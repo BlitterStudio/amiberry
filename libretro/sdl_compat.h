@@ -405,6 +405,8 @@ typedef struct SDL_JoyDeviceEvent {
 	Sint32 which;
 } SDL_JoyDeviceEvent;
 
+#define SDL_TOUCH_MOUSEID ((Uint32)-1)
+
 typedef struct SDL_MouseButtonEvent {
 	Uint32 type;
 	Uint32 timestamp;

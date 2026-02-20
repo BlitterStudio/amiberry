@@ -3,6 +3,7 @@
 
 #include "sdl_compat.h"
 #include "vkbd/vkbd.h"
+#include "on_screen_joystick.h"
 
 // serial_ports is declared in parser.h and defined in amiberry_gui.cpp (standalone).
 // The libretro build doesn't include amiberry_gui.cpp, so provide the definition here.
@@ -90,4 +91,34 @@ bool vkbd_is_active(void)
 
 void vkbd_update_position_from_texture()
 {
+}
+
+// On-screen joystick stubs (not used in libretro builds)
+void on_screen_joystick_init(SDL_Renderer* renderer) { (void)renderer; }
+void on_screen_joystick_quit() {}
+void on_screen_joystick_redraw(SDL_Renderer* renderer) { (void)renderer; }
+#ifdef USE_OPENGL
+void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect& game_rect)
+{
+	(void)drawable_w; (void)drawable_h; (void)game_rect;
+}
+#endif
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w, int window_h)
+{
+	(void)event; (void)window_w; (void)window_h; return false;
+}
+bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int window_w, int window_h)
+{
+	(void)event; (void)window_w; (void)window_h; return false;
+}
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_w, int window_h)
+{
+	(void)event; (void)window_w; (void)window_h; return false;
+}
+bool on_screen_joystick_is_enabled() { return false; }
+void on_screen_joystick_set_enabled(bool enabled) { (void)enabled; }
+bool on_screen_joystick_keyboard_tapped() { return false; }
+void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect)
+{
+	(void)screen_w; (void)screen_h; (void)game_rect;
 }
