@@ -48,6 +48,7 @@
 #endif
 #include "cpuboard.h"
 #include "threaddep/thread.h"
+#include "cpu_thread.h"
 #ifdef WITH_X86
 #include "x86.h"
 #endif
