@@ -198,6 +198,7 @@ When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR
 15. `JITPTR` macro — `(uae_u32)(uintptr)` → `(uintptr)`
 16-17. `current_block_pc_p`, `create_jmpdep()` — `uae_u32` → `uintptr`
 18. `arm_ADD_l_ri()` parameter — `IM32` → `IMPTR` (was truncating `comp_pc_p` in all Bcc/DBcc branch target computations — the root cause of runtime crashes)
+19. **BSR.L/Bcc.L displacement sign extension** — `comp_get_ilong()` returns `uae_u32` which zero-extends to `uintptr` on 64-bit. Backward branch displacements (negative signed values) must be sign-extended via `(uae_s32)` cast before use in pointer arithmetic. Without this, adding e.g. `0x00000000FFFFF000` (should be `-4096`) to PC_P at `0x3...` overflows to `0x4...`, corrupting `comp_pc_p`. Fixed in 32 generated handlers in `compemu_arm.cpp` (BSR.L + BRA.L + 14 Bcc.L × `_ff`/`_nf`) and the generator `gencomp_arm.c` (both `i_BSR` and `i_Bcc` cases). BSR.W/BSR.B were already correct (`(uae_s32)(uae_s16)` / `(uae_s32)(uae_s8)` casts sign-extend properly).
 
 **Natmem reservation**: On ARM64, `UAE_VM_32BIT` is dropped from the natmem reservation call since the JIT is 64-bit-clean. This avoids ~25 wasted mmap/munmap cycles on platforms where the kernel ignores low-address hints.
 

@@ -4,8 +4,10 @@ description: >
   ARM64 JIT compiler fixes for Amiberry (GitHub issue #1766). This skill captures the complete
   technical knowledge from 20+ debugging sessions that identified and fixed: (a) a page 0 DMA
   corruption crash during A1200 Kickstart boot, (b) visual corruption (black gadgets, garbled
-  text) caused by incorrect inter-block flag optimization, and (c) SIGSEGV crashes on unmapped
-  natmem gaps (e.g., 0x00F10000) in complex configs with hardfiles/RTG. Use this skill when working on:
+  text) caused by incorrect inter-block flag optimization, (c) SIGSEGV crashes on unmapped
+  natmem gaps (e.g., 0x00F10000) in complex configs with hardfiles/RTG, and (d) BSR.L/Bcc.L
+  backward branch crashes from 32-bit displacement zero-extension on 64-bit platforms.
+  Use this skill when working on:
   (1) the JIT_DEBUG_MEM_CORRUPTION code in compemu_support_arm.cpp or newcpu.cpp,
   (2) the page 0 DMA guard mechanism (mprotect/SIGSEGV/BRK single-step),
   (3) any ARM64 JIT register width bugs (64-bit vs 32-bit instruction selection),
@@ -17,7 +19,9 @@ description: >
   blitter DMA, mprotect, SIGSEGV handler, BRK single-step, ARM64 JIT, Kickstart boot,
   visual corruption, black gadgets, garbled ROM version, compemu_support_arm,
   JIT_DEBUG_MEM_CORRUPTION, inter-block flag, dont_care_flags, 68040 JIT,
-  natmem gap, unmapped region, commit_natmem_gaps, 0x00F10000, canbang, PROT_NONE.
+  natmem gap, unmapped region, commit_natmem_gaps, 0x00F10000, canbang, PROT_NONE,
+  BSR, Bcc, branch displacement, sign extension, comp_pc_p, comp_get_ilong,
+  64-bit pointer, zero-extend, backward branch, gencomp_arm.
 ---
 
 # Amiberry ARM64 JIT Crash Fix — Session Knowledge
@@ -27,8 +31,9 @@ description: >
 **Crash fix: SOLVED (v43-clean).** System boots to Workbench and runs SysInfo without crash.
 **Visual corruption: SOLVED.** Caused by inter-block flag optimization in compile_block() — disabled with `#if 0`.
 **Natmem gap crash: SOLVED.** Complex configs (hardfiles, RTG, etc.) crashed at unmapped natmem gaps — fixed by `commit_natmem_gaps()`.
+**BSR.L/Bcc.L sign extension: SOLVED.** Backward `.L` branch displacements zero-extended instead of sign-extended on 64-bit platforms, corrupting `comp_pc_p` and causing SIGSEGV. Fixed with `(uae_s32)` cast in 32 handlers + generator.
 **ARM64 JIT runtime status (2026-02): STABLE with narrow fallback.**
-- SysInfo + A4000 configs pass with JIT enabled.
+- SysInfo + A4000 configs pass with JIT enabled (including SysSpeed).
 - Lightwave boots with JIT enabled using a narrow ARM64 hotspot fallback.
 - Broad ARM64 Z3 fallback was removed (performance parity improved).
 - `jit_n_addr_unsafe` now starts at `0` again (direct mode), with normal unsafe-bank escalation.
@@ -178,6 +183,41 @@ Implemented in `src/jit/arm/compemu_support_arm.cpp`:
 - `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` re-enables optional hotspot logic for A/B testing.
 - `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` forces optional hotspot logic OFF and does not bypass the fixed safety hotspot guard.
 - `AMIBERRY_ARM64_GUARD_VERBOSE=1` enables per-key/per-window dynamic guard learning logs for diagnostics.
+
+## BSR.L/Bcc.L Sign Extension Fix (SOLVED)
+
+### Root Cause
+On 64-bit platforms where `natmem_offset` > 4GB (e.g., macOS ARM64 at `0x300000000`), all `.L`
+branch handlers (BSR.L, BRA.L, and 14 Bcc.L condition codes) read the 32-bit displacement via
+`comp_get_ilong()` which returns `uae_u32`. This zero-extends to `uintptr` (64-bit), but branch
+displacements are **signed**. A backward branch like -4096 (`0xFFFFF000`) becomes
+`0x00000000FFFFF000` instead of `0xFFFFFFFFFFFFF000`. Adding this to PC_P at `0x3...` overflows
+to `0x4...`, corrupting `comp_pc_p` and causing SIGSEGV in the next instruction's compiler handler.
+
+### Why .W and .B Were Unaffected
+- BSR.W: `(uae_s32)(uae_s16) comp_get_iword(...)` — sign-extends 16→32→64 correctly
+- BSR.B: `(uae_s32)(uae_s8)(opcode & 255)` — sign-extends 8→32→64 correctly
+- BSR.L: `comp_get_ilong(...)` — no cast, zero-extends 32→64 **BUG**
+
+### Fix
+Cast displacement to `(uae_s32)` before passing to `mov_l_ri()`:
+```c
+// Before (zero-extends on 64-bit):
+mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+// After (sign-extends correctly):
+mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
+```
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `src/jit/arm/compemu_arm.cpp` | 32 handlers fixed (BSR.L + BRA.L + 14 Bcc.L × `_ff`/`_nf` variants) |
+| `src/jit/arm/gencomp_arm.c` | Generator fixed for `i_BSR` (sz_long post-genamode fixup) and `i_Bcc` (sz_long case in sign-extension switch) |
+
+### Diagnosis Method
+Added `jit_validate_comp_pc_p()` diagnostic function that checks `comp_pc_p` stays within natmem bounds.
+Inserted at 4 points in `compile_block()` loop (before/after `comptbl[opcode](opcode)` and at `pc_hist` assignments).
+Diagnostic caught: `comp_pc_p=0x408a96a88 (upper32=0x04)` after opcode `0x61ff` (BSR.L) at `inst_idx=0`.
 
 ## Known Separate Issues
 
