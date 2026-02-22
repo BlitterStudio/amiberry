@@ -2588,10 +2588,9 @@ void target_fixup_options(uae_prefs* p)
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
 #ifdef WITH_THREADED_CPU
-	// Can't combine JIT and CPU Thread
-	if (p->cachesize > 0) {
-		p->cpu_thread = false;
-	}
+	// JIT and CPU Thread can now work together.
+	// cpu_thread_run_jit() handles JIT execution on a separate thread,
+	// while run_cpu_thread() manages cycle timing on the main thread.
 #endif
 #endif
 	

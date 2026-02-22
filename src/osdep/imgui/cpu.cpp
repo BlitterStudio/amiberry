@@ -31,7 +31,7 @@ void render_panel_cpu() {
 
     bool cpu_based_enable =
             changed_prefs.cpu_model >= 68020 && changed_prefs.address_space_24 == 0;
-    bool jit_enable = cpu_based_enable && !changed_prefs.mmu_model && !changed_prefs.cpu_thread; // eventually cpu_thread _should_ work with JIT, but it requires some refactoring
+    bool jit_enable = cpu_based_enable && !changed_prefs.mmu_model;
 #ifndef JIT
     jit_enable = false;
 #endif
@@ -462,7 +462,7 @@ void render_panel_cpu() {
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
 
-        const bool no_thread = (changed_prefs.cachesize > 0 || changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
+        const bool no_thread = (changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
         ImGui::BeginDisabled(no_thread || emulating);
         AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ShowHelpMarker("Run CPU emulation on a separate thread. Experimental.");
