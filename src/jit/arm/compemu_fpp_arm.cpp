@@ -379,7 +379,8 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 void comp_fbcc_opp (uae_u32 opcode)
 {
 	uae_u32 start_68k_offset = m68k_pc_offset;
-	uae_u32 off, v1, v2;
+	uae_s32 off;
+	uintptr v1, v2;
 	int cc;
 
 	if (!currprefs.compfpu) {

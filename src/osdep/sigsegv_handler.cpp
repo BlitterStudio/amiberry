@@ -662,7 +662,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 		output_log(_T("info.si_signo = %d\n"), signum);
 		output_log(_T("info.si_errno = %d\n"), info->si_errno);
 		output_log(_T("info.si_code = %d\n"), info->si_code);
-		output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+		output_log(_T("info.si_addr = %p\n"), info->si_addr);
 		output_log(_T("JIT: regs.pc=%08x regs.pc_p=%p regs.pc_oldp=%p canbang=%d cachesize=%d\n"),
 			::regs.pc, ::regs.pc_p, ::regs.pc_oldp, canbang, currprefs.cachesize);
 		if (signum == 4)

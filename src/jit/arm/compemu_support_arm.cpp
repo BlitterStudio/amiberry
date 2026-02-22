@@ -480,6 +480,16 @@ static uae_s32 reg_alloc_run;
 const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
 uae_u8* popallspace = NULL;
 
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+/* On macOS ARM64, popallspace and JIT cache are allocated as one contiguous
+ * MAP_JIT block to guarantee the cache is within ARM64 B/BL branch range
+ * (±128 MB) of popallspace. macOS mmap ignores hint addresses for MAP_JIT
+ * allocations, making separate nearby allocation unreliable. */
+static size_t popall_combined_alloc_size = 0;
+static uint8 *popall_combined_cache_start = NULL;
+static uint32 popall_combined_cache_kb = 0;
+#endif
+
 void* pushall_call_handler = NULL;
 static void* popall_do_nothing = NULL;
 static void* popall_exec_nostats = NULL;
@@ -2543,13 +2553,27 @@ void compiler_exit(void)
 
     // Deallocate translation cache
     if (compiled_code) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+        /* Don't free separately if part of the combined popallspace block */
+        if (compiled_code != popall_combined_cache_start) {
+            vm_release(compiled_code, cache_size * 1024);
+        }
+#else
         vm_release(compiled_code, cache_size * 1024);
+#endif
         compiled_code = 0;
     }
 
     // Deallocate popallspace
     if (popallspace) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+        vm_release(popallspace, popall_combined_alloc_size ? popall_combined_alloc_size : POPALLSPACE_SIZE);
+        popall_combined_alloc_size = 0;
+        popall_combined_cache_start = NULL;
+        popall_combined_cache_kb = 0;
+#else
         vm_release(popallspace, POPALLSPACE_SIZE);
+#endif
         popallspace = 0;
     }
 #endif
@@ -3125,7 +3149,14 @@ void alloc_cache(void)
 {
     if (compiled_code) {
         flush_icache_hard(3);
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+        /* Don't free if it's part of the combined popallspace block */
+        if (compiled_code != popall_combined_cache_start) {
+            vm_release(compiled_code, cache_size * 1024);
+        }
+#else
 		vm_release(compiled_code, cache_size * 1024);
+#endif
         compiled_code = 0;
     }
 
@@ -3133,25 +3164,36 @@ void alloc_cache(void)
     if (cache_size == 0)
         return;
 
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	/* Use pre-allocated cache from the combined popallspace block if available */
+	if (popall_combined_cache_start && (uint32)cache_size <= popall_combined_cache_kb) {
+		compiled_code = popall_combined_cache_start;
+	} else {
+		/* Fall back to separate allocation with hint-based approach */
+		while (!compiled_code && cache_size) {
+			const uint32 cache_bytes = cache_size * 1024;
+			compiled_code = alloc_code_near_popall(cache_bytes);
+			if (compiled_code && !arm64_cache_reaches_popall(compiled_code, cache_bytes)) {
+				jit_log("ARM64 macOS: JIT cache %p (size %u) is out of branch range from popallspace %p",
+					compiled_code, cache_bytes, popallspace);
+				vm_release(compiled_code, cache_bytes);
+				compiled_code = NULL;
+			}
+			if (compiled_code == NULL) {
+				compiled_code = 0;
+				cache_size /= 2;
+			}
+		}
+	}
+#else
 	while (!compiled_code && cache_size) {
 		const uint32 cache_bytes = cache_size * 1024;
-#if defined(__APPLE__) && defined(CPU_AARCH64)
-		compiled_code = alloc_code_near_popall(cache_bytes);
-		if (compiled_code && !arm64_cache_reaches_popall(compiled_code, cache_bytes)) {
-			jit_log("ARM64 macOS: JIT cache %p (size %u) is out of branch range from popallspace %p",
-				compiled_code, cache_bytes, popallspace);
-			vm_release(compiled_code, cache_bytes);
-			compiled_code = NULL;
-		}
-#else
 		compiled_code = alloc_code(cache_bytes);
-#endif
 		if (compiled_code == NULL) {
 			compiled_code = 0;
 			cache_size /= 2;
 		}
 	}
-#if !defined(__APPLE__) || !defined(CPU_AARCH64)
 	vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE);
 #endif
 
@@ -3352,7 +3394,31 @@ STATIC_INLINE void create_popalls(void)
     int i, r;
 
     if (popallspace == NULL) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+        /* Allocate popallspace + JIT cache as one contiguous MAP_JIT block.
+         * macOS mmap ignores hint addresses for MAP_JIT, so separate allocation
+         * of the cache near popallspace is unreliable (cache ends up tiny). */
+        const uint32 cache_kb = currprefs.cachesize > 0 ? currprefs.cachesize : MAX_JIT_CACHE;
+        const size_t cache_bytes = (size_t)cache_kb * 1024;
+        const size_t combined_size = POPALLSPACE_SIZE + cache_bytes;
+        popallspace = alloc_code(combined_size);
+        if (popallspace) {
+            popall_combined_alloc_size = combined_size;
+            popall_combined_cache_start = popallspace + POPALLSPACE_SIZE;
+            popall_combined_cache_kb = cache_kb;
+            jit_log("ARM64 macOS: combined popallspace+cache allocation at %p (%u KB cache)",
+                popallspace, cache_kb);
+        } else {
+            /* Fall back to popallspace-only allocation */
+            popall_combined_alloc_size = 0;
+            popall_combined_cache_start = NULL;
+            popall_combined_cache_kb = 0;
+            popallspace = alloc_code(POPALLSPACE_SIZE);
+        }
+        if (popallspace == NULL) {
+#else
         if ((popallspace = alloc_code(POPALLSPACE_SIZE)) == NULL) {
+#endif
             jit_log("WARNING: Could not allocate popallspace!");
             if (currprefs.cachesize > 0)
             {
