@@ -17269,7 +17269,7 @@ uae_u32 REGPARAM2 op_60ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17330,7 +17330,7 @@ uae_u32 REGPARAM2 op_61ff_0_comp_ff(uae_u32 opcode) {
 	uae_u32 m68k_pc_offset_thisinst = m68k_pc_offset;
 	m68k_pc_offset += 2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	{
 		uae_u32 retadd = start_pc + ((char *) comp_pc_p - (char *) start_pc_p) + m68k_pc_offset;
 		int ret = alloc_scratch();
@@ -17395,7 +17395,7 @@ uae_u32 REGPARAM2 op_62ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17463,7 +17463,7 @@ uae_u32 REGPARAM2 op_63ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17527,7 +17527,7 @@ uae_u32 REGPARAM2 op_64ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17591,7 +17591,7 @@ uae_u32 REGPARAM2 op_65ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17655,7 +17655,7 @@ uae_u32 REGPARAM2 op_66ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17719,7 +17719,7 @@ uae_u32 REGPARAM2 op_67ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17783,7 +17783,7 @@ uae_u32 REGPARAM2 op_68ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17847,7 +17847,7 @@ uae_u32 REGPARAM2 op_69ff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17911,7 +17911,7 @@ uae_u32 REGPARAM2 op_6aff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -17975,7 +17975,7 @@ uae_u32 REGPARAM2 op_6bff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -18039,7 +18039,7 @@ uae_u32 REGPARAM2 op_6cff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -18103,7 +18103,7 @@ uae_u32 REGPARAM2 op_6dff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -18167,7 +18167,7 @@ uae_u32 REGPARAM2 op_6eff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -18231,7 +18231,7 @@ uae_u32 REGPARAM2 op_6fff_0_comp_ff(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44056,7 +44056,7 @@ uae_u32 REGPARAM2 op_60ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44117,7 +44117,7 @@ uae_u32 REGPARAM2 op_61ff_0_comp_nf(uae_u32 opcode) {
 	uae_u32 m68k_pc_offset_thisinst = m68k_pc_offset;
 	m68k_pc_offset += 2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	{
 		uae_u32 retadd = start_pc + ((char *) comp_pc_p - (char *) start_pc_p) + m68k_pc_offset;
 		int ret = alloc_scratch();
@@ -44182,7 +44182,7 @@ uae_u32 REGPARAM2 op_62ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44250,7 +44250,7 @@ uae_u32 REGPARAM2 op_63ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44314,7 +44314,7 @@ uae_u32 REGPARAM2 op_64ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44378,7 +44378,7 @@ uae_u32 REGPARAM2 op_65ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44442,7 +44442,7 @@ uae_u32 REGPARAM2 op_66ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44506,7 +44506,7 @@ uae_u32 REGPARAM2 op_67ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44570,7 +44570,7 @@ uae_u32 REGPARAM2 op_68ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44634,7 +44634,7 @@ uae_u32 REGPARAM2 op_69ff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44698,7 +44698,7 @@ uae_u32 REGPARAM2 op_6aff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44762,7 +44762,7 @@ uae_u32 REGPARAM2 op_6bff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44826,7 +44826,7 @@ uae_u32 REGPARAM2 op_6cff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44890,7 +44890,7 @@ uae_u32 REGPARAM2 op_6dff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -44954,7 +44954,7 @@ uae_u32 REGPARAM2 op_6eff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
@@ -45018,7 +45018,7 @@ uae_u32 REGPARAM2 op_6fff_0_comp_nf(uae_u32 opcode) {
 	m68k_pc_offset += 2;
 	uintptr v1, v2;
 	int src = alloc_scratch();
-	mov_l_ri(src, comp_get_ilong((m68k_pc_offset += 4) - 4));
+	mov_l_ri(src, (uae_s32)comp_get_ilong((m68k_pc_offset += 4) - 4));
 	sub_l_ri(src, m68k_pc_offset - m68k_pc_offset_thisinst - 2);
 	arm_ADD_l_ri(src, (uintptr) comp_pc_p);
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
