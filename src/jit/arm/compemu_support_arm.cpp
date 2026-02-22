@@ -400,27 +400,6 @@ static void jit_diag_log_tables(void)
 
 uae_u8* comp_pc_p;
 
-#if defined(CPU_AARCH64)
-static inline void jit_validate_comp_pc_p(const char* where, int opcode_idx, uae_u32 opcode)
-{
-	if (comp_pc_p && natmem_offset) {
-		uintptr val = (uintptr)comp_pc_p;
-		uintptr base = (uintptr)natmem_offset;
-		uintptr size = (uintptr)natmem_reserved_size;
-		if (val < base || val >= base + size) {
-			write_log("JIT: COMP_PC_P CORRUPTION at %s: comp_pc_p=%p (upper32=0x%08x) "
-				"natmem=%p..%p inst_idx=%d opcode=0x%04x m68k_pc_offset=%u\n",
-				where, comp_pc_p,
-				(uae_u32)(val >> 32),
-				natmem_offset,
-				(void*)(base + size),
-				opcode_idx, opcode, m68k_pc_offset);
-			abort();
-		}
-	}
-}
-#endif
-
 // gb-- Extra data for Basilisk II/JIT
 #define follow_const_jumps (currprefs.comp_constjump != 0)
 
@@ -4017,9 +3996,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             branch_cc = 0; // Only to be initialized. Will be set together with next_pc_p
 
             comp_pc_p = (uae_u8*)pc_hist[0].location;
-#if defined(CPU_AARCH64)
-            jit_validate_comp_pc_p("after_set_from_pchist0", 0, 0);
-#endif
             init_comp();
             was_comp = 1;
 
@@ -4047,20 +4023,11 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     failure = 0;
                     if (!was_comp) {
                         comp_pc_p = (uae_u8*)pc_hist[i].location;
-#if defined(CPU_AARCH64)
-                        jit_validate_comp_pc_p("after_set_from_pchist_i", i, opcode);
-#endif
                         init_comp();
                     }
                     was_comp = 1;
 
-#if defined(CPU_AARCH64)
-                    jit_validate_comp_pc_p("before_comptbl", i, opcode);
-#endif
                     comptbl[opcode](opcode);
-#if defined(CPU_AARCH64)
-                    jit_validate_comp_pc_p("after_comptbl", i, opcode);
-#endif
                     freescratch();
                     if (!(liveflags[i + 1] & FLAG_CZNV)) {
                         /* We can forget about flags */
