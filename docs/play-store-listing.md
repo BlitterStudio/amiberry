@@ -86,8 +86,7 @@ For documentation, guides, and support:
 
 ## Category
 
-**Primary:** Tools > Utilities
-**Alternative:** Games > Arcade (if better for discoverability)
+**Games > Action** (matches PPSSPP and other established emulators on Play Store)
 
 ---
 
