@@ -700,11 +700,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            platform: unix
+            platform: linux
             arch: x86_64
             artifact: amiberry_libretro.so
           - os: ubuntu-latest
-            platform: unix
+            platform: linux
             arch: aarch64
             artifact: amiberry_libretro.so
           - os: windows-latest
