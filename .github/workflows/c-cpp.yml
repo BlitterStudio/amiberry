@@ -700,15 +700,18 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            platform: linux
+            platform: unix
+            artifact_platform: linux
             arch: x86_64
             artifact: amiberry_libretro.so
           - os: ubuntu-latest
-            platform: linux
+            platform: unix
+            artifact_platform: linux
             arch: aarch64
             artifact: amiberry_libretro.so
           - os: windows-latest
             platform: win
+            artifact_platform: win
             arch: x86_64
             artifact: amiberry_libretro.dll
     steps:
@@ -771,7 +774,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: amiberry-libretro-${{ matrix.platform }}-${{ matrix.arch }}
+          name: amiberry-libretro-${{ matrix.artifact_platform }}-${{ matrix.arch }}
           path: amiberry/libretro/${{ matrix.artifact }}
 
   create-release:
