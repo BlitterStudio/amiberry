@@ -813,6 +813,9 @@ void gui_exit()
 	close_sound();
 	save_amiberry_settings();
 	ClearConfigFileList();
+#ifdef USE_IMGUI
+	configurations_panel_reset();
+#endif
 }
 
 void gui_purge_events()

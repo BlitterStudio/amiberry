@@ -27,6 +27,13 @@ static const char* strcasestr(const char* haystack, const char* needle)
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 
+static bool s_configs_initialized = false;
+
+void configurations_panel_reset()
+{
+	s_configs_initialized = false;
+}
+
 void render_panel_configurations()
 {
 	static int selected = -1;
@@ -34,14 +41,12 @@ void render_panel_configurations()
 	static char desc[MAX_DPATH] = "";
 	static char search_text[256] = "";
 	static char last_seen_config[MAX_DPATH] = "";
-
-	static bool initialized = false;
 	// Check if the current config has changed (e.g. via Quickstart or loading a file)
 	// If so, update the fields to match.
-	if (!initialized || strncmp(last_active_config, last_seen_config, MAX_DPATH) != 0)
+	if (!s_configs_initialized || strncmp(last_active_config, last_seen_config, MAX_DPATH) != 0)
 	{
 		ReadConfigFileList();
-		initialized = true;
+		s_configs_initialized = true;
 		bool found = false;
 		if (last_active_config[0])
 		{
