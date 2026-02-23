@@ -18,7 +18,6 @@ import androidx.navigation.compose.rememberNavController
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import com.blitterstudio.amiberry.ui.screens.ConfigurationsScreen
 import com.blitterstudio.amiberry.ui.screens.FileManagerScreen
-import com.blitterstudio.amiberry.ui.screens.HomeScreen
 import com.blitterstudio.amiberry.ui.screens.QuickStartScreen
 import com.blitterstudio.amiberry.ui.screens.settings.SettingsScreen
 
@@ -53,28 +52,9 @@ fun AmiberryApp() {
 	) { innerPadding ->
 		NavHost(
 			navController = navController,
-			startDestination = Screen.Home.route,
+			startDestination = Screen.QuickStart.route,
 			modifier = Modifier.padding(innerPadding)
 		) {
-			composable(Screen.Home.route) {
-				HomeScreen(
-					onNavigateToQuickStart = {
-						navController.navigate(Screen.QuickStart.route) {
-							launchSingleTop = true
-						}
-					},
-					onNavigateToFiles = {
-						navController.navigate(Screen.FileManager.route) {
-							launchSingleTop = true
-						}
-					},
-					onNavigateToSettings = {
-						navController.navigate(Screen.Settings.route) {
-							launchSingleTop = true
-						}
-					}
-				)
-			}
 			composable(Screen.QuickStart.route) {
 				QuickStartScreen()
 			}

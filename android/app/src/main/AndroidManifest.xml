@@ -27,6 +27,7 @@
         <!-- SDL emulator activity (launched by native UI) -->
         <activity android:name="com.blitterstudio.amiberry.AmiberryActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation"
+            android:screenOrientation="sensorLandscape"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:exported="false">
             <meta-data android:name="SDL_MAIN_LIBRARY_NAMES" android:value="amiberry" />
