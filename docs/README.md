@@ -104,15 +104,6 @@ For detailed configuration guides, tutorials, and compatibility lists, please vi
 -   [Compile from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source)
 -   [Troubleshooting](https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting)
 
-### ARM64 JIT diagnostics
-
-On ARM64 hosts, JIT includes runtime safety guards for known unstable startup paths.
-
-- `AMIBERRY_ARM64_GUARD_VERBOSE=1` enables detailed guard-learning logs (diagnostic use).
-- Optional ARM64 hotspot guard is now disabled by default for performance.
-- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` re-enables optional hotspot guard logic for A/B testing.
-- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` forces optional hotspot guard off; fixed safety fallback for the known startup hotspot remains active.
-
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's reporting bugs, suggesting features, or submitting Pull Requests, your help makes Amiberry better.
