@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace 'com.blitterstudio.amiberry'
-    compileSdk 36
+    namespace = 'com.blitterstudio.amiberry'
+    compileSdk = 36
 
     defaultConfig {
-        applicationId "com.blitterstudio.amiberry"
-        minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "8.0"
+        applicationId = "com.blitterstudio.amiberry"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "8.0"
 
         externalNativeBuild {
             cmake {
@@ -51,7 +51,7 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    ndkVersion '28.2.13676358'
+    ndkVersion = '28.2.13676358'
 }
 
 dependencies {
