@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -162,8 +163,15 @@ private fun ConfigItem(
 				)
 			}
 
-			// Context menu
+			// More options button (D-pad accessible alternative to long-press)
 			Box {
+				IconButton(onClick = { showMenu = true }) {
+					Icon(
+						Icons.Default.MoreVert,
+						contentDescription = "More options",
+						modifier = Modifier.size(24.dp)
+					)
+				}
 				DropdownMenu(
 					expanded = showMenu,
 					onDismissRequest = { showMenu = false }

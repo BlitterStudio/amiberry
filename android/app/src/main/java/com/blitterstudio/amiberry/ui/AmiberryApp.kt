@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry.ui
 
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -27,7 +28,7 @@ fun AmiberryApp() {
 
 	Scaffold(
 		bottomBar = {
-			NavigationBar {
+			NavigationBar(modifier = Modifier.focusGroup()) {
 				val navBackStackEntry by navController.currentBackStackEntryAsState()
 				val currentDestination = navBackStackEntry?.destination
 

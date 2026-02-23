@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,27 +128,29 @@ fun InputTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		// On-screen controls
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text("On-Screen Controls", style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
+		// On-screen controls (only shown on devices with a touchscreen)
+		if (hasTouchScreen()) {
+			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+				Column(modifier = Modifier.padding(16.dp)) {
+					Text("On-Screen Controls", style = MaterialTheme.typography.titleMedium)
+					Spacer(modifier = Modifier.height(8.dp))
 
-				SwitchRow(
-					label = "On-Screen Joystick",
-					checked = settings.onScreenJoystick,
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(onScreenJoystick = it) }
-					}
-				)
+					SwitchRow(
+						label = "On-Screen Joystick",
+						checked = settings.onScreenJoystick,
+						onCheckedChange = {
+							viewModel.updateSettings { s -> s.copy(onScreenJoystick = it) }
+						}
+					)
 
-				SwitchRow(
-					label = "On-Screen Keyboard Button",
-					checked = settings.onScreenKeyboard,
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
-					}
-				)
+					SwitchRow(
+						label = "On-Screen Keyboard Button",
+						checked = settings.onScreenKeyboard,
+						onCheckedChange = {
+							viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
+						}
+					)
+				}
 			}
 		}
 	}

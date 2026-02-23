@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
 import android.content.Intent
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,7 +43,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
 	Column(modifier = Modifier.fillMaxSize()) {
 		ScrollableTabRow(
 			selectedTabIndex = selectedTab,
-			modifier = Modifier.fillMaxWidth()
+			modifier = Modifier.fillMaxWidth().focusGroup()
 		) {
 			tabs.forEachIndexed { index, title ->
 				Tab(
@@ -74,6 +75,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
 			modifier = Modifier
 				.fillMaxWidth()
 				.padding(16.dp)
+				.focusGroup()
 		) {
 			Button(
 				onClick = {
