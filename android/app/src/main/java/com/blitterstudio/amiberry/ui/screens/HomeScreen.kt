@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -55,7 +56,6 @@ import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.FileCategory
-import java.io.File
 
 @Composable
 fun HomeScreen(
@@ -67,17 +67,15 @@ fun HomeScreen(
 	val storagePath = remember {
 		context.getExternalFilesDir(null)?.absolutePath ?: "Unknown"
 	}
-	val romCount = remember {
-		val romsDir = File(context.getExternalFilesDir(null), "roms")
-		if (romsDir.exists()) {
-			romsDir.listFiles { f ->
-				f.extension.lowercase() in setOf("rom", "bin")
-			}?.size ?: 0
-		} else 0
-	}
 
 	val repository = remember { FileRepository.getInstance(context) }
+	val roms by repository.roms.collectAsState()
 	val whdloadGames by repository.whdloadGames.collectAsState()
+
+	// Trigger a scan when the HomeScreen first appears
+	LaunchedEffect(Unit) {
+		repository.rescan()
+	}
 
 	// SAF picker for importing WHDLoad games
 	val whdloadPickerLauncher = rememberLauncherForActivityResult(
@@ -143,7 +141,7 @@ fun HomeScreen(
 		Card(
 			modifier = Modifier.fillMaxWidth(),
 			colors = CardDefaults.cardColors(
-				containerColor = if (romCount > 0)
+				containerColor = if (roms.isNotEmpty())
 					MaterialTheme.colorScheme.primaryContainer
 				else
 					MaterialTheme.colorScheme.errorContainer
@@ -163,11 +161,11 @@ fun HomeScreen(
 				Spacer(modifier = Modifier.width(12.dp))
 				Column {
 					Text(
-						text = if (romCount > 0) "$romCount ROM(s) found" else "No Kickstart ROMs found",
+						text = if (roms.isNotEmpty()) "${roms.size} ROM(s) found" else "No Kickstart ROMs found",
 						style = MaterialTheme.typography.titleMedium
 					)
 					Text(
-						text = if (romCount > 0)
+						text = if (roms.isNotEmpty())
 							"Ready to emulate"
 						else
 							"Import ROMs via the Files tab to get started",
