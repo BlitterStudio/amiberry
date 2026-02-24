@@ -1230,6 +1230,15 @@ void run_gui()
 					uae_quit();
 					gui_running = false;
 				}
+				else if (gui_event.key.keysym.sym == SDLK_F12 && !start_disabled) {
+					if (emulating) {
+						gui_running = false;
+					}
+					else {
+						uae_reset(0, 1);
+						gui_running = false;
+					}
+				}
 			}
 			else if (gui_event.type == SDL_DROPFILE) {
 				// Handle dropped files
