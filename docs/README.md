@@ -92,7 +92,7 @@ brew install --cask amiberry
 Amiberry supports Windows x86_64 using MinGW-w64 (GCC).
 
 **Releases:**
-1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases/latest).
 2.  Extract the contents to a directory of your choice.
 3.  Run `Amiberry.exe` to start the emulator.
 
