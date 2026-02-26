@@ -4325,9 +4325,11 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
+	download_command.append("\"");
 	download_command.append(tmp);
-	download_command.append(" ");
+	download_command.append("\" \"");
 	download_command.append(source);
+	download_command.append("\"");
 	if (!use_curl)
 		download_command.append(" 2>&1"); // wget needs this to capture output to pipe properly
 
