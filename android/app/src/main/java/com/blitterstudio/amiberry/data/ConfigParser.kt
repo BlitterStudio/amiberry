@@ -1,8 +1,10 @@
 package com.blitterstudio.amiberry.data
 
+import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import java.io.File
+import java.io.IOException
 
 /**
  * Parses .uae config files back into EmulatorSettings.
@@ -33,10 +35,17 @@ object ConfigParser {
 		"use_gui", "config_description"
 	)
 
+	private const val TAG = "Amiberry-ConfigParser"
+
 	fun parse(file: File): ParsedConfig {
 		if (!file.exists()) return ParsedConfig(EmulatorSettings(), emptyList(), "")
 
-		val lines = file.readLines()
+		val lines = try {
+			file.readLines()
+		} catch (e: IOException) {
+			Log.e(TAG, "Failed to read config file: ${file.path}", e)
+			return ParsedConfig(EmulatorSettings(), emptyList(), "")
+		}
 		val kvPairs = mutableMapOf<String, String>()
 		val unknownLines = mutableListOf<String>()
 

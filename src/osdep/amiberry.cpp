@@ -5425,6 +5425,7 @@ int amiberry_main(int argc, char* argv[])
 {
 #ifdef __ANDROID__
 	if (SDL_Init(0) < 0) {
+		write_log("SDL_Init(0) failed: %s\n", SDL_GetError());
 	}
 #endif
 	max_uae_width = 8192;

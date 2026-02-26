@@ -9,11 +9,12 @@
 # Keep SDL library classes (required by the native emulator)
 -keep class org.libsdl.app.** { *; }
 
-# Keep all Amiberry application classes
--keep class com.blitterstudio.amiberry.** { *; }
+# Keep data model classes (used in config parsing and file scanning)
+-keep class com.blitterstudio.amiberry.data.model.** { *; }
 
-# Keep Compose-related classes that may be referenced via reflection
--keep class androidx.compose.** { *; }
+# Keep activities referenced in AndroidManifest.xml
+-keep class com.blitterstudio.amiberry.ui.MainActivity { *; }
+-keep class com.blitterstudio.amiberry.AmiberryActivity { *; }
 
 # Don't warn about missing SDL references (native-only paths)
 -dontwarn org.libsdl.app.**

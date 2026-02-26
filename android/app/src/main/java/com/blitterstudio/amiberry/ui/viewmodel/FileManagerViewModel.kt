@@ -2,13 +2,16 @@ package com.blitterstudio.amiberry.ui.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,24 +30,38 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 	private val _importResult = MutableStateFlow<String?>(null)
 	val importResult: StateFlow<String?> = _importResult.asStateFlow()
 
+	private var importJob: Job? = null
+
 	init {
 		rescan()
 	}
 
 	fun rescan() {
 		viewModelScope.launch(Dispatchers.IO) {
-			repository.rescan()
+			try {
+				repository.rescan()
+			} catch (e: Exception) {
+				Log.e(TAG, "Failed to rescan files", e)
+			}
 		}
 	}
 
 	fun importFile(uri: Uri, category: FileCategory) {
-		viewModelScope.launch(Dispatchers.IO) {
-			val result = FileManager.importFile(getApplication(), uri, category)
-			if (result != null) {
-				_importResult.value = "Imported successfully"
-				repository.rescanCategory(category)
-			} else {
-				_importResult.value = "Import failed"
+		importJob?.cancel()
+		importJob = viewModelScope.launch(Dispatchers.IO) {
+			try {
+				val result = FileManager.importFile(getApplication(), uri, category)
+				if (result != null) {
+					_importResult.value = "Imported successfully"
+					repository.rescanCategory(category)
+				} else {
+					_importResult.value = "Import failed"
+				}
+			} catch (e: CancellationException) {
+				throw e
+			} catch (e: Exception) {
+				Log.e(TAG, "Failed to import file", e)
+				_importResult.value = "Import failed: ${e.message}"
 			}
 		}
 	}
@@ -55,5 +72,9 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
 	fun getStoragePath(): String {
 		return FileManager.getAppStoragePath(getApplication())
+	}
+
+	companion object {
+		private const val TAG = "Amiberry-FileManagerVM"
 	}
 }

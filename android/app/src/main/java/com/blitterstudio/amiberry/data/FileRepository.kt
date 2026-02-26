@@ -3,11 +3,14 @@ package com.blitterstudio.amiberry.data
 import android.content.Context
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class FileRepository(private val context: Context) {
+
+	private val isScanning = AtomicBoolean(false)
 
 	private val _roms = MutableStateFlow<List<AmigaFile>>(emptyList())
 	val roms: StateFlow<List<AmigaFile>> = _roms.asStateFlow()
@@ -25,11 +28,16 @@ class FileRepository(private val context: Context) {
 	val whdloadGames: StateFlow<List<AmigaFile>> = _whdloadGames.asStateFlow()
 
 	fun rescan() {
-		_roms.value = FileManager.scanForCategory(context, FileCategory.ROMS)
-		_floppies.value = FileManager.scanForCategory(context, FileCategory.FLOPPIES)
-		_hardDrives.value = FileManager.scanForCategory(context, FileCategory.HARD_DRIVES)
-		_cdImages.value = FileManager.scanForCategory(context, FileCategory.CD_IMAGES)
-		_whdloadGames.value = FileManager.scanForCategory(context, FileCategory.WHDLOAD_GAMES)
+		if (!isScanning.compareAndSet(false, true)) return
+		try {
+			_roms.value = FileManager.scanForCategory(context, FileCategory.ROMS)
+			_floppies.value = FileManager.scanForCategory(context, FileCategory.FLOPPIES)
+			_hardDrives.value = FileManager.scanForCategory(context, FileCategory.HARD_DRIVES)
+			_cdImages.value = FileManager.scanForCategory(context, FileCategory.CD_IMAGES)
+			_whdloadGames.value = FileManager.scanForCategory(context, FileCategory.WHDLOAD_GAMES)
+		} finally {
+			isScanning.set(false)
+		}
 	}
 
 	fun rescanCategory(category: FileCategory) {

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.theme.AmiberryTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
@@ -55,11 +59,13 @@ class MainActivity : ComponentActivity() {
 		}
 
 		// Extract assets in background, skip if already done for this version
-		Thread {
+		lifecycleScope.launch(Dispatchers.IO) {
 			extractAssetsIfNeeded()
 			ensureDirectories()
-			runOnUiThread { isReady = true }
-		}.start()
+			withContext(Dispatchers.Main) {
+				isReady = true
+			}
+		}
 	}
 
 	private fun extractAssetsIfNeeded() {

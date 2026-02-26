@@ -47,7 +47,12 @@ object FileManager {
 		}
 
 		return try {
-			context.contentResolver.openInputStream(uri)?.use { input ->
+			val inputStream = context.contentResolver.openInputStream(uri)
+			if (inputStream == null) {
+				Log.e(TAG, "Failed to open input stream for URI: $uri")
+				return null
+			}
+			inputStream.use { input ->
 				finalFile.outputStream().use { output ->
 					input.copyTo(output)
 				}
@@ -130,7 +135,8 @@ object FileManager {
 		context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
 			val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
 			if (nameIndex >= 0 && cursor.moveToFirst()) {
-				return cursor.getString(nameIndex)
+				val name = cursor.getString(nameIndex)
+				if (!name.isNullOrBlank()) return name
 			}
 		}
 		// Fallback: extract from URI path

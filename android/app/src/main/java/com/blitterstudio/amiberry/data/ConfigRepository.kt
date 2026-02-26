@@ -49,11 +49,23 @@ class ConfigRepository(private val context: Context) {
 		return file
 	}
 
+	/**
+	 * Validate that a config name is safe for use as a filename.
+	 * Rejects path separators, parent directory references, and blank names.
+	 */
+	private fun isValidConfigName(name: String): Boolean {
+		if (name.isBlank()) return false
+		if (name.contains('/') || name.contains('\\') || name.contains("..")) return false
+		val testFile = File(confDir, "$name.uae")
+		return testFile.parentFile?.canonicalPath == confDir.canonicalPath
+	}
+
 	fun deleteConfig(path: String): Boolean {
 		return File(path).delete()
 	}
 
 	fun renameConfig(path: String, newName: String): File? {
+		if (!isValidConfigName(newName)) return null
 		val oldFile = File(path)
 		if (!oldFile.exists()) return null
 		val newFile = File(oldFile.parentFile, "$newName.uae")
@@ -61,6 +73,7 @@ class ConfigRepository(private val context: Context) {
 	}
 
 	fun duplicateConfig(path: String, newName: String): File? {
+		if (!isValidConfigName(newName)) return null
 		val source = File(path)
 		if (!source.exists()) return null
 		val target = File(source.parentFile, "$newName.uae")
