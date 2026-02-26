@@ -46,7 +46,7 @@ Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-
 
 ### Linux 🐧
 
-Amiberry is available as a `.deb` (Debian/Ubuntu/Raspberry Pi OS) and `.rpm` (Fedora/RHEL) package.
+Amiberry is available as a `.deb` (Debian/Ubuntu/Raspberry Pi OS) and `.rpm` (Fedora/RHEL) package. You can download the latest release from GitHub [using this link](https://github.com/BlitterStudio/amiberry/releases/latest).
 
 **Debian / Ubuntu / Raspberry Pi OS:**
 ```bash
@@ -81,7 +81,7 @@ brew install --cask amiberry
 ```
 
 **Via DMG:**
-1.  Download the latest `.dmg` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+1.  Download the latest `.dmg` from [Releases](https://github.com/BlitterStudio/amiberry/releases/latest).
 2.  Open the disk image.
 3.  Drag `Amiberry.app` to your `Applications` folder.
 
@@ -92,7 +92,7 @@ brew install --cask amiberry
 Amiberry supports Windows x86_64 using MinGW-w64 (GCC).
 
 **Releases:**
-1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases/latest).
 2.  Extract the contents to a directory of your choice.
 3.  Run `Amiberry.exe` to start the emulator.
 
