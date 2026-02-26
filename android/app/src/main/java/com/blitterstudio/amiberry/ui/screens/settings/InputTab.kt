@@ -32,14 +32,17 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 fun InputTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 
-	val portOptions = listOf(
-		"mouse" to "Mouse",
-		"joy0" to "Joystick 0",
-		"joy1" to "Joystick 1",
-		"kbd1" to "Keyboard Layout 1",
-		"kbd2" to "Keyboard Layout 2",
-		"kbd3" to "Keyboard Layout 3"
-	)
+	val portOptions = buildList {
+		add("mouse" to "Mouse")
+		add("joy0" to "Joystick 0")
+		add("joy1" to "Joystick 1")
+		if (hasTouchScreen()) {
+			add("onscreen_joy" to "On-Screen Joystick")
+		}
+		add("kbd1" to "Keyboard Layout 1")
+		add("kbd2" to "Keyboard Layout 2")
+		add("kbd3" to "Keyboard Layout 3")
+	}
 
 	Column(
 		modifier = Modifier
@@ -118,7 +121,13 @@ fun InputTab(viewModel: SettingsViewModel) {
 							DropdownMenuItem(
 								text = { Text(label) },
 								onClick = {
-									viewModel.updateSettings { s -> s.copy(joyport1 = value) }
+									viewModel.updateSettings { s ->
+										if (value == "onscreen_joy") {
+											s.copy(joyport1 = value, onScreenJoystick = true)
+										} else {
+											s.copy(joyport1 = value)
+										}
+									}
 									port1Expanded = false
 								}
 							)

@@ -85,7 +85,7 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 		did->buttonsort[1] = 1;
 		// Create +/- button entries for axes (needed by the input mapping system)
 		fixthings(did);
-		num_joystick++;
+		(*num_joystick)++;
 		write_log("On-Screen Joystick registered as JOY%d\n", osj_device_index);
 	}
 }

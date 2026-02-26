@@ -63,8 +63,27 @@ object EmulatorLauncher {
 		launchSdlActivity(context, args.toTypedArray())
 	}
 
+	/**
+	 * Launch emulation with pre-built args (used by SettingsScreen).
+	 */
+	fun launchWithArgs(context: Context, args: Array<String>) {
+		launchSdlActivity(context, args)
+	}
+
+	/**
+	 * Bring the existing emulation session back to the foreground.
+	 * If AmiberryActivity is still alive (emulation running or paused in ImGui),
+	 * it is reordered to the front. If not, a new instance opens the ImGui GUI.
+	 */
+	fun resumeEmulation(context: Context) {
+		val intent = Intent(context, AmiberryActivity::class.java)
+		intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+		context.startActivity(intent)
+	}
+
 	private fun launchSdlActivity(context: Context, args: Array<String>) {
 		val intent = Intent(context, AmiberryActivity::class.java)
+		intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 		intent.putExtra("SDL_ARGS", args)
 		context.startActivity(intent)
 	}

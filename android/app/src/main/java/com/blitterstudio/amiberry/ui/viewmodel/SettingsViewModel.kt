@@ -10,6 +10,7 @@ import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.ui.hasTouchScreen
 import kotlinx.coroutines.flow.StateFlow
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -24,6 +25,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	val availableCds: StateFlow<List<AmigaFile>> = repository.cdImages
 
 	init {
+		settings = applyConstraints(settings)
 		repository.rescan()
 	}
 
@@ -64,6 +66,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		// FPU: only internal for 68040/68060
 		if (result.fpuModel == 68040 && result.cpuModel < 68040) {
 			result = result.copy(fpuModel = 0)
+		}
+
+		// On-screen joystick requires a touchscreen
+		if (result.joyport1 == "onscreen_joy" && !hasTouchScreen(getApplication())) {
+			result = result.copy(joyport1 = "joy0", onScreenJoystick = false)
 		}
 
 		return result

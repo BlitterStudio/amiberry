@@ -40,8 +40,11 @@
 
         <!-- SDL emulator activity (launched by native UI) -->
         <activity android:name="com.blitterstudio.amiberry.AmiberryActivity"
+            android:launchMode="singleTop"
+            android:process=":sdl"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:enableOnBackInvokedCallback="true"
             android:exported="false">
             <meta-data android:name="SDL_MAIN_LIBRARY_NAMES" android:value="amiberry" />
         </activity>

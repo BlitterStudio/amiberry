@@ -120,7 +120,16 @@ object ConfigParser {
 			autoCrop = kv["gfx_auto_crop"].toBool(false),
 
 			joyport0 = kv["joyport0"] ?: "mouse",
-			joyport1 = kv["joyport1"] ?: "joy0",
+			// Round-trip: if on-screen joystick is enabled and joyport1 is default/absent,
+			// the auto-assignment in on_screen_joystick_set_enabled() is active
+			joyport1 = run {
+				val onScreenJoy = kv["amiberry.onscreen_joystick"].toBool(true)
+				if (onScreenJoy && (kv["joyport1"] == null || kv["joyport1"] == "joy0")) {
+					"onscreen_joy"
+				} else {
+					kv["joyport1"] ?: "joy0"
+				}
+			},
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
 			onScreenKeyboard = kv["amiberry.onscreen_keyboard"].toBool(true)
 		)

@@ -1092,6 +1092,10 @@ void on_screen_joystick_set_enabled(bool enabled)
 			if (changed_prefs.jports[1].id != target_id) {
 				changed_prefs.jports[1].id = target_id;
 				changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
+				// Also update currprefs immediately so input routing works
+				// right away, without waiting for the next config sync cycle.
+				currprefs.jports[1].id = target_id;
+				currprefs.jports[1].mode = JSEM_MODE_JOYSTICK;
 				inputdevice_config_change();
 			}
 		}

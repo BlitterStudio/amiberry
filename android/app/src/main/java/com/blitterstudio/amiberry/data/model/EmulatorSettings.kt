@@ -59,7 +59,7 @@ data class EmulatorSettings(
 
 	// Input
 	val joyport0: String = "mouse",
-	val joyport1: String = "joy0",
+	val joyport1: String = "onscreen_joy",
 	val onScreenJoystick: Boolean = true,
 	val onScreenKeyboard: Boolean = true
 ) {

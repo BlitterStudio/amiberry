@@ -78,7 +78,11 @@ object ConfigGenerator {
 
 		// Input
 		sb.appendLine("joyport0=${settings.joyport0}")
-		sb.appendLine("joyport1=${settings.joyport1}")
+		// When on-screen joystick is selected for port 1, omit joyport1 from config
+		// and let on_screen_joystick_set_enabled() auto-assign it at runtime
+		if (settings.joyport1 != "onscreen_joy") {
+			sb.appendLine("joyport1=${settings.joyport1}")
+		}
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")

@@ -51,6 +51,13 @@ fun isTvDevice(context: Context): Boolean {
 }
 
 /**
+ * Non-composable version for use in ViewModels or non-Compose code.
+ */
+fun hasTouchScreen(context: Context): Boolean {
+	return context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+}
+
+/**
  * Modifier that adds D-pad focus support with a visible focus ring.
  * When an element receives focus (via D-pad/keyboard navigation), a colored
  * border appears around it. The border disappears when focus is lost.
