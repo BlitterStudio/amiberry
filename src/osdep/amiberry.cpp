@@ -65,6 +65,7 @@
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
 #include "vkbd/vkbd.h"
+#include "macos_bookmarks.h"
 
 #ifdef __MACH__
 #include <string>
@@ -3335,41 +3336,49 @@ void get_configuration_path(char* out, const int size)
 void set_configuration_path(const std::string& newpath)
 {
 	config_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_nvram_path(const std::string& newpath)
 {
 	nvram_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_plugins_path(const std::string& newpath)
 {
 	plugins_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_video_path(const std::string& newpath)
 {
 	video_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_themes_path(const std::string& newpath)
 {
 	themes_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_shaders_path(const std::string& newpath)
 {
 	shaders_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_savestate_path(const std::string& newpath)
 {
 	savestate_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_controllers_path()
@@ -3380,6 +3389,7 @@ std::string get_controllers_path()
 void set_controllers_path(const std::string& newpath)
 {
 	controllers_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_retroarch_file()
@@ -3390,6 +3400,7 @@ std::string get_retroarch_file()
 void set_retroarch_file(const std::string& newpath)
 {
 	retroarch_file = newpath;
+	macos_bookmark_store(newpath);
 }
 
 bool get_logfile_enabled()
@@ -3428,6 +3439,7 @@ std::string get_whdbootpath()
 void set_whdbootpath(const std::string& newpath)
 {
 	whdboot_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_whdload_arch_path()
@@ -3438,6 +3450,7 @@ std::string get_whdload_arch_path()
 void set_whdload_arch_path(const std::string& newpath)
 {
 	whdload_arch_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_floppy_path()
@@ -3448,6 +3461,7 @@ std::string get_floppy_path()
 void set_floppy_path(const std::string& newpath)
 {
 	floppy_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_harddrive_path()
@@ -3458,6 +3472,7 @@ std::string get_harddrive_path()
 void set_harddrive_path(const std::string& newpath)
 {
 	harddrive_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_cdrom_path()
@@ -3468,6 +3483,7 @@ std::string get_cdrom_path()
 void set_cdrom_path(const std::string& newpath)
 {
 	cdrom_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_logfile_path()
@@ -3478,6 +3494,7 @@ std::string get_logfile_path()
 void set_logfile_path(const std::string& newpath)
 {
 	logfile_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_rom_path()
@@ -3493,6 +3510,7 @@ void get_rom_path(char* out, const int size)
 void set_rom_path(const std::string& newpath)
 {
 	rom_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void get_rp9_path(char* out, const int size)
@@ -4494,6 +4512,22 @@ std::string get_home_directory(const bool portable_mode)
 		return {tmp};
 	}
 #endif
+#ifdef __MACH__
+	// macOS: use ~/Library/Application Support/Amiberry (standard convention)
+	{
+		const auto user_home_dir = getenv("HOME");
+		if (user_home_dir != nullptr)
+		{
+			std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+			if (!my_existsdir(app_support.c_str()))
+			{
+				my_mkdir(app_support.c_str());
+			}
+			write_log("macOS: Using home directory %s\n", app_support.c_str());
+			return app_support;
+		}
+	}
+#endif
 	if (portable_mode)
 	{
 		// Portable mode, all in startup path
@@ -4538,17 +4572,17 @@ std::string get_home_directory(const bool portable_mode)
 std::string get_config_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	const auto user_home_dir = getenv("HOME");
-	if (!directory_exists(user_home_dir, "/Amiberry"))
+	// macOS: use ~/Library/Application Support/Amiberry/Configurations
 	{
-		my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+		const auto user_home_dir = getenv("HOME");
+		std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+		if (!my_existsdir(app_support.c_str()))
+			my_mkdir(app_support.c_str());
+		std::string config = app_support + "/Configurations";
+		if (!my_existsdir(config.c_str()))
+			my_mkdir(config.c_str());
+		return config;
 	}
-	if (!directory_exists(user_home_dir, "/Amiberry/Configurations"))
-	{
-		my_mkdir((std::string(user_home_dir) + "/Amiberry/Configurations").c_str());
-	}
-	auto result = std::string(user_home_dir);
-	return result.append("/Amiberry/Configurations");
 #elif defined(_WIN32)
 	{
 		const auto user_home_dir = getenv("USERPROFILE");
@@ -5447,6 +5481,7 @@ int amiberry_main(int argc, char* argv[])
 	{
 		load_amiberry_settings();
 	}
+	macos_bookmarks_init(get_home_directory(portable_mode));
 	create_missing_amiberry_folders();
 
 	makeverstr(VersionStr);

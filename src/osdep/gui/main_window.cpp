@@ -29,6 +29,7 @@
 #include "savestate.h"
 #include "target.h"
 #include "tinyxml2.h"
+#include "macos_bookmarks.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -258,6 +259,7 @@ namespace
 		if (ImGuiFileDialog::Instance()->IsOk())
 		{
 			outPath = getResult(ImGuiFileDialog::Instance());
+			macos_bookmark_store(outPath);
 			ok = true;
 		}
 		ImGuiFileDialog::Instance()->Close();
