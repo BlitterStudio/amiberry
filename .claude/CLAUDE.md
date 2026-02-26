@@ -149,6 +149,34 @@ amiberry/
 - `src/osdep/sigsegv_handler.cpp` - SIGSEGV handler for JIT code faults
 - `src/vm.cpp` - Virtual memory abstraction (reserve/commit/decommit)
 
+### ROM Detection & Registry System
+
+**Registry:** Amiberry uses an INI-file-based "registry" (`src/osdep/registry.cpp`, always `inimode=1`) stored in `amiberry.ini`. Sections act as registry "trees" (e.g., `[DetectedROMs]`). Persists across launches.
+
+**ROM scanning flow:**
+1. `amiberry_main()` early arg loop processes `--rescan-roms` → sets `forceroms = 1`
+2. `initialize_ini()` → `read_rom_list(true)` checks `!exists || forceroms`
+3. If true: `scan_roms()` runs — walks ROM path, CRC32-matches against `rommgr.cpp` database (340+ entries), writes to `[DetectedROMs]` in INI, adds built-in AROS ROMs (crc32==0xffffffff)
+4. `read_rom_list()` loads entries from INI into global `rl[]` array
+5. Model selection (`bip_a500()`, etc.) calls `configure_rom(p, roms, romcheck)` which searches `rl[]` for matching ROM IDs in priority order
+
+**Critical timing:** `initialize_ini()` runs BEFORE `parse_cmdline_and_init_file()`. CLI flags affecting ROM scanning must be processed in the early arg loop in `amiberry_main()` (alongside `--log`, `--jit-selftest`), not in `parse_cmdline()`.
+
+**`--rescan-roms` flag:** Forces `scan_roms()` on every launch. Android always passes this to ensure newly added ROMs are detected. Added in the early arg scan at `amiberry.cpp:5441`.
+
+### CLI Argument Processing Order
+
+Startup in `amiberry_main()` processes arguments in phases:
+1. **Early arg scan** (`amiberry_main()` loop) — `--log`, `--jit-selftest`, `--rescan-roms`
+2. `parse_amiberry_cmd_line()` — Amiberry-specific args (custom data dir, etc.)
+3. **`initialize_ini()`** — loads `amiberry.ini`, calls `read_rom_list()` (ROM scanning happens here)
+4. `parse_cmdline_and_init_file()`:
+   a. `parse_cmdline_2()` — `-cfgparam` only
+   b. `target_cfgfile_load(optionsfile)` — loads default config if exists
+   c. `parse_cmdline()` — `--model`, `--config`, `-0`, `--autoload`, `-s`, etc. (processed in argv order)
+
+**Key implication:** `--model` and `--config` in `parse_cmdline()` execute in command-line order. When Android passes `--model A500 --config file.uae`, the config file loads AFTER `bip_a500()` and can override ROM selection via `kickstart_rom_file`.
+
 ### Natmem / JIT Memory System
 
 The emulator maps Amiga's address space into a contiguous host virtual memory block ("natmem") for direct pointer-based access from both the JIT compiler and interpreter (`canbang` mode).
@@ -259,6 +287,33 @@ The UAE input device system uses `inputdevice_functions` structs for each device
 - `send_input_event(INPUTEVENT_JOY*_*, state, max, autofire)` — direct event injection, bypasses port mode. Avoid for new code.
 
 **Device registration pattern:** Append to `di_joystick[]`, increment `num_joystick`, call `cleardid()` + `fixthings()` to initialize metadata, set axes/buttons/names/mappings. The device then appears in the Input configuration GUI dropdown.
+
+### Android App Architecture
+
+The Android app (`android/app/src/main/java/com/blitterstudio/amiberry/`) is a Kotlin/Jetpack Compose UI that launches the native C++ emulator via SDL Activity intents. No JNI — all communication is via command-line args passed through `intent.putExtra("SDL_ARGS", args)`.
+
+**Key files:**
+- `data/EmulatorLauncher.kt` — Central launch point; builds CLI args for all launch modes (Quick Start, config, WHDLoad, Advanced GUI)
+- `data/ConfigGenerator.kt` — Generates `.uae` config files from `EmulatorSettings`
+- `data/ConfigParser.kt` — Parses `.uae` files back to `EmulatorSettings`
+- `data/FileManager.kt` — File import via SAF (Storage Access Framework), scans directories for ROMs/floppies/CDs
+- `data/FileRepository.kt` — Singleton providing `StateFlow<List<AmigaFile>>` for each file category
+- `data/model/AmigaModel.kt` — Enum of 10 Amiga models with `cmdArg` matching `--model` handler in `main.cpp`
+- `data/model/EmulatorSettings.kt` — All configurable settings with `fromModel()` factory
+- `ui/screens/QuickStartScreen.kt` — Model selector, media import, WHDLoad launcher
+- `ui/screens/settings/SettingsScreen.kt` — Tabbed settings (CPU & Chipset, Memory, Display, Sound, Input, Storage)
+- `ui/screens/settings/StorageTab.kt` — ROM selector dropdown, floppy drives, CD image
+- `ui/viewmodel/QuickStartViewModel.kt` — State for Quick Start screen
+- `ui/viewmodel/SettingsViewModel.kt` — State for Settings screen with hardware constraints
+
+**Launch modes:**
+- Quick Start: `--rescan-roms --model A1200 -0 <floppy> -G`
+- Config file: `--rescan-roms --config <path>.uae -G`
+- WHDLoad: `--rescan-roms --autoload <lha> -G`
+- Advanced GUI: `--rescan-roms` (no `-G`, opens ImGui)
+- Settings: `--rescan-roms --model <model> --config <generated>.uae -G`
+
+**File categories scanned by Android UI:** ROMs (`.rom`, `.bin`), floppies (`.adf`, `.adz`, `.ipf`, `.dms`), CDs (`.iso`, `.cue`, `.bin`), WHDLoad games (`.lha`, `.lzx`, `.lzh`). Scan directories: `{appStorageDir}/<category>/` + root + `whdboot/game-data/Kickstarts/` for ROMs.
 
 ### Platform Support
 

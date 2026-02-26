@@ -17,7 +17,7 @@ object EmulatorLauncher {
 		floppyPath: String? = null,
 		cdPath: String? = null
 	) {
-		val args = mutableListOf("--model", model.cmdArg)
+		val args = mutableListOf("--rescan-roms", "--model", model.cmdArg)
 
 		if (floppyPath != null && model.hasFloppy) {
 			args.addAll(listOf("-0", floppyPath))
@@ -35,7 +35,7 @@ object EmulatorLauncher {
 	 * Launch emulation from a saved .uae config file.
 	 */
 	fun launchWithConfig(context: Context, configPath: String, skipGui: Boolean = true) {
-		val args = mutableListOf("--config", configPath)
+		val args = mutableListOf("--rescan-roms", "--config", configPath)
 		if (skipGui) args.add("-G")
 
 		launchSdlActivity(context, args.toTypedArray())
@@ -46,7 +46,7 @@ object EmulatorLauncher {
 	 * The emulator auto-configures based on its XML database match.
 	 */
 	fun launchWhdload(context: Context, lhaPath: String) {
-		val args = arrayOf("--autoload", lhaPath, "-G")
+		val args = arrayOf("--rescan-roms", "--autoload", lhaPath, "-G")
 		launchSdlActivity(context, args)
 	}
 
@@ -54,7 +54,7 @@ object EmulatorLauncher {
 	 * Open the full ImGui GUI, optionally loading a config file for editing.
 	 */
 	fun launchAdvancedGui(context: Context, configPath: String? = null) {
-		val args = mutableListOf<String>()
+		val args = mutableListOf("--rescan-roms")
 		if (configPath != null) {
 			args.addAll(listOf("--config", configPath))
 		}

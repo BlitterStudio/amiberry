@@ -5438,6 +5438,8 @@ int amiberry_main(int argc, char* argv[])
 			console_logging = 1;
 		if (_tcscmp(argv[i], _T("--jit-selftest")) == 0)
 			run_jit_selftest = true;
+		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
+			forceroms = 1;
 	}
 
 	if (run_jit_selftest)

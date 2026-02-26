@@ -105,6 +105,7 @@ object ConfigGenerator {
 	fun generateLaunchArgs(context: Context, settings: EmulatorSettings): Array<String> {
 		val configFile = writeConfig(context, settings, ".current_settings.uae")
 		return arrayOf(
+			"--rescan-roms",
 			"--model", settings.baseModel.cmdArg,
 			"--config", configFile.absolutePath,
 			"-G"
