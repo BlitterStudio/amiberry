@@ -4711,6 +4711,16 @@ void create_missing_amiberry_folders()
 		}
 	}
 #endif
+	// Helper to copy directory contents using std::filesystem (handles spaces in paths)
+	auto copy_dir_contents = [](const std::string& src, const std::string& dst) {
+		try {
+			std::filesystem::copy(src, dst,
+				std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+		} catch (const std::exception& e) {
+			write_log("Failed to copy from %s to %s: %s\n", src.c_str(), dst.c_str(), e.what());
+		}
+	};
+
 	if (!my_existsdir(config_path.c_str()))
 		my_mkdir(config_path.c_str());
 	if (!my_existsdir(controllers_path.c_str()))
@@ -4724,13 +4734,11 @@ void create_missing_amiberry_folders()
 		// copy default controller files, if they exist in AMIBERRY_DATADIR/controllers
 		if (my_existsdir(default_controller_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_controller_path + "* " + controllers_path;
-			system(command.c_str());
+			copy_dir_contents(default_controller_path, controllers_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/controllers/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/controllers/* " + controllers_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/controllers/", controllers_path);
 		}
 	}
 	if (!my_existsdir(whdboot_path.c_str()))
@@ -4744,18 +4752,15 @@ void create_missing_amiberry_folders()
 		// copy default whdboot files, if they exist in AMIBERRY_DATADIR/whdboot
 		if (my_existsdir(default_whdboot_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_whdboot_path + "* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents(default_whdboot_path, whdboot_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/whdboot/", whdboot_path);
 		}
 		else if (my_existsdir("/usr/local/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/local/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/local/share/amiberry/whdboot/", whdboot_path);
 		}
 		else
 		{
@@ -4836,18 +4841,15 @@ void create_missing_amiberry_folders()
 		// copy default kickstart files, if they exist in AMIBERRY_DATADIR/roms
 		if (my_existsdir(default_roms_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_roms_path + "* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents(default_roms_path, rom_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/roms/", rom_path);
 		}
 		else if (my_existsdir("/usr/local/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -R /usr/local/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/local/share/amiberry/roms/", rom_path);
 		}
 	}
 	//if (!my_existsdir(rp9_path.c_str()))
