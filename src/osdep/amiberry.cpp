@@ -65,6 +65,7 @@
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
 #include "vkbd/vkbd.h"
+#include "macos_bookmarks.h"
 
 #ifdef __MACH__
 #include <string>
@@ -3335,41 +3336,49 @@ void get_configuration_path(char* out, const int size)
 void set_configuration_path(const std::string& newpath)
 {
 	config_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_nvram_path(const std::string& newpath)
 {
 	nvram_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_plugins_path(const std::string& newpath)
 {
 	plugins_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_video_path(const std::string& newpath)
 {
 	video_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_themes_path(const std::string& newpath)
 {
 	themes_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_shaders_path(const std::string& newpath)
 {
 	shaders_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_savestate_path(const std::string& newpath)
 {
 	savestate_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_controllers_path()
@@ -3380,6 +3389,7 @@ std::string get_controllers_path()
 void set_controllers_path(const std::string& newpath)
 {
 	controllers_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_retroarch_file()
@@ -3390,6 +3400,7 @@ std::string get_retroarch_file()
 void set_retroarch_file(const std::string& newpath)
 {
 	retroarch_file = newpath;
+	macos_bookmark_store(newpath);
 }
 
 bool get_logfile_enabled()
@@ -3428,6 +3439,7 @@ std::string get_whdbootpath()
 void set_whdbootpath(const std::string& newpath)
 {
 	whdboot_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_whdload_arch_path()
@@ -3438,6 +3450,7 @@ std::string get_whdload_arch_path()
 void set_whdload_arch_path(const std::string& newpath)
 {
 	whdload_arch_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_floppy_path()
@@ -3448,6 +3461,7 @@ std::string get_floppy_path()
 void set_floppy_path(const std::string& newpath)
 {
 	floppy_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_harddrive_path()
@@ -3458,6 +3472,7 @@ std::string get_harddrive_path()
 void set_harddrive_path(const std::string& newpath)
 {
 	harddrive_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_cdrom_path()
@@ -3468,6 +3483,7 @@ std::string get_cdrom_path()
 void set_cdrom_path(const std::string& newpath)
 {
 	cdrom_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_logfile_path()
@@ -3478,6 +3494,7 @@ std::string get_logfile_path()
 void set_logfile_path(const std::string& newpath)
 {
 	logfile_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_rom_path()
@@ -3493,6 +3510,7 @@ void get_rom_path(char* out, const int size)
 void set_rom_path(const std::string& newpath)
 {
 	rom_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void get_rp9_path(char* out, const int size)
@@ -4494,6 +4512,22 @@ std::string get_home_directory(const bool portable_mode)
 		return {tmp};
 	}
 #endif
+#ifdef __MACH__
+	// macOS: use ~/Library/Application Support/Amiberry (standard convention)
+	{
+		const auto user_home_dir = getenv("HOME");
+		if (user_home_dir != nullptr)
+		{
+			std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+			if (!my_existsdir(app_support.c_str()))
+			{
+				my_mkdir(app_support.c_str());
+			}
+			write_log("macOS: Using home directory %s\n", app_support.c_str());
+			return app_support;
+		}
+	}
+#endif
 	if (portable_mode)
 	{
 		// Portable mode, all in startup path
@@ -4538,17 +4572,17 @@ std::string get_home_directory(const bool portable_mode)
 std::string get_config_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	const auto user_home_dir = getenv("HOME");
-	if (!directory_exists(user_home_dir, "/Amiberry"))
+	// macOS: use ~/Library/Application Support/Amiberry/Configurations
 	{
-		my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+		const auto user_home_dir = getenv("HOME");
+		std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+		if (!my_existsdir(app_support.c_str()))
+			my_mkdir(app_support.c_str());
+		std::string config = app_support + "/Configurations";
+		if (!my_existsdir(config.c_str()))
+			my_mkdir(config.c_str());
+		return config;
 	}
-	if (!directory_exists(user_home_dir, "/Amiberry/Configurations"))
-	{
-		my_mkdir((std::string(user_home_dir) + "/Amiberry/Configurations").c_str());
-	}
-	auto result = std::string(user_home_dir);
-	return result.append("/Amiberry/Configurations");
 #elif defined(_WIN32)
 	{
 		const auto user_home_dir = getenv("USERPROFILE");
@@ -4711,6 +4745,16 @@ void create_missing_amiberry_folders()
 		}
 	}
 #endif
+	// Helper to copy directory contents using std::filesystem (handles spaces in paths)
+	auto copy_dir_contents = [](const std::string& src, const std::string& dst) {
+		try {
+			std::filesystem::copy(src, dst,
+				std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+		} catch (const std::exception& e) {
+			write_log("Failed to copy from %s to %s: %s\n", src.c_str(), dst.c_str(), e.what());
+		}
+	};
+
 	if (!my_existsdir(config_path.c_str()))
 		my_mkdir(config_path.c_str());
 	if (!my_existsdir(controllers_path.c_str()))
@@ -4724,13 +4768,11 @@ void create_missing_amiberry_folders()
 		// copy default controller files, if they exist in AMIBERRY_DATADIR/controllers
 		if (my_existsdir(default_controller_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_controller_path + "* " + controllers_path;
-			system(command.c_str());
+			copy_dir_contents(default_controller_path, controllers_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/controllers/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/controllers/* " + controllers_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/controllers/", controllers_path);
 		}
 	}
 	if (!my_existsdir(whdboot_path.c_str()))
@@ -4744,18 +4786,15 @@ void create_missing_amiberry_folders()
 		// copy default whdboot files, if they exist in AMIBERRY_DATADIR/whdboot
 		if (my_existsdir(default_whdboot_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_whdboot_path + "* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents(default_whdboot_path, whdboot_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/whdboot/", whdboot_path);
 		}
 		else if (my_existsdir("/usr/local/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/local/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/local/share/amiberry/whdboot/", whdboot_path);
 		}
 		else
 		{
@@ -4836,18 +4875,15 @@ void create_missing_amiberry_folders()
 		// copy default kickstart files, if they exist in AMIBERRY_DATADIR/roms
 		if (my_existsdir(default_roms_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_roms_path + "* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents(default_roms_path, rom_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/roms/", rom_path);
 		}
 		else if (my_existsdir("/usr/local/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -R /usr/local/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/local/share/amiberry/roms/", rom_path);
 		}
 	}
 	//if (!my_existsdir(rp9_path.c_str()))
@@ -5445,6 +5481,7 @@ int amiberry_main(int argc, char* argv[])
 	{
 		load_amiberry_settings();
 	}
+	macos_bookmarks_init(get_home_directory(portable_mode));
 	create_missing_amiberry_folders();
 
 	makeverstr(VersionStr);

@@ -493,6 +493,11 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     )
 endif()
 
+# Security-scoped bookmarks for App Store sandbox
+if(MACOS_APP_STORE)
+    target_sources(${PROJECT_NAME} PRIVATE src/osdep/macos_bookmarks.mm)
+endif()
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         _FILE_OFFSET_BITS=64
         AMIBERRY_VERSION="${PROJECT_VERSION}"
