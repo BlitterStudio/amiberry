@@ -56,6 +56,11 @@ UAE_DLHANDLE uae_qemu_uae_init(void)
 	}
 	initialized = true;
 
+#ifdef MACOS_APP_STORE
+	write_log(_T("PPC emulation via qemu-uae plugin is not available in App Store builds\n"));
+	return handle;
+#endif
+
 	handle = uae_dlopen_plugin(_T("qemu-uae"));
 	if (!handle) {
 		gui_message(_T("Error loading qemu-uae plugin\n"));
