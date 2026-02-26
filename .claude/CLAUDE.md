@@ -13,7 +13,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **FreeBSD**: x86_64
 - **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
-- **Version**: 8.0.0 (Public Beta 22)
+- **Version**: 8.0.0 (Public Beta 25)
 - **Languages**: C/C++
 - **Build System**: CMake (minimum 3.16)
 - **License**: GPL (see LICENSE file)
@@ -136,6 +136,8 @@ amiberry/
 - `src/osdep/amiberry_gfx.cpp` - Graphics/display handling
 - `src/osdep/amiberry_input.cpp` - Input device handling
 - `src/osdep/amiberry_input.h` - Input device types and declarations
+- `src/osdep/macos_bookmarks.h` - macOS security-scoped bookmark API (no-op stubs when not App Store)
+- `src/osdep/macos_bookmarks.mm` - macOS security-scoped bookmark implementation (Objective-C++)
 - `src/osdep/on_screen_joystick.cpp` - On-screen touch joystick (Android/touchscreens)
 - `src/osdep/on_screen_joystick.h` - On-screen joystick public API
 - `src/osdep/amiberry_gui.cpp` - GUI management
@@ -269,10 +271,31 @@ Platform-specific code is in `src/osdep/`:
 
 ### macOS Port Notes
 
+**Home directory (since Beta 23):**
+- macOS now uses `~/Library/Application Support/Amiberry` as the HOME directory (standard macOS convention), instead of the previous `~/Amiberry`. This path contains spaces, so all shell commands operating on paths must quote arguments.
+- `get_home_directory()` creates this directory on first run.
+- `get_config_directory()` returns `~/Library/Application Support/Amiberry/Configurations`.
+- The `amiberry.conf` file is stored at `~/Library/Application Support/Amiberry/Configurations/amiberry.conf`.
+- All user data subdirectories (floppies, roms, savestates, etc.) are created under `~/Library/Application Support/Amiberry/`.
+
+**Security-scoped bookmarks (App Store preparation):**
+- `src/osdep/macos_bookmarks.h` / `macos_bookmarks.mm` — bookmark system for macOS App Sandbox.
+- Active only when `MACOS_APP_STORE` is defined; no-op inline stubs otherwise.
+- Every `set_*_path()` function calls `macos_bookmark_store()` to persist access rights.
+- `macos_bookmarks_init()` is called at startup (in `amiberry_main()`) to restore bookmarks.
+- Bookmarks are stored as a binary plist in `~/Library/Application Support/Amiberry/bookmarks.plist`.
+- Entitlements: `packaging/macos/Amiberry-AppStore.entitlements` adds `app-sandbox`, `files.user-selected.read-write`, `files.bookmarks.app-scope`, `network.client`, `device.usb`.
+
+**Initial folder setup:**
+- `create_missing_amiberry_folders()` uses `std::filesystem::copy()` (via a `copy_dir_contents` lambda) instead of `system("cp -R ...")` to handle spaces in paths correctly. This applies to all platforms, not just macOS.
+
+**Shell quoting in downloads:**
+- `download_file()` in `amiberry.cpp` wraps both the destination path and source URL in double quotes when constructing curl/wget shell commands via `popen()`. This fixes failures when paths contain spaces.
+
 **DiskArbitration & CD-ROMs:**
 - macOS mounts Audio CDs via `cddafs`, which inherently puts an exclusive lock on the standard block device (e.g., `/dev/disk4`) returning `EBUSY` when `open()` is attempted.
 - `src/osdep/blkdev_ioctl.cpp` handles this by intentionally falling back to the raw character device (`/dev/rdisk4`).
-- Interfacing with Apple's `DiskArbitration` framework (to retrieve CD TOCs) *requires* the block device string. Therefore `ioctl_command_toc2` temporarily reverts `/dev/rdiskX` back to `/dev/diskX` before passing it to `DADiskCreateFromBSDName`. 
+- Interfacing with Apple's `DiskArbitration` framework (to retrieve CD TOCs) *requires* the block device string. Therefore `ioctl_command_toc2` temporarily reverts `/dev/rdiskX` back to `/dev/diskX` before passing it to `DADiskCreateFromBSDName`.
 - Fetching audio sectors requires grouping `CDDA_BUFFERS` into a single `ioctl` call from the character device, and unpacking the contiguous stream with a 96-byte padding gap matching Amiberry's 2448-byte CDDA stride.
 
 ### Windows Port Notes
