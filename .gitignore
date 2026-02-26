@@ -144,6 +144,9 @@ Brewfile.lock.json
 
 # Android subproject specific
 /android/local.properties
+/android/keystore.properties
+*.keystore
+*.jks
 /android/.gradle/
 /android/build/
 /android/app/build/

@@ -1,0 +1,49 @@
+package com.blitterstudio.amiberry.ui.theme
+
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+
+private val AmiberryRed = Color(0xFFCC3333)
+private val AmiberryRedDark = Color(0xFF992222)
+private val AmiberryBlue = Color(0xFF3366CC)
+
+private val DarkColorScheme = darkColorScheme(
+	primary = AmiberryRed,
+	secondary = AmiberryBlue,
+	tertiary = Color(0xFF66BB6A)
+)
+
+private val LightColorScheme = lightColorScheme(
+	primary = AmiberryRedDark,
+	secondary = AmiberryBlue,
+	tertiary = Color(0xFF388E3C)
+)
+
+@Composable
+fun AmiberryTheme(
+	darkTheme: Boolean = isSystemInDarkTheme(),
+	dynamicColor: Boolean = true,
+	content: @Composable () -> Unit
+) {
+	val colorScheme = when {
+		dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+			val context = LocalContext.current
+			if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+		}
+		darkTheme -> DarkColorScheme
+		else -> LightColorScheme
+	}
+
+	MaterialTheme(
+		colorScheme = colorScheme,
+		content = content
+	)
+}

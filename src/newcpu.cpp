@@ -48,6 +48,7 @@
 #endif
 #include "cpuboard.h"
 #include "threaddep/thread.h"
+#include "cpu_thread.h"
 #ifdef WITH_X86
 #include "x86.h"
 #endif
@@ -5333,13 +5334,20 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
+	// Signal request: set mode LAST (after addr/size are visible) with release semantics.
+	// The main thread polls cpu_thread_indirect_mode with acquire - no semaphore needed.
 	__atomic_store_n(&cpu_thread_indirect_mode, 2, __ATOMIC_RELEASE);
-	uae_sem_post(&cpu_out_sema);
 
-	for (int i = 0; i < 500000; i++) {
-		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) == 0xfe) {
-			if (uae_sem_trywait(&cpu_in_sema) == 0)
-				return cpu_thread_indirect_val;
+	// Spin-wait for main thread to complete the read.
+	// The main thread sets mode to 0xfe when done (data in cpu_thread_indirect_val).
+	for (;;) {
+		uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
+		if (mode == 0xfe) {
+			return cpu_thread_indirect_val;
+		}
+		// Break out if mode change requested (shutdown)
+		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
+			return 0;
 		}
 #if defined(CPU_arm) || defined(CPU_AARCH64)
 		__asm__ __volatile__ ("yield");
@@ -5349,9 +5357,6 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 		__asm__ __volatile__ ("pause");
 #endif
 	}
-
-	uae_sem_wait(&cpu_in_sema);
-	return cpu_thread_indirect_val;
 }
 
 void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
@@ -5376,13 +5381,19 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
 	cpu_thread_indirect_val = data;
+	// Signal request: set mode LAST with release semantics.
 	__atomic_store_n(&cpu_thread_indirect_mode, 1, __ATOMIC_RELEASE);
-	uae_sem_post(&cpu_out_sema);
 
-	for (int i = 0; i < 500000; i++) {
-		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) == 0xff) {
-			if (uae_sem_trywait(&cpu_in_sema) == 0)
-				return;
+	// Spin-wait for main thread to complete the write.
+	// The main thread sets mode to 0xff when done.
+	for (;;) {
+		uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
+		if (mode == 0xff) {
+			return;
+		}
+		// Break out if mode change requested (shutdown)
+		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
+			return;
 		}
 #if defined(CPU_arm) || defined(CPU_AARCH64)
 		__asm__ __volatile__ ("yield");
@@ -5392,13 +5403,45 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 		__asm__ __volatile__ ("pause");
 #endif
 	}
+}
 
-	uae_sem_wait(&cpu_in_sema);
+// Service one indirect memory request from the CPU thread.
+// Returns true if a request was processed.
+static inline bool service_cpu_indirect_request(void)
+{
+	uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
+	if (mode != 1 && mode != 2)
+		return false;
+
+	uaecptr addr = cpu_thread_indirect_addr;
+	uae_u32 data = cpu_thread_indirect_val;
+	uae_u32 size = cpu_thread_indirect_size;
+
+	if (mode == 1) {
+		// Write
+		addrbank* ab = thread_mem_banks[bankindex(addr)];
+		switch (size) {
+		case 0: ab->bput(addr, data & 0xff); break;
+		case 1: ab->wput(addr, data & 0xffff); break;
+		case 2: ab->lput(addr, data); break;
+		}
+		__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
+	} else {
+		// Read
+		addrbank* ab = thread_mem_banks[bankindex(addr)];
+		switch (size) {
+		case 0: data = ab->bget(addr) & 0xff; break;
+		case 1: data = ab->wget(addr) & 0xffff; break;
+		case 2: data = ab->lget(addr); break;
+		}
+		cpu_thread_indirect_val = data;
+		__atomic_store_n(&cpu_thread_indirect_mode, 0xfe, __ATOMIC_RELEASE);
+	}
+	return true;
 }
 
 static void run_cpu_thread(int (*f)(void *))
 {
-	uae_u32 framecnt = -1;
 	int vp = 0;
 	int intlev_prev = 0;
 	int cck_cnt = 0;
@@ -5420,49 +5463,13 @@ static void run_cpu_thread(int (*f)(void *))
 	}
 
 	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
-		// Check for CPU requests
-		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE) <= 2) {
-			while (uae_sem_trywait(&cpu_out_sema) == 0) {
-				uaecptr addr;
-				uae_u32 data, size, mode;
-				mode = cpu_thread_indirect_mode;
-				if (mode == 0 || mode == 0xff || mode == 0xfe) break;
-				addr = cpu_thread_indirect_addr;
-				data = cpu_thread_indirect_val;
-				size = cpu_thread_indirect_size;
-				switch (mode)
-				{
-				case 1: // Write
-				{
-					addrbank* ab = thread_mem_banks[bankindex(addr)];
-					switch (size)
-					{
-					case 0: ab->bput(addr, data & 0xff); break;
-					case 1: ab->wput(addr, data & 0xffff); break;
-					case 2: ab->lput(addr, data); break;
-					}
-					__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
-					uae_sem_post(&cpu_in_sema);
-					break;
-				}
-				case 2: // Read
-				{
-					addrbank* ab = thread_mem_banks[bankindex(addr)];
-					switch (size)
-					{
-					case 0: data = ab->bget(addr) & 0xff; break;
-					case 1: data = ab->wget(addr) & 0xffff; break;
-					case 2: data = ab->lget(addr); break;
-					}
-					cpu_thread_indirect_val = data;
-					__atomic_store_n(&cpu_thread_indirect_mode, 0xfe, __ATOMIC_RELEASE);
-					uae_sem_post(&cpu_in_sema);
-					break;
-				}
-				}
-			}
-		}
+		// Service any pending indirect memory request (lockless fast path)
+		service_cpu_indirect_request();
 
+		// Flush any batched register operations from the CPU thread
+		cpu_thread_flush_register_batch();
+
+		// Check for CPU reset request
 		uae_u32 reset_val = __atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE);
 		if (reset_val & 1) {
 			bool hardreset = reset_val & 2;
@@ -5472,23 +5479,30 @@ static void run_cpu_thread(int (*f)(void *))
 			uae_sem_post(&cpu_in_sema);
 		}
 
-		// Advance time
-		int cycles_to_do = 1;
+		// Advance time - determine how many CCKs to run before re-checking IO
+		// When idle (no pending request), run more cycles per iteration.
+		// When a request just completed, re-check immediately after 1 cycle.
+		int cycles_to_do;
 		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) > 2) {
-			cycles_to_do = currprefs.m68k_speed < 0 ? 256 : 128; // Process more CCKs when idle
+			cycles_to_do = currprefs.m68k_speed < 0 ? 256 : 128;
+		} else {
+			cycles_to_do = 1;
 		}
 
 		for (int i = 0; i < cycles_to_do; i++) {
-			if (i > 0 && __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) <= 2) {
-				break;
+			// Check for incoming IO request EVERY cycle for minimal latency
+			if (i > 0 && service_cpu_indirect_request()) {
+				// Serviced a request - flush register batch too while we're at it
+				cpu_thread_flush_register_batch();
 			}
+
 			do_cycles(CYCLE_UNIT);
 
 			if (++cck_cnt >= 227) {
 				cck_cnt = 0;
 			}
 
-			if ((cck_cnt & 1) == 0) { // Check interrupts more frequently
+			if ((cck_cnt & 1) == 0) {
 				check_uae_int_request();
 				int intr = intlev();
 				if (intr != intlev_prev) {
@@ -5523,10 +5537,10 @@ static void run_cpu_thread(int (*f)(void *))
 				frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
 				frame_time_t c = read_processor_time();
 				while (next > c && next - c < vsyncmaxtime * 2) {
-					if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) <= 2)
-						break;
-					
-					sleep_millis(0); // Yield
+					// Even during frame limiter sleep, service IO requests
+					if (service_cpu_indirect_request()) {
+						cpu_thread_flush_register_batch();
+					}
 					c = read_processor_time();
 				}
 			}

@@ -46,7 +46,7 @@ Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-
 
 ### Linux 🐧
 
-Amiberry is available as a `.deb` (Debian/Ubuntu/Raspberry Pi OS) and `.rpm` (Fedora/RHEL) package.
+Amiberry is available as a `.deb` (Debian/Ubuntu/Raspberry Pi OS) and `.rpm` (Fedora/RHEL) package. You can download the latest release from GitHub [using this link](https://github.com/BlitterStudio/amiberry/releases/latest).
 
 **Debian / Ubuntu / Raspberry Pi OS:**
 ```bash
@@ -81,7 +81,7 @@ brew install --cask amiberry
 ```
 
 **Via DMG:**
-1.  Download the latest `.dmg` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+1.  Download the latest `.dmg` from [Releases](https://github.com/BlitterStudio/amiberry/releases/latest).
 2.  Open the disk image.
 3.  Drag `Amiberry.app` to your `Applications` folder.
 
@@ -92,7 +92,7 @@ brew install --cask amiberry
 Amiberry supports Windows x86_64 using MinGW-w64 (GCC).
 
 **Releases:**
-1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases/latest).
 2.  Extract the contents to a directory of your choice.
 3.  Run `Amiberry.exe` to start the emulator.
 
@@ -103,15 +103,6 @@ For detailed configuration guides, tutorials, and compatibility lists, please vi
 -   [First Installation Guide](https://github.com/BlitterStudio/amiberry/wiki/First-Installation)
 -   [Compile from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source)
 -   [Troubleshooting](https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting)
-
-### ARM64 JIT diagnostics
-
-On ARM64 hosts, JIT includes runtime safety guards for known unstable startup paths.
-
-- `AMIBERRY_ARM64_GUARD_VERBOSE=1` enables detailed guard-learning logs (diagnostic use).
-- Optional ARM64 hotspot guard is now disabled by default for performance.
-- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` re-enables optional hotspot guard logic for A/B testing.
-- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` forces optional hotspot guard off; fixed safety fallback for the known startup hotspot remains active.
 
 ## 🤝 Contributing
 

@@ -31,6 +31,25 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/)
 
+# Codesign all bundled code with the same team identity
+# This removes the need for com.apple.security.cs.disable-library-validation
+set(MACOS_CODESIGN_IDENTITY "" CACHE STRING "Code signing identity for macOS (e.g. 'Developer ID Application: Name (TEAMID)')")
+if(MACOS_CODESIGN_IDENTITY)
+    # Sign plugins
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND codesign --force --sign "${MACOS_CODESIGN_IDENTITY}"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:capsimage>
+        COMMENT "Codesigning capsimage plugin")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND codesign --force --sign "${MACOS_CODESIGN_IDENTITY}"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>
+        COMMENT "Codesigning floppybridge plugin")
+    # Sign all bundled frameworks
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND bash -c "find '$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/' -name '*.dylib' -exec codesign --force --sign '${MACOS_CODESIGN_IDENTITY}' {} \\;"
+        COMMENT "Codesigning bundled frameworks")
+endif()
+
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(FILES $<TARGET_FILE:capsimage>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)

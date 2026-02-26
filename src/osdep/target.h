@@ -182,6 +182,7 @@ extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
 extern void ReadConfigFileList();
+extern void configurations_panel_reset();
 extern void read_rom_list(bool);
 extern int scan_roms(int show);
 

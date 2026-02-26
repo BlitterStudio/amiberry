@@ -68,8 +68,19 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(USE_UAENET_TAP OFF CACHE BOOL "TAP backend only available on Linux" FORCE)
 endif()
 
+# Mac App Store: enforce sandbox-compatible feature set
+if(MACOS_APP_STORE)
+    if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+        message(FATAL_ERROR "MACOS_APP_STORE can only be used on macOS builds")
+    endif()
+    add_compile_definitions(MACOS_APP_STORE)
+    set(USE_LIBSERIALPORT OFF CACHE BOOL "Serial port not available in App Store sandbox" FORCE)
+    set(USE_IPC_SOCKET OFF CACHE BOOL "IPC socket not available in App Store sandbox" FORCE)
+    message(STATUS "Mac App Store build enabled: sandbox entitlements, serial/IPC disabled")
+endif()
+
 # Pre-release version suffix (project version is set in project() above)
-set(VERSION_PRE_RELEASE "23" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "24" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")

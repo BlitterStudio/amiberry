@@ -4275,6 +4275,13 @@ gen_opcode(unsigned long int opcode) {
 	case i_BSR:
 		is_const_jump;
 		genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
+		if (curi->size == sz_long) {
+			/* Sign-extend 32-bit long displacement to native pointer width.
+			 * comp_get_ilong returns uae_u32 which zero-extends to uintptr on
+			 * 64-bit platforms, but BSR displacement is signed. Without this,
+			 * backward branches corrupt comp_pc_p (upper bits overflow). */
+			comprintf("\tif (isconst(src)) live.state[src].val = (uintptr)(uae_s32)(uae_u32)live.state[src].val;\n");
+		}
 		start_brace();
 		comprintf(
 				"\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
@@ -4300,6 +4307,11 @@ gen_opcode(unsigned long int opcode) {
 			comprintf("\tsign_extend_16_rr(src,src);\n");
 			break;
 		case sz_long:
+			/* Sign-extend 32-bit long displacement to native pointer width.
+			 * comp_get_ilong returns uae_u32 which zero-extends to uintptr on
+			 * 64-bit platforms, but Bcc displacement is signed. Without this,
+			 * backward branches compute wrong target addresses (upper bits overflow). */
+			comprintf("\tif (isconst(src)) live.state[src].val = (uintptr)(uae_s32)(uae_u32)live.state[src].val;\n");
 			break;
 		}
 		comprintf(

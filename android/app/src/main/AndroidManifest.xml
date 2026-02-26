@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Hardware feature declarations for Play Store device filtering -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="true" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
@@ -13,20 +18,23 @@
         android:icon="@mipmap/ic_launcher"
         android:hasFragileUserData="true"
         android:requestLegacyExternalStorage="true">
-        
-        <activity android:name="com.blitterstudio.amiberry.LauncherActivity"
-            android:exported="true">
+
+        <!-- Native Compose UI (launcher) -->
+        <activity android:name="com.blitterstudio.amiberry.ui.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity android:name="org.libsdl.app.SDLActivity"
+        <!-- SDL emulator activity (launched by native UI) -->
+        <activity android:name="com.blitterstudio.amiberry.AmiberryActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:exported="false">
-            
-            <!-- Tell SDL which native library to load -->
             <meta-data android:name="SDL_MAIN_LIBRARY_NAMES" android:value="amiberry" />
         </activity>
     </application>

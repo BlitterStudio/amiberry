@@ -1,13 +1,16 @@
 /*
  * Amiberry - On-screen touch joystick controls
  *
- * Provides a virtual D-pad and fire buttons overlay for touchscreen devices.
+ * Provides a virtual arcade-style joystick and fire buttons overlay for
+ * touchscreen devices. The joystick has a movable ball-top knob that follows
+ * the player's finger, providing intuitive slide-to-move input.
+ *
  * Registered as a proper joystick input device so it appears in the Input
  * configuration panel and respects the selected port mode (joystick/mouse).
  *
  * Supports both SDL2 renderer and OpenGL rendering paths.
  *
- * Copyright 2025 Amiberry team
+ * Copyright 2025-2026 Amiberry team
  */
 
 #include <cmath>
@@ -32,7 +35,7 @@
 // Configuration constants
 // ---------------------------------------------------------------------------
 
-// D-pad size as fraction of the shorter screen dimension
+// Joystick base size as fraction of the shorter screen dimension
 static constexpr float DPAD_SIZE_FRACTION = 0.38f;
 // Button size as fraction of the shorter screen dimension
 static constexpr float BUTTON_SIZE_FRACTION = 0.22f;
@@ -41,13 +44,21 @@ static constexpr float BUTTON_GAP_FRACTION = 0.05f;
 // Margin from screen edge as fraction of shorter dimension
 static constexpr float EDGE_MARGIN_FRACTION = 0.02f;
 // Texture resolution for procedurally-generated graphics
-static constexpr int DPAD_TEX_SIZE = 256;
+static constexpr int STICK_BASE_TEX_SIZE = 256;
+static constexpr int STICK_KNOB_TEX_SIZE = 128;
 static constexpr int BUTTON_TEX_SIZE = 128;
 // Alpha values (0-255)
 static constexpr Uint8 ALPHA_NORMAL = 160;
 static constexpr Uint8 ALPHA_PRESSED = 220;
-// Dead zone in the center of the D-pad (fraction of radius)
-static constexpr float DPAD_DEADZONE = 0.20f;
+// Dead zone in the center of the joystick (fraction of radius)
+static constexpr float DPAD_DEADZONE = 0.15f;
+// Knob size as fraction of the base plate diameter
+static constexpr float KNOB_SIZE_FRACTION = 0.40f;
+// Maximum travel distance of knob center from base center (fraction of base radius)
+static constexpr float KNOB_MAX_TRAVEL = 0.55f;
+// Diagonal offset for button 2 relative to button 1 (fraction of button size)
+static constexpr float BTN2_DIAG_X_OFFSET = 0.30f;
+static constexpr float BTN2_DIAG_Y_OFFSET = 0.50f;
 
 // ---------------------------------------------------------------------------
 // Retro color palette
@@ -57,11 +68,18 @@ struct Color {
 	Uint8 r, g, b, a;
 };
 
-// D-pad colors - dark gunmetal with steel cross
-static constexpr Color DPAD_BASE      = { 30,  30,  35, 255 };
-static constexpr Color DPAD_CROSS     = { 60,  60,  68, 255 };
-static constexpr Color DPAD_HIGHLIGHT = {200, 180,  50, 200 };
-static constexpr Color DPAD_ARROW     = {180, 180, 190, 255 };
+// Joystick base plate colors - dark gunmetal concave well
+static constexpr Color STICK_BASE_OUTER    = { 25,  25,  30, 255 };
+static constexpr Color STICK_BASE_BEVEL    = { 50,  50,  56, 255 };
+static constexpr Color STICK_BASE_WELL_IN  = { 30,  30,  35, 255 };
+static constexpr Color STICK_BASE_WELL_OUT = { 45,  45,  52, 255 };
+static constexpr Color STICK_DIR_DOT       = { 70,  70,  78, 180 };
+static constexpr Color STICK_CENTER_DOT    = { 55,  55,  62, 255 };
+
+// Joystick knob (ball-top) colors - classic red arcade
+static constexpr Color KNOB_OUTER    = {140,  15,  15, 255 };
+static constexpr Color KNOB_INNER    = {230,  55,  55, 255 };
+static constexpr Color KNOB_GLINT    = {255, 180, 180, 255 };
 
 // Button colors
 static constexpr Color BTN1_OUTER     = {160,  20,  20, 255 };
@@ -85,20 +103,23 @@ static bool osj_enabled = false;
 static bool osj_initialized = false;
 
 // SDL Textures (used for non-OpenGL rendering)
-static SDL_Texture* dpad_tex = nullptr;
+static SDL_Texture* stick_base_tex = nullptr;
+static SDL_Texture* knob_tex = nullptr;
 static SDL_Texture* btn1_tex = nullptr;
 static SDL_Texture* btn2_tex = nullptr;
 static SDL_Texture* btnkb_tex = nullptr;
 
 // SDL Surfaces (kept around for GL texture upload)
-static SDL_Surface* dpad_surface = nullptr;
+static SDL_Surface* stick_base_surface = nullptr;
+static SDL_Surface* knob_surface = nullptr;
 static SDL_Surface* btn1_surface = nullptr;
 static SDL_Surface* btn2_surface = nullptr;
 static SDL_Surface* btnkb_surface = nullptr;
 
 #ifdef USE_OPENGL
 // OpenGL textures
-static GLuint gl_dpad_tex = 0;
+static GLuint gl_stick_base_tex = 0;
+static GLuint gl_knob_tex = 0;
 static GLuint gl_btn1_tex = 0;
 static GLuint gl_btn2_tex = 0;
 static GLuint gl_btnkb_tex = 0;
@@ -130,6 +151,12 @@ static bool prev_fire1 = false, prev_fire2 = false;
 // Keyboard button tapped flag (consumed on read)
 static bool kb_tapped = false;
 static bool joy_kb_pressed = false;
+
+// Joystick knob position tracking
+// Normalized offset of the knob from the base center, in range [-1.0, +1.0]
+static float knob_offset_x = 0.0f;
+static float knob_offset_y = 0.0f;
+static bool knob_active = false;
 
 // Multi-touch tracking
 enum ControlType { CTL_NONE, CTL_DPAD, CTL_BUTTON1, CTL_BUTTON2, CTL_KEYBOARD };
@@ -221,84 +248,12 @@ static void fill_rect(SDL_Surface* s, int x0, int y0, int w, int h, Color col)
 }
 
 // ---------------------------------------------------------------------------
-// Helper: draw small triangle arrows on an SDL_Surface
+// Surface generation: joystick base plate (concave well)
 // ---------------------------------------------------------------------------
 
-static void draw_arrow_up(SDL_Surface* s, int cx, int cy, int size, Color col)
+static SDL_Surface* create_stick_base_surface()
 {
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	auto* pixels = static_cast<Uint32*>(s->pixels);
-	int pitch = s->pitch / 4;
-	for (int row = 0; row < size; row++) {
-		int half_w = row;
-		int y = cy - size / 2 + row;
-		if (y < 0 || y >= s->h) continue;
-		for (int dx = -half_w; dx <= half_w; dx++) {
-			int x = cx + dx;
-			if (x >= 0 && x < s->w)
-				pixels[y * pitch + x] = color;
-		}
-	}
-}
-
-static void draw_arrow_down(SDL_Surface* s, int cx, int cy, int size, Color col)
-{
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	auto* pixels = static_cast<Uint32*>(s->pixels);
-	int pitch = s->pitch / 4;
-	for (int row = 0; row < size; row++) {
-		int half_w = size - 1 - row;
-		int y = cy - size / 2 + row;
-		if (y < 0 || y >= s->h) continue;
-		for (int dx = -half_w; dx <= half_w; dx++) {
-			int x = cx + dx;
-			if (x >= 0 && x < s->w)
-				pixels[y * pitch + x] = color;
-		}
-	}
-}
-
-static void draw_arrow_left(SDL_Surface* s, int cx, int cy, int size, Color col)
-{
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	auto* pixels = static_cast<Uint32*>(s->pixels);
-	int pitch = s->pitch / 4;
-	for (int col_idx = 0; col_idx < size; col_idx++) {
-		int half_h = col_idx;
-		int x = cx - size / 2 + col_idx;
-		if (x < 0 || x >= s->w) continue;
-		for (int dy = -half_h; dy <= half_h; dy++) {
-			int y = cy + dy;
-			if (y >= 0 && y < s->h)
-				pixels[y * pitch + x] = color;
-		}
-	}
-}
-
-static void draw_arrow_right(SDL_Surface* s, int cx, int cy, int size, Color col)
-{
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	auto* pixels = static_cast<Uint32*>(s->pixels);
-	int pitch = s->pitch / 4;
-	for (int col_idx = 0; col_idx < size; col_idx++) {
-		int half_h = size - 1 - col_idx;
-		int x = cx - size / 2 + col_idx;
-		if (x < 0 || x >= s->w) continue;
-		for (int dy = -half_h; dy <= half_h; dy++) {
-			int y = cy + dy;
-			if (y >= 0 && y < s->h)
-				pixels[y * pitch + x] = color;
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Surface generation: D-pad
-// ---------------------------------------------------------------------------
-
-static SDL_Surface* create_dpad_surface()
-{
-	const int sz = DPAD_TEX_SIZE;
+	const int sz = STICK_BASE_TEX_SIZE;
 	// ABGR8888 stores bytes as [R,G,B,A] in memory on little-endian,
 	// which matches GL_RGBA + GL_UNSIGNED_BYTE for OpenGL upload.
 	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
@@ -309,40 +264,150 @@ static SDL_Surface* create_dpad_surface()
 	int cx = sz / 2;
 	int cy = sz / 2;
 	int base_r = sz / 2 - 4;
-	int arm_half = sz / 7;
-	int arm_len = base_r - 4;
 
-	// Dark circular base plate
-	fill_circle(surface, cx, cy, base_r, DPAD_BASE);
+	// Dark outer ring
+	fill_circle(surface, cx, cy, base_r, STICK_BASE_OUTER);
 
-	// Inner ring for depth
-	Color inner_ring = { 40, 40, 46, 255 };
-	fill_circle(surface, cx, cy, base_r - 3, inner_ring);
+	// Bevel ring (lighter just inside the outer edge)
+	fill_circle(surface, cx, cy, base_r - 2, STICK_BASE_BEVEL);
 
-	// Cross shape
-	fill_rect(surface, cx - arm_half, cy - arm_len, arm_half * 2, arm_len * 2, DPAD_CROSS);
-	fill_rect(surface, cx - arm_len, cy - arm_half, arm_len * 2, arm_half * 2, DPAD_CROSS);
+	// Inner well with radial gradient (concave look: darker center, lighter edges)
+	{
+		int well_r = base_r - 5;
+		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		int pitch = surface->pitch / 4;
+		float fr = static_cast<float>(well_r);
 
-	// Bevel effect
-	Color bevel_light = { 80, 80, 90, 255 };
-	fill_rect(surface, cx - arm_half, cy - arm_len, arm_half * 2, 2, bevel_light);
-	fill_rect(surface, cx - arm_len, cy - arm_half, 2, arm_half * 2, bevel_light);
-	fill_rect(surface, cx - arm_half, cy - arm_len, 2, arm_len * 2, bevel_light);
-	fill_rect(surface, cx - arm_len, cy - arm_half, arm_len * 2, 2, bevel_light);
+		int y0 = std::max(0, cy - well_r);
+		int y1 = std::min(sz - 1, cy + well_r);
+		for (int y = y0; y <= y1; y++) {
+			int dy = y - cy;
+			int dx_max = static_cast<int>(std::sqrt(fr * fr - static_cast<float>(dy * dy)));
+			int x0 = std::max(0, cx - dx_max);
+			int x1 = std::min(sz - 1, cx + dx_max);
+			for (int x = x0; x <= x1; x++) {
+				int dx = x - cx;
+				float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+				float t = dist / fr; // 0 at center, 1 at edge
 
-	// Arrow indicators
-	int arrow_size = sz / 14;
-	int arrow_offset = arm_len * 2 / 3;
-	draw_arrow_up(surface, cx, cy - arrow_offset, arrow_size, DPAD_ARROW);
-	draw_arrow_down(surface, cx, cy + arrow_offset, arrow_size, DPAD_ARROW);
-	draw_arrow_left(surface, cx - arrow_offset, cy, arrow_size, DPAD_ARROW);
-	draw_arrow_right(surface, cx + arrow_offset, cy, arrow_size, DPAD_ARROW);
+				// Gradient: center is darker (well_in), edge is lighter (well_out)
+				Uint8 cr = static_cast<Uint8>(STICK_BASE_WELL_IN.r + (STICK_BASE_WELL_OUT.r - STICK_BASE_WELL_IN.r) * t);
+				Uint8 cg = static_cast<Uint8>(STICK_BASE_WELL_IN.g + (STICK_BASE_WELL_OUT.g - STICK_BASE_WELL_IN.g) * t);
+				Uint8 cb = static_cast<Uint8>(STICK_BASE_WELL_IN.b + (STICK_BASE_WELL_OUT.b - STICK_BASE_WELL_IN.b) * t);
 
-	// Center circle
-	Color center_dot = { 50, 50, 56, 255 };
-	fill_circle(surface, cx, cy, sz / 12, center_dot);
-	Color center_highlight = { 70, 70, 78, 255 };
-	fill_circle(surface, cx - 1, cy - 1, sz / 16, center_highlight);
+				pixels[y * pitch + x] = SDL_MapRGBA(surface->format, cr, cg, cb, 255);
+			}
+		}
+	}
+
+	// 8 direction indicator dots at the cardinal and diagonal positions
+	{
+		static constexpr float PI = 3.14159265f;
+		int dot_r = sz / 64;
+		if (dot_r < 2) dot_r = 2;
+		float dot_dist = (base_r - 5) * 0.70f;
+
+		for (int i = 0; i < 8; i++) {
+			float angle = i * PI / 4.0f;
+			int dx = cx + static_cast<int>(std::cos(angle) * dot_dist);
+			int dy = cy + static_cast<int>(std::sin(angle) * dot_dist);
+			fill_circle(surface, dx, dy, dot_r, STICK_DIR_DOT);
+		}
+	}
+
+	// Center position marker
+	fill_circle(surface, cx, cy, sz / 16, STICK_CENTER_DOT);
+
+	return surface;
+}
+
+// ---------------------------------------------------------------------------
+// Surface generation: joystick knob (red ball-top)
+// ---------------------------------------------------------------------------
+
+static SDL_Surface* create_stick_knob_surface()
+{
+	const int sz = STICK_KNOB_TEX_SIZE;
+	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
+	if (!surface) return nullptr;
+
+	SDL_FillRect(surface, nullptr, 0);
+
+	int cx = sz / 2;
+	int cy = sz / 2;
+	int r = sz / 2 - 4;
+
+	// Main ball with radial gradient (dark red outer -> bright red inner)
+	// and a directional glint for 3D appearance
+	fill_circle_gradient(surface, cx, cy, r, KNOB_OUTER, KNOB_INNER, KNOB_GLINT);
+
+	// Specular highlight dot (upper-left quadrant for 3D sphere look)
+	{
+		int spec_cx = cx - static_cast<int>(r * 0.25f);
+		int spec_cy = cy - static_cast<int>(r * 0.25f);
+		int spec_r = static_cast<int>(r * 0.15f);
+		if (spec_r < 2) spec_r = 2;
+
+		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		int pitch = surface->pitch / 4;
+		float fspec_r = static_cast<float>(spec_r);
+
+		int y0 = std::max(0, spec_cy - spec_r);
+		int y1 = std::min(sz - 1, spec_cy + spec_r);
+		for (int y = y0; y <= y1; y++) {
+			int dy = y - spec_cy;
+			int dx_max = static_cast<int>(std::sqrt(fspec_r * fspec_r - static_cast<float>(dy * dy)));
+			int x0 = std::max(0, spec_cx - dx_max);
+			int x1 = std::min(sz - 1, spec_cx + dx_max);
+			for (int x = x0; x <= x1; x++) {
+				int dx = x - spec_cx;
+				float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+				float t = dist / fspec_r;
+				// Fade from bright center to transparent edge
+				Uint8 alpha = static_cast<Uint8>(200.0f * (1.0f - t));
+				// Blend specular onto existing pixel
+				Uint32 existing = pixels[y * pitch + x];
+				Uint8 er, eg, eb, ea;
+				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				if (ea > 0) {
+					float a = alpha / 255.0f;
+					er = static_cast<Uint8>(std::min(255.0f, er + (255 - er) * a));
+					eg = static_cast<Uint8>(std::min(255.0f, eg + (220 - eg) * a));
+					eb = static_cast<Uint8>(std::min(255.0f, eb + (220 - eb) * a));
+					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+				}
+			}
+		}
+	}
+
+	// Subtle bottom shadow crescent for depth
+	{
+		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		int pitch = surface->pitch / 4;
+		float fr = static_cast<float>(r);
+
+		int y0 = cy + static_cast<int>(r * 0.7f);
+		int y1 = std::min(sz - 1, cy + r);
+		for (int y = y0; y <= y1; y++) {
+			int dy = y - cy;
+			int dx_max = static_cast<int>(std::sqrt(fr * fr - static_cast<float>(dy * dy)));
+			int x0 = std::max(0, cx - dx_max);
+			int x1 = std::min(sz - 1, cx + dx_max);
+			for (int x = x0; x <= x1; x++) {
+				float shadow_t = static_cast<float>(y - y0) / static_cast<float>(y1 - y0 + 1);
+				Uint32 existing = pixels[y * pitch + x];
+				Uint8 er, eg, eb, ea;
+				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				if (ea > 0) {
+					float darken = shadow_t * 0.35f;
+					er = static_cast<Uint8>(er * (1.0f - darken));
+					eg = static_cast<Uint8>(eg * (1.0f - darken));
+					eb = static_cast<Uint8>(eb * (1.0f - darken));
+					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+				}
+			}
+		}
+	}
 
 	return surface;
 }
@@ -394,7 +459,7 @@ static void draw_char(SDL_Surface* s, const uint8_t bitmap[7], int ox, int oy, i
 }
 
 // ---------------------------------------------------------------------------
-// Surface generation: arcade button
+// Surface generation: arcade dome button
 // ---------------------------------------------------------------------------
 
 static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
@@ -411,13 +476,84 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 	int cy = sz / 2;
 	int r = sz / 2 - 4;
 
-	// Outer ring (bezel)
+	// Dark housing/collar ring (arcade button surround)
+	Color housing = { 20, 20, 22, 255 };
+	fill_circle(surface, cx, cy, r, housing);
+
+	// Outer ring (bezel) - wider than before for more prominent dome look
 	Color bezel = { static_cast<Uint8>(outer.r / 2), static_cast<Uint8>(outer.g / 2),
 		static_cast<Uint8>(outer.b / 2), 255 };
-	fill_circle(surface, cx, cy, r, bezel);
+	fill_circle(surface, cx, cy, r - 3, bezel);
 
-	// Main button surface with gradient
-	fill_circle_gradient(surface, cx, cy, r - 4, outer, inner, glint);
+	// Main button surface with gradient (dome)
+	fill_circle_gradient(surface, cx, cy, r - 6, outer, inner, glint);
+
+	// Second specular highlight dot for more pronounced dome reflection
+	{
+		int spec_cx = cx - static_cast<int>((r - 6) * 0.22f);
+		int spec_cy = cy - static_cast<int>((r - 6) * 0.22f);
+		int spec_r = static_cast<int>((r - 6) * 0.12f);
+		if (spec_r < 2) spec_r = 2;
+
+		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		int pitch = surface->pitch / 4;
+		float fspec_r = static_cast<float>(spec_r);
+
+		int y0 = std::max(0, spec_cy - spec_r);
+		int y1 = std::min(sz - 1, spec_cy + spec_r);
+		for (int y = y0; y <= y1; y++) {
+			int dy = y - spec_cy;
+			int dx_max = static_cast<int>(std::sqrt(fspec_r * fspec_r - static_cast<float>(dy * dy)));
+			int x0 = std::max(0, spec_cx - dx_max);
+			int x1 = std::min(sz - 1, spec_cx + dx_max);
+			for (int x = x0; x <= x1; x++) {
+				int dx = x - spec_cx;
+				float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+				float t = dist / fspec_r;
+				Uint8 alpha = static_cast<Uint8>(150.0f * (1.0f - t));
+				Uint32 existing = pixels[y * pitch + x];
+				Uint8 er, eg, eb, ea;
+				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				if (ea > 0) {
+					float a = alpha / 255.0f;
+					er = static_cast<Uint8>(std::min(255.0f, er + (255 - er) * a));
+					eg = static_cast<Uint8>(std::min(255.0f, eg + (255 - eg) * a));
+					eb = static_cast<Uint8>(std::min(255.0f, eb + (255 - eb) * a));
+					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+				}
+			}
+		}
+	}
+
+	// Subtle bottom shadow arc for depth
+	{
+		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		int pitch = surface->pitch / 4;
+		int inner_r = r - 6;
+		float fr = static_cast<float>(inner_r);
+
+		int y0 = cy + static_cast<int>(inner_r * 0.65f);
+		int y1 = std::min(sz - 1, cy + inner_r);
+		for (int y = y0; y <= y1; y++) {
+			int dy = y - cy;
+			int dx_max = static_cast<int>(std::sqrt(fr * fr - static_cast<float>(dy * dy)));
+			int x0 = std::max(0, cx - dx_max);
+			int x1 = std::min(sz - 1, cx + dx_max);
+			for (int x = x0; x <= x1; x++) {
+				float shadow_t = static_cast<float>(y - y0) / static_cast<float>(y1 - y0 + 1);
+				Uint32 existing = pixels[y * pitch + x];
+				Uint8 er, eg, eb, ea;
+				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				if (ea > 0) {
+					float darken = shadow_t * 0.25f;
+					er = static_cast<Uint8>(er * (1.0f - darken));
+					eg = static_cast<Uint8>(eg * (1.0f - darken));
+					eb = static_cast<Uint8>(eb * (1.0f - darken));
+					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+				}
+			}
+		}
+	}
 
 	return surface;
 }
@@ -438,13 +574,17 @@ static SDL_Surface* create_kb_button_surface()
 	int cy = sz / 2;
 	int r = sz / 2 - 4;
 
+	// Dark housing/collar ring
+	Color housing = { 20, 20, 22, 255 };
+	fill_circle(surface, cx, cy, r, housing);
+
 	// Outer ring (bezel)
 	Color bezel = { static_cast<Uint8>(BTNKB_OUTER.r / 2), static_cast<Uint8>(BTNKB_OUTER.g / 2),
 		static_cast<Uint8>(BTNKB_OUTER.b / 2), 255 };
-	fill_circle(surface, cx, cy, r, bezel);
+	fill_circle(surface, cx, cy, r - 3, bezel);
 
 	// Main button surface with gradient
-	fill_circle_gradient(surface, cx, cy, r - 4, BTNKB_OUTER, BTNKB_INNER, BTNKB_HIGHLIGHT);
+	fill_circle_gradient(surface, cx, cy, r - 6, BTNKB_OUTER, BTNKB_INNER, BTNKB_HIGHLIGHT);
 
 	// Draw "KB" text centered on the button
 	Color text_col = { 255, 255, 255, 255 };
@@ -519,7 +659,7 @@ static void inject_buttons()
 }
 
 // ---------------------------------------------------------------------------
-// D-pad direction from touch position
+// Joystick direction from touch position (with knob tracking)
 // ---------------------------------------------------------------------------
 
 static void update_dpad_from_position(int touch_x, int touch_y)
@@ -527,7 +667,22 @@ static void update_dpad_from_position(int touch_x, int touch_y)
 	int dx = touch_x - dpad_cx;
 	int dy = touch_y - dpad_cy;
 	float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+	float max_travel = dpad_hit_radius * KNOB_MAX_TRAVEL;
 
+	// Update knob visual position (clamped to max travel radius)
+	if (dist > max_travel) {
+		float scale = max_travel / dist;
+		knob_offset_x = (dx * scale) / max_travel;
+		knob_offset_y = (dy * scale) / max_travel;
+	} else if (dist > 0.001f) {
+		knob_offset_x = static_cast<float>(dx) / max_travel;
+		knob_offset_y = static_cast<float>(dy) / max_travel;
+	} else {
+		knob_offset_x = 0.0f;
+		knob_offset_y = 0.0f;
+	}
+
+	// Deadzone for digital direction output
 	float deadzone_px = dpad_hit_radius * DPAD_DEADZONE;
 	if (dist < deadzone_px) {
 		joy_up = joy_down = joy_left = joy_right = false;
@@ -556,6 +711,9 @@ static void update_dpad_from_position(int touch_x, int touch_y)
 static void release_dpad()
 {
 	joy_up = joy_down = joy_left = joy_right = false;
+	knob_offset_x = 0.0f;
+	knob_offset_y = 0.0f;
+	knob_active = false;
 	inject_directions();
 }
 
@@ -570,6 +728,26 @@ static void release_button(ControlType ctl)
 		return;  // No Amiga input to inject
 	}
 	inject_buttons();
+}
+
+// ---------------------------------------------------------------------------
+// Knob position helper for rendering
+// ---------------------------------------------------------------------------
+
+static SDL_Rect compute_knob_rect()
+{
+	int knob_size = static_cast<int>(dpad_rect.w * KNOB_SIZE_FRACTION);
+	float max_travel_px = dpad_hit_radius * KNOB_MAX_TRAVEL;
+
+	int knob_cx = dpad_cx + static_cast<int>(knob_offset_x * max_travel_px);
+	int knob_cy = dpad_cy + static_cast<int>(knob_offset_y * max_travel_px);
+
+	SDL_Rect r;
+	r.x = knob_cx - knob_size / 2;
+	r.y = knob_cy - knob_size / 2;
+	r.w = knob_size;
+	r.h = knob_size;
+	return r;
 }
 
 // ---------------------------------------------------------------------------
@@ -748,7 +926,7 @@ static GLuint upload_surface_to_gl(SDL_Surface* surface)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	// SDL_PIXELFORMAT_RGBA8888 = R in byte 0, G in byte 1, B in byte 2, A in byte 3
+	// SDL_PIXELFORMAT_ABGR8888 = R in byte 0, G in byte 1, B in byte 2, A in byte 3
 	// On OpenGL this maps to GL_RGBA + GL_UNSIGNED_BYTE
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
@@ -793,7 +971,8 @@ static void render_gl_quad(GLuint texture, const SDL_Rect& rect, int drawable_w,
 
 static void cleanup_osj_gl()
 {
-	if (gl_dpad_tex) { glDeleteTextures(1, &gl_dpad_tex); gl_dpad_tex = 0; }
+	if (gl_stick_base_tex) { glDeleteTextures(1, &gl_stick_base_tex); gl_stick_base_tex = 0; }
+	if (gl_knob_tex) { glDeleteTextures(1, &gl_knob_tex); gl_knob_tex = 0; }
 	if (gl_btn1_tex) { glDeleteTextures(1, &gl_btn1_tex); gl_btn1_tex = 0; }
 	if (gl_btn2_tex) { glDeleteTextures(1, &gl_btn2_tex); gl_btn2_tex = 0; }
 	if (gl_btnkb_tex) { glDeleteTextures(1, &gl_btnkb_tex); gl_btnkb_tex = 0; }
@@ -815,7 +994,8 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	}
 
 	// Generate surfaces
-	dpad_surface = create_dpad_surface();
+	stick_base_surface = create_stick_base_surface();
+	knob_surface = create_stick_knob_surface();
 	btn1_surface = create_button_surface(BTN1_OUTER, BTN1_INNER, BTN1_HIGHLIGHT);
 	btn2_surface = create_button_surface(BTN2_OUTER, BTN2_INNER, BTN2_HIGHLIGHT);
 	btnkb_surface = create_kb_button_surface();
@@ -823,9 +1003,13 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 #ifndef USE_OPENGL
 	// Create SDL textures from surfaces (only when using SDL2 renderer)
 	if (renderer) {
-		if (dpad_surface) {
-			dpad_tex = SDL_CreateTextureFromSurface(renderer, dpad_surface);
-			if (dpad_tex) SDL_SetTextureBlendMode(dpad_tex, SDL_BLENDMODE_BLEND);
+		if (stick_base_surface) {
+			stick_base_tex = SDL_CreateTextureFromSurface(renderer, stick_base_surface);
+			if (stick_base_tex) SDL_SetTextureBlendMode(stick_base_tex, SDL_BLENDMODE_BLEND);
+		}
+		if (knob_surface) {
+			knob_tex = SDL_CreateTextureFromSurface(renderer, knob_surface);
+			if (knob_tex) SDL_SetTextureBlendMode(knob_tex, SDL_BLENDMODE_BLEND);
 		}
 		if (btn1_surface) {
 			btn1_tex = SDL_CreateTextureFromSurface(renderer, btn1_surface);
@@ -847,6 +1031,9 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	joy_fire1 = joy_fire2 = false;
 	prev_up = prev_down = prev_left = prev_right = false;
 	prev_fire1 = prev_fire2 = false;
+	knob_offset_x = 0.0f;
+	knob_offset_y = 0.0f;
+	knob_active = false;
 	active_fingers.clear();
 
 	osj_initialized = true;
@@ -864,15 +1051,21 @@ void on_screen_joystick_quit()
 		inject_buttons();
 	}
 
-	if (dpad_tex) { SDL_DestroyTexture(dpad_tex); dpad_tex = nullptr; }
+	if (stick_base_tex) { SDL_DestroyTexture(stick_base_tex); stick_base_tex = nullptr; }
+	if (knob_tex) { SDL_DestroyTexture(knob_tex); knob_tex = nullptr; }
 	if (btn1_tex) { SDL_DestroyTexture(btn1_tex); btn1_tex = nullptr; }
 	if (btn2_tex) { SDL_DestroyTexture(btn2_tex); btn2_tex = nullptr; }
 	if (btnkb_tex) { SDL_DestroyTexture(btnkb_tex); btnkb_tex = nullptr; }
 
-	if (dpad_surface) { SDL_FreeSurface(dpad_surface); dpad_surface = nullptr; }
+	if (stick_base_surface) { SDL_FreeSurface(stick_base_surface); stick_base_surface = nullptr; }
+	if (knob_surface) { SDL_FreeSurface(knob_surface); knob_surface = nullptr; }
 	if (btn1_surface) { SDL_FreeSurface(btn1_surface); btn1_surface = nullptr; }
 	if (btn2_surface) { SDL_FreeSurface(btn2_surface); btn2_surface = nullptr; }
 	if (btnkb_surface) { SDL_FreeSurface(btnkb_surface); btnkb_surface = nullptr; }
+
+	knob_offset_x = 0.0f;
+	knob_offset_y = 0.0f;
+	knob_active = false;
 
 #ifdef USE_OPENGL
 	cleanup_osj_gl();
@@ -908,6 +1101,9 @@ void on_screen_joystick_set_enabled(bool enabled)
 		joy_fire1 = joy_fire2 = false;
 		joy_kb_pressed = false;
 		kb_tapped = false;
+		knob_offset_x = 0.0f;
+		knob_offset_y = 0.0f;
+		knob_active = false;
 		inject_directions();
 		inject_buttons();
 		active_fingers.clear();
@@ -933,7 +1129,7 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 	int dpad_size = static_cast<int>(shorter * DPAD_SIZE_FRACTION);
 	int margin = static_cast<int>(shorter * EDGE_MARGIN_FRACTION);
 
-	// Place D-pad on the left side, vertically centered
+	// Place joystick base on the left side, vertically centered
 	int left_space = game_rect.x;
 	if (left_space > dpad_size + margin * 2) {
 		dpad_rect.x = (left_space - dpad_size) / 2;
@@ -952,27 +1148,35 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 	int btn_size = static_cast<int>(shorter * BUTTON_SIZE_FRACTION);
 	int btn_gap = static_cast<int>(shorter * BUTTON_GAP_FRACTION);
 
-	// Place buttons on the right side
+	// Place buttons on the right side with diagonal offset
 	int right_start = game_rect.x + game_rect.w;
 	int right_space = sw - right_start;
+
+	// Calculate diagonal offset
+	int diag_x = static_cast<int>(btn_size * BTN2_DIAG_X_OFFSET);
+	int diag_y = static_cast<int>(btn_size * BTN2_DIAG_Y_OFFSET);
+
+	// Total width needed for diagonal layout
+	int total_btn_w = btn_size + diag_x;
 	int btn_x;
-	if (right_space > btn_size + margin * 2) {
-		btn_x = right_start + (right_space - btn_size) / 2;
+	if (right_space > total_btn_w + margin * 2) {
+		btn_x = right_start + (right_space - total_btn_w) / 2;
 	} else {
-		btn_x = sw - btn_size - margin;
+		btn_x = sw - total_btn_w - margin;
 	}
 
-	int total_btn_height = btn_size * 2 + btn_gap;
+	int total_btn_height = btn_size + diag_y + btn_gap;
 	int btn_y_start = (sh - total_btn_height) / 2;
 
-	// Stack buttons vertically, no diagonal offset
+	// Button 1 (upper-left of the pair)
 	btn1_rect.x = btn_x;
 	btn1_rect.y = btn_y_start;
 	btn1_rect.w = btn_size;
 	btn1_rect.h = btn_size;
 
-	btn2_rect.x = btn_x;
-	btn2_rect.y = btn_y_start + btn_size + btn_gap;
+	// Button 2 (lower-right, diagonal offset)
+	btn2_rect.x = btn_x + diag_x;
+	btn2_rect.y = btn_y_start + diag_y + btn_gap;
 	btn2_rect.w = btn_size;
 	btn2_rect.h = btn_size;
 
@@ -984,9 +1188,10 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 	btn2_cy = btn2_rect.y + btn_size / 2;
 	btn2_hit_radius = btn_size / 2 + btn_size / 8;
 
-	// Keyboard button: smaller, placed below the two fire buttons
+	// Keyboard button: smaller, placed below the button pair
 	int kb_size = static_cast<int>(shorter * KB_BUTTON_SIZE_FRACTION);
-	int kb_x = btn_x + (btn_size - kb_size) / 2;  // Centered under fire buttons
+	// Center KB button horizontally between the two fire buttons
+	int kb_x = (btn1_rect.x + btn2_rect.x + btn_size) / 2 - kb_size / 2;
 	int kb_y = btn2_rect.y + btn_size + btn_gap;
 
 	btnkb_rect.x = kb_x;
@@ -1002,7 +1207,7 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 void on_screen_joystick_redraw(SDL_Renderer* renderer)
 {
 	if (!osj_enabled || !osj_initialized) return;
-	if (!dpad_tex || !btn1_tex || !btn2_tex) return;
+	if (!stick_base_tex || !knob_tex || !btn1_tex || !btn2_tex) return;
 
 	// Auto-recalculate layout when screen geometry changes
 	{
@@ -1019,43 +1224,35 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 		}
 	}
 
-	// D-pad
+	// Joystick base plate
 	{
-		bool any_pressed = joy_up || joy_down || joy_left || joy_right;
-		Uint8 alpha = any_pressed ? ALPHA_PRESSED : ALPHA_NORMAL;
-		SDL_SetTextureAlphaMod(dpad_tex, alpha);
-		SDL_RenderCopy(renderer, dpad_tex, nullptr, &dpad_rect);
+		Uint8 alpha = knob_active ? ALPHA_PRESSED : ALPHA_NORMAL;
+		SDL_SetTextureAlphaMod(stick_base_tex, alpha);
+		SDL_SetTextureColorMod(stick_base_tex, 255, 255, 255);
+		SDL_RenderCopy(renderer, stick_base_tex, nullptr, &dpad_rect);
+	}
 
-		if (any_pressed) {
-			SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-			int arm_half = dpad_rect.w / 7;
-			int arm_len = dpad_rect.w / 2 - 8;
+	// Joystick knob (ball-top) - rendered at offset position
+	{
+		SDL_Rect knob_rect = compute_knob_rect();
 
-			if (joy_up) {
-				SDL_Rect r = { dpad_cx - arm_half, dpad_rect.y + 8, arm_half * 2, arm_len };
-				SDL_SetRenderDrawColor(renderer, DPAD_HIGHLIGHT.r, DPAD_HIGHLIGHT.g,
-					DPAD_HIGHLIGHT.b, DPAD_HIGHLIGHT.a / 2);
-				SDL_RenderFillRect(renderer, &r);
-			}
-			if (joy_down) {
-				SDL_Rect r = { dpad_cx - arm_half, dpad_cy, arm_half * 2, arm_len };
-				SDL_SetRenderDrawColor(renderer, DPAD_HIGHLIGHT.r, DPAD_HIGHLIGHT.g,
-					DPAD_HIGHLIGHT.b, DPAD_HIGHLIGHT.a / 2);
-				SDL_RenderFillRect(renderer, &r);
-			}
-			if (joy_left) {
-				SDL_Rect r = { dpad_rect.x + 8, dpad_cy - arm_half, arm_len, arm_half * 2 };
-				SDL_SetRenderDrawColor(renderer, DPAD_HIGHLIGHT.r, DPAD_HIGHLIGHT.g,
-					DPAD_HIGHLIGHT.b, DPAD_HIGHLIGHT.a / 2);
-				SDL_RenderFillRect(renderer, &r);
-			}
-			if (joy_right) {
-				SDL_Rect r = { dpad_cx, dpad_cy - arm_half, arm_len, arm_half * 2 };
-				SDL_SetRenderDrawColor(renderer, DPAD_HIGHLIGHT.r, DPAD_HIGHLIGHT.g,
-					DPAD_HIGHLIGHT.b, DPAD_HIGHLIGHT.a / 2);
-				SDL_RenderFillRect(renderer, &r);
-			}
+		// Drop shadow when active
+		if (knob_active) {
+			SDL_Rect shadow_rect = knob_rect;
+			shadow_rect.x += 2;
+			shadow_rect.y += 3;
+			shadow_rect.w += 2;
+			shadow_rect.h += 2;
+			SDL_SetTextureAlphaMod(knob_tex, 60);
+			SDL_SetTextureColorMod(knob_tex, 0, 0, 0);
+			SDL_RenderCopy(renderer, knob_tex, nullptr, &shadow_rect);
 		}
+
+		// The knob itself
+		Uint8 knob_alpha = knob_active ? 240 : ALPHA_NORMAL;
+		SDL_SetTextureAlphaMod(knob_tex, knob_alpha);
+		SDL_SetTextureColorMod(knob_tex, 255, 255, 255);
+		SDL_RenderCopy(renderer, knob_tex, nullptr, &knob_rect);
 	}
 
 	// Button 1 (red / fire)
@@ -1099,7 +1296,7 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect& game_rect)
 {
 	if (!osj_enabled || !osj_initialized) return;
-	if (!dpad_surface || !btn1_surface || !btn2_surface) return;
+	if (!stick_base_surface || !knob_surface || !btn1_surface || !btn2_surface) return;
 
 	// Update layout if geometry changed
 	if (drawable_w > 0 && drawable_h > 0 && game_rect.w > 0 && game_rect.h > 0) {
@@ -1116,12 +1313,13 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect
 	if (!init_osj_gl_shader()) return;
 
 	// Upload surfaces to GL textures on first use
-	if (!gl_dpad_tex) gl_dpad_tex = upload_surface_to_gl(dpad_surface);
+	if (!gl_stick_base_tex) gl_stick_base_tex = upload_surface_to_gl(stick_base_surface);
+	if (!gl_knob_tex) gl_knob_tex = upload_surface_to_gl(knob_surface);
 	if (!gl_btn1_tex) gl_btn1_tex = upload_surface_to_gl(btn1_surface);
 	if (!gl_btn2_tex) gl_btn2_tex = upload_surface_to_gl(btn2_surface);
 	if (!gl_btnkb_tex) gl_btnkb_tex = upload_surface_to_gl(btnkb_surface);
 
-	if (!gl_dpad_tex || !gl_btn1_tex || !gl_btn2_tex) return;
+	if (!gl_stick_base_tex || !gl_knob_tex || !gl_btn1_tex || !gl_btn2_tex) return;
 
 	// Set up GL state for overlay rendering
 	glEnable(GL_BLEND);
@@ -1137,11 +1335,29 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 
-	// D-pad
+	// Joystick base plate
 	{
-		bool any_pressed = joy_up || joy_down || joy_left || joy_right;
-		float alpha = any_pressed ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f);
-		render_gl_quad(gl_dpad_tex, dpad_rect, drawable_w, drawable_h, alpha);
+		float alpha = knob_active ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f);
+		render_gl_quad(gl_stick_base_tex, dpad_rect, drawable_w, drawable_h, alpha);
+	}
+
+	// Joystick knob (ball-top)
+	{
+		SDL_Rect knob_rect = compute_knob_rect();
+
+		// Drop shadow when active
+		if (knob_active) {
+			SDL_Rect shadow_rect = knob_rect;
+			shadow_rect.x += 2;
+			shadow_rect.y += 3;
+			shadow_rect.w += 2;
+			shadow_rect.h += 2;
+			render_gl_quad(gl_knob_tex, shadow_rect, drawable_w, drawable_h, 0.23f);
+		}
+
+		// The knob itself
+		float knob_alpha = knob_active ? 0.94f : (ALPHA_NORMAL / 255.0f);
+		render_gl_quad(gl_knob_tex, knob_rect, drawable_w, drawable_h, knob_alpha);
 	}
 
 	// Button 1 (red / fire)
@@ -1192,6 +1408,7 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w,
 
 	switch (ctl) {
 	case CTL_DPAD:
+		knob_active = true;
 		update_dpad_from_position(px, py);
 		break;
 	case CTL_BUTTON1:

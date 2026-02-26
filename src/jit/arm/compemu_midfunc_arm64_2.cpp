@@ -7881,7 +7881,7 @@ MIDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 	adr = readreg(adr);
 	d = writereg(d);
 
-	ADD_xxwEX(d, R_MEMSTART, adr, EX_SXTW);
+	ADD_xxwEX(d, R_MEMSTART, adr, EX_UXTW);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7909,7 +7909,7 @@ MIDFUNC(2,jnf_MEM_GETADR_JMP_OFF,(W4 d, RR4 adr))
 	LOAD_U64(REG_WORK2, (uintptr)baseaddr);
 	LSR_wwi(REG_WORK1, adr, 16);
 	LDR_xXxLSLi(REG_WORK3, REG_WORK2, REG_WORK1, 1); // 1 means shift by 3
-	ADD_xxwEX(d, REG_WORK3, adr, EX_SXTW);
+	ADD_xxwEX(d, REG_WORK3, adr, EX_UXTW);
 	LOAD_U64(REG_WORK1, ~1ULL);
 	AND_xxx(d, d, REG_WORK1);
 
