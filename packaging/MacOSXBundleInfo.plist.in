@@ -30,6 +30,8 @@
         <true/>
         <key>NSHumanReadableCopyright</key>
         <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
+        <key>LSApplicationCategoryType</key>
+        <string>public.app-category.games</string>
 		<key>CFBundleDocumentTypes</key>
 		<array>
 			<dict>

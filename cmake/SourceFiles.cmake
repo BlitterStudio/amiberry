@@ -481,6 +481,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/MacOSXBundleInfo.plist.in"
 )
 
+# Select entitlements file based on build target
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    if(MACOS_APP_STORE)
+        set(AMIBERRY_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/packaging/macos/Amiberry-AppStore.entitlements")
+    else()
+        set(AMIBERRY_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/packaging/macos/Amiberry.entitlements")
+    endif()
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${AMIBERRY_ENTITLEMENTS}"
+    )
+endif()
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         _FILE_OFFSET_BITS=64
         AMIBERRY_VERSION="${PROJECT_VERSION}"

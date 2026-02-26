@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #if defined(__APPLE__) && defined(__aarch64__)
-#include <pthread.h>
+extern void uae_vm_jit_write_protect(bool enable_execute_mode);
 #endif
 #include "ibm.h"
 #include "x86.h"
@@ -414,7 +414,7 @@ static inline void exec_recompiler(void)
                 cpu_new_blocks++;
 
 #if defined(__APPLE__) && defined(__aarch64__)
-                pthread_jit_write_protect_np(0);
+                uae_vm_jit_write_protect(false);
 #endif
                 codegen_block_start_recompile(block);
                 codegen_in_recompile = 1;
@@ -488,7 +488,7 @@ static inline void exec_recompiler(void)
 
                 codegen_in_recompile = 0;
 #if defined(__APPLE__) && defined(__aarch64__)
-                pthread_jit_write_protect_np(1);
+                uae_vm_jit_write_protect(true);
 #endif
         }
         else if (!cpu_state.abrt)
