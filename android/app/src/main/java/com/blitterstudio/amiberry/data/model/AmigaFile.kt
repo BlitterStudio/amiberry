@@ -23,8 +23,8 @@ enum class FileCategory(
 ) {
 	ROMS("roms", "ROMs", setOf("rom", "bin")),
 	FLOPPIES("floppies", "Floppies", setOf("adf", "adz", "dms", "ipf", "zip", "gz")),
-	HARD_DRIVES("hdf", "Hard Drives", setOf("hdf", "hdi", "vhd")),
-	CD_IMAGES("cd", "CD Images", setOf("iso", "cue", "chd", "nrg", "mds")),
+	HARD_DRIVES("harddrives", "Hard Drives", setOf("hdf", "hdi", "vhd")),
+	CD_IMAGES("cdroms", "CD Images", setOf("iso", "cue", "chd", "nrg", "mds")),
 	WHDLOAD_GAMES("lha", "WHDLoad Games", setOf("lha", "lzx", "lzh"));
 
 	companion object {

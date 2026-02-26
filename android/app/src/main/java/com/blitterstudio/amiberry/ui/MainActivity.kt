@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
 	 */
 	private fun ensureDirectories() {
 		val base = getExternalFilesDir(null) ?: return
-		listOf("roms", "floppies", "hdf", "cd", "lha", "conf").forEach { dir ->
+		listOf("roms", "floppies", "harddrives", "cdroms", "lha", "conf").forEach { dir ->
 			File(base, dir).let { if (!it.exists()) it.mkdirs() }
 		}
 	}
