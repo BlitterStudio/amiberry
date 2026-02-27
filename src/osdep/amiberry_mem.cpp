@@ -1276,7 +1276,12 @@ void commit_natmem_gaps(void)
 				uae_u32 gap_size = gap_end - gap_start;
 				uae_u8* addr = natmem_reserved + gap_start;
 				if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
-					memset(addr, fill_byte, gap_size);
+#ifndef _WIN32
+					/* On POSIX, freshly committed anonymous pages are zero-filled
+					 * by the kernel. Only memset if we need a non-zero fill. */
+					if (fill_byte != 0)
+#endif
+						memset(addr, fill_byte, gap_size);
 					total_gap += gap_size;
 					write_log(_T("MMAN: Committed gap %08x-%08x (%uK) fill=0x%02x\n"),
 						gap_start, gap_end, gap_size >> 10, fill_byte);
@@ -1294,7 +1299,10 @@ void commit_natmem_gaps(void)
 			uae_u32 gap_size = gap_end - gap_start;
 			uae_u8* addr = natmem_reserved + gap_start;
 			if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
-				memset(addr, fill_byte, gap_size);
+#ifndef _WIN32
+				if (fill_byte != 0)
+#endif
+					memset(addr, fill_byte, gap_size);
 				total_gap += gap_size;
 				write_log(_T("MMAN: Committed trailing gap %08x-%08x (%uK) fill=0x%02x\n"),
 					gap_start, gap_end, gap_size >> 10, fill_byte);

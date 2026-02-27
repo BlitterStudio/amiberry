@@ -31,7 +31,7 @@
 #include "sysdeps.h"
 
 #include <math.h>
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 #include <sys/mman.h>
 #endif
 
@@ -79,8 +79,8 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 {
 	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
 	int flags = UAE_VM_32BIT;
-#if defined(__APPLE__) && defined(CPU_AARCH64)
-	/* ARM64 JIT metadata pools don't need low 4GB addresses on macOS. */
+#if defined(CPU_AARCH64)
+	/* ARM64 JIT is 64-bit clean: metadata pools don't need low 4GB. */
 	flags = 0;
 #endif
 	return uae_vm_alloc(size, flags, UAE_VM_READ_WRITE);
@@ -91,11 +91,19 @@ static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
 	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
 	int flags = UAE_VM_32BIT;
 	int protect = UAE_VM_READ_WRITE;
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
+#if defined(__APPLE__)
 	/* On macOS ARM64, MAP_JIT mappings may not be placeable below 4GB.
 	 * Allow normal placement and rely on ARM64 codegen's 64-bit pointers. */
 	flags = UAE_VM_JIT;
-	/* MAP_JIT allocations are expected to be executable mappings. */
+#else
+	/* ARM64 JIT is 64-bit pointer clean — no need for 32-bit constraint.
+	 * On Android, the 32-bit scan loop would iterate ~460K times because
+	 * natmem is placed well above 4GB by the kernel. */
+	flags = 0;
+#endif
+	/* All ARM64: code memory must be executable from allocation time.
+	 * On Android, SELinux may deny mprotect(PROT_EXEC) on non-exec pages. */
 	protect = UAE_VM_READ_WRITE_EXECUTE;
 #endif
 	return uae_vm_alloc(size, flags, protect);
@@ -112,7 +120,7 @@ static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
   write_log("JIT: " format "\n", ##__VA_ARGS__);
 #define jit_log2(format, ...)
 
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 /* Not used on ARM64; R_MEMSTART (x27) holds full 64-bit natmem_offset */
 #define MEMBaseDiff ((uae_u32)0)
 #else
@@ -480,11 +488,11 @@ static uae_s32 reg_alloc_run;
 const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
 uae_u8* popallspace = NULL;
 
-#if defined(__APPLE__) && defined(CPU_AARCH64)
-/* On macOS ARM64, popallspace and JIT cache are allocated as one contiguous
- * MAP_JIT block to guarantee the cache is within ARM64 B/BL branch range
- * (±128 MB) of popallspace. macOS mmap ignores hint addresses for MAP_JIT
- * allocations, making separate nearby allocation unreliable. */
+#if defined(CPU_AARCH64)
+/* On ARM64, popallspace and JIT cache are allocated as one contiguous
+ * block to guarantee the cache is within ARM64 B/BL branch range
+ * (+-128 MB) of popallspace. Separate allocations may be scattered
+ * too far apart by the kernel's mmap placement. */
 static size_t popall_combined_alloc_size = 0;
 static uint8 *popall_combined_cache_start = NULL;
 static uint32 popall_combined_cache_kb = 0;
@@ -2553,7 +2561,7 @@ void compiler_exit(void)
 
     // Deallocate translation cache
     if (compiled_code) {
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
         /* Don't free separately if part of the combined popallspace block */
         if (compiled_code != popall_combined_cache_start) {
             vm_release(compiled_code, cache_size * 1024);
@@ -2566,7 +2574,7 @@ void compiler_exit(void)
 
     // Deallocate popallspace
     if (popallspace) {
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
         vm_release(popallspace, popall_combined_alloc_size ? popall_combined_alloc_size : POPALLSPACE_SIZE);
         popall_combined_alloc_size = 0;
         popall_combined_cache_start = NULL;
@@ -3066,12 +3074,13 @@ static inline uint8 *alloc_code(uint32 size)
     uint8 *ptr = do_alloc_code(size, 0);
 	/* allocated code must fit in 32-bit boundaries */
 #ifdef CPU_64_BIT
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
+	/* ARM64 JIT is 64-bit pointer clean — tolerate high addresses. */
 	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
-		static bool arm64_macos_high_jit_logged = false;
-		if (!arm64_macos_high_jit_logged) {
-			jit_log("ARM64 macOS: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
-			arm64_macos_high_jit_logged = true;
+		static bool arm64_high_jit_logged = false;
+		if (!arm64_high_jit_logged) {
+			jit_log("ARM64: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
+			arm64_high_jit_logged = true;
 		}
 	}
 #else
@@ -3085,7 +3094,7 @@ static inline uint8 *alloc_code(uint32 size)
 	return ptr;
 }
 
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 static inline bool arm64_uncond_branch_reachable(uintptr from, uintptr to)
 {
 	/* AArch64 B immediate range: signed 26-bit immediate, shifted left by 2. */
@@ -3107,6 +3116,7 @@ static inline bool arm64_cache_reaches_popall(uint8 *cache_start, uint32 cache_s
 		arm64_uncond_branch_reachable(end, popall);
 }
 
+#if defined(__APPLE__)
 static uint8 *alloc_code_near_popall(uint32 size)
 {
 	if (!popallspace || size == 0) {
@@ -3143,13 +3153,14 @@ static uint8 *alloc_code_near_popall(uint32 size)
 	/* Fallback allocation may place cache out of branch range, checked by caller. */
 	return alloc_code(size);
 }
-#endif
+#endif /* __APPLE__ */
+#endif /* CPU_AARCH64 */
 
 void alloc_cache(void)
 {
     if (compiled_code) {
         flush_icache_hard(3);
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
         /* Don't free if it's part of the combined popallspace block */
         if (compiled_code != popall_combined_cache_start) {
             vm_release(compiled_code, cache_size * 1024);
@@ -3164,17 +3175,21 @@ void alloc_cache(void)
     if (cache_size == 0)
         return;
 
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 	/* Use pre-allocated cache from the combined popallspace block if available */
 	if (popall_combined_cache_start && (uint32)cache_size <= popall_combined_cache_kb) {
 		compiled_code = popall_combined_cache_start;
 	} else {
-		/* Fall back to separate allocation with hint-based approach */
+		/* Fall back to separate allocation */
 		while (!compiled_code && cache_size) {
 			const uint32 cache_bytes = cache_size * 1024;
+#if defined(__APPLE__)
 			compiled_code = alloc_code_near_popall(cache_bytes);
+#else
+			compiled_code = alloc_code(cache_bytes);
+#endif
 			if (compiled_code && !arm64_cache_reaches_popall(compiled_code, cache_bytes)) {
-				jit_log("ARM64 macOS: JIT cache %p (size %u) is out of branch range from popallspace %p",
+				jit_log("ARM64: JIT cache %p (size %u) is out of branch range from popallspace %p",
 					compiled_code, cache_bytes, popallspace);
 				vm_release(compiled_code, cache_bytes);
 				compiled_code = NULL;
@@ -3194,15 +3209,25 @@ void alloc_cache(void)
 			cache_size /= 2;
 		}
 	}
-	vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE);
+	if (compiled_code) {
+		if (!vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE)) {
+			jit_log("WARNING: Failed to set JIT cache to RWX — JIT may crash");
+		}
+	}
 #endif
 
     if (compiled_code) {
-#if defined(__APPLE__) && defined(CPU_AARCH64)
-		static bool arm64_macos_jit_mode_logged = false;
-		if (!arm64_macos_jit_mode_logged) {
-			jit_log("ARM64 macOS JIT mode active: MAP_JIT allocation + write/execute switching");
-			arm64_macos_jit_mode_logged = true;
+#if defined(CPU_AARCH64)
+		static bool arm64_jit_mode_logged = false;
+		if (!arm64_jit_mode_logged) {
+#if defined(__APPLE__)
+			jit_log("ARM64 macOS JIT mode: MAP_JIT + write/execute switching");
+#elif defined(__ANDROID__)
+			jit_log("ARM64 Android JIT mode: RWX anonymous mapping");
+#else
+			jit_log("ARM64 JIT mode: RWX anonymous mapping");
+#endif
+			arm64_jit_mode_logged = true;
 		}
 #endif
         jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size * 1024);
@@ -3394,10 +3419,9 @@ STATIC_INLINE void create_popalls(void)
     int i, r;
 
     if (popallspace == NULL) {
-#if defined(__APPLE__) && defined(CPU_AARCH64)
-        /* Allocate popallspace + JIT cache as one contiguous MAP_JIT block.
-         * macOS mmap ignores hint addresses for MAP_JIT, so separate allocation
-         * of the cache near popallspace is unreliable (cache ends up tiny). */
+#if defined(CPU_AARCH64)
+        /* On ARM64, allocate popallspace + JIT cache as one contiguous block
+         * to guarantee the cache is within B/BL branch range (+-128 MB). */
         const uint32 cache_kb = currprefs.cachesize > 0 ? currprefs.cachesize : MAX_JIT_CACHE;
         const size_t cache_bytes = (size_t)cache_kb * 1024;
         const size_t combined_size = POPALLSPACE_SIZE + cache_bytes;
@@ -3406,7 +3430,7 @@ STATIC_INLINE void create_popalls(void)
             popall_combined_alloc_size = combined_size;
             popall_combined_cache_start = popallspace + POPALLSPACE_SIZE;
             popall_combined_cache_kb = cache_kb;
-            jit_log("ARM64 macOS: combined popallspace+cache allocation at %p (%u KB cache)",
+            jit_log("ARM64: combined popallspace+cache allocation at %p (%u KB cache)",
                 popallspace, cache_kb);
         } else {
             /* Fall back to popallspace-only allocation */
@@ -3430,7 +3454,9 @@ STATIC_INLINE void create_popalls(void)
             return;
         }
     }
-#if !defined(__APPLE__) || !defined(CPU_AARCH64)
+#if !defined(CPU_AARCH64)
+    /* On non-ARM64, code memory was allocated RW-only; this is a no-op there.
+     * On ARM64, code memory is already RWX from allocation — skip. */
     vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_WRITE);
 #endif
 	jit_begin_write_window();
@@ -3520,7 +3546,7 @@ STATIC_INLINE void create_popalls(void)
     // stale/random data from the I-cache.
     flush_cpu_icache((void *)popallspace, (void *)get_target());
 #endif
-#if !defined(__APPLE__) || !defined(CPU_AARCH64)
+#if !defined(CPU_AARCH64)
 	vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
 #endif
 	jit_end_write_window();
