@@ -809,14 +809,14 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	if (h != nullptr) {
 		uae_s64 size;
 #ifdef __MACH__
-	// check type of file
-	int ret = stat(name,&st);
+	// check type of file using fstat on the already-open descriptor
+	// (more reliable than stat-by-path on network volumes like SMB/NFS)
+	int ret = fstat(fileno(h), &st);
 	if(ret) {
-		write_log ("osx: can't stat '%s'\n", name);
-		goto end;
+		write_log("osx: fstat failed for '%s' (errno=%d), assuming regular file\n", name, errno);
 	}
 		// block devices need special handling on osx
-		if(S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode)) {
+		if(!ret && (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode))) {
 			uint32_t block_size;
 			uint64_t block_count;
 			int fh = fileno(h);
