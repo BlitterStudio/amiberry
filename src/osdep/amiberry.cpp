@@ -2464,6 +2464,10 @@ void fullpath(TCHAR* path, int size, bool userelative)
 		if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
 			_tcscpy(path, tmp1);
 	}
+	else if (path[0] != 0)
+	{
+		write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
+	}
 }
 
 // convert path to absolute
