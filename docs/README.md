@@ -3,7 +3,7 @@
 <img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
 <h1>Amiberry</h1>
-<strong>Optimized Amiga Emulator for Linux, macOS and Windows</strong>
+<strong>Optimized Amiga Emulator for Linux, macOS, Windows and Android</strong>
 
 <p>
   <a href="https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml">
@@ -29,13 +29,13 @@
 
 ## 📖 Introduction
 
-**Amiberry** is an optimized Amiga emulator designed for ARM (32/64-bit), x86_64, and RISC-V platforms. It natively runs on **Linux**, **macOS** and **Windows**, providing a high-performance emulation experience suitable for everything from low-power SBCs (like Raspberry Pi) to powerful desktop workstations.
+**Amiberry** is an optimized Amiga emulator designed for ARM (32/64-bit), x86_64, and RISC-V platforms. It natively runs on **Linux**, **macOS**, **Windows** and **Android**, providing a high-performance emulation experience suitable for everything from low-power SBCs (like Raspberry Pi) to powerful desktop workstations and mobile devices.
 
 Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-standard compatibility to multiple platforms while adding unique features tailored for modern setups.
 
 ## ✨ Features
 
--   **High Performance JIT**: Custom Just-In-Time compiler for extreme speed on supported devices.
+-   **High Performance JIT**: Custom Just-In-Time compiler for extreme speed on ARM64 (macOS, Linux, Android) and x86.
 -   **WHDLoad BOOTER**: Native support for launching WHDLoad titles directly, handling all configuration automatically.
 -   **RetroArch Integration**: Seamless mapping for RetroArch controllers.
 -   **Host Tools Integration**: Launch host applications directly from the emulation.
@@ -86,6 +86,12 @@ brew install --cask amiberry
 3.  Drag `Amiberry.app` to your `Applications` folder.
 
 > **Note**: For development builds, file associations for `.uae`, `.adf`, and `.lha` are set up automatically.
+
+### Android 🤖
+
+Amiberry supports Android on AArch64 and x86_64, with full ARM64 JIT support for maximum performance.
+
+See [Compile from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source) for build instructions.
 
 ### Windows 🪟
 

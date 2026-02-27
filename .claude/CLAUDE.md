@@ -188,7 +188,7 @@ The emulator maps Amiga's address space into a contiguous host virtual memory bl
 - `shmids[]` array (MAX_SHMID=256) tracks all committed regions
 
 **Gap handling (`commit_natmem_gaps()`):**
-Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and Kickstart ROM) would cause SIGSEGV on access. After all banks are mapped, `commit_natmem_gaps()` walks the natmem space and commits any remaining gaps with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). This is called at the end of `memory_reset()` behind `#ifdef NATMEM_OFFSET`.
+Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and Kickstart ROM) would cause SIGSEGV on access. After all banks are mapped, `commit_natmem_gaps()` walks the natmem space and commits any remaining gaps with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). This is called at the end of `memory_reset()` behind `#ifdef NATMEM_OFFSET`. On POSIX systems, `memset` is skipped when the fill byte is 0x00 because the kernel zero-fills anonymous pages on demand — this avoids physically allocating the trailing gap (which can be ~1.8GB on A4000 configs) and prevents OOM on memory-constrained platforms like Android.
 
 **Key variables** (in `amiberry_mem.cpp`):
 - `natmem_reserved` — base pointer of reserved block
@@ -198,6 +198,20 @@ Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and K
 
 **SIGSEGV handler** (`sigsegv_handler.cpp`):
 When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR instruction and emulates the access via bank handlers. Faults outside JIT code range are not recovered.
+
+### ARM64 JIT Android Support (2026-02)
+
+The ARM64 JIT compiler works on Android (AArch64). Three issues were solved to enable it:
+
+1. **macOS-only guards generalized**: 14 `#if defined(__APPLE__) && defined(CPU_AARCH64)` guards in `compemu_support_arm.cpp` changed to `#if defined(CPU_AARCH64)`. This gives Android the same RWX code allocation, combined popallspace+cache layout, and 64-bit pointer tolerance that macOS uses. macOS-specific APIs (`MAP_JIT`, `pthread_jit_write_protect_np`) remain behind `__APPLE__` guards.
+
+2. **`UAE_VM_32BIT` scan loop**: `vm_acquire_code()` used the `UAE_VM_32BIT` flag on non-Apple ARM64, causing ~460K futile `mmap`/`munmap` iterations because Android's natmem sits well above 4GB (`0x7604c00000`). Fixed by setting `flags = 0` for non-Apple ARM64.
+
+3. **OOM from natmem gap `memset`**: Enabling JIT sets `canbang=true` (via `jit_direct_compatible_memory` when `cachesize > 0`), which activates `commit_natmem_gaps()`. The trailing gap (~1.84GB on A4000) `memset` forced physical page allocation, OOM-killing on Android. Fixed in `amiberry_mem.cpp`: skip `memset` when `fill_byte == 0` on POSIX (the kernel zero-fills anonymous pages).
+
+**Key insight**: Before JIT is enabled, `cachesize == 0` → `jit_direct_compatible_memory = false` → `canbang = false` → `commit_natmem_gaps()` returns early. The 1.84GB trailing gap was never an issue until JIT activated it.
+
+**Android JIT memory model**: Code memory is allocated RWX (`PROT_READ|PROT_WRITE|PROT_EXEC`) from the start via `uae_vm_alloc(..., UAE_VM_READ_WRITE_EXECUTE)`. Unlike macOS (which uses MAP_JIT + W^X toggling via `pthread_jit_write_protect_np`), Android keeps memory permanently RWX. The `jit_begin_write_window()` / `jit_end_write_window()` calls are no-ops on Android. `flush_cpu_icache()` uses `__builtin___clear_cache()` (not macOS's `sys_icache_invalidate`). An SELinux error hint is logged in `vm.cpp` if RWX allocation fails.
 
 ### ARM64 JIT Stability Notes (2026-02)
 
