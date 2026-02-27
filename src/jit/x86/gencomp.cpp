@@ -2023,9 +2023,10 @@ gen_opcode(unsigned int opcode)
 		if (curi->size == sz_long) {
 			/* Sign-extend 32-bit displacement to pointer width for backward branches.
 			   comp_get_ilong() returns uae_u32 which zero-extends to uintptr on 64-bit;
-			   a negative displacement like 0xFFFFF000 must become 0xFFFFFFFFFFFFF000. */
-			comprintf("\tif (isconst(src)) live.state[src].val = "
-				"(uintptr)(uae_s32)(uae_u32)live.state[src].val;\n");
+			   a negative displacement like 0xFFFFF000 must become 0xFFFFFFFFFFFFF000.
+			   Uses get_const/mov_l_ri (accessible from generated code) instead of
+			   isconst/live (static in compemu_support, not visible here). */
+			comprintf("\tmov_l_ri(src, (uintptr)(uae_s32)(uae_u32)get_const(src));\n");
 		}
 		start_brace();
 		comprintf("\tuae_u32 retadd=(uae_u32)(start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset);\n");
@@ -2053,8 +2054,7 @@ gen_opcode(unsigned int opcode)
 		case sz_long:
 			/* Sign-extend 32-bit displacement to pointer width for backward branches.
 			   Same fix as BSR.L above. */
-			comprintf("\tif (isconst(src)) live.state[src].val = "
-				"(uintptr)(uae_s32)(uae_u32)live.state[src].val;\n");
+			comprintf("\tmov_l_ri(src, (uintptr)(uae_s32)(uae_u32)get_const(src));\n");
 			break;
 		}
 		comprintf("\tsub_l_ri(src,m68k_pc_offset-m68k_pc_offset_thisinst-2);\n");

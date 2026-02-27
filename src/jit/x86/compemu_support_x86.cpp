@@ -1665,7 +1665,7 @@ static inline void writeback_const(int r)
 	}
 
 #if X86_TARGET_64BIT
-	if (r == PC_P || r == PC_OLDP) {
+	if (r == PC_P) {
 		/* PC_P holds a 64-bit host pointer — must use 64-bit store */
 		raw_mov_q_mi((uintptr)live.state[r].mem, live.state[r].val);
 	} else
@@ -1824,7 +1824,7 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		if (live.state[r].status!=UNDEF) {
 			if (isconst(r)) {
 #if X86_TARGET_64BIT
-				if (r == PC_P || r == PC_OLDP) {
+				if (r == PC_P) {
 					/* PC_P holds a 64-bit host pointer — must use 64-bit load */
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
@@ -1870,7 +1870,7 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		else {
 			if (live.state[r].status!=UNDEF) {
 #if X86_TARGET_64BIT
-				if (r == PC_P || r == PC_OLDP) {
+				if (r == PC_P) {
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
 #endif
