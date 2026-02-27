@@ -554,15 +554,8 @@ if(NOT ANDROID AND NOT WIN32)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
     target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
 elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-    # JIT compiler uses 32-bit addressing (x86-64 address override prefix).
-    # All pointers referenced from JIT code must be below 4GB, including
-    # host functions and global data in the executable itself. Force the
-    # image base below 4GB and disable high-entropy ASLR which would
-    # place it at a random high address.
-    target_link_options(${PROJECT_NAME} PRIVATE
-        -Wl,--default-image-base-low
-        -Wl,--disable-high-entropy-va
-    )
+    # x86_64 JIT is now 64-bit pointer-clean: no longer needs ASLR-disabling
+    # linker flags or forced low image base.
     # Mark as GUI application in Release builds to suppress the console
     # window. Debug builds keep the console for convenience.
     # When --log is passed at runtime, main.cpp calls AllocConsole() to

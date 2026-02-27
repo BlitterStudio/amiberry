@@ -46,7 +46,7 @@ typedef uae_u32 uintptr;
 #define USE_JIT
 #endif
 
-#define JITPTR (uae_u32)(uintptr)
+#define JITPTR (uintptr)
 
 #ifdef USE_JIT
 
@@ -253,7 +253,7 @@ extern void* pushall_call_handler;
 
 typedef struct {
   uae_u32* mem;
-  uae_u32 val;
+  uintptr val;  /* Must be pointer-width: PC_P holds a host pointer (64-bit on x86_64) */
   uae_u8 is_swapped;
   uae_u8 status;
   uae_s8 realreg; /* gb-- realreg can hold -1 */
@@ -348,6 +348,7 @@ typedef struct {
 extern int touchcnt;
 
 #define IMM  uae_s32
+#define IMPTR uintptr
 #define RR1  uae_u32
 #define RR2  uae_u32
 #define RR4  uae_u32
@@ -363,9 +364,9 @@ extern int touchcnt;
 #define RW1 uae_u32
 #define RW2 uae_u32
 #define RW4 uae_u32
-#define MEMR uae_u32
-#define MEMW uae_u32
-#define MEMRW    uae_u32
+#define MEMR uintptr
+#define MEMW uintptr
+#define MEMRW    uintptr
 #define MEMPTR   uintptr
 #define MEMPTRR  MEMPTR
 #define MEMPTRW  MEMPTR
@@ -410,9 +411,9 @@ extern void set_zero(int r, int tmp);
 extern int kill_rodent(int r);
 #define SYNC_PC_OFFSET 100
 extern void sync_m68k_pc(void);
-extern uae_u32 get_const(int r);
+extern uintptr get_const(int r);
 extern int  is_const(int r);
-extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
+extern void register_branch(uintptr not_taken, uintptr taken, uae_u8 cond);
 void compemu_make_sr(int sr, int tmp);
 void compemu_enter_super(int sr);
 void compemu_exc_make_frame(int format, int sr, int currpc, int nr, int tmp);
@@ -560,32 +561,10 @@ void jit_abort(const char *format,...) __attribute__((format(printf, 1, 2))) __a
 
 #endif /* UAE */
 
-#ifdef CPU_64_BIT
-static inline uae_u32 check_uae_p32(uintptr address, const char *file, int line)
-{
-	if (address > (uintptr_t) 0xffffffff) {
-#ifdef AMIBERRY
-		// JIT compiler uses 32-bit addressing — pointers must fit in 32 bits.
-		// Do NOT call jit_abort() here as it triggers uae_reset() which
-		// permanently sets quit_program, blocking the rendering thread.
-		// Log the error; the truncated pointer will cause JIT malfunction
-		// but the emulator can fall back to interpreter mode.
-		static int p32_warn_count = 0;
-		if (p32_warn_count < 5) {
-			write_log("JIT: WARNING: 64-bit pointer 0x%llx at %s:%d (natmem not in 32-bit range?)\n",
-				(unsigned long long)address, file, line);
-			p32_warn_count++;
-		}
-#else
-		jit_abort("JIT: 64-bit pointer (0x%llx) at %s:%d (fatal)",
-			(unsigned long long)address, file, line);
-#endif
-	}
-	return (uae_u32) address;
-}
-#define uae_p32(x) (check_uae_p32((uintptr)(x), __FILE__, __LINE__))
-#else
-#define uae_p32(x) ((uae_u32)(x))
-#endif
+/* x86_64 JIT is now 64-bit pointer-clean. uae_p32() is no longer needed
+   for pointer truncation. It now passes through the full uintptr value.
+   The debug check remains to catch any leftover code that still assumes
+   32-bit pointers where it shouldn't. */
+#define uae_p32(x) ((uintptr)(x))
 
 #endif /* COMPEMU_H */

@@ -368,10 +368,10 @@ bool preinit_shm ()
 #if 1
 	{
 		int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
-#if defined(CPU_AARCH64)
-		/* ARM64 JIT is 64-bit pointer-clean: natmem can live above 4GB.
-		   Dropping UAE_VM_32BIT avoids ~25 futile mmap/munmap cycles on
-		   platforms (e.g. macOS) where the kernel ignores low-address hints. */
+#if defined(CPU_AARCH64) || defined(CPU_x86_64)
+		/* ARM64 and x86_64 JIT are 64-bit pointer-clean: natmem can live above 4GB.
+		   Dropping UAE_VM_32BIT avoids futile mmap/munmap cycles on
+		   platforms where the kernel ignores low-address hints. */
 		vm_flags &= ~UAE_VM_32BIT;
 #endif
 		natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, vm_flags));

@@ -246,7 +246,7 @@ The ARM64 JIT compiler works on Android (AArch64). Three issues were solved to e
 
 **Natmem reservation**: On ARM64, `UAE_VM_32BIT` is dropped from the natmem reservation call since the JIT is 64-bit-clean. This avoids ~25 wasted mmap/munmap cycles on platforms where the kernel ignores low-address hints.
 
-**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has the same 32-bit type patterns but uses separate files. It works on platforms where natmem fits below 4GB. If x86_64 natmem ever moves above 4GB, the same fixes would be needed there.
+**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has been made 64-bit pointer-clean using the same approach as the ARM64 JIT. JITPTR passes full pointer width, PC_P uses 64-bit loads/stores via `raw_mov_q_ri`/`raw_mov_q_mi`, the ADDR32 prefix has been removed (eliminates 5-cycle Intel Core penalty), `UAE_VM_32BIT` is dropped from natmem/code allocation, and the Windows ASLR-disabling linker flags have been removed.
 
 ### GUI System
 
@@ -372,8 +372,8 @@ Platform-specific code is in `src/osdep/`:
 **Key Differences from POSIX platforms:**
 - `sysconfig.h` previously `#undef _WIN32` — this was removed to unlock WinUAE Windows code paths
 - Windows LLP64: `long` is 4 bytes (not 8); `SIZEOF_LONG` must be 4 in `sysconfig.h`
-- JIT compiler is non-functional on 64-bit Windows (pointers exceed 32-bit); interpreter mode works fine
-- `src/jit/x86/compemu_x86.h`: `check_uae_p32()` logs instead of calling `jit_abort()` under `AMIBERRY`
+- JIT compiler works on 64-bit Windows. The x86_64 JIT is 64-bit pointer-clean (same approach as ARM64 JIT): `JITPTR` passes full pointer width, `PC_P` uses 64-bit loads/stores, `ADDR32` prefix removed, and `UAE_VM_32BIT` dropped from natmem/code allocation. ASLR-disabling linker flags are no longer needed.
+- `src/jit/x86/compemu_x86.h`: `uae_p32()` is now a simple `(uintptr)` cast (no truncation)
 - `src/osdep/crtemu.h` line 80: uses `CRTEMU_SDL` path on Windows+Amiberry (not WinUAE's direct LoadLibrary path)
 
 **Symlinks:** Windows requires admin/DevMode for symlinks and uses different APIs for file vs directory symlinks. The WHDBooter (`src/osdep/amiberry_whdbooter.cpp`) uses `std::filesystem::copy()` directly on Windows for directory links, with try-catch fallback for file links.

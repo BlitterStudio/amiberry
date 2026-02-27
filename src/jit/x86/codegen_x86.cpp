@@ -198,10 +198,12 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
 
 #if defined(CPU_x86_64)
 #define X86_TARGET_64BIT		1
-/* The address override prefix causes a 5 cycles penalty on Intel Core
-   processors. Another solution would be to decompose the load in an LEA,
-   MOV (to zero-extend), MOV (from memory): is it better? */
-#define ADDR32					x86_emit_byte(0x67),
+/* ADDR32 removed: the address override prefix (0x67) caused a 5-cycle penalty
+   on Intel Core processors and forced 32-bit addressing. With the JIT now
+   64-bit pointer-clean, we use the default 64-bit addressing mode which
+   allows RIP-relative access (via _r_X macro) for addresses within 2GB
+   of the JIT code. This is both faster and supports natmem above 4GB. */
+#define ADDR32
 #else
 #define ADDR32
 #endif
@@ -872,6 +874,30 @@ LOWFUNC(NONE,NONE,2,raw_mov_l_ri,(W4 d, IMM s))
 	MOVLir(s, d);
 }
 
+#if X86_TARGET_64BIT
+/* 64-bit immediate → register (movabs r64, imm64).
+   Used for PC_P which holds a 64-bit host pointer. */
+LOWFUNC(NONE,NONE,2,raw_mov_q_ri,(W4 d, uintptr s))
+{
+	MOVQir(s, d);
+}
+
+/* 64-bit value → memory via scratch register.
+   x86_64 has no MOV [mem], imm64 instruction, so we use
+   movabs rax, imm64; then store via RIP-relative or register-indirect. */
+static inline void raw_mov_q_mi(uintptr d, uintptr s)
+{
+	MOVQir(s, X86_RAX);  /* movabs rax, imm64 */
+	if (x86_RIP_addressing_possible(d, 0)) {
+		intptr disp = (intptr)d - (intptr)((uintptr)get_target() + 4);
+		MOVQmr((IMM)disp, X86_NOREG, X86_NOREG, 1, X86_RAX);
+	} else {
+		MOVQir(d, X86_RCX);  /* movabs rcx, addr */
+		MOVQmr(0, X86_RCX, X86_NOREG, 1, X86_RAX);  /* mov [rcx], rax */
+	}
+}
+#endif
+
 LOWFUNC(NONE,NONE,2,raw_mov_w_ri,(W2 d, IMM s))
 {
 	MOVWir(s, d);
@@ -1181,15 +1207,31 @@ static inline void raw_jmp_m(uae_u32 base)
 }
 
 
+#if X86_TARGET_64BIT
+static inline void raw_call(uintptr t)
+{
+	/* 64-bit: load target into scratch register, call via register */
+	MOVQir(t, X86_RAX);
+	CALLsr(X86_RAX);
+}
+
+static inline void raw_jmp(uintptr t)
+{
+	/* 64-bit: load target into scratch register, jump via register */
+	MOVQir(t, X86_RAX);
+	JMPsr(X86_RAX);
+}
+#else
 static inline void raw_call(uae_u32 t)
 {
-	ADDR32 CALLm(t);
+	CALLm(t);
 }
 
 static inline void raw_jmp(uae_u32 t)
 {
-	ADDR32 JMPm(t);
+	JMPm(t);
 }
+#endif
 
 static inline void raw_jcc_l_oponly(int cc)
 {

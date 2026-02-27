@@ -728,7 +728,11 @@ static void install_exception_handler(void)
 
 #ifdef JIT_EXCEPTION_HANDLER
 	if (veccode == NULL) {
+#if X86_TARGET_64BIT
+		veccode = (uae_u8 *) uae_vm_alloc(256, 0, UAE_VM_READ_WRITE_EXECUTE);
+#else
 		veccode = (uae_u8 *) uae_vm_alloc(256, UAE_VM_32BIT, UAE_VM_READ_WRITE_EXECUTE);
+#endif
 	}
 #endif
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING

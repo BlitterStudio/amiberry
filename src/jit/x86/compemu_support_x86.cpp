@@ -130,7 +130,7 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 	write_log("JIT: " format "\n", ##__VA_ARGS__);
 #define jit_log2(format, ...)
 
-#define MEMBaseDiff uae_p32(NATMEM_OFFSET)
+#define MEMBaseDiff ((uintptr)NATMEM_OFFSET)
 
 #ifdef NATMEM_OFFSET
 #define FIXED_ADDRESSING 1
@@ -367,7 +367,7 @@ static inline unsigned int cft_map (unsigned int f)
 
 uae_u8* start_pc_p;
 uae_u32 start_pc;
-uae_u32 current_block_pc_p;
+uintptr current_block_pc_p;
 static uintptr current_block_start_target;
 uae_u32 needed_flags;
 static uintptr next_pc_p;
@@ -717,7 +717,7 @@ static inline void invalidate_block(blockinfo* bi)
 	remove_deps(bi);
 }
 
-static inline void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uae_u32 target)
+static inline void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uintptr target)
 {
 	blockinfo*  tbi=get_blockinfo_addr((void*)(uintptr)target);
 
@@ -1664,7 +1664,15 @@ static inline void writeback_const(int r)
 		jit_abort("Trying to write back constant NF_HANDLER!");
 	}
 
-	compemu_raw_mov_l_mi(JITPTR live.state[r].mem,live.state[r].val);
+#if X86_TARGET_64BIT
+	if (r == PC_P || r == PC_OLDP) {
+		/* PC_P holds a 64-bit host pointer — must use 64-bit store */
+		raw_mov_q_mi((uintptr)live.state[r].mem, live.state[r].val);
+	} else
+#endif
+	{
+		compemu_raw_mov_l_mi(JITPTR live.state[r].mem, live.state[r].val);
+	}
 	log_vwrite(r);
 	live.state[r].val=0;
 	set_status(r,INMEM);
@@ -1738,8 +1746,7 @@ static inline void disassociate(int r)
 	evict(r);
 }
 
-/* XXFIXME: val may be 64bit address for PC_P */
-static inline void set_const(int r, uae_u32 val)
+static inline void set_const(int r, uintptr val)
 {
 	disassociate(r);
 	live.state[r].val=val;
@@ -1816,7 +1823,15 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 	if (!willclobber) {
 		if (live.state[r].status!=UNDEF) {
 			if (isconst(r)) {
-				compemu_raw_mov_l_ri(bestreg,live.state[r].val);
+#if X86_TARGET_64BIT
+				if (r == PC_P || r == PC_OLDP) {
+					/* PC_P holds a 64-bit host pointer — must use 64-bit load */
+					raw_mov_q_ri(bestreg, live.state[r].val);
+				} else
+#endif
+				{
+					compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+				}
 				live.state[r].val=0;
 				live.state[r].dirtysize=4;
 				set_status(r,DIRTY);
@@ -1853,8 +1868,16 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 			}
 		}
 		else {
-			if (live.state[r].status!=UNDEF)
-				compemu_raw_mov_l_ri(bestreg,live.state[r].val);
+			if (live.state[r].status!=UNDEF) {
+#if X86_TARGET_64BIT
+				if (r == PC_P || r == PC_OLDP) {
+					raw_mov_q_ri(bestreg, live.state[r].val);
+				} else
+#endif
+				{
+					compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+				}
+			}
 			live.state[r].val=0;
 			live.state[r].validsize=4;
 			live.state[r].dirtysize=4;
@@ -2676,7 +2699,7 @@ int kill_rodent(int r)
 		 live.state[r].dirtysize==4);
 }
 
-uae_u32 get_const(int r)
+uintptr get_const(int r)
 {
 	Dif (!isconst(r)) {
 		jit_abort("Register %d should be constant, but isn't",r);
@@ -3255,7 +3278,7 @@ static void freescratch(void)
  * Memory access and related functions, CREATE time                 *
  ********************************************************************/
 
-void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond)
+void register_branch(uintptr not_taken, uintptr taken, uae_u8 cond)
 {
 	next_pc_p=not_taken;
 	taken_pc_p=taken;
@@ -3639,15 +3662,22 @@ uae_u32 get_jitted_size(void)
 static uint8 *do_alloc_code(uint32 size, int depth)
 {
 	UNUSED(depth);
+#if X86_TARGET_64BIT
+	/* 64-bit JIT is pointer-clean — no need to force code below 4GB */
+	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT);
+#else
 	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+#endif
 	return code == VM_MAP_FAILED ? NULL : code;
 }
 
 static inline uint8 *alloc_code(uint32 size)
 {
 	uint8 *ptr = do_alloc_code(size, 0);
+#if !X86_TARGET_64BIT
 	/* allocated code must fit in 32-bit boundaries */
 	assert((uintptr)ptr <= 0xffffffff);
+#endif
 	return ptr;
 }
 
@@ -5044,7 +5074,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #if USE_NORMAL_CALLING_CONVENTION
 					raw_push_l_r(REG_PAR1);
 #endif
-					compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[i].location);
+	#if X86_TARGET_64BIT
+				raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[i].location);
+#else
+				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[i].location);
+#endif
 					raw_dec_sp(STACK_SHADOW_SPACE);
 					compemu_raw_call(JITPTR cputbl[opcode]);
 					raw_inc_sp(STACK_SHADOW_SPACE);
@@ -5076,8 +5110,10 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					}
 				}
 			}
-#if 1 /* This isn't completely kosher yet; It really needs to be
-		 integrated into a general inter-block-dependency scheme */
+#if 0 /* Disabled: inter-block flag optimization uses single-instruction
+		 lookahead which is insufficient. Can discard flags that later
+		 instructions in the next block depend on, causing visual corruption.
+		 Same issue as ARM64 fix (compemu_support_arm.cpp:3528). */
 			if (next_pc_p && taken_pc_p &&
 				was_comp && taken_pc_p==current_block_pc_p)
 			{
@@ -5143,7 +5179,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 				tba=(uae_u32*)get_target();
 				emit_jmp_target(JITPTR get_handler(t1));
+	#if X86_TARGET_64BIT
+				raw_mov_q_mi((uintptr)&regs.pc_p, t1);
+#else
 				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR t1);
+#endif
 				flush_reg_count();
 				compemu_raw_jmp(JITPTR popall_do_nothing);
 				create_jmpdep(bi,0,tba, JITPTR t1);
@@ -5165,7 +5205,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 				tba=(uae_u32*)get_target();
 				emit_jmp_target(JITPTR get_handler(t2));
+	#if X86_TARGET_64BIT
+				raw_mov_q_mi((uintptr)&regs.pc_p, t2);
+#else
 				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR t2);
+#endif
 				flush_reg_count();
 				compemu_raw_jmp(JITPTR popall_do_nothing);
 				create_jmpdep(bi,1,tba, JITPTR t2);
@@ -5209,7 +5253,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 					tba=(uae_u32*)get_target();
 					emit_jmp_target(JITPTR get_handler(v));
+	#if X86_TARGET_64BIT
+					raw_mov_q_mi((uintptr)&regs.pc_p, v);
+#else
 					compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR v);
+#endif
 					compemu_raw_jmp(JITPTR popall_do_nothing);
 					create_jmpdep(bi,0,tba, JITPTR v);
 				}
