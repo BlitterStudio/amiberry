@@ -82,6 +82,11 @@
 
 #include "dpi_handler.hpp"
 #include "registry.h"
+#include "target.h"
+
+#ifdef USE_OPENGL
+#include <SDL_image.h>
+#endif
 
 #ifdef AMIBERRY
 static bool force_auto_crop = false;
@@ -398,6 +403,19 @@ static GLint osd_tex_loc = -1;
 static GLuint osd_vbo = 0;
 static GLuint osd_vao = 0;
 static GLuint vbo_uploaded = 0;
+
+// Custom bezel overlay
+static GLuint bezel_texture = 0;
+static GLuint bezel_vao = 0;
+static GLuint bezel_vbo = 0;
+static std::string loaded_bezel_name;
+static int bezel_tex_width = 0;
+static int bezel_tex_height = 0;
+// Screen hole region (normalized 0.0-1.0 fractions of bezel image)
+static float bezel_hole_x = 0.0f;
+static float bezel_hole_y = 0.0f;
+static float bezel_hole_w = 1.0f;
+static float bezel_hole_h = 1.0f;
 
 static const char* osd_vs_source =
 	""
@@ -2061,6 +2079,207 @@ static void render_osd(const int monid, int x, int y, int w, int h)
 #endif
 
 #ifdef USE_OPENGL
+// Custom bezel overlay functions
+static bool load_bezel_texture(const char* bezel_name)
+{
+	if (!bezel_name || !strcmp(bezel_name, "none") || !strlen(bezel_name))
+		return false;
+
+	// Already loaded with same name
+	if (bezel_texture != 0 && loaded_bezel_name == bezel_name)
+		return true;
+
+	// Unload existing
+	if (bezel_texture != 0 && glIsTexture(bezel_texture)) {
+		glDeleteTextures(1, &bezel_texture);
+		bezel_texture = 0;
+	}
+	loaded_bezel_name.clear();
+	bezel_tex_width = 0;
+	bezel_tex_height = 0;
+
+	std::string full_path = get_bezels_path() + bezel_name;
+	SDL_Surface* surface = IMG_Load(full_path.c_str());
+	if (!surface) {
+		write_log("Custom bezel: failed to load %s: %s\n", full_path.c_str(), IMG_GetError());
+		return false;
+	}
+
+	SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ABGR8888, 0);
+	SDL_FreeSurface(surface);
+	if (!rgba) {
+		write_log("Custom bezel: failed to convert %s to RGBA\n", full_path.c_str());
+		return false;
+	}
+
+	// Scan alpha channel to find the transparent "screen hole" bounding box
+	{
+		int min_x = rgba->w, min_y = rgba->h, max_x = 0, max_y = 0;
+		const int pitch = rgba->pitch;
+		const Uint8* pixels = static_cast<const Uint8*>(rgba->pixels);
+
+		for (int y = 0; y < rgba->h; y++) {
+			const Uint8* row = pixels + y * pitch;
+			for (int x = 0; x < rgba->w; x++) {
+				// ABGR8888 layout: R, G, B, A (alpha is byte 3)
+				Uint8 alpha = row[x * 4 + 3];
+				if (alpha < 128) {  // Transparent or semi-transparent
+					if (x < min_x) min_x = x;
+					if (x > max_x) max_x = x;
+					if (y < min_y) min_y = y;
+					if (y > max_y) max_y = y;
+				}
+			}
+		}
+
+		if (max_x >= min_x && max_y >= min_y) {
+			bezel_hole_x = static_cast<float>(min_x) / rgba->w;
+			bezel_hole_y = static_cast<float>(min_y) / rgba->h;
+			bezel_hole_w = static_cast<float>(max_x - min_x + 1) / rgba->w;
+			bezel_hole_h = static_cast<float>(max_y - min_y + 1) / rgba->h;
+			write_log("Custom bezel: screen hole at %.1f%%,%.1f%% size %.1f%%x%.1f%%\n",
+				bezel_hole_x * 100.0f, bezel_hole_y * 100.0f,
+				bezel_hole_w * 100.0f, bezel_hole_h * 100.0f);
+		} else {
+			// No transparent region found - default to full image
+			bezel_hole_x = 0.0f;
+			bezel_hole_y = 0.0f;
+			bezel_hole_w = 1.0f;
+			bezel_hole_h = 1.0f;
+			write_log("Custom bezel: no transparent region found, using full area\n");
+		}
+	}
+
+	glGenTextures(1, &bezel_texture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bezel_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rgba->w, rgba->h, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, rgba->pixels);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	bezel_tex_width = rgba->w;
+	bezel_tex_height = rgba->h;
+	loaded_bezel_name = bezel_name;
+
+	SDL_FreeSurface(rgba);
+	write_log("Custom bezel: loaded %s (%dx%d)\n", bezel_name, bezel_tex_width, bezel_tex_height);
+	return true;
+}
+
+static void destroy_bezel_overlay()
+{
+	if (bezel_texture != 0 && glIsTexture(bezel_texture)) {
+		glDeleteTextures(1, &bezel_texture);
+		bezel_texture = 0;
+	}
+	if (bezel_vbo != 0) {
+		glDeleteBuffers(1, &bezel_vbo);
+		bezel_vbo = 0;
+	}
+	if (bezel_vao != 0) {
+		glDeleteVertexArrays(1, &bezel_vao);
+		bezel_vao = 0;
+	}
+	loaded_bezel_name.clear();
+	bezel_tex_width = 0;
+	bezel_tex_height = 0;
+	bezel_hole_x = 0.0f;
+	bezel_hole_y = 0.0f;
+	bezel_hole_w = 1.0f;
+	bezel_hole_h = 1.0f;
+}
+
+void update_custom_bezel()
+{
+	// Don't do GL calls here - this may be called from the GUI
+	// where the GL context isn't current. Just invalidate the loaded name
+	// so render_bezel_overlay() will reload on the next frame.
+	loaded_bezel_name.clear();
+
+	if (!amiberry_options.use_custom_bezel ||
+		strcmp(amiberry_options.custom_bezel, "none") == 0) {
+		// Schedule cleanup - actual GL deletion happens in render context
+		// For now, mark texture as needing reload by clearing the name.
+		// The texture ID will be cleaned up in destroy_shaders() or
+		// when a new texture is loaded (load_bezel_texture deletes the old one).
+	}
+}
+
+static void render_bezel_overlay(int drawableWidth, int drawableHeight)
+{
+	if (!amiberry_options.use_custom_bezel ||
+		strcmp(amiberry_options.custom_bezel, "none") == 0) {
+		// Clean up if we had a texture loaded
+		if (bezel_texture != 0) {
+			destroy_bezel_overlay();
+		}
+		return;
+	}
+
+	// Check if we need to (re)load the texture
+	if (loaded_bezel_name != amiberry_options.custom_bezel) {
+		// Name changed or was cleared by update_custom_bezel() - reload
+		if (bezel_texture != 0) {
+			destroy_bezel_overlay();
+		}
+		if (!load_bezel_texture(amiberry_options.custom_bezel)) return;
+	}
+	if (bezel_texture == 0 || !glIsTexture(bezel_texture)) return;
+
+	// Reuse OSD shader program
+	if (!init_osd_shader()) return;
+
+	// Create VAO/VBO on first use
+	if (bezel_vao == 0) {
+		glGenVertexArrays(1, &bezel_vao);
+		glBindVertexArray(bezel_vao);
+		glGenBuffers(1, &bezel_vbo);
+		glBindVertexArray(0);
+	}
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_SCISSOR_TEST);
+
+	// Full window viewport
+	glViewport(0, 0, drawableWidth, drawableHeight);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bezel_texture);
+
+	glUseProgram(osd_program);
+	if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
+
+	glBindVertexArray(bezel_vao);
+	glEnableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+
+	// Full-screen quad in NDC
+	GLfloat vertices[] = {
+		-1.0f, -1.0f, 0.0f, 1.0f,  // bottom-left
+		 1.0f, -1.0f, 1.0f, 1.0f,  // bottom-right
+		 1.0f,  1.0f, 1.0f, 0.0f,  // top-right
+		-1.0f,  1.0f, 0.0f, 0.0f,  // top-left
+	};
+
+	glBindBuffer(GL_ARRAY_BUFFER, bezel_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glDisableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glDisable(GL_BLEND);
+	glUseProgram(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 static void render_software_cursor_gl(const int monid, int x, int y, int w, int h)
 {
 	const amigadisplay* ad = &adisplays[monid];
@@ -2215,19 +2434,45 @@ void show_screen(const int monid, int mode)
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
 
-	int destW = drawableWidth;
-	int destH = (int) (drawableWidth / desired_aspect);
+	// When a custom bezel is active, constrain the emulator output to the
+	// bezel's transparent screen hole. We define an "effective" render area
+	// that all shader paths use instead of the full drawable.
+	int renderAreaX = 0, renderAreaY = 0;
+	int renderAreaW = drawableWidth, renderAreaH = drawableHeight;
 
-	if (destH > drawableHeight) {
-		destH = drawableHeight;
-		destW = (int)(drawableHeight * desired_aspect);
+	if (amiberry_options.use_custom_bezel && bezel_texture != 0 && bezel_hole_w > 0.0f && bezel_hole_h > 0.0f) {
+		renderAreaX = static_cast<int>(bezel_hole_x * drawableWidth);
+		renderAreaY = static_cast<int>(bezel_hole_y * drawableHeight);
+		renderAreaW = static_cast<int>(bezel_hole_w * drawableWidth);
+		renderAreaH = static_cast<int>(bezel_hole_h * drawableHeight);
 	}
 
-	if (destW <= 0) destW = 1;
-	if (destH <= 0) destH = 1;
+	int destW, destH, destX, destY;
 
-	int destX = (drawableWidth - destW) / 2;
-	int destY = (drawableHeight - destH) / 2;
+	if (renderAreaX != 0 || renderAreaY != 0 ||
+		renderAreaW != drawableWidth || renderAreaH != drawableHeight) {
+		// Custom bezel active: fill the screen hole completely.
+		// The bezel artist designed the transparent area as the screen shape.
+		destW = renderAreaW;
+		destH = renderAreaH;
+		destX = renderAreaX;
+		destY = renderAreaY;
+	} else {
+		// Normal mode: aspect-ratio-corrected letterboxing
+		destW = renderAreaW;
+		destH = static_cast<int>(renderAreaW / desired_aspect);
+
+		if (destH > renderAreaH) {
+			destH = renderAreaH;
+			destW = static_cast<int>(renderAreaH * desired_aspect);
+		}
+
+		if (destW <= 0) destW = 1;
+		if (destH <= 0) destH = 1;
+
+		destX = (renderAreaW - destW) / 2;
+		destY = (renderAreaH - destH) / 2;
+	}
 
 	// Only clear if letterboxing is active (frame doesn't cover entire window)
 	if (destW < drawableWidth || destH < drawableHeight) {
@@ -2275,8 +2520,8 @@ void show_screen(const int monid, int mode)
 
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
-		int viewport_x = (drawableWidth - viewport_w) / 2;
-		int viewport_y = (drawableHeight - viewport_h) / 2;
+		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
+		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
 
 		static int preset_frame_count = 0;
 
@@ -2316,8 +2561,8 @@ void show_screen(const int monid, int mode)
 		// Many CRT shaders calculate scale = floor(OutputSize / InputSize) which fails if OutputSize < InputSize
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
-		int viewport_x = (drawableWidth - viewport_w) / 2;
-		int viewport_y = (drawableHeight - viewport_h) / 2;
+		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
+		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
 		
 		// Set viewport for shader rendering
 		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
@@ -2347,8 +2592,11 @@ void show_screen(const int monid, int mode)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
+		// When a custom bezel defines the viewport, skip crtemu's internal 4:3 letterboxing
+		crtemu_shader->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
+
 		if (crtemu_shader->type != CRTEMU_TYPE_NONE) {
-			glViewport(0, 0, drawableWidth, drawableHeight);
+			glViewport(renderAreaX, renderAreaY, renderAreaW, renderAreaH);
 		}
 
 		// Determine correct OpenGL format
@@ -2391,6 +2639,7 @@ void show_screen(const int monid, int mode)
 	}
 
 	render_software_cursor_gl(monid, destX, destY, destW, destH);
+	render_bezel_overlay(drawableWidth, drawableHeight);
 	render_osd(monid, destX, destY, destW, destH);
 
 	if (vkbd_allowed(monid))
@@ -5375,6 +5624,9 @@ void destroy_shaders()
 		glDeleteTextures(1, &osd_texture);
 		osd_texture = 0;
 	}
+
+	// Clean up custom bezel overlay
+	destroy_bezel_overlay();
 
 	// Reset GL state flag to ensure clean slate for next shader
 	gl_state_initialized = false;

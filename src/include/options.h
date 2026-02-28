@@ -1374,6 +1374,8 @@ struct amiberry_options
 	char shader_rtg[128] = "none";
 	bool force_mobile_shaders = false;
 	bool use_bezel = false;
+	bool use_custom_bezel = false;
+	char custom_bezel[256] = "none";
 };
 
 extern struct amiberry_options amiberry_options;

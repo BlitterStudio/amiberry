@@ -4,6 +4,7 @@
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "amiberry_gfx.h"
+#include "target.h"
 #include <algorithm>
 #include <filesystem>
 #include <vector>
@@ -18,6 +19,56 @@ extern ShaderPreset* shader_preset;
 
 // Built-in shader names
 static const char* builtin_shaders[] = { "none", "tv", "pc", "lite", "1084" };
+
+// Bezel list storage
+static std::vector<std::string> bezel_names;
+static std::vector<const char*> bezel_items;
+static bool bezels_initialized = false;
+
+static void scan_bezels()
+{
+	bezel_names.clear();
+	bezel_items.clear();
+
+	bezel_names.emplace_back("none");
+
+	std::string bezels_dir = get_bezels_path();
+	if (!bezels_dir.empty()) {
+		namespace fs = std::filesystem;
+		fs::path base_path(bezels_dir);
+		try {
+			for (const auto& entry : fs::recursive_directory_iterator(base_path,
+				fs::directory_options::skip_permission_denied)) {
+				if (!entry.is_regular_file()) continue;
+
+				std::string ext = entry.path().extension().string();
+				std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+				if (ext != ".png" && ext != ".jpg" && ext != ".jpeg") continue;
+
+				fs::path rel = fs::relative(entry.path(), base_path);
+				bezel_names.push_back(rel.generic_string());
+			}
+		} catch (...) {
+			// Directory doesn't exist or can't be read - ignore
+		}
+	}
+
+	std::sort(bezel_names.begin() + 1, bezel_names.end());
+
+	for (const auto& name : bezel_names) {
+		bezel_items.push_back(name.c_str());
+	}
+
+	bezels_initialized = true;
+}
+
+static int find_bezel_index(const char* bezel_name)
+{
+	for (size_t i = 0; i < bezel_names.size(); i++) {
+		if (bezel_names[i] == bezel_name) return static_cast<int>(i);
+	}
+	return 0; // Default to "none"
+}
 
 // Shader list storage
 static std::vector<std::string> shader_names;
@@ -280,19 +331,62 @@ void render_panel_filter()
 
 	ImGui::Spacing();
 
-	// CRT Bezel Overlay
-	BeginGroupBox("CRT Bezel Overlay");
+	// Bezel Overlay
+	BeginGroupBox("Bezel Overlay");
 	{
-		if (AmigaCheckbox("Show bezel frame", &amiberry_options.use_bezel)) {
+		// Built-in CRT bezel (disabled when custom bezel is active)
+		if (amiberry_options.use_custom_bezel) ImGui::BeginDisabled();
+		if (AmigaCheckbox("Built-in CRT bezel", &amiberry_options.use_bezel)) {
 #ifdef USE_OPENGL
 			update_crtemu_bezel();
 #endif
 		}
-		ShowHelpMarker("Overlay a CRT television bezel frame around the display.\n"
+		ShowHelpMarker("Built-in CRT television bezel frame.\n"
 					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
-					   "Has no effect with the 'none', 'lite' or external shaders.");
+					   "Disabled when a custom bezel is selected.");
+		if (amiberry_options.use_custom_bezel) ImGui::EndDisabled();
+
+		ImGui::Spacing();
+
+		// Custom bezel overlay (disabled when built-in bezel is active)
+		if (amiberry_options.use_bezel) ImGui::BeginDisabled();
+
+		if (!bezels_initialized) scan_bezels();
+
+		int bezel_idx = find_bezel_index(amiberry_options.custom_bezel);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+		if (ImGui::BeginCombo("##CustomBezel", bezel_items.empty() ? "none" : bezel_items[bezel_idx])) {
+			for (int i = 0; i < static_cast<int>(bezel_items.size()); i++) {
+				bool is_selected = (i == bezel_idx);
+				if (ImGui::Selectable(bezel_items[i], is_selected)) {
+					strncpy(amiberry_options.custom_bezel, bezel_names[i].c_str(),
+							sizeof(amiberry_options.custom_bezel) - 1);
+					amiberry_options.use_custom_bezel = (strcmp(amiberry_options.custom_bezel, "none") != 0);
+					// If enabling custom bezel, disable built-in
+					if (amiberry_options.use_custom_bezel) {
+						amiberry_options.use_bezel = false;
+#ifdef USE_OPENGL
+						update_crtemu_bezel();
+#endif
+					}
+#ifdef USE_OPENGL
+					update_custom_bezel();
+#endif
+				}
+				if (is_selected) ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		ShowHelpMarker("Select a custom bezel overlay image (PNG with transparency).\n"
+					   "Place bezel images in the Bezels directory.\n"
+					   "Works with all shader types.");
+		ImGui::SameLine();
+		ImGui::Text("Custom bezel overlay");
+
+		if (amiberry_options.use_bezel) ImGui::EndDisabled();
 	}
-	EndGroupBox("CRT Bezel Overlay");
+	EndGroupBox("Bezel Overlay");
 
 	ImGui::Spacing();
 
@@ -311,8 +405,9 @@ void render_panel_filter()
 	ImGui::Spacing();
 
 	// Rescan button
-	if (AmigaButton("Rescan Shaders", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+	if (AmigaButton("Rescan Shaders & Bezels", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
 		shaders_initialized = false;  // Force rescan on next frame
+		bezels_initialized = false;
 	}
 	ImGui::SameLine();
 

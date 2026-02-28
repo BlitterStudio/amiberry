@@ -420,6 +420,7 @@ std::string plugins_dir;
 std::string video_dir;
 std::string themes_path;
 std::string shaders_path;
+std::string bezels_path;
 std::string amiberry_conf_file;
 std::string amiberry_ini_file;
 
@@ -3373,6 +3374,12 @@ void set_shaders_path(const std::string& newpath)
 	macos_bookmark_store(newpath);
 }
 
+void set_bezels_path(const std::string& newpath)
+{
+	bezels_path = newpath;
+	macos_bookmark_store(newpath);
+}
+
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
@@ -3574,6 +3581,11 @@ std::string get_themes_path()
 std::string get_shaders_path()
 {
 	return fix_trailing(shaders_path);
+}
+
+std::string get_bezels_path()
+{
+	return fix_trailing(bezels_path);
 }
 
 void get_floppy_sounds_path(char* out, const int size)
@@ -3968,6 +3980,8 @@ void save_amiberry_settings()
 
 	// Show CRT bezel frame overlay
 	write_bool_option("use_bezel", amiberry_options.use_bezel);
+	write_bool_option("use_custom_bezel", amiberry_options.use_custom_bezel);
+	write_string_option("custom_bezel", amiberry_options.custom_bezel);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -3992,6 +4006,7 @@ void save_amiberry_settings()
 	write_string_option("video_dir", video_dir);
 	write_string_option("themes_path", themes_path);
 	write_string_option("shaders_path", shaders_path);
+	write_string_option("bezels_path", bezels_path);
 
 	// Recent disk entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
@@ -4104,6 +4119,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		ret |= cfgfile_string(option, value, "themes_path", themes_path);
 		ret |= cfgfile_string(option, value, "shaders_path", shaders_path);
+		ret |= cfgfile_string(option, value, "bezels_path", bezels_path);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -4171,6 +4187,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
 		ret |= cfgfile_yesno(option, value, "force_mobile_shaders", &amiberry_options.force_mobile_shaders);
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
+		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
+		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);
 	}
 	return ret;
 }
@@ -4912,6 +4930,8 @@ void create_missing_amiberry_folders()
 		my_mkdir(themes_path.c_str());
 	if (!my_existsdir(shaders_path.c_str()))
 		my_mkdir(shaders_path.c_str());
+	if (!my_existsdir(bezels_path.c_str()))
+		my_mkdir(bezels_path.c_str());
 	std::string default_theme_file = themes_path + "Default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
@@ -4992,7 +5012,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	if (portable_mode)
 #endif
 	{
-		themes_path = shaders_path= config_path;
+		themes_path = shaders_path = bezels_path = config_path;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
@@ -5028,7 +5048,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 		xdg_config_home += "/" + amiberry_dir;
 		if (!my_existsdir(xdg_config_home.c_str()))
 			my_mkdir(xdg_config_home.c_str());
-		themes_path = shaders_path = xdg_config_home;
+		themes_path = shaders_path = bezels_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = 
@@ -5060,6 +5080,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("/Videos/");
 	themes_path.append("/Themes/");
 	shaders_path.append("/Shaders/");
+	bezels_path.append("/Bezels/");
 #elif defined(__ANDROID__)
     controllers_path.append("controllers/");
     whdboot_path.append("whdboot/");
@@ -5080,6 +5101,7 @@ static void init_amiberry_dirs(const bool portable_mode)
     video_dir.append("videos/");
     themes_path.append("themes/");
     shaders_path.append("shaders/");
+    bezels_path.append("bezels/");
 #elif defined(_WIN32)
 	controllers_path.append("\\Controllers\\");
 	whdboot_path.append("\\Whdboot\\");
@@ -5099,6 +5121,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("\\Videos\\");
 	themes_path.append("\\Themes\\");
 	shaders_path.append("\\Shaders\\");
+	bezels_path.append("\\Bezels\\");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -5118,6 +5141,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("/videos/");
 	themes_path.append("/themes/");
 	shaders_path.append("/shaders/");
+	bezels_path.append("/bezels/");
 #endif
 
 	retroarch_file = config_path;
