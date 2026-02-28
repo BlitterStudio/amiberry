@@ -5,6 +5,68 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
+def readCmakeVersionInfo = {
+    def cmakeFile = rootProject.file("../CMakeLists.txt")
+    if (!cmakeFile.exists()) {
+        throw new GradleException("Missing CMakeLists.txt at ${cmakeFile}")
+    }
+
+    def cmakeText = cmakeFile.getText("UTF-8")
+    def versionMatcher = (cmakeText =~ /(?m)^\s*VERSION\s+(\d+)\.(\d+)\.(\d+)\s*$/)
+    if (!versionMatcher.find()) {
+        throw new GradleException("Could not parse VERSION x.y.z from ${cmakeFile}")
+    }
+
+    def preReleaseMatcher = (cmakeText =~ /(?m)^\s*set\(VERSION_PRE_RELEASE\s+"?([^"\)]*)"?/)
+    Integer preRelease = null
+    if (preReleaseMatcher.find()) {
+        def raw = preReleaseMatcher.group(1).trim()
+        if (raw && raw != "0") {
+            if (!(raw ==~ /\d+/)) {
+                throw new GradleException("VERSION_PRE_RELEASE must be numeric in ${cmakeFile}, found '${raw}'")
+            }
+            preRelease = raw.toInteger()
+        }
+    }
+
+    return [
+            major     : versionMatcher.group(1).toInteger(),
+            minor     : versionMatcher.group(2).toInteger(),
+            patch     : versionMatcher.group(3).toInteger(),
+            preRelease: preRelease
+    ]
+}
+
+def computeAndroidVersionCode = { info ->
+    // Reserve 99 for the final release so x.y.z-betaN is always lower than x.y.z.
+    final int finalReleaseSlot = 99
+    if (info.preRelease != null && (info.preRelease < 1 || info.preRelease > (finalReleaseSlot - 1))) {
+        throw new GradleException("VERSION_PRE_RELEASE must be between 1 and 98 for Android versionCode mapping")
+    }
+
+    return info.major * 1_000_000 + info.minor * 10_000 + info.patch * 100 + (info.preRelease ?: finalReleaseSlot)
+}
+
+def formatAndroidVersionName = { info ->
+    def base = "${info.major}.${info.minor}.${info.patch}"
+    return info.preRelease ? "${base}-beta${info.preRelease}" : base
+}
+
+def cmakeVersionInfo = readCmakeVersionInfo()
+def computedVersionCode = computeAndroidVersionCode(cmakeVersionInfo)
+def computedVersionName = formatAndroidVersionName(cmakeVersionInfo)
+def versionCodeOverride = providers.gradleProperty("ANDROID_VERSION_CODE").orNull
+def androidVersionCode = computedVersionCode
+if (versionCodeOverride != null) {
+    if (!(versionCodeOverride ==~ /\d+/)) {
+        throw new GradleException("ANDROID_VERSION_CODE must be a positive integer, found '${versionCodeOverride}'")
+    }
+    androidVersionCode = versionCodeOverride.toInteger()
+    if (androidVersionCode <= 0) {
+        throw new GradleException("ANDROID_VERSION_CODE must be > 0")
+    }
+}
+
 // Load keystore credentials from keystore.properties (git-ignored)
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
@@ -20,8 +82,8 @@ android {
         applicationId = "com.blitterstudio.amiberry"
         minSdk = 29
         targetSdk = 36
-        versionCode = 25
-        versionName = "8.0.0-beta25"
+        versionCode = androidVersionCode
+        versionName = computedVersionName
 
         externalNativeBuild {
             cmake {

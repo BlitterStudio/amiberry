@@ -13,7 +13,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **FreeBSD**: x86_64
 - **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
-- **Version**: 8.0.0 (Public Beta 25)
+- **Version**: 8.0.0 (Public Beta 26)
 - **Languages**: C/C++
 - **Build System**: CMake (minimum 3.16)
 - **License**: GPL (see LICENSE file)
@@ -49,6 +49,29 @@ The Android build uses Gradle and fetches dependencies via CMake FetchContent:
 ```bash
 cd android
 ./gradlew assembleRelease
+```
+
+#### Android Versioning (Play Store)
+
+Android now derives app version metadata from the top-level `CMakeLists.txt`:
+- `project(... VERSION x.y.z)` -> Android `versionName` base
+- `set(VERSION_PRE_RELEASE "N")` -> Android beta suffix (`x.y.z-betaN`)
+
+`versionCode` is generated to stay monotonic for Play uploads:
+- Formula: `major * 1_000_000 + minor * 10_000 + patch * 100 + slot`
+- `slot = N` for pre-release (`VERSION_PRE_RELEASE` 1..98)
+- `slot = 99` for final release (no pre-release suffix / `0`)
+
+Examples:
+- `8.0.0-beta26` -> `versionCode 8000026`
+- `8.0.0` (final) -> `versionCode 8000099`
+
+This ensures final is always greater than any beta for the same `x.y.z`.
+If needed, override only the code at build time with:
+
+```bash
+cd android
+./gradlew bundleRelease -PANDROID_VERSION_CODE=8000100
 ```
 
 ### Windows (MinGW-w64)
