@@ -260,6 +260,40 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 - `input.cpp` - Controller configuration
 - `whdload.cpp` - WHDLoad integration
 
+### Custom Bezel Overlay System
+
+Custom bezels are PNG/JPEG images (e.g., CRT monitor frames) with a transparent "screen hole" where the emulator output shows through. They work with **all** shader types (crtemu built-in, external GLSL, GLSLP presets).
+
+**Rendering order in `show_screen()`:**
+1. Clear to black
+2. Render emulator output via active shader (constrained to screen hole viewport)
+3. Render software cursor
+4. **Render custom bezel overlay** (full window, alpha blended)
+5. Render OSD, virtual keyboard, on-screen joystick (on top of bezel)
+6. SwapWindow
+
+**Architecture:**
+- Bezel texture loaded via `IMG_Load()` → `SDL_ConvertSurfaceFormat(ABGR8888)` → GL texture upload
+- Alpha channel scanned during load to detect transparent screen hole bounding box (threshold: alpha < 128)
+- Screen hole stored as normalized coordinates (`bezel_hole_x/y/w/h` in 0.0-1.0 range)
+- `renderAreaX/Y/W/H` variables in `show_screen()` define the effective render area for all shader paths
+- `crtemu_t::skip_aspect_correction` flag bypasses crtemu's internal 4:3 letterboxing when bezel controls the viewport
+- Lazy texture loading: `render_bezel_overlay()` loads on first render frame (GL context safe), not from GUI
+- `update_custom_bezel()` (called from GUI) only clears `loaded_bezel_name` to trigger reload — no GL calls
+- Built-in CRT bezel and custom bezels are mutually exclusive
+
+**Key files:**
+- `src/osdep/amiberry_gfx.cpp` — `load_bezel_texture()`, `destroy_bezel_overlay()`, `update_custom_bezel()`, `render_bezel_overlay()`, renderArea logic in `show_screen()`
+- `src/osdep/crtemu.h` — `skip_aspect_correction` field and modified aspect ratio logic in `crtemu_present()`
+- `src/osdep/imgui/filter.cpp` — GUI controls, bezel scanning (`scan_bezels()`), mutual exclusion logic
+- `src/osdep/amiberry.cpp` — `bezels_path` variable, `get_bezels_path()`/`set_bezels_path()`, config save/load
+- `src/include/options.h` — `use_custom_bezel`, `custom_bezel[256]` fields in `amiberry_options`
+
+**Config options** (in `amiberry.conf`):
+- `use_custom_bezel` — enable custom bezel overlay (boolean)
+- `custom_bezel` — filename relative to bezels directory (string, "none" to disable)
+- `bezels_path` — path to bezels directory
+
 ### On-Screen Joystick (Touch Controls)
 
 The on-screen joystick provides touch-based D-pad and fire buttons for Android and other touchscreen devices. It is implemented in `src/osdep/on_screen_joystick.cpp` with rendering support for both SDL2 renderer and OpenGL.

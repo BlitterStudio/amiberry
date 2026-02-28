@@ -2197,16 +2197,13 @@ void update_custom_bezel()
 {
 	// Don't do GL calls here - this may be called from the GUI
 	// where the GL context isn't current. Just invalidate the loaded name
-	// so render_bezel_overlay() will reload on the next frame.
+	// and reset hole coordinates so render_bezel_overlay() will reload
+	// on the next frame (where the GL context IS current).
 	loaded_bezel_name.clear();
-
-	if (!amiberry_options.use_custom_bezel ||
-		strcmp(amiberry_options.custom_bezel, "none") == 0) {
-		// Schedule cleanup - actual GL deletion happens in render context
-		// For now, mark texture as needing reload by clearing the name.
-		// The texture ID will be cleaned up in destroy_shaders() or
-		// when a new texture is loaded (load_bezel_texture deletes the old one).
-	}
+	bezel_hole_x = 0.0f;
+	bezel_hole_y = 0.0f;
+	bezel_hole_w = 1.0f;
+	bezel_hole_h = 1.0f;
 }
 
 static void render_bezel_overlay(int drawableWidth, int drawableHeight)
@@ -2233,11 +2230,22 @@ static void render_bezel_overlay(int drawableWidth, int drawableHeight)
 	// Reuse OSD shader program
 	if (!init_osd_shader()) return;
 
-	// Create VAO/VBO on first use
+	// Create VAO/VBO and upload vertex data on first use
 	if (bezel_vao == 0) {
+		// Full-screen quad in NDC (static - never changes)
+		static const GLfloat vertices[] = {
+			-1.0f, -1.0f, 0.0f, 1.0f,  // bottom-left
+			 1.0f, -1.0f, 1.0f, 1.0f,  // bottom-right
+			 1.0f,  1.0f, 1.0f, 0.0f,  // top-right
+			-1.0f,  1.0f, 0.0f, 0.0f,  // top-left
+		};
+
 		glGenVertexArrays(1, &bezel_vao);
 		glBindVertexArray(bezel_vao);
 		glGenBuffers(1, &bezel_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, bezel_vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
 		glBindVertexArray(0);
 	}
 
@@ -2259,17 +2267,7 @@ static void render_bezel_overlay(int drawableWidth, int drawableHeight)
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 
-	// Full-screen quad in NDC
-	GLfloat vertices[] = {
-		-1.0f, -1.0f, 0.0f, 1.0f,  // bottom-left
-		 1.0f, -1.0f, 1.0f, 1.0f,  // bottom-right
-		 1.0f,  1.0f, 1.0f, 0.0f,  // top-right
-		-1.0f,  1.0f, 0.0f, 0.0f,  // top-left
-	};
-
 	glBindBuffer(GL_ARRAY_BUFFER, bezel_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	glDisableVertexAttribArray(0);
