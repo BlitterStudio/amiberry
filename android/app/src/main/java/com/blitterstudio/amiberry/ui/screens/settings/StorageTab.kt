@@ -20,12 +20,12 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -39,7 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
@@ -58,7 +60,7 @@ fun StorageTab(viewModel: SettingsViewModel) {
 		modifier = Modifier
 			.fillMaxWidth()
 			.verticalScroll(rememberScrollState())
-			.padding(16.dp),
+			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
 		// ROM selection
@@ -67,19 +69,19 @@ fun StorageTab(viewModel: SettingsViewModel) {
 				Row(verticalAlignment = Alignment.CenterVertically) {
 					Icon(Icons.Default.Memory, contentDescription = null, modifier = Modifier.size(20.dp))
 					Spacer(modifier = Modifier.width(8.dp))
-					Text("Kickstart ROM", style = MaterialTheme.typography.titleMedium)
+					Text(stringResource(R.string.settings_storage_kickstart_rom_title), style = MaterialTheme.typography.titleMedium)
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
 				if (roms.isEmpty()) {
 					Text(
-						"No ROMs found. Import via the Files tab.",
+						stringResource(R.string.settings_storage_no_roms_found),
 						style = MaterialTheme.typography.bodySmall,
 						color = MaterialTheme.colorScheme.error
 					)
 				} else {
 					FileDropdown(
-						label = "ROM File",
+						label = stringResource(R.string.settings_storage_rom_file_label),
 						files = roms,
 						selectedPath = settings.romFile,
 						onSelect = { viewModel.updateSettings { s -> s.copy(romFile = it) } },
@@ -95,13 +97,13 @@ fun StorageTab(viewModel: SettingsViewModel) {
 				Row(verticalAlignment = Alignment.CenterVertically) {
 					Icon(Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(20.dp))
 					Spacer(modifier = Modifier.width(8.dp))
-					Text("Floppy Drives", style = MaterialTheme.typography.titleMedium)
+					Text(stringResource(R.string.settings_storage_floppy_drives_title), style = MaterialTheme.typography.titleMedium)
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
 				// DF0
 				FloppyDriveRow(
-					label = "DF0",
+					label = stringResource(R.string.settings_storage_drive_df0),
 					files = floppies,
 					selectedPath = settings.floppy0,
 					driveType = settings.floppy0Type,
@@ -115,7 +117,7 @@ fun StorageTab(viewModel: SettingsViewModel) {
 
 				// DF1
 				FloppyDriveRow(
-					label = "DF1",
+					label = stringResource(R.string.settings_storage_drive_df1),
 					files = floppies,
 					selectedPath = settings.floppy1,
 					driveType = settings.floppy1Type,
@@ -133,19 +135,19 @@ fun StorageTab(viewModel: SettingsViewModel) {
 				Row(verticalAlignment = Alignment.CenterVertically) {
 					Icon(Icons.Default.Album, contentDescription = null, modifier = Modifier.size(20.dp))
 					Spacer(modifier = Modifier.width(8.dp))
-					Text("CD Image", style = MaterialTheme.typography.titleMedium)
+					Text(stringResource(R.string.settings_storage_cd_image_title), style = MaterialTheme.typography.titleMedium)
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
 				if (cds.isEmpty()) {
 					Text(
-						"No CD images found. Import via the Files tab.",
+						stringResource(R.string.settings_storage_no_cd_images_found),
 						style = MaterialTheme.typography.bodySmall,
 						color = MaterialTheme.colorScheme.onSurfaceVariant
 					)
 				} else {
 					FileDropdown(
-						label = "CD Image",
+						label = stringResource(R.string.settings_storage_cd_image_label),
 						files = cds,
 						selectedPath = settings.cdImage,
 						onSelect = { viewModel.updateSettings { s -> s.copy(cdImage = it) } },
@@ -167,7 +169,8 @@ private fun FileDropdown(
 	onClear: () -> Unit
 ) {
 	var expanded by remember { mutableStateOf(false) }
-	val selectedName = if (selectedPath.isEmpty()) "(none)"
+	val noneLabel = stringResource(R.string.placeholder_none)
+	val selectedName = if (selectedPath.isEmpty()) noneLabel
 	else selectedPath.substringAfterLast('/')
 
 	Row(
@@ -183,18 +186,18 @@ private fun FileDropdown(
 				value = selectedName,
 				onValueChange = {},
 				readOnly = true,
-				label = { Text(label) },
-				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-				modifier = Modifier
-					.menuAnchor(MenuAnchorType.PrimaryNotEditable)
-					.fillMaxWidth()
-			)
+					label = { Text(label) },
+					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+					modifier = Modifier
+						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+						.fillMaxWidth()
+				)
 			ExposedDropdownMenu(
 				expanded = expanded,
 				onDismissRequest = { expanded = false }
 			) {
 				DropdownMenuItem(
-					text = { Text("(none)") },
+					text = { Text(noneLabel) },
 					onClick = {
 						onClear()
 						expanded = false
@@ -213,7 +216,7 @@ private fun FileDropdown(
 		}
 		if (selectedPath.isNotEmpty()) {
 			IconButton(onClick = onClear) {
-				Icon(Icons.Default.Eject, contentDescription = "Eject")
+				Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject))
 			}
 		}
 	}
@@ -232,9 +235,9 @@ private fun FloppyDriveRow(
 	context: android.content.Context
 ) {
 	val driveTypeOptions = listOf(
-		0 to "3.5\" DD",
-		1 to "3.5\" HD",
-		-1 to "Disabled"
+		0 to stringResource(R.string.settings_storage_drive_type_dd),
+		1 to stringResource(R.string.settings_storage_drive_type_hd),
+		-1 to stringResource(R.string.settings_common_disabled)
 	)
 
 	Column(modifier = Modifier.fillMaxWidth()) {
@@ -243,7 +246,8 @@ private fun FloppyDriveRow(
 
 		// Drive type
 		var typeExpanded by remember { mutableStateOf(false) }
-		val typeLabel = driveTypeOptions.firstOrNull { it.first == driveType }?.second ?: "Unknown"
+		val typeLabel = driveTypeOptions.firstOrNull { it.first == driveType }?.second
+			?: stringResource(R.string.settings_storage_drive_type_unknown)
 
 		ExposedDropdownMenuBox(
 			expanded = typeExpanded,
@@ -254,10 +258,10 @@ private fun FloppyDriveRow(
 				value = typeLabel,
 				onValueChange = {},
 				readOnly = true,
-				label = { Text("Type") },
+				label = { Text(stringResource(R.string.settings_storage_type_label)) },
 				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
 				modifier = Modifier
-					.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 					.fillMaxWidth()
 			)
 			ExposedDropdownMenu(
@@ -280,7 +284,7 @@ private fun FloppyDriveRow(
 			Spacer(modifier = Modifier.height(8.dp))
 
 			FileDropdown(
-				label = "Disk",
+				label = stringResource(R.string.settings_storage_disk_label),
 				files = files,
 				selectedPath = selectedPath,
 				onSelect = onSelect,
@@ -296,7 +300,7 @@ private fun FloppyDriveRow(
 				}
 			}
 			TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
-				Text("Import disk image...")
+				Text(stringResource(R.string.settings_storage_import_disk_image))
 			}
 		}
 	}

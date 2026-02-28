@@ -10,10 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,7 +23,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,23 +34,23 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 
 	val resolutionPresets = listOf(
-		Triple(640, 256, "640x256 (PAL Low-res)"),
-		Triple(640, 512, "640x512 (PAL Hi-res)"),
-		Triple(720, 568, "720x568 (Default)"),
-		Triple(800, 600, "800x600"),
-		Triple(1024, 768, "1024x768")
+		Triple(640, 256, stringResource(R.string.settings_display_resolution_pal_low)),
+		Triple(640, 512, stringResource(R.string.settings_display_resolution_pal_high)),
+		Triple(720, 568, stringResource(R.string.settings_display_resolution_default)),
+		Triple(800, 600, stringResource(R.string.settings_display_resolution_800_600)),
+		Triple(1024, 768, stringResource(R.string.settings_display_resolution_1024_768))
 	)
 
 	Column(
 		modifier = Modifier
 			.fillMaxWidth()
 			.verticalScroll(rememberScrollState())
-			.padding(16.dp),
+			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
-				Text("Display Settings", style = MaterialTheme.typography.titleMedium)
+				Text(stringResource(R.string.settings_display_title), style = MaterialTheme.typography.titleMedium)
 				Spacer(modifier = Modifier.height(8.dp))
 
 				// Resolution preset
@@ -66,10 +68,10 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						value = currentLabel,
 						onValueChange = {},
 						readOnly = true,
-						label = { Text("Resolution") },
+						label = { Text(stringResource(R.string.settings_display_resolution_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resExpanded) },
 						modifier = Modifier
-							.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
 					ExposedDropdownMenu(
@@ -93,7 +95,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 				Spacer(modifier = Modifier.height(8.dp))
 
 				SwitchRow(
-					label = "Correct Aspect Ratio",
+					label = stringResource(R.string.settings_display_correct_aspect_ratio),
 					checked = settings.correctAspect,
 					onCheckedChange = {
 						viewModel.updateSettings { s -> s.copy(correctAspect = it) }
@@ -101,7 +103,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 				)
 
 				SwitchRow(
-					label = "Auto-Crop",
+					label = stringResource(R.string.settings_display_auto_crop),
 					checked = settings.autoCrop,
 					onCheckedChange = {
 						viewModel.updateSettings { s -> s.copy(autoCrop = it) }

@@ -10,10 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,7 +23,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
@@ -31,35 +33,43 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 @Composable
 fun SoundTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
+	val soundOutputLabels = mapOf(
+		"none" to stringResource(R.string.settings_sound_output_disabled),
+		"interrupts" to stringResource(R.string.settings_sound_output_emulated_no_output),
+		"normal" to stringResource(R.string.settings_sound_output_normal),
+		"exact" to stringResource(R.string.settings_sound_output_exact)
+	)
 
 	val freqOptions = listOf(
-		22050 to "22050 Hz",
-		44100 to "44100 Hz",
-		48000 to "48000 Hz"
+		22050 to stringResource(R.string.settings_sound_frequency_hz, 22050),
+		44100 to stringResource(R.string.settings_sound_frequency_hz, 44100),
+		48000 to stringResource(R.string.settings_sound_frequency_hz, 48000)
 	)
 
 	val channelOptions = listOf(
-		"mono" to "Mono",
-		"stereo" to "Stereo",
-		"mixed" to "Mixed (75% stereo)"
+		"mono" to stringResource(R.string.settings_sound_channels_mono),
+		"stereo" to stringResource(R.string.settings_sound_channels_stereo),
+		"mixed" to stringResource(R.string.settings_sound_channels_mixed)
 	)
 
 	Column(
 		modifier = Modifier
 			.fillMaxWidth()
 			.verticalScroll(rememberScrollState())
-			.padding(16.dp),
+			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
-				Text("Sound Settings", style = MaterialTheme.typography.titleMedium)
+				Text(stringResource(R.string.settings_sound_title), style = MaterialTheme.typography.titleMedium)
 				Spacer(modifier = Modifier.height(8.dp))
 
 				// Sound output mode
 				var outputExpanded by remember { mutableStateOf(false) }
 				val outputLabel = EmulatorSettings.soundOutputOptions
-					.firstOrNull { it.first == settings.soundOutput }?.second ?: settings.soundOutput
+					.firstOrNull { it.first == settings.soundOutput }?.let { (value, fallback) ->
+						soundOutputLabels[value] ?: fallback
+					} ?: settings.soundOutput
 
 				ExposedDropdownMenuBox(
 					expanded = outputExpanded,
@@ -69,19 +79,19 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						value = outputLabel,
 						onValueChange = {},
 						readOnly = true,
-						label = { Text("Sound Output") },
+						label = { Text(stringResource(R.string.settings_sound_output_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = outputExpanded) },
 						modifier = Modifier
-							.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
 					ExposedDropdownMenu(
 						expanded = outputExpanded,
 						onDismissRequest = { outputExpanded = false }
 					) {
-						EmulatorSettings.soundOutputOptions.forEach { (value, label) ->
+						EmulatorSettings.soundOutputOptions.forEach { (value, fallbackLabel) ->
 							DropdownMenuItem(
-								text = { Text(label) },
+								text = { Text(soundOutputLabels[value] ?: fallbackLabel) },
 								onClick = {
 									viewModel.updateSettings { s -> s.copy(soundOutput = value) }
 									outputExpanded = false
@@ -96,7 +106,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 				// Frequency
 				var freqExpanded by remember { mutableStateOf(false) }
 				val freqLabel = freqOptions.firstOrNull { it.first == settings.soundFreq }?.second
-					?: "${settings.soundFreq} Hz"
+					?: stringResource(R.string.settings_sound_frequency_hz, settings.soundFreq)
 
 				ExposedDropdownMenuBox(
 					expanded = freqExpanded,
@@ -106,10 +116,10 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						value = freqLabel,
 						onValueChange = {},
 						readOnly = true,
-						label = { Text("Sample Rate") },
+						label = { Text(stringResource(R.string.settings_sound_sample_rate_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = freqExpanded) },
 						modifier = Modifier
-							.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
 					ExposedDropdownMenu(
@@ -143,10 +153,10 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						value = channelLabel,
 						onValueChange = {},
 						readOnly = true,
-						label = { Text("Stereo Mode") },
+						label = { Text(stringResource(R.string.settings_sound_stereo_mode_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = channelExpanded) },
 						modifier = Modifier
-							.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
 					ExposedDropdownMenu(

@@ -46,12 +46,6 @@ public class AmiberryActivity extends SDLActivity {
 	}
 
 	@Override
-	protected void onNewIntent(Intent intent) {
-		super.onNewIntent(intent);
-		setIntent(intent);
-	}
-
-	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
 		super.onWindowFocusChanged(hasFocus);
 		if (hasFocus) {
@@ -130,7 +124,13 @@ public class AmiberryActivity extends SDLActivity {
 			getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
 			backCallback = null;
 		}
+		final boolean finishing = isFinishing();
 		super.onDestroy();
+		// Amiberry runs in a dedicated :sdl process; terminate it when this
+		// activity is finished so the next launch always starts from clean state.
+		if (finishing) {
+			android.os.Process.killProcess(android.os.Process.myPid());
+		}
 	}
 
 	private void enterImmersiveMode() {
