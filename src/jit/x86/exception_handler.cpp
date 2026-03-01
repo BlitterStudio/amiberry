@@ -601,7 +601,11 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	uae_u8 *original_target = target;
 	target = (uae_u8*) CONTEXT_PC(context);
 
-	uae_u8 vecbuf[5];
+#if X86_TARGET_64BIT
+	uae_u8 vecbuf[16]; /* MOVQir(10) + JMPsr(3) = 13 bytes on x86-64 */
+#else
+	uae_u8 vecbuf[5];  /* JMPm = 5 bytes on 32-bit */
+#endif
 	for (int i = 0; i < sizeof(vecbuf); i++) {
 		vecbuf[i] = target[i];
 	}
@@ -788,11 +792,11 @@ static void install_exception_handler(void)
 
 #ifdef JIT_EXCEPTION_HANDLER
 	if (veccode == NULL) {
-#if X86_TARGET_64BIT
-		veccode = (uae_u8 *) uae_vm_alloc(256, 0, UAE_VM_READ_WRITE_EXECUTE);
-#else
+		/* veccode generates RIP-relative references to globals, so it
+		 * must be within ±2GB of the .data segment. UAE_VM_32BIT uses
+		 * MAP_32BIT on Linux to place it in the low 2GB, which is
+		 * within range of no-PIE globals on all x86-64 platforms. */
 		veccode = (uae_u8 *) uae_vm_alloc(256, UAE_VM_32BIT, UAE_VM_READ_WRITE_EXECUTE);
-#endif
 	}
 #endif
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING

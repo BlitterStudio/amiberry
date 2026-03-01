@@ -108,6 +108,9 @@ static void build_comp(void);
 #endif
 
 #include "uae/vm.h"
+#if defined(CPU_x86_64) && !defined(_WIN32)
+#include <sys/mman.h>
+#endif
 #define VM_PAGE_READ UAE_VM_READ
 #define VM_PAGE_WRITE UAE_VM_WRITE
 #define VM_PAGE_EXECUTE UAE_VM_EXECUTE
@@ -117,9 +120,11 @@ static void build_comp(void);
 #define vm_protect(address, size, protect) uae_vm_protect(address, size, protect)
 #define vm_release(address, size) uae_vm_free(address, size)
 
-#if defined(CPU_x86_64) && defined(_WIN32)
+#if defined(CPU_x86_64)
 /* vm_acquire() uses this as the RIP-relative allocation anchor.
- * Set to the JIT cache base after alloc_cache() succeeds. */
+ * Set to the JIT cache base after alloc_cache() succeeds.
+ * All x86-64 platforms need this since RIP-relative addressing
+ * requires JIT allocations within ±2GB of both code and globals. */
 static uae_u8* vm_acquire_anchor = NULL;
 #endif
 
@@ -196,9 +201,66 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 		}
 		return result;
 #else
-		/* Non-Windows 64-bit: no PIE (enforced above), globals are in
-		 * low 2GB, so 32-bit absolute addressing via _r_DSIB works. */
-		return uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
+		/* Linux/POSIX x86-64: RIP-relative addressing (the _r_X macro)
+		 * requires all JIT allocations within ±2GB of both the JIT code
+		 * and global variables in the .data segment. Use compiled_code
+		 * as anchor when available, otherwise a .data section anchor.
+		 * Try mmap with hints near the anchor; fall back to unanchored. */
+		static int data_anchor;
+		uintptr base = vm_acquire_anchor
+			? (uintptr)vm_acquire_anchor
+			: (uintptr)&data_anchor;
+		base &= ~(uintptr)0xFFFF;
+		const uintptr range = 0x70000000ULL;  /* 1.75GB */
+
+		uintptr lo = (base > range) ? (base - range) : 0x10000;
+		uintptr hi = base + range;
+		void *result = NULL;
+
+		/* Try hints at 2MB intervals from anchor outward */
+		for (uintptr offset = 0; offset < range && !result; offset += 0x200000) {
+			/* Try above anchor */
+			uintptr try_addr = base + offset;
+			if (try_addr >= lo && try_addr + size <= hi) {
+				result = mmap((void *)try_addr, size, PROT_READ | PROT_WRITE,
+					MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+				if (result != MAP_FAILED) {
+					uintptr dist = ((uintptr)result >= base)
+						? ((uintptr)result - base) : (base - (uintptr)result);
+					if (dist < range)
+						break;
+					munmap(result, size);
+					result = NULL;
+				} else {
+					result = NULL;
+				}
+			}
+			if (offset == 0)
+				continue;
+			/* Try below anchor */
+			if (base > offset) {
+				try_addr = base - offset;
+				if (try_addr >= lo && try_addr + size <= hi) {
+					result = mmap((void *)try_addr, size, PROT_READ | PROT_WRITE,
+						MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+					if (result != MAP_FAILED) {
+						uintptr dist = ((uintptr)result >= base)
+							? ((uintptr)result - base) : (base - (uintptr)result);
+						if (dist < range)
+							break;
+						munmap(result, size);
+						result = NULL;
+					} else {
+						result = NULL;
+					}
+				}
+			}
+		}
+		if (!result) {
+			/* Last resort: OS choice (may be out of RIP-relative range) */
+			result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
+		}
+		return result;
 #endif
 	}
 #endif
@@ -3904,7 +3966,7 @@ void alloc_cache(void)
 		flush_icache_hard(3);
 		vm_release(compiled_code, cache_size * 1024);
 		compiled_code = 0;
-#if defined(CPU_x86_64) && defined(_WIN32)
+#if defined(CPU_x86_64)
 		vm_acquire_anchor = NULL;
 #endif
 	}
@@ -3925,7 +3987,7 @@ void alloc_cache(void)
 	
 	if (compiled_code) {
 		jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p", cache_size, compiled_code, compiled_code + cache_size*1024);
-#if defined(CPU_x86_64) && defined(_WIN32)
+#if defined(CPU_x86_64)
 		/* Anchor subsequent vm_acquire() calls at the JIT cache so
 		 * blockinfo pools stay within RIP-relative range of code. */
 		vm_acquire_anchor = compiled_code;
