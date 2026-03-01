@@ -153,6 +153,7 @@ extern void gfx_unlock();
 
 extern void destroy_shaders();
 extern void update_crtemu_bezel();
+extern void update_custom_bezel();
 #ifdef USE_OPENGL
 extern SDL_GLContext gl_context;
 extern bool gl_state_initialized;

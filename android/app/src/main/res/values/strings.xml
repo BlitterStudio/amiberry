@@ -1,1 +1,187 @@
-<?xml version="1.0" encoding="utf-8"?><resources><string name="app_name">Amiberry</string></resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Amiberry</string>
+
+    <string name="nav_home">Home</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_files">Files</string>
+    <string name="nav_configs">Configs</string>
+
+    <string name="tab_cpu">CPU</string>
+    <string name="tab_chipset">Chipset</string>
+    <string name="tab_memory">Memory</string>
+    <string name="tab_display">Display</string>
+    <string name="tab_sound">Sound</string>
+    <string name="tab_input">Input</string>
+    <string name="tab_storage">Storage</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="quick_start_title">Quick Start</string>
+    <string name="file_manager_title">File Manager</string>
+    <string name="configurations_title">Saved Configurations</string>
+
+    <string name="more_options">More options</string>
+    <string name="action_start">Start</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_import">Import</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_duplicate">Duplicate</string>
+    <string name="action_launch">Launch</string>
+    <string name="action_edit_config">Edit Config</string>
+    <string name="action_save_configuration">Save Configuration</string>
+    <string name="action_advanced">Advanced</string>
+    <string name="action_edit_advanced_imgui">Edit in Advanced mode (ImGui)</string>
+    <string name="action_eject">Eject</string>
+
+    <string name="label_configuration_name">Configuration Name</string>
+    <string name="dialog_save_config_title">Save Configuration</string>
+    <string name="dialog_save_config_message">Enter a name for this configuration.</string>
+    <string name="dialog_delete_config_title">Delete Configuration</string>
+    <string name="dialog_delete_config_message">Delete "%1$s"? This cannot be undone.</string>
+
+    <string name="msg_invalid_config_name">Invalid configuration name</string>
+    <string name="msg_failed_save_config">Failed to save configuration</string>
+    <string name="msg_saved_configuration">Saved %1$s</string>
+    <string name="msg_rom_required_before_start">Import/select a Kickstart ROM before starting.</string>
+    <string name="msg_game_imported">Game imported</string>
+    <string name="msg_path_copied">Path copied</string>
+    <string name="msg_failed_load_config">Failed to load configuration</string>
+    <string name="msg_config_deleted">Configuration deleted</string>
+    <string name="msg_failed_delete_config">Failed to delete configuration</string>
+    <string name="msg_failed_duplicate_config">Failed to duplicate configuration</string>
+    <string name="msg_config_duplicated_as">Duplicated as %1$s</string>
+
+    <string name="configurations_empty_title">No configurations saved yet</string>
+    <string name="configurations_empty_message">Configure settings and launch emulation to generate config files, or use the Advanced (ImGui) interface to create them.</string>
+
+    <string name="quick_start_ready_title">Ready to Launch</string>
+    <string name="quick_start_ready_subtitle">Choose a model and media, then press Start.</string>
+    <string name="quick_start_model_summary">Model: %1$s</string>
+    <string name="quick_start_media_whdload">WHDLoad game selected</string>
+    <string name="quick_start_media_floppy_cd">Floppy and CD selected</string>
+    <string name="quick_start_media_floppy">Floppy selected</string>
+    <string name="quick_start_media_cd">CD selected</string>
+    <string name="quick_start_media_none">No media selected</string>
+    <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from File Manager before launch.</string>
+    <string name="quick_start_amiga_model">Amiga Model</string>
+    <string name="quick_start_floppy_df0">Floppy Disk (DF0)</string>
+    <string name="quick_start_no_floppy_images">No floppy images found</string>
+    <string name="quick_start_cd_image">CD Image</string>
+    <string name="quick_start_no_cd_images">No CD images found</string>
+    <string name="quick_start_whdload_title">WHDLoad Game</string>
+    <string name="quick_start_whdload_help">Select an .lha game to auto-configure and launch</string>
+    <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha files to get started.</string>
+    <string name="quick_start_select_game_placeholder">(select a game)</string>
+
+    <string name="file_manager_tab_roms">ROMs</string>
+    <string name="file_manager_tab_whdload">WHDLoad</string>
+    <string name="file_manager_tab_floppies">Floppies</string>
+    <string name="file_manager_tab_hard_drives">Hard Drives</string>
+    <string name="file_manager_tab_cds">CDs</string>
+    <string name="file_manager_app_storage">App Storage</string>
+    <string name="file_manager_copy_path">Copy path</string>
+    <string name="file_manager_no_files_found">No %1$s found</string>
+    <string name="file_manager_empty_help">Tap + to import files, or copy them to:\n%1$s/%2$s/</string>
+
+    <string name="settings_option_none">None</string>
+    <string name="settings_common_disabled">Disabled</string>
+    <string name="settings_placeholder_unknown">?</string>
+
+    <string name="settings_cpu_model_preset">Model Preset</string>
+    <string name="settings_cpu_model_preset_help">Applies default CPU, chipset, and memory settings</string>
+    <string name="settings_cpu_section_title">CPU</string>
+    <string name="settings_cpu_model_label">CPU Model</string>
+    <string name="settings_cpu_fastest_possible">Fastest Possible</string>
+    <string name="settings_cpu_more_compatible">More Compatible</string>
+    <string name="settings_cpu_24bit_addressing">24-bit Addressing</string>
+    <string name="settings_cpu_fpu_label">FPU</string>
+    <string name="settings_cpu_fpu_internal">CPU Internal</string>
+    <string name="settings_cpu_jit_cache_label">JIT Cache (KB)</string>
+    <string name="settings_cpu_jit_cache_value">%1$d KB</string>
+
+    <string name="settings_chipset_ocs">OCS</string>
+    <string name="settings_chipset_ecs_agnus">ECS Agnus</string>
+    <string name="settings_chipset_ecs_denise">ECS Denise</string>
+    <string name="settings_chipset_full_ecs">Full ECS</string>
+    <string name="settings_chipset_aga">AGA</string>
+    <string name="settings_chipset_section_title">Chipset</string>
+    <string name="settings_chipset_label">Chipset</string>
+    <string name="settings_chipset_immediate_blitter">Immediate Blitter</string>
+    <string name="settings_chipset_cycle_exact">Cycle-Exact</string>
+    <string name="settings_chipset_ntsc">NTSC</string>
+    <string name="settings_chipset_collision_level_label">Collision Level</string>
+    <string name="settings_chipset_collision_sprites_only">Sprites Only</string>
+    <string name="settings_chipset_collision_sprites_playfields">Sprites + Playfields</string>
+    <string name="settings_chipset_collision_full">Full</string>
+
+    <string name="settings_memory_config_title">Memory Configuration</string>
+    <string name="settings_memory_chip_ram">Chip RAM</string>
+    <string name="settings_memory_slow_ram">Slow RAM (Trapdoor)</string>
+    <string name="settings_memory_fast_ram">Fast RAM (Zorro II)</string>
+    <string name="settings_memory_z3_fast_ram">Z3 Fast RAM (Zorro III)</string>
+    <string name="settings_memory_summary_title">Summary</string>
+    <string name="settings_memory_summary_chip">Chip: %1$s</string>
+    <string name="settings_memory_summary_slow">Slow: %1$s</string>
+    <string name="settings_memory_summary_z2_fast">Z2 Fast: %1$d MB</string>
+    <string name="settings_memory_summary_z3_fast">Z3 Fast: %1$d MB</string>
+    <string name="settings_memory_summary_total">Total: %1$.1f MB</string>
+    <string name="settings_memory_value_mb">%1$d MB</string>
+    <string name="settings_memory_value_kb">%1$d KB</string>
+
+    <string name="settings_display_title">Display Settings</string>
+    <string name="settings_display_resolution_label">Resolution</string>
+    <string name="settings_display_resolution_pal_low">640x256 (PAL Low-res)</string>
+    <string name="settings_display_resolution_pal_high">640x512 (PAL Hi-res)</string>
+    <string name="settings_display_resolution_default">720x568 (Default)</string>
+    <string name="settings_display_resolution_800_600">800x600</string>
+    <string name="settings_display_resolution_1024_768">1024x768</string>
+    <string name="settings_display_correct_aspect_ratio">Correct Aspect Ratio</string>
+    <string name="settings_display_auto_crop">Auto-Crop</string>
+
+    <string name="settings_sound_title">Sound Settings</string>
+    <string name="settings_sound_output_label">Sound Output</string>
+    <string name="settings_sound_sample_rate_label">Sample Rate</string>
+    <string name="settings_sound_stereo_mode_label">Stereo Mode</string>
+    <string name="settings_sound_output_disabled">Disabled</string>
+    <string name="settings_sound_output_emulated_no_output">Emulated (no output)</string>
+    <string name="settings_sound_output_normal">Normal</string>
+    <string name="settings_sound_output_exact">Exact</string>
+    <string name="settings_sound_frequency_hz">%1$d Hz</string>
+    <string name="settings_sound_channels_mono">Mono</string>
+    <string name="settings_sound_channels_stereo">Stereo</string>
+    <string name="settings_sound_channels_mixed">Mixed (75% stereo)</string>
+
+    <string name="settings_input_port_assignments_title">Port Assignments</string>
+    <string name="settings_input_port0_label">Port 0 (Mouse Port)</string>
+    <string name="settings_input_port1_label">Port 1 (Joystick Port)</string>
+    <string name="settings_input_on_screen_controls_title">On-Screen Controls</string>
+    <string name="settings_input_on_screen_joystick">On-Screen Joystick</string>
+    <string name="settings_input_on_screen_keyboard_button">On-Screen Keyboard Button</string>
+    <string name="settings_input_device_mouse">Mouse</string>
+    <string name="settings_input_device_joystick_0">Joystick 0</string>
+    <string name="settings_input_device_joystick_1">Joystick 1</string>
+    <string name="settings_input_device_on_screen_joystick">On-Screen Joystick</string>
+    <string name="settings_input_device_keyboard_layout_1">Keyboard Layout 1</string>
+    <string name="settings_input_device_keyboard_layout_2">Keyboard Layout 2</string>
+    <string name="settings_input_device_keyboard_layout_3">Keyboard Layout 3</string>
+
+    <string name="settings_storage_kickstart_rom_title">Kickstart ROM</string>
+    <string name="settings_storage_no_roms_found">No ROMs found. Import via the Files tab.</string>
+    <string name="settings_storage_rom_file_label">ROM File</string>
+    <string name="settings_storage_floppy_drives_title">Floppy Drives</string>
+    <string name="settings_storage_drive_df0">DF0</string>
+    <string name="settings_storage_drive_df1">DF1</string>
+    <string name="settings_storage_cd_image_title">CD Image</string>
+    <string name="settings_storage_no_cd_images_found">No CD images found. Import via the Files tab.</string>
+    <string name="settings_storage_cd_image_label">CD Image</string>
+    <string name="settings_storage_drive_type_dd">3.5" DD</string>
+    <string name="settings_storage_drive_type_hd">3.5" HD</string>
+    <string name="settings_storage_drive_type_unknown">Unknown</string>
+    <string name="settings_storage_type_label">Type</string>
+    <string name="settings_storage_disk_label">Disk</string>
+    <string name="settings_storage_import_disk_image">Import disk image...</string>
+
+    <string name="clipboard_label_path">path</string>
+    <string name="placeholder_none">(none)</string>
+</resources>

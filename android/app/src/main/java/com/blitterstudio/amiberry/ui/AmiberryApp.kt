@@ -1,17 +1,25 @@
 package com.blitterstudio.amiberry.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -26,17 +34,21 @@ import com.blitterstudio.amiberry.ui.screens.settings.SettingsScreen
 fun AmiberryApp() {
 	val navController = rememberNavController()
 
-	Scaffold(
-		bottomBar = {
-			NavigationBar(modifier = Modifier.focusGroup()) {
-				val navBackStackEntry by navController.currentBackStackEntryAsState()
-				val currentDestination = navBackStackEntry?.destination
+	val configuration = LocalConfiguration.current
+	val useNavRail = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-				Screen.bottomNavItems.forEach { screen ->
-					NavigationBarItem(
-						icon = { Icon(screen.icon, contentDescription = screen.title) },
-						label = { Text(screen.title) },
-						selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+	val navBackStackEntry by navController.currentBackStackEntryAsState()
+	val currentDestination = navBackStackEntry?.destination
+
+	if (useNavRail) {
+		Row(modifier = Modifier.fillMaxSize()) {
+			NavigationRail(modifier = Modifier.focusGroup()) {
+					Screen.bottomNavItems.forEach { screen ->
+						val title = stringResource(screen.titleRes)
+						NavigationRailItem(
+							icon = { Icon(screen.icon, contentDescription = title) },
+							label = { Text(title) },
+							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
 						onClick = {
 							navController.navigate(screen.route) {
 								popUpTo(navController.graph.findStartDestination().id) {
@@ -49,25 +61,57 @@ fun AmiberryApp() {
 					)
 				}
 			}
+			Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
+				AmiberryNavHost(navController, Modifier.padding(innerPadding))
+			}
 		}
-	) { innerPadding ->
-		NavHost(
-			navController = navController,
-			startDestination = Screen.QuickStart.route,
-			modifier = Modifier.padding(innerPadding)
-		) {
-			composable(Screen.QuickStart.route) {
-				QuickStartScreen()
+	} else {
+		Scaffold(
+			bottomBar = {
+				NavigationBar(modifier = Modifier.focusGroup()) {
+					Screen.bottomNavItems.forEach { screen ->
+						val title = stringResource(screen.titleRes)
+						NavigationBarItem(
+							icon = { Icon(screen.icon, contentDescription = title) },
+							label = { Text(title) },
+							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+							onClick = {
+								navController.navigate(screen.route) {
+									popUpTo(navController.graph.findStartDestination().id) {
+										saveState = true
+									}
+									launchSingleTop = true
+									restoreState = true
+								}
+							}
+						)
+					}
+				}
 			}
-			composable(Screen.Settings.route) {
-				SettingsScreen()
-			}
-			composable(Screen.FileManager.route) {
-				FileManagerScreen()
-			}
-			composable(Screen.Configurations.route) {
-				ConfigurationsScreen()
-			}
+		) { innerPadding ->
+			AmiberryNavHost(navController, Modifier.padding(innerPadding))
+		}
+	}
+}
+
+@Composable
+fun AmiberryNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+	NavHost(
+		navController = navController,
+		startDestination = Screen.QuickStart.route,
+		modifier = modifier
+	) {
+		composable(Screen.QuickStart.route) {
+			QuickStartScreen()
+		}
+		composable(Screen.Settings.route) {
+			SettingsScreen()
+		}
+		composable(Screen.FileManager.route) {
+			FileManagerScreen()
+		}
+		composable(Screen.Configurations.route) {
+			ConfigurationsScreen(navController = navController)
 		}
 	}
 }

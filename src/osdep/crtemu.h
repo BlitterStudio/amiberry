@@ -232,6 +232,7 @@ typedef GLbitfield CRTEMU_GLbitfield;
 struct crtemu_t {
 	crtemu_type_t type;
 	void* memctx;
+	bool skip_aspect_correction; // When true, fill viewport without 4:3 letterboxing
 
 	CRTEMU_GLuint vertexbuffer;
 	CRTEMU_GLuint vertexbuffer_static;
@@ -2486,15 +2487,21 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	int window_width = viewport[ 2 ] - viewport[ 0 ];
 	int window_height = viewport[ 3 ] - viewport[ 1 ];
 
-	int aspect_width = (int)( ( window_height * 4 ) / 3 );
-	int aspect_height= (int)( ( window_width * 3 ) / 4 );
 	int target_width, target_height;
-	if( aspect_height <= window_height ) {
+	if( crtemu->skip_aspect_correction ) {
+		// Custom bezel controls the viewport - fill it completely
 		target_width = window_width;
-		target_height = aspect_height;
-	} else {
-		target_width = aspect_width;
 		target_height = window_height;
+	} else {
+		int aspect_width = (int)( ( window_height * 4 ) / 3 );
+		int aspect_height= (int)( ( window_width * 3 ) / 4 );
+		if( aspect_height <= window_height ) {
+			target_width = window_width;
+			target_height = aspect_height;
+		} else {
+			target_width = aspect_width;
+			target_height = window_height;
+		}
 	}
 
 	float hscale = target_width / (float) width;

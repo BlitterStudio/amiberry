@@ -3,7 +3,6 @@ package com.blitterstudio.amiberry.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.focusGroup
@@ -32,43 +31,59 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.ui.viewmodel.FileManagerViewModel
+import java.util.Locale
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	val context = LocalContext.current
+	val scope = rememberCoroutineScope()
+	val snackbarHostState = remember { SnackbarHostState() }
 	var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
 	val tabs = listOf(
-		TabInfo(FileCategory.ROMS, "ROMs", Icons.Default.Memory),
-		TabInfo(FileCategory.WHDLOAD_GAMES, "WHDLoad", Icons.Default.SportsEsports),
-		TabInfo(FileCategory.FLOPPIES, "Floppies", Icons.Default.SaveAlt),
-		TabInfo(FileCategory.HARD_DRIVES, "Hard Drives", Icons.Default.Storage),
-		TabInfo(FileCategory.CD_IMAGES, "CDs", Icons.Default.Album)
+		TabInfo(FileCategory.ROMS, stringResource(R.string.file_manager_tab_roms), Icons.Default.Memory),
+		TabInfo(FileCategory.WHDLOAD_GAMES, stringResource(R.string.file_manager_tab_whdload), Icons.Default.SportsEsports),
+		TabInfo(FileCategory.FLOPPIES, stringResource(R.string.file_manager_tab_floppies), Icons.Default.SaveAlt),
+		TabInfo(FileCategory.HARD_DRIVES, stringResource(R.string.file_manager_tab_hard_drives), Icons.Default.Storage),
+		TabInfo(FileCategory.CD_IMAGES, stringResource(R.string.file_manager_tab_cds), Icons.Default.Album)
 	)
+	val pathCopiedMessage = stringResource(R.string.msg_path_copied)
+	val clipboardLabelPath = stringResource(R.string.clipboard_label_path)
 
 	val currentCategory = tabs[selectedTab].category
 	val files by when (currentCategory) {
@@ -80,25 +95,37 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	}.collectAsState()
 
 	val importResult by viewModel.importResult.collectAsState()
-
-	// SAF file picker launcher
 	val filePickerLauncher = rememberLauncherForActivityResult(
 		contract = ActivityResultContracts.OpenDocument()
 	) { uri ->
 		uri?.let { viewModel.importFile(it, currentCategory) }
 	}
 
-	// Show toast on import result
 	LaunchedEffect(importResult) {
 		importResult?.let { msg ->
-			Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+			snackbarHostState.showSnackbar(msg)
 			viewModel.clearImportResult()
 		}
 	}
 
-	Box(modifier = Modifier.fillMaxSize()) {
-		Column {
-			// Storage path info
+	Scaffold(
+		snackbarHost = { SnackbarHost(snackbarHostState) },
+		topBar = {
+			TopAppBar(title = { Text(stringResource(R.string.file_manager_title)) })
+		},
+		floatingActionButton = {
+			ExtendedFloatingActionButton(
+				onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+				icon = { Icon(Icons.Default.Add, contentDescription = null) },
+				text = { Text(stringResource(R.string.action_import)) }
+			)
+		}
+	) { innerPadding ->
+		Column(
+			modifier = Modifier
+				.fillMaxSize()
+				.padding(innerPadding)
+		) {
 			OutlinedCard(
 				modifier = Modifier
 					.fillMaxWidth()
@@ -119,7 +146,10 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 								modifier = Modifier.size(16.dp)
 							)
 							Spacer(modifier = Modifier.width(6.dp))
-							Text("App Storage", style = MaterialTheme.typography.labelMedium)
+							Text(
+								stringResource(R.string.file_manager_app_storage),
+								style = MaterialTheme.typography.labelMedium
+							)
 						}
 						Text(
 							text = viewModel.getStoragePath(),
@@ -129,20 +159,28 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 							maxLines = 1
 						)
 					}
-					IconButton(onClick = {
-						val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-						clipboard.setPrimaryClip(ClipData.newPlainText("path", viewModel.getStoragePath()))
-						Toast.makeText(context, "Path copied", Toast.LENGTH_SHORT).show()
-					}) {
-						Icon(Icons.Default.ContentCopy, contentDescription = "Copy path", modifier = Modifier.size(18.dp))
+
+					IconButton(
+						onClick = {
+							val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+							clipboard.setPrimaryClip(ClipData.newPlainText(clipboardLabelPath, viewModel.getStoragePath()))
+							scope.launch { snackbarHostState.showSnackbar(pathCopiedMessage) }
+						}
+					) {
+						Icon(
+							Icons.Default.ContentCopy,
+							contentDescription = stringResource(R.string.file_manager_copy_path),
+							modifier = Modifier.size(18.dp)
+						)
 					}
 				}
 			}
 
-			// Tab row
-			ScrollableTabRow(
+			SecondaryScrollableTabRow(
 				selectedTabIndex = selectedTab,
-				modifier = Modifier.fillMaxWidth().focusGroup()
+				modifier = Modifier
+					.fillMaxWidth()
+					.focusGroup()
 			) {
 				tabs.forEachIndexed { index, tab ->
 					Tab(
@@ -154,7 +192,6 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			}
 
-			// File list
 			if (files.isEmpty()) {
 				Box(
 					modifier = Modifier
@@ -164,12 +201,19 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				) {
 					Column(horizontalAlignment = Alignment.CenterHorizontally) {
 						Text(
-							text = "No ${tabs[selectedTab].title.lowercase()} found",
+							text = stringResource(
+								R.string.file_manager_no_files_found,
+								tabs[selectedTab].title.lowercase(Locale.getDefault())
+							),
 							style = MaterialTheme.typography.bodyLarge
 						)
 						Spacer(modifier = Modifier.height(8.dp))
 						Text(
-							text = "Tap + to import files, or copy them to:\n${viewModel.getStoragePath()}/${currentCategory.dirName}/",
+							text = context.getString(
+								R.string.file_manager_empty_help,
+								viewModel.getStoragePath(),
+								currentCategory.dirName
+							),
 							style = MaterialTheme.typography.bodySmall,
 							color = MaterialTheme.colorScheme.onSurfaceVariant
 						)
@@ -186,18 +230,6 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			}
 		}
-
-		// FAB for importing
-		ExtendedFloatingActionButton(
-			onClick = {
-				filePickerLauncher.launch(arrayOf("*/*"))
-			},
-			modifier = Modifier
-				.align(Alignment.BottomEnd)
-				.padding(16.dp),
-			icon = { Icon(Icons.Default.Add, contentDescription = null) },
-			text = { Text("Import") }
-		)
 	}
 }
 
@@ -225,10 +257,7 @@ private fun FileItem(file: AmigaFile) {
 			)
 			Spacer(modifier = Modifier.width(12.dp))
 			Column(modifier = Modifier.weight(1f)) {
-				Text(
-					text = file.name,
-					style = MaterialTheme.typography.bodyMedium
-				)
+				Text(text = file.name, style = MaterialTheme.typography.bodyMedium)
 				Text(
 					text = file.sizeDisplay,
 					style = MaterialTheme.typography.bodySmall,

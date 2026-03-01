@@ -40,6 +40,7 @@ Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-
 -   **RetroArch Integration**: Seamless mapping for RetroArch controllers.
 -   **Host Tools Integration**: Launch host applications directly from the emulation.
 -   **Dynamic File Handling**: Drag-and-drop support for floppies, hardfiles, and config files.
+-   **Custom Bezel Overlays**: Use your own bezel PNG images (e.g., CRT monitor frames) with any shader. The emulator output is automatically fitted to the bezel's transparent screen area.
 -   **Native GUI**: A responsive, feature-rich interface designed for both mouse and controller navigation.
 
 ## 🚀 Installation

@@ -25,6 +25,7 @@ object ConfigGenerator {
 		}
 		if (settings.jitCacheSize > 0) {
 			sb.appendLine("cachesize=${settings.jitCacheSize}")
+			sb.appendLine("compfpu=${settings.jitFpu.toCfg()}")
 		}
 
 		// Chipset

@@ -40,7 +40,6 @@
 
         <!-- SDL emulator activity (launched by native UI) -->
         <activity android:name="com.blitterstudio.amiberry.AmiberryActivity"
-            android:launchMode="singleTop"
             android:process=":sdl"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"

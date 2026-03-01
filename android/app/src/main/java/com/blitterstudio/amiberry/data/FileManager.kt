@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import java.util.zip.CRC32
 import java.io.File
 
 object FileManager {
@@ -78,13 +79,15 @@ object FileManager {
 				file.isFile && file.extension.lowercase() in extensions
 			}
 			?.map { file ->
+				val crc = if (category == FileCategory.ROMS) calculateCrc32(file) else null
 				AmigaFile(
 					path = file.absolutePath,
 					name = file.name,
 					extension = file.extension.lowercase(),
 					size = file.length(),
 					lastModified = file.lastModified(),
-					category = category ?: FileCategory.fromExtension(file.extension) ?: FileCategory.FLOPPIES
+					category = category ?: FileCategory.fromExtension(file.extension) ?: FileCategory.FLOPPIES,
+					crc32 = crc
 				)
 			}
 			?.sortedBy { it.name.lowercase() }
@@ -141,5 +144,23 @@ object FileManager {
 		}
 		// Fallback: extract from URI path
 		return uri.lastPathSegment?.substringAfterLast('/')
+	}
+
+	private fun calculateCrc32(file: File): Long? {
+		return try {
+			val crc = CRC32()
+			file.inputStream().use { input ->
+				val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+				while (true) {
+					val read = input.read(buffer)
+					if (read <= 0) break
+					crc.update(buffer, 0, read)
+				}
+			}
+			crc.value and 0xffffffffL
+		} catch (e: Exception) {
+			Log.w(TAG, "Failed to calculate CRC32 for ${file.absolutePath}", e)
+			null
+		}
 	}
 }

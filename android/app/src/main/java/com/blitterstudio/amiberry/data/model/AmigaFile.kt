@@ -6,7 +6,8 @@ data class AmigaFile(
 	val extension: String,
 	val size: Long,
 	val lastModified: Long,
-	val category: FileCategory
+	val category: FileCategory,
+	val crc32: Long? = null
 ) {
 	val sizeDisplay: String
 		get() = when {

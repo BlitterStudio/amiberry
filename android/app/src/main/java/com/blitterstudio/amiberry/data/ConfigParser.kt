@@ -21,7 +21,7 @@ object ConfigParser {
 	// Keys we know how to parse into EmulatorSettings
 	private val knownKeys = setOf(
 		"cpu_model", "cpu_compatible", "cpu_24bit_addressing", "cpu_speed",
-		"fpu_model", "cachesize",
+		"fpu_model", "cachesize", "compfpu",
 		"chipset", "immediate_blits", "collision_level", "cycle_exact", "ntsc",
 		"chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size",
 		"kickstart_rom_file", "kickstart_ext_rom_file",
@@ -84,6 +84,7 @@ object ConfigParser {
 			cpuSpeed = kv["cpu_speed"] ?: "real",
 			fpuModel = kv["fpu_model"]?.toIntOrNull() ?: 0,
 			jitCacheSize = kv["cachesize"]?.toIntOrNull() ?: 0,
+			jitFpu = kv["compfpu"].toBool(false),
 
 			chipset = kv["chipset"] ?: "ocs",
 			immediateBlits = kv["immediate_blits"].toBool(false),

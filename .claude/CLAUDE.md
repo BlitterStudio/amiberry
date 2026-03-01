@@ -13,7 +13,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **FreeBSD**: x86_64
 - **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
-- **Version**: 8.0.0 (Public Beta 25)
+- **Version**: 8.0.0 (Public Beta 26)
 - **Languages**: C/C++
 - **Build System**: CMake (minimum 3.16)
 - **License**: GPL (see LICENSE file)
@@ -49,6 +49,29 @@ The Android build uses Gradle and fetches dependencies via CMake FetchContent:
 ```bash
 cd android
 ./gradlew assembleRelease
+```
+
+#### Android Versioning (Play Store)
+
+Android now derives app version metadata from the top-level `CMakeLists.txt`:
+- `project(... VERSION x.y.z)` -> Android `versionName` base
+- `set(VERSION_PRE_RELEASE "N")` -> Android beta suffix (`x.y.z-betaN`)
+
+`versionCode` is generated to stay monotonic for Play uploads:
+- Formula: `major * 1_000_000 + minor * 10_000 + patch * 100 + slot`
+- `slot = N` for pre-release (`VERSION_PRE_RELEASE` 1..98)
+- `slot = 99` for final release (no pre-release suffix / `0`)
+
+Examples:
+- `8.0.0-beta26` -> `versionCode 8000026`
+- `8.0.0` (final) -> `versionCode 8000099`
+
+This ensures final is always greater than any beta for the same `x.y.z`.
+If needed, override only the code at build time with:
+
+```bash
+cd android
+./gradlew bundleRelease -PANDROID_VERSION_CODE=8000100
 ```
 
 ### Windows (MinGW-w64)
@@ -272,6 +295,40 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 - `input.cpp` - Controller configuration
 - `whdload.cpp` - WHDLoad integration
 
+### Custom Bezel Overlay System
+
+Custom bezels are PNG/JPEG images (e.g., CRT monitor frames) with a transparent "screen hole" where the emulator output shows through. They work with **all** shader types (crtemu built-in, external GLSL, GLSLP presets).
+
+**Rendering order in `show_screen()`:**
+1. Clear to black
+2. Render emulator output via active shader (constrained to screen hole viewport)
+3. Render software cursor
+4. **Render custom bezel overlay** (full window, alpha blended)
+5. Render OSD, virtual keyboard, on-screen joystick (on top of bezel)
+6. SwapWindow
+
+**Architecture:**
+- Bezel texture loaded via `IMG_Load()` → `SDL_ConvertSurfaceFormat(ABGR8888)` → GL texture upload
+- Alpha channel scanned during load to detect transparent screen hole bounding box (threshold: alpha < 128)
+- Screen hole stored as normalized coordinates (`bezel_hole_x/y/w/h` in 0.0-1.0 range)
+- `renderAreaX/Y/W/H` variables in `show_screen()` define the effective render area for all shader paths
+- `crtemu_t::skip_aspect_correction` flag bypasses crtemu's internal 4:3 letterboxing when bezel controls the viewport
+- Lazy texture loading: `render_bezel_overlay()` loads on first render frame (GL context safe), not from GUI
+- `update_custom_bezel()` (called from GUI) only clears `loaded_bezel_name` to trigger reload — no GL calls
+- Built-in CRT bezel and custom bezels are mutually exclusive
+
+**Key files:**
+- `src/osdep/amiberry_gfx.cpp` — `load_bezel_texture()`, `destroy_bezel_overlay()`, `update_custom_bezel()`, `render_bezel_overlay()`, renderArea logic in `show_screen()`
+- `src/osdep/crtemu.h` — `skip_aspect_correction` field and modified aspect ratio logic in `crtemu_present()`
+- `src/osdep/imgui/filter.cpp` — GUI controls, bezel scanning (`scan_bezels()`), mutual exclusion logic
+- `src/osdep/amiberry.cpp` — `bezels_path` variable, `get_bezels_path()`/`set_bezels_path()`, config save/load
+- `src/include/options.h` — `use_custom_bezel`, `custom_bezel[256]` fields in `amiberry_options`
+
+**Config options** (in `amiberry.conf`):
+- `use_custom_bezel` — enable custom bezel overlay (boolean)
+- `custom_bezel` — filename relative to bezels directory (string, "none" to disable)
+- `bezels_path` — path to bezels directory
+
 ### On-Screen Joystick (Touch Controls)
 
 The on-screen joystick provides touch-based D-pad and fire buttons for Android and other touchscreen devices. It is implemented in `src/osdep/on_screen_joystick.cpp` with rendering support for both SDL2 renderer and OpenGL.
@@ -316,30 +373,113 @@ The UAE input device system uses `inputdevice_functions` structs for each device
 
 ### Android App Architecture
 
-The Android app (`android/app/src/main/java/com/blitterstudio/amiberry/`) is a Kotlin/Jetpack Compose UI that launches the native C++ emulator via SDL Activity intents. No JNI — all communication is via command-line args passed through `intent.putExtra("SDL_ARGS", args)`.
+The Android app (`android/app/src/main/java/com/blitterstudio/amiberry/`) is a Kotlin/Jetpack Compose front-end that launches the native SDL emulator process via Intent args. There is no JNI control layer for runtime settings; communication is CLI-style through `SDL_ARGS`.
 
-**Key files:**
-- `data/EmulatorLauncher.kt` — Central launch point; builds CLI args for all launch modes (Quick Start, config, WHDLoad, Advanced GUI)
-- `data/ConfigGenerator.kt` — Generates `.uae` config files from `EmulatorSettings`
-- `data/ConfigParser.kt` — Parses `.uae` files back to `EmulatorSettings`
-- `data/FileManager.kt` — File import via SAF (Storage Access Framework), scans directories for ROMs/floppies/CDs
-- `data/FileRepository.kt` — Singleton providing `StateFlow<List<AmigaFile>>` for each file category
-- `data/model/AmigaModel.kt` — Enum of 10 Amiga models with `cmdArg` matching `--model` handler in `main.cpp`
-- `data/model/EmulatorSettings.kt` — All configurable settings with `fromModel()` factory
-- `ui/screens/QuickStartScreen.kt` — Model selector, media import, WHDLoad launcher
-- `ui/screens/settings/SettingsScreen.kt` — Tabbed settings (CPU & Chipset, Memory, Display, Sound, Input, Storage)
-- `ui/screens/settings/StorageTab.kt` — ROM selector dropdown, floppy drives, CD image
-- `ui/viewmodel/QuickStartViewModel.kt` — State for Quick Start screen
-- `ui/viewmodel/SettingsViewModel.kt` — State for Settings screen with hardware constraints
+**Process and Activity model**
+- `ui/MainActivity.kt` is the launcher activity in the main app process.
+- `AmiberryActivity.java` extends `SDLActivity` and runs in a dedicated `:sdl` process (`AndroidManifest.xml`).
+- Native launch args are passed via `Intent.putExtra("SDL_ARGS", String[])`; `AmiberryActivity.getArguments()` returns them to SDL/native `main()`.
+- `AmiberryActivity` registers `OnBackInvokedCallback` (API 33+) and forwards back to SDL when SDL's trap hint is enabled (`SDL_ANDROID_TRAP_BACK_BUTTON`), otherwise finishes the activity.
+- `AmiberryActivity.onDestroy()` kills the `:sdl` process when finishing, so each emulator launch starts from a clean process state.
+- SDL activity is started with `android:enableOnBackInvokedCallback="true"` and fullscreen theme; immersive bars are reapplied on focus changes.
 
-**Launch modes:**
-- Quick Start: `--rescan-roms --model A1200 -0 <floppy> -G`
-- Config file: `--rescan-roms --config <path>.uae -G`
-- WHDLoad: `--rescan-roms --autoload <lha> -G`
-- Advanced GUI: `--rescan-roms` (no `-G`, opens ImGui)
-- Settings: `--rescan-roms --model <model> --config <generated>.uae -G`
+**Startup/bootstrap behavior (`MainActivity`)**
+- Calls `enableEdgeToEdge()`.
+- Extracts packaged assets to `getExternalFilesDir(null)` on first run per app version.
+- Uses `.extracted_version` marker file to skip re-extraction when version unchanged.
+- Ensures user directories exist: `roms`, `floppies`, `harddrives`, `cdroms`, `lha`, `conf`.
+- Shows a loading screen ("Preparing Amiberry...") until extraction/dir prep completes.
 
-**File categories scanned by Android UI:** ROMs (`.rom`, `.bin`), floppies (`.adf`, `.adz`, `.ipf`, `.dms`), CDs (`.iso`, `.cue`, `.bin`), WHDLoad games (`.lha`, `.lzx`, `.lzh`). Scan directories: `{appStorageDir}/<category>/` + root + `whdboot/game-data/Kickstarts/` for ROMs.
+**Navigation/UI shell**
+- `ui/AmiberryApp.kt` hosts 4 root screens:
+  - Quick Start
+  - Settings
+  - File Manager
+  - Configurations
+- Uses `NavigationRail` in landscape and bottom `NavigationBar` in portrait.
+- Uses `Screen` sealed class with string resources for nav labels.
+
+**State ownership and sharing**
+- `SettingsViewModel` (activity-scoped in screens) is the single source of truth for current emulation settings.
+- Quick Start and Settings both operate on the same `SettingsViewModel`, so model/media changes are shared across these tabs.
+- `QuickStartViewModel` holds WHDLoad selection and media lists.
+- `FileManagerViewModel` handles import + per-category rescans.
+- `ConfigurationsViewModel` handles saved `.uae` list/load/duplicate/delete/rename operations.
+
+**Core Android data layer**
+- `data/EmulatorLauncher.kt`
+  - Quick Start launch: `--rescan-roms --model <model> [-0 <floppy>] [-s cdimage0=<cd>] -G`
+  - Config launch: `--rescan-roms --config <path> [-G]`
+  - WHDLoad launch: `--rescan-roms --autoload <lha> -G`
+  - Advanced launch: `--rescan-roms [--config <path>] -s use_gui=yes` (no `-G`)
+- `data/ConfigGenerator.kt`
+  - Generates `.uae` from `EmulatorSettings`.
+  - Writes `use_gui=no` for native-UI-driven launches.
+  - Omits `joyport1` when using `onscreen_joy` so runtime auto-assignment can apply.
+- `data/ConfigParser.kt`
+  - Parses known keys into `EmulatorSettings`.
+  - Preserves unknown lines for round-trip safety.
+  - Supports config description and heuristic `baseModel` guess when loading arbitrary configs.
+- `data/ConfigRepository.kt`
+  - Lists non-hidden `.uae` files from `conf/`.
+  - Safe filename validation (blocks separators, `..`, and path escapes via canonical checks).
+  - Save/load/delete/rename/duplicate helpers.
+- `data/FileManager.kt`
+  - SAF import with duplicate-safe filename suffixing.
+  - Scans category dir + app root; ROM scan also includes `whdboot/game-data/Kickstarts`.
+  - Computes CRC32 for ROM files (`AmigaFile.crc32`) to support deterministic ROM-ID matching.
+- `data/FileRepository.kt`
+  - Singleton with `StateFlow<List<AmigaFile>>` per category and rescan APIs.
+
+**Key UI behavior details**
+- Quick Start:
+  - No top-right "advanced gear"; advanced access is in Settings/Configurations.
+  - Supports model selection, floppy/CD media pickers, and WHDLoad launch.
+  - Start button is blocked with snackbar when no ROM is available/selected.
+- Settings:
+  - Top app bar overflow actions: Save Configuration, Advanced (ImGui).
+  - Advanced opens ImGui with a generated temp config and preserved unknown lines.
+  - Start uses generated config args (`--model + --config + -G`) and same ROM presence guard.
+  - Tabs: CPU, Chipset, Memory, Display, Sound, Input, Storage.
+- File Manager:
+  - Import via SAF (`OpenDocument`) into selected category.
+  - Shows app storage path and copy-to-clipboard action.
+- Configurations:
+  - Single-tap loads config into `SettingsViewModel` and navigates to Settings.
+  - Per-item actions: launch, edit, advanced edit in ImGui, duplicate, delete.
+
+**Android model preset parity (`--model` vs Settings)**
+- Requirement: Settings model selection must match CLI `--model` ROM behavior from `main.cpp` wrappers and `bip_*` logic.
+- Do not use filename/version heuristics for default ROM assignment.
+- `SettingsViewModel.applyModel()` uses ROM IDs derived from CRC32, with explicit per-model priority lists (`MODEL_ROM_PROFILE`).
+- It sets both `romFile` and `romExtFile` as needed (CDTV/CD32 split-ROM cases).
+
+**Exact ROM ID priority (matches current `--model` wrappers)**
+- `A500` -> `6, 5, 4` (`bip_a500(...,130)`)
+- `A500P` -> `7, 6, 5` (`bip_a500plus(...,-1)`)
+- `A600` -> `10, 9, 8`
+- `A1000` -> `24`
+- `A2000` -> `6, 5, 4` (`bip_a2000(...,130)`)
+- `A3000` -> `59`
+- `A1200` -> `11, 15, 276, 281, 286, 291, 304`
+- `A4000` -> `16, 31, 13, 12, 46, 278, 283, 288, 293, 306`
+- `CD32` -> kick `64, 18`; ext `19` required when kick is `18` (kick `64` is combined KS+ext)
+- `CDTV` -> kick `6, 32`; ext `20, 21, 22` required
+
+**ROM-selection invariants**
+- Quick Start (`--model`) and Settings model selection should result in equivalent default ROM choices.
+- For CDTV/CD32 split-ROM setups, selection is invalid unless required ext ROM is present.
+- If no ROM ID from profile exists, leave auto-selection empty (no heuristic fallback).
+- If C++ `--model` wrappers / `bip_*` defaults change, update Android `MODEL_ROM_PROFILE` and `ROM_CRC_TO_ID`.
+
+**Settings hardware constraints (`SettingsViewModel.applyConstraints`)**
+- 68000/68010 forces 24-bit addressing; disables Z3 RAM and JIT.
+- `cycle_exact=true` forces `cpu_speed=real` and disables JIT.
+- JIT (`jitCacheSize > 0`) requires 68020+; when enabled it forces `cpu_speed=max` and `jitFpu=true`.
+- 24-bit addressing disables JIT.
+- Z3 RAM requires 32-bit addressing.
+- Internal FPU model (68040) only valid for CPU >= 68040.
+- On-screen joystick (`joyport1=onscreen_joy`) is disabled on non-touch devices.
 
 ### Platform Support
 
