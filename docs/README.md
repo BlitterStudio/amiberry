@@ -35,7 +35,7 @@ Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-
 
 ## ✨ Features
 
--   **High Performance JIT**: Custom Just-In-Time compiler for extreme speed on ARM64 (macOS, Linux, Android) and x86.
+-   **High Performance JIT**: Custom Just-In-Time compiler for extreme speed on ARM64 (macOS, Linux, Android) and x86-64 (Linux, macOS, Windows).
 -   **WHDLoad BOOTER**: Native support for launching WHDLoad titles directly, handling all configuration automatically.
 -   **RetroArch Integration**: Seamless mapping for RetroArch controllers.
 -   **Host Tools Integration**: Launch host applications directly from the emulation.
