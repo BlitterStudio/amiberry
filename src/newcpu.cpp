@@ -5809,17 +5809,21 @@ static void m68k_run_jit(void)
 					struct regstruct *r = &regs;
 					bool exit = false;
 					check_debugger();
-					while (!exit && (regs.t0 || regs.t1 || regs.m)) {
-						r->instruction_pc = m68k_getpc();
-						r->opcode = x_get_iword(0);
-						(*cpufunctbl[r->opcode])(r->opcode);
-						count_instr(r->opcode);
-						do_cycles(4 * CYCLE_UNIT);
-						if (r->spcflags) {
-							if (do_specialties(cpu_cycles))
-								exit = true;
+					TRY(prb2) {
+						while (!exit && (regs.t0 || regs.t1 || regs.m)) {
+							r->instruction_pc = m68k_getpc();
+							r->opcode = x_get_iword(0);
+							(*cpufunctbl[r->opcode])(r->opcode);
+							count_instr(r->opcode);
+							do_cycles(4 * CYCLE_UNIT);
+							if (r->spcflags) {
+								if (do_specialties(cpu_cycles))
+									exit = true;
+							}
 						}
-					}
+					} CATCH(prb2) {
+						bus_error();
+					} ENDTRY
 					unset_special(SPCFLAG_END_COMPILE);
 				}
 			}

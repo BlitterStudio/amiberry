@@ -246,7 +246,19 @@ The ARM64 JIT compiler works on Android (AArch64). Three issues were solved to e
 
 **Natmem reservation**: On ARM64, `UAE_VM_32BIT` is dropped from the natmem reservation call since the JIT is 64-bit-clean. This avoids ~25 wasted mmap/munmap cycles on platforms where the kernel ignores low-address hints.
 
-**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has been made 64-bit pointer-clean using the same approach as the ARM64 JIT. JITPTR passes full pointer width, PC_P uses 64-bit loads/stores via `raw_mov_q_ri`/`raw_mov_q_mi`, the ADDR32 prefix has been removed (eliminates 5-cycle Intel Core penalty), `UAE_VM_32BIT` is dropped from natmem/code allocation, and the Windows ASLR-disabling linker flags have been removed.
+**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has been made 64-bit pointer-clean. Key changes:
+- `JITPTR` passes full pointer width (`(uintptr)` cast, no truncation)
+- `reg_status::val` widened to `uintptr` (was `uae_u32`) — `set_const()`/`get_const()` carry 64-bit values
+- PC_P uses 64-bit loads/stores via `raw_mov_q_ri`/`raw_mov_q_mi` in `mov_l_ri`, `writeback_const`, `tomem`, `alloc_reg_hinted`
+- R_MEMSTART (R15) holds `natmem_offset` for all JIT memory access: `[R_MEMSTART + m68k_addr]`
+- ADDR32 prefix removed from all `raw_*` functions (eliminates 5-cycle Intel Core penalty)
+- `readmem_real`/`writemem_real` bank handler paths rewritten for 64-bit pointer chase (function pointer and bank base address loaded via 64-bit MOV through scratch register, not RIP-relative)
+- `isconst` shortcuts disabled (`#if !X86_TARGET_64BIT`) in 15 mid-level functions that would otherwise fold natmem addresses into RIP-relative memory operands (overflows ±2GB displacement on x86-64): `mov_l_rR`, `mov_w_rR`, `mov_b_rR`, `mov_l_brR`, `mov_w_brR`, `mov_b_brR`, `mov_l_Ri`, `mov_w_Ri`, `mov_b_Ri`, `mov_l_Rr`, `mov_w_Rr`, `mov_b_Rr`, `mov_l_bRr`, `mov_w_bRr`, `mov_b_bRr`
+- Windows ASLR-disabling linker flags removed
+- Windows blockinfo pool allocation (`vm_acquire` in `compemu_support_x86.cpp`) uses VirtualQuery walk to find free regions within ±1.75GB of the JIT cache, replacing the blind 16MB-step scan that exhausted in congested ASLR address spaces
+- PIE is a compile-time error (`#error` guard in `compemu_support_x86.cpp` line 106-108)
+
+**Natmem reservation on x86-64**: `UAE_VM_32BIT` is kept (NOT stripped) for x86-64, unlike ARM64. This ensures `natmem_offset` lands near 0x80000000 on all platforms, keeping `comp_pc_p` (= `natmem_offset + M68k_addr`) within 32 bits. This is necessary because the x86-64 JIT still has 32-bit arithmetic paths for PC_P (`add_l_ri` → `ADDLir`, `adjust_nreg` → 32-bit LEA) that would truncate if `natmem_offset > 4GB`. The ARM64 JIT doesn't have this limitation because `arm_ADD_l_ri()` uses 64-bit ADD when `d == PC_P`.
 
 ### GUI System
 
@@ -372,7 +384,7 @@ Platform-specific code is in `src/osdep/`:
 **Key Differences from POSIX platforms:**
 - `sysconfig.h` previously `#undef _WIN32` — this was removed to unlock WinUAE Windows code paths
 - Windows LLP64: `long` is 4 bytes (not 8); `SIZEOF_LONG` must be 4 in `sysconfig.h`
-- JIT compiler works on 64-bit Windows. The x86_64 JIT is 64-bit pointer-clean (same approach as ARM64 JIT): `JITPTR` passes full pointer width, `PC_P` uses 64-bit loads/stores, `ADDR32` prefix removed, and `UAE_VM_32BIT` dropped from natmem/code allocation. ASLR-disabling linker flags are no longer needed.
+- JIT compiler works on 64-bit Windows. The x86_64 JIT is 64-bit pointer-clean: `JITPTR` passes full pointer width, `PC_P` uses 64-bit loads/stores, ADDR32 prefix removed, `isconst` shortcuts disabled for natmem-translated addresses, and blockinfo pools allocated near JIT cache via VirtualQuery walk. ASLR-disabling linker flags are no longer needed. `UAE_VM_32BIT` is kept for x86-64 natmem to ensure `comp_pc_p` fits in 32 bits (see "Natmem reservation on x86-64" in the ARM64 JIT section).
 - `src/jit/x86/compemu_x86.h`: `uae_p32()` is now a simple `(uintptr)` cast (no truncation)
 - `src/osdep/crtemu.h` line 80: uses `CRTEMU_SDL` path on Windows+Amiberry (not WinUAE's direct LoadLibrary path)
 

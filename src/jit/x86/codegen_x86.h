@@ -68,12 +68,6 @@
 #define X86_OPTIMIZE_ROTSHI	1
 #endif
 
-/* Define to optimize absolute addresses for RIP relative addressing.  */
-#ifndef X86_RIP_RELATIVE_ADDR
-#define X86_RIP_RELATIVE_ADDR	1
-#endif 
-
-
 /* --- Macros -------------------------------------------------------------- */
 
 /* Functions used to emit code.
@@ -415,31 +409,6 @@ typedef unsigned int	_ul;
 #define _r_DB(  R, D,B    )	((_s0P(D) && (!_rbp13P(B)) ? _r_0B  (R,  B    ) : (_s8P(D) ? _r_1B(  R,D,B    ) : _r_4B(  R,D,B    ))))
 #define _r_DBIS(R, D,B,I,S)	((_s0P(D) && (!_rbp13P(B)) ? _r_0BIS(R,  B,I,S) : (_s8P(D) ? _r_1BIS(R,D,B,I,S) : _r_4BIS(R,D,B,I,S))))
 
-/* Use RIP-addressing in 64-bit mode, if possible */
-#define _x86_RIP_addressing_possible(D,O)	(X86_RIP_RELATIVE_ADDR && x86_RIP_addressing_possible(D, O))
-
-static inline int x86_RIP_addressing_possible(uintptr addr, uintptr offset)
-{
-#if X86_TARGET_64BIT
-	/*
-	 * address of the next instruction.
-	 * The opcode has already been emmitted,
-	 * so this is the size of an 32bit displacement +
-	 * the size of any immediate value that is part of the instruction (offset),
-	 */
-	uintptr dst = (uintptr)get_target() + 4 + offset;
-	intptr disp = dst - addr;
-	int ok = disp >= -0x80000000LL && disp <= 0x7fffffffLL;
-	/* fprintf(stderr, "x86_RIP_addressing_possible: %llx - %llx %16llx = %d\n", (unsigned long long)dst, (unsigned long long)addr, (long long)disp, ok); */
-	return ok;
-#else
-	UNUSED(addr);
-	UNUSED(offset);
-	return 0;
-#endif
-}
-
-
 static inline int x86_DISP32_addressing_possible(uintptr addr)
 {
 #if X86_TARGET_64BIT
@@ -452,9 +421,7 @@ static inline int x86_DISP32_addressing_possible(uintptr addr)
 
 
 #define _r_X(   R, D,B,I,S,O)	(_r0P(I) ? (_r0P(B)    ? (!X86_TARGET_64BIT ? _r_D(R,D) : \
-					                 (_x86_RIP_addressing_possible(D, O) ? \
-				                          _r_D(R, (D) - ((uintptr)x86_get_target() + 4 + (O))) : \
-				                          _r_DSIB(R,D))) : \
+				                          _r_D(R, (D) - ((uintptr)x86_get_target() + 4 + (O)))) : \
 				           (_rIP(B)    ? _r_D   (R,D                )   : \
 				           (_rsp12P(B) ? _r_DBIS(R,D,_rSP(),_rSP(),1)   : \
 						         _r_DB  (R,D,     B       ))))  : \

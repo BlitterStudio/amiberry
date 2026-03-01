@@ -276,11 +276,10 @@ bool preinit_shm ()
 	uae_u32 max_allowed_mman = 512 + 256;
 	if (os_64bit) {
 #ifdef CPU_64_BIT
-		// On x86-64, the JIT compiler uses 32-bit addressing (address override
-		// prefix) so natmem must fit below 4GB → max 2GB from 0x80000000.
-		// On ARM64, the JIT is 64-bit pointer-clean so natmem can be anywhere,
-		// but we still cap the reservation size at 2GB (plenty for Amiga).
-		// This is plenty for Amiga emulation (2GB of Z3 address space).
+		// On x86-64, the JIT uses [reg + disp32] for natmem access. The disp32
+		// is sign-extended, so natmem_offset must be < 0x80000000 (2GB).
+		// On ARM64, the JIT is fully 64-bit pointer-clean via dedicated register.
+		// Both cap the reservation size at 2GB (plenty for Amiga).
 		max_allowed_mman = 2048 - 1;
 #else
 		// 32-bit builds (e.g. WoW64): all addresses are naturally below 4GB.
@@ -368,10 +367,14 @@ bool preinit_shm ()
 #if 1
 	{
 		int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
-#if defined(CPU_AARCH64) || defined(CPU_x86_64)
-		/* ARM64 and x86_64 JIT are 64-bit pointer-clean: natmem can live above 4GB.
-		   Dropping UAE_VM_32BIT avoids futile mmap/munmap cycles on
-		   platforms where the kernel ignores low-address hints. */
+#if defined(CPU_AARCH64)
+		/* ARM64 JIT is fully 64-bit pointer-clean (including add/sub on PC_P):
+		   natmem can live above 4GB.  Dropping UAE_VM_32BIT avoids futile
+		   mmap/munmap cycles on platforms where the kernel ignores low-address
+		   hints (e.g. macOS ARM64).
+		   x86-64 JIT still has 32-bit arithmetic paths for PC_P (add_l_ri,
+		   adjust_nreg/LEA) that would truncate if natmem_offset > 4GB.
+		   Keep UAE_VM_32BIT for x86-64 to ensure natmem lands near 0x80000000. */
 		vm_flags &= ~UAE_VM_32BIT;
 #endif
 		natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, vm_flags));

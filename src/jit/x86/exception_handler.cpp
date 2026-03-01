@@ -668,6 +668,66 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 
 #ifdef _WIN32
 
+#if defined(CPU_x86_64)
+static LONG WINAPI JITUnhandledExceptionFilter(PEXCEPTION_POINTERS pExInfo)
+{
+	PEXCEPTION_RECORD er = pExInfo->ExceptionRecord;
+	PCONTEXT ctx = pExInfo->ContextRecord;
+
+	write_log(_T("JIT: UNHANDLED EXCEPTION!\n"));
+	write_log(_T("JIT:   Code: 0x%08X\n"), (unsigned int)er->ExceptionCode);
+	write_log(_T("JIT:   Address: %p\n"), er->ExceptionAddress);
+	write_log(_T("JIT:   RIP: 0x%llX\n"), (unsigned long long)ctx->Rip);
+	write_log(_T("JIT:   RSP: 0x%llX\n"), (unsigned long long)ctx->Rsp);
+	write_log(_T("JIT:   RAX: 0x%llX  RBX: 0x%llX\n"),
+		(unsigned long long)ctx->Rax, (unsigned long long)ctx->Rbx);
+	write_log(_T("JIT:   RCX: 0x%llX  RDX: 0x%llX\n"),
+		(unsigned long long)ctx->Rcx, (unsigned long long)ctx->Rdx);
+	write_log(_T("JIT:   RSI: 0x%llX  RDI: 0x%llX\n"),
+		(unsigned long long)ctx->Rsi, (unsigned long long)ctx->Rdi);
+	write_log(_T("JIT:   R8:  0x%llX  R9:  0x%llX\n"),
+		(unsigned long long)ctx->R8, (unsigned long long)ctx->R9);
+	write_log(_T("JIT:   R10: 0x%llX  R11: 0x%llX\n"),
+		(unsigned long long)ctx->R10, (unsigned long long)ctx->R11);
+	write_log(_T("JIT:   R12: 0x%llX  R13: 0x%llX\n"),
+		(unsigned long long)ctx->R12, (unsigned long long)ctx->R13);
+	write_log(_T("JIT:   R14: 0x%llX  R15: 0x%llX\n"),
+		(unsigned long long)ctx->R14, (unsigned long long)ctx->R15);
+	write_log(_T("JIT:   RBP: 0x%llX\n"), (unsigned long long)ctx->Rbp);
+
+	if (er->ExceptionCode == STATUS_ACCESS_VIOLATION && er->NumberParameters >= 2) {
+		write_log(_T("JIT:   AV type: %s  target: %p\n"),
+			er->ExceptionInformation[0] ? _T("WRITE") : _T("READ"),
+			(void*)er->ExceptionInformation[1]);
+	}
+
+	/* Check if RIP is in JIT code range */
+	uintptr rip = (uintptr)ctx->Rip;
+	if (compiled_code && rip >= (uintptr)compiled_code &&
+		rip < (uintptr)compiled_code + currprefs.cachesize * 1024) {
+		write_log(_T("JIT:   ** Crash is INSIDE JIT compiled code **\n"));
+		/* Dump instruction bytes at crash site */
+		uae_u8 *pc = (uae_u8 *)rip;
+		write_log(_T("JIT:   Instruction bytes at RIP:"));
+		for (int j = 0; j < 16; j++) {
+			write_log(_T(" %02x"), pc[j]);
+		}
+		write_log(_T("\n"));
+	} else if (popallspace && rip >= (uintptr)popallspace &&
+			   rip < (uintptr)popallspace + POPALLSPACE_SIZE) {
+		write_log(_T("JIT:   ** Crash is in popallspace trampolines **\n"));
+	} else {
+		write_log(_T("JIT:   ** Crash is in native C/C++ code **\n"));
+	}
+
+	write_log(_T("JIT:   M68K PC: 0x%08X\n"), (unsigned int)M68K_GETPC);
+	write_log(_T("JIT:   regs.pc_p: %p\n"), regs.pc_p);
+	write_log(_T("JIT:   natmem_offset: %p\n"), NATMEM_OFFSET);
+
+	return EXCEPTION_CONTINUE_SEARCH;  /* Let Windows default handler take over */
+}
+#endif /* CPU_x86_64 */
+
 LONG WINAPI EvalException(LPEXCEPTION_POINTERS info)
 {
 	DWORD code = info->ExceptionRecord->ExceptionCode;
@@ -742,6 +802,10 @@ static void install_exception_handler(void)
 	write_log(_T("JIT: Installing vectored exception handler\n"));
 	installed_vector_handler = AddVectoredExceptionHandler(
 		0, JITVectoredHandler);
+#if defined(CPU_x86_64)
+	write_log(_T("JIT: Installing unhandled exception filter (crash diagnostics)\n"));
+	SetUnhandledExceptionFilter(JITUnhandledExceptionFilter);
+#endif
 #else
 	write_log(_T("JIT: Installing unhandled exception filter\n"));
 	SetUnhandledExceptionFilter(EvalException);
