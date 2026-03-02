@@ -787,7 +787,11 @@ static int create_windows(struct AmigaMonitor* mon)
 	gfx_platform_set_window_icon(mon->amiga_window);
 
 	if (g_renderer) {
-		g_renderer->create_platform_renderer(mon);
+		if (!g_renderer->create_platform_renderer(mon)) {
+			write_log(_T("creation of platform renderer failed\n"));
+			close_hwnds(mon);
+			return 0;
+		}
 		if (mon->amiga_renderer) {
 			DPIHandler::set_render_scale(mon->amiga_renderer);
 		}
