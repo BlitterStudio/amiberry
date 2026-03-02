@@ -3,6 +3,11 @@
 #include <string>
 
 #include "libretro_shared.h"
+#include "gfx_window.h"
+#include "display_modes.h"
+
+// updatepicasso96 lives in amiberry_gfx.cpp with no header declaration
+extern void updatepicasso96(struct AmigaMonitor* mon);
 
 static constexpr int LIBRETRO_DISPLAY_INIT_WIDTH = 1920;
 static constexpr int LIBRETRO_DISPLAY_INIT_HEIGHT = 1080;
