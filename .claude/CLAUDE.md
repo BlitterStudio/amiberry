@@ -163,6 +163,14 @@ amiberry/
 - `src/osdep/macos_bookmarks.mm` - macOS security-scoped bookmark implementation (Objective-C++)
 - `src/osdep/on_screen_joystick.cpp` - On-screen touch joystick (Android/touchscreens)
 - `src/osdep/on_screen_joystick.h` - On-screen joystick public API
+- `src/osdep/on_screen_joystick_gl.h/.cpp` - On-screen joystick GL shader infrastructure
+- `src/osdep/vkbd/vkbd_gl.h/.cpp` - Virtual keyboard GL shader infrastructure
+- `src/osdep/irenderer.h` - Abstract renderer interface
+- `src/osdep/opengl_renderer.h/.cpp` - OpenGL renderer backend
+- `src/osdep/sdl_renderer.h/.cpp` - SDL2 renderer backend
+- `src/osdep/renderer_factory.h/.cpp` - Renderer creation factory
+- `src/osdep/gl_platform.h/.cpp` - GL function pointer loading / GLES3 includes
+- `src/osdep/gl_overlays.cpp` - GL OSD overlay rendering
 - `src/osdep/amiberry_gui.cpp` - GUI management
 - `src/cfgfile.cpp` - Configuration file parsing
 - `src/custom.cpp` - Amiga custom chip emulation
@@ -295,6 +303,56 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 - `input.cpp` - Controller configuration
 - `whdload.cpp` - WHDLoad integration
 
+### Rendering Architecture
+
+Amiberry supports two rendering backends, selected at compile time via `USE_OPENGL`:
+- **OpenGL** (`USE_OPENGL` defined): Hardware-accelerated rendering with shader support (CRT emulation, external GLSL, GLSLP presets, custom bezels)
+- **SDL2 Renderer** (`USE_OPENGL` not defined): Software/basic rendering via `SDL_Renderer`
+
+**IRenderer abstraction** (`src/osdep/irenderer.h`):
+Abstract base class decoupling all rendering operations from `amiberry_gfx.cpp`. Virtual methods cover context lifecycle, texture allocation, frame rendering, shader management, bezel overlays, OSD/vkbd/on-screen joystick rendering, and input coordinate translation. Global `g_renderer` pointer (created by `renderer_factory.cpp`) dispatches to the active backend.
+
+**Implementations:**
+- `OpenGLRenderer` (`src/osdep/opengl_renderer.h/.cpp`) — owns GL context, `ShaderState` (crtemu, external shader, preset), `GLOverlayState` (OSD, bezel, cursor textures/shaders). Accessed via `get_opengl_renderer()`.
+- `SDLRenderer` (`src/osdep/sdl_renderer.h/.cpp`) — owns `SDL_Texture*` for Amiga frame and cursor overlay. Accessed via `get_sdl_renderer()`.
+- `renderer_factory.h/.cpp` — `create_renderer()` returns the appropriate implementation.
+
+**GL infrastructure extraction:**
+GL shader compilation, texture upload, and quad rendering have been extracted from overlay files into dedicated `_gl` files to reduce `#ifdef USE_OPENGL` clutter:
+
+| Component | Common logic + state | GL infrastructure |
+|-----------|---------------------|-------------------|
+| Virtual keyboard | `src/osdep/vkbd/vkbd.cpp` | `src/osdep/vkbd/vkbd_gl.h/.cpp` |
+| On-screen joystick | `src/osdep/on_screen_joystick.cpp` | `src/osdep/on_screen_joystick_gl.h/.cpp` |
+| OSD overlays | `src/osdep/amiberry_gfx.cpp` | `src/osdep/gl_overlays.cpp` |
+
+Each `_gl` file is wrapped in `#ifdef USE_OPENGL` / `#endif` internally (not conditionally compiled via CMake). The GL render entry points (`vkbd_redraw_gl`, `on_screen_joystick_redraw_gl`) remain in the original files because they access 15+ file-local static variables. The extracted files expose:
+- Shader init: `vkbd_init_gl_shader()` / `osj_init_gl_shader()`
+- Texture upload: `vkbd_upload_surface_to_gl()` / `osj_upload_surface_to_gl()`
+- Quad rendering: `vkbd_render_gl_quad()` / `osj_render_gl_quad()` / `vkbd_render_gl_filled_rect()`
+- Cleanup: `vkbd_cleanup_gl_shader()` / `osj_cleanup_gl_shader()`
+- Handle accessors: `vkbd_get_gl_program()` / `vkbd_get_gl_vao()` / `osj_get_gl_program()` / `osj_get_gl_vao()`
+
+**Key rendering files:**
+
+| File | Purpose |
+|------|---------|
+| `src/osdep/irenderer.h` | Abstract renderer interface |
+| `src/osdep/opengl_renderer.h/.cpp` | OpenGL backend |
+| `src/osdep/sdl_renderer.h/.cpp` | SDL2 backend |
+| `src/osdep/renderer_factory.h/.cpp` | Backend selection |
+| `src/osdep/amiberry_gfx.cpp` | Graphics orchestration (window, frame timing, `show_screen()`) |
+| `src/osdep/gfx_window.cpp` | Window creation and management |
+| `src/osdep/gl_platform.h/.cpp` | GL function pointer loading (desktop) / GLES3 includes (Android) |
+| `src/osdep/gl_overlays.cpp` | GL OSD overlay shader and rendering |
+| `src/osdep/crtemu_impl.cpp` | CRT shader implementation |
+| `src/osdep/external_shader.cpp` | External GLSL shader loading |
+| `src/osdep/shader_preset.cpp` | GLSLP multi-pass shader presets |
+| `src/osdep/gfx_state.h` | VSyncState and shared graphics state |
+| `src/osdep/display_modes.cpp` | Display mode enumeration |
+| `src/osdep/gfx_colors.cpp` | Pixel format detection |
+| `src/osdep/gfx_prefs_check.cpp` | Graphics preference validation |
+
 ### Custom Bezel Overlay System
 
 Custom bezels are PNG/JPEG images (e.g., CRT monitor frames) with a transparent "screen hole" where the emulator output shows through. They work with **all** shader types (crtemu built-in, external GLSL, GLSLP presets).
@@ -331,7 +389,7 @@ Custom bezels are PNG/JPEG images (e.g., CRT monitor frames) with a transparent 
 
 ### On-Screen Joystick (Touch Controls)
 
-The on-screen joystick provides touch-based D-pad and fire buttons for Android and other touchscreen devices. It is implemented in `src/osdep/on_screen_joystick.cpp` with rendering support for both SDL2 renderer and OpenGL.
+The on-screen joystick provides touch-based D-pad and fire buttons for Android and other touchscreen devices. Common logic and state are in `src/osdep/on_screen_joystick.cpp`; GL shader infrastructure (compilation, texture upload, quad rendering) is in `src/osdep/on_screen_joystick_gl.h/.cpp`.
 
 **Architecture:**
 - Registered as a **virtual joystick device** ("On-Screen Joystick") in the UAE input device system via `init_joystick()` in `amiberry_input.cpp`
