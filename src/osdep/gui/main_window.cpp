@@ -771,7 +771,7 @@ void amiberry_gui_init()
 	// ImGui will use the OpenGL3 backend directly instead of SDLRenderer2.
 	if (mon->gui_window == mon->amiga_window && gl_context != nullptr) {
 		destroy_shaders();
-		gl_state_initialized = false;
+		reset_gl_state();
 	}
 #endif
 	if (mon->gui_window == mon->amiga_window) {
@@ -1111,7 +1111,7 @@ void amiberry_gui_halt()
 	// GL context was kept alive — force full GL state reset for emulation
 	if (gui_use_opengl && mon->amiga_window && gl_context != nullptr) {
 		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
-		gl_state_initialized = false;
+		reset_gl_state();
 		clear_loaded_shader_name();
 	}
 #endif

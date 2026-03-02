@@ -133,6 +133,14 @@ extern const char* sdl_video_driver;
 extern SDL_Rect render_quad;
 extern SDL_Cursor* normalcursor;
 
+// Grouped state structs (defined in gfx_state.h)
+struct ShaderState;
+struct VSyncState;
+#ifdef USE_OPENGL
+extern ShaderState g_shader;
+#endif
+extern VSyncState g_vsync;
+
 extern void sortdisplays();
 extern void enumeratedisplays();
 extern void reenumeratemonitors();
@@ -147,6 +155,8 @@ extern int default_freq;
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
 extern void close_windows(AmigaMonitor*);
+extern void reopen_gfx(AmigaMonitor*);
+extern int reopen(AmigaMonitor*, int, bool);
 extern void updatewinfsmode(int monid, uae_prefs* p);
 extern void gfx_lock();
 extern void gfx_unlock();
@@ -156,9 +166,9 @@ extern void update_crtemu_bezel();
 extern void update_custom_bezel();
 #ifdef USE_OPENGL
 extern SDL_GLContext gl_context;
-extern bool gl_state_initialized;
 extern bool init_opengl_context(SDL_Window* window);
 extern void clear_loaded_shader_name();
+extern void reset_gl_state();
 #endif
 
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
@@ -171,6 +181,7 @@ extern void quit_drawing_thread();
 extern void start_drawing_thread();
 extern bool target_graphics_buffer_update(const int monid, const bool force);
 
+extern bool force_auto_crop;
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;

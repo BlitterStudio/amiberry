@@ -13,8 +13,7 @@
 #ifdef USE_OPENGL
 #include "external_shader.h"
 #include "shader_preset.h"
-extern ExternalShader* external_shader;
-extern ShaderPreset* shader_preset;
+#include "gfx_state.h"
 #endif
 
 // Built-in shader names
@@ -155,10 +154,10 @@ static void render_shader_parameters_popup()
 	if (ImGui::Begin("Shader Parameters", &show_shader_params_popup)) {
 		std::vector<ShaderParameter>* params = nullptr;
 
-		if (shader_preset && shader_preset->is_valid()) {
-			params = &shader_preset->get_all_parameters();
-		} else if (external_shader && external_shader->is_valid()) {
-			params = const_cast<std::vector<ShaderParameter>*>(&external_shader->get_parameters());
+		if (g_shader.preset && g_shader.preset->is_valid()) {
+			params = &g_shader.preset->get_all_parameters();
+		} else if (g_shader.external && g_shader.external->is_valid()) {
+			params = const_cast<std::vector<ShaderParameter>*>(&g_shader.external->get_parameters());
 		}
 
 		if (params && !params->empty()) {
@@ -176,10 +175,10 @@ static void render_shader_parameters_popup()
 				if (ImGui::SliderFloat("##val", &param.current_value,
 					param.min_value, param.max_value, "%.3f")) {
 					// Apply the parameter change
-					if (shader_preset) {
-						shader_preset->set_parameter(param.name, param.current_value);
-					} else if (external_shader) {
-						external_shader->set_parameter(param.name, param.current_value);
+					if (g_shader.preset) {
+						g_shader.preset->set_parameter(param.name, param.current_value);
+					} else if (g_shader.external) {
+						g_shader.external->set_parameter(param.name, param.current_value);
 					}
 				}
 				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
@@ -191,10 +190,10 @@ static void render_shader_parameters_popup()
 			if (AmigaButton("Reset to Defaults")) {
 				for (auto& param : *params) {
 					param.current_value = param.default_value;
-					if (shader_preset) {
-						shader_preset->set_parameter(param.name, param.default_value);
-					} else if (external_shader) {
-						external_shader->set_parameter(param.name, param.default_value);
+					if (g_shader.preset) {
+						g_shader.preset->set_parameter(param.name, param.default_value);
+					} else if (g_shader.external) {
+						g_shader.external->set_parameter(param.name, param.default_value);
 					}
 				}
 			}

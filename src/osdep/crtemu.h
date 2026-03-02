@@ -42,41 +42,11 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int height, int* x, int* y );
 
-#endif /* crtemu_h */
-
 /*
-----------------------
-    IMPLEMENTATION
-----------------------
-*/
-#ifdef CRTEMU_IMPLEMENTATION
-#undef CRTEMU_IMPLEMENTATION
-
-#define _CRT_NONSTDC_NO_DEPRECATE
-#define _CRT_SECURE_NO_WARNINGS
-#include <stddef.h>
-#include <string.h>
-
-#ifndef CRTEMU_MALLOC
-#include <stdlib.h>
-#if defined(__cplusplus)
-#define CRTEMU_MALLOC( ctx, size ) ( ::malloc( size ) )
-#define CRTEMU_FREE( ctx, ptr ) ( ::free( ptr ) )
-#else
-#define CRTEMU_MALLOC( ctx, size ) ( malloc( size ) )
-        #define CRTEMU_FREE( ctx, ptr ) ( free( ptr ) )
-#endif
-#endif
-
-#ifdef CRTEMU_REPORT_SHADER_ERRORS
-#ifndef CRTEMU_REPORT_ERROR
-#define _CRT_NONSTDC_NO_DEPRECATE
-#define _CRT_SECURE_NO_WARNINGS
-#include <stdio.h>
-#define CRTEMU_REPORT_ERROR( str ) printf( "%s", str )
-#endif
-#endif
-
+ * Platform detection and GL type definitions.
+ * These are needed for the crtemu_t struct definition below, which is exposed
+ * in the header so that consumers can access struct members directly.
+ */
 #if !defined(_WIN32) || defined(AMIBERRY)
 #define CRTEMU_SDL
 #endif
@@ -336,10 +306,43 @@ struct crtemu_t {
     void (CRTEMU_GLCALLTYPE* GenVertexArrays) (CRTEMU_GLsizei n, CRTEMU_GLuint *arrays);
     void (CRTEMU_GLCALLTYPE* BindVertexArray) (CRTEMU_GLuint array);
     void (CRTEMU_GLCALLTYPE* DeleteVertexArrays) (CRTEMU_GLsizei n, CRTEMU_GLuint const *arrays);
-#ifdef CRTEMU_REPORT_SHADER_ERRORS
 	void (CRTEMU_GLCALLTYPE* GetShaderInfoLog) (CRTEMU_GLuint shader, CRTEMU_GLsizei bufSize, CRTEMU_GLsizei *length, CRTEMU_GLchar *infoLog);
-#endif
 };
+
+#endif /* crtemu_h */
+
+/*
+----------------------
+    IMPLEMENTATION
+----------------------
+*/
+#ifdef CRTEMU_IMPLEMENTATION
+#undef CRTEMU_IMPLEMENTATION
+
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_SECURE_NO_WARNINGS
+#include <stddef.h>
+#include <string.h>
+
+#ifndef CRTEMU_MALLOC
+#include <stdlib.h>
+#if defined(__cplusplus)
+#define CRTEMU_MALLOC( ctx, size ) ( ::malloc( size ) )
+#define CRTEMU_FREE( ctx, ptr ) ( ::free( ptr ) )
+#else
+#define CRTEMU_MALLOC( ctx, size ) ( malloc( size ) )
+        #define CRTEMU_FREE( ctx, ptr ) ( free( ptr ) )
+#endif
+#endif
+
+#ifdef CRTEMU_REPORT_SHADER_ERRORS
+#ifndef CRTEMU_REPORT_ERROR
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#define CRTEMU_REPORT_ERROR( str ) printf( "%s", str )
+#endif
+#endif
 
 
 static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const* vs_source_in, char const* fs_source_in ) {

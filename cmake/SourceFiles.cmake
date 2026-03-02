@@ -227,6 +227,13 @@ set(SOURCE_FILES
         src/osdep/amiberry_input.cpp
         src/osdep/input_platform.cpp
         src/osdep/amiberry_gfx.cpp
+        src/osdep/display_modes.cpp
+        src/osdep/gfx_colors.cpp
+        src/osdep/gfx_prefs_check.cpp
+        src/osdep/gl_overlays.cpp
+        src/osdep/gl_shader_dispatch.cpp
+        src/osdep/gfx_window.cpp
+        src/osdep/crtemu_impl.cpp
         src/osdep/gl_platform.cpp
         src/osdep/external_shader.cpp
         src/osdep/shader_preset.cpp
