@@ -1,8 +1,11 @@
 #pragma once
 #include <SDL.h>
+#include <memory>
 #include "rtgmodes.h"
 #include "uae/types.h"
 #include <vector>
+
+class IRenderer;
 
 #define MAX_DISPLAYS 1
 
@@ -123,6 +126,8 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 #define  SYSTEM_RED_MASK       (amiga_surface->format->Rmask)
 #define  SYSTEM_GREEN_MASK     (amiga_surface->format->Gmask)
 #define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
+
+extern std::unique_ptr<IRenderer> g_renderer;
 
 extern SDL_Texture* amiga_texture;
 extern SDL_DisplayMode sdl_mode;

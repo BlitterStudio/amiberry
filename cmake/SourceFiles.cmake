@@ -233,6 +233,9 @@ set(SOURCE_FILES
         src/osdep/gl_overlays.cpp
         src/osdep/gl_shader_dispatch.cpp
         src/osdep/gfx_window.cpp
+        src/osdep/renderer_factory.cpp
+        src/osdep/opengl_renderer.cpp
+        src/osdep/sdl_renderer.cpp
         src/osdep/crtemu_impl.cpp
         src/osdep/gl_platform.cpp
         src/osdep/external_shader.cpp

@@ -18,6 +18,10 @@
 #include "uae.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
+#ifdef USE_OPENGL
+#include "opengl_renderer.h"
+#endif
 #include "fsdb_host.h"
 #include "autoconf.h"
 #include "blkdev.h"
@@ -769,9 +773,9 @@ void amiberry_gui_init()
 #else
 	// OpenGL path: keep GL context alive, destroy only emulation shaders.
 	// ImGui will use the OpenGL3 backend directly instead of SDLRenderer2.
-	if (mon->gui_window == mon->amiga_window && gl_context != nullptr) {
-		destroy_shaders();
-		reset_gl_state();
+	if (mon->gui_window == mon->amiga_window && g_renderer && g_renderer->has_context()) {
+		g_renderer->destroy_shaders();
+		g_renderer->reset_state();
 	}
 #endif
 	if (mon->gui_window == mon->amiga_window) {
@@ -790,7 +794,7 @@ void amiberry_gui_init()
 #endif
 
 #if defined(_WIN32) && defined(USE_OPENGL)
-	gui_use_opengl = (gl_context != nullptr && mon->gui_window == mon->amiga_window);
+	gui_use_opengl = (g_renderer && g_renderer->has_context() && mon->gui_window == mon->amiga_window);
 #endif
 
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
@@ -989,8 +993,10 @@ void amiberry_gui_init()
 	// Setup Platform/Renderer backends
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl) {
-		SDL_GL_MakeCurrent(mon->gui_window, gl_context);
-		ImGui_ImplSDL2_InitForOpenGL(mon->gui_window, gl_context);
+		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
+		SDL_GLContext ctx = gl_renderer ? gl_renderer->get_gl_context() : nullptr;
+		SDL_GL_MakeCurrent(mon->gui_window, ctx);
+		ImGui_ImplSDL2_InitForOpenGL(mon->gui_window, ctx);
 		ImGui_ImplOpenGL3_Init("#version 130");
 	} else {
 		ImGui_ImplSDL2_InitForSDLRenderer(mon->gui_window, mon->gui_renderer);
@@ -1109,10 +1115,13 @@ void amiberry_gui_halt()
 	}
 #ifdef USE_OPENGL
 	// GL context was kept alive — force full GL state reset for emulation
-	if (gui_use_opengl && mon->amiga_window && gl_context != nullptr) {
-		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
-		reset_gl_state();
-		clear_loaded_shader_name();
+	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
+		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
+		if (gl_renderer) {
+			SDL_GL_MakeCurrent(mon->amiga_window, gl_renderer->get_gl_context());
+		}
+		g_renderer->reset_state();
+		g_renderer->clear_shader_cache();
 	}
 #endif
 #endif

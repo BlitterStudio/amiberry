@@ -83,6 +83,7 @@
 #include "gfx_colors.h"
 #include "gfx_prefs_check.h"
 #include "display_modes.h"
+#include "renderer_factory.h"
 
 #ifdef USE_OPENGL
 #include <SDL_image.h>
@@ -130,6 +131,8 @@ Uint32 pixel_format = SDL_PIXELFORMAT_ABGR8888;
 static frame_time_t last_synctime;
 
 VSyncState g_vsync;
+
+std::unique_ptr<IRenderer> g_renderer;
 
 static SDL_Surface* current_screenshot = nullptr;
 std::string screenshot_filename;
@@ -587,17 +590,21 @@ void show_screen(const int monid, int mode)
 	}
 #ifdef USE_OPENGL
 	// Safety check: if no shader is available, skip rendering
-	if (!g_shader.crtemu && !g_shader.external && !g_shader.preset) {
+	if (g_renderer && !g_renderer->has_valid_shader()) {
 		return;
 	}
 
 	const auto time = SDL_GetTicks();
 
 	// Handle VSync options
-	update_vsync(monid);
+	if (g_renderer) g_renderer->update_vsync(monid);
 
 	int drawableWidth, drawableHeight;
-	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
+	if (g_renderer) {
+		g_renderer->get_drawable_size(mon->amiga_window, &drawableWidth, &drawableHeight);
+	} else {
+		SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
+	}
 
 	// Ensure GL context is current for this window
 	if (gl_context && mon->amiga_window) {
@@ -1381,6 +1388,11 @@ void machdep_free()
 
 int graphics_init(bool mousecapture)
 {
+	// Create the renderer backend if it doesn't exist yet
+	if (!g_renderer) {
+		g_renderer = create_renderer();
+	}
+
 	// Skip all graphics initialization if running in headless mode
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping graphics initialization.\n");
@@ -1415,10 +1427,11 @@ int graphics_setup()
 
 void graphics_leave()
 {
-	for (int i = 0; i < MAX_AMIGAMONITORS; i++) 
+	for (int i = 0; i < MAX_AMIGAMONITORS; i++)
 	{
 		close_windows(&AMonitors[i]);
 	}
+	g_renderer.reset();
 }
 
 

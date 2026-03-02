@@ -50,6 +50,7 @@
 #include "registry.h"
 #include "target.h"
 #include "display_modes.h"
+#include "irenderer.h"
 
 #ifdef AMIBERRY
 
@@ -95,63 +96,13 @@ void close_hwnds(struct AmigaMonitor* mon)
 	if (mon->monitor_id > 0 && mon->amiga_window)
 		setmouseactive(mon->monitor_id, 0);
 
-#ifdef USE_OPENGL
-	destroy_shaders();
-	if (gl_context != nullptr)
-	{
-		if (g_overlay.cursor_texture) {
-			glDeleteTextures(1, &g_overlay.cursor_texture);
-			g_overlay.cursor_texture = 0;
-		}
-		if (g_overlay.cursor_vao) {
-			glDeleteVertexArrays(1, &g_overlay.cursor_vao);
-			g_overlay.cursor_vao = 0;
-		}
-		if (g_overlay.cursor_vbo) {
-			glDeleteBuffers(1, &g_overlay.cursor_vbo);
-			g_overlay.cursor_vbo = 0;
+	if (g_renderer) {
+		g_renderer->close_hwnds_cleanup(mon);
+		g_renderer->destroy_context();
+		if (!kmsdrm_detected) {
+			g_renderer->destroy_platform_renderer(mon);
 		}
 	}
-#else
-	if (amiga_texture)
-	{
-		SDL_DestroyTexture(amiga_texture);
-		amiga_texture = nullptr;
-	}
-	if (p96_cursor_overlay_texture)
-	{
-		SDL_DestroyTexture(p96_cursor_overlay_texture);
-		p96_cursor_overlay_texture = nullptr;
-	}
-#endif
-
-#ifdef USE_OPENGL
-	if (gl_context != nullptr)
-	{
-		SDL_GL_DeleteContext(gl_context);
-		gl_context = nullptr;
-		g_vsync.current_interval = -1; // Reset VSync state
-		g_vsync.cached_refresh_rate = 0.0f;
-		g_vsync.gl_initialized = false; // Reset GL state flag for next context
-	}
-#else
-	if (mon->amiga_renderer && !kmsdrm_detected)
-	{
-#if defined(__ANDROID__)
-		// Don't destroy the renderer on Android, as we reuse it
-#elif defined(_WIN32)
-		if (mon->gui_renderer == mon->amiga_renderer) {
-			// GUI is sharing this renderer — don't destroy
-		} else {
-			SDL_DestroyRenderer(mon->amiga_renderer);
-			mon->amiga_renderer = nullptr;
-		}
-#else
-		SDL_DestroyRenderer(mon->amiga_renderer);
-		mon->amiga_renderer = nullptr;
-#endif
-	}
-#endif
 	if (mon->amiga_window && !kmsdrm_detected)
 	{
 #if defined(__ANDROID__)
@@ -810,9 +761,9 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= SDL_WINDOW_BORDERLESS;
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
-#ifdef USE_OPENGL
-	flags |= SDL_WINDOW_OPENGL;
-#endif
+	if (g_renderer) {
+		flags |= g_renderer->get_window_flags();
+	}
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
 		rc.w, rc.h,
@@ -846,18 +797,12 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	gfx_platform_set_window_icon(mon->amiga_window);
 
-#ifndef USE_OPENGL
-	if (mon->amiga_renderer == nullptr)
-	{
-		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
-		const auto* ad = &adisplays[mon->monitor_id];
-		const auto* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
-
-		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
-		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
+	if (g_renderer) {
+		g_renderer->create_platform_renderer(mon);
+		if (mon->amiga_renderer) {
+			DPIHandler::set_render_scale(mon->amiga_renderer);
+		}
 	}
-	DPIHandler::set_render_scale(mon->amiga_renderer);
-#endif
 
     // Cache current display mode for scaling heuristics
     if (SDL_GetWindowDisplayMode(mon->amiga_window, &sdl_mode) != 0) {
@@ -984,61 +929,58 @@ bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_height = rc.h;
 		}
 
-#ifdef USE_OPENGL
-		int gl_attempts = 0;
-		bool gl_success = false;
+		if (g_renderer) {
+			int ctx_attempts = 0;
+			bool ctx_success = false;
 
-		while (gl_attempts < 2 && !gl_success) {
-			if (!set_opengl_attributes(gl_attempts))
-			{
-				write_log("Failed to set OpenGL attributes for mode %d\n", gl_attempts);
-				gl_attempts++;
-				continue;
+			while (ctx_attempts < 2 && !ctx_success) {
+				if (!g_renderer->set_context_attributes(ctx_attempts))
+				{
+					write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
+					ctx_attempts++;
+					continue;
+				}
+
+				if (!create_windows(mon))
+				{
+					close_hwnds(mon);
+					return false;
+				}
+
+				// Destroy existing shaders and context before creating a new one.
+				// When the window is reused (e.g. auto-resolution change), create_windows
+				// returns without calling close_hwnds, so the old context and shaders
+				// survive. The shaders hold resources tied to the old context, so they
+				// must be destroyed while the old context is still current. Without this,
+				// init_context creates a new context, leaks the old one, and leaves
+				// stale shader objects that produce a black screen after a few frames.
+				g_renderer->destroy_shaders();
+				g_renderer->destroy_context();
+
+				if (g_renderer->init_context(mon->amiga_window))
+				{
+					ctx_success = true;
+				}
+				else
+				{
+					write_log("Renderer context init failed for mode %d. Retrying...\n", ctx_attempts);
+					// Close window to force recreation with new attributes
+					close_windows(mon);
+					ctx_attempts++;
+				}
 			}
 
+			if (!ctx_success) {
+				write_log("All renderer context attempts failed. Aborting doInit.\n");
+				return false;
+			}
+		} else {
 			if (!create_windows(mon))
 			{
 				close_hwnds(mon);
 				return false;
 			}
-
-			// Destroy existing shaders and GL context before creating a new one.
-			// When the window is reused (e.g. auto-resolution change), create_windows
-			// returns without calling close_hwnds, so the old GL context and shaders
-			// survive. The shaders hold GL resources tied to the old context, so they
-			// must be destroyed while the old context is still current. Without this,
-			// init_opengl_context creates a new context, leaks the old one, and leaves
-			// stale shader GL objects that produce a black screen after a few frames.
-			destroy_shaders();
-			if (gl_context != nullptr) {
-				SDL_GL_DeleteContext(gl_context);
-				gl_context = nullptr;
-			}
-
-			if (init_opengl_context(mon->amiga_window))
-			{
-				gl_success = true;
-			}
-			else
-			{
-				write_log("OpenGL context init failed for mode %d. Retrying...\n", gl_attempts);
-				// Close window to force recreation with new attributes
-				close_windows(mon);
-				gl_attempts++;
-			}
 		}
-
-		if (!gl_success) {
-			write_log("All OpenGL context attempts failed. Aborting doInit.\n");
-			return false;
-		}
-#else
-		if (!create_windows(mon))
-		{
-			close_hwnds(mon);
-			return false;
-		}
-#endif
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
 			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
@@ -1125,11 +1067,11 @@ bool doInit(AmigaMonitor* mon)
 	{
 		on_screen_joystick_init(mon->amiga_renderer);
 		int sw = 0, sh = 0;
-#ifdef USE_OPENGL
-		SDL_GL_GetDrawableSize(mon->amiga_window, &sw, &sh);
-#else
-		SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
-#endif
+		if (g_renderer) {
+			g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
+		} else {
+			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+		}
 		on_screen_joystick_update_layout(sw, sh, render_quad);
 		on_screen_joystick_set_enabled(true);
 	}

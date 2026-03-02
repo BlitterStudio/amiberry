@@ -32,6 +32,7 @@
 #include "blkdev.h"
 #include "memory.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
 #ifdef ARCADIA
 #include "arcadia.h"
 #endif
@@ -905,10 +906,10 @@ void gui_display(int shortcut)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);
 	}
-#if defined(_WIN32) && defined(USE_OPENGL)
+#if defined(_WIN32)
 	// After GUI close on Windows+OpenGL, the emulation shaders were destroyed
 	// to let ImGui use the GL context. Force shader recreation now.
-	if (gl_context != nullptr && amiga_surface != nullptr)
+	if (g_renderer && g_renderer->has_context() && amiga_surface != nullptr)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);
 	}
