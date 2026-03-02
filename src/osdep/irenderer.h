@@ -70,6 +70,13 @@ public:
 	virtual void render_software_cursor(int monid, int x, int y, int w, int h) {}
 	virtual void destroy_bezel() {}
 
+	// --- Input coordinate translation ---
+	// Computes offsets and scale factors for mouse input mapping.
+	// src_w/h/x/y = Amiga source dimensions and crop offset.
+	// On return: dx/dy = pixel offset, mx/my = scale factor.
+	virtual void get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
+		float* dx, float* dy, float* mx, float* my) = 0;
+
 	// --- Drawable size query ---
 	virtual void get_drawable_size(SDL_Window* w, int* width, int* height) = 0;
 
@@ -82,6 +89,10 @@ public:
 	// --- VSync state accessor ---
 	VSyncState& vsync_state() { return m_vsync; }
 	const VSyncState& vsync_state() const { return m_vsync; }
+
+	// --- Layout state (shared between renderer and orchestration code) ---
+	SDL_Rect render_quad{};
+	SDL_Rect crop_rect{};
 
 protected:
 	VSyncState m_vsync;

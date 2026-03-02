@@ -130,11 +130,9 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 extern std::unique_ptr<IRenderer> g_renderer;
 
 extern SDL_DisplayMode sdl_mode;
-extern SDL_Rect crop_rect;
 
 extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
-extern SDL_Rect render_quad;
 extern SDL_Cursor* normalcursor;
 
 extern void sortdisplays();
@@ -164,6 +162,7 @@ void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
+extern float calculate_desired_aspect(const AmigaMonitor* mon);
 extern void quit_drawing_thread();
 extern void start_drawing_thread();
 extern bool target_graphics_buffer_update(const int monid, const bool force);

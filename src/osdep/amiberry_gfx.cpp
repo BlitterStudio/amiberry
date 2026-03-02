@@ -55,7 +55,6 @@
 #include "registry.h"
 #include "target.h"
 #include "gfx_window.h"
-#include "gl_shader_dispatch.h"
 #include "gl_overlays.h"
 #include "gfx_colors.h"
 #include "gfx_prefs_check.h"
@@ -92,9 +91,7 @@ bool force_auto_crop = false;
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
 
-SDL_Rect render_quad;
 static int dx = 0, dy = 0;
-SDL_Rect crop_rect;
 const char* sdl_video_driver;
 bool kmsdrm_detected = false;
 
@@ -205,124 +202,7 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		}
 	}
 #endif
-#ifdef USE_OPENGL
-	return amiga_surface != nullptr;
-#else
-	auto* sdl_r = get_sdl_renderer();
-	auto*& tex = sdl_r->amiga_texture();
-	if (tex && amiga_surface)
-	{
-		AmigaMonitor* mon = &AMonitors[monid];
-
-		// Ensure the draw color is black for clearing
-		SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
-		SDL_RenderClear(mon->amiga_renderer);
-
-		// If a full render is needed or there are no specific dirty rects, update the whole texture.
-		if (mon->full_render_needed || mon->dirty_rects.empty()) {
-			if (amiga_surface) {
-				SDL_UpdateTexture(tex, NULL, amiga_surface->pixels, amiga_surface->pitch);
-			}
-		} else {
-			// Otherwise, update only the collected dirty rectangles.
-			for (const auto& rect : mon->dirty_rects) {
-				SDL_UpdateTexture(tex, &rect, static_cast<const uae_u8*>(amiga_surface->pixels) + rect.y * amiga_surface->pitch + rect.x * amiga_surface->format->BytesPerPixel, amiga_surface->pitch);
-			}
-		}
-
-		// Clear the dirty rects list for the next frame.
-		mon->dirty_rects.clear();
-		mon->full_render_needed = false;
-
-		const SDL_Rect* p_crop = &crop_rect;
-		const SDL_Rect* p_quad = &render_quad;
-		SDL_Rect rtg_rect;
-
-		if (ad->picasso_on) {
-			rtg_rect = { 0, 0, amiga_surface->w, amiga_surface->h };
-			p_crop = &rtg_rect;
-			p_quad = &rtg_rect;
-
-			int lw, lh;
-			SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
-			if (lw != rtg_rect.w || lh != rtg_rect.h) {
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, rtg_rect.w, rtg_rect.h);
-			}
-		}
-
-		SDL_RenderCopyEx(mon->amiga_renderer, tex, p_crop, p_quad, 0, nullptr, SDL_FLIP_NONE);
-
-		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
-		if (ad->picasso_on && p96_uses_software_cursor()) {
-			auto*& cursor_tex = sdl_r->cursor_overlay_texture();
-			if (p96_cursor_needs_update() || !cursor_tex) {
-				SDL_Surface* s = p96_get_cursor_overlay_surface();
-				if (s) {
-					if (cursor_tex)
-						SDL_DestroyTexture(cursor_tex);
-					cursor_tex = SDL_CreateTextureFromSurface(mon->amiga_renderer, s);
-					if (cursor_tex)
-						SDL_SetTextureBlendMode(cursor_tex, SDL_BLENDMODE_BLEND);
-				}
-			}
-
-			if (cursor_tex) {
-				int cx, cy, cw, ch;
-				p96_get_cursor_position(&cx, &cy);
-				p96_get_cursor_dimensions(&cw, &ch);
-
-				// Renderer logical size matches RTG resolution, so 1:1 mapping
-				SDL_Rect dst_cursor = { cx, cy, cw, ch };
-				SDL_RenderCopy(mon->amiga_renderer, cursor_tex, nullptr, &dst_cursor);
-			}
-		}
-
-		// GPU-composited Status Line (OSD) for both native and RTG
-		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
-			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
-		{
-			int slx, sly, dst_w, dst_h;
-			SDL_RenderGetLogicalSize(mon->amiga_renderer, &dst_w, &dst_h);
-			if (dst_w == 0 || dst_h == 0) {
-				SDL_GetRendererOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
-			}
-			statusline_getpos(monid, &slx, &sly, dst_w, dst_h);
-			SDL_Rect dst_osd = { slx, sly, mon->statusline_surface->w, mon->statusline_surface->h };
-			SDL_RenderCopy(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
-		}
-
-		if (vkbd_allowed(monid))
-		{
-			vkbd_redraw();
-		}
-
-		if (on_screen_joystick_is_enabled())
-		{
-			on_screen_joystick_redraw(mon->amiga_renderer);
-		}
-
-		return true;
-	}
-#endif
-
-	return false;
-}
-
-static void SDL2_showframe(const int monid)
-{
-	if (gfx_platform_present_frame(amiga_surface)) {
-		return;
-	}
-
-	// Skip presentation if headless mode
-	if (currprefs.headless) {
-		return;
-	}
-
-	const AmigaMonitor* mon = &AMonitors[monid];
-	SDL_RenderPresent(mon->amiga_renderer);
-	if (g_renderer->vsync_state().waitvblankthread_mode <= 0)
-		g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
+	return g_renderer->render_frame(monid, mode, immediate);
 }
 
 void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
@@ -335,25 +215,23 @@ void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
 static void SDL2_refresh(const int monid)
 {
 	SDL2_renderframe(monid, 1, 1);
-	SDL2_showframe(monid);
+	g_renderer->present_frame(monid, 0);
 }
 #endif //AMIBERRY
 
 void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
-	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
-	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
-	// Determine effective Amiga source dimensions/offset
+	float dx = 0, dy = 0, mx = 1.0f, my = 1.0f;
 	float src_w = 0, src_h = 0;
 	float src_x = 0, src_y = 0;
 
 #ifdef AMIBERRY
 	if (currprefs.gfx_auto_crop && !ad->picasso_on) {
-		src_w = static_cast<float>(crop_rect.w);
-		src_h = static_cast<float>(crop_rect.h);
-		src_x = static_cast<float>(crop_rect.x);
-		src_y = static_cast<float>(crop_rect.y);
+		src_w = static_cast<float>(g_renderer->crop_rect.w);
+		src_h = static_cast<float>(g_renderer->crop_rect.h);
+		src_x = static_cast<float>(g_renderer->crop_rect.x);
+		src_y = static_cast<float>(g_renderer->crop_rect.y);
 	}
 #endif
 	if (src_w <= 0 && amiga_surface) {
@@ -363,54 +241,7 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 		src_y = 0;
 	}
 
-#ifdef USE_OPENGL
-	// OpenGL Path (Windowed & Fullscreen)
-	// Always use render_quad if available, as it reflects the true viewport
-	if (amiga_surface && render_quad.w > 0 && render_quad.h > 0) {
-		// Scaling: Viewport / Amiga Source
-		if (src_w > 0) mx = static_cast<float>(render_quad.w) / src_w;
-		if (src_h > 0) my = static_cast<float>(render_quad.h) / src_h;
-
-		if (ad->picasso_on) {
-			// RTG Mode: inputdevice logic x = (x_win - dx) * fmx + fdx * fmx (Wait, verify formula)
-			// Actually: x = (x - XOffset) * fmx + fdx * fmx
-			// We want: x_amiga = (x_win - render_quad.x) * fmx + crop_x
-			// InputDevice: x_win * fmx + (fdx * fmx)
-			// => fdx * fmx = -render_quad.x * fmx + crop_x
-			// => fdx = -render_quad.x + crop_x / fmx
-			// => fdx = -render_quad.x + crop_x * mx
-			
-			dx = -static_cast<float>(render_quad.x) + src_x * mx;
-			dy = -static_cast<float>(render_quad.y) + src_y * my;
-		} else {
-			// Native Mode: x = x * fmx - fdx (where x is already window coords)
-			// Wait, inputdevice Native: x = (x * fmx) - fdx
-			// We want: x_amiga = (x_win - render_quad.x) * fmx + crop_x
-			// x_win * fmx - (render_quad.x * fmx - crop_x)
-			// => fdx = render_quad.x * fmx - crop_x
-			// => fdx = render_quad.x / mx - crop_x
-			
-			dx = static_cast<float>(render_quad.x) / mx - src_x;
-			dy = static_cast<float>(render_quad.y) / my - src_y;
-		}
-	} else 
-#endif
-	// Fallback / Software Renderer Path
-	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-#ifdef AMIBERRY
-		// Legacy AutoCrop for software renderer
-		if (currprefs.gfx_auto_crop) {
-			dx -= src_x;
-			dy -= src_y;
-		}
-#endif
-		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
-			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || 
-			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
-			dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
-			dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
-		}
-	}
+	g_renderer->get_gfx_offset(monid, src_w, src_h, src_x, src_y, &dx, &dy, &mx, &my);
 
 	*dxp = dx;
 	*dyp = dy;
@@ -475,7 +306,7 @@ float target_adjust_vblank_hz(const int monid, float hz)
 	return hz;
 }
 
-static float calculate_desired_aspect(const AmigaMonitor* mon)
+float calculate_desired_aspect(const AmigaMonitor* mon)
 {
 	if (mon->screen_is_picasso && amiga_surface) {
 		return (float)amiga_surface->w / (float)amiga_surface->h;
@@ -507,271 +338,13 @@ void show_screen(const int monid, int mode)
 	if (mode >= 0 && !mon->render_ok) {
 		return;
 	}
-#ifdef USE_OPENGL
-	// Safety check: if no shader is available, skip rendering
+
+	// Safety check: if no shader is available, skip rendering (GL path only)
 	if (g_renderer && !g_renderer->has_valid_shader()) {
 		return;
 	}
 
-	const auto time = SDL_GetTicks();
-
-	// Handle VSync options
-	if (g_renderer) g_renderer->update_vsync(monid);
-
-	int drawableWidth, drawableHeight;
-	if (g_renderer) {
-		g_renderer->get_drawable_size(mon->amiga_window, &drawableWidth, &drawableHeight);
-	} else {
-		SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
-	}
-
-	auto* gl_r = get_opengl_renderer();
-	auto& shader = gl_r->shader_state();
-	auto& overlay = gl_r->overlay_state();
-
-	// Ensure GL context is current for this window
-	auto gl_ctx = gl_r->get_gl_context();
-	if (gl_ctx && mon->amiga_window) {
-		if (SDL_GL_MakeCurrent(mon->amiga_window, gl_ctx) != 0) {
-			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
-		}
-	}
-
-	// Reset GL state to a known baseline - only on first frame after context creation
-	if (!g_renderer->vsync_state().gl_initialized) {
-		glDisable(GL_SCISSOR_TEST);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_STENCIL_TEST);
-		glDisable(GL_CULL_FACE);
-		glDisable(GL_BLEND);
-		g_renderer->vsync_state().gl_initialized = true;
-	}
-
-	float desired_aspect = calculate_desired_aspect(mon);
-	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
-
-	// When a custom bezel is active, constrain the emulator output to the
-	// bezel's transparent screen hole. We define an "effective" render area
-	// that all shader paths use instead of the full drawable.
-	int renderAreaX = 0, renderAreaY = 0;
-	int renderAreaW = drawableWidth, renderAreaH = drawableHeight;
-
-	if (amiberry_options.use_custom_bezel && overlay.bezel_texture != 0 && overlay.bezel_hole_w > 0.0f && overlay.bezel_hole_h > 0.0f) {
-		renderAreaX = static_cast<int>(overlay.bezel_hole_x * drawableWidth);
-		renderAreaY = static_cast<int>(overlay.bezel_hole_y * drawableHeight);
-		renderAreaW = static_cast<int>(overlay.bezel_hole_w * drawableWidth);
-		renderAreaH = static_cast<int>(overlay.bezel_hole_h * drawableHeight);
-	}
-
-	int destW, destH, destX, destY;
-
-	if (renderAreaX != 0 || renderAreaY != 0 ||
-		renderAreaW != drawableWidth || renderAreaH != drawableHeight) {
-		// Custom bezel active: fill the screen hole completely.
-		// The bezel artist designed the transparent area as the screen shape.
-		destW = renderAreaW;
-		destH = renderAreaH;
-		destX = renderAreaX;
-		destY = renderAreaY;
-	} else {
-		// Normal mode: aspect-ratio-corrected letterboxing
-		destW = renderAreaW;
-		destH = static_cast<int>(renderAreaW / desired_aspect);
-
-		if (destH > renderAreaH) {
-			destH = renderAreaH;
-			destW = static_cast<int>(renderAreaH * desired_aspect);
-		}
-
-		if (destW <= 0) destW = 1;
-		if (destH <= 0) destH = 1;
-
-		destX = (renderAreaW - destW) / 2;
-		destY = (renderAreaH - destH) / 2;
-	}
-
-	// Only clear if letterboxing is active (frame doesn't cover entire window)
-	if (destW < drawableWidth || destH < drawableHeight) {
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-	}
-
-	glViewport(destX, destY, destW, destH);
-
-	// Update render_quad to reflect the actual drawn area
-	render_quad.x = destX;
-	render_quad.y = destY;
-	render_quad.w = destW;
-	render_quad.h = destH;
-
-	// Check if cropping is active and valid
-	bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-					   crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-					   crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-					   (crop_rect.w > 0 && crop_rect.h > 0);
-
-	// Validate that the crop rectangle produces usable dimensions within the surface
-	if (is_cropped && amiga_surface) {
-		int cx = std::max(0, crop_rect.x);
-		int cy = std::max(0, crop_rect.y);
-		int cw = std::min(crop_rect.w, amiga_surface->w - cx);
-		int ch = std::min(crop_rect.h, amiga_surface->h - cy);
-		if (cw <= 0 || ch <= 0) {
-			is_cropped = false;
-		}
-	}
-
-	// Handle shader preset rendering (multi-pass .glslp)
-	if (shader.preset && shader.preset->is_valid()) {
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-
-		int src_w = amiga_surface ? amiga_surface->w : 0;
-		int src_h = amiga_surface ? amiga_surface->h : 0;
-		if (is_cropped && amiga_surface) {
-			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
-			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
-		}
-
-		int viewport_w = std::max(destW, src_w);
-		int viewport_h = std::max(destH, src_h);
-		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
-		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
-
-		static int preset_frame_count = 0;
-
-		if (is_cropped && amiga_surface) {
-			const int bpp = 4;
-			int x = std::max(0, crop_rect.x);
-			int y = std::max(0, crop_rect.y);
-			int w = std::min(crop_rect.w, amiga_surface->w - x);
-			int h = std::min(crop_rect.h, amiga_surface->h - y);
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-
-			shader.preset->render(crop_ptr, w, h, amiga_surface->pitch,
-				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
-		} else if (amiga_surface) {
-			shader.preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
-				amiga_surface->w, amiga_surface->h, amiga_surface->pitch,
-				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
-		}
-
-	}
-	// Handle external shader rendering (simplified single-pass)
-	else if (shader.external && shader.external->is_valid()) {
-		// Explicitly disable attributes to avoid leakage from previous passes
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-
-		// Get source dimensions for this frame
-		int src_w = amiga_surface ? amiga_surface->w : 0;
-		int src_h = amiga_surface ? amiga_surface->h : 0;
-		if (is_cropped && amiga_surface) {
-			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
-			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
-		}
-
-		// Use aspect-corrected viewport, but ensure it's at least as large as the source
-		// Many CRT shaders calculate scale = floor(OutputSize / InputSize) which fails if OutputSize < InputSize
-		int viewport_w = std::max(destW, src_w);
-		int viewport_h = std::max(destH, src_h);
-		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
-		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
-
-		// Set viewport for shader rendering
-		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
-
-		if (is_cropped && amiga_surface) {
-			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			const int bpp = 4;
-			int x = std::max(0, crop_rect.x);
-			int y = std::max(0, crop_rect.y);
-			int w = std::min(crop_rect.w, amiga_surface->w - x);
-			int h = std::min(crop_rect.h, amiga_surface->h - y);
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-
-			render_with_external_shader(shader.external, monid, crop_ptr,
-				w, h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
-		} else if (amiga_surface) {
-			// FAST PATH: No cropping
-			render_with_external_shader(shader.external, monid,
-				static_cast<const uae_u8*>(amiga_surface->pixels),
-				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
-		}
-
-	} else if (shader.crtemu) {
-		// crtemu_present expects attribute 0 to be enabled.
-		glEnableVertexAttribArray(0);
-		// Disable other attributes that might have been enabled by OSD or other passes
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-
-		// When a custom bezel defines the viewport, skip crtemu's internal 4:3 letterboxing
-		shader.crtemu->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
-
-		if (shader.crtemu->type != CRTEMU_TYPE_NONE) {
-			glViewport(renderAreaX, renderAreaY, renderAreaW, renderAreaH);
-		}
-
-		// Determine correct OpenGL format
-		unsigned int gl_fmt, gl_type;
-		int bpp = 4;
-		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-			gl_fmt = GL_BGRA;
-			gl_type = GL_UNSIGNED_BYTE;
-		}
-		else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-			gl_fmt = GL_RGB;
-			gl_type = GL_UNSIGNED_SHORT_5_6_5;
-			bpp = 2;
-		}
-		else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-			gl_fmt = GL_RGBA;
-			gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-			bpp = 2;
-		}
-		else {
-			gl_fmt = GL_RGBA;
-			gl_type = GL_UNSIGNED_BYTE;
-		}
-
-		if (is_cropped && amiga_surface) {
-			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			int x = std::max(0, crop_rect.x);
-			int y = std::max(0, crop_rect.y);
-			int w = std::min(crop_rect.w, amiga_surface->w - x);
-			int h = std::min(crop_rect.h, amiga_surface->h - y);
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-
-			crtemu_present(shader.crtemu, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
-				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
-		} else if (amiga_surface) {
-			// FAST PATH: No cropping.
-			crtemu_present(shader.crtemu, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
-		}
-	}
-
-	g_renderer->render_software_cursor(monid, destX, destY, destW, destH);
-	g_renderer->render_bezel(drawableWidth, drawableHeight);
-	g_renderer->render_osd(monid, destX, destY, destW, destH);
-
-	if (vkbd_allowed(monid))
-	{
-		vkbd_redraw_gl(drawableWidth, drawableHeight);
-	}
-
-	if (on_screen_joystick_is_enabled())
-	{
-		on_screen_joystick_redraw_gl(drawableWidth, drawableHeight, render_quad);
-	}
-
-	SDL_GL_SwapWindow(mon->amiga_window);
-#else
-	SDL2_showframe(monid);
-#endif
+	g_renderer->present_frame(monid, mode);
 	mon->render_ok = false;
 }
 
@@ -1390,16 +963,19 @@ static void compute_scaled_dimensions(const int w, const int h, const bool is_rt
 // For Native: respects manual crop settings, auto_crop is handled elsewhere
 static void configure_render_rects(const int w, const int h, const int scaled_w, const int scaled_h, const bool is_rtg)
 {
+	auto& rq = g_renderer->render_quad;
+	auto& cr = g_renderer->crop_rect;
+
 	if (is_rtg) {
-		render_quad = { dx, dy, w, h };
-		crop_rect = { dx, dy, w, h };
+		rq = { dx, dy, w, h };
+		cr = { dx, dy, w, h };
 		return;
 	}
 
 	// Native mode with manual crop
 	if (currprefs.gfx_manual_crop) {
-		render_quad = { dx, dy, scaled_w, scaled_h };
-		crop_rect = {
+		rq = { dx, dy, scaled_w, scaled_h };
+		cr = {
 			currprefs.gfx_horizontal_offset,
 			currprefs.gfx_vertical_offset,
 			(currprefs.gfx_manual_crop_width > 0) ? currprefs.gfx_manual_crop_width : w,
@@ -1408,8 +984,8 @@ static void configure_render_rects(const int w, const int h, const int scaled_w,
 	}
 	// Native mode without auto_crop (auto_crop is handled in auto_crop_image())
 	else if (!currprefs.gfx_auto_crop) {
-		render_quad = { dx, dy, scaled_w, scaled_h };
-		crop_rect = { dx, dy, w, h };
+		rq = { dx, dy, scaled_w, scaled_h };
+		cr = { dx, dy, w, h };
 	}
 }
 
@@ -1449,7 +1025,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		}
 
 		if (skip_update) {
-			if (SDL2_alloctexture(mon->monitor_id, -w, -h))
+			if (g_renderer->alloc_texture(mon->monitor_id, -w, -h))
 			{
 				//osk_setup(monid, -2);
 				if (vbout) {
@@ -1539,7 +1115,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	// Allocate/update texture (single call regardless of surface recreation)
-	if (!SDL2_alloctexture(mon->monitor_id, w, h)) {
+	if (!g_renderer->alloc_texture(mon->monitor_id, w, h)) {
 		return false;
 	}
 
@@ -1849,17 +1425,19 @@ void auto_crop_image()
 		if (mon->amiga_renderer)
 			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
 
-		render_quad = { dx, dy, width, height };
-		crop_rect = { cx, cy, cw, ch };
+		auto& rq = g_renderer->render_quad;
+		auto& cr = g_renderer->crop_rect;
+		rq = { dx, dy, width, height };
+		cr = { cx, cy, cw, ch };
 		if (amiga_surface) {
-			if (crop_rect.x < 0) crop_rect.x = 0;
-			if (crop_rect.y < 0) crop_rect.y = 0;
-			if (crop_rect.x >= amiga_surface->w) crop_rect.x = 0;
-			if (crop_rect.y >= amiga_surface->h) crop_rect.y = 0;
-			if (crop_rect.w <= 0 || crop_rect.x + crop_rect.w > amiga_surface->w)
-				crop_rect.w = amiga_surface->w - crop_rect.x;
-			if (crop_rect.h <= 0 || crop_rect.y + crop_rect.h > amiga_surface->h)
-				crop_rect.h = amiga_surface->h - crop_rect.y;
+			if (cr.x < 0) cr.x = 0;
+			if (cr.y < 0) cr.y = 0;
+			if (cr.x >= amiga_surface->w) cr.x = 0;
+			if (cr.y >= amiga_surface->h) cr.y = 0;
+			if (cr.w <= 0 || cr.x + cr.w > amiga_surface->w)
+				cr.w = amiga_surface->w - cr.x;
+			if (cr.h <= 0 || cr.y + cr.h > amiga_surface->h)
+				cr.h = amiga_surface->h - cr.y;
 		}
 
 		if (vkbd_allowed(0))

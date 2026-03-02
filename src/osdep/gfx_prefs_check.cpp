@@ -681,7 +681,7 @@ int check_prefs_changed_gfx()
 			int sw = 0, sh = 0;
 			if (g_renderer)
 				g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
-			on_screen_joystick_update_layout(sw, sh, render_quad);
+			on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
 			on_screen_joystick_set_enabled(true);
 		}
 		else

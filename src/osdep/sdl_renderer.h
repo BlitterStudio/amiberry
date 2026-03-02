@@ -43,6 +43,10 @@ public:
 	// Shader management: uses IRenderer defaults (no-op)
 	// Bezel overlay: uses IRenderer defaults (no-op)
 
+	// Input coordinate translation
+	void get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
+		float* dx, float* dy, float* mx, float* my) override;
+
 	// Drawable size query
 	void get_drawable_size(SDL_Window* w, int* width, int* height) override;
 

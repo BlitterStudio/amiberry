@@ -12,6 +12,7 @@
 #include "sysdeps.h"
 #include "uae.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
 
 #include <map>
 #include <vector>
@@ -970,7 +971,7 @@ void vkbd_update_position_from_texture()
 #else
 	SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
 #endif
-	int renderedWidth = crop_rect.w, rendererHeight = crop_rect.h;
+	int renderedWidth = g_renderer->crop_rect.w, rendererHeight = g_renderer->crop_rect.h;
 
 #ifdef USE_OPENGL
 	// In OpenGL mode, crop_rect may not be set yet at init time.

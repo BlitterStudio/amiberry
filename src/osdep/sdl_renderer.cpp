@@ -1,8 +1,8 @@
 /*
  * sdl_renderer.cpp - SDL2 software renderer backend implementation of IRenderer
  *
- * Phase 1: Thin forwarding layer delegating to existing free functions
- * and accessing existing globals. No code is moved yet.
+ * Owns SDL2 texture state and implements frame rendering/presentation
+ * using SDL2_Renderer (SDL_RenderCopy, SDL_RenderPresent).
  *
  * Copyright 2026 Dimitris Panokostas
  */
@@ -13,10 +13,14 @@
 
 #include "options.h"
 #include "xwin.h"
+#include "picasso96.h"
+#include "statusline.h"
 
 #include "sdl_renderer.h"
 #include "amiberry_gfx.h"
-#include "gl_shader_dispatch.h"
+#include "gfx_platform_internal.h"
+#include "vkbd/vkbd.h"
+#include "on_screen_joystick.h"
 
 #ifdef AMIBERRY
 
@@ -98,7 +102,38 @@ void SDLRenderer::destroy_platform_renderer(AmigaMonitor* mon)
 
 bool SDLRenderer::alloc_texture(int monid, int w, int h)
 {
-	return SDL2_alloctexture(monid, w, h);
+	if (currprefs.headless) return true;
+	if (w == 0 || h == 0) return false;
+	if (gfx_platform_skip_alloctexture(monid, w, h)) return true;
+
+	if (w < 0 || h < 0)
+	{
+		if (m_amiga_texture)
+		{
+			int width, height;
+			Uint32 format;
+			SDL_QueryTexture(m_amiga_texture, &format, nullptr, &width, &height);
+			if (width == -w && height == -h && format == pixel_format)
+			{
+				set_scaling(monid, &currprefs, width, height);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	if (m_amiga_texture != nullptr)
+		SDL_DestroyTexture(m_amiga_texture);
+
+	AmigaMonitor* mon = &AMonitors[monid];
+	m_amiga_texture = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, amiga_surface->w, amiga_surface->h);
+	return m_amiga_texture != nullptr;
+}
+
+// Helper to decide between Linear (smooth) and Nearest Neighbor (pixelated) scaling
+static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int height)
+{
+	return mode->w % width == 0 && mode->h % height == 0;
 }
 
 void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
@@ -106,7 +141,25 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	AmigaMonitor* mon = &AMonitors[monid];
 	if (mon->amiga_renderer)
 		SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
-	set_scaling_option(monid, p, w, h);
+
+	if (currprefs.headless) return;
+
+	auto scale_quality = "nearest";
+	SDL_bool integer_scale = SDL_FALSE;
+
+	switch (p->scaling_method) {
+	case -1: // Auto
+		if (!ar_is_exact(&sdl_mode, w, h))
+			scale_quality = "linear";
+		break;
+	case 0: scale_quality = "nearest"; break;
+	case 1: scale_quality = "linear"; break;
+	case 2: scale_quality = "nearest"; integer_scale = SDL_TRUE; break;
+	default: scale_quality = "linear"; break;
+	}
+
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scale_quality);
+	SDL_RenderSetIntegerScale(mon->amiga_renderer, integer_scale);
 }
 
 // --- VSync ---
@@ -120,21 +173,144 @@ void SDLRenderer::update_vsync(int /*monid*/)
 
 bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 {
-	// The SDL2 software render_frame logic is embedded in SDL2_renderframe()
-	// in amiberry_gfx.cpp. This will be wired up when SDL2_renderframe
-	// delegates to g_renderer.
-	return m_amiga_texture && amiga_surface;
+	if (m_amiga_texture && amiga_surface)
+	{
+		const amigadisplay* ad = &adisplays[monid];
+		AmigaMonitor* mon = &AMonitors[monid];
+
+		// Ensure the draw color is black for clearing
+		SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
+		SDL_RenderClear(mon->amiga_renderer);
+
+		// If a full render is needed or there are no specific dirty rects, update the whole texture.
+		if (mon->full_render_needed || mon->dirty_rects.empty()) {
+			if (amiga_surface) {
+				SDL_UpdateTexture(m_amiga_texture, NULL, amiga_surface->pixels, amiga_surface->pitch);
+			}
+		} else {
+			// Otherwise, update only the collected dirty rectangles.
+			for (const auto& rect : mon->dirty_rects) {
+				SDL_UpdateTexture(m_amiga_texture, &rect, static_cast<const uae_u8*>(amiga_surface->pixels) + rect.y * amiga_surface->pitch + rect.x * amiga_surface->format->BytesPerPixel, amiga_surface->pitch);
+			}
+		}
+
+		// Clear the dirty rects list for the next frame.
+		mon->dirty_rects.clear();
+		mon->full_render_needed = false;
+
+		const SDL_Rect* p_crop = &crop_rect;
+		const SDL_Rect* p_quad = &render_quad;
+		SDL_Rect rtg_rect;
+
+		if (ad->picasso_on) {
+			rtg_rect = { 0, 0, amiga_surface->w, amiga_surface->h };
+			p_crop = &rtg_rect;
+			p_quad = &rtg_rect;
+
+			int lw, lh;
+			SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
+			if (lw != rtg_rect.w || lh != rtg_rect.h) {
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, rtg_rect.w, rtg_rect.h);
+			}
+		}
+
+		SDL_RenderCopyEx(mon->amiga_renderer, m_amiga_texture, p_crop, p_quad, 0, nullptr, SDL_FLIP_NONE);
+
+		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
+		if (ad->picasso_on && p96_uses_software_cursor()) {
+			if (p96_cursor_needs_update() || !m_cursor_overlay_texture) {
+				SDL_Surface* s = p96_get_cursor_overlay_surface();
+				if (s) {
+					if (m_cursor_overlay_texture)
+						SDL_DestroyTexture(m_cursor_overlay_texture);
+					m_cursor_overlay_texture = SDL_CreateTextureFromSurface(mon->amiga_renderer, s);
+					if (m_cursor_overlay_texture)
+						SDL_SetTextureBlendMode(m_cursor_overlay_texture, SDL_BLENDMODE_BLEND);
+				}
+			}
+
+			if (m_cursor_overlay_texture) {
+				int cx, cy, cw, ch;
+				p96_get_cursor_position(&cx, &cy);
+				p96_get_cursor_dimensions(&cw, &ch);
+
+				// Renderer logical size matches RTG resolution, so 1:1 mapping
+				SDL_Rect dst_cursor = { cx, cy, cw, ch };
+				SDL_RenderCopy(mon->amiga_renderer, m_cursor_overlay_texture, nullptr, &dst_cursor);
+			}
+		}
+
+		// GPU-composited Status Line (OSD) for both native and RTG
+		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
+		{
+			int slx, sly, dst_w, dst_h;
+			SDL_RenderGetLogicalSize(mon->amiga_renderer, &dst_w, &dst_h);
+			if (dst_w == 0 || dst_h == 0) {
+				SDL_GetRendererOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
+			}
+			statusline_getpos(monid, &slx, &sly, dst_w, dst_h);
+			SDL_Rect dst_osd = { slx, sly, mon->statusline_surface->w, mon->statusline_surface->h };
+			SDL_RenderCopy(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
+		}
+
+		if (vkbd_allowed(monid))
+		{
+			vkbd_redraw();
+		}
+
+		if (on_screen_joystick_is_enabled())
+		{
+			on_screen_joystick_redraw(mon->amiga_renderer);
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 void SDLRenderer::present_frame(int monid, int mode)
 {
-	// The SDL2 present logic is in SDL2_showframe() in amiberry_gfx.cpp.
-	// This will be wired up when show_screen delegates to g_renderer.
+	if (gfx_platform_present_frame(amiga_surface)) {
+		return;
+	}
+
+	// Skip presentation if headless mode
+	if (currprefs.headless) {
+		return;
+	}
+
+	const AmigaMonitor* mon = &AMonitors[monid];
+	SDL_RenderPresent(mon->amiga_renderer);
+	if (m_vsync.waitvblankthread_mode <= 0)
+		m_vsync.wait_vblank_timestamp = read_processor_time();
 }
 
 // Shader management and bezel overlay: uses IRenderer defaults (no-op)
 
 // --- Drawable size query ---
+
+void SDLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
+	float* dx, float* dy, float* mx, float* my)
+{
+	const AmigaMonitor* mon = &AMonitors[monid];
+
+	*dx = 0; *dy = 0; *mx = 1.0f; *my = 1.0f;
+
+	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+		if (currprefs.gfx_auto_crop) {
+			*dx -= src_x;
+			*dy -= src_y;
+		}
+		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
+			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width ||
+			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
+			*dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
+			*dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
+		}
+	}
+}
 
 void SDLRenderer::get_drawable_size(SDL_Window* /*w*/, int* width, int* height)
 {

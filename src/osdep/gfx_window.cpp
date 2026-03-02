@@ -14,23 +14,17 @@
 #endif
 #include <cstdio>
 #include <cmath>
-#include <iostream>
-
 #include "sysdeps.h"
 #include "options.h"
 #include "uae.h"
 #include "custom.h"
-#include "events.h"
 #include "xwin.h"
-#include "keyboard.h"
 #include "drawing.h"
 #include "statusline.h"
 #include "picasso96.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
 #include "gfx_window.h"
-#include "gl_overlays.h"
-#include "gl_shader_dispatch.h"
 #include "gfx_colors.h"
 #include "sounddep/sound.h"
 #include "inputdevice.h"
@@ -1067,7 +1061,7 @@ bool doInit(AmigaMonitor* mon)
 		} else {
 			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
 		}
-		on_screen_joystick_update_layout(sw, sh, render_quad);
+		on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
 		on_screen_joystick_set_enabled(true);
 	}
 

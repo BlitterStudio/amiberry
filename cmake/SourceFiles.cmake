@@ -231,7 +231,6 @@ set(SOURCE_FILES
         src/osdep/gfx_colors.cpp
         src/osdep/gfx_prefs_check.cpp
         src/osdep/gl_overlays.cpp
-        src/osdep/gl_shader_dispatch.cpp
         src/osdep/gfx_window.cpp
         src/osdep/renderer_factory.cpp
         src/osdep/opengl_renderer.cpp

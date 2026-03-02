@@ -101,6 +101,10 @@ public:
 	void render_software_cursor(int monid, int x, int y, int w, int h) override;
 	void destroy_bezel() override;
 
+	// Input coordinate translation
+	void get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
+		float* dx, float* dy, float* mx, float* my) override;
+
 	// Drawable size query
 	void get_drawable_size(SDL_Window* w, int* width, int* height) override;
 
@@ -128,6 +132,11 @@ private:
 	// Private helpers for overlay rendering
 	bool init_osd_shader();
 	bool load_bezel_texture(const char* bezel_name);
+
+	// Private helper for external shader rendering
+	void render_external_shader(ExternalShader* shader, int monid,
+		const uae_u8* pixels, int width, int height, int pitch,
+		int viewport_x, int viewport_y, int viewport_width, int viewport_height);
 };
 
 // Helper to get the OpenGL renderer from the global g_renderer.
