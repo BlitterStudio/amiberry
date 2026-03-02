@@ -13,8 +13,49 @@
 #ifdef USE_OPENGL
 
 #include "irenderer.h"
-#include "gfx_state.h"
+#include "gl_platform.h"
 #include <SDL.h>
+#include <string>
+
+// Forward declarations
+struct crtemu_t;
+class ExternalShader;
+class ShaderPreset;
+
+// Shader lifecycle and caching state (owned by OpenGLRenderer)
+struct ShaderState {
+	crtemu_t* crtemu = nullptr;
+	ExternalShader* external = nullptr;
+	ShaderPreset* preset = nullptr;
+	std::string external_name;
+	std::string loaded_name;      // cache key to avoid recreation
+	GLenum texture_filter_mode = GL_LINEAR;
+};
+
+// OpenGL overlay resources: OSD, bezel, software cursor (owned by OpenGLRenderer)
+struct GLOverlayState {
+	GLuint osd_texture = 0;
+	GLuint osd_program = 0;
+	GLint osd_tex_loc = -1;
+	GLuint osd_vbo = 0;
+	GLuint osd_vao = 0;
+	GLuint vbo_uploaded = 0;
+
+	GLuint bezel_texture = 0;
+	GLuint bezel_vao = 0;
+	GLuint bezel_vbo = 0;
+	std::string loaded_bezel_name;
+	int bezel_tex_w = 0;
+	int bezel_tex_h = 0;
+	float bezel_hole_x = 0.0f;
+	float bezel_hole_y = 0.0f;
+	float bezel_hole_w = 1.0f;
+	float bezel_hole_h = 1.0f;
+
+	GLuint cursor_texture = 0;
+	GLuint cursor_vao = 0;
+	GLuint cursor_vbo = 0;
+};
 
 class OpenGLRenderer : public IRenderer {
 public:
@@ -56,9 +97,6 @@ public:
 
 	// Drawable size query
 	void get_drawable_size(SDL_Window* w, int* width, int* height) override;
-
-	// VSync timestamp
-	frame_time_t get_vblank_timestamp() const override;
 
 	// Cleanup of window-associated resources
 	void close_hwnds_cleanup(AmigaMonitor* mon) override;

@@ -129,7 +129,6 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 extern std::unique_ptr<IRenderer> g_renderer;
 
-extern SDL_Texture* amiga_texture;
 extern SDL_DisplayMode sdl_mode;
 extern SDL_Rect crop_rect;
 
@@ -137,10 +136,6 @@ extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
 extern SDL_Rect render_quad;
 extern SDL_Cursor* normalcursor;
-
-// Grouped state structs (defined in gfx_state.h)
-struct VSyncState;
-extern VSyncState g_vsync;
 
 extern void sortdisplays();
 extern void enumeratedisplays();
@@ -162,11 +157,6 @@ extern void updatewinfsmode(int monid, uae_prefs* p);
 extern void gfx_lock();
 extern void gfx_unlock();
 
-extern void destroy_shaders();
-#ifdef USE_OPENGL
-extern void clear_loaded_shader_name();
-extern void reset_gl_state();
-#endif
 
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);

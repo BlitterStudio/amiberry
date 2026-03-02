@@ -12,6 +12,7 @@
 #include "drawing.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
 #include "sounddep/sound.h"
 #include "inputdevice.h"
 #ifdef WITH_MIDI
@@ -678,11 +679,8 @@ int check_prefs_changed_gfx()
 			AmigaMonitor* mon = &AMonitors[0];
 			on_screen_joystick_init(mon->amiga_renderer);
 			int sw = 0, sh = 0;
-#ifdef USE_OPENGL
-			SDL_GL_GetDrawableSize(mon->amiga_window, &sw, &sh);
-#else
-			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
-#endif
+			if (g_renderer)
+				g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
 			on_screen_joystick_update_layout(sw, sh, render_quad);
 			on_screen_joystick_set_enabled(true);
 		}

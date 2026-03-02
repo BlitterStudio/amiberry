@@ -13,6 +13,7 @@
 #include <SDL.h>
 #include "uae/types.h"
 #include "uae/time.h"
+#include "gfx_state.h"
 
 struct AmigaMonitor;
 struct uae_prefs;
@@ -67,8 +68,15 @@ public:
 	virtual void get_drawable_size(SDL_Window* w, int* width, int* height) = 0;
 
 	// --- VSync timestamp (for frame timing) ---
-	virtual frame_time_t get_vblank_timestamp() const = 0;
+	virtual frame_time_t get_vblank_timestamp() const { return m_vsync.wait_vblank_timestamp; }
 
 	// --- Cleanup of window-associated resources ---
 	virtual void close_hwnds_cleanup(AmigaMonitor* mon) = 0;
+
+	// --- VSync state accessor ---
+	VSyncState& vsync_state() { return m_vsync; }
+	const VSyncState& vsync_state() const { return m_vsync; }
+
+protected:
+	VSyncState m_vsync;
 };

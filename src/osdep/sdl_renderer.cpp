@@ -19,16 +19,17 @@
 
 #include "sdl_renderer.h"
 #include "amiberry_gfx.h"
-#include "gfx_state.h"
 #include "gl_shader_dispatch.h"
 
 #ifdef AMIBERRY
 
 // External globals (defined in amiberry_gfx.cpp)
-extern SDL_Texture* amiga_texture;
-extern SDL_Texture* p96_cursor_overlay_texture;
 extern SDL_Surface* amiga_surface;
-extern VSyncState g_vsync;
+
+SDLRenderer* get_sdl_renderer()
+{
+	return dynamic_cast<SDLRenderer*>(g_renderer.get());
+}
 
 // --- Context lifecycle ---
 
@@ -105,6 +106,9 @@ bool SDLRenderer::alloc_texture(int monid, int w, int h)
 
 void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 {
+	AmigaMonitor* mon = &AMonitors[monid];
+	if (mon->amiga_renderer)
+		SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
 	set_scaling_option(monid, p, w, h);
 }
 
@@ -122,7 +126,7 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 	// The SDL2 software render_frame logic is embedded in SDL2_renderframe()
 	// in amiberry_gfx.cpp. This will be wired up when SDL2_renderframe
 	// delegates to g_renderer.
-	return amiga_texture && amiga_surface;
+	return m_amiga_texture && amiga_surface;
 }
 
 void SDLRenderer::present_frame(int monid, int mode)
@@ -183,26 +187,21 @@ void SDLRenderer::get_drawable_size(SDL_Window* /*w*/, int* width, int* height)
 	}
 }
 
-// --- VSync timestamp ---
-
-frame_time_t SDLRenderer::get_vblank_timestamp() const
-{
-	return g_vsync.wait_vblank_timestamp;
-}
+// get_vblank_timestamp() uses base class default (returns m_vsync.wait_vblank_timestamp)
 
 // --- Cleanup ---
 
 void SDLRenderer::close_hwnds_cleanup(AmigaMonitor* mon)
 {
-	if (amiga_texture)
+	if (m_amiga_texture)
 	{
-		SDL_DestroyTexture(amiga_texture);
-		amiga_texture = nullptr;
+		SDL_DestroyTexture(m_amiga_texture);
+		m_amiga_texture = nullptr;
 	}
-	if (p96_cursor_overlay_texture)
+	if (m_cursor_overlay_texture)
 	{
-		SDL_DestroyTexture(p96_cursor_overlay_texture);
-		p96_cursor_overlay_texture = nullptr;
+		SDL_DestroyTexture(m_cursor_overlay_texture);
+		m_cursor_overlay_texture = nullptr;
 	}
 }
 

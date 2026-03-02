@@ -28,7 +28,6 @@
 #include "picasso96.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
-#include "gfx_state.h"
 #include "gfx_window.h"
 #include "gl_overlays.h"
 #include "gl_shader_dispatch.h"
@@ -53,10 +52,6 @@
 #include "irenderer.h"
 
 #ifdef AMIBERRY
-
-#ifndef USE_OPENGL
-extern SDL_Texture* p96_cursor_overlay_texture;
-#endif
 
 // Shared state defined in amiberry_gfx.cpp
 extern int wasfs[2];
@@ -1137,10 +1132,5 @@ bool doInit(AmigaMonitor* mon)
 
 	return success;
 }
-
-#ifdef USE_OPENGL
-// init_opengl_context() has been moved into OpenGLRenderer::init_context()
-// in opengl_renderer.cpp
-#endif
 
 #endif // AMIBERRY

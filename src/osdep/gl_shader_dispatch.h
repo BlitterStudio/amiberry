@@ -20,10 +20,6 @@ bool SDL2_alloctexture(int monid, int w, int h);
 
 class ExternalShader;
 
-bool is_external_shader(const char* shader);
-bool is_shader_preset(const char* shader);
-int get_crtemu_type(const char* shader);
-
 void render_with_external_shader(ExternalShader* shader, int monid,
 	const uae_u8* pixels, int width, int height, int pitch,
 	int viewport_x, int viewport_y, int viewport_width, int viewport_height);

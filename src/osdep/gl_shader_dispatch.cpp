@@ -14,7 +14,6 @@
 #include "drawing.h"
 #include "picasso96.h"
 #include "amiberry_gfx.h"
-#include "gfx_state.h"
 #include "gl_shader_dispatch.h"
 #include "gl_overlays.h"
 #include "target.h"
@@ -27,11 +26,12 @@
 #include "external_shader.h"
 #include "shader_preset.h"
 #include "opengl_renderer.h"
+#else
+#include "sdl_renderer.h"
 #endif
 
 #ifdef AMIBERRY
 
-extern VSyncState g_vsync;
 
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int height)
@@ -103,6 +103,12 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, integer_scale);
 #endif
 }
+
+#ifdef USE_OPENGL
+static bool is_external_shader(const char* shader);
+static bool is_shader_preset(const char* shader);
+static int get_crtemu_type(const char* shader);
+#endif
 
 bool SDL2_alloctexture(int monid, int w, int h)
 {
@@ -195,13 +201,14 @@ bool SDL2_alloctexture(int monid, int w, int h)
 	}
 	return shader.crtemu != nullptr || shader.external != nullptr || shader.preset != nullptr;
 #else
+	auto*& tex = get_sdl_renderer()->amiga_texture();
 	if (w < 0 || h < 0)
 	{
-		if (amiga_texture)
+		if (tex)
 		{
 			int width, height;
 			Uint32 format;
-			SDL_QueryTexture(amiga_texture, &format, nullptr, &width, &height);
+			SDL_QueryTexture(tex, &format, nullptr, &width, &height);
 			if (width == -w && height == -h && format == pixel_format)
 			{
 				set_scaling_option(monid, &currprefs, width, height);
@@ -211,12 +218,12 @@ bool SDL2_alloctexture(int monid, int w, int h)
 		return false;
 	}
 
-	if (amiga_texture != nullptr)
-		SDL_DestroyTexture(amiga_texture);
+	if (tex != nullptr)
+		SDL_DestroyTexture(tex);
 
 	AmigaMonitor* mon = &AMonitors[monid];
-	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, amiga_surface->w, amiga_surface->h);
-	return amiga_texture != nullptr;
+	tex = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, amiga_surface->w, amiga_surface->h);
+	return tex != nullptr;
 #endif
 }
 
@@ -231,7 +238,7 @@ bool SDL2_alloctexture(int monid, int w, int h)
 #endif
 
 // Check if shader name refers to an external .glsl file
-bool is_external_shader(const char* shader)
+static bool is_external_shader(const char* shader)
 {
 	if (!shader) return false;
 	const char* ext = strrchr(shader, '.');
@@ -239,14 +246,14 @@ bool is_external_shader(const char* shader)
 }
 
 // Check if shader name refers to a .glslp shader preset
-bool is_shader_preset(const char* shader)
+static bool is_shader_preset(const char* shader)
 {
 	if (!shader) return false;
 	const char* ext = strrchr(shader, '.');
 	return ext && !strcasecmp(ext, ".glslp");
 }
 
-int get_crtemu_type(const char* shader)
+static int get_crtemu_type(const char* shader)
 {
 	if (!shader) return CRTEMU_TYPE_TV;
 
@@ -519,7 +526,7 @@ void destroy_shaders()
 		shader.crtemu = nullptr;
 		shader.external = nullptr;
 		shader.preset = nullptr;
-		g_vsync.gl_initialized = false;
+		g_renderer->vsync_state().gl_initialized = false;
 		return;
 	}
 
@@ -563,7 +570,7 @@ void destroy_shaders()
 	destroy_bezel_overlay();
 
 	// Reset GL state flag to ensure clean slate for next shader
-	g_vsync.gl_initialized = false;
+	g_renderer->vsync_state().gl_initialized = false;
 
 	// Reset GL state to ensure clean slate for next shader
 	glBindVertexArray(0);
@@ -590,7 +597,7 @@ void clear_loaded_shader_name()
 
 void reset_gl_state()
 {
-	g_vsync.gl_initialized = false;
+	g_renderer->vsync_state().gl_initialized = false;
 }
 #endif // USE_OPENGL
 

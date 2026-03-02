@@ -18,7 +18,6 @@
 #include "drawing.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
-#include "gfx_state.h"
 #include "display_modes.h"
 #include "threaddep/thread.h"
 #include "registry.h"
@@ -44,17 +43,10 @@ extern float vsync_vblank, vsync_hblank;
 extern uae_s64 spincount;
 extern void target_calibrate_spin();
 
-// VSyncState lives as a file-static in amiberry_gfx.cpp; the functions that
-// need it are kept together in this TU by accepting a local mirror. However,
-// because the extracted functions access the *same* g_vsync instance, we
-// declare an accessor instead. We will use a different approach: the
-// VSyncState instance is moved to be accessible. Actually, g_vsync is
-// file-static in amiberry_gfx.cpp. The functions extracted here that
-// reference g_vsync are: target_get_display_scanline2, target_get_display_scanline,
-// display_vblank_thread, display_param_init. These all need g_vsync.
-//
-// Solution: make g_vsync non-static in amiberry_gfx.cpp and extern it here.
-extern VSyncState g_vsync;
+// VSyncState is now a member of the IRenderer base class.
+// Access it via g_renderer->vsync_state().
+#include "irenderer.h"
+extern std::unique_ptr<IRenderer> g_renderer;
 
 // SDL2_getrefreshrate is static in amiberry_gfx.cpp. We need it for
 // target_getcurrentvblankrate. We'll declare it as an extern here and
@@ -274,7 +266,7 @@ int target_get_display(const TCHAR* name)
 
 static int target_get_display_scanline2(int displayindex)
 {
-	float diff = static_cast<float>(read_processor_time() - g_vsync.wait_vblank_timestamp);
+	float diff = static_cast<float>(read_processor_time() - g_renderer->vsync_state().wait_vblank_timestamp);
 	if (diff < 0)
 		return -1;
 	int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
@@ -285,7 +277,7 @@ static int target_get_display_scanline2(int displayindex)
 
 int target_get_display_scanline(const int displayindex)
 {
-	if (!g_vsync.scanlinecalibrating && calculated_scanline) {
+	if (!g_renderer->vsync_state().scanlinecalibrating && calculated_scanline) {
 		return target_get_display_scanline2(displayindex);
 	} else {
 		static uae_s64 lastrdtsc;
@@ -339,13 +331,13 @@ static void display_vblank_thread(struct AmigaMonitor* mon)
 	const struct amigadisplay* ad = &adisplays[mon->monitor_id];
 	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
 
-	if (g_vsync.waitvblankthread_mode > 0)
+	if (g_renderer->vsync_state().waitvblankthread_mode > 0)
 		return;
 	// It seems some Windows 7 drivers stall if D3DKMTWaitForVerticalBlankEvent()
 	// and D3DKMTGetScanLine() is used simultaneously.
-	//if ((calculated_scanline || os_win8) && ap->gfx_vsyncmode && pD3DKMTWaitForVerticalBlankEvent && g_vsync.wait_vblank_display && g_vsync.wait_vblank_display->HasAdapterData) {
+	//if ((calculated_scanline || os_win8) && ap->gfx_vsyncmode && pD3DKMTWaitForVerticalBlankEvent && g_renderer->vsync_state().wait_vblank_display && g_renderer->vsync_state().wait_vblank_display->HasAdapterData) {
 	//	waitvblankevent = CreateEvent(NULL, FALSE, FALSE, NULL);
-	//	g_vsync.waitvblankthread_mode = 1;
+	//	g_renderer->vsync_state().waitvblankthread_mode = 1;
 	//	unsigned int th;
 	//	_beginthreadex(NULL, 0, waitvblankthread, 0, 0, &th);
 	//}
@@ -377,16 +369,16 @@ void display_param_init(struct AmigaMonitor* mon)
 		vsync_activeheight = mon->currentmode.current_height;
 	}
 
-	g_vsync.wait_vblank_display = getdisplay(&currprefs, mon->monitor_id);
-	if (g_vsync.wait_vblank_display) {
-		g_vsync.wait_vblank_display->HasAdapterData = true; // SDL2 displays always have adapter data
+	g_renderer->vsync_state().wait_vblank_display = getdisplay(&currprefs, mon->monitor_id);
+	if (g_renderer->vsync_state().wait_vblank_display) {
+		g_renderer->vsync_state().wait_vblank_display->HasAdapterData = true; // SDL2 displays always have adapter data
 	}
-	if (!g_vsync.wait_vblank_display || !g_vsync.wait_vblank_display->HasAdapterData) {
+	if (!g_renderer->vsync_state().wait_vblank_display || !g_renderer->vsync_state().wait_vblank_display->HasAdapterData) {
 		write_log(_T("Selected display mode does not have adapter data!\n"));
 	}
-	g_vsync.scanlinecalibrating = true;
+	g_renderer->vsync_state().scanlinecalibrating = true;
 	target_calibrate_spin();
-	g_vsync.scanlinecalibrating = false;
+	g_renderer->vsync_state().scanlinecalibrating = false;
 	display_vblank_thread(mon);
 }
 

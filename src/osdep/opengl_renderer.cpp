@@ -20,7 +20,6 @@
 
 #include "opengl_renderer.h"
 #include "amiberry_gfx.h"
-#include "gfx_state.h"
 #include "gfx_window.h"
 #include "gl_shader_dispatch.h"
 #include "gl_overlays.h"
@@ -30,9 +29,6 @@
 #include "target.h"
 
 #ifdef AMIBERRY
-
-// g_vsync stays global (shared between GL and SDL paths)
-extern VSyncState g_vsync;
 
 // Declared in amiberry_gfx.cpp (no header)
 extern float SDL2_getrefreshrate(int monid);
@@ -91,9 +87,9 @@ void OpenGLRenderer::destroy_context()
 	{
 		SDL_GL_DeleteContext(m_gl_context);
 		m_gl_context = nullptr;
-		g_vsync.current_interval = -1;
-		g_vsync.cached_refresh_rate = 0.0f;
-		g_vsync.gl_initialized = false;
+		m_vsync.current_interval = -1;
+		m_vsync.cached_refresh_rate = 0.0f;
+		m_vsync.gl_initialized = false;
 	}
 }
 
@@ -151,16 +147,16 @@ void OpenGLRenderer::update_vsync(int monid)
 	if (vsync_mode > 0) {
 		if (vsync_mode > 1) {
 			// VSync 50/60Hz: Adapt for High Refresh Rate Monitors
-			if (g_vsync.cached_refresh_rate <= 0.0f) {
-				g_vsync.cached_refresh_rate = SDL2_getrefreshrate(monid);
-				write_log("VSync: Detected refresh rate: %.2f Hz\n", g_vsync.cached_refresh_rate);
+			if (m_vsync.cached_refresh_rate <= 0.0f) {
+				m_vsync.cached_refresh_rate = SDL2_getrefreshrate(monid);
+				write_log("VSync: Detected refresh rate: %.2f Hz\n", m_vsync.cached_refresh_rate);
 			}
 
 			float target_fps = (float)vblank_hz;
 			if (target_fps < 45 || target_fps > 125) target_fps = 50.0f;
 
-			if (g_vsync.cached_refresh_rate > 0) {
-				interval = (int)std::round(g_vsync.cached_refresh_rate / target_fps);
+			if (m_vsync.cached_refresh_rate > 0) {
+				interval = (int)std::round(m_vsync.cached_refresh_rate / target_fps);
 				if (interval < 1) interval = 1;
 			}
 			else {
@@ -172,14 +168,14 @@ void OpenGLRenderer::update_vsync(int monid)
 		}
 	}
 
-	if (g_vsync.current_interval != interval) {
+	if (m_vsync.current_interval != interval) {
 		if (SDL_GL_SetSwapInterval(interval) == 0) {
 			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
 		}
 		else {
 			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
 		}
-		g_vsync.current_interval = interval;
+		m_vsync.current_interval = interval;
 	}
 }
 
@@ -272,12 +268,7 @@ void OpenGLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 	SDL_GL_GetDrawableSize(w, width, height);
 }
 
-// --- VSync timestamp ---
-
-frame_time_t OpenGLRenderer::get_vblank_timestamp() const
-{
-	return g_vsync.wait_vblank_timestamp;
-}
+// get_vblank_timestamp() uses base class default (returns m_vsync.wait_vblank_timestamp)
 
 // --- Cleanup ---
 

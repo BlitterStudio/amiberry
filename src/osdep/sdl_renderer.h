@@ -54,11 +54,18 @@ public:
 	// Drawable size query
 	void get_drawable_size(SDL_Window* w, int* width, int* height) override;
 
-	// VSync timestamp
-	frame_time_t get_vblank_timestamp() const override;
-
 	// Cleanup of window-associated resources
 	void close_hwnds_cleanup(AmigaMonitor* mon) override;
+
+	// SDL-specific accessors
+	SDL_Texture*& amiga_texture() { return m_amiga_texture; }
+	SDL_Texture*& cursor_overlay_texture() { return m_cursor_overlay_texture; }
+
+private:
+	SDL_Texture* m_amiga_texture = nullptr;
+	SDL_Texture* m_cursor_overlay_texture = nullptr;
 };
+
+SDLRenderer* get_sdl_renderer();
 
 #endif // !USE_OPENGL

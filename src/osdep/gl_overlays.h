@@ -9,7 +9,6 @@
  */
 
 #ifdef USE_OPENGL
-extern bool init_osd_shader();
 extern void render_osd(int monid, int x, int y, int w, int h);
 extern void render_bezel_overlay(int drawableWidth, int drawableHeight);
 extern void render_software_cursor_gl(int monid, int x, int y, int w, int h);

@@ -17,7 +17,6 @@
 #include "statusline.h"
 
 #include "amiberry_gfx.h"
-#include "gfx_state.h"
 #include "gl_overlays.h"
 #include "target.h"
 #include "fsdb_host.h"
@@ -50,7 +49,7 @@ static const char* osd_fs_source =
 	"  gl_FragColor = texture2D(tex0, uv);\n"
 	"}\n";
 
-bool init_osd_shader()
+static bool init_osd_shader()
 {
 	auto& overlay = get_opengl_renderer()->overlay_state();
 

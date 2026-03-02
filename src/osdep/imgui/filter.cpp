@@ -14,7 +14,6 @@
 #ifdef USE_OPENGL
 #include "external_shader.h"
 #include "shader_preset.h"
-#include "gfx_state.h"
 #include "opengl_renderer.h"
 #endif
 
