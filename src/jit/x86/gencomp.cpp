@@ -2020,6 +2020,14 @@ gen_opcode(unsigned int opcode)
 #endif
 		is_const_jump;
 		genamode(curi->smode, "srcreg", curi->size, "src", GENA_GETV_FETCH, GENA_MOVEM_DO_INC);
+		if (curi->size == sz_long) {
+			/* Sign-extend 32-bit displacement to pointer width for backward branches.
+			   comp_get_ilong() returns uae_u32 which zero-extends to uintptr on 64-bit;
+			   a negative displacement like 0xFFFFF000 must become 0xFFFFFFFFFFFFF000.
+			   Uses get_const/mov_l_ri (accessible from generated code) instead of
+			   isconst/live (static in compemu_support, not visible here). */
+			comprintf("\tmov_l_ri(src, (uintptr)(uae_s32)(uae_u32)get_const(src));\n");
+		}
 		start_brace();
 		comprintf("\tuae_u32 retadd=(uae_u32)(start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset);\n");
 		comprintf("\tint ret=scratchie++;\n"
@@ -2043,7 +2051,11 @@ gen_opcode(unsigned int opcode)
 		switch (curi->size) {
 		case sz_byte: comprintf("\tsign_extend_8_rr(src,src);\n"); break;
 		case sz_word: comprintf("\tsign_extend_16_rr(src,src);\n"); break;
-		case sz_long: break;
+		case sz_long:
+			/* Sign-extend 32-bit displacement to pointer width for backward branches.
+			   Same fix as BSR.L above. */
+			comprintf("\tmov_l_ri(src, (uintptr)(uae_s32)(uae_u32)get_const(src));\n");
+			break;
 		}
 		comprintf("\tsub_l_ri(src,m68k_pc_offset-m68k_pc_offset_thisinst-2);\n");
 		/* Leave the following as "add" --- it will allow it to be optimized
@@ -2056,8 +2068,8 @@ gen_opcode(unsigned int opcode)
 		comprintf("\tm68k_pc_offset=0;\n");
 
 		if (curi->cc >= 2) {
-			comprintf("\tuae_u32 v1=get_const(PC_P);\n"
-				"\tuae_u32 v2=get_const(src);\n"
+			comprintf("\tuintptr v1=get_const(PC_P);\n"
+				"\tuintptr v2=get_const(src);\n"
 				"\tregister_branch(v1,v2,%d);\n",
 				cond_codes[curi->cc]);
 			comprintf("\tmake_flags_live();\n"); /* Load the flags */
@@ -2159,8 +2171,8 @@ gen_opcode(unsigned int opcode)
 			comprintf("\tsub_w_ri(src,1);\n");
 			comprintf("\tend_needflags();\n");
 			start_brace();
-			comprintf("\tuae_u32 v2;\n"
-				"\tuae_u32 v1=get_const(PC_P);\n");
+			comprintf("\tuintptr v2;\n"
+				"\tuintptr v1=get_const(PC_P);\n");
 			comprintf("\tv2=get_const(offs);\n"
 				"\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CC);
 			break;

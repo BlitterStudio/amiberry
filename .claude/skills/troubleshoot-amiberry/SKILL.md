@@ -213,6 +213,15 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 | `src/osdep/amiberry_gfx.cpp` | Graphics/display |
 | `src/osdep/amiberry_input.cpp` | Input handling |
 | `src/osdep/amiberry.cpp` | Core platform layer |
+| `src/osdep/macos_bookmarks.h/.mm` | macOS security-scoped bookmarks (App Store) |
+
+## macOS Path Notes
+
+- macOS HOME directory is `~/Library/Application Support/Amiberry` (contains a space).
+- When constructing shell commands with paths, always quote arguments.
+- `download_file()` properly quotes paths in curl/wget commands via `popen()`.
+- `create_missing_amiberry_folders()` uses `std::filesystem::copy()` instead of `system("cp -R ...")`.
+- The app bundle at `build/Amiberry.app` stores resources (controllers, data, roms, whdboot) under `Resources/`.
 
 ## Tips
 

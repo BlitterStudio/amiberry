@@ -65,6 +65,7 @@
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
 #include "vkbd/vkbd.h"
+#include "macos_bookmarks.h"
 
 #ifdef __MACH__
 #include <string>
@@ -419,6 +420,7 @@ std::string plugins_dir;
 std::string video_dir;
 std::string themes_path;
 std::string shaders_path;
+std::string bezels_path;
 std::string amiberry_conf_file;
 std::string amiberry_ini_file;
 
@@ -2463,6 +2465,10 @@ void fullpath(TCHAR* path, int size, bool userelative)
 		if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
 			_tcscpy(path, tmp1);
 	}
+	else if (path[0] != 0)
+	{
+		write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
+	}
 }
 
 // convert path to absolute
@@ -3335,41 +3341,55 @@ void get_configuration_path(char* out, const int size)
 void set_configuration_path(const std::string& newpath)
 {
 	config_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_nvram_path(const std::string& newpath)
 {
 	nvram_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_plugins_path(const std::string& newpath)
 {
 	plugins_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_video_path(const std::string& newpath)
 {
 	video_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_themes_path(const std::string& newpath)
 {
 	themes_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_shaders_path(const std::string& newpath)
 {
 	shaders_path = newpath;
+	macos_bookmark_store(newpath);
+}
+
+void set_bezels_path(const std::string& newpath)
+{
+	bezels_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void set_savestate_path(const std::string& newpath)
 {
 	savestate_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_controllers_path()
@@ -3380,6 +3400,7 @@ std::string get_controllers_path()
 void set_controllers_path(const std::string& newpath)
 {
 	controllers_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_retroarch_file()
@@ -3390,6 +3411,7 @@ std::string get_retroarch_file()
 void set_retroarch_file(const std::string& newpath)
 {
 	retroarch_file = newpath;
+	macos_bookmark_store(newpath);
 }
 
 bool get_logfile_enabled()
@@ -3428,6 +3450,7 @@ std::string get_whdbootpath()
 void set_whdbootpath(const std::string& newpath)
 {
 	whdboot_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_whdload_arch_path()
@@ -3438,6 +3461,7 @@ std::string get_whdload_arch_path()
 void set_whdload_arch_path(const std::string& newpath)
 {
 	whdload_arch_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_floppy_path()
@@ -3448,6 +3472,7 @@ std::string get_floppy_path()
 void set_floppy_path(const std::string& newpath)
 {
 	floppy_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_harddrive_path()
@@ -3458,6 +3483,7 @@ std::string get_harddrive_path()
 void set_harddrive_path(const std::string& newpath)
 {
 	harddrive_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_cdrom_path()
@@ -3468,6 +3494,7 @@ std::string get_cdrom_path()
 void set_cdrom_path(const std::string& newpath)
 {
 	cdrom_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_logfile_path()
@@ -3478,6 +3505,7 @@ std::string get_logfile_path()
 void set_logfile_path(const std::string& newpath)
 {
 	logfile_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 std::string get_rom_path()
@@ -3493,6 +3521,7 @@ void get_rom_path(char* out, const int size)
 void set_rom_path(const std::string& newpath)
 {
 	rom_path = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void get_rp9_path(char* out, const int size)
@@ -3552,6 +3581,11 @@ std::string get_themes_path()
 std::string get_shaders_path()
 {
 	return fix_trailing(shaders_path);
+}
+
+std::string get_bezels_path()
+{
+	return fix_trailing(bezels_path);
 }
 
 void get_floppy_sounds_path(char* out, const int size)
@@ -3946,6 +3980,8 @@ void save_amiberry_settings()
 
 	// Show CRT bezel frame overlay
 	write_bool_option("use_bezel", amiberry_options.use_bezel);
+	write_bool_option("use_custom_bezel", amiberry_options.use_custom_bezel);
+	write_string_option("custom_bezel", amiberry_options.custom_bezel);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -3970,6 +4006,7 @@ void save_amiberry_settings()
 	write_string_option("video_dir", video_dir);
 	write_string_option("themes_path", themes_path);
 	write_string_option("shaders_path", shaders_path);
+	write_string_option("bezels_path", bezels_path);
 
 	// Recent disk entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
@@ -4082,6 +4119,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		ret |= cfgfile_string(option, value, "themes_path", themes_path);
 		ret |= cfgfile_string(option, value, "shaders_path", shaders_path);
+		ret |= cfgfile_string(option, value, "bezels_path", bezels_path);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -4149,6 +4187,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
 		ret |= cfgfile_yesno(option, value, "force_mobile_shaders", &amiberry_options.force_mobile_shaders);
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
+		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
+		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);
 	}
 	return ret;
 }
@@ -4307,9 +4347,11 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
+	download_command.append("\"");
 	download_command.append(tmp);
-	download_command.append(" ");
+	download_command.append("\" \"");
 	download_command.append(source);
+	download_command.append("\"");
 	if (!use_curl)
 		download_command.append(" 2>&1"); // wget needs this to capture output to pipe properly
 
@@ -4494,6 +4536,22 @@ std::string get_home_directory(const bool portable_mode)
 		return {tmp};
 	}
 #endif
+#ifdef __MACH__
+	// macOS: use ~/Library/Application Support/Amiberry (standard convention)
+	{
+		const auto user_home_dir = getenv("HOME");
+		if (user_home_dir != nullptr)
+		{
+			std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+			if (!my_existsdir(app_support.c_str()))
+			{
+				my_mkdir(app_support.c_str());
+			}
+			write_log("macOS: Using home directory %s\n", app_support.c_str());
+			return app_support;
+		}
+	}
+#endif
 	if (portable_mode)
 	{
 		// Portable mode, all in startup path
@@ -4538,17 +4596,17 @@ std::string get_home_directory(const bool portable_mode)
 std::string get_config_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	const auto user_home_dir = getenv("HOME");
-	if (!directory_exists(user_home_dir, "/Amiberry"))
+	// macOS: use ~/Library/Application Support/Amiberry/Configurations
 	{
-		my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+		const auto user_home_dir = getenv("HOME");
+		std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+		if (!my_existsdir(app_support.c_str()))
+			my_mkdir(app_support.c_str());
+		std::string config = app_support + "/Configurations";
+		if (!my_existsdir(config.c_str()))
+			my_mkdir(config.c_str());
+		return config;
 	}
-	if (!directory_exists(user_home_dir, "/Amiberry/Configurations"))
-	{
-		my_mkdir((std::string(user_home_dir) + "/Amiberry/Configurations").c_str());
-	}
-	auto result = std::string(user_home_dir);
-	return result.append("/Amiberry/Configurations");
 #elif defined(_WIN32)
 	{
 		const auto user_home_dir = getenv("USERPROFILE");
@@ -4711,6 +4769,16 @@ void create_missing_amiberry_folders()
 		}
 	}
 #endif
+	// Helper to copy directory contents using std::filesystem (handles spaces in paths)
+	auto copy_dir_contents = [](const std::string& src, const std::string& dst) {
+		try {
+			std::filesystem::copy(src, dst,
+				std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+		} catch (const std::exception& e) {
+			write_log("Failed to copy from %s to %s: %s\n", src.c_str(), dst.c_str(), e.what());
+		}
+	};
+
 	if (!my_existsdir(config_path.c_str()))
 		my_mkdir(config_path.c_str());
 	if (!my_existsdir(controllers_path.c_str()))
@@ -4724,13 +4792,11 @@ void create_missing_amiberry_folders()
 		// copy default controller files, if they exist in AMIBERRY_DATADIR/controllers
 		if (my_existsdir(default_controller_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_controller_path + "* " + controllers_path;
-			system(command.c_str());
+			copy_dir_contents(default_controller_path, controllers_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/controllers/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/controllers/* " + controllers_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/controllers/", controllers_path);
 		}
 	}
 	if (!my_existsdir(whdboot_path.c_str()))
@@ -4744,18 +4810,15 @@ void create_missing_amiberry_folders()
 		// copy default whdboot files, if they exist in AMIBERRY_DATADIR/whdboot
 		if (my_existsdir(default_whdboot_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_whdboot_path + "* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents(default_whdboot_path, whdboot_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/whdboot/", whdboot_path);
 		}
 		else if (my_existsdir("/usr/local/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/local/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/local/share/amiberry/whdboot/", whdboot_path);
 		}
 		else
 		{
@@ -4836,18 +4899,15 @@ void create_missing_amiberry_folders()
 		// copy default kickstart files, if they exist in AMIBERRY_DATADIR/roms
 		if (my_existsdir(default_roms_path.c_str()))
 		{
-			const std::string command = "cp -R " + default_roms_path + "* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents(default_roms_path, rom_path);
 		}
 		else if (my_existsdir("/usr/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/share/amiberry/roms/", rom_path);
 		}
 		else if (my_existsdir("/usr/local/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -R /usr/local/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
+			copy_dir_contents("/usr/local/share/amiberry/roms/", rom_path);
 		}
 	}
 	//if (!my_existsdir(rp9_path.c_str()))
@@ -4870,6 +4930,8 @@ void create_missing_amiberry_folders()
 		my_mkdir(themes_path.c_str());
 	if (!my_existsdir(shaders_path.c_str()))
 		my_mkdir(shaders_path.c_str());
+	if (!my_existsdir(bezels_path.c_str()))
+		my_mkdir(bezels_path.c_str());
 	std::string default_theme_file = themes_path + "Default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
@@ -4950,7 +5012,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	if (portable_mode)
 #endif
 	{
-		themes_path = shaders_path= config_path;
+		themes_path = shaders_path = bezels_path = config_path;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
@@ -4986,7 +5048,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 		xdg_config_home += "/" + amiberry_dir;
 		if (!my_existsdir(xdg_config_home.c_str()))
 			my_mkdir(xdg_config_home.c_str());
-		themes_path = shaders_path = xdg_config_home;
+		themes_path = shaders_path = bezels_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = 
@@ -5018,6 +5080,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("/Videos/");
 	themes_path.append("/Themes/");
 	shaders_path.append("/Shaders/");
+	bezels_path.append("/Bezels/");
 #elif defined(__ANDROID__)
     controllers_path.append("controllers/");
     whdboot_path.append("whdboot/");
@@ -5038,6 +5101,7 @@ static void init_amiberry_dirs(const bool portable_mode)
     video_dir.append("videos/");
     themes_path.append("themes/");
     shaders_path.append("shaders/");
+    bezels_path.append("bezels/");
 #elif defined(_WIN32)
 	controllers_path.append("\\Controllers\\");
 	whdboot_path.append("\\Whdboot\\");
@@ -5057,6 +5121,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("\\Videos\\");
 	themes_path.append("\\Themes\\");
 	shaders_path.append("\\Shaders\\");
+	bezels_path.append("\\Bezels\\");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -5076,6 +5141,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("/videos/");
 	themes_path.append("/themes/");
 	shaders_path.append("/shaders/");
+	bezels_path.append("/bezels/");
 #endif
 
 	retroarch_file = config_path;
@@ -5387,6 +5453,7 @@ int amiberry_main(int argc, char* argv[])
 {
 #ifdef __ANDROID__
 	if (SDL_Init(0) < 0) {
+		write_log("SDL_Init(0) failed: %s\n", SDL_GetError());
 	}
 #endif
 	max_uae_width = 8192;
@@ -5400,6 +5467,8 @@ int amiberry_main(int argc, char* argv[])
 			console_logging = 1;
 		if (_tcscmp(argv[i], _T("--jit-selftest")) == 0)
 			run_jit_selftest = true;
+		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
+			forceroms = 1;
 	}
 
 	if (run_jit_selftest)
@@ -5445,6 +5514,7 @@ int amiberry_main(int argc, char* argv[])
 	{
 		load_amiberry_settings();
 	}
+	macos_bookmarks_init(get_home_directory(portable_mode));
 	create_missing_amiberry_folders();
 
 	makeverstr(VersionStr);

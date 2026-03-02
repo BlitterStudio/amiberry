@@ -13,7 +13,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **FreeBSD**: x86_64
 - **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
-- **Version**: 8.0.0 (Public Beta 22)
+- **Version**: 8.0.0 (Public Beta 26)
 - **Languages**: C/C++
 - **Build System**: CMake (minimum 3.16)
 - **License**: GPL (see LICENSE file)
@@ -49,6 +49,29 @@ The Android build uses Gradle and fetches dependencies via CMake FetchContent:
 ```bash
 cd android
 ./gradlew assembleRelease
+```
+
+#### Android Versioning (Play Store)
+
+Android now derives app version metadata from the top-level `CMakeLists.txt`:
+- `project(... VERSION x.y.z)` -> Android `versionName` base
+- `set(VERSION_PRE_RELEASE "N")` -> Android beta suffix (`x.y.z-betaN`)
+
+`versionCode` is generated to stay monotonic for Play uploads:
+- Formula: `major * 1_000_000 + minor * 10_000 + patch * 100 + slot`
+- `slot = N` for pre-release (`VERSION_PRE_RELEASE` 1..98)
+- `slot = 99` for final release (no pre-release suffix / `0`)
+
+Examples:
+- `8.0.0-beta26` -> `versionCode 8000026`
+- `8.0.0` (final) -> `versionCode 8000099`
+
+This ensures final is always greater than any beta for the same `x.y.z`.
+If needed, override only the code at build time with:
+
+```bash
+cd android
+./gradlew bundleRelease -PANDROID_VERSION_CODE=8000100
 ```
 
 ### Windows (MinGW-w64)
@@ -136,6 +159,8 @@ amiberry/
 - `src/osdep/amiberry_gfx.cpp` - Graphics/display handling
 - `src/osdep/amiberry_input.cpp` - Input device handling
 - `src/osdep/amiberry_input.h` - Input device types and declarations
+- `src/osdep/macos_bookmarks.h` - macOS security-scoped bookmark API (no-op stubs when not App Store)
+- `src/osdep/macos_bookmarks.mm` - macOS security-scoped bookmark implementation (Objective-C++)
 - `src/osdep/on_screen_joystick.cpp` - On-screen touch joystick (Android/touchscreens)
 - `src/osdep/on_screen_joystick.h` - On-screen joystick public API
 - `src/osdep/amiberry_gui.cpp` - GUI management
@@ -146,6 +171,34 @@ amiberry/
 - `src/osdep/amiberry_mem.cpp` - Natmem shared memory mapping and gap management
 - `src/osdep/sigsegv_handler.cpp` - SIGSEGV handler for JIT code faults
 - `src/vm.cpp` - Virtual memory abstraction (reserve/commit/decommit)
+
+### ROM Detection & Registry System
+
+**Registry:** Amiberry uses an INI-file-based "registry" (`src/osdep/registry.cpp`, always `inimode=1`) stored in `amiberry.ini`. Sections act as registry "trees" (e.g., `[DetectedROMs]`). Persists across launches.
+
+**ROM scanning flow:**
+1. `amiberry_main()` early arg loop processes `--rescan-roms` → sets `forceroms = 1`
+2. `initialize_ini()` → `read_rom_list(true)` checks `!exists || forceroms`
+3. If true: `scan_roms()` runs — walks ROM path, CRC32-matches against `rommgr.cpp` database (340+ entries), writes to `[DetectedROMs]` in INI, adds built-in AROS ROMs (crc32==0xffffffff)
+4. `read_rom_list()` loads entries from INI into global `rl[]` array
+5. Model selection (`bip_a500()`, etc.) calls `configure_rom(p, roms, romcheck)` which searches `rl[]` for matching ROM IDs in priority order
+
+**Critical timing:** `initialize_ini()` runs BEFORE `parse_cmdline_and_init_file()`. CLI flags affecting ROM scanning must be processed in the early arg loop in `amiberry_main()` (alongside `--log`, `--jit-selftest`), not in `parse_cmdline()`.
+
+**`--rescan-roms` flag:** Forces `scan_roms()` on every launch. Android always passes this to ensure newly added ROMs are detected. Added in the early arg scan at `amiberry.cpp:5441`.
+
+### CLI Argument Processing Order
+
+Startup in `amiberry_main()` processes arguments in phases:
+1. **Early arg scan** (`amiberry_main()` loop) — `--log`, `--jit-selftest`, `--rescan-roms`
+2. `parse_amiberry_cmd_line()` — Amiberry-specific args (custom data dir, etc.)
+3. **`initialize_ini()`** — loads `amiberry.ini`, calls `read_rom_list()` (ROM scanning happens here)
+4. `parse_cmdline_and_init_file()`:
+   a. `parse_cmdline_2()` — `-cfgparam` only
+   b. `target_cfgfile_load(optionsfile)` — loads default config if exists
+   c. `parse_cmdline()` — `--model`, `--config`, `-0`, `--autoload`, `-s`, etc. (processed in argv order)
+
+**Key implication:** `--model` and `--config` in `parse_cmdline()` execute in command-line order. When Android passes `--model A500 --config file.uae`, the config file loads AFTER `bip_a500()` and can override ROM selection via `kickstart_rom_file`.
 
 ### Natmem / JIT Memory System
 
@@ -158,7 +211,7 @@ The emulator maps Amiga's address space into a contiguous host virtual memory bl
 - `shmids[]` array (MAX_SHMID=256) tracks all committed regions
 
 **Gap handling (`commit_natmem_gaps()`):**
-Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and Kickstart ROM) would cause SIGSEGV on access. After all banks are mapped, `commit_natmem_gaps()` walks the natmem space and commits any remaining gaps with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). This is called at the end of `memory_reset()` behind `#ifdef NATMEM_OFFSET`.
+Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and Kickstart ROM) would cause SIGSEGV on access. After all banks are mapped, `commit_natmem_gaps()` walks the natmem space and commits any remaining gaps with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). This is called at the end of `memory_reset()` behind `#ifdef NATMEM_OFFSET`. On POSIX systems, `memset` is skipped when the fill byte is 0x00 because the kernel zero-fills anonymous pages on demand — this avoids physically allocating the trailing gap (which can be ~1.8GB on A4000 configs) and prevents OOM on memory-constrained platforms like Android.
 
 **Key variables** (in `amiberry_mem.cpp`):
 - `natmem_reserved` — base pointer of reserved block
@@ -168,6 +221,20 @@ Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and K
 
 **SIGSEGV handler** (`sigsegv_handler.cpp`):
 When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR instruction and emulates the access via bank handlers. Faults outside JIT code range are not recovered.
+
+### ARM64 JIT Android Support (2026-02)
+
+The ARM64 JIT compiler works on Android (AArch64). Three issues were solved to enable it:
+
+1. **macOS-only guards generalized**: 14 `#if defined(__APPLE__) && defined(CPU_AARCH64)` guards in `compemu_support_arm.cpp` changed to `#if defined(CPU_AARCH64)`. This gives Android the same RWX code allocation, combined popallspace+cache layout, and 64-bit pointer tolerance that macOS uses. macOS-specific APIs (`MAP_JIT`, `pthread_jit_write_protect_np`) remain behind `__APPLE__` guards.
+
+2. **`UAE_VM_32BIT` scan loop**: `vm_acquire_code()` used the `UAE_VM_32BIT` flag on non-Apple ARM64, causing ~460K futile `mmap`/`munmap` iterations because Android's natmem sits well above 4GB (`0x7604c00000`). Fixed by setting `flags = 0` for non-Apple ARM64.
+
+3. **OOM from natmem gap `memset`**: Enabling JIT sets `canbang=true` (via `jit_direct_compatible_memory` when `cachesize > 0`), which activates `commit_natmem_gaps()`. The trailing gap (~1.84GB on A4000) `memset` forced physical page allocation, OOM-killing on Android. Fixed in `amiberry_mem.cpp`: skip `memset` when `fill_byte == 0` on POSIX (the kernel zero-fills anonymous pages).
+
+**Key insight**: Before JIT is enabled, `cachesize == 0` → `jit_direct_compatible_memory = false` → `canbang = false` → `commit_natmem_gaps()` returns early. The 1.84GB trailing gap was never an issue until JIT activated it.
+
+**Android JIT memory model**: Code memory is allocated RWX (`PROT_READ|PROT_WRITE|PROT_EXEC`) from the start via `uae_vm_alloc(..., UAE_VM_READ_WRITE_EXECUTE)`. Unlike macOS (which uses MAP_JIT + W^X toggling via `pthread_jit_write_protect_np`), Android keeps memory permanently RWX. The `jit_begin_write_window()` / `jit_end_write_window()` calls are no-ops on Android. `flush_cpu_icache()` uses `__builtin___clear_cache()` (not macOS's `sys_icache_invalidate`). An SELinux error hint is logged in `vm.cpp` if RWX allocation fails.
 
 ### ARM64 JIT Stability Notes (2026-02)
 
@@ -202,7 +269,19 @@ When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR
 
 **Natmem reservation**: On ARM64, `UAE_VM_32BIT` is dropped from the natmem reservation call since the JIT is 64-bit-clean. This avoids ~25 wasted mmap/munmap cycles on platforms where the kernel ignores low-address hints.
 
-**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has the same 32-bit type patterns but uses separate files. It works on platforms where natmem fits below 4GB. If x86_64 natmem ever moves above 4GB, the same fixes would be needed there.
+**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has been made 64-bit pointer-clean. Key changes:
+- `JITPTR` passes full pointer width (`(uintptr)` cast, no truncation)
+- `reg_status::val` widened to `uintptr` (was `uae_u32`) — `set_const()`/`get_const()` carry 64-bit values
+- PC_P uses 64-bit loads/stores via `raw_mov_q_ri`/`raw_mov_q_mi` in `mov_l_ri`, `writeback_const`, `tomem`, `alloc_reg_hinted`
+- R_MEMSTART (R15) holds `natmem_offset` for all JIT memory access: `[R_MEMSTART + m68k_addr]`
+- ADDR32 prefix removed from all `raw_*` functions (eliminates 5-cycle Intel Core penalty)
+- `readmem_real`/`writemem_real` bank handler paths rewritten for 64-bit pointer chase (function pointer and bank base address loaded via 64-bit MOV through scratch register, not RIP-relative)
+- `isconst` shortcuts disabled (`#if !X86_TARGET_64BIT`) in 15 mid-level functions that would otherwise fold natmem addresses into RIP-relative memory operands (overflows ±2GB displacement on x86-64): `mov_l_rR`, `mov_w_rR`, `mov_b_rR`, `mov_l_brR`, `mov_w_brR`, `mov_b_brR`, `mov_l_Ri`, `mov_w_Ri`, `mov_b_Ri`, `mov_l_Rr`, `mov_w_Rr`, `mov_b_Rr`, `mov_l_bRr`, `mov_w_bRr`, `mov_b_bRr`
+- Windows ASLR-disabling linker flags removed
+- Windows blockinfo pool allocation (`vm_acquire` in `compemu_support_x86.cpp`) uses VirtualQuery walk to find free regions within ±1.75GB of the JIT cache, replacing the blind 16MB-step scan that exhausted in congested ASLR address spaces
+- PIE is a compile-time error (`#error` guard in `compemu_support_x86.cpp` line 106-108)
+
+**Natmem reservation on x86-64**: `UAE_VM_32BIT` is kept (NOT stripped) for x86-64, unlike ARM64. This ensures `natmem_offset` lands near 0x80000000 on all platforms, keeping `comp_pc_p` (= `natmem_offset + M68k_addr`) within 32 bits. This is necessary because the x86-64 JIT still has 32-bit arithmetic paths for PC_P (`add_l_ri` → `ADDLir`, `adjust_nreg` → 32-bit LEA) that would truncate if `natmem_offset > 4GB`. The ARM64 JIT doesn't have this limitation because `arm_ADD_l_ri()` uses 64-bit ADD when `d == PC_P`.
 
 ### GUI System
 
@@ -215,6 +294,40 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 - `display.cpp`, `sound.cpp` - Output settings
 - `input.cpp` - Controller configuration
 - `whdload.cpp` - WHDLoad integration
+
+### Custom Bezel Overlay System
+
+Custom bezels are PNG/JPEG images (e.g., CRT monitor frames) with a transparent "screen hole" where the emulator output shows through. They work with **all** shader types (crtemu built-in, external GLSL, GLSLP presets).
+
+**Rendering order in `show_screen()`:**
+1. Clear to black
+2. Render emulator output via active shader (constrained to screen hole viewport)
+3. Render software cursor
+4. **Render custom bezel overlay** (full window, alpha blended)
+5. Render OSD, virtual keyboard, on-screen joystick (on top of bezel)
+6. SwapWindow
+
+**Architecture:**
+- Bezel texture loaded via `IMG_Load()` → `SDL_ConvertSurfaceFormat(ABGR8888)` → GL texture upload
+- Alpha channel scanned during load to detect transparent screen hole bounding box (threshold: alpha < 128)
+- Screen hole stored as normalized coordinates (`bezel_hole_x/y/w/h` in 0.0-1.0 range)
+- `renderAreaX/Y/W/H` variables in `show_screen()` define the effective render area for all shader paths
+- `crtemu_t::skip_aspect_correction` flag bypasses crtemu's internal 4:3 letterboxing when bezel controls the viewport
+- Lazy texture loading: `render_bezel_overlay()` loads on first render frame (GL context safe), not from GUI
+- `update_custom_bezel()` (called from GUI) only clears `loaded_bezel_name` to trigger reload — no GL calls
+- Built-in CRT bezel and custom bezels are mutually exclusive
+
+**Key files:**
+- `src/osdep/amiberry_gfx.cpp` — `load_bezel_texture()`, `destroy_bezel_overlay()`, `update_custom_bezel()`, `render_bezel_overlay()`, renderArea logic in `show_screen()`
+- `src/osdep/crtemu.h` — `skip_aspect_correction` field and modified aspect ratio logic in `crtemu_present()`
+- `src/osdep/imgui/filter.cpp` — GUI controls, bezel scanning (`scan_bezels()`), mutual exclusion logic
+- `src/osdep/amiberry.cpp` — `bezels_path` variable, `get_bezels_path()`/`set_bezels_path()`, config save/load
+- `src/include/options.h` — `use_custom_bezel`, `custom_bezel[256]` fields in `amiberry_options`
+
+**Config options** (in `amiberry.conf`):
+- `use_custom_bezel` — enable custom bezel overlay (boolean)
+- `custom_bezel` — filename relative to bezels directory (string, "none" to disable)
+- `bezels_path` — path to bezels directory
 
 ### On-Screen Joystick (Touch Controls)
 
@@ -258,6 +371,116 @@ The UAE input device system uses `inputdevice_functions` structs for each device
 
 **Device registration pattern:** Append to `di_joystick[]`, increment `num_joystick`, call `cleardid()` + `fixthings()` to initialize metadata, set axes/buttons/names/mappings. The device then appears in the Input configuration GUI dropdown.
 
+### Android App Architecture
+
+The Android app (`android/app/src/main/java/com/blitterstudio/amiberry/`) is a Kotlin/Jetpack Compose front-end that launches the native SDL emulator process via Intent args. There is no JNI control layer for runtime settings; communication is CLI-style through `SDL_ARGS`.
+
+**Process and Activity model**
+- `ui/MainActivity.kt` is the launcher activity in the main app process.
+- `AmiberryActivity.java` extends `SDLActivity` and runs in a dedicated `:sdl` process (`AndroidManifest.xml`).
+- Native launch args are passed via `Intent.putExtra("SDL_ARGS", String[])`; `AmiberryActivity.getArguments()` returns them to SDL/native `main()`.
+- `AmiberryActivity` registers `OnBackInvokedCallback` (API 33+) and forwards back to SDL when SDL's trap hint is enabled (`SDL_ANDROID_TRAP_BACK_BUTTON`), otherwise finishes the activity.
+- `AmiberryActivity.onDestroy()` kills the `:sdl` process when finishing, so each emulator launch starts from a clean process state.
+- SDL activity is started with `android:enableOnBackInvokedCallback="true"` and fullscreen theme; immersive bars are reapplied on focus changes.
+
+**Startup/bootstrap behavior (`MainActivity`)**
+- Calls `enableEdgeToEdge()`.
+- Extracts packaged assets to `getExternalFilesDir(null)` on first run per app version.
+- Uses `.extracted_version` marker file to skip re-extraction when version unchanged.
+- Ensures user directories exist: `roms`, `floppies`, `harddrives`, `cdroms`, `lha`, `conf`.
+- Shows a loading screen ("Preparing Amiberry...") until extraction/dir prep completes.
+
+**Navigation/UI shell**
+- `ui/AmiberryApp.kt` hosts 4 root screens:
+  - Quick Start
+  - Settings
+  - File Manager
+  - Configurations
+- Uses `NavigationRail` in landscape and bottom `NavigationBar` in portrait.
+- Uses `Screen` sealed class with string resources for nav labels.
+
+**State ownership and sharing**
+- `SettingsViewModel` (activity-scoped in screens) is the single source of truth for current emulation settings.
+- Quick Start and Settings both operate on the same `SettingsViewModel`, so model/media changes are shared across these tabs.
+- `QuickStartViewModel` holds WHDLoad selection and media lists.
+- `FileManagerViewModel` handles import + per-category rescans.
+- `ConfigurationsViewModel` handles saved `.uae` list/load/duplicate/delete/rename operations.
+
+**Core Android data layer**
+- `data/EmulatorLauncher.kt`
+  - Quick Start launch: `--rescan-roms --model <model> [-0 <floppy>] [-s cdimage0=<cd>] -G`
+  - Config launch: `--rescan-roms --config <path> [-G]`
+  - WHDLoad launch: `--rescan-roms --autoload <lha> -G`
+  - Advanced launch: `--rescan-roms [--config <path>] -s use_gui=yes` (no `-G`)
+- `data/ConfigGenerator.kt`
+  - Generates `.uae` from `EmulatorSettings`.
+  - Writes `use_gui=no` for native-UI-driven launches.
+  - Omits `joyport1` when using `onscreen_joy` so runtime auto-assignment can apply.
+- `data/ConfigParser.kt`
+  - Parses known keys into `EmulatorSettings`.
+  - Preserves unknown lines for round-trip safety.
+  - Supports config description and heuristic `baseModel` guess when loading arbitrary configs.
+- `data/ConfigRepository.kt`
+  - Lists non-hidden `.uae` files from `conf/`.
+  - Safe filename validation (blocks separators, `..`, and path escapes via canonical checks).
+  - Save/load/delete/rename/duplicate helpers.
+- `data/FileManager.kt`
+  - SAF import with duplicate-safe filename suffixing.
+  - Scans category dir + app root; ROM scan also includes `whdboot/game-data/Kickstarts`.
+  - Computes CRC32 for ROM files (`AmigaFile.crc32`) to support deterministic ROM-ID matching.
+- `data/FileRepository.kt`
+  - Singleton with `StateFlow<List<AmigaFile>>` per category and rescan APIs.
+
+**Key UI behavior details**
+- Quick Start:
+  - No top-right "advanced gear"; advanced access is in Settings/Configurations.
+  - Supports model selection, floppy/CD media pickers, and WHDLoad launch.
+  - Start button is blocked with snackbar when no ROM is available/selected.
+- Settings:
+  - Top app bar overflow actions: Save Configuration, Advanced (ImGui).
+  - Advanced opens ImGui with a generated temp config and preserved unknown lines.
+  - Start uses generated config args (`--model + --config + -G`) and same ROM presence guard.
+  - Tabs: CPU, Chipset, Memory, Display, Sound, Input, Storage.
+- File Manager:
+  - Import via SAF (`OpenDocument`) into selected category.
+  - Shows app storage path and copy-to-clipboard action.
+- Configurations:
+  - Single-tap loads config into `SettingsViewModel` and navigates to Settings.
+  - Per-item actions: launch, edit, advanced edit in ImGui, duplicate, delete.
+
+**Android model preset parity (`--model` vs Settings)**
+- Requirement: Settings model selection must match CLI `--model` ROM behavior from `main.cpp` wrappers and `bip_*` logic.
+- Do not use filename/version heuristics for default ROM assignment.
+- `SettingsViewModel.applyModel()` uses ROM IDs derived from CRC32, with explicit per-model priority lists (`MODEL_ROM_PROFILE`).
+- It sets both `romFile` and `romExtFile` as needed (CDTV/CD32 split-ROM cases).
+
+**Exact ROM ID priority (matches current `--model` wrappers)**
+- `A500` -> `6, 5, 4` (`bip_a500(...,130)`)
+- `A500P` -> `7, 6, 5` (`bip_a500plus(...,-1)`)
+- `A600` -> `10, 9, 8`
+- `A1000` -> `24`
+- `A2000` -> `6, 5, 4` (`bip_a2000(...,130)`)
+- `A3000` -> `59`
+- `A1200` -> `11, 15, 276, 281, 286, 291, 304`
+- `A4000` -> `16, 31, 13, 12, 46, 278, 283, 288, 293, 306`
+- `CD32` -> kick `64, 18`; ext `19` required when kick is `18` (kick `64` is combined KS+ext)
+- `CDTV` -> kick `6, 32`; ext `20, 21, 22` required
+
+**ROM-selection invariants**
+- Quick Start (`--model`) and Settings model selection should result in equivalent default ROM choices.
+- For CDTV/CD32 split-ROM setups, selection is invalid unless required ext ROM is present.
+- If no ROM ID from profile exists, leave auto-selection empty (no heuristic fallback).
+- If C++ `--model` wrappers / `bip_*` defaults change, update Android `MODEL_ROM_PROFILE` and `ROM_CRC_TO_ID`.
+
+**Settings hardware constraints (`SettingsViewModel.applyConstraints`)**
+- 68000/68010 forces 24-bit addressing; disables Z3 RAM and JIT.
+- `cycle_exact=true` forces `cpu_speed=real` and disables JIT.
+- JIT (`jitCacheSize > 0`) requires 68020+; when enabled it forces `cpu_speed=max` and `jitFpu=true`.
+- 24-bit addressing disables JIT.
+- Z3 RAM requires 32-bit addressing.
+- Internal FPU model (68040) only valid for CPU >= 68040.
+- On-screen joystick (`joyport1=onscreen_joy`) is disabled on non-touch devices.
+
 ### Platform Support
 
 Platform-specific code is in `src/osdep/`:
@@ -269,10 +492,31 @@ Platform-specific code is in `src/osdep/`:
 
 ### macOS Port Notes
 
+**Home directory (since Beta 23):**
+- macOS now uses `~/Library/Application Support/Amiberry` as the HOME directory (standard macOS convention), instead of the previous `~/Amiberry`. This path contains spaces, so all shell commands operating on paths must quote arguments.
+- `get_home_directory()` creates this directory on first run.
+- `get_config_directory()` returns `~/Library/Application Support/Amiberry/Configurations`.
+- The `amiberry.conf` file is stored at `~/Library/Application Support/Amiberry/Configurations/amiberry.conf`.
+- All user data subdirectories (floppies, roms, savestates, etc.) are created under `~/Library/Application Support/Amiberry/`.
+
+**Security-scoped bookmarks (App Store preparation):**
+- `src/osdep/macos_bookmarks.h` / `macos_bookmarks.mm` — bookmark system for macOS App Sandbox.
+- Active only when `MACOS_APP_STORE` is defined; no-op inline stubs otherwise.
+- Every `set_*_path()` function calls `macos_bookmark_store()` to persist access rights.
+- `macos_bookmarks_init()` is called at startup (in `amiberry_main()`) to restore bookmarks.
+- Bookmarks are stored as a binary plist in `~/Library/Application Support/Amiberry/bookmarks.plist`.
+- Entitlements: `packaging/macos/Amiberry-AppStore.entitlements` adds `app-sandbox`, `files.user-selected.read-write`, `files.bookmarks.app-scope`, `network.client`, `device.usb`.
+
+**Initial folder setup:**
+- `create_missing_amiberry_folders()` uses `std::filesystem::copy()` (via a `copy_dir_contents` lambda) instead of `system("cp -R ...")` to handle spaces in paths correctly. This applies to all platforms, not just macOS.
+
+**Shell quoting in downloads:**
+- `download_file()` in `amiberry.cpp` wraps both the destination path and source URL in double quotes when constructing curl/wget shell commands via `popen()`. This fixes failures when paths contain spaces.
+
 **DiskArbitration & CD-ROMs:**
 - macOS mounts Audio CDs via `cddafs`, which inherently puts an exclusive lock on the standard block device (e.g., `/dev/disk4`) returning `EBUSY` when `open()` is attempted.
 - `src/osdep/blkdev_ioctl.cpp` handles this by intentionally falling back to the raw character device (`/dev/rdisk4`).
-- Interfacing with Apple's `DiskArbitration` framework (to retrieve CD TOCs) *requires* the block device string. Therefore `ioctl_command_toc2` temporarily reverts `/dev/rdiskX` back to `/dev/diskX` before passing it to `DADiskCreateFromBSDName`. 
+- Interfacing with Apple's `DiskArbitration` framework (to retrieve CD TOCs) *requires* the block device string. Therefore `ioctl_command_toc2` temporarily reverts `/dev/rdiskX` back to `/dev/diskX` before passing it to `DADiskCreateFromBSDName`.
 - Fetching audio sectors requires grouping `CDDA_BUFFERS` into a single `ioctl` call from the character device, and unpacking the contiguous stream with a 96-byte padding gap matching Amiberry's 2448-byte CDDA stride.
 
 ### Windows Port Notes
@@ -280,8 +524,8 @@ Platform-specific code is in `src/osdep/`:
 **Key Differences from POSIX platforms:**
 - `sysconfig.h` previously `#undef _WIN32` — this was removed to unlock WinUAE Windows code paths
 - Windows LLP64: `long` is 4 bytes (not 8); `SIZEOF_LONG` must be 4 in `sysconfig.h`
-- JIT compiler is non-functional on 64-bit Windows (pointers exceed 32-bit); interpreter mode works fine
-- `src/jit/x86/compemu_x86.h`: `check_uae_p32()` logs instead of calling `jit_abort()` under `AMIBERRY`
+- JIT compiler works on 64-bit Windows. The x86_64 JIT is 64-bit pointer-clean: `JITPTR` passes full pointer width, `PC_P` uses 64-bit loads/stores, ADDR32 prefix removed, `isconst` shortcuts disabled for natmem-translated addresses, and blockinfo pools allocated near JIT cache via VirtualQuery walk. ASLR-disabling linker flags are no longer needed. `UAE_VM_32BIT` is kept for x86-64 natmem to ensure `comp_pc_p` fits in 32 bits (see "Natmem reservation on x86-64" in the ARM64 JIT section).
+- `src/jit/x86/compemu_x86.h`: `uae_p32()` is now a simple `(uintptr)` cast (no truncation)
 - `src/osdep/crtemu.h` line 80: uses `CRTEMU_SDL` path on Windows+Amiberry (not WinUAE's direct LoadLibrary path)
 
 **Symlinks:** Windows requires admin/DevMode for symlinks and uses different APIs for file vs directory symlinks. The WHDBooter (`src/osdep/amiberry_whdbooter.cpp`) uses `std::filesystem::copy()` directly on Windows for directory links, with try-catch fallback for file links.

@@ -276,11 +276,10 @@ bool preinit_shm ()
 	uae_u32 max_allowed_mman = 512 + 256;
 	if (os_64bit) {
 #ifdef CPU_64_BIT
-		// On x86-64, the JIT compiler uses 32-bit addressing (address override
-		// prefix) so natmem must fit below 4GB → max 2GB from 0x80000000.
-		// On ARM64, the JIT is 64-bit pointer-clean so natmem can be anywhere,
-		// but we still cap the reservation size at 2GB (plenty for Amiga).
-		// This is plenty for Amiga emulation (2GB of Z3 address space).
+		// On x86-64, the JIT uses [reg + disp32] for natmem access. The disp32
+		// is sign-extended, so natmem_offset must be < 0x80000000 (2GB).
+		// On ARM64, the JIT is fully 64-bit pointer-clean via dedicated register.
+		// Both cap the reservation size at 2GB (plenty for Amiga).
 		max_allowed_mman = 2048 - 1;
 #else
 		// 32-bit builds (e.g. WoW64): all addresses are naturally below 4GB.
@@ -369,9 +368,13 @@ bool preinit_shm ()
 	{
 		int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
 #if defined(CPU_AARCH64)
-		/* ARM64 JIT is 64-bit pointer-clean: natmem can live above 4GB.
-		   Dropping UAE_VM_32BIT avoids ~25 futile mmap/munmap cycles on
-		   platforms (e.g. macOS) where the kernel ignores low-address hints. */
+		/* ARM64 JIT is fully 64-bit pointer-clean (including add/sub on PC_P):
+		   natmem can live above 4GB.  Dropping UAE_VM_32BIT avoids futile
+		   mmap/munmap cycles on platforms where the kernel ignores low-address
+		   hints (e.g. macOS ARM64).
+		   x86-64 JIT still has 32-bit arithmetic paths for PC_P (add_l_ri,
+		   adjust_nreg/LEA) that would truncate if natmem_offset > 4GB.
+		   Keep UAE_VM_32BIT for x86-64 to ensure natmem lands near 0x80000000. */
 		vm_flags &= ~UAE_VM_32BIT;
 #endif
 		natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, vm_flags));
@@ -1276,7 +1279,12 @@ void commit_natmem_gaps(void)
 				uae_u32 gap_size = gap_end - gap_start;
 				uae_u8* addr = natmem_reserved + gap_start;
 				if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
-					memset(addr, fill_byte, gap_size);
+#ifndef _WIN32
+					/* On POSIX, freshly committed anonymous pages are zero-filled
+					 * by the kernel. Only memset if we need a non-zero fill. */
+					if (fill_byte != 0)
+#endif
+						memset(addr, fill_byte, gap_size);
 					total_gap += gap_size;
 					write_log(_T("MMAN: Committed gap %08x-%08x (%uK) fill=0x%02x\n"),
 						gap_start, gap_end, gap_size >> 10, fill_byte);
@@ -1294,7 +1302,10 @@ void commit_natmem_gaps(void)
 			uae_u32 gap_size = gap_end - gap_start;
 			uae_u8* addr = natmem_reserved + gap_start;
 			if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
-				memset(addr, fill_byte, gap_size);
+#ifndef _WIN32
+				if (fill_byte != 0)
+#endif
+					memset(addr, fill_byte, gap_size);
 				total_gap += gap_size;
 				write_log(_T("MMAN: Committed trailing gap %08x-%08x (%uK) fill=0x%02x\n"),
 					gap_start, gap_end, gap_size >> 10, fill_byte);

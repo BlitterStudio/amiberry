@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background gradient: dark Amiga-themed blue -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#1A237E"
+                android:centerColor="#283593"
+                android:endColor="#1A237E"
+                android:angle="135" />
+        </shape>
+    </item>
+
+    <!-- Subtle bottom accent bar (Amiga checkmark-style) -->
+    <item android:top="156dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#E65100" />
+        </shape>
+    </item>
+    <item android:top="162dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+    <item android:top="168dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#2E7D32" />
+        </shape>
+    </item>
+    <item android:top="174dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#0D47A1" />
+        </shape>
+    </item>
+
+    <!-- App icon centered (reuse launcher foreground) -->
+    <item
+        android:drawable="@mipmap/ic_launcher_foreground"
+        android:gravity="center"
+        android:width="80dp"
+        android:height="80dp" />
+</layer-list>

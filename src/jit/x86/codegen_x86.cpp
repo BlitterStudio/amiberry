@@ -59,6 +59,9 @@
 #define R13_INDEX 13
 #define R14_INDEX 14
 #define R15_INDEX 15
+/* Dedicated register holding natmem_offset, analogous to ARM64's R27 (R_MEMSTART).
+   Used in [R_MEMSTART + m68k_addr] addressing to avoid disp32 sign-extension. */
+#define R_MEMSTART R15_INDEX
 #endif
 /* XXX this has to match X86_Reg8H_Base + 4 */
 #define AH_INDEX (0x10+4+EAX_INDEX)
@@ -111,12 +114,12 @@
  * since r/m bits 100 implies SIB byte. Simplest fix is to not use these
  * registers. Also note that these registers are listed in the freescratch
  * function as well. */
-uae_s8 always_used[] = { ESP_INDEX, R12_INDEX, -1 };
+uae_s8 always_used[] = { ESP_INDEX, R12_INDEX, R_MEMSTART, -1 };
 #else
 uae_s8 always_used[] = { ESP_INDEX, -1 };
 #endif
-uae_s8 can_byte[]={0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,-1};
-uae_s8 can_word[]={0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,-1};
+uae_s8 can_byte[]={0,1,2,3,5,6,7,8,9,10,11,12,13,14,-1};
+uae_s8 can_word[]={0,1,2,3,5,6,7,8,9,10,11,12,13,14,-1};
 #else
 uae_s8 always_used[] = { ESP_INDEX, -1 };
 uae_s8 can_byte[]={0,1,2,3,-1};
@@ -198,10 +201,12 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
 
 #if defined(CPU_x86_64)
 #define X86_TARGET_64BIT		1
-/* The address override prefix causes a 5 cycles penalty on Intel Core
-   processors. Another solution would be to decompose the load in an LEA,
-   MOV (to zero-extend), MOV (from memory): is it better? */
-#define ADDR32					x86_emit_byte(0x67),
+/* ADDR32 removed: the address override prefix (0x67) caused a 5-cycle penalty
+   on Intel Core processors and forced 32-bit addressing. With the JIT now
+   64-bit pointer-clean, we use the default 64-bit addressing mode which
+   allows RIP-relative access (via _r_X macro) for addresses within 2GB
+   of the JIT code. This is both faster and supports natmem above 4GB. */
+#define ADDR32
 #else
 #define ADDR32
 #endif
@@ -703,31 +708,74 @@ LOWFUNC(NONE,READ,5,raw_mov_b_brrm_indexed,(W1 d, IMM base, R4 baser, R4 index, 
 	ADDR32 MOVBmr(base, baser, index, factor, d);
 }
 
-LOWFUNC(NONE,READ,4,raw_mov_l_rm_indexed,(W4 d, IMM base, R4 index, IMM factor))
+LOWFUNC(NONE,READ,4,raw_mov_l_rm_indexed,(W4 d, MEMR base, R4 index, IMM factor))
 {
-	ADDR32 MOVLmr(base, X86_NOREG, index, factor, d);
+#if X86_TARGET_64BIT
+	/* x86-64: [disp32 + index*scale] can't reach addresses above ±2GB.
+	   Load 64-bit base into a scratch, then read from [scratch + index*factor].
+	   All callers read pointer arrays (baseaddr[], mem_banks[], cache_tags[]),
+	   so use MOVQmr (64-bit load) to get the full pointer width.
+	   If d == index, we must use a DIFFERENT scratch register so MOVQir
+	   doesn't destroy the index value.
+	   Compare _rR() to get 4-bit hardware register number regardless of
+	   register class (X86_EAX=0x40 and X86_RAX=0x50 are the same register). */
+	if (d == index) {
+		int scratch = (_rR(d) == 0) ? X86_RCX : X86_RAX;
+		PUSHQr(scratch);
+		MOVQir(base, scratch);
+		MOVQmr(0, scratch, index, factor, d);
+		POPQr(scratch);
+	} else {
+		MOVQir(base, d);
+		MOVQmr(0, d, index, factor, d);
+	}
+#else
+	MOVLmr(base, X86_NOREG, index, factor, d);
+#endif
 }
 
-LOWFUNC(NONE,READ,5,raw_cmov_l_rm_indexed,(W4 d, IMM base, R4 index, IMM factor, IMM cond))
+LOWFUNC(NONE,READ,5,raw_cmov_l_rm_indexed,(W4 d, MEMR base, R4 index, IMM factor, IMM cond))
 {
+#if X86_TARGET_64BIT
+	/* x86-64: [disp32 + index*scale] can't reach 64-bit addresses.
+	   Emulate CMOV as: JCC_not skip; MOV d,[base+index*factor]; skip:
+	   If d == index, use a scratch register to hold the base (preserved
+	   via PUSH/POP) to avoid overwriting the index value. */
+	{
+		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
+		JCCSii(cond^1, 0);
+		if (d == index) {
+			int scratch = (_rR(d) == 0) ? X86_RCX : X86_RAX;
+			PUSHQr(scratch);
+			MOVQir(base, scratch);
+			MOVQmr(0, scratch, index, factor, d);
+			POPQr(scratch);
+		} else {
+			MOVQir(base, d);
+			MOVQmr(0, d, index, factor, d);
+		}
+		*target_p = (uae_s8)(JITPTR x86_get_target() - (JITPTR target_p + 1));
+	}
+#else
 	if (have_cmov)
-		ADDR32 CMOVLmr(cond, base, X86_NOREG, index, factor, d);
+		CMOVLmr(cond, base, X86_NOREG, index, factor, d);
 	else { /* replacement using branch and mov */
 		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
 		JCCSii(cond^1, 0);
-		ADDR32 MOVLmr(base, X86_NOREG, index, factor, d);
+		MOVLmr(base, X86_NOREG, index, factor, d);
 		*target_p = JITPTR x86_get_target() - (JITPTR target_p + 1);
 	}
+#endif
 }
 
-LOWFUNC(NONE,READ,3,raw_cmov_l_rm,(W4 d, IMM mem, IMM cond))
+LOWFUNC(NONE,READ,3,raw_cmov_l_rm,(W4 d, MEMR mem, IMM cond))
 {
 	if (have_cmov)
 		CMOVLmr(cond, mem, X86_NOREG, X86_NOREG, 1, d);
 	else { /* replacement using branch and mov */
 		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
 		JCCSii(cond^1, 0);
-		ADDR32 MOVLmr(mem, X86_NOREG, X86_NOREG, 1, d);
+		MOVLmr(mem, X86_NOREG, X86_NOREG, 1, d);
 		*target_p = JITPTR x86_get_target() - (JITPTR target_p + 1);
 	}
 }
@@ -736,6 +784,15 @@ LOWFUNC(NONE,READ,3,raw_mov_l_rR,(W4 d, R4 s, IMM offset))
 {
 	ADDR32 MOVLmr(offset, s, X86_NOREG, 1, d);
 }
+
+#if X86_TARGET_64BIT
+/* 64-bit register-relative load: d = *(uint64_t*)(s + offset).
+   Used for reading pointer-sized values (e.g., function pointers from addrbank). */
+static inline void raw_mov_q_rR(int d, int s, int offset)
+{
+	MOVQmr(offset, s, X86_NOREG, 1, d);
+}
+#endif
 
 LOWFUNC(NONE,READ,3,raw_mov_w_rR,(W2 d, R4 s, IMM offset))
 {
@@ -749,17 +806,32 @@ LOWFUNC(NONE,READ,3,raw_mov_b_rR,(W1 d, R4 s, IMM offset))
 
 LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, R4 s, IMM offset))
 {
+#if X86_TARGET_64BIT
+	/* Use [R_MEMSTART + s + offset] — R_MEMSTART holds natmem_offset.
+	   Caller passes only the accumulated register offset (not MEMBaseDiff)
+	   on x86-64, since R_MEMSTART already provides the natmem base. */
+	MOVLmr(offset, R_MEMSTART, s, 1, d);
+#else
 	ADDR32 MOVLmr(offset, s, X86_NOREG, 1, d);
+#endif
 }
 
 LOWFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, R4 s, IMM offset))
 {
+#if X86_TARGET_64BIT
+	MOVWmr(offset, R_MEMSTART, s, 1, d);
+#else
 	ADDR32 MOVWmr(offset, s, X86_NOREG, 1, d);
+#endif
 }
 
 LOWFUNC(NONE,READ,3,raw_mov_b_brR,(W1 d, R4 s, IMM offset))
 {
+#if X86_TARGET_64BIT
+	MOVBmr(offset, R_MEMSTART, s, 1, d);
+#else
 	ADDR32 MOVBmr(offset, s, X86_NOREG, 1, d);
+#endif
 }
 
 LOWFUNC(NONE,WRITE,3,raw_mov_l_Ri,(R4 d, IMM i, IMM offset))
@@ -794,7 +866,13 @@ LOWFUNC(NONE,WRITE,3,raw_mov_b_Rr,(R4 d, R1 s, IMM offset))
 
 LOWFUNC(NONE,NONE,3,raw_lea_l_brr,(W4 d, R4 s, IMM offset))
 {
-	ADDR32 LEALmr(offset, s, X86_NOREG, 1, d);
+	/* On x86-64 without ADDR32: LEA r32, [r64 + disp32_signext].
+	   The 32-bit operand size truncates the result correctly even when
+	   disp32 sign-extends (e.g. MEMBaseDiff=0x80000000 → -2GB + addr
+	   wraps around in 64-bit, but 32-bit truncation gives correct result).
+	   This works for both natmem translation (MEMBaseDiff offset) and
+	   general register arithmetic (small offsets like 2, 4, -2, -4). */
+	LEALmr(offset, s, X86_NOREG, 1, d);
 }
 
 LOWFUNC(NONE,NONE,5,raw_lea_l_brr_indexed,(W4 d, R4 s, R4 index, IMM factor, IMM offset))
@@ -814,17 +892,30 @@ LOWFUNC(NONE,NONE,4,raw_lea_l_r_scaled,(W4 d, R4 index, IMM factor))
 
 LOWFUNC(NONE,WRITE,3,raw_mov_l_bRr,(R4 d, R4 s, IMM offset))
 {
+#if X86_TARGET_64BIT
+	/* Use [R_MEMSTART + d + offset] — see raw_mov_l_brR comment. */
+	MOVLrm(s, offset, R_MEMSTART, d, 1);
+#else
 	ADDR32 MOVLrm(s, offset, d, X86_NOREG, 1);
+#endif
 }
 
 LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr,(R4 d, R2 s, IMM offset))
 {
+#if X86_TARGET_64BIT
+	MOVWrm(s, offset, R_MEMSTART, d, 1);
+#else
 	ADDR32 MOVWrm(s, offset, d, X86_NOREG, 1);
+#endif
 }
 
 LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr,(R4 d, R1 s, IMM offset))
 {
+#if X86_TARGET_64BIT
+	MOVBrm(s, offset, R_MEMSTART, d, 1);
+#else
 	ADDR32 MOVBrm(s, offset, d, X86_NOREG, 1);
+#endif
 }
 
 LOWFUNC(NONE,NONE,1,raw_bswap_32,(RW4 r))
@@ -842,27 +933,27 @@ LOWFUNC(NONE,NONE,2,raw_mov_l_rr,(W4 d, R4 s))
 	MOVLrr(s, d);
 }
 
-LOWFUNC(NONE,WRITE,2,raw_mov_l_mr,(IMM d, R4 s))
+LOWFUNC(NONE,WRITE,2,raw_mov_l_mr,(MEMW d, R4 s))
 {
 	ADDR32 MOVLrm(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-LOWFUNC(NONE,WRITE,2,raw_mov_w_mr,(IMM d, R2 s))
+LOWFUNC(NONE,WRITE,2,raw_mov_w_mr,(MEMW d, R2 s))
 {
 	ADDR32 MOVWrm(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-LOWFUNC(NONE,READ,2,raw_mov_w_rm,(W2 d, IMM s))
+LOWFUNC(NONE,READ,2,raw_mov_w_rm,(W2 d, MEMR s))
 {
 	ADDR32 MOVWmr(s, X86_NOREG, X86_NOREG, 1, d);
 }
 
-LOWFUNC(NONE,WRITE,2,raw_mov_b_mr,(IMM d, R1 s))
+LOWFUNC(NONE,WRITE,2,raw_mov_b_mr,(MEMW d, R1 s))
 {
 	ADDR32 MOVBrm(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-LOWFUNC(NONE,READ,2,raw_mov_b_rm,(W1 d, IMM s))
+LOWFUNC(NONE,READ,2,raw_mov_b_rm,(W1 d, MEMR s))
 {
 	ADDR32 MOVBmr(s, X86_NOREG, X86_NOREG, 1, d);
 }
@@ -871,6 +962,40 @@ LOWFUNC(NONE,NONE,2,raw_mov_l_ri,(W4 d, IMM s))
 {
 	MOVLir(s, d);
 }
+
+#if X86_TARGET_64BIT
+/* 64-bit immediate → register (movabs r64, imm64).
+   Used for PC_P which holds a 64-bit host pointer. */
+LOWFUNC(NONE,NONE,2,raw_mov_q_ri,(W4 d, uintptr s))
+{
+	MOVQir(s, d);
+}
+
+/* 64-bit value → memory via scratch register.
+   x86_64 has no MOV [mem], imm64 instruction, so we use
+   movabs rax, imm64; then store via RIP-relative or register-indirect. */
+static inline void raw_mov_q_mi(uintptr d, uintptr s)
+{
+	MOVQir(s, X86_RAX);  /* movabs rax, imm64 (value to store) */
+	/* Let _r_X handle RIP-relative vs fallback automatically.
+	   _r_X sees d as uintptr, computes RIP-relative if within ±2GB. */
+	MOVQrm(X86_RAX, d, X86_NOREG, X86_NOREG, 1);  /* mov [d], rax */
+}
+
+/* 64-bit load from memory → register.
+   Used for reloading PC_P from its home slot. */
+static inline void raw_mov_q_rm(int d, uintptr s)
+{
+	MOVQmr(s, X86_NOREG, X86_NOREG, 1, d);  /* mov d, [s] via RIP-relative */
+}
+
+/* 64-bit store from register → memory.
+   Used for flushing PC_P from hardware register to its home slot. */
+static inline void raw_mov_q_mr(uintptr d, int s)
+{
+	MOVQrm(s, d, X86_NOREG, X86_NOREG, 1);  /* mov [d], s via RIP-relative */
+}
+#endif
 
 LOWFUNC(NONE,NONE,2,raw_mov_w_ri,(W2 d, IMM s))
 {
@@ -887,17 +1012,17 @@ LOWFUNC(RMW,RMW,2,raw_adc_l_mi,(MEMRW d, IMM s))
 	ADDR32 ADCLim(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-LOWFUNC(WRITE,RMW,2,raw_add_l_mi,(IMM d, IMM s)) 
+LOWFUNC(WRITE,RMW,2,raw_add_l_mi,(MEMRW d, IMM s))
 {
 	ADDR32 ADDLim(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-LOWFUNC(WRITE,RMW,2,raw_add_w_mi,(IMM d, IMM s)) 
+LOWFUNC(WRITE,RMW,2,raw_add_w_mi,(MEMRW d, IMM s))
 {
 	ADDR32 ADDWim(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-LOWFUNC(WRITE,RMW,2,raw_add_b_mi,(IMM d, IMM s)) 
+LOWFUNC(WRITE,RMW,2,raw_add_b_mi,(MEMRW d, IMM s))
 {
 	ADDR32 ADDBim(s, d, X86_NOREG, X86_NOREG, 1);
 }
@@ -922,7 +1047,7 @@ LOWFUNC(WRITE,NONE,2,raw_test_b_rr,(R1 d, R1 s))
 	TESTBrr(s, d);
 }
 
-LOWFUNC(WRITE,READ,2,raw_test_b_mi,(IMM d, IMM s))
+LOWFUNC(WRITE,READ,2,raw_test_b_mi,(MEMR d, IMM s))
 {
 	ADDR32 TESTBim(s, d, X86_NOREG, X86_NOREG, 1);
 }
@@ -1122,6 +1247,15 @@ LOWFUNC(WRITE,READ,2,raw_cmp_l_mi,(MEMR d, IMM s))
 	ADDR32 CMPLim(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
+#if X86_TARGET_64BIT
+/* CMP [mem64], r64  — compare 8-byte memory value against 64-bit register.
+   Sets flags from [mem] - reg. */
+static inline void raw_cmp_q_mr(uintptr mem, R4 r)
+{
+	CMPQrm(r, mem, X86_NOREG, X86_NOREG, 1);
+}
+#endif
+
 LOWFUNC(NONE,NONE,2,raw_xchg_l_rr,(RW4 r1, RW4 r2))
 {
 	XCHGLrr(r2, r1);
@@ -1168,28 +1302,58 @@ static inline void raw_jmp_r(R4 r)
 	JMPsr(r);
 }
 
-static inline void raw_jmp_m_indexed(uae_u32 base, uae_u32 r, uae_u32 m)
+static inline void raw_jmp_m_indexed(uintptr base, uae_u32 r, uae_u32 m)
 {
-	ADDR32 JMPsm(base, X86_NOREG, r, m);
+#if X86_TARGET_64BIT
+	/* x86-64: load 64-bit base into RAX, then JMP [RAX + r*m].
+	   Caller must ensure r != EAX_INDEX (currently always true:
+	   r = REG_PC_TMP = ECX_INDEX). */
+	MOVQir(base, X86_RAX);
+	JMPsm(0, X86_RAX, r, m);
+#else
+	JMPsm(base, X86_NOREG, r, m);
+#endif
 }
 
-static inline void raw_jmp_m(uae_u32 base)
+static inline void raw_jmp_m(uintptr base)
 {
+#if X86_TARGET_64BIT
+	/* x86-64: load 64-bit address into RAX, then JMP [RAX] */
+	MOVQir(base, X86_RAX);
+	JMPsm(0, X86_RAX, X86_NOREG, 1);
+#else
 	emit_byte(0xff);
 	emit_byte(0x25);
 	emit_long(base);
+#endif
 }
 
 
+#if X86_TARGET_64BIT
+static inline void raw_call(uintptr t)
+{
+	/* 64-bit: load target into scratch register, call via register */
+	MOVQir(t, X86_RAX);
+	CALLsr(X86_RAX);
+}
+
+static inline void raw_jmp(uintptr t)
+{
+	/* 64-bit: load target into scratch register, jump via register */
+	MOVQir(t, X86_RAX);
+	JMPsr(X86_RAX);
+}
+#else
 static inline void raw_call(uae_u32 t)
 {
-	ADDR32 CALLm(t);
+	CALLm(t);
 }
 
 static inline void raw_jmp(uae_u32 t)
 {
-	ADDR32 JMPm(t);
+	JMPm(t);
 }
+#endif
 
 static inline void raw_jcc_l_oponly(int cc)
 {
@@ -2232,12 +2396,24 @@ LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 	}
 }
 
-LOWFUNC(NONE,READ,2,raw_fldcw_m_indexed,(R4 index, IMM base))
+LOWFUNC(NONE,READ,2,raw_fldcw_m_indexed,(R4 index, MEMR base))
 {
+#if X86_TARGET_64BIT
+	/* x86-64: [index + disp32] can't reach 64-bit addresses.
+	   Load base into RAX, use FLDCW [RAX + index*1] via SIB encoding. */
+	MOVQir(base, X86_RAX);
+	x86_64_prefix(false, false, NULL, &index, NULL);
+	emit_byte(0xd9);
+	/* ModRM: mod=00, reg=5 (FLDCW), rm=100 (SIB follows) */
+	emit_byte(0x2c);
+	/* SIB: scale=00 (x1), index=index_reg, base=RAX (000) */
+	emit_byte((_r(index) << 3) | 0x00);
+#else
 	x86_64_prefix(true, false, NULL, NULL, &index);
 	emit_byte(0xd9);
 	emit_byte(0xa8 + index);
 	emit_long(base);
+#endif
 }
 
 LOWFUNC(NONE,NONE,2,raw_fsqrt_rr,(FW d, FR s))

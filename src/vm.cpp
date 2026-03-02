@@ -236,6 +236,11 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 		} else {
 			write_log("VM: uae_vm_alloc(%u, %d, %d) mmap failed (%d: %s)\n",
 				size, flags, protect, err, strerror(err));
+#if defined(__ANDROID__) && defined(CPU_AARCH64)
+			if (protect == UAE_VM_READ_WRITE_EXECUTE && (err == EPERM || err == EACCES)) {
+				write_log("VM: SELinux may deny PROT_EXEC on this device — check 'adb logcat | grep avc'\n");
+			}
+#endif
 		}
 	    return NULL;
 	}

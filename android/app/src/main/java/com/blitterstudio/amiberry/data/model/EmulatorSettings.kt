@@ -15,6 +15,7 @@ data class EmulatorSettings(
 	val cpuSpeed: String = "real",  // "max" or "real"
 	val fpuModel: Int = 0,  // 0=none, 68881, 68882
 	val jitCacheSize: Int = 0,  // 0=disabled, else KB
+	val jitFpu: Boolean = false,
 
 	// Chipset
 	val chipset: String = "ocs",  // ocs, ecs_agnus, ecs_denise, ecs, aga
@@ -59,7 +60,7 @@ data class EmulatorSettings(
 
 	// Input
 	val joyport0: String = "mouse",
-	val joyport1: String = "joy0",
+	val joyport1: String = "onscreen_joy",
 	val onScreenJoystick: Boolean = true,
 	val onScreenKeyboard: Boolean = true
 ) {
@@ -69,44 +70,44 @@ data class EmulatorSettings(
 			return when (model) {
 				AmigaModel.A500 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 1, slowRam = 2, fastRam = 0
+					chipRam = 1, slowRam = 2, fastRam = 0, cycleExact = true
 				)
 				AmigaModel.A500_PLUS -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ecs",
-					chipRam = 2, slowRam = 0, fastRam = 0
+					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
 				)
 				AmigaModel.A600 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ecs",
-					chipRam = 4, slowRam = 0, fastRam = 0
+					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
 				)
 				AmigaModel.A1000 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 1, slowRam = 0, fastRam = 0
+					chipRam = 1, slowRam = 0, fastRam = 0, cycleExact = true
 				)
 				AmigaModel.A2000 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 1, slowRam = 2, fastRam = 0
+					chipRam = 1, slowRam = 2, fastRam = 0, cycleExact = true
 				)
 				AmigaModel.A1200 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68020, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 0, address24Bit = false
+					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true
 				)
 				AmigaModel.A3000 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68030, chipset = "ecs",
-					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false
+					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false, cpuSpeed = "max"
 				)
 				AmigaModel.A4000 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68040, chipset = "aga",
 					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false,
-					fpuModel = 68040
+					fpuModel = 68040, cpuSpeed = "max", jitCacheSize = 16384, jitFpu = true
 				)
 				AmigaModel.CD32 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68020, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 0, address24Bit = false
+					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true
 				)
 				AmigaModel.CDTV -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 2, slowRam = 0, fastRam = 0
+					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
 				)
 			}
 		}

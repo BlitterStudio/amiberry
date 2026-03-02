@@ -123,7 +123,7 @@ static void RefreshExpansionList() {
         displayed_rom_indices.push_back(i);
     }
 
-    // Auto-select if current choice is invalid
+    // Auto-select if the current choice is invalid
     bool current_valid = false;
     for (int idx: displayed_rom_indices) {
         if (idx == scsiromselected) {
@@ -153,8 +153,8 @@ static std::vector<ROMOption> GetAvailableROMs(int romtype, int romtype_extra) {
     // WinUAE adds "ROM Disabled" effectively by allowing NULL path or specific selection
     options.push_back({"ROM Disabled", "", true});
 
-    struct romlist *rl = romlist_getit();
-    int count = romlist_count();
+    const romlist *rl = romlist_getit();
+    const int count = romlist_count();
 
     for (int i = 0; i < count; i++) {
         const romdata *rd = rl[i].rd;

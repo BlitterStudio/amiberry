@@ -342,7 +342,7 @@ MIDFUNC(2,bts_l_rr,(RW4 r, RR4 b))
 	unlock2(b);
 }
 
-MIDFUNC(2,mov_l_rm,(W4 d, IMM s))
+MIDFUNC(2,mov_l_rm,(W4 d, MEMR s))
 {
 	CLOBBER_MOV;
 	d=writereg(d,4);
@@ -359,25 +359,25 @@ MIDFUNC(1,call_r,(RR4 r)) /* Clobbering is implicit */
 	unlock2(r);
 }
 
-MIDFUNC(2,sub_l_mi,(IMM d, IMM s))
+MIDFUNC(2,sub_l_mi,(MEMRW d, IMM s))
 {
 	CLOBBER_SUB;
 	raw_sub_l_mi(d,s) ;
 }
 
-MIDFUNC(2,mov_l_mi,(IMM d, IMM s))
+MIDFUNC(2,mov_l_mi,(MEMW d, IMM s))
 {
 	CLOBBER_MOV;
 	raw_mov_l_mi(d,s) ;
 }
 
-MIDFUNC(2,mov_w_mi,(IMM d, IMM s))
+MIDFUNC(2,mov_w_mi,(MEMW d, IMM s))
 {
 	CLOBBER_MOV;
 	raw_mov_w_mi(d,s) ;
 }
 
-MIDFUNC(2,mov_b_mi,(IMM d, IMM s))
+MIDFUNC(2,mov_b_mi,(MEMW d, IMM s))
 {
 	CLOBBER_MOV;
 	raw_mov_b_mi(d,s) ;
@@ -831,7 +831,7 @@ MIDFUNC(3,cmov_l_rr,(RW4 d, RR4 s, IMM cc))
 	unlock2(d);
 }
 
-MIDFUNC(3,cmov_l_rm,(RW4 d, IMM s, IMM cc))
+MIDFUNC(3,cmov_l_rm,(RW4 d, MEMR s, IMM cc))
 {
 	CLOBBER_CMOV;
 	d=rmw(d,4,4);
@@ -1288,7 +1288,7 @@ MIDFUNC(5,mov_b_brrm_indexed,(W1 d, IMM base, RR4 baser, RR4 index, IMM factor))
 }
 
 /* Read a long from base+factor*index */
-MIDFUNC(4,mov_l_rm_indexed,(W4 d, IMM base, RR4 index, IMM factor))
+MIDFUNC(4,mov_l_rm_indexed,(W4 d, MEMR base, RR4 index, IMM factor))
 {
 	int indexreg=index;
 
@@ -1310,10 +1310,15 @@ MIDFUNC(4,mov_l_rm_indexed,(W4 d, IMM base, RR4 index, IMM factor))
 /* read the long at the address contained in s+offset and store in d */
 MIDFUNC(3,mov_l_rR,(W4 d, RR4 s, IMM offset))
 {
+#if !X86_TARGET_64BIT
+	/* On x86-64, s may hold a natmem-translated address (via get_n_addr)
+	   that is unreachable via RIP-relative encoding.  Use register-indirect
+	   path instead. */
 	if (isconst(s)) {
 		COMPCALL(mov_l_rm)(d,live.state[s].val+offset);
 		return;
 	}
+#endif
 	CLOBBER_MOV;
 	s=readreg(s,4);
 	d=writereg(d,4);
@@ -1323,13 +1328,30 @@ MIDFUNC(3,mov_l_rR,(W4 d, RR4 s, IMM offset))
 	unlock2(s);
 }
 
+#if X86_TARGET_64BIT
+/* read a 64-bit (pointer-width) value at the address contained in s+offset and store in d.
+   Used for reading function pointers from addrbank structs on x86-64. */
+MIDFUNC(3,mov_q_rR,(W4 d, RR4 s, IMM offset))
+{
+	CLOBBER_MOV;
+	s=readreg(s,4);
+	d=writereg(d,4);
+
+	raw_mov_q_rR(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+#endif
+
 /* read the word at the address contained in s+offset and store in d */
 MIDFUNC(3,mov_w_rR,(W2 d, RR4 s, IMM offset))
 {
+#if !X86_TARGET_64BIT
 	if (isconst(s)) {
 		COMPCALL(mov_w_rm)(d,live.state[s].val+offset);
 		return;
 	}
+#endif
 	CLOBBER_MOV;
 	s=readreg(s,4);
 	d=writereg(d,2);
@@ -1342,10 +1364,12 @@ MIDFUNC(3,mov_w_rR,(W2 d, RR4 s, IMM offset))
 /* read the word at the address contained in s+offset and store in d */
 MIDFUNC(3,mov_b_rR,(W1 d, RR4 s, IMM offset))
 {
+#if !X86_TARGET_64BIT
 	if (isconst(s)) {
 		COMPCALL(mov_b_rm)(d,live.state[s].val+offset);
 		return;
 	}
+#endif
 	CLOBBER_MOV;
 	s=readreg(s,4);
 	d=writereg(d,1);
@@ -1359,13 +1383,24 @@ MIDFUNC(3,mov_b_rR,(W1 d, RR4 s, IMM offset))
 MIDFUNC(3,mov_l_brR,(W4 d, RR4 s, IMM offset))
 {
 	int sreg=s;
+#if !X86_TARGET_64BIT
+	/* On x86-64, natmem addresses are unreachable via RIP-relative encoding
+	   (natmem at ~0x80000000 is far from JIT code at ~0x7FFxxxxxxxxx).
+	   Skip the isconst shortcut; the normal path uses [R_MEMSTART + reg]. */
 	if (isconst(s)) {
 		COMPCALL(mov_l_rm)(d,live.state[s].val+offset);
 		return;
 	}
+#endif
 	CLOBBER_MOV;
 	s=readreg_offset(s,4);
+#if X86_TARGET_64BIT
+	/* R_MEMSTART already holds natmem_offset, so strip MEMBaseDiff
+	   from offset — only pass the accumulated register offset. */
+	offset=get_offset(sreg);
+#else
 	offset+=get_offset(sreg);
+#endif
 	d=writereg(d,4);
 
 	raw_mov_l_brR(d,s,offset);
@@ -1377,14 +1412,20 @@ MIDFUNC(3,mov_l_brR,(W4 d, RR4 s, IMM offset))
 MIDFUNC(3,mov_w_brR,(W2 d, RR4 s, IMM offset))
 {
 	int sreg=s;
+#if !X86_TARGET_64BIT
 	if (isconst(s)) {
 		COMPCALL(mov_w_rm)(d,live.state[s].val+offset);
 		return;
 	}
+#endif
 	CLOBBER_MOV;
 	remove_offset(d,-1);
 	s=readreg_offset(s,4);
+#if X86_TARGET_64BIT
+	offset=get_offset(sreg);
+#else
 	offset+=get_offset(sreg);
+#endif
 	d=writereg(d,2);
 
 	raw_mov_w_brR(d,s,offset);
@@ -1396,14 +1437,20 @@ MIDFUNC(3,mov_w_brR,(W2 d, RR4 s, IMM offset))
 MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
 {
 	int sreg=s;
+#if !X86_TARGET_64BIT
 	if (isconst(s)) {
 		COMPCALL(mov_b_rm)(d,live.state[s].val+offset);
 		return;
 	}
+#endif
 	CLOBBER_MOV;
 	remove_offset(d,-1);
 	s=readreg_offset(s,4);
+#if X86_TARGET_64BIT
+	offset=get_offset(sreg);
+#else
 	offset+=get_offset(sreg);
+#endif
 	d=writereg(d,1);
 
 	raw_mov_b_brR(d,s,offset);
@@ -1414,10 +1461,12 @@ MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
 MIDFUNC(3,mov_l_Ri,(RR4 d, IMM i, IMM offset))
 {
 	int dreg=d;
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_l_mi)(live.state[d].val+offset,i);
 		return;
 	}
+#endif
 
 	CLOBBER_MOV;
 	d=readreg_offset(d,4);
@@ -1429,10 +1478,12 @@ MIDFUNC(3,mov_l_Ri,(RR4 d, IMM i, IMM offset))
 MIDFUNC(3,mov_w_Ri,(RR4 d, IMM i, IMM offset))
 {
 	int dreg=d;
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_w_mi)(live.state[d].val+offset,i);
 		return;
 	}
+#endif
 
 	CLOBBER_MOV;
 	d=readreg_offset(d,4);
@@ -1444,10 +1495,12 @@ MIDFUNC(3,mov_w_Ri,(RR4 d, IMM i, IMM offset))
 MIDFUNC(3,mov_b_Ri,(RR4 d, IMM i, IMM offset))
 {
 	int dreg=d;
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_b_mi)(live.state[d].val+offset,i);
 		return;
 	}
+#endif
 
 	CLOBBER_MOV;
 	d=readreg_offset(d,4);
@@ -1459,10 +1512,15 @@ MIDFUNC(3,mov_b_Ri,(RR4 d, IMM i, IMM offset))
 /* Warning! OFFSET is byte sized only! */
 MIDFUNC(3,mov_l_Rr,(RR4 d, RR4 s, IMM offset))
 {
+#if !X86_TARGET_64BIT
+	/* On x86-64, d may hold a natmem-translated address (via get_n_addr)
+	   that is unreachable via RIP-relative encoding.  Use register-indirect
+	   path instead. */
 	if (isconst(d)) {
 		COMPCALL(mov_l_mr)(live.state[d].val+offset,s);
 		return;
 	}
+#endif
 	if (isconst(s)) {
 		COMPCALL(mov_l_Ri)(d,live.state[s].val,offset);
 		return;
@@ -1479,10 +1537,12 @@ MIDFUNC(3,mov_l_Rr,(RR4 d, RR4 s, IMM offset))
 
 MIDFUNC(3,mov_w_Rr,(RR4 d, RR2 s, IMM offset))
 {
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_w_mr)(live.state[d].val+offset,s);
 		return;
 	}
+#endif
 	if (isconst(s)) {
 		COMPCALL(mov_w_Ri)(d,(uae_u16)live.state[s].val,offset);
 		return;
@@ -1498,10 +1558,12 @@ MIDFUNC(3,mov_w_Rr,(RR4 d, RR2 s, IMM offset))
 
 MIDFUNC(3,mov_b_Rr,(RR4 d, RR1 s, IMM offset))
 {
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_b_mr)(live.state[d].val+offset,s);
 		return;
 	}
+#endif
 	if (isconst(s)) {
 		COMPCALL(mov_b_Ri)(d,(uae_u8)live.state[s].val,offset);
 		return;
@@ -1569,15 +1631,21 @@ MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
 MIDFUNC(3,mov_l_bRr,(RR4 d, RR4 s, IMM offset))
 {
 	int dreg=d;
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_l_mr)(live.state[d].val+offset,s);
 		return;
 	}
+#endif
 
 	CLOBBER_MOV;
 	s=readreg(s,4);
 	d=readreg_offset(d,4);
+#if X86_TARGET_64BIT
+	offset=get_offset(dreg);
+#else
 	offset+=get_offset(dreg);
+#endif
 
 	raw_mov_l_bRr(d,s,offset);
 	unlock2(d);
@@ -1589,15 +1657,21 @@ MIDFUNC(3,mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 {
 	int dreg=d;
 
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_w_mr)(live.state[d].val+offset,s);
 		return;
 	}
+#endif
 
 	CLOBBER_MOV;
 	s=readreg(s,2);
 	d=readreg_offset(d,4);
+#if X86_TARGET_64BIT
+	offset=get_offset(dreg);
+#else
 	offset+=get_offset(dreg);
+#endif
 	raw_mov_w_bRr(d,s,offset);
 	unlock2(d);
 	unlock2(s);
@@ -1606,15 +1680,21 @@ MIDFUNC(3,mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 MIDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 {
 	int dreg=d;
+#if !X86_TARGET_64BIT
 	if (isconst(d)) {
 		COMPCALL(mov_b_mr)(live.state[d].val+offset,s);
 		return;
 	}
+#endif
 
 	CLOBBER_MOV;
 	s=readreg(s,1);
 	d=readreg_offset(d,4);
+#if X86_TARGET_64BIT
+	offset=get_offset(dreg);
+#else
 	offset+=get_offset(dreg);
+#endif
 	raw_mov_b_bRr(d,s,offset);
 	unlock2(d);
 	unlock2(s);
@@ -1680,8 +1760,22 @@ MIDFUNC(2,mov_l_rr,(W4 d, RR4 s))
 	unlock2(s);
 }
 
-MIDFUNC(2,mov_l_mr,(IMM d, RR4 s))
+MIDFUNC(2,mov_l_mr,(MEMW d, RR4 s))
 {
+#if X86_TARGET_64BIT
+	if (s == PC_P) {
+		/* PC_P holds a 64-bit host pointer — must use 64-bit store */
+		if (isconst(s)) {
+			raw_mov_q_mi(d, live.state[s].val);
+		} else {
+			CLOBBER_MOV;
+			s=readreg(s,4);
+			raw_mov_q_mr(d, s);
+			unlock2(s);
+		}
+		return;
+	}
+#endif
 	if (isconst(s)) {
 		COMPCALL(mov_l_mi)(d,live.state[s].val);
 		return;
@@ -1694,7 +1788,7 @@ MIDFUNC(2,mov_l_mr,(IMM d, RR4 s))
 }
 
 
-MIDFUNC(2,mov_w_mr,(IMM d, RR2 s))
+MIDFUNC(2,mov_w_mr,(MEMW d, RR2 s))
 {
 	if (isconst(s)) {
 		COMPCALL(mov_w_mi)(d,(uae_u16)live.state[s].val);
@@ -1707,7 +1801,7 @@ MIDFUNC(2,mov_w_mr,(IMM d, RR2 s))
 	unlock2(s);
 }
 
-MIDFUNC(2,mov_w_rm,(W2 d, IMM s))
+MIDFUNC(2,mov_w_rm,(W2 d, MEMR s))
 {
 	CLOBBER_MOV;
 	d=writereg(d,2);
@@ -1716,7 +1810,7 @@ MIDFUNC(2,mov_w_rm,(W2 d, IMM s))
 	unlock2(d);
 }
 
-MIDFUNC(2,mov_b_mr,(IMM d, RR1 s))
+MIDFUNC(2,mov_b_mr,(MEMW d, RR1 s))
 {
 	if (isconst(s)) {
 		COMPCALL(mov_b_mi)(d,(uae_u8)live.state[s].val);
@@ -1730,7 +1824,7 @@ MIDFUNC(2,mov_b_mr,(IMM d, RR1 s))
 	unlock2(s);
 }
 
-MIDFUNC(2,mov_b_rm,(W1 d, IMM s))
+MIDFUNC(2,mov_b_rm,(W1 d, MEMR s))
 {
 	CLOBBER_MOV;
 	d=writereg(d,1);
@@ -1739,7 +1833,7 @@ MIDFUNC(2,mov_b_rm,(W1 d, IMM s))
 	unlock2(d);
 }
 
-MIDFUNC(2,mov_l_ri,(W4 d, IMM s))
+MIDFUNC(2,mov_l_ri,(W4 d, IMPTR s))
 {
 	set_const(d,s);
 	return;
@@ -1763,19 +1857,19 @@ MIDFUNC(2,mov_b_ri,(W1 d, IMM s))
 	unlock2(d);
 }
 
-MIDFUNC(2,add_l_mi,(IMM d, IMM s))
+MIDFUNC(2,add_l_mi,(MEMRW d, IMM s))
 {
 	CLOBBER_ADD;
 	raw_add_l_mi(d,s);
 }
 
-MIDFUNC(2,add_w_mi,(IMM d, IMM s))
+MIDFUNC(2,add_w_mi,(MEMRW d, IMM s))
 {
 	CLOBBER_ADD;
 	raw_add_w_mi(d,s);
 }
 
-MIDFUNC(2,add_b_mi,(IMM d, IMM s))
+MIDFUNC(2,add_b_mi,(MEMRW d, IMM s))
 {
 	CLOBBER_ADD;
 	raw_add_b_mi(d,s);
@@ -1823,7 +1917,7 @@ MIDFUNC(2,test_b_rr,(RR1 d, RR1 s))
 	unlock2(s);
 }
 
-MIDFUNC(2,test_b_mi,(IMM d, IMM s))
+MIDFUNC(2,test_b_mi,(MEMR d, IMM s))
 {
 	CLOBBER_TEST;
 	raw_test_b_mi(d,s);
@@ -2066,7 +2160,7 @@ MIDFUNC(2,sub_b_ri,(RW1 d, IMM i))
 	unlock2(d);
 }
 
-MIDFUNC(2,add_l_ri,(RW4 d, IMM i))
+MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
 {
 	if (!i && !needflags)
 		return;
@@ -2076,13 +2170,13 @@ MIDFUNC(2,add_l_ri,(RW4 d, IMM i))
 	}
 #if USE_OFFSET
 	if (!needflags) {
-		add_offset(d,i);
+		add_offset(d,(uintptr)i);
 		return;
 	}
 #endif
 	CLOBBER_ADD;
 	d=rmw(d,4,4);
-	raw_add_l_ri(d,i);
+	raw_add_l_ri(d,(IMM)i);
 	unlock2(d);
 }
 
@@ -2516,7 +2610,7 @@ MIDFUNC(2,fmov_rr,(FW d, FR s))
 #endif
 }
 
-MIDFUNC(2,fldcw_m_indexed,(RR4 index, IMM base))
+MIDFUNC(2,fldcw_m_indexed,(RR4 index, MEMR base))
 {
 	index=readreg(index,4);
 

@@ -1,8 +1,10 @@
 package com.blitterstudio.amiberry.data
 
+import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import java.io.File
+import java.io.IOException
 
 /**
  * Parses .uae config files back into EmulatorSettings.
@@ -19,7 +21,7 @@ object ConfigParser {
 	// Keys we know how to parse into EmulatorSettings
 	private val knownKeys = setOf(
 		"cpu_model", "cpu_compatible", "cpu_24bit_addressing", "cpu_speed",
-		"fpu_model", "cachesize",
+		"fpu_model", "cachesize", "compfpu",
 		"chipset", "immediate_blits", "collision_level", "cycle_exact", "ntsc",
 		"chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size",
 		"kickstart_rom_file", "kickstart_ext_rom_file",
@@ -33,10 +35,17 @@ object ConfigParser {
 		"use_gui", "config_description"
 	)
 
+	private const val TAG = "Amiberry-ConfigParser"
+
 	fun parse(file: File): ParsedConfig {
 		if (!file.exists()) return ParsedConfig(EmulatorSettings(), emptyList(), "")
 
-		val lines = file.readLines()
+		val lines = try {
+			file.readLines()
+		} catch (e: IOException) {
+			Log.e(TAG, "Failed to read config file: ${file.path}", e)
+			return ParsedConfig(EmulatorSettings(), emptyList(), "")
+		}
 		val kvPairs = mutableMapOf<String, String>()
 		val unknownLines = mutableListOf<String>()
 
@@ -75,6 +84,7 @@ object ConfigParser {
 			cpuSpeed = kv["cpu_speed"] ?: "real",
 			fpuModel = kv["fpu_model"]?.toIntOrNull() ?: 0,
 			jitCacheSize = kv["cachesize"]?.toIntOrNull() ?: 0,
+			jitFpu = kv["compfpu"].toBool(false),
 
 			chipset = kv["chipset"] ?: "ocs",
 			immediateBlits = kv["immediate_blits"].toBool(false),
@@ -111,7 +121,16 @@ object ConfigParser {
 			autoCrop = kv["gfx_auto_crop"].toBool(false),
 
 			joyport0 = kv["joyport0"] ?: "mouse",
-			joyport1 = kv["joyport1"] ?: "joy0",
+			// Round-trip: if on-screen joystick is enabled and joyport1 is default/absent,
+			// the auto-assignment in on_screen_joystick_set_enabled() is active
+			joyport1 = run {
+				val onScreenJoy = kv["amiberry.onscreen_joystick"].toBool(true)
+				if (onScreenJoy && (kv["joyport1"] == null || kv["joyport1"] == "joy0")) {
+					"onscreen_joy"
+				} else {
+					kv["joyport1"] ?: "joy0"
+				}
+			},
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
 			onScreenKeyboard = kv["amiberry.onscreen_keyboard"].toBool(true)
 		)

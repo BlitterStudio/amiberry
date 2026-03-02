@@ -10,10 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,7 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,26 +34,29 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 fun InputTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 
-	val portOptions = listOf(
-		"mouse" to "Mouse",
-		"joy0" to "Joystick 0",
-		"joy1" to "Joystick 1",
-		"kbd1" to "Keyboard Layout 1",
-		"kbd2" to "Keyboard Layout 2",
-		"kbd3" to "Keyboard Layout 3"
-	)
+	val portOptions = buildList {
+		add("mouse" to stringResource(R.string.settings_input_device_mouse))
+		add("joy0" to stringResource(R.string.settings_input_device_joystick_0))
+		add("joy1" to stringResource(R.string.settings_input_device_joystick_1))
+		if (hasTouchScreen()) {
+			add("onscreen_joy" to stringResource(R.string.settings_input_device_on_screen_joystick))
+		}
+		add("kbd1" to stringResource(R.string.settings_input_device_keyboard_layout_1))
+		add("kbd2" to stringResource(R.string.settings_input_device_keyboard_layout_2))
+		add("kbd3" to stringResource(R.string.settings_input_device_keyboard_layout_3))
+	}
 
 	Column(
 		modifier = Modifier
 			.fillMaxWidth()
 			.verticalScroll(rememberScrollState())
-			.padding(16.dp),
+			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
 		// Port assignments
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
-				Text("Port Assignments", style = MaterialTheme.typography.titleMedium)
+				Text(stringResource(R.string.settings_input_port_assignments_title), style = MaterialTheme.typography.titleMedium)
 				Spacer(modifier = Modifier.height(8.dp))
 
 				// Port 0
@@ -66,10 +72,10 @@ fun InputTab(viewModel: SettingsViewModel) {
 						value = port0Label,
 						onValueChange = {},
 						readOnly = true,
-						label = { Text("Port 0 (Mouse Port)") },
+						label = { Text(stringResource(R.string.settings_input_port0_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port0Expanded) },
 						modifier = Modifier
-							.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
 					ExposedDropdownMenu(
@@ -103,10 +109,10 @@ fun InputTab(viewModel: SettingsViewModel) {
 						value = port1Label,
 						onValueChange = {},
 						readOnly = true,
-						label = { Text("Port 1 (Joystick Port)") },
+						label = { Text(stringResource(R.string.settings_input_port1_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port1Expanded) },
 						modifier = Modifier
-							.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
 					ExposedDropdownMenu(
@@ -117,7 +123,13 @@ fun InputTab(viewModel: SettingsViewModel) {
 							DropdownMenuItem(
 								text = { Text(label) },
 								onClick = {
-									viewModel.updateSettings { s -> s.copy(joyport1 = value) }
+									viewModel.updateSettings { s ->
+										if (value == "onscreen_joy") {
+											s.copy(joyport1 = value, onScreenJoystick = true)
+										} else {
+											s.copy(joyport1 = value)
+										}
+									}
 									port1Expanded = false
 								}
 							)
@@ -127,27 +139,29 @@ fun InputTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		// On-screen controls
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text("On-Screen Controls", style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
+		// On-screen controls (only shown on devices with a touchscreen)
+		if (hasTouchScreen()) {
+			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+				Column(modifier = Modifier.padding(16.dp)) {
+					Text(stringResource(R.string.settings_input_on_screen_controls_title), style = MaterialTheme.typography.titleMedium)
+					Spacer(modifier = Modifier.height(8.dp))
 
-				SwitchRow(
-					label = "On-Screen Joystick",
-					checked = settings.onScreenJoystick,
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(onScreenJoystick = it) }
-					}
-				)
+					SwitchRow(
+						label = stringResource(R.string.settings_input_on_screen_joystick),
+						checked = settings.onScreenJoystick,
+						onCheckedChange = {
+							viewModel.updateSettings { s -> s.copy(onScreenJoystick = it) }
+						}
+					)
 
-				SwitchRow(
-					label = "On-Screen Keyboard Button",
-					checked = settings.onScreenKeyboard,
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
-					}
-				)
+					SwitchRow(
+						label = stringResource(R.string.settings_input_on_screen_keyboard_button),
+						checked = settings.onScreenKeyboard,
+						onCheckedChange = {
+							viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
+						}
+					)
+				}
 			}
 		}
 	}

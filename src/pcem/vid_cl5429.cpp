@@ -2055,9 +2055,20 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
             return;
         }
 
+        const int blt_width_bytes = gd5429->blt.width_backup + 1;
+        // Keep 8-bit and 24-bit on the conservative path unless we can prove a
+        // specific shortcut is byte-for-byte equivalent to the reference loop.
+        const bool is_24bit = (svga->bpp == 24) || (gd5429->blt.depth == BLIT_DEPTH_24);
+        const bool allow_fast_shortcuts = (svga->bpp != 8) && !is_24bit;
+        // 24-bit copy is safe only in the simple unmasked full-pixel case.
+        const bool allow_fast_copy_24 =
+            (svga->bpp == 24) &&
+            (gd5429->blt.depth == BLIT_DEPTH_24) &&
+            ((gd5429->blt.mask & 7) == 0) &&
+            ((blt_width_bytes % 3) == 0);
+
         // Optimization: Screen-to-Screen Copy (ROP 0x0D)
-        // Optimization disabled for 8-bit SCREEN depth (svga->bpp == 8) due to regression
-        if (svga->bpp != 8 && (gd5429->blt.mode & 0xC4) == 0 && gd5429->blt.rop == 0x0D) {
+        if ((allow_fast_shortcuts || allow_fast_copy_24) && (gd5429->blt.mode & 0xC4) == 0 && gd5429->blt.rop == 0x0D) {
             // ... (Existing FastBlt code for Copy) ...
             int w = gd5429->blt.width_backup + 1;
             int h = gd5429->blt.height_internal + 1;
@@ -2097,8 +2108,7 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
         // Optimization: Fast Pattern Fill (RectFill/RectFillPattern)
         // Matches logs: mode=0xD0 (Pattern Copy), rop=0x0D (Source Copy, actually Pattern Copy in this mode context)
         // Ext=0 means "Not solid block", so "Mono Expansion from VRAM Pattern".
-        // Optimization disabled for 8-bit SCREEN depth (svga->bpp == 8) due to regression
-        if (svga->bpp != 8 && (gd5429->blt.mode & 0xC0) == 0xC0 && !(gd5429->blt.extensions & 4)) {
+        if (allow_fast_shortcuts && (gd5429->blt.mode & 0xC0) == 0xC0 && !(gd5429->blt.extensions & 4)) {
              // Supports ROP 0x0D (Copy Pattern) and 0xF0 (Copy Pattern). 0x0D in Pattern Mode means "Copy Pattern Source"? 
              // Logic: Standard loop uses 'src' derived from pattern expansion, then applies ROP 0x0D -> dst=src.
              // So if ROP is 0x0D or 0xF0 (common copies), we can optimize.
@@ -2308,9 +2318,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
         }
 
         // Optimization: Fast Solid Fill (RectFill)
-        // We target the Solid Color Extension case (bit 2 of extensions)
-        // Optimization disabled for 8-bit SCREEN depth (svga->bpp == 8) due to regression
-        if (svga->bpp != 8 && (gd5429->blt.mode & 0xC0) && (gd5429->blt.extensions & 4) && (gd5429->blt.rop == 0xF0 || gd5429->blt.rop == 0x0D)) {
+        // We target the Solid Color Extension case (bit 2 of extensions).
+        if (allow_fast_shortcuts && (gd5429->blt.mode & 0xC0) && (gd5429->blt.extensions & 4) && (gd5429->blt.rop == 0xF0 || gd5429->blt.rop == 0x0D)) {
              int w = gd5429->blt.width_backup + 1; // Width is already in bytes
              int h = gd5429->blt.height_internal + 1;
              int dst_pitch = (gd5429->blt.mode & 0x01) ? -gd5429->blt.dst_pitch : gd5429->blt.dst_pitch;

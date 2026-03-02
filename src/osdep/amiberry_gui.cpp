@@ -45,6 +45,7 @@
 #include "registry.h"
 #include "scsi.h"
 #include "target.h"
+#include "macos_bookmarks.h"
 
 #ifdef AMIBERRY
 #if defined(__linux__)
@@ -812,6 +813,7 @@ void gui_exit()
 #endif
 	close_sound();
 	save_amiberry_settings();
+	macos_bookmarks_shutdown();
 	ClearConfigFileList();
 #ifdef USE_IMGUI
 	configurations_panel_reset();

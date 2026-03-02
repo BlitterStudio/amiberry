@@ -731,7 +731,7 @@ static int mmu030_match_ttr(uaecptr addr, uae_u32 fc, bool write)
 	}
     tt1 = mmu030_do_match_ttr(tt1_030, mmu030.transparent.tt1, addr, fc, write);
     if (tt1&TT_OK_MATCH) {
-		if (tt0_030&TT_CI)
+		if (tt1_030&TT_CI)
 	        mmu030_cache_state = CACHE_DISABLE_MMU;
     }
     

@@ -25,6 +25,7 @@ object ConfigGenerator {
 		}
 		if (settings.jitCacheSize > 0) {
 			sb.appendLine("cachesize=${settings.jitCacheSize}")
+			sb.appendLine("compfpu=${settings.jitFpu.toCfg()}")
 		}
 
 		// Chipset
@@ -78,7 +79,11 @@ object ConfigGenerator {
 
 		// Input
 		sb.appendLine("joyport0=${settings.joyport0}")
-		sb.appendLine("joyport1=${settings.joyport1}")
+		// When on-screen joystick is selected for port 1, omit joyport1 from config
+		// and let on_screen_joystick_set_enabled() auto-assign it at runtime
+		if (settings.joyport1 != "onscreen_joy") {
+			sb.appendLine("joyport1=${settings.joyport1}")
+		}
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
@@ -105,6 +110,7 @@ object ConfigGenerator {
 	fun generateLaunchArgs(context: Context, settings: EmulatorSettings): Array<String> {
 		val configFile = writeConfig(context, settings, ".current_settings.uae")
 		return arrayOf(
+			"--rescan-roms",
 			"--model", settings.baseModel.cmdArg,
 			"--config", configFile.absolutePath,
 			"-G"

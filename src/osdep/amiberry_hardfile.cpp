@@ -809,14 +809,14 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	if (h != nullptr) {
 		uae_s64 size;
 #ifdef __MACH__
-	// check type of file
-	int ret = stat(name,&st);
+	// check type of file using fstat on the already-open descriptor
+	// (more reliable than stat-by-path on network volumes like SMB/NFS)
+	int ret = fstat(fileno(h), &st);
 	if(ret) {
-		write_log ("osx: can't stat '%s'\n", name);
-		goto end;
+		write_log("osx: fstat failed for '%s' (errno=%d), assuming regular file\n", name, errno);
 	}
 		// block devices need special handling on osx
-		if(S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode)) {
+		if(!ret && (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode))) {
 			uint32_t block_size;
 			uint64_t block_count;
 			int fh = fileno(h);
@@ -838,9 +838,23 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		} else {
 #endif
 			uae_s64 pos = _ftelli64(h);
-			_fseeki64(h, 0, SEEK_END);
+			if (pos < 0) {
+				write_log("HDF '%s' ftell failed (initial), error %d\n", name, errno);
+				goto end;
+			}
+			if (_fseeki64(h, 0, SEEK_END) != 0) {
+				write_log("HDF '%s' fseek(SEEK_END) failed, error %d\n", name, errno);
+				goto end;
+			}
 			size = _ftelli64(h);
-			_fseeki64(h, pos, SEEK_SET);
+			if (size < 0) {
+				write_log("HDF '%s' ftell failed (size), error %d\n", name, errno);
+				goto end;
+			}
+			if (_fseeki64(h, pos, SEEK_SET) != 0) {
+				write_log("HDF '%s' fseek(SEEK_SET) failed, error %d\n", name, errno);
+				goto end;
+			}
 #ifdef __MACH__
 		}
 #endif
@@ -924,22 +938,20 @@ static int hdf_seek(const struct hardfiledata *hfd, uae_u64 offset)
 {
 	if (hfd->handle_valid == 0)
 	{
-		gui_message(_T("hd: hdf handle is not valid. bug."));
-		abort();
+		write_log(_T("hd: hdf handle is not valid.\n"));
+		return -1;
 	}
 	if (hfd->physsize) {
 		if (offset >= hfd->physsize) {
 			write_log(_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
-			gui_message(_T("hd: tried to seek out of bounds!"));
-			abort();
+			return -1;
 		}
 		offset += hfd->offset;
 		if (offset & (hfd->ci.blocksize - 1))
 		{
 			write_log(_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
 				offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
-			gui_message(_T("hd: poscheck failed, offset not aligned to blocksize!"));
-			abort();
+			return -1;
 		}
 	}
 	
@@ -959,7 +971,7 @@ static int hdf_seek(const struct hardfiledata *hfd, uae_u64 offset)
 	return 0;
 }
 
-static void poscheck(const struct hardfiledata *hfd, int len)
+static int poscheck(const struct hardfiledata *hfd, int len)
 {
 	uae_u64 pos = -1;
 
@@ -968,9 +980,8 @@ static void poscheck(const struct hardfiledata *hfd, int len)
 		const int ret = _fseeki64(hfd->handle->h, 0, SEEK_CUR);
 		if (ret)
 		{
-			write_log(_T("hd: poscheck failed. seek failure"));
-			gui_message(_T("Internal error"), _T("hd: poscheck failed. seek failure."));
-			abort();
+			write_log(_T("hd: poscheck failed. seek failure\n"));
+			return -1;
 		}
 		pos = _ftelli64(hfd->handle->h);
 	}
@@ -980,28 +991,25 @@ static void poscheck(const struct hardfiledata *hfd, int len)
 	}
 	if (len < 0)
 	{
-		write_log(_T("hd: poscheck failed, negative length! (%d)"), len);
-		target_startup_msg(_T("Internal error"), _T("hd: poscheck failed, negative length."));
-		abort();
+		write_log(_T("hd: poscheck failed, negative length! (%d)\n"), len);
+		return -1;
 	}
 	if (pos < hfd->offset)
 	{
-		write_log(_T("hd: poscheck failed, offset out of bounds! (%I64d < %I64d)"), pos, hfd->offset);
-		target_startup_msg(_T("Internal error"), _T("hd: hd: poscheck failed, offset out of bounds."));
-		abort();
+		write_log(_T("hd: poscheck failed, offset out of bounds! (%I64d < %I64d)\n"), pos, hfd->offset);
+		return -1;
 	}
 	if (pos >= hfd->offset + hfd->physsize - hfd->virtual_size || pos >= hfd->offset + hfd->physsize + len - hfd->virtual_size)
 	{
-		write_log(_T("hd: poscheck failed, offset out of bounds! (%I64d >= %I64d, LEN=%d)"), pos, hfd->offset + hfd->physsize, len);
-		target_startup_msg(_T("Internal error"), _T("hd: hd: poscheck failed, offset out of bounds."));
-		abort();
+		write_log(_T("hd: poscheck failed, offset out of bounds! (%I64d >= %I64d, LEN=%d)\n"), pos, hfd->offset + hfd->physsize, len);
+		return -1;
 	}
 	if (pos & (hfd->ci.blocksize - 1))
 	{
-		write_log(_T("hd: poscheck failed, offset not aligned to blocksize! (%I64X & %04X = %04X\n"), pos, hfd->ci.blocksize, pos & hfd->ci.blocksize);
-		target_startup_msg(_T("Internal error"), _T("hd: poscheck failed, offset not aligned to blocksize."));
-		abort();
+		write_log(_T("hd: poscheck failed, offset not aligned to blocksize! (%I64X & %04X = %04X)\n"), pos, hfd->ci.blocksize, pos & hfd->ci.blocksize);
+		return -1;
 	}
+	return 0;
 }
 
 static int isincache(const struct hardfiledata *hfd, uae_u64 offset, int len)
@@ -1031,7 +1039,8 @@ static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 	}
 	if (hdf_seek(hfd, hfd->cache_offset))
 		return 0;
-	poscheck(hfd, CACHE_SIZE);
+	if (poscheck(hfd, CACHE_SIZE))
+		return 0;
 	if (hfd->handle_valid == HDF_HANDLE_LINUX)
 		outlen = fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->h);
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
@@ -1068,8 +1077,10 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 			hfd->cache_valid = 0;
 			if (hdf_seek(hfd, offset))
 				return got;
-			if (hfd->physsize)
-				poscheck(hfd, len);
+			if (hfd->physsize) {
+				if (poscheck(hfd, len))
+					return got;
+			}
 			if (hfd->handle_valid == HDF_HANDLE_LINUX)
 			{
 				ret = fread(hfd->cache, 1, len, hfd->handle->h);
@@ -1110,7 +1121,8 @@ static int hdf_write_2(struct hardfiledata *hfd, const void *buffer, uae_u64 off
 	hfd->cache_valid = 0;
 	if (hdf_seek(hfd, offset))
 		return 0;
-	poscheck(hfd, len);
+	if (poscheck(hfd, len))
+		return 0;
 	memcpy(hfd->cache, buffer, len);
 	if (hfd->handle_valid == HDF_HANDLE_LINUX)
 	{
@@ -1124,7 +1136,10 @@ static int hdf_write_2(struct hardfiledata *hfd, const void *buffer, uae_u64 off
 			{
 				int cmplen = tmplen > len ? len : tmplen;
 				memset(tmp, 0xa1, tmplen);
-				hdf_seek(hfd, offset);
+				if (hdf_seek(hfd, offset)) {
+					xfree(tmp);
+					return static_cast<int>(outlen);
+				}
 				auto outlen2 = fread(tmp, 1, tmplen, hfd->handle->h);
 				if (memcmp(hfd->cache, tmp, cmplen) != 0 || outlen != len)
 					gui_message(_T("\"%s\"\n\nblock zero write failed!"), name);
