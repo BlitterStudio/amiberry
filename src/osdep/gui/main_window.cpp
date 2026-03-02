@@ -19,9 +19,6 @@
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 #include "irenderer.h"
-#ifdef USE_OPENGL
-#include "opengl_renderer.h"
-#endif
 #include "fsdb_host.h"
 #include "autoconf.h"
 #include "blkdev.h"
@@ -767,17 +764,9 @@ void amiberry_gui_init()
 	// conflicts that cause crashes. This mirrors the Android/KMSDRM pattern.
 	if (mon->amiga_window && !mon->gui_window)
 		mon->gui_window = mon->amiga_window;
-#ifndef USE_OPENGL
-	if (mon->amiga_renderer && !mon->gui_renderer)
-		mon->gui_renderer = mon->amiga_renderer;
-#else
-	// OpenGL path: keep GL context alive, destroy only emulation shaders.
-	// ImGui will use the OpenGL3 backend directly instead of SDLRenderer2.
-	if (mon->gui_window == mon->amiga_window && g_renderer && g_renderer->has_context()) {
-		g_renderer->destroy_shaders();
-		g_renderer->reset_state();
+	if (mon->gui_window == mon->amiga_window && g_renderer) {
+		g_renderer->prepare_gui_sharing(mon);
 	}
-#endif
 	if (mon->gui_window == mon->amiga_window) {
 		SDL_GetWindowPosition(mon->gui_window, &saved_emu_x, &saved_emu_y);
 		SDL_GetWindowSize(mon->gui_window, &saved_emu_w, &saved_emu_h);
@@ -1113,17 +1102,10 @@ void amiberry_gui_halt()
 			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		saved_emu_w = saved_emu_h = 0;
 	}
-#ifdef USE_OPENGL
-	// GL context was kept alive — force full GL state reset for emulation
+	// Restore emulation rendering context (GL: MakeCurrent + reset; SDL: no-op)
 	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
-		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
-		if (gl_renderer) {
-			SDL_GL_MakeCurrent(mon->amiga_window, gl_renderer->get_gl_context());
-		}
-		g_renderer->reset_state();
-		g_renderer->clear_shader_cache();
+		g_renderer->restore_emulation_context(mon->amiga_window);
 	}
-#endif
 #endif
 }
 

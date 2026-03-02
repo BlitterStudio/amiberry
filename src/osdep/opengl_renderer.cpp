@@ -547,15 +547,8 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	render_bezel(drawableWidth, drawableHeight);
 	render_osd(monid, destX, destY, destW, destH);
 
-	if (vkbd_allowed(monid))
-	{
-		vkbd_redraw_gl(drawableWidth, drawableHeight);
-	}
-
-	if (on_screen_joystick_is_enabled())
-	{
-		on_screen_joystick_redraw_gl(drawableWidth, drawableHeight, render_quad);
-	}
+	render_vkbd(monid);
+	render_onscreen_joystick(monid);
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 }
@@ -848,6 +841,17 @@ bool OpenGLRenderer::has_valid_shader() const
 		   m_shader.preset != nullptr;
 }
 
+bool OpenGLRenderer::has_shader_parameters() const
+{
+	if (m_shader.preset && m_shader.preset->is_valid() &&
+		!m_shader.preset->get_all_parameters().empty())
+		return true;
+	if (m_shader.external && m_shader.external->is_valid() &&
+		!m_shader.external->get_parameters().empty())
+		return true;
+	return false;
+}
+
 // --- Bezel overlay ---
 
 void OpenGLRenderer::update_custom_bezel()
@@ -922,6 +926,28 @@ void OpenGLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 // get_vblank_timestamp() uses base class default (returns m_vsync.wait_vblank_timestamp)
 
 // --- Cleanup ---
+
+// --- GUI context transitions ---
+
+void OpenGLRenderer::prepare_gui_sharing(AmigaMonitor* /*mon*/)
+{
+	// OpenGL path: keep GL context alive, destroy only emulation shaders.
+	// ImGui will use the OpenGL3 backend directly instead of SDLRenderer2.
+	if (has_context()) {
+		destroy_shaders();
+		reset_state();
+	}
+}
+
+void OpenGLRenderer::restore_emulation_context(SDL_Window* window)
+{
+	// GL context was kept alive — force full GL state reset for emulation
+	if (window && has_context()) {
+		SDL_GL_MakeCurrent(window, m_gl_context);
+		reset_state();
+		clear_shader_cache();
+	}
+}
 
 void OpenGLRenderer::close_hwnds_cleanup(AmigaMonitor* /*mon*/)
 {
@@ -1436,6 +1462,28 @@ void OpenGLRenderer::render_software_cursor(const int monid, int x, int y, int w
 				glUseProgram(0);
 			}
 		}
+	}
+}
+
+// --- Virtual keyboard / on-screen joystick wrappers ---
+
+void OpenGLRenderer::render_vkbd(int monid)
+{
+	if (vkbd_allowed(monid))
+	{
+		int dw, dh;
+		get_drawable_size(AMonitors[monid].amiga_window, &dw, &dh);
+		vkbd_redraw_gl(dw, dh);
+	}
+}
+
+void OpenGLRenderer::render_onscreen_joystick(int monid)
+{
+	if (on_screen_joystick_is_enabled())
+	{
+		int dw, dh;
+		get_drawable_size(AMonitors[monid].amiga_window, &dw, &dh);
+		on_screen_joystick_redraw_gl(dw, dh, render_quad);
 	}
 }
 

@@ -90,6 +90,7 @@ public:
 	void clear_shader_cache() override;
 	void reset_state() override;
 	bool has_valid_shader() const override;
+	bool has_shader_parameters() const override;
 
 	// Bezel overlay
 	void update_custom_bezel() override;
@@ -101,6 +102,8 @@ public:
 	void render_bezel(int drawableWidth, int drawableHeight) override;
 	void render_software_cursor(int monid, int x, int y, int w, int h) override;
 	void destroy_bezel() override;
+	void render_vkbd(int monid) override;
+	void render_onscreen_joystick(int monid) override;
 
 	// Input coordinate translation
 	void get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
@@ -111,6 +114,10 @@ public:
 
 	// Cleanup of window-associated resources
 	void close_hwnds_cleanup(AmigaMonitor* mon) override;
+
+	// GUI context transitions
+	void prepare_gui_sharing(AmigaMonitor* mon) override;
+	void restore_emulation_context(SDL_Window* window) override;
 
 	// --- OpenGL-specific accessors (not part of IRenderer) ---
 

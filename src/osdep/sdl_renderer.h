@@ -43,6 +43,13 @@ public:
 	// Shader management: uses IRenderer defaults (no-op)
 	// Bezel overlay: uses IRenderer defaults (no-op)
 
+	// OSD texture synchronization
+	void sync_osd_texture(int monid, int led_width, int led_height) override;
+
+	// Overlay rendering
+	void render_vkbd(int monid) override;
+	void render_onscreen_joystick(int monid) override;
+
 	// Input coordinate translation
 	void get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
 		float* dx, float* dy, float* mx, float* my) override;
@@ -52,6 +59,9 @@ public:
 
 	// Cleanup of window-associated resources
 	void close_hwnds_cleanup(AmigaMonitor* mon) override;
+
+	// GUI context transitions
+	void prepare_gui_sharing(AmigaMonitor* mon) override;
 
 	// SDL-specific accessors
 	SDL_Texture*& amiga_texture() { return m_amiga_texture; }

@@ -58,17 +58,23 @@ public:
 	virtual void clear_shader_cache() {}
 	virtual void reset_state() {}
 	virtual bool has_valid_shader() const { return true; }
+	virtual bool has_shader_parameters() const { return false; }
 
 	// --- Bezel overlay (default: no-op for non-GL backends) ---
 	virtual void update_custom_bezel() {}
 	virtual void update_crtemu_bezel() {}
 	virtual BezelHoleInfo get_bezel_hole_info() const { return BezelHoleInfo{}; }
 
+	// --- OSD texture synchronization (SDL path uploads surface to texture) ---
+	virtual void sync_osd_texture(int monid, int led_width, int led_height) {}
+
 	// --- Overlay rendering (default: no-op for non-GL backends) ---
 	virtual void render_osd(int monid, int x, int y, int w, int h) {}
 	virtual void render_bezel(int drawableWidth, int drawableHeight) {}
 	virtual void render_software_cursor(int monid, int x, int y, int w, int h) {}
 	virtual void destroy_bezel() {}
+	virtual void render_vkbd(int monid) {}
+	virtual void render_onscreen_joystick(int monid) {}
 
 	// --- Input coordinate translation ---
 	// Computes offsets and scale factors for mouse input mapping.
@@ -85,6 +91,12 @@ public:
 
 	// --- Cleanup of window-associated resources ---
 	virtual void close_hwnds_cleanup(AmigaMonitor* mon) = 0;
+
+	// --- GUI context transitions ---
+	// Called when entering GUI with shared window. SDL path shares the renderer; GL path resets shader state.
+	virtual void prepare_gui_sharing(AmigaMonitor* /*mon*/) {}
+	// Called when leaving GUI to restore emulation rendering context.
+	virtual void restore_emulation_context(SDL_Window* /*window*/) {}
 
 	// --- VSync state accessor ---
 	VSyncState& vsync_state() { return m_vsync; }

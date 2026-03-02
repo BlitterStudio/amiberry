@@ -142,13 +142,13 @@ static int find_shader_index(const char* shader_name)
 	return 2;  // Default to "pc" (index 2)
 }
 
-#ifdef USE_OPENGL
 static bool show_shader_params_popup = false;
 
 static void render_shader_parameters_popup()
 {
 	if (!show_shader_params_popup) return;
 
+#ifdef USE_OPENGL
 	ImGui::SetNextWindowSize(ImVec2(BUTTON_WIDTH * 5, BUTTON_HEIGHT * 10), ImGuiCond_FirstUseEver);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -208,8 +208,8 @@ static void render_shader_parameters_popup()
 	ImGui::End();
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
-}
 #endif
+}
 
 void render_panel_filter()
 {
@@ -408,21 +408,19 @@ void render_panel_filter()
 	}
 	ImGui::SameLine();
 
-#ifdef USE_OPENGL
-	// Shader Parameters button
-	if (AmigaButton("Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
-		show_shader_params_popup = true;
+	// Shader Parameters button (only shown when active shader has parameters)
+	if (g_renderer && g_renderer->has_shader_parameters()) {
+		if (AmigaButton("Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+			show_shader_params_popup = true;
+		}
+		ImGui::SameLine();
 	}
-	ImGui::SameLine();
-#endif
 
 	// Save button
 	if (AmigaButton("Save Settings", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
 		save_amiberry_settings();
 	}
 
-#ifdef USE_OPENGL
 	// Render the shader parameters popup if open
 	render_shader_parameters_popup();
-#endif
 }

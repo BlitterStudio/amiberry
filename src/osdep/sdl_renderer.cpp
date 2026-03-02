@@ -162,6 +162,36 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	SDL_RenderSetIntegerScale(mon->amiga_renderer, integer_scale);
 }
 
+// --- OSD texture synchronization ---
+
+void SDLRenderer::sync_osd_texture(int monid, int led_width, int led_height)
+{
+	AmigaMonitor* mon = &AMonitors[monid];
+	if (!mon->amiga_renderer)
+		return;
+
+	// Destroy and recreate texture if dimensions changed
+	if (mon->statusline_texture) {
+		int tw, th;
+		SDL_QueryTexture(mon->statusline_texture, nullptr, nullptr, &tw, &th);
+		if (tw != led_width || th != led_height) {
+			SDL_DestroyTexture(mon->statusline_texture);
+			mon->statusline_texture = nullptr;
+		}
+	}
+
+	// Create texture if needed
+	if (!mon->statusline_texture) {
+		mon->statusline_texture = SDL_CreateTexture(mon->amiga_renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, led_width, led_height);
+		if (mon->statusline_texture)
+			SDL_SetTextureBlendMode(mon->statusline_texture, SDL_BLENDMODE_BLEND);
+	}
+
+	// Upload surface pixels to texture
+	if (mon->statusline_texture && mon->statusline_surface)
+		SDL_UpdateTexture(mon->statusline_texture, nullptr, mon->statusline_surface->pixels, mon->statusline_surface->pitch);
+}
+
 // --- VSync ---
 
 void SDLRenderer::update_vsync(int /*monid*/)
@@ -257,20 +287,32 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			SDL_RenderCopy(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
 		}
 
-		if (vkbd_allowed(monid))
-		{
-			vkbd_redraw();
-		}
-
-		if (on_screen_joystick_is_enabled())
-		{
-			on_screen_joystick_redraw(mon->amiga_renderer);
-		}
+		render_vkbd(monid);
+		render_onscreen_joystick(monid);
 
 		return true;
 	}
 
 	return false;
+}
+
+// --- Virtual keyboard / on-screen joystick wrappers ---
+
+void SDLRenderer::render_vkbd(int monid)
+{
+	if (vkbd_allowed(monid))
+	{
+		vkbd_redraw();
+	}
+}
+
+void SDLRenderer::render_onscreen_joystick(int monid)
+{
+	if (on_screen_joystick_is_enabled())
+	{
+		AmigaMonitor* mon = &AMonitors[monid];
+		on_screen_joystick_redraw(mon->amiga_renderer);
+	}
 }
 
 void SDLRenderer::present_frame(int monid, int mode)
@@ -325,6 +367,14 @@ void SDLRenderer::get_drawable_size(SDL_Window* /*w*/, int* width, int* height)
 }
 
 // get_vblank_timestamp() uses base class default (returns m_vsync.wait_vblank_timestamp)
+
+// --- GUI context transitions ---
+
+void SDLRenderer::prepare_gui_sharing(AmigaMonitor* mon)
+{
+	if (mon->amiga_renderer && !mon->gui_renderer)
+		mon->gui_renderer = mon->amiga_renderer;
+}
 
 // --- Cleanup ---
 
