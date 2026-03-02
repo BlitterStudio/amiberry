@@ -53,16 +53,22 @@ public:
 	virtual bool render_frame(int monid, int mode, int immediate) = 0;
 	virtual void present_frame(int monid, int mode) = 0;
 
-	// --- Shader management ---
-	virtual void destroy_shaders() = 0;
-	virtual void clear_shader_cache() = 0;
-	virtual void reset_state() = 0;
-	virtual bool has_valid_shader() const = 0;
+	// --- Shader management (default: no-op for non-GL backends) ---
+	virtual void destroy_shaders() {}
+	virtual void clear_shader_cache() {}
+	virtual void reset_state() {}
+	virtual bool has_valid_shader() const { return true; }
 
-	// --- Bezel overlay ---
-	virtual void update_custom_bezel() = 0;
-	virtual void update_crtemu_bezel() = 0;
-	virtual BezelHoleInfo get_bezel_hole_info() const = 0;
+	// --- Bezel overlay (default: no-op for non-GL backends) ---
+	virtual void update_custom_bezel() {}
+	virtual void update_crtemu_bezel() {}
+	virtual BezelHoleInfo get_bezel_hole_info() const { return BezelHoleInfo{}; }
+
+	// --- Overlay rendering (default: no-op for non-GL backends) ---
+	virtual void render_osd(int monid, int x, int y, int w, int h) {}
+	virtual void render_bezel(int drawableWidth, int drawableHeight) {}
+	virtual void render_software_cursor(int monid, int x, int y, int w, int h) {}
+	virtual void destroy_bezel() {}
 
 	// --- Drawable size query ---
 	virtual void get_drawable_size(SDL_Window* w, int* width, int* height) = 0;

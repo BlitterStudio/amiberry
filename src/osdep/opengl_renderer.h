@@ -95,6 +95,12 @@ public:
 	void update_crtemu_bezel() override;
 	BezelHoleInfo get_bezel_hole_info() const override;
 
+	// Overlay rendering
+	void render_osd(int monid, int x, int y, int w, int h) override;
+	void render_bezel(int drawableWidth, int drawableHeight) override;
+	void render_software_cursor(int monid, int x, int y, int w, int h) override;
+	void destroy_bezel() override;
+
 	// Drawable size query
 	void get_drawable_size(SDL_Window* w, int* width, int* height) override;
 
@@ -118,6 +124,10 @@ private:
 	SDL_GLContext m_gl_context = nullptr;
 	ShaderState m_shader;
 	GLOverlayState m_overlay;
+
+	// Private helpers for overlay rendering
+	bool init_osd_shader();
+	bool load_bezel_texture(const char* bezel_name);
 };
 
 // Helper to get the OpenGL renderer from the global g_renderer.

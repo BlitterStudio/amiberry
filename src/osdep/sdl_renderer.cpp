@@ -12,10 +12,7 @@
 #ifndef USE_OPENGL
 
 #include "options.h"
-#include "custom.h"
 #include "xwin.h"
-#include "drawing.h"
-#include "picasso96.h"
 
 #include "sdl_renderer.h"
 #include "amiberry_gfx.h"
@@ -135,46 +132,7 @@ void SDLRenderer::present_frame(int monid, int mode)
 	// This will be wired up when show_screen delegates to g_renderer.
 }
 
-// --- Shader management ---
-
-void SDLRenderer::destroy_shaders()
-{
-	// SDL2 software path: no shaders
-}
-
-void SDLRenderer::clear_shader_cache()
-{
-	// SDL2 software path: no shader cache
-}
-
-void SDLRenderer::reset_state()
-{
-	// SDL2 software path: nothing to reset
-}
-
-bool SDLRenderer::has_valid_shader() const
-{
-	// SDL2 software path: always valid (no shader required)
-	return true;
-}
-
-// --- Bezel overlay ---
-
-void SDLRenderer::update_custom_bezel()
-{
-	// SDL2 software path: custom bezels not supported
-}
-
-void SDLRenderer::update_crtemu_bezel()
-{
-	// SDL2 software path: CRT bezels not supported
-}
-
-BezelHoleInfo SDLRenderer::get_bezel_hole_info() const
-{
-	// SDL2 software path: no bezel
-	return BezelHoleInfo{};
-}
+// Shader management and bezel overlay: uses IRenderer defaults (no-op)
 
 // --- Drawable size query ---
 

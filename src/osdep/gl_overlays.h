@@ -1,18 +1,11 @@
 #pragma once
 
 /*
- * gl_overlays.h - OpenGL overlay rendering: OSD, bezel, software cursor
+ * gl_overlays.h - LED/OSD status line rendering
  *
- * Extracted from amiberry_gfx.cpp.
+ * OpenGL overlay rendering (OSD, bezel, cursor) has moved to OpenGLRenderer.
  *
  * Copyright 2025 Dimitris Panokostas
  */
-
-#ifdef USE_OPENGL
-extern void render_osd(int monid, int x, int y, int w, int h);
-extern void render_bezel_overlay(int drawableWidth, int drawableHeight);
-extern void render_software_cursor_gl(int monid, int x, int y, int w, int h);
-extern void destroy_bezel_overlay();
-#endif
 
 extern void update_leds(int monid);

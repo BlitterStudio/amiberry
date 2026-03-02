@@ -15,7 +15,6 @@
 #include "picasso96.h"
 #include "amiberry_gfx.h"
 #include "gl_shader_dispatch.h"
-#include "gl_overlays.h"
 #include "target.h"
 #include "fsdb_host.h"
 #include "gfx_platform_internal.h"
@@ -139,7 +138,7 @@ bool SDL2_alloctexture(int monid, int w, int h)
 	}
 
 	// Clean up existing shaders (name changed or no shader loaded yet)
-	destroy_shaders();
+	r->destroy_shaders();
 	shader.loaded_name = shader_name;
 
 	// Force full render on next frame after shader switch
@@ -510,95 +509,6 @@ void render_with_external_shader(ExternalShader* shader, const int monid,
 	glBindVertexArray(0);
 }
 
-void destroy_shaders()
-{
-	auto* r = get_opengl_renderer();
-	auto& shader = r->shader_state();
-	auto& overlay = r->overlay_state();
-
-	// Clear tracked name so next SDL2_alloctexture call will recreate
-	shader.loaded_name.clear();
-
-	// Early exit if no GL context exists (e.g., quitting before emulation started)
-	if (!r->has_context())
-	{
-		// Reset non-GL state
-		shader.crtemu = nullptr;
-		shader.external = nullptr;
-		shader.preset = nullptr;
-		g_renderer->vsync_state().gl_initialized = false;
-		return;
-	}
-
-	if (shader.crtemu != nullptr)
-	{
-		crtemu_destroy(shader.crtemu);
-		shader.crtemu = nullptr;
-	}
-	if (shader.external != nullptr)
-	{
-		destroy_external_shader(shader.external);
-		shader.external = nullptr;
-	}
-	if (shader.preset != nullptr)
-	{
-		destroy_shader_preset(shader.preset);
-		shader.preset = nullptr;
-	}
-	if (overlay.osd_program != 0 && glIsProgram(overlay.osd_program))
-	{
-		glDeleteProgram(overlay.osd_program);
-		overlay.osd_program = 0;
-	}
-	if (overlay.osd_vbo != 0 && glIsBuffer(overlay.osd_vbo))
-	{
-		glDeleteBuffers(1, &overlay.osd_vbo);
-		overlay.osd_vbo = 0;
-	}
-	if (overlay.osd_vao != 0 && glIsVertexArray(overlay.osd_vao))
-	{
-		glDeleteVertexArrays(1, &overlay.osd_vao);
-		overlay.osd_vao = 0;
-	}
-	if (overlay.osd_texture != 0 && glIsTexture(overlay.osd_texture))
-	{
-		glDeleteTextures(1, &overlay.osd_texture);
-		overlay.osd_texture = 0;
-	}
-
-	// Clean up custom bezel overlay
-	destroy_bezel_overlay();
-
-	// Reset GL state flag to ensure clean slate for next shader
-	g_renderer->vsync_state().gl_initialized = false;
-
-	// Reset GL state to ensure clean slate for next shader
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glUseProgram(0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Reset pixel store settings
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-
-	// Disable all vertex attributes that might have been enabled
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-}
-
-void clear_loaded_shader_name()
-{
-	get_opengl_renderer()->shader_state().loaded_name.clear();
-}
-
-void reset_gl_state()
-{
-	g_renderer->vsync_state().gl_initialized = false;
-}
 #endif // USE_OPENGL
 
 #endif // AMIBERRY

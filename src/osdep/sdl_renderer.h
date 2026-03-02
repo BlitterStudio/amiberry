@@ -40,16 +40,8 @@ public:
 	bool render_frame(int monid, int mode, int immediate) override;
 	void present_frame(int monid, int mode) override;
 
-	// Shader management
-	void destroy_shaders() override;
-	void clear_shader_cache() override;
-	void reset_state() override;
-	bool has_valid_shader() const override;
-
-	// Bezel overlay
-	void update_custom_bezel() override;
-	void update_crtemu_bezel() override;
-	BezelHoleInfo get_bezel_hole_info() const override;
+	// Shader management: uses IRenderer defaults (no-op)
+	// Bezel overlay: uses IRenderer defaults (no-op)
 
 	// Drawable size query
 	void get_drawable_size(SDL_Window* w, int* width, int* height) override;

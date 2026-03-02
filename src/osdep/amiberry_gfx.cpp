@@ -47,28 +47,6 @@
 #include "savestate.h"
 #include "uae/types.h"
 
-#ifdef USE_OPENGL
-#include "gl_platform.h"
-
-#ifdef LIBRETRO
-#include "libretro_shared.h"
-#endif
-
-#ifndef GL_BGRA
-#ifdef GL_BGRA_EXT
-#define GL_BGRA GL_BGRA_EXT
-#else
-#define GL_BGRA 0x80E1
-#endif
-#endif
-
-#include "crtemu.h"
-#include "crt_frame.h"
-#include "external_shader.h"
-#include "shader_preset.h"
-
-#endif // USE_OPENGL
-
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
 #endif
@@ -83,21 +61,36 @@
 #include "gfx_prefs_check.h"
 #include "display_modes.h"
 #include "renderer_factory.h"
-#ifdef USE_OPENGL
-#include "opengl_renderer.h"
-#endif
 
 #ifdef USE_OPENGL
+#include "gl_platform.h"
+#include "crtemu.h"
+#include "crt_frame.h"
+#include "external_shader.h"
+#include "shader_preset.h"
+#include "opengl_renderer.h"
 #include <SDL_image.h>
+
+#ifdef LIBRETRO
+#include "libretro_shared.h"
 #endif
+
+#ifndef GL_BGRA
+#ifdef GL_BGRA_EXT
+#define GL_BGRA GL_BGRA_EXT
+#else
+#define GL_BGRA 0x80E1
+#endif
+#endif
+
+#else // !USE_OPENGL
+#include "sdl_renderer.h"
+#endif // USE_OPENGL
 
 #ifdef AMIBERRY
 bool force_auto_crop = false;
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
-#ifndef USE_OPENGL
-#include "sdl_renderer.h"
-#endif
 
 SDL_Rect render_quad;
 static int dx = 0, dy = 0;
@@ -761,9 +754,9 @@ void show_screen(const int monid, int mode)
 		}
 	}
 
-	render_software_cursor_gl(monid, destX, destY, destW, destH);
-	render_bezel_overlay(drawableWidth, drawableHeight);
-	render_osd(monid, destX, destY, destW, destH);
+	g_renderer->render_software_cursor(monid, destX, destY, destW, destH);
+	g_renderer->render_bezel(drawableWidth, drawableHeight);
+	g_renderer->render_osd(monid, destX, destY, destW, destH);
 
 	if (vkbd_allowed(monid))
 	{

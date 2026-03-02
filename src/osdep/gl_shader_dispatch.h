@@ -24,8 +24,4 @@ void render_with_external_shader(ExternalShader* shader, int monid,
 	const uae_u8* pixels, int width, int height, int pitch,
 	int viewport_x, int viewport_y, int viewport_width, int viewport_height);
 
-void destroy_shaders();
-void clear_loaded_shader_name();
-void reset_gl_state();
-
 #endif // USE_OPENGL
