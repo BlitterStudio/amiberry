@@ -128,10 +128,45 @@ static inline bool gfx_platform_override_pixel_format(Uint32* format)
 	return true;
 }
 
+static inline void libretro_allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf, int flags, int width, int height)
+{
+	struct vidbuf_description* vidinfo = &adisplays[monid].gfxvidinfo;
+	int depth = 32;
+
+	if (buf->initialized && buf->vram_buffer)
+		return;
+
+	buf->monitor_id = monid;
+	buf->pixbytes = (depth + 7) / 8;
+	buf->width_allocated = (width + 7) & ~7;
+	buf->height_allocated = height;
+	buf->initialized = true;
+	buf->hardwiredpositioning = false;
+
+	if (buf == &vidinfo->drawbuffer) {
+		buf->bufmem = NULL;
+		buf->bufmemend = NULL;
+		buf->realbufmem = NULL;
+		buf->bufmem_allocated = NULL;
+		buf->vram_buffer = true;
+	} else {
+		xfree(buf->realbufmem);
+		const int w = buf->width_allocated;
+		const int h = buf->height_allocated;
+		const int size = (w * 2) * (h * 2) * buf->pixbytes;
+		buf->rowbytes = w * 2 * buf->pixbytes;
+		buf->realbufmem = xcalloc(uae_u8, size);
+		buf->bufmem_allocated = buf->bufmem = buf->realbufmem + (h / 2) * buf->rowbytes + (w / 2) * buf->pixbytes;
+		buf->bufmemend = buf->realbufmem + size - buf->rowbytes;
+	}
+}
+
 static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 {
 	if (!mon)
 		return false;
+
+	int display_width, display_height;
 
 	struct vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 	struct amigadisplay* ad = &adisplays[mon->monitor_id];
@@ -173,10 +208,10 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 	updatepicasso96(mon);
 
 	if (!mon->screen_is_picasso) {
-		allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
+		libretro_allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
 			LIBRETRO_DRAWBUFFER_WIDTH, LIBRETRO_DRAWBUFFER_HEIGHT);
 
-		allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
+		libretro_allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
 			mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,
 			mon->currentmode.amiga_height > 2048 ? mon->currentmode.amiga_height : 2048);
 	}
