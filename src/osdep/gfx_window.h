@@ -32,5 +32,4 @@ extern int oldtex_w[], oldtex_h[], oldtex_rtg[];
 
 #ifdef USE_OPENGL
 bool set_opengl_attributes(int mode);
-bool init_opengl_context(SDL_Window* window);
 #endif

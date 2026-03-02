@@ -139,11 +139,7 @@ extern SDL_Rect render_quad;
 extern SDL_Cursor* normalcursor;
 
 // Grouped state structs (defined in gfx_state.h)
-struct ShaderState;
 struct VSyncState;
-#ifdef USE_OPENGL
-extern ShaderState g_shader;
-#endif
 extern VSyncState g_vsync;
 
 extern void sortdisplays();
@@ -167,11 +163,7 @@ extern void gfx_lock();
 extern void gfx_unlock();
 
 extern void destroy_shaders();
-extern void update_crtemu_bezel();
-extern void update_custom_bezel();
 #ifdef USE_OPENGL
-extern SDL_GLContext gl_context;
-extern bool init_opengl_context(SDL_Window* window);
 extern void clear_loaded_shader_name();
 extern void reset_gl_state();
 #endif

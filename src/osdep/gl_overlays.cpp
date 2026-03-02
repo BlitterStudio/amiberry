@@ -26,12 +26,12 @@
 #ifdef USE_OPENGL
 #include "gl_platform.h"
 #include <SDL_image.h>
+#include "opengl_renderer.h"
 #endif
 
 #ifdef AMIBERRY
 
 #ifdef USE_OPENGL
-GLOverlayState g_overlay; // OpenGL overlay resources: OSD, bezel, software cursor
 
 static const char* osd_vs_source =
 	""
@@ -52,10 +52,12 @@ static const char* osd_fs_source =
 
 bool init_osd_shader()
 {
-	if (g_overlay.osd_program != 0 && glIsProgram(g_overlay.osd_program)) return true;
+	auto& overlay = get_opengl_renderer()->overlay_state();
 
-	g_overlay.osd_program = 0;
-	g_overlay.osd_vbo = 0;
+	if (overlay.osd_program != 0 && glIsProgram(overlay.osd_program)) return true;
+
+	overlay.osd_program = 0;
+	overlay.osd_vbo = 0;
 
 	// Detect GL version and profile
 	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
@@ -113,25 +115,25 @@ bool init_osd_shader()
 		return false;
 	}
 
-	g_overlay.osd_program = glCreateProgram();
-	glAttachShader(g_overlay.osd_program, vsh);
-	glAttachShader(g_overlay.osd_program, fsh);
+	overlay.osd_program = glCreateProgram();
+	glAttachShader(overlay.osd_program, vsh);
+	glAttachShader(overlay.osd_program, fsh);
 
 	// Bind attribute locations explicitly for modern GL
-	glBindAttribLocation(g_overlay.osd_program, 0, "pos");
+	glBindAttribLocation(overlay.osd_program, 0, "pos");
 
-	glLinkProgram(g_overlay.osd_program);
+	glLinkProgram(overlay.osd_program);
 
 	GLint linked;
-	glGetProgramiv(g_overlay.osd_program, GL_LINK_STATUS, &linked);
+	glGetProgramiv(overlay.osd_program, GL_LINK_STATUS, &linked);
 	if (!linked) {
 		char infoLog[512];
-		glGetProgramInfoLog(g_overlay.osd_program, 512, nullptr, infoLog);
+		glGetProgramInfoLog(overlay.osd_program, 512, nullptr, infoLog);
 		write_log("OSD Shader link error: %s\n", infoLog);
 		glDeleteShader(vsh);
 		glDeleteShader(fsh);
-		glDeleteProgram(g_overlay.osd_program);
-		g_overlay.osd_program = 0;
+		glDeleteProgram(overlay.osd_program);
+		overlay.osd_program = 0;
 		return false;
 	}
 
@@ -139,12 +141,12 @@ bool init_osd_shader()
 	glDeleteShader(vsh);
 	glDeleteShader(fsh);
 
-	g_overlay.osd_tex_loc = glGetUniformLocation(g_overlay.osd_program, "tex0");
+	overlay.osd_tex_loc = glGetUniformLocation(overlay.osd_program, "tex0");
 
-    glGenVertexArrays(1, &g_overlay.osd_vao);
-    glBindVertexArray(g_overlay.osd_vao);
+    glGenVertexArrays(1, &overlay.osd_vao);
+    glBindVertexArray(overlay.osd_vao);
 
-	glGenBuffers(1, &g_overlay.osd_vbo);
+	glGenBuffers(1, &overlay.osd_vbo);
     glBindVertexArray(0);
 
 	return true;
@@ -231,6 +233,7 @@ void update_leds(const int monid)
 #ifdef USE_OPENGL
 void render_osd(const int monid, int x, int y, int w, int h)
 {
+	auto& overlay = get_opengl_renderer()->overlay_state();
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
 	static int last_osd_w = 0;
@@ -240,13 +243,13 @@ void render_osd(const int monid, int x, int y, int w, int h)
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
 	{
 		if (mon->statusline_surface) {
-			if (g_overlay.osd_texture != 0 && !glIsTexture(g_overlay.osd_texture)) {
-				g_overlay.osd_texture = 0;
+			if (overlay.osd_texture != 0 && !glIsTexture(overlay.osd_texture)) {
+				overlay.osd_texture = 0;
 			}
-			if (g_overlay.osd_texture == 0) {
-				glGenTextures(1, &g_overlay.osd_texture);
+			if (overlay.osd_texture == 0) {
+				glGenTextures(1, &overlay.osd_texture);
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, g_overlay.osd_texture);
+				glBindTexture(GL_TEXTURE_2D, overlay.osd_texture);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				last_osd_w = 0;
@@ -256,7 +259,7 @@ void render_osd(const int monid, int x, int y, int w, int h)
 			if (!init_osd_shader()) return;
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, g_overlay.osd_texture);
+			glBindTexture(GL_TEXTURE_2D, overlay.osd_texture);
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, mon->statusline_surface->pitch / 4);
 			if (mon->statusline_surface->w != last_osd_w || mon->statusline_surface->h != last_osd_h) {
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
@@ -273,11 +276,11 @@ void render_osd(const int monid, int x, int y, int w, int h)
 			glDisable(GL_SCISSOR_TEST);
 			glViewport(x, y, w, h);
 
-			glUseProgram(g_overlay.osd_program);
-			if (g_overlay.osd_tex_loc != -1) glUniform1i(g_overlay.osd_tex_loc, 0);
+			glUseProgram(overlay.osd_program);
+			if (overlay.osd_tex_loc != -1) glUniform1i(overlay.osd_tex_loc, 0);
 
             // Bind VAO
-            glBindVertexArray(g_overlay.osd_vao);
+            glBindVertexArray(overlay.osd_vao);
 
 			// Ensure only attribute 0 is enabled for OSD
 			glEnableVertexAttribArray(0);
@@ -310,7 +313,7 @@ void render_osd(const int monid, int x, int y, int w, int h)
 				x0, y1, 0.0f, 0.0f,
 			};
 
-			glBindBuffer(GL_ARRAY_BUFFER, g_overlay.osd_vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, overlay.osd_vbo);
 			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 			glEnableVertexAttribArray(0);
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
@@ -331,21 +334,23 @@ void render_osd(const int monid, int x, int y, int w, int h)
 // Custom bezel overlay functions
 static bool load_bezel_texture(const char* bezel_name)
 {
+	auto& overlay = get_opengl_renderer()->overlay_state();
+
 	if (!bezel_name || !strcmp(bezel_name, "none") || !strlen(bezel_name))
 		return false;
 
 	// Already loaded with same name
-	if (g_overlay.bezel_texture != 0 && g_overlay.loaded_bezel_name == bezel_name)
+	if (overlay.bezel_texture != 0 && overlay.loaded_bezel_name == bezel_name)
 		return true;
 
 	// Unload existing
-	if (g_overlay.bezel_texture != 0 && glIsTexture(g_overlay.bezel_texture)) {
-		glDeleteTextures(1, &g_overlay.bezel_texture);
-		g_overlay.bezel_texture = 0;
+	if (overlay.bezel_texture != 0 && glIsTexture(overlay.bezel_texture)) {
+		glDeleteTextures(1, &overlay.bezel_texture);
+		overlay.bezel_texture = 0;
 	}
-	g_overlay.loaded_bezel_name.clear();
-	g_overlay.bezel_tex_w = 0;
-	g_overlay.bezel_tex_h = 0;
+	overlay.loaded_bezel_name.clear();
+	overlay.bezel_tex_w = 0;
+	overlay.bezel_tex_h = 0;
 
 	std::string full_path = get_bezels_path() + bezel_name;
 	SDL_Surface* surface = IMG_Load(full_path.c_str());
@@ -382,26 +387,26 @@ static bool load_bezel_texture(const char* bezel_name)
 		}
 
 		if (max_x >= min_x && max_y >= min_y) {
-			g_overlay.bezel_hole_x = static_cast<float>(min_x) / rgba->w;
-			g_overlay.bezel_hole_y = static_cast<float>(min_y) / rgba->h;
-			g_overlay.bezel_hole_w = static_cast<float>(max_x - min_x + 1) / rgba->w;
-			g_overlay.bezel_hole_h = static_cast<float>(max_y - min_y + 1) / rgba->h;
+			overlay.bezel_hole_x = static_cast<float>(min_x) / rgba->w;
+			overlay.bezel_hole_y = static_cast<float>(min_y) / rgba->h;
+			overlay.bezel_hole_w = static_cast<float>(max_x - min_x + 1) / rgba->w;
+			overlay.bezel_hole_h = static_cast<float>(max_y - min_y + 1) / rgba->h;
 			write_log("Custom bezel: screen hole at %.1f%%,%.1f%% size %.1f%%x%.1f%%\n",
-				g_overlay.bezel_hole_x * 100.0f, g_overlay.bezel_hole_y * 100.0f,
-				g_overlay.bezel_hole_w * 100.0f, g_overlay.bezel_hole_h * 100.0f);
+				overlay.bezel_hole_x * 100.0f, overlay.bezel_hole_y * 100.0f,
+				overlay.bezel_hole_w * 100.0f, overlay.bezel_hole_h * 100.0f);
 		} else {
 			// No transparent region found - default to full image
-			g_overlay.bezel_hole_x = 0.0f;
-			g_overlay.bezel_hole_y = 0.0f;
-			g_overlay.bezel_hole_w = 1.0f;
-			g_overlay.bezel_hole_h = 1.0f;
+			overlay.bezel_hole_x = 0.0f;
+			overlay.bezel_hole_y = 0.0f;
+			overlay.bezel_hole_w = 1.0f;
+			overlay.bezel_hole_h = 1.0f;
 			write_log("Custom bezel: no transparent region found, using full area\n");
 		}
 	}
 
-	glGenTextures(1, &g_overlay.bezel_texture);
+	glGenTextures(1, &overlay.bezel_texture);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, g_overlay.bezel_texture);
+	glBindTexture(GL_TEXTURE_2D, overlay.bezel_texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -410,77 +415,68 @@ static bool load_bezel_texture(const char* bezel_name)
 		GL_RGBA, GL_UNSIGNED_BYTE, rgba->pixels);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	g_overlay.bezel_tex_w = rgba->w;
-	g_overlay.bezel_tex_h = rgba->h;
-	g_overlay.loaded_bezel_name = bezel_name;
+	overlay.bezel_tex_w = rgba->w;
+	overlay.bezel_tex_h = rgba->h;
+	overlay.loaded_bezel_name = bezel_name;
 
 	SDL_FreeSurface(rgba);
-	write_log("Custom bezel: loaded %s (%dx%d)\n", bezel_name, g_overlay.bezel_tex_w, g_overlay.bezel_tex_h);
+	write_log("Custom bezel: loaded %s (%dx%d)\n", bezel_name, overlay.bezel_tex_w, overlay.bezel_tex_h);
 	return true;
 }
 
 void destroy_bezel_overlay()
 {
-	if (g_overlay.bezel_texture != 0 && glIsTexture(g_overlay.bezel_texture)) {
-		glDeleteTextures(1, &g_overlay.bezel_texture);
-		g_overlay.bezel_texture = 0;
-	}
-	if (g_overlay.bezel_vbo != 0) {
-		glDeleteBuffers(1, &g_overlay.bezel_vbo);
-		g_overlay.bezel_vbo = 0;
-	}
-	if (g_overlay.bezel_vao != 0) {
-		glDeleteVertexArrays(1, &g_overlay.bezel_vao);
-		g_overlay.bezel_vao = 0;
-	}
-	g_overlay.loaded_bezel_name.clear();
-	g_overlay.bezel_tex_w = 0;
-	g_overlay.bezel_tex_h = 0;
-	g_overlay.bezel_hole_x = 0.0f;
-	g_overlay.bezel_hole_y = 0.0f;
-	g_overlay.bezel_hole_w = 1.0f;
-	g_overlay.bezel_hole_h = 1.0f;
-}
+	auto& overlay = get_opengl_renderer()->overlay_state();
 
-void update_custom_bezel()
-{
-	// Don't do GL calls here - this may be called from the GUI
-	// where the GL context isn't current. Just invalidate the loaded name
-	// and reset hole coordinates so render_bezel_overlay() will reload
-	// on the next frame (where the GL context IS current).
-	g_overlay.loaded_bezel_name.clear();
-	g_overlay.bezel_hole_x = 0.0f;
-	g_overlay.bezel_hole_y = 0.0f;
-	g_overlay.bezel_hole_w = 1.0f;
-	g_overlay.bezel_hole_h = 1.0f;
+	if (overlay.bezel_texture != 0 && glIsTexture(overlay.bezel_texture)) {
+		glDeleteTextures(1, &overlay.bezel_texture);
+		overlay.bezel_texture = 0;
+	}
+	if (overlay.bezel_vbo != 0) {
+		glDeleteBuffers(1, &overlay.bezel_vbo);
+		overlay.bezel_vbo = 0;
+	}
+	if (overlay.bezel_vao != 0) {
+		glDeleteVertexArrays(1, &overlay.bezel_vao);
+		overlay.bezel_vao = 0;
+	}
+	overlay.loaded_bezel_name.clear();
+	overlay.bezel_tex_w = 0;
+	overlay.bezel_tex_h = 0;
+	overlay.bezel_hole_x = 0.0f;
+	overlay.bezel_hole_y = 0.0f;
+	overlay.bezel_hole_w = 1.0f;
+	overlay.bezel_hole_h = 1.0f;
 }
 
 void render_bezel_overlay(int drawableWidth, int drawableHeight)
 {
+	auto& overlay = get_opengl_renderer()->overlay_state();
+
 	if (!amiberry_options.use_custom_bezel ||
 		strcmp(amiberry_options.custom_bezel, "none") == 0) {
 		// Clean up if we had a texture loaded
-		if (g_overlay.bezel_texture != 0) {
+		if (overlay.bezel_texture != 0) {
 			destroy_bezel_overlay();
 		}
 		return;
 	}
 
 	// Check if we need to (re)load the texture
-	if (g_overlay.loaded_bezel_name != amiberry_options.custom_bezel) {
+	if (overlay.loaded_bezel_name != amiberry_options.custom_bezel) {
 		// Name changed or was cleared by update_custom_bezel() - reload
-		if (g_overlay.bezel_texture != 0) {
+		if (overlay.bezel_texture != 0) {
 			destroy_bezel_overlay();
 		}
 		if (!load_bezel_texture(amiberry_options.custom_bezel)) return;
 	}
-	if (g_overlay.bezel_texture == 0 || !glIsTexture(g_overlay.bezel_texture)) return;
+	if (overlay.bezel_texture == 0 || !glIsTexture(overlay.bezel_texture)) return;
 
 	// Reuse OSD shader program
 	if (!init_osd_shader()) return;
 
 	// Create VAO/VBO and upload vertex data on first use
-	if (g_overlay.bezel_vao == 0) {
+	if (overlay.bezel_vao == 0) {
 		// Full-screen quad in NDC (static - never changes)
 		static const GLfloat vertices[] = {
 			-1.0f, -1.0f, 0.0f, 1.0f,  // bottom-left
@@ -489,10 +485,10 @@ void render_bezel_overlay(int drawableWidth, int drawableHeight)
 			-1.0f,  1.0f, 0.0f, 0.0f,  // top-left
 		};
 
-		glGenVertexArrays(1, &g_overlay.bezel_vao);
-		glBindVertexArray(g_overlay.bezel_vao);
-		glGenBuffers(1, &g_overlay.bezel_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, g_overlay.bezel_vbo);
+		glGenVertexArrays(1, &overlay.bezel_vao);
+		glBindVertexArray(overlay.bezel_vao);
+		glGenBuffers(1, &overlay.bezel_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, overlay.bezel_vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
 		glBindVertexArray(0);
@@ -506,17 +502,17 @@ void render_bezel_overlay(int drawableWidth, int drawableHeight)
 	glViewport(0, 0, drawableWidth, drawableHeight);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, g_overlay.bezel_texture);
+	glBindTexture(GL_TEXTURE_2D, overlay.bezel_texture);
 
-	glUseProgram(g_overlay.osd_program);
-	if (g_overlay.osd_tex_loc != -1) glUniform1i(g_overlay.osd_tex_loc, 0);
+	glUseProgram(overlay.osd_program);
+	if (overlay.osd_tex_loc != -1) glUniform1i(overlay.osd_tex_loc, 0);
 
-	glBindVertexArray(g_overlay.bezel_vao);
+	glBindVertexArray(overlay.bezel_vao);
 	glEnableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 
-	glBindBuffer(GL_ARRAY_BUFFER, g_overlay.bezel_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, overlay.bezel_vbo);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	glDisableVertexAttribArray(0);
@@ -529,15 +525,16 @@ void render_bezel_overlay(int drawableWidth, int drawableHeight)
 
 void render_software_cursor_gl(const int monid, int x, int y, int w, int h)
 {
+	auto& overlay = get_opengl_renderer()->overlay_state();
 	const amigadisplay* ad = &adisplays[monid];
 	if (ad->picasso_on && p96_uses_software_cursor()) {
-		if (p96_cursor_needs_update() || !g_overlay.cursor_texture) {
+		if (p96_cursor_needs_update() || !overlay.cursor_texture) {
 			SDL_Surface* s = p96_get_cursor_overlay_surface();
 			if (s) {
-				if (g_overlay.cursor_texture == 0) {
-					glGenTextures(1, &g_overlay.cursor_texture);
+				if (overlay.cursor_texture == 0) {
+					glGenTextures(1, &overlay.cursor_texture);
 				}
-				glBindTexture(GL_TEXTURE_2D, g_overlay.cursor_texture);
+				glBindTexture(GL_TEXTURE_2D, overlay.cursor_texture);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -545,9 +542,9 @@ void render_software_cursor_gl(const int monid, int x, int y, int w, int h)
 			}
 		}
 
-		if (g_overlay.cursor_texture) {
-			if (g_overlay.cursor_vao == 0) glGenVertexArrays(1, &g_overlay.cursor_vao);
-			if (g_overlay.cursor_vbo == 0) glGenBuffers(1, &g_overlay.cursor_vbo);
+		if (overlay.cursor_texture) {
+			if (overlay.cursor_vao == 0) glGenVertexArrays(1, &overlay.cursor_vao);
+			if (overlay.cursor_vbo == 0) glGenBuffers(1, &overlay.cursor_vbo);
 
 			if (!init_osd_shader()) return; // Re-use OSD shader (simple texture shader)
 
@@ -586,19 +583,19 @@ void render_software_cursor_gl(const int monid, int x, int y, int w, int h)
 				glDisable(GL_SCISSOR_TEST);
 				glViewport(x, y, w, h);
 
-				glUseProgram(g_overlay.osd_program);
-				if (g_overlay.osd_tex_loc != -1) glUniform1i(g_overlay.osd_tex_loc, 0);
+				glUseProgram(overlay.osd_program);
+				if (overlay.osd_tex_loc != -1) glUniform1i(overlay.osd_tex_loc, 0);
 
-				glBindVertexArray(g_overlay.cursor_vao);
+				glBindVertexArray(overlay.cursor_vao);
 
 				glEnableVertexAttribArray(0);
 				glDisableVertexAttribArray(1);
 				glDisableVertexAttribArray(2);
 
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, g_overlay.cursor_texture);
+				glBindTexture(GL_TEXTURE_2D, overlay.cursor_texture);
 
-				glBindBuffer(GL_ARRAY_BUFFER, g_overlay.cursor_vbo);
+				glBindBuffer(GL_ARRAY_BUFFER, overlay.cursor_vbo);
 				glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
 				glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
 

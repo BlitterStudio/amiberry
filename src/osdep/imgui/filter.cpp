@@ -341,9 +341,7 @@ void render_panel_filter()
 		// Built-in CRT bezel (disabled when custom bezel is active)
 		if (amiberry_options.use_custom_bezel) ImGui::BeginDisabled();
 		if (AmigaCheckbox("Built-in CRT bezel", &amiberry_options.use_bezel)) {
-#ifdef USE_OPENGL
-			update_crtemu_bezel();
-#endif
+			if (g_renderer) g_renderer->update_crtemu_bezel();
 		}
 		ShowHelpMarker("Built-in CRT television bezel frame.\n"
 					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
@@ -369,13 +367,9 @@ void render_panel_filter()
 					// If enabling custom bezel, disable built-in
 					if (amiberry_options.use_custom_bezel) {
 						amiberry_options.use_bezel = false;
-#ifdef USE_OPENGL
-						update_crtemu_bezel();
-#endif
+						if (g_renderer) g_renderer->update_crtemu_bezel();
 					}
-#ifdef USE_OPENGL
-					update_custom_bezel();
-#endif
+					if (g_renderer) g_renderer->update_custom_bezel();
 				}
 				if (is_selected) ImGui::SetItemDefaultFocus();
 			}

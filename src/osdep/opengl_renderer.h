@@ -3,9 +3,9 @@
 /*
  * opengl_renderer.h - OpenGL backend implementation of IRenderer
  *
- * Wraps all OpenGL-specific rendering operations. During the initial
- * integration phase this delegates to existing free functions and globals.
- * Subsequent phases will internalize the state.
+ * Owns the GL context, shader state, and overlay resources as private
+ * members. External code accesses GL-specific state via the typed
+ * get_opengl_renderer() helper.
  *
  * Copyright 2026 Dimitris Panokostas
  */
@@ -13,12 +13,8 @@
 #ifdef USE_OPENGL
 
 #include "irenderer.h"
+#include "gfx_state.h"
 #include <SDL.h>
-
-// Forward declarations
-struct ShaderState;
-struct GLOverlayState;
-struct VSyncState;
 
 class OpenGLRenderer : public IRenderer {
 public:
@@ -75,6 +71,19 @@ public:
 	// Access shader state for filter.cpp parameter editing
 	ShaderState& shader_state();
 	const ShaderState& shader_state() const;
+
+	// Access overlay state for overlay rendering functions
+	GLOverlayState& overlay_state();
+	const GLOverlayState& overlay_state() const;
+
+private:
+	SDL_GLContext m_gl_context = nullptr;
+	ShaderState m_shader;
+	GLOverlayState m_overlay;
 };
+
+// Helper to get the OpenGL renderer from the global g_renderer.
+// Returns nullptr if g_renderer is null or not an OpenGLRenderer.
+OpenGLRenderer* get_opengl_renderer();
 
 #endif // USE_OPENGL

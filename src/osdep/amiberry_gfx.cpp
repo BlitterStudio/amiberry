@@ -84,6 +84,9 @@
 #include "gfx_prefs_check.h"
 #include "display_modes.h"
 #include "renderer_factory.h"
+#ifdef USE_OPENGL
+#include "opengl_renderer.h"
+#endif
 
 #ifdef USE_OPENGL
 #include <SDL_image.h>
@@ -97,26 +100,7 @@ SDL_Surface* amiga_surface = nullptr;
 SDL_Texture* p96_cursor_overlay_texture = nullptr;  // Software cursor overlay for RTG
 #endif
 
-#ifdef USE_OPENGL
-SDL_GLContext gl_context;
-ShaderState g_shader;
-
-// Load or unload the CRT bezel frame overlay based on amiberry_options.use_bezel
-void update_crtemu_bezel()
-{
-	if (g_shader.crtemu == nullptr)
-		return;
-	if (amiberry_options.use_bezel) {
-		auto* frame_pixels = new CRTEMU_U32[CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT];
-		crt_frame(frame_pixels);
-		crtemu_frame(g_shader.crtemu, frame_pixels, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
-		delete[] frame_pixels;
-	} else {
-		crtemu_frame(g_shader.crtemu, nullptr, 0, 0);
-	}
-}
-
-#else
+#ifndef USE_OPENGL
 SDL_Texture* amiga_texture;
 #endif
 
@@ -180,58 +164,6 @@ float SDL2_getrefreshrate(const int monid)
 	}
 	return static_cast<float>(mode.refresh_rate);
 }
-
-#ifdef USE_OPENGL
-// current_vsync_interval, cached_refresh_rate, gl_state_initialized
-// are now in the VSyncState g_vsync struct declared above
-
-void update_vsync(const int monid)
-{
-	if (!AMonitors[monid].amiga_window) return;
-	
-	const AmigaMonitor* mon = &AMonitors[monid];
-	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
-	const int vsync_mode = currprefs.gfx_apmode[idx].gfx_vsync;
-	int interval = 0;
-
-	if (vsync_mode > 0) {
-		if (vsync_mode > 1) {
-			// VSync 50/60Hz: Adapt for High Refresh Rate Monitors
-			// We cache the refresh rate check to avoid expensive calls every frame
-			if (g_vsync.cached_refresh_rate <= 0.0f) {
-				g_vsync.cached_refresh_rate = SDL2_getrefreshrate(monid);
-				write_log("VSync: Detected refresh rate: %.2f Hz\n", g_vsync.cached_refresh_rate);
-			}
-
-			float target_fps = (float)vblank_hz;
-			if (target_fps < 45 || target_fps > 125) target_fps = 50.0f; // Sanity check
-
-			if (g_vsync.cached_refresh_rate > 0) {
-				interval = (int)std::round(g_vsync.cached_refresh_rate / target_fps);
-				if (interval < 1) interval = 1;
-			}
-			else {
-				interval = 1;
-			}
-		}
-		else {
-			// Standard VSync
-			interval = 1;
-		}
-	}
-	
-	if (g_vsync.current_interval != interval) {
-		if (SDL_GL_SetSwapInterval(interval) == 0) {
-			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
-		}
-		else {
-			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
-		}
-		// Update interval even on failure to prevent repeated attempts
-		g_vsync.current_interval = interval;
-	}
-}
-#endif
 
 void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 {
@@ -606,9 +538,14 @@ void show_screen(const int monid, int mode)
 		SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
 	}
 
+	auto* gl_r = get_opengl_renderer();
+	auto& shader = gl_r->shader_state();
+	auto& overlay = gl_r->overlay_state();
+
 	// Ensure GL context is current for this window
-	if (gl_context && mon->amiga_window) {
-		if (SDL_GL_MakeCurrent(mon->amiga_window, gl_context) != 0) {
+	auto gl_ctx = gl_r->get_gl_context();
+	if (gl_ctx && mon->amiga_window) {
+		if (SDL_GL_MakeCurrent(mon->amiga_window, gl_ctx) != 0) {
 			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
 	}
@@ -632,11 +569,11 @@ void show_screen(const int monid, int mode)
 	int renderAreaX = 0, renderAreaY = 0;
 	int renderAreaW = drawableWidth, renderAreaH = drawableHeight;
 
-	if (amiberry_options.use_custom_bezel && g_overlay.bezel_texture != 0 && g_overlay.bezel_hole_w > 0.0f && g_overlay.bezel_hole_h > 0.0f) {
-		renderAreaX = static_cast<int>(g_overlay.bezel_hole_x * drawableWidth);
-		renderAreaY = static_cast<int>(g_overlay.bezel_hole_y * drawableHeight);
-		renderAreaW = static_cast<int>(g_overlay.bezel_hole_w * drawableWidth);
-		renderAreaH = static_cast<int>(g_overlay.bezel_hole_h * drawableHeight);
+	if (amiberry_options.use_custom_bezel && overlay.bezel_texture != 0 && overlay.bezel_hole_w > 0.0f && overlay.bezel_hole_h > 0.0f) {
+		renderAreaX = static_cast<int>(overlay.bezel_hole_x * drawableWidth);
+		renderAreaY = static_cast<int>(overlay.bezel_hole_y * drawableHeight);
+		renderAreaW = static_cast<int>(overlay.bezel_hole_w * drawableWidth);
+		renderAreaH = static_cast<int>(overlay.bezel_hole_h * drawableHeight);
 	}
 
 	int destW, destH, destX, destY;
@@ -698,7 +635,7 @@ void show_screen(const int monid, int mode)
 	}
 
 	// Handle shader preset rendering (multi-pass .glslp)
-	if (g_shader.preset && g_shader.preset->is_valid()) {
+	if (shader.preset && shader.preset->is_valid()) {
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
@@ -725,22 +662,22 @@ void show_screen(const int monid, int mode)
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 
-			g_shader.preset->render(crop_ptr, w, h, amiga_surface->pitch,
+			shader.preset->render(crop_ptr, w, h, amiga_surface->pitch,
 				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
 		} else if (amiga_surface) {
-			g_shader.preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
+			shader.preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
 				amiga_surface->w, amiga_surface->h, amiga_surface->pitch,
 				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
 		}
 
 	}
 	// Handle external shader rendering (simplified single-pass)
-	else if (g_shader.external && g_shader.external->is_valid()) {
+	else if (shader.external && shader.external->is_valid()) {
 		// Explicitly disable attributes to avoid leakage from previous passes
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
-		
+
 		// Get source dimensions for this frame
 		int src_w = amiga_surface ? amiga_surface->w : 0;
 		int src_h = amiga_surface ? amiga_surface->h : 0;
@@ -748,14 +685,14 @@ void show_screen(const int monid, int mode)
 			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
 			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
 		}
-		
+
 		// Use aspect-corrected viewport, but ensure it's at least as large as the source
 		// Many CRT shaders calculate scale = floor(OutputSize / InputSize) which fails if OutputSize < InputSize
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
 		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
 		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
-		
+
 		// Set viewport for shader rendering
 		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
@@ -768,16 +705,16 @@ void show_screen(const int monid, int mode)
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 
-			render_with_external_shader(g_shader.external, monid, crop_ptr,
+			render_with_external_shader(shader.external, monid, crop_ptr,
 				w, h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		} else if (amiga_surface) {
 			// FAST PATH: No cropping
-			render_with_external_shader(g_shader.external, monid, 
+			render_with_external_shader(shader.external, monid,
 				static_cast<const uae_u8*>(amiga_surface->pixels),
 				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		}
 
-	} else if (g_shader.crtemu) {
+	} else if (shader.crtemu) {
 		// crtemu_present expects attribute 0 to be enabled.
 		glEnableVertexAttribArray(0);
 		// Disable other attributes that might have been enabled by OSD or other passes
@@ -785,9 +722,9 @@ void show_screen(const int monid, int mode)
 		glDisableVertexAttribArray(2);
 
 		// When a custom bezel defines the viewport, skip crtemu's internal 4:3 letterboxing
-		g_shader.crtemu->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
+		shader.crtemu->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
 
-		if (g_shader.crtemu->type != CRTEMU_TYPE_NONE) {
+		if (shader.crtemu->type != CRTEMU_TYPE_NONE) {
 			glViewport(renderAreaX, renderAreaY, renderAreaW, renderAreaH);
 		}
 
@@ -820,12 +757,12 @@ void show_screen(const int monid, int mode)
 			int w = std::min(crop_rect.w, amiga_surface->w - x);
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-			
-			crtemu_present(g_shader.crtemu, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
+
+			crtemu_present(shader.crtemu, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
 				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		} else if (amiga_surface) {
 			// FAST PATH: No cropping.
-			crtemu_present(g_shader.crtemu, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
+			crtemu_present(shader.crtemu, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
 			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		}
 	}

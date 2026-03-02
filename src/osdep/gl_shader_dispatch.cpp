@@ -26,6 +26,7 @@
 #include "crtemu.h"
 #include "external_shader.h"
 #include "shader_preset.h"
+#include "opengl_renderer.h"
 #endif
 
 #ifdef AMIBERRY
@@ -76,23 +77,24 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	}
 
 #ifdef USE_OPENGL
+	auto& shader = get_opengl_renderer()->shader_state();
 	// Store the texture filter mode for use when creating/updating textures
-	g_shader.texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
+	shader.texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
 	// Note: integer_scale is not directly applicable to OpenGL - it would need custom
 	// viewport calculations which are handled elsewhere in the rendering pipeline
 
 	// Only apply filter mode when no shader is active (NONE mode without external shader)
 	// CRT shaders and external shaders handle their own texture filtering
-	bool no_shader_active = (g_shader.crtemu != nullptr && g_shader.crtemu->type == CRTEMU_TYPE_NONE && g_shader.external == nullptr);
+	bool no_shader_active = (shader.crtemu != nullptr && shader.crtemu->type == CRTEMU_TYPE_NONE && shader.external == nullptr);
 	if (no_shader_active) {
 		// For NONE mode without external shader, we need to apply filter to the backbuffer texture
-		if (g_shader.crtemu->backbuffer != 0 && glIsTexture(g_shader.crtemu->backbuffer)) {
+		if (shader.crtemu->backbuffer != 0 && glIsTexture(shader.crtemu->backbuffer)) {
 			// Update the persistent filter state in crtemu so it's used every frame
-			g_shader.crtemu->texture_filter = g_shader.texture_filter_mode;
+			shader.crtemu->texture_filter = shader.texture_filter_mode;
 
-			glBindTexture(GL_TEXTURE_2D, g_shader.crtemu->backbuffer);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, g_shader.texture_filter_mode);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, g_shader.texture_filter_mode);
+			glBindTexture(GL_TEXTURE_2D, shader.crtemu->backbuffer);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, shader.texture_filter_mode);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, shader.texture_filter_mode);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 	}
@@ -114,6 +116,8 @@ bool SDL2_alloctexture(int monid, int w, int h)
 	if (gfx_platform_skip_alloctexture(monid, w, h))
 		return true;
 #ifdef USE_OPENGL
+	auto* r = get_opengl_renderer();
+	auto& shader = r->shader_state();
 	auto mon = &AMonitors[monid];
 	const char* shader_name;
 	if (mon->screen_is_picasso)
@@ -123,42 +127,43 @@ bool SDL2_alloctexture(int monid, int w, int h)
 
 	// Skip shader recreation if already loaded with the same name.
 	// This preserves runtime parameter changes made by the user.
-	bool shader_exists = (g_shader.crtemu != nullptr || g_shader.external != nullptr || g_shader.preset != nullptr);
-	if (shader_exists && g_shader.loaded_name == shader_name) {
+	bool shader_exists = (shader.crtemu != nullptr || shader.external != nullptr || shader.preset != nullptr);
+	if (shader_exists && shader.loaded_name == shader_name) {
 		return true;
 	}
 
 	// Clean up existing shaders (name changed or no shader loaded yet)
 	destroy_shaders();
-	g_shader.loaded_name = shader_name;
+	shader.loaded_name = shader_name;
 
 	// Force full render on next frame after shader switch
 	mon->full_render_needed = true;
 
 	// Ensure GL context is current before creating shaders
-	if (gl_context && mon->amiga_window) {
-		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
+	auto gl_ctx = r->get_gl_context();
+	if (gl_ctx && mon->amiga_window) {
+		SDL_GL_MakeCurrent(mon->amiga_window, gl_ctx);
 	}
 
 	// Check if we should use a shader preset (.glslp)
 	if (is_shader_preset(shader_name)) {
 		write_log("Loading shader preset: %s\n", shader_name);
-		g_shader.preset = create_shader_preset(shader_name);
+		shader.preset = create_shader_preset(shader_name);
 
-		if (!g_shader.preset) {
+		if (!shader.preset) {
 			write_log("Failed to load shader preset, falling back to built-in shaders\n");
 			shader_name = "none";
 		} else {
-			write_log("Shader preset loaded successfully (%d passes)\n", g_shader.preset->get_pass_count());
+			write_log("Shader preset loaded successfully (%d passes)\n", shader.preset->get_pass_count());
 			return true;
 		}
 	}
 	// Check if we should use an external shader (.glsl)
 	else if (is_external_shader(shader_name)) {
 		write_log("Loading external shader: %s\n", shader_name);
-		g_shader.external = create_external_shader(shader_name);
+		shader.external = create_external_shader(shader_name);
 
-		if (!g_shader.external) {
+		if (!shader.external) {
 			write_log("Failed to load external shader, falling back to built-in shaders\n");
 			// Fall back to built-in shaders
 			shader_name = "none";
@@ -169,26 +174,26 @@ bool SDL2_alloctexture(int monid, int w, int h)
 	}
 
 	// Use built-in crtemu shaders
-	if (g_shader.crtemu == nullptr) {
+	if (shader.crtemu == nullptr) {
 		const int crt_type = get_crtemu_type(shader_name);
-		g_shader.crtemu = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr,
+		shader.crtemu = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr,
 			amiberry_options.force_mobile_shaders);
 
 		// Apply force_mobile_shaders override if enabled
-		if (g_shader.crtemu != nullptr && amiberry_options.force_mobile_shaders) {
-			g_shader.crtemu->is_mobile_gpu = true;
+		if (shader.crtemu != nullptr && amiberry_options.force_mobile_shaders) {
+			shader.crtemu->is_mobile_gpu = true;
 		}
 
 		// Fallback to NONE if shader creation failed (e.g., shader compilation error)
-		if (g_shader.crtemu == nullptr && crt_type != CRTEMU_TYPE_NONE) {
+		if (shader.crtemu == nullptr && crt_type != CRTEMU_TYPE_NONE) {
 			write_log("WARNING: Failed to create CRT shader type %d, falling back to NONE\n", crt_type);
-			g_shader.crtemu = crtemu_create(CRTEMU_TYPE_NONE, nullptr);
+			shader.crtemu = crtemu_create(CRTEMU_TYPE_NONE, nullptr);
 		}
 
 		// Load bezel frame overlay if enabled
-		update_crtemu_bezel();
+		r->update_crtemu_bezel();
 	}
-	return g_shader.crtemu != nullptr || g_shader.external != nullptr || g_shader.preset != nullptr;
+	return shader.crtemu != nullptr || shader.external != nullptr || shader.preset != nullptr;
 #else
 	if (w < 0 || h < 0)
 	{
@@ -247,7 +252,7 @@ int get_crtemu_type(const char* shader)
 
 	// Check if it's an external shader file or preset
 	if (is_external_shader(shader) || is_shader_preset(shader)) {
-		g_shader.external_name = shader;
+		get_opengl_renderer()->shader_state().external_name = shader;
 		return CRTEMU_TYPE_NONE; // Use NONE to skip crtemu initialization
 	}
 
@@ -500,54 +505,58 @@ void render_with_external_shader(ExternalShader* shader, const int monid,
 
 void destroy_shaders()
 {
+	auto* r = get_opengl_renderer();
+	auto& shader = r->shader_state();
+	auto& overlay = r->overlay_state();
+
 	// Clear tracked name so next SDL2_alloctexture call will recreate
-	g_shader.loaded_name.clear();
+	shader.loaded_name.clear();
 
 	// Early exit if no GL context exists (e.g., quitting before emulation started)
-	if (gl_context == nullptr)
+	if (!r->has_context())
 	{
 		// Reset non-GL state
-		g_shader.crtemu = nullptr;
-		g_shader.external = nullptr;
-		g_shader.preset = nullptr;
+		shader.crtemu = nullptr;
+		shader.external = nullptr;
+		shader.preset = nullptr;
 		g_vsync.gl_initialized = false;
 		return;
 	}
 
-	if (g_shader.crtemu != nullptr)
+	if (shader.crtemu != nullptr)
 	{
-		crtemu_destroy(g_shader.crtemu);
-		g_shader.crtemu = nullptr;
+		crtemu_destroy(shader.crtemu);
+		shader.crtemu = nullptr;
 	}
-	if (g_shader.external != nullptr)
+	if (shader.external != nullptr)
 	{
-		destroy_external_shader(g_shader.external);
-		g_shader.external = nullptr;
+		destroy_external_shader(shader.external);
+		shader.external = nullptr;
 	}
-	if (g_shader.preset != nullptr)
+	if (shader.preset != nullptr)
 	{
-		destroy_shader_preset(g_shader.preset);
-		g_shader.preset = nullptr;
+		destroy_shader_preset(shader.preset);
+		shader.preset = nullptr;
 	}
-	if (g_overlay.osd_program != 0 && glIsProgram(g_overlay.osd_program))
+	if (overlay.osd_program != 0 && glIsProgram(overlay.osd_program))
 	{
-		glDeleteProgram(g_overlay.osd_program);
-		g_overlay.osd_program = 0;
+		glDeleteProgram(overlay.osd_program);
+		overlay.osd_program = 0;
 	}
-	if (g_overlay.osd_vbo != 0 && glIsBuffer(g_overlay.osd_vbo))
+	if (overlay.osd_vbo != 0 && glIsBuffer(overlay.osd_vbo))
 	{
-		glDeleteBuffers(1, &g_overlay.osd_vbo);
-		g_overlay.osd_vbo = 0;
+		glDeleteBuffers(1, &overlay.osd_vbo);
+		overlay.osd_vbo = 0;
 	}
-	if (g_overlay.osd_vao != 0 && glIsVertexArray(g_overlay.osd_vao))
+	if (overlay.osd_vao != 0 && glIsVertexArray(overlay.osd_vao))
 	{
-		glDeleteVertexArrays(1, &g_overlay.osd_vao);
-		g_overlay.osd_vao = 0;
+		glDeleteVertexArrays(1, &overlay.osd_vao);
+		overlay.osd_vao = 0;
 	}
-	if (g_overlay.osd_texture != 0 && glIsTexture(g_overlay.osd_texture))
+	if (overlay.osd_texture != 0 && glIsTexture(overlay.osd_texture))
 	{
-		glDeleteTextures(1, &g_overlay.osd_texture);
-		g_overlay.osd_texture = 0;
+		glDeleteTextures(1, &overlay.osd_texture);
+		overlay.osd_texture = 0;
 	}
 
 	// Clean up custom bezel overlay
@@ -576,7 +585,7 @@ void destroy_shaders()
 
 void clear_loaded_shader_name()
 {
-	g_shader.loaded_name.clear();
+	get_opengl_renderer()->shader_state().loaded_name.clear();
 }
 
 void reset_gl_state()

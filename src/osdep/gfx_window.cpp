@@ -1139,65 +1139,8 @@ bool doInit(AmigaMonitor* mon)
 }
 
 #ifdef USE_OPENGL
-
-/**
- * @brief Creates the OpenGL context and initializes extension function pointers.
- *
- * This function must be called after an SDL window has been successfully
- * created. It performs the final steps required to prepare for OpenGL
- * rendering:
- * 1. Creates an OpenGL context and associates it with the given window.
- * 2. Binds the newly created context to the current thread.
- * 3. Loads OpenGL extension function pointers via SDL_GL_GetProcAddress.
- *
- * The function includes error checking after each step and will log detailed
- * error messages if any part of the process fails. It also logs the vendor,
- * renderer, and version strings for debugging purposes.
- *
- * @param window A pointer to the SDL_Window that the OpenGL context will be
- *               created for.
- * @return true if the context was created and extension functions were loaded
- *         successfully, false otherwise.
- */
-[[nodiscard]] bool init_opengl_context(SDL_Window* window)
-{
-	write_log("DEBUG: Initializing OpenGL Context...\n");
-
-	gl_context = SDL_GL_CreateContext(window);
-	if (!gl_context) {
-		write_log(_T("!!! SDL_GL_CreateContext failed: %hs\n"), SDL_GetError());
-		return false;
-	}
-
-	if (SDL_GL_MakeCurrent(window, gl_context) != 0) {
-		write_log(_T("!!! SDL_GL_MakeCurrent failed: %hs\n"), SDL_GetError());
-		SDL_GL_DeleteContext(gl_context);
-		gl_context = nullptr;
-		return false;
-	}
-
-	// Load OpenGL extension functions (does nothing on Android/GLES3)
-	if (!gl_platform_init()) {
-		const GLubyte* ver = glGetString(GL_VERSION);
-		if (!ver) {
-			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
-			SDL_GL_DeleteContext(gl_context);
-			gl_context = nullptr;
-			return false;
-		}
-		write_log(_T("!!! OpenGL version: %hs\n"), ver);
-	}
-
-	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-	const char* sl_ver   = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
-	write_log(_T("OpenGL Renderer: %hs\n"), renderer ? renderer : "unknown");
-	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
-	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
-
-	return true;
-}
-
+// init_opengl_context() has been moved into OpenGLRenderer::init_context()
+// in opengl_renderer.cpp
 #endif
 
 #endif // AMIBERRY
