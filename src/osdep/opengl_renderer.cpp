@@ -92,6 +92,17 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
 	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
 
+	// Cache GL pixel format info (pixel_format is set once at init and never changes)
+	if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+		m_gl_format = { GL_BGRA, GL_UNSIGNED_BYTE, 4 };
+	} else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
+		m_gl_format = { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2 };
+	} else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+		m_gl_format = { GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, 2 };
+	} else {
+		m_gl_format = { GL_RGBA, GL_UNSIGNED_BYTE, 4 };
+	}
+
 	return true;
 }
 
@@ -439,29 +450,27 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 					   crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
 					   (crop_rect.w > 0 && crop_rect.h > 0);
 
-	// Validate that the crop rectangle produces usable dimensions within the surface
+	// Pre-compute clamped crop bounds once for all shader paths
+	int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0;
 	if (is_cropped && amiga_surface) {
-		int cx = std::max(0, crop_rect.x);
-		int cy = std::max(0, crop_rect.y);
-		int cw = std::min(crop_rect.w, amiga_surface->w - cx);
-		int ch = std::min(crop_rect.h, amiga_surface->h - cy);
-		if (cw <= 0 || ch <= 0) {
+		crop_x = std::max(0, crop_rect.x);
+		crop_y = std::max(0, crop_rect.y);
+		crop_w = std::min(crop_rect.w, amiga_surface->w - crop_x);
+		crop_h = std::min(crop_rect.h, amiga_surface->h - crop_y);
+		if (crop_w <= 0 || crop_h <= 0) {
 			is_cropped = false;
 		}
 	}
+
+	// Source dimensions (crop-aware)
+	const int src_w = (is_cropped) ? crop_w : (amiga_surface ? amiga_surface->w : 0);
+	const int src_h = (is_cropped) ? crop_h : (amiga_surface ? amiga_surface->h : 0);
 
 	// Handle shader preset rendering (multi-pass .glslp)
 	if (m_shader.preset && m_shader.preset->is_valid()) {
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
-
-		int src_w = amiga_surface ? amiga_surface->w : 0;
-		int src_h = amiga_surface ? amiga_surface->h : 0;
-		if (is_cropped && amiga_surface) {
-			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
-			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
-		}
 
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
@@ -471,14 +480,9 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		static int preset_frame_count = 0;
 
 		if (is_cropped && amiga_surface) {
-			const int bpp = 4;
-			int x = std::max(0, crop_rect.x);
-			int y = std::max(0, crop_rect.y);
-			int w = std::min(crop_rect.w, amiga_surface->w - x);
-			int h = std::min(crop_rect.h, amiga_surface->h - y);
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * 4);
 
-			m_shader.preset->render(crop_ptr, w, h, amiga_surface->pitch,
+			m_shader.preset->render(crop_ptr, crop_w, crop_h, amiga_surface->pitch,
 				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
 		} else if (amiga_surface) {
 			m_shader.preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
@@ -494,14 +498,6 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		// Get source dimensions for this frame
-		int src_w = amiga_surface ? amiga_surface->w : 0;
-		int src_h = amiga_surface ? amiga_surface->h : 0;
-		if (is_cropped && amiga_surface) {
-			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
-			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
-		}
-
 		// Use aspect-corrected viewport, but ensure it's at least as large as the source
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
@@ -512,18 +508,11 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 		if (is_cropped && amiga_surface) {
-			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			const int bpp = 4;
-			int x = std::max(0, crop_rect.x);
-			int y = std::max(0, crop_rect.y);
-			int w = std::min(crop_rect.w, amiga_surface->w - x);
-			int h = std::min(crop_rect.h, amiga_surface->h - y);
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * 4);
 
 			render_external_shader(m_shader.external, monid, crop_ptr,
-				w, h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
+				crop_w, crop_h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		} else if (amiga_surface) {
-			// FAST PATH: No cropping
 			render_external_shader(m_shader.external, monid,
 				static_cast<const uae_u8*>(amiga_surface->pixels),
 				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
@@ -543,42 +532,14 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			glViewport(renderAreaX, renderAreaY, renderAreaW, renderAreaH);
 		}
 
-		// Determine correct OpenGL format
-		unsigned int gl_fmt, gl_type;
-		int bpp = 4;
-		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-			gl_fmt = GL_BGRA;
-			gl_type = GL_UNSIGNED_BYTE;
-		}
-		else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-			gl_fmt = GL_RGB;
-			gl_type = GL_UNSIGNED_SHORT_5_6_5;
-			bpp = 2;
-		}
-		else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-			gl_fmt = GL_RGBA;
-			gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-			bpp = 2;
-		}
-		else {
-			gl_fmt = GL_RGBA;
-			gl_type = GL_UNSIGNED_BYTE;
-		}
-
 		if (is_cropped && amiga_surface) {
-			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			int x = std::max(0, crop_rect.x);
-			int y = std::max(0, crop_rect.y);
-			int w = std::min(crop_rect.w, amiga_surface->w - x);
-			int h = std::min(crop_rect.h, amiga_surface->h - y);
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			crtemu_present(m_shader.crtemu, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
-				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
+				crop_w, crop_h, amiga_surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
 		} else if (amiga_surface) {
-			// FAST PATH: No cropping.
 			crtemu_present(m_shader.crtemu, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
+			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
 		}
 	}
 
@@ -695,31 +656,10 @@ void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int mo
 	glDisable(GL_BLEND);
 	glDisable(GL_SCISSOR_TEST);
 
-	// Determine correct OpenGL format based on global pixel_format
-	GLenum gl_fmt = GL_RGBA;
-	GLenum gl_type = GL_UNSIGNED_BYTE;
-	int bpp = 4;
-
-	if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-		gl_fmt = GL_BGRA;
-		gl_type = GL_UNSIGNED_BYTE;
-		bpp = 4;
-	}
-	else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-		gl_fmt = GL_RGB;
-		gl_type = GL_UNSIGNED_SHORT_5_6_5;
-		bpp = 2;
-	}
-	else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-		gl_fmt = GL_RGBA;
-		gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-		bpp = 2;
-	}
-
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / bpp);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / m_gl_format.bpp);
 
 	// Track texture changes per-shader to handle shader switches properly
 	GLuint current_program = shader->get_program();
@@ -736,12 +676,12 @@ void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int mo
 	}
 
 	if (width != last_w || height != last_h || texture != last_texture) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, gl_type, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, m_gl_format.fmt, m_gl_format.type, pixels);
 		last_w = width;
 		last_h = height;
 		last_texture = texture;
 	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, gl_fmt, gl_type, pixels);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, m_gl_format.fmt, m_gl_format.type, pixels);
 	}
 
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -916,6 +856,7 @@ void OpenGLRenderer::update_custom_bezel()
 	// where the GL context isn't current. Just invalidate the loaded name
 	// and reset hole coordinates so render_bezel_overlay() will reload
 	// on the next frame (where the GL context IS current).
+	m_overlay.bezel_dirty = true;
 	m_overlay.loaded_bezel_name.clear();
 	m_overlay.bezel_hole_x = 0.0f;
 	m_overlay.bezel_hole_y = 0.0f;
@@ -928,10 +869,9 @@ void OpenGLRenderer::update_crtemu_bezel()
 	if (m_shader.crtemu == nullptr)
 		return;
 	if (amiberry_options.use_bezel) {
-		auto* frame_pixels = new CRTEMU_U32[CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT];
+		static CRTEMU_U32 frame_pixels[CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT];
 		crt_frame(frame_pixels);
 		crtemu_frame(m_shader.crtemu, frame_pixels, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
-		delete[] frame_pixels;
 	} else {
 		crtemu_frame(m_shader.crtemu, nullptr, 0, 0);
 	}
@@ -1328,6 +1268,7 @@ void OpenGLRenderer::destroy_bezel()
 		m_overlay.bezel_vao = 0;
 	}
 	m_overlay.loaded_bezel_name.clear();
+	m_overlay.bezel_dirty = true;
 	m_overlay.bezel_tex_w = 0;
 	m_overlay.bezel_tex_h = 0;
 	m_overlay.bezel_hole_x = 0.0f;
@@ -1338,24 +1279,26 @@ void OpenGLRenderer::destroy_bezel()
 
 void OpenGLRenderer::render_bezel(int drawableWidth, int drawableHeight)
 {
-	if (!amiberry_options.use_custom_bezel ||
-		strcmp(amiberry_options.custom_bezel, "none") == 0) {
-		// Clean up if we had a texture loaded
-		if (m_overlay.bezel_texture != 0) {
-			destroy_bezel();
+	// Only re-evaluate bezel state when dirty (avoids per-frame string comparisons)
+	if (m_overlay.bezel_dirty) {
+		if (!amiberry_options.use_custom_bezel ||
+			strcmp(amiberry_options.custom_bezel, "none") == 0) {
+			if (m_overlay.bezel_texture != 0) {
+				destroy_bezel();
+			}
+			m_overlay.bezel_dirty = false;
+			return;
 		}
-		return;
-	}
 
-	// Check if we need to (re)load the texture
-	if (m_overlay.loaded_bezel_name != amiberry_options.custom_bezel) {
-		// Name changed or was cleared by update_custom_bezel() - reload
-		if (m_overlay.bezel_texture != 0) {
-			destroy_bezel();
+		if (m_overlay.loaded_bezel_name != amiberry_options.custom_bezel) {
+			if (m_overlay.bezel_texture != 0) {
+				destroy_bezel();
+			}
+			if (!load_bezel_texture(amiberry_options.custom_bezel)) return;
 		}
-		if (!load_bezel_texture(amiberry_options.custom_bezel)) return;
+		m_overlay.bezel_dirty = false;
 	}
-	if (m_overlay.bezel_texture == 0 || !glIsTexture(m_overlay.bezel_texture)) return;
+	if (m_overlay.bezel_texture == 0) return;
 
 	// Reuse OSD shader program
 	if (!init_osd_shader()) return;

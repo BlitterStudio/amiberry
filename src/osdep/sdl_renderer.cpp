@@ -189,8 +189,11 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			}
 		} else {
 			// Otherwise, update only the collected dirty rectangles.
+			const int bpp = amiga_surface->format->BytesPerPixel;
+			const auto* base = static_cast<const uae_u8*>(amiga_surface->pixels);
+			const int pitch = amiga_surface->pitch;
 			for (const auto& rect : mon->dirty_rects) {
-				SDL_UpdateTexture(m_amiga_texture, &rect, static_cast<const uae_u8*>(amiga_surface->pixels) + rect.y * amiga_surface->pitch + rect.x * amiga_surface->format->BytesPerPixel, amiga_surface->pitch);
+				SDL_UpdateTexture(m_amiga_texture, &rect, base + rect.y * pitch + rect.x * bpp, pitch);
 			}
 		}
 

@@ -45,6 +45,7 @@ struct GLOverlayState {
 	GLuint bezel_vao = 0;
 	GLuint bezel_vbo = 0;
 	std::string loaded_bezel_name;
+	bool bezel_dirty = true;  // Set true to trigger reload check; false = skip string comparisons
 	int bezel_tex_w = 0;
 	int bezel_tex_h = 0;
 	float bezel_hole_x = 0.0f;
@@ -128,6 +129,13 @@ private:
 	SDL_GLContext m_gl_context = nullptr;
 	ShaderState m_shader;
 	GLOverlayState m_overlay;
+
+	// Cached GL pixel format info (resolved once from pixel_format, reused per frame)
+	struct GLFormatInfo {
+		GLenum fmt = GL_RGBA;
+		GLenum type = GL_UNSIGNED_BYTE;
+		int bpp = 4;
+	} m_gl_format;
 
 	// Private helpers for overlay rendering
 	bool init_osd_shader();
