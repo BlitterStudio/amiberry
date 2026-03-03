@@ -435,17 +435,17 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 					rd);
 
 				/* dummy_bank handler is NOT signal-safe: it calls gary_nonrange()
-			 * which can trigger hardware_exception2() -> THROW(2) (longjmp from
-			 * signal handler = undefined behavior). For dummy_bank, return 0
-			 * for loads and silently ignore stores. */
-			if (ab == &dummy_bank) {
-				if (transfer_type == TYPE_LOAD) {
-					set_reg_w(rd, 0);
-					output_log(_T("JIT: dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
-				} else {
-					output_log(_T("JIT: dummy_bank store at %08x, ignored\n"), amiga_addr);
-				}
-			} else if (transfer_type == TYPE_LOAD) {
+				 * which can trigger hardware_exception2() -> THROW(2) (longjmp from
+				 * signal handler = undefined behavior). For dummy_bank, return 0
+				 * for loads and silently ignore stores. */
+				if (ab == &dummy_bank) {
+					if (transfer_type == TYPE_LOAD) {
+						set_reg_w(rd, 0);
+						output_log(_T("JIT: dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
+					} else {
+						output_log(_T("JIT: dummy_bank store at %08x, ignored\n"), amiga_addr);
+					}
+				} else if (transfer_type == TYPE_LOAD) {
 					// Perform load via indirect memory call
 					const uae_u32 oldval = get_reg_w(rd);
 					uae_u32 newval = oldval;

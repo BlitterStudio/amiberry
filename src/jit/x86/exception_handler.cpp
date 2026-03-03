@@ -355,7 +355,9 @@ static bool decode_instruction(
 #ifdef CPU_x86_64
 	/* SIB byte present when ModR/M rm field = 100 (binary).
 	 * This occurs in JIT-generated memory accesses like
-	 * MOV r32, [R15 + reg*1 + disp32] where R15 = natmem_offset. */
+	 * MOV r32, [R15 + reg*1 + disp32] where R15 = natmem_offset.
+	 * Note: does not handle mod=00, SIB.base=101 (disp32-only base case);
+	 * safe because JIT only generates mod=0x80 patterns. */
 	if (*r != -1 && (pc[1] & 0x07) == 0x04) {
 		*len += 1;
 	}
@@ -843,7 +845,7 @@ static void sigsegv_handler(int signum, siginfo_t *info, void *context)
 				is_read = (uc->uc_mcontext.gregs[REG_ERR] & 0x2) == 0;
 			}
 #endif
-			uae_u32 amiga_addr = uae_p32(address) - uae_p32(NATMEM_OFFSET);
+			uae_u32 amiga_addr = (uae_u32)(address - (uintptr_t) NATMEM_OFFSET);
 			write_log(_T("JIT: SIGSEGV comp_catchfault: addr=%08x %s, redirecting to popall_do_nothing\n"),
 				amiga_addr, is_read ? _T("read") : _T("write"));
 
