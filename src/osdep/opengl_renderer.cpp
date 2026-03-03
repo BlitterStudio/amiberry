@@ -391,6 +391,30 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
 
+	// Compute bezel display area: letterbox/pillarbox the bezel image within the
+	// window to preserve its original aspect ratio. Without this, resizing the
+	// window in windowed mode would stretch the bezel and distort the hole.
+	int bezelDisplayX = 0, bezelDisplayY = 0;
+	int bezelDisplayW = drawableWidth, bezelDisplayH = drawableHeight;
+
+	if (amiberry_options.use_custom_bezel && m_overlay.bezel_texture != 0 &&
+		m_overlay.bezel_tex_w > 0 && m_overlay.bezel_tex_h > 0) {
+		float bezelAspect = static_cast<float>(m_overlay.bezel_tex_w) / m_overlay.bezel_tex_h;
+		float windowAspect = static_cast<float>(drawableWidth) / drawableHeight;
+
+		if (windowAspect > bezelAspect) {
+			// Window is wider than bezel — pillarbox (black bars on sides)
+			bezelDisplayH = drawableHeight;
+			bezelDisplayW = static_cast<int>(drawableHeight * bezelAspect);
+		} else {
+			// Window is taller than bezel — letterbox (black bars top/bottom)
+			bezelDisplayW = drawableWidth;
+			bezelDisplayH = static_cast<int>(drawableWidth / bezelAspect);
+		}
+		bezelDisplayX = (drawableWidth - bezelDisplayW) / 2;
+		bezelDisplayY = (drawableHeight - bezelDisplayH) / 2;
+	}
+
 	// When a custom bezel is active, constrain the emulator output to the
 	// bezel's transparent screen hole. We define an "effective" render area
 	// that all shader paths use instead of the full drawable.
@@ -398,10 +422,10 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	int renderAreaW = drawableWidth, renderAreaH = drawableHeight;
 
 	if (amiberry_options.use_custom_bezel && m_overlay.bezel_texture != 0 && m_overlay.bezel_hole_w > 0.0f && m_overlay.bezel_hole_h > 0.0f) {
-		renderAreaX = static_cast<int>(m_overlay.bezel_hole_x * drawableWidth);
-		renderAreaY = static_cast<int>(m_overlay.bezel_hole_y * drawableHeight);
-		renderAreaW = static_cast<int>(m_overlay.bezel_hole_w * drawableWidth);
-		renderAreaH = static_cast<int>(m_overlay.bezel_hole_h * drawableHeight);
+		renderAreaX = bezelDisplayX + static_cast<int>(m_overlay.bezel_hole_x * bezelDisplayW);
+		renderAreaY = bezelDisplayY + static_cast<int>(m_overlay.bezel_hole_y * bezelDisplayH);
+		renderAreaW = static_cast<int>(m_overlay.bezel_hole_w * bezelDisplayW);
+		renderAreaH = static_cast<int>(m_overlay.bezel_hole_h * bezelDisplayH);
 	}
 
 	int destW, destH, destX, destY;
@@ -548,7 +572,8 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	}
 
 	render_software_cursor(monid, destX, glDestY, destW, destH);
-	render_bezel(drawableWidth, drawableHeight);
+	int glBezelY = drawableHeight - bezelDisplayY - bezelDisplayH;
+	render_bezel(bezelDisplayX, glBezelY, bezelDisplayW, bezelDisplayH);
 	render_osd(monid, destX, glDestY, destW, destH);
 
 	render_vkbd(monid);
@@ -1307,7 +1332,7 @@ void OpenGLRenderer::destroy_bezel()
 	m_overlay.bezel_hole_h = 1.0f;
 }
 
-void OpenGLRenderer::render_bezel(int drawableWidth, int drawableHeight)
+void OpenGLRenderer::render_bezel(int x, int y, int w, int h)
 {
 	// Only re-evaluate bezel state when dirty (avoids per-frame string comparisons)
 	if (m_overlay.bezel_dirty) {
@@ -1356,8 +1381,8 @@ void OpenGLRenderer::render_bezel(int drawableWidth, int drawableHeight)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDisable(GL_SCISSOR_TEST);
 
-	// Full window viewport
-	glViewport(0, 0, drawableWidth, drawableHeight);
+	// Bezel display area viewport (aspect-ratio-corrected)
+	glViewport(x, y, w, h);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_overlay.bezel_texture);

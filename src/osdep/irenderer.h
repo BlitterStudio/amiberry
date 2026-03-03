@@ -70,7 +70,7 @@ public:
 
 	// --- Overlay rendering (default: no-op for non-GL backends) ---
 	virtual void render_osd(int monid, int x, int y, int w, int h) {}
-	virtual void render_bezel(int drawableWidth, int drawableHeight) {}
+	virtual void render_bezel(int x, int y, int w, int h) {}
 	virtual void render_software_cursor(int monid, int x, int y, int w, int h) {}
 	virtual void destroy_bezel() {}
 	virtual void render_vkbd(int monid) {}

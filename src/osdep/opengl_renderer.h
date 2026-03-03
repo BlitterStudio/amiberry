@@ -99,7 +99,7 @@ public:
 
 	// Overlay rendering
 	void render_osd(int monid, int x, int y, int w, int h) override;
-	void render_bezel(int drawableWidth, int drawableHeight) override;
+	void render_bezel(int x, int y, int w, int h) override;
 	void render_software_cursor(int monid, int x, int y, int w, int h) override;
 	void destroy_bezel() override;
 	void render_vkbd(int monid) override;
