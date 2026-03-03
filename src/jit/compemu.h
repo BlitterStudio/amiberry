@@ -11,4 +11,6 @@
 #include "x86/compemu_x86.h"
 #endif
 
+extern volatile int jit_exception_pending;
+
 #endif //AMIBERRY_COMPEMU_H

@@ -530,8 +530,6 @@ static inline int end_block(uae_u32 opcode)
 	return (prop[opcode].cflow & fl_end_block);
 }
 
-extern volatile int jit_exception_pending;
-
 #ifdef _WIN32
 LONG WINAPI EvalException(LPEXCEPTION_POINTERS info);
 #if defined(_MSC_VER) && !defined(NO_WIN32_EXCEPTION_HANDLER)

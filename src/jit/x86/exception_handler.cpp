@@ -17,7 +17,6 @@
 #define SIG_WRITE 2
 
 static int in_handler = 0;
-volatile int jit_exception_pending = 0;
 static uae_u8 *veccode;
 
 #if defined(JIT_DEBUG)

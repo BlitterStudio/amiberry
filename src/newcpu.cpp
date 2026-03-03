@@ -59,6 +59,7 @@
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>
+volatile int jit_exception_pending = 0;
 #if defined(CPU_AARCH64)
 extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
 extern void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after);
