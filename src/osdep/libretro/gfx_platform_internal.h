@@ -3,8 +3,14 @@
 #include <string>
 
 #include "libretro_shared.h"
+#include "custom.h"
+#include "drawing.h"
 #include "gfx_window.h"
+#include "gfx_colors.h"
 #include "display_modes.h"
+#ifdef PICASSO96
+#include "picasso96.h"
+#endif
 
 // updatepicasso96 lives in amiberry_gfx.cpp with no header declaration
 extern void updatepicasso96(struct AmigaMonitor* mon);
