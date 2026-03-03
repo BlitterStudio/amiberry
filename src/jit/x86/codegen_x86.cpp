@@ -205,8 +205,15 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
    on Intel Core processors and forced 32-bit addressing. With the JIT now
    64-bit pointer-clean, we use the default 64-bit addressing mode which
    allows RIP-relative access (via _r_X macro) for addresses within 2GB
-   of the JIT code. This is both faster and supports natmem above 4GB. */
+   of the JIT code. This is both faster and supports natmem above 4GB.
+   FreeBSD exception: JIT cache is placed by ASLR mmap so RIP-relative
+   encoding of raw 32-bit addresses is incorrect. Restore 0x67 prefix to
+   force 32-bit absolute addressing. The 5-cycle penalty is acceptable. */
+#if defined(__FreeBSD__)
+#define ADDR32  x86_emit_byte(0x67),
+#else
 #define ADDR32
+#endif
 #else
 #define ADDR32
 #endif

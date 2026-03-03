@@ -821,7 +821,7 @@ static void install_exception_handler(void)
 	sigemptyset (&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 	sigaction(SIGSEGV, &act, NULL);
-#ifdef MACOSX
+#if defined(MACOSX) || defined(__FreeBSD__)
 	sigaction(SIGBUS, &act, NULL);
 #endif
 #else
