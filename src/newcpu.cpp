@@ -5749,7 +5749,8 @@ static int cpu_thread_run_jit(void *v)
 		for (;;) {
 			check_debugger();
 			((compiled_handler*)(pushall_call_handler))();
-			/* Check for pending exception from SIGSEGV comp_catchfault handler */
+			/* Check for pending exception from SIGSEGV comp_catchfault handler (x86-64 only) */
+#if defined(CPU_x86_64) || defined(_M_AMD64)
 			if (jit_exception_pending) {
 				int exc = jit_exception_pending;
 				jit_exception_pending = 0;
@@ -5757,6 +5758,7 @@ static int cpu_thread_run_jit(void *v)
 					exc, (unsigned int)M68K_GETPC);
 				Exception(exc);
 			}
+#endif
 			/* Whenever we return from that, we should check spcflags */
 			if (regs.spcflags || cpu_thread_ilvl > 0) {
 				if (do_specialties_thread()) {
@@ -5804,7 +5806,8 @@ static void m68k_run_jit(void)
 #endif
 			for (;;) {
 				((compiled_handler*)(pushall_call_handler))();
-				/* Check for pending exception from SIGSEGV comp_catchfault handler */
+				/* Check for pending exception from SIGSEGV comp_catchfault handler (x86-64 only) */
+#if defined(CPU_x86_64) || defined(_M_AMD64)
 				if (jit_exception_pending) {
 					int exc = jit_exception_pending;
 					jit_exception_pending = 0;
@@ -5812,6 +5815,7 @@ static void m68k_run_jit(void)
 						exc, (unsigned int)M68K_GETPC);
 					Exception(exc);
 				}
+#endif
 				/* Whenever we return from that, we should check spcflags */
 				check_uae_int_request();
 				if (regs.spcflags) {
