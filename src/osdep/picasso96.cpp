@@ -1393,6 +1393,7 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	bool rendered = false;
 	const bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
 	const bool uaegfx_active = is_uaegfx_active();
+	bool panning_state_changed = false;
 
 	const int state = vidinfo->picasso_state_change;
 	if (state)
@@ -1435,6 +1436,7 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 		vidinfo->set_panning_called = 1;
 		init_picasso_screen(monid);
 		vidinfo->set_panning_called = 0;
+		panning_state_changed = true;
 	}
 	if (state & PICASSO_STATE_SETDISPLAY) {
 		atomic_and(&vidinfo->picasso_state_change, ~PICASSO_STATE_SETDISPLAY);
@@ -1442,6 +1444,13 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	}
 	if (state)
 		unlockrtg();
+
+	// SetPanning can change the visible VRAM base (XYOffset) without changing
+	// mode dimensions/format. Ensure host buffer binding is refreshed so
+	// zero-copy paths follow the new source address.
+	if (panning_state_changed) {
+		target_graphics_buffer_update(monid, false);
+	}
 
 	if (ad->picasso_on) {
 #if 0
@@ -7230,5 +7239,4 @@ uae_u8 *save_p96 (size_t *len, uae_u8 *dstptr)
 }
 
 #endif
-
 
