@@ -227,6 +227,15 @@ set(SOURCE_FILES
         src/osdep/amiberry_input.cpp
         src/osdep/input_platform.cpp
         src/osdep/amiberry_gfx.cpp
+        src/osdep/display_modes.cpp
+        src/osdep/gfx_colors.cpp
+        src/osdep/gfx_prefs_check.cpp
+        src/osdep/gl_overlays.cpp
+        src/osdep/gfx_window.cpp
+        src/osdep/renderer_factory.cpp
+        src/osdep/opengl_renderer.cpp
+        src/osdep/sdl_renderer.cpp
+        src/osdep/crtemu_impl.cpp
         src/osdep/gl_platform.cpp
         src/osdep/external_shader.cpp
         src/osdep/shader_preset.cpp
@@ -257,7 +266,9 @@ set(SOURCE_FILES
         src/threaddep/threading.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/vkbd/vkbd.cpp
+        src/osdep/vkbd/vkbd_gl.cpp
         src/osdep/on_screen_joystick.cpp
+        src/osdep/on_screen_joystick_gl.cpp
         src/newcpu.cpp
         src/newcpu_common.cpp
         src/readcpu.cpp

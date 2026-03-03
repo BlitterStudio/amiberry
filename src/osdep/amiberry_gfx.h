@@ -1,8 +1,11 @@
 #pragma once
 #include <SDL.h>
+#include <memory>
 #include "rtgmodes.h"
 #include "uae/types.h"
 #include <vector>
+
+class IRenderer;
 
 #define MAX_DISPLAYS 1
 
@@ -124,13 +127,12 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 #define  SYSTEM_GREEN_MASK     (amiga_surface->format->Gmask)
 #define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
 
-extern SDL_Texture* amiga_texture;
+extern std::unique_ptr<IRenderer> g_renderer;
+
 extern SDL_DisplayMode sdl_mode;
-extern SDL_Rect crop_rect;
 
 extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
-extern SDL_Rect render_quad;
 extern SDL_Cursor* normalcursor;
 
 extern void sortdisplays();
@@ -147,19 +149,12 @@ extern int default_freq;
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
 extern void close_windows(AmigaMonitor*);
+extern void reopen_gfx(AmigaMonitor*);
+extern int reopen(AmigaMonitor*, int, bool);
 extern void updatewinfsmode(int monid, uae_prefs* p);
 extern void gfx_lock();
 extern void gfx_unlock();
 
-extern void destroy_shaders();
-extern void update_crtemu_bezel();
-extern void update_custom_bezel();
-#ifdef USE_OPENGL
-extern SDL_GLContext gl_context;
-extern bool gl_state_initialized;
-extern bool init_opengl_context(SDL_Window* window);
-extern void clear_loaded_shader_name();
-#endif
 
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
@@ -167,10 +162,12 @@ void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
+extern float calculate_desired_aspect(const AmigaMonitor* mon);
 extern void quit_drawing_thread();
 extern void start_drawing_thread();
 extern bool target_graphics_buffer_update(const int monid, const bool force);
 
+extern bool force_auto_crop;
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;

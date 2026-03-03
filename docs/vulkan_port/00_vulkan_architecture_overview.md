@@ -9,7 +9,7 @@ To introduce Vulkan without breaking existing features, the work is divided into
 - **Incremental Implementation**: We build the Vulkan backend piece-by-piece. We start by just getting a window and a swapchain up, then buffer uploads, then we handle shaders, and finally, we optimize with multithreading.
 
 ## The Phases
-1. **[Phase 1: Abstraction Layer](01_phase_1_abstraction_layer.md)**: Create the `IRenderer` interface.
+1. **[Phase 1: Abstraction Layer](01_phase_1_abstraction_layer.md)** *(COMPLETE)*: `IRenderer` interface with `OpenGLRenderer` and `SDLRenderer` implementations, factory pattern, GL infrastructure extraction.
 2. **[Phase 2: Context & Swapchain](02_phase_2_vulkan_init_swapchain.md)**: Setup Vulkan Instance, Device, and Window Swapchain.
 3. **[Phase 3: Pipeline & Buffers](03_phase_3_pipeline_and_buffers.md)**: Implement memory management (VMA), Staging Buffers, and texture uploads for Amiga frames.
 4. **[Phase 4: Shaders & ImGui](04_phase_4_shaders_and_imgui.md)**: Compile GLSL to SPIR-V, create Vulkan Graphics Pipelines, and integrate Dear ImGui.

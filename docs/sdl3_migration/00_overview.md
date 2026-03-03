@@ -95,11 +95,11 @@ Steps 04-10 have limited inter-dependencies and could theoretically be paralleli
 
 ## Relationship to Vulkan Port
 
-The existing `docs/vulkan_port/` documents describe a 5-phase plan to add a Vulkan rendering backend via an `IRenderer` abstraction. SDL3 migration is **complementary**:
+The existing `docs/vulkan_port/` documents describe a 5-phase plan to add a Vulkan rendering backend. SDL3 migration is **complementary**:
 
-- **Phase 1 (IRenderer abstraction)**: SDL3 migration does not implement this, but the SDL3 renderer can be the first `IRenderer` implementation when that work begins
-- **SDL_GPU opportunity**: SDL3's `SDL_GPU` API could serve as the backend for `IRenderer` instead of raw Vulkan, providing Vulkan/Metal/D3D12 support through a single API. ImGui already has `imgui_impl_sdlgpu3.cpp` for this
-- **Migration order**: Complete SDL3 migration first, then implement the rendering abstraction
+- **Phase 1 (IRenderer abstraction)**: Already complete. `IRenderer` (`src/osdep/irenderer.h`) is implemented with `OpenGLRenderer` and `SDLRenderer` backends, wired through `renderer_factory.h/.cpp`. GL shader infrastructure for overlays (vkbd, on-screen joystick, OSD) has been extracted into dedicated `_gl.cpp` files. A future `VulkanRenderer` or `SDLGPURenderer` would implement the same interface.
+- **SDL_GPU opportunity**: SDL3's `SDL_GPU` API could serve as the backend for `IRenderer` instead of raw Vulkan, providing Vulkan/Metal/D3D12 support through a single API. ImGui already has `imgui_impl_sdlgpu3.cpp` for this.
+- **Migration order**: SDL3 migration can proceed independently; the rendering abstraction is already in place.
 
 ## Acceptance Criteria
 

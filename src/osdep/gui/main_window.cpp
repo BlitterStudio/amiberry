@@ -18,6 +18,10 @@
 #include "uae.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
+#ifdef USE_OPENGL
+#include "opengl_renderer.h"
+#endif
 #include "fsdb_host.h"
 #include "autoconf.h"
 #include "blkdev.h"
@@ -763,17 +767,9 @@ void amiberry_gui_init()
 	// conflicts that cause crashes. This mirrors the Android/KMSDRM pattern.
 	if (mon->amiga_window && !mon->gui_window)
 		mon->gui_window = mon->amiga_window;
-#ifndef USE_OPENGL
-	if (mon->amiga_renderer && !mon->gui_renderer)
-		mon->gui_renderer = mon->amiga_renderer;
-#else
-	// OpenGL path: keep GL context alive, destroy only emulation shaders.
-	// ImGui will use the OpenGL3 backend directly instead of SDLRenderer2.
-	if (mon->gui_window == mon->amiga_window && gl_context != nullptr) {
-		destroy_shaders();
-		gl_state_initialized = false;
+	if (mon->gui_window == mon->amiga_window && g_renderer) {
+		g_renderer->prepare_gui_sharing(mon);
 	}
-#endif
 	if (mon->gui_window == mon->amiga_window) {
 		SDL_GetWindowPosition(mon->gui_window, &saved_emu_x, &saved_emu_y);
 		SDL_GetWindowSize(mon->gui_window, &saved_emu_w, &saved_emu_h);
@@ -790,7 +786,7 @@ void amiberry_gui_init()
 #endif
 
 #if defined(_WIN32) && defined(USE_OPENGL)
-	gui_use_opengl = (gl_context != nullptr && mon->gui_window == mon->amiga_window);
+	gui_use_opengl = (g_renderer && g_renderer->has_context() && mon->gui_window == mon->amiga_window);
 #endif
 
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
@@ -989,8 +985,10 @@ void amiberry_gui_init()
 	// Setup Platform/Renderer backends
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl) {
-		SDL_GL_MakeCurrent(mon->gui_window, gl_context);
-		ImGui_ImplSDL2_InitForOpenGL(mon->gui_window, gl_context);
+		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
+		SDL_GLContext ctx = gl_renderer ? gl_renderer->get_gl_context() : nullptr;
+		SDL_GL_MakeCurrent(mon->gui_window, ctx);
+		ImGui_ImplSDL2_InitForOpenGL(mon->gui_window, ctx);
 		ImGui_ImplOpenGL3_Init("#version 130");
 	} else {
 		ImGui_ImplSDL2_InitForSDLRenderer(mon->gui_window, mon->gui_renderer);
@@ -1107,14 +1105,10 @@ void amiberry_gui_halt()
 			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		saved_emu_w = saved_emu_h = 0;
 	}
-#ifdef USE_OPENGL
-	// GL context was kept alive — force full GL state reset for emulation
-	if (gui_use_opengl && mon->amiga_window && gl_context != nullptr) {
-		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
-		gl_state_initialized = false;
-		clear_loaded_shader_name();
+	// Restore emulation rendering context (GL: MakeCurrent + reset; SDL: no-op)
+	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
+		g_renderer->restore_emulation_context(mon->amiga_window);
 	}
-#endif
 #endif
 }
 
