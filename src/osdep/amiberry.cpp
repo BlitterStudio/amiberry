@@ -1598,10 +1598,20 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 	return 1;
 }
 
-static void handle_focus_gained_event(const AmigaMonitor* mon)
+static void handle_focus_gained_event(AmigaMonitor* mon)
 {
 	amiberry_active(mon, minimized);
 	unsetminimized(mon->monitor_id);
+
+	if (mon->focus_transitioning && isfullscreen() <= 0 && mon->amiga_window) {
+		int cur_x, cur_y;
+		SDL_GetWindowPosition(mon->amiga_window, &cur_x, &cur_y);
+		if (cur_x != mon->pre_focus_x || cur_y != mon->pre_focus_y) {
+			mon->in_sizemove++;
+			SDL_SetWindowPosition(mon->amiga_window, mon->pre_focus_x, mon->pre_focus_y);
+		}
+	}
+	mon->focus_transitioning = false;
 }
 
 static void handle_minimized_event(const AmigaMonitor* mon)
@@ -1622,6 +1632,8 @@ static void handle_restored_event(const AmigaMonitor* mon)
 
 static void handle_moved_event(AmigaMonitor* mon)
 {
+	if (mon->focus_transitioning)
+		return;
 	setsizemove(mon, mon->amiga_window);
 }
 
@@ -1646,8 +1658,12 @@ static void handle_leave_event()
 	mouseinside = false;
 }
 
-static void handle_focus_lost_event(const AmigaMonitor* mon)
+static void handle_focus_lost_event(AmigaMonitor* mon)
 {
+	if (isfullscreen() <= 0 && mon->amiga_window) {
+		SDL_GetWindowPosition(mon->amiga_window, &mon->pre_focus_x, &mon->pre_focus_y);
+		mon->focus_transitioning = true;
+	}
 	amiberry_inactive(mon, minimized);
 	if (isfullscreen() <= 0 && currprefs.minimize_inactive)
 		minimizewindow(mon->monitor_id);

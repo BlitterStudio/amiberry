@@ -100,6 +100,8 @@ struct AmigaMonitor {
 	int dpi;
 
 	int in_sizemove;
+	bool focus_transitioning;
+	int pre_focus_x, pre_focus_y;
 	int manual_painting_needed;
 	int minimized;
 	int screen_is_picasso;

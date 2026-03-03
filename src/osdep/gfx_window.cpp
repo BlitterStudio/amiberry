@@ -278,6 +278,9 @@ int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 		wait_keyrelease();
 
 	mon->in_sizemove = 0;
+	mon->focus_transitioning = false;
+	mon->pre_focus_x = 0;
+	mon->pre_focus_y = 0;
 
 	updatewinfsmode(mon->monitor_id, &currprefs);
 
