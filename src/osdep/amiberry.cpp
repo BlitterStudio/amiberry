@@ -36,6 +36,7 @@
 #include "inputdevice.h"
 #include "drawing.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
 #include "autoconf.h"
 #include "gui.h"
 #include "disk.h"
@@ -1597,10 +1598,20 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 	return 1;
 }
 
-static void handle_focus_gained_event(const AmigaMonitor* mon)
+static void handle_focus_gained_event(AmigaMonitor* mon)
 {
 	amiberry_active(mon, minimized);
 	unsetminimized(mon->monitor_id);
+
+	if (mon->focus_transitioning && isfullscreen() <= 0 && mon->amiga_window) {
+		int cur_x, cur_y;
+		SDL_GetWindowPosition(mon->amiga_window, &cur_x, &cur_y);
+		if (cur_x != mon->pre_focus_x || cur_y != mon->pre_focus_y) {
+			mon->in_sizemove++;
+			SDL_SetWindowPosition(mon->amiga_window, mon->pre_focus_x, mon->pre_focus_y);
+		}
+	}
+	mon->focus_transitioning = false;
 }
 
 static void handle_minimized_event(const AmigaMonitor* mon)
@@ -1621,6 +1632,8 @@ static void handle_restored_event(const AmigaMonitor* mon)
 
 static void handle_moved_event(AmigaMonitor* mon)
 {
+	if (mon->focus_transitioning)
+		return;
 	setsizemove(mon, mon->amiga_window);
 }
 
@@ -1645,8 +1658,12 @@ static void handle_leave_event()
 	mouseinside = false;
 }
 
-static void handle_focus_lost_event(const AmigaMonitor* mon)
+static void handle_focus_lost_event(AmigaMonitor* mon)
 {
+	if (isfullscreen() <= 0 && mon->amiga_window) {
+		SDL_GetWindowPosition(mon->amiga_window, &mon->pre_focus_x, &mon->pre_focus_y);
+		mon->focus_transitioning = true;
+	}
 	amiberry_inactive(mon, minimized);
 	if (isfullscreen() <= 0 && currprefs.minimize_inactive)
 		minimizewindow(mon->monitor_id);
@@ -2011,24 +2028,24 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	Sint32 yrel = event.motion.yrel;
 
 	// HiDPI / Retina Scaling
-	// SDL mouse events report in "Screen Coordinates" (Points), while SDL_GL_GetDrawableSize reports Pixels.
+	// SDL mouse events report in "Screen Coordinates" (Points), while drawable size reports Pixels.
 	// On Retina/HiDPI, Points < Pixels. We need to scale the input up to Pixels for the emulator.
-#ifdef USE_OPENGL
-	int win_w, win_h, draw_w, draw_h;
-	SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
-	SDL_GL_GetDrawableSize(mon->amiga_window, &draw_w, &draw_h);
+	if (g_renderer) {
+		int win_w, win_h, draw_w, draw_h;
+		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
+		g_renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
 
-	if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
-		float scale_x = (float)draw_w / (float)win_w;
-		x = (Sint32)(x * scale_x);
-		xrel = (Sint32)(xrel * scale_x);
+		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
+			float scale_x = (float)draw_w / (float)win_w;
+			x = (Sint32)(x * scale_x);
+			xrel = (Sint32)(xrel * scale_x);
+		}
+		if (win_h > 0 && draw_h > 0 && win_h != draw_h) {
+			float scale_y = (float)draw_h / (float)win_h;
+			y = (Sint32)(y * scale_y);
+			yrel = (Sint32)(yrel * scale_y);
+		}
 	}
-	if (win_h > 0 && draw_h > 0 && win_h != draw_h) {
-		float scale_y = (float)draw_h / (float)win_h;
-		y = (Sint32)(y * scale_y);
-		yrel = (Sint32)(yrel * scale_y);
-	}
-#endif
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{

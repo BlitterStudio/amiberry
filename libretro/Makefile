@@ -279,6 +279,12 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(LIBRETRO_DIR)/libretro_gui_stubs.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_gfx.cpp \
+                $(AMIBERRY_DIR)/src/osdep/gfx_window.cpp \
+                $(AMIBERRY_DIR)/src/osdep/gfx_colors.cpp \
+                $(AMIBERRY_DIR)/src/osdep/gfx_prefs_check.cpp \
+                $(AMIBERRY_DIR)/src/osdep/display_modes.cpp \
+                $(AMIBERRY_DIR)/src/osdep/renderer_factory.cpp \
+                $(AMIBERRY_DIR)/src/osdep/sdl_renderer.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_input.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_mem.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_serial.cpp \

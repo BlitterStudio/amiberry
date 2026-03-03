@@ -10,11 +10,11 @@
 #include <vector>
 #include <string>
 
+#include "irenderer.h"
 #ifdef USE_OPENGL
 #include "external_shader.h"
 #include "shader_preset.h"
-extern ExternalShader* external_shader;
-extern ShaderPreset* shader_preset;
+#include "opengl_renderer.h"
 #endif
 
 // Built-in shader names
@@ -142,23 +142,26 @@ static int find_shader_index(const char* shader_name)
 	return 2;  // Default to "pc" (index 2)
 }
 
-#ifdef USE_OPENGL
 static bool show_shader_params_popup = false;
 
 static void render_shader_parameters_popup()
 {
 	if (!show_shader_params_popup) return;
 
+#ifdef USE_OPENGL
 	ImGui::SetNextWindowSize(ImVec2(BUTTON_WIDTH * 5, BUTTON_HEIGHT * 10), ImGuiCond_FirstUseEver);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
 	if (ImGui::Begin("Shader Parameters", &show_shader_params_popup)) {
 		std::vector<ShaderParameter>* params = nullptr;
 
-		if (shader_preset && shader_preset->is_valid()) {
-			params = &shader_preset->get_all_parameters();
-		} else if (external_shader && external_shader->is_valid()) {
-			params = const_cast<std::vector<ShaderParameter>*>(&external_shader->get_parameters());
+		auto* gl_renderer = g_renderer ? dynamic_cast<OpenGLRenderer*>(g_renderer.get()) : nullptr;
+		ShaderState* shader = gl_renderer ? &gl_renderer->shader_state() : nullptr;
+
+		if (shader && shader->preset && shader->preset->is_valid()) {
+			params = &shader->preset->get_all_parameters();
+		} else if (shader && shader->external && shader->external->is_valid()) {
+			params = const_cast<std::vector<ShaderParameter>*>(&shader->external->get_parameters());
 		}
 
 		if (params && !params->empty()) {
@@ -176,10 +179,10 @@ static void render_shader_parameters_popup()
 				if (ImGui::SliderFloat("##val", &param.current_value,
 					param.min_value, param.max_value, "%.3f")) {
 					// Apply the parameter change
-					if (shader_preset) {
-						shader_preset->set_parameter(param.name, param.current_value);
-					} else if (external_shader) {
-						external_shader->set_parameter(param.name, param.current_value);
+					if (shader && shader->preset) {
+						shader->preset->set_parameter(param.name, param.current_value);
+					} else if (shader && shader->external) {
+						shader->external->set_parameter(param.name, param.current_value);
 					}
 				}
 				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
@@ -191,10 +194,10 @@ static void render_shader_parameters_popup()
 			if (AmigaButton("Reset to Defaults")) {
 				for (auto& param : *params) {
 					param.current_value = param.default_value;
-					if (shader_preset) {
-						shader_preset->set_parameter(param.name, param.default_value);
-					} else if (external_shader) {
-						external_shader->set_parameter(param.name, param.default_value);
+					if (shader && shader->preset) {
+						shader->preset->set_parameter(param.name, param.default_value);
+					} else if (shader && shader->external) {
+						shader->external->set_parameter(param.name, param.default_value);
 					}
 				}
 			}
@@ -205,8 +208,8 @@ static void render_shader_parameters_popup()
 	ImGui::End();
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
-}
 #endif
+}
 
 void render_panel_filter()
 {
@@ -337,9 +340,7 @@ void render_panel_filter()
 		// Built-in CRT bezel (disabled when custom bezel is active)
 		if (amiberry_options.use_custom_bezel) ImGui::BeginDisabled();
 		if (AmigaCheckbox("Built-in CRT bezel", &amiberry_options.use_bezel)) {
-#ifdef USE_OPENGL
-			update_crtemu_bezel();
-#endif
+			if (g_renderer) g_renderer->update_crtemu_bezel();
 		}
 		ShowHelpMarker("Built-in CRT television bezel frame.\n"
 					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
@@ -365,13 +366,9 @@ void render_panel_filter()
 					// If enabling custom bezel, disable built-in
 					if (amiberry_options.use_custom_bezel) {
 						amiberry_options.use_bezel = false;
-#ifdef USE_OPENGL
-						update_crtemu_bezel();
-#endif
+						if (g_renderer) g_renderer->update_crtemu_bezel();
 					}
-#ifdef USE_OPENGL
-					update_custom_bezel();
-#endif
+					if (g_renderer) g_renderer->update_custom_bezel();
 				}
 				if (is_selected) ImGui::SetItemDefaultFocus();
 			}
@@ -411,21 +408,19 @@ void render_panel_filter()
 	}
 	ImGui::SameLine();
 
-#ifdef USE_OPENGL
-	// Shader Parameters button
-	if (AmigaButton("Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
-		show_shader_params_popup = true;
+	// Shader Parameters button (only shown when active shader has parameters)
+	if (g_renderer && g_renderer->has_shader_parameters()) {
+		if (AmigaButton("Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+			show_shader_params_popup = true;
+		}
+		ImGui::SameLine();
 	}
-	ImGui::SameLine();
-#endif
 
 	// Save button
 	if (AmigaButton("Save Settings", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
 		save_amiberry_settings();
 	}
 
-#ifdef USE_OPENGL
 	// Render the shader parameters popup if open
 	render_shader_parameters_popup();
-#endif
 }

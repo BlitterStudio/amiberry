@@ -766,10 +766,12 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
 		BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
 		return -1;
 	} else {
-		/* TODO: getsd() returns -1 when the descriptor table is full.
-		 * Unchecked, this causes ftable[sd-1] to write out of bounds.
-		 * Same bug exists in the POSIX host_socket. */
 		sd = getsd(ctx, sb, s);
+		if (sd == -1) {
+			write_log(_T("host_socket: descriptor table full, closing socket\n"));
+			closesocket(s);
+			return -1;
+		}
 	}
 
 	sb->ftable[sd - 1] = SF_BLOCKING;
@@ -915,28 +917,32 @@ void host_accept(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32 namelen
 			sb->resultval = -1;
 			BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
 		} else {
-			/* TODO: getsd() returns -1 when the descriptor table is full.
-			 * Unchecked, this causes ftable[resultval-1] to write out of bounds.
-			 * Same bug exists in the POSIX bsdthr_Accept_2. */
 			sb->resultval = getsd(ctx, sb, s2);
-			sb->ftable[sb->resultval - 1] = sb->ftable[sd - 1];
-			callfdcallback(ctx, sb, sb->resultval - 1, FDCB_ALLOC);
-			sb->resultval--;
-			if (rp_name != 0) {
-				if (hlen <= hlenuae) {
-					prepamigaaddr(rp_name, hlen);
-					if (namelen != 0) {
-						trap_put_long(ctx, namelen, hlen);
-					}
-				} else {
-					if (hlenuae != 0) {
-						prepamigaaddr(rp_name, hlenuae);
-						memcpy(rp_nameuae, rp_name, hlenuae);
-						trap_put_long(ctx, namelen, hlenuae);
+			if (sb->resultval == -1) {
+				write_log(_T("host_accept: descriptor table full, closing accepted socket\n"));
+				closesocket(s2);
+				sb->resultval = -1;
+				SETERRNO;
+			} else {
+				sb->ftable[sb->resultval - 1] = sb->ftable[sd - 1];
+				callfdcallback(ctx, sb, sb->resultval - 1, FDCB_ALLOC);
+				sb->resultval--;
+				if (rp_name != 0) {
+					if (hlen <= hlenuae) {
+						prepamigaaddr(rp_name, hlen);
+						if (namelen != 0) {
+							trap_put_long(ctx, namelen, hlen);
+						}
+					} else {
+						if (hlenuae != 0) {
+							prepamigaaddr(rp_name, hlenuae);
+							memcpy(rp_nameuae, rp_name, hlenuae);
+							trap_put_long(ctx, namelen, hlenuae);
+						}
 					}
 				}
+				BSDTRACE((_T("%d/%d\n"), sb->resultval, hlen));
 			}
-			BSDTRACE((_T("%d/%d\n"), sb->resultval, hlen));
 		}
 
 		ENDBLOCKING;
@@ -3220,10 +3226,11 @@ STATIC_INLINE int bsd_amigaside_FD_ISSET (int n, uae_u32 set)
 	return 0;
 }
 
-STATIC_INLINE void bsd_amigaside_FD_ZERO (uae_u32 set)
+STATIC_INLINE void bsd_amigaside_FD_ZERO (uae_u32 set, int nfds)
 {
-	put_long (set, 0);
-	put_long (set + 4, 0);
+	unsigned int i;
+	for (i = 0; i < (unsigned int)nfds; i += 32, set += 4)
+		put_long (set, 0);
 }
 
 STATIC_INLINE void bsd_amigaside_FD_SET (int n, uae_u32 set)
@@ -3605,8 +3612,6 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		entry.sb = sb;
 		entry.sd = sd;
 		entry.s = s;
-		entry.sd = sd;
-		entry.s = s;
 		entry.eventmask = eventmask;
 		entry.connecting = false;
 		// Determine actual connection state — bare sockets must not fire REP_WRITE/READ
@@ -3868,10 +3873,12 @@ uae_u32 bsdthr_Accept_2 (SB)
 		if ((flags = fcntl (s, F_GETFL)) == -1)
 			flags = 0;
 		fcntl (s, F_SETFL, flags & ~O_NONBLOCK); /* @@@ Don't do this if it's supposed to stay nonblocking... */
-		/* TODO: getsd() returns -1 when the descriptor table is full.
-		 * Unchecked, this causes ftable[s2-1] to write out of bounds.
-		 * Same bug exists in the Windows host_accept. */
 		s2 = getsd (sb->context, sb, s);
+		if (s2 == -1) {
+			write_log("bsdthr_Accept_2: descriptor table full, closing accepted socket %d\n", s);
+			close(s);
+			return -1;
+		}
 		sb->ftable[s2-1] = sb->ftable[sb->len]; /* new socket inherits the old socket's properties */
 		write_log ("Accept: AmigaSide %d, NativeSide %d, len %d(%d)", sb->resultval, s, hlen, get_long (sb->a_addrlen));
 		printSockAddr (&addr);
@@ -4243,6 +4250,12 @@ int init_socket_layer(void)
 	return result;
 }
 
+void deinit_socket_layer(void)
+{
+	stop_event_monitor();
+	uae_sem_destroy(&sem_queue);
+}
+
 void locksigqueue(void)
 {
 	uae_sem_wait(&sem_queue);
@@ -4399,10 +4412,12 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
         return -1;
     } else {
         int arg = 1;
-        /* TODO: getsd() returns -1 when the descriptor table is full.
-         * Unchecked, this causes ftable[sd-1] to write out of bounds.
-         * Same bug exists in the Windows host_socket. */
         sd = getsd (ctx, sb, s);
+        if (sd == -1) {
+            write_log("host_socket: descriptor table full, closing socket %d\n", s);
+            close(s);
+            return -1;
+        }
         setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
     }
 
@@ -4524,7 +4539,7 @@ void host_connect(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32 namele
 
 			WAITSIGNAL;
 
-			// Implicitly			// Re-enable REP_CONNECT (and REP_WRITE as they are related on success)
+			// Implicitly re-enable REP_CONNECT (and REP_WRITE as they are related on success)
 			socket_reenable_events(sb, sd - 1, REP_CONNECT | REP_WRITE);
 		} else {
 			write_log (_T("BSDSOCK: WARNING - Excessive namelen (%d) in connect():%d!\n"), namelen, wscnt);
@@ -4548,7 +4563,7 @@ void host_sendto (TrapContext *ctx, SB, uae_u32 sd, uae_u32 msg, uae_u8 *hmsg, u
 	sd++;
 	s = getsock(ctx, sb, sd);
 
-	if (sb->s != INVALID_SOCKET) {
+	if (s != INVALID_SOCKET) {
 		if (hmsg == NULL) {
 			if (!addr_valid (_T("host_sendto1"), msg, 4))
 				return;
@@ -5132,7 +5147,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 			r = 0;
 			for (set = 0; set < 3; set++)
 				if (sb->sets[set] != 0)
-					bsd_amigaside_FD_ZERO(sb->sets[set]);
+					bsd_amigaside_FD_ZERO(sb->sets[set], nfds);
 			clearsockabort(sb);
 		}
 		else
@@ -5140,7 +5155,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 			for (set = 0; set < 3; set++) {
 				a_set = sb->sets[set];
 				if (a_set != 0) {
-					bsd_amigaside_FD_ZERO(a_set);
+					bsd_amigaside_FD_ZERO(a_set, nfds);
 					for (i = 0; i < nfds; i++) {
 						a_s = getsock(ctx, sb, i + 1);
 						if (!(a_s < 0)) {
@@ -5156,7 +5171,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 	} else if (r == 0) {         /* Timeout. I think we're supposed to clear the sets.. */
 		for (set = 0; set < 3; set++)
 			if (sb->sets[set] != 0)
-				bsd_amigaside_FD_ZERO(sb->sets[set]);
+				bsd_amigaside_FD_ZERO(sb->sets[set], nfds);
 	}
 	BSDTRACE((_T("WaitSelect: r=%d errno=%d\n"), r, errno));
 	return r;
