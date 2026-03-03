@@ -5795,6 +5795,14 @@ static void m68k_run_jit(void)
 #endif
 			for (;;) {
 				((compiled_handler*)(pushall_call_handler))();
+				/* Check for pending exception from SIGSEGV comp_catchfault handler */
+				if (jit_exception_pending) {
+					int exc = jit_exception_pending;
+					jit_exception_pending = 0;
+					write_log(_T("JIT: Processing pending bus error (exception %d, PC=%08x)\n"),
+						exc, (unsigned int)M68K_GETPC);
+					Exception(exc);
+				}
 				/* Whenever we return from that, we should check spcflags */
 				check_uae_int_request();
 				if (regs.spcflags) {
