@@ -391,6 +391,12 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
 
+	// Hot-reload shader if user changed it in the GUI while emulation is running
+	const char* wanted_shader = mon->screen_is_picasso ? amiberry_options.shader_rtg : amiberry_options.shader;
+	if (m_shader.loaded_name != wanted_shader && amiga_surface) {
+		alloc_texture(monid, amiga_surface->w, amiga_surface->h);
+	}
+
 	// Compute bezel display area: letterbox/pillarbox the bezel image within the
 	// window to preserve its original aspect ratio. Without this, resizing the
 	// window in windowed mode would stretch the bezel and distort the hole.
