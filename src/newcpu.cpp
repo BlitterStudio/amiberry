@@ -5749,6 +5749,14 @@ static int cpu_thread_run_jit(void *v)
 		for (;;) {
 			check_debugger();
 			((compiled_handler*)(pushall_call_handler))();
+			/* Check for pending exception from SIGSEGV comp_catchfault handler */
+			if (jit_exception_pending) {
+				int exc = jit_exception_pending;
+				jit_exception_pending = 0;
+				write_log(_T("JIT: Processing pending bus error in cpu_thread (exception %d, PC=%08x)\n"),
+					exc, (unsigned int)M68K_GETPC);
+				Exception(exc);
+			}
 			/* Whenever we return from that, we should check spcflags */
 			if (regs.spcflags || cpu_thread_ilvl > 0) {
 				if (do_specialties_thread()) {
