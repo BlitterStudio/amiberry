@@ -19,6 +19,9 @@
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 #include "irenderer.h"
+#ifdef USE_OPENGL
+#include "opengl_renderer.h"
+#endif
 #include "fsdb_host.h"
 #include "autoconf.h"
 #include "blkdev.h"
