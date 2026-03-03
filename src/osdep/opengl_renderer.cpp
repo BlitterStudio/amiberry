@@ -430,13 +430,17 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		destY = (renderAreaH - destH) / 2;
 	}
 
+	// Flip Y for GL viewport: OpenGL has y=0 at bottom, bezel hole Y is y=0 at top
+	int glDestY = drawableHeight - destY - destH;
+	int glAreaY = drawableHeight - renderAreaY - renderAreaH;
+
 	// Only clear if letterboxing is active (frame doesn't cover entire window)
 	if (destW < drawableWidth || destH < drawableHeight) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
-	glViewport(destX, destY, destW, destH);
+	glViewport(destX, glDestY, destW, destH);
 
 	// Update render_quad to reflect the actual drawn area
 	render_quad.x = destX;
@@ -475,7 +479,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
 		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
-		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
+		int viewport_y = glAreaY + (renderAreaH - viewport_h) / 2;
 
 		static int preset_frame_count = 0;
 
@@ -502,7 +506,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		int viewport_w = std::max(destW, src_w);
 		int viewport_h = std::max(destH, src_h);
 		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
-		int viewport_y = renderAreaY + (renderAreaH - viewport_h) / 2;
+		int viewport_y = glAreaY + (renderAreaH - viewport_h) / 2;
 
 		// Set viewport for shader rendering
 		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
@@ -529,7 +533,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		m_shader.crtemu->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
 
 		if (m_shader.crtemu->type != CRTEMU_TYPE_NONE) {
-			glViewport(renderAreaX, renderAreaY, renderAreaW, renderAreaH);
+			glViewport(renderAreaX, glAreaY, renderAreaW, renderAreaH);
 		}
 
 		if (is_cropped && amiga_surface) {
@@ -543,9 +547,9 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		}
 	}
 
-	render_software_cursor(monid, destX, destY, destW, destH);
+	render_software_cursor(monid, destX, glDestY, destW, destH);
 	render_bezel(drawableWidth, drawableHeight);
-	render_osd(monid, destX, destY, destW, destH);
+	render_osd(monid, destX, glDestY, destW, destH);
 
 	render_vkbd(monid);
 	render_onscreen_joystick(monid);

@@ -2487,8 +2487,8 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 	crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 
-	int window_width = viewport[ 2 ] - viewport[ 0 ];
-	int window_height = viewport[ 3 ] - viewport[ 1 ];
+	int window_width = viewport[ 2 ];
+	int window_height = viewport[ 3 ];
 
 	int target_width, target_height;
 	if( crtemu->skip_aspect_correction ) {
@@ -2629,8 +2629,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			CRTEMU_GLint viewport[ 4 ];
 			crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-			int window_width = viewport[ 2 ] - viewport[ 0 ];
-			int window_height = viewport[ 3 ] - viewport[ 1 ];
+			int window_width = viewport[ 2 ];
+			int window_height = viewport[ 3 ];
 
 			int aspect_width = (int)( ( window_height * 4 ) / 3 );
 			int aspect_height= (int)( ( window_width * 3 ) / 4 );
@@ -2686,8 +2686,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			CRTEMU_GLint viewport[ 4 ];
 			crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-			int window_width = viewport[ 2 ] - viewport[ 0 ];
-			int window_height = viewport[ 3 ] - viewport[ 1 ];
+			int window_width = viewport[ 2 ];
+			int window_height = viewport[ 3 ];
 
 			int aspect_width = (int)( ( window_height * 4 ) / 3 );
 			int aspect_height= (int)( ( window_width * 3 ) / 4 );
@@ -2743,8 +2743,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			CRTEMU_GLint viewport[ 4 ];
 			crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-			int window_width = viewport[ 2 ] - viewport[ 0 ];
-			int window_height = viewport[ 3 ] - viewport[ 1 ];
+			int window_width = viewport[ 2 ];
+			int window_height = viewport[ 3 ];
 
 			int aspect_width = (int)( ( window_height * 4 ) / 3 );
 			int aspect_height= (int)( ( window_width * 3 ) / 4 );
@@ -2792,8 +2792,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			CRTEMU_GLint viewport[ 4 ];
 			crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-			int window_width = viewport[ 2 ] - viewport[ 0 ];
-			int window_height = viewport[ 3 ] - viewport[ 1 ];
+			int window_width = viewport[ 2 ];
+			int window_height = viewport[ 3 ];
 
 			int aspect_width = (int)( ( window_height * 4 ) / 3 );
 			int aspect_height= (int)( ( window_width * 3 ) / 4 );
