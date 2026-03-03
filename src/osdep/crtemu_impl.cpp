@@ -9,6 +9,8 @@
  * Copyright 2025-2026 Dimitris Panokostas
  */
 
+#include "sysdeps.h"
+
 #ifdef USE_OPENGL
 
 #include "gl_platform.h"
