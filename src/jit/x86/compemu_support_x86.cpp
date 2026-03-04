@@ -286,11 +286,7 @@ void *jit_vm_acquire(uae_u32 size, int options)
 				}
 			}
 		}
-		if (result) {
-			write_log("JIT: cache allocated at %p (anchor=%p, dist=%+lld)\n",
-				result, (void *)base,
-				(long long)((intptr_t)result - (intptr_t)base));
-		} else {
+		if (!result) {
 			/* Last resort: OS choice */
 			result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
 			if (result) {
@@ -4760,6 +4756,7 @@ void build_comp(void)
 			compfunctbl[cft_map(tbl[i].opcode)] = tbl[i].handler;
 	}
 
+	int jit_unavail_count = 0;
 	for (i = 0; nftbl[i].opcode < 65536; i++) {
 		bool uses_fpu = (tbl[i].specific & COMP_OPCODE_USES_FPU) != 0;
 		if (uses_fpu && avoid_fpu)
@@ -4779,14 +4776,11 @@ void build_comp(void)
 			}
 		}
 		if (!nfctbl[j].handler_ff && currprefs.cachesize) {
-			int mnemo = table68k[nftbl[i].opcode].mnemo;
-			struct mnemolookup *lookup;
-			for (lookup = lookuptab; lookup->mnemo != mnemo; lookup++)
-				;
-			char *s = ua(lookup->name);
-			jit_log("%04x (%s) unavailable", nftbl[i].opcode, s);
-			xfree(s);
+			jit_unavail_count++;
 		}
+	}
+	if (jit_unavail_count > 0) {
+		jit_log("%d opcodes unavailable for JIT compilation", jit_unavail_count);
 	}
 
 #ifdef NOFLAGS_SUPPORT_GENCOMP
