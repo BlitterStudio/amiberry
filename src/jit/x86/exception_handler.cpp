@@ -894,7 +894,7 @@ static void install_exception_handler(void)
 		if (veccode) {
 			uae_vm_protect(veccode, 256, UAE_VM_READ_WRITE_EXECUTE);
 		} else {
-			write_log("JIT: FATAL: veccode allocation failed — "
+			write_log("JIT: FATAL: veccode allocation failed -- "
 				"cannot install exception handler, disabling JIT\n");
 			changed_prefs.cachesize = 0;
 			currprefs.cachesize = 0;

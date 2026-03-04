@@ -4053,11 +4053,16 @@ void alloc_cache(void)
 			jit_log("code cache at %p, regs at %p, distance=%+lld bytes",
 				compiled_code, (void *)&regs, (long long)dist);
 			if (llabs(dist) > (intptr_t)0x70000000) {
-				jit_log("WARNING: code cache is %+lld bytes from globals — "
+				jit_log("WARNING: code cache is %+lld bytes from globals -- "
 					"RIP-relative addressing may fail! Disabling JIT.",
 					(long long)dist);
+				vm_release(compiled_code, cache_size * 1024);
+				compiled_code = 0;
+				vm_acquire_anchor = NULL;
 				changed_prefs.cachesize = 0;
 				currprefs.cachesize = 0;
+				cache_size = 0;
+				return;
 			}
 		}
 #endif
