@@ -50,6 +50,10 @@ typedef uae_u32 uintptr;
 
 #ifdef USE_JIT
 
+/* Allocate memory near the JIT cache / .data segment for RIP-relative access.
+ * options=0 uses anchor-based allocation; options=1 forces low 2GB (MAP_32BIT). */
+extern void *jit_vm_acquire(uae_u32 size, int options = 0);
+
 #ifdef JIT_DEBUG
 /* dump some information (m68k block, x86 block addresses) about the compiler state */
 extern void compiler_dumpstate(void);

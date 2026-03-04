@@ -56,9 +56,9 @@
 #include "compemu_arm.h"
 #include <SDL.h>
 
-#if defined(__pie__) || defined (__PIE__)
-#error Position-independent code (PIE) cannot be used with JIT
-#endif
+/* ARM64 JIT is PIE-compatible: it uses register-indirect addressing
+ * (R_MEMSTART/R15) rather than PC-relative globals, so code placement
+ * relative to .data does not matter. */
 
 #ifdef __MACH__
 // Needed for sys_cache_invalidate to on the JIT space region, Mac OS X specific

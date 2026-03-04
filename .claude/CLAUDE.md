@@ -222,7 +222,7 @@ Amiga address space mapped into contiguous host virtual memory ("natmem") for di
 
 **Android specifics**: Code memory allocated RWX permanently (no W^X toggling). `flush_cpu_icache()` uses `__builtin___clear_cache()`. SELinux error hint logged if RWX fails.
 
-**x86_64** (`src/jit/x86/`): 64-bit pointer-clean. `JITPTR` = `(uintptr)`, PC_P uses 64-bit loads/stores, ADDR32 prefix removed, `isconst` shortcuts disabled for natmem addresses, blockinfo pools allocated near JIT cache via VirtualQuery walk. `UAE_VM_32BIT` kept for x86-64 natmem (ensures `comp_pc_p` fits 32 bits — x86-64 still has 32-bit PC_P arithmetic paths). PIE is a compile-time error.
+**x86_64** (`src/jit/x86/`): 64-bit pointer-clean, PIE-compatible. `JITPTR` = `(uintptr)`, PC_P uses 64-bit loads/stores, ADDR32 prefix removed, `isconst` shortcuts disabled for natmem addresses. `UAE_VM_32BIT` kept for x86-64 natmem (ensures `comp_pc_p` fits 32 bits — x86-64 still has 32-bit PC_P arithmetic paths). Anchor-based JIT allocator (`jit_vm_acquire()`) places code within ±2GB of `.data` globals for RIP-relative addressing; blockinfo pools and veccode allocated near the JIT cache. If no suitable VA is found, JIT is gracefully disabled at runtime.
 
 **Debugging env vars**: `AMIBERRY_ARM64_GUARD_VERBOSE=1`, `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1`.
 

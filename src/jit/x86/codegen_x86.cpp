@@ -1378,22 +1378,22 @@ static inline void raw_jnz_l_oponly(void)
 	raw_jcc_l_oponly(NATIVE_CC_NE);
 }
 
-static inline void raw_jl(uae_u32 t)
+static inline void raw_jl(uintptr t)
 {
 	raw_jcc_l_oponly(NATIVE_CC_LT);
-	emit_long(t-(uae_u32)JITPTR target-4);
+	emit_long((uae_u32)(t-(uintptr)target-4));
 }
 
-static inline void raw_jz(uae_u32 t)
+static inline void raw_jz(uintptr t)
 {
 	raw_jz_l_oponly();
-	emit_long(t-(uae_u32)JITPTR target-4);
+	emit_long((uae_u32)(t-(uintptr)target-4));
 }
 
-static inline void raw_jnz(uae_u32 t)
+static inline void raw_jnz(uintptr t)
 {
 	raw_jnz_l_oponly();
-	emit_long(t-(uae_u32)JITPTR target-4);
+	emit_long((uae_u32)(t-(uintptr)target-4));
 }
 
 static inline void raw_jcc_b_oponly(int cc)
