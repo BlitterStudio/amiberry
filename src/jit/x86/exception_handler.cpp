@@ -888,10 +888,11 @@ static void install_exception_handler(void)
 #ifdef JIT_EXCEPTION_HANDLER
 	if (veccode == NULL) {
 		/* veccode generates RIP-relative references to globals, so it
-		 * must be within ±2GB of the .data segment. UAE_VM_32BIT uses
-		 * MAP_32BIT on Linux to place it in the low 2GB, which is
-		 * within range of no-PIE globals on all x86-64 platforms. */
-		veccode = (uae_u8 *) uae_vm_alloc(256, UAE_VM_32BIT, UAE_VM_READ_WRITE_EXECUTE);
+		 * must be within ±2GB of the .data segment. Use the anchor-based
+		 * JIT allocator to place it near .data/JIT cache, then set RWX. */
+		veccode = (uae_u8 *) jit_vm_acquire(256, 0);
+		if (veccode)
+			uae_vm_protect(veccode, 256, UAE_VM_READ_WRITE_EXECUTE);
 	}
 #endif
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING

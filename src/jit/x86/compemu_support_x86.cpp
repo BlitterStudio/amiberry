@@ -103,9 +103,9 @@ static void build_comp(void);
 #endif
 #include "uae/log.h"
 
-#if defined(__pie__) || defined (__PIE__)
-#error Position-independent code (PIE) cannot be used with JIT
-#endif
+/* PIE is now supported on x86-64: the anchor-based JIT allocator
+ * keeps code within RIP-relative range of globals. FreeBSD still
+ * requires -fno-pie (ADDR32+MAP_32BIT strategy). */
 
 #include "uae/vm.h"
 #if defined(CPU_x86_64) && !defined(_WIN32)
@@ -121,14 +121,32 @@ static void build_comp(void);
 #define vm_release(address, size) uae_vm_free(address, size)
 
 #if defined(CPU_x86_64)
-/* vm_acquire() uses this as the RIP-relative allocation anchor.
+/*
+ * JIT cache allocation strategy (PIE-compatible):
+ *
+ * x86-64 JIT uses RIP-relative [RIP+disp32] addressing to access globals
+ * (regs, regflags, etc.) via the _r_X() macro. This requires the JIT code
+ * cache to be within ±2GB of .data.
+ *
+ * Under non-PIE, .data is at a fixed low address and MAP_32BIT suffices.
+ * Under PIE+ASLR, .data can be anywhere in the 47-bit VA space.
+ *
+ * We use an anchor-based probe: &data_anchor is a reference point in .data,
+ * and we search outward from it for a free VA range. This mirrors the
+ * Windows strategy (VirtualQuery walk from data_anchor).
+ *
+ * The probe covers ±1.75GB at 2MB intervals, well within the ±2GB
+ * RIP-relative limit.
+ */
+
+/* jit_vm_acquire() uses this as the RIP-relative allocation anchor.
  * Set to the JIT cache base after alloc_cache() succeeds.
  * All x86-64 platforms need this since RIP-relative addressing
  * requires JIT allocations within ±2GB of both code and globals. */
 static uae_u8* vm_acquire_anchor = NULL;
 #endif
 
-static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
+void *jit_vm_acquire(uae_u32 size, int options)
 {
 #if defined(CPU_x86_64)
 	if (!(options & VM_MAP_32BIT)) {
@@ -223,13 +241,19 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 		uintptr hi = base + range;
 		void *result = NULL;
 
+#ifdef MAP_FIXED_NOREPLACE
+		int extra_flags = MAP_FIXED_NOREPLACE;
+#else
+		int extra_flags = 0;
+#endif
+
 		/* Try hints at 2MB intervals from anchor outward */
 		for (uintptr offset = 0; offset < range && !result; offset += 0x200000) {
 			/* Try above anchor */
 			uintptr try_addr = base + offset;
 			if (try_addr >= lo && try_addr + size <= hi) {
 				result = mmap((void *)try_addr, size, PROT_READ | PROT_WRITE,
-					MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+					MAP_PRIVATE | MAP_ANONYMOUS | extra_flags, -1, 0);
 				if (result != MAP_FAILED) {
 					uintptr dist = ((uintptr)result >= base)
 						? ((uintptr)result - base) : (base - (uintptr)result);
@@ -248,7 +272,7 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 				try_addr = base - offset;
 				if (try_addr >= lo && try_addr + size <= hi) {
 					result = mmap((void *)try_addr, size, PROT_READ | PROT_WRITE,
-						MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+						MAP_PRIVATE | MAP_ANONYMOUS | extra_flags, -1, 0);
 					if (result != MAP_FAILED) {
 						uintptr dist = ((uintptr)result >= base)
 							? ((uintptr)result - base) : (base - (uintptr)result);
@@ -262,9 +286,26 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 				}
 			}
 		}
-		if (!result) {
-			/* Last resort: OS choice (may be out of RIP-relative range) */
+		if (result) {
+			write_log("JIT: cache allocated at %p (anchor=%p, dist=%+lld)\n",
+				result, (void *)base,
+				(long long)((intptr_t)result - (intptr_t)base));
+		} else {
+			/* Last resort: OS choice */
 			result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
+			if (result) {
+				intptr_t dist = (intptr_t)result - (intptr_t)&data_anchor;
+				if (llabs(dist) >= (intptr_t)range) {
+					write_log("JIT: FATAL: could not allocate within 2GB of globals "
+						"(alloc=%p anchor=%p dist=%lld)\n",
+						result, (void *)&data_anchor, (long long)dist);
+					uae_vm_free(result, size);
+					result = NULL;
+				} else {
+					write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
+						result, (void *)&data_anchor, (long long)dist);
+				}
+			}
 		}
 		return result;
 #endif /* !__FreeBSD__ */
@@ -1024,13 +1065,13 @@ T * LazyBlockAllocator<T>::acquire()
 #if defined(CPU_x86_64)
 #if defined(__FreeBSD__)
 		/* FreeBSD: pools must also be below 2GB for ADDR32 to work */
-		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
+		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
 #else
 		/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
-		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
+		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
 #endif
 #else
-		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
+		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
 #endif
 		if (newPool == VM_MAP_FAILED) {
 			jit_abort("Could not allocate block pool!");
@@ -3957,13 +3998,13 @@ static uint8 *do_alloc_code(uint32 size, int depth)
 #if defined(__FreeBSD__)
 	/* FreeBSD ASLR places mmap at high addresses; force JIT cache below
 	 * 2GB so ADDR32 (0x67-prefix) absolute addressing works correctly. */
-	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+	uint8 *code = (uint8 *)jit_vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
 #else
 	/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
-	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT);
+	uint8 *code = (uint8 *)jit_vm_acquire(size, VM_MAP_DEFAULT);
 #endif
 #else
-	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+	uint8 *code = (uint8 *)jit_vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
 #endif
 	return code == VM_MAP_FAILED ? NULL : code;
 }
@@ -4006,9 +4047,23 @@ void alloc_cache(void)
 	if (compiled_code) {
 		jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p", cache_size, compiled_code, compiled_code + cache_size*1024);
 #if defined(CPU_x86_64)
-		/* Anchor subsequent vm_acquire() calls at the JIT cache so
+		/* Anchor subsequent jit_vm_acquire() calls at the JIT cache so
 		 * blockinfo pools stay within RIP-relative range of code. */
 		vm_acquire_anchor = compiled_code;
+
+		/* Verify JIT cache is within RIP-relative reach of globals */
+		{
+			intptr_t dist = (intptr_t)compiled_code - (intptr_t)&regs;
+			jit_log("code cache at %p, regs at %p, distance=%+lld bytes",
+				compiled_code, (void *)&regs, (long long)dist);
+			if (llabs(dist) > (intptr_t)0x70000000) {
+				jit_log("WARNING: code cache is %+lld bytes from globals — "
+					"RIP-relative addressing may fail! Disabling JIT.",
+					(long long)dist);
+				changed_prefs.cachesize = 0;
+				currprefs.cachesize = 0;
+			}
+		}
 #endif
 #ifdef USE_DATA_BUFFER
 		max_compile_start = compiled_code + cache_size*1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;

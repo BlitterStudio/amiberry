@@ -560,7 +560,13 @@ endif()
 # library dependencies, so Windows system libs (ws2_32, winmm, etc.)
 # come after static libs that depend on them (enet, etc.).
 
-if(NOT ANDROID AND NOT WIN32)
+if(NOT ANDROID AND NOT WIN32
+        AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"
+        AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+    # FreeBSD x86-64 JIT uses ADDR32 prefix + MAP_32BIT strategy,
+    # requiring all code/data in the low 2GB. PIE would break this.
+    # Linux/macOS x86-64 use RIP-relative + anchor-based allocation,
+    # which is PIE-compatible.
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
     target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
 elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)

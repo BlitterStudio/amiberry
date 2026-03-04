@@ -735,7 +735,9 @@ void comp_fbcc_opp(uae_u32 opcode)
 	uae_u32 v2;
 	int cc;
 
-	// comp_pc_p is expected to be bound to 32-bit addresses
+	// comp_pc_p points into natmem, which is allocated with UAE_VM_32BIT
+	// (low 4GB) on x86-64. This is independent of PIE/ASLR — natmem
+	// placement uses explicit mmap hints, not .text/.data ASLR.
 	assert((uintptr) comp_pc_p <= 0xffffffffUL);
 
 	if (jit_disable.fbcc)
