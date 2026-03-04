@@ -891,8 +891,15 @@ static void install_exception_handler(void)
 		 * must be within ±2GB of the .data segment. Use the anchor-based
 		 * JIT allocator to place it near .data/JIT cache, then set RWX. */
 		veccode = (uae_u8 *) jit_vm_acquire(256, 0);
-		if (veccode)
+		if (veccode) {
 			uae_vm_protect(veccode, 256, UAE_VM_READ_WRITE_EXECUTE);
+		} else {
+			write_log("JIT: FATAL: veccode allocation failed — "
+				"cannot install exception handler, disabling JIT\n");
+			changed_prefs.cachesize = 0;
+			currprefs.cachesize = 0;
+			return;
+		}
 	}
 #endif
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
