@@ -184,7 +184,6 @@ set(SOURCE_FILES
         src/archivers/lha/lhamaketbl.cpp
         src/archivers/lha/lharc.cpp
         src/archivers/lha/shuf.cpp
-        src/archivers/lha/shuf.cpp
         src/archivers/lha/slide.cpp
         src/archivers/lha/uae_lha.cpp
         src/archivers/lha/util.cpp
