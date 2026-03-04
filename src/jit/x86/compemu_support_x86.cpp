@@ -4052,7 +4052,7 @@ void alloc_cache(void)
 			intptr_t dist = (intptr_t)compiled_code - (intptr_t)&regs;
 			jit_log("code cache at %p, regs at %p, distance=%+lld bytes",
 				compiled_code, (void *)&regs, (long long)dist);
-			if (llabs(dist) > (intptr_t)0x70000000) {
+			if (llabs(dist) > (intptr_t)0x7F000000) {
 				jit_log("WARNING: code cache is %+lld bytes from globals -- "
 					"RIP-relative addressing may fail! Disabling JIT.",
 					(long long)dist);
