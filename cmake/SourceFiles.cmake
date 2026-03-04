@@ -557,14 +557,16 @@ endif()
 if(AMIBERRY_PLATFORM_LINK_DIRS)
     target_link_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LINK_DIRS})
 endif()
+
+if(NOT ANDROID AND NOT WIN32 AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")
+    target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
+    target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+endif()
+
 # AMIBERRY_PLATFORM_LIBS are linked in Dependencies.cmake after all
 # library dependencies, so Windows system libs (ws2_32, winmm, etc.)
 # come after static libs that depend on them (enet, etc.).
-
-if(NOT ANDROID AND NOT WIN32)
-    target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
-    target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
-elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # x86_64 JIT is now 64-bit pointer-clean: no longer needs ASLR-disabling
     # linker flags or forced low image base.
     # Mark as GUI application in Release builds to suppress the console

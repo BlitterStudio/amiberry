@@ -103,10 +103,6 @@ static void build_comp(void);
 #endif
 #include "uae/log.h"
 
-#if defined(__pie__) || defined (__PIE__)
-#error Position-independent code (PIE) cannot be used with JIT
-#endif
-
 #include "uae/vm.h"
 #if defined(CPU_x86_64) && !defined(_WIN32)
 #include <sys/mman.h>
