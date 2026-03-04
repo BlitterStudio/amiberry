@@ -353,6 +353,14 @@ static bool decode_instruction(
 		break;
 	}
 #ifdef CPU_x86_64
+	/* SIB byte present when ModR/M rm field = 100 (binary).
+	 * This occurs in JIT-generated memory accesses like
+	 * MOV r32, [R15 + reg*1 + disp32] where R15 = natmem_offset.
+	 * Note: does not handle mod=00, SIB.base=101 (disp32-only base case);
+	 * safe because JIT only generates mod=0x80 patterns. */
+	if (*r != -1 && (pc[1] & 0x07) == 0x04) {
+		*len += 1;
+	}
 	if (*rex & (1 << 2)) {
 		/* Use x86-64 extended registers R8..R15. */
 		*r += 8;
@@ -439,12 +447,11 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 {
 	uae_u8 *fault_pc = (uae_u8 *) CONTEXT_PC(context);
 #ifdef CPU_64_BIT
-#if 0
-	if ((fault_addr & 0xffffffff00000000) == 0xffffffff00000000) {
-		fault_addr &= 0xffffffff;
-	}
-#endif
-	if (fault_addr > (uintptr_t) 0xffffffff) {
+	/* Compute Amiga address first, then range-check. The host fault address
+	 * can exceed 32-bit when natmem_offset + amiga_addr > 4GB, but the
+	 * Amiga address itself is always 32-bit. */
+	uintptr_t amiga_addr_wide = fault_addr - (uintptr_t) NATMEM_OFFSET;
+	if (amiga_addr_wide > (uintptr_t) 0xffffffff) {
 		return 0;
 	}
 #endif
@@ -480,15 +487,37 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 		return 0;
 	}
 
-	uae_u32 addr = uae_p32(fault_addr) - uae_p32(NATMEM_OFFSET);
+	uae_u32 addr = (uae_u32)(fault_addr - (uintptr_t) NATMEM_OFFSET);
+	addrbank *ab = &get_mem_bank(addr);
 #ifdef DEBUG_ACCESS
 	if (addr >= 0x80000000) {
 		write_log (_T("JIT: Suspicious address 0x%x in SEGV handler.\n"), addr);
 	}
-	addrbank *ab = &get_mem_bank(addr);
 	if (ab)
 		write_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), addr);
 #endif
+
+	/* dummy_bank handler is NOT safe in exception context: it calls
+	 * gary_nonrange() which can trigger hardware_exception2() -> THROW(2).
+	 * For dummy_bank, return 0 for reads and silently ignore writes —
+	 * matching committed natmem gap behavior. */
+	if (ab == &dummy_bank) {
+		if (dir == SIG_READ) {
+			switch (size) {
+			case 1: *((uae_u8*)pr) = 0; break;
+			case 2: *((uae_u16*)pr) = 0; break;
+			case 4: *((uae_u32*)pr) = 0; break;
+			default: break;
+			}
+		}
+		CONTEXT_PC(context) += len;
+		if (delete_trigger(active, fault_pc))
+			return 1;
+		if (delete_trigger(dormant, fault_pc))
+			return 1;
+		set_special(0);
+		return 1;
+	}
 
 	if (dir == SIG_READ) {
 		switch (size) {
@@ -547,12 +576,12 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 {
 	uae_u8 *fault_pc = (uae_u8 *) CONTEXT_PC(context);
 #ifdef CPU_64_BIT
-#if 0
-	if ((fault_addr & 0xffffffff00000000) == 0xffffffff00000000) {
-		fault_addr &= 0xffffffff;
-	}
-#endif
-	if (fault_addr > (uintptr_t) 0xffffffff) {
+	/* Compute Amiga address first, then range-check. The host fault address
+	 * can exceed 32-bit when natmem_offset + amiga_addr > 4GB, but the
+	 * Amiga address itself is always 32-bit. Example: natmem at 0x80000000,
+	 * Amiga addr 0x80000004 -> host 0x100000004 (>32-bit on host, valid Amiga). */
+	uintptr_t amiga_addr_wide = fault_addr - (uintptr_t) NATMEM_OFFSET;
+	if (amiga_addr_wide > (uintptr_t) 0xffffffff) {
 		return 0;
 	}
 #endif
@@ -588,15 +617,37 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 		return 0;
 	}
 
-	uae_u32 addr = uae_p32(fault_addr) - uae_p32(NATMEM_OFFSET);
+	uae_u32 addr = (uae_u32)(fault_addr - (uintptr_t) NATMEM_OFFSET);
+	addrbank *ab = &get_mem_bank(addr);
 #ifdef DEBUG_ACCESS
 	if (addr >= 0x80000000) {
 			write_log (_T("JIT: Suspicious address 0x%x in SEGV handler.\n"), addr);
 	}
-	addrbank *ab = &get_mem_bank(addr);
 	if (ab)
 		write_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), addr);
 #endif
+
+	/* dummy_bank handler is NOT signal-safe: it calls gary_nonrange() which
+	 * can trigger hardware_exception2() -> THROW(2) (longjmp from signal
+	 * handler = undefined behavior). For dummy_bank, return 0 for reads
+	 * and silently ignore writes — matching committed natmem gap behavior. */
+	if (ab == &dummy_bank) {
+		if (dir == SIG_READ) {
+			switch (size) {
+			case 1: *((uae_u8*)pr) = 0; break;
+			case 2: *((uae_u16*)pr) = 0; break;
+			case 4: *((uae_u32*)pr) = 0; break;
+			default: break;
+			}
+		}
+		CONTEXT_PC(context) += len;
+		if (delete_trigger(active, fault_pc))
+			return 1;
+		if (delete_trigger(dormant, fault_pc))
+			return 1;
+		set_special(0);
+		return 1;
+	}
 
 	uae_u8 *original_target = target;
 	target = (uae_u8*) CONTEXT_PC(context);
@@ -765,15 +816,59 @@ static void sigsegv_handler(int signum, siginfo_t *info, void *context)
 	uae_u8 *i = (uae_u8 *) CONTEXT_PC(context);
 	uintptr_t address = (uintptr_t) info->si_addr;
 
-	if (i >= compiled_code) {
+	if (i >= compiled_code && i <= current_compile_p) {
 		if (handle_access(address, context)) {
 			return;
 		}
+
+		/* handle_access() failed — log diagnostics */
+		write_log(_T("JIT: SIGSEGV at PC=%p, fault addr=%p\n"), i, (void *)address);
+		if (i) {
+			write_log(_T("JIT: Instruction bytes at PC:"));
+			for (int j = 0; j < 16; j++) {
+				write_log(_T(" %02x"), i[j]);
+			}
+			write_log(_T("\n"));
+		}
+		write_log(_T("JIT: compiled_code=%p, current_compile_p=%p\n"),
+			compiled_code, current_compile_p);
+		write_log(_T("JIT: M68K PC=%08x, natmem_offset=%p\n"),
+			(unsigned int)M68K_GETPC, NATMEM_OFFSET);
+
+		if (currprefs.comp_catchfault) {
+			/* Determine read/write direction from Linux REG_ERR */
+			bool is_read = true;
+#if defined(__linux__) && defined(REG_ERR)
+			{
+				ucontext_t *uc = (ucontext_t *)context;
+				/* Bit 1 of REG_ERR: 0=read, 1=write */
+				is_read = (uc->uc_mcontext.gregs[REG_ERR] & 0x2) == 0;
+			}
+#endif
+			uae_u32 amiga_addr = (uae_u32)(address - (uintptr_t) NATMEM_OFFSET);
+			write_log(_T("JIT: SIGSEGV comp_catchfault: addr=%08x %s, redirecting to popall_do_nothing\n"),
+				amiga_addr, is_read ? _T("read") : _T("write"));
+
+			/* Store Amiga fault info — signal-safe (only writes globals) */
+			exception2_setup(regs.opcode, amiga_addr, is_read, 1, regs.s ? 4 : 0);
+
+			/* Signal m68k_run_jit() to generate Exception(2) after return */
+			jit_exception_pending = 2;
+
+			/* Redirect to popall_do_nothing which unwinds the JIT stack
+			 * frame (inc SP + pop preserved regs + ret) and returns to
+			 * m68k_run_jit()'s inner loop */
+			CONTEXT_PC(context) = (uintptr_t)popall_do_nothing;
+			return;
+		}
+
+		write_log(_T("JIT: No comp_catchfault — aborting\n"));
 	} else {
-		write_log ("Caught illegal access to %08lx at eip=%p\n", address, i);
+		write_log(_T("JIT: Caught SIGSEGV outside JIT code: access to %p at PC=%p\n"),
+			(void *)address, i);
 	}
 
-	exit (EXIT_FAILURE);
+	exit(EXIT_FAILURE);
 }
 
 #endif
@@ -821,7 +916,7 @@ static void install_exception_handler(void)
 	sigemptyset (&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 	sigaction(SIGSEGV, &act, NULL);
-#ifdef MACOSX
+#if defined(MACOSX) || defined(__FreeBSD__)
 	sigaction(SIGBUS, &act, NULL);
 #endif
 #else

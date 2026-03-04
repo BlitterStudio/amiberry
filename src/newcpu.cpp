@@ -59,6 +59,7 @@
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>
+volatile int jit_exception_pending = 0;
 #if defined(CPU_AARCH64)
 extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
 extern void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after);
@@ -5748,6 +5749,16 @@ static int cpu_thread_run_jit(void *v)
 		for (;;) {
 			check_debugger();
 			((compiled_handler*)(pushall_call_handler))();
+			/* Check for pending exception from SIGSEGV comp_catchfault handler (x86-64 only) */
+#if defined(CPU_x86_64) || defined(_M_AMD64)
+			if (jit_exception_pending) {
+				int exc = jit_exception_pending;
+				jit_exception_pending = 0;
+				write_log(_T("JIT: Processing pending bus error in cpu_thread (exception %d, PC=%08x)\n"),
+					exc, (unsigned int)M68K_GETPC);
+				Exception(exc);
+			}
+#endif
 			/* Whenever we return from that, we should check spcflags */
 			if (regs.spcflags || cpu_thread_ilvl > 0) {
 				if (do_specialties_thread()) {
@@ -5795,6 +5806,16 @@ static void m68k_run_jit(void)
 #endif
 			for (;;) {
 				((compiled_handler*)(pushall_call_handler))();
+				/* Check for pending exception from SIGSEGV comp_catchfault handler (x86-64 only) */
+#if defined(CPU_x86_64) || defined(_M_AMD64)
+				if (jit_exception_pending) {
+					int exc = jit_exception_pending;
+					jit_exception_pending = 0;
+					write_log(_T("JIT: Processing pending bus error (exception %d, PC=%08x)\n"),
+						exc, (unsigned int)M68K_GETPC);
+					Exception(exc);
+				}
+#endif
 				/* Whenever we return from that, we should check spcflags */
 				check_uae_int_request();
 				if (regs.spcflags) {

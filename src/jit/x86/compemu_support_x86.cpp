@@ -197,6 +197,12 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 		}
 		return result;
 #else
+#if defined(__FreeBSD__)
+		/* FreeBSD: ASLR defeats anchor-based hints. Delegate to
+		 * uae_vm_alloc with UAE_VM_32BIT (MAP_32BIT), guaranteeing
+		 * allocation below 2GB where ADDR32 absolute addressing works. */
+		return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
+#else
 		/* Linux/POSIX x86-64: RIP-relative addressing (the _r_X macro)
 		 * requires all JIT allocations within ±2GB of both the JIT code
 		 * and global variables in the .data segment. Use compiled_code
@@ -257,7 +263,8 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 			result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
 		}
 		return result;
-#endif
+#endif /* !__FreeBSD__ */
+#endif /* !_WIN32 */
 	}
 #endif
 	return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
@@ -1011,8 +1018,13 @@ T * LazyBlockAllocator<T>::acquire()
 		// There is no chunk left, allocate a new pool and link the
 		// chunks into the free list
 #if defined(CPU_x86_64)
-		/* 64-bit JIT uses RIP-relative addressing — pools must be near code */
+#if defined(__FreeBSD__)
+		/* FreeBSD: pools must also be below 2GB for ADDR32 to work */
+		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
+#else
+		/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
 		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
+#endif
 #else
 		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
 #endif
@@ -3938,8 +3950,14 @@ static uint8 *do_alloc_code(uint32 size, int depth)
 {
 	UNUSED(depth);
 #if X86_TARGET_64BIT
-	/* 64-bit JIT is pointer-clean — no need to force code below 4GB */
+#if defined(__FreeBSD__)
+	/* FreeBSD ASLR places mmap at high addresses; force JIT cache below
+	 * 2GB so ADDR32 (0x67-prefix) absolute addressing works correctly. */
+	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+#else
+	/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
 	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT);
+#endif
 #else
 	uint8 *code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
 #endif

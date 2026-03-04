@@ -54,6 +54,31 @@ OpenGLRenderer* get_opengl_renderer()
 	return dynamic_cast<OpenGLRenderer*>(g_renderer.get());
 }
 
+static void resolve_gl_pixel_format(Uint32 sdl_pixel_format, GLenum& fmt, GLenum& type, int& bpp)
+{
+	if (sdl_pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+		fmt = GL_BGRA;
+		type = GL_UNSIGNED_BYTE;
+		bpp = 4;
+		return;
+	}
+	if (sdl_pixel_format == SDL_PIXELFORMAT_RGB565) {
+		fmt = GL_RGB;
+		type = GL_UNSIGNED_SHORT_5_6_5;
+		bpp = 2;
+		return;
+	}
+	if (sdl_pixel_format == SDL_PIXELFORMAT_RGB555) {
+		fmt = GL_RGBA;
+		type = GL_UNSIGNED_SHORT_5_5_5_1;
+		bpp = 2;
+		return;
+	}
+	fmt = GL_RGBA;
+	type = GL_UNSIGNED_BYTE;
+	bpp = 4;
+}
+
 // --- Context lifecycle ---
 
 bool OpenGLRenderer::init_context(SDL_Window* window)
@@ -92,16 +117,8 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
 	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
 
-	// Cache GL pixel format info (pixel_format is set once at init and never changes)
-	if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-		m_gl_format = { GL_BGRA, GL_UNSIGNED_BYTE, 4 };
-	} else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-		m_gl_format = { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2 };
-	} else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-		m_gl_format = { GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, 2 };
-	} else {
-		m_gl_format = { GL_RGBA, GL_UNSIGNED_BYTE, 4 };
-	}
+	// Initialize GL upload format from current SDL pixel format.
+	resolve_gl_pixel_format(pixel_format, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
 
 	return true;
 }
@@ -186,6 +203,9 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 	if (currprefs.headless) return true;
 	if (w == 0 || h == 0) return false;
 	if (gfx_platform_skip_alloctexture(monid, w, h)) return true;
+
+	// RTG depth can switch between 16/32-bit at runtime; keep upload format in sync.
+	resolve_gl_pixel_format(pixel_format, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
 
 	auto mon = &AMonitors[monid];
 	const char* shader_name;
