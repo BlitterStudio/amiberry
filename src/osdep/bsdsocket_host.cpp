@@ -2166,7 +2166,7 @@ static unsigned int thread_get2(void *indexp)
 	uae_u32 name;
 	uae_u32 namelen;
 	long addrtype;
-	char *name_rp;
+	const char *name_rp;
 	SB;
 	TrapContext *ctx = NULL;
 
@@ -2188,7 +2188,7 @@ static unsigned int thread_get2(void *indexp)
 				namelen = args->args3;
 				addrtype = args->args4;
 				if (addr_valid(_T("thread_get1"), name, 1))
-					name_rp = (char*)get_real_address(name);
+					name_rp = (const char*)get_real_address(name);
 				else
 					name_rp = "";
 
@@ -2210,7 +2210,7 @@ static unsigned int thread_get2(void *indexp)
 				struct protoent *proto;
 				name = args->args2;
 				if (addr_valid(_T("thread_get2"), name, 1))
-					name_rp = (char*)get_real_address(name);
+					name_rp = (const char*)get_real_address(name);
 				else
 					name_rp = "";
 				proto = getprotobyname(name_rp);
@@ -2369,7 +2369,7 @@ void host_gethostbynameaddr(TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen,
 	HOSTENT *h;
 	int size, numaliases = 0, numaddr = 0;
 	uae_u32 aptr;
-	char *name_rp;
+	const char *name_rp;
 	int i, tindex;
 	struct threadargs args;
 	volatile struct threadargs *argsp;
@@ -2387,13 +2387,13 @@ void host_gethostbynameaddr(TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen,
 	name_rp = "";
 
 	if (addr_valid(_T("host_gethostbynameaddr"), name, 1))
-		name_rp = (char*)get_real_address(name);
+		name_rp = (const char*)get_real_address(name);
 
 	if (addrtype == -1) {
 		BSDTRACE((_T("gethostbyname(%s) -> "), name_rp));
 		if ((addr = inet_addr(name_rp)) != INADDR_NONE) {
 			bsdsocklib_seterrno(ctx, sb, 0);
-			((HOSTENT *)buf)->h_name = name_rp;
+			((HOSTENT *)buf)->h_name = (char*)name_rp;
 			((HOSTENT *)buf)->h_aliases = NULL;
 			((HOSTENT *)buf)->h_addrtype = AF_INET;
 			((HOSTENT *)buf)->h_length = 4;

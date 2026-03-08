@@ -8,7 +8,6 @@
 #include "keyboard.h"
 
 #include "clipboard.h"
-#include "config.h"
 #include "uae.h"
 
 char keyboard_type = 0;

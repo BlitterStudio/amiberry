@@ -735,7 +735,7 @@ static uae_u32 REGPARAM2 bsdsocklib_SetSocketSignals (TrapContext *ctx)
 /* SetDTableSize(size)(d0) */
 static uae_u32 bsdsocklib_SetDTableSize (TrapContext *ctx, SB, int newSize)
 {
-	int *newdtable;
+	SOCKET_TYPE *newdtable;
 	int *newftable;
 	unsigned int *newmtable;
 	int i;
@@ -745,7 +745,7 @@ static uae_u32 bsdsocklib_SetDTableSize (TrapContext *ctx, SB, int newSize)
 		return 0;
 	}
 
-	newdtable = xcalloc (int, newSize);
+	newdtable = xcalloc (SOCKET_TYPE, newSize);
 	newftable = xcalloc (int, newSize);
 	newmtable = xcalloc (unsigned int, newSize);
 
@@ -769,7 +769,7 @@ static uae_u32 bsdsocklib_SetDTableSize (TrapContext *ctx, SB, int newSize)
 	xfree(sb->dtable);
 	xfree(sb->ftable);
 	xfree(sb->mtable);
-	sb->dtable = (SOCKET*)newdtable;
+	sb->dtable = newdtable;
 	sb->ftable = newftable;
 	sb->mtable = newmtable;
 	sb->resultval = 0;

@@ -8,7 +8,6 @@
  *
  */
 
-#include "config.h"
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -705,6 +704,18 @@ bool my_existsfile2(const char* name)
 {
 	if (!name) return false;
 	return fs::exists(name) && fs::is_regular_file(name);
+}
+
+bool my_existsfiledir(const char *name)
+{
+	struct stat st;
+	if (stat(name, &st) == 0)
+		return true;
+
+	if (errno == ENOENT || errno == ENOTDIR)
+		return false;
+
+	return true;
 }
 
 bool my_existsfile(const char* name)

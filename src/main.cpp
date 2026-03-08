@@ -772,11 +772,25 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->maprom = 0;
 	}
 
-	if (p->tod_hack && p->cs_ciaatod == 0)
+	if (p->tod_hack && p->cs_ciaatod == 0) {
 		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+	}
 
 	// PCem does not support max speed.
 	p->x86_speed_throttle = std::max<float>(p->x86_speed_throttle, 0);
+
+	if (p->cs_hsyncadjust < 2 * 4 * 2) {
+		p->cs_hsyncadjust = 2 * 4 * 2;
+	}
+	if (p->cs_hsyncadjust > 20 * 4 * 2) {
+		p->cs_hsyncadjust = 20 * 4 * 2;
+	}
+	if (p->cs_vsyncadjust < 0) {
+		p->cs_vsyncadjust = 0;
+	}
+	if (p->cs_vsyncadjust > 20 * 2) {
+		p->cs_vsyncadjust = 20 * 2;
+	}
 
 	built_in_chipset_prefs (p);
 	blkdev_fix_prefs (p);

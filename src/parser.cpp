@@ -15,7 +15,6 @@
 
 #undef SERIAL_ENET
 
-#include "config.h"
 #include "sysdeps.h"
 #include "options.h"
 #include "events.h"
