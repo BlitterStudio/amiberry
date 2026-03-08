@@ -1292,11 +1292,9 @@ void commit_natmem_gaps(void)
 				size_t gap_size = gap_end - gap_start;
 				uae_u8* addr = natmem_reserved + gap_start;
 				if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
-#ifndef _WIN32
-					/* On POSIX, freshly committed anonymous pages are zero-filled
-					 * by the kernel. Only memset if we need a non-zero fill. */
+					/* On POSIX and Windows, freshly committed anonymous pages are
+					 * zero-filled by the OS. Only memset if we need a non-zero fill. */
 					if (fill_byte != 0)
-#endif
 						memset(addr, fill_byte, gap_size);
 					/* Make gap pages read-only: with special_mem_default=0 (default),
 					 * JIT uses direct memory access for ALL addresses. R/W gap pages
@@ -1322,9 +1320,8 @@ void commit_natmem_gaps(void)
 			size_t gap_size = gap_end - gap_start;
 			uae_u8* addr = natmem_reserved + gap_start;
 			if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
-#ifndef _WIN32
+				/* See comment above — OS zero-fills committed pages. */
 				if (fill_byte != 0)
-#endif
 					memset(addr, fill_byte, gap_size);
 				/* Read-only gap pages — see comment above. */
 				uae_vm_protect(addr, gap_size, UAE_VM_READ);

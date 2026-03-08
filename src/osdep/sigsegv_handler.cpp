@@ -531,7 +531,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				countdown = 0;
 				set_special(SPCFLAG_END_COMPILE);
 				in_handler--;
-				longjmp(jit_bus_error_jmpbuf, 3);
+				longjmp(jit_bus_error_jmpbuf, 2);
 			}
 
 		break;
