@@ -9190,7 +9190,7 @@ static void dcache030_maybe_burst(uaecptr addr, struct cache030 *c, int lws)
 	if (c->valid[0] + c->valid[1] + c->valid[2] + c->valid[3] == 1) {
 		uaecptr physaddr = addr;
 		if (currprefs.mmu_model) {
-			physaddr = mmu030_translate(addr, regs.s != 0, false, false);
+			physaddr = mmu030_translate(addr, regs.s != 0, true, false);
 		}
 
 		if (ce_banktype[physaddr >> 16] == CE_MEMBANK_FAST32) {
