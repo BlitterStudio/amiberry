@@ -52,7 +52,7 @@ typedef void (REGPARAM3 *mem_put_func)(uaecptr, uae_u32) REGPARAM;
 typedef uae_u8 *(REGPARAM3 *xlate_func)(uaecptr) REGPARAM;
 typedef int (REGPARAM3 *check_func)(uaecptr, uae_u32) REGPARAM;
 
-extern uae_u32 max_z3fastmem, max_physmem;
+extern size_t max_z3fastmem, max_physmem;
 
 extern uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode);
 extern void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v);
@@ -878,7 +878,7 @@ extern shmpiece *shm_start;
 
 extern uae_u8* natmem_offset;
 extern uae_u8 *natmem_reserved;
-extern uae_u32 natmem_reserved_size;
+extern size_t natmem_reserved_size;
 
 #endif
 

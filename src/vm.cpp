@@ -41,7 +41,7 @@
 
 struct alloc_size {
 	void *address;
-	uae_u32 size;
+	size_t size;
 };
 
 #define MAX_ALLOCATIONS 2048
@@ -50,9 +50,9 @@ struct alloc_size {
  * could be awkward if/when you want to allocate page-aligned memory. */
 static struct alloc_size alloc_sizes[MAX_ALLOCATIONS];
 
-static void add_allocation(void *address, uae_u32 size)
+static void add_allocation(void *address, size_t size)
 {
-	write_log("VM: add_allocation %p (%d)\n", address, size);
+	write_log("VM: add_allocation %p (%zu)\n", address, size);
 	for (int i = 0; i < MAX_ALLOCATIONS; i++) {
 		if (alloc_sizes[i].address == NULL) {
 			alloc_sizes[i].address = address;
@@ -63,7 +63,7 @@ static void add_allocation(void *address, uae_u32 size)
 	abort();
 }
 
-static uae_u32 find_allocation(void *address)
+static size_t find_allocation(void *address)
 {
 	for (int i = 0; i < MAX_ALLOCATIONS; i++) {
 		if (alloc_sizes[i].address == address) {
@@ -73,12 +73,12 @@ static uae_u32 find_allocation(void *address)
 	abort();
 }
 
-static uae_u32 remove_allocation(void *address)
+static size_t remove_allocation(void *address)
 {
 	for (int i = 0; i < MAX_ALLOCATIONS; i++) {
 		if (alloc_sizes[i].address == address) {
 			alloc_sizes[i].address = NULL;
-			uae_u32 size = alloc_sizes[i].size;
+			size_t size = alloc_sizes[i].size;
 			alloc_sizes[i].size = 0;
 			return size;
 		}
@@ -136,7 +136,7 @@ int uae_vm_page_size(void)
 	return page_size;
 }
 
-static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
+static void *uae_vm_alloc_with_flags(size_t size, int flags, int protect)
 {
 	void *address = NULL;
 	static bool first_allocation = true;
@@ -146,7 +146,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 		first_allocation = false;
 	}
 #ifdef LOG_ALLOCATIONS
-	write_log("VM: Allocate 0x%-8x bytes [%d] (%s)\n",
+	write_log("VM: Allocate 0x%-8zx bytes [%d] (%s)\n",
 			size, flags, protect_description(protect));
 #endif
 
@@ -224,17 +224,17 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 		if (flags & UAE_VM_JIT) {
 #if defined(__APPLE__) && defined(CPU_AARCH64)
 			const bool entitlement_hint = (err == EPERM || err == EINVAL);
-			write_log("VM: uae_vm_alloc(%u, %d, %d) JIT mmap failed (%d: %s)%s\n",
+			write_log("VM: uae_vm_alloc(%zu, %d, %d) JIT mmap failed (%d: %s)%s\n",
 				size, flags, protect, err, strerror(err),
 				entitlement_hint
 					? " - check MAP_JIT policy and com.apple.security.cs.allow-jit entitlement"
 					: "");
 #else
-			write_log("VM: uae_vm_alloc(%u, %d, %d) JIT mmap failed (%d: %s)\n",
+			write_log("VM: uae_vm_alloc(%zu, %d, %d) JIT mmap failed (%d: %s)\n",
 				size, flags, protect, err, strerror(err));
 #endif
 		} else {
-			write_log("VM: uae_vm_alloc(%u, %d, %d) mmap failed (%d: %s)\n",
+			write_log("VM: uae_vm_alloc(%zu, %d, %d) mmap failed (%d: %s)\n",
 				size, flags, protect, err, strerror(err));
 #if defined(__ANDROID__) && defined(CPU_AARCH64)
 			if (protect == UAE_VM_READ_WRITE_EXECUTE && (err == EPERM || err == EACCES)) {
@@ -253,27 +253,27 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	return address;
 }
 
-void *uae_vm_alloc(uae_u32 size, int flags, int protect)
+void *uae_vm_alloc(size_t size, int flags, int protect)
 {
 	return uae_vm_alloc_with_flags(size, flags, protect);
 }
 
-static bool do_protect(void *address, int size, int protect)
+static bool do_protect(void *address, size_t size, int protect)
 {
 #ifdef TRACK_ALLOCATIONS
-	uae_u32 allocated_size = find_allocation(address);
+	size_t allocated_size = find_allocation(address);
 	assert(allocated_size == size);
 #endif
 #ifdef _WIN32
 	DWORD old;
 	if (VirtualProtect(address, size, protect_to_native(protect), &old) == 0) {
-		write_log("VM: uae_vm_protect(%p, %d, %d) VirtualProtect failed (%d)\n",
+		write_log("VM: uae_vm_protect(%p, %zu, %d) VirtualProtect failed (%d)\n",
 				address, size, protect, GetLastError());
 		return false;
 	}
 #else
 	if (mprotect(address, size, protect_to_native(protect)) != 0) {
-		write_log("VM: uae_vm_protect(%p, %d, %d) mprotect failed (%d)\n",
+		write_log("VM: uae_vm_protect(%p, %zu, %d) mprotect failed (%d)\n",
 				address, size, protect, errno);
 		return false;
 	}
@@ -281,22 +281,22 @@ static bool do_protect(void *address, int size, int protect)
 	return true;
 }
 
-bool uae_vm_protect(void *address, int size, int protect)
+bool uae_vm_protect(void *address, size_t size, int protect)
 {
 	return do_protect(address, size, protect);
 }
 
-static bool do_free(void *address, int size)
+static bool do_free(void *address, size_t size)
 {
 #ifdef TRACK_ALLOCATIONS
-	uae_u32 allocated_size = remove_allocation(address);
+	size_t allocated_size = remove_allocation(address);
 	assert(allocated_size == size);
 #endif
 #ifdef _WIN32
 	return VirtualFree(address, 0, MEM_RELEASE) != 0;
 #else
 	if (munmap(address, size) != 0) {
-		write_log("VM: uae_vm_free(%p, %d) munmap failed (%d)\n",
+		write_log("VM: uae_vm_free(%p, %zu) munmap failed (%d)\n",
 				address, size, errno);
 		return false;
 	}
@@ -304,9 +304,9 @@ static bool do_free(void *address, int size)
 	return true;
 }
 
-bool uae_vm_free(void *address, int size)
+bool uae_vm_free(void *address, size_t size)
 {
-	write_log("VM: Free     0x%-8x bytes at %p\n", size, address);
+	write_log("VM: Free     0x%-8zx bytes at %p\n", size, address);
 	return do_free(address, size);
 }
 
@@ -319,14 +319,14 @@ void uae_vm_jit_write_protect(bool enable_execute_mode)
 #endif
 }
 
-static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
+static void *try_reserve(uintptr_t try_addr, size_t size, int flags)
 {
 	void *address = NULL;
 	if (try_addr) {
-		write_log("VM: Reserve  0x%-8x bytes, try address 0x%llx\n",
+		write_log("VM: Reserve  0x%-8zx bytes, try address 0x%llx\n",
 				size, (uae_u64) try_addr);
 	} else {
-		write_log("VM: Reserve  0x%-8x bytes\n", size);
+		write_log("VM: Reserve  0x%-8zx bytes\n", size);
 	}
 #ifdef _WIN32
 	int va_type = MEM_RESERVE;
@@ -365,7 +365,7 @@ static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 	if (flags & UAE_VM_32BIT) {
 		uintptr_t end = (uintptr_t) address + size;
 		if (address && end > (uintptr_t) 0x100000000ULL) {
-			write_log("VM: Reserve  0x%-8x bytes, got address 0x%llx (> 32-bit)\n",
+			write_log("VM: Reserve  0x%-8zx bytes, got address 0x%llx (> 32-bit)\n",
 					size, (uae_u64) (uintptr_t) address);
 #ifdef _WIN32
 			VirtualFree(address, 0, MEM_RELEASE);
@@ -379,7 +379,7 @@ static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 	return address;
 }
 
-void *uae_vm_reserve(uae_u32 size, int flags)
+void *uae_vm_reserve(size_t size, int flags)
 {
 	void *address = NULL;
 #ifdef _WIN32
@@ -415,35 +415,35 @@ void *uae_vm_reserve(uae_u32 size, int flags)
 	}
 #endif
 	if (address) {
-		write_log("VM: Reserve  0x%-8x bytes, got address 0x%llx\n",
+		write_log("VM: Reserve  0x%-8zx bytes, got address 0x%llx\n",
 				size, (uae_u64) (uintptr_t) address);
 	} else {
-		write_log("VM: Reserve  0x%-8x bytes failed!\n", size);
+		write_log("VM: Reserve  0x%-8zx bytes failed!\n", size);
 	}
 	return address;
 }
 
-void *uae_vm_reserve_fixed(void *want_addr, uae_u32 size, int flags)
+void *uae_vm_reserve_fixed(void *want_addr, size_t size, int flags)
 {
 	void *address = NULL;
-	//write_log("VM: Reserve  0x%-8x bytes at %p (fixed)\n", size, want_addr);
+	//write_log("VM: Reserve  0x%-8zx bytes at %p (fixed)\n", size, want_addr);
 	address = try_reserve((uintptr_t) want_addr, size, flags);
 	if (address == NULL) {
-		write_log("VM: Reserve  0x%-8x bytes at %p failed!\n", size, want_addr);
+		write_log("VM: Reserve  0x%-8zx bytes at %p failed!\n", size, want_addr);
 		return NULL;
 	}
 	if (address != want_addr) {
 		do_free(address, size);
 		return NULL;
 	}
-	// write_log("VM: Reserve  0x%-8x bytes, got address 0x%llx\n",
+	// write_log("VM: Reserve  0x%-8zx bytes, got address 0x%llx\n",
 	// 		size, (uae_u64) (uintptr_t) address);
 	return address;
 }
 
-void *uae_vm_commit(void *address, uae_u32 size, int protect)
+void *uae_vm_commit(void *address, size_t size, int protect)
 {
-	// write_log("VM: Commit   0x%-8x bytes at %p (%s)\n",
+	// write_log("VM: Commit   0x%-8zx bytes at %p (%s)\n",
 	// 		size, address, protect_description(protect));
 #ifdef _WIN32
 	int va_type = MEM_COMMIT ;
@@ -459,9 +459,9 @@ void *uae_vm_commit(void *address, uae_u32 size, int protect)
 	return address;
 }
 
-bool uae_vm_decommit(void *address, uae_u32 size)
+bool uae_vm_decommit(void *address, size_t size)
 {
-	//write_log("VM: Decommit 0x%-8x bytes at %p\n", size, address);
+	//write_log("VM: Decommit 0x%-8zx bytes at %p\n", size, address);
 #ifdef _WIN32
 	return VirtualFree (address, size, MEM_DECOMMIT) != 0;
 #else

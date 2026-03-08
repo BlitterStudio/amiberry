@@ -460,7 +460,12 @@ MIDFUNC(2,sub_l_ri,(RW4 d, IM8 i))
 	if (!i)
 		return;
 	if (isconst(d)) {
-		live.state[d].val -= i;
+		// Preserve full 64-bit if the current value already exceeds 32 bits
+		// (e.g. scratch register holding a host pointer for branch target).
+		if (live.state[d].val > (uintptr)0xFFFFFFFFULL)
+			live.state[d].val = live.state[d].val - i;
+		else
+			live.state[d].val = (uae_u32)(live.state[d].val - i);
 		return;
 	}
 
@@ -503,13 +508,38 @@ MENDFUNC(1,forget_about,(W4 r))
 MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(arm_ADD_l_ri)(d,live.state[s].val);
+		uintptr val = live.state[s].val;
+		#ifdef CPU_AARCH64
+		// When adding a 32-bit M68K displacement to PC_P (a 64-bit host
+		// pointer), sign-extend the displacement first.  M68K branch
+		// offsets are signed, but stored as unsigned uintptr in
+		// live.state[].val.  Adding an unsigned 0xFFFFFE42 (i.e. -0x1BE)
+		// to a 64-bit pointer causes carry into bit 32, producing 0x4...
+		// instead of the correct 0x3...
+		if (d == PC_P && val <= (uintptr)0xFFFFFFFFULL)
+			val = (uintptr)(uae_s64)(uae_s32)val;
+#endif
+		COMPCALL(arm_ADD_l_ri)(d, val);
 		return;
 	}
 
+#ifdef CPU_AARCH64
+	bool is_pcp = (d == PC_P);
+#endif
 	s = readreg(s);
 	d = rmw(d);
-	ADD_www(d, d, s);
+#ifdef CPU_AARCH64
+	if (is_pcp) {
+		/* PC_P holds a 64-bit host pointer. src is a signed 32-bit
+		   displacement in a W register.  Use ADD Xd, Xd, Ws, SXTW
+		   to sign-extend the 32-bit displacement to 64-bit before
+		   adding, preserving the upper bits of the host pointer. */
+		ADD_xxwEX(d, d, s, 6); // extend option 6 = SXTW
+	} else
+#endif
+	{
+		ADD_www(d, d, s);
+	}
 	unlock2(d);
 	unlock2(s);
 }
@@ -536,7 +566,23 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IMPTR i))
 	if (!i)
 		return;
 	if (isconst(d)) {
-		live.state[d].val += i;
+		// Preserve full 64-bit result when d is PC_P, when i is a 64-bit
+		// host pointer, OR when val already exceeds 32 bits (e.g. scratch
+		// register that received comp_pc_p in a previous arm_ADD_l_ri).
+		if (d == PC_P || i > (IMPTR)0xFFFFFFFFULL || live.state[d].val > (uintptr)0xFFFFFFFFULL) {
+			uintptr val = live.state[d].val;
+			// When adding a 64-bit host pointer (i) to a 32-bit M68K value
+			// (val), sign-extend val first.  M68K branch displacements are
+			// signed, so a backward branch like -0x100 is stored as
+			// 0xFFFFFF00.  Without sign extension, adding 0xFFFFFF00 to a
+			// 64-bit pointer produces carry into bit 32 (0x4... instead of
+			// 0x3...).
+			if (val <= (uintptr)0xFFFFFFFFULL && i > (IMPTR)0xFFFFFFFFULL)
+				val = (uintptr)(uae_s64)(uae_s32)val;
+			live.state[d].val = val + i;
+		} else {
+			live.state[d].val = (uae_u32)(live.state[d].val + i);
+		}
 		return;
 	}
 
@@ -544,15 +590,25 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IMPTR i))
 	// the immediate itself exceeds 32 bits (e.g. branch target scratch
 	// registers that hold natmem_offset + M68k_addr).
 	bool is_ptr = (d == PC_P) || (i > (IMPTR)0xFFFFFFFFULL);
+	bool is_pcp = (d == PC_P);
 	d = rmw(d);
 
 	if (is_ptr) {
 		// 64-bit ADD to preserve upper bits (e.g. 0x300000000 on macOS).
-		if(i <= 0xfff) {
-			ADD_xxi(d, d, i);
+		if (is_pcp) {
+			// PC_P already holds a 64-bit host pointer; just add.
+			if(i <= 0xfff) {
+				ADD_xxi(d, d, i);
+			} else {
+				LOAD_U64(REG_WORK1, (uintptr)i);
+				ADD_xxx(d, d, REG_WORK1);
+			}
 		} else {
+			// d is a scratch holding a 32-bit M68K displacement in Wd.
+			// Sign-extend Wd to Xd before adding the 64-bit pointer,
+			// because M68K branch displacements are signed.
 			LOAD_U64(REG_WORK1, (uintptr)i);
-			ADD_xxx(d, d, REG_WORK1);
+			ADD_xxwEX(d, REG_WORK1, d, 6); // ADD Xd, Ximm, Wd, SXTW
 		}
 	} else {
 		// Use 32-bit ADD (ADD_www/ADD_wwi) to keep upper 32 bits of the X
@@ -577,7 +633,11 @@ MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 	if (!i)
 		return;
 	if (isconst(d)) {
-		live.state[d].val += i;
+		// Preserve full 64-bit if d is PC_P or already holds a 64-bit value
+		if (d == PC_P || live.state[d].val > (uintptr)0xFFFFFFFFULL)
+			live.state[d].val = live.state[d].val + i;
+		else
+			live.state[d].val = (uae_u32)(live.state[d].val + i);
 		return;
 	}
 
@@ -596,7 +656,11 @@ MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 	if (!i)
 		return;
 	if (isconst(d)) {
-		live.state[d].val -= i;
+		// Preserve full 64-bit if d is PC_P or already holds a 64-bit value
+		if (d == PC_P || live.state[d].val > (uintptr)0xFFFFFFFFULL)
+			live.state[d].val = live.state[d].val - i;
+		else
+			live.state[d].val = (uae_u32)(live.state[d].val - i);
 		return;
 	}
 

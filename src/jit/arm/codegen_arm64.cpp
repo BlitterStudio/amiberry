@@ -251,26 +251,37 @@ LENDFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 
 LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMPTR s))
 {
-	/* d points always to memory in regs struct */
 	uintptr idx = d - (uintptr) &regs;
 	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
 		LOAD_U64(REG_WORK2, s);  // pc_p/pc_oldp are 64-bit host pointers
 		STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
-	} else {
+	} else if(idx <= 16380 && (idx & 3) == 0) {
+		// Within R_REGSTRUCT unsigned-offset range (covers regs + nearby
+		// globals like regflags that the linker places close by).
 		LOAD_U32(REG_WORK2, (uae_u32)s);
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	} else {
+		// Address too far from R_REGSTRUCT — use absolute address.
+		LOAD_U64(REG_WORK1, d);
+		LOAD_U32(REG_WORK2, (uae_u32)s);
+		STR_wXi(REG_WORK2, REG_WORK1, 0);
 	}
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMPTR s))
 
 LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 {
-	/* d points always to memory in regs struct */
 	uintptr idx = d - (uintptr) &regs;
 	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
 		STR_xXi(s, R_REGSTRUCT, idx);
-	} else {
+	} else if(idx <= 16380 && (idx & 3) == 0) {
+		// Within R_REGSTRUCT unsigned-offset range (covers regs + nearby
+		// globals like regflags that the linker places close by).
 		STR_wXi(s, R_REGSTRUCT, idx);
+	} else {
+		// Address too far from R_REGSTRUCT — use absolute address.
+		LOAD_U64(REG_WORK1, d);
+		STR_wXi(s, REG_WORK1, 0);
 	}
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
@@ -283,17 +294,14 @@ LENDFUNC(NONE,NONE,2,compemu_raw_mov_l_ri,(W4 d, IM32 s))
 
 LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 {
-	if(s >= (uintptr) &regs && s < ((uintptr) &regs) + sizeof(struct regstruct)) {
-		uintptr idx = s - (uintptr) &regs;
-		if(s == (uintptr) &(regs.pc_p) || s == (uintptr) &(regs.pc_oldp))
-			LDR_xXi(d, R_REGSTRUCT, idx);
-		else
-			LDR_wXi(d, R_REGSTRUCT, idx);
+	uintptr idx = s - (uintptr) &regs;
+	if(s == (uintptr) &(regs.pc_p) || s == (uintptr) &(regs.pc_oldp)) {
+		LDR_xXi(d, R_REGSTRUCT, idx);
+	} else if(idx <= 16380 && (idx & 3) == 0) {
+		// Within R_REGSTRUCT unsigned-offset range.
+		LDR_wXi(d, R_REGSTRUCT, idx);
 	} else {
-		// Address outside regs struct (e.g. regflags.nzcv, regflags.x).
-		// Use 32-bit load to keep upper 32 bits clean. All M68k values
-		// are 32-bit; pc_p (the only 64-bit value) is always in the
-		// regs struct and handled by the branch above.
+		// Address too far from R_REGSTRUCT — use absolute address.
 		LOAD_U64(REG_WORK1, s);
 		LDR_wXi(d, REG_WORK1, 0);
 	}
