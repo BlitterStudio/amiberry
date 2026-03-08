@@ -136,6 +136,7 @@ private:
 	SDL_GLContext m_gl_context = nullptr;
 	ShaderState m_shader;
 	GLOverlayState m_overlay;
+	bool m_integer_scaling = false; // Integer scaling for native Amiga modes (scaling_method == 2)
 
 	// Cached GL pixel format info (resolved once from pixel_format, reused per frame)
 	struct GLFormatInfo {
