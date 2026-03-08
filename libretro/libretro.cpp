@@ -1542,14 +1542,25 @@ static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
 
 static bool libretro_get_image_label(unsigned index, char* s, size_t len);
 
-static void show_message(const char* text)
+static void show_message(const char* text, unsigned duration_ms = 2000,
+	enum retro_log_level level = RETRO_LOG_INFO)
 {
 	if (!environ_cb || !text || !*text)
 		return;
-	struct retro_message msg;
-	msg.msg = text;
-	msg.frames = 120;
-	environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+	struct retro_message_ext msg_ext = {};
+	msg_ext.msg = text;
+	msg_ext.duration = duration_ms;
+	msg_ext.priority = (level >= RETRO_LOG_WARN) ? 3 : 1;
+	msg_ext.level = level;
+	msg_ext.target = RETRO_MESSAGE_TARGET_ALL;
+	msg_ext.type = RETRO_MESSAGE_TYPE_NOTIFICATION;
+	msg_ext.progress = -1;
+	if (!environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &msg_ext)) {
+		struct retro_message msg = {};
+		msg.msg = text;
+		msg.frames = duration_ms / 16; // ~60fps
+		environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+	}
 }
 
 static void notify_disk_change()
@@ -1675,6 +1686,8 @@ static bool libretro_replace_image_index(unsigned index, const struct retro_game
 	if (index >= disk_images.size())
 		return false;
 	if (info && info->path) {
+		if (!file_readable(info->path) && log_cb)
+			log_cb(RETRO_LOG_WARN, "Disk image not readable: %s\n", info->path);
 		disk_images[index].path = info->path;
 		disk_images[index].label.clear();
 	} else {
@@ -2369,7 +2382,13 @@ static void core_entry(void)
 	libretro_debug_log("core_entry start: game_path='%s'\n", game_path);
 	std::vector<char*> argv;
 	argv.reserve(32);
-	argv.push_back(strdup("amiberry"));
+	bool argv_alloc_failed = false;
+	auto safe_strdup = [&argv, &argv_alloc_failed](const char* s) {
+		char* p = strdup(s);
+		if (!p) argv_alloc_failed = true;
+		argv.push_back(p);
+	};
+	safe_strdup("amiberry");
 	std::string game_ext;
 	if (game_path[0])
 		game_ext = path_extension_lower(game_path);
@@ -2377,9 +2396,9 @@ static void core_entry(void)
 	const bool is_cd = content_is_cd || is_cd_extension(game_ext);
 	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
 
-	auto push_s_option = [&argv](const std::string& value) {
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(value.c_str()));
+	auto push_s_option = [&safe_strdup](const std::string& value) {
+		safe_strdup("-s");
+		safe_strdup(value.c_str());
 	};
 
 	const char* model = cached_model.empty() ? nullptr : cached_model.c_str();
@@ -2399,8 +2418,8 @@ static void core_entry(void)
 		else if (strcmp(model, "CD32FR") == 0)
 			engine_model = "CD32";
 
-		argv.push_back(strdup("--model"));
-		argv.push_back(strdup(engine_model));
+		safe_strdup("--model");
+		safe_strdup(engine_model);
 
 		// Expanded preset overrides: -s options after --model so bip_*() sets
 		// the base config first, then we override individual fields.
@@ -2470,7 +2489,7 @@ static void core_entry(void)
 	}
 #endif
 
-	argv.push_back(strdup("-G")); // No GUI
+	safe_strdup("-G"); // No GUI
 
 	std::string rom_path_value;
 	if (!system_dir.empty()) {
@@ -2510,8 +2529,8 @@ static void core_entry(void)
 		}
 
 		if (have_kick) {
-			argv.push_back(strdup("-r"));
-			argv.push_back(strdup(kick_path));
+			safe_strdup("-r");
+			safe_strdup(kick_path);
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
 			libretro_debug_log("kickstart override: %s\n", kick_path);
@@ -2522,8 +2541,8 @@ static void core_entry(void)
 		if (is_cd && model) {
 			char ext_path[1024] = {0};
 			if (find_ext_rom_in_system_dir(model, ext_path, sizeof(ext_path))) {
-				argv.push_back(strdup("-K"));
-				argv.push_back(strdup(ext_path));
+				safe_strdup("-K");
+				safe_strdup(ext_path);
 				if (log_cb)
 					log_cb(RETRO_LOG_INFO, "Using Extended ROM: %s\n", ext_path);
 			}
@@ -2534,14 +2553,14 @@ static void core_entry(void)
 		const std::string saveimage_path = "saveimage_dir=" + save_dir;
 		const std::string savestate_path = "savestate_dir=" + save_dir;
 		const std::string statefile_path = "statefile_path=" + save_dir;
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(cfg_path.c_str()));
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(saveimage_path.c_str()));
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(savestate_path.c_str()));
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(statefile_path.c_str()));
+		safe_strdup("-s");
+		safe_strdup(cfg_path.c_str());
+		safe_strdup("-s");
+		safe_strdup(saveimage_path.c_str());
+		safe_strdup("-s");
+		safe_strdup(savestate_path.c_str());
+		safe_strdup("-s");
+		safe_strdup(statefile_path.c_str());
 	}
 
 	if (game_path[0])
@@ -2549,8 +2568,8 @@ static void core_entry(void)
 		if (is_whdload) {
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "WHDLoad autoload: %s\n", game_path);
-			argv.push_back(strdup("--autoload"));
-			argv.push_back(strdup(game_path));
+			safe_strdup("--autoload");
+			safe_strdup(game_path);
 		} else if (is_cd) {
 			// Pass CD image via -s cdimage0= instead of positional arg.
 			// A positional .iso/.cue/.chd triggers cd_auto_prefs() which calls
@@ -2562,7 +2581,7 @@ static void core_entry(void)
 			std::string cd_opt = std::string("cdimage0=") + game_path + ",image";
 			push_s_option(cd_opt);
 		} else {
-			argv.push_back(strdup(game_path));
+			safe_strdup(game_path);
 		}
 	}
 	argv.push_back(nullptr);
@@ -2573,8 +2592,13 @@ static void core_entry(void)
 			libretro_debug_log(" [%s]", argv[i] ? argv[i] : "");
 		libretro_debug_log("\n");
 	}
+	if (argv_alloc_failed) {
+		if (log_cb)
+			log_cb(RETRO_LOG_ERROR, "core_entry: memory allocation failed building argv\n");
+	}
 	reset_parse_cmdline();
-	amiberry_main((int)argv.size() - 1, argv.data());
+	if (!argv_alloc_failed)
+		amiberry_main((int)argv.size() - 1, argv.data());
 
 	// Free strdup'd argv strings
 	for (auto p : argv)
@@ -2674,7 +2698,7 @@ void retro_set_environment(retro_environment_t cb)
 {
 	environ_cb = cb;
 	struct retro_log_callback logging;
-	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
 		log_cb = logging.log;
 	else
 		log_cb = NULL;
@@ -2699,6 +2723,11 @@ void retro_set_environment(retro_environment_t cb)
 	{
 		bool no_game = true;
 		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_game);
+	}
+	{
+		uint64_t quirks = RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE
+			| RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE;
+		environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
 	}
 	{
 		const char* dir = nullptr;
@@ -2990,7 +3019,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			(info_ext->file_in_archive || !info_ext->full_path || !*info_ext->full_path)) {
 			const std::string base = info_ext->name ? info_ext->name : "whdload";
 			const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
-			const std::string out_file = "whdload_" + sanitize_filename(base) + "." + (info_ext->ext ? info_ext->ext : "lha");
+			std::string safe_name = sanitize_filename(base);
+			if (safe_name.length() > 200) safe_name.resize(200);
+			const std::string out_file = "whdload_" + safe_name + "." + (info_ext->ext ? info_ext->ext : "lha");
 			const std::string out_path = path_join(out_dir, out_file);
 			if (vfs_write_file(out_path.c_str(), info_ext->data, info_ext->size)) {
 				whd_path = out_path;
@@ -3004,7 +3035,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			if (vfs_read_all(vfs_path.c_str(), data)) {
 				const std::string base = info_ext->name ? info_ext->name : path_basename(info_ext->archive_file);
 				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
-				const std::string out_file = "whdload_" + sanitize_filename(base) + "." + ext;
+				std::string safe_name = sanitize_filename(base);
+				if (safe_name.length() > 200) safe_name.resize(200);
+				const std::string out_file = "whdload_" + safe_name + "." + ext;
 				const std::string out_path = path_join(out_dir, out_file);
 				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
 					whd_path = out_path;
@@ -3020,7 +3053,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			if (vfs_read_all(whd_path.c_str(), data)) {
 				const std::string base = path_basename(whd_path);
 				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
-				const std::string out_file = "whdload_" + sanitize_filename(base);
+				std::string safe_name = sanitize_filename(base);
+				if (safe_name.length() > 200) safe_name.resize(200);
+				const std::string out_file = "whdload_" + safe_name;
 				const std::string out_path = path_join(out_dir, out_file);
 				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
 					whd_path = out_path;
