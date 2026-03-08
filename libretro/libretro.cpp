@@ -77,9 +77,9 @@ static constexpr size_t kJoypadMax = RETRO_DEVICE_ID_JOYPAD_R3 + 1;
 static int16_t last_joypad[2][kJoypadMax];
 static int16_t last_analog[2][4];
 static int16_t last_trigger[2][2];
-static int16_t last_mouse_buttons[3];
-static int16_t last_mouse_x;
-static int16_t last_mouse_y;
+static int16_t last_mouse_buttons[2][3];
+static int16_t last_mouse_x[2];
+static int16_t last_mouse_y[2];
 static unsigned libretro_port_device[2] = { RETRO_DEVICE_MOUSE, RETRO_DEVICE_JOYPAD };
 static int libretro_joyport_order[2] = { 0, 1 };
 static bool libretro_options_dirty = true;
@@ -102,6 +102,12 @@ static int last_geometry_height = -1;
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
+static struct retro_perf_callback perf_cb = {};
+
+// CD32 Pad device subclass for retro_set_controller_port_device
+#define RETRO_DEVICE_AMIGA_CD32PAD  RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
+#define RETRO_DEVICE_AMIGA_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 2)
+
 enum RetroLedIndex {
 	RETRO_LED_POWER = 0,
 	RETRO_LED_DRIVES,
@@ -472,6 +478,13 @@ static void set_fastforward_override(bool enabled)
 	ff_override_active = enabled;
 }
 
+static float amiga_aspect_ratio(int width, int height)
+{
+	(void)width;
+	(void)height;
+	return currprefs.ntscmode ? (4.0f / 3.0f) : (4.0f / 3.0f);
+}
+
 static void update_geometry()
 {
 	if (!environ_cb)
@@ -490,7 +503,7 @@ static void update_geometry()
 	geom.base_height = height;
 	geom.max_width = std::max(width, MAX_GFX_WIDTH);
 	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
-	geom.aspect_ratio = (float)width / (float)height;
+	geom.aspect_ratio = amiga_aspect_ratio(width, height);
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
 	last_geometry_height = height;
@@ -533,7 +546,7 @@ static void log_mouse_motion(int16_t dx, int16_t dy)
 			input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
 		return;
 	}
-	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0)) {
+	if ((dx != 0 || dy != 0) && (last_mouse_x[0] == 0 && last_mouse_y[0] == 0)) {
 		log_cb(RETRO_LOG_INFO, "input mouse motion dx=%d dy=%d\n", dx, dy);
 		input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
 	}
@@ -2242,6 +2255,10 @@ static void poll_input(void)
 
 	for (int i = 0; i < 2; i++)
 	{
+		const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
+		if (dev == RETRO_DEVICE_NONE)
+			continue;
+
 		const int joy = i;
 		unsigned joypad_mask = 0;
 		if (input_bitmask_supported)
@@ -2306,12 +2323,17 @@ static void poll_input(void)
 		}
 	}
 
-	// Mouse input
-	for (int i = 0; i < 1; i++) // Usually only 1 mouse
+	// Mouse input — poll both ports (Amiga supports 2 mice)
+	for (int i = 0; i < 2; i++)
 	{
+		const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
+		if (dev != RETRO_DEVICE_MOUSE && dev != RETRO_DEVICE_JOYPAD)
+			continue;
+
 		int16_t mouse_x = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
 		int16_t mouse_y = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-		log_mouse_motion(mouse_x, mouse_y);
+		if (i == 0)
+			log_mouse_motion(mouse_x, mouse_y);
 		if (mouse_x != 0 || mouse_y != 0)
 		{
 			setmousestate(i, 0, mouse_x, 0);
@@ -2326,14 +2348,15 @@ static void poll_input(void)
 		for (int b = 0; b < 3; b++)
 		{
 			const int16_t state = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, mouse_buttons[b]) & 1;
-			if (state != last_mouse_buttons[b]) {
-				last_mouse_buttons[b] = state;
-				log_mouse_button(b, state);
+			if (state != last_mouse_buttons[i][b]) {
+				last_mouse_buttons[i][b] = state;
+				if (i == 0)
+					log_mouse_button(b, state);
 			}
 			setmousebuttonstate(i, b, state);
 		}
-		last_mouse_x = mouse_x;
-		last_mouse_y = mouse_y;
+		last_mouse_x[i] = mouse_x;
+		last_mouse_y[i] = mouse_y;
 	}
 	last_analog_enabled = analog_enabled;
 }
@@ -2672,6 +2695,10 @@ void retro_set_environment(retro_environment_t cb)
 		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
 	}
 	{
+		bool no_game = true;
+		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_game);
+	}
+	{
 		const char* dir = nullptr;
 		if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
 			system_dir = dir;
@@ -2733,14 +2760,19 @@ void retro_set_environment(retro_environment_t cb)
 
 	input_bitmask_supported = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 
+	if (!environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
+		memset(&perf_cb, 0, sizeof(perf_cb));
+
 	static const struct retro_controller_description port_controllers[] = {
-		{ "Joypad", RETRO_DEVICE_JOYPAD },
+		{ "RetroPad", RETRO_DEVICE_JOYPAD },
+		{ "CD32 Pad", RETRO_DEVICE_AMIGA_CD32PAD },
+		{ "Joystick", RETRO_DEVICE_AMIGA_JOYSTICK },
 		{ "Mouse", RETRO_DEVICE_MOUSE },
 		{ "None", RETRO_DEVICE_NONE }
 	};
 	static const struct retro_controller_info controller_info[] = {
-		{ port_controllers, 3 },
-		{ port_controllers, 3 },
+		{ port_controllers, 5 },
+		{ port_controllers, 5 },
 		{ nullptr, 0 }
 	};
 	environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)controller_info);
@@ -3129,7 +3161,16 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 size_t retro_serialize_size(void)
 {
-	return currprefs.chipmem.size + currprefs.bogomem.size + currprefs.fastmem[0].size + currprefs.z3fastmem[0].size + 2 * 1024 * 1024;
+	size_t total = currprefs.chipmem.size + currprefs.bogomem.size;
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		total += currprefs.fastmem[i].size;
+		total += currprefs.z3fastmem[i].size;
+	}
+	total += currprefs.z3chipmem.size;
+	total += currprefs.mbresmem_low.size;
+	total += currprefs.mbresmem_high.size;
+	total += 8 * 1024 * 1024;
+	return total;
 }
 
 bool retro_serialize(void *data, size_t size)
@@ -3165,7 +3206,6 @@ bool retro_unserialize(const void *data, size_t size)
 	if (!f) return false;
 
 	restore_state_file(f);
-	zfile_fclose(f);
 	return true;
 }
 
