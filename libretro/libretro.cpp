@@ -1988,10 +1988,12 @@ static void apply_libretro_input_options(void)
 	int desired_joyport_order[2] = { libretro_joyport_order[0], libretro_joyport_order[1] };
 	const bool joyport_order_explicit = parse_joyport_order(get_option_value("amiberry_joyport_order"), desired_joyport_order);
 	if (!joyport_order_explicit) {
-		if (desired_port_device[0] == RETRO_DEVICE_JOYPAD && desired_port_device[1] != RETRO_DEVICE_JOYPAD) {
+		const unsigned base0 = desired_port_device[0] & RETRO_DEVICE_MASK;
+		const unsigned base1 = desired_port_device[1] & RETRO_DEVICE_MASK;
+		if (base0 == RETRO_DEVICE_JOYPAD && base1 != RETRO_DEVICE_JOYPAD) {
 			desired_joyport_order[0] = 0;
 			desired_joyport_order[1] = 1;
-		} else if (desired_port_device[1] == RETRO_DEVICE_JOYPAD && desired_port_device[0] != RETRO_DEVICE_JOYPAD) {
+		} else if (base1 == RETRO_DEVICE_JOYPAD && base0 != RETRO_DEVICE_JOYPAD) {
 			desired_joyport_order[0] = 1;
 			desired_joyport_order[1] = 0;
 		} else {
