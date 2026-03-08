@@ -83,9 +83,6 @@ extern blockinfo* active;
 extern blockinfo* dormant;
 extern void invalidate_block(blockinfo* bi);
 extern void raise_in_cl_list(blockinfo* bi);
-#if defined(CPU_AARCH64)
-extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
-#endif
 #endif
   
 
@@ -229,7 +226,10 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				output_log(_T("JIT: Address bank: %s, address %08x (jit_read=%d jit_write=%d flags=%08x)\n"),
 					ab->name ? ab->name : _T("NONE"), amiga_addr, ab->jit_read_flag, ab->jit_write_flag, ab->flags);
 			}
-			const bool arm64_quarantine_candidate = (!ab || !ab->name) && amiga_addr >= 0xFF000000;
+			/* Quarantine any JIT fault that hits the dummy bank (unmapped
+			 * address space). This prevents repeated SIGSEGV from JIT direct
+			 * access to addresses outside natmem reservation. */
+			const bool arm64_quarantine_candidate = (ab == &dummy_bank);
 
 		// Analyze AARCH64 instruction
 		const unsigned int opcode = ((uae_u32*)fault_pc)[0];
@@ -504,11 +504,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				 * the same translated block. */
 				set_special(SPCFLAG_END_COMPILE);
 				if (arm64_quarantine_candidate) {
-					jit_mark_arm64_unstable_pc(regs.pc);
-					jit_mark_arm64_unstable_pc(fault_m68k_pc);
-					/* This pattern can involve multiple chained compiled fragments.
-					 * Flush translated cache so control quickly returns via interpreter
-					 * and recompiles with learned dynamic guard keys. */
+					/* Flush translated cache so control returns via interpreter. */
 					flush_icache(3);
 				}
 
@@ -522,6 +518,20 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 					// Can happen if one emulated instruction causes multiple faults.
 					set_special(0);
 				}
+
+			}
+			/* Fallback for unrecognized ARM64 instructions in JIT code:
+			 * If the fault is on unmapped memory (dummy_bank) and we couldn't
+			 * decode the instruction, quarantine the block and bail out via
+			 * longjmp to m68k_run_jit's setjmp recovery point. */
+			if (transfer_size == SIZE_UNKNOWN && arm64_quarantine_candidate) {
+				output_log(_T("JIT: unhandled insn 0x%08x at unmapped %08x, quarantine PC=%08x\n"),
+					opcode, amiga_addr, regs.pc);
+				flush_icache(3);
+				countdown = 0;
+				set_special(SPCFLAG_END_COMPILE);
+				in_handler--;
+				longjmp(jit_bus_error_jmpbuf, 2);
 			}
 
 		break;
@@ -669,6 +679,12 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 #endif
 
 	auto addr = reinterpret_cast<uintptr_t>(info->si_addr);
+
+	/* Try JIT fault recovery (same as signal_segv). On macOS, accessing
+	 * PROT_NONE natmem gap pages raises SIGBUS, not SIGSEGV. */
+	int handled = handle_exception(context, addr);
+	if (handled == HANDLE_EXCEPTION_OK || handled == HANDLE_EXCEPTION_A4000RAM)
+		return;
 
 		output_log(_T("info.si_signo = %d\n"), signum);
 		output_log(_T("info.si_errno = %d\n"), info->si_errno);

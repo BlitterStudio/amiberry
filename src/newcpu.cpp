@@ -61,8 +61,9 @@
 #include <signal.h>
 volatile int jit_exception_pending = 0;
 #if defined(CPU_AARCH64)
-extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
-extern void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after);
+#include <setjmp.h>
+jmp_buf jit_bus_error_jmpbuf;
+volatile bool jit_in_compiled_code = false;
 #endif
 #else
 /* Need to have these somewhere */
@@ -3832,26 +3833,6 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 	int inrom = in_rom (pc);
 	int inrt = in_rtarea (pc);
 
-#if defined(JIT) && defined(CPU_AARCH64)
-	/* Illegal-instruction probe code in early Z3 startup can destabilize ARM64
-	 * translated control flow; quarantine those PCs to interpreter. */
-	if (currprefs.cachesize > 0 && !inrom && !inrt) {
-		const uae_u32 illg_key = pc & ~0x1ffu;
-		const bool known_startup_probe = opcode == 0x4e7a && pc >= 0x40020000 && pc < 0x40040000;
-		static uae_u32 last_illg_flush_key = 0xffffffffu;
-		jit_mark_arm64_unstable_pc(pc);
-		if (known_startup_probe) {
-			jit_mark_arm64_unstable_pc_window(pc, 0x2000u, 0x2000u);
-		}
-		countdown = 0;
-		set_special(SPCFLAG_END_COMPILE);
-		if (known_startup_probe && illg_key != last_illg_flush_key) {
-			last_illg_flush_key = illg_key;
-			set_special(0);
-			flush_icache(3);
-		}
-	}
-#endif
 
 	if (opcode == 0x4afc || opcode == 0xfc4a) {
 		if (!valid_address(pc, 4) && valid_address(pc - 4, 4)) {
@@ -5601,6 +5582,7 @@ void do_nothing (void)
 	}
 #endif
 
+
 	if (!currprefs.cpu_thread) {
 		/* What did you expect this to do? */
 		do_cycles (0);
@@ -5703,12 +5685,6 @@ void execute_normal(void)
 		total_cycles += cpu_cycles;
 
 		pc_hist[blocklen].specmem = special_mem;
-#ifdef JIT_DEBUG_VISUAL
-		{
-			extern void jit_diag_verify_specmem(uae_u32 pc, uae_u8 recorded_specmem);
-			jit_diag_verify_specmem(m68k_getpc(), special_mem);
-		}
-#endif
 		blocklen++;
 		if (end_block (r->opcode) || blocklen >= MAXRUN || r->spcflags || uae_int_requested) {
 #ifdef JIT_DEBUG_MEM_CORRUPTION
@@ -5748,8 +5724,19 @@ static int cpu_thread_run_jit(void *v)
 	{
 		for (;;) {
 			check_debugger();
-			((compiled_handler*)(pushall_call_handler))();
-			/* Check for pending exception from SIGSEGV comp_catchfault handler (x86-64 only) */
+#if defined(CPU_AARCH64)
+			{
+				int bus_error_exc = setjmp(jit_bus_error_jmpbuf);
+				if (bus_error_exc != 0) {
+					jit_in_compiled_code = false;
+					Exception(bus_error_exc);
+					continue;
+				}
+			}
+			jit_in_compiled_code = true;
+#endif
+				((compiled_handler*)(pushall_call_handler))();
+			/* Check for pending exception from SIGSEGV handler (x86-64) */
 #if defined(CPU_x86_64) || defined(_M_AMD64)
 			if (jit_exception_pending) {
 				int exc = jit_exception_pending;
@@ -5761,9 +5748,15 @@ static int cpu_thread_run_jit(void *v)
 #endif
 			/* Whenever we return from that, we should check spcflags */
 			if (regs.spcflags || cpu_thread_ilvl > 0) {
+#if defined(CPU_AARCH64)
+				jit_in_compiled_code = false;
+#endif
 				if (do_specialties_thread()) {
 					break;
 				}
+#if defined(CPU_AARCH64)
+				jit_in_compiled_code = true;
+#endif
 			}
 			if (regs.stopped) {
 				uae_sem_wait(&cpu_wakeup_sema);
@@ -5804,9 +5797,32 @@ static void m68k_run_jit(void)
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 		__try {
 #endif
+			#if defined(CPU_AARCH64)
+			/* setjmp point for bus error recovery from JIT-compiled code.
+			 * When hardware_exception2() is called from within JIT code,
+			 * it longjmps here instead of throwing (C++ throw can't
+			 * unwind through JIT code). exception2_setup() has already
+			 * saved the bus error details before the longjmp.
+			 * Placed OUTSIDE the inner loop so the cost of setjmp (which
+			 * saves all callee-saved registers) is only paid once per
+			 * exception, not on every JIT dispatch. */
+			{
+				int bus_error_exc = setjmp(jit_bus_error_jmpbuf);
+				if (bus_error_exc != 0) {
+					jit_in_compiled_code = false;
+					Exception(bus_error_exc);
+				}
+			}
+			/* Set once before entering the hot dispatch loop.
+			 * Only cleared on rare paths (spcflags, trace mode, exit).
+			 * Safe because between JIT dispatches, only the pushall
+			 * trampoline and compiled M68K code access Amiga memory;
+			 * the C dispatch code does not. */
+			jit_in_compiled_code = true;
+#endif
 			for (;;) {
 				((compiled_handler*)(pushall_call_handler))();
-				/* Check for pending exception from SIGSEGV comp_catchfault handler (x86-64 only) */
+				/* Check for pending exception from SIGSEGV handler (x86-64) */
 #if defined(CPU_x86_64) || defined(_M_AMD64)
 				if (jit_exception_pending) {
 					int exc = jit_exception_pending;
@@ -5819,13 +5835,22 @@ static void m68k_run_jit(void)
 				/* Whenever we return from that, we should check spcflags */
 				check_uae_int_request();
 				if (regs.spcflags) {
+#if defined(CPU_AARCH64)
+					jit_in_compiled_code = false;
+#endif
 					if (do_specialties(0)) {
 						STOPTRY;
 						return;
 					}
+#if defined(CPU_AARCH64)
+					jit_in_compiled_code = true;
+#endif
 				}
 				// If T0, T1 or M got set: run normal emulation loop
 				if (regs.t0 || regs.t1 || regs.m) {
+#if defined(CPU_AARCH64)
+					jit_in_compiled_code = false;
+#endif
 					flush_icache(3);
 					struct regstruct *r = &regs;
 					bool exit = false;
@@ -5846,6 +5871,9 @@ static void m68k_run_jit(void)
 						bus_error();
 					} ENDTRY
 					unset_special(SPCFLAG_END_COMPILE);
+#if defined(CPU_AARCH64)
+					jit_in_compiled_code = true;
+#endif
 				}
 			}
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
@@ -8092,6 +8120,17 @@ void hardware_exception2(uaecptr addr, uae_u32 v, bool read, bool ins, int size)
 		}
 		// Non-MMU
 		exception2_setup(regs.opcode, addr, read, size, fc);
+#if defined(CPU_AARCH64)
+		/* On ARM64, C++ exceptions cannot unwind through JIT-compiled
+		 * code (no DWARF unwinding tables in JIT code buffer). When
+		 * executing inside JIT-compiled code, use longjmp to immediately
+		 * return to the JIT loop where Exception() can be called with
+		 * the correct M68K state (saved by exception2_setup above). */
+		if (jit_in_compiled_code) {
+			longjmp(jit_bus_error_jmpbuf, 2);
+			/* not reached */
+		}
+#endif
 		THROW(2);
 	}
 }

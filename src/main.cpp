@@ -499,7 +499,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		if (rbc->rtgmem_size > max_z3fastmem && rbc->rtgmem_type == GFXBOARD_UAE_Z3)
 		{
 			error_log(
-				_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size,
+				_T("Graphics card memory size %d (0x%x) larger than maximum reserved %zu (0x%zx)."), rbc->rtgmem_size,
 				rbc->rtgmem_size, max_z3fastmem, max_z3fastmem);
 			rbc->rtgmem_size = max_z3fastmem;
 		}
@@ -537,7 +537,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->z3autoconfig_start = 0x1000000;
 
 	if (p->z3chipmem.size > max_z3fastmem) {
-		error_log (_T("Zorro III fake chipmem size %d (0x%x) larger than max reserved %d (0x%x)."), p->z3chipmem.size, p->z3chipmem.size, max_z3fastmem, max_z3fastmem);
+		error_log (_T("Zorro III fake chipmem size %d (0x%x) larger than max reserved %zu (0x%zx)."), p->z3chipmem.size, p->z3chipmem.size, max_z3fastmem, max_z3fastmem);
 		p->z3chipmem.size = max_z3fastmem;
 	}
 	if (((p->z3chipmem.size & p->z3chipmem.size - 1) != 0 && p->z3chipmem.size != 0x18000000 && p->z3chipmem.size != 0x30000000) || (p->z3chipmem.size != 0 && p->z3chipmem.size < 0x100000))

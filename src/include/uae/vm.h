@@ -34,14 +34,14 @@
 void *uae_vm_alloc(uae_u32 size);
 void *uae_vm_alloc(uae_u32 size, int flags);
 #endif
-void *uae_vm_alloc(uae_u32 size, int flags, int protect);
-bool uae_vm_protect(void *address, int size, int protect);
-bool uae_vm_free(void *address, int size);
+void *uae_vm_alloc(size_t size, int flags, int protect);
+bool uae_vm_protect(void *address, size_t size, int protect);
+bool uae_vm_free(void *address, size_t size);
 
-void *uae_vm_reserve(uae_u32 size, int flags);
-void *uae_vm_reserve_fixed(void *address, uae_u32 size, int flags);
-void *uae_vm_commit(void *address, uae_u32 size, int protect);
-bool uae_vm_decommit(void *address, uae_u32 size);
+void *uae_vm_reserve(size_t size, int flags);
+void *uae_vm_reserve_fixed(void *address, size_t size, int flags);
+void *uae_vm_commit(void *address, size_t size, int protect);
+bool uae_vm_decommit(void *address, size_t size);
 
 int uae_vm_page_size(void);
 void uae_vm_jit_write_protect(bool enable_execute_mode);

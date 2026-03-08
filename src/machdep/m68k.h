@@ -471,7 +471,7 @@ struct flag_struct {
 #define FLAGBIT_Z   30
 #define FLAGBIT_C   29
 #define FLAGBIT_V   28
-#define FLAGBIT_X   FLAGBIT_C /* must be in the same position in as x flag */
+#define FLAGBIT_X   0 /* JIT stores X as 0/1 in bit 0; interpreter adapts */
 
 #define FLAGVAL_N   (1 << FLAGBIT_N)
 #define FLAGVAL_Z   (1 << FLAGBIT_Z)
@@ -483,20 +483,20 @@ struct flag_struct {
 #define SET_ZFLG(y)		(regflags.nzcv = (regflags.nzcv & ~FLAGVAL_Z) | (((y) & 1) << FLAGBIT_Z))
 #define SET_CFLG(y)		(regflags.nzcv = (regflags.nzcv & ~FLAGVAL_C) | (((y) & 1) << FLAGBIT_C))
 #define SET_VFLG(y)		(regflags.nzcv = (regflags.nzcv & ~FLAGVAL_V) | (((y) & 1) << FLAGBIT_V))
-#define SET_XFLG(y)		(regflags.x = ((y) & 1) << FLAGBIT_X)
+#define SET_XFLG(y)		(regflags.x = ((y) & 1))
 
 #define GET_NFLG()		((regflags.nzcv >> FLAGBIT_N) & 1)
 #define GET_ZFLG()		((regflags.nzcv >> FLAGBIT_Z) & 1)
 #define GET_CFLG()		((regflags.nzcv >> FLAGBIT_C) & 1)
 #define GET_VFLG()		((regflags.nzcv >> FLAGBIT_V) & 1)
-#define GET_XFLG()		((regflags.x    >> FLAGBIT_X) & 1)
+#define GET_XFLG()		((regflags.x) & 1)
 
 #define CLEAR_CZNV()	(regflags.nzcv = 0)
 #define GET_CZNV()		(regflags.nzcv)
 #define IOR_CZNV(X)		(regflags.nzcv |= (X))
 #define SET_CZNV(X)		(regflags.nzcv = (X))
 
-#define COPY_CARRY()	(regflags.x = regflags.nzcv >> (FLAGBIT_C - FLAGBIT_X))
+#define COPY_CARRY()	(regflags.x = (regflags.nzcv >> FLAGBIT_C) & 1)
 
 extern struct flag_struct regflags __asm__("regflags");
 
