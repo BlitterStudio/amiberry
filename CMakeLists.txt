@@ -51,6 +51,8 @@ if(ANDROID)
     # Enabled features for Android
     set(USE_LIBMPEG2 OFF CACHE BOOL "Use LibMPEG2 for CD32 FMV support" FORCE)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
+    # Android 15+ (API 35) requires 16KB page size alignment for Play Store
+    add_link_options("-Wl,-z,max-page-size=16384")
 endif()
 
 if(WIN32)

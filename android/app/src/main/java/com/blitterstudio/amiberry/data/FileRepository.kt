@@ -4,9 +4,11 @@ import android.content.Context
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 
 class FileRepository(private val context: Context) {
 
@@ -27,8 +29,8 @@ class FileRepository(private val context: Context) {
 	private val _whdloadGames = MutableStateFlow<List<AmigaFile>>(emptyList())
 	val whdloadGames: StateFlow<List<AmigaFile>> = _whdloadGames.asStateFlow()
 
-	fun rescan() {
-		if (!isScanning.compareAndSet(false, true)) return
+	suspend fun rescan() = withContext(Dispatchers.IO) {
+		if (!isScanning.compareAndSet(false, true)) return@withContext
 		try {
 			_roms.value = FileManager.scanForCategory(context, FileCategory.ROMS)
 			_floppies.value = FileManager.scanForCategory(context, FileCategory.FLOPPIES)
@@ -40,7 +42,7 @@ class FileRepository(private val context: Context) {
 		}
 	}
 
-	fun rescanCategory(category: FileCategory) {
+	suspend fun rescanCategory(category: FileCategory) = withContext(Dispatchers.IO) {
 		val files = FileManager.scanForCategory(context, category)
 		when (category) {
 			FileCategory.ROMS -> _roms.value = files
