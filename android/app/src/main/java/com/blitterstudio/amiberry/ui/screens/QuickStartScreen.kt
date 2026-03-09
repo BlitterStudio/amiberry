@@ -16,11 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Eject
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,7 +30,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -40,7 +37,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -62,6 +58,7 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.ui.viewmodel.QuickStartViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import com.blitterstudio.amiberry.ui.components.MediaSelector
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -263,277 +260,57 @@ fun QuickStartScreen(
 			}
 
 			if (model.hasFloppy) {
-				OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Row(
-							modifier = Modifier.fillMaxWidth(),
-							verticalAlignment = Alignment.CenterVertically,
-							horizontalArrangement = Arrangement.SpaceBetween
-						) {
-							Row(verticalAlignment = Alignment.CenterVertically) {
-									Icon(Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(20.dp))
-									Spacer(modifier = Modifier.width(8.dp))
-									Text(stringResource(R.string.quick_start_floppy_df0), style = MaterialTheme.typography.titleMedium)
-								}
-								TextButton(onClick = { floppyPickerLauncher.launch(arrayOf("*/*")) }) {
-									Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
-									Spacer(modifier = Modifier.width(4.dp))
-									Text(stringResource(R.string.action_import))
-								}
-							}
-						Spacer(modifier = Modifier.height(8.dp))
-
-							if (floppies.isEmpty() && selectedFloppyPath.isBlank()) {
-								Text(
-									text = stringResource(R.string.quick_start_no_floppy_images),
-									style = MaterialTheme.typography.bodySmall,
-									color = MaterialTheme.colorScheme.onSurfaceVariant
-								)
-						} else {
-							var floppyExpanded by remember { mutableStateOf(false) }
-
-							Row(
-								modifier = Modifier.fillMaxWidth(),
-								verticalAlignment = Alignment.CenterVertically
-							) {
-								ExposedDropdownMenuBox(
-									expanded = floppyExpanded,
-									onExpandedChange = { floppyExpanded = it },
-									modifier = Modifier.weight(1f)
-								) {
-									OutlinedTextField(
-											value = selectedFloppy?.name
-												?: selectedFloppyPath.takeIf { it.isNotBlank() }?.substringAfterLast('/')
-												?: stringResource(R.string.placeholder_none),
-										onValueChange = {},
-										readOnly = true,
-											trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = floppyExpanded) },
-											modifier = Modifier
-												.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-												.fillMaxWidth()
-										)
-									ExposedDropdownMenu(
-										expanded = floppyExpanded,
-										onDismissRequest = { floppyExpanded = false }
-									) {
-										floppies.forEach { file ->
-											DropdownMenuItem(
-												text = {
-													Column {
-														Text(file.name)
-														Text(
-															file.sizeDisplay,
-															style = MaterialTheme.typography.bodySmall,
-															color = MaterialTheme.colorScheme.onSurfaceVariant
-														)
-													}
-												},
-												onClick = {
-													settingsViewModel.updateSettings { s -> s.copy(floppy0 = file.path) }
-													floppyExpanded = false
-												}
-											)
-										}
-									}
-								}
-
-								if (selectedFloppyPath.isNotBlank()) {
-										IconButton(onClick = {
-											settingsViewModel.updateSettings { s -> s.copy(floppy0 = "") }
-										}) {
-											Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject))
-										}
-									}
-							}
-						}
-					}
-				}
+				MediaSelector(
+					title = stringResource(R.string.quick_start_floppy_df0),
+					icon = Icons.Default.SaveAlt,
+					items = floppies,
+					selectedItem = selectedFloppy,
+					selectedPath = selectedFloppyPath,
+					emptyText = stringResource(R.string.quick_start_no_floppy_images),
+					onItemSelected = { file ->
+						settingsViewModel.updateSettings { s -> s.copy(floppy0 = file.path) }
+					},
+					onEject = {
+						settingsViewModel.updateSettings { s -> s.copy(floppy0 = "") }
+					},
+					onImport = { floppyPickerLauncher.launch(arrayOf("*/*")) }
+				)
 			}
 
 			if (model.hasCd) {
-				OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Row(
-							modifier = Modifier.fillMaxWidth(),
-							verticalAlignment = Alignment.CenterVertically,
-							horizontalArrangement = Arrangement.SpaceBetween
-						) {
-							Row(verticalAlignment = Alignment.CenterVertically) {
-									Icon(Icons.Default.Album, contentDescription = null, modifier = Modifier.size(20.dp))
-									Spacer(modifier = Modifier.width(8.dp))
-									Text(stringResource(R.string.quick_start_cd_image), style = MaterialTheme.typography.titleMedium)
-								}
-								TextButton(onClick = { cdPickerLauncher.launch(arrayOf("*/*")) }) {
-									Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
-									Spacer(modifier = Modifier.width(4.dp))
-									Text(stringResource(R.string.action_import))
-								}
-							}
-						Spacer(modifier = Modifier.height(8.dp))
-
-							if (cds.isEmpty() && selectedCdPath.isBlank()) {
-								Text(
-									text = stringResource(R.string.quick_start_no_cd_images),
-									style = MaterialTheme.typography.bodySmall,
-									color = MaterialTheme.colorScheme.onSurfaceVariant
-								)
-						} else {
-							var cdExpanded by remember { mutableStateOf(false) }
-
-							Row(
-								modifier = Modifier.fillMaxWidth(),
-								verticalAlignment = Alignment.CenterVertically
-							) {
-								ExposedDropdownMenuBox(
-									expanded = cdExpanded,
-									onExpandedChange = { cdExpanded = it },
-									modifier = Modifier.weight(1f)
-								) {
-									OutlinedTextField(
-											value = selectedCd?.name
-												?: selectedCdPath.takeIf { it.isNotBlank() }?.substringAfterLast('/')
-												?: stringResource(R.string.placeholder_none),
-										onValueChange = {},
-										readOnly = true,
-											trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cdExpanded) },
-											modifier = Modifier
-												.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-												.fillMaxWidth()
-										)
-									ExposedDropdownMenu(
-										expanded = cdExpanded,
-										onDismissRequest = { cdExpanded = false }
-									) {
-										cds.forEach { file ->
-											DropdownMenuItem(
-												text = {
-													Column {
-														Text(file.name)
-														Text(
-															file.sizeDisplay,
-															style = MaterialTheme.typography.bodySmall,
-															color = MaterialTheme.colorScheme.onSurfaceVariant
-														)
-													}
-												},
-												onClick = {
-													settingsViewModel.updateSettings { s -> s.copy(cdImage = file.path) }
-													cdExpanded = false
-												}
-											)
-										}
-									}
-								}
-
-								if (selectedCdPath.isNotBlank()) {
-										IconButton(onClick = {
-											settingsViewModel.updateSettings { s -> s.copy(cdImage = "") }
-										}) {
-											Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject))
-										}
-									}
-							}
-						}
-					}
-				}
+				MediaSelector(
+					title = stringResource(R.string.quick_start_cd_image),
+					icon = Icons.Default.Album,
+					items = cds,
+					selectedItem = selectedCd,
+					selectedPath = selectedCdPath,
+					emptyText = stringResource(R.string.quick_start_no_cd_images),
+					onItemSelected = { file ->
+						settingsViewModel.updateSettings { s -> s.copy(cdImage = file.path) }
+					},
+					onEject = {
+						settingsViewModel.updateSettings { s -> s.copy(cdImage = "") }
+					},
+					onImport = { cdPickerLauncher.launch(arrayOf("*/*")) }
+				)
 			}
 
 			HorizontalDivider()
 
-			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-				Column(modifier = Modifier.padding(16.dp)) {
-					Row(
-						modifier = Modifier.fillMaxWidth(),
-						verticalAlignment = Alignment.CenterVertically,
-						horizontalArrangement = Arrangement.SpaceBetween
-					) {
-						Row(verticalAlignment = Alignment.CenterVertically) {
-								Icon(
-									Icons.Default.SportsEsports,
-								contentDescription = null,
-								modifier = Modifier.size(20.dp),
-								tint = MaterialTheme.colorScheme.primary
-							)
-								Spacer(modifier = Modifier.width(8.dp))
-								Text(stringResource(R.string.quick_start_whdload_title), style = MaterialTheme.typography.titleMedium)
-							}
-							TextButton(onClick = { whdloadPickerLauncher.launch(arrayOf("*/*")) }) {
-								Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
-								Spacer(modifier = Modifier.width(4.dp))
-								Text(stringResource(R.string.action_import))
-							}
-						}
-
-						Text(
-							text = stringResource(R.string.quick_start_whdload_help),
-							style = MaterialTheme.typography.bodySmall,
-							color = MaterialTheme.colorScheme.onSurfaceVariant
-						)
-
-					Spacer(modifier = Modifier.height(8.dp))
-
-						if (whdloadGames.isEmpty()) {
-							Text(
-								text = stringResource(R.string.quick_start_no_whdload_games),
-								style = MaterialTheme.typography.bodySmall,
-								color = MaterialTheme.colorScheme.onSurfaceVariant
-							)
-					} else {
-						var whdExpanded by remember { mutableStateOf(false) }
-
-						Row(
-							modifier = Modifier.fillMaxWidth(),
-							verticalAlignment = Alignment.CenterVertically
-						) {
-							ExposedDropdownMenuBox(
-								expanded = whdExpanded,
-								onExpandedChange = { whdExpanded = it },
-								modifier = Modifier.weight(1f)
-							) {
-									OutlinedTextField(
-										value = selectedWhdloadGame?.name?.removeSuffix(".lha")?.removeSuffix(".lzx")?.removeSuffix(".lzh")
-											?: stringResource(R.string.quick_start_select_game_placeholder),
-									onValueChange = {},
-									readOnly = true,
-										trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = whdExpanded) },
-										modifier = Modifier
-											.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-											.fillMaxWidth()
-									)
-								ExposedDropdownMenu(
-									expanded = whdExpanded,
-									onDismissRequest = { whdExpanded = false }
-								) {
-									whdloadGames.forEach { game ->
-										DropdownMenuItem(
-											text = {
-												Column {
-													Text(game.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh"))
-													Text(
-														game.sizeDisplay,
-														style = MaterialTheme.typography.bodySmall,
-														color = MaterialTheme.colorScheme.onSurfaceVariant
-													)
-												}
-											},
-											onClick = {
-												viewModel.selectWhdload(game)
-												whdExpanded = false
-											}
-										)
-									}
-								}
-							}
-
-							if (selectedWhdloadGame != null) {
-								IconButton(onClick = { viewModel.selectWhdload(null) }) {
-									Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject))
-								}
-							}
-						}
-					}
-				}
-			}
+			MediaSelector(
+				title = stringResource(R.string.quick_start_whdload_title),
+				icon = Icons.Default.SportsEsports,
+				items = whdloadGames,
+				selectedItem = selectedWhdloadGame,
+				selectedPath = selectedWhdloadGame?.path ?: "",
+				emptyText = stringResource(R.string.quick_start_no_whdload_games),
+				placeholder = stringResource(R.string.quick_start_select_game_placeholder),
+				helpText = stringResource(R.string.quick_start_whdload_help),
+				onItemSelected = { game -> viewModel.selectWhdload(game) },
+				onEject = { viewModel.selectWhdload(null) },
+				onImport = { whdloadPickerLauncher.launch(arrayOf("*/*")) },
+				displayName = { it.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh") }
+			)
 
 			Spacer(modifier = Modifier.height(80.dp))
 		}

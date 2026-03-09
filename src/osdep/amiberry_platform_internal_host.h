@@ -36,6 +36,12 @@ static inline bool osdep_platform_init_sdl()
 #endif
 
 #ifdef __ANDROID__
+	// OpenSL ES is more reliable than AAudio in SDL2 on Android 14/15
+	// (AAudio has latency/noise bugs fixed in SDL3 but not backported to SDL2)
+	SDL_SetHint("SDL_AUDIODRIVER", "openslES");
+#endif
+
+#ifdef __ANDROID__
 	// Trap the Android back button so SDL delivers it as SDL_SCANCODE_AC_BACK
 	// instead of letting the system handle it (which would exit/minimize the app)
 	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");

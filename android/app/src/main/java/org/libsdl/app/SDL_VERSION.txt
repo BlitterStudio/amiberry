@@ -1,0 +1,21 @@
+SDL2 Android Java Bridge — Version Tracking
+============================================
+
+Current SDL2 version: release-2.30.10
+
+Source: https://github.com/libsdl-org/SDL/tree/release-2.30.10/android-project/app/src/main/java/org/libsdl/app/
+
+Files in this directory are vendored from the SDL2 source tree.
+When updating SDL2 (via FetchContent GIT_TAG in cmake/Dependencies.cmake),
+sync these Java files from the corresponding SDL release tag.
+
+Files:
+  - SDLActivity.java
+  - SDLAudioManager.java
+  - SDLControllerManager.java
+  - SDLSurface.java
+  - SDL.java
+  - HIDDevice.java
+  - HIDDeviceBLESteamController.java
+  - HIDDeviceManager.java
+  - HIDDeviceUSB.java

@@ -1,12 +1,18 @@
 package com.blitterstudio.amiberry.ui
 
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -58,7 +64,31 @@ class MainActivity : ComponentActivity() {
 			}
 		}
 
-		// Extract assets in background, skip if already done for this version
+		// Request MANAGE_EXTERNAL_STORAGE on Android 11+ if not already granted
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+			try {
+				val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+				intent.data = Uri.parse("package:$packageName")
+				storagePermissionLauncher.launch(intent)
+			} catch (e: Exception) {
+				Log.w(TAG, "Could not open app-specific storage settings, trying generic", e)
+				val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+				storagePermissionLauncher.launch(intent)
+			}
+		} else {
+			startAssetExtraction()
+		}
+	}
+
+	private val storagePermissionLauncher = registerForActivityResult(
+		ActivityResultContracts.StartActivityForResult()
+	) {
+		// Whether user granted or denied, proceed with extraction
+		// (app still works with scoped storage, just can't access arbitrary paths)
+		startAssetExtraction()
+	}
+
+	private fun startAssetExtraction() {
 		lifecycleScope.launch(Dispatchers.IO) {
 			extractAssetsIfNeeded()
 			ensureDirectories()
@@ -127,9 +157,25 @@ class MainActivity : ComponentActivity() {
 		}
 	}
 
+	/**
+	 * Directories containing user-modifiable files that should not be overwritten
+	 * on version upgrades (users may have customized controller mappings, WHDLoad configs, etc.)
+	 */
+	private val userModifiableDirs = setOf("controllers", "whdboot", "conf")
+
 	private fun copyAssetFile(assetPath: String) {
 		try {
 			val outFile = File(getExternalFilesDir(null), assetPath)
+
+			// Skip overwriting files in user-modifiable directories if they already exist
+			if (outFile.exists()) {
+				val topDir = assetPath.substringBefore('/')
+				if (topDir in userModifiableDirs) {
+					Log.d(TAG, "Preserving user-modified file: $assetPath")
+					return
+				}
+			}
+
 			outFile.parentFile?.let { parent ->
 				if (!parent.exists()) parent.mkdirs()
 			}
