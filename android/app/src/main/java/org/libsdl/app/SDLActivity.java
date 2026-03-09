@@ -1,3 +1,10 @@
+/**
+ * SDL2 Android Java bridge — vendored from SDL release-2.30.10
+ * Source: https://github.com/libsdl-org/SDL/tree/release-2.30.10/android-project/app/src/main/java/org/libsdl/app/
+ *
+ * When updating SDL2 (via FetchContent in cmake/Dependencies.cmake),
+ * sync these Java files from the corresponding SDL release tag.
+ */
 package org.libsdl.app;
 
 import android.app.Activity;

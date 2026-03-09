@@ -5,10 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class QuickStartViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -23,7 +25,9 @@ class QuickStartViewModel(application: Application) : AndroidViewModel(applicati
 	val availableWhdloadGames: StateFlow<List<AmigaFile>> = repository.whdloadGames
 
 	init {
-		repository.rescan()
+		viewModelScope.launch {
+			repository.rescan()
+		}
 	}
 
 	fun selectWhdload(file: AmigaFile?) {
@@ -31,6 +35,8 @@ class QuickStartViewModel(application: Application) : AndroidViewModel(applicati
 	}
 
 	fun rescanWhdload() {
-		repository.rescanCategory(FileCategory.WHDLOAD_GAMES)
+		viewModelScope.launch {
+			repository.rescanCategory(FileCategory.WHDLOAD_GAMES)
+		}
 	}
 }

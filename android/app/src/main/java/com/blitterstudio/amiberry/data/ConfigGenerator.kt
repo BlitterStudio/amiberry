@@ -84,6 +84,8 @@ object ConfigGenerator {
 		if (settings.joyport1 != "onscreen_joy") {
 			sb.appendLine("joyport1=${settings.joyport1}")
 		}
+		// Persist the Android UI's joyport1 choice for reliable round-trip parsing
+		sb.appendLine("amiberry.android_joyport1=${settings.joyport1}")
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")

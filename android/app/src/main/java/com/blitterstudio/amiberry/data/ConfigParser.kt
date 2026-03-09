@@ -32,7 +32,8 @@ object ConfigParser {
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"joyport0", "joyport1",
 		"amiberry.onscreen_joystick", "amiberry.onscreen_keyboard",
-		"use_gui", "config_description"
+		"amiberry.android_joyport1",
+		"use_gui", "config_description", "config_hardware_path"
 	)
 
 	private const val TAG = "Amiberry-ConfigParser"
@@ -121,9 +122,9 @@ object ConfigParser {
 			autoCrop = kv["gfx_auto_crop"].toBool(false),
 
 			joyport0 = kv["joyport0"] ?: "mouse",
-			// Round-trip: if on-screen joystick is enabled and joyport1 is default/absent,
-			// the auto-assignment in on_screen_joystick_set_enabled() is active
-			joyport1 = run {
+			// Round-trip: prefer the explicit Android joyport1 key if present,
+			// otherwise infer from on-screen joystick state
+			joyport1 = kv["amiberry.android_joyport1"] ?: run {
 				val onScreenJoy = kv["amiberry.onscreen_joystick"].toBool(true)
 				if (onScreenJoy && (kv["joyport1"] == null || kv["joyport1"] == "joy0")) {
 					"onscreen_joy"
@@ -143,14 +144,23 @@ object ConfigParser {
 		val cpu = kv["cpu_model"]?.toIntOrNull() ?: 68000
 		val chipset = kv["chipset"] ?: "ocs"
 		val hasCd = kv["cdimage0"]?.isNotEmpty() == true
+		val chipRam = kv["chipmem_size"]?.toIntOrNull() ?: 1
+		val slowRam = kv["bogomem_size"]?.toIntOrNull() ?: 0
+		val hwPath = kv["config_hardware_path"] ?: ""
 
 		return when {
 			chipset == "aga" && cpu >= 68040 -> AmigaModel.A4000
 			chipset == "aga" && hasCd -> AmigaModel.CD32
 			chipset == "aga" -> AmigaModel.A1200
 			chipset == "ecs" && cpu >= 68030 -> AmigaModel.A3000
-			chipset == "ecs" -> AmigaModel.A600
+			chipset == "ecs" && hwPath.contains("A600", ignoreCase = true) -> AmigaModel.A600
+			chipset == "ecs" && hwPath.contains("A500", ignoreCase = true) -> AmigaModel.A500_PLUS
+			// Without config_hardware_path, A500+ has 1MB chip + no slow RAM,
+			// while A600 has 2MB chip + no slow RAM. But both have chipRam=2 in defaults.
+			// Default to A500+ (more common) when we can't distinguish.
+			chipset == "ecs" -> AmigaModel.A500_PLUS
 			hasCd -> AmigaModel.CDTV
+			// OCS with 512KB chip + 512KB slow = A500 (or A2000), default A500
 			else -> AmigaModel.A500
 		}
 	}

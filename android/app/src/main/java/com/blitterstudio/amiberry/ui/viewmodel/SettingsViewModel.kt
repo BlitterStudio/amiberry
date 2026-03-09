@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -13,6 +14,7 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -31,8 +33,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	init {
 		settings = applyConstraints(settings)
-		repository.rescan()
-		autoSelectDefaultRomIfNeeded(availableRoms.value)
+		viewModelScope.launch {
+			repository.rescan()
+			autoSelectDefaultRomIfNeeded(availableRoms.value)
+		}
 	}
 
 	fun applyModel(model: AmigaModel) {

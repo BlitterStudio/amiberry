@@ -2165,12 +2165,14 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_APP_WILLENTERBACKGROUND:
 		case SDL_APP_DIDENTERBACKGROUND:
+			pause_sound();
 			pause_emulation = 1;
 			break;
 
 		case SDL_APP_WILLENTERFOREGROUND:
 		case SDL_APP_DIDENTERFOREGROUND:
 			pause_emulation = 0;
+			resume_sound();
 			break;
 
 		case SDL_CLIPBOARDUPDATE:
@@ -5568,14 +5570,14 @@ int amiberry_main(int argc, char* argv[])
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGSEGV, &action, nullptr) < 0)
 	{
-		printf("Failed to set signal handler (SIGSEGV).\n");
+		write_log("Failed to set signal handler (SIGSEGV).\n");
 #ifndef __ANDROID__
 		abort();
 #endif
 	}
 	if (sigaction(SIGILL, &action, nullptr) < 0)
 	{
-		printf("Failed to set signal handler (SIGILL).\n");
+		write_log("Failed to set signal handler (SIGILL).\n");
 #ifndef __ANDROID__
 		abort();
 #endif
@@ -5586,7 +5588,7 @@ int amiberry_main(int argc, char* argv[])
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGBUS, &action, nullptr) < 0)
 	{
-		printf("Failed to set signal handler (SIGBUS).\n");
+		write_log("Failed to set signal handler (SIGBUS).\n");
 #ifndef __ANDROID__
 		abort();
 #endif
@@ -5597,7 +5599,7 @@ int amiberry_main(int argc, char* argv[])
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGTERM, &action, nullptr) < 0)
 	{
-		printf("Failed to set signal handler (SIGTERM).\n");
+		write_log("Failed to set signal handler (SIGTERM).\n");
 #ifndef __ANDROID__
 		abort();
 #endif
