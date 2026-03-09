@@ -1,6 +1,5 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "imgui_panels.h"
 #include "options.h"
 

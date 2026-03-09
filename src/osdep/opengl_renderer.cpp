@@ -292,6 +292,7 @@ void OpenGLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	if (currprefs.headless) return;
 
 	auto scale_quality = "nearest";
+	m_integer_scaling = false;
 
 	switch (p->scaling_method) {
 	case -1: // Auto
@@ -300,16 +301,18 @@ void OpenGLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 		break;
 	case 0: scale_quality = "nearest"; break;
 	case 1: scale_quality = "linear"; break;
-	case 2: scale_quality = "nearest"; break;
+	case 2: scale_quality = "nearest"; m_integer_scaling = true; break;
 	default: scale_quality = "linear"; break;
 	}
 
 	m_shader.texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
 
-	// Only apply filter mode when no shader is active (NONE mode without external shader)
+	// Only apply filter mode when no shader is active (NONE mode without external shader).
+	// When a shader is active, it controls its own texture sampling.
 	bool no_shader_active = (m_shader.crtemu != nullptr
 		&& m_shader.crtemu->type == CRTEMU_TYPE_NONE
-		&& m_shader.external == nullptr);
+		&& m_shader.external == nullptr
+		&& m_shader.preset == nullptr);
 	if (no_shader_active) {
 		if (m_shader.crtemu->backbuffer != 0 && glIsTexture(m_shader.crtemu->backbuffer)) {
 			m_shader.crtemu->texture_filter = m_shader.texture_filter_mode;
@@ -454,6 +457,33 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		renderAreaH = static_cast<int>(m_overlay.bezel_hole_h * bezelDisplayH);
 	}
 
+	// Compute source dimensions early (needed for integer scaling)
+	bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+					   crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+					   crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+					   (crop_rect.w > 0 && crop_rect.h > 0);
+
+	int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0;
+	if (is_cropped && amiga_surface) {
+		crop_x = std::max(0, crop_rect.x);
+		crop_y = std::max(0, crop_rect.y);
+		crop_w = std::min(crop_rect.w, amiga_surface->w - crop_x);
+		crop_h = std::min(crop_rect.h, amiga_surface->h - crop_y);
+		if (crop_w <= 0 || crop_h <= 0) {
+			is_cropped = false;
+		}
+	}
+
+	const int src_w = (is_cropped) ? crop_w : (amiga_surface ? amiga_surface->w : 0);
+	const int src_h = (is_cropped) ? crop_h : (amiga_surface ? amiga_surface->h : 0);
+
+	// Check if integer scaling is requested:
+	// - Native mode: scaling_method == 2 (stored in m_integer_scaling)
+	// - RTG mode: scalepicasso == RTG_MODE_INTEGER_SCALE
+	bool use_integer_scaling = mon->screen_is_picasso
+		? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
+		: m_integer_scaling;
+
 	int destW, destH, destX, destY;
 
 	if (renderAreaX != 0 || renderAreaY != 0 ||
@@ -476,6 +506,14 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		if (destW <= 0) destW = 1;
 		if (destH <= 0) destH = 1;
 
+		// Apply integer scaling: constrain to largest integer multiple of source
+		if (use_integer_scaling && src_w > 0 && src_h > 0) {
+			int scale = std::min(destW / src_w, destH / src_h);
+			if (scale < 1) scale = 1;
+			destW = src_w * scale;
+			destH = src_h * scale;
+		}
+
 		destX = (renderAreaW - destW) / 2;
 		destY = (renderAreaH - destH) / 2;
 	}
@@ -497,28 +535,6 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	render_quad.y = destY;
 	render_quad.w = destW;
 	render_quad.h = destH;
-
-	// Check if cropping is active and valid
-	bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-					   crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-					   crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-					   (crop_rect.w > 0 && crop_rect.h > 0);
-
-	// Pre-compute clamped crop bounds once for all shader paths
-	int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0;
-	if (is_cropped && amiga_surface) {
-		crop_x = std::max(0, crop_rect.x);
-		crop_y = std::max(0, crop_rect.y);
-		crop_w = std::min(crop_rect.w, amiga_surface->w - crop_x);
-		crop_h = std::min(crop_rect.h, amiga_surface->h - crop_y);
-		if (crop_w <= 0 || crop_h <= 0) {
-			is_cropped = false;
-		}
-	}
-
-	// Source dimensions (crop-aware)
-	const int src_w = (is_cropped) ? crop_w : (amiga_surface ? amiga_surface->w : 0);
-	const int src_h = (is_cropped) ? crop_h : (amiga_surface ? amiga_surface->h : 0);
 
 	// Handle shader preset rendering (multi-pass .glslp)
 	if (m_shader.preset && m_shader.preset->is_valid()) {

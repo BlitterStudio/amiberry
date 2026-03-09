@@ -12,7 +12,6 @@
 #include <functional>
 
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "memory.h"
 #include "uae.h"

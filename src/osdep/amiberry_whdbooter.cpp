@@ -234,22 +234,32 @@ void make_rom_symlink(const std::string& kickstart_short_name, const int kicksta
 		if (configure_rom(prefs, roms, 0) == 1)
 		{
 			try {
+#if defined(__ANDROID__) || defined(_WIN32)
+				// Android's external storage and Windows often do not support symlinks; copy instead
+				std::filesystem::copy(prefs->romfile, kickstart_long_path);
+				write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+#else
 				std::filesystem::create_symlink(prefs->romfile, kickstart_long_path);
 				write_log("Making SymLink for Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+#endif
 			}
 			catch (std::filesystem::filesystem_error& e) {
-				if (e.code() == std::errc::operation_not_permitted) {
-					// Fallback to copying file if filesystem does not support the generation of symlinks
+#if !defined(__ANDROID__) && !defined(_WIN32)
+				// Fallback to copying file if symlink creation fails for any reason
+				try {
 					std::filesystem::copy(prefs->romfile, kickstart_long_path);
-					write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+					write_log("SymLink failed, copying Kickstart ROM instead: %s  [Ok]\n", kickstart_long_path.c_str());
 				}
-				else {
-					write_log("Error creating SymLink for Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
+				catch (std::filesystem::filesystem_error& e2) {
+					write_log("Error copying Kickstart ROM: %s  [Fail]: %s\n", kickstart_long_path.c_str(), e2.what());
 				}
+#else
+				write_log("Error copying Kickstart ROM: %s  [Fail]: %s\n", kickstart_long_path.c_str(), e.what());
+#endif
 			}
 		}
 		// restore the original prefs->romfile
-        strcpy(prefs->romfile, old_romfile.c_str());
+		strcpy(prefs->romfile, old_romfile.c_str());
 	}
 }
 
@@ -292,15 +302,26 @@ void symlink_roms(struct uae_prefs* prefs)
 	rom_key_destination_path /= "rom.key";
 
 	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
-		write_log("Making SymLink for rom.key\n");
 		try {
+#if defined(__ANDROID__) || defined(_WIN32)
+			write_log("Copying rom.key\n");
+			std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
+#else
+			write_log("Making SymLink for rom.key\n");
 			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
+#endif
 		}
 		catch (std::filesystem::filesystem_error& e) {
-			if (e.code() == std::errc::operation_not_permitted) {
-				// Fallback to copying file if filesystem does not support the generation of symlinks
+#if !defined(__ANDROID__) && !defined(_WIN32)
+			try {
 				std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
 			}
+			catch (std::filesystem::filesystem_error& e2) {
+				write_log("Error copying rom.key: %s\n", e2.what());
+			}
+#else
+			write_log("Error copying rom.key: %s\n", e.what());
+#endif
 		}
 	}
 }
@@ -1147,7 +1168,7 @@ void create_startup_sequence()
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup.c_str());
 
-	std::ofstream myfile(whd_startup);
+	std::ofstream myfile(whd_startup, std::ios::binary);
 	if (myfile.is_open())
 	{
 		myfile << whd_bootscript.str();

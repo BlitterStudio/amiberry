@@ -559,39 +559,6 @@ void render_panel_display() {
         if (!linemode_enabled || is_double) ImGui::EndDisabled();
 
         if (!linemode_enabled || !is_double) ImGui::BeginDisabled();
-        // WinUAE has logic mapping these to 0, 1, 2 depending on values.
-        // IDC_LM_IDOUBLED -> Frames? Is enabled if Double is selected.
-        // My previous assumption regarding Double/Fields/Fields+ was iscanlines=1,2 etc.
-        // Wait, CheckRadioButton says:
-        // IDC_LM_INORMAL + (gfx_iscanlines ? gfx_iscanlines + 1: (gfx_vresolution ? 1 : 0))
-        // If IDoubled (Double frames) is selected (val=1?), iscanlines must be...
-        // If ISingle selected (val=0), iscanlines=0.
-        // We need to match this.
-        // Let's rely on radio button variable binding.
-        // We need 4 options here.
-        // Single, Double frames, Double fields, Double fields+
-        // If Single##I is selected (RadioButton 0), it sets iscanlines = 0.
-        // If Double frames##I (RadioButton 1) ?
-        // If Double fields##I (RadioButton 2) ?
-        // If Double fields+##I (RadioButton 3) ?
-        // Mapping:
-        // If ISingle: iscan=0.
-        // If IDouble frames: iscan=0? No, that would overlap.
-        // In WinUAE, if Double is selected, vres>0.
-        // The check code: INORMAL + (iscan? iscan+1 : (vres?1:0))
-        // If vres=1, scan=0 -> INORMAL + 1 -> IDOUBLED.
-        // So IDOUBLED (Double frames) maps to iscan=0 when vres=1.
-        // IDOUBLED2 (Double fields) maps to iscan=1.
-        // IDOUBLED3 (Double fields+) maps to iscan=2.
-
-        // So:
-        // Single##I -> enabled if !is_double. iscan=0.
-        // Double Frames##I -> enabled if is_double. iscan=0.
-        // Double Fields##I -> enabled if is_double. iscan=1.
-        // Double Fields+##I -> enabled if is_double. iscan=2.
-
-        // Implementation:
-        // Toggle radio button for "Double frames" manually if iscan==0.
         bool dbl_frames_active = (changed_prefs.gfx_iscanlines == 0 && is_double);
         if (AmigaRadioButton("Double, frames##I", dbl_frames_active)) { changed_prefs.gfx_iscanlines = 0; }
         ShowHelpMarker("Double frames mode for interlaced screens (available only in double line mode)");
