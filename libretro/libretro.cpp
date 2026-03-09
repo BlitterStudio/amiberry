@@ -21,6 +21,7 @@
 #endif
 #include <sys/stat.h>
 #include <algorithm>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -77,9 +78,9 @@ static constexpr size_t kJoypadMax = RETRO_DEVICE_ID_JOYPAD_R3 + 1;
 static int16_t last_joypad[2][kJoypadMax];
 static int16_t last_analog[2][4];
 static int16_t last_trigger[2][2];
-static int16_t last_mouse_buttons[3];
-static int16_t last_mouse_x;
-static int16_t last_mouse_y;
+static int16_t last_mouse_buttons[2][3];
+static int16_t last_mouse_x[2];
+static int16_t last_mouse_y[2];
 static unsigned libretro_port_device[2] = { RETRO_DEVICE_MOUSE, RETRO_DEVICE_JOYPAD };
 static int libretro_joyport_order[2] = { 0, 1 };
 static bool libretro_options_dirty = true;
@@ -102,6 +103,12 @@ static int last_geometry_height = -1;
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
+static struct retro_perf_callback perf_cb = {};
+
+// CD32 Pad device subclass for retro_set_controller_port_device
+#define RETRO_DEVICE_AMIGA_CD32PAD  RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
+#define RETRO_DEVICE_AMIGA_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 2)
+
 enum RetroLedIndex {
 	RETRO_LED_POWER = 0,
 	RETRO_LED_DRIVES,
@@ -124,8 +131,8 @@ extern float vblank_hz;
 
 static constexpr int DEFAULT_GFX_WIDTH = 640;
 static constexpr int DEFAULT_GFX_HEIGHT = 480;
-static constexpr int MAX_GFX_WIDTH = 1280;
-static constexpr int MAX_GFX_HEIGHT = 1024;
+static constexpr int MAX_GFX_WIDTH = 1920;
+static constexpr int MAX_GFX_HEIGHT = 1280;
 static constexpr size_t CORE_FIBER_STACK_SIZE = 65536 * sizeof(void*);
 
 static void input_log_file_write(const char* fmt, ...);
@@ -141,6 +148,10 @@ static std::string cached_chipset;
 static std::string cached_chipset_aga;
 static std::string cached_audio_rate;
 static std::string cached_audio_interpol;
+static std::string cached_sound_filter;
+static std::string cached_stereo_sep;
+static std::string cached_floppy_speed;
+static std::string cached_video_standard;
 static int cached_audio_rate_value = 44100;
 static const char* get_option_value(const char* key);
 
@@ -214,6 +225,7 @@ struct DiskImage {
 };
 
 static std::vector<DiskImage> disk_images;
+static std::mutex disk_mutex;
 static unsigned disk_index = 0;
 static bool disk_ejected = false;
 static int initial_disk_index = -1;
@@ -490,7 +502,7 @@ static void update_geometry()
 	geom.base_height = height;
 	geom.max_width = std::max(width, MAX_GFX_WIDTH);
 	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
-	geom.aspect_ratio = (float)width / (float)height;
+	geom.aspect_ratio = 4.0f / 3.0f;
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
 	last_geometry_height = height;
@@ -533,7 +545,7 @@ static void log_mouse_motion(int16_t dx, int16_t dy)
 			input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
 		return;
 	}
-	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0)) {
+	if ((dx != 0 || dy != 0) && (last_mouse_x[0] == 0 && last_mouse_y[0] == 0)) {
 		log_cb(RETRO_LOG_INFO, "input mouse motion dx=%d dy=%d\n", dx, dy);
 		input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
 	}
@@ -549,6 +561,10 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_chipset_aga", "Chipset (AGA Models); auto|ocs|ecs|aga" },
 	{ "amiberry_audio_rate", "Audio Rate (Hz); auto|44100|48000" },
 	{ "amiberry_audio_interpolation", "Audio Interpolation; auto|none|anti|sinc" },
+	{ "amiberry_sound_filter", "Sound Filter; off|emulated|on" },
+	{ "amiberry_stereo_separation", "Stereo Separation; 0|1|2|3|4|5|6|7|8|9|10" },
+	{ "amiberry_floppy_speed", "Floppy Speed; 0|100|200|400|800" },
+	{ "amiberry_video_standard", "Video Standard; auto|pal|ntsc" },
 	{ "amiberry_port0_device", "Port 1 Device; mouse|joystick" },
 	{ "amiberry_port1_device", "Port 2 Device; joystick|mouse" },
 	{ "amiberry_swap_ports", "Swap Ports; disabled|enabled" },
@@ -823,6 +839,76 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ "none", "Off" },
 			{ "anti", "Anti-alias" },
 			{ "sinc", "Sinc" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_sound_filter",
+		"Sound Filter",
+		"Sound Filter",
+		"Amiga audio low-pass filter. 'Emulated' mimics the original A500 hardware filter.",
+		NULL,
+		"audio",
+		{
+			{ "off", "Off" },
+			{ "emulated", "Emulated (A500)" },
+			{ "on", "Always On" },
+			{ NULL, NULL }
+		},
+		"off"
+	},
+	{
+		"amiberry_stereo_separation",
+		"Stereo Separation",
+		"Stereo Separation",
+		"Set stereo separation from mono to full stereo. 7 matches default Amiga hard-panned output.",
+		NULL,
+		"audio",
+		{
+			{ "0", "0 (Mono)" },
+			{ "1", "1" },
+			{ "2", "2" },
+			{ "3", "3" },
+			{ "4", "4" },
+			{ "5", "5" },
+			{ "6", "6" },
+			{ "7", "7 (Amiga Default)" },
+			{ "8", "8" },
+			{ "9", "9" },
+			{ "10", "10 (Full Stereo)" },
+			{ NULL, NULL }
+		},
+		"7"
+	},
+	{
+		"amiberry_floppy_speed",
+		"Floppy Speed",
+		"Floppy Speed",
+		"Set floppy drive speed multiplier. 0 enables turbo loading.",
+		NULL,
+		"system",
+		{
+			{ "0", "Turbo" },
+			{ "100", "1x (Normal)" },
+			{ "200", "2x" },
+			{ "400", "4x" },
+			{ "800", "8x" },
+			{ NULL, NULL }
+		},
+		"100"
+	},
+	{
+		"amiberry_video_standard",
+		"Video Standard",
+		"Video Standard",
+		"Select PAL or NTSC timing mode. Auto uses the model default. Core restart required.",
+		NULL,
+		"video",
+		{
+			{ "auto", "Auto" },
+			{ "pal", "PAL (50Hz)" },
+			{ "ntsc", "NTSC (60Hz)" },
 			{ NULL, NULL }
 		},
 		"auto"
@@ -1222,6 +1308,112 @@ static cd_content_type detect_cd_content_from_chd(const char* path)
 }
 #endif
 
+static cd_content_type detect_cd_content_from_cue(const char* cue_path)
+{
+	FILE* f = fopen(cue_path, "r");
+	if (!f)
+		return CD_CONTENT_UNKNOWN_CD;
+
+	char line[2048];
+	std::string bin_file;
+	int sector_size = 2048;
+
+	while (fgets(line, sizeof(line), f)) {
+		// Case-insensitive keyword matching: work on a lowercase copy
+		// but extract quoted filenames from the original line.
+		char lower[2048];
+		for (int k = 0; k < 2047 && line[k]; k++)
+			lower[k] = static_cast<char>(tolower(static_cast<unsigned char>(line[k])));
+		lower[strlen(line) < 2048 ? strlen(line) : 2047] = '\0';
+		const char* fp = strstr(lower, "file");
+		if (fp) {
+			// Map position back to original line for quoted filename extraction
+			const char* orig_fp = line + (fp - lower);
+			const char* q1 = strchr(orig_fp, '"');
+			if (q1) {
+				const char* q2 = strchr(q1 + 1, '"');
+				if (q2)
+					bin_file.assign(q1 + 1, q2);
+			}
+		}
+		if (strstr(lower, "mode1/2352") || strstr(lower, "mode2/2352"))
+			sector_size = 2352;
+	}
+	fclose(f);
+
+	if (bin_file.empty())
+		return CD_CONTENT_UNKNOWN_CD;
+
+	std::string bin_path;
+	if (bin_file[0] == '/' || bin_file[0] == '\\' || (bin_file.size() > 1 && bin_file[1] == ':')) {
+		bin_path = bin_file;
+	} else {
+		std::string cue_dir = path_dirname(cue_path);
+		bin_path = cue_dir.empty() ? bin_file : path_join(cue_dir, bin_file);
+	}
+
+	FILE* bf = fopen(bin_path.c_str(), "rb");
+	if (!bf)
+		return CD_CONTENT_UNKNOWN_CD;
+
+	long offset = (sector_size == 2352) ? (16L * 2352 + 16) : (16L * 2048);
+	if (fseek(bf, offset, SEEK_SET) != 0) {
+		fclose(bf);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+
+	unsigned char buf[2048];
+	if (fread(buf, 1, 12, bf) < 12) {
+		fclose(bf);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+	fclose(bf);
+
+	if (memcmp(buf + 8, "CD32", 4) == 0 || memcmp(buf + 8, "COMM", 4) == 0)
+		return CD_CONTENT_CD32;
+	if (memcmp(buf + 8, "CDTV", 4) == 0)
+		return CD_CONTENT_CDTV;
+
+	return CD_CONTENT_UNKNOWN_CD;
+}
+
+static cd_content_type detect_cd_content_from_ccd(const char* ccd_path)
+{
+	std::string path(ccd_path);
+	auto dot = path.rfind('.');
+	if (dot == std::string::npos)
+		return CD_CONTENT_UNKNOWN_CD;
+	std::string img_path = path.substr(0, dot) + ".img";
+
+	FILE* f = fopen(img_path.c_str(), "rb");
+	if (!f) {
+		img_path = path.substr(0, dot) + ".IMG";
+		f = fopen(img_path.c_str(), "rb");
+		if (!f)
+			return CD_CONTENT_UNKNOWN_CD;
+	}
+
+	long offset = 16L * 2352 + 16;
+	if (fseek(f, offset, SEEK_SET) != 0) {
+		fclose(f);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+
+	unsigned char buf[2048];
+	if (fread(buf, 1, 12, f) < 12) {
+		fclose(f);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+	fclose(f);
+
+	if (memcmp(buf + 8, "CD32", 4) == 0 || memcmp(buf + 8, "COMM", 4) == 0)
+		return CD_CONTENT_CD32;
+	if (memcmp(buf + 8, "CDTV", 4) == 0)
+		return CD_CONTENT_CDTV;
+
+	return CD_CONTENT_UNKNOWN_CD;
+}
+
 // Detect CD content type from a file path and its extension.
 // For raw ISO files, reads sector 16 directly.
 // For CHD files, uses MAME CHD API to check metadata and read sector 16.
@@ -1247,12 +1439,12 @@ static cd_content_type detect_cd_content(const char* path, const std::string& ex
 #endif
 	}
 
-	// TODO: CUE/CCD/MDS/NRG — parse the sheet/descriptor to locate the
-	// data track, then read sector 16 from the binary. For now, fall through
-	// to heuristics below.
+	if (ext == "cue")
+		return detect_cd_content_from_cue(path);
 
-	// CUE/CCD/MDS/NRG: cannot read sector 16 without parsing the sheet.
-	// Use filename heuristic as fallback (like PUAE does).
+	if (ext == "ccd")
+		return detect_cd_content_from_ccd(path);
+
 	if (path) {
 		std::string lower_path = to_lower_copy(path);
 		if (lower_path.find("cdtv") != std::string::npos)
@@ -1529,14 +1721,25 @@ static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
 
 static bool libretro_get_image_label(unsigned index, char* s, size_t len);
 
-static void show_message(const char* text)
+static void show_message(const char* text, unsigned duration_ms = 2000,
+	enum retro_log_level level = RETRO_LOG_INFO)
 {
 	if (!environ_cb || !text || !*text)
 		return;
-	struct retro_message msg;
-	msg.msg = text;
-	msg.frames = 120;
-	environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+	struct retro_message_ext msg_ext = {};
+	msg_ext.msg = text;
+	msg_ext.duration = duration_ms;
+	msg_ext.priority = (level >= RETRO_LOG_WARN) ? 3 : 1;
+	msg_ext.level = level;
+	msg_ext.target = RETRO_MESSAGE_TARGET_ALL;
+	msg_ext.type = RETRO_MESSAGE_TYPE_NOTIFICATION;
+	msg_ext.progress = -1;
+	if (!environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &msg_ext)) {
+		struct retro_message msg = {};
+		msg.msg = text;
+		msg.frames = duration_ms / 16; // ~60fps
+		environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+	}
 }
 
 static void notify_disk_change()
@@ -1554,13 +1757,19 @@ static void notify_disk_change()
 		return;
 
 	if (last_disk_ejected || disk_index != last_disk_index) {
-		char label[256];
-		const char* label_ptr = nullptr;
-		if (libretro_get_image_label(disk_index, label, sizeof(label)))
-			label_ptr = label;
+		const std::string& image_label = disk_images[disk_index].label;
+		std::string label;
+		if (!image_label.empty()) {
+			label = image_label;
+		} else {
+			label = path_basename(disk_images[disk_index].path);
+			const auto dot = label.find_last_of('.');
+			if (dot != std::string::npos)
+				label = label.substr(0, dot);
+		}
 		char msg[320];
-		if (label_ptr && *label_ptr)
-			snprintf(msg, sizeof(msg), "Disk %u: %s inserted", disk_index + 1, label_ptr);
+		if (!label.empty())
+			snprintf(msg, sizeof(msg), "Disk %u: %s inserted", disk_index + 1, label.c_str());
 		else
 			snprintf(msg, sizeof(msg), "Disk %u inserted", disk_index + 1);
 		show_message(msg);
@@ -1585,7 +1794,7 @@ static void cd_insert(const char* path)
 	set_config_changed();
 }
 
-static void disk_control_apply()
+static void disk_control_apply_locked()
 {
 	if (!core_started)
 		return;
@@ -1626,42 +1835,56 @@ static void disk_control_apply()
 	}
 }
 
+static void disk_control_apply()
+{
+	std::lock_guard<std::mutex> lock(disk_mutex);
+	disk_control_apply_locked();
+}
+
 static bool libretro_set_eject_state(bool ejected)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	disk_ejected = ejected;
-	disk_control_apply();
+	disk_control_apply_locked();
 	return true;
 }
 
 static bool libretro_get_eject_state(void)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	return disk_ejected;
 }
 
 static unsigned libretro_get_image_index(void)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	return disk_index;
 }
 
 static bool libretro_set_image_index(unsigned index)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	if (index >= disk_images.size())
 		return false;
 	disk_index = index;
-	disk_control_apply();
+	disk_control_apply_locked();
 	return true;
 }
 
 static unsigned libretro_get_num_images(void)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	return (unsigned)disk_images.size();
 }
 
 static bool libretro_replace_image_index(unsigned index, const struct retro_game_info* info)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	if (index >= disk_images.size())
 		return false;
 	if (info && info->path) {
+		if (!file_readable(info->path) && log_cb)
+			log_cb(RETRO_LOG_WARN, "Disk image not readable: %s\n", info->path);
 		disk_images[index].path = info->path;
 		disk_images[index].label.clear();
 	} else {
@@ -1669,18 +1892,20 @@ static bool libretro_replace_image_index(unsigned index, const struct retro_game
 		disk_images[index].label.clear();
 	}
 	if (index == disk_index)
-		disk_control_apply();
+		disk_control_apply_locked();
 	return true;
 }
 
 static bool libretro_add_image_index(void)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	disk_images.emplace_back();
 	return true;
 }
 
 static bool libretro_set_initial_image(unsigned index, const char* path)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	initial_disk_index = static_cast<int>(index);
 	if (path && *path)
 		initial_disk_path = path;
@@ -1705,6 +1930,7 @@ static bool libretro_set_initial_image(unsigned index, const char* path)
 
 static bool libretro_get_image_path(unsigned index, char* s, size_t len)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	if (!s || len == 0 || index >= disk_images.size())
 		return false;
 	if (disk_images[index].path.empty())
@@ -1716,6 +1942,7 @@ static bool libretro_get_image_path(unsigned index, char* s, size_t len)
 
 static bool libretro_get_image_label(unsigned index, char* s, size_t len)
 {
+	std::lock_guard<std::mutex> lock(disk_mutex);
 	if (!s || len == 0 || index >= disk_images.size())
 		return false;
 	std::string label = disk_images[index].label;
@@ -1808,6 +2035,14 @@ static void snapshot_core_options()
 	cached_audio_rate_value = parse_audio_rate_value(audio_rate);
 	const char* audio_interpol = get_option_value("amiberry_audio_interpolation");
 	cached_audio_interpol = audio_interpol ? audio_interpol : "";
+	const char* snd_filter = get_option_value("amiberry_sound_filter");
+	cached_sound_filter = snd_filter ? snd_filter : "";
+	const char* stereo_sep = get_option_value("amiberry_stereo_separation");
+	cached_stereo_sep = stereo_sep ? stereo_sep : "";
+	const char* floppy_spd = get_option_value("amiberry_floppy_speed");
+	cached_floppy_speed = floppy_spd ? floppy_spd : "";
+	const char* vid_std = get_option_value("amiberry_video_standard");
+	cached_video_standard = vid_std ? vid_std : "";
 }
 
 static const char* cached_chipset_value()
@@ -1933,10 +2168,11 @@ static void apply_port_device(struct uae_prefs* prefs, unsigned port, unsigned d
 {
 	const TCHAR* name = _T("none");
 	int mode = -1;
-	if (device == RETRO_DEVICE_MOUSE) {
+	const unsigned base_device = device & RETRO_DEVICE_MASK;
+	if (base_device == RETRO_DEVICE_MOUSE) {
 		name = _T("mouse");
 		mode = JSEM_MODE_MOUSE;
-	} else if (device == RETRO_DEVICE_JOYPAD || device == RETRO_DEVICE_ANALOG) {
+	} else if (base_device == RETRO_DEVICE_JOYPAD || base_device == RETRO_DEVICE_ANALOG) {
 		if (joy_index < 0 || joy_index > 3)
 			joy_index = static_cast<int>(port);
 		TCHAR joy_name[8];
@@ -1975,10 +2211,12 @@ static void apply_libretro_input_options(void)
 	int desired_joyport_order[2] = { libretro_joyport_order[0], libretro_joyport_order[1] };
 	const bool joyport_order_explicit = parse_joyport_order(get_option_value("amiberry_joyport_order"), desired_joyport_order);
 	if (!joyport_order_explicit) {
-		if (desired_port_device[0] == RETRO_DEVICE_JOYPAD && desired_port_device[1] != RETRO_DEVICE_JOYPAD) {
+		const unsigned base0 = desired_port_device[0] & RETRO_DEVICE_MASK;
+		const unsigned base1 = desired_port_device[1] & RETRO_DEVICE_MASK;
+		if (base0 == RETRO_DEVICE_JOYPAD && base1 != RETRO_DEVICE_JOYPAD) {
 			desired_joyport_order[0] = 0;
 			desired_joyport_order[1] = 1;
-		} else if (desired_port_device[1] == RETRO_DEVICE_JOYPAD && desired_port_device[0] != RETRO_DEVICE_JOYPAD) {
+		} else if (base1 == RETRO_DEVICE_JOYPAD && base0 != RETRO_DEVICE_JOYPAD) {
 			desired_joyport_order[0] = 1;
 			desired_joyport_order[1] = 0;
 		} else {
@@ -2242,6 +2480,10 @@ static void poll_input(void)
 
 	for (int i = 0; i < 2; i++)
 	{
+		const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
+		if (dev == RETRO_DEVICE_NONE)
+			continue;
+
 		const int joy = i;
 		unsigned joypad_mask = 0;
 		if (input_bitmask_supported)
@@ -2306,12 +2548,17 @@ static void poll_input(void)
 		}
 	}
 
-	// Mouse input
-	for (int i = 0; i < 1; i++) // Usually only 1 mouse
+	// Mouse input — poll both ports (Amiga supports 2 mice)
+	for (int i = 0; i < 2; i++)
 	{
+		const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
+		if (dev != RETRO_DEVICE_MOUSE && dev != RETRO_DEVICE_JOYPAD)
+			continue;
+
 		int16_t mouse_x = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
 		int16_t mouse_y = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-		log_mouse_motion(mouse_x, mouse_y);
+		if (i == 0)
+			log_mouse_motion(mouse_x, mouse_y);
 		if (mouse_x != 0 || mouse_y != 0)
 		{
 			setmousestate(i, 0, mouse_x, 0);
@@ -2326,14 +2573,15 @@ static void poll_input(void)
 		for (int b = 0; b < 3; b++)
 		{
 			const int16_t state = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, mouse_buttons[b]) & 1;
-			if (state != last_mouse_buttons[b]) {
-				last_mouse_buttons[b] = state;
-				log_mouse_button(b, state);
+			if (state != last_mouse_buttons[i][b]) {
+				last_mouse_buttons[i][b] = state;
+				if (i == 0)
+					log_mouse_button(b, state);
 			}
 			setmousebuttonstate(i, b, state);
 		}
-		last_mouse_x = mouse_x;
-		last_mouse_y = mouse_y;
+		last_mouse_x[i] = mouse_x;
+		last_mouse_y[i] = mouse_y;
 	}
 	last_analog_enabled = analog_enabled;
 }
@@ -2344,7 +2592,13 @@ static void core_entry(void)
 	libretro_debug_log("core_entry start: game_path='%s'\n", game_path);
 	std::vector<char*> argv;
 	argv.reserve(32);
-	argv.push_back(strdup("amiberry"));
+	bool argv_alloc_failed = false;
+	auto safe_strdup = [&argv, &argv_alloc_failed](const char* s) {
+		char* p = strdup(s);
+		if (!p) argv_alloc_failed = true;
+		argv.push_back(p);
+	};
+	safe_strdup("amiberry");
 	std::string game_ext;
 	if (game_path[0])
 		game_ext = path_extension_lower(game_path);
@@ -2352,9 +2606,9 @@ static void core_entry(void)
 	const bool is_cd = content_is_cd || is_cd_extension(game_ext);
 	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
 
-	auto push_s_option = [&argv](const std::string& value) {
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(value.c_str()));
+	auto push_s_option = [&safe_strdup](const std::string& value) {
+		safe_strdup("-s");
+		safe_strdup(value.c_str());
 	};
 
 	const char* model = cached_model.empty() ? nullptr : cached_model.c_str();
@@ -2374,8 +2628,8 @@ static void core_entry(void)
 		else if (strcmp(model, "CD32FR") == 0)
 			engine_model = "CD32";
 
-		argv.push_back(strdup("--model"));
-		argv.push_back(strdup(engine_model));
+		safe_strdup("--model");
+		safe_strdup(engine_model);
 
 		// Expanded preset overrides: -s options after --model so bip_*() sets
 		// the base config first, then we override individual fields.
@@ -2424,6 +2678,24 @@ static void core_entry(void)
 		push_s_option(std::string("sound_interpol=") + audio_interpol);
 	}
 
+	if (!cached_sound_filter.empty() && cached_sound_filter != "auto")
+		push_s_option("sound_filter=" + cached_sound_filter);
+
+	if (!cached_stereo_sep.empty()) {
+		push_s_option("sound_stereo_separation=" + cached_stereo_sep);
+	}
+
+	if (!cached_floppy_speed.empty() && cached_floppy_speed != "100") {
+		push_s_option("floppy_speed=" + cached_floppy_speed);
+	}
+
+	if (!cached_video_standard.empty() && cached_video_standard != "auto") {
+		if (cached_video_standard == "ntsc")
+			push_s_option("ntsc=true");
+		else if (cached_video_standard == "pal")
+			push_s_option("ntsc=false");
+	}
+
 #ifdef WITH_MIDI
 	{
 		const char* midi_opt = get_option_value("amiberry_midi_output");
@@ -2445,7 +2717,7 @@ static void core_entry(void)
 	}
 #endif
 
-	argv.push_back(strdup("-G")); // No GUI
+	safe_strdup("-G"); // No GUI
 
 	std::string rom_path_value;
 	if (!system_dir.empty()) {
@@ -2485,8 +2757,8 @@ static void core_entry(void)
 		}
 
 		if (have_kick) {
-			argv.push_back(strdup("-r"));
-			argv.push_back(strdup(kick_path));
+			safe_strdup("-r");
+			safe_strdup(kick_path);
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
 			libretro_debug_log("kickstart override: %s\n", kick_path);
@@ -2497,8 +2769,8 @@ static void core_entry(void)
 		if (is_cd && model) {
 			char ext_path[1024] = {0};
 			if (find_ext_rom_in_system_dir(model, ext_path, sizeof(ext_path))) {
-				argv.push_back(strdup("-K"));
-				argv.push_back(strdup(ext_path));
+				safe_strdup("-K");
+				safe_strdup(ext_path);
 				if (log_cb)
 					log_cb(RETRO_LOG_INFO, "Using Extended ROM: %s\n", ext_path);
 			}
@@ -2509,14 +2781,14 @@ static void core_entry(void)
 		const std::string saveimage_path = "saveimage_dir=" + save_dir;
 		const std::string savestate_path = "savestate_dir=" + save_dir;
 		const std::string statefile_path = "statefile_path=" + save_dir;
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(cfg_path.c_str()));
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(saveimage_path.c_str()));
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(savestate_path.c_str()));
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(statefile_path.c_str()));
+		safe_strdup("-s");
+		safe_strdup(cfg_path.c_str());
+		safe_strdup("-s");
+		safe_strdup(saveimage_path.c_str());
+		safe_strdup("-s");
+		safe_strdup(savestate_path.c_str());
+		safe_strdup("-s");
+		safe_strdup(statefile_path.c_str());
 	}
 
 	if (game_path[0])
@@ -2524,8 +2796,8 @@ static void core_entry(void)
 		if (is_whdload) {
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "WHDLoad autoload: %s\n", game_path);
-			argv.push_back(strdup("--autoload"));
-			argv.push_back(strdup(game_path));
+			safe_strdup("--autoload");
+			safe_strdup(game_path);
 		} else if (is_cd) {
 			// Pass CD image via -s cdimage0= instead of positional arg.
 			// A positional .iso/.cue/.chd triggers cd_auto_prefs() which calls
@@ -2537,7 +2809,7 @@ static void core_entry(void)
 			std::string cd_opt = std::string("cdimage0=") + game_path + ",image";
 			push_s_option(cd_opt);
 		} else {
-			argv.push_back(strdup(game_path));
+			safe_strdup(game_path);
 		}
 	}
 	argv.push_back(nullptr);
@@ -2548,8 +2820,13 @@ static void core_entry(void)
 			libretro_debug_log(" [%s]", argv[i] ? argv[i] : "");
 		libretro_debug_log("\n");
 	}
+	if (argv_alloc_failed) {
+		if (log_cb)
+			log_cb(RETRO_LOG_ERROR, "core_entry: memory allocation failed building argv\n");
+	}
 	reset_parse_cmdline();
-	amiberry_main((int)argv.size() - 1, argv.data());
+	if (!argv_alloc_failed)
+		amiberry_main((int)argv.size() - 1, argv.data());
 
 	// Free strdup'd argv strings
 	for (auto p : argv)
@@ -2645,11 +2922,19 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 	info->timing.sample_rate    = static_cast<double>(audio_rate_for_av_info());
 }
 
+static void RETRO_CALLCONV audio_buffer_status_cb(bool active, unsigned occupancy, bool underrun_likely)
+{
+	(void)active;
+	(void)occupancy;
+	if (underrun_likely && log_cb)
+		log_cb(RETRO_LOG_DEBUG, "Audio buffer underrun likely (occupancy=%u%%)\n", occupancy);
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
 	environ_cb = cb;
 	struct retro_log_callback logging;
-	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
 		log_cb = logging.log;
 	else
 		log_cb = NULL;
@@ -2670,6 +2955,15 @@ void retro_set_environment(retro_environment_t cb)
 	{
 		bool achievements = true;
 		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
+	}
+	{
+		bool no_game = true;
+		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_game);
+	}
+	{
+		uint64_t quirks = RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE
+			| RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE;
+		environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
 	}
 	{
 		const char* dir = nullptr;
@@ -2733,14 +3027,28 @@ void retro_set_environment(retro_environment_t cb)
 
 	input_bitmask_supported = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 
+	if (!environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
+		memset(&perf_cb, 0, sizeof(perf_cb));
+	{
+		unsigned audio_latency = 64;
+		environ_cb(RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY, &audio_latency);
+	}
+	{
+		struct retro_audio_buffer_status_callback audio_buf_cb = { audio_buffer_status_cb };
+		if (!environ_cb(RETRO_ENVIRONMENT_SET_AUDIO_BUFFER_STATUS_CALLBACK, &audio_buf_cb))
+			memset(&audio_buf_cb, 0, sizeof(audio_buf_cb));
+	}
+
 	static const struct retro_controller_description port_controllers[] = {
-		{ "Joypad", RETRO_DEVICE_JOYPAD },
+		{ "RetroPad", RETRO_DEVICE_JOYPAD },
+		{ "CD32 Pad", RETRO_DEVICE_AMIGA_CD32PAD },
+		{ "Joystick", RETRO_DEVICE_AMIGA_JOYSTICK },
 		{ "Mouse", RETRO_DEVICE_MOUSE },
 		{ "None", RETRO_DEVICE_NONE }
 	};
 	static const struct retro_controller_info controller_info[] = {
-		{ port_controllers, 3 },
-		{ port_controllers, 3 },
+		{ port_controllers, 5 },
+		{ port_controllers, 5 },
 		{ nullptr, 0 }
 	};
 	environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)controller_info);
@@ -2956,7 +3264,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			(info_ext->file_in_archive || !info_ext->full_path || !*info_ext->full_path)) {
 			const std::string base = info_ext->name ? info_ext->name : "whdload";
 			const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
-			const std::string out_file = "whdload_" + sanitize_filename(base) + "." + (info_ext->ext ? info_ext->ext : "lha");
+			std::string safe_name = sanitize_filename(base);
+			if (safe_name.length() > 200) safe_name.resize(200);
+			const std::string out_file = "whdload_" + safe_name + "." + (info_ext->ext ? info_ext->ext : "lha");
 			const std::string out_path = path_join(out_dir, out_file);
 			if (vfs_write_file(out_path.c_str(), info_ext->data, info_ext->size)) {
 				whd_path = out_path;
@@ -2970,7 +3280,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			if (vfs_read_all(vfs_path.c_str(), data)) {
 				const std::string base = info_ext->name ? info_ext->name : path_basename(info_ext->archive_file);
 				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
-				const std::string out_file = "whdload_" + sanitize_filename(base) + "." + ext;
+				std::string safe_name = sanitize_filename(base);
+				if (safe_name.length() > 200) safe_name.resize(200);
+				const std::string out_file = "whdload_" + safe_name + "." + ext;
 				const std::string out_path = path_join(out_dir, out_file);
 				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
 					whd_path = out_path;
@@ -2986,7 +3298,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			if (vfs_read_all(whd_path.c_str(), data)) {
 				const std::string base = path_basename(whd_path);
 				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
-				const std::string out_file = "whdload_" + sanitize_filename(base);
+				std::string safe_name = sanitize_filename(base);
+				if (safe_name.length() > 200) safe_name.resize(200);
+				const std::string out_file = "whdload_" + safe_name;
 				const std::string out_path = path_join(out_dir, out_file);
 				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
 					whd_path = out_path;
@@ -3129,7 +3443,16 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 size_t retro_serialize_size(void)
 {
-	return currprefs.chipmem.size + currprefs.bogomem.size + currprefs.fastmem[0].size + currprefs.z3fastmem[0].size + 2 * 1024 * 1024;
+	size_t total = currprefs.chipmem.size + currprefs.bogomem.size;
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		total += currprefs.fastmem[i].size;
+		total += currprefs.z3fastmem[i].size;
+	}
+	total += currprefs.z3chipmem.size;
+	total += currprefs.mbresmem_low.size;
+	total += currprefs.mbresmem_high.size;
+	total += 8 * 1024 * 1024;
+	return total;
 }
 
 bool retro_serialize(void *data, size_t size)
@@ -3165,7 +3488,6 @@ bool retro_unserialize(const void *data, size_t size)
 	if (!f) return false;
 
 	restore_state_file(f);
-	zfile_fclose(f);
 	return true;
 }
 
