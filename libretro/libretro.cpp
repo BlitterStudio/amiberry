@@ -484,13 +484,6 @@ static void set_fastforward_override(bool enabled)
 	ff_override_active = enabled;
 }
 
-static float amiga_aspect_ratio(int width, int height)
-{
-	(void)width;
-	(void)height;
-	return currprefs.ntscmode ? (4.0f / 3.0f) : (4.0f / 3.0f);
-}
-
 static void update_geometry()
 {
 	if (!environ_cb)
@@ -509,7 +502,7 @@ static void update_geometry()
 	geom.base_height = height;
 	geom.max_width = std::max(width, MAX_GFX_WIDTH);
 	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
-	geom.aspect_ratio = amiga_aspect_ratio(width, height);
+	geom.aspect_ratio = 4.0f / 3.0f;
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
 	last_geometry_height = height;
@@ -1326,19 +1319,24 @@ static cd_content_type detect_cd_content_from_cue(const char* cue_path)
 	int sector_size = 2048;
 
 	while (fgets(line, sizeof(line), f)) {
-		const char* fp = strstr(line, "FILE");
-		if (!fp) fp = strstr(line, "File");
-		if (!fp) fp = strstr(line, "file");
+		// Case-insensitive keyword matching: work on a lowercase copy
+		// but extract quoted filenames from the original line.
+		char lower[2048];
+		for (int k = 0; k < 2047 && line[k]; k++)
+			lower[k] = static_cast<char>(tolower(static_cast<unsigned char>(line[k])));
+		lower[strlen(line) < 2048 ? strlen(line) : 2047] = '\0';
+		const char* fp = strstr(lower, "file");
 		if (fp) {
-			const char* q1 = strchr(fp, '"');
+			// Map position back to original line for quoted filename extraction
+			const char* orig_fp = line + (fp - lower);
+			const char* q1 = strchr(orig_fp, '"');
 			if (q1) {
 				const char* q2 = strchr(q1 + 1, '"');
 				if (q2)
 					bin_file.assign(q1 + 1, q2);
 			}
 		}
-		if (strstr(line, "MODE1/2352") || strstr(line, "MODE2/2352")
-			|| strstr(line, "mode1/2352") || strstr(line, "mode2/2352"))
+		if (strstr(lower, "mode1/2352") || strstr(lower, "mode2/2352"))
 			sector_size = 2352;
 	}
 	fclose(f);
@@ -2170,10 +2168,11 @@ static void apply_port_device(struct uae_prefs* prefs, unsigned port, unsigned d
 {
 	const TCHAR* name = _T("none");
 	int mode = -1;
-	if (device == RETRO_DEVICE_MOUSE) {
+	const unsigned base_device = device & RETRO_DEVICE_MASK;
+	if (base_device == RETRO_DEVICE_MOUSE) {
 		name = _T("mouse");
 		mode = JSEM_MODE_MOUSE;
-	} else if (device == RETRO_DEVICE_JOYPAD || device == RETRO_DEVICE_ANALOG) {
+	} else if (base_device == RETRO_DEVICE_JOYPAD || base_device == RETRO_DEVICE_ANALOG) {
 		if (joy_index < 0 || joy_index > 3)
 			joy_index = static_cast<int>(port);
 		TCHAR joy_name[8];
