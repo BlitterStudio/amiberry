@@ -134,162 +134,11 @@ static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
 // %%% BRIAN KING WAS HERE %%%
 extern bool canbang;
 
-#ifdef JIT_DEBUG_VISUAL
-// Runtime diagnostic for visual corruption debugging.
-// Enable by adding #define JIT_DEBUG_VISUAL in sysconfig.h.
-// Verifies JIT direct memory path matches bank-based reads.
-
-static int jit_diag_block_count = 0;
-static bool jit_diag_verified_memstart = false;
-static int jit_diag_specmem_mismatch_count = 0;
-
-// Called once from compile_block to verify natmem_offset + memory mapping
-static void jit_diag_verify_natmem(void)
-{
-	if (!jit_diag_verified_memstart) {
-		jit_diag_verified_memstart = true;
-		write_log("JIT_DIAG: === JIT Visual Corruption Diagnostic ===\n");
-		write_log("JIT_DIAG: natmem_offset = %p, canbang = %d\n",
-			natmem_offset, (int)canbang);
-		write_log("JIT_DIAG: COMP_DEBUG = %d\n", COMP_DEBUG);
-		write_log("JIT_DIAG: special_mem_default = %d (0=direct, 7=indirect)\n",
-			special_mem_default);
-		write_log("JIT_DIAG: comptrustbyte=%d comptrustword=%d comptrustlong=%d\n",
-			currprefs.comptrustbyte, currprefs.comptrustword, currprefs.comptrustlong);
-		write_log("JIT_DIAG: address_space_24 = %d\n", currprefs.address_space_24);
-
-		if (!natmem_offset) {
-			write_log("JIT_DIAG: *** natmem_offset is NULL!\n");
-			return;
-		}
-
-		// Verify ROM via direct path vs bank path
-		// Kickstart ROM is at 0xF80000-0xFFFFFF (512KB)
-		uae_u8 *rom_native = natmem_offset + 0xF80000;
-		uae_u16 rom_id_direct = (rom_native[0] << 8) | rom_native[1];
-		uae_u16 rom_id_bank = get_word(0xF80000);
-		write_log("JIT_DIAG: ROM[F80000] direct=0x%04x bank=0x%04x %s\n",
-			rom_id_direct, rom_id_bank,
-			(rom_id_direct == rom_id_bank) ? "OK" : "*** MISMATCH ***");
-
-		// ROM version at offset 12-13 (version), 14-15 (revision)
-		uae_u16 rom_ver_d = (rom_native[12] << 8) | rom_native[13];
-		uae_u16 rom_rev_d = (rom_native[14] << 8) | rom_native[15];
-		uae_u16 rom_ver_b = get_word(0xF8000C);
-		uae_u16 rom_rev_b = get_word(0xF8000E);
-		write_log("JIT_DIAG: ROM version direct=%d.%d bank=%d.%d\n",
-			rom_ver_d, rom_rev_d, rom_ver_b, rom_rev_b);
-
-		// Dump first 32 bytes of ROM via both paths
-		write_log("JIT_DIAG: ROM first 32 bytes (direct): ");
-		for (int i = 0; i < 32; i++)
-			write_log("%02x ", rom_native[i]);
-		write_log("\n");
-
-		write_log("JIT_DIAG: ROM first 32 bytes (bank):   ");
-		for (int i = 0; i < 32; i++)
-			write_log("%02x ", get_byte(0xF80000 + i));
-		write_log("\n");
-
-		// Verify Chip RAM mapping
-		uae_u8 *chip_native = natmem_offset + 0x000000;
-		write_log("JIT_DIAG: ChipRAM[000000] native ptr = %p\n", chip_native);
-
-		// Check a few addresses in Chip RAM
-		for (uae_u32 addr = 0; addr < 0x20; addr += 4) {
-			uae_u32 val_direct = ((uae_u32)chip_native[addr] << 24) |
-				((uae_u32)chip_native[addr+1] << 16) |
-				((uae_u32)chip_native[addr+2] << 8) |
-				chip_native[addr+3];
-			uae_u32 val_bank = get_long(addr);
-			if (val_direct != val_bank) {
-				write_log("JIT_DIAG: ChipRAM[%06x] direct=0x%08x bank=0x%08x *** MISMATCH ***\n",
-					addr, val_direct, val_bank);
-			}
-		}
-
-		// Check kickmem_bank jit flags
-		extern addrbank kickmem_bank;
-		write_log("JIT_DIAG: kickmem_bank jit_read_flag=%d jit_write_flag=%d\n",
-			kickmem_bank.jit_read_flag, kickmem_bank.jit_write_flag);
-		extern addrbank chipmem_bank;
-		write_log("JIT_DIAG: chipmem_bank jit_read_flag=%d jit_write_flag=%d\n",
-			chipmem_bank.jit_read_flag, chipmem_bank.jit_write_flag);
-
-		write_log("JIT_DIAG: === End Initial Verification ===\n");
-	}
-}
-
-// Called from compile_block to log block info
-static void jit_diag_log_block(cpu_history* pc_hist, int blocklen, uae_u32 start_pc_val)
-{
-	jit_diag_block_count++;
-
-	// Log first 20 blocks in detail
-	if (jit_diag_block_count <= 20) {
-		write_log("JIT_DIAG: Block #%d PC=0x%08x len=%d\n",
-			jit_diag_block_count, start_pc_val, blocklen);
-		for (int i = 0; i < blocklen && i < 8; i++) {
-			uae_u16 op = *(pc_hist[i].location);
-			// Byte-swap to get M68k opcode (same as DO_GET_OPCODE but available before its #define)
-			uae_u16 swapped = do_get_mem_word(pc_hist[i].location);
-			write_log("JIT_DIAG:   [%d] rawop=0x%04x swapped=0x%04x specmem=%d\n",
-				i, op, swapped, pc_hist[i].specmem);
-		}
-	}
-	// Then log every 5000th block
-	else if ((jit_diag_block_count % 5000) == 0) {
-		write_log("JIT_DIAG: Block #%d PC=0x%08x len=%d specmem[0]=%d\n",
-			jit_diag_block_count, start_pc_val, blocklen,
-			pc_hist[0].specmem);
-	}
-}
-
-// Called from inside compile_block's compilation loop to log compile decisions
-static void jit_diag_log_compile_decision(int block_num, int insn_idx, uae_u32 opcode,
-	int failure, int special_mem_val, int needed_flags_val, int optlev_val)
-{
-	// Only log first 20 blocks
-	if (block_num > 20)
-		return;
-	const char *decision = failure ? "INTERP" : "JIT";
-	write_log("JIT_DIAG:   compile[%d] op=0x%04x -> %s specmem=%d nflags=0x%02x optlev=%d\n",
-		insn_idx, opcode, decision, special_mem_val, needed_flags_val, optlev_val);
-}
-
-// Called from execute_normal to verify specmem consistency
-// Checks that the bank-based jit_read/write flags match what specmem recorded
-void jit_diag_verify_specmem(uae_u32 pc, uae_u8 recorded_specmem)
-{
-	// Only check first 500 instructions and then every 10000th
-	static int check_count = 0;
-	check_count++;
-	if (check_count > 500 && (check_count % 10000) != 0)
-		return;
-
-	// Verify: if specmem says "no special mem" (0), the PC should be in
-	// a bank with jit_read_flag=0 (i.e., directly accessible memory)
-	addrbank *bank = &get_mem_bank(pc);
-	int expected_read_flag = bank->jit_read_flag;
-
-	// The recorded specmem includes S_READ | S_WRITE | S_N_ADDR accumulated
-	// from ALL memory accesses in the instruction. So if specmem has S_READ
-	// but the PC bank doesn't set it, that's from data accesses (not instruction fetch).
-	// We just log suspicious cases.
-	if (recorded_specmem == 0 && expected_read_flag != 0) {
-		jit_diag_specmem_mismatch_count++;
-		if (jit_diag_specmem_mismatch_count <= 10) {
-			write_log("JIT_DIAG: specmem=0 but PC bank has jit_read_flag=%d at PC=0x%08x (bank=%s)\n",
-				expected_read_flag, pc, bank->name ? bank->name : "?");
-		}
-	}
-}
-#endif // JIT_DEBUG_VISUAL
-
 #include "../compemu_prefs.cpp"
 
 #define uint32 uae_u32
 #define uint8 uae_u8
+
 
 static inline int distrust_check(int value)
 {
@@ -382,28 +231,6 @@ static compop_func *compfunctbl[65536];
 static compop_func *nfcompfunctbl[65536];
 #ifdef NOFLAGS_SUPPORT_GENCOMP
 static cpuop_func* nfcpufunctbl[65536];
-#endif
-
-#ifdef JIT_DEBUG_VISUAL
-static bool jit_diag_tables_logged = false;
-static void jit_diag_log_tables(void)
-{
-	if (jit_diag_tables_logged)
-		return;
-	jit_diag_tables_logged = true;
-	int comp_count = 0, nfcomp_count = 0, both_count = 0, neither_count = 0;
-	for (int idx = 0; idx < 65536; idx++) {
-		bool has_c = (compfunctbl[idx] != NULL);
-		bool has_nf = (nfcompfunctbl[idx] != NULL);
-		if (has_c && has_nf) both_count++;
-		else if (has_c) comp_count++;
-		else if (has_nf) nfcomp_count++;
-		else neither_count++;
-	}
-	write_log("JIT_DIAG: Compiler table: comp_only=%d nfcomp_only=%d both=%d neither=%d\n",
-		comp_count, nfcomp_count, both_count, neither_count);
-	write_log("JIT_DIAG: compnf=%d\n", currprefs.compnf);
-}
 #endif
 
 uae_u8* comp_pc_p;
@@ -1786,6 +1613,14 @@ static inline void disassociate(int r)
 static inline void set_const(int r, uintptr val)
 {
     disassociate(r);
+#ifdef CPU_AARCH64
+    // On ARM64, guest registers (Dn, An, flags) are 32-bit values.
+    // Only PC_P holds a 64-bit host pointer.  Mask val to 32-bit for
+    // all other registers to prevent 64-bit arithmetic leaking into
+    // constant-propagation paths (sub_l_ri underflow, etc.).
+    if (r != PC_P)
+        val = (uae_u32)val;
+#endif
     live.state[r].val = val;
     set_status(r, ISCONST);
 }
@@ -2183,245 +2018,6 @@ static inline int isinrom(uintptr addr)
 #endif
 }
 
-static inline bool isarm64unstableblock(uae_u32 pc)
-{
-#if defined(CPU_AARCH64)
-    /* Fixed safety guard for the known Lightwave startup hotspot that loops
-     * under ARM64 JIT (observed at/around PC=0x4003dfbe).  This guard is
-     * always active — the optional hotspot guard toggle does NOT bypass it. */
-    if (pc >= 0x4003df00 && pc <= 0x4003e1ff)
-        return true;
-
-    /* Guard for KS 3.1 boot-time code in RAMSEY memory where D0/D2
-     * corruption was confirmed.  Two corruption sites:
-     *   1. PC=0x0803ae96 — checksum loop
-     *   2. PC=0x0803b094 — tight loop where D0/D2 become garbage when
-     *      blocks get promoted from optlev=0 to full JIT compilation. */
-    if (pc >= 0x0803ae00 && pc <= 0x0803b100)
-        return true;
-
-    return false;
-#else
-    (void)pc;
-    return false;
-#endif
-}
-
-#if defined(CPU_AARCH64)
-static constexpr uae_u32 ARM64_UNSTABLE_KEY_SHIFT = 9;
-static constexpr uae_u32 ARM64_UNSTABLE_KEY_MASK = ~((1u << ARM64_UNSTABLE_KEY_SHIFT) - 1u);
-static constexpr uae_u32 ARM64_UNSTABLE_BITMAP_BYTES = 1u << (32 - ARM64_UNSTABLE_KEY_SHIFT - 3);
-static uae_u8 arm64_dynamic_unstable_bitmap[ARM64_UNSTABLE_BITMAP_BYTES];
-static uae_u32 arm64_dynamic_unstable_count = 0;
-static uae_u32 arm64_dynamic_window_learn_count = 0;
-static uae_u32 arm64_guard_compile_total = 0;
-static uae_u32 arm64_guard_compile_interp = 0;
-static uae_u32 arm64_guard_compile_interp_rom = 0;
-static uae_u32 arm64_guard_compile_interp_compat = 0;
-static uae_u32 arm64_guard_compile_interp_static = 0;
-static uae_u32 arm64_guard_compile_interp_dynamic = 0;
-static constexpr uae_u32 ARM64_GUARD_STATS_SNAPSHOT_INTERVAL = 1024;
-static uae_u32 arm64_guard_compile_snapshot_target = ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
-
-static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
-{
-    return pc & ARM64_UNSTABLE_KEY_MASK;
-}
-
-static inline bool arm64_guard_verbose_logging(void)
-{
-    static bool initialized = false;
-    static bool enabled = false;
-    if (!initialized) {
-        initialized = true;
-        const char* env = getenv("AMIBERRY_ARM64_GUARD_VERBOSE");
-        enabled = env && env[0] != '\0' && env[0] != '0';
-        if (enabled) {
-            write_log("JIT: ARM64 verbose guard logging enabled by AMIBERRY_ARM64_GUARD_VERBOSE\n");
-        }
-    }
-    return enabled;
-}
-
-static inline bool arm64_guard_stats_enabled(void)
-{
-    static bool initialized = false;
-    static bool enabled = false;
-    if (!initialized) {
-        initialized = true;
-        const char* env = getenv("AMIBERRY_ARM64_GUARD_STATS");
-        enabled = env && env[0] != '\0' && env[0] != '0';
-        if (enabled) {
-            write_log("JIT: ARM64 guard stats enabled by AMIBERRY_ARM64_GUARD_STATS\n");
-        }
-    }
-    return enabled;
-}
-
-static inline void arm64_guard_stats_log(const char* reason);
-
-static inline void arm64_guard_stats_note_compile(bool interp_only, bool rom_only, bool compat_only, bool static_hotspot_only, bool dynamic_hotspot_only)
-{
-    if (!arm64_guard_stats_enabled()) {
-        return;
-    }
-    arm64_guard_compile_total++;
-    if (!interp_only) {
-        return;
-    }
-    arm64_guard_compile_interp++;
-    if (rom_only) {
-        arm64_guard_compile_interp_rom++;
-    }
-    if (compat_only) {
-        arm64_guard_compile_interp_compat++;
-    }
-    if (static_hotspot_only) {
-        arm64_guard_compile_interp_static++;
-    }
-    if (dynamic_hotspot_only) {
-        arm64_guard_compile_interp_dynamic++;
-    }
-    if (arm64_guard_compile_total >= arm64_guard_compile_snapshot_target) {
-        arm64_guard_stats_log("periodic");
-        while (arm64_guard_compile_total >= arm64_guard_compile_snapshot_target) {
-            arm64_guard_compile_snapshot_target += ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
-        }
-    }
-}
-
-static inline void arm64_guard_stats_log(const char* reason)
-{
-    if (!arm64_guard_stats_enabled()) {
-        return;
-    }
-    if (arm64_guard_compile_total == 0 && arm64_dynamic_unstable_count == 0 && arm64_dynamic_window_learn_count == 0) {
-        return;
-    }
-    write_log("JIT: ARM64 guard stats (%s): compile=%u interp=%u rom=%u compat=%u static=%u dynamic=%u learned_keys=%u learned_windows=%u\n",
-        reason,
-        arm64_guard_compile_total,
-        arm64_guard_compile_interp,
-        arm64_guard_compile_interp_rom,
-        arm64_guard_compile_interp_compat,
-        arm64_guard_compile_interp_static,
-        arm64_guard_compile_interp_dynamic,
-        arm64_dynamic_unstable_count,
-        arm64_dynamic_window_learn_count);
-}
-
-static inline void arm64_guard_stats_reset(void)
-{
-    arm64_dynamic_window_learn_count = 0;
-    arm64_guard_compile_total = 0;
-    arm64_guard_compile_interp = 0;
-    arm64_guard_compile_interp_rom = 0;
-    arm64_guard_compile_interp_compat = 0;
-    arm64_guard_compile_interp_static = 0;
-    arm64_guard_compile_interp_dynamic = 0;
-    arm64_guard_compile_snapshot_target = ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
-}
-
-static inline bool arm64_is_dynamic_unstable_key(uae_u32 key)
-{
-    if (!key)
-        return false;
-    const uae_u32 idx = key >> ARM64_UNSTABLE_KEY_SHIFT;
-    return (arm64_dynamic_unstable_bitmap[idx >> 3] & (1u << (idx & 7))) != 0;
-}
-
-static bool arm64_add_dynamic_unstable_key(uae_u32 key, bool log_key)
-{
-    if (!key)
-        return false;
-    const uae_u32 idx = key >> ARM64_UNSTABLE_KEY_SHIFT;
-    uae_u8* const bits = &arm64_dynamic_unstable_bitmap[idx >> 3];
-    const uae_u8 mask = static_cast<uae_u8>(1u << (idx & 7));
-    if ((*bits & mask) != 0) {
-        return false;
-    }
-    *bits |= mask;
-    arm64_dynamic_unstable_count++;
-    if (log_key && arm64_guard_verbose_logging())
-        write_log("JIT: ARM64 dynamic guard learned unstable block PC=%08x\n", key);
-    return true;
-}
-
-static inline bool isarm64dynamicunstableblock(uae_u32 pc)
-{
-    return arm64_is_dynamic_unstable_key(arm64_unstable_block_key(pc));
-}
-
-void jit_mark_arm64_unstable_pc(uae_u32 pc)
-{
-    const uae_u32 key = arm64_unstable_block_key(pc);
-    arm64_add_dynamic_unstable_key(key, true);
-}
-
-void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after)
-{
-    if (!pc)
-        return;
-    const uae_u32 start_pc = pc > before ? pc - before : 0;
-    const uae_u32 first = arm64_unstable_block_key(start_pc);
-    const uae_u32 last = arm64_unstable_block_key(pc + after);
-    int learned = 0;
-    for (uae_u32 key = first; key <= last; key += 0x200u) {
-        if (arm64_add_dynamic_unstable_key(key, false))
-            ++learned;
-        if (key > 0xfffffdffu)
-            break;
-    }
-    if (learned > 0 && arm64_guard_verbose_logging()) {
-        write_log("JIT: ARM64 dynamic guard learned unstable window PC=%08x range=%08x-%08x (%d keys)\n",
-            pc, first, last, learned);
-    }
-    if (learned > 0) {
-        arm64_dynamic_window_learn_count++;
-    }
-}
-#else
-static inline bool isarm64dynamicunstableblock(uae_u32 pc)
-{
-    (void)pc;
-    return false;
-}
-void jit_mark_arm64_unstable_pc(uae_u32 pc)
-{
-    (void)pc;
-}
-void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after)
-{
-    (void)pc;
-    (void)before;
-    (void)after;
-}
-#endif
-
-static inline bool arm64_hotspot_guard_enabled(void)
-{
-#if defined(CPU_AARCH64)
-    static bool initialized = false;
-    static bool enabled = false;
-    if (!initialized) {
-        initialized = true;
-        const char* enable_env = getenv("AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD");
-        const char* disable_env = getenv("AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD");
-        if (enable_env && enable_env[0] != '\0' && enable_env[0] != '0') {
-            enabled = true;
-            write_log("JIT: ARM64 hotspot guard enabled by AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD\n");
-        }
-        if (disable_env && disable_env[0] != '\0' && disable_env[0] != '0') {
-            enabled = false;
-            write_log("JIT: ARM64 hotspot guard disabled by AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD\n");
-        }
-    }
-    return enabled;
-#else
-    return false;
-#endif
-}
-
 #if defined(UAE) || defined(FLIGHT_RECORDER)
 static void flush_all(void)
 {
@@ -2543,9 +2139,6 @@ void compiler_init(void)
 
 void compiler_exit(void)
 {
-#if defined(CPU_AARCH64)
-    arm64_guard_stats_log("exit");
-#endif
 
 #ifdef PROFILE_COMPILE_TIME
     emul_end_time = clock();
@@ -2675,6 +2268,7 @@ static void init_comp(void)
 
     set_status(FLAGTMP, INMEM);
     flags_carry_inverted = false;
+
 
     for (i = 0; i < VFREGS; i++) {
         if (i < 8) { /* First 8 registers map to 68k FPU registers */
@@ -3384,7 +2978,6 @@ static int called_check_checksum(blockinfo* bi)
 
 static void check_checksum(void)
 {
-
     blockinfo* bi = get_blockinfo_addr(regs.pc_p);
     uae_u32 cl = cacheline(regs.pc_p);
     blockinfo* bi2 = get_blockinfo(cl);
@@ -3584,16 +3177,11 @@ static void prepare_block(blockinfo* bi)
         bi->dep[i].next = NULL;
     }
     bi->status = BI_INVALID;
+    bi->needed_flags = FLAG_ALL;
 }
 
 void compemu_reset(void)
 {
-#if defined(CPU_AARCH64)
-    arm64_guard_stats_log("reset");
-    memset(arm64_dynamic_unstable_bitmap, 0, sizeof arm64_dynamic_unstable_bitmap);
-    arm64_dynamic_unstable_count = 0;
-    arm64_guard_stats_reset();
-#endif
     flush_icache = lazy_flush ? flush_icache_lazy : flush_icache_hard;
     set_cache_state(0);
 }
@@ -3847,12 +3435,6 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
 
 void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 {
-#ifdef JIT_DEBUG_VISUAL
-    jit_diag_verify_natmem();
-    jit_diag_log_tables();
-    jit_diag_log_block(pc_hist, blocklen, start_pc);
-#endif
-
     if (cache_enabled && compiled_code && currprefs.cpu_model >= 68020) {
 		jit_begin_write_window();
 #ifdef PROFILE_COMPILE_TIME
@@ -3885,46 +3467,8 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 
         optlev = bi->optlevel;
 #if defined(CPU_AARCH64)
-        const bool arm64_compat_interp_only = currprefs.cpu_compatible != 0;
-        const bool arm64_rom_interp_only = trace_in_rom;
-        const bool arm64_optional_hotspot_guard_enabled = arm64_hotspot_guard_enabled();
-        const bool arm64_static_hotspot_interp_only = isarm64unstableblock(start_pc);
-        const bool arm64_dynamic_hotspot_interp_only = isarm64dynamicunstableblock(start_pc);
-        const bool arm64_hotspot_interp_only = arm64_static_hotspot_interp_only || arm64_dynamic_hotspot_interp_only;
-        const bool arm64_interp_only = arm64_compat_interp_only || arm64_rom_interp_only || arm64_hotspot_interp_only;
-        arm64_guard_stats_note_compile(
-            arm64_interp_only,
-            arm64_rom_interp_only,
-            arm64_compat_interp_only,
-            arm64_static_hotspot_interp_only,
-            arm64_dynamic_hotspot_interp_only);
-        if (arm64_interp_only) {
-            static int arm64_rom_guard_logged = 0;
-            static int arm64_compat_guard_logged = 0;
-            static int arm64_hotspot_guard_logged = 0;
-            static int arm64_hotspot_guard_forced_logged = 0;
-            static int arm64_dynamic_guard_logged = 0;
-            if (arm64_rom_interp_only && !arm64_rom_guard_logged) {
-                write_log("JIT: ARM64 guard active, running ROM blocks without JIT\n");
-                arm64_guard_stats_log("startup");
-                arm64_rom_guard_logged = 1;
-            }
-            if (arm64_compat_interp_only && !arm64_compat_guard_logged) {
-                write_log("JIT: ARM64 guard active, cpu_compatible=true uses interpreter blocks\n");
-                arm64_compat_guard_logged = 1;
-            }
-            if (arm64_static_hotspot_interp_only && !arm64_hotspot_guard_logged) {
-                write_log("JIT: ARM64 guard active, running known unstable ARM64 block range without JIT\n");
-                arm64_hotspot_guard_logged = 1;
-            }
-            if (arm64_static_hotspot_interp_only && !arm64_optional_hotspot_guard_enabled && !arm64_hotspot_guard_forced_logged) {
-                write_log("JIT: ARM64 fixed safety guard still active for known-bad block range while optional hotspot guard is disabled\n");
-                arm64_hotspot_guard_forced_logged = 1;
-            }
-            if (arm64_dynamic_hotspot_interp_only && !arm64_dynamic_guard_logged) {
-                write_log("JIT: ARM64 dynamic guard active, running learned unstable block without JIT\n");
-                arm64_dynamic_guard_logged = 1;
-            }
+        /* When cpu_compatible is set, force blocks to interpreter mode */
+        if (currprefs.cpu_compatible) {
             optlev = 0;
         }
 #endif
@@ -3942,9 +3486,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         }
         if (bi->count == -1) {
 #if defined(CPU_AARCH64)
-            if (arm64_interp_only) {
-                /* Keep ROM/compat/known-hotspot blocks at interpreter level
-                 * to avoid unstable ARM64 codegen paths. */
+            if (currprefs.cpu_compatible) {
                 optlev = 0;
             } else
 #endif
@@ -3957,13 +3499,32 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         }
         current_block_pc_p = JITPTR pc_hist[0].location;
 
+        /* Save successor needed_flags BEFORE remove_deps clears them.
+           On recompilation, deps still point to the previous successor blocks.
+           Use their needed_flags to initialize liveflags[blocklen] more
+           precisely than the conservative FLAG_ALL. This allows the backward
+           liveflags analysis to eliminate more flag operations within the block.
+           First compilation or after invalidation: deps are NULL, falls back to FLAG_ALL.
+           Only use needed_flags from blocks that have actually been compiled
+           (status != BI_INVALID), since uncompiled blocks have uninitialized flags. */
+        uae_u8 successor_flags = FLAG_ALL;
+        if (bi->dep[0].target && bi->dep[0].target->status != BI_INVALID) {
+            successor_flags = bi->dep[0].target->needed_flags;
+            if (bi->dep[1].target) {
+                if (bi->dep[1].target->status != BI_INVALID)
+                    successor_flags |= bi->dep[1].target->needed_flags;
+                else
+                    successor_flags = FLAG_ALL; /* dep[1] uncompiled, be conservative */
+            }
+        }
+
         remove_deps(bi); /* We are about to create new code */
         bi->optlevel = optlev;
         bi->pc_p = (uae_u8*)pc_hist[0].location;
         free_checksum_info_chain(bi->csi);
         bi->csi = NULL;
 
-        liveflags[blocklen] = FLAG_ALL; /* All flags needed afterwards */
+        liveflags[blocklen] = successor_flags; /* Use successor info if available, else FLAG_ALL */
         i = blocklen;
         while (i--) {
             uae_u16* currpcp = pc_hist[i].location;
@@ -4044,6 +3605,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     comptbl = compfunctbl;
                 }
 
+
                 failure = 1; // gb-- defaults to failure state
                 if (comptbl[opcode] && optlev > 1) {
                     failure = 0;
@@ -4062,10 +3624,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 }
 
 
-#ifdef JIT_DEBUG_VISUAL
-                jit_diag_log_compile_decision(jit_diag_block_count, i, opcode,
-                    failure, special_mem, needed_flags, optlev);
-#endif
                 if (failure) {
                     if (was_comp) {
                         flush(1);
@@ -4098,14 +3656,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     may_raise_exception = false;
                 }
             }
-#if 0 /* Disabled: this inter-block flag optimization incorrectly
-         discards flags at block boundaries on ARM64, causing visual
-         corruption (black gadgets, garbled text) and crashes.
-         The single-instruction lookahead (`|| 1` forces recalculation)
-         is insufficient — if the next block's first instruction neither
-         uses nor sets flags, the second instruction's flag needs are
-         missed. This optimization does not exist in Amiberry-Lite's
-         working ARM64 JIT. */
             if (next_pc_p && taken_pc_p &&
                 was_comp && taken_pc_p == current_block_pc_p)
             {
@@ -4113,7 +3663,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 blockinfo* bi2 = get_blockinfo_addr_new((void*)taken_pc_p);
                 uae_u8 x = bi1->needed_flags;
 
-                if (x == 0xff || 1) {  /* To be on the safe side */
+                if (x == 0xff) {  /* Block not yet compiled — use conservative single-op lookahead */
                     uae_u16* next = (uae_u16*)next_pc_p;
                     uae_u32 op = DO_GET_OPCODE(next);
 
@@ -4121,15 +3671,19 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     x &= (~prop[op].set_flags);
                     x |= prop[op].use_flags;
                 }
+                /* else: bi1->needed_flags already has the full block's requirements */
 
                 x |= bi2->needed_flags;
                 if (!(x & FLAG_CZNV)) {
-                    /* We can forget about flags */
+                    /* Save flags to memory FIRST, so the interpreter slow path
+                       (countdown < 0 → popall_do_nothing) has correct regflags.nzcv.
+                       Then mark flags as unimportant so successor blocks benefit
+                       from not needing to restore them. flush(1) will see
+                       flags_on_stack==VALID and skip the redundant save. */
+                    flush_flags();
                     dont_care_flags();
-                    extra_len += 2; /* The next instruction now is part of this block */
                 }
             }
-#endif
             log_flush();
 
             if (next_pc_p) { /* A branch was registered */
@@ -4240,6 +3794,8 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         flush(1);
 
         compemu_raw_jmp((uintptr)bi->direct_handler);
+
+
 
         flush_cpu_icache((void*)current_block_start_target, (void*)target);
         current_compile_p = get_target();

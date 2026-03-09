@@ -489,9 +489,13 @@ MIDFUNC(2,jff_ADDX_b,(RW1 d, RR1 s))
 	INIT_REGS_b(d, s);
 	int x = rmw(FLAGX);
 
+	// REG_WORK1 must be all-ones: bits 0-23 are padding for the byte BFI+ADCS
+	// carry chain, and also serves as the all-ones value for sticky-Z CSEL.
 	MOVN_xi(REG_WORK1, 0);
-	MOVN_xish(REG_WORK2, 0x4000, 16); // inverse Z flag
-	CSEL_xxxc(REG_WORK2, REG_WORK2, REG_WORK1, NATIVE_CC_NE);
+	if (needed_flags & FLAG_Z) {
+		MOVN_xish(REG_WORK2, 0x4000, 16); // inverse Z flag
+		CSEL_xxxc(REG_WORK2, REG_WORK2, REG_WORK1, NATIVE_CC_NE);
+	}
 
 	// Restore X to carry (don't care about other flags)
 	SUBS_wwi(REG_WORK3, x, 1);
@@ -502,7 +506,15 @@ MIDFUNC(2,jff_ADDX_b,(RW1 d, RR1 s))
 	BFXIL_xxii(d, REG_WORK1, 24, 8);
 
 	MRS_NZCV_x(REG_WORK1);
-	AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
+
+	if (needed_flags & FLAG_Z) {
+		// Fix Z flag: ADCS Z is always 0 due to all-ones padding in lower bits.
+		UBFX_wwii(REG_WORK3, d, 0, 8);
+		CMP_wi(REG_WORK3, 0);
+		SET_xxZflag(REG_WORK3, REG_WORK1);
+		CSEL_xxxc(REG_WORK1, REG_WORK3, REG_WORK1, NATIVE_CC_EQ);
+		AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2); // apply ADDX sticky-Z
+	}
 	if (needed_flags & FLAG_X)
 		UBFX_xxii(x, REG_WORK1, 29, 1); // Duplicate carry
 	MSR_NZCV_x(REG_WORK1);
@@ -518,9 +530,13 @@ MIDFUNC(2,jff_ADDX_w,(RW2 d, RR2 s))
 	INIT_REGS_w(d, s);
 	int x = rmw(FLAGX);
 
+	// REG_WORK1 must be all-ones: bits 0-15 are padding for the word BFI+ADCS
+	// carry chain, and also serves as the all-ones value for sticky-Z CSEL.
 	MOVN_xi(REG_WORK1, 0);
-	MOVN_xish(REG_WORK2, 0x4000, 16); // inverse Z flag
-	CSEL_xxxc(REG_WORK2, REG_WORK2, REG_WORK1, NATIVE_CC_NE);
+	if (needed_flags & FLAG_Z) {
+		MOVN_xish(REG_WORK2, 0x4000, 16); // inverse Z flag
+		CSEL_xxxc(REG_WORK2, REG_WORK2, REG_WORK1, NATIVE_CC_NE);
+	}
 
 	// Restore X to carry (don't care about other flags)
 	SUBS_wwi(REG_WORK3, x, 1);
@@ -531,7 +547,15 @@ MIDFUNC(2,jff_ADDX_w,(RW2 d, RR2 s))
 	BFXIL_xxii(d, REG_WORK1, 16, 16);
 
 	MRS_NZCV_x(REG_WORK1);
-	AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
+
+	if (needed_flags & FLAG_Z) {
+		// Fix Z flag: ADCS Z is always 0 due to all-ones padding in lower bits.
+		UBFX_wwii(REG_WORK3, d, 0, 16);
+		CMP_wi(REG_WORK3, 0);
+		SET_xxZflag(REG_WORK3, REG_WORK1);
+		CSEL_xxxc(REG_WORK1, REG_WORK3, REG_WORK1, NATIVE_CC_EQ);
+		AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2); // apply ADDX sticky-Z
+	}
 	if (needed_flags & FLAG_X)
 		UBFX_xxii(x, REG_WORK1, 29, 1); // Duplicate carry
 	MSR_NZCV_x(REG_WORK1);
@@ -547,9 +571,11 @@ MIDFUNC(2,jff_ADDX_l,(W4 d, RR4 s))
 	INIT_REGS_l(d, s);
 	int x = rmw(FLAGX);
 
-	MOVN_xi(REG_WORK1, 0);
-	MOVN_xish(REG_WORK2, 0x4000, 16); // inverse Z flag
-	CSEL_xxxc(REG_WORK2, REG_WORK2, REG_WORK1, NATIVE_CC_NE);
+	if (needed_flags & FLAG_Z) {
+		MOVN_xi(REG_WORK1, 0);
+		MOVN_xish(REG_WORK2, 0x4000, 16); // inverse Z flag
+		CSEL_xxxc(REG_WORK2, REG_WORK2, REG_WORK1, NATIVE_CC_NE);
+	}
 
 	// Restore X to carry (don't care about other flags)
 	SUBS_wwi(REG_WORK3, x, 1);
@@ -557,7 +583,8 @@ MIDFUNC(2,jff_ADDX_l,(W4 d, RR4 s))
 	ADCS_www(d, d, s);
 
 	MRS_NZCV_x(REG_WORK1);
-	AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
+	if (needed_flags & FLAG_Z)
+		AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	if (needed_flags & FLAG_X)
 		UBFX_xxii(x, REG_WORK1, 29, 1); // Duplicate carry
 	MSR_NZCV_x(REG_WORK1);
@@ -4915,8 +4942,8 @@ MIDFUNC(2,jnf_MOVE16,(RR4 d, RR4 s))
 	CLEAR_LOW4_xx(REG_WORK3, s);
 	CLEAR_LOW4_xx(REG_WORK4, d);
 
-	ADD_www(REG_WORK3, REG_WORK3, R_MEMSTART);
-	ADD_www(REG_WORK4, REG_WORK4, R_MEMSTART);
+	ADD_xxx(REG_WORK3, REG_WORK3, R_MEMSTART);
+	ADD_xxx(REG_WORK4, REG_WORK4, R_MEMSTART);
 
 	LDP_xxXi(REG_WORK1, REG_WORK2, REG_WORK3, 0);
 	STP_xxXi(REG_WORK1, REG_WORK2, REG_WORK4, 0);
@@ -7490,9 +7517,11 @@ MIDFUNC(2,jff_SUBX_b,(RW1 d, RR1 s))
 	INIT_REGS_b(d, s);
 	int x = rmw(FLAGX);
 
-	MOVN_xi(REG_WORK2, 0);
-	MOVN_xish(REG_WORK1, 0x4000, 16); // inverse Z flag
-	CSEL_xxxc(REG_WORK2, REG_WORK1, REG_WORK2, NATIVE_CC_NE);
+	if (needed_flags & FLAG_Z) {
+		MOVN_xi(REG_WORK2, 0);
+		MOVN_xish(REG_WORK1, 0x4000, 16); // inverse Z flag
+		CSEL_xxxc(REG_WORK2, REG_WORK1, REG_WORK2, NATIVE_CC_NE);
+	}
 
 	// Restore inverted X to carry (don't care about other flags)
 	NEGS_ww(REG_WORK1, x);
@@ -7504,7 +7533,15 @@ MIDFUNC(2,jff_SUBX_b,(RW1 d, RR1 s))
 
 	MRS_NZCV_x(REG_WORK1);
 	EOR_xxCflag(REG_WORK1, REG_WORK1);
-	AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
+
+	if (needed_flags & FLAG_Z) {
+		// Fix Z flag: SBCS Z may be wrong when borrow propagates through lower zero bits.
+		UBFX_wwii(REG_WORK3, d, 0, 8);
+		CMP_wi(REG_WORK3, 0);
+		SET_xxZflag(REG_WORK3, REG_WORK1);
+		CSEL_xxxc(REG_WORK1, REG_WORK3, REG_WORK1, NATIVE_CC_EQ);
+		AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2); // apply SUBX sticky-Z
+	}
 	MSR_NZCV_x(REG_WORK1);
 	flags_carry_inverted = false;
 	if (needed_flags & FLAG_X)
@@ -7520,9 +7557,11 @@ MIDFUNC(2,jff_SUBX_w,(RW2 d, RR2 s))
 	INIT_REGS_w(d, s);
 	int x = rmw(FLAGX);
 
-	MOVN_xi(REG_WORK2, 0);
-	MOVN_xish(REG_WORK1, 0x4000, 16); // inverse Z flag
-	CSEL_xxxc(REG_WORK2, REG_WORK1, REG_WORK2, NATIVE_CC_NE);
+	if (needed_flags & FLAG_Z) {
+		MOVN_xi(REG_WORK2, 0);
+		MOVN_xish(REG_WORK1, 0x4000, 16); // inverse Z flag
+		CSEL_xxxc(REG_WORK2, REG_WORK1, REG_WORK2, NATIVE_CC_NE);
+	}
 
 	// Restore inverted X to carry (don't care about other flags)
 	NEGS_ww(REG_WORK1, x);
@@ -7534,7 +7573,15 @@ MIDFUNC(2,jff_SUBX_w,(RW2 d, RR2 s))
 
 	MRS_NZCV_x(REG_WORK1);
 	EOR_xxCflag(REG_WORK1, REG_WORK1);
-	AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
+
+	if (needed_flags & FLAG_Z) {
+		// Fix Z flag: SBCS Z may be wrong when borrow propagates through lower zero bits.
+		UBFX_wwii(REG_WORK3, d, 0, 16);
+		CMP_wi(REG_WORK3, 0);
+		SET_xxZflag(REG_WORK3, REG_WORK1);
+		CSEL_xxxc(REG_WORK1, REG_WORK3, REG_WORK1, NATIVE_CC_EQ);
+		AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2); // apply SUBX sticky-Z
+	}
 	MSR_NZCV_x(REG_WORK1);
 	flags_carry_inverted = false;
 	if (needed_flags & FLAG_X)
@@ -7550,9 +7597,11 @@ MIDFUNC(2,jff_SUBX_l,(RW4 d, RR4 s))
 	INIT_REGS_l(d, s);
 	int x = rmw(FLAGX);
 
-	MOVN_xi(REG_WORK2, 0);
-	MOVN_xish(REG_WORK1, 0x4000, 16); // inverse Z flag
-	CSEL_xxxc(REG_WORK2, REG_WORK1, REG_WORK2, NATIVE_CC_NE);
+	if (needed_flags & FLAG_Z) {
+		MOVN_xi(REG_WORK2, 0);
+		MOVN_xish(REG_WORK1, 0x4000, 16); // inverse Z flag
+		CSEL_xxxc(REG_WORK2, REG_WORK1, REG_WORK2, NATIVE_CC_NE);
+	}
 
 	// Restore inverted X to carry (don't care about other flags)
 	NEGS_ww(REG_WORK1, x);
@@ -7561,7 +7610,8 @@ MIDFUNC(2,jff_SUBX_l,(RW4 d, RR4 s))
 
 	MRS_NZCV_x(REG_WORK1);
 	EOR_xxCflag(REG_WORK1, REG_WORK1);
-	AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
+	if (needed_flags & FLAG_Z)
+		AND_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	MSR_NZCV_x(REG_WORK1);
 	flags_carry_inverted = false;
 	if (needed_flags & FLAG_X)

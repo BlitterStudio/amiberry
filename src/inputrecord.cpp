@@ -11,6 +11,7 @@
 #define ENABLE_DEBUGGER 0
 
 #define HEADERSIZE 16
+#define INPREC_MAGIC (((uae_u32)'U' << 24) | ('A' << 16) | ('E' << 8) | 0)
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -401,7 +402,7 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 		zfile_fread(inprec_buffer, inprec_size, 1, inprec_zf);
 		inprec_plastptr = inprec_buffer;
 		id = inprec_pu32();
-		if (id != 'UAE\0') {
+		if (id != INPREC_MAGIC) {
 			inprec_close(true);
 			return 0;
 		}
@@ -469,7 +470,7 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 	} else if (input_record) {
 		seed = uaesetrandseed(seed);
 		inprec_buffer = inprec_p = xmalloc(uae_u8, inprec_size);
-		inprec_ru32('UAE\0');
+		inprec_ru32(INPREC_MAGIC);
 		inprec_ru8(3);
 		inprec_ru8(UAEMAJOR);
 		inprec_ru8(UAEMINOR);

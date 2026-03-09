@@ -610,7 +610,7 @@ TCHAR* write_log_get_ts(void)
 	_sntprintf(p, 10, "%03d", milliseconds);
 	p += strlen(p);
 	if (vsync_counter != 0xffffffff)
-		_sntprintf(p, 50, " [%u %03d%s%03d/%03d]", vsync_counter, current_hpos_safe(), lof_store ? "-" : "=", vpos, linear_vpos);
+		_sntprintf(p, 50, " [%u %03d%s%03d/%03d]", vsync_counter, current_hpos_safe(), lof_store ? "-" : "=", vpos, linear_display_vpos);
 	strcat(p, ": ");
 	return out;
 }

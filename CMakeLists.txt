@@ -51,6 +51,8 @@ if(ANDROID)
     # Enabled features for Android
     set(USE_LIBMPEG2 OFF CACHE BOOL "Use LibMPEG2 for CD32 FMV support" FORCE)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
+    # Android 15+ (API 35) requires 16KB page size alignment for Play Store
+    add_link_options("-Wl,-z,max-page-size=16384")
 endif()
 
 if(WIN32)
@@ -81,7 +83,7 @@ if(MACOS_APP_STORE)
 endif()
 
 # Pre-release version suffix (project version is set in project() above)
-set(VERSION_PRE_RELEASE "28" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "29" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")

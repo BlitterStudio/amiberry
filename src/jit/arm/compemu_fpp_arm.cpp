@@ -406,14 +406,21 @@ void comp_fbcc_opp (uae_u32 opcode)
   if(cc == 0)
     return; /* jump never */
 
-	/* Note, "off" will sometimes be (unsigned) "negative", so the following
-         * uintptr can be > 0xffffffff, but the result will be correct due to
-         * wraparound when truncated to 32 bit in the call to mov_l_ri. */
-	mov_l_ri(S1, (uintptr)
-		(comp_pc_p + off - (m68k_pc_offset - start_68k_offset)));
+	/* ARM64 fix: split the branch target computation so that the
+	 * displacement and the host pointer addition are separate.
+	 * On 32-bit, mov_l_ri folds everything into a single value,
+	 * but on 64-bit, set_const masks non-PC_P registers to 32 bits,
+	 * truncating the host pointer.  Match the pattern used by the
+	 * integer Bcc handlers: load signed displacement first, then
+	 * add the 64-bit comp_pc_p via arm_ADD_l_ri. */
+	{
+		uae_s32 displacement = off - (uae_s32)(m68k_pc_offset - start_68k_offset);
+		mov_l_ri(S1, (uae_s32)displacement);
+		arm_ADD_l_ri(S1, (uintptr)comp_pc_p);
+	}
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
 
-	/* Now they are both constant. Might as well fold in m68k_pc_offset */
+	/* Now they are both constant. Fold in m68k_pc_offset */
 	arm_ADD_l_ri (S1, m68k_pc_offset);
 	arm_ADD_l_ri (PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;

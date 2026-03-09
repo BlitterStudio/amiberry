@@ -12,5 +12,10 @@
 #endif
 
 extern volatile int jit_exception_pending;
+#if defined(CPU_AARCH64)
+#include <setjmp.h>
+extern jmp_buf jit_bus_error_jmpbuf;
+extern volatile bool jit_in_compiled_code;
+#endif
 
 #endif //AMIBERRY_COMPEMU_H

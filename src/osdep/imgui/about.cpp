@@ -76,6 +76,7 @@ void render_panel_about()
 		"Credits:\n"
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
 		"Toni Wilen - WinUAE author\n"
+		"Romain Tisserand - Libretro implementation\n"
 		"TomB - Original ARM port of UAE, JIT ARM updates\n"
 		"Rob Smith, Drawbridge floppy controller\n"
 		"Gareth Fare - Original Serial port implementation\n"

@@ -519,6 +519,14 @@ struct monconfig
 #define DISPLAY_OPTIMIZATIONS_PARTIAL 1
 #define DISPLAY_OPTIMIZATIONS_NONE 2
 
+#define HVSYNC_COMBINED 0
+#define HVSYNC_CSYNC 1
+#define HVSYNC_HVSYNC 2
+#define HVSYNC_SYNCPOS 3
+#define HVSYNC_COMBINED_SYNC 3
+#define HVSYNC_CSYNC_SYNC 4
+#define HVSYNC_HVSYNC_SYNC 5
+
 #ifdef AMIBERRY
 enum custom_type
 {
@@ -839,6 +847,8 @@ struct uae_prefs {
 	int cs_ciatype[2];
 	int cs_kbhandshake;
 	int cs_hvcsync;
+	int cs_hsyncadjust;
+	int cs_vsyncadjust;
 	int cs_eclockphase;
 	int cs_eclocksync;
 	int cs_agnusmodel;

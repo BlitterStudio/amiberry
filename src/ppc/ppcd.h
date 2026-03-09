@@ -20,8 +20,12 @@ typedef signed   long long  s64;
 typedef enum { false = 0, true } bool;
 #endif
 
+#ifndef FASTCALL
 #define FASTCALL    __fastcall
+#endif
+#ifndef INLINE
 #define INLINE      __inline
+#endif
 
 // See some documentation in CPP file.
 

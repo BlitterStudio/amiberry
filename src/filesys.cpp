@@ -3628,6 +3628,20 @@ static Key *new_key (Unit *unit)
 	return k;
 }
 
+static bool filedir_exists(Unit *unit, a_inode *aino)
+{
+	struct mystat statbuf;
+	bool ok = true;
+	if (unit->volflags & MYVOLUMEINFO_ARCHIVE)
+		ok = zfile_stat_archive(aino->nname, &statbuf) != 0;
+	else if (unit->volflags & MYVOLUMEINFO_CDFS)
+		ok = isofs_stat(unit->ui.cdfs_superblock, aino->uniq_external, &statbuf);
+	else {
+		ok = my_existsfiledir(aino->nname);
+	}
+	return ok;
+}
+
 #if TRACING_ENABLED
 static void dumplock(TrapContext *ctx, Unit *unit, uaecptr lock)
 {
@@ -3921,12 +3935,19 @@ static void action_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 	if (err == 0 && (a->elock || (mode != SHARED_LOCK && a->shlock > 0))) {
 		err = ERROR_OBJECT_IN_USE;
 	}
+	if (err == 0) {
+		if (!filedir_exists(unit, a)) {
+			delete_aino(unit, a);
+			err = ERROR_OBJECT_NOT_AROUND;
+		}
+	}
 	/* Lock() doesn't do access checks. */
 	if (err != 0) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, err);
 		return;
 	}
+
 	if (mode == SHARED_LOCK)
 		a->shlock++;
 	else

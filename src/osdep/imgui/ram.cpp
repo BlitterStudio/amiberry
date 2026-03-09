@@ -339,12 +339,12 @@ void render_panel_ram() {
         if (size32 >= first)
             size32 -= first;
 
-        uae_u32 z3size_uae = natmem_reserved_size >= expamem_z3_pointer_uae ?
+        size_t z3size_uae = natmem_reserved_size >= expamem_z3_pointer_uae ?
             natmem_reserved_size - expamem_z3_pointer_uae : 0;
-        uae_u32 z3size_real = natmem_reserved_size >= expamem_z3_pointer_real ?
+        size_t z3size_real = natmem_reserved_size >= expamem_z3_pointer_real ?
             natmem_reserved_size - expamem_z3_pointer_real : 0;
 
-        ImGui::Text("Configured: %dM, Total: %dM, Z3(UAE): %dM, Z3(Real): %dM",
+        ImGui::Text("Configured: %dM, Total: %zuM, Z3(UAE): %zuM, Z3(Real): %zuM",
             size32 / (1024 * 1024),
             (natmem_reserved_size - 256 * 1024 * 1024) / (1024 * 1024),
             z3size_uae / (1024 * 1024),
