@@ -117,16 +117,14 @@ void close_hwnds(struct AmigaMonitor* mon)
 
 void updatemodes(struct AmigaMonitor* mon)
 {
-	Uint32 flags = 0;
+	SDL_WindowFlags flags = 0;
 
 	mon->currentmode.fullfill = 0;
-	if (isfullscreen() > 0)
+	if (isfullscreen() != 0)
 		flags |= SDL_WINDOW_FULLSCREEN;
-	else if (isfullscreen() < 0)
-		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
 	mon->currentmode.flags = flags;
-	if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+	if (isfullscreen() < 0) {
 		const SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
@@ -428,7 +426,7 @@ void close_windows(struct AmigaMonitor* mon)
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
 		if (amiga_surface) {
-			SDL_FreeSurface(amiga_surface);
+			SDL_DestroySurface(amiga_surface);
 			amiga_surface = nullptr;
 		}
 		return;
@@ -439,11 +437,11 @@ void close_windows(struct AmigaMonitor* mon)
 	reset_sound();
 
 #ifdef AMIBERRY
-	SDL_FreeSurface(amiga_surface);
+	SDL_DestroySurface(amiga_surface);
 	amiga_surface = nullptr;
 #endif
 	if (mon->statusline_surface) {
-		SDL_FreeSurface(mon->statusline_surface);
+		SDL_DestroySurface(mon->statusline_surface);
 		mon->statusline_surface = nullptr;
 	}
 	if (mon->statusline_texture) {
@@ -535,9 +533,9 @@ static int create_windows(struct AmigaMonitor* mon)
 		return 1;
 	}
 
-	const Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
-	Uint32 fullwindow = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
-	Uint32 flags = 0;
+	const SDL_WindowFlags fullscreen = (isfullscreen() > 0) ? SDL_WINDOW_FULLSCREEN : 0;
+	uint32_t fullwindow = (isfullscreen() < 0) ? 1 : 0;
+	SDL_WindowFlags flags = 0;
 	const int borderless = currprefs.borderless;
 	int x, y, w, h;
 	struct MultiDisplay* md;
@@ -688,7 +686,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	stored_y = std::max(stored_y, 0);
 
 	SDL_Rect displayBounds;
-	SDL_GetDisplayBounds(0, &displayBounds);
+	SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &displayBounds);
 
 	if (stored_x > displayBounds.w)
 		rc.x = 1;
@@ -720,14 +718,14 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (fullwindow) {
 		rc = md->rect;
-		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALLOW_HIGHDPI;
+		flags |= SDL_WINDOW_FULLSCREEN;
 #ifdef __ANDROID__
 		flags |= SDL_WINDOW_RESIZABLE;
 #endif
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
 	} else if (fullscreen) {
-		flags = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI;
+		flags = SDL_WINDOW_FULLSCREEN;
 #ifdef __ANDROID__
 		flags |= SDL_WINDOW_RESIZABLE;
 #endif
@@ -744,7 +742,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		else
 			y = rc.y + (rc.h - h);
 	} else {
-		flags |= SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+		flags |= SDL_WINDOW_RESIZABLE;
 	}
 	if (currprefs.main_alwaysontop) {
 		flags |= SDL_WINDOW_ALWAYS_ON_TOP;
@@ -757,7 +755,6 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= g_renderer->get_window_flags();
 	}
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
-		rc.x, rc.y,
 		rc.w, rc.h,
 		flags);
 	if (!mon->amiga_window) {
@@ -765,6 +762,22 @@ static int create_windows(struct AmigaMonitor* mon)
 		write_log(SDL_GetError());
 		write_log("\n");
 		return 0;
+	}
+	SDL_SetWindowPosition(mon->amiga_window, rc.x, rc.y);
+
+	// SDL3: Set fullscreen mode before the window becomes visible
+	if (fullwindow) {
+		SDL_SetWindowFullscreenMode(mon->amiga_window, NULL); // desktop/borderless fullscreen
+	} else if (fullscreen) {
+		// For exclusive fullscreen, set a specific display mode
+		SDL_DisplayID display_id = SDL_GetDisplayForWindow(mon->amiga_window);
+		if (display_id) {
+			SDL_DisplayMode closest;
+			if (SDL_GetClosestFullscreenDisplayMode(
+				display_id, mon->currentmode.native_width, mon->currentmode.native_height, 0.0f, true, &closest)) {
+				SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
+			}
+		}
 	}
 
 	SDL_Rect rc2;
@@ -801,9 +814,12 @@ static int create_windows(struct AmigaMonitor* mon)
 	}
 
     // Cache current display mode for scaling heuristics
-    if (SDL_GetWindowDisplayMode(mon->amiga_window, &sdl_mode) != 0) {
-        // Fallback to desktop mode if window query fails
-        SDL_GetDesktopDisplayMode(0, &sdl_mode);
+    {
+        SDL_DisplayID disp_id = SDL_GetDisplayForWindow(mon->amiga_window);
+        const SDL_DisplayMode* dm = disp_id ? SDL_GetDesktopDisplayMode(disp_id) : nullptr;
+        if (dm) {
+            sdl_mode = *dm;
+        }
     }
 	updatewinrect(mon, true);
 	GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
@@ -813,11 +829,10 @@ static int create_windows(struct AmigaMonitor* mon)
 	mon->window_extra_height_bar = 0;
 	//mon->dpi = getdpiforwindow(mon->monitor_id);
 
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		write_log("SDL2: could not grab the keyboard!\n");
+	// SDL3: SDL_HINT_GRAB_KEYBOARD removed, keyboard is automatically grabbed in fullscreen
 
-	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
-		write_log("SDL2: Set window not to minimize on focus loss\n");
+	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0"))
+		write_log("SDL3: Set window not to minimize on focus loss\n");
 
 	return 1;
 }
@@ -899,7 +914,12 @@ bool doInit(AmigaMonitor* mon)
 
 		// Create internal surface if needed
 		if (amiga_surface == nullptr) {
-			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+			amiga_surface = SDL_CreateSurface(display_width, display_height, pixel_format);
+			if (!amiga_surface) {
+				write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
+				return false;
+			}
+			update_system_pixel_format();
 		}
 
 		mon->screen_is_initialized = 1;
@@ -919,7 +939,7 @@ bool doInit(AmigaMonitor* mon)
 	for (;;) {
 		updatemodes(mon);
 
-		if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+		if (isfullscreen() < 0) {
 			const SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
 			mon->currentmode.native_width = rc.w;
 			mon->currentmode.native_height = rc.h;
@@ -1023,10 +1043,15 @@ bool doInit(AmigaMonitor* mon)
 
 	if (amiga_surface)
 	{
-		SDL_FreeSurface(amiga_surface);
+		SDL_DestroySurface(amiga_surface);
 		amiga_surface = nullptr;
 	}
-	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+	amiga_surface = SDL_CreateSurface(display_width, display_height, pixel_format);
+	if (!amiga_surface) {
+		write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
+		return false;
+	}
+	update_system_pixel_format();
 
 	updatewinrect(mon, true);
 	mon->screen_is_initialized = 1;
@@ -1066,7 +1091,7 @@ bool doInit(AmigaMonitor* mon)
 		if (g_renderer) {
 			g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
 		} else {
-			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+			SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &sw, &sh);
 		}
 		on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
 		on_screen_joystick_set_enabled(true);
@@ -1097,39 +1122,39 @@ bool doInit(AmigaMonitor* mon)
 		if (likely_gles_only) {
 			// GLES-only systems (e.g., Raspberry Pi with KMSDRM): Try GLES 3.0
 			write_log(_T("Requesting OpenGL ES 3.0 context (GLES-only driver detected)...\n"));
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) == 0);
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) == 0);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 		} else {
 			// Desktop OpenGL (x86, x86_64, ARM desktops, macOS): Try Core Profile 3.3
 			write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) == 0);
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) == 0);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #ifdef __APPLE__
 			// macOS requires the forward-compatible flag for OpenGL 3.2+ Core Profile
-			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG) == 0);
+			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 #endif
 		}
 	} else {
 		// Fallback: Legacy OpenGL 2.1 Compatibility
 		write_log(_T("Requesting OpenGL 2.1 Compatibility context...\n"));
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 	}
 
 	// Sensible defaults.
-	success &= (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0) == 0);
+	success &= SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	success &= SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	success &= SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
 	// Optional: request RGBA8
-	success &= (SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8) == 0);
+	success &= SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
+	success &= SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	success &= SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
+	success &= SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 
 	return success;
 }

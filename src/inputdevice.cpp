@@ -3635,7 +3635,7 @@ static void inputdevice_read(void)
 //	if ((inputdevice_logging & (2 | 4)))
 //		write_log(_T("INPUTREAD\n"));
 	inputdevice_read_msg(false);
-#ifndef AMIBERRY // we handle input device reading based on SDL2 events in Amiberry
+#ifndef AMIBERRY // we handle input device reading based on SDL events in Amiberry
 	if (inputread <= 0) {
 		idev[IDTYPE_MOUSE].read();
 		idev[IDTYPE_JOYSTICK].read();

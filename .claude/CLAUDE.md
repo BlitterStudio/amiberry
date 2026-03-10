@@ -107,7 +107,7 @@ Key CMake options (all default ON unless noted):
 | Option | Description |
 |--------|-------------|
 | `USE_PCEM` | PCem x86 emulation (disabled on RISC-V) |
-| `USE_IMGUI` | ImGui-based GUI (current active development) |
+| `USE_IMGUI` | ImGui-based GUI (always enabled; compile definition kept for `#ifdef` guards) |
 | `USE_OPENGL` | OpenGL rendering |
 | `USE_LIBSERIALPORT` | Serial port emulation |
 | `USE_LIBENET` | Network emulation |
@@ -167,7 +167,7 @@ amiberry/
 - `src/osdep/vkbd/vkbd_gl.h/.cpp` - Virtual keyboard GL shader infrastructure
 - `src/osdep/irenderer.h` - Abstract renderer interface
 - `src/osdep/opengl_renderer.h/.cpp` - OpenGL renderer backend
-- `src/osdep/sdl_renderer.h/.cpp` - SDL2 renderer backend
+- `src/osdep/sdl_renderer.h/.cpp` - SDL3 renderer backend
 - `src/osdep/renderer_factory.h/.cpp` - Renderer creation factory
 - `src/osdep/gl_platform.h/.cpp` - GL function pointer loading / GLES3 includes
 - `src/osdep/gl_overlays.cpp` - GL OSD overlay rendering
@@ -228,7 +228,7 @@ Amiga address space mapped into contiguous host virtual memory ("natmem") for di
 
 ### GUI System
 
-The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in `src/osdep/imgui/`:
+ImGui is the GUI framework (`USE_IMGUI` compile definition is always set). ImGui panel sources are in `src/osdep/imgui/`:
 
 - `quickstart.cpp` - Quick start panel
 - `configurations.cpp` - Configuration management
@@ -242,7 +242,7 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 
 Two backends selected at compile time via `USE_OPENGL`:
 - **OpenGL** (`OpenGLRenderer`): Hardware rendering with shaders (CRT, external GLSL, GLSLP presets, bezels)
-- **SDL2** (`SDLRenderer`): Software/basic rendering via `SDL_Renderer`
+- **SDL3** (`SDLRenderer`): Software/basic rendering via `SDL_Renderer`
 
 **IRenderer abstraction** (`irenderer.h`): Abstract base class for all rendering ops. Global `g_renderer` (from `renderer_factory.cpp`) dispatches to active backend. `OpenGLRenderer` owns GL context + `ShaderState` + `GLOverlayState`. `SDLRenderer` owns `SDL_Texture*`. Accessed via `get_opengl_renderer()` / `get_sdl_renderer()`.
 
@@ -324,7 +324,8 @@ Platform-specific code is in `src/osdep/`:
 
 ### Required
 
-- SDL2, SDL2_image
+- SDL3, SDL3_image
+
 - ZLIB
 - libpng
 - FLAC
@@ -357,7 +358,7 @@ Platform-specific code is in `src/osdep/`:
 
 ## Current Development Branch
 
-The `imgui` branch is the active development branch focusing on the ImGui GUI implementation. Main branch is `master`.
+ImGui is always enabled. Main branch is `master`.
 
 ## Testing
 

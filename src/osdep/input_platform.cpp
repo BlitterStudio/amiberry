@@ -1,7 +1,7 @@
 #include "sysdeps.h"
 #include "input_platform.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <string>
 
@@ -15,7 +15,7 @@ void osdep_init_keyboard(int* keyboard_german, int* retroarch_inited, int* num_r
 		return;
 
 	*keyboard_german = 0;
-	if (SDL_GetKeyFromScancode(SDL_SCANCODE_Y) == SDLK_z)
+	if (SDL_GetKeyFromScancode(SDL_SCANCODE_Y, SDL_KMOD_NONE, false) == SDLK_Z)
 		*keyboard_german = 1;
 
 	if (*retroarch_inited)

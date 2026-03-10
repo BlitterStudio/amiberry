@@ -55,15 +55,13 @@ void init_colors(const int monid)
 	/* init colors */
 
 	red_bits = green_bits = blue_bits = 8;
-	red_bits = green_bits = blue_bits = 8;
 
-	SDL_PixelFormat *pf = SDL_AllocFormat(pixel_format);
+	const SDL_PixelFormatDetails *pf = SDL_GetPixelFormatDetails(pixel_format);
 	if (pf) {
 		red_shift = pf->Rshift;
 		green_shift = pf->Gshift;
 		blue_shift = pf->Bshift;
 		alpha_shift = pf->Ashift;
-		SDL_FreeFormat(pf);
 	} else {
 		// Fallback defaults if allocation fails
 		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {

@@ -20,7 +20,7 @@ static inline bool osdep_platform_should_delay_on_pause()
 
 static inline bool osdep_platform_init_sdl()
 {
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
 	{
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		int num = SDL_GetNumVideoDrivers();
@@ -30,14 +30,12 @@ static inline bool osdep_platform_init_sdl()
 		return false;
 	}
 
-	// Enable native IME for international text input (SDL 2.0.18+)
-#ifdef SDL_HINT_IME_SHOW_UI
-	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
-#endif
+	// Enable native IME for international text input
+	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "1");
 
 #ifdef __ANDROID__
-	// OpenSL ES is more reliable than AAudio in SDL2 on Android 14/15
-	// (AAudio has latency/noise bugs fixed in SDL3 but not backported to SDL2)
+	// OpenSL ES is more reliable than AAudio on older Android versions
+	// (SDL3 has improved AAudio support, but OpenSL ES remains a safe fallback)
 	SDL_SetHint("SDL_AUDIODRIVER", "openslES");
 #endif
 
@@ -58,7 +56,7 @@ static inline void osdep_platform_shutdown_sdl()
 
 static inline void osdep_platform_init_ui()
 {
-	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT);
 	clipboard_init();
 }
 
@@ -80,8 +78,8 @@ static inline void osdep_platform_sync_keyboard_leds()
 	ioctl(0, KDSETLED, kbd_led_status);
 #else
 	int caps = SDL_GetModState();
-	caps = caps & KMOD_CAPS;
-	if (caps == KMOD_CAPS)
+	caps = caps & SDL_KMOD_CAPS;
+	if (caps == SDL_KMOD_CAPS)
 		kbd_led_status |= ~0x04;
 	else
 		kbd_led_status &= ~0x04;
@@ -102,18 +100,17 @@ static inline void osdep_platform_call_real_main(int argc, char** argv)
 #ifdef __APPLE__
 	SDL_PumpEvents();
 	SDL_Event event;
-	if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
+	if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_DROP_FILE, SDL_EVENT_DROP_FILE) > 0)
 	{
-		write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
+		write_log("Intercepted SDL_EVENT_DROP_FILE event: %s\n", event.drop.data);
 		char** new_argv = new char*[argc + 2];
 		for (int i = 0; i < argc; ++i)
 		{
 			new_argv[i] = argv[i];
 		}
-		new_argv[argc] = event.drop.file;
+		new_argv[argc] = const_cast<char*>(event.drop.data);
 		new_argv[argc + 1] = nullptr;
 		real_main(argc + 1, new_argv);
-		SDL_free(event.drop.file);
 		delete[] new_argv;
 	}
 	else

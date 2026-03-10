@@ -2,7 +2,7 @@
 #include "shader_preset.h"
 #include "sysdeps.h"
 #include "uae.h"
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -17,7 +17,7 @@
 #endif
 #endif
 
-extern Uint32 pixel_format;
+extern SDL_PixelFormat pixel_format;
 
 ShaderPreset::ShaderPreset() = default;
 
@@ -426,15 +426,15 @@ bool ShaderPreset::load_lut_texture(LutTexture& lut)
 {
 	SDL_Surface* surface = IMG_Load(lut.config.path.c_str());
 	if (!surface) {
-		write_log("IMG_Load failed for %s: %s\n", lut.config.path.c_str(), IMG_GetError());
+		write_log("IMG_Load failed for %s: %s\n", lut.config.path.c_str(), SDL_GetError());
 		return false;
 	}
 
 	// Convert to RGBA32
-	SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ABGR8888, 0);
-	SDL_FreeSurface(surface);
+	SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
+	SDL_DestroySurface(surface);
 	if (!rgba) {
-		write_log("SDL_ConvertSurfaceFormat failed for LUT texture\n");
+		write_log("SDL_ConvertSurface failed for LUT texture\n");
 		return false;
 	}
 
@@ -446,7 +446,7 @@ bool ShaderPreset::load_lut_texture(LutTexture& lut)
 
 	lut.width = rgba->w;
 	lut.height = rgba->h;
-	SDL_FreeSurface(rgba);
+	SDL_DestroySurface(rgba);
 
 	// Filtering
 	GLenum min_filter = lut.config.linear ? GL_LINEAR : GL_NEAREST;
@@ -825,7 +825,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 		gl_fmt = GL_RGB;
 		gl_type = GL_UNSIGNED_SHORT_5_6_5;
 		bpp = 2;
-	} else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+	} else if (pixel_format == SDL_PIXELFORMAT_XRGB1555) {
 		gl_fmt = GL_RGBA;
 		gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
 		bpp = 2;

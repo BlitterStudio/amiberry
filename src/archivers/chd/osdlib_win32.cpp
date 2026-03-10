@@ -7,7 +7,7 @@
 //  Provides the platform-specific implementations for:
 //  - Environment variables
 //  - Process control
-//  - Clipboard access (via SDL2)
+//  - Clipboard access (via SDL)
 //  - Dynamic module loading (via LoadLibrary)
 //  - Virtual memory allocation (via VirtualAlloc)
 //  - Instruction cache invalidation
@@ -18,7 +18,7 @@
 #include "osdcore.h"
 #include "osdlib.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -95,9 +95,8 @@ std::string osd_get_clipboard_text()
 
 	if (SDL_HasClipboardText())
 	{
-		char* temp = SDL_GetClipboardText();
+		const char* temp = SDL_GetClipboardText();
 		result.assign(temp);
-		SDL_free(temp);
 	}
 	return result;
 }

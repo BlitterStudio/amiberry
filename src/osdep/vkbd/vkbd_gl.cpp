@@ -140,7 +140,7 @@ GLuint vkbd_upload_surface_to_gl(SDL_Surface* surface)
 	if (!surface) return 0;
 
 	// Convert to RGBA32 if needed
-	SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+	SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
 	if (!rgba) return 0;
 
 	GLuint tex = 0;
@@ -153,7 +153,7 @@ GLuint vkbd_upload_surface_to_gl(SDL_Surface* surface)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rgba->w, rgba->h, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, rgba->pixels);
 
-	SDL_FreeSurface(rgba);
+	SDL_DestroySurface(rgba);
 	return tex;
 }
 

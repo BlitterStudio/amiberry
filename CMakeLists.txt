@@ -30,7 +30,6 @@ option(USE_OPENGL        "Use OpenGL for rendering" ON)
 option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
-option(USE_IMGUI         "Use ImGui for the GUI" ON)
 
 # Automatically disable PCem on RISC-V targets
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv")
@@ -89,22 +88,22 @@ set(VERSION_PRE_RELEASE "29" CACHE STRING "Pre-release version")
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Required packages via pkg-config
 	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(SDL2 REQUIRED sdl2)
-	pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+	pkg_check_modules(SDL REQUIRED sdl3)
+	pkg_check_modules(SDL_IMAGE REQUIRED SDL3_image)
 	pkg_check_modules(FLAC REQUIRED flac)
 	pkg_check_modules(PNG REQUIRED libpng)
   pkg_check_modules(SERIALPORT REQUIRED libserialport)
 
 	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
 	set(FREEBSD_INCLUDE_DIRS
-    	${SDL2_INCLUDE_DIRS}
-    	${SDL2_IMAGE_INCLUDE_DIRS}
+    	${SDL_INCLUDE_DIRS}
+    	${SDL_IMAGE_INCLUDE_DIRS}
     	${FLAC_INCLUDE_DIRS}
     	${PNG_INCLUDE_DIRS}
 	)
 	set(FREEBSD_LIBRARIES
-    	${SDL2_LIBRARIES}
-    	${SDL2_IMAGE_LIBRARIES}
+    	${SDL_LIBRARIES}
+    	${SDL_IMAGE_LIBRARIES}
     	${FLAC_LIBRARIES}
     	${PNG_LIBRARIES}
 	)

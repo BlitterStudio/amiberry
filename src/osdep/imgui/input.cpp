@@ -86,7 +86,7 @@ static int get_device_index(int id) {
 void render_panel_input() {
     std::string mapping;
     if (ControllerMap_ConsumeResult(mapping)) {
-        SDL_GameControllerAddMapping(mapping.c_str());
+        SDL_AddGamepadMapping(mapping.c_str());
         save_mapping_to_file(mapping);
     }
 

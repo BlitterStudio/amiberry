@@ -28,7 +28,7 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 		*tid = thread;
 	} else if (thread) {
 		// If the caller didn't ask for the thread ID, we can't wait for it later.
-		// This will cause a memory leak in SDL2, unless we detach the thread.
+		// If the caller didn't ask for the thread ID, we can't wait for it later.
 		SDL_DetachThread(thread);
 	}
 	return result;
@@ -53,7 +53,7 @@ int uae_sem_init(uae_sem_t* sem, int dummy, int initial_state)
 {
 	if (*sem)
 	{
-		SDL_SemPost(*sem);
+		SDL_SignalSemaphore(*sem);
 	}
 	else
 	{
@@ -73,10 +73,10 @@ void uae_sem_destroy(uae_sem_t* event)
 
 void uae_set_thread_priority(uae_thread_id* id, int pri)
 {
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+	SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 }
 
-SDL_threadID uae_thread_get_id(SDL_Thread *thread)
+SDL_ThreadID uae_thread_get_id(SDL_Thread *thread)
 {
 	return SDL_GetThreadID(thread);
 }

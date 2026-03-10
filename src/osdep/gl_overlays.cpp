@@ -61,13 +61,13 @@ void update_leds(const int monid)
 
 	// (Re)allocate OSD surface if dimensions changed
 	if (!mon->statusline_surface || mon->statusline_surface->w != led_width || mon->statusline_surface->h != led_height) {
-		if (mon->statusline_surface) SDL_FreeSurface(mon->statusline_surface);
-		mon->statusline_surface = SDL_CreateRGBSurfaceWithFormat(0, led_width, led_height, 32, SDL_PIXELFORMAT_RGBA32);
+		if (mon->statusline_surface) SDL_DestroySurface(mon->statusline_surface);
+		mon->statusline_surface = SDL_CreateSurface(led_width, led_height, SDL_PIXELFORMAT_RGBA32);
 	}
 
 	if (mon->statusline_surface) {
 		// Clear with transparent color
-		SDL_FillRect(mon->statusline_surface, nullptr, 0x00000000);
+		SDL_FillSurfaceRect(mon->statusline_surface, nullptr, 0x00000000);
 
 		// Draw the LEDs into the off-screen surface
 		for (int y = 0; y < led_height; y++) {

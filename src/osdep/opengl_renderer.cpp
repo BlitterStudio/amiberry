@@ -32,7 +32,7 @@
 #include "statusline.h"
 #include "vkbd/vkbd.h"
 #include "on_screen_joystick.h"
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #ifndef GL_BGRA
 #ifdef GL_BGRA_EXT
@@ -45,7 +45,7 @@
 #ifdef AMIBERRY
 
 // Declared in amiberry_gfx.cpp (no header)
-extern float SDL2_getrefreshrate(int monid);
+extern float amiberry_getrefreshrate(int monid);
 
 // --- get_opengl_renderer() helper ---
 
@@ -54,7 +54,7 @@ OpenGLRenderer* get_opengl_renderer()
 	return dynamic_cast<OpenGLRenderer*>(g_renderer.get());
 }
 
-static void resolve_gl_pixel_format(Uint32 sdl_pixel_format, GLenum& fmt, GLenum& type, int& bpp)
+static void resolve_gl_pixel_format(uint32_t sdl_pixel_format, GLenum& fmt, GLenum& type, int& bpp)
 {
 	if (sdl_pixel_format == SDL_PIXELFORMAT_ARGB8888) {
 		fmt = GL_BGRA;
@@ -68,7 +68,7 @@ static void resolve_gl_pixel_format(Uint32 sdl_pixel_format, GLenum& fmt, GLenum
 		bpp = 2;
 		return;
 	}
-	if (sdl_pixel_format == SDL_PIXELFORMAT_RGB555) {
+	if (sdl_pixel_format == SDL_PIXELFORMAT_XRGB1555) {
 		fmt = GL_RGBA;
 		type = GL_UNSIGNED_SHORT_5_5_5_1;
 		bpp = 2;
@@ -91,9 +91,9 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 		return false;
 	}
 
-	if (SDL_GL_MakeCurrent(window, m_gl_context) != 0) {
+	if (!SDL_GL_MakeCurrent(window, m_gl_context)) {
 		write_log(_T("!!! SDL_GL_MakeCurrent failed: %hs\n"), SDL_GetError());
-		SDL_GL_DeleteContext(m_gl_context);
+		SDL_GL_DestroyContext(m_gl_context);
 		m_gl_context = nullptr;
 		return false;
 	}
@@ -103,7 +103,7 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 		const GLubyte* ver = glGetString(GL_VERSION);
 		if (!ver) {
 			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
-			SDL_GL_DeleteContext(m_gl_context);
+			SDL_GL_DestroyContext(m_gl_context);
 			m_gl_context = nullptr;
 			return false;
 		}
@@ -127,7 +127,7 @@ void OpenGLRenderer::destroy_context()
 {
 	if (m_gl_context != nullptr)
 	{
-		SDL_GL_DeleteContext(m_gl_context);
+		SDL_GL_DestroyContext(m_gl_context);
 		m_gl_context = nullptr;
 		m_vsync.current_interval = -1;
 		m_vsync.cached_refresh_rate = 0.0f;
@@ -142,7 +142,7 @@ bool OpenGLRenderer::has_context() const
 
 // --- Window creation support ---
 
-Uint32 OpenGLRenderer::get_window_flags() const
+SDL_WindowFlags OpenGLRenderer::get_window_flags() const
 {
 	return SDL_WINDOW_OPENGL;
 }
@@ -339,7 +339,7 @@ void OpenGLRenderer::update_vsync(int monid)
 		if (vsync_mode > 1) {
 			// VSync 50/60Hz: Adapt for High Refresh Rate Monitors
 			if (m_vsync.cached_refresh_rate <= 0.0f) {
-				m_vsync.cached_refresh_rate = SDL2_getrefreshrate(monid);
+				m_vsync.cached_refresh_rate = amiberry_getrefreshrate(monid);
 				write_log("VSync: Detected refresh rate: %.2f Hz\n", m_vsync.cached_refresh_rate);
 			}
 
@@ -360,7 +360,7 @@ void OpenGLRenderer::update_vsync(int monid)
 	}
 
 	if (m_vsync.current_interval != interval) {
-		if (SDL_GL_SetSwapInterval(interval) == 0) {
+		if (SDL_GL_SetSwapInterval(interval)) {
 			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
 		}
 		else {
@@ -396,7 +396,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	// Ensure GL context is current for this window
 	if (m_gl_context && mon->amiga_window) {
-		if (SDL_GL_MakeCurrent(mon->amiga_window, m_gl_context) != 0) {
+		if (!SDL_GL_MakeCurrent(mon->amiga_window, m_gl_context)) {
 			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
 	}
@@ -991,7 +991,7 @@ void OpenGLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float s
 
 void OpenGLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 {
-	SDL_GL_GetDrawableSize(w, width, height);
+	SDL_GetWindowSizeInPixels(w, width, height);
 }
 
 // get_vblank_timestamp() uses base class default (returns m_vsync.wait_vblank_timestamp)
@@ -1281,12 +1281,12 @@ bool OpenGLRenderer::load_bezel_texture(const char* bezel_name)
 	std::string full_path = get_bezels_path() + bezel_name;
 	SDL_Surface* surface = IMG_Load(full_path.c_str());
 	if (!surface) {
-		write_log("Custom bezel: failed to load %s: %s\n", full_path.c_str(), IMG_GetError());
+		write_log("Custom bezel: failed to load %s: %s\n", full_path.c_str(), SDL_GetError());
 		return false;
 	}
 
-	SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ABGR8888, 0);
-	SDL_FreeSurface(surface);
+	SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
+	SDL_DestroySurface(surface);
 	if (!rgba) {
 		write_log("Custom bezel: failed to convert %s to RGBA\n", full_path.c_str());
 		return false;
@@ -1296,13 +1296,13 @@ bool OpenGLRenderer::load_bezel_texture(const char* bezel_name)
 	{
 		int min_x = rgba->w, min_y = rgba->h, max_x = 0, max_y = 0;
 		const int pitch = rgba->pitch;
-		const Uint8* pixels = static_cast<const Uint8*>(rgba->pixels);
+		const uint8_t* pixels = static_cast<const uint8_t*>(rgba->pixels);
 
 		for (int y = 0; y < rgba->h; y++) {
-			const Uint8* row = pixels + y * pitch;
+			const uint8_t* row = pixels + y * pitch;
 			for (int x = 0; x < rgba->w; x++) {
 				// ABGR8888 layout: R, G, B, A (alpha is byte 3)
-				Uint8 alpha = row[x * 4 + 3];
+				uint8_t alpha = row[x * 4 + 3];
 				if (alpha < 128) {  // Transparent or semi-transparent
 					if (x < min_x) min_x = x;
 					if (x > max_x) max_x = x;
@@ -1345,7 +1345,7 @@ bool OpenGLRenderer::load_bezel_texture(const char* bezel_name)
 	m_overlay.bezel_tex_h = rgba->h;
 	m_overlay.loaded_bezel_name = bezel_name;
 
-	SDL_FreeSurface(rgba);
+	SDL_DestroySurface(rgba);
 	write_log("Custom bezel: loaded %s (%dx%d)\n", bezel_name, m_overlay.bezel_tex_w, m_overlay.bezel_tex_h);
 	return true;
 }

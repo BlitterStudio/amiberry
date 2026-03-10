@@ -18,7 +18,7 @@
 #endif
 #include <windows.h>
 #endif
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include "options.h"
 #include "sana2.h"
@@ -55,7 +55,7 @@
 
 extern std::string get_version_string();
 extern std::string get_copyright_notice();
-extern std::string get_sdl2_version_string();
+extern std::string get_sdl_version_string();
 
 STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 {
@@ -85,7 +85,7 @@ extern int save_thumb(const std::string& path);
 
 extern amiberry_hotkey get_hotkey_from_config(const std::string& config_option);
 extern amiberry_hotkey enter_gui_key;
-extern SDL_GameControllerButton enter_gui_button;
+extern SDL_GamepadButton enter_gui_button;
 extern amiberry_hotkey quit_key;
 extern amiberry_hotkey action_replay_key;
 extern amiberry_hotkey fullscreen_key;

@@ -1,7 +1,7 @@
 #ifndef ON_SCREEN_JOYSTICK_H
 #define ON_SCREEN_JOYSTICK_H
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 // Initialize on-screen joystick surfaces and state.
 // When USE_OPENGL is defined, renderer can be NULL (GL textures are created lazily).
@@ -10,7 +10,7 @@ void on_screen_joystick_init(SDL_Renderer* renderer);
 // Clean up textures/surfaces and state.
 void on_screen_joystick_quit();
 
-// Render the on-screen joystick controls using SDL2 renderer.
+// Render the on-screen joystick controls using SDL renderer.
 // Call during the rendering frame, after the game screen is drawn.
 void on_screen_joystick_redraw(SDL_Renderer* renderer);
 

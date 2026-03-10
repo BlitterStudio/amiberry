@@ -98,7 +98,7 @@ void render_panel_custom()
 	// Hotkey Display/Set
 	if (did->mapping.hotkey_button) {
 		// Basic display logic (simplified vs Guisan for now)
-		const char* keyname = SDL_GameControllerGetStringForButton((SDL_GameControllerButton)did->mapping.hotkey_button);
+		const char* keyname = SDL_GetGamepadStringForButton((SDL_GamepadButton)did->mapping.hotkey_button);
 		if (keyname) snprintf(set_hotkey_buf, sizeof(set_hotkey_buf), "%s", keyname);
 		else snprintf(set_hotkey_buf, sizeof(set_hotkey_buf), "%d", did->mapping.hotkey_button);
 	} else {
@@ -117,7 +117,7 @@ void render_panel_custom()
 	}
 	ImGui::SameLine();
 	if (AmigaButton("X")) {
-		did->mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
+		did->mapping.hotkey_button = SDL_GAMEPAD_BUTTON_INVALID;
 		inputdevice_updateconfig(nullptr, &changed_prefs);
 	}
 	if (did->mapping.is_retroarch) ImGui::EndDisabled();
@@ -133,8 +133,8 @@ void render_panel_custom()
 		
 		// Check for Controller Button Input
 		if (did->controller) {
-			for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i) {
-				if (SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(i))) {
+			for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i) {
+				if (SDL_GetGamepadButton(did->controller, static_cast<SDL_GamepadButton>(i))) {
 					did->mapping.hotkey_button = i;
 					inputdevice_updateconfig(nullptr, &changed_prefs);
 					ImGui::CloseCurrentPopup();
@@ -142,9 +142,9 @@ void render_panel_custom()
 				}
 			}
 		} else if (did->joystick) {
-			const int num_buttons = SDL_JoystickNumButtons(did->joystick);
+			const int num_buttons = SDL_GetNumJoystickButtons(did->joystick);
 			for (int i = 0; i < num_buttons; ++i) {
-				if (SDL_JoystickGetButton(did->joystick, i)) {
+				if (SDL_GetJoystickButton(did->joystick, i)) {
 					did->mapping.hotkey_button = i;
 					inputdevice_updateconfig(nullptr, &changed_prefs);
 					ImGui::CloseCurrentPopup();
@@ -204,8 +204,8 @@ void render_panel_custom()
 
 	ImGui::BeginChild("RemapArea", ImVec2(0, -40), true);
 
-	int half_btns = SDL_CONTROLLER_BUTTON_MAX / 2;
-	int half_axes = SDL_CONTROLLER_AXIS_MAX / 2 + 1;
+	int half_btns = SDL_GAMEPAD_BUTTON_COUNT / 2;
+	int half_axes = SDL_GAMEPAD_AXIS_COUNT / 2 + 1;
 
 	if (ImGui::BeginTable("RemapTable", 2, ImGuiTableFlags_None)) {
 		ImGui::TableNextRow();
@@ -223,7 +223,7 @@ void render_panel_custom()
 			bool is_mapped = did->mapping.button[i] > -1;
 
 			// D-Pad override
-			if (i >= SDL_CONTROLLER_BUTTON_DPAD_UP && i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
+			if (i >= SDL_GAMEPAD_BUTTON_DPAD_UP && i <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
 				is_mapped = true;
 
 			std::string in_use_type;
@@ -278,7 +278,7 @@ void render_panel_custom()
 		ImGui::TableNextColumn();
 
 		// Loop for Buttons (Second Half)
-		for (int i = half_btns; i < SDL_CONTROLLER_BUTTON_MAX; i++) {
+		for (int i = half_btns; i < SDL_GAMEPAD_BUTTON_COUNT; i++) {
 			int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_none[i] : &did->mapping.amiberry_custom_hotkey[i];
 			int display_val = *store_ptr;
 			if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_button_mapping[i];
@@ -286,7 +286,7 @@ void render_panel_custom()
 			int idx = get_mapped_event_index(display_val);
 
 			bool is_mapped = did->mapping.button[i] > -1;
-			if (i >= SDL_CONTROLLER_BUTTON_DPAD_UP && i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
+			if (i >= SDL_GAMEPAD_BUTTON_DPAD_UP && i <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
 				is_mapped = true;
 
 			std::string in_use_type;
@@ -315,7 +315,7 @@ void render_panel_custom()
 		}
 
 		// Loop for Axes (Second Half)
-		for (int i = half_axes; i < SDL_CONTROLLER_AXIS_MAX; i++) {
+		for (int i = half_axes; i < SDL_GAMEPAD_AXIS_COUNT; i++) {
 			int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_axis_none[i] : &did->mapping.amiberry_custom_axis_hotkey[i];
 			int display_val = *store_ptr;
 			if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_axis_mapping[i];

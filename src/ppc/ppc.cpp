@@ -47,7 +47,7 @@ static volatile bool ppc_spinlock_waiting;
 static CRITICAL_SECTION ppc_cs1, ppc_cs2;
 static bool ppc_cs_initialized;
 #else
-static SDL_mutex* ppc_mutex, *ppc_mutex2;
+static SDL_Mutex* ppc_mutex, *ppc_mutex2;
 #endif
 
 void uae_ppc_spinlock_get(void)

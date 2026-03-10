@@ -49,7 +49,7 @@ static void ShowVkbdHotkeyPopup() {
                      for (int port = 0; port < 2; port++) {
                         const auto host_joy_id = changed_prefs.jports[port].id - JSEM_JOYS;
                         if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES) {
-                             di_joystick[host_joy_id].mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+                             di_joystick[host_joy_id].mapping.vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
                         }
                      }
                      ImGui::CloseCurrentPopup();
@@ -149,7 +149,7 @@ void render_panel_virtual_keyboard()
          for (int port = 0; port < 2; port++) {
             const auto host_joy_id = changed_prefs.jports[port].id - JSEM_JOYS;
              if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES) {
-                 di_joystick[host_joy_id].mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+                 di_joystick[host_joy_id].mapping.vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
             }
          }
     }

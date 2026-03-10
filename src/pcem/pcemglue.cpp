@@ -872,7 +872,7 @@ typedef struct win_mutex_t
 #ifdef _WIN32
 	HANDLE handle;
 #else
-	SDL_mutex* handle;
+	SDL_Mutex* handle;
 #endif
 } win_mutex_t;
 
@@ -937,7 +937,7 @@ int thread_test_mutex(mutex_t *_mutex)
 	if (ret == WAIT_OBJECT_0)
 		return 1;
 #else
-	if (SDL_TryLockMutex(mutex->handle) == 0) {
+	if (SDL_TryLockMutex(mutex->handle)) {
 		SDL_UnlockMutex(mutex->handle);
 		return 1;
 	}

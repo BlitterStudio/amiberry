@@ -490,7 +490,7 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
         memcpy(ud->mac_addr, mac, 6);
 
     // Destroy existing semaphores before reinitializing to prevent value
-    // inflation — uae_sem_init() on an existing semaphore calls SDL_SemPost()
+    // inflation — uae_sem_init() on an existing semaphore calls SDL_SignalSemaphore()
     // instead of recreating, which inflates mutex values and breaks synchronization.
     if (ud->change_sem) uae_sem_destroy(&ud->change_sem);
     if (ud->sync_sem) uae_sem_destroy(&ud->sync_sem);

@@ -69,7 +69,7 @@ amiberry/
 - **UAE naming** in emulator core (matches WinUAE upstream)
 - **ImGui patterns** in GUI code
 - **Platform guards**: `#ifdef __ANDROID__`, `#ifdef _WIN32`, `#ifdef __APPLE__`, `#ifdef AMIBERRY`
-- **Feature guards**: `#ifdef USE_OPENGL`, `#ifdef USE_IMGUI`, `#ifdef USE_PCEM`, etc.
+- **Feature guards**: `#ifdef USE_OPENGL`, `#ifdef USE_IMGUI` (always defined), `#ifdef USE_PCEM`, etc.
 - **Vendored code**: `pcem/`, `slirp/`, `ppc/`, `qemuvga/`, `softfloat/`, `mame/` — minimize modifications
 
 ## ANTI-PATTERNS (THIS PROJECT)

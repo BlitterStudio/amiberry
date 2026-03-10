@@ -1,7 +1,7 @@
 /*
 * Amiberry
 *
-* SDL2 sound interface
+* SDL3 sound interface
 *
 * Copyright 2020-2025 Dimitris Panokostas <midwan@gmail.com>
 * Based on WinUAE code by Toni Wilen
@@ -22,7 +22,7 @@
 #include "gensound.h"
 #include "xwin.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <cmath>
 #include <algorithm>
 
@@ -34,7 +34,7 @@
 
 struct sound_dp
 {
-	SDL_AudioDeviceID dev;
+	SDL_AudioStream* stream;
 	int sndbufsize;
 	int framesperbuffer;
 	int sndbuf;
@@ -87,14 +87,15 @@ static uae_u8 *extrasndbuf;
 static int extrasndbufsize;
 static int extrasndbuffered;
 
-// SDL2 Audio callback
-static void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
+// SDL3 Audio stream get callback (pull mode)
+static void SDLCALL sdl3_audio_get_callback(void* userdata, SDL_AudioStream* astream, int additional_amount, int total_amount)
 {
 	auto* sd = static_cast<sound_data*>(userdata);
 	auto* s = sd->data;
 
 	if (!s->stream_initialised || sd->mute) {
-		std::memset(stream, 0, len);
+		std::vector<uint8_t> silence(additional_amount, 0);
+		SDL_PutAudioStreamData(astream, silence.data(), additional_amount);
 		if (sd->mute) s->silence_written++;
 		s->stream_initialised = 1;
 		return;
@@ -108,9 +109,9 @@ static void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 		return;
 	}
 
-	const auto bytes_to_copy = std::min(static_cast<unsigned int>(s->framesperbuffer * sd->samplesize), static_cast<unsigned int>(s->pullbufferlen));
+	const auto bytes_to_copy = std::min(static_cast<unsigned int>(additional_amount), static_cast<unsigned int>(s->pullbufferlen));
 	if (sd->mute == 0 && bytes_to_copy > 0) {
-		std::copy(s->pullbuffer, s->pullbuffer + bytes_to_copy, stream);
+		SDL_PutAudioStreamData(astream, s->pullbuffer, bytes_to_copy);
 	}
 
 	if (bytes_to_copy < s->pullbufferlen) {
@@ -234,26 +235,26 @@ static float sync_sound (float m)
 	return skipmode;
 }
 
-static void clearbuffer_sdl2(struct sound_data *sd)
+static void clearbuffer_sdl(struct sound_data *sd)
 {
 	const sound_dp* s = sd->data;
 	
-	SDL_LockAudioDevice(s->dev);
+	SDL_LockAudioStream(s->stream);
 	std::memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
-	SDL_UnlockAudioDevice(s->dev);
+	SDL_UnlockAudioStream(s->stream);
 }
 
 static void clearbuffer (struct sound_data *sd)
 {
 	const auto* s = sd->data;
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
-		clearbuffer_sdl2(sd);
+		clearbuffer_sdl(sd);
 	if (s->pullbuffer) {
 		if (sd->devicetype == SOUND_DEVICE_SDL2)
-			SDL_LockAudioDevice(s->dev);
+			SDL_LockAudioStream(s->stream);
 		std::memset(s->pullbuffer, 0, s->pullbuffermaxlen);
 		if (sd->devicetype == SOUND_DEVICE_SDL2)
-			SDL_UnlockAudioDevice(s->dev);
+			SDL_UnlockAudioStream(s->stream);
 	}
 }
 
@@ -266,16 +267,16 @@ static void set_reset(struct sound_data *sd)
 	sd->resetframecnt = 0;
 }
 
-static void pause_audio_sdl2(struct sound_data* sd)
+static void pause_audio_sdl(struct sound_data* sd)
 {
 	const sound_dp* s = sd->data;
 	
 	sd->waiting_for_buffer = 0;
-	SDL_PauseAudioDevice(s->dev, 1);
+	SDL_PauseAudioStreamDevice(s->stream);
 	clearbuffer(sd);
 }
 
-static void resume_audio_sdl2(struct sound_data* sd)
+static void resume_audio_sdl(struct sound_data* sd)
 {
 	sound_dp* s = sd->data;
 	
@@ -283,25 +284,26 @@ static void resume_audio_sdl2(struct sound_data* sd)
 	sd->waiting_for_buffer = 1;
 	s->avg_correct = 0;
 	s->cnt_correct = 0;
-	SDL_PauseAudioDevice(s->dev, 0);
+	SDL_ResumeAudioStreamDevice(s->stream);
 	sd->paused = 0;
 }
 
-static void close_audio_sdl2(struct sound_data* sd)
+static void close_audio_sdl(struct sound_data* sd)
 {
 	auto* s = sd->data;
-	SDL_PauseAudioDevice(s->dev, 1);
+	SDL_PauseAudioStreamDevice(s->stream);
 	
-	SDL_LockAudioDevice(s->dev);
+	SDL_LockAudioStream(s->stream);
 	if (s->pullbuffer != nullptr)
 	{
 		xfree(s->pullbuffer);
 		s->pullbuffer = nullptr;
 	}
 	s->pullbufferlen = 0;
-	SDL_UnlockAudioDevice(s->dev);
+	SDL_UnlockAudioStream(s->stream);
 	
-	SDL_CloseAudioDevice(s->dev);
+	SDL_DestroyAudioStream(s->stream);
+	s->stream = nullptr;
 }
 
 extern void setvolume_ahi (int);
@@ -332,19 +334,23 @@ void set_volume(int volume, int mute)
 	config_changed = 1;
 }
 
-static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
+static void finish_sound_buffer_sdl_push(struct sound_data* sd, uae_u16* sndbuffer)
 {
 	sound_dp* s = sd->data;
 	if (sd->mute) {
 		std::memset(sndbuffer, 0, sd->sndbufsize);
 		s->silence_written++; // In push mode no sound gen means no audio push so this might not be incremented frequently
 	}
-	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
+	if (!SDL_PutAudioStreamData(s->stream, sndbuffer, sd->sndbufsize)) {
+		write_log("SDL_PutAudioStreamData failed: %s\n", SDL_GetError());
+		return;
+	}
 
 	// Sync
-	const auto queued = SDL_GetQueuedAudioSize(s->dev);
+	const int queued = SDL_GetAudioStreamQueued(s->stream);
+	if (queued < 0) return; // stream error
 	const auto target = sd->sndbufsize * 3; // Target 3 buffers latency to prevent underruns
-	const auto diff = static_cast<int>(queued) - target;
+	const auto diff = queued - target;
 	const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
 	
 	int vis = 0;
@@ -359,7 +365,7 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	auto* s = sd->data;
 	static unsigned int pull_overflow_count;
 
-	SDL_LockAudioDevice(s->dev);
+	SDL_LockAudioStream(s->stream);
 	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
 		pull_overflow_count++;
 		if (pull_overflow_count <= 8 || (pull_overflow_count % 512) == 0) {
@@ -378,7 +384,7 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	// Calc sync inside lock to get consistent len
 	const auto len = s->pullbufferlen;
 	const auto maxlen = s->pullbuffermaxlen;
-	SDL_UnlockAudioDevice(s->dev);
+	SDL_UnlockAudioStream(s->stream);
 
 	if (maxlen > 0)
 	{
@@ -390,7 +396,7 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	}
 }
 
-static int open_audio_sdl2(struct sound_data* sd, int index)
+static int open_audio_sdl(struct sound_data* sd, int index)
 {
 	auto* const s = sd->data;
 	const auto freq = sd->freq;
@@ -410,29 +416,28 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	if (sound_platform_open_audio(sd, index))
 		return 1;
 
-	SDL_AudioSpec want = {}, have;
-	want.freq = freq;
-	want.format = AUDIO_S16SYS;
-	want.channels = ch;
-	want.samples = s->framesperbuffer;
+	SDL_AudioSpec spec = {};
+	spec.format = SDL_AUDIO_S16;
+	spec.channels = ch;
+	spec.freq = freq;
 
 	if (s->pullmode)
 	{
-		want.callback = sdl2_audio_callback;
-		want.userdata = sd;
+		// Pull mode: use stream with get callback
+		s->stream = SDL_OpenAudioDeviceStream(
+			SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, sdl3_audio_get_callback, sd);
+	}
+	else
+	{
+		// Push mode: use stream without callback, we'll push data manually
+		s->stream = SDL_OpenAudioDeviceStream(
+			SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
 	}
 
-	if (s->dev == 0)
-		s->dev = SDL_OpenAudioDevice(currprefs.soundcard_default ? nullptr : devname, 0, &want, &have, 0);
-	if (s->dev == 0)
+	if (!s->stream)
 	{
-		write_log("Failed to open selected SDL2 device for audio: %s, retrying with default device\n", SDL_GetError());
-		s->dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-		if (s->dev == 0)
-		{
-			write_log("Failed to open default SDL2 device for audio: %s\n", SDL_GetError());
-			return 0;
-		}
+		write_log("Failed to open SDL3 audio device stream: %s\n", SDL_GetError());
+		return 0;
 	}
 
 	if (s->pullmode)
@@ -441,7 +446,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		s->pullbuffer = xcalloc(uae_u8, s->pullbuffermaxlen);
 		s->pullbufferlen = 0;
 	}
-	write_log("SDL2: CH=%d, FREQ=%d '%s' buffer %d/%d (%s)\n", ch, freq, sound_devices[index]->name,
+	write_log("SDL3: CH=%d, FREQ=%d '%s' buffer %d/%d (%s)\n", ch, freq, sound_devices[index]->name,
 		s->sndbufsize, s->framesperbuffer, !s->pullmode ? _T("push") : _T("pull"));
 	clearbuffer(sd);
 
@@ -458,7 +463,7 @@ int open_sound_device (struct sound_data *sd, int index, int exclusive, int bufs
 	sd->channels = channels;
 	sd->paused = 1;
 	sd->index = index;
-	const auto ret = open_audio_sdl2(sd, index);
+	const auto ret = open_audio_sdl(sd, index);
 	sd->samplesize = sd->channels * 2;
 	sd->sndbufframes = sd->sndbufsize / sd->samplesize;
 	return ret;
@@ -467,7 +472,7 @@ int open_sound_device (struct sound_data *sd, int index, int exclusive, int bufs
 void close_sound_device (struct sound_data *sd)
 {
 	pause_sound_device(sd);
-	close_audio_sdl2(sd);
+	close_audio_sdl(sd);
 	xfree(sd->data);
 	sd->data = NULL;
 	sd->index = -1;
@@ -478,11 +483,11 @@ void pause_sound_device (struct sound_data *sd)
 	sd->paused = 1;
 	gui_data.sndbuf_status = 0;
 	gui_data.sndbuf = 0;
-	pause_audio_sdl2(sd);
+	pause_audio_sdl(sd);
 }
 void resume_sound_device (struct sound_data *sd)
 {
-	resume_audio_sdl2(sd);
+	resume_audio_sdl(sd);
 	sd->paused = 0;
 }
 
@@ -710,7 +715,7 @@ bool audio_finish_pull()
 	return false;
 }
 
-static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
+static void finish_sound_buffer_sdl(struct sound_data *sd, uae_u16 *sndbuffer)
 {
 	if (sound_platform_output_audio(sd, sndbuffer))
 		return;
@@ -721,7 +726,7 @@ static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 	if (s->pullmode)
 		finish_sound_buffer_pull(sd, sndbuffer);
 	else
-		finish_sound_buffer_sdl2_push(sd, sndbuffer);
+		finish_sound_buffer_sdl_push(sd, sndbuffer);
 }
 
 static void channelswap(uae_s16* sndbuffer, int len)
@@ -766,7 +771,7 @@ static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
 			p[i] = p[i] * sd->softvolume / 32768;
 		}
 	}
-	finish_sound_buffer_sdl2(sd, sndbuffer);
+	finish_sound_buffer_sdl(sd, sndbuffer);
 }
 
 static void handle_reset()
@@ -881,12 +886,14 @@ int enumerate_sound_devices()
 		return num_sound_devices;
 	if (!num_sound_devices) {
 
-		write_log("Enumerating SDL2 playback devices...\n");
-		num_sound_devices = SDL_GetNumAudioDevices(SDL_FALSE);
+		write_log("Enumerating SDL3 playback devices...\n");
+		int playback_count = 0;
+		SDL_AudioDeviceID* playback_devices = SDL_GetAudioPlaybackDevices(&playback_count);
+		num_sound_devices = playback_count;
 		write_log("Detected %d sound playback devices\n", num_sound_devices);
 		for (int i = 0; i < num_sound_devices && i < MAX_SOUND_DEVICES; i++)
 		{
-			const auto devname = SDL_GetAudioDeviceName(i, SDL_FALSE);
+			const auto devname = SDL_GetAudioDeviceName(playback_devices[i]);
 			write_log("Sound playback device %d: %s\n", i, devname);
 			sound_devices[i] = xcalloc(struct sound_device, 1);
 			sound_devices[i]->id = i;
@@ -895,13 +902,16 @@ int enumerate_sound_devices()
 			sound_devices[i]->name = my_strdup(devname);
 			sound_devices[i]->alname = my_strdup(std::to_string(i).c_str());
 		}
+		SDL_free(playback_devices);
 
-		write_log("Enumerating SDL2 recording devices...\n");
-		num_record_devices = SDL_GetNumAudioDevices(SDL_TRUE);
+		write_log("Enumerating SDL3 recording devices...\n");
+		int recording_count = 0;
+		SDL_AudioDeviceID* recording_devices = SDL_GetAudioRecordingDevices(&recording_count);
+		num_record_devices = recording_count;
 		write_log("Detected %d sound recording devices\n", num_record_devices);
 		for (int i = 0; i < num_record_devices && i < MAX_SOUND_DEVICES; i++)
 		{
-			const auto devname = SDL_GetAudioDeviceName(i, SDL_TRUE);
+			const auto devname = SDL_GetAudioDeviceName(recording_devices[i]);
 			write_log("Sound recording device %d: %s\n", i, devname);
 			record_devices[i] = xcalloc(struct sound_device, 1);
 			record_devices[i]->id = i;
@@ -910,6 +920,7 @@ int enumerate_sound_devices()
 			record_devices[i]->name = my_strdup(devname);
 			record_devices[i]->alname = my_strdup(std::to_string(i).c_str());
 		}
+		SDL_free(recording_devices);
 
 		write_log(_T("Enumeration end\n"));
 		for (num_sound_devices = 0; num_sound_devices < MAX_SOUND_DEVICES; num_sound_devices++) {
@@ -969,8 +980,8 @@ void master_sound_volume(int dir)
 		mute = mute ? 0 : 1;
 	vol += dir * (65536 / 10);
 	vol = std::max(vol, 0);
-	if (vol > SDL_MIX_MAXVOLUME)
-		vol = SDL_MIX_MAXVOLUME;
+	if (vol > 128) // Legacy SDL_MIX_MAXVOLUME was 128
+		vol = 128;
 	set_master_volume(vol, mute);
 	config_changed = 1;
 }

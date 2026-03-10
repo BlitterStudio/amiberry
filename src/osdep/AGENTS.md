@@ -12,7 +12,7 @@ osdep/
 │   ├── irenderer.h              # Abstract base (40+ virtual methods)
 │   ├── renderer_factory.h/cpp   # Creates OpenGL or SDL renderer
 │   ├── opengl_renderer.h/cpp    # OpenGL backend (1589 lines, shaders/overlays)
-│   └── sdl_renderer.h/cpp       # SDL2 software backend (396 lines, minimal)
+│   └── sdl_renderer.h/cpp       # SDL3 software backend (396 lines, minimal)
 │
 ├── [Platform Indirection — Compile-Time Dispatch]
 │   ├── amiberry_platform_internal.h      # → includes host or libretro impl

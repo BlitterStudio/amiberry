@@ -20,16 +20,11 @@
 #define SAMPLESIZE 4
 
 //static LPDIRECTSOUNDCAPTURE lpDS2r = NULL;
-static SDL_AudioDeviceID dev_rec;
-SDL_AudioSpec rec_want, rec_have;
-//static LPDIRECTSOUNDCAPTUREBUFFER lpDSBprimary2r = NULL;
-//static LPDIRECTSOUNDCAPTUREBUFFER lpDSB2r = NULL;
-static Uint8* recording_buffer = nullptr;
-static Uint32 buffer_byte_size = 0;
-static Uint32 buffer_byte_pos = 0;
-static Uint32 buffer_byte_max_pos = 0;
-
-void audioRecordingCallback(void* userdata, Uint8* stream, int len);
+static SDL_AudioStream* rec_stream = nullptr;
+static uint8_t* recording_buffer = nullptr;
+static uint32_t buffer_byte_size = 0;
+static uint32_t buffer_byte_pos = 0;
+static uint32_t buffer_byte_max_pos = 0;
 
 //Number of available devices
 int recording_device_count = 0;
@@ -76,22 +71,21 @@ static int capture_init (void)
 	//	return 0;
 	//}
 
-	SDL_zero(rec_want);
-	rec_want.freq = 44100;
-	rec_want.format = AUDIO_S16SYS;
-	rec_want.channels = 2;
-	rec_want.samples = sampleframes;
-	rec_want.callback = audioRecordingCallback;
+	SDL_AudioSpec rec_spec;
+	rec_spec.format = SDL_AUDIO_S16;
+	rec_spec.channels = 2;
+	rec_spec.freq = samplerate;
 
 	//Open recording device
-	dev_rec = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(record_devices[currprefs.samplersoundcard]->id, SDL_TRUE), SDL_TRUE, &rec_want, &rec_have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	rec_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &rec_spec, NULL, NULL);
 	//Device failed to open
-	if (dev_rec == 0)
+	if (rec_stream == nullptr)
 	{
 		//Report error
 		write_log("SAMPLER: Failed to open recording device! SDL Error: %s", SDL_GetError());
 		return 0;
 	}
+	SDL_ResumeAudioStreamDevice(rec_stream);
 
 	//memset (&sound_buffer_rec, 0, sizeof (DSCBUFFERDESC));
 	//sound_buffer_rec.dwSize = sizeof (DSCBUFFERDESC);
@@ -111,9 +105,9 @@ static int capture_init (void)
 	//	return 0;
 	//}
 
-	buffer_byte_size = rec_have.size;
+	buffer_byte_size = sampleframes * SAMPLESIZE;
 	//Allocate and initialize byte buffer
-	recording_buffer = new Uint8[buffer_byte_size];
+	recording_buffer = new uint8_t[buffer_byte_size];
 	memset(recording_buffer, 0, buffer_byte_size);
 
 	samplebuffer = xcalloc (uae_u8, sampleframes * SAMPLESIZE);
@@ -123,8 +117,9 @@ static int capture_init (void)
 
 static void capture_free (void)
 {
-	if (dev_rec) {
-		SDL_CloseAudioDevice(dev_rec);
+	if (rec_stream) {
+		SDL_DestroyAudioStream(rec_stream);
+		rec_stream = nullptr;
 		write_log (_T("SAMPLER: Parallel port sampler freed\n"));
 	}
 	if (recording_buffer)
@@ -229,12 +224,18 @@ uae_u8 sampler_getsample (int channel)
 		//	write_log (_T("SAMPLER: Lock() failed %x\n"), hr);
 		//	return 0;
 		//}
-		SDL_LockAudioDevice(dev_rec);
-		memcpy (samplebuffer, recording_buffer, buffer_byte_size);
-		//if (p2)
-		//	memcpy (samplebuffer + len1, p2, len2);
-		//lpDSB2r->Unlock (p1, len1, p2, len2);
-		SDL_UnlockAudioDevice(dev_rec);
+		SDL_LockAudioStream(rec_stream);
+		// Read available recorded data from the stream
+		int available = SDL_GetAudioStreamAvailable(rec_stream);
+		if (available > 0) {
+			if (available > (int)buffer_byte_size)
+				available = (int)buffer_byte_size;
+			const int bytes_read = SDL_GetAudioStreamData(rec_stream, recording_buffer, available);
+			if (bytes_read < 0)
+				available = 0;
+		}
+		memcpy(samplebuffer, recording_buffer, buffer_byte_size);
+		SDL_UnlockAudioStream(rec_stream);
 
 #if 0
 		cap_pos = t;
@@ -334,11 +335,3 @@ void sampler_vsync (void)
 	}
 }
 
-void audioRecordingCallback(void* userdata, Uint8* stream, int len)
-{
-	//Copy audio from stream
-	memcpy(&recording_buffer[buffer_byte_pos], stream, len);
-
-	//Move along buffer
-	buffer_byte_pos += len;
-}

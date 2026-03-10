@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <filesystem>
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 #include <dpi_handler.hpp>
 #include <unordered_map>
 #include <cmath>
@@ -36,11 +36,11 @@
 
 #ifdef USE_IMGUI
 #include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_sdlrenderer2.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlrenderer3.h"
 #if defined(_WIN32) && defined(USE_OPENGL)
 #include "imgui_impl_opengl3.h"
-#include <SDL_opengl.h>
+#include <SDL3/SDL_opengl.h>
 #endif
 #include "ImGuiFileDialog.h"
 #include <array>
@@ -67,7 +67,7 @@ static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
 #ifdef _WIN32
 static int saved_emu_x = 0, saved_emu_y = 0, saved_emu_w = 0, saved_emu_h = 0;
-static Uint32 saved_emu_flags = 0;
+static SDL_WindowFlags saved_emu_flags = 0;
 #endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 static bool gui_use_opengl = false;
@@ -81,7 +81,7 @@ ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 	if (out_h) *out_h = surface->h;
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl) {
-		SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ABGR8888, 0);
+		SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
 		if (!rgba) return ImTextureID_Invalid;
 		GLuint tex;
 		glGenTextures(1, &tex);
@@ -91,7 +91,7 @@ ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rgba->w, rgba->h, 0,
 			GL_RGBA, GL_UNSIGNED_BYTE, rgba->pixels);
-		SDL_FreeSurface(rgba);
+		SDL_DestroySurface(rgba);
 		return (ImTextureID)(intptr_t)tex;
 	}
 #endif
@@ -206,12 +206,17 @@ static void apply_imgui_theme()
 	style.ChildRounding = 0.0f;
 	style.ScrollbarRounding = 0.0f;
 	style.GrabRounding = 0.0f;
-	if (SDL_GetNumTouchDevices() > 0) {
-		style.ScrollbarSize = 24.0f;  // Wider for touch targets
-		style.GrabMinSize = 20.0f;
-	} else {
-		style.ScrollbarSize = 16.0f;
-		style.GrabMinSize = 10.0f;
+	{
+		int touch_count = 0;
+		SDL_TouchID* touch_devs = SDL_GetTouchDevices(&touch_count);
+		SDL_free(touch_devs);
+		if (touch_count > 0) {
+			style.ScrollbarSize = 24.0f;  // Wider for touch targets
+			style.GrabMinSize = 20.0f;
+		} else {
+			style.ScrollbarSize = 16.0f;
+			style.GrabMinSize = 10.0f;
+		}
 	}
 	style.TabRounding = 0.0f;
 
@@ -334,29 +339,35 @@ bool IsFileDialogOpen()
 #endif
 
 // Helper: get usable bounds for a display index (fallback to full bounds)
-static SDL_Rect get_display_usable_bounds(int display_index)
+static SDL_Rect get_display_usable_bounds(SDL_DisplayID display_id)
 {
 	SDL_Rect bounds{0,0,0,0};
-	if (display_index < 0 || display_index >= SDL_GetNumVideoDisplays()) {
-		display_index = 0;
-	}
-	if (SDL_GetDisplayUsableBounds(display_index, &bounds) != 0) {
+	if (!display_id)
+		display_id = SDL_GetPrimaryDisplay();
+	if (!SDL_GetDisplayUsableBounds(display_id, &bounds)) {
 		// Fallback if usable bounds fail
-		SDL_GetDisplayBounds(display_index, &bounds);
+		SDL_GetDisplayBounds(display_id, &bounds);
 	}
 	return bounds;
 }
 
 // Helper: find the display index that contains the rect (by its topleft); fallback to primary
-static int find_display_for_rect(const SDL_Rect& rect)
+static SDL_DisplayID find_display_for_rect(const SDL_Rect& rect)
 {
-	const int nd = SDL_GetNumVideoDisplays();
-	for (int i = 0; i < nd; ++i) {
-		SDL_Rect b = get_display_usable_bounds(i);
-		if (rect.x >= b.x && rect.x < b.x + b.w && rect.y >= b.y && rect.y < b.y + b.h)
-			return i;
+	int count = 0;
+	SDL_DisplayID* displays = SDL_GetDisplays(&count);
+	if (displays) {
+		for (int i = 0; i < count; ++i) {
+			SDL_Rect b = get_display_usable_bounds(displays[i]);
+			if (rect.x >= b.x && rect.x < b.x + b.w && rect.y >= b.y && rect.y < b.y + b.h) {
+				SDL_DisplayID result = displays[i];
+				SDL_free(displays);
+				return result;
+			}
+		}
+		SDL_free(displays);
 	}
-	return 0;
+	return SDL_GetPrimaryDisplay();
 }
 
 // Helper: clamp rect position (and optionally size) into display usable bounds; returns true if changed
@@ -743,7 +754,7 @@ static void ensure_sidebar_icons_loaded()
 		}
 		ImTextureID tex = gui_create_texture(surf, nullptr, nullptr);
 		IconTex it{ tex, surf->w, surf->h };
-		SDL_FreeSurface(surf);
+		SDL_DestroySurface(surf);
 		g_sidebar_icons.emplace(std::move(key), it);
 	}
 }
@@ -774,13 +785,13 @@ void amiberry_gui_init()
 		SDL_GetWindowSize(mon->gui_window, &saved_emu_w, &saved_emu_h);
 		saved_emu_flags = SDL_GetWindowFlags(mon->gui_window);
 		// Exit fullscreen for GUI if needed
-		if (saved_emu_flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP))
-			SDL_SetWindowFullscreen(mon->gui_window, 0);
+		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
+			SDL_SetWindowFullscreen(mon->gui_window, false);
 		SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
 		SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		SDL_SetWindowTitle(mon->gui_window, "Amiberry GUI");
-		SDL_SetWindowResizable(mon->gui_window, SDL_TRUE);
-		SDL_SetWindowGrab(mon->gui_window, SDL_FALSE);
+		SDL_SetWindowResizable(mon->gui_window, true);
+		SDL_SetWindowGrab(mon->gui_window, false);
 	}
 #endif
 
@@ -799,9 +810,12 @@ void amiberry_gui_init()
 		{
 			mon->gui_renderer = mon->amiga_renderer;
 		}
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		// SDL3: scale quality is per-texture, not a global hint
 	}
-	SDL_GetCurrentDisplayMode(0, &sdl_mode);
+	{
+		const SDL_DisplayMode* dm = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
+		if (dm) sdl_mode = *dm;
+	}
 
 	if (!gui_window_size_initialized) {
 		const float gui_scale = DPIHandler::get_layout_scale();
@@ -829,7 +843,7 @@ void amiberry_gui_init()
 			}
 		}
 
-		Uint32 mode;
+		uint32_t mode;
 		if (!kmsdrm_detected)
 		{
 #ifdef __ANDROID__
@@ -842,25 +856,27 @@ void amiberry_gui_init()
 		}
 		else
 		{
-			// otherwise go for Full-window
-			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+			// otherwise go for Full-window (borderless fullscreen)
+			mode = SDL_WINDOW_FULLSCREEN;
 		}
 
 		if (currprefs.gui_alwaysontop)
 			mode |= SDL_WINDOW_ALWAYS_ON_TOP;
 		if (currprefs.start_minimized)
 			mode |= SDL_WINDOW_HIDDEN;
-		else
-			mode |= SDL_WINDOW_SHOWN;
-		// Set Window allow high DPI by default
-		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+		// SDL3: SHOWN is default, ALLOW_HIGHDPI is always enabled
 
 		mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-										   SDL_WINDOWPOS_CENTERED,
-										   SDL_WINDOWPOS_CENTERED,
 										   gui_window_rect.w,
 										   gui_window_rect.h,
 										   mode);
+		if (mon->gui_window && kmsdrm_detected) {
+			// For KMSDRM borderless fullscreen, use desktop mode
+			SDL_SetWindowFullscreenMode(mon->gui_window, NULL);
+		}
+		if (mon->gui_window) {
+			SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
 
 		// Sync rect to actual window metrics (handles SDL_WINDOWPOS_CENTERED)
 		int wx, wy, ww, wh;
@@ -872,7 +888,7 @@ void amiberry_gui_init()
 		gui_window_rect.h = wh;
 
 		// After creation, ensure window is fully visible; clamp to its current display
-		int disp = SDL_GetWindowDisplayIndex(mon->gui_window);
+		SDL_DisplayID disp = SDL_GetDisplayForWindow(mon->gui_window);
 		SDL_Rect usable = get_display_usable_bounds(disp);
 		SDL_Rect clamped = gui_window_rect;
 		bool adjusted = clamp_rect_to_bounds(clamped, usable, true);
@@ -899,7 +915,7 @@ void amiberry_gui_init()
 		if (icon_surface != nullptr)
 		{
 			SDL_SetWindowIcon(mon->gui_window, icon_surface);
-			SDL_FreeSurface(icon_surface);
+			SDL_DestroySurface(icon_surface);
 		}
 	}
 	else if (kmsdrm_detected)
@@ -912,8 +928,10 @@ void amiberry_gui_init()
 #endif
 		if (mon->gui_renderer == nullptr)
 		{
-			mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, NULL);
 			check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
+			if (mon->gui_renderer)
+				SDL_SetRenderVSync(mon->gui_renderer, 1);
 		}
 		DPIHandler::set_render_scale(mon->gui_renderer);
 #if defined(_WIN32) && defined(USE_OPENGL)
@@ -928,8 +946,13 @@ void amiberry_gui_init()
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-	if (SDL_GetNumTouchDevices() > 0)
-		io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;      // Optimize for touch input
+	{
+		int touch_count = 0;
+		SDL_TouchID* touch_devs = SDL_GetTouchDevices(&touch_count);
+		SDL_free(touch_devs);
+		if (touch_count > 0)
+			io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;  // Optimize for touch input
+	}
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
@@ -987,15 +1010,15 @@ void amiberry_gui_init()
 		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
 		SDL_GLContext ctx = gl_renderer ? gl_renderer->get_gl_context() : nullptr;
 		SDL_GL_MakeCurrent(mon->gui_window, ctx);
-		ImGui_ImplSDL2_InitForOpenGL(mon->gui_window, ctx);
+		ImGui_ImplSDL3_InitForOpenGL(mon->gui_window, ctx);
 		ImGui_ImplOpenGL3_Init("#version 130");
 	} else {
-		ImGui_ImplSDL2_InitForSDLRenderer(mon->gui_window, mon->gui_renderer);
-		ImGui_ImplSDLRenderer2_Init(mon->gui_renderer);
+		ImGui_ImplSDL3_InitForSDLRenderer(mon->gui_window, mon->gui_renderer);
+		ImGui_ImplSDLRenderer3_Init(mon->gui_renderer);
 	}
 #else
-	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
-	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
+	ImGui_ImplSDL3_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
+	ImGui_ImplSDLRenderer3_Init(AMonitors[0].gui_renderer);
 #endif
 
 	if (amiberry_options.quickstart_start && !emulating && strlen(last_loaded_config) == 0)
@@ -1032,17 +1055,17 @@ void amiberry_gui_halt()
 	if (gui_use_opengl)
 		ImGui_ImplOpenGL3_Shutdown();
 	else
-		ImGui_ImplSDLRenderer2_Shutdown();
+		ImGui_ImplSDLRenderer3_Shutdown();
 #else
-	ImGui_ImplSDLRenderer2_Shutdown();
+	ImGui_ImplSDLRenderer3_Shutdown();
 #endif
-	ImGui_ImplSDL2_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
 #endif
 
 	if (gui_screen != nullptr)
 	{
-		SDL_FreeSurface(gui_screen);
+		SDL_DestroySurface(gui_screen);
 		gui_screen = nullptr;
 	}
 	if (gui_texture != nullptr)
@@ -1099,9 +1122,7 @@ void amiberry_gui_halt()
 		SDL_SetWindowSize(mon->amiga_window, saved_emu_w, saved_emu_h);
 		SDL_SetWindowPosition(mon->amiga_window, saved_emu_x, saved_emu_y);
 		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
-			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
-		else if (saved_emu_flags & SDL_WINDOW_FULLSCREEN_DESKTOP)
-			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			SDL_SetWindowFullscreen(mon->amiga_window, true);
 		saved_emu_w = saved_emu_h = 0;
 	}
 	// Restore emulation rendering context (GL: MakeCurrent + reset; SDL: no-op)
@@ -1115,7 +1136,7 @@ std::string get_filename_extension(const TCHAR* filename);
 
 static void handle_drop_file_event(const SDL_Event& event)
 {
-	char* dropped_file = event.drop.file;
+	const char* dropped_file = event.drop.data;
 	const auto ext = get_filename_extension(dropped_file);
 
 	if (strcasecmp(ext.c_str(), ".uae") == 0)
@@ -1139,11 +1160,10 @@ static void handle_drop_file_event(const SDL_Event& event)
 	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
 	{
 		// CD image
-		cd_auto_prefs(&currprefs, dropped_file);
+		cd_auto_prefs(&currprefs, const_cast<char*>(dropped_file));
 		uae_restart(&currprefs, -1, nullptr);
 		gui_running = false;
 	}
-	SDL_free(dropped_file);
 }
 
 #ifdef USE_IMGUI
@@ -1201,18 +1221,18 @@ void run_gui()
 	while (gui_running) {
 		while (SDL_PollEvent(&gui_event)) {
 			// Make sure ImGui sees all events
-			ImGui_ImplSDL2_ProcessEvent(&gui_event);
+			ImGui_ImplSDL3_ProcessEvent(&gui_event);
 
 			if (ControllerMap_HandleEvent(gui_event)) {
 				continue;
 			}
 
-			if (gui_event.type == SDL_QUIT)	{
+			if (gui_event.type == SDL_EVENT_QUIT)	{
 				uae_quit();
 				gui_running = false;
 			}
-			else if (gui_event.type == SDL_KEYDOWN && !ImGui::GetIO().WantTextInput) {
-				if (gui_event.key.keysym.sym == SDLK_F1) {
+			else if (gui_event.type == SDL_EVENT_KEY_DOWN && !ImGui::GetIO().WantTextInput) {
+				if (gui_event.key.key == SDLK_F1) {
 					// Show Help when F1 is pressed
 					const char* help_ptr = nullptr;
 					if (last_active_panel >= 0 && categories[last_active_panel].category != nullptr)
@@ -1220,12 +1240,12 @@ void run_gui()
 					if (help_ptr && *help_ptr)
 						ShowMessageBox("Help", help_ptr);
 				}
-				else if (gui_event.key.keysym.sym == SDLK_q) {
+				else if (gui_event.key.key == SDLK_Q) {
 					// Quit when Q is pressed
 					uae_quit();
 					gui_running = false;
 				}
-				else if (gui_event.key.keysym.sym == SDLK_F12 && !start_disabled) {
+				else if (gui_event.key.key == SDLK_F12 && !start_disabled) {
 					if (emulating) {
 						gui_running = false;
 					}
@@ -1235,48 +1255,43 @@ void run_gui()
 					}
 				}
 			}
-			else if (gui_event.type == SDL_DROPFILE) {
+			else if (gui_event.type == SDL_EVENT_DROP_FILE) {
 				// Handle dropped files
 				handle_drop_file_event(gui_event);
 			}
-			else if (gui_event.type == SDL_WINDOWEVENT) {
-				// Handle window events, keep track of position and size
-				if (gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
-					switch (gui_event.window.event) {
-					case SDL_WINDOWEVENT_MOVED:
-						gui_window_rect.x = gui_event.window.data1;
-						gui_window_rect.y = gui_event.window.data2;
-						// Clamp move to current display usable bounds
-						{
-							int disp = SDL_GetWindowDisplayIndex(mon->gui_window);
-							SDL_Rect usable = get_display_usable_bounds(disp);
-							if (clamp_rect_to_bounds(gui_window_rect, usable, false)) {
-								SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
-							}
-						}
-						gui_window_moved = true;
-						break;
-					case SDL_WINDOWEVENT_RESIZED:
-						gui_window_rect.w = gui_event.window.data1;
-						gui_window_rect.h = gui_event.window.data2;
-						break;
-					default:
-						break;
+			else if (gui_event.type == SDL_EVENT_WINDOW_MOVED
+				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
+				gui_window_rect.x = gui_event.window.data1;
+				gui_window_rect.y = gui_event.window.data2;
+				// Clamp move to current display usable bounds
+				{
+					SDL_DisplayID disp = SDL_GetDisplayForWindow(mon->gui_window);
+					SDL_Rect usable = get_display_usable_bounds(disp);
+					if (clamp_rect_to_bounds(gui_window_rect, usable, false)) {
+						SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
 					}
 				}
-				if (gui_event.window.event == SDL_WINDOWEVENT_CLOSE && gui_event.window.windowID == SDL_GetWindowID(mon->gui_window))
-					gui_running = false;
+				gui_window_moved = true;
+			}
+			else if (gui_event.type == SDL_EVENT_WINDOW_RESIZED
+				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
+				gui_window_rect.w = gui_event.window.data1;
+				gui_window_rect.h = gui_event.window.data2;
+			}
+			else if (gui_event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED
+				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
+				gui_running = false;
 			}
 			// Touch-drag scrolling: convert finger swipes into ImGui scroll wheel events
-			// SDL2 synthesizes mouse events from touch, but not mouse-wheel, so ImGui
+			// SDL synthesizes mouse events from touch, but not mouse-wheel, so ImGui
 			// child windows won't scroll from finger drags without this.
-			else if (gui_event.type == SDL_FINGERDOWN) {
-				touch_scroll_finger = gui_event.tfinger.fingerId;
+			else if (gui_event.type == SDL_EVENT_FINGER_DOWN) {
+				touch_scroll_finger = gui_event.tfinger.fingerID;
 				touch_scrolling = false;
 				touch_scroll_accum = 0.0f;
 			}
-			else if (gui_event.type == SDL_FINGERMOTION
-				&& gui_event.tfinger.fingerId == touch_scroll_finger) {
+			else if (gui_event.type == SDL_EVENT_FINGER_MOTION
+				&& gui_event.tfinger.fingerID == touch_scroll_finger) {
 				int wh = 0;
 				SDL_GetWindowSize(mon->gui_window, nullptr, &wh);
 				const float dy_pixels = gui_event.tfinger.dy * static_cast<float>(wh);
@@ -1299,8 +1314,8 @@ void run_gui()
 					}
 				}
 			}
-			else if (gui_event.type == SDL_FINGERUP
-				&& gui_event.tfinger.fingerId == touch_scroll_finger) {
+			else if (gui_event.type == SDL_EVENT_FINGER_UP
+				&& gui_event.tfinger.fingerID == touch_scroll_finger) {
 				touch_scrolling = false;
 			}
 		}
@@ -1310,11 +1325,11 @@ void run_gui()
 		// ImGui sets WantTextInput when a text field is active.
 		{
 			bool want_text = ImGui::GetIO().WantTextInput;
-			bool text_active = SDL_IsTextInputActive();
+			bool text_active = SDL_TextInputActive(mon->gui_window);
 			if (want_text && !text_active)
-				SDL_StartTextInput();
+				SDL_StartTextInput(mon->gui_window);
 			else if (!want_text && text_active)
-				SDL_StopTextInput();
+				SDL_StopTextInput(mon->gui_window);
 		}
 #endif
 
@@ -1329,11 +1344,11 @@ void run_gui()
 		if (gui_use_opengl)
 			ImGui_ImplOpenGL3_NewFrame();
 		else
-			ImGui_ImplSDLRenderer2_NewFrame();
+			ImGui_ImplSDLRenderer3_NewFrame();
 #else
-		ImGui_ImplSDLRenderer2_NewFrame();
+		ImGui_ImplSDLRenderer3_NewFrame();
 #endif
-		ImGui_ImplSDL2_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
 		// While touch-scrolling, suppress hover highlight so items don't
@@ -1622,20 +1637,20 @@ void run_gui()
 			SDL_GL_SwapWindow(mon->gui_window);
 		} else {
 			const ImGuiIO& render_io = ImGui::GetIO();
-			SDL_RenderSetScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
-			SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<Uint8>(0.45f * 255), static_cast<Uint8>(0.55f * 255),
-							   static_cast<Uint8>(0.60f * 255), static_cast<Uint8>(1.00f * 255));
+			SDL_SetRenderScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
+			SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
+							   static_cast<uint8_t>(0.60f * 255), static_cast<uint8_t>(1.00f * 255));
 			SDL_RenderClear(mon->gui_renderer);
-			ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
+			ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
 			SDL_RenderPresent(mon->gui_renderer);
 		}
 #else
 		const ImGuiIO& render_io = ImGui::GetIO();
-		SDL_RenderSetScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
-		SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<Uint8>(0.45f * 255), static_cast<Uint8>(0.55f * 255),
-						   static_cast<Uint8>(0.60f * 255), static_cast<Uint8>(1.00f * 255));
+		SDL_SetRenderScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
+		SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
+						   static_cast<uint8_t>(0.60f * 255), static_cast<uint8_t>(1.00f * 255));
 		SDL_RenderClear(mon->gui_renderer);
-		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
+		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
 		SDL_RenderPresent(mon->gui_renderer);
 #endif
 	}

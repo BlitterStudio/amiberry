@@ -35,11 +35,11 @@ typedef unsigned int UINT;
 /** clipboard_read is called from both the main thread and uae thread
  * (mousehack_done), so clipboard_from_host_text/changed and is protected with
  * a mutex. */
-static SDL_mutex* clipboard_from_host_mutex;
+static SDL_Mutex* clipboard_from_host_mutex;
 static char* clipboard_from_host_text;
 static bool clipboard_from_host_changed;
 
-static SDL_mutex* clipboard_to_host_mutex;
+static SDL_Mutex* clipboard_to_host_mutex;
 static char* clipboard_to_host_text;
 
 #endif // AMIBERRY
@@ -800,7 +800,7 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 #endif
 #ifdef AMIBERRY
 	char* lptstr = nullptr;
-	SDL_mutexP(clipboard_from_host_mutex);
+	SDL_LockMutex(clipboard_from_host_mutex);
 	if (clipboard_from_host_changed)
 	{
 		if (clipboard_from_host_text)
@@ -814,7 +814,7 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 		text = true;
 		clipboard_from_host_changed = false;
 	}
-	SDL_mutexV(clipboard_from_host_mutex);
+	SDL_UnlockMutex(clipboard_from_host_mutex);
 #if defined(_WIN32)
 	// On Windows, also check for bitmap clipboard data via Win32 API
 	if (!text && !keyboardinject) {
@@ -949,14 +949,14 @@ static int clipboard_put_bmp_real (HBITMAP hbmp)
 static int clipboard_put_text_real(const TCHAR* txt)
 {
 #ifdef AMIBERRY
-	SDL_mutexP(clipboard_to_host_mutex);
+	SDL_LockMutex(clipboard_to_host_mutex);
 	if (clipboard_to_host_text != nullptr)
 	{
 		free(clipboard_to_host_text);
 		clipboard_to_host_text = nullptr;
 	}
 	clipboard_to_host_text = strdup(txt);
-	SDL_mutexV(clipboard_to_host_mutex);
+	SDL_UnlockMutex(clipboard_to_host_mutex);
 	return true;
 #else
 	HGLOBAL hglb;
@@ -1213,13 +1213,13 @@ void clipboard_unsafeperiod()
 
 char* uae_clipboard_get_text()
 {
-	SDL_mutexP(clipboard_to_host_mutex);
+	SDL_LockMutex(clipboard_to_host_mutex);
 	char* text = clipboard_to_host_text;
 	if (text)
 	{
 		clipboard_to_host_text = nullptr;
 	}
-	SDL_mutexV(clipboard_to_host_mutex);
+	SDL_UnlockMutex(clipboard_to_host_mutex);
 	return text;
 }
 
@@ -1250,14 +1250,14 @@ void uae_clipboard_put_text(const char* text)
 	{
 		return;
 	}
-	SDL_mutexP(clipboard_from_host_mutex);
+	SDL_LockMutex(clipboard_from_host_mutex);
 	if (clipboard_from_host_text)
 	{
 		free(clipboard_from_host_text);
 	}
 	clipboard_from_host_text = strdup(text);
 	clipboard_from_host_changed = true;
-	SDL_mutexV(clipboard_from_host_mutex);
+	SDL_UnlockMutex(clipboard_from_host_mutex);
 
 	// FIXME: We can call clipboard_changed directly, and so, we do not
 	// really need the locks (all access to clipboard_from_host* is from

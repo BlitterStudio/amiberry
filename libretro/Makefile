@@ -69,6 +69,7 @@ else ifeq ($(platform), osx)
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    SHARED := -dynamiclib
+   LDFLAGS += -framework CoreFoundation -framework DiskArbitration -lz -liconv
 else
    TARGET := $(TARGET_NAME)_libretro.dll
    CC ?= gcc
@@ -87,7 +88,11 @@ ifneq ($(DEBUG), 1)
 FLAGS += -fvisibility=hidden
 endif
 FLAGS += -ffunction-sections -fdata-sections
+ifneq ($(platform), osx)
 LDFLAGS += -Wl,--gc-sections
+else
+LDFLAGS += -Wl,-dead_strip
+endif
 
 ifeq ($(DEBUG), 1)
    FLAGS += -O0 -g -fno-omit-frame-pointer
@@ -125,6 +130,8 @@ FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
 FLAGS += -DWITH_MIDI
 
 ifneq (,$(findstring aarch64,$(ARCH)))
+   FLAGS += -DCPU_AARCH64
+else ifneq (,$(findstring arm64,$(ARCH)))
    FLAGS += -DCPU_AARCH64
 else ifneq (,$(findstring arm,$(ARCH)))
    FLAGS += -DCPU_ARM
@@ -623,10 +630,10 @@ $(TARGET): $(OBJECTS)
 	$(CXX) $(INCFLAGS) $(FLAGS) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cpp
-	$(CXX) $(INCFLAGS) $(FLAGS) -c -o $@ $<
+	$(CXX) $(INCFLAGS) $(FLAGS) -std=gnu++17 -c -o $@ $<
 
 %.o: %.c
-	$(CC) $(INCFLAGS) $(FLAGS) -c -o $@ $<
+	$(CC) $(INCFLAGS) $(FLAGS) -std=gnu99 -c -o $@ $<
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)

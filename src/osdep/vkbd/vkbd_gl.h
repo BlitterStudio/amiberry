@@ -2,7 +2,7 @@
 #ifdef USE_OPENGL
 
 #include "gl_platform.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 // Initialize the VKBD GL shader program and VAO/VBO.
 // Returns true on success, false on shader compilation/link error.

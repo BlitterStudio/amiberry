@@ -463,7 +463,7 @@ extern int last_y;
 
 extern struct romdata *scan_single_rom (const TCHAR *path);
 extern void update_gui_screen();
-extern void cap_fps(Uint64 start);
+extern void cap_fps(uint64_t start);
 extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup);
 extern void download_rtb(const std::string& filename);

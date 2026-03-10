@@ -8,7 +8,7 @@
  * Copyright 2025-2026 Dimitris Panokostas
  */
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 struct AmigaMonitor;
 

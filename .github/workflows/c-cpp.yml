@@ -718,6 +718,11 @@ jobs:
             artifact_platform: win
             arch: x86_64
             artifact: amiberry_libretro.dll
+          - os: macos-latest
+            platform: osx
+            artifact_platform: macOS
+            arch: arm64
+            artifact: amiberry_libretro.dylib
     steps:
       - name: Check out amiberry
         uses: actions/checkout@v4

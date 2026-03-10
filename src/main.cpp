@@ -489,7 +489,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		if (rbc->monitor_id > 0) {
 			if (!p->gfx_api) {
 				rbc->monitor_id = 0;
-				error_log(_T("Multi virtual monitor support requires SDL2 mode."));
+				error_log(_T("Multi virtual monitor support requires OpenGL mode."));
 			}
 			if (isfullscreen() > 0) {
 				rbc->monitor_id = 0;

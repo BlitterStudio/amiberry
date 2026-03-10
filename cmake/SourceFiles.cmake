@@ -415,11 +415,10 @@ set(PCEM_SOURCE_FILES
         src/pcem/x87_timings.cpp
 )
 
-if (USE_IMGUI)
-    message(STATUS "Using ImGui for GUI")
-    list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
-    list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
-endif ()
+# ImGui GUI (always enabled)
+message(STATUS "Using ImGui for GUI")
+list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
+list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
 
 if (USE_PCEM)
     message(STATUS "PCem support enabled")
@@ -591,9 +590,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         external/floppybridge/src
 )
 
-if (USE_IMGUI)
-    target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
-endif()
+# ImGui include dirs (always enabled)
+target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
 
 # Install the executable
 install(TARGETS ${PROJECT_NAME}

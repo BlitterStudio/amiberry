@@ -2664,7 +2664,7 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 #include <cstddef>
 #include <cstring>
 #include <vector>
-#include <SDL_mutex.h>
+#include <SDL3/SDL_mutex.h>
 #if defined(_WIN32)
 #include <mutex>
 static std::mutex bsdsock_mutex;
@@ -2859,7 +2859,7 @@ struct socket_event_entry {
 // Event monitor thread state
 struct event_monitor {
 	uae_thread_id thread;      // Monitor thread
-	SDL_mutex* mutex;          // Protects socket_list
+	SDL_Mutex* mutex;          // Protects socket_list
 	int wake_pipe[2];          // Pipe to wake thread on changes
 	std::atomic<bool> running; // Thread running flag
 	std::vector<socket_event_entry> socket_list;  // Sockets to monitor

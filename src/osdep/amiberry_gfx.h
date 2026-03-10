@@ -1,5 +1,5 @@
 #pragma once
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <memory>
 #include "rtgmodes.h"
 #include "uae/types.h"
@@ -14,7 +14,7 @@ class IRenderer;
 #define RTG_MODE_INTEGER_SCALE 3
 
 #ifdef AMIBERRY
-extern Uint32 pixel_format;
+extern SDL_PixelFormat pixel_format;
 extern uae_u8* p96_get_render_buffer_pointer(int monid);
 #endif
 
@@ -122,12 +122,17 @@ struct AmigaMonitor {
 extern struct AmigaMonitor* amon;
 extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
-#define  SYSTEM_RED_SHIFT      (amiga_surface->format->Rshift)
-#define  SYSTEM_GREEN_SHIFT    (amiga_surface->format->Gshift)
-#define  SYSTEM_BLUE_SHIFT     (amiga_surface->format->Bshift)
-#define  SYSTEM_RED_MASK       (amiga_surface->format->Rmask)
-#define  SYSTEM_GREEN_MASK     (amiga_surface->format->Gmask)
-#define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
+// SDL3: surface->format is an enum, not a pointer. Cache pixel format details in globals.
+extern int system_red_shift, system_green_shift, system_blue_shift;
+extern uint32_t system_red_mask, system_green_mask, system_blue_mask;
+void update_system_pixel_format();
+
+#define  SYSTEM_RED_SHIFT      system_red_shift
+#define  SYSTEM_GREEN_SHIFT    system_green_shift
+#define  SYSTEM_BLUE_SHIFT     system_blue_shift
+#define  SYSTEM_RED_MASK       system_red_mask
+#define  SYSTEM_GREEN_MASK     system_green_mask
+#define  SYSTEM_BLUE_MASK      system_blue_mask
 
 extern std::unique_ptr<IRenderer> g_renderer;
 
@@ -160,8 +165,6 @@ extern void gfx_unlock();
 
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
-void SDL2_guimode(int monid, int guion);
-void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
 extern float calculate_desired_aspect(const AmigaMonitor* mon);
@@ -170,6 +173,6 @@ extern void start_drawing_thread();
 extern bool target_graphics_buffer_update(const int monid, const bool force);
 
 extern bool force_auto_crop;
-extern SDL_GameControllerButton vkbd_button;
+extern SDL_GamepadButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;

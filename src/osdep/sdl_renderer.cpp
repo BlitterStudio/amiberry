@@ -1,8 +1,8 @@
 /*
- * sdl_renderer.cpp - SDL2 software renderer backend implementation of IRenderer
+ * sdl_renderer.cpp - SDL3 software renderer backend implementation of IRenderer
  *
- * Owns SDL2 texture state and implements frame rendering/presentation
- * using SDL2_Renderer (SDL_RenderCopy, SDL_RenderPresent).
+ * Owns SDL3 texture state and implements frame rendering/presentation
+ * using SDL3_Renderer (SDL_RenderTexture, SDL_RenderPresent).
  *
  * Copyright 2026 Dimitris Panokostas
  */
@@ -18,6 +18,7 @@
 
 #include "sdl_renderer.h"
 #include "amiberry_gfx.h"
+#include "display_modes.h"
 #include "gfx_platform_internal.h"
 #include "vkbd/vkbd.h"
 #include "on_screen_joystick.h"
@@ -36,31 +37,31 @@ SDLRenderer* get_sdl_renderer()
 
 bool SDLRenderer::init_context(SDL_Window* /*window*/)
 {
-	// SDL2 software path: no separate context needed
+	// SDL software path: no separate context needed
 	return true;
 }
 
 void SDLRenderer::destroy_context()
 {
-	// SDL2 software path: nothing to do
+	// SDL software path: nothing to do
 }
 
 bool SDLRenderer::has_context() const
 {
-	// SDL2 software path: always considered "valid" when a renderer exists
+	// SDL software path: always considered "valid" when a renderer exists
 	return true;
 }
 
 // --- Window creation support ---
 
-Uint32 SDLRenderer::get_window_flags() const
+SDL_WindowFlags SDLRenderer::get_window_flags() const
 {
-	return 0; // No special flags needed for SDL2 software rendering
+	return 0; // No special flags needed for SDL software rendering
 }
 
 bool SDLRenderer::set_context_attributes(int /*mode*/)
 {
-	// SDL2 software path: no GL attributes to set
+	// SDL software path: no GL attributes to set
 	return true;
 }
 
@@ -68,8 +69,7 @@ bool SDLRenderer::create_platform_renderer(AmigaMonitor* mon)
 {
 	if (mon->amiga_renderer == nullptr)
 	{
-		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
-		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
+		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, NULL);
 		if (mon->amiga_renderer == nullptr) {
 			write_log("Unable to create a renderer: %s\n", SDL_GetError());
 			return false;
@@ -110,10 +110,11 @@ bool SDLRenderer::alloc_texture(int monid, int w, int h)
 	{
 		if (m_amiga_texture)
 		{
-			int width, height;
-			Uint32 format;
-			SDL_QueryTexture(m_amiga_texture, &format, nullptr, &width, &height);
-			if (width == -w && height == -h && format == pixel_format)
+			float tex_fw, tex_fh;
+			SDL_GetTextureSize(m_amiga_texture, &tex_fw, &tex_fh);
+			int width = static_cast<int>(tex_fw);
+			int height = static_cast<int>(tex_fh);
+			if (width == -w && height == -h)
 			{
 				set_scaling(monid, &currprefs, width, height);
 				return true;
@@ -140,26 +141,33 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	if (mon->amiga_renderer)
-		SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
 	if (currprefs.headless) return;
 
-	auto scale_quality = "nearest";
-	SDL_bool integer_scale = SDL_FALSE;
+	SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAREST;
+	bool integer_scale = false;
 
 	switch (p->scaling_method) {
 	case -1: // Auto
 		if (!ar_is_exact(&sdl_mode, w, h))
-			scale_quality = "linear";
+			scale_mode = SDL_SCALEMODE_LINEAR;
 		break;
-	case 0: scale_quality = "nearest"; break;
-	case 1: scale_quality = "linear"; break;
-	case 2: scale_quality = "nearest"; integer_scale = SDL_TRUE; break;
-	default: scale_quality = "linear"; break;
+	case 0: scale_mode = SDL_SCALEMODE_NEAREST; break;
+	case 1: scale_mode = SDL_SCALEMODE_LINEAR; break;
+	case 2: scale_mode = SDL_SCALEMODE_NEAREST; integer_scale = true; break;
+	default: scale_mode = SDL_SCALEMODE_LINEAR; break;
 	}
 
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scale_quality);
-	SDL_RenderSetIntegerScale(mon->amiga_renderer, integer_scale);
+	// SDL3: scale mode is per-texture, set on the amiga texture
+	if (m_amiga_texture)
+		SDL_SetTextureScaleMode(m_amiga_texture, scale_mode);
+
+	// SDL3: integer scaling via logical presentation mode
+	if (integer_scale)
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, w, h, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+	else
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }
 
 // --- OSD texture synchronization ---
@@ -172,8 +180,10 @@ void SDLRenderer::sync_osd_texture(int monid, int led_width, int led_height)
 
 	// Destroy and recreate texture if dimensions changed
 	if (mon->statusline_texture) {
-		int tw, th;
-		SDL_QueryTexture(mon->statusline_texture, nullptr, nullptr, &tw, &th);
+		float tw_f, th_f;
+		SDL_GetTextureSize(mon->statusline_texture, &tw_f, &th_f);
+		int tw = static_cast<int>(tw_f);
+		int th = static_cast<int>(th_f);
 		if (tw != led_width || th != led_height) {
 			SDL_DestroyTexture(mon->statusline_texture);
 			mon->statusline_texture = nullptr;
@@ -196,7 +206,7 @@ void SDLRenderer::sync_osd_texture(int monid, int led_width, int led_height)
 
 void SDLRenderer::update_vsync(int /*monid*/)
 {
-	// SDL2 software path: VSync handled by renderer flags at creation time
+	// SDL software path: VSync handled by renderer flags at creation time
 }
 
 // --- Frame rendering ---
@@ -219,7 +229,8 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			}
 		} else {
 			// Otherwise, update only the collected dirty rectangles.
-			const int bpp = amiga_surface->format->BytesPerPixel;
+			const auto* fmt = SDL_GetPixelFormatDetails(amiga_surface->format);
+			const int bpp = fmt ? fmt->bytes_per_pixel : 4;
 			const auto* base = static_cast<const uae_u8*>(amiga_surface->pixels);
 			const int pitch = amiga_surface->pitch;
 			for (const auto& rect : mon->dirty_rects) {
@@ -231,23 +242,23 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 		mon->dirty_rects.clear();
 		mon->full_render_needed = false;
 
-		const SDL_Rect* p_crop = &crop_rect;
-		const SDL_Rect* p_quad = &render_quad;
-		SDL_Rect rtg_rect;
+		SDL_FRect f_crop = { static_cast<float>(crop_rect.x), static_cast<float>(crop_rect.y),
+			static_cast<float>(crop_rect.w), static_cast<float>(crop_rect.h) };
+		SDL_FRect f_quad = { static_cast<float>(render_quad.x), static_cast<float>(render_quad.y),
+			static_cast<float>(render_quad.w), static_cast<float>(render_quad.h) };
 
 		if (ad->picasso_on) {
-			rtg_rect = { 0, 0, amiga_surface->w, amiga_surface->h };
-			p_crop = &rtg_rect;
-			p_quad = &rtg_rect;
+			f_crop = { 0.0f, 0.0f, static_cast<float>(amiga_surface->w), static_cast<float>(amiga_surface->h) };
+			f_quad = f_crop;
 
 			int lw, lh;
-			SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
-			if (lw != rtg_rect.w || lh != rtg_rect.h) {
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, rtg_rect.w, rtg_rect.h);
+			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, nullptr, nullptr);
+			if (lw != amiga_surface->w || lh != amiga_surface->h) {
+				SDL_SetRenderLogicalPresentation(mon->amiga_renderer, amiga_surface->w, amiga_surface->h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 			}
 		}
 
-		SDL_RenderCopyEx(mon->amiga_renderer, m_amiga_texture, p_crop, p_quad, 0, nullptr, SDL_FLIP_NONE);
+		SDL_RenderTextureRotated(mon->amiga_renderer, m_amiga_texture, &f_crop, &f_quad, 0, nullptr, SDL_FLIP_NONE);
 
 		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
 		if (ad->picasso_on && p96_uses_software_cursor()) {
@@ -268,8 +279,9 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 				p96_get_cursor_dimensions(&cw, &ch);
 
 				// Renderer logical size matches RTG resolution, so 1:1 mapping
-				SDL_Rect dst_cursor = { cx, cy, cw, ch };
-				SDL_RenderCopy(mon->amiga_renderer, m_cursor_overlay_texture, nullptr, &dst_cursor);
+				SDL_FRect dst_cursor = { static_cast<float>(cx), static_cast<float>(cy),
+					static_cast<float>(cw), static_cast<float>(ch) };
+				SDL_RenderTexture(mon->amiga_renderer, m_cursor_overlay_texture, nullptr, &dst_cursor);
 			}
 		}
 
@@ -278,13 +290,14 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
 		{
 			int slx, sly, dst_w, dst_h;
-			SDL_RenderGetLogicalSize(mon->amiga_renderer, &dst_w, &dst_h);
+			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &dst_w, &dst_h, nullptr, nullptr);
 			if (dst_w == 0 || dst_h == 0) {
-				SDL_GetRendererOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
+				SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
 			}
 			statusline_getpos(monid, &slx, &sly, dst_w, dst_h);
-			SDL_Rect dst_osd = { slx, sly, mon->statusline_surface->w, mon->statusline_surface->h };
-			SDL_RenderCopy(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
+			SDL_FRect dst_osd = { static_cast<float>(slx), static_cast<float>(sly),
+				static_cast<float>(mon->statusline_surface->w), static_cast<float>(mon->statusline_surface->h) };
+			SDL_RenderTexture(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
 		}
 
 		render_vkbd(monid);
@@ -343,7 +356,7 @@ void SDLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_
 
 	*dx = 0; *dy = 0; *mx = 1.0f; *my = 1.0f;
 
-	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+	if (isfullscreen() < 0) {
 		if (currprefs.gfx_auto_crop) {
 			*dx -= src_x;
 			*dy -= src_y;
@@ -359,10 +372,10 @@ void SDLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_
 
 void SDLRenderer::get_drawable_size(SDL_Window* /*w*/, int* width, int* height)
 {
-	// SDL2 software path: use renderer output size
+	// SDL3 software path: use renderer output size
 	AmigaMonitor* mon = &AMonitors[0];
 	if (mon->amiga_renderer) {
-		SDL_GetRendererOutputSize(mon->amiga_renderer, width, height);
+		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, width, height);
 	}
 }
 

@@ -591,7 +591,7 @@ TCHAR* write_log_get_ts(void)
 	if (!vsync_counter)
 		return nullptr;
 
-	Uint32 ticks = SDL_GetTicks();
+	uint64_t ticks = SDL_GetTicks();
 	time_t seconds = ticks / 1000;
 	int milliseconds = ticks % 1000;
 

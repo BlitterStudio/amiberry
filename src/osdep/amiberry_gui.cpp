@@ -11,8 +11,8 @@
 
 #ifdef USE_IMGUI
 #include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_sdlrenderer2.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlrenderer3.h"
 #endif
 
 #include "sysdeps.h"
@@ -901,7 +901,7 @@ void gui_display(int shortcut)
 	//rawinput_alloc();
 	struct AmigaMonitor* mon = &AMonitors[0];
 	if (mon->amiga_window)
-		SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+		SDL_SetWindowMouseGrab(mon->amiga_window, true);
 	if (kmsdrm_detected && amiga_surface != nullptr)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);

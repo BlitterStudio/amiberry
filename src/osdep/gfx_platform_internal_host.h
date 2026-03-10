@@ -1,7 +1,7 @@
 #pragma once
 
 #include <png.h>
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #include <string>
 
@@ -58,11 +58,11 @@ static inline void gfx_platform_set_window_icon(SDL_Window* window)
 	if (icon_surface != nullptr)
 	{
 		SDL_SetWindowIcon(window, icon_surface);
-		SDL_FreeSurface(icon_surface);
+		SDL_DestroySurface(icon_surface);
 	}
 }
 
-static inline bool gfx_platform_override_pixel_format(Uint32* format)
+static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)
 {
 	(void)format;
 	return false;
@@ -146,15 +146,12 @@ static inline bool gfx_platform_create_screenshot(SDL_Surface* amiga_surface, SD
 		return false;
 
 	if (amiga_surface != nullptr) {
-		*out_surface = SDL_CreateRGBSurfaceFrom(amiga_surface->pixels,
+		*out_surface = SDL_CreateSurfaceFrom(
 			AMIGA_WIDTH_MAX << currprefs.gfx_resolution,
 			AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution,
-			amiga_surface->format->BitsPerPixel,
-			amiga_surface->pitch,
-			amiga_surface->format->Rmask,
-			amiga_surface->format->Gmask,
-			amiga_surface->format->Bmask,
-			amiga_surface->format->Amask);
+			amiga_surface->format,
+			amiga_surface->pixels,
+			amiga_surface->pitch);
 	}
 	return *out_surface != nullptr;
 }

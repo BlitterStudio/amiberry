@@ -40,7 +40,7 @@
 /* On Windows x86_64, JIT exception handling is done via
  * AddVectoredExceptionHandler in jit/x86/exception_handler.cpp.
  * This file only provides stubs for the POSIX signal handler API. */
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 static int max_signals = 200;
 
@@ -73,7 +73,7 @@ void init_max_signals()
 #ifdef HAVE_EXECINFO
 #include <execinfo.h>
 #endif
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #ifdef JIT
 extern uae_u8* current_compile_p;
