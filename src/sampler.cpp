@@ -45,12 +45,13 @@ static int capture_init (void)
 	//WAVEFORMATEX wavfmt;
 	TCHAR *name = nullptr;
 	int samplerate = 44100;
-
+	SDL_AudioDeviceID device_id = SDL_AUDIO_DEVICE_DEFAULT_RECORDING;
 	if (currprefs.sampler_freq)
 		samplerate = currprefs.sampler_freq;
 
 	name = record_devices[currprefs.samplersoundcard]->name;
-
+	if (record_devices[currprefs.samplersoundcard] != nullptr)
+		device_id = static_cast<SDL_AudioDeviceID>(record_devices[currprefs.samplersoundcard]->id);
 	//wavfmt.wFormatTag = WAVE_FORMAT_PCM;
 	//wavfmt.nChannels = 2;
 	//wavfmt.nSamplesPerSec = samplerate;
@@ -77,13 +78,20 @@ static int capture_init (void)
 	rec_spec.freq = samplerate;
 
 	//Open recording device
-	rec_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &rec_spec, NULL, NULL);
+	rec_stream = SDL_OpenAudioDeviceStream(device_id, &rec_spec, NULL, NULL);
 	//Device failed to open
 	if (rec_stream == nullptr)
 	{
-		//Report error
-		write_log("SAMPLER: Failed to open recording device! SDL Error: %s", SDL_GetError());
-		return 0;
+		if (device_id != SDL_AUDIO_DEVICE_DEFAULT_RECORDING)
+		{
+			write_log("SAMPLER: Failed to open selected recording device '%s': %s. Retrying with default device.\n", name, SDL_GetError());
+			rec_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &rec_spec, NULL, NULL);
+		}
+		if (rec_stream == nullptr)
+		{
+			write_log("SAMPLER: Failed to open recording device! SDL Error: %s", SDL_GetError());
+			return 0;
+		}
 	}
 	SDL_ResumeAudioStreamDevice(rec_stream);
 
@@ -334,4 +342,3 @@ void sampler_vsync (void)
 		return;
 	}
 }
-

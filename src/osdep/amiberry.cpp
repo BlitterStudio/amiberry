@@ -1711,10 +1711,19 @@ static void handle_clipboard_update_event()
 	}
 }
 
-static void handle_joy_device_event(const int which, const bool removed)
+static void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 {
-	const didata* existing_did = &di_joystick[which];
-	if (existing_did->guid.empty() || removed)
+	bool known_device = false;
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id)
+	{
+		const didata* did = &di_joystick[id];
+		if (!did->guid.empty() && did->joystick_id == which)
+		{
+			known_device = true;
+			break;
+		}
+	}
+	if (!known_device || removed)
 	{
 		write_log("SDL Gamepad/Joystick added or removed, re-running import joysticks...\n");
 		if (inputdevice_devicechange(&currprefs))

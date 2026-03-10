@@ -402,7 +402,10 @@ static int open_audio_sdl(struct sound_data* sd, int index)
 	const auto freq = sd->freq;
 	const auto ch = sd->channels;
 	auto devname = sound_devices[index]->name;
-
+	const bool use_default_device = currprefs.soundcard_default || sound_devices[index] == nullptr;
+	const SDL_AudioDeviceID device_id = use_default_device
+		? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
+		: static_cast<SDL_AudioDeviceID>(sound_devices[index]->id);
 	sd->devicetype = SOUND_DEVICE_SDL2;
 	sd->sndbufsize = std::max(sd->sndbufsize, 0x80);
 	s->framesperbuffer = sd->sndbufsize;
@@ -425,19 +428,36 @@ static int open_audio_sdl(struct sound_data* sd, int index)
 	{
 		// Pull mode: use stream with get callback
 		s->stream = SDL_OpenAudioDeviceStream(
-			SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, sdl3_audio_get_callback, sd);
+			device_id, &spec, sdl3_audio_get_callback, sd);
 	}
 	else
 	{
 		// Push mode: use stream without callback, we'll push data manually
 		s->stream = SDL_OpenAudioDeviceStream(
-			SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+			device_id, &spec, NULL, NULL);
 	}
 
 	if (!s->stream)
 	{
-		write_log("Failed to open SDL3 audio device stream: %s\n", SDL_GetError());
-		return 0;
+		if (!use_default_device)
+		{
+			write_log("Failed to open selected SDL3 audio device '%s': %s, retrying with default device\n", devname, SDL_GetError());
+			if (s->pullmode)
+			{
+				s->stream = SDL_OpenAudioDeviceStream(
+					SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, sdl3_audio_get_callback, sd);
+			}
+			else
+			{
+				s->stream = SDL_OpenAudioDeviceStream(
+					SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+			}
+		}
+		if (!s->stream)
+		{
+			write_log("Failed to open default SDL3 audio device stream: %s\n", SDL_GetError());
+			return 0;
+		}
 	}
 
 	if (s->pullmode)
@@ -896,7 +916,7 @@ int enumerate_sound_devices()
 			const auto devname = SDL_GetAudioDeviceName(playback_devices[i]);
 			write_log("Sound playback device %d: %s\n", i, devname);
 			sound_devices[i] = xcalloc(struct sound_device, 1);
-			sound_devices[i]->id = i;
+			sound_devices[i]->id = static_cast<int>(playback_devices[i]);
 			sound_devices[i]->cfgname = my_strdup(devname);
 			sound_devices[i]->type = SOUND_DEVICE_SDL2;
 			sound_devices[i]->name = my_strdup(devname);
@@ -914,7 +934,7 @@ int enumerate_sound_devices()
 			const auto devname = SDL_GetAudioDeviceName(recording_devices[i]);
 			write_log("Sound recording device %d: %s\n", i, devname);
 			record_devices[i] = xcalloc(struct sound_device, 1);
-			record_devices[i]->id = i;
+			record_devices[i]->id = static_cast<int>(recording_devices[i]);
 			record_devices[i]->cfgname = my_strdup(devname);
 			record_devices[i]->type = SOUND_DEVICE_SDL2;
 			record_devices[i]->name = my_strdup(devname);
