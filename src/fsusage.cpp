@@ -32,6 +32,8 @@ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 // For osx, sigurbjornl
 #elif defined (__MACH__) || defined(__FreeBSD__)
 #include <sys/mount.h>
+#elif defined(__HAIKU__)
+#include <sys/statvfs.h>
 #else
 #include <sys/vfs.h>
 #endif
@@ -109,7 +111,7 @@ int statfs ();
 # include <sys/param.h>
 #endif
 
-#if HAVE_SYS_MOUNT_H
+#if HAVE_SYS_MOUNT_H && !defined(__HAIKU__)
 # include <sys/mount.h>
 #endif
 
@@ -117,8 +119,8 @@ int statfs ();
 #include <sys/vfs.h>
 #elif defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
-#else
-#error "Filesystem header not supported on this platform"
+#elif defined(__HAIKU__)
+#include <sys/statvfs.h>
 #endif
 
 #if HAVE_SYS_FS_S5PARAM_H	/* Fujitsu UXP/V */
@@ -137,8 +139,8 @@ int statfs ();
 #include <sys/statfs.h>
 #elif defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
-#else
-#error "Platform not supported for filesystem stats"
+#elif defined(__HAIKU__)
+#include <sys/statvfs.h>
 #endif
 
 #if HAVE_DUSTAT_H		/* AIX PS/2 */

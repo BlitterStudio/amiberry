@@ -6793,7 +6793,11 @@ static void picasso_reset2(int monid)
 		}
 #ifdef AMIBERRY
 		if (render_cs == nullptr) {
+			#if defined(__HAIKU__)
+			uae_sem_init(&render_cs, 0, 1);
+#else
 			uae_sem_init(&render_cs, 0, -1);
+#endif
 		}
 #endif
 		if (render_thread_state <= 0) {

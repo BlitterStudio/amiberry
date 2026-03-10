@@ -2661,6 +2661,32 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif /* _WIN32 */
+
+#if defined(__HAIKU__)
+/* Haiku does not define these obsolete/rare constants */
+#ifndef ESOCKTNOSUPPORT
+#define ESOCKTNOSUPPORT 44
+#endif
+#ifndef ETOOMANYREFS
+#define ETOOMANYREFS    59
+#endif
+#ifndef IPPROTO_EGP
+#define IPPROTO_EGP     8
+#endif
+#ifndef IPPROTO_PUP
+#define IPPROTO_PUP     12
+#endif
+#ifndef IPPROTO_IDP
+#define IPPROTO_IDP     22
+#endif
+#ifndef IPPROTO_ENCAP
+#define IPPROTO_ENCAP   98
+#endif
+#ifndef SIOCGIFCONF
+#include <sys/sockio.h>
+#endif
+#endif /* __HAIKU__ */
+
 #include <cstddef>
 #include <cstring>
 #include <vector>
@@ -3739,6 +3765,9 @@ static int copysockaddr_a2n(struct sockaddr_in* addr, uae_u32 a_addr, unsigned i
 		return 0;
 
 	addr->sin_family = get_byte(a_addr + 1);
+#if defined(__HAIKU__)
+	if (addr->sin_family == 2) addr->sin_family = AF_INET;
+#endif
 	addr->sin_port = htons(get_word(a_addr + 2));
 	addr->sin_addr.s_addr = htonl(get_long(a_addr + 4));
 
@@ -3760,7 +3789,13 @@ static int copysockaddr_n2a (uae_u32 a_addr, const struct sockaddr_in *addr, uns
 		return 0;
 
 	put_byte (a_addr, 0);                       /* Anyone use this field? */
+#if defined(__HAIKU__)
+	{ int amiga_af = addr->sin_family;
+	  if (amiga_af == AF_INET) amiga_af = 2;
+	 	  put_byte(a_addr + 1, amiga_af); }
+#else
 	put_byte (a_addr + 1, addr->sin_family);
+#endif
 	put_word (a_addr + 2, ntohs (addr->sin_port));
 	put_long (a_addr + 4, ntohl (addr->sin_addr.s_addr));
 
@@ -4398,6 +4433,10 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
 {
     int sd;
     int s;
+#if defined(__HAIKU__)
+    /* On Haiku AF_INET=1, but Amiga/BSD use AF_INET=2. Translate. */
+    if (af == 2) af = AF_INET;
+#endif
 
     write_log("socket(%s,%s,%d) -> ",af == AF_INET ? "AF_INET" : "AF_other",
            type == SOCK_STREAM ? "SOCK_STREAM" : type == SOCK_DGRAM ?

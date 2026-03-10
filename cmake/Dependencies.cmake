@@ -551,7 +551,10 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_libraries(${PROJECT_NAME} PRIVATE ${UTIL_LIBRARY})
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
-endif ()
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    target_link_libraries(${PROJECT_NAME} PRIVATE network iconv bsd)
+endif()
 
 # Platform system libraries must come AFTER all other dependencies so that
 # static libs (enet, etc.) can resolve their system library references.
