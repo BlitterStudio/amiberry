@@ -333,18 +333,22 @@ jobs:
             runner: ubuntu-latest
             container: ubuntu:22.04
             artifact_name: amiberry-ubuntu-22.04-amd64
+            sdl_source: setup-sdl
           - name: 24.04-amd64
             runner: ubuntu-latest
             container: ubuntu:24.04
             artifact_name: amiberry-ubuntu-24.04-amd64
+            sdl_source: setup-sdl
           - name: 25.10-amd64
             runner: ubuntu-latest
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-amd64
+            sdl_source: setup-sdl
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-arm64
+            sdl_source: apt
     steps:
       - name: Install prerequisites
         run: |
@@ -380,6 +384,7 @@ jobs:
           sudo apt-get install -y build-essential cmake ninja-build file libflac-dev libmpeg2-4-dev libpng-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
       - name: Install SDL3 and SDL3_image
+        if: matrix.sdl_source == 'setup-sdl'
         id: sdl
         uses: libsdl-org/setup-sdl@main
         with:
@@ -388,12 +393,26 @@ jobs:
           version-sdl-image: 3.2.4
           pre-release: false
 
-      - name: make for Ubuntu ${{ matrix.name }}
+      - name: Install SDL3 and SDL3_image from apt
+        if: matrix.sdl_source == 'apt'
+        run: sudo apt-get install -y libsdl3-dev libsdl3-image-dev
+
+      - name: make for Ubuntu ${{ matrix.name }} with setup-sdl
+        if: matrix.sdl_source == 'setup-sdl'
         env:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
           cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
+          cpack -G DEB --config build/CPackConfig.cmake
+
+      - name: make for Ubuntu ${{ matrix.name }} with apt SDL3
+        if: matrix.sdl_source == 'apt'
+        env:
+          CCACHE_DIR: ~/.ccache
+        run: |
+          export PATH="/usr/lib/ccache:$PATH"
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
