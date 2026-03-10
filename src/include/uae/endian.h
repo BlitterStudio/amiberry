@@ -38,7 +38,7 @@ static inline uint32_t le32toh_impl(uint32_t v)
 #define le32toh le32toh_impl
 #endif
 
-#elif defined(HAVE_LIBKERN_OSBYTEORDER_H)
+#elif defined(__APPLE__)
 
 /* OS X lacks endian.h, but has something similar */
 #include <libkern/OSByteOrder.h>

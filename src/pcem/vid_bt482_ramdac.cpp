@@ -1,6 +1,7 @@
 
 /* BT482 RAMDAC (based on 86box BT484) */
 
+#include <cstdlib>
 #include <memory>
 #include "ibm.h"
 #include "mem.h"
