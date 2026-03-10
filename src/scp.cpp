@@ -16,7 +16,9 @@
 #include "uae/endian.h"
 
 #include <stdint.h>
-#if defined __MACH__
+#if defined __HAIKU__
+#include <endian.h>
+#elif defined __MACH__
 #include <machine/endian.h>
 #include <libkern/OSByteOrder.h>
 #define htobe16(x) OSSwapHostToBigInt16(x)

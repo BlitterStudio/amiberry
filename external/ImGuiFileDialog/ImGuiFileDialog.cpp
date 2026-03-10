@@ -96,7 +96,8 @@ SOFTWARE.
     defined(__NetBSD__) || \
     defined(__OpenBSD__) || \
     defined(__APPLE__) ||\
-    defined(__EMSCRIPTEN__)
+    defined(__EMSCRIPTEN__) || \
+    defined(__HAIKU__)
 #define _IGFD_UNIX_
 #define stricmp strcasecmp
 #include <sys/types.h>
@@ -806,6 +807,22 @@ public:
             for (size_t i = 0; i < n; ++i) {
                 struct dirent* ent = files[i];
                 IGFD::FileType fileType;
+#if defined(__HAIKU__)
+                {
+                        struct stat sb = {};
+                        const auto fpn = vPath + IGFD::Utils::GetPathSeparator() + ent->d_name;
+                        if (!lstat(fpn.c_str(), &sb)) {
+                            if (sb.st_mode & S_IFREG)
+                                fileType.SetContent(IGFD::FileType::ContentType::File);
+                            else if (sb.st_mode & S_IFDIR)
+                                fileType.SetContent(IGFD::FileType::ContentType::Directory);
+                            else if (sb.st_mode & S_IFLNK) {
+                                fileType.SetSymLink(true);
+                                fileType.SetContent(IGFD::FileType::ContentType::LinkToUnknown);
+                            }
+                        }
+                }
+#else
                 switch (ent->d_type) {
                     case DT_DIR: fileType.SetContent(IGFD::FileType::ContentType::Directory); break;
                     case DT_REG: fileType.SetContent(IGFD::FileType::ContentType::File); break;
@@ -838,6 +855,7 @@ public:
                     }
                     default: break;  // leave it invalid (devices, etc.)
                 }
+#endif /* __HAIKU__ */
                 if (fileType.isValid()) {
                     IGFD::FileInfos _file;
                     _file.filePath    = vPath;

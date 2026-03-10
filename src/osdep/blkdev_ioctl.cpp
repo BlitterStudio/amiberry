@@ -46,6 +46,8 @@
 #define ENOMEDIUM ENXIO
 #endif
 
+#elif defined(__HAIKU__)
+#include <errno.h>
 #elif defined(__FreeBSD__)
 // FreeBSD
 #include <sys/cdio.h>

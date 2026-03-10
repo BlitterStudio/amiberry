@@ -6058,6 +6058,8 @@ std::vector<std::string> get_cd_drives()
 			results.emplace_back(root);
 		}
 	}
+#elif defined(__HAIKU__)
+	write_log("CD drive auto-detection not supported on Haiku\n");
 #else
 	char path[MAX_DPATH];
 	FILE* fp = popen("lsblk -o NAME,TYPE | awk '$2==\"rom\"{print \"/dev/\"$1}'", "r");

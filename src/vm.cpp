@@ -28,7 +28,7 @@
 #endif
 
 //#if defined(LINUX) && defined(CPU_x86_64)
-#if defined(CPU_x86_64) && !defined(__APPLE__) && !defined(_WIN32)
+#if defined(CPU_x86_64) && !defined(__APPLE__) && !defined(_WIN32) && !defined(__HAIKU__)
 #define HAVE_MAP_32BIT 1
 #endif
 
@@ -177,8 +177,17 @@ static void *uae_vm_alloc_with_flags(size_t size, int flags, int protect)
 		/* Stupid algorithm to find available space, but should
 		 * work well enough when there is not a lot of allocations. */
 		int step = uae_vm_page_size();
+#if defined(__HAIKU__)
+		uae_u8 *p = (uae_u8 *) 0x10000000;
+		uae_u8 *p_end = (uae_u8 *) 0x7f000000 - size;
+		if (natmem_reserved && natmem_reserved > p && natmem_reserved < (uae_u8 *)0x7f000000) {
+			uae_u8 *nr_end = natmem_reserved - size;
+			if (nr_end < p_end) p_end = nr_end;
+		}
+#else
 		uae_u8 *p = (uae_u8 *) 0x40000000;
 		uae_u8 *p_end = natmem_reserved - size;
+#endif
 		if (size > 1024 * 1024) {
 			/* Reserve some space for smaller allocations */
 			p += 32 * 1024 * 1024;
@@ -355,6 +364,10 @@ static void *try_reserve(uintptr_t try_addr, size_t size, int flags)
     // We use a fixed hint and explicitly add MAP_32BIT.
     try_addr = 0x10000000;
     mmap_flags |= MAP_32BIT;
+    #elif defined(__HAIKU__)
+    if (try_addr == 0 || try_addr > 0x7f000000) {
+        try_addr = 0x10000000;
+    }
     #endif
 	address = mmap((void *) try_addr, size, PROT_NONE, mmap_flags, -1, 0);
 	if (address == MAP_FAILED) {

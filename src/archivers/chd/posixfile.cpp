@@ -26,7 +26,7 @@
 #define _FILE_OFFSET_BITS 64
 #endif
 
-#if !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__bsdi__) && !defined(__DragonFly__)
+#if (!defined(__FreeBSD__) || defined(__HAIKU__)) && !defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__bsdi__) && !defined(__DragonFly__)
 #ifdef _XOPEN_SOURCE
 #if _XOPEN_SOURCE < 500
 #undef _XOPEN_SOURCE
@@ -100,7 +100,7 @@ namespace {
 		{
 			ssize_t result;
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__)
 			result = ::pread(m_fd, buffer, size_t(count), off_t(std::make_unsigned_t<off_t>(offset)));
 #elif defined(_WIN32) || defined(SDLMAME_NO64BITIO)
 			if (lseek(m_fd, off_t(std::make_unsigned_t<off_t>(offset)), SEEK_SET) < 0)
@@ -121,7 +121,7 @@ namespace {
 		{
 			ssize_t result;
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__)
 			result = ::pwrite(m_fd, buffer, size_t(count), off_t(std::make_unsigned_t<off_t>(offset)));
 #elif defined(_WIN32) || defined(SDLMAME_NO64BITIO)
 			if (lseek(m_fd, off_t(std::make_unsigned_t<off_t>(offset)), SEEK_SET) < 0)
@@ -142,7 +142,7 @@ namespace {
 		{
 			int result;
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__EMSCRIPTEN__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__EMSCRIPTEN__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
 			result = ::ftruncate(m_fd, off_t(std::make_unsigned_t<off_t>(offset)));
 #else
 			result = ::ftruncate64(m_fd, off64_t(offset));
@@ -262,7 +262,7 @@ std::error_condition osd_file::open(std::string const& path, std::uint32_t openf
 
 	// attempt to open the file
 	int fd = -1;
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
 	fd = ::open(dst.c_str(), access, 0666);
 #else
 	fd = ::open64(dst.c_str(), access, 0666);
@@ -285,7 +285,7 @@ std::error_condition osd_file::open(std::string const& path, std::uint32_t openf
 				// attempt to reopen the file
 				if (!createrr)
 				{
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
 					fd = ::open(dst.c_str(), access, 0666);
 #else
 					fd = ::open64(dst.c_str(), access, 0666);
@@ -306,7 +306,7 @@ std::error_condition osd_file::open(std::string const& path, std::uint32_t openf
 	}
 
 	// get the file size
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
 	struct stat st;
 	if (::fstat(fd, &st) < 0)
 #else
@@ -371,7 +371,7 @@ bool osd_get_physical_drive_geometry(const char* filename, uint32_t* cylinders, 
 
 std::unique_ptr<osd::directory::entry> osd_stat(const std::string& path)
 {
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__HAIKU__) || defined(_WIN32) || defined(SDLMAME_NO64BITIO) || defined(__ANDROID__)
 	struct stat st;
 	int const err = ::stat(path.c_str(), &st);
 #else
