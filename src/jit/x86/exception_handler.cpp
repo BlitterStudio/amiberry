@@ -9,7 +9,11 @@
 #ifndef __USE_GNU
 #define __USE_GNU
 #endif
+#if defined(__HAIKU__)
+#include <signal.h>
+#else
 #include <sys/ucontext.h>
+#endif
 #endif
 #include <signal.h>
 
@@ -80,6 +84,28 @@ typedef void *CONTEXT_T;
 #define CONTEXT_R13(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_R13])
 #define CONTEXT_R14(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_R14])
 #define CONTEXT_R15(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_R15])
+
+#elif defined(AMIBERRY) && defined(CPU_x86_64) && defined(__HAIKU__)
+
+typedef void *CONTEXT_T;
+#define HAVE_CONTEXT_T 1
+#define CONTEXT_RIP(context) (((ucontext_t *) context)->uc_mcontext.rip)
+#define CONTEXT_RAX(context) (((ucontext_t *) context)->uc_mcontext.rax)
+#define CONTEXT_RCX(context) (((ucontext_t *) context)->uc_mcontext.rcx)
+#define CONTEXT_RDX(context) (((ucontext_t *) context)->uc_mcontext.rdx)
+#define CONTEXT_RBX(context) (((ucontext_t *) context)->uc_mcontext.rbx)
+#define CONTEXT_RSP(context) (((ucontext_t *) context)->uc_mcontext.rsp)
+#define CONTEXT_RBP(context) (((ucontext_t *) context)->uc_mcontext.rbp)
+#define CONTEXT_RSI(context) (((ucontext_t *) context)->uc_mcontext.rsi)
+#define CONTEXT_RDI(context) (((ucontext_t *) context)->uc_mcontext.rdi)
+#define CONTEXT_R8(context)  (((ucontext_t *) context)->uc_mcontext.r8)
+#define CONTEXT_R9(context)  (((ucontext_t *) context)->uc_mcontext.r9)
+#define CONTEXT_R10(context) (((ucontext_t *) context)->uc_mcontext.r10)
+#define CONTEXT_R11(context) (((ucontext_t *) context)->uc_mcontext.r11)
+#define CONTEXT_R12(context) (((ucontext_t *) context)->uc_mcontext.r12)
+#define CONTEXT_R13(context) (((ucontext_t *) context)->uc_mcontext.r13)
+#define CONTEXT_R14(context) (((ucontext_t *) context)->uc_mcontext.r14)
+#define CONTEXT_R15(context) (((ucontext_t *) context)->uc_mcontext.r15)
 
 #elif defined(HAVE_STRUCT_UCONTEXT_T_UC_MCONTEXT_GREGS) && defined(CPU_i386)
 
