@@ -934,6 +934,10 @@ int graphics_init(bool mousecapture)
 		update_pixel_format();
 		if (amiga_surface == nullptr) {
 			amiga_surface = SDL_CreateSurface(1920, 1080, pixel_format);
+			if (!amiga_surface) {
+				write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
+				return false;
+			}
 			update_system_pixel_format();
 		}
 		return amiga_surface != nullptr;
