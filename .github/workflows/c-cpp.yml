@@ -349,7 +349,7 @@ jobs:
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y sudo git
+          apt-get install -y sudo git gh
 
       - name: Check out repository code
         uses: actions/checkout@v4
