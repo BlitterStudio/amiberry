@@ -384,8 +384,9 @@ jobs:
         uses: libsdl-org/setup-sdl@main
         with:
           install-linux-dependencies: true
-          version: 3-latest
-          version-sdl-image: 3-latest
+          version: 3.2.8
+          version-sdl-image: 3.2.4
+          pre-release: false
 
       - name: make for Ubuntu ${{ matrix.name }}
         env:

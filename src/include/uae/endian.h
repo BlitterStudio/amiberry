@@ -55,7 +55,7 @@ static inline uint32_t le32toh_impl(uint32_t v)
 #define be64toh(x) OSSwapBigToHostInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 
-#elif defined(HAVE_ENDIAN_H)
+#elif defined(HAVE_ENDIAN_H) || defined(__ANDROID__)
 
 /* Linux has endian.h */
 #include <endian.h>
