@@ -32,6 +32,7 @@
 #include "statusline.h"
 #include "vkbd/vkbd.h"
 #include "on_screen_joystick.h"
+#include <cmath>
 #include <SDL3_image/SDL_image.h>
 
 #ifndef GL_BGRA

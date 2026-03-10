@@ -5,7 +5,12 @@
   "homepage": "https://amiberry.com",
   "dependencies": [
     "sdl3",
-    "sdl3-image",
+    {
+      "name": "sdl3-image",
+      "features": [
+        "png"
+      ]
+    },
     "libflac",
     "mpg123",
     "libpng",

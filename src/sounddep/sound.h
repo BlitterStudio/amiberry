@@ -83,4 +83,4 @@ extern int active_sound_stereo;
 #define FILTER_SOUND_TYPE_A500_FIXEDONLY 2
 
 extern int sounddrivermask;
-#define SOUNDDRIVER_SDL2 1
+#define SOUNDDRIVER_SDL 1

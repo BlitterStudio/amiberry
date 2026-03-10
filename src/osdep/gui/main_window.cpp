@@ -791,7 +791,7 @@ void amiberry_gui_init()
 		SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		SDL_SetWindowTitle(mon->gui_window, "Amiberry GUI");
 		SDL_SetWindowResizable(mon->gui_window, true);
-		SDL_SetWindowGrab(mon->gui_window, false);
+		SDL_SetWindowMouseGrab(mon->gui_window, false);
 	}
 #endif
 
