@@ -550,7 +550,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		static int preset_frame_count = 0;
 
 		if (is_cropped && amiga_surface) {
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * 4);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			m_shader.preset->render(crop_ptr, crop_w, crop_h, amiga_surface->pitch,
 				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
@@ -578,7 +578,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 		if (is_cropped && amiga_surface) {
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * 4);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			render_external_shader(m_shader.external, monid, crop_ptr,
 				crop_w, crop_h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
