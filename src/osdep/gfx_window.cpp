@@ -88,11 +88,13 @@ void close_hwnds(struct AmigaMonitor* mon)
 	if (g_renderer) {
 		g_renderer->close_hwnds_cleanup(mon);
 		g_renderer->destroy_context();
-		if (!kmsdrm_detected) {
+		// Preserve the window in full-window mode to avoid compositor desktop flicker
+		// during resolution transitions; create_windows() reuses the existing window.
+		if (!kmsdrm_detected && isfullscreen() >= 0) {
 			g_renderer->destroy_platform_renderer(mon);
 		}
 	}
-	if (mon->amiga_window && !kmsdrm_detected)
+	if (mon->amiga_window && !kmsdrm_detected && isfullscreen() >= 0)
 	{
 #if defined(__ANDROID__)
 		// Reuse existing window
