@@ -1,22 +1,13 @@
 ---
 name: amiberry-arm64-jit
 description: >
-  Complete ARM64 JIT compiler knowledge for Amiberry (GitHub issue #1766). Captures architecture,
-  12 root-cause bug fixes, performance optimizations, and testing methodology from 30+ debugging
-  sessions. Key fixes: (a) inter-block flag optimization (flush_flags before dont_care_flags +
-  two-pass liveflags), (b) FBcc 64-bit branch target truncation, (c) BSR.L/Bcc.L sign extension,
-  (d) ADDX/SUBX Z-flag M68K semantics, (e) ADDX byte/word register initialization (MOVN_xi dual-purpose),
-  (g) bus error recovery via setjmp/longjmp. Performance: R_REGSTRUCT range-based offset,
-  ADDX/SUBX Z-flag skip, guard infrastructure removal. Use this skill for ANY ARM64 JIT work:
-  crashes, stalls, incorrect behavior, performance, codegen, inter-block flags, natmem/memory,
-  FPU JIT, or the page 0 DMA guard.
-  MANDATORY TRIGGERS: ARM64 JIT, JIT crash, JIT stall, JIT performance, MIPS, SysInfo,
-  compile_block, dont_care_flags, flush_flags, inter-block, liveflags, FBcc, comp_fbcc_opp,
-  BSR, Bcc, sign extension, comp_pc_p, set_const, PC_P, 64-bit pointer, truncation,
-  ADDX, SUBX, Z flag, FLAG_Z, natmem gap, commit_natmem_gaps, PROT_NONE, canbang,
-  bus error, setjmp, SIGBUS, R_REGSTRUCT, regflags, codegen_arm64, compemu_support_arm,
-  compemu_fpp_arm, compemu_midfunc_arm64, page 0, DMA guard, JIT_DEBUG_MEM_CORRUPTION,
-  SIGSEGV handler, gencomp_arm, Lightwave, Workbench boot, block chaining.
+  Reference workflow for Amiberry ARM64 JIT debugging and fixes. Use for ARM64 JIT crashes,
+  stalls, wrong behavior, performance work, codegen issues, inter-block flag handling, natmem or
+  page-0 guard bugs, FPU JIT problems, and regressions in files such as compemu_support_arm.cpp,
+  compemu_fpp_arm.cpp, compemu_midfunc_arm64.cpp, or gencomp_arm. Covers the known root-cause
+  fixes around liveflags, flush_flags, FBcc and Bcc and BSR sign extension, PC_P 64-bit pointer
+  handling, ADDX and SUBX Z-flag semantics, bus error recovery, R_REGSTRUCT offsets, SysInfo
+  MIPS, Lightwave, and Workbench boot issues.
 ---
 
 # Amiberry ARM64 JIT — Complete Knowledge Base
