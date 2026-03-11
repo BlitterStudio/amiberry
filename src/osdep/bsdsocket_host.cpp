@@ -3942,7 +3942,7 @@ uae_u32 bsdthr_Recv_2 (SB)
             }
             n = recv(sb->s, (char*)sb->buf, sb->len, sb->flags /*| MSG_NOSIGNAL*/);
             foo = (int)n;
-            write_log("recv2, recv returns %d, errno is %d\n", foo, errno);
+            { int _e = errno; write_log("recv2, recv returns %d, errno is %d\n", foo, _e); errno = _e; }
             if (foo >= 0) break;
         } while (errno == EINTR && --retries > 0);
     } else {
@@ -3957,7 +3957,7 @@ uae_u32 bsdthr_Recv_2 (SB)
             }
             n = recvfrom(sb->s, (char*)sb->buf, sb->len, sb->flags | MSG_NOSIGNAL, (struct sockaddr *)&addr, &l);
             foo = (int)n;
-            write_log("recv2, recvfrom returns %d, errno is %d\n", foo, errno);
+            { int _e = errno; write_log("recv2, recvfrom returns %d, errno is %d\n", foo, _e); errno = _e; }
             if (foo >= 0) {
                 copysockaddr_n2a(sb->from, &addr, l);
                 put_long(sb->fromlen, l);
@@ -4008,7 +4008,7 @@ uae_u32 bsdthr_Connect_2 (SB)
 		int retval;
 		copysockaddr_a2n (&addr, sb->a_addr, sb->a_addrlen);
 		retval = connect (sb->s, (struct sockaddr *)&addr, len);
-		write_log ("Connect returns %d, errno is %d\n", retval, errno);
+		{ int _e = errno; write_log ("Connect returns %d, errno is %d\n", retval, _e); errno = _e; }
 		/* Hack: I need to set the action to something other than
 		 * 1 but I know action == 2 does the correct thing
 		 */
@@ -4023,7 +4023,8 @@ uae_u32 bsdthr_Connect_2 (SB)
 		bar = sizeof (foo);
 		if (getsockopt (sb->s, SOL_SOCKET, SO_ERROR, (char*)&foo, &bar) == 0) {
 			errno = foo;
-			write_log("Connect status is %d\n", foo);
+			write_log("Connect status is %d\n", foo); /* write_log may clobber errno */
+			errno = foo; /* restore after write_log */
 			return (foo == 0) ? 0 : -1;
 		}
 		return -1;
@@ -4040,6 +4041,7 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
     int done = 0, foo = 0;
     long flags;
     int nonblock;
+    int saved_errno = 0;
     int socktype = 0;
     socklen_t optlen = sizeof(socktype);
     int is_raw = 0;
@@ -4083,8 +4085,13 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
         do {
             foo = tryfunc(sb);
         } while (foo < 0 && errno == EINTR); // retry on EINTR
+        /* Save errno immediately after tryfunc() — any intervening call (write_log,
+         * getsockopt, etc.) can clobber it. Use saved_errno for all checks below,
+         * and restore it so code inside the block that reads errno directly is consistent. */
+        saved_errno = errno;
         if (foo < 0 && !nonblock) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINPROGRESS)) {
+            errno = saved_errno;
+            if ((saved_errno == EAGAIN) || (saved_errno == EWOULDBLOCK) || (saved_errno == EINPROGRESS)) {
                 fd_set readset, writeset, exceptset;
                 int maxfd = (sb->s > sb->sockabort[0]) ? sb->s : sb->sockabort[0];
                 int num;
@@ -4103,13 +4110,15 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                     num = select(maxfd + 1, &readset, &writeset, &exceptset, NULL);
                 } while (num == -1 && errno == EINTR); // retry on EINTR
                 if (num == -1) {
-                    write_log("Blocking select(%d) returns -1,errno is %d\n", sb->sockabort[0], errno);
+                    int _select_err = errno; /* save before write_log/fcntl/setsockopt clobber it */
+                    write_log("Blocking select(%d) returns -1,errno is %d\n", sb->sockabort[0], _select_err);
 #ifdef _WIN32
                     if (!is_raw) { u_long mode = 0; ioctlsocket(sb->s, FIONBIO, &mode); }
 #else
                     if (!is_raw) fcntl(sb->s, F_SETFL, flags);
 #endif
                     if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&orig_timeout, sizeof(orig_timeout));
+                    errno = _select_err; /* restore after cleanup calls */
                     return -1;
                 }
 
@@ -4137,6 +4146,9 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
     if (!is_raw) fcntl(sb->s, F_SETFL, flags);
 #endif
     if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&orig_timeout, sizeof(orig_timeout));
+    /* Restore errno after fcntl/setsockopt cleanup — caller (bsdlib_threadfunc) reads
+     * errno via SETERRNO immediately after we return. */
+    errno = saved_errno;
     return foo;
 }
 
@@ -4362,6 +4374,13 @@ void host_sbcleanup (SB)
 	unregister_all_socket_events(sb);
 
 	uae_thread_id thread = sb->thread;
+	/* Abort any pending blocking operation BEFORE closing the pipe.
+	 * Without this, a connect() blocked in select() inside bsdthr_blockingstuff
+	 * will never see the wakeup and the thread hangs forever. */
+	sb->action = 0;
+	sockabort(sb);           /* unblocks any select() waiting on sockabort[0] */
+	uae_sem_post(&sb->sem);  /* wakes thread if blocked on semaphore instead */
+
 	close_pipe (sb->sockabort[0]);
 	close_pipe (sb->sockabort[1]);
 	for (i = 0; i < sb->dtablesize; i++) {
@@ -4369,9 +4388,6 @@ void host_sbcleanup (SB)
 			close_socket(sb->dtable[i]);
 		}
 	}
-	sb->action = 0;
-
-	uae_sem_post (&sb->sem); /* destroy happens on socket thread */
 
 	/* We need to join with the socket thread to allow the thread to die
 	 * and clean up resources when the underlying thread layer is pthreads.
