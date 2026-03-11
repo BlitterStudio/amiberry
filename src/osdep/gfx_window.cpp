@@ -899,7 +899,8 @@ bool doInit(AmigaMonitor* mon)
 
 		// Create internal surface if needed
 		if (amiga_surface == nullptr) {
-			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+			const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, surface_depth, pixel_format);
 		}
 
 		mon->screen_is_initialized = 1;
@@ -1026,7 +1027,8 @@ bool doInit(AmigaMonitor* mon)
 		SDL_FreeSurface(amiga_surface);
 		amiga_surface = nullptr;
 	}
-	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+	const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
+	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, surface_depth, pixel_format);
 
 	updatewinrect(mon, true);
 	mon->screen_is_initialized = 1;

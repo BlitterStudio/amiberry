@@ -27,8 +27,26 @@ void update_pixel_format()
 	if (gfx_platform_override_pixel_format(&pixel_format))
 		return;
 
-	if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5 ||
-		picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC) {
+	const bool is_packed_16bit_rtg =
+		picasso96_state[0].RGBFormat == RGBFB_R5G6B5 ||
+		picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC ||
+		picasso96_state[0].RGBFormat == RGBFB_R5G5B5 ||
+		picasso96_state[0].RGBFormat == RGBFB_R5G5B5PC ||
+		picasso96_state[0].RGBFormat == RGBFB_B5G6R5PC ||
+		picasso96_state[0].RGBFormat == RGBFB_B5G5R5PC ||
+		picasso96_state[0].RGBFormat == RGBFB_Y4U2V2;
+
+	if (is_packed_16bit_rtg) {
+		// KMSDRM's SDL renderer presents 32-bit RTG correctly but the 16-bit
+		// streaming texture path can go black. Keep the emulated RTG mode
+		// unchanged and only widen the host presentation format on KMSDRM.
+		if (kmsdrm_detected) {
+			pixel_format = currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE
+				? SDL_PIXELFORMAT_ARGB8888
+				: SDL_PIXELFORMAT_ABGR8888;
+			return;
+		}
+
 		pixel_format = SDL_PIXELFORMAT_RGB565;
 		return;
 	}

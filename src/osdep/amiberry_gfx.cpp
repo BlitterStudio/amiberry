@@ -896,7 +896,8 @@ int graphics_init(bool mousecapture)
 		g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
 		update_pixel_format();
 		if (amiga_surface == nullptr) {
-			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, 32, pixel_format);
+			const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, surface_depth, pixel_format);
 		}
 		return amiga_surface != nullptr;
 	}
