@@ -128,6 +128,8 @@ bool SDLRenderer::alloc_texture(int monid, int w, int h)
 
 	AmigaMonitor* mon = &AMonitors[monid];
 	m_amiga_texture = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, amiga_surface->w, amiga_surface->h);
+	if (m_amiga_texture != nullptr)
+		SDL_SetTextureBlendMode(m_amiga_texture, SDL_BLENDMODE_NONE);
 	return m_amiga_texture != nullptr;
 }
 
