@@ -362,11 +362,14 @@ int keyhack (const int scancode, const int pressed, const int num)
 	static unsigned char backslashstate, apostrophstate;
 	const bool* state = SDL_GetKeyboardState(nullptr);
 
-	// release mouse if TAB and ALT is pressed (but only if option is enabled)
+	// Reserve Alt-Tab for the host when the option is enabled. Focus loss will
+	// perform the actual capture teardown and pressed-key cleanup.
 	if (currprefs.alt_tab_release)
 	{
-		if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
-			disablecapture();
+		if (pressed && scancode == SDL_SCANCODE_TAB && (key_altpressed() || state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT])) {
+			// Let the normal focus-loss path unwind capture state. Releasing it
+			// here races the current Alt-Tab event sequence and double-applies
+			// capture teardown before the window actually loses focus.
 			return -1;
 		}
 	}

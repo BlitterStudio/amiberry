@@ -142,7 +142,7 @@ void render_panel_misc()
         AmigaCheckbox("A600/A1200/A4000 IDE scsi.device disable", &changed_prefs.scsidevicedisable);
         ShowHelpMarker("Disable scsi.device for built-in IDE controllers on these models");
         AmigaCheckbox("Alt-Tab releases control", &changed_prefs.alt_tab_release);
-        ShowHelpMarker("Release mouse and keyboard capture when Alt-Tab is pressed");
+        ShowHelpMarker("Reserve Alt-Tab for the host and release capture when the emulator window loses focus");
         AmigaCheckbox("Warp mode reset", &changed_prefs.turbo_boot);
         ShowHelpMarker("Enable turbo/warp mode during reset for faster booting");
         AmigaCheckbox("Use RetroArch Quit Button", &changed_prefs.use_retroarch_quit);
