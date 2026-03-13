@@ -323,8 +323,11 @@ static void set_key_configs(const uae_prefs* p)
 		for (int port = 0; port < 2; port++)
 		{
 			const auto host_joy_id = p->jports[port].id - JSEM_JOYS;
-			didata* did = &di_joystick[host_joy_id];
-			did->mapping.menu_button = enter_gui_button;
+			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
+			{
+				didata* did = &di_joystick[host_joy_id];
+				did->mapping.menu_button = enter_gui_button;
+			}
 		}
 	}
 	
@@ -367,8 +370,11 @@ static void set_key_configs(const uae_prefs* p)
 		for (int port = 0; port < 2; port++)
 		{
 			const auto host_joy_id = p->jports[port].id - JSEM_JOYS;
-			didata* did = &di_joystick[host_joy_id];
-			did->mapping.vkbd_button = vkbd_button;
+			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
+			{
+				didata* did = &di_joystick[host_joy_id];
+				did->mapping.vkbd_button = vkbd_button;
+			}
 		}
 	}
 }
