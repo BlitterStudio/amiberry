@@ -104,11 +104,29 @@ if(ANDROID)
         GIT_TAG        v1.6.43
     )
 
+    # libcurl
+    set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(CURL_USE_OPENSSL ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        curl
+        GIT_REPOSITORY https://github.com/curl/curl.git
+        GIT_TAG        curl-8_11_1
+    )
+
+    # nlohmann-json (header-only)
+    set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG        v3.11.3
+    )
+
     # Materialize deps (order matters a bit: SDL2 first for *_image)
     if(USE_MPG123)
-        FetchContent_MakeAvailable(sdl2 sdl2_image flac mpg123 libpng zstd)
+        FetchContent_MakeAvailable(sdl2 sdl2_image flac mpg123 libpng zstd curl nlohmann_json)
     else()
-        FetchContent_MakeAvailable(sdl2 sdl2_image flac libpng zstd)
+        FetchContent_MakeAvailable(sdl2 sdl2_image flac libpng zstd curl nlohmann_json)
     endif()
 
     # Make zstd discoverable for the rest of this file (later FindHelper/pkg-config logic).
@@ -203,6 +221,7 @@ if(ANDROID)
     amiberry_android_sanitize_target(${AMIBERRY_SDL2_TARGET})
 
     target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL2_TARGET} SDL2_image)
+    target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl nlohmann_json::nlohmann_json)
 
     # Defensive: ensure we never add raw SDL2/pthread libraries or flags on Android.
     # Some transitive/legacy paths may still append plain library names or link options.
@@ -347,6 +366,8 @@ else()
     find_package(mpg123 REQUIRED)
     find_package(PNG REQUIRED)
     find_package(ZLIB REQUIRED)
+    find_package(CURL REQUIRED)
+    find_package(nlohmann_json CONFIG REQUIRED)
 
     # mpg123 is available on desktop builds; enable mp3 decoding in code.
     target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MPG123)
@@ -488,6 +509,8 @@ endif()
 set(AMIBERRY_LIBS
         mt32emu
         ZLIB::ZLIB
+        CURL::libcurl
+        nlohmann_json::nlohmann_json
         ${CMAKE_DL_LIBS}
         ${_SDL2_IMAGE_LIB}
 )

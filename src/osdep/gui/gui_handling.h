@@ -371,7 +371,7 @@ PANEL(prio,               "Priority",           "misc.png") \
 PANEL(savestates,         "Savestates",         "savestate.png") \
 PANEL(virtual_keyboard,   "Virtual Keyboard",   "keyboard.png") \
 PANEL(whdload,            "WHDLoad",            "drive.png") \
-PANEL(themes,             "Themes",             "amigainfo.png")
+PANEL(update,             "Update",             "misc.png")
 
 #endif
 
@@ -481,8 +481,7 @@ extern void save_theme(const std::string& theme_filename);
 extern void load_theme(const std::string& theme_filename);
 extern void load_default_theme();
 extern void load_default_dark_theme();
-extern void apply_theme();
-extern void apply_theme_extras();
+extern void apply_imgui_theme();
 
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);
