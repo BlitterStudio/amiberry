@@ -184,6 +184,7 @@ void render_panel_update()
 		save_amiberry_settings();
 	}
 
+	ImGui::AlignTextToFramePadding();
 	const char* current_channel = amiberry_options.update_channel == 1 ? "Preview" : "Stable";
 	ImGui::TextUnformatted("Update channel:");
 	ImGui::SameLine();
@@ -210,9 +211,13 @@ void render_panel_update()
 
 		ImGui::EndCombo();
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
 
+	ImGui::Spacing();
 	ImGui::Text("Current version: %s", get_current_semver().c_str());
+	ImGui::Spacing();
 	ImGui::Text("Update method: %s", get_update_method_label(get_update_method()));
+	ImGui::Spacing();
 
 	if (is_update_check_running())
 	{
@@ -229,6 +234,8 @@ void render_panel_update()
 			s_show_no_update_msg = false;
 		}
 	}
+
+	ImGui::Spacing();
 
 	if (s_has_cached_result)
 	{
