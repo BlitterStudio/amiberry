@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [master]
+    tags:
+      - 'v*'
+      - 'preview-v*'
     paths-ignore:
       - '**.md'
       - 'wiki/**'
