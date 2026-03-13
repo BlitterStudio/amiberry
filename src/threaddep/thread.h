@@ -18,8 +18,8 @@ void uae_sem_destroy(uae_sem_t* event);
 #define uae_sem_post(PSEM) SDL_SignalSemaphore (*(PSEM))
 #define uae_sem_unpost(PSEM) SDL_SignalSemaphore (*(PSEM))
 #define uae_sem_wait(PSEM) SDL_WaitSemaphore (*(PSEM))
-#define uae_sem_trywait(PSEM) SDL_TryWaitSemaphore (*(PSEM))
-#define uae_sem_trywait_delay(PSEM, ms) SDL_WaitSemaphoreTimeout(*(PSEM), ms)
+#define uae_sem_trywait(PSEM) (SDL_TryWaitSemaphore(*(PSEM)) ? 0 : -1)
+#define uae_sem_trywait_delay(PSEM, ms) (SDL_WaitSemaphoreTimeout(*(PSEM), ms) ? 0 : -1)
 #define uae_sem_getvalue(PSEM) SDL_GetSemaphoreValue (*(PSEM))
 
 #include "commpipe.h"
