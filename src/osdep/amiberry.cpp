@@ -4482,9 +4482,15 @@ std::string get_data_directory(bool portable_mode)
     return prefix_with_application_directory_path("data/");
 #elif defined(_WIN32)
 	{
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return std::string(tmp) + "\\data\\";
+		// Use the executable's directory, not getcwd(), because file associations
+		// and shortcuts can launch the app with an arbitrary working directory.
+		char exepath[MAX_DPATH];
+		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+		std::string dir(exepath);
+		auto last_sep = dir.find_last_of("\\/");
+		if (last_sep != std::string::npos)
+			dir = dir.substr(0, last_sep);
+		return dir + "\\data\\";
 	}
 #else
 	if (portable_mode)
@@ -4537,10 +4543,14 @@ std::string get_home_directory(const bool portable_mode)
 #elif defined(_WIN32)
 	if (portable_mode)
 	{
-		write_log("Portable mode: Setting home directory to startup path\n");
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return {tmp};
+		write_log("Portable mode: Setting home directory to executable path\n");
+		char exepath[MAX_DPATH];
+		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+		std::string dir(exepath);
+		auto last_sep = dir.find_last_of("\\/");
+		if (last_sep != std::string::npos)
+			dir = dir.substr(0, last_sep);
+		return dir;
 	}
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
@@ -4560,11 +4570,14 @@ std::string get_home_directory(const bool portable_mode)
 			auto result = std::string(user_home_dir);
 			return result.append("\\Amiberry");
 		}
-		// Fallback: portable mode
-		write_log("Fallback Portable mode: Setting home directory to startup path\n");
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return {tmp};
+		write_log("Fallback: Setting home directory to executable path\n");
+		char exepath[MAX_DPATH];
+		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+		std::string dir(exepath);
+		auto last_sep = dir.find_last_of("\\/");
+		if (last_sep != std::string::npos)
+			dir = dir.substr(0, last_sep);
+		return dir;
 	}
 #endif
 #ifdef __MACH__
@@ -4650,10 +4663,13 @@ std::string get_config_directory(bool portable_mode)
 			auto result = std::string(user_home_dir);
 			return result.append("\\Amiberry\\Configurations");
 		}
-		// Fallback: portable mode
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return { std::string(tmp) + "\\conf" };
+		char exepath[MAX_DPATH];
+		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+		std::string dir(exepath);
+		auto last_sep = dir.find_last_of("\\/");
+		if (last_sep != std::string::npos)
+			dir = dir.substr(0, last_sep);
+		return dir + "\\conf";
 	}
 #elif defined(__ANDROID__)
 	const char* path = SDL_GetAndroidExternalStoragePath();
@@ -4710,6 +4726,25 @@ std::string get_plugins_directory(bool portable_mode)
 		{
 			directory = string(exepath).substr(0, last_slash_idx);
 		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_swap_idx);
+		}
+	}
+	return directory + "/Resources/plugins/";
+#elif defined(__ANDROID__)
+    return prefix_with_application_directory_path("plugins/");
+#elif defined(_WIN32)
+	{
+		char exepath[MAX_DPATH];
+		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+		std::string dir(exepath);
+		auto last_sep = dir.find_last_of("\\/");
+		if (last_sep != std::string::npos)
+			dir = dir.substr(0, last_sep);
+		return dir + "\\plugins";
+	}
 		last_slash_idx = directory.rfind('/');
 		if (std::string::npos != last_slash_idx)
 		{
