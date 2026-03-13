@@ -247,7 +247,7 @@ static const TCHAR *help[] = {
 	_T("  dm                    Dump current address space map.\n"),
 	_T("  v <vpos> [<hpos>] [<lines>]\n"),
 	_T("                        Show DMA data (accurate only in cycle-exact mode).\n"),
-	_T("                        v [-1 to -4] = enable visual DMA debugger.\n"),
+	_T("                        v [-2 to -5] = enable visual DMA debugger.\n"),
 	_T("  vh [<ratio> <lines>]  \"Heat map\"\n"),
 	_T("  I <custom event>      Send custom event string\n"),
 	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n"),
@@ -1562,6 +1562,8 @@ static void set_debug_colors(void)
 	set_dbg_color(DMARECORD_SPRITE,			0, 0xff, 0x00, 0xff, 8, _T("Sprite"));
 	set_dbg_color(DMARECORD_DISK,			0, 0xff, 0xff, 0xff, 3, _T("Disk"));
 	set_dbg_color(DMARECORD_CONFLICT,		0, 0xff, 0xb8, 0x40, 0, _T("Conflict"));
+	set_dbg_color(DMARECORD_DIW,			0, 0xcf, 0xcf, 0xcf, 0, _T("DIW"));
+	set_dbg_color(DMARECORD_DDF,			0, 0xcf, 0xcf, 0x4f, 0, _T("DDF"));
 
 	for (int i = 0; i < DMARECORD_MAX; i++) {
 		for (int j = 1; j < DMARECORD_SUBITEMS; j++) {
@@ -1581,19 +1583,55 @@ static void set_debug_colors(void)
 
 static int cycles_toggle;
 
+int get_dma_debug_color(struct dma_rec *dr, int line, uae_u32 *cp)
+{
+	int t = 0;
+	if (dr->reg != 0xffff && debug_colors[dr->type].enabled) {
+		uae_u32 c = 0;
+		// General DMA slots
+		c = debug_colors[dr->type].l[dr->extra & 7];
+
+		// Special cases
+		if (dr->cf_reg != 0xffff && ((cycles_toggle ^ line) & 1)) {
+			c = debug_colors[DMARECORD_CONFLICT].l[0];
+		} else if (dr->extra > 0xF) {
+			// High bits of "extra" contain additional blitter state.
+			if (dr->extra & 0x10)
+				c = debug_colors[dr->type].l[4]; // blit fill, channels A-D
+			else if (dr->extra & 0x20)
+				c = debug_colors[dr->type].l[6]; // blit line, channels A-D
+		}
+		t = 1;
+		if ((dr->denise_evt_changed[0] | dr->denise_evt_changed[1]) & DENISE_EVENT_HDIW) {
+			c |= debug_colors[DMARECORD_DIW].l[0];
+			t = 3;
+		}
+		if (dr->agnus_evt_changed & AGNUS_EVENT_VDIW) {
+			c |= debug_colors[DMARECORD_DIW].l[0];
+			t = 2;
+		}
+		if (dr->agnus_evt_changed & AGNUS_EVENT_BPRUN) {
+			c |= debug_colors[DMARECORD_DDF].l[0];
+			t = 2;
+		}
+		*cp = c;
+	}
+	return t;
+}
+
 static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width, int height, uae_u32 *xredcolors, uae_u32 *xgreencolors, uae_u32 *xbluescolors)
 {
 	int y, x, xx, dx, xplus, yplus;
 	struct dma_rec *dr;
 	static bool endline;
 
-	if (debug_dma >= 4)
+	if (debug_dma >= 5)
 		yplus = 2;
 	else
 		yplus = 1;
-	if (debug_dma >= 5)
+	if (debug_dma >= 6)
 		xplus = 3;
-	else if (debug_dma >= 3)
+	else if (debug_dma >= 4)
 		xplus = 2;
 	else
 		xplus = 1;
@@ -1638,21 +1676,7 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 		if (ended || dr->tick != tick) {
 			c = 0;
 		} else {
-			if (dr->reg != 0xffff && debug_colors[dr->type].enabled) {
-				// General DMA slots
-				c = debug_colors[dr->type].l[dr->extra & 7];
-
-				// Special cases
-				if (dr->cf_reg != 0xffff && ((cycles_toggle ^ line) & 1)) {
-					c = debug_colors[DMARECORD_CONFLICT].l[0];
-				} else if (dr->extra > 0xF) {
-					// High bits of "extra" contain additional blitter state.
-					if (dr->extra & 0x10)
-						c = debug_colors[dr->type].l[4]; // blit fill, channels A-D
-					else if (dr->extra & 0x20)
-						c = debug_colors[dr->type].l[6]; // blit line, channels A-D
-				}
-			}
+			get_dma_debug_color(dr, line, &c);
 		}
 		if (dr->intlev > intlev)
 			intlev = dr->intlev;
@@ -7508,11 +7532,16 @@ static bool debug_line (TCHAR *input)
 						if (debug_dma && v1 >= 0 && v2 >= 0) {
 							decode_dma_record(v2, v1, v3, cmd == 'v', nextcmd == 'l');
 						} else {
+							int ddma = debug_dma;
 							if (debug_dma) {
 								record_dma_reset(0);
 								reset_drawing();
 							}
+							set_debug_colors();
 							debug_dma = v1 < 0 ? -v1 : 1;
+							if ((ddma == 2 && debug_dma != 2) || (ddma != 2 && debug_dma == 2)) {
+								reset_drawing();
+							}
 							console_out_f(_T("DMA debugger enabled, mode=%d.\n"), debug_dma);
 						}
 					}

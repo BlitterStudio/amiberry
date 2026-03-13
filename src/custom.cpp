@@ -2219,6 +2219,11 @@ static void init_beamcon0(void)
 	}
 
 	int hpixels = maxhpos_display * 2;
+	if (currprefs.gfx_resolution == RES_LORES) {
+		hpixels /= 2;
+	} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
+		hpixels *= 2;
+	}
 	int vpixels = vsync_lines - minfirstline;
 	int hpixelsd = hpixels * 80 / 100;
 	if (hpixelsd < vpixels) {
@@ -2240,6 +2245,9 @@ static void init_beamcon0(void)
 		}
 	} else if (hpixelsd > vpixels * 2) {
 		doublescan2x = -1;
+		if (hpixelsd > vpixels * 4) {
+			doublescan2x = -2;
+		}
 	}
 
 	if (maxvpos_nom >= MAXVPOS) {
@@ -6671,6 +6679,8 @@ static void hsync_handler(bool vs)
 			}
 		}
 		reset_autoscale();
+		virtual_vsync_check();
+		last_vsync_evt = get_cycles() + (maxvpos * maxhpos * 3) * CYCLE_UNIT;
 		display_vsync_counter++;
 		maxvpos_display_vsync_next = true;
 		display_hsync_counter = 0;
@@ -11290,13 +11300,6 @@ static void custom_trigger_start(void)
 		custom_fastmode = 0;
 	} else {
 		check_vsyncs_fast();
-	}
-
-	if (vpos == vsync_startline) {
-
-		virtual_vsync_check();
-
-		last_vsync_evt = get_cycles() + (maxvpos * maxhpos * 3) * CYCLE_UNIT;
 	}
 
 #if 0
