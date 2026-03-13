@@ -900,8 +900,10 @@ void gui_display(int shortcut)
 	}
 	//rawinput_alloc();
 	struct AmigaMonitor* mon = &AMonitors[0];
-	if (mon->amiga_window)
+	if (mon->amiga_window) {
+		SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, currprefs.alt_tab_release ? "0" : "1");
 		SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+	}
 	if (kmsdrm_detected && amiga_surface != nullptr)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);

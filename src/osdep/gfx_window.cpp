@@ -815,8 +815,8 @@ static int create_windows(struct AmigaMonitor* mon)
 	mon->window_extra_height_bar = 0;
 	//mon->dpi = getdpiforwindow(mon->monitor_id);
 
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		write_log("SDL2: could not grab the keyboard!\n");
+	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, currprefs.alt_tab_release ? "0" : "1") != SDL_TRUE)
+		write_log("SDL2: could not set keyboard grab hint!\n");
 
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
