@@ -609,6 +609,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
+      - name: Generate icon
+        shell: pwsh
+        run: |
+          magick data/amiberry.png -define icon:auto-resize=256,128,64,48,32,16 data/amiberry.ico
+
       - name: Build for Windows (${{ matrix.name }})
         shell: msys2 {0}
         env:
@@ -617,7 +622,7 @@ jobs:
           cmake --preset windows-release
           cmake --build out/build/windows-release -j$(nproc)
 
-      - name: Package
+      - name: Package (ZIP)
         shell: msys2 {0}
         run: |
           # Copy MinGW runtime DLLs next to the executable
@@ -627,12 +632,19 @@ jobs:
           # Create ZIP package
           cpack -G ZIP --config out/build/windows-release/CPackConfig.cmake
 
+      - name: Package (InnoSetup)
+        shell: pwsh
+        run: |
+          cpack -G INNOSETUP --config out/build/windows-release/CPackConfig.cmake
+
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
-          path: amiberry-*.zip
+          path: |
+            amiberry-*.zip
+            amiberry-*.exe
           retention-days: 7
 
       - name: Upload artifact for release
@@ -640,7 +652,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
-          path: amiberry-*.zip
+          path: |
+            amiberry-*.zip
+            amiberry-*.exe
           retention-days: 7
 
   build-android:
@@ -850,7 +864,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip Amiberry-*.zip *.apk *.aab 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe Amiberry-*.zip *.apk *.aab 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -862,6 +876,7 @@ jobs:
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
             artifacts/amiberry-*.zip
+            artifacts/amiberry-*.exe
             artifacts/Amiberry-*.zip
             artifacts/*.apk
             artifacts/*.aab
