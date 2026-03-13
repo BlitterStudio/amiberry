@@ -1980,7 +1980,7 @@ bool drawing_can_lineoptimizations(void)
 		currprefs.cs_color_burst || currprefs.gfx_grayscale || currprefs.monitoremu) {
 		return false;
 	}
-	if ((lightpen_active && currprefs.lightpen_crosshair) || debug_dma >= 2 || debug_heatmap >= 2) {
+	if ((lightpen_active && currprefs.lightpen_crosshair) || debug_dma >= 3 || debug_heatmap >= 2) {
 		return false;
 	}
 	if (video_recording_active) {
@@ -1992,7 +1992,7 @@ bool drawing_can_lineoptimizations(void)
 static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 {
 #ifdef DEBUGGER
-	if (debug_dma > 1 || debug_heatmap > 1) {
+	if (debug_dma > 2 || debug_heatmap > 1) {
 		if (denise_lock()) {
 			for (int i = 0; i < vb->outheight; i++) {
 				int line = i;
@@ -3264,7 +3264,7 @@ int getvresolution(void)
 
 int gethresolution(void)
 {
-	int h = currprefs.gfx_resolution - doublescan2x - doublescan2xx;
+	int h = currprefs.gfx_resolution - doublescan2xx;
 	if (h < 0) {
 		h = 0;
 	}
@@ -3616,6 +3616,9 @@ void denise_reset(bool hard)
 	last_bpl_pix = 0;
 	decode_specials = 0;
 	decode_specials_debug = currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA ? 2 : (currprefs.display_calibration ? 1 : 0);
+	if (debug_dma == 2) {
+		decode_specials_debug |= 0x100;
+	}
 	debug_special_hvsync = currprefs.gfx_overscanmode == OVERSCANMODE_ULTRA + 1;
 	debug_special_csync = currprefs.gfx_overscanmode == OVERSCANMODE_ULTRA + 2;
 	denise_csync_blanken = false;
@@ -5519,13 +5522,13 @@ static void emulate_black_level_calibration(uae_u32 *b1, uae_u32 *b2, uae_u32 *d
 		return;
 	}
 
-#if 1
-	db[off] = 0xff0000;
-	db[off + (clen << shift) - 1] = 0xff0000;
+	if (currprefs.display_calibration > 1) {
+		db[off] = 0xff0000;
+		db[off + (clen << shift) - 1] = 0xff0000;
 
-	b1[off] = 0xff0000;
-	b1[off + (clen << shift) - 1] = 0xff0000;
-#endif
+		b1[off] = 0xff0000;
+		b1[off + (clen << shift) - 1] = 0xff0000;
+	}
 
 	int outc[3];
 	for (int i = 0; i < 3; i++) {
@@ -5583,9 +5586,10 @@ static uae_u32 filter_pixel(uae_u32 p1, uae_u32 p2)
 }
 
 // ultra extreme debug pixel patterns
+static bool dmadebugtoggle;
 static uint32_t decode_denise_specials_debug(uint32_t v, int inc)
 {
-	if (decode_specials_debug > 1) {
+	if ((decode_specials_debug & 15) > 1) {
 		int t = ((inc >> 1) + this_line->linear_vpos + 1) & 3;
 		if (denise_blank_active2) {
 			if (t == 0) {
@@ -5622,6 +5626,30 @@ static uint32_t decode_denise_specials_debug(uint32_t v, int inc)
 			}
 		}
 	}
+	if (debug_dma == 2 && debug_dma_ptr) {
+		uae_u32 cv = 0;
+		int t = 0;
+		if (dmadebugtoggle) {
+			t = get_dma_debug_color(debug_dma_ptr, this_line->linear_vpos, &cv);
+			if ((this_line->linear_vpos & 1) && dmadebugtoggle) {
+				if (t) {
+					v = cv;
+				}
+			}
+			if (t > 1) {
+				v = cv;
+			}
+		}
+		if (!(this_line->linear_vpos & 1)) {
+			dmadebugtoggle = false;
+		}
+		dmadebugtoggle = !dmadebugtoggle;
+		if (!t) {
+			//v >>= 1;
+			//v &= 0x7f7f7f7f;
+		}
+	}
+
 	*buf_d++ = v;
 	return v;
 }

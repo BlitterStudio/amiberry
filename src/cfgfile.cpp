@@ -285,6 +285,7 @@ static const TCHAR *kbtype[] = {
 	_T("ax000_6570-036"),
 	nullptr
 };
+static const TCHAR *blcalib[] = { _T("off"), _T("on"), _T("debug"), NULL };
 
 struct hdcontrollerconfig
 {
@@ -2668,7 +2669,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	if (p->chipset_refreshrate > 0)
 		cfgfile_write (f, _T("chipset_refreshrate"), _T("%f"), p->chipset_refreshrate);
 	cfgfile_dwrite_bool(f, _T("chipset_subpixel"), p->chipset_hr);
-	cfgfile_dwrite_bool(f, _T("chipset_black_level_calibration"), p->display_calibration);
+	cfgfile_dwrite_strarr(f, _T("chipset_black_level_calibration"), blcalib, p->display_calibration);
 
 	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 		struct chipset_refresh *cr = &p->cr[i];
@@ -6493,7 +6494,8 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_yesno(option, value, _T("chipset_subpixel"), &p->chipset_hr)) {
 		return 1;
 	}
-	if (cfgfile_yesno(option, value, _T("chipset_black_level_calibration"), &p->display_calibration)) {
+
+	if (cfgfile_strval(option, value, _T("chipset_black_level_calibration"), &p->display_calibration, blcalib, 0)) {
 		return 1;
 	}
 
@@ -8816,7 +8818,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->blitter_cycle_exact = true;
 	p->chipset_mask = CSMASK_ECS_AGNUS;
 	p->chipset_hr = false;
-	p->display_calibration = false;
+	p->display_calibration = 0;
 	p->genlock = false;
 	p->genlock_image = 0;
 	p->genlock_mix = 0;

@@ -740,7 +740,7 @@ struct uae_prefs {
 	float blitter_speed_throttle;
 	unsigned int chipset_mask;
 	bool chipset_hr;
-	bool display_calibration;
+	int display_calibration;
 	int keyboard_mode;
 	bool keyboard_nkro;
 	bool ntscmode;

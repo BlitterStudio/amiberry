@@ -320,7 +320,9 @@ extern struct dma_rec *last_dma_rec;
 #define DMARECORD_UHRESBPL 9
 #define DMARECORD_UHRESSPR 10
 #define DMARECORD_CONFLICT 11
-#define DMARECORD_MAX 12
+#define DMARECORD_DIW 12
+#define DMARECORD_DDF 13
+#define DMARECORD_MAX 14
 
 extern void record_dma_read(uae_u16 reg, uae_u32 addr, int type, int extra);
 extern void record_dma_write(uae_u16 reg, uae_u32 v, uae_u32 addr, int type, int extra);
@@ -342,6 +344,7 @@ extern void record_dma_ipl_sample(void);
 extern void debug_mark_refreshed(uaecptr);
 extern void debug_draw(uae_u8 *buf, uae_u8 *genlock, int line, int width, int height, uae_u32 *xredcolors, uae_u32 *xgreencolors, uae_u32 *xbluescolors);
 extern struct dma_rec *record_dma_next_cycle(int hpos, int vpos, int vvpos);
+extern int get_dma_debug_color(struct dma_rec *dr, int line, uae_u32 *cp);
 
 #define TRACE_SKIP_INS 1
 #define TRACE_MATCH_PC 2

@@ -4756,9 +4756,13 @@ std::string get_plugins_directory(bool portable_mode)
     return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
 	{
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return std::string(tmp) + "\\plugins";
+		char exepath[MAX_DPATH];
+		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+		std::string dir(exepath);
+		auto last_sep = dir.find_last_of("\\/");
+		if (last_sep != std::string::npos)
+			dir = dir.substr(0, last_sep);
+		return dir + "\\plugins";
 	}
 #else
 	if (portable_mode)
