@@ -831,7 +831,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	mon->window_extra_height_bar = 0;
 	//mon->dpi = getdpiforwindow(mon->monitor_id);
 
-	// SDL3: SDL_HINT_GRAB_KEYBOARD removed, keyboard is automatically grabbed in fullscreen
+	// SDL3: SDL_HINT_GRAB_KEYBOARD removed, keyboard grab is controlled via SDL_SetWindowKeyboardGrab()
 
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0"))
 		write_log("SDL3: Set window not to minimize on focus loss\n");

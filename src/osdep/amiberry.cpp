@@ -792,6 +792,7 @@ void set_showcursor(const BOOL v)
 void releasecapture(const AmigaMonitor* mon)
 {
 	SDL_SetWindowMouseGrab(mon->amiga_window, false);
+	SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
 	SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
@@ -855,6 +856,7 @@ void target_inputdevice_unacquire(const bool full)
 	if (full) {
 		//rawinput_release();
 		SDL_SetWindowMouseGrab(mon->amiga_window, false);
+		SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
 	}
 }
 void target_inputdevice_acquire()
@@ -864,6 +866,7 @@ void target_inputdevice_acquire()
 	//tablet = open_tablet(mon->amiga_window);
 	//rawinput_alloc();
 	SDL_SetWindowMouseGrab(mon->amiga_window, true);
+	SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 }
 
 static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause)
@@ -897,8 +900,6 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 	mouseactive = active ? mon->monitor_id + 1 : 0;
 
 	mon->mouseposx = mon->mouseposy = 0;
-	releasecapture(mon);
-	recapture = 0;
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
 		if (currprefs.input_tablet > 0) {
@@ -913,6 +914,25 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 		}
 	}
 
+	if (mouseactive) {
+		bool gotfocus = false;
+		for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+			if (AMonitors[i].amiga_window && iswindowfocus(&AMonitors[i])) {
+				gotfocus = true;
+				mon = &AMonitors[i];
+				break;
+			}
+		}
+		if (!gotfocus) {
+			write_log(_T("Tried to capture mouse but window didn't have focus! F=%d A=%d\n"), focus, mouseactive);
+			focus = 0;
+			mouseactive = 0;
+			active = 0;
+			releasecapture(mon);
+			recapture = 0;
+		}
+	}
+
 	if (mouseactive > 0)
 		focus = mon->monitor_id + 1;
 
@@ -922,6 +942,10 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 			set_showcursor(FALSE);
 #endif
 			SDL_SetWindowMouseGrab(mon->amiga_window, true);
+			// Skip keyboard grab when alt_tab_release is on so the
+			// compositor handles Alt-Tab; focus-loss tears down capture
+			// safely after pointer focus has already moved (see #1829).
+			SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 			// SDL hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
 			// unless it's configured to use Virtual Mouse (absolute movement).
