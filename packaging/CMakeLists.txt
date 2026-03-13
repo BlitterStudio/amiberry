@@ -42,7 +42,7 @@ set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/packaging/dmg/AppDMGBackgrou
 set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/packaging/dmg/AppDMGSetup.scpt")
 
 # Linux DEB settings - build dependency list conditionally based on enabled features
-set(_deb_deps "libc6, libstdc++6, libsdl3-0, libsdl3-image-0, flac, libmpg123-0, libpng16-16, zlib1g")
+set(_deb_deps "libc6, libstdc++6, libsdl3-0, libsdl3-image-0, flac, libmpg123-0, libpng16-16, zlib1g, libcurl4")
 if(USE_ZSTD)
     string(APPEND _deb_deps ", libzstd1")
 endif()
@@ -93,7 +93,7 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
         "${CMAKE_SOURCE_DIR}/packaging/linux/scripts/postrm")
 
 # Linux RPM settings - build dependency list conditionally based on enabled features
-set(_rpm_deps "glibc, libstdc++, SDL3, SDL3_image, flac, mpg123, libpng, zlib")
+set(_rpm_deps "glibc, libstdc++, SDL3, SDL3_image, flac, mpg123, libpng, zlib, libcurl")
 if(USE_ZSTD)
     string(APPEND _rpm_deps ", zstd")
 endif()

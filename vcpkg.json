@@ -17,6 +17,8 @@
     "zlib",
     "zstd",
     "enet",
-    "libiconv"
+    "libiconv",
+    "curl",
+    "nlohmann-json"
   ]
 }

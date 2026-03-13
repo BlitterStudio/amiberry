@@ -118,8 +118,8 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 	_tcsncpy(startup_message, msg, MAX_STARTUP_MESSAGE);
 }
 
-// Forward declarations used in this early block
-static void apply_imgui_theme();
+// Forward declaration
+void apply_imgui_theme();
 
 float DISTANCE_BORDER = 10;
 float DISTANCE_NEXT_X = 15;
@@ -151,7 +151,7 @@ static bool parse_rgb_csv(const std::string& s, int& r, int& g, int& b) {
 	return true;
 }
 
-static void apply_imgui_theme()
+void apply_imgui_theme()
 {
 	ImVec4 col_base = rgb_to_vec4(gui_theme.base_color.r, gui_theme.base_color.g, gui_theme.base_color.b);
 	ImVec4 col_bg   = rgb_to_vec4(gui_theme.background_color.r, gui_theme.background_color.g, gui_theme.background_color.b);
@@ -1618,6 +1618,8 @@ void run_gui()
                 ImGui::EndPopup();
             }
         }
+
+		update_check_show_notification();
 
 		ImGui::End();
 

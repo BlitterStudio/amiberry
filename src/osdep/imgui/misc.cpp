@@ -4,6 +4,7 @@
 #include "options.h"
 #include "statusline.h"
 #include "gui/gui_handling.h"
+#include "target.h"
 
 // Helper for bitmask checkboxes
 static bool CheckboxFlags(const char* label, int* flags, int mask)
@@ -107,6 +108,19 @@ void render_panel_misc()
         ShowHelpMarker("Use middle mouse button to release mouse capture");
         AmigaCheckbox("Show GUI on startup", &changed_prefs.start_gui);
         ShowHelpMarker("Show the configuration GUI when Amiberry starts");
+        {
+            bool is_dark = (strcmp(amiberry_options.gui_theme, "Dark.theme") == 0);
+            if (AmigaCheckbox("Dark theme", &is_dark))
+            {
+                const char* theme = is_dark ? "Dark.theme" : "Default.theme";
+                strncpy(amiberry_options.gui_theme, theme, sizeof(amiberry_options.gui_theme) - 1);
+                amiberry_options.gui_theme[sizeof(amiberry_options.gui_theme) - 1] = '\0';
+                load_theme(amiberry_options.gui_theme);
+                apply_imgui_theme();
+                save_amiberry_settings();
+            }
+            ShowHelpMarker("Switch between light and dark GUI appearance");
+        }
         AmigaCheckbox("Always on top", &changed_prefs.main_alwaysontop);
         ShowHelpMarker("Keep the emulator window on top of other windows");
         AmigaCheckbox("GUI Always on top", &changed_prefs.gui_alwaysontop);

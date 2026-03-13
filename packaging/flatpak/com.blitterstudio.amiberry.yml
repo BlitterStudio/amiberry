@@ -129,6 +129,20 @@ modules:
         commands:
           - autoreconf -ifv
 
+  - name: nlohmann-json
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DJSON_BuildTests=OFF
+    sources:
+      - type: archive
+        url: https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+        sha256: 0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+
   - name: amiberry
     buildsystem: cmake-ninja
     builddir: true

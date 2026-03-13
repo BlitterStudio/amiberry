@@ -241,6 +241,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_gui.cpp
         src/osdep/amiberry_mem.cpp
         src/osdep/amiberry_serial.cpp
+        src/osdep/amiberry_update.cpp
         src/osdep/amiberry_uaenet.cpp
         src/osdep/amiberry_whdbooter.cpp
         src/osdep/blkdev_ioctl.cpp
@@ -350,9 +351,9 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/rtg.cpp
 		src/osdep/imgui/savestates.cpp
 		src/osdep/imgui/sound.cpp
-		src/osdep/imgui/themes.cpp
 		src/osdep/imgui/virtualkeyboard.cpp
 		src/osdep/imgui/whdload.cpp
+		src/osdep/imgui/imgui_update.cpp
 )
 
 set(PCEM_SOURCE_FILES
