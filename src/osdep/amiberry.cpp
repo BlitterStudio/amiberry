@@ -1675,6 +1675,14 @@ static void handle_enter_event()
 static void handle_leave_event()
 {
 	mouseinside = false;
+#ifndef LIBRETRO
+	// SDL3 < 3.4.2 Wayland crash workaround: turn off relative mouse mode
+	// when the pointer leaves, so subsequent pump cycles don't hit a NULL
+	// window in pointer_dispatch_relative_motion. See SDL fab42a14, #1829.
+	if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+	}
+#endif
 }
 
 static void handle_focus_lost_event(AmigaMonitor* mon)
