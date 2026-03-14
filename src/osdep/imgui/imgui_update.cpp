@@ -11,11 +11,13 @@
 #include <cstring>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 static bool s_update_popup_open = false;
-static bool s_download_in_progress = false;
-static bool s_download_complete = false;
-static bool s_download_failed = false;
+static std::atomic<bool> s_download_in_progress{false};
+static std::atomic<bool> s_download_complete{false};
+static std::atomic<bool> s_download_failed{false};
+static std::mutex s_download_error_mutex;
 static std::string s_download_error;
 static std::atomic<int64_t> s_download_progress_bytes{0};
 static std::atomic<int64_t> s_download_total_bytes{0};
@@ -64,10 +66,13 @@ static void start_background_download()
 	if (s_download_in_progress || s_cached_update_info.download_url.empty())
 		return;
 
-	s_download_in_progress = true;
-	s_download_complete = false;
-	s_download_failed = false;
-	s_download_error.clear();
+	s_download_in_progress.store(true);
+	s_download_complete.store(false);
+	s_download_failed.store(false);
+	{
+		std::lock_guard<std::mutex> lock(s_download_error_mutex);
+		s_download_error.clear();
+	}
 	s_download_progress_bytes.store(0);
 	s_download_total_bytes.store(s_cached_update_info.asset_size);
 	s_download_cancel_requested.store(false);
@@ -83,30 +88,39 @@ static void start_background_download()
 		const std::string downloaded_file = download_update(info, progress_cb);
 		if (downloaded_file.empty())
 		{
-			s_download_in_progress = false;
-			s_download_failed = true;
-			s_download_error = s_download_cancel_requested.load() ? "Download cancelled." : "Failed to download update package.";
+			{
+				std::lock_guard<std::mutex> lock(s_download_error_mutex);
+				s_download_error = s_download_cancel_requested.load() ? "Download cancelled." : "Failed to download update package.";
+			}
+			s_download_failed.store(true);
+			s_download_in_progress.store(false);
 			return;
 		}
 
 		if (!verify_update_checksum(downloaded_file, info.sha256_expected))
 		{
-			s_download_in_progress = false;
-			s_download_failed = true;
-			s_download_error = "Checksum verification failed.";
+			{
+				std::lock_guard<std::mutex> lock(s_download_error_mutex);
+				s_download_error = "Checksum verification failed.";
+			}
+			s_download_failed.store(true);
+			s_download_in_progress.store(false);
 			return;
 		}
 
 		if (!apply_update(downloaded_file, info))
 		{
-			s_download_in_progress = false;
-			s_download_failed = true;
-			s_download_error = "Failed to apply update.";
+			{
+				std::lock_guard<std::mutex> lock(s_download_error_mutex);
+				s_download_error = "Failed to apply update.";
+			}
+			s_download_failed.store(true);
+			s_download_in_progress.store(false);
 			return;
 		}
 
-		s_download_in_progress = false;
-		s_download_complete = true;
+		s_download_complete.store(true);
+		s_download_in_progress.store(false);
 	}).detach();
 }
 
@@ -147,17 +161,23 @@ static void render_download_progress_dialog()
 		ImGui::SameLine();
 		if (AmigaButton("Close", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
-			s_download_complete = false;
+			s_download_complete.store(false);
 			ImGui::CloseCurrentPopup();
 		}
 	}
-	else if (s_download_failed)
+	else if (s_download_failed.load())
 	{
-		ImGui::TextWrapped("%s", s_download_error.c_str());
+		{
+			std::lock_guard<std::mutex> lock(s_download_error_mutex);
+			ImGui::TextWrapped("%s", s_download_error.c_str());
+		}
 		if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
-			s_download_failed = false;
-			s_download_error.clear();
+			s_download_failed.store(false);
+			{
+				std::lock_guard<std::mutex> lock(s_download_error_mutex);
+				s_download_error.clear();
+			}
 			ImGui::CloseCurrentPopup();
 		}
 	}

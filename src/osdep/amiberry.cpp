@@ -4731,7 +4731,7 @@ std::string get_plugins_directory(bool portable_mode)
 		last_slash_idx = directory.rfind('/');
 		if (std::string::npos != last_slash_idx)
 		{
-			directory = directory.substr(0, last_swap_idx);
+			directory = directory.substr(0, last_slash_idx);
 		}
 	}
 	return directory + "/Resources/plugins/";
