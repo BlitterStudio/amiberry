@@ -1227,9 +1227,6 @@ UpdateInfo get_async_update_result()
 
 void cancel_async_update_check()
 {
-	if (!s_update_running.load()) {
-		return;
-	}
 	s_update_cancel.store(true);
 	if (s_update_thread.joinable()) {
 		s_update_thread.join();

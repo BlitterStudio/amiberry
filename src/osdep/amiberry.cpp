@@ -51,6 +51,7 @@
 #include <sstream>
 
 #include "amiberry_input.h"
+#include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
 #include "fsdb.h"
@@ -2595,6 +2596,7 @@ void target_run()
 
 void target_quit()
 {
+	cancel_async_update_check();
 }
 
 void target_fixup_options(uae_prefs* p)
