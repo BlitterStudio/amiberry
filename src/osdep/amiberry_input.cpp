@@ -367,9 +367,9 @@ int keyhack (const int scancode, const int pressed, const int num)
 	if (currprefs.alt_tab_release)
 	{
 		if (pressed && scancode == SDL_SCANCODE_TAB && (key_altpressed() || state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT])) {
-			// Let the normal focus-loss path unwind capture state. Releasing it
-			// here races the current Alt-Tab event sequence and double-applies
-			// capture teardown before the window actually loses focus.
+			// Workaround: SDL3 < 3.4.2 crashes in Wayland pointer_dispatch_relative_motion
+			// with NULL window during focus transition. See SDL fab42a14, #1829.
+			SDL_SetRelativeMouseMode(SDL_FALSE);
 			return -1;
 		}
 	}
