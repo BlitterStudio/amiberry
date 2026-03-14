@@ -72,17 +72,10 @@ jobs:
         if: matrix.arch == 'intel'
         run: brew install --build-from-source gobject-introspection
 
-      - name: Install dependencies (Homebrew - Intel)
-        if: matrix.arch == 'intel'
-        run: |
-          brew update && \
-          if [ -f Brewfile ]; then brew bundle; else brew install sdl3 sdl3_image mpg123 flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler nlohmann-json; fi
-
-      - name: Install dependencies (Homebrew - Apple Silicon)
-        if: matrix.arch == 'apple-silicon'
+      - name: Install dependencies (Homebrew)
         run: |
           brew update
-          brew install sdl3 sdl3_image mpg123 flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler nlohmann-json
+          brew bundle
 
       - name: Build for macOS (${{ matrix.name }})
         run: |
