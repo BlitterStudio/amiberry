@@ -1,0 +1,22 @@
+# Packit configuration for automated COPR builds
+# Documentation: https://packit.dev/docs/
+---
+upstream_project_url: https://github.com/BlitterStudio/amiberry
+upstream_tag_template: v{version}
+
+specfile_path: packaging/rpm/amiberry.spec
+
+files_to_sync:
+  - packaging/rpm/amiberry.spec
+  - .packit.yaml
+
+jobs:
+  - job: copr_build
+    trigger: release
+    targets:
+      - fedora-latest-x86_64
+      - fedora-latest-aarch64
+    owner: blitterstudio
+    project: amiberry
+    # Only build stable releases (not pre-releases)
+    branch: master

@@ -1,0 +1,90 @@
+%global _hardened_build 1
+
+Name:           amiberry
+Version:        8.0.0
+Release:        0.pre30%{?dist}
+Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
+
+License:        GPL-3.0-only
+URL:            https://amiberry.com
+Source0:        https://github.com/BlitterStudio/amiberry/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+
+BuildRequires:  cmake >= 3.20
+BuildRequires:  ninja-build
+BuildRequires:  gcc-c++
+BuildRequires:  flac-devel
+BuildRequires:  libmpeg2-devel
+BuildRequires:  libpng-devel
+BuildRequires:  SDL2-devel
+BuildRequires:  SDL2_image-devel
+BuildRequires:  alsa-lib-devel
+BuildRequires:  mpg123-devel
+BuildRequires:  portmidi-devel
+BuildRequires:  libserialport-devel
+BuildRequires:  enet-devel
+BuildRequires:  libpcap-devel
+BuildRequires:  libzstd-devel
+BuildRequires:  libcurl-devel
+BuildRequires:  json-devel
+
+Requires:       glibc
+Requires:       libstdc++
+Requires:       SDL2
+Requires:       SDL2_image
+Requires:       flac
+Requires:       mpg123
+Requires:       libpng
+Requires:       zlib
+Requires:       libcurl
+Requires:       zstd
+Requires:       libserialport
+Requires:       portmidi
+Requires:       enet
+
+%description
+Amiberry is an optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms.
+It is based on the latest WinUAE and supports various Amiga models, including
+the A4000T, A4000D, A1200, A3000 and A600. Features include support for WHDLoad
+titles, RetroArch integration, custom controller mappings, and more.
+
+%prep
+%autosetup -n %{name}-%{version}
+
+%build
+%cmake \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix}
+%cmake_build
+
+%install
+%cmake_install
+
+%post
+%{_bindir}/update-desktop-database &>/dev/null || :
+%{_bindir}/update-mime-database %{_datadir}/mime &>/dev/null || :
+touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
+%{_bindir}/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+
+%postun
+%{_bindir}/update-desktop-database &>/dev/null || :
+%{_bindir}/update-mime-database %{_datadir}/mime &>/dev/null || :
+if [ $1 -eq 0 ] ; then
+    touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
+    %{_bindir}/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+fi
+
+%files
+%license LICENSE
+%{_bindir}/amiberry
+%{_libdir}/amiberry/
+%{_datadir}/amiberry/
+%{_datadir}/applications/Amiberry.desktop
+%{_datadir}/icons/hicolor/*/apps/amiberry.png
+%{_datadir}/metainfo/Amiberry.metainfo.xml
+%{_datadir}/mime/packages/amiberry.xml
+%{_mandir}/man1/amiberry.1.gz
+
+%changelog
+* Sat Mar 14 2026 Dimitris Panokostas <midwan@gmail.com> - 8.0.0-0.pre30
+- Initial COPR packaging
