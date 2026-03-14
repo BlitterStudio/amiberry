@@ -329,18 +329,22 @@ jobs:
             runner: ubuntu-latest
             container: ubuntu:22.04
             artifact_name: amiberry-ubuntu-22.04-amd64
+            codename: jammy
           - name: 24.04-amd64
             runner: ubuntu-latest
             container: ubuntu:24.04
             artifact_name: amiberry-ubuntu-24.04-amd64
+            codename: noble
           - name: 25.10-amd64
             runner: ubuntu-latest
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-amd64
+            codename: plucky
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-arm64
+            codename: plucky
     steps:
       - name: Install prerequisites
         run: |
@@ -380,7 +384,7 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -417,18 +421,20 @@ jobs:
             image: midwan/amiberry-fedora-x86_64:latest
             artifact_name: amiberry-fedora-x86_64
             release_suffix: fedora-x86_64
+            codename: fc41
           - name: aarch64
             runner: ubuntu-24.04-arm
             image: midwan/amiberry-fedora-arm64:latest
             artifact_name: amiberry-fedora-aarch64
             release_suffix: fedora-aarch64
+            codename: fc41
     steps:
     - uses: actions/checkout@v5
 
     - name: Run the build process with Docker
       run: |
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake"
+          bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -463,17 +469,19 @@ jobs:
             image: midwan/amiberry-debian-x86_64:bookworm
             artifact_name: amiberry-debian-bookworm-amd64
             release_name: debian-bookworm-amd64
+            codename: bookworm
           - name: trixie
             image: midwan/amiberry-debian-x86_64:trixie
             artifact_name: amiberry-debian-trixie-amd64
             release_name: debian-trixie-amd64
+            codename: trixie
     steps:
       - uses: actions/checkout@v5
 
       - name: Run the build process with Docker
         run: |
           docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-            bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+            bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -508,17 +516,19 @@ jobs:
             image: midwan/amiberry-debian-aarch64:bookworm
             artifact_name: amiberry-debian-bookworm-arm64
             release_name: debian-bookworm-arm64
+            codename: bookworm
           - name: trixie
             image: midwan/amiberry-debian-aarch64:trixie
             artifact_name: amiberry-debian-trixie-arm64
             release_name: debian-trixie-arm64
+            codename: trixie
     steps:
     - uses: actions/checkout@v5
 
     - name: Run the build process with Docker
       run: |
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
