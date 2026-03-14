@@ -69,7 +69,9 @@
 #include "vkbd/vkbd.h"
 #include "macos_bookmarks.h"
 #include <mutex>
+#ifndef LIBRETRO
 #include <curl/curl.h>
+#endif
 
 #ifdef __MACH__
 #include <string>
@@ -4352,6 +4354,7 @@ bool file_exists(const std::string& file)
 	return (fs::exists(f));
 }
 
+#ifndef LIBRETRO
 // libcurl write callback: writes data to a FILE*
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
@@ -4458,6 +4461,17 @@ void download_rtb(const std::string& filename)
 		download_file(url, destination, false);
 	}
 }
+#else
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
+{
+	write_log("download_file: not available in libretro build\n");
+	return false;
+}
+
+void download_rtb(const std::string& filename)
+{
+}
+#endif
 
 // this is where the required assets are stored, like fonts, icons, etc.
 std::string get_data_directory(bool portable_mode)
@@ -4728,25 +4742,6 @@ std::string get_plugins_directory(bool portable_mode)
 		{
 			directory = string(exepath).substr(0, last_slash_idx);
 		}
-		last_slash_idx = directory.rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-			directory = directory.substr(0, last_slash_idx);
-		}
-	}
-	return directory + "/Resources/plugins/";
-#elif defined(__ANDROID__)
-    return prefix_with_application_directory_path("plugins/");
-#elif defined(_WIN32)
-	{
-		char exepath[MAX_DPATH];
-		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
-		std::string dir(exepath);
-		auto last_sep = dir.find_last_of("\\/");
-		if (last_sep != std::string::npos)
-			dir = dir.substr(0, last_sep);
-		return dir + "\\plugins";
-	}
 		last_slash_idx = directory.rfind('/');
 		if (std::string::npos != last_slash_idx)
 		{
