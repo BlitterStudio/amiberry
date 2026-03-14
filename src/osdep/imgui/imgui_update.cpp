@@ -274,26 +274,26 @@ void render_panel_update()
 		else if (s_cached_update_info.update_available)
 		{
 			ImGui::Text("Update available: %s", s_cached_update_info.latest_version.c_str());
-			if (AmigaButton("View Release Notes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			if (AmigaButton("View Release Notes", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 				SDL_OpenURL(s_cached_update_info.release_url.c_str());
 
 			if (get_update_method() == UpdateMethod::SELF_UPDATE)
 			{
 				ImGui::SameLine();
-				if (AmigaButton("Download & Update", ImVec2(BUTTON_WIDTH * 1.4f, BUTTON_HEIGHT)))
+				if (AmigaButton("Download & Update", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 					start_background_download();
 			}
 			else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
 			{
 				ImGui::SameLine();
-				if (AmigaButton("Open Download Page", ImVec2(BUTTON_WIDTH * 1.4f, BUTTON_HEIGHT)))
+				if (AmigaButton("Open Download Page", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 					SDL_OpenURL(s_cached_update_info.release_url.c_str());
 			}
 
-			if (AmigaButton("Skip This Version", ImVec2(BUTTON_WIDTH * 1.4f, BUTTON_HEIGHT)))
+			if (AmigaButton("Skip This Version", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 				skip_cached_version();
 			ImGui::SameLine();
-			if (AmigaButton("Remind Me Later", ImVec2(BUTTON_WIDTH * 1.4f, BUTTON_HEIGHT)))
+			if (AmigaButton("Remind Me Later", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 			{
 				s_has_cached_result = false;
 				s_show_no_update_msg = false;
