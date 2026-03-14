@@ -388,6 +388,10 @@ int scan_roms(int show)
 	return 0;
 }
 
+void cancel_async_update_check()
+{
+}
+
 // No physical SCSI/IOCTL device support in libretro
 struct device_functions devicefunc_scsi_ioctl = {
 	_T("IOCTL"),

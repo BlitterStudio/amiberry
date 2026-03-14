@@ -4355,7 +4355,6 @@ bool file_exists(const std::string& file)
 }
 
 #ifndef LIBRETRO
-// libcurl write callback: writes data to a FILE*
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
 	auto* fp = static_cast<FILE*>(userdata);
@@ -4449,6 +4448,12 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 	return false;
 }
+#else
+bool download_file(const std::string&, const std::string&, bool)
+{
+	return false;
+}
+#endif
 
 void download_rtb(const std::string& filename)
 {
@@ -4745,6 +4750,7 @@ std::string get_plugins_directory(bool portable_mode)
 		last_slash_idx = directory.rfind('/');
 		if (std::string::npos != last_slash_idx)
 		{
+
 			directory = directory.substr(0, last_slash_idx);
 		}
 	}

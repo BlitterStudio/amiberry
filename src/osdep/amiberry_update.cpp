@@ -1252,6 +1252,25 @@ void restart_after_update()
 		write_log("Updater: failed to resolve executable path for restart\n");
 		return;
 	}
+
+	auto app_bundle = std::filesystem::path(exe).parent_path().parent_path().parent_path();
+	if (app_bundle.extension() == ".app") {
+		write_log("Updater: relaunching %s via open(1)\n", app_bundle.c_str());
+		std::string app_str = app_bundle.string();
+		char* args[] = {
+			const_cast<char*>("/usr/bin/open"),
+			const_cast<char*>("-n"),
+			const_cast<char*>(app_str.c_str()),
+			nullptr
+		};
+		pid_t pid = 0;
+		int ret = posix_spawn(&pid, "/usr/bin/open", nullptr, nullptr, args, *_NSGetEnviron());
+		if (ret == 0) {
+			_exit(0);
+		}
+		write_log("Updater: open(1) failed (%s), falling back to execl\n", strerror(ret));
+	}
+
 	write_log("Updater: restarting from %s\n", exe.c_str());
 	execl(exe.c_str(), exe.c_str(), nullptr);
 	write_log("Failed to restart after update: %s\n", std::strerror(errno));
