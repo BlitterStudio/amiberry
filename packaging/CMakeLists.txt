@@ -24,6 +24,18 @@ else()
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 endif()
 
+# Append distro codename suffix for Linux packages when DISTRO_CODENAME is set.
+# DEB: appends +${DISTRO_CODENAME} to version (e.g., 8.0.0+noble)
+# RPM: appends .${DISTRO_CODENAME} to release (e.g., 0.pre30.noble or 1.noble)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND DISTRO_CODENAME)
+    string(APPEND CPACK_PACKAGE_VERSION "+${DISTRO_CODENAME}")
+    if(CPACK_RPM_PACKAGE_RELEASE)
+        string(APPEND CPACK_RPM_PACKAGE_RELEASE ".${DISTRO_CODENAME}")
+    else()
+        set(CPACK_RPM_PACKAGE_RELEASE "1.${DISTRO_CODENAME}")
+    endif()
+endif()
+
 set(CPACK_PACKAGE_VENDOR "BlitterStudio")
 set(CPACK_PACKAGE_CONTACT "Dimitris Panokostas <midwan@gmail.com>")
 set(CPACK_PACKAGE_DESCRIPTION
