@@ -353,7 +353,6 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/sound.cpp
 		src/osdep/imgui/virtualkeyboard.cpp
 		src/osdep/imgui/whdload.cpp
-		src/osdep/imgui/imgui_update.cpp
 )
 
 set(PCEM_SOURCE_FILES
