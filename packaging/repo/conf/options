@@ -1,0 +1,2 @@
+basedir .
+waitforlock 10

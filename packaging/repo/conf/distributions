@@ -1,0 +1,49 @@
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
+Codename: jammy
+Architectures: amd64
+Components: main
+Description: Amiberry APT repository (Ubuntu 22.04 Jammy)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+Limit: 2
+
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
+Codename: noble
+Architectures: amd64
+Components: main
+Description: Amiberry APT repository (Ubuntu 24.04 Noble)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+Limit: 2
+
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
+Codename: plucky
+Architectures: amd64 arm64
+Components: main
+Description: Amiberry APT repository (Ubuntu 25.10 Plucky)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+Limit: 2
+
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
+Codename: bookworm
+Architectures: amd64 arm64
+Components: main
+Description: Amiberry APT repository (Debian 12 Bookworm)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+Limit: 2
+
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
+Codename: trixie
+Architectures: amd64 arm64
+Components: main
+Description: Amiberry APT repository (Debian 13 Trixie)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+Limit: 2
