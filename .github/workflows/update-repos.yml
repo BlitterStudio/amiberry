@@ -3,6 +3,17 @@ name: Update Package Repositories
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'Release tag to download packages from'
+        required: true
+        type: string
+    secrets:
+      GPG_PRIVATE_KEY:
+        required: true
+      PACKAGES_REPO_TOKEN:
+        required: true
 
 concurrency:
   group: packages-deploy
@@ -36,7 +47,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p /tmp/release-assets
-          gh release download "${{ github.event.release.tag_name }}" \
+          gh release download "${{ inputs.tag_name || github.event.release.tag_name }}" \
             --dir /tmp/release-assets \
             --pattern "*.zip"
           ls -la /tmp/release-assets/
@@ -122,7 +133,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p /tmp/release-assets
-          gh release download "${{ github.event.release.tag_name }}" \
+          gh release download "${{ inputs.tag_name || github.event.release.tag_name }}" \
             --dir /tmp/release-assets \
             --pattern "*.zip"
           ls -la /tmp/release-assets/
@@ -244,7 +255,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git checkout -b gh-pages
           git add .
-          git commit -m "Deploy packages.amiberry.com - ${{ github.event.release.tag_name }}"
+          git commit -m "Deploy packages.amiberry.com - ${{ inputs.tag_name || github.event.release.tag_name }}"
           git push --force \
             "https://x-access-token:${PACKAGES_REPO_TOKEN}@github.com/BlitterStudio/amiberry-packages.git" \
             gh-pages

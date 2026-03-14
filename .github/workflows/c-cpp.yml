@@ -761,3 +761,10 @@ jobs:
             artifacts/*.apk
             artifacts/*.aab
             artifacts/SHA256SUMS
+
+  update-repos:
+    needs: create-release
+    uses: ./.github/workflows/update-repos.yml
+    with:
+      tag_name: ${{ github.ref_name }}
+    secrets: inherit
