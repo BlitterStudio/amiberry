@@ -1,0 +1,95 @@
+name: Upload to Launchpad PPA
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  upload-ppa:
+    runs-on: ubuntu-24.04
+    # Only upload stable releases (not pre-releases)
+    if: ${{ !github.event.release.prerelease }}
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            devscripts \
+            debhelper \
+            dput \
+            ninja-build \
+            libflac-dev \
+            libmpeg2-4-dev \
+            libpng-dev \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libasound2-dev \
+            libmpg123-dev \
+            libportmidi-dev \
+            libserialport-dev \
+            libenet-dev \
+            libpcap-dev \
+            libzstd-dev \
+            libcurl4-openssl-dev \
+            nlohmann-json3-dev
+
+      - name: Import GPG signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Configure dput
+        run: |
+          cat > ~/.dput.cf <<'EOF'
+          [amiberry-ppa]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~blitterstudio/ubuntu/amiberry
+          login = anonymous
+          allow_unsigned_uploads = 0
+          EOF
+
+      - name: Build and upload source package for noble
+        env:
+          DEBEMAIL: midwan@gmail.com
+          DEBFULLNAME: "Dimitris Panokostas"
+        run: |
+          mkdir -p /tmp/ppa-build/noble
+          cp -r . /tmp/ppa-build/noble/amiberry
+          cd /tmp/ppa-build/noble/amiberry
+          # Update changelog for noble
+          sed -i "s/UNRELEASED/noble/" debian/changelog
+          # Build source package only (no binaries — Launchpad builds them)
+          dpkg-buildpackage -S -d -us -uc
+          # Sign the .changes file
+          debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
+            /tmp/ppa-build/noble/amiberry_*_source.changes
+          # Upload to PPA
+          dput amiberry-ppa /tmp/ppa-build/noble/amiberry_*_source.changes
+
+      - name: Build and upload source package for jammy
+        env:
+          DEBEMAIL: midwan@gmail.com
+          DEBFULLNAME: "Dimitris Panokostas"
+        run: |
+          mkdir -p /tmp/ppa-build/jammy
+          cp -r . /tmp/ppa-build/jammy/amiberry
+          cd /tmp/ppa-build/jammy/amiberry
+          # Update changelog for jammy (add ~jammy1 suffix)
+          sed -i "s/UNRELEASED/jammy/" debian/changelog
+          VERSION=$(dpkg-parsechangelog -l debian/changelog -S Version)
+          dch --distribution jammy --newversion "${VERSION}~jammy1" \
+            "Rebuild for Ubuntu 22.04 Jammy Jellyfish"
+          # Build source package
+          dpkg-buildpackage -S -d -us -uc
+          # Sign the .changes file
+          debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
+            /tmp/ppa-build/jammy/amiberry_*_source.changes
+          # Upload to PPA
+          dput amiberry-ppa /tmp/ppa-build/jammy/amiberry_*_source.changes
