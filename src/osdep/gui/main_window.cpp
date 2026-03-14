@@ -1604,8 +1604,6 @@ void run_gui()
             }
         }
 
-		update_check_show_notification();
-
 		ImGui::End();
 
 		// Pop touch-scrolling hover suppression colors

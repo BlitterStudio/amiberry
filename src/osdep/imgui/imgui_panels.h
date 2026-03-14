@@ -79,9 +79,6 @@ void render_panel_themes();
 void render_panel_filter();
 void render_panel_update();
 
-// Update notification popup (called from main GUI loop)
-void update_check_show_notification();
-
 // Controller mapping modal (ImGui)
 void ControllerMap_Open(int device, bool map_touchpad);
 bool ControllerMap_IsActive();

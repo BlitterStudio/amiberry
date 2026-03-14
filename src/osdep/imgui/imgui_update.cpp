@@ -13,7 +13,6 @@
 #include <atomic>
 #include <mutex>
 
-static bool s_update_popup_open = false;
 static std::atomic<bool> s_download_in_progress{false};
 static std::atomic<bool> s_download_complete{false};
 static std::atomic<bool> s_download_failed{false};
@@ -25,6 +24,7 @@ static UpdateInfo s_cached_update_info;
 static bool s_check_triggered_manually = false;
 static bool s_show_no_update_msg = false;
 static bool s_has_cached_result = false;
+static bool s_startup_result_consumed = false;
 
 static std::atomic<bool> s_download_cancel_requested{false};
 
@@ -124,71 +124,29 @@ static void start_background_download()
 	}).detach();
 }
 
-static void render_download_progress_dialog()
-{
-	if (!s_download_in_progress && !s_download_complete && !s_download_failed)
-		return;
-
-	ImGui::OpenPopup("Download Update");
-	if (!ImGui::BeginPopupModal("Download Update", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		return;
-
-	ImGui::Text("Downloading Amiberry %s...", s_cached_update_info.latest_version.c_str());
-
-	const int64_t downloaded = s_download_progress_bytes.load();
-	const int64_t total = s_download_total_bytes.load();
-	float progress = 0.0f;
-	if (total > 0)
-		progress = static_cast<float>(downloaded) / static_cast<float>(total);
-	if (progress < 0.0f)
-		progress = 0.0f;
-	if (progress > 1.0f)
-		progress = 1.0f;
-
-	ImGui::ProgressBar(progress, ImVec2(420.0f, 0.0f));
-	ImGui::Text("%d%% (%s / %s)", static_cast<int>(progress * 100.0f), format_bytes(downloaded).c_str(), format_bytes(total).c_str());
-
-	if (s_download_in_progress)
-	{
-		if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-			s_download_cancel_requested.store(true);
-	}
-	else if (s_download_complete)
-	{
-		ImGui::TextUnformatted("Update ready! Restart to apply.");
-		if (AmigaButton("Restart Now", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-			restart_after_update();
-		ImGui::SameLine();
-		if (AmigaButton("Close", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			s_download_complete.store(false);
-			ImGui::CloseCurrentPopup();
-		}
-	}
-	else if (s_download_failed.load())
-	{
-		{
-			std::lock_guard<std::mutex> lock(s_download_error_mutex);
-			ImGui::TextWrapped("%s", s_download_error.c_str());
-		}
-		if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			s_download_failed.store(false);
-			{
-				std::lock_guard<std::mutex> lock(s_download_error_mutex);
-				s_download_error.clear();
-			}
-			ImGui::CloseCurrentPopup();
-		}
-	}
-
-	ImGui::EndPopup();
-}
-
 void render_panel_update()
 {
 	ImGui::Indent(4.0f);
 
+	// Consume startup async check result (runs once after startup check completes)
+	if (!s_startup_result_consumed && !s_check_triggered_manually && !is_update_check_running())
+	{
+		const auto result = get_async_update_result();
+		const bool has_result = result.update_available || !result.error_message.empty() || !result.latest_version.empty();
+		if (has_result)
+		{
+			if (result.update_available
+				&& std::strcmp(amiberry_options.skipped_version, result.latest_version.c_str()) != 0)
+			{
+				s_cached_update_info = result;
+				s_has_cached_result = true;
+			}
+			s_show_no_update_msg = !result.update_available && result.error_message.empty();
+		}
+		s_startup_result_consumed = true;
+	}
+
+	// Consume manually triggered check result
 	if (s_check_triggered_manually && !is_update_check_running())
 	{
 		s_cached_update_info = get_async_update_result();
@@ -277,26 +235,29 @@ void render_panel_update()
 			if (AmigaButton("View Release Notes", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 				SDL_OpenURL(s_cached_update_info.release_url.c_str());
 
-			if (get_update_method() == UpdateMethod::SELF_UPDATE)
+			if (!s_download_in_progress && !s_download_complete && !s_download_failed)
 			{
-				ImGui::SameLine();
-				if (AmigaButton("Download & Update", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
-					start_background_download();
-			}
-			else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
-			{
-				ImGui::SameLine();
-				if (AmigaButton("Open Download Page", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
-					SDL_OpenURL(s_cached_update_info.release_url.c_str());
-			}
+				if (get_update_method() == UpdateMethod::SELF_UPDATE)
+				{
+					ImGui::SameLine();
+					if (AmigaButton("Download & Update", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+						start_background_download();
+				}
+				else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
+				{
+					ImGui::SameLine();
+					if (AmigaButton("Open Download Page", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+						SDL_OpenURL(s_cached_update_info.release_url.c_str());
+				}
 
-			if (AmigaButton("Skip This Version", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
-				skip_cached_version();
-			ImGui::SameLine();
-			if (AmigaButton("Remind Me Later", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
-			{
-				s_has_cached_result = false;
-				s_show_no_update_msg = false;
+				if (AmigaButton("Skip This Version", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+					skip_cached_version();
+				ImGui::SameLine();
+				if (AmigaButton("Remind Me Later", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+				{
+					s_has_cached_result = false;
+					s_show_no_update_msg = false;
+				}
 			}
 		}
 		else
@@ -310,73 +271,56 @@ void render_panel_update()
 		ImGui::TextUnformatted("You are running the latest version.");
 	}
 
-	render_download_progress_dialog();
-}
-
-void update_check_show_notification()
-{
-	static bool s_notification_shown = false;
-
-	if (!s_update_popup_open)
+	if (s_download_in_progress || s_download_complete || s_download_failed)
 	{
-		if (s_notification_shown || is_update_check_running() || get_update_method() == UpdateMethod::DISABLED)
-		{
-			render_download_progress_dialog();
-			return;
-		}
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
 
-		const auto result = get_async_update_result();
-		const bool has_result = result.update_available || !result.error_message.empty() || !result.latest_version.empty();
-		if (!has_result)
+		if (s_download_in_progress)
 		{
-			render_download_progress_dialog();
-			return;
-		}
+			ImGui::Text("Downloading Amiberry %s...", s_cached_update_info.latest_version.c_str());
 
-		if (result.update_available && std::strcmp(amiberry_options.skipped_version, result.latest_version.c_str()) != 0)
-		{
-			s_cached_update_info = result;
-			s_has_cached_result = true;
-			s_update_popup_open = true;
-			ImGui::OpenPopup("Update Available");
+			const int64_t downloaded = s_download_progress_bytes.load();
+			const int64_t total = s_download_total_bytes.load();
+			float progress = 0.0f;
+			if (total > 0)
+				progress = static_cast<float>(downloaded) / static_cast<float>(total);
+			if (progress < 0.0f)
+				progress = 0.0f;
+			if (progress > 1.0f)
+				progress = 1.0f;
+
+			ImGui::ProgressBar(progress, ImVec2(420.0f, 0.0f));
+			ImGui::Text("%d%% (%s / %s)", static_cast<int>(progress * 100.0f),
+				format_bytes(downloaded).c_str(), format_bytes(total).c_str());
+
+			if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+				s_download_cancel_requested.store(true);
 		}
-		s_notification_shown = true;
+		else if (s_download_complete)
+		{
+			ImGui::TextUnformatted("Update applied successfully! Restart to use the new version.");
+			if (AmigaButton("Restart Now", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+				restart_after_update();
+			ImGui::SameLine();
+			if (AmigaButton("Close", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+				s_download_complete.store(false);
+		}
+		else if (s_download_failed.load())
+		{
+			{
+				std::lock_guard<std::mutex> lock(s_download_error_mutex);
+				ImGui::TextWrapped("%s", s_download_error.c_str());
+			}
+			if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			{
+				s_download_failed.store(false);
+				{
+					std::lock_guard<std::mutex> lock(s_download_error_mutex);
+					s_download_error.clear();
+				}
+			}
+		}
 	}
-
-	if (s_update_popup_open)
-		ImGui::OpenPopup("Update Available");
-
-	if (ImGui::BeginPopupModal("Update Available", &s_update_popup_open, ImGuiWindowFlags_AlwaysAutoResize))
-	{
-		ImGui::TextWrapped("Amiberry %s is available.", s_cached_update_info.latest_version.c_str());
-
-		if (AmigaButton("Update", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			if (get_update_method() == UpdateMethod::SELF_UPDATE)
-				start_background_download();
-			else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
-				SDL_OpenURL(s_cached_update_info.release_url.c_str());
-			s_update_popup_open = false;
-			ImGui::CloseCurrentPopup();
-		}
-
-		ImGui::SameLine();
-		if (AmigaButton("Skip", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			skip_cached_version();
-			s_update_popup_open = false;
-			ImGui::CloseCurrentPopup();
-		}
-
-		ImGui::SameLine();
-		if (AmigaButton("Later", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			s_update_popup_open = false;
-			ImGui::CloseCurrentPopup();
-		}
-
-		ImGui::EndPopup();
-	}
-
-	render_download_progress_dialog();
 }
