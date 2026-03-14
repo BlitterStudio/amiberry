@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amiberry Package Repository</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #58a6ff;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            color: #8b949e;
+        }
+        
+        section {
+            margin-bottom: 40px;
+        }
+        
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #58a6ff;
+            border-left: 3px solid #58a6ff;
+            padding-left: 15px;
+        }
+        
+        .quick-install {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .code-block {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        code {
+            font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            color: #79c0ff;
+        }
+        
+        .code-block code {
+            display: block;
+            white-space: pre;
+        }
+        
+        .copy-hint {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-top: 10px;
+        }
+        
+        .manual-section {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .manual-section h3 {
+            color: #79c0ff;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .manual-section ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .manual-section li {
+            margin-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #30363d;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #161b22;
+            color: #58a6ff;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #0d1117;
+        }
+        
+        tr:hover {
+            background-color: #161b22;
+        }
+        
+        .fingerprint {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        
+        .links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        a {
+            color: #58a6ff;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        
+        a:hover {
+            border-bottom-color: #58a6ff;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #30363d;
+            color: #8b949e;
+            font-size: 0.9em;
+        }
+        
+        .warning {
+            background-color: #161b22;
+            border-left: 3px solid #d29922;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .warning strong {
+            color: #d29922;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            h2 {
+                font-size: 1.2em;
+            }
+            
+            .container {
+                padding: 20px 15px;
+            }
+            
+            .links {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Amiberry Package Repository</h1>
+            <p class="subtitle">Official package repository for Amiberry — Amiga emulator</p>
+        </header>
+        
+        <section>
+            <h2>Quick Install</h2>
+            <div class="quick-install">
+                <p>The easiest way to set up the Amiberry repository:</p>
+                <div class="code-block">
+                    <code>curl -fsSL https://packages.amiberry.com/install.sh | sudo sh</code>
+                </div>
+                <p class="copy-hint">This script auto-detects your Linux distribution and configures the repository.</p>
+            </div>
+        </section>
+        
+        <section>
+            <h2>Supported Distributions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Distribution</th>
+                        <th>Versions</th>
+                        <th>Package Manager</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Ubuntu</td>
+                        <td>22.04 LTS, 24.04 LTS, 25.10</td>
+                        <td>apt</td>
+                    </tr>
+                    <tr>
+                        <td>Debian</td>
+                        <td>12 (Bookworm), 13 (Trixie)</td>
+                        <td>apt</td>
+                    </tr>
+                    <tr>
+                        <td>Raspberry Pi OS</td>
+                        <td>Bookworm, Trixie</td>
+                        <td>apt</td>
+                    </tr>
+                    <tr>
+                        <td>Fedora</td>
+                        <td>39, 40, 41</td>
+                        <td>dnf</td>
+                    </tr>
+                    <tr>
+                        <td>RHEL / CentOS / Rocky / AlmaLinux</td>
+                        <td>8, 9</td>
+                        <td>dnf</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section>
+            <h2>Manual Installation</h2>
+            
+            <div class="manual-section">
+                <h3>Ubuntu / Debian / Raspberry Pi OS</h3>
+                <ol>
+                    <li>Download the GPG signing key:
+                        <div class="code-block">
+                            <code>sudo curl -fsSL https://packages.amiberry.com/gpg.key -o /usr/share/keyrings/amiberry-archive-keyring.gpg</code>
+                        </div>
+                    </li>
+                    <li>Add the repository to your sources (replace <code>jammy</code> with your release codename):
+                        <div class="code-block">
+                            <code>echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/amiberry-archive-keyring.gpg] https://packages.amiberry.com/apt jammy main" | sudo tee /etc/apt/sources.list.d/amiberry.list</code>
+                        </div>
+                    </li>
+                    <li>Update package lists and install:
+                        <div class="code-block">
+                            <code>sudo apt update
+sudo apt install amiberry</code>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+            
+            <div class="manual-section">
+                <h3>Fedora / RHEL / CentOS / Rocky / AlmaLinux</h3>
+                <ol>
+                    <li>Download the repository configuration:
+                        <div class="code-block">
+                            <code>sudo curl -fsSL https://packages.amiberry.com/rpm/amiberry.repo -o /etc/yum.repos.d/amiberry.repo</code>
+                        </div>
+                    </li>
+                    <li>Import the GPG signing key:
+                        <div class="code-block">
+                            <code>sudo rpm --import https://packages.amiberry.com/gpg.asc</code>
+                        </div>
+                    </li>
+                    <li>Install Amiberry:
+                        <div class="code-block">
+                            <code>sudo dnf install amiberry</code>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+        
+        <section>
+            <h2>GPG Key Verification</h2>
+            <p>All packages in this repository are signed with the following GPG key:</p>
+            <div class="fingerprint">
+                <strong>Fingerprint:</strong><br>
+                D74D 5252 5340 C442 A4F8 B657 A12B 57C0 4E1F E282
+            </div>
+            <p>You can verify the key fingerprint after importing it:</p>
+            <div class="code-block">
+                <code>gpg --show-keys /usr/share/keyrings/amiberry-archive-keyring.gpg</code>
+            </div>
+        </section>
+        
+        <section>
+            <h2>Troubleshooting</h2>
+            <div class="warning">
+                <strong>Repository not found?</strong> Make sure you've replaced the release codename (e.g., <code>jammy</code>, <code>bookworm</code>) with your actual distribution release. Run <code>lsb_release -cs</code> to find your codename.
+            </div>
+            <div class="warning">
+                <strong>GPG signature verification failed?</strong> Ensure the GPG key was downloaded correctly and placed in <code>/usr/share/keyrings/amiberry-archive-keyring.gpg</code>.
+            </div>
+            <div class="warning">
+                <strong>Package not available?</strong> Run <code>sudo apt update</code> (or <code>sudo dnf makecache</code> on Fedora) to refresh the package cache.
+            </div>
+        </section>
+        
+        <footer>
+            <div class="links">
+                <a href="https://amiberry.com">Amiberry Homepage</a>
+                <a href="https://github.com/BlitterStudio/amiberry">GitHub Repository</a>
+                <a href="https://flathub.org/apps/com.blitterstudio.amiberry">Flathub</a>
+            </div>
+            <p style="margin-top: 20px;">Repository: <code>https://packages.amiberry.com</code></p>
+        </footer>
+    </div>
+</body>
+</html>
