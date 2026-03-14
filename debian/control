@@ -1,0 +1,36 @@
+Source: amiberry
+Section: otherosfs
+Priority: optional
+Maintainer: Dimitris Panokostas <midwan@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.20),
+               ninja-build,
+               libflac-dev,
+               libmpeg2-4-dev,
+               libpng-dev,
+               libsdl2-dev,
+               libsdl2-image-dev,
+               libasound2-dev,
+               libmpg123-dev,
+               libportmidi-dev,
+               libserialport-dev,
+               libenet-dev,
+               libpcap-dev,
+               libzstd-dev,
+               libcurl4-openssl-dev,
+               nlohmann-json3-dev
+Standards-Version: 4.6.2
+Homepage: https://amiberry.com
+Vcs-Git: https://github.com/BlitterStudio/amiberry.git
+Vcs-Browser: https://github.com/BlitterStudio/amiberry
+
+Package: amiberry
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Optimized Amiga emulator for various platforms
+ Amiberry is an optimized Amiga emulator for ARM64, AMD64 and RISC-V
+ platforms. It is based on the latest WinUAE and supports various Amiga
+ models, including the A4000T, A4000D, A1200, A3000 and A600.
+ .
+ Features include support for WHDLoad titles, RetroArch integration,
+ custom controller mappings, and more.

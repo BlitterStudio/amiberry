@@ -1,0 +1,5 @@
+amiberry (8.0.0~pre30-1) UNRELEASED; urgency=medium
+
+  * Initial Ubuntu PPA packaging.
+
+ -- Dimitris Panokostas <midwan@gmail.com>  Sat, 14 Mar 2026 22:00:00 +0000
