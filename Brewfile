@@ -11,5 +11,4 @@ brew "enet"
 brew "libpcap"
 brew "zstd"
 brew "dylibbundler"
-
-
+brew "nlohmann-json"
