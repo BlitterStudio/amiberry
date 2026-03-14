@@ -927,6 +927,11 @@ void SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed)
 {
 	SDL_SetWindowGrab(window, grabbed);
 }
+void SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed)
+{
+	(void)window;
+	(void)grabbed;
+}
 bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode)
 {
 	(void)window;

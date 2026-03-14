@@ -937,6 +937,7 @@ void SDL_GetWindowPosition(SDL_Window* window, int* x, int* y);
 void SDL_GetWindowSize(SDL_Window* window, int* w, int* h);
 void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed);
 void SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed);
+void SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed);
 bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode);
 void SDL_SetWindowSize(SDL_Window* window, int w, int h);
 void SDL_SetWindowPosition(SDL_Window* window, int x, int y);
