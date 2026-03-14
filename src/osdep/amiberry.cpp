@@ -69,7 +69,9 @@
 #include "vkbd/vkbd.h"
 #include "macos_bookmarks.h"
 #include <mutex>
+#if !defined(LIBRETRO)
 #include <curl/curl.h>
+#endif
 
 #ifdef __MACH__
 #include <string>
@@ -4360,7 +4362,7 @@ bool file_exists(const std::string& file)
 	return (fs::exists(f));
 }
 
-// libcurl write callback: writes data to a FILE*
+#if !defined(LIBRETRO)
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
 	auto* fp = static_cast<FILE*>(userdata);
@@ -4454,6 +4456,12 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 	return false;
 }
+#else
+bool download_file(const std::string&, const std::string&, bool)
+{
+	return false;
+}
+#endif
 
 void download_rtb(const std::string& filename)
 {
