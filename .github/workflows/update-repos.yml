@@ -5,13 +5,11 @@ on:
     types: [published]
 
 concurrency:
-  group: pages-deploy
+  group: packages-deploy
   cancel-in-progress: false
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build-apt-repo:
@@ -193,9 +191,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build-apt-repo, build-yum-repo]
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -229,9 +224,9 @@ jobs:
           # GPG public keys
           cp packaging/repo/gpg.key /tmp/pages-deploy/gpg.key
           cp packaging/repo/gpg.asc /tmp/pages-deploy/gpg.asc
-          # CNAME for custom domain
+          # CNAME for custom domain (packages.amiberry.com)
           cp packaging/repo/CNAME /tmp/pages-deploy/CNAME
-          # User-facing files (if they exist yet)
+          # User-facing files
           [ -f packaging/repo/install.sh ] && cp packaging/repo/install.sh /tmp/pages-deploy/
           [ -f packaging/repo/index.html ] && cp packaging/repo/index.html /tmp/pages-deploy/
           # DNF .repo file at well-known URL
@@ -239,14 +234,17 @@ jobs:
           echo "Deployment directory contents:"
           find /tmp/pages-deploy -type f | sort
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: /tmp/pages-deploy
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Push to amiberry-packages repository
+        env:
+          PACKAGES_REPO_TOKEN: ${{ secrets.PACKAGES_REPO_TOKEN }}
+        run: |
+          cd /tmp/pages-deploy
+          git init
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout -b gh-pages
+          git add .
+          git commit -m "Deploy packages.amiberry.com - ${{ github.event.release.tag_name }}"
+          git push --force \
+            "https://x-access-token:${PACKAGES_REPO_TOKEN}@github.com/BlitterStudio/amiberry-packages.git" \
+            gh-pages
