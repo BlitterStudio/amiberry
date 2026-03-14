@@ -384,7 +384,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build file libflac-dev libmpeg2-4-dev libpng-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev
+          sudo apt-get install -y build-essential cmake ninja-build file zip libflac-dev libmpeg2-4-dev libpng-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev
 
       - name: Install SDL3 and SDL3_image
         if: matrix.sdl_source == 'setup-sdl'
