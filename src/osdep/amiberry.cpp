@@ -51,6 +51,7 @@
 #include <sstream>
 
 #include "amiberry_input.h"
+#include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
 #include "fsdb.h"
@@ -67,6 +68,10 @@
 #include "on_screen_joystick.h"
 #include "vkbd/vkbd.h"
 #include "macos_bookmarks.h"
+#include <mutex>
+#if !defined(LIBRETRO)
+#include <curl/curl.h>
+#endif
 
 #ifdef __MACH__
 #include <string>
@@ -2608,6 +2613,7 @@ void target_run()
 
 void target_quit()
 {
+	cancel_async_update_check();
 }
 
 void target_fixup_options(uae_prefs* p)
@@ -4039,6 +4045,8 @@ void save_amiberry_settings()
 	write_bool_option("use_custom_bezel", amiberry_options.use_custom_bezel);
 	write_string_option("custom_bezel", amiberry_options.custom_bezel);
 
+	write_int_option("update_channel", amiberry_options.update_channel);
+
 	// Paths
 	write_string_option("config_path", config_path);
 	write_string_option("controllers_path", controllers_path);
@@ -4245,6 +4253,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
 		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
 		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);
+		ret |= cfgfile_intval(option, value, "update_channel", &amiberry_options.update_channel, 1);
 	}
 	return ret;
 }
@@ -4353,65 +4362,28 @@ bool file_exists(const std::string& file)
 	return (fs::exists(f));
 }
 
+#if !defined(LIBRETRO)
+static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
+{
+	auto* fp = static_cast<FILE*>(userdata);
+	return fwrite(ptr, size, nmemb, fp);
+}
+
+static void ensure_curl_initialized()
+{
+	static std::once_flag s_curl_once;
+	std::call_once(s_curl_once, []() {
+		curl_global_init(CURL_GLOBAL_DEFAULT);
+	});
+}
+
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
-	std::string tool_path = "";
-	std::string download_command = "";
-	bool use_curl = false;
-
-	// Check for curl first
-#if defined (__MACH__) && defined (__arm64__)
-	if (file_exists("/opt/homebrew/bin/curl"))
-		tool_path = "/opt/homebrew/bin/curl";
-	else if (file_exists("/usr/bin/curl"))
-		tool_path = "/usr/bin/curl";
-#else
-	if (file_exists("/usr/bin/curl"))
-		tool_path = "/usr/bin/curl";
-	else if (file_exists("/usr/local/bin/curl"))
-		tool_path = "/usr/local/bin/curl";
-#endif
-
-	if (!tool_path.empty())
-	{
-		use_curl = true;
-		download_command = tool_path + " -L -s -o ";
-	}
-	else
-	{
-		// Fallback to wget
-#if defined (__MACH__) && defined (__arm64__)	
-		std::string wget_path = "/opt/homebrew/bin/wget";
-		if (file_exists(wget_path))
-			tool_path = wget_path;
-#elif defined(__MACH__)
-		std::string wget_path = "/usr/local/bin/wget";
-		if (file_exists(wget_path))
-			tool_path = wget_path;
-#else
-		tool_path = "wget";
-#endif
-
-		if (tool_path.empty() || (tool_path != "wget" && !file_exists(tool_path)))
-		{
-			write_log("Could not locate curl or wget! Please install one of them to support downloads.\n");
-			return false;
-		}
-		download_command = tool_path + " -np -nv -O ";
-	}
+	ensure_curl_initialized();
 
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
-	download_command.append("\"");
-	download_command.append(tmp);
-	download_command.append("\" \"");
-	download_command.append(source);
-	download_command.append("\"");
-	if (!use_curl)
-		download_command.append(" 2>&1"); // wget needs this to capture output to pipe properly
-
-	// Cleanup if the tmp destination already exists
 	if (file_exists(tmp))
 	{
 		write_log("Existing file found, removing %s\n", tmp.c_str());
@@ -4422,26 +4394,41 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		}
 	}
 
-	try
+	FILE* fp = fopen(tmp.c_str(), "wb");
+	if (!fp)
 	{
-		char buffer[MAX_DPATH];
-		const auto output = popen(download_command.c_str(), "r");
-		if (!output)
-		{
-			write_log("Failed while trying to run download command! Make sure it exists in your system...\n");
-			return false;
-		}
-
-		while (fgets(buffer, sizeof buffer, output))
-		{
-			write_log(buffer);
-			write_log("\n");
-		}
-		pclose(output);
+		write_log("Failed to open temporary file for writing: %s\n", tmp.c_str());
+		return false;
 	}
-	catch (...)
+
+	CURL* curl = curl_easy_init();
+	if (!curl)
 	{
-		write_log("An exception was thrown while trying to execute download command!\n");
+		write_log("Failed to initialize libcurl\n");
+		fclose(fp);
+		return false;
+	}
+
+	curl_easy_setopt(curl, CURLOPT_URL, source.c_str());
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file_cb);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Amiberry");
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+
+	const CURLcode res = curl_easy_perform(curl);
+	curl_easy_cleanup(curl);
+	fclose(fp);
+
+	if (res != CURLE_OK)
+	{
+		write_log("Download failed: %s (URL: %s)\n", curl_easy_strerror(res), source.c_str());
+		std::remove(tmp.c_str());
 		return false;
 	}
 
@@ -4469,6 +4456,12 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 	return false;
 }
+#else
+bool download_file(const std::string&, const std::string&, bool)
+{
+	return false;
+}
+#endif
 
 void download_rtb(const std::string& filename)
 {
@@ -4754,6 +4747,7 @@ std::string get_plugins_directory(bool portable_mode)
 		last_slash_idx = directory.rfind('/');
 		if (std::string::npos != last_slash_idx)
 		{
+
 			directory = directory.substr(0, last_slash_idx);
 		}
 	}

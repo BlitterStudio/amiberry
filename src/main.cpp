@@ -75,6 +75,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
+
 // Special version string so that AmigaOS can detect it
 static const char __ver[] = "$VER: Amiberry v" AMIBERRY_VERSION " (" AMIBERRY_BUILD_DATE ")";
 

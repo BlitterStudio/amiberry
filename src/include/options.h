@@ -1386,6 +1386,7 @@ struct amiberry_options
 	bool use_bezel = false;
 	bool use_custom_bezel = false;
 	char custom_bezel[256] = "none";
+	int update_channel = 0;                  // 0=stable, 1=preview
 };
 
 extern struct amiberry_options amiberry_options;

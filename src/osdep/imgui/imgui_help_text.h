@@ -852,22 +852,4 @@ static const char* help_text_whdload =
 	"file alone - you must first load the .lha file itself, change any\n"
 	"settings, and then save the .uae config file.\n";
 
-static const char* help_text_themes =
-	"The themes panel allows you to customize the look of the GUI.\n"
-	"\n"
-	"The 'Theme' dropdown allows you to select a theme.\n"
-	"\n"
-	"Font: The font to use for the GUI.\n"
-	"Font size: The size of the font.\n"
-	"Font color: The color of the font.\n"
-	"Base color: The base color of the GUI.\n"
-	"Selector inactive color: The color of the inactive selector.\n"
-	"Selector active color: The color of the active selector.\n"
-	"Selection color: The color of the selection.\n"
-	"Background color: The color of the background.\n"
-	"Foreground color: The color of the foreground.\n"
-	"\n"
-	"The 'Save' button saves the current theme.\n"
-	"The 'Save as...' button saves the current theme with a new name.\n"
-	"The 'Reset' button resets the current theme to the default theme.\n"
-	"The 'Use' button applies the current theme.\n";
+
