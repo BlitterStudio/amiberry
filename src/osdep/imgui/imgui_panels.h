@@ -77,8 +77,6 @@ void render_panel_virtual_keyboard();
 void render_panel_whdload();
 void render_panel_themes();
 void render_panel_filter();
-void render_panel_update();
-
 // Controller mapping modal (ImGui)
 void ControllerMap_Open(int device, bool map_touchpad);
 bool ControllerMap_IsActive();

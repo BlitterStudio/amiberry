@@ -852,18 +852,4 @@ static const char* help_text_whdload =
 	"file alone - you must first load the .lha file itself, change any\n"
 	"settings, and then save the .uae config file.\n";
 
-static const char* help_text_update =
-	"Check for and install Amiberry updates.\n"
-	"\n"
-	"Check for updates: Enable or disable automatic update checks on startup.\n"
-	"\n"
-	"Update channel:\n"
-	"  Stable - Only released versions.\n"
-	"  Preview - Includes pre-release versions (may contain bugs).\n"
-	"\n"
-	"Update method (determined by your installation type):\n"
-	"  Self-update - Amiberry can download and apply updates directly.\n"
-	"  Notify only - You will be notified, but must update manually.\n"
-	"  Disabled - Updates are managed externally (Flatpak, Play Store, etc.).\n"
-	"\n"
-	"Use 'Check Now' to manually check for the latest version.\n";
+

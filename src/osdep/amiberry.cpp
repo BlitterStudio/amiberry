@@ -4043,11 +4043,7 @@ void save_amiberry_settings()
 	write_bool_option("use_custom_bezel", amiberry_options.use_custom_bezel);
 	write_string_option("custom_bezel", amiberry_options.custom_bezel);
 
-	// Auto-update settings
-	write_int_option("update_check", amiberry_options.update_check);
 	write_int_option("update_channel", amiberry_options.update_channel);
-	write_string_option("skipped_version", amiberry_options.skipped_version);
-	write_string_option("last_update_check", amiberry_options.last_update_check);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -4255,10 +4251,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
 		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
 		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);
-		ret |= cfgfile_intval(option, value, "update_check", &amiberry_options.update_check, 1);
 		ret |= cfgfile_intval(option, value, "update_channel", &amiberry_options.update_channel, 1);
-		ret |= cfgfile_string(option, value, "skipped_version", amiberry_options.skipped_version, sizeof amiberry_options.skipped_version);
-		ret |= cfgfile_string(option, value, "last_update_check", amiberry_options.last_update_check, sizeof amiberry_options.last_update_check);
 	}
 	return ret;
 }

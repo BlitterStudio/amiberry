@@ -74,7 +74,7 @@
 #include "fsdb.h"
 #include "fsdb_host.h"
 #include "keyboard.h"
-#include "amiberry_update.h"
+
 
 // Special version string so that AmigaOS can detect it
 static const char __ver[] = "$VER: Amiberry v" AMIBERRY_VERSION " (" AMIBERRY_BUILD_DATE ")";
@@ -1580,12 +1580,6 @@ static int real_main2 (int argc, TCHAR **argv)
 		} else if (err == -2) {
 			return 1;
 		}
-	}
-
-	if (amiberry_options.update_check && get_update_method() != UpdateMethod::DISABLED) {
-		const auto channel = amiberry_options.update_channel == 1
-			? UpdateChannel::Preview : UpdateChannel::Stable;
-		start_async_update_check(channel);
 	}
 
 	memset (&gui_data, 0, sizeof gui_data);

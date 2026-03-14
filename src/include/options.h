@@ -1386,11 +1386,7 @@ struct amiberry_options
 	bool use_bezel = false;
 	bool use_custom_bezel = false;
 	char custom_bezel[256] = "none";
-	// Auto-update settings
-	int update_check = 1;                    // 0=disabled, 1=enabled (check on startup)
 	int update_channel = 0;                  // 0=stable, 1=preview
-	char skipped_version[128]{};             // Version string to skip (e.g. "8.1.0")
-	char last_update_check[64]{};            // ISO timestamp of last check
 };
 
 extern struct amiberry_options amiberry_options;

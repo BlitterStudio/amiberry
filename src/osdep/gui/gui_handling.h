@@ -370,8 +370,7 @@ PANEL(misc,               "Miscellaneous",      "misc.png") \
 PANEL(prio,               "Priority",           "misc.png") \
 PANEL(savestates,         "Savestates",         "savestate.png") \
 PANEL(virtual_keyboard,   "Virtual Keyboard",   "keyboard.png") \
-PANEL(whdload,            "WHDLoad",            "drive.png") \
-PANEL(update,             "Update",             "misc.png")
+PANEL(whdload,            "WHDLoad",            "drive.png")
 
 #endif
 
