@@ -14,7 +14,6 @@
 #include <fstream>
 #include <filesystem>
 #include <cstring>
-#include <ctime>
 #include <regex>
 #include <algorithm>
 #include <array>
@@ -27,12 +26,12 @@
 #else
 #include <unistd.h>
 #include <sys/stat.h>
+#include <spawn.h>
+#include <sys/wait.h>
 #endif
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
-#include <spawn.h>
-#include <sys/wait.h>
 #include <sys/xattr.h>
 #include <crt_externs.h>
 #endif
@@ -48,6 +47,7 @@ struct SemVer {
 	int patch = 0;
 	bool has_pre = false;
 	int pre_number = 0;
+	bool valid = false;
 
 	static SemVer parse(const std::string& version_str)
 	{
@@ -70,7 +70,7 @@ struct SemVer {
 			s = s.substr(1);
 		}
 
-		std::regex re(R"(^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-pre\.([0-9]+))?$)");
+		static const std::regex re(R"(^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-pre\.([0-9]+))?$)");
 		std::smatch m;
 		if (!std::regex_match(s, m, re)) {
 			return out;
@@ -83,11 +83,15 @@ struct SemVer {
 			out.has_pre = true;
 			out.pre_number = std::atoi(m[4].str().c_str());
 		}
+		out.valid = true;
 		return out;
 	}
 
 	int compare(const SemVer& other) const
 	{
+		if (!valid || !other.valid) {
+			return 0;
+		}
 		if (major != other.major) {
 			return major < other.major ? -1 : 1;
 		}
@@ -246,7 +250,6 @@ static std::array<uint8_t, 32> sha256_final(Sha256Ctx& ctx)
 
 struct HttpContext {
 	std::string buffer;
-	std::atomic<bool>* cancel_flag = nullptr;
 };
 
 struct DownloadContext {
@@ -335,16 +338,31 @@ static std::string get_platform_asset_suffix()
 	return "windows-x64";
 #elif defined(__APPLE__)
 	return "macOS-universal";
-#elif defined(__linux__)
-	#if defined(__aarch64__) || defined(CPU_AARCH64)
-	return "linux-aarch64";
-	#elif defined(__arm__) || defined(CPU_arm)
-	return "linux-armhf";
-	#else
-	return "linux-x86_64";
-	#endif
 #else
 	return "";
+#endif
+}
+
+static bool matches_platform_asset(const std::string& name)
+{
+#if defined(__linux__)
+	// Linux release assets use various naming conventions per distro/arch
+	// (e.g. "debian-bookworm-amd64", "fedora-x86_64", "ubuntu-24.04-arm64").
+	// Exclude assets for other platforms that share architecture substrings.
+	const std::string name_lower = to_lower(name);
+	if (name_lower.find("macos") != std::string::npos || name_lower.find("windows") != std::string::npos)
+		return false;
+	#if defined(__aarch64__) || defined(CPU_AARCH64)
+	return name_lower.find("arm64") != std::string::npos || name_lower.find("aarch64") != std::string::npos;
+	#elif defined(__arm__) || defined(CPU_arm)
+	return name_lower.find("armhf") != std::string::npos;
+	#else
+	return name_lower.find("amd64") != std::string::npos || name_lower.find("x86_64") != std::string::npos;
+	#endif
+#else
+	const std::string suffix = get_platform_asset_suffix();
+	if (suffix.empty()) return true;
+	return name.find(suffix) != std::string::npos;
 #endif
 }
 
@@ -414,7 +432,6 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 	}
 
 	HttpContext ctx;
-	ctx.cancel_flag = cancel_flag;
 
 	const std::string ua = std::string("User-Agent: amiberry/") + AMIBERRY_VERSION;
 	struct curl_slist* headers = nullptr;
@@ -429,6 +446,7 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_to_string);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, k_http_timeout_sec);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
@@ -480,7 +498,6 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 		out.is_prerelease = rel["prerelease"].get<bool>();
 	}
 
-	std::string asset_suffix = get_platform_asset_suffix();
 	std::string sha256_url;
 
 	if (rel.contains("assets") && rel["assets"].is_array()) {
@@ -499,7 +516,7 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 				continue;
 			}
 
-			if (!asset_suffix.empty() && name.find(asset_suffix) == std::string::npos) {
+			if (!matches_platform_asset(name)) {
 				continue;
 			}
 
@@ -523,13 +540,13 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 		if (http_get(sha256_url, sums_body, sums_code, nullptr) && sums_code >= 200 && sums_code < 300) {
 			std::istringstream iss(sums_body);
 			std::string line;
+			static const std::regex sha_re(R"(^\s*([A-Fa-f0-9]{64})\s+\*?(.+?)\s*$)");
 			while (std::getline(iss, line)) {
 				if (out.asset_name.empty() || line.find(out.asset_name) == std::string::npos) {
 					continue;
 				}
 				std::smatch m;
-				std::regex re(R"(^\s*([A-Fa-f0-9]{64})\s+\*?(.+?)\s*$)");
-				if (std::regex_match(line, m, re)) {
+				if (std::regex_match(line, m, sha_re)) {
 					out.sha256_expected = to_lower(m[1].str());
 					break;
 				}
@@ -635,18 +652,7 @@ UpdateMethod get_update_method()
 	if (getenv("FLATPAK_ID")) {
 		return UpdateMethod::DISABLED;
 	}
-	{
-		char exe_path[PATH_MAX] = {};
-		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-		if (len > 0) {
-			exe_path[len] = '\0';
-			std::string path(exe_path);
-			if (path.rfind("/usr/bin/", 0) == 0 || path.rfind("/usr/local/bin/", 0) == 0) {
-				return UpdateMethod::NOTIFY_ONLY;
-			}
-		}
-	}
-	return UpdateMethod::SELF_UPDATE;
+	return UpdateMethod::NOTIFY_ONLY;
 #elif defined(_WIN32)
 	return UpdateMethod::SELF_UPDATE;
 #elif defined(__APPLE__)
@@ -749,6 +755,8 @@ std::string download_update(const UpdateInfo& info, DownloadProgressCallback pro
 	CURL* curl = curl_easy_init();
 	if (!curl) {
 		write_log("Updater: curl_easy_init failed in download_update\n");
+		out.close();
+		std::filesystem::remove(temp_path, ec);
 		return {};
 	}
 
@@ -766,9 +774,7 @@ std::string download_update(const UpdateInfo& info, DownloadProgressCallback pro
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_to_file);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &dctx);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	// Use low-speed detection instead of a total timeout for file downloads.
-	// Abort if transfer speed drops below 1 KB/s for 60 seconds, but allow
-	// arbitrarily long transfers as long as progress is being made.
+	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1024L);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 60L);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
@@ -827,7 +833,7 @@ bool verify_update_checksum(const std::string& file_path, const std::string& exp
 	return ok;
 }
 
-#ifdef __APPLE__
+#ifndef _WIN32
 static int run_tool(const std::vector<std::string>& args)
 {
 	if (args.empty()) return -1;
@@ -836,7 +842,12 @@ static int run_tool(const std::vector<std::string>& args)
 	argv.push_back(nullptr);
 
 	pid_t pid = 0;
+#ifdef __APPLE__
 	int ret = posix_spawn(&pid, argv[0], nullptr, nullptr, argv.data(), *_NSGetEnviron());
+#else
+	extern char **environ;
+	int ret = posix_spawn(&pid, argv[0], nullptr, nullptr, argv.data(), environ);
+#endif
 	if (ret != 0) {
 		write_log("Updater: failed to spawn %s: %s\n", argv[0], strerror(ret));
 		return -1;
@@ -845,7 +856,9 @@ static int run_tool(const std::vector<std::string>& args)
 	waitpid(pid, &status, 0);
 	return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
+#endif
 
+#ifdef __APPLE__
 static void remove_quarantine_recursive(const std::filesystem::path& path)
 {
 	removexattr(path.c_str(), "com.apple.quarantine", XATTR_NOFOLLOW);
@@ -872,43 +885,105 @@ bool apply_update(const std::string& downloaded_file, const UpdateInfo&)
 	}
 
 #ifdef __linux__
-	std::string lower = to_lower(downloaded_file);
-	if (lower.find(".zip") != std::string::npos || lower.find(".tar") != std::string::npos || lower.find(".gz") != std::string::npos
-		|| lower.find(".bz2") != std::string::npos || lower.find(".xz") != std::string::npos || lower.find(".7z") != std::string::npos) {
-		write_log("Updater: archive extraction not yet implemented in apply_update\n");
-		return false;
-	}
-
 	const std::string exe_path = get_executable_path();
 	if (exe_path.empty()) {
 		write_log("Updater: failed to locate executable path\n");
 		return false;
 	}
 
-	const std::filesystem::path exe = exe_path;
-	const std::filesystem::path old = exe_path + ".old";
+	const auto install_dir = std::filesystem::path(exe_path).parent_path();
+	const std::string lower = to_lower(downloaded_file);
+	const bool is_zip = lower.find(".zip") != std::string::npos;
 
-	std::error_code ec;
-	std::filesystem::remove(old, ec);
-	std::filesystem::rename(exe, old, ec);
-	if (ec) {
-		write_log("Updater: failed to backup executable: %s\n", ec.message().c_str());
+	if (!is_zip && (lower.find(".tar") != std::string::npos || lower.find(".gz") != std::string::npos
+		|| lower.find(".bz2") != std::string::npos || lower.find(".xz") != std::string::npos
+		|| lower.find(".7z") != std::string::npos)) {
+		write_log("Updater: unsupported archive format for self-update: %s\n", downloaded_file.c_str());
 		return false;
 	}
 
-	std::filesystem::copy_file(downloaded_file, exe, std::filesystem::copy_options::overwrite_existing, ec);
-	if (ec) {
-		write_log("Updater: failed to copy new executable: %s\n", ec.message().c_str());
-		std::error_code ec_restore;
-		std::filesystem::rename(old, exe, ec_restore);
-		if (ec_restore) {
-			write_log("Updater: failed to restore previous executable: %s\n", ec_restore.message().c_str());
+	if (is_zip) {
+		const auto staging_dir = install_dir / "_amiberry_update";
+
+		std::error_code ec;
+		std::filesystem::remove_all(staging_dir, ec);
+		std::filesystem::create_directories(staging_dir, ec);
+		if (ec) {
+			write_log("Updater: failed to create staging directory: %s\n", ec.message().c_str());
+			return false;
 		}
-		return false;
-	}
 
-	if (chmod(exe_path.c_str(), 0755) != 0) {
-		write_log("Updater: chmod failed for updated executable: %s\n", std::strerror(errno));
+		int ret = run_tool({"/usr/bin/unzip", "-o", downloaded_file, "-d", staging_dir.string()});
+		if (ret != 0) {
+			write_log("Updater: failed to extract ZIP (exit code %d). Is 'unzip' installed?\n", ret);
+			std::filesystem::remove_all(staging_dir, ec);
+			return false;
+		}
+
+		std::filesystem::path content_root;
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(staging_dir, ec)) {
+			if (entry.is_regular_file() && entry.path().filename() == "amiberry") {
+				content_root = entry.path().parent_path();
+				break;
+			}
+		}
+		if (content_root.empty()) {
+			write_log("Updater: could not find amiberry binary in extracted archive\n");
+			std::filesystem::remove_all(staging_dir, ec);
+			return false;
+		}
+
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(content_root, ec)) {
+			const auto relative = std::filesystem::relative(entry.path(), content_root, ec);
+			if (ec) { ec.clear(); continue; }
+			const auto dest_path = install_dir / relative;
+
+			if (entry.is_directory()) {
+				std::filesystem::create_directories(dest_path, ec);
+			} else if (entry.is_regular_file()) {
+				std::filesystem::create_directories(dest_path.parent_path(), ec);
+				std::filesystem::copy_file(entry.path(), dest_path,
+					std::filesystem::copy_options::overwrite_existing, ec);
+				if (ec) {
+					write_log("Updater: warning: failed to copy %s: %s\n",
+						relative.string().c_str(), ec.message().c_str());
+					ec.clear();
+				}
+			}
+		}
+
+		if (chmod(exe_path.c_str(), 0755) != 0) {
+			write_log("Updater: chmod failed for updated executable: %s\n", std::strerror(errno));
+		}
+
+		std::filesystem::remove_all(staging_dir, ec);
+		std::filesystem::remove(downloaded_file, ec);
+	} else {
+		const std::filesystem::path exe = exe_path;
+		const std::filesystem::path old = exe_path + ".old";
+
+		std::error_code ec;
+		std::filesystem::remove(old, ec);
+		std::filesystem::rename(exe, old, ec);
+		if (ec) {
+			write_log("Updater: failed to backup executable: %s\n", ec.message().c_str());
+			return false;
+		}
+
+		std::filesystem::copy_file(downloaded_file, exe, std::filesystem::copy_options::overwrite_existing, ec);
+		if (ec) {
+			write_log("Updater: failed to copy new executable: %s\n", ec.message().c_str());
+			std::error_code ec_restore;
+			std::filesystem::rename(old, exe, ec_restore);
+			if (ec_restore) {
+				write_log("Updater: failed to restore previous executable: %s\n", ec_restore.message().c_str());
+			}
+			return false;
+		}
+
+		if (chmod(exe_path.c_str(), 0755) != 0) {
+			write_log("Updater: chmod failed for updated executable: %s\n", std::strerror(errno));
+		}
 	}
 
 	write_log("Updater: update applied successfully, restart required\n");
@@ -962,9 +1037,13 @@ bool apply_update(const std::string& downloaded_file, const UpdateInfo&)
 			return false;
 		}
 
-		WaitForSingleObject(pi.hProcess, 120000);
+		const DWORD wait_result = WaitForSingleObject(pi.hProcess, 120000);
 		DWORD exit_code = 1;
 		GetExitCodeProcess(pi.hProcess, &exit_code);
+		if (wait_result == WAIT_TIMEOUT || exit_code == STILL_ACTIVE) {
+			TerminateProcess(pi.hProcess, 1);
+			exit_code = 1;
+		}
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 
