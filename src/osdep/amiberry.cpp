@@ -4448,12 +4448,6 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 	return false;
 }
-#else
-bool download_file(const std::string&, const std::string&, bool)
-{
-	return false;
-}
-#endif
 
 void download_rtb(const std::string& filename)
 {
