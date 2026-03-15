@@ -540,8 +540,10 @@ void* open_tablet(SDL_Window* window)
 	if (inputdevice_is_tablet() <= 0 && !is_touch_lightpen())
 		return nullptr;
 
+#ifndef LIBRETRO
 	SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "0");
 	SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "0");
+#endif
 
 	xmax = 4095; // Amiga tablet.library max coordinate range
 	ymax = 4095;
@@ -571,8 +573,10 @@ int close_tablet(void* ctx)
 	// Don't reset tablet_detected — it represents hardware availability,
 	// not session state. Matches WinUAE behavior where close_tablet()
 	// only closes the Wintab context without clearing the detection flag.
+#ifndef LIBRETRO
 	SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "1");
 	SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "1");
+#endif
 	tablet_proximity = -1;
 	tablet_x = -1;
 	write_log(_T("Tablet: SDL3 pen session closed\n"));
