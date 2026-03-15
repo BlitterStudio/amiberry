@@ -2264,6 +2264,8 @@ static void handle_pen_event(const SDL_Event& event)
 		default:
 			break;
 		}
+		if (tablet_real)
+			pen_send_current(mon, event.paxis.x, event.paxis.y);
 		break;
 
 	case SDL_EVENT_PEN_BUTTON_DOWN:

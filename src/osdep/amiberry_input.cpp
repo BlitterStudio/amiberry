@@ -571,6 +571,8 @@ int close_tablet(void* ctx)
 	// Don't reset tablet_detected — it represents hardware availability,
 	// not session state. Matches WinUAE behavior where close_tablet()
 	// only closes the Wintab context without clearing the detection flag.
+	SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "1");
+	SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "1");
 	tablet_proximity = -1;
 	tablet_x = -1;
 	write_log(_T("Tablet: SDL3 pen session closed\n"));
