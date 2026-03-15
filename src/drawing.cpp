@@ -2040,13 +2040,17 @@ static void setspecialmonitorpos(struct vidbuffer *vb)
 
 static void vbcopy(struct vidbuffer *vbout, struct vidbuffer *vbin)
 {
-	if (vbout->locked) {
-		for (int h = 0; h < vbout->height_allocated && h < vbin->height_allocated; h++) {
-			uae_u8 *dst = vbout->bufmem + h * vbout->rowbytes;
-			uae_u8 *src = vbin->bufmem + h * vbin->rowbytes;
-			int len = vbin->width_allocated > vbout->width_allocated ? vbout->width_allocated : vbin->width_allocated;
-			memcpy(dst, src, len * vbout->pixbytes);
-		}
+	// Skip if both buffers point to the same memory.
+	// This happens when inbuffer == outbuffer == drawbuffer (the common case
+	// with line optimizations enabled), where both share amiga_surface->pixels.
+	if (!vbout->locked || vbin->bufmem == vbout->bufmem) {
+		return;
+	}
+	for (int h = 0; h < vbout->height_allocated && h < vbin->height_allocated; h++) {
+		uae_u8 *dst = vbout->bufmem + h * vbout->rowbytes;
+		uae_u8 *src = vbin->bufmem + h * vbin->rowbytes;
+		int len = vbin->width_allocated > vbout->width_allocated ? vbout->width_allocated : vbin->width_allocated;
+		memcpy(dst, src, len * vbout->pixbytes);
 	}
 }
 

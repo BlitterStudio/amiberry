@@ -1165,6 +1165,7 @@ void OpenGLRenderer::render_osd(const int monid, int x, int y, int w, int h)
 	const amigadisplay* ad = &adisplays[monid];
 	static int last_osd_w = 0;
 	static int last_osd_h = 0;
+	static uint32_t last_osd_hash = 0;
 
 	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
@@ -1173,6 +1174,7 @@ void OpenGLRenderer::render_osd(const int monid, int x, int y, int w, int h)
 			if (m_overlay.osd_texture != 0 && !glIsTexture(m_overlay.osd_texture)) {
 				m_overlay.osd_texture = 0;
 			}
+			bool needs_full_upload = false;
 			if (m_overlay.osd_texture == 0) {
 				glGenTextures(1, &m_overlay.osd_texture);
 				glActiveTexture(GL_TEXTURE0);
@@ -1181,22 +1183,36 @@ void OpenGLRenderer::render_osd(const int monid, int x, int y, int w, int h)
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				last_osd_w = 0;
 				last_osd_h = 0;
+				last_osd_hash = 0;
+				needs_full_upload = true;
 			}
 
 			if (!init_osd_shader()) return;
 
+			uint32_t osd_hash = 0;
+			const auto* pixels = static_cast<const uint32_t*>(mon->statusline_surface->pixels);
+			const int pixel_count = (mon->statusline_surface->pitch / 4) * mon->statusline_surface->h;
+			for (int i = 0; i < pixel_count; i += 4) {
+				osd_hash ^= pixels[i];
+				osd_hash = (osd_hash << 7) | (osd_hash >> 25);
+			}
+
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_overlay.osd_texture);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, mon->statusline_surface->pitch / 4);
 			if (mon->statusline_surface->w != last_osd_w || mon->statusline_surface->h != last_osd_h) {
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, mon->statusline_surface->pitch / 4);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 				last_osd_w = mon->statusline_surface->w;
 				last_osd_h = mon->statusline_surface->h;
+				last_osd_hash = osd_hash;
 			}
-			else {
+			else if (osd_hash != last_osd_hash || needs_full_upload) {
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, mon->statusline_surface->pitch / 4);
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mon->statusline_surface->w, mon->statusline_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+				last_osd_hash = osd_hash;
 			}
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
