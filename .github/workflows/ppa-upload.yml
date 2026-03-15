@@ -1,5 +1,8 @@
 name: Upload to Launchpad PPA
 
+permissions:
+  contents: read
+
 on:
   release:
     types: [published]
