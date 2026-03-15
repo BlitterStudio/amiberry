@@ -5216,7 +5216,7 @@ static volatile uae_u32 cpu_thread_indirect_val;
 static volatile uae_u32 cpu_thread_indirect_size;
 static volatile uae_atomic cpu_thread_reset;
 static SDL_Thread* cpu_thread;
-static SDL_threadID cpu_thread_tid;
+static SDL_ThreadID cpu_thread_tid;
 
 static bool m68k_cs_initialized;
 

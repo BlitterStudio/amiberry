@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
 
 #include "imgui_panels.h"
 
@@ -63,7 +63,7 @@ static void UpdateScreenshotTexture(int slot) {
         SDL_Surface *surface = IMG_Load(screenshot_filename.c_str());
         if (surface) {
             savestate_screenshot_tex = gui_create_texture(surface, nullptr, nullptr);
-            SDL_FreeSurface(surface);
+            SDL_DestroySurface(surface);
         }
     }
 }

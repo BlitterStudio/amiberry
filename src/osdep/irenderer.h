@@ -10,7 +10,7 @@
  * Copyright 2026 Dimitris Panokostas
  */
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "uae/types.h"
 #include "uae/time.h"
 #include "gfx_state.h"
@@ -37,7 +37,7 @@ public:
 	virtual bool has_context() const = 0;
 
 	// --- Window creation support ---
-	virtual Uint32 get_window_flags() const = 0;        // SDL_WINDOW_OPENGL or 0
+	virtual SDL_WindowFlags get_window_flags() const = 0;  // SDL_WINDOW_OPENGL or 0
 	virtual bool set_context_attributes(int mode) = 0;  // GL attributes or no-op
 	virtual bool create_platform_renderer(AmigaMonitor* mon) = 0;  // SDL_CreateRenderer or no-op
 	virtual void destroy_platform_renderer(AmigaMonitor* mon) = 0;

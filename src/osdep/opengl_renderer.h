@@ -14,7 +14,7 @@
 
 #include "irenderer.h"
 #include "gl_platform.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <string>
 
 // Forward declarations
@@ -69,7 +69,7 @@ public:
 	bool has_context() const override;
 
 	// Window creation support
-	Uint32 get_window_flags() const override;
+	SDL_WindowFlags get_window_flags() const override;
 	bool set_context_attributes(int mode) override;
 	bool create_platform_renderer(AmigaMonitor* mon) override;
 	void destroy_platform_renderer(AmigaMonitor* mon) override;

@@ -127,7 +127,7 @@ static inline void gfx_platform_set_window_icon(SDL_Window* window)
 	(void)window;
 }
 
-static inline bool gfx_platform_override_pixel_format(Uint32* format)
+static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)
 {
 	if (!format)
 		return false;
@@ -231,14 +231,14 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 	avidinfo->inbuffer = &avidinfo->tempbuffer;
 
 	if (amiga_surface) {
-		SDL_FreeSurface(amiga_surface);
+		SDL_DestroySurface(amiga_surface);
 		amiga_surface = nullptr;
 	}
 	// Set pixel_format to match the libretro frontend expectation (XRGB8888)
 	// BEFORE creating the surface so init_colors and target_graphics_buffer_update
 	// see a consistent format (no surface recreation = no crash).
 	gfx_platform_override_pixel_format(&pixel_format);
-	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+	amiga_surface = SDL_CreateSurface(display_width, display_height, pixel_format);
 
 	mon->screen_is_initialized = 1;
 	init_colors(mon->monitor_id);

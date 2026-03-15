@@ -31,7 +31,7 @@ struct cda_play
 {
 	int unitnum;
 	int cdda_volume[2];
-	Uint8* cdda_wavehandle;
+	uint8_t* cdda_wavehandle;
 	int cd_last_pos;
 	int cdda_play;
 	int cdda_play_finished;

@@ -1292,6 +1292,8 @@ void restart_after_update()
 	}
 	write_log("Updater: failed to launch Windows restart script\n");
 #elif defined(__APPLE__)
+	// After apply_update() renames the .app bundle, _NSGetExecutablePath returns
+	// the stale path. Use the stored path to the new executable instead.
 	std::string exe = s_macos_new_executable;
 	if (exe.empty())
 		exe = get_executable_path();

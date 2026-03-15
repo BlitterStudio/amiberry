@@ -7,50 +7,51 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 	if (!num_joystick || !di_joystick)
 		return;
 
-	// This disables the use of gyroscopes as axis device
-	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
-
-	*num_joystick = SDL_NumJoysticks();
+	int count = 0;
+	SDL_JoystickID* joysticks = SDL_GetJoysticks(&count);
+	*num_joystick = count;
 	if (*num_joystick > MAX_INPUT_DEVICES)
 		*num_joystick = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
 	std::string cfg = get_controllers_path();
 	cfg += "gamecontrollerdb.txt";
-	SDL_GameControllerAddMappingsFromFile(cfg.c_str());
+	SDL_AddGamepadMappingsFromFile(cfg.c_str());
 
 	std::string controllers = get_controllers_path();
 	controllers.append("gamecontrollerdb_user.txt");
-	SDL_GameControllerAddMappingsFromFile(controllers.c_str());
+	SDL_AddGamepadMappingsFromFile(controllers.c_str());
 
 	// Possible scenarios:
-	// 1 - Controller is an SDL2 Game Controller, no retroarch file: we use the default mapping
-	// 2 - Controller is an SDL2 Game Controller, but there's a retroarch file: retroarch overrides default mapping
-	// 3 - Controller is not an SDL2 Game Controller, but there's a retroarch file: open it as Joystick, use retroarch mapping
-	// 4 - Controller is not an SDL2 Game Controller, no retroarch file: open as Joystick with default map
+	// 1 - Controller is an SDL Gamepad, no retroarch file: we use the default mapping
+	// 2 - Controller is an SDL Gamepad, but there's a retroarch file: retroarch overrides default mapping
+	// 3 - Controller is not an SDL Gamepad, but there's a retroarch file: open it as Joystick, use retroarch mapping
+	// 4 - Controller is not an SDL Gamepad, no retroarch file: open as Joystick with default map
 
 	controllers = get_controllers_path();
 	// do the loop
 	for (auto i = 0; i < *num_joystick; i++)
 	{
 		struct didata* did = &di_joystick[i];
+		const SDL_JoystickID joy_id = joysticks[i];
 
-		// Check if joystick supports SDL's game controller interface (a mapping is available)
-		if (SDL_IsGameController(i))
+		// Check if joystick supports SDL's gamepad interface (a mapping is available)
+		if (SDL_IsGamepad(joy_id))
 		{
-			open_as_game_controller(did, i);
+			open_as_game_controller(did, joy_id);
 			setup_controller_mappings(did, i);
 		}
-		// Controller interface not supported, try to open as joystick
+		// Gamepad interface not supported, try to open as joystick
 		else
 		{
-			open_as_joystick(did, i);
+			open_as_joystick(did, joy_id);
 			write_log("Joystick #%i does not have a mapping available\n", did->joystick_id);
 		}
 
 		fix_didata(did);
 		setup_mapping(did, controllers, i);
 	}
+	SDL_free(joysticks);
 
 	// Register the built-in on-screen joystick only when enabled
 	if (currprefs.onscreen_joystick && *num_joystick < MAX_INPUT_DEVICES) {

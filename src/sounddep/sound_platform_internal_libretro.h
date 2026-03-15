@@ -10,7 +10,6 @@ static inline bool sound_platform_open_audio(struct sound_data* sd, int index)
 	const auto freq = sd->freq;
 	const auto ch = sd->channels;
 
-	s->dev = 1;
 	s->pullmode = 0;
 	s->pullbuffer = nullptr;
 	s->pullbufferlen = 0;

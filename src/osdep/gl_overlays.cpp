@@ -13,6 +13,8 @@
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
+#include "gui.h"
+#include "inputdevice.h"
 #include "picasso96.h"
 #include "statusline.h"
 
@@ -25,25 +27,86 @@
 
 #ifdef AMIBERRY
 
+struct led_state_snapshot {
+	uae_u8 powerled_brightness;
+	bool capslock;
+	uae_s8 drive_side;
+	uae_s8 hd;
+	uae_s8 cd;
+	uae_s8 md;
+	uae_s8 net;
+	int cpu_halted;
+	int cpu_stopped;
+	int fps;
+	int fps_color;
+	int idle;
+	int sndbuf;
+	int sndbuf_status;
+	bool sndbuf_avail;
+	bool pause;
+	bool picasso_on;
+#ifdef AMIBERRY
+	int temperature;
+#endif
+	struct {
+		bool drive_motor;
+		uae_u8 drive_track;
+		bool drive_writing;
+		bool drive_disabled;
+		bool floppy_protected;
+		bool floppy_inserted;
+	} drives[4];
+};
+
+static bool capture_led_state(int monid, led_state_snapshot& snap)
+{
+	const amigadisplay* ad = &adisplays[monid];
+	snap.powerled_brightness = gui_data.powerled_brightness;
+	snap.capslock = gui_data.capslock;
+	snap.drive_side = gui_data.drive_side;
+	snap.hd = gui_data.hd;
+	snap.cd = gui_data.cd;
+	snap.md = gui_data.md;
+	snap.net = gui_data.net;
+	snap.cpu_halted = gui_data.cpu_halted;
+	snap.cpu_stopped = gui_data.cpu_stopped;
+	snap.fps = gui_data.fps;
+	snap.fps_color = gui_data.fps_color;
+	snap.idle = gui_data.idle;
+	snap.sndbuf = gui_data.sndbuf;
+	snap.sndbuf_status = gui_data.sndbuf_status;
+	snap.sndbuf_avail = gui_data.sndbuf_avail;
+	snap.pause = pause_emulation;
+	snap.picasso_on = ad->picasso_on;
+#ifdef AMIBERRY
+	snap.temperature = gui_data.temperature;
+#endif
+	for (int i = 0; i < 4; i++) {
+		snap.drives[i].drive_motor = gui_data.drives[i].drive_motor;
+		snap.drives[i].drive_track = gui_data.drives[i].drive_track;
+		snap.drives[i].drive_writing = gui_data.drives[i].drive_writing;
+		snap.drives[i].drive_disabled = gui_data.drives[i].drive_disabled;
+		snap.drives[i].floppy_protected = gui_data.drives[i].floppy_protected;
+		snap.drives[i].floppy_inserted = gui_data.drives[i].floppy_inserted;
+	}
+	return true;
+}
+
 void update_leds(const int monid)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 
-	// Skip LED rendering if headless
 	if (currprefs.headless) {
 		return;
 	}
 	if (!gfx_platform_render_leds())
 		return;
 
-	// Use static variables to avoid recalculating color tables every frame
 	static uae_u32 rc[256], gc[256], bc[256], a[256];
 	static bool color_tables_initialized = false;
 
-	// Only initialize color tables once for better performance
 	if (!color_tables_initialized) {
 		for (int i = 0; i < 256; i++) {
-			// Using RGBA32 for the internal OSD surface
 			rc[i] = i << 0;
 			gc[i] = i << 8;
 			bc[i] = i << 16;
@@ -59,24 +122,36 @@ void update_leds(const int monid)
 	if (led_width <= 0)
 		led_width = 640;
 
-	// (Re)allocate OSD surface if dimensions changed
-	if (!mon->statusline_surface || mon->statusline_surface->w != led_width || mon->statusline_surface->h != led_height) {
-		if (mon->statusline_surface) SDL_FreeSurface(mon->statusline_surface);
-		mon->statusline_surface = SDL_CreateRGBSurfaceWithFormat(0, led_width, led_height, 32, SDL_PIXELFORMAT_RGBA32);
+	bool surface_exists = mon->statusline_surface
+		&& mon->statusline_surface->w == led_width
+		&& mon->statusline_surface->h == led_height;
+
+	if (surface_exists) {
+		static led_state_snapshot prev_snap = {};
+		static bool prev_valid = false;
+		led_state_snapshot cur_snap = {};
+		capture_led_state(monid, cur_snap);
+		if (prev_valid && memcmp(&cur_snap, &prev_snap, sizeof(cur_snap)) == 0) {
+			return;
+		}
+		prev_snap = cur_snap;
+		prev_valid = true;
+	}
+
+	if (!surface_exists) {
+		if (mon->statusline_surface) SDL_DestroySurface(mon->statusline_surface);
+		mon->statusline_surface = SDL_CreateSurface(led_width, led_height, SDL_PIXELFORMAT_RGBA32);
 	}
 
 	if (mon->statusline_surface) {
-		// Clear with transparent color
-		SDL_FillRect(mon->statusline_surface, nullptr, 0x00000000);
+		SDL_FillSurfaceRect(mon->statusline_surface, nullptr, 0x00000000);
 
-		// Draw the LEDs into the off-screen surface
 		for (int y = 0; y < led_height; y++) {
 			uae_u8* buf = static_cast<uae_u8*>(mon->statusline_surface->pixels) + y * mon->statusline_surface->pitch;
 			draw_status_line_single(monid, buf, y, led_width, rc, gc, bc, a);
 		}
 	}
 
-	// Let the active renderer sync its backend-specific texture (SDL texture upload, etc.)
 	if (g_renderer)
 		g_renderer->sync_osd_texture(monid, led_width, led_height);
 }

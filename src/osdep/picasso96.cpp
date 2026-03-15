@@ -885,9 +885,9 @@ static void update_cursor_overlay_surface()
 		cursor_overlay_surface->h != cursorheight) {
 
 		if (cursor_overlay_surface) {
-			SDL_FreeSurface(cursor_overlay_surface);
+			SDL_DestroySurface(cursor_overlay_surface);
 		}
-		cursor_overlay_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
+		cursor_overlay_surface = SDL_CreateSurface(cursorwidth, cursorheight, SDL_PIXELFORMAT_RGBA32);
 		if (!cursor_overlay_surface)
 			return;
 	}
@@ -895,7 +895,7 @@ static void update_cursor_overlay_surface()
 	// Copy cursor data to overlay surface
 	for (int y = 0; y < cursorheight; y++) {
 		uae_u8 *p1 = cursordata + cursorwidth * y;
-		auto *p2 = reinterpret_cast<uae_u32*>(static_cast<Uint8*>(cursor_overlay_surface->pixels) + cursor_overlay_surface->pitch * y);
+		auto *p2 = reinterpret_cast<uae_u32*>(static_cast<uint8_t*>(cursor_overlay_surface->pixels) + cursor_overlay_surface->pitch * y);
 		for (int x = 0; x < cursorwidth; x++) {
 			uae_u8 c = *p1++;
 			if (c < 4) {
@@ -926,7 +926,7 @@ bool p96_cursor_needs_update()
 void p96_cleanup_cursor_overlay()
 {
 	if (cursor_overlay_surface) {
-		SDL_FreeSurface(cursor_overlay_surface);
+		SDL_DestroySurface(cursor_overlay_surface);
 		cursor_overlay_surface = nullptr;
 	}
 	// Note: texture cleanup is handled by the renderer in amiberry_gfx.cpp
@@ -951,7 +951,7 @@ static void setupcursor()
 		
 		// Ensure any native SDL cursor is hidden/freed so it doesn't conflict
 		if (p96_cursor) {
-			SDL_FreeCursor(p96_cursor);
+			SDL_DestroyCursor(p96_cursor);
 			p96_cursor = nullptr;
 		}
 
@@ -1007,7 +1007,7 @@ static void disablemouse ()
 		return;
 #ifdef AMIBERRY
 	if (p96_cursor) {
-		SDL_FreeCursor(p96_cursor);
+		SDL_DestroyCursor(p96_cursor);
 		p96_cursor = nullptr;
 	}
 #else
@@ -2083,7 +2083,9 @@ static uae_u32 REGPARAM2 picasso_SetSpriteColor (TrapContext *ctx)
 #ifdef AMIBERRY
 static void putmousepixel(const SDL_Surface* cursor_surface, const int x, const int y, const int c, const uae_u32 *ct)
 {
-	auto* const target_pixel = reinterpret_cast<Uint32*>(static_cast<Uint8*>(cursor_surface->pixels) + y * cursor_surface->pitch + x * cursor_surface->format->BytesPerPixel);
+	const auto* fmt = SDL_GetPixelFormatDetails(cursor_surface->format);
+	const int bpp = fmt ? fmt->bytes_per_pixel : 4;
+	auto* const target_pixel = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(cursor_surface->pixels) + y * cursor_surface->pitch + x * bpp);
 	if (c == 0) {
 		*target_pixel = 0;
 	} else {
@@ -2207,7 +2209,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+	cursor_surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
 	if (!cursor_surface)
 		goto end;
 
@@ -2235,7 +2237,7 @@ end:
 
 	if (cursor_surface != nullptr)
 	{
-		SDL_FreeSurface(cursor_surface);
+		SDL_DestroySurface(cursor_surface);
 		cursor_surface = nullptr;
 	}
 
@@ -2249,7 +2251,7 @@ end:
 	}
 
 	if (old_cursor) {
-		SDL_FreeCursor(old_cursor);
+		SDL_DestroyCursor(old_cursor);
 		old_cursor = nullptr;
 	}
 
@@ -2260,7 +2262,7 @@ exit:
 		if (SDL_GetCursor() == p96_cursor) {
 			SDL_SetCursor(normalcursor);
 		}
-		SDL_FreeCursor(p96_cursor);
+		SDL_DestroyCursor(p96_cursor);
 		p96_cursor = nullptr;
 	}
 

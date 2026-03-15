@@ -17,6 +17,7 @@
  *          Copyright 2021 TheCollector1995.
  */
 #include <stdio.h>
+#include <cstdlib>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

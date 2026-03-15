@@ -24,15 +24,12 @@ public class AmiberryActivity extends SDLActivity {
 
 	private OnBackInvokedCallback backCallback;
 
-	// ── SDL-version-dependent constants ──────────────────────────────────
-	// These are the touch-points that may need updating when migrating
-	// from SDL2 to SDL3.  As of SDL 3.5.0 the JNI signatures and hint
-	// name are identical to SDL2, so no changes are needed yet.
-	//
-	// SDL2 → SDL3 checklist:
-	//   • HINT_TRAP_BACK  – same name in SDL3 ("SDL_ANDROID_TRAP_BACK_BUTTON")
-	//   • sendBackToSDL() – uses onNativeKeyDown/Up, same JNI sig in SDL3
-	//   • isBackTrapped() – uses nativeGetHintBoolean, same JNI sig in SDL3
+	// ── SDL3-specific notes ──────────────────────────────────────────────
+	// JNI method signatures verified against SDL3 release-3.2.8:
+	//   • HINT_TRAP_BACK  – same hint name ("SDL_ANDROID_TRAP_BACK_BUTTON")
+	//   • sendBackToSDL() – uses onNativeKeyDown/Up, same JNI sig
+	//   • isBackTrapped() – uses nativeGetHintBoolean, same JNI sig
+	//   • getLibraries()  – overridden to load only "amiberry" (SDL3 linked statically)
 	//   • If SDL3 adds its own OnBackInvokedCallback, remove registerBackHandler()
 	//     and the manifest attribute android:enableOnBackInvokedCallback.
 	// ─────────────────────────────────────────────────────────────────────
@@ -54,6 +51,15 @@ public class AmiberryActivity extends SDLActivity {
 	}
 
 	@Override
+	protected String[] getLibraries() {
+		return new String[] {
+			// SDL3 and SDL3_image are statically linked into libamiberry.so,
+			// so only load the final shared library.
+			"amiberry"
+		};
+	}
+
+	@Override
 	protected String[] getArguments() {
 		Intent intent = getIntent();
 		if (intent != null) {
@@ -67,7 +73,7 @@ public class AmiberryActivity extends SDLActivity {
 	}
 
 	// ── Back-button handling ─────────────────────────────────────────────
-	// SDL2/SDL3's SDLActivity.onBackPressed() is deprecated since API 33.
+	// SDL3's SDLActivity.onBackPressed() is deprecated since API 33.
 	// On API 34+ with gesture navigation the system may never call it,
 	// causing the activity to finish instead of opening the ImGui GUI.
 	//
@@ -84,7 +90,7 @@ public class AmiberryActivity extends SDLActivity {
 	 * Query SDL's hint to check whether the native side wants the back
 	 * button trapped (i.e. delivered as a key event rather than finishing).
 	 *
-	 * SDL2/SDL3: same JNI method, same hint name.
+	 * SDL3: same JNI method, same hint name.
 	 */
 	private boolean isBackTrapped() {
 		return SDLActivity.nativeGetHintBoolean(HINT_TRAP_BACK, false);
@@ -95,7 +101,7 @@ public class AmiberryActivity extends SDLActivity {
 	 * The native side maps this to SDL_SCANCODE_AC_BACK → AKS_ENTERGUI,
 	 * which opens or closes the ImGui settings panel.
 	 *
-	 * SDL2/SDL3: same JNI method signatures.
+	 * SDL3: same JNI method signatures.
 	 */
 	private void sendBackToSDL() {
 		SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_BACK);

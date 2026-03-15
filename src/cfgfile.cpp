@@ -2312,18 +2312,18 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		for (int m = 0; m < 2; ++m)
 		{
 			mode = m == 0 ? "none" : "hotkey";
-			for (int n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
+			for (int n = 0; n < SDL_GAMEPAD_BUTTON_COUNT; ++n) // loop through all buttons
 			{
-				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(n));
 				const auto b = m == 0 ? did->mapping.amiberry_custom_none[n] : did->mapping.amiberry_custom_hotkey[n];
 
 				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
 
-			for (int n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
+			for (int n = 0; n < SDL_GAMEPAD_AXIS_COUNT; ++n)
 			{
-				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(n));
 				const auto b = m == 0 ? did->mapping.amiberry_custom_axis_none[n] : did->mapping.amiberry_custom_axis_hotkey[n];
 
 				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));

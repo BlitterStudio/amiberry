@@ -15,8 +15,8 @@ BuildRequires:  gcc-c++
 BuildRequires:  flac-devel
 BuildRequires:  libmpeg2-devel
 BuildRequires:  libpng-devel
-BuildRequires:  SDL2-devel
-BuildRequires:  SDL2_image-devel
+BuildRequires:  SDL3-devel
+BuildRequires:  SDL3_image-devel
 BuildRequires:  alsa-lib-devel
 BuildRequires:  mpg123-devel
 BuildRequires:  portmidi-devel
@@ -29,8 +29,8 @@ BuildRequires:  json-devel
 
 Requires:       glibc
 Requires:       libstdc++
-Requires:       SDL2
-Requires:       SDL2_image
+Requires:       SDL3
+Requires:       SDL3_image
 Requires:       flac
 Requires:       mpg123
 Requires:       libpng

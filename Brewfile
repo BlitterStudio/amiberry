@@ -1,8 +1,8 @@
 # Brewfile for Amiberry macOS CI
 brew "cmake"
-brew "sdl2"
+brew "sdl3"
+brew "sdl3_image"
 brew "mpg123"
-brew "sdl2_image"
 brew "flac"
 brew "libmpeg2"
 brew "libserialport"

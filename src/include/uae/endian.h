@@ -38,7 +38,7 @@ static inline uint32_t le32toh_impl(uint32_t v)
 #define le32toh le32toh_impl
 #endif
 
-#elif defined(HAVE_LIBKERN_OSBYTEORDER_H)
+#elif defined(__APPLE__)
 
 /* OS X lacks endian.h, but has something similar */
 #include <libkern/OSByteOrder.h>
@@ -55,7 +55,7 @@ static inline uint32_t le32toh_impl(uint32_t v)
 #define be64toh(x) OSSwapBigToHostInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 
-#elif defined(HAVE_ENDIAN_H)
+#elif defined(HAVE_ENDIAN_H) || defined(__ANDROID__) || defined(__HAIKU__)
 
 /* Linux has endian.h */
 #include <endian.h>

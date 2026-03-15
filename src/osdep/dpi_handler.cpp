@@ -6,39 +6,40 @@
 
 namespace
 {
-	constexpr int display_index{0};
 	constexpr float default_dpi{96.0F};
 
-	float read_scale_from_dpi()
+	float read_scale_from_content_scale()
 	{
-		float ddpi{0.0F};
-		float hdpi{0.0F};
-		float vdpi{0.0F};
-
-		if (SDL_GetDisplayDPI(display_index, &ddpi, &hdpi, &vdpi) != 0)
+		// SDL3: SDL_GetDisplayContentScale replaces SDL_GetDisplayDPI
+		SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+		if (!primary)
 			return 0.0F;
 
-		const float max_dpi = std::max(ddpi, std::max(hdpi, vdpi));
-		if (max_dpi <= 0.0F)
+		float scale = SDL_GetDisplayContentScale(primary);
+		if (scale <= 0.0F)
 			return 0.0F;
 
-		return max_dpi / default_dpi;
+		return scale;
 	}
 
 	float read_scale_from_display_mode()
 	{
-		SDL_DisplayMode mode{};
+		SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+		if (!primary)
+			return 0.0F;
+
+		const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(primary);
 		SDL_Rect bounds{};
 
-		if (SDL_GetDesktopDisplayMode(display_index, &mode) != 0)
+		if (!mode)
 			return 0.0F;
-		if (SDL_GetDisplayBounds(display_index, &bounds) != 0)
+		if (!SDL_GetDisplayBounds(primary, &bounds))
 			return 0.0F;
 		if (bounds.w <= 0 || bounds.h <= 0)
 			return 0.0F;
 
-		const float scale_x = static_cast<float>(mode.w) / static_cast<float>(bounds.w);
-		const float scale_y = static_cast<float>(mode.h) / static_cast<float>(bounds.h);
+		const float scale_x = static_cast<float>(mode->w) / static_cast<float>(bounds.w);
+		const float scale_y = static_cast<float>(mode->h) / static_cast<float>(bounds.h);
 
 		return std::max(scale_x, scale_y);
 	}
@@ -64,9 +65,9 @@ float DPIHandler::get_scale()
 {
 	float scale = 1.0F;
 
-	const float dpi_scale = read_scale_from_dpi();
-	if (dpi_scale > 0.0F)
-		scale = std::max(scale, dpi_scale);
+	const float content_scale = read_scale_from_content_scale();
+	if (content_scale > 0.0F)
+		scale = std::max(scale, content_scale);
 
 	const float mode_scale = read_scale_from_display_mode();
 	if (mode_scale > 0.0F)
@@ -88,7 +89,7 @@ float DPIHandler::get_scale()
 float DPIHandler::get_layout_scale() {
 #ifdef __ANDROID__
     SDL_Rect bounds;
-    if (SDL_GetDisplayBounds(0, &bounds) == 0) {
+    if (SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &bounds)) {
         // Use the larger dimension to ensure consistent scaling regardless of orientation
         // This way portrait and landscape start with the same scale factor
         int max_dim = std::max(bounds.w, bounds.h);
@@ -97,7 +98,10 @@ float DPIHandler::get_layout_scale() {
     }
     return 1.0f;
 #elif defined(__linux__)
-    return get_scale();
+    float scale = read_scale_from_content_scale();
+    if (scale <= 0.0f)
+        scale = read_scale_from_display_mode();
+    return std::max(scale, 1.0f);
 #else
     return 1.0f;
 #endif
@@ -146,6 +150,6 @@ void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
     // SDL renderer scale is only needed on macOS where drawable pixels differ from window points.
 #ifdef __MACH__
     auto scale{std::max(1.0f, std::round(get_scale()))};
-    SDL_RenderSetScale(renderer, scale, scale);
+    SDL_SetRenderScale(renderer, scale, scale);
 #endif
 }

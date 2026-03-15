@@ -656,14 +656,14 @@ int check_prefs_changed_gfx()
 			vkbd_set_language(string(currprefs.vkbd_language));
 			vkbd_set_style(string(currprefs.vkbd_style));
 			vkbd_key = get_hotkey_from_config(string(currprefs.vkbd_toggle));
-			vkbd_button = SDL_GameControllerGetButtonFromString(currprefs.vkbd_toggle);
+			vkbd_button = SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle);
 			if (vkbd_allowed(0))
 				vkbd_init();
 		}
 		else
 		{
 			vkbd_key = {};
-			vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+			vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
 			vkbd_quit();
 		}
 	}

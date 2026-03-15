@@ -1,7 +1,7 @@
 /*
 * Amiberry
 *
-* SDL2 AHI interface (V1 compatibility)
+* SDL3 AHI interface (V1 compatibility)
 *
 * Copyright 2025 Dimitris Panokostas <midwan@gmail.com>
 * Based on WinUAE code by Toni Wilen
@@ -53,9 +53,8 @@ static int amigablksize;
 
 static uae_u32 sound_flushes2 = 0;
 
-SDL_AudioDeviceID ahi_dev;
-SDL_AudioDeviceID ahi_dev_rec;
-SDL_AudioSpec ahi_want, ahi_have;
+static SDL_AudioStream* ahi_stream = nullptr;
+static SDL_AudioStream* ahi_rec_stream = nullptr;
 
 static int ahi_write_pos;
 
@@ -76,16 +75,18 @@ void ahi_close_sound()
 	record_enabled = 0;
 	ahi_write_pos = 0;
 
-	if (ahi_dev) {
-		SDL_PauseAudioDevice(ahi_dev, 1);
-		SDL_CloseAudioDevice(ahi_dev);
-		ahi_dev = 0;
+	if (ahi_stream) {
+		SDL_PauseAudioStreamDevice(ahi_stream);
+		SDL_DestroyAudioStream(ahi_stream);
+		ahi_stream = nullptr;
 	} else {
 		write_log(_T("AHI: Sound Stopped...\n"));
 	}
-	if (ahi_dev_rec)
-		SDL_CloseAudioDevice(ahi_dev_rec);
-	ahi_dev_rec = 0;
+	if (ahi_rec_stream) {
+		SDL_PauseAudioStreamDevice(ahi_rec_stream);
+		SDL_DestroyAudioStream(ahi_rec_stream);
+		ahi_rec_stream = nullptr;
+	}
 	if (ahisndbuffer)
 	{
 		xfree(ahisndbuffer);
@@ -95,9 +96,9 @@ void ahi_close_sound()
 
 void ahi_updatesound(int force)
 {
-	Uint32 pos;
-	Uint32 dwBytes1;
-	Uint8 *dwData1;
+	int pos;
+	uint32_t dwBytes1;
+	uint8_t *dwData1;
 	static int oldpos;
 
 	if (sound_flushes2 == 1) {
@@ -107,14 +108,14 @@ void ahi_updatesound(int force)
 		INTREQ(0x8000 | 0x2000);
 
 		// Start playing audio
-		SDL_PauseAudioDevice(ahi_dev, 0);
+		SDL_ResumeAudioStreamDevice(ahi_stream);
 	}
 
-	SDL_LockAudioDevice(ahi_dev);
-	pos = SDL_GetQueuedAudioSize(ahi_dev);
-	SDL_UnlockAudioDevice(ahi_dev);
-	// safety check to limit the number of bytes being queued
-	if (pos > 65536) return;
+	SDL_LockAudioStream(ahi_stream);
+	pos = SDL_GetAudioStreamQueued(ahi_stream);
+	SDL_UnlockAudioStream(ahi_stream);
+	// safety check — error or too much data queued
+	if (pos < 0 || pos > 65536) return;
 
 	pos -= ahitweak;
 	if (pos < 0)
@@ -150,7 +151,7 @@ void ahi_updatesound(int force)
 		}
 	}
 
-	SDL_QueueAudio(ahi_dev, dwData1, dwBytes1);
+	SDL_PutAudioStreamData(ahi_stream, dwData1, dwBytes1);
 
 	oldpos += amigablksize * 4;
 	if (oldpos >= ahisndbufsize)
@@ -171,21 +172,20 @@ void ahi_finish_sound_buffer ()
 
 static int ahi_init_record ()
 {
-	SDL_AudioSpec desired, obtained;
-	desired.freq = sound_freq_ahi;
-	desired.format = AUDIO_S16SYS;
-	desired.channels = sound_channels_ahi;
-	desired.samples = amigablksize * 4 * RECORDBUFFER;
-	desired.callback = nullptr; // We'll use SDL_QueueAudio and SDL_DequeueAudio instead of a callback
+	SDL_AudioSpec spec;
+	spec.format = SDL_AUDIO_S16;
+	spec.channels = sound_channels_ahi;
+	spec.freq = sound_freq_ahi;
 
-	ahi_dev_rec = SDL_OpenAudioDevice(nullptr, 1, &desired, &obtained, 0);
-	if (ahi_dev_rec == 0) {
-		write_log(_T("AHI: SDL_OpenAudioDevice() failure: %s\n"), SDL_GetError());
+	ahi_rec_stream = SDL_OpenAudioDeviceStream(
+		SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, nullptr, nullptr);
+	if (!ahi_rec_stream) {
+		write_log(_T("AHI: SDL_OpenAudioDeviceStream() recording failure: %s\n"), SDL_GetError());
 		record_enabled = -1;
 		return 0;
 	}
 
-	SDL_PauseAudioDevice(ahi_dev_rec, 0); // Start recording
+	SDL_ResumeAudioStreamDevice(ahi_rec_stream); // Start recording
 	record_enabled = 1;
 	write_log(_T("AHI: Init AHI Audio Recording \n"));
 	return 1;
@@ -193,24 +193,24 @@ static int ahi_init_record ()
 
 void setvolume_ahi (int volume)
 {
-	if (!ahi_dev)
+	if (!ahi_stream)
 		return;
-	// SDL2 doesn't support device-level volume control via API easily (mixers needed).
-	// We can't really set the device volume here without software mixing which we do in sound.cpp but here V1 pushes raw buffers from Amiga.
-	// For now, no-op or we could try to scale data in updatesound if needed.
+	// SDL3 AudioStream doesn't support device-level volume control directly.
+	// AHI V1 pushes raw buffers from Amiga — volume scaling would need software mixing.
+	// For now, no-op.
 }
 
 static int ahi_init_sound()
 {
-	if (ahi_dev)
+	if (ahi_stream)
 		return 0;
 
 	enumerate_sound_devices();
-	SDL_zero(ahi_want);
-	ahi_want.freq = sound_freq_ahi;
-	ahi_want.format = sound_bits_ahi == 16 ? AUDIO_S16SYS : AUDIO_U8;
-	ahi_want.channels = sound_channels_ahi;
-	ahi_want.samples = amigablksize;
+
+	SDL_AudioSpec spec;
+	spec.format = sound_bits_ahi == 16 ? SDL_AUDIO_S16 : SDL_AUDIO_U8;
+	spec.channels = sound_channels_ahi;
+	spec.freq = sound_freq_ahi;
 
 	write_log(_T("AHI: Init AHI Sound Rate %d, Channels %d, Bits %d, Buffsize %d\n"),
 	sound_freq_ahi, sound_channels_ahi, sound_bits_ahi, amigablksize);
@@ -219,26 +219,21 @@ static int ahi_init_sound()
 		return 0;
 	soundneutral = 0;
 	// Use 4 native buffers as per WinUAE
-	ahisndbufsize = (amigablksize * 4) * NATIVBUFFNUM; 
+	ahisndbufsize = (amigablksize * 4) * NATIVBUFFNUM;
 	ahisndbuffer = xmalloc(uae_u8, ahisndbufsize + 32);
 	if (!ahisndbuffer)
 		return 0;
 
-	const auto devname = sound_devices[currprefs.soundcard]->name;
-	// Create a separate/new device for AHI output as WinUAE does (usually mixing with Primary Sound Buffer in DS, here separate SDL device)
-	ahi_dev = SDL_OpenAudioDevice(currprefs.soundcard_default ? nullptr : devname, 0, &ahi_want, &ahi_have, 0);
+	// Create a separate SDL3 AudioStream for AHI output (push mode, no callback)
+	ahi_stream = SDL_OpenAudioDeviceStream(
+		SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
 
-	if (ahi_dev == 0) {
-		write_log(_T("AHI: Failed to open selected SDL2 device: %s, retrying with default device\n"), SDL_GetError());
-		ahi_dev = SDL_OpenAudioDevice(nullptr, 0, &ahi_want, &ahi_have, 0);
-		if (ahi_dev == 0)
-		{
-			write_log(_T("AHI: Failed to open default SDL2 device: %s:\n"), SDL_GetError());
-			return 0;
-		}
+	if (!ahi_stream) {
+		write_log(_T("AHI: Failed to open SDL3 audio device stream: %s\n"), SDL_GetError());
+		return 0;
 	}
 
-	SDL_PauseAudioDevice(ahi_dev, 0);
+	SDL_ResumeAudioStreamDevice(ahi_stream);
 
 	setvolume_ahi(0);
 
@@ -303,7 +298,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	switch (opcode)
 	{
 		static int cap_pos, clipsize;
-		static char *clipdat;
+		static const char *clipdat;
 
 	case 0:
 		cap_pos = 0;
@@ -354,8 +349,8 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 			if (record_enabled < 0)
 				return -2;
 
-			const auto queued_bytes = SDL_GetQueuedAudioSize(ahi_dev_rec);
-			if (queued_bytes < static_cast<Uint32>(amigablksize * 4)) //if no complete buffer ready exit
+			const auto queued_bytes = SDL_GetAudioStreamAvailable(ahi_rec_stream);
+			if (queued_bytes < static_cast<uint32_t>(amigablksize * 4)) //if no complete buffer ready exit
 				return -1;
 
 			uaecptr addr = m68k_areg(regs, 0);
@@ -365,7 +360,11 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 				write_log(_T("AHI: malloc failed in recording path\n"));
 				return -1;
 			}
-			SDL_DequeueAudio(ahi_dev_rec, sndbufrecpt, bytes_to_read);
+			const int bytes_read = SDL_GetAudioStreamData(ahi_rec_stream, sndbufrecpt, bytes_to_read);
+			if (bytes_read < 0) {
+				free(sndbufrecpt);
+				return -1;
+			}
 
 			auto* sptr = sndbufrecpt;
 			for (int i = 0; i < amigablksize; i++) {
@@ -383,7 +382,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 				addr += 4;
 			}
 			free(sndbufrecpt);
-			return (SDL_GetQueuedAudioSize(ahi_dev_rec)) / (amigablksize * 4);
+			return (SDL_GetAudioStreamAvailable(ahi_rec_stream)) / (amigablksize * 4);
 		}
 
 	case 4:
@@ -428,7 +427,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 12:
 		{
 			TCHAR* s = au(reinterpret_cast<char*>(get_real_address(m68k_areg(regs, 0))));
-			if (SDL_SetClipboardText(s) != 0) {
+			if (!SDL_SetClipboardText(s)) {
 				// handle error
 				write_log("Unable to set clipboard text: %s\n", SDL_GetError());
 			}

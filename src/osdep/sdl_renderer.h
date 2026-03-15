@@ -1,9 +1,9 @@
 #pragma once
 
 /*
- * sdl_renderer.h - SDL2 software renderer backend implementation of IRenderer
+ * sdl_renderer.h - SDL software renderer backend implementation of IRenderer
  *
- * Wraps all non-OpenGL SDL2 rendering operations.
+ * Wraps all non-OpenGL SDL rendering operations.
  *
  * Copyright 2026 Dimitris Panokostas
  */
@@ -11,7 +11,7 @@
 #ifndef USE_OPENGL
 
 #include "irenderer.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 class SDLRenderer : public IRenderer {
 public:
@@ -24,7 +24,7 @@ public:
 	bool has_context() const override;
 
 	// Window creation support
-	Uint32 get_window_flags() const override;
+	SDL_WindowFlags get_window_flags() const override;
 	bool set_context_attributes(int mode) override;
 	bool create_platform_renderer(AmigaMonitor* mon) override;
 	void destroy_platform_renderer(AmigaMonitor* mon) override;

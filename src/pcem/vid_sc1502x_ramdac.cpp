@@ -18,6 +18,7 @@
  *          Copyright 2008-2018 Sarah Walker.
  *          Copyright 2016-2018 Miran Grca.
  */
+#include <cstdlib>
 #include <memory>
 #include "ibm.h"
 #include "mem.h"

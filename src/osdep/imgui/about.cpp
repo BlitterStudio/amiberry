@@ -7,7 +7,7 @@
 #include "fsdb_host.h"
 #include "amiberry_update.h"
 #include "target.h"
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #include <string>
 #include <thread>
@@ -41,7 +41,7 @@ static void ensure_about_logo_texture()
 		return;
 	}
 	about_logo_texture = gui_create_texture(surf, &about_logo_tex_w, &about_logo_tex_h);
-	SDL_FreeSurface(surf);
+	SDL_DestroySurface(surf);
 	if (about_logo_texture == ImTextureID_Invalid) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to create texture: %s", SDL_GetError());
 	}
@@ -311,8 +311,8 @@ void render_panel_about()
 
 	ImGui::TextUnformatted(get_version_string().c_str());
 	ImGui::TextUnformatted(get_copyright_notice().c_str());
-	ImGui::TextUnformatted(get_sdl2_version_string().c_str());
-	ImGui::Text("SDL2 video driver: %s", sdl_video_driver ? sdl_video_driver : "unknown");
+	ImGui::TextUnformatted(get_sdl_version_string().c_str());
+	ImGui::Text("SDL video driver: %s", sdl_video_driver ? sdl_video_driver : "unknown");
 
 	ImGui::Spacing();
 	ImGui::Separator();

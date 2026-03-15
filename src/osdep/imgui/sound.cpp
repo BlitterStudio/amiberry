@@ -36,7 +36,7 @@ void render_panel_sound() {
             int type = sound_devices[i]->type;
             snprintf(tmp, sizeof(tmp), "%s: %s",
                      type == SOUND_DEVICE_SDL2
-                         ? "SDL2"
+                         ? "SDL"
                          : (type == SOUND_DEVICE_DS
                                 ? "DSOUND"
                                 : (type == SOUND_DEVICE_AL

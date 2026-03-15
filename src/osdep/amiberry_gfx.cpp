@@ -1,7 +1,7 @@
 /*
 * Amiberry Amiga Emulator
 *
-* SDL2 interface
+* SDL3 interface
 * 
 * Copyright 2025 Dimitris Panokostas
 * 
@@ -68,7 +68,7 @@
 #include "external_shader.h"
 #include "shader_preset.h"
 #include "opengl_renderer.h"
-#include <SDL_image.h>
+#include <SDL3_image/SDL_image.h>
 
 #ifdef LIBRETRO
 #include "libretro_shared.h"
@@ -91,11 +91,29 @@ bool force_auto_crop = false;
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
 
+// Cached pixel format details for SYSTEM_*_SHIFT/MASK macros (SDL3: surface->format is enum, not pointer)
+int system_red_shift = 0, system_green_shift = 0, system_blue_shift = 0;
+uint32_t system_red_mask = 0, system_green_mask = 0, system_blue_mask = 0;
+
+void update_system_pixel_format()
+{	if (amiga_surface) {
+		const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(amiga_surface->format);
+		if (details) {
+			system_red_shift = details->Rshift;
+			system_green_shift = details->Gshift;
+			system_blue_shift = details->Bshift;
+			system_red_mask = details->Rmask;
+			system_green_mask = details->Gmask;
+			system_blue_mask = details->Bmask;
+		}
+	}
+}
+
 static int dx = 0, dy = 0;
 const char* sdl_video_driver;
 bool kmsdrm_detected = false;
 
-Uint32 pixel_format = SDL_PIXELFORMAT_ABGR8888;
+SDL_PixelFormat pixel_format = SDL_PIXELFORMAT_ABGR8888;
 
 static frame_time_t last_synctime;
 
@@ -137,15 +155,24 @@ void gfx_unlock()
 }
 
 #ifdef AMIBERRY
-float SDL2_getrefreshrate(const int monid)
+float amiberry_getrefreshrate(const int monid)
 {
-	SDL_DisplayMode mode;
-	if (SDL_GetCurrentDisplayMode(monid, &mode) != 0)
+	int count = 0;
+	SDL_DisplayID* displays = SDL_GetDisplays(&count);
+	if (!displays || monid >= count)
+	{
+		SDL_free(displays);
+		write_log("SDL_GetDisplays failed or monid out of range\n");
+		return 0;
+	}
+	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(displays[monid]);
+	SDL_free(displays);
+	if (!mode)
 	{
 		write_log("SDL_GetCurrentDisplayMode failed: %s\n", SDL_GetError());
 		return 0;
 	}
-	return static_cast<float>(mode.refresh_rate);
+	return mode->refresh_rate;
 }
 
 void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
@@ -158,13 +185,18 @@ bool MonitorFromPoint(const SDL_Point pt)
 {
 	SDL_Rect display_bounds;
 	bool point_in_display = false;
-	for (int i = 0; i < SDL_GetNumVideoDisplays(); ++i) {
-		if (SDL_GetDisplayBounds(i, &display_bounds) == 0) {
-			if (SDL_PointInRect(&pt, &display_bounds)) {
-				point_in_display = true;
-				break;
+	int count = 0;
+	SDL_DisplayID* displays = SDL_GetDisplays(&count);
+	if (displays) {
+		for (int i = 0; i < count; ++i) {
+			if (SDL_GetDisplayBounds(displays[i], &display_bounds)) {
+				if (SDL_PointInRect(&pt, &display_bounds)) {
+					point_in_display = true;
+					break;
+				}
 			}
 		}
+		SDL_free(displays);
 	}
 	return point_in_display;
 }
@@ -178,7 +210,7 @@ bool vkbd_allowed(const int monid)
 	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
 }
 
-static bool SDL2_renderframe(const int monid, int mode, int immediate)
+static bool amiberry_renderframe(const int monid, int mode, int immediate)
 {
 	// Skip all rendering if in headless mode
 	if (currprefs.headless) {
@@ -212,9 +244,9 @@ void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
 	mon->full_render_needed = true;
 }
 
-static void SDL2_refresh(const int monid)
+static void amiberry_refresh(const int monid)
 {
-	SDL2_renderframe(monid, 1, 1);
+	amiberry_renderframe(monid, 1, 1);
 	g_renderer->present_frame(monid, 0);
 }
 #endif //AMIBERRY
@@ -273,7 +305,7 @@ bool render_screen(const int monid, const int mode, const bool immediate)
 			return mon->render_ok;
 		}
 	}
-	mon->render_ok = SDL2_renderframe(monid, mode, immediate);
+	mon->render_ok = amiberry_renderframe(monid, mode, immediate);
 	return mon->render_ok;
 }
 
@@ -414,7 +446,7 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 	vb->locked = false;
 	if (vb->vram_buffer) {
 		vb->bufmem = nullptr;
-		// Not using SDL2_UnlockTexture due to performance reasons, see lockscr for details
+		// Not using SDL_UnlockTexture due to performance reasons, see lockscr for details
 		//SDL_UnlockTexture(amiga_texture);
 
 		// Record the dirty rectangle if y_start and y_end are valid.
@@ -510,7 +542,12 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
 
-	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
+	const auto* fmt = SDL_GetPixelFormatDetails(amiga_surface->format);
+	if (!fmt) {
+		write_log("gfx_lock_picasso: SDL_GetPixelFormatDetails failed\n");
+		return nullptr;
+	}
+	vidinfo->pixbytes = fmt->bytes_per_pixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
 	vidinfo->maxheight = amiga_surface->h;
@@ -544,7 +581,7 @@ void gfx_unlock_picasso(const int monid, const bool dorender)
 	}
 	//SDL_UnlockTexture(amiga_texture);
 	if (dorender) {
-		if (SDL2_renderframe(monid, true, false)) {
+		if (amiberry_renderframe(monid, true, false)) {
 			mon->render_ok = true;
 			show_screen_maybe(monid, true);
 		}
@@ -896,8 +933,12 @@ int graphics_init(bool mousecapture)
 		g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
 		update_pixel_format();
 		if (amiga_surface == nullptr) {
-			const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
-			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, surface_depth, pixel_format);
+			amiga_surface = SDL_CreateSurface(1920, 1080, pixel_format);
+			if (!amiga_surface) {
+				write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
+				return false;
+			}
+			update_system_pixel_format();
 		}
 		return amiga_surface != nullptr;
 	}
@@ -1014,7 +1055,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		h = vb->outheight;
 	}
 
-	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && amiga_surface && amiga_surface->format->format == pixel_format) {
+	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && amiga_surface && amiga_surface->format == pixel_format) {
 		bool skip_update = true;
 		if (mon->screen_is_picasso) {
 			uae_u8* rtg_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
@@ -1071,7 +1112,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	// Ensure amiga_surface is in sync with the texture size, format, and memory pointer (if zero-copy)
-	bool recreate_surface = (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h || amiga_surface->format->format != pixel_format);
+	bool recreate_surface = (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h || amiga_surface->format != pixel_format);
 
 	// For zero-copy, also check if pitch matches the RTG state
 	if (!recreate_surface && is_zero_copy_eligible && amiga_surface->pitch != state->BytesPerRow) {
@@ -1087,28 +1128,30 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 	if (recreate_surface) {
 		if (amiga_surface) {
-			SDL_FreeSurface(amiga_surface);
+			SDL_DestroySurface(amiga_surface);
 			amiga_surface = nullptr;
 		}
-		const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
+		const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_XRGB1555) ? 16 : 32;
 
 		if (is_zero_copy_eligible) {
 			// Zero-Copy: Create surface from existing memory (rtg_render_ptr guaranteed non-null)
-			amiga_surface = SDL_CreateRGBSurfaceWithFormatFrom(rtg_render_ptr, w, h, surface_depth, state->BytesPerRow, pixel_format);
+			amiga_surface = SDL_CreateSurfaceFrom(w, h, pixel_format, rtg_render_ptr, state->BytesPerRow);
 		} else {
 			// Normal copy: Create fresh surface
-			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
+			amiga_surface = SDL_CreateSurface(w, h, pixel_format);
 		}
 
 		if (amiga_surface) {
 			SDL_SetSurfaceBlendMode(amiga_surface, SDL_BLENDMODE_NONE);
+			update_system_pixel_format();
 		} else {
 			write_log("!!! Failed to create amiga_surface.\n");
 			return false;
 		}
 		mon->full_render_needed = true;
 		struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
-		vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
+		const auto* fmt = SDL_GetPixelFormatDetails(amiga_surface->format);
+		vidinfo->pixbytes = fmt ? fmt->bytes_per_pixel : 4;
 #ifndef PICASSO_STATE_SETDAC
 #define PICASSO_STATE_SETDAC 8
 #endif
@@ -1159,7 +1202,7 @@ static void updatedisplayarea2(const int monid)
 	const struct AmigaMonitor* mon = &AMonitors[monid];
 	if (!mon->screen_is_initialized)
 		return;
-	SDL2_refresh(monid);
+	amiberry_refresh(monid);
 }
 
 void updatedisplayarea(const int monid)
@@ -1424,7 +1467,7 @@ void auto_crop_image()
 		}
 		// SDL software path needs logical size update
 		if (mon->amiga_renderer)
-			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
+			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
 		auto& rq = g_renderer->render_quad;
 		auto& cr = g_renderer->crop_rect;
@@ -1465,7 +1508,7 @@ bool create_screenshot()
 {
 	if (current_screenshot != nullptr)
 	{
-		SDL_FreeSurface(current_screenshot);
+		SDL_DestroySurface(current_screenshot);
 		current_screenshot = nullptr;
 	}
 	return gfx_platform_create_screenshot(amiga_surface, &current_screenshot);
@@ -1477,7 +1520,7 @@ int save_thumb(const std::string& path)
 	if (current_screenshot != nullptr)
 	{
 		ret = save_png(current_screenshot, path);
-		SDL_FreeSurface(current_screenshot);
+		SDL_DestroySurface(current_screenshot);
 		current_screenshot = nullptr;
 	}
 	return ret;

@@ -635,7 +635,7 @@ static std::string HandleGetVersion(const std::vector<std::string>& args)
 	std::cout << "IPC: Received GET_VERSION" << std::endl;
 	std::vector<std::string> info;
 	info.push_back("version=" + get_version_string());
-	info.push_back("sdl=" + get_sdl2_version_string());
+	info.push_back("sdl=" + get_sdl_version_string());
 	return make_response(true, info);
 }
 

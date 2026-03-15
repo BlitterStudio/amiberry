@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
 
 #ifdef USE_OPENGL
 #include "vkbd_gl.h"
@@ -644,7 +644,8 @@ static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exi
 {
 	const int width = keyboard->w + exit->w;
 	const int height = std::max(keyboard->h, exit->h);
-	const auto surf = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
+	const auto surf = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_ARGB8888);
+	if (!surf) return nullptr;
 	SDL_Rect srcRect;
 	srcRect.x = 0;
 	srcRect.y = 0;
@@ -675,8 +676,8 @@ static void cleanup_vkbd_gl()
 	if (vkbdGLTexture) { glDeleteTextures(1, &vkbdGLTexture); vkbdGLTexture = 0; }
 	if (vkbdGLTextureShift) { glDeleteTextures(1, &vkbdGLTextureShift); vkbdGLTextureShift = 0; }
 	vkbd_cleanup_gl_shader();
-	if (vkbdSurface) { SDL_FreeSurface(vkbdSurface); vkbdSurface = nullptr; }
-	if (vkbdSurfaceShift) { SDL_FreeSurface(vkbdSurfaceShift); vkbdSurfaceShift = nullptr; }
+	if (vkbdSurface) { SDL_DestroySurface(vkbdSurface); vkbdSurface = nullptr; }
+	if (vkbdSurfaceShift) { SDL_DestroySurface(vkbdSurfaceShift); vkbdSurfaceShift = nullptr; }
 	vkbdGLTexWidth = 0;
 	vkbdGLTexHeight = 0;
 }
@@ -692,11 +693,11 @@ static SDL_Surface* vkbd_create_keyboard_combined_surface(bool shift)
 		const auto exit = vkbd_create_exit_button_surface();
 		if (exit == nullptr)
 		{
-			SDL_FreeSurface(keyboard);
+			SDL_DestroySurface(keyboard);
 			return nullptr;
 		}
 		surf = vkbd_concat_surfaces(keyboard, exit);
-		SDL_FreeSurface(exit);
+		SDL_DestroySurface(exit);
 		if (surf == nullptr) return nullptr;
 	}
 	else
@@ -732,7 +733,7 @@ static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 			return nullptr;
 		}
 
-		SDL_FreeSurface(exit);
+		SDL_DestroySurface(exit);
 	}
 	else
 	{
@@ -740,7 +741,7 @@ static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 	}
 
 	const auto texture = SDL_CreateTextureFromSurface(mon->amiga_renderer, surf);
-	SDL_FreeSurface(surf);
+	SDL_DestroySurface(surf);
 	return texture;
 }
 #endif
@@ -757,14 +758,15 @@ static int vkbd_find_index(int key)
 
 void vkbd_update_position_from_texture()
 {
-	int width, height;
+	float widthf, heightf;
 #ifdef USE_OPENGL
-	width = vkbdGLTexWidth;
-	height = vkbdGLTexHeight;
-	if (width <= 0 || height <= 0) return;
+	widthf = static_cast<float>(vkbdGLTexWidth);
+	heightf = static_cast<float>(vkbdGLTexHeight);
+	if (widthf <= 0 || heightf <= 0) return;
 #else
-	SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
+	SDL_GetTextureSize(vkbdTexture, &widthf, &heightf);
 #endif
+	int width = static_cast<int>(widthf), height = static_cast<int>(heightf);
 	int renderedWidth = g_renderer->crop_rect.w, rendererHeight = g_renderer->crop_rect.h;
 
 #ifdef USE_OPENGL
@@ -811,7 +813,7 @@ void vkbd_update(bool createTextures)
 	{
 		if (vkbdSurface != nullptr)
 		{
-			SDL_FreeSurface(vkbdSurface);
+			SDL_DestroySurface(vkbdSurface);
 		}
 		if (vkbdGLTexture != 0)
 		{
@@ -830,7 +832,7 @@ void vkbd_update(bool createTextures)
 	{
 		if (vkbdSurfaceShift != nullptr)
 		{
-			SDL_FreeSurface(vkbdSurfaceShift);
+			SDL_DestroySurface(vkbdSurfaceShift);
 		}
 		if (vkbdGLTextureShift != 0)
 		{
@@ -1191,19 +1193,18 @@ void vkbd_redraw()
 		return;
 	}
 
-	int w = 0;
-	int h = 0;
-	SDL_QueryTexture(toDraw, nullptr, nullptr, &w, &h);
-	SDL_Rect rect;
-	rect.x = vkbdCurrentX;
-	rect.y = vkbdCurrentY;
-	rect.w = w;
-	rect.h = h;
+	float fw = 0, fh = 0;
+	SDL_GetTextureSize(toDraw, &fw, &fh);
+	SDL_FRect frect;
+	frect.x = static_cast<float>(vkbdCurrentX);
+	frect.y = static_cast<float>(vkbdCurrentY);
+	frect.w = fw;
+	frect.h = fh;
 
 	SDL_SetRenderDrawBlendMode(mon->amiga_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);
-	SDL_RenderCopy(mon->amiga_renderer, toDraw, nullptr, &rect);
+	SDL_RenderTexture(mon->amiga_renderer, toDraw, nullptr, &frect);
 
 	// Store color so we can restore later
 	SDL_Color color;

@@ -4,7 +4,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include "uae/types.h"
 #include <cstring>

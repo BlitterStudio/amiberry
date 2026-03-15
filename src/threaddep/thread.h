@@ -7,20 +7,20 @@
   */
 
 #pragma once
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine
  * with different ones, make them look like POSIX semaphores. */
-typedef SDL_sem *uae_sem_t;
+typedef SDL_Semaphore *uae_sem_t;
 
 int uae_sem_init(uae_sem_t* sem, int dummy, int initial_state);
 void uae_sem_destroy(uae_sem_t* event);
-#define uae_sem_post(PSEM) SDL_SemPost (*(PSEM))
-#define uae_sem_unpost(PSEM) SDL_SemPost (*(PSEM))
-#define uae_sem_wait(PSEM) SDL_SemWait (*(PSEM))
-#define uae_sem_trywait(PSEM) SDL_SemTryWait (*(PSEM))
-#define uae_sem_trywait_delay(PSEM, ms) SDL_SemWaitTimeout(*(PSEM), ms)
-#define uae_sem_getvalue(PSEM) SDL_SemValue (*(PSEM))
+#define uae_sem_post(PSEM) SDL_SignalSemaphore (*(PSEM))
+#define uae_sem_unpost(PSEM) SDL_SignalSemaphore (*(PSEM))
+#define uae_sem_wait(PSEM) SDL_WaitSemaphore (*(PSEM))
+#define uae_sem_trywait(PSEM) (SDL_TryWaitSemaphore(*(PSEM)) ? 0 : -1)
+#define uae_sem_trywait_delay(PSEM, ms) (SDL_WaitSemaphoreTimeout(*(PSEM), ms) ? 0 : -1)
+#define uae_sem_getvalue(PSEM) SDL_GetSemaphoreValue (*(PSEM))
 
 #include "commpipe.h"
 
@@ -33,7 +33,7 @@ void uae_end_thread(uae_thread_id* thread);
 int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_thread_id* thread);
 int uae_start_thread_fast(uae_thread_function fn, void* arg, uae_thread_id* thread);
 int uae_wait_thread(uae_thread_id* thread);
-SDL_threadID uae_thread_get_id(SDL_Thread* thread);
+SDL_ThreadID uae_thread_get_id(SDL_Thread* thread);
 
 /* Do nothing; thread exits if thread function returns.  */
 #define UAE_THREAD_EXIT do {} while (0)

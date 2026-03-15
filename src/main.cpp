@@ -74,6 +74,9 @@
 #include "fsdb.h"
 #include "fsdb_host.h"
 #include "keyboard.h"
+#ifndef LIBRETRO
+#include "amiberry_update.h"
+#endif
 
 
 // Special version string so that AmigaOS can detect it
@@ -490,7 +493,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		if (rbc->monitor_id > 0) {
 			if (!p->gfx_api) {
 				rbc->monitor_id = 0;
-				error_log(_T("Multi virtual monitor support requires SDL2 mode."));
+				error_log(_T("Multi virtual monitor support requires OpenGL mode."));
 			}
 			if (isfullscreen() > 0) {
 				rbc->monitor_id = 0;
@@ -1581,6 +1584,14 @@ static int real_main2 (int argc, TCHAR **argv)
 			return 1;
 		}
 	}
+
+#ifndef LIBRETRO
+	if (amiberry_options.update_check && get_update_method() != UpdateMethod::DISABLED) {
+		const auto channel = amiberry_options.update_channel == 1
+			? UpdateChannel::Preview : UpdateChannel::Stable;
+		start_async_update_check(channel);
+	}
+#endif
 
 	memset (&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;

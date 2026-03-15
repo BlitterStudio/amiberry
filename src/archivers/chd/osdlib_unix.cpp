@@ -12,7 +12,7 @@
 #include "osdcore.h"
 #include "osdlib.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <csignal>
 #include <cstdio>
@@ -84,9 +84,8 @@ std::string osd_get_clipboard_text()
 
 	if (SDL_HasClipboardText())
 	{
-		char* temp = SDL_GetClipboardText();
+		const char* temp = SDL_GetClipboardText();
 		result.assign(temp);
-		SDL_free(temp);
 	}
 	return result;
 }

@@ -768,10 +768,7 @@ static uae_u32 call_hardware_trap_back(TrapContext *ctx, uae_u16 cmd, uae_u32 p1
 		if (v == 0x01 || v == 0x02 || v == 0x03) {
 			break;
 		}
-		if (uae_sem_trywait_delay(&hardware_trap_event[trap_slot], 100) == -2) {
-			hardware_trap_kill[trap_slot] = 3;
-			return 0;
-		}
+		uae_sem_trywait_delay(&hardware_trap_event[trap_slot], 100);
 	}
 
 	// get result

@@ -16,11 +16,11 @@
 #ifdef __ANDROID__
 // Android: GLES3 provides all functions directly
 #include <GLES3/gl3.h>
-#include <SDL_opengles2.h>
+#include <SDL3/SDL_opengles2.h>
 
 #else
 // Desktop: Need to load extension functions dynamically
-#include <SDL_opengl.h>
+#include <SDL3/SDL_opengl.h>
 
 // Declare external function pointers (defined in gl_platform.cpp)
 extern PFNGLGENVERTEXARRAYSPROC glp_GenVertexArrays;

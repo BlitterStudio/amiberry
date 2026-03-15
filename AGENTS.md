@@ -69,7 +69,7 @@ amiberry/
 - **UAE naming** in emulator core (matches WinUAE upstream)
 - **ImGui patterns** in GUI code
 - **Platform guards**: `#ifdef __ANDROID__`, `#ifdef _WIN32`, `#ifdef __APPLE__`, `#ifdef AMIBERRY`
-- **Feature guards**: `#ifdef USE_OPENGL`, `#ifdef USE_IMGUI`, `#ifdef USE_PCEM`, etc.
+- **Feature guards**: `#ifdef USE_OPENGL`, `#ifdef USE_IMGUI` (always defined), `#ifdef USE_PCEM`, etc.
 - **Vendored code**: `pcem/`, `slirp/`, `ppc/`, `qemuvga/`, `softfloat/`, `mame/` — minimize modifications
 
 ## ANTI-PATTERNS (THIS PROJECT)
@@ -115,6 +115,19 @@ cd android && ./gradlew assembleRelease
 # Cross-compile ARM64
 cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build
 ```
+
+## SDL3 KMSDRM STATUS (RPi Console)
+
+**As of SDL 3.4.2 (March 2026):** KMSDRM has critical open bugs. See `docs/sdl3_migration/13_kmsdrm_known_issues.md` for full details.
+
+- 🔴 **Keyboard input broken** ([SDL #15166](https://github.com/libsdl-org/SDL/issues/15166)) — TTY grabs all keyboard; SDL app receives nothing. Milestoned SDL 3.6.0.
+- 🔴 **VT switching broken** ([SDL #13145](https://github.com/libsdl-org/SDL/issues/13145)) — Ctrl+Alt+Fn non-functional. Milestoned SDL 3.6.0.
+- 🟠 **RPi 5 requires SDL ≥ 3.4.0** — atomic modesetting restored in [PR #11511](https://github.com/libsdl-org/SDL/pull/11511).
+- 🟠 **RPi 2/3/Zero not supported** — build failures and black screen with SDL3 KMSDRM.
+- 🟡 **`SDL_UNIX_CONSOLE_BUILD=ON` disables KMSDRM** — never use this CMake flag.
+- 🟡 **Vulkan + KMSDRM SDL renderer broken** — use OpenGL ES (Amiberry already does this).
+- ✅ **Amiberry KMSDRM handling** is correct: forces fullwindow, reuses GUI window, requests GLES 3.0, preserves window on close.
+- **Minimum viable SDL3 for KMSDRM:** SDL ≥ 3.6.0 (unreleased). Until then, recommend users run under a compositor (sway/cage).
 
 ## NOTES
 

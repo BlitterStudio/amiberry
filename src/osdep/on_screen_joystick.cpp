@@ -8,7 +8,7 @@
  * Registered as a proper joystick input device so it appears in the Input
  * configuration panel and respects the selected port mode (joystick/mouse).
  *
- * Supports both SDL2 renderer and OpenGL rendering paths.
+ * Supports both SDL software renderer and OpenGL rendering paths.
  *
  * Copyright 2025-2026 Amiberry team
  */
@@ -18,11 +18,19 @@
 #include <vector>
 #include <algorithm>
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #ifdef USE_OPENGL
 #include "on_screen_joystick_gl.h"
 #endif
+
+// SDL3 helper: convert SDL_Rect to SDL_FRect for SDL_RenderTexture
+static inline SDL_FRect rect_to_frect(const SDL_Rect* r)
+{
+	if (!r) return SDL_FRect{0, 0, 0, 0};
+	return SDL_FRect{ static_cast<float>(r->x), static_cast<float>(r->y),
+		static_cast<float>(r->w), static_cast<float>(r->h) };
+}
 
 #include "on_screen_joystick.h"
 #include "sysdeps.h"
@@ -49,8 +57,8 @@ static constexpr int STICK_BASE_TEX_SIZE = 256;
 static constexpr int STICK_KNOB_TEX_SIZE = 128;
 static constexpr int BUTTON_TEX_SIZE = 128;
 // Alpha values (0-255)
-static constexpr Uint8 ALPHA_NORMAL = 160;
-static constexpr Uint8 ALPHA_PRESSED = 220;
+static constexpr uint8_t ALPHA_NORMAL = 160;
+static constexpr uint8_t ALPHA_PRESSED = 220;
 // Dead zone in the center of the joystick (fraction of radius)
 static constexpr float DPAD_DEADZONE = 0.15f;
 // Knob size as fraction of the base plate diameter
@@ -66,7 +74,7 @@ static constexpr float BTN2_DIAG_Y_OFFSET = 0.50f;
 // ---------------------------------------------------------------------------
 
 struct Color {
-	Uint8 r, g, b, a;
+	uint8_t r, g, b, a;
 };
 
 // Joystick base plate colors - dark gunmetal concave well
@@ -175,8 +183,8 @@ static SDL_Rect cached_game_rect = {};
 
 static void fill_circle(SDL_Surface* s, int cx, int cy, int radius, Color col)
 {
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	auto* pixels = static_cast<Uint32*>(s->pixels);
+	uint32_t color = SDL_MapSurfaceRGBA(s, col.r, col.g, col.b, col.a);
+	auto* pixels = static_cast<uint32_t*>(s->pixels);
 	int pitch = s->pitch / 4;
 	int r2 = radius * radius;
 
@@ -200,7 +208,7 @@ static void fill_circle(SDL_Surface* s, int cx, int cy, int radius, Color col)
 static void fill_circle_gradient(SDL_Surface* s, int cx, int cy, int radius,
 	Color outer, Color inner, Color glint)
 {
-	auto* pixels = static_cast<Uint32*>(s->pixels);
+	auto* pixels = static_cast<uint32_t*>(s->pixels);
 	int pitch = s->pitch / 4;
 	float r = static_cast<float>(radius);
 
@@ -216,19 +224,19 @@ static void fill_circle_gradient(SDL_Surface* s, int cx, int cy, int radius,
 			float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
 			float t = dist / r;
 
-			Uint8 cr = static_cast<Uint8>(inner.r + (outer.r - inner.r) * t);
-			Uint8 cg = static_cast<Uint8>(inner.g + (outer.g - inner.g) * t);
-			Uint8 cb = static_cast<Uint8>(inner.b + (outer.b - inner.b) * t);
-			Uint8 ca = static_cast<Uint8>(inner.a + (outer.a - inner.a) * t);
+			uint8_t cr = static_cast<uint8_t>(inner.r + (outer.r - inner.r) * t);
+			uint8_t cg = static_cast<uint8_t>(inner.g + (outer.g - inner.g) * t);
+			uint8_t cb = static_cast<uint8_t>(inner.b + (outer.b - inner.b) * t);
+			uint8_t ca = static_cast<uint8_t>(inner.a + (outer.a - inner.a) * t);
 
 			float highlight = std::max(0.0f, 1.0f - dist / (r * 0.5f));
 			float angle = std::atan2(static_cast<float>(dy), static_cast<float>(dx));
 			float dir_factor = std::max(0.0f, -std::cos(angle + 0.7f)) * highlight * 0.4f;
-			cr = static_cast<Uint8>(std::min(255.0f, cr + (glint.r - cr) * dir_factor));
-			cg = static_cast<Uint8>(std::min(255.0f, cg + (glint.g - cg) * dir_factor));
-			cb = static_cast<Uint8>(std::min(255.0f, cb + (glint.b - cb) * dir_factor));
+			cr = static_cast<uint8_t>(std::min(255.0f, cr + (glint.r - cr) * dir_factor));
+			cg = static_cast<uint8_t>(std::min(255.0f, cg + (glint.g - cg) * dir_factor));
+			cb = static_cast<uint8_t>(std::min(255.0f, cb + (glint.b - cb) * dir_factor));
 
-			pixels[y * pitch + x] = SDL_MapRGBA(s->format, cr, cg, cb, ca);
+			pixels[y * pitch + x] = SDL_MapSurfaceRGBA(s, cr, cg, cb, ca);
 		}
 	}
 }
@@ -240,8 +248,8 @@ static void fill_circle_gradient(SDL_Surface* s, int cx, int cy, int radius,
 static void fill_rect(SDL_Surface* s, int x0, int y0, int w, int h, Color col)
 {
 	SDL_Rect r = { x0, y0, w, h };
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	SDL_FillRect(s, &r, color);
+	uint32_t color = SDL_MapSurfaceRGBA(s, col.r, col.g, col.b, col.a);
+	SDL_FillSurfaceRect(s, &r, color);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,10 +261,10 @@ static SDL_Surface* create_stick_base_surface()
 	const int sz = STICK_BASE_TEX_SIZE;
 	// ABGR8888 stores bytes as [R,G,B,A] in memory on little-endian,
 	// which matches GL_RGBA + GL_UNSIGNED_BYTE for OpenGL upload.
-	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
+	SDL_Surface* surface = SDL_CreateSurface(sz, sz, SDL_PIXELFORMAT_ABGR8888);
 	if (!surface) return nullptr;
 
-	SDL_FillRect(surface, nullptr, 0);
+	SDL_FillSurfaceRect(surface, nullptr, 0);
 
 	int cx = sz / 2;
 	int cy = sz / 2;
@@ -271,7 +279,7 @@ static SDL_Surface* create_stick_base_surface()
 	// Inner well with radial gradient (concave look: darker center, lighter edges)
 	{
 		int well_r = base_r - 5;
-		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		auto* pixels = static_cast<uint32_t*>(surface->pixels);
 		int pitch = surface->pitch / 4;
 		float fr = static_cast<float>(well_r);
 
@@ -288,11 +296,11 @@ static SDL_Surface* create_stick_base_surface()
 				float t = dist / fr; // 0 at center, 1 at edge
 
 				// Gradient: center is darker (well_in), edge is lighter (well_out)
-				Uint8 cr = static_cast<Uint8>(STICK_BASE_WELL_IN.r + (STICK_BASE_WELL_OUT.r - STICK_BASE_WELL_IN.r) * t);
-				Uint8 cg = static_cast<Uint8>(STICK_BASE_WELL_IN.g + (STICK_BASE_WELL_OUT.g - STICK_BASE_WELL_IN.g) * t);
-				Uint8 cb = static_cast<Uint8>(STICK_BASE_WELL_IN.b + (STICK_BASE_WELL_OUT.b - STICK_BASE_WELL_IN.b) * t);
+				uint8_t cr = static_cast<uint8_t>(STICK_BASE_WELL_IN.r + (STICK_BASE_WELL_OUT.r - STICK_BASE_WELL_IN.r) * t);
+				uint8_t cg = static_cast<uint8_t>(STICK_BASE_WELL_IN.g + (STICK_BASE_WELL_OUT.g - STICK_BASE_WELL_IN.g) * t);
+				uint8_t cb = static_cast<uint8_t>(STICK_BASE_WELL_IN.b + (STICK_BASE_WELL_OUT.b - STICK_BASE_WELL_IN.b) * t);
 
-				pixels[y * pitch + x] = SDL_MapRGBA(surface->format, cr, cg, cb, 255);
+				pixels[y * pitch + x] = SDL_MapSurfaceRGBA(surface, cr, cg, cb, 255);
 			}
 		}
 	}
@@ -325,10 +333,10 @@ static SDL_Surface* create_stick_base_surface()
 static SDL_Surface* create_stick_knob_surface()
 {
 	const int sz = STICK_KNOB_TEX_SIZE;
-	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
+	SDL_Surface* surface = SDL_CreateSurface(sz, sz, SDL_PIXELFORMAT_ABGR8888);
 	if (!surface) return nullptr;
 
-	SDL_FillRect(surface, nullptr, 0);
+	SDL_FillSurfaceRect(surface, nullptr, 0);
 
 	int cx = sz / 2;
 	int cy = sz / 2;
@@ -345,9 +353,11 @@ static SDL_Surface* create_stick_knob_surface()
 		int spec_r = static_cast<int>(r * 0.15f);
 		if (spec_r < 2) spec_r = 2;
 
-		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		auto* pixels = static_cast<uint32_t*>(surface->pixels);
 		int pitch = surface->pitch / 4;
 		float fspec_r = static_cast<float>(spec_r);
+		const auto* fmt_details = SDL_GetPixelFormatDetails(surface->format);
+		if (!fmt_details) return nullptr;
 
 		int y0 = std::max(0, spec_cy - spec_r);
 		int y1 = std::min(sz - 1, spec_cy + spec_r);
@@ -361,17 +371,17 @@ static SDL_Surface* create_stick_knob_surface()
 				float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
 				float t = dist / fspec_r;
 				// Fade from bright center to transparent edge
-				Uint8 alpha = static_cast<Uint8>(200.0f * (1.0f - t));
+				uint8_t alpha = static_cast<uint8_t>(200.0f * (1.0f - t));
 				// Blend specular onto existing pixel
-				Uint32 existing = pixels[y * pitch + x];
-				Uint8 er, eg, eb, ea;
-				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				uint32_t existing = pixels[y * pitch + x];
+				uint8_t er, eg, eb, ea;
+				SDL_GetRGBA(existing, fmt_details, nullptr, &er, &eg, &eb, &ea);
 				if (ea > 0) {
 					float a = alpha / 255.0f;
-					er = static_cast<Uint8>(std::min(255.0f, er + (255 - er) * a));
-					eg = static_cast<Uint8>(std::min(255.0f, eg + (220 - eg) * a));
-					eb = static_cast<Uint8>(std::min(255.0f, eb + (220 - eb) * a));
-					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+					er = static_cast<uint8_t>(std::min(255.0f, er + (255 - er) * a));
+					eg = static_cast<uint8_t>(std::min(255.0f, eg + (220 - eg) * a));
+					eb = static_cast<uint8_t>(std::min(255.0f, eb + (220 - eb) * a));
+					pixels[y * pitch + x] = SDL_MapSurfaceRGBA(surface, er, eg, eb, ea);
 				}
 			}
 		}
@@ -379,9 +389,11 @@ static SDL_Surface* create_stick_knob_surface()
 
 	// Subtle bottom shadow crescent for depth
 	{
-		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		auto* pixels = static_cast<uint32_t*>(surface->pixels);
 		int pitch = surface->pitch / 4;
 		float fr = static_cast<float>(r);
+		const auto* fmt_details = SDL_GetPixelFormatDetails(surface->format);
+		if (!fmt_details) return nullptr;
 
 		int y0 = cy + static_cast<int>(r * 0.7f);
 		int y1 = std::min(sz - 1, cy + r);
@@ -392,15 +404,15 @@ static SDL_Surface* create_stick_knob_surface()
 			int x1 = std::min(sz - 1, cx + dx_max);
 			for (int x = x0; x <= x1; x++) {
 				float shadow_t = static_cast<float>(y - y0) / static_cast<float>(y1 - y0 + 1);
-				Uint32 existing = pixels[y * pitch + x];
-				Uint8 er, eg, eb, ea;
-				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				uint32_t existing = pixels[y * pitch + x];
+				uint8_t er, eg, eb, ea;
+				SDL_GetRGBA(existing, fmt_details, nullptr, &er, &eg, &eb, &ea);
 				if (ea > 0) {
 					float darken = shadow_t * 0.35f;
-					er = static_cast<Uint8>(er * (1.0f - darken));
-					eg = static_cast<Uint8>(eg * (1.0f - darken));
-					eb = static_cast<Uint8>(eb * (1.0f - darken));
-					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+					er = static_cast<uint8_t>(er * (1.0f - darken));
+					eg = static_cast<uint8_t>(eg * (1.0f - darken));
+					eb = static_cast<uint8_t>(eb * (1.0f - darken));
+					pixels[y * pitch + x] = SDL_MapSurfaceRGBA(surface, er, eg, eb, ea);
 				}
 			}
 		}
@@ -436,8 +448,8 @@ static const uint8_t font_B[7] = {
 
 static void draw_char(SDL_Surface* s, const uint8_t bitmap[7], int ox, int oy, int scale, Color col)
 {
-	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
-	auto* pixels = static_cast<Uint32*>(s->pixels);
+	uint32_t color = SDL_MapSurfaceRGBA(s, col.r, col.g, col.b, col.a);
+	auto* pixels = static_cast<uint32_t*>(s->pixels);
 	int pitch = s->pitch / 4;
 	for (int row = 0; row < 7; row++) {
 		for (int col_idx = 0; col_idx < 5; col_idx++) {
@@ -464,10 +476,10 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 	const int sz = BUTTON_TEX_SIZE;
 	// ABGR8888 stores bytes as [R,G,B,A] in memory on little-endian,
 	// which matches GL_RGBA + GL_UNSIGNED_BYTE for OpenGL upload.
-	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
+	SDL_Surface* surface = SDL_CreateSurface(sz, sz, SDL_PIXELFORMAT_ABGR8888);
 	if (!surface) return nullptr;
 
-	SDL_FillRect(surface, nullptr, 0);
+	SDL_FillSurfaceRect(surface, nullptr, 0);
 
 	int cx = sz / 2;
 	int cy = sz / 2;
@@ -478,8 +490,8 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 	fill_circle(surface, cx, cy, r, housing);
 
 	// Outer ring (bezel) - wider than before for more prominent dome look
-	Color bezel = { static_cast<Uint8>(outer.r / 2), static_cast<Uint8>(outer.g / 2),
-		static_cast<Uint8>(outer.b / 2), 255 };
+	Color bezel = { static_cast<uint8_t>(outer.r / 2), static_cast<uint8_t>(outer.g / 2),
+		static_cast<uint8_t>(outer.b / 2), 255 };
 	fill_circle(surface, cx, cy, r - 3, bezel);
 
 	// Main button surface with gradient (dome)
@@ -492,9 +504,11 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 		int spec_r = static_cast<int>((r - 6) * 0.12f);
 		if (spec_r < 2) spec_r = 2;
 
-		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		auto* pixels = static_cast<uint32_t*>(surface->pixels);
 		int pitch = surface->pitch / 4;
 		float fspec_r = static_cast<float>(spec_r);
+		const auto* fmt_details = SDL_GetPixelFormatDetails(surface->format);
+		if (!fmt_details) return nullptr;
 
 		int y0 = std::max(0, spec_cy - spec_r);
 		int y1 = std::min(sz - 1, spec_cy + spec_r);
@@ -507,16 +521,16 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 				int dx = x - spec_cx;
 				float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
 				float t = dist / fspec_r;
-				Uint8 alpha = static_cast<Uint8>(150.0f * (1.0f - t));
-				Uint32 existing = pixels[y * pitch + x];
-				Uint8 er, eg, eb, ea;
-				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				uint8_t alpha = static_cast<uint8_t>(150.0f * (1.0f - t));
+				uint32_t existing = pixels[y * pitch + x];
+				uint8_t er, eg, eb, ea;
+				SDL_GetRGBA(existing, fmt_details, nullptr, &er, &eg, &eb, &ea);
 				if (ea > 0) {
 					float a = alpha / 255.0f;
-					er = static_cast<Uint8>(std::min(255.0f, er + (255 - er) * a));
-					eg = static_cast<Uint8>(std::min(255.0f, eg + (255 - eg) * a));
-					eb = static_cast<Uint8>(std::min(255.0f, eb + (255 - eb) * a));
-					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+					er = static_cast<uint8_t>(std::min(255.0f, er + (255 - er) * a));
+					eg = static_cast<uint8_t>(std::min(255.0f, eg + (255 - eg) * a));
+					eb = static_cast<uint8_t>(std::min(255.0f, eb + (255 - eb) * a));
+					pixels[y * pitch + x] = SDL_MapSurfaceRGBA(surface, er, eg, eb, ea);
 				}
 			}
 		}
@@ -524,10 +538,12 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 
 	// Subtle bottom shadow arc for depth
 	{
-		auto* pixels = static_cast<Uint32*>(surface->pixels);
+		auto* pixels = static_cast<uint32_t*>(surface->pixels);
 		int pitch = surface->pitch / 4;
 		int inner_r = r - 6;
 		float fr = static_cast<float>(inner_r);
+		const auto* fmt_details = SDL_GetPixelFormatDetails(surface->format);
+		if (!fmt_details) return nullptr;
 
 		int y0 = cy + static_cast<int>(inner_r * 0.65f);
 		int y1 = std::min(sz - 1, cy + inner_r);
@@ -538,15 +554,15 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 			int x1 = std::min(sz - 1, cx + dx_max);
 			for (int x = x0; x <= x1; x++) {
 				float shadow_t = static_cast<float>(y - y0) / static_cast<float>(y1 - y0 + 1);
-				Uint32 existing = pixels[y * pitch + x];
-				Uint8 er, eg, eb, ea;
-				SDL_GetRGBA(existing, surface->format, &er, &eg, &eb, &ea);
+				uint32_t existing = pixels[y * pitch + x];
+				uint8_t er, eg, eb, ea;
+				SDL_GetRGBA(existing, fmt_details, nullptr, &er, &eg, &eb, &ea);
 				if (ea > 0) {
 					float darken = shadow_t * 0.25f;
-					er = static_cast<Uint8>(er * (1.0f - darken));
-					eg = static_cast<Uint8>(eg * (1.0f - darken));
-					eb = static_cast<Uint8>(eb * (1.0f - darken));
-					pixels[y * pitch + x] = SDL_MapRGBA(surface->format, er, eg, eb, ea);
+					er = static_cast<uint8_t>(er * (1.0f - darken));
+					eg = static_cast<uint8_t>(eg * (1.0f - darken));
+					eb = static_cast<uint8_t>(eb * (1.0f - darken));
+					pixels[y * pitch + x] = SDL_MapSurfaceRGBA(surface, er, eg, eb, ea);
 				}
 			}
 		}
@@ -562,10 +578,10 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 static SDL_Surface* create_kb_button_surface()
 {
 	const int sz = BUTTON_TEX_SIZE;
-	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
+	SDL_Surface* surface = SDL_CreateSurface(sz, sz, SDL_PIXELFORMAT_ABGR8888);
 	if (!surface) return nullptr;
 
-	SDL_FillRect(surface, nullptr, 0);
+	SDL_FillSurfaceRect(surface, nullptr, 0);
 
 	int cx = sz / 2;
 	int cy = sz / 2;
@@ -576,8 +592,8 @@ static SDL_Surface* create_kb_button_surface()
 	fill_circle(surface, cx, cy, r, housing);
 
 	// Outer ring (bezel)
-	Color bezel = { static_cast<Uint8>(BTNKB_OUTER.r / 2), static_cast<Uint8>(BTNKB_OUTER.g / 2),
-		static_cast<Uint8>(BTNKB_OUTER.b / 2), 255 };
+	Color bezel = { static_cast<uint8_t>(BTNKB_OUTER.r / 2), static_cast<uint8_t>(BTNKB_OUTER.g / 2),
+		static_cast<uint8_t>(BTNKB_OUTER.b / 2), 255 };
 	fill_circle(surface, cx, cy, r - 3, bezel);
 
 	// Main button surface with gradient
@@ -827,7 +843,7 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	btnkb_surface = create_kb_button_surface();
 
 #ifndef USE_OPENGL
-	// Create SDL textures from surfaces (only when using SDL2 renderer)
+	// Create SDL textures from surfaces (only when using SDL renderer)
 	if (renderer) {
 		if (stick_base_surface) {
 			stick_base_tex = SDL_CreateTextureFromSurface(renderer, stick_base_surface);
@@ -883,11 +899,11 @@ void on_screen_joystick_quit()
 	if (btn2_tex) { SDL_DestroyTexture(btn2_tex); btn2_tex = nullptr; }
 	if (btnkb_tex) { SDL_DestroyTexture(btnkb_tex); btnkb_tex = nullptr; }
 
-	if (stick_base_surface) { SDL_FreeSurface(stick_base_surface); stick_base_surface = nullptr; }
-	if (knob_surface) { SDL_FreeSurface(knob_surface); knob_surface = nullptr; }
-	if (btn1_surface) { SDL_FreeSurface(btn1_surface); btn1_surface = nullptr; }
-	if (btn2_surface) { SDL_FreeSurface(btn2_surface); btn2_surface = nullptr; }
-	if (btnkb_surface) { SDL_FreeSurface(btnkb_surface); btnkb_surface = nullptr; }
+	if (stick_base_surface) { SDL_DestroySurface(stick_base_surface); stick_base_surface = nullptr; }
+	if (knob_surface) { SDL_DestroySurface(knob_surface); knob_surface = nullptr; }
+	if (btn1_surface) { SDL_DestroySurface(btn1_surface); btn1_surface = nullptr; }
+	if (btn2_surface) { SDL_DestroySurface(btn2_surface); btn2_surface = nullptr; }
+	if (btnkb_surface) { SDL_DestroySurface(btnkb_surface); btnkb_surface = nullptr; }
 
 	knob_offset_x = 0.0f;
 	knob_offset_y = 0.0f;
@@ -1042,7 +1058,7 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 	// Auto-recalculate layout when screen geometry changes
 	{
 		int sw = 0, sh = 0;
-		SDL_GetRendererOutputSize(renderer, &sw, &sh);
+		SDL_GetCurrentRenderOutputSize(renderer, &sw, &sh);
 		const auto& rq = g_renderer->render_quad;
 		if (sw > 0 && sh > 0 && rq.w > 0 && rq.h > 0) {
 			if (sw != screen_w || sh != screen_h ||
@@ -1057,10 +1073,10 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 
 	// Joystick base plate
 	{
-		Uint8 alpha = knob_active ? ALPHA_PRESSED : ALPHA_NORMAL;
+		uint8_t alpha = knob_active ? ALPHA_PRESSED : ALPHA_NORMAL;
 		SDL_SetTextureAlphaMod(stick_base_tex, alpha);
 		SDL_SetTextureColorMod(stick_base_tex, 255, 255, 255);
-		SDL_RenderCopy(renderer, stick_base_tex, nullptr, &dpad_rect);
+		{ SDL_FRect fr = rect_to_frect(&dpad_rect); SDL_RenderTexture(renderer, stick_base_tex, nullptr, &fr); }
 	}
 
 	// Joystick knob (ball-top) - rendered at offset position
@@ -1076,50 +1092,50 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 			shadow_rect.h += 2;
 			SDL_SetTextureAlphaMod(knob_tex, 60);
 			SDL_SetTextureColorMod(knob_tex, 0, 0, 0);
-			SDL_RenderCopy(renderer, knob_tex, nullptr, &shadow_rect);
+			{ SDL_FRect fr = rect_to_frect(&shadow_rect); SDL_RenderTexture(renderer, knob_tex, nullptr, &fr); }
 		}
 
 		// The knob itself
-		Uint8 knob_alpha = knob_active ? 240 : ALPHA_NORMAL;
+		uint8_t knob_alpha = knob_active ? 240 : ALPHA_NORMAL;
 		SDL_SetTextureAlphaMod(knob_tex, knob_alpha);
 		SDL_SetTextureColorMod(knob_tex, 255, 255, 255);
-		SDL_RenderCopy(renderer, knob_tex, nullptr, &knob_rect);
+		{ SDL_FRect fr = rect_to_frect(&knob_rect); SDL_RenderTexture(renderer, knob_tex, nullptr, &fr); }
 	}
 
 	// Button 1 (red / fire)
 	{
-		Uint8 alpha = joy_fire1 ? ALPHA_PRESSED : ALPHA_NORMAL;
+		uint8_t alpha = joy_fire1 ? ALPHA_PRESSED : ALPHA_NORMAL;
 		SDL_SetTextureAlphaMod(btn1_tex, alpha);
 		if (joy_fire1) {
 			SDL_SetTextureColorMod(btn1_tex, 255, 200, 200);
 		} else {
 			SDL_SetTextureColorMod(btn1_tex, 255, 255, 255);
 		}
-		SDL_RenderCopy(renderer, btn1_tex, nullptr, &btn1_rect);
+		{ SDL_FRect fr = rect_to_frect(&btn1_rect); SDL_RenderTexture(renderer, btn1_tex, nullptr, &fr); }
 	}
 
 	// Button 2 (blue / secondary fire)
 	{
-		Uint8 alpha = joy_fire2 ? ALPHA_PRESSED : ALPHA_NORMAL;
+		uint8_t alpha = joy_fire2 ? ALPHA_PRESSED : ALPHA_NORMAL;
 		SDL_SetTextureAlphaMod(btn2_tex, alpha);
 		if (joy_fire2) {
 			SDL_SetTextureColorMod(btn2_tex, 200, 200, 255);
 		} else {
 			SDL_SetTextureColorMod(btn2_tex, 255, 255, 255);
 		}
-		SDL_RenderCopy(renderer, btn2_tex, nullptr, &btn2_rect);
+		{ SDL_FRect fr = rect_to_frect(&btn2_rect); SDL_RenderTexture(renderer, btn2_tex, nullptr, &fr); }
 	}
 
 	// Keyboard button (green)
 	if (btnkb_tex) {
-		Uint8 alpha = joy_kb_pressed ? ALPHA_PRESSED : ALPHA_NORMAL;
+		uint8_t alpha = joy_kb_pressed ? ALPHA_PRESSED : ALPHA_NORMAL;
 		SDL_SetTextureAlphaMod(btnkb_tex, alpha);
 		if (joy_kb_pressed) {
 			SDL_SetTextureColorMod(btnkb_tex, 200, 255, 200);
 		} else {
 			SDL_SetTextureColorMod(btnkb_tex, 255, 255, 255);
 		}
-		SDL_RenderCopy(renderer, btnkb_tex, nullptr, &btnkb_rect);
+		{ SDL_FRect fr = rect_to_frect(&btnkb_rect); SDL_RenderTexture(renderer, btnkb_tex, nullptr, &fr); }
 	}
 }
 
@@ -1233,7 +1249,7 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w,
 	if (ctl == CTL_NONE) return false;
 
 	FingerTrack ft;
-	ft.id = event.tfinger.fingerId;
+	ft.id = event.tfinger.fingerID;
 	ft.control = ctl;
 	active_fingers.push_back(ft);
 
@@ -1265,11 +1281,11 @@ bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int /*window_w*
 {
 	if (!osj_enabled || !osj_initialized) return false;
 
-	FingerTrack* ft = find_finger(event.tfinger.fingerId);
+	FingerTrack* ft = find_finger(event.tfinger.fingerID);
 	if (!ft) return false;
 
 	ControlType ctl = ft->control;
-	remove_finger(event.tfinger.fingerId);
+	remove_finger(event.tfinger.fingerID);
 
 	switch (ctl) {
 	case CTL_DPAD:
@@ -1290,7 +1306,7 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_
 {
 	if (!osj_enabled || !osj_initialized) return false;
 
-	FingerTrack* ft = find_finger(event.tfinger.fingerId);
+	FingerTrack* ft = find_finger(event.tfinger.fingerID);
 	if (!ft) return false;
 
 	if (ft->control == CTL_DPAD) {

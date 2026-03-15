@@ -1,6 +1,6 @@
 app-id: com.blitterstudio.amiberry
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 command: amiberry
 rename-desktop-file: Amiberry.desktop
@@ -32,6 +32,40 @@ cleanup:
   - '*.a'
 
 modules:
+  - name: sdl3
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSDL_STATIC=OFF
+    sources:
+      - type: git
+        url: https://github.com/libsdl-org/SDL.git
+        tag: release-3.4.2
+        commit: 683181b47cfabd293e3ea409f838915b8297a4fd
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+      - '*.a'
+      - '*.la'
+
+  - name: sdl3-image
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSDL3IMAGE_INSTALL=ON
+    sources:
+      - type: git
+        url: https://github.com/libsdl-org/SDL_image.git
+        tag: release-3.4.0
+        commit: ad58ecfc27a1bd09e510ceff8bbbdb1094806476
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+      - '*.a'
+      - '*.la'
+
   - name: libpcap
     buildsystem: autotools
     sources:
@@ -63,21 +97,28 @@ modules:
     sources:
       - type: git
         url: https://github.com/sigrokproject/libserialport
-        tag: libserialport-0.1.1
-        commit: 348a6d353af8ac142f68fbf9fe0f4d070448d945
+        tag: libserialport-0.1.2
+        commit: 869c567eeaae4a0ff12e114652b750e18a881f49
+    cleanup:
+      - /include
+      - '*.la'
+      - '*.a'
 
   - name: portmidi
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
     sources:
-      - type: archive
-        url: https://github.com/PortMidi/portmidi/archive/refs/tags/v2.0.7.tar.gz
-        sha256: 43fa65b4ed7ebaa68b0028a538ba8b2ca4dc9b86a7e22ec48842070e010f823f
-        x-checker-data:
-          type: anitya
-          project-id: 3729
-          url-template: https://github.com/PortMidi/portmidi/archive/refs/tags/v$version.tar.gz
+      - type: git
+        url: https://github.com/PortMidi/portmidi.git
+        tag: v2.0.8
+        commit: 101dac9455e2718512c94e24cbcae6a6f34b908b
+    cleanup:
+      - /lib/cmake
+      - /lib/pkgconfig
+      - /include
+      - '*.a'
+      - '*.la'
 
   - name: enet
     sources:

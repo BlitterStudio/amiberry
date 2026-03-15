@@ -54,7 +54,7 @@
 #include "newcpu.h"
 #include "comptbl_arm.h"
 #include "compemu_arm.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 /* ARM64 JIT is PIE-compatible: it uses register-indirect addressing
  * (R_MEMSTART/R15) rather than PC-relative globals, so code placement

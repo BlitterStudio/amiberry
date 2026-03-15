@@ -1,4 +1,5 @@
 #include "sysdeps.h"
+#include <SDL3/SDL_main.h>
 
 int amiberry_main(int argc, char* argv[]);
 

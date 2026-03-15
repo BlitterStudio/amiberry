@@ -339,7 +339,8 @@ struct DSAHI {
 	evt_t evttime;
 	uae_u32 signalchannelmask;
 
-	SDL_AudioDeviceID al_dev, al_recorddev;
+	ALCdevice* al_dev;
+	ALCdevice* al_recorddev;
 	ALCcontext* al_ctx;
 	int al_bufferformat;
 	uae_u8* tmpbuffer;
@@ -552,7 +553,7 @@ static void ds_free(struct DSAHI* dsahip)
 	alcMakeContextCurrent(NULL);
 	alcDestroyContext(dsahip->al_ctx);
 	dsahip->al_ctx = 0;
-	SDL_CloseAudioDevice(dsahip->al_dev);
+	alcCloseDevice(dsahip->al_dev);
 	dsahip->al_dev = 0;
 	if (ahi_debug && ahi_active)
 		write_log(_T("AHI: OpenAL freed\n"));
@@ -562,7 +563,7 @@ static void ds_free(struct DSAHI* dsahip)
 static void ds_free_record(struct DSAHI* dsahip)
 {
 	if (dsahip->al_recorddev)
-		SDL_CloseAudioDevice(dsahip->al_recorddev);
+		alcCloseDevice(dsahip->al_recorddev);
 	dsahip->al_recorddev = NULL;
 }
 

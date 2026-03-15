@@ -29,6 +29,10 @@ if (USE_OPENGL)
     endif()
 endif ()
 
+# SDL3
+target_compile_definitions(${PROJECT_NAME} PRIVATE USE_SDL3)
+message(STATUS "Using SDL3")
+
 if(ANDROID)
     include(FetchContent)
 
@@ -43,16 +47,16 @@ if(ANDROID)
     # Note: Desktop builds use system packages (see non-ANDROID branch below).
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 
-    # SDL2 / SDL2_image
+    # SDL3 / SDL3_image (built from source on Android)
     FetchContent_Declare(
-        sdl2
+        sdl3
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-        GIT_TAG        release-2.30.10
+        GIT_TAG        release-3.2.8
     )
     FetchContent_Declare(
-        sdl2_image
+        sdl3_image
         GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-        GIT_TAG        release-2.8.2
+        GIT_TAG        release-3.2.4
     )
 
     # Zstd
@@ -122,11 +126,11 @@ if(ANDROID)
         GIT_TAG        v3.11.3
     )
 
-    # Materialize deps (order matters a bit: SDL2 first for *_image)
+    # Materialize deps (order matters: SDL first for *_image)
     if(USE_MPG123)
-        FetchContent_MakeAvailable(sdl2 sdl2_image flac mpg123 libpng zstd curl nlohmann_json)
+        FetchContent_MakeAvailable(sdl3 sdl3_image flac mpg123 libpng zstd curl nlohmann_json)
     else()
-        FetchContent_MakeAvailable(sdl2 sdl2_image flac libpng zstd curl nlohmann_json)
+        FetchContent_MakeAvailable(sdl3 sdl3_image flac libpng zstd curl nlohmann_json)
     endif()
 
     # Make zstd discoverable for the rest of this file (later FindHelper/pkg-config logic).
@@ -145,15 +149,14 @@ if(ANDROID)
     endif()
 
     # --- Android link hygiene ------------------------------------------------
-    # Some upstream CMake projects can propagate a raw "SDL2" or "pthread"
+    # Some upstream CMake projects can propagate a raw "SDL3" or "pthread"
     # library name via INTERFACE properties.
-    # On Android this becomes "-lSDL2" / "-pthread" and breaks the link.
     function(amiberry_android_sanitize_target _tgt)
         if(NOT TARGET ${_tgt})
             return()
         endif()
 
-        # If this is an ALIAS target (e.g. SDL2::SDL2), resolve to the real target.
+        # If this is an ALIAS target (e.g. SDL3::SDL3), resolve to the real target.
         get_target_property(_aliased ${_tgt} ALIASED_TARGET)
         if(_aliased)
             set(_tgt ${_aliased})
@@ -164,8 +167,8 @@ if(ANDROID)
         foreach(_prop IN ITEMS INTERFACE_LINK_LIBRARIES INTERFACE_LINK_OPTIONS)
             get_target_property(_val ${_tgt} ${_prop})
             if(_val)
-                # Remove both "SDL2" (library name) and the common flag spellings.
-                list(REMOVE_ITEM _val SDL2 pthread -lSDL2 -pthread)
+                # Remove raw library names and common flag spellings.
+                list(REMOVE_ITEM _val SDL3 SDL3_image pthread -lSDL3 -lSDL3_image -pthread)
                 set_target_properties(${_tgt} PROPERTIES ${_prop} "${_val}")
             endif()
         endforeach()
@@ -173,62 +176,56 @@ if(ANDROID)
 
     # -------------------------------------------------------------------------
 
-    # We use Prefabs for SDL2, but might need to fetch others or rely on system
-    # However, on Android these are usually not present in the system image for NDK
-
     # ZLIB is usually available in NDK
     find_package(ZLIB REQUIRED)
 
-    # Link SDL2 + extensions
-    # Use real CMake targets to avoid generating raw '-lSDL2' flags on Android.
-    set(AMIBERRY_SDL2_TARGET "")
-    if(TARGET SDL2::SDL2)
-        set(AMIBERRY_SDL2_TARGET SDL2::SDL2)
-    elseif(TARGET SDL2-static)
-        set(AMIBERRY_SDL2_TARGET SDL2-static)
-    elseif(TARGET SDL2)
-        set(AMIBERRY_SDL2_TARGET SDL2)
+    # Link SDL3 + extensions
+    # Use real CMake targets to avoid generating raw '-lSDL3' flags on Android.
+    set(AMIBERRY_SDL_TARGET "")
+    if(TARGET SDL3::SDL3)
+        set(AMIBERRY_SDL_TARGET SDL3::SDL3)
+    elseif(TARGET SDL3-static)
+        set(AMIBERRY_SDL_TARGET SDL3-static)
+    elseif(TARGET SDL3)
+        set(AMIBERRY_SDL_TARGET SDL3)
+    endif()
+    if(AMIBERRY_SDL_TARGET STREQUAL "")
+        message(FATAL_ERROR "SDL3 target not found (expected SDL3::SDL3, SDL3-static, or SDL3)")
     endif()
 
-    if(AMIBERRY_SDL2_TARGET STREQUAL "")
-        message(FATAL_ERROR "SDL2 target not found (expected SDL2::SDL2, SDL2-static, or SDL2)")
+    # Resolve SDL3_image target (shared or static depending on BUILD_SHARED_LIBS)
+    set(AMIBERRY_SDL_IMAGE_TARGET "")
+    if(TARGET SDL3_image::SDL3_image)
+        set(AMIBERRY_SDL_IMAGE_TARGET SDL3_image::SDL3_image)
+    elseif(TARGET SDL3_image-static)
+        set(AMIBERRY_SDL_IMAGE_TARGET SDL3_image-static)
+    elseif(TARGET SDL3_image)
+        set(AMIBERRY_SDL_IMAGE_TARGET SDL3_image)
     endif()
 
-    # Ensure SDL extension libs depend on the chosen SDL2 target (not a raw "SDL2" name)
-    if(TARGET SDL2_image)
-        target_link_libraries(SDL2_image PRIVATE ${AMIBERRY_SDL2_TARGET})
-    endif()
-
-    # Compatibility shim: some deps still emit a raw "SDL2" item that becomes -lSDL2.
-    # Provide a CMake target named "SDL2" that aliases the real SDL2 target so the
-    # dependency resolves via target linking (no -lSDL2 lookup).
-    # Note: CMake doesn't allow ALIAS -> ALIAS, so resolve to the underlying target.
-    if(NOT TARGET SDL2)
-        set(_amiberry_sdl2_real_target "${AMIBERRY_SDL2_TARGET}")
-        if(TARGET ${_amiberry_sdl2_real_target})
-            get_target_property(_amiberry_sdl2_aliased ${_amiberry_sdl2_real_target} ALIASED_TARGET)
-            if(_amiberry_sdl2_aliased)
-                set(_amiberry_sdl2_real_target ${_amiberry_sdl2_aliased})
-            endif()
+    # Resolve alias to real target for modification (target_link_libraries, sanitize)
+    set(_SDL_IMAGE_REAL_TARGET ${AMIBERRY_SDL_IMAGE_TARGET})
+    if(NOT _SDL_IMAGE_REAL_TARGET STREQUAL "")
+        get_target_property(_aliased ${_SDL_IMAGE_REAL_TARGET} ALIASED_TARGET)
+        if(_aliased)
+            set(_SDL_IMAGE_REAL_TARGET ${_aliased})
         endif()
-        add_library(SDL2 ALIAS ${_amiberry_sdl2_real_target})
-        unset(_amiberry_sdl2_real_target)
-        unset(_amiberry_sdl2_aliased)
+        target_link_libraries(${_SDL_IMAGE_REAL_TARGET} PRIVATE ${AMIBERRY_SDL_TARGET})
     endif()
 
-    # Sanitize known SDL-related targets so they can't inject raw -lSDL2/-pthread
-    amiberry_android_sanitize_target(SDL2_image)
-    amiberry_android_sanitize_target(${AMIBERRY_SDL2_TARGET})
+    # Sanitize known SDL-related targets so they can't inject raw -lSDL3/-pthread
+    amiberry_android_sanitize_target(${AMIBERRY_SDL_IMAGE_TARGET})
+    amiberry_android_sanitize_target(${AMIBERRY_SDL_TARGET})
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL2_TARGET} SDL2_image)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL_TARGET} ${AMIBERRY_SDL_IMAGE_TARGET})
     target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl nlohmann_json::nlohmann_json)
 
-    # Defensive: ensure we never add raw SDL2/pthread libraries or flags on Android.
+    # Defensive: ensure we never add raw SDL3/pthread libraries or flags on Android.
     # Some transitive/legacy paths may still append plain library names or link options.
     foreach(_prop IN ITEMS LINK_LIBRARIES LINK_OPTIONS INTERFACE_LINK_LIBRARIES INTERFACE_LINK_OPTIONS)
         get_target_property(_amiberry_val ${PROJECT_NAME} ${_prop})
         if(_amiberry_val)
-            list(REMOVE_ITEM _amiberry_val SDL2 pthread -lSDL2 -pthread)
+            list(REMOVE_ITEM _amiberry_val SDL3 pthread -lSDL3 -lSDL3_image -pthread)
             set_target_properties(${PROJECT_NAME} PROPERTIES ${_prop} "${_amiberry_val}")
         endif()
     endforeach()
@@ -353,15 +350,8 @@ if(ANDROID)
     
     # --- Existing dependencies --- 
 else()
-    find_package(SDL2 CONFIG REQUIRED)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-        find_package(SDL2_image MODULE REQUIRED)
-    else()
-        find_package(SDL2_image CONFIG QUIET)
-        if(NOT SDL2_image_FOUND)
-            find_package(SDL2_image MODULE REQUIRED)
-        endif()
-    endif()
+    find_package(SDL3 CONFIG REQUIRED)
+    find_package(SDL3_image CONFIG REQUIRED)
     find_package(FLAC REQUIRED)
     find_package(mpg123 REQUIRED)
     find_package(PNG REQUIRED)
@@ -471,39 +461,42 @@ if (USE_UAENET_TAP)
     endif()
 endif()
 
-# SDL include dirs: FetchContent builds may not provide SDL2::SDL2.
-set(SDL2_INCLUDE_DIRS "")
-if(TARGET SDL2::SDL2)
-    get_target_property(SDL2_INCLUDE_DIRS SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
-elseif(TARGET SDL2-static)
-    get_target_property(SDL2_INCLUDE_DIRS SDL2-static INTERFACE_INCLUDE_DIRECTORIES)
-elseif(TARGET SDL2)
-    get_target_property(SDL2_INCLUDE_DIRS SDL2 INTERFACE_INCLUDE_DIRECTORIES)
+# SDL3 include dirs: FetchContent builds may not provide SDL3::SDL3.
+set(_SDL_INCLUDE_DIRS "")
+if(TARGET SDL3::SDL3)
+    get_target_property(_SDL_INCLUDE_DIRS SDL3::SDL3 INTERFACE_INCLUDE_DIRECTORIES)
+elseif(TARGET SDL3-static)
+    get_target_property(_SDL_INCLUDE_DIRS SDL3-static INTERFACE_INCLUDE_DIRECTORIES)
+elseif(TARGET SDL3)
+    get_target_property(_SDL_INCLUDE_DIRS SDL3 INTERFACE_INCLUDE_DIRECTORIES)
+endif()
+if(_SDL_INCLUDE_DIRS)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${_SDL_INCLUDE_DIRS})
 endif()
 
-if(SDL2_INCLUDE_DIRS)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR})
-else()
-    # Keep previous behavior if detection fails; include dirs are often already set by targets.
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_IMAGE_INCLUDE_DIR})
+# SDL3_image include dirs: FetchContent builds need the include path for <SDL3_image/SDL_image.h>.
+if(ANDROID AND DEFINED sdl3_image_SOURCE_DIR)
+    target_include_directories(${PROJECT_NAME} PRIVATE "${sdl3_image_SOURCE_DIR}/include")
 endif()
 
-if (USE_IMGUI)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
-endif()
+# ImGui is always enabled
+target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 
-# Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables
-if(TARGET SDL2_image::SDL2_image)
-    set(_SDL2_IMAGE_LIB SDL2_image::SDL2_image)
-elseif(SDL2_IMAGE_LIBRARIES)
-    set(_SDL2_IMAGE_LIB ${SDL2_IMAGE_LIBRARIES})
+# Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
+# On Android, SDL3_image is already linked via the FetchContent target (line ~187).
+if(ANDROID)
+    set(_SDL_IMAGE_LIB "")
+elseif(TARGET SDL3_image::SDL3_image)
+    set(_SDL_IMAGE_LIB SDL3_image::SDL3_image)
+elseif(SDL3_IMAGE_LIBRARIES)
+    set(_SDL_IMAGE_LIB ${SDL3_IMAGE_LIBRARIES})
 else()
-    set(_SDL2_IMAGE_LIB SDL2_image)
+    set(_SDL_IMAGE_LIB SDL3_image)
 endif()
 
 set(AMIBERRY_LIBS
@@ -512,7 +505,7 @@ set(AMIBERRY_LIBS
         CURL::libcurl
         nlohmann_json::nlohmann_json
         ${CMAKE_DL_LIBS}
-        ${_SDL2_IMAGE_LIB}
+        ${_SDL_IMAGE_LIB}
 )
 
 if (NOT ANDROID AND NOT WIN32)
@@ -556,20 +549,20 @@ if(ANDROID)
     list(APPEND AMIBERRY_LIBS log android)
 endif()
 
-# Do not add SDL2 as a raw library name; Android must link SDL via the CMake target above.
+# Do not add SDL as a raw library name; Android must link SDL via the CMake target above.
 if(ANDROID)
-    list(REMOVE_ITEM AMIBERRY_LIBS SDL2 pthread)
+    list(REMOVE_ITEM AMIBERRY_LIBS SDL3 pthread)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBS})
 
-if (USE_IMGUI)
-    if(USE_OPENGL)
-        set(IMGUI_USE_OPENGL ON CACHE BOOL "Build ImGui OpenGL3 backend" FORCE)
-    endif()
-    add_subdirectory(external/imgui)
-    target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
+# ImGui is always enabled
+if(USE_OPENGL)
+    set(IMGUI_USE_OPENGL ON CACHE BOOL "Build ImGui OpenGL3 backend" FORCE)
 endif()
+set(IMGUI_USE_SDL3 ON CACHE BOOL "Build ImGui SDL3 backend" FORCE)
+add_subdirectory(external/imgui)
+target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 
 # capsimage and floppybridge are plugins (not linked into amiberry) but are
 # copied by post-build commands. Explicit dependencies ensure they are built.
@@ -591,5 +584,3 @@ endif()
 if(AMIBERRY_PLATFORM_LIBS)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
 endif()
-
-

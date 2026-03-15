@@ -4,8 +4,13 @@
   "description": "Optimized Amiga emulator for various platforms",
   "homepage": "https://amiberry.com",
   "dependencies": [
-    "sdl2",
-    "sdl2-image",
+    "sdl3",
+    {
+      "name": "sdl3-image",
+      "features": [
+        "png"
+      ]
+    },
     "libflac",
     "mpg123",
     "libpng",

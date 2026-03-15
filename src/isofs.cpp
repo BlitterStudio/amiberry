@@ -10,6 +10,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include <cstddef>
+
 #include "options.h"
 #include "blkdev.h"
 #include "isofs_api.h"

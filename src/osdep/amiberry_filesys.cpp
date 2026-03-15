@@ -24,7 +24,7 @@
 #if !defined(_WIN32) || defined(LIBRETRO)
 #include <iconv.h>
 #else
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #define iconv_t SDL_iconv_t
 #define iconv_open SDL_iconv_open
 #define iconv_close SDL_iconv_close
@@ -129,7 +129,7 @@ static inline int utimes(const char* path, const struct timeval tv[2])
 #endif
 
 #ifdef __ANDROID__
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #define iconv_t SDL_iconv_t
 #define iconv_open SDL_iconv_open
 #define iconv_close SDL_iconv_close
@@ -398,7 +398,7 @@ std::string CFStringCopyUTF8String(CFStringRef aString) {
 		return std::string(currentpath);
 	}
 #elif defined(__ANDROID__)
-    const char *path = SDL_AndroidGetExternalStoragePath();
+    const char *path = SDL_GetAndroidExternalStoragePath();
     if (path) {
         std::string result(path);
         result += "/";
@@ -450,7 +450,7 @@ std::string prefix_with_data_path(const std::string& filename)
 	filePath = CFStringCopyUTF8String(path);
 	return filePath;
 #elif defined(__ANDROID__)
-    const char *path = SDL_AndroidGetExternalStoragePath();
+    const char *path = SDL_GetAndroidExternalStoragePath();
     if (path) {
         std::string result(path);
         result += "/data/";

@@ -35,9 +35,9 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 			did->axismappings[a] = a;
 			did->axissort[a] = a;
 			did->axisname[a] = std::string("Axis ").append(std::to_string(a));
-			if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
+			if (a == SDL_GAMEPAD_AXIS_LEFTX || a == SDL_GAMEPAD_AXIS_RIGHTX)
 				did->axistype[a] = AXISTYPE_POV_X;
-			else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
+			else if (a == SDL_GAMEPAD_AXIS_LEFTY || a == SDL_GAMEPAD_AXIS_RIGHTY)
 				did->axistype[a] = AXISTYPE_POV_Y;
 			else
 				did->axistype[a] = AXISTYPE_NORMAL;

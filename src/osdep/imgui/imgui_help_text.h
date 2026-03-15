@@ -5,7 +5,7 @@
 
 static const char* help_text_about =
 	"This panel contains information about the version of Amiberry, when it was changed,\n"
-	"which version of SDL2 it was compiled against and currently using.\n"
+	"which version of SDL3 it was compiled against and currently using.\n"
 	"\n"
 	"Furthermore, you can also find the GPLv3 license notice here, and if you scroll down\n"
 	"all the credits to the people behind the development of this emulator as well.\n"
@@ -63,7 +63,7 @@ static const char* help_text_paths =
 	"\n"
 	"The \"Update Controllers DB\" button will attempt to download the latest version of\n"
 	"the bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\n"
-	"The file contains the \"official\" mappings for recognized controllers by SDL2 itself.\n"
+	"The file contains the \"official\" mappings for recognized controllers by SDL3 itself.\n"
 	"Please note that this is separate from the user-configurable gamecontrollerdb_user.txt\n"
 	"file, which is contained in the Controllers path. That file is never overwritten, and\n"
 	"it will be loaded after the official one, so any entries contained there will take a\n"
@@ -83,7 +83,7 @@ static const char* help_text_paths =
 	"  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n"
 	"  file, which contains the default settings the emulator uses when it starts up. This\n"
 	"  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n"
-	"  community-maintained mappings for various controllers that SDL2 recognizes.\n"
+	"  community-maintained mappings for various controllers that SDL3 recognizes.\n"
 	"\n"
 	"- NVRAM files: the location where CDTV/CD32 modes will store their NVRAM files.\n"
 	"\n"
@@ -345,7 +345,7 @@ static const char* help_text_rtg =
 	"     cursor as the Amiga cursor in RTG modes, if supported. Please\n"
 	"     note that some systems do not support this, and you will only\n"
 	"     get a blank cursor instead, if this option is enabled.\n"
-	"     Due to SDL2 limitations, this currently only works well when\n"
+	"     Due to SDL limitations, this currently only works well when\n"
 	"     the \"Virtual Mouse driver\" option from the Input panel, is\n"
 	"     enabled as well.\n"
 	"\n"
@@ -852,4 +852,18 @@ static const char* help_text_whdload =
 	"file alone - you must first load the .lha file itself, change any\n"
 	"settings, and then save the .uae config file.\n";
 
-
+static const char* help_text_update =
+	"Check for and install Amiberry updates.\n"
+	"\n"
+	"Check for updates: Enable or disable automatic update checks on startup.\n"
+	"\n"
+	"Update channel:\n"
+	"  Stable - Only released versions.\n"
+	"  Preview - Includes pre-release versions (may contain bugs).\n"
+	"\n"
+	"Update method (determined by your installation type):\n"
+	"  Self-update - Amiberry can download and apply updates directly.\n"
+	"  Notify only - You will be notified, but must update manually.\n"
+	"  Disabled - Updates are managed externally (Flatpak, Play Store, etc.).\n"
+	"\n"
+	"Use 'Check Now' to manually check for the latest version.\n";

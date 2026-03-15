@@ -421,11 +421,11 @@ void map_from_retroarch(controller_mapping& mapping, const std::string& control_
 	}
 
 	// If axes are not found, try alternative keys
-	if (mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] == -1)
-		mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] = find_retroarch(ra_player_input("input_right_axis", player), control_config);
+	if (mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] == -1)
+		mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] = find_retroarch(ra_player_input("input_right_axis", player), control_config);
 
-	if (mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] == -1)
-		mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] = find_retroarch(ra_player_input("input_down_axis", player), control_config);
+	if (mapping.axis[SDL_GAMEPAD_AXIS_LEFTY] == -1)
+		mapping.axis[SDL_GAMEPAD_AXIS_LEFTY] = find_retroarch(ra_player_input("input_down_axis", player), control_config);
 
 	// hats
 	mapping.number_of_hats = find_retroarch(ra_player_input("count_hats", player), control_config);

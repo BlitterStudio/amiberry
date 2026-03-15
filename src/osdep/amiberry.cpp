@@ -69,7 +69,7 @@
 #include "vkbd/vkbd.h"
 #include "macos_bookmarks.h"
 #include <mutex>
-#if !defined(LIBRETRO)
+#ifndef LIBRETRO
 #include <curl/curl.h>
 #endif
 
@@ -109,7 +109,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 extern int run_jit_selftest_cli(void);
 extern int console_logging;
 
-static SDL_threadID mainthreadid;
+static SDL_ThreadID mainthreadid;
 static int logging_started;
 int log_scsi;
 int log_net;
@@ -140,8 +140,8 @@ int mouseactive;
 int minimized;
 int monitor_off;
 
-static SDL_cond* cpu_wakeup_event;
-static SDL_mutex* cpu_wakeup_mutex;
+static SDL_Condition* cpu_wakeup_event;
+static SDL_Mutex* cpu_wakeup_mutex;
 static volatile bool cpu_wakeup_event_triggered;
 
 int quickstart_model = 0;
@@ -156,7 +156,7 @@ whdload_options whdload_prefs = {};
 struct amiberry_options amiberry_options = {};
 amiberry_gui_theme gui_theme = {};
 amiberry_hotkey enter_gui_key;
-SDL_GameControllerButton enter_gui_button;
+SDL_GamepadButton enter_gui_button;
 amiberry_hotkey quit_key;
 amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
@@ -164,23 +164,23 @@ amiberry_hotkey minimize_key;
 amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
 amiberry_hotkey vkbd_key;
-SDL_GameControllerButton vkbd_button;
+SDL_GamepadButton vkbd_button;
 
 bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
 bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
-void cap_fps(Uint64 start)
+void cap_fps(uint64_t start)
 {
 	const auto end = SDL_GetPerformanceCounter();
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
 
-	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
+	const int refresh_rate = std::clamp(static_cast<int>(sdl_mode.refresh_rate), 50, 60);
 	const float frame_time = 1000.0f / static_cast<float>(refresh_rate);
 	const float delay_time = frame_time - elapsed_ms;
 
 	if (delay_time > 0.0f)
-		SDL_Delay(static_cast<Uint32>(delay_time));
+		SDL_Delay(static_cast<uint32_t>(delay_time));
 }
 
 std::string get_version_string()
@@ -193,16 +193,15 @@ std::string get_copyright_notice()
 	return COPYRIGHT;
 }
 
-std::string get_sdl2_version_string()
+std::string get_sdl_version_string()
 {
-	SDL_version compiled;
-	SDL_version linked;
-	SDL_VERSION(&compiled);
-	SDL_GetVersion(&linked);
-	std::ostringstream sdl_compiled;
-	sdl_compiled << "Compiled against SDL2 v" << static_cast<int>(compiled.major) << "." << static_cast<int>(compiled.minor) << "." << static_cast<int>(compiled.patch);
-	sdl_compiled << ", Linked against SDL2 v" << static_cast<int>(linked.major) << "." << static_cast<int>(linked.minor) << "." << static_cast<int>(linked.patch);
-	return sdl_compiled.str();
+	const int version = SDL_GetVersion();
+	const int major = SDL_VERSIONNUM_MAJOR(version);
+	const int minor = SDL_VERSIONNUM_MINOR(version);
+	const int micro = SDL_VERSIONNUM_MICRO(version);
+	std::ostringstream sdl_version;
+	sdl_version << "SDL " << major << "." << minor << "." << micro;
+	return sdl_version.str();
 }
 
 std::vector<int> parse_color_string(const std::string& input)
@@ -234,8 +233,8 @@ amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 		{"RGUI", [](hotkey_modifiers& m) { m.rgui = true; }}
 	};
 
-	static const std::unordered_map<std::string, const char*> sdl2_name_map = {
-		// Modifier keys (ImGui short names → SDL2 names)
+	static const std::unordered_map<std::string, const char*> sdl_key_name_map = {
+		// Modifier keys (ImGui short names → SDL names)
 		{"LCtrl", "Left Ctrl"},
 		{"RCtrl", "Right Ctrl"},
 		{"LAlt", "Left Alt"},
@@ -244,7 +243,7 @@ amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 		{"RShift", "Right Shift"},
 		{"LGUI", "Left GUI"},
 		{"RGUI", "Right GUI"},
-		// ImGui full names → SDL2 names (from ImGui::GetKeyName)
+		// ImGui full names → SDL names (from ImGui::GetKeyName)
 		{"LeftCtrl", "Left Ctrl"},
 		{"RightCtrl", "Right Ctrl"},
 		{"LeftAlt", "Left Alt"},
@@ -298,12 +297,12 @@ amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 	// The remaining part is the key name
 	hotkey.key_name = config_option.substr(start);
 
-	// Use lookup table for SDL2 name mapping
-	const auto sdl2_it = sdl2_name_map.find(hotkey.key_name);
-	const char* sdl2_key_name = (sdl2_it != sdl2_name_map.end()) ? sdl2_it->second : hotkey.key_name.c_str();
+	// Use lookup table for SDL name mapping
+	const auto sdl_it = sdl_key_name_map.find(hotkey.key_name);
+	const char* sdl_key_name = (sdl_it != sdl_key_name_map.end()) ? sdl_it->second : hotkey.key_name.c_str();
 
-	hotkey.scancode = SDL_GetScancodeFromName(sdl2_key_name);
-	hotkey.button = SDL_GameControllerGetButtonFromString(hotkey.key_name.c_str());
+	hotkey.scancode = SDL_GetScancodeFromName(sdl_key_name);
+	hotkey.button = SDL_GetGamepadButtonFromString(hotkey.key_name.c_str());
 	
 	return hotkey;
 }
@@ -320,10 +319,10 @@ static void set_key_configs(const uae_prefs* p)
 	if (enter_gui_key.scancode == 0)
 		enter_gui_key.scancode = SDL_SCANCODE_F12;
 
-	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
-	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
-		enter_gui_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_open_gui_key);
-	if (enter_gui_button != SDL_CONTROLLER_BUTTON_INVALID)
+	enter_gui_button = SDL_GetGamepadButtonFromString(p->open_gui);
+	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID)
+		enter_gui_button = SDL_GetGamepadButtonFromString(amiberry_options.default_open_gui_key);
+	if (enter_gui_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (int port = 0; port < 2; port++)
 		{
@@ -367,10 +366,10 @@ static void set_key_configs(const uae_prefs* p)
 	else
 		vkbd_key = get_hotkey_from_config(amiberry_options.default_vkbd_toggle);
 
-	vkbd_button = SDL_GameControllerGetButtonFromString(p->vkbd_toggle);
-	if (vkbd_button == SDL_CONTROLLER_BUTTON_INVALID)
-		vkbd_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_vkbd_toggle);
-	if (vkbd_button != SDL_CONTROLLER_BUTTON_INVALID)
+	vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
+	if (vkbd_button == SDL_GAMEPAD_BUTTON_INVALID)
+		vkbd_button = SDL_GetGamepadButtonFromString(amiberry_options.default_vkbd_toggle);
+	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (int port = 0; port < 2; port++)
 		{
@@ -456,26 +455,23 @@ void set_last_active_config(const char* filename)
 	remove_file_extension(last_active_config);
 }
 
-int getdpiformonitor(int displayIndex)
+int getdpiformonitor(SDL_DisplayID displayID)
 {
-	float ddpi, hdpi, vdpi;
-	if (SDL_GetDisplayDPI(displayIndex, &ddpi, &hdpi, &vdpi) == 0) {
-		return static_cast<int>(vdpi);
+	float scale = SDL_GetDisplayContentScale(displayID);
+	if (scale > 0.0f) {
+		return static_cast<int>(96.0f * scale);
 	}
-	else {
-		// Fallback to a default DPI value if SDL_GetDisplayDPI fails
-		return 96; // Common default DPI value
-	}
+	return 96; // Common default DPI value
 }
 
 int getdpiforwindow(const int monid)
 {
-	float diagDPI = -1;
-	float horiDPI = -1;
-	float vertDPI = -1;
-
-	SDL_GetDisplayDPI(monid, &diagDPI, &horiDPI, &vertDPI);
-	return static_cast<int>(vertDPI);
+	SDL_DisplayID displayID = SDL_GetPrimaryDisplay();
+	if (AMonitors[monid].amiga_window) {
+		SDL_DisplayID winDisplay = SDL_GetDisplayForWindow(AMonitors[monid].amiga_window);
+		if (winDisplay) displayID = winDisplay;
+	}
+	return getdpiformonitor(displayID);
 }
 
 uae_s64 spincount;
@@ -564,7 +560,7 @@ fail:
 
 static int init_mmtimer()
 {
-	cpu_wakeup_event = SDL_CreateCond();
+	cpu_wakeup_event = SDL_CreateCondition();
 	cpu_wakeup_mutex = SDL_CreateMutex();
 	if (!cpu_wakeup_event || !cpu_wakeup_mutex) {
 		write_log(_T("Failed to create CPU wakeup event/mutex\n"));
@@ -577,7 +573,7 @@ void sleep_cpu_wakeup()
 {
 	if (!cpu_wakeup_event_triggered) {
 		cpu_wakeup_event_triggered = true;
-		SDL_CondSignal(cpu_wakeup_event);
+		SDL_SignalCondition(cpu_wakeup_event);
 	}
 }
 
@@ -590,13 +586,13 @@ static int sleep_millis2(int ms, const bool main)
 	if (ms < 0)
 		ms = -ms;
 	if (main) {
-		if (SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, 0) == 0) {
+		if (SDL_WaitConditionTimeout(cpu_wakeup_event, cpu_wakeup_mutex, 0)) {
 			return 0;
 		}
 		start = read_processor_time();
 
 		SDL_Delay(ms);
-		//SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
+		//SDL_WaitConditionTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
 		cpu_wakeup_event_triggered = false;
 	}
 	else {
@@ -768,13 +764,13 @@ void setpriority(const int prio)
 		switch (prio)
 		{
 		case 0:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+			SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_LOW);
 			break;
 		case 1:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
+			SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
 			break;
 		case 2:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+			SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 			break;
 		default:
 			break;
@@ -786,44 +782,29 @@ static void setcursorshape(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		SDL_ShowCursor(SDL_DISABLE);
+		SDL_HideCursor();
 	}
 	else if (!picasso_setwincursor(monid)) {
 		SDL_SetCursor(normalcursor);
-		SDL_ShowCursor(SDL_ENABLE);
+		SDL_ShowCursor();
 	}
 }
 
 void set_showcursor(const BOOL v)
 {
 	if (v) {
-		const int vv = SDL_ShowCursor(SDL_ENABLE);
-		if (vv > 1) {
-			SDL_ShowCursor(SDL_DISABLE);
-		}
+		SDL_ShowCursor();
 	}
 	else {
-		int max = 10;
-		while (max-- > 0) {
-			int vv = SDL_ShowCursor(SDL_DISABLE);
-			if (vv < 0) {
-				while (vv < -1) {
-					vv = SDL_ShowCursor(SDL_ENABLE);
-				}
-				break;
-			}
-		}
+		SDL_HideCursor();
 	}
 }
 
 void releasecapture(const AmigaMonitor* mon)
 {
-	// Ensure hint is "1" before releasing so that sdl2-compat
-	// (which gates keyboard ungrab on this hint) actually calls
-	// SDL_SetWindowKeyboardGrab(FALSE).
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
-	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
-	SDL_SetRelativeMouseMode(SDL_FALSE);
+	SDL_SetWindowMouseGrab(mon->amiga_window, false);
+	SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
+	SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
 }
@@ -862,7 +843,7 @@ void updatewinrect(AmigaMonitor* mon, const bool allowfullscreen)
 static bool iswindowfocus(const AmigaMonitor* mon)
 {
 	bool donotfocus = false;
-	const Uint32 flags = SDL_GetWindowFlags(mon->amiga_window);
+	const SDL_WindowFlags flags = SDL_GetWindowFlags(mon->amiga_window);
 
 	if (!(flags & SDL_WINDOW_INPUT_FOCUS)) {
 		donotfocus = true;
@@ -885,9 +866,8 @@ void target_inputdevice_unacquire(const bool full)
 	//tablet = NULL;
 	if (full) {
 		//rawinput_release();
-		// sdl2-compat: hint must be "1" for keyboard ungrab to take effect
-		SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
-		SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
+		SDL_SetWindowMouseGrab(mon->amiga_window, false);
+		SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
 	}
 }
 void target_inputdevice_acquire()
@@ -896,11 +876,8 @@ void target_inputdevice_acquire()
 	target_inputdevice_unacquire(false);
 	//tablet = open_tablet(mon->amiga_window);
 	//rawinput_alloc();
-	// sdl2-compat: hint must be "1" for keyboard ungrab to take effect
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
-	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, currprefs.alt_tab_release ? "0" : "1");
-	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+	SDL_SetWindowMouseGrab(mon->amiga_window, true);
+	SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 }
 
 static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause)
@@ -924,7 +901,7 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 			return;
 	}
 	if (active) {
-		if (!isrp && !(SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN))
+		if (!isrp && (SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_HIDDEN))
 			return;
 	}
 	
@@ -975,16 +952,16 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
+			SDL_SetWindowMouseGrab(mon->amiga_window, true);
 			// Skip keyboard grab when alt_tab_release is on so the
 			// compositor handles Alt-Tab; focus-loss tears down capture
 			// safely after pointer focus has already moved (see #1829).
-			SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, currprefs.alt_tab_release ? "0" : "1");
-			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
-			// SDL2 hides the cursor when Relative mode is enabled
+			SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
+			// SDL hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
 			// unless it's configured to use Virtual Mouse (absolute movement).
 			if (!currprefs.input_tablet)
-				SDL_SetRelativeMouseMode(SDL_TRUE);
+				SDL_SetWindowRelativeMouseMode(mon->amiga_window, true);
 			
 			updatewinrect(mon, false);
 			mon_cursorclipped = mon->monitor_id + 1;
@@ -1262,7 +1239,7 @@ static int is_in_media_queue(const TCHAR* drvname)
 
 static void start_media_insert_timer();
 
-//Uint32 timer_callbackfunc(Uint32 interval, void* param)
+//uint32_t timer_callbackfunc(uint32_t interval, void* param)
 //{
 //	if ((*(int*)&param) == 2) {
 //		bool restart = false;
@@ -1574,7 +1551,7 @@ static void getsizemove(AmigaMonitor* mon)
 	mon->ratio_height = mon->amigawin_rect.h;
 	mon->ratio_adjust_x = mon->ratio_width - mon->mainwin_rect.w;
 	mon->ratio_adjust_y = mon->ratio_height - mon->mainwin_rect.h;
-	const Uint8* state = SDL_GetKeyboardState(nullptr);
+	const bool* state = SDL_GetKeyboardState(nullptr);
 	mon->ratio_sizing = state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
 }
 
@@ -1702,8 +1679,9 @@ static void handle_leave_event()
 	// SDL3 < 3.4.2 Wayland crash workaround: turn off relative mouse mode
 	// when the pointer leaves, so subsequent pump cycles don't hit a NULL
 	// window in pointer_dispatch_relative_motion. See SDL fab42a14, #1829.
-	if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-		SDL_SetRelativeMouseMode(SDL_FALSE);
+	const AmigaMonitor* mon = &AMonitors[0];
+	if (mon->amiga_window && SDL_GetWindowRelativeMouseMode(mon->amiga_window)) {
+		SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
 	}
 #endif
 }
@@ -1728,34 +1706,34 @@ static void handle_close_event()
 
 static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 {
-	switch (event.window.event)
+	switch (event.type)
 	{
-	case SDL_WINDOWEVENT_FOCUS_GAINED:
+	case SDL_EVENT_WINDOW_FOCUS_GAINED:
 		handle_focus_gained_event(mon);
 		break;
-	case SDL_WINDOWEVENT_MINIMIZED:
+	case SDL_EVENT_WINDOW_MINIMIZED:
 		handle_minimized_event(mon);
 		break;
-	case SDL_WINDOWEVENT_RESTORED:
+	case SDL_EVENT_WINDOW_RESTORED:
 		handle_restored_event(mon);
 		break;
-	case SDL_WINDOWEVENT_MOVED:
+	case SDL_EVENT_WINDOW_MOVED:
 		handle_moved_event(mon);
 		break;
-	case SDL_WINDOWEVENT_SIZE_CHANGED:
-	case SDL_WINDOWEVENT_RESIZED:
+	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+	case SDL_EVENT_WINDOW_RESIZED:
 		handle_resized_event(mon, event.window.data1, event.window.data2);
 		break;
-	case SDL_WINDOWEVENT_ENTER:
+	case SDL_EVENT_WINDOW_MOUSE_ENTER:
 		handle_enter_event();
 		break;
-	case SDL_WINDOWEVENT_LEAVE:
+	case SDL_EVENT_WINDOW_MOUSE_LEAVE:
 		handle_leave_event();
 		break;
-	case SDL_WINDOWEVENT_FOCUS_LOST:
+	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		handle_focus_lost_event(mon);
 		break;
-	case SDL_WINDOWEVENT_CLOSE:
+	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 		handle_close_event();
 		break;
 	default:
@@ -1770,20 +1748,28 @@ static void handle_quit_event()
 
 static void handle_clipboard_update_event()
 {
-	if (currprefs.clipboard_sharing && SDL_HasClipboardText() == SDL_TRUE)
+	if (currprefs.clipboard_sharing && SDL_HasClipboardText() == true)
 	{
-		auto* clipboard_host = SDL_GetClipboardText();
+		const auto* clipboard_host = SDL_GetClipboardText();
 		uae_clipboard_put_text(clipboard_host);
-		SDL_free(clipboard_host);
 	}
 }
 
-static void handle_joy_device_event(const int which, const bool removed)
+static void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 {
-	const didata* existing_did = &di_joystick[which];
-	if (existing_did->guid.empty() || removed)
+	bool known_device = false;
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id)
 	{
-		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
+		const didata* did = &di_joystick[id];
+		if (!did->guid.empty() && did->joystick_id == which)
+		{
+			known_device = true;
+			break;
+		}
+	}
+	if (!known_device || removed)
+	{
+		write_log("SDL Gamepad/Joystick added or removed, re-running import joysticks...\n");
 		if (inputdevice_devicechange(&currprefs))
 		{
 			import_joysticks();
@@ -1794,8 +1780,8 @@ static void handle_joy_device_event(const int which, const bool removed)
 
 static void handle_controller_button_event(const SDL_Event& event)
 {
-	const auto button = event.cbutton.button;
-	const auto state = event.cbutton.state == SDL_PRESSED;
+	const auto button = event.gbutton.button;
+	const auto state = event.gbutton.down;
 
 	if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
@@ -1818,7 +1804,7 @@ static void handle_controller_button_event(const SDL_Event& event)
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 			const didata* did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != event.caxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
+			if (did->name.empty() || did->joystick_id != event.gaxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
 
 			read_controller_button(id, button, state);
 			break;
@@ -1829,7 +1815,7 @@ static void handle_controller_button_event(const SDL_Event& event)
 static void handle_joy_button_event(const SDL_Event& event)
 {
 	const auto button = event.jbutton.button;
-	const auto state = event.jbutton.state == SDL_PRESSED;
+	const auto state = event.jbutton.down;
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
@@ -1861,13 +1847,13 @@ static void handle_joy_button_event(const SDL_Event& event)
 
 static void handle_controller_axis_motion_event(const SDL_Event& event)
 {
-	const auto axis = event.caxis.axis;
-	const auto value = event.caxis.value;
+	const auto axis = event.gaxis.axis;
+	const auto value = event.gaxis.value;
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != event.caxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
+		if (did->name.empty() || did->joystick_id != event.gaxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
 
 		read_controller_axis(id, axis, value);
 	}
@@ -1908,20 +1894,20 @@ static void handle_key_event(const SDL_Event& event)
 {
 	// Allow keyboard input if we have any focus level
 	const int focus_level = isfocus();
-	if (event.key.repeat != 0 || !focus_level)
+	if (event.key.repeat || !focus_level)
 		return;
 	
 	// Only apply the virtual mouse focus restriction in windowed mode.
 	// In fullscreen/full-window modes (including KMSDRM console), keyboard should work
-	// because console mode never receives SDL_WINDOWEVENT_ENTER, leaving mouseinside false.
+	// because console mode never receives SDL_EVENT_WINDOW_MOUSE_ENTER, leaving mouseinside false.
 	if (isfullscreen() == 0 && focus_level < 2 && 
 		currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
 		return;
 
-	int scancode = event.key.keysym.scancode;
-	const auto pressed = event.key.state;
+	int scancode = event.key.scancode;
+	const auto pressed = event.key.down;
 
-	if (event.key.repeat != 0 || !focus_level)
+	if (event.key.repeat || !focus_level)
 		return;
 
 #ifdef __ANDROID__
@@ -1974,25 +1960,25 @@ static void handle_finger_event(const SDL_Event& event)
 		return;
 
     // Simple single-finger tap for Left Click
-	if (event.tfinger.fingerId == 0)
+	if (event.tfinger.fingerID == 0)
 	{
-        if (event.tfinger.type == SDL_FINGERDOWN)
+        if (event.tfinger.type == SDL_EVENT_FINGER_DOWN)
         {
             setmousebuttonstate(0, 0, 1);
         }
-        else if (event.tfinger.type == SDL_FINGERUP)
+        else if (event.tfinger.type == SDL_EVENT_FINGER_UP)
         {
             setmousebuttonstate(0, 0, 0);
         }
 	}
     // 2nd finger tap for Right Click
-    else if (event.tfinger.fingerId == 1)
+    else if (event.tfinger.fingerID == 1)
     {
-        if (event.tfinger.type == SDL_FINGERDOWN)
+        if (event.tfinger.type == SDL_EVENT_FINGER_DOWN)
         {
             setmousebuttonstate(0, 1, 1);
         }
-        else if (event.tfinger.type == SDL_FINGERUP)
+        else if (event.tfinger.type == SDL_EVENT_FINGER_UP)
         {
             setmousebuttonstate(0, 1, 0);
         }
@@ -2002,7 +1988,7 @@ static void handle_finger_event(const SDL_Event& event)
 static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
 	const auto button = event.button.button;
-	const auto state = event.button.state == SDL_PRESSED;
+	const auto state = event.button.down;
 	const auto clicks = event.button.clicks;
 
 	if (button == SDL_BUTTON_LEFT && !mouseactive && (!mousehack_alive() || currprefs.input_tablet != TABLET_MOUSEHACK ||
@@ -2041,7 +2027,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 
 static void handle_finger_motion_event(const SDL_Event& event)
 {
-	if (isfocus() && event.tfinger.fingerId == 0)
+	if (isfocus() && event.tfinger.fingerID == 0)
 	{
         // Use relative movement for better control (Laptop touchpad style)
         // Scale normalized coords (0..1) to window pixels
@@ -2072,10 +2058,10 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 	if (isfocus() <= 0) return;
 
-	Sint32 x = event.motion.x;
-	Sint32 y = event.motion.y;
-	Sint32 xrel = event.motion.xrel;
-	Sint32 yrel = event.motion.yrel;
+	int32_t x = event.motion.x;
+	int32_t y = event.motion.y;
+	int32_t xrel = event.motion.xrel;
+	int32_t yrel = event.motion.yrel;
 
 	// HiDPI / Retina Scaling
 	// SDL mouse events report in "Screen Coordinates" (Points), while drawable size reports Pixels.
@@ -2087,13 +2073,13 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
 			float scale_x = (float)draw_w / (float)win_w;
-			x = (Sint32)(x * scale_x);
-			xrel = (Sint32)(xrel * scale_x);
+			x = (int32_t)(x * scale_x);
+			xrel = (int32_t)(xrel * scale_x);
 		}
 		if (win_h > 0 && draw_h > 0 && win_h != draw_h) {
 			float scale_y = (float)draw_h / (float)win_h;
-			y = (Sint32)(y * scale_y);
-			yrel = (Sint32)(yrel * scale_y);
+			y = (int32_t)(y * scale_y);
+			yrel = (int32_t)(yrel * scale_y);
 		}
 	}
 
@@ -2164,7 +2150,7 @@ std::string get_filename_extension(const TCHAR* filename);
 
 static void handle_drop_file_event(const SDL_Event& event)
 {
-	char* dropped_file = event.drop.file;
+	const char* dropped_file = event.drop.data;
 	const auto ext = get_filename_extension(dropped_file);
 
 	if (strcasecmp(ext.c_str(), ".uae") == 0)
@@ -2188,19 +2174,19 @@ static void handle_drop_file_event(const SDL_Event& event)
 	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
 	{
 		// CD image
-		cd_auto_prefs(&currprefs, dropped_file);
+		cd_auto_prefs(&currprefs, const_cast<char*>(dropped_file));
 		uae_restart(&currprefs, 0, nullptr);
 		gui_running = false;
 	}
-	SDL_free(dropped_file);
 }
 
 static void process_event(const SDL_Event& event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
-	// Handle window events
-	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
+	// Handle window events (SDL3: flat top-level events instead of nested SDL_WINDOWEVENT)
+	if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST
+		&& SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
 	{
 		handle_window_event(event, mon);
 	}
@@ -2209,62 +2195,62 @@ static void process_event(const SDL_Event& event)
 		// Handle other types of events
 		switch (event.type)
 		{
-		case SDL_QUIT:
+		case SDL_EVENT_QUIT:
 			handle_quit_event();
 			break;
 
-		case SDL_APP_WILLENTERBACKGROUND:
-		case SDL_APP_DIDENTERBACKGROUND:
+		case SDL_EVENT_WILL_ENTER_BACKGROUND:
+		case SDL_EVENT_DID_ENTER_BACKGROUND:
 			pause_sound();
 			pause_emulation = 1;
 			break;
 
-		case SDL_APP_WILLENTERFOREGROUND:
-		case SDL_APP_DIDENTERFOREGROUND:
+		case SDL_EVENT_WILL_ENTER_FOREGROUND:
+		case SDL_EVENT_DID_ENTER_FOREGROUND:
 			pause_emulation = 0;
 			resume_sound();
 			break;
 
-		case SDL_CLIPBOARDUPDATE:
+		case SDL_EVENT_CLIPBOARD_UPDATE:
 			handle_clipboard_update_event();
 			break;
 
-		case SDL_JOYDEVICEADDED:
+		case SDL_EVENT_JOYSTICK_ADDED:
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
-		case SDL_JOYDEVICEREMOVED:
+		case SDL_EVENT_JOYSTICK_REMOVED:
 			handle_joy_device_event(event.jdevice.which, true);
 			break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
-		case SDL_CONTROLLERBUTTONUP:
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+		case SDL_EVENT_GAMEPAD_BUTTON_UP:
 			handle_controller_button_event(event);
 			break;
 
-		case SDL_JOYBUTTONDOWN:
-		case SDL_JOYBUTTONUP:
+		case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
+		case SDL_EVENT_JOYSTICK_BUTTON_UP:
 			handle_joy_button_event(event);
 			break;
 
-		case SDL_CONTROLLERAXISMOTION:
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 			handle_controller_axis_motion_event(event);
 			break;
 
-		case SDL_JOYAXISMOTION:
+		case SDL_EVENT_JOYSTICK_AXIS_MOTION:
 			handle_joy_axis_motion_event(event);
 			break;
 
-		case SDL_JOYHATMOTION:
+		case SDL_EVENT_JOYSTICK_HAT_MOTION:
 			handle_joy_hat_motion_event(event);
 			break;
 
-		case SDL_KEYDOWN:
-		case SDL_KEYUP:
+		case SDL_EVENT_KEY_DOWN:
+		case SDL_EVENT_KEY_UP:
 			handle_key_event(event);
 			break;
 
-		case SDL_FINGERDOWN:
-		case SDL_FINGERUP:
+		case SDL_EVENT_FINGER_DOWN:
+		case SDL_EVENT_FINGER_UP:
 		{
 			// Let on-screen joystick consume the event first if applicable
 			int ww = 0, wh = 0;
@@ -2272,7 +2258,7 @@ static void process_event(const SDL_Event& event)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
 			bool consumed = false;
 			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0) {
-				if (event.type == SDL_FINGERDOWN)
+				if (event.type == SDL_EVENT_FINGER_DOWN)
 					consumed = on_screen_joystick_handle_finger_down(event, ww, wh);
 				else
 					consumed = on_screen_joystick_handle_finger_up(event, ww, wh);
@@ -2281,10 +2267,10 @@ static void process_event(const SDL_Event& event)
 			if (on_screen_joystick_keyboard_tapped()) {
 #ifdef __ANDROID__
 				// Toggle native Android soft keyboard
-				if (SDL_IsTextInputActive())
-					SDL_StopTextInput();
+				if (SDL_TextInputActive(mon->amiga_window))
+					SDL_StopTextInput(mon->amiga_window);
 				else
-					SDL_StartTextInput();
+					SDL_StartTextInput(mon->amiga_window);
 #else
 				// Toggle the virtual keyboard overlay on other platforms
 				if (vkbd_allowed(0))
@@ -2296,8 +2282,8 @@ static void process_event(const SDL_Event& event)
 			break;
 		}
 
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEBUTTONUP:
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		case SDL_EVENT_MOUSE_BUTTON_UP:
 			// Skip touch-synthesized mouse events when the on-screen joystick is active,
 			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
 			if (on_screen_joystick_is_enabled() && event.button.which == SDL_TOUCH_MOUSEID)
@@ -2305,7 +2291,7 @@ static void process_event(const SDL_Event& event)
 			handle_mouse_button_event(event, mon);
 			break;
 
-		case SDL_FINGERMOTION:
+		case SDL_EVENT_FINGER_MOTION:
 		{
 			int ww = 0, wh = 0;
 			if (mon->amiga_window)
@@ -2318,7 +2304,7 @@ static void process_event(const SDL_Event& event)
 			break;
 		}
 
-		case SDL_MOUSEMOTION:
+		case SDL_EVENT_MOUSE_MOTION:
 			// Skip touch-synthesized mouse events when the on-screen joystick is active,
 			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
 			if (on_screen_joystick_is_enabled() && event.motion.which == SDL_TOUCH_MOUSEID)
@@ -2326,11 +2312,11 @@ static void process_event(const SDL_Event& event)
 			handle_mouse_motion_event(event, mon);
 			break;
 
-		case SDL_MOUSEWHEEL:
+		case SDL_EVENT_MOUSE_WHEEL:
 			handle_mouse_wheel_event(event);
 			break;
 
-		case SDL_DROPFILE:
+		case SDL_EVENT_DROP_FILE:
 			handle_drop_file_event(event);
 			break;
 
@@ -2451,7 +2437,7 @@ void logging_init()
 		logging_started = 1;
 		first++;
 		write_log("%s Logfile\n\n", VersionStr);
-		write_log("%s\n", get_sdl2_version_string().c_str());
+		write_log("%s\n", get_sdl_version_string().c_str());
 		regstatus();
 	}
 }
@@ -4045,7 +4031,11 @@ void save_amiberry_settings()
 	write_bool_option("use_custom_bezel", amiberry_options.use_custom_bezel);
 	write_string_option("custom_bezel", amiberry_options.custom_bezel);
 
+	// Auto-update settings
+	write_int_option("update_check", amiberry_options.update_check);
 	write_int_option("update_channel", amiberry_options.update_channel);
+	write_string_option("skipped_version", amiberry_options.skipped_version);
+	write_string_option("last_update_check", amiberry_options.last_update_check);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -4251,7 +4241,10 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
 		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
 		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);
+		ret |= cfgfile_intval(option, value, "update_check", &amiberry_options.update_check, 1);
 		ret |= cfgfile_intval(option, value, "update_channel", &amiberry_options.update_channel, 1);
+		ret |= cfgfile_string(option, value, "skipped_version", amiberry_options.skipped_version, sizeof amiberry_options.skipped_version);
+		ret |= cfgfile_string(option, value, "last_update_check", amiberry_options.last_update_check, sizeof amiberry_options.last_update_check);
 	}
 	return ret;
 }
@@ -4360,7 +4353,7 @@ bool file_exists(const std::string& file)
 	return (fs::exists(f));
 }
 
-#if !defined(LIBRETRO)
+#ifndef LIBRETRO
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
 	auto* fp = static_cast<FILE*>(userdata);
@@ -4454,12 +4447,6 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 	return false;
 }
-#else
-bool download_file(const std::string&, const std::string&, bool)
-{
-	return false;
-}
-#endif
 
 void download_rtb(const std::string& filename)
 {
@@ -4472,6 +4459,17 @@ void download_rtb(const std::string& filename)
 		download_file(url, destination, false);
 	}
 }
+#else
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
+{
+	write_log("download_file: not available in libretro build\n");
+	return false;
+}
+
+void download_rtb(const std::string& filename)
+{
+}
+#endif
 
 // this is where the required assets are stored, like fonts, icons, etc.
 std::string get_data_directory(bool portable_mode)
@@ -4549,7 +4547,7 @@ std::string get_data_directory(bool portable_mode)
 std::string get_home_directory(const bool portable_mode)
 {
 #if defined(__ANDROID__)
-    const char* path = SDL_AndroidGetExternalStoragePath();
+    const char* path = SDL_GetAndroidExternalStoragePath();
     if (path) {
         std::string home(path);
         home += "/";
@@ -4688,7 +4686,7 @@ std::string get_config_directory(bool portable_mode)
 		return dir + "\\conf";
 	}
 #elif defined(__ANDROID__)
-	const char* path = SDL_AndroidGetExternalStoragePath();
+	const char* path = SDL_GetAndroidExternalStoragePath();
 	if (path) {
 		return std::string(path) + "/conf/";
 	}
@@ -5464,11 +5462,10 @@ static void initialize_ini()
 	}
 
 	if (!regexists(nullptr, _T("MainPosX")) || !regexists(nullptr, _T("GUIPosX"))) {
-		SDL_DisplayMode dm;
-		SDL_GetCurrentDisplayMode(0, &dm);
-		int x = dm.w;
-		int y = dm.h;
-		const int dpi = getdpiformonitor(0);
+		const SDL_DisplayMode* dm = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
+		int x = dm ? dm->w : 1920;
+		int y = dm ? dm->h : 1080;
+		const int dpi = getdpiformonitor(SDL_GetPrimaryDisplay());
 		x = (x - (GUI_WIDTH * dpi / 96)) / 2;
 		y = (y - (GUI_HEIGHT * dpi / 96)) / 2;
 		x = std::max(x, 10);
@@ -5520,7 +5517,7 @@ static void makeverstr(TCHAR* s)
 int amiberry_main(int argc, char* argv[])
 {
 #ifdef __ANDROID__
-	if (SDL_Init(0) < 0) {
+	if (!SDL_Init(0)) {
 		write_log("SDL_Init(0) failed: %s\n", SDL_GetError());
 	}
 #endif
@@ -5672,12 +5669,12 @@ int amiberry_main(int argc, char* argv[])
 	enumerate_sound_devices();
 	for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 		const int type = sound_devices[i]->type;
-		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
 	}
 	write_log(_T("Enumerating recording devices:\n"));
 	for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 		const int type = record_devices[i]->type;
-		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
 	}
 	write_log(_T("Enumeration done\n"));
 
@@ -6003,10 +6000,10 @@ std::vector<std::string> get_cd_drives()
 	// Cache results to avoid expensive system calls on every GUI frame.
 	// CD drives rarely change, so a 5-second refresh interval is sufficient.
 	static std::vector<std::string> cached_results;
-	static Uint32 last_query_time = 0;
-	constexpr Uint32 cache_interval_ms = 5000;
+	static uint64_t last_query_time = 0;
+	constexpr uint64_t cache_interval_ms = 5000;
 
-	Uint32 now = SDL_GetTicks();
+	uint64_t now = SDL_GetTicks();
 	if (last_query_time != 0 && (now - last_query_time) < cache_interval_ms) {
 		return cached_results;
 	}

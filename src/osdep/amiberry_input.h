@@ -1,6 +1,6 @@
 #pragma once
 #include "options.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #ifdef AMIBERRY
 #define MAX_MAPPINGS 128
@@ -18,8 +18,8 @@ enum
 };
 
 struct controller_mapping {
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button;
-	std::array<int, SDL_CONTROLLER_AXIS_MAX> axis;
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> button;
+	std::array<int, SDL_GAMEPAD_AXIS_COUNT> axis;
 
 	bool lstick_axis_y_invert{};
 	bool lstick_axis_x_invert{};
@@ -40,10 +40,10 @@ struct controller_mapping {
 
 	bool is_retroarch{};
 
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_none;
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_hotkey;
-	std::array<int, SDL_CONTROLLER_AXIS_MAX> amiberry_custom_axis_none;
-	std::array<int, SDL_CONTROLLER_AXIS_MAX> amiberry_custom_axis_hotkey;
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> amiberry_custom_none;
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> amiberry_custom_hotkey;
+	std::array<int, SDL_GAMEPAD_AXIS_COUNT> amiberry_custom_axis_none;
+	std::array<int, SDL_GAMEPAD_AXIS_COUNT> amiberry_custom_axis_hotkey;
 };
 
 struct didata {
@@ -55,7 +55,7 @@ struct didata {
 
 	std::string guid{};
 	bool is_controller{};
-	SDL_GameController* controller{};
+	SDL_Gamepad* controller{};
 	SDL_Joystick* joystick{};
 	SDL_JoystickID joystick_id{};
 	uae_s16 axles{};

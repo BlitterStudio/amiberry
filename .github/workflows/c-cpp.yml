@@ -329,27 +329,31 @@ jobs:
             runner: ubuntu-latest
             container: ubuntu:22.04
             artifact_name: amiberry-ubuntu-22.04-amd64
+            sdl_source: setup-sdl
             codename: jammy
           - name: 24.04-amd64
             runner: ubuntu-latest
             container: ubuntu:24.04
             artifact_name: amiberry-ubuntu-24.04-amd64
+            sdl_source: setup-sdl
             codename: noble
           - name: 25.10-amd64
             runner: ubuntu-latest
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-amd64
+            sdl_source: setup-sdl
             codename: plucky
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-arm64
+            sdl_source: apt
             codename: plucky
     steps:
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y sudo git
+          apt-get install -y sudo git gh
 
       - name: Check out repository code
         uses: actions/checkout@v5
@@ -377,9 +381,33 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build file zip libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev
+          sudo apt-get install -y build-essential cmake ninja-build file zip libflac-dev libmpeg2-4-dev libpng-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev
 
-      - name: make for Ubuntu ${{ matrix.name }}
+      - name: Install SDL3 and SDL3_image
+        if: matrix.sdl_source == 'setup-sdl'
+        id: sdl
+        uses: libsdl-org/setup-sdl@main
+        with:
+          install-linux-dependencies: true
+          version: 3.2.8
+          version-sdl-image: 3.2.4
+          pre-release: false
+
+      - name: Install SDL3 and SDL3_image from apt
+        if: matrix.sdl_source == 'apt'
+        run: sudo apt-get install -y libsdl3-dev libsdl3-image-dev
+
+      - name: make for Ubuntu ${{ matrix.name }} with setup-sdl
+        if: matrix.sdl_source == 'setup-sdl'
+        env:
+          CCACHE_DIR: ~/.ccache
+        run: |
+          export PATH="/usr/lib/ccache:$PATH"
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
+          cpack -G DEB --config build/CPackConfig.cmake
+
+      - name: make for Ubuntu ${{ matrix.name }} with apt SDL3
+        if: matrix.sdl_source == 'apt'
         env:
           CCACHE_DIR: ~/.ccache
         run: |
@@ -648,6 +676,11 @@ jobs:
             artifact_platform: win
             arch: x86_64
             artifact: amiberry_libretro.dll
+          - os: macos-latest
+            platform: osx
+            artifact_platform: macOS
+            arch: arm64
+            artifact: amiberry_libretro.dylib
     steps:
       - name: Check out amiberry
         uses: actions/checkout@v5

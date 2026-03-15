@@ -68,7 +68,7 @@ static void sub_deinterleave(const uae_u8* s, uae_u8* d)
 static void cdda_closewav(struct cda_play* ciw)
 {
 	if (ciw->cdda_wavehandle != NULL)
-		SDL_FreeWAV(ciw->cdda_wavehandle);
+		SDL_free(ciw->cdda_wavehandle);
 	ciw->cdda_wavehandle = NULL;
 }
 
@@ -77,10 +77,10 @@ static void cdda_closewav(struct cda_play* ciw)
 static int cdda_openwav(struct cda_play* ciw)
 {
 	SDL_AudioSpec wav;
-	Uint32 wavLength;
+	uint32_t wavLength;
 
 	auto mmr = SDL_LoadWAV("", &wav, &ciw->cdda_wavehandle, &wavLength);
-	if (mmr == nullptr) {
+	if (!mmr) {
 		write_log(_T("IOCTL CDDA: wave open failed\n"));
 		cdda_closewav(ciw);
 		return 0;

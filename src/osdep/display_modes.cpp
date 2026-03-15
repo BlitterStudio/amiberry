@@ -48,10 +48,9 @@ extern void target_calibrate_spin();
 #include "irenderer.h"
 extern std::unique_ptr<IRenderer> g_renderer;
 
-// SDL2_getrefreshrate is static in amiberry_gfx.cpp. We need it for
-// target_getcurrentvblankrate. We'll declare it as an extern here and
-// make it non-static in amiberry_gfx.cpp.
-extern float SDL2_getrefreshrate(int monid);
+// amiberry_getrefreshrate is defined in amiberry_gfx.cpp. We need it for
+// target_getcurrentvblankrate. We'll declare it as an extern here.
+extern float amiberry_getrefreshrate(int monid);
 
 // OffsetRect is static in amiberry_gfx.cpp. centerdstrect uses it.
 // We provide a local copy here.
@@ -299,22 +298,30 @@ int target_get_display_scanline(const int displayindex)
 static bool get_display_vblank_params(int displayindex, int* activeheightp, int* totalheightp, float* vblankp, float* hblankp)
 {
 	bool ret = false;
-	SDL_DisplayMode dm;
-
-	if (SDL_GetDesktopDisplayMode(displayindex, &dm) != 0)
+	int count = 0;
+	SDL_DisplayID* displays = SDL_GetDisplays(&count);
+	if (!displays || displayindex >= count)
+	{
+		write_log("SDL_GetDisplays failed or displayindex out of range\n");
+		SDL_free(displays);
+		return ret;
+	}
+	const SDL_DisplayMode* dm = SDL_GetDesktopDisplayMode(displays[displayindex]);
+	SDL_free(displays);
+	if (!dm)
 	{
 		write_log("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
 		return ret;
 	}
 
-	int active = dm.h;
+	int active = dm->h;
 	int total = active * 1125 / 1080; // Standard 1080p timing heuristic
 
 	if (activeheightp)
 		*activeheightp = active;
 	if (totalheightp)
 		*totalheightp = total;
-	const auto vblank = static_cast<float>(dm.refresh_rate);
+	const auto vblank = dm->refresh_rate;
 	// standard horizontal frequency is ~31.4 kHz for 60Hz 1080p
 	const auto hblank = static_cast<float>(vblank * total);
 	if (vblankp)
@@ -371,7 +378,7 @@ void display_param_init(struct AmigaMonitor* mon)
 
 	g_renderer->vsync_state().wait_vblank_display = getdisplay(&currprefs, mon->monitor_id);
 	if (g_renderer->vsync_state().wait_vblank_display) {
-		g_renderer->vsync_state().wait_vblank_display->HasAdapterData = true; // SDL2 displays always have adapter data
+		g_renderer->vsync_state().wait_vblank_display->HasAdapterData = true; // SDL displays always have adapter data
 	}
 	if (!g_renderer->vsync_state().wait_vblank_display || !g_renderer->vsync_state().wait_vblank_display->HasAdapterData) {
 		write_log(_T("Selected display mode does not have adapter data!\n"));
@@ -404,9 +411,9 @@ const TCHAR* target_get_display_name(const int num, const bool friendlyname)
 
 void centerdstrect(struct AmigaMonitor* mon, SDL_Rect* dr)
 {
-	if (!(mon->currentmode.flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)))
+	if (isfullscreen() == 0)
 		OffsetRect(dr, mon->amigawin_rect.x, mon->amigawin_rect.y);
-	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+	if (isfullscreen() < 0) {
 		if (mon->scalepicasso && mon->screen_is_picasso)
 			return;
 		if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
@@ -463,7 +470,7 @@ static void addmode(const struct MultiDisplay* md, const SDL_DisplayMode* dm, co
 		return;
 	}
 
-	// SDL2 reports 24-bit here, but we can ignore it and use 32-bit modes
+	// SDL3 reports 24-bit here, but we can ignore it and use 32-bit modes
 #ifndef AMIBERRY
 	if (d != 32) {
 		return;
@@ -602,34 +609,39 @@ void reenumeratemonitors()
 static bool enumeratedisplays2(bool selectall)
 {
 	struct MultiDisplay *md = Displays;
-	const int num_displays = SDL_GetNumVideoDisplays();
-	if (num_displays < 1) {
+	int num_displays = 0;
+	SDL_DisplayID* display_ids = SDL_GetDisplays(&num_displays);
+	if (!display_ids || num_displays < 1) {
 		write_log("No video displays found\n");
+		SDL_free(display_ids);
 		return false;
 	}
+
+	SDL_DisplayID primary_id = SDL_GetPrimaryDisplay();
 
 	for (int i = 0; i < num_displays; i++)
 	{
 		if (md - Displays >= MAX_DISPLAYS)
 			break;
-		const char *display_name = SDL_GetDisplayName(i);
+		const char *display_name = SDL_GetDisplayName(display_ids[i]);
 		if (!display_name)
 			continue;
 
-		if (SDL_GetDisplayBounds(i, &md->rect) != 0)
+		if (!SDL_GetDisplayBounds(display_ids[i], &md->rect))
 			continue;
-		SDL_GetDisplayBounds(i, &md->workrect);
+		SDL_GetDisplayBounds(display_ids[i], &md->workrect);
 
 		md->adaptername = my_strdup_trim(display_name);
 		md->adapterid = my_strdup(display_name);
 		md->adapterkey = my_strdup(display_name);
 		md->monitorname = my_strdup_trim(display_name);
 		md->monitorid = my_strdup(display_name);
-		md->primary = i == 0; // Assuming the first display is the primary display
+		md->primary = (display_ids[i] == primary_id);
 		md->monitor = i;
 
-		int num_modes = SDL_GetNumDisplayModes(i);
-		if (num_modes < 1)
+		int num_modes = 0;
+		const SDL_DisplayMode* const* modes = SDL_GetFullscreenDisplayModes(display_ids[i], &num_modes);
+		if (!modes || num_modes < 1)
 			continue;
 
 		md->DisplayModes = xcalloc(struct PicassoResolution, num_modes + 1);
@@ -637,18 +649,19 @@ static bool enumeratedisplays2(bool selectall)
 			continue;
 
 		for (int j = 0; j < num_modes; j++) {
-			SDL_DisplayMode mode;
-			if (SDL_GetDisplayMode(i, j, &mode) != 0)
+			const SDL_DisplayMode* mode = modes[j];
+			if (!mode)
 				continue;
 
-			md->DisplayModes[j].res.width = mode.w;
-			md->DisplayModes[j].res.height = mode.h;
-			md->DisplayModes[j].refresh[0] = mode.refresh_rate;
+			md->DisplayModes[j].res.width = mode->w;
+			md->DisplayModes[j].res.height = mode->h;
+			md->DisplayModes[j].refresh[0] = static_cast<int>(mode->refresh_rate);
 			md->DisplayModes[j].refresh[1] = 0;
 		}
 
 		md++;
 	}
+	SDL_free(display_ids);
 
 	if (md == Displays)
 		return false;
@@ -684,17 +697,17 @@ void sortdisplays()
 	struct MultiDisplay* md;
 	int i, idx;
 
-	SDL_DisplayMode desktop_dm;
-	if (SDL_GetDesktopDisplayMode(0, &desktop_dm) != 0) {
+	const SDL_DisplayMode* desktop_dm = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+	if (!desktop_dm) {
 		write_log("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
 		return;
 	}
 
-	const int w = desktop_dm.w;
-	const int h = desktop_dm.h;
+	const int w = desktop_dm->w;
+	const int h = desktop_dm->h;
 	const int wv = w;
 	const int hv = h;
-	const int b = SDL_BITSPERPIXEL(desktop_dm.format);
+	const int b = SDL_BITSPERPIXEL(desktop_dm->format);
 
 	deskhz = 0;
 
@@ -704,27 +717,37 @@ void sortdisplays()
 
 		write_log(_T("%s '%s' [%s]\n"), md->adaptername, md->adapterid, md->adapterkey);
 		write_log(_T("-: %s [%s]\n"), md->fullname, md->monitorid);
+		// SDL3: Use SDL_GetFullscreenDisplayModes to get all available modes
+		int num_disp_modes = 0;
+		SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
+		// Find the actual display ID for this monitor
+		{
+			int disp_count = 0;
+			SDL_DisplayID* disp_ids = SDL_GetDisplays(&disp_count);
+			if (disp_ids && md->monitor < disp_count) {
+				display_id = disp_ids[md->monitor];
+			}
+			SDL_free(disp_ids);
+		}
+		const SDL_DisplayMode* const* modes = SDL_GetFullscreenDisplayModes(display_id, &num_disp_modes);
 		for (int mode = 0; mode < 2; mode++)
 		{
-			SDL_DisplayMode dm;
-			const int num_disp_modes = SDL_GetNumDisplayModes(md->monitor);
 			for (idx = 0; idx < num_disp_modes; idx++)
 			{
-				if (SDL_GetDisplayMode(md->monitor, idx, &dm) != 0) {
-					write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-					return;
-				}
+				const SDL_DisplayMode* dm = modes[idx];
+				if (!dm)
+					continue;
 				int found = 0;
 				int idx2 = 0;
 				while (md->DisplayModes[idx2].inuse && !found)
 				{
 					struct PicassoResolution* pr = &md->DisplayModes[idx2];
-					if (dm.w == w && dm.h == h && SDL_BITSPERPIXEL(dm.format) == b) {
-						deskhz = std::max(dm.refresh_rate, deskhz);
+					if (dm->w == w && dm->h == h && SDL_BITSPERPIXEL(dm->format) == b) {
+						deskhz = std::max(static_cast<int>(dm->refresh_rate), deskhz);
 					}
-					if (pr->res.width == dm.w && pr->res.height == dm.h) {
+					if (pr->res.width == dm->w && pr->res.height == dm->h) {
 						for (i = 0; pr->refresh[i]; i++) {
-							if (pr->refresh[i] == dm.refresh_rate) {
+							if (pr->refresh[i] == static_cast<int>(dm->refresh_rate)) {
 								found = 1;
 								break;
 							}
@@ -732,8 +755,8 @@ void sortdisplays()
 					}
 					idx2++;
 				}
-				if (!found && SDL_BITSPERPIXEL(dm.format) > 8) {
-					addmode(md, &dm, mode);
+				if (!found && SDL_BITSPERPIXEL(dm->format) > 8) {
+					addmode(md, dm, mode);
 				}
 			}
 
@@ -882,5 +905,5 @@ float target_getcurrentvblankrate(const int monid)
 		return vb;
 	}
 
-	return SDL2_getrefreshrate(0);
+	return amiberry_getrefreshrate(0);
 }
