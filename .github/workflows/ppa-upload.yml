@@ -53,8 +53,11 @@ jobs:
           cp -r . /tmp/ppa-build/noble/amiberry
           cd /tmp/ppa-build/noble/amiberry
 
-          # Remove placeholder changelog so dch --create can write a fresh one
           rm -f debian/changelog
+
+          tar czf /tmp/ppa-build/noble/amiberry_${VERSION}.orig.tar.gz \
+            --exclude='.git' --exclude='debian' \
+            -C /tmp/ppa-build/noble amiberry
 
           # Write a fresh changelog entry for this release
           dch --create --package amiberry \
@@ -86,6 +89,10 @@ jobs:
           cd /tmp/ppa-build/jammy/amiberry
 
           rm -f debian/changelog
+
+          tar czf /tmp/ppa-build/jammy/amiberry_${VERSION}.orig.tar.gz \
+            --exclude='.git' --exclude='debian' \
+            -C /tmp/ppa-build/jammy amiberry
 
           # jammy gets a ~jammy1 suffix so both series coexist in the PPA
           dch --create --package amiberry \
