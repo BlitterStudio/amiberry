@@ -44,7 +44,7 @@ static ImTextureID savestate_screenshot_tex = ImTextureID_Invalid;
 static int savestate_screenshot_slot = -1;
 
 static void ClearScreenshotTexture() {
-    if (savestate_screenshot_tex) {
+    if (savestate_screenshot_tex != ImTextureID_Invalid) {
         gui_destroy_texture(savestate_screenshot_tex);
         savestate_screenshot_tex = ImTextureID_Invalid;
     }
@@ -52,7 +52,7 @@ static void ClearScreenshotTexture() {
 }
 
 static void UpdateScreenshotTexture(int slot) {
-    if (slot == savestate_screenshot_slot && savestate_screenshot_tex) return;
+    if (slot == savestate_screenshot_slot && savestate_screenshot_tex != ImTextureID_Invalid) return;
 
     if (slot != savestate_screenshot_slot) {
         ClearScreenshotTexture();
@@ -107,7 +107,7 @@ void render_panel_savestates() {
         ImGui::TableNextColumn();
         ImGui::TextDisabled("State screenshot");
         if (ImGui::BeginChild("ScreenshotArea", ImVec2(0, 360), true)) {
-            if (savestate_screenshot_tex) {
+            if (savestate_screenshot_tex != ImTextureID_Invalid) {
                 ImVec2 region = ImGui::GetContentRegionAvail();
                 ImGui::Image(savestate_screenshot_tex, region);
             } else {

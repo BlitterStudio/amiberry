@@ -1345,7 +1345,6 @@ struct amiberry_options
 	int default_fullscreen_mode = 0;
 	int default_stereo_separation = 7;
 	int default_sound_buffer = 3072;
-	bool default_sound_pull = false;
 	int default_sound_frequency = 44100;
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;
@@ -1382,7 +1381,6 @@ struct amiberry_options
 	char gui_theme[128] = "Default.theme";
 	char shader[128] = "none";
 	char shader_rtg[128] = "none";
-	bool force_mobile_shaders = false;
 	bool use_bezel = false;
 	bool use_custom_bezel = false;
 	char custom_bezel[256] = "none";

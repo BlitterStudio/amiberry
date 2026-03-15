@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <vector>
 #include <string>
 #include "imgui.h"
@@ -93,10 +94,43 @@ void copycpuboardmem(bool tomem)
 	}
 }
 
+static int calculate_bit_shift(const expansionboardsettings *ebs, int item_idx)
+{
+	int shift = 0;
+	for (int k = 0; k < item_idx; ++k) {
+		const expansionboardsettings *prev = &ebs[k];
+		if (prev->type == EXPANSIONBOARD_MULTI) {
+			int items = 0;
+			const char *pp = (const char *) prev->configname;
+			if (pp) {
+				while (*pp) {
+					items++;
+					pp += strlen(pp) + 1;
+				}
+			}
+			int bits = 1;
+			for (int b = 0; b < 8; b++) {
+				if ((1 << b) >= items) {
+					bits = b;
+					break;
+				}
+			}
+			shift += bits;
+		} else if (prev->type == EXPANSIONBOARD_CHECKBOX) {
+			shift++;
+		}
+		shift += prev->bitshift;
+	}
+	shift += ebs[item_idx].bitshift;
+	return shift;
+}
+
 static void RefreshExpansionList() {
     displayed_rom_indices.clear();
     int first_match = -1;
-    bool matched = false;
+
+    if (scsiromselectedcatnum < 0 || scsiromselectedcatnum >= IM_ARRAYSIZE(ExpansionCategoriesMask))
+        scsiromselectedcatnum = 0;
 
     for (int i = 0; expansionroms[i].name; i++) {
         if (expansionroms[i].romtype & ROMTYPE_CPUBOARD) continue;
@@ -109,7 +143,6 @@ static void RefreshExpansionList() {
         if ((expansionroms[i].deviceflags & EXPANSIONTYPE_X86_EXPANSION) && mask != EXPANSIONTYPE_X86_EXPANSION)
             continue;
 
-        // Check for duplicates/enabled instances
         int cnt = 0;
         for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
             if (is_board_enabled(&changed_prefs, expansionroms[i].romtype, j)) {
@@ -117,13 +150,16 @@ static void RefreshExpansionList() {
             }
         }
 
-        if (i == scsiromselected) matched = true;
         if (cnt > 0 && first_match < 0) first_match = i;
 
         displayed_rom_indices.push_back(i);
     }
 
-    // Auto-select if the current choice is invalid
+    std::sort(displayed_rom_indices.begin(), displayed_rom_indices.end(),
+        [](int a, int b) {
+            return _tcsicmp(expansionroms[a].friendlyname, expansionroms[b].friendlyname) < 0;
+        });
+
     bool current_valid = false;
     for (int idx: displayed_rom_indices) {
         if (idx == scsiromselected) {
@@ -183,6 +219,7 @@ void render_panel_expansions() {
     bool gui_enabled = !emulating;
 
     BeginGroupBox("Expansion Board Settings");
+    ImGui::BeginDisabled(!gui_enabled);
 
     // Category Selector
     ImGui::PushItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
@@ -236,6 +273,12 @@ void render_panel_expansions() {
                 if (is_board_enabled(&changed_prefs, expansionroms[global_idx].romtype, j)) cnt++;
             }
             std::string name_label = expansionroms[global_idx].friendlyname;
+            if (expansionroms[global_idx].friendlymanufacturer
+                && _tcsicmp(expansionroms[global_idx].friendlymanufacturer, expansionroms[global_idx].friendlyname) != 0) {
+                name_label += " (";
+                name_label += expansionroms[global_idx].friendlymanufacturer;
+                name_label += ")";
+            }
             if (cnt > 0) name_label = (cnt > 1 ? "[" + std::to_string(cnt) + "] " : "* ") + name_label;
 
             if (is_selected)
@@ -416,29 +459,25 @@ void render_panel_expansions() {
             ImGui::PushItemWidth(-40);
 
             if (rom_options.size() > 1) {
-                // More than just "ROM Disabled"
                 std::string current_preview = "Select ROM...";
-                // Logic to set preview based on current path match
                 for (const auto &opt: rom_options) {
                     if (opt.is_disabled_opt) {
-                        if (strcmp(rom_path, ":ENABLED") == 0 || rom_path[0] == 0) {
-                            // Or some other disabled marker? WinUAE uses empty for disabled usually?
-                            if (rom_path[0] == 0) current_preview = opt.name;
+                        if (rom_path[0] == 0 || strcmp(rom_path, ":ENABLED") == 0) {
+                            current_preview = opt.name;
                         }
                     } else if (strcmp(opt.path.c_str(), rom_path) == 0) {
                         current_preview = opt.name;
                     }
                 }
-                // Fallback if path is custom/unknown
                 if (current_preview == "Select ROM..." && rom_path[0] != 0) {
-                    current_preview = rom_path; // Show path if custom
+                    current_preview = rom_path;
                 }
 
                 if (ImGui::BeginCombo("##ROMSelector", current_preview.c_str())) {
                     for (const auto &opt: rom_options) {
                         bool is_selected = false;
                         if (opt.is_disabled_opt) {
-                            is_selected = (rom_path[0] == 0);
+                            is_selected = (rom_path[0] == 0 || strcmp(rom_path, ":ENABLED") == 0);
                         } else {
                             is_selected = (strcmp(opt.path.c_str(), rom_path) == 0);
                         }
@@ -524,31 +563,7 @@ void render_panel_expansions() {
             int item_idx = 0;
             while (ebs[item_idx].name) {
                 const expansionboardsettings *s = &ebs[item_idx];
-                int bitcnt = 0;
-                int current_bit_shift = 0;
-                for (int k = 0; k < item_idx; ++k) {
-                    const expansionboardsettings *prev = &ebs[k];
-                    if (prev->type == EXPANSIONBOARD_MULTI) {
-                        int items = 0;
-                        const char *pp = (const char *) prev->configname;
-                        while (*pp) {
-                            items++;
-                            pp += strlen(pp) + 1;
-                        }
-                        int bits = 1;
-                        for (int b = 0; b < 8; b++) {
-                            if ((1 << b) >= items) {
-                                bits = b;
-                                break;
-                            }
-                        }
-                        current_bit_shift += bits;
-                    } else if (prev->type == EXPANSIONBOARD_CHECKBOX) {
-                        current_bit_shift++;
-                    }
-                    current_bit_shift += prev->bitshift;
-                }
-                current_bit_shift += s->bitshift;
+                int current_bit_shift = calculate_bit_shift(ebs, item_idx);
 
                 if (s->type == EXPANSIONBOARD_CHECKBOX) {
                     bool checked = (settings_val & (1 << current_bit_shift)) != 0;
@@ -634,6 +649,7 @@ void render_panel_expansions() {
         }
         ImGui::EndDisabled();
     }
+    ImGui::EndDisabled();
     EndGroupBox("Expansion Board Settings");
 
     // Accelerator Settings
@@ -705,7 +721,6 @@ void render_panel_expansions() {
 
         ImGui::TableNextColumn();
 
-        // Right Column: ROM & Memory
         if (changed_prefs.cpuboard_type != 0) {
             int idx = 0;
             boardromconfig *brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &idx);
@@ -714,10 +729,55 @@ void render_panel_expansions() {
             char rom_path[MAX_DPATH] = "";
             if (brc) strncpy(rom_path, brc->roms[idx].romfile, MAX_DPATH);
 
+            std::vector<ROMOption> accel_rom_options = GetAvailableROMs(st->romtype, st->romtype_extra);
+
             ImGui::PushItemWidth(-BUTTON_WIDTH / 2);
-            ImGui::BeginDisabled(!gui_enabled); // Only change ROM if not running/safe
-            ImGui::InputText("##AccelROM", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
-            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+            ImGui::BeginDisabled(!gui_enabled);
+
+            if (accel_rom_options.size() > 1) {
+                std::string current_preview = "Select ROM...";
+                for (const auto &opt : accel_rom_options) {
+                    if (opt.is_disabled_opt) {
+                        if (rom_path[0] == 0) current_preview = opt.name;
+                    } else if (strcmp(opt.path.c_str(), rom_path) == 0) {
+                        current_preview = opt.name;
+                    }
+                }
+                if (current_preview == "Select ROM..." && rom_path[0] != 0) {
+                    current_preview = rom_path;
+                }
+
+                if (ImGui::BeginCombo("##AccelROM", current_preview.c_str())) {
+                    for (const auto &opt : accel_rom_options) {
+                        bool is_selected = opt.is_disabled_opt
+                            ? (rom_path[0] == 0)
+                            : (strcmp(opt.path.c_str(), rom_path) == 0);
+
+                        if (is_selected)
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                        if (ImGui::Selectable(opt.name.c_str(), is_selected)) {
+                            int new_idx = 0;
+                            boardromconfig *new_brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &new_idx);
+                            if (new_brc) {
+                                if (opt.is_disabled_opt) {
+                                    new_brc->roms[new_idx].romfile[0] = 0;
+                                } else {
+                                    strncpy(new_brc->roms[new_idx].romfile, opt.path.c_str(), MAX_DPATH);
+                                }
+                            }
+                        }
+                        if (is_selected) {
+                            ImGui::PopStyleColor();
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            } else {
+                ImGui::InputText("##AccelROM", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+            }
             ImGui::PopItemWidth();
             ImGui::SameLine();
             if (AmigaButton("...##Accel")) {
@@ -730,7 +790,6 @@ void render_panel_expansions() {
             if (rom_dialog_source == ROM_DIALOG_ACCELERATOR && ConsumeFileDialogResultKey("EXPANSIONS_ROM", result_path)) {
                 rom_dialog_source = ROM_DIALOG_NONE;
                 if (!result_path.empty()) {
-                    // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist
                     int new_idx = 0;
                     boardromconfig *new_brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &new_idx);
                     if (new_brc) {
@@ -790,30 +849,7 @@ void render_panel_expansions() {
         int item_idx = 0;
         while (ebs[item_idx].name) {
             const expansionboardsettings *s = &ebs[item_idx];
-            int current_bit_shift = 0;
-            for (int k = 0; k < item_idx; ++k) {
-                const expansionboardsettings *prev = &ebs[k];
-                if (prev->type == EXPANSIONBOARD_MULTI) {
-                    int items = 0;
-                    const char *pp = prev->configname;
-                    while (*pp) {
-                        items++;
-                        pp += strlen(pp) + 1;
-                    }
-                    int bits = 1;
-                    for (int b = 0; b < 8; b++) {
-                        if ((1 << b) >= items) {
-                            bits = b;
-                            break;
-                        }
-                    }
-                    current_bit_shift += bits;
-                } else if (prev->type == EXPANSIONBOARD_CHECKBOX) {
-                    current_bit_shift++;
-                }
-                current_bit_shift += prev->bitshift;
-            }
-            current_bit_shift += s->bitshift;
+            int current_bit_shift = calculate_bit_shift(ebs, item_idx);
 
             if (s->type == EXPANSIONBOARD_CHECKBOX) {
                 bool checked = (settings_val & (1 << current_bit_shift)) != 0;
@@ -825,12 +861,31 @@ void render_panel_expansions() {
                     changed_prefs.cpuboard_settings = settings_val;
                 }
             } else if (s->type == EXPANSIONBOARD_MULTI) {
-                const char *pp = (const char *) s->configname;
+                // WinUAE sync: Use s->name for display (Label\0Option1\0Option2\0\0),
+                // fall back to s->configname if no options in name
                 std::vector<std::string> options;
-                while (*pp) {
-                    options.emplace_back(pp);
-                    pp += strlen(pp) + 1;
+                std::string accel_label = "Settings";
+
+                if (s->name) {
+                    const char *pp = (const char *) s->name;
+                    if (*pp) {
+                        accel_label = pp;
+                        pp += strlen(pp) + 1;
+                        while (*pp) {
+                            options.emplace_back(pp);
+                            pp += strlen(pp) + 1;
+                        }
+                    }
                 }
+
+                if (options.empty() && s->configname) {
+                    const char *pp = (const char *) s->configname;
+                    while (*pp) {
+                        options.emplace_back(pp);
+                        pp += strlen(pp) + 1;
+                    }
+                }
+
                 int items_count = (int) options.size();
                 int bits = 1;
                 for (int b = 0; b < 8; b++) {
@@ -847,12 +902,6 @@ void render_panel_expansions() {
                 // Ensure val is within bounds
                 if (val >= items_count) val = 0;
 
-                // WinUAE sync: Extract label from s->name, not s->configname
-                std::string accel_label = "Settings";
-                if (s->name) {
-                    const char *lp = s->name;
-                    if (*lp) accel_label = lp;
-                }
                 if (ImGui::BeginCombo(accel_label.c_str(),
                                       (items_count > val) ? options[val].c_str() : "Unknown")) {
                     for (int opt_i = 0; opt_i < items_count; opt_i++) {
@@ -911,7 +960,8 @@ void render_panel_expansions() {
 }
 
 static void InitializeExpansionSelection() {
-    // Logic from WinUAE init_expansion2: Find the first enabled board to select on open
+    load_keyring(&changed_prefs, nullptr);
+
     scsiromselected = 0;
     scsiromselectedcatnum = 0;
     scsiromselectednum = 0;

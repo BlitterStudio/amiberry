@@ -233,12 +233,8 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - Build with Debug type (`-DCMAKE_BUILD_TYPE=Debug`) for better crash info
 - If you need to test multiple configs, use `kill_amiberry` + `launch_and_wait_for_ipc` between each
 
-### ARM64 JIT toggles (current)
+### ARM64 JIT testing
 
-- `AMIBERRY_ARM64_GUARD_VERBOSE=1`: enables detailed dynamic guard learning logs (per key/window). Keep this off for normal runs.
-- Optional ARM64 hotspot guard is OFF by default for performance.
-- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1`: re-enables optional hotspot logic for A/B diagnostics.
-- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1`: forces optional hotspot logic off; fixed ARM64 safety fallback for the known Lightwave startup hotspot remains active.
 - ARM64 JIT stability checks should be validated with at least 3 configs: SysInfo, A4000, and Lightwave.
 
 ## Input & On-Screen Joystick Troubleshooting
@@ -247,7 +243,7 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
   1. **SDL touch-to-mouse synthesis**: SDL2 synthesizes `SDL_MOUSEBUTTONDOWN`/`SDL_MOUSEMOTION` from touch events by default. Fix: filter `event.button.which == SDL_TOUCH_MOUSEID` / `event.motion.which == SDL_TOUCH_MOUSEID` in mouse event handlers when on-screen joystick is active (done in `amiberry.cpp`).
   2. **Wrong port assignment**: Another device (e.g., Android accelerometer) may be assigned to Port 1, overriding the on-screen joystick. The on-screen joystick auto-assigns to Port 1 via `on_screen_joystick_set_enabled(true)`, but check `changed_prefs.jports[1].id` to verify.
 
-- **On-screen joystick not appearing in Input dropdown**: The virtual device must be registered in `init_joystick()` (`amiberry_input.cpp`). Check that `num_joystick < MAX_INPUT_DEVICES` and `osj_device_index` is set. The device appears as "On-Screen Joystick" in the joystick device list.
+- **On-screen joystick not appearing in Input dropdown**: The virtual device is only registered when `currprefs.onscreen_joystick` is enabled. Check this preference first. Then verify registration in `init_joystick()` (`input_platform_internal_host.h`): `num_joystick < MAX_INPUT_DEVICES` and `osj_device_index` is set. The device appears as "On-Screen Joystick" in the joystick device list.
 
 - **Input injection debugging**: Use `--log` flag. The on-screen joystick logs `"On-Screen Joystick registered as JOY%d"` at startup. Use `setjoystickstate()`/`setjoybuttonstate()` (proper device API); avoid `send_input_event()` which bypasses port mode configuration.
 

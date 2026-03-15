@@ -1,0 +1,261 @@
+name: Update Package Repositories
+
+on:
+  release:
+    types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'Release tag to download packages from'
+        required: true
+        type: string
+    secrets:
+      GPG_PRIVATE_KEY:
+        required: true
+      PACKAGES_REPO_TOKEN:
+        required: true
+
+concurrency:
+  group: packages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-apt-repo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro wget curl unzip
+
+      - name: Import GPG signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/release-assets
+          gh release download "${{ inputs.tag_name || github.event.release.tag_name }}" \
+            --dir /tmp/release-assets \
+            --pattern "*.zip"
+          ls -la /tmp/release-assets/
+
+      - name: Extract .deb packages from zips
+        run: |
+          mkdir -p /tmp/debs
+          for zipfile in /tmp/release-assets/*.zip; do
+            echo "Processing: $zipfile"
+            unzip -j "$zipfile" "*.deb" -d /tmp/debs/ 2>/dev/null || true
+          done
+          echo "Extracted .deb files:"
+          ls -la /tmp/debs/ || echo "No .deb files found"
+
+      - name: Set up reprepro repository structure
+        run: |
+          mkdir -p /tmp/apt-repo
+          cp -r packaging/repo/conf /tmp/apt-repo/conf
+
+      - name: Fetch existing repository (stateless CI fix)
+        run: |
+          PAGES_URL="https://packages.amiberry.com"
+          mkdir -p /tmp/apt-repo
+          for codename in jammy noble plucky bookworm trixie; do
+            for arch in amd64 arm64; do
+              pkgs_url="${PAGES_URL}/apt/dists/${codename}/main/binary-${arch}/Packages.gz"
+              if curl -sf --max-time 10 "$pkgs_url" -o /tmp/packages-${codename}-${arch}.gz 2>/dev/null; then
+                echo "Downloaded existing Packages.gz for ${codename}/${arch}"
+                gunzip -c /tmp/packages-${codename}-${arch}.gz | grep "^Filename:" | while read -r _ filepath; do
+                  deb_url="${PAGES_URL}/apt/${filepath}"
+                  dest="/tmp/apt-repo/${filepath}"
+                  mkdir -p "$(dirname "$dest")"
+                  curl -sf --max-time 30 "$deb_url" -o "$dest" 2>/dev/null && echo "  Restored: $filepath"
+                done
+              fi
+            done
+          done
+
+      - name: Add .deb packages to reprepro
+        run: |
+          cd /tmp/apt-repo
+          for deb in /tmp/debs/*.deb; do
+            [ -f "$deb" ] || { echo "No .deb files to process"; break; }
+            debname=$(basename "$deb")
+            echo "Processing: $debname"
+            codename=$(echo "$debname" | grep -oP '\+\K[^_]+(?=_[^_]+\.deb$)' || echo "")
+            if [ -z "$codename" ]; then
+              echo "  WARNING: Cannot extract codename from $debname - skipping"
+              continue
+            fi
+            echo "  Adding to codename: $codename"
+            reprepro -b . includedeb "$codename" "$deb"
+          done
+
+      - name: Upload APT repo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apt-repo
+          path: /tmp/apt-repo
+          retention-days: 1
+
+  build-yum-repo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y createrepo-c wget curl unzip
+
+      - name: Import GPG signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/release-assets
+          gh release download "${{ inputs.tag_name || github.event.release.tag_name }}" \
+            --dir /tmp/release-assets \
+            --pattern "*.zip"
+          ls -la /tmp/release-assets/
+
+      - name: Extract .rpm packages from zips
+        run: |
+          mkdir -p /tmp/rpms/x86_64 /tmp/rpms/aarch64
+          for zipfile in /tmp/release-assets/*.zip; do
+            echo "Processing: $zipfile"
+            zipname=$(basename "$zipfile" .zip)
+            if echo "$zipname" | grep -q "aarch64"; then
+              unzip -j "$zipfile" "*.rpm" -d /tmp/rpms/aarch64/ 2>/dev/null || true
+            elif echo "$zipname" | grep -q "x86_64\|fedora-x86"; then
+              unzip -j "$zipfile" "*.rpm" -d /tmp/rpms/x86_64/ 2>/dev/null || true
+            fi
+          done
+          echo "Extracted RPM files:"
+          ls -la /tmp/rpms/x86_64/ /tmp/rpms/aarch64/ 2>/dev/null || echo "No RPM files found"
+
+      - name: Fetch existing RPM repository (stateless CI fix)
+        run: |
+          PAGES_URL="https://packages.amiberry.com"
+          mkdir -p /tmp/rpms/x86_64 /tmp/rpms/aarch64
+          for arch in x86_64 aarch64; do
+            primary_url="${PAGES_URL}/rpm/${arch}/repodata/primary.xml.gz"
+            if curl -sf --max-time 10 "$primary_url" -o /tmp/primary-${arch}.xml.gz 2>/dev/null; then
+              echo "Found existing repo for ${arch}"
+              gunzip -c /tmp/primary-${arch}.xml.gz | grep -oP '(?<=href=")[^"]+\.rpm' | while read -r rpmfile; do
+                rpm_url="${PAGES_URL}/rpm/${arch}/${rpmfile}"
+                dest="/tmp/rpms/${arch}/$(basename "$rpmfile")"
+                curl -sf --max-time 30 "$rpm_url" -o "$dest" 2>/dev/null && echo "  Restored: $rpmfile" || true
+              done
+            fi
+          done
+
+      - name: Create YUM repository metadata
+        run: |
+          for arch in x86_64 aarch64; do
+            mkdir -p /tmp/yum-repo/${arch}
+            if ls /tmp/rpms/${arch}/*.rpm 2>/dev/null; then
+              cp /tmp/rpms/${arch}/*.rpm /tmp/yum-repo/${arch}/
+            fi
+            createrepo_c /tmp/yum-repo/${arch}/
+            echo "Created repodata for ${arch}:"
+            ls -la /tmp/yum-repo/${arch}/repodata/
+          done
+
+      - name: Sign RPM repository metadata
+        run: |
+          for arch in x86_64 aarch64; do
+            repomd="/tmp/yum-repo/${arch}/repodata/repomd.xml"
+            if [ -f "$repomd" ]; then
+              gpg --batch --yes --detach-sign --armor "$repomd"
+              echo "Signed repomd.xml for ${arch}"
+            fi
+          done
+
+      - name: Upload YUM repo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yum-repo
+          path: /tmp/yum-repo
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-apt-repo, build-yum-repo]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Download APT repo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: apt-repo
+          path: /tmp/apt-repo
+
+      - name: Download YUM repo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: yum-repo
+          path: /tmp/yum-repo
+
+      - name: Prepare deployment directory
+        run: |
+          mkdir -p /tmp/pages-deploy
+          # APT repo under apt/ subdirectory (exclude db/)
+          if [ -d /tmp/apt-repo/dists ] || [ -d /tmp/apt-repo/pool ]; then
+            mkdir -p /tmp/pages-deploy/apt
+            [ -d /tmp/apt-repo/dists ] && cp -r /tmp/apt-repo/dists /tmp/pages-deploy/apt/
+            [ -d /tmp/apt-repo/pool ] && cp -r /tmp/apt-repo/pool /tmp/pages-deploy/apt/
+          fi
+          # YUM repo under rpm/ subdirectory
+          if [ -d /tmp/yum-repo ]; then
+            mkdir -p /tmp/pages-deploy/rpm
+            cp -r /tmp/yum-repo/. /tmp/pages-deploy/rpm/
+          fi
+          # GPG public keys
+          cp packaging/repo/gpg.key /tmp/pages-deploy/gpg.key
+          cp packaging/repo/gpg.asc /tmp/pages-deploy/gpg.asc
+          # CNAME for custom domain (packages.amiberry.com)
+          cp packaging/repo/CNAME /tmp/pages-deploy/CNAME
+          # User-facing files
+          [ -f packaging/repo/install.sh ] && cp packaging/repo/install.sh /tmp/pages-deploy/
+          [ -f packaging/repo/index.html ] && cp packaging/repo/index.html /tmp/pages-deploy/
+          # DNF .repo file at well-known URL
+          [ -f packaging/repo/amiberry.repo ] && cp packaging/repo/amiberry.repo /tmp/pages-deploy/rpm/amiberry.repo
+          echo "Deployment directory contents:"
+          find /tmp/pages-deploy -type f | sort
+
+      - name: Push to amiberry-packages repository
+        env:
+          PACKAGES_REPO_TOKEN: ${{ secrets.PACKAGES_REPO_TOKEN }}
+        run: |
+          cd /tmp/pages-deploy
+          git init
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout -b gh-pages
+          git add .
+          git commit -m "Deploy packages.amiberry.com - ${{ inputs.tag_name || github.event.release.tag_name }}"
+          git push --force \
+            "https://x-access-token:${PACKAGES_REPO_TOKEN}@github.com/BlitterStudio/amiberry-packages.git" \
+            gh-pages

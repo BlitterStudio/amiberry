@@ -51,7 +51,8 @@ osdep/
 │   └── sysconfig.h             # System configuration flags
 │
 ├── [Core Platform Files]
-│   ├── amiberry.cpp            # Main entry + initialization (6118 lines)
+│   ├── amiberry.cpp            # Main entry + initialization (6171 lines)
+│   ├── amiberry_update.cpp     # Self-update mechanism (Windows)
 │   ├── amiberry_mem.cpp        # Natmem memory management
 │   ├── amiberry_filesys.cpp    # Host filesystem emulation
 │   ├── sigsegv_handler.cpp     # SIGSEGV handler for JIT faults

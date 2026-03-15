@@ -185,6 +185,7 @@ void render_panel_whdload()
         ImGui::BeginDisabled();
         const auto hidden_label = "##" + std::string(label);
         ImGui::InputText(hidden_label.c_str(), buf, 255, ImGuiInputTextFlags_ReadOnly);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::EndDisabled();
     };
 

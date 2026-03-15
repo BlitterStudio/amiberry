@@ -53,8 +53,8 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 	}
 	SDL_free(joysticks);
 
-	// Register the built-in on-screen joystick as a virtual device
-	if (*num_joystick < MAX_INPUT_DEVICES) {
+	// Register the built-in on-screen joystick only when enabled
+	if (currprefs.onscreen_joystick && *num_joystick < MAX_INPUT_DEVICES) {
 		osj_device_index = *num_joystick;
 		struct didata* did = &di_joystick[osj_device_index];
 		cleardid(did);

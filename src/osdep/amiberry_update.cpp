@@ -335,7 +335,7 @@ static std::string get_executable_path()
 static std::string get_platform_asset_suffix()
 {
 #if defined(_WIN32)
-	return "windows-x64";
+	return "win64";
 #elif defined(__APPLE__)
 	return "macOS-universal";
 #else
@@ -520,16 +520,27 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 				continue;
 			}
 
-			if (!out.download_url.empty()) {
+			if (!asset.contains("browser_download_url") || !asset["browser_download_url"].is_string()) {
 				continue;
 			}
 
-			if (asset.contains("browser_download_url") && asset["browser_download_url"].is_string()) {
-				out.download_url = asset["browser_download_url"].get<std::string>();
-				out.asset_name = name;
-				if (asset.contains("size") && asset["size"].is_number_integer()) {
-					out.asset_size = asset["size"].get<int64_t>();
-				}
+#ifdef _WIN32
+			// On Windows prefer .exe installer over .zip archive
+			const bool is_installer = name.size() >= 4
+				&& to_lower(name.substr(name.size() - 4)) == ".exe";
+			if (!out.download_url.empty() && !is_installer) {
+				continue;
+			}
+#else
+			if (!out.download_url.empty()) {
+				continue;
+			}
+#endif
+
+			out.download_url = asset["browser_download_url"].get<std::string>();
+			out.asset_name = name;
+			if (asset.contains("size") && asset["size"].is_number_integer()) {
+				out.asset_size = asset["size"].get<int64_t>();
 			}
 		}
 	}
@@ -997,6 +1008,44 @@ bool apply_update(const std::string& downloaded_file, const UpdateInfo&)
 	}
 
 	const auto install_dir = std::filesystem::path(exe_path).parent_path();
+	const std::string lower_file = to_lower(downloaded_file);
+	const bool is_installer = lower_file.size() >= 4
+		&& lower_file.substr(lower_file.size() - 4) == ".exe";
+
+	if (is_installer) {
+		const auto script_path = install_dir / "_amiberry_update.bat";
+
+		std::ofstream script(script_path);
+		if (!script.is_open()) {
+			write_log("Updater: failed to create installer launch script\n");
+			return false;
+		}
+
+		const DWORD pid = GetCurrentProcessId();
+
+		script << "@echo off\r\n";
+		script << "setlocal\r\n";
+		script << "echo Waiting for Amiberry to exit...\r\n";
+		script << ":waitloop\r\n";
+		script << "tasklist /FI \"PID eq " << pid << "\" 2>nul | find /I \"" << pid << "\" >nul\r\n";
+		script << "if not errorlevel 1 (\r\n";
+		script << "    timeout /t 1 /nobreak >nul\r\n";
+		script << "    goto waitloop\r\n";
+		script << ")\r\n";
+		script << "echo Running installer...\r\n";
+		script << "\"" << downloaded_file << "\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS\r\n";
+		script << "echo Cleaning up...\r\n";
+		script << "del /Q \"" << downloaded_file << "\"\r\n";
+		script << "echo Starting updated Amiberry...\r\n";
+		script << "start \"\" \"" << exe_path << "\"\r\n";
+		script << "del \"%~f0\" & exit\r\n";
+		script.close();
+
+		s_windows_restart_script = script_path.string();
+		write_log("Updater: Windows installer update prepared, script at %s\n", s_windows_restart_script.c_str());
+		return true;
+	}
+
 	const auto staging_dir = install_dir / "_amiberry_update";
 
 	std::error_code ec;

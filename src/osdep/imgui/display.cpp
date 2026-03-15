@@ -199,8 +199,8 @@ void render_panel_display() {
 
     // Checkboxes
     if (ImGui::BeginTable("ChkTable", 2, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -231,8 +231,8 @@ void render_panel_display() {
 
     // Resolution row
     if (ImGui::BeginTable("ResTable", 4, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
-        ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
+        ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+        ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -240,7 +240,7 @@ void render_panel_display() {
         ImGui::Text("Resolution:");
         ImGui::SameLine();
         const char *resolution_items[] = {"LowRes", "HighRes (normal)", "SuperHighRes"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.7f);
         if (!resolution_enabled) ImGui::BeginDisabled();
         if (ImGui::BeginCombo("##Resolution", resolution_items[changed_prefs.gfx_resolution])) {
             for (int n = 0; n < IM_ARRAYSIZE(resolution_items); n++) {
@@ -265,8 +265,8 @@ void render_panel_display() {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Overscan:");
         ImGui::SameLine();
-        const char *overscan_items[] = {"Standard", "Overscan", "Broadcast", "Extreme", "Ultra"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        const char *overscan_items[] = {"TV Narrow", "TV Standard", "TV Wide", "Overscan", "Broadcast", "Extreme", "Ultra", "Ultra H/V", "Ultra CSync"};
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
         if (ImGui::BeginCombo("##Overscan", overscan_items[changed_prefs.gfx_overscanmode])) {
             for (int n = 0; n < IM_ARRAYSIZE(overscan_items); n++) {
                 const bool is_selected = (changed_prefs.gfx_overscanmode == n);
@@ -502,12 +502,15 @@ void render_panel_display() {
         ImGui::TableNextColumn();
 
         BeginGroupBox("Centering");
+        bool centering_en = changed_prefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN;
+        if (!centering_en) ImGui::BeginDisabled();
         bool h_center = changed_prefs.gfx_xcenter == 2;
         if (AmigaCheckbox("Horizontal", &h_center)) changed_prefs.gfx_xcenter = h_center ? 2 : 0;
         ShowHelpMarker("Automatically center the display horizontally on screen");
         bool v_center = changed_prefs.gfx_ycenter == 2;
         if (AmigaCheckbox("Vertical", &v_center)) changed_prefs.gfx_ycenter = v_center ? 2 : 0;
         ShowHelpMarker("Automatically center the display vertically on screen");
+        if (!centering_en) ImGui::EndDisabled();
         ImGui::Spacing();
         EndGroupBox("Centering");
 
@@ -519,6 +522,7 @@ void render_panel_display() {
         if (AmigaRadioButton("Single", changed_prefs.gfx_vresolution == 0 && changed_prefs.gfx_pscanlines == 0)) {
             changed_prefs.gfx_vresolution = 0;
             changed_prefs.gfx_pscanlines = 0;
+            changed_prefs.gfx_iscanlines = 0;
         }
         ShowHelpMarker("Single scan: display one line per scanline (200 lines for NTSC, 256 for PAL)");
         if (AmigaRadioButton("Double", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 0)) {
@@ -536,11 +540,10 @@ void render_panel_display() {
             changed_prefs.gfx_pscanlines = 2;
         }
         ShowHelpMarker("Interlaced field rendering: alternates between even and odd lines");
-        if (AmigaRadioButton("Double, fields+",
-                               changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 3)) {
+        if (AmigaRadioButton("Double, fields+", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 3)) {
             changed_prefs.gfx_vresolution = 1;
             changed_prefs.gfx_pscanlines = 3;
-                               }
+        }
         ShowHelpMarker("Enhanced interlaced field rendering with improved blending");
         if (!linemode_enabled) ImGui::EndDisabled();
         ImGui::Spacing();
@@ -552,15 +555,16 @@ void render_panel_display() {
         BeginGroupBox("Interlaced line mode");
         bool is_double = changed_prefs.gfx_vresolution > 0;
         if (!linemode_enabled || is_double) ImGui::BeginDisabled();
-        if (AmigaRadioButton("Single##I", changed_prefs.gfx_iscanlines == 0 && !is_double)) {
+        if (AmigaRadioButton("Single##I", !is_double)) {
             changed_prefs.gfx_iscanlines = 0;
         }
         ShowHelpMarker("Single line mode for interlaced screens (available only in single line mode)");
         if (!linemode_enabled || is_double) ImGui::EndDisabled();
 
         if (!linemode_enabled || !is_double) ImGui::BeginDisabled();
-        bool dbl_frames_active = (changed_prefs.gfx_iscanlines == 0 && is_double);
-        if (AmigaRadioButton("Double, frames##I", dbl_frames_active)) { changed_prefs.gfx_iscanlines = 0; }
+        if (AmigaRadioButton("Double, frames##I", is_double && changed_prefs.gfx_iscanlines == 0)) {
+            changed_prefs.gfx_iscanlines = 0;
+        }
         ShowHelpMarker("Double frames mode for interlaced screens (available only in double line mode)");
         AmigaRadioButton("Double, fields##I", &changed_prefs.gfx_iscanlines, 1);
         ShowHelpMarker("Interlaced field rendering: alternates between even and odd lines");

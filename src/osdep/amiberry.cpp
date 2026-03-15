@@ -2881,7 +2881,7 @@ void target_default_options(uae_prefs* p, const int type)
 	drawbridge_update_profiles(p);
 
 	p->alt_tab_release = false;
-	p->sound_pullmode = amiberry_options.default_sound_pull;
+	p->sound_pullmode = 0;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
 	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
@@ -3047,7 +3047,6 @@ void target_save_options(zfile* f, uae_prefs* p)
 	}
 
 	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
-	cfgfile_target_dwrite(f, _T("sound_pullmode"), _T("%d"), p->sound_pullmode);
 
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
@@ -3158,7 +3157,6 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
-		|| cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
 		|| cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
 		|| cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
 		|| cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1)
@@ -3935,9 +3933,6 @@ void save_amiberry_settings()
 	// Default Sound buffer size
 	write_int_option("default_sound_buffer", amiberry_options.default_sound_buffer);
 
-	// Default Sound Mode (Pull/Push)
-	write_bool_option("default_sound_pull", amiberry_options.default_sound_pull);
-
 	// Default Joystick Deadzone
 	write_int_option("default_joystick_deadzone", amiberry_options.default_joystick_deadzone);
 
@@ -4030,9 +4025,6 @@ void save_amiberry_settings()
 
 	// Shader to use for RTG modes (if any)
 	write_string_option("shader_rtg", amiberry_options.shader_rtg);
-
-	// Force mobile-optimized shaders
-	write_bool_option("force_mobile_shaders", amiberry_options.force_mobile_shaders);
 
 	// Show CRT bezel frame overlay
 	write_bool_option("use_bezel", amiberry_options.use_bezel);
@@ -4215,7 +4207,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 		ret |= cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
 		ret |= cfgfile_intval(option, value, "default_sound_frequency", &amiberry_options.default_sound_frequency, 1);
-		ret |= cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
 		ret |= cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
@@ -4247,7 +4238,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
-		ret |= cfgfile_yesno(option, value, "force_mobile_shaders", &amiberry_options.force_mobile_shaders);
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
 		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
 		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);

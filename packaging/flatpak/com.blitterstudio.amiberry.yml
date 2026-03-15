@@ -21,6 +21,15 @@ finish-args:
   - --socket=pulseaudio
   # Filesystem access
   - --filesystem=host
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/doc
+  - /share/man
+  - /share/pkgconfig
+  - '*.la'
+  - '*.a'
 
 modules:
   - name: sdl3
@@ -82,10 +91,6 @@ modules:
           - autoreconf -vfi
     cleanup:
       - /bin
-      - /include
-      - /lib/pkgconfig
-      - '*.la'
-      - '*.a'
 
   - name: libserialport
     buildsystem: autotools
@@ -136,12 +141,12 @@ modules:
       - -DJSON_BuildTests=OFF
     sources:
       - type: archive
-        url: https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
-        sha256: 0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406
-    cleanup:
-      - /include
-      - /lib/cmake
-      - /lib/pkgconfig
+        url: https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.tar.gz
+        sha256: 4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187
+        x-checker-data:
+          type: anitya
+          project-id: 11152
+          url-template: https://github.com/nlohmann/json/archive/refs/tags/v$version.tar.gz
 
   - name: amiberry
     buildsystem: cmake-ninja

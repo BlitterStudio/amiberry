@@ -32,7 +32,7 @@ static std::atomic<bool> s_download_cancel_requested{false};
 
 static void ensure_about_logo_texture()
 {
-	if (about_logo_texture)
+	if (about_logo_texture != ImTextureID_Invalid)
 		return;
 	const auto path = prefix_with_data_path("amiberry-logo.png");
 	SDL_Surface* surf = IMG_Load(path.c_str());
@@ -42,7 +42,7 @@ static void ensure_about_logo_texture()
 	}
 	about_logo_texture = gui_create_texture(surf, &about_logo_tex_w, &about_logo_tex_h);
 	SDL_DestroySurface(surf);
-	if (!about_logo_texture) {
+	if (about_logo_texture == ImTextureID_Invalid) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to create texture: %s", SDL_GetError());
 	}
 }
@@ -288,7 +288,7 @@ void render_panel_about()
 {
 	ensure_about_logo_texture();
 
-	if (about_logo_texture)
+	if (about_logo_texture != ImTextureID_Invalid)
 	{
 		const float region_w = ImGui::GetContentRegionAvail().x;
 		auto draw_w = static_cast<float>(about_logo_tex_w);

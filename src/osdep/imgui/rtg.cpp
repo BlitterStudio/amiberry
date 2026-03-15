@@ -12,6 +12,18 @@
 static std::vector<std::string> rtg_board_names;
 static bool rtg_boards_initialized = false;
 
+// Convert a byte size (power of 2, >= 1MB) to a slider index: 1MB=0, 2MB=1, 4MB=2, ...
+static int vram_bytes_to_slider(int bytes)
+{
+	if (bytes <= 0) return 0;
+	int mb = bytes >> 20;
+	if (mb <= 0) return 0;
+	int val = 0;
+	int temp = mb;
+	while (temp >>= 1) val++;
+	return val;
+}
+
 void render_panel_rtg() {
     ImGui::Indent(4.0f);
 
@@ -37,7 +49,6 @@ void render_panel_rtg() {
         rtg_boards_initialized = true;
     }
 
-    // Prepare Vector for Combo
     std::vector<const char *> rtg_boards_c;
     for (const auto &name: rtg_board_names) rtg_boards_c.push_back(name.c_str());
 
@@ -45,35 +56,45 @@ void render_panel_rtg() {
     ImGui::Text("RTG Graphics Card");
     ImGui::Separator();
 
-    // Board Dropdown
+    struct rtgboardconfig *rbc = &changed_prefs.rtgboards[0];
+
     int current_board_idx = 0;
-    if (changed_prefs.rtgboards[0].rtgmem_size > 0) {
-        // Find index that matches current type
-        int type = changed_prefs.rtgboards[0].rtgmem_type;
-        // Search in the list (index map: list_idx-1 == gfxboard_v_index)
-        // We need to reverse map ID -> v_index.
-        // Helper: gfxboard_get_index_from_id(type) -> returns v_index.
-        // List index is v_index + 1 (because of "-").
-        int v_idx = gfxboard_get_index_from_id(type);
+    if (rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE) {
+        int v_idx = gfxboard_get_index_from_id(rbc->rtgmem_type);
         if (v_idx >= 0) current_board_idx = v_idx + 1;
     }
 
     if (ImGui::Combo("##RTGBoardCombo", &current_board_idx, rtg_boards_c.data(), (int) rtg_boards_c.size())) {
         if (current_board_idx == 0) {
-            changed_prefs.rtgboards[0].rtgmem_type = 0;
-            changed_prefs.rtgboards[0].rtgmem_size = 0;
+            rbc->rtgmem_type = 0;
+            rbc->rtgmem_size = 0;
         } else {
-            // Get ID from v_index (current_board_idx - 1)
             int v_idx = current_board_idx - 1;
             int new_type = gfxboard_get_id_from_index(v_idx);
-            changed_prefs.rtgboards[0].rtgmem_type = new_type;
+            rbc->rtgmem_type = new_type;
 
-            if (changed_prefs.rtgboards[0].rtgmem_size == 0) {
-                // Default sizes based on type (simplification: 4MB default)
-                // If Z2 (GFXBOARD_UAE_Z2 == 0?? Check header again. header says 0. But ID from index might return correct ID)
-                // Let's rely on standard default.
-                changed_prefs.rtgboards[0].rtgmem_size = 4 * 1024 * 1024;
-                if (new_type == GFXBOARD_UAE_Z2) changed_prefs.rtgboards[0].rtgmem_size = 2 * 1024 * 1024;
+            if (new_type >= GFXBOARD_HARDWARE) {
+                int vmin = gfxboard_get_vram_min(rbc);
+                int vmax = gfxboard_get_vram_max(rbc);
+                if (rbc->rtgmem_size == 0 && vmin > 0) {
+                    rbc->rtgmem_size = vmin;
+                }
+                if (vmax > 0 && rbc->rtgmem_size > vmax) {
+                    rbc->rtgmem_size = vmax;
+                }
+                if (vmin > 0 && rbc->rtgmem_size < vmin) {
+                    rbc->rtgmem_size = vmin;
+                }
+            } else {
+                if (rbc->rtgmem_size == 0) {
+                    if (new_type == GFXBOARD_UAE_Z2)
+                        rbc->rtgmem_size = 4 * 1024 * 1024;
+                    else
+                        rbc->rtgmem_size = 16 * 1024 * 1024;
+                }
+                if (new_type == GFXBOARD_UAE_Z2 && rbc->rtgmem_size > 8 * 1024 * 1024) {
+                    rbc->rtgmem_size = 8 * 1024 * 1024;
+                }
             }
         }
         cfgfile_compatibility_rtg(&changed_prefs);
@@ -81,18 +102,27 @@ void render_panel_rtg() {
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ShowHelpMarker("Select RTG graphics card to emulate (Picasso96, CyberGraphX compatible)");
 
-    // Override initial native chipset display
-    // WinUAE logic: Exclusive across boards
-    bool override_native = changed_prefs.rtgboards[0].initial_active;
-    ImGui::BeginDisabled(current_board_idx == 0); // Disable everything if no board selected
+    // WinUAE enable_for_expansiondlg() logic
+    bool has_memory = rbc->rtgmem_size > 0;
+    bool is_uae_rtg = rbc->rtgmem_type < GFXBOARD_HARDWARE;
+    bool is_hw_board = rbc->rtgmem_type >= GFXBOARD_HARDWARE;
+
+    bool color_modes_en = has_memory && is_uae_rtg;
+    bool display_opts_en = has_memory || is_hw_board;
+    bool sw_rtg_opts_en = has_memory && is_uae_rtg;
+    bool autoswitch_en = has_memory && (!is_hw_board || !gfxboard_get_switcher(rbc));
+
+    ImGui::BeginDisabled(!has_memory);
+    bool override_native = rbc->initial_active;
     if (AmigaCheckbox("Override initial native chipset display", &override_native)) {
         if (override_native) {
             for (int i = 0; i < MAX_RTG_BOARDS; ++i)
                 changed_prefs.rtgboards[i].initial_active = false;
         }
-        changed_prefs.rtgboards[0].initial_active = override_native;
+        rbc->initial_active = override_native;
     }
     ShowHelpMarker("Start with RTG display active instead of native Amiga chipset");
+    ImGui::EndDisabled();
 
     ImGui::Spacing();
 
@@ -101,48 +131,67 @@ void render_panel_rtg() {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
-        // VRAM Section
-        int vram_bytes = changed_prefs.rtgboards[0].rtgmem_size;
-        int vram_mb = vram_bytes >> 20;
-        int slider_val = 0;
-        // Calculate log2 of MB to get slider index. 1MB=0, 2MB=1, 4MB=2...
-        if (vram_mb > 0) {
-            int temp = vram_mb;
-            while (temp >>= 1) slider_val++;
+        // --- VRAM Section ---
+        // Calculate slider range from board hardware limits
+        int min_slider_val = 0;
+        int max_slider_val = 8; // 256MB default for UAE Z3/PCI
+
+        if (is_hw_board) {
+            int vmin = gfxboard_get_vram_min(rbc);
+            int vmax = gfxboard_get_vram_max(rbc);
+            if (vmin > 0) min_slider_val = vram_bytes_to_slider(vmin);
+            if (vmax > 0) max_slider_val = vram_bytes_to_slider(vmax);
+        } else if (rbc->rtgmem_type == GFXBOARD_UAE_Z2) {
+            max_slider_val = 3; // Z2 max 8MB
         }
 
-        // Zorro II limit is 8MB (index 3: 2^3=8).
-        // Zorro III / PCI usually up to 256MB or 512MB.
-        // WinUAE max suggests 256MB or similar. Let's limit to 256MB (index 8) for now.
-        int max_slider_val = 8;
-        if (changed_prefs.rtgboards[0].rtgmem_type == GFXBOARD_UAE_Z2) max_slider_val = 3;
+        int vram_bytes = rbc->rtgmem_size;
+        int slider_val = vram_bytes_to_slider(vram_bytes);
 
-        // Clamp if switching boards caused invalid val
+        // Clamp slider value to current range
         if (slider_val > max_slider_val) slider_val = max_slider_val;
+        if (slider_val < min_slider_val) slider_val = min_slider_val;
+
+        // Also clamp the actual prefs value if it was out of range
+        int clamped_bytes = (1 << slider_val) * 1024 * 1024;
+        if (has_memory && clamped_bytes != vram_bytes) {
+            rbc->rtgmem_size = clamped_bytes;
+        }
 
         // Display textual representation of the slider value
         char vram_label[32];
         snprintf(vram_label, sizeof(vram_label), "%d MB", 1 << slider_val);
 
+        ImGui::BeginDisabled(current_board_idx == 0);
         ImGui::Text("VRAM size:");
-        if (ImGui::SliderInt("##VRAMsizeSlider", &slider_val, 0, max_slider_val, vram_label)) {
-            changed_prefs.rtgboards[0].rtgmem_size = (1 << slider_val) * 1024 * 1024;
+        if (ImGui::SliderInt("##VRAMsizeSlider", &slider_val, min_slider_val, max_slider_val, vram_label)) {
+            rbc->rtgmem_size = (1 << slider_val) * 1024 * 1024;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-        ShowHelpMarker("Video memory on the emulated RTG card. Zorro II max 8MB, Zorro III/PCI max 256MB");
+        if (is_hw_board) {
+            int vmin_mb = 1 << min_slider_val;
+            int vmax_mb = 1 << max_slider_val;
+            char help[128];
+            snprintf(help, sizeof(help), "Video memory for this card (%d MB - %d MB)", vmin_mb, vmax_mb);
+            ShowHelpMarker(help);
+        } else {
+            ShowHelpMarker("Video memory on the emulated RTG card. Zorro II max 8MB, Zorro III/PCI max 256MB");
+        }
+        ImGui::EndDisabled();
 
         ImGui::TableNextColumn();
 
-        // Right Column: Color Modes
+        // Right Column: Color Modes (only for UAE RTG)
+        ImGui::BeginDisabled(!color_modes_en);
         ImGui::Text("Color modes:");
 
         // 8-bit Mode
         const char *rtg_8bit_modes[] = {"8-bit", "All", "CLUT (*)"};
         int idx8 = 0;
         uae_u32 mask = changed_prefs.picasso96_modeflags;
-        if (mask & RGBFF_CLUT) idx8 = 2; // Simple assumption
+        if (mask & RGBFF_CLUT) idx8 = 2;
         if (ImGui::Combo("##8bit", &idx8, rtg_8bit_modes, IM_ARRAYSIZE(rtg_8bit_modes))) {
-            mask &= ~RGBFF_CLUT; // Clear 8bit
+            mask &= ~RGBFF_CLUT;
             if (idx8 == 1 || idx8 == 2) mask |= RGBFF_CLUT;
             changed_prefs.picasso96_modeflags = mask;
         }
@@ -211,6 +260,7 @@ void render_panel_rtg() {
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         ShowHelpMarker("32-bit color with alpha channel (A=Alpha for transparency)");
+        ImGui::EndDisabled(); // color_modes_en
 
         ImGui::EndTable();
     }
@@ -221,9 +271,9 @@ void render_panel_rtg() {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
-        // Left Column: Scaling options
-        // Autoscale modes are mutually exclusive in valid RTG filter:
-        // RTG_MODE_SCALE (1), RTG_MODE_CENTER (2), RTG_MODE_INTEGER_SCALE (3)
+        // Left Column: Scaling options (enabled when any RTG is active)
+        ImGui::BeginDisabled(!display_opts_en);
+
         int current_autoscale_mode = changed_prefs.gf[1].gfx_filter_autoscale;
 
         bool scale_smaller = (current_autoscale_mode == RTG_MODE_SCALE);
@@ -250,28 +300,38 @@ void render_panel_rtg() {
         AmigaCheckbox("Zero Copy (Buffer sharing)", &changed_prefs.rtg_zerocopy);
         ShowHelpMarker("Share buffers directly between emulation and display for better performance");
 
+        ImGui::EndDisabled(); // display_opts_en
+
         ImGui::TableNextColumn();
 
         // Right Column: Hardware/Misc Checkboxes
-        AmigaCheckbox("Native/RTG autoswitch", &changed_prefs.rtgboards[0].autoswitch);
+        bool has_hw_switcher = is_hw_board && gfxboard_get_switcher(rbc);
+        bool autoswitch_display = has_memory && (rbc->autoswitch || has_hw_switcher || is_uae_rtg);
+        ImGui::BeginDisabled(!autoswitch_en);
+        if (AmigaCheckbox("Native/RTG autoswitch", &autoswitch_display)) {
+            rbc->autoswitch = autoswitch_display;
+        }
+        ImGui::EndDisabled();
         ShowHelpMarker("Automatically switch between native chipset and RTG display");
+
+        ImGui::BeginDisabled(!sw_rtg_opts_en);
         AmigaCheckbox("Multithreaded", &changed_prefs.rtg_multithread);
         ShowHelpMarker("Use multiple CPU threads for RTG rendering (better performance)");
 
-        bool hwsprite_enabled = changed_prefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
-        ImGui::BeginDisabled(!hwsprite_enabled);
         AmigaCheckbox("Hardware sprite emulation", &changed_prefs.rtg_hardwaresprite);
-        ImGui::EndDisabled();
         ShowHelpMarker("Use RTG card's hardware sprite engine for mouse pointer");
 
         AmigaCheckbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
         ShowHelpMarker("Emulate hardware VBlank interrupt for RTG display timing");
+        ImGui::EndDisabled(); // sw_rtg_opts_en
 
         ImGui::EndTable();
     }
     ImGui::Spacing();
 
     // --- Bottom Row: Screen Mode Details ---
+    ImGui::BeginDisabled(!display_opts_en);
+
     ImGui::Text("Screen Mode settings");
     ImGui::Separator();
 
@@ -337,5 +397,6 @@ void render_panel_rtg() {
 
         ImGui::EndTable();
     }
-    ImGui::EndDisabled();
+
+    ImGui::EndDisabled(); // display_opts_en
 }

@@ -91,9 +91,10 @@ void render_panel_sound() {
 
     ImGui::Spacing();
 
-    // ---------------------------------------------------------
-    // Emulation | Volume
-    // ---------------------------------------------------------
+    // WinUAE enable_for_sounddlg(): nearly all controls gated by produce_sound
+    bool sound_en = changed_prefs.produce_sound > 0;
+    bool stereo_en = sound_en && changed_prefs.sound_stereo > 0;
+
     if (ImGui::BeginTable("TopRowTable", 2, ImGuiTableFlags_None)) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -113,8 +114,10 @@ void render_panel_sound() {
 
         ImGui::Spacing();
 
+        ImGui::BeginDisabled(!sound_en);
         AmigaCheckbox("Automatic switching", &changed_prefs.sound_auto);
         ShowHelpMarker("Automatically adjust sound emulation quality based on performance");
+        ImGui::EndDisabled();
         ImGui::Spacing();
         EndGroupBox("Sound Emulation");
 
@@ -124,8 +127,7 @@ void render_panel_sound() {
         // Volume (WinUAE Style)
         // ---------------------------------------------------------
         BeginGroupBox("Volume");
-
-        // Row 1: Master Slider
+        ImGui::BeginDisabled(!sound_en);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Master");
         ImGui::SameLine();
@@ -182,16 +184,15 @@ void render_panel_sound() {
         ImGui::SameLine();
         ImGui::Text("%d%%", display_vol);
         ShowHelpMarker("Individual volume controls - Paula: Amiga sound chip, CD: CD audio, AHI: retargetable audio, MIDI: external MIDI");
+        ImGui::EndDisabled(); // sound_en
         ImGui::Spacing();
         EndGroupBox("Volume");
 
         ImGui::EndTable();
     }
 
-    // ---------------------------------------------------------
-    // Settings
-    // ---------------------------------------------------------
     BeginGroupBox("Settings");
+    ImGui::BeginDisabled(!sound_en);
 
     if (ImGui::BeginTable("SettingsRow1Table", 3, ImGuiTableFlags_None)) {
         ImGui::TableNextRow();
@@ -229,8 +230,7 @@ void render_panel_sound() {
         int sep_idx = 10 - changed_prefs.sound_stereo_separation;
         ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 
-        // Logic: Disable if Mono
-        ImGui::BeginDisabled(changed_prefs.sound_stereo == 0);
+        ImGui::BeginDisabled(!stereo_en);
         if (ImGui::BeginCombo("##Sep", separation_items[sep_idx])) {
             for (int n = 0; n < IM_ARRAYSIZE(separation_items); n++) {
                 const bool is_selected = (sep_idx == n);
@@ -345,8 +345,7 @@ void render_panel_sound() {
         int delay_idx = changed_prefs.sound_mixed_stereo_delay > 0 ? changed_prefs.sound_mixed_stereo_delay : 0;
         ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 
-        // Logic: Disable if Mono
-        ImGui::BeginDisabled(changed_prefs.sound_stereo == 0);
+        ImGui::BeginDisabled(!stereo_en);
         if (ImGui::BeginCombo("##Delay", stereo_delay_items[delay_idx])) {
             for (int n = 0; n < IM_ARRAYSIZE(stereo_delay_items); n++) {
                 const bool is_selected = (delay_idx == n);
@@ -420,12 +419,11 @@ void render_panel_sound() {
 
         ImGui::EndTable();
     }
+    ImGui::EndDisabled(); // sound_en
     ImGui::Spacing();
     EndGroupBox("Settings");
 
-    // ---------------------------------------------------------
-    // Floppy | Buffer
-    // ---------------------------------------------------------
+    ImGui::BeginDisabled(!sound_en);
     if (ImGui::BeginTable("BottomRowTable", 2, ImGuiTableFlags_None)) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -528,16 +526,10 @@ void render_panel_sound() {
 
         ImGui::Spacing();
 
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("Audio Pull/Push:");
-        AmigaRadioButton("Pull", &changed_prefs.sound_pullmode, 1);
-        ShowHelpMarker("Pull mode: emulator requests audio data when needed (recommended)");
-        ImGui::SameLine();
-        AmigaRadioButton("Push", &changed_prefs.sound_pullmode, 0);
-        ShowHelpMarker("Push mode: emulator continuously sends audio data to output device");
         ImGui::Spacing();
         EndGroupBox("Sound Buffer Size");
 
         ImGui::EndTable();
     }
+    ImGui::EndDisabled(); // sound_en
 }

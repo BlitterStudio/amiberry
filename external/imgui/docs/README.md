@@ -55,8 +55,8 @@ if (ImGui::Button("Save"))
 ImGui::InputText("string", buf, IM_COUNTOF(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-<img width="412" height="236" alt="sample code output (dark)" src="https://github.com/user-attachments/assets/f075e2b0-98de-4be8-acb4-99ba0c9966cd" />
-<img width="412" height="236" alt="sample code output (light)" src="https://github.com/user-attachments/assets/32b838df-6378-498b-84a8-9a79ee6264a7" />
+<img width="412" height="236" alt="sample code output (dark)" src="https://github.com/user-attachments/assets/32b838df-6378-498b-84a8-9a79ee6264a7" />
+<img width="412" height="236" alt="sample code output (light)" src="https://github.com/user-attachments/assets/f075e2b0-98de-4be8-acb4-99ba0c9966cd" />
 
 ```cpp
 // Create a window called "My First Tool", with a menu bar.
@@ -110,7 +110,7 @@ Reading the changelogs is a good way to keep up to date with the things Dear ImG
 ### Demo
 
 Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcasing a variety of features and examples. The code is always available for reference in `imgui_demo.cpp`. 
-- [Web version of the demo](https://pthom.github.io/imgui_manual_online/manual/imgui_manual.html) w/ source code browser, courtesy of [@pthom](https://github.com/pthom).
+- [imgui_explorer](https://pthom.github.io/imgui_explorer): Web version of the demo w/ source code browser, courtesy of [@pthom](https://github.com/pthom).
 
 You should be able to build the examples from sources. If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20260225.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20260225.zip) (Windows, 1.92.6, built 2026/02/25, master) or [older binaries](https://www.dearimgui.com/binaries).
@@ -150,10 +150,10 @@ Officially maintained backends (in repository):
 - Frameworks: AGS/Adventure Game Studio, Amethyst, Blender, bsf, Cinder, Cocos2d-x, Defold, Diligent Engine, Ebiten, Flexium, GML/Game Maker Studio, GLEQ, Godot, GTK3, Irrlicht Engine, JUCE, LÖVE+LUA, Mach Engine, Magnum, Marmalade, Monogame, NanoRT, nCine, Nim Game Lib, Nintendo 3DS/Switch/WiiU (homebrew), Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, Photoshop, px_render, Qt/QtDirect3D, raylib, SFML, Sokol, Unity, Unreal Engine 4/5, UWP, vtk, VulkanHpp, VulkanSceneGraph, Win32 GDI, WxWidgets.
 - Many bindings are auto-generated (by good old [cimgui](https://github.com/cimgui/cimgui) or our newer [dear_bindings](https://github.com/dearimgui/dear_bindings)), you can use their metadata output to generate bindings for other languages.
 
-<img width="878" height="220" alt="Useful extensions" src="https://github.com/user-attachments/assets/e6b0aa7c-bf53-41c5-ac69-bea3098b1dee" />
-
 [Useful Extensions/Widgets](https://github.com/ocornut/imgui/wiki/Useful-Extensions) wiki page:
-- Automation/testing, Text editors, node editors, timeline editors, plotting, software renderers, remote network access, memory editors, gizmos, etc. Notable and well supported extensions include [ImPlot](https://github.com/epezent/implot) and [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
+
+[![Useful extensions thumbnails](https://github.com/user-attachments/assets/e6b0aa7c-bf53-41c5-ac69-bea3098b1dee)](https://github.com/ocornut/imgui/wiki/Useful-Extensions) 
+- Automation/testing, Text editors, node editors, timeline editors, plotting, software renderers, remote network access, memory editors, gizmos, etc. Notable and well supported extensions include [ImPlot](https://github.com/epezent/implot), [ImPlot3d](https://github.com/brenocq/implot3d) and [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
 
 Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 

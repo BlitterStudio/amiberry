@@ -82,7 +82,7 @@ if(MACOS_APP_STORE)
 endif()
 
 # Pre-release version suffix (project version is set in project() above)
-set(VERSION_PRE_RELEASE "30" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "31" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")

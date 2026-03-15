@@ -101,9 +101,13 @@ void render_panel_rom()
 	InitializeROMLists();
 	ImGui::Indent(4.0f);
 
+	const float browse_btn_w = SMALL_BUTTON_WIDTH;
+	const float spacing = ImGui::GetStyle().ItemSpacing.x;
+
 	BeginGroupBox("System ROM Settings");
 	// Main ROM
 	ImGui::Text("Main ROM File:");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	if (RomCombo("##MainRomCombo", changed_prefs.romfile, MAX_DPATH, main_rom_list)) {
 		read_kickstart_version(&changed_prefs);
 	}
@@ -119,6 +123,7 @@ void render_panel_rom()
 
 	// Extended ROM
 	ImGui::Text("Extended ROM File:");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	RomCombo("##ExtRomCombo", changed_prefs.romextfile, MAX_DPATH, ext_rom_list);
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romextfile);
@@ -185,6 +190,7 @@ void render_panel_rom()
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	AmigaInputText("##CustomRomFilename", rb->lf.loadfile, MAX_DPATH);
 	ImGui::SameLine();
     if (AmigaButton("...##CustomRomFileButton")) {
@@ -196,6 +202,7 @@ void render_panel_rom()
 
 	BeginGroupBox("Miscellaneous");
 	ImGui::Text("Cartridge ROM File:");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list);
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
@@ -206,6 +213,7 @@ void render_panel_rom()
 	}
 
 	ImGui::Text("Flash RAM or A2286/A2386SX BIOS CMOS RAM file:");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	AmigaInputText("##FlashROM", changed_prefs.flashfile, MAX_DPATH);
 	ImGui::SameLine();
 	if (AmigaButton("...##FlashRomFileButton")) {
@@ -214,6 +222,7 @@ void render_panel_rom()
 	}
 
 	ImGui::Text("Real Time Clock file:");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	AmigaInputText("##RTC", changed_prefs.rtcfile, MAX_DPATH);
 	ImGui::SameLine();
 	if (AmigaButton("...##RTCFileButton")) {
@@ -237,6 +246,7 @@ void render_panel_rom()
 	
 	ImGui::BeginDisabled(!uae_enabled);
 	ImGui::Text("Board Type:");
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
 	if (ImGui::Combo("##BoardTypeCombo", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
 		if (current_uaeboard_idx > 0) {
 			changed_prefs.uaeboard = current_uaeboard_idx - 1;

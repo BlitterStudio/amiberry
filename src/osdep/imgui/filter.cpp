@@ -214,6 +214,7 @@ static void render_shader_parameters_popup()
 void render_panel_filter()
 {
 	ImGui::Indent(4.0f);
+	const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
 	// Initialize shader list on first call
 	if (!shaders_initialized) {
@@ -248,7 +249,7 @@ void render_panel_filter()
 	int scaling_idx = changed_prefs.scaling_method + 1; // -1 -> 0, 0 -> 1, etc.
 	if (scaling_idx < 0) scaling_idx = 0;
 	if (scaling_idx > 3) scaling_idx = 3;
-	ImGui::SetNextItemWidth(BUTTON_WIDTH);
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
 	if (ImGui::BeginCombo("##ScalingMethod", scaling_items[scaling_idx])) {
 		for (int n = 0; n < IM_ARRAYSIZE(scaling_items); n++) {
 			const bool is_selected = (scaling_idx == n);
@@ -271,14 +272,14 @@ void render_panel_filter()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("H. Offset:");
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
 	ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -80, 80);
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("V. Offset:");
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
 	ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -80, 80);
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 	ImGui::Spacing();
@@ -288,7 +289,8 @@ void render_panel_filter()
 	BeginGroupBox("Native Display Shader");
 	{
 		int native_idx = find_shader_index(amiberry_options.shader);
-		ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+		const float native_label_w = ImGui::CalcTextSize("Shader for native Amiga modes").x;
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - native_label_w - spacing * 3);
 		if (ImGui::BeginCombo("##NativeShader", shader_items[native_idx])) {
 			for (int i = 0; i < static_cast<int>(shader_items.size()); i++) {
 				bool is_selected = (i == native_idx);
@@ -313,7 +315,8 @@ void render_panel_filter()
 	BeginGroupBox("RTG Display Shader");
 	{
 		int rtg_idx = find_shader_index(amiberry_options.shader_rtg);
-		ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+		const float rtg_label_w = ImGui::CalcTextSize("Shader for RTG/Picasso modes").x;
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - rtg_label_w - spacing * 3);
 		if (ImGui::BeginCombo("##RTGShader", shader_items[rtg_idx])) {
 			for (int i = 0; i < static_cast<int>(shader_items.size()); i++) {
 				bool is_selected = (i == rtg_idx);
@@ -355,7 +358,8 @@ void render_panel_filter()
 		if (!bezels_initialized) scan_bezels();
 
 		int bezel_idx = find_bezel_index(amiberry_options.custom_bezel);
-		ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+		const float bezel_label_w = ImGui::CalcTextSize("Custom bezel overlay").x;
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - bezel_label_w - spacing * 3);
 		if (ImGui::BeginCombo("##CustomBezel", bezel_items.empty() ? "none" : bezel_items[bezel_idx])) {
 			for (int i = 0; i < static_cast<int>(bezel_items.size()); i++) {
 				bool is_selected = (i == bezel_idx);
@@ -384,19 +388,6 @@ void render_panel_filter()
 		if (amiberry_options.use_bezel) ImGui::EndDisabled();
 	}
 	EndGroupBox("Bezel Overlay");
-
-	ImGui::Spacing();
-
-	// Mobile Shader Options
-	BeginGroupBox("Performance Options");
-	{
-		AmigaCheckbox("Force mobile-optimized shaders",
-					  &amiberry_options.force_mobile_shaders);
-		ShowHelpMarker("Enable mobile shader variants regardless of auto-detection.\n"
-					   "Mobile shaders are faster but have reduced visual effects.\n"
-					   "Useful for testing on desktop or when auto-detection fails.");
-	}
-	EndGroupBox("Performance Options");
 
 	ImGui::Spacing();
 	ImGui::Spacing();

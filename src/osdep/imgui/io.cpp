@@ -169,11 +169,12 @@ void render_panel_io()
 	bool use_serial = (serial_idx > 0);
 	if (!use_serial) ImGui::BeginDisabled();
 
-	if (ImGui::BeginTable("SerialOptsTable", 4, ImGuiTableFlags_None)) {
-		ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
-		ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-		ImGui::TableSetupColumn("column4", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
+	const float table_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;
+	if (ImGui::BeginTable("SerialOptsTable", 4, ImGuiTableFlags_None, ImVec2(table_w, 0))) {
+		ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch, 1.5f);
+		ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+		ImGui::TableSetupColumn("column4", ImGuiTableColumnFlags_WidthStretch, 1.5f);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn(); AmigaCheckbox("Shared", &changed_prefs.serial_demand);
 		ShowHelpMarker("Allow host and emulated Amiga to share the serial port");
@@ -186,9 +187,9 @@ void render_panel_io()
 		ImGui::EndTable();
 	}
 
-	if (ImGui::BeginTable("SerialStatusTable", 2, ImGuiTableFlags_None)) {
-		ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.9f);
-		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.9f);
+	if (ImGui::BeginTable("SerialStatusTable", 2, ImGuiTableFlags_None, ImVec2(table_w, 0))) {
+		ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn(); AmigaCheckbox("Serial status (RTS/CTS/...)", &changed_prefs.serial_rtsctsdtrdtecd);
 		ShowHelpMarker("Emulate serial port status lines (RTS, CTS, DTR, DSR, CD)");
@@ -209,9 +210,10 @@ void render_panel_io()
 	int midi_out_idx = 0;
 	int midi_in_idx = 0;
 
-	if (ImGui::BeginTable("MidiTable", 2, ImGuiTableFlags_None)) {
-		ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
-		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+	const float midi_table_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;
+	if (ImGui::BeginTable("MidiTable", 2, ImGuiTableFlags_None, ImVec2(midi_table_w, 0))) {
+		ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 

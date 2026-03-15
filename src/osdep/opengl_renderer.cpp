@@ -264,12 +264,7 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 	// Use built-in crtemu shaders
 	if (m_shader.crtemu == nullptr) {
 		const int crt_type = get_crtemu_type(shader_name, m_shader);
-		m_shader.crtemu = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr,
-			amiberry_options.force_mobile_shaders);
-
-		if (m_shader.crtemu != nullptr && amiberry_options.force_mobile_shaders) {
-			m_shader.crtemu->is_mobile_gpu = true;
-		}
+		m_shader.crtemu = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
 
 		// Fallback to NONE if shader creation failed
 		if (m_shader.crtemu == nullptr && crt_type != CRTEMU_TYPE_NONE) {
@@ -478,24 +473,27 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	const int src_w = (is_cropped) ? crop_w : (amiga_surface ? amiga_surface->w : 0);
 	const int src_h = (is_cropped) ? crop_h : (amiga_surface ? amiga_surface->h : 0);
 
-	// Check if integer scaling is requested:
-	// - Native mode: scaling_method == 2 (stored in m_integer_scaling)
-	// - RTG mode: scalepicasso == RTG_MODE_INTEGER_SCALE
 	bool use_integer_scaling = mon->screen_is_picasso
 		? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
 		: m_integer_scaling;
+
+	bool use_center = mon->screen_is_picasso
+		&& mon->scalepicasso == RTG_MODE_CENTER;
 
 	int destW, destH, destX, destY;
 
 	if (renderAreaX != 0 || renderAreaY != 0 ||
 		renderAreaW != drawableWidth || renderAreaH != drawableHeight) {
-		// Custom bezel active: fill the screen hole completely.
 		destW = renderAreaW;
 		destH = renderAreaH;
 		destX = renderAreaX;
 		destY = renderAreaY;
+	} else if (use_center && src_w > 0 && src_h > 0) {
+		destW = src_w;
+		destH = src_h;
+		destX = (renderAreaW - destW) / 2;
+		destY = (renderAreaH - destH) / 2;
 	} else {
-		// Normal mode: aspect-ratio-corrected letterboxing
 		destW = renderAreaW;
 		destH = static_cast<int>(renderAreaW / desired_aspect);
 
@@ -507,7 +505,6 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		if (destW <= 0) destW = 1;
 		if (destH <= 0) destH = 1;
 
-		// Apply integer scaling: constrain to largest integer multiple of source
 		if (use_integer_scaling && src_w > 0 && src_h > 0) {
 			int scale = std::min(destW / src_w, destH / src_h);
 			if (scale < 1) scale = 1;

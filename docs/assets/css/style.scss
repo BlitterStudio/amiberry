@@ -1,0 +1,454 @@
+---
+---
+
+// =====================================================================
+//  Amiberry — Custom Landing Page Styles
+//  Theme: jekyll-theme-cayman (overridden)
+// =====================================================================
+
+// Override Cayman variables before import
+$header-bg-color: #1a3a5c;
+$header-bg-color-secondary: #0d1b2a;
+$section-headings-color: #1a3a5c;
+$body-link-color: #1a6fb5;
+
+@import "jekyll-theme-cayman";
+
+// ----- Header --------------------------------------------------------
+
+.page-header {
+  padding: 2.5rem 2rem;
+  background-image: linear-gradient(135deg, #0d1b2a 0%, #152238 40%, #1a3a5c 100%);
+
+  .project-name {
+    font-weight: 800;
+    font-size: 2.8rem;
+    letter-spacing: -0.02em;
+  }
+
+  .project-tagline {
+    font-weight: 300;
+    font-size: 1.1rem;
+    opacity: 0.85;
+    max-width: 540px;
+    margin: 0.5rem auto 0;
+  }
+}
+
+// ----- Navigation Bar ------------------------------------------------
+
+.nav-bar {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  padding: 0.8rem 0;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #d0d7de;
+
+  a {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a3a5c;
+    text-decoration: none;
+    padding: 0.3rem 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s, color 0.2s;
+
+    &:hover {
+      color: #0d1b2a;
+      border-bottom-color: #1a3a5c;
+    }
+  }
+}
+
+// ----- Hero Section --------------------------------------------------
+
+.hero {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  > img {
+    max-width: 260px;
+    margin-bottom: 1rem;
+  }
+
+  .hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-description {
+    font-size: 1.12rem;
+    line-height: 1.7;
+    color: #424a53;
+    max-width: 640px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .hero-cta {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.6rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
+      }
+    }
+
+    .btn-primary {
+      background: #1a3a5c;
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #f6f8fa;
+      color: #1a3a5c;
+      border: 1px solid #d0d7de;
+    }
+  }
+}
+
+// ----- Highlight Cards (3-up) ----------------------------------------
+
+.highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.highlight-card {
+  text-align: center;
+  padding: 1.8rem 1.2rem;
+  background: linear-gradient(145deg, #f0f4f8, #f6f8fa);
+  border-radius: 12px;
+  border: 1px solid #d0d7de;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  .highlight-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    color: #1a3a5c;
+    margin: 0 0 0.4rem;
+  }
+
+  p {
+    font-size: 0.88rem;
+    color: #656d76;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+// ----- Section Dividers ----------------------------------------------
+
+hr {
+  border: none;
+  border-top: 1px solid #d8dee4;
+  margin: 2.5rem 0;
+}
+
+// ----- Section Typography --------------------------------------------
+
+.main-content {
+  > h2 {
+    margin-top: 0;
+    margin-bottom: 0.3rem;
+  }
+
+  > h2 + p {
+    color: #656d76;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+// ----- Feature Grid --------------------------------------------------
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+  margin: 1.2rem 0 0.5rem;
+}
+
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e1e4e8;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: #1a3a5c;
+    box-shadow: 0 2px 8px rgba(26, 58, 92, 0.06);
+  }
+
+  .feature-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    width: 1.8rem;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .feature-content {
+    h4 {
+      font-size: 0.92rem;
+      color: #1f2328;
+      margin: 0 0 0.2rem;
+    }
+
+    p {
+      font-size: 0.82rem;
+      color: #656d76;
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+}
+
+// ----- Platform Install Grid -----------------------------------------
+
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.2rem;
+  margin: 1.2rem 0 0.5rem;
+}
+
+.platform-card {
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  padding: 1.3rem 1.4rem;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+
+  &.linux::before   { background: linear-gradient(90deg, #e8a317, #d4860b); }
+  &.macos::before   { background: linear-gradient(90deg, #a3a3a3, #737373); }
+  &.windows::before { background: linear-gradient(90deg, #0078d4, #005a9e); }
+  &.android::before { background: linear-gradient(90deg, #3ddc84, #2da65d); }
+
+  h3 {
+    font-size: 1.05rem;
+    color: #1f2328;
+    margin: 0.2rem 0 0.6rem;
+  }
+
+  > p {
+    font-size: 0.88rem;
+    color: #424a53;
+    margin: 0 0 0.4rem;
+  }
+
+  pre {
+    background: #161b22;
+    color: #e6edf3;
+    border: none;
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    margin: 0.5rem 0;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+      border: none;
+    }
+  }
+
+  ol, ul {
+    font-size: 0.88rem;
+    margin: 0.5rem 0;
+    padding-left: 1.3rem;
+    color: #424a53;
+
+    li { margin-bottom: 0.3rem; }
+    code { font-size: 0.82rem; }
+  }
+
+  .platform-alt {
+    font-size: 0.82rem;
+    color: #656d76;
+    margin-top: 0.6rem;
+
+    a { color: #1a6fb5; }
+  }
+}
+
+// ----- Resource Links Grid -------------------------------------------
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0 0.5rem;
+}
+
+.resource-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  text-decoration: none !important;
+  color: #1f2328 !important;
+  font-weight: 600;
+  font-size: 0.92rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: #1a3a5c;
+    box-shadow: 0 2px 8px rgba(26, 58, 92, 0.06);
+    color: #1a3a5c !important;
+  }
+
+  .resource-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+}
+
+// ----- Community Links -----------------------------------------------
+
+.community-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1.2rem 0 2rem;
+
+  img {
+    border-radius: 6px;
+    transition: transform 0.15s, opacity 0.15s;
+
+    &:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+  }
+}
+
+// ----- Footer --------------------------------------------------------
+
+.site-footer {
+  text-align: center;
+  padding: 1rem 0 0;
+
+  .sponsor-section {
+    margin-bottom: 1rem;
+
+    .sponsor-label {
+      font-size: 0.7rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.6rem;
+    }
+
+    img {
+      opacity: 0.5;
+      transition: opacity 0.2s;
+
+      &:hover { opacity: 1; }
+    }
+  }
+
+  .footer-meta {
+    font-size: 0.78rem;
+    color: #8b949e;
+    margin-top: 0.8rem;
+
+    a { color: #656d76; }
+  }
+}
+
+// ----- Responsive ----------------------------------------------------
+
+@media screen and (max-width: 64em) {
+  .highlight-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .feature-grid,
+  .platform-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 42em) {
+  .page-header {
+    padding: 2rem 1.5rem;
+
+    .project-name  { font-size: 2rem; }
+    .project-tagline { font-size: 0.95rem; }
+  }
+
+  .hero > img { max-width: 180px; }
+
+  .nav-bar {
+    gap: 0.3rem 1.2rem;
+    a { font-size: 0.85rem; }
+  }
+
+  .highlight-grid,
+  .feature-grid,
+  .platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-cta a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .resource-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
