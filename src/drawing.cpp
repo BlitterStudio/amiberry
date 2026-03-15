@@ -7203,17 +7203,23 @@ static void pfield_doline32_8_neon(uae_u32 *pixels, int wordcount, int planes, u
 		b4 = neon_bswap32(b4); b5 = neon_bswap32(b5);
 		b6 = neon_bswap32(b6); b7 = neon_bswap32(b7);
 
-		for (int i = 0; i < 4; i++) {
-			pixels[0] = vgetq_lane_u32(b0, 0); b0 = vextq_u32(b0, b0, 1);
-			pixels[4] = vgetq_lane_u32(b2, 0); b2 = vextq_u32(b2, b2, 1);
-			pixels[2] = vgetq_lane_u32(b1, 0); b1 = vextq_u32(b1, b1, 1);
-			pixels[6] = vgetq_lane_u32(b3, 0); b3 = vextq_u32(b3, b3, 1);
-			pixels[1] = vgetq_lane_u32(b4, 0); b4 = vextq_u32(b4, b4, 1);
-			pixels[5] = vgetq_lane_u32(b6, 0); b6 = vextq_u32(b6, b6, 1);
-			pixels[3] = vgetq_lane_u32(b5, 0); b5 = vextq_u32(b5, b5, 1);
-			pixels[7] = vgetq_lane_u32(b7, 0); b7 = vextq_u32(b7, b7, 1);
-			pixels += 8;
-		}
+		/* Transpose 8×4 output matrix using zip to avoid SIMD→scalar stalls.
+		 * Output order per word: [b0, b4, b1, b5, b2, b6, b3, b7] */
+		uint32x4_t z04_lo = vzip1q_u32(b0, b4); uint32x4_t z04_hi = vzip2q_u32(b0, b4);
+		uint32x4_t z15_lo = vzip1q_u32(b1, b5); uint32x4_t z15_hi = vzip2q_u32(b1, b5);
+		uint32x4_t z26_lo = vzip1q_u32(b2, b6); uint32x4_t z26_hi = vzip2q_u32(b2, b6);
+		uint32x4_t z37_lo = vzip1q_u32(b3, b7); uint32x4_t z37_hi = vzip2q_u32(b3, b7);
+
+		vst1q_u32(pixels +  0, vcombine_u32(vget_low_u32(z04_lo), vget_low_u32(z15_lo)));
+		vst1q_u32(pixels +  4, vcombine_u32(vget_low_u32(z26_lo), vget_low_u32(z37_lo)));
+		vst1q_u32(pixels +  8, vcombine_u32(vget_high_u32(z04_lo), vget_high_u32(z15_lo)));
+		vst1q_u32(pixels + 12, vcombine_u32(vget_high_u32(z26_lo), vget_high_u32(z37_lo)));
+		vst1q_u32(pixels + 16, vcombine_u32(vget_low_u32(z04_hi), vget_low_u32(z15_hi)));
+		vst1q_u32(pixels + 20, vcombine_u32(vget_low_u32(z26_hi), vget_low_u32(z37_hi)));
+		vst1q_u32(pixels + 24, vcombine_u32(vget_high_u32(z04_hi), vget_high_u32(z15_hi)));
+		vst1q_u32(pixels + 28, vcombine_u32(vget_high_u32(z26_hi), vget_high_u32(z37_hi)));
+
+		pixels += 32;
 	}
 
 	if (tail > 0) {
@@ -7321,17 +7327,21 @@ static void pfield_doline32_8_sse2(uae_u32 *pixels, int wordcount, int planes, u
 		MERGE32_SSE2(b4, b6, maskffff, 16);
 		MERGE32_SSE2(b5, b7, maskffff, 16);
 
-		/* Extract and scatter-store 4 words at a time per output slot */
-		uae_u32 tmp[4];
+		/* Transpose 8×4 output matrix using unpack to avoid scalar scatter.
+		 * Output order per word: [b0, b4, b1, b5, b2, b6, b3, b7] */
+		__m128i z04_lo = _mm_unpacklo_epi32(b0, b4); __m128i z04_hi = _mm_unpackhi_epi32(b0, b4);
+		__m128i z15_lo = _mm_unpacklo_epi32(b1, b5); __m128i z15_hi = _mm_unpackhi_epi32(b1, b5);
+		__m128i z26_lo = _mm_unpacklo_epi32(b2, b6); __m128i z26_hi = _mm_unpackhi_epi32(b2, b6);
+		__m128i z37_lo = _mm_unpacklo_epi32(b3, b7); __m128i z37_hi = _mm_unpackhi_epi32(b3, b7);
 
-		sse2_store_bswap32(tmp, b0); pixels[ 0]=tmp[0]; pixels[ 8]=tmp[1]; pixels[16]=tmp[2]; pixels[24]=tmp[3];
-		sse2_store_bswap32(tmp, b2); pixels[ 4]=tmp[0]; pixels[12]=tmp[1]; pixels[20]=tmp[2]; pixels[28]=tmp[3];
-		sse2_store_bswap32(tmp, b1); pixels[ 2]=tmp[0]; pixels[10]=tmp[1]; pixels[18]=tmp[2]; pixels[26]=tmp[3];
-		sse2_store_bswap32(tmp, b3); pixels[ 6]=tmp[0]; pixels[14]=tmp[1]; pixels[22]=tmp[2]; pixels[30]=tmp[3];
-		sse2_store_bswap32(tmp, b4); pixels[ 1]=tmp[0]; pixels[ 9]=tmp[1]; pixels[17]=tmp[2]; pixels[25]=tmp[3];
-		sse2_store_bswap32(tmp, b6); pixels[ 5]=tmp[0]; pixels[13]=tmp[1]; pixels[21]=tmp[2]; pixels[29]=tmp[3];
-		sse2_store_bswap32(tmp, b5); pixels[ 3]=tmp[0]; pixels[11]=tmp[1]; pixels[19]=tmp[2]; pixels[27]=tmp[3];
-		sse2_store_bswap32(tmp, b7); pixels[ 7]=tmp[0]; pixels[15]=tmp[1]; pixels[23]=tmp[2]; pixels[31]=tmp[3];
+		sse2_store_bswap32(pixels +  0, _mm_unpacklo_epi64(z04_lo, z15_lo));
+		sse2_store_bswap32(pixels +  4, _mm_unpacklo_epi64(z26_lo, z37_lo));
+		sse2_store_bswap32(pixels +  8, _mm_unpackhi_epi64(z04_lo, z15_lo));
+		sse2_store_bswap32(pixels + 12, _mm_unpackhi_epi64(z26_lo, z37_lo));
+		sse2_store_bswap32(pixels + 16, _mm_unpacklo_epi64(z04_hi, z15_hi));
+		sse2_store_bswap32(pixels + 20, _mm_unpacklo_epi64(z26_hi, z37_hi));
+		sse2_store_bswap32(pixels + 24, _mm_unpackhi_epi64(z04_hi, z15_hi));
+		sse2_store_bswap32(pixels + 28, _mm_unpackhi_epi64(z26_hi, z37_hi));
 
 		pixels += 32;
 	}
