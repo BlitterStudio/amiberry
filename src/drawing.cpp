@@ -40,10 +40,10 @@
 #include "devices.h"
 #include "gfxboard.h"
 
-#if defined(CPU_AARCH64) || (defined(CPU_arm) && defined(ARMV6_ASSEMBLY))
+#if defined(CPU_AARCH64)
 #include <arm_neon.h>
 #define HAVE_NEON 1
-#elif defined(CPU_x86_64) || defined(CPU_i386)
+#elif defined(CPU_x86_64)
 #include <immintrin.h>
 #define HAVE_SSE2 1
 #endif
@@ -7242,12 +7242,10 @@ static void pfield_doline32_8_neon(uae_u32 *pixels, int wordcount, int planes, u
 static inline __m128i sse2_load_bswap32(const uae_u8 *ptr)
 {
 	__m128i v = _mm_loadu_si128((const __m128i *)ptr);
-	/* byte-swap each 32-bit lane: ABCD -> DCBA */
-	__m128i byte_mask = _mm_set_epi8(12,13,14,15, 8,9,10,11, 4,5,6,7, 0,1,2,3);
 #ifdef __SSSE3__
+	__m128i byte_mask = _mm_set_epi8(12,13,14,15, 8,9,10,11, 4,5,6,7, 0,1,2,3);
 	return _mm_shuffle_epi8(v, byte_mask);
 #else
-	/* SSE2 fallback: swap bytes within 16-bit words, then swap 16-bit halves */
 	__m128i hi = _mm_srli_epi16(v, 8);
 	__m128i lo = _mm_slli_epi16(v, 8);
 	v = _mm_or_si128(hi, lo);
