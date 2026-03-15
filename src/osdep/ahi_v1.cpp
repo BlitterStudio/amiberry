@@ -224,10 +224,23 @@ static int ahi_init_sound()
 	if (!ahisndbuffer)
 		return 0;
 
-	// Create a separate SDL3 AudioStream for AHI output (push mode, no callback)
-	ahi_stream = SDL_OpenAudioDeviceStream(
-		SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+	// Honor selected output device, matching the Paula audio path in sound.cpp
+	const int sndcard = currprefs.soundcard;
+	const bool use_default_device = currprefs.soundcard_default
+		|| sndcard < 0 || sndcard >= MAX_SOUND_DEVICES
+		|| sound_devices[sndcard] == nullptr;
+	const SDL_AudioDeviceID device_id = use_default_device
+		? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
+		: static_cast<SDL_AudioDeviceID>(sound_devices[sndcard]->id);
 
+	// Create a separate SDL3 AudioStream for AHI output (push mode, no callback)
+	ahi_stream = SDL_OpenAudioDeviceStream(device_id, &spec, nullptr, nullptr);
+
+	if (!ahi_stream && !use_default_device) {
+		write_log(_T("AHI: Failed to open selected audio device, retrying with default: %s\n"), SDL_GetError());
+		ahi_stream = SDL_OpenAudioDeviceStream(
+			SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+	}
 	if (!ahi_stream) {
 		write_log(_T("AHI: Failed to open SDL3 audio device stream: %s\n"), SDL_GetError());
 		return 0;
