@@ -40,6 +40,14 @@
 #include "devices.h"
 #include "gfxboard.h"
 
+#if defined(CPU_AARCH64) || (defined(CPU_arm) && defined(ARMV6_ASSEMBLY))
+#include <arm_neon.h>
+#define HAVE_NEON 1
+#elif defined(CPU_x86_64) || defined(CPU_i386)
+#include <immintrin.h>
+#define HAVE_SSE2 1
+#endif
+
 #define ENABLE_MULTITHREADED_DENISE 1
 
 #define FMODE64_HACK 0
@@ -7120,6 +7128,223 @@ STATIC_INLINE void pfield_doline32_8(uae_u32 *pixels, int wordcount, int planes,
 	}
 }
 
+/* ---- SIMD bitplane merge: ARM64 NEON ---- */
+
+#ifdef HAVE_NEON
+
+#define MERGE32_NEON(a, b, mask_vec, shift) do { \
+	uint32x4_t tmp = vandq_u32(mask_vec, veorq_u32(a, vshrq_n_u32(b, shift))); \
+	a = veorq_u32(a, tmp); \
+	b = veorq_u32(b, vshlq_n_u32(tmp, shift)); \
+} while (0)
+
+static inline uint32x4_t neon_bswap32(uint32x4_t v)
+{
+	return vreinterpretq_u32_u8(vrev32q_u8(vreinterpretq_u8_u32(v)));
+}
+
+static void pfield_doline32_8_neon(uae_u32 *pixels, int wordcount, int planes, uae_u8 *real_bplpt[8])
+{
+	const uint32x4_t mask55 = vdupq_n_u32(0x55555555);
+	const uint32x4_t mask33 = vdupq_n_u32(0x33333333);
+	const uint32x4_t mask0f = vdupq_n_u32(0x0f0f0f0f);
+	const uint32x4_t maskff = vdupq_n_u32(0x00ff00ff);
+	const uint32x4_t maskffff = vdupq_n_u32(0x0000ffff);
+
+	int simd_count = wordcount >> 2;
+	int tail = wordcount & 3;
+
+	while (simd_count-- > 0) {
+		uint32x4_t b0, b1, b2, b3, b4, b5, b6, b7;
+
+		b0 = vdupq_n_u32(0); b1 = b0; b2 = b0; b3 = b0;
+		b4 = b0; b5 = b0; b6 = b0; b7 = b0;
+
+		switch (planes) {
+#ifdef AGA
+			case 8: b0 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[7])); real_bplpt[7] += 16;
+			case 7: b1 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[6])); real_bplpt[6] += 16;
+#endif
+			case 6: b2 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[5])); real_bplpt[5] += 16;
+			case 5: b3 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[4])); real_bplpt[4] += 16;
+			case 4: b4 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[3])); real_bplpt[3] += 16;
+			case 3: b5 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[2])); real_bplpt[2] += 16;
+			case 2: b6 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[1])); real_bplpt[1] += 16;
+			case 1: b7 = neon_bswap32(vld1q_u32((const uint32_t *)real_bplpt[0])); real_bplpt[0] += 16;
+		}
+
+		MERGE32_NEON(b0, b1, mask55, 1);
+		MERGE32_NEON(b2, b3, mask55, 1);
+		MERGE32_NEON(b4, b5, mask55, 1);
+		MERGE32_NEON(b6, b7, mask55, 1);
+
+		MERGE32_NEON(b0, b2, mask33, 2);
+		MERGE32_NEON(b1, b3, mask33, 2);
+		MERGE32_NEON(b4, b6, mask33, 2);
+		MERGE32_NEON(b5, b7, mask33, 2);
+
+		MERGE32_NEON(b0, b4, mask0f, 4);
+		MERGE32_NEON(b1, b5, mask0f, 4);
+		MERGE32_NEON(b2, b6, mask0f, 4);
+		MERGE32_NEON(b3, b7, mask0f, 4);
+
+		MERGE32_NEON(b0, b1, maskff, 8);
+		MERGE32_NEON(b2, b3, maskff, 8);
+		MERGE32_NEON(b4, b5, maskff, 8);
+		MERGE32_NEON(b6, b7, maskff, 8);
+
+		MERGE32_NEON(b0, b2, maskffff, 16);
+		MERGE32_NEON(b1, b3, maskffff, 16);
+		MERGE32_NEON(b4, b6, maskffff, 16);
+		MERGE32_NEON(b5, b7, maskffff, 16);
+
+		b0 = neon_bswap32(b0); b1 = neon_bswap32(b1);
+		b2 = neon_bswap32(b2); b3 = neon_bswap32(b3);
+		b4 = neon_bswap32(b4); b5 = neon_bswap32(b5);
+		b6 = neon_bswap32(b6); b7 = neon_bswap32(b7);
+
+		for (int i = 0; i < 4; i++) {
+			pixels[0] = vgetq_lane_u32(b0, 0); b0 = vextq_u32(b0, b0, 1);
+			pixels[4] = vgetq_lane_u32(b2, 0); b2 = vextq_u32(b2, b2, 1);
+			pixels[2] = vgetq_lane_u32(b1, 0); b1 = vextq_u32(b1, b1, 1);
+			pixels[6] = vgetq_lane_u32(b3, 0); b3 = vextq_u32(b3, b3, 1);
+			pixels[1] = vgetq_lane_u32(b4, 0); b4 = vextq_u32(b4, b4, 1);
+			pixels[5] = vgetq_lane_u32(b6, 0); b6 = vextq_u32(b6, b6, 1);
+			pixels[3] = vgetq_lane_u32(b5, 0); b5 = vextq_u32(b5, b5, 1);
+			pixels[7] = vgetq_lane_u32(b7, 0); b7 = vextq_u32(b7, b7, 1);
+			pixels += 8;
+		}
+	}
+
+	if (tail > 0) {
+		pfield_doline32_8(pixels, tail, planes, real_bplpt);
+	}
+}
+
+#endif /* HAVE_NEON */
+
+/* ---- SIMD bitplane merge: x86_64 SSE2 ---- */
+
+#ifdef HAVE_SSE2
+
+#define MERGE32_SSE2(a, b, mask_vec, shift) do { \
+	__m128i tmp = _mm_and_si128(mask_vec, _mm_xor_si128(a, _mm_srli_epi32(b, shift))); \
+	a = _mm_xor_si128(a, tmp); \
+	b = _mm_xor_si128(b, _mm_slli_epi32(tmp, shift)); \
+} while (0)
+
+static inline __m128i sse2_load_bswap32(const uae_u8 *ptr)
+{
+	__m128i v = _mm_loadu_si128((const __m128i *)ptr);
+	/* byte-swap each 32-bit lane: ABCD -> DCBA */
+	__m128i byte_mask = _mm_set_epi8(12,13,14,15, 8,9,10,11, 4,5,6,7, 0,1,2,3);
+#ifdef __SSSE3__
+	return _mm_shuffle_epi8(v, byte_mask);
+#else
+	/* SSE2 fallback: swap bytes within 16-bit words, then swap 16-bit halves */
+	__m128i hi = _mm_srli_epi16(v, 8);
+	__m128i lo = _mm_slli_epi16(v, 8);
+	v = _mm_or_si128(hi, lo);
+	v = _mm_shufflelo_epi16(v, _MM_SHUFFLE(2,3,0,1));
+	v = _mm_shufflehi_epi16(v, _MM_SHUFFLE(2,3,0,1));
+	return v;
+#endif
+}
+
+static inline void sse2_store_bswap32(uae_u32 *dst, __m128i v)
+{
+#ifdef __SSSE3__
+	__m128i byte_mask = _mm_set_epi8(12,13,14,15, 8,9,10,11, 4,5,6,7, 0,1,2,3);
+	_mm_storeu_si128((__m128i *)dst, _mm_shuffle_epi8(v, byte_mask));
+#else
+	__m128i hi = _mm_srli_epi16(v, 8);
+	__m128i lo = _mm_slli_epi16(v, 8);
+	v = _mm_or_si128(hi, lo);
+	v = _mm_shufflelo_epi16(v, _MM_SHUFFLE(2,3,0,1));
+	v = _mm_shufflehi_epi16(v, _MM_SHUFFLE(2,3,0,1));
+	_mm_storeu_si128((__m128i *)dst, v);
+#endif
+}
+
+static void pfield_doline32_8_sse2(uae_u32 *pixels, int wordcount, int planes, uae_u8 *real_bplpt[8])
+{
+	const __m128i mask55 = _mm_set1_epi32(0x55555555);
+	const __m128i mask33 = _mm_set1_epi32(0x33333333);
+	const __m128i mask0f = _mm_set1_epi32(0x0f0f0f0f);
+	const __m128i maskff = _mm_set1_epi32(0x00ff00ff);
+	const __m128i maskffff = _mm_set1_epi32(0x0000ffff);
+
+	int simd_count = wordcount >> 2;
+	int tail = wordcount & 3;
+
+	while (simd_count-- > 0) {
+		__m128i b0, b1, b2, b3, b4, b5, b6, b7;
+
+		b0 = _mm_setzero_si128(); b1 = b0; b2 = b0; b3 = b0;
+		b4 = b0; b5 = b0; b6 = b0; b7 = b0;
+
+		switch (planes) {
+#ifdef AGA
+			case 8: b0 = sse2_load_bswap32(real_bplpt[7]); real_bplpt[7] += 16;
+			case 7: b1 = sse2_load_bswap32(real_bplpt[6]); real_bplpt[6] += 16;
+#endif
+			case 6: b2 = sse2_load_bswap32(real_bplpt[5]); real_bplpt[5] += 16;
+			case 5: b3 = sse2_load_bswap32(real_bplpt[4]); real_bplpt[4] += 16;
+			case 4: b4 = sse2_load_bswap32(real_bplpt[3]); real_bplpt[3] += 16;
+			case 3: b5 = sse2_load_bswap32(real_bplpt[2]); real_bplpt[2] += 16;
+			case 2: b6 = sse2_load_bswap32(real_bplpt[1]); real_bplpt[1] += 16;
+			case 1: b7 = sse2_load_bswap32(real_bplpt[0]); real_bplpt[0] += 16;
+		}
+
+		MERGE32_SSE2(b0, b1, mask55, 1);
+		MERGE32_SSE2(b2, b3, mask55, 1);
+		MERGE32_SSE2(b4, b5, mask55, 1);
+		MERGE32_SSE2(b6, b7, mask55, 1);
+
+		MERGE32_SSE2(b0, b2, mask33, 2);
+		MERGE32_SSE2(b1, b3, mask33, 2);
+		MERGE32_SSE2(b4, b6, mask33, 2);
+		MERGE32_SSE2(b5, b7, mask33, 2);
+
+		MERGE32_SSE2(b0, b4, mask0f, 4);
+		MERGE32_SSE2(b1, b5, mask0f, 4);
+		MERGE32_SSE2(b2, b6, mask0f, 4);
+		MERGE32_SSE2(b3, b7, mask0f, 4);
+
+		MERGE32_SSE2(b0, b1, maskff, 8);
+		MERGE32_SSE2(b2, b3, maskff, 8);
+		MERGE32_SSE2(b4, b5, maskff, 8);
+		MERGE32_SSE2(b6, b7, maskff, 8);
+
+		MERGE32_SSE2(b0, b2, maskffff, 16);
+		MERGE32_SSE2(b1, b3, maskffff, 16);
+		MERGE32_SSE2(b4, b6, maskffff, 16);
+		MERGE32_SSE2(b5, b7, maskffff, 16);
+
+		/* Extract and scatter-store 4 words at a time per output slot */
+		uae_u32 tmp[4];
+
+		sse2_store_bswap32(tmp, b0); pixels[ 0]=tmp[0]; pixels[ 8]=tmp[1]; pixels[16]=tmp[2]; pixels[24]=tmp[3];
+		sse2_store_bswap32(tmp, b2); pixels[ 4]=tmp[0]; pixels[12]=tmp[1]; pixels[20]=tmp[2]; pixels[28]=tmp[3];
+		sse2_store_bswap32(tmp, b1); pixels[ 2]=tmp[0]; pixels[10]=tmp[1]; pixels[18]=tmp[2]; pixels[26]=tmp[3];
+		sse2_store_bswap32(tmp, b3); pixels[ 6]=tmp[0]; pixels[14]=tmp[1]; pixels[22]=tmp[2]; pixels[30]=tmp[3];
+		sse2_store_bswap32(tmp, b4); pixels[ 1]=tmp[0]; pixels[ 9]=tmp[1]; pixels[17]=tmp[2]; pixels[25]=tmp[3];
+		sse2_store_bswap32(tmp, b6); pixels[ 5]=tmp[0]; pixels[13]=tmp[1]; pixels[21]=tmp[2]; pixels[29]=tmp[3];
+		sse2_store_bswap32(tmp, b5); pixels[ 3]=tmp[0]; pixels[11]=tmp[1]; pixels[19]=tmp[2]; pixels[27]=tmp[3];
+		sse2_store_bswap32(tmp, b7); pixels[ 7]=tmp[0]; pixels[15]=tmp[1]; pixels[23]=tmp[2]; pixels[31]=tmp[3];
+
+		pixels += 32;
+	}
+
+	if (tail > 0) {
+		pfield_doline32_8(pixels, tail, planes, real_bplpt);
+	}
+}
+
+#endif /* HAVE_SSE2 */
+
+/* ---- NOINLINE dispatch wrappers ---- */
+
 /* See above for comments on inlining.  These functions should _not_
 be inlined themselves.  */
 static void NOINLINE pfield_doline32_n1_8(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8(data, count, 1, real_bplpt); }
@@ -7132,10 +7357,56 @@ static void NOINLINE pfield_doline32_n6_8(uae_u32 *data, int count, uae_u8 *real
 static void NOINLINE pfield_doline32_n7_8(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8(data, count, 7, real_bplpt); }
 static void NOINLINE pfield_doline32_n8_8(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8(data, count, 8, real_bplpt); }
 #endif
+
+/* SIMD NOINLINE wrappers */
+#ifdef HAVE_NEON
+static void NOINLINE pfield_doline32_n1_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 1, real_bplpt); }
+static void NOINLINE pfield_doline32_n2_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 2, real_bplpt); }
+static void NOINLINE pfield_doline32_n3_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 3, real_bplpt); }
+static void NOINLINE pfield_doline32_n4_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 4, real_bplpt); }
+static void NOINLINE pfield_doline32_n5_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 5, real_bplpt); }
+static void NOINLINE pfield_doline32_n6_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 6, real_bplpt); }
+#ifdef AGA
+static void NOINLINE pfield_doline32_n7_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 7, real_bplpt); }
+static void NOINLINE pfield_doline32_n8_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_neon(data, count, 8, real_bplpt); }
+#endif
+#elif defined(HAVE_SSE2)
+static void NOINLINE pfield_doline32_n1_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 1, real_bplpt); }
+static void NOINLINE pfield_doline32_n2_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 2, real_bplpt); }
+static void NOINLINE pfield_doline32_n3_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 3, real_bplpt); }
+static void NOINLINE pfield_doline32_n4_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 4, real_bplpt); }
+static void NOINLINE pfield_doline32_n5_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 5, real_bplpt); }
+static void NOINLINE pfield_doline32_n6_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 6, real_bplpt); }
+#ifdef AGA
+static void NOINLINE pfield_doline32_n7_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 7, real_bplpt); }
+static void NOINLINE pfield_doline32_n8_8_simd(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_8_sse2(data, count, 8, real_bplpt); }
+#endif
+#endif /* HAVE_SSE2 */
+
 static void pfield_doline_8(int planecnt, int wordcount, uae_u8 *datap, struct linestate *ls)
 {
 	uae_u8 **real_bplpt = ls->bplpt;
 	uae_u32 *data = (uae_u32 *)datap;
+
+#if defined(HAVE_NEON) || defined(HAVE_SSE2)
+	if (wordcount >= 4) {
+		switch (planecnt) {
+			default: break;
+			case 0: memset(data, 0, wordcount * 32); return;
+			case 1: pfield_doline32_n1_8_simd(data, wordcount, real_bplpt); return;
+			case 2: pfield_doline32_n2_8_simd(data, wordcount, real_bplpt); return;
+			case 3: pfield_doline32_n3_8_simd(data, wordcount, real_bplpt); return;
+			case 4: pfield_doline32_n4_8_simd(data, wordcount, real_bplpt); return;
+			case 5: pfield_doline32_n5_8_simd(data, wordcount, real_bplpt); return;
+			case 6: pfield_doline32_n6_8_simd(data, wordcount, real_bplpt); return;
+#ifdef AGA
+			case 7: pfield_doline32_n7_8_simd(data, wordcount, real_bplpt); return;
+			case 8: pfield_doline32_n8_8_simd(data, wordcount, real_bplpt); return;
+#endif
+		}
+	}
+#endif
+
 	switch (planecnt) {
 		default: break;
 		case 0: memset(data, 0, wordcount * 32); break;
