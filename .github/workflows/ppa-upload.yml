@@ -45,7 +45,6 @@ jobs:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          # Derive clean version from tag: v8.0.0 -> 8.0.0
           TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
           VERSION="${TAG#v}"
 
@@ -54,25 +53,16 @@ jobs:
           cd /tmp/ppa-build/noble/amiberry
 
           rm -f debian/changelog
-
-          tar czf /tmp/ppa-build/noble/amiberry_${VERSION}.orig.tar.gz \
-            --exclude='.git' --exclude='debian' \
-            -C /tmp/ppa-build/noble amiberry
-
-          # Write a fresh changelog entry for this release
           dch --create --package amiberry \
-            --newversion "${VERSION}-1" \
+            --newversion "${VERSION}" \
             --distribution noble \
             "Release ${VERSION}"
 
-          # Build source package only (no binaries — Launchpad builds them)
           dpkg-buildpackage -S -d -us -uc
 
-          # Sign the .changes file
           debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
             /tmp/ppa-build/noble/amiberry_*_source.changes
 
-          # Upload to PPA
           dput amiberry-ppa /tmp/ppa-build/noble/amiberry_*_source.changes
 
       - name: Build and upload source package for jammy
@@ -80,7 +70,6 @@ jobs:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          # Derive clean version from tag: v8.0.0 -> 8.0.0
           TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
           VERSION="${TAG#v}"
 
@@ -89,23 +78,14 @@ jobs:
           cd /tmp/ppa-build/jammy/amiberry
 
           rm -f debian/changelog
-
-          tar czf /tmp/ppa-build/jammy/amiberry_${VERSION}.orig.tar.gz \
-            --exclude='.git' --exclude='debian' \
-            -C /tmp/ppa-build/jammy amiberry
-
-          # jammy gets a ~jammy1 suffix so both series coexist in the PPA
           dch --create --package amiberry \
-            --newversion "${VERSION}-1~jammy1" \
+            --newversion "${VERSION}~jammy1" \
             --distribution jammy \
             "Release ${VERSION} (Ubuntu 22.04 Jammy rebuild)"
 
-          # Build source package
           dpkg-buildpackage -S -d -us -uc
 
-          # Sign the .changes file
           debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
             /tmp/ppa-build/jammy/amiberry_*_source.changes
 
-          # Upload to PPA
           dput amiberry-ppa /tmp/ppa-build/jammy/amiberry_*_source.changes
