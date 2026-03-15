@@ -108,10 +108,23 @@ if(ANDROID)
         GIT_TAG        v1.6.43
     )
 
+    # mbedTLS (SSL backend for curl — Android NDK doesn't ship OpenSSL)
+    set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(ENABLE_PROGRAMS OFF CACHE BOOL "" FORCE)
+    set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "" FORCE)
+    set(USE_SHARED_MBEDTLS_LIBRARY OFF CACHE BOOL "" FORCE)
+    set(USE_STATIC_MBEDTLS_LIBRARY ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        mbedtls
+        GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls.git
+        GIT_TAG        v3.6.3
+    )
+
     # libcurl
     set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-    set(CURL_USE_OPENSSL ON CACHE BOOL "" FORCE)
+    set(CURL_USE_OPENSSL OFF CACHE BOOL "" FORCE)
+    set(CURL_USE_MBEDTLS ON CACHE BOOL "" FORCE)
     FetchContent_Declare(
         curl
         GIT_REPOSITORY https://github.com/curl/curl.git
@@ -126,11 +139,39 @@ if(ANDROID)
         GIT_TAG        v3.11.3
     )
 
-    # Materialize deps (order matters: SDL first for *_image)
+    # Materialize mbedTLS first so curl can find it
+    FetchContent_GetProperties(mbedtls)
+    if(NOT mbedtls_POPULATED)
+        FetchContent_Populate(mbedtls)
+        add_subdirectory(${mbedtls_SOURCE_DIR} ${mbedtls_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    # Pre-set cache vars as FILE PATHS (not target names) so curl's
+    # install(EXPORT CURLTargets) doesn't pull mbedtls targets into
+    # the export set — file-path link deps don't need export entries.
+    set(MBEDTLS_INCLUDE_DIR "${mbedtls_SOURCE_DIR}/include" CACHE PATH "" FORCE)
+    set(MBEDTLS_LIBRARY "${mbedtls_BINARY_DIR}/library/libmbedtls.a" CACHE FILEPATH "" FORCE)
+    set(MBEDX509_LIBRARY "${mbedtls_BINARY_DIR}/library/libmbedx509.a" CACHE FILEPATH "" FORCE)
+    set(MBEDCRYPTO_LIBRARY "${mbedtls_BINARY_DIR}/library/libmbedcrypto.a" CACHE FILEPATH "" FORCE)
+
+    # Materialize curl
+    FetchContent_GetProperties(curl)
+    if(NOT curl_POPULATED)
+        FetchContent_Populate(curl)
+        add_subdirectory(${curl_SOURCE_DIR} ${curl_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    # File-path linking skips automatic target dependency tracking,
+    # so explicitly ensure mbedTLS is built before curl links against it.
+    if(TARGET libcurl_static)
+        add_dependencies(libcurl_static mbedtls mbedx509 mbedcrypto)
+    elseif(TARGET libcurl)
+        add_dependencies(libcurl mbedtls mbedx509 mbedcrypto)
+    endif()
+
+    # Materialize remaining deps (order matters: SDL first for *_image)
     if(USE_MPG123)
-        FetchContent_MakeAvailable(sdl3 sdl3_image flac mpg123 libpng zstd curl nlohmann_json)
+        FetchContent_MakeAvailable(sdl3 sdl3_image flac mpg123 libpng zstd nlohmann_json)
     else()
-        FetchContent_MakeAvailable(sdl3 sdl3_image flac libpng zstd curl nlohmann_json)
+        FetchContent_MakeAvailable(sdl3 sdl3_image flac libpng zstd nlohmann_json)
     endif()
 
     # Make zstd discoverable for the rest of this file (later FindHelper/pkg-config logic).
