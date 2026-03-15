@@ -74,7 +74,9 @@
 #include "fsdb.h"
 #include "fsdb_host.h"
 #include "keyboard.h"
+#ifndef LIBRETRO
 #include "amiberry_update.h"
+#endif
 
 
 // Special version string so that AmigaOS can detect it
@@ -1583,11 +1585,13 @@ static int real_main2 (int argc, TCHAR **argv)
 		}
 	}
 
+#ifndef LIBRETRO
 	if (amiberry_options.update_check && get_update_method() != UpdateMethod::DISABLED) {
 		const auto channel = amiberry_options.update_channel == 1
 			? UpdateChannel::Preview : UpdateChannel::Stable;
 		start_async_update_check(channel);
 	}
+#endif
 
 	memset (&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
