@@ -719,7 +719,7 @@ static std::unordered_map<std::string, IconTex> g_sidebar_icons;
 static void release_sidebar_icons()
 {
 	for (auto& kv : g_sidebar_icons) {
-		if (kv.second.tex) {
+		if (kv.second.tex != ImTextureID_Invalid) {
 			gui_destroy_texture(kv.second.tex);
 			kv.second.tex = ImTextureID_Invalid;
 		}
@@ -1021,7 +1021,7 @@ void amiberry_gui_halt()
 
 #ifdef USE_IMGUI
 	// Release any About panel resources
-	if (about_logo_texture) {
+	if (about_logo_texture != ImTextureID_Invalid) {
 		gui_destroy_texture(about_logo_texture);
 		about_logo_texture = ImTextureID_Invalid;
 	}
@@ -1410,7 +1410,7 @@ void run_gui()
 			int tex_w = 0, tex_h = 0;
 			if (categories[i].imagepath) {
 				auto it = g_sidebar_icons.find(categories[i].imagepath);
-				if (it != g_sidebar_icons.end() && it->second.tex) {
+				if (it != g_sidebar_icons.end() && it->second.tex != ImTextureID_Invalid) {
 					icon_tex = it->second.tex; tex_w = it->second.w; tex_h = it->second.h;
 					if (tex_w > 0 && tex_h > 0) {
 						float aspect = (float)tex_w / (float)tex_h;
@@ -1421,7 +1421,7 @@ void run_gui()
 			ImVec2 icon_p0 = ImVec2(pos.x + pad_x, pos.y + pad_y);
 			ImVec2 icon_p1 = ImVec2(icon_p0.x + icon_w, icon_p0.y + icon_h);
 			ImDrawList* dl = ImGui::GetWindowDrawList();
-			if (icon_tex) {
+			if (icon_tex != ImTextureID_Invalid) {
 				dl->AddImage(icon_tex, icon_p0, icon_p1);
 			} else {
 				// Fallback: small filled square as placeholder

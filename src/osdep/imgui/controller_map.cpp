@@ -203,7 +203,7 @@ static ImTextureID LoadTexture(const char* file, SDL_bool transparent, int* out_
 
 	ImTextureID texture = gui_create_texture(temp, out_w, out_h);
 	SDL_FreeSurface(temp);
-	if (!texture)
+	if (texture == ImTextureID_Invalid)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s\n", SDL_GetError());
 	}
@@ -212,8 +212,8 @@ static ImTextureID LoadTexture(const char* file, SDL_bool transparent, int* out_
 
 static void ControllerMap_EnsureTextures()
 {
-	if (g_controller_map.background_front && g_controller_map.background_back &&
-		g_controller_map.marker_button && g_controller_map.marker_axis)
+	if (g_controller_map.background_front != ImTextureID_Invalid && g_controller_map.background_back != ImTextureID_Invalid &&
+		g_controller_map.marker_button != ImTextureID_Invalid && g_controller_map.marker_axis != ImTextureID_Invalid)
 	{
 		return;
 	}
@@ -231,22 +231,22 @@ static void ControllerMap_EnsureTextures()
 
 static void ControllerMap_DestroyTextures()
 {
-	if (g_controller_map.background_front)
+	if (g_controller_map.background_front != ImTextureID_Invalid)
 	{
 		gui_destroy_texture(g_controller_map.background_front);
 		g_controller_map.background_front = ImTextureID_Invalid;
 	}
-	if (g_controller_map.background_back)
+	if (g_controller_map.background_back != ImTextureID_Invalid)
 	{
 		gui_destroy_texture(g_controller_map.background_back);
 		g_controller_map.background_back = ImTextureID_Invalid;
 	}
-	if (g_controller_map.marker_button)
+	if (g_controller_map.marker_button != ImTextureID_Invalid)
 	{
 		gui_destroy_texture(g_controller_map.marker_button);
 		g_controller_map.marker_button = ImTextureID_Invalid;
 	}
-	if (g_controller_map.marker_axis)
+	if (g_controller_map.marker_axis != ImTextureID_Invalid)
 	{
 		gui_destroy_texture(g_controller_map.marker_axis);
 		g_controller_map.marker_axis = ImTextureID_Invalid;
@@ -880,7 +880,7 @@ void ControllerMap_RenderModal()
 		const int iElement = s_arrBindingOrder[s_iCurrentBinding];
 		ControllerMap_EnsureTextures();
 
-		if (g_controller_map.background_front)
+		if (g_controller_map.background_front != ImTextureID_Invalid)
 		{
 #if SDL_VERSION_ATLEAST(2,0,14)
 			const bool use_back = (s_arrBindingOrder[s_iCurrentBinding] >= SDL_CONTROLLER_BUTTON_PADDLE1 &&
@@ -924,7 +924,7 @@ void ControllerMap_RenderModal()
 			const float alpha = 0.5f + 0.5f * std::sin(t * 2.0f);
 			const ImU32 tint = IM_COL32(10, 255, 21, static_cast<int>(128 + 127 * alpha));
 			const float angle = static_cast<float>(s_arrBindingDisplay[iElement].angle) * (3.14159265f / 180.0f);
-			if (marker_tex)
+			if (marker_tex != ImTextureID_Invalid)
 			{
 				AddImageRotated(dl_overlay,
 					marker_tex,
