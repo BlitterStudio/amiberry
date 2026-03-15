@@ -21,6 +21,15 @@ finish-args:
   - --socket=pulseaudio
   # Filesystem access
   - --filesystem=host
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/doc
+  - /share/man
+  - /share/pkgconfig
+  - '*.la'
+  - '*.a'
 
 modules:
   - name: libpcap
@@ -48,10 +57,6 @@ modules:
           - autoreconf -vfi
     cleanup:
       - /bin
-      - /include
-      - /lib/pkgconfig
-      - '*.la'
-      - '*.a'
 
   - name: libserialport
     buildsystem: autotools
@@ -60,10 +65,6 @@ modules:
         url: https://github.com/sigrokproject/libserialport
         tag: libserialport-0.1.1
         commit: 348a6d353af8ac142f68fbf9fe0f4d070448d945
-    cleanup:
-      - /include
-      - '*.la'
-      - '*.a'
 
   - name: portmidi
     buildsystem: cmake-ninja
@@ -77,12 +78,6 @@ modules:
           type: anitya
           project-id: 3729
           url-template: https://github.com/PortMidi/portmidi/archive/refs/tags/v$version.tar.gz
-    cleanup:
-      - /lib/cmake
-      - /lib/pkgconfig
-      - /include
-      - '*.a'
-      - '*.la'
 
   - name: enet
     sources:
@@ -111,10 +106,6 @@ modules:
           type: anitya
           project-id: 11152
           url-template: https://github.com/nlohmann/json/archive/refs/tags/v$version.tar.gz
-    cleanup:
-      - /include
-      - /lib/cmake
-      - /lib/pkgconfig
 
   - name: amiberry
     buildsystem: cmake-ninja
