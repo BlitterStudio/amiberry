@@ -14,9 +14,11 @@ jobs:
   - job: copr_build
     trigger: release
     targets:
-      - fedora-latest-x86_64
-      - fedora-latest-aarch64
-    owner: blitterstudio
+      - fedora-42-x86_64
+      - fedora-42-aarch64
+      - fedora-43-x86_64
+      - fedora-43-aarch64
+      - fedora-44-x86_64
+      - fedora-44-aarch64
+    owner: midwan
     project: amiberry
-    # Only build stable releases (not pre-releases)
-    branch: master

@@ -14,11 +14,11 @@ After setup, RPM builds are automated by Packit when a GitHub Release is publish
 Go to https://accounts.fedoraproject.org and create an account.
 
 ### 2. Create COPR Project
-Go to https://copr.fedorainfracloud.org/coprs/blitterstudio/
+Go to https://copr.fedorainfracloud.org/coprs/midwan/
 Click "New Project":
 - Name: `amiberry`
 - Description: `Optimized Amiga emulator for Fedora`
-- Chroots: `fedora-latest-x86_64`, `fedora-latest-aarch64`
+- Chroots: `fedora-42/43/44-x86_64 and fedora-42/43/44-aarch64
 
 ### 3. Install Packit GitHub App
 Go to https://github.com/marketplace/packit-as-a-service
@@ -32,12 +32,12 @@ In COPR project settings → Packages → Allow builds from Packit.
 After the next GitHub Release is published, Packit will:
 1. Create a source RPM from the spec file
 2. Submit a build to COPR
-3. Make packages available at: https://copr.fedorainfracloud.org/coprs/blitterstudio/amiberry
+3. Make packages available at: https://copr.fedorainfracloud.org/coprs/midwan/amiberry
 
 ### COPR Repository URL for users
 
 ```bash
 sudo dnf install dnf-plugins-core
-sudo dnf copr enable blitterstudio/amiberry
+sudo dnf copr enable midwan/amiberry
 sudo dnf install amiberry
 ```
