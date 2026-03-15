@@ -25,7 +25,7 @@
 
   <p class="hero-description">
     Built on the WinUAE core, Amiberry delivers full Amiga compatibility across ARM and x86 hardware.
-    From a Raspberry Pi to a desktop workstation, from Linux to Android — the Amiga runs everywhere.
+    From a Raspberry Pi to a desktop workstation, from Linux to Android, FreeBSD to Haiku — the Amiga runs everywhere.
   </p>
 
   <div class="hero-cta">
@@ -48,7 +48,7 @@
   <div class="highlight-card">
     <div class="highlight-icon">🌍</div>
     <h3>Truly Multi-Platform</h3>
-    <p>Linux, macOS, Windows, and Android on ARM, x86, and RISC-V</p>
+    <p>Linux, macOS, Windows, Android, FreeBSD, and Haiku on ARM, x86, and RISC-V</p>
   </div>
 </div>
 
@@ -109,10 +109,10 @@ Everything you need for the ultimate Amiga experience.
     </div>
   </div>
   <div class="feature-card">
-    <div class="feature-icon">🔧</div>
+    <div class="feature-icon">✨</div>
     <div class="feature-content">
-      <h4>Host Integration</h4>
-      <p>Launch host system applications directly from within the emulation</p>
+      <h4>Shader Support</h4>
+      <p>Built-in shaders plus support for external GLSL shaders for the perfect retro look</p>
     </div>
   </div>
 </div>
@@ -151,12 +151,11 @@ sudo apt install amiberry</code></pre>
 
   <div class="platform-card windows">
     <h3>🪟 Windows</h3>
-    <p>Portable — no installation needed:</p>
-    <ol>
-      <li>Download the latest <code>.zip</code> from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a></li>
-      <li>Extract to any directory</li>
-      <li>Run <code>Amiberry.exe</code></li>
-    </ol>
+    <p>Download from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>:</p>
+    <ul>
+      <li><strong>Installer</strong> — run the <code>.exe</code> installer for a guided setup</li>
+      <li><strong>Portable</strong> — extract the <code>.zip</code> to any directory and run <code>Amiberry.exe</code></li>
+    </ul>
   </div>
 
   <div class="platform-card android">
