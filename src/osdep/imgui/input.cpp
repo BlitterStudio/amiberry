@@ -238,7 +238,9 @@ void render_panel_input() {
         ImGui::TableNextColumn(); // Skip Col 1
         ImGui::TableNextColumn();
         ImGui::Dummy(ImVec2(0, 8.0f));
-        AmigaButton("Swap ports");
+        if (AmigaButton("Swap ports")) {
+            inputdevice_swap_compa_ports(&changed_prefs, 0);
+        }
         ImGui::SameLine();
         AmigaCheckbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
         ShowHelpMarker("Automatically switch Port 0 and Port 1 devices based on input activity");
@@ -529,17 +531,19 @@ void render_panel_input() {
         // Row 3
         ImGui::TableNextRow();
 
-        // Left: Tablet Library emul
         ImGui::TableNextColumn();
+        bool tablet_active = changed_prefs.input_tablet > 0;
+        ImGui::BeginDisabled(!tablet_active);
         AmigaCheckbox("Tablet.library emulation", &changed_prefs.tablet_library);
         ShowHelpMarker("Emulate Amiga tablet.library for graphics tablet support");
+        ImGui::EndDisabled();
 
-        // Right: Tablet Mode (Aligned with Row 3)
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Tablet mode:");
         ImGui::SameLine();
 
+        ImGui::BeginDisabled(!tablet_active);
         int tablet_mode = changed_prefs.input_tablet == TABLET_MOUSEHACK ? 1 : 0;
         ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
         if (ImGui::Combo("##TabletMode", &tablet_mode, "Disabled\0MouseHack\0")) {
@@ -547,6 +551,7 @@ void render_panel_input() {
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         ShowHelpMarker("Enable MouseHack for absolute positioning of tablet/touchscreen input");
+        ImGui::EndDisabled();
 
         ImGui::EndTable();
     }
