@@ -199,8 +199,8 @@ void render_panel_display() {
 
     // Checkboxes
     if (ImGui::BeginTable("ChkTable", 2, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -231,8 +231,8 @@ void render_panel_display() {
 
     // Resolution row
     if (ImGui::BeginTable("ResTable", 4, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
-        ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
+        ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+        ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -240,7 +240,7 @@ void render_panel_display() {
         ImGui::Text("Resolution:");
         ImGui::SameLine();
         const char *resolution_items[] = {"LowRes", "HighRes (normal)", "SuperHighRes"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.7f);
         if (!resolution_enabled) ImGui::BeginDisabled();
         if (ImGui::BeginCombo("##Resolution", resolution_items[changed_prefs.gfx_resolution])) {
             for (int n = 0; n < IM_ARRAYSIZE(resolution_items); n++) {
@@ -265,8 +265,8 @@ void render_panel_display() {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Overscan:");
         ImGui::SameLine();
-        const char *overscan_items[] = {"Standard", "Overscan", "Broadcast", "Extreme", "Ultra"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        const char *overscan_items[] = {"TV Narrow", "TV Standard", "TV Wide", "Overscan", "Broadcast", "Extreme", "Ultra", "Ultra H/V", "Ultra CSync"};
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
         if (ImGui::BeginCombo("##Overscan", overscan_items[changed_prefs.gfx_overscanmode])) {
             for (int n = 0; n < IM_ARRAYSIZE(overscan_items); n++) {
                 const bool is_selected = (changed_prefs.gfx_overscanmode == n);
