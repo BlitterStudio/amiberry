@@ -13,6 +13,7 @@
 #ifndef TABLET_OFF
 #define TABLET_OFF 0
 #define TABLET_MOUSEHACK 1
+#define TABLET_REAL 2
 #endif
 #ifndef MOUSEUNTRAP_MIDDLEBUTTON
 #define MOUSEUNTRAP_MIDDLEBUTTON 1
@@ -494,10 +495,15 @@ void render_panel_input() {
 
         // Left: Virtual Mouse
         ImGui::TableNextColumn();
-        bool virt_mouse = changed_prefs.input_tablet > 0;
-        if (AmigaCheckbox("Install virtual mouse driver", &virt_mouse)) {
-            changed_prefs.input_tablet = virt_mouse ? TABLET_MOUSEHACK : TABLET_OFF;
-        }
+		bool virt_mouse = changed_prefs.input_tablet > 0;
+		if (AmigaCheckbox("Install virtual mouse driver", &virt_mouse)) {
+			if (virt_mouse) {
+				if (changed_prefs.input_tablet == TABLET_OFF)
+					changed_prefs.input_tablet = TABLET_MOUSEHACK;
+			} else {
+				changed_prefs.input_tablet = TABLET_OFF;
+			}
+		}
         ShowHelpMarker("Install a virtual mouse driver for tablet/touchscreen absolute positioning");
 
         // Right: Cursor Mode
@@ -543,14 +549,23 @@ void render_panel_input() {
         ImGui::Text("Tablet mode:");
         ImGui::SameLine();
 
-        ImGui::BeginDisabled(!tablet_active);
-        int tablet_mode = changed_prefs.input_tablet == TABLET_MOUSEHACK ? 1 : 0;
-        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-        if (ImGui::Combo("##TabletMode", &tablet_mode, "Disabled\0MouseHack\0")) {
-            changed_prefs.input_tablet = tablet_mode == 1 ? TABLET_MOUSEHACK : TABLET_OFF;
-        }
-        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-        ShowHelpMarker("Enable MouseHack for absolute positioning of tablet/touchscreen input");
+		ImGui::BeginDisabled(!tablet_active);
+		int tablet_mode = 0;
+		if (changed_prefs.input_tablet == TABLET_MOUSEHACK)
+			tablet_mode = 1;
+		else if (changed_prefs.input_tablet == TABLET_REAL)
+			tablet_mode = 2;
+		ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+		if (ImGui::Combo("##TabletMode", &tablet_mode, "Disabled\0MouseHack\0Real Tablet\0")) {
+			if (tablet_mode == 2)
+				changed_prefs.input_tablet = TABLET_REAL;
+			else if (tablet_mode == 1)
+				changed_prefs.input_tablet = TABLET_MOUSEHACK;
+			else
+				changed_prefs.input_tablet = TABLET_OFF;
+		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+		ShowHelpMarker("Tablet mode: MouseHack for mouse absolute positioning, Real Tablet for pressure-sensitive pen/tablet input via SDL3");
         ImGui::EndDisabled();
 
         ImGui::EndTable();
