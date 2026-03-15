@@ -27,25 +27,7 @@ jobs:
       - name: Install packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            devscripts \
-            debhelper \
-            dput \
-            ninja-build \
-            libflac-dev \
-            libmpeg2-4-dev \
-            libpng-dev \
-            libsdl3-dev \
-            libsdl3-image-dev \
-            libasound2-dev \
-            libmpg123-dev \
-            libportmidi-dev \
-            libserialport-dev \
-            libenet-dev \
-            libpcap-dev \
-            libzstd-dev \
-            libcurl4-openssl-dev \
-            nlohmann-json3-dev
+          sudo apt-get install -y devscripts debhelper dput
 
       - name: Import GPG signing key
         env:
