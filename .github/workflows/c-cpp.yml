@@ -723,15 +723,6 @@ jobs:
       pull-requests: read
       issues: read
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Create Changelog
-        id: changelog
-        uses: loopwerk/tag-changelog@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-
       - name: Download Build Artifacts
         uses: actions/download-artifact@v7
         with:
@@ -753,7 +744,7 @@ jobs:
           prerelease: ${{ startsWith(github.ref_name, 'preview-v') }}
           allowUpdates: true
           omitBodyDuringUpdate: true
-          body: ${{ steps.changelog.outputs.changes }}
+          generateReleaseNotes: true
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/amiberry-*.exe
