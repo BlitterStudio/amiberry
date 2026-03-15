@@ -738,6 +738,10 @@ static void prefs_to_gui()
 	
 	copy_prefs(&currprefs, &changed_prefs);
 
+	if (changed_prefs.jports[1].id == JPORT_NONE || changed_prefs.jports[1].id < 0) {
+		changed_prefs.jports[1].id = JSEM_KBDLAYOUT + 1;
+	}
+
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));

@@ -10381,10 +10381,12 @@ int inputdevice_joyport_config(struct uae_prefs *p, const TCHAR *value1, const T
 						if (start == JSEM_KBDLAYOUT && v > 0)
 							v--;
 						if (v >= 0) {
-							if (v >= max)
+							if (max > 0 && v >= max)
 								v = 0;
-							start += v;
-							got = 2;
+							if (max > 0) {
+								start += v;
+								got = 2;
+							}
 						}
 					}
 				}
