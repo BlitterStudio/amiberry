@@ -114,7 +114,7 @@ bool SDLRenderer::alloc_texture(int monid, int w, int h)
 			SDL_GetTextureSize(m_amiga_texture, &tex_fw, &tex_fh);
 			int width = static_cast<int>(tex_fw);
 			int height = static_cast<int>(tex_fh);
-			if (width == -w && height == -h)
+			if (width == -w && height == -h && m_texture_format == pixel_format)
 			{
 				set_scaling(monid, &currprefs, width, height);
 				return true;
@@ -129,7 +129,10 @@ bool SDLRenderer::alloc_texture(int monid, int w, int h)
 	AmigaMonitor* mon = &AMonitors[monid];
 	m_amiga_texture = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, amiga_surface->w, amiga_surface->h);
 	if (m_amiga_texture != nullptr)
+	{
 		SDL_SetTextureBlendMode(m_amiga_texture, SDL_BLENDMODE_NONE);
+		m_texture_format = pixel_format;
+	}
 	return m_amiga_texture != nullptr;
 }
 

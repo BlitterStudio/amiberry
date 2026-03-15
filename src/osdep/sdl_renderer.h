@@ -70,6 +70,7 @@ public:
 private:
 	SDL_Texture* m_amiga_texture = nullptr;
 	SDL_Texture* m_cursor_overlay_texture = nullptr;
+	SDL_PixelFormat m_texture_format = SDL_PIXELFORMAT_UNKNOWN;
 };
 
 SDLRenderer* get_sdl_renderer();
