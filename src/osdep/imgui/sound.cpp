@@ -526,13 +526,6 @@ void render_panel_sound() {
 
         ImGui::Spacing();
 
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("Audio Pull/Push:");
-        AmigaRadioButton("Pull", &changed_prefs.sound_pullmode, 1);
-        ShowHelpMarker("Pull mode: emulator requests audio data when needed (recommended)");
-        ImGui::SameLine();
-        AmigaRadioButton("Push", &changed_prefs.sound_pullmode, 0);
-        ShowHelpMarker("Push mode: emulator continuously sends audio data to output device");
         ImGui::Spacing();
         EndGroupBox("Sound Buffer Size");
 

@@ -1345,7 +1345,6 @@ struct amiberry_options
 	int default_fullscreen_mode = 0;
 	int default_stereo_separation = 7;
 	int default_sound_buffer = 3072;
-	bool default_sound_pull = false;
 	int default_sound_frequency = 44100;
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;
