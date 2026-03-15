@@ -862,10 +862,9 @@ bool ismouseactive ()
 void target_inputdevice_unacquire(const bool full)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
-	//close_tablet(tablet);
-	//tablet = NULL;
+	close_tablet(tablet);
+	tablet = NULL;
 	if (full) {
-		//rawinput_release();
 		SDL_SetWindowMouseGrab(mon->amiga_window, false);
 		SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
 	}
@@ -874,8 +873,7 @@ void target_inputdevice_acquire()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 	target_inputdevice_unacquire(false);
-	//tablet = open_tablet(mon->amiga_window);
-	//rawinput_alloc();
+	tablet = open_tablet(mon->amiga_window);
 	SDL_SetWindowMouseGrab(mon->amiga_window, true);
 	SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 }
@@ -1954,9 +1952,13 @@ static void handle_key_event(const SDL_Event& event)
 	}
 }
 
+static int pen_in_proximity;
+
 static void handle_finger_event(const SDL_Event& event)
 {
 	if (!isfocus())
+		return;
+	if (pen_in_proximity && currprefs.input_tablet > 0)
 		return;
 
     // Simple single-finger tap for Left Click
@@ -1987,6 +1989,9 @@ static void handle_finger_event(const SDL_Event& event)
 
 static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
+	if (pen_in_proximity && currprefs.input_tablet > 0)
+		return;
+
 	const auto button = event.button.button;
 	const auto state = event.button.down;
 	const auto clicks = event.button.clicks;
@@ -2027,6 +2032,8 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 
 static void handle_finger_motion_event(const SDL_Event& event)
 {
+	if (pen_in_proximity && currprefs.input_tablet > 0)
+		return;
 	if (isfocus() && event.tfinger.fingerID == 0)
 	{
         // Use relative movement for better control (Laptop touchpad style)
@@ -2050,6 +2057,9 @@ static void handle_finger_motion_event(const SDL_Event& event)
 static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
 	monitor_off = 0;
+
+	if (pen_in_proximity && currprefs.input_tablet > 0)
+		return;
 
 	if (mouseinside && recapture && isfullscreen() <= 0) {
 		enablecapture(mon->monitor_id);
@@ -2118,32 +2128,181 @@ static void handle_mouse_wheel_event(const SDL_Event& event)
 		setmousebuttonstate(0, 6, -1);
 }
 
+static float pen_pressure;
+static float pen_xtilt;
+static float pen_ytilt;
+static float pen_rotation;
+static uae_u32 pen_buttons;
+static int pen_eraser;
+
+static void pen_coords_to_tablet(const AmigaMonitor* mon, float x, float y, int* tx, int* ty)
+{
+	int win_w, win_h;
+	SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
+
+	// HiDPI: window screen coords → drawable pixels (same as mouse handler)
+	if (g_renderer) {
+		int draw_w, draw_h;
+		g_renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		if (win_w > 0 && draw_w > 0 && win_w != draw_w)
+			x = x * static_cast<float>(draw_w) / static_cast<float>(win_w);
+		if (win_h > 0 && draw_h > 0 && win_h != draw_h)
+			y = y * static_cast<float>(draw_h) / static_cast<float>(win_h);
+
+		// Map relative to the Amiga display area within the drawable
+		const SDL_Rect& rq = g_renderer->render_quad;
+		if (rq.w > 0 && rq.h > 0) {
+			float rx = (x - static_cast<float>(rq.x)) * 4095.0f / static_cast<float>(rq.w);
+			float ry = (y - static_cast<float>(rq.y)) * 4095.0f / static_cast<float>(rq.h);
+			*tx = static_cast<int>(std::clamp(rx, 0.0f, 4095.0f));
+			*ty = static_cast<int>(std::clamp(ry, 0.0f, 4095.0f));
+			return;
+		}
+	}
+
+	// Fallback: map to full window
+	*tx = (win_w > 0) ? static_cast<int>(std::clamp(x * 4095.0f / static_cast<float>(win_w), 0.0f, 4095.0f)) : 0;
+	*ty = (win_h > 0) ? static_cast<int>(std::clamp(y * 4095.0f / static_cast<float>(win_h), 0.0f, 4095.0f)) : 0;
+}
+
+static void pen_send_current(const AmigaMonitor* mon, float x, float y)
+{
+	int tx, ty;
+	pen_coords_to_tablet(mon, x, y, &tx, &ty);
+	int pres = static_cast<int>(pen_pressure * 255.0f);
+	int flags = pen_eraser ? 1 : 0;
+	int ax = static_cast<int>((pen_xtilt + 90.0f) * 255.0f / 180.0f);
+	int ay = static_cast<int>((pen_ytilt + 90.0f) * 255.0f / 180.0f);
+	int az = static_cast<int>((pen_rotation + 180.0f) * 255.0f / 360.0f);
+	send_tablet(tx, ty, 0, pres, pen_buttons, flags, ax, ay, az, 0, 0, 0, nullptr);
+}
+
+static void pen_position_via_mouse(const AmigaMonitor* mon, float x, float y)
+{
+	int32_t px = static_cast<int32_t>(x);
+	int32_t py = static_cast<int32_t>(y);
+
+	if (g_renderer) {
+		int win_w, win_h, draw_w, draw_h;
+		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
+		g_renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		if (win_w > 0 && draw_w > 0 && win_w != draw_w)
+			px = static_cast<int32_t>(x * static_cast<float>(draw_w) / static_cast<float>(win_w));
+		if (win_h > 0 && draw_h > 0 && win_h != draw_h)
+			py = static_cast<int32_t>(y * static_cast<float>(draw_h) / static_cast<float>(win_h));
+	}
+
+	setmousestate(0, 0, px, 1);
+	setmousestate(0, 1, py, 1);
+}
+
 static void handle_pen_event(const SDL_Event& event)
 {
-	//TODO Implement with SDL3 for Tablet support
-	//if (inputdevice_is_tablet() <= 0 && !currprefs.tablet_library && !is_touch_lightpen()) {
-	//	close_tablet(tablet);
-	//	tablet = NULL;
-	//	return;
-	//}
-	//if (pWTPacket((HCTX)lParam, (UINT)wParam, &pkt)) {
-	//	AmigaMonitor* mon = &AMonitors[0];
-	//	int x, y, z, pres, proxi;
-	//	DWORD buttons;
-	//	ORIENTATION ori;
-	//	ROTATION rot;
+	if (currprefs.input_tablet <= 0)
+		return;
 
-	//	x = pkt.pkX;
-	//	y = pkt.pkY;
-	//	z = pkt.pkZ;
-	//	pres = pkt.pkNormalPressure;
-	//	ori = pkt.pkOrientation;
-	//	rot = pkt.pkRotation;
-	//	buttons = pkt.pkButtons;
-	//	proxi = pkt.pkStatus;
-	//	send_tablet(x, y, z, pres, buttons, proxi, ori.orAzimuth, ori.orAltitude, ori.orTwist, rot.roPitch, rot.roRoll, rot.roYaw, &mon->amigawin_rect);
+	const bool tablet_real = inputdevice_is_tablet() > 0;
+	AmigaMonitor* mon = &AMonitors[0];
 
-	//}
+	switch (event.type) {
+	case SDL_EVENT_PEN_PROXIMITY_IN:
+		pen_in_proximity = 1;
+		if (tablet_real)
+			send_tablet_proximity(1);
+		break;
+
+	case SDL_EVENT_PEN_PROXIMITY_OUT:
+		pen_in_proximity = 0;
+		pen_pressure = 0;
+		if (tablet_real)
+			send_tablet_proximity(0);
+		break;
+
+	case SDL_EVENT_PEN_DOWN:
+		pen_eraser = event.ptouch.eraser ? 1 : 0;
+		pen_buttons |= 1;
+		if (tablet_real) {
+			pen_send_current(mon, event.ptouch.x, event.ptouch.y);
+		} else {
+			pen_position_via_mouse(mon, event.ptouch.x, event.ptouch.y);
+			setmousebuttonstate(0, 0, 1);
+		}
+		break;
+
+	case SDL_EVENT_PEN_UP:
+		pen_pressure = 0;
+		pen_buttons &= ~1u;
+		if (tablet_real) {
+			pen_send_current(mon, event.ptouch.x, event.ptouch.y);
+		} else {
+			pen_position_via_mouse(mon, event.ptouch.x, event.ptouch.y);
+			setmousebuttonstate(0, 0, 0);
+		}
+		break;
+
+	case SDL_EVENT_PEN_MOTION:
+		if (tablet_real)
+			pen_send_current(mon, event.pmotion.x, event.pmotion.y);
+		else
+			pen_position_via_mouse(mon, event.pmotion.x, event.pmotion.y);
+		break;
+
+	case SDL_EVENT_PEN_AXIS:
+		switch (event.paxis.axis) {
+		case SDL_PEN_AXIS_PRESSURE:
+			pen_pressure = event.paxis.value;
+			break;
+		case SDL_PEN_AXIS_XTILT:
+			pen_xtilt = event.paxis.value;
+			break;
+		case SDL_PEN_AXIS_YTILT:
+			pen_ytilt = event.paxis.value;
+			break;
+		case SDL_PEN_AXIS_ROTATION:
+			pen_rotation = event.paxis.value;
+			break;
+		default:
+			break;
+		}
+		break;
+
+	case SDL_EVENT_PEN_BUTTON_DOWN:
+	{
+		Uint8 btn = event.pbutton.button;
+		if (tablet_real) {
+			if (btn >= 1 && btn <= 5)
+				pen_buttons |= (1u << (btn - 1));
+			pen_send_current(mon, event.pbutton.x, event.pbutton.y);
+		} else {
+			pen_position_via_mouse(mon, event.pbutton.x, event.pbutton.y);
+			if (btn == 1)
+				setmousebuttonstate(0, 2, 1);
+			else if (btn == 2)
+				setmousebuttonstate(0, 1, 1);
+		}
+		break;
+	}
+
+	case SDL_EVENT_PEN_BUTTON_UP:
+	{
+		Uint8 btn = event.pbutton.button;
+		if (tablet_real) {
+			if (btn >= 1 && btn <= 5)
+				pen_buttons &= ~(1u << (btn - 1));
+			pen_send_current(mon, event.pbutton.x, event.pbutton.y);
+		} else {
+			pen_position_via_mouse(mon, event.pbutton.x, event.pbutton.y);
+			if (btn == 1)
+				setmousebuttonstate(0, 2, 0);
+			else if (btn == 2)
+				setmousebuttonstate(0, 1, 0);
+		}
+		break;
+	}
+
+	default:
+		break;
+	}
 }
 
 std::string get_filename_extension(const TCHAR* filename);
@@ -2320,19 +2479,17 @@ static void process_event(const SDL_Event& event)
 			handle_drop_file_event(event);
 			break;
 
-		//TODO Implement with SDL3 for Tablet support
-			/* Pressure-sensitive pen events */
-			//  SDL_EVENT_PEN_PROXIMITY_IN = 0x1300,  /**< Pressure-sensitive pen has become available */
-			//	SDL_EVENT_PEN_PROXIMITY_OUT,          /**< Pressure-sensitive pen has become unavailable */
-			//	SDL_EVENT_PEN_DOWN,                   /**< Pressure-sensitive pen touched drawing surface */
-			//	SDL_EVENT_PEN_UP,                     /**< Pressure-sensitive pen stopped touching drawing surface */
-			//	SDL_EVENT_PEN_BUTTON_DOWN,            /**< Pressure-sensitive pen button pressed */
-			//	SDL_EVENT_PEN_BUTTON_UP,              /**< Pressure-sensitive pen button released */
-			//	SDL_EVENT_PEN_MOTION,                 /**< Pressure-sensitive pen is moving on the tablet */
-			//	SDL_EVENT_PEN_AXIS,                   /**< Pressure-sensitive pen angle/pressure/etc changed */
-			//
-			// handle_pen_event(event);
-			// break;
+		case SDL_EVENT_PEN_PROXIMITY_IN:
+		case SDL_EVENT_PEN_PROXIMITY_OUT:
+		case SDL_EVENT_PEN_DOWN:
+		case SDL_EVENT_PEN_UP:
+		case SDL_EVENT_PEN_BUTTON_DOWN:
+		case SDL_EVENT_PEN_BUTTON_UP:
+		case SDL_EVENT_PEN_MOTION:
+		case SDL_EVENT_PEN_AXIS:
+			handle_pen_event(event);
+			break;
+
 		default:
 			break;
 		}
