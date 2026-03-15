@@ -25,7 +25,7 @@ gpg --keyserver keyserver.ubuntu.com --send-keys D74D52525340C442A4F8B657A12B57C
 Then in Launchpad → Your Profile → OpenPGP keys → "Import Key".
 
 ### 3. Create PPA
-Go to https://launchpad.net/~blitterstudio/+activate-ppa
+Go to https://launchpad.net/~midwan-a/+activate-ppa
 - Name: `amiberry`
 - Display name: `Amiberry`
 - Description: `Optimized Amiga emulator`
@@ -51,16 +51,16 @@ at: https://github.com/BlitterStudio/amiberry/settings/secrets/actions
 sed -i "s/UNRELEASED/noble/" debian/changelog
 dpkg-buildpackage -S -d -us -uc
 debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 *.changes
-dput ppa:blitterstudio/amiberry *.changes
+dput ppa:midwan-a/amiberry *.changes
 ```
 
 After upload, Launchpad builds the package (15-30 minutes).
-Monitor builds at: https://launchpad.net/~blitterstudio/+archive/ubuntu/amiberry
+Monitor builds at: https://launchpad.net/~midwan-a/+archive/ubuntu/amiberry
 
 ## PPA URL for users
 
 Once active, users can add:
 ```
-ppa:blitterstudio/amiberry
+ppa:midwan-a/amiberry
 ```
-Using: `sudo add-apt-repository ppa:blitterstudio/amiberry`
+Using: `sudo add-apt-repository ppa:midwan-a/amiberry`

@@ -53,7 +53,7 @@ jobs:
 
       - name: Configure dput
         run: |
-          printf '[amiberry-ppa]\nfqdn = ppa.launchpad.net\nmethod = ftp\nincoming = ~blitterstudio/ubuntu/amiberry\nlogin = anonymous\nallow_unsigned_uploads = 0\n' > ~/.dput.cf
+          printf '[amiberry-ppa]\nfqdn = ppa.launchpad.net\nmethod = ftp\nincoming = ~midwan-a/ubuntu/amiberry\nlogin = anonymous\nallow_unsigned_uploads = 0\n' > ~/.dput.cf
 
       - name: Build and upload source package for noble
         env:
