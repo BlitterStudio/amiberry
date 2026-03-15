@@ -768,3 +768,12 @@ jobs:
     with:
       tag_name: ${{ github.ref_name }}
     secrets: inherit
+
+  upload-ppa:
+    needs: create-release
+    # Only upload stable releases (not preview-v* pre-releases)
+    if: ${{ !startsWith(github.ref_name, 'preview-v') }}
+    uses: ./.github/workflows/ppa-upload.yml
+    with:
+      tag_name: ${{ github.ref_name }}
+    secrets: inherit
