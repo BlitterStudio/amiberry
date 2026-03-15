@@ -386,19 +386,6 @@ void render_panel_filter()
 	EndGroupBox("Bezel Overlay");
 
 	ImGui::Spacing();
-
-	// Mobile Shader Options
-	BeginGroupBox("Performance Options");
-	{
-		AmigaCheckbox("Force mobile-optimized shaders",
-					  &amiberry_options.force_mobile_shaders);
-		ShowHelpMarker("Enable mobile shader variants regardless of auto-detection.\n"
-					   "Mobile shaders are faster but have reduced visual effects.\n"
-					   "Useful for testing on desktop or when auto-detection fails.");
-	}
-	EndGroupBox("Performance Options");
-
-	ImGui::Spacing();
 	ImGui::Spacing();
 
 	// Rescan button

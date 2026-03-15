@@ -263,12 +263,7 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 	// Use built-in crtemu shaders
 	if (m_shader.crtemu == nullptr) {
 		const int crt_type = get_crtemu_type(shader_name, m_shader);
-		m_shader.crtemu = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr,
-			amiberry_options.force_mobile_shaders);
-
-		if (m_shader.crtemu != nullptr && amiberry_options.force_mobile_shaders) {
-			m_shader.crtemu->is_mobile_gpu = true;
-		}
+		m_shader.crtemu = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
 
 		// Fallback to NONE if shader creation failed
 		if (m_shader.crtemu == nullptr && crt_type != CRTEMU_TYPE_NONE) {
