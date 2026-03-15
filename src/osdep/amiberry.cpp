@@ -1952,14 +1952,18 @@ static void handle_key_event(const SDL_Event& event)
 	}
 }
 
+#ifndef LIBRETRO
 static int pen_in_proximity;
+#endif
 
 static void handle_finger_event(const SDL_Event& event)
 {
 	if (!isfocus())
 		return;
+#ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
 		return;
+#endif
 
     // Simple single-finger tap for Left Click
 	if (event.tfinger.fingerID == 0)
@@ -1989,8 +1993,10 @@ static void handle_finger_event(const SDL_Event& event)
 
 static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
+#ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
 		return;
+#endif
 
 	const auto button = event.button.button;
 	const auto state = event.button.down;
@@ -2032,8 +2038,10 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 
 static void handle_finger_motion_event(const SDL_Event& event)
 {
+#ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
 		return;
+#endif
 	if (isfocus() && event.tfinger.fingerID == 0)
 	{
         // Use relative movement for better control (Laptop touchpad style)
@@ -2058,8 +2066,10 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 {
 	monitor_off = 0;
 
+#ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
 		return;
+#endif
 
 	if (mouseinside && recapture && isfullscreen() <= 0) {
 		enablecapture(mon->monitor_id);
@@ -2128,6 +2138,7 @@ static void handle_mouse_wheel_event(const SDL_Event& event)
 		setmousebuttonstate(0, 6, -1);
 }
 
+#ifndef LIBRETRO
 static float pen_pressure;
 static float pen_xtilt;
 static float pen_ytilt;
@@ -2306,6 +2317,7 @@ static void handle_pen_event(const SDL_Event& event)
 		break;
 	}
 }
+#endif
 
 std::string get_filename_extension(const TCHAR* filename);
 
@@ -2481,6 +2493,7 @@ static void process_event(const SDL_Event& event)
 			handle_drop_file_event(event);
 			break;
 
+#ifndef LIBRETRO
 		case SDL_EVENT_PEN_PROXIMITY_IN:
 		case SDL_EVENT_PEN_PROXIMITY_OUT:
 		case SDL_EVENT_PEN_DOWN:
@@ -2491,6 +2504,7 @@ static void process_event(const SDL_Event& event)
 		case SDL_EVENT_PEN_AXIS:
 			handle_pen_event(event);
 			break;
+#endif
 
 		default:
 			break;
