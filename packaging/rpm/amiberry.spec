@@ -2,7 +2,7 @@
 
 Name:           amiberry
 Version:        8.0.0
-Release:        0.pre30%{?dist}
+Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
 License:        GPL-3.0-only
@@ -86,5 +86,8 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Sat Mar 15 2026 Dimitris Panokostas <midwan@gmail.com> - 8.0.0-1
+- Stable v8.0.0 release
+
 * Sat Mar 14 2026 Dimitris Panokostas <midwan@gmail.com> - 8.0.0-0.pre30
 - Initial COPR packaging

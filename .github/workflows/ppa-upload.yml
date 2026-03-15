@@ -35,8 +35,8 @@ jobs:
             libflac-dev \
             libmpeg2-4-dev \
             libpng-dev \
-            libsdl2-dev \
-            libsdl2-image-dev \
+            libsdl3-dev \
+            libsdl3-image-dev \
             libasound2-dev \
             libmpg123-dev \
             libportmidi-dev \
@@ -71,6 +71,9 @@ jobs:
           cp -r . /tmp/ppa-build/noble/amiberry
           cd /tmp/ppa-build/noble/amiberry
 
+          # Remove placeholder changelog so dch --create can write a fresh one
+          rm -f debian/changelog
+
           # Write a fresh changelog entry for this release
           dch --create --package amiberry \
             --newversion "${VERSION}-1" \
@@ -99,6 +102,8 @@ jobs:
           mkdir -p /tmp/ppa-build/jammy
           cp -r . /tmp/ppa-build/jammy/amiberry
           cd /tmp/ppa-build/jammy/amiberry
+
+          rm -f debian/changelog
 
           # jammy gets a ~jammy1 suffix so both series coexist in the PPA
           dch --create --package amiberry \

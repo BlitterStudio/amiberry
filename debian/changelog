@@ -1,5 +1,5 @@
-amiberry (8.0.0~pre30-1) UNRELEASED; urgency=medium
+amiberry (8.0.0-1) UNRELEASED; urgency=medium
 
-  * Initial Ubuntu PPA packaging.
+  * Stable v8.0.0 release.
 
- -- Dimitris Panokostas <midwan@gmail.com>  Sat, 14 Mar 2026 22:00:00 +0000
+ -- Dimitris Panokostas <midwan@gmail.com>  Sat, 15 Mar 2026 22:00:00 +0000
