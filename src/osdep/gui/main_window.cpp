@@ -920,7 +920,12 @@ void amiberry_gui_init()
 	}
 	else if (kmsdrm_detected)
 	{
-		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
+		// Reset emulation's logical presentation on the shared renderer,
+		// otherwise the GUI overflows the smaller Amiga logical space.
+		if (mon->gui_renderer) {
+			SDL_SetRenderLogicalPresentation(mon->gui_renderer, 0, 0,
+				SDL_LOGICAL_PRESENTATION_DISABLED);
+		}
 	}
 
 #if defined(_WIN32) && defined(USE_OPENGL)

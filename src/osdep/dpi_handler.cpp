@@ -98,7 +98,10 @@ float DPIHandler::get_layout_scale() {
     }
     return 1.0f;
 #elif defined(__linux__)
-    return get_scale();
+    float scale = read_scale_from_content_scale();
+    if (scale <= 0.0f)
+        scale = read_scale_from_display_mode();
+    return std::max(scale, 1.0f);
 #else
     return 1.0f;
 #endif
