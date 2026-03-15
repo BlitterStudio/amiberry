@@ -42,35 +42,45 @@ Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-
 -   **Dynamic File Handling**: Drag-and-drop support for floppies, hardfiles, and config files.
 -   **Custom Bezel Overlays**: Use your own bezel PNG images (e.g., CRT monitor frames) with any shader. The emulator output is automatically fitted to the bezel's transparent screen area.
 -   **Native GUI**: A responsive, feature-rich interface designed for both mouse and controller navigation.
+-   **Auto-Update**: Built-in update checker that detects new releases and downloads them directly — with SHA256 verification.
 
 ## 🚀 Installation
 
 ### Linux 🐧
 
-Amiberry is available as a `.deb` (Debian/Ubuntu/Raspberry Pi OS) and `.rpm` (Fedora/RHEL) package. You can download the latest release from GitHub [using this link](https://github.com/BlitterStudio/amiberry/releases/latest).
-
-**Debian / Ubuntu / Raspberry Pi OS:**
+**Via package repository (recommended — automatic updates):**
 ```bash
-# Download the latest .deb from Releases or Development Builds
-sudo apt update
-sudo apt install ./amiberry_*.deb
+curl -fsSL https://packages.amiberry.com/install.sh | sudo sh
+sudo apt install amiberry      # Debian / Ubuntu / Raspberry Pi OS
+sudo dnf install amiberry      # Fedora
 ```
 
-**Fedora:**
+The repository at [packages.amiberry.com](https://packages.amiberry.com) supports Ubuntu 22.04/24.04/25.10, Debian 12/13, and Fedora. Once set up, `apt upgrade` or `dnf update` will deliver future releases automatically.
+
+**Via Ubuntu PPA:**
 ```bash
-# Download the latest .rpm from Releases or Development Builds
-sudo dnf install ./amiberry-*.rpm
+sudo add-apt-repository ppa:midwan-a/amiberry
+sudo apt update && sudo apt install amiberry
 ```
 
-**Flatpak (Flathub):**
+**Via Fedora COPR:**
+```bash
+sudo dnf copr enable midwan/amiberry
+sudo dnf install amiberry
+```
+
+**Via Flatpak (Flathub):**
 ```bash
 flatpak install flathub com.blitterstudio.amiberry
 ```
 
-**Arch Linux (AUR):**
+**Via Arch Linux (AUR):**
 ```bash
 yay -S amiberry
 ```
+
+**Manual download:**
+Download the latest `.deb` or `.rpm` from [GitHub Releases](https://github.com/BlitterStudio/amiberry/releases/latest) and install with `sudo apt install ./amiberry_*.deb` or `sudo dnf install ./amiberry-*.rpm`.
 
 ### macOS 🍎
 
