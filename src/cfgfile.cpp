@@ -2469,6 +2469,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_strarr(f, _T("gfx_fullscreen_picasso"), fullmodes, p->gfx_apmode[1].gfx_fullscreen);
 	cfgfile_write_strarr(f, _T("gfx_center_horizontal"), centermode1, p->gfx_xcenter);
 	cfgfile_write_strarr(f, _T("gfx_center_vertical"), centermode1, p->gfx_ycenter);
+	cfgfile_write_bool(f, _T("gfx_keep_aspect"), p->gfx_keep_aspect);
 	cfgfile_write_str(f, _T("gfx_colour_mode"), _T("32bit"));
 	cfgfile_write_bool(f, _T("gfx_blacker_than_black"), p->gfx_blackerthanblack);
 	cfgfile_dwrite_bool(f, _T("gfx_monochrome"), p->gfx_grayscale);
@@ -3743,6 +3744,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 		|| cfgfile_intval (option, value, _T("gfx_center_horizontal_size"), &p->gfx_xcenter_size, 1)
 		|| cfgfile_intval (option, value, _T("gfx_center_vertical_size"), &p->gfx_ycenter_size, 1)
+		|| cfgfile_yesno(option, value, _T("gfx_keep_aspect"), &p->gfx_keep_aspect, 1)
 
 		|| cfgfile_intval (option, value, _T("filesys_max_size"), &p->filesys_limit, 1)
 		|| cfgfile_intval (option, value, _T("filesys_max_name_length"), &p->filesys_max_name, 1)
@@ -8668,6 +8670,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->gfx_ycenter_pos = MANUAL_SCALE_MIN_RANGE - 1;
 	p->gfx_xcenter_size = -1;
 	p->gfx_ycenter_size = -1;
+	p->gfx_keep_aspect = false;
 	p->gfx_max_horizontal = RES_HIRES;
 	p->gfx_max_vertical = VRES_DOUBLE;
 	p->gfx_autoresolution_minv = 0;

@@ -204,5 +204,6 @@ void denise_clearbuffers(void);
 uae_u8 *get_row_genlock(int monid, int line);
 void drawing_free(void);
 bool denise_get_hboffsets(int *hbs, int *hbe, int *hblen, int *total);
+bool denise_get_hbstate(bool);
 
 #endif /* UAE_DRAWING_H */

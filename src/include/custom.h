@@ -140,7 +140,7 @@ extern int maxhpos, maxhposm0, maxhpos_short;
 extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync, maxhpos_display;
 extern int maxvsize_display;
 extern int hsyncstartpos_hw, hsyncendpos_hw;
-extern int minfirstline, minfirstline_linear, vblank_endline, numscrlines, minfirstline_linear;
+extern int minfirstline, minfirstline_linear, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan, doublescan2x;

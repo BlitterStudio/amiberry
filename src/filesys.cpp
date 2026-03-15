@@ -1938,38 +1938,18 @@ int filesys_eject(int nr)
 }
 
 static uae_u32 heartbeat;
-static int heartbeat_count, heartbeat_count_cont;
-static int heartbeat_task;
+static int heartbeat_count_cont;
 
 bool filesys_heartbeat(void)
 {
 	return heartbeat_count_cont > 0;
 }
 
-// This uses filesystem process to reduce resource usage
 void setsystime (void)
 {
-	write_log("SETSYSTIME\n");
 	if (!currprefs.tod_hack || !rtarea_bank.baseaddr)
 		return;
-	write_log("SETSYSTIME2\n");
-	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
-	heartbeat_task = 1;
-	heartbeat_count = 10;
-}
-
-static void setsystime_vblank (void)
-{
-	Unit *u;
-	TrapContext *ctx = NULL;
-
-	for (u = units; u; u = u->next) {
-		if (is_virtual(u->unit) && filesys_isvolume(u)) {
-			put_byte(u->volume + 173 - 32, get_byte(u->volume + 173 - 32) | 1);
-			uae_Signal(get_long(u->volume + 176 - 32), 1 << 13);
-			break;
-		}
-	}
+	uae_ClockSync();
 }
 
 static uae_u32 REGPARAM2 debugger_helper(TrapContext *ctx)
@@ -7030,6 +7010,12 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 					return 7;
 				}
 
+				case 7: /* clocksync */
+				{
+					trap_set_areg(ctx, 0, 0);
+					return 8;
+				}
+
 				default:
 				write_log(_T("exter_int_helper: unknown native action %X\n"), cmd);
 				break;
@@ -9382,8 +9368,6 @@ void filesys_vsync (void)
 	}
 
 	if (heartbeat == get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT)) {
-		if (heartbeat_count > 0)
-			heartbeat_count--;
 		if (heartbeat_count_cont > 0)
 			heartbeat_count_cont--;
 		return;
@@ -9421,14 +9405,6 @@ void filesys_vsync (void)
 				hardfile_media_change (hfd, &hfd->delayedci, true, true);
 			}
 		}
-	}
-
-	if (heartbeat_count <= 0)
-		return;
-
-	if (heartbeat_task & 1) {
-		setsystime_vblank ();
-		heartbeat_task &= ~1;
 	}
 }
 
@@ -9491,7 +9467,6 @@ void filesys_install (void)
 	org (rtarea_base + RTAREA_HEARTBEAT);
 	dl (0);
 	heartbeat = 0;
-	heartbeat_task = 0;
 
 	org (rtarea_base + 0xFF18);
 	calltrap (deftrap2 (filesys_dev_bootfilesys, 0, _T("filesys_dev_bootfilesys")));

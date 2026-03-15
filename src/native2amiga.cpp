@@ -143,6 +143,15 @@ void uae_ShellExecute2(uae_u32 id)
 	uae_nativesem_post();
 }
 
+void uae_ClockSync(void)
+{
+	uae_nativesem_wait();
+	write_comm_pipe_int(&native2amiga_pending, 7, 0);
+	write_comm_pipe_int(&native2amiga_pending, 0, 1);
+	do_uae_int_requested();
+	uae_nativesem_post();
+}
+
 #endif
 
 uaecptr uae_AllocMem (TrapContext *ctx, uae_u32 size, uae_u32 flags, uaecptr sysbase)

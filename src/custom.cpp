@@ -2233,20 +2233,22 @@ static void init_beamcon0(void)
 		}
 		hpixelsd *= 2;
 	}
-	bool dbl = line_is_doubled();
-	if (dbl) {
-		vpixels *= 2;
-	}
-	if (hpixelsd < vpixels) {
-		doublescan2x = 1;
-		hpixelsd *= 2;
-		if (hpixelsd < vpixels) {
-			doublescan2x = 2;
+	if (currprefs.gfx_keep_aspect) {
+		bool dbl = line_is_doubled();
+		if (dbl) {
+			vpixels *= 2;
 		}
-	} else if (hpixelsd > vpixels * 2) {
-		doublescan2x = -1;
-		if (hpixelsd > vpixels * 4) {
-			doublescan2x = -2;
+		if (hpixelsd < vpixels) {
+			doublescan2x = 1;
+			hpixelsd *= 2;
+			if (hpixelsd < vpixels) {
+				doublescan2x = 2;
+			}
+		} else if (hpixelsd > vpixels * 2) {
+			doublescan2x = -1;
+			if (hpixelsd > vpixels * 4) {
+				doublescan2x = -2;
+			}
 		}
 	}
 
@@ -5176,6 +5178,10 @@ static void vsync_check_vsyncmode(void)
 		}
 	}
 
+	if (!current_linear_temp_change && denise_get_hbstate(false) && currprefs.cs_hvcsync < HVSYNC_SYNCPOS) {
+		current_linear_temp_change = 2;
+	}
+
 	bool framesync = false;
 	if (current_linear_temp_change > 0) {
 		current_linear_temp_change--;
@@ -5199,7 +5205,7 @@ static void vsync_check_vsyncmode(void)
 				framesync = true;
 				display_redraw = true;
 			}
-			if (current_linear_hblen != current_linear_hblen_temp) {
+			if ((current_linear_hblen != current_linear_hblen_temp || denise_get_hbstate(true)) && currprefs.cs_hvcsync < HVSYNC_SYNCPOS) {
 				current_linear_hblen = current_linear_hblen_temp;
 				init_beamcon0();
 				framesync = true;
@@ -8949,7 +8955,8 @@ void check_prefs_changed_custom(void)
 		currprefs.ntscmode != changed_prefs.ntscmode ||
 		currprefs.cs_agnusmodel != changed_prefs.cs_agnusmodel ||
 		currprefs.cs_denisemodel != changed_prefs.cs_denisemodel ||
-		currprefs.cs_hvcsync != changed_prefs.cs_hvcsync
+		currprefs.cs_hvcsync != changed_prefs.cs_hvcsync ||
+		currprefs.gfx_keep_aspect != changed_prefs.gfx_keep_aspect
 		) {
 			currprefs.picasso96_nocustom = changed_prefs.picasso96_nocustom;
 			if (currprefs.ntscmode != changed_prefs.ntscmode) {
@@ -8974,6 +8981,7 @@ void check_prefs_changed_custom(void)
 			currprefs.cs_agnusmodel = changed_prefs.cs_agnusmodel;
 			currprefs.cs_denisemodel = changed_prefs.cs_denisemodel;
 			currprefs.cs_hvcsync = changed_prefs.cs_hvcsync;
+			currprefs.gfx_keep_aspect = changed_prefs.gfx_keep_aspect;
 			init_custom();
 	}
 
@@ -12201,7 +12209,9 @@ static void do_cck(bool docycles)
 static uae_u16 quick_strobe(void)
 {
 	uae_u16 str = get_strobe_reg(0);
+	agnus_trigger_cck -= 2;
 	write_drga_strobe(str);
+	agnus_trigger_cck += 2;
 	if (prev_strobe == 0x3c && str != 0x3c) {
 		INTREQ_INT(5, 0);
 	}

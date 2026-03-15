@@ -29,6 +29,7 @@
 ; 2016.01.14 'Indirect' boot ROM trap support.
 ; 2018.03.22 Segment tracking
 ; 2018.07.08 68060 FPU disable
+; 2026.03.15 clocksync from exter_do
 
 AllocMem = -198
 FreeMem = -210
@@ -618,6 +619,14 @@ exter_task:
 exter_task_wait
 	move.l #$100,d0
 	jsr -$13e(a6) ;Wait
+	move.l a5,d0
+	bne.s .gottimer
+	lea tim_dev(pc),a0
+	moveq #0,d0
+	moveq #0,d1
+	bsr.w allocdevice
+	move.l d0,a5
+.gottimer
 	bsr.s exter_do
 	bra.s exter_task_wait
 
@@ -680,8 +689,16 @@ EXTT_shellexec
 	bra.w EXTT_loop
 EXTT_shellexec2
 	cmp.w #7,d0
-	bgt.w EXTT_loop
+	bgt.s EXTT_clocksync
 	bsr.s doshellexecute2
+	bra.w EXTT_loop
+EXTT_clocksync
+	cmp.w #8,d0
+	bgt.w EXTT_loop
+	move.l a5,a1
+	move.l a1,d0
+	beq.w EXTT_loop
+	bsr clockreset
 	bra.w EXTT_loop
 
 doshellexecute
@@ -2067,12 +2084,12 @@ addfsonthefly ; d1 = fs index
 	movem.l (sp)+,d2-d7/a2-a6
 	rts
 
+	; a1 = timer.device
 clockreset:
 	move.w #$ff58,d0 ; fsmisc_helper
 	bsr.w getrtbaselocal
 	moveq #3,d0 ; get time
 	jsr (a0)
-	move.l 168(a3),a1
 	move.l d0,32(a1)
 	beq.s .cr
 	moveq #0,d0
@@ -2080,7 +2097,8 @@ clockreset:
 	move.w #11,28(a1) ;TR_SETSYSTIME
 	move.b #1,30(a1) ;IOF_QUICK
 	jsr -$01c8(a6) ;DoIO
-.cr	rts
+.cr
+	rts
 
 filesys_mainloop:
 	moveq #0,d7
@@ -2209,6 +2227,7 @@ FSML_loop:
 	; clock reset
 	btst #0,173(a3)
 	beq.s .noclk
+	move.l 168(a3),a1
 	bsr.w clockreset
 	bclr #0,173(a3)
 .noclk

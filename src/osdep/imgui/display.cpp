@@ -494,9 +494,9 @@ void render_panel_display() {
     // Right Column
     // ---------------------------------------------------------
     if (ImGui::BeginTable("BottomGrid", 3, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2);
-        ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2);
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
+        ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -513,6 +513,12 @@ void render_panel_display() {
         if (!centering_en) ImGui::EndDisabled();
         ImGui::Spacing();
         EndGroupBox("Centering");
+
+        BeginGroupBox("Aspect ratio");
+        AmigaCheckbox("Auto integer scaling", &changed_prefs.gfx_keep_aspect);
+        ShowHelpMarker("Automatically select integer scaling factor based on resolution, line mode and doublescan settings to maintain correct aspect ratio");
+        ImGui::Spacing();
+        EndGroupBox("Aspect ratio");
 
         ImGui::TableNextColumn();
 
@@ -553,6 +559,7 @@ void render_panel_display() {
 
         // Interlaced Line Mode Group
         BeginGroupBox("Interlaced line mode");
+        ImGui::Dummy(ImVec2(BUTTON_WIDTH * 1.7f, 0));
         bool is_double = changed_prefs.gfx_vresolution > 0;
         if (!linemode_enabled || is_double) ImGui::BeginDisabled();
         if (AmigaRadioButton("Single##I", !is_double)) {
