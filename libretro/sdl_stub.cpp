@@ -768,17 +768,11 @@ bool SDL_SetRenderLogicalPresentation(SDL_Renderer* renderer, int w, int h, SDL_
 	}
 	return true;
 }
-bool SDL_GetRenderLogicalPresentation(SDL_Renderer* renderer, int* w, int* h, SDL_LogicalPresentation* mode, SDL_FRect* viewport)
+bool SDL_GetRenderLogicalPresentation(SDL_Renderer* renderer, int* w, int* h, SDL_LogicalPresentation* mode)
 {
 	if (w) *w = renderer ? renderer->logical_w : 0;
 	if (h) *h = renderer ? renderer->logical_h : 0;
 	if (mode) *mode = SDL_LOGICAL_PRESENTATION_LETTERBOX;
-	if (viewport) {
-		viewport->x = 0.0f;
-		viewport->y = 0.0f;
-		viewport->w = renderer && renderer->window ? (float)renderer->window->w : 0.0f;
-		viewport->h = renderer && renderer->window ? (float)renderer->window->h : 0.0f;
-	}
 	return true;
 }
 bool SDL_RenderSetIntegerScale(SDL_Renderer* renderer, SDL_bool enable)

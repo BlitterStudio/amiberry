@@ -26,10 +26,7 @@ extern int hdisplay_left_border, denisehtotal;
 extern int vsync_startline;
 extern int video_recording_active;
 
-#define AMIGA_WIDTH_MAX (754 / 2)
-#define AMIGA_HEIGHT_MAX_PAL (576 / 2)
-#define AMIGA_HEIGHT_MAX_NTSC (486 / 2)
-#define AMIGA_HEIGHT_MAX (AMIGA_HEIGHT_MAX_PAL)
+#include "amiga_constants.h"
 
 #define CCK_SHRES_SHIFT 3
 

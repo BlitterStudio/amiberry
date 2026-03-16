@@ -911,7 +911,7 @@ bool SDL_RenderTexture(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_F
 bool SDL_RenderTextureRotated(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_FRect* sr, const SDL_FRect* dr, double angle, const SDL_FPoint* center, SDL_RendererFlip flip);
 bool SDL_RenderFillRect(SDL_Renderer* renderer, const SDL_FRect* rect);
 bool SDL_SetRenderLogicalPresentation(SDL_Renderer* renderer, int w, int h, SDL_LogicalPresentation mode);
-bool SDL_GetRenderLogicalPresentation(SDL_Renderer* renderer, int* w, int* h, SDL_LogicalPresentation* mode, SDL_FRect* viewport);
+bool SDL_GetRenderLogicalPresentation(SDL_Renderer* renderer, int* w, int* h, SDL_LogicalPresentation* mode);
 bool SDL_RenderSetIntegerScale(SDL_Renderer* renderer, SDL_bool enable);
 bool SDL_RenderSetScale(SDL_Renderer* renderer, float scaleX, float scaleY);
 bool SDL_SetRenderScale(SDL_Renderer* renderer, float scaleX, float scaleY);

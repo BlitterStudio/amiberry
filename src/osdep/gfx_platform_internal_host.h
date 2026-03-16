@@ -4,6 +4,8 @@
 #include <SDL3_image/SDL_image.h>
 
 #include <string>
+#include "fsdb_host.h"
+#include "amiga_constants.h"
 
 static inline bool gfx_platform_skip_alloctexture(int monid, int w, int h)
 {

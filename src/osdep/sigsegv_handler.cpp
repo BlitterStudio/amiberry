@@ -58,9 +58,7 @@ void init_max_signals()
 
 #else /* !_WIN32 */
 
-#if !defined(__MACH__) && !defined(CPU_AMD64) && !defined(__x86_64__) && !defined(__riscv)
-#include <asm/sigcontext.h>
-#elif defined(__HAIKU__)
+#if defined(__HAIKU__)
 #include <signal.h>
 #else
 #include <sys/ucontext.h>

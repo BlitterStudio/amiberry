@@ -13,8 +13,8 @@
 
 #ifdef USE_OPENGL
 
-#ifdef __ANDROID__
-// Android: GLES3 provides all functions directly
+#if defined(__ANDROID__) || defined(USE_GLES3)
+// Android/GLES3: Functions are provided by <GLES3/gl3.h>
 #include <GLES3/gl3.h>
 #include <SDL3/SDL_opengles2.h>
 

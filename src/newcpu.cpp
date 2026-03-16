@@ -5336,7 +5336,7 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 #elif defined(CPU_x86_64) || defined(CPU_i386)
 		__asm__ __volatile__ ("pause");
 #elif defined(__riscv)
-		__asm__ __volatile__ ("pause");
+		__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
 #endif
 	}
 }
@@ -5382,7 +5382,7 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 #elif defined(CPU_x86_64) || defined(CPU_i386)
 		__asm__ __volatile__ ("pause");
 #elif defined(__riscv)
-		__asm__ __volatile__ ("pause");
+		__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
 #endif
 	}
 }

@@ -257,7 +257,7 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			f_quad = f_crop;
 
 			int lw, lh;
-			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, nullptr, nullptr);
+			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, nullptr);
 			if (lw != amiga_surface->w || lh != amiga_surface->h) {
 				SDL_SetRenderLogicalPresentation(mon->amiga_renderer, amiga_surface->w, amiga_surface->h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 			}
@@ -295,7 +295,7 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
 		{
 			int slx, sly, dst_w, dst_h;
-			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &dst_w, &dst_h, nullptr, nullptr);
+			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &dst_w, &dst_h, nullptr);
 			if (dst_w == 0 || dst_h == 0) {
 				SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
 			}
