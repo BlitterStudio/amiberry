@@ -271,10 +271,16 @@ static bool has_logged_iconv_fail = false;
         }
     }
 
-    // Log if significant number of characters were invalid
+    // Log if significant number of characters were invalid (rate-limited)
     if (invalid_chars > 0 && invalid_chars > input.size() / 10) {
-        write_log(_T("utf8_to_latin1_string: %zu invalid characters found in string of length %zu\n"),
-                 invalid_chars, input.size());
+        static int log_count = 0;
+        if (log_count < 5) {
+            write_log(_T("utf8_to_latin1_string: %zu invalid characters found in string of length %zu\n"),
+                     invalid_chars, input.size());
+            log_count++;
+            if (log_count == 5)
+                write_log(_T("utf8_to_latin1_string: further conversion warnings suppressed\n"));
+        }
     }
 
     return invalid_chars == 0;
@@ -675,7 +681,14 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 
 		std::string string_output;
 		if (!utf8_to_latin1_string(result, string_output)) {
-			write_log("my_readdir: utf8_to_latin1_string conversion failed for %s\n", result.c_str());
+			static std::set<std::string> logged_names;
+			static int suppress_count = 0;
+			if (logged_names.size() < 20 && logged_names.find(result) == logged_names.end()) {
+				write_log("my_readdir: utf8_to_latin1_string conversion failed for %s\n", result.c_str());
+				logged_names.insert(result);
+			} else {
+				suppress_count++;
+			}
 			continue;
 		}
 

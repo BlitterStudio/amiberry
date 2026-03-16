@@ -170,12 +170,9 @@ static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* name, int isDirectory
             return -1;
         }
 
-        // Special directory name checks
         if (isDirectory) {
-            // '.' and '..' are reserved directory names
             if ((name[0] == '.' && name_length == 1) ||
                 (name[0] == '.' && name[1] == '.' && name_length == 2)) {
-                write_log(_T("fsdb_name_invalid_2: reserved directory name '%s'\n"), name);
                 return -1;
             }
         }
