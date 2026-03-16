@@ -3,6 +3,12 @@ name: Update Package Repositories
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to download packages from'
+        required: true
+        type: string
   workflow_call:
     inputs:
       tag_name:
