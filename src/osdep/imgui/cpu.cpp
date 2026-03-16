@@ -79,7 +79,11 @@ void render_panel_cpu() {
             changed_prefs.cpu_model <= 68030 && changed_prefs.cachesize == 0;
     bool enable_cpu_idle_slider = changed_prefs.m68k_speed != 0;
     
+#ifdef USE_PCEM
     bool enable_x86_group = is_x86_cpu(&changed_prefs);
+#else
+    bool enable_x86_group = false;
+#endif
 
     bool enable_cpu_unimplemented = changed_prefs.cpu_model == 68060 && changed_prefs.cachesize == 0;
 
