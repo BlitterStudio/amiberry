@@ -119,13 +119,16 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y createrepo-c wget curl unzip
+          sudo apt-get install -y createrepo-c wget curl unzip rpm
 
       - name: Import GPG signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
           echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+          # Allow non-interactive signing via loopback pinentry
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpg-connect-agent reloadagent /bye
           gpg --list-secret-keys
 
       - name: Download release assets
@@ -165,6 +168,33 @@ jobs:
                 rpm_url="${PAGES_URL}/rpm/${arch}/${rpmfile}"
                 dest="/tmp/rpms/${arch}/$(basename "$rpmfile")"
                 curl -sf --max-time 30 "$rpm_url" -o "$dest" 2>/dev/null && echo "  Restored: $rpmfile" || true
+              done
+            fi
+          done
+
+      - name: Sign RPM packages
+        run: |
+          GPG_KEY_ID=$(gpg --list-secret-keys --with-colons 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
+          echo "Signing with GPG key: ${GPG_KEY_ID}"
+          echo "%_signature gpg" > ~/.rpmmacros
+          echo "%_gpg_name ${GPG_KEY_ID}" >> ~/.rpmmacros
+          echo "%__gpg_sign_cmd %{__gpg} gpg --batch --pinentry-mode loopback --no-verbose --no-armor --no-secmem-warning --digest-algo sha256 -u '%{_gpg_name}' -sbo %{__signature_filename} %{__plaintext_filename}" >> ~/.rpmmacros
+          for arch in x86_64 aarch64; do
+            if ls /tmp/rpms/${arch}/*.rpm 2>/dev/null; then
+              for rpm_file in /tmp/rpms/${arch}/*.rpm; do
+                echo "Signing: $(basename "$rpm_file")"
+                rpmsign --addsign "$rpm_file"
+              done
+            fi
+          done
+
+      - name: Verify RPM signatures
+        run: |
+          for arch in x86_64 aarch64; do
+            if ls /tmp/rpms/${arch}/*.rpm 2>/dev/null; then
+              for rpm_file in /tmp/rpms/${arch}/*.rpm; do
+                echo "Verifying: $(basename "$rpm_file")"
+                rpm --checksig "$rpm_file"
               done
             fi
           done

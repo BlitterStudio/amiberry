@@ -3,5 +3,6 @@ name=Amiberry - $basearch
 baseurl=https://packages.amiberry.com/rpm/$basearch
 enabled=1
 gpgcheck=1
+repo_gpgcheck=1
 gpgkey=https://packages.amiberry.com/gpg.asc
 metadata_expire=1d
