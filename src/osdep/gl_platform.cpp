@@ -10,7 +10,7 @@
 #include "gl_platform.h"
 #include "sysdeps.h"
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(USE_GLES3)
 // Desktop: Define the function pointers
 PFNGLGENVERTEXARRAYSPROC glp_GenVertexArrays = nullptr;
 PFNGLBINDVERTEXARRAYPROC glp_BindVertexArray = nullptr;
