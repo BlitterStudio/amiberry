@@ -1028,9 +1028,19 @@ void setup_controller_mappings(const struct didata* did, const int i)
 void fix_didata(struct didata* did)
 {
 	did->axles = static_cast<uae_s16>(SDL_GetNumJoystickAxes(did->joystick));
+	if (did->axles > MAX_MAPPINGS) {
+		write_log("Warning: Joystick '%s' reports %d axes, clamping to %d\n",
+			did->name.c_str(), did->axles, MAX_MAPPINGS);
+		did->axles = MAX_MAPPINGS;
+	}
 	int hats = SDL_GetNumJoystickHats(did->joystick);
 	if (hats > 0) hats = hats * 4;
 	did->buttons_real = did->buttons = static_cast<uae_s16>(SDL_GetNumJoystickButtons(did->joystick) + hats);
+	if (did->buttons > MAX_MAPPINGS) {
+		write_log("Warning: Joystick '%s' reports %d buttons (incl. %d hat switches), clamping to %d\n",
+			did->name.c_str(), did->buttons, hats / 4, MAX_MAPPINGS);
+		did->buttons_real = did->buttons = MAX_MAPPINGS;
+	}
 	if (did->is_controller)
 	{
 		for (uae_s16 b = 0; b < did->buttons; b++)
@@ -1475,7 +1485,10 @@ void read_joystick_buttons(const int id)
 		// Check all Joystick buttons, including axes acting as buttons
 		// Use at least 15 to cover all RetroArch-mapped buttons (indices 0-14),
 		// even when the controller reports fewer physical buttons (issue #1493)
-		const int num_buttons = did->buttons > 15 ? did->buttons : 15;
+		// Cap to SDL_GAMEPAD_BUTTON_COUNT to avoid OOB on mapping.button[] array
+		int num_buttons = did->buttons > 15 ? did->buttons : 15;
+		if (num_buttons > SDL_GAMEPAD_BUTTON_COUNT)
+			num_buttons = SDL_GAMEPAD_BUTTON_COUNT;
 		for (int did_button = 0; did_button < num_buttons; did_button++)
 		{
 			if (did->mapping.button[did_button] != SDL_GAMEPAD_BUTTON_INVALID)
@@ -1514,7 +1527,9 @@ void read_joystick_axis(const int id, const int axis, int value)
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
 		// Check for any Axis movement
-		for (auto did_axis = 0; did_axis < did->axles; did_axis++)
+		// Cap to SDL_GAMEPAD_AXIS_COUNT to avoid OOB on mapping.axis[] array
+		const int num_axes = did->axles < SDL_GAMEPAD_AXIS_COUNT ? did->axles : SDL_GAMEPAD_AXIS_COUNT;
+		for (auto did_axis = 0; did_axis < num_axes; did_axis++)
 		{
 			if (did->mapping.axis[did_axis] != SDL_GAMEPAD_AXIS_INVALID)
 			{
