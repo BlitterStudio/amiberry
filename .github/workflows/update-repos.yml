@@ -196,6 +196,7 @@ jobs:
 
       - name: Verify RPM signatures
         run: |
+          rpm --import packaging/repo/gpg.asc
           for arch in x86_64 aarch64; do
             if ls /tmp/rpms/${arch}/*.rpm 2>/dev/null; then
               for rpm_file in /tmp/rpms/${arch}/*.rpm; do
