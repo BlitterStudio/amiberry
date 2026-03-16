@@ -42,12 +42,9 @@ modules:
         url: https://github.com/libsdl-org/SDL.git
         tag: release-3.4.2
         commit: 683181b47cfabd293e3ea409f838915b8297a4fd
-    cleanup:
-      - /include
-      - /lib/cmake
-      - /lib/pkgconfig
-      - '*.a'
-      - '*.la'
+        x-checker-data:
+          type: git
+          tag-pattern: ^release-([\d.]+)$
 
   - name: sdl3-image
     buildsystem: cmake-ninja
@@ -59,12 +56,9 @@ modules:
         url: https://github.com/libsdl-org/SDL_image.git
         tag: release-3.4.0
         commit: ad58ecfc27a1bd09e510ceff8bbbdb1094806476
-    cleanup:
-      - /include
-      - /lib/cmake
-      - /lib/pkgconfig
-      - '*.a'
-      - '*.la'
+        x-checker-data:
+          type: git
+          tag-pattern: ^release-([\d.]+)$
 
   - name: libpcap
     buildsystem: autotools
@@ -99,10 +93,9 @@ modules:
         url: https://github.com/sigrokproject/libserialport
         tag: libserialport-0.1.2
         commit: 869c567eeaae4a0ff12e114652b750e18a881f49
-    cleanup:
-      - /include
-      - '*.la'
-      - '*.a'
+        x-checker-data:
+          type: git
+          tag-pattern: ^libserialport-([\d.]+)$
 
   - name: portmidi
     buildsystem: cmake-ninja
@@ -113,12 +106,9 @@ modules:
         url: https://github.com/PortMidi/portmidi.git
         tag: v2.0.8
         commit: 101dac9455e2718512c94e24cbcae6a6f34b908b
-    cleanup:
-      - /lib/cmake
-      - /lib/pkgconfig
-      - /include
-      - '*.a'
-      - '*.la'
+        x-checker-data:
+          type: git
+          tag-pattern: ^v([\d.]+)$
 
   - name: enet
     sources:
@@ -151,8 +141,13 @@ modules:
   - name: amiberry
     buildsystem: cmake-ninja
     builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
         tag: v7.1.1
         commit: c53d6db770a5580732a7f2bb48abcbfcd95fd0f4
+        x-checker-data:
+          type: git
+          tag-pattern: ^v([\d.]+)$
