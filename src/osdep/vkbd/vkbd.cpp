@@ -1211,17 +1211,21 @@ void vkbd_redraw()
 	SDL_GetRenderDrawColor(mon->amiga_renderer, &color.r, &color.g, &color.b, &color.a);
 
 	// Draw currently selected key:
-	rect = vkbd_get_key_drawing_rect(vkbdActualIndex);
+	SDL_Rect rect = vkbd_get_key_drawing_rect(vkbdActualIndex);
+	SDL_FRect frect_key = { static_cast<float>(rect.x), static_cast<float>(rect.y),
+		static_cast<float>(rect.w), static_cast<float>(rect.h) };
 	const int alpha = static_cast<int>((1.0 - vkbdTransparency) * vkbdPressedKeyColor.a);
 	SDL_SetRenderDrawColor(mon->amiga_renderer, vkbdPressedKeyColor.r, vkbdPressedKeyColor.g, vkbdPressedKeyColor.b, alpha);
-	SDL_RenderFillRect(mon->amiga_renderer, &rect);
+	SDL_RenderFillRect(mon->amiga_renderer, &frect_key);
 
 	// Draw sticky keys:
 	for (auto key : vkbdPressedStickyKeys)
 	{
 		const auto index = vkbdStickyKeyToIndex[key];
 		rect = vkbd_get_key_drawing_rect(index);
-		SDL_RenderFillRect(mon->amiga_renderer, &rect);
+		frect_key = { static_cast<float>(rect.x), static_cast<float>(rect.y),
+			static_cast<float>(rect.w), static_cast<float>(rect.h) };
+		SDL_RenderFillRect(mon->amiga_renderer, &frect_key);
 	}
 
 	SDL_SetRenderDrawColor(mon->amiga_renderer, color.r, color.g, color.b, color.a);
