@@ -77,6 +77,7 @@ fi
 
 %files
 %license LICENSE
+%doc %{_docdir}/amiberry/
 %{_bindir}/amiberry
 %{_libdir}/amiberry/
 %{_datadir}/amiberry/
