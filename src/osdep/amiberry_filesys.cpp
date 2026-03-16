@@ -190,7 +190,11 @@ static bool has_logged_iconv_fail = false;
 
         iconv_t get() {
             std::call_once(init_flag_, [this]() {
+#ifdef __APPLE__
+                handle_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8-MAC");
+#else
                 handle_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
+#endif
                 valid_ = (handle_ != iconv_t(-1));
             });
             return handle_;
