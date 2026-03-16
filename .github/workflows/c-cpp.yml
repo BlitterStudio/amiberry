@@ -294,24 +294,11 @@ jobs:
 
           echo "DMG_NAME=${DMG_NAME}" >> "$GITHUB_ENV"
 
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-macOS-universal.zip ${DMG_NAME}.dmg
-
       - name: Upload artifact
-        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v6
         with:
           name: amiberry-macOS-universal
           path: Amiberry-*.dmg
-          retention-days: 7
-
-      - name: Upload artifact for release
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v6
-        with:
-          name: amiberry-macOS-universal
-          path: Amiberry-*.zip
           retention-days: 7
 
   build-ubuntu:
@@ -768,7 +755,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip amiberry-*.exe Amiberry-*.zip *.apk *.aab 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe Amiberry-*.dmg *.apk *.aab 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -781,7 +768,7 @@ jobs:
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/amiberry-*.exe
-            artifacts/Amiberry-*.zip
+            artifacts/Amiberry-*.dmg
             artifacts/*.apk
             artifacts/*.aab
             artifacts/SHA256SUMS
