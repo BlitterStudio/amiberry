@@ -1,4 +1,5 @@
 %global _hardened_build 1
+%global debug_package %{nil}
 
 Name:           amiberry
 Version:        8.0.0
@@ -86,7 +87,7 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
-* Sat Mar 15 2026 Dimitris Panokostas <midwan@gmail.com> - 8.0.0-1
+* Sun Mar 15 2026 Dimitris Panokostas <midwan@gmail.com> - 8.0.0-1
 - Stable v8.0.0 release
 
 * Sat Mar 14 2026 Dimitris Panokostas <midwan@gmail.com> - 8.0.0-0.pre30
