@@ -864,7 +864,11 @@ void amiberry_gui_init()
 			mode |= SDL_WINDOW_ALWAYS_ON_TOP;
 		if (currprefs.start_minimized)
 			mode |= SDL_WINDOW_HIDDEN;
-		// SDL3: SHOWN is default, ALLOW_HIGHDPI is always enabled
+		// Request native-resolution framebuffer on HiDPI displays.
+		// Android: NOT needed — display scaling is handled entirely via layout_scale.
+#if !defined(__ANDROID__)
+		mode |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#endif
 
 		mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 										   gui_window_rect.w,
@@ -990,21 +994,34 @@ void amiberry_gui_init()
 	SELECTOR_HEIGHT = 24 * scaling_factor;
 	SCROLLBAR_WIDTH = 20 * scaling_factor;
 	style.ScaleAllSizes(scaling_factor);
-	style.FontScaleDpi = scaling_factor;  // Enable DPI-aware font scaling (ImGui v1.92+)
 
-	// Load custom font from data/ (default to AmigaTopaz.ttf)
-	// Note: Don't manually scale font_px here - FontScaleDpi handles DPI scaling automatically
+	// Build font atlas at physical pixel resolution for crisp text on HiDPI displays.
+	// On macOS Retina (dpi=2.0): atlas at 30px, FontScaleDpi=0.5 → effective 15px logical
+	// On Linux 150% (dpi=1.5): atlas at 33.75px, FontScaleDpi=0.667 → effective 22.5px logical
+	// On non-HiDPI (dpi=1.0): atlas at 15px, FontScaleDpi=1.0 → unchanged
+#ifdef __ANDROID__
+	const float font_dpi_scale = 1.0f;
+#else
+	int win_w = 0, win_h = 0, pix_w = 0, pix_h = 0;
+	SDL_GetWindowSize(mon->gui_window, &win_w, &win_h);
+	SDL_GetWindowSizeInPixels(mon->gui_window, &pix_w, &pix_h);
+	const float font_dpi_scale = (win_w > 0) ? std::max(1.0f, static_cast<float>(pix_w) / static_cast<float>(win_w)) : 1.0f;
+#endif
+	style.FontScaleDpi = 1.0f / font_dpi_scale;
+
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
 	const std::string font_path = prefix_with_data_path(font_file);
 	const float font_px = gui_theme.font_size > 0 ? static_cast<float>(gui_theme.font_size) : 15.0f;
+	const float font_load_px = font_px * scaling_factor * font_dpi_scale;
 
 	ImFont* loaded_font = nullptr;
 	if (!font_path.empty() && std::filesystem::exists(font_path)) {
-		loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_px);
+		loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_load_px);
 	}
 	if (!loaded_font) {
-		// Fallback to default font if loading failed
-		loaded_font = io.Fonts->AddFontDefault();
+		ImFontConfig fallback_cfg;
+		fallback_cfg.SizePixels = font_load_px;
+		loaded_font = io.Fonts->AddFontDefault(&fallback_cfg);
 		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "ImGui: failed to load font '%s', falling back to default", font_path.c_str());
 	}
 	io.FontDefault = loaded_font;
@@ -1635,7 +1652,10 @@ void run_gui()
 		ImGui::Render();
 #if defined(_WIN32) && defined(USE_OPENGL)
 		if (gui_use_opengl) {
-			glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
+			const ImGuiIO& gl_io = ImGui::GetIO();
+			glViewport(0, 0,
+				(int)(gl_io.DisplaySize.x * gl_io.DisplayFramebufferScale.x),
+				(int)(gl_io.DisplaySize.y * gl_io.DisplayFramebufferScale.y));
 			glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
 			glClear(GL_COLOR_BUFFER_BIT);
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
