@@ -124,6 +124,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+            echo "::error::This step requires bash >= 4 (found ${BASH_VERSION:-unknown})"
+            exit 1
+          fi
+
           mkdir -p universal-app/Amiberry.app
 
           # Start with the arm64 app as the base (preserves bundle structure)
@@ -157,23 +162,129 @@ jobs:
             fi
           }
 
-          # Merge all dylibs in Frameworks
-          for dylib in universal-app/Amiberry.app/Contents/Frameworks/*.dylib; do
-            basename=$(basename "$dylib")
-            merge_binary \
-              "x86_64-app/Amiberry.app/Contents/Frameworks/$basename" \
-              "arm64-app/Amiberry.app/Contents/Frameworks/$basename" \
-              "$dylib"
+          # Helper: extract library stem from a versioned dylib filename
+          # For libs with -N in the name (e.g. libglib-2.0), strip only the last version component
+          #   libglib-2.0.0.dylib      → libglib-2.0
+          #   libgobject-2.0.0.dylib   → libgobject-2.0
+          # For all other libs, strip the entire trailing version
+          #   libavif.16.4.0.dylib     → libavif
+          #   libSDL3.0.6.0.dylib      → libSDL3
+          #   libpng16.16.dylib        → libpng16
+          lib_stem() {
+            local name="${1%.dylib}"
+            if [[ "$name" =~ -[0-9] ]] && [[ "$name" =~ \.[0-9]+([.][0-9]+)*$ ]]; then
+              echo "${name%.*}"
+            else
+              echo "$name" | sed -E 's/\.[0-9]+(\.[0-9]+)*$//'
+            fi
+          }
+
+          X86_FW="x86_64-app/Amiberry.app/Contents/Frameworks"
+          ARM_FW="arm64-app/Amiberry.app/Contents/Frameworks"
+          UNI_FW="universal-app/Amiberry.app/Contents/Frameworks"
+
+          # Build stem → filename maps for both architectures
+          declare -A x86_stems arm_stems
+          if [ -d "$X86_FW" ]; then
+            for f in "$X86_FW"/*.dylib; do
+              [ -f "$f" ] || continue
+              name=$(basename "$f")
+              stem=$(lib_stem "$name")
+              x86_stems["$stem"]="$name"
+            done
+          fi
+          if [ -d "$ARM_FW" ]; then
+            for f in "$ARM_FW"/*.dylib; do
+              [ -f "$f" ] || continue
+              name=$(basename "$f")
+              stem=$(lib_stem "$name")
+              arm_stems["$stem"]="$name"
+            done
+          fi
+
+          # Parity check: warn about mismatches between architectures
+          echo "=== Checking dylib parity between x86_64 and arm64 builds ==="
+          had_mismatch=0
+          for stem in "${!arm_stems[@]}"; do
+            arm_name="${arm_stems[$stem]}"
+            x86_name="${x86_stems[$stem]:-}"
+            if [ -z "$x86_name" ]; then
+              echo "  WARNING: $arm_name exists only in arm64 build (no x86_64 equivalent)"
+              had_mismatch=1
+            elif [ "$arm_name" != "$x86_name" ]; then
+              echo "  WARNING: version mismatch for $stem: x86_64=$x86_name vs arm64=$arm_name"
+              had_mismatch=1
+            fi
+          done
+          for stem in "${!x86_stems[@]}"; do
+            if [ -z "${arm_stems[$stem]:-}" ]; then
+              echo "  WARNING: ${x86_stems[$stem]} exists only in x86_64 build (no arm64 equivalent)"
+              had_mismatch=1
+            fi
+          done
+          if [ "$had_mismatch" = "0" ]; then
+            echo "  All dylibs match between architectures"
+          fi
+
+          # Merge Frameworks dylibs using stem-aware matching
+          echo "=== Merging Frameworks dylibs ==="
+          declare -A merged_stems
+          # Collect all unique stems from both architectures
+          all_stems=()
+          for stem in "${!arm_stems[@]}"; do all_stems+=("$stem"); done
+          for stem in "${!x86_stems[@]}"; do
+            if [ -z "${arm_stems[$stem]:-}" ]; then
+              all_stems+=("$stem")
+            fi
           done
 
-          # Merge all dylibs in plugins
-          if [ -d "universal-app/Amiberry.app/Contents/Resources/plugins" ]; then
-            for dylib in universal-app/Amiberry.app/Contents/Resources/plugins/*.dylib; do
-              basename=$(basename "$dylib")
-              merge_binary \
-                "x86_64-app/Amiberry.app/Contents/Resources/plugins/$basename" \
-                "arm64-app/Amiberry.app/Contents/Resources/plugins/$basename" \
-                "$dylib"
+          for stem in "${all_stems[@]}"; do
+            [ -n "${merged_stems[$stem]:-}" ] && continue
+            merged_stems["$stem"]=1
+
+            x86_name="${x86_stems[$stem]:-}"
+            arm_name="${arm_stems[$stem]:-}"
+
+            if [ -n "$x86_name" ] && [ -n "$arm_name" ]; then
+              if [ "$x86_name" = "$arm_name" ]; then
+                # Same filename — standard merge
+                echo "  Merging: $arm_name"
+                merge_binary "$X86_FW/$x86_name" "$ARM_FW/$arm_name" "$UNI_FW/$arm_name"
+              else
+                # Version mismatch — merge by stem, provide both names
+                echo "  Merging with version mismatch: x86_64=$x86_name + arm64=$arm_name"
+                merge_binary "$X86_FW/$x86_name" "$ARM_FW/$arm_name" "$UNI_FW/$arm_name"
+                ln -sf "$arm_name" "$UNI_FW/$x86_name"
+                echo "    → Universal dylib: $arm_name, symlink: $x86_name → $arm_name"
+              fi
+            elif [ -n "$arm_name" ]; then
+              echo "  Keeping arm64-only: $arm_name (no x86_64 equivalent)"
+            elif [ -n "$x86_name" ]; then
+              echo "  Copying x86_64-only: $x86_name (not in arm64 base)"
+              cp "$X86_FW/$x86_name" "$UNI_FW/$x86_name"
+            fi
+          done
+
+          # Merge all dylibs in plugins (arm64 base + any x86-only plugins)
+          UNI_PLUGINS="universal-app/Amiberry.app/Contents/Resources/plugins"
+          X86_PLUGINS="x86_64-app/Amiberry.app/Contents/Resources/plugins"
+          ARM_PLUGINS="arm64-app/Amiberry.app/Contents/Resources/plugins"
+          if [ -d "$UNI_PLUGINS" ]; then
+            for dylib in "$UNI_PLUGINS"/*.dylib; do
+              [ -f "$dylib" ] || continue
+              bname=$(basename "$dylib")
+              merge_binary "$X86_PLUGINS/$bname" "$ARM_PLUGINS/$bname" "$dylib"
+            done
+          fi
+          if [ -d "$X86_PLUGINS" ]; then
+            for dylib in "$X86_PLUGINS"/*.dylib; do
+              [ -f "$dylib" ] || continue
+              bname=$(basename "$dylib")
+              if [ ! -f "$UNI_PLUGINS/$bname" ]; then
+                echo "  Copying x86_64-only plugin: $bname"
+                mkdir -p "$UNI_PLUGINS"
+                cp "$dylib" "$UNI_PLUGINS/$bname"
+              fi
             done
           fi
 
@@ -181,6 +292,43 @@ jobs:
           echo "=== Universal binary info ==="
           lipo -info universal-app/Amiberry.app/Contents/MacOS/Amiberry
           file universal-app/Amiberry.app/Contents/MacOS/Amiberry
+
+          # Verify all Frameworks dylibs are universal
+          echo "=== Verifying Frameworks dylibs ==="
+          non_universal=0
+          for dylib in "$UNI_FW"/*.dylib; do
+            [ -f "$dylib" ] || continue
+            # Skip symlinks — they point to an already-checked universal dylib
+            [ -L "$dylib" ] && continue
+            archs=$(lipo -info "$dylib" 2>/dev/null | sed 's/.*: //')
+            name=$(basename "$dylib")
+            if echo "$archs" | grep -q "x86_64" && echo "$archs" | grep -q "arm64"; then
+              echo "  OK: $name ($archs)"
+            else
+              echo "  WARNING: $name is NOT universal ($archs)"
+              non_universal=1
+            fi
+          done
+          if [ "$non_universal" = "1" ]; then
+            echo "::warning::Some Frameworks dylibs are not universal — the app may crash on one architecture"
+          fi
+
+          echo "=== Verifying dylib dependencies resolve ==="
+          missing_deps=0
+          MAIN_BIN="universal-app/Amiberry.app/Contents/MacOS/Amiberry"
+          for arch in x86_64 arm64; do
+            while read -r line; do
+              dep_name=$(echo "$line" | sed -E 's|.*@executable_path/../Frameworks/([^ ]+).*|\1|')
+              if [ ! -f "$UNI_FW/$dep_name" ]; then
+                echo "  MISSING ($arch): $dep_name"
+                missing_deps=1
+              fi
+            done < <(otool -arch "$arch" -L "$MAIN_BIN" 2>/dev/null | grep '@executable_path/../Frameworks/' || true)
+          done
+          if [ "$missing_deps" = "1" ]; then
+            echo "::error::Some @executable_path dylib references cannot be resolved — the app will crash on load"
+            exit 1
+          fi
 
       - name: Install the Apple certificate
         env:
@@ -204,14 +352,14 @@ jobs:
           CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
         run: |
           for file in universal-app/Amiberry.app/Contents/Frameworks/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard "$file"
-            fi
+            [ -f "$file" ] || continue
+            [ -L "$file" ] && continue
+            codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard "$file"
           done
           for file in universal-app/Amiberry.app/Contents/Resources/plugins/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard "$file"
-            fi
+            [ -f "$file" ] || continue
+            [ -L "$file" ] && continue
+            codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard "$file"
           done
 
       - name: Codesign the app
