@@ -2,7 +2,7 @@ Origin: Amiberry
 Label: Amiberry
 Suite: stable
 Codename: jammy
-Architectures: amd64
+Architectures: amd64 arm64
 Components: main
 Description: Amiberry APT repository (Ubuntu 22.04 Jammy)
 SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
@@ -11,7 +11,7 @@ Origin: Amiberry
 Label: Amiberry
 Suite: stable
 Codename: noble
-Architectures: amd64
+Architectures: amd64 arm64
 Components: main
 Description: Amiberry APT repository (Ubuntu 24.04 Noble)
 SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282

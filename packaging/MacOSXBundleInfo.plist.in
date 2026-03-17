@@ -37,16 +37,19 @@
 			<dict>
 				<key>CFBundleTypeName</key>
 				<string>Amiberry Supported File</string>
-				<key>CFBundleTypeExtensions</key>
-				<array>
-					<string>uae</string>
-					<string>adf</string>
-					<string>lha</string>
-					<string>ipf</string>
-					<string>dms</string>
-					<string>cue</string>
-					<string>uss</string>
-				</array>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>uae</string>
+				<string>adf</string>
+				<string>lha</string>
+				<string>ipf</string>
+				<string>dms</string>
+				<string>cue</string>
+				<string>uss</string>
+				<string>hdf</string>
+				<string>chd</string>
+				<string>iso</string>
+			</array>
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>LSHandlerRank</key>

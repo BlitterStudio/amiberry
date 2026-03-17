@@ -6,7 +6,7 @@ Version:        8.0.0
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
-License:        GPL-3.0-only
+License:        GPL-3.0-or-later
 URL:            https://amiberry.com
 Source0:        https://github.com/BlitterStudio/amiberry/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
@@ -62,17 +62,17 @@ titles, RetroArch integration, custom controller mappings, and more.
 %cmake_install
 
 %post
-%{_bindir}/update-desktop-database &>/dev/null || :
-%{_bindir}/update-mime-database %{_datadir}/mime &>/dev/null || :
-touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
-%{_bindir}/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+%{_bindir}/update-desktop-database 2>/dev/null || :
+%{_bindir}/update-mime-database %{_datadir}/mime 2>/dev/null || :
+touch --no-create %{_datadir}/icons/hicolor 2>/dev/null || :
+%{_bindir}/gtk-update-icon-cache %{_datadir}/icons/hicolor 2>/dev/null || :
 
 %postun
-%{_bindir}/update-desktop-database &>/dev/null || :
-%{_bindir}/update-mime-database %{_datadir}/mime &>/dev/null || :
+%{_bindir}/update-desktop-database 2>/dev/null || :
+%{_bindir}/update-mime-database %{_datadir}/mime 2>/dev/null || :
 if [ $1 -eq 0 ] ; then
-    touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
-    %{_bindir}/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+    touch --no-create %{_datadir}/icons/hicolor 2>/dev/null || :
+    %{_bindir}/gtk-update-icon-cache %{_datadir}/icons/hicolor 2>/dev/null || :
 fi
 
 %files

@@ -51,16 +51,18 @@ case "$ID" in
         ARCH=$(dpkg --print-architecture)
         
         # Determine which sources format to use
-        # DEB822 (.sources) for Ubuntu 24.04+, legacy (.list) for older
-        UBUNTU_VERSION=${VERSION_ID:-0}
+        # DEB822 (.sources) for Ubuntu 24.04+ and Debian 13+ (trixie), legacy (.list) for older
         USE_DEB822=0
-        if [ "$ID" = "ubuntu" ]; then
-            # Compare version numbers
-            MAJOR=$(echo "$UBUNTU_VERSION" | cut -d. -f1)
-            if [ "${MAJOR:-0}" -ge 24 ]; then
-                USE_DEB822=1
-            fi
-        fi
+        case "$ID" in
+            ubuntu)
+                MAJOR=$(echo "${VERSION_ID:-0}" | cut -d. -f1)
+                [ "${MAJOR:-0}" -ge 24 ] && USE_DEB822=1
+                ;;
+            debian|raspbian)
+                MAJOR=$(echo "${VERSION_ID:-0}" | cut -d. -f1)
+                [ "${MAJOR:-0}" -ge 13 ] && USE_DEB822=1
+                ;;
+        esac
         
         if [ "$USE_DEB822" = "1" ]; then
             # Modern DEB822 format

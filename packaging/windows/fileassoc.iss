@@ -10,6 +10,9 @@ Name: "fileassoc\dms"; Description: ".dms - DMS Compressed Disk Image"; Flags: u
 Name: "fileassoc\lha"; Description: ".lha - WHDLoad Game Archive"; Flags: unchecked
 Name: "fileassoc\cue"; Description: ".cue - CD Cue Sheet"; Flags: unchecked
 Name: "fileassoc\uss"; Description: ".uss - UAE Savestate"; Flags: unchecked
+Name: "fileassoc\hdf"; Description: ".hdf - Amiga Hard Disk File"; Flags: unchecked
+Name: "fileassoc\chd"; Description: ".chd - MAME Compressed Disk Image"; Flags: unchecked
+Name: "fileassoc\iso"; Description: ".iso - CD Image"; Flags: unchecked
 
 [Registry]
 ; .uae - Amiberry Configuration
@@ -53,3 +56,21 @@ Root: HKA; Subkey: "Software\Classes\.uss\OpenWithProgids"; ValueType: string; V
 Root: HKA; Subkey: "Software\Classes\Amiberry.uss"; ValueType: string; ValueName: ""; ValueData: "UAE Savestate"; Flags: uninsdeletekey; Tasks: fileassoc\uss
 Root: HKA; Subkey: "Software\Classes\Amiberry.uss\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\bin\Amiberry.exe,0"; Tasks: fileassoc\uss
 Root: HKA; Subkey: "Software\Classes\Amiberry.uss\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\bin\Amiberry.exe"" ""%1"""; Tasks: fileassoc\uss
+
+; .hdf - Amiga Hard Disk File
+Root: HKA; Subkey: "Software\Classes\.hdf\OpenWithProgids"; ValueType: string; ValueName: "Amiberry.hdf"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc\hdf
+Root: HKA; Subkey: "Software\Classes\Amiberry.hdf"; ValueType: string; ValueName: ""; ValueData: "Amiga Hard Disk File"; Flags: uninsdeletekey; Tasks: fileassoc\hdf
+Root: HKA; Subkey: "Software\Classes\Amiberry.hdf\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\bin\Amiberry.exe,0"; Tasks: fileassoc\hdf
+Root: HKA; Subkey: "Software\Classes\Amiberry.hdf\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\bin\Amiberry.exe"" ""%1"""; Tasks: fileassoc\hdf
+
+; .chd - MAME Compressed Hunks of Data
+Root: HKA; Subkey: "Software\Classes\.chd\OpenWithProgids"; ValueType: string; ValueName: "Amiberry.chd"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc\chd
+Root: HKA; Subkey: "Software\Classes\Amiberry.chd"; ValueType: string; ValueName: ""; ValueData: "MAME Compressed Disk Image"; Flags: uninsdeletekey; Tasks: fileassoc\chd
+Root: HKA; Subkey: "Software\Classes\Amiberry.chd\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\bin\Amiberry.exe,0"; Tasks: fileassoc\chd
+Root: HKA; Subkey: "Software\Classes\Amiberry.chd\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\bin\Amiberry.exe"" ""%1"""; Tasks: fileassoc\chd
+
+; .iso - CD Image
+Root: HKA; Subkey: "Software\Classes\.iso\OpenWithProgids"; ValueType: string; ValueName: "Amiberry.iso"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc\iso
+Root: HKA; Subkey: "Software\Classes\Amiberry.iso"; ValueType: string; ValueName: ""; ValueData: "CD Image"; Flags: uninsdeletekey; Tasks: fileassoc\iso
+Root: HKA; Subkey: "Software\Classes\Amiberry.iso\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\bin\Amiberry.exe,0"; Tasks: fileassoc\iso
+Root: HKA; Subkey: "Software\Classes\Amiberry.iso\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\bin\Amiberry.exe"" ""%1"""; Tasks: fileassoc\iso
