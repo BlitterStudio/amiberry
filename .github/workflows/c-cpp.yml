@@ -368,13 +368,15 @@ jobs:
         run: |
           codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard --entitlements packaging/macos/Amiberry.entitlements universal-app/Amiberry.app
 
-      - name: Verify app entitlements
+      - name: Verify app entitlements and signature
         run: |
           codesign -d --entitlements :- universal-app/Amiberry.app
+          codesign --verify --deep --strict universal-app/Amiberry.app
+          echo "Signature verification passed"
 
       - name: Create a zip to send to the notary service
         run: |
-          zip -r Amiberry-${{ github.sha }}-macOS-universal.zip universal-app/Amiberry.app
+          ditto -c -k --keepParent universal-app/Amiberry.app Amiberry-${{ github.sha }}-macOS-universal.zip
 
       - name: Send the file to be notarized by Apple
         run: |
