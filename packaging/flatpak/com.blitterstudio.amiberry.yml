@@ -92,7 +92,7 @@ modules:
       - type: git
         url: https://github.com/sigrokproject/libserialport
         tag: libserialport-0.1.2
-        commit: 869c567eeaae4a0ff12e114652b750e18a881f49
+        commit: bc8f88ef3399b76da7992a99badebada419d0e19
         x-checker-data:
           type: git
           tag-pattern: ^libserialport-([\d.]+)$
@@ -146,8 +146,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
-        tag: v7.1.1
-        commit: c53d6db770a5580732a7f2bb48abcbfcd95fd0f4
+        tag: v8.0.0
+        commit: c206f446fefa820e41aa35b2160fd9dcc43a914f
         x-checker-data:
           type: git
           tag-pattern: ^v([\d.]+)$
