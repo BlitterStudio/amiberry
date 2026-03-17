@@ -947,7 +947,7 @@ void amiberry_gui_init()
 		qs_models.push_back(amodel.name);
 	}
 	qs_configs.clear();
-	for (const auto & config : amodels[0].configs) {
+	for (const auto & config : amodels[quickstart_model].configs) {
 		qs_configs.push_back(config);
 	}
 }
