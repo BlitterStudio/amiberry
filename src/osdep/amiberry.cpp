@@ -2489,12 +2489,14 @@ static void process_event(const SDL_Event& event)
 			handle_mouse_wheel_event(event);
 			break;
 
+#ifndef LIBRETRO
 		case SDL_EVENT_MOUSE_ADDED:
 			handle_sdl_mouse_added(event.mdevice.which);
 			break;
 		case SDL_EVENT_MOUSE_REMOVED:
 			handle_sdl_mouse_removed(event.mdevice.which);
 			break;
+#endif
 
 		case SDL_EVENT_DROP_FILE:
 			handle_drop_file_event(event);

@@ -637,6 +637,7 @@ static int init_mouse()
 	for (auto& s : mouse_unique_names)
 		s.clear();
 
+#ifndef LIBRETRO
 	int count = 0;
 	SDL_MouseID* sdl_mice = SDL_GetMice(&count);
 	if (sdl_mice && count >= 1) {
@@ -663,10 +664,13 @@ static int init_mouse()
 	} else {
 		if (sdl_mice)
 			SDL_free(sdl_mice);
+#endif
 		num_mouse = 1;
 		mouse_id_map[0] = 0;
 		setup_mouse_device(&di_mouse[0], "System mouse");
+#ifndef LIBRETRO
 	}
+#endif
 	return 1;
 }
 
@@ -785,15 +789,18 @@ struct inputdevice_functions inputdevicefunc_mouse = {
 
 int get_mouse_index_from_sdl_id(SDL_MouseID which)
 {
+#ifndef LIBRETRO
 	if (which == 0 || which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID)
 		return 0;
 	for (int i = 0; i < num_mouse; i++) {
 		if (mouse_id_map[i] == which)
 			return i;
 	}
+#endif
 	return 0;
 }
 
+#ifndef LIBRETRO
 void handle_sdl_mouse_added(SDL_MouseID which)
 {
 	if (which == 0 || which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID)
@@ -853,6 +860,7 @@ void handle_sdl_mouse_removed(SDL_MouseID which)
 	while (num_mouse > 1 && mouse_id_map[num_mouse - 1] == 0)
 		num_mouse--;
 }
+#endif
 
 static void setid(struct uae_input_device* uid, const int i, const int slot, const int sub, const int port, int evt, const bool gp)
 {
