@@ -431,13 +431,13 @@ void render_panel_floppy()
     
     if (AmigaButton("Create 3.5'' DD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateDD;
-        OpenFileDialogKey("FLOPPY", "Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
+        OpenFileDialogKey("FLOPPY", "Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path(), true);
     }
     ShowHelpMarker("Create a new 880KB double-density floppy disk image");
     ImGui::SameLine();
     if (AmigaButton("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateHD;
-        OpenFileDialogKey("FLOPPY", "Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
+        OpenFileDialogKey("FLOPPY", "Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path(), true);
     }
     ShowHelpMarker("Create a new 1.76MB high-density floppy disk image");
     ImGui::SameLine();

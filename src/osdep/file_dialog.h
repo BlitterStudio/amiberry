@@ -5,7 +5,7 @@
 void file_dialog_init();
 void file_dialog_shutdown();
 
-void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath);
+void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath, bool saveMode = false);
 bool ConsumeFileDialogResultKey(const char* key, std::string& outPath);
 bool IsFileDialogOpenKey(const char* key);
 

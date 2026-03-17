@@ -302,7 +302,7 @@ void file_dialog_shutdown()
 	s_results.clear();
 }
 
-void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath)
+void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath, bool saveMode)
 {
 	key = dialog_key_or_default(key);
 	title = title ? title : "Choose File";
@@ -314,20 +314,39 @@ void OpenFileDialogKey(const char* key, const char* title, const char* filters, 
 		ensure_wayland_display();
 		ParsedNFDFilters parsed = parse_igfd_filters(filters);
 
-		nfdopendialogu8args_t args{};
-		if (!parsed.items.empty())
-		{
-			args.filterList = parsed.items.data();
-			args.filterCount = static_cast<nfdfiltersize_t>(parsed.items.size());
-		}
-		args.defaultPath = initialPath.empty() ? nullptr : initialPath.c_str();
+		nfdu8char_t* outPath = nullptr;
+		nfdresult_t result = NFD_ERROR;
 
 		AmigaMonitor* mon = &AMonitors[0];
+		nfdwindowhandle_t parentWindow{};
 		if (mon->gui_window)
-			NFD_GetNativeWindowFromSDL3Window(mon->gui_window, &args.parentWindow);
+			NFD_GetNativeWindowFromSDL3Window(mon->gui_window, &parentWindow);
 
-		nfdu8char_t* outPath = nullptr;
-		const nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+		if (saveMode)
+		{
+			nfdsavedialogu8args_t args{};
+			if (!parsed.items.empty())
+			{
+				args.filterList = parsed.items.data();
+				args.filterCount = static_cast<nfdfiltersize_t>(parsed.items.size());
+			}
+			args.defaultPath = initialPath.empty() ? nullptr : initialPath.c_str();
+			args.parentWindow = parentWindow;
+			result = NFD_SaveDialogU8_With(&outPath, &args);
+		}
+		else
+		{
+			nfdopendialogu8args_t args{};
+			if (!parsed.items.empty())
+			{
+				args.filterList = parsed.items.data();
+				args.filterCount = static_cast<nfdfiltersize_t>(parsed.items.size());
+			}
+			args.defaultPath = initialPath.empty() ? nullptr : initialPath.c_str();
+			args.parentWindow = parentWindow;
+			result = NFD_OpenDialogU8_With(&outPath, &args);
+		}
+
 		if (result == NFD_OKAY)
 		{
 			std::string path = outPath ? outPath : "";
@@ -345,7 +364,7 @@ void OpenFileDialogKey(const char* key, const char* title, const char* filters, 
 			return;
 		}
 
-		write_log("NFD_OpenDialogU8_With failed: %s — falling back to built-in file browser\n", NFD_GetError());
+		write_log("NFD file dialog failed: %s — falling back to built-in file browser\n", NFD_GetError());
 		s_nfd_available = false;  // don't retry NFD on subsequent calls
 		if (outPath)
 			NFD_FreePathU8(outPath);

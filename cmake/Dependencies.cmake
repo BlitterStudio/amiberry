@@ -613,9 +613,32 @@ target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 # Native File Dialog Extended (NFD) — OS-native open/save/folder dialogs.
 # Excluded on Android (own Kotlin UI) and Haiku (unsupported by NFD).
 # Gracefully skipped when the submodule is not initialized (plain git clone
-# without --recursive, or GitHub source archives).
+# without --recursive, or GitHub source archives), or when Linux build deps
+# (dbus-1) are missing — falls back to the built-in ImGuiFileDialog.
+set(NFD_AVAILABLE OFF)
 if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku"
         AND EXISTS "${CMAKE_SOURCE_DIR}/external/nativefiledialog-extended/CMakeLists.txt")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(NFD_DBUS dbus-1)
+            pkg_check_modules(NFD_WAYLAND QUIET wayland-client)
+        endif()
+        if(NOT NFD_DBUS_FOUND)
+            message(STATUS "NFD: dbus-1 not found — native file dialogs disabled (install libdbus-1-dev)")
+        else()
+            set(NFD_AVAILABLE ON)
+            if(NOT NFD_WAYLAND_FOUND)
+                set(NFD_WAYLAND OFF CACHE BOOL "Wayland not available" FORCE)
+            endif()
+        endif()
+    else()
+        set(NFD_AVAILABLE ON)
+    endif()
+elseif(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    message(STATUS "NFD submodule not found — native file dialogs disabled (use git submodule update --init --recursive)")
+endif()
+if(NFD_AVAILABLE)
     set(NFD_PORTAL ON CACHE BOOL "Use xdg-desktop-portal on Linux (avoids GTK dep)" FORCE)
     set(NFD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(NFD_INSTALL OFF CACHE BOOL "" FORCE)
@@ -626,8 +649,6 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku"
     set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
     target_link_libraries(${PROJECT_NAME} PRIVATE nfd)
     target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_NFD)
-elseif(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-    message(STATUS "NFD submodule not found — native file dialogs disabled (use git submodule update --init --recursive)")
 endif()
 
 # capsimage and floppybridge are plugins (not linked into amiberry) but are
