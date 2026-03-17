@@ -43,6 +43,10 @@ osdep/
 │   ├── vkbd/vkbd.h/cpp             # Virtual keyboard
 │   └── vkbd/vkbd_gl.h/cpp          # GL rendering for vkbd
 │
+├── [File Dialogs]
+│   ├── file_dialog.h/cpp       # Native OS file picker (NFD) with ImGuiFileDialog fallback
+│   └── nfd_sdl3.h              # SDL3 adapter for NFD parent window handles
+│
 ├── [Platform-Specific]
 │   ├── macos_bookmarks.h/mm    # App Store security-scoped bookmarks
 │   ├── amiberry_dbus.h/cpp     # Linux DBus interface

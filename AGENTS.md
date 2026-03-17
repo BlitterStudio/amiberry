@@ -34,7 +34,7 @@ amiberry/
 │   ├── threaddep/         # Threading abstraction
 │   ├── caps/              # IPF disk image support
 │   └── cputest/           # CPU validation test suite
-├── external/              # Third-party: ImGui, MT-32, FloppyBridge, CAPS
+├── external/              # Third-party: ImGui, MT-32, FloppyBridge, CAPS, NFD
 ├── android/               # Kotlin/Compose Android app + Gradle build
 ├── libretro/              # RetroArch core wrapper + libretro-common
 ├── cmake/                 # CMake modules, toolchains, platform flags

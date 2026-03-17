@@ -51,7 +51,7 @@ imgui/
 | Add new panel | Create `new_panel.cpp`, add to `IMGUI_PANEL_LIST` in `imgui_panels.h` | Also add to `cmake/SourceFiles.cmake` |
 | Add widget helpers | `imgui_panels.h` | `AmigaButton()`, `AmigaCheckbox()`, `BeginGroupBox()`, etc. |
 | Shader params UI | `filter.cpp` | Only panel that accesses renderer internals |
-| File dialogs | `imgui_panels.h` | `OpenFileDialogKey()` / `ConsumeFileDialogResultKey()` |
+| File dialogs | `file_dialog.h` | `OpenFileDialogKey()` / `ConsumeFileDialogResultKey()` — dispatches to native OS dialog (NFD) or ImGuiFileDialog fallback |
 
 ## CONVENTIONS
 
