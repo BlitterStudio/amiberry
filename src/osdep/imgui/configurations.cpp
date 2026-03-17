@@ -202,6 +202,43 @@ void render_panel_configurations()
 	}
 	if (strlen(name) == 0) ImGui::EndDisabled();
 	ImGui::SameLine();
+	if (AmigaButton("Save As...", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	{
+		std::string config_dir = get_configuration_path();
+		OpenFileDialogKey("CONFIG_SAVE_AS", "Save Configuration As", "UAE Config (*.uae){.uae}", config_dir, true);
+	}
+	{
+		std::string save_as_path;
+		if (ConsumeFileDialogResultKey("CONFIG_SAVE_AS", save_as_path))
+		{
+			if (!save_as_path.empty())
+			{
+				snprintf(changed_prefs.description, 256, "%s", desc);
+				if (cfgfile_save(&changed_prefs, save_as_path.c_str(), 0))
+				{
+					write_log("Config save as: SUCCESS '%s'\n", save_as_path.c_str());
+					ReadConfigFileList();
+					char saved_name[MAX_DPATH];
+					extract_filename(save_as_path.c_str(), saved_name);
+					remove_file_extension(saved_name);
+					snprintf(last_active_config, MAX_DPATH, "%s", saved_name);
+					for (int i = 0; i < static_cast<int>(ConfigFilesList.size()); ++i)
+					{
+						if (strcmp(ConfigFilesList[i]->Name, saved_name) == 0)
+						{
+							selected = i;
+							break;
+						}
+					}
+				}
+				else
+				{
+					write_log("Config save as: FAILED for '%s'\n", save_as_path.c_str());
+				}
+			}
+		}
+	}
+	ImGui::SameLine();
 	if (selected == -1) ImGui::BeginDisabled();
 	if (AmigaButton("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{

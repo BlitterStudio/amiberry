@@ -139,7 +139,8 @@ amiberry/
 │   └── qemuvga/           # QEMU VGA emulation
 ├── external/              # Third-party libraries
 │   ├── imgui/             # Dear ImGui
-│   ├── ImGuiFileDialog/   # File dialog for ImGui
+│   ├── ImGuiFileDialog/   # File dialog for ImGui (fallback)
+│   ├── nativefiledialog-extended/ # Native OS file dialogs (submodule)
 │   ├── mt32emu/           # Roland MT-32 emulation
 │   ├── floppybridge/      # Physical floppy drive support
 │   ├── capsimage/         # IPF disk image support
@@ -343,7 +344,8 @@ Platform-specific code is in `src/osdep/`:
 ### Bundled in external/
 
 - Dear ImGui
-- ImGuiFileDialog
+- ImGuiFileDialog (fallback file browser)
+- nativefiledialog-extended (native OS file pickers — submodule, requires `git submodule update --init --recursive`)
 - MT-32 emulator (mt32emu)
 - FloppyBridge
 - CAPSImage (IPF support)
