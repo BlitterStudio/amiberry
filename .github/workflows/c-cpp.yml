@@ -121,8 +121,11 @@ jobs:
           tar -xzf arm64-app/Amiberry.app.tar.gz -C arm64-app
 
       - name: Create Universal binary with lipo
-        shell: /opt/homebrew/bin/bash -eo pipefail {0}
         run: |
+          # Re-exec under Homebrew bash 5 if running Apple's bash 3.2
+          if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+            exec /opt/homebrew/bin/bash --noprofile --norc -euo pipefail "$0" "$@"
+          fi
           set -euo pipefail
 
           mkdir -p universal-app/Amiberry.app
