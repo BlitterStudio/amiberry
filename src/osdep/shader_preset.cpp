@@ -821,6 +821,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 		gl_fmt = GL_BGRA;
 		gl_type = GL_UNSIGNED_BYTE;
 		bpp = 4;
+	// Currently unreachable — update_pixel_format() always selects 32-bit host format
 	} else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
 		gl_fmt = GL_RGB;
 		gl_type = GL_UNSIGNED_SHORT_5_6_5;

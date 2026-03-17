@@ -1106,7 +1106,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
 
-		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && (pixel_format == SDL_PIXELFORMAT_ABGR8888 || pixel_format == SDL_PIXELFORMAT_RGB565)) {
+		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && pixel_format == SDL_PIXELFORMAT_ABGR8888) {
 			is_zero_copy_eligible = true;
 		}
 	}
@@ -1131,8 +1131,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 			SDL_DestroySurface(amiga_surface);
 			amiga_surface = nullptr;
 		}
-		const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_XRGB1555) ? 16 : 32;
-
 		if (is_zero_copy_eligible) {
 			// Zero-Copy: Create surface from existing memory (rtg_render_ptr guaranteed non-null)
 			amiga_surface = SDL_CreateSurfaceFrom(w, h, pixel_format, rtg_render_ptr, state->BytesPerRow);

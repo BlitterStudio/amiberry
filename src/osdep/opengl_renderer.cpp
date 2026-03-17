@@ -63,6 +63,7 @@ static void resolve_gl_pixel_format(uint32_t sdl_pixel_format, GLenum& fmt, GLen
 		bpp = 4;
 		return;
 	}
+	// Currently unreachable — update_pixel_format() always selects 32-bit host format
 	if (sdl_pixel_format == SDL_PIXELFORMAT_RGB565) {
 		fmt = GL_RGB;
 		type = GL_UNSIGNED_SHORT_5_6_5;
