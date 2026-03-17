@@ -612,7 +612,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 
 # Native File Dialog Extended (NFD) — OS-native open/save/folder dialogs.
 # Excluded on Android (own Kotlin UI) and Haiku (unsupported by NFD).
-if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+# Gracefully skipped when the submodule is not initialized (plain git clone
+# without --recursive, or GitHub source archives).
+if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku"
+        AND EXISTS "${CMAKE_SOURCE_DIR}/external/nativefiledialog-extended/CMakeLists.txt")
     set(NFD_PORTAL ON CACHE BOOL "Use xdg-desktop-portal on Linux (avoids GTK dep)" FORCE)
     set(NFD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(NFD_INSTALL OFF CACHE BOOL "" FORCE)
@@ -623,6 +626,8 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
     set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
     target_link_libraries(${PROJECT_NAME} PRIVATE nfd)
     target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_NFD)
+elseif(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    message(STATUS "NFD submodule not found — native file dialogs disabled (use git submodule update --init --recursive)")
 endif()
 
 # capsimage and floppybridge are plugins (not linked into amiberry) but are
