@@ -197,7 +197,8 @@ static void RenderDriveSlot(const int i)
             }
 
             if (ImGui::Selectable(label.c_str(), is_selected)) {
-                 strncpy(changed_prefs.floppyslots[i].df, lstMRUDiskList[h].c_str(), MAX_DPATH);
+                 strncpy(changed_prefs.floppyslots[i].df, lstMRUDiskList[h].c_str(), MAX_DPATH - 1);
+                 changed_prefs.floppyslots[i].df[MAX_DPATH - 1] = '\0';
                  disk_insert(i, changed_prefs.floppyslots[i].df);
                  DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
             }
@@ -496,7 +497,8 @@ void render_panel_floppy()
                 }
                 
                 if (drive_idx >= 0) {
-                     strncpy(changed_prefs.floppyslots[drive_idx].df, result_path.c_str(), MAX_DPATH);
+                     strncpy(changed_prefs.floppyslots[drive_idx].df, result_path.c_str(), MAX_DPATH - 1);
+                     changed_prefs.floppyslots[drive_idx].df[MAX_DPATH - 1] = '\0';
                      disk_insert(drive_idx, result_path.c_str());
                      DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
                 }

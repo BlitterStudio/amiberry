@@ -219,7 +219,7 @@ typedef struct {
 	int drive_id_scnt; /* drive id shift counter */
 	int idbit;
 	unsigned long drive_id; /* drive id to be reported */
-	TCHAR newname[256]; /* storage space for new filename during eject delay */
+	TCHAR newname[MAX_DPATH]; /* storage space for new filename during eject delay */
 	bool newnamewriteprotected;
 	uae_u32 crc32;
 #ifdef FDI2RAW
@@ -1418,7 +1418,8 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		changed_prefs.floppyslots[dnum].df[255] = 0;
 		changed_prefs.floppyslots[dnum].forcedwriteprotect = forcedwriteprotect;
 		if (drv->newname != fname_in) {
-			_tcscpy(drv->newname, fname_in);
+			_tcsncpy(drv->newname, fname_in, MAX_DPATH - 1);
+			drv->newname[MAX_DPATH - 1] = 0;
 		}
 		drv->newnamewriteprotected = forcedwriteprotect;
 		gui_filename (dnum, outname);
@@ -3346,7 +3347,8 @@ static void disk_insert_2 (int num, const TCHAR *name, bool forced, bool forcedw
 	if (!_tcscmp (currprefs.floppyslots[num].df, name))
 		return;
 	drv->dskeject = false;
-	_tcscpy(drv->newname, name);
+	_tcsncpy(drv->newname, name, MAX_DPATH - 1);
+	drv->newname[MAX_DPATH - 1] = 0;
 	drv->newnamewriteprotected = forcedwriteprotect;
 	_tcscpy (currprefs.floppyslots[num].df, name);
 	currprefs.floppyslots[num].forcedwriteprotect = forcedwriteprotect;
@@ -5963,7 +5965,8 @@ uae_u8 *restore_disk (int num,uae_u8 *src)
 						drv->dskchange = true;
 				} else {
 					drv->dskchange_time = -1;
-					_tcscpy(drv->newname, changed_prefs.floppyslots[num].df);
+					_tcsncpy(drv->newname, changed_prefs.floppyslots[num].df, MAX_DPATH - 1);
+					drv->newname[MAX_DPATH - 1] = 0;
 					_tcscpy(currprefs.floppyslots[num].df, drv->newname);
 					write_log(_T("Disk image not found, faking inserted disk.\n"));
 				}
