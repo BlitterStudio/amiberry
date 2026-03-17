@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include "imgui.h"
+#include "file_dialog.h"
 
 // Forward declaration to avoid pulling in SDL headers in every includer
 struct SDL_Texture;
@@ -17,21 +18,6 @@ extern ImTextureID about_logo_texture;
 struct SDL_Surface;
 ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h);
 void gui_destroy_texture(ImTextureID tex);
-
-// File dialog helpers used across imgui panels (defined in main_window.cpp)
-void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath);
-bool ConsumeFileDialogResultKey(const char* key, std::string& outPath);
-bool IsFileDialogOpenKey(const char* key);
-void OpenDirDialogKey(const char* key, const std::string& initialPath);
-bool ConsumeDirDialogResultKey(const char* key, std::string& outPath);
-bool IsDirDialogOpenKey(const char* key);
-
-void OpenFileDialog(const char* title, const char* filters, const std::string& initialPath);
-bool ConsumeFileDialogResult(std::string& outPath);
-bool IsFileDialogOpen();
-void OpenDirDialog(const std::string& initialPath);
-bool ConsumeDirDialogResult(std::string& outPath);
-bool IsDirDialogOpen();
 
 void BeginGroupBox(const char* name);
 void EndGroupBox(const char* name);

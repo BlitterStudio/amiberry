@@ -264,6 +264,7 @@ set(SOURCE_FILES
         src/qemuvga/vga.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
+        src/osdep/file_dialog.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/vkbd/vkbd.cpp
         src/osdep/vkbd/vkbd_gl.cpp

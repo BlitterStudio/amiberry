@@ -32,7 +32,7 @@
 #include "savestate.h"
 #include "target.h"
 #include "tinyxml2.h"
-#include "macos_bookmarks.h"
+#include "file_dialog.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -42,7 +42,6 @@
 #include "imgui_impl_opengl3.h"
 #include <SDL3/SDL_opengl.h>
 #endif
-#include "ImGuiFileDialog.h"
 #include <array>
 #include <fstream>
 #include <sstream>
@@ -223,117 +222,6 @@ void apply_imgui_theme()
 	// Add a bit more padding inside windows/child areas
 	style.WindowPadding = ImVec2(10.0f, 10.0f);
 	style.FramePadding = ImVec2(5.0f, 4.0f);
-}
-
-void OpenDirDialogKey(const char* key, const std::string &initialPath)
-{
-	IGFD::FileDialogConfig config;
-	config.path = initialPath;
-	config.countSelectionMax = 1;
-	config.flags = ImGuiFileDialogFlags_Modal;
-	ImGuiFileDialog::Instance()->OpenDialog(key, "Choose Directory", nullptr, config);
-}
-
-namespace
-{
-	// Shared sizing/constraints used for both file/dir dialogs.
-	// Generic consume helper: handles Display/IsOk/Close and delegates result extraction.
-	bool ConsumeIGFDResult(const char* dialogKey, std::string& outPath,
-		const std::function<std::string(ImGuiFileDialog*)>& getResult)
-	{
-		ImVec2 minSize(0,0), maxSize(FLT_MAX, FLT_MAX);
-		ImGuiViewport* vp = ImGui::GetMainViewport();
-		if (vp) {
-			const float vw = vp->Size.x;
-			const float vh = vp->Size.y;
-			const float maxW = vw * 0.95f;
-			const float maxH = vh * 0.90f;
-			const float minW = vw * 0.50f;
-			const float minH = vh * 0.50f;
-			const float defW = vw * 0.70f;
-			const float defH = vh * 0.70f;
-
-			minSize = ImVec2(minW, minH);
-			maxSize = ImVec2(maxW, maxH);
-
-			ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(defW, defH), ImGuiCond_Appearing);
-		}
-
-		if (!ImGuiFileDialog::Instance()->Display(dialogKey, ImGuiWindowFlags_NoCollapse, minSize, maxSize))
-			return false;
-
-		bool ok = false;
-		if (ImGuiFileDialog::Instance()->IsOk())
-		{
-			outPath = getResult(ImGuiFileDialog::Instance());
-			macos_bookmark_store(outPath);
-			ok = true;
-		}
-		ImGuiFileDialog::Instance()->Close();
-		return ok;
-	}
-}
-
-bool ConsumeDirDialogResultKey(const char* key, std::string &outPath)
-{
-	return ConsumeIGFDResult(key, outPath,
-		[](ImGuiFileDialog* dlg) { return dlg->GetCurrentPath(); });
-}
-
-bool IsDirDialogOpenKey(const char* key)
-{
-	return ImGuiFileDialog::Instance()->IsOpened(key);
-}
-
-void OpenFileDialogKey(const char* key, const char *title, const char *filters, const std::string &initialPath)
-{
-	IGFD::FileDialogConfig config;
-	config.path = initialPath;
-	config.countSelectionMax = 1;
-	config.flags = ImGuiFileDialogFlags_Modal;
-	ImGuiFileDialog::Instance()->OpenDialog(key, title, filters, config);
-}
-
-bool ConsumeFileDialogResultKey(const char* key, std::string &outPath)
-{
-	return ConsumeIGFDResult(key, outPath,
-		[](ImGuiFileDialog* dlg) { return dlg->GetFilePathName(); });
-}
-
-bool IsFileDialogOpenKey(const char* key)
-{
-	return ImGuiFileDialog::Instance()->IsOpened(key);
-}
-
-void OpenDirDialog(const std::string &initialPath)
-{
-	OpenDirDialogKey("ChooseDirDlgKey", initialPath);
-}
-
-bool ConsumeDirDialogResult(std::string &outPath)
-{
-	return ConsumeDirDialogResultKey("ChooseDirDlgKey", outPath);
-}
-
-bool IsDirDialogOpen()
-{
-	return IsDirDialogOpenKey("ChooseDirDlgKey");
-}
-
-void OpenFileDialog(const char *title, const char *filters, const std::string &initialPath)
-{
-	OpenFileDialogKey("ChooseFileDlgKey", title, filters, initialPath);
-}
-
-bool ConsumeFileDialogResult(std::string &outPath)
-{
-	return ConsumeFileDialogResultKey("ChooseFileDlgKey", outPath);
-}
-
-bool IsFileDialogOpen()
-{
-	return IsFileDialogOpenKey("ChooseFileDlgKey");
 }
 
 #endif
@@ -949,6 +837,8 @@ void amiberry_gui_init()
 	}
 #endif
 
+	file_dialog_init();
+
 #ifdef USE_IMGUI
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -1065,6 +955,7 @@ void amiberry_gui_init()
 void amiberry_gui_halt()
 {
 	AmigaMonitor* mon = &AMonitors[0];
+	file_dialog_shutdown();
 
 #ifdef USE_IMGUI
 	// Release any About panel resources
