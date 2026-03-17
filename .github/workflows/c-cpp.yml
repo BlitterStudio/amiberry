@@ -121,13 +121,9 @@ jobs:
           tar -xzf arm64-app/Amiberry.app.tar.gz -C arm64-app
 
       - name: Create Universal binary with lipo
+        shell: /opt/homebrew/bin/bash -eo pipefail {0}
         run: |
           set -euo pipefail
-
-          if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
-            echo "::error::This step requires bash >= 4 (found ${BASH_VERSION:-unknown})"
-            exit 1
-          fi
 
           mkdir -p universal-app/Amiberry.app
 
