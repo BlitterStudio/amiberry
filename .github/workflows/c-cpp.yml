@@ -378,7 +378,26 @@ jobs:
 
       - name: Send the file to be notarized by Apple
         run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-universal.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
+          set -euo pipefail
+          ZIP="Amiberry-${{ github.sha }}-macOS-universal.zip"
+          OUTPUT=$(xcrun notarytool submit "$ZIP" --wait \
+            --apple-id "midwan@gmail.com" \
+            --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} \
+            --team-id ${{ secrets.APPLE_TEAM_ID }} 2>&1)
+          echo "$OUTPUT"
+          SUBMISSION_ID=$(echo "$OUTPUT" | grep 'id:' | head -1 | awk '{print $2}')
+          if echo "$OUTPUT" | grep -q 'status: Accepted'; then
+            echo "Notarization accepted."
+          else
+            echo "::error::Notarization failed — fetching rejection log"
+            if [ -n "$SUBMISSION_ID" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "midwan@gmail.com" \
+                --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} \
+                --team-id ${{ secrets.APPLE_TEAM_ID }}
+            fi
+            exit 1
+          fi
 
       - name: Staple the notary receipt to the application bundle
         run: |
