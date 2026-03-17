@@ -56,12 +56,14 @@ static inline bool gfx_platform_skip_sortdisplays()
 
 static inline void gfx_platform_set_window_icon(SDL_Window* window)
 {
+#ifndef __MACH__
 	auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 	if (icon_surface != nullptr)
 	{
 		SDL_SetWindowIcon(window, icon_surface);
 		SDL_DestroySurface(icon_surface);
 	}
+#endif
 }
 
 static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)

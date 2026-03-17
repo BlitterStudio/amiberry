@@ -915,12 +915,14 @@ void amiberry_gui_init()
 			gui_window_rect.y = cy;
 		}
 
+#ifndef __MACH__
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
 			SDL_SetWindowIcon(mon->gui_window, icon_surface);
 			SDL_DestroySurface(icon_surface);
 		}
+#endif
 	}
 	else if (kmsdrm_detected)
 	{
