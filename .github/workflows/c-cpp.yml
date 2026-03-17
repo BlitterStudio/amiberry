@@ -122,9 +122,10 @@ jobs:
 
       - name: Create Universal binary with lipo
         run: |
-          # Re-exec under Homebrew bash 5 if running Apple's bash 3.2
+          # macOS ships bash 3.2 (GPLv2); install bash 5 for associative arrays
           if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
-            exec /opt/homebrew/bin/bash --noprofile --norc -euo pipefail "$0" "$@"
+            brew install bash
+            exec "$(brew --prefix)/bin/bash" --noprofile --norc -euo pipefail "$0" "$@"
           fi
           set -euo pipefail
 
