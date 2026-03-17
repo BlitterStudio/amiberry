@@ -20,7 +20,7 @@ static inline bool NFD_SetDisplayPropertiesFromSDL3Window(SDL_Window* sdlWindow)
 	void* wl_display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
 	if (!wl_display) return true;
 
-	return NFD_SetWaylandDisplay(wl_display) == NFD_OKAY;
+	return NFD_SetWaylandDisplay(static_cast<struct wl_display*>(wl_display)) == NFD_OKAY;
 #else
 	(void)sdlWindow;
 	return true;
