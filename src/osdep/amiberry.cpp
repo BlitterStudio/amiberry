@@ -2001,6 +2001,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 	const auto button = event.button.button;
 	const auto state = event.button.down;
 	const auto clicks = event.button.clicks;
+	const int midx = get_mouse_index_from_sdl_id(event.button.which);
 
 	if (button == SDL_BUTTON_LEFT && !mouseactive && (!mousehack_alive() || currprefs.input_tablet != TABLET_MOUSEHACK ||
 		(currprefs.input_tablet == TABLET_MOUSEHACK && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))))
@@ -2014,22 +2015,22 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 		switch (button)
 		{
 		case SDL_BUTTON_LEFT:
-			setmousebuttonstate(0, 0, state);
+			setmousebuttonstate(midx, 0, state);
 			break;
 		case SDL_BUTTON_RIGHT:
-			setmousebuttonstate(0, 1, state);
+			setmousebuttonstate(midx, 1, state);
 			break;
 		case SDL_BUTTON_MIDDLE:
 			if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
 				activationtoggle(0, true);
 			else
-				setmousebuttonstate(0, 2, state);
+				setmousebuttonstate(midx, 2, state);
 			break;
 		case SDL_BUTTON_X1:
-			setmousebuttonstate(0, 3, state);
+			setmousebuttonstate(midx, 3, state);
 			break;
 		case SDL_BUTTON_X2:
-			setmousebuttonstate(0, 4, state);
+			setmousebuttonstate(midx, 4, state);
 			break;
 		default: break;
 		}
@@ -2078,14 +2079,14 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 	if (isfocus() <= 0) return;
 
+	const int midx = get_mouse_index_from_sdl_id(event.motion.which);
+
 	int32_t x = event.motion.x;
 	int32_t y = event.motion.y;
 	int32_t xrel = event.motion.xrel;
 	int32_t yrel = event.motion.yrel;
 
-	// HiDPI / Retina Scaling
-	// SDL mouse events report in "Screen Coordinates" (Points), while drawable size reports Pixels.
-	// On Retina/HiDPI, Points < Pixels. We need to scale the input up to Pixels for the emulator.
+	// HiDPI / Retina: scale from screen coordinates (points) to drawable pixels
 	if (g_renderer) {
 		int win_w, win_h, draw_w, draw_h;
 		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
@@ -2105,37 +2106,36 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
-		/* absolute */
-		setmousestate(0, 0, x, 1);
-		setmousestate(0, 1, y, 1);
+		setmousestate(midx, 0, x, 1);
+		setmousestate(midx, 1, y, 1);
 	}
 	else
 	{
-		/* relative */
-		setmousestate(0, 0, xrel, 0);
-		setmousestate(0, 1, yrel, 0);
+		setmousestate(midx, 0, xrel, 0);
+		setmousestate(midx, 1, yrel, 0);
 	}
 }
 
 static void handle_mouse_wheel_event(const SDL_Event& event)
 {
 	if (isfocus() <= 0) return;
-	
+
+	const int midx = get_mouse_index_from_sdl_id(event.wheel.which);
 	const auto val_y = event.wheel.y;
 	const auto val_x = event.wheel.x;
 
-	setmousestate(0, 2, val_y, 0);
-	setmousestate(0, 3, val_x, 0);
+	setmousestate(midx, 2, val_y, 0);
+	setmousestate(midx, 3, val_x, 0);
 
 	if (val_y < 0)
-		setmousebuttonstate(0, 3, -1);
+		setmousebuttonstate(midx, 3, -1);
 	else if (val_y > 0)
-		setmousebuttonstate(0, 4, -1);
+		setmousebuttonstate(midx, 4, -1);
 
 	if (val_x < 0)
-		setmousebuttonstate(0, 5, -1);
+		setmousebuttonstate(midx, 5, -1);
 	else if (val_x > 0)
-		setmousebuttonstate(0, 6, -1);
+		setmousebuttonstate(midx, 6, -1);
 }
 
 #ifndef LIBRETRO
@@ -2487,6 +2487,13 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_EVENT_MOUSE_WHEEL:
 			handle_mouse_wheel_event(event);
+			break;
+
+		case SDL_EVENT_MOUSE_ADDED:
+			handle_sdl_mouse_added(event.mdevice.which);
+			break;
+		case SDL_EVENT_MOUSE_REMOVED:
+			handle_sdl_mouse_removed(event.mdevice.which);
 			break;
 
 		case SDL_EVENT_DROP_FILE:

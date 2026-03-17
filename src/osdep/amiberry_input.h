@@ -130,3 +130,8 @@ extern void save_controller_mapping_to_file(const controller_mapping& input, con
 extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);
 
 extern bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value);
+
+// Multi-mouse support: SDL_MouseID to UAE device index mapping
+extern int get_mouse_index_from_sdl_id(SDL_MouseID which);
+extern void handle_sdl_mouse_added(SDL_MouseID which);
+extern void handle_sdl_mouse_removed(SDL_MouseID which);

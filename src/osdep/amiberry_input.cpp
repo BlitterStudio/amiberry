@@ -41,6 +41,9 @@ static struct didata di_mouse[MAX_INPUT_DEVICES];
 static struct didata di_keyboard[MAX_INPUT_DEVICES];
 struct didata di_joystick[MAX_INPUT_DEVICES];
 
+static SDL_MouseID mouse_id_map[MAX_INPUT_DEVICES]{};
+static std::string mouse_unique_names[MAX_INPUT_DEVICES];
+
 static int num_mouse = 1, num_keyboard = 1, num_joystick = 0, num_retroarch_kbdjoy = 0;
 static int joystick_inited, retroarch_inited;
 // Index of the on-screen joystick inside di_joystick[]; -1 when not registered
@@ -605,13 +608,12 @@ static int initialize_tablet(void)
 	return 1;
 }
 
-static int init_mouse()
+static void setup_mouse_device(struct didata* did, const char* name)
 {
-	struct didata* did = di_mouse;
-	
-	num_mouse = 1;
-	did->name = "System mouse";
+	cleardid(did);
+	did->name = name ? name : "Mouse";
 	did->buttons = 3;
+	did->buttons_real = 3;
 	did->axles = 4;
 	did->axissort[0] = 0;
 	did->axisname[0] = "X Axis";
@@ -627,6 +629,44 @@ static int init_mouse()
 		did->axisname[3] = "HWheel";
 		addplusminus(did, 3);
 	}
+}
+
+static int init_mouse()
+{
+	memset(mouse_id_map, 0, sizeof mouse_id_map);
+	for (auto& s : mouse_unique_names)
+		s.clear();
+
+	int count = 0;
+	SDL_MouseID* sdl_mice = SDL_GetMice(&count);
+	if (sdl_mice && count >= 1) {
+		num_mouse = std::min(count, static_cast<int>(MAX_INPUT_DEVICES));
+		for (int i = 0; i < num_mouse; i++) {
+			mouse_id_map[i] = sdl_mice[i];
+			const char* sdl_name = SDL_GetMouseNameForID(sdl_mice[i]);
+			std::string device_name;
+			if (sdl_name && sdl_name[0]) {
+				device_name = sdl_name;
+			} else {
+				device_name = (num_mouse > 1)
+					? "Mouse " + std::to_string(i + 1)
+					: "System mouse";
+			}
+			setup_mouse_device(&di_mouse[i], device_name.c_str());
+		}
+		SDL_free(sdl_mice);
+		write_log(_T("Multi-mouse: %d mice detected\n"), num_mouse);
+		for (int i = 0; i < num_mouse; i++) {
+			write_log(_T("  Mouse %d: \"%s\" (SDL ID %u)\n"), i, di_mouse[i].name.c_str(),
+				static_cast<unsigned>(mouse_id_map[i]));
+		}
+	} else {
+		if (sdl_mice)
+			SDL_free(sdl_mice);
+		num_mouse = 1;
+		mouse_id_map[0] = 0;
+		setup_mouse_device(&di_mouse[0], "System mouse");
+	}
 	return 1;
 }
 
@@ -634,6 +674,9 @@ static void close_mouse()
 {
 	for (auto i = 0; i < num_mouse; i++)
 		di_dev_free(&di_mouse[i]);
+	memset(mouse_id_map, 0, sizeof mouse_id_map);
+	for (auto& s : mouse_unique_names)
+		s.clear();
 	di_free();
 }
 
@@ -670,9 +713,11 @@ static const TCHAR* get_mouse_friendlyname(const int mouse)
 
 static const TCHAR* get_mouse_uniquename(const int mouse)
 {
-	if (num_mouse > 0 && mouse == 0)
-		return "MOUSE0";
-
+	if (mouse >= 0 && mouse < num_mouse) {
+		if (mouse_unique_names[mouse].empty())
+			mouse_unique_names[mouse] = "MOUSE" + std::to_string(mouse);
+		return mouse_unique_names[mouse].c_str();
+	}
 	return "";
 }
 
@@ -737,6 +782,77 @@ struct inputdevice_functions inputdevicefunc_mouse = {
 	get_mouse_widget_first,
 	get_mouse_flags
 };
+
+int get_mouse_index_from_sdl_id(SDL_MouseID which)
+{
+	if (which == 0 || which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID)
+		return 0;
+	for (int i = 0; i < num_mouse; i++) {
+		if (mouse_id_map[i] == which)
+			return i;
+	}
+	return 0;
+}
+
+void handle_sdl_mouse_added(SDL_MouseID which)
+{
+	if (which == 0 || which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID)
+		return;
+
+	for (int i = 0; i < num_mouse; i++) {
+		if (mouse_id_map[i] == which)
+			return;
+	}
+
+	int idx = -1;
+	for (int i = 0; i < num_mouse; i++) {
+		if (mouse_id_map[i] == 0) {
+			idx = i;
+			break;
+		}
+	}
+	if (idx < 0) {
+		if (num_mouse >= MAX_INPUT_DEVICES)
+			return;
+		idx = num_mouse;
+		num_mouse++;
+	}
+
+	mouse_id_map[idx] = which;
+	const char* sdl_name = SDL_GetMouseNameForID(which);
+	std::string device_name;
+	if (sdl_name && sdl_name[0]) {
+		device_name = sdl_name;
+	} else {
+		device_name = "Mouse " + std::to_string(idx + 1);
+	}
+	setup_mouse_device(&di_mouse[idx], device_name.c_str());
+	mouse_unique_names[idx] = "MOUSE" + std::to_string(idx);
+
+	write_log(_T("Multi-mouse: added \"%s\" (SDL ID %u) as mouse %d\n"),
+		di_mouse[idx].name.c_str(), static_cast<unsigned>(which), idx);
+}
+
+void handle_sdl_mouse_removed(SDL_MouseID which)
+{
+	if (which == 0 || which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID)
+		return;
+
+	for (int i = 0; i < num_mouse; i++) {
+		if (mouse_id_map[i] == which) {
+			write_log(_T("Multi-mouse: removed \"%s\" (SDL ID %u, mouse %d)\n"),
+				di_mouse[i].name.c_str(), static_cast<unsigned>(which), i);
+			for (int b = 0; b < di_mouse[i].buttons; b++)
+				setmousebuttonstate(i, b, 0);
+			mouse_id_map[i] = 0;
+			cleardid(&di_mouse[i]);
+			mouse_unique_names[i].clear();
+			break;
+		}
+	}
+	while (num_mouse > 1 && mouse_id_map[num_mouse - 1] == 0)
+		num_mouse--;
+}
 
 static void setid(struct uae_input_device* uid, const int i, const int slot, const int sub, const int port, int evt, const bool gp)
 {
