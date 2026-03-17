@@ -1273,6 +1273,9 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 		if (my_existsfile2(controller_file.c_str()))
 		{
 			write_log("Controller cfg file found, using that for mapping\n");
+			// Seed with current defaults so older SDL2-era files that don't have
+			// the newer SDL3 button slots keep sane identity mappings.
+			fill_default_controller(did->mapping);
 			read_controller_mapping_from_file(did->mapping, controller_file);
 		}
 		else
