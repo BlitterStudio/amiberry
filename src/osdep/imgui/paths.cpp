@@ -201,7 +201,7 @@ void render_panel_paths()
 		std::string destination = get_controllers_path();
 		destination += "gamecontrollerdb.txt";
 		write_log("Downloading % ...\n", destination.c_str());
-		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
+		const auto* const url = "https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/master/gamecontrollerdb.txt";
 		const auto result = download_file(url, destination, true);
 
 		if (result)
