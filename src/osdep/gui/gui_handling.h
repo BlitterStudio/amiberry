@@ -290,7 +290,8 @@ static string drivebridgeModes[] =
 const string label_button_list[] = {
 	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
 	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
-	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
+	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:",
+	"Misc2:", "Misc3:", "Misc4:", "Misc5:", "Misc6:"
 };
 
 const string label_axis_list[] = {
