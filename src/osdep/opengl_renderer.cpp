@@ -408,7 +408,16 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		m_vsync.gl_initialized = true;
 	}
 
-	float desired_aspect = calculate_desired_aspect(mon);
+	// When autocrop is active, auto_crop_image() has already computed the correct
+	// logical dimensions in render_quad, accounting for resolution mode (hires height
+	// doubling, lores width doubling) and NTSC correction. Use those for the aspect
+	// ratio instead of the fixed 4:3 that only applies to the full uncropped frame.
+	float desired_aspect;
+	if (currprefs.gfx_auto_crop && !mon->screen_is_picasso && render_quad.w > 0 && render_quad.h > 0) {
+		desired_aspect = static_cast<float>(render_quad.w) / static_cast<float>(render_quad.h);
+	} else {
+		desired_aspect = calculate_desired_aspect(mon);
+	}
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
 
 	// Hot-reload shader if user changed it in the GUI while emulation is running
