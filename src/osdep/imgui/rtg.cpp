@@ -115,6 +115,7 @@ void render_panel_rtg() {
 
     ImGui::BeginDisabled(!has_memory);
 
+    ImGui::AlignTextToFramePadding();
     ImGui::Text("Monitor:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
