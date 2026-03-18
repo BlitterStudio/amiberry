@@ -829,7 +829,8 @@ int getbestmode(struct AmigaMonitor* mon, int nextbest)
 	int i, startidx;
 	struct MultiDisplay* md;
 	int ratio;
-	int index = -1;
+	int apmode_idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
+	int index = currprefs.gfx_apmode[apmode_idx].gfx_display - 1;
 
 	for (;;) {
 		md = getdisplay2(&currprefs, index);

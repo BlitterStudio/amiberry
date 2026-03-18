@@ -949,6 +949,7 @@ int graphics_init(bool mousecapture)
 
 	g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
 	update_pixel_format();
+	AMonitors[0].active = true;
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
 		if (currprefs.monitoremu_mon > 0 && currprefs.monitoremu) {
