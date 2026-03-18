@@ -3038,8 +3038,10 @@ static int addresolutions(void)
 	if (p96depth(32))
 		depths++;
 
-	for (const auto & Display : Displays) {
-		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (int di = 0; di < MAX_DISPLAYS && Displays[di].monitorname; di++) {
+		const struct PicassoResolution *DisplayModes = Displays[di].DisplayModes;
+		if (!DisplayModes)
+			continue;
 		int i = 0;
 		while (DisplayModes[i].inuse) {
 			for (int j = 0; missmodes[j * 2] >= 0; j++) {
@@ -3053,8 +3055,10 @@ static int addresolutions(void)
 	}
 
 	int cnt = 0;
-	for (const auto & Display : Displays) {
-		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (int di = 0; di < MAX_DISPLAYS && Displays[di].monitorname; di++) {
+		const struct PicassoResolution *DisplayModes = Displays[di].DisplayModes;
+		if (!DisplayModes)
+			continue;
 		int i = 0;
 		while (DisplayModes[i].inuse) {
 			if (DisplayModes[i].rawmode) {
