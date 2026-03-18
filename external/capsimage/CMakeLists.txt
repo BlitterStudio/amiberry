@@ -11,7 +11,6 @@ option(BUILD_SHARED_LIBS "Build a dynamic library instead of static library" ON)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(BUILD_FRAMEWORK "Build a macOS framework instead of a shared library" OFF)
-  set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
   set(BUILD_SHARED_LIBS ON)
 endif()
 
