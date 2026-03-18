@@ -132,8 +132,15 @@ typedef enum {
 
 #ifdef USE_GPIOD
 #include <gpiod.h>
+#if defined(GPIOD_VERSION_MAJOR) && GPIOD_VERSION_MAJOR >= 2
+#define GPIO_LINE_RED    18
+#define GPIO_LINE_GREEN  24
+#define GPIO_LINE_YELLOW 23
+extern struct gpiod_line_request* gpio_request;
+#else
 extern struct gpiod_line* lineRed;    // Red LED
 extern struct gpiod_line* lineGreen;  // Green LED
 extern struct gpiod_line* lineYellow; // Yellow LED
+#endif
 #endif
 #endif /* UAE_GUI_H */

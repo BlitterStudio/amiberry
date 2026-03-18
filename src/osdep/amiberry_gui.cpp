@@ -1051,7 +1051,13 @@ void gui_led(int led, int on, int brightness)
 			else kbd_led_status &= ~LED_CAP;
 		}
 #ifdef USE_GPIOD
+#if defined(GPIOD_VERSION_MAJOR) && GPIOD_VERSION_MAJOR >= 2
+		if (gpio_request)
+			gpiod_line_request_set_value(gpio_request, GPIO_LINE_RED,
+				on ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+#else
 		gpiod_line_set_value(lineRed, on);
+#endif
 #endif
 	}
 
@@ -1074,10 +1080,19 @@ void gui_led(int led, int on, int brightness)
 			else kbd_led_status &= ~LED_CAP;
 		}
 #ifdef USE_GPIOD
+#if defined(GPIOD_VERSION_MAJOR) && GPIOD_VERSION_MAJOR >= 2
+		if (led == LED_HD && gpio_request)
+			gpiod_line_request_set_value(gpio_request, GPIO_LINE_YELLOW,
+				on ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+		if (led == LED_POWER && gpio_request)
+			gpiod_line_request_set_value(gpio_request, GPIO_LINE_GREEN,
+				on ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+#else
 		if (led == LED_HD)
 			gpiod_line_set_value(lineYellow, on);
 		if (led == LED_POWER)
 			gpiod_line_set_value(lineGreen, on);
+#endif
 #endif
 	}
 

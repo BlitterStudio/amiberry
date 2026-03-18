@@ -92,11 +92,15 @@
 
 #ifdef USE_GPIOD
 #include <gpiod.h>
-const char* chipname = "gpiochip0";
 struct gpiod_chip* chip;
+#if defined(GPIOD_VERSION_MAJOR) && GPIOD_VERSION_MAJOR >= 2
+struct gpiod_line_request* gpio_request;
+#else
+const char* chipname = "gpiochip0";
 struct gpiod_line* lineRed;    // Red LED
 struct gpiod_line* lineGreen;  // Green LED
 struct gpiod_line* lineYellow; // Yellow LED
+#endif
 #endif
 
 #ifdef USE_DBUS
@@ -5866,7 +5870,29 @@ int amiberry_main(int argc, char* argv[])
 	osdep_platform_sync_keyboard_leds();
 
 #ifdef USE_GPIOD
-	// Open GPIO chip
+#if defined(GPIOD_VERSION_MAJOR) && GPIOD_VERSION_MAJOR >= 2
+	// Open GPIO chip and request output lines (v2 API)
+	chip = gpiod_chip_open("/dev/gpiochip0");
+	if (chip) {
+		struct gpiod_line_settings* settings = gpiod_line_settings_new();
+		gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+		gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
+
+		struct gpiod_line_config* line_cfg = gpiod_line_config_new();
+		unsigned int offsets[] = {GPIO_LINE_RED, GPIO_LINE_YELLOW, GPIO_LINE_GREEN};
+		gpiod_line_config_add_line_settings(line_cfg, offsets, 3, settings);
+
+		struct gpiod_request_config* req_cfg = gpiod_request_config_new();
+		gpiod_request_config_set_consumer(req_cfg, "amiberry");
+
+		gpio_request = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
+
+		gpiod_request_config_free(req_cfg);
+		gpiod_line_config_free(line_cfg);
+		gpiod_line_settings_free(settings);
+	}
+#else
+	// Open GPIO chip (v1 API)
 	chip = gpiod_chip_open_by_name(chipname);
 
 	// Open GPIO lines
@@ -5878,6 +5904,7 @@ int amiberry_main(int argc, char* argv[])
 	gpiod_line_request_output(lineRed, "amiberry", 0);
 	gpiod_line_request_output(lineGreen, "amiberry", 0);
 	gpiod_line_request_output(lineYellow, "amiberry", 0);
+#endif
 #endif
 #ifdef CATWEASEL
 	catweasel_init ();
@@ -5894,12 +5921,16 @@ int amiberry_main(int argc, char* argv[])
 	osdep_platform_call_real_main(argc, argv);
 
 #ifdef USE_GPIOD
-	// Release lines and chip
+#if defined(GPIOD_VERSION_MAJOR) && GPIOD_VERSION_MAJOR >= 2
+	if (gpio_request)
+		gpiod_line_request_release(gpio_request);
+#else
 	gpiod_line_release(lineRed);
 	gpiod_line_release(lineGreen);
 	gpiod_line_release(lineYellow);
-
-	gpiod_chip_close(chip);
+#endif
+	if (chip)
+		gpiod_chip_close(chip);
 #endif
 #if defined(__linux__)
 	// restore keyboard LEDs to normal state

@@ -355,13 +355,13 @@ static void HandleGetConfig(DBusMessage* msg)
 	} else {
 		// Memory options
 		if (strcmp(optname, "chipmem_size") == 0) {
-			responses.push_back(std::to_string(changed_prefs.chipmem_size));
+			responses.push_back(std::to_string(changed_prefs.chipmem.size));
 		} else if (strcmp(optname, "fastmem_size") == 0) {
-			responses.push_back(std::to_string(changed_prefs.fastmem_size));
+			responses.push_back(std::to_string(changed_prefs.fastmem[0].size));
 		} else if (strcmp(optname, "bogomem_size") == 0) {
-			responses.push_back(std::to_string(changed_prefs.bogomem_size));
+			responses.push_back(std::to_string(changed_prefs.bogomem.size));
 		} else if (strcmp(optname, "z3fastmem_size") == 0) {
-			responses.push_back(std::to_string(changed_prefs.z3fastmem_size));
+			responses.push_back(std::to_string(changed_prefs.z3fastmem[0].size));
 		}
 		// CPU options
 		else if (strcmp(optname, "cpu_model") == 0) {
