@@ -146,8 +146,7 @@ void uae_ShellExecute2(uae_u32 id)
 void uae_ClockSync(void)
 {
 	uae_nativesem_wait();
-	write_comm_pipe_int(&native2amiga_pending, 7, 0);
-	write_comm_pipe_int(&native2amiga_pending, 0, 1);
+	write_comm_pipe_int(&native2amiga_pending, 7, 1);
 	do_uae_int_requested();
 	uae_nativesem_post();
 }
