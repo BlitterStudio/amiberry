@@ -712,15 +712,18 @@ static int create_windows(struct AmigaMonitor* mon)
 	SDL_DisplayID bounds_display = (md && md->display_id) ? md->display_id : SDL_GetPrimaryDisplay();
 	SDL_GetDisplayBounds(bounds_display, &displayBounds);
 
-	if (stored_x > displayBounds.w)
-		rc.x = 1;
-	else
-		rc.x = stored_x;
+	bool pos_on_target = (stored_x >= displayBounds.x
+		&& stored_x < displayBounds.x + displayBounds.w
+		&& stored_y >= displayBounds.y
+		&& stored_y < displayBounds.y + displayBounds.h);
 
-	if (stored_y > displayBounds.h)
-		rc.y = 1;
-	else
+	if (pos_on_target) {
+		rc.x = stored_x;
 		rc.y = stored_y;
+	} else {
+		rc.x = displayBounds.x + (displayBounds.w - mon->currentmode.current_width) / 2;
+		rc.y = displayBounds.y + (displayBounds.h - mon->currentmode.current_height) / 2;
+	}
 
 	rc.w = mon->currentmode.current_width;
 	rc.h = mon->currentmode.current_height;
