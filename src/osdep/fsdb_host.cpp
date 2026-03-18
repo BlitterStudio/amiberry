@@ -41,7 +41,23 @@ static char evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<
 static char hex_chars[] = "0123456789abcdef";
 #define UAEFSDB_BEGINS _T("__uae___")
 
-static char* aname_to_nname(const char* aname, const int ascii)
+static bool is_hex_digit(char c)
+{
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+static unsigned char char_to_hex(char c)
+{
+	if (c >= '0' && c <= '9')
+		return static_cast<unsigned char>(c - '0');
+	if (c >= 'a' && c <= 'f')
+		return static_cast<unsigned char>(10 + c - 'a');
+	if (c >= 'A' && c <= 'F')
+		return static_cast<unsigned char>(10 + c - 'A');
+	return 0;
+}
+
+char* aname_to_nname(const char* aname, const int ascii)
 {
     // Input validation
     if (!aname) {
@@ -144,6 +160,50 @@ static char* aname_to_nname(const char* aname, const int ascii)
                  aname, e.what());
         return strdup("");  // Return empty string rather than null to prevent crashes
     }
+}
+
+char* nname_to_aname(const char* nname, int noconvert)
+{
+	if (!nname) {
+		return nullptr;
+	}
+
+	const char* input = nname;
+	std::string latin1_str;
+	if (!noconvert) {
+		if (!utf8_to_latin1_string(std::string_view(nname), latin1_str)) {
+			return my_strdup(nname);
+		}
+		input = latin1_str.c_str();
+	}
+
+	const size_t len = strlen(input);
+	char* result = xmalloc(char, len + 1);
+	char* out = result;
+
+	for (size_t i = 0; i < len; ++i) {
+		if (input[i] == '%' && i + 2 < len && is_hex_digit(input[i + 1]) && is_hex_digit(input[i + 2])) {
+			*out++ = static_cast<char>((char_to_hex(input[i + 1]) << 4) | char_to_hex(input[i + 2]));
+			i += 2;
+		} else {
+			*out++ = input[i];
+		}
+	}
+	*out = '\0';
+	return result;
+}
+
+void fsdb_init_file_info(fsdb_file_info* info)
+{
+	if (!info) {
+		return;
+	}
+	info->type = 0;
+	info->mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
+	info->days = 0;
+	info->mins = 0;
+	info->ticks = 0;
+	info->comment = nullptr;
 }
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
