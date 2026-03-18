@@ -203,6 +203,7 @@ struct crtemu_t {
 	crtemu_type_t type;
 	void* memctx;
 	bool skip_aspect_correction; // When true, fill viewport without 4:3 letterboxing
+	float desired_aspect;        // Display aspect ratio (width/height), e.g. 4/3
 
 	CRTEMU_GLuint vertexbuffer;
 	CRTEMU_GLuint vertexbuffer_static;
@@ -2209,7 +2210,8 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 		if( frame_abgr ) {
 			crtemu->use_frame = 1.0f;
 		} else {
-			crtemu->use_frame = 0.0f;
+	crtemu->use_frame = 0.0f;
+	crtemu->desired_aspect = 4.0f / 3.0f;
 		}
 	}
 }
@@ -2496,8 +2498,8 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		target_width = window_width;
 		target_height = window_height;
 	} else {
-		int aspect_width = (int)( ( window_height * 4 ) / 3 );
-		int aspect_height= (int)( ( window_width * 3 ) / 4 );
+		int aspect_width = (int)( window_height * crtemu->desired_aspect );
+		int aspect_height= (int)( window_width / crtemu->desired_aspect );
 		if( aspect_height <= window_height ) {
 			target_width = window_width;
 			target_height = aspect_height;
@@ -2632,8 +2634,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			int window_width = viewport[ 2 ];
 			int window_height = viewport[ 3 ];
 
-			int aspect_width = (int)( ( window_height * 4 ) / 3 );
-			int aspect_height= (int)( ( window_width * 3 ) / 4 );
+			int aspect_width = (int)( window_height * crtemu->desired_aspect );
+			int aspect_height= (int)( window_width / crtemu->desired_aspect );
 			int target_width, target_height;
 			if( aspect_height <= window_height ) {
 				target_width = window_width;
@@ -2689,8 +2691,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			int window_width = viewport[ 2 ];
 			int window_height = viewport[ 3 ];
 
-			int aspect_width = (int)( ( window_height * 4 ) / 3 );
-			int aspect_height= (int)( ( window_width * 3 ) / 4 );
+			int aspect_width = (int)( window_height * crtemu->desired_aspect );
+			int aspect_height= (int)( window_width / crtemu->desired_aspect );
 			int target_width, target_height;
 			if( aspect_height <= window_height ) {
 				target_width = window_width;
@@ -2746,8 +2748,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			int window_width = viewport[ 2 ];
 			int window_height = viewport[ 3 ];
 
-			int aspect_width = (int)( ( window_height * 4 ) / 3 );
-			int aspect_height= (int)( ( window_width * 3 ) / 4 );
+			int aspect_width = (int)( window_height * crtemu->desired_aspect );
+			int aspect_height= (int)( window_width / crtemu->desired_aspect );
 			int target_width, target_height;
 			if( aspect_height <= window_height ) {
 				target_width = window_width;
@@ -2795,8 +2797,8 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			int window_width = viewport[ 2 ];
 			int window_height = viewport[ 3 ];
 
-			int aspect_width = (int)( ( window_height * 4 ) / 3 );
-			int aspect_height= (int)( ( window_width * 3 ) / 4 );
+			int aspect_width = (int)( window_height * crtemu->desired_aspect );
+			int aspect_height= (int)( window_width / crtemu->desired_aspect );
 			int target_width, target_height;
 			if( aspect_height <= window_height ) {
 				target_width = window_width;

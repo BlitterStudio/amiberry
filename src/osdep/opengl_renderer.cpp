@@ -605,6 +605,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 		// When a custom bezel defines the viewport, skip crtemu's internal 4:3 letterboxing
 		m_shader.crtemu->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
+		m_shader.crtemu->desired_aspect = desired_aspect;
 
 		if (m_shader.crtemu->type != CRTEMU_TYPE_NONE) {
 			glViewport(renderAreaX, glAreaY, renderAreaW, renderAreaH);
