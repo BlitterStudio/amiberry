@@ -1219,23 +1219,24 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			(void)remove_extra_file(path, file);
 		}
 
+		// Check if directory has any real files (skip .uaem sidecars and _UAEFSDB.___)
+		bool has_real_files = false;
 		for (const auto& entry : fs::directory_iterator(dirpath, ec)) {
 			const auto name = entry.path().filename().string();
-			if (name.size() > 5 && name.compare(name.size() - 5, 5, ".uaem") == 0) {
-				fs::remove(entry.path(), ec);
-			}
-		}
-
-		// Check if directory is empty (excluding . and ..)
-		bool is_empty = true;
-		for (const auto& entry : fs::directory_iterator(dirpath, ec)) {
-			is_empty = false;
+			if (name == "_UAEFSDB.___") continue;
+			if (name.size() > 5 && name.compare(name.size() - 5, 5, ".uaem") == 0) continue;
+			has_real_files = true;
 			break;
 		}
 
-		if (!is_empty) {
+		if (has_real_files) {
 			write_log("my_rmdir: directory %s is not empty\n", path);
 			return -1;
+		}
+
+		// Directory has only metadata files — safe to clean up and remove
+		for (const auto& entry : fs::directory_iterator(dirpath, ec)) {
+			fs::remove(entry.path(), ec);
 		}
 
 		// Remove the directory
