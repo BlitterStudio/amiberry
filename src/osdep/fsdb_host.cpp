@@ -769,6 +769,14 @@ int fsdb_set_file_attrs(a_inode* aino)
 			return 0;
 		}
 		info.mode = aino->amigaos_mode ^ 0xf;
+		// Use the current aino comment (may have been updated by ACTION_SET_COMMENT)
+		if (info.comment) {
+			xfree(info.comment);
+			info.comment = nullptr;
+		}
+		if (aino->comment && aino->comment[0]) {
+			info.comment = my_strdup(aino->comment);
+		}
 		const int uaem_err = fsdb_write_uaem(aino->nname, &info);
 		if (info.comment) {
 			xfree(info.comment);
