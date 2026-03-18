@@ -1217,6 +1217,9 @@ extern void fixup_prefs(struct uae_prefs* prefs, bool userconfig);
 extern void fixup_cpu(struct uae_prefs* prefs);
 extern void cfgfile_compatibility_romtype(struct uae_prefs* p);
 extern void cfgfile_compatibility_rtg(struct uae_prefs* p);
+#ifdef AMIBERRY
+extern void cfgfile_compatibility_rtg_pixelformat(struct uae_prefs* p);
+#endif
 extern bool cfgfile_detect_art(struct uae_prefs* p, TCHAR* path);
 extern const TCHAR *cfgfile_getconfigdata(size_t *len);
 extern bool cfgfile_createconfigstore(struct uae_prefs* p);

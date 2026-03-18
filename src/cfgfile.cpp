@@ -6804,6 +6804,21 @@ void cfgfile_compatibility_rtg(struct uae_prefs *p)
 	}
 }
 
+#ifdef AMIBERRY
+// Amiberry uses RGBA (R8G8B8A8) as its native 32-bit host pixel format,
+// while WinUAE uses BGRA (B8G8R8A8). Configs created with Amiberry < 8.0
+// (or imported from WinUAE) will have the BGRA format flag set, which
+// must be migrated to RGBA to match the current rendering pipeline.
+void cfgfile_compatibility_rtg_pixelformat(struct uae_prefs *p)
+{
+	if (p->picasso96_modeflags & RGBFF_B8G8R8A8) {
+		p->picasso96_modeflags &= ~RGBFF_B8G8R8A8;
+		p->picasso96_modeflags |= RGBFF_R8G8B8A8;
+		write_log(_T("RTG pixel format migration: BGRA -> RGBA (modeflags=0x%x)\n"), p->picasso96_modeflags);
+	}
+}
+#endif
+
 void cfgfile_compatibility_romtype(struct uae_prefs *p)
 {
 	addbcromtype(p, ROMTYPE_MB_PCMCIA, p->cs_pcmcia, nullptr, 0);

@@ -429,6 +429,9 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	built_in_chipset_prefs (p);
 	fixup_cpu (p);
 	cfgfile_compatibility_rtg(p);
+#ifdef AMIBERRY
+	cfgfile_compatibility_rtg_pixelformat(p);
+#endif
 	cfgfile_compatibility_romtype(p);
 
 	read_kickstart_version(p);
