@@ -375,7 +375,9 @@ void display_param_init(struct AmigaMonitor* mon)
 	vsync_totalheight = vsync_activeheight * 1125 / 1080;
 	vsync_vblank = 0;
 	vsync_hblank = 0;
-	get_display_vblank_params(0, &vsync_activeheight, &vsync_totalheight, &vsync_vblank, &vsync_hblank);
+	struct MultiDisplay* vblank_md = getdisplay(&currprefs, mon->monitor_id);
+	int vblank_display_idx = vblank_md ? vblank_md->monitor : 0;
+	get_display_vblank_params(vblank_display_idx, &vsync_activeheight, &vsync_totalheight, &vsync_vblank, &vsync_hblank);
 	if (vsync_vblank <= 0)
 		vsync_vblank = static_cast<float>(mon->currentmode.freq);
 	// GPU scaled mode?
@@ -902,9 +904,11 @@ float target_getcurrentvblankrate(const int monid)
 	float vb;
 	if (currprefs.gfx_variable_sync)
 		return static_cast<float>(mon->currentmode.freq);
-	if (get_display_vblank_params(0, nullptr, nullptr, &vb, nullptr)) {
+	struct MultiDisplay* md = getdisplay(&currprefs, monid);
+	int display_idx = md ? md->monitor : 0;
+	if (get_display_vblank_params(display_idx, nullptr, nullptr, &vb, nullptr)) {
 		return vb;
 	}
 
-	return amiberry_getrefreshrate(0);
+	return amiberry_getrefreshrate(display_idx);
 }

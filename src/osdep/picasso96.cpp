@@ -7059,14 +7059,14 @@ void restore_p96_finish ()
 
 		if (overlay_vram) {
 			overlay_vram_offset = static_cast<int>(overlay_vram - gfxmem_banks[0]->start);
-			overlay_convert = getconvert(static_cast<int>(overlay_format), picasso_vidinfo[0].pixbytes);
+			overlay_convert = getconvert(static_cast<int>(overlay_format), vidinfo->pixbytes);
 			if (!p96_rgbx16_ovl)
 				p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 			alloc_colors_picasso(8, 8, 8, 0, 8, 16, overlay_format, p96_rgbx16_ovl);
 			picasso_palette(overlay_clutc, overlay_clut);
 			overlay_color = overlay_color_unswapped;
 			overlay_pix = GetBytesPerPixel(overlay_format);
-			endianswap(&overlay_color, picasso96_state[0].BytesPerPixel);
+			endianswap(&overlay_color, state->BytesPerPixel);
 		}
 		if (cursorvisible) {
 			setspriteimage(nullptr, boardinfo);

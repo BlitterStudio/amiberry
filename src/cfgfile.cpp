@@ -7480,8 +7480,10 @@ int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ign
 end:
 	recursive--;
 	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
-		if (!p->gfx_monitor[i].enabled)
+		if (!p->gfx_monitor[i].enabled) {
 			memcpy(&p->gfx_monitor[i], &p->gfx_monitor[0], sizeof(struct monconfig));
+			p->gfx_monitor[i].enabled = false;
+		}
 	}
 	fixup_prefs (p, userconfig != 0);
 	for (int i = 0; i < MAX_JPORTS_CUSTOM; i++) {
