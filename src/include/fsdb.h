@@ -119,10 +119,20 @@ typedef struct a_inode_struct {
 #endif
 } a_inode;
 
+typedef struct fsdb_file_info fsdb_file_info;
+
 extern TCHAR *nname_begin (TCHAR *);
 
 extern TCHAR *build_nname (const TCHAR *d, const TCHAR *n);
 extern TCHAR *build_aname (const TCHAR *d, const TCHAR *n);
+extern char *nname_to_aname (const char *nname, int noconvert);
+extern char *aname_to_nname (const char *aname, int ascii);
+extern void fsdb_init_file_info (fsdb_file_info *info);
+extern int fsdb_read_uaem (const char *nname, fsdb_file_info *info);
+extern int fsdb_write_uaem (const char *nname, const fsdb_file_info *info);
+extern a_inode *custom_fsdb_lookup_aino_aname (a_inode *base, const TCHAR *aname);
+extern a_inode *custom_fsdb_lookup_aino_nname (a_inode *base, const TCHAR *nname);
+extern int custom_fsdb_used_as_nname (a_inode *base, const TCHAR *nname);
 
 /* Filesystem-independent functions.  */
 extern void fsdb_clean_dir (a_inode *);

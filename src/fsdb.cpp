@@ -178,10 +178,8 @@ a_inode *fsdb_lookup_aino_aname (a_inode *base, const TCHAR *aname)
 
 	f = get_fsdb (base, _T("r+b"));
 	if (f == 0) {
-#ifndef AMIBERRY
 		if (currprefs.filesys_custom_uaefsdb && (base->volflags & MYVOLUMEINFO_STREAMS))
 			return custom_fsdb_lookup_aino_aname (base, aname);
-#endif
 		return 0;
 	}
 	for (;;) {
@@ -209,10 +207,8 @@ a_inode *fsdb_lookup_aino_nname (a_inode *base, const TCHAR *nname)
 
 	f = get_fsdb (base, _T("r+b"));
 	if (f == 0) {
-#ifndef AMIBERRY
 		if (currprefs.filesys_custom_uaefsdb && (base->volflags & MYVOLUMEINFO_STREAMS))
 			return custom_fsdb_lookup_aino_nname (base, nname);
-#endif
 		return 0;
 	}
 	s = ua (nname);
@@ -239,10 +235,8 @@ int fsdb_used_as_nname (a_inode *base, const TCHAR *nname)
 
 	f = get_fsdb (base, _T("r+b"));
 	if (f == 0) {
-#ifndef AMIBERRY
 		if (currprefs.filesys_custom_uaefsdb && (base->volflags & MYVOLUMEINFO_STREAMS))
 			return custom_fsdb_used_as_nname (base, nname);
-#endif
 		return 0;
 	}
 	for (;;) {
@@ -339,7 +333,6 @@ void fsdb_dir_writeback (a_inode *dir)
 
 	f = get_fsdb (dir, _T("r+b"));
 	if (f == 0) {
-#ifndef AMIBERRY
 		if ((currprefs.filesys_custom_uaefsdb  && (dir->volflags & MYVOLUMEINFO_STREAMS)) || currprefs.filesys_no_uaefsdb) {
 			for (aino = dir->child; aino; aino = aino->sibling) {
 				aino->dirty = 0;
@@ -348,7 +341,6 @@ void fsdb_dir_writeback (a_inode *dir)
 			}
 			return;
 		}
-#endif
 		f = get_fsdb (dir, _T("w+b"));
 		if (f == 0) {
 			TRACE ((_T("failed\n")));
