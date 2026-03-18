@@ -2744,8 +2744,13 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 	* aname "." -> nname "uae_xxx" in the database.  Then, the Amiga
 	* program looks up "uae_xxx" (yes, it's contrived).  The filesystem
 	* should not make the uae_xxx file visible to the Amiga side.  */
-	if (fsdb_used_as_nname (base, rel))
-		return 0;
+	if (fsdb_used_as_nname (base, rel)) {
+		TCHAR* encoded = aname_to_nname(rel, 0);
+		const bool has_evil_chars = encoded && _tcscmp(encoded, rel) != 0;
+		xfree(encoded);
+		if (!has_evil_chars)
+			return 0;
+	}
 	/* A file called "." (or whatever else is invalid on this filesystem)
 	* does not exist, as far as the Amiga side is concerned.  */
 
@@ -4298,7 +4303,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		put_long_host(buf + 124, statbuf.size > MAXFILESIZE32 ? MAXFILESIZE32 : (uae_u32)statbuf.size);
 	}
 
-	timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
+	fsdb_get_file_time(aino, &days, &mins, &ticks);
 	put_long_host(buf + 132, days);
 	put_long_host(buf + 136, mins);
 	put_long_host(buf + 140, ticks);
@@ -4607,7 +4612,7 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 		size2 += 4;
 	}
 	if (type >= 5) {
-		timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
+		fsdb_get_file_time(aino, &days, &mins, &ticks);
 		size2 += 12;
 	}
 	if (type >= 6) {

@@ -229,6 +229,12 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 		if (size < 0) {
 			break;
 		}
+		if (size > 4096) {
+			write_log(_T("fsdb_read_uaem: sidecar too large for '%s' (%ld bytes)\n"),
+				nname,
+				size);
+			break;
+		}
 		if (fseek(file, 0, SEEK_SET) != 0) {
 			break;
 		}
@@ -330,25 +336,9 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 	return result;
 }
 
-int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
+static int fsdb_write_uaem_file(const char* path_utf8, const fsdb_file_info* info, bool has_comment)
 {
-	if (!nname || !info) {
-		return ERROR_OBJECT_NOT_AROUND;
-	}
-
-	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
-	const bool has_comment = info->comment && info->comment[0] != '\0';
-	const bool need_uaem = info->mode != static_cast<uint32_t>(default_mode) || has_comment;
-
-	const std::string uaem_path = std::string(nname) + ".uaem";
-	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
-
-	if (!need_uaem) {
-		remove(uaem_path_utf8.c_str());
-		return 0;
-	}
-
-	FILE* file = fopen(uaem_path_utf8.c_str(), "wb");
+	FILE* file = fopen(path_utf8, "wb");
 	if (!file) {
 		return ERROR_OBJECT_NOT_AROUND;
 	}
@@ -408,9 +398,47 @@ int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 		free(encoded_comment);
 	}
 
-	fputc('\n', file);
-	fclose(file);
+	if (fputc('\n', file) == EOF) {
+		fclose(file);
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+	if (fclose(file) != 0) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
 	return 0;
+}
+
+int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
+{
+	if (!nname || !info) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
+	const bool has_comment = info->comment && info->comment[0] != '\0';
+	const bool has_time = info->days != 0 || info->mins != 0 || info->ticks != 0;
+	const bool need_uaem = info->mode != static_cast<uint32_t>(default_mode) || has_comment || has_time;
+
+	const std::string uaem_path = std::string(nname) + ".uaem";
+	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
+
+	if (!need_uaem) {
+		remove(uaem_path_utf8.c_str());
+		return 0;
+	}
+
+	const std::string tmp_path_utf8 = uaem_path_utf8 + ".tmp";
+	int write_err = fsdb_write_uaem_file(tmp_path_utf8.c_str(), info, has_comment);
+	if (write_err != 0) {
+		return write_err;
+	}
+
+	if (rename(tmp_path_utf8.c_str(), uaem_path_utf8.c_str()) == 0) {
+		return 0;
+	}
+
+	remove(tmp_path_utf8.c_str());
+	return fsdb_write_uaem_file(uaem_path_utf8.c_str(), info, has_comment);
 }
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
@@ -565,7 +593,14 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 
 	fsdb_file_info info;
 	fsdb_init_file_info(&info);
-	fsdb_read_uaem(name, &info);
+	const int read_err = fsdb_read_uaem(name, &info);
+	if (read_err != 0 && read_err != ERROR_OBJECT_NOT_AROUND) {
+		write_log(_T("my_utime: malformed .uaem for '%s', preserving existing sidecar\n"), name);
+		if (info.comment) {
+			xfree(info.comment);
+		}
+		return true;
+	}
 	timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
 	const int uaem_err = fsdb_write_uaem(name, &info);
 	if (info.comment) {
@@ -724,7 +759,15 @@ int fsdb_set_file_attrs(a_inode* aino)
 
 		fsdb_file_info info;
 		fsdb_init_file_info(&info);
-		fsdb_read_uaem(aino->nname, &info);
+		const int read_err = fsdb_read_uaem(aino->nname, &info);
+		if (read_err != 0 && read_err != ERROR_OBJECT_NOT_AROUND) {
+			write_log(_T("fsdb_set_file_attrs: malformed .uaem for '%s', preserving existing sidecar\n"), aino->nname);
+			if (info.comment) {
+				xfree(info.comment);
+			}
+			aino->dirty = 1;
+			return 0;
+		}
 		info.mode = aino->amigaos_mode ^ 0xf;
 		const int uaem_err = fsdb_write_uaem(aino->nname, &info);
 		if (info.comment) {
@@ -741,7 +784,56 @@ int fsdb_set_file_attrs(a_inode* aino)
         write_log(_T("fsdb_set_file_attrs: exception for '%s': %s\n"),
                  aino->nname, e.what());
         return ERROR_OBJECT_NOT_AROUND;
-    }
+	}
+}
+
+void fsdb_get_file_time(a_inode* node, int* days, int* mins, int* ticks)
+{
+	if (days) {
+		*days = 0;
+	}
+	if (mins) {
+		*mins = 0;
+	}
+	if (ticks) {
+		*ticks = 0;
+	}
+
+	if (!node || !node->nname || !days || !mins || !ticks) {
+		return;
+	}
+
+	fsdb_file_info info;
+	fsdb_init_file_info(&info);
+	if (fsdb_read_uaem(node->nname, &info) == 0) {
+		*days = info.days;
+		*mins = info.mins;
+		*ticks = info.ticks;
+		if (info.comment) {
+			xfree(info.comment);
+		}
+		return;
+	}
+	if (info.comment) {
+		xfree(info.comment);
+	}
+
+	struct mystat statbuf {};
+	if (!my_stat(node->nname, &statbuf)) {
+		return;
+	}
+	timeval_to_amiga(&statbuf.mtime, days, mins, ticks, 50);
+}
+
+int fsdb_set_file_time(a_inode* node, int days, int mins, int ticks)
+{
+	if (!node || !node->nname) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	struct mytimeval tv {};
+	amiga_to_timeval(&tv, days, mins, ticks, 50);
+	return my_utime(node->nname, &tv) ? 0 : ERROR_OBJECT_NOT_AROUND;
 }
 
 static void find_nname_case(const char* dir_path, char** name)
