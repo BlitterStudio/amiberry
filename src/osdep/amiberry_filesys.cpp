@@ -42,6 +42,7 @@ namespace fs = std::filesystem;
 #endif
 
 #include <set>
+#include <unordered_set>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -138,6 +139,7 @@ static inline int utimes(const char* path, const struct timeval tv[2])
 
 struct my_opendir_s {
 	DIR* dir{};
+	std::unordered_set<std::string> uaem_basenames;
 };
 
 struct my_openfile_s {
@@ -678,8 +680,12 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 		const std::string result(entry->d_name);
 		const int len = result.length();
 
-		if (ignoreList.find(result) != ignoreList.end() ||
-			(len > 5 && result.compare(len - 5, 5, ".uaem") == 0)) {
+		if (ignoreList.find(result) != ignoreList.end()) {
+			continue;
+		}
+
+		if (len > 5 && result.compare(len - 5, 5, ".uaem") == 0) {
+			mod->uaem_basenames.insert(result.substr(0, len - 5));
 			continue;
 		}
 
