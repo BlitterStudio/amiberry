@@ -520,6 +520,7 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 
 	struct mytimeval mtv;
 
+	bool ok = false;
 	try {
 		if (tv == nullptr) {
 			time_t rawtime;
@@ -551,16 +552,30 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 		struct _utimbuf utb;
 		utb.actime = mtv.tv_sec;
 		utb.modtime = mtv.tv_sec;
-		return _utime(name, &utb) == 0;
+		ok = _utime(name, &utb) == 0;
 #else
 		struct timeval times[2];
 		times[0] = times[1] = { mtv.tv_sec, mtv.tv_usec };
-		return utimes(name, times) == 0;
+		ok = utimes(name, times) == 0;
 #endif
 	}
 	catch (...) {
 		return false;
 	}
+
+	if (!ok) {
+		return false;
+	}
+
+	fsdb_file_info info;
+	fsdb_init_file_info(&info);
+	fsdb_read_uaem(name, &info);
+	timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
+	const int uaem_err = fsdb_write_uaem(name, &info);
+	if (info.comment) {
+		xfree(info.comment);
+	}
+	return uaem_err == 0;
 }
 
 /* return supported combination */
@@ -636,6 +651,22 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 		aino->amigaos_mode &= ~A_FIBF_READ;
 #endif
 
+		fsdb_file_info info;
+		fsdb_init_file_info(&info);
+		if (fsdb_read_uaem(aino->nname, &info) == 0) {
+			aino->amigaos_mode = info.mode ^ 0xf;
+			if (info.comment) {
+				if (aino->comment) {
+					xfree(aino->comment);
+				}
+				aino->comment = info.comment;
+				info.comment = nullptr;
+			}
+		}
+		if (info.comment) {
+			xfree(info.comment);
+		}
+
 		return 1;
 	}
 	catch (const std::exception& e) {
@@ -687,16 +718,28 @@ int fsdb_set_file_attrs(a_inode* aino)
             mode |= (S_IXGRP | S_IXOTH);
         }
 
-        // Apply new permissions
-        if (chmod(path_utf8.c_str(), mode) != 0) {
-            const int err = errno;
-            write_log(_T("fsdb_set_file_attrs: chmod failed for '%s': %s\n"),
-                     aino->nname, strerror(err));
-            return host_errno_to_dos_errno(err);
-        }
+		// Apply new permissions
+		if (chmod(path_utf8.c_str(), mode) != 0) {
+			const int err = errno;
+			write_log(_T("fsdb_set_file_attrs: chmod failed for '%s': %s\n"),
+					 aino->nname, strerror(err));
+			return host_errno_to_dos_errno(err);
+		}
 
-        aino->dirty = 1;
-        return 0;
+		fsdb_file_info info;
+		fsdb_init_file_info(&info);
+		fsdb_read_uaem(aino->nname, &info);
+		info.mode = aino->amigaos_mode ^ 0xf;
+		const int uaem_err = fsdb_write_uaem(aino->nname, &info);
+		if (info.comment) {
+			xfree(info.comment);
+		}
+		if (uaem_err != 0) {
+			return uaem_err;
+		}
+
+		aino->dirty = 1;
+		return 0;
     }
     catch (const std::exception& e) {
         write_log(_T("fsdb_set_file_attrs: exception for '%s': %s\n"),
