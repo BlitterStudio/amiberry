@@ -768,6 +768,12 @@ int fsdb_set_file_attrs(a_inode* aino)
 			aino->dirty = 1;
 			return 0;
 		}
+		if (read_err == ERROR_OBJECT_NOT_AROUND) {
+			struct mystat st {};
+			if (my_stat(aino->nname, &st)) {
+				timeval_to_amiga(&st.mtime, &info.days, &info.mins, &info.ticks, 50);
+			}
+		}
 		info.mode = aino->amigaos_mode ^ 0xf;
 		// Use the current aino comment (may have been updated by ACTION_SET_COMMENT)
 		if (info.comment) {

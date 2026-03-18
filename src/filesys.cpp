@@ -4303,7 +4303,10 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		put_long_host(buf + 124, statbuf.size > MAXFILESIZE32 ? MAXFILESIZE32 : (uae_u32)statbuf.size);
 	}
 
-	fsdb_get_file_time(aino, &days, &mins, &ticks);
+	if (unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS))
+		timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
+	else
+		fsdb_get_file_time(aino, &days, &mins, &ticks);
 	put_long_host(buf + 132, days);
 	put_long_host(buf + 136, mins);
 	put_long_host(buf + 140, ticks);
@@ -4612,7 +4615,10 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 		size2 += 4;
 	}
 	if (type >= 5) {
-		fsdb_get_file_time(aino, &days, &mins, &ticks);
+		if (unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS))
+			timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
+		else
+			fsdb_get_file_time(aino, &days, &mins, &ticks);
 		size2 += 12;
 	}
 	if (type >= 6) {
