@@ -15,6 +15,7 @@
 #include <climits>
 #include <memory>
 #include <chrono>
+#include <vector>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -204,6 +205,216 @@ void fsdb_init_file_info(fsdb_file_info* info)
 	info->mins = 0;
 	info->ticks = 0;
 	info->comment = nullptr;
+}
+
+int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
+{
+	if (!nname || !info) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	const std::string uaem_path = std::string(nname) + ".uaem";
+	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
+	FILE* file = fopen(uaem_path_utf8.c_str(), "rb");
+	if (!file) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	int result = 0;
+	if (fseek(file, 0, SEEK_END) != 0) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+	const long size = ftell(file);
+	if (size < 0) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+	if (fseek(file, 0, SEEK_SET) != 0) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+
+	std::vector<char> buffer(static_cast<size_t>(size) + 1);
+	if (size > 0 && fread(buffer.data(), 1, static_cast<size_t>(size), file) != static_cast<size_t>(size)) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+	buffer[static_cast<size_t>(size)] = '\0';
+
+	const char* p = buffer.data();
+	size_t remaining = static_cast<size_t>(size);
+	if (remaining >= 3 && static_cast<unsigned char>(p[0]) == 0xEF
+		&& static_cast<unsigned char>(p[1]) == 0xBB
+		&& static_cast<unsigned char>(p[2]) == 0xBF) {
+		p += 3;
+		remaining -= 3;
+	}
+
+	if (remaining < 8) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+
+	fsdb_init_file_info(info);
+	info->mode = 0;
+	static const int bits[8] = {
+		A_FIBF_HIDDEN,
+		A_FIBF_SCRIPT,
+		A_FIBF_PURE,
+		A_FIBF_ARCHIVE,
+		A_FIBF_READ,
+		A_FIBF_WRITE,
+		A_FIBF_EXECUTE,
+		A_FIBF_DELETE
+	};
+	static const char chars[8] = { 'h', 's', 'p', 'a', 'r', 'w', 'e', 'd' };
+	for (int i = 0; i < 8; ++i) {
+		if (p[i] == chars[i]) {
+			info->mode |= bits[i];
+		}
+	}
+	p += 8;
+	remaining -= 8;
+
+	while (remaining > 0 && *p == ' ') {
+		++p;
+		--remaining;
+	}
+
+	int year, month, day, hour, min, sec, centisec;
+	if (remaining < 22 || sscanf(p, "%4d-%2d-%2d %2d:%2d:%2d.%2d", &year, &month, &day, &hour, &min, &sec, &centisec) != 7) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+
+	struct tm tmv {};
+	tmv.tm_year = year - 1900;
+	tmv.tm_mon = month - 1;
+	tmv.tm_mday = day;
+	tmv.tm_hour = hour;
+	tmv.tm_min = min;
+	tmv.tm_sec = sec;
+#ifdef _WIN32
+	time_t utc = _mkgmtime(&tmv);
+#else
+	time_t utc = timegm(&tmv);
+#endif
+	if (utc == static_cast<time_t>(-1)) {
+		result = ERROR_BAD_NUMBER;
+		goto out;
+	}
+
+	struct mytimeval tv {};
+	tv.tv_sec = static_cast<int>(utc);
+	tv.tv_usec = centisec * 10000;
+	timeval_to_amiga(&tv, &info->days, &info->mins, &info->ticks, 50);
+
+	p += 22;
+	remaining -= 22;
+	while (remaining > 0 && *p == ' ') {
+		++p;
+		--remaining;
+	}
+
+	if (remaining > 0 && *p != '\r' && *p != '\n') {
+		const char* start = p;
+		while (remaining > 0 && *p != '\r' && *p != '\n') {
+			++p;
+			--remaining;
+		}
+		std::string comment(start, static_cast<size_t>(p - start));
+		if (!comment.empty()) {
+			info->comment = nname_to_aname(comment.c_str(), 1);
+		}
+	}
+
+out:
+	fclose(file);
+	return result;
+}
+
+int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
+{
+	if (!nname || !info) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
+	const bool has_comment = info->comment && info->comment[0] != '\0';
+	const bool need_uaem = info->mode != static_cast<uint32_t>(default_mode) || has_comment;
+
+	const std::string uaem_path = std::string(nname) + ".uaem";
+	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
+
+	if (!need_uaem) {
+		remove(uaem_path_utf8.c_str());
+		return 0;
+	}
+
+	FILE* file = fopen(uaem_path_utf8.c_str(), "wb");
+	if (!file) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	static const int bits[8] = {
+		A_FIBF_HIDDEN,
+		A_FIBF_SCRIPT,
+		A_FIBF_PURE,
+		A_FIBF_ARCHIVE,
+		A_FIBF_READ,
+		A_FIBF_WRITE,
+		A_FIBF_EXECUTE,
+		A_FIBF_DELETE
+	};
+	static const char chars[8] = { 'h', 's', 'p', 'a', 'r', 'w', 'e', 'd' };
+	char prot[9] = {};
+	for (int i = 0; i < 8; ++i) {
+		prot[i] = (info->mode & bits[i]) ? chars[i] : '-';
+	}
+	prot[8] = '\0';
+
+	struct mytimeval tv {};
+	amiga_to_timeval(&tv, info->days, info->mins, info->ticks, 50);
+	time_t t = static_cast<time_t>(tv.tv_sec);
+	struct tm tmv {};
+#ifdef _WIN32
+	gmtime_s(&tmv, &t);
+#else
+	gmtime_r(&t, &tmv);
+#endif
+	const int centisec = tv.tv_usec / 10000;
+
+	if (fprintf(file, "%s %04d-%02d-%02d %02d:%02d:%02d.%02d",
+		prot,
+		tmv.tm_year + 1900,
+		tmv.tm_mon + 1,
+		tmv.tm_mday,
+		tmv.tm_hour,
+		tmv.tm_min,
+		tmv.tm_sec,
+		centisec) < 0) {
+		fclose(file);
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
+	if (has_comment) {
+		char* encoded_comment = aname_to_nname(info->comment, 1);
+		if (!encoded_comment) {
+			fclose(file);
+			return ERROR_NO_FREE_STORE;
+		}
+		if (fprintf(file, " %s", encoded_comment) < 0) {
+			free(encoded_comment);
+			fclose(file);
+			return ERROR_OBJECT_NOT_AROUND;
+		}
+		free(encoded_comment);
+	}
+
+	fputc('\n', file);
+	fclose(file);
+	return 0;
 }
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
