@@ -354,6 +354,35 @@ void render_panel_rtg() {
     ImGui::Text("Screen Mode settings");
     ImGui::Separator();
 
+    {
+        int display_count = 0;
+        while (display_count < MAX_DISPLAYS && Displays[display_count].monitorname)
+            display_count++;
+        if (display_count > 1) {
+            ImGui::Text("Display:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+            int current_display = changed_prefs.gfx_apmode[APMODE_RTG].gfx_display;
+            if (ImGui::BeginCombo("##RTGHostDisplay", current_display > 0 && current_display <= display_count
+                ? Displays[current_display - 1].monitorname : "Primary")) {
+                for (int i = 0; i < display_count; i++) {
+                    char label[256];
+                    snprintf(label, sizeof(label), "%s%s", Displays[i].monitorname,
+                        Displays[i].primary ? " (Primary)" : "");
+                    bool is_selected = (current_display == i + 1);
+                    if (ImGui::Selectable(label, is_selected)) {
+                        changed_prefs.gfx_apmode[APMODE_RTG].gfx_display = i + 1;
+                    }
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ImGui::Spacing();
+        }
+    }
+
     if (ImGui::BeginTable("rtg_bottom_table", 3, ImGuiTableFlags_None)) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
