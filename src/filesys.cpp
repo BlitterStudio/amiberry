@@ -2748,8 +2748,6 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 		return 0;
 	/* A file called "." (or whatever else is invalid on this filesystem)
 	* does not exist, as far as the Amiga side is concerned.  */
-	if (fsdb_name_invalid_dir (base, rel))
-		return 0;
 
 	/* See if we have a file that has the same name as the aname we are
 	* looking for.  */
@@ -2760,6 +2758,18 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 	found = fsdb_search_dir (base->nname, rel);
 #endif
 	if (found == 0) {
+		TCHAR* encoded = aname_to_nname(rel, 0);
+		if (encoded && _tcscmp(encoded, rel) != 0) {
+			TCHAR* enc_found = fsdb_search_dir(base->nname, encoded);
+			if (enc_found) {
+				TCHAR* result = build_nname(base->nname, enc_found);
+				if (enc_found != encoded)
+					xfree(enc_found);
+				xfree(encoded);
+				return result;
+			}
+		}
+		xfree(encoded);
 		return found;
 	}
 	if (found == rel) {

@@ -220,116 +220,112 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 		return ERROR_OBJECT_NOT_AROUND;
 	}
 
-	int result = 0;
-	if (fseek(file, 0, SEEK_END) != 0) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
-	const long size = ftell(file);
-	if (size < 0) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
-	if (fseek(file, 0, SEEK_SET) != 0) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
-
-	std::vector<char> buffer(static_cast<size_t>(size) + 1);
-	if (size > 0 && fread(buffer.data(), 1, static_cast<size_t>(size), file) != static_cast<size_t>(size)) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
-	buffer[static_cast<size_t>(size)] = '\0';
-
-	const char* p = buffer.data();
-	size_t remaining = static_cast<size_t>(size);
-	if (remaining >= 3 && static_cast<unsigned char>(p[0]) == 0xEF
-		&& static_cast<unsigned char>(p[1]) == 0xBB
-		&& static_cast<unsigned char>(p[2]) == 0xBF) {
-		p += 3;
-		remaining -= 3;
-	}
-
-	if (remaining < 8) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
-
-	fsdb_init_file_info(info);
-	info->mode = 0;
-	static const int bits[8] = {
-		A_FIBF_HIDDEN,
-		A_FIBF_SCRIPT,
-		A_FIBF_PURE,
-		A_FIBF_ARCHIVE,
-		A_FIBF_READ,
-		A_FIBF_WRITE,
-		A_FIBF_EXECUTE,
-		A_FIBF_DELETE
-	};
-	static const char chars[8] = { 'h', 's', 'p', 'a', 'r', 'w', 'e', 'd' };
-	for (int i = 0; i < 8; ++i) {
-		if (p[i] == chars[i]) {
-			info->mode |= bits[i];
+	int result = ERROR_BAD_NUMBER;
+	do {
+		if (fseek(file, 0, SEEK_END) != 0) {
+			break;
 		}
-	}
-	p += 8;
-	remaining -= 8;
+		const long size = ftell(file);
+		if (size < 0) {
+			break;
+		}
+		if (fseek(file, 0, SEEK_SET) != 0) {
+			break;
+		}
 
-	while (remaining > 0 && *p == ' ') {
-		++p;
-		--remaining;
-	}
+		std::vector<char> buffer(static_cast<size_t>(size) + 1);
+		if (size > 0 && fread(buffer.data(), 1, static_cast<size_t>(size), file) != static_cast<size_t>(size)) {
+			break;
+		}
+		buffer[static_cast<size_t>(size)] = '\0';
 
-	int year, month, day, hour, min, sec, centisec;
-	if (remaining < 22 || sscanf(p, "%4d-%2d-%2d %2d:%2d:%2d.%2d", &year, &month, &day, &hour, &min, &sec, &centisec) != 7) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
+		const char* p = buffer.data();
+		size_t remaining = static_cast<size_t>(size);
+		if (remaining >= 3 && static_cast<unsigned char>(p[0]) == 0xEF
+			&& static_cast<unsigned char>(p[1]) == 0xBB
+			&& static_cast<unsigned char>(p[2]) == 0xBF) {
+			p += 3;
+			remaining -= 3;
+		}
 
-	struct tm tmv {};
-	tmv.tm_year = year - 1900;
-	tmv.tm_mon = month - 1;
-	tmv.tm_mday = day;
-	tmv.tm_hour = hour;
-	tmv.tm_min = min;
-	tmv.tm_sec = sec;
-#ifdef _WIN32
-	time_t utc = _mkgmtime(&tmv);
-#else
-	time_t utc = timegm(&tmv);
-#endif
-	if (utc == static_cast<time_t>(-1)) {
-		result = ERROR_BAD_NUMBER;
-		goto out;
-	}
+		if (remaining < 8) {
+			break;
+		}
 
-	struct mytimeval tv {};
-	tv.tv_sec = static_cast<int>(utc);
-	tv.tv_usec = centisec * 10000;
-	timeval_to_amiga(&tv, &info->days, &info->mins, &info->ticks, 50);
+		fsdb_init_file_info(info);
+		info->mode = 0;
+		static const int bits[8] = {
+			A_FIBF_HIDDEN,
+			A_FIBF_SCRIPT,
+			A_FIBF_PURE,
+			A_FIBF_ARCHIVE,
+			A_FIBF_READ,
+			A_FIBF_WRITE,
+			A_FIBF_EXECUTE,
+			A_FIBF_DELETE
+		};
+		static const char chars[8] = { 'h', 's', 'p', 'a', 'r', 'w', 'e', 'd' };
+		for (int i = 0; i < 8; ++i) {
+			if (p[i] == chars[i]) {
+				info->mode |= bits[i];
+			}
+		}
+		p += 8;
+		remaining -= 8;
 
-	p += 22;
-	remaining -= 22;
-	while (remaining > 0 && *p == ' ') {
-		++p;
-		--remaining;
-	}
-
-	if (remaining > 0 && *p != '\r' && *p != '\n') {
-		const char* start = p;
-		while (remaining > 0 && *p != '\r' && *p != '\n') {
+		while (remaining > 0 && *p == ' ') {
 			++p;
 			--remaining;
 		}
-		std::string comment(start, static_cast<size_t>(p - start));
-		if (!comment.empty()) {
-			info->comment = nname_to_aname(comment.c_str(), 1);
-		}
-	}
 
-out:
+		int year, month, day, hour, min, sec, centisec;
+		if (remaining < 22 || sscanf(p, "%4d-%2d-%2d %2d:%2d:%2d.%2d", &year, &month, &day, &hour, &min, &sec, &centisec) != 7) {
+			break;
+		}
+
+		struct tm tmv {};
+		tmv.tm_year = year - 1900;
+		tmv.tm_mon = month - 1;
+		tmv.tm_mday = day;
+		tmv.tm_hour = hour;
+		tmv.tm_min = min;
+		tmv.tm_sec = sec;
+#ifdef _WIN32
+		time_t utc = _mkgmtime(&tmv);
+#else
+		time_t utc = timegm(&tmv);
+#endif
+		if (utc == static_cast<time_t>(-1)) {
+			break;
+		}
+
+		struct mytimeval tv {};
+		tv.tv_sec = static_cast<int>(utc);
+		tv.tv_usec = centisec * 10000;
+		timeval_to_amiga(&tv, &info->days, &info->mins, &info->ticks, 50);
+
+		p += 22;
+		remaining -= 22;
+		while (remaining > 0 && *p == ' ') {
+			++p;
+			--remaining;
+		}
+
+		if (remaining > 0 && *p != '\r' && *p != '\n') {
+			const char* start = p;
+			while (remaining > 0 && *p != '\r' && *p != '\n') {
+				++p;
+				--remaining;
+			}
+			std::string comment(start, static_cast<size_t>(p - start));
+			if (!comment.empty()) {
+				info->comment = nname_to_aname(comment.c_str(), 1);
+			}
+		}
+
+		result = 0;
+	} while (0);
+
 	fclose(file);
 	return result;
 }
@@ -746,6 +742,157 @@ int fsdb_set_file_attrs(a_inode* aino)
                  aino->nname, e.what());
         return ERROR_OBJECT_NOT_AROUND;
     }
+}
+
+static void find_nname_case(const char* dir_path, char** name)
+{
+	if (!dir_path || !name || !*name) {
+		return;
+	}
+
+	const auto dir_path_utf8 = iso_8859_1_to_utf8(std::string_view(dir_path));
+	DIR* dir = opendir(dir_path_utf8.c_str());
+	if (!dir) {
+		return;
+	}
+
+	std::string search_latin1;
+	const char* search_name = *name;
+	if (utf8_to_latin1_string(std::string_view(*name), search_latin1)) {
+		search_name = search_latin1.c_str();
+	}
+
+	struct dirent* entry;
+	while ((entry = readdir(dir)) != nullptr) {
+		std::string entry_latin1;
+		const char* entry_name = entry->d_name;
+		if (utf8_to_latin1_string(std::string_view(entry->d_name), entry_latin1)) {
+			entry_name = entry_latin1.c_str();
+		}
+		if (strcasecmp(entry_name, search_name) == 0) {
+			free(*name);
+			*name = strdup(entry->d_name);
+			break;
+		}
+	}
+
+	closedir(dir);
+}
+
+a_inode* custom_fsdb_lookup_aino_aname(a_inode* base, const TCHAR* aname)
+{
+	if (!base || !base->nname || !aname) {
+		return nullptr;
+	}
+
+	char* encoded = aname_to_nname(aname, 0);
+	if (!encoded) {
+		return nullptr;
+	}
+
+	find_nname_case(base->nname, &encoded);
+	TCHAR* full_nname = build_nname(base->nname, encoded);
+	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
+	struct stat statbuf {};
+	if (stat(full_nname_utf8.c_str(), &statbuf) != 0) {
+		free(encoded);
+		xfree(full_nname);
+		return nullptr;
+	}
+
+	a_inode* aino = xcalloc(a_inode, 1);
+	if (!aino) {
+		free(encoded);
+		xfree(full_nname);
+		return nullptr;
+	}
+
+	aino->aname = nname_to_aname(encoded, 0);
+	aino->nname = full_nname;
+	aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
+	aino->amigaos_mode = ((S_IXUSR & statbuf.st_mode ? 0 : A_FIBF_EXECUTE)
+		| (S_IWUSR & statbuf.st_mode ? 0 : A_FIBF_WRITE)
+		| (S_IRUSR & statbuf.st_mode ? 0 : A_FIBF_READ));
+#if defined(AMIBERRY)
+	aino->amigaos_mode &= ~A_FIBF_EXECUTE;
+	aino->amigaos_mode &= ~A_FIBF_READ;
+#endif
+	aino->comment = nullptr;
+	aino->has_dbentry = 0;
+	aino->dirty = 0;
+	aino->db_offset = 0;
+
+	fsdb_file_info info;
+	fsdb_init_file_info(&info);
+	if (fsdb_read_uaem(full_nname, &info) == 0) {
+		aino->amigaos_mode = info.mode ^ 0xf;
+		if (info.comment) {
+			aino->comment = info.comment;
+			info.comment = nullptr;
+		}
+	}
+	if (info.comment) {
+		xfree(info.comment);
+	}
+
+	free(encoded);
+	return aino;
+}
+
+a_inode* custom_fsdb_lookup_aino_nname(a_inode* base, const TCHAR* nname)
+{
+	if (!base || !base->nname || !nname) {
+		return nullptr;
+	}
+
+	TCHAR* full_nname = build_nname(base->nname, nname);
+	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
+	struct stat statbuf {};
+	if (stat(full_nname_utf8.c_str(), &statbuf) != 0) {
+		xfree(full_nname);
+		return nullptr;
+	}
+
+	a_inode* aino = xcalloc(a_inode, 1);
+	if (!aino) {
+		xfree(full_nname);
+		return nullptr;
+	}
+
+	aino->aname = nname_to_aname(nname, 0);
+	aino->nname = full_nname;
+	aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
+	aino->amigaos_mode = ((S_IXUSR & statbuf.st_mode ? 0 : A_FIBF_EXECUTE)
+		| (S_IWUSR & statbuf.st_mode ? 0 : A_FIBF_WRITE)
+		| (S_IRUSR & statbuf.st_mode ? 0 : A_FIBF_READ));
+#if defined(AMIBERRY)
+	aino->amigaos_mode &= ~A_FIBF_EXECUTE;
+	aino->amigaos_mode &= ~A_FIBF_READ;
+#endif
+	aino->comment = nullptr;
+	aino->has_dbentry = 0;
+	aino->dirty = 0;
+	aino->db_offset = 0;
+
+	fsdb_file_info info;
+	fsdb_init_file_info(&info);
+	if (fsdb_read_uaem(full_nname, &info) == 0) {
+		aino->amigaos_mode = info.mode ^ 0xf;
+		if (info.comment) {
+			aino->comment = info.comment;
+			info.comment = nullptr;
+		}
+	}
+	if (info.comment) {
+		xfree(info.comment);
+	}
+
+	return aino;
+}
+
+int custom_fsdb_used_as_nname(a_inode* base, const TCHAR* nname)
+{
+	return 1;
 }
 
 int same_aname(const char* an1, const char* an2)
