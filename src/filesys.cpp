@@ -2871,7 +2871,7 @@ static void handle_softlink(TrapContext *ctx, Unit *unit, dpacket *packet, a_ino
 */
 static TCHAR *get_aname (Unit *unit, a_inode *base, TCHAR *rel)
 {
-	return my_strdup (rel);
+	return nname_to_aname (rel, 0);
 }
 
 static void init_child_aino_tree (Unit *unit, a_inode *base, a_inode *aino)
@@ -4712,7 +4712,7 @@ static int action_examine_all_do(TrapContext *ctx, Unit *unit, uaecptr lock, ExA
 		if (!eak->fn) {
 			do {
 				ok = filesys_readdir(d, fn, &uniq);
-			} while (ok && d->fstype == FS_DIRECTORY && (filesys_name_invalid (fn) || fsdb_name_invalid_dir (NULL, fn)));
+			} while (ok && d->fstype == FS_DIRECTORY && filesys_name_invalid (fn));
 			if (!ok)
 				return 0;
 		} else {
@@ -5042,7 +5042,7 @@ static void populate_directory (Unit *unit, a_inode *base)
 		like "..", "." etc.  */
 		do {
 			ok = filesys_readdir(d, fn, &uniq);
-		} while (ok && d->fstype == FS_DIRECTORY && (filesys_name_invalid (fn) || fsdb_name_invalid_dir (NULL, fn)));
+		} while (ok && d->fstype == FS_DIRECTORY && filesys_name_invalid (fn));
 		if (!ok)
 			break;
 		/* This calls init_child_aino, which will notice that the parent is
