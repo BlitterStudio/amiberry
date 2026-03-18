@@ -669,7 +669,7 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 		return 0;
 	}
 
-	static const std::set<std::string> ignoreList = { "_UAEFSDB.___", "Thumbs.db", ".DS_Store", "UAEFS.ini" };
+	static const std::set<std::string> ignoreList = { ".", "..", "_UAEFSDB.___", "Thumbs.db", ".DS_Store", "UAEFS.ini" };
 
 	while (true) {
 		auto* entry = readdir(mod->dir);
@@ -1216,7 +1216,14 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		// First try to remove common system files that might prevent directory deletion
 		const std::array<const char*, 2> extra_files = { "Thumbs.db", ".DS_Store" };
 		for (const auto& file : extra_files) {
-			(void)remove_extra_file(path, file);  // Best-effort cleanup, ignore result
+			(void)remove_extra_file(path, file);
+		}
+
+		for (const auto& entry : fs::directory_iterator(dirpath, ec)) {
+			const auto name = entry.path().filename().string();
+			if (name.size() > 5 && name.compare(name.size() - 5, 5, ".uaem") == 0) {
+				fs::remove(entry.path(), ec);
+			}
 		}
 
 		// Check if directory is empty (excluding . and ..)
@@ -1293,6 +1300,11 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			return -1;
 		}
 
+		fs::path uaem_path(utf8_path + ".uaem");
+		if (fs::exists(uaem_path, ec)) {
+			fs::remove(uaem_path, ec);
+		}
+
 		return 0;
 	}
 	catch (const std::exception& e) {
@@ -1354,6 +1366,12 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			}
 			write_log("my_rename: rename from '%s' to '%s' failed: %s (errno=%d)\n",
 				oldname, newname, error_msg, errno);
+		} else {
+			const std::string old_uaem = old_output + ".uaem";
+			const std::string new_uaem = new_output + ".uaem";
+			if (fs::exists(fs::path(old_uaem))) {
+				rename(old_uaem.c_str(), new_uaem.c_str());
+			}
 		}
 
 		return result;
