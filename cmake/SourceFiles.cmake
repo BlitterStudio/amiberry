@@ -461,10 +461,19 @@ else()
     set(AMIBERRY_IS_PRE_RELEASE 0)
 endif()
 
-# Build date components (configure-time timestamp)
+# Build date components (configure-time wall-clock timestamp)
+# Temporarily unset SOURCE_DATE_EPOCH so string(TIMESTAMP) returns the
+# real build date. Flatpak-builder sets this for reproducible builds,
+# which since CMake 3.24 causes string(TIMESTAMP) to return the epoch
+# date instead of the current date (see issue #1854).
+set(_sde_backup "$ENV{SOURCE_DATE_EPOCH}")
+unset(ENV{SOURCE_DATE_EPOCH})
 string(TIMESTAMP AMIBERRY_BUILD_YEAR "%Y")
 string(TIMESTAMP AMIBERRY_BUILD_MONTH "%m")
 string(TIMESTAMP AMIBERRY_BUILD_DAY "%d")
+if(NOT "${_sde_backup}" STREQUAL "")
+    set(ENV{SOURCE_DATE_EPOCH} "${_sde_backup}")
+endif()
 # Remove leading zeros for C integer literals
 math(EXPR AMIBERRY_BUILD_MONTH_INT "${AMIBERRY_BUILD_MONTH}")
 math(EXPR AMIBERRY_BUILD_DAY_INT "${AMIBERRY_BUILD_DAY}")
