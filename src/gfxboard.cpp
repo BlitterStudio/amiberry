@@ -3668,13 +3668,10 @@ void gfxboard_reset_init(void)
 		struct rtgboardconfig *rbc = &currprefs.rtgboards[i];
 		if (rbc->initial_active) {
 			rtg_initial[rbc->monitor_id] = i;
-			int monid = rbc->monitor_id;
-			if (monid >= 0 && monid < MAX_AMIGADISPLAYS) {
-				struct amigadisplay *ad = &adisplays[monid];
-				ad->picasso_on = 1;
-				ad->picasso_requested_on = 1;
-				initial_done = 0;
-			}
+			struct amigadisplay *ad = &adisplays[i];
+			ad->picasso_on = 1;
+			ad->picasso_requested_on = 1;
+			initial_done = 0;
 		}
 	}
 }

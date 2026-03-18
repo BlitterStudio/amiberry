@@ -6008,12 +6008,11 @@ static int render_thread(void *v)
 		if (idx == -1)
 			break;
 		idx &= 0xff;
-		const int monid = currprefs.rtgboards[idx].monitor_id;
-		struct amigadisplay *ad = &adisplays[monid];
+		struct amigadisplay *ad = &adisplays[idx];
 		if (ad->picasso_on && ad->picasso_requested_on) {
 			lockrtg();
 			if (ad->picasso_requested_on) {
-				const struct picasso96_state_struct *state = &picasso96_state[monid];
+				const struct picasso96_state_struct *state = &picasso96_state[idx];
 				picasso_flushpixels(idx, gfxmem_banks[idx]->start + natmem_offset, state->XYOffset - gfxmem_banks[idx]->start, false);
 				ad->pending_render = true;
 			}
@@ -7050,10 +7049,9 @@ static uae_u32 p96_restored_flags;
 
 void restore_p96_finish ()
 {
-	int monid = currprefs.rtgboards[0].monitor_id;
-	struct amigadisplay *ad = &adisplays[monid];
-	struct picasso96_state_struct *state = &picasso96_state[monid];
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	struct amigadisplay *ad = &adisplays[0];
+	struct picasso96_state_struct *state = &picasso96_state[0];
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[0];
 
 	init_alloc (nullptr, 0);
 	if (uaegfx_rom && boardinfo) {
@@ -7063,14 +7061,14 @@ void restore_p96_finish ()
 
 		if (overlay_vram) {
 			overlay_vram_offset = static_cast<int>(overlay_vram - gfxmem_banks[0]->start);
-			overlay_convert = getconvert(static_cast<int>(overlay_format), vidinfo->pixbytes);
+			overlay_convert = getconvert(static_cast<int>(overlay_format), picasso_vidinfo[0].pixbytes);
 			if (!p96_rgbx16_ovl)
 				p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 			alloc_colors_picasso(8, 8, 8, 0, 8, 16, overlay_format, p96_rgbx16_ovl);
 			picasso_palette(overlay_clutc, overlay_clut);
 			overlay_color = overlay_color_unswapped;
 			overlay_pix = GetBytesPerPixel(overlay_format);
-			endianswap(&overlay_color, state->BytesPerPixel);
+			endianswap(&overlay_color, picasso96_state[0].BytesPerPixel);
 		}
 		if (cursorvisible) {
 			setspriteimage(nullptr, boardinfo);
@@ -7082,10 +7080,9 @@ void restore_p96_finish ()
 
 uae_u8 *restore_p96 (uae_u8 *src)
 {
-	int monid = currprefs.rtgboards[0].monitor_id;
-	struct amigadisplay *ad = &adisplays[monid];
-	struct picasso96_state_struct *state = &picasso96_state[monid];
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	struct amigadisplay *ad = &adisplays[0];
+	struct picasso96_state_struct *state = &picasso96_state[0];
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[0];
 	uae_u32 flags;
 
 	if (restore_u32 () != 2)
@@ -7165,10 +7162,9 @@ uae_u8 *restore_p96 (uae_u8 *src)
 
 uae_u8 *save_p96 (size_t *len, uae_u8 *dstptr)
 {
-	int monid = currprefs.rtgboards[0].monitor_id;
-	const struct amigadisplay *ad = &adisplays[monid];
-	const struct picasso96_state_struct *state = &picasso96_state[monid];
-	const struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	const struct amigadisplay *ad = &adisplays[0];
+	const struct picasso96_state_struct *state = &picasso96_state[0];
+	const struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[0];
 	uae_u8 *dstbak, *dst;
 	int i;
 
