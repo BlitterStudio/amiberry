@@ -2357,15 +2357,28 @@ static void handle_drop_file_event(const SDL_Event& event)
 	}
 }
 
+static AmigaMonitor* monitor_from_window_id(SDL_WindowID window_id)
+{
+	SDL_Window* win = SDL_GetWindowFromID(window_id);
+	if (win) {
+		for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+			if (AMonitors[i].active && AMonitors[i].amiga_window == win)
+				return &AMonitors[i];
+		}
+	}
+	return &AMonitors[0];
+}
+
 static void process_event(const SDL_Event& event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
-	// Handle window events (SDL3: flat top-level events instead of nested SDL_WINDOWEVENT)
-	if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST
-		&& SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
-	{
-		handle_window_event(event, mon);
+	if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST) {
+		mon = monitor_from_window_id(event.window.windowID);
+		if (mon->amiga_window && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window) {
+			handle_window_event(event, mon);
+			return;
+		}
 	}
 	else
 	{

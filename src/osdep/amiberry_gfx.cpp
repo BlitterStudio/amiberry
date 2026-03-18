@@ -125,7 +125,7 @@ FILE* screenshot_file = nullptr;
 int delay_savestate_frame = 0;
 #endif
 
-struct MultiDisplay Displays[MAX_DISPLAYS];
+struct MultiDisplay Displays[MAX_DISPLAYS + 1];
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 void updatepicasso96(struct AmigaMonitor* mon);

@@ -96,9 +96,14 @@ int gfx_GetHeight(const struct AmigaMonitor* mon)
 
 struct MultiDisplay* getdisplay2(const struct uae_prefs* p, const int index)
 {
-	const struct AmigaMonitor* mon = &AMonitors[0];
 	static int max;
-	int display = index < 0 ? p->gfx_apmode[mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE].gfx_display - 1 : index;
+	int display;
+	if (index < 0 && p) {
+		const int apmode = p->gfx_apmode[APMODE_NATIVE].gfx_display;
+		display = apmode - 1;
+	} else {
+		display = index;
+	}
 
 	if (!max || (max < MAX_DISPLAYS && max > 0 && Displays[max].monitorname != nullptr)) {
 		max = 0;
@@ -122,6 +127,10 @@ struct MultiDisplay* getdisplay(const struct uae_prefs* p, const int monid)
 	const struct AmigaMonitor* mon = &AMonitors[monid];
 	if (monid > 0 && mon->md)
 		return mon->md;
+	if (p) {
+		int apmode_idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
+		return getdisplay2(p, p->gfx_apmode[apmode_idx].gfx_display - 1);
+	}
 	return getdisplay2(p, 0);
 }
 
@@ -397,7 +406,7 @@ const TCHAR* target_get_display_name(const int num, const bool friendlyname)
 {
 	if (num <= 0)
 		return nullptr;
-	const struct MultiDisplay* md = getdisplay2(nullptr, 0);
+	const struct MultiDisplay* md = getdisplay2(nullptr, num - 1);
 	if (!md)
 		return nullptr;
 	if (friendlyname)
@@ -636,6 +645,7 @@ static bool enumeratedisplays2(bool selectall)
 		md->adapterkey = my_strdup(display_name);
 		md->monitorname = my_strdup_trim(display_name);
 		md->monitorid = my_strdup(display_name);
+		md->display_id = display_ids[i];
 		md->primary = (display_ids[i] == primary_id);
 		md->monitor = i;
 
@@ -717,18 +727,8 @@ void sortdisplays()
 
 		write_log(_T("%s '%s' [%s]\n"), md->adaptername, md->adapterid, md->adapterkey);
 		write_log(_T("-: %s [%s]\n"), md->fullname, md->monitorid);
-		// SDL3: Use SDL_GetFullscreenDisplayModes to get all available modes
 		int num_disp_modes = 0;
-		SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
-		// Find the actual display ID for this monitor
-		{
-			int disp_count = 0;
-			SDL_DisplayID* disp_ids = SDL_GetDisplays(&disp_count);
-			if (disp_ids && md->monitor < disp_count) {
-				display_id = disp_ids[md->monitor];
-			}
-			SDL_free(disp_ids);
-		}
+		SDL_DisplayID display_id = md->display_id ? md->display_id : SDL_GetPrimaryDisplay();
 		const SDL_DisplayMode* const* modes = SDL_GetFullscreenDisplayModes(display_id, &num_disp_modes);
 		for (int mode = 0; mode < 2; mode++)
 		{

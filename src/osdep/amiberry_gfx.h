@@ -7,7 +7,7 @@
 
 class IRenderer;
 
-#define MAX_DISPLAYS 1
+#define MAX_DISPLAYS 10
 
 #define RTG_MODE_SCALE 1
 #define RTG_MODE_CENTER 2
@@ -55,6 +55,7 @@ struct PicassoResolution
 struct MultiDisplay {
 	int primary;
 	int monitor;
+	SDL_DisplayID display_id;
 	TCHAR* adaptername, *adapterid, *adapterkey;
 	TCHAR* monitorname, *monitorid;
 	TCHAR* fullname;
@@ -63,7 +64,7 @@ struct MultiDisplay {
 	SDL_Rect workrect;
 	bool HasAdapterData;
 };
-extern struct MultiDisplay Displays[MAX_DISPLAYS];
+extern struct MultiDisplay Displays[MAX_DISPLAYS + 1]; // +1 sentinel (matches WinUAE)
 
 struct winuae_currentmode {
 	unsigned int flags;
@@ -75,9 +76,11 @@ struct winuae_currentmode {
 	int freq;
 };
 
-#define MAX_AMIGAMONITORS 1
+#define MAX_AMIGAMONITORS 4
 struct AmigaMonitor {
 	int monitor_id;
+	bool active;
+	SDL_DisplayID assigned_display;
 	SDL_Window* amiga_window;
 	SDL_Renderer* amiga_renderer;
 	SDL_Window* gui_window;
