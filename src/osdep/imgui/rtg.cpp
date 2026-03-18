@@ -2,7 +2,8 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "gfxboard.h"
-#include "../amiberry_gfx.h" // For RTG_MODE constants
+#include "../amiberry_gfx.h"
+#include "../display_modes.h"
 #include <vector>
 #include <string>
 
@@ -113,6 +114,24 @@ void render_panel_rtg() {
     bool autoswitch_en = has_memory && (!is_hw_board || !gfxboard_get_switcher(rbc));
 
     ImGui::BeginDisabled(!has_memory);
+
+    ImGui::Text("Monitor:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    {
+        int mon_id = rbc->monitor_id;
+        const char* mon_labels[MAX_AMIGAMONITORS];
+        char mon_buf[MAX_AMIGAMONITORS][32];
+        for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+            snprintf(mon_buf[i], sizeof(mon_buf[i]), "Monitor %d", i + 1);
+            mon_labels[i] = mon_buf[i];
+        }
+        if (ImGui::Combo("##MonitorCombo", &mon_id, mon_labels, MAX_AMIGAMONITORS)) {
+            rbc->monitor_id = mon_id;
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    }
+
     bool override_native = rbc->initial_active;
     if (AmigaCheckbox("Override initial native chipset display", &override_native)) {
         if (override_native) {
@@ -334,6 +353,35 @@ void render_panel_rtg() {
 
     ImGui::Text("Screen Mode settings");
     ImGui::Separator();
+
+    {
+        int display_count = 0;
+        while (display_count < MAX_DISPLAYS && Displays[display_count].monitorname)
+            display_count++;
+        if (display_count > 1) {
+            ImGui::Text("Display:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+            int current_display = changed_prefs.gfx_apmode[APMODE_RTG].gfx_display;
+            if (ImGui::BeginCombo("##RTGHostDisplay", current_display > 0 && current_display <= display_count
+                ? Displays[current_display - 1].monitorname : "Primary")) {
+                for (int i = 0; i < display_count; i++) {
+                    char label[256];
+                    snprintf(label, sizeof(label), "%s%s", Displays[i].monitorname,
+                        Displays[i].primary ? " (Primary)" : "");
+                    bool is_selected = (current_display == i + 1);
+                    if (ImGui::Selectable(label, is_selected)) {
+                        changed_prefs.gfx_apmode[APMODE_RTG].gfx_display = i + 1;
+                    }
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ImGui::Spacing();
+        }
+    }
 
     if (ImGui::BeginTable("rtg_bottom_table", 3, ImGuiTableFlags_None)) {
         ImGui::TableNextRow();

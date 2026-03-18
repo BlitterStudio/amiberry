@@ -125,7 +125,7 @@ FILE* screenshot_file = nullptr;
 int delay_savestate_frame = 0;
 #endif
 
-struct MultiDisplay Displays[MAX_DISPLAYS];
+struct MultiDisplay Displays[MAX_DISPLAYS + 1];
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 void updatepicasso96(struct AmigaMonitor* mon);
@@ -234,20 +234,22 @@ static bool amiberry_renderframe(const int monid, int mode, int immediate)
 		}
 	}
 #endif
-	return g_renderer->render_frame(monid, mode, immediate);
+	IRenderer* renderer = get_renderer(monid);
+	return renderer ? renderer->render_frame(monid, mode, immediate) : false;
 }
 
 void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
 {
 	AmigaMonitor* mon = &AMonitors[vb->monitor_id];
-	// A call to flush_screen implies a full refresh is needed.
 	mon->full_render_needed = true;
 }
 
 static void amiberry_refresh(const int monid)
 {
 	amiberry_renderframe(monid, 1, 1);
-	g_renderer->present_frame(monid, 0);
+	IRenderer* renderer = get_renderer(monid);
+	if (renderer)
+		renderer->present_frame(monid, 0);
 }
 #endif //AMIBERRY
 
@@ -259,11 +261,12 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	float src_x = 0, src_y = 0;
 
 #ifdef AMIBERRY
-	if (currprefs.gfx_auto_crop && !ad->picasso_on) {
-		src_w = static_cast<float>(g_renderer->crop_rect.w);
-		src_h = static_cast<float>(g_renderer->crop_rect.h);
-		src_x = static_cast<float>(g_renderer->crop_rect.x);
-		src_y = static_cast<float>(g_renderer->crop_rect.y);
+	IRenderer* renderer = get_renderer(monid);
+	if (currprefs.gfx_auto_crop && !ad->picasso_on && renderer) {
+		src_w = static_cast<float>(renderer->crop_rect.w);
+		src_h = static_cast<float>(renderer->crop_rect.h);
+		src_x = static_cast<float>(renderer->crop_rect.x);
+		src_y = static_cast<float>(renderer->crop_rect.y);
 	}
 #endif
 	if (src_w <= 0 && amiga_surface) {
@@ -273,7 +276,8 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 		src_y = 0;
 	}
 
-	g_renderer->get_gfx_offset(monid, src_w, src_h, src_x, src_y, &dx, &dy, &mx, &my);
+	if (renderer)
+		renderer->get_gfx_offset(monid, src_w, src_h, src_x, src_y, &dx, &dy, &mx, &my);
 
 	*dxp = dx;
 	*dyp = dy;
@@ -945,6 +949,7 @@ int graphics_init(bool mousecapture)
 
 	g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
 	update_pixel_format();
+	AMonitors[0].active = true;
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
 		if (currprefs.monitoremu_mon > 0 && currprefs.monitoremu) {

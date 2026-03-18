@@ -2436,6 +2436,24 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_str (f, _T("gfx_display_friendlyname_rtg"), target_get_display_name (p->gfx_apmode[APMODE_RTG].gfx_display, true));
 	cfgfile_write_str (f, _T("gfx_display_name_rtg"), target_get_display_name (p->gfx_apmode[APMODE_RTG].gfx_display, false));
 
+	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
+		if (!p->gfx_monitor[i].enabled)
+			continue;
+		TCHAR tmp[256];
+		_stprintf(tmp, _T("gfx_monitor%d_display"), i);
+		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_display);
+		_stprintf(tmp, _T("gfx_monitor%d_fullscreen"), i);
+		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_fullscreen);
+		_stprintf(tmp, _T("gfx_monitor%d_width_windowed"), i);
+		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_win.width);
+		_stprintf(tmp, _T("gfx_monitor%d_height_windowed"), i);
+		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_win.height);
+		_stprintf(tmp, _T("gfx_monitor%d_width_fullscreen"), i);
+		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_fs.width);
+		_stprintf(tmp, _T("gfx_monitor%d_height_fullscreen"), i);
+		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_fs.height);
+	}
+
 	cfgfile_write(f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
 	write_resolution(f, _T("gfx_width"), _T("gfx_height"), &p->gfx_monitor[0].gfx_size_win); /* compatibility with old versions */
 	cfgfile_write(f, _T("gfx_x_windowed"), _T("%d"), p->gfx_monitor[0].gfx_size_win.x);
@@ -4024,6 +4042,30 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				p->gfx_apmode[APMODE_RTG].gfx_display = num;
 		}
 		return 1;
+	}
+
+	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
+		TCHAR tmp[256];
+		_stprintf(tmp, _T("gfx_monitor%d_display"), i);
+		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_display, 1)) {
+			p->gfx_monitor[i].enabled = true;
+			return 1;
+		}
+		_stprintf(tmp, _T("gfx_monitor%d_fullscreen"), i);
+		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_fullscreen, 1))
+			return 1;
+		_stprintf(tmp, _T("gfx_monitor%d_width_windowed"), i);
+		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_win.width, 1))
+			return 1;
+		_stprintf(tmp, _T("gfx_monitor%d_height_windowed"), i);
+		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_win.height, 1))
+			return 1;
+		_stprintf(tmp, _T("gfx_monitor%d_width_fullscreen"), i);
+		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_fs.width, 1))
+			return 1;
+		_stprintf(tmp, _T("gfx_monitor%d_height_fullscreen"), i);
+		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_fs.height, 1))
+			return 1;
 	}
 
 	if (_tcscmp (option, _T("gfx_linemode")) == 0) {
@@ -7438,7 +7480,10 @@ int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ign
 end:
 	recursive--;
 	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
-		memcpy(&p->gfx_monitor[i], &p->gfx_monitor[0], sizeof(struct monconfig));
+		if (!p->gfx_monitor[i].enabled) {
+			memcpy(&p->gfx_monitor[i], &p->gfx_monitor[0], sizeof(struct monconfig));
+			p->gfx_monitor[i].enabled = false;
+		}
 	}
 	fixup_prefs (p, userconfig != 0);
 	for (int i = 0; i < MAX_JPORTS_CUSTOM; i++) {
@@ -8669,11 +8714,23 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->gfx_monitor[0].gfx_size_fs.height = 600;
 	p->gfx_monitor[0].gfx_size_win.width = 720;
 	p->gfx_monitor[0].gfx_size_win.height = 568;
+	p->gfx_monitor[0].enabled = true;
+	p->gfx_monitor[0].gfx_display = 0;
+	p->gfx_monitor[0].gfx_fullscreen = GFX_WINDOW;
 	for (int i = 0; i < GFX_SIZE_EXTRA_NUM; i++) {
 		p->gfx_monitor[0].gfx_size_fs_xtra[i].width = 0;
 		p->gfx_monitor[0].gfx_size_fs_xtra[i].height = 0;
 		p->gfx_monitor[0].gfx_size_win_xtra[i].width = 0;
 		p->gfx_monitor[0].gfx_size_win_xtra[i].height = 0;
+	}
+	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
+		p->gfx_monitor[i].enabled = false;
+		p->gfx_monitor[i].gfx_display = 0;
+		p->gfx_monitor[i].gfx_fullscreen = GFX_WINDOW;
+		p->gfx_monitor[i].gfx_size_win.width = 720;
+		p->gfx_monitor[i].gfx_size_win.height = 568;
+		p->gfx_monitor[i].gfx_size_fs.width = 800;
+		p->gfx_monitor[i].gfx_size_fs.height = 600;
 	}
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_DOUBLE;

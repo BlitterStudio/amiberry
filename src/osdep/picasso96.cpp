@@ -3038,8 +3038,10 @@ static int addresolutions(void)
 	if (p96depth(32))
 		depths++;
 
-	for (const auto & Display : Displays) {
-		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (int di = 0; di < MAX_DISPLAYS && Displays[di].monitorname; di++) {
+		const struct PicassoResolution *DisplayModes = Displays[di].DisplayModes;
+		if (!DisplayModes)
+			continue;
 		int i = 0;
 		while (DisplayModes[i].inuse) {
 			for (int j = 0; missmodes[j * 2] >= 0; j++) {
@@ -3053,8 +3055,10 @@ static int addresolutions(void)
 	}
 
 	int cnt = 0;
-	for (const auto & Display : Displays) {
-		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (int di = 0; di < MAX_DISPLAYS && Displays[di].monitorname; di++) {
+		const struct PicassoResolution *DisplayModes = Displays[di].DisplayModes;
+		if (!DisplayModes)
+			continue;
 		int i = 0;
 		while (DisplayModes[i].inuse) {
 			if (DisplayModes[i].rawmode) {
@@ -6004,12 +6008,11 @@ static int render_thread(void *v)
 		if (idx == -1)
 			break;
 		idx &= 0xff;
-		const int monid = currprefs.rtgboards[idx].monitor_id;
-		struct amigadisplay *ad = &adisplays[monid];
+		struct amigadisplay *ad = &adisplays[idx];
 		if (ad->picasso_on && ad->picasso_requested_on) {
 			lockrtg();
 			if (ad->picasso_requested_on) {
-				const struct picasso96_state_struct *state = &picasso96_state[monid];
+				const struct picasso96_state_struct *state = &picasso96_state[idx];
 				picasso_flushpixels(idx, gfxmem_banks[idx]->start + natmem_offset, state->XYOffset - gfxmem_banks[idx]->start, false);
 				ad->pending_render = true;
 			}

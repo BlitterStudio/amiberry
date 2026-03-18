@@ -22,7 +22,7 @@
 #define UAEMINOR AMIBERRY_VERSION_MINOR
 #define UAESUBREV AMIBERRY_VERSION_PATCH
 
-#define MAX_AMIGADISPLAYS 1
+#define MAX_AMIGADISPLAYS 4
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
@@ -503,6 +503,9 @@ struct monconfig
 	struct wh gfx_size;
 	struct wh gfx_size_win_xtra[GFX_SIZE_EXTRA_NUM];
 	struct wh gfx_size_fs_xtra[GFX_SIZE_EXTRA_NUM];
+	int gfx_display;
+	int gfx_fullscreen;
+	bool enabled;
 };
 
 #define KB_DISCONNECTED -1

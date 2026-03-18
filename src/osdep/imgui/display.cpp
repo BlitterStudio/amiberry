@@ -1,7 +1,8 @@
 #include "imgui.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "amiberry_gfx.h" // For getdisplay and MultiDisplay
+#include "amiberry_gfx.h"
+#include "display_modes.h"
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
 #include "gfxboard.h"
@@ -32,6 +33,40 @@ void render_panel_display() {
     bool vga_autoswitch_enabled = (changed_prefs.gfx_resolution >= 1 && changed_prefs.gfx_vresolution >= 1);
     if (!vga_autoswitch_enabled && changed_prefs.gfx_autoresolution_vga) {
         changed_prefs.gfx_autoresolution_vga = false;
+    }
+
+    // ---------------------------------------------------------
+    // Host Display Selection
+    // ---------------------------------------------------------
+    {
+        int display_count = 0;
+        while (display_count < MAX_DISPLAYS && Displays[display_count].monitorname)
+            display_count++;
+        if (display_count > 1) {
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Display:");
+            ImGui::SameLine(BUTTON_WIDTH);
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+            int current_display = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_display;
+            if (ImGui::BeginCombo("##HostDisplay", current_display > 0 && current_display <= display_count
+                ? Displays[current_display - 1].monitorname : "Primary")) {
+                for (int i = 0; i < display_count; i++) {
+                    char label[256];
+                    snprintf(label, sizeof(label), "%s%s", Displays[i].monitorname,
+                        Displays[i].primary ? " (Primary)" : "");
+                    bool is_selected = (current_display == i + 1);
+                    if (ImGui::Selectable(label, is_selected)) {
+                        changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_display = i + 1;
+                        changed_prefs.gfx_apmode[APMODE_RTG].gfx_display = i + 1;
+                    }
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ImGui::Spacing();
+        }
     }
 
     // ---------------------------------------------------------
