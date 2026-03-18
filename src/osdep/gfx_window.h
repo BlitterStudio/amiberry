@@ -15,6 +15,7 @@ struct AmigaMonitor;
 // Window lifecycle
 void close_hwnds(struct AmigaMonitor* mon);
 void close_windows(struct AmigaMonitor* mon);
+void close_all_windows();
 int open_windows(AmigaMonitor* mon, bool mousecapture, bool started);
 void open_screen(struct AmigaMonitor* mon);
 void reopen_gfx(struct AmigaMonitor* mon);

@@ -139,6 +139,12 @@ void update_system_pixel_format();
 
 extern std::unique_ptr<IRenderer> g_renderer;
 
+inline IRenderer* get_renderer(int monid = 0)
+{
+	(void)monid;
+	return g_renderer.get();
+}
+
 extern SDL_DisplayMode sdl_mode;
 
 extern SDL_Surface* amiga_surface;

@@ -424,7 +424,6 @@ int reopen(struct AmigaMonitor* mon, int full, bool unacquire)
 
 void close_windows(struct AmigaMonitor* mon)
 {
-	// Skip SDL resource cleanup if headless mode
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
 		if (amiga_surface) {
@@ -436,11 +435,14 @@ void close_windows(struct AmigaMonitor* mon)
 
 	vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 
-	reset_sound();
+	if (mon->monitor_id == 0)
+		reset_sound();
 
 #ifdef AMIBERRY
-	SDL_DestroySurface(amiga_surface);
-	amiga_surface = nullptr;
+	if (mon->monitor_id == 0) {
+		SDL_DestroySurface(amiga_surface);
+		amiga_surface = nullptr;
+	}
 #endif
 	if (mon->statusline_surface) {
 		SDL_DestroySurface(mon->statusline_surface);
@@ -454,6 +456,15 @@ void close_windows(struct AmigaMonitor* mon)
 	freevidbuffer(mon->monitor_id, &avidinfo->drawbuffer);
 	freevidbuffer(mon->monitor_id, &avidinfo->tempbuffer);
 	close_hwnds(mon);
+	mon->active = false;
+}
+
+void close_all_windows()
+{
+	for (int i = MAX_AMIGAMONITORS - 1; i >= 0; i--) {
+		if (AMonitors[i].active)
+			close_windows(&AMonitors[i]);
+	}
 }
 
 static void movecursor(const int x, const int y)
@@ -526,13 +537,23 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 
 static int create_windows(struct AmigaMonitor* mon)
 {
-	// Skip window creation entirely if headless mode
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
 		mon->amiga_window = nullptr;
 		mon->amiga_renderer = nullptr;
 		mon->screen_is_initialized = 1;
 		return 1;
+	}
+
+	if (mon->monitor_id > 0) {
+#ifdef __ANDROID__
+		write_log("Android: Secondary monitors not supported, skipping monitor %d.\n", mon->monitor_id);
+		return 0;
+#endif
+		if (kmsdrm_detected) {
+			write_log("KMSDRM: Secondary monitors not supported, skipping monitor %d.\n", mon->monitor_id);
+			return 0;
+		}
 	}
 
 	const SDL_WindowFlags fullscreen = (isfullscreen() > 0) ? SDL_WINDOW_FULLSCREEN : 0;
@@ -688,7 +709,8 @@ static int create_windows(struct AmigaMonitor* mon)
 	stored_y = std::max(stored_y, 0);
 
 	SDL_Rect displayBounds;
-	SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &displayBounds);
+	SDL_DisplayID bounds_display = (md && md->display_id) ? md->display_id : SDL_GetPrimaryDisplay();
+	SDL_GetDisplayBounds(bounds_display, &displayBounds);
 
 	if (stored_x > displayBounds.w)
 		rc.x = 1;
@@ -756,7 +778,12 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (g_renderer) {
 		flags |= g_renderer->get_window_flags();
 	}
-	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
+	TCHAR wintitle[64];
+	if (mon->monitor_id > 0)
+		_stprintf(wintitle, _T("Amiberry [%d]"), mon->monitor_id + 1);
+	else
+		_tcscpy(wintitle, _T("Amiberry"));
+	mon->amiga_window = SDL_CreateWindow(wintitle,
 		rc.w, rc.h,
 		flags);
 	if (!mon->amiga_window) {
@@ -836,6 +863,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0"))
 		write_log("SDL3: Set window not to minimize on focus loss\n");
 
+	mon->active = true;
 	return 1;
 }
 

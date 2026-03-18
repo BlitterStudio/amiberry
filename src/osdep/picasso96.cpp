@@ -7046,9 +7046,10 @@ static uae_u32 p96_restored_flags;
 
 void restore_p96_finish ()
 {
-	struct amigadisplay *ad = &adisplays[0];
-	struct picasso96_state_struct *state = &picasso96_state[0];
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[0];
+	int monid = currprefs.rtgboards[0].monitor_id;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct picasso96_state_struct *state = &picasso96_state[monid];
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 
 	init_alloc (nullptr, 0);
 	if (uaegfx_rom && boardinfo) {
@@ -7077,9 +7078,10 @@ void restore_p96_finish ()
 
 uae_u8 *restore_p96 (uae_u8 *src)
 {
-	struct amigadisplay *ad = &adisplays[0];
-	struct picasso96_state_struct *state = &picasso96_state[0];
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[0];
+	int monid = currprefs.rtgboards[0].monitor_id;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct picasso96_state_struct *state = &picasso96_state[monid];
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	uae_u32 flags;
 
 	if (restore_u32 () != 2)
@@ -7159,9 +7161,10 @@ uae_u8 *restore_p96 (uae_u8 *src)
 
 uae_u8 *save_p96 (size_t *len, uae_u8 *dstptr)
 {
-	const struct amigadisplay *ad = &adisplays[0];
-	const struct picasso96_state_struct *state = &picasso96_state[0];
-	const struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[0];
+	int monid = currprefs.rtgboards[0].monitor_id;
+	const struct amigadisplay *ad = &adisplays[monid];
+	const struct picasso96_state_struct *state = &picasso96_state[monid];
+	const struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	uae_u8 *dstbak, *dst;
 	int i;
 
