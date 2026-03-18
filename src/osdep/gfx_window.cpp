@@ -661,6 +661,15 @@ static int create_windows(struct AmigaMonitor* mon)
 			ny = rc.y;
 			nw = rc.w;
 			nh = rc.h;
+		} else if (md && md->display_id) {
+			SDL_Rect db;
+			SDL_GetDisplayBounds(md->display_id, &db);
+			bool on_target = (nx >= db.x && nx < db.x + db.w
+				&& ny >= db.y && ny < db.y + db.h);
+			if (!on_target) {
+				nx = db.x + (db.w - nw) / 2;
+				ny = db.y + (db.h - nh) / 2;
+			}
 		}
 
 		if (w != nw || h != nh || x != nx || y != ny) {
