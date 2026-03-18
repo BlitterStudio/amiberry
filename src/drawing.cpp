@@ -2769,26 +2769,6 @@ static void sprwrite_64(int reg, uae_u64 v)
 	} else {
 		s->dataa64 = v;
 		spr_arm(s, 1);
-#if AUTOSCALE_SPRITES
-		/* get upper and lower sprite position if brdsprt enabled */
-		if ((s->dataa64 || s->datab64) && bordersprite) {
-			if (this_line->linear_vpos < plffirstline_total) {
-				plffirstline_total = this_line->linear_vpos;
-			}
-			if (this_line->linear_vpos > plflastline_total) {
-				plflastline_total = this_line->linear_vpos;
-			}
-			int x = s->xpos;;
-			if (diwfirstword_total > x && x >= (48 << RES_MAX)) {
-				diwfirstword_total = x;
-				diwfirstword_total <<= 2;
-			}
-			if (diwlastword_total < x + 16 && x <= (448 << RES_MAX)) {
-				diwlastword_total = x + 16;
-				diwlastword_total <<= 2;
-			}
-#endif
-		}
 	}
 }
 
@@ -2824,26 +2804,6 @@ static void sprwrite(int reg, uae_u32 v)
 				return;
 			}
 			spr_arm(s, 1);
-#if AUTOSCALE_SPRITES
-			/* get upper and lower sprite position if brdsprt enabled */
-			if ((s->dataa || s->datab) && bordersprite) {
-				if (this_line->linear_vpos < plffirstline_total) {
-					plffirstline_total = this_line->linear_vpos;
-				}
-				if (this_line->linear_vpos > plflastline_total) {
-					plflastline_total = this_line->linear_vpos;
-				}
-				int x = s->xpos;;
-				if (diwfirstword_total > x && x >= (48 << RES_MAX)) {
-					diwfirstword_total = x;
-					diwfirstword_total <<= 2;
-				}
-				if (diwlastword_total < x + 16 && x <= (448 << RES_MAX)) {
-					diwlastword_total = x + 16;
-					diwlastword_total <<= 2;
-				}
-			}
-#endif
 		}
 	} else {
 		if (second) {
@@ -4605,6 +4565,24 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 	return 0;
 }
 
+static void autoscale_sprites(void)
+{
+#if AUTOSCALE_SPRITES
+	if (diwfirstword_total > internal_pixel_cnt && internal_pixel_cnt > (48 << RES_MAX)) {
+		diwfirstword_total = internal_pixel_cnt;
+	}
+	if (diwlastword_total < internal_pixel_cnt && internal_pixel_cnt < (448 << RES_MAX)) {
+		diwlastword_total = internal_pixel_cnt;
+	}
+	if (this_line->linear_vpos < plffirstline_total) {
+		plffirstline_total = this_line->linear_vpos;
+	}
+	if (this_line->linear_vpos > plflastline_total) {
+		plflastline_total = this_line->linear_vpos;
+	}
+#endif
+}
+
 static void get_shres_spr_pix(uae_u32 sv0, uae_u32 sv1, uae_u32 *dpix0, uae_u32 *dpix1)
 {
 	uae_u16 v;
@@ -4655,6 +4633,7 @@ static uae_u32 denise_render_sprites_aga(int add)
 {
 	uae_u32 v = 0;
 	uae_u32 d = 0;
+	bool asp = false;
 	int sidx = 0;
 	while (dprspts[sidx]) {
 		struct denise_spr *sp = dprspts[sidx];
@@ -4673,6 +4652,8 @@ static uae_u32 denise_render_sprites_aga(int add)
 			if (denise_sprfmode64) {
 				if (!sp->dataas64 && !sp->databs64) {
 					d |= 1 << num;
+				} else if (num > 0) {
+					asp = true;
 				}
 				sp->pix = ((sp->dataas64 >> 63) & 1) << 0;
 				sp->pix |= ((sp->databs64 >> 63) & 1) << 1;
@@ -4681,6 +4662,8 @@ static uae_u32 denise_render_sprites_aga(int add)
 			} else {
 				if (!sp->dataas && !sp->databs) {
 					d |= 1 << num;
+				} else if (num > 0) {
+					asp = true;
 				}
 				sp->pix = ((sp->dataas >> 31) & 1) << 0;
 				sp->pix |= ((sp->databs >> 31) & 1) << 1;
@@ -4692,6 +4675,10 @@ static uae_u32 denise_render_sprites_aga(int add)
 	}
 	if (d) {
 		spr_disarms(d);
+	}
+	if (asp && !denise_blank_active && !sprites_hidden) {
+		// only sprites 1-7
+		autoscale_sprites();
 	}
 	return v;
 }
