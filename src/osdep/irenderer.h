@@ -105,6 +105,7 @@ public:
 	// --- Layout state (shared between renderer and orchestration code) ---
 	SDL_Rect render_quad{};
 	SDL_Rect crop_rect{};
+	float crop_aspect{};  // set by auto_crop_image(); 0 = not yet computed
 
 protected:
 	VSyncState m_vsync;

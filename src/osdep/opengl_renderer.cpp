@@ -408,13 +408,12 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		m_vsync.gl_initialized = true;
 	}
 
-	// When autocrop is active, auto_crop_image() has already computed the correct
-	// logical dimensions in render_quad, accounting for resolution mode (hires height
-	// doubling, lores width doubling) and NTSC correction. Use those for the aspect
-	// ratio instead of the fixed 4:3 that only applies to the full uncropped frame.
+	// When autocrop is active, auto_crop_image() stores the correct logical aspect
+	// in crop_aspect, accounting for resolution mode and NTSC correction.
+	// Use it instead of the fixed 4:3 that only applies to the full uncropped frame.
 	float desired_aspect;
-	if (currprefs.gfx_auto_crop && !mon->screen_is_picasso && render_quad.w > 0 && render_quad.h > 0) {
-		desired_aspect = static_cast<float>(render_quad.w) / static_cast<float>(render_quad.h);
+	if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
+		desired_aspect = crop_aspect;
 	} else {
 		desired_aspect = calculate_desired_aspect(mon);
 	}
@@ -550,8 +549,13 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		int viewport_w = std::max(destW, src_w);
-		int viewport_h = std::max(destH, src_h);
+		int viewport_w = destW;
+		int viewport_h = destH;
+		if (src_w > 0 && src_h > 0 && (viewport_w < src_w || viewport_h < src_h)) {
+			float s = std::max(static_cast<float>(src_w) / viewport_w, static_cast<float>(src_h) / viewport_h);
+			viewport_w = static_cast<int>(viewport_w * s);
+			viewport_h = static_cast<int>(viewport_h * s);
+		}
 		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
 		int viewport_y = glAreaY + (renderAreaH - viewport_h) / 2;
 
@@ -576,9 +580,13 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		// Use aspect-corrected viewport, but ensure it's at least as large as the source
-		int viewport_w = std::max(destW, src_w);
-		int viewport_h = std::max(destH, src_h);
+		int viewport_w = destW;
+		int viewport_h = destH;
+		if (src_w > 0 && src_h > 0 && (viewport_w < src_w || viewport_h < src_h)) {
+			float s = std::max(static_cast<float>(src_w) / viewport_w, static_cast<float>(src_h) / viewport_h);
+			viewport_w = static_cast<int>(viewport_w * s);
+			viewport_h = static_cast<int>(viewport_h * s);
+		}
 		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
 		int viewport_y = glAreaY + (renderAreaH - viewport_h) / 2;
 

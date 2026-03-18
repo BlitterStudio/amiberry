@@ -1028,6 +1028,14 @@ static void configure_render_rects(const int w, const int h, const int scaled_w,
 			(currprefs.gfx_manual_crop_width > 0) ? currprefs.gfx_manual_crop_width : w,
 			(currprefs.gfx_manual_crop_height > 0) ? currprefs.gfx_manual_crop_height : h
 		};
+		int crop_scaled_w, crop_scaled_h;
+		compute_scaled_dimensions(cr.w, cr.h, false, crop_scaled_w, crop_scaled_h);
+		if (currprefs.gfx_correct_aspect == 0) {
+			crop_scaled_w = sdl_mode.w;
+			crop_scaled_h = sdl_mode.h;
+		}
+		g_renderer->crop_aspect = (crop_scaled_h > 0)
+			? static_cast<float>(crop_scaled_w) / static_cast<float>(crop_scaled_h) : 0.0f;
 	}
 	// Native mode without auto_crop (auto_crop is handled in auto_crop_image())
 	else if (!currprefs.gfx_auto_crop) {
@@ -1448,15 +1456,14 @@ void auto_crop_image()
 
 		int width = cw;
 		int height = ch;
-		if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
+		if (vres == VRES_NONDOUBLE)
 		{
-			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
+			if (hres == RES_HIRES || hres == RES_SUPERHIRES)
 				height *= 2;
 		}
 		else
 		{
-			// Add missing LORES width doubling to match compute_scaled_dimensions()
-			if (currprefs.gfx_resolution == RES_LORES)
+			if (hres == RES_LORES)
 				width *= 2;
 		}
 
@@ -1474,6 +1481,7 @@ void auto_crop_image()
 
 		auto& rq = g_renderer->render_quad;
 		auto& cr = g_renderer->crop_rect;
+		g_renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		rq = { dx, dy, width, height };
 		cr = { cx, cy, cw, ch };
 		if (amiga_surface) {

@@ -1829,6 +1829,7 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 	crtemu->memctx = memctx;
 
 	crtemu->use_frame = 0.0f;
+	crtemu->desired_aspect = 4.0f / 3.0f;
 
 	crtemu->last_present_width = 0;
 	crtemu->last_present_height = 0;
@@ -2210,8 +2211,7 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 		if( frame_abgr ) {
 			crtemu->use_frame = 1.0f;
 		} else {
-	crtemu->use_frame = 0.0f;
-	crtemu->desired_aspect = 4.0f / 3.0f;
+			crtemu->use_frame = 0.0f;
 		}
 	}
 }
