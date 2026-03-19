@@ -7033,7 +7033,7 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 
 				case 7: /* clocksync */
 				{
-					trap_set_areg(ctx, 0, 0);
+					trap_set_areg(ctx, 0, read_comm_pipe_u32_blocking(&native2amiga_pending));
 					return 8;
 				}
 
