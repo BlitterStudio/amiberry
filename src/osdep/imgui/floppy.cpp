@@ -53,6 +53,32 @@ enum class FloppyDialogMode {
 };
 static FloppyDialogMode current_floppy_dialog_mode = FloppyDialogMode::None;
 
+// Cache write-protect state per drive to avoid re-opening (and unpacking)
+// archive files on every frame.  Note: quickstart.cpp has its own identical
+// cache (qs_wp_cache) because both panels render independently.
+static struct {
+	std::string path;
+	bool wp = false;
+} wp_cache[4];
+
+static bool cached_disk_getwriteprotect(struct uae_prefs *p, const TCHAR *name, int num)
+{
+	if (num < 0 || num >= 4)
+		return false;
+	std::string current(name ? name : "");
+	if (wp_cache[num].path != current) {
+		wp_cache[num].path = current;
+		wp_cache[num].wp = current.empty() ? false : (disk_getwriteprotect(p, name, num) != 0);
+	}
+	return wp_cache[num].wp;
+}
+
+static void invalidate_wp_cache(int num)
+{
+	if (num >= 0 && num < 4)
+		wp_cache[num].path.clear();
+}
+
 static std::string format_mru_entry(const std::string& fullpath) {
     size_t last_slash = fullpath.find_last_of("/\\");
     std::string filename = (last_slash == std::string::npos) ? fullpath : fullpath.substr(last_slash + 1);
@@ -137,10 +163,11 @@ static void RenderDriveSlot(const int i)
 
         // 3. WP Checkbox
         ImGui::TableNextColumn();
-        bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
+        bool wp = cached_disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
         if (AmigaCheckbox("Write Protected", &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
-            if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
+            invalidate_wp_cache(i);
+            if (cached_disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
                 // Failed to change write protection -> maybe filesystem doesn't support this
                 ShowMessageBox("Set/Clear write protect", "Failed to change write permission.\nMaybe underlying filesystem doesn't support this.");
             }
@@ -163,6 +190,7 @@ static void RenderDriveSlot(const int i)
         if (AmigaButton("Eject", ImVec2(-1, 0))) {
              disk_eject(i);
              changed_prefs.floppyslots[i].df[0] = 0;
+             invalidate_wp_cache(i);
         }
         
         // 7. Select Button
@@ -201,6 +229,7 @@ static void RenderDriveSlot(const int i)
                  changed_prefs.floppyslots[i].df[MAX_DPATH - 1] = '\0';
                  disk_insert(i, changed_prefs.floppyslots[i].df);
                  DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
+                 invalidate_wp_cache(i);
             }
 
             if (is_selected)
@@ -501,6 +530,7 @@ void render_panel_floppy()
                      changed_prefs.floppyslots[drive_idx].df[MAX_DPATH - 1] = '\0';
                      disk_insert(drive_idx, result_path.c_str());
                      DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
+                     invalidate_wp_cache(drive_idx);
                 }
             }
             current_floppy_dialog_mode = FloppyDialogMode::None;

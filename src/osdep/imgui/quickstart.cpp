@@ -10,6 +10,31 @@
 std::vector<const char *> qs_models;
 std::vector<const char *> qs_configs;
 
+// Cache write-protect state per drive to avoid re-opening (and unpacking)
+// archive files on every frame.
+static struct {
+	std::string path;
+	bool wp = false;
+} qs_wp_cache[4];
+
+static bool qs_cached_disk_getwriteprotect(struct uae_prefs *p, const TCHAR *name, int num)
+{
+	if (num < 0 || num >= 4)
+		return false;
+	std::string current(name ? name : "");
+	if (qs_wp_cache[num].path != current) {
+		qs_wp_cache[num].path = current;
+		qs_wp_cache[num].wp = current.empty() ? false : (disk_getwriteprotect(p, name, num) != 0);
+	}
+	return qs_wp_cache[num].wp;
+}
+
+static void qs_invalidate_wp_cache(int num)
+{
+	if (num >= 0 && num < 4)
+		qs_wp_cache[num].path.clear();
+}
+
 // Quickstart MRU display helpers/state
 static bool qs_ignore_list_change = false;
 static std::vector<std::string> qs_disk_display;
@@ -355,11 +380,12 @@ void render_panel_quickstart() {
         // 4. Write-protected
         bool wp_enabled = drive_enabled && !changed_prefs.floppy_read_only && disk_present;
         if (!wp_enabled) ImGui::BeginDisabled();
-        bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != 0;
+        bool wp = qs_cached_disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
         snprintf(label, sizeof(label), "Write-protected##QSFloppyWriteProtected%d", i);
         if (AmigaCheckbox(label, &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
-            if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
+            qs_invalidate_wp_cache(i);
+            if (qs_cached_disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
                 wp = !wp;
                 ShowMessageBox("Set/Clear write protect",
                                "Failed to change write permission.\nMaybe underlying filesystem doesn't support this.");
@@ -387,6 +413,7 @@ void render_panel_quickstart() {
         if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH * 1.33f / 2.0f, 0))) {
             disk_eject(i);
             changed_prefs.floppyslots[i].df[0] = 0;
+            qs_invalidate_wp_cache(i);
         }
         if (!eject_enabled) ImGui::EndDisabled();
 
@@ -414,6 +441,7 @@ void render_panel_quickstart() {
                     if (combo_index == 0) {
                         disk_eject(i);
                         changed_prefs.floppyslots[i].df[0] = 0;
+                        qs_invalidate_wp_cache(i);
                     } else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(
                                    lstMRUDiskList.size())) {
                         std::string element = get_full_path_from_disk_list(qs_disk_display[combo_index - 1]);
@@ -421,6 +449,7 @@ void render_panel_quickstart() {
                             std::strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
                             DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
                             disk_insert(i, changed_prefs.floppyslots[i].df);
+                            qs_invalidate_wp_cache(i);
                             if (!last_loaded_config[0])
                                 set_last_active_config(element.c_str());
                         }
@@ -647,6 +676,7 @@ void render_panel_quickstart() {
                         std::strncpy(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH);
                         disk_insert(i, filePath.c_str());
                         add_file_to_mru_list(lstMRUDiskList, filePath);
+                        qs_invalidate_wp_cache(i);
                         if (!last_loaded_config[0])
                             set_last_active_config(filePath.c_str());
                     }

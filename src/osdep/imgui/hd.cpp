@@ -45,6 +45,55 @@ static int create_hdf_size_mb = 100;
 static bool create_hdf_dynamic = false;
 static bool create_hdf_rdb = false;
 
+// Cache get_filesys_unitconfig() results for HDF entries only.
+// HDF queries call hdf_open()/hdf_close() which is expensive I/O.
+// DIR/CD/tape queries are lightweight (stat, blkdev_get_info) and
+// must remain uncached so live media state stays visible.
+static struct {
+	bool valid = false;
+	int type = -1;
+	struct mountedinfo mi{};
+	TCHAR rootdir[MAX_DPATH]{};
+} hdf_cache[MOUNT_CONFIG_SIZE];
+static int hdf_cache_mount_count = -1;
+
+static void invalidate_hdf_cache()
+{
+	for (auto& c : hdf_cache)
+		c.valid = false;
+	hdf_cache_mount_count = -1;
+}
+
+static int cached_get_filesys_unitconfig(struct uae_prefs *p, int row, struct mountedinfo *mi)
+{
+	if (row < 0 || row >= MOUNT_CONFIG_SIZE)
+		return get_filesys_unitconfig(p, row, mi);
+
+	auto* ci = &p->mountconfig[row].ci;
+
+	// Only cache HDF entries — everything else goes through uncached
+	if (ci->type != UAEDEV_HDF)
+		return get_filesys_unitconfig(p, row, mi);
+
+	// Invalidate all entries when mount list changes shape
+	if (hdf_cache_mount_count != p->mountitems) {
+		for (auto& c : hdf_cache)
+			c.valid = false;
+		hdf_cache_mount_count = p->mountitems;
+	}
+
+	auto& c = hdf_cache[row];
+	if (c.valid && _tcscmp(c.rootdir, ci->rootdir) != 0)
+		c.valid = false;
+	if (!c.valid) {
+		c.type = get_filesys_unitconfig(p, row, &c.mi);
+		_tcscpy(c.rootdir, ci->rootdir);
+		c.valid = true;
+	}
+	memcpy(mi, &c.mi, sizeof(*mi));
+	return c.type;
+}
+
 static bool IsCdDevicePath(const char* path)
 {
     return path && std::strncmp(path, "/dev/", 5) == 0;
@@ -144,7 +193,7 @@ static void RenderMountedDrives()
             auto* const ci = &uci->ci;
             
             struct mountedinfo mi{};
-            int type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+            int type = cached_get_filesys_unitconfig(&changed_prefs, row, &mi);
             
             bool nosize = false;
             if (type < 0) {
@@ -318,6 +367,7 @@ static void RenderActionButtons()
     // Remove
     if (AmigaButton("Remove", ImVec2(btn_w_props_remove, BUTTON_HEIGHT))) {
         kill_filesys_unitconfig(&changed_prefs, selected_row);
+        invalidate_hdf_cache();
         if (selected_row >= changed_prefs.mountitems) selected_row = changed_prefs.mountitems - 1;
     }
     ImGui::EndDisabled();
@@ -566,6 +616,7 @@ static void ShowEditFilesysVirtualModal()
 
         if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             new_filesys(edit_entry_index);
+            invalidate_hdf_cache();
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_virtual_filesys_modal = false;
@@ -765,6 +816,7 @@ static void ShowEditFilesysHardfileModal()
 
         if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             new_hardfile(edit_entry_index);
+            invalidate_hdf_cache();
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_hardfile_modal = false;
@@ -1174,7 +1226,8 @@ static void ShowEditCDDriveModal()
                     AddToMruCdList(path_buf);
             }
 
-            new_cddrive(-1); 
+            new_cddrive(-1);
+            invalidate_hdf_cache();
             gui_force_rtarea_hdchange(); 
             ImGui::CloseCurrentPopup();
             show_cd_modal = false;
@@ -1299,7 +1352,8 @@ static void ShowEditTapeDriveModal()
                 
                 inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, path_buf[0] != 0);
 
-                new_tapedrive(-1); 
+                new_tapedrive(-1);
+                invalidate_hdf_cache();
                 gui_force_rtarea_hdchange(); 
                 ImGui::CloseCurrentPopup();
                 show_tape_modal = false;
