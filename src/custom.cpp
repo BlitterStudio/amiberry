@@ -2285,6 +2285,9 @@ static void init_beamcon0(void)
 
 static void init_hz_reset(void)
 {
+	lol = 0;
+	linetoggle = !(new_beamcon0 & BEAMCON0_PAL) && !(new_beamcon0 & BEAMCON0_LOLDIS);
+
 	linear_vpos = currprefs.ntscmode ? MAXVPOS_NTSC : MAXVPOS_PAL;
 	linear_hpos = currprefs.ntscmode ? MAXHPOS_NTSC : MAXHPOS_PAL;
 	linear_vpos += lof_store;
@@ -2293,7 +2296,7 @@ static void init_hz_reset(void)
 	linear_vpos_prev[1] = linear_vpos;
 	linear_vpos_prev[2] = linear_vpos;
 	linear_hpos_prev[0] = linear_hpos;
-	linear_hpos_prev[1] = linear_hpos;
+	linear_hpos_prev[1] = linear_hpos + lol;
 	linear_hpos_prev[2] = linear_hpos;
 	current_linear_vpos = linear_vpos; // +vsync_startline - lof_store;
 	current_linear_hpos = linear_hpos;
@@ -5162,6 +5165,10 @@ static void vsync_check_vsyncmode(void)
 					int ydiff = (prevlofs[0] != prevlofs[1] && prevlofs[0] == prevlofs[2]) ? 2 : 1;
 					if (abs(hp - current_linear_hpos_temp) >= 2 || abs(vp - current_linear_vpos_temp) >= ydiff) {
 						current_linear_hpos_temp = hp;
+						if (linear_hpos_prev[0] == linear_hpos_prev[2] && abs(linear_hpos_prev[1] - linear_hpos_prev[0]) == 1) {
+							// LOL=1: select shorter line
+							current_linear_hpos_temp = linear_hpos_prev[0] > linear_hpos_prev[1] ? linear_hpos_prev[1] : linear_hpos_prev[0];
+						}
 						current_linear_vpos_temp = vp;
 						current_linear_temp_change = 2;
 					}
@@ -10431,7 +10438,7 @@ static void decide_line_end(void)
 {
 	linear_hpos_prev[2] = linear_hpos_prev[1];
 	linear_hpos_prev[1] = linear_hpos_prev[0];
-	linear_hpos_prev[0] = hsync_ccks;
+	linear_hpos_prev[0] = custom_fastmode ? maxhpos : hsync_ccks;
 	linear_hpos = 0;
 	hautoscale_check();
 	display_hstart_cyclewait_cnt = display_hstart_cyclewait_start;
@@ -11239,8 +11246,8 @@ static void custom_trigger_start(void)
 		check_vsyncs_fast();
 		linear_hpos_prev[2] = linear_hpos_prev[1];
 		linear_hpos_prev[1] = linear_hpos_prev[0];
-		linear_hpos_prev[0] = maxhpos_short;
-		linear_hpos = maxhpos_short;
+		linear_hpos_prev[0] = maxhpos;
+		linear_hpos = maxhpos;
 	}
 
 	if (!canvhposw()) {

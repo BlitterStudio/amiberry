@@ -6224,7 +6224,7 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 
 	// detect horizontal blanking
 	if (!denise_vblank_active) {
-		linear_denise_frame_hbstrt = hbstrt_offset;
+		linear_denise_frame_hbstrt = hbstrt_offset + (denise_strlong_seen ? lol * 8 : 0);
 		linear_denise_frame_hbstop = hbstop_offset;
 		//write_log("%d %d\n", linear_denise_frame_hbstrt, linear_denise_frame_hbstop);
 
@@ -6246,7 +6246,7 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 				linear_denise_frame_hbstrt_sel += linear_denise_strobe_offset + 2 * 8;
 				linear_denise_frame_hbstop_sel += linear_denise_strobe_offset + 2 * 8;
 				denise_hbstrt_relative_cnt = 0;
-				if (ss != linear_denise_frame_hbstrt_sel || ee != linear_denise_frame_hbstop_sel) {
+				if (abs(ss - linear_denise_frame_hbstrt_sel) >= 16 || abs(ee - linear_denise_frame_hbstop_sel) >= 16) {
 					denise_blanking_changed = true;
 				}
 			}
