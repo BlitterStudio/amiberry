@@ -528,34 +528,29 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
 	uae_u8* p;
 
-	if (amiga_surface == nullptr) {
+	SDL_Surface* surface = get_amiga_surface(monid);
+	if (surface == nullptr) {
 		return nullptr;
 	}
 
-	// When zero-copy is active, amiga_surface->pixels IS the VRAM.
-	// Detect this by comparing the surface pixels pointer with the RTG VRAM pointer.
-	// Returning nullptr here prevents picasso_flushpixels from copying
-	// VRAM to itself, which would cause display corruption.
 	if (currprefs.rtg_zerocopy) {
 		uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
-		if (rtg_vram != nullptr && amiga_surface->pixels == rtg_vram) {
+		if (rtg_vram != nullptr && surface->pixels == rtg_vram) {
 			return nullptr;
 		}
 	}
 
 
-	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
-
-	const auto* fmt = SDL_GetPixelFormatDetails(amiga_surface->format);
+	const auto* fmt = SDL_GetPixelFormatDetails(surface->format);
 	if (!fmt) {
 		write_log("gfx_lock_picasso: SDL_GetPixelFormatDetails failed\n");
 		return nullptr;
 	}
 	vidinfo->pixbytes = fmt->bytes_per_pixel;
-	vidinfo->rowbytes = amiga_surface->pitch;
-	vidinfo->maxwidth = amiga_surface->w;
-	vidinfo->maxheight = amiga_surface->h;
-	p = static_cast<uae_u8*>(amiga_surface->pixels);
+	vidinfo->rowbytes = surface->pitch;
+	vidinfo->maxwidth = surface->w;
+	vidinfo->maxheight = surface->h;
+	p = static_cast<uae_u8*>(surface->pixels);
 	return p;
 }
 uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)

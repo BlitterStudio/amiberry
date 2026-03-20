@@ -44,6 +44,7 @@
 #include "target.h"
 #include "display_modes.h"
 #include "irenderer.h"
+#include "renderer_factory.h"
 
 #ifdef AMIBERRY
 
@@ -85,14 +86,20 @@ void close_hwnds(struct AmigaMonitor* mon)
 	if (mon->monitor_id > 0 && mon->amiga_window)
 		setmouseactive(mon->monitor_id, 0);
 
-	if (g_renderer) {
-		g_renderer->close_hwnds_cleanup(mon);
-		g_renderer->destroy_context();
-		// Preserve the window in full-window mode to avoid compositor desktop flicker
-		// during resolution transitions; create_windows() reuses the existing window.
+	IRenderer* renderer_to_use = g_renderer.get();
+	if (mon->monitor_id > 0 && mon->renderer) {
+		renderer_to_use = mon->renderer.get();
+	}
+
+	if (renderer_to_use) {
+		renderer_to_use->close_hwnds_cleanup(mon);
+		renderer_to_use->destroy_context();
 		if (!kmsdrm_detected && isfullscreen() >= 0) {
-			g_renderer->destroy_platform_renderer(mon);
+			renderer_to_use->destroy_platform_renderer(mon);
 		}
+	}
+	if (mon->monitor_id > 0 && mon->renderer) {
+		mon->renderer.reset();
 	}
 	if (mon->amiga_window && !kmsdrm_detected && isfullscreen() >= 0)
 	{
@@ -442,6 +449,11 @@ void close_windows(struct AmigaMonitor* mon)
 	if (mon->monitor_id == 0) {
 		SDL_DestroySurface(amiga_surface);
 		amiga_surface = nullptr;
+	} else {
+		if (mon->amiga_surface) {
+			SDL_DestroySurface(mon->amiga_surface);
+			mon->amiga_surface = nullptr;
+		}
 	}
 #endif
 	if (mon->statusline_surface) {
@@ -787,8 +799,18 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= SDL_WINDOW_BORDERLESS;
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
-	if (g_renderer) {
-		flags |= g_renderer->get_window_flags();
+
+	// For secondary monitors, create a dedicated renderer
+	IRenderer* renderer_to_use = g_renderer.get();
+	if (mon->monitor_id > 0 && !mon->renderer) {
+		mon->renderer = create_renderer();
+		renderer_to_use = mon->renderer.get();
+	} else if (mon->renderer) {
+		renderer_to_use = mon->renderer.get();
+	}
+
+	if (renderer_to_use) {
+		flags |= renderer_to_use->get_window_flags();
 	}
 	TCHAR wintitle[64];
 	if (mon->monitor_id > 0)
@@ -843,8 +865,8 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	gfx_platform_set_window_icon(mon->amiga_window);
 
-	if (g_renderer) {
-		if (!g_renderer->create_platform_renderer(mon)) {
+	if (renderer_to_use) {
+		if (!renderer_to_use->create_platform_renderer(mon)) {
 			write_log(_T("creation of platform renderer failed\n"));
 			close_hwnds(mon);
 			return 0;
@@ -987,12 +1009,13 @@ bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_height = rc.h;
 		}
 
-		if (g_renderer) {
+		IRenderer* renderer = get_renderer(mon->monitor_id);
+		if (renderer) {
 			int ctx_attempts = 0;
 			bool ctx_success = false;
 
 			while (ctx_attempts < 2 && !ctx_success) {
-				if (!g_renderer->set_context_attributes(ctx_attempts))
+				if (!renderer->set_context_attributes(ctx_attempts))
 				{
 					write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
 					ctx_attempts++;
@@ -1005,31 +1028,23 @@ bool doInit(AmigaMonitor* mon)
 					return false;
 				}
 
-				// Destroy existing shaders and context before creating a new one.
-				// When the window is reused (e.g. auto-resolution change), create_windows
-				// returns without calling close_hwnds, so the old context and shaders
-				// survive. The shaders hold resources tied to the old context, so they
-				// must be destroyed while the old context is still current. Without this,
-				// init_context creates a new context, leaks the old one, and leaves
-				// stale shader objects that produce a black screen after a few frames.
-				g_renderer->destroy_shaders();
-				g_renderer->destroy_context();
+				renderer->destroy_shaders();
+				renderer->destroy_context();
 
-				if (g_renderer->init_context(mon->amiga_window))
+				if (renderer->init_context(mon->amiga_window))
 				{
 					ctx_success = true;
 				}
 				else
 				{
-					write_log("Renderer context init failed for mode %d. Retrying...\n", ctx_attempts);
-					// Close window to force recreation with new attributes
+					write_log("Renderer context init failed for mode %d on monitor %d. Retrying...\n", ctx_attempts, mon->monitor_id);
 					close_windows(mon);
 					ctx_attempts++;
 				}
 			}
 
 			if (!ctx_success) {
-				write_log("All renderer context attempts failed. Aborting doInit.\n");
+				write_log("All renderer context attempts failed for monitor %d. Aborting doInit.\n", mon->monitor_id);
 				return false;
 			}
 		} else {
@@ -1083,14 +1098,16 @@ bool doInit(AmigaMonitor* mon)
 	avidinfo->outbuffer = &avidinfo->drawbuffer;
 	avidinfo->inbuffer = &avidinfo->tempbuffer;
 
-	if (amiga_surface)
+	// For secondary monitors, use per-monitor surface instead of global
+	SDL_Surface*& surface_ref = (mon->monitor_id > 0) ? mon->amiga_surface : amiga_surface;
+	if (surface_ref)
 	{
-		SDL_DestroySurface(amiga_surface);
-		amiga_surface = nullptr;
+		SDL_DestroySurface(surface_ref);
+		surface_ref = nullptr;
 	}
-	amiga_surface = SDL_CreateSurface(display_width, display_height, pixel_format);
-	if (!amiga_surface) {
-		write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
+	surface_ref = SDL_CreateSurface(display_width, display_height, pixel_format);
+	if (!surface_ref) {
+		write_log("Failed to create amiga_surface for monitor %d: %s\n", mon->monitor_id, SDL_GetError());
 		return false;
 	}
 	update_system_pixel_format();
@@ -1130,12 +1147,14 @@ bool doInit(AmigaMonitor* mon)
 	{
 		on_screen_joystick_init(mon->amiga_renderer);
 		int sw = 0, sh = 0;
-		if (g_renderer) {
-			g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
-		} else {
+		IRenderer* renderer = get_renderer(mon->monitor_id);
+		if (renderer) {
+			renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
+			on_screen_joystick_update_layout(sw, sh, renderer->render_quad);
+		} else if (mon->amiga_renderer) {
 			SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &sw, &sh);
+			on_screen_joystick_update_layout(sw, sh, {});
 		}
-		on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
 		on_screen_joystick_set_enabled(true);
 	}
 
