@@ -32,7 +32,11 @@ UAE_DLHANDLE uae_dlopen(const TCHAR *path)
 		return NULL;
 	}
 #ifdef _WIN32
-	result = LoadLibrary(path);
+	result = LoadLibraryA(path);
+	if (result == NULL) {
+		DWORD err = GetLastError();
+		write_log("DLOPEN: LoadLibrary error code: %lu\n", err);
+	}
 #else
 	result = dlopen(path, RTLD_NOW);
 	const char *error = dlerror();
@@ -110,17 +114,29 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 	TCHAR path[MAX_DPATH];
 	std::string directory = get_plugins_path();
 	_tcscpy(path, directory.append(name).c_str());
-#ifdef _WIN64
-	_tcscat(path, _T("_x64"));
-#endif
 	if (_tcscmp(path + _tcslen(path) - _tcslen(LT_MODULE_EXT), LT_MODULE_EXT) != 0) {
 		_tcscat(path, LT_MODULE_EXT);
 	}
+#ifdef _WIN32
+	// Add the executable directory to DLL search path so plugins in a
+	// subdirectory can find their dependencies (e.g. libserialport)
+	{
+		char exedir[MAX_DPATH];
+		GetModuleFileNameA(NULL, exedir, MAX_DPATH);
+		char* last_sep = strrchr(exedir, '\\');
+		if (!last_sep) last_sep = strrchr(exedir, '/');
+		if (last_sep) *last_sep = '\0';
+		SetDllDirectoryA(exedir);
+	}
+#endif
+	write_log(_T("DLOPEN: Trying to load plugin from: %s\n"), path);
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #endif
 	if (handle) {
 		write_log(_T("DLOPEN: Loaded plugin %s\n"), path);
 		uae_dlopen_patch_common(handle);
+	} else {
+		write_log(_T("DLOPEN: Failed to load plugin %s\n"), path);
 	}
 	return handle;
 }

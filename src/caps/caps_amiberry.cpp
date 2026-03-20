@@ -67,7 +67,11 @@ int caps_init (void)
 
 	if (init)
 		return 1;
+#ifdef _WIN32
+	UAE_DLHANDLE h = uae_dlopen_plugin(_T("libCAPSImg"));
+#else
 	UAE_DLHANDLE h = uae_dlopen_plugin(_T("libcapsimage"));
+#endif
 	if (!h) {
 		if (noticed)
 			return 0;

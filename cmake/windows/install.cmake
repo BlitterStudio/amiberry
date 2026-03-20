@@ -19,11 +19,24 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_SOURCE_DIR}/whdboot
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
 
-# Copy plugin DLLs next to the executable
+# Copy plugin DLLs to plugins/ subdirectory in build dir for local debugging
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:capsimage>
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:floppybridge>
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/)
+
+# Install plugin DLLs to plugins/ subdirectory
 install(FILES $<TARGET_FILE:capsimage>
-        DESTINATION ${CMAKE_INSTALL_BINDIR})
+        DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
 install(FILES $<TARGET_FILE:floppybridge>
-        DESTINATION ${CMAKE_INSTALL_BINDIR})
+        DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
         DESTINATION ${CMAKE_INSTALL_BINDIR})
