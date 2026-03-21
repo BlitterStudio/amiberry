@@ -61,7 +61,7 @@ extern int window_led_msg, window_led_msg_end, window_led_msg_start;
 static int display_width;
 static int display_height;
 
-static void movecursor(int x, int y);
+static void movecursor(const AmigaMonitor* mon, int x, int y);
 static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r);
 static int create_windows(struct AmigaMonitor* mon);
 static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf, int flags, int width, int height);
@@ -481,9 +481,8 @@ void close_all_windows()
 	}
 }
 
-static void movecursor(const int x, const int y)
+static void movecursor(const AmigaMonitor* mon, const int x, const int y)
 {
-	const AmigaMonitor* mon = &AMonitors[0];
 	if (mon->amiga_window) {
 		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
 	}
@@ -707,6 +706,7 @@ static int create_windows(struct AmigaMonitor* mon)
 				const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
 				SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
 				SDL_SetWindowFullscreen(mon->amiga_window, true);
+				SDL_SyncWindow(mon->amiga_window);
 			} else if (fullscreen) {
 				SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
 				if (display_id) {
@@ -717,6 +717,7 @@ static int create_windows(struct AmigaMonitor* mon)
 					}
 				}
 				SDL_SetWindowFullscreen(mon->amiga_window, true);
+				SDL_SyncWindow(mon->amiga_window);
 			}
 		} else {
 			w = nw;
@@ -862,6 +863,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
 		SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
 		SDL_SetWindowFullscreen(mon->amiga_window, true);
+		SDL_SyncWindow(mon->amiga_window);
 	} else if (fullscreen) {
 		SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
 		if (display_id) {
@@ -872,6 +874,7 @@ static int create_windows(struct AmigaMonitor* mon)
 			}
 		}
 		SDL_SetWindowFullscreen(mon->amiga_window, true);
+		SDL_SyncWindow(mon->amiga_window);
 	}
 
 	SDL_Rect rc2;
@@ -918,7 +921,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	updatewinrect(mon, true);
 	GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
 	if (fullscreen || fullwindow)
-		movecursor(x + w / 2, y + h / 2);
+		movecursor(mon, x + w / 2, y + h / 2);
 
 	mon->window_extra_height_bar = 0;
 	//mon->dpi = getdpiforwindow(mon->monitor_id);
@@ -1040,7 +1043,7 @@ bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_height = rc.h;
 		}
 
-	IRenderer* renderer = g_renderer.get();
+	IRenderer* renderer = get_renderer(mon->monitor_id);
 		if (renderer) {
 			int ctx_attempts = 0;
 			bool ctx_success = false;

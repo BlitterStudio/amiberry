@@ -141,6 +141,7 @@ static int recapture;
 static int focus;
 static int mouseinside;
 int mouseactive;
+int mouse_monid;
 int minimized;
 int monitor_off;
 
@@ -2098,10 +2099,11 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	int32_t yrel = event.motion.yrel;
 
 	// HiDPI / Retina: scale from screen coordinates (points) to drawable pixels
-	if (g_renderer) {
+	IRenderer* renderer = get_renderer(mon->monitor_id);
+	if (renderer) {
 		int win_w, win_h, draw_w, draw_h;
 		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
-		g_renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
 
 		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
 			float scale_x = (float)draw_w / (float)win_w;
@@ -2485,6 +2487,8 @@ static void process_event(const SDL_Event& event)
 			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
 			if (on_screen_joystick_is_enabled() && event.button.which == SDL_TOUCH_MOUSEID)
 				break;
+			mon = monitor_from_window_id(event.button.windowID);
+			mouse_monid = mon->monitor_id;
 			handle_mouse_button_event(event, mon);
 			break;
 
@@ -2506,6 +2510,8 @@ static void process_event(const SDL_Event& event)
 			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
 			if (on_screen_joystick_is_enabled() && event.motion.which == SDL_TOUCH_MOUSEID)
 				break;
+			mon = monitor_from_window_id(event.motion.windowID);
+			mouse_monid = mon->monitor_id;
 			handle_mouse_motion_event(event, mon);
 			break;
 

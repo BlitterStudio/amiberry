@@ -376,12 +376,18 @@ void SDLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_
 	}
 }
 
-void SDLRenderer::get_drawable_size(SDL_Window* /*w*/, int* width, int* height)
+void SDLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 {
-	// SDL3 software path: use renderer output size
-	AmigaMonitor* mon = &AMonitors[0];
-	if (mon->amiga_renderer) {
-		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, width, height);
+	// SDL3 software path: try to find the monitor owning this window
+	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+		if (AMonitors[i].amiga_window == w && AMonitors[i].amiga_renderer) {
+			SDL_GetCurrentRenderOutputSize(AMonitors[i].amiga_renderer, width, height);
+			return;
+		}
+	}
+	// Fallback: use monitor 0
+	if (AMonitors[0].amiga_renderer) {
+		SDL_GetCurrentRenderOutputSize(AMonitors[0].amiga_renderer, width, height);
 	}
 }
 

@@ -2543,7 +2543,7 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	if (cursorheight > CURSORMAXHEIGHT)
 		cursorheight = CURSORMAXHEIGHT;
 
-	createwindowscursor(0, 1, 0);
+	createwindowscursor(currprefs.rtgboards[0].monitor_id, 1, 0);
 
 	setupcursor ();
 	ret = 1;
@@ -6026,11 +6026,12 @@ static int render_thread(void *v)
 		if (idx == -1)
 			break;
 		idx &= 0xff;
-		struct amigadisplay *ad = &adisplays[idx];
+		int monid = currprefs.rtgboards[idx].monitor_id;
+		struct amigadisplay *ad = &adisplays[monid];
 		if (ad->picasso_on && ad->picasso_requested_on) {
 			lockrtg();
 			if (ad->picasso_requested_on) {
-				const struct picasso96_state_struct *state = &picasso96_state[idx];
+				const struct picasso96_state_struct *state = &picasso96_state[monid];
 				picasso_flushpixels(idx, gfxmem_banks[idx]->start + natmem_offset, state->XYOffset - gfxmem_banks[idx]->start, false);
 				ad->pending_render = true;
 			}
