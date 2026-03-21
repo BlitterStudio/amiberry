@@ -253,7 +253,7 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
             static_cast<float>(render_quad.w), static_cast<float>(render_quad.h) };
 
         if (ad->picasso_on) {
-            f_crop = { 1.0f, 1.0f, static_cast<float>(surface->w), static_cast<float>(surface->h) };
+            f_crop = { 0.0f, 0.0f, static_cast<float>(surface->w), static_cast<float>(surface->h) };
             f_quad = f_crop;
 
             int lw, lh;

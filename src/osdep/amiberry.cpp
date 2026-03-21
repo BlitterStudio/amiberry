@@ -2057,21 +2057,22 @@ static void handle_finger_motion_event(const SDL_Event& event)
 #endif
 	if (isfocus() && event.tfinger.fingerID == 0)
 	{
-        // Use relative movement for better control (Laptop touchpad style)
-        // Scale normalized coords (0..1) to window pixels
-        int w = 0, h = 0;
-        if (AMonitors[0].amiga_window) {
-             SDL_GetWindowSize(AMonitors[0].amiga_window, &w, &h);
-        } else {
-             // Fallback if window not ready, though unlikely if getting events
-             w = 640; h = 480; 
-        }
-        
-        int relX = (int)(event.tfinger.dx * w);
-        int relY = (int)(event.tfinger.dy * h);
+		// Use relative movement for better control (Laptop touchpad style)
+		// Scale normalized coords (0..1) to window pixels
+		int w = 0, h = 0;
+		const AmigaMonitor* mon = &AMonitors[mouse_monid];
+		if (mon->amiga_window) {
+			SDL_GetWindowSize(mon->amiga_window, &w, &h);
+		} else {
+			// Fallback if window not ready, though unlikely if getting events
+			w = 640; h = 480;
+		}
 
-        setmousestate(0, 0, relX, 0); // 0 = relative
-        setmousestate(0, 1, relY, 0);
+		int relX = (int)(event.tfinger.dx * w);
+		int relY = (int)(event.tfinger.dy * h);
+
+		setmousestate(0, 0, relX, 0); // 0 = relative
+		setmousestate(0, 1, relY, 0);
 	}
 }
 
@@ -2151,6 +2152,8 @@ static void handle_mouse_wheel_event(const SDL_Event& event)
 		setmousebuttonstate(midx, 6, -1);
 }
 
+static AmigaMonitor* monitor_from_window_id(SDL_WindowID window_id);
+
 #ifndef LIBRETRO
 static float pen_pressure;
 static float pen_xtilt;
@@ -2165,16 +2168,17 @@ static void pen_coords_to_tablet(const AmigaMonitor* mon, float x, float y, int*
 	SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
 
 	// HiDPI: window screen coords → drawable pixels (same as mouse handler)
-	if (g_renderer) {
+	IRenderer* renderer = get_renderer(mon->monitor_id);
+	if (renderer) {
 		int draw_w, draw_h;
-		g_renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
 		if (win_w > 0 && draw_w > 0 && win_w != draw_w)
 			x = x * static_cast<float>(draw_w) / static_cast<float>(win_w);
 		if (win_h > 0 && draw_h > 0 && win_h != draw_h)
 			y = y * static_cast<float>(draw_h) / static_cast<float>(win_h);
 
 		// Map relative to the Amiga display area within the drawable
-		const SDL_Rect& rq = g_renderer->render_quad;
+		const SDL_Rect& rq = renderer->render_quad;
 		if (rq.w > 0 && rq.h > 0) {
 			float rx = (x - static_cast<float>(rq.x)) * 4095.0f / static_cast<float>(rq.w);
 			float ry = (y - static_cast<float>(rq.y)) * 4095.0f / static_cast<float>(rq.h);
@@ -2206,10 +2210,11 @@ static void pen_position_via_mouse(const AmigaMonitor* mon, float x, float y)
 	int32_t px = static_cast<int32_t>(x);
 	int32_t py = static_cast<int32_t>(y);
 
-	if (g_renderer) {
+	IRenderer* renderer = get_renderer(mon->monitor_id);
+	if (renderer) {
 		int win_w, win_h, draw_w, draw_h;
 		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
-		g_renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
 		if (win_w > 0 && draw_w > 0 && win_w != draw_w)
 			px = static_cast<int32_t>(x * static_cast<float>(draw_w) / static_cast<float>(win_w));
 		if (win_h > 0 && draw_h > 0 && win_h != draw_h)
@@ -2226,7 +2231,7 @@ static void handle_pen_event(const SDL_Event& event)
 		return;
 
 	const bool tablet_real = inputdevice_is_tablet() > 0;
-	AmigaMonitor* mon = &AMonitors[0];
+	AmigaMonitor* mon = monitor_from_window_id(event.pproximity.windowID);
 
 	switch (event.type) {
 	case SDL_EVENT_PEN_PROXIMITY_IN:
@@ -2451,6 +2456,8 @@ static void process_event(const SDL_Event& event)
 		case SDL_EVENT_FINGER_DOWN:
 		case SDL_EVENT_FINGER_UP:
 		{
+			mon = monitor_from_window_id(event.tfinger.windowID);
+			mouse_monid = mon->monitor_id;
 			// Let on-screen joystick consume the event first if applicable
 			int ww = 0, wh = 0;
 			if (mon->amiga_window)
@@ -2494,6 +2501,8 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_EVENT_FINGER_MOTION:
 		{
+			mon = monitor_from_window_id(event.tfinger.windowID);
+			mouse_monid = mon->monitor_id;
 			int ww = 0, wh = 0;
 			if (mon->amiga_window)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
