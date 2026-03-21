@@ -1456,6 +1456,11 @@ void auto_crop_image()
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
 
+		// get_custom_limits() applies dy-- which shifts the crop start up by
+		// 1 raster line without extending the height, cutting off the bottom
+		// content line. Compensate by shifting cy back down.
+		cy += (1 << vres);
+
 		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop && last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy)
 		{
 			return;

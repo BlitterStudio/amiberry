@@ -512,10 +512,21 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		if (destH <= 0) destH = 1;
 
 		if (use_integer_scaling && src_w > 0 && src_h > 0) {
-			int scale = std::min(destW / src_w, destH / src_h);
+			// Use the aspect-corrected integer dimensions from auto_crop_image()
+			// when available. These are exact integers, avoiding float precision
+			// issues with crop_aspect that cause off-by-one in scale computation.
+			int display_w, display_h;
+			if (is_cropped && render_quad.w > 0 && render_quad.h > 0) {
+				display_w = render_quad.w;
+				display_h = render_quad.h;
+			} else {
+				display_w = src_w;
+				display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
+			}
+			int scale = std::min(renderAreaW / display_w, renderAreaH / display_h);
 			if (scale < 1) scale = 1;
-			destW = src_w * scale;
-			destH = src_h * scale;
+			destW = display_w * scale;
+			destH = display_h * scale;
 		}
 
 		destX = (renderAreaW - destW) / 2;
