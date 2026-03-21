@@ -932,6 +932,21 @@ bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode
 	(void)mode;
 	return true;
 }
+bool SDL_SetWindowFullscreen(SDL_Window* window, bool fullscreen)
+{
+	(void)window;
+	(void)fullscreen;
+	return true;
+}
+void SDL_SyncWindow(SDL_Window* window)
+{
+	(void)window;
+}
+void SDL_GetWindowSizeInPixels(SDL_Window* window, int* w, int* h)
+{
+	if (w) *w = window ? window->w : 0;
+	if (h) *h = window ? window->h : 0;
+}
 void SDL_SetWindowSize(SDL_Window* window, int w, int h)
 {
 	if (window) {

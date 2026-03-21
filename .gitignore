@@ -158,3 +158,4 @@ android/app/src/main/assets/whdboot
 android/local.properties
 .claude/settings.local.json
 build-debug
+.cache
