@@ -2168,6 +2168,20 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		yrel = (int32_t)(yrel * mon->hidpi_scale_y);
 	}
 
+#ifndef LIBRETRO
+	// SDL3 logical presentation: convert window coordinates to render coordinates
+	if (mon->amiga_renderer) {
+		float rx, ry, rx0, ry0;
+		if (SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, (float)x, (float)y, &rx, &ry)) {
+			SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, (float)(x - xrel), (float)(y - yrel), &rx0, &ry0);
+			xrel = (int32_t)(rx - rx0);
+			yrel = (int32_t)(ry - ry0);
+			x = (int32_t)rx;
+			y = (int32_t)ry;
+		}
+	}
+#endif
+
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
 		setmousestate(midx, 0, x, 1);
