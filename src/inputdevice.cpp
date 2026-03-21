@@ -2617,8 +2617,6 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 
 	getgfxoffset(monid, &fdx, &fdy, &fmx, &fmy);
 
-	//write_log("%d %d, %.2f*%.2f %.2f*%.2f\n", x, y, fdx, fdy, fmx, fmy);
-
 #ifdef PICASSO96
 	if (ad->picasso_on) {
 		x -= state->XOffset;
