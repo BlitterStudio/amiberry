@@ -920,6 +920,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 {
 	if (path == nullptr) {
 		write_log("my_mkdir: null path provided\n");
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -932,9 +933,11 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		if (fs::exists(utf8_path, ec)) {
 			if (fs::is_directory(utf8_path, ec)) {
 				write_log("my_mkdir: directory %s already exists\n", path);
+				errno = EEXIST;
 				return -1;
 			}
 			write_log("my_mkdir: path %s exists but is not a directory\n", path);
+			errno = EEXIST;
 			return -1;
 		}
 
@@ -944,6 +947,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			if (!fs::create_directories(parent, ec)) {
 				write_log("my_mkdir: failed to create parent directories for %s: %s\n",
 					path, ec.message().c_str());
+				if (errno == 0) errno = EIO;
 				return -1;
 			}
 		}
@@ -960,6 +964,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	catch (const std::exception& e) {
 		write_log("my_mkdir: exception while creating directory %s: %s\n",
 			path, e.what());
+		errno = EIO;
 		return -1;
 	}
 }
@@ -1193,6 +1198,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 {
 	if (!path) {
 		write_log("my_rmdir: null directory path provided\n");
+		errno = ENOENT;
 		return -1;
 	}
 
@@ -1205,11 +1211,13 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		std::error_code ec;
 		if (!fs::exists(dirpath, ec)) {
 			write_log("my_rmdir: directory %s does not exist\n", path);
+			errno = ENOENT;
 			return -1;
 		}
 
 		if (!fs::is_directory(dirpath, ec)) {
 			write_log("my_rmdir: path %s is not a directory\n", path);
+			errno = ENOTDIR;
 			return -1;
 		}
 
@@ -1231,6 +1239,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 		if (has_real_files) {
 			write_log("my_rmdir: directory %s is not empty\n", path);
+			errno = ENOTEMPTY;
 			return -1;
 		}
 
@@ -1254,6 +1263,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	catch (const std::exception& e) {
 		write_log("my_rmdir: exception while removing directory %s: %s\n",
 			path, e.what());
+		errno = EIO;
 		return -1;
 	}
 }
@@ -1262,6 +1272,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 {
 	if (!path) {
 		write_log("my_unlink: null file path provided\n");
+		errno = ENOENT;
 		return -1;
 	}
 
@@ -1272,6 +1283,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 		if (filepath.empty()) {
 			write_log("my_unlink: empty path provided\n");
+			errno = ENOENT;
 			return -1;
 		}
 
@@ -1279,17 +1291,20 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		std::error_code ec;
 		if (!fs::exists(filepath, ec)) {
 			write_log("my_unlink: file %s does not exist\n", path);
+			errno = ENOENT;
 			return -1;
 		}
 
 		if (!fs::is_regular_file(filepath, ec)) {
 			write_log("my_unlink: %s is not a regular file\n", path);
+			errno = EPERM;
 			return -1;
 		}
 
 		// Ensure we have write permission to delete
 		if (!fs::is_regular_file(filepath) || (fs::status(filepath, ec).permissions() & fs::perms::owner_all) == fs::perms::none) {
 			write_log("my_unlink: insufficient permissions to remove %s\n", path);
+			errno = EACCES;
 			return -1;
 		}
 
@@ -1298,6 +1313,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		if (!fs::remove(filepath, ec)) {
 			write_log("my_unlink: remove failed for %s: %s\n",
 				path, ec.message().c_str());
+			errno = EIO;
 			return -1;
 		}
 
@@ -1311,6 +1327,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	catch (const std::exception& e) {
 		write_log("my_unlink: exception while removing %s: %s\n",
 			path, e.what());
+		errno = EIO;
 		return -1;
 	}
 }
@@ -1321,11 +1338,13 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	if (oldname == nullptr || newname == nullptr) {
 		write_log("my_rename: invalid arguments - %s\n",
 			oldname == nullptr ? "old filename is null" : "new filename is null");
+		errno = EINVAL;
 		return -1;
 	}
 
 	if (*oldname == '\0' || *newname == '\0') {
 		write_log("my_rename: empty filename provided\n");
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -1337,6 +1356,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		// Check if paths are valid after conversion
 		if (old_output.empty() || new_output.empty()) {
 			write_log("my_rename: path conversion failed\n");
+			errno = EINVAL;
 			return -1;
 		}
 
@@ -1380,6 +1400,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	catch (const std::exception& e) {
 		write_log("my_rename: unexpected error while renaming '%s' to '%s': %s\n",
 			oldname, newname, e.what());
+		errno = EIO;
 		return -1;
 	}
 }
@@ -1389,12 +1410,14 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	// Input validation with detailed error reporting
 	if (mos == nullptr) {
 		write_log("my_lseek: null file descriptor provided\n");
+		errno = EBADF;
 		return -1;
 	}
 
 	if (mos->fd < 0 || mos->path == nullptr) {
 		write_log("my_lseek: invalid file descriptor state (fd=%d, path=%s)\n",
 			mos->fd, mos->path ? mos->path : "null");
+		errno = EBADF;
 		return -1;
 	}
 
@@ -1402,6 +1425,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) {
 		write_log("my_lseek: invalid whence parameter %d for file %s\n",
 			whence, mos->path);
+		errno = EINVAL;
 		return -1;
 	}
 

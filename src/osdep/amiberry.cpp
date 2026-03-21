@@ -575,10 +575,12 @@ static int init_mmtimer()
 
 void sleep_cpu_wakeup()
 {
+	SDL_LockMutex(cpu_wakeup_mutex);
 	if (!cpu_wakeup_event_triggered) {
 		cpu_wakeup_event_triggered = true;
 		SDL_SignalCondition(cpu_wakeup_event);
 	}
+	SDL_UnlockMutex(cpu_wakeup_mutex);
 }
 
 int get_sound_event();
@@ -590,14 +592,19 @@ static int sleep_millis2(int ms, const bool main)
 	if (ms < 0)
 		ms = -ms;
 	if (main) {
-		if (SDL_WaitConditionTimeout(cpu_wakeup_event, cpu_wakeup_mutex, 0)) {
+		SDL_LockMutex(cpu_wakeup_mutex);
+		if (cpu_wakeup_event_triggered) {
+			cpu_wakeup_event_triggered = false;
+			SDL_UnlockMutex(cpu_wakeup_mutex);
 			return 0;
 		}
+		SDL_UnlockMutex(cpu_wakeup_mutex);
 		start = read_processor_time();
 
 		SDL_Delay(ms);
-		//SDL_WaitConditionTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
+		SDL_LockMutex(cpu_wakeup_mutex);
 		cpu_wakeup_event_triggered = false;
+		SDL_UnlockMutex(cpu_wakeup_mutex);
 	}
 	else {
 		SDL_Delay(ms);
