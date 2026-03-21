@@ -87,6 +87,9 @@ struct AmigaMonitor {
 	SDL_Renderer* gui_renderer;
 	struct MultiDisplay* md;
 
+	SDL_Surface* amiga_surface;
+	std::unique_ptr<IRenderer> renderer;
+
 	SDL_Rect amigawin_rect, mainwin_rect;
 	SDL_Rect amigawinclip_rect;
 	int window_extra_width, window_extra_height;
@@ -138,16 +141,23 @@ void update_system_pixel_format();
 #define  SYSTEM_BLUE_MASK      system_blue_mask
 
 extern std::unique_ptr<IRenderer> g_renderer;
+extern SDL_Surface* amiga_surface;
 
 inline IRenderer* get_renderer(int monid = 0)
 {
-	(void)monid;
+	if (monid >= 0 && monid < MAX_AMIGAMONITORS && AMonitors[monid].renderer)
+		return AMonitors[monid].renderer.get();
 	return g_renderer.get();
 }
 
-extern SDL_DisplayMode sdl_mode;
+inline SDL_Surface* get_amiga_surface(int monid = 0)
+{
+	if (monid >= 0 && monid < MAX_AMIGAMONITORS && AMonitors[monid].amiga_surface)
+		return AMonitors[monid].amiga_surface;
+	return amiga_surface;
+}
 
-extern SDL_Surface* amiga_surface;
+extern SDL_DisplayMode sdl_mode;
 extern const char* sdl_video_driver;
 extern SDL_Cursor* normalcursor;
 

@@ -2603,7 +2603,8 @@ void input_mousehack_mouseoffset(uaecptr pointerprefs)
 
 static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 {
-	int monid = 0;
+	extern int mouse_monid;
+	int monid = mouse_monid;
 	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
 	struct amigadisplay *ad = &adisplays[monid];
 	struct picasso96_state_struct *state = &picasso96_state[monid];

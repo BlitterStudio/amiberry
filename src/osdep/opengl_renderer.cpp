@@ -371,17 +371,14 @@ void OpenGLRenderer::update_vsync(int monid)
 
 bool OpenGLRenderer::render_frame(int monid, int mode, int immediate)
 {
-	// OpenGL path: just checks surface exists.
-	// The actual GL rendering happens in present_frame (show_screen).
-	extern SDL_Surface* amiga_surface;
-	return amiga_surface != nullptr;
+	SDL_Surface* surface = get_amiga_surface(monid);
+	return surface != nullptr;
 }
 
 void OpenGLRenderer::present_frame(int monid, int mode)
 {
-	extern SDL_Surface* amiga_surface;
-
 	AmigaMonitor* mon = &AMonitors[monid];
+	SDL_Surface* surface = get_amiga_surface(monid);
 
 	const auto time = SDL_GetTicks();
 
@@ -421,8 +418,8 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	// Hot-reload shader if user changed it in the GUI while emulation is running
 	const char* wanted_shader = mon->screen_is_picasso ? amiberry_options.shader_rtg : amiberry_options.shader;
-	if (m_shader.loaded_name != wanted_shader && amiga_surface) {
-		alloc_texture(monid, amiga_surface->w, amiga_surface->h);
+	if (m_shader.loaded_name != wanted_shader && surface) {
+		alloc_texture(monid, surface->w, surface->h);
 	}
 
 	// Compute bezel display area: letterbox/pillarbox the bezel image within the
@@ -464,23 +461,23 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	// Compute source dimensions early (needed for integer scaling)
 	bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-					   crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-					   crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-					   (crop_rect.w > 0 && crop_rect.h > 0);
+		crop_rect.w != (surface ? surface->w : 0) ||
+		crop_rect.h != (surface ? surface->h : 0)) &&
+		(crop_rect.w > 0 && crop_rect.h > 0);
 
 	int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0;
-	if (is_cropped && amiga_surface) {
+	if (is_cropped && surface) {
 		crop_x = std::max(0, crop_rect.x);
 		crop_y = std::max(0, crop_rect.y);
-		crop_w = std::min(crop_rect.w, amiga_surface->w - crop_x);
-		crop_h = std::min(crop_rect.h, amiga_surface->h - crop_y);
+		crop_w = std::min(crop_rect.w, surface->w - crop_x);
+		crop_h = std::min(crop_rect.h, surface->h - crop_y);
 		if (crop_w <= 0 || crop_h <= 0) {
 			is_cropped = false;
 		}
 	}
 
-	const int src_w = (is_cropped) ? crop_w : (amiga_surface ? amiga_surface->w : 0);
-	const int src_h = (is_cropped) ? crop_h : (amiga_surface ? amiga_surface->h : 0);
+	const int src_w = (is_cropped) ? crop_w : (surface ? surface->w : 0);
+	const int src_h = (is_cropped) ? crop_h : (surface ? surface->h : 0);
 
 	bool use_integer_scaling = mon->screen_is_picasso
 		? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
@@ -561,14 +558,14 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 		static int preset_frame_count = 0;
 
-		if (is_cropped && amiga_surface) {
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * m_gl_format.bpp);
+		if (is_cropped && surface) {
+			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
 
-			m_shader.preset->render(crop_ptr, crop_w, crop_h, amiga_surface->pitch,
+			m_shader.preset->render(crop_ptr, crop_w, crop_h, surface->pitch,
 				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
-		} else if (amiga_surface) {
-			m_shader.preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
-				amiga_surface->w, amiga_surface->h, amiga_surface->pitch,
+		} else if (surface) {
+			m_shader.preset->render(static_cast<const unsigned char*>(surface->pixels),
+				surface->w, surface->h, surface->pitch,
 				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
 		}
 
@@ -593,15 +590,15 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		// Set viewport for shader rendering
 		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
-		if (is_cropped && amiga_surface) {
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * m_gl_format.bpp);
+		if (is_cropped && surface) {
+			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			render_external_shader(m_shader.external, monid, crop_ptr,
-				crop_w, crop_h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
-		} else if (amiga_surface) {
+				crop_w, crop_h, surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
+		} else if (surface) {
 			render_external_shader(m_shader.external, monid,
-				static_cast<const uae_u8*>(amiga_surface->pixels),
-				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
+				static_cast<const uae_u8*>(surface->pixels),
+				surface->w, surface->h, surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		}
 
 	} else if (m_shader.crtemu) {
@@ -619,15 +616,15 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			glViewport(renderAreaX, glAreaY, renderAreaW, renderAreaH);
 		}
 
-		if (is_cropped && amiga_surface) {
-			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (crop_y * amiga_surface->pitch) + (crop_x * m_gl_format.bpp);
+		if (is_cropped && surface) {
+			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			crtemu_present(m_shader.crtemu, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
-				crop_w, crop_h, amiga_surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
-		} else if (amiga_surface) {
-			crtemu_present(m_shader.crtemu, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
-		}
+				crop_w, crop_h, surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
+		} else if (surface) {
+			crtemu_present(m_shader.crtemu, time * 1000, (CRTEMU_U32 const*)surface->pixels,
+			surface->w, surface->h, surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
+        }
 	}
 
 	render_software_cursor(monid, destX, glDestY, destW, destH);
@@ -987,12 +984,12 @@ BezelHoleInfo OpenGLRenderer::get_bezel_hole_info() const
 void OpenGLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
 	float* dx, float* dy, float* mx, float* my)
 {
-	extern SDL_Surface* amiga_surface;
 	const amigadisplay* ad = &adisplays[monid];
+	SDL_Surface* surface = get_amiga_surface(monid);
 
 	*dx = 0; *dy = 0; *mx = 1.0f; *my = 1.0f;
 
-	if (amiga_surface && render_quad.w > 0 && render_quad.h > 0) {
+	if (surface && render_quad.w > 0 && render_quad.h > 0) {
 		if (src_w > 0) *mx = static_cast<float>(render_quad.w) / src_w;
 		if (src_h > 0) *my = static_cast<float>(render_quad.h) / src_h;
 
@@ -1509,10 +1506,10 @@ void OpenGLRenderer::render_software_cursor(const int monid, int x, int y, int w
 			p96_get_cursor_position(&cx, &cy);
 			p96_get_cursor_dimensions(&cw, &ch);
 
-			extern SDL_Surface* amiga_surface;
-			if (amiga_surface) {
-				float surf_w = (float)amiga_surface->w;
-				float surf_h = (float)amiga_surface->h;
+			SDL_Surface* surface = get_amiga_surface(monid);
+			if (surface) {
+				float surf_w = (float)surface->w;
+				float surf_h = (float)surface->h;
 
 				// Percentage of surface
 				float px = (float)cx / surf_w;

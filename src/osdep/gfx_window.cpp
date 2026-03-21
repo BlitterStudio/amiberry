@@ -44,6 +44,7 @@
 #include "target.h"
 #include "display_modes.h"
 #include "irenderer.h"
+#include "renderer_factory.h"
 
 #ifdef AMIBERRY
 
@@ -60,7 +61,7 @@ extern int window_led_msg, window_led_msg_end, window_led_msg_start;
 static int display_width;
 static int display_height;
 
-static void movecursor(int x, int y);
+static void movecursor(const AmigaMonitor* mon, int x, int y);
 static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r);
 static int create_windows(struct AmigaMonitor* mon);
 static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf, int flags, int width, int height);
@@ -85,14 +86,22 @@ void close_hwnds(struct AmigaMonitor* mon)
 	if (mon->monitor_id > 0 && mon->amiga_window)
 		setmouseactive(mon->monitor_id, 0);
 
-	if (g_renderer) {
-		g_renderer->close_hwnds_cleanup(mon);
-		g_renderer->destroy_context();
-		// Preserve the window in full-window mode to avoid compositor desktop flicker
-		// during resolution transitions; create_windows() reuses the existing window.
+	IRenderer* renderer_to_use = nullptr;
+		if (mon->monitor_id > 0 && mon->renderer) {
+			renderer_to_use = mon->renderer.get();
+		} else if (mon->monitor_id == 00 && g_renderer) {
+		 renderer_to_use = g_renderer.get();
+        }
+
+	if (renderer_to_use) {
+		renderer_to_use->close_hwnds_cleanup(mon);
+		renderer_to_use->destroy_context();
 		if (!kmsdrm_detected && isfullscreen() >= 0) {
-			g_renderer->destroy_platform_renderer(mon);
+			renderer_to_use->destroy_platform_renderer(mon);
 		}
+	}
+	if (mon->monitor_id > 0 && mon->renderer) {
+		mon->renderer.reset();
 	}
 	if (mon->amiga_window && !kmsdrm_detected && isfullscreen() >= 0)
 	{
@@ -442,6 +451,11 @@ void close_windows(struct AmigaMonitor* mon)
 	if (mon->monitor_id == 0) {
 		SDL_DestroySurface(amiga_surface);
 		amiga_surface = nullptr;
+	} else {
+		if (mon->amiga_surface) {
+			SDL_DestroySurface(mon->amiga_surface);
+			mon->amiga_surface = nullptr;
+		}
 	}
 #endif
 	if (mon->statusline_surface) {
@@ -467,9 +481,8 @@ void close_all_windows()
 	}
 }
 
-static void movecursor(const int x, const int y)
+static void movecursor(const AmigaMonitor* mon, const int x, const int y)
 {
-	const AmigaMonitor* mon = &AMonitors[0];
 	if (mon->amiga_window) {
 		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
 	}
@@ -678,8 +691,34 @@ static int create_windows(struct AmigaMonitor* mon)
 			x = nx;
 			y = ny;
 			mon->in_sizemove++;
+
+			// SDL3: position/size changes are deferred on fullscreen windows,
+			// so exit fullscreen first, reposition, then re-enter
+			if (fullwindow || fullscreen) {
+				SDL_SetWindowFullscreen(mon->amiga_window, false);
+			}
+
 			SDL_SetWindowPosition(mon->amiga_window, x, y);
 			SDL_SetWindowSize(mon->amiga_window, w, h);
+			SDL_SyncWindow(mon->amiga_window);
+
+			if (fullwindow) {
+				const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
+				SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
+				SDL_SetWindowFullscreen(mon->amiga_window, true);
+				SDL_SyncWindow(mon->amiga_window);
+			} else if (fullscreen) {
+				SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
+				if (display_id) {
+					SDL_DisplayMode closest;
+					if (SDL_GetClosestFullscreenDisplayMode(
+						display_id, w, h, 0.0f, true, &closest)) {
+						SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
+					}
+				}
+				SDL_SetWindowFullscreen(mon->amiga_window, true);
+				SDL_SyncWindow(mon->amiga_window);
+			}
 		} else {
 			w = nw;
 			h = nh;
@@ -754,14 +793,12 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (fullwindow) {
 		rc = md->rect;
-		flags |= SDL_WINDOW_FULLSCREEN;
 #ifdef __ANDROID__
 		flags |= SDL_WINDOW_RESIZABLE;
 #endif
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
 	} else if (fullscreen) {
-		flags = SDL_WINDOW_FULLSCREEN;
 #ifdef __ANDROID__
 		flags |= SDL_WINDOW_RESIZABLE;
 #endif
@@ -787,8 +824,21 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= SDL_WINDOW_BORDERLESS;
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
-	if (g_renderer) {
-		flags |= g_renderer->get_window_flags();
+
+	// For secondary monitors, create a dedicated renderer BEFORE window creation
+	// so that window flags (e.g., SDL_WINDOW_OPENGL) are set correctly
+	IRenderer* renderer_to_use = nullptr;
+	if (mon->monitor_id > 0) {
+		if (!mon->renderer) {
+			mon->renderer = create_renderer();
+		}
+		renderer_to_use = mon->renderer.get();
+	} else {
+		renderer_to_use = g_renderer.get();
+	}
+
+	if (renderer_to_use) {
+		flags |= renderer_to_use->get_window_flags();
 	}
 	TCHAR wintitle[64];
 	if (mon->monitor_id > 0)
@@ -805,13 +855,17 @@ static int create_windows(struct AmigaMonitor* mon)
 		return 0;
 	}
 	SDL_SetWindowPosition(mon->amiga_window, rc.x, rc.y);
+	if (fullwindow || fullscreen) {
+		SDL_SyncWindow(mon->amiga_window);
+	}
 
-	// SDL3: Set fullscreen mode before the window becomes visible
 	if (fullwindow) {
-		SDL_SetWindowFullscreenMode(mon->amiga_window, NULL); // desktop/borderless fullscreen
+		const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
+		SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
+		SDL_SetWindowFullscreen(mon->amiga_window, true);
+		SDL_SyncWindow(mon->amiga_window);
 	} else if (fullscreen) {
-		// For exclusive fullscreen, set a specific display mode
-		SDL_DisplayID display_id = SDL_GetDisplayForWindow(mon->amiga_window);
+		SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
 		if (display_id) {
 			SDL_DisplayMode closest;
 			if (SDL_GetClosestFullscreenDisplayMode(
@@ -819,6 +873,8 @@ static int create_windows(struct AmigaMonitor* mon)
 				SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
 			}
 		}
+		SDL_SetWindowFullscreen(mon->amiga_window, true);
+		SDL_SyncWindow(mon->amiga_window);
 	}
 
 	SDL_Rect rc2;
@@ -843,8 +899,8 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	gfx_platform_set_window_icon(mon->amiga_window);
 
-	if (g_renderer) {
-		if (!g_renderer->create_platform_renderer(mon)) {
+	if (renderer_to_use) {
+		if (!renderer_to_use->create_platform_renderer(mon)) {
 			write_log(_T("creation of platform renderer failed\n"));
 			close_hwnds(mon);
 			return 0;
@@ -865,7 +921,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	updatewinrect(mon, true);
 	GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
 	if (fullscreen || fullwindow)
-		movecursor(x + w / 2, y + h / 2);
+		movecursor(mon, x + w / 2, y + h / 2);
 
 	mon->window_extra_height_bar = 0;
 	//mon->dpi = getdpiforwindow(mon->monitor_id);
@@ -987,12 +1043,13 @@ bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_height = rc.h;
 		}
 
-		if (g_renderer) {
+	IRenderer* renderer = get_renderer(mon->monitor_id);
+		if (renderer) {
 			int ctx_attempts = 0;
 			bool ctx_success = false;
 
 			while (ctx_attempts < 2 && !ctx_success) {
-				if (!g_renderer->set_context_attributes(ctx_attempts))
+				if (!renderer->set_context_attributes(ctx_attempts))
 				{
 					write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
 					ctx_attempts++;
@@ -1005,31 +1062,25 @@ bool doInit(AmigaMonitor* mon)
 					return false;
 				}
 
-				// Destroy existing shaders and context before creating a new one.
-				// When the window is reused (e.g. auto-resolution change), create_windows
-				// returns without calling close_hwnds, so the old context and shaders
-				// survive. The shaders hold resources tied to the old context, so they
-				// must be destroyed while the old context is still current. Without this,
-				// init_context creates a new context, leaks the old one, and leaves
-				// stale shader objects that produce a black screen after a few frames.
-				g_renderer->destroy_shaders();
-				g_renderer->destroy_context();
+				renderer = get_renderer(mon->monitor_id);
+				
+				renderer->destroy_shaders();
+				renderer->destroy_context();
 
-				if (g_renderer->init_context(mon->amiga_window))
+				if (renderer->init_context(mon->amiga_window))
 				{
 					ctx_success = true;
 				}
 				else
 				{
-					write_log("Renderer context init failed for mode %d. Retrying...\n", ctx_attempts);
-					// Close window to force recreation with new attributes
+					write_log("Renderer context init failed for mode %d on monitor %d. Retrying...\n", ctx_attempts, mon->monitor_id);
 					close_windows(mon);
 					ctx_attempts++;
 				}
 			}
 
 			if (!ctx_success) {
-				write_log("All renderer context attempts failed. Aborting doInit.\n");
+				write_log("All renderer context attempts failed for monitor %d. Aborting doInit.\n", mon->monitor_id);
 				return false;
 			}
 		} else {
@@ -1041,8 +1092,9 @@ bool doInit(AmigaMonitor* mon)
 		}
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
-			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
-			display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
+			struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
+			display_width = state->Width ? state->Width : 640;
+			display_height = state->Height ? state->Height : 480;
 			break;
 		} else {
 #endif
@@ -1083,14 +1135,16 @@ bool doInit(AmigaMonitor* mon)
 	avidinfo->outbuffer = &avidinfo->drawbuffer;
 	avidinfo->inbuffer = &avidinfo->tempbuffer;
 
-	if (amiga_surface)
+	// For secondary monitors, use per-monitor surface instead of global
+	SDL_Surface*& surface_ref = (mon->monitor_id > 0) ? mon->amiga_surface : amiga_surface;
+	if (surface_ref)
 	{
-		SDL_DestroySurface(amiga_surface);
-		amiga_surface = nullptr;
+		SDL_DestroySurface(surface_ref);
+		surface_ref = nullptr;
 	}
-	amiga_surface = SDL_CreateSurface(display_width, display_height, pixel_format);
-	if (!amiga_surface) {
-		write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
+	surface_ref = SDL_CreateSurface(display_width, display_height, pixel_format);
+	if (!surface_ref) {
+		write_log("Failed to create amiga_surface for monitor %d: %s\n", mon->monitor_id, SDL_GetError());
 		return false;
 	}
 	update_system_pixel_format();
@@ -1130,12 +1184,14 @@ bool doInit(AmigaMonitor* mon)
 	{
 		on_screen_joystick_init(mon->amiga_renderer);
 		int sw = 0, sh = 0;
-		if (g_renderer) {
-			g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
-		} else {
+		IRenderer* renderer = get_renderer(mon->monitor_id);
+		if (renderer) {
+			renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
+			on_screen_joystick_update_layout(sw, sh, renderer->render_quad);
+		} else if (mon->amiga_renderer) {
 			SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &sw, &sh);
+			on_screen_joystick_update_layout(sw, sh, {});
 		}
-		on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
 		on_screen_joystick_set_enabled(true);
 	}
 

@@ -65,6 +65,7 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 // Expose prefix_with_application_directory from amiberry_filesys,
 // so we can use it to open the main configuration file on OS X
 extern int mouseactive;
+extern int mouse_monid;
 extern int minimized;
 extern int monitor_off;
 extern bool joystick_refresh_needed;

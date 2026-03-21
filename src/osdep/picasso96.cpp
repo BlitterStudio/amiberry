@@ -58,6 +58,8 @@
 #include "options.h"
 #ifdef AMIBERRY
 #include "amiberry_gfx.h"
+#include "gfx_window.h"
+#include "display_modes.h"
 #endif
 #include "threaddep/thread.h"
 #include "memory.h"
@@ -2541,7 +2543,7 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	if (cursorheight > CURSORMAXHEIGHT)
 		cursorheight = CURSORMAXHEIGHT;
 
-	createwindowscursor(0, 1, 0);
+	createwindowscursor(currprefs.rtgboards[0].monitor_id, 1, 0);
 
 	setupcursor ();
 	ret = 1;
@@ -3451,12 +3453,28 @@ void picasso_enablescreen(int monid, int on)
 	const bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtgboards[0].rtgmem_size;
 	const bool uaegfx_active = is_uaegfx_active();
 
+#ifdef AMIBERRY
+	if (monid > 0 && on && !AMonitors[monid].active) {
+		AMonitors[monid].monitor_id = monid;
+		AMonitors[monid].assigned_display = 0;
+		int display_idx = currprefs.gfx_apmode[APMODE_RTG].gfx_display - 1;
+		if (display_idx >= 0 && display_idx < MAX_DISPLAYS && Displays[display_idx].display_id) {
+			AMonitors[monid].assigned_display = Displays[display_idx].display_id;
+		}
+		if (!open_windows(&AMonitors[monid], false, false)) {
+			write_log(_T("picasso_enablescreen: Failed to create window for monitor %d\n"), monid);
+		}
+	} else if (monid > 0 && !on && AMonitors[monid].active) {
+		close_windows(&AMonitors[monid]);
+	}
+#endif
+
 	if (uaegfx_active && uaegfx) {
 		if (!init_picasso_screen_called)
 			init_picasso_screen(monid);
 	}
 	setconvert(monid);
-	picasso_refresh(0);
+	picasso_refresh(monid);
 }
 
 static void resetpalette(struct picasso96_state_struct *state)
@@ -6008,11 +6026,12 @@ static int render_thread(void *v)
 		if (idx == -1)
 			break;
 		idx &= 0xff;
-		struct amigadisplay *ad = &adisplays[idx];
+		int monid = currprefs.rtgboards[idx].monitor_id;
+		struct amigadisplay *ad = &adisplays[monid];
 		if (ad->picasso_on && ad->picasso_requested_on) {
 			lockrtg();
 			if (ad->picasso_requested_on) {
-				const struct picasso96_state_struct *state = &picasso96_state[idx];
+				const struct picasso96_state_struct *state = &picasso96_state[monid];
 				picasso_flushpixels(idx, gfxmem_banks[idx]->start + natmem_offset, state->XYOffset - gfxmem_banks[idx]->start, false);
 				ad->pending_render = true;
 			}
