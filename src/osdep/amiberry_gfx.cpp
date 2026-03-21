@@ -822,7 +822,7 @@ void gfx_set_picasso_state(const int monid, const int on)
 		if (_tcscmp(newf->gfx_filtermask[i], oldf->gfx_filtermask[i]))
 			mode = -1;
 	}
-	const bool differentmonitor = getdisplay(&currprefs, newmode->gfx_display) != getdisplay(&currprefs, oldmode->gfx_display);
+	const bool differentmonitor = getdisplay2(&currprefs, newmode->gfx_display - 1) != getdisplay2(&currprefs, oldmode->gfx_display - 1);
 	// if screen parameter changes, need to reopen window
 	if (newmode->gfx_fullscreen != oldmode->gfx_fullscreen ||
 		(newmode->gfx_fullscreen && (

@@ -57,7 +57,6 @@ void render_panel_display() {
                     bool is_selected = (current_display == i + 1);
                     if (ImGui::Selectable(label, is_selected)) {
                         changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_display = i + 1;
-                        changed_prefs.gfx_apmode[APMODE_RTG].gfx_display = i + 1;
                     }
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();

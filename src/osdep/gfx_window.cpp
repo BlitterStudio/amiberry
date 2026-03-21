@@ -692,8 +692,32 @@ static int create_windows(struct AmigaMonitor* mon)
 			x = nx;
 			y = ny;
 			mon->in_sizemove++;
+
+			// SDL3: position/size changes are deferred on fullscreen windows,
+			// so exit fullscreen first, reposition, then re-enter
+			if (fullwindow || fullscreen) {
+				SDL_SetWindowFullscreen(mon->amiga_window, false);
+			}
+
 			SDL_SetWindowPosition(mon->amiga_window, x, y);
 			SDL_SetWindowSize(mon->amiga_window, w, h);
+			SDL_SyncWindow(mon->amiga_window);
+
+			if (fullwindow) {
+				const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
+				SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
+				SDL_SetWindowFullscreen(mon->amiga_window, true);
+			} else if (fullscreen) {
+				SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
+				if (display_id) {
+					SDL_DisplayMode closest;
+					if (SDL_GetClosestFullscreenDisplayMode(
+						display_id, w, h, 0.0f, true, &closest)) {
+						SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
+					}
+				}
+				SDL_SetWindowFullscreen(mon->amiga_window, true);
+			}
 		} else {
 			w = nw;
 			h = nh;
@@ -768,14 +792,12 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (fullwindow) {
 		rc = md->rect;
-		flags |= SDL_WINDOW_FULLSCREEN;
 #ifdef __ANDROID__
 		flags |= SDL_WINDOW_RESIZABLE;
 #endif
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
 	} else if (fullscreen) {
-		flags = SDL_WINDOW_FULLSCREEN;
 #ifdef __ANDROID__
 		flags |= SDL_WINDOW_RESIZABLE;
 #endif
@@ -832,13 +854,16 @@ static int create_windows(struct AmigaMonitor* mon)
 		return 0;
 	}
 	SDL_SetWindowPosition(mon->amiga_window, rc.x, rc.y);
+	if (fullwindow || fullscreen) {
+		SDL_SyncWindow(mon->amiga_window);
+	}
 
-	// SDL3: Set fullscreen mode before the window becomes visible
 	if (fullwindow) {
-		SDL_SetWindowFullscreenMode(mon->amiga_window, NULL); // desktop/borderless fullscreen
+		const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
+		SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
+		SDL_SetWindowFullscreen(mon->amiga_window, true);
 	} else if (fullscreen) {
-		// For exclusive fullscreen, set a specific display mode
-		SDL_DisplayID display_id = SDL_GetDisplayForWindow(mon->amiga_window);
+		SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
 		if (display_id) {
 			SDL_DisplayMode closest;
 			if (SDL_GetClosestFullscreenDisplayMode(
@@ -846,6 +871,7 @@ static int create_windows(struct AmigaMonitor* mon)
 				SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
 			}
 		}
+		SDL_SetWindowFullscreen(mon->amiga_window, true);
 	}
 
 	SDL_Rect rc2;
