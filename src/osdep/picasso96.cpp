@@ -3464,6 +3464,8 @@ void picasso_enablescreen(int monid, int on)
 		if (!open_windows(&AMonitors[monid], false, false)) {
 			write_log(_T("picasso_enablescreen: Failed to create window for monitor %d\n"), monid);
 		}
+	} else if (monid > 0 && !on && AMonitors[monid].active) {
+		close_windows(&AMonitors[monid]);
 	}
 #endif
 

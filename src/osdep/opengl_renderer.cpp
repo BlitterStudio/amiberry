@@ -371,10 +371,8 @@ void OpenGLRenderer::update_vsync(int monid)
 
 bool OpenGLRenderer::render_frame(int monid, int mode, int immediate)
 {
-	// OpenGL path: just checks surface exists.
-	// The actual GL rendering happens in present_frame (show_screen).
-	extern SDL_Surface* amiga_surface;
-	return amiga_surface != nullptr;
+	SDL_Surface* surface = get_amiga_surface(monid);
+	return surface != nullptr;
 }
 
 void OpenGLRenderer::present_frame(int monid, int mode)

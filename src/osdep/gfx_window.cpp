@@ -86,10 +86,12 @@ void close_hwnds(struct AmigaMonitor* mon)
 	if (mon->monitor_id > 0 && mon->amiga_window)
 		setmouseactive(mon->monitor_id, 0);
 
-	IRenderer* renderer_to_use = g_renderer.get();
-	if (mon->monitor_id > 0 && mon->renderer) {
-		renderer_to_use = mon->renderer.get();
-	}
+	IRenderer* renderer_to_use = nullptr;
+		if (mon->monitor_id > 0 && mon->renderer) {
+			renderer_to_use = mon->renderer.get();
+		} else if (mon->monitor_id == 00 && g_renderer) {
+		 renderer_to_use = g_renderer.get();
+        }
 
 	if (renderer_to_use) {
 		renderer_to_use->close_hwnds_cleanup(mon);
@@ -800,13 +802,16 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 
-	// For secondary monitors, create a dedicated renderer
-	IRenderer* renderer_to_use = g_renderer.get();
-	if (mon->monitor_id > 0 && !mon->renderer) {
-		mon->renderer = create_renderer();
+	// For secondary monitors, create a dedicated renderer BEFORE window creation
+	// so that window flags (e.g., SDL_WINDOW_OPENGL) are set correctly
+	IRenderer* renderer_to_use = nullptr;
+	if (mon->monitor_id > 0) {
+		if (!mon->renderer) {
+			mon->renderer = create_renderer();
+		}
 		renderer_to_use = mon->renderer.get();
-	} else if (mon->renderer) {
-		renderer_to_use = mon->renderer.get();
+	} else {
+		renderer_to_use = g_renderer.get();
 	}
 
 	if (renderer_to_use) {
@@ -1009,7 +1014,7 @@ bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_height = rc.h;
 		}
 
-		IRenderer* renderer = get_renderer(mon->monitor_id);
+	IRenderer* renderer = g_renderer.get();
 		if (renderer) {
 			int ctx_attempts = 0;
 			bool ctx_success = false;
@@ -1028,6 +1033,8 @@ bool doInit(AmigaMonitor* mon)
 					return false;
 				}
 
+				renderer = get_renderer(mon->monitor_id);
+				
 				renderer->destroy_shaders();
 				renderer->destroy_context();
 
@@ -1056,8 +1063,9 @@ bool doInit(AmigaMonitor* mon)
 		}
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
-			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
-			display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
+			struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
+			display_width = state->Width ? state->Width : 640;
+			display_height = state->Height ? state->Height : 480;
 			break;
 		} else {
 #endif

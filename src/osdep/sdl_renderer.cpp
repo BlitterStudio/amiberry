@@ -217,53 +217,54 @@ void SDLRenderer::update_vsync(int /*monid*/)
 // --- Frame rendering ---
 
 bool SDLRenderer::render_frame(int monid, int mode, int immediate)
-{
-	if (m_amiga_texture && amiga_surface)
-	{
-		const amigadisplay* ad = &adisplays[monid];
-		AmigaMonitor* mon = &AMonitors[monid];
+ {
+	SDL_Surface* surface = get_amiga_surface(monid);
+	if (m_amiga_texture && surface) {
+	 const amigadisplay* ad = &adisplays[monid];
+        AmigaMonitor* mon = &AMonitors[monid];
 
-		// Ensure the draw color is black for clearing
-		SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
-		SDL_RenderClear(mon->amiga_renderer);
+        // Ensure the draw color is black for clearing
+        SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
+        SDL_RenderClear(mon->amiga_renderer);
 
-		// If a full render is needed or there are no specific dirty rects, update the whole texture.
-		if (mon->full_render_needed || mon->dirty_rects.empty()) {
-			if (amiga_surface) {
-				SDL_UpdateTexture(m_amiga_texture, NULL, amiga_surface->pixels, amiga_surface->pitch);
-			}
-		} else {
-			// Otherwise, update only the collected dirty rectangles.
-			const auto* fmt = SDL_GetPixelFormatDetails(amiga_surface->format);
-			const int bpp = fmt ? fmt->bytes_per_pixel : 4;
-			const auto* base = static_cast<const uae_u8*>(amiga_surface->pixels);
-			const int pitch = amiga_surface->pitch;
-			for (const auto& rect : mon->dirty_rects) {
-				SDL_UpdateTexture(m_amiga_texture, &rect, base + rect.y * pitch + rect.x * bpp, pitch);
-			}
-		}
+        // If a full render is needed or there are no specific dirty rects, update the whole texture.
+        if (mon->full_render_needed || mon->dirty_rects.empty()) {
+            if (surface) {
+                SDL_UpdateTexture(m_amiga_texture, NULL, surface->pixels, surface->pitch);
+            }
+        } else {
+            // Otherwise, update only the collected dirty rectangles.
+            const auto* fmt = SDL_GetPixelFormatDetails(surface->format);
+            const int bpp = fmt ? fmt->bytes_per_pixel : 4;
+            const auto* base = static_cast<const uae_u8*>(surface->pixels);
+            const int pitch = surface->pitch;
+            for (const auto& rect : mon->dirty_rects) {
+                SDL_UpdateTexture(m_amiga_texture, &rect, base + rect.y * pitch + rect.x * bpp, pitch);
+            }
+        }
 
-		// Clear the dirty rects list for the next frame.
-		mon->dirty_rects.clear();
-		mon->full_render_needed = false;
+        // Clear the dirty rects list for the next frame.
+        mon->dirty_rects.clear();
+        mon->full_render_needed = false;
 
-		SDL_FRect f_crop = { static_cast<float>(crop_rect.x), static_cast<float>(crop_rect.y),
-			static_cast<float>(crop_rect.w), static_cast<float>(crop_rect.h) };
-		SDL_FRect f_quad = { static_cast<float>(render_quad.x), static_cast<float>(render_quad.y),
-			static_cast<float>(render_quad.w), static_cast<float>(render_quad.h) };
+        SDL_FRect f_crop = { static_cast<float>(crop_rect.x), static_cast<float>(crop_rect.y),
+            static_cast<float>(crop_rect.w), static_cast<float>(crop_rect.h) };
+        SDL_FRect f_quad = { static_cast<float>(render_quad.x), static_cast<float>(render_quad.y),
+            static_cast<float>(render_quad.w), static_cast<float>(render_quad.h) };
 
-		if (ad->picasso_on) {
-			f_crop = { 0.0f, 0.0f, static_cast<float>(amiga_surface->w), static_cast<float>(amiga_surface->h) };
-			f_quad = f_crop;
+        if (ad->picasso_on) {
+            f_crop = { 1.0f, 1.0f, static_cast<float>(surface->w), static_cast<float>(surface->h) };
+            f_quad = f_crop;
 
-			int lw, lh;
-			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, nullptr);
-			if (lw != amiga_surface->w || lh != amiga_surface->h) {
-				SDL_SetRenderLogicalPresentation(mon->amiga_renderer, amiga_surface->w, amiga_surface->h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
-			}
-		}
+            int lw, lh;
+            SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, nullptr);
+            if (lw != surface->w || lh != surface->h) {
+			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, surface->w, surface->h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+            }
+        }
 
-		SDL_RenderTextureRotated(mon->amiga_renderer, m_amiga_texture, &f_crop, &f_quad, 0, nullptr, SDL_FLIP_NONE);
+        SDL_RenderTextureRotated(mon->amiga_renderer, m_amiga_texture, &f_crop, &f_quad, 0, nullptr, SDL_FLIP_NONE);
+
 
 		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
 		if (ad->picasso_on && p96_uses_software_cursor()) {
