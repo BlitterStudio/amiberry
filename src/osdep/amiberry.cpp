@@ -1792,6 +1792,7 @@ static void handle_controller_button_event(const SDL_Event& event)
 {
 	const auto button = event.gbutton.button;
 	const auto state = event.gbutton.down;
+	const auto which = event.gbutton.which;
 
 	if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
@@ -1814,7 +1815,7 @@ static void handle_controller_button_event(const SDL_Event& event)
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 			const didata* did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != event.gaxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
+			if (did->name.empty() || did->joystick_id != which || did->mapping.is_retroarch || !did->is_controller) continue;
 
 			read_controller_button(id, button, state);
 			break;
@@ -1830,7 +1831,7 @@ static void handle_joy_button_event(const SDL_Event& event)
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->joystick_id != event.jbutton.which || did->name.empty() || did->joystick_id != id || (!did->mapping.is_retroarch && did->is_controller)) continue;
+		if (did->name.empty() || did->joystick_id != event.jbutton.which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
 		if (button == did->mapping.hotkey_button)
 		{
@@ -1878,9 +1879,9 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || did->joystick_id != id || (!did->mapping.is_retroarch && did->is_controller)) continue;
+		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
-		read_joystick_axis(which, axis, value);
+		read_joystick_axis(id, axis, value);
 	}
 }
 
@@ -1893,9 +1894,9 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || did->joystick_id != id || (!did->mapping.is_retroarch && did->is_controller)) continue;
+		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
-		read_joystick_hat(which, hat, value);
+		read_joystick_hat(id, hat, value);
 		break;
 	}
 }
