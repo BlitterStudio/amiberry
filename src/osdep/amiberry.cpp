@@ -1765,7 +1765,7 @@ static void handle_clipboard_update_event()
 	}
 }
 
-static void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
+void handle_joy_device_event(const SDL_JoystickID which, const bool removed, struct uae_prefs* prefs)
 {
 	bool known_device = false;
 	for (int id = 0; id < MAX_INPUT_DEVICES; ++id)
@@ -1780,7 +1780,7 @@ static void handle_joy_device_event(const SDL_JoystickID which, const bool remov
 	if (!known_device || removed)
 	{
 		write_log("SDL Gamepad/Joystick added or removed, re-running import joysticks...\n");
-		if (inputdevice_devicechange(&currprefs))
+		if (inputdevice_devicechange(prefs))
 		{
 			import_joysticks();
 			joystick_refresh_needed = true;
@@ -2421,10 +2421,10 @@ static void process_event(const SDL_Event& event)
 			break;
 
 		case SDL_EVENT_JOYSTICK_ADDED:
-			handle_joy_device_event(event.jdevice.which, false);
+			handle_joy_device_event(event.jdevice.which, false, &currprefs);
 			break;
 		case SDL_EVENT_JOYSTICK_REMOVED:
-			handle_joy_device_event(event.jdevice.which, true);
+			handle_joy_device_event(event.jdevice.which, true, &currprefs);
 			break;
 
 		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:

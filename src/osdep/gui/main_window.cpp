@@ -1177,6 +1177,11 @@ void run_gui()
 				// Handle dropped files
 				handle_drop_file_event(gui_event);
 			}
+			else if (gui_event.type == SDL_EVENT_JOYSTICK_ADDED
+				|| gui_event.type == SDL_EVENT_JOYSTICK_REMOVED) {
+				handle_joy_device_event(gui_event.jdevice.which,
+					gui_event.type == SDL_EVENT_JOYSTICK_REMOVED, &changed_prefs);
+			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_MOVED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
 				gui_window_rect.x = gui_event.window.data1;

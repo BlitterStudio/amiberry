@@ -9,6 +9,12 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 
 	int count = 0;
 	SDL_JoystickID* joysticks = SDL_GetJoysticks(&count);
+	if (joysticks == nullptr) {
+		write_log("SDL_GetJoysticks failed: %s\n", SDL_GetError());
+		*num_joystick = 0;
+		return;
+	}
+	write_log("SDL_GetJoysticks: %d device(s) found\n", count);
 	*num_joystick = count;
 	if (*num_joystick > MAX_INPUT_DEVICES)
 		*num_joystick = MAX_INPUT_DEVICES;

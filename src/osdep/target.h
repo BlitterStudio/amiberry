@@ -69,6 +69,7 @@ extern int mouse_monid;
 extern int minimized;
 extern int monitor_off;
 extern bool joystick_refresh_needed;
+extern void handle_joy_device_event(unsigned int which, bool removed, struct uae_prefs* prefs);
 extern std::string screenshot_filename;
 
 extern void logging_init();

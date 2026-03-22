@@ -91,7 +91,10 @@ void render_panel_input() {
         save_mapping_to_file(mapping);
     }
 
-    if (input_device_names.empty()) poll_input_devices();
+	if (input_device_names.empty() || joystick_refresh_needed) {
+		joystick_refresh_needed = false;
+		poll_input_devices();
+	}
 
     ImGui::Indent(4.0f);
 
