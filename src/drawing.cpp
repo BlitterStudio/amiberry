@@ -878,7 +878,7 @@ void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 		}
 		visible_left_start = visible_left_border + dx;
 		visible_right_stop = visible_left_start + w;
-		if (currprefs.gfx_overscanmode >= OVERSCANMODE_BROADCAST) {
+		if (dx <= 0 && currprefs.gfx_overscanmode >= OVERSCANMODE_BROADCAST) {
 			visible_right_stop += 2 << currprefs.gfx_resolution;
 		}
 	}
@@ -890,7 +890,7 @@ void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 		int startypos = linear_vpos_vb_end << vshift;
 		visible_top_start = startypos + dy;
 		visible_bottom_stop = startypos + dy + h;
-		if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
+		if (dy <= 0 && currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
 			visible_top_start += 1 << vshift;
 			visible_bottom_stop -= 1 << vshift;
 		}
@@ -1033,7 +1033,6 @@ int get_custom_limits(int *pw, int *ph, int *pdx, int *pdy, int *prealh, int *hr
 
 	h = y2 - y1 + 1;
 	dy = y1 - minfirstline_linear;
-	dy--;
 
 	if (plffirstline_total >= 30000) {
 		// no planes enabled during frame
@@ -1478,17 +1477,12 @@ static void center_image(void)
 			visible_left_border += 4 << currprefs.gfx_resolution;
 		}
 	}
+	visible_right_border = visible_left_border + w;
 	visible_left_border &= ~((1 << currprefs.gfx_resolution) - 1);
-
-	//write_log (_T("%d %d %d %d\n"), max_diwlastword, vidinfo->inbuffer->width, currprefs.gfx_resolution, visible_left_border);
+	visible_right_border &= ~((1 << currprefs.gfx_resolution) - 1);
 
 	linetoscr_x_adjust = xoffset;
 	center_horizontal_offset = xoffset;
-
-	visible_right_border = maxdiw + w + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
-	if (visible_right_border > maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution)) {
-		visible_right_border = maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
-	}
 
 	int max_drawn_amiga_line_tmp = max_drawn_amiga_line;
 	if (max_drawn_amiga_line_tmp > vidinfo->inbuffer->inheight) {
@@ -5894,6 +5888,10 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 	int rshift = hresolution_inv;
 	int hbstrt_offset2 = (hbstrt_offset - internal_pixel_start_cnt) >> rshift;
 	int hbstop_offset2 = (hbstop_offset - internal_pixel_start_cnt) >> rshift;
+	if (exthblankon_aga) {
+		hbstrt_offset2 -= 2 >> rshift;
+		hbstop_offset2 -= 2 >> rshift;
+	}
 	uae_u32 *hbstrt_ptr1 = buf1t && hbstrt_offset2 >= 0 ? buf1t + hbstrt_offset2 : NULL;
 	uae_u32 *hbstop_ptr1 = buf1t && hbstop_offset2 >= 0 ? buf1t - hbstop_offset2 : NULL;
 	uae_u32 *hbstrt_ptr2 = buf2t && hbstrt_offset2 >= 0 ? buf2t + hbstrt_offset2 : NULL;
@@ -5931,14 +5929,17 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 			}
 		}
 	}
-	int right = strlong_seen ? denise_hblank_extra_right - (1 << currprefs.gfx_resolution) : denise_hblank_extra_right;
-	if ((denise_hblank_extra_left > visible_left_border || visible_right_border > right) && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME) {
+	if ((denise_hblank_extra_left > visible_left_border || visible_right_border > denise_hblank_extra_right) && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME) {
 		int ww1 = denise_hblank_extra_left > visible_left_border ? (denise_hblank_extra_left - visible_left_border) << 0 : 0;
-		int ww2 = visible_right_border > right ? (visible_right_border - right) << 0 : 0;
+		int ww2 = visible_right_border > denise_hblank_extra_right ? (visible_right_border - denise_hblank_extra_right) << 0 : 0;
+
+		hbstrt_ptr1 = hbstop_ptr1 ? hbstop_ptr1 + denise_hblank_extra_right - visible_left_border : NULL;
+		hbstrt_ptr2 = hbstop_ptr2 ? hbstop_ptr2 + denise_hblank_extra_right - visible_left_border : NULL;
+
 		for (int i = 0; i < 4; i++) {
 			int add = 1 << hresolution;
 			uae_u32 *ptr, *ptrs, *ptre;
-			int lolshift = 0;
+			int lolshift = lol || no_denise_lol ? 0 : add;
 			int w = 0;
 			switch (i)
 			{
@@ -5946,73 +5947,46 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 					ptr = hbstrt_ptr1;
 					ptrs = buf1t;
 					ptre = buf1;
-					lolshift = no_denise_lol ? (lol ? add : -add) : (lol ? add : 0);
 					w = ww2;
 					break;
 				case 1:
 					ptr = hbstrt_ptr2;
 					ptrs = buf2t;
 					ptre = buf2;
-					lolshift = no_denise_lol ? (lol ? add : -add) : (lol ? add : 0);
 					w = ww2;
 					break;
 				case 2:
 					ptr = hbstop_ptr1;
 					ptrs = buf1t;
 					ptre = buf1;
-					lolshift = lol || no_denise_lol ? 0 : add;
 					w = ww1;
 					break;
 				case 3:
 					ptr = hbstop_ptr2;
 					ptrs = buf2t;
 					ptre = buf2;
-					lolshift = lol || no_denise_lol ? 0 : add;
 					w = ww1;
 					break;
 			}
 			if (ptr && w) {
 				int lolshift2 = strlong_seen ? lolshift : 0;
 				uae_u32 *p1 = ptr + lolshift2;
-				if (i >= 2) {
-					if (p1 + w > ptrs && p1 < ptre) {
-						int wxadd = 0;
-						if (p1 < ptrs) {
-							wxadd = addrdiff(ptrs, p1);
-							w -= wxadd;
-							p1 += wxadd;
-						}
-						if (p1 + w > ptre) {
-							int wadd = addrdiff(p1 + w, ptre);
-							w -= wadd;
-						}
-						if (w > 0) {
-							memset(p1, DEBUG_TVOVERSCAN_H_GRAYSCALE_RIGHT, w * sizeof(uae_u32));
-							if (bufg) {
-								uae_u8 *gp1 = (p1 - ptrs) + bufg + wxadd;
-								memset(gp1, 0, w);
-							}
-						}
+				if (p1 + w > ptrs && p1 < ptre) {
+					int wxadd = 0;
+					if (p1 < ptrs) {
+						wxadd = addrdiff(ptrs, p1);
+						w -= wxadd;
+						p1 += wxadd;
 					}
-				} else {
-					if (p1 - w < ptre && p1 >= ptrs) {
-						int wxadd = 0;
-						p1 -= w;
-						if (p1 < ptrs) {
-							wxadd = addrdiff(ptrs, p1);
-							p1 += wxadd;
-							w -= wxadd;
-						}
-						if (p1 + w > ptre) {
-							int wadd = addrdiff(p1 + w, ptre);
-							w -= wadd;
-						}
-						if (w > 0) {
-							memset(p1, DEBUG_TVOVERSCAN_H_GRAYSCALE_LEFT, w * sizeof(uae_u32));
-							if (bufg) {
-								uae_u8 *gp1 = (p1 - ptrs) + bufg + wxadd;
-								memset(gp1, 0, w);
-							}
+					if (p1 + w > ptre) {
+						int wadd = addrdiff(p1 + w, ptre);
+						w -= wadd;
+					}
+					if (w > 0) {
+						memset(p1, DEBUG_TVOVERSCAN_H_GRAYSCALE_RIGHT, w * sizeof(uae_u32));
+						if (bufg) {
+							uae_u8 *gp1 = (p1 - ptrs) + bufg + wxadd;
+							memset(gp1, 0, w);
 						}
 					}
 				}
@@ -6224,6 +6198,7 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 
 	// detect horizontal blanking
 	if (!denise_vblank_active) {
+		int ipc = internal_pixel_cnt + (denise_strlong_seen ? lol * 8 : 0);
 		linear_denise_frame_hbstrt = hbstrt_offset + (denise_strlong_seen ? lol * 8 : 0);
 		linear_denise_frame_hbstop = hbstop_offset;
 		//write_log("%d %d\n", linear_denise_frame_hbstrt, linear_denise_frame_hbstop);
@@ -6240,13 +6215,13 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 					linear_denise_frame_hbstop_sel = -1;
 				} else {
 					if (linear_denise_frame_hbstrt_sel > linear_denise_frame_hbstop_sel) {
-						linear_denise_frame_hbstrt_sel -= internal_pixel_cnt;
+						linear_denise_frame_hbstrt_sel -= ipc;
 					}
 				}
 				linear_denise_frame_hbstrt_sel += linear_denise_strobe_offset + 2 * 8;
 				linear_denise_frame_hbstop_sel += linear_denise_strobe_offset + 2 * 8;
 				denise_hbstrt_relative_cnt = 0;
-				if (abs(ss - linear_denise_frame_hbstrt_sel) >= 16 || abs(ee - linear_denise_frame_hbstop_sel) >= 16) {
+				if (ss != linear_denise_frame_hbstrt_sel || ee != linear_denise_frame_hbstop_sel) {
 					denise_blanking_changed = true;
 				}
 			}
@@ -7433,17 +7408,19 @@ static void pfield_doline_8(int planecnt, int wordcount, uae_u8 *datap, struct l
 	}
 }
 
-static void tvadjust(int *hbstrt_offset, int *hbstop_offset, struct linestate *ls)
+static void tvadjust(int *hbstrt_offset, int *hbstop_offset, int rshift, struct linestate *ls)
 {
-	if (currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME) {
-		int right = denise_strlong_seen ? denise_hblank_extra_right - (1 << currprefs.gfx_resolution) : denise_hblank_extra_right;
+	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
+
+		int hbstop_left = (ls->hbstop_offset - ls->internal_pixel_start_cnt) >> rshift;
+		int hbstop_right = hbstop_left + denise_hblank_extra_right - visible_left_border;
+
 		int ww1 = denise_hblank_extra_left > visible_left_border ? (denise_hblank_extra_left - visible_left_border) << 0 : 0;
-		int ww2 = visible_right_border > right ? (visible_right_border - right) << 0 : 0;
-	
+		int ww2 = visible_right_border > denise_hblank_extra_right ? (visible_right_border - denise_hblank_extra_right) << 0 : 0;
+
 		if (hbstrt_offset && ww2 > 0) {
 			*hbstrt_offset -= ww2;
 		}
-		int hbstop_left = *hbstop_offset - ls->internal_pixel_start_cnt;
 		if (hbstop_left > 0) {
 			ww1 -= hbstop_left;
 		}
@@ -7587,7 +7564,7 @@ void draw_denise_border_line_fast(int gfx_ypos, bool blank, enum nln_how how, st
 	int hbstrt_offset = ls->hbstrt_offset >> rshift;
 	int hbstop_offset = ls->hbstop_offset >> rshift;
 
-	tvadjust(&hbstrt_offset, &hbstop_offset, ls);
+	tvadjust(&hbstrt_offset, &hbstop_offset, rshift, ls);
 
 	int draw_end = ls->internal_pixel_cnt >> rshift;
 	int draw_startoffset = ls->internal_pixel_start_cnt >> rshift;
@@ -7837,7 +7814,7 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 	}
 
 	// if HAM: need to clear left hblank after line has been drawn
-	tvadjust(&hbstrt_offset, ham ? NULL : &hbstop_offset, ls);
+	tvadjust(&hbstrt_offset, ham ? NULL : &hbstop_offset, rshift, ls);
 
 	// negative checks are needed to handle always-on HDIW
 	int hstop_offset_adjusted = ls->hstop_offset;

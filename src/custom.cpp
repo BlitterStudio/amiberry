@@ -2161,11 +2161,14 @@ static void init_beamcon0(void)
 	}
 
 	if ((beamcon0 & BEAMCON0_VARVBEN) && (beamcon0 & bemcon0_vsync_mask)) {
-		minfirstline = vsync_startline;
+		if (minfirstline < vsync_startline) {
+			minfirstline = vsync_startline;
+			minfirstline++;
+		}
 		if (minfirstline > vsync_lines / 2) {
 			minfirstline = vsync_startline;
+			minfirstline++;
 		}
-		minfirstline++;
 	} else if (beamcon0 & BEAMCON0_VARVBEN) {
 		if (minfirstline > vbstop) {
 			minfirstline = vbstop;
