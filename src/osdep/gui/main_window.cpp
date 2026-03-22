@@ -976,6 +976,9 @@ void amiberry_gui_halt()
 #endif
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
+	// Restore SDL's default so clicks used to refocus the emulation window
+	// are not forwarded after closing the GUI (see #1871).
+	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "0");
 #endif
 
 	if (gui_screen != nullptr)
