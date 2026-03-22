@@ -512,21 +512,53 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		if (destH <= 0) destH = 1;
 
 		if (use_integer_scaling && src_w > 0 && src_h > 0) {
-			// Use the aspect-corrected integer dimensions from auto_crop_image()
-			// when available. These are exact integers, avoiding float precision
-			// issues with crop_aspect that cause off-by-one in scale computation.
+			// Use the aspect-corrected dimensions from auto_crop_image()
+			// (stored in crop_display_w/h to avoid the render_quad overwrite issue).
 			int display_w, display_h;
-			if (is_cropped && render_quad.w > 0 && render_quad.h > 0) {
-				display_w = render_quad.w;
-				display_h = render_quad.h;
+			if (is_cropped && crop_display_w > 0 && crop_display_h > 0) {
+				display_w = crop_display_w;
+				display_h = crop_display_h;
 			} else {
 				display_w = src_w;
 				display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
 			}
-			int scale = std::min(renderAreaW / display_w, renderAreaH / display_h);
-			if (scale < 1) scale = 1;
-			destW = display_w * scale;
-			destH = display_h * scale;
+
+			// Vertical integer scale from aspect-corrected height
+			int h_scale = renderAreaH / display_h;
+			if (h_scale < 1) h_scale = 1;
+
+			int w_scale;
+			if (currprefs.gfx_correct_aspect && !mon->screen_is_picasso) {
+				// Per-axis scaling: find horizontal scale closest to target aspect (4:3)
+				// This enables exact 4:3 at resolutions where it's achievable with
+				// integer values (e.g., 2160p: 9x horizontal, 8x vertical = 2880x2160).
+				float target_aspect = 4.0f / 3.0f;
+				float ideal_w = display_h * h_scale * target_aspect;
+				int w_lo = std::max(1, static_cast<int>(ideal_w / src_w));
+				int w_hi = w_lo + 1;
+
+				// Pick the candidate closest to target aspect; prefer narrower on tie
+				float aspect_lo = static_cast<float>(src_w * w_lo) / (display_h * h_scale);
+				float aspect_hi = static_cast<float>(src_w * w_hi) / (display_h * h_scale);
+
+				if (src_w * w_hi <= renderAreaW &&
+					fabsf(aspect_hi - target_aspect) < fabsf(aspect_lo - target_aspect)) {
+					w_scale = w_hi;
+				} else {
+					w_scale = w_lo;
+				}
+
+				// Clamp to render area
+				while (src_w * w_scale > renderAreaW && w_scale > 1) w_scale--;
+			} else {
+				// Uniform scaling (no aspect correction or RTG)
+				w_scale = renderAreaW / display_w;
+				if (w_scale > h_scale) w_scale = h_scale;
+			}
+			if (w_scale < 1) w_scale = 1;
+
+			destW = src_w * w_scale;
+			destH = display_h * h_scale;
 		}
 
 		destX = (renderAreaW - destW) / 2;

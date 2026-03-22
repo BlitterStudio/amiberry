@@ -106,6 +106,8 @@ public:
 	SDL_Rect render_quad{};
 	SDL_Rect crop_rect{};
 	float crop_aspect{};  // set by auto_crop_image(); 0 = not yet computed
+	int crop_display_w{};  // Logical display width from auto_crop_image()
+	int crop_display_h{};  // Logical display height from auto_crop_image()
 
 protected:
 	VSyncState m_vsync;

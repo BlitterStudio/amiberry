@@ -1496,6 +1496,10 @@ void auto_crop_image()
 		auto& rq = renderer->render_quad;
 		auto& cr = renderer->crop_rect;
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+		renderer->crop_display_w = width;
+		renderer->crop_display_h = height;
+		write_log(_T("auto_crop: cw=%d ch=%d cx=%d cy=%d hres=%d vres=%d ntsc=%d => display %dx%d aspect=%.4f\n"),
+			cw, ch, cx, cy, hres, vres, currprefs.ntscmode, width, height, renderer->crop_aspect);
 		rq = { dx, dy, width, height };
 		cr = { cx, cy, cw, ch };
 		if (amiga_surface) {
