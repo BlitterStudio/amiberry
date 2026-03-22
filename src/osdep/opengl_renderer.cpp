@@ -523,16 +523,16 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 				display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
 			}
 
-			// Vertical integer scale from aspect-corrected height
-			int h_scale = renderAreaH / display_h;
+			// Vertical integer scale, constrained by the aspect-corrected destH
+			int h_scale = destH / display_h;
 			if (h_scale < 1) h_scale = 1;
 
 			int w_scale;
 			if (currprefs.gfx_correct_aspect && !mon->screen_is_picasso) {
-				// Per-axis scaling: find horizontal scale closest to target aspect (4:3)
-				// This enables exact 4:3 at resolutions where it's achievable with
-				// integer values (e.g., 2160p: 9x horizontal, 8x vertical = 2880x2160).
-				float target_aspect = 4.0f / 3.0f;
+				// Per-axis scaling: widen toward 4:3 when content is narrower,
+				// but never narrow content that's already wider than 4:3.
+				// At 2160p this gives exact 4:3 (9x horiz, 8x vert = 2880x2160).
+				float target_aspect = std::max(desired_aspect, 4.0f / 3.0f);
 				float ideal_w = display_h * h_scale * target_aspect;
 				int w_lo = std::max(1, static_cast<int>(ideal_w / src_w));
 				int w_hi = w_lo + 1;
