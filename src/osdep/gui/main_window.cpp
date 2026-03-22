@@ -1132,6 +1132,44 @@ void run_gui()
 	amiberry_gui_init();
 	start_disabled = false;
 
+#ifdef __MACH__
+	if (macos_data_migrated)
+	{
+		ShowMessageBox("Data Migration",
+			"Your Amiberry data has been migrated from:\n\n"
+			"  ~/Library/Application Support/Amiberry\n\n"
+			"to the new location:\n\n"
+			"  ~/Documents/Amiberry\n\n"
+			"All configuration files and paths have been updated automatically.");
+		macos_data_migrated = false;
+	}
+	else if (macos_migration_conflicts)
+	{
+		ShowMessageBox("Data Migration (Partial)",
+			"Your Amiberry data has been migrated to:\n\n"
+			"  ~/Documents/Amiberry\n\n"
+			"Some files were skipped because they already existed\n"
+			"at the destination. The old directory has been preserved:\n\n"
+			"  ~/Library/Application Support/Amiberry\n\n"
+			"Please review both locations and remove the old folder\n"
+			"when you are satisfied that all data is in place.");
+		macos_migration_conflicts = false;
+	}
+	else if (macos_migration_failed)
+	{
+		ShowMessageBox("Data Migration Failed",
+			"Amiberry could not migrate your data automatically.\n\n"
+			"Your data is still at:\n"
+			"  ~/Library/Application Support/Amiberry\n\n"
+			"The new location is:\n"
+			"  ~/Documents/Amiberry\n\n"
+			"Please check available disk space, move the files manually,\n"
+			"or restart Amiberry to retry the migration.\n\n"
+			"Check the log file for details.");
+		macos_migration_failed = false;
+	}
+#endif
+
 	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
 

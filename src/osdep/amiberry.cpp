@@ -4817,18 +4817,16 @@ std::string get_home_directory(const bool portable_mode)
 	}
 #endif
 #ifdef __MACH__
-	// macOS: use ~/Library/Application Support/Amiberry (standard convention)
+	// macOS: use ~/Documents/Amiberry (visible to the user)
 	{
 		const auto user_home_dir = getenv("HOME");
 		if (user_home_dir != nullptr)
 		{
-			std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
-			if (!my_existsdir(app_support.c_str()))
-			{
-				my_mkdir(app_support.c_str());
-			}
-			write_log("macOS: Using home directory %s\n", app_support.c_str());
-			return app_support;
+			std::string new_dir = std::string(user_home_dir) + "/Documents/Amiberry";
+			if (!my_existsdir(new_dir.c_str()))
+				my_mkdir(new_dir.c_str());
+			write_log("macOS: Using home directory %s\n", new_dir.c_str());
+			return new_dir;
 		}
 	}
 #endif
@@ -4876,13 +4874,13 @@ std::string get_home_directory(const bool portable_mode)
 std::string get_config_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	// macOS: use ~/Library/Application Support/Amiberry/Configurations
+	// macOS: use ~/Documents/Amiberry/Configurations
 	{
 		const auto user_home_dir = getenv("HOME");
-		std::string app_support = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
-		if (!my_existsdir(app_support.c_str()))
-			my_mkdir(app_support.c_str());
-		std::string config = app_support + "/Configurations";
+		std::string home_dir = std::string(user_home_dir) + "/Documents/Amiberry";
+		if (!my_existsdir(home_dir.c_str()))
+			my_mkdir(home_dir.c_str());
+		std::string config = home_dir + "/Configurations";
 		if (!my_existsdir(config.c_str()))
 			my_mkdir(config.c_str());
 		return config;
@@ -5234,6 +5232,222 @@ void create_missing_amiberry_folders()
 		save_theme("Dark.theme");
 	}
 }
+
+#ifdef __MACH__
+bool macos_data_migrated = false;
+bool macos_migration_failed = false;
+bool macos_migration_conflicts = false;
+
+static void rewrite_paths_in_file(const std::string& filepath, const std::string& old_path, const std::string& new_path)
+{
+	std::ifstream in(filepath);
+	if (!in.is_open()) return;
+
+	std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	in.close();
+
+	std::string::size_type pos = 0;
+	bool modified = false;
+	while ((pos = content.find(old_path, pos)) != std::string::npos)
+	{
+		content.replace(pos, old_path.length(), new_path);
+		pos += new_path.length();
+		modified = true;
+	}
+
+	if (modified)
+	{
+		std::ofstream out(filepath);
+		if (out.is_open())
+		{
+			out << content;
+			write_log("macOS: Updated paths in %s\n", filepath.c_str());
+		}
+	}
+}
+
+static void rewrite_migrated_configs(const std::string& new_dir, const std::string& old_dir)
+{
+	rewrite_paths_in_file(new_dir + "/Configurations/amiberry.conf", old_dir, new_dir);
+	rewrite_paths_in_file(new_dir + "/Configurations/amiberry.ini", old_dir, new_dir);
+
+	std::string configs_dir = new_dir + "/Configurations";
+	std::error_code ec;
+	if (my_existsdir(configs_dir.c_str()))
+	{
+		for (const auto& entry : std::filesystem::directory_iterator(configs_dir, ec))
+		{
+			if (entry.path().extension() == ".uae")
+				rewrite_paths_in_file(entry.path().string(), old_dir, new_dir);
+		}
+	}
+}
+
+static uintmax_t get_directory_size(const std::string& path)
+{
+	uintmax_t total = 0;
+	std::error_code ec;
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(path, ec))
+	{
+		if (entry.is_regular_file(ec))
+			total += entry.file_size(ec);
+	}
+	return total;
+}
+
+static bool merge_directory(const std::filesystem::path& src, const std::filesystem::path& dest,
+	bool& had_conflicts)
+{
+	std::error_code ec;
+	bool ok = true;
+	if (!std::filesystem::exists(dest))
+		std::filesystem::create_directories(dest, ec);
+
+	for (const auto& entry : std::filesystem::directory_iterator(src, ec))
+	{
+		const auto target = dest / entry.path().filename();
+		if (entry.is_directory(ec))
+		{
+			if (!merge_directory(entry.path(), target, had_conflicts))
+				ok = false;
+		}
+		else if (std::filesystem::exists(target))
+		{
+			write_log("Migration: skipped (already exists): %s\n", target.c_str());
+			had_conflicts = true;
+		}
+		else
+		{
+			std::filesystem::rename(entry.path(), target, ec);
+			if (ec)
+			{
+				ec.clear();
+				std::filesystem::copy(entry.path(), target, ec);
+				if (ec)
+				{
+					write_log("Migration: failed to copy %s: %s\n",
+						entry.path().c_str(), ec.message().c_str());
+					ok = false;
+					ec.clear();
+				}
+			}
+		}
+	}
+	return ok;
+}
+
+static void migrate_macos_user_data()
+{
+	const auto user_home_dir = getenv("HOME");
+	if (user_home_dir == nullptr) return;
+
+	std::string new_dir = std::string(user_home_dir) + "/Documents/Amiberry";
+	std::string old_dir = std::string(user_home_dir) + "/Library/Application Support/Amiberry";
+	std::string sentinel = new_dir + "/.migration_complete";
+	if (!my_existsdir(old_dir.c_str())) return;
+	if (my_existsfile2(sentinel.c_str())) return;
+
+	write_log("macOS: Migrating user data from %s to %s\n", old_dir.c_str(), new_dir.c_str());
+
+	std::error_code ec;
+	std::filesystem::rename(old_dir, new_dir, ec);
+	if (!ec)
+	{
+		write_log("macOS: Moved directory successfully (rename)\n");
+		rewrite_migrated_configs(new_dir, old_dir);
+		std::ofstream(sentinel).close();
+		macos_data_migrated = true;
+		write_log("macOS: Migration complete\n");
+		return;
+	}
+
+	write_log("macOS: Rename failed (%s), falling back to copy\n", ec.message().c_str());
+	ec.clear();
+
+	uintmax_t needed = get_directory_size(old_dir);
+	auto space_info = std::filesystem::space(std::filesystem::path(new_dir).parent_path(), ec);
+	if (ec || space_info.available < needed + (10 * 1024 * 1024))
+	{
+		write_log("macOS: Not enough disk space for migration (need %llu, have %llu)\n",
+			static_cast<unsigned long long>(needed),
+			ec ? 0ULL : static_cast<unsigned long long>(space_info.available));
+		macos_migration_failed = true;
+		return;
+	}
+
+	std::string staging_dir = std::string(user_home_dir) + "/Documents/.amiberry_migration_staging";
+	std::filesystem::remove_all(staging_dir, ec);
+	ec.clear();
+	my_mkdir(staging_dir.c_str());
+
+	bool copy_errors = false;
+	for (const auto& entry : std::filesystem::directory_iterator(old_dir, ec))
+	{
+		const auto dest = std::filesystem::path(staging_dir) / entry.path().filename();
+		std::filesystem::copy(entry.path(), dest,
+			std::filesystem::copy_options::recursive, ec);
+		if (ec)
+		{
+			write_log("macOS: Failed to copy %s: %s\n",
+				entry.path().filename().string().c_str(), ec.message().c_str());
+			ec.clear();
+			copy_errors = true;
+		}
+	}
+
+	if (copy_errors)
+	{
+		write_log("macOS: Copy errors occurred, rolling back staging directory\n");
+		std::filesystem::remove_all(staging_dir, ec);
+		macos_migration_failed = true;
+		return;
+	}
+
+	bool had_conflicts = false;
+	if (!my_existsdir(new_dir.c_str()))
+	{
+		std::filesystem::rename(staging_dir, new_dir, ec);
+		if (ec)
+		{
+			write_log("macOS: Failed to move staging to destination: %s\n", ec.message().c_str());
+			std::filesystem::remove_all(staging_dir, ec);
+			macos_migration_failed = true;
+			return;
+		}
+	}
+	else
+	{
+		if (!merge_directory(staging_dir, new_dir, had_conflicts))
+		{
+			write_log("macOS: Some files could not be merged into destination\n");
+			macos_migration_failed = true;
+			// Leave staging_dir for manual recovery
+			return;
+		}
+		std::filesystem::remove_all(staging_dir, ec);
+		if (had_conflicts)
+			write_log("macOS: Some files were skipped (already existed at destination). "
+				"Old directory preserved for manual reconciliation.\n");
+	}
+
+	rewrite_migrated_configs(new_dir, old_dir);
+
+	if (had_conflicts)
+	{
+		macos_migration_conflicts = true;
+		write_log("macOS: Migration completed with conflicts (old directory preserved)\n");
+	}
+	else
+	{
+		std::filesystem::remove_all(old_dir, ec);
+		if (ec)
+			write_log("macOS: Could not remove old directory: %s\n", ec.message().c_str());
+		std::ofstream(sentinel).close();
+		macos_data_migrated = true;
+		write_log("macOS: Migration complete\n");
+	}
+}
+#endif
 
 static bool locate_amiberry_conf(const bool portable_mode)
 {
@@ -5794,6 +6008,10 @@ int amiberry_main(int argc, char* argv[])
 	// Check if a file with the name "amiberry.portable" exists in the current directory
 	// If it does, we will set portable_mode to true
 	const bool portable_mode = my_existsfile2("amiberry.portable");
+#ifdef __MACH__
+	if (!portable_mode)
+		migrate_macos_user_data();
+#endif
 	const bool config_found = locate_amiberry_conf(portable_mode);
 
 	init_amiberry_dirs(portable_mode);

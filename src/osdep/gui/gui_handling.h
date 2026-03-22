@@ -313,6 +313,11 @@ using ConfigCategory = struct config_category
 };
 
 extern bool gui_running;
+#ifdef __MACH__
+extern bool macos_data_migrated;
+extern bool macos_migration_failed;
+extern bool macos_migration_conflicts;
+#endif
 extern ConfigCategory categories[];
 
 // GUI Colors
