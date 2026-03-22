@@ -1008,7 +1008,7 @@ static void compute_scaled_dimensions(const int w, const int h, const bool is_rt
 			scaled_w *= 2;
 	}
 
-	if (currprefs.ntscmode)
+	if (vblank_hz > 55.0f)
 		scaled_h = scaled_h * 6 / 5;
 }
 
@@ -1451,12 +1451,20 @@ void auto_crop_image()
 	if (currprefs.gfx_auto_crop)
 	{
 		static int last_cw = 0, last_ch = 0, last_cx = 0, last_cy = 0;
+		static bool last_is_ntsc = false;
 		int cw, ch, cx, cy, crealh = 0;
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
 
-		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop && last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy)
+		// Detect NTSC from actual display timing — more reliable than
+		// currprefs.ntscmode which may not reflect the chipset state
+		// (e.g. WHDLoad games that switch PAL/NTSC at runtime).
+		bool is_ntsc = (vblank_hz > 55.0f);
+
+		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop
+			&& last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy
+			&& last_is_ntsc == is_ntsc)
 		{
 			return;
 		}
@@ -1465,6 +1473,7 @@ void auto_crop_image()
 		last_ch = ch;
 		last_cx = cx;
 		last_cy = cy;
+		last_is_ntsc = is_ntsc;
 		force_auto_crop = false;
 
 		int width = cw;
@@ -1480,7 +1489,7 @@ void auto_crop_image()
 				width *= 2;
 		}
 
-		if (currprefs.ntscmode)
+		if (is_ntsc)
 			height = height * 6 / 5;
 
 		if (currprefs.gfx_correct_aspect == 0)
@@ -1498,8 +1507,8 @@ void auto_crop_image()
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		renderer->crop_display_w = width;
 		renderer->crop_display_h = height;
-		write_log(_T("auto_crop: cw=%d ch=%d cx=%d cy=%d hres=%d vres=%d ntsc=%d => display %dx%d aspect=%.4f\n"),
-			cw, ch, cx, cy, hres, vres, currprefs.ntscmode, width, height, renderer->crop_aspect);
+		write_log(_T("auto_crop: cw=%d ch=%d cx=%d cy=%d hres=%d vres=%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+			cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
 		rq = { dx, dy, width, height };
 		cr = { cx, cy, cw, ch };
 		if (amiga_surface) {
