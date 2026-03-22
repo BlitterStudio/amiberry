@@ -129,7 +129,11 @@ struct MultiDisplay* getdisplay(const struct uae_prefs* p, const int monid)
 		return mon->md;
 	if (p) {
 		int apmode_idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
-		return getdisplay2(p, p->gfx_apmode[apmode_idx].gfx_display - 1);
+		struct MultiDisplay* md = getdisplay2(p, p->gfx_apmode[apmode_idx].gfx_display - 1);
+		if (md)
+			return md;
+		write_log("getdisplay: configured display %d not available, falling back to primary\n",
+			p->gfx_apmode[apmode_idx].gfx_display);
 	}
 	return getdisplay2(p, 0);
 }
