@@ -62,6 +62,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.1.0" date="2026-03-23">
+            <description>
+                <p>Feature release: multi-monitor RTG rendering, .uaem sidecar filesystem metadata, native OS file dialogs, multi-mouse support, autocrop and scaling improvements, HiDPI text rendering, and numerous bug fixes.</p>
+            </description>
+        </release>
         <release version="8.0.0" date="2026-03-16">
             <description>
                 <p>Major release: migrated from SDL2 to SDL3, new ImGui-based GUI, multi-pass GLSL shader presets, tablet pressure support, aspect ratio auto integer scaling, and numerous GUI panel improvements.</p>
