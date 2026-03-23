@@ -2,19 +2,20 @@
 
 ## OVERVIEW
 
-~700 C/C++ files implementing the Amiga emulation engine. WinUAE-derived core with Amiberry platform customizations.
+~1100 C/C++ files implementing the Amiga emulation engine. WinUAE-derived core with Amiberry platform customizations.
 
 ## STRUCTURE
 
 ```
 src/
-├── [Core Emulation — 148 files at root level]
+├── [Core Emulation — 282 files at root level]
 │   ├── newcpu.cpp          # M68K CPU core (10.5K lines)
 │   ├── custom.cpp          # Custom chips: Agnus/Denise/Paula (12.7K lines)
 │   ├── memory.cpp          # Memory bank system
-│   ├── cfgfile.cpp         # Config parser (10.4K lines)
+│   ├── cfgfile.cpp         # Config parser (10.5K lines)
 │   ├── filesys.cpp         # Filesystem emulation (10.7K lines)
 │   ├── inputdevice.cpp     # Input device handling (10.7K lines)
+│   ├── drawing.cpp         # Drawing/rendering logic (8.4K lines)
 │   ├── main.cpp            # Entry point + main loop (1.7K lines)
 │   ├── cpuemu_*.cpp        # GENERATED opcode handlers (DO NOT EDIT)
 │   ├── linetoscr_*.cpp     # GENERATED line-to-screen renderers
@@ -45,7 +46,7 @@ src/
 | Custom chip (DMA, copper, blitter) | `custom.cpp` | 12.7K lines, cycle-accurate |
 | CPU interpreter | `newcpu.cpp` + `cpuemu_*.cpp` | cpuemu files are generated |
 | Memory banks | `memory.cpp` + `include/memory.h` | `addrbank` struct, 65536-bank model |
-| Config parsing | `cfgfile.cpp` | 10.4K lines, add options in `include/options.h` |
+| Config parsing | `cfgfile.cpp` | 10.5K lines, add options in `include/options.h` |
 | Floppy emulation | `disk.cpp` | Index hack, AMAX speedup hack |
 | Audio | `audio.cpp` | DMA wait hack, low period hack |
 | Filesystem | `filesys.cpp` | Known crash on concurrent host FS modification |

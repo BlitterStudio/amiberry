@@ -1,7 +1,7 @@
 # AMIBERRY — PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-15
-**Commit:** e69453b2
+**Generated:** 2026-03-23
+**Commit:** e018b60e
 **Branch:** master
 
 ## OVERVIEW
@@ -12,11 +12,11 @@ Amiga emulator (UAE-based) targeting Linux/macOS/Windows/Android/FreeBSD. C/C++ 
 
 ```
 amiberry/
-├── src/                    # Emulation core (~700 files)
+├── src/                    # Emulation core (~1100 files)
 │   ├── osdep/             # Platform abstraction + GUI + renderers
 │   │   ├── imgui/         # Dear ImGui GUI panels (30+ modular)
 │   │   └── vkbd/          # Virtual keyboard (touch/GL)
-│   ├── include/           # Core headers (119 files — API contracts)
+│   ├── include/           # Core headers (145 files — API contracts)
 │   ├── jit/               # JIT compiler backends
 │   │   ├── arm/           # ARM64 codegen (primary target)
 │   │   └── x86/           # x86-64 codegen
@@ -56,7 +56,8 @@ amiberry/
 | Custom chip emulation | `src/custom.cpp` | 68K custom chip (Agnus, Denise, Paula) |
 | CPU emulation | `src/newcpu.cpp` + `src/cpuemu_*.cpp` | Interpreter + generated opcode handlers |
 | Memory mapping | `src/memory.cpp` + `src/osdep/amiberry_mem.cpp` | Natmem + bank system |
-| Renderer changes | `src/osdep/irenderer.h` → `opengl_renderer.cpp` / `sdl_renderer.cpp` | Factory pattern |
+| Renderer changes | `src/osdep/irenderer.h` → `opengl_renderer.cpp` / `sdl_renderer.cpp` | Factory pattern, per-monitor instances |
+| Multi-monitor | `src/osdep/gfx_window.cpp` + `src/osdep/amiberry_gfx.cpp` | Per-monitor renderer/surface lifecycle |
 | Build config | `CMakeLists.txt` + `cmake/*.cmake` | 15+ feature flags |
 | Android app | `android/app/src/main/java/` | Kotlin Compose, launches SDL in `:sdl` process |
 | Packaging | `packaging/CMakeLists.txt` | CPack: DEB/RPM/DMG/ZIP |
@@ -132,8 +133,9 @@ cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build
 ## NOTES
 
 - **No automated tests** — manual testing with Amiga software is the methodology
-- **CLAUDE.md** at `.claude/CLAUDE.md` has comprehensive architecture docs (387 lines) — read it first
+- **CLAUDE.md** at `.claude/CLAUDE.md` has comprehensive architecture docs (390 lines) — read it first
 - **CI** builds 15+ platform variants (see `.github/workflows/c-cpp.yml`)
+- **macOS user data** moved to `~/Documents/Amiberry` (startup migration from `~/Library/Application Support/Amiberry`)
 - **WinUAE upstream**: Core files (`custom.cpp`, `newcpu.cpp`, `memory.cpp`, etc.) track WinUAE — use `winuae-amiberry-merge` skill for porting
 - **JIT debugging**: Use `amiberry-arm64-jit` skill — covers 12 root-cause bug fixes
 - **Troubleshooting**: Use `troubleshoot-amiberry` skill — full edit-build-run-test cycle with MCP tools

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-119 header files defining the emulator's architecture: data structures, memory bank interfaces, custom chip registers, CPU operation tables, and configuration options. These are the API contracts between all subsystems.
+145 header files defining the emulator's architecture: data structures, memory bank interfaces, custom chip registers, CPU operation tables, and configuration options. These are the API contracts between all subsystems.
 
 ## KEY HEADERS
 

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-~140 C/C++ files implementing OS-dependent platform abstraction: renderers, input, graphics, GUI, audio, networking, and file system. Supports host (SDL) and libretro (headless) targets.
+~184 C/C++ files implementing OS-dependent platform abstraction: renderers, input, graphics, GUI, audio, networking, and file system. Supports host (SDL) and libretro (headless) targets.
 
 ## STRUCTURE
 
@@ -11,8 +11,8 @@ osdep/
 ├── [Renderer Abstraction — Factory Pattern]
 │   ├── irenderer.h              # Abstract base (40+ virtual methods)
 │   ├── renderer_factory.h/cpp   # Creates OpenGL or SDL renderer
-│   ├── opengl_renderer.h/cpp    # OpenGL backend (1589 lines, shaders/overlays)
-│   └── sdl_renderer.h/cpp       # SDL3 software backend (396 lines, minimal)
+│   ├── opengl_renderer.h/cpp    # OpenGL backend (1662 lines, shaders/overlays)
+│   └── sdl_renderer.h/cpp       # SDL3 software backend (421 lines, minimal)
 │
 ├── [Platform Indirection — Compile-Time Dispatch]
 │   ├── amiberry_platform_internal.h      # → includes host or libretro impl
@@ -21,8 +21,8 @@ osdep/
 │   └── gui_handling_platform.h           # → GUI platform dispatch
 │
 ├── [Graphics Subsystem]
-│   ├── amiberry_gfx.h/cpp      # Main orchestration (AmigaMonitor, frame rendering)
-│   ├── gfx_window.h/cpp        # Window lifecycle
+│   ├── amiberry_gfx.h/cpp      # Main orchestration (AmigaMonitor, frame rendering, multi-monitor)
+│   ├── gfx_window.h/cpp        # Window lifecycle (per-monitor renderer/surface)
 │   ├── gl_platform.h/cpp       # GL function loading (desktop) / GLES3 (Android)
 │   ├── gl_overlays.h/cpp       # LED/OSD overlay rendering
 │   ├── external_shader.h/cpp   # Custom shader support
@@ -55,7 +55,7 @@ osdep/
 │   └── sysconfig.h             # System configuration flags
 │
 ├── [Core Platform Files]
-│   ├── amiberry.cpp            # Main entry + initialization (6171 lines)
+│   ├── amiberry.cpp            # Main entry + initialization (6635 lines)
 │   ├── amiberry_update.cpp     # Self-update mechanism (Windows)
 │   ├── amiberry_mem.cpp        # Natmem memory management
 │   ├── amiberry_filesys.cpp    # Host filesystem emulation
@@ -74,7 +74,8 @@ osdep/
 |------|----------|-------|
 | Add renderer feature | `irenderer.h` → impl in `opengl_renderer.cpp` | SDL renderer is minimal fallback |
 | Platform-specific init | `amiberry_platform_internal_host.h` | Inline functions, compile-time dispatch |
-| Window management | `gfx_window.cpp` | Open/close/resize |
+| Window management | `gfx_window.cpp` | Open/close/resize, per-monitor lifecycle |
+| Multi-monitor RTG | `amiberry_gfx.cpp` + `gfx_window.cpp` | Secondary window for RTG monitor_id > 0 |
 | Shader work | `external_shader.cpp` or `shader_preset.cpp` | `filter.cpp` in imgui/ exposes params |
 | Touch controls | `on_screen_joystick.cpp` | Registered as virtual joystick device |
 | macOS sandbox | `macos_bookmarks.h/mm` | No-op stubs when not App Store build |
