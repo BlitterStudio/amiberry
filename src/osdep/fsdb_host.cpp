@@ -998,7 +998,7 @@ a_inode* custom_fsdb_lookup_aino_nname(a_inode* base, const TCHAR* nname)
 
 int custom_fsdb_used_as_nname(a_inode* base, const TCHAR* nname)
 {
-	return 1;
+	return 0;
 }
 
 int same_aname(const char* an1, const char* an2)
