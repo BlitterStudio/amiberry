@@ -213,6 +213,11 @@ void render_panel_configurations()
 		{
 			if (!save_as_path.empty())
 			{
+				if (save_as_path.size() < 4 ||
+					strcasecmp(save_as_path.c_str() + save_as_path.size() - 4, ".uae") != 0)
+				{
+					save_as_path += ".uae";
+				}
 				snprintf(changed_prefs.description, 256, "%s", desc);
 				if (cfgfile_save(&changed_prefs, save_as_path.c_str(), 0))
 				{
