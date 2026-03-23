@@ -1176,30 +1176,36 @@ bool apply_update(const std::string& downloaded_file, const UpdateInfo&)
 		return false;
 	}
 
-	int ret = run_tool({"/usr/bin/ditto", "-x", "-k", downloaded_file, staging_dir.string()});
-	if (ret != 0) {
-		write_log("Updater: failed to extract ZIP with ditto (exit code %d)\n", ret);
-		std::filesystem::remove_all(staging_dir, ec);
-		return false;
-	}
-
+	const bool is_dmg = to_lower(std::filesystem::path(downloaded_file).extension().string()) == ".dmg";
 	std::filesystem::path dmg_path;
-	for (const auto& entry : std::filesystem::directory_iterator(staging_dir, ec)) {
-		if (entry.is_regular_file() && to_lower(entry.path().extension().string()) == ".dmg") {
-			dmg_path = entry.path();
-			break;
+
+	if (is_dmg) {
+		dmg_path = downloaded_file;
+	} else {
+		int ret = run_tool({"/usr/bin/ditto", "-x", "-k", downloaded_file, staging_dir.string()});
+		if (ret != 0) {
+			write_log("Updater: failed to extract ZIP with ditto (exit code %d)\n", ret);
+			std::filesystem::remove_all(staging_dir, ec);
+			return false;
 		}
-	}
-	if (dmg_path.empty()) {
-		write_log("Updater: no DMG found in extracted ZIP\n");
-		std::filesystem::remove_all(staging_dir, ec);
-		return false;
+
+		for (const auto& entry : std::filesystem::directory_iterator(staging_dir, ec)) {
+			if (entry.is_regular_file() && to_lower(entry.path().extension().string()) == ".dmg") {
+				dmg_path = entry.path();
+				break;
+			}
+		}
+		if (dmg_path.empty()) {
+			write_log("Updater: no DMG found in extracted ZIP\n");
+			std::filesystem::remove_all(staging_dir, ec);
+			return false;
+		}
 	}
 
 	const auto mount_dir = staging_dir / "dmg_mount";
 	std::filesystem::create_directories(mount_dir, ec);
 
-	ret = run_tool({"/usr/bin/hdiutil", "attach", dmg_path.string(),
+	int ret = run_tool({"/usr/bin/hdiutil", "attach", dmg_path.string(),
 		"-mountpoint", mount_dir.string(),
 		"-noverify", "-nobrowse", "-noautoopen"});
 	if (ret != 0) {
