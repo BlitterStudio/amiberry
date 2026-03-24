@@ -207,10 +207,9 @@ Amiberry is free and open source. Corporate sponsors help keep development susta
       <p class="tier-price">€300/mo</p>
     </div>
     <p class="tier-description">Logo on website + README, early access, priority support, "Amiberry Certified Partner" badge for your product and marketing.</p>
-    <div class="sponsor-slots logo-slots">
-      <a href="https://ko-fi.com/midwan" class="sponsor-placeholder">
-        <span class="placeholder-icon">+</span>
-        <span class="placeholder-text">Your logo here</span>
+    <div class="sponsor-slots">
+      <a href="https://ko-fi.com/midwan" class="sponsor-badge">
+        <img src="/assets/badges/badge-certified-partner.svg" alt="Become a Certified Partner"/>
       </a>
     </div>
   </div>
@@ -222,10 +221,9 @@ Amiberry is free and open source. Corporate sponsors help keep development susta
       <p class="tier-price">€150/mo</p>
     </div>
     <p class="tier-description">Logo on website + README, early release access, priority issue responses.</p>
-    <div class="sponsor-slots logo-slots">
-      <a href="https://ko-fi.com/midwan" class="sponsor-placeholder">
-        <span class="placeholder-icon">+</span>
-        <span class="placeholder-text">Your logo here</span>
+    <div class="sponsor-slots">
+      <a href="https://ko-fi.com/midwan" class="sponsor-badge">
+        <img src="/assets/badges/badge-partner.svg" alt="Become a Partner"/>
       </a>
     </div>
   </div>
@@ -237,10 +235,9 @@ Amiberry is free and open source. Corporate sponsors help keep development susta
       <p class="tier-price">€50/mo</p>
     </div>
     <p class="tier-description">Named on website, listed in release notes.</p>
-    <div class="sponsor-slots name-slots">
-      <a href="https://ko-fi.com/midwan" class="sponsor-placeholder">
-        <span class="placeholder-icon">+</span>
-        <span class="placeholder-text">Your name here</span>
+    <div class="sponsor-slots">
+      <a href="https://ko-fi.com/midwan" class="sponsor-badge">
+        <img src="/assets/badges/badge-supporter.svg" alt="Become a Supporter"/>
       </a>
     </div>
   </div>

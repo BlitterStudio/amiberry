@@ -460,43 +460,22 @@ hr {
     gap: 0.6rem;
   }
 
-  .logo-slots .sponsor-placeholder {
-    width: 100%;
-    min-height: 60px;
-  }
-
-  .name-slots .sponsor-placeholder {
-    width: 100%;
-    min-height: 44px;
-  }
-
-  .sponsor-placeholder {
+  .sponsor-badge {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
-    border: 2px dashed #d0d7de;
-    border-radius: 8px;
+    width: 100%;
     text-decoration: none !important;
-    color: #8b949e !important;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    transition: transform 0.15s, opacity 0.15s;
 
     &:hover {
-      border-color: #1a6fb5;
-      color: #1a6fb5 !important;
-      background: #f6f8fa;
+      transform: translateY(-1px);
+      opacity: 0.85;
     }
 
-    .placeholder-icon {
-      font-size: 1.2rem;
-      font-weight: 300;
-      line-height: 1;
-    }
-
-    .placeholder-text {
-      font-size: 0.75rem;
-      font-weight: 500;
+    img {
+      max-width: 100%;
+      height: auto;
     }
   }
 }

@@ -15,22 +15,15 @@ A huge thank you to the companies and individuals who support Amiberry developme
 
 ### Certified Partners
 
-<!-- To add your logo: replace the placeholder with an img tag linking to your logo (height ~64px) -->
-| | |
-|:-:|:-:|
-| *Your logo here* | [Become a Certified Partner](https://ko-fi.com/midwan) |
+[![Certified Partner](https://amiberry.com/assets/badges/badge-certified-partner.svg)](https://ko-fi.com/midwan)
 
 ### Partners
 
-<!-- To add your logo: replace the placeholder with an img tag linking to your logo (height ~48px) -->
-| | |
-|:-:|:-:|
-| *Your logo here* | [Become a Partner](https://ko-fi.com/midwan) |
+[![Partner](https://amiberry.com/assets/badges/badge-partner.svg)](https://ko-fi.com/midwan)
 
 ### Supporters
 
-<!-- Name-only listing for Supporter tier sponsors -->
-*Your name here — [become a Supporter](https://ko-fi.com/midwan)*
+[![Supporter](https://amiberry.com/assets/badges/badge-supporter.svg)](https://ko-fi.com/midwan)
 
 > **[View full sponsor details on amiberry.com](https://amiberry.com#sponsors)**
 
