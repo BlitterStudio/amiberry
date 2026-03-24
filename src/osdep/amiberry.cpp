@@ -4815,8 +4815,14 @@ std::string get_home_directory(const bool portable_mode)
 	}
 #endif
 #ifdef __MACH__
-	// macOS: use ~/Documents/Amiberry (visible to the user)
+	// macOS: check AMIBERRY_HOME_DIR first, then default to ~/Documents/Amiberry
 	{
+		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+		if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+		{
+			write_log("macOS: Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
+			return { env_home_dir };
+		}
 		const auto user_home_dir = getenv("HOME");
 		if (user_home_dir != nullptr)
 		{
@@ -4872,8 +4878,15 @@ std::string get_home_directory(const bool portable_mode)
 std::string get_config_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	// macOS: use ~/Documents/Amiberry/Configurations
 	{
+		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+		if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+		{
+			std::string config = std::string(env_home_dir) + "/Configurations";
+			if (!my_existsdir(config.c_str()))
+				my_mkdir(config.c_str());
+			return config;
+		}
 		const auto user_home_dir = getenv("HOME");
 		std::string home_dir = std::string(user_home_dir) + "/Documents/Amiberry";
 		if (!my_existsdir(home_dir.c_str()))
@@ -6007,7 +6020,7 @@ int amiberry_main(int argc, char* argv[])
 	// If it does, we will set portable_mode to true
 	const bool portable_mode = my_existsfile2("amiberry.portable");
 #ifdef __MACH__
-	if (!portable_mode)
+	if (!portable_mode && getenv("AMIBERRY_HOME_DIR") == nullptr)
 		migrate_macos_user_data();
 #endif
 	const bool config_found = locate_amiberry_conf(portable_mode);
