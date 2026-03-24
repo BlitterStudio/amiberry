@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(amiberry
-    VERSION 8.1.0
+    VERSION 8.1.1
     LANGUAGES C CXX
     DESCRIPTION "Optimized Amiga emulator for various platforms"
     HOMEPAGE_URL "https://amiberry.com"
