@@ -603,6 +603,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # ImGui include dirs (always enabled)
 target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
 
+# When bundling SDL3, set RPATH so the binary finds the co-installed shared libs.
+if(BUNDLE_SDL AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}"
+        BUILD_RPATH_USE_ORIGIN ON
+    )
+endif()
+
 # Install the executable
 install(TARGETS ${PROJECT_NAME}
         BUNDLE DESTINATION .

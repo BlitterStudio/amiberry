@@ -69,7 +69,12 @@ else()
 endif()
 
 # Linux DEB settings - build dependency list conditionally based on enabled features
-set(_deb_deps "libc6, libstdc++6, libsdl3-0, libsdl3-image0, flac, libmpg123-0, libpng16-16, zlib1g, libcurl4")
+# When BUNDLE_SDL is ON, SDL3 libs are shipped inside the package — no system dependency needed.
+if(BUNDLE_SDL)
+    set(_deb_deps "libc6, libstdc++6, flac, libmpg123-0, libpng16-16, zlib1g, libcurl4")
+else()
+    set(_deb_deps "libc6, libstdc++6, libsdl3-0, libsdl3-image0, flac, libmpg123-0, libpng16-16, zlib1g, libcurl4")
+endif()
 if(USE_ZSTD)
     string(APPEND _deb_deps ", libzstd1")
 endif()
@@ -113,7 +118,11 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
         "${CMAKE_SOURCE_DIR}/packaging/linux/scripts/postrm")
 
 # Linux RPM settings - build dependency list conditionally based on enabled features
-set(_rpm_deps "glibc, libstdc++, SDL3, SDL3_image, flac, mpg123, libpng, zlib, libcurl")
+if(BUNDLE_SDL)
+    set(_rpm_deps "glibc, libstdc++, flac, mpg123, libpng, zlib, libcurl")
+else()
+    set(_rpm_deps "glibc, libstdc++, SDL3, SDL3_image, flac, mpg123, libpng, zlib, libcurl")
+endif()
 if(USE_ZSTD)
     string(APPEND _rpm_deps ", zstd")
 endif()
