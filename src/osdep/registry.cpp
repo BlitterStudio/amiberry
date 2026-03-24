@@ -453,7 +453,7 @@ UAEREG* regcreatetree(UAEREG* root, const TCHAR* name)
 void regclosetree(UAEREG* key)
 {
     if (inimode) {
-        if (inidata->modified) {
+        if (inidata && inidata->modified) {
             ini_save(inidata, inipath);
         }
     }
