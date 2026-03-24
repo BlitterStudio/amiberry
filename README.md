@@ -11,16 +11,28 @@ Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility a
 
 ## Sponsors
 
-A huge thank you to the companies and individuals who support Amiberry development. 💙
+A huge thank you to the companies and individuals who support Amiberry development.
 
 ### Certified Partners
-*Your logo here — [become a Certified Partner](https://ko-fi.com/midwan)*
+
+<!-- To add your logo: replace the placeholder with an img tag linking to your logo (height ~64px) -->
+| | |
+|:-:|:-:|
+| *Your logo here* | [Become a Certified Partner](https://ko-fi.com/midwan) |
 
 ### Partners
-*Your logo here — [become a Partner](https://ko-fi.com/midwan)*
+
+<!-- To add your logo: replace the placeholder with an img tag linking to your logo (height ~48px) -->
+| | |
+|:-:|:-:|
+| *Your logo here* | [Become a Partner](https://ko-fi.com/midwan) |
 
 ### Supporters
+
+<!-- Name-only listing for Supporter tier sponsors -->
 *Your name here — [become a Supporter](https://ko-fi.com/midwan)*
+
+> **[View full sponsor details on amiberry.com](https://amiberry.com#sponsors)**
 
 ---
 
@@ -38,7 +50,7 @@ platforms your product depends on exist because of community and corporate suppo
 
 | Tier | Monthly | Benefits |
 |------|---------|----------|
-| 🥉 Supporter | €50/mo | Logo on website, listed in release notes |
+| 🥉 Supporter | €50/mo | Named on website, listed in release notes |
 | 🥈 Partner | €150/mo | Logo on website + README, early release access, priority issue responses |
 | 🥇 Certified Partner | €300/mo | Everything above + "Amiberry Certified Partner" badge for your product/marketing |
 
