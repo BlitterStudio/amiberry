@@ -9,6 +9,30 @@
 
 Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility across ARM and x86 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed.
 
+## Commercial Use & Sponsorship
+
+Amiberry is free and open source under the [GPL v3 license](LICENSE).
+You are welcome to use, modify, and redistribute it under those terms.
+
+**If you are shipping a commercial product, paid subscription service, or
+hardware bundle that includes Amiberry**, we ask that you support the project
+financially. Amiberry is maintained by a single developer — the features and
+platforms your product depends on exist because of community and corporate support.
+
+### Corporate Sponsorship Tiers
+
+| Tier | Monthly | Benefits |
+|------|---------|----------|
+| 🥉 Supporter | €50/mo | Logo on website, listed in release notes |
+| 🥈 Partner | €150/mo | Logo on website + README, early release access, priority issue responses |
+| 🥇 Certified Partner | €300/mo | Everything above + "Amiberry Certified Partner" badge for your product/marketing |
+
+👉 [Become a corporate sponsor on Ko-Fi](https://ko-fi.com/amiberry)
+📧 For custom arrangements, contact: **your@email.com**
+
+*Individual supporters keep this project alive too —
+[any contribution is appreciated](https://ko-fi.com/amiberry).*
+
 > **[Visit amiberry.com](https://amiberry.com)** for the full documentation site.
 
 ![Custom shaders and bezel overlays](docs/resources/screenshots/shader-bezel-showcase-1.jpg)
