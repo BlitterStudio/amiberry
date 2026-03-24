@@ -2,13 +2,21 @@
   "version": 3,
   "configurePresets": [
     {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}"
+    },
+    {
       "name": "linux-debug",
       "displayName": "Linux Debug",
       "description": "Target Linux systems with Debug build type.",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" },
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -19,10 +27,20 @@
       "name": "linux-release",
       "displayName": "Linux Release",
       "description": "Target Linux systems with Release build type.",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
+      "inherits": "base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-relwithdebinfo",
+      "displayName": "Linux RelWithDebInfo",
+      "description": "Target Linux systems with RelWithDebInfo build type (optimized + debug symbols).",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -33,10 +51,11 @@
       "name": "macos-debug",
       "displayName": "macOS Debug",
       "description": "Target macOS systems with Debug build type.",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" },
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -47,10 +66,20 @@
       "name": "macos-release",
       "displayName": "macOS Release",
       "description": "Target macOS systems with Release build type.",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
+      "inherits": "base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-relwithdebinfo",
+      "displayName": "macOS RelWithDebInfo",
+      "description": "Target macOS systems with RelWithDebInfo build type (optimized + debug symbols).",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -61,11 +90,10 @@
       "name": "windows-debug",
       "displayName": "Windows Debug (MinGW)",
       "description": "Target Windows systems with MinGW-w64 and Debug build type.",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
+      "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
         "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
@@ -80,9 +108,7 @@
       "name": "windows-release",
       "displayName": "Windows Release (MinGW)",
       "description": "Target Windows systems with MinGW-w64 and Release build type.",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "installDir": "${sourceDir}/out/install/${presetName}",
+      "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -94,6 +120,56 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "linux-relwithdebinfo",
+      "configurePreset": "linux-relwithdebinfo",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "macos-debug",
+      "configurePreset": "macos-debug",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    {
+      "name": "macos-release",
+      "configurePreset": "macos-release",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    {
+      "name": "macos-relwithdebinfo",
+      "configurePreset": "macos-relwithdebinfo",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     }
   ]
 }
