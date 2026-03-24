@@ -117,6 +117,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            debuggable = true
+            jniDebuggable = true
+        }
         release {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.release
@@ -147,6 +153,15 @@ android {
         }
     }
 
+    lint {
+        abortOnError = false
+        warningsAsErrors = false
+        checkDependencies = true
+        lintConfig = file('lint.xml')
+        htmlReport = true
+        htmlOutput = file("${project.buildDir}/reports/lint-results.html")
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -173,6 +188,9 @@ dependencies {
         implementation 'com.google.firebase:firebase-crashlytics'
         implementation 'com.google.firebase:firebase-crashlytics-ndk'
     }
+
+    // Splash Screen API (Android 12+ compatible back to API 23)
+    implementation 'androidx.core:core-splashscreen:1.0.1'
 
     // Jetpack Compose
     implementation platform('androidx.compose:compose-bom:2026.02.00')

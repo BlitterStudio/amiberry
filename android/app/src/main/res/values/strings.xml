@@ -138,6 +138,8 @@
     <string name="settings_display_resolution_1024_768">1024x768</string>
     <string name="settings_display_correct_aspect_ratio">Correct Aspect Ratio</string>
     <string name="settings_display_auto_crop">Auto-Crop</string>
+    <string name="settings_display_app_theme">App Theme</string>
+    <string name="settings_display_dynamic_color">Use Material You colors</string>
 
     <string name="settings_sound_title">Sound Settings</string>
     <string name="settings_sound_output_label">Sound Output</string>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Disable checks that don't apply to this project -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <issue id="AllowBackup" severity="ignore" />
+    <issue id="MissingTranslation" severity="ignore" />
+    <issue id="IconMissingDensityFolder" severity="ignore" />
+    <issue id="GoogleAppIndexingWarning" severity="ignore" />
+
+    <!-- Treat these as errors -->
+    <issue id="NewApi" severity="error" />
+    <issue id="InlinedApi" severity="error" />
+    <issue id="HardcodedText" severity="warning" />
+    <issue id="Deprecated" severity="warning" />
+</lint>
