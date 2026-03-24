@@ -1033,7 +1033,12 @@ bool apply_update(const std::string& downloaded_file, const UpdateInfo&)
 		script << "    goto waitloop\r\n";
 		script << ")\r\n";
 		script << "echo Running installer...\r\n";
-		script << "\"" << downloaded_file << "\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS\r\n";
+		script << "\"" << downloaded_file << "\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /DIR=\"" << install_dir.string() << "\"\r\n";
+		script << "if errorlevel 1 (\r\n";
+		script << "    echo Installer failed, starting current version...\r\n";
+		script << "    start \"\" \"" << exe_path << "\"\r\n";
+		script << "    del \"%~f0\" & exit\r\n";
+		script << ")\r\n";
 		script << "echo Cleaning up...\r\n";
 		script << "del /Q \"" << downloaded_file << "\"\r\n";
 		script << "echo Starting updated Amiberry...\r\n";

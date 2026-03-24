@@ -151,8 +151,11 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
 elseif (WIN32)
     set(CPACK_GENERATOR ZIP INNOSETUP)
 
-    # InnoSetup installer settings
-    set(CPACK_INNOSETUP_ARCHITECTURE x64)
+	# InnoSetup installer settings
+	# Use a version-free install directory so upgrades replace the existing
+	# installation instead of creating a separate folder per version.
+	set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")
+	set(CPACK_INNOSETUP_ARCHITECTURE x64)
     set(CPACK_INNOSETUP_SETUP_PrivilegesRequired "lowest")
     set(CPACK_INNOSETUP_SETUP_PrivilegesRequiredOverridesAllowed "dialog")
     set(CPACK_INNOSETUP_INSTALL_ROOT "{localappdata}\\\\Programs")
