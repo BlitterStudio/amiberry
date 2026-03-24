@@ -1059,10 +1059,18 @@ static void parse_diskswapper (const TCHAR *s)
 		TCHAR c = s[i];
 
 		if (c == '\0' || (c == ',' && !quoted)) {
-			// End of a path token
+			// End of a path token (maybe)
 			path[pathlen] = '\0';
 
 			if (pathlen > 0 && num < MAX_SPARE_DRIVES) {
+				// If this is a comma and the path doesn't exist as a file,
+				// the comma is likely part of the filename — keep accumulating
+				if (c == ',' && !zfile_exists(path)) {
+					if (pathlen < MAX_DPATH - 1)
+						path[pathlen++] = ',';
+					continue;
+				}
+
 				auto *expanded = target_expand_environment(path, nullptr, 0);
 				const TCHAR *use_path = expanded ? expanded : path;
 
