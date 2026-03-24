@@ -27,3 +27,6 @@ Thumbs.db
 # Signing files
 *.jks
 *.keystore
+
+# Firebase config (contains project-specific API keys)
+google-services.json
