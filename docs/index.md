@@ -2,6 +2,7 @@
   <a href="#features">Features</a>
   <a href="#get-amiberry">Install</a>
   <a href="#documentation">Docs</a>
+  <a href="#sponsors">Sponsors</a>
   <a href="#community">Community</a>
 </nav>
 
@@ -190,6 +191,61 @@ Guides, tutorials, and references to help you get the most out of Amiberry.
     <span class="resource-icon">🔍</span>
     Troubleshooting
   </a>
+</div>
+
+---
+
+## Sponsors
+
+Amiberry is free and open source. Corporate sponsors help keep development sustainable.
+
+<div class="sponsor-tiers">
+  <div class="sponsor-tier">
+    <div class="tier-header certified">
+      <span class="tier-badge">🥇</span>
+      <h3>Certified Partners</h3>
+      <p class="tier-price">€300/mo</p>
+    </div>
+    <p class="tier-description">Logo on website + README, early access, priority support, "Amiberry Certified Partner" badge for your product and marketing.</p>
+    <div class="sponsor-slots">
+      <a href="https://ko-fi.com/midwan" class="sponsor-badge">
+        <img src="/assets/badges/badge-certified-partner.svg" alt="Become a Certified Partner"/>
+      </a>
+    </div>
+  </div>
+
+  <div class="sponsor-tier">
+    <div class="tier-header partner">
+      <span class="tier-badge">🥈</span>
+      <h3>Partners</h3>
+      <p class="tier-price">€150/mo</p>
+    </div>
+    <p class="tier-description">Logo on website + README, early release access, priority issue responses.</p>
+    <div class="sponsor-slots">
+      <a href="https://ko-fi.com/midwan" class="sponsor-badge">
+        <img src="/assets/badges/badge-partner.svg" alt="Become a Partner"/>
+      </a>
+    </div>
+  </div>
+
+  <div class="sponsor-tier">
+    <div class="tier-header supporter">
+      <span class="tier-badge">🥉</span>
+      <h3>Supporters</h3>
+      <p class="tier-price">€50/mo</p>
+    </div>
+    <p class="tier-description">Named on website, listed in release notes.</p>
+    <div class="sponsor-slots">
+      <a href="https://ko-fi.com/midwan" class="sponsor-badge">
+        <img src="/assets/badges/badge-supporter.svg" alt="Become a Supporter"/>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="sponsor-cta">
+  <a href="https://ko-fi.com/midwan" class="btn-primary">Become a Sponsor</a>
+  <p class="sponsor-cta-note">Using Amiberry in a commercial product? <a href="mailto:midwan@gmail.com">Contact us</a> for custom arrangements.</p>
 </div>
 
 ---

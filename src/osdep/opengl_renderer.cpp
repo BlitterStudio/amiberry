@@ -146,7 +146,11 @@ bool OpenGLRenderer::has_context() const
 
 SDL_WindowFlags OpenGLRenderer::get_window_flags() const
 {
-	return SDL_WINDOW_OPENGL;
+	SDL_WindowFlags flags = SDL_WINDOW_OPENGL;
+#if !defined(__ANDROID__)
+	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#endif
+	return flags;
 }
 
 bool OpenGLRenderer::set_context_attributes(int mode)
@@ -1238,8 +1242,8 @@ void OpenGLRenderer::render_osd(const int monid, int x, int y, int w, int h)
 				glGenTextures(1, &m_overlay.osd_texture);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, m_overlay.osd_texture);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 				last_osd_w = 0;
 				last_osd_h = 0;
 				last_osd_hash = 0;

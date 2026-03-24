@@ -62,6 +62,29 @@ $body-link-color: #1a6fb5;
   }
 }
 
+// ----- Shared Button Styles ------------------------------------------
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  background: #1a3a5c;
+  color: #fff;
+  transition: transform 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+    color: #fff;
+  }
+}
+
 // ----- Hero Section --------------------------------------------------
 
 .hero {
@@ -111,11 +134,6 @@ $body-link-color: #1a6fb5;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
         text-decoration: none;
       }
-    }
-
-    .btn-primary {
-      background: #1a3a5c;
-      color: #fff;
     }
 
     .btn-secondary {
@@ -375,6 +393,110 @@ hr {
   }
 }
 
+// ----- Sponsor Tiers -------------------------------------------------
+
+.sponsor-tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  margin: 1.2rem 0 1.5rem;
+}
+
+.sponsor-tier {
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .tier-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.9rem 1.2rem;
+    flex-wrap: wrap;
+
+    &.certified { background: linear-gradient(135deg, #fff7e6, #fff1cc); border-bottom: 2px solid #d4a017; }
+    &.partner   { background: linear-gradient(135deg, #f0f4f8, #e8ecf0); border-bottom: 2px solid #8b949e; }
+    &.supporter { background: linear-gradient(135deg, #fdf2f0, #fbe8e4); border-bottom: 2px solid #cd7f5c; }
+
+    .tier-badge {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      font-size: 0.95rem;
+      color: #1f2328;
+      margin: 0;
+      flex: 1;
+    }
+
+    .tier-price {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #656d76;
+      margin: 0;
+      white-space: nowrap;
+    }
+  }
+
+  .tier-description {
+    font-size: 0.82rem;
+    color: #656d76;
+    line-height: 1.5;
+    padding: 0.8rem 1.2rem 0;
+    margin: 0;
+  }
+
+  .sponsor-slots {
+    padding: 0.8rem 1.2rem 1.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .sponsor-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-decoration: none !important;
+    transition: transform 0.15s, opacity 0.15s;
+
+    &:hover {
+      transform: translateY(-1px);
+      opacity: 0.85;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+  }
+}
+
+.sponsor-cta {
+  text-align: center;
+  margin: 0.5rem 0 0;
+
+  .btn-primary {
+    padding: 0.7rem 2rem;
+  }
+
+  .sponsor-cta-note {
+    font-size: 0.82rem;
+    color: #656d76;
+    margin-top: 0.8rem;
+
+    a { color: #1a6fb5; }
+  }
+}
+
 // ----- Footer --------------------------------------------------------
 
 .site-footer {
@@ -420,6 +542,10 @@ hr {
   .platform-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .sponsor-tiers {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media screen and (max-width: 42em) {
@@ -439,7 +565,8 @@ hr {
 
   .highlight-grid,
   .feature-grid,
-  .platform-grid {
+  .platform-grid,
+  .sponsor-tiers {
     grid-template-columns: 1fr;
   }
 

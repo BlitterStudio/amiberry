@@ -148,6 +148,98 @@ struct my_openfile_s {
 };
 
 #ifdef AMIBERRY
+
+// NFD → NFC for Latin-1: recompose ASCII + combining mark into precomposed UTF-8
+static std::string normalize_nfd_for_latin1(const std::string_view input)
+{
+	std::string result;
+	result.reserve(input.size());
+
+	for (size_t i = 0; i < input.size(); ++i) {
+		if (i + 1 < input.size() && !result.empty() &&
+			static_cast<unsigned char>(input[i]) == 0xCC) {
+
+			const unsigned char combining = static_cast<unsigned char>(input[i + 1]);
+			const unsigned char base = static_cast<unsigned char>(result.back());
+			uint8_t precomposed = 0;
+
+			switch (combining) {
+				case 0x80: // U+0300 COMBINING GRAVE ACCENT
+					switch (base) {
+						case 'A': precomposed = 0xC0; break; case 'E': precomposed = 0xC8; break;
+						case 'I': precomposed = 0xCC; break; case 'O': precomposed = 0xD2; break;
+						case 'U': precomposed = 0xD9; break;
+						case 'a': precomposed = 0xE0; break; case 'e': precomposed = 0xE8; break;
+						case 'i': precomposed = 0xEC; break; case 'o': precomposed = 0xF2; break;
+						case 'u': precomposed = 0xF9; break;
+					}
+					break;
+				case 0x81: // U+0301 COMBINING ACUTE ACCENT
+					switch (base) {
+						case 'A': precomposed = 0xC1; break; case 'E': precomposed = 0xC9; break;
+						case 'I': precomposed = 0xCD; break; case 'O': precomposed = 0xD3; break;
+						case 'U': precomposed = 0xDA; break; case 'Y': precomposed = 0xDD; break;
+						case 'a': precomposed = 0xE1; break; case 'e': precomposed = 0xE9; break;
+						case 'i': precomposed = 0xED; break; case 'o': precomposed = 0xF3; break;
+						case 'u': precomposed = 0xFA; break; case 'y': precomposed = 0xFD; break;
+					}
+					break;
+				case 0x82: // U+0302 COMBINING CIRCUMFLEX ACCENT
+					switch (base) {
+						case 'A': precomposed = 0xC2; break; case 'E': precomposed = 0xCA; break;
+						case 'I': precomposed = 0xCE; break; case 'O': precomposed = 0xD4; break;
+						case 'U': precomposed = 0xDB; break;
+						case 'a': precomposed = 0xE2; break; case 'e': precomposed = 0xEA; break;
+						case 'i': precomposed = 0xEE; break; case 'o': precomposed = 0xF4; break;
+						case 'u': precomposed = 0xFB; break;
+					}
+					break;
+				case 0x83: // U+0303 COMBINING TILDE
+					switch (base) {
+						case 'A': precomposed = 0xC3; break; case 'N': precomposed = 0xD1; break;
+						case 'O': precomposed = 0xD5; break;
+						case 'a': precomposed = 0xE3; break; case 'n': precomposed = 0xF1; break;
+						case 'o': precomposed = 0xF5; break;
+					}
+					break;
+				case 0x88: // U+0308 COMBINING DIAERESIS
+					switch (base) {
+						case 'A': precomposed = 0xC4; break; case 'E': precomposed = 0xCB; break;
+						case 'I': precomposed = 0xCF; break; case 'O': precomposed = 0xD6; break;
+						case 'U': precomposed = 0xDC; break;
+						case 'a': precomposed = 0xE4; break; case 'e': precomposed = 0xEB; break;
+						case 'i': precomposed = 0xEF; break; case 'o': precomposed = 0xF6; break;
+						case 'u': precomposed = 0xFC; break; case 'y': precomposed = 0xFF; break;
+					}
+					break;
+				case 0x8A: // U+030A COMBINING RING ABOVE
+					switch (base) {
+						case 'A': precomposed = 0xC5; break;
+						case 'a': precomposed = 0xE5; break;
+					}
+					break;
+				case 0xA7: // U+0327 COMBINING CEDILLA
+					switch (base) {
+						case 'C': precomposed = 0xC7; break;
+						case 'c': precomposed = 0xE7; break;
+					}
+					break;
+			}
+
+			if (precomposed) {
+				result.back() = static_cast<char>(0xC0 | (precomposed >> 6));
+				result += static_cast<char>(0x80 | (precomposed & 0x3F));
+				++i;
+				continue;
+			}
+		}
+
+		result += input[i];
+	}
+
+	return result;
+}
+
 static bool has_logged_iconv_fail = false;
 [[nodiscard]] bool utf8_to_latin1_string(const std::string_view input, std::string& output)
 {
@@ -170,11 +262,16 @@ static bool has_logged_iconv_fail = false;
         }
     }
 
-    // If ASCII only, we can just copy directly without conversion
     if (ascii_only) {
         output.assign(input);
         return true;
     }
+
+#ifdef __APPLE__
+    const std::string normalized = normalize_nfd_for_latin1(input);
+#else
+    const std::string_view normalized = input;
+#endif
 
     // Thread-local RAII wrapper for iconv to ensure thread safety
     static thread_local class IconvWrapper {
@@ -193,9 +290,9 @@ static bool has_logged_iconv_fail = false;
         iconv_t get() {
             std::call_once(init_flag_, [this]() {
 #ifdef __APPLE__
-                handle_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8-MAC");
+				handle_ = iconv_open("ISO-8859-1", "UTF-8-MAC");
 #else
-                handle_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
+				handle_ = iconv_open("ISO-8859-1", "UTF-8");
 #endif
                 valid_ = (handle_ != iconv_t(-1));
             });
@@ -220,13 +317,11 @@ static bool has_logged_iconv_fail = false;
         return false;
     }
 
-    // Use a single allocation for input buffer
-    std::vector<char> in_buf(input.begin(), input.end());
+    std::vector<char> in_buf(normalized.begin(), normalized.end());
 
-    // Fixed buffer for output with reasonable size
     std::array<char, 2048> buf{};
     char* src_ptr = in_buf.data();
-    size_t src_size = input.size();
+    size_t src_size = normalized.size();
     size_t invalid_chars = 0;
 
     // Reset conversion state before starting
@@ -250,12 +345,23 @@ static bool has_logged_iconv_fail = false;
                     output.append(buf.data(), buf.size() - dst_size);
                     continue;
 
-                case EILSEQ:
-                    // Invalid sequence - skip byte and continue
-                    ++src_ptr;
-                    --src_size;
-                    ++invalid_chars;
-                    break;
+			case EILSEQ: {
+				    // Flush any successfully converted data in buf before the bad char
+				    if (buf.size() > dst_size) {
+				        output.append(buf.data(), buf.size() - dst_size);
+				    }
+				    const auto lead = static_cast<unsigned char>(*src_ptr);
+				    size_t char_len = 1;
+				    if ((lead & 0xE0) == 0xC0) char_len = 2;
+				    else if ((lead & 0xF0) == 0xE0) char_len = 3;
+				    else if ((lead & 0xF8) == 0xF0) char_len = 4;
+				    if (char_len > src_size) char_len = src_size;
+				    src_ptr += char_len;
+				    src_size -= char_len;
+				    ++invalid_chars;
+				    output += '?';
+				    continue;
+				}
 
                 case EINVAL:
                     // Incomplete sequence at end - skip remaining bytes
@@ -278,11 +384,11 @@ static bool has_logged_iconv_fail = false;
     }
 
     // Log if significant number of characters were invalid (rate-limited)
-    if (invalid_chars > 0 && invalid_chars > input.size() / 10) {
+    if (invalid_chars > 0 && invalid_chars > normalized.size() / 10) {
         static int log_count = 0;
         if (log_count < 5) {
             write_log(_T("utf8_to_latin1_string: %zu invalid characters found in string of length %zu\n"),
-                     invalid_chars, input.size());
+                     invalid_chars, normalized.size());
             log_count++;
             if (log_count == 5)
                 write_log(_T("utf8_to_latin1_string: further conversion warnings suppressed\n"));
@@ -692,12 +798,9 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 		std::string string_output;
 		if (!utf8_to_latin1_string(result, string_output)) {
 			static std::set<std::string> logged_names;
-			static int suppress_count = 0;
 			if (logged_names.size() < 20 && logged_names.find(result) == logged_names.end()) {
-				write_log("my_readdir: utf8_to_latin1_string conversion failed for %s\n", result.c_str());
+				write_log("my_readdir: skipping non-Latin-1 filename: %s\n", result.c_str());
 				logged_names.insert(result);
-			} else {
-				suppress_count++;
 			}
 			continue;
 		}
@@ -731,8 +834,10 @@ bool my_existsfile2(const char* name)
 
 bool my_existsfiledir(const char *name)
 {
+	if (!name) return false;
+	const auto output = iso_8859_1_to_utf8(std::string(name));
 	struct stat st;
-	if (stat(name, &st) == 0)
+	if (stat(output.c_str(), &st) == 0)
 		return true;
 
 	if (errno == ENOENT || errno == ENOTDIR)

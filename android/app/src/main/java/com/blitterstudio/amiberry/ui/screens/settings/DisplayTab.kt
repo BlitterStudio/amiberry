@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,9 +24,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,13 +105,32 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 					}
 				)
 
-				SwitchRow(
-					label = stringResource(R.string.settings_display_auto_crop),
-					checked = settings.autoCrop,
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(autoCrop = it) }
-					}
-				)
+			SwitchRow(
+				label = stringResource(R.string.settings_display_auto_crop),
+				checked = settings.autoCrop,
+				onCheckedChange = {
+					viewModel.updateSettings { s -> s.copy(autoCrop = it) }
+				}
+			)
+			}
+		}
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+				Column(modifier = Modifier.padding(16.dp)) {
+					Text(stringResource(R.string.settings_display_app_theme), style = MaterialTheme.typography.titleMedium)
+					Spacer(modifier = Modifier.height(8.dp))
+
+					val context = LocalContext.current
+					val appPrefs = AppPreferences.getInstance(context)
+					val useDynamicColor by appPrefs.useDynamicColor
+
+					SwitchRow(
+						label = stringResource(R.string.settings_display_dynamic_color),
+						checked = useDynamicColor,
+						onCheckedChange = { appPrefs.setDynamicColor(it) }
+					)
+				}
 			}
 		}
 	}

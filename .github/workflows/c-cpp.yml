@@ -822,7 +822,6 @@ jobs:
             amiberry-*.zip
             amiberry-*.exe
           retention-days: 7
-
   build-libretro:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -936,7 +935,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip amiberry-*.exe Amiberry-*.dmg *.apk *.aab 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe Amiberry-*.dmg 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -950,8 +949,6 @@ jobs:
             artifacts/amiberry-*.zip
             artifacts/amiberry-*.exe
             artifacts/Amiberry-*.dmg
-            artifacts/*.apk
-            artifacts/*.aab
             artifacts/SHA256SUMS
 
   update-repos:
