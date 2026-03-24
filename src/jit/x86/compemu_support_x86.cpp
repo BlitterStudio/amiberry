@@ -287,12 +287,15 @@ void *jit_vm_acquire(uae_u32 size, int options)
 			}
 		}
 		if (!result) {
-			/* Last resort: OS choice */
-			result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
-			if (result) {
+			/* Last resort: try MAP_32BIT first, then unanchored */
+			result = uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
+			if (jit_vm_alloc_failed(result)) {
+				result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
+			}
+			if (!jit_vm_alloc_failed(result)) {
 				intptr_t dist = (intptr_t)result - (intptr_t)&data_anchor;
 				if (llabs(dist) >= (intptr_t)range) {
-					write_log("JIT: FATAL: could not allocate within 2GB of globals "
+					write_log("JIT: WARNING: could not allocate within 2GB of globals "
 						"(alloc=%p anchor=%p dist=%lld)\n",
 						result, (void *)&data_anchor, (long long)dist);
 					uae_vm_free(result, size);
@@ -301,6 +304,8 @@ void *jit_vm_acquire(uae_u32 size, int options)
 					write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
 						result, (void *)&data_anchor, (long long)dist);
 				}
+			} else {
+				result = NULL;
 			}
 		}
 		return result;
@@ -603,6 +608,25 @@ static void flush_icache_hard(int);
 static void flush_icache_lazy(int);
 static void flush_icache_none(int);
 //void (*flush_icache)(int) = flush_icache_none;
+
+static inline bool jit_vm_alloc_failed(const void *ptr)
+{
+	return ptr == NULL || ptr == VM_MAP_FAILED;
+}
+
+#ifdef UAE
+static void disable_jit_on_runtime_alloc_failure(const char *what)
+{
+	if (!cache_enabled)
+		return;
+
+	write_log("JIT: WARNING: %s\n", what);
+	write_log("JIT: WARNING: Disabling JIT and falling back to the interpreter.\n");
+
+	cache_enabled = 0;
+	currprefs.cachesize = 0;
+}
+#endif
 
 static bigstate live;
 static smallstate empty_ss;
@@ -992,7 +1016,12 @@ static inline blockinfo* get_blockinfo_addr_new(void* addr, int /* setstate */)
 		}
 	}
 	if (!bi) {
+#ifdef UAE
+		disable_jit_on_runtime_alloc_failure("Looking for blockinfo, can't find free one");
+		return NULL;
+#else
 		jit_abort("Looking for blockinfo, can't find free one");
+#endif
 	}
 	return bi;
 }
@@ -1058,19 +1087,20 @@ T * LazyBlockAllocator<T>::acquire()
 	if (!mChunks) {
 		// There is no chunk left, allocate a new pool and link the
 		// chunks into the free list
-#if defined(CPU_x86_64)
-#if defined(__FreeBSD__)
-		/* FreeBSD: pools must also be below 2GB for ADDR32 to work */
+#if defined(CPU_x86_64) && defined(__FreeBSD__)
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
-#else
-		/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
+#elif defined(CPU_x86_64)
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
-#endif
 #else
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
 #endif
-		if (newPool == VM_MAP_FAILED) {
+		if (jit_vm_alloc_failed(newPool)) {
+#ifdef UAE
+			disable_jit_on_runtime_alloc_failure("Could not allocate block pool!");
+			return NULL;
+#else
 			jit_abort("Could not allocate block pool!");
+#endif
 		}
 		for (T * chunk = &newPool->chunk[0]; chunk < &newPool->chunk[kPoolSize]; chunk++) {
 			chunk->next = mChunks;
@@ -1117,12 +1147,16 @@ static HardBlockAllocator<checksum_info> ChecksumInfoAllocator;
 static inline checksum_info *alloc_checksum_info(void)
 {
 	checksum_info *csi = ChecksumInfoAllocator.acquire();
+	if (!csi)
+		return NULL;
 	csi->next = NULL;
 	return csi;
 }
 
 static inline void free_checksum_info(checksum_info *csi)
 {
+	if (!csi)
+		return;
 	csi->next = NULL;
 	ChecksumInfoAllocator.release(csi);
 }
@@ -1139,6 +1173,8 @@ static inline void free_checksum_info_chain(checksum_info *csi)
 static inline blockinfo *alloc_blockinfo(void)
 {
 	blockinfo *bi = BlockInfoAllocator.acquire();
+	if (!bi)
+		return NULL;
 #if USE_CHECKSUM_INFO
 	bi->csi = NULL;
 #endif
@@ -1147,6 +1183,8 @@ static inline blockinfo *alloc_blockinfo(void)
 
 static inline void free_blockinfo(blockinfo *bi)
 {
+	if (!bi)
+		return;
 #if USE_CHECKSUM_INFO
 	free_checksum_info_chain(bi->csi);
 	bi->csi = NULL;
@@ -1154,17 +1192,20 @@ static inline void free_blockinfo(blockinfo *bi)
 	BlockInfoAllocator.release(bi);
 }
 
-static inline void alloc_blockinfos(void)
+static inline bool alloc_blockinfos(void)
 {
 	int i;
 	blockinfo* bi;
 
 	for (i=0;i<MAX_HOLD_BI;i++) {
 		if (hold_bi[i])
-			return;
+			return true;
 		bi=hold_bi[i]=alloc_blockinfo();
+		if (!bi)
+			return false;
 		prepare_block(bi);
 	}
+	return true;
 }
 
 /********************************************************************
@@ -5184,9 +5225,16 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		if (current_compile_p >= MAX_COMPILE_PTR)
 			flush_icache_hard(3);
 
-		alloc_blockinfos();
+		if (!alloc_blockinfos()) {
+			flush_icache_hard(3);
+			return;
+		}
 
 		bi=get_blockinfo_addr_new(pc_hist[0].location,0);
+		if (!bi) {
+			flush_icache_hard(3);
+			return;
+		}
 		bi2=get_blockinfo(cl);
 
 		optlev=bi->optlevel;
@@ -5228,6 +5276,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
 			if (follow_const_jumps && is_const_jump(op)) {
 				checksum_info *csi = alloc_checksum_info();
+				if (!csi) {
+					invalidate_block(bi);
+					flush_icache_hard(3);
+					return;
+				}
 				csi->start_p = (uae_u8 *)min_pcp;
 				csi->length = JITPTR max_pcp - JITPTR min_pcp + LONGEST_68K_INST;
 				csi->next = bi->csi;
@@ -5257,6 +5310,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 #if USE_CHECKSUM_INFO
 		checksum_info *csi = alloc_checksum_info();
+		if (!csi) {
+			invalidate_block(bi);
+			flush_icache_hard(3);
+			return;
+		}
 		csi->start_p = (uae_u8 *)min_pcp;
 		csi->length = JITPTR max_pcp - JITPTR min_pcp + LONGEST_68K_INST;
 		csi->next = bi->csi;
