@@ -1609,12 +1609,10 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 				int h = mon->mainwin_rect.h;
 				const int content_w = w - mon->window_extra_width;
 				const int content_h = h - mon->window_extra_height;
-				const int logical_w = DPIHandler::unscale_window_dimension(content_w);
-				const int logical_h = DPIHandler::unscale_window_dimension(content_h);
-				if (logical_w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width ||
-					logical_h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height) {
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = logical_w;
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = logical_h;
+				if (content_w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width ||
+					content_h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height) {
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = content_w;
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = content_h;
 					set_config_changed();
 				}
 				//if (mon->hStatusWnd)

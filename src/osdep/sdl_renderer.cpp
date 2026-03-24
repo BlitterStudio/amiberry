@@ -56,7 +56,11 @@ bool SDLRenderer::has_context() const
 
 SDL_WindowFlags SDLRenderer::get_window_flags() const
 {
-	return 0; // No special flags needed for SDL software rendering
+#if !defined(__ANDROID__)
+	return SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#else
+	return 0;
+#endif
 }
 
 bool SDLRenderer::set_context_attributes(int /*mode*/)
@@ -198,8 +202,10 @@ void SDLRenderer::sync_osd_texture(int monid, int led_width, int led_height)
 	// Create texture if needed
 	if (!mon->statusline_texture) {
 		mon->statusline_texture = SDL_CreateTexture(mon->amiga_renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, led_width, led_height);
-		if (mon->statusline_texture)
+		if (mon->statusline_texture) {
 			SDL_SetTextureBlendMode(mon->statusline_texture, SDL_BLENDMODE_BLEND);
+			SDL_SetTextureScaleMode(mon->statusline_texture, SDL_SCALEMODE_NEAREST);
+		}
 	}
 
 	// Upload surface pixels to texture
