@@ -655,7 +655,10 @@ bool VulkanRenderer::create_swapchain()
 	create_info.imageColorSpace = surface_format.colorSpace;
 	create_info.imageExtent = extent;
 	create_info.imageArrayLayers = 1;
-	create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if (details.capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+		create_info.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	}
 
 	QueueFamilyIndices indices = find_queue_families(m_physical_device);
 	uint32_t queue_family_indices[] = {indices.graphics, indices.present};
@@ -669,7 +672,22 @@ bool VulkanRenderer::create_swapchain()
 	}
 
 	create_info.preTransform = details.capabilities.currentTransform;
-	create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	// Pick composite alpha from the supported mask, preferring OPAQUE
+	VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	if (!(details.capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)) {
+		const VkCompositeAlphaFlagBitsKHR candidates[] = {
+			VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+		};
+		for (auto candidate : candidates) {
+			if (details.capabilities.supportedCompositeAlpha & candidate) {
+				composite_alpha = candidate;
+				break;
+			}
+		}
+	}
+	create_info.compositeAlpha = composite_alpha;
 	create_info.presentMode = present_mode;
 	create_info.clipped = VK_TRUE;
 	create_info.oldSwapchain = VK_NULL_HANDLE;
