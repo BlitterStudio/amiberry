@@ -27,11 +27,11 @@ platforms your product depends on exist because of community and corporate suppo
 | 🥈 Partner | €150/mo | Logo on website + README, early release access, priority issue responses |
 | 🥇 Certified Partner | €300/mo | Everything above + "Amiberry Certified Partner" badge for your product/marketing |
 
-👉 [Become a corporate sponsor on Ko-Fi](https://ko-fi.com/amiberry)
+👉 [Become a corporate sponsor on Ko-Fi](https://ko-fi.com/midwan)
 📧 For custom arrangements, contact: **midwan@gmail.com**
 
 *Individual supporters keep this project alive too —
-[any contribution is appreciated](https://ko-fi.com/amiberry).*
+[any contribution is appreciated](https://ko-fi.com/midwan).*
 
 > **[Visit amiberry.com](https://amiberry.com)** for the full documentation site.
 
