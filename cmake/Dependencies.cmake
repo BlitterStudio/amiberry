@@ -42,6 +42,16 @@ if (USE_OPENGL)
     endif()
 endif ()
 
+if (USE_VULKAN)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_VULKAN)
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
+    message(STATUS "Vulkan renderer enabled (experimental)")
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(STATUS "  Vulkan validation layers will be requested (Debug build)")
+    endif()
+endif ()
+
 # SDL3
 target_compile_definitions(${PROJECT_NAME} PRIVATE USE_SDL3)
 message(STATUS "Using SDL3")

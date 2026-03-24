@@ -234,6 +234,7 @@ set(SOURCE_FILES
         src/osdep/renderer_factory.cpp
         src/osdep/opengl_renderer.cpp
         src/osdep/sdl_renderer.cpp
+        src/osdep/vulkan_renderer.cpp
         src/osdep/crtemu_impl.cpp
         src/osdep/gl_platform.cpp
         src/osdep/external_shader.cpp

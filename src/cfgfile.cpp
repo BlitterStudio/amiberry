@@ -222,7 +222,7 @@ static const TCHAR *epsonprinter[] = { _T("none"), _T("ascii"), _T("epson_matrix
 static const TCHAR *aspects[] = { _T("none"), _T("vga"), _T("tv"), nullptr };
 static const TCHAR *vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), nullptr };
 static const TCHAR *vsyncmodes2[] = { _T("normal"), _T("busywait"), nullptr };
-static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), _T("sdl2"), nullptr};
+static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), _T("sdl3"), _T("vulkan"), nullptr};
 static const TCHAR *filterapiopts[] = { _T("hardware"), _T("software"), nullptr };
 static const TCHAR *overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), _T("ultra"), _T("ultra_hv"), _T("ultra_csync"), nullptr};
 static const TCHAR *dongles[] =
@@ -3841,6 +3841,11 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_yesno(option, value, _T("cputester"), &p->cputester)
 		|| cfgfile_yesno(option, value, _T("bsdsocket_emu"), &p->socket_emu))
 		return 1;
+
+	if (!_tcscmp(option, _T("gfx_api")) && !_tcsicmp(value, _T("sdl2"))) {
+		p->gfx_api = 4;
+		return 1;
+	}
 
 	if (cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode1, 1)
 		|| cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode2, 0)

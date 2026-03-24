@@ -7,7 +7,9 @@
 #include "sysdeps.h"
 #include "renderer_factory.h"
 
-#ifdef USE_OPENGL
+#ifdef USE_VULKAN
+#include "vulkan_renderer.h"
+#elif defined(USE_OPENGL)
 #include "opengl_renderer.h"
 #else
 #include "sdl_renderer.h"
@@ -15,7 +17,9 @@
 
 std::unique_ptr<IRenderer> create_renderer()
 {
-#ifdef USE_OPENGL
+#ifdef USE_VULKAN
+	return std::make_unique<VulkanRenderer>();
+#elif defined(USE_OPENGL)
 	return std::make_unique<OpenGLRenderer>();
 #else
 	return std::make_unique<SDLRenderer>();

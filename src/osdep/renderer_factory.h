@@ -12,6 +12,7 @@
 #include "irenderer.h"
 
 // Creates the renderer matching the current build configuration:
+// - USE_VULKAN defined: returns VulkanRenderer
 // - USE_OPENGL defined: returns OpenGLRenderer
 // - Otherwise: returns SDLRenderer
 std::unique_ptr<IRenderer> create_renderer();
