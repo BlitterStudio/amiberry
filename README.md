@@ -9,6 +9,21 @@
 
 Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility across ARM and x86 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed.
 
+## Sponsors
+
+A huge thank you to the companies and individuals who support Amiberry development. 💙
+
+### Certified Partners
+*Your logo here — [become a Certified Partner](https://ko-fi.com/midwan)*
+
+### Partners
+*Your logo here — [become a Partner](https://ko-fi.com/midwan)*
+
+### Supporters
+*Your name here — [become a Supporter](https://ko-fi.com/midwan)*
+
+---
+
 ## Commercial Use & Sponsorship
 
 Amiberry is free and open source under the [GPL v3 license](LICENSE).
