@@ -168,6 +168,10 @@ android {
     }
 
     ndkVersion = '29.0.14206865'
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
 }
 
 kotlin {
@@ -203,6 +207,9 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.10.0'
     debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    // Unit tests
+    testImplementation 'junit:junit:4.13.2'
 }
 
 
