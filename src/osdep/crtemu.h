@@ -1781,7 +1781,7 @@ bool crtemu_shaders_none( crtemu_t* crtemu ) {
 			""
 			"void main( void )"
 			"    {"
-			"    gl_FragColor = texture2D( tex0, vec2(uv.x, 1.0 - uv.y) );"
+			"    gl_FragColor = vec4( texture2D( tex0, vec2(uv.x, 1.0 - uv.y) ).rgb, 1.0 );"
 			"    }   "
 			"";
 
