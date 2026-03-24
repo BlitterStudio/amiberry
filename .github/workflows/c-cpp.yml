@@ -660,11 +660,13 @@ jobs:
             artifact_name: amiberry-debian-bookworm-amd64
             release_name: debian-bookworm-amd64
             codename: bookworm
+            extra_cmake_args: -DBUNDLE_SDL=ON
           - name: trixie
             image: midwan/amiberry-debian-x86_64:trixie
             artifact_name: amiberry-debian-trixie-amd64
             release_name: debian-trixie-amd64
             codename: trixie
+            extra_cmake_args:
     steps:
       - uses: actions/checkout@v5
         with:
@@ -673,7 +675,7 @@ jobs:
       - name: Run the build process with Docker
         run: |
           docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-            bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+            bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -709,11 +711,13 @@ jobs:
             artifact_name: amiberry-debian-bookworm-arm64
             release_name: debian-bookworm-arm64
             codename: bookworm
+            extra_cmake_args: -DBUNDLE_SDL=ON
           - name: trixie
             image: midwan/amiberry-debian-aarch64:trixie
             artifact_name: amiberry-debian-trixie-arm64
             release_name: debian-trixie-arm64
             codename: trixie
+            extra_cmake_args:
     steps:
     - uses: actions/checkout@v5
       with:
@@ -722,7 +726,7 @@ jobs:
     - name: Run the build process with Docker
       run: |
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'

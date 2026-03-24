@@ -31,6 +31,7 @@ option(USE_GLES          "Use OpenGL ES instead of desktop OpenGL (for embedded 
 option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
+option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
 
 # Automatically disable PCem on RISC-V targets
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv")
