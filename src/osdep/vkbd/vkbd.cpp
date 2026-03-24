@@ -764,6 +764,7 @@ void vkbd_update_position_from_texture()
 	heightf = static_cast<float>(vkbdGLTexHeight);
 	if (widthf <= 0 || heightf <= 0) return;
 #else
+	if (!vkbdTexture) return;
 	SDL_GetTextureSize(vkbdTexture, &widthf, &heightf);
 #endif
 	int width = static_cast<int>(widthf), height = static_cast<int>(heightf);
