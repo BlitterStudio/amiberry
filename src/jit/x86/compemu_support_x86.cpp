@@ -151,6 +151,90 @@ static inline bool jit_vm_alloc_failed(const void *ptr)
 	return ptr == NULL || ptr == VM_MAP_FAILED;
 }
 
+#if defined(CPU_x86_64) && defined(__linux__)
+/* VMA-aware near-address allocator — Linux equivalent of the Windows
+ * VirtualQuery walk.  Parses /proc/self/maps to find the closest gap
+ * to `base` that can hold `size` bytes within `range`.
+ * Returns mmap'd pointer on success, NULL on failure. */
+static void *find_nearest_gap(uintptr base, uae_u32 size, uintptr range)
+{
+	FILE *maps = fopen("/proc/self/maps", "r");
+	if (!maps)
+		return NULL;
+
+	const uintptr granularity = 0x10000;  /* 64KB, matches Windows path */
+	uintptr lo = (base > range) ? (base - range) : granularity;
+	uintptr hi = base + range;
+
+	void *best = NULL;
+	uintptr best_dist = UINTPTR_MAX;
+	uintptr prev_end = 0;
+
+	char line[512];
+	while (fgets(line, sizeof(line), maps)) {
+		unsigned long vma_start, vma_end;
+		if (sscanf(line, "%lx-%lx", &vma_start, &vma_end) != 2)
+			continue;
+
+		/* Check the gap between prev_end and this VMA's start */
+		if (vma_start > prev_end && prev_end > 0) {
+			uintptr gap_start = prev_end;
+			uintptr gap_end = vma_start;
+			uintptr gap_size = gap_end - gap_start;
+
+			if (gap_size >= size && gap_start < hi && gap_end > lo) {
+				/* Find the address in this gap closest to base */
+				uintptr alloc_at;
+				if (base >= gap_start && base + size <= gap_end) {
+					/* Gap contains base — ideal */
+					alloc_at = base & ~(granularity - 1);
+				} else if (gap_end <= base) {
+					/* Gap is below base — use highest aligned addr */
+					alloc_at = (gap_end - size) & ~(granularity - 1);
+				} else {
+					/* Gap is above base — use lowest aligned addr */
+					alloc_at = (gap_start + granularity - 1) & ~(granularity - 1);
+				}
+
+				if (alloc_at >= gap_start && alloc_at + size <= gap_end &&
+					alloc_at >= lo && alloc_at + size <= hi) {
+					uintptr dist = (alloc_at >= base)
+						? (alloc_at - base) : (base - alloc_at);
+					if (dist < best_dist) {
+						best = (void *)alloc_at;
+						best_dist = dist;
+					}
+				}
+			}
+		}
+		prev_end = vma_end;
+	}
+	fclose(maps);
+
+	if (!best)
+		return NULL;
+
+	/* Try atomic claim with MAP_FIXED_NOREPLACE first */
+#ifdef MAP_FIXED_NOREPLACE
+	void *result = mmap(best, size, PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+	if (result != MAP_FAILED)
+		return result;
+#endif
+	/* Fallback: hint-based (kernel may slide it) */
+	void *result2 = mmap(best, size, PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (result2 != MAP_FAILED) {
+		uintptr dist = ((uintptr)result2 >= base)
+			? ((uintptr)result2 - base) : (base - (uintptr)result2);
+		if (dist < range)
+			return result2;
+		munmap(result2, size);
+	}
+	return NULL;
+}
+#endif /* CPU_x86_64 && __linux__ */
+
 void *jit_vm_acquire(uae_u32 size, int options)
 {
 #if defined(CPU_x86_64)
@@ -246,14 +330,27 @@ void *jit_vm_acquire(uae_u32 size, int options)
 		uintptr hi = base + range;
 		void *result = NULL;
 
+#ifdef __linux__
+		result = find_nearest_gap(base, size, range);
+		if (result) {
+			write_log("JIT: VMA-aware alloc at %p (anchor=%p, dist=%+lld)\n",
+				result, (void *)base,
+				(long long)((intptr_t)result - (intptr_t)base));
+			return result;
+		}
+#endif
+
 #ifdef MAP_FIXED_NOREPLACE
 		int extra_flags = MAP_FIXED_NOREPLACE;
 #else
 		int extra_flags = 0;
 #endif
 
-		/* Try hints at 2MB intervals from anchor outward */
-		for (uintptr offset = 0; offset < range && !result; offset += 0x200000) {
+		uintptr stride = (size + 0xFFFF) & ~(uintptr)0xFFFF;
+		if (stride < 0x10000)
+			stride = 0x10000;
+
+		for (uintptr offset = 0; offset < range && !result; offset += stride) {
 			/* Try above anchor */
 			uintptr try_addr = base + offset;
 			if (try_addr >= lo && try_addr + size <= hi) {
@@ -298,18 +395,18 @@ void *jit_vm_acquire(uae_u32 size, int options)
 					: uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
 				if (jit_vm_alloc_failed(try_alloc))
 					continue;
-				intptr_t dist = (intptr_t)try_alloc - (intptr_t)&data_anchor;
+				intptr_t dist = (intptr_t)try_alloc - (intptr_t)base;
 				if (llabs(dist) >= (intptr_t)range) {
 					uae_vm_free(try_alloc, size);
 					continue;
 				}
 				write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
-					try_alloc, (void *)&data_anchor, (long long)dist);
+					try_alloc, (void *)base, (long long)dist);
 				result = try_alloc;
 			}
 			if (!result) {
 				write_log("JIT: WARNING: could not allocate within 2GB of globals "
-					"(anchor=%p)\n", (void *)&data_anchor);
+					"(anchor=%p)\n", (void *)base);
 			}
 		}
 		return result;
