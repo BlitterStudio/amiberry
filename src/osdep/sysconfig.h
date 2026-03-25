@@ -190,7 +190,7 @@
 
 #include <cstdint>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__) || defined(_WIN64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(CPU_loongarch64) || defined(__LP64__) || defined(_WIN64)
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4
@@ -341,7 +341,7 @@ typedef int32_t uae_atomic;
 /* The number of bytes in a long.  */
 #if defined(_WIN32)
 #define SIZEOF_LONG 4  /* Windows LLP64: long is always 4 bytes */
-#elif defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
+#elif defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(CPU_loongarch64) || defined(__LP64__)
 #define SIZEOF_LONG 8
 #else
 #define SIZEOF_LONG 4

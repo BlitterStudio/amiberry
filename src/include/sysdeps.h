@@ -63,6 +63,9 @@ using namespace std;
 #elif defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 64
 #define CPU_riscv64 1
 #define CPU_64_BIT 1
+#elif defined(__loongarch__) && (__loongarch_grlen == 64)
+#define CPU_loongarch64 1
+#define CPU_64_BIT 1
 #else
 #error unrecognized CPU type
 #endif

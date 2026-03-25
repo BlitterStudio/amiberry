@@ -446,7 +446,7 @@ static inline int cctrue(int cc)
 
 #endif /* SAHF_SETO_PROFITABLE */
 
-#elif defined(CPU_riscv64) || defined(CPU_arm) || defined(CPU_AARCH64)
+#elif defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_arm) || defined(CPU_AARCH64)
 
 #ifdef __cplusplus
 # include <cstdlib>
@@ -458,7 +458,7 @@ static inline int cctrue(int cc)
  * Machine dependent structure for holding the 68k CCR flags
  */
 struct flag_struct {
-#if defined(CPU_riscv64) || defined (CPU_AARCH64)
+#if defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_AARCH64)
 	uae_u64 nzcv;
 	uae_u64 x;
 #else

@@ -39,14 +39,15 @@ if(USE_VULKAN AND USE_OPENGL)
     message(FATAL_ERROR "USE_VULKAN and USE_OPENGL are mutually exclusive. Please enable only one.")
 endif()
 
-# Automatically disable PCem on RISC-V targets
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv")
+# Automatically disable PCem on architectures without a PCem backend
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv"
+   OR CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "loongarch")
     if(USE_PCEM)
-        message(STATUS "Detected RISC-V architecture (${CMAKE_SYSTEM_PROCESSOR}). Disabling USE_PCEM.")
+        message(STATUS "Detected ${CMAKE_SYSTEM_PROCESSOR} architecture. Disabling USE_PCEM (no backend available).")
     else()
-        message(STATUS "Detected RISC-V architecture (${CMAKE_SYSTEM_PROCESSOR}). USE_PCEM already disabled.")
+        message(STATUS "Detected ${CMAKE_SYSTEM_PROCESSOR} architecture. USE_PCEM already disabled.")
     endif()
-    set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
+    set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no backend for this architecture)" FORCE)
 endif()
 
 if(ANDROID)
