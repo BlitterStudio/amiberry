@@ -7,10 +7,17 @@ description: >
   compemu_fpp_arm.cpp, compemu_midfunc_arm64.cpp, or gencomp_arm. Covers the known root-cause
   fixes around liveflags, flush_flags, FBcc and Bcc and BSR sign extension, PC_P 64-bit pointer
   handling, ADDX and SUBX Z-flag semantics, bus error recovery, R_REGSTRUCT offsets, SysInfo
-  MIPS, Lightwave, and Workbench boot issues.
+  MIPS, Lightwave, and Workbench boot issues. This skill is ARM64-specific; for x86-64 JIT
+  allocator or RIP-relative distance issues use `amiberry-x86-jit`.
 ---
 
 # Amiberry ARM64 JIT — Complete Knowledge Base
+
+## Scope
+
+- Use this skill for `src/jit/arm/` and ARM64 codegen issues.
+- Do not use this skill for x86-64 allocator, `MAP_32BIT`, `VirtualAlloc`, or RIP-relative `±2GB` problems in `src/jit/x86/`.
+- If the failing symbol lives in `compemu_support_x86.cpp` or `compemu_x86.h`, switch to `amiberry-x86-jit`.
 
 ## Current Status (2026-03)
 

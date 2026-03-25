@@ -1,6 +1,6 @@
 ---
 name: winuae-amiberry-merge
-description: Assist with merging updates and synchronizing functionality from the upstream WinUAE repository (Windows) to Amiberry (Linux/macOS/Android/Windows). Includes a comprehensive guide for porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, and analyzing platform-specific code. Use this for analyzing upstream commits, identifying Windows-specific code, adapting GUI panels, and verifying feature parity.
+description: Assist with merging updates and synchronizing functionality from the upstream WinUAE repository (Windows) to Amiberry (Linux/macOS/Android/Windows). Includes a guide for porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, analyzing platform-specific code, and preserving upstream-sync safety when Amiberry needs local divergences in WinUAE-tracked files. Use this for analyzing upstream commits, identifying Windows-specific code, adapting GUI panels, handling `#ifdef AMIBERRY` splits, and verifying feature parity.
 ---
 
 # WinUAE to Amiberry Merge Assistant
@@ -117,6 +117,23 @@ For each identified issue:
 - Many `#ifdef _WIN32` blocks from WinUAE now activate in Amiberry on Windows
 - `sysconfig.h` previously `#undef _WIN32` to suppress this; that was removed
 - JIT is non-functional on 64-bit Windows (pointers > 32-bit); interpreter mode is used
+
+### 3a. Preserve Upstream Merge Safety
+
+When the fix touches a WinUAE-synced core file such as `drawing.cpp`, decide whether the change is:
+
+- Upstream-worthy and shared: send or prepare the WinUAE-side fix, then port it cleanly
+- Amiberry-specific integration: keep the change local, but isolate it so a future sync cannot silently drop it
+- Mixed: keep the generic logic upstream-friendly and guard only the Amiberry-specific glue
+
+Rules:
+
+- Prefer pushing the real emulation fix upstream when the bug is not Amiberry-specific.
+- If Amiberry must diverge in a synced file, make the divergence explicit with narrow `#ifdef AMIBERRY` blocks around the local logic instead of rewriting the surrounding upstream flow.
+- Preserve the upstream behavior in the `#else` path when feasible. This makes future WinUAE merges either preserve the divergence or create a conflict that forces review.
+- Do not scatter broad `#ifdef AMIBERRY` blocks across unrelated logic. Keep them tight around the minimum Amiberry-only state, helper, or call site.
+- Mention the upstream status in the commit message or PR summary: upstreamed, to-be-upstreamed, or intentionally Amiberry-only.
+- If a local fix belongs in `src/osdep/` instead of a synced core file, prefer moving it there.
 
 ### 4. Apply Changes
 
@@ -345,5 +362,7 @@ If `currprefs.rtg_zerocopy` is true, `gfx_lock_picasso()` may return `nullptr`.
 - Start with non-GUI changes (they're usually easier)
 - Keep commits focused on logical units
 - Preserve WinUAE's commit messages for traceability
+- When editing a WinUAE-tracked file, explain why the change cannot live purely in `src/osdep/`
+- If you add `#ifdef AMIBERRY`, make it conflict-friendly rather than convenience-driven
 - When uncertain about an API translation, check how similar code is handled elsewhere in Amiberry
 - Test incrementally rather than merging everything at once

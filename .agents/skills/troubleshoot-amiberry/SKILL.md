@@ -1,6 +1,6 @@
 ---
 name: troubleshoot-amiberry
-description: Autonomous troubleshooting workflow for Amiberry bugs. Use this when investigating, reproducing, or fixing bugs in Amiberry. Provides a complete edit-build-run-test-fix cycle using the Amiberry MCP server tools for process management, IPC control, screenshot analysis, log monitoring, and crash detection.
+description: Autonomous troubleshooting workflow for Amiberry bugs. Use this when investigating, reproducing, or fixing bugs in Amiberry, especially renderer or input regressions, HiDPI or SDL3 logical-presentation bugs, Vulkan capability or swapchain failures, or general crash and behavior regressions. Provides a complete edit-build-run-test-fix cycle using the Amiberry MCP server tools for process management, IPC control, screenshot analysis, log monitoring, and crash detection.
 allowed-tools: Bash(cmake:*), Bash(make:*), Bash(wsl:*), Read, Write, Edit, Grep, Glob
 argument-hint: [bug description or issue number]
 ---
@@ -99,6 +99,22 @@ ninja -j12
    - Use `get_crash_info` to detect the crash and analyze signals + log patterns
    - Use `get_process_info` for exit code and signal details
 
+### Phase 2a: Split Shared Bugs Into Concrete Paths
+
+Before editing, decide whether the bug is in a shared subsystem or only one renderer/input path.
+
+- Treat these coordinate spaces as distinct:
+  - Window coordinates: raw SDL event coordinates
+  - Drawable pixel coordinates: OpenGL/Vulkan backbuffer size
+  - Render/logical coordinates: SDL renderer logical presentation space
+- For SDL renderer logical-presentation bugs, pass raw window coordinates to SDL conversion helpers such as `SDL_RenderCoordinatesFromWindow()` or `SDL_ConvertEventToRenderCoordinates()`. Do not pre-scale and then ask SDL to scale again.
+- Check mouse, pen, and tablet paths together. If only `SDL_EVENT_MOUSE_MOTION` is fixed, stylus/tablet input often remains offset.
+- Separate renderer-specific behavior before changing code:
+  - SDL renderer path: `SDL_Renderer`, logical presentation, viewport, pen/mouse conversion
+  - OpenGL path: drawable size, external shaders, texture filtering, OSD path
+  - Vulkan path: instance/device/swapchain capability probing, no SDL renderer fallback assumptions
+- When debugging visual regressions, verify the exact path that owns the blur or scaling issue. OSD textures, main frame textures, and external shader input textures are different paths and should not be "fixed" together by assumption.
+
 ### Phase 3: Fix
 
 1. **Make code changes** using Edit tool on the Amiberry source files
@@ -122,6 +138,16 @@ ninja -j12
 
 4. **If NOT fixed**: Go back to Phase 3 with new hypothesis
 5. **If fixed**: Clean up and report findings
+
+### Phase 4a: Renderer And Capability Verification
+
+- For HiDPI issues, test both SDL renderer and OpenGL/Vulkan paths when relevant. A fix in one path does not prove the others are correct.
+- For Vulkan startup failures, gate everything against reported capabilities:
+  - composite alpha from `supportedCompositeAlpha`
+  - image usage bits such as `TRANSFER_DST_BIT`
+  - present modes and surface formats
+- Prefer "probe, then enable" over hardcoding spec-preferred flags.
+- If the bug involves presentation or scaling, verify both startup and post-resize behavior.
 
 ### Phase 5: Report
 
@@ -228,6 +254,8 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - Always use `--log` (handled automatically by `launch_and_wait_for_ipc`) for log output
 - Use `tail_log` frequently to catch errors early
 - If the screen looks wrong, `pause_emulation` + `runtime_screenshot_view` gives a stable frame
+- If a fix touches input coordinates, explicitly note which coordinate space each variable is in
+- If a fix touches rendering quality, verify OSD, main frame, and external shader paths independently
 - For timing-sensitive bugs, use `runtime_set_config` to change CPU speed or floppy speed
 - For crashes, the signal name in `get_crash_info` tells you a lot: SIGSEGV = null pointer/bad memory, SIGABRT = assertion/abort, SIGBUS = alignment
 - Build with Debug type (`-DCMAKE_BUILD_TYPE=Debug`) for better crash info
