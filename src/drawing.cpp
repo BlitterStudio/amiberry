@@ -547,7 +547,9 @@ static int denise_y_start, denise_y_end;
 
 static int denise_pixtotal, denise_pixtotalv, denise_linecnt, denise_startpos, denise_cck, denise_endcycle;
 static int denise_pixtotalskip_start, denise_pixtotalskip_end, denise_hdelay;
+#ifdef AMIBERRY
 static int denise_render_left_border = 0;
+#endif
 static int denise_pixtotal_max;
 static uae_u32 *buf1, *buf2, *buf_d;
 static uae_u8 *gbuf;
@@ -614,7 +616,11 @@ STATIC_INLINE int xshift(int x, int shift)
 
 int coord_native_to_amiga_x(int x)
 {
+#ifdef AMIBERRY
 	x += denise_render_left_border ? denise_render_left_border : visible_left_border;
+#else
+	x += visible_left_border;
+#endif
 	return x;
 }
 
@@ -5778,12 +5784,14 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 		setxlinebuffer(0, gfx_ypos);
 		xshift = linetoscr_x_adjust >> hresolution;
 		denise_pixtotal -= xshift;
+#ifdef AMIBERRY
 		// Compute effective left border from Denise rendering parameters.
 		// Buffer pixel 0 starts when denise_pixtotal reaches 0, which is
 		// (skip_start + xshift) * 2 half-CCKs after denise_hcounter's initial
 		// value. Convert to native pixels for use by input coordinate mapping.
 		int hcounter_at_buffer_start = (denise_hcounter + (denise_pixtotalskip_start + xshift) * 2) & 511;
 		denise_render_left_border = hcounter_at_buffer_start << hresolution;
+#endif
 	}
 
 	buf1 = (uae_u32*)xlinebuffer;
@@ -6001,7 +6009,6 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 		}
 	}
 }
-
 
 static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
 	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool finalseg, struct linestate *ls)
