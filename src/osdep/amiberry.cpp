@@ -1722,10 +1722,32 @@ static void handle_moved_event(AmigaMonitor* mon)
 	setsizemove(mon, mon->amiga_window);
 }
 
+static void update_hidpi_scale(AmigaMonitor* mon)
+{
+	mon->hidpi_needs_scaling = false;
+	mon->hidpi_scale_x = 1.0f;
+	mon->hidpi_scale_y = 1.0f;
+	IRenderer* renderer = get_renderer(mon->monitor_id);
+	if (renderer && mon->amiga_window) {
+		int win_w, win_h, draw_w, draw_h;
+		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
+		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
+			mon->hidpi_scale_x = (float)draw_w / (float)win_w;
+			mon->hidpi_needs_scaling = true;
+		}
+		if (win_h > 0 && draw_h > 0 && win_h != draw_h) {
+			mon->hidpi_scale_y = (float)draw_h / (float)win_h;
+			mon->hidpi_needs_scaling = true;
+		}
+	}
+}
+
 static void handle_resized_event(AmigaMonitor* mon, int width, int height)
 {
 	write_log("Window resized to: %dx%d\n", width, height);
 	setsizemove(mon, mon->amiga_window);
+	update_hidpi_scale(mon);
 }
 
 static void handle_enter_event()
@@ -2174,22 +2196,12 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	int32_t yrel = event.motion.yrel;
 
 	// HiDPI / Retina: scale from screen coordinates (points) to drawable pixels
-	IRenderer* renderer = get_renderer(mon->monitor_id);
-	if (renderer) {
-		int win_w, win_h, draw_w, draw_h;
-		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
-		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
-
-		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
-			float scale_x = (float)draw_w / (float)win_w;
-			x = (int32_t)(x * scale_x);
-			xrel = (int32_t)(xrel * scale_x);
-		}
-		if (win_h > 0 && draw_h > 0 && win_h != draw_h) {
-			float scale_y = (float)draw_h / (float)win_h;
-			y = (int32_t)(y * scale_y);
-			yrel = (int32_t)(yrel * scale_y);
-		}
+	// Scale factors cached per-monitor in update_hidpi_scale(), updated on window resize
+	if (mon->hidpi_needs_scaling) {
+		x = (int32_t)(x * mon->hidpi_scale_x);
+		xrel = (int32_t)(xrel * mon->hidpi_scale_x);
+		y = (int32_t)(y * mon->hidpi_scale_y);
+		yrel = (int32_t)(yrel * mon->hidpi_scale_y);
 	}
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)

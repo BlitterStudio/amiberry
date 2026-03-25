@@ -124,6 +124,11 @@ struct AmigaMonitor {
 	SDL_Texture* statusline_texture;
 	struct winuae_currentmode currentmode;
 	struct uae_filter* usedfilter;
+
+	// Cached HiDPI scale factors (updated on window resize)
+	float hidpi_scale_x = 1.0f;
+	float hidpi_scale_y = 1.0f;
+	bool hidpi_needs_scaling = false;
 };
 extern struct AmigaMonitor* amon;
 extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];

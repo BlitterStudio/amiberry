@@ -917,6 +917,24 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0"))
 		write_log("SDL3: Set window not to minimize on focus loss\n");
 
+	// Initialize HiDPI scale cache for mouse input
+	mon->hidpi_needs_scaling = false;
+	mon->hidpi_scale_x = 1.0f;
+	mon->hidpi_scale_y = 1.0f;
+	if (renderer_to_use && mon->amiga_window) {
+		int win_w, win_h, draw_w, draw_h;
+		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
+		renderer_to_use->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
+		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
+			mon->hidpi_scale_x = (float)draw_w / (float)win_w;
+			mon->hidpi_needs_scaling = true;
+		}
+		if (win_h > 0 && draw_h > 0 && win_h != draw_h) {
+			mon->hidpi_scale_y = (float)draw_h / (float)win_h;
+			mon->hidpi_needs_scaling = true;
+		}
+	}
+
 	mon->active = true;
 	return 1;
 }
