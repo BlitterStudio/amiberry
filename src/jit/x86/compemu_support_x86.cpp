@@ -146,6 +146,11 @@ static void build_comp(void);
 static uae_u8* vm_acquire_anchor = NULL;
 #endif
 
+static inline bool jit_vm_alloc_failed(const void *ptr)
+{
+	return ptr == NULL || ptr == VM_MAP_FAILED;
+}
+
 void *jit_vm_acquire(uae_u32 size, int options)
 {
 #if defined(CPU_x86_64)
@@ -607,11 +612,6 @@ static void flush_icache_hard(int);
 static void flush_icache_lazy(int);
 static void flush_icache_none(int);
 //void (*flush_icache)(int) = flush_icache_none;
-
-static inline bool jit_vm_alloc_failed(const void *ptr)
-{
-	return ptr == NULL || ptr == VM_MAP_FAILED;
-}
 
 #ifdef UAE
 static void disable_jit_on_runtime_alloc_failure(const char *what)
