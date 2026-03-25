@@ -47,9 +47,15 @@ struct sound_dp
 	float cnt_correct;
 	int stream_initialised;
 	int silence_written;
+	int push_target_buffers;
+	int push_stable_writes;
 };
 
 #define SND_STATUSCNT 10
+
+#define PUSH_TARGET_BUFFERS_MIN 2
+#define PUSH_TARGET_BUFFERS_MAX 3
+#define PUSH_TARGET_STABLE_WRITES 48
 
 #define ADJUST_SIZE 20
 #define EXP 1.9
@@ -86,6 +92,58 @@ static struct sound_data *sdp = &sdpaula;
 static uae_u8 *extrasndbuf;
 static int extrasndbufsize;
 static int extrasndbuffered;
+
+static void reset_push_timing_state(struct sound_data* sd)
+{
+	auto* s = sd->data;
+	s->avg_correct = 0;
+	s->cnt_correct = 0;
+	s->push_target_buffers = PUSH_TARGET_BUFFERS_MIN;
+	s->push_stable_writes = 0;
+}
+
+static void clear_stream_state_sdl(struct sound_data* sd)
+{
+	auto* s = sd->data;
+	if (!s || !s->stream)
+		return;
+
+	if (!SDL_ClearAudioStream(s->stream)) {
+		write_log("SDL_ClearAudioStream failed: %s\n", SDL_GetError());
+	}
+
+	if (SDL_LockAudioStream(s->stream)) {
+		s->pullbufferlen = 0;
+		s->stream_initialised = 0;
+		if (s->pullbuffer) {
+			std::memset(s->pullbuffer, 0, s->pullbuffermaxlen);
+		}
+		SDL_UnlockAudioStream(s->stream);
+	}
+}
+
+static void update_push_target_latency(struct sound_data* sd, int queued)
+{
+	auto* s = sd->data;
+	if (queued <= sd->sndbufsize) {
+		s->push_target_buffers = PUSH_TARGET_BUFFERS_MAX;
+		s->push_stable_writes = 0;
+		return;
+	}
+
+	if (s->push_target_buffers > PUSH_TARGET_BUFFERS_MIN) {
+		const int stable_threshold = sd->sndbufsize * PUSH_TARGET_BUFFERS_MIN;
+		if (queued >= stable_threshold) {
+			s->push_stable_writes++;
+			if (s->push_stable_writes >= PUSH_TARGET_STABLE_WRITES) {
+				s->push_target_buffers = PUSH_TARGET_BUFFERS_MIN;
+				s->push_stable_writes = 0;
+			}
+		} else {
+			s->push_stable_writes = 0;
+		}
+	}
+}
 
 // SDL3 Audio stream get callback (pull mode)
 static void SDLCALL sdl3_audio_get_callback(void* userdata, SDL_AudioStream* astream, int additional_amount, int total_amount)
@@ -238,8 +296,13 @@ static float sync_sound (float m)
 static void clearbuffer_sdl(struct sound_data *sd)
 {
 	const sound_dp* s = sd->data;
-	
-	SDL_LockAudioStream(s->stream);
+
+	clear_stream_state_sdl(sd);
+
+	if (!s || !s->stream)
+		return;
+	if (!SDL_LockAudioStream(s->stream))
+		return;
 	std::memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
 	SDL_UnlockAudioStream(s->stream);
 }
@@ -249,7 +312,9 @@ static void clearbuffer (struct sound_data *sd)
 	const auto* s = sd->data;
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
 		clearbuffer_sdl(sd);
-	if (s->pullbuffer) {
+	else
+		std::memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
+	if (s->pullbuffer && (!s->stream || sd->devicetype != SOUND_DEVICE_SDL2)) {
 		if (sd->devicetype == SOUND_DEVICE_SDL2)
 			SDL_LockAudioStream(s->stream);
 		std::memset(s->pullbuffer, 0, s->pullbuffermaxlen);
@@ -278,12 +343,11 @@ static void pause_audio_sdl(struct sound_data* sd)
 
 static void resume_audio_sdl(struct sound_data* sd)
 {
-	sound_dp* s = sd->data;
-	
+	const auto* s = sd->data;
+
 	clearbuffer(sd);
 	sd->waiting_for_buffer = 1;
-	s->avg_correct = 0;
-	s->cnt_correct = 0;
+	reset_push_timing_state(sd);
 	SDL_ResumeAudioStreamDevice(s->stream);
 	sd->paused = 0;
 }
@@ -292,6 +356,7 @@ static void close_audio_sdl(struct sound_data* sd)
 {
 	auto* s = sd->data;
 	SDL_PauseAudioStreamDevice(s->stream);
+	clear_stream_state_sdl(sd);
 	
 	SDL_LockAudioStream(s->stream);
 	if (s->pullbuffer != nullptr)
@@ -343,13 +408,15 @@ static void finish_sound_buffer_sdl_push(struct sound_data* sd, uae_u16* sndbuff
 	}
 	if (!SDL_PutAudioStreamData(s->stream, sndbuffer, sd->sndbufsize)) {
 		write_log("SDL_PutAudioStreamData failed: %s\n", SDL_GetError());
+		set_reset(sd);
 		return;
 	}
 
 	// Sync
 	const int queued = SDL_GetAudioStreamQueued(s->stream);
 	if (queued < 0) return; // stream error
-	const auto target = sd->sndbufsize * 3; // Target 3 buffers latency to prevent underruns
+	update_push_target_latency(sd, queued);
+	const auto target = sd->sndbufsize * std::max(s->push_target_buffers, PUSH_TARGET_BUFFERS_MIN);
 	const auto diff = queued - target;
 	const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
 	
@@ -466,6 +533,7 @@ static int open_audio_sdl(struct sound_data* sd, int index)
 		s->pullbuffer = xcalloc(uae_u8, s->pullbuffermaxlen);
 		s->pullbufferlen = 0;
 	}
+	reset_push_timing_state(sd);
 	write_log("SDL3: CH=%d, FREQ=%d '%s' buffer %d/%d (%s)\n", ch, freq, sound_devices[index]->name,
 		s->sndbufsize, s->framesperbuffer, !s->pullmode ? _T("push") : _T("pull"));
 	clearbuffer(sd);

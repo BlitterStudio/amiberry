@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "sysdeps.h"
 #include "options.h"
+#include "audio.h"
 #include "imgui_panels.h"
 #include "sounddep/sound.h"
 #include <vector>
@@ -512,17 +513,23 @@ void render_panel_sound() {
         BeginGroupBox("Sound Buffer Size");
 
         int buf_idx = getsoundbufsizeindex(changed_prefs.sound_maxbsiz);
-        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 6);
+        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
         if (ImGui::SliderInt("##BufSize", &buf_idx, 0, 10, "")) {
             if (buf_idx == 0) changed_prefs.sound_maxbsiz = 0;
             else changed_prefs.sound_maxbsiz = sndbufsizes[buf_idx - 1];
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-        ImGui::SameLine();
-        ImGui::AlignTextToFramePadding();
-        if (buf_idx == 0) ImGui::Text("Min");
-        else ImGui::Text("%d", changed_prefs.sound_maxbsiz);
-        ShowHelpMarker("Audio buffer size in bytes - smaller values reduce latency but may cause audio glitches");
+        if (buf_idx == 0) {
+            ImGui::Text("Min");
+        } else {
+            const int native_channels = get_audio_nativechannels(changed_prefs.sound_stereo);
+            const int sample_rate = changed_prefs.sound_freq > 0 ? changed_prefs.sound_freq : 44100;
+            const float buffer_ms = native_channels > 0
+                ? (static_cast<float>(changed_prefs.sound_maxbsiz >> 2) * 1000.0f) / static_cast<float>(sample_rate)
+                : 0.0f;
+            ImGui::Text("%d (~%.1f ms/buffer)", changed_prefs.sound_maxbsiz, buffer_ms);
+        }
+        ShowHelpMarker("Emulator audio buffer setting. Smaller values usually reduce latency but may cause glitches on slower systems. Actual output latency also depends on host audio queueing and the selected audio device.");
 
         ImGui::Spacing();
 
