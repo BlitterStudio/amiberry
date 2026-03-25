@@ -172,7 +172,6 @@ amiberry_hotkey vkbd_key;
 SDL_GamepadButton vkbd_button;
 
 bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
-bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
 // Input latency instrumentation
@@ -1885,33 +1884,32 @@ static void handle_joy_button_event(const SDL_Event& event)
 {
 	const auto button = event.jbutton.button;
 	const auto state = event.jbutton.down;
+	const auto which = event.jbutton.which;
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != event.jbutton.which || (!did->mapping.is_retroarch && did->is_controller)) continue;
+		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
+
+		// Per-device hotkey check using SDL state query (not a global)
+		const bool device_hotkey_held = did->mapping.hotkey_button > SDL_GAMEPAD_BUTTON_INVALID
+			&& SDL_GetJoystickButton(did->joystick, did->mapping.hotkey_button) & 1;
 
 		if (button == did->mapping.hotkey_button)
-		{
-			hotkey_pressed = state;
 			break;
-		}
-		if (button == did->mapping.menu_button && hotkey_pressed && state)
+		if (button == did->mapping.menu_button && device_hotkey_held && state)
 		{
-			hotkey_pressed = false;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
-		if (button == did->mapping.vkbd_button && hotkey_pressed && state)
+		if (button == did->mapping.vkbd_button && device_hotkey_held && state)
 		{
-			hotkey_pressed = false;
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;
 		}
 
-		read_joystick_buttons(id);
-		latency_joy_button.record(event.jbutton.timestamp);
-		return;
+		read_joystick_button_single(id, button, state);
+		break;
 	}
 	latency_joy_button.record(event.jbutton.timestamp);
 }
@@ -1927,6 +1925,7 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		if (did->name.empty() || did->joystick_id != event.gaxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
 
 		read_controller_axis(id, axis, value);
+		break;
 	}
 	latency_ctrl_axis.record(event.gaxis.timestamp);
 }
@@ -1943,6 +1942,7 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
 		read_joystick_axis(id, axis, value);
+		break;
 	}
 	latency_joy_axis.record(event.jaxis.timestamp);
 }

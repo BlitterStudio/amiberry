@@ -1587,12 +1587,13 @@ void read_controller_axis(const int id, const int axis, const int value)
 	}
 }
 
-void read_joystick_buttons(const int id)
+void read_joystick_button_single(const int id, const int button, const int state)
 {
 	const didata* did = &di_joystick[id];
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
+		// Per-device hotkey check (avoids global hotkey_pressed leak across devices)
 		auto held_offset = 0;
 		if (did->mapping.hotkey_button > SDL_GAMEPAD_BUTTON_INVALID
 			&& SDL_GetJoystickButton(did->joystick, did->mapping.hotkey_button) & 1)
@@ -1604,45 +1605,27 @@ void read_joystick_buttons(const int id)
 			|| SDL_GetJoystickButton(did->joystick, did->mapping.hotkey_button) & 1)
 		{
 			// detect RetroArch events, with or without Hotkey
-			set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, false);
-			set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, false);
-			set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, false);
-			set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, false);
+			// Only check the specific RetroArch button that matches the event
+			if (button == did->mapping.menu_button)
+				setjoybuttonstate(id, retroarch_offset + 1, state);
+			else if (button == did->mapping.quit_button)
+				setjoybuttonstate(id, retroarch_offset + 2, state);
+			else if (button == did->mapping.reset_button)
+				setjoybuttonstate(id, retroarch_offset + 3, state);
+			else if (button == did->mapping.vkbd_button)
+				setjoybuttonstate(id, retroarch_offset + 4, state);
 		}
 
-		// Check all Joystick buttons, including axes acting as buttons
-		// Use at least 15 to cover all RetroArch-mapped buttons (indices 0-14),
-		// even when the controller reports fewer physical buttons (issue #1493)
-		// Cap to SDL_GAMEPAD_BUTTON_COUNT to avoid OOB on mapping.button[] array
+		// Find which logical button this physical button maps to and dispatch directly
 		int num_buttons = did->buttons > 15 ? did->buttons : 15;
 		if (num_buttons > SDL_GAMEPAD_BUTTON_COUNT)
 			num_buttons = SDL_GAMEPAD_BUTTON_COUNT;
 		for (int did_button = 0; did_button < num_buttons; did_button++)
 		{
-			if (did->mapping.button[did_button] != SDL_GAMEPAD_BUTTON_INVALID)
+			if (did->mapping.button[did_button] == button)
 			{
-				const int did_state = SDL_GetJoystickButton(did->joystick, did->mapping.button[did_button]) & 1;
-				//if (did->buttonaxisparent[did_button] >= 0)
-				//{
-				//	int bstate;
-				//	const int axis = did->buttonaxisparent[did_button];
-				//	const int dir = did->buttonaxisparentdir[did_button];
-
-				//	const int data = SDL_GetJoystickAxis(did->joystick, axis);
-				//	if (dir)
-				//		bstate = data > joystick_dead_zone ? 1 : 0;
-				//	else
-				//		bstate = data < -joystick_dead_zone ? 1 : 0;
-
-				//	if (axisold[id][did_button] != bstate) {
-				//		setjoybuttonstate(id, did_button, bstate);
-				//		axisold[id][did_button] = bstate;
-				//	}
-				//}
-				//else
-				//{
-					setjoybuttonstate(id, did_button + held_offset, did_state);
-				//}
+				setjoybuttonstate(id, did_button + held_offset, state);
+				break;
 			}
 		}
 	}
@@ -1654,25 +1637,23 @@ void read_joystick_axis(const int id, const int axis, int value)
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
-		// Check for any Axis movement
-		// Cap to SDL_GAMEPAD_AXIS_COUNT to avoid OOB on mapping.axis[] array
+		// Find which logical axis this physical axis maps to and dispatch directly
 		const int num_axes = did->axles < SDL_GAMEPAD_AXIS_COUNT ? did->axles : SDL_GAMEPAD_AXIS_COUNT;
 		for (auto did_axis = 0; did_axis < num_axes; did_axis++)
 		{
-			if (did->mapping.axis[did_axis] != SDL_GAMEPAD_AXIS_INVALID)
+			if (did->mapping.axis[did_axis] == axis)
 			{
-				const int data = SDL_GetJoystickAxis(did->joystick, did->mapping.axis[did_axis]);
-
 				// If analog mouse mapping is used, the Left stick acts as a mouse
 				if (did_axis <= SDL_GAMEPAD_AXIS_LEFTY && currprefs.jports[id].mousemap > 0)
 				{
-					if (data > joystick_dead_zone || data < -joystick_dead_zone)
-						setmousestate(id, did_axis, data / 1000, 0);
+					if (value > joystick_dead_zone || value < -joystick_dead_zone)
+						setmousestate(id, did_axis, value / 1000, 0);
 				}
 				else
 				{
-					set_axis_state(id, did_axis, data, invert_axis(did_axis, did));
+					set_axis_state(id, did_axis, value, invert_axis(did_axis, did));
 				}
+				break;
 			}
 		}
 	}

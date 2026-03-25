@@ -116,7 +116,7 @@ extern std::string sanitize_retroarch_name(std::string s);
 extern int find_retroarch(const std::string& find_setting, const std::string& retroarch_file);
 extern void map_from_retroarch(controller_mapping& mapping, const std::string& control_config, const int player);
 
-extern void read_joystick_buttons(int id);
+extern void read_joystick_button_single(int id, int button, int state);
 extern void read_joystick_axis(int id, int axis, int value);
 extern void read_joystick_hat(int id, int hat, int value);
 
