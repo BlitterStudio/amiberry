@@ -303,8 +303,17 @@ void *jit_vm_acquire(uae_u32 size, int options)
 			result = VirtualAlloc(best, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		}
 		if (!result) {
-			/* Last resort: OS choice (may be out of RIP-relative range) */
+			/* Last resort: OS choice — range-check the result to avoid
+			 * silent RIP-relative overflow in pool allocations that
+			 * bypass alloc_cache()'s post-hoc distance check. */
 			result = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+			if (result) {
+				intptr_t dist = (intptr_t)result - (intptr_t)base;
+				if (llabs(dist) >= (intptr_t)range) {
+					VirtualFree(result, 0, MEM_RELEASE);
+					result = NULL;
+				}
+			}
 		}
 		return result;
 #else
