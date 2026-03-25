@@ -506,19 +506,15 @@ static const char* help_text_sound =
 	"for the sounds produced.\n"
 	"\n"
 	"Sound buffer size\n"
-	"The size of the buffer used for producing the sound output, as well as the method used\n"
-	"for consuming that buffer. The default value is 6 and Pull audio, which uses a\n"
-	"medium-sized buffer and a callback that consumes it automatically. The size of the\n"
-	"audio buffer can affect latency and CPU load: too big a buffer and there will be some\n"
-	"latency before the audio is heard, too small a buffer and the CPU will have more load\n"
-	"to constantly try and fill the buffer.\n"
+	"This setting controls the emulator-side audio buffer used for sound output. Smaller\n"
+	"values usually reduce latency, but they also give the system less headroom and can\n"
+	"cause glitches or dropouts on slower hardware. Larger values increase latency, but\n"
+	"tend to be more robust when the host system is under load.\n"
 	"\n"
-	"The Pull audio option enables a callback, which will then automatically consume the\n"
-	"buffer asynchronously. This works better with a medium-sized buffer (e.g. 6 or 8).\n"
-	"The Push audio option, will change the behavior to have Amiberry push audio directly\n"
-	"on an interval, during custom chipset emulation. This option works best with smaller\n"
-	"buffer sizes (e.g. 1 or even 0) and might help decrease any latency found even\n"
-	"further, but at the cost of slightly higher CPU usage.\n";
+	"The value shown in the panel is not the full end-to-end output latency by itself.\n"
+	"Actual latency also depends on host audio queueing and the selected audio device.\n"
+	"The panel shows an approximate milliseconds-per-buffer value to make this easier to\n"
+	"judge while testing different settings.\n";
 
 static const char* help_text_input =
 	"Here you can select the devices connected to the various input ports.\n"
