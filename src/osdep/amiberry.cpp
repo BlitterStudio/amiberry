@@ -4577,6 +4577,31 @@ bool file_exists(const std::string& file)
 	return (fs::exists(f));
 }
 
+#ifdef _WIN32
+static std::string get_windows_executable_directory()
+{
+	char exepath[MAX_DPATH];
+	GetModuleFileNameA(NULL, exepath, MAX_DPATH);
+	std::string dir(exepath);
+	const auto last_sep = dir.find_last_of("\\/");
+	if (last_sep != std::string::npos)
+		dir = dir.substr(0, last_sep);
+	return dir;
+}
+#endif
+
+static bool is_portable_mode_enabled()
+{
+	if (my_existsfile2("amiberry.portable"))
+		return true;
+#ifdef _WIN32
+	const std::string portable_marker = get_windows_executable_directory() + "\\amiberry.portable";
+	return my_existsfile2(portable_marker.c_str());
+#else
+	return false;
+#endif
+}
+
 #ifndef LIBRETRO
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
@@ -4722,13 +4747,7 @@ std::string get_data_directory(bool portable_mode)
 	{
 		// Use the executable's directory, not getcwd(), because file associations
 		// and shortcuts can launch the app with an arbitrary working directory.
-		char exepath[MAX_DPATH];
-		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
-		std::string dir(exepath);
-		auto last_sep = dir.find_last_of("\\/");
-		if (last_sep != std::string::npos)
-			dir = dir.substr(0, last_sep);
-		return dir + "\\data\\";
+		return get_windows_executable_directory() + "\\data\\";
 	}
 #else
 	if (portable_mode)
@@ -4782,13 +4801,7 @@ std::string get_home_directory(const bool portable_mode)
 	if (portable_mode)
 	{
 		write_log("Portable mode: Setting home directory to executable path\n");
-		char exepath[MAX_DPATH];
-		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
-		std::string dir(exepath);
-		auto last_sep = dir.find_last_of("\\/");
-		if (last_sep != std::string::npos)
-			dir = dir.substr(0, last_sep);
-		return dir;
+		return get_windows_executable_directory();
 	}
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
@@ -4809,13 +4822,7 @@ std::string get_home_directory(const bool portable_mode)
 			return result.append("\\Amiberry");
 		}
 		write_log("Fallback: Setting home directory to executable path\n");
-		char exepath[MAX_DPATH];
-		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
-		std::string dir(exepath);
-		auto last_sep = dir.find_last_of("\\/");
-		if (last_sep != std::string::npos)
-			dir = dir.substr(0, last_sep);
-		return dir;
+		return get_windows_executable_directory();
 	}
 #endif
 #ifdef __MACH__
@@ -4901,6 +4908,11 @@ std::string get_config_directory(bool portable_mode)
 		return config;
 	}
 #elif defined(_WIN32)
+	if (portable_mode)
+	{
+		write_log("Portable mode: Setting config directory to executable path\n");
+		return get_windows_executable_directory() + "\\conf";
+	}
 	{
 		const auto user_home_dir = getenv("USERPROFILE");
 		if (user_home_dir != nullptr)
@@ -4912,13 +4924,7 @@ std::string get_config_directory(bool portable_mode)
 			auto result = std::string(user_home_dir);
 			return result.append("\\Amiberry\\Configurations");
 		}
-		char exepath[MAX_DPATH];
-		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
-		std::string dir(exepath);
-		auto last_sep = dir.find_last_of("\\/");
-		if (last_sep != std::string::npos)
-			dir = dir.substr(0, last_sep);
-		return dir + "\\conf";
+		return get_windows_executable_directory() + "\\conf";
 	}
 #elif defined(__ANDROID__)
 	const char* path = SDL_GetAndroidExternalStoragePath();
@@ -4987,13 +4993,7 @@ std::string get_plugins_directory(bool portable_mode)
     return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
 	{
-		char exepath[MAX_DPATH];
-		GetModuleFileNameA(NULL, exepath, MAX_DPATH);
-		std::string dir(exepath);
-		auto last_sep = dir.find_last_of("\\/");
-		if (last_sep != std::string::npos)
-			dir = dir.substr(0, last_sep);
-		return dir + "\\plugins";
+		return get_windows_executable_directory() + "\\plugins";
 	}
 #else
 	if (portable_mode)
@@ -6020,9 +6020,10 @@ int amiberry_main(int argc, char* argv[])
 		abort();
 	}
 
-	// Check if a file with the name "amiberry.portable" exists in the current directory
-	// If it does, we will set portable_mode to true
-	const bool portable_mode = my_existsfile2("amiberry.portable");
+	// Portable mode is enabled when the marker is found in the startup directory.
+	// On Windows, also check next to the executable because shortcuts and file
+	// associations can launch the app with a different working directory.
+	const bool portable_mode = is_portable_mode_enabled();
 #ifdef __MACH__
 	if (!portable_mode && getenv("AMIBERRY_HOME_DIR") == nullptr)
 		migrate_macos_user_data();
