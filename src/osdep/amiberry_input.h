@@ -75,6 +75,8 @@ struct didata {
 	std::array<uae_s16, MAX_MAPPINGS> buttonaxisparent;
 	std::array<uae_s16, MAX_MAPPINGS> buttonaxisparentdir;
 	std::array<uae_s16, MAX_MAPPINGS> buttonaxistype;
+
+	bool hotkey_held{}; // per-device hotkey state, updated in event order
 };
 
 //Analog joystick dead zone

@@ -1870,8 +1870,15 @@ static void handle_controller_button_event(const SDL_Event& event)
 	}
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
-			const didata* did = &di_joystick[id];
+			didata* did = &di_joystick[id];
 			if (did->name.empty() || did->joystick_id != which || did->mapping.is_retroarch || !did->is_controller) continue;
+
+			// Update per-device hotkey state in event order
+			if (button == did->mapping.hotkey_button)
+			{
+				did->hotkey_held = state;
+				break;
+			}
 
 			read_controller_button(id, button, state);
 			break;
@@ -1888,22 +1895,24 @@ static void handle_joy_button_event(const SDL_Event& event)
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
-		const didata* did = &di_joystick[id];
+		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
-		// Per-device hotkey check using SDL state query (not a global)
-		const bool device_hotkey_held = did->mapping.hotkey_button > SDL_GAMEPAD_BUTTON_INVALID
-			&& SDL_GetJoystickButton(did->joystick, did->mapping.hotkey_button) & 1;
-
+		// Update per-device hotkey state in event order (not polled)
 		if (button == did->mapping.hotkey_button)
-			break;
-		if (button == did->mapping.menu_button && device_hotkey_held && state)
 		{
+			did->hotkey_held = state;
+			break;
+		}
+		if (button == did->mapping.menu_button && did->hotkey_held && state)
+		{
+			did->hotkey_held = false;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
-		if (button == did->mapping.vkbd_button && device_hotkey_held && state)
+		if (button == did->mapping.vkbd_button && did->hotkey_held && state)
 		{
+			did->hotkey_held = false;
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;
 		}

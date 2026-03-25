@@ -1405,6 +1405,7 @@ static void unacquire_joystick(const int num)
 
 	struct didata* did = &di_joystick[num];
 	did->acquired = 0;
+	did->hotkey_held = false;
 }
 
 static const TCHAR* get_joystick_friendlyname(const int joy)
@@ -1521,17 +1522,6 @@ static bool invert_axis(int axis, const didata* did)
 	}
 }
 
-void set_button_state(const didata* did, const int id, int button, const int button_offset, const bool is_controller)
-{
-	if (button != SDL_GAMEPAD_BUTTON_INVALID)
-	{
-		const auto button_state = is_controller
-			? SDL_GetGamepadButton(did->controller, static_cast<SDL_GamepadButton>(button)) & 1
-			: SDL_GetJoystickButton(did->joystick, button) & 1;
-		setjoybuttonstate(id, button_offset, button_state);
-	}
-}
-
 void set_axis_state(const int id, const int axis, int value, const bool invert)
 {
 	if (invert)
@@ -1551,18 +1541,20 @@ void read_controller_button(const int id, const int button, const int state)
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
-		auto held_offset = 0;
-		if (did->mapping.hotkey_button > SDL_GAMEPAD_BUTTON_INVALID
-			&& SDL_GetGamepadButton(did->controller, static_cast<SDL_GamepadButton>(did->mapping.hotkey_button)) & 1)
-			held_offset = REMAP_BUTTONS;
+		// Use per-device hotkey state maintained in event order by handle_controller_button_event()
+		const auto held_offset = did->hotkey_held ? REMAP_BUTTONS : 0;
 
 		int retroarch_offset = SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT * 2;
 
-		// detect RetroArch events, with or without Hotkey
-		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, true);
-		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, true);
-		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, true);
-		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, true);
+		// detect RetroArch events — only check the specific button that changed
+		if (button == did->mapping.menu_button)
+			setjoybuttonstate(id, retroarch_offset + 1, state);
+		else if (button == did->mapping.quit_button)
+			setjoybuttonstate(id, retroarch_offset + 2, state);
+		else if (button == did->mapping.reset_button)
+			setjoybuttonstate(id, retroarch_offset + 3, state);
+		else if (button == did->mapping.vkbd_button)
+			setjoybuttonstate(id, retroarch_offset + 4, state);
 
 		setjoybuttonstate(id, button + held_offset, state);
 	}
@@ -1593,16 +1585,12 @@ void read_joystick_button_single(const int id, const int button, const int state
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
-		// Per-device hotkey check (avoids global hotkey_pressed leak across devices)
-		auto held_offset = 0;
-		if (did->mapping.hotkey_button > SDL_GAMEPAD_BUTTON_INVALID
-			&& SDL_GetJoystickButton(did->joystick, did->mapping.hotkey_button) & 1)
-			held_offset = REMAP_BUTTONS;
+		// Use per-device hotkey state maintained in event order by handle_joy_button_event()
+		const auto held_offset = did->hotkey_held ? REMAP_BUTTONS : 0;
 
 		int retroarch_offset = SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT * 2;
 
-		if (did->mapping.hotkey_button == SDL_GAMEPAD_BUTTON_INVALID
-			|| SDL_GetJoystickButton(did->joystick, did->mapping.hotkey_button) & 1)
+		if (did->mapping.hotkey_button == SDL_GAMEPAD_BUTTON_INVALID || did->hotkey_held)
 		{
 			// detect RetroArch events, with or without Hotkey
 			// Only check the specific RetroArch button that matches the event
