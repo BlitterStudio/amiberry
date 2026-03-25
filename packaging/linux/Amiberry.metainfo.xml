@@ -62,6 +62,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.1.1" date="2026-03-25">
+            <description>
+                <p>Bugfix release: LoongArch64 architecture support, experimental Vulkan renderer, JIT allocator fixes for x86-64, portable install path fixes on Windows, HiDPI scaling fix on Linux, filesystem encoding fix for international filenames, and various bug fixes.</p>
+            </description>
+        </release>
         <release version="8.1.0" date="2026-03-23">
             <description>
                 <p>Feature release: multi-monitor RTG rendering, .uaem sidecar filesystem metadata, native OS file dialogs, multi-mouse support, autocrop and scaling improvements, HiDPI text rendering, and numerous bug fixes.</p>
