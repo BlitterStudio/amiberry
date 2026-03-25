@@ -287,25 +287,24 @@ void *jit_vm_acquire(uae_u32 size, int options)
 			}
 		}
 		if (!result) {
-			/* Last resort: try MAP_32BIT first, then unanchored */
-			result = uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
-			if (jit_vm_alloc_failed(result)) {
-				result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
-			}
-			if (!jit_vm_alloc_failed(result)) {
-				intptr_t dist = (intptr_t)result - (intptr_t)&data_anchor;
+			for (int attempt = 0; attempt < 2 && !result; attempt++) {
+				void *try_alloc = (attempt == 0)
+					? uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE)
+					: uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
+				if (jit_vm_alloc_failed(try_alloc))
+					continue;
+				intptr_t dist = (intptr_t)try_alloc - (intptr_t)&data_anchor;
 				if (llabs(dist) >= (intptr_t)range) {
-					write_log("JIT: WARNING: could not allocate within 2GB of globals "
-						"(alloc=%p anchor=%p dist=%lld)\n",
-						result, (void *)&data_anchor, (long long)dist);
-					uae_vm_free(result, size);
-					result = NULL;
-				} else {
-					write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
-						result, (void *)&data_anchor, (long long)dist);
+					uae_vm_free(try_alloc, size);
+					continue;
 				}
-			} else {
-				result = NULL;
+				write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
+					try_alloc, (void *)&data_anchor, (long long)dist);
+				result = try_alloc;
+			}
+			if (!result) {
+				write_log("JIT: WARNING: could not allocate within 2GB of globals "
+					"(anchor=%p)\n", (void *)&data_anchor);
 			}
 		}
 		return result;
@@ -625,6 +624,7 @@ static void disable_jit_on_runtime_alloc_failure(const char *what)
 
 	cache_enabled = 0;
 	currprefs.cachesize = 0;
+	changed_prefs.cachesize = 0;
 }
 #endif
 
