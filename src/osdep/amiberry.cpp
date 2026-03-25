@@ -176,15 +176,31 @@ bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
 // Input latency instrumentation
+#ifdef LIBRETRO
+// No-op stubs for libretro (no SDL_GetTicksNS)
+struct input_latency_stats {
+	void record(uint64_t) {}
+	void log_and_reset(const char*) {}
+};
+static void maybe_log_input_latency() {}
+#else
 struct input_latency_stats {
 	uint64_t total_ns = 0;
 	uint64_t min_ns = UINT64_MAX;
 	uint64_t max_ns = 0;
 	uint64_t count = 0;
+	uint64_t skipped = 0; // events where event timestamp was ahead of now
+	uint64_t last_event_ts = 0; // last event timestamp seen
+	uint64_t last_now = 0; // SDL_GetTicksNS() at time of last event
 
 	void record(uint64_t event_timestamp_ns) {
 		uint64_t now = SDL_GetTicksNS();
-		if (now <= event_timestamp_ns) return; // clock mismatch guard
+		last_event_ts = event_timestamp_ns;
+		last_now = now;
+		if (now <= event_timestamp_ns) {
+			skipped++;
+			return;
+		}
 		uint64_t delta = now - event_timestamp_ns;
 		total_ns += delta;
 		if (delta < min_ns) min_ns = delta;
@@ -193,19 +209,24 @@ struct input_latency_stats {
 	}
 
 	void log_and_reset(const char* label) {
-		if (count == 0) return;
-		write_log(_T("INPUT_LATENCY [%s]: count=%llu avg=%.1fus min=%.1fus max=%.1fus\n"),
+		if (count == 0 && skipped == 0) return;
+		write_log(_T("INPUT_LATENCY [%s]: count=%llu avg=%.1fus min=%.1fus max=%.1fus skipped=%llu last_evt=%llu last_now=%llu\n"),
 			label,
 			(unsigned long long)count,
-			(double)total_ns / (double)count / 1000.0,
-			(double)min_ns / 1000.0,
-			(double)max_ns / 1000.0);
+			count > 0 ? (double)total_ns / (double)count / 1000.0 : 0.0,
+			count > 0 ? (double)min_ns / 1000.0 : 0.0,
+			count > 0 ? (double)max_ns / 1000.0 : 0.0,
+			(unsigned long long)skipped,
+			(unsigned long long)(last_event_ts / 1000000ULL), // ms for readability
+			(unsigned long long)(last_now / 1000000ULL));
 		total_ns = 0;
 		min_ns = UINT64_MAX;
 		max_ns = 0;
 		count = 0;
+		skipped = 0;
 	}
 };
+#endif // LIBRETRO vs real SDL3
 
 static input_latency_stats latency_joy_button;
 static input_latency_stats latency_joy_axis;
@@ -213,10 +234,13 @@ static input_latency_stats latency_ctrl_button;
 static input_latency_stats latency_ctrl_axis;
 static input_latency_stats latency_mouse;
 static input_latency_stats latency_keyboard;
+#ifndef LIBRETRO
 static uint64_t latency_last_log_time = 0;
+#endif
 
 static void maybe_log_input_latency()
 {
+#ifndef LIBRETRO
 	uint64_t now = SDL_GetTicksNS();
 	// Log every 5 seconds
 	if (latency_last_log_time == 0) {
@@ -232,6 +256,7 @@ static void maybe_log_input_latency()
 	latency_ctrl_axis.log_and_reset("ctrl_axis");
 	latency_mouse.log_and_reset("mouse");
 	latency_keyboard.log_and_reset("keyboard");
+#endif
 }
 
 void cap_fps(uint64_t start)
