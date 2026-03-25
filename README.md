@@ -7,7 +7,7 @@
 
 **Optimized Amiga emulator for Linux, macOS, Windows, Android, FreeBSD, and Haiku.**
 
-Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility across ARM and x86 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed.
+Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility across ARM, x86, RISC-V, and LoongArch64 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed.
 
 ## Sponsors
 

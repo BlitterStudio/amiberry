@@ -25,7 +25,7 @@
   </div>
 
   <p class="hero-description">
-    Built on the WinUAE core, Amiberry delivers full Amiga compatibility across ARM and x86 hardware.
+    Built on the WinUAE core, Amiberry delivers full Amiga compatibility across ARM, x86, RISC-V, and LoongArch64 hardware.
     From a Raspberry Pi to a desktop workstation, from Linux to Android, FreeBSD to Haiku — the Amiga runs everywhere.
   </p>
 
