@@ -146,6 +146,95 @@ static void build_comp(void);
 static uae_u8* vm_acquire_anchor = NULL;
 #endif
 
+static inline bool jit_vm_alloc_failed(const void *ptr)
+{
+	return ptr == NULL || ptr == VM_MAP_FAILED;
+}
+
+#if defined(CPU_x86_64) && defined(__linux__)
+/* VMA-aware near-address allocator — Linux equivalent of the Windows
+ * VirtualQuery walk.  Parses /proc/self/maps to find the closest gap
+ * to `base` that can hold `size` bytes within `range`.
+ * Returns mmap'd pointer on success, NULL on failure. */
+static void *find_nearest_gap(uintptr base, uae_u32 size, uintptr range)
+{
+	FILE *maps = fopen("/proc/self/maps", "r");
+	if (!maps)
+		return NULL;
+
+	const uintptr granularity = 0x10000;  /* 64KB, matches Windows path */
+	uintptr lo = (base > range) ? (base - range) : granularity;
+	uintptr hi = base + range;
+
+	void *best = NULL;
+	uintptr best_dist = UINTPTR_MAX;
+	uintptr prev_end = 0;
+
+	char line[512];
+	while (fgets(line, sizeof(line), maps)) {
+		unsigned long vma_start, vma_end;
+		if (sscanf(line, "%lx-%lx", &vma_start, &vma_end) != 2)
+			continue;
+
+		/* Check the gap between prev_end and this VMA's start */
+		if (vma_start > prev_end && prev_end > 0) {
+			uintptr gap_start = prev_end;
+			uintptr gap_end = vma_start;
+			uintptr gap_size = gap_end - gap_start;
+
+			if (gap_size >= size && gap_start < hi && gap_end > lo) {
+				/* Find the address in this gap closest to base */
+				uintptr alloc_at;
+				if (base >= gap_start && base + size <= gap_end) {
+					/* Gap contains base — ideal */
+					alloc_at = base & ~(granularity - 1);
+				} else if (gap_end <= base) {
+					/* Gap is below base — use highest aligned addr */
+					alloc_at = (gap_end - size) & ~(granularity - 1);
+				} else {
+					/* Gap is above base — use lowest aligned addr */
+					alloc_at = (gap_start + granularity - 1) & ~(granularity - 1);
+				}
+
+				if (alloc_at >= gap_start && alloc_at + size <= gap_end &&
+					alloc_at >= lo && alloc_at + size <= hi) {
+					uintptr dist = (alloc_at >= base)
+						? (alloc_at - base) : (base - alloc_at);
+					if (dist < best_dist) {
+						best = (void *)alloc_at;
+						best_dist = dist;
+					}
+				}
+			}
+		}
+		prev_end = vma_end;
+	}
+	fclose(maps);
+
+	if (!best)
+		return NULL;
+
+	/* Try atomic claim with MAP_FIXED_NOREPLACE first */
+#ifdef MAP_FIXED_NOREPLACE
+	void *result = mmap(best, size, PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+	if (result != MAP_FAILED)
+		return result;
+#endif
+	/* Fallback: hint-based (kernel may slide it) */
+	void *result2 = mmap(best, size, PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (result2 != MAP_FAILED) {
+		uintptr dist = ((uintptr)result2 >= base)
+			? ((uintptr)result2 - base) : (base - (uintptr)result2);
+		if (dist < range)
+			return result2;
+		munmap(result2, size);
+	}
+	return NULL;
+}
+#endif /* CPU_x86_64 && __linux__ */
+
 void *jit_vm_acquire(uae_u32 size, int options)
 {
 #if defined(CPU_x86_64)
@@ -214,8 +303,17 @@ void *jit_vm_acquire(uae_u32 size, int options)
 			result = VirtualAlloc(best, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		}
 		if (!result) {
-			/* Last resort: OS choice (may be out of RIP-relative range) */
+			/* Last resort: OS choice — range-check the result to avoid
+			 * silent RIP-relative overflow in pool allocations that
+			 * bypass alloc_cache()'s post-hoc distance check. */
 			result = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+			if (result) {
+				intptr_t dist = (intptr_t)result - (intptr_t)base;
+				if (llabs(dist) >= (intptr_t)range) {
+					VirtualFree(result, 0, MEM_RELEASE);
+					result = NULL;
+				}
+			}
 		}
 		return result;
 #else
@@ -241,14 +339,27 @@ void *jit_vm_acquire(uae_u32 size, int options)
 		uintptr hi = base + range;
 		void *result = NULL;
 
+#ifdef __linux__
+		result = find_nearest_gap(base, size, range);
+		if (result) {
+			write_log("JIT: VMA-aware alloc at %p (anchor=%p, dist=%+lld)\n",
+				result, (void *)base,
+				(long long)((intptr_t)result - (intptr_t)base));
+			return result;
+		}
+#endif
+
 #ifdef MAP_FIXED_NOREPLACE
 		int extra_flags = MAP_FIXED_NOREPLACE;
 #else
 		int extra_flags = 0;
 #endif
 
-		/* Try hints at 2MB intervals from anchor outward */
-		for (uintptr offset = 0; offset < range && !result; offset += 0x200000) {
+		uintptr stride = (size + 0xFFFF) & ~(uintptr)0xFFFF;
+		if (stride < 0x10000)
+			stride = 0x10000;
+
+		for (uintptr offset = 0; offset < range && !result; offset += stride) {
 			/* Try above anchor */
 			uintptr try_addr = base + offset;
 			if (try_addr >= lo && try_addr + size <= hi) {
@@ -287,20 +398,24 @@ void *jit_vm_acquire(uae_u32 size, int options)
 			}
 		}
 		if (!result) {
-			/* Last resort: OS choice */
-			result = uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
-			if (result) {
-				intptr_t dist = (intptr_t)result - (intptr_t)&data_anchor;
+			for (int attempt = 0; attempt < 2 && !result; attempt++) {
+				void *try_alloc = (attempt == 0)
+					? uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE)
+					: uae_vm_alloc(size, 0, UAE_VM_READ_WRITE);
+				if (jit_vm_alloc_failed(try_alloc))
+					continue;
+				intptr_t dist = (intptr_t)try_alloc - (intptr_t)base;
 				if (llabs(dist) >= (intptr_t)range) {
-					write_log("JIT: FATAL: could not allocate within 2GB of globals "
-						"(alloc=%p anchor=%p dist=%lld)\n",
-						result, (void *)&data_anchor, (long long)dist);
-					uae_vm_free(result, size);
-					result = NULL;
-				} else {
-					write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
-						result, (void *)&data_anchor, (long long)dist);
+					uae_vm_free(try_alloc, size);
+					continue;
 				}
+				write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
+					try_alloc, (void *)base, (long long)dist);
+				result = try_alloc;
+			}
+			if (!result) {
+				write_log("JIT: WARNING: could not allocate within 2GB of globals "
+					"(anchor=%p)\n", (void *)base);
 			}
 		}
 		return result;
@@ -603,6 +718,21 @@ static void flush_icache_hard(int);
 static void flush_icache_lazy(int);
 static void flush_icache_none(int);
 //void (*flush_icache)(int) = flush_icache_none;
+
+#ifdef UAE
+static void disable_jit_on_runtime_alloc_failure(const char *what)
+{
+	if (!cache_enabled)
+		return;
+
+	write_log("JIT: WARNING: %s\n", what);
+	write_log("JIT: WARNING: Disabling JIT and falling back to the interpreter.\n");
+
+	cache_enabled = 0;
+	currprefs.cachesize = 0;
+	changed_prefs.cachesize = 0;
+}
+#endif
 
 static bigstate live;
 static smallstate empty_ss;
@@ -992,7 +1122,12 @@ static inline blockinfo* get_blockinfo_addr_new(void* addr, int /* setstate */)
 		}
 	}
 	if (!bi) {
+#ifdef UAE
+		disable_jit_on_runtime_alloc_failure("Looking for blockinfo, can't find free one");
+		return NULL;
+#else
 		jit_abort("Looking for blockinfo, can't find free one");
+#endif
 	}
 	return bi;
 }
@@ -1058,19 +1193,20 @@ T * LazyBlockAllocator<T>::acquire()
 	if (!mChunks) {
 		// There is no chunk left, allocate a new pool and link the
 		// chunks into the free list
-#if defined(CPU_x86_64)
-#if defined(__FreeBSD__)
-		/* FreeBSD: pools must also be below 2GB for ADDR32 to work */
+#if defined(CPU_x86_64) && defined(__FreeBSD__)
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
-#else
-		/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
+#elif defined(CPU_x86_64)
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
-#endif
 #else
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
 #endif
-		if (newPool == VM_MAP_FAILED) {
+		if (jit_vm_alloc_failed(newPool)) {
+#ifdef UAE
+			disable_jit_on_runtime_alloc_failure("Could not allocate block pool!");
+			return NULL;
+#else
 			jit_abort("Could not allocate block pool!");
+#endif
 		}
 		for (T * chunk = &newPool->chunk[0]; chunk < &newPool->chunk[kPoolSize]; chunk++) {
 			chunk->next = mChunks;
@@ -1117,12 +1253,16 @@ static HardBlockAllocator<checksum_info> ChecksumInfoAllocator;
 static inline checksum_info *alloc_checksum_info(void)
 {
 	checksum_info *csi = ChecksumInfoAllocator.acquire();
+	if (!csi)
+		return NULL;
 	csi->next = NULL;
 	return csi;
 }
 
 static inline void free_checksum_info(checksum_info *csi)
 {
+	if (!csi)
+		return;
 	csi->next = NULL;
 	ChecksumInfoAllocator.release(csi);
 }
@@ -1139,6 +1279,8 @@ static inline void free_checksum_info_chain(checksum_info *csi)
 static inline blockinfo *alloc_blockinfo(void)
 {
 	blockinfo *bi = BlockInfoAllocator.acquire();
+	if (!bi)
+		return NULL;
 #if USE_CHECKSUM_INFO
 	bi->csi = NULL;
 #endif
@@ -1147,6 +1289,8 @@ static inline blockinfo *alloc_blockinfo(void)
 
 static inline void free_blockinfo(blockinfo *bi)
 {
+	if (!bi)
+		return;
 #if USE_CHECKSUM_INFO
 	free_checksum_info_chain(bi->csi);
 	bi->csi = NULL;
@@ -1154,17 +1298,20 @@ static inline void free_blockinfo(blockinfo *bi)
 	BlockInfoAllocator.release(bi);
 }
 
-static inline void alloc_blockinfos(void)
+static inline bool alloc_blockinfos(void)
 {
 	int i;
 	blockinfo* bi;
 
 	for (i=0;i<MAX_HOLD_BI;i++) {
 		if (hold_bi[i])
-			return;
+			return true;
 		bi=hold_bi[i]=alloc_blockinfo();
+		if (!bi)
+			return false;
 		prepare_block(bi);
 	}
+	return true;
 }
 
 /********************************************************************
@@ -5184,9 +5331,16 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		if (current_compile_p >= MAX_COMPILE_PTR)
 			flush_icache_hard(3);
 
-		alloc_blockinfos();
+		if (!alloc_blockinfos()) {
+			flush_icache_hard(3);
+			return;
+		}
 
 		bi=get_blockinfo_addr_new(pc_hist[0].location,0);
+		if (!bi) {
+			flush_icache_hard(3);
+			return;
+		}
 		bi2=get_blockinfo(cl);
 
 		optlev=bi->optlevel;
@@ -5228,6 +5382,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
 			if (follow_const_jumps && is_const_jump(op)) {
 				checksum_info *csi = alloc_checksum_info();
+				if (!csi) {
+					invalidate_block(bi);
+					flush_icache_hard(3);
+					return;
+				}
 				csi->start_p = (uae_u8 *)min_pcp;
 				csi->length = JITPTR max_pcp - JITPTR min_pcp + LONGEST_68K_INST;
 				csi->next = bi->csi;
@@ -5257,6 +5416,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 #if USE_CHECKSUM_INFO
 		checksum_info *csi = alloc_checksum_info();
+		if (!csi) {
+			invalidate_block(bi);
+			flush_icache_hard(3);
+			return;
+		}
 		csi->start_p = (uae_u8 *)min_pcp;
 		csi->length = JITPTR max_pcp - JITPTR min_pcp + LONGEST_68K_INST;
 		csi->next = bi->csi;
