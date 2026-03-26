@@ -182,7 +182,6 @@ struct input_latency_stats {
 	void record(uint64_t) {}
 	void log_and_reset(const char*) {}
 };
-static void maybe_log_input_latency() {}
 #else
 struct input_latency_stats {
 	uint64_t total_ns = 0;
