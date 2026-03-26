@@ -159,3 +159,4 @@ android/local.properties
 .claude/settings.local.json
 build-debug
 .cache
+.sisyphus/
