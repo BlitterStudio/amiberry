@@ -44,6 +44,7 @@ static bool show_tape_modal = false;
 static int create_hdf_size_mb = 100;
 static bool create_hdf_dynamic = false;
 static bool create_hdf_rdb = false;
+static std::string harddrive_modal_error;
 
 // Cache get_filesys_unitconfig() results for HDF entries only.
 // HDF queries call hdf_open()/hdf_close() which is expensive I/O.
@@ -102,6 +103,38 @@ static bool IsCdDevicePath(const char* path)
 static bool IsCdDevicePath(const std::string& path)
 {
     return path.rfind("/dev/", 0) == 0;
+}
+
+static bool ValidatePhysicalDriveSelection(const uaedev_config_info& ci, std::string& error, bool* out_readonly = nullptr)
+{
+    if (!ci.rootdir[0]) {
+        error = "Select a physical drive first.";
+        return false;
+    }
+
+    struct hardfiledata hfd{};
+    memcpy(&hfd.ci, &ci, sizeof(struct uaedev_config_info));
+    if (hfd.ci.blocksize <= 0)
+        hfd.ci.blocksize = 512;
+
+    const bool opened = hdf_open(&hfd) > 0;
+    if (opened && out_readonly)
+        *out_readonly = hfd.ci.readonly;
+    hdf_close(&hfd);
+
+    if (opened)
+        return true;
+
+#ifdef __MACH__
+    if (!_tcsncmp(ci.rootdir, _T("/dev/"), 5)) {
+        error = "Amiberry couldn't open this device. Unmount it first and make sure macOS allows raw disk access.";
+    } else {
+        error = "Amiberry couldn't open this hard drive path.";
+    }
+#else
+    error = "Amiberry couldn't open this hard drive path.";
+#endif
+    return false;
 }
 
 static void AddToMruCdList(const std::string& path)
@@ -914,6 +947,7 @@ static void ShowAddHardDriveModal()
             drive_sector_sizes.clear();
             drive_flags.clear();
             selected_drive_idx = -1;
+            harddrive_modal_error.clear();
             hdf_init_target();
             inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
             int num = hdf_getnumharddrives();
@@ -946,6 +980,7 @@ static void ShowAddHardDriveModal()
                 bool is_selected = (selected_drive_idx == i);
                 if (ImGui::Selectable(drive_names[i].c_str(), is_selected)) {
                     selected_drive_idx = i;
+                    harddrive_modal_error.clear();
                     if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_paths.size()) {
                         au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
                         current_hfdlg.ci.blocksize = drive_sector_sizes[selected_drive_idx];
@@ -968,8 +1003,10 @@ static void ShowAddHardDriveModal()
         }
 
         bool is_mounted = false;
+        bool access_denied = false;
         if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_flags.size()) {
             is_mounted = (drive_flags[selected_drive_idx] & HDF_DRIVEFLAG_MOUNTED) != 0;
+            access_denied = (drive_flags[selected_drive_idx] & HDF_DRIVEFLAG_ACCESS_DENIED) != 0;
         }
         if (is_mounted) {
             ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Warning: selected device is mounted by the host.");
@@ -977,7 +1014,13 @@ static void ShowAddHardDriveModal()
             ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "macOS: unmount the drive before attaching (diskutil unmountDisk).");
 #endif
         }
-        
+        if (access_denied) {
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Warning: Amiberry cannot currently open this device.");
+#ifdef __MACH__
+            ImGui::TextWrapped("macOS denied raw /dev access for this disk. Unmount it and check the app's disk permissions before attaching it.");
+#endif
+        }
+
         bool rw = !current_hfdlg.ci.readonly;
         if (AmigaCheckbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
         ShowHelpMarker("Allow writing to this physical drive");
@@ -1051,6 +1094,10 @@ static void ShowAddHardDriveModal()
 
         ImGui::TextWrapped("%s", hdf_info_text1.c_str());
         ImGui::TextWrapped("%s", hdf_info_text2.c_str());
+        if (!harddrive_modal_error.empty()) {
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s", harddrive_modal_error.c_str());
+        }
         ImGui::Separator();
 
         if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
@@ -1059,6 +1106,12 @@ static void ShowAddHardDriveModal()
                 current_hfdlg.ci.blocksize = drive_sector_sizes[selected_drive_idx];
             }
             if (current_hfdlg.ci.rootdir[0]) {
+                bool opened_readonly = current_hfdlg.ci.readonly;
+                if (!ValidatePhysicalDriveSelection(current_hfdlg.ci, harddrive_modal_error, &opened_readonly)) {
+                    updatehdfinfo(true, true, true, hdf_info_text1, hdf_info_text2);
+                } else {
+                    current_hfdlg.ci.readonly = opened_readonly;
+                    harddrive_modal_error.clear();
                 if (current_hfdlg.ci.devname[0] == 0) {
                     char devname[256];
                     CreateDefaultDevicename(devname);
@@ -1067,10 +1120,12 @@ static void ShowAddHardDriveModal()
                 new_harddrive(edit_entry_index);
                 show_add_harddrive_modal = false;
                 ImGui::CloseCurrentPopup();
+                }
             }
         }
         ImGui::SameLine();
         if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+            harddrive_modal_error.clear();
             show_add_harddrive_modal = false;
             ImGui::CloseCurrentPopup();
         }

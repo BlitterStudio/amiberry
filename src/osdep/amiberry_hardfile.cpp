@@ -51,6 +51,7 @@ struct uae_driveinfo {
 	int dangerous;
 	int readonly;
 	int mounted;
+	int access_denied;
 };
 
 #ifdef __MACH__
@@ -176,7 +177,7 @@ static bool is_partition_of(const char* disk, const char* part)
 }
 
 static void add_drive_entry(const char* display, const char* path, uae_u64 size_bytes, int bytespersector,
-	int readonly, int removable, int mounted)
+	int readonly, int removable, int mounted, int access_denied = 0)
 {
 	if (num_drives >= MAX_FILESYSTEM_UNITS)
 		return;
@@ -191,6 +192,7 @@ static void add_drive_entry(const char* display, const char* path, uae_u64 size_
 	di->readonly = readonly;
 	di->removablemedia = removable;
 	di->mounted = mounted;
+	di->access_denied = access_denied;
 }
 
 #if !defined(_WIN32)
@@ -423,9 +425,16 @@ static void scan_harddrives_macos()
 		bool has_rpath = (stat(rpath.c_str(), &st) == 0);
 		const std::string& device_path = has_rpath ? rpath : path;
 
+		int last_open_err = 0;
 		int fd = open(rpath.c_str(), O_RDONLY);
 		if (fd < 0)
+			last_open_err = errno;
+		if (fd < 0) {
 			fd = open(path.c_str(), O_RDONLY);
+			if (fd < 0)
+				last_open_err = errno;
+		}
+		const int access_denied = fd < 0 && (last_open_err == EACCES || last_open_err == EPERM);
 
 		uint32_t block_size = 0;
 		uint64_t block_count = 0;
@@ -461,7 +470,7 @@ static void scan_harddrives_macos()
 
 		const std::string size_str = size_bytes ? format_size_bytes(size_bytes) : std::string("unknown");
 		std::string display = name + " (" + size_str + ") — " + path;
-		add_drive_entry(display.c_str(), device_path.c_str(), size_bytes, block_size > 0 ? (int)block_size : 512, 0, 0, is_mounted);
+		add_drive_entry(display.c_str(), device_path.c_str(), size_bytes, block_size > 0 ? (int)block_size : 512, 0, 0, is_mounted, access_denied);
 	}
 	closedir(d);
 
@@ -881,6 +890,13 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	}
 	else {
 		write_log("HDF '%s' failed to open. error = %d\n", name, errno);
+#ifdef __MACH__
+		if (!strncmp(name, "/dev/", 5) && (errno == EACCES || errno == EPERM)) {
+			write_log("macOS raw-disk access was denied for '%s'.\n", name);
+			write_log("If this is a physical disk, unmount it first with 'diskutil unmountDisk /dev/diskN'.\n");
+			write_log("Then launch the Amiberry binary from Terminal with elevated privileges if raw access is required.\n");
+		}
+#endif
 	}
 
 	if (hfd->handle_valid || hfd->drive_empty) {
@@ -1232,7 +1248,8 @@ TCHAR *hdf_getnameharddrive (int index, int flags, int *sectorsize, int *dangero
 	if (outflags)
 		*outflags = (uae_drives[index].mounted ? HDF_DRIVEFLAG_MOUNTED : 0) |
 			(uae_drives[index].readonly ? HDF_DRIVEFLAG_READONLY : 0) |
-			(uae_drives[index].removablemedia ? HDF_DRIVEFLAG_REMOVABLE : 0);
+			(uae_drives[index].removablemedia ? HDF_DRIVEFLAG_REMOVABLE : 0) |
+			(uae_drives[index].access_denied ? HDF_DRIVEFLAG_ACCESS_DENIED : 0);
 	return my_strdup(uae_drives[index].device_name);
 }
 

@@ -140,6 +140,7 @@ extern TCHAR *hdf_getpathharddrive (int index);
 #define HDF_DRIVEFLAG_MOUNTED   0x1
 #define HDF_DRIVEFLAG_READONLY  0x2
 #define HDF_DRIVEFLAG_REMOVABLE 0x4
+#define HDF_DRIVEFLAG_ACCESS_DENIED 0x8
 extern int get_native_path(TrapContext *ctx, uae_u32 lock, TCHAR *out);
 extern void hardfile_do_disk_change (struct uaedev_config_data *uci, bool insert);
 extern void hardfile_send_disk_change (struct hardfiledata *hfd, bool insert);
