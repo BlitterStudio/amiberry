@@ -175,89 +175,6 @@ bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, r
 bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
-// Input latency instrumentation
-#ifdef LIBRETRO
-// No-op stubs for libretro (no SDL_GetTicksNS)
-struct input_latency_stats {
-	void record(uint64_t) {}
-	void log_and_reset(const char*) {}
-};
-#else
-struct input_latency_stats {
-	uint64_t total_ns = 0;
-	uint64_t min_ns = UINT64_MAX;
-	uint64_t max_ns = 0;
-	uint64_t count = 0;
-	uint64_t skipped = 0; // events where event timestamp was ahead of now
-	uint64_t last_event_ts = 0; // last event timestamp seen
-	uint64_t last_now = 0; // SDL_GetTicksNS() at time of last event
-
-	void record(uint64_t event_timestamp_ns) {
-		uint64_t now = SDL_GetTicksNS();
-		last_event_ts = event_timestamp_ns;
-		last_now = now;
-		if (now <= event_timestamp_ns) {
-			skipped++;
-			return;
-		}
-		uint64_t delta = now - event_timestamp_ns;
-		total_ns += delta;
-		if (delta < min_ns) min_ns = delta;
-		if (delta > max_ns) max_ns = delta;
-		count++;
-	}
-
-	void log_and_reset(const char* label) {
-		if (count == 0 && skipped == 0) return;
-		write_log(_T("INPUT_LATENCY [%s]: count=%llu avg=%.1fus min=%.1fus max=%.1fus skipped=%llu last_evt=%llu last_now=%llu\n"),
-			label,
-			(unsigned long long)count,
-			count > 0 ? (double)total_ns / (double)count / 1000.0 : 0.0,
-			count > 0 ? (double)min_ns / 1000.0 : 0.0,
-			count > 0 ? (double)max_ns / 1000.0 : 0.0,
-			(unsigned long long)skipped,
-			(unsigned long long)(last_event_ts / 1000000ULL), // ms for readability
-			(unsigned long long)(last_now / 1000000ULL));
-		total_ns = 0;
-		min_ns = UINT64_MAX;
-		max_ns = 0;
-		count = 0;
-		skipped = 0;
-	}
-};
-#endif // LIBRETRO vs real SDL3
-
-static input_latency_stats latency_joy_button;
-static input_latency_stats latency_joy_axis;
-static input_latency_stats latency_ctrl_button;
-static input_latency_stats latency_ctrl_axis;
-static input_latency_stats latency_mouse;
-static input_latency_stats latency_keyboard;
-#ifndef LIBRETRO
-static uint64_t latency_last_log_time = 0;
-#endif
-
-static void maybe_log_input_latency()
-{
-#ifndef LIBRETRO
-	uint64_t now = SDL_GetTicksNS();
-	// Log every 5 seconds
-	if (latency_last_log_time == 0) {
-		latency_last_log_time = now;
-		return;
-	}
-	if (now - latency_last_log_time < 5000000000ULL) return;
-	latency_last_log_time = now;
-
-	latency_joy_button.log_and_reset("joy_button");
-	latency_joy_axis.log_and_reset("joy_axis");
-	latency_ctrl_button.log_and_reset("ctrl_button");
-	latency_ctrl_axis.log_and_reset("ctrl_axis");
-	latency_mouse.log_and_reset("mouse");
-	latency_keyboard.log_and_reset("keyboard");
-#endif
-}
-
 void cap_fps(uint64_t start)
 {
 	const auto end = SDL_GetPerformanceCounter();
@@ -1902,7 +1819,7 @@ static void handle_controller_button_event(const SDL_Event& event)
 			break;
 		}
 	}
-	latency_ctrl_button.record(event.gbutton.timestamp);
+
 }
 
 static void handle_joy_button_event(const SDL_Event& event)
@@ -1934,10 +1851,10 @@ static void handle_joy_button_event(const SDL_Event& event)
 		}
 
 		read_joystick_buttons(id);
-		latency_joy_button.record(event.jbutton.timestamp);
+	
 		return;
 	}
-	latency_joy_button.record(event.jbutton.timestamp);
+
 }
 
 static void handle_controller_axis_motion_event(const SDL_Event& event)
@@ -1952,7 +1869,7 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 
 		read_controller_axis(id, axis, value);
 	}
-	latency_ctrl_axis.record(event.gaxis.timestamp);
+
 }
 
 static void handle_joy_axis_motion_event(const SDL_Event& event)
@@ -1968,7 +1885,7 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 
 		read_joystick_axis(id, axis, value);
 	}
-	latency_joy_axis.record(event.jaxis.timestamp);
+
 }
 
 static void handle_joy_hat_motion_event(const SDL_Event& event)
@@ -2049,7 +1966,7 @@ static void handle_key_event(const SDL_Event& event)
 	{
 		my_kbd_handler(0, scancode, pressed, true);
 	}
-	latency_keyboard.record(event.key.timestamp);
+
 }
 
 #ifndef LIBRETRO
@@ -2135,7 +2052,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 		default: break;
 		}
 	}
-	latency_mouse.record(event.button.timestamp);
+
 }
 
 static void handle_finger_motion_event(const SDL_Event& event)
@@ -2217,7 +2134,7 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		setmousestate(midx, 0, xrel, 0);
 		setmousestate(midx, 1, yrel, 0);
 	}
-	latency_mouse.record(event.motion.timestamp);
+
 }
 
 static void handle_mouse_wheel_event(const SDL_Event& event)
@@ -2670,7 +2587,6 @@ int handle_msgpump(bool vblank)
 		if (currprefs.clipboard_sharing)
 			update_clipboard();
 	}
-	maybe_log_input_latency();
 	return got_event;
 }
 
