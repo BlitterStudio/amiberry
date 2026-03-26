@@ -467,6 +467,31 @@ static void log_unhandled_access(uae_u8 *fault_pc)
 	}
 }
 
+static int handle_ramsey_size_probe(uae_u32 addr, CONTEXT_T context, int len)
+{
+	/* Match the ARM/AArch64 JIT handlers: Kickstart probes just beyond the
+	 * configured Ramsey low/high RAM to detect memory size. These accesses
+	 * are expected and should simply skip the faulting direct-memory op
+	 * without invalidating the current block. */
+	if (a3000lmem_bank.allocated_size > 0
+		&& addr >= a3000lmem_bank.start - 0x00100000
+		&& addr < a3000lmem_bank.start - 0x00100000 + 8) {
+		write_log(_T("JIT: Skipping ramsey_low size probe at %08x\n"), addr);
+		CONTEXT_PC(context) += len;
+		return 1;
+	}
+
+	if (a3000hmem_bank.allocated_size > 0
+		&& addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size
+		&& addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
+		write_log(_T("JIT: Skipping ramsey_high size probe at %08x\n"), addr);
+		CONTEXT_PC(context) += len;
+		return 1;
+	}
+
+	return 0;
+}
+
 #ifdef WIN32
 
 static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
@@ -514,6 +539,8 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	}
 
 	uae_u32 addr = (uae_u32)(fault_addr - (uintptr_t) NATMEM_OFFSET);
+	if (handle_ramsey_size_probe(addr, context, len))
+		return 1;
 	addrbank *ab = &get_mem_bank(addr);
 #ifdef DEBUG_ACCESS
 	if (addr >= 0x80000000) {
@@ -644,6 +671,8 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	}
 
 	uae_u32 addr = (uae_u32)(fault_addr - (uintptr_t) NATMEM_OFFSET);
+	if (handle_ramsey_size_probe(addr, context, len))
+		return 1;
 	addrbank *ab = &get_mem_bank(addr);
 #ifdef DEBUG_ACCESS
 	if (addr >= 0x80000000) {
