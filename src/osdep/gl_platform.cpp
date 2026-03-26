@@ -145,4 +145,43 @@ bool gl_platform_init()
 }
 #endif // __ANDROID__
 
+const GlShaderPreambles& get_gl_shader_preambles()
+{
+	static GlShaderPreambles cached = {};
+	static bool initialized = false;
+
+	if (initialized)
+		return cached;
+
+	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
+	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
+	int major = 0, minor = 0;
+	if (gl_ver_str) {
+		const char* v = gl_ver_str;
+		while (*v && (*v < '0' || *v > '9')) v++;
+		if (*v) {
+			major = atoi(v);
+			while (*v && *v != '.') v++;
+			if (*v == '.') {
+				v++;
+				minor = atoi(v);
+			}
+		}
+	}
+
+	if (is_gles && major >= 3) {
+		cached.vs = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
+		cached.fs = "#version 300 es\nprecision mediump float;\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	} else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
+		cached.vs = "#version 330 core\n#define attribute in\n#define varying out\n";
+		cached.fs = "#version 330 core\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	} else {
+		cached.vs = "#version 120\n";
+		cached.fs = "#version 120\n";
+	}
+
+	initialized = true;
+	return cached;
+}
+
 #endif // USE_OPENGL

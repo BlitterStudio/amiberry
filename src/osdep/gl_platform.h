@@ -136,6 +136,18 @@ extern PFNGLGENERATEMIPMAPPROC glp_GenerateMipmap;
 // Returns true on success, false if critical functions failed to load
 bool gl_platform_init();
 
+struct GlShaderPreambles {
+	const char* vs;
+	const char* fs;
+};
+
+// Returns cached GLSL preambles for the current GL context. Detects GL profile
+// once and returns the appropriate #version + compatibility defines so that
+// legacy GLSL (attribute/varying/texture2D/gl_FragColor) compiles on core
+// profile (macOS) and GLES 3.0 (Android/RPi). Must be called after GL context
+// creation. Thread-safe for reads after first call.
+const GlShaderPreambles& get_gl_shader_preambles();
+
 #endif // USE_OPENGL
 
 #endif // GL_PLATFORM_H

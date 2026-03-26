@@ -1127,34 +1127,9 @@ bool OpenGLRenderer::init_osd_shader()
 	m_overlay.osd_program = 0;
 	m_overlay.osd_vbo = 0;
 
-	// Detect GL version and profile
-	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
-	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
-	int major = 0, minor = 0;
-	if (gl_ver_str) {
-		const char* v = gl_ver_str;
-		while (*v && (*v < '0' || *v > '9')) v++;
-		if (*v) {
-			major = atoi(v);
-			while (*v && *v != '.') v++;
-			if (*v == '.') {
-				v++;
-				minor = atoi(v);
-			}
-		}
-	}
-
-	const char* vs_preamble = "#version 120\n";
-	const char* fs_preamble = "#version 120\n";
-
-	if (is_gles && major >= 3) {
-		vs_preamble = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
-		fs_preamble = "#version 300 es\nprecision mediump float;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
-	}
-	else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
-		vs_preamble = "#version 330 core\n#define attribute in\n#define varying out\n";
-		fs_preamble = "#version 330 core\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
-	}
+	const auto& preambles = get_gl_shader_preambles();
+	const char* vs_preamble = preambles.vs;
+	const char* fs_preamble = preambles.fs;
 
 	GLuint vsh = glCreateShader(GL_VERTEX_SHADER);
 	const char* vs_sources[] = { vs_preamble, osd_vs_source };

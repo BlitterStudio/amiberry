@@ -185,7 +185,10 @@ std::string ExternalShader::extract_vertex_shader(const std::string& source)
 			return vs_source;
 		}
 	}
-	return defines + source;
+
+	const auto& preambles = get_gl_shader_preambles();
+	write_log("Injecting vertex shader preamble for shader without #version\n");
+	return preambles.vs + defines + source;
 }
 
 // Extract fragment shader from combined source
@@ -206,7 +209,10 @@ std::string ExternalShader::extract_fragment_shader(const std::string& source)
 			return fs_source;
 		}
 	}
-	return defines + source;
+
+	const auto& preambles = get_gl_shader_preambles();
+	write_log("Injecting fragment shader preamble for shader without #version\n");
+	return preambles.fs + defines + source;
 }
 
 // Parse #pragma parameter directives
