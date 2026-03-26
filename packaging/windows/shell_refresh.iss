@@ -3,18 +3,16 @@ const
   SHCNE_UPDATEDIR = $00001000;
   SHCNE_ASSOCCHANGED = $08000000;
   SHCNF_IDLIST = $0000;
-  SHCNF_PATH = $0005;
+  SHCNF_PATHW = $0005;
 
-procedure SHChangeNotifyPath(wEventId, uFlags: Integer; dwItem1, dwItem2: String);
-  external 'SHChangeNotifyW@shell32.dll stdcall';
-procedure SHChangeNotifyNil(wEventId, uFlags: Integer; dwItem1, dwItem2: Integer);
+procedure SHChangeNotify(wEventId, uFlags: Integer; dwItem1, dwItem2: String);
   external 'SHChangeNotify@shell32.dll stdcall';
 
 procedure RefreshProgramsShell(GroupDir: String);
 begin
-  SHChangeNotifyPath(SHCNE_UPDATEDIR, SHCNF_PATH, ExpandConstant('{autoprograms}'), '');
-  SHChangeNotifyPath(SHCNE_UPDATEDIR, SHCNF_PATH, GroupDir, '');
-  SHChangeNotifyNil(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, 0, 0);
+  SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW, ExpandConstant('{autoprograms}'), '');
+  SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW, GroupDir, '');
+  SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, '', '');
 end;
 
 <event('CurStepChanged')>
@@ -27,7 +25,7 @@ begin
 
   GroupDir := ExpandConstant('{group}');
 
-  SHChangeNotifyPath(SHCNE_MKDIR, SHCNF_PATH, GroupDir, '');
+  SHChangeNotify(SHCNE_MKDIR, SHCNF_PATHW, GroupDir, '');
   RefreshProgramsShell(GroupDir);
 end;
 
