@@ -1440,6 +1440,22 @@ static addrbank *expamem_map_uaeboard(struct autoconfig_info *aci)
 	uaeboard_base = expamem_board_pointer;
 	uaeboard_ram_start = UAEBOARD_WRITEOFFSET;
 	uaeboard_bank.start = uaeboard_base;
+#ifdef AMIBERRY
+	// Guard against invalid/shutup addresses (e.g. DiagROM writing 0 to the base register).
+	// Without this, map_banks_z2 triggers CPU_HALT_AUTOCONFIG_CONFLICT.
+	// See: https://github.com/BlitterStudio/amiberry/issues/1901
+	{
+		int bank_start = uaeboard_base >> 16;
+		if (uaeboard_base == 0xffffffff
+			|| bank_start < 0x20
+			|| (bank_start >= 0xa0 && bank_start < 0xe9)
+			|| bank_start >= 0xf0) {
+			write_log(_T("expamem_map_uaeboard: rejecting invalid board address %08x\n"), uaeboard_base);
+			uaeboard_bank.start = 0xffffffff;
+			return &uaeboard_bank;
+		}
+	}
+#endif
 	map_banks_z2(&uaeboard_bank, uaeboard_base >> 16, 1);
 	if (currprefs.uaeboard > 1) {
 		rtarea_bank.start = uaeboard_base + 65536;
