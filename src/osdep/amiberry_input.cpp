@@ -371,11 +371,11 @@ int keyhack (const int scancode, const int pressed, const int num)
 	if (currprefs.alt_tab_release)
 	{
 		if (pressed && scancode == SDL_SCANCODE_TAB && (key_altpressed() || state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT])) {
-			// Workaround: SDL3 < 3.4.2 crashes in Wayland pointer_dispatch_relative_motion
-			// with NULL window during focus transition. See SDL fab42a14, #1829.
 			const AmigaMonitor* mon = &AMonitors[0];
-			if (mon->amiga_window)
+			if (mon->amiga_window) {
+				SDL_SetWindowMouseGrab(mon->amiga_window, false);
 				SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
+			}
 			return -1;
 		}
 	}
