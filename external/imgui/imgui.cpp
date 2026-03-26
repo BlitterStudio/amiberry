@@ -3270,8 +3270,11 @@ ImGuiListClipper::~ImGuiListClipper()
 
 void ImGuiListClipper::Begin(int items_count, float items_height)
 {
-    if (Ctx == NULL)
-        Ctx = ImGui::GetCurrentContext();
+    // Always refresh context pointer — not just when NULL — to handle
+    // cases where the ImGui context is destroyed and recreated while
+    // a long-lived clipper instance (e.g. inside a static singleton)
+    // still holds a stale pointer to the old context. (Amiberry #1900)
+    Ctx = ImGui::GetCurrentContext();
 
     ImGuiContext& g = *Ctx;
     ImGuiWindow* window = g.CurrentWindow;
