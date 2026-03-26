@@ -941,7 +941,7 @@ static void ShowAddHardDriveModal()
         static std::vector<std::string> drive_paths;
         static std::vector<int> drive_sector_sizes;
         static std::vector<uae_u32> drive_flags;
-        if (ImGui::IsWindowAppearing()) {
+        auto rescan_drives = [&]() {
             drive_names.clear();
             drive_paths.clear();
             drive_sector_sizes.clear();
@@ -973,6 +973,9 @@ static void ShowAddHardDriveModal()
                 if (path) xfree(path);
                 if (name) xfree(name);
             }
+        };
+        if (ImGui::IsWindowAppearing()) {
+            rescan_drives();
         }
 
         if (ImGui::BeginListBox("##PhysicalDrives", ImVec2(-FLT_MIN, 200))) {
@@ -1002,6 +1005,12 @@ static void ShowAddHardDriveModal()
             ImGui::TextDisabled("No devices found.");
         }
 
+        if (AmigaButton("Rescan")) {
+            rescan_drives();
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("Refresh drive list after mounting/unmounting");
+
         bool is_mounted = false;
         bool access_denied = false;
         if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_flags.size()) {
@@ -1017,7 +1026,7 @@ static void ShowAddHardDriveModal()
         if (access_denied) {
             ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Warning: Amiberry cannot currently open this device.");
 #ifdef __MACH__
-            ImGui::TextWrapped("macOS denied raw /dev access for this disk. Unmount it and check the app's disk permissions before attaching it.");
+            ImGui::TextWrapped("macOS denied raw /dev access for this disk. Amiberry will automatically prompt for authorization to attach eligible unmounted disks.");
 #endif
         }
 
@@ -1107,19 +1116,28 @@ static void ShowAddHardDriveModal()
             }
             if (current_hfdlg.ci.rootdir[0]) {
                 bool opened_readonly = current_hfdlg.ci.readonly;
-                if (!ValidatePhysicalDriveSelection(current_hfdlg.ci, harddrive_modal_error, &opened_readonly)) {
+                if (is_mounted) {
+                    // Mounted disks are explicitly refused before validation
+                    harddrive_modal_error = "Unmount the drive before attaching (diskutil unmountDisk).";
+                    updatehdfinfo(true, true, true, hdf_info_text1, hdf_info_text2);
+                } else if (!ValidatePhysicalDriveSelection(current_hfdlg.ci, harddrive_modal_error, &opened_readonly)) {
+                    // Validation/open failed; if it's due to access denial, show a short auth error
+                    if (access_denied) {
+                        harddrive_modal_error = "Authorization denied to access this disk. Cancel to retry.";
+                    }
                     updatehdfinfo(true, true, true, hdf_info_text1, hdf_info_text2);
                 } else {
+                    // Success path
                     current_hfdlg.ci.readonly = opened_readonly;
                     harddrive_modal_error.clear();
-                if (current_hfdlg.ci.devname[0] == 0) {
-                    char devname[256];
-                    CreateDefaultDevicename(devname);
-                    au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
-                }
-                new_harddrive(edit_entry_index);
-                show_add_harddrive_modal = false;
-                ImGui::CloseCurrentPopup();
+                    if (current_hfdlg.ci.devname[0] == 0) {
+                        char devname[256];
+                        CreateDefaultDevicename(devname);
+                        au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
+                    }
+                    new_harddrive(edit_entry_index);
+                    show_add_harddrive_modal = false;
+                    ImGui::CloseCurrentPopup();
                 }
             }
         }

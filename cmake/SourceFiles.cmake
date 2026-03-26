@@ -325,6 +325,8 @@ set(SLIRP_SOURCES
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 	set_source_files_properties(${SLIRP_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-pragma-pack")
 endif()
+
+ 
 list(APPEND SOURCE_FILES ${SLIRP_SOURCES})
 
 set(IMGUI_GUI_FILES
@@ -427,7 +429,8 @@ if (USE_PCEM)
     list(APPEND SOURCE_FILES ${PCEM_SOURCE_FILES})
 else ()
     message(STATUS "PCem support disabled")
-endif ()
+endif()
+
 
 # On Windows, swap POSIX-specific CHD files for Windows equivalents
 if(WIN32)
@@ -516,6 +519,10 @@ endif()
 # Security-scoped bookmarks for App Store sandbox
 if(MACOS_APP_STORE)
     target_sources(${PROJECT_NAME} PRIVATE src/osdep/macos_bookmarks.mm)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    target_sources(${PROJECT_NAME} PRIVATE src/osdep/macos_authopen.cpp)
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

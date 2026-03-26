@@ -27,6 +27,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/storage/IOMedia.h>
+#include "macos_authopen.h"
 #endif
 
 struct hardfilehandle
@@ -389,10 +390,22 @@ static bool is_disk_name(const char* name)
 
 static std::string disk_parent(const std::string& name)
 {
-	const auto s = name.find('s');
-	if (s == std::string::npos)
-		return name;
-	return name.substr(0, s);
+	// name is "disk5" or "disk5s1" — find partition separator 's' after "disk<N>"
+	size_t pos = 0;
+	if (name.rfind("disk", 0) == 0)
+		pos = 4;
+	while (pos < name.size() && isdigit(static_cast<unsigned char>(name[pos])))
+		pos++;
+	if (pos < name.size() && name[pos] == 's')
+		return name.substr(0, pos);
+	return name;
+}
+
+static std::string canonical_disk_parent(const std::string& name)
+{
+	if (name.rfind("rdisk", 0) == 0)
+		return disk_parent(name.substr(1));
+	return disk_parent(name);
 }
 
 static void scan_harddrives_macos()
@@ -403,7 +416,7 @@ static void scan_harddrives_macos()
 
 	std::vector<std::string> mounted;
 	struct statfs* mntbuf = nullptr;
-	int mntcount = getmntinfo(&mntbuf, MNT_NOWAIT);
+	int mntcount = getmntinfo(&mntbuf, MNT_WAIT);
 	for (int i = 0; i < mntcount; ++i) {
 		if (mntbuf[i].f_mntfromname[0])
 			mounted.emplace_back(mntbuf[i].f_mntfromname);
@@ -466,7 +479,7 @@ static void scan_harddrives_macos()
 		if (!is_mounted)
 			is_mounted = std::find(mounted.begin(), mounted.end(), rpath) != mounted.end();
 		if (is_mounted)
-			parent_mounted[disk_parent(name)] = true;
+			parent_mounted[canonical_disk_parent(name)] = true;
 
 		const std::string size_str = size_bytes ? format_size_bytes(size_bytes) : std::string("unknown");
 		std::string display = name + " (" + size_str + ") — " + path;
@@ -483,7 +496,7 @@ static void scan_harddrives_macos()
 		if (spath.rfind("/dev/", 0) != 0)
 			continue;
 		std::string name = spath.substr(5);
-		auto it = parent_mounted.find(disk_parent(name));
+		auto it = parent_mounted.find(canonical_disk_parent(name));
 		if (it != parent_mounted.end() && it->second) {
 			uae_drives[i].mounted = 1;
 		}
@@ -765,6 +778,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	int i;
 	char* name = my_strdup(pname);
 	int zmode = 0;
+	int open_error = 0;
 	struct stat st{};
 	
 	hfd->flags = 0;
@@ -804,6 +818,32 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		if (h != nullptr)
 			hfd->ci.readonly = true;
 	}
+	open_error = errno;
+#ifdef __MACH__
+	if (h == nullptr && !strncmp(name, "/dev/", 5) && (open_error == EACCES || open_error == EPERM)) {
+		const int open_flags = hfd->ci.readonly ? O_RDONLY : O_RDWR;
+		std::string authopen_error;
+		const int auth_fd = macos_authopen_fd(name, open_flags, authopen_error);
+		if (auth_fd >= 0) {
+			h = fdopen(auth_fd, hfd->ci.readonly ? "rb" : "r+b");
+        if (h != nullptr) {
+            write_log("macOS authopen authorization of raw-disk path '%s' succeeded\n", name);
+			} else {
+				write_log("macOS authopen fdopen failed for '%s' (errno=%d)\n", name, errno);
+				close(auth_fd);
+			}
+        } else {
+            write_log("macOS authopen failed for '%s': %s\n", name, authopen_error.c_str());
+            if (authopen_error.find("mounted") != std::string::npos) {
+                write_log("authopen_result: mounted - disk must be unmounted before access.\n");
+            } else if (authopen_error.find("not eligible") != std::string::npos) {
+                write_log("authopen_result: not eligible for authopen; access denied.\n");
+            } else {
+                write_log("authopen_result: authopen failed (general) - please grant permission via GUI prompt.\n");
+            }
+        }
+	}
+#endif
 	hfd->handle->h = h;
 	i = _tcslen(name) - 1;
 	while (i >= 0) {
@@ -891,11 +931,10 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	else {
 		write_log("HDF '%s' failed to open. error = %d\n", name, errno);
 #ifdef __MACH__
-		if (!strncmp(name, "/dev/", 5) && (errno == EACCES || errno == EPERM)) {
-			write_log("macOS raw-disk access was denied for '%s'.\n", name);
-			write_log("If this is a physical disk, unmount it first with 'diskutil unmountDisk /dev/diskN'.\n");
-			write_log("Then launch the Amiberry binary from Terminal with elevated privileges if raw access is required.\n");
-		}
+        if (!strncmp(name, "/dev/", 5) && (errno == EACCES || errno == EPERM)) {
+            write_log("macOS raw-disk access denied for '%s'.\n", name);
+            write_log("Using macOS authopen fallback for raw-disk access. If the disk is mounted, unmount it first.\n");
+        }
 #endif
 	}
 
