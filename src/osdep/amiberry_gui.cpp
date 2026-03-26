@@ -901,6 +901,7 @@ void gui_display(int shortcut)
 	//rawinput_alloc();
 	struct AmigaMonitor* mon = &AMonitors[0];
 	if (mon->amiga_window) {
+		SDL_RaiseWindow(mon->amiga_window);
 		SDL_SetWindowMouseGrab(mon->amiga_window, true);
 		SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 	}
