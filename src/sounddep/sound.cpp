@@ -102,17 +102,44 @@ static void reset_push_timing_state(struct sound_data* sd)
 	s->push_stable_writes = 0;
 }
 
+static bool lock_audio_stream_sdl(SDL_AudioStream* stream)
+{
+#ifdef LIBRETRO
+	SDL_LockAudioStream(stream);
+	return true;
+#else
+	return SDL_LockAudioStream(stream);
+#endif
+}
+
+static void clear_audio_stream_queue_sdl(sound_dp* s)
+{
+	if (!s || !s->stream)
+		return;
+
+#ifdef LIBRETRO
+	uae_u8 discard[4096];
+	while (SDL_GetAudioStreamQueued(s->stream) > 0) {
+		const int drained = SDL_GetAudioStreamData(s->stream, discard, sizeof discard);
+		if (drained <= 0)
+			break;
+	}
+#else
+	if (!SDL_ClearAudioStream(s->stream)) {
+		write_log("SDL_ClearAudioStream failed: %s\n", SDL_GetError());
+	}
+#endif
+}
+
 static void clear_stream_state_sdl(struct sound_data* sd)
 {
 	auto* s = sd->data;
 	if (!s || !s->stream)
 		return;
 
-	if (!SDL_ClearAudioStream(s->stream)) {
-		write_log("SDL_ClearAudioStream failed: %s\n", SDL_GetError());
-	}
+	clear_audio_stream_queue_sdl(s);
 
-	if (SDL_LockAudioStream(s->stream)) {
+	if (lock_audio_stream_sdl(s->stream)) {
 		s->pullbufferlen = 0;
 		s->stream_initialised = 0;
 		if (s->pullbuffer) {
@@ -301,7 +328,7 @@ static void clearbuffer_sdl(struct sound_data *sd)
 
 	if (!s || !s->stream)
 		return;
-	if (!SDL_LockAudioStream(s->stream))
+	if (!lock_audio_stream_sdl(s->stream))
 		return;
 	std::memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
 	SDL_UnlockAudioStream(s->stream);
