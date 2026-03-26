@@ -332,6 +332,10 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/sounddep/sound.cpp \
                 $(AMIBERRY_DIR)/src/threaddep/threading.cpp
 
+ifeq ($(platform), osx)
+SOURCES_OSDEP += $(AMIBERRY_DIR)/src/osdep/macos_authopen.cpp
+endif
+
 # libretro-common (VFS helpers + encoding/time)
 SOURCES_LIBRETRO_COMMON := $(LIBRETRO_COMMON)/file/file_path.c \
                           $(LIBRETRO_COMMON)/file/file_path_io.c \
