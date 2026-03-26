@@ -320,20 +320,48 @@ static bool decode_instruction(
 
 	switch (pc[0]) {
 	case 0x8a: /* MOV r8, m8 */
-		if ((pc[1] & 0xc0) == 0x80) {
+		switch (pc[1] & 0xc0) {
+		case 0x80:
 			*r = (pc[1] >> 3) & 7;
 			*dir = SIG_READ;
 			*size = 1;
 			*len += 6;
 			break;
+		case 0x40:
+			*r = (pc[1] >> 3) & 7;
+			*dir = SIG_READ;
+			*size = 1;
+			*len += 3;
+			break;
+		case 0x00:
+			*r = (pc[1] >> 3) & 7;
+			*dir = SIG_READ;
+			*size = 1;
+			*len += 2;
+			break;
+		default:
+			break;
 		}
 		break;
 	case 0x88: /* MOV m8, r8 */
-		if ((pc[1] & 0xc0) == 0x80) {
+		switch (pc[1] & 0xc0) {
+		case 0x80:
 			*r = (pc[1] >> 3) & 7;
 			*dir = SIG_WRITE;
 			*size = 1;
 			*len += 6;
+			break;
+		case 0x40:
+			*r = (pc[1] >> 3) & 7;
+			*dir = SIG_WRITE;
+			*size = 1;
+			*len += 3;
+			break;
+		case 0x00:
+			*r = (pc[1] >> 3) & 7;
+			*dir = SIG_WRITE;
+			*size = 1;
+			*len += 2;
 			break;
 		}
 		break;
