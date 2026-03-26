@@ -29,7 +29,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 # Gather all dependencies with dylibbundler
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/)
+        COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/ -s /usr/local/lib)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -DAPP_BINARY=$<TARGET_FILE:${PROJECT_NAME}> -P ${CMAKE_SOURCE_DIR}/cmake/macos/dedupe_frameworks_rpath.cmake)
 
 # Codesign all bundled code with the same team identity
 # This removes the need for com.apple.security.cs.disable-library-validation

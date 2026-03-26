@@ -44,6 +44,7 @@ endif ()
 
 if (USE_VULKAN)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_VULKAN)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/external/VulkanMemoryAllocator/include)
     find_package(Vulkan REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
     message(STATUS "Vulkan renderer enabled (experimental)")
