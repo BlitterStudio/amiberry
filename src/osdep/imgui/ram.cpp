@@ -354,7 +354,7 @@ void render_panel_ram() {
 
     EndGroupBox("Memory Settings");
 
-    BeginGroupBox("Advanced Memory Settings");
+    if (BeginGroupBox("Advanced Memory Settings", true)) {
 
     // WinUAE sync: Validate current selection is still valid (e.g., after switching to 24-bit mode)
     if (!z3_enabled && current_advanced_ram_idx >= ADVANCED_RAM_Z3_BASE) {
@@ -734,6 +734,7 @@ void render_panel_ram() {
         }
     }
 
+    }
     EndGroupBox("Advanced Memory Settings");
 
     copycpuboardmem(true);

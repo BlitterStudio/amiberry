@@ -19,7 +19,7 @@ struct SDL_Surface;
 ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h);
 void gui_destroy_texture(ImTextureID tex);
 
-void BeginGroupBox(const char* name);
+bool BeginGroupBox(const char* name, bool collapsible = false);
 void EndGroupBox(const char* name);
 
 void AmigaBevel(ImVec2 min, ImVec2 max, bool recessed);

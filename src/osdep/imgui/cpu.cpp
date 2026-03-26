@@ -294,7 +294,7 @@ void render_panel_cpu() {
         ImGui::Spacing();
         EndGroupBox("CPU");
 
-        BeginGroupBox("MMU");
+        if (BeginGroupBox("MMU", true)) {
         ImGui::BeginDisabled(!enable_mmu);
         if (AmigaRadioButton("None##MMU", &changed_prefs.mmu_model, 0)) {
             changed_prefs.mmu_ec = false;
@@ -313,6 +313,7 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
+        }
         EndGroupBox("MMU");
 
         BeginGroupBox("FPU");
@@ -475,7 +476,7 @@ void render_panel_cpu() {
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("Cycle-Exact CPU Emulation Speed");
 
-        BeginGroupBox("PowerPC CPU Options");
+        if (BeginGroupBox("PowerPC CPU Options", true)) {
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
         if (AmigaCheckbox("PPC CPU emulation", &ppc_bool)) {
@@ -502,9 +503,10 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
+        }
         EndGroupBox("PowerPC CPU Options");
 
-        BeginGroupBox("x86 Bridgeboard CPU options");
+        if (BeginGroupBox("x86 Bridgeboard CPU options", true)) {
         ImGui::BeginDisabled(!enable_x86_group);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Speed");
@@ -522,10 +524,10 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
+        }
         EndGroupBox("x86 Bridgeboard CPU options");
 
-        // Re-organized JIT settings
-        BeginGroupBox("Advanced JIT Settings");
+        if (BeginGroupBox("Advanced JIT Settings", true)) {
         
         ImGui::AlignTextToFramePadding();
         ImGui::AlignTextToFramePadding();
@@ -615,6 +617,7 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
+        }
         EndGroupBox("Advanced JIT Settings");
     }
     ImGui::EndGroup();

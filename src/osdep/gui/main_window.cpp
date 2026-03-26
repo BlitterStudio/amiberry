@@ -196,7 +196,7 @@ void apply_imgui_theme()
 	style.WindowBorderSize = 0.0f;
 	style.PopupBorderSize = 1.0f;
 	style.ChildBorderSize = 0.0f;
-	style.ItemSpacing = ImVec2(8.0f, 4.0f);
+	style.ItemSpacing = ImVec2(8.0f, 6.0f);
 	style.SelectableTextAlign = ImVec2(0.0f, 0.5f);
 
 	style.WindowRounding = 0.0f;
@@ -462,18 +462,51 @@ void AmigaCircularBevel(const ImVec2 center, const float radius, const bool rece
 	draw_list->PathStroke(col_bottom_right, 0, 1.0f);
 }
 
-void BeginGroupBox(const char* name)
+static bool g_groupbox_collapsed = false;
+
+bool BeginGroupBox(const char* name, bool collapsible)
 {
+	// Add breathing room between consecutive group boxes.
+	// Skip the extra spacing when we are near the top of the panel
+	// (first group box) so we don't waste space above it.
+	const float cursor_y = ImGui::GetCursorPosY();
+	if (cursor_y > ImGui::GetTextLineHeightWithSpacing() * 2.0f)
+		ImGui::Dummy(ImVec2(0.0f, 4.0f));
+
 	ImGui::BeginGroup();
 	ImGui::PushID(name);
 
-	// Reserve space for the title and the top border part
+	g_groupbox_collapsed = false;
+	if (collapsible) {
+		ImGuiID id = ImGui::GetID("##collapse");
+		ImGuiStorage* storage = ImGui::GetStateStorage();
+		bool open = storage->GetBool(id, true);
+		const char* arrow = open ? "v " : "> ";
+		std::string toggle_label = std::string(arrow) + name;
+		if (ImGui::Selectable(toggle_label.c_str(), false, 0, ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
+			open = !open;
+			storage->SetBool(id, open);
+		}
+		if (!open) {
+			g_groupbox_collapsed = true;
+			return false;
+		}
+	}
+
 	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f));
-	ImGui::Indent(10.0f); // Add internal padding
+	ImGui::Indent(10.0f);
+	return true;
 }
 
 void EndGroupBox(const char* name)
 {
+	if (g_groupbox_collapsed) {
+		ImGui::PopID();
+		ImGui::EndGroup();
+		g_groupbox_collapsed = false;
+		return;
+	}
+
 	ImGui::Unindent(10.0f);
 	ImGui::PopID();
 	ImGui::EndGroup();
@@ -481,7 +514,6 @@ void EndGroupBox(const char* name)
 	constexpr float text_padding = 8.0f;
 	constexpr float box_padding = 4.0f;
 
-	// Now draw the border and title
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	ImVec2 item_min = ImGui::GetItemRectMin();
 	ImVec2 item_max = ImGui::GetItemRectMax();
@@ -1338,9 +1370,17 @@ void run_gui()
 		ImGui::Begin("Amiberry", &gui_running, hostFlags);
 		ImGui::PopStyleVar(2);
 
-		// Determine sidebar width based on current window content width, with sane clamps
 		const float content_width = ImGui::GetContentRegionAvail().x;
-		const float sidebar_width = content_width * 0.22f;
+		const float content_height = ImGui::GetContentRegionAvail().y - button_bar_height;
+		const float splitter_thickness = 6.0f;
+		const float min_sidebar = 120.0f;
+		const float max_sidebar = content_width * 0.40f;
+
+		static float sidebar_width = 0.0f;
+		if (sidebar_width <= 0.0f)
+			sidebar_width = content_width * 0.22f;
+		sidebar_width = std::clamp(sidebar_width, min_sidebar, max_sidebar);
+		float panel_width = content_width - sidebar_width - splitter_thickness;
 
 		// Sidebar
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 1.0f);
@@ -1349,7 +1389,12 @@ void run_gui()
 		ImGui::Indent(4.0f);
 		ImGui::Dummy(ImVec2(0, 2.0f));
 
-		// Ensure icons are ready
+		static char sidebar_filter[64] = "";
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		ImGui::InputTextWithHint("##sidebar_filter", "Search...", sidebar_filter, sizeof(sidebar_filter));
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+		ImGui::Dummy(ImVec2(0, 4.0f));
+
 		ensure_sidebar_icons_loaded();
 
  		const ImGuiStyle& s = ImGui::GetStyle();
@@ -1359,21 +1404,124 @@ void run_gui()
 		const float icon_h_target = base_text_h;
 		const float row_h = std::max(base_row_h, icon_h_target + 2.0f * s.FramePadding.y);
 		const ImVec4 col_act = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
-		for (int i = 0; categories[i].category != nullptr; ++i) {
-			const bool selected = (last_active_panel == i);
-			// Full-width selectable row with custom height
-			if (selected) {
-				ImGui::PushStyleColor(ImGuiCol_Header, col_act);
-				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, lighten(col_act, 0.05f));
-				ImGui::PushStyleColor(ImGuiCol_HeaderActive, lighten(col_act, 0.10f));
+
+		struct SidebarGroup { int first_index; const char* label; };
+		static const SidebarGroup sidebar_groups[] = {
+			{ 0,  "General" },
+			{ 4,  "Hardware" },
+			{ 9,  "Storage" },
+			{ 11, "Expansion" },
+			{ 14, "Output" },
+			{ 17, "Input / IO" },
+			{ 20, "Utility" },
+		};
+		constexpr int num_groups = sizeof(sidebar_groups) / sizeof(sidebar_groups[0]);
+		int next_group = 0;
+		const bool has_filter = sidebar_filter[0] != '\0';
+
+		auto icontains = [](const char* haystack, const char* needle) -> bool {
+			for (const char* h = haystack; *h; ++h) {
+				const char* hi = h;
+				const char* ni = needle;
+				while (*hi && *ni && tolower((unsigned char)*hi) == tolower((unsigned char)*ni)) { ++hi; ++ni; }
+				if (!*ni) return true;
 			}
+			return false;
+		};
+
+		auto group_has_visible = [&](int group_idx) -> bool {
+			if (!has_filter) return true;
+			int start = sidebar_groups[group_idx].first_index;
+			int end = (group_idx + 1 < num_groups) ? sidebar_groups[group_idx + 1].first_index : 999;
+			for (int j = start; categories[j].category != nullptr && j < end; ++j) {
+				if (icontains(categories[j].category, sidebar_filter))
+					return true;
+			}
+			return false;
+		};
+
+		// Keyboard navigation (when filter box is not focused)
+		if (!ImGui::GetIO().WantTextInput) {
+			int total_panels = 0;
+			while (categories[total_panels].category != nullptr) total_panels++;
+			if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+				int next = last_active_panel - 1;
+				if (has_filter) {
+					while (next >= 0 && !icontains(categories[next].category, sidebar_filter)) --next;
+				}
+				if (next >= 0) last_active_panel = next;
+			}
+			if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
+				int next = last_active_panel + 1;
+				if (has_filter) {
+					while (next < total_panels && !icontains(categories[next].category, sidebar_filter)) ++next;
+				}
+				if (next < total_panels) last_active_panel = next;
+			}
+		}
+
+		bool any_rendered = false;
+		for (int i = 0; categories[i].category != nullptr; ++i) {
+			if (has_filter && !icontains(categories[i].category, sidebar_filter))
+				continue;
+
+			if (next_group < num_groups && i >= sidebar_groups[next_group].first_index) {
+				if (group_has_visible(next_group)) {
+					if (any_rendered) {
+						ImGui::Dummy(ImVec2(0, 8.0f));
+						ImVec2 p = ImGui::GetCursorScreenPos();
+						float line_w = ImGui::GetContentRegionAvail().x * 0.6f;
+						float line_x = p.x + (ImGui::GetContentRegionAvail().x - line_w) * 0.5f;
+						ImGui::GetWindowDrawList()->AddLine(
+							ImVec2(line_x, p.y), ImVec2(line_x + line_w, p.y),
+							ImGui::GetColorU32(ImGuiCol_Separator, 0.5f), 1.0f);
+						ImGui::Dummy(ImVec2(0, 4.0f));
+					}
+					ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+					label_col.w *= 0.7f;
+					ImGui::PushStyleColor(ImGuiCol_Text, label_col);
+					ImGui::SetCursorPosX(ImGui::GetCursorPosX() + s.FramePadding.x + 2.0f);
+					ImGui::SetWindowFontScale(0.85f);
+					std::string upper_label;
+					for (const char* c = sidebar_groups[next_group].label; *c; ++c)
+						upper_label += static_cast<char>(toupper(static_cast<unsigned char>(*c)));
+					ImGui::TextUnformatted(upper_label.c_str());
+					ImGui::SetWindowFontScale(1.0f);
+					ImGui::PopStyleColor();
+					ImGui::Dummy(ImVec2(0, 2.0f));
+				}
+				next_group++;
+				while (next_group < num_groups && sidebar_groups[next_group].first_index <= i)
+					next_group++;
+			}
+			any_rendered = true;
+			ImGui::Indent(6.0f);
+			const bool selected = (last_active_panel == i);
+			ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0, 0, 0, 0));
 			if (ImGui::Selectable( (std::string("##cat_") + std::to_string(i)).c_str(), selected, 0, ImVec2(ImGui::GetContentRegionAvail().x, row_h))) {
 				last_active_panel = i;
 			}
+			ImGui::PopStyleColor(3);
+			const bool item_hovered = ImGui::IsItemHovered();
+			ImVec2 sel_min = ImGui::GetItemRectMin();
+			ImVec2 sel_max = ImGui::GetItemRectMax();
 			if (selected) {
-				ImGui::PopStyleColor(3);
+				ImGui::GetWindowDrawList()->AddRectFilled(sel_min, sel_max,
+					ImGui::GetColorU32(col_act), 4.0f);
+				ImVec4 accent = lighten(col_act, 0.3f);
+				ImGui::GetWindowDrawList()->AddRectFilled(
+					ImVec2(sel_min.x, sel_min.y + 2.0f),
+					ImVec2(sel_min.x + 3.0f, sel_max.y - 2.0f),
+					ImGui::GetColorU32(accent), 1.5f);
+			} else if (item_hovered) {
+				ImVec4 hover_col = lighten(col_act, 0.05f);
+				hover_col.w = 0.3f;
+				ImGui::GetWindowDrawList()->AddRectFilled(sel_min, sel_max,
+					ImGui::GetColorU32(hover_col), 4.0f);
 			}
-			// Draw icon + text inside the selectable rect
+			ImGui::Unindent(6.0f);
 			ImVec2 rmin = ImGui::GetItemRectMin();
 			ImVec2 rmax = ImGui::GetItemRectMax();
 			ImVec2 pos = rmin;
@@ -1414,6 +1562,41 @@ void run_gui()
 		const ImVec2 min = ImGui::GetItemRectMin();
 		const ImVec2 max = ImGui::GetItemRectMax();
 		AmigaBevel(ImVec2(min.x - 1, min.y - 1), ImVec2(max.x + 1, max.y + 1), false);
+
+		ImGui::SameLine();
+
+		{
+			ImGui::InvisibleButton("##splitter", ImVec2(splitter_thickness, content_height));
+			const bool splitter_hovered = ImGui::IsItemHovered();
+			const bool splitter_active = ImGui::IsItemActive();
+
+			if (splitter_active)
+				sidebar_width += ImGui::GetIO().MouseDelta.x;
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && splitter_hovered)
+				sidebar_width = content_width * 0.22f;
+			sidebar_width = std::clamp(sidebar_width, min_sidebar, max_sidebar);
+
+			if (splitter_hovered || splitter_active)
+				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+			ImVec2 smin = ImGui::GetItemRectMin();
+			ImVec2 smax = ImGui::GetItemRectMax();
+			ImDrawList* sdl = ImGui::GetWindowDrawList();
+
+			if (splitter_hovered || splitter_active) {
+				ImU32 bg_col = ImGui::GetColorU32(ImGuiCol_Separator, splitter_active ? 0.4f : 0.2f);
+				sdl->AddRectFilled(smin, smax, bg_col);
+			}
+
+			ImU32 grip_col = ImGui::GetColorU32(
+				splitter_active ? ImGuiCol_SeparatorActive :
+				splitter_hovered ? ImGuiCol_SeparatorHovered :
+				ImGuiCol_Separator);
+			float cx = (smin.x + smax.x) * 0.5f;
+			sdl->AddLine(
+				ImVec2(cx, smin.y + 4.0f), ImVec2(cx, smax.y - 4.0f),
+				grip_col, 2.0f);
+		}
 
 		ImGui::SameLine();
 

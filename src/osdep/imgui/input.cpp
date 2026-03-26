@@ -257,7 +257,7 @@ void render_panel_input() {
     // ---------------------------------------------------------
     // Emulated Parallel Port
     // ---------------------------------------------------------
-    BeginGroupBox("Emulated parallel port joystick adapter");
+    if (BeginGroupBox("Emulated parallel port joystick adapter", true)) {
 
     if (ImGui::BeginTable("ParTable", 2, ImGuiTableFlags_None)) {
         ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
@@ -340,15 +340,13 @@ void render_panel_input() {
         ImGui::EndTable();
     }
     ImGui::Spacing();
+    }
     EndGroupBox("Emulated parallel port joystick adapter");
 
-    // ---------------------------------------------------------
-    // Game Controller Settings
-    // ---------------------------------------------------------
     static const int digital_joymousespeed_values[] = {2, 5, 10, 15, 20};
     static const int analog_joymousespeed_values[] = {5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150};
 
-    BeginGroupBox("Game Controller Settings");
+    if (BeginGroupBox("Game Controller Settings", true)) {
     // Joystick Dead Zone
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Joystick dead zone:");
@@ -435,12 +433,10 @@ void render_panel_input() {
     ImGui::AlignTextToFramePadding();
     ImGui::Text("%d", changed_prefs.input_joymouse_multiplier);
     ImGui::Spacing();
+    }
     EndGroupBox("Game Controller Settings");
 
-    // ---------------------------------------------------------
-    // Mouse Extra Settings
-    // ---------------------------------------------------------
-    BeginGroupBox("Mouse extra settings");
+    if (BeginGroupBox("Mouse extra settings", true)) {
 
     if (ImGui::BeginTable("MouseExtrasTable", 2, ImGuiTableFlags_None)) {
         // Row 1
@@ -574,5 +570,6 @@ void render_panel_input() {
         ImGui::EndTable();
     }
     ImGui::Spacing();
+    }
     EndGroupBox("Mouse extra settings");
 }

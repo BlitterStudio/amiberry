@@ -427,7 +427,7 @@ static void RenderCDSection()
     
     ImGui::Spacing();
 
-    BeginGroupBox("CD Drive / Image");
+    if (BeginGroupBox("CD Drive / Image", true)) {
     
     bool cd_enabled = changed_prefs.cdslots[0].inuse;
     if (AmigaCheckbox("CD drive/image", &cd_enabled)) {
@@ -526,6 +526,7 @@ static void RenderCDSection()
         }
     }
 
+    }
     EndGroupBox("CD Drive / Image");
 }
 
