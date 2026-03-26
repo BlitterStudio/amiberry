@@ -1965,6 +1965,28 @@ static void handle_key_event(const SDL_Event& event)
 	}
 #endif
 
+	// Ctrl+Alt releases mouse capture (like QEMU). Works on trackpads
+	// where there is no middle mouse button available.
+	if (currprefs.ctrl_alt_release && pressed && mouseactive)
+	{
+		const bool* kbstate = SDL_GetKeyboardState(nullptr);
+		const bool ctrl_held = kbstate[SDL_SCANCODE_LCTRL] || kbstate[SDL_SCANCODE_RCTRL];
+		const bool alt_held = kbstate[SDL_SCANCODE_LALT] || kbstate[SDL_SCANCODE_RALT];
+		const bool is_ctrl = (scancode == SDL_SCANCODE_LCTRL || scancode == SDL_SCANCODE_RCTRL);
+		const bool is_alt = (scancode == SDL_SCANCODE_LALT || scancode == SDL_SCANCODE_RALT);
+
+		if ((is_ctrl && alt_held) || (is_alt && ctrl_held))
+		{
+			activationtoggle(0, true);
+			// Release both modifiers in the emulator so they don't stick
+			my_kbd_handler(0, SDL_SCANCODE_LCTRL, 0, true);
+			my_kbd_handler(0, SDL_SCANCODE_RCTRL, 0, true);
+			my_kbd_handler(0, SDL_SCANCODE_LALT, 0, true);
+			my_kbd_handler(0, SDL_SCANCODE_RALT, 0, true);
+			return;
+		}
+	}
+
 	if (key_swap_hack == 1) {
 		if (scancode == SDL_SCANCODE_F11) {
 			scancode = SDL_SCANCODE_EQUALS;
@@ -3134,6 +3156,7 @@ void target_default_options(uae_prefs* p, const int type)
 	drawbridge_update_profiles(p);
 
 	p->alt_tab_release = false;
+	p->ctrl_alt_release = true;
 	p->sound_pullmode = 0;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -3300,6 +3323,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	}
 
 	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
+	cfgfile_target_dwrite_bool(f, _T("ctrl_alt_release"), p->ctrl_alt_release);
 
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
@@ -3406,6 +3430,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
 		|| cfgfile_intval(option, value, _T("drawbridge_drive_cable"), &p->drawbridge_drive_cable, 1)
 		|| cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release)
+		|| cfgfile_yesno(option, value, _T("ctrl_alt_release"), &p->ctrl_alt_release)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)

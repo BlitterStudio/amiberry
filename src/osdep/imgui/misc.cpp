@@ -154,6 +154,10 @@ static MiscListItem misc_items[] = {
 	 "Reserve Alt-Tab for the host and release capture when focus is lost",
 	 &changed_prefs.alt_tab_release, nullptr, 0, 0, MISC_NORMAL},
 
+	{"Ctrl+Alt releases capture",
+	 "Press Ctrl+Alt to release mouse capture (useful on laptops without a middle mouse button)",
+	 &changed_prefs.ctrl_alt_release, nullptr, 0, 0, MISC_NORMAL},
+
 	{"Use RetroArch Quit Button",
 	 "Enable RetroArch-style quit button mapping",
 	 &changed_prefs.use_retroarch_quit, nullptr, 0, 0, MISC_NORMAL},

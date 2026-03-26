@@ -520,6 +520,7 @@ int check_prefs_changed_gfx()
 		currprefs.capture_always != changed_prefs.capture_always ||
 		currprefs.native_code != changed_prefs.native_code ||
 		currprefs.alt_tab_release != changed_prefs.alt_tab_release ||
+		currprefs.ctrl_alt_release != changed_prefs.ctrl_alt_release ||
 		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
 		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
 		currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
@@ -552,6 +553,7 @@ int check_prefs_changed_gfx()
 		currprefs.capture_always = changed_prefs.capture_always;
 		currprefs.native_code = changed_prefs.native_code;
 		currprefs.alt_tab_release = changed_prefs.alt_tab_release;
+		currprefs.ctrl_alt_release = changed_prefs.ctrl_alt_release;
 		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
 		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;
 		currprefs.use_retroarch_reset = changed_prefs.use_retroarch_reset;

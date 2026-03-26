@@ -1104,6 +1104,7 @@ struct uae_prefs {
 	bool drawbridge_smartspeed;
 	bool drawbridge_autocache;
 	bool alt_tab_release;
+	bool ctrl_alt_release;
 	int sound_pullmode;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;
