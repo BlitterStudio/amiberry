@@ -49,6 +49,7 @@ struct sound_dp
 	int silence_written;
 	int push_target_buffers;
 	int push_stable_writes;
+	int push_low_water_count;
 };
 
 #define SND_STATUSCNT 10
@@ -56,6 +57,7 @@ struct sound_dp
 #define PUSH_TARGET_BUFFERS_MIN 2
 #define PUSH_TARGET_BUFFERS_MAX 3
 #define PUSH_TARGET_STABLE_WRITES 48
+#define PUSH_LOW_WATER_ESCALATE 3
 
 #define ADJUST_SIZE 20
 #define EXP 1.9
@@ -100,6 +102,7 @@ static void reset_push_timing_state(struct sound_data* sd)
 	s->cnt_correct = 0;
 	s->push_target_buffers = PUSH_TARGET_BUFFERS_MIN;
 	s->push_stable_writes = 0;
+	s->push_low_water_count = 0;
 }
 
 static bool lock_audio_stream_sdl(SDL_AudioStream* stream)
@@ -153,10 +156,20 @@ static void update_push_target_latency(struct sound_data* sd, int queued)
 {
 	auto* s = sd->data;
 	if (queued <= sd->sndbufsize) {
-		s->push_target_buffers = PUSH_TARGET_BUFFERS_MAX;
+		// Low water — count consecutive occurrences
+		s->push_low_water_count++;
 		s->push_stable_writes = 0;
+
+		// Only escalate after sustained pressure, not a single transient dip
+		// (e.g. autocrop dimension changes cause isolated 1-frame dips)
+		if (s->push_low_water_count >= PUSH_LOW_WATER_ESCALATE) {
+			s->push_target_buffers = PUSH_TARGET_BUFFERS_MAX;
+		}
 		return;
 	}
+
+	// Above low-water: reset dip counter
+	s->push_low_water_count = 0;
 
 	if (s->push_target_buffers > PUSH_TARGET_BUFFERS_MIN) {
 		const int stable_threshold = sd->sndbufsize * PUSH_TARGET_BUFFERS_MIN;

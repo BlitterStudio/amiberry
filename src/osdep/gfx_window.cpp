@@ -282,9 +282,14 @@ int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 		recapture = true;
 
 	inputdevice_unacquire();
-	reset_sound();
-	if (mon->amiga_window == nullptr)
+	// Only reset sound when creating a new window, not on quick reopen
+	// (e.g. auto-resolution changes). close_windows() already resets sound
+	// when doing a full teardown. Resetting here on quick reopen wipes the
+	// audio buffer and causes audible dropouts during mode switches.
+	if (mon->amiga_window == nullptr) {
+		reset_sound();
 		wait_keyrelease();
+	}
 
 	mon->in_sizemove = 0;
 	mon->focus_transitioning = false;
