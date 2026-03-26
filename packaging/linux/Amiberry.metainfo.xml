@@ -62,6 +62,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.1.2" date="2026-03-26">
+            <description>
+                <p>Bugfix release: event-driven input dispatch with reduced latency, portable mode toggle in Paths panel, Ctrl+Alt hotkey to release mouse grab, audio queue robustness improvements, ImGui update, file dialog crash fix, autoconfig and x86-64 JIT exception handler fixes, macOS raw disk access fallback, and various bug fixes.</p>
+            </description>
+        </release>
         <release version="8.1.1" date="2026-03-25">
             <description>
                 <p>Bugfix release: LoongArch64 architecture support, experimental Vulkan renderer, JIT allocator fixes for x86-64, portable install path fixes on Windows, HiDPI scaling fix on Linux, filesystem encoding fix for international filenames, and various bug fixes.</p>
