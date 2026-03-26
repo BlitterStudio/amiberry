@@ -1115,7 +1115,14 @@ TCHAR* fsdb_create_unique_nname(const a_inode* base, const TCHAR* suggestion)
 // Get local time in secs, starting from 01.01.1970
 uae_u32 getlocaltime()
 {
-	using namespace std::chrono;
-	const auto now = system_clock::now();
-	return static_cast<uae_u32>(duration_cast<seconds>(now.time_since_epoch()).count());
+	time_t utc = time(nullptr);
+	struct tm *lt = localtime(&utc);
+#if defined(_WIN32)
+	long tz_seconds;
+	_get_timezone(&tz_seconds);
+	int dst = lt->tm_isdst > 0 ? 3600 : 0;
+	return static_cast<uae_u32>(utc - tz_seconds + dst);
+#else
+	return static_cast<uae_u32>(utc + lt->tm_gmtoff);
+#endif
 }
