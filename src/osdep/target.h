@@ -179,6 +179,12 @@ extern void set_rom_path(const std::string& newpath);
 extern void get_rp9_path(char* out, int size);
 extern std::string get_screenshot_path();
 
+extern bool get_portable_mode();
+#if !defined(__MACH__) && !defined(__ANDROID__)
+extern bool set_portable_mode(bool enable);
+#endif
+extern void reset_default_paths();
+
 extern void extract_filename(const char* str, char* buffer);
 extern std::string extract_filename(const std::string& path);
 extern void extract_path(const char* str, char* buffer);

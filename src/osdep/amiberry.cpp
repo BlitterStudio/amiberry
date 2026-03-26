@@ -397,6 +397,7 @@ extern void set_last_active_config(const char* filename);
 
 std::string home_dir;
 std::string current_dir;
+static bool g_portable_mode = false;
 
 #if defined(__linux__)
 #include <linux/kd.h>
@@ -4656,6 +4657,35 @@ static bool is_portable_mode_enabled()
 #endif
 }
 
+bool get_portable_mode()
+{
+	return g_portable_mode;
+}
+
+#if !defined(__MACH__) && !defined(__ANDROID__)
+bool set_portable_mode(bool enable)
+{
+#ifdef _WIN32
+	const std::string marker = get_windows_executable_directory() + "\\amiberry.portable";
+#else
+	const std::string marker = "amiberry.portable";
+#endif
+	if (enable)
+	{
+		FILE* f = fopen(marker.c_str(), "w");
+		if (!f)
+			return false;
+		fclose(f);
+	}
+	else
+	{
+		std::remove(marker.c_str());
+	}
+	g_portable_mode = enable;
+	return true;
+}
+#endif
+
 #ifndef LIBRETRO
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
@@ -5732,6 +5762,12 @@ static void init_amiberry_dirs(const bool portable_mode)
 #endif
 }
 
+void reset_default_paths()
+{
+	init_amiberry_dirs(g_portable_mode);
+	create_missing_amiberry_folders();
+}
+
 void load_amiberry_settings()
 {
 	auto* const fh = zfile_fopen(amiberry_conf_file.c_str(), _T("r"), ZFD_NORMAL);
@@ -6077,7 +6113,8 @@ int amiberry_main(int argc, char* argv[])
 	// Portable mode is enabled when the marker is found in the startup directory.
 	// On Windows, also check next to the executable because shortcuts and file
 	// associations can launch the app with a different working directory.
-	const bool portable_mode = is_portable_mode_enabled();
+	g_portable_mode = is_portable_mode_enabled();
+	const bool portable_mode = g_portable_mode;
 #ifdef __MACH__
 	if (!portable_mode && getenv("AMIBERRY_HOME_DIR") == nullptr)
 		migrate_macos_user_data();

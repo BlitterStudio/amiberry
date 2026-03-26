@@ -85,12 +85,52 @@ void render_panel_paths()
 		ImGui::Spacing();
 	};
 
+	// Portable mode toggle (functional on Windows/Linux, shown disabled on macOS, hidden on Android)
+#if !defined(__ANDROID__)
+	{
+		bool portable = get_portable_mode();
+#if defined(__MACH__)
+		ImGui::BeginDisabled();
+#endif
+		if (AmigaCheckbox("Portable mode (use exe directory for all paths)", &portable))
+		{
+#if !defined(__MACH__)
+			if (set_portable_mode(portable))
+			{
+				ShowMessageBox("Portable Mode",
+					portable
+						? "Portable mode enabled.\n\nPlease restart Amiberry for this change to take full effect."
+						: "Portable mode disabled.\n\nPlease restart Amiberry for this change to take full effect.");
+			}
+			else
+			{
+				ShowMessageBox("Portable Mode", "Failed to change portable mode.\n\nCheck file permissions in the application directory.");
+			}
+#endif
+		}
+#if defined(__MACH__)
+		ImGui::EndDisabled();
+#endif
+		ShowHelpMarker("When enabled, all data directories are resolved relative to the executable location.\n"
+			"Creates/removes the 'amiberry.portable' marker file.\n"
+			"A restart is required for the change to take effect.\n\n"
+			"Not available on macOS.");
+	}
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+#endif
+
 	// Estimate reserved height for bottom controls (logfile widgets + 1 line spacing + 1 line for buttons)
 	const float line_h = ImGui::GetFrameHeightWithSpacing();
-	const float reserved_height = line_h * 4.5f; // 2.5 lines for logfile widgets, 1 for spacing, 1 for buttons
+	const float reserved_height = line_h * 6.0f; // logfile widgets + logfile path + spacing + 2 button rows
 
 	// Begin scrollable area for path entries
-	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), true, ImGuiChildFlags_AutoResizeY);
+	// Draw a recessed frame around the scroll area
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.06f));
+	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), ImGuiChildFlags_Borders);
 
 	RenderPathRow("System ROMs:", "SystemROMs", get_rom_path(), [](const std::string& p) { set_rom_path(p); });
 
@@ -122,6 +162,8 @@ void render_panel_paths()
 	RenderPathRow("Hard drives path:", "HDDPath", get_harddrive_path(), [](const std::string& p) { set_harddrive_path(p); });
 
 	ImGui::EndChild();
+	ImGui::PopStyleColor(2);
+	ImGui::PopStyleVar();
 
 	// Logging Options
 	auto logging_enabled = get_logfile_enabled();
@@ -142,6 +184,13 @@ void render_panel_paths()
 	RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
 
 	ImGui::Spacing();
+	if (AmigaButton("Reset to Defaults", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
+		reset_default_paths();
+		save_amiberry_settings();
+		ShowMessageBox("Reset Paths", "All paths have been reset to their default values.");
+	}
+	ImGui::SameLine();
 	if (AmigaButton("Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		scan_roms(true);
@@ -150,7 +199,6 @@ void render_panel_paths()
 
 		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
-	ImGui::SameLine();
 	if (AmigaButton("Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		std::string destination;
