@@ -894,14 +894,19 @@ void gui_display(int shortcut)
 	inputdevice_config_change_test();
 	clearallkeys ();
 
+	// Raise the emulation window before acquiring input so that
+	// iswindowfocus() succeeds inside setmouseactive2 (see #1895).
+	struct AmigaMonitor* mon = &AMonitors[0];
+	if (mon->amiga_window) {
+		SDL_RaiseWindow(mon->amiga_window);
+	}
+
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
 	}
 	//rawinput_alloc();
-	struct AmigaMonitor* mon = &AMonitors[0];
 	if (mon->amiga_window) {
-		SDL_RaiseWindow(mon->amiga_window);
 		SDL_SetWindowMouseGrab(mon->amiga_window, true);
 		SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 	}
