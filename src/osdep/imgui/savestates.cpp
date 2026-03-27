@@ -139,8 +139,14 @@ void render_panel_savestates() {
         ImGui::Spacing();
 
         // Buttons
+        float avail_w = ImGui::GetContentRegionAvail().x;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float del_w = BUTTON_WIDTH;
+        float slot_btn_w = (avail_w - del_w - spacing * 2) / 2.0f;
+        float file_btn_w = (avail_w - spacing) / 2.0f;
+
         ImGui::BeginDisabled(!has_state);
-        if (AmigaButton("Load from Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+        if (AmigaButton(ICON_FA_UPLOAD " Load from Slot", ImVec2(slot_btn_w, BUTTON_HEIGHT))) {
             if (emulating && strlen(savestate_fname) > 0) {
                 FILE *f = fopen(savestate_fname, "rbe");
                 if (f) {
@@ -156,7 +162,7 @@ void render_panel_savestates() {
             }
         }
         ImGui::SameLine();
-        if (AmigaButton("Save to Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+        if (AmigaButton(ICON_FA_FLOPPY_DISK " Save to Slot", ImVec2(slot_btn_w, BUTTON_HEIGHT))) {
             if (emulating) {
                 savestate_initsave(savestate_fname, 1, 0, true);
                 save_state(savestate_fname, "...");
@@ -169,7 +175,7 @@ void render_panel_savestates() {
             }
         }
         ImGui::SameLine();
-        if (AmigaButton("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+        if (AmigaButton(ICON_FA_TRASH_CAN " Delete", ImVec2(del_w, BUTTON_HEIGHT))) {
             if (strlen(savestate_fname) > 0) {
                 show_delete_confirm_popup = true;
             }
@@ -178,7 +184,7 @@ void render_panel_savestates() {
 
         ImGui::Spacing();
 
-        if (AmigaButton("Load state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+        if (AmigaButton(ICON_FA_UPLOAD " Load state...", ImVec2(file_btn_w, BUTTON_HEIGHT))) {
             disk_selection(4, &changed_prefs);
             current_state_num = 99;
             last_state_num = 99;
@@ -186,7 +192,7 @@ void render_panel_savestates() {
             ClearScreenshotTexture();
         }
         ImGui::SameLine();
-        if (AmigaButton("Save state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+        if (AmigaButton(ICON_FA_FLOPPY_DISK " Save state...", ImVec2(file_btn_w, BUTTON_HEIGHT))) {
             if (emulating) {
                 disk_selection(5, &changed_prefs);
             } else {
@@ -205,7 +211,7 @@ void render_panel_savestates() {
     if (ImGui::BeginPopupModal(alert_title.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%s", alert_message.c_str());
         ImGui::Separator();
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -219,14 +225,14 @@ void render_panel_savestates() {
         ImGui::Text("Do you really want to delete the statefile?");
         ImGui::Text("This will also delete the corresponding screenshot.");
         ImGui::Separator();
-        if (AmigaButton("Yes", ImVec2(120, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " Yes", ImVec2(120, 0))) {
             remove(savestate_fname);
             if (!screenshot_filename.empty()) remove(screenshot_filename.c_str());
             ClearScreenshotTexture();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (AmigaButton("No", ImVec2(120, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " No", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

@@ -400,7 +400,7 @@ void render_panel_chipset() {
             "Sony LaserDisc Player",
             "Pioneer LaserDisc Player"
         };
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 3.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x - 3.0f);
         ImGui::Combo("##Genlock", &changed_prefs.genlock_image, genlock_items, IM_ARRAYSIZE(genlock_items));
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::SameLine();

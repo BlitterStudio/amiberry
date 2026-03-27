@@ -206,7 +206,7 @@ static void ShowHotkeyPopup()
 		if (ImGui::IsKeyPressed(ImGuiKey_Escape))
 			ImGui::CloseCurrentPopup();
 
-		if (AmigaButton("Cancel"))
+		if (AmigaButton(ICON_FA_XMARK " Cancel"))
 			ImGui::CloseCurrentPopup();
 
 		ImGui::EndPopup();
@@ -277,8 +277,8 @@ void render_panel_misc()
 
 			if (ImGui::BeginTable("##HotkeyRow", 2, ImGuiTableFlags_SizingStretchProp))
 			{
-				ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
-				ImGui::TableSetupColumn("Btns",  ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+				ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+				ImGui::TableSetupColumn("Btns",  ImGuiTableColumnFlags_WidthFixed, SMALL_BUTTON_WIDTH * 2 + ImGui::GetStyle().ItemSpacing.x);
 
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
@@ -295,7 +295,7 @@ void render_panel_misc()
 					open_hotkey_popup = true;
 				}
 				ImGui::SameLine();
-				if (AmigaButton("X"))
+				if (AmigaButton(ICON_FA_XMARK "##clear"))
 					config_val[0] = '\0';
 
 				ImGui::EndTable();

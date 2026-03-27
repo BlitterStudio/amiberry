@@ -878,7 +878,7 @@ void ControllerMap_RenderModal()
 		{
 			ImGui::TextWrapped("%s", g_controller_map.error_text.c_str());
 			ImGui::Spacing();
-			if (AmigaButton("Close", ImVec2(BUTTON_WIDTH, 0)))
+			if (AmigaButton(ICON_FA_XMARK " Close", ImVec2(BUTTON_WIDTH, 0)))
 			{
 				ImGui::CloseCurrentPopup();
 				ControllerMap_Close();
@@ -954,7 +954,7 @@ void ControllerMap_RenderModal()
 
 		const float buttons_y = SCREEN_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT;
 		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, buttons_y));
-		if (AmigaButton("Back", ImVec2(BUTTON_WIDTH, 0)))
+		if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Back", ImVec2(BUTTON_WIDTH, 0)))
 		{
 			SetCurrentBinding(s_iCurrentBinding - 1);
 		}
@@ -964,7 +964,7 @@ void ControllerMap_RenderModal()
 			SetCurrentBinding(s_iCurrentBinding + 1);
 		}
 		ImGui::SameLine();
-		if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0)))
+		if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0)))
 		{
 			g_controller_map.error_text = "Mapping canceled.";
 		}

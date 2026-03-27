@@ -154,7 +154,7 @@ void render_panel_custom()
 		}
 
 		// Also Allow clearing via button in popup?
-		if (AmigaButton("Cancel")) {
+		if (AmigaButton(ICON_FA_XMARK " Cancel")) {
 			ImGui::CloseCurrentPopup();
 		}
 		
@@ -346,7 +346,7 @@ void render_panel_custom()
 	// Save Button
 	// ---------------------------------------------------------
 	if (!did->mapping.is_retroarch) {
-		if (AmigaButton("Save as default mapping", ImVec2(-1, 0))) {
+		if (AmigaButton(ICON_FA_FLOPPY_DISK " Save as default mapping", ImVec2(-1, 0))) {
 			std::string controller_path = get_controllers_path();
 			std::string controller_file = controller_path + did->name + ".controller";
 			save_controller_mapping_to_file(did->mapping, controller_file);

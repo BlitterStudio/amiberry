@@ -191,7 +191,7 @@ static void render_shader_parameters_popup()
 
 			ImGui::Spacing();
 			ImGui::Separator();
-			if (AmigaButton("Reset to Defaults")) {
+			if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Reset to Defaults")) {
 				for (auto& param : *params) {
 					param.current_value = param.default_value;
 					if (shader && shader->preset) {
@@ -393,7 +393,7 @@ void render_panel_filter()
 	ImGui::Spacing();
 
 	// Rescan button
-	if (AmigaButton("Rescan Shaders & Bezels", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
+	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Shaders & Bezels", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
 		shaders_initialized = false;  // Force rescan on next frame
 		bezels_initialized = false;
 	}
@@ -401,14 +401,14 @@ void render_panel_filter()
 
 	// Shader Parameters button (only shown when active shader has parameters)
 	if (g_renderer && g_renderer->has_shader_parameters()) {
-		if (AmigaButton("Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_SLIDERS " Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
 			show_shader_params_popup = true;
 		}
 		ImGui::SameLine();
 	}
 
 	// Save button
-	if (AmigaButton("Save Settings", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save Settings", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
 		save_amiberry_settings();
 	}
 

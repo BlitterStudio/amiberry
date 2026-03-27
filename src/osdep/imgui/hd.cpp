@@ -352,63 +352,48 @@ static void RenderMountedDrives()
 static void RenderActionButtons()
 {    
     float avail = ImGui::GetContentRegionAvail().x;
-    float btn_w_3 = (avail - 20) / 3.0f; // Width of Row 1 buttons (roughly)
     float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float btn_w = (avail - spacing * 2) / 3.0f;
 
-    // Row 1: Add Dir, Add HDF, Add HD
-    if (AmigaButton("Add Directory...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
+    // Row 1: Add Directory, Add Hardfile, Add Hard Drive
+    if (AmigaButton(ICON_FA_PLUS " Add Directory...", ImVec2(btn_w, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddDir;
     }
     ImGui::SameLine();
-    if (AmigaButton("Add Hardfile...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_PLUS " Add Hardfile...", ImVec2(btn_w, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddHDF;
     }
     ImGui::SameLine();
-    if (AmigaButton("Add Hard Drive...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_PLUS " Add Hard Drive...", ImVec2(btn_w, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddHardDrive;
     }
 
-    // Row 2: Add CD, Add Tape, Properties, Remove
-    // "Add CD Drive", "Add Tape Drive", "Properties", "Remove"
-
-    // Calculate widths for Row 2
-    float btn_w_cd = btn_w_3;
-    float btn_w_tape = btn_w_3;
-    float btn_w_props_remove = (btn_w_3 - spacing) / 2.0f;
-
-    // Add CD Drive
-    if (AmigaButton("Add CD Drive...", ImVec2(btn_w_cd, BUTTON_HEIGHT))) {
+    // Row 2: Add CD Drive, Add Tape Drive, Create Hardfile
+    if (AmigaButton(ICON_FA_PLUS " Add CD Drive...", ImVec2(btn_w, BUTTON_HEIGHT))) {
          current_hd_dialog_mode = HDDialogMode::AddCD;
     }
-    
     ImGui::SameLine();
-
-    // Add Tape Drive
-    if (AmigaButton("Add Tape Drive...", ImVec2(btn_w_tape, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_PLUS " Add Tape Drive...", ImVec2(btn_w, BUTTON_HEIGHT))) {
          current_hd_dialog_mode = HDDialogMode::AddTape;
     }
-
     ImGui::SameLine();
-    
-    // Properties (Edit)
+    if (AmigaButton(ICON_FA_PLUS " Create Hardfile...", ImVec2(btn_w, BUTTON_HEIGHT))) {
+        current_hd_dialog_mode = HDDialogMode::CreateHDF;
+    }
+
+    // Row 3: Properties, Remove
     ImGui::BeginDisabled(selected_row < 0 || selected_row >= changed_prefs.mountitems);
-    if (AmigaButton("Properties", ImVec2(btn_w_props_remove, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_GEAR " Properties", ImVec2(btn_w, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::EditEntry;
         edit_entry_index = selected_row;
     }
     ImGui::SameLine();
-    // Remove
-    if (AmigaButton("Remove", ImVec2(btn_w_props_remove, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_TRASH_CAN " Remove", ImVec2(btn_w, BUTTON_HEIGHT))) {
         kill_filesys_unitconfig(&changed_prefs, selected_row);
         invalidate_hdf_cache();
         if (selected_row >= changed_prefs.mountitems) selected_row = changed_prefs.mountitems - 1;
     }
     ImGui::EndDisabled();
-
-    // Row 3: Create Hardfile (Full width or similar to top buttons?) 
-    if (AmigaButton("Create Hardfile...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
-        current_hd_dialog_mode = HDDialogMode::CreateHDF;
-    }
 }
 
 static void RenderCDSection()
@@ -496,7 +481,7 @@ static void RenderCDSection()
     ImGui::SameLine();
     ShowHelpMarker("Physical devices require OS permission to read /dev/...");
     ImGui::SameLine();
-    if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH, 0))) {
+    if (AmigaButton(ICON_FA_EJECT " Eject", ImVec2(BUTTON_WIDTH, 0))) {
         changed_prefs.cdslots[0].name[0] = 0;
         changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
     }
@@ -648,7 +633,7 @@ static void ShowEditFilesysVirtualModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, 0))) {
             new_filesys(edit_entry_index);
             invalidate_hdf_cache();
             current_hd_dialog_mode = HDDialogMode::None;
@@ -656,7 +641,7 @@ static void ShowEditFilesysVirtualModal()
             show_virtual_filesys_modal = false;
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_virtual_filesys_modal = false;
@@ -848,7 +833,7 @@ static void ShowEditFilesysHardfileModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, 0))) {
             new_hardfile(edit_entry_index);
             invalidate_hdf_cache();
             current_hd_dialog_mode = HDDialogMode::None;
@@ -856,7 +841,7 @@ static void ShowEditFilesysHardfileModal()
             show_hardfile_modal = false;
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_hardfile_modal = false;
@@ -912,7 +897,7 @@ static void ShowCreateHardfileModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("Create", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_PLUS " Create", ImVec2(BUTTON_WIDTH, 0))) {
             uae_u64 size_bytes = (uae_u64)create_hdf_size_mb * 1024 * 1024;
             if (vhd_create(current_hfdlg.ci.rootdir, size_bytes, create_hdf_dynamic ? 1 : 0)) {
                 show_create_hdf_modal = false;
@@ -920,7 +905,7 @@ static void ShowCreateHardfileModal()
             }
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             show_create_hdf_modal = false;
             ImGui::CloseCurrentPopup();
         }
@@ -1006,7 +991,7 @@ static void ShowAddHardDriveModal()
             ImGui::TextDisabled("No devices found.");
         }
 
-        if (AmigaButton("Rescan")) {
+        if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan")) {
             rescan_drives();
         }
         ImGui::SameLine();
@@ -1110,7 +1095,7 @@ static void ShowAddHardDriveModal()
         }
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, 0))) {
             if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_names.size()) {
                 au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
                 current_hfdlg.ci.blocksize = drive_sector_sizes[selected_drive_idx];
@@ -1143,7 +1128,7 @@ static void ShowAddHardDriveModal()
             }
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             harddrive_modal_error.clear();
             show_add_harddrive_modal = false;
             ImGui::CloseCurrentPopup();
@@ -1280,7 +1265,7 @@ static void ShowEditCDDriveModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, 0))) {
             strncpy(current_cddlg.ci.rootdir, path_buf, MAX_DPATH);
             current_cddlg.ci.controller_unit = selected_unit;
             
@@ -1309,7 +1294,7 @@ static void ShowEditCDDriveModal()
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             ImGui::CloseCurrentPopup();
             show_cd_modal = false;
             initialized = false;
@@ -1411,7 +1396,7 @@ static void ShowEditTapeDriveModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, 0))) {
             if (path_buf[0] == 0) {
                  // Warning?
             } else {
@@ -1436,7 +1421,7 @@ static void ShowEditTapeDriveModal()
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             ImGui::CloseCurrentPopup();
             show_tape_modal = false;
             initialized = false;

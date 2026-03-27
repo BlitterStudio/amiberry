@@ -39,7 +39,7 @@ void render_panel_diskswapper()
                  OpenFileDialogKey("DISKSWAP", "Select disk image file", filter, startPath);
             }
             ImGui::SameLine();
-            if (AmigaButton("X"))
+            if (AmigaButton(ICON_FA_XMARK "##clear"))
             {
                 changed_prefs.dfxlist[i][0] = 0;
             }
@@ -79,7 +79,7 @@ void render_panel_diskswapper()
     }
     ImGui::EndChild();
 
-    if (AmigaButton("Remove All", ImVec2(120, 0)))
+    if (AmigaButton(ICON_FA_TRASH_CAN " Remove All", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT)))
     {
         for (int row = 0; row < MAX_SPARE_DRIVES; ++row)
         {

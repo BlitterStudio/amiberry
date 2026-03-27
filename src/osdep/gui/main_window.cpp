@@ -467,6 +467,7 @@ void AmigaCircularBevel(const ImVec2 center, const float radius, const bool rece
 }
 
 static bool g_groupbox_collapsed = false;
+static bool g_groupbox_collapsible = false;
 
 bool BeginGroupBox(const char* name, bool collapsible)
 {
@@ -481,12 +482,13 @@ bool BeginGroupBox(const char* name, bool collapsible)
 	ImGui::PushID(name);
 
 	g_groupbox_collapsed = false;
+	g_groupbox_collapsible = collapsible;
 	if (collapsible) {
 		ImGuiID id = ImGui::GetID("##collapse");
 		ImGuiStorage* storage = ImGui::GetStateStorage();
 		bool open = storage->GetBool(id, true);
-		const char* arrow = open ? "v " : "> ";
-		std::string toggle_label = std::string(arrow) + name;
+		const char* arrow = open ? ICON_FA_CHEVRON_DOWN : ICON_FA_CHEVRON_RIGHT;
+		std::string toggle_label = std::string(arrow) + " " + name;
 		if (ImGui::Selectable(toggle_label.c_str(), false, 0, ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
 			open = !open;
 			storage->SetBool(id, open);
@@ -497,7 +499,13 @@ bool BeginGroupBox(const char* name, bool collapsible)
 		}
 	}
 
-	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f));
+	if (collapsible) {
+		// Gap between chevron header and border/content
+		ImGui::Dummy(ImVec2(0.0f, 8.0f));
+	} else {
+		// Space reserved for the title text drawn by EndGroupBox
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f));
+	}
 	ImGui::Indent(10.0f);
 	return true;
 }
@@ -508,8 +516,12 @@ void EndGroupBox(const char* name)
 		ImGui::PopID();
 		ImGui::EndGroup();
 		g_groupbox_collapsed = false;
+		g_groupbox_collapsible = false;
 		return;
 	}
+
+	const bool was_collapsible = g_groupbox_collapsible;
+	g_groupbox_collapsible = false;
 
 	ImGui::Unindent(10.0f);
 	ImGui::PopID();
@@ -523,7 +535,12 @@ void EndGroupBox(const char* name)
 	ImVec2 item_max = ImGui::GetItemRectMax();
 
 	const float text_height = ImGui::GetTextLineHeight();
-	const float border_y = item_min.y + text_height * 0.5f;
+
+	// For collapsible groups the Selectable already rendered the title,
+	// so the border starts below that row instead of at the text midpoint.
+	const float border_y = was_collapsible
+		? item_min.y + ImGui::GetTextLineHeightWithSpacing() + 4.0f
+		: item_min.y + text_height * 0.5f;
 
 	ImU32 shadow_col = ImGui::GetColorU32(ImGuiCol_Border);
 	ImU32 shine_col = ImGui::GetColorU32(ImGuiCol_BorderShadow);
@@ -549,11 +566,12 @@ void EndGroupBox(const char* name)
 	draw_list->AddRect(ImVec2(item_min.x, border_y), ImVec2(item_max.x, item_max.y), shadow_col);
 	draw_list->AddRect(ImVec2(item_min.x + 1, border_y + 1), ImVec2(item_max.x + 1, item_max.y + 1), shine_col);
 
-	// Clear background for text
-	draw_list->AddRectFilled(ImVec2(text_start_x - text_padding, border_y - text_height * 0.5f - 1), ImVec2(text_start_x + text_size.x + text_padding, border_y + text_height * 0.5f + 1), ImGui::GetColorU32(ImGuiCol_WindowBg));
-
-	// Draw Title
-	draw_list->AddText(ImVec2(text_start_x, item_min.y), text_col, name);
+	if (!was_collapsible) {
+		// Clear background for text and draw title (non-collapsible only;
+		// collapsible groups already show the title via the Selectable toggle)
+		draw_list->AddRectFilled(ImVec2(text_start_x - text_padding, border_y - text_height * 0.5f - 1), ImVec2(text_start_x + text_size.x + text_padding, border_y + text_height * 0.5f + 1), ImGui::GetColorU32(ImGuiCol_WindowBg));
+		draw_list->AddText(ImVec2(text_start_x, item_min.y), text_col, name);
+	}
 
 	ImGui::Dummy(ImVec2(0.0f, 10.0f));
 }
@@ -909,7 +927,7 @@ void amiberry_gui_init()
 	float scaling_factor = DPIHandler::get_layout_scale();
 
 	// Apply scaling to GUI constants
-	BUTTON_WIDTH = 90 * scaling_factor;
+	BUTTON_WIDTH = 105 * scaling_factor;
 	BUTTON_HEIGHT = 30 * scaling_factor;
 	SMALL_BUTTON_WIDTH = 30 * scaling_factor;
 	SMALL_BUTTON_HEIGHT = 22 * scaling_factor;
@@ -1503,13 +1521,6 @@ void run_gui()
 				if (group_has_visible(next_group)) {
 					if (any_rendered) {
 						ImGui::Dummy(ImVec2(0, 8.0f));
-						ImVec2 p = ImGui::GetCursorScreenPos();
-						float line_w = ImGui::GetContentRegionAvail().x * 0.6f;
-						float line_x = p.x + (ImGui::GetContentRegionAvail().x - line_w) * 0.5f;
-						ImGui::GetWindowDrawList()->AddLine(
-							ImVec2(line_x, p.y), ImVec2(line_x + line_w, p.y),
-							ImGui::GetColorU32(ImGuiCol_Separator, 0.5f), 1.0f);
-						ImGui::Dummy(ImVec2(0, 4.0f));
 					}
 					ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 					label_col.w *= 0.7f;
@@ -1671,24 +1682,24 @@ void run_gui()
 		// Button bar
 		// Left-aligned buttons (Shutdown, Reset, Quit, Restart, Help)
 		if (!amiberry_options.disable_shutdown_button) {
-			if (AmigaButton("Shutdown", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			if (AmigaButton(ICON_FA_POWER_OFF " Shutdown", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				uae_quit();
 				gui_running = false;
 				host_poweroff = true;
 			}
 			ImGui::SameLine();
 		}
-		if (AmigaButton("Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_ROTATE_RIGHT " Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_reset(1, 1);
 			gui_running = false;
 		}
 		ImGui::SameLine();
-		if (AmigaButton("Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_RIGHT_FROM_BRACKET " Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_quit();
 			gui_running = false;
 		}
 		ImGui::SameLine();
-		if (AmigaButton("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_ARROWS_ROTATE " Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			char tmp[MAX_DPATH] = {0};
 			get_configuration_path(tmp, sizeof tmp);
 			if (strlen(last_loaded_config) > 0) {
@@ -1716,11 +1727,11 @@ void run_gui()
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.05f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.10f));
 		if (emulating) {
-			if (AmigaButton("Resume", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			if (AmigaButton(ICON_FA_PLAY " Resume", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				gui_running = false;
 			}
 		} else {
-			if (AmigaButton("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			if (AmigaButton(ICON_FA_PLAY " Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				uae_reset(0, 1);
 				gui_running = false;
 			}
@@ -1730,7 +1741,7 @@ void run_gui()
 		if (start_disabled)
 			ImGui::EndDisabled();
 		ImGui::SameLine();
-		if (AmigaButton("Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_CIRCLE_QUESTION " Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			const char* help_ptr = nullptr;
 			if (last_active_panel >= 0 && categories[last_active_panel].category != nullptr && categories[last_active_panel].HelpText != nullptr)
 				help_ptr = categories[last_active_panel].HelpText;

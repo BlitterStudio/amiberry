@@ -46,7 +46,7 @@ void render_panel_display() {
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Display:");
             ImGui::SameLine(BUTTON_WIDTH);
-            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
             int current_display = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_display;
             if (ImGui::BeginCombo("##HostDisplay", current_display > 0 && current_display <= display_count
                 ? Displays[current_display - 1].monitorname : "Primary")) {
@@ -102,7 +102,7 @@ void render_panel_display() {
     ImGui::Text("Native:");
     ImGui::SameLine(BUTTON_WIDTH);
     const char *screenmode_items[] = {"Windowed", "Fullscreen", "Full-window"};
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
     if (ImGui::BeginCombo("##NativeMode", screenmode_items[changed_prefs.gfx_apmode[0].gfx_fullscreen])) {
         for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
             const bool is_selected = (changed_prefs.gfx_apmode[0].gfx_fullscreen == n);
@@ -135,7 +135,7 @@ void render_panel_display() {
     else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
         vsync_idx = 4;
 
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
     if (ImGui::BeginCombo("##NativeVSync", vsync_items[vsync_idx])) {
         for (int n = 0; n < IM_ARRAYSIZE(vsync_items); n++) {
             const bool is_selected = (vsync_idx == n);
@@ -177,7 +177,7 @@ void render_panel_display() {
     ImGui::AlignTextToFramePadding();
     ImGui::Text("RTG:");
     ImGui::SameLine(BUTTON_WIDTH);
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
     if (ImGui::BeginCombo("##RTGMode", screenmode_items[changed_prefs.gfx_apmode[1].gfx_fullscreen])) {
         for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
             const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_fullscreen == n);
@@ -203,7 +203,7 @@ void render_panel_display() {
     int rtg_vsync_idx = 0;
     if (changed_prefs.gfx_apmode[1].gfx_vsync > 0)
         rtg_vsync_idx = 1;
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
     if (ImGui::BeginCombo("##RTGVSync", vsync_rtg_items[rtg_vsync_idx])) {
         for (int n = 0; n < IM_ARRAYSIZE(vsync_rtg_items); n++) {
             const bool is_selected = (rtg_vsync_idx == n);
@@ -233,8 +233,8 @@ void render_panel_display() {
 
     // Checkboxes
     if (ImGui::BeginTable("ChkTable", 2, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -264,9 +264,9 @@ void render_panel_display() {
     ImGui::Spacing();
 
     // Resolution row
-    if (ImGui::BeginTable("ResTable", 4, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
-        ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 3.0f);
+    if (ImGui::BeginTable("ResTable", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("col1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("col2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -274,7 +274,7 @@ void render_panel_display() {
         ImGui::Text("Resolution:");
         ImGui::SameLine();
         const char *resolution_items[] = {"LowRes", "HighRes (normal)", "SuperHighRes"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.7f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
         if (!resolution_enabled) ImGui::BeginDisabled();
         if (ImGui::BeginCombo("##Resolution", resolution_items[changed_prefs.gfx_resolution])) {
             for (int n = 0; n < IM_ARRAYSIZE(resolution_items); n++) {
@@ -300,7 +300,7 @@ void render_panel_display() {
         ImGui::Text("Overscan:");
         ImGui::SameLine();
         const char *overscan_items[] = {"TV Narrow", "TV Standard", "TV Wide", "Overscan", "Broadcast", "Extreme", "Ultra", "Ultra H/V", "Ultra CSync"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
         if (ImGui::BeginCombo("##Overscan", overscan_items[changed_prefs.gfx_overscanmode])) {
             for (int n = 0; n < IM_ARRAYSIZE(overscan_items); n++) {
                 const bool is_selected = (changed_prefs.gfx_overscanmode == n);
@@ -327,7 +327,7 @@ void render_panel_display() {
     ImGui::Text("Resolution autoswitch:");
     ImGui::SameLine();
     const char *res_autoswitch_items[] = {"Disabled", "Always On", "10%", "33%", "66%"};
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.4f);
     // Convert int value to index (0, 1, 10, 33, 66 -> 0, 1, 2, 3, 4)
     int autoswitch_idx = 0;
     if (changed_prefs.gfx_autoresolution == 1) autoswitch_idx = 1;
@@ -370,9 +370,9 @@ void render_panel_display() {
     // Refresh Slider + PAL/NTSC
     // WinUAE: Label "Refresh:" -> Slider -> Dropdown "PAL"
     if (ImGui::BeginTable("RefreshRowTable", 3, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-        ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-        ImGui::TableSetupColumn("combo", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2);
+        ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 0.7f);
+        ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("combo", ImGuiTableColumnFlags_WidthStretch, 1.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -449,7 +449,7 @@ void render_panel_display() {
     const char *attr_items[] = {
         "Brightness", "Contrast", "Gamma", "Gamma [R]", "Gamma [G]", "Gamma [B]", "Dark palette fix"
     };
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
     if (ImGui::BeginCombo("##AttrCombo", attr_items[current_attr_idx])) {
         for (int n = 0; n < IM_ARRAYSIZE(attr_items); n++) {
             const bool is_selected = (current_attr_idx == n);
@@ -498,7 +498,7 @@ void render_panel_display() {
         ImGui::SameLine();
         // Convert stored value to UI value
         int ui_val = *val_ptr / multiplier;
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x);
         if (ImGui::SliderInt("##AttrSlider", &ui_val, min_val, max_val, "")) {
             *val_ptr = ui_val * multiplier;
         }
@@ -528,9 +528,9 @@ void render_panel_display() {
     // Right Column
     // ---------------------------------------------------------
     if (ImGui::BeginTable("BottomGrid", 3, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.5f);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
-        ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -593,7 +593,6 @@ void render_panel_display() {
 
         // Interlaced Line Mode Group
         BeginGroupBox("Interlaced line mode");
-        ImGui::Dummy(ImVec2(BUTTON_WIDTH * 1.7f, 0));
         bool is_double = changed_prefs.gfx_vresolution > 0;
         if (!linemode_enabled || is_double) ImGui::BeginDisabled();
         if (AmigaRadioButton("Single##I", !is_double)) {

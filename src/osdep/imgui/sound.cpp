@@ -132,7 +132,7 @@ void render_panel_sound() {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Master");
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH * 0.5f);
         if (ImGui::SliderInt("##MasterVol", &master_volume, 0, 100, "")) {
             // Assuming master_sound_volume takes 0-100 or inverted?
             // Standard uae volume seems to be 0=silent, 100=max.
@@ -177,7 +177,7 @@ void render_panel_sound() {
         // Existing code: newvol = 100 - slider. So stored value is inverted (attenuation).
         // Display should be 100%.
         int display_vol = 100 - *current_vol_ptr;
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH * 0.5f);
         if (ImGui::SliderInt("##SubVol", &display_vol, 0, 100, "")) {
             *current_vol_ptr = 100 - display_vol;
         }
@@ -196,6 +196,9 @@ void render_panel_sound() {
     ImGui::BeginDisabled(!sound_en);
 
     if (ImGui::BeginTable("SettingsRow1Table", 3, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
@@ -280,6 +283,10 @@ void render_panel_sound() {
     ImGui::Spacing();
 
     if (ImGui::BeginTable("SettingsRow2Table", 4, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c4", ImGuiTableColumnFlags_WidthStretch, 1.0f);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -426,6 +433,8 @@ void render_panel_sound() {
 
     ImGui::BeginDisabled(!sound_en);
     if (ImGui::BeginTable("BottomRowTable", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
@@ -466,7 +475,7 @@ void render_panel_sound() {
         const char *sound_types[] = {"No sound", "A500 (built-in)"}; // 0, 1
         int sound_type = changed_prefs.floppyslots[selected_floppy_drive].dfxclick;
         if (sound_type > 1) sound_type = 1; // Clamp if unknown
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
         if (ImGui::BeginCombo("##SoundType", sound_types[sound_type])) {
             for (int n = 0; n < IM_ARRAYSIZE(sound_types); n++) {
                 const bool is_selected = (sound_type == n);
@@ -487,7 +496,7 @@ void render_panel_sound() {
 
         ImGui::SameLine();
         const char *drive_items[] = {"DF0:", "DF1:", "DF2:", "DF3:"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::BeginCombo("##FloppyDrive", drive_items[selected_floppy_drive])) {
             for (int n = 0; n < IM_ARRAYSIZE(drive_items); n++) {
                 const bool is_selected = (selected_floppy_drive == n);

@@ -4,6 +4,7 @@
 #include <string>
 #include "imgui.h"
 #include "file_dialog.h"
+#include "gui/icons_fa.h"
 
 // Forward declaration to avoid pulling in SDL headers in every includer
 struct SDL_Texture;

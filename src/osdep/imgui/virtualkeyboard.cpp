@@ -57,7 +57,7 @@ static void ShowVkbdHotkeyPopup() {
             }
         }
 
-        if (AmigaButton("Cancel")) {
+        if (AmigaButton(ICON_FA_XMARK " Cancel")) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

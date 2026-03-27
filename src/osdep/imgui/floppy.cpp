@@ -92,15 +92,20 @@ static void RenderDriveSlot(const int i)
     char table_id[32];
     snprintf(table_id, sizeof(table_id), "DriveTable%d", i);
     
-    if (ImGui::BeginTable(table_id, 7, ImGuiTableFlags_None))
+    if (ImGui::BeginTable(table_id, 6, ImGuiTableFlags_None))
     {
-        ImGui::TableSetupColumn("En", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH / 2);
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.5f);
-        ImGui::TableSetupColumn("WP", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.5f);
-        ImGui::TableSetupColumn("Filler", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH / 3);
-        ImGui::TableSetupColumn("Eject", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-        ImGui::TableSetupColumn("Sel", ImGuiTableColumnFlags_WidthStretch);
+        float small_btn = SMALL_BUTTON_WIDTH;
+        float en_w = BUTTON_WIDTH * 0.5f;
+        float type_w = BUTTON_WIDTH * 1.1f;
+        float btns_w = small_btn * 3 + ImGui::GetStyle().ItemSpacing.x * 2;
+        float wp_width = ImGui::GetContentRegionAvail().x - en_w - type_w - btns_w - ImGui::GetStyle().ItemSpacing.x * 3 - 8.0f;
+        if (wp_width < BUTTON_WIDTH) wp_width = BUTTON_WIDTH;
+        ImGui::TableSetupColumn("En", ImGuiTableColumnFlags_WidthFixed, en_w);
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, type_w);
+        ImGui::TableSetupColumn("WP", ImGuiTableColumnFlags_WidthFixed, wp_width);
+        ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, small_btn);
+        ImGui::TableSetupColumn("Eject", ImGuiTableColumnFlags_WidthFixed, small_btn);
+        ImGui::TableSetupColumn("Sel", ImGuiTableColumnFlags_WidthFixed, small_btn);
 
         ImGui::TableNextRow();
         
@@ -127,7 +132,7 @@ static void RenderDriveSlot(const int i)
         ImGui::TableNextColumn();
         int type_idx = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
         
-        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x);
+        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x - 6.0f);
         const char* type_name = (type_idx >= 0 && type_idx < IM_ARRAYSIZE(drive_types)) ? drive_types[type_idx] : "Disabled";
         if (ImGui::BeginCombo("##FloppyTypeCombo", type_name)) {
             for (int n = 0; n < IM_ARRAYSIZE(drive_types); n++) {
@@ -175,10 +180,7 @@ static void RenderDriveSlot(const int i)
         }
         ShowHelpMarker("Prevent writing to the disk image");
 
-        // 4. Filler
-        ImGui::TableNextColumn();
-        
-        // 5. Info Button
+        // 4. Info Button
         ImGui::TableNextColumn();
         if (AmigaButton("?", ImVec2(-1, 0))) {
              if (strlen(changed_prefs.floppyslots[i].df) > 0)
@@ -187,7 +189,7 @@ static void RenderDriveSlot(const int i)
         
         // 6. Eject Button
         ImGui::TableNextColumn();
-        if (AmigaButton("Eject", ImVec2(-1, 0))) {
+        if (AmigaButton(ICON_FA_EJECT "##Eject", ImVec2(-1, 0))) {
              disk_eject(i);
              changed_prefs.floppyslots[i].df[0] = 0;
              invalidate_wp_cache(i);
@@ -210,7 +212,7 @@ static void RenderDriveSlot(const int i)
     bool enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
     ImGui::BeginDisabled(!enabled);
     
-    ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x);
+    ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x - 6.0f);
     std::string current_val = changed_prefs.floppyslots[i].df;
     if (current_val.empty()) current_val = "";
     
@@ -256,7 +258,7 @@ static void RenderDrawBridge()
     ImGui::AlignTextToFramePadding();
     ImGui::Text("DrawBridge driver:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 4);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 6.0f);
 
     std::string current_driver = "Select Driver...";
     if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
@@ -287,7 +289,7 @@ static void RenderDrawBridge()
     ShowHelpMarker("Select the DrawBridge hardware driver for connecting real Amiga floppy drives");
 
     ImGui::SameLine();
-    if (AmigaButton("Refresh")) {
+    if (AmigaButton(ICON_FA_ARROWS_ROTATE " Refresh")) {
         FloppyBridgeAPI::getDriverList(driver_list);
     }
     ShowHelpMarker("Refresh the list of available DrawBridge drivers");
@@ -311,7 +313,7 @@ static void RenderDrawBridge()
     // cboDBSerialPort->setEnabled(!chkDBSerialAuto->isSelected()); if ConfigOption_ComPort supported.
     bool serial_port_supported = (config_options & FloppyBridgeAPI::ConfigOption_ComPort) != 0;
     ImGui::BeginDisabled(!serial_port_supported || changed_prefs.drawbridge_serial_auto);
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
 
     std::string current_port = "none";
     if (changed_prefs.drawbridge_serial_port[0] != 0) {
@@ -375,7 +377,7 @@ static void RenderDrawBridge()
     ImGui::AlignTextToFramePadding();
     ImGui::Text("DrawBridge: Drive cable:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
     int cable_idx = changed_prefs.drawbridge_drive_cable;
     if (ImGui::BeginCombo("##DBCable", drive_cable_list[cable_idx])) {
         for (int n = 0; n < IM_ARRAYSIZE(drive_cable_list); n++) {
@@ -443,7 +445,7 @@ void render_panel_floppy()
     ImGui::SameLine();
     
     ImGui::BeginDisabled();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - 6.0f);
     char speed_label[32];
     strncpy(speed_label, drive_speed_list[speed_idx], 32);
     ImGui::InputText("##SpeedLabel", speed_label, 32, ImGuiInputTextFlags_ReadOnly);
@@ -456,23 +458,23 @@ void render_panel_floppy()
     // ---------------------------------------------------------
     BeginGroupBox("New Floppy Disk Image");
     
-    float avail_w = ImGui::GetContentRegionAvail().x;
-    float btn_w = (avail_w - 20) / 3.0f;
+    float avail_w = ImGui::GetContentRegionAvail().x - 10.0f;
+    float btn_w = (avail_w - ImGui::GetStyle().ItemSpacing.x * 2) / 3.0f;
     
-    if (AmigaButton("Create 3.5'' DD disk", ImVec2(btn_w, 0))) {
+    if (AmigaButton(ICON_FA_PLUS " 3.5'' DD", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateDD;
         OpenFileDialogKey("FLOPPY", "Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path(), true);
     }
     ShowHelpMarker("Create a new 880KB double-density floppy disk image");
     ImGui::SameLine();
-    if (AmigaButton("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
+    if (AmigaButton(ICON_FA_PLUS " 3.5'' HD", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateHD;
         OpenFileDialogKey("FLOPPY", "Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path(), true);
     }
     ShowHelpMarker("Create a new 1.76MB high-density floppy disk image");
     ImGui::SameLine();
     ImGui::BeginDisabled(strlen(changed_prefs.floppyslots[0].df) == 0);
-    if (AmigaButton("Save config for disk", ImVec2(btn_w, 0))) {
+    if (AmigaButton(ICON_FA_FLOPPY_DISK " Save config", ImVec2(btn_w, 0))) {
         char filename[MAX_DPATH];
         char diskname[MAX_DPATH];
         extract_filename(changed_prefs.floppyslots[0].df, diskname);

@@ -165,7 +165,7 @@ void render_panel_configurations()
 
 	ImGui::Spacing();
 
-	if (AmigaButton("Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_UPLOAD " Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 		{
@@ -175,7 +175,7 @@ void render_panel_configurations()
 	}
 	ImGui::SameLine();
 	if (strlen(name) == 0) ImGui::BeginDisabled();
-	if (AmigaButton("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		char filename[MAX_DPATH];
 		char config_path[MAX_DPATH];
@@ -202,7 +202,7 @@ void render_panel_configurations()
 	}
 	if (strlen(name) == 0) ImGui::EndDisabled();
 	ImGui::SameLine();
-	if (AmigaButton("Save As...", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save As...", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		std::string config_dir = get_configuration_path();
 		OpenFileDialogKey("CONFIG_SAVE_AS", "Save Configuration As", "UAE Config (*.uae){.uae}", config_dir, true);
@@ -245,7 +245,7 @@ void render_panel_configurations()
 	}
 	ImGui::SameLine();
 	if (selected == -1) ImGui::BeginDisabled();
-	if (AmigaButton("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_TRASH_CAN " Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 			ImGui::OpenPopup("Delete Configuration");
@@ -257,7 +257,7 @@ void render_panel_configurations()
 		ImGui::Text("Do you want to delete '%s'?", ConfigFilesList[selected]->Name);
 		ImGui::Separator();
 
-		if (AmigaButton("Yes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		if (AmigaButton(ICON_FA_CHECK " Yes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			remove(ConfigFilesList[selected]->FullPath);
 			ReadConfigFileList();
@@ -268,7 +268,7 @@ void render_panel_configurations()
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
-		if (AmigaButton("No", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		if (AmigaButton(ICON_FA_XMARK " No", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			ImGui::CloseCurrentPopup();
 		}

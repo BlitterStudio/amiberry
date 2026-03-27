@@ -365,7 +365,7 @@ void render_panel_ram() {
     char current_name_buf[128];
     get_ramboard_name(current_advanced_ram_idx, current_name_buf, sizeof(current_name_buf), true);
 
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH * 2.7f - ImGui::GetStyle().ItemSpacing.x * 2);
     if (ImGui::BeginCombo("##RamSelector", current_name_buf)) {
         // WinUAE sync: Build dropdown like setfastram_selectmenu()
         char item_buf[128];
@@ -462,7 +462,7 @@ void render_panel_ram() {
 
         if (current_msi) {
              ImGui::SameLine();
-             ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH * 0.6f - ImGui::GetStyle().ItemSpacing.x);
 
              int current_size_idx = get_mem_index(rb->size, current_msi, msi_count);
 
@@ -496,7 +496,7 @@ void render_panel_ram() {
             ShowHelpMarker("Size of the selected memory board. Available sizes depend on the type of memory.");
 
              ImGui::SameLine();
-             ImGui::SetNextItemWidth(BUTTON_WIDTH);
+             ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.6f);
              char size_buf[32];
              strncpy(size_buf, memsize_names[current_msi[current_size_idx]], sizeof(size_buf));
              ImGui::InputText("##AdvSize", size_buf, sizeof(size_buf),
@@ -525,7 +525,7 @@ void render_panel_ram() {
             ImGui::BeginDisabled(!edit_ac);
             char manuf_buf[8];
             snprintf(manuf_buf, sizeof(manuf_buf), "%04X", rb->manufacturer);
-            ImGui::SetNextItemWidth(BUTTON_WIDTH);
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.8f);
             if (ImGui::InputText("##Manuf", manuf_buf, 8, ImGuiInputTextFlags_CharsHexadecimal)) {
                 rb->manufacturer = (uae_u16) strtoul(manuf_buf, nullptr, 16);
                 // Update Autoconfig bytes
@@ -552,7 +552,7 @@ void render_panel_ram() {
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Autoconfig data");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3); // Wider to match WinUAE visual
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             
             // Format autoconfig bytes
             char autoconfig_buf[64] = "";
@@ -576,7 +576,7 @@ void render_panel_ram() {
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Memory board");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 
             // zram is set above: 0=none, 2=Z2, 3=Z3
             bool enable_board_select = (zram == 2 || zram == 3);
@@ -668,14 +668,14 @@ void render_panel_ram() {
             ImGui::SameLine();
             char addr_buf[16];
             snprintf(addr_buf, sizeof(addr_buf), "%08X", rb->start_address);
-            ImGui::SetNextItemWidth(BUTTON_WIDTH);
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.8f);
             if (ImGui::InputText("##Address", addr_buf, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
                 rb->start_address = strtoul(addr_buf, nullptr, 16);
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
             // Second box for end address
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(BUTTON_WIDTH);
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.8f);
             char end_addr_buf[16];
             uae_u32 end_addr = rb->start_address + rb->size;
             if (end_addr > 0) end_addr -= 1; // Inclusive range usually
@@ -723,7 +723,7 @@ void render_panel_ram() {
             ImGui::Spacing();
             ImGui::Text("Z3 mapping mode:");
             const char *z3_mapping_items[] = {"Automatic (*)", "UAE", "Real"};
-            ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             ImGui::BeginDisabled(!z3_enabled);
             ImGui::Combo("##Z3Mapping", &changed_prefs.z3_mapping_mode, z3_mapping_items,
                          IM_ARRAYSIZE(z3_mapping_items));

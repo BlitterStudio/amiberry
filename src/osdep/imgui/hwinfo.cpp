@@ -95,12 +95,12 @@ void render_panel_hwinfo()
     
     ImGui::SameLine();
     ImGui::BeginDisabled(!changed_prefs.autoconfig_custom_sort || selected_row < 0);
-    if (AmigaButton("Move up", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_ARROW_UP " Move up", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
         int new_idx = expansion_autoconfig_move(&changed_prefs, selected_row, -1, false);
         if (new_idx >= 0) selected_row = new_idx;
     }
     ImGui::SameLine();
-    if (AmigaButton("Move down", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_ARROW_DOWN " Move down", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
         int new_idx = expansion_autoconfig_move(&changed_prefs, selected_row, 1, false);
         if (new_idx >= 0) selected_row = new_idx;
     }

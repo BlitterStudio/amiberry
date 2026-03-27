@@ -65,6 +65,7 @@ void render_panel_rtg() {
         if (v_idx >= 0) current_board_idx = v_idx + 1;
     }
 
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.6f);
     if (ImGui::Combo("##RTGBoardCombo", &current_board_idx, rtg_boards_c.data(), (int) rtg_boards_c.size())) {
         if (current_board_idx == 0) {
             rbc->rtgmem_type = 0;
@@ -118,7 +119,7 @@ void render_panel_rtg() {
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Monitor:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
     {
         int mon_id = rbc->monitor_id;
         const char* mon_labels[MAX_AMIGAMONITORS];
@@ -210,6 +211,7 @@ void render_panel_rtg() {
         int idx8 = 0;
         uae_u32 mask = changed_prefs.picasso96_modeflags;
         if (mask & RGBFF_CLUT) idx8 = 2;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##8bit", &idx8, rtg_8bit_modes, IM_ARRAYSIZE(rtg_8bit_modes))) {
             mask &= ~RGBFF_CLUT;
             if (idx8 == 1 || idx8 == 2) mask |= RGBFF_CLUT;
@@ -230,6 +232,7 @@ void render_panel_rtg() {
         else if (mask & RGBFF_B5G6R5PC) idx16 = 6;
         else if (mask & RGBFF_B5G5R5PC) idx16 = 7;
 
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##16bit", &idx16, rtg_16bit_modes, IM_ARRAYSIZE(rtg_16bit_modes))) {
             mask &= ~(RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC);
             if (idx16 == 1) mask |= RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC |
@@ -251,6 +254,7 @@ void render_panel_rtg() {
         if (mask & RGBFF_R8G8B8) idx24 = 2;
         else if (mask & RGBFF_B8G8R8) idx24 = 3;
 
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##24bit", &idx24, rtg_24bit_modes, IM_ARRAYSIZE(rtg_24bit_modes))) {
             mask &= ~(RGBFF_R8G8B8 | RGBFF_B8G8R8);
             if (idx24 == 1) mask |= RGBFF_R8G8B8 | RGBFF_B8G8R8;
@@ -269,6 +273,7 @@ void render_panel_rtg() {
         else if (mask & RGBFF_R8G8B8A8) idx32 = 4;
         else if (mask & RGBFF_B8G8R8A8) idx32 = 5;
 
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##32bit", &idx32, rtg_32bit_modes, IM_ARRAYSIZE(rtg_32bit_modes))) {
             mask &= ~(RGBFF_A8R8G8B8 | RGBFF_A8B8G8R8 | RGBFF_R8G8B8A8 | RGBFF_B8G8R8A8);
             if (idx32 == 1) mask |= RGBFF_A8R8G8B8 | RGBFF_A8B8G8R8 | RGBFF_R8G8B8A8 | RGBFF_B8G8R8A8;
@@ -362,7 +367,7 @@ void render_panel_rtg() {
         if (display_count > 1) {
             ImGui::Text("Display:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             int current_display = changed_prefs.gfx_apmode[APMODE_RTG].gfx_display;
             if (ImGui::BeginCombo("##RTGHostDisplay", current_display > 0 && current_display <= display_count
                 ? Displays[current_display - 1].monitorname : "Primary")) {
@@ -385,6 +390,9 @@ void render_panel_rtg() {
     }
 
     if (ImGui::BeginTable("rtg_bottom_table", 3, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Col1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("Col2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("Col3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
@@ -397,8 +405,8 @@ void render_panel_rtg() {
         else if (changed_prefs.rtgvblankrate == 70) current_rate_idx = 4;
         else if (changed_prefs.rtgvblankrate == 75) current_rate_idx = 5;
 
-        ImGui::Text("Refresh rate:");
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        ImGui::AlignTextToFramePadding(); ImGui::Text("Refresh rate:");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##RefreshRateCombo", &current_rate_idx, rtg_refreshrates, IM_ARRAYSIZE(rtg_refreshrates))) {
             switch (current_rate_idx) {
                 case 0: changed_prefs.rtgvblankrate = 0;
@@ -424,8 +432,8 @@ void render_panel_rtg() {
         int current_buffer = (changed_prefs.gfx_apmode[1].gfx_backbuffers > 0)
                                  ? changed_prefs.gfx_apmode[1].gfx_backbuffers - 1
                                  : 0;
-        ImGui::Text("Buffer mode:");
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        ImGui::AlignTextToFramePadding(); ImGui::Text("Buffer mode:");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##BufferModeCombo", &current_buffer, rtg_buffermodes, IM_ARRAYSIZE(rtg_buffermodes))) {
             changed_prefs.gfx_apmode[1].gfx_backbuffers = current_buffer + 1;
         }
@@ -436,8 +444,8 @@ void render_panel_rtg() {
 
         const char *rtg_aspectratios[] = {"Disabled", "Automatic"};
         int current_aspect = (changed_prefs.rtgscaleaspectratio == 0) ? 0 : 1;
-        ImGui::Text("Aspect ratio:");
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        ImGui::AlignTextToFramePadding(); ImGui::Text("Aspect ratio:");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::Combo("##AspectRatioCombo", &current_aspect, rtg_aspectratios, IM_ARRAYSIZE(rtg_aspectratios))) {
             changed_prefs.rtgscaleaspectratio = (current_aspect == 0) ? 0 : -1;
         }

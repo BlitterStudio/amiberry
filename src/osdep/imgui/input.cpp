@@ -242,7 +242,7 @@ void render_panel_input() {
         ImGui::TableNextColumn(); // Skip Col 1
         ImGui::TableNextColumn();
         ImGui::Dummy(ImVec2(0, 8.0f));
-        if (AmigaButton("Swap ports")) {
+        if (AmigaButton(ICON_FA_SHUFFLE " Swap ports")) {
             inputdevice_swap_compa_ports(&changed_prefs, 0);
         }
         ImGui::SameLine();

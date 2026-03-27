@@ -184,14 +184,14 @@ void render_panel_paths()
 	RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
 
 	ImGui::Spacing();
-	if (AmigaButton("Reset to Defaults", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Reset to Defaults", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		reset_default_paths();
 		save_amiberry_settings();
 		ShowMessageBox("Reset Paths", "All paths have been reset to their default values.");
 	}
 	ImGui::SameLine();
-	if (AmigaButton("Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		scan_roms(true);
 		symlink_roms(&changed_prefs);
@@ -199,7 +199,7 @@ void render_panel_paths()
 
 		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
-	if (AmigaButton("Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_DOWNLOAD " Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		std::string destination;
 		//  download WHDLoad executable
@@ -244,7 +244,7 @@ void render_panel_paths()
 			ShowMessageBox("XML Downloader", "Failed to download files!\n\nPlease check the log for more details.");
 	}
 	ImGui::SameLine();
-	if (AmigaButton("Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton(ICON_FA_DOWNLOAD " Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		std::string destination = get_controllers_path();
 		destination += "gamecontrollerdb.txt";

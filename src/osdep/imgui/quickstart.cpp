@@ -311,7 +311,7 @@ void render_panel_quickstart() {
         // 2. Select file Button
         const float button_width = BUTTON_WIDTH * 1.33f; // Wider button for "Select file"
         if (!drive_enabled) ImGui::BeginDisabled();
-        if (AmigaButton("Select file", ImVec2(button_width, 0))) {
+        if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file", ImVec2(button_width, 0))) {
             std::string tmp;
             if (disk_present)
                 tmp = changed_prefs.floppyslots[i].df;
@@ -410,11 +410,13 @@ void render_panel_quickstart() {
         // 6. Eject Button
         bool eject_enabled = drive_enabled && disk_present;
         if (!eject_enabled) ImGui::BeginDisabled();
-        if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH * 1.33f / 2.0f, 0))) {
+        snprintf(label, sizeof(label), ICON_FA_EJECT "##QSFloppyEject%d", i);
+        if (AmigaButton(label, ImVec2(SMALL_BUTTON_WIDTH, 0))) {
             disk_eject(i);
             changed_prefs.floppyslots[i].df[0] = 0;
             qs_invalidate_wp_cache(i);
         }
+        ShowHelpMarker("Eject disk");
         if (!eject_enabled) ImGui::EndDisabled();
 
         // 7. File Path Combo (Next Line)
@@ -485,7 +487,7 @@ void render_panel_quickstart() {
         ImGui::SameLine();
 
         const float cd_button_width = BUTTON_WIDTH * 1.33f;
-        if (AmigaButton("Select file", ImVec2(cd_button_width, 0))) {
+        if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file", ImVec2(cd_button_width, 0))) {
             std::string tmp;
             if (std::strlen(changed_prefs.cdslots[0].name) > 0)
                 tmp = changed_prefs.cdslots[0].name;
@@ -504,7 +506,7 @@ void render_panel_quickstart() {
 
         bool cd_controls_enabled = changed_prefs.cdslots[0].inuse;
         if (!cd_controls_enabled) ImGui::BeginDisabled();
-        if (AmigaButton("Eject", ImVec2(eject_button_width, 0))) {
+        if (AmigaButton(ICON_FA_EJECT " Eject", ImVec2(eject_button_width, 0))) {
             changed_prefs.cdslots[0].name[0] = 0;
             changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
         }
@@ -591,7 +593,7 @@ void render_panel_quickstart() {
     ImGui::Spacing();
 
     BeginGroupBox("WHDLoad auto-config:");
-    if (AmigaButton("Select file##QSWHD", ImVec2(BUTTON_WIDTH * 1.33f, 0))) {
+    if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file##QSWHD", ImVec2(BUTTON_WIDTH * 1.33f, 0))) {
         std::string tmp;
         if (!whdload_prefs.whdload_filename.empty())
             tmp = whdload_prefs.whdload_filename;
@@ -603,7 +605,7 @@ void render_panel_quickstart() {
 
     ImGui::SameLine();
 
-    if (AmigaButton("Eject##QSWHD", ImVec2(BUTTON_WIDTH * 1.33f / 2.0f, 0))) {
+    if (AmigaButton(ICON_FA_EJECT "##QSWHD", ImVec2(SMALL_BUTTON_WIDTH, 0))) {
         whdload_prefs.whdload_filename.clear();
     }
 
@@ -662,7 +664,7 @@ void render_panel_quickstart() {
     EndGroupBox("Mode");
 
     ImGui::Spacing();
-    if (AmigaButton("Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_CHECK " Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
         Quickstart_ApplyDefaults();
     }
 

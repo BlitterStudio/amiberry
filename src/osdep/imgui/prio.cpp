@@ -20,7 +20,10 @@ void render_panel_prio() {
 
     const char *prio_items[] = {"Low", "Normal", "High"};
 
-    if (ImGui::BeginTable("PrioPanelTable", 3, ImGuiTableFlags_SizingStretchProp)) {
+    if (ImGui::BeginTable("PrioPanelTable", 3, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("c3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
         // --- When Active ---
         ImGui::TableNextColumn();
         BeginGroupBox("When Active");

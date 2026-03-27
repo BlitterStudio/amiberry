@@ -209,7 +209,7 @@ static void render_update_section()
 				if (get_update_method() == UpdateMethod::SELF_UPDATE)
 				{
 					ImGui::SameLine();
-					if (AmigaButton("Download & Update", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+					if (AmigaButton(ICON_FA_DOWNLOAD " Download & Update", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 						start_background_download();
 				}
 				else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
@@ -255,7 +255,7 @@ static void render_update_section()
 			ImGui::Text("%d%% (%s / %s)", static_cast<int>(progress * 100.0f),
 				format_bytes(downloaded).c_str(), format_bytes(total).c_str());
 
-			if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 				s_download_cancel_requested.store(true);
 		}
 		else if (s_download_complete)
@@ -264,7 +264,7 @@ static void render_update_section()
 			if (AmigaButton("Restart Now", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 				restart_after_update();
 			ImGui::SameLine();
-			if (AmigaButton("Close", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			if (AmigaButton(ICON_FA_XMARK " Close", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 				s_download_complete.store(false);
 		}
 		else if (s_download_failed.load())
@@ -273,7 +273,7 @@ static void render_update_section()
 				std::lock_guard<std::mutex> lock(s_download_error_mutex);
 				ImGui::TextWrapped("%s", s_download_error.c_str());
 			}
-			if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 			{
 				s_download_failed.store(false);
 				{

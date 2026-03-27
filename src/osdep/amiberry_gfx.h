@@ -18,7 +18,7 @@ extern SDL_PixelFormat pixel_format;
 extern uae_u8* p96_get_render_buffer_pointer(int monid);
 #endif
 
-#define GUI_WIDTH  800
+#define GUI_WIDTH  860
 #define GUI_HEIGHT 720
 
 #define DISPLAY_SIGNAL_SETUP 				1

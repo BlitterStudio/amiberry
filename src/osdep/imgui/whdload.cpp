@@ -94,7 +94,7 @@ static void RenderCustomFieldsPopup()
             ImGui::Separator();
         }
 
-        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
+        if (AmigaButton(ICON_FA_CHECK " OK", ImVec2(BUTTON_WIDTH, 0))) {
             create_startup_sequence(); // Apply changes
             ImGui::CloseCurrentPopup();
         }
@@ -111,7 +111,7 @@ void render_panel_whdload()
     ImGui::Text("WHDLoad auto-config:");
 
     ImGui::SameLine();
-    if (AmigaButton("Select file", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
         std::string startPath = whdload_prefs.whdload_filename;
         if (startPath.empty()) startPath = get_whdload_arch_path();
         const auto filter = "LHA Files (*.lha,*.lzh){.lha,.lzh},All Files (*){.*}";
@@ -131,7 +131,7 @@ void render_panel_whdload()
     }
 
     ImGui::SameLine();
-    if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+    if (AmigaButton(ICON_FA_EJECT " Eject", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
         whdload_prefs.whdload_filename = "";
         clear_whdload_prefs();
     }
