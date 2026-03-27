@@ -4306,8 +4306,8 @@ static void wordsync_detected(bool startup)
 {
 	// wordsync interrupt is edge triggered
 	if (!dsksync_on) {
-		// wordsync interrupt is inhibited if DSKLEN write bit is set
-		if (!(dsklen & 0x4000)) {
+		// wordsync interrupt is inhibited if writing is active.
+		if (dskdmaen != DSKDMA_WRITE) {
 			INTREQ_INT(12, 0);
 		}
 		dsksync_on = true;
