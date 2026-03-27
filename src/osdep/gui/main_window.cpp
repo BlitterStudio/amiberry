@@ -1542,7 +1542,8 @@ void run_gui()
 					}
 				}
 			}
-			ImVec2 icon_p0 = ImVec2(pos.x + pad_x, pos.y + pad_y);
+			float icon_y = pos.y + ((rmax.y - rmin.y) - icon_h) * 0.5f;
+			ImVec2 icon_p0 = ImVec2(pos.x + pad_x, icon_y);
 			ImVec2 icon_p1 = ImVec2(icon_p0.x + icon_w, icon_p0.y + icon_h);
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			if (icon_tex != ImTextureID_Invalid) {
