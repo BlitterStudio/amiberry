@@ -2159,9 +2159,11 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	int32_t xrel = event.motion.xrel;
 	int32_t yrel = event.motion.yrel;
 
-	// HiDPI / Retina: scale from screen coordinates (points) to drawable pixels
-	// Scale factors cached per-monitor in update_hidpi_scale(), updated on window resize
-	if (mon->hidpi_needs_scaling) {
+	// HiDPI / Retina: scale from screen coordinates (points) to drawable pixels.
+	// Only needed for OpenGL path — SDL_RenderCoordinatesFromWindow handles this
+	// internally when the SDL renderer is active.
+	// Scale factors cached per-monitor in update_hidpi_scale(), updated on window resize.
+	if (!mon->amiga_renderer && mon->hidpi_needs_scaling) {
 		x = (int32_t)(x * mon->hidpi_scale_x);
 		xrel = (int32_t)(xrel * mon->hidpi_scale_x);
 		y = (int32_t)(y * mon->hidpi_scale_y);
