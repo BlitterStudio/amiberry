@@ -420,7 +420,7 @@ jobs:
           else
             DMG_VERSION="${VERSION}"
           fi
-          DMG_NAME="Amiberry-${DMG_VERSION}-Darwin"
+          DMG_NAME="Amiberry-${DMG_VERSION}-macOS-universal"
 
           # Create a staging directory for DMG contents
           STAGING="dmg-staging"
