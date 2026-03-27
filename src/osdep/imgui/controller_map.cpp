@@ -11,6 +11,11 @@
 #include <cmath>
 #include <string>
 
+#include "gui/controllermap_png_data.h"
+#include "gui/controllermap_back_png_data.h"
+#include "gui/button_png_data.h"
+#include "gui/axis_png_data.h"
+
 enum
 {
 	SDL_GAMEPAD_BINDING_AXIS_LEFTX_NEGATIVE,
@@ -190,12 +195,14 @@ static struct
 
 static const char* kControllerMapTitle = "Controller Map";
 
-static ImTextureID LoadTexture(const char* file, bool transparent, int* out_w, int* out_h)
+static ImTextureID LoadTextureFromMemory(const unsigned char* data, unsigned int size, bool transparent, int* out_w, int* out_h)
 {
-	SDL_Surface* temp = IMG_Load(file);
+	SDL_IOStream* io = SDL_IOFromConstMem(data, size);
+	if (!io) return ImTextureID_Invalid;
+	SDL_Surface* temp = IMG_Load_IO(io, true);
 	if (temp == nullptr)
 	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", file, SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load embedded texture: %s", SDL_GetError());
 		return ImTextureID_Invalid;
 	}
 
@@ -224,15 +231,10 @@ static void ControllerMap_EnsureTextures()
 		return;
 	}
 
-	const auto front_path = prefix_with_data_path("controllermap.png");
-	const auto back_path = prefix_with_data_path("controllermap_back.png");
-	const auto button_path = prefix_with_data_path("button.png");
-	const auto axis_path = prefix_with_data_path("axis.png");
-
-	g_controller_map.background_front = LoadTexture(front_path.c_str(), true, &g_controller_map.bg_w, &g_controller_map.bg_h);
-	g_controller_map.background_back = LoadTexture(back_path.c_str(), true, nullptr, nullptr);
-	g_controller_map.marker_button = LoadTexture(button_path.c_str(), true, &g_controller_map.marker_button_w, &g_controller_map.marker_button_h);
-	g_controller_map.marker_axis = LoadTexture(axis_path.c_str(), true, &g_controller_map.marker_axis_w, &g_controller_map.marker_axis_h);
+	g_controller_map.background_front = LoadTextureFromMemory(controllermap_png_data, controllermap_png_size, true, &g_controller_map.bg_w, &g_controller_map.bg_h);
+	g_controller_map.background_back = LoadTextureFromMemory(controllermap_back_png_data, controllermap_back_png_size, true, nullptr, nullptr);
+	g_controller_map.marker_button = LoadTextureFromMemory(button_png_data, button_png_size, true, &g_controller_map.marker_button_w, &g_controller_map.marker_button_h);
+	g_controller_map.marker_axis = LoadTextureFromMemory(axis_png_data, axis_png_size, true, &g_controller_map.marker_axis_w, &g_controller_map.marker_axis_h);
 }
 
 static void ControllerMap_DestroyTextures()

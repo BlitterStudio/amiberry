@@ -6,6 +6,7 @@
 #include <string>
 #include "fsdb_host.h"
 #include "amiga_constants.h"
+#include "gui/amiberry_png_data.h"
 
 static inline bool gfx_platform_skip_alloctexture(int monid, int w, int h)
 {
@@ -57,7 +58,8 @@ static inline bool gfx_platform_skip_sortdisplays()
 static inline void gfx_platform_set_window_icon(SDL_Window* window)
 {
 #ifndef __MACH__
-	auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
+	SDL_IOStream* io = SDL_IOFromConstMem(amiberry_png_data, amiberry_png_size);
+	auto* const icon_surface = io ? IMG_Load_IO(io, true) : nullptr;
 	if (icon_surface != nullptr)
 	{
 		SDL_SetWindowIcon(window, icon_surface);

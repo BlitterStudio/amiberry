@@ -47,6 +47,10 @@
 #include <sstream>
 #include "imgui/imgui_panels.h"
 #include "imgui/imgui_help_text.h"
+#include "icons_fa.h"
+#include "fa_solid_900_compressed.h"
+#include "AmigaTopaz_compressed.h"
+#include "amiberry_png_data.h"
 
 bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
 int last_x = 0;
@@ -836,11 +840,14 @@ void amiberry_gui_init()
 		}
 
 #ifndef __MACH__
-		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
-		if (icon_surface != nullptr)
 		{
-			SDL_SetWindowIcon(mon->gui_window, icon_surface);
-			SDL_DestroySurface(icon_surface);
+			SDL_IOStream* io = SDL_IOFromConstMem(amiberry_png_data, amiberry_png_size);
+			auto* const icon_surface = io ? IMG_Load_IO(io, true) : nullptr;
+			if (icon_surface != nullptr)
+			{
+				SDL_SetWindowIcon(mon->gui_window, icon_surface);
+				SDL_DestroySurface(icon_surface);
+			}
 		}
 #endif
 	}
@@ -934,20 +941,47 @@ void amiberry_gui_init()
 	style.FontScaleDpi = 1.0f / font_dpi_scale;
 
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
-	const std::string font_path = prefix_with_data_path(font_file);
+	const bool use_default_font = (font_file == "AmigaTopaz.ttf");
 	const float font_px = gui_theme.font_size > 0 ? static_cast<float>(gui_theme.font_size) : 15.0f;
 	const float font_load_px = font_px * scaling_factor * font_dpi_scale;
 
 	ImFont* loaded_font = nullptr;
-	if (!font_path.empty() && std::filesystem::exists(font_path)) {
-		loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_load_px);
+	if (use_default_font) {
+		// Load embedded Amiga Topaz — no filesystem dependency
+		loaded_font = io.Fonts->AddFontFromMemoryCompressedTTF(
+			AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px);
+	} else {
+		// User-configured custom font: load from filesystem
+		const std::string font_path = prefix_with_data_path(font_file);
+		if (!font_path.empty() && std::filesystem::exists(font_path)) {
+			loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_load_px);
+		}
+		if (!loaded_font) {
+			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+				"ImGui: failed to load font '%s', falling back to embedded Amiga Topaz", font_path.c_str());
+			loaded_font = io.Fonts->AddFontFromMemoryCompressedTTF(
+				AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px);
+		}
 	}
 	if (!loaded_font) {
 		ImFontConfig fallback_cfg;
 		fallback_cfg.SizePixels = font_load_px;
 		loaded_font = io.Fonts->AddFontDefault(&fallback_cfg);
-		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "ImGui: failed to load font '%s', falling back to default", font_path.c_str());
+		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "ImGui: all font loading failed, using ImGui default");
 	}
+
+	// Merge Font Awesome icon font (embedded, no file dependency)
+	{
+		ImFontConfig icons_cfg;
+		icons_cfg.MergeMode = true;
+		icons_cfg.PixelSnapH = true;
+		icons_cfg.GlyphMinAdvanceX = font_load_px; // monospace-width icons
+		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+		io.Fonts->AddFontFromMemoryCompressedTTF(
+			fa_solid_900_compressed_data, fa_solid_900_compressed_size,
+			font_load_px, &icons_cfg, icon_ranges);
+	}
+
 	io.FontDefault = loaded_font;
 
 	// Setup Platform/Renderer backends
@@ -1142,10 +1176,10 @@ void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 
 // Provide IMGUI categories using centralized panel list
 ConfigCategory categories[] = {
-#define PANEL(id, label, icon) { label, icon, render_panel_##id, help_text_##id },
+#define PANEL(id, label, img, ico) { label, img, ico, render_panel_##id, help_text_##id },
 	IMGUI_PANEL_LIST
 #undef PANEL
-	{ nullptr, nullptr, nullptr, nullptr }
+	{ nullptr, nullptr, nullptr, nullptr, nullptr }
 };
 
 void disable_resume()
@@ -1391,7 +1425,7 @@ void run_gui()
 
 		static char sidebar_filter[64] = "";
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		ImGui::InputTextWithHint("##sidebar_filter", "Search...", sidebar_filter, sizeof(sidebar_filter));
+		ImGui::InputTextWithHint("##sidebar_filter", ICON_FA_MAGNIFYING_GLASS " Search...", sidebar_filter, sizeof(sidebar_filter));
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 		ImGui::Dummy(ImVec2(0, 4.0f));
 
@@ -1527,12 +1561,29 @@ void run_gui()
 			ImVec2 pos = rmin;
 			float pad_y = s.FramePadding.y;
 			float pad_x = s.FramePadding.x;
-			float avail_h = (rmax.y - rmin.y) - 2.0f * pad_y;
-			float icon_h = std::min(icon_h_target, avail_h > 0.0f ? avail_h : (row_h - 2.0f * pad_y));
-			float icon_w = icon_h; // default square
-			ImTextureID icon_tex = ImTextureID_Invalid;
-			int tex_w = 0, tex_h = 0;
-			if (categories[i].imagepath) {
+			float row_total_h = rmax.y - rmin.y;
+			float text_h = ImGui::GetTextLineHeight();
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+
+			if (categories[i].icon) {
+				// Font icon with accent color; white when selected for contrast
+				const ImU32 icon_col = selected
+					? ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
+					: ImGui::GetColorU32(col_act);
+				const ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
+				float icon_y = pos.y + (row_total_h - text_h) * 0.5f;
+				ImVec2 icon_size = ImGui::CalcTextSize(categories[i].icon);
+				dl->AddText(ImVec2(pos.x + pad_x, icon_y), icon_col, categories[i].icon);
+				float text_x = pos.x + pad_x + icon_size.x + pad_x;
+				float text_y = pos.y + (row_total_h - text_h) * 0.5f;
+				dl->AddText(ImVec2(text_x, text_y), text_col, categories[i].category);
+			} else if (categories[i].imagepath) {
+				// PNG fallback
+				float avail_h = row_total_h - 2.0f * pad_y;
+				float icon_h = std::min(icon_h_target, avail_h > 0.0f ? avail_h : (row_h - 2.0f * pad_y));
+				float icon_w = icon_h;
+				ImTextureID icon_tex = ImTextureID_Invalid;
+				int tex_w = 0, tex_h = 0;
 				auto it = g_sidebar_icons.find(categories[i].imagepath);
 				if (it != g_sidebar_icons.end() && it->second.tex != ImTextureID_Invalid) {
 					icon_tex = it->second.tex; tex_w = it->second.w; tex_h = it->second.h;
@@ -1541,21 +1592,22 @@ void run_gui()
 						icon_w = icon_h * aspect;
 					}
 				}
-			}
-			float icon_y = pos.y + ((rmax.y - rmin.y) - icon_h) * 0.5f;
-			ImVec2 icon_p0 = ImVec2(pos.x + pad_x, icon_y);
-			ImVec2 icon_p1 = ImVec2(icon_p0.x + icon_w, icon_p0.y + icon_h);
-			ImDrawList* dl = ImGui::GetWindowDrawList();
-			if (icon_tex != ImTextureID_Invalid) {
-				dl->AddImage(icon_tex, icon_p0, icon_p1);
+				float icon_y = pos.y + (row_total_h - icon_h) * 0.5f;
+				ImVec2 icon_p0 = ImVec2(pos.x + pad_x, icon_y);
+				ImVec2 icon_p1 = ImVec2(icon_p0.x + icon_w, icon_p0.y + icon_h);
+				if (icon_tex != ImTextureID_Invalid) {
+					dl->AddImage(icon_tex, icon_p0, icon_p1);
+				} else {
+					dl->AddRectFilled(icon_p0, icon_p1, ImGui::GetColorU32(ImGuiCol_TextDisabled), 3.0f);
+				}
+				float text_x = icon_p1.x + pad_x;
+				float text_y = pos.y + (row_total_h - text_h) * 0.5f;
+				dl->AddText(ImVec2(text_x, text_y), ImGui::GetColorU32(ImGuiCol_Text), categories[i].category);
 			} else {
-				// Fallback: small filled square as placeholder
-				dl->AddRectFilled(icon_p0, icon_p1, ImGui::GetColorU32(ImGuiCol_TextDisabled), 3.0f);
+				// No icon at all
+				float text_y = pos.y + (row_total_h - text_h) * 0.5f;
+				dl->AddText(ImVec2(pos.x + pad_x, text_y), ImGui::GetColorU32(ImGuiCol_Text), categories[i].category);
 			}
-			// Text baseline: vertically center with the row
-			float text_x = icon_p1.x + pad_x;
-			float text_y = pos.y + ((rmax.y - rmin.y) - ImGui::GetTextLineHeight()) * 0.5f;
-			dl->AddText(ImVec2(text_x, text_y), ImGui::GetColorU32(ImGuiCol_Text), categories[i].category);
 		}
 		ImGui::Unindent(4.0f);
 		ImGui::EndChild();

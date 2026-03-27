@@ -8,6 +8,7 @@
 #include "amiberry_update.h"
 #include "target.h"
 #include <SDL3_image/SDL_image.h>
+#include "gui/amiberry_logo_png_data.h"
 
 #include <string>
 #include <thread>
@@ -34,10 +35,10 @@ static void ensure_about_logo_texture()
 {
 	if (about_logo_texture != ImTextureID_Invalid)
 		return;
-	const auto path = prefix_with_data_path("amiberry-logo.png");
-	SDL_Surface* surf = IMG_Load(path.c_str());
+	SDL_IOStream* io = SDL_IOFromConstMem(amiberry_logo_png_data, amiberry_logo_png_size);
+	SDL_Surface* surf = io ? IMG_Load_IO(io, true) : nullptr;
 	if (!surf) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to load %s: %s", path.c_str(), SDL_GetError());
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to load embedded logo: %s", SDL_GetError());
 		return;
 	}
 	about_logo_texture = gui_create_texture(surf, &about_logo_tex_w, &about_logo_tex_h);
