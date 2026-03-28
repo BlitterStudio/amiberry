@@ -4781,6 +4781,116 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	return false;
 }
 
+struct download_progress_ctx
+{
+	std::function<bool(int64_t, int64_t)> progress_cb;
+	std::atomic<bool>* cancel_flag = nullptr;
+};
+
+static int download_progress_callback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t, curl_off_t)
+{
+	auto* ctx = static_cast<download_progress_ctx*>(clientp);
+	if (!ctx)
+		return 0;
+	if (ctx->cancel_flag && ctx->cancel_flag->load())
+		return 1;
+	if (ctx->progress_cb)
+	{
+		const bool should_cancel = ctx->progress_cb(static_cast<int64_t>(dlnow), static_cast<int64_t>(dltotal));
+		if (should_cancel)
+			return 1;
+	}
+	return 0;
+}
+
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup,
+	const std::function<bool(int64_t, int64_t)>& progress_cb, std::atomic<bool>* cancel_flag)
+{
+	ensure_curl_initialized();
+
+	auto tmp = destination;
+	tmp = tmp.append(".tmp");
+
+	if (file_exists(tmp))
+	{
+		write_log("Existing file found, removing %s\n", tmp.c_str());
+		if (std::remove(tmp.c_str()) < 0)
+		{
+			write_log(strerror(errno));
+			write_log("\n");
+		}
+	}
+
+	FILE* fp = fopen(tmp.c_str(), "wb");
+	if (!fp)
+	{
+		write_log("Failed to open temporary file for writing: %s\n", tmp.c_str());
+		return false;
+	}
+
+	CURL* curl = curl_easy_init();
+	if (!curl)
+	{
+		write_log("Failed to initialize libcurl\n");
+		fclose(fp);
+		return false;
+	}
+
+	download_progress_ctx pctx;
+	pctx.progress_cb = progress_cb;
+	pctx.cancel_flag = cancel_flag;
+
+	curl_easy_setopt(curl, CURLOPT_URL, source.c_str());
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file_cb);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Amiberry");
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+	curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, download_progress_callback);
+	curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &pctx);
+	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+
+	const CURLcode res = curl_easy_perform(curl);
+	curl_easy_cleanup(curl);
+	fclose(fp);
+
+	if (res != CURLE_OK)
+	{
+		write_log("Download failed: %s (URL: %s)\n", curl_easy_strerror(res), source.c_str());
+		std::remove(tmp.c_str());
+		return false;
+	}
+
+	if (file_exists(tmp))
+	{
+		if (file_exists(destination) && keep_backup)
+		{
+			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
+			const std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
+			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
+			{
+				write_log(strerror(errno));
+				write_log("\n");
+			}
+		}
+
+		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
+		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
+		{
+			write_log(strerror(errno));
+			write_log("\n");
+		}
+		return true;
+	}
+
+	return false;
+}
+
 void download_rtb(const std::string& filename)
 {
 	const std::string destination_filename = "save-data/Kickstarts/" + filename;
@@ -4794,6 +4904,13 @@ void download_rtb(const std::string& filename)
 }
 #else
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
+{
+	write_log("download_file: not available in libretro build\n");
+	return false;
+}
+
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup,
+	const std::function<bool(int64_t, int64_t)>& progress_cb, std::atomic<bool>* cancel_flag)
 {
 	write_log("download_file: not available in libretro build\n");
 	return false;

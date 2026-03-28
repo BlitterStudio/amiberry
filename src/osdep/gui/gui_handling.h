@@ -1,6 +1,8 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
 
+#include <atomic>
+#include <functional>
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
@@ -475,6 +477,8 @@ extern void update_gui_screen();
 extern void cap_fps(uint64_t start);
 extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup);
+extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup,
+	const std::function<bool(int64_t, int64_t)>& progress_cb, std::atomic<bool>* cancel_flag);
 extern void download_rtb(const std::string& filename);
 extern int fromdfxtype(int num, int dfx, int subtype);
 extern int todfxtype(int num, int dfx, int* subtype);

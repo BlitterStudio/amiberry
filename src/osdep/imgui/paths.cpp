@@ -1,5 +1,9 @@
 #include "imgui.h"
+#include <atomic>
+#include <filesystem>
 #include <functional>
+#include <mutex>
+#include <thread>
 #include "sysdeps.h"
 #include "options.h"
 #include "gui/gui_handling.h"
@@ -10,6 +14,237 @@
 
 extern int console_logging;
 extern std::string get_xml_timestamp(const std::string& xml_filename);
+
+// WHDBooter download state
+static std::atomic<bool> s_whdboot_downloading{false};
+static std::atomic<bool> s_whdboot_complete{false};
+static std::atomic<bool> s_whdboot_failed{false};
+static std::atomic<bool> s_whdboot_cancel{false};
+static std::atomic<int64_t> s_whdboot_dl_now{0};
+static std::atomic<int64_t> s_whdboot_dl_total{0};
+static std::atomic<int> s_whdboot_step{0};
+static std::atomic<int> s_whdboot_step_count{0};
+static std::mutex s_whdboot_mutex;
+static std::string s_whdboot_status;
+static std::string s_whdboot_result_msg;
+static bool s_whdboot_result_is_error = false;
+
+// Controllers DB download state
+static std::atomic<bool> s_controllers_downloading{false};
+static std::atomic<bool> s_controllers_complete{false};
+static std::atomic<bool> s_controllers_failed{false};
+static std::atomic<bool> s_controllers_cancel{false};
+static std::atomic<int64_t> s_controllers_dl_now{0};
+static std::atomic<int64_t> s_controllers_dl_total{0};
+static std::mutex s_controllers_mutex;
+static std::string s_controllers_result_msg;
+static bool s_controllers_result_is_error = false;
+
+static std::string format_download_bytes(int64_t bytes)
+{
+	if (bytes < 1024) return std::to_string(bytes) + " B";
+	if (bytes < 1024 * 1024) return std::to_string(bytes / 1024) + " KB";
+	char buf[32];
+	snprintf(buf, sizeof(buf), "%.1f MB", static_cast<double>(bytes) / (1024.0 * 1024.0));
+	return buf;
+}
+
+static void start_whdboot_download()
+{
+	if (s_whdboot_downloading.load())
+		return;
+
+	s_whdboot_downloading.store(true);
+	s_whdboot_complete.store(false);
+	s_whdboot_failed.store(false);
+	s_whdboot_cancel.store(false);
+	s_whdboot_dl_now.store(0);
+	s_whdboot_dl_total.store(0);
+	s_whdboot_step.store(0);
+	s_whdboot_step_count.store(10);
+	{
+		std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+		s_whdboot_status = "Starting...";
+		s_whdboot_result_msg.clear();
+		s_whdboot_result_is_error = false;
+	}
+
+	std::thread([]() {
+		auto progress_cb = [](int64_t dlnow, int64_t dltotal) -> bool {
+			s_whdboot_dl_now.store(dlnow);
+			s_whdboot_dl_total.store(dltotal);
+			return s_whdboot_cancel.load();
+		};
+
+		auto set_status = [](const std::string& status) {
+			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+			s_whdboot_status = status;
+		};
+
+		auto do_download = [&](int step, const std::string& label, const std::string& url,
+			const std::string& dest, bool backup) -> bool {
+			if (s_whdboot_cancel.load()) return false;
+			s_whdboot_step.store(step);
+			s_whdboot_dl_now.store(0);
+			s_whdboot_dl_total.store(0);
+			set_status(label);
+			write_log("Downloading %s ...\n", dest.c_str());
+			return download_file(url, dest, backup, progress_cb, &s_whdboot_cancel);
+		};
+
+		int step = 0;
+		std::string dest;
+		bool all_ok = true;
+
+		// 1. WHDLoad
+		dest = get_whdbootpath().append("WHDLoad");
+		if (!do_download(++step, "WHDLoad", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", dest, false))
+			all_ok = false;
+
+		// 2. JST
+		dest = get_whdbootpath().append("JST");
+		if (!do_download(++step, "JST", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", dest, false))
+			all_ok = false;
+
+		// 3. AmiQuit
+		dest = get_whdbootpath().append("AmiQuit");
+		if (!do_download(++step, "AmiQuit", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", dest, false))
+			all_ok = false;
+
+		// 4. boot-data.zip
+		dest = get_whdbootpath().append("boot-data.zip");
+		if (!do_download(++step, "boot-data.zip", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", dest, false))
+			all_ok = false;
+
+		// 5-9. RTB files (skip if already present)
+		const char* rtb_files[] = {
+			"kick33180.A500.RTB",
+			"kick34005.A500.RTB",
+			"kick40063.A600.RTB",
+			"kick40068.A1200.RTB",
+			"kick40068.A4000.RTB"
+		};
+		for (const auto& rtb : rtb_files)
+		{
+			++step;
+			if (s_whdboot_cancel.load()) break;
+			const std::string rtb_dest_name = std::string("save-data/Kickstarts/") + rtb;
+			const std::string rtb_dest = get_whdbootpath().append(rtb_dest_name);
+			if (std::filesystem::exists(rtb_dest))
+			{
+				s_whdboot_step.store(step);
+				set_status(std::string(rtb) + " (already exists)");
+				continue;
+			}
+			const std::string rtb_url = std::string("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/") + rtb + "?raw=true";
+			if (!do_download(step, rtb, rtb_url, rtb_dest, false))
+				all_ok = false;
+		}
+
+		// 10. whdload_db.xml
+		dest = get_whdbootpath().append("game-data/whdload_db.xml");
+		const auto old_timestamp = get_xml_timestamp(dest);
+		const bool xml_ok = do_download(++step, "whdload_db.xml",
+			"https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", dest, true);
+
+		if (s_whdboot_cancel.load())
+		{
+			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+			s_whdboot_result_msg = "Download cancelled.";
+			s_whdboot_result_is_error = true;
+			s_whdboot_failed.store(true);
+			s_whdboot_downloading.store(false);
+			return;
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+			if (xml_ok)
+			{
+				const auto new_timestamp = get_xml_timestamp(dest);
+				s_whdboot_result_msg = "WHDBooter files updated.\n\nXML previous: " + old_timestamp + "\nXML new: " + new_timestamp;
+			}
+			else if (!all_ok)
+			{
+				s_whdboot_result_msg = "Some files failed to download.\nPlease check the log for details.";
+				s_whdboot_result_is_error = true;
+			}
+			else
+			{
+				s_whdboot_result_msg = "Failed to download whdload_db.xml.\nPlease check the log for details.";
+				s_whdboot_result_is_error = true;
+			}
+		}
+
+		if (s_whdboot_result_is_error)
+			s_whdboot_failed.store(true);
+		else
+			s_whdboot_complete.store(true);
+		s_whdboot_downloading.store(false);
+	}).detach();
+}
+
+static void start_controllers_download()
+{
+	if (s_controllers_downloading.load())
+		return;
+
+	s_controllers_downloading.store(true);
+	s_controllers_complete.store(false);
+	s_controllers_failed.store(false);
+	s_controllers_cancel.store(false);
+	s_controllers_dl_now.store(0);
+	s_controllers_dl_total.store(0);
+	{
+		std::lock_guard<std::mutex> lock(s_controllers_mutex);
+		s_controllers_result_msg.clear();
+		s_controllers_result_is_error = false;
+	}
+
+	std::thread([]() {
+		auto progress_cb = [](int64_t dlnow, int64_t dltotal) -> bool {
+			s_controllers_dl_now.store(dlnow);
+			s_controllers_dl_total.store(dltotal);
+			return s_controllers_cancel.load();
+		};
+
+		std::string destination = get_controllers_path();
+		destination += "gamecontrollerdb.txt";
+		write_log("Downloading %s ...\n", destination.c_str());
+		const auto result = download_file(
+			"https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/master/gamecontrollerdb.txt",
+			destination, true, progress_cb, &s_controllers_cancel);
+
+		if (s_controllers_cancel.load())
+		{
+			std::lock_guard<std::mutex> lock(s_controllers_mutex);
+			s_controllers_result_msg = "Download cancelled.";
+			s_controllers_result_is_error = true;
+			s_controllers_failed.store(true);
+			s_controllers_downloading.store(false);
+			return;
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(s_controllers_mutex);
+			if (result)
+			{
+				s_controllers_result_msg = "Latest version of Game Controllers DB downloaded.";
+			}
+			else
+			{
+				s_controllers_result_msg = "Failed to download file!\nPlease check the log for details.";
+				s_controllers_result_is_error = true;
+			}
+		}
+
+		if (s_controllers_result_is_error)
+			s_controllers_failed.store(true);
+		else
+			s_controllers_complete.store(true);
+		s_controllers_downloading.store(false);
+	}).detach();
+}
 
 void render_panel_paths()
 {
@@ -123,7 +358,11 @@ void render_panel_paths()
 
 	// Estimate reserved height for bottom controls (logfile widgets + 1 line spacing + 1 line for buttons)
 	const float line_h = ImGui::GetFrameHeightWithSpacing();
-	const float reserved_height = line_h * 6.0f; // logfile widgets + logfile path + spacing + 2 button rows
+	float reserved_height = line_h * 6.0f; // logfile widgets + logfile path + spacing + 2 button rows
+	if (s_whdboot_downloading.load() || s_whdboot_complete.load() || s_whdboot_failed.load())
+		reserved_height += line_h * 3.0f;
+	if (s_controllers_downloading.load() || s_controllers_complete.load() || s_controllers_failed.load())
+		reserved_height += line_h * 3.0f;
 
 	// Begin scrollable area for path entries
 	// Draw a recessed frame around the scroll area
@@ -199,65 +438,112 @@ void render_panel_paths()
 
 		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
-	if (AmigaButton(ICON_FA_DOWNLOAD " Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
-		std::string destination;
-		//  download WHDLoad executable
-		destination = get_whdbootpath().append("WHDLoad");
-		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
+		const bool any_downloading = s_whdboot_downloading.load() || s_controllers_downloading.load();
+		if (any_downloading)
+			ImGui::BeginDisabled();
 
-		//  download JST executable
-		destination = get_whdbootpath().append("JST");
-		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", destination, false);
+		if (AmigaButton(ICON_FA_DOWNLOAD " Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+			start_whdboot_download();
+		ImGui::SameLine();
+		if (AmigaButton(ICON_FA_DOWNLOAD " Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+			start_controllers_download();
 
-		//  download AmiQuit executable
-		destination = get_whdbootpath().append("AmiQuit");
-		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", destination, false);
-
-		//  download boot-data.zip
-		destination = get_whdbootpath().append("boot-data.zip");
-		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
-
-		// download kickstart RTB files for maximum compatibility
-		download_rtb("kick33180.A500.RTB");
-		download_rtb("kick34005.A500.RTB");
-		download_rtb("kick40063.A600.RTB");
-		download_rtb("kick40068.A1200.RTB");
-		download_rtb("kick40068.A4000.RTB");
-
-		destination = get_whdbootpath().append("game-data/whdload_db.xml");
-		const auto old_timestamp = get_xml_timestamp(destination);
-		write_log("Downloading %s ...\n", destination.c_str());
-		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
-
-		if (result)
-		{
-			const auto new_timestamp = get_xml_timestamp(destination);
-			std::string message = "Updated XML downloaded.\n\nPrevious timestamp: " + old_timestamp + "\nNew timestamp: " + new_timestamp;
-			ShowMessageBox("XML Downloader", message.c_str());
-		}
-		else
-			ShowMessageBox("XML Downloader", "Failed to download files!\n\nPlease check the log for more details.");
+		if (any_downloading)
+			ImGui::EndDisabled();
 	}
-	ImGui::SameLine();
-	if (AmigaButton(ICON_FA_DOWNLOAD " Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
-	{
-		std::string destination = get_controllers_path();
-		destination += "gamecontrollerdb.txt";
-		write_log("Downloading % ...\n", destination.c_str());
-		const auto* const url = "https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/master/gamecontrollerdb.txt";
-		const auto result = download_file(url, destination, true);
 
-		if (result)
+	// WHDBooter download progress / results
+	if (s_whdboot_downloading.load())
+	{
+		ImGui::Spacing();
+		const int step = s_whdboot_step.load();
+		const int total_steps = s_whdboot_step_count.load();
+		std::string status;
+		{
+			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+			status = s_whdboot_status;
+		}
+		ImGui::Text("Downloading: %s (%d/%d)", status.c_str(), step, total_steps);
+
+		const int64_t dl_now = s_whdboot_dl_now.load();
+		const int64_t dl_total = s_whdboot_dl_total.load();
+		float progress = 0.0f;
+		if (dl_total > 0)
+			progress = static_cast<float>(dl_now) / static_cast<float>(dl_total);
+		if (progress > 1.0f) progress = 1.0f;
+
+		ImGui::ProgressBar(progress, ImVec2(-SMALL_BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x, 0.0f));
+		ImGui::SameLine();
+		if (AmigaButton(ICON_FA_XMARK "##CancelWHD", ImVec2(SMALL_BUTTON_WIDTH, 0.0f)))
+			s_whdboot_cancel.store(true);
+
+		if (dl_total > 0)
+			ImGui::Text("%s / %s", format_download_bytes(dl_now).c_str(), format_download_bytes(dl_total).c_str());
+	}
+	else if (s_whdboot_complete.load() || s_whdboot_failed.load())
+	{
+		ImGui::Spacing();
+		{
+			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+			if (s_whdboot_result_is_error)
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+			ImGui::TextWrapped("%s", s_whdboot_result_msg.c_str());
+			if (s_whdboot_result_is_error)
+				ImGui::PopStyleColor();
+		}
+		if (AmigaButton(ICON_FA_CHECK " OK##WHDResult", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		{
+			s_whdboot_complete.store(false);
+			s_whdboot_failed.store(false);
+		}
+	}
+
+	// Controllers DB download progress / results
+	if (s_controllers_downloading.load())
+	{
+		ImGui::Spacing();
+		ImGui::Text("Downloading: gamecontrollerdb.txt");
+
+		const int64_t dl_now = s_controllers_dl_now.load();
+		const int64_t dl_total = s_controllers_dl_total.load();
+		float progress = 0.0f;
+		if (dl_total > 0)
+			progress = static_cast<float>(dl_now) / static_cast<float>(dl_total);
+		if (progress > 1.0f) progress = 1.0f;
+
+		ImGui::ProgressBar(progress, ImVec2(-SMALL_BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x, 0.0f));
+		ImGui::SameLine();
+		if (AmigaButton(ICON_FA_XMARK "##CancelCtrl", ImVec2(SMALL_BUTTON_WIDTH, 0.0f)))
+			s_controllers_cancel.store(true);
+
+		if (dl_total > 0)
+			ImGui::Text("%s / %s", format_download_bytes(dl_now).c_str(), format_download_bytes(dl_total).c_str());
+	}
+	else if (s_controllers_complete.load() || s_controllers_failed.load())
+	{
+		// Re-import joysticks on main thread after successful download
+		static bool s_controllers_joysticks_reimported = false;
+		if (s_controllers_complete.load() && !s_controllers_joysticks_reimported)
 		{
 			import_joysticks();
-			ShowMessageBox("Game Controllers DB", "Latest version of Game Controllers DB downloaded.");
+			s_controllers_joysticks_reimported = true;
 		}
-		else
-			ShowMessageBox("Game Controllers DB", "Failed to download file!\n\nPlease check the log for more information");
+
+		ImGui::Spacing();
+		{
+			std::lock_guard<std::mutex> lock(s_controllers_mutex);
+			if (s_controllers_result_is_error)
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+			ImGui::TextWrapped("%s", s_controllers_result_msg.c_str());
+			if (s_controllers_result_is_error)
+				ImGui::PopStyleColor();
+		}
+		if (AmigaButton(ICON_FA_CHECK " OK##CtrlResult", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		{
+			s_controllers_complete.store(false);
+			s_controllers_failed.store(false);
+			s_controllers_joysticks_reimported = false;
+		}
 	}
 }
