@@ -172,6 +172,12 @@ ZLIB_LIBS ?= $(shell $(PKG_CONFIG) --libs zlib 2>/dev/null)
 INCFLAGS += $(ZLIB_CFLAGS)
 LDFLAGS += $(ZLIB_LIBS)
 
+# nlohmann/json (header-only) — fetched once into deps/
+NLOHMANN_JSON_VERSION ?= v3.11.3
+NLOHMANN_JSON_DIR := $(LIBRETRO_DIR)/deps/nlohmann
+NLOHMANN_JSON_HEADER := $(NLOHMANN_JSON_DIR)/json.hpp
+INCFLAGS += -I$(LIBRETRO_DIR)/deps
+
 ifeq ($(platform), unix)
 LDFLAGS += -ldl -lm -pthread
 endif
@@ -630,10 +636,14 @@ OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 
 all: $(TARGET)
 
+$(NLOHMANN_JSON_HEADER):
+	@mkdir -p $(NLOHMANN_JSON_DIR)
+	curl -sfL -o $@ https://github.com/nlohmann/json/releases/download/$(NLOHMANN_JSON_VERSION)/json.hpp
+
 $(TARGET): $(OBJECTS)
 	$(CXX) $(INCFLAGS) $(FLAGS) -o $@ $^ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp | $(NLOHMANN_JSON_HEADER)
 	$(CXX) $(INCFLAGS) $(FLAGS) -std=gnu++17 -c -o $@ $<
 
 %.o: %.c
@@ -641,5 +651,8 @@ $(TARGET): $(OBJECTS)
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)
+
+distclean: clean
+	rm -rf $(LIBRETRO_DIR)/deps
 
 .PHONY: clean all
