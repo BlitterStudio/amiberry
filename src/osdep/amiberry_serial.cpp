@@ -310,7 +310,7 @@ static bool tcp_is_connected ()
 			if (serialconn != UAE_SOCKET_INVALID) {
 				write_log(_T("TCP: Serial connection accepted\n"));
 				int opt = 1;
-				setsockopt(serialsocket, IPPROTO_TCP, TCP_NODELAY, (char*)&opt, sizeof(int));
+				setsockopt(serialconn, IPPROTO_TCP, TCP_NODELAY, (char*)&opt, sizeof(int));
 			}
 		}
 	}
@@ -1412,6 +1412,10 @@ static void flushqueue(void)
 	for (;;) {
 		bool breakcond;
 		if (!readseravail(&breakcond)) {
+			break;
+		}
+		int data;
+		if (readser(&data) <= 0) {
 			break;
 		}
 	}

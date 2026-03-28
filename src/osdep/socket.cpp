@@ -14,6 +14,10 @@
 #include <netdb.h>
 #endif
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 #ifndef _WIN32
 #define SOCKADDR_INET sockaddr_storage
 #endif
@@ -176,7 +180,7 @@ int uae_socket_read(uae_socket s, void *buf, int count)
 
 int uae_socket_write(uae_socket s, const void *buf, int count)
 {
-	return static_cast<int>(send(s, (const char*)buf, count, 0));
+	return static_cast<int>(send(s, (const char*)buf, count, MSG_NOSIGNAL));
 }
 
 int uae_socket_select(
