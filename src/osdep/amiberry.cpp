@@ -2231,20 +2231,23 @@ static int pen_eraser;
 
 static void pen_coords_to_tablet(const AmigaMonitor* mon, float x, float y, int* tx, int* ty)
 {
-	int win_w, win_h;
-	SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
-
-	// HiDPI: window screen coords → drawable pixels (same as mouse handler)
 	IRenderer* renderer = get_renderer(mon->monitor_id);
 	if (renderer) {
-		int draw_w, draw_h;
-		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
-		if (win_w > 0 && draw_w > 0 && win_w != draw_w)
-			x = x * static_cast<float>(draw_w) / static_cast<float>(win_w);
-		if (win_h > 0 && draw_h > 0 && win_h != draw_h)
-			y = y * static_cast<float>(draw_h) / static_cast<float>(win_h);
+		// Transform window coordinates to match render_quad's coordinate space.
+		// SDL renderer: logical presentation space (via SDL_RenderCoordinatesFromWindow).
+		// OpenGL: drawable pixel space (via cached HiDPI scale factors).
+		if (mon->amiga_renderer) {
+			float rx, ry;
+			if (SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, x, y, &rx, &ry)) {
+				x = rx;
+				y = ry;
+			}
+		} else if (mon->hidpi_needs_scaling) {
+			x *= mon->hidpi_scale_x;
+			y *= mon->hidpi_scale_y;
+		}
 
-		// Map relative to the Amiga display area within the drawable
+		// Map relative to the Amiga display area within the render target
 		const SDL_Rect& rq = renderer->render_quad;
 		if (rq.w > 0 && rq.h > 0) {
 			float rx = (x - static_cast<float>(rq.x)) * 4095.0f / static_cast<float>(rq.w);
@@ -2256,6 +2259,8 @@ static void pen_coords_to_tablet(const AmigaMonitor* mon, float x, float y, int*
 	}
 
 	// Fallback: map to full window
+	int win_w, win_h;
+	SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
 	*tx = (win_w > 0) ? static_cast<int>(std::clamp(x * 4095.0f / static_cast<float>(win_w), 0.0f, 4095.0f)) : 0;
 	*ty = (win_h > 0) ? static_cast<int>(std::clamp(y * 4095.0f / static_cast<float>(win_h), 0.0f, 4095.0f)) : 0;
 }
@@ -2277,15 +2282,18 @@ static void pen_position_via_mouse(const AmigaMonitor* mon, float x, float y)
 	int32_t px = static_cast<int32_t>(x);
 	int32_t py = static_cast<int32_t>(y);
 
-	IRenderer* renderer = get_renderer(mon->monitor_id);
-	if (renderer) {
-		int win_w, win_h, draw_w, draw_h;
-		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
-		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
-		if (win_w > 0 && draw_w > 0 && win_w != draw_w)
-			px = static_cast<int32_t>(x * static_cast<float>(draw_w) / static_cast<float>(win_w));
-		if (win_h > 0 && draw_h > 0 && win_h != draw_h)
-			py = static_cast<int32_t>(y * static_cast<float>(draw_h) / static_cast<float>(win_h));
+	// Match mouse handler coordinate paths:
+	// SDL renderer handles HiDPI + logical presentation in one call.
+	// OpenGL uses cached per-monitor HiDPI scale factors.
+	if (mon->amiga_renderer) {
+		float rx, ry;
+		if (SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, x, y, &rx, &ry)) {
+			px = static_cast<int32_t>(rx);
+			py = static_cast<int32_t>(ry);
+		}
+	} else if (mon->hidpi_needs_scaling) {
+		px = static_cast<int32_t>(x * mon->hidpi_scale_x);
+		py = static_cast<int32_t>(y * mon->hidpi_scale_y);
 	}
 
 	setmousestate(0, 0, px, 1);
