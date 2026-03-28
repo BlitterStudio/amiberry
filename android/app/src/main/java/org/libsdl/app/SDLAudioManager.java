@@ -13,6 +13,7 @@ import java.util.ArrayList;
 public class SDLAudioManager {
     protected static final String TAG = "SDLAudio";
 
+    @android.annotation.SuppressLint("StaticFieldLeak") // :sdl process is killed on exit; no cross-activity leak
     protected static Context mContext;
 
     private static AudioDeviceCallback mAudioDeviceCallback;

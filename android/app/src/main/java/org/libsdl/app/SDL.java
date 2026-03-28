@@ -86,5 +86,6 @@ public class SDL {
         }
     }
 
+    @android.annotation.SuppressLint("StaticFieldLeak") // Cleared in onDestroy; :sdl process is killed on exit
     protected static Context mContext;
 }

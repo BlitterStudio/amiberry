@@ -55,6 +55,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.ConfigInfo
 import com.blitterstudio.amiberry.data.EmulatorLauncher
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -67,7 +69,7 @@ import java.util.Locale
 @Composable
 fun ConfigurationsScreen(
 	viewModel: ConfigurationsViewModel = viewModel(),
-	settingsViewModel: SettingsViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity),
+	settingsViewModel: SettingsViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity),
 	navController: androidx.navigation.NavController
 ) {
 	val context = LocalContext.current
@@ -143,6 +145,7 @@ fun ConfigurationsScreen(
 							onDuplicate = {
 								scope.launch {
 									val result = viewModel.duplicateConfig(config.path)
+									@Suppress("LocalContextGetResourceValueCall")
 									val message = result.fold(
 										onSuccess = { context.getString(R.string.msg_config_duplicated_as, it.name) },
 										onFailure = { duplicateFailedMessage }
@@ -173,6 +176,7 @@ private fun ConfigItem(
 	Card(
 		modifier = Modifier
 			.fillMaxWidth()
+			.dpadFocusIndicator()
 			.combinedClickable(
 				onClick = onLoad,
 				onLongClick = { showMenu = true }

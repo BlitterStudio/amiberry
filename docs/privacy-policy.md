@@ -5,7 +5,7 @@ title: Privacy Policy - Amiberry
 
 # Privacy Policy
 
-**Effective Date: February 23, 2026**
+**Effective Date: March 28, 2026**
 
 This privacy policy describes how **Amiberry** ("the App"), developed by **BlitterStudio**, handles user data on the Android platform.
 
@@ -13,7 +13,7 @@ This privacy policy describes how **Amiberry** ("the App"), developed by **Blitt
 
 ## Summary
 
-Amiberry does not collect, store, or transmit any personal data. The App runs entirely on your device and does not communicate with any external servers.
+Amiberry does not collect, store, or transmit any personal data, with the sole exception of **anonymous crash reports** sent via Firebase Crashlytics to help us fix bugs. No personal information, usage patterns, or file contents are ever collected.
 
 ---
 
@@ -38,37 +38,61 @@ Amiberry requests the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission on
 
 ## Network Usage
 
-Amiberry uses the `INTERNET` permission solely for **emulated Amiga networking** (bsdsocket.library emulation). This allows Amiga software running inside the emulator to access network resources, just as a real Amiga would.
+Amiberry uses the `INTERNET` permission for:
 
-The App itself does not:
+1. **Emulated Amiga networking** (bsdsocket.library emulation) — allows Amiga software running inside the emulator to access network resources, just as a real Amiga would.
+2. **Crash reporting** — anonymous crash diagnostics are sent to Firebase Crashlytics (see below).
 
-- Contact any external servers
+The App does not:
+
 - Send analytics or telemetry data
-- Perform crash reporting
 - Display advertisements
-- Make any network requests on its own behalf
+- Track user behavior or usage patterns
+- Make any other network requests on its own behalf
 
-## Data Collection
+## Crash Reporting (Firebase Crashlytics)
 
-**Amiberry does not collect any data.** Specifically:
+Amiberry uses **Firebase Crashlytics** to collect anonymous crash reports. This helps us identify and fix bugs, which is especially important for a complex emulator with native code.
+
+**What Crashlytics collects when a crash occurs:**
+
+- Crash stack trace (technical details about what went wrong)
+- Device model and manufacturer
+- Android OS version
+- App version and build number
+- A random Crashlytics installation ID (not linked to your identity)
+- General device state (e.g. available memory, orientation)
+
+**What Crashlytics does NOT collect:**
+
+- Your name, email, or any personal identifiers
+- File names or contents on your device
+- ROM files, disk images, or any emulation data
+- Your location
+- Any information about what you were emulating
+
+Crashlytics data is processed by Google in accordance with the [Firebase Terms of Service](https://firebase.google.com/terms) and the [Google Privacy Policy](https://policies.google.com/privacy). Crash data is retained for 90 days.
+
+## Other Data Collection
+
+Beyond crash reports, **Amiberry does not collect any data.** Specifically:
 
 - No personal information is collected
 - No usage statistics or analytics are gathered
-- No device identifiers are recorded
-- No crash reports are sent
+- No advertising identifiers are recorded
 - No cookies or tracking technologies are used
 
 ## Third-Party Services
 
-Amiberry does not integrate any third-party services, SDKs, or libraries that collect user data. There are no ads, analytics, or social media integrations.
+Amiberry integrates **Firebase Crashlytics** for crash reporting as described above. There are no ads, analytics, social media integrations, or other third-party services that collect user data.
 
 ## Children's Privacy
 
-Since Amiberry does not collect any data from any user, it does not collect data from children. The App complies with applicable children's privacy regulations.
+Amiberry does not knowingly collect personal information from children. The only data collected (crash reports) is anonymous and not linked to any individual. The App complies with applicable children's privacy regulations.
 
 ## Data Security
 
-Because no personal data is collected or transmitted, there is no user data at risk. All emulator data (configurations, save states) is stored locally on your device and is under your control.
+No personal data is collected or transmitted. Crash reports contain only anonymous technical information and are transmitted securely (HTTPS) to Firebase servers. All emulator data (configurations, save states) is stored locally on your device and is under your control.
 
 ## Open Source
 
@@ -76,7 +100,7 @@ Amiberry is open-source software released under the **GNU General Public License
 
 ## Changes to This Policy
 
-If this privacy policy is updated, the revised version will be posted at this URL with an updated effective date. Since the App does not collect data, changes are unlikely.
+If this privacy policy is updated, the revised version will be posted at this URL with an updated effective date.
 
 ## Contact
 

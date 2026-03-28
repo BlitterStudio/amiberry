@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.FileRepository
+import java.io.File
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
@@ -32,10 +33,34 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	private val romIdCacheByPath = mutableMapOf<String, Int?>()
 
 	init {
+		restoreLastSession()
 		settings = applyConstraints(settings)
 		viewModelScope.launch {
 			repository.rescan()
 			autoSelectDefaultRomIfNeeded(availableRoms.value)
+		}
+	}
+
+	private fun restoreLastSession() {
+		val confDir = File(getApplication<Application>().getExternalFilesDir(null), "conf")
+		val sessionFile = File(confDir, LAST_SESSION_FILE)
+		if (!sessionFile.exists()) return
+		try {
+			val parsed = ConfigParser.parse(sessionFile)
+			settings = parsed.settings
+			currentUnknownLines = parsed.unknownLines
+		} catch (_: Exception) {
+			// Corrupted session file — start with defaults
+		}
+	}
+
+	private fun saveLastSession() {
+		viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+			try {
+				ConfigGenerator.writeConfig(getApplication(), settings, LAST_SESSION_FILE)
+			} catch (_: Exception) {
+				// Non-critical — settings persistence is best-effort
+			}
 		}
 	}
 
@@ -46,12 +71,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			romExtFile = selectedRoms.ext?.path.orEmpty()
 		)
 		settings = applyConstraints(newSettings)
+		saveLastSession()
 	}
 
 	fun loadConfig(parsed: ConfigParser.ParsedConfig) {
 		settings = applyConstraints(parsed.settings)
 		currentUnknownLines = parsed.unknownLines
 		autoSelectDefaultRomIfNeeded(availableRoms.value)
+		saveLastSession()
 	}
 
 	private fun autoSelectDefaultRomIfNeeded(roms: List<AmigaFile>) {
@@ -128,6 +155,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	)
 
 	private companion object {
+		private const val LAST_SESSION_FILE = ".last_session.uae"
+
 		/**
 		 * Exact --model ROM priority behavior from main.cpp wrappers:
 		 * A500->bip_a500(130), A500P->bip_a500plus(-1), A2000->bip_a2000(130), etc.
@@ -185,6 +214,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	fun updateSettings(transform: (EmulatorSettings) -> EmulatorSettings) {
 		val newSettings = transform(settings)
 		settings = applyConstraints(newSettings)
+		saveLastSession()
 	}
 
 	fun generateLaunchArgs(): Array<String> {

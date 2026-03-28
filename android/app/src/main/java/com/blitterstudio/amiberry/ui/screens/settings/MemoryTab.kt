@@ -1,6 +1,5 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
@@ -33,20 +31,19 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoryTab(viewModel: SettingsViewModel) {
-	val context = LocalContext.current
 	val settings = viewModel.settings
 	val noneLabel = stringResource(R.string.settings_option_none)
 	val chipOptions = listOf(1, 2, 4, 8, 16).map { value ->
-		value to formatMemory(context, value * 512, noneLabel)
+		value to formatMemory(value * 512, noneLabel)
 	}
 	val slowOptions = listOf(0, 2, 4, 6, 7).map { value ->
-		value to if (value == 0) noneLabel else formatMemory(context, value * 256, noneLabel)
+		value to if (value == 0) noneLabel else formatMemory(value * 256, noneLabel)
 	}
 	val z2FastOptions = listOf(0, 1, 2, 4, 8).map { value ->
-		value to if (value == 0) noneLabel else context.getString(R.string.settings_memory_value_mb, value)
+		value to if (value == 0) noneLabel else stringResource(R.string.settings_memory_value_mb, value)
 	}
 	val z3FastOptions = listOf(0, 16, 32, 64, 128, 256, 512).map { value ->
-		value to if (value == 0) noneLabel else context.getString(R.string.settings_memory_value_mb, value)
+		value to if (value == 0) noneLabel else stringResource(R.string.settings_memory_value_mb, value)
 	}
 
 	Column(
@@ -115,12 +112,12 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 				val z3MB = settings.z3Ram
 
 				Text(
-					stringResource(R.string.settings_memory_summary_chip, formatMemory(context, chipKB, noneLabel)),
+					stringResource(R.string.settings_memory_summary_chip, formatMemory(chipKB, noneLabel)),
 					style = MaterialTheme.typography.bodyMedium
 				)
 				if (slowKB > 0) {
 					Text(
-						stringResource(R.string.settings_memory_summary_slow, formatMemory(context, slowKB, noneLabel)),
+						stringResource(R.string.settings_memory_summary_slow, formatMemory(slowKB, noneLabel)),
 						style = MaterialTheme.typography.bodyMedium
 					)
 				}
@@ -192,11 +189,12 @@ private fun MemoryDropdown(
 	}
 }
 
-private fun formatMemory(context: Context, kb: Int, noneLabel: String): String {
+@Composable
+private fun formatMemory(kb: Int, noneLabel: String): String {
 	if (kb <= 0) return noneLabel
 	return if (kb >= 1024) {
-		context.getString(R.string.settings_memory_value_mb, kb / 1024)
+		stringResource(R.string.settings_memory_value_mb, kb / 1024)
 	} else {
-		context.getString(R.string.settings_memory_value_kb, kb)
+		stringResource(R.string.settings_memory_value_kb, kb)
 	}
 }

@@ -131,6 +131,11 @@ public class AmiberryActivity extends SDLActivity {
 			backCallback = null;
 		}
 		final boolean finishing = isFinishing();
+		// Clear the session marker on normal exit so the main process
+		// knows this was not a crash.
+		if (finishing) {
+			com.blitterstudio.amiberry.data.EmulatorLauncher.INSTANCE.clearSessionMarker(this);
+		}
 		super.onDestroy();
 		// Amiberry runs in a dedicated :sdl process; terminate it when this
 		// activity is finished so the next launch always starts from clean state.

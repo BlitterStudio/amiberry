@@ -29,6 +29,7 @@ public class HIDDeviceManager {
     private static final String TAG = "hidapi";
     private static final String ACTION_USB_PERMISSION = "org.libsdl.app.USB_PERMISSION";
 
+    @android.annotation.SuppressLint("StaticFieldLeak") // :sdl process is killed on exit; no cross-activity leak
     private static HIDDeviceManager sManager;
     private static int sManagerRefCount = 0;
 
@@ -113,7 +114,7 @@ public class HIDDeviceManager {
 //        if (shouldClear) {
 //            SharedPreferences.Editor spedit = mSharedPreferences.edit();
 //            spedit.clear();
-//            spedit.commit();
+//            spedit.apply();
 //        }
 //        else
         {
@@ -135,10 +136,11 @@ public class HIDDeviceManager {
         }
 
         spedit.putInt(identifier, result);
-        spedit.commit();
+        spedit.apply();
         return result;
     }
 
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag") // Pre-33 system broadcasts don't need explicit flag
     private void initializeUSB() {
         mUsbManager = (UsbManager)mContext.getSystemService(Context.USB_SERVICE);
         if (mUsbManager == null) {
@@ -361,6 +363,7 @@ public class HIDDeviceManager {
         }
     }
 
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag") // Pre-33 system broadcasts don't need explicit flag
     private void initializeBluetooth() {
         Log.d(TAG, "Initializing Bluetooth");
 
@@ -439,6 +442,7 @@ public class HIDDeviceManager {
     // Chromebooks do not pass along ACTION_ACL_CONNECTED / ACTION_ACL_DISCONNECTED properly.
     // This function provides a sort of dummy version of that, watching for changes in the
     // connected devices and attempting to add controllers as things change.
+    @android.annotation.SuppressLint("MissingPermission") // Guarded by initializeBluetooth()
     public void chromebookConnectionHandler() {
         if (!mIsChromebook) {
             return;
@@ -478,6 +482,7 @@ public class HIDDeviceManager {
         }, 10000);
     }
 
+    @android.annotation.SuppressLint("MissingPermission") // Guarded by initializeBluetooth()
     public boolean connectBluetoothDevice(BluetoothDevice bluetoothDevice) {
         Log.v(TAG, "connectBluetoothDevice device=" + bluetoothDevice);
         synchronized (this) {
@@ -513,6 +518,7 @@ public class HIDDeviceManager {
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission") // Guarded by initializeBluetooth()
     public boolean isSteamController(BluetoothDevice bluetoothDevice) {
         // Sanity check.  If you pass in a null device, by definition it is never a Steam Controller.
         if (bluetoothDevice == null) {

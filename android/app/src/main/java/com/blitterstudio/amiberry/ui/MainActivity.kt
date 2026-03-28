@@ -1,23 +1,20 @@
 package com.blitterstudio.amiberry.ui
 
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.Settings
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.blitterstudio.amiberry.data.AppPreferences
+import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.ui.theme.AmiberryTheme
+import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,6 +24,8 @@ import java.io.IOException
 class MainActivity : ComponentActivity() {
 
 	private var isReady by mutableStateOf(false)
+	var emulatorCrashDetected by mutableStateOf(false)
+		private set
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		val splashScreen = installSplashScreen()
@@ -42,27 +41,11 @@ class MainActivity : ComponentActivity() {
 			}
 		}
 
-		// Request MANAGE_EXTERNAL_STORAGE on Android 11+ if not already granted
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
-			try {
-				val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-				intent.data = Uri.parse("package:$packageName")
-				storagePermissionLauncher.launch(intent)
-			} catch (e: Exception) {
-				Log.w(TAG, "Could not open app-specific storage settings, trying generic", e)
-				val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-				storagePermissionLauncher.launch(intent)
-			}
-		} else {
-			startAssetExtraction()
-		}
-	}
-
-	private val storagePermissionLauncher = registerForActivityResult(
-		ActivityResultContracts.StartActivityForResult()
-	) {
-		// Whether user granted or denied, proceed with extraction
-		// (app still works with scoped storage, just can't access arbitrary paths)
+		// Storage permission is NOT requested automatically on startup.
+		// The StoragePermissionBanner in the UI provides a user-initiated path
+		// to grant MANAGE_EXTERNAL_STORAGE when they choose. This avoids
+		// blocking the first-launch experience and strengthens the Play Store
+		// case that the permission is user-initiated.
 		startAssetExtraction()
 	}
 
@@ -176,6 +159,43 @@ class MainActivity : ComponentActivity() {
 		listOf("roms", "floppies", "harddrives", "cdroms", "lha", "conf").forEach { dir ->
 			File(base, dir).let { if (!it.exists()) it.mkdirs() }
 		}
+	}
+
+	/** Tracks whether the emulator was running so we can distinguish
+	 *  "returning from emulation" vs normal activity resume. */
+	private var emulatorWasLaunched = false
+
+	override fun onResume() {
+		super.onResume()
+		if (!isReady) return
+
+		if (EmulatorLauncher.checkAndClearCrashMarker(this)) {
+			emulatorCrashDetected = true
+			emulatorWasLaunched = false
+		} else if (emulatorWasLaunched) {
+			// Successful emulator session — check if we should request a review
+			emulatorWasLaunched = false
+			if (AppPreferences.getInstance(this).incrementLaunchCountAndCheckReview()) {
+				requestInAppReview()
+			}
+		}
+	}
+
+	/** Called by EmulatorLauncher before starting the SDL activity. */
+	fun markEmulatorLaunched() {
+		emulatorWasLaunched = true
+	}
+
+	private fun requestInAppReview() {
+		val manager = ReviewManagerFactory.create(this)
+		manager.requestReviewFlow().addOnSuccessListener { reviewInfo ->
+			manager.launchReviewFlow(this, reviewInfo)
+			// No success/failure handling needed — Google controls the UI
+		}
+	}
+
+	fun clearCrashFlag() {
+		emulatorCrashDetected = false
 	}
 
 	companion object {

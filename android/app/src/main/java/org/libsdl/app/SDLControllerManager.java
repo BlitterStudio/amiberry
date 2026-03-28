@@ -489,6 +489,7 @@ class SDLJoystickHandler_API19 extends SDLJoystickHandler_API16 {
     }
 }
 
+@android.annotation.SuppressLint("NewApi") // Only instantiated when Build.VERSION.SDK_INT >= 31
 class SDLHapticHandler_API31 extends SDLHapticHandler {
     @Override
     public void run(int device_id, float intensity, int length) {

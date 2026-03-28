@@ -29,7 +29,10 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,12 +45,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,6 +68,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.viewmodel.FileManagerViewModel
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -95,6 +102,9 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	}.collectAsState()
 
 	val importResult by viewModel.importResult.collectAsState()
+	val isScanning by viewModel.isScanning.collectAsState()
+	val isImporting by viewModel.isImporting.collectAsState()
+	val showProgress = isScanning || isImporting
 	val filePickerLauncher = rememberLauncherForActivityResult(
 		contract = ActivityResultContracts.OpenDocument()
 	) { uri ->
@@ -126,6 +136,10 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				.fillMaxSize()
 				.padding(innerPadding)
 		) {
+			StoragePermissionBanner(
+				modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+			)
+
 			OutlinedCard(
 				modifier = Modifier
 					.fillMaxWidth()
@@ -192,7 +206,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			}
 
-			if (files.isEmpty()) {
+			if (showProgress) {
+				LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+			}
+
+			if (files.isEmpty() && !isScanning) {
 				Box(
 					modifier = Modifier
 						.fillMaxSize()
@@ -209,7 +227,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						)
 						Spacer(modifier = Modifier.height(8.dp))
 						Text(
-							text = context.getString(
+							text = stringResource(
 								R.string.file_manager_empty_help,
 								viewModel.getStoragePath(),
 								currentCategory.dirName
@@ -225,7 +243,10 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					verticalArrangement = Arrangement.spacedBy(6.dp)
 				) {
 					items(files, key = { it.path }) { file ->
-						FileItem(file = file)
+						FileItem(
+							file = file,
+							onDelete = { viewModel.deleteFile(file) }
+						)
 					}
 				}
 			}
@@ -234,12 +255,14 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 }
 
 @Composable
-private fun FileItem(file: AmigaFile) {
-	Card(modifier = Modifier.fillMaxWidth()) {
+private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
+	var showDeleteDialog by remember { mutableStateOf(false) }
+
+	Card(modifier = Modifier.fillMaxWidth().dpadFocusIndicator()) {
 		Row(
 			modifier = Modifier
 				.fillMaxWidth()
-				.padding(12.dp),
+				.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
 			verticalAlignment = Alignment.CenterVertically
 		) {
 			val icon = when (file.category) {
@@ -264,7 +287,39 @@ private fun FileItem(file: AmigaFile) {
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
 			}
+			IconButton(onClick = { showDeleteDialog = true }) {
+				Icon(
+					Icons.Default.Delete,
+					contentDescription = stringResource(R.string.action_delete),
+					modifier = Modifier.size(20.dp),
+					tint = MaterialTheme.colorScheme.onSurfaceVariant
+				)
+			}
 		}
+	}
+
+	if (showDeleteDialog) {
+		AlertDialog(
+			onDismissRequest = { showDeleteDialog = false },
+			title = { Text(stringResource(R.string.file_manager_delete_title)) },
+			text = { Text(stringResource(R.string.file_manager_delete_message, file.name)) },
+			confirmButton = {
+				TextButton(onClick = {
+					onDelete()
+					showDeleteDialog = false
+				}) {
+					Text(
+						stringResource(R.string.action_delete),
+						color = MaterialTheme.colorScheme.error
+					)
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = { showDeleteDialog = false }) {
+					Text(stringResource(R.string.action_cancel))
+				}
+			}
+		)
 	}
 }
 

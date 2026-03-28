@@ -215,15 +215,20 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public static boolean mBrokenLibraries = true;
 
     // Main components
+    @android.annotation.SuppressLint("StaticFieldLeak") // :sdl process is killed on exit; no cross-activity leak
     protected static SDLActivity mSingleton;
+    @android.annotation.SuppressLint("StaticFieldLeak")
     protected static SDLSurface mSurface;
+    @android.annotation.SuppressLint("StaticFieldLeak")
     protected static SDLDummyEdit mTextEdit;
     protected static boolean mScreenKeyboardShown;
+    @android.annotation.SuppressLint("StaticFieldLeak")
     protected static ViewGroup mLayout;
     protected static SDLClipboardHandler mClipboardHandler;
     protected static Hashtable<Integer, PointerIcon> mCursors;
     protected static int mLastCursorID;
     protected static SDLGenericMotionListener_API14 mMotionListener;
+    @android.annotation.SuppressLint("StaticFieldLeak")
     protected static HIDDeviceManager mHIDDeviceManager;
 
     // This is what SDL runs in. It invokes SDL_main(), eventually
@@ -713,6 +718,14 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         super.onDestroy();
     }
 
+    // Predictive back: AmiberryActivity registers an OnBackInvokedCallback (API 33+)
+    // and sets enableOnBackInvokedCallback="true" in the manifest. On API 33+, the system
+    // dispatches back events through that callback, never calling onBackPressed().
+    // This method remains as the fallback path for API ≤ 32 where OnBackInvokedCallback
+    // does not exist. SDLActivity extends plain Activity (not AppCompatActivity), so
+    // OnBackPressedDispatcher is not available as an alternative.
+    @SuppressWarnings("deprecation")
+    @android.annotation.SuppressLint("GestureBackNavigation")
     @Override
     public void onBackPressed() {
         // Check if we want to block the back button in case of mouse right click.
@@ -786,7 +799,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         });
     }
 
-    // Used to access the system back behavior.
+    // Used to access the system back behavior (API ≤ 32 fallback only).
+    @SuppressWarnings("deprecation")
+    @android.annotation.SuppressLint("GestureBackNavigation")
     public void superOnBackPressed() {
         super.onBackPressed();
     }
@@ -933,8 +948,10 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                                 window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
                                 SDLActivity.mFullscreenModeActive = false;
                             }
-                            if (Build.VERSION.SDK_INT >= 28 /* Android 9 (Pie) */) {
+                            if (Build.VERSION.SDK_INT >= 30 /* Android 11 (R) */) {
                                 window.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+                            } else if (Build.VERSION.SDK_INT >= 28 /* Android 9 (Pie) */) {
+                                window.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
                             }
                             if (Build.VERSION.SDK_INT >= 30 /* Android 11 (R) */ &&
                                 Build.VERSION.SDK_INT < 35 /* Android 15 */) {

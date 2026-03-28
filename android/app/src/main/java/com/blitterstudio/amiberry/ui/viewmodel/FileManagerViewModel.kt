@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -26,9 +27,13 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 	val hardDrives: StateFlow<List<AmigaFile>> = repository.hardDrives
 	val cdImages: StateFlow<List<AmigaFile>> = repository.cdImages
 	val whdloadGames: StateFlow<List<AmigaFile>> = repository.whdloadGames
+	val isScanning: StateFlow<Boolean> = repository.isScanning
 
 	private val _importResult = MutableStateFlow<String?>(null)
 	val importResult: StateFlow<String?> = _importResult.asStateFlow()
+
+	private val _isImporting = MutableStateFlow(false)
+	val isImporting: StateFlow<Boolean> = _isImporting.asStateFlow()
 
 	private var importJob: Job? = null
 
@@ -49,19 +54,42 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 	fun importFile(uri: Uri, category: FileCategory) {
 		importJob?.cancel()
 		importJob = viewModelScope.launch(Dispatchers.IO) {
+			_isImporting.value = true
 			try {
 				val result = FileManager.importFile(getApplication(), uri, category)
 				if (result != null) {
-					_importResult.value = "Imported successfully"
+					_importResult.value = getApplication<Application>().getString(R.string.msg_imported_successfully)
 					repository.rescanCategory(category)
 				} else {
-					_importResult.value = "Import failed"
+					_importResult.value = getApplication<Application>().getString(R.string.msg_import_failed)
 				}
 			} catch (e: CancellationException) {
 				throw e
 			} catch (e: Exception) {
 				Log.e(TAG, "Failed to import file", e)
-				_importResult.value = "Import failed: ${e.message}"
+				_importResult.value = getApplication<Application>().getString(R.string.msg_import_failed)
+			} finally {
+				_isImporting.value = false
+			}
+		}
+	}
+
+	fun deleteFile(file: AmigaFile) {
+		viewModelScope.launch(Dispatchers.IO) {
+			try {
+				val app = getApplication<Application>()
+				val deleted = java.io.File(file.path).delete()
+				if (deleted) {
+					_importResult.value = app.getString(R.string.msg_deleted_file, file.name)
+					repository.rescanCategory(file.category)
+				} else {
+					_importResult.value = app.getString(R.string.msg_failed_delete_file, file.name)
+				}
+			} catch (e: CancellationException) {
+				throw e
+			} catch (e: Exception) {
+				Log.e(TAG, "Failed to delete file: ${file.path}", e)
+				_importResult.value = getApplication<Application>().getString(R.string.msg_failed_delete_file, file.name)
 			}
 		}
 	}

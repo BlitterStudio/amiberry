@@ -196,6 +196,9 @@ dependencies {
     // Splash Screen API (Android 12+ compatible back to API 23)
     implementation 'androidx.core:core-splashscreen:1.0.1'
 
+    // Play In-App Review
+    implementation 'com.google.android.play:review-ktx:2.0.2'
+
     // Jetpack Compose
     implementation platform('androidx.compose:compose-bom:2026.02.00')
     implementation 'androidx.compose.material3:material3'

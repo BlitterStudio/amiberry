@@ -22,6 +22,9 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.UUID;
 
+// All BLE calls in this class are only reachable after HIDDeviceManager.initializeBluetooth()
+// verifies BLUETOOTH_CONNECT is granted. Lint cannot trace across that boundary.
+@android.annotation.SuppressLint("MissingPermission")
 class HIDDeviceBLESteamController extends BluetoothGattCallback implements HIDDevice {
 
     private static final String TAG = "hidapi";

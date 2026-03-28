@@ -44,6 +44,10 @@
 -dontwarn kotlin.**
 -dontwarn kotlinx.**
 
+# ── Play In-App Review ────────────────────────────────────────────────
+-keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
+
 # ── General ──────────────────────────────────────────────────────────
 # Keep enum values (used in AmigaModel, FileCategory, etc.)
 -keepclassmembers enum * {

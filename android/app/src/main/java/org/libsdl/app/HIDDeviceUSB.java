@@ -31,7 +31,7 @@ class HIDDeviceUSB implements HIDDevice {
     }
 
     public String getIdentifier() {
-        return String.format("%s/%x/%x/%d", mDevice.getDeviceName(), mDevice.getVendorId(), mDevice.getProductId(), mInterfaceIndex);
+        return String.format(java.util.Locale.US, "%s/%x/%x/%d", mDevice.getDeviceName(), mDevice.getVendorId(), mDevice.getProductId(), mInterfaceIndex);
     }
 
     @Override

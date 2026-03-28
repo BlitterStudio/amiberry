@@ -46,12 +46,13 @@ import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.EmulatorLauncher
+import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity)) {
+fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity)) {
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
@@ -198,6 +199,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						return@SaveConfigDialog
 					}
 					showSaveDialog = false
+					@Suppress("LocalContextGetResourceValueCall")
 					scope.launch {
 						snackbarHostState.showSnackbar(
 							context.getString(R.string.msg_saved_configuration, savedFile.name)

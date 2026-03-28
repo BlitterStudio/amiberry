@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +31,8 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +40,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,20 +56,28 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileManager
+import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.viewmodel.QuickStartViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import com.blitterstudio.amiberry.ui.components.MediaSelector
+import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
+import com.blitterstudio.amiberry.ui.navigation.Screen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickStartScreen(
-	viewModel: QuickStartViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity),
-	settingsViewModel: SettingsViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity)
+	navController: androidx.navigation.NavController? = null,
+	viewModel: QuickStartViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity),
+	settingsViewModel: SettingsViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity)
 ) {
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
@@ -76,6 +88,7 @@ fun QuickStartScreen(
 	val roms by viewModel.availableRoms.collectAsState()
 	val whdloadGames by viewModel.availableWhdloadGames.collectAsState()
 	val selectedWhdloadGame = viewModel.selectedWhdload
+	val isScanning by FileRepository.getInstance(context).isScanning.collectAsState()
 	val hasRoms = roms.isNotEmpty()
 	val canStart = settingsViewModel.settings.romFile.isNotBlank() || hasRoms
 
@@ -102,9 +115,13 @@ fun QuickStartScreen(
 		contract = ActivityResultContracts.OpenDocument()
 	) { uri ->
 		uri?.let {
-			val path = FileManager.importFile(context, it, FileCategory.FLOPPIES)
-			if (path != null) {
-				settingsViewModel.updateSettings { s -> s.copy(floppy0 = path) }
+			scope.launch {
+				val path = withContext(Dispatchers.IO) {
+					FileManager.importFile(context, it, FileCategory.FLOPPIES)
+				}
+				if (path != null) {
+					settingsViewModel.updateSettings { s -> s.copy(floppy0 = path) }
+				}
 			}
 		}
 	}
@@ -113,9 +130,13 @@ fun QuickStartScreen(
 		contract = ActivityResultContracts.OpenDocument()
 	) { uri ->
 		uri?.let {
-			val path = FileManager.importFile(context, it, FileCategory.CD_IMAGES)
-			if (path != null) {
-				settingsViewModel.updateSettings { s -> s.copy(cdImage = path) }
+			scope.launch {
+				val path = withContext(Dispatchers.IO) {
+					FileManager.importFile(context, it, FileCategory.CD_IMAGES)
+				}
+				if (path != null) {
+					settingsViewModel.updateSettings { s -> s.copy(cdImage = path) }
+				}
 			}
 		}
 	}
@@ -124,20 +145,34 @@ fun QuickStartScreen(
 		contract = ActivityResultContracts.OpenDocument()
 	) { uri ->
 		uri?.let {
-				val path = FileManager.importFile(context, it, FileCategory.WHDLOAD_GAMES)
+			scope.launch {
+				val path = withContext(Dispatchers.IO) {
+					FileManager.importFile(context, it, FileCategory.WHDLOAD_GAMES)
+				}
 				if (path != null) {
 					viewModel.rescanWhdload()
-					scope.launch {
-						snackbarHostState.showSnackbar(gameImportedMessage)
-					}
+					snackbarHostState.showSnackbar(gameImportedMessage)
 				}
 			}
 		}
+	}
 
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
-			TopAppBar(title = { Text(stringResource(R.string.quick_start_title)) })
+			TopAppBar(
+				title = { Text(stringResource(R.string.quick_start_title)) },
+				actions = {
+					IconButton(onClick = {
+						navController?.navigate(Screen.About.route)
+					}) {
+						Icon(
+							Icons.Default.Info,
+							contentDescription = stringResource(R.string.nav_about)
+						)
+					}
+				}
+			)
 		},
 		floatingActionButton = {
 			ExtendedFloatingActionButton(
@@ -172,6 +207,56 @@ fun QuickStartScreen(
 				.padding(16.dp),
 			verticalArrangement = Arrangement.spacedBy(16.dp)
 		) {
+			if (isScanning) {
+				LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+			}
+
+			StoragePermissionBanner()
+
+			val appPreferences = remember { AppPreferences.getInstance(context) }
+			val hasSeenWelcome by appPreferences.hasSeenWelcome
+
+			if (!hasSeenWelcome) {
+				Card(
+					modifier = Modifier.fillMaxWidth(),
+					colors = CardDefaults.cardColors(
+						containerColor = MaterialTheme.colorScheme.tertiaryContainer
+					)
+				) {
+					Column(modifier = Modifier.padding(16.dp)) {
+						Row(verticalAlignment = Alignment.CenterVertically) {
+							Icon(
+								Icons.Default.Info,
+								contentDescription = null,
+								modifier = Modifier.size(24.dp),
+								tint = MaterialTheme.colorScheme.onTertiaryContainer
+							)
+							Spacer(modifier = Modifier.width(8.dp))
+							Text(
+								stringResource(R.string.welcome_title),
+								style = MaterialTheme.typography.titleMedium,
+								color = MaterialTheme.colorScheme.onTertiaryContainer
+							)
+						}
+						Spacer(modifier = Modifier.height(8.dp))
+						Text(
+							text = stringResource(R.string.welcome_message),
+							style = MaterialTheme.typography.bodyMedium,
+							color = MaterialTheme.colorScheme.onTertiaryContainer
+						)
+						Spacer(modifier = Modifier.height(8.dp))
+						Row(
+							modifier = Modifier.fillMaxWidth(),
+							horizontalArrangement = Arrangement.End
+						) {
+							TextButton(onClick = { appPreferences.setHasSeenWelcome(true) }) {
+								Text(stringResource(R.string.welcome_dismiss))
+							}
+						}
+					}
+				}
+			}
+
 			Card(
 				modifier = Modifier.fillMaxWidth(),
 				colors = CardDefaults.cardColors(

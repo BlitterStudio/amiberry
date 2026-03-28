@@ -13,7 +13,7 @@ data class AmigaFile(
 		get() = when {
 			size < 1024 -> "$size B"
 			size < 1024 * 1024 -> "${size / 1024} KB"
-			else -> String.format("%.1f MB", size / (1024.0 * 1024.0))
+			else -> String.format(java.util.Locale.getDefault(), "%.1f MB", size / (1024.0 * 1024.0))
 		}
 }
 

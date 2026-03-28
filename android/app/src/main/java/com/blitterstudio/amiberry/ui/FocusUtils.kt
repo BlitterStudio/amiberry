@@ -1,17 +1,26 @@
 package com.blitterstudio.amiberry.ui
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Environment
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusChanged
@@ -40,6 +49,62 @@ fun hasTouchScreen(): Boolean {
 	val context = LocalContext.current
 	return remember {
 		context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+	}
+}
+
+/**
+ * Returns true when the app has full external storage access.
+ * On Android 10 and below, this is always true (legacy storage).
+ * On Android 11+, requires MANAGE_EXTERNAL_STORAGE permission.
+ *
+ * Re-checks on every lifecycle ON_RESUME so the banner disappears
+ * immediately when the user returns from granting permission in Settings.
+ */
+@Composable
+fun hasFullStorageAccess(): Boolean {
+	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true
+
+	// Force re-evaluation on every resume by bumping a counter
+	var resumeCount by remember { mutableIntStateOf(0) }
+	val lifecycleOwner = LocalLifecycleOwner.current
+	DisposableEffect(lifecycleOwner) {
+		val observer = LifecycleEventObserver { _, event ->
+			if (event == Lifecycle.Event.ON_RESUME) {
+				resumeCount++
+			}
+		}
+		lifecycleOwner.lifecycle.addObserver(observer)
+		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+	}
+
+	// resumeCount is read here, making this recompose on every resume
+	@Suppress("UNUSED_EXPRESSION")
+	resumeCount
+	return Environment.isExternalStorageManager()
+}
+
+/**
+ * Walk the ContextWrapper chain to find the hosting Activity.
+ * Safer than a direct cast of LocalContext.current, which can fail
+ * if the context is wrapped (e.g., by theming or configuration).
+ */
+fun Context.findActivity(): Activity {
+	var ctx = this
+	while (ctx is ContextWrapper) {
+		if (ctx is Activity) return ctx
+		ctx = ctx.baseContext
+	}
+	throw IllegalStateException("No Activity found in context chain")
+}
+
+/**
+ * Non-composable version for use in ViewModels or non-Compose code.
+ */
+fun hasFullStorageAccess(context: Context): Boolean {
+	return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+		Environment.isExternalStorageManager()
+	} else {
+		true
 	}
 }
 

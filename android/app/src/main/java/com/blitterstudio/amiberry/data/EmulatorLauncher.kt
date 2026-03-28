@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import java.io.File
 
 object EmulatorLauncher {
 
@@ -72,9 +73,46 @@ object EmulatorLauncher {
 		launchSdlActivity(context, args)
 	}
 
+	private const val SESSION_MARKER = ".emulator_session"
+
 	private fun launchSdlActivity(context: Context, args: Array<String>) {
+		writeSessionMarker(context)
+		(context as? com.blitterstudio.amiberry.ui.MainActivity)?.markEmulatorLaunched()
 		val intent = Intent(context, AmiberryActivity::class.java)
 		intent.putExtra("SDL_ARGS", args)
 		context.startActivity(intent)
+	}
+
+	private fun writeSessionMarker(context: Context) {
+		try {
+			val marker = File(context.getExternalFilesDir(null), SESSION_MARKER)
+			marker.writeText(System.currentTimeMillis().toString())
+		} catch (_: Exception) {
+			// Non-critical — crash detection is best-effort
+		}
+	}
+
+	/**
+	 * Delete the session marker. Called by AmiberryActivity on normal exit.
+	 */
+	fun clearSessionMarker(context: Context) {
+		try {
+			File(context.getExternalFilesDir(null), SESSION_MARKER).delete()
+		} catch (_: Exception) {
+			// Ignore
+		}
+	}
+
+	/**
+	 * Check if a previous emulator session crashed (marker file still present).
+	 * Returns true if a crash was detected, and cleans up the marker.
+	 */
+	fun checkAndClearCrashMarker(context: Context): Boolean {
+		val marker = File(context.getExternalFilesDir(null), SESSION_MARKER)
+		if (marker.exists()) {
+			marker.delete()
+			return true
+		}
+		return false
 	}
 }

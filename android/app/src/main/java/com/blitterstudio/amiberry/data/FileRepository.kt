@@ -12,7 +12,9 @@ import kotlinx.coroutines.withContext
 
 class FileRepository(private val context: Context) {
 
-	private val isScanning = AtomicBoolean(false)
+	private val scanLock = AtomicBoolean(false)
+	private val _isScanning = MutableStateFlow(false)
+	val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
 	private val _roms = MutableStateFlow<List<AmigaFile>>(emptyList())
 	val roms: StateFlow<List<AmigaFile>> = _roms.asStateFlow()
@@ -30,7 +32,8 @@ class FileRepository(private val context: Context) {
 	val whdloadGames: StateFlow<List<AmigaFile>> = _whdloadGames.asStateFlow()
 
 	suspend fun rescan() = withContext(Dispatchers.IO) {
-		if (!isScanning.compareAndSet(false, true)) return@withContext
+		if (!scanLock.compareAndSet(false, true)) return@withContext
+		_isScanning.value = true
 		try {
 			_roms.value = FileManager.scanForCategory(context, FileCategory.ROMS)
 			_floppies.value = FileManager.scanForCategory(context, FileCategory.FLOPPIES)
@@ -38,7 +41,8 @@ class FileRepository(private val context: Context) {
 			_cdImages.value = FileManager.scanForCategory(context, FileCategory.CD_IMAGES)
 			_whdloadGames.value = FileManager.scanForCategory(context, FileCategory.WHDLOAD_GAMES)
 		} finally {
-			isScanning.set(false)
+			_isScanning.value = false
+			scanLock.set(false)
 		}
 	}
 
