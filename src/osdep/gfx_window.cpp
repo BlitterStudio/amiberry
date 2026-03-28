@@ -709,12 +709,19 @@ static int create_windows(struct AmigaMonitor* mon)
 				SDL_SyncWindow(mon->amiga_window);
 			} else if (fullscreen) {
 				SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
+				bool mode_set = false;
 				if (display_id) {
 					SDL_DisplayMode closest;
 					if (SDL_GetClosestFullscreenDisplayMode(
 						display_id, w, h, 0.0f, true, &closest)) {
 						SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
+						mode_set = true;
 					}
+				}
+				if (!mode_set) {
+					write_log(_T("Fullscreen: no matching display mode for %dx%d, falling back to desktop mode (full-window)\n"), w, h);
+					const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
+					SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
 				}
 				SDL_SetWindowFullscreen(mon->amiga_window, true);
 				SDL_SyncWindow(mon->amiga_window);
@@ -861,12 +868,22 @@ static int create_windows(struct AmigaMonitor* mon)
 		SDL_SyncWindow(mon->amiga_window);
 	} else if (fullscreen) {
 		SDL_DisplayID display_id = md ? md->display_id : SDL_GetDisplayForWindow(mon->amiga_window);
+		bool mode_set = false;
 		if (display_id) {
 			SDL_DisplayMode closest;
 			if (SDL_GetClosestFullscreenDisplayMode(
 				display_id, mon->currentmode.native_width, mon->currentmode.native_height, 0.0f, true, &closest)) {
 				SDL_SetWindowFullscreenMode(mon->amiga_window, &closest);
+				mode_set = true;
 			}
+		}
+		if (!mode_set) {
+			// No matching fullscreen display mode found (e.g. custom EDID with limited modes).
+			// Fall back to desktop mode (full-window) to avoid a windowed-size window.
+			write_log(_T("Fullscreen: no matching display mode for %dx%d, falling back to desktop mode (full-window)\n"),
+				mon->currentmode.native_width, mon->currentmode.native_height);
+			const SDL_DisplayMode* desktop = md ? SDL_GetDesktopDisplayMode(md->display_id) : nullptr;
+			SDL_SetWindowFullscreenMode(mon->amiga_window, desktop);
 		}
 		SDL_SetWindowFullscreen(mon->amiga_window, true);
 		SDL_SyncWindow(mon->amiga_window);
