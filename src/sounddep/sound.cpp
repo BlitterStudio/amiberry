@@ -100,7 +100,7 @@ static void reset_push_timing_state(struct sound_data* sd)
 	auto* s = sd->data;
 	s->avg_correct = 0;
 	s->cnt_correct = 0;
-	s->push_target_buffers = PUSH_TARGET_BUFFERS_MIN;
+	s->push_target_buffers = PUSH_TARGET_BUFFERS_MAX;
 	s->push_stable_writes = 0;
 	s->push_low_water_count = 0;
 }
@@ -162,8 +162,11 @@ static void update_push_target_latency(struct sound_data* sd, int queued)
 
 		// Only escalate after sustained pressure, not a single transient dip
 		// (e.g. autocrop dimension changes cause isolated 1-frame dips)
-		if (s->push_low_water_count >= PUSH_LOW_WATER_ESCALATE) {
+		if (s->push_low_water_count >= PUSH_LOW_WATER_ESCALATE
+			&& s->push_target_buffers < PUSH_TARGET_BUFFERS_MAX) {
 			s->push_target_buffers = PUSH_TARGET_BUFFERS_MAX;
+			s->avg_correct = 0;
+			s->cnt_correct = 0;
 		}
 		return;
 	}
@@ -178,6 +181,8 @@ static void update_push_target_latency(struct sound_data* sd, int queued)
 			if (s->push_stable_writes >= PUSH_TARGET_STABLE_WRITES) {
 				s->push_target_buffers = PUSH_TARGET_BUFFERS_MIN;
 				s->push_stable_writes = 0;
+				s->avg_correct = 0;
+				s->cnt_correct = 0;
 			}
 		} else {
 			s->push_stable_writes = 0;
