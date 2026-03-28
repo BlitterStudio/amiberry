@@ -1,6 +1,9 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <algorithm>
+#include <string>
+#include <vector>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -642,10 +645,34 @@ static int init_mouse()
 	int count = 0;
 	SDL_MouseID* sdl_mice = SDL_GetMice(&count);
 	if (sdl_mice && count >= 1) {
+		// Sort mice: prefer real physical mice over virtual/core pointers.
+		// Virtual devices (like "Virtual core pointer" on X11) should be last
+		// so that index 0 is a real mouse when possible.
+		std::vector<SDL_MouseID> sorted_mice(sdl_mice, sdl_mice + count);
+		std::stable_sort(sorted_mice.begin(), sorted_mice.end(),
+			[](SDL_MouseID a, SDL_MouseID b) {
+				const char* name_a = SDL_GetMouseNameForID(a);
+				const char* name_b = SDL_GetMouseNameForID(b);
+				auto is_virtual = [](const char* name) -> bool {
+					if (!name || !name[0]) return true;
+					std::string n(name);
+					// Common virtual/abstract pointer names across platforms
+					if (n.find("Virtual") != std::string::npos) return true;
+					if (n.find("virtual") != std::string::npos) return true;
+					if (n.find("core pointer") != std::string::npos) return true;
+					if (n.find("XTEST") != std::string::npos) return true;
+					return false;
+				};
+				bool va = is_virtual(name_a);
+				bool vb = is_virtual(name_b);
+				if (va != vb) return !va; // real mice first
+				return false; // preserve original order otherwise
+			});
+
 		num_mouse = std::min(count, static_cast<int>(MAX_INPUT_DEVICES));
 		for (int i = 0; i < num_mouse; i++) {
-			mouse_id_map[i] = sdl_mice[i];
-			const char* sdl_name = SDL_GetMouseNameForID(sdl_mice[i]);
+			mouse_id_map[i] = sorted_mice[i];
+			const char* sdl_name = SDL_GetMouseNameForID(sorted_mice[i]);
 			std::string device_name;
 			if (sdl_name && sdl_name[0]) {
 				device_name = sdl_name;

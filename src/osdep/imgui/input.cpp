@@ -2,6 +2,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "inputdevice.h"
+#include "amiberry_input.h"
 #include "imgui_panels.h"
 #include <vector>
 #include <string>
@@ -49,16 +50,26 @@ static void poll_input_devices() {
         add(buf, JSEM_KBDLAYOUT + j + 4);
     }
 
-    // Joysticks
+    // Joysticks — add type prefix so users can identify device types
     int num_joys = inputdevice_get_device_total(IDTYPE_JOYSTICK);
     for (int j = 0; j < num_joys; j++) {
-        add(inputdevice_get_device_name(IDTYPE_JOYSTICK, j), JSEM_JOYS + j);
+        const char* name = inputdevice_get_device_name(IDTYPE_JOYSTICK, j);
+        std::string label;
+        if (j < MAX_INPUT_DEVICES && di_joystick[j].is_controller)
+            label = std::string("[Gamepad] ") + (name ? name : "?");
+        else
+            label = std::string("[Joystick] ") + (name ? name : "?");
+        input_device_names.push_back(label);
+        input_device_ids.push_back(JSEM_JOYS + j);
     }
 
     // Mice
     int num_mice = inputdevice_get_device_total(IDTYPE_MOUSE);
     for (int j = 0; j < num_mice; j++) {
-        add(inputdevice_get_device_name(IDTYPE_MOUSE, j), JSEM_MICE + j);
+        const char* name = inputdevice_get_device_name(IDTYPE_MOUSE, j);
+        std::string label = std::string("[Mouse] ") + (name ? name : "?");
+        input_device_names.push_back(label);
+        input_device_ids.push_back(JSEM_MICE + j);
     }
 
     // Disambiguate duplicate device names by appending instance numbers
