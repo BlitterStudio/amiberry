@@ -5378,8 +5378,13 @@ void create_missing_amiberry_folders()
 			download_rtb("kick40068.A1200.RTB");
 			download_rtb("kick40068.A4000.RTB");
 
-			destination = get_whdbootpath().append("game-data/whdload_db.xml");
-			download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
+			destination = get_whdbootpath().append("game-data/whdload_db.json");
+			if (!download_file("https://raw.githubusercontent.com/BlitterStudio/amiberry-game-db/main/whdload_db.json", destination, true))
+			{
+				// Fallback to XML from legacy source
+				destination = get_whdbootpath().append("game-data/whdload_db.xml");
+				download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
+			}
 		}
 	}
 	if (!my_existsdir(whdload_arch_path.c_str()))

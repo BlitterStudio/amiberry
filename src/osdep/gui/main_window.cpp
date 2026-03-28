@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <filesystem>
+#include <nlohmann/json.hpp>
 #include <SDL3_image/SDL_image.h>
 #include <dpi_handler.hpp>
 #include <unordered_map>
@@ -318,6 +319,34 @@ static int gui_create_rtarea_flag(uae_prefs* p)
 #endif
 
 	return flag;
+}
+
+std::string get_json_timestamp(const std::string& json_filename)
+{
+	std::ifstream f(json_filename);
+	if (!f.is_open())
+		return "";
+
+	try
+	{
+		// Read only enough to find the timestamp fields near the top
+		// Parse the full file since nlohmann doesn't support partial parsing easily
+		nlohmann::json doc = nlohmann::json::parse(f, nullptr, false);
+		f.close();
+		if (doc.is_discarded())
+			return "";
+
+		// Prefer upstream_timestamp, fall back to generated
+		if (doc.contains("upstream_timestamp") && doc["upstream_timestamp"].is_string())
+			return doc["upstream_timestamp"].get<std::string>();
+		if (doc.contains("generated") && doc["generated"].is_string())
+			return doc["generated"].get<std::string>();
+	}
+	catch (...)
+	{
+		// Parse failed
+	}
+	return "";
 }
 
 std::string get_xml_timestamp(const std::string& xml_filename)

@@ -14,6 +14,7 @@
 
 extern int console_logging;
 extern std::string get_xml_timestamp(const std::string& xml_filename);
+extern std::string get_json_timestamp(const std::string& json_filename);
 
 // WHDBooter download state
 static std::atomic<bool> s_whdboot_downloading{false};
@@ -141,11 +142,23 @@ static void start_whdboot_download()
 				all_ok = false;
 		}
 
-		// 10. whdload_db.xml
-		dest = get_whdbootpath().append("game-data/whdload_db.xml");
-		const auto old_timestamp = get_xml_timestamp(dest);
-		const bool xml_ok = do_download(++step, "whdload_db.xml",
-			"https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", dest, true);
+		// 10. whdload_db.json (primary) with XML fallback
+		const auto json_dest = get_whdbootpath().append("game-data/whdload_db.json");
+		const auto xml_dest = get_whdbootpath().append("game-data/whdload_db.xml");
+		const auto old_json_timestamp = get_json_timestamp(json_dest);
+		const auto old_xml_timestamp = get_xml_timestamp(xml_dest);
+		const auto old_timestamp = !old_json_timestamp.empty() ? old_json_timestamp : old_xml_timestamp;
+
+		bool db_ok = do_download(++step, "whdload_db.json",
+			"https://raw.githubusercontent.com/BlitterStudio/amiberry-game-db/main/whdload_db.json", json_dest, true);
+
+		if (!db_ok && !s_whdboot_cancel.load())
+		{
+			write_log("WHDBooter - JSON download failed, falling back to XML\n");
+			dest = xml_dest;
+			db_ok = do_download(step, "whdload_db.xml",
+				"https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", dest, true);
+		}
 
 		if (s_whdboot_cancel.load())
 		{
@@ -159,10 +172,12 @@ static void start_whdboot_download()
 
 		{
 			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
-			if (xml_ok)
+			if (db_ok)
 			{
-				const auto new_timestamp = get_xml_timestamp(dest);
-				s_whdboot_result_msg = "WHDBooter files updated.\n\nXML previous: " + old_timestamp + "\nXML new: " + new_timestamp;
+				const auto new_json_timestamp = get_json_timestamp(json_dest);
+				const auto new_xml_timestamp = get_xml_timestamp(xml_dest);
+				const auto new_timestamp = !new_json_timestamp.empty() ? new_json_timestamp : new_xml_timestamp;
+				s_whdboot_result_msg = "WHDBooter files updated.\n\nDB previous: " + old_timestamp + "\nDB new: " + new_timestamp;
 			}
 			else if (!all_ok)
 			{
@@ -171,7 +186,7 @@ static void start_whdboot_download()
 			}
 			else
 			{
-				s_whdboot_result_msg = "Failed to download whdload_db.xml.\nPlease check the log for details.";
+				s_whdboot_result_msg = "Failed to download game database.\nPlease check the log for details.";
 				s_whdboot_result_is_error = true;
 			}
 		}

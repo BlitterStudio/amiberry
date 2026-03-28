@@ -20,6 +20,7 @@
 #include "rommgr.h"
 #include "fsdb.h"
 #include "tinyxml2.h"
+#include <nlohmann/json.hpp>
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
@@ -909,6 +910,183 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 	}
 }
 
+static std::string json_string_or_nul(const nlohmann::json& obj, const std::string& key)
+{
+	auto it = obj.find(key);
+	if (it == obj.end() || it->is_null())
+		return "nul";
+	if (it->is_boolean())
+		return it->get<bool>() ? "TRUE" : "FALSE";
+	if (it->is_number_integer())
+		return std::to_string(it->get<int>());
+	return it->get<std::string>();
+}
+
+static game_hardware_options get_game_hardware_from_json(const nlohmann::json& hw)
+{
+	game_hardware_options detail;
+	detail.port0 = json_string_or_nul(hw, "port0");
+	detail.port1 = json_string_or_nul(hw, "port1");
+	detail.control = json_string_or_nul(hw, "primary_control");
+	detail.control2 = json_string_or_nul(hw, "secondary_control");
+	detail.cpu = json_string_or_nul(hw, "cpu");
+	detail.blitter = json_string_or_nul(hw, "blitter");
+	detail.clock = json_string_or_nul(hw, "clock");
+	detail.chipset = json_string_or_nul(hw, "chipset");
+	detail.jit = json_string_or_nul(hw, "jit");
+	detail.cpu_24bit = json_string_or_nul(hw, "cpu_24bitaddressing");
+	detail.cpu_comp = json_string_or_nul(hw, "cpu_compatible");
+	detail.sprites = json_string_or_nul(hw, "sprites");
+	detail.scr_height = json_string_or_nul(hw, "screen_height");
+	detail.scr_width = json_string_or_nul(hw, "screen_width");
+	detail.scr_autoheight = json_string_or_nul(hw, "screen_autoheight");
+	detail.scr_centerh = json_string_or_nul(hw, "screen_centerh");
+	detail.scr_centerv = json_string_or_nul(hw, "screen_centerv");
+	detail.scr_offseth = json_string_or_nul(hw, "screen_offseth");
+	detail.scr_offsetv = json_string_or_nul(hw, "screen_offsetv");
+	detail.ntsc = json_string_or_nul(hw, "ntsc");
+	detail.fast = json_string_or_nul(hw, "fast_ram");
+	detail.z3 = json_string_or_nul(hw, "z3_ram");
+	detail.cpu_exact = json_string_or_nul(hw, "cpu_exact");
+	return detail;
+}
+
+static void parse_slave_custom_fields_from_json(whdload_slave& slave, const nlohmann::json& fields)
+{
+	for (const auto& field : fields)
+	{
+		int slot = field.value("slot", 0);
+		if (slot < 1 || slot > 5)
+			continue;
+
+		auto& custom_field = slave.get_custom(slot);
+		std::string type = field.value("type", "");
+
+		if (type == "bool")
+		{
+			custom_field.type = bool_type;
+			custom_field.caption = field.value("caption", "");
+			custom_field.value = 0;
+		}
+		else if (type == "bit")
+		{
+			custom_field.type = bit_type;
+			custom_field.value = 0;
+			std::string label = field.value("label", "");
+			int bit = field.value("bit", 0);
+			custom_field.label_bit_pairs.insert(custom_field.label_bit_pairs.end(), { label, bit });
+		}
+		else if (type == "list")
+		{
+			custom_field.type = list_type;
+			custom_field.caption = field.value("caption", "");
+			custom_field.value = 0;
+			if (field.contains("options"))
+			{
+				for (const auto& opt : field["options"])
+					custom_field.labels.push_back(opt.get<std::string>());
+			}
+		}
+	}
+}
+
+game_hardware_options parse_settings_from_json(uae_prefs* prefs, const char* filepath)
+{
+	write_log("WHDBooter - Searching whdload_db.json for %s\n", whdload_prefs.filename.c_str());
+
+	std::ifstream f(whd_config);
+	if (!f.is_open())
+	{
+		write_log("Failed to open '%s'\n", whd_config.c_str());
+		return {};
+	}
+
+	nlohmann::json doc;
+	try
+	{
+		doc = nlohmann::json::parse(f);
+	}
+	catch (const nlohmann::json::parse_error& e)
+	{
+		write_log("Failed to parse '%s': %s\n", whd_config.c_str(), e.what());
+		return {};
+	}
+	f.close();
+
+	if (!doc.contains("games") || !doc["games"].is_array())
+	{
+		write_log("WHDBooter - whdload_db.json has no 'games' array\n");
+		return {};
+	}
+
+	game_hardware_options game_detail{};
+	auto sha1 = my_get_sha1_of_file(filepath);
+	std::transform(sha1.begin(), sha1.end(), sha1.begin(),
+		[](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
+
+	for (const auto& game : doc["games"])
+	{
+		std::string entry_filename = game.value("filename", "");
+		std::string entry_sha1 = game.value("sha1", "");
+
+		if (entry_filename != whdload_prefs.filename && entry_sha1 != sha1)
+			continue;
+
+		whdload_prefs.game_name = game.value("name", "");
+		whdload_prefs.sub_path = game.value("subpath", "");
+		whdload_prefs.variant_uuid = game.value("variant_uuid", "");
+		whdload_prefs.slave_count = game.value("slave_count", 0);
+		whdload_prefs.slave_default = game.value("slave_default", "");
+		whdload_prefs.slave_libraries = game.value("slave_libraries", false);
+
+		write_log("WHDBooter - Selected Slave: %s \n", whdload_prefs.slave_default.c_str());
+
+		whdload_prefs.slaves.clear();
+		if (game.contains("slaves") && game["slaves"].is_array())
+		{
+			for (const auto& slave_json : game["slaves"])
+			{
+				whdload_slave slave;
+				slave.filename = slave_json.value("filename", "");
+				slave.data_path = slave_json.value("datapath", "");
+
+				if (slave_json.contains("custom_fields") && slave_json["custom_fields"].is_array())
+				{
+					parse_slave_custom_fields_from_json(slave, slave_json["custom_fields"]);
+				}
+
+				whdload_prefs.slaves.emplace_back(slave);
+
+				if (slave.filename == whdload_prefs.slave_default)
+					whdload_prefs.selected_slave = slave;
+			}
+		}
+
+		if (game.contains("hardware") && game["hardware"].is_object())
+		{
+			game_detail = get_game_hardware_from_json(game["hardware"]);
+			write_log("WHDBooter - Game H/W Settings loaded from JSON\n");
+		}
+
+		if (game.contains("custom_controls") && game["custom_controls"].is_array())
+		{
+			for (const auto& line : game["custom_controls"])
+			{
+				std::string cfg_line = line.get<std::string>();
+				if (!cfg_line.empty())
+				{
+					parse_cfg_line(prefs, cfg_line);
+				}
+			}
+			write_log("WHDBooter - Game Custom Settings loaded from JSON\n");
+		}
+
+		break;
+	}
+
+	return game_detail;
+}
+
 game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 {
 	tinyxml2::XMLDocument doc;
@@ -1415,18 +1593,26 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// are we using save-data/ ?
 	kickstart_path = std::filesystem::path(get_savedatapath(true)) / "Kickstarts";
 
-	// LOAD GAME SPECIFICS
+	// LOAD GAME SPECIFICS - prefer JSON, fall back to XML
 	whd_path = whdbooter_path / "game-data";
 	game_hardware_options game_detail;
-	whd_config = (whd_path / "whdload_db.xml").string();
 
-	if (std::filesystem::exists(whd_config))
+	const auto json_path = (whd_path / "whdload_db.json").string();
+	const auto xml_path = (whd_path / "whdload_db.xml").string();
+
+	if (std::filesystem::exists(json_path))
 	{
+		whd_config = json_path;
+		game_detail = parse_settings_from_json(prefs, filepath);
+	}
+	else if (std::filesystem::exists(xml_path))
+	{
+		whd_config = xml_path;
 		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
 	else
 	{
-		write_log("WHDBooter - Could not load whdload_db.xml - does not exist?\n");
+		write_log("WHDBooter - Could not load whdload_db.json or whdload_db.xml - do not exist?\n");
 	}
 
 	if (whdload_prefs.selected_slave.filename.empty())
