@@ -93,31 +93,6 @@ endif()
 # Pre-release version suffix (project version is set in project() above)
 set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
 
-# Use PkgConfig only on FreeBSD
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-	# Required packages via pkg-config
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(SDL REQUIRED sdl3)
-	pkg_check_modules(SDL_IMAGE REQUIRED SDL3_image)
-	pkg_check_modules(FLAC REQUIRED flac)
-	pkg_check_modules(PNG REQUIRED libpng)
-    pkg_check_modules(SERIALPORT REQUIRED libserialport)
-
-	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
-	set(FREEBSD_INCLUDE_DIRS
-    	${SDL_INCLUDE_DIRS}
-    	${SDL_IMAGE_INCLUDE_DIRS}
-    	${FLAC_INCLUDE_DIRS}
-    	${PNG_INCLUDE_DIRS}
-	)
-	set(FREEBSD_LIBRARIES
-    	${SDL_LIBRARIES}
-    	${SDL_IMAGE_LIBRARIES}
-    	${FLAC_LIBRARIES}
-    	${PNG_LIBRARIES}
-	)
-endif()
-
 # Project identity
 set(AMIBERRY_DISPLAY_NAME "Amiberry")
 set(PROJECT_COMPANY_NAME "BlitterStudio")
