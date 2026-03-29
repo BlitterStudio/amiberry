@@ -1763,6 +1763,32 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		handle_focus_lost_event(mon);
 		break;
+	case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+	{
+		// Sync internal state when entering fullscreen via OS mechanism (e.g. macOS green button)
+		const auto* ad = &adisplays[mon->monitor_id];
+		auto* p = ad->picasso_on
+			? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen
+			: &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
+		if (*p == GFX_WINDOW) {
+			*p = GFX_FULLWINDOW;
+			set_config_changed();
+		}
+		break;
+	}
+	case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+	{
+		// Sync internal state when leaving fullscreen via OS mechanism (e.g. macOS green button)
+		const auto* ad = &adisplays[mon->monitor_id];
+		auto* p = ad->picasso_on
+			? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen
+			: &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
+		if (*p == GFX_FULLWINDOW) {
+			*p = GFX_WINDOW;
+			set_config_changed();
+		}
+		break;
+	}
 	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 		handle_close_event();
 		break;
