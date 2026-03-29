@@ -530,6 +530,54 @@ void VulkanRenderer::destroy_platform_renderer(AmigaMonitor* /*mon*/)
 	// No-op for Vulkan
 }
 
+const char* VulkanRenderer::get_selected_shader_name(int monid) const
+{
+	const auto* mon = &AMonitors[monid];
+	return mon->screen_is_picasso ? amiberry_options.shader_rtg : amiberry_options.shader;
+}
+
+void VulkanRenderer::sync_crt_shader_selection(int monid)
+{
+	const char* shader_name = get_selected_shader_name(monid);
+	if (shader_name == nullptr)
+		shader_name = "";
+
+	const bool want_crt = (*shader_name != '\0' && SDL_strcasecmp(shader_name, "none") != 0);
+	const bool shader_changed = (m_crt_shader_name != shader_name);
+	const bool was_active = m_crt_shader_active;
+
+	if (!want_crt) {
+		if (shader_changed || was_active ||
+			m_crt_pipeline != VK_NULL_HANDLE || m_crt_fragment_shader_module != VK_NULL_HANDLE) {
+			cleanup_crt_pipeline();
+			cleanup_crt_shader_module();
+		}
+		if (was_active)
+			write_log("VulkanRenderer: CRT shader deactivated\n");
+		m_crt_shader_active = false;
+		m_crt_shader_name = shader_name;
+		m_crt_time = 0.0f;
+		return;
+	}
+
+	if (shader_changed) {
+		cleanup_crt_pipeline();
+		cleanup_crt_shader_module();
+		m_crt_time = 0.0f;
+	}
+
+	m_crt_shader_name = shader_name;
+	m_crt_shader_active = true;
+
+	if (m_crt_pipeline == VK_NULL_HANDLE || m_crt_fragment_shader_module == VK_NULL_HANDLE) {
+		if (create_crt_pipeline()) {
+			write_log("VulkanRenderer: CRT shader activated (%s)\n", shader_name);
+		} else if (shader_changed || !was_active) {
+			write_log("VulkanRenderer: CRT shader selected (%s), pipeline not ready yet\n", shader_name);
+		}
+	}
+}
+
 // ============================================================================
 // Texture / shader allocation (Phase 2: stubs)
 // ============================================================================
@@ -543,23 +591,7 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	if (gfx_platform_skip_alloctexture(monid, w, h))
 		return true;
 
-	// Detect CRT shader selection from options
-	{
-		const auto* mon = &AMonitors[monid];
-		const char* shader_name = mon->screen_is_picasso
-			? amiberry_options.shader_rtg : amiberry_options.shader;
-		bool want_crt = (shader_name && *shader_name &&
-			strcmp(shader_name, "none") != 0 && strcmp(shader_name, "NONE") != 0);
-		if (want_crt != m_crt_shader_active) {
-			m_crt_shader_active = want_crt;
-			if (want_crt) {
-				create_crt_pipeline();
-				write_log("VulkanRenderer: CRT shader activated\n");
-			} else {
-				write_log("VulkanRenderer: CRT shader deactivated\n");
-			}
-		}
-	}
+	sync_crt_shader_selection(monid);
 
 	if (w < 0 || h < 0) {
 		const int requested_w = -w;
@@ -870,6 +902,8 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 		m_has_uploaded_frame = false;
 		return false;
 	}
+
+	sync_crt_shader_selection(monid);
 
 	const bool upload_resources_ready =
 		m_upload_staging_buffer != VK_NULL_HANDLE &&
@@ -2725,10 +2759,16 @@ bool VulkanRenderer::create_crt_shader_module()
 	if (m_crt_fragment_shader_module != VK_NULL_HANDLE)
 		return true;
 
+	const bool use_1084_shader =
+		(!m_crt_shader_name.empty() && SDL_strcasecmp(m_crt_shader_name.c_str(), "1084") == 0);
+	const uint32_t* shader_code = use_1084_shader ? __amiberry_crt1084_frag_spv : __amiberry_crt_frag_spv;
+	const size_t shader_code_size = use_1084_shader
+		? sizeof(__amiberry_crt1084_frag_spv) : sizeof(__amiberry_crt_frag_spv);
+
 	VkShaderModuleCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	create_info.codeSize = sizeof(__amiberry_crt_frag_spv);
-	create_info.pCode = __amiberry_crt_frag_spv;
+	create_info.codeSize = shader_code_size;
+	create_info.pCode = shader_code;
 
 	VkResult result = vkCreateShaderModule(m_device, &create_info, nullptr, &m_crt_fragment_shader_module);
 	if (result != VK_SUCCESS) {
@@ -2736,7 +2776,8 @@ bool VulkanRenderer::create_crt_shader_module()
 		return false;
 	}
 
-	write_log("VulkanRenderer: CRT fragment shader module created\n");
+	write_log("VulkanRenderer: CRT fragment shader module created (%s)\n",
+		use_1084_shader ? "1084" : "default");
 	return true;
 }
 
@@ -3832,6 +3873,8 @@ void VulkanRenderer::render_onscreen_joystick(int /*monid*/)
 void VulkanRenderer::destroy_shaders()
 {
 	m_crt_shader_active = false;
+	m_crt_shader_name.clear();
+	m_crt_time = 0.0f;
 	cleanup_crt_pipeline();
 	cleanup_crt_shader_module();
 }

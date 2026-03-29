@@ -148,6 +148,7 @@ private:
 	VkShaderModule m_crt_fragment_shader_module = VK_NULL_HANDLE;
 	VkPipeline m_crt_pipeline = VK_NULL_HANDLE;
 	bool m_crt_shader_active = false;
+	std::string m_crt_shader_name;
 	float m_crt_time = 0.0f;
 
 	VkRenderPass m_render_pass = VK_NULL_HANDLE;
@@ -268,6 +269,8 @@ private:
 	bool create_texture_descriptor_resources();
 	void cleanup_texture_descriptor_resources();
 	bool update_texture_descriptor_set();
+	const char* get_selected_shader_name(int monid) const;
+	void sync_crt_shader_selection(int monid);
 	bool create_pipeline_layout();
 	void cleanup_pipeline_layout();
 	bool create_shader_modules();

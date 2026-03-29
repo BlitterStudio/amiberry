@@ -29,7 +29,7 @@ layout(push_constant) uniform PushConstants {
 // have a gamma of roughly 2.2.
 vec3 tsample(vec2 tc)
 {
-    return pow(max(texture(backbuffer, vec2(tc.x, 1.0 - tc.y)).rgb, vec3(0.0)), vec3(2.2));
+    return pow(max(texture(backbuffer, tc).rgb, vec3(0.0)), vec3(2.2));
 }
 
 // Cheap 5-tap blur approximation for bloom/halation without a separate pass.
