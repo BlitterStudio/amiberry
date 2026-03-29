@@ -140,6 +140,8 @@ static int sound_closed;
 static int recapture;
 static int focus;
 static int mouseinside;
+static int pending_mousecapture_monid = -1;
+static int pending_mousecapture_active;
 int mouseactive;
 int mouse_monid;
 int minimized;
@@ -812,6 +814,73 @@ void set_showcursor(const BOOL v)
 	}
 }
 
+void updatemouseclip(AmigaMonitor* mon);
+void updatewinrect(AmigaMonitor* mon, const bool allowfullscreen);
+void releasecapture(const AmigaMonitor* mon);
+
+static void clear_pending_mouse_capture()
+{
+	pending_mousecapture_monid = -1;
+	pending_mousecapture_active = 0;
+}
+
+static void queue_pending_mouse_capture(const int monid, const int active)
+{
+	if (pending_mousecapture_monid != monid || pending_mousecapture_active != active) {
+		write_log("Deferring mouse capture until focus is gained on monitor %d (active=%d)\n", monid, active);
+	}
+	pending_mousecapture_monid = monid;
+	pending_mousecapture_active = active;
+}
+
+static bool consume_pending_mouse_capture(const int monid, int* active)
+{
+	if (pending_mousecapture_monid != monid)
+		return false;
+	if (active)
+		*active = pending_mousecapture_active;
+	pending_mousecapture_monid = -1;
+	pending_mousecapture_active = 0;
+	return true;
+}
+
+static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
+{
+	const bool mouse_grab_ok = SDL_SetWindowMouseGrab(mon->amiga_window, true);
+	if (!mouse_grab_ok) {
+		write_log("SDL_SetWindowMouseGrab(true) failed on monitor %d: %s\n", mon->monitor_id, SDL_GetError());
+	}
+	// Skip keyboard grab when alt_tab_release is on so the
+	// compositor handles Alt-Tab; focus-loss tears down capture
+	// safely after pointer focus has already moved (see #1829).
+	if (!SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release)) {
+		write_log("SDL_SetWindowKeyboardGrab(%d) failed on monitor %d: %s\n",
+			currprefs.alt_tab_release ? 0 : 1, mon->monitor_id, SDL_GetError());
+	}
+	// SDL hides the cursor when Relative mode is enabled.
+	// This means that the RTG hardware sprite will no longer be shown,
+	// unless it's configured to use Virtual Mouse (absolute movement).
+	bool relative_ok = true;
+	if (!currprefs.input_tablet) {
+		relative_ok = SDL_SetWindowRelativeMouseMode(mon->amiga_window, true);
+		if (!relative_ok) {
+			write_log("SDL_SetWindowRelativeMouseMode(true) failed on monitor %d: %s\n",
+				mon->monitor_id, SDL_GetError());
+		}
+	}
+
+	if (!mouse_grab_ok || !relative_ok) {
+		releasecapture(mon);
+		return false;
+	}
+
+	updatewinrect(mon, false);
+	mon_cursorclipped = mon->monitor_id + 1;
+	updatemouseclip(mon);
+	setcursor(mon, -30000, -30000);
+	return true;
+}
+
 void releasecapture(const AmigaMonitor* mon)
 {
 	SDL_SetWindowMouseGrab(mon->amiga_window, false);
@@ -957,27 +1026,20 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 	if (mouseactive > 0)
 		focus = mon->monitor_id + 1;
 
-	if (mouseactive) {
-		if (focus) {
+	if (mouseactive && focus) {
 #if MOUSECLIP_HIDE
-			set_showcursor(FALSE);
+		set_showcursor(FALSE);
 #endif
-			SDL_SetWindowMouseGrab(mon->amiga_window, true);
-			// Skip keyboard grab when alt_tab_release is on so the
-			// compositor handles Alt-Tab; focus-loss tears down capture
-			// safely after pointer focus has already moved (see #1829).
-			SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
-			// SDL hides the cursor when Relative mode is enabled
-			// This means that the RTG hardware sprite will no longer be shown,
-			// unless it's configured to use Virtual Mouse (absolute movement).
-			if (!currprefs.input_tablet)
-				SDL_SetWindowRelativeMouseMode(mon->amiga_window, true);
-			
-			updatewinrect(mon, false);
-			mon_cursorclipped = mon->monitor_id + 1;
-			updatemouseclip(mon);
-			setcursor(mon, -30000, -30000);
+		if (!apply_mouse_capture_grabs(mon)) {
+			write_log("Mouse capture activation failed on monitor %d, keeping window uncaptured\n", mon->monitor_id);
+			focus = 0;
+			mouseactive = 0;
+			active = 0;
+			recapture = 0;
 		}
+	}
+
+	if (mouseactive) {
 		if (lastmouseactive != mouseactive) {
 			wait_keyrelease();
 		}
@@ -1012,10 +1074,18 @@ void setmouseactive(const int monid, const int active)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
+	if (active <= 0)
+		clear_pending_mouse_capture();
 	if (osdep_platform_require_window_for_mouse() && !mon->amiga_window)
 		return;
 	if (active > 1)
 		SDL_RaiseWindow(mon->amiga_window);
+	if (active != 0 && !iswindowfocus(mon)) {
+		queue_pending_mouse_capture(monid, active);
+		return;
+	}
+	if (active != 0 && pending_mousecapture_monid == monid)
+		clear_pending_mouse_capture();
 	setmouseactive2(mon, active, true);
 	setcursorshape(monid);
 }
@@ -1639,6 +1709,13 @@ static void handle_focus_gained_event(AmigaMonitor* mon)
 		}
 	}
 	mon->focus_transitioning = false;
+
+	int pending_active = 0;
+	if (consume_pending_mouse_capture(mon->monitor_id, &pending_active) && !mouseactive) {
+		write_log("Focus gained on monitor %d, completing deferred mouse capture (active=%d)\n",
+			mon->monitor_id, pending_active);
+		setmouseactive(mon->monitor_id, pending_active);
+	}
 }
 
 static void handle_minimized_event(const AmigaMonitor* mon)
