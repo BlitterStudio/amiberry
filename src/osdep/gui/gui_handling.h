@@ -379,6 +379,7 @@ PANEL(io,                 "IO Ports",           "port.png",       ICON_FA_PLUG) 
 PANEL(custom,             "Custom controls",    "controller.png", ICON_FA_GEARS) \
 PANEL(diskswapper,        "Disk swapper",       "35floppy.png",   ICON_FA_SHUFFLE) \
 PANEL(misc,               "Miscellaneous",      "misc.png",       ICON_FA_WRENCH) \
+PANEL(themes,             "Themes",             "misc.png",       ICON_FA_GEAR) \
 PANEL(prio,               "Priority",           "misc.png",       ICON_FA_GAUGE_HIGH) \
 PANEL(savestates,         "Savestates",         "savestate.png",  ICON_FA_BOOKMARK) \
 PANEL(virtual_keyboard,   "Virtual Keyboard",   "keyboard.png",   ICON_FA_KEYBOARD) \
@@ -495,6 +496,7 @@ extern void load_theme(const std::string& theme_filename);
 extern void load_default_theme();
 extern void load_default_dark_theme();
 extern void apply_imgui_theme();
+extern void rebuild_gui_fonts();
 
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);

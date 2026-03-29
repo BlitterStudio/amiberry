@@ -516,6 +516,40 @@ static const char* help_text_sound =
 	"The panel shows an approximate milliseconds-per-buffer value to make this easier to\n"
 	"judge while testing different settings.\n";
 
+static const char* help_text_themes =
+	"The Themes panel allows you to customize the look of the Amiberry GUI.\n"
+	"\n"
+	"Theme selection\n"
+	"Use the Theme dropdown to select a preset. Default and Dark are built-in presets\n"
+	"that are always available. You can also create and select custom themes.\n"
+	"\n"
+	"Font\n"
+	"You can change the font used by the GUI by entering a font filename or selecting\n"
+	"one using the \"...\" file browser button. The font size can also be adjusted.\n"
+	"You can expand the \"System fonts\" section to browse and select from fonts\n"
+	"installed on your system.\n"
+	"Font size changes apply immediately using the +/- buttons.\n"
+	"After changing the font name, click \"Apply font\" to load the new font.\n"
+
+	"\n"
+	"Colors\n"
+	"You can customize the GUI colors, organized by category:\n"
+	"- Window: Window background and input field backgrounds\n"
+	"- Text: Normal and disabled text colors\n"
+	"- Buttons: Button and button hover colors\n"
+	"- Accent: Active/accent color (used for checkmarks, active tabs, sliders)\n"
+	"  and selection highlight\n"
+	"- Borders: Border and separator line colors\n"
+	"- Tables: Table header background\n"
+	"- Overlay: Modal dim color (darkens the screen behind popups)\n"
+	"Color changes are previewed immediately in the GUI.\n"
+	"\n"
+	"Actions\n"
+	"- Use: Apply the current theme as your active theme\n"
+	"- Save: Overwrite the current custom theme file (disabled for built-in presets)\n"
+	"- Save as...: Save the current colors and font under a new theme name\n"
+	"- Reset: Reload the current theme from disk, discarding unsaved changes\n";
+
 static const char* help_text_input =
 	"Here you can select the devices connected to the various input ports.\n"
 	"Port 0 is normally used by a Mouse, while Port 1 is usually for a Joystick.\n"

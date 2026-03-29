@@ -1821,11 +1821,27 @@ void load_default_theme()
 {
 	gui_theme.font_name = "AmigaTopaz.ttf";
 	gui_theme.font_size = 15;
-	gui_theme.font_color = { 0, 0, 0 };
+	// Window
 	gui_theme.base_color = { 170, 170, 170 };
-	gui_theme.selector_inactive = { 170, 170, 170 };
-	gui_theme.selector_active = { 0, 85, 170 }; // Classic Amiga Blue
+	gui_theme.frame_color = { 150, 150, 150 };
+	// Text
+	gui_theme.font_color = { 0, 0, 0 };
+	gui_theme.text_disabled_color = { 100, 100, 100 };
+	// Accent
+	gui_theme.selector_active = { 0, 85, 170 };
 	gui_theme.selection_color = { 195, 217, 217 };
+	// Borders
+	gui_theme.border_color = { 120, 120, 120 };
+	// Buttons
+	gui_theme.button_color = { 170, 170, 170 };
+	gui_theme.button_hover_color = { 185, 185, 185 };
+	// Tables
+	gui_theme.table_header_color = { 160, 160, 160 };
+	// Modal
+	gui_theme.modal_dim_color = { 0, 0, 0 };
+	// Font rendering
+	// Legacy
+	gui_theme.selector_inactive = { 170, 170, 170 };
 	gui_theme.background_color = { 220, 220, 220 };
 	gui_theme.foreground_color = { 0, 0, 0 };
 }
@@ -1834,11 +1850,27 @@ void load_default_dark_theme()
 {
 	gui_theme.font_name = "AmigaTopaz.ttf";
 	gui_theme.font_size = 15;
-	gui_theme.font_color = { 200, 200, 200 };
+	// Window
 	gui_theme.base_color = { 32, 32, 37 };
-	gui_theme.selector_inactive = { 32, 32, 37 };
+	gui_theme.frame_color = { 45, 45, 47 };
+	// Text
+	gui_theme.font_color = { 200, 200, 200 };
+	gui_theme.text_disabled_color = { 128, 128, 128 };
+	// Accent
 	gui_theme.selector_active = { 50, 100, 200 };
 	gui_theme.selection_color = { 50, 100, 200 };
+	// Borders
+	gui_theme.border_color = { 60, 60, 65 };
+	// Buttons
+	gui_theme.button_color = { 50, 50, 55 };
+	gui_theme.button_hover_color = { 65, 65, 70 };
+	// Tables
+	gui_theme.table_header_color = { 40, 40, 45 };
+	// Modal
+	gui_theme.modal_dim_color = { 0, 0, 0 };
+	// Font rendering
+	// Legacy
+	gui_theme.selector_inactive = { 32, 32, 37 };
 	gui_theme.background_color = { 45, 45, 47 };
 	gui_theme.foreground_color = { 200, 200, 200 };
 }
@@ -1866,70 +1898,72 @@ void save_theme(const std::string& theme_filename)
 	file_output.open(filename, ios::out);
 	if (file_output.is_open())
 	{
+		auto write_color = [&](const char* key, const amiberry_gui_color& c) {
+			file_output << key << "=" << (int)c.r << "," << (int)c.g << "," << (int)c.b << '\n';
+		};
 		file_output << "font_name=" << gui_theme.font_name << '\n';
 		file_output << "font_size=" << gui_theme.font_size << '\n';
-		file_output << "font_color=" << (int)gui_theme.font_color.r << "," << (int)gui_theme.font_color.g << "," << (int)gui_theme.font_color.b << '\n';
-		file_output << "base_color=" << (int)gui_theme.base_color.r << "," << (int)gui_theme.base_color.g << "," << (int)gui_theme.base_color.b << '\n';
-		file_output << "selector_inactive=" << (int)gui_theme.selector_inactive.r << "," << (int)gui_theme.selector_inactive.g << "," << (int)gui_theme.selector_inactive.b << '\n';
-		file_output << "selector_active=" << (int)gui_theme.selector_active.r << "," << (int)gui_theme.selector_active.g << "," << (int)gui_theme.selector_active.b << '\n';
-		file_output << "selection_color=" << (int)gui_theme.selection_color.r << "," << (int)gui_theme.selection_color.g << "," << (int)gui_theme.selection_color.b << '\n';
-		file_output << "background_color=" << (int)gui_theme.background_color.r << "," << (int)gui_theme.background_color.g << "," << (int)gui_theme.background_color.b << '\n';
-		file_output << "foreground_color=" << (int)gui_theme.foreground_color.r << "," << (int)gui_theme.foreground_color.g << "," << (int)gui_theme.foreground_color.b << '\n';
+		write_color("font_color", gui_theme.font_color);
+		write_color("text_disabled_color", gui_theme.text_disabled_color);
+		write_color("base_color", gui_theme.base_color);
+		write_color("frame_color", gui_theme.frame_color);
+		write_color("selector_active", gui_theme.selector_active);
+		write_color("selection_color", gui_theme.selection_color);
+		write_color("border_color", gui_theme.border_color);
+		write_color("button_color", gui_theme.button_color);
+		write_color("button_hover_color", gui_theme.button_hover_color);
+		write_color("table_header_color", gui_theme.table_header_color);
+		write_color("modal_dim_color", gui_theme.modal_dim_color);
+		// Legacy fields for backward compatibility
+		write_color("selector_inactive", gui_theme.selector_inactive);
+		write_color("background_color", gui_theme.background_color);
+		write_color("foreground_color", gui_theme.foreground_color);
 		file_output.close();
 	}
 }
 
 void load_theme(const std::string& theme_filename)
 {
+	// Pre-fill all fields with light-theme defaults so that old theme files
+	// missing the new color fields get sensible values instead of black.
+	load_default_theme();
+
 	std::string filename = get_themes_path();
 	filename.append(theme_filename);
 	std::ifstream file_input(filename);
 	if (file_input.is_open())
 	{
+		auto read_color = [](const std::string& value, amiberry_gui_color& c) {
+			const std::vector<int> rgb = parse_color_string(value);
+			if (rgb.size() >= 3)
+				c = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
+		};
+
 		std::string line;
 		while (std::getline(file_input, line))
 		{
-			std::string key = line.substr(0, line.find('='));
-			std::string value = line.substr(line.find('=') + 1);
-			if (key == "font_name")
-				gui_theme.font_name = value;
-			else if (key == "font_size")
-				gui_theme.font_size = std::stoi(value);
-			else if (key == "font_color")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.font_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
-			else if (key == "base_color")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.base_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
-			else if (key == "selector_inactive")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.selector_inactive = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
-			else if (key == "selector_active")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.selector_active = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
-			else if (key == "selection_color")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.selection_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
-			else if (key == "background_color")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.background_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
-			else if (key == "foreground_color")
-			{
-				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.foreground_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
-			}
+			const auto eq = line.find('=');
+			if (eq == std::string::npos) continue;
+			const std::string key = line.substr(0, eq);
+			const std::string value = line.substr(eq + 1);
+
+			if (key == "font_name") gui_theme.font_name = value;
+			else if (key == "font_size") gui_theme.font_size = std::stoi(value);
+			else if (key == "font_color") read_color(value, gui_theme.font_color);
+			else if (key == "text_disabled_color") read_color(value, gui_theme.text_disabled_color);
+			else if (key == "base_color") read_color(value, gui_theme.base_color);
+			else if (key == "frame_color") read_color(value, gui_theme.frame_color);
+			else if (key == "selector_active") read_color(value, gui_theme.selector_active);
+			else if (key == "selection_color") read_color(value, gui_theme.selection_color);
+			else if (key == "border_color") read_color(value, gui_theme.border_color);
+			else if (key == "button_color") read_color(value, gui_theme.button_color);
+			else if (key == "button_hover_color") read_color(value, gui_theme.button_hover_color);
+			else if (key == "table_header_color") read_color(value, gui_theme.table_header_color);
+			else if (key == "modal_dim_color") read_color(value, gui_theme.modal_dim_color);
+			// Legacy fields
+			else if (key == "selector_inactive") read_color(value, gui_theme.selector_inactive);
+			else if (key == "background_color") read_color(value, gui_theme.background_color);
+			else if (key == "foreground_color") read_color(value, gui_theme.foreground_color);
 		}
 		file_input.close();
 	}
