@@ -1245,7 +1245,32 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	// This mirrors the OpenGL renderer's present_frame() logic.
 	const int drawable_w = static_cast<int>(m_swapchain_extent.width);
 	const int drawable_h = static_cast<int>(m_swapchain_extent.height);
-	int destX = 0, destY = 0, destW = drawable_w, destH = drawable_h;
+	int bezel_display_x = 0, bezel_display_y = 0;
+	int bezel_display_w = drawable_w, bezel_display_h = drawable_h;
+	if (draw_bezel && m_bezel_tex_w > 0 && m_bezel_tex_h > 0 && drawable_w > 0 && drawable_h > 0) {
+		const float bezel_aspect = static_cast<float>(m_bezel_tex_w) / m_bezel_tex_h;
+		const float window_aspect = static_cast<float>(drawable_w) / drawable_h;
+
+		if (window_aspect > bezel_aspect) {
+			bezel_display_w = static_cast<int>(drawable_h * bezel_aspect);
+			bezel_display_x = (drawable_w - bezel_display_w) / 2;
+		} else {
+			bezel_display_h = static_cast<int>(drawable_w / bezel_aspect);
+			bezel_display_y = (drawable_h - bezel_display_h) / 2;
+		}
+	}
+
+	int render_area_x = 0, render_area_y = 0;
+	int render_area_w = drawable_w, render_area_h = drawable_h;
+	if (draw_bezel && m_bezel_hole_w > 0.0f && m_bezel_hole_h > 0.0f) {
+		render_area_x = bezel_display_x + static_cast<int>(m_bezel_hole_x * bezel_display_w);
+		render_area_y = bezel_display_y + static_cast<int>(m_bezel_hole_y * bezel_display_h);
+		render_area_w = static_cast<int>(m_bezel_hole_w * bezel_display_w);
+		render_area_h = static_cast<int>(m_bezel_hole_h * bezel_display_h);
+	}
+
+	int destX = render_area_x, destY = render_area_y;
+	int destW = render_area_w, destH = render_area_h;
 
 	if (drawable_w > 0 && drawable_h > 0 && m_upload_texture_width > 0 && m_upload_texture_height > 0) {
 		const AmigaMonitor* mon = &AMonitors[monid];
@@ -1265,18 +1290,24 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 		const int src_w = m_upload_texture_width;
 		const int src_h = m_upload_texture_height;
 
-		if (use_center && src_w > 0 && src_h > 0) {
+		if (render_area_x != 0 || render_area_y != 0 ||
+			render_area_w != drawable_w || render_area_h != drawable_h) {
+			destW = render_area_w;
+			destH = render_area_h;
+			destX = render_area_x;
+			destY = render_area_y;
+		} else if (use_center && src_w > 0 && src_h > 0) {
 			destW = src_w;
 			destH = src_h;
-			destX = (drawable_w - destW) / 2;
-			destY = (drawable_h - destH) / 2;
+			destX = (render_area_w - destW) / 2;
+			destY = (render_area_h - destH) / 2;
 		} else {
 			// Fit to window preserving aspect ratio
-			destW = drawable_w;
-			destH = static_cast<int>(drawable_w / desired_aspect);
-			if (destH > drawable_h) {
-				destH = drawable_h;
-				destW = static_cast<int>(drawable_h * desired_aspect);
+			destW = render_area_w;
+			destH = static_cast<int>(render_area_w / desired_aspect);
+			if (destH > render_area_h) {
+				destH = render_area_h;
+				destW = static_cast<int>(render_area_h * desired_aspect);
 			}
 			if (destW <= 0) destW = 1;
 			if (destH <= 0) destH = 1;
@@ -1285,15 +1316,15 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 				int display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
 				int h_scale = destH / display_h;
 				if (h_scale < 1) h_scale = 1;
-				int w_scale = drawable_w / src_w;
+				int w_scale = render_area_w / src_w;
 				if (w_scale > h_scale) w_scale = h_scale;
 				if (w_scale < 1) w_scale = 1;
 				destW = src_w * w_scale;
 				destH = display_h * h_scale;
 			}
 
-			destX = (drawable_w - destW) / 2;
-			destY = (drawable_h - destH) / 2;
+			destX = render_area_x + (render_area_w - destW) / 2;
+			destY = render_area_y + (render_area_h - destH) / 2;
 		}
 	}
 
@@ -1432,18 +1463,8 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 
 	// Bezel overlay (covers full drawable, alpha-blended frame around the game area)
 	if (draw_bezel && m_bezel_tex_w > 0 && m_bezel_tex_h > 0) {
-		// Letterbox/pillarbox the bezel to preserve its aspect ratio
-		float bezel_aspect = static_cast<float>(m_bezel_tex_w) / m_bezel_tex_h;
-		float window_aspect = static_cast<float>(drawable_w) / drawable_h;
-		int bx = 0, by = 0, bw = drawable_w, bh = drawable_h;
-		if (window_aspect > bezel_aspect) {
-			bw = static_cast<int>(drawable_h * bezel_aspect);
-			bx = (drawable_w - bw) / 2;
-		} else {
-			bh = static_cast<int>(drawable_w / bezel_aspect);
-			by = (drawable_h - bh) / 2;
-		}
-		record_overlay_draw(command_buffer, m_bezel_tex, bx, by, bw, bh);
+		record_overlay_draw(command_buffer, m_bezel_tex,
+			bezel_display_x, bezel_display_y, bezel_display_w, bezel_display_h);
 	}
 
 	// Software cursor
