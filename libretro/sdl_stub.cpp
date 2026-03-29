@@ -901,16 +901,18 @@ SDL_Window* SDL_GetWindowFromID(SDL_WindowID id)
 }
 SDL_WindowID SDL_GetWindowID(SDL_Window* window) { return window ? window->id : 0; }
 SDL_WindowFlags SDL_GetWindowFlags(SDL_Window* window) { return window ? window->flags : 0; }
-void SDL_GetWindowPosition(SDL_Window* window, int* x, int* y)
+bool SDL_GetWindowPosition(SDL_Window* window, int* x, int* y)
 {
 	(void)window;
 	if (x) *x = 0;
 	if (y) *y = 0;
+	return true;
 }
-void SDL_GetWindowSize(SDL_Window* window, int* w, int* h)
+bool SDL_GetWindowSize(SDL_Window* window, int* w, int* h)
 {
 	if (w) *w = window ? window->w : 0;
 	if (h) *h = window ? window->h : 0;
+	return true;
 }
 void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed)
 {
@@ -940,40 +942,45 @@ bool SDL_SetWindowFullscreen(SDL_Window* window, bool fullscreen)
 	(void)fullscreen;
 	return true;
 }
-void SDL_SyncWindow(SDL_Window* window)
+bool SDL_SyncWindow(SDL_Window* window)
 {
 	(void)window;
+	return true;
 }
-void SDL_GetWindowSizeInPixels(SDL_Window* window, int* w, int* h)
+bool SDL_GetWindowSizeInPixels(SDL_Window* window, int* w, int* h)
 {
 	if (w) *w = window ? window->w : 0;
 	if (h) *h = window ? window->h : 0;
+	return true;
 }
-void SDL_SetWindowSize(SDL_Window* window, int w, int h)
+bool SDL_SetWindowSize(SDL_Window* window, int w, int h)
 {
 	if (window) {
 		window->w = w;
 		window->h = h;
 	}
+	return true;
 }
-void SDL_SetWindowPosition(SDL_Window* window, int x, int y)
+bool SDL_SetWindowPosition(SDL_Window* window, int x, int y)
 {
 	(void)window;
 	(void)x;
 	(void)y;
+	return true;
 }
-void SDL_RaiseWindow(SDL_Window* window) { (void)window; }
-void SDL_MinimizeWindow(SDL_Window* window) { (void)window; }
+bool SDL_RaiseWindow(SDL_Window* window) { (void)window; return true; }
+bool SDL_MinimizeWindow(SDL_Window* window) { (void)window; return true; }
 void SDL_DestroyWindow(SDL_Window* window)
 {
 	if (window == &g_window) {
 		SDL_zero(g_window);
 	}
 }
-void SDL_SetWindowIcon(SDL_Window* window, SDL_Surface* icon)
+bool SDL_SetWindowIcon(SDL_Window* window, SDL_Surface* icon)
 {
 	(void)window;
 	(void)icon;
+	return true;
 }
 
 SDL_Window* SDL_GetKeyboardFocus(void) { return &g_window; }
@@ -997,8 +1004,8 @@ SDL_Scancode SDL_GetScancodeFromName(const char* name)
 SDL_Keymod SDL_GetModState(void) { return KMOD_NONE; }
 
 SDL_Cursor* SDL_GetCursor(void) { return nullptr; }
-void SDL_ShowCursor(void) {}
-void SDL_HideCursor(void) {}
+bool SDL_ShowCursor(void) { return true; }
+bool SDL_HideCursor(void) { return true; }
 SDL_Cursor* SDL_CreateColorCursor(SDL_Surface* surface, int hot_x, int hot_y)
 {
 	(void)surface;
@@ -1012,7 +1019,7 @@ SDL_Cursor* SDL_CreateSystemCursor(SDL_SystemCursor id)
 	return nullptr;
 }
 void SDL_DestroyCursor(SDL_Cursor* cursor) { (void)cursor; }
-void SDL_SetCursor(SDL_Cursor* cursor) { (void)cursor; }
+bool SDL_SetCursor(SDL_Cursor* cursor) { (void)cursor; return true; }
 bool SDL_WarpMouseGlobal(float x, float y)
 {
 	(void)x;
@@ -1362,13 +1369,15 @@ int SDL_GetAudioStreamAvailable(SDL_AudioStream* stream)
 {
 	return stream ? stream->queued : 0;
 }
-void SDL_LockAudioStream(SDL_AudioStream* stream)
+bool SDL_LockAudioStream(SDL_AudioStream* stream)
 {
 	(void)stream;
+	return true;
 }
-void SDL_UnlockAudioStream(SDL_AudioStream* stream)
+bool SDL_UnlockAudioStream(SDL_AudioStream* stream)
 {
 	(void)stream;
+	return true;
 }
 bool SDL_SetAudioStreamGain(SDL_AudioStream* stream, float gain)
 {

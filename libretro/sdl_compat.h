@@ -627,6 +627,8 @@ enum {
 	SDL_EVENT_WINDOW_MOUSE_ENTER = 0x208,
 	SDL_EVENT_WINDOW_MOUSE_LEAVE = 0x209,
 	SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED = 0x20A,
+	SDL_EVENT_WINDOW_ENTER_FULLSCREEN = 0x20B,
+	SDL_EVENT_WINDOW_LEAVE_FULLSCREEN = 0x20C,
 	SDL_EVENT_WINDOW_LAST = 0x2FF,
 	SDL_EVENT_KEY_DOWN = 0x300,
 	SDL_EVENT_KEY_UP,
@@ -934,21 +936,21 @@ SDL_Renderer* SDL_CreateRenderer(SDL_Window* window, const char* name);
 SDL_Window* SDL_GetWindowFromID(SDL_WindowID id);
 SDL_WindowID SDL_GetWindowID(SDL_Window* window);
 SDL_WindowFlags SDL_GetWindowFlags(SDL_Window* window);
-void SDL_GetWindowPosition(SDL_Window* window, int* x, int* y);
-void SDL_GetWindowSize(SDL_Window* window, int* w, int* h);
+bool SDL_GetWindowPosition(SDL_Window* window, int* x, int* y);
+bool SDL_GetWindowSize(SDL_Window* window, int* w, int* h);
 void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed);
 bool SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed);
 bool SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed);
 bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode);
 bool SDL_SetWindowFullscreen(SDL_Window* window, bool fullscreen);
-void SDL_SyncWindow(SDL_Window* window);
-void SDL_GetWindowSizeInPixels(SDL_Window* window, int* w, int* h);
-void SDL_SetWindowSize(SDL_Window* window, int w, int h);
-void SDL_SetWindowPosition(SDL_Window* window, int x, int y);
-void SDL_RaiseWindow(SDL_Window* window);
-void SDL_MinimizeWindow(SDL_Window* window);
+bool SDL_SyncWindow(SDL_Window* window);
+bool SDL_GetWindowSizeInPixels(SDL_Window* window, int* w, int* h);
+bool SDL_SetWindowSize(SDL_Window* window, int w, int h);
+bool SDL_SetWindowPosition(SDL_Window* window, int x, int y);
+bool SDL_RaiseWindow(SDL_Window* window);
+bool SDL_MinimizeWindow(SDL_Window* window);
 void SDL_DestroyWindow(SDL_Window* window);
-void SDL_SetWindowIcon(SDL_Window* window, SDL_Surface* icon);
+bool SDL_SetWindowIcon(SDL_Window* window, SDL_Surface* icon);
 
 SDL_Window* SDL_GetKeyboardFocus(void);
 const bool* SDL_GetKeyboardState(int* numkeys);
@@ -957,12 +959,12 @@ SDL_Scancode SDL_GetScancodeFromName(const char* name);
 SDL_Keymod SDL_GetModState(void);
 
 SDL_Cursor* SDL_GetCursor(void);
-void SDL_ShowCursor(void);
-void SDL_HideCursor(void);
+bool SDL_ShowCursor(void);
+bool SDL_HideCursor(void);
 SDL_Cursor* SDL_CreateColorCursor(SDL_Surface* surface, int hot_x, int hot_y);
 SDL_Cursor* SDL_CreateSystemCursor(SDL_SystemCursor id);
 void SDL_DestroyCursor(SDL_Cursor* cursor);
-void SDL_SetCursor(SDL_Cursor* cursor);
+bool SDL_SetCursor(SDL_Cursor* cursor);
 bool SDL_WarpMouseGlobal(float x, float y);
 void SDL_WarpMouseInWindow(SDL_Window* window, float x, float y);
 bool SDL_SetWindowRelativeMouseMode(SDL_Window* window, bool enabled);
@@ -1028,8 +1030,8 @@ bool SDL_PauseAudioStreamDevice(SDL_AudioStream* stream);
 void SDL_DestroyAudioStream(SDL_AudioStream* stream);
 int SDL_GetAudioStreamQueued(SDL_AudioStream* stream);
 int SDL_GetAudioStreamAvailable(SDL_AudioStream* stream);
-void SDL_LockAudioStream(SDL_AudioStream* stream);
-void SDL_UnlockAudioStream(SDL_AudioStream* stream);
+bool SDL_LockAudioStream(SDL_AudioStream* stream);
+bool SDL_UnlockAudioStream(SDL_AudioStream* stream);
 bool SDL_SetAudioStreamGain(SDL_AudioStream* stream, float gain);
 
 bool SDL_Init(Uint32 flags);
