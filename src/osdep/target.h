@@ -19,6 +19,7 @@
 #include <windows.h>
 #endif
 #include <SDL3/SDL.h>
+#include <vector>
 
 #include "options.h"
 #include "sana2.h"
@@ -142,6 +143,10 @@ string prefix_with_application_directory_path(string currentpath);
 #endif
 
 extern void get_configuration_path(char* out, int size);
+extern std::string get_base_content_path();
+extern std::vector<std::string> get_base_content_missing_directories(const std::string& newpath);
+extern void set_base_content_path(const std::string& newpath);
+extern void create_missing_directories_for_base_content_path(const std::string& newpath);
 extern void set_configuration_path(const std::string& newpath);
 extern void set_nvram_path(const std::string& newpath);
 extern void set_plugins_path(const std::string& newpath);
@@ -183,7 +188,14 @@ extern bool get_portable_mode();
 #if !defined(__MACH__) && !defined(__ANDROID__)
 extern bool set_portable_mode(bool enable);
 #endif
+extern bool should_show_legacy_cleanup_prompt();
+extern std::vector<std::string> get_legacy_cleanup_prompt_items();
+extern bool legacy_cleanup_uses_trash();
+extern bool cleanup_legacy_items(std::vector<std::string>& failed_items);
+extern void postpone_legacy_cleanup_prompt();
+extern void dismiss_legacy_cleanup_prompt();
 extern void reset_default_paths();
+extern void create_missing_amiberry_folders();
 
 extern void extract_filename(const char* str, char* buffer);
 extern std::string extract_filename(const std::string& path);
