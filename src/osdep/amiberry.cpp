@@ -6861,27 +6861,27 @@ void create_missing_amiberry_folders()
 			write_log("No WHDLoad boot files found in %s, %s, or %s\n", default_whdboot_path.c_str(), "/usr/share/amiberry/whdboot/", "/usr/local/share/amiberry/whdboot/");
 			write_log("Attempting to download them from the internet...\n");
 
-			std::string directory_name = whdboot_path + "save-data";
+			std::string directory_name = join_path(whdboot_path, "save-data");
 			if (!my_existsdir(directory_name.c_str()))
 				my_mkdir(directory_name.c_str());
 
-			directory_name = whdboot_path + "save-data/Autoboots";
+			directory_name = join_path(whdboot_path, "save-data/Autoboots");
 			if (!my_existsdir(directory_name.c_str()))
 				my_mkdir(directory_name.c_str());
 
-			directory_name = whdboot_path + "save-data/Debugs";
+			directory_name = join_path(whdboot_path, "save-data/Debugs");
 			if (!my_existsdir(directory_name.c_str()))
 				my_mkdir(directory_name.c_str());
 
-			directory_name = whdboot_path + "save-data/Kickstarts";
+			directory_name = join_path(whdboot_path, "save-data/Kickstarts");
 			if (!my_existsdir(directory_name.c_str()))
 				my_mkdir(directory_name.c_str());
 
-			directory_name = whdboot_path + "save-data/Savegames";
+			directory_name = join_path(whdboot_path, "save-data/Savegames");
 			if (!my_existsdir(directory_name.c_str()))
 				my_mkdir(directory_name.c_str());
 
-			directory_name = whdboot_path + "game-data";
+			directory_name = join_path(whdboot_path, "game-data");
 			if (!my_existsdir(directory_name.c_str()))
 				my_mkdir(directory_name.c_str());
 
@@ -6973,14 +6973,14 @@ void create_missing_amiberry_folders()
 		ensure_directory_exists(shaders_path);
 	if (!my_existsdir(bezels_path.c_str()))
 		ensure_directory_exists(bezels_path);
-	std::string default_theme_file = themes_path + "Default.theme";
+	std::string default_theme_file = join_path(themes_path, "Default.theme");
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
 		load_default_theme();
 		save_theme("Default.theme");
 	}
 
-	default_theme_file = themes_path + "Dark.theme";
+	default_theme_file = join_path(themes_path, "Dark.theme");
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
 		load_default_dark_theme();
