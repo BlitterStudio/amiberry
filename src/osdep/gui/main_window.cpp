@@ -1528,6 +1528,9 @@ static void handle_drop_file_event(const SDL_Event& event)
 static bool show_disk_info = false;
 static char disk_info_title[128] = {0};
 static std::vector<std::string> disk_info_text;
+static bool open_legacy_cleanup_popup = false;
+static std::vector<std::string> legacy_cleanup_text;
+static std::string legacy_cleanup_error_message;
 
 void ShowMessageBox(const char* title, const char* message)
 {
@@ -1573,40 +1576,33 @@ void run_gui()
 #ifdef __MACH__
 	if (macos_data_migrated)
 	{
-		ShowMessageBox("Data Migration",
-			"Your Amiberry data has been migrated from:\n\n"
+		ShowMessageBox("Amiberry Migration",
+			"Amiberry imported existing settings and any compatible visual assets into the new layout.\n\n"
+			"Bootstrap settings now live in:\n\n"
 			"  ~/Library/Application Support/Amiberry\n\n"
-			"to the new location:\n\n"
-			"  ~/Documents/Amiberry\n\n"
-			"All configuration files and paths have been updated automatically.");
+			"Visual asset folders now default to:\n\n"
+			"  ~/Documents/Amiberry/Visuals\n\n"
+			"Your remaining content folders stay where they were before.");
 		macos_data_migrated = false;
-	}
-	else if (macos_migration_conflicts)
-	{
-		ShowMessageBox("Data Migration (Partial)",
-			"Your Amiberry data has been migrated to:\n\n"
-			"  ~/Documents/Amiberry\n\n"
-			"Some files were skipped because they already existed\n"
-			"at the destination. The old directory has been preserved:\n\n"
-			"  ~/Library/Application Support/Amiberry\n\n"
-			"Please review both locations and remove the old folder\n"
-			"when you are satisfied that all data is in place.");
-		macos_migration_conflicts = false;
 	}
 	else if (macos_migration_failed)
 	{
-		ShowMessageBox("Data Migration Failed",
-			"Amiberry could not migrate your data automatically.\n\n"
-			"Your data is still at:\n"
+		ShowMessageBox("Amiberry Migration Failed",
+			"Amiberry could not fully import your existing settings and visual assets into the new layout.\n\n"
+			"Bootstrap settings should live in:\n\n"
 			"  ~/Library/Application Support/Amiberry\n\n"
-			"The new location is:\n"
-			"  ~/Documents/Amiberry\n\n"
-			"Please check available disk space, move the files manually,\n"
-			"or restart Amiberry to retry the migration.\n\n"
-			"Check the log file for details.");
+			"Visual assets now default to:\n\n"
+			"  ~/Documents/Amiberry/Visuals\n\n"
+			"Your existing files were left untouched whenever possible.\n"
+			"Please check the log file for details.");
 		macos_migration_failed = false;
 	}
 #endif
+
+	open_legacy_cleanup_popup = should_show_legacy_cleanup_prompt();
+	legacy_cleanup_text = get_legacy_cleanup_prompt_items();
+	if (open_legacy_cleanup_popup)
+		legacy_cleanup_error_message.clear();
 
 	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
@@ -2146,6 +2142,82 @@ void run_gui()
                 ImGui::EndPopup();
             }
         }
+
+		if (open_legacy_cleanup_popup && !show_message_box && !show_disk_info) {
+			const float vw = vp->Size.x;
+			const float vh = vp->Size.y;
+			const float desired_w = vw * 0.62f;
+			ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(desired_w, 0.0f), ImGuiCond_Appearing);
+			ImGui::SetNextWindowSizeConstraints(ImVec2(desired_w, 0.0f), ImVec2(desired_w, vh * 0.82f));
+			ImGui::OpenPopup("Legacy Cleanup");
+			open_legacy_cleanup_popup = false;
+		}
+		if (ImGui::BeginPopupModal("Legacy Cleanup", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+		{
+			const float vh = vp->Size.y;
+			ImGui::TextWrapped("Amiberry found leftover files and folders from the previous layout.");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Your active paths already use the new locations, so cleaning these up will not change the settings and visuals Amiberry is using now.");
+			ImGui::Spacing();
+			ImGui::TextWrapped("If everything looks right, Amiberry can move the leftovers %s for safekeeping. You can also keep them for now and decide later.",
+				legacy_cleanup_uses_trash() ? "to Trash" : "aside");
+			ImGui::Spacing();
+			if (!legacy_cleanup_error_message.empty())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.70f, 0.10f, 0.10f, 1.0f));
+				ImGui::TextWrapped("%s", legacy_cleanup_error_message.c_str());
+				ImGui::PopStyleColor();
+				ImGui::Spacing();
+			}
+			ImGui::Text("Items to clean up:");
+			ImGui::BeginChild("LegacyCleanupItems", ImVec2(0, vh * 0.34f), ImGuiChildFlags_Borders);
+			for (const auto& item : legacy_cleanup_text)
+				ImGui::BulletText("%s", item.c_str());
+			ImGui::EndChild();
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Spacing();
+			const char* cleanup_action_label = legacy_cleanup_uses_trash() ? "Move to Trash" : "Archive Old Items";
+			if (AmigaButton(cleanup_action_label, ImVec2(BUTTON_WIDTH * 1.6f, BUTTON_HEIGHT)))
+			{
+				std::vector<std::string> failed_items;
+				const bool cleanup_ok = cleanup_legacy_items(failed_items);
+				if (cleanup_ok)
+				{
+					legacy_cleanup_error_message.clear();
+					legacy_cleanup_text.clear();
+					ImGui::CloseCurrentPopup();
+				}
+				else
+				{
+					legacy_cleanup_error_message = legacy_cleanup_uses_trash()
+						? "Some legacy items could not be moved to Trash:"
+						: "Some legacy items could not be moved aside:";
+					for (const auto& failed_item : failed_items)
+						legacy_cleanup_error_message += "\n- " + failed_item;
+					legacy_cleanup_error_message += "\n\nThey were left in place.";
+					legacy_cleanup_text = get_legacy_cleanup_prompt_items();
+				}
+			}
+			ImGui::SameLine();
+			if (AmigaButton("Ask Later", ImVec2(BUTTON_WIDTH * 1.2f, BUTTON_HEIGHT)))
+			{
+				legacy_cleanup_error_message.clear();
+				postpone_legacy_cleanup_prompt();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (AmigaButton("Don't Ask Again", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT)))
+			{
+				legacy_cleanup_error_message.clear();
+				dismiss_legacy_cleanup_prompt();
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
 
 		if (show_disk_info) {
             const float vw = vp->Size.x;

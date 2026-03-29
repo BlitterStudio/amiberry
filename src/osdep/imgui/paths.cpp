@@ -4,6 +4,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <vector>
 #include "sysdeps.h"
 #include "options.h"
 #include "gui/gui_handling.h"
@@ -40,6 +41,26 @@ static std::atomic<int64_t> s_controllers_dl_total{0};
 static std::mutex s_controllers_mutex;
 static std::string s_controllers_result_msg;
 static bool s_controllers_result_is_error = false;
+
+static std::string s_base_content_path_input;
+static std::string s_base_content_path_apply_value;
+static std::vector<std::string> s_base_content_missing_dirs;
+static bool s_base_content_path_dirty = false;
+static bool s_open_base_content_apply_popup = false;
+
+static std::string normalize_ui_path_string(const std::string& input)
+{
+	if (input.empty())
+		return {};
+
+	const auto normalized = std::filesystem::path(input).lexically_normal().string();
+	return normalized.empty() ? input : normalized;
+}
+
+static bool path_inputs_match(const std::string& lhs, const std::string& rhs)
+{
+	return normalize_ui_path_string(lhs) == normalize_ui_path_string(rhs);
+}
 
 static std::string format_download_bytes(int64_t bytes)
 {
@@ -264,6 +285,39 @@ static void start_controllers_download()
 void render_panel_paths()
 {
 	char tmp[MAX_DPATH];
+	const auto applied_base_content_path = get_base_content_path();
+	if (!s_base_content_path_dirty && !path_inputs_match(s_base_content_path_input, applied_base_content_path))
+		s_base_content_path_input = applied_base_content_path;
+
+	auto sync_base_content_path_input = [&]() {
+		s_base_content_path_input = get_base_content_path();
+		s_base_content_path_dirty = false;
+		s_base_content_path_apply_value.clear();
+		s_base_content_missing_dirs.clear();
+	};
+
+	auto finish_base_content_apply = [&](const bool create_missing_directories) {
+		set_base_content_path(s_base_content_path_apply_value);
+		if (create_missing_directories)
+			create_missing_directories_for_base_content_path(s_base_content_path_apply_value);
+		save_amiberry_settings();
+		sync_base_content_path_input();
+
+		if (s_base_content_path_apply_value.empty())
+		{
+			ShowMessageBox("Base Content Folder",
+				create_missing_directories
+					? "Base content folder cleared.\n\nMissing default folders were created."
+					: "Base content folder cleared.");
+		}
+		else
+		{
+			ShowMessageBox("Base Content Folder",
+				create_missing_directories
+					? "Base content folder updated.\n\nMissing folders were created."
+					: "Base content folder updated.");
+		}
+	};
 
 	// Helper lambda for rendering path rows
 	auto RenderPathRow = [&](const char* label, const char* id, const std::string& path, const std::function<void(const std::string&)>& setter, const bool is_file = false, const char* filter_name = nullptr, const char* filter_ext = nullptr) {
@@ -361,10 +415,11 @@ void render_panel_paths()
 #if defined(__MACH__)
 		ImGui::EndDisabled();
 #endif
-		ShowHelpMarker("When enabled, all data directories are resolved relative to the executable location.\n"
-			"Creates/removes the 'amiberry.portable' marker file.\n"
-			"A restart is required for the change to take effect.\n\n"
-			"Not available on macOS.");
+			ShowHelpMarker("When enabled, all data directories are resolved relative to the executable location.\n"
+				"Creates/removes the 'amiberry.portable' marker file.\n"
+				"A restart is required for the change to take effect.\n\n"
+				"Supported on Windows and Linux startup-directory installs.\n"
+				"Not available on macOS or Android.");
 	}
 	ImGui::Spacing();
 	ImGui::Separator();
@@ -385,6 +440,77 @@ void render_panel_paths()
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.06f));
 	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), ImGuiChildFlags_Borders);
+
+	ImGui::PushID("BaseContentPath");
+	ImGui::Text("Base content folder:");
+
+	const float browse_button_width = SMALL_BUTTON_WIDTH;
+	const float apply_button_width = BUTTON_WIDTH * 0.95f;
+	const float spacing = ImGui::GetStyle().ItemSpacing.x;
+	float input_width = ImGui::GetContentRegionAvail().x - browse_button_width - apply_button_width - spacing * 2.0f;
+	if (input_width < BUTTON_WIDTH)
+		input_width = BUTTON_WIDTH;
+
+	ImGui::SetNextItemWidth(input_width);
+	const bool base_content_exists = s_base_content_path_input.empty() || my_existsdir(s_base_content_path_input.c_str());
+	if (!base_content_exists)
+		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+
+	char base_content_buffer[MAX_DPATH];
+	strncpy(base_content_buffer, s_base_content_path_input.c_str(), MAX_DPATH);
+	base_content_buffer[MAX_DPATH - 1] = '\0';
+	if (AmigaInputText("##Input", base_content_buffer, MAX_DPATH))
+	{
+		s_base_content_path_input = base_content_buffer;
+		s_base_content_path_dirty = true;
+	}
+
+	if (!base_content_exists)
+	{
+		ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Directory not found");
+	}
+
+	ImGui::SameLine();
+	if (AmigaButton("...", ImVec2(browse_button_width, 0)))
+	{
+		OpenDirDialogKey("PATHS_BaseContentPath_DIR", s_base_content_path_input);
+	}
+
+	std::string base_content_dialog_path;
+	if (ConsumeDirDialogResultKey("PATHS_BaseContentPath_DIR", base_content_dialog_path))
+	{
+		s_base_content_path_input = base_content_dialog_path;
+		s_base_content_path_dirty = true;
+	}
+
+	ImGui::SameLine();
+	const auto normalized_pending_base_content_path = normalize_ui_path_string(s_base_content_path_input);
+	const bool can_apply_base_content = !path_inputs_match(normalized_pending_base_content_path, applied_base_content_path);
+	if (!can_apply_base_content)
+		ImGui::BeginDisabled();
+	if (AmigaButton("Apply", ImVec2(apply_button_width, 0)))
+	{
+		s_base_content_path_apply_value = normalized_pending_base_content_path;
+		s_base_content_missing_dirs = get_base_content_missing_directories(s_base_content_path_apply_value);
+		if (s_base_content_missing_dirs.empty())
+		{
+			finish_base_content_apply(false);
+		}
+		else
+		{
+			s_open_base_content_apply_popup = true;
+		}
+	}
+	if (!can_apply_base_content)
+		ImGui::EndDisabled();
+	ImGui::PopID();
+
+		ImGui::TextWrapped("Optional. When set, Amiberry derives the standard folders below from this root. Visual assets are stored in a sibling Visuals folder, not inside Configuration files. Editing a path below makes that entry an explicit override. Click Apply to use the new root. The bootstrap settings files stay in Amiberry's platform settings location.");
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
 
 	RenderPathRow("System ROMs:", "SystemROMs", get_rom_path(), [](const std::string& p) { set_rom_path(p); });
 
@@ -419,6 +545,47 @@ void render_panel_paths()
 	ImGui::PopStyleColor(2);
 	ImGui::PopStyleVar();
 
+	if (s_open_base_content_apply_popup)
+	{
+		ImGui::OpenPopup("Apply Base Content Folder");
+		s_open_base_content_apply_popup = false;
+	}
+	if (ImGui::BeginPopupModal("Apply Base Content Folder", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextWrapped("Some managed folders for this path layout do not exist yet.");
+		if (!s_base_content_path_apply_value.empty())
+		{
+			ImGui::Spacing();
+			ImGui::TextWrapped("Base folder: %s", s_base_content_path_apply_value.c_str());
+		}
+		ImGui::Spacing();
+		ImGui::Text("Missing folders:");
+		ImGui::BeginChild("MissingBaseContentDirs", ImVec2(BUTTON_WIDTH * 4.5f, BUTTON_HEIGHT * 6.0f), ImGuiChildFlags_Borders);
+		for (const auto& directory : s_base_content_missing_dirs)
+			ImGui::BulletText("%s", directory.c_str());
+		ImGui::EndChild();
+		ImGui::Spacing();
+		if (AmigaButton("Create", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		{
+			finish_base_content_apply(true);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (AmigaButton("Use As-Is", ImVec2(BUTTON_WIDTH * 1.3f, BUTTON_HEIGHT)))
+		{
+			finish_base_content_apply(false);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		{
+			s_base_content_path_apply_value.clear();
+			s_base_content_missing_dirs.clear();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+
 	// Logging Options
 	auto logging_enabled = get_logfile_enabled();
 	if (AmigaCheckbox("Enable logging", &logging_enabled))
@@ -442,16 +609,18 @@ void render_panel_paths()
 	{
 		reset_default_paths();
 		save_amiberry_settings();
+		sync_base_content_path_input();
 		ShowMessageBox("Reset Paths", "All paths have been reset to their default values.");
 	}
 	ImGui::SameLine();
 	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
+		create_missing_amiberry_folders();
 		scan_roms(true);
 		symlink_roms(&changed_prefs);
 		import_joysticks();
 
-		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
+		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- Missing folders created\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
 	{
 		const bool any_downloading = s_whdboot_downloading.load() || s_controllers_downloading.load();
