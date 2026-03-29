@@ -23,6 +23,13 @@
 #include <set>
 #include <limits>
 
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "picasso96.h"
+#include "target.h"
+#include "vkbd/vkbd.h"
+#include "on_screen_joystick.h"
+
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
@@ -125,6 +132,137 @@ static const uint32_t __amiberry_fullscreen_frag_spv[] = {
 	0x0003003e,0x00000021,0x00000028,0x000100fd,0x00010038
 };
 
+// Single-pass CRT shader: scanlines, RGB phosphor shadow mask, vignette.
+// Compiled from GLSL 450 via glslangValidator. Uses the same vertex shader,
+// push constants, and descriptor set layout as the passthrough fragment shader.
+static const uint32_t __amiberry_crt_frag_spv[] = {
+	0x07230203,0x00010000,0x0008000b,0x000000a4,0x00000000,0x00020011,0x00000001,0x00020011,
+	0x00000032,0x0006000b,0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,
+	0x00000000,0x00000001,0x0008000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x0000001e,
+	0x00000063,0x0000009e,0x00030010,0x00000004,0x00000007,0x00030003,0x00000002,0x000001c2,
+	0x00040005,0x00000004,0x6e69616d,0x00000000,0x00030005,0x00000009,0x00007675,0x00060005,
+	0x0000000a,0x68737550,0x736e6f43,0x746e6174,0x00000073,0x00050006,0x0000000a,0x00000000,
+	0x696d5f75,0x0000006e,0x00050006,0x0000000a,0x00000001,0x696d5f76,0x0000006e,0x00050006,
+	0x0000000a,0x00000002,0x616d5f75,0x00000078,0x00050006,0x0000000a,0x00000003,0x616d5f76,
+	0x00000078,0x00030005,0x0000000c,0x00006370,0x00040005,0x0000001e,0x56556e69,0x00000000,
+	0x00040005,0x00000021,0x53786574,0x00657a69,0x00040005,0x00000025,0x74786554,0x00657275,
+	0x00050005,0x0000002b,0x706f7263,0x657a6953,0x00000000,0x00030005,0x0000003b,0x006c6f63,
+	0x00050005,0x00000049,0x6e616373,0x656e696c,0x00000000,0x00040005,0x00000061,0x6b73616d,
+	0x00786449,0x00060005,0x00000063,0x465f6c67,0x43676172,0x64726f6f,0x00000000,0x00040005,
+	0x0000006a,0x6b73616d,0x00000000,0x00030005,0x00000080,0x00676976,0x00050005,0x0000009e,
+	0x4374756f,0x726f6c6f,0x00000000,0x00030047,0x0000000a,0x00000002,0x00050048,0x0000000a,
+	0x00000000,0x00000023,0x00000000,0x00050048,0x0000000a,0x00000001,0x00000023,0x00000004,
+	0x00050048,0x0000000a,0x00000002,0x00000023,0x00000008,0x00050048,0x0000000a,0x00000003,
+	0x00000023,0x0000000c,0x00040047,0x0000001e,0x0000001e,0x00000000,0x00040047,0x00000025,
+	0x00000021,0x00000000,0x00040047,0x00000025,0x00000022,0x00000000,0x00040047,0x00000063,
+	0x0000000b,0x0000000f,0x00040047,0x0000009e,0x0000001e,0x00000000,0x00020013,0x00000002,
+	0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,0x00000020,0x00040017,0x00000007,
+	0x00000006,0x00000002,0x00040020,0x00000008,0x00000007,0x00000007,0x0006001e,0x0000000a,
+	0x00000006,0x00000006,0x00000006,0x00000006,0x00040020,0x0000000b,0x00000009,0x0000000a,
+	0x0004003b,0x0000000b,0x0000000c,0x00000009,0x00040015,0x0000000d,0x00000020,0x00000001,
+	0x0004002b,0x0000000d,0x0000000e,0x00000000,0x00040020,0x0000000f,0x00000009,0x00000006,
+	0x0004002b,0x0000000d,0x00000012,0x00000001,0x0004002b,0x0000000d,0x00000016,0x00000002,
+	0x0004002b,0x0000000d,0x00000019,0x00000003,0x00040020,0x0000001d,0x00000001,0x00000007,
+	0x0004003b,0x0000001d,0x0000001e,0x00000001,0x00090019,0x00000022,0x00000006,0x00000001,
+	0x00000000,0x00000000,0x00000000,0x00000001,0x00000000,0x0003001b,0x00000023,0x00000022,
+	0x00040020,0x00000024,0x00000000,0x00000023,0x0004003b,0x00000024,0x00000025,0x00000000,
+	0x00040017,0x00000028,0x0000000d,0x00000002,0x00040017,0x00000039,0x00000006,0x00000003,
+	0x00040020,0x0000003a,0x00000007,0x00000039,0x00040017,0x0000003e,0x00000006,0x00000004,
+	0x0004002b,0x00000006,0x00000042,0x400ccccd,0x0006002c,0x00000039,0x00000043,0x00000042,
+	0x00000042,0x00000042,0x0004002b,0x00000006,0x00000045,0x3fb33333,0x00040020,0x00000048,
+	0x00000007,0x00000006,0x0004002b,0x00000006,0x0000004a,0x3f000000,0x00040015,0x0000004b,
+	0x00000020,0x00000000,0x0004002b,0x0000004b,0x0000004c,0x00000001,0x0004002b,0x00000006,
+	0x0000004f,0x40c90fd0,0x0004002b,0x00000006,0x00000058,0x3f4ccccd,0x0004002b,0x00000006,
+	0x0000005e,0x3f0ccccd,0x00040020,0x00000062,0x00000001,0x0000003e,0x0004003b,0x00000062,
+	0x00000063,0x00000001,0x0004002b,0x0000004b,0x00000064,0x00000000,0x00040020,0x00000065,
+	0x00000001,0x00000006,0x0004002b,0x00000006,0x00000068,0x40400000,0x0004002b,0x00000006,
+	0x0000006b,0x3f800000,0x0006002c,0x00000039,0x0000006c,0x0000006b,0x0000006b,0x0000006b,
+	0x00020014,0x0000006e,0x0004002b,0x00000006,0x00000072,0x3f333333,0x0006002c,0x00000039,
+	0x00000073,0x0000006b,0x00000072,0x00000072,0x0004002b,0x00000006,0x00000076,0x40000000,
+	0x0006002c,0x00000039,0x0000007a,0x00000072,0x0000006b,0x00000072,0x0006002c,0x00000039,
+	0x0000007c,0x00000072,0x00000072,0x0000006b,0x0004002b,0x00000006,0x00000081,0x41800000,
+	0x0004002b,0x00000006,0x00000091,0x00000000,0x0004002b,0x00000006,0x00000093,0x3e99999a,
+	0x0004002b,0x00000006,0x0000009a,0x3ee8ba2f,0x0006002c,0x00000039,0x0000009b,0x0000009a,
+	0x0000009a,0x0000009a,0x00040020,0x0000009d,0x00000003,0x0000003e,0x0004003b,0x0000009d,
+	0x0000009e,0x00000003,0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,0x000200f8,
+	0x00000005,0x0004003b,0x00000008,0x00000009,0x00000007,0x0004003b,0x00000008,0x00000021,
+	0x00000007,0x0004003b,0x00000008,0x0000002b,0x00000007,0x0004003b,0x0000003a,0x0000003b,
+	0x00000007,0x0004003b,0x00000048,0x00000049,0x00000007,0x0004003b,0x00000048,0x00000061,
+	0x00000007,0x0004003b,0x0000003a,0x0000006a,0x00000007,0x0004003b,0x00000048,0x00000080,
+	0x00000007,0x00050041,0x0000000f,0x00000010,0x0000000c,0x0000000e,0x0004003d,0x00000006,
+	0x00000011,0x00000010,0x00050041,0x0000000f,0x00000013,0x0000000c,0x00000012,0x0004003d,
+	0x00000006,0x00000014,0x00000013,0x00050050,0x00000007,0x00000015,0x00000011,0x00000014,
+	0x00050041,0x0000000f,0x00000017,0x0000000c,0x00000016,0x0004003d,0x00000006,0x00000018,
+	0x00000017,0x00050041,0x0000000f,0x0000001a,0x0000000c,0x00000019,0x0004003d,0x00000006,
+	0x0000001b,0x0000001a,0x00050050,0x00000007,0x0000001c,0x00000018,0x0000001b,0x0004003d,
+	0x00000007,0x0000001f,0x0000001e,0x0008000c,0x00000007,0x00000020,0x00000001,0x0000002e,
+	0x00000015,0x0000001c,0x0000001f,0x0003003e,0x00000009,0x00000020,0x0004003d,0x00000023,
+	0x00000026,0x00000025,0x00040064,0x00000022,0x00000027,0x00000026,0x00050067,0x00000028,
+	0x00000029,0x00000027,0x0000000e,0x0004006f,0x00000007,0x0000002a,0x00000029,0x0003003e,
+	0x00000021,0x0000002a,0x0004003d,0x00000007,0x0000002c,0x00000021,0x00050041,0x0000000f,
+	0x0000002d,0x0000000c,0x00000016,0x0004003d,0x00000006,0x0000002e,0x0000002d,0x00050041,
+	0x0000000f,0x0000002f,0x0000000c,0x0000000e,0x0004003d,0x00000006,0x00000030,0x0000002f,
+	0x00050083,0x00000006,0x00000031,0x0000002e,0x00000030,0x00050041,0x0000000f,0x00000032,
+	0x0000000c,0x00000019,0x0004003d,0x00000006,0x00000033,0x00000032,0x00050041,0x0000000f,
+	0x00000034,0x0000000c,0x00000012,0x0004003d,0x00000006,0x00000035,0x00000034,0x00050083,
+	0x00000006,0x00000036,0x00000033,0x00000035,0x00050050,0x00000007,0x00000037,0x00000031,
+	0x00000036,0x00050085,0x00000007,0x00000038,0x0000002c,0x00000037,0x0003003e,0x0000002b,
+	0x00000038,0x0004003d,0x00000023,0x0000003c,0x00000025,0x0004003d,0x00000007,0x0000003d,
+	0x00000009,0x00050057,0x0000003e,0x0000003f,0x0000003c,0x0000003d,0x0008004f,0x00000039,
+	0x00000040,0x0000003f,0x0000003f,0x00000000,0x00000001,0x00000002,0x0003003e,0x0000003b,
+	0x00000040,0x0004003d,0x00000039,0x00000041,0x0000003b,0x0007000c,0x00000039,0x00000044,
+	0x00000001,0x0000001a,0x00000041,0x00000043,0x0003003e,0x0000003b,0x00000044,0x0004003d,
+	0x00000039,0x00000046,0x0000003b,0x0005008e,0x00000039,0x00000047,0x00000046,0x00000045,
+	0x0003003e,0x0000003b,0x00000047,0x00050041,0x00000048,0x0000004d,0x00000009,0x0000004c,
+	0x0004003d,0x00000006,0x0000004e,0x0000004d,0x00050085,0x00000006,0x00000050,0x0000004e,
+	0x0000004f,0x00050041,0x00000048,0x00000051,0x0000002b,0x0000004c,0x0004003d,0x00000006,
+	0x00000052,0x00000051,0x00050085,0x00000006,0x00000053,0x00000050,0x00000052,0x0006000c,
+	0x00000006,0x00000054,0x00000001,0x0000000e,0x00000053,0x00050085,0x00000006,0x00000055,
+	0x0000004a,0x00000054,0x00050083,0x00000006,0x00000056,0x0000004a,0x00000055,0x0003003e,
+	0x00000049,0x00000056,0x0004003d,0x00000006,0x00000057,0x00000049,0x0007000c,0x00000006,
+	0x00000059,0x00000001,0x0000001a,0x00000057,0x00000058,0x0003003e,0x00000049,0x00000059,
+	0x0004003d,0x00000039,0x0000005a,0x0000003b,0x0004003d,0x00000039,0x0000005b,0x0000003b,
+	0x0004003d,0x00000006,0x0000005c,0x00000049,0x0005008e,0x00000039,0x0000005d,0x0000005b,
+	0x0000005c,0x00060050,0x00000039,0x0000005f,0x0000005e,0x0000005e,0x0000005e,0x0008000c,
+	0x00000039,0x00000060,0x00000001,0x0000002e,0x0000005a,0x0000005d,0x0000005f,0x0003003e,
+	0x0000003b,0x00000060,0x00050041,0x00000065,0x00000066,0x00000063,0x00000064,0x0004003d,
+	0x00000006,0x00000067,0x00000066,0x0005008d,0x00000006,0x00000069,0x00000067,0x00000068,
+	0x0003003e,0x00000061,0x00000069,0x0003003e,0x0000006a,0x0000006c,0x0004003d,0x00000006,
+	0x0000006d,0x00000061,0x000500b8,0x0000006e,0x0000006f,0x0000006d,0x0000006b,0x000300f7,
+	0x00000071,0x00000000,0x000400fa,0x0000006f,0x00000070,0x00000074,0x000200f8,0x00000070,
+	0x0003003e,0x0000006a,0x00000073,0x000200f9,0x00000071,0x000200f8,0x00000074,0x0004003d,
+	0x00000006,0x00000075,0x00000061,0x000500b8,0x0000006e,0x00000077,0x00000075,0x00000076,
+	0x000300f7,0x00000079,0x00000000,0x000400fa,0x00000077,0x00000078,0x0000007b,0x000200f8,
+	0x00000078,0x0003003e,0x0000006a,0x0000007a,0x000200f9,0x00000079,0x000200f8,0x0000007b,
+	0x0003003e,0x0000006a,0x0000007c,0x000200f9,0x00000079,0x000200f8,0x00000079,0x000200f9,
+	0x00000071,0x000200f8,0x00000071,0x0004003d,0x00000039,0x0000007d,0x0000006a,0x0004003d,
+	0x00000039,0x0000007e,0x0000003b,0x00050085,0x00000039,0x0000007f,0x0000007e,0x0000007d,
+	0x0003003e,0x0000003b,0x0000007f,0x00050041,0x00000048,0x00000082,0x00000009,0x00000064,
+	0x0004003d,0x00000006,0x00000083,0x00000082,0x00050085,0x00000006,0x00000084,0x00000081,
+	0x00000083,0x00050041,0x00000048,0x00000085,0x00000009,0x0000004c,0x0004003d,0x00000006,
+	0x00000086,0x00000085,0x00050085,0x00000006,0x00000087,0x00000084,0x00000086,0x00050041,
+	0x00000048,0x00000088,0x00000009,0x00000064,0x0004003d,0x00000006,0x00000089,0x00000088,
+	0x00050083,0x00000006,0x0000008a,0x0000006b,0x00000089,0x00050085,0x00000006,0x0000008b,
+	0x00000087,0x0000008a,0x00050041,0x00000048,0x0000008c,0x00000009,0x0000004c,0x0004003d,
+	0x00000006,0x0000008d,0x0000008c,0x00050083,0x00000006,0x0000008e,0x0000006b,0x0000008d,
+	0x00050085,0x00000006,0x0000008f,0x0000008b,0x0000008e,0x0003003e,0x00000080,0x0000008f,
+	0x0004003d,0x00000006,0x00000090,0x00000080,0x0008000c,0x00000006,0x00000092,0x00000001,
+	0x0000002b,0x00000090,0x00000091,0x0000006b,0x0007000c,0x00000006,0x00000094,0x00000001,
+	0x0000001a,0x00000092,0x00000093,0x0003003e,0x00000080,0x00000094,0x0004003d,0x00000006,
+	0x00000095,0x00000080,0x0008000c,0x00000006,0x00000096,0x00000001,0x0000002e,0x00000072,
+	0x0000006b,0x00000095,0x0004003d,0x00000039,0x00000097,0x0000003b,0x0005008e,0x00000039,
+	0x00000098,0x00000097,0x00000096,0x0003003e,0x0000003b,0x00000098,0x0004003d,0x00000039,
+	0x00000099,0x0000003b,0x0007000c,0x00000039,0x0000009c,0x00000001,0x0000001a,0x00000099,
+	0x0000009b,0x0003003e,0x0000003b,0x0000009c,0x0004003d,0x00000039,0x0000009f,0x0000003b,
+	0x00050051,0x00000006,0x000000a0,0x0000009f,0x00000000,0x00050051,0x00000006,0x000000a1,
+	0x0000009f,0x00000001,0x00050051,0x00000006,0x000000a2,0x0000009f,0x00000002,0x00070050,
+	0x0000003e,0x000000a3,0x000000a0,0x000000a1,0x000000a2,0x0000006b,0x0003003e,0x0000009e,
+	0x000000a3,0x000100fd,0x00010038
+};
+
+// CRT 1084 fragment shader SPIR-V (compiled from crt_1084.frag)
+#include "crt_1084_spv.h"
+
 struct VulkanCropPushConstants {
 	float u_min;
 	float v_min;
@@ -134,6 +272,32 @@ struct VulkanCropPushConstants {
 
 static_assert(sizeof(VulkanCropPushConstants) == sizeof(float) * 4,
 	"VulkanCropPushConstants must be 16 bytes");
+
+// CRT shader push constants — superset of crop (first 16 bytes match)
+struct VulkanCrtPushConstants {
+	float u_min;
+	float v_min;
+	float u_max;
+	float v_max;
+	float resolution_x;
+	float resolution_y;
+	float size_x;
+	float size_y;
+	float time;
+};
+
+static_assert(sizeof(VulkanCrtPushConstants) == sizeof(float) * 9,
+	"VulkanCrtPushConstants must be 36 bytes");
+
+// Map the global SDL pixel_format to the corresponding Vulkan format.
+// SDL_PIXELFORMAT_ABGR8888 → memory layout R,G,B,A → VK_FORMAT_R8G8B8A8_UNORM
+// SDL_PIXELFORMAT_ARGB8888 → memory layout B,G,R,A → VK_FORMAT_B8G8R8A8_UNORM
+VkFormat VulkanRenderer::resolve_upload_format()
+{
+	if (pixel_format == SDL_PIXELFORMAT_ARGB8888)
+		return VK_FORMAT_B8G8R8A8_UNORM;
+	return VK_FORMAT_R8G8B8A8_UNORM;
+}
 
 // --- Debug messenger callback ---
 #ifndef NDEBUG
@@ -279,6 +443,19 @@ void VulkanRenderer::destroy_context()
 	m_swapchain_recreate_requested = false;
 	m_logged_zero_extent_skip = false;
 
+	cleanup_imgui_descriptor_pool();
+	cleanup_overlay_texture(m_osj_btnkb_tex);
+	cleanup_overlay_texture(m_osj_btn2_tex);
+	cleanup_overlay_texture(m_osj_btn1_tex);
+	cleanup_overlay_texture(m_osj_knob_tex);
+	cleanup_overlay_texture(m_osj_base_tex);
+	cleanup_overlay_texture(m_vkbd_tex);
+	cleanup_overlay_texture(m_cursor_tex);
+	cleanup_overlay_texture(m_bezel_tex);
+	cleanup_osd_resources();
+	cleanup_osd_pipeline();
+	cleanup_crt_pipeline();
+	cleanup_crt_shader_module();
 	cleanup_sync_objects();
 	cleanup_command_infrastructure();
 	cleanup_upload_resources();
@@ -366,6 +543,24 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	if (gfx_platform_skip_alloctexture(monid, w, h))
 		return true;
 
+	// Detect CRT shader selection from options
+	{
+		const auto* mon = &AMonitors[monid];
+		const char* shader_name = mon->screen_is_picasso
+			? amiberry_options.shader_rtg : amiberry_options.shader;
+		bool want_crt = (shader_name && *shader_name &&
+			strcmp(shader_name, "none") != 0 && strcmp(shader_name, "NONE") != 0);
+		if (want_crt != m_crt_shader_active) {
+			m_crt_shader_active = want_crt;
+			if (want_crt) {
+				create_crt_pipeline();
+				write_log("VulkanRenderer: CRT shader activated\n");
+			} else {
+				write_log("VulkanRenderer: CRT shader deactivated\n");
+			}
+		}
+	}
+
 	if (w < 0 || h < 0) {
 		const int requested_w = -w;
 		const int requested_h = -h;
@@ -378,7 +573,7 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 			m_upload_texture_view != VK_NULL_HANDLE &&
 			m_upload_texture_width == requested_w &&
 			m_upload_texture_height == requested_h &&
-			m_upload_texture_cached_format == k_upload_texture_format;
+			m_upload_texture_cached_format == resolve_upload_format();
 
 		if (can_reuse) {
 			if (!m_logged_upload_reuse) {
@@ -497,7 +692,7 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	image_info.extent.depth = 1;
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
-	image_info.format = k_upload_texture_format;
+	image_info.format = resolve_upload_format();
 	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -519,7 +714,7 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	view_info.image = new_texture_image;
 	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	view_info.format = k_upload_texture_format;
+	view_info.format = resolve_upload_format();
 	view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	view_info.subresourceRange.baseMipLevel = 0;
 	view_info.subresourceRange.levelCount = 1;
@@ -563,7 +758,7 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	m_upload_texture_view = new_texture_view;
 	m_upload_texture_width = w;
 	m_upload_texture_height = h;
-	m_upload_texture_cached_format = k_upload_texture_format;
+	m_upload_texture_cached_format = resolve_upload_format();
 	m_upload_texture_extent = {
 		static_cast<uint32_t>(w),
 		static_cast<uint32_t>(h)
@@ -605,16 +800,43 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 
 	write_log("VulkanRenderer: staging buffer created (%zu bytes for %dx%d)\n",
 		static_cast<size_t>(m_upload_staging_size), w, h);
-	write_log("VulkanRenderer: texture image created (%dx%d, format=%d)\n", w, h, k_upload_texture_format);
+	write_log("VulkanRenderer: texture image created (%dx%d, format=%d)\n", w, h, resolve_upload_format());
 
 	m_has_uploaded_frame = false;
 
 	return true;
 }
 
-void VulkanRenderer::set_scaling(int /*monid*/, const uae_prefs* /*p*/, int /*w*/, int /*h*/)
+void VulkanRenderer::set_scaling(int /*monid*/, const uae_prefs* p, int /*w*/, int /*h*/)
 {
-	// Phase 2: No scaling yet
+	if (!p) return;
+
+	m_integer_scaling = false;
+	m_linear_filter = false;
+
+	switch (p->scaling_method) {
+	case -1: // Auto
+		m_linear_filter = true;
+		break;
+	case 0: // Nearest
+		break;
+	case 1: // Linear
+		m_linear_filter = true;
+		break;
+	case 2: // Integer
+		m_integer_scaling = true;
+		break;
+	default:
+		m_linear_filter = true;
+		break;
+	}
+
+	// Update the texture sampler filter mode
+	if (m_upload_texture_sampler != VK_NULL_HANDLE) {
+		VkFilter desired = m_linear_filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+		// Recreate sampler if filter changed (Vulkan samplers are immutable)
+		// For now, we'll handle this in the sampler creation
+	}
 }
 
 // ============================================================================
@@ -658,7 +880,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 		m_upload_texture_view != VK_NULL_HANDLE &&
 		m_upload_texture_width == surface->w &&
 		m_upload_texture_height == surface->h &&
-		m_upload_texture_cached_format == k_upload_texture_format;
+		m_upload_texture_cached_format == resolve_upload_format();
 
 	if (!upload_resources_ready) {
 		if (!alloc_texture(monid, surface->w, surface->h)) {
@@ -718,7 +940,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	return true;
 }
 
-void VulkanRenderer::present_frame(int /*monid*/, int /*mode*/)
+void VulkanRenderer::present_frame(int monid, int /*mode*/)
 {
 	if (currprefs.headless || !m_context_valid)
 		return;
@@ -869,6 +1091,132 @@ void VulkanRenderer::present_frame(int /*monid*/, int /*mode*/)
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
+	// Copy OSD staging buffer to OSD image (if OSD data available)
+	const bool draw_osd = m_osd_uploaded && m_osd_image != VK_NULL_HANDLE &&
+		m_osd_staging_buffer != VK_NULL_HANDLE && m_osd_descriptor_set != VK_NULL_HANDLE &&
+		m_osd_pipeline != VK_NULL_HANDLE && m_osd_width > 0 && m_osd_height > 0;
+
+	if (draw_osd) {
+		record_image_layout_transition(
+			command_buffer, m_osd_image,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_ACCESS_SHADER_READ_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+		VkBufferImageCopy osd_copy{};
+		osd_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		osd_copy.imageSubresource.layerCount = 1;
+		osd_copy.imageExtent = {static_cast<uint32_t>(m_osd_width), static_cast<uint32_t>(m_osd_height), 1};
+
+		vkCmdCopyBufferToImage(command_buffer, m_osd_staging_buffer, m_osd_image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &osd_copy);
+
+		record_image_layout_transition(
+			command_buffer, m_osd_image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	}
+
+	// --- Prepare overlay textures (bezel, cursor, vkbd, joystick) ---
+
+	// Bezel overlay
+	bool draw_bezel = false;
+	if (amiberry_options.use_custom_bezel && amiberry_options.custom_bezel[0] != '\0'
+		&& strcmp(amiberry_options.custom_bezel, "none") != 0) {
+		if (m_loaded_bezel_name != amiberry_options.custom_bezel) {
+			cleanup_overlay_texture(m_bezel_tex);
+			m_loaded_bezel_name.clear();
+			std::string full_path = get_bezels_path() + amiberry_options.custom_bezel;
+			SDL_Surface* bezel_surf = IMG_Load(full_path.c_str());
+			if (bezel_surf) {
+				// Convert and detect screen hole (transparent region)
+				SDL_Surface* rgba = SDL_ConvertSurface(bezel_surf, SDL_PIXELFORMAT_ABGR8888);
+				SDL_DestroySurface(bezel_surf);
+				if (rgba) {
+					// Scan alpha to find the screen hole bounding box
+					int min_x = rgba->w, min_y = rgba->h, max_x = 0, max_y = 0;
+					const auto* px = static_cast<const uint8_t*>(rgba->pixels);
+					for (int y = 0; y < rgba->h; y++) {
+						const auto* row = px + y * rgba->pitch;
+						for (int x = 0; x < rgba->w; x++) {
+							if (row[x * 4 + 3] < 128) {
+								if (x < min_x) min_x = x;
+								if (x > max_x) max_x = x;
+								if (y < min_y) min_y = y;
+								if (y > max_y) max_y = y;
+							}
+						}
+					}
+					if (max_x >= min_x && max_y >= min_y) {
+						m_bezel_hole_x = static_cast<float>(min_x) / rgba->w;
+						m_bezel_hole_y = static_cast<float>(min_y) / rgba->h;
+						m_bezel_hole_w = static_cast<float>(max_x - min_x + 1) / rgba->w;
+						m_bezel_hole_h = static_cast<float>(max_y - min_y + 1) / rgba->h;
+					} else {
+						m_bezel_hole_x = m_bezel_hole_y = 0;
+						m_bezel_hole_w = m_bezel_hole_h = 1.0f;
+					}
+					m_bezel_tex_w = rgba->w;
+					m_bezel_tex_h = rgba->h;
+					upload_overlay_texture(m_bezel_tex, rgba);
+					SDL_DestroySurface(rgba);
+					m_loaded_bezel_name = amiberry_options.custom_bezel;
+				}
+			}
+		}
+		draw_bezel = (m_bezel_tex.descriptor_set != VK_NULL_HANDLE && m_bezel_tex_w > 0);
+		if (draw_bezel) record_overlay_copy(command_buffer, m_bezel_tex);
+	}
+
+	// Software cursor (RTG)
+	bool draw_cursor = false;
+	{
+		const amigadisplay* ad = &adisplays[monid];
+		if (ad->picasso_on && p96_uses_software_cursor()) {
+			SDL_Surface* cs = p96_get_cursor_overlay_surface();
+			if (cs) {
+				upload_overlay_texture(m_cursor_tex, cs);
+				record_overlay_copy(command_buffer, m_cursor_tex);
+				draw_cursor = true;
+			}
+		}
+	}
+
+	// Virtual keyboard
+	bool draw_vkbd = false;
+	VkbdRenderInfo vkbd_info{};
+	if (vkbd_allowed(monid) && vkbd_get_render_info(vkbd_info)) {
+		upload_overlay_texture(m_vkbd_tex, vkbd_info.surface);
+		record_overlay_copy(command_buffer, m_vkbd_tex);
+		draw_vkbd = true;
+	}
+
+	// On-screen joystick
+	bool draw_osj = false;
+	OsjRenderInfo osj_info{};
+	if (on_screen_joystick_is_enabled() && on_screen_joystick_get_render_info(osj_info)) {
+		upload_overlay_texture(m_osj_base_tex, osj_info.base.surface);
+		upload_overlay_texture(m_osj_knob_tex, osj_info.knob.surface);
+		upload_overlay_texture(m_osj_btn1_tex, osj_info.btn1.surface);
+		upload_overlay_texture(m_osj_btn2_tex, osj_info.btn2.surface);
+		if (osj_info.btnkb.surface)
+			upload_overlay_texture(m_osj_btnkb_tex, osj_info.btnkb.surface);
+		record_overlay_copy(command_buffer, m_osj_base_tex);
+		record_overlay_copy(command_buffer, m_osj_knob_tex);
+		record_overlay_copy(command_buffer, m_osj_btn1_tex);
+		record_overlay_copy(command_buffer, m_osj_btn2_tex);
+		if (m_osj_btnkb_tex.descriptor_set != VK_NULL_HANDLE)
+			record_overlay_copy(command_buffer, m_osj_btnkb_tex);
+		draw_osj = true;
+	}
+
 	VkClearValue clear_value{};
 	clear_value.color.float32[0] = 0.0f;
 	clear_value.color.float32[1] = 0.0f;
@@ -885,32 +1233,81 @@ void VulkanRenderer::present_frame(int /*monid*/, int /*mode*/)
 	render_pass_begin.pClearValues = &clear_value;
 
 	vkCmdBeginRenderPass(command_buffer, &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
-	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
-	VkRect2D draw_scissor{};
-	bool has_valid_draw_rect = false;
-	if (render_quad.w > 0 && render_quad.h > 0) {
-		const int32_t max_x = static_cast<int32_t>(m_swapchain_extent.width);
-		const int32_t max_y = static_cast<int32_t>(m_swapchain_extent.height);
-		draw_scissor.offset.x = std::clamp(render_quad.x, 0, max_x);
-		draw_scissor.offset.y = std::clamp(render_quad.y, 0, max_y);
+	// Select CRT or passthrough pipeline for the main emulation quad
+	VkPipeline active_pipeline = m_graphics_pipeline;
+	if (m_crt_shader_active && m_crt_pipeline != VK_NULL_HANDLE) {
+		active_pipeline = m_crt_pipeline;
+	}
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, active_pipeline);
 
-		const int32_t available_w = std::max(0, max_x - draw_scissor.offset.x);
-		const int32_t available_h = std::max(0, max_y - draw_scissor.offset.y);
-		const int32_t clamped_w = std::clamp(render_quad.w, 0, available_w);
-		const int32_t clamped_h = std::clamp(render_quad.h, 0, available_h);
+	// Compute aspect-correct destination rectangle within the swapchain.
+	// This mirrors the OpenGL renderer's present_frame() logic.
+	const int drawable_w = static_cast<int>(m_swapchain_extent.width);
+	const int drawable_h = static_cast<int>(m_swapchain_extent.height);
+	int destX = 0, destY = 0, destW = drawable_w, destH = drawable_h;
 
-		if (clamped_w > 0 && clamped_h > 0) {
-			draw_scissor.extent.width = static_cast<uint32_t>(clamped_w);
-			draw_scissor.extent.height = static_cast<uint32_t>(clamped_h);
-			has_valid_draw_rect = true;
+	if (drawable_w > 0 && drawable_h > 0 && m_upload_texture_width > 0 && m_upload_texture_height > 0) {
+		const AmigaMonitor* mon = &AMonitors[monid];
+		float desired_aspect;
+		if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
+			desired_aspect = crop_aspect;
+		} else {
+			desired_aspect = calculate_desired_aspect(mon);
+		}
+		if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
+
+		bool use_center = mon->screen_is_picasso && mon->scalepicasso == RTG_MODE_CENTER;
+		bool use_integer = mon->screen_is_picasso
+			? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
+			: m_integer_scaling;
+
+		const int src_w = m_upload_texture_width;
+		const int src_h = m_upload_texture_height;
+
+		if (use_center && src_w > 0 && src_h > 0) {
+			destW = src_w;
+			destH = src_h;
+			destX = (drawable_w - destW) / 2;
+			destY = (drawable_h - destH) / 2;
+		} else {
+			// Fit to window preserving aspect ratio
+			destW = drawable_w;
+			destH = static_cast<int>(drawable_w / desired_aspect);
+			if (destH > drawable_h) {
+				destH = drawable_h;
+				destW = static_cast<int>(drawable_h * desired_aspect);
+			}
+			if (destW <= 0) destW = 1;
+			if (destH <= 0) destH = 1;
+
+			if (use_integer && src_w > 0 && src_h > 0) {
+				int display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
+				int h_scale = destH / display_h;
+				if (h_scale < 1) h_scale = 1;
+				int w_scale = drawable_w / src_w;
+				if (w_scale > h_scale) w_scale = h_scale;
+				if (w_scale < 1) w_scale = 1;
+				destW = src_w * w_scale;
+				destH = display_h * h_scale;
+			}
+
+			destX = (drawable_w - destW) / 2;
+			destY = (drawable_h - destH) / 2;
 		}
 	}
 
-	if (!has_valid_draw_rect) {
-		draw_scissor.offset = {0, 0};
-		draw_scissor.extent = m_swapchain_extent;
-	}
+	// Update render_quad so input coordinate translation works correctly
+	render_quad.x = destX;
+	render_quad.y = destY;
+	render_quad.w = destW;
+	render_quad.h = destH;
+
+	VkRect2D draw_scissor{};
+	draw_scissor.offset.x = std::clamp(destX, 0, drawable_w);
+	draw_scissor.offset.y = std::clamp(destY, 0, drawable_h);
+	draw_scissor.extent.width = static_cast<uint32_t>(std::clamp(destW, 0, drawable_w - draw_scissor.offset.x));
+	draw_scissor.extent.height = static_cast<uint32_t>(std::clamp(destH, 0, drawable_h - draw_scissor.offset.y));
 
 	VkViewport viewport{};
 	viewport.x = static_cast<float>(draw_scissor.offset.x);
@@ -971,15 +1368,138 @@ void VulkanRenderer::present_frame(int /*monid*/, int /*mode*/)
 		crop_push_constants.v_max = std::clamp(static_cast<float>(crop_y + crop_h) * inv_h, 0.0f, 1.0f);
 	}
 
-	vkCmdPushConstants(
-		command_buffer,
-		m_graphics_pipeline_layout,
-		VK_SHADER_STAGE_FRAGMENT_BIT,
-		0,
-		sizeof(VulkanCropPushConstants),
-		&crop_push_constants);
+	// Push constants — always push the full CRT-sized struct for layout compatibility.
+	// The passthrough shader only reads the first 16 bytes (cropUV); extra fields are ignored.
+	VulkanCrtPushConstants push_constants{};
+	push_constants.u_min = crop_push_constants.u_min;
+	push_constants.v_min = crop_push_constants.v_min;
+	push_constants.u_max = crop_push_constants.u_max;
+	push_constants.v_max = crop_push_constants.v_max;
+
+	if (m_crt_shader_active && m_crt_pipeline != VK_NULL_HANDLE) {
+		m_crt_time += 1.0f / 50.0f; // Approximate PAL frame time
+		push_constants.resolution_x = viewport.width;
+		push_constants.resolution_y = viewport.height;
+		push_constants.size_x = static_cast<float>(m_upload_texture_width);
+		push_constants.size_y = static_cast<float>(m_upload_texture_height);
+		push_constants.time = m_crt_time;
+	}
+
+	vkCmdPushConstants(command_buffer, m_graphics_pipeline_layout,
+		VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VulkanCrtPushConstants), &push_constants);
 
 	vkCmdDraw(command_buffer, 3, 1, 0, 0);
+
+	// Draw OSD overlay (alpha-blended, bottom of emulation area)
+	if (draw_osd) {
+		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_osd_pipeline);
+		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+			m_graphics_pipeline_layout, 0, 1, &m_osd_descriptor_set, 0, nullptr);
+
+		// Position OSD at the bottom of the render area, stretched to full width
+		const float osd_w = static_cast<float>(m_osd_width);
+		const float osd_h = static_cast<float>(m_osd_height);
+		const float area_w = static_cast<float>(draw_scissor.extent.width);
+		const float area_h = static_cast<float>(draw_scissor.extent.height);
+
+		// Scale height to match width scaling (preserve LED aspect ratio)
+		const float scale_x = area_w / osd_w;
+		const float scaled_h = osd_h * scale_x;
+
+		VkViewport osd_viewport{};
+		osd_viewport.x = static_cast<float>(draw_scissor.offset.x);
+		osd_viewport.y = static_cast<float>(draw_scissor.offset.y) + area_h - scaled_h;
+		osd_viewport.width = area_w;
+		osd_viewport.height = scaled_h;
+		osd_viewport.minDepth = 0.0f;
+		osd_viewport.maxDepth = 1.0f;
+
+		VkRect2D osd_scissor = draw_scissor;
+		vkCmdSetViewport(command_buffer, 0, 1, &osd_viewport);
+		vkCmdSetScissor(command_buffer, 0, 1, &osd_scissor);
+
+		// Full UV range for OSD
+		VulkanCrtPushConstants osd_pc{};
+		osd_pc.u_min = 0.0f; osd_pc.v_min = 0.0f;
+		osd_pc.u_max = 1.0f; osd_pc.v_max = 1.0f;
+		vkCmdPushConstants(command_buffer, m_graphics_pipeline_layout,
+			VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VulkanCrtPushConstants), &osd_pc);
+
+		vkCmdDraw(command_buffer, 3, 1, 0, 0);
+	}
+
+	// --- Draw additional overlays ---
+
+	// Bezel overlay (covers full drawable, alpha-blended frame around the game area)
+	if (draw_bezel && m_bezel_tex_w > 0 && m_bezel_tex_h > 0) {
+		// Letterbox/pillarbox the bezel to preserve its aspect ratio
+		float bezel_aspect = static_cast<float>(m_bezel_tex_w) / m_bezel_tex_h;
+		float window_aspect = static_cast<float>(drawable_w) / drawable_h;
+		int bx = 0, by = 0, bw = drawable_w, bh = drawable_h;
+		if (window_aspect > bezel_aspect) {
+			bw = static_cast<int>(drawable_h * bezel_aspect);
+			bx = (drawable_w - bw) / 2;
+		} else {
+			bh = static_cast<int>(drawable_w / bezel_aspect);
+			by = (drawable_h - bh) / 2;
+		}
+		record_overlay_draw(command_buffer, m_bezel_tex, bx, by, bw, bh);
+	}
+
+	// Software cursor
+	if (draw_cursor) {
+		int cx, cy, cw, ch;
+		p96_get_cursor_position(&cx, &cy);
+		p96_get_cursor_dimensions(&cw, &ch);
+		// Map cursor position from source coordinates to destination
+		if (m_upload_texture_width > 0 && m_upload_texture_height > 0) {
+			float sx = static_cast<float>(destW) / m_upload_texture_width;
+			float sy = static_cast<float>(destH) / m_upload_texture_height;
+			int dx = destX + static_cast<int>(cx * sx);
+			int dy = destY + static_cast<int>(cy * sy);
+			int dw = static_cast<int>(cw * sx);
+			int dh = static_cast<int>(ch * sy);
+			if (dw > 0 && dh > 0)
+				record_overlay_draw(command_buffer, m_cursor_tex, dx, dy, dw, dh);
+		}
+	}
+
+	// Virtual keyboard
+	if (draw_vkbd && vkbd_info.position_space_w > 0 && vkbd_info.position_space_h > 0) {
+		float sx = static_cast<float>(drawable_w) / vkbd_info.position_space_w;
+		float sy = static_cast<float>(drawable_h) / vkbd_info.position_space_h;
+		int vx = static_cast<int>(vkbd_info.x * sx);
+		int vy = static_cast<int>(vkbd_info.y * sy);
+		int vw = static_cast<int>(vkbd_info.surface->w * sx);
+		int vh = static_cast<int>(vkbd_info.surface->h * sy);
+		if (vw > 0 && vh > 0)
+			record_overlay_draw(command_buffer, m_vkbd_tex, vx, vy, vw, vh);
+	}
+
+	// On-screen joystick
+	if (draw_osj && osj_info.screen_w > 0 && osj_info.screen_h > 0) {
+		// OSJ rects are in screen_w x screen_h coordinate space
+		// Map to drawable space
+		float sx = static_cast<float>(drawable_w) / osj_info.screen_w;
+		float sy = static_cast<float>(drawable_h) / osj_info.screen_h;
+
+		auto draw_osj_element = [&](const OverlayTexture& tex, const OsjOverlayElement& elem) {
+			if (tex.descriptor_set == VK_NULL_HANDLE || elem.rect.w <= 0) return;
+			int ex = static_cast<int>(elem.rect.x * sx);
+			int ey = static_cast<int>(elem.rect.y * sy);
+			int ew = static_cast<int>(elem.rect.w * sx);
+			int eh = static_cast<int>(elem.rect.h * sy);
+			if (ew > 0 && eh > 0)
+				record_overlay_draw(command_buffer, tex, ex, ey, ew, eh);
+		};
+
+		draw_osj_element(m_osj_base_tex, osj_info.base);
+		draw_osj_element(m_osj_knob_tex, osj_info.knob);
+		draw_osj_element(m_osj_btn1_tex, osj_info.btn1);
+		draw_osj_element(m_osj_btn2_tex, osj_info.btn2);
+		draw_osj_element(m_osj_btnkb_tex, osj_info.btnkb);
+	}
+
 	vkCmdEndRenderPass(command_buffer);
 
 	result = vkEndCommandBuffer(command_buffer);
@@ -1653,7 +2173,7 @@ bool VulkanRenderer::create_swapchain(VkSwapchainKHR old_swapchain)
 	VkPresentModeKHR present_mode = choose_present_mode(details.present_modes);
 	VkExtent2D extent = choose_swap_extent(details.capabilities);
 	write_log("VulkanRenderer: selected formats (swapchain=%d, upload=%d)\n",
-		surface_format.format, k_upload_texture_format);
+		surface_format.format, resolve_upload_format());
 
 	// Request one more image than minimum for triple buffering
 	uint32_t image_count = details.capabilities.minImageCount + 1;
@@ -1860,6 +2380,7 @@ bool VulkanRenderer::recreate_swapchain()
 	}
 
 	m_swapchain_recreate_requested = false;
+	m_imgui_pipeline_stale = true;
 	write_log("VulkanRenderer: swapchain recreated (%ux%u, %zu images)\n",
 		m_swapchain_extent.width,
 		m_swapchain_extent.height,
@@ -1889,6 +2410,9 @@ bool VulkanRenderer::create_persistent_draw_resources()
 		cleanup_texture_sampler();
 		return false;
 	}
+
+	// CRT shader module is optional — failure just means no CRT effect
+	create_crt_shader_module();
 
 	if (m_upload_texture_view != VK_NULL_HANDLE && !update_texture_descriptor_set()) {
 		cleanup_shader_modules();
@@ -1925,11 +2449,25 @@ bool VulkanRenderer::create_swapchain_draw_resources()
 		return false;
 	}
 
+	if (!create_osd_pipeline()) {
+		cleanup_graphics_pipeline();
+		cleanup_swapchain_framebuffers();
+		cleanup_render_pass();
+		return false;
+	}
+
+	// CRT pipeline is optional — failure doesn't block rendering
+	if (m_crt_fragment_shader_module != VK_NULL_HANDLE || m_crt_shader_active) {
+		create_crt_pipeline();
+	}
+
 	return true;
 }
 
 void VulkanRenderer::cleanup_swapchain_draw_resources()
 {
+	cleanup_crt_pipeline();
+	cleanup_osd_pipeline();
 	cleanup_graphics_pipeline();
 	cleanup_swapchain_framebuffers();
 	cleanup_render_pass();
@@ -2005,13 +2543,14 @@ bool VulkanRenderer::create_texture_descriptor_resources()
 
 	VkDescriptorPoolSize pool_size{};
 	pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_size.descriptorCount = 1;
+	pool_size.descriptorCount = 16; // main + OSD + bezel + cursor + vkbd + joystick(5) + headroom
 
 	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	pool_info.poolSizeCount = 1;
 	pool_info.pPoolSizes = &pool_size;
-	pool_info.maxSets = 1;
+	pool_info.maxSets = 16;
 
 	result = vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_texture_descriptor_pool);
 	if (result != VK_SUCCESS) {
@@ -2087,7 +2626,7 @@ bool VulkanRenderer::create_pipeline_layout()
 	VkPushConstantRange push_constant_range{};
 	push_constant_range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	push_constant_range.offset = 0;
-	push_constant_range.size = sizeof(VulkanCropPushConstants);
+	push_constant_range.size = sizeof(VulkanCrtPushConstants); // Must fit largest push constant struct
 
 	VkPipelineLayoutCreateInfo layout_info{};
 	layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -2147,6 +2686,8 @@ bool VulkanRenderer::create_shader_modules()
 
 void VulkanRenderer::cleanup_shader_modules()
 {
+	cleanup_crt_shader_module();
+
 	if (m_fragment_shader_module != VK_NULL_HANDLE) {
 		vkDestroyShaderModule(m_device, m_fragment_shader_module, nullptr);
 		m_fragment_shader_module = VK_NULL_HANDLE;
@@ -2155,6 +2696,133 @@ void VulkanRenderer::cleanup_shader_modules()
 	if (m_vertex_shader_module != VK_NULL_HANDLE) {
 		vkDestroyShaderModule(m_device, m_vertex_shader_module, nullptr);
 		m_vertex_shader_module = VK_NULL_HANDLE;
+	}
+}
+
+bool VulkanRenderer::create_crt_shader_module()
+{
+	if (m_crt_fragment_shader_module != VK_NULL_HANDLE)
+		return true;
+
+	VkShaderModuleCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.codeSize = sizeof(__amiberry_crt_frag_spv);
+	create_info.pCode = __amiberry_crt_frag_spv;
+
+	VkResult result = vkCreateShaderModule(m_device, &create_info, nullptr, &m_crt_fragment_shader_module);
+	if (result != VK_SUCCESS) {
+		write_log("VulkanRenderer: failed to create CRT fragment shader module (VkResult=%d)\n", result);
+		return false;
+	}
+
+	write_log("VulkanRenderer: CRT fragment shader module created\n");
+	return true;
+}
+
+void VulkanRenderer::cleanup_crt_shader_module()
+{
+	if (m_crt_fragment_shader_module != VK_NULL_HANDLE && m_device != VK_NULL_HANDLE) {
+		vkDestroyShaderModule(m_device, m_crt_fragment_shader_module, nullptr);
+		m_crt_fragment_shader_module = VK_NULL_HANDLE;
+	}
+}
+
+bool VulkanRenderer::create_crt_pipeline()
+{
+	if (m_crt_pipeline != VK_NULL_HANDLE)
+		return true;
+
+	if (m_render_pass == VK_NULL_HANDLE || m_graphics_pipeline_layout == VK_NULL_HANDLE ||
+		m_vertex_shader_module == VK_NULL_HANDLE)
+		return false;
+
+	if (!create_crt_shader_module())
+		return false;
+
+	VkPipelineShaderStageCreateInfo vertex_stage{};
+	vertex_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertex_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertex_stage.module = m_vertex_shader_module;
+	vertex_stage.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragment_stage{};
+	fragment_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragment_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragment_stage.module = m_crt_fragment_shader_module;
+	fragment_stage.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage, fragment_stage};
+
+	VkPipelineVertexInputStateCreateInfo vertex_input_state{};
+	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+	VkPipelineInputAssemblyStateCreateInfo input_assembly_state{};
+	input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkPipelineViewportStateCreateInfo viewport_state{};
+	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewport_state.viewportCount = 1;
+	viewport_state.scissorCount = 1;
+
+	VkPipelineRasterizationStateCreateInfo rasterizer_state{};
+	rasterizer_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer_state.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizer_state.lineWidth = 1.0f;
+	rasterizer_state.cullMode = VK_CULL_MODE_NONE;
+
+	VkPipelineMultisampleStateCreateInfo multisample_state{};
+	multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState color_blend_attachment{};
+	color_blend_attachment.blendEnable = VK_FALSE;
+	color_blend_attachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+	VkPipelineColorBlendStateCreateInfo color_blend_state{};
+	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	color_blend_state.attachmentCount = 1;
+	color_blend_state.pAttachments = &color_blend_attachment;
+
+	VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+	VkPipelineDynamicStateCreateInfo dynamic_state{};
+	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic_state.dynamicStateCount = 2;
+	dynamic_state.pDynamicStates = dynamic_states;
+
+	VkGraphicsPipelineCreateInfo pipeline_info{};
+	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipeline_info.stageCount = 2;
+	pipeline_info.pStages = shader_stages;
+	pipeline_info.pVertexInputState = &vertex_input_state;
+	pipeline_info.pInputAssemblyState = &input_assembly_state;
+	pipeline_info.pViewportState = &viewport_state;
+	pipeline_info.pRasterizationState = &rasterizer_state;
+	pipeline_info.pMultisampleState = &multisample_state;
+	pipeline_info.pColorBlendState = &color_blend_state;
+	pipeline_info.pDynamicState = &dynamic_state;
+	pipeline_info.layout = m_graphics_pipeline_layout;
+	pipeline_info.renderPass = m_render_pass;
+	pipeline_info.subpass = 0;
+
+	VkResult result = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1,
+		&pipeline_info, nullptr, &m_crt_pipeline);
+	if (result != VK_SUCCESS) {
+		write_log("VulkanRenderer: failed to create CRT pipeline (VkResult=%d)\n", result);
+		return false;
+	}
+
+	write_log("VulkanRenderer: CRT pipeline created\n");
+	return true;
+}
+
+void VulkanRenderer::cleanup_crt_pipeline()
+{
+	if (m_crt_pipeline != VK_NULL_HANDLE && m_device != VK_NULL_HANDLE) {
+		vkDestroyPipeline(m_device, m_crt_pipeline, nullptr);
+		m_crt_pipeline = VK_NULL_HANDLE;
 	}
 }
 
@@ -2553,6 +3221,858 @@ bool VulkanRenderer::setup_debug_messenger()
 	return true;
 }
 #endif // NDEBUG
+
+// ============================================================================
+// Generic overlay texture system
+// ============================================================================
+
+bool VulkanRenderer::upload_overlay_texture(OverlayTexture& tex, SDL_Surface* surface)
+{
+	if (!surface || !surface->pixels || surface->w <= 0 || surface->h <= 0)
+		return false;
+	if (m_device == VK_NULL_HANDLE || m_allocator == nullptr)
+		return false;
+
+	// Convert to RGBA if needed
+	SDL_Surface* rgba = nullptr;
+	SDL_Surface* src = surface;
+	if (surface->format != SDL_PIXELFORMAT_ABGR8888) {
+		rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
+		if (!rgba) return false;
+		src = rgba;
+	}
+
+	const bool size_changed = (tex.width != src->w || tex.height != src->h);
+	if (size_changed) {
+		cleanup_overlay_texture(tex);
+
+		const VkDeviceSize required = static_cast<VkDeviceSize>(src->w) * src->h * 4;
+
+		// Staging buffer
+		VkBufferCreateInfo buf_info{};
+		buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		buf_info.size = required;
+		buf_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		VmaAllocationCreateInfo buf_alloc{};
+		buf_alloc.usage = VMA_MEMORY_USAGE_AUTO;
+		buf_alloc.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		VmaAllocationInfo info{};
+		if (vmaCreateBuffer(m_allocator, &buf_info, &buf_alloc, &tex.staging_buffer, &tex.staging_allocation, &info) != VK_SUCCESS) {
+			if (rgba) SDL_DestroySurface(rgba);
+			return false;
+		}
+		tex.staging_mapped = info.pMappedData;
+		tex.staging_mapped_by_vma_map = false;
+		if (!tex.staging_mapped) {
+			if (vmaMapMemory(m_allocator, tex.staging_allocation, &tex.staging_mapped) != VK_SUCCESS) {
+				cleanup_overlay_texture(tex);
+				if (rgba) SDL_DestroySurface(rgba);
+				return false;
+			}
+			tex.staging_mapped_by_vma_map = true;
+		}
+		tex.staging_size = required;
+
+		// Image
+		VkImageCreateInfo img_info{};
+		img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		img_info.imageType = VK_IMAGE_TYPE_2D;
+		img_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+		img_info.extent = {static_cast<uint32_t>(src->w), static_cast<uint32_t>(src->h), 1};
+		img_info.mipLevels = 1;
+		img_info.arrayLayers = 1;
+		img_info.samples = VK_SAMPLE_COUNT_1_BIT;
+		img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+		img_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VmaAllocationCreateInfo img_alloc{};
+		img_alloc.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+		if (vmaCreateImage(m_allocator, &img_info, &img_alloc, &tex.image, &tex.allocation, nullptr) != VK_SUCCESS) {
+			cleanup_overlay_texture(tex);
+			if (rgba) SDL_DestroySurface(rgba);
+			return false;
+		}
+
+		// Image view
+		VkImageViewCreateInfo view_info{};
+		view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		view_info.image = tex.image;
+		view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+		view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		view_info.subresourceRange.levelCount = 1;
+		view_info.subresourceRange.layerCount = 1;
+		if (vkCreateImageView(m_device, &view_info, nullptr, &tex.view) != VK_SUCCESS) {
+			cleanup_overlay_texture(tex);
+			if (rgba) SDL_DestroySurface(rgba);
+			return false;
+		}
+
+		// Sampler
+		VkSamplerCreateInfo samp_info{};
+		samp_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samp_info.magFilter = VK_FILTER_LINEAR;
+		samp_info.minFilter = VK_FILTER_LINEAR;
+		samp_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samp_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samp_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		if (vkCreateSampler(m_device, &samp_info, nullptr, &tex.sampler) != VK_SUCCESS) {
+			cleanup_overlay_texture(tex);
+			if (rgba) SDL_DestroySurface(rgba);
+			return false;
+		}
+
+		// Descriptor set
+		if (m_texture_descriptor_pool != VK_NULL_HANDLE && m_texture_descriptor_set_layout != VK_NULL_HANDLE) {
+			VkDescriptorSetAllocateInfo ds_alloc{};
+			ds_alloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			ds_alloc.descriptorPool = m_texture_descriptor_pool;
+			ds_alloc.descriptorSetCount = 1;
+			ds_alloc.pSetLayouts = &m_texture_descriptor_set_layout;
+			if (vkAllocateDescriptorSets(m_device, &ds_alloc, &tex.descriptor_set) != VK_SUCCESS) {
+				cleanup_overlay_texture(tex);
+				if (rgba) SDL_DestroySurface(rgba);
+				return false;
+			}
+		}
+
+		transition_image_to_shader_read(tex.image);
+		tex.width = src->w;
+		tex.height = src->h;
+	}
+
+	// Copy pixels to staging
+	const auto* src_bytes = static_cast<const uint8_t*>(src->pixels);
+	auto* dst_bytes = static_cast<uint8_t*>(tex.staging_mapped);
+	const size_t dst_pitch = static_cast<size_t>(src->w) * 4;
+	for (int y = 0; y < src->h; y++) {
+		memcpy(dst_bytes + y * dst_pitch, src_bytes + y * src->pitch, dst_pitch);
+	}
+	vmaFlushAllocation(m_allocator, tex.staging_allocation, 0, tex.staging_size);
+
+	// Update descriptor set
+	VkDescriptorImageInfo img_desc{};
+	img_desc.sampler = tex.sampler;
+	img_desc.imageView = tex.view;
+	img_desc.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	VkWriteDescriptorSet write{};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = tex.descriptor_set;
+	write.dstBinding = 0;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write.pImageInfo = &img_desc;
+	vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
+
+	tex.dirty = true;
+	if (rgba) SDL_DestroySurface(rgba);
+	return true;
+}
+
+void VulkanRenderer::cleanup_overlay_texture(OverlayTexture& tex)
+{
+	if (m_device == VK_NULL_HANDLE) return;
+
+	if (tex.descriptor_set != VK_NULL_HANDLE && m_texture_descriptor_pool != VK_NULL_HANDLE) {
+		vkFreeDescriptorSets(m_device, m_texture_descriptor_pool, 1, &tex.descriptor_set);
+	}
+	tex.descriptor_set = VK_NULL_HANDLE;
+
+	if (tex.sampler != VK_NULL_HANDLE) { vkDestroySampler(m_device, tex.sampler, nullptr); tex.sampler = VK_NULL_HANDLE; }
+	if (tex.view != VK_NULL_HANDLE) { vkDestroyImageView(m_device, tex.view, nullptr); tex.view = VK_NULL_HANDLE; }
+	if (tex.image != VK_NULL_HANDLE && tex.allocation) { vmaDestroyImage(m_allocator, tex.image, tex.allocation); tex.image = VK_NULL_HANDLE; tex.allocation = nullptr; }
+	if (tex.staging_buffer != VK_NULL_HANDLE && tex.staging_allocation) {
+		if (tex.staging_mapped && tex.staging_mapped_by_vma_map) vmaUnmapMemory(m_allocator, tex.staging_allocation);
+		tex.staging_mapped = nullptr;
+		tex.staging_mapped_by_vma_map = false;
+		vmaDestroyBuffer(m_allocator, tex.staging_buffer, tex.staging_allocation);
+		tex.staging_buffer = VK_NULL_HANDLE;
+		tex.staging_allocation = nullptr;
+	}
+	tex.staging_size = 0;
+	tex.width = 0;
+	tex.height = 0;
+	tex.dirty = false;
+}
+
+void VulkanRenderer::record_overlay_copy(VkCommandBuffer cmd, OverlayTexture& tex)
+{
+	if (!tex.dirty || tex.image == VK_NULL_HANDLE || tex.staging_buffer == VK_NULL_HANDLE)
+		return;
+
+	record_image_layout_transition(cmd, tex.image,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	VkBufferImageCopy region{};
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.layerCount = 1;
+	region.imageExtent = {static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height), 1};
+	vkCmdCopyBufferToImage(cmd, tex.staging_buffer, tex.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	record_image_layout_transition(cmd, tex.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+	tex.dirty = false;
+}
+
+void VulkanRenderer::record_overlay_draw(VkCommandBuffer cmd, const OverlayTexture& tex,
+	int x, int y, int w, int h, float /*alpha*/)
+{
+	if (tex.descriptor_set == VK_NULL_HANDLE || m_osd_pipeline == VK_NULL_HANDLE)
+		return;
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_osd_pipeline);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+		m_graphics_pipeline_layout, 0, 1, &tex.descriptor_set, 0, nullptr);
+
+	VkViewport vp{};
+	vp.x = static_cast<float>(x);
+	vp.y = static_cast<float>(y);
+	vp.width = static_cast<float>(w);
+	vp.height = static_cast<float>(h);
+	vp.minDepth = 0.0f;
+	vp.maxDepth = 1.0f;
+	vkCmdSetViewport(cmd, 0, 1, &vp);
+
+	VkRect2D sc{};
+	sc.offset = {std::max(0, x), std::max(0, y)};
+	sc.extent = {static_cast<uint32_t>(w), static_cast<uint32_t>(h)};
+	vkCmdSetScissor(cmd, 0, 1, &sc);
+
+	VulkanCrtPushConstants pc{};
+	pc.u_min = 0.0f; pc.v_min = 0.0f; pc.u_max = 1.0f; pc.v_max = 1.0f;
+	vkCmdPushConstants(cmd, m_graphics_pipeline_layout,
+		VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VulkanCrtPushConstants), &pc);
+
+	vkCmdDraw(cmd, 3, 1, 0, 0);
+}
+
+// ============================================================================
+// OSD overlay support
+// ============================================================================
+
+bool VulkanRenderer::create_osd_pipeline()
+{
+	if (m_osd_pipeline != VK_NULL_HANDLE)
+		return true;
+
+	if (m_render_pass == VK_NULL_HANDLE || m_graphics_pipeline_layout == VK_NULL_HANDLE ||
+		m_vertex_shader_module == VK_NULL_HANDLE || m_fragment_shader_module == VK_NULL_HANDLE)
+		return false;
+
+	// Same as main pipeline but with alpha blending enabled
+	VkPipelineShaderStageCreateInfo vertex_stage{};
+	vertex_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertex_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertex_stage.module = m_vertex_shader_module;
+	vertex_stage.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragment_stage{};
+	fragment_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragment_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragment_stage.module = m_fragment_shader_module;
+	fragment_stage.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage, fragment_stage};
+
+	VkPipelineVertexInputStateCreateInfo vertex_input_state{};
+	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+	VkPipelineInputAssemblyStateCreateInfo input_assembly_state{};
+	input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkPipelineViewportStateCreateInfo viewport_state{};
+	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewport_state.viewportCount = 1;
+	viewport_state.scissorCount = 1;
+
+	VkPipelineRasterizationStateCreateInfo rasterizer_state{};
+	rasterizer_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer_state.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizer_state.lineWidth = 1.0f;
+	rasterizer_state.cullMode = VK_CULL_MODE_NONE;
+
+	VkPipelineMultisampleStateCreateInfo multisample_state{};
+	multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState color_blend_attachment{};
+	color_blend_attachment.blendEnable = VK_TRUE;
+	color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+	color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+	color_blend_attachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+	VkPipelineColorBlendStateCreateInfo color_blend_state{};
+	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	color_blend_state.attachmentCount = 1;
+	color_blend_state.pAttachments = &color_blend_attachment;
+
+	VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+	VkPipelineDynamicStateCreateInfo dynamic_state{};
+	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic_state.dynamicStateCount = 2;
+	dynamic_state.pDynamicStates = dynamic_states;
+
+	VkGraphicsPipelineCreateInfo pipeline_info{};
+	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipeline_info.stageCount = 2;
+	pipeline_info.pStages = shader_stages;
+	pipeline_info.pVertexInputState = &vertex_input_state;
+	pipeline_info.pInputAssemblyState = &input_assembly_state;
+	pipeline_info.pViewportState = &viewport_state;
+	pipeline_info.pRasterizationState = &rasterizer_state;
+	pipeline_info.pMultisampleState = &multisample_state;
+	pipeline_info.pColorBlendState = &color_blend_state;
+	pipeline_info.pDynamicState = &dynamic_state;
+	pipeline_info.layout = m_graphics_pipeline_layout;
+	pipeline_info.renderPass = m_render_pass;
+	pipeline_info.subpass = 0;
+
+	VkResult result = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1,
+		&pipeline_info, nullptr, &m_osd_pipeline);
+	if (result != VK_SUCCESS) {
+		write_log("VulkanRenderer: failed to create OSD pipeline (VkResult=%d)\n", result);
+		return false;
+	}
+
+	write_log("VulkanRenderer: OSD overlay pipeline created\n");
+	return true;
+}
+
+void VulkanRenderer::cleanup_osd_pipeline()
+{
+	if (m_osd_pipeline != VK_NULL_HANDLE && m_device != VK_NULL_HANDLE) {
+		vkDestroyPipeline(m_device, m_osd_pipeline, nullptr);
+		m_osd_pipeline = VK_NULL_HANDLE;
+	}
+}
+
+void VulkanRenderer::cleanup_osd_resources()
+{
+	if (m_device == VK_NULL_HANDLE) return;
+
+	if (m_osd_descriptor_set != VK_NULL_HANDLE && m_texture_descriptor_pool != VK_NULL_HANDLE) {
+		vkFreeDescriptorSets(m_device, m_texture_descriptor_pool, 1, &m_osd_descriptor_set);
+	}
+	m_osd_descriptor_set = VK_NULL_HANDLE;
+
+	if (m_osd_sampler != VK_NULL_HANDLE) {
+		vkDestroySampler(m_device, m_osd_sampler, nullptr);
+		m_osd_sampler = VK_NULL_HANDLE;
+	}
+	if (m_osd_image_view != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, m_osd_image_view, nullptr);
+		m_osd_image_view = VK_NULL_HANDLE;
+	}
+	if (m_osd_image != VK_NULL_HANDLE && m_osd_allocation != nullptr) {
+		vmaDestroyImage(m_allocator, m_osd_image, m_osd_allocation);
+		m_osd_image = VK_NULL_HANDLE;
+		m_osd_allocation = nullptr;
+	}
+	if (m_osd_staging_buffer != VK_NULL_HANDLE && m_osd_staging_allocation != nullptr) {
+		if (m_osd_staging_mapped != nullptr && m_osd_staging_mapped_by_vma_map) {
+			vmaUnmapMemory(m_allocator, m_osd_staging_allocation);
+		}
+		m_osd_staging_mapped = nullptr;
+		m_osd_staging_mapped_by_vma_map = false;
+		vmaDestroyBuffer(m_allocator, m_osd_staging_buffer, m_osd_staging_allocation);
+		m_osd_staging_buffer = VK_NULL_HANDLE;
+		m_osd_staging_allocation = nullptr;
+	}
+	m_osd_staging_size = 0;
+	m_osd_width = 0;
+	m_osd_height = 0;
+	m_osd_uploaded = false;
+}
+
+void VulkanRenderer::sync_osd_texture(int monid, int led_width, int led_height)
+{
+	if (m_device == VK_NULL_HANDLE || m_allocator == nullptr || led_width <= 0 || led_height <= 0)
+		return;
+
+	const AmigaMonitor* mon = &AMonitors[monid];
+	if (!mon->statusline_surface || !mon->statusline_surface->pixels)
+		return;
+
+	// Recreate OSD resources if size changed
+	if (m_osd_width != led_width || m_osd_height != led_height) {
+		cleanup_osd_resources();
+
+		const VkDeviceSize required_size = static_cast<VkDeviceSize>(led_width) * led_height * 4;
+
+		// Create staging buffer
+		VkBufferCreateInfo buf_info{};
+		buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		buf_info.size = required_size;
+		buf_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+		VmaAllocationCreateInfo buf_alloc_info{};
+		buf_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+		buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+			VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+		VmaAllocationInfo staging_info{};
+		VkResult result = vmaCreateBuffer(m_allocator, &buf_info, &buf_alloc_info,
+			&m_osd_staging_buffer, &m_osd_staging_allocation, &staging_info);
+		if (result != VK_SUCCESS) return;
+
+		m_osd_staging_mapped = staging_info.pMappedData;
+		m_osd_staging_mapped_by_vma_map = false;
+		if (!m_osd_staging_mapped) {
+			result = vmaMapMemory(m_allocator, m_osd_staging_allocation, &m_osd_staging_mapped);
+			if (result != VK_SUCCESS) {
+				cleanup_osd_resources();
+				return;
+			}
+			m_osd_staging_mapped_by_vma_map = true;
+		}
+		m_osd_staging_size = required_size;
+
+		// Create image (RGBA — statusline_surface uses SDL_PIXELFORMAT_RGBA32)
+		VkImageCreateInfo img_info{};
+		img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		img_info.imageType = VK_IMAGE_TYPE_2D;
+		img_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+		img_info.extent = {static_cast<uint32_t>(led_width), static_cast<uint32_t>(led_height), 1};
+		img_info.mipLevels = 1;
+		img_info.arrayLayers = 1;
+		img_info.samples = VK_SAMPLE_COUNT_1_BIT;
+		img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+		img_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		VmaAllocationCreateInfo img_alloc_info{};
+		img_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+		result = vmaCreateImage(m_allocator, &img_info, &img_alloc_info,
+			&m_osd_image, &m_osd_allocation, nullptr);
+		if (result != VK_SUCCESS) {
+			cleanup_osd_resources();
+			return;
+		}
+
+		// Create image view
+		VkImageViewCreateInfo view_info{};
+		view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		view_info.image = m_osd_image;
+		view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+		view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		view_info.subresourceRange.levelCount = 1;
+		view_info.subresourceRange.layerCount = 1;
+
+		result = vkCreateImageView(m_device, &view_info, nullptr, &m_osd_image_view);
+		if (result != VK_SUCCESS) {
+			cleanup_osd_resources();
+			return;
+		}
+
+		// Create sampler
+		VkSamplerCreateInfo sampler_info{};
+		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		sampler_info.magFilter = VK_FILTER_NEAREST;
+		sampler_info.minFilter = VK_FILTER_NEAREST;
+		sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+		result = vkCreateSampler(m_device, &sampler_info, nullptr, &m_osd_sampler);
+		if (result != VK_SUCCESS) {
+			cleanup_osd_resources();
+			return;
+		}
+
+		// Allocate descriptor set from the existing texture descriptor pool
+		if (m_texture_descriptor_pool != VK_NULL_HANDLE && m_texture_descriptor_set_layout != VK_NULL_HANDLE) {
+			VkDescriptorSetAllocateInfo ds_alloc{};
+			ds_alloc.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			ds_alloc.descriptorPool = m_texture_descriptor_pool;
+			ds_alloc.descriptorSetCount = 1;
+			ds_alloc.pSetLayouts = &m_texture_descriptor_set_layout;
+
+			result = vkAllocateDescriptorSets(m_device, &ds_alloc, &m_osd_descriptor_set);
+			if (result != VK_SUCCESS) {
+				cleanup_osd_resources();
+				return;
+			}
+		}
+
+		// Transition image to shader read
+		transition_image_to_shader_read(m_osd_image);
+
+		m_osd_width = led_width;
+		m_osd_height = led_height;
+		write_log("VulkanRenderer: OSD texture created (%dx%d)\n", led_width, led_height);
+	}
+
+	// Upload statusline pixels to staging buffer
+	const auto* src = static_cast<const uint8_t*>(mon->statusline_surface->pixels);
+	auto* dst = static_cast<uint8_t*>(m_osd_staging_mapped);
+	const size_t dst_pitch = static_cast<size_t>(led_width) * 4;
+	const size_t src_pitch = static_cast<size_t>(mon->statusline_surface->pitch);
+	for (int y = 0; y < led_height; y++) {
+		memcpy(dst + y * dst_pitch, src + y * src_pitch, dst_pitch);
+	}
+	vmaFlushAllocation(m_allocator, m_osd_staging_allocation, 0, m_osd_staging_size);
+
+	// Update descriptor set
+	if (m_osd_descriptor_set != VK_NULL_HANDLE) {
+		VkDescriptorImageInfo image_descriptor{};
+		image_descriptor.sampler = m_osd_sampler;
+		image_descriptor.imageView = m_osd_image_view;
+		image_descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkWriteDescriptorSet write{};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = m_osd_descriptor_set;
+		write.dstBinding = 0;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.pImageInfo = &image_descriptor;
+
+		vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
+	}
+
+	m_osd_uploaded = true;
+}
+
+void VulkanRenderer::render_osd(int monid, int /*x*/, int /*y*/, int /*w*/, int /*h*/)
+{
+	// OSD rendering is done inline in present_frame() via the command buffer.
+	(void)monid;
+}
+
+// --- Bezel overlay ---
+
+void VulkanRenderer::update_custom_bezel()
+{
+	m_loaded_bezel_name.clear();
+}
+
+void VulkanRenderer::destroy_bezel()
+{
+	cleanup_overlay_texture(m_bezel_tex);
+	m_loaded_bezel_name.clear();
+	m_bezel_tex_w = 0;
+	m_bezel_tex_h = 0;
+	m_bezel_hole_x = m_bezel_hole_y = m_bezel_hole_w = m_bezel_hole_h = 0;
+}
+
+void VulkanRenderer::render_bezel(int /*x*/, int /*y*/, int /*w*/, int /*h*/)
+{
+	// Bezel rendering is done inline in present_frame() via the command buffer.
+}
+
+BezelHoleInfo VulkanRenderer::get_bezel_hole_info() const
+{
+	BezelHoleInfo info;
+	info.x = m_bezel_hole_x;
+	info.y = m_bezel_hole_y;
+	info.w = m_bezel_hole_w;
+	info.h = m_bezel_hole_h;
+	info.active = (m_bezel_tex.descriptor_set != VK_NULL_HANDLE &&
+		m_bezel_hole_w > 0.0f && m_bezel_hole_h > 0.0f);
+	return info;
+}
+
+// --- Software cursor ---
+
+void VulkanRenderer::render_software_cursor(int /*monid*/, int /*x*/, int /*y*/, int /*w*/, int /*h*/)
+{
+	// Software cursor rendering is done inline in present_frame() via the command buffer.
+}
+
+// --- Virtual keyboard ---
+
+void VulkanRenderer::render_vkbd(int /*monid*/)
+{
+	// VKBD rendering is done inline in present_frame() via the command buffer.
+}
+
+// --- On-screen joystick ---
+
+void VulkanRenderer::render_onscreen_joystick(int /*monid*/)
+{
+	// On-screen joystick rendering is done inline in present_frame() via the command buffer.
+}
+
+void VulkanRenderer::destroy_shaders()
+{
+	m_crt_shader_active = false;
+	cleanup_crt_pipeline();
+	cleanup_crt_shader_module();
+}
+
+void VulkanRenderer::clear_shader_cache()
+{
+	destroy_shaders();
+}
+
+bool VulkanRenderer::has_valid_shader() const
+{
+	if (m_crt_shader_active)
+		return m_crt_pipeline != VK_NULL_HANDLE;
+	return true; // passthrough always valid
+}
+
+// ============================================================================
+// ImGui Vulkan support
+// ============================================================================
+
+bool VulkanRenderer::create_imgui_descriptor_pool()
+{
+	if (m_device == VK_NULL_HANDLE) return false;
+
+	// ImGui needs a descriptor pool for font textures and any additional textures
+	// registered via ImGui_ImplVulkan_AddTexture (used by gui_create_texture).
+	VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 64 },
+	};
+
+	VkDescriptorPoolCreateInfo pool_info{};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = 64;
+	pool_info.poolSizeCount = 1;
+	pool_info.pPoolSizes = pool_sizes;
+
+	VkResult result = vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_imgui_descriptor_pool);
+	if (result != VK_SUCCESS) {
+		write_log("VulkanRenderer: failed to create ImGui descriptor pool (VkResult=%d)\n", result);
+		return false;
+	}
+
+	write_log("VulkanRenderer: ImGui descriptor pool created\n");
+	return true;
+}
+
+void VulkanRenderer::cleanup_imgui_descriptor_pool()
+{
+	if (m_imgui_descriptor_pool != VK_NULL_HANDLE && m_device != VK_NULL_HANDLE) {
+		vkDestroyDescriptorPool(m_device, m_imgui_descriptor_pool, nullptr);
+		m_imgui_descriptor_pool = VK_NULL_HANDLE;
+	}
+}
+
+void VulkanRenderer::prepare_gui_sharing(AmigaMonitor* /*mon*/)
+{
+	if (m_device != VK_NULL_HANDLE) {
+		vkDeviceWaitIdle(m_device);
+	}
+}
+
+void VulkanRenderer::restore_emulation_context(SDL_Window* /*window*/)
+{
+	// Vulkan doesn't have a "current context" like OpenGL.
+	// Just ensure the device is idle before resuming emulation rendering.
+	if (m_device != VK_NULL_HANDLE) {
+		vkDeviceWaitIdle(m_device);
+	}
+}
+
+bool VulkanRenderer::render_gui_frame(void* draw_data_ptr)
+{
+	if (!m_context_valid || m_device == VK_NULL_HANDLE || m_swapchain == VK_NULL_HANDLE)
+		return false;
+
+	if (m_swapchain_recreate_requested) {
+		recreate_swapchain();
+		if (m_swapchain_recreate_requested)
+			return false;
+	}
+
+	// After swapchain recreation the render pass handle changes and the image
+	// count may differ.  Rebuild ImGui's Vulkan pipeline for the new pass.
+	if (m_imgui_pipeline_stale && m_render_pass != VK_NULL_HANDLE) {
+		const uint32_t new_image_count = std::max(2u, static_cast<uint32_t>(m_swapchain_images.size()));
+
+		if (m_imgui_init_image_count != 0 && new_image_count != m_imgui_init_image_count) {
+			// Image count changed — full re-init is the only safe path.
+			// SetMinImageCount only updates MinImageCount; ImageCount lives in
+			// ImGui_ImplVulkan_Data which has no public setter.  Rather than
+			// poking internal struct layout we tear down and rebuild.
+			write_log("VulkanRenderer: swapchain image count changed (%u → %u), re-initializing ImGui Vulkan backend\n",
+				m_imgui_init_image_count, new_image_count);
+			vkDeviceWaitIdle(m_device);
+			ImGui_ImplVulkan_Shutdown();
+
+			ImGui_ImplVulkan_InitInfo init_info{};
+			init_info.Instance = m_instance;
+			init_info.PhysicalDevice = m_physical_device;
+			init_info.Device = m_device;
+			init_info.QueueFamily = m_graphics_queue_family;
+			init_info.Queue = m_graphics_queue;
+			init_info.DescriptorPool = m_imgui_descriptor_pool;
+			init_info.MinImageCount = new_image_count;
+			init_info.ImageCount = new_image_count;
+			init_info.PipelineInfoMain.RenderPass = m_render_pass;
+			init_info.PipelineInfoMain.Subpass = 0;
+			init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+			ImGui_ImplVulkan_Init(&init_info);
+			m_imgui_init_image_count = new_image_count;
+		} else {
+			// Same image count — just rebuild the pipeline for the new render pass.
+			ImGui_ImplVulkan_SetMinImageCount(new_image_count);
+
+			ImGui_ImplVulkan_PipelineInfo pipe_info{};
+			pipe_info.RenderPass = m_render_pass;
+			pipe_info.Subpass = 0;
+			pipe_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+			ImGui_ImplVulkan_CreateMainPipeline(&pipe_info);
+
+			if (m_imgui_init_image_count == 0)
+				m_imgui_init_image_count = new_image_count;
+		}
+
+		m_imgui_pipeline_stale = false;
+		write_log("VulkanRenderer: ImGui pipeline rebuilt for new render pass (images=%u)\n", new_image_count);
+	}
+
+	if (m_graphics_queue == VK_NULL_HANDLE ||
+		m_present_queue == VK_NULL_HANDLE ||
+		m_render_pass == VK_NULL_HANDLE ||
+		m_swapchain_framebuffers.empty() ||
+		m_swapchain_render_finished_semaphores.empty() ||
+		m_swapchain_images_in_flight.size() != m_swapchain_images.size()) {
+		return false;
+	}
+
+	if (m_current_frame >= k_max_frames_in_flight)
+		m_current_frame = 0;
+
+	const uint32_t frame_index = m_current_frame;
+	VkFence frame_fence = m_in_flight_fences[frame_index];
+	VkCommandBuffer command_buffer = m_graphics_command_buffers[frame_index];
+	if (frame_fence == VK_NULL_HANDLE || command_buffer == VK_NULL_HANDLE)
+		return false;
+
+	VkResult result = vkWaitForFences(m_device, 1, &frame_fence, VK_TRUE, UINT64_MAX);
+	if (result != VK_SUCCESS)
+		return false;
+
+	uint32_t swapchain_image_index = 0;
+	result = vkAcquireNextImageKHR(
+		m_device, m_swapchain, UINT64_MAX,
+		m_image_available_semaphores[frame_index], VK_NULL_HANDLE,
+		&swapchain_image_index);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		request_swapchain_recreate("render_gui_frame: swapchain out of date/suboptimal");
+		recreate_swapchain();
+		return false;
+	}
+	if (result != VK_SUCCESS)
+		return false;
+
+	if (swapchain_image_index >= m_swapchain_framebuffers.size() ||
+		swapchain_image_index >= m_swapchain_render_finished_semaphores.size() ||
+		swapchain_image_index >= m_swapchain_images_in_flight.size())
+		return false;
+
+	VkFence image_in_flight_fence = m_swapchain_images_in_flight[swapchain_image_index];
+	if (image_in_flight_fence != VK_NULL_HANDLE && image_in_flight_fence != frame_fence) {
+		vkWaitForFences(m_device, 1, &image_in_flight_fence, VK_TRUE, UINT64_MAX);
+	}
+
+	result = vkResetCommandBuffer(command_buffer, 0);
+	if (result != VK_SUCCESS)
+		return false;
+
+	VkCommandBufferBeginInfo begin_info{};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	result = vkBeginCommandBuffer(command_buffer, &begin_info);
+	if (result != VK_SUCCESS)
+		return false;
+
+	VkClearValue clear_value{};
+	clear_value.color.float32[0] = 0.45f * 1.0f;
+	clear_value.color.float32[1] = 0.55f * 1.0f;
+	clear_value.color.float32[2] = 0.60f * 1.0f;
+	clear_value.color.float32[3] = 1.0f;
+
+	VkRenderPassBeginInfo render_pass_begin{};
+	render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	render_pass_begin.renderPass = m_render_pass;
+	render_pass_begin.framebuffer = m_swapchain_framebuffers[swapchain_image_index];
+	render_pass_begin.renderArea.offset = {0, 0};
+	render_pass_begin.renderArea.extent = m_swapchain_extent;
+	render_pass_begin.clearValueCount = 1;
+	render_pass_begin.pClearValues = &clear_value;
+
+	vkCmdBeginRenderPass(command_buffer, &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+	// ImGui_ImplVulkan_RenderDrawData records ImGui draw commands into our command buffer
+	// We include the header conditionally and cast the void* back to ImDrawData*
+#ifdef USE_VULKAN
+	{
+		auto* imgui_draw_data = static_cast<ImDrawData*>(draw_data_ptr);
+		if (imgui_draw_data) {
+			ImGui_ImplVulkan_RenderDrawData(imgui_draw_data, command_buffer);
+		}
+	}
+#endif
+
+	vkCmdEndRenderPass(command_buffer);
+
+	result = vkEndCommandBuffer(command_buffer);
+	if (result != VK_SUCCESS)
+		return false;
+
+	result = vkResetFences(m_device, 1, &frame_fence);
+	if (result != VK_SUCCESS)
+		return false;
+
+	VkSemaphore wait_semaphores[] = {m_image_available_semaphores[frame_index]};
+	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+	VkSemaphore signal_semaphores[] = {m_swapchain_render_finished_semaphores[swapchain_image_index]};
+
+	VkSubmitInfo submit_info{};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = wait_semaphores;
+	submit_info.pWaitDstStageMask = wait_stages;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &command_buffer;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = signal_semaphores;
+
+	result = vkQueueSubmit(m_graphics_queue, 1, &submit_info, frame_fence);
+	if (result != VK_SUCCESS) {
+		vkDeviceWaitIdle(m_device);
+		recreate_frame_sync_objects(frame_index);
+		return false;
+	}
+
+	m_swapchain_images_in_flight[swapchain_image_index] = frame_fence;
+
+	VkPresentInfoKHR present_info{};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = signal_semaphores;
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = &m_swapchain;
+	present_info.pImageIndices = &swapchain_image_index;
+
+	result = vkQueuePresentKHR(m_present_queue, &present_info);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		request_swapchain_recreate("render_gui_frame: present out of date/suboptimal");
+		recreate_swapchain();
+	}
+
+	m_current_frame = (m_current_frame + 1) % k_max_frames_in_flight;
+	return true;
+}
 
 // ============================================================================
 // Global accessor

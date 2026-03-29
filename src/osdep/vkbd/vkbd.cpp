@@ -48,19 +48,22 @@ static std::chrono::time_point<std::chrono::system_clock> vkbdTimeLastRedraw;
 static std::map<int, int> vkbdStickyKeyToIndex;
 static std::set<int> vkbdPressedStickyKeys;
 static std::set<int> vkbdStickyKeys;
+#if defined(USE_OPENGL) || defined(USE_VULKAN)
+// Surfaces for GL/Vulkan texture upload
+static SDL_Surface* vkbdSurface = nullptr;
+static SDL_Surface* vkbdSurfaceShift = nullptr;
+// Coordinate space dimensions used by position system (for scaling to drawable)
+static int vkbdPositionSpaceW = 0;
+static int vkbdPositionSpaceH = 0;
+#endif
 #ifdef USE_OPENGL
 // GL textures for keyboard rendering
 static GLuint vkbdGLTexture = 0;
 static GLuint vkbdGLTextureShift = 0;
 static int vkbdGLTexWidth = 0;
 static int vkbdGLTexHeight = 0;
-// Keep surfaces around for GL texture upload
-static SDL_Surface* vkbdSurface = nullptr;
-static SDL_Surface* vkbdSurfaceShift = nullptr;
-// Coordinate space dimensions used by position system (for scaling to drawable)
-static int vkbdPositionSpaceW = 0;
-static int vkbdPositionSpaceH = 0;
-#else
+#endif
+#if !defined(USE_OPENGL) && !defined(USE_VULKAN)
 static SDL_Texture* vkbdTexture = nullptr;
 static SDL_Texture* vkbdTextureShift = nullptr;
 #endif
@@ -670,18 +673,27 @@ static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exi
 	return surf;
 }
 
+#if defined(USE_OPENGL) || defined(USE_VULKAN)
+static void cleanup_vkbd_surfaces()
+{
+	if (vkbdSurface) { SDL_DestroySurface(vkbdSurface); vkbdSurface = nullptr; }
+	if (vkbdSurfaceShift) { SDL_DestroySurface(vkbdSurfaceShift); vkbdSurfaceShift = nullptr; }
+}
+#endif
 #ifdef USE_OPENGL
 static void cleanup_vkbd_gl()
 {
 	if (vkbdGLTexture) { glDeleteTextures(1, &vkbdGLTexture); vkbdGLTexture = 0; }
 	if (vkbdGLTextureShift) { glDeleteTextures(1, &vkbdGLTextureShift); vkbdGLTextureShift = 0; }
 	vkbd_cleanup_gl_shader();
-	if (vkbdSurface) { SDL_DestroySurface(vkbdSurface); vkbdSurface = nullptr; }
-	if (vkbdSurfaceShift) { SDL_DestroySurface(vkbdSurfaceShift); vkbdSurfaceShift = nullptr; }
+	cleanup_vkbd_surfaces();
 	vkbdGLTexWidth = 0;
 	vkbdGLTexHeight = 0;
 }
 
+// Shared by OpenGL and Vulkan paths — creates the combined keyboard surface
+#endif // USE_OPENGL
+#if defined(USE_OPENGL) || defined(USE_VULKAN)
 static SDL_Surface* vkbd_create_keyboard_combined_surface(bool shift)
 {
 	const auto keyboard = vkbd_create_keyboard_surface(shift);
@@ -706,7 +718,8 @@ static SDL_Surface* vkbd_create_keyboard_combined_surface(bool shift)
 	}
 	return surf;
 }
-#else
+#endif
+#if !defined(USE_OPENGL) && !defined(USE_VULKAN)
 static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -763,6 +776,10 @@ void vkbd_update_position_from_texture()
 	widthf = static_cast<float>(vkbdGLTexWidth);
 	heightf = static_cast<float>(vkbdGLTexHeight);
 	if (widthf <= 0 || heightf <= 0) return;
+#elif defined(USE_VULKAN)
+	if (!vkbdSurface) return;
+	widthf = static_cast<float>(vkbdSurface->w);
+	heightf = static_cast<float>(vkbdSurface->h);
 #else
 	if (!vkbdTexture) return;
 	SDL_GetTextureSize(vkbdTexture, &widthf, &heightf);
@@ -770,8 +787,8 @@ void vkbd_update_position_from_texture()
 	int width = static_cast<int>(widthf), height = static_cast<int>(heightf);
 	int renderedWidth = g_renderer->crop_rect.w, rendererHeight = g_renderer->crop_rect.h;
 
-#ifdef USE_OPENGL
-	// In OpenGL mode, crop_rect may not be set yet at init time.
+#if defined(USE_OPENGL) || defined(USE_VULKAN)
+	// In GL/Vulkan mode, crop_rect may not be set yet at init time.
 	// Skip until auto_crop_image() establishes valid crop_rect dimensions.
 	if (renderedWidth <= 0 || rendererHeight <= 0) return;
 	vkbdPositionSpaceW = renderedWidth;
@@ -809,23 +826,27 @@ void vkbd_update(bool createTextures)
 		vkbdRect = vkbdRectUS;
 		break;
 	}
-#ifdef USE_OPENGL
+#if defined(USE_OPENGL) || defined(USE_VULKAN)
 	if (createTextures || vkbdSurface != nullptr)
 	{
 		if (vkbdSurface != nullptr)
 		{
 			SDL_DestroySurface(vkbdSurface);
 		}
+#ifdef USE_OPENGL
 		if (vkbdGLTexture != 0)
 		{
 			glDeleteTextures(1, &vkbdGLTexture);
 			vkbdGLTexture = 0;
 		}
+#endif
 		vkbdSurface = vkbd_create_keyboard_combined_surface(false);
 		if (vkbdSurface)
 		{
+#ifdef USE_OPENGL
 			vkbdGLTexWidth = vkbdSurface->w;
 			vkbdGLTexHeight = vkbdSurface->h;
+#endif
 		}
 	}
 
@@ -835,11 +856,13 @@ void vkbd_update(bool createTextures)
 		{
 			SDL_DestroySurface(vkbdSurfaceShift);
 		}
+#ifdef USE_OPENGL
 		if (vkbdGLTextureShift != 0)
 		{
 			glDeleteTextures(1, &vkbdGLTextureShift);
 			vkbdGLTextureShift = 0;
 		}
+#endif // USE_OPENGL
 		vkbdSurfaceShift = vkbd_create_keyboard_combined_surface(true);
 	}
 
@@ -847,7 +870,7 @@ void vkbd_update(bool createTextures)
 	{
 		vkbd_update_position_from_texture();
 	}
-#else
+#else // !(USE_OPENGL || USE_VULKAN)
 	if (createTextures || vkbdTexture != nullptr)
 	{
 		if (vkbdTexture != nullptr)
@@ -994,6 +1017,8 @@ void vkbd_quit()
 {
 #ifdef USE_OPENGL
 	cleanup_vkbd_gl();
+#elif defined(USE_VULKAN)
+	cleanup_vkbd_surfaces();
 #else
 	if (vkbdTexture != nullptr)
 	{
@@ -1037,7 +1062,7 @@ static bool vkbd_is_shift_pressed()
 		vkbdPressedStickyKeys.find(AK_RSH) != vkbdPressedStickyKeys.end();
 }
 
-#ifndef USE_OPENGL
+#if !defined(USE_OPENGL) && !defined(USE_VULKAN)
 static SDL_Texture* vkbd_get_texture_to_draw()
 {
 	return vkbd_is_shift_pressed() ? vkbdTextureShift : vkbdTexture;
@@ -1065,6 +1090,31 @@ static void vkbd_update_current_xy()
 	vkbdCurrentY = std::max(minY, vkbdCurrentY);
 	vkbdCurrentY = std::min(maxY, vkbdCurrentY);
 }
+
+#if defined(USE_OPENGL) || defined(USE_VULKAN)
+bool vkbd_get_render_info(VkbdRenderInfo& info)
+{
+	info = {};
+	if (!vkbdShow && (vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY))
+		return false;
+
+	vkbd_update_current_xy();
+
+	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
+		return false;
+
+	const bool shift = vkbd_is_shift_pressed();
+	info.surface = shift ? vkbdSurfaceShift : vkbdSurface;
+	if (!info.surface) return false;
+	info.x = vkbdCurrentX;
+	info.y = vkbdCurrentY;
+	info.position_space_w = vkbdPositionSpaceW;
+	info.position_space_h = vkbdPositionSpaceH;
+	info.alpha = vkbdAlpha;
+	info.visible = true;
+	return true;
+}
+#endif // USE_OPENGL || USE_VULKAN
 
 #ifdef USE_OPENGL
 // Scale an SDL_Rect from vkbd position coordinate space to drawable pixel space
@@ -1171,7 +1221,7 @@ void vkbd_redraw_gl(int drawable_w, int drawable_h)
 
 void vkbd_redraw()
 {
-#ifndef USE_OPENGL
+#if !defined(USE_OPENGL) && !defined(USE_VULKAN)
 	AmigaMonitor* mon = &AMonitors[0];
 
 	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)

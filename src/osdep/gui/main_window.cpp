@@ -43,6 +43,10 @@
 #include "imgui_impl_opengl3.h"
 #include <SDL3/SDL_opengl.h>
 #endif
+#ifdef USE_VULKAN
+#include "imgui_impl_vulkan.h"
+#include "vulkan_renderer.h"
+#endif
 #include <array>
 #include <fstream>
 #include <sstream>
@@ -76,13 +80,268 @@ static SDL_WindowFlags saved_emu_flags = 0;
 #if defined(_WIN32) && defined(USE_OPENGL)
 static bool gui_use_opengl = false;
 #endif
+#ifdef USE_VULKAN
+static bool gui_use_vulkan = false;
+// Track Vulkan resources for GUI textures so we can clean them up
+struct VkGuiTextureResources {
+	VkImage image;
+	VkDeviceMemory memory;
+	VkImageView view;
+	VkSampler sampler;
+};
+static std::unordered_map<uint64_t, VkGuiTextureResources> vk_gui_textures;
+#endif
 
-// Texture helpers: abstract SDL_Texture (SDLRenderer2) vs GLuint (OpenGL3)
+// Texture helpers: abstract SDL_Texture (SDLRenderer2) vs GLuint (OpenGL3) vs VkDescriptorSet (Vulkan)
 ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 {
 	if (!surface) return ImTextureID_Invalid;
 	if (out_w) *out_w = surface->w;
 	if (out_h) *out_h = surface->h;
+#ifdef USE_VULKAN
+	if (gui_use_vulkan) {
+		auto* vk = get_vulkan_renderer();
+		if (!vk) return ImTextureID_Invalid;
+
+		SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
+		if (!rgba) return ImTextureID_Invalid;
+
+		VkDevice device = vk->get_vk_device();
+
+		// Create staging buffer
+		VkDeviceSize image_size = static_cast<VkDeviceSize>(rgba->w) * rgba->h * 4;
+		VkBuffer staging_buffer;
+		VkDeviceMemory staging_memory;
+		{
+			VkBufferCreateInfo buf_info{};
+			buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			buf_info.size = image_size;
+			buf_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			if (vkCreateBuffer(device, &buf_info, nullptr, &staging_buffer) != VK_SUCCESS) {
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+			VkMemoryRequirements mem_reqs;
+			vkGetBufferMemoryRequirements(device, staging_buffer, &mem_reqs);
+
+			VkPhysicalDeviceMemoryProperties mem_props;
+			vkGetPhysicalDeviceMemoryProperties(vk->get_vk_physical_device(), &mem_props);
+			uint32_t mem_type = UINT32_MAX;
+			for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+				if ((mem_reqs.memoryTypeBits & (1 << i)) &&
+					(mem_props.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
+					(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+					mem_type = i;
+					break;
+				}
+			}
+			if (mem_type == UINT32_MAX) {
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+			VkMemoryAllocateInfo alloc_info{};
+			alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			alloc_info.allocationSize = mem_reqs.size;
+			alloc_info.memoryTypeIndex = mem_type;
+			if (vkAllocateMemory(device, &alloc_info, nullptr, &staging_memory) != VK_SUCCESS) {
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+			vkBindBufferMemory(device, staging_buffer, staging_memory, 0);
+			void* mapped;
+			vkMapMemory(device, staging_memory, 0, image_size, 0, &mapped);
+			const auto* src = static_cast<const uint8_t*>(rgba->pixels);
+			auto* dst = static_cast<uint8_t*>(mapped);
+			const size_t dst_pitch = static_cast<size_t>(rgba->w) * 4;
+			for (int y = 0; y < rgba->h; y++) {
+				memcpy(dst + y * dst_pitch, src + y * rgba->pitch, dst_pitch);
+			}
+			vkUnmapMemory(device, staging_memory);
+		}
+
+		// Create image
+		VkImage image;
+		VkDeviceMemory image_memory;
+		{
+			VkImageCreateInfo img_info{};
+			img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			img_info.imageType = VK_IMAGE_TYPE_2D;
+			img_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+			img_info.extent = { static_cast<uint32_t>(rgba->w), static_cast<uint32_t>(rgba->h), 1 };
+			img_info.mipLevels = 1;
+			img_info.arrayLayers = 1;
+			img_info.samples = VK_SAMPLE_COUNT_1_BIT;
+			img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+			img_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			img_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			if (vkCreateImage(device, &img_info, nullptr, &image) != VK_SUCCESS) {
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				vkFreeMemory(device, staging_memory, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+			VkMemoryRequirements mem_reqs;
+			vkGetImageMemoryRequirements(device, image, &mem_reqs);
+			VkPhysicalDeviceMemoryProperties mem_props;
+			vkGetPhysicalDeviceMemoryProperties(vk->get_vk_physical_device(), &mem_props);
+			uint32_t mem_type = UINT32_MAX;
+			for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+				if ((mem_reqs.memoryTypeBits & (1 << i)) &&
+					(mem_props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+					mem_type = i;
+					break;
+				}
+			}
+			if (mem_type == UINT32_MAX) {
+				vkDestroyImage(device, image, nullptr);
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				vkFreeMemory(device, staging_memory, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+			VkMemoryAllocateInfo alloc_info{};
+			alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			alloc_info.allocationSize = mem_reqs.size;
+			alloc_info.memoryTypeIndex = mem_type;
+			if (vkAllocateMemory(device, &alloc_info, nullptr, &image_memory) != VK_SUCCESS) {
+				vkDestroyImage(device, image, nullptr);
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				vkFreeMemory(device, staging_memory, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+			vkBindImageMemory(device, image, image_memory, 0);
+		}
+
+		// Create image view
+		VkImageView image_view;
+		{
+			VkImageViewCreateInfo view_info{};
+			view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			view_info.image = image;
+			view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+			view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			view_info.subresourceRange.levelCount = 1;
+			view_info.subresourceRange.layerCount = 1;
+			if (vkCreateImageView(device, &view_info, nullptr, &image_view) != VK_SUCCESS) {
+				vkDestroyImage(device, image, nullptr);
+				vkFreeMemory(device, image_memory, nullptr);
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				vkFreeMemory(device, staging_memory, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+		}
+
+		// Create sampler
+		VkSampler sampler;
+		{
+			VkSamplerCreateInfo sampler_info{};
+			sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			sampler_info.magFilter = VK_FILTER_LINEAR;
+			sampler_info.minFilter = VK_FILTER_LINEAR;
+			sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			if (vkCreateSampler(device, &sampler_info, nullptr, &sampler) != VK_SUCCESS) {
+				vkDestroyImageView(device, image_view, nullptr);
+				vkDestroyImage(device, image, nullptr);
+				vkFreeMemory(device, image_memory, nullptr);
+				vkDestroyBuffer(device, staging_buffer, nullptr);
+				vkFreeMemory(device, staging_memory, nullptr);
+				SDL_DestroySurface(rgba);
+				return ImTextureID_Invalid;
+			}
+		}
+
+		// Upload: transition, copy, transition
+		{
+			VkCommandPool cmd_pool;
+			VkCommandPoolCreateInfo pool_info{};
+			pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			pool_info.queueFamilyIndex = vk->get_vk_graphics_queue_family();
+			vkCreateCommandPool(device, &pool_info, nullptr, &cmd_pool);
+
+			VkCommandBuffer cmd;
+			VkCommandBufferAllocateInfo alloc_info{};
+			alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			alloc_info.commandPool = cmd_pool;
+			alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			alloc_info.commandBufferCount = 1;
+			vkAllocateCommandBuffers(device, &alloc_info, &cmd);
+
+			VkCommandBufferBeginInfo begin_info{};
+			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			vkBeginCommandBuffer(cmd, &begin_info);
+
+			// Transition UNDEFINED → TRANSFER_DST
+			VkImageMemoryBarrier barrier{};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = image;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.levelCount = 1;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+			// Copy buffer to image
+			VkBufferImageCopy region{};
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.layerCount = 1;
+			region.imageExtent = { static_cast<uint32_t>(rgba->w), static_cast<uint32_t>(rgba->h), 1 };
+			vkCmdCopyBufferToImage(cmd, staging_buffer, image,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+			// Transition TRANSFER_DST → SHADER_READ_ONLY
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+			vkEndCommandBuffer(cmd);
+
+			VkSubmitInfo submit{};
+			submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submit.commandBufferCount = 1;
+			submit.pCommandBuffers = &cmd;
+			vkQueueSubmit(vk->get_vk_graphics_queue(), 1, &submit, VK_NULL_HANDLE);
+			vkQueueWaitIdle(vk->get_vk_graphics_queue());
+
+			vkDestroyCommandPool(device, cmd_pool, nullptr);
+		}
+
+		// Cleanup staging
+		vkDestroyBuffer(device, staging_buffer, nullptr);
+		vkFreeMemory(device, staging_memory, nullptr);
+		SDL_DestroySurface(rgba);
+
+		// Register with ImGui
+		VkDescriptorSet ds = ImGui_ImplVulkan_AddTexture(sampler, image_view,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		// Store Vulkan resources for cleanup
+		uint64_t key = reinterpret_cast<uint64_t>(ds);
+		vk_gui_textures[key] = {image, image_memory, image_view, sampler};
+
+		return (ImTextureID)ds;
+	}
+#endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl) {
 		SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
@@ -106,6 +365,27 @@ ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 void gui_destroy_texture(ImTextureID tex)
 {
 	if (tex == ImTextureID_Invalid) return;
+#ifdef USE_VULKAN
+	if (gui_use_vulkan) {
+		auto* vk = get_vulkan_renderer();
+		if (!vk) return;
+		VkDevice device = vk->get_vk_device();
+		VkDescriptorSet ds = (VkDescriptorSet)tex;
+		uint64_t key = reinterpret_cast<uint64_t>(ds);
+
+		auto it = vk_gui_textures.find(key);
+		if (it != vk_gui_textures.end()) {
+			vkDeviceWaitIdle(device);
+			ImGui_ImplVulkan_RemoveTexture(ds);
+			vkDestroySampler(device, it->second.sampler, nullptr);
+			vkDestroyImageView(device, it->second.view, nullptr);
+			vkDestroyImage(device, it->second.image, nullptr);
+			vkFreeMemory(device, it->second.memory, nullptr);
+			vk_gui_textures.erase(it);
+		}
+		return;
+	}
+#endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl) {
 		GLuint gl_tex = (GLuint)(intptr_t)tex;
@@ -769,6 +1049,10 @@ void amiberry_gui_init()
 #if defined(_WIN32) && defined(USE_OPENGL)
 	gui_use_opengl = (g_renderer && g_renderer->has_context() && mon->gui_window == mon->amiga_window);
 #endif
+#ifdef USE_VULKAN
+	gui_use_vulkan = (get_vulkan_renderer() != nullptr && g_renderer->has_context()
+		&& mon->gui_window == mon->amiga_window);
+#endif
 
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
 	{
@@ -908,20 +1192,25 @@ void amiberry_gui_init()
 		}
 	}
 
+{
+		bool skip_sdl_renderer = false;
 #if defined(_WIN32) && defined(USE_OPENGL)
-	if (!gui_use_opengl) {
+		if (gui_use_opengl) skip_sdl_renderer = true;
 #endif
-		if (mon->gui_renderer == nullptr)
-		{
-			mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, NULL);
-			check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
-			if (mon->gui_renderer)
-				SDL_SetRenderVSync(mon->gui_renderer, 1);
+#ifdef USE_VULKAN
+		if (gui_use_vulkan) skip_sdl_renderer = true;
+#endif
+		if (!skip_sdl_renderer) {
+			if (mon->gui_renderer == nullptr)
+			{
+				mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, NULL);
+				check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
+				if (mon->gui_renderer)
+					SDL_SetRenderVSync(mon->gui_renderer, 1);
+			}
+			DPIHandler::set_render_scale(mon->gui_renderer);
 		}
-		DPIHandler::set_render_scale(mon->gui_renderer);
-#if defined(_WIN32) && defined(USE_OPENGL)
 	}
-#endif
 
 	file_dialog_init();
 
@@ -1032,6 +1321,31 @@ void amiberry_gui_init()
 	io.FontDefault = loaded_font;
 
 	// Setup Platform/Renderer backends
+#ifdef USE_VULKAN
+	if (gui_use_vulkan) {
+		auto* vk = get_vulkan_renderer();
+		if (vk && vk->has_context()) {
+			if (!vk->get_imgui_descriptor_pool()) {
+				vk->create_imgui_descriptor_pool();
+			}
+			ImGui_ImplSDL3_InitForVulkan(mon->gui_window);
+			ImGui_ImplVulkan_InitInfo init_info{};
+			init_info.Instance = vk->get_vk_instance();
+			init_info.PhysicalDevice = vk->get_vk_physical_device();
+			init_info.Device = vk->get_vk_device();
+			init_info.QueueFamily = vk->get_vk_graphics_queue_family();
+			init_info.Queue = vk->get_vk_graphics_queue();
+			init_info.DescriptorPool = vk->get_imgui_descriptor_pool();
+			init_info.MinImageCount = vk->get_vk_min_image_count();
+			init_info.ImageCount = vk->get_vk_image_count();
+			init_info.PipelineInfoMain.RenderPass = vk->get_vk_render_pass();
+			init_info.PipelineInfoMain.Subpass = 0;
+			init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+			ImGui_ImplVulkan_Init(&init_info);
+			vk->set_imgui_init_image_count(init_info.ImageCount);
+		}
+	} else
+#endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl) {
 		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
@@ -1039,14 +1353,13 @@ void amiberry_gui_init()
 		SDL_GL_MakeCurrent(mon->gui_window, ctx);
 		ImGui_ImplSDL3_InitForOpenGL(mon->gui_window, ctx);
 		ImGui_ImplOpenGL3_Init("#version 130");
-	} else {
-		ImGui_ImplSDL3_InitForSDLRenderer(mon->gui_window, mon->gui_renderer);
-		ImGui_ImplSDLRenderer3_Init(mon->gui_renderer);
-	}
-#else
-	ImGui_ImplSDL3_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
-	ImGui_ImplSDLRenderer3_Init(AMonitors[0].gui_renderer);
+	} else
 #endif
+	{
+		AmigaMonitor* mon0 = &AMonitors[0];
+		ImGui_ImplSDL3_InitForSDLRenderer(mon0->gui_window, mon0->gui_renderer);
+		ImGui_ImplSDLRenderer3_Init(mon0->gui_renderer);
+	}
 
 	if (amiberry_options.quickstart_start && !emulating && strlen(last_loaded_config) == 0)
 	{
@@ -1079,14 +1392,21 @@ void amiberry_gui_halt()
 	// Release sidebar icon textures
 	release_sidebar_icons();
 	// Properly shutdown ImGui backends/context
+#ifdef USE_VULKAN
+	if (gui_use_vulkan) {
+		auto* vk = get_vulkan_renderer();
+		if (vk) vkDeviceWaitIdle(vk->get_vk_device());
+		ImGui_ImplVulkan_Shutdown();
+	} else
+#endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 	if (gui_use_opengl)
 		ImGui_ImplOpenGL3_Shutdown();
 	else
-		ImGui_ImplSDLRenderer3_Shutdown();
-#else
-	ImGui_ImplSDLRenderer3_Shutdown();
 #endif
+	{
+		ImGui_ImplSDLRenderer3_Shutdown();
+	}
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
 	// Restore SDL's default so clicks used to refocus the emulation window
@@ -1156,8 +1476,13 @@ void amiberry_gui_halt()
 			SDL_SetWindowFullscreen(mon->amiga_window, true);
 		saved_emu_w = saved_emu_h = 0;
 	}
-	// Restore emulation rendering context (GL: MakeCurrent + reset; SDL: no-op)
+	// Restore emulation rendering context (GL: MakeCurrent + reset; Vulkan: wait idle; SDL: no-op)
 	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
+		g_renderer->restore_emulation_context(mon->amiga_window);
+	}
+#endif
+#ifdef USE_VULKAN
+	if (gui_use_vulkan && mon->amiga_window && g_renderer && g_renderer->has_context()) {
 		g_renderer->restore_emulation_context(mon->amiga_window);
 	}
 #endif
@@ -1414,14 +1739,19 @@ void run_gui()
 		}
 
 		// Start the Dear ImGui frame
+#ifdef USE_VULKAN
+		if (gui_use_vulkan)
+			ImGui_ImplVulkan_NewFrame();
+		else
+#endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 		if (gui_use_opengl)
 			ImGui_ImplOpenGL3_NewFrame();
 		else
-			ImGui_ImplSDLRenderer3_NewFrame();
-#else
-		ImGui_ImplSDLRenderer3_NewFrame();
 #endif
+		{
+			ImGui_ImplSDLRenderer3_NewFrame();
+		}
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
@@ -1865,6 +2195,14 @@ void run_gui()
 
 		// Rendering
 		ImGui::Render();
+#ifdef USE_VULKAN
+		if (gui_use_vulkan) {
+			auto* vk = get_vulkan_renderer();
+			if (vk) {
+				vk->render_gui_frame(ImGui::GetDrawData());
+			}
+		} else
+#endif
 #if defined(_WIN32) && defined(USE_OPENGL)
 		if (gui_use_opengl) {
 			const ImGuiIO& gl_io = ImGui::GetIO();
@@ -1875,7 +2213,9 @@ void run_gui()
 			glClear(GL_COLOR_BUFFER_BIT);
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 			SDL_GL_SwapWindow(mon->gui_window);
-		} else {
+		} else
+#endif
+		{
 			const ImGuiIO& render_io = ImGui::GetIO();
 			SDL_SetRenderScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
 			SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
@@ -1884,15 +2224,6 @@ void run_gui()
 			ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
 			SDL_RenderPresent(mon->gui_renderer);
 		}
-#else
-		const ImGuiIO& render_io = ImGui::GetIO();
-		SDL_SetRenderScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
-		SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
-						   static_cast<uint8_t>(0.60f * 255), static_cast<uint8_t>(1.00f * 255));
-		SDL_RenderClear(mon->gui_renderer);
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
-		SDL_RenderPresent(mon->gui_renderer);
-#endif
 	}
 
 	amiberry_gui_halt();
