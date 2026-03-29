@@ -213,6 +213,8 @@ extern std::vector<std::string> lstMRUDiskList;
 extern std::vector<std::string> lstMRUCDList;
 extern std::vector<std::string> lstMRUWhdloadList;
 
+extern std::string last_floppy_dir;
+
 extern void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file);
 
 int count_HDs(const struct uae_prefs* p);

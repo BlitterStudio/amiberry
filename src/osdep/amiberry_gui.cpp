@@ -105,6 +105,8 @@ std::vector<std::string> lstMRUDiskList;
 std::vector<std::string> lstMRUCDList;
 std::vector<std::string> lstMRUWhdloadList;
 
+std::string last_floppy_dir;
+
 std::string get_full_path_from_disk_list(std::string element)
 {
 	if (element.empty())

@@ -315,6 +315,8 @@ void render_panel_quickstart() {
             std::string tmp;
             if (disk_present)
                 tmp = changed_prefs.floppyslots[i].df;
+            else if (!last_floppy_dir.empty())
+                tmp = last_floppy_dir;
             else
                 tmp = get_floppy_path();
             OpenFileDialogKey("QUICKSTART", "Select disk image file",
@@ -674,6 +676,9 @@ void render_panel_quickstart() {
             if (qs_pending_floppy_drive >= 0 && qs_pending_floppy_drive < 2) {
                 int i = qs_pending_floppy_drive;
                 if (!filePath.empty()) {
+                    size_t last_sep = filePath.find_last_of("/\\");
+                    if (last_sep != std::string::npos)
+                        last_floppy_dir = filePath.substr(0, last_sep);
                     if (std::strncmp(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH) != 0) {
                         std::strncpy(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH);
                         disk_insert(i, filePath.c_str());

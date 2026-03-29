@@ -32,6 +32,7 @@ void render_panel_diskswapper()
             {
                  diskswapper_target_slot = i;
                  std::string startPath = changed_prefs.dfxlist[i];
+                 if (startPath.empty() && !last_floppy_dir.empty()) startPath = last_floppy_dir;
                  if (startPath.empty()) startPath = get_floppy_path();
 
                  // Use a standard filter similar to Floppy panel
@@ -92,7 +93,9 @@ void render_panel_diskswapper()
     std::string result_path;
     if (ConsumeFileDialogResultKey("DISKSWAP", result_path)) {
         if (!result_path.empty() && diskswapper_target_slot >= 0 && diskswapper_target_slot < MAX_SPARE_DRIVES) {
-             // Check content of slot?
+             size_t last_sep = result_path.find_last_of("/\\");
+             if (last_sep != std::string::npos)
+                 last_floppy_dir = result_path.substr(0, last_sep);
              if (strncmp(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH) != 0)
              {
                  strncpy(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH);

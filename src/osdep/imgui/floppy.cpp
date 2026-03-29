@@ -200,6 +200,7 @@ static void RenderDriveSlot(const int i)
         if (AmigaButton("...")) {
              current_floppy_dialog_mode = static_cast<FloppyDialogMode>(static_cast<int>(FloppyDialogMode::SelectDF0) + i);
              std::string startPath = changed_prefs.floppyslots[i].df;
+             if (startPath.empty() && !last_floppy_dir.empty()) startPath = last_floppy_dir;
              if (startPath.empty()) startPath = get_floppy_path(); 
              OpenFileDialogKey("FLOPPY", "Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
         }
@@ -497,8 +498,12 @@ void render_panel_floppy()
 
     std::string result_path;
     if (ConsumeFileDialogResultKey("FLOPPY", result_path)) {
-       // Existing logic for file Selection
        if (!result_path.empty()) {
+            // Remember the directory for next time
+            size_t last_sep = result_path.find_last_of("/\\");
+            if (last_sep != std::string::npos)
+                last_floppy_dir = result_path.substr(0, last_sep);
+
             if (current_floppy_dialog_mode == FloppyDialogMode::CreateDD) {
                 char diskname[MAX_DPATH];
                 extract_filename(result_path.c_str(), diskname);
