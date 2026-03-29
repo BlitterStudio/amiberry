@@ -6322,6 +6322,8 @@ int amiberry_main(int argc, char* argv[])
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
 			usage();
+		if (_tcscmp(argv[i], _T("--version")) == 0)
+			print_version();
 		if (_tcscmp(argv[i], _T("--log")) == 0)
 			console_logging = 1;
 		if (_tcscmp(argv[i], _T("--jit-selftest")) == 0)
@@ -6338,14 +6340,10 @@ int amiberry_main(int argc, char* argv[])
 #endif
 	mainthreadid = uae_thread_get_id(nullptr);
 
-	if(argc == 2)
-	{
-		const std::string two(argv[1]);
-		if(two == "-v" || two == "--version")
-		{
-			print_version();
-		}
-	}
+	// -v is also used for chipset selection (e.g. -v 4 for AGA),
+	// so it can only mean "version" when it's the sole argument.
+	if (argc == 2 && _tcscmp(argv[1], _T("-v")) == 0)
+		print_version();
 
 #ifdef USE_DBUS
 	DBusSetup();
