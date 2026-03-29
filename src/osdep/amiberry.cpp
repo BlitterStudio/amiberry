@@ -1763,6 +1763,7 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		handle_focus_lost_event(mon);
 		break;
+#ifndef LIBRETRO
 	case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
 	{
 		// Sync internal state when entering fullscreen via OS mechanism (e.g. macOS green button)
@@ -1789,6 +1790,7 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 		}
 		break;
 	}
+#endif
 	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 		handle_close_event();
 		break;
