@@ -3242,6 +3242,7 @@ static void apply_current_visual_asset_paths(const visual_asset_path_set& paths)
 }
 
 std::string get_config_directory(bool portable_mode);
+static std::string get_xdg_config_home();
 
 static const managed_path_option_descriptor* const themes_path_descriptor = &base_content_managed_path_options[17];
 static const managed_path_option_descriptor* const shaders_path_descriptor = &base_content_managed_path_options[18];
