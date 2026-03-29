@@ -18,6 +18,10 @@ if(IMGUI_USE_OPENGL)
     target_sources(imgui PRIVATE backends/imgui_impl_opengl3.cpp)
 endif()
 
+if(IMGUI_USE_VULKAN)
+    target_sources(imgui PRIVATE backends/imgui_impl_vulkan.cpp)
+endif()
+
 target_include_directories(imgui PUBLIC .)
 target_include_directories(imgui PUBLIC backends)
 
@@ -47,4 +51,9 @@ if(IMGUI_USE_OPENGL)
         find_package(OpenGL REQUIRED)
         target_link_libraries(imgui PRIVATE OpenGL::GL)
     endif()
+endif()
+
+if(IMGUI_USE_VULKAN)
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(imgui PRIVATE Vulkan::Vulkan)
 endif()

@@ -1050,6 +1050,23 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 	btnkb_hit_radius = kb_size / 2 + kb_size / 8;
 }
 
+bool on_screen_joystick_get_render_info(OsjRenderInfo& info)
+{
+	info = {};
+	if (!osj_enabled || !osj_initialized) return false;
+	if (!stick_base_surface || !knob_surface || !btn1_surface || !btn2_surface) return false;
+
+	info.base = {stick_base_surface, dpad_rect, knob_active ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.knob = {knob_surface, compute_knob_rect(), knob_active ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.btn1 = {btn1_surface, btn1_rect, joy_fire1 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.btn2 = {btn2_surface, btn2_rect, joy_fire2 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.btnkb = {btnkb_surface, btnkb_rect, ALPHA_NORMAL / 255.0f};
+	info.screen_w = screen_w;
+	info.screen_h = screen_h;
+	info.valid = (screen_w > 0 && screen_h > 0);
+	return info.valid;
+}
+
 void on_screen_joystick_redraw(SDL_Renderer* renderer)
 {
 	if (!osj_enabled || !osj_initialized) return;

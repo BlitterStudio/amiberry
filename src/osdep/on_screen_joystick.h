@@ -38,4 +38,21 @@ bool on_screen_joystick_keyboard_tapped();
 // game_rect is the destination rectangle of the Amiga screen on the display.
 void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect);
 
+// Accessor for Vulkan/generic overlay rendering
+struct OsjOverlayElement {
+	SDL_Surface* surface;
+	SDL_Rect rect;
+	float alpha;
+};
+struct OsjRenderInfo {
+	OsjOverlayElement base;     // dpad base plate
+	OsjOverlayElement knob;     // dpad knob
+	OsjOverlayElement btn1;     // fire button 1
+	OsjOverlayElement btn2;     // fire button 2
+	OsjOverlayElement btnkb;    // keyboard button
+	int screen_w, screen_h;
+	bool valid;
+};
+bool on_screen_joystick_get_render_info(OsjRenderInfo& info);
+
 #endif // ON_SCREEN_JOYSTICK_H

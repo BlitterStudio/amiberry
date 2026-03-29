@@ -43,4 +43,15 @@ extern bool vkbd_process(int state, int* keycode, int* pressed);
 extern bool vkbd_is_active(void);
 extern void vkbd_update_position_from_texture();
 
+// Accessors for Vulkan/generic overlay rendering
+struct VkbdRenderInfo {
+	SDL_Surface* surface;       // keyboard bitmap (may be shifted variant)
+	int x, y;                   // current position in position-space coords
+	int position_space_w;       // width of the position coordinate space
+	int position_space_h;       // height of the position coordinate space
+	int alpha;                  // 0-255
+	bool visible;               // true if keyboard should be drawn
+};
+extern bool vkbd_get_render_info(VkbdRenderInfo& info);
+
 #endif // VKBD_H
