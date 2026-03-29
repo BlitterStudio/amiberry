@@ -937,8 +937,8 @@ SDL_WindowFlags SDL_GetWindowFlags(SDL_Window* window);
 void SDL_GetWindowPosition(SDL_Window* window, int* x, int* y);
 void SDL_GetWindowSize(SDL_Window* window, int* w, int* h);
 void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed);
-void SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed);
-void SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed);
+bool SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed);
+bool SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed);
 bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode);
 bool SDL_SetWindowFullscreen(SDL_Window* window, bool fullscreen);
 void SDL_SyncWindow(SDL_Window* window);
@@ -966,6 +966,7 @@ void SDL_SetCursor(SDL_Cursor* cursor);
 bool SDL_WarpMouseGlobal(float x, float y);
 void SDL_WarpMouseInWindow(SDL_Window* window, float x, float y);
 bool SDL_SetWindowRelativeMouseMode(SDL_Window* window, bool enabled);
+bool SDL_GetWindowRelativeMouseMode(SDL_Window* window);
 
 bool SDL_HasClipboardText(void);
 char* SDL_GetClipboardText(void);

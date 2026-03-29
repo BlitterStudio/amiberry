@@ -917,14 +917,16 @@ void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed)
 	(void)window;
 	(void)grabbed;
 }
-void SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed)
+bool SDL_SetWindowMouseGrab(SDL_Window* window, SDL_bool grabbed)
 {
 	SDL_SetWindowGrab(window, grabbed);
+	return true;
 }
-void SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed)
+bool SDL_SetWindowKeyboardGrab(SDL_Window* window, SDL_bool grabbed)
 {
 	(void)window;
 	(void)grabbed;
+	return true;
 }
 bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode)
 {
@@ -1028,6 +1030,11 @@ bool SDL_SetWindowRelativeMouseMode(SDL_Window* window, bool enabled)
 	(void)window;
 	(void)enabled;
 	return true;
+}
+bool SDL_GetWindowRelativeMouseMode(SDL_Window* window)
+{
+	(void)window;
+	return false;
 }
 
 bool SDL_HasClipboardText(void) { return false; }

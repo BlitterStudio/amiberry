@@ -844,6 +844,7 @@ static bool consume_pending_mouse_capture(const int monid, int* active)
 	return true;
 }
 
+#ifndef LIBRETRO
 static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 {
 	const bool mouse_grab_ok = SDL_SetWindowMouseGrab(mon->amiga_window, true);
@@ -880,6 +881,9 @@ static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 	setcursor(mon, -30000, -30000);
 	return true;
 }
+#else
+static bool apply_mouse_capture_grabs(AmigaMonitor*) { return true; }
+#endif
 
 void releasecapture(const AmigaMonitor* mon)
 {
