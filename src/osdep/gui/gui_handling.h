@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <functional>
+#include <string>
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
@@ -316,12 +317,8 @@ using ConfigCategory = struct config_category
 };
 
 extern bool gui_running;
-#ifdef __MACH__
-extern bool macos_data_migrated;
-extern bool macos_migration_failed;
-extern bool macos_migration_conflicts;
-#endif
 extern ConfigCategory categories[];
+bool consume_startup_migration_notice(std::string& title, std::string& message);
 
 // GUI Colors
 extern amiberry_gui_theme gui_theme;

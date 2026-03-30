@@ -1716,31 +1716,12 @@ void run_gui()
 	amiberry_gui_init();
 	start_disabled = false;
 
-#ifdef __MACH__
-	if (macos_data_migrated)
 	{
-		ShowMessageBox("Amiberry Migration",
-			"Amiberry imported existing settings and any compatible visual assets into the new layout.\n\n"
-			"Bootstrap settings now live in:\n\n"
-			"  ~/Library/Application Support/Amiberry\n\n"
-			"Visual asset folders now default to:\n\n"
-			"  ~/Documents/Amiberry/Visuals\n\n"
-			"Your remaining content folders stay where they were before.");
-		macos_data_migrated = false;
+		std::string migration_title;
+		std::string migration_message;
+		if (consume_startup_migration_notice(migration_title, migration_message))
+			ShowMessageBox(migration_title.c_str(), migration_message.c_str());
 	}
-	else if (macos_migration_failed)
-	{
-		ShowMessageBox("Amiberry Migration Failed",
-			"Amiberry could not fully import your existing settings and visual assets into the new layout.\n\n"
-			"Bootstrap settings should live in:\n\n"
-			"  ~/Library/Application Support/Amiberry\n\n"
-			"Visual assets now default to:\n\n"
-			"  ~/Documents/Amiberry/Visuals\n\n"
-			"Your existing files were left untouched whenever possible.\n"
-			"Please check the log file for details.");
-		macos_migration_failed = false;
-	}
-#endif
 
 	open_legacy_cleanup_popup = should_show_legacy_cleanup_prompt();
 	legacy_cleanup_text = get_legacy_cleanup_prompt_items();

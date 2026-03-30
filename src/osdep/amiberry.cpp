@@ -447,12 +447,8 @@ static bool amiberry_conf_file_overridden_from_cli = false;
 static bool legacy_layout_migrated = false;
 static bool legacy_layout_migration_failed = false;
 static bool legacy_layout_migration_conflicts = false;
-
-#ifdef __MACH__
-bool macos_data_migrated = false;
-bool macos_migration_failed = false;
-bool macos_migration_conflicts = false;
-#endif
+static bool startup_migration_notice_pending = false;
+static bool startup_migration_notice_is_failure = false;
 
 struct legacy_cleanup_item
 {
@@ -472,6 +468,7 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 static void init_amiberry_dirs(bool portable_mode);
+void save_amiberry_settings();
 
 void set_last_loaded_config(const char* filename)
 {
@@ -3248,6 +3245,21 @@ static const managed_path_option_descriptor* const themes_path_descriptor = &bas
 static const managed_path_option_descriptor* const shaders_path_descriptor = &base_content_managed_path_options[18];
 static const managed_path_option_descriptor* const bezels_path_descriptor = &base_content_managed_path_options[19];
 
+static std::string get_current_visual_assets_root_path()
+{
+	if (!themes_path.empty())
+	{
+		const auto visuals_root = normalize_path_string(std::filesystem::path(themes_path).parent_path().string());
+		if (!visuals_root.empty())
+			return visuals_root;
+	}
+
+	if (!home_dir.empty())
+		return join_path(home_dir, get_visual_assets_directory_name());
+
+	return {};
+}
+
 static bool is_visual_managed_path_option(const managed_path_option_descriptor* descriptor)
 {
 	return descriptor == themes_path_descriptor
@@ -3309,8 +3321,25 @@ static std::string normalize_path_for_compare(const std::string& input)
 	if (input.empty())
 		return {};
 
-	const auto normalized = std::filesystem::path(input).lexically_normal().generic_string();
-	return normalized.empty() ? input : normalized;
+	auto normalized = std::filesystem::path(input).lexically_normal().generic_string();
+	if (normalized.empty())
+		normalized = input;
+
+	while (normalized.size() > 1 && normalized.back() == '/')
+	{
+#ifdef _WIN32
+		if (normalized.size() == 3
+			&& std::isalpha(static_cast<unsigned char>(normalized[0]))
+			&& normalized[1] == ':'
+			&& normalized[2] == '/')
+		{
+			break;
+		}
+#endif
+		normalized.pop_back();
+	}
+
+	return normalized;
 }
 
 static bool path_strings_match(const std::string& lhs, const std::string& rhs)
@@ -6331,12 +6360,6 @@ static void migrate_legacy_settings_files(const bool portable_mode)
 		legacy_layout_migrated = true;
 	if (conf_copy_failed || ini_copy_failed)
 		legacy_layout_migration_failed = true;
-
-#ifdef __MACH__
-	macos_data_migrated = conf_copied || ini_copied;
-	macos_migration_failed = conf_copy_failed || ini_copy_failed;
-	macos_migration_conflicts = false;
-#endif
 }
 
 static void append_visual_asset_candidate(std::vector<visual_asset_path_set>& candidates,
@@ -6506,15 +6529,6 @@ static void migrate_legacy_visual_asset_directories()
 	// We only keep the "needs manual review" state when this run also imported new files.
 	if (migration_conflicts && migrated_any)
 		legacy_layout_migration_conflicts = true;
-
-#ifdef __MACH__
-	if (migrated_any)
-		macos_data_migrated = true;
-	if (migration_failed)
-		macos_migration_failed = true;
-	if (migration_conflicts && migrated_any)
-		macos_migration_conflicts = true;
-#endif
 }
 
 static constexpr auto LEGACY_CLEANUP_DISMISSED_KEY = _T("LegacyCleanupDismissed");
@@ -6775,6 +6789,49 @@ void dismiss_legacy_cleanup_prompt()
 {
 	legacy_cleanup_prompt_enabled = false;
 	regsetint(nullptr, LEGACY_CLEANUP_DISMISSED_KEY, 1);
+}
+
+static void update_startup_migration_notice_state()
+{
+	startup_migration_notice_pending = legacy_layout_migrated || legacy_layout_migration_failed;
+	startup_migration_notice_is_failure = legacy_layout_migration_failed || legacy_layout_migration_conflicts;
+}
+
+static void persist_bootstrap_settings_after_migration_if_needed()
+{
+	if (!legacy_layout_migrated || amiberry_conf_file_overridden_from_cli)
+		return;
+
+	save_amiberry_settings();
+	write_log("Settings migration: rewrote bootstrap settings file at %s\n", amiberry_conf_file.c_str());
+}
+
+bool consume_startup_migration_notice(std::string& title, std::string& message)
+{
+	if (!startup_migration_notice_pending)
+		return false;
+
+	startup_migration_notice_pending = false;
+
+	const auto settings_root = settings_dir.empty() ? get_settings_directory(g_portable_mode) : settings_dir;
+	const auto visuals_root = get_current_visual_assets_root_path();
+
+	if (startup_migration_notice_is_failure)
+	{
+		title = "Amiberry Migration Review Needed";
+		message = "Amiberry could not fully migrate your existing settings and visual assets into the new layout.\n\n";
+		message += "Bootstrap settings now live in:\n\n  " + settings_root + "\n\n";
+		message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
+		message += "Existing files were left in place whenever possible.\nPlease check the log file for details.";
+		return true;
+	}
+
+	title = "Amiberry Migration";
+	message = "Amiberry imported your existing settings and any compatible visual assets into the new layout.\n\n";
+	message += "Bootstrap settings now live in:\n\n  " + settings_root + "\n\n";
+	message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
+	message += "Your remaining content folders stay in their existing location.";
+	return true;
 }
 
 static void resolve_bootstrap_settings_paths(const bool portable_mode)
@@ -7537,11 +7594,8 @@ int amiberry_main(int argc, char* argv[])
 	legacy_layout_migrated = false;
 	legacy_layout_migration_failed = false;
 	legacy_layout_migration_conflicts = false;
-#ifdef __MACH__
-	macos_data_migrated = false;
-	macos_migration_failed = false;
-	macos_migration_conflicts = false;
-#endif
+	startup_migration_notice_pending = false;
+	startup_migration_notice_is_failure = false;
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
@@ -7612,6 +7666,8 @@ int amiberry_main(int argc, char* argv[])
 	macos_bookmarks_init(get_home_directory(portable_mode));
 	if (base_content_path.empty())
 		create_missing_amiberry_folders();
+	persist_bootstrap_settings_after_migration_if_needed();
+	update_startup_migration_notice_state();
 
 	makeverstr(VersionStr);
 	uae_time_init();
