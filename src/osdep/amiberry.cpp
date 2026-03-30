@@ -6974,19 +6974,11 @@ void create_missing_amiberry_folders()
 		ensure_directory_exists(shaders_path);
 	if (!my_existsdir(bezels_path.c_str()))
 		ensure_directory_exists(bezels_path);
-	std::string default_theme_file = join_path(themes_path, "Default.theme");
-	if (!my_existsfile2(default_theme_file.c_str()))
-	{
-		load_default_theme();
-		save_theme("Default.theme");
-	}
-
-	default_theme_file = join_path(themes_path, "Dark.theme");
-	if (!my_existsfile2(default_theme_file.c_str()))
-	{
-		load_default_dark_theme();
-		save_theme("Dark.theme");
-	}
+	// Always regenerate built-in theme presets so they include any new fields
+	load_default_theme();
+	save_theme("Default.theme");
+	load_default_dark_theme();
+	save_theme("Dark.theme");
 }
 
 static void init_amiberry_dirs(const bool portable_mode)

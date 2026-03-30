@@ -437,45 +437,91 @@ static bool parse_rgb_csv(const std::string& s, int& r, int& g, int& b) {
 
 void apply_imgui_theme()
 {
-	ImVec4 col_base = rgb_to_vec4(gui_theme.base_color.r, gui_theme.base_color.g, gui_theme.base_color.b);
-	ImVec4 col_bg   = rgb_to_vec4(gui_theme.background_color.r, gui_theme.background_color.g, gui_theme.background_color.b);
-	ImVec4 col_fg   = rgb_to_vec4(gui_theme.foreground_color.r, gui_theme.foreground_color.g, gui_theme.foreground_color.b);
-	ImVec4 col_sel  = rgb_to_vec4(gui_theme.selection_color.r, gui_theme.selection_color.g, gui_theme.selection_color.b);
-	ImVec4 col_act  = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
-	ImVec4 col_inact= rgb_to_vec4(gui_theme.selector_inactive.r, gui_theme.selector_inactive.g, gui_theme.selector_inactive.b);
-	ImVec4 col_text = rgb_to_vec4(gui_theme.font_color.r, gui_theme.font_color.g, gui_theme.font_color.b);
+	auto c = [](const amiberry_gui_color& col) { return rgb_to_vec4(col.r, col.g, col.b); };
+
+	const ImVec4 col_base    = c(gui_theme.base_color);
+	const ImVec4 col_frame   = c(gui_theme.frame_color);
+	const ImVec4 col_text    = c(gui_theme.font_color);
+	const ImVec4 col_textdis = c(gui_theme.text_disabled_color);
+	const ImVec4 col_accent  = c(gui_theme.selector_active);
+	const ImVec4 col_sel     = c(gui_theme.selection_color);
+	const ImVec4 col_border  = c(gui_theme.border_color);
+	const ImVec4 col_btn     = c(gui_theme.button_color);
+	const ImVec4 col_btnhov  = c(gui_theme.button_hover_color);
+	const ImVec4 col_tblhdr  = c(gui_theme.table_header_color);
+	const ImVec4 col_modal   = rgb_to_vec4(gui_theme.modal_dim_color.r, gui_theme.modal_dim_color.g, gui_theme.modal_dim_color.b, 0.55f);
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImVec4* colors = style.Colors;
+
+	// Text
 	colors[ImGuiCol_Text]                 = col_text;
-	colors[ImGuiCol_TextDisabled]         = darken(col_text, 0.40f);
+	colors[ImGuiCol_TextDisabled]         = col_textdis;
+	colors[ImGuiCol_InputTextCursor]      = col_text;
+	colors[ImGuiCol_TextSelectedBg]       = col_sel;
+
+	// Window backgrounds
 	colors[ImGuiCol_WindowBg]             = col_base;
 	colors[ImGuiCol_ChildBg]              = col_base;
 	colors[ImGuiCol_PopupBg]              = col_base;
-	colors[ImGuiCol_Border]               = darken(col_base, 0.45f);
-	colors[ImGuiCol_BorderShadow]         = lighten(col_base, 0.45f);
-	colors[ImGuiCol_FrameBg]              = darken(col_base, 0.1f);
-	colors[ImGuiCol_FrameBgHovered]       = lighten(col_base, 0.05f);
-	colors[ImGuiCol_FrameBgActive]        = lighten(col_base, 0.10f);
-	colors[ImGuiCol_TitleBg]              = col_base;
-	colors[ImGuiCol_TitleBgActive]        = col_act;
-	colors[ImGuiCol_TitleBgCollapsed]     = col_base;
 	colors[ImGuiCol_MenuBarBg]            = col_base;
-	colors[ImGuiCol_ScrollbarBg]          = darken(col_base, 0.15f);
-	colors[ImGuiCol_ScrollbarGrab]        = col_base;
-	colors[ImGuiCol_ScrollbarGrabHovered] = lighten(col_base, 0.05f);
-	colors[ImGuiCol_ScrollbarGrabActive]  = col_act;
-	colors[ImGuiCol_CheckMark]            = darken(col_act, 0.15f);
-	colors[ImGuiCol_SliderGrab]           = col_act;
-	colors[ImGuiCol_SliderGrabActive]     = lighten(col_act, 0.15f);
-	colors[ImGuiCol_Button]               = col_base;
-	colors[ImGuiCol_ButtonHovered]        = lighten(col_base, 0.05f);
-	colors[ImGuiCol_ButtonActive]         = col_act;
-	colors[ImGuiCol_Header]               = col_base;
-	colors[ImGuiCol_HeaderHovered]        = lighten(col_base, 0.05f);
-	colors[ImGuiCol_HeaderActive]         = col_act;
-	colors[ImGuiCol_TextSelectedBg]       = col_sel;
-	colors[ImGuiCol_TableHeaderBg]        = col_base;
+	colors[ImGuiCol_TitleBg]              = col_base;
+	colors[ImGuiCol_TitleBgCollapsed]     = col_base;
+
+	// Frames (input fields, checkboxes, combo boxes)
+	colors[ImGuiCol_FrameBg]              = col_frame;
+	colors[ImGuiCol_FrameBgHovered]       = lighten(col_frame, 0.06f);
+	colors[ImGuiCol_FrameBgActive]        = lighten(col_frame, 0.12f);
+
+	// Borders and separators
+	colors[ImGuiCol_Border]               = col_border;
+	colors[ImGuiCol_BorderShadow]         = lighten(col_base, 0.35f);
+	colors[ImGuiCol_Separator]            = col_border;
+	colors[ImGuiCol_SeparatorHovered]     = lighten(col_border, 0.15f);
+	colors[ImGuiCol_SeparatorActive]      = col_accent;
+
+	// Buttons
+	colors[ImGuiCol_Button]               = col_btn;
+	colors[ImGuiCol_ButtonHovered]        = col_btnhov;
+	colors[ImGuiCol_ButtonActive]         = col_accent;
+
+	// Headers (CollapsingHeader, TreeNode, Selectable, MenuItem)
+	colors[ImGuiCol_Header]               = col_btn;
+	colors[ImGuiCol_HeaderHovered]        = col_btnhov;
+	colors[ImGuiCol_HeaderActive]         = col_accent;
+
+	// Accent elements
+	colors[ImGuiCol_TitleBgActive]        = col_accent;
+	colors[ImGuiCol_CheckMark]            = darken(col_accent, 0.15f);
+	colors[ImGuiCol_SliderGrab]           = col_accent;
+	colors[ImGuiCol_SliderGrabActive]     = lighten(col_accent, 0.15f);
+	colors[ImGuiCol_NavCursor]            = col_accent;
+	colors[ImGuiCol_ResizeGrip]           = darken(col_border, 0.10f);
+	colors[ImGuiCol_ResizeGripHovered]    = col_accent;
+	colors[ImGuiCol_ResizeGripActive]     = lighten(col_accent, 0.10f);
+
+	// Scrollbar
+	colors[ImGuiCol_ScrollbarBg]          = col_frame;
+	colors[ImGuiCol_ScrollbarGrab]        = col_btn;
+	colors[ImGuiCol_ScrollbarGrabHovered] = col_btnhov;
+	colors[ImGuiCol_ScrollbarGrabActive]  = col_accent;
+
+	// Tables
+	colors[ImGuiCol_TableHeaderBg]        = col_tblhdr;
+	colors[ImGuiCol_TableBorderStrong]    = col_border;
+	colors[ImGuiCol_TableBorderLight]     = lighten(col_border, 0.10f);
+	colors[ImGuiCol_TableRowBg]           = ImVec4(0, 0, 0, 0); // transparent
+	colors[ImGuiCol_TableRowBgAlt]        = ImVec4(col_frame.x, col_frame.y, col_frame.z, 0.25f);
+
+	// Tabs
+	colors[ImGuiCol_Tab]                  = col_btn;
+	colors[ImGuiCol_TabHovered]           = col_btnhov;
+	colors[ImGuiCol_TabSelected]          = col_accent;
+	colors[ImGuiCol_TabDimmed]            = darken(col_btn, 0.10f);
+	colors[ImGuiCol_TabDimmedSelected]    = darken(col_accent, 0.20f);
+
+	// Modal
+	colors[ImGuiCol_ModalWindowDimBg]     = col_modal;
 
 	style.FrameBorderSize = 0.0f; // We will draw our own bevels
 	style.WindowBorderSize = 0.0f;
@@ -507,6 +553,93 @@ void apply_imgui_theme()
 	// Add a bit more padding inside windows/child areas
 	style.WindowPadding = ImVec2(10.0f, 10.0f);
 	style.FramePadding = ImVec2(5.0f, 4.0f);
+}
+
+// Deferred font rebuild state — font changes are requested during rendering
+// but applied between frames to avoid modifying the atlas mid-render.
+static bool s_font_rebuild_pending = false;
+// Tracks the font file currently loaded in the atlas.
+static std::string s_loaded_font_file;
+
+void rebuild_gui_fonts()
+{
+	// Mark for rebuild; actual work happens in apply_pending_font_rebuild()
+	s_font_rebuild_pending = true;
+}
+
+static void apply_pending_font_rebuild()
+{
+	if (!s_font_rebuild_pending)
+		return;
+	s_font_rebuild_pending = false;
+
+	ImGuiIO& io = ImGui::GetIO();
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	const float font_px = gui_theme.font_size > 0 ? static_cast<float>(gui_theme.font_size) : 15.0f;
+	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
+
+	// Font size: update FontSizeBase for the dynamic atlas to render at.
+	style.FontSizeBase = font_px;
+
+	// Full atlas rebuild needed when the font file changes.
+	// Size changes are handled by FontSizeBase + the dynamic atlas.
+	// Pixel-snap changes require a GUI restart (ImGui's dynamic atlas does
+	// not support changing OversampleH after the font is loaded).
+	const bool needs_rebuild = (font_file != s_loaded_font_file);
+
+	if (needs_rebuild)
+	{
+		const float scaling_factor = DPIHandler::get_layout_scale();
+		const float font_scale_dpi = style.FontScaleDpi;
+		const float font_dpi_scale = (font_scale_dpi > 0.0f) ? (1.0f / font_scale_dpi) : 1.0f;
+		const float font_load_px = font_px * scaling_factor * font_dpi_scale;
+		io.Fonts->Clear();
+
+		const bool use_default_font = (font_file == "AmigaTopaz.ttf");
+		ImFont* loaded_font = nullptr;
+		if (use_default_font) {
+			ImFontConfig pixel_cfg;
+			pixel_cfg.OversampleH = 1;
+			pixel_cfg.PixelSnapH = true;
+			loaded_font = io.Fonts->AddFontFromMemoryCompressedTTF(
+				AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px, &pixel_cfg);
+		} else {
+			const std::string font_path = std::filesystem::path(font_file).is_absolute()
+				? font_file
+				: prefix_with_data_path(font_file);
+			if (!font_path.empty() && std::filesystem::exists(font_path)) {
+				loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_load_px);
+			}
+			if (!loaded_font) {
+				ImFontConfig pixel_cfg;
+				pixel_cfg.OversampleH = 1;
+				pixel_cfg.PixelSnapH = true;
+				loaded_font = io.Fonts->AddFontFromMemoryCompressedTTF(
+					AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px, &pixel_cfg);
+			}
+		}
+		if (!loaded_font) {
+			ImFontConfig fallback_cfg;
+			fallback_cfg.SizePixels = font_load_px;
+			loaded_font = io.Fonts->AddFontDefault(&fallback_cfg);
+		}
+
+		// Merge icon font
+		{
+			ImFontConfig icons_cfg;
+			icons_cfg.MergeMode = true;
+			icons_cfg.PixelSnapH = true;
+			icons_cfg.GlyphMinAdvanceX = font_load_px;
+			static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+			io.Fonts->AddFontFromMemoryCompressedTTF(
+				fa_solid_900_compressed_data, fa_solid_900_compressed_size,
+				font_load_px, &icons_cfg, icon_ranges);
+		}
+
+		io.FontDefault = loaded_font;
+		s_loaded_font_file = font_file;
+	}
 }
 
 #endif
@@ -1283,20 +1416,29 @@ void amiberry_gui_init()
 
 	ImFont* loaded_font = nullptr;
 	if (use_default_font) {
-		// Load embedded Amiga Topaz — no filesystem dependency
+		// Load embedded Amiga Topaz with pixel-snapping for crisp rendering
+		ImFontConfig pixel_cfg;
+		pixel_cfg.OversampleH = 1;
+		pixel_cfg.PixelSnapH = true;
 		loaded_font = io.Fonts->AddFontFromMemoryCompressedTTF(
-			AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px);
+			AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px, &pixel_cfg);
 	} else {
 		// User-configured custom font: load from filesystem
-		const std::string font_path = prefix_with_data_path(font_file);
+		// Absolute paths are used directly; relative names go through the data-path prefix
+		const std::string font_path = std::filesystem::path(font_file).is_absolute()
+			? font_file
+			: prefix_with_data_path(font_file);
 		if (!font_path.empty() && std::filesystem::exists(font_path)) {
 			loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_load_px);
 		}
 		if (!loaded_font) {
 			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
 				"ImGui: failed to load font '%s', falling back to embedded Amiga Topaz", font_path.c_str());
+			ImFontConfig pixel_cfg;
+			pixel_cfg.OversampleH = 1;
+			pixel_cfg.PixelSnapH = true;
 			loaded_font = io.Fonts->AddFontFromMemoryCompressedTTF(
-				AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px);
+				AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, font_load_px, &pixel_cfg);
 		}
 	}
 	if (!loaded_font) {
@@ -1319,6 +1461,7 @@ void amiberry_gui_init()
 	}
 
 	io.FontDefault = loaded_font;
+	s_loaded_font_file = font_file;
 
 	// Setup Platform/Renderer backends
 #ifdef USE_VULKAN
@@ -1748,7 +1891,13 @@ void run_gui()
 		{
 			ImGui_ImplSDLRenderer3_NewFrame();
 		}
+
 		ImGui_ImplSDL3_NewFrame();
+
+		// Apply deferred font changes after SDL3 NewFrame (window size known)
+		// but before ImGui::NewFrame() (which reads the font atlas).
+		apply_pending_font_rebuild();
+
 		ImGui::NewFrame();
 
 		// While touch-scrolling, suppress hover highlight so items don't
@@ -1940,7 +2089,7 @@ void run_gui()
 				float icon_y = pos.y + (row_total_h - text_h) * 0.5f;
 				ImVec2 icon_size = ImGui::CalcTextSize(categories[i].icon);
 				dl->AddText(ImVec2(pos.x + pad_x, icon_y), icon_col, categories[i].icon);
-				float text_x = pos.x + pad_x + icon_size.x + pad_x;
+				float text_x = pos.x + pad_x + icon_size.x + pad_x * 2.0f;
 				float text_y = pos.y + (row_total_h - text_h) * 0.5f;
 				dl->AddText(ImVec2(text_x, text_y), text_col, categories[i].category);
 			} else if (categories[i].imagepath) {

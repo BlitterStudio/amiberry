@@ -1316,15 +1316,31 @@ struct amiberry_gui_color
 
 struct amiberry_gui_theme
 {
+	// Window
 	amiberry_gui_color base_color;
-	amiberry_gui_color selector_inactive;
-	amiberry_gui_color selector_active;
-	amiberry_gui_color background_color;
-	amiberry_gui_color selection_color;
-	amiberry_gui_color foreground_color;
+	amiberry_gui_color frame_color;
+	// Text
 	std::string font_name;
 	int font_size;
 	amiberry_gui_color font_color;
+	amiberry_gui_color text_disabled_color;
+	// Accent
+	amiberry_gui_color selector_active;
+	amiberry_gui_color selection_color;
+	// Borders
+	amiberry_gui_color border_color;
+	// Buttons
+	amiberry_gui_color button_color;
+	amiberry_gui_color button_hover_color;
+	// Tables
+	amiberry_gui_color table_header_color;
+	// Modal overlay
+	amiberry_gui_color modal_dim_color;
+
+	// Legacy fields (kept for backward compatibility with old .theme files)
+	amiberry_gui_color selector_inactive;
+	amiberry_gui_color background_color;
+	amiberry_gui_color foreground_color;
 };
 
 struct amiberry_options

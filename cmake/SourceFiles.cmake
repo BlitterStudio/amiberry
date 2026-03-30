@@ -355,6 +355,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/rtg.cpp
 		src/osdep/imgui/savestates.cpp
 		src/osdep/imgui/sound.cpp
+		src/osdep/imgui/themes.cpp
 		src/osdep/imgui/virtualkeyboard.cpp
 		src/osdep/imgui/whdload.cpp
 )
