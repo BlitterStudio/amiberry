@@ -924,7 +924,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: amiberry-libretro-${{ matrix.artifact_platform }}-${{ matrix.arch }}
-          path: amiberry/libretro/${{ matrix.artifact }}
+          path: |
+            amiberry/libretro/${{ matrix.artifact }}
+            amiberry/libretro/amiberry_libretro.info
           retention-days: 7
 
       - name: Upload artifact for release
@@ -933,6 +935,13 @@ jobs:
         with:
           name: amiberry-libretro-${{ matrix.artifact_platform }}-${{ matrix.arch }}
           path: ${{ env.LIBRETRO_RELEASE_ARTIFACT }}
+
+      - name: Upload libretro info artifact for release
+        if: github.ref_type == 'tag' && matrix.platform == 'unix' && matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@v6
+        with:
+          name: amiberry-libretro-info
+          path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
     needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-libretro]
@@ -958,7 +967,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* Amiberry-*.dmg 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* amiberry_libretro.info Amiberry-*.dmg 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -971,6 +980,7 @@ jobs:
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/amiberry-libretro-*.*
+            artifacts/amiberry_libretro.info
             artifacts/amiberry-*.exe
             artifacts/Amiberry-*.dmg
             artifacts/SHA256SUMS

@@ -33,6 +33,7 @@ LIBCO_DIR := $(LIBRETRO_DIR)/libco
 PKG_CONFIG ?= pkg-config
 
 TARGET_NAME := amiberry
+LIBRETRO_INFO := $(TARGET_NAME)_libretro.info
 
 ifneq ($(CROSS_COMPILE),)
    CC ?= $(CROSS_COMPILE)gcc
@@ -113,6 +114,7 @@ endif
 AMIBERRY_VERSION_MAJOR := $(word 1,$(subst ., ,$(AMIBERRY_VERSION)))
 AMIBERRY_VERSION_MINOR := $(word 2,$(subst ., ,$(AMIBERRY_VERSION)))
 AMIBERRY_VERSION_PATCH := $(word 3,$(subst ., ,$(AMIBERRY_VERSION)))
+LIBRETRO_SUPPORTED_EXTENSIONS := $(shell sed -n 's/^[[:space:]]*info->valid_extensions = "\(.*\)";/\1/p' $(LIBRETRO_DIR)/libretro.cpp | head -1)
 
 # Add Amiberry defines
 FLAGS += -DAMIBERRY -DLIBRETRO -DUTF8PROC_STATIC -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
@@ -634,7 +636,7 @@ SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 
-all: $(TARGET)
+all: $(TARGET) $(LIBRETRO_INFO)
 
 $(NLOHMANN_JSON_HEADER):
 	@mkdir -p $(NLOHMANN_JSON_DIR)
@@ -643,6 +645,19 @@ $(NLOHMANN_JSON_HEADER):
 $(TARGET): $(OBJECTS)
 	$(CXX) $(INCFLAGS) $(FLAGS) -o $@ $^ $(LDFLAGS)
 
+$(LIBRETRO_INFO): $(LIBRETRO_DIR)/libretro.cpp $(AMIBERRY_DIR)/CMakeLists.txt
+	@printf 'display_name = "Amiberry"\n' > $@
+	@printf 'authors = "Amiberry Team"\n' >> $@
+	@printf 'supported_extensions = "%s"\n' "$(LIBRETRO_SUPPORTED_EXTENSIONS)" >> $@
+	@printf 'corename = "Amiberry"\n' >> $@
+	@printf 'categories = "Emulator"\n' >> $@
+	@printf 'license = "GPLv3"\n' >> $@
+	@printf 'permissions = "Content loading"\n' >> $@
+	@printf 'display_version = "v%s"\n' "$(AMIBERRY_VERSION)" >> $@
+	@printf 'supports_no_game = "true"\n' >> $@
+	@printf 'database = "Commodore - Amiga"\n' >> $@
+	@printf 'notes = "Requires Kickstart ROM files in the frontend system directory."\n' >> $@
+
 %.o: %.cpp | $(NLOHMANN_JSON_HEADER)
 	$(CXX) $(INCFLAGS) $(FLAGS) -std=gnu++17 -c -o $@ $<
 
@@ -650,7 +665,7 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(INCFLAGS) $(FLAGS) -std=gnu99 -c -o $@ $<
 
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -f $(OBJECTS) $(TARGET) $(LIBRETRO_INFO)
 
 distclean: clean
 	rm -rf $(LIBRETRO_DIR)/deps
