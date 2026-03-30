@@ -397,6 +397,7 @@ static int next_lineno;
 int linear_vpos, linear_vpos_vb_start, linear_vpos_vb_end, linear_hpos, linear_vpos_prev[3], linear_hpos_prev[3];
 static int linear_vb_offset;
 static int linear_vpos_vsync;
+int vsync_start_offset;
 int linear_display_vpos;
 int current_linear_vpos, current_linear_hpos;
 static int current_linear_hblen, current_linear_hblen_temp;
@@ -1690,7 +1691,9 @@ void compute_framesync(void)
 	if (currprefs.cs_hvcsync >= HVSYNC_SYNCPOS) {
 		vblines = LINES_AFTER_VSYNC;
 	}
-	int maxv = current_linear_vpos - (vblines - display_vblankstart_skip) + display_vblankend_skip + 1;
+	int hiddentopv = (vblines - display_vblankstart_skip);
+	int hiddenbottomv = display_vblankend_skip;
+	int maxv = current_linear_vpos - (hiddentopv + hiddenbottomv) + 1;
 	linear_vpos_vb_end = current_linear_vpos_vb_end - display_vblankstart_skip - 1;
 	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		maxv = current_linear_vpos;
@@ -4623,7 +4626,8 @@ static void cursorsprite(struct sprite *s)
 
 static int calculate_linetype(int vp)
 {
-	int lineno = vp - (currprefs.cs_hvcsync >= HVSYNC_SYNCPOS ? LINES_AFTER_VSYNC : linear_vb_offset);
+	int off = currprefs.cs_hvcsync >= HVSYNC_SYNCPOS ? LINES_AFTER_VSYNC : linear_vb_offset;
+	int lineno = vp - off;
 	nextline_how = nln_normal;
 	if (doflickerfix_active()) {
 		lineno *= 2;
@@ -10128,7 +10132,7 @@ static void vsync_mark(void)
 		if (!vb_end_detect) {
 			vb_detect_cnt++;
 			if (vb_detect_cnt >= 4) {
-				// if VB does not exists
+				// if VB does not exist
 				linear_vpos_vblank_end = LINES_AFTER_VSYNC;
 				linear_vpos_vblank_start = linear_vpos;
 				linear_vpos_vblank_lines = LINES_AFTER_VSYNC;
@@ -10141,6 +10145,10 @@ static void vsync_mark(void)
 		}
 		vb_end_detect = false;
 		linear_vpos = 0;
+
+		int off = currprefs.cs_hvcsync >= HVSYNC_SYNCPOS ? LINES_AFTER_VSYNC : linear_vb_offset;
+		vsync_start_offset = -off;
+
 	}
 }
 

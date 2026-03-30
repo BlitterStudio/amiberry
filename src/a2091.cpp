@@ -40,6 +40,9 @@
 #include "cpuboard.h"
 #include "rtc.h"
 #include "devices.h"
+#ifdef DEBUGGER
+#include "debug.h"
+#endif
 #ifdef WITH_DSP
 #include "dsp3210/dsp_glue.h"
 #endif
@@ -656,16 +659,19 @@ static void setphase(struct wd_chip_state *wd, uae_u8 phase)
 	wd->wdregs[WD_COMMAND_PHASE] = phase;
 }
 
-static bool dmacheck_a2091 (struct wd_state *wd)
+static bool dmacheck_a2091(struct wd_state *wd, int size)
 {
-	wd->cdmac.dmac_acr++;
+	if (!wd->cdmac.old_dmac && size == 4 && (wd->cdmac.dmac_acr & 2)) {
+		wd->cdmac.dmac_acr += 2;
+	} else {
+		wd->cdmac.dmac_acr += size;
+	}
 	if (wd->cdmac.old_dmac && (wd->cdmac.dmac_cntr & CNTR_TCEN)) {
 		if (wd->cdmac.dmac_wtc == 0) {
 			wd->cdmac.dmac_istr |= ISTR_E_INT;
 			return true;
 		} else {
-			if ((wd->cdmac.dmac_acr & 1) == 1)
-				wd->cdmac.dmac_wtc--;
+			wd->cdmac.dmac_wtc--;
 		}
 	}
 	return false;
@@ -756,27 +762,47 @@ static bool do_dma_commodore_8727(struct wd_state *wd, struct scsi_data *scsi)
 	return false;
 }
 
-static bool do_dma_commodore(struct wd_state *wd, struct scsi_data *scsi)
+static bool do_dma_commodore(struct wd_state *wd, struct scsi_data *scsi, bool sdmac)
 {
-	if (wd->cdtv)
+	if (wd->cdtv) {
 		cdtv_getdmadata(&wd->cdmac.dmac_acr);
+	}
+	int size = sdmac && wd->cdmac.old_dmac ? 4 : 2;
+
 	if (scsi->direction < 0) {
 #if WD33C93_DEBUG || XT_DEBUG > 0
 		uaecptr odmac_acr = wd->cdmac.dmac_acr;
 #endif
 		bool run = true;
 		while (run) {
-			uae_u8 v;
-			int status = scsi_receive_data(scsi, &v, true);
-			dma_put_byte(wd->cdmac.dmac_acr & wd->dma_mask, v);
-			if (wd->wc.wd_dataoffset < sizeof wd->wc.wd_data)
-				wd->wc.wd_data[wd->wc.wd_dataoffset++] = v;
-			if (decreasetc (&wd->wc))
+			int got = 0;
+			uae_u8 data[4];
+			for (int i = 0; i < size && run; i++) {
+				int status = scsi_receive_data(scsi, &data[i], true);
+				if (status >= 0) {
+					got++;
+					if (decreasetc(&wd->wc)) {
+						run = false;
+						break;
+					}
+					if (wd->wc.wd_dataoffset < sizeof wd->wc.wd_data) {
+						wd->wc.wd_data[wd->wc.wd_dataoffset++] = data[i];
+					}
+					if (status > 0) {
+						run = false;
+					}
+				}
+			}
+			if (got == size) {
+				if (size == 2) {
+					dma_put_word(wd->cdmac.dmac_acr & wd->dma_mask, (data[0] << 8) | (data[1] << 0));
+				} else {
+					dma_put_long(wd->cdmac.dmac_acr & wd->dma_mask, (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | (data[3] << 0));
+				}
+			}
+			if (dmacheck_a2091(wd, size)) {
 				run = false;
-			if (dmacheck_a2091 (wd))
-				run = false;
-			if (status)
-				run = false;
+			}
 		}
 #if WD33C93_DEBUG || XT_DEBUG > 0
 		write_log (_T("%s Done DMA from WD, %d/%d %08X\n"), WD33C93, scsi->offset, scsi->data_len, odmac_acr);
@@ -788,17 +814,34 @@ static bool do_dma_commodore(struct wd_state *wd, struct scsi_data *scsi)
 #endif
 		bool run = true;
 		while (run) {
-			int status;
-			uae_u8 v = dma_get_byte(wd->cdmac.dmac_acr & wd->dma_mask);
-			if (wd->wc.wd_dataoffset < sizeof wd->wc.wd_data)
-				wd->wc.wd_data[wd->wc.wd_dataoffset++] = v;
-			status = scsi_send_data (scsi, v);
-			if (decreasetc (&wd->wc))
+			uae_u8 data[4];
+			if (size == 2) {
+				uae_u16 v = dma_get_word(wd->cdmac.dmac_acr & wd->dma_mask);
+				data[0] = v >> 8;
+				data[1] = v & 0xff;
+			} else {
+				uae_u32 v = dma_get_long(wd->cdmac.dmac_acr & wd->dma_mask);
+				data[0] = v >> 24;
+				data[1] = v >> 16;
+				data[2] = v >> 8;
+				data[3] = v & 0xff;
+			}
+			for (int i = 0; i < size && run; i++) {
+				if (wd->wc.wd_dataoffset < sizeof wd->wc.wd_data) {
+					wd->wc.wd_data[wd->wc.wd_dataoffset++] = data[i];
+				}
+				int status = scsi_send_data(scsi, data[i]);
+				if (decreasetc(&wd->wc)) {
+					run = false;
+					break;
+				}
+				if (status > 0) {
+					run = false;
+				}
+			}
+			if (dmacheck_a2091(wd, size)) {
 				run = false;
-			if (dmacheck_a2091 (wd))
-				run = false;
-			if (status)
-				run = false;
+			}
 		}
 #if WD33C93_DEBUG || XT_DEBUG > 0
 		write_log (_T("%s Done DMA to WD, %d/%d %08x\n"), WD33C93, scsi->offset, scsi->data_len, odmac_acr);
@@ -920,8 +963,9 @@ static bool do_dma(struct wd_state *wd)
 	switch (wd->dmac_type)
 	{
 		case COMMODORE_DMAC:
+		return do_dma_commodore(wd, scsi, false);
 		case COMMODORE_SDMAC:
-		return do_dma_commodore(wd, scsi);
+		return do_dma_commodore(wd, scsi, true);
 		case COMMODORE_8727:
 		return do_dma_commodore_8727(wd, scsi);
 		case GVP_DMAC_S2:
@@ -3570,7 +3614,7 @@ static void mbdmac_write_word (struct wd_state *wd, uae_u32 addr, uae_u32 val)
 		break;
 	case 0x04:
 		wd->cdmac.dmac_wtc &= 0x0000ffff;
-		wd->cdmac.dmac_wtc |= val << 16;
+		wd->cdmac.dmac_wtc |= (val & 0xfff) << 16;
 		break;
 	case 0x06:
 		wd->cdmac.dmac_wtc &= 0xffff0000;
@@ -3587,7 +3631,7 @@ static void mbdmac_write_word (struct wd_state *wd, uae_u32 addr, uae_u32 val)
 		break;
 	case 0x0e:
 		wd->cdmac.dmac_acr &= 0xffff0000;
-		wd->cdmac.dmac_acr |= val & 0xfffe;
+		wd->cdmac.dmac_acr |= val & (wd->cdmac.old_dmac ? 0xfffc : 0xfffe);
 		break;
 	case 0x12:
 		if (wd->cdmac.dmac_dma <= 0)
@@ -3675,8 +3719,18 @@ static uae_u32 mbdmac_read_word (struct wd_state *wd, uae_u32 addr)
 		v = wd->cdmac.dmac_dawr;
 		break;
 	case 0x04:
+		if (wd->cdmac.old_dmac) {
+			v = wd->cdmac.dmac_wtc >> 16;
+		} else {
+			v = 0xffff;
+		}
+		break;
 	case 0x06:
-		v = 0xffff;
+		if (wd->cdmac.old_dmac) {
+			v = wd->cdmac.dmac_wtc;
+		} else {
+			v = 0xffff;
+		}
 		break;
 	case 0x0a:
 		v = wd->cdmac.dmac_cntr;
@@ -3958,6 +4012,7 @@ bool a3000scsi_init(struct autoconfig_info *aci)
 	wd->configured = -1;
 	wd->baseaddress = 0xdd0000;
 	wd->dmac_type = COMMODORE_SDMAC;
+	wd->cdmac.old_dmac = currprefs.cs_ramseyrev < 0x0f;
 	map_banks(&mbdmac_a3000_bank, wd->baseaddress >> 16, 1, 0);
 	wd_cmd_reset (&wd->wc, false, false);
 	reset_dmac(wd);

@@ -1523,7 +1523,9 @@ addrbank kickram_bank = {
 	kickmem2_lput, kickmem2_wput, kickmem2_bput,
 	kickmem_xlate, kickmem_check, NULL, NULL, _T("Kickstart Shadow RAM"),
 	kickmem_lget, kickmem_wget,
+#ifdef AMIBERRY
 	ABFLAG_UNK | ABFLAG_SAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_THREADSAFE, 0, S_WRITE
+#endif
 };
 
 addrbank extendedkickmem_bank = {
@@ -3579,7 +3581,9 @@ static uae_u32 REGPARAM2 threadcpu_bget(uaecptr addr)
 
 static addrbank *get_bank_cpu_thread(addrbank *bank)
 {
+#ifdef AMIBERRY
 	if (bank->flags & ABFLAG_THREADSAFE)
+#endif
 		return bank;
 	if (bank == &dummy_bank)
 		return bank;
@@ -3674,7 +3678,9 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			set_memory_cacheable(bnr, bank);
 #ifdef WITH_THREADED_CPU
 			if (currprefs.cpu_thread) {
+#ifdef AMIBERRY
 				thread_mem_banks[bnr] = orig_bank ? orig_bank : bank;
+#endif
 			}
 #endif
 			real_left--;
@@ -3706,7 +3712,9 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			set_memory_cacheable(bnr + hioffs, bank);
 #ifdef WITH_THREADED_CPU
 			if (currprefs.cpu_thread) {
+#ifdef AMIBERRY
 				thread_mem_banks[bnr + hioffs] = orig_bank ? orig_bank : bank;
+#endif
 			}
 #endif
 			real_left--;
@@ -3779,10 +3787,12 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 
 #ifdef JIT
 	if ((bank->jit_read_flag | bank->jit_write_flag) & S_N_ADDR) {
+#ifdef AMIBERRY
 		if (!jit_n_addr_unsafe) {
 			write_log(_T("JIT: jit_n_addr_unsafe enabled by bank '%s' at %08x (r=%d w=%d)\n"),
 				bank->name ? bank->name : _T("<unnamed>"), start << 16, bank->jit_read_flag, bank->jit_write_flag);
 		}
+#endif
 		jit_n_addr_unsafe = 1;
 	}
 #endif
@@ -3808,7 +3818,6 @@ bool validate_banks_z3(addrbank *bank, int start, int size)
 {
 	if (start < 0x1000 || size <= 0) {
 		error_log(_T("Z3 invalid map_banks(%s) start=%08x size=%08x\n"), bank->name, start << 16, size << 16);
-		cpu_halt(CPU_HALT_AUTOCONFIG_CONFLICT);
 		return false;
 	}
 	if (size > 0x4000 || start + size > 0xf000) {
@@ -3825,36 +3834,34 @@ bool validate_banks_z3(addrbank *bank, int start, int size)
 	return true;
 }
 
-void map_banks_z3(addrbank *bank, int start, int size)
+bool map_banks_z3(addrbank *bank, int start, int size)
 {
-	if (!validate_banks_z3(bank, start, size))
-		return;
+	if (!validate_banks_z3(bank, start, size)) {
+		return false;
+	}
 	map_banks(bank, start, size, 0);
+	return true;
 }
 
 bool validate_banks_z2(addrbank *bank, int start, int size)
 {
 	if (start < 0x20 || (start >= 0xa0 && start < 0xe9) || start >= 0xf0) {
 		error_log(_T("Z2 map_banks(%s) with invalid start address %08X\n"), bank->name, start << 16);
-		cpu_halt(CPU_HALT_AUTOCONFIG_CONFLICT);
 		return false;
 	}
 	if (start >= 0xe9) {
 		if (start + size > 0xf0) {
 			error_log(_T("Z2 map_banks(%s) with invalid region %08x - %08X\n"), bank->name, start << 16, (start + size) << 16);
-			cpu_halt(CPU_HALT_AUTOCONFIG_CONFLICT);
 			return false;
 		}
 	} else {
 		if (start + size > 0xa0) {
 			error_log(_T("Z2 map_banks(%s) with invalid region %08x - %08X\n"), bank->name, start << 16, (start + size) << 16);
-			cpu_halt(CPU_HALT_AUTOCONFIG_CONFLICT);
 			return false;
 		}
 	}
 	if (size <= 0 || size > 0x80) {
 		error_log(_T("Z2 map_banks(%s) with invalid size %08x\n"), bank->name, size);
-		cpu_halt(CPU_HALT_AUTOCONFIG_CONFLICT);
 		return false;
 	}
 	for (int i = start; i < start + size; i++) {
@@ -3868,11 +3875,13 @@ bool validate_banks_z2(addrbank *bank, int start, int size)
 }
 
 
-void map_banks_z2 (addrbank *bank, int start, int size)
+bool map_banks_z2 (addrbank *bank, int start, int size)
 {
-	if (!validate_banks_z2(bank, start, size))
-		return;
+	if (!validate_banks_z2(bank, start, size)) {
+		return false;
+	}
 	map_banks (bank, start, size, 0);
+	return true;
 }
 
 uae_u32 map_banks_z2_autosize(addrbank *bank, int start)
@@ -4338,6 +4347,13 @@ int memory_valid_address(uaecptr addr, uae_u32 size)
 	return addr + size <= ab->allocated_size;
 }
 
+void dma_put_long(uaecptr addr, uae_u32 v)
+{
+	addrbank *ab = &get_mem_bank(addr);
+	if (ab->flags & ABFLAG_NODMA)
+		return;
+	put_long(addr, v);
+}
 void dma_put_word(uaecptr addr, uae_u16 v)
 {
 	addrbank* ab = &get_mem_bank(addr);
@@ -4351,6 +4367,13 @@ void dma_put_byte(uaecptr addr, uae_u8 v)
 	if (ab->flags & ABFLAG_NODMA)
 		return;
 	put_byte(addr, v);
+}
+uae_u32 dma_get_long(uaecptr addr)
+{
+	addrbank *ab = &get_mem_bank(addr);
+	if (ab->flags & ABFLAG_NODMA)
+		return 0xffffffff;
+	return get_long(addr);
 }
 uae_u16 dma_get_word(uaecptr addr)
 {

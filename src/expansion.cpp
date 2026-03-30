@@ -73,7 +73,6 @@
 #endif
 
 
-
 #define CARD_FLAG_CAN_Z3 1
 #define CARD_FLAG_CHILD 8
 #define CARD_FLAG_UAEROM 16
@@ -706,7 +705,6 @@ static uae_u32 REGPARAM2 expamem_lget (uaecptr addr)
 		return expamem_bank_current->sub_banks ? expamem_bank_current->sub_banks[0].bank->lget(addr) : expamem_bank_current->lget(addr);
 	}
 	write_log (_T("warning: Z2 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
-
 	return (expamem_wget (addr) << 16) | expamem_wget (addr + 2);
 }
 
@@ -729,7 +727,6 @@ static uae_u32 REGPARAM2 expamem_wget (uaecptr addr)
 		v = val;
 	}
 	write_log (_T("warning: READ.W from address $%08x=%04x PC=%x\n"), addr, v & 0xffff, M68K_GETPC);
-
 	return v;
 }
 
@@ -769,7 +766,6 @@ static void REGPARAM2 expamem_lput (uaecptr addr, uae_u32 value)
 		return;
 	}
 	write_log (_T("warning: Z2 WRITE.L to address $%08x : value $%08x\n"), addr, value);
-
 }
 
 static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
@@ -789,7 +785,6 @@ static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
 		expamem_map = cd->map;
 	if (expamem_type () != zorroIII) {
 		write_log (_T("warning: WRITE.W to address $%08x : value $%x PC=%08x\n"), addr, value, M68K_GETPC);
-
 	}
 	switch (addr & 0xff) {
 	case 0x48:
@@ -950,14 +945,12 @@ static uae_u32 REGPARAM2 expamemz3_wget (uaecptr addr)
 {
 	uae_u32 v = (expamemz3_bget (addr) << 8) | expamemz3_bget (addr + 1);
 	write_log (_T("warning: Z3 READ.W from address $%08x=%04x PC=%x\n"), addr, v & 0xffff, M68K_GETPC);
-
 	return v;
 }
 
 static uae_u32 REGPARAM2 expamemz3_lget (uaecptr addr)
 {
 	write_log (_T("warning: Z3 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
-
 	return (expamemz3_wget (addr) << 16) | expamemz3_wget (addr + 2);
 }
 
@@ -1006,7 +999,6 @@ static void REGPARAM2 expamemz3_wput (uaecptr addr, uae_u32 value)
 static void REGPARAM2 expamemz3_lput (uaecptr addr, uae_u32 value)
 {
 	write_log (_T("warning: Z3 WRITE.L to address $%08x : value $%08x\n"), addr, value);
-
 }
 
 #ifdef CD32
@@ -1231,7 +1223,9 @@ addrbank filesys_bank = {
 	filesys_lput, filesys_wput, filesys_bput,
 	filesys_xlate, filesys_check, NULL, _T("*"), _T("Filesystem autoconfig"),
 	filesys_lget, filesys_wget,
+#ifdef AMIBERRY
 	ABFLAG_IO | ABFLAG_SAFE | ABFLAG_PPCIOSPACE | ABFLAG_THREADSAFE, S_READ, S_WRITE
+#endif
 };
 
 static bool filesys_write(uaecptr addr)
@@ -1326,7 +1320,9 @@ addrbank uaeboard_bank = {
 	uaeboard_lput, uaeboard_wput, uaeboard_bput,
 	uaeboard_xlate, uaeboard_check, NULL, _T("*"), _T("UAE Board"),
 	dummy_lgeti, dummy_wgeti,
+#ifdef AMIBERRY
 	ABFLAG_IO | ABFLAG_SAFE | ABFLAG_PPCIOSPACE | ABFLAG_THREADSAFE, S_READ, S_WRITE
+#endif
 };
 
 uae_u32 uaeboard_base; /* Determined by the OS */
@@ -1440,27 +1436,12 @@ static addrbank *expamem_map_uaeboard(struct autoconfig_info *aci)
 	uaeboard_base = expamem_board_pointer;
 	uaeboard_ram_start = UAEBOARD_WRITEOFFSET;
 	uaeboard_bank.start = uaeboard_base;
-#ifdef AMIBERRY
-	// Guard against invalid/shutup addresses (e.g. DiagROM writing 0 to the base register).
-	// Without this, map_banks_z2 triggers CPU_HALT_AUTOCONFIG_CONFLICT.
-	// See: https://github.com/BlitterStudio/amiberry/issues/1901
-	{
-		int bank_start = uaeboard_base >> 16;
-		if (uaeboard_base == 0xffffffff
-			|| bank_start < 0x20
-			|| (bank_start >= 0xa0 && bank_start < 0xe9)
-			|| bank_start >= 0xf0) {
-			write_log(_T("expamem_map_uaeboard: rejecting invalid board address %08x\n"), uaeboard_base);
-			uaeboard_bank.start = 0xffffffff;
-			return &uaeboard_bank;
+	if (map_banks_z2(&uaeboard_bank, uaeboard_base >> 16, 1)) {
+		if (currprefs.uaeboard > 1) {
+			rtarea_bank.start = uaeboard_base + 65536;
+			map_banks_z2(&rtarea_bank, (uaeboard_base + 65536) >> 16, 1);
+			ce_cachable[(uaeboard_base + 65536) >> 16] = CACHE_DISABLE_ALLOCATE;
 		}
-	}
-#endif
-	map_banks_z2(&uaeboard_bank, uaeboard_base >> 16, 1);
-	if (currprefs.uaeboard > 1) {
-		rtarea_bank.start = uaeboard_base + 65536;
-		map_banks_z2(&rtarea_bank, (uaeboard_base + 65536) >> 16, 1);
-		ce_cachable[(uaeboard_base + 65536) >> 16] = CACHE_DISABLE_ALLOCATE;
 	}
 	return &uaeboard_bank;
 }
@@ -1648,8 +1629,9 @@ static addrbank *expamem_map_fastcard(struct autoconfig_info *aci)
 	uae_u32 size = ab->allocated_size;
 	ab->start = start;
 	if (ab->start && size) {
-		map_banks_z2(ab, ab->start >> 16, size >> 16);
-		initramboard(ab, &currprefs.fastmem[devnum]);
+		if (map_banks_z2(ab, ab->start >> 16, size >> 16)) {
+			initramboard(ab, &currprefs.fastmem[devnum]);
+		}
 	}
 	return ab;
 }
@@ -1922,8 +1904,9 @@ static addrbank *expamem_map_filesys (struct autoconfig_info *aci)
 	mapped_malloc(&filesys_bank);
 	memcpy (filesys_bank.baseaddr, expamem, 0x3000);
 	uaeboard_ram_start = UAEBOARD_WRITEOFFSET;
-	map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1);
-	expamem_map_filesys_update();
+	if (map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1)) {
+		expamem_map_filesys_update();
+	}
 	return &filesys_bank;
 }
 
@@ -2094,8 +2077,9 @@ static addrbank *expamem_map_z3fastmem (struct autoconfig_info *aci)
 	uae_u32 size = currprefs.z3fastmem[devnum].size;
 
 	if (ab->allocated_size) {
-		map_banks_z3(ab, z3fs >> 16, size >> 16);
-		initramboard(ab, &currprefs.z3fastmem[devnum]);
+		if (map_banks_z3(ab, z3fs >> 16, size >> 16)) {
+			initramboard(ab, &currprefs.z3fastmem[devnum]);
+		}
 	}
 	return ab;
 }
@@ -4027,12 +4011,12 @@ void expansion_map(void)
 		filesys_bank.start = 0xe90000;
 		mapped_free(&filesys_bank);
 		mapped_malloc(&filesys_bank);
-		map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1);
-		expamem_init_filesys(NULL);
-		expamem_map_filesys_update();
+		if (map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1)) {
+			expamem_init_filesys(NULL);
+			expamem_map_filesys_update();
+		}
 	}
 }
-
 static void clear_bank (addrbank *ab)
 {
 	if (!ab->baseaddr || !ab->allocated_size)

@@ -1,3 +1,11 @@
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Video port display adapters using digital RGBI signals
+*
+*/
+
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -17,9 +25,6 @@
 #endif
 #include "arcadia.h"
 #include "uae/attributes.h"
-
-// We have this in sysconfig.h
-//#define VIDEOGRAB 1
 
 const TCHAR *specialmonitorfriendlynames[] =
 {
@@ -2084,7 +2089,7 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 	doff = ((dxoff << RES_MAX) / avidinfo->xchange) * src->pixbytes;
 	found = false;
 
-	int idlinestart = 21;
+	int idlinestart = 18;
 	for (idline = idlinestart; idline <= idlinestart + 8; idline += 8) {
 		if (src->yoffset > (idline << VRES_MAX))
 			continue;
@@ -2202,7 +2207,11 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 		return false;
 	}
 
-	srcbuf = src->bufmem + (((44 << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes + (srcxoffset / avidinfo->xchange) * src->pixbytes;
+	int ystart = 82 - src->yoffset;
+	if (ystart < 0) {
+		return false;
+	}
+	srcbuf = src->bufmem + (ystart / avidinfo->ychange) * src->rowbytes + (srcxoffset / avidinfo->xchange) * src->pixbytes;
 	dstbuf = dst->bufmem + py * (panel_height / avidinfo->ychange) * dst->rowbytes + px * ((panel_width * 2) / avidinfo->xchange) * dst->pixbytes;
 
 	for (y = 0; y < (panel_height / (dbl == 1 ? 1 : 2)) / avidinfo->ychange; y++) {

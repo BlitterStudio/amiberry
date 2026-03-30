@@ -520,9 +520,9 @@ extern void memory_init (void);
 extern void memory_cleanup(void);
 extern void restore_banks(void);
 extern void map_banks (addrbank *bank, int first, int count, int realsize);
-extern void map_banks_z2(addrbank *bank, int first, int count);
+extern bool map_banks_z2(addrbank *bank, int first, int count);
 extern uae_u32 map_banks_z2_autosize(addrbank *bank, int first);
-extern void map_banks_z3(addrbank *bank, int first, int count);
+extern bool map_banks_z3(addrbank *bank, int first, int count);
 extern bool validate_banks_z2(addrbank *bank, int start, int size);
 extern bool validate_banks_z3(addrbank *bank, int start, int size);
 extern void map_banks_quick (addrbank *bank, int first, int count, int realsize);
@@ -684,6 +684,8 @@ STATIC_INLINE void *get_pointer (uaecptr addr)
 # endif
 #endif
 
+void dma_put_long(uaecptr addr, uae_u32 v);
+uae_u32 dma_get_long(uaecptr addr);
 void dma_put_word(uaecptr addr, uae_u16 v);
 uae_u16 dma_get_word(uaecptr addr);
 void dma_put_byte(uaecptr addr, uae_u8 v);

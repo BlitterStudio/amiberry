@@ -53,6 +53,9 @@
 #include "ini.h"
 #include "readcpu.h"
 #include "keybuf.h"
+#ifdef WITH_SOFTFLOAT
+#include "softfloat/softfloat.h"
+#endif
 
 static int trace_mode;
 static uae_u32 trace_param[3];
@@ -250,7 +253,11 @@ static const TCHAR *help[] = {
 	_T("                        v [-2 to -5] = enable visual DMA debugger.\n"),
 	_T("  vh [<ratio> <lines>]  \"Heat map\"\n"),
 	_T("  I <custom event>      Send custom event string\n"),
+#ifdef WITH_SOFTFLOAT
+	_T("  ?<value>              Hex ($, 0x)/Bin (%)/Dec (!) converter and calculator. Floating point is partially supported.\n"),
+#else
 	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n"),
+#endif
 #ifdef _WIN32
 	_T("  x                     Close debugger.\n"),
 	_T("  xx                    Switch between console and GUI debugger.\n"),
@@ -788,6 +795,44 @@ static bool checkisneg(TCHAR **c)
 	return false;
 }
 
+#define NUMTYTPE_S 5
+#define NUMTYTPE_D 6
+#define NUMTYTPE_X 7
+#define NUMTYTPE_P 8
+
+#ifdef WITH_SOFTFLOAT
+using debugfloatx80 = floatx80;
+
+static double f80todouble(floatx80 v)
+{
+	float_status st = { 0 };
+	union {
+		double d;
+		uae_u32 u[2];
+	} fval;
+	float64 v64 = floatx80_to_float64(v, &st);
+	fval.u[1] = v64 >> 32;
+	fval.u[0] = v64 >> 0;
+	return fval.d;
+}
+static floatx80 doubletof80(double d)
+{
+	float_status st = { 0 };
+	union {
+		double d;
+		uae_u32 u[2];
+	} fval;
+	fval.d = d;
+	return float64_to_floatx80(((uae_u64)fval.u[1] << 32) | (fval.u[0]), &st);
+}
+#else
+struct debugfloatx80
+{
+	uae_u16 high;
+	uae_u64 low;
+};
+#endif
+
 static bool readbinx (TCHAR **c, uae_u32 *valp)
 {
 	uae_u32 val = 0;
@@ -826,7 +871,8 @@ static bool readhexx (TCHAR **c, uae_u32 *valp)
 	negative = checkisneg(c);
 	if (!isxdigit(peekchar(c)))
 		return false;
-	while (isxdigit (nc = **c)) {
+	int max = 8;
+	while (isxdigit (nc = **c) && max-- > 0) {
 		(*c)++;
 		val *= 16;
 		nc = _totupper (nc);
@@ -839,6 +885,46 @@ static bool readhexx (TCHAR **c, uae_u32 *valp)
 	*valp = val * (negative ? -1 : 1);
 	return true;
 }
+
+#ifdef WITH_SOFTFLOAT
+static bool iscfloat(TCHAR **c)
+{
+	int cnt = 0;
+	for (;;) {
+		TCHAR nc = (*c)[cnt];
+		if (!nc) {
+			break;
+		}
+		if (nc == ' ' || nc == '\t') {
+			break;
+		}
+		if (nc == '.') {
+			TCHAR nc2 = (*c)[cnt + 1];
+			if (isdigit(nc2)) {
+				return true;
+			}
+			break;
+		}
+		if (nc != '-' && nc != '+' && !isdigit(nc)) {
+			break;
+		}
+		cnt++;
+	}
+	return false;
+}
+
+static bool readfloatx(TCHAR **c, debugfloatx80 *valx80)
+{
+	TCHAR *endptr = nullptr;
+	const double dval = _tcstod(*c, &endptr);
+	if (endptr == *c) {
+		return false;
+	}
+	*c = endptr;
+	*valx80 = doubletof80(dval);
+	return true;
+}
+#endif
 
 static bool readintx (TCHAR **c, uae_u32 *valp)
 {
@@ -859,35 +945,98 @@ static bool readintx (TCHAR **c, uae_u32 *valp)
 	return true;
 }
 
-static int checkvaltype2 (TCHAR **c, uae_u32 *val, TCHAR def)
+static int checkvaltype2(TCHAR **c, uae_u32 *val, debugfloatx80 *valx80, TCHAR def)
 {
 	TCHAR nc;
 
-	ignore_ws (c);
-	nc = _totupper (**c);
+	ignore_ws(c);
+
+#ifdef WITH_SOFTFLOAT
+	// check for floating point formats
+	TCHAR *cp = *c;
+	for (;;) {
+		nc = *cp++;
+		TCHAR nc2 = _totupper (*cp);
+		if (!nc || _istspace(nc)) {
+			break;
+		}
+		if (nc == '.' && (nc2 == 'S' || nc2 == 'D' || nc2 == 'X')) {
+			float_status st = { 0 };
+			nc = _totupper(**c);
+			if (nc == '$') {
+				(*c)++;
+			}
+			if (nc == '0' && _totupper((*c)[1]) == 'X') {
+				(*c) += 2;
+			}
+			if (nc2 == 'S') {
+				if (readhexx(c, val)) {
+					*valx80 = float32_to_floatx80(*val, &st);
+					return NUMTYTPE_S;
+				}
+			}
+			if (nc2 == 'D') {
+				uae_u32 val2;
+				if (readhexx(c, val)) {
+					if (readhexx(c, &val2)) {
+						*valx80 = float64_to_floatx80((((uae_u64)(*val)) << 32) | val2, &st);
+						return NUMTYTPE_D;
+					}
+				}
+			}
+			if (nc2 == 'X') {
+				uae_u32 val1;
+				uae_u32 val2, val3;
+				if (readhexx(c, &val1)) {
+					if (peekchar(c) == '.') {
+						(*c)++;
+					}
+					if (readhexx(c, &val2)) {
+						if (readhexx(c, &val3)) {
+							valx80->high = val1;
+							valx80->low = ((uae_u64)val2 << 32) | val3;
+							return NUMTYTPE_X;
+						}
+					}
+				}
+			}
+			return 0;
+		}
+	}
+#endif
+
+	nc = _totupper(**c);
 	if (nc == '!') {
 		(*c)++;
-		return readintx (c, val) ? 1 : 0;
+		return readintx(c, val) ? 1 : 0;
 	}
 	if (nc == '$') {
 		(*c)++;
-		return readhexx (c, val) ? 1 : 0;
+		return readhexx(c, val) ? 1 : 0;
 	}
 	if (nc == '0' && _totupper ((*c)[1]) == 'X') {
 		(*c)+= 2;
-		return readhexx (c, val) ? 1 : 0;
+		return readhexx(c, val) ? 1 : 0;
 	}
 	if (nc == '%') {
 		(*c)++;
-		return readbinx (c, val) ? 1: 0;
+		return readbinx(c, val) ? 1: 0;
 	}
+#ifdef WITH_SOFTFLOAT
+	if (iscfloat(c)) {
+		if (readfloatx(c, valx80)) {
+			return 2;
+		}
+		return 0;
+	}
+#endif
 	if (nc >= 'A' && nc <= 'Z' && nc != 'A' && nc != 'D') {
-		if (readregx (c, val))
+		if (readregx(c, val))
 			return 1;
 	}
 	TCHAR name[256];
 	name[0] = 0;
-	for (int i = 0; i < sizeof name / sizeof(TCHAR) - 1; i++) {
+	for (int i = 0; i < sizeof(name) / sizeof(TCHAR) - 1; i++) {
 		nc = (*c)[i];
 		if (nc == 0 || nc == ' ')
 			break;
@@ -904,11 +1053,11 @@ static int checkvaltype2 (TCHAR **c, uae_u32 *val, TCHAR def)
 		}
 	}
 	if (def == '!') {
-		return readintx (c, val) ? -1 : 0;
+		return readintx(c, val) ? -1 : 0;
 	} else if (def == '$') {
-		return readhexx (c, val) ? -1 : 0;
+		return readhexx(c, val) ? -1 : 0;
 	} else if (def == '%') {
-		return readbinx (c, val) ? -1 : 0;
+		return readbinx(c, val) ? -1 : 0;
 	}
 	return 0;
 }
@@ -924,33 +1073,65 @@ static int readsize (int val, TCHAR **c)
 		return 3;
 	if (cc == 'L')
 		return 4;
+#ifdef WITH_SOFTFLOAT
+	if (cc == 'S')
+		return NUMTYTPE_S;
+	if (cc == 'D')
+		return NUMTYTPE_D;
+	if (cc == 'X')
+		return NUMTYTPE_X;
+	if (cc == 'P')
+		return NUMTYTPE_P;
+#endif
 	return 0;
 }
 
-static int checkvaltype(TCHAR **cp, uae_u32 *val, int *size, TCHAR def)
+static int checkvaltype(TCHAR **cp, uae_u32 *val, debugfloatx80 *valx80, int *size, TCHAR def)
 {
 	TCHAR form[256], *p;
+#ifdef AMIBERRY
 	int remaining_bufsize;
+#endif
 	bool gotop = false;
 	bool copyrest = false;
 	double out;
+	int sizetype = -1;
+	TCHAR *startp = NULL;
+	debugfloatx80 vx80 = { 0 };
+	int outret = 1;
 
 	form[0] = 0;
-	if (size)
+	if (size) {
 		*size = 0;
+	}
 	p = form;
 	for (;;) {
 		uae_u32 v;
-		if (!checkvaltype2(cp, &v, def)) {
+		int ret = checkvaltype2(cp, &v, &vx80, def);
+		if (!ret) {
 			if (isoperator(cp) || gotop || **cp == '\"' || **cp == '\'') {
 				goto docalc;
 			}
 			return 0;
 		}
-		*val = v;
-		remaining_bufsize = sizeof(form) - (p - &form[0])*sizeof(TCHAR);
-		// stupid but works!
-		_sntprintf(p, remaining_bufsize, _T("%u"), v);
+		if (ret == 1 || ret == -1) {
+			*val = v;
+#ifdef AMIBERRY
+			remaining_bufsize = sizeof(form) - (p - &form[0])*sizeof(TCHAR);
+#endif
+			// stupid but works!
+			_sntprintf(p, remaining_bufsize, _T("%u"), v);
+#ifdef WITH_SOFTFLOAT
+		} else {
+			*val = 0;
+			*valx80 = vx80;
+			_stprintf(p, _T("%f"), f80todouble(vx80));
+			if (size) {
+				*size = NUMTYTPE_X;
+			}
+			outret = -1;
+#endif
+		}
 		p += _tcslen (p);
 		*p = 0;
 		if (peekchar(cp) == '.') {
@@ -980,7 +1161,7 @@ static int checkvaltype(TCHAR **cp, uae_u32 *val, int *size, TCHAR def)
 				*size = 1;
 			}
 		}
-		return 1;
+		return outret;
 	}
 docalc:
 	while (more_params2(cp)) {
@@ -1005,51 +1186,87 @@ docalc:
 				*size = 1;
 			}
 		}
-		return 1;
+		return outret;
 	} else if (v < 0) {
 		console_out_f(_T("String returned: '%s'\n"), tmp);
 	}
 	return 0;
 }
 
+struct numdata
+{
+	bool x80;
+	uae_u32 val;
+	debugfloatx80 valx80;
+};
 
-static uae_u32 readnum(TCHAR **c, int *size, TCHAR def, bool *err)
+static void readnum(struct numdata *nd, TCHAR **c, int *size, TCHAR def, bool *err)
 {
 	uae_u32 val;
+	debugfloatx80 valx80 = { 0 };
+	nd->val = 0;
+	nd->valx80.high = 0;
+	nd->valx80.low = 0;
+	nd->x80 = false;
 	if (err) {
 		*err = 0;
 	}
-	if (checkvaltype(c, &val, size, def)) {
-		return val;
+	int ret = checkvaltype(c, &val, &valx80, size, def);
+	if (ret > 0) {
+		nd->x80 = false;
+		nd->val = val;
+		return;
+	} else if (ret < 0) {
+		nd->x80 = true;
+		nd->valx80 = valx80;
+		return;
 	}
 	if (err) {
 		*err = 1;
 	}
-	return 0;
 }
 
+static bool readintx(TCHAR **c, bool *err, uae_u32 *val, debugfloatx80 *valx80)
+{
+	int size;
+	struct numdata nd;
+	readnum(&nd, c, &size, '!', err);
+	*valx80 = nd.valx80;
+	*val = nd.val;
+	return nd.x80;
+}
 static uae_u32 readint(TCHAR **c, bool *err)
 {
 	int size;
-	return readnum(c, &size, '!', err);
+	struct numdata nd;
+	readnum(&nd, c, &size, '!', err);
+	return nd.val;
 }
 static uae_u32 readhex(TCHAR **c, bool *err)
 {
 	int size;
-	return readnum(c, &size, '$', err);
+	struct numdata nd;
+	readnum(&nd, c, &size, '$', err);
+	return nd.val;
 }
 static uae_u32 readbin(TCHAR **c, bool *err)
 {
 	int size;
-	return readnum(c, &size, '%', err);
+	struct numdata nd;
+	readnum(&nd, c, &size, '%', err);
+	return nd.val;
 }
 static uae_u32 readint(TCHAR **c, int *size, bool *err)
 {
-	return readnum(c, size, '!', err);
+	struct numdata nd;
+	readnum(&nd, c, size, '!', err);
+	return nd.val;
 }
 static uae_u32 readhex(TCHAR **c, int *size, bool *err)
 {
-	return readnum(c, size, '$', err);
+	struct numdata nd;
+	readnum(&nd, c, size, '$', err);
+	return nd.val;
 }
 
 static size_t next_string (TCHAR **c, TCHAR *out, int max, int forceupper)
@@ -1087,6 +1304,50 @@ static size_t next_string (TCHAR **c, TCHAR *out, int max, int forceupper)
 
 static void converter(TCHAR **c)
 {
+#ifdef WITH_SOFTFLOAT
+	TCHAR s[100];
+	float_status st = { 0 };
+	bool err = false;
+	uae_u32 v = 0;
+	floatx80 xf = { 0 };
+
+	bool isfloat = iscfloat(c);
+	// NOTE: output decimal value is currently always double, even if input was extended.
+	if (isfloat) {
+		float_status st = { 0 };
+		struct numdata nd;
+		int size;
+		readnum(&nd, c, &size, 0, &err);
+		v = floatx80_to_int32_round_to_zero(nd.valx80, &st);
+		xf = nd.valx80;
+
+	} else {
+		if (!readintx(c, &err, &v, &xf)) {
+			xf = int32_to_floatx80(v);
+		} else {
+			v = floatx80_to_int32(xf, &st);
+		}
+	}
+
+	if (err) {
+		return;
+	}
+
+	uae_u64 df = floatx80_to_float64(xf, &st);
+	uae_u32 sf = floatx80_to_float32(xf, &st);
+
+	int i, j;
+	for (i = 0, j = 0; i < 32; i++) {
+		s[j++] = (v & (1 << (31 - i))) ? '1' : '0';
+		if (i < 31 && (i & 7) == 7) {
+			s[j++] = '`';
+		}
+	}
+	s[j] = 0;
+	console_out_f(_T("$%08X = %%%s = %u = %d ($%08X.S = $%08X%08X.D = $%04X.%08X%08X.X = %f)\n"), v, s, v, (uae_s32)v,
+		sf, (uae_u32)(df >> 32), (uae_u32)df, (uae_u32)(xf.high), (uae_u32)(xf.low >> 32), (uae_u32)xf.low,
+		f80todouble(xf));
+#else
 	bool err;
 	uae_u32 v = readint(c, &err);
 	TCHAR s[100];
@@ -1102,7 +1363,8 @@ static void converter(TCHAR **c)
 		}
 	}
 	s[j] = 0;
-	console_out_f (_T("$%08X = %%%s = %u = %d\n"), v, s, v, (uae_s32)v);
+	console_out_f(_T("$%08X = %%%s = %u = %d\n"), v, s, v, (uae_s32)v);
+#endif
 }
 
 static bool isrom(uaecptr addr)
@@ -5518,7 +5780,8 @@ static void show_exec_lists (TCHAR *t)
 						console_out_f (_T("   %s:%d %08x\n"), unitname, get_long_debug(fssm), get_long_debug(fssm + 8));
 						uaecptr de = get_long_debug(fssm + 8) << 2;
 						if (de) {
-							console_out_f (_T("    TableSize       %u\n"), get_long_debug(de + 0));
+							int size = get_long_debug(de + 0);
+							console_out_f (_T("    TableSize       %u\n"), size);
 							console_out_f (_T("    SizeBlock       %u\n"), get_long_debug(de + 4));
 							console_out_f (_T("    SecOrg          %u\n"), get_long_debug(de + 8));
 							console_out_f (_T("    Surfaces        %u\n"), get_long_debug(de + 12));
@@ -5535,6 +5798,15 @@ static void show_exec_lists (TCHAR *t)
 							console_out_f (_T("    Mask            0x%08x\n"), get_long_debug(de + 56));
 							console_out_f (_T("    BootPri         %d\n"), get_long_debug(de + 60));
 							console_out_f (_T("    DosType         0x%08x\n"), get_long_debug(de + 64));
+							if (size >= 17) {
+								console_out_f (_T("    Baud            0x%08x\n"), get_long_debug(de + 68));
+								if (size >= 18) {
+									console_out_f (_T("    Control         0x%08x\n"), get_long_debug(de + 72));
+									if (size >= 19) {
+										console_out_f (_T("    BootBlocks      0x%08x\n"), get_long_debug(de + 76));
+									}
+								}
+							}
 						}
 						xfree(unitname);
 					}
@@ -6875,6 +7147,7 @@ static bool parsecmd(TCHAR *cmd, bool *out)
 	return false;
 }
 
+#ifdef AMIBERRY
 static void debug_backtrace(int max_frames)
 {
 	// Frame pointer must be in A5 for this to give a correct backtrace
@@ -6942,6 +7215,7 @@ static void debug_backtrace(int max_frames)
 		console_out_f(_T("No more valid frames\n"));
 	}
 }
+#endif
 
 static bool debug_line (TCHAR *input)
 {
@@ -7560,6 +7834,7 @@ static bool debug_line (TCHAR *input)
 		case 'O':
 			break;
 		case 'b':
+#ifdef AMIBERRY
 			if (*inptr == 't') {
 				int max_frames = 5; // Default to 5 frames
 				next_char2(&inptr);
@@ -7571,6 +7846,7 @@ static bool debug_line (TCHAR *input)
 					}
 				}
 				debug_backtrace(max_frames);
+#endif
 			} else if (staterecorder (&inptr))
 				return true;
 			break;

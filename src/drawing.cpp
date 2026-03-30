@@ -1552,7 +1552,7 @@ static void center_image(void)
 	}
 
 	vidinfo->inbuffer->xoffset = visible_left_border << (RES_MAX - currprefs.gfx_resolution);
-	vidinfo->inbuffer->yoffset = thisframe_y_adjust << VRES_MAX;
+	vidinfo->inbuffer->yoffset = (-vsync_start_offset) << VRES_MAX;
 
 	int linedbl = currprefs.gfx_vresolution;
 	if (doublescan > 0 && interlace_seen <= 0) {
@@ -1991,8 +1991,9 @@ static void refresh_indicator_init(void)
 
 bool drawing_can_lineoptimizations(void)
 {
-	if (currprefs.cs_cd32fmv || ((currprefs.genlock || currprefs.genlock_effects) && currprefs.genlock_image) ||
-		currprefs.cs_color_burst || currprefs.gfx_grayscale || currprefs.monitoremu) {
+	if (currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA &&
+		(currprefs.cs_cd32fmv || ((currprefs.genlock || currprefs.genlock_effects) && currprefs.genlock_image) ||
+		currprefs.cs_color_burst || currprefs.gfx_grayscale || currprefs.monitoremu)) {
 		return false;
 	}
 	if ((lightpen_active && currprefs.lightpen_crosshair) || debug_dma >= 3 || debug_heatmap >= 2) {
@@ -2051,6 +2052,8 @@ static void setspecialmonitorpos(struct vidbuffer *vb)
 	vb->yoffset = vidinfo->inbuffer->yoffset;
 	vb->inxoffset = vidinfo->inbuffer->inxoffset;
 	vb->inyoffset = vidinfo->inbuffer->inyoffset;
+	vb->outwidth = vidinfo->inbuffer->outwidth;
+	vb->outheight = vidinfo->inbuffer->outheight;
 }
 
 static void vbcopy(struct vidbuffer *vbout, struct vidbuffer *vbin)
@@ -2097,7 +2100,7 @@ static void finish_drawing_frame(bool drawlines)
 #endif
 #ifdef WITH_SPECIALMONITORS
 	// video port adapters
-	if (currprefs.monitoremu) {
+	if (currprefs.monitoremu && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA) {
 		if (!denise_lock()) {
 			return;
 		}
@@ -2146,7 +2149,8 @@ static void finish_drawing_frame(bool drawlines)
 	}
 
 	// genlock
-	if (currprefs.genlock_image && (currprefs.genlock || currprefs.genlock_effects) && !currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated) {
+	if (currprefs.genlock_image && (currprefs.genlock || currprefs.genlock_effects) && !currprefs.monitoremu &&
+		vidinfo->tempbuffer.bufmem_allocated && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA) {
 		if (!denise_lock()) {
 			return;
 		}
@@ -2166,7 +2170,7 @@ static void finish_drawing_frame(bool drawlines)
 
 #ifdef CD32
 	// cd32 fmv
-	if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated && currprefs.cs_cd32fmv) {
+	if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated && currprefs.cs_cd32fmv && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA) {
 		if (!denise_lock()) {
 			return;
 		}
@@ -2182,7 +2186,7 @@ static void finish_drawing_frame(bool drawlines)
 
 	// grayscale
 #ifdef WITH_SPECIALMONITORS
-	if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated &&
+	if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA &&
 		((!currprefs.genlock && (!bplcolorburst_field && currprefs.cs_color_burst)) || currprefs.gfx_grayscale)) {
 		if (!denise_lock()) {
 			return;
