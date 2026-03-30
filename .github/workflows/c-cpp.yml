@@ -909,11 +909,30 @@ jobs:
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
           fi
 
+      - name: Prepare libretro release artifact
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          artifact="${{ matrix.artifact }}"
+          ext="${artifact##*.}"
+          release_artifact="amiberry-libretro-${{ matrix.artifact_platform }}-${{ matrix.arch }}.${ext}"
+          cp "amiberry/libretro/${artifact}" "$release_artifact"
+          echo "LIBRETRO_RELEASE_ARTIFACT=$release_artifact" >> "$GITHUB_ENV"
+
       - name: Upload artifact
+        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v6
         with:
           name: amiberry-libretro-${{ matrix.artifact_platform }}-${{ matrix.arch }}
           path: amiberry/libretro/${{ matrix.artifact }}
+          retention-days: 7
+
+      - name: Upload artifact for release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v6
+        with:
+          name: amiberry-libretro-${{ matrix.artifact_platform }}-${{ matrix.arch }}
+          path: ${{ env.LIBRETRO_RELEASE_ARTIFACT }}
 
   create-release:
     needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-libretro]
@@ -939,7 +958,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip amiberry-*.exe Amiberry-*.dmg 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* Amiberry-*.dmg 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -951,6 +970,7 @@ jobs:
           generateReleaseNotes: true
           artifacts: |
             artifacts/amiberry-*.zip
+            artifacts/amiberry-libretro-*.*
             artifacts/amiberry-*.exe
             artifacts/Amiberry-*.dmg
             artifacts/SHA256SUMS
