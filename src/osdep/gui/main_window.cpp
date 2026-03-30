@@ -1125,6 +1125,7 @@ static void release_sidebar_icons()
 static void ensure_sidebar_icons_loaded()
 {
 	for (int i = 0; categories[i].category != nullptr; ++i) {
+		if (categories[i].icon) continue;
 		if (!categories[i].imagepath) continue;
 		std::string key = categories[i].imagepath;
 		if (g_sidebar_icons.find(key) != g_sidebar_icons.end())
