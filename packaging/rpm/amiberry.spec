@@ -88,7 +88,7 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
-* Thu Mar 27 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.3-1
+* Mon Mar 30 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.3-1
 - Stable v8.1.3 release
 
 * Thu Mar 26 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.2-1

@@ -62,9 +62,9 @@
         </screenshot>
     </screenshots>
     <releases>
-        <release version="8.1.3" date="2026-03-27">
+        <release version="8.1.3" date="2026-03-30">
             <description>
-                <p>Bugfix release: improved sidebar icon vertical alignment with text labels.</p>
+                <p>Feature and bugfix release: restored the Themes panel, embedded GUI assets with Font Awesome icons, added async downloads in the Paths panel and JSON game database fallback support, expanded Vulkan composition and fullscreen handling, and fixed input scaling, audio buffering, TCP serial, Windows migration, and other platform-specific issues.</p>
             </description>
         </release>
         <release version="8.1.2" date="2026-03-26">
