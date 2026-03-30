@@ -153,6 +153,7 @@ extern void set_plugins_path(const std::string& newpath);
 extern void set_screenshot_path(const std::string& newpath);
 extern void set_savestate_path(const std::string& newpath);
 extern void set_themes_path(const std::string& newpath);
+extern void set_shaders_path(const std::string& newpath);
 extern std::string get_controllers_path();
 extern void set_controllers_path(const std::string& newpath);
 

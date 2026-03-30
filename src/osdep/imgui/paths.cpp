@@ -319,6 +319,42 @@ void render_panel_paths()
 		}
 	};
 
+	auto get_visuals_root_for_asset_path = [&](const std::string& asset_path) -> std::string {
+		const auto normalized_asset_path = normalize_ui_path_string(asset_path);
+		if (normalized_asset_path.empty())
+			return {};
+
+		auto asset_path_fs = std::filesystem::path(normalized_asset_path);
+		if (asset_path_fs.filename().empty())
+			asset_path_fs = asset_path_fs.parent_path();
+
+		return normalize_ui_path_string(asset_path_fs.parent_path().string());
+	};
+
+	auto get_visuals_root_path = [&]() -> std::string {
+		const auto themes_root = get_visuals_root_for_asset_path(get_themes_path());
+		const auto shaders_root = get_visuals_root_for_asset_path(get_shaders_path());
+		const auto bezels_root = get_visuals_root_for_asset_path(get_bezels_path());
+
+		std::string shared_root;
+		for (const auto& candidate : { themes_root, shaders_root, bezels_root })
+		{
+			if (candidate.empty())
+				continue;
+
+			if (shared_root.empty())
+			{
+				shared_root = candidate;
+				continue;
+			}
+
+			if (!path_inputs_match(shared_root, candidate))
+				return {};
+		}
+
+		return shared_root;
+	};
+
 	// Helper lambda for rendering path rows
 	auto RenderPathRow = [&](const char* label, const char* id, const std::string& path, const std::function<void(const std::string&)>& setter, const bool is_file = false, const char* filter_name = nullptr, const char* filter_ext = nullptr) {
 		ImGui::PushID(id);
@@ -389,6 +425,34 @@ void render_panel_paths()
 		ImGui::Spacing();
 	};
 
+	auto RenderReadOnlyPathRow = [&](const char* label, const char* id, const std::string& path) {
+		ImGui::PushID(id);
+		ImGui::Text("%s", label);
+
+		const bool exists = path.empty() || my_existsdir(path.c_str());
+		if (!exists)
+			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+
+		char buffer[MAX_DPATH];
+		strncpy(buffer, path.c_str(), MAX_DPATH);
+		buffer[MAX_DPATH - 1] = '\0';
+
+		ImGui::BeginDisabled();
+		ImGui::SetNextItemWidth(-1.0f);
+		AmigaInputText("##ReadOnly", buffer, MAX_DPATH);
+		ImGui::EndDisabled();
+
+		if (!exists)
+		{
+			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Directory not found");
+		}
+
+		ImGui::PopID();
+		ImGui::Spacing();
+	};
+
 	// Portable mode toggle (functional on Windows/Linux, shown disabled on macOS, hidden on Android)
 #if !defined(__ANDROID__)
 	{
@@ -426,20 +490,12 @@ void render_panel_paths()
 	ImGui::Spacing();
 #endif
 
-	// Estimate reserved height for bottom controls (logfile widgets + 1 line spacing + 1 line for buttons)
-	const float line_h = ImGui::GetFrameHeightWithSpacing();
-	float reserved_height = line_h * 6.0f; // logfile widgets + logfile path + spacing + 2 button rows
-	if (s_whdboot_downloading.load() || s_whdboot_complete.load() || s_whdboot_failed.load())
-		reserved_height += line_h * 3.0f;
-	if (s_controllers_downloading.load() || s_controllers_complete.load() || s_controllers_failed.load())
-		reserved_height += line_h * 3.0f;
-
 	// Begin scrollable area for path entries
 	// Draw a recessed frame around the scroll area
 	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.06f));
-	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), ImGuiChildFlags_Borders);
+	ImGui::BeginChild("PathsScroll", ImVec2(0, 0), ImGuiChildFlags_Borders);
 
 	ImGui::PushID("BaseContentPath");
 	ImGui::Text("Base content folder:");
@@ -507,39 +563,218 @@ void render_panel_paths()
 		ImGui::EndDisabled();
 	ImGui::PopID();
 
-		ImGui::TextWrapped("Optional. When set, Amiberry derives the standard folders below from this root. Visual assets are stored in a sibling Visuals folder, not inside Configuration files. Editing a path below makes that entry an explicit override. Click Apply to use the new root. The bootstrap settings files stay in Amiberry's platform settings location.");
+	ImGui::TextWrapped("Optional. When set, Amiberry derives the standard folders below from this root. Visual assets are stored in a sibling Visuals folder, not inside Configuration files. Editing a path below makes that entry an explicit override. Click Apply to use the new root. The bootstrap settings files stay in Amiberry's platform settings location.");
+	ImGui::Spacing();
+	const auto visuals_root_path = get_visuals_root_path();
+	RenderReadOnlyPathRow("Visuals root:", "VisualsRoot", visuals_root_path);
+	if (visuals_root_path.empty())
+		ImGui::TextWrapped("Themes, shaders, and bezels currently use explicit custom locations.");
+	else
+		ImGui::TextWrapped("Themes, shaders, and bezels normally follow this Visuals root automatically.");
+	ImGui::Spacing();
+	if (ImGui::CollapsingHeader("Main Paths", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		RenderPathRow("System ROMs:", "SystemROMs", get_rom_path(), [](const std::string& p) { set_rom_path(p); });
+		RenderPathRow("Floppies:", "FloppiesPath", get_floppy_path(), [](const std::string& p) { set_floppy_path(p); });
+		RenderPathRow("CD-ROMs:", "CDROMPath", get_cdrom_path(), [](const std::string& p) { set_cdrom_path(p); });
+		RenderPathRow("Hard drives:", "HDDPath", get_harddrive_path(), [](const std::string& p) { set_harddrive_path(p); });
+		RenderPathRow("Screenshots:", "ScreenshotsPath", get_screenshot_path(), [](const std::string& p) { set_screenshot_path(p); });
+
+		get_savestate_path(tmp, MAX_DPATH);
+		RenderPathRow("Save states:", "SaveStatesPath", tmp, [](const std::string& p) { set_savestate_path(p); });
+	}
+	ImGui::Spacing();
+
+	if (ImGui::CollapsingHeader("Support Files"))
+	{
+		ImGui::TextWrapped("Less frequently changed emulator data and integration files.");
+		ImGui::Spacing();
+
+		get_configuration_path(tmp, sizeof tmp);
+		RenderPathRow("Configs:", "ConfigPath", tmp, [](const std::string& p) { set_configuration_path(p); });
+
+		get_nvram_path(tmp, sizeof tmp);
+		RenderPathRow("NVRAM:", "NVRAMPath", tmp, [](const std::string& p) { set_nvram_path(p); });
+
+		RenderPathRow("Plugins:", "PluginsPath", get_plugins_path(), [](const std::string& p) { set_plugins_path(p); });
+		RenderPathRow("Controllers DB:", "ControllersPath", get_controllers_path(), [](const std::string& p) { set_controllers_path(p); });
+		RenderPathRow("RetroArch config:", "RetroArchConfigPath", get_retroarch_file(), [](const std::string& p) { set_retroarch_file(p); }, true, "Choose Retroarch .cfg file", ".cfg");
+		RenderPathRow("WHDBoot:", "WHDBootPath", get_whdbootpath(), [](const std::string& p) { set_whdbootpath(p); });
+		RenderPathRow("WHDLoad archives:", "WHDLoadPath", get_whdload_arch_path(), [](const std::string& p) { set_whdload_arch_path(p); });
+	}
+	ImGui::Spacing();
+
+	if (ImGui::CollapsingHeader("Visual Overrides"))
+	{
+		ImGui::TextWrapped("Only change these if you want a custom layout. Reset Paths to Defaults to return to the derived Visuals locations.");
+		ImGui::Spacing();
+		RenderPathRow("Themes:", "ThemesPath", get_themes_path(), [](const std::string& p) { set_themes_path(p); });
+		RenderPathRow("Shaders:", "ShadersPath", get_shaders_path(), [](const std::string& p) { set_shaders_path(p); });
+		RenderPathRow("Bezels:", "BezelsPath", get_bezels_path(), [](const std::string& p) { set_bezels_path(p); });
+	}
+	ImGui::Spacing();
+
 	ImGui::Spacing();
 	ImGui::Separator();
 	ImGui::Spacing();
 
-	RenderPathRow("System ROMs:", "SystemROMs", get_rom_path(), [](const std::string& p) { set_rom_path(p); });
+	ImGui::Text("Actions");
+	ImGui::TextWrapped("Maintenance and update tasks stay visible here for quick access.");
+	ImGui::Spacing();
+	if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Reset to Defaults", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
+		reset_default_paths();
+		save_amiberry_settings();
+		sync_base_content_path_input();
+		ShowMessageBox("Reset Paths", "All paths have been reset to their default values.");
+	}
+	ImGui::SameLine();
+	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
+		create_missing_amiberry_folders();
+		scan_roms(true);
+		symlink_roms(&changed_prefs);
+		import_joysticks();
 
-	get_configuration_path(tmp, sizeof tmp);
-	RenderPathRow("Configuration files:", "ConfigPath", tmp, [](const std::string& p) { set_configuration_path(p); });
+		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- Missing folders created\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
+	}
 
-	get_nvram_path(tmp, sizeof tmp);
-	RenderPathRow("NVRAM files:", "NVRAMPath", tmp, [](const std::string& p) { set_nvram_path(p); });
+	static bool s_controllers_joysticks_reimported = false;
+	if (s_controllers_complete.load() && !s_controllers_joysticks_reimported)
+	{
+		import_joysticks();
+		s_controllers_joysticks_reimported = true;
+	}
 
-	RenderPathRow("Plugin files:", "PluginsPath", get_plugins_path(), [](const std::string& p) { set_plugins_path(p); });
+	ImGui::Spacing();
+	{
+		const bool any_downloading = s_whdboot_downloading.load() || s_controllers_downloading.load();
+		if (any_downloading)
+			ImGui::BeginDisabled();
 
-	RenderPathRow("Screenshots:", "ScreenshotsPath", get_screenshot_path(), [](const std::string& p) { set_screenshot_path(p); });
+		if (AmigaButton(ICON_FA_DOWNLOAD " Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+			start_whdboot_download();
+		ImGui::SameLine();
+		if (AmigaButton(ICON_FA_DOWNLOAD " Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+			start_controllers_download();
 
-	get_savestate_path(tmp, MAX_DPATH);
-	RenderPathRow("State files:", "SaveStatesPath", tmp, [](const std::string& p) { set_savestate_path(p); });
+		if (any_downloading)
+			ImGui::EndDisabled();
+	}
 
-	RenderPathRow("Controller files:", "ControllersPath", get_controllers_path(), [](const std::string& p) { set_controllers_path(p); });
+	const bool show_download_status =
+		s_whdboot_downloading.load() || s_whdboot_complete.load() || s_whdboot_failed.load()
+		|| s_controllers_downloading.load() || s_controllers_complete.load() || s_controllers_failed.load();
+	if (show_download_status)
+	{
+		ImGui::Spacing();
+		ImGui::Text("Download Status");
 
-	RenderPathRow("RetroArch config file:", "RetroArchConfigPath", get_retroarch_file(), [](const std::string& p) { set_retroarch_file(p); }, true, "Choose Retroarch .cfg file", ".cfg");
+		if (s_whdboot_downloading.load())
+		{
+			ImGui::Spacing();
+			const int step = s_whdboot_step.load();
+			const int total_steps = s_whdboot_step_count.load();
+			std::string status;
+			{
+				std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+				status = s_whdboot_status;
+			}
+			ImGui::Text("Downloading: %s (%d/%d)", status.c_str(), step, total_steps);
 
-	RenderPathRow("WHDBoot files:", "WHDBootPath", get_whdbootpath(), [](const std::string& p) { set_whdbootpath(p); });
+			const int64_t dl_now = s_whdboot_dl_now.load();
+			const int64_t dl_total = s_whdboot_dl_total.load();
+			float progress = 0.0f;
+			if (dl_total > 0)
+				progress = static_cast<float>(dl_now) / static_cast<float>(dl_total);
+			if (progress > 1.0f) progress = 1.0f;
 
-	RenderPathRow("WHDLoad Archives (LHA):", "WHDLoadPath", get_whdload_arch_path(), [](const std::string& p) { set_whdload_arch_path(p); });
+			ImGui::ProgressBar(progress, ImVec2(-SMALL_BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x, 0.0f));
+			ImGui::SameLine();
+			if (AmigaButton(ICON_FA_XMARK "##CancelWHD", ImVec2(SMALL_BUTTON_WIDTH, 0.0f)))
+				s_whdboot_cancel.store(true);
 
-	RenderPathRow("Floppies path:", "FloppiesPath", get_floppy_path(), [](const std::string& p) { set_floppy_path(p); });
+			if (dl_total > 0)
+				ImGui::Text("%s / %s", format_download_bytes(dl_now).c_str(), format_download_bytes(dl_total).c_str());
+		}
+		else if (s_whdboot_complete.load() || s_whdboot_failed.load())
+		{
+			ImGui::Spacing();
+			{
+				std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+				if (s_whdboot_result_is_error)
+					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+				ImGui::TextWrapped("%s", s_whdboot_result_msg.c_str());
+				if (s_whdboot_result_is_error)
+					ImGui::PopStyleColor();
+			}
+			if (AmigaButton(ICON_FA_CHECK " OK##WHDResult", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			{
+				s_whdboot_complete.store(false);
+				s_whdboot_failed.store(false);
+			}
+		}
 
-	RenderPathRow("CD-ROMs path:", "CDROMPath", get_cdrom_path(), [](const std::string& p) { set_cdrom_path(p); });
+		if (s_controllers_downloading.load())
+		{
+			ImGui::Spacing();
+			ImGui::Text("Downloading: gamecontrollerdb.txt");
 
-	RenderPathRow("Hard drives path:", "HDDPath", get_harddrive_path(), [](const std::string& p) { set_harddrive_path(p); });
+			const int64_t dl_now = s_controllers_dl_now.load();
+			const int64_t dl_total = s_controllers_dl_total.load();
+			float progress = 0.0f;
+			if (dl_total > 0)
+				progress = static_cast<float>(dl_now) / static_cast<float>(dl_total);
+			if (progress > 1.0f) progress = 1.0f;
+
+			ImGui::ProgressBar(progress, ImVec2(-SMALL_BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x, 0.0f));
+			ImGui::SameLine();
+			if (AmigaButton(ICON_FA_XMARK "##CancelCtrl", ImVec2(SMALL_BUTTON_WIDTH, 0.0f)))
+				s_controllers_cancel.store(true);
+
+			if (dl_total > 0)
+				ImGui::Text("%s / %s", format_download_bytes(dl_now).c_str(), format_download_bytes(dl_total).c_str());
+		}
+		else if (s_controllers_complete.load() || s_controllers_failed.load())
+		{
+			ImGui::Spacing();
+			{
+				std::lock_guard<std::mutex> lock(s_controllers_mutex);
+				if (s_controllers_result_is_error)
+					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+				ImGui::TextWrapped("%s", s_controllers_result_msg.c_str());
+				if (s_controllers_result_is_error)
+					ImGui::PopStyleColor();
+			}
+			if (AmigaButton(ICON_FA_CHECK " OK##CtrlResult", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			{
+				s_controllers_complete.store(false);
+				s_controllers_failed.store(false);
+				s_controllers_joysticks_reimported = false;
+			}
+		}
+	}
+	ImGui::Spacing();
+
+	if (ImGui::CollapsingHeader("Logging"))
+	{
+		auto logging_enabled = get_logfile_enabled();
+		if (AmigaCheckbox("Enable logging", &logging_enabled))
+		{
+			set_logfile_enabled(logging_enabled);
+			logging_init();
+		}
+		ShowHelpMarker("Write debug information to log file");
+		ImGui::SameLine();
+		auto log_to_console = console_logging > 0;
+		if (AmigaCheckbox("Log to console", &log_to_console))
+		{
+			console_logging = log_to_console ? 1 : 0;
+		}
+		ShowHelpMarker("Also output log messages to terminal");
+
+		RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
+	}
 
 	ImGui::EndChild();
 	ImGui::PopStyleColor(2);
@@ -584,150 +819,5 @@ void render_panel_paths()
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::EndPopup();
-	}
-
-	// Logging Options
-	auto logging_enabled = get_logfile_enabled();
-	if (AmigaCheckbox("Enable logging", &logging_enabled))
-	{
-		set_logfile_enabled(logging_enabled);
-		logging_init();
-	}
-	ShowHelpMarker("Write debug information to log file");
-	ImGui::SameLine();
-	auto log_to_console = console_logging > 0;
-	if (AmigaCheckbox("Log to console", &log_to_console))
-	{
-		console_logging = log_to_console ? 1 : 0;
-	}
-	ShowHelpMarker("Also output log messages to terminal");
-
-	RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
-
-	ImGui::Spacing();
-	if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Reset to Defaults", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
-	{
-		reset_default_paths();
-		save_amiberry_settings();
-		sync_base_content_path_input();
-		ShowMessageBox("Reset Paths", "All paths have been reset to their default values.");
-	}
-	ImGui::SameLine();
-	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
-	{
-		create_missing_amiberry_folders();
-		scan_roms(true);
-		symlink_roms(&changed_prefs);
-		import_joysticks();
-
-		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- Missing folders created\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
-	}
-	{
-		const bool any_downloading = s_whdboot_downloading.load() || s_controllers_downloading.load();
-		if (any_downloading)
-			ImGui::BeginDisabled();
-
-		if (AmigaButton(ICON_FA_DOWNLOAD " Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
-			start_whdboot_download();
-		ImGui::SameLine();
-		if (AmigaButton(ICON_FA_DOWNLOAD " Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
-			start_controllers_download();
-
-		if (any_downloading)
-			ImGui::EndDisabled();
-	}
-
-	// WHDBooter download progress / results
-	if (s_whdboot_downloading.load())
-	{
-		ImGui::Spacing();
-		const int step = s_whdboot_step.load();
-		const int total_steps = s_whdboot_step_count.load();
-		std::string status;
-		{
-			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
-			status = s_whdboot_status;
-		}
-		ImGui::Text("Downloading: %s (%d/%d)", status.c_str(), step, total_steps);
-
-		const int64_t dl_now = s_whdboot_dl_now.load();
-		const int64_t dl_total = s_whdboot_dl_total.load();
-		float progress = 0.0f;
-		if (dl_total > 0)
-			progress = static_cast<float>(dl_now) / static_cast<float>(dl_total);
-		if (progress > 1.0f) progress = 1.0f;
-
-		ImGui::ProgressBar(progress, ImVec2(-SMALL_BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x, 0.0f));
-		ImGui::SameLine();
-		if (AmigaButton(ICON_FA_XMARK "##CancelWHD", ImVec2(SMALL_BUTTON_WIDTH, 0.0f)))
-			s_whdboot_cancel.store(true);
-
-		if (dl_total > 0)
-			ImGui::Text("%s / %s", format_download_bytes(dl_now).c_str(), format_download_bytes(dl_total).c_str());
-	}
-	else if (s_whdboot_complete.load() || s_whdboot_failed.load())
-	{
-		ImGui::Spacing();
-		{
-			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
-			if (s_whdboot_result_is_error)
-				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
-			ImGui::TextWrapped("%s", s_whdboot_result_msg.c_str());
-			if (s_whdboot_result_is_error)
-				ImGui::PopStyleColor();
-		}
-		if (AmigaButton(ICON_FA_CHECK " OK##WHDResult", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			s_whdboot_complete.store(false);
-			s_whdboot_failed.store(false);
-		}
-	}
-
-	// Controllers DB download progress / results
-	if (s_controllers_downloading.load())
-	{
-		ImGui::Spacing();
-		ImGui::Text("Downloading: gamecontrollerdb.txt");
-
-		const int64_t dl_now = s_controllers_dl_now.load();
-		const int64_t dl_total = s_controllers_dl_total.load();
-		float progress = 0.0f;
-		if (dl_total > 0)
-			progress = static_cast<float>(dl_now) / static_cast<float>(dl_total);
-		if (progress > 1.0f) progress = 1.0f;
-
-		ImGui::ProgressBar(progress, ImVec2(-SMALL_BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x, 0.0f));
-		ImGui::SameLine();
-		if (AmigaButton(ICON_FA_XMARK "##CancelCtrl", ImVec2(SMALL_BUTTON_WIDTH, 0.0f)))
-			s_controllers_cancel.store(true);
-
-		if (dl_total > 0)
-			ImGui::Text("%s / %s", format_download_bytes(dl_now).c_str(), format_download_bytes(dl_total).c_str());
-	}
-	else if (s_controllers_complete.load() || s_controllers_failed.load())
-	{
-		// Re-import joysticks on main thread after successful download
-		static bool s_controllers_joysticks_reimported = false;
-		if (s_controllers_complete.load() && !s_controllers_joysticks_reimported)
-		{
-			import_joysticks();
-			s_controllers_joysticks_reimported = true;
-		}
-
-		ImGui::Spacing();
-		{
-			std::lock_guard<std::mutex> lock(s_controllers_mutex);
-			if (s_controllers_result_is_error)
-				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
-			ImGui::TextWrapped("%s", s_controllers_result_msg.c_str());
-			if (s_controllers_result_is_error)
-				ImGui::PopStyleColor();
-		}
-		if (AmigaButton(ICON_FA_CHECK " OK##CtrlResult", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			s_controllers_complete.store(false);
-			s_controllers_failed.store(false);
-			s_controllers_joysticks_reimported = false;
-		}
 	}
 }
