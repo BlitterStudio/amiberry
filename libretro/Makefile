@@ -97,11 +97,11 @@ endif
 ifeq ($(DEBUG), 1)
    FLAGS += -O0 -g -fno-omit-frame-pointer
 else
-   FLAGS += -O3 -g -DNDEBUG
+   FLAGS += -O3 -DNDEBUG
 endif
 
 ifeq ($(SANITIZE), 1)
-   FLAGS += -fsanitize=address -fno-omit-frame-pointer
+   FLAGS += -fsanitize=address -fno-omit-frame-pointer -g
    LDFLAGS += -fsanitize=address
 endif
 
