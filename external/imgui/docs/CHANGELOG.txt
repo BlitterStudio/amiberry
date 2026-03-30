@@ -120,6 +120,8 @@ Other Changes:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
     you may want to carry an index around.
+  - Always pulls current context on `ImGuiListClipper::Begin()`, consistent with public
+    API design, and avoids issues with clipper instances outliving contexts. (#9324, #5856)
 - Scrollbar:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
@@ -130,6 +132,9 @@ Other Changes:
     as a convenience for when using e.g. InvisibleButton().
 - Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
   for one frame on e.g. application boot if no other windows are submitted. (#9243)
+- DrawList:
+  - PathArcTo(): fixed erroneous segment count for pathologically small arcs on large 
+    circles. (#9331, #9313) [@thedmd, @epajarre]
 - Memory:
   - Discard/GC of ImDrawList buffers for unused windows favor restoring them to
     ~Size*1.05 instead of Capacity when awakening again. Facilitate releasing ImDrawList
