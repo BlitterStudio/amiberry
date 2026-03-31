@@ -489,24 +489,28 @@ jobs:
             artifact_name: amiberry-ubuntu-22.04-amd64
             sdl_source: setup-sdl
             codename: jammy
+            extra_cmake_args: -DBUNDLE_SDL=ON
           - name: 24.04-amd64
             runner: ubuntu-latest
             container: ubuntu:24.04
             artifact_name: amiberry-ubuntu-24.04-amd64
             sdl_source: setup-sdl
             codename: noble
+            extra_cmake_args: -DBUNDLE_SDL=ON
           - name: 25.10-amd64
             runner: ubuntu-latest
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-amd64
             sdl_source: setup-sdl
             codename: plucky
+            extra_cmake_args:
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
             artifact_name: amiberry-ubuntu-25.10-arm64
             sdl_source: apt
             codename: plucky
+            extra_cmake_args:
     steps:
       - name: Install prerequisites
         run: |
@@ -563,7 +567,7 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} ${{ matrix.extra_cmake_args }} && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: make for Ubuntu ${{ matrix.name }} with apt SDL3
