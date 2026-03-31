@@ -8125,6 +8125,8 @@ int amiberry_main(int argc, char* argv[])
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
+	makeverstr(VersionStr);
+
 	bool run_jit_selftest = false;
 	bool dump_paths = false;
 	bool download_whdboot = false;
@@ -8153,10 +8155,7 @@ int amiberry_main(int argc, char* argv[])
 #endif
 	mainthreadid = uae_thread_get_id(nullptr);
 
-	// -v is also used for chipset selection (e.g. -v 4 for AGA),
-	// so it can only mean "version" when it's the sole argument.
-	if (argc == 2 && _tcscmp(argv[1], _T("-v")) == 0)
-		print_version();
+
 
 #ifdef USE_DBUS
 	if (!dump_paths)
@@ -8247,7 +8246,6 @@ int amiberry_main(int argc, char* argv[])
 	if (download_whdboot)
 		return whdboot_download_exit_code;
 
-	makeverstr(VersionStr);
 	uae_time_init();
 
 	// Parse the command line, remove used amiberry specific args
