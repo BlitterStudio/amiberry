@@ -131,7 +131,7 @@ bool SDLRenderer::alloc_texture(int monid, int w, int h)
 		SDL_DestroyTexture(m_amiga_texture);
 
 	AmigaMonitor* mon = &AMonitors[monid];
-	m_amiga_texture = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, amiga_surface->w, amiga_surface->h);
+	m_amiga_texture = SDL_CreateTexture(mon->amiga_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, w, h);
 	if (m_amiga_texture != nullptr)
 	{
 		SDL_SetTextureBlendMode(m_amiga_texture, SDL_BLENDMODE_NONE);
@@ -342,7 +342,7 @@ void SDLRenderer::render_onscreen_joystick(int monid)
 
 void SDLRenderer::present_frame(int monid, int mode)
 {
-	if (gfx_platform_present_frame(amiga_surface)) {
+	if (gfx_platform_present_frame(get_amiga_surface(monid))) {
 		return;
 	}
 

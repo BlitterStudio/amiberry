@@ -729,6 +729,8 @@ void sortdisplays()
 
 	md = Displays;
 	while (md->monitorname) {
+		// Free previous allocation (from enumeratedisplays2) before replacing
+		xfree(md->DisplayModes);
 		md->DisplayModes = xcalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 
 		write_log(_T("%s '%s' [%s]\n"), md->adaptername, md->adapterid, md->adapterkey);

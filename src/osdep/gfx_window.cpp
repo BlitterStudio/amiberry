@@ -89,7 +89,7 @@ void close_hwnds(struct AmigaMonitor* mon)
 	IRenderer* renderer_to_use = nullptr;
 		if (mon->monitor_id > 0 && mon->renderer) {
 			renderer_to_use = mon->renderer.get();
-		} else if (mon->monitor_id == 00 && g_renderer) {
+		} else if (mon->monitor_id == 0 && g_renderer) {
 		 renderer_to_use = g_renderer.get();
         }
 
@@ -685,7 +685,28 @@ static int create_windows(struct AmigaMonitor* mon)
 			}
 		}
 
-		if (w != nw || h != nh || x != nx || y != ny) {
+		// For fullwindow mode, skip the resize/reposition cycle if the window
+		// is already fullscreen on the correct display. On macOS,
+		// SDL_GetWindowPosition on a fullscreen window may return coordinates
+		// that don't match SDL_GetDisplayBounds (e.g. Space-relative vs global),
+		// causing a false mismatch that triggers SDL_SetWindowFullscreen toggling
+		// — which produces a visible Spaces switching animation.
+		bool needs_resize = (w != nw || h != nh || x != nx || y != ny);
+		if (needs_resize && fullwindow) {
+			SDL_WindowFlags wflags = SDL_GetWindowFlags(mon->amiga_window);
+			if (wflags & SDL_WINDOW_FULLSCREEN) {
+				// Window is already fullscreen — check if it's on the right display
+				SDL_DisplayID current_display = SDL_GetDisplayForWindow(mon->amiga_window);
+				SDL_DisplayID target_display = md ? md->display_id : current_display;
+				if (current_display == target_display) {
+					// Already fullscreen on the correct display, skip the toggle
+					needs_resize = false;
+					write_log(_T("fullwindow: skipping resize — already fullscreen on target display\n"));
+				}
+			}
+		}
+
+		if (needs_resize) {
 			w = nw;
 			h = nh;
 			x = nx;
@@ -1067,43 +1088,56 @@ bool doInit(AmigaMonitor* mon)
 
 	IRenderer* renderer = get_renderer(mon->monitor_id);
 		if (renderer) {
-			int ctx_attempts = 0;
-			bool ctx_success = false;
-
-			while (ctx_attempts < 2 && !ctx_success) {
-				if (!renderer->set_context_attributes(ctx_attempts))
-				{
-					write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
-					ctx_attempts++;
-					continue;
-				}
-
+			// Quick reopen path: if the window already exists and the renderer
+			// context is still valid, skip the expensive destroy/recreate cycle.
+			// This avoids tearing down the GL context or Vulkan surface/swapchain
+			// on resolution-only changes, which on macOS triggers the Spaces
+			// switching animation in fullwindow mode.
+			if (mon->amiga_window && renderer->has_context()) {
 				if (!create_windows(mon))
 				{
 					close_hwnds(mon);
 					return false;
 				}
+			} else {
+				int ctx_attempts = 0;
+				bool ctx_success = false;
 
-				renderer = get_renderer(mon->monitor_id);
-				
-				renderer->destroy_shaders();
-				renderer->destroy_context();
+				while (ctx_attempts < 2 && !ctx_success) {
+					if (!renderer->set_context_attributes(ctx_attempts))
+					{
+						write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
+						ctx_attempts++;
+						continue;
+					}
 
-				if (renderer->init_context(mon->amiga_window))
-				{
-					ctx_success = true;
+					if (!create_windows(mon))
+					{
+						close_hwnds(mon);
+						return false;
+					}
+
+					renderer = get_renderer(mon->monitor_id);
+
+					renderer->destroy_shaders();
+					renderer->destroy_context();
+
+					if (renderer->init_context(mon->amiga_window))
+					{
+						ctx_success = true;
+					}
+					else
+					{
+						write_log("Renderer context init failed for mode %d on monitor %d. Retrying...\n", ctx_attempts, mon->monitor_id);
+						close_windows(mon);
+						ctx_attempts++;
+					}
 				}
-				else
-				{
-					write_log("Renderer context init failed for mode %d on monitor %d. Retrying...\n", ctx_attempts, mon->monitor_id);
-					close_windows(mon);
-					ctx_attempts++;
-				}
-			}
 
-			if (!ctx_success) {
-				write_log("All renderer context attempts failed for monitor %d. Aborting doInit.\n", mon->monitor_id);
-				return false;
+				if (!ctx_success) {
+					write_log("All renderer context attempts failed for monitor %d. Aborting doInit.\n", mon->monitor_id);
+					return false;
+				}
 			}
 		} else {
 			if (!create_windows(mon))
@@ -1159,17 +1193,20 @@ bool doInit(AmigaMonitor* mon)
 
 	// For secondary monitors, use per-monitor surface instead of global
 	SDL_Surface*& surface_ref = (mon->monitor_id > 0) ? mon->amiga_surface : amiga_surface;
-	if (surface_ref)
+	if (!surface_ref || surface_ref->w != display_width || surface_ref->h != display_height || surface_ref->format != pixel_format)
 	{
-		SDL_DestroySurface(surface_ref);
-		surface_ref = nullptr;
+		if (surface_ref)
+		{
+			SDL_DestroySurface(surface_ref);
+			surface_ref = nullptr;
+		}
+		surface_ref = SDL_CreateSurface(display_width, display_height, pixel_format);
+		if (!surface_ref) {
+			write_log("Failed to create amiga_surface for monitor %d: %s\n", mon->monitor_id, SDL_GetError());
+			return false;
+		}
+		update_system_pixel_format();
 	}
-	surface_ref = SDL_CreateSurface(display_width, display_height, pixel_format);
-	if (!surface_ref) {
-		write_log("Failed to create amiga_surface for monitor %d: %s\n", mon->monitor_id, SDL_GetError());
-		return false;
-	}
-	update_system_pixel_format();
 
 	updatewinrect(mon, true);
 	mon->screen_is_initialized = 1;
