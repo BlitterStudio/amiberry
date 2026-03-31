@@ -5709,10 +5709,9 @@ static std::string get_desktop_executable_directory()
 		return strip_filename_from_path(exepath);
 	return {};
 #else
-	if (char* base_path = SDL_GetBasePath())
+	if (const char* base_path = SDL_GetBasePath())
 	{
 		const auto executable_directory = normalize_path_string(base_path);
-		SDL_free(base_path);
 		if (!executable_directory.empty())
 			return executable_directory;
 	}
