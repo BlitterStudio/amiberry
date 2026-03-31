@@ -147,6 +147,9 @@ float vsync_vblank, vsync_hblank;
 bool beamracer_debug;
 bool gfx_hdr;
 
+// TODO: These are WinUAE stubs. With threaded Vulkan rendering, surface
+// lifecycle in doInit should be protected if concurrent access is possible.
+// Currently mitigated by skipping surface recreation when dimensions match.
 void gfx_lock()
 {
 }
@@ -565,13 +568,13 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	static uae_u8* p;
 	if (mon->rtg_locked) {
-		return p;
+		return mon->rtg_locked_ptr;
 	}
-	p = gfx_lock_picasso2(monid, fullupdate);
+	uae_u8* p = gfx_lock_picasso2(monid, fullupdate);
 	if (p) {
 		mon->rtg_locked = true;
+		mon->rtg_locked_ptr = p;
 	}
 	return p;
 }
@@ -645,8 +648,8 @@ bool vsync_switchmode(const int monid, int hz)
 		return true;
 	}
 
-	static struct PicassoResolution* oldmode;
-	static int oldhz;
+	static struct PicassoResolution* oldmode[MAX_AMIGAMONITORS];
+	static int oldhz[MAX_AMIGAMONITORS];
 	int w = mon->currentmode.native_width;
 	int h = mon->currentmode.native_height;
 	struct MultiDisplay* md = getdisplay(&currprefs, monid);
@@ -713,10 +716,10 @@ bool vsync_switchmode(const int monid, int hz)
 			}
 		}
 	}
-	if (found == oldmode && hz == oldhz)
+	if (found == oldmode[monid] && hz == oldhz[monid])
 		return true;
-	oldmode = found;
-	oldhz = hz;
+	oldmode[monid] = found;
+	oldhz[monid] = hz;
 	if (!found) {
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsync = 0;
 		if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsync) {
@@ -1511,15 +1514,16 @@ void auto_crop_image()
 			cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
 		rq = { dx, dy, width, height };
 		cr = { cx, cy, cw, ch };
-		if (amiga_surface) {
+		SDL_Surface* surface = get_amiga_surface(0);
+		if (surface) {
 			if (cr.x < 0) cr.x = 0;
 			if (cr.y < 0) cr.y = 0;
-			if (cr.x >= amiga_surface->w) cr.x = 0;
-			if (cr.y >= amiga_surface->h) cr.y = 0;
-			if (cr.w <= 0 || cr.x + cr.w > amiga_surface->w)
-				cr.w = amiga_surface->w - cr.x;
-			if (cr.h <= 0 || cr.y + cr.h > amiga_surface->h)
-				cr.h = amiga_surface->h - cr.y;
+			if (cr.x >= surface->w) cr.x = 0;
+			if (cr.y >= surface->h) cr.y = 0;
+			if (cr.w <= 0 || cr.x + cr.w > surface->w)
+				cr.w = surface->w - cr.x;
+			if (cr.h <= 0 || cr.y + cr.h > surface->h)
+				cr.h = surface->h - cr.y;
 		}
 
 		if (vkbd_allowed(0))

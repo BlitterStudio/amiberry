@@ -114,6 +114,7 @@ struct AmigaMonitor {
 	int screen_is_initialized;
 	int scalepicasso;
 	bool rtg_locked;
+	uae_u8* rtg_locked_ptr;
 	int p96_double_buffer_firstx, p96_double_buffer_lastx;
 	int p96_double_buffer_first, p96_double_buffer_last;
 	int p96_double_buffer_needs_flushing;
