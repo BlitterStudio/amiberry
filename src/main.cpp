@@ -957,6 +957,8 @@ void usage()
 	std::cout << " --help                     \n" << '\n';
 	std::cout << " --log                      Show log output to console." << '\n';
 	std::cout << " --jit-selftest             Run ARM64 JIT VM/write/execute selftest and exit." << '\n';
+	std::cout << " --dump-paths               Resolve startup paths, print them, and exit." << '\n';
+	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';

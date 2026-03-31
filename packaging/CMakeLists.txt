@@ -161,7 +161,9 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     set(CPACK_GENERATOR TGZ DEB RPM)
 elseif (WIN32)
-    set(CPACK_GENERATOR ZIP INNOSETUP)
+    # Windows release ZIPs are produced separately from the installed tree so
+    # they can be explicit portable packages with an amiberry.portable marker.
+    set(CPACK_GENERATOR INNOSETUP)
 
 	# InnoSetup installer settings
 	# Use a version-free install directory so upgrades replace the existing

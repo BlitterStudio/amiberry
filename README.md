@@ -88,6 +88,7 @@ brew install --cask amiberry
 ### Windows
 
 Download the [installer or portable ZIP](https://github.com/BlitterStudio/amiberry/releases/latest).
+The portable ZIP includes the `amiberry.portable` marker, so writable paths stay next to `Amiberry.exe` without extra setup.
 
 ### Android
 

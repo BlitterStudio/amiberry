@@ -14,6 +14,37 @@ static NSMutableDictionary<NSString*, NSURL*>*  s_active_urls = nil;
 static NSString* s_bookmarks_path = nil;
 static std::mutex s_mutex;
 
+static void release_bookmark_data()
+{
+	if (s_bookmark_data)
+	{
+		[s_bookmark_data release];
+		s_bookmark_data = nil;
+	}
+}
+
+static void release_active_urls()
+{
+	if (!s_active_urls)
+		return;
+
+	for (NSString* key in s_active_urls)
+	{
+		[s_active_urls[key] stopAccessingSecurityScopedResource];
+	}
+
+	[s_active_urls release];
+	s_active_urls = nil;
+}
+
+static NSString* get_bookmarks_plist_path(const std::string& directory_path)
+{
+	if (directory_path.empty())
+		return nil;
+
+	return [NSString stringWithUTF8String:(directory_path + "/bookmarks.plist").c_str()];
+}
+
 // Save bookmark data to disk
 static void save_bookmarks_plist()
 {
@@ -42,23 +73,20 @@ static void save_bookmarks_plist()
 }
 
 // Load bookmark data from disk
-static void load_bookmarks_plist()
+static bool load_bookmarks_plist_from_path(NSString* bookmarks_path)
 {
-	if (!s_bookmarks_path)
-		return;
+	release_bookmark_data();
 
-	if (![[NSFileManager defaultManager] fileExistsAtPath:s_bookmarks_path])
-	{
-		s_bookmark_data = [[NSMutableDictionary alloc] init];
-		return;
-	}
+	if (!bookmarks_path)
+		return false;
+	if (![[NSFileManager defaultManager] fileExistsAtPath:bookmarks_path])
+		return false;
 
-	NSData* plistData = [NSData dataWithContentsOfFile:s_bookmarks_path];
+	NSData* plistData = [NSData dataWithContentsOfFile:bookmarks_path];
 	if (!plistData)
 	{
-		write_log("Security bookmarks: failed to read %s\n", [s_bookmarks_path UTF8String]);
-		s_bookmark_data = [[NSMutableDictionary alloc] init];
-		return;
+		write_log("Security bookmarks: failed to read %s\n", [bookmarks_path UTF8String]);
+		return false;
 	}
 
 	NSError* error = nil;
@@ -69,13 +97,20 @@ static void load_bookmarks_plist()
 
 	if (error || ![plist isKindOfClass:[NSMutableDictionary class]])
 	{
-		write_log("Security bookmarks: failed to parse plist: %s\n",
+		write_log("Security bookmarks: failed to parse %s: %s\n",
+			[bookmarks_path UTF8String],
 			error ? [[error localizedDescription] UTF8String] : "not a dictionary");
-		s_bookmark_data = [[NSMutableDictionary alloc] init];
-		return;
+		return false;
 	}
 
-	s_bookmark_data = (NSMutableDictionary<NSString*, NSData*>*)plist;
+	s_bookmark_data = [(NSMutableDictionary<NSString*, NSData*>*)plist retain];
+	return true;
+}
+
+static void ensure_bookmark_data_initialized()
+{
+	if (!s_bookmark_data)
+		s_bookmark_data = [[NSMutableDictionary alloc] init];
 }
 
 // Resolve a single bookmark and start accessing it
@@ -146,17 +181,42 @@ static std::string normalize_to_directory(const std::string& path)
 	return result;
 }
 
-void macos_bookmarks_init(const std::string& app_support_dir)
+void macos_bookmarks_init(const std::string& settings_dir, const std::vector<std::string>& legacy_bookmarks_dirs)
 {
 	@autoreleasepool
 	{
 		std::lock_guard<std::mutex> lock(s_mutex);
 
-		s_bookmarks_path = [[NSString stringWithUTF8String:
-			(app_support_dir + "/bookmarks.plist").c_str()] retain];
+		[s_bookmarks_path release];
+		s_bookmarks_path = [get_bookmarks_plist_path(settings_dir) retain];
+
+		release_active_urls();
 		s_active_urls = [[NSMutableDictionary alloc] init];
 
-		load_bookmarks_plist();
+		const bool loaded_current_store = load_bookmarks_plist_from_path(s_bookmarks_path);
+		if (!loaded_current_store)
+		{
+			for (const auto& legacy_bookmarks_dir : legacy_bookmarks_dirs)
+			{
+				const auto legacy_bookmarks_path = get_bookmarks_plist_path(legacy_bookmarks_dir);
+				if (legacy_bookmarks_path == nil
+					|| [legacy_bookmarks_path isEqualToString:s_bookmarks_path])
+				{
+					continue;
+				}
+
+				if (load_bookmarks_plist_from_path(legacy_bookmarks_path))
+				{
+					write_log("Security bookmarks: migrating legacy store from %s to %s\n",
+						[legacy_bookmarks_path UTF8String],
+						[s_bookmarks_path UTF8String]);
+					save_bookmarks_plist();
+					break;
+				}
+			}
+		}
+
+		ensure_bookmark_data_initialized();
 
 		int resolved = 0;
 		int failed = 0;
@@ -180,18 +240,9 @@ void macos_bookmarks_shutdown()
 	{
 		std::lock_guard<std::mutex> lock(s_mutex);
 
-		if (s_active_urls)
-		{
-			for (NSString* key in s_active_urls)
-			{
-				[s_active_urls[key] stopAccessingSecurityScopedResource];
-			}
-			[s_active_urls release];
-			s_active_urls = nil;
-		}
+		release_active_urls();
 
-		[s_bookmark_data release];
-		s_bookmark_data = nil;
+		release_bookmark_data();
 
 		[s_bookmarks_path release];
 		s_bookmarks_path = nil;

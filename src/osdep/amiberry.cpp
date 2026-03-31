@@ -7,6 +7,8 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#else
+#include <io.h>
 #endif
 #include <algorithm>
 #include <cstdio>
@@ -443,12 +445,51 @@ std::string bezels_path;
 std::string settings_dir;
 std::string amiberry_conf_file;
 std::string amiberry_ini_file;
+static std::string resolved_settings_file;
 static bool amiberry_conf_file_overridden_from_cli = false;
-static bool legacy_layout_migrated = false;
-static bool legacy_layout_migration_failed = false;
-static bool legacy_layout_migration_conflicts = false;
+static bool suppress_runtime_path_side_effects = false;
+struct legacy_migration_state_summary
+{
+	bool config_migrated{};
+	bool config_failed{};
+	bool state_migrated{};
+	bool state_failed{};
+	bool visuals_migrated{};
+	bool visuals_failed{};
+	bool visuals_conflicts{};
+
+	bool any_migrated() const
+	{
+		return config_migrated || state_migrated || visuals_migrated;
+	}
+
+	bool any_failures() const
+	{
+		return config_failed || state_failed || visuals_failed || visuals_conflicts;
+	}
+
+	bool any_bootstrap_files_migrated() const
+	{
+		return config_migrated || state_migrated;
+	}
+
+	bool any_bootstrap_failures() const
+	{
+		return config_failed || state_failed;
+	}
+};
+
+enum class settings_resolution_source
+{
+	default_paths_only,
+	settings_dir,
+	legacy_settings,
+	cli_override,
+};
+
+static legacy_migration_state_summary legacy_migration_state;
 static bool startup_migration_notice_pending = false;
-static bool startup_migration_notice_is_failure = false;
+static settings_resolution_source resolved_settings_source = settings_resolution_source::default_paths_only;
 
 struct legacy_cleanup_item
 {
@@ -467,8 +508,64 @@ int max_uae_width;
 int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
-static void init_amiberry_dirs(bool portable_mode);
+static void init_amiberry_dirs(bool portable_mode, bool materialize_host_roots = true);
 void save_amiberry_settings();
+
+static const char* get_settings_resolution_source_name(const settings_resolution_source source)
+{
+	switch (source)
+	{
+	case settings_resolution_source::settings_dir:
+		return "settings_dir";
+	case settings_resolution_source::legacy_settings:
+		return "legacy_settings";
+	case settings_resolution_source::cli_override:
+		return "cli_override";
+	case settings_resolution_source::default_paths_only:
+	default:
+		return "default_paths_only";
+	}
+}
+
+static std::string describe_bootstrap_migration_subjects(const bool config, const bool state)
+{
+	if (config && state)
+		return "existing settings and state data";
+	if (config)
+		return "existing settings";
+	if (state)
+		return "existing state data";
+	return {};
+}
+
+static std::string describe_layout_migration_subjects(const legacy_migration_state_summary& state)
+{
+	const auto bootstrap_subjects =
+		describe_bootstrap_migration_subjects(state.config_migrated || state.config_failed,
+			state.state_migrated || state.state_failed);
+	const bool include_visuals = state.visuals_migrated || state.visuals_failed || state.visuals_conflicts;
+
+	if (!bootstrap_subjects.empty() && include_visuals)
+		return bootstrap_subjects + " and compatible visual assets";
+	if (!bootstrap_subjects.empty())
+		return bootstrap_subjects;
+	if (include_visuals)
+		return "compatible visual assets";
+	return "legacy files";
+}
+
+static std::string get_bootstrap_destination_label(const legacy_migration_state_summary& state)
+{
+	if (state.config_migrated || state.config_failed)
+	{
+		if (state.state_migrated || state.state_failed)
+			return "Bootstrap settings and state now live in:\n\n  ";
+		return "Bootstrap settings now live in:\n\n  ";
+	}
+	if (state.state_migrated || state.state_failed)
+		return "Bootstrap state now lives in:\n\n  ";
+	return {};
+}
 
 void set_last_loaded_config(const char* filename)
 {
@@ -4539,10 +4636,11 @@ void set_base_content_path(const std::string& newpath)
 	else
 	{
 		apply_base_content_path_preserving_overrides(newpath);
-		macos_bookmark_store(base_content_path);
+		if (!suppress_runtime_path_side_effects)
+			macos_bookmark_store(base_content_path);
 	}
 
-	if (!path_strings_match(previous_logfile_path, logfile_path))
+	if (!suppress_runtime_path_side_effects && !path_strings_match(previous_logfile_path, logfile_path))
 		reopen_active_logfile_if_needed();
 }
 
@@ -5592,16 +5690,70 @@ static std::string get_windows_executable_directory()
 }
 #endif
 
+static std::string strip_filename_from_path(const std::string& path)
+{
+	const auto last_sep = path.find_last_of("\\/");
+	if (last_sep == std::string::npos)
+		return {};
+	return normalize_path_string(path.substr(0, last_sep));
+}
+
+static std::string get_desktop_executable_directory()
+{
+#ifdef _WIN32
+	return get_windows_executable_directory();
+#elif defined(__MACH__)
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+		return strip_filename_from_path(exepath);
+	return {};
+#else
+	if (char* base_path = SDL_GetBasePath())
+	{
+		const auto executable_directory = normalize_path_string(base_path);
+		SDL_free(base_path);
+		if (!executable_directory.empty())
+			return executable_directory;
+	}
+
+	char exepath[MAX_DPATH];
+	const auto len = readlink("/proc/self/exe", exepath, sizeof exepath - 1);
+	if (len > 0)
+	{
+		exepath[len] = '\0';
+		return strip_filename_from_path(exepath);
+	}
+
+	return {};
+#endif
+}
+
+static std::string get_portable_root_directory()
+{
+	const auto executable_directory = get_desktop_executable_directory();
+	if (!executable_directory.empty())
+		return executable_directory;
+
+	return {};
+}
+
+static std::string get_portable_mode_marker_path()
+{
+#if defined(__MACH__) || defined(__ANDROID__)
+	return {};
+#else
+	return join_path(get_portable_root_directory(), "amiberry.portable");
+#endif
+}
+
 static bool is_portable_mode_enabled()
 {
-	if (my_existsfile2("amiberry.portable"))
-		return true;
-#ifdef _WIN32
-	const std::string portable_marker = get_windows_executable_directory() + "\\amiberry.portable";
+	const auto portable_marker = get_portable_mode_marker_path();
+	if (portable_marker.empty())
+		return false;
+
 	return my_existsfile2(portable_marker.c_str());
-#else
-	return false;
-#endif
 }
 
 bool get_portable_mode()
@@ -5610,13 +5762,48 @@ bool get_portable_mode()
 }
 
 #if !defined(__MACH__) && !defined(__ANDROID__)
+bool can_toggle_portable_mode(std::string* reason_out)
+{
+	const auto portable_root = get_portable_root_directory();
+	if (portable_root.empty())
+	{
+		if (reason_out != nullptr)
+			*reason_out = "Amiberry could not resolve the executable directory.";
+		return false;
+	}
+
+	const auto marker = get_portable_mode_marker_path();
+	if (marker.empty())
+	{
+		if (reason_out != nullptr)
+			*reason_out = "Amiberry could not resolve the portable marker path.";
+		return false;
+	}
+
+#ifdef _WIN32
+	const bool can_write_portable_root = _access(portable_root.c_str(), 2) == 0;
+#else
+	const bool can_write_portable_root = access(portable_root.c_str(), W_OK) == 0;
+#endif
+	if (!can_write_portable_root)
+	{
+		if (reason_out != nullptr)
+			*reason_out = "Amiberry cannot write to the application directory:\n\n" + portable_root;
+		return false;
+	}
+
+	return true;
+}
+
 bool set_portable_mode(bool enable)
 {
-#ifdef _WIN32
-	const std::string marker = get_windows_executable_directory() + "\\amiberry.portable";
-#else
-	const std::string marker = "amiberry.portable";
-#endif
+	if (!can_toggle_portable_mode(nullptr))
+		return false;
+
+	const auto marker = get_portable_mode_marker_path();
+	if (marker.empty())
+		return false;
+
 	if (enable)
 	{
 		FILE* f = fopen(marker.c_str(), "w");
@@ -5900,10 +6087,9 @@ std::string get_data_directory(bool portable_mode)
 #else
 	if (portable_mode)
 	{
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		write_log("Portable mode: Setting data directory to startup path: %s\n", tmp);
-		return  std::string(tmp) + "/data/";
+		const auto portable_root = get_portable_root_directory();
+		write_log("Portable mode: Setting data directory relative to executable path: %s\n", portable_root.c_str());
+		return join_path(portable_root, "data");
 	}
 
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
@@ -5925,26 +6111,62 @@ std::string get_data_directory(bool portable_mode)
 		return std::string(AMIBERRY_DATADIR) + "/data/";
 	}
 
-	// 3: Fallback Portable mode, all in the startup path
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	write_log("Using data directory from startup path: %s\n", tmp);
-	return  std::string(tmp) + "/data/";
+	// 3: Check for a local executable-relative data dir (e.g. local build or unpacked tree)
+	const auto executable_directory = get_desktop_executable_directory();
+	if (directory_exists(executable_directory, "/data"))
+	{
+		write_log("Using data directory from executable path: %s\n", executable_directory.c_str());
+		return join_path(executable_directory, "data");
+	}
+
+	write_log("Unable to resolve a usable data directory.\n");
+	return {};
 #endif
 }
 
 // This path wil be used to create most of the user-specific files and directories
 // Kickstart ROMs, HDD images, Floppy images will live under this directory
+#ifdef __MACH__
+static std::string get_default_macos_content_root()
+{
+	const auto user_home_dir = getenv("HOME");
+	if (user_home_dir == nullptr || user_home_dir[0] == '\0')
+		return {};
+
+	return normalize_path_string(std::string(user_home_dir) + "/Documents/Amiberry");
+}
+#endif
+
+#ifdef _WIN32
+static std::string get_default_windows_content_root()
+{
+	const auto user_home_dir = getenv("USERPROFILE");
+	if (user_home_dir == nullptr || user_home_dir[0] == '\0')
+		return {};
+
+	return normalize_path_string(std::string(user_home_dir) + "\\Amiberry");
+}
+#endif
+
+static std::string get_default_posix_content_root()
+{
+	const auto user_home_dir = getenv("HOME");
+	if (user_home_dir == nullptr || user_home_dir[0] == '\0')
+		return {};
+
+	return normalize_path_string(std::string(user_home_dir) + "/Amiberry");
+}
+
 std::string get_home_directory(const bool portable_mode)
 {
 #if defined(__ANDROID__)
-    const char* path = SDL_GetAndroidExternalStoragePath();
-    if (path) {
-        std::string home(path);
-        home += "/";
-        return home;
-    }
-    return prefix_with_application_directory_path("");
+	const char* path = SDL_GetAndroidExternalStoragePath();
+	if (path) {
+		std::string home(path);
+		home += "/";
+		return home;
+	}
+	return prefix_with_application_directory_path("");
 #elif defined(_WIN32)
 	if (portable_mode)
 	{
@@ -5953,84 +6175,68 @@ std::string get_home_directory(const bool portable_mode)
 	}
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-		if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
 		{
 			write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 			return { env_home_dir };
 		}
-		const auto user_home_dir = getenv("USERPROFILE");
-		if (user_home_dir != nullptr)
+		const auto default_home_dir = get_default_windows_content_root();
+		if (!default_home_dir.empty())
 		{
-			if (!directory_exists(user_home_dir, "\\Amiberry"))
-			{
-				my_mkdir((std::string(user_home_dir) + "\\Amiberry").c_str());
-			}
+			// Keep path discovery side-effect free so migrated/customized setups do not recreate default folders.
 			write_log("Using home directory from %%USERPROFILE%%\\Amiberry\n");
-			auto result = std::string(user_home_dir);
-			return result.append("\\Amiberry");
+			return default_home_dir;
 		}
 		write_log("Fallback: Setting home directory to executable path\n");
 		return get_windows_executable_directory();
 	}
 #endif
 #ifdef __MACH__
-	// macOS: check AMIBERRY_HOME_DIR first, then default to ~/Documents/Amiberry
+	// macOS: check AMIBERRY_HOME_DIR first, then default to ~/Documents/Amiberry.
+	// Keep path discovery side-effect free so migrated setups do not recreate legacy folders.
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-		if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
 		{
 			write_log("macOS: Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 			return { env_home_dir };
 		}
-		const auto user_home_dir = getenv("HOME");
-		if (user_home_dir != nullptr)
+		const auto default_home_dir = get_default_macos_content_root();
+		if (!default_home_dir.empty())
 		{
-			std::string new_dir = std::string(user_home_dir) + "/Documents/Amiberry";
-			if (!my_existsdir(new_dir.c_str()))
-				my_mkdir(new_dir.c_str());
-			write_log("macOS: Using home directory %s\n", new_dir.c_str());
-			return new_dir;
+			write_log("macOS: Using home directory %s\n", default_home_dir.c_str());
+			return default_home_dir;
 		}
 	}
 #endif
 	if (portable_mode)
 	{
-		// Portable mode, all in startup path
-		write_log("Portable mode: Setting home directory to startup path\n");
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return {tmp};
+		write_log("Portable mode: Setting home directory to executable path\n");
+		return get_portable_root_directory();
 	}
 
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-	const auto user_home_dir = getenv("HOME");
 
 	// 1: Check if the $AMIBERRY_HOME_DIR ENV variable is set
-	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+	if (env_home_dir != nullptr && env_home_dir[0] != '\0')
 	{
 		// If the ENV variable is set, use it
 		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 		return { env_home_dir };
 	}
 	// 2: Check $HOME/Amiberry
-	if (user_home_dir != nullptr)
+	const auto default_home_dir = get_default_posix_content_root();
+	if (!default_home_dir.empty())
 	{
-		if (!directory_exists(user_home_dir, "/Amiberry"))
-		{
-			// If $HOME exists, but not the Amiberry subdirectory, create it
-			my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-		}
-		// $HOME/Amiberry exists, use it
+		// Keep path discovery side-effect free so migrated/customized setups do not recreate default folders.
 		write_log("Using home directory from $HOME/Amiberry\n");
-		auto result = std::string(user_home_dir);
-		return result.append("/Amiberry");
+		return default_home_dir;
 	}
 
-	// 3: Fallback Portable mode, all in startup path
-	write_log("Fallback Portable mode: Setting home directory to startup path\n");
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	return {tmp};
+	// 3: Fallback to the executable directory when no user home is available.
+	const auto portable_root = get_portable_root_directory();
+	write_log("Fallback: Setting home directory to executable path\n");
+	return portable_root;
 }
 
 // The location of .uae configurations
@@ -6039,21 +6245,14 @@ std::string get_config_directory(bool portable_mode)
 #ifdef __MACH__
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-		if (env_home_dir != nullptr && my_existsdir(env_home_dir))
-		{
-			std::string config = std::string(env_home_dir) + "/Configurations";
-			if (!my_existsdir(config.c_str()))
-				my_mkdir(config.c_str());
-			return config;
-		}
-		const auto user_home_dir = getenv("HOME");
-		std::string home_dir = std::string(user_home_dir) + "/Documents/Amiberry";
-		if (!my_existsdir(home_dir.c_str()))
-			my_mkdir(home_dir.c_str());
-		std::string config = home_dir + "/Configurations";
-		if (!my_existsdir(config.c_str()))
-			my_mkdir(config.c_str());
-		return config;
+		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
+			return normalize_path_string(std::string(env_home_dir) + "/Configurations");
+
+		const auto default_home_dir = get_default_macos_content_root();
+		if (!default_home_dir.empty())
+			return join_path(default_home_dir, "Configurations");
+
+		return {};
 	}
 #elif defined(_WIN32)
 	if (portable_mode)
@@ -6062,16 +6261,13 @@ std::string get_config_directory(bool portable_mode)
 		return get_windows_executable_directory() + "\\conf";
 	}
 	{
-		const auto user_home_dir = getenv("USERPROFILE");
-		if (user_home_dir != nullptr)
-		{
-			if (!directory_exists(user_home_dir, "\\Amiberry"))
-				my_mkdir((std::string(user_home_dir) + "\\Amiberry").c_str());
-			if (!directory_exists(user_home_dir, "\\Amiberry\\Configurations"))
-				my_mkdir((std::string(user_home_dir) + "\\Amiberry\\Configurations").c_str());
-			auto result = std::string(user_home_dir);
-			return result.append("\\Amiberry\\Configurations");
-		}
+		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
+			return normalize_path_string(std::string(env_home_dir) + "\\Configurations");
+
+		const auto default_home_dir = get_default_windows_content_root();
+		if (!default_home_dir.empty())
+			return normalize_path_string(default_home_dir + "\\Configurations");
 		return get_windows_executable_directory() + "\\conf";
 	}
 #elif defined(__ANDROID__)
@@ -6083,35 +6279,32 @@ std::string get_config_directory(bool portable_mode)
 #else
 	if (portable_mode)
 	{
-		write_log("Portable mode: Setting config directory to startup path\n");
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return { std::string(tmp) + "/conf" };
+		write_log("Portable mode: Setting config directory to executable path\n");
+		return join_path(get_portable_root_directory(), "conf");
 	}
 
 	const auto env_conf_dir = getenv("AMIBERRY_CONFIG_DIR");
-	const auto user_home_dir = getenv("HOME");
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 
 	// 1: Check if the $AMIBERRY_CONFIG_DIR ENV variable is set
-	if (env_conf_dir != nullptr)
+	if (env_conf_dir != nullptr && env_conf_dir[0] != '\0')
 	{
 		// If the ENV variable is set, use it
 		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
 		return { env_conf_dir };
 	}
-	// 2: Check $HOME/Amiberry/conf
-	if (user_home_dir != nullptr)
-	{
-		auto result = std::string(user_home_dir);
-		return result.append("/Amiberry/conf");
-	}
+	// 2: Check if the $AMIBERRY_HOME_DIR ENV variable is set
+	if (env_home_dir != nullptr && env_home_dir[0] != '\0')
+		return join_path(env_home_dir, "conf");
 
-	// 3: Fallback Portable mode, all in startup path
-	// Should never really end up here, unless $HOME is not defined
-	write_log("Using config directory from startup path\n");
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	return { std::string(tmp) + "/conf" };
+	// 2: Check $HOME/Amiberry/conf
+	const auto default_home_dir = get_default_posix_content_root();
+	if (!default_home_dir.empty())
+		return join_path(default_home_dir, "conf");
+
+	// 3: Fallback to the executable directory when $HOME is unavailable.
+	write_log("Using config directory from executable path\n");
+	return join_path(get_portable_root_directory(), "conf");
 #endif
 }
 
@@ -6138,7 +6331,7 @@ std::string get_plugins_directory(bool portable_mode)
 	}
 	return directory + "/Resources/plugins/";
 #elif defined(__ANDROID__)
-    return prefix_with_application_directory_path("plugins/");
+	return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
 	{
 		return get_windows_executable_directory() + "\\plugins";
@@ -6146,15 +6339,13 @@ std::string get_plugins_directory(bool portable_mode)
 #else
 	if (portable_mode)
 	{
-		write_log("Portable mode: Setting plugins directory to startup path\n");
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		return { std::string(tmp) + "/plugins" };
+		write_log("Portable mode: Setting plugins directory to executable path\n");
+		return join_path(get_portable_root_directory(), "plugins");
 	}
 
 	// 1: Check if the $AMIBERRY_PLUGINS_DIR ENV variable is set
 	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
-	if (env_plugins_dir != nullptr && my_existsdir(env_plugins_dir))
+	if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
 	{
 		// If the ENV variable is set, use it
 		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
@@ -6168,48 +6359,27 @@ std::string get_plugins_directory(bool portable_mode)
 	}
 	// 3: Check for $AMIBERRY_HOME_DIR/plugins
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+	if (env_home_dir != nullptr && env_home_dir[0] != '\0')
 	{
 		write_log("Using plugins directory from AMIBERRY_HOME_DIR/plugins\n");
 		return { std::string(env_home_dir) + "/plugins" };
 	}
-	// 4: Check for ~/Amiberry/plugins
-	const auto user_home_dir = getenv("HOME");
-	if (user_home_dir != nullptr)
+	// 4: Check for ~/Amiberry/plugins.
+	// Keep path discovery side-effect free so migrated/customized setups do not recreate default folders.
+	const auto default_home_dir = get_default_posix_content_root();
+	if (!default_home_dir.empty())
 	{
-		if (!directory_exists(user_home_dir, "/Amiberry"))
-		{
-			my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-		}
-		// $HOME/Amiberry exists, use it
-		if (!directory_exists(user_home_dir, "/Amiberry/plugins"))
-		{
-			my_mkdir((std::string(user_home_dir) + "/Amiberry/plugins").c_str());
-		}
 		write_log("Using plugins directory from $HOME/Amiberry/plugins\n");
-		return { std::string(user_home_dir) + "/Amiberry/plugins" };
+		return join_path(default_home_dir, "plugins");
 	}
 
-	// 4: Fallback Portable mode, all in the startup path
-	write_log("Using plugins directory from startup path\n");
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	return { std::string(tmp) + "/plugins" };
+	// 5: Fallback to the executable directory when no other plugin path is available.
+	write_log("Using plugins directory from executable path\n");
+	return join_path(get_portable_root_directory(), "plugins");
 #endif
 }
 
-static std::string get_portable_root_directory()
-{
-#ifdef _WIN32
-	return get_windows_executable_directory();
-#else
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	return { tmp };
-#endif
-}
-
-static void append_settings_candidate(std::vector<std::string>& candidates, const std::string& candidate)
+static void append_unique_path_candidate(std::vector<std::string>& candidates, const std::string& candidate)
 {
 	if (candidate.empty())
 		return;
@@ -6221,6 +6391,11 @@ static void append_settings_candidate(std::vector<std::string>& candidates, cons
 			return;
 	}
 	candidates.emplace_back(normalized_candidate);
+}
+
+static void append_settings_candidate(std::vector<std::string>& candidates, const std::string& candidate)
+{
+	append_unique_path_candidate(candidates, candidate);
 }
 
 static std::string get_settings_directory(const bool portable_mode)
@@ -6284,14 +6459,59 @@ static std::vector<std::string> get_legacy_settings_candidate_directories(const 
 			join_path(std::string(user_home_dir) + "/Library/Application Support/Amiberry", "Configurations"));
 	}
 #elif defined(_WIN32)
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	if (env_home_dir != nullptr && env_home_dir[0] != '\0' && my_existsdir(env_home_dir))
+		append_settings_candidate(candidates, join_path(env_home_dir, "Configurations"));
+
 	const auto user_home_dir = getenv("USERPROFILE");
 	if (user_home_dir != nullptr && user_home_dir[0] != '\0')
 		append_settings_candidate(candidates, std::string(user_home_dir) + "\\Amiberry\\Configurations");
 #elif defined(__ANDROID__)
 	append_settings_candidate(candidates, get_home_directory(false));
+#else
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+		append_settings_candidate(candidates, join_path(env_home_dir, "conf"));
+
+	const auto default_home_dir = get_default_posix_content_root();
+	if (!default_home_dir.empty())
+		append_settings_candidate(candidates, join_path(default_home_dir, "conf"));
 #endif
 
 	return candidates;
+}
+
+static std::vector<std::string> get_legacy_bookmark_candidate_directories(const bool portable_mode)
+{
+	std::vector<std::string> candidates;
+
+#if defined(MACOS_APP_STORE)
+	append_settings_candidate(candidates, home_dir);
+	append_settings_candidate(candidates, get_home_directory(portable_mode));
+#endif
+
+	return candidates;
+}
+
+static std::string get_existing_settings_file_for_resolution(const bool portable_mode)
+{
+	if (!amiberry_conf_file.empty() && my_existsfile2(amiberry_conf_file.c_str()))
+		return amiberry_conf_file;
+
+	if (amiberry_conf_file_overridden_from_cli)
+		return {};
+
+	for (const auto& candidate_directory : get_legacy_settings_candidate_directories(portable_mode))
+	{
+		if (candidate_directory.empty())
+			continue;
+
+		const auto candidate_file = join_path(candidate_directory, "amiberry.conf");
+		if (my_existsfile2(candidate_file.c_str()))
+			return candidate_file;
+	}
+
+	return {};
 }
 
 static bool copy_file_if_missing(const std::string& source_file, const std::string& destination_file, bool& failed)
@@ -6356,10 +6576,14 @@ static void migrate_legacy_settings_files(const bool portable_mode)
 	bool ini_copy_failed = false;
 	const bool conf_copied = import_legacy_settings_file_if_needed(candidate_directories, "amiberry.conf", conf_copy_failed);
 	const bool ini_copied = import_legacy_settings_file_if_needed(candidate_directories, "amiberry.ini", ini_copy_failed);
-	if (conf_copied || ini_copied)
-		legacy_layout_migrated = true;
-	if (conf_copy_failed || ini_copy_failed)
-		legacy_layout_migration_failed = true;
+	if (conf_copied)
+		legacy_migration_state.config_migrated = true;
+	if (conf_copy_failed)
+		legacy_migration_state.config_failed = true;
+	if (ini_copied)
+		legacy_migration_state.state_migrated = true;
+	if (ini_copy_failed)
+		legacy_migration_state.state_failed = true;
 }
 
 static void append_visual_asset_candidate(std::vector<visual_asset_path_set>& candidates,
@@ -6522,13 +6746,13 @@ static void migrate_legacy_visual_asset_directories()
 	migrate_visual_directory(shaders_path_descriptor, current_visual_paths.shaders_path, baseline_visual_paths.shaders_path);
 	migrate_visual_directory(bezels_path_descriptor, current_visual_paths.bezels_path, baseline_visual_paths.bezels_path);
 	if (migrated_any)
-		legacy_layout_migrated = true;
+		legacy_migration_state.visuals_migrated = true;
 	if (migration_failed)
-		legacy_layout_migration_failed = true;
+		legacy_migration_state.visuals_failed = true;
 	// Duplicate filenames in an already-migrated layout should not suppress the later cleanup prompt.
 	// We only keep the "needs manual review" state when this run also imported new files.
 	if (migration_conflicts && migrated_any)
-		legacy_layout_migration_conflicts = true;
+		legacy_migration_state.visuals_conflicts = true;
 }
 
 static constexpr auto LEGACY_CLEANUP_DISMISSED_KEY = _T("LegacyCleanupDismissed");
@@ -6565,6 +6789,22 @@ static void collect_legacy_settings_cleanup_items()
 		if (my_existsfile2(legacy_ini.c_str()) && !path_strings_match(legacy_ini, amiberry_ini_file))
 			append_legacy_cleanup_item("Legacy state file", legacy_ini, false);
 	}
+}
+
+static void collect_legacy_bookmark_cleanup_items()
+{
+#if defined(MACOS_APP_STORE)
+	const auto current_bookmarks_file = join_path(settings_dir, "bookmarks.plist");
+	for (const auto& candidate_directory : get_legacy_bookmark_candidate_directories(g_portable_mode))
+	{
+		const auto legacy_bookmarks_file = join_path(candidate_directory, "bookmarks.plist");
+		if (my_existsfile2(legacy_bookmarks_file.c_str())
+			&& !path_strings_match(legacy_bookmarks_file, current_bookmarks_file))
+		{
+			append_legacy_cleanup_item("Legacy security bookmarks", legacy_bookmarks_file, false);
+		}
+	}
+#endif
 }
 
 static std::vector<visual_asset_path_set> get_legacy_visual_asset_candidates_for_current_state()
@@ -6682,6 +6922,7 @@ static void refresh_legacy_cleanup_items()
 {
 	legacy_cleanup_items.clear();
 	collect_legacy_settings_cleanup_items();
+	collect_legacy_bookmark_cleanup_items();
 	collect_legacy_visual_cleanup_items();
 }
 
@@ -6696,10 +6937,10 @@ static void initialize_legacy_cleanup_prompt_state()
 		return;
 	}
 
-	if (legacy_layout_migration_failed || legacy_layout_migration_conflicts)
+	if (legacy_migration_state.any_failures())
 		return;
 
-	const bool migration_happened_this_run = legacy_layout_migrated;
+	const bool migration_happened_this_run = legacy_migration_state.any_migrated();
 	const int cleanup_dismissed = regexists(nullptr, LEGACY_CLEANUP_DISMISSED_KEY);
 
 	if (migration_happened_this_run)
@@ -6793,13 +7034,12 @@ void dismiss_legacy_cleanup_prompt()
 
 static void update_startup_migration_notice_state()
 {
-	startup_migration_notice_pending = legacy_layout_migrated || legacy_layout_migration_failed;
-	startup_migration_notice_is_failure = legacy_layout_migration_failed || legacy_layout_migration_conflicts;
+	startup_migration_notice_pending = legacy_migration_state.any_migrated() || legacy_migration_state.any_failures();
 }
 
 static void persist_bootstrap_settings_after_migration_if_needed()
 {
-	if (!legacy_layout_migrated || amiberry_conf_file_overridden_from_cli)
+	if (!legacy_migration_state.config_migrated || amiberry_conf_file_overridden_from_cli)
 		return;
 
 	save_amiberry_settings();
@@ -6815,37 +7055,59 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 
 	const auto settings_root = settings_dir.empty() ? get_settings_directory(g_portable_mode) : settings_dir;
 	const auto visuals_root = get_current_visual_assets_root_path();
+	const auto subject_description = describe_layout_migration_subjects(legacy_migration_state);
+	const auto bootstrap_destination_label = get_bootstrap_destination_label(legacy_migration_state);
 
-	if (startup_migration_notice_is_failure)
+	if (legacy_migration_state.any_failures())
 	{
 		title = "Amiberry Migration Review Needed";
-		message = "Amiberry could not fully migrate your existing settings and visual assets into the new layout.\n\n";
-		message += "Bootstrap settings now live in:\n\n  " + settings_root + "\n\n";
-		message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
+		message = "Amiberry could not fully migrate your " + subject_description + " into the new layout.\n\n";
+
+		if (!bootstrap_destination_label.empty())
+			message += bootstrap_destination_label + settings_root + "\n\n";
+		if (legacy_migration_state.visuals_migrated
+			|| legacy_migration_state.visuals_failed
+			|| legacy_migration_state.visuals_conflicts)
+		{
+			message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
+		}
 		message += "Existing files were left in place whenever possible.\nPlease check the log file for details.";
 		return true;
 	}
 
 	title = "Amiberry Migration";
-	message = "Amiberry imported your existing settings and any compatible visual assets into the new layout.\n\n";
-	message += "Bootstrap settings now live in:\n\n  " + settings_root + "\n\n";
-	message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
+	message = "Amiberry imported your " + subject_description + " into the new layout.\n\n";
+
+	if (!bootstrap_destination_label.empty())
+		message += bootstrap_destination_label + settings_root + "\n\n";
+	if (legacy_migration_state.visuals_migrated)
+		message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
 	message += "Your remaining content folders stay in their existing location.";
 	return true;
 }
 
-static void resolve_bootstrap_settings_paths(const bool portable_mode)
+static void resolve_bootstrap_settings_paths(const bool portable_mode, const bool ensure_settings_root)
 {
 	settings_dir = get_settings_directory(portable_mode);
-	ensure_directory_exists(settings_dir);
+	if (ensure_settings_root)
+		ensure_directory_exists(settings_dir);
 	amiberry_ini_file = join_path(settings_dir, "amiberry.ini");
 	if (!amiberry_conf_file_overridden_from_cli)
 		amiberry_conf_file = join_path(settings_dir, "amiberry.conf");
 }
 
-void create_missing_amiberry_folders()
+static bool ensure_directory_exists_if_missing(const std::string& directory_path)
 {
+	if (directory_path.empty() || my_existsdir(directory_path.c_str()))
+		return false;
+
+	ensure_directory_exists(directory_path);
+	return true;
+}
+
 #ifdef __MACH__
+static std::string get_macos_app_resources_directory()
+{
 	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
 	std::string app_directory;
@@ -6862,183 +7124,385 @@ void create_missing_amiberry_folders()
 			app_directory = app_directory.substr(0, last_slash_idx);
 		}
 	}
+	if (app_directory.empty())
+		return {};
+	return join_path(app_directory, "Resources");
+}
 #endif
-	// Helper to copy directory contents using std::filesystem (handles spaces in paths)
-	auto copy_dir_contents = [](const std::string& src, const std::string& dst) {
-		try {
-			std::filesystem::copy(src, dst,
-				std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
-		} catch (const std::exception& e) {
-			write_log("Failed to copy from %s to %s: %s\n", src.c_str(), dst.c_str(), e.what());
-		}
+
+static std::vector<std::string> get_seed_source_candidates(const std::string& subdirectory,
+	const bool include_usr_local_share)
+{
+	std::vector<std::string> candidates;
+#ifdef __MACH__
+	const auto app_resources_dir = get_macos_app_resources_directory();
+	if (!app_resources_dir.empty())
+		append_unique_path_candidate(candidates, join_path(app_resources_dir, subdirectory));
+#else
+	append_unique_path_candidate(candidates, join_path(AMIBERRY_DATADIR, subdirectory));
+#if !defined(_WIN32)
+	append_unique_path_candidate(candidates, join_path("/usr/share/amiberry", subdirectory));
+	if (include_usr_local_share)
+		append_unique_path_candidate(candidates, join_path("/usr/local/share/amiberry", subdirectory));
+#endif
+#endif
+	return candidates;
+}
+
+static bool copy_missing_directory_contents_if_exists(const std::string& source_dir, const std::string& destination_dir)
+{
+	if (source_dir.empty() || destination_dir.empty() || !my_existsdir(source_dir.c_str()))
+		return false;
+
+	ensure_directory_exists(destination_dir);
+
+	try
+	{
+		std::filesystem::copy(source_dir, destination_dir,
+			std::filesystem::copy_options::recursive | std::filesystem::copy_options::skip_existing);
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		write_log("Failed to seed missing files from %s to %s: %s\n",
+			source_dir.c_str(), destination_dir.c_str(), e.what());
+		return false;
+	}
+}
+
+static bool seed_missing_directory_contents_from_candidates(const std::string& destination_dir,
+	const std::vector<std::string>& source_candidates)
+{
+	for (const auto& candidate : source_candidates)
+	{
+		if (copy_missing_directory_contents_if_exists(candidate, destination_dir))
+			return true;
+	}
+
+	return false;
+}
+
+static void ensure_amiberry_user_directories()
+{
+	ensure_directory_exists_if_missing(config_path);
+	if (!plugins_dir.empty())
+		ensure_directory_exists_if_missing(plugins_dir);
+
+	ensure_directory_exists_if_missing(controllers_path);
+	ensure_directory_exists_if_missing(whdboot_path);
+	ensure_directory_exists_if_missing(whdload_arch_path);
+	ensure_directory_exists_if_missing(floppy_path);
+	ensure_directory_exists_if_missing(harddrive_path);
+	ensure_directory_exists_if_missing(cdrom_path);
+	ensure_directory_exists_if_missing(rom_path);
+	ensure_directory_exists_if_missing(saveimage_dir);
+	ensure_directory_exists_if_missing(savestate_dir);
+	ensure_directory_exists_if_missing(ripper_path);
+	ensure_directory_exists_if_missing(input_dir);
+	ensure_directory_exists_if_missing(screenshot_dir);
+	ensure_directory_exists_if_missing(nvram_dir);
+	ensure_directory_exists_if_missing(video_dir);
+	ensure_directory_exists_if_missing(themes_path);
+	ensure_directory_exists_if_missing(shaders_path);
+	ensure_directory_exists_if_missing(bezels_path);
+}
+
+static bool controller_seed_files_missing()
+{
+	return !file_exists(join_path(controllers_path, "gamecontrollerdb.txt"));
+}
+
+static void seed_default_controller_files_if_needed()
+{
+	if (!controller_seed_files_missing())
+		return;
+
+	seed_missing_directory_contents_from_candidates(controllers_path,
+		get_seed_source_candidates("controllers", true));
+}
+
+static void ensure_whdboot_runtime_directories()
+{
+	const char* subdirectories[] = {
+		"save-data",
+		"save-data/Autoboots",
+		"save-data/Debugs",
+		"save-data/Kickstarts",
+		"save-data/Savegames",
+		"game-data",
 	};
 
-	if (!my_existsdir(config_path.c_str()))
-		my_mkdir(config_path.c_str());
-	if (!my_existsdir(controllers_path.c_str()))
+	for (const auto* subdirectory : subdirectories)
+		ensure_directory_exists(join_path(whdboot_path, subdirectory));
+}
+
+extern std::string get_xml_timestamp(const std::string& xml_filename);
+extern std::string get_json_timestamp(const std::string& json_filename);
+
+static bool should_cancel_whdboot_download(std::atomic<bool>* cancel_flag)
+{
+	return cancel_flag != nullptr && cancel_flag->load();
+}
+
+static bool report_whdboot_download_progress(
+	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
+	std::atomic<bool>* cancel_flag,
+	const int step,
+	const int total_steps,
+	const std::string& label,
+	const int64_t bytes_downloaded,
+	const int64_t bytes_total)
+{
+	if (should_cancel_whdboot_download(cancel_flag))
+		return true;
+
+	if (!progress_cb)
+		return false;
+
+	whdboot_download_progress progress;
+	progress.step = step;
+	progress.total_steps = total_steps;
+	progress.label = label;
+	progress.bytes_downloaded = bytes_downloaded;
+	progress.bytes_total = bytes_total;
+	return progress_cb(progress);
+}
+
+whdboot_download_result download_whdboot_assets(
+	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
+	std::atomic<bool>* cancel_flag)
+{
+	constexpr int total_steps = 10;
+	whdboot_download_result result;
+	bool any_success = false;
+	bool any_failure = false;
+
+	write_log("Downloading WHDBoot runtime assets into %s\n", whdboot_path.c_str());
+
+	ensure_whdboot_runtime_directories();
+
+	const auto do_download = [&](const int step, const std::string& label, const std::string& url,
+		const std::string& destination, const bool keep_backup, const bool record_failure = true) -> bool
 	{
-		my_mkdir(controllers_path.c_str());
-#ifdef __MACH__
-		const std::string default_controller_path = app_directory + "/Resources/controllers/";
-#else
-		const std::string default_controller_path = AMIBERRY_DATADIR "/controllers/";
-#endif
-		// copy default controller files, if they exist in AMIBERRY_DATADIR/controllers
-		if (my_existsdir(default_controller_path.c_str()))
-		{
-			copy_dir_contents(default_controller_path, controllers_path);
-		}
-		else if (my_existsdir("/usr/share/amiberry/controllers/"))
-		{
-			copy_dir_contents("/usr/share/amiberry/controllers/", controllers_path);
-		}
-	}
-	if (!my_existsdir(whdboot_path.c_str()))
-	{
-		my_mkdir(whdboot_path.c_str());
-#ifdef __MACH__
-		const std::string default_whdboot_path = app_directory + "/Resources/whdboot/";
-#else
-		const std::string default_whdboot_path = AMIBERRY_DATADIR "/whdboot/";
-#endif
-		// copy default whdboot files, if they exist in AMIBERRY_DATADIR/whdboot
-		if (my_existsdir(default_whdboot_path.c_str()))
-		{
-			copy_dir_contents(default_whdboot_path, whdboot_path);
-		}
-		else if (my_existsdir("/usr/share/amiberry/whdboot/"))
-		{
-			copy_dir_contents("/usr/share/amiberry/whdboot/", whdboot_path);
-		}
-		else if (my_existsdir("/usr/local/share/amiberry/whdboot/"))
-		{
-			copy_dir_contents("/usr/local/share/amiberry/whdboot/", whdboot_path);
-		}
-		else
-		{
-			write_log("No WHDLoad boot files found in %s, %s, or %s\n", default_whdboot_path.c_str(), "/usr/share/amiberry/whdboot/", "/usr/local/share/amiberry/whdboot/");
-			write_log("Attempting to download them from the internet...\n");
+		if (report_whdboot_download_progress(progress_cb, cancel_flag, step, total_steps, label, 0, 0))
+			return false;
 
-			std::string directory_name = join_path(whdboot_path, "save-data");
-			if (!my_existsdir(directory_name.c_str()))
-				my_mkdir(directory_name.c_str());
-
-			directory_name = join_path(whdboot_path, "save-data/Autoboots");
-			if (!my_existsdir(directory_name.c_str()))
-				my_mkdir(directory_name.c_str());
-
-			directory_name = join_path(whdboot_path, "save-data/Debugs");
-			if (!my_existsdir(directory_name.c_str()))
-				my_mkdir(directory_name.c_str());
-
-			directory_name = join_path(whdboot_path, "save-data/Kickstarts");
-			if (!my_existsdir(directory_name.c_str()))
-				my_mkdir(directory_name.c_str());
-
-			directory_name = join_path(whdboot_path, "save-data/Savegames");
-			if (!my_existsdir(directory_name.c_str()))
-				my_mkdir(directory_name.c_str());
-
-			directory_name = join_path(whdboot_path, "game-data");
-			if (!my_existsdir(directory_name.c_str()))
-				my_mkdir(directory_name.c_str());
-
-			//  download WHDLoad executable
-			std:: string destination = get_whdbootpath().append("WHDLoad");
-			write_log("Downloading %s ...\n", destination.c_str());
-			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
-
-			//  download JST executable
-			destination = get_whdbootpath().append("JST");
-			write_log("Downloading %s ...\n", destination.c_str());
-			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", destination, false);
-
-			//  download AmiQuit executable
-			destination = get_whdbootpath().append("AmiQuit");
-			write_log("Downloading %s ...\n", destination.c_str());
-			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", destination, false);
-
-			//  download boot-data.zip
-			destination = get_whdbootpath().append("boot-data.zip");
-			write_log("Downloading %s ...\n", destination.c_str());
-			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
-
-			// download kickstart RTB files for maximum compatibility
-			download_rtb("kick33180.A500.RTB");
-			download_rtb("kick34005.A500.RTB");
-			download_rtb("kick40063.A600.RTB");
-			download_rtb("kick40068.A1200.RTB");
-			download_rtb("kick40068.A4000.RTB");
-
-			destination = get_whdbootpath().append("game-data/whdload_db.json");
-			if (!download_file("https://raw.githubusercontent.com/BlitterStudio/amiberry-game-db/main/whdload_db.json", destination, true))
+		write_log("Downloading %s ...\n", destination.c_str());
+		const auto ok = download_file(url, destination, keep_backup,
+			[&](const int64_t dlnow, const int64_t dltotal)
 			{
-				// Fallback to XML from legacy source
-				destination = get_whdbootpath().append("game-data/whdload_db.xml");
-				download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
-			}
-		}
-	}
-	if (!my_existsdir(whdload_arch_path.c_str()))
-		my_mkdir(whdload_arch_path.c_str());
-	if (!my_existsdir(floppy_path.c_str()))
-		my_mkdir(floppy_path.c_str());
-	if (!my_existsdir(harddrive_path.c_str()))
-		my_mkdir(harddrive_path.c_str());
-	if (!my_existsdir(cdrom_path.c_str()))
-		my_mkdir(cdrom_path.c_str());
-	if (!my_existsdir(rom_path.c_str()))
+				return report_whdboot_download_progress(progress_cb, cancel_flag, step, total_steps,
+					label, dlnow, dltotal);
+			},
+			cancel_flag);
+		if (ok)
+			any_success = true;
+		else if (record_failure && !should_cancel_whdboot_download(cancel_flag))
+			any_failure = true;
+		return ok;
+	};
+
+	int step = 0;
+	auto destination = join_path(whdboot_path, "WHDLoad");
+	do_download(++step, "WHDLoad",
+		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true",
+		destination, false);
+	if (should_cancel_whdboot_download(cancel_flag))
 	{
-		my_mkdir(rom_path.c_str());
-#ifdef __MACH__
-		const std::string default_roms_path = app_directory + "/Resources/roms/";
-#else
-		const std::string default_roms_path = AMIBERRY_DATADIR "/roms/";
-#endif
-		// copy default kickstart files, if they exist in AMIBERRY_DATADIR/roms
-		if (my_existsdir(default_roms_path.c_str()))
+		result.outcome = whdboot_download_outcome::cancelled;
+		return result;
+	}
+
+	destination = join_path(whdboot_path, "JST");
+	do_download(++step, "JST",
+		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true",
+		destination, false);
+	if (should_cancel_whdboot_download(cancel_flag))
+	{
+		result.outcome = whdboot_download_outcome::cancelled;
+		return result;
+	}
+
+	destination = join_path(whdboot_path, "AmiQuit");
+	do_download(++step, "AmiQuit",
+		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true",
+		destination, false);
+	if (should_cancel_whdboot_download(cancel_flag))
+	{
+		result.outcome = whdboot_download_outcome::cancelled;
+		return result;
+	}
+
+	destination = join_path(whdboot_path, "boot-data.zip");
+	do_download(++step, "boot-data.zip",
+		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true",
+		destination, false);
+	if (should_cancel_whdboot_download(cancel_flag))
+	{
+		result.outcome = whdboot_download_outcome::cancelled;
+		return result;
+	}
+
+	const char* rtb_files[] = {
+		"kick33180.A500.RTB",
+		"kick34005.A500.RTB",
+		"kick40063.A600.RTB",
+		"kick40068.A1200.RTB",
+		"kick40068.A4000.RTB"
+	};
+	for (const auto& rtb : rtb_files)
+	{
+		++step;
+		const auto rtb_dest_name = std::string("save-data/Kickstarts/") + rtb;
+		const auto rtb_destination = join_path(whdboot_path, rtb_dest_name);
+		if (file_exists(rtb_destination))
 		{
-			copy_dir_contents(default_roms_path, rom_path);
+			report_whdboot_download_progress(progress_cb, cancel_flag, step, total_steps,
+				std::string(rtb) + " (already exists)", 0, 0);
+			if (should_cancel_whdboot_download(cancel_flag))
+			{
+				result.outcome = whdboot_download_outcome::cancelled;
+				return result;
+			}
+			continue;
 		}
-		else if (my_existsdir("/usr/share/amiberry/roms/"))
+
+		const auto rtb_url = std::string("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/")
+			+ rtb + "?raw=true";
+		do_download(step, rtb, rtb_url, rtb_destination, false);
+		if (should_cancel_whdboot_download(cancel_flag))
 		{
-			copy_dir_contents("/usr/share/amiberry/roms/", rom_path);
-		}
-		else if (my_existsdir("/usr/local/share/amiberry/roms/"))
-		{
-			copy_dir_contents("/usr/local/share/amiberry/roms/", rom_path);
+			result.outcome = whdboot_download_outcome::cancelled;
+			return result;
 		}
 	}
-	//if (!my_existsdir(rp9_path.c_str()))
-	//	my_mkdir(rp9_path.c_str());
-	if (!my_existsdir(saveimage_dir.c_str()))
-		my_mkdir(saveimage_dir.c_str());
-	if (!my_existsdir(savestate_dir.c_str()))
-		my_mkdir(savestate_dir.c_str());
-	if (!my_existsdir(ripper_path.c_str()))
-		my_mkdir(ripper_path.c_str());
-	if (!my_existsdir(input_dir.c_str()))
-		my_mkdir(input_dir.c_str());
-	if (!my_existsdir(screenshot_dir.c_str()))
-		my_mkdir(screenshot_dir.c_str());
-	if (!my_existsdir(nvram_dir.c_str()))
-		my_mkdir(nvram_dir.c_str());
-	if (!my_existsdir(video_dir.c_str()))
-		my_mkdir(video_dir.c_str());
-	if (!my_existsdir(themes_path.c_str()))
-		ensure_directory_exists(themes_path);
-	if (!my_existsdir(shaders_path.c_str()))
-		ensure_directory_exists(shaders_path);
-	if (!my_existsdir(bezels_path.c_str()))
-		ensure_directory_exists(bezels_path);
-	// Always regenerate built-in theme presets so they include any new fields
+
+	const auto json_destination = join_path(whdboot_path, "game-data/whdload_db.json");
+	const auto xml_destination = join_path(whdboot_path, "game-data/whdload_db.xml");
+	const auto old_json_timestamp = get_json_timestamp(json_destination);
+	const auto old_xml_timestamp = get_xml_timestamp(xml_destination);
+	result.previous_db_timestamp = !old_json_timestamp.empty() ? old_json_timestamp : old_xml_timestamp;
+
+	bool db_ok = do_download(++step, "whdload_db.json",
+		"https://raw.githubusercontent.com/BlitterStudio/amiberry-game-db/main/whdload_db.json",
+		json_destination, true, false);
+	if (!db_ok && !should_cancel_whdboot_download(cancel_flag))
+	{
+		write_log("WHDBooter - JSON download failed, falling back to XML\n");
+		db_ok = do_download(step, "whdload_db.xml",
+			"https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true",
+			xml_destination, true, true);
+	}
+
+	if (should_cancel_whdboot_download(cancel_flag))
+	{
+		result.outcome = whdboot_download_outcome::cancelled;
+		return result;
+	}
+
+	const auto new_json_timestamp = get_json_timestamp(json_destination);
+	const auto new_xml_timestamp = get_xml_timestamp(xml_destination);
+	result.current_db_timestamp = !new_json_timestamp.empty() ? new_json_timestamp : new_xml_timestamp;
+
+	if (!any_failure)
+		result.outcome = whdboot_download_outcome::success;
+	else if (any_success)
+		result.outcome = whdboot_download_outcome::partial_failure;
+	else
+		result.outcome = whdboot_download_outcome::failed;
+
+	return result;
+}
+
+static bool whdboot_seed_files_missing()
+{
+	if (!file_exists(join_path(whdboot_path, "WHDLoad")))
+		return true;
+	if (!file_exists(join_path(whdboot_path, "JST")))
+		return true;
+	if (!file_exists(join_path(whdboot_path, "AmiQuit")))
+		return true;
+
+	const auto boot_data_zip = join_path(whdboot_path, "boot-data.zip");
+	const auto boot_data_dir = join_path(whdboot_path, "boot-data");
+	if (!file_exists(boot_data_zip) && !my_existsdir(boot_data_dir.c_str()))
+		return true;
+
+	const auto json_destination = join_path(whdboot_path, "game-data/whdload_db.json");
+	const auto xml_destination = join_path(whdboot_path, "game-data/whdload_db.xml");
+	if (!file_exists(json_destination) && !file_exists(xml_destination))
+		return true;
+
+	const char* required_rtb_files[] = {
+		"kick33180.A500.RTB",
+		"kick34005.A500.RTB",
+		"kick40063.A600.RTB",
+		"kick40068.A1200.RTB",
+		"kick40068.A4000.RTB"
+	};
+	for (const auto* filename : required_rtb_files)
+	{
+		const auto destination = join_path(whdboot_path, std::string("save-data/Kickstarts/") + filename);
+		if (!file_exists(destination))
+			return true;
+	}
+
+	return false;
+}
+
+static void seed_default_whdboot_files_if_needed()
+{
+	if (!whdboot_seed_files_missing())
+		return;
+
+	const auto source_candidates = get_seed_source_candidates("whdboot", true);
+	if (!seed_missing_directory_contents_from_candidates(whdboot_path, source_candidates))
+	{
+		write_log("No WHDLoad boot files found in bundled or system data locations\n");
+		write_log("Skipping automatic download during startup. Use the Paths panel or --download-whdboot to fetch them explicitly.\n");
+	}
+}
+
+static bool rom_seed_files_missing()
+{
+	if (!file_exists(join_path(rom_path, "aros-ext.bin")))
+		return true;
+	if (!file_exists(join_path(rom_path, "aros-rom.bin")))
+		return true;
+	if (!file_exists(join_path(rom_path, "mt32-roms/dir.txt")))
+		return true;
+	return false;
+}
+
+static void seed_default_rom_files_if_needed()
+{
+	if (!rom_seed_files_missing())
+		return;
+
+	seed_missing_directory_contents_from_candidates(rom_path,
+		get_seed_source_candidates("roms", true));
+}
+
+static void refresh_builtin_theme_presets()
+{
+	// Always regenerate built-in theme presets so they include any new fields.
 	load_default_theme();
 	save_theme("Default.theme");
 	load_default_dark_theme();
 	save_theme("Dark.theme");
 }
 
-static void init_amiberry_dirs(const bool portable_mode)
+void create_missing_amiberry_folders()
+{
+	ensure_amiberry_user_directories();
+	seed_default_controller_files_if_needed();
+	ensure_whdboot_runtime_directories();
+	seed_default_whdboot_files_if_needed();
+	seed_default_rom_files_if_needed();
+	refresh_builtin_theme_presets();
+}
+
+static void init_amiberry_dirs(const bool portable_mode, const bool materialize_host_roots)
 {
 #ifdef __MACH__
 	const std::string amiberry_dir = "Amiberry";
@@ -7070,31 +7534,31 @@ static void init_amiberry_dirs(const bool portable_mode)
 		cdrom_path = logfile_path = rom_path = rp9_path =
 		home_dir;
 	}
-	else
-	{
-		std::string xdg_data_home = get_xdg_data_home();
-		if (!my_existsdir(xdg_data_home.c_str()))
+		else
 		{
-			// Create the XDG_DATA_HOME directory if it doesn't exist
-			const auto user_home_dir = getenv("HOME");
+			std::string xdg_data_home = get_xdg_data_home();
+			if (materialize_host_roots && !my_existsdir(xdg_data_home.c_str()))
+			{
+				// Create the XDG_DATA_HOME directory if it doesn't exist
+				const auto user_home_dir = getenv("HOME");
 			if (user_home_dir != nullptr)
 			{
 				std::string destination = std::string(user_home_dir) + "/.local";
 				my_mkdir(destination.c_str());
 				destination += "/share";
 				my_mkdir(destination.c_str());
+				}
 			}
-		}
-		xdg_data_home += "/" + amiberry_dir;
-		if (!my_existsdir(xdg_data_home.c_str()))
-			my_mkdir(xdg_data_home.c_str());
+			xdg_data_home += "/" + amiberry_dir;
+			if (materialize_host_roots && !my_existsdir(xdg_data_home.c_str()))
+				my_mkdir(xdg_data_home.c_str());
 
-		std::string xdg_config_home = get_xdg_config_home();
-		if (!my_existsdir(xdg_config_home.c_str()))
-			my_mkdir(xdg_config_home.c_str());
-		xdg_config_home += "/" + amiberry_dir;
-		if (!my_existsdir(xdg_config_home.c_str()))
-			my_mkdir(xdg_config_home.c_str());
+			std::string xdg_config_home = get_xdg_config_home();
+			if (materialize_host_roots && !my_existsdir(xdg_config_home.c_str()))
+				my_mkdir(xdg_config_home.c_str());
+			xdg_config_home += "/" + amiberry_dir;
+			if (materialize_host_roots && !my_existsdir(xdg_config_home.c_str()))
+				my_mkdir(xdg_config_home.c_str());
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = 
@@ -7199,6 +7663,64 @@ static void init_amiberry_dirs(const bool portable_mode)
 	default_base_content_paths = get_current_base_content_path_set();
 }
 
+static void dump_resolved_paths(const bool write_dump_file)
+{
+	std::string output;
+	const auto append_line = [&](const char* key, const std::string& value)
+	{
+		output.append(key).append("=").append(value).append("\n");
+	};
+
+	output.append("portable_mode=").append(g_portable_mode ? "1" : "0").append("\n");
+	append_line("portable_root", get_portable_root_directory());
+	append_line("portable_marker_file", get_portable_mode_marker_path());
+	append_line("settings_resolution_source", get_settings_resolution_source_name(resolved_settings_source));
+	append_line("settings_resolution_file", resolved_settings_file);
+	append_line("settings_dir", settings_dir);
+	append_line("amiberry_conf_file", amiberry_conf_file);
+	append_line("amiberry_ini_file", amiberry_ini_file);
+	append_line("base_content_path", base_content_path);
+	append_line("home_dir", home_dir);
+	append_line("config_path", config_path);
+	append_line("data_dir", data_dir);
+	append_line("plugins_dir", plugins_dir);
+	append_line("controllers_path", controllers_path);
+	append_line("whdboot_path", whdboot_path);
+	append_line("whdload_arch_path", whdload_arch_path);
+	append_line("floppy_path", floppy_path);
+	append_line("harddrive_path", harddrive_path);
+	append_line("cdrom_path", cdrom_path);
+	append_line("logfile_path", logfile_path);
+	append_line("rom_path", rom_path);
+	append_line("rp9_path", rp9_path);
+	append_line("saveimage_dir", saveimage_dir);
+	append_line("savestate_dir", savestate_dir);
+	append_line("ripper_path", ripper_path);
+	append_line("input_dir", input_dir);
+	append_line("screenshot_dir", screenshot_dir);
+	append_line("nvram_dir", nvram_dir);
+	append_line("video_dir", video_dir);
+	append_line("themes_path", themes_path);
+	append_line("shaders_path", shaders_path);
+	append_line("bezels_path", bezels_path);
+
+	fputs(output.c_str(), stdout);
+	fflush(stdout);
+
+	if (write_dump_file)
+	{
+		const auto dump_file = join_path(settings_dir, "resolved-paths.txt");
+		if (!dump_file.empty())
+		{
+			if (auto* dump_handle = fopen(dump_file.c_str(), "w"))
+			{
+				fwrite(output.data(), 1, output.size(), dump_handle);
+				fclose(dump_handle);
+			}
+		}
+	}
+}
+
 void reset_default_paths()
 {
 	const auto previous_logfile_path = logfile_path;
@@ -7209,9 +7731,9 @@ void reset_default_paths()
 		reopen_active_logfile_if_needed();
 }
 
-void load_amiberry_settings()
+static void load_amiberry_settings_from_file(const std::string& settings_file)
 {
-	auto* const fh = zfile_fopen(amiberry_conf_file.c_str(), _T("r"), ZFD_NORMAL);
+	auto* const fh = zfile_fopen(settings_file.c_str(), _T("r"), ZFD_NORMAL);
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
@@ -7236,12 +7758,12 @@ void load_amiberry_settings()
 			strncpy(line_copy, line.c_str(), CONFIG_BLEN - 1);
 			line_copy[CONFIG_BLEN - 1] = '\0';
 
-			if (parse_base_content_path_line(amiberry_conf_file.c_str(), line_copy, configured_base_path))
+			if (parse_base_content_path_line(settings_file.c_str(), line_copy, configured_base_path))
 				has_base_content_path = true;
 
 			strncpy(line_copy, line.c_str(), CONFIG_BLEN - 1);
 			line_copy[CONFIG_BLEN - 1] = '\0';
-			if (parse_managed_path_option_line(amiberry_conf_file.c_str(), line_copy, managed_path_line))
+			if (parse_managed_path_option_line(settings_file.c_str(), line_copy, managed_path_line))
 				managed_path_lines.emplace_back(managed_path_line);
 		}
 
@@ -7281,14 +7803,14 @@ void load_amiberry_settings()
 			strncpy(line_copy, line.c_str(), CONFIG_BLEN - 1);
 			line_copy[CONFIG_BLEN - 1] = '\0';
 
-			if (parse_base_content_path_line(amiberry_conf_file.c_str(), line_copy, ignored))
+			if (parse_base_content_path_line(settings_file.c_str(), line_copy, ignored))
 				continue;
 
 			if (!serialized_base_path_to_skip.empty())
 			{
 				strncpy(managed_line_copy, line.c_str(), CONFIG_BLEN - 1);
 				managed_line_copy[CONFIG_BLEN - 1] = '\0';
-				if (parse_managed_path_option_line(amiberry_conf_file.c_str(), managed_line_copy, managed_path_line))
+				if (parse_managed_path_option_line(settings_file.c_str(), managed_line_copy, managed_path_line))
 				{
 					const auto serialized_base_paths = get_base_content_path_set(serialized_base_path_to_skip);
 					if (path_strings_match(managed_path_line.value,
@@ -7301,7 +7823,7 @@ void load_amiberry_settings()
 
 			strncpy(managed_line_copy, line.c_str(), CONFIG_BLEN - 1);
 			managed_line_copy[CONFIG_BLEN - 1] = '\0';
-			if (parse_managed_path_option_line(amiberry_conf_file.c_str(), managed_line_copy, managed_path_line)
+			if (parse_managed_path_option_line(settings_file.c_str(), managed_line_copy, managed_path_line)
 				&& is_visual_managed_path_option(managed_path_line.descriptor))
 			{
 				bool skip_legacy_visual_line = false;
@@ -7317,9 +7839,14 @@ void load_amiberry_settings()
 					continue;
 			}
 
-			parse_amiberry_settings_line(amiberry_conf_file.c_str(), line_copy);
+			parse_amiberry_settings_line(settings_file.c_str(), line_copy);
 		}
 	}
+}
+
+void load_amiberry_settings()
+{
+	load_amiberry_settings_from_file(amiberry_conf_file);
 }
 
 static void romlist_add2(const TCHAR* path, romdata* rd)
@@ -7590,16 +8117,18 @@ int amiberry_main(int argc, char* argv[])
 	settings_dir.clear();
 	amiberry_conf_file.clear();
 	amiberry_ini_file.clear();
+	resolved_settings_file.clear();
 	amiberry_conf_file_overridden_from_cli = false;
-	legacy_layout_migrated = false;
-	legacy_layout_migration_failed = false;
-	legacy_layout_migration_conflicts = false;
+	suppress_runtime_path_side_effects = false;
+	legacy_migration_state = {};
 	startup_migration_notice_pending = false;
-	startup_migration_notice_is_failure = false;
+	resolved_settings_source = settings_resolution_source::default_paths_only;
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
 	bool run_jit_selftest = false;
+	bool dump_paths = false;
+	bool download_whdboot = false;
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
 			usage();
@@ -7609,6 +8138,10 @@ int amiberry_main(int argc, char* argv[])
 			console_logging = 1;
 		if (_tcscmp(argv[i], _T("--jit-selftest")) == 0)
 			run_jit_selftest = true;
+		if (_tcscmp(argv[i], _T("--dump-paths")) == 0)
+			dump_paths = true;
+		if (_tcscmp(argv[i], _T("--download-whdboot")) == 0)
+			download_whdboot = true;
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
 			forceroms = 1;
 	}
@@ -7627,11 +8160,15 @@ int amiberry_main(int argc, char* argv[])
 		print_version();
 
 #ifdef USE_DBUS
-	DBusSetup();
+	if (!dump_paths)
+		DBusSetup();
 #endif
 #ifdef USE_IPC_SOCKET
-	Amiberry::IPC::IPCSetup();
+	if (!dump_paths)
+		Amiberry::IPC::IPCSetup();
 #endif
+
+	suppress_runtime_path_side_effects = dump_paths;
 
 	// Parse the command line to possibly set amiberry_config.
 	// Do not remove used args yet.
@@ -7642,32 +8179,74 @@ int amiberry_main(int argc, char* argv[])
 		abort();
 	}
 
-	// Portable mode is enabled when the marker is found in the startup directory.
-	// On Windows, also check next to the executable because shortcuts and file
-	// associations can launch the app with a different working directory.
+	// Portable mode is enabled by an amiberry.portable marker next to the executable.
+	// This keeps portable installs stable even when shortcuts or shell launches use
+	// a different working directory.
 	g_portable_mode = is_portable_mode_enabled();
 #if defined(__MACH__) || defined(__ANDROID__)
 	if (g_portable_mode)
 		write_log("Portable mode marker ignored on this platform.\n");
 	g_portable_mode = false;
-#endif
+	#endif
 	const bool portable_mode = g_portable_mode;
-	resolve_bootstrap_settings_paths(portable_mode);
+	resolve_bootstrap_settings_paths(portable_mode, !dump_paths);
+	if (dump_paths)
+	{
+		init_amiberry_dirs(portable_mode, false);
+		resolved_settings_source = amiberry_conf_file_overridden_from_cli
+			? settings_resolution_source::cli_override
+			: settings_resolution_source::default_paths_only;
+		const auto settings_file_for_resolution = get_existing_settings_file_for_resolution(portable_mode);
+		if (!settings_file_for_resolution.empty())
+		{
+			resolved_settings_file = normalize_path_string(settings_file_for_resolution);
+			if (!amiberry_conf_file_overridden_from_cli)
+			{
+				resolved_settings_source = path_strings_match(settings_file_for_resolution, amiberry_conf_file)
+					? settings_resolution_source::settings_dir
+					: settings_resolution_source::legacy_settings;
+			}
+			load_amiberry_settings_from_file(settings_file_for_resolution);
+		}
+		dump_resolved_paths(false);
+		return 0;
+	}
+
 	if (!amiberry_conf_file_overridden_from_cli)
 		migrate_legacy_settings_files(portable_mode);
 	const bool config_found = my_existsfile2(amiberry_conf_file.c_str());
 
 	init_amiberry_dirs(portable_mode);
 	if (config_found)
-	{
 		load_amiberry_settings();
-	}
 	migrate_legacy_visual_asset_directories();
-	macos_bookmarks_init(get_home_directory(portable_mode));
-	if (base_content_path.empty())
-		create_missing_amiberry_folders();
+	macos_bookmarks_init(settings_dir, get_legacy_bookmark_candidate_directories(portable_mode));
+	create_missing_amiberry_folders();
+	int whdboot_download_exit_code = 0;
+	if (download_whdboot)
+	{
+		const auto download_result = download_whdboot_assets({}, nullptr);
+		switch (download_result.outcome)
+		{
+		case whdboot_download_outcome::success:
+			whdboot_download_exit_code = 0;
+			break;
+		case whdboot_download_outcome::partial_failure:
+			whdboot_download_exit_code = 2;
+			break;
+		case whdboot_download_outcome::cancelled:
+			whdboot_download_exit_code = 130;
+			break;
+		case whdboot_download_outcome::failed:
+		default:
+			whdboot_download_exit_code = 1;
+			break;
+		}
+	}
 	persist_bootstrap_settings_after_migration_if_needed();
 	update_startup_migration_notice_state();
+	if (download_whdboot)
+		return whdboot_download_exit_code;
 
 	makeverstr(VersionStr);
 	uae_time_init();

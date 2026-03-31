@@ -14,9 +14,6 @@
 #include <string>
 
 extern int console_logging;
-extern std::string get_xml_timestamp(const std::string& xml_filename);
-extern std::string get_json_timestamp(const std::string& json_filename);
-
 // WHDBooter download state
 static std::atomic<bool> s_whdboot_downloading{false};
 static std::atomic<bool> s_whdboot_complete{false};
@@ -92,96 +89,18 @@ static void start_whdboot_download()
 	}
 
 	std::thread([]() {
-		auto progress_cb = [](int64_t dlnow, int64_t dltotal) -> bool {
-			s_whdboot_dl_now.store(dlnow);
-			s_whdboot_dl_total.store(dltotal);
+		auto progress_cb = [](const whdboot_download_progress& progress) -> bool {
+			s_whdboot_step.store(progress.step);
+			s_whdboot_step_count.store(progress.total_steps);
+			s_whdboot_dl_now.store(progress.bytes_downloaded);
+			s_whdboot_dl_total.store(progress.bytes_total);
+			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
+			s_whdboot_status = progress.label;
 			return s_whdboot_cancel.load();
 		};
 
-		auto set_status = [](const std::string& status) {
-			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
-			s_whdboot_status = status;
-		};
-
-		auto do_download = [&](int step, const std::string& label, const std::string& url,
-			const std::string& dest, bool backup) -> bool {
-			if (s_whdboot_cancel.load()) return false;
-			s_whdboot_step.store(step);
-			s_whdboot_dl_now.store(0);
-			s_whdboot_dl_total.store(0);
-			set_status(label);
-			write_log("Downloading %s ...\n", dest.c_str());
-			return download_file(url, dest, backup, progress_cb, &s_whdboot_cancel);
-		};
-
-		int step = 0;
-		std::string dest;
-		bool all_ok = true;
-
-		// 1. WHDLoad
-		dest = get_whdbootpath().append("WHDLoad");
-		if (!do_download(++step, "WHDLoad", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", dest, false))
-			all_ok = false;
-
-		// 2. JST
-		dest = get_whdbootpath().append("JST");
-		if (!do_download(++step, "JST", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", dest, false))
-			all_ok = false;
-
-		// 3. AmiQuit
-		dest = get_whdbootpath().append("AmiQuit");
-		if (!do_download(++step, "AmiQuit", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", dest, false))
-			all_ok = false;
-
-		// 4. boot-data.zip
-		dest = get_whdbootpath().append("boot-data.zip");
-		if (!do_download(++step, "boot-data.zip", "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", dest, false))
-			all_ok = false;
-
-		// 5-9. RTB files (skip if already present)
-		const char* rtb_files[] = {
-			"kick33180.A500.RTB",
-			"kick34005.A500.RTB",
-			"kick40063.A600.RTB",
-			"kick40068.A1200.RTB",
-			"kick40068.A4000.RTB"
-		};
-		for (const auto& rtb : rtb_files)
-		{
-			++step;
-			if (s_whdboot_cancel.load()) break;
-			const std::string rtb_dest_name = std::string("save-data/Kickstarts/") + rtb;
-			const std::string rtb_dest = get_whdbootpath().append(rtb_dest_name);
-			if (std::filesystem::exists(rtb_dest))
-			{
-				s_whdboot_step.store(step);
-				set_status(std::string(rtb) + " (already exists)");
-				continue;
-			}
-			const std::string rtb_url = std::string("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/") + rtb + "?raw=true";
-			if (!do_download(step, rtb, rtb_url, rtb_dest, false))
-				all_ok = false;
-		}
-
-		// 10. whdload_db.json (primary) with XML fallback
-		const auto json_dest = get_whdbootpath().append("game-data/whdload_db.json");
-		const auto xml_dest = get_whdbootpath().append("game-data/whdload_db.xml");
-		const auto old_json_timestamp = get_json_timestamp(json_dest);
-		const auto old_xml_timestamp = get_xml_timestamp(xml_dest);
-		const auto old_timestamp = !old_json_timestamp.empty() ? old_json_timestamp : old_xml_timestamp;
-
-		bool db_ok = do_download(++step, "whdload_db.json",
-			"https://raw.githubusercontent.com/BlitterStudio/amiberry-game-db/main/whdload_db.json", json_dest, true);
-
-		if (!db_ok && !s_whdboot_cancel.load())
-		{
-			write_log("WHDBooter - JSON download failed, falling back to XML\n");
-			dest = xml_dest;
-			db_ok = do_download(step, "whdload_db.xml",
-				"https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", dest, true);
-		}
-
-		if (s_whdboot_cancel.load())
+		const auto result = download_whdboot_assets(progress_cb, &s_whdboot_cancel);
+		if (result.outcome == whdboot_download_outcome::cancelled)
 		{
 			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
 			s_whdboot_result_msg = "Download cancelled.";
@@ -193,29 +112,29 @@ static void start_whdboot_download()
 
 		{
 			std::lock_guard<std::mutex> lock(s_whdboot_mutex);
-			if (db_ok)
+			if (result.outcome == whdboot_download_outcome::success)
 			{
-				const auto new_json_timestamp = get_json_timestamp(json_dest);
-				const auto new_xml_timestamp = get_xml_timestamp(xml_dest);
-				const auto new_timestamp = !new_json_timestamp.empty() ? new_json_timestamp : new_xml_timestamp;
-				s_whdboot_result_msg = "WHDBooter files updated.\n\nDB previous: " + old_timestamp + "\nDB new: " + new_timestamp;
+				s_whdboot_result_msg = "WHDBooter files updated.\n\nDB previous: "
+					+ result.previous_db_timestamp + "\nDB new: " + result.current_db_timestamp;
 			}
-			else if (!all_ok)
+			else if (result.outcome == whdboot_download_outcome::partial_failure)
 			{
 				s_whdboot_result_msg = "Some files failed to download.\nPlease check the log for details.";
 				s_whdboot_result_is_error = true;
 			}
 			else
 			{
-				s_whdboot_result_msg = "Failed to download game database.\nPlease check the log for details.";
+				s_whdboot_result_msg = "Failed to download WHDBooter files.\nPlease check the log for details.";
 				s_whdboot_result_is_error = true;
 			}
 		}
 
-		if (s_whdboot_result_is_error)
-			s_whdboot_failed.store(true);
-		else
+		if (result.outcome == whdboot_download_outcome::success)
 			s_whdboot_complete.store(true);
+		else
+		{
+			s_whdboot_failed.store(true);
+		}
 		s_whdboot_downloading.store(false);
 	}).detach();
 }
@@ -457,8 +376,13 @@ void render_panel_paths()
 #if !defined(__ANDROID__)
 	{
 		bool portable = get_portable_mode();
+		std::string portable_toggle_unavailable_reason;
 #if defined(__MACH__)
 		ImGui::BeginDisabled();
+#else
+		const bool portable_toggle_available = can_toggle_portable_mode(&portable_toggle_unavailable_reason);
+		if (!portable_toggle_available)
+			ImGui::BeginDisabled();
 #endif
 		if (AmigaCheckbox("Portable mode (use exe directory for all paths)", &portable))
 		{
@@ -472,18 +396,50 @@ void render_panel_paths()
 			}
 			else
 			{
-				ShowMessageBox("Portable Mode", "Failed to change portable mode.\n\nCheck file permissions in the application directory.");
+				std::string failure_reason;
+				if (can_toggle_portable_mode(&failure_reason) && failure_reason.empty())
+				{
+					failure_reason =
+						"Failed to change portable mode.\n\nThe application directory could not be updated.";
+				}
+				else if (!failure_reason.empty())
+				{
+					failure_reason = "Failed to change portable mode.\n\n" + failure_reason;
+				}
+				else
+				{
+					failure_reason = "Failed to change portable mode.\n\nCheck file permissions in the application directory.";
+				}
+#ifdef _WIN32
+				failure_reason += "\n\nIf you want a self-contained installation, use the official portable ZIP release.";
+#endif
+				ShowMessageBox("Portable Mode", failure_reason.c_str());
 			}
 #endif
 		}
 #if defined(__MACH__)
 		ImGui::EndDisabled();
+#else
+		if (!portable_toggle_available)
+			ImGui::EndDisabled();
 #endif
-			ShowHelpMarker("When enabled, all data directories are resolved relative to the executable location.\n"
-				"Creates/removes the 'amiberry.portable' marker file.\n"
-				"A restart is required for the change to take effect.\n\n"
-				"Supported on Windows and Linux startup-directory installs.\n"
-				"Not available on macOS or Android.");
+		std::string portable_help =
+			"When enabled, all data directories are resolved relative to the executable location.\n"
+			"Creates/removes the 'amiberry.portable' marker file.\n"
+			"A restart is required for the change to take effect.\n\n"
+			"Supported on Windows and Linux desktop installs.\n"
+			"Not available on macOS or Android.";
+#if !defined(__MACH__)
+		if (!portable_toggle_unavailable_reason.empty())
+		{
+			portable_help += "\n\nCurrently unavailable:\n";
+			portable_help += portable_toggle_unavailable_reason;
+#ifdef _WIN32
+			portable_help += "\n\nIf you want a self-contained install, use the official portable ZIP release.";
+#endif
+		}
+#endif
+		ShowHelpMarker(portable_help.c_str());
 	}
 	ImGui::Spacing();
 	ImGui::Separator();

@@ -187,6 +187,7 @@ extern std::string get_screenshot_path();
 
 extern bool get_portable_mode();
 #if !defined(__MACH__) && !defined(__ANDROID__)
+extern bool can_toggle_portable_mode(std::string* reason_out);
 extern bool set_portable_mode(bool enable);
 #endif
 extern bool should_show_legacy_cleanup_prompt();

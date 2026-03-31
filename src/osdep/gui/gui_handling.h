@@ -477,7 +477,35 @@ extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup);
 extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup,
 	const std::function<bool(int64_t, int64_t)>& progress_cb, std::atomic<bool>* cancel_flag);
-extern void download_rtb(const std::string& filename);
+
+enum class whdboot_download_outcome
+{
+	success,
+	partial_failure,
+	failed,
+	cancelled
+};
+
+struct whdboot_download_progress
+{
+	int step = 0;
+	int total_steps = 0;
+	std::string label;
+	int64_t bytes_downloaded = 0;
+	int64_t bytes_total = 0;
+};
+
+struct whdboot_download_result
+{
+	whdboot_download_outcome outcome = whdboot_download_outcome::failed;
+	std::string previous_db_timestamp;
+	std::string current_db_timestamp;
+};
+
+extern whdboot_download_result download_whdboot_assets(
+	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
+	std::atomic<bool>* cancel_flag);
+
 extern int fromdfxtype(int num, int dfx, int subtype);
 extern int todfxtype(int num, int dfx, int* subtype);
 extern void DisplayDiskInfo(int num);

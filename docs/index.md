@@ -155,7 +155,7 @@ sudo apt install amiberry</code></pre>
     <p>Download from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>:</p>
     <ul>
       <li><strong>Installer</strong> — run the <code>.exe</code> installer for a guided setup</li>
-      <li><strong>Portable</strong> — extract the <code>.zip</code> to any directory and run <code>Amiberry.exe</code></li>
+      <li><strong>Portable ZIP</strong> — extract the <code>*-portable.zip</code> archive and run <code>Amiberry.exe</code>; it already includes the <code>amiberry.portable</code> marker</li>
     </ul>
   </div>
 

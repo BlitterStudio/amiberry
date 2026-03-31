@@ -792,15 +792,126 @@ jobs:
           cmake --preset windows-release
           cmake --build out/build/windows-release -j$(nproc)
 
-      - name: Package (ZIP)
+      - name: Package (Portable ZIP)
         shell: msys2 {0}
         run: |
-          # Copy MinGW runtime DLLs next to the executable
-          cp /mingw64/bin/libstdc++-6.dll out/build/windows-release/
-          cp /mingw64/bin/libgcc_s_seh-1.dll out/build/windows-release/
-          cp /mingw64/bin/libwinpthread-1.dll out/build/windows-release/
-          # Create ZIP package
-          cpack -G ZIP --config out/build/windows-release/CPackConfig.cmake
+          rm -rf out/install/windows-release
+          rm -rf out/package/windows-release
+          cmake --install out/build/windows-release --prefix out/install/windows-release
+
+          PORTABLE_ROOT="out/install/windows-release/bin"
+          test -f "$PORTABLE_ROOT/Amiberry.exe"
+          : > "$PORTABLE_ROOT/amiberry.portable"
+
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            ZIP_NAME="amiberry-${{ github.ref_name }}-${{ matrix.release_suffix }}-portable.zip"
+          else
+            ZIP_NAME="amiberry-${{ github.sha }}-${{ matrix.release_suffix }}-portable.zip"
+          fi
+
+          PACKAGE_ROOT="out/package/windows-release/${ZIP_NAME%.zip}"
+          mkdir -p "$(dirname "$PACKAGE_ROOT")"
+          cmake -E copy_directory "$PORTABLE_ROOT" "$PACKAGE_ROOT"
+
+          ZIP_PATH="$PWD/$ZIP_NAME"
+          (cd out/package/windows-release && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
+
+      - name: Verify Portable ZIP
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem "$PWD/amiberry-*-portable.zip" | Select-Object -First 1
+          if (-not $zip) {
+            throw "Portable ZIP not found."
+          }
+
+          $verifyRoot = Join-Path $PWD "portable-smoke"
+          Remove-Item -Recurse -Force $verifyRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
+          Expand-Archive -Path $zip.FullName -DestinationPath $verifyRoot
+
+          $portableDir = Get-ChildItem $verifyRoot -Directory | Select-Object -First 1
+          if (-not $portableDir) {
+            throw "Portable ZIP did not contain a top-level directory."
+          }
+
+          $exePath = Join-Path $portableDir.FullName "Amiberry.exe"
+          if (-not (Test-Path $exePath)) {
+            throw "Portable ZIP is missing Amiberry.exe."
+          }
+
+          $alternateWorkingDir = Join-Path $verifyRoot "alternate-cwd"
+          New-Item -ItemType Directory -Path $alternateWorkingDir | Out-Null
+
+          $stdoutFile = Join-Path $verifyRoot "dump-paths.stdout"
+          $stderrFile = Join-Path $verifyRoot "dump-paths.stderr"
+          $proc = Start-Process -FilePath $exePath -ArgumentList "--dump-paths" -WorkingDirectory $alternateWorkingDir -PassThru -Wait -NoNewWindow -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+          if ($proc.ExitCode -ne 0) {
+            Write-Host "STDOUT:"
+            if (Test-Path $stdoutFile) { Get-Content $stdoutFile }
+            Write-Host "STDERR:"
+            if (Test-Path $stderrFile) { Get-Content $stderrFile }
+            throw "--dump-paths failed with exit code $($proc.ExitCode)."
+          }
+
+          $lines = @{}
+          Get-Content $stdoutFile | ForEach-Object {
+            if ($_ -match '^(.*?)=(.*)$') {
+              $lines[$matches[1]] = $matches[2]
+            }
+          }
+
+          function Normalize-PortablePath([string]$path) {
+            if ([string]::IsNullOrWhiteSpace($path)) { return "" }
+            return $path.Replace('\', '/').TrimEnd('/').ToLowerInvariant()
+          }
+
+          $expectedRoot = Normalize-PortablePath $portableDir.FullName
+          $expectedMarker = "$expectedRoot/amiberry.portable"
+          $expectedData = "$expectedRoot/data"
+          $expectedPlugins = "$expectedRoot/plugins"
+          $blockedRoots = @()
+          if ($env:LOCALAPPDATA) { $blockedRoots += (Normalize-PortablePath $env:LOCALAPPDATA) }
+          if ($env:USERPROFILE) { $blockedRoots += (Normalize-PortablePath $env:USERPROFILE) }
+
+          function Assert-PortablePath([string]$key, [string]$expected) {
+            $actual = Normalize-PortablePath $lines[$key]
+            if ($actual -ne $expected) {
+              throw "$key mismatch: '$($lines[$key])' vs '$expected'."
+            }
+          }
+
+          function Assert-NotUnderBlockedRoots([string]$key) {
+            $actual = Normalize-PortablePath $lines[$key]
+            foreach ($blockedRoot in $blockedRoots) {
+              if (-not [string]::IsNullOrWhiteSpace($blockedRoot) -and $actual.StartsWith($blockedRoot)) {
+                throw "$key unexpectedly resolved under host profile path '$($lines[$key])'."
+              }
+            }
+          }
+
+          if ($lines["portable_mode"] -ne "1") {
+            throw "portable_mode expected 1, got '$($lines["portable_mode"])'."
+          }
+          Assert-PortablePath "portable_root" $expectedRoot
+          Assert-PortablePath "portable_marker_file" $expectedMarker
+          Assert-PortablePath "home_dir" $expectedRoot
+          Assert-PortablePath "config_path" "$expectedRoot/conf"
+          Assert-PortablePath "settings_dir" "$expectedRoot/settings"
+          Assert-PortablePath "data_dir" $expectedData
+          Assert-PortablePath "plugins_dir" $expectedPlugins
+          Assert-NotUnderBlockedRoots "portable_root"
+          Assert-NotUnderBlockedRoots "portable_marker_file"
+          Assert-NotUnderBlockedRoots "home_dir"
+          Assert-NotUnderBlockedRoots "config_path"
+          Assert-NotUnderBlockedRoots "settings_dir"
+          Assert-NotUnderBlockedRoots "data_dir"
+          Assert-NotUnderBlockedRoots "plugins_dir"
+          if (Test-Path (Join-Path $portableDir.FullName "Settings")) {
+            throw "--dump-paths should not create Settings in the portable tree."
+          }
+          if (Test-Path (Join-Path $portableDir.FullName "conf")) {
+            throw "--dump-paths should not create conf in the portable tree."
+          }
 
       - name: Package (InnoSetup)
         shell: pwsh
