@@ -852,6 +852,7 @@ void SDL_Delay(Uint32 ms);
 
 int SDL_GetVersion(void);
 const char* SDL_GetPlatform(void);
+const char* SDL_GetBasePath(void);
 const char* SDL_GetCurrentVideoDriver(void);
 int SDL_GetNumVideoDisplays(void);
 SDL_DisplayID* SDL_GetDisplays(int* count);

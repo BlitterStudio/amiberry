@@ -281,6 +281,7 @@ void SDL_Delay(Uint32 ms) { usleep((useconds_t)ms * 1000); }
 
 int SDL_GetVersion(void) { return (3 << 16); }
 const char* SDL_GetPlatform(void) { return "libretro"; }
+const char* SDL_GetBasePath(void) { return NULL; }
 const char* SDL_GetCurrentVideoDriver(void) { return "libretro"; }
 int SDL_GetNumVideoDisplays(void) { return 1; }
 SDL_DisplayID* SDL_GetDisplays(int* count)
