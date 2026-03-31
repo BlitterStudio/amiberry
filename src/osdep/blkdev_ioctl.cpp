@@ -2325,7 +2325,6 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 
 error:
 	write_log(_T("IOCTL: sys_cddev_open error for unit %d\n"), unitnum);
-	win32_error(ciw, unitnum, _T("CreateFile"));
 
 	free(ciw->tempbuffer);
 	ciw->tempbuffer = NULL;
