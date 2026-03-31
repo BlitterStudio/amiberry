@@ -61,6 +61,11 @@ static constexpr uint8_t ALPHA_NORMAL = 160;
 static constexpr uint8_t ALPHA_PRESSED = 220;
 // Dead zone in the center of the joystick (fraction of radius)
 static constexpr float DPAD_DEADZONE = 0.15f;
+// Auto-release threshold: if the finger moves beyond this multiple of the
+// hit radius from the D-pad center, the joystick is released to center.
+// This prevents the joystick from getting stuck when a finger slides far
+// away and then back (where motion events can be lost or IDs can change).
+static constexpr float DPAD_RELEASE_RADIUS = 2.5f;
 // Knob size as fraction of the base plate diameter
 static constexpr float KNOB_SIZE_FRACTION = 0.40f;
 // Maximum travel distance of knob center from base center (fraction of base radius)
@@ -783,6 +788,26 @@ static void remove_finger(SDL_FingerID id)
 		active_fingers.end());
 }
 
+// Release any existing finger that is tracking the given control.
+// Used to clean up orphaned state before assigning a new finger.
+static void release_existing_control(ControlType ctl)
+{
+	for (auto it = active_fingers.begin(); it != active_fingers.end(); ) {
+		if (it->control == ctl) {
+			it = active_fingers.erase(it);
+		} else {
+			++it;
+		}
+	}
+	if (ctl == CTL_DPAD) {
+		release_dpad();
+	} else if (ctl == CTL_BUTTON1 || ctl == CTL_BUTTON2) {
+		release_button(ctl);
+	} else if (ctl == CTL_KEYBOARD) {
+		joy_kb_pressed = false;
+	}
+}
+
 static ControlType hit_test(int px, int py)
 {
 	{
@@ -1259,11 +1284,55 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w,
 {
 	if (!osj_enabled || !osj_initialized) return false;
 
+	// Stale-finger audit: if any tracked finger no longer exists in SDL's
+	// active touch list, release it.  This catches silently dropped touches
+	// (palm rejection, focus loss, etc.) that would otherwise leave the
+	// dpad or buttons stuck.
+	if (!active_fingers.empty()) {
+		SDL_TouchID touch_id = event.tfinger.touchID;
+		int num_fingers = 0;
+		SDL_Finger** fingers = SDL_GetTouchFingers(touch_id, &num_fingers);
+		if (fingers) {
+			// Build a quick check of which IDs SDL still knows about
+			for (auto it = active_fingers.begin(); it != active_fingers.end(); ) {
+				bool still_alive = false;
+				for (int i = 0; i < num_fingers; i++) {
+					if (fingers[i]->id == it->id) {
+						still_alive = true;
+						break;
+					}
+				}
+				if (!still_alive) {
+					ControlType stale_ctl = it->control;
+					it = active_fingers.erase(it);
+					if (stale_ctl == CTL_DPAD) {
+						release_dpad();
+					} else if (stale_ctl == CTL_BUTTON1 || stale_ctl == CTL_BUTTON2) {
+						release_button(stale_ctl);
+					} else if (stale_ctl == CTL_KEYBOARD) {
+						joy_kb_pressed = false;
+					}
+				} else {
+					++it;
+				}
+			}
+			SDL_free(fingers);
+		}
+	}
+
 	int px = static_cast<int>(event.tfinger.x * window_w);
 	int py = static_cast<int>(event.tfinger.y * window_h);
 
 	ControlType ctl = hit_test(px, py);
 	if (ctl == CTL_NONE) return false;
+
+	// If a finger is already tracking this control (orphaned from a missed
+	// finger-up), release it first to avoid stuck state.
+	bool already_tracked = std::any_of(active_fingers.begin(), active_fingers.end(),
+		[ctl](const FingerTrack& f) { return f.control == ctl; });
+	if (already_tracked) {
+		release_existing_control(ctl);
+	}
 
 	FingerTrack ft;
 	ft.id = event.tfinger.fingerID;
@@ -1329,6 +1398,21 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_
 	if (ft->control == CTL_DPAD) {
 		int px = static_cast<int>(event.tfinger.x * window_w);
 		int py = static_cast<int>(event.tfinger.y * window_h);
+
+		// If the finger has moved far beyond the D-pad area, auto-release
+		// to prevent stuck directions when the finger slides away and back
+		// (which can cause missed events or finger ID changes on some devices).
+		int dx = px - dpad_cx;
+		int dy = py - dpad_cy;
+		float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+		float release_dist = dpad_hit_radius * DPAD_RELEASE_RADIUS;
+
+		if (dist > release_dist) {
+			release_dpad();
+			remove_finger(event.tfinger.fingerID);
+			return true;
+		}
+
 		update_dpad_from_position(px, py);
 	}
 
