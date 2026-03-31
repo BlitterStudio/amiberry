@@ -96,10 +96,13 @@ void render_panel_diskswapper()
              size_t last_sep = result_path.find_last_of("/\\");
              if (last_sep != std::string::npos)
                  last_floppy_dir = result_path.substr(0, last_sep);
-             if (strncmp(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH) != 0)
-             {
-                 strncpy(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH);
-                 add_file_to_mru_list(lstMRUDiskList, result_path);
+             int archive_count = populate_diskswapper_from_archive(result_path.c_str(), &changed_prefs);
+             if (archive_count <= 0) {
+                 if (strncmp(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH) != 0)
+                 {
+                     strncpy(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH);
+                     add_file_to_mru_list(lstMRUDiskList, result_path);
+                 }
              }
         }
         diskswapper_target_slot = -1;

@@ -679,8 +679,18 @@ void render_panel_quickstart() {
                     size_t last_sep = filePath.find_last_of("/\\");
                     if (last_sep != std::string::npos)
                         last_floppy_dir = filePath.substr(0, last_sep);
-                    if (std::strncmp(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH) != 0) {
-                        std::strncpy(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH);
+                    int archive_count = populate_diskswapper_from_archive(filePath.c_str(), &changed_prefs);
+                    if (archive_count > 0) {
+                        std::strncpy(changed_prefs.floppyslots[i].df, changed_prefs.dfxlist[0], MAX_DPATH - 1);
+                        changed_prefs.floppyslots[i].df[MAX_DPATH - 1] = '\0';
+                        disk_insert(i, changed_prefs.floppyslots[i].df);
+                        add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[0]));
+                        qs_invalidate_wp_cache(i);
+                        if (!last_loaded_config[0])
+                            set_last_active_config(changed_prefs.dfxlist[0]);
+                    } else if (std::strncmp(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH) != 0) {
+                        std::strncpy(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH - 1);
+                        changed_prefs.floppyslots[i].df[MAX_DPATH - 1] = '\0';
                         disk_insert(i, filePath.c_str());
                         add_file_to_mru_list(lstMRUDiskList, filePath);
                         qs_invalidate_wp_cache(i);

@@ -533,10 +533,20 @@ void render_panel_floppy()
                 }
                 
                 if (drive_idx >= 0) {
-                     strncpy(changed_prefs.floppyslots[drive_idx].df, result_path.c_str(), MAX_DPATH - 1);
-                     changed_prefs.floppyslots[drive_idx].df[MAX_DPATH - 1] = '\0';
-                     disk_insert(drive_idx, result_path.c_str());
-                     DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
+                     int archive_count = populate_diskswapper_from_archive(result_path.c_str(), &changed_prefs);
+                     if (archive_count > 0) {
+                         // Archive with multiple disks: insert first image into selected drive
+                         strncpy(changed_prefs.floppyslots[drive_idx].df, changed_prefs.dfxlist[0], MAX_DPATH - 1);
+                         changed_prefs.floppyslots[drive_idx].df[MAX_DPATH - 1] = '\0';
+                         disk_insert(drive_idx, changed_prefs.floppyslots[drive_idx].df);
+                         DISK_history_add(changed_prefs.floppyslots[drive_idx].df, -1, HISTORY_FLOPPY, 0);
+                         add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[0]));
+                     } else {
+                         strncpy(changed_prefs.floppyslots[drive_idx].df, result_path.c_str(), MAX_DPATH - 1);
+                         changed_prefs.floppyslots[drive_idx].df[MAX_DPATH - 1] = '\0';
+                         disk_insert(drive_idx, result_path.c_str());
+                         DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
+                     }
                      invalidate_wp_cache(drive_idx);
                 }
             }

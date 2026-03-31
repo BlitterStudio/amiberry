@@ -29,6 +29,7 @@
 #include "xwin.h"
 #include "custom.h"
 #include "disk.h"
+#include "zfile.h"
 #include "imgui_internal.h"
 #include "savestate.h"
 #include "target.h"
@@ -796,6 +797,44 @@ std::string get_xml_timestamp(const std::string& xml_filename)
 void gui_force_rtarea_hdchange()
 {
 	gui_rtarea_flags_onenter |= 2;
+}
+
+struct archive_disk_scan_state {
+	std::vector<std::string> images;
+};
+
+static int archive_disk_scan_cb(struct zfile *f, void *user)
+{
+	auto *state = static_cast<archive_disk_scan_state *>(user);
+	if (state->images.size() >= MAX_SPARE_DRIVES)
+		return 1;
+	int type = zfile_gettype(f);
+	const TCHAR *name = zfile_getname(f);
+	if (name && (type == ZFILE_DISKIMAGE || type == ZFILE_EXECUTABLE)) {
+		state->images.emplace_back(name);
+	}
+	return 0;
+}
+
+int populate_diskswapper_from_archive(const TCHAR *path, struct uae_prefs *prefs)
+{
+	archive_disk_scan_state state;
+	if (!zfile_zopen(std::string(path), archive_disk_scan_cb, &state))
+		return 0;
+	if (state.images.size() <= 1)
+		return 0;
+
+	std::sort(state.images.begin(), state.images.end());
+
+	for (int i = 0; i < MAX_SPARE_DRIVES; i++)
+		prefs->dfxlist[i][0] = 0;
+
+	int count = std::min(static_cast<int>(state.images.size()), MAX_SPARE_DRIVES);
+	for (int i = 0; i < count; i++) {
+		_tcsncpy(prefs->dfxlist[i], state.images[i].c_str(), MAX_DPATH - 1);
+		prefs->dfxlist[i][MAX_DPATH - 1] = '\0';
+	}
+	return count;
 }
 
 int disk_in_drive(int entry)
