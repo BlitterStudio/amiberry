@@ -431,11 +431,15 @@ bool VulkanRenderer::init_context(SDL_Window* window)
 		m_swapchain_extent.width, m_swapchain_extent.height,
 		m_swapchain_images.size());
 
+	start_render_thread();
+
 	return true;
 }
 
 void VulkanRenderer::destroy_context()
 {
+	stop_render_thread();
+
 	if (m_device != VK_NULL_HANDLE) {
 		vkDeviceWaitIdle(m_device);
 	}
@@ -597,9 +601,9 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 		const int requested_w = -w;
 		const int requested_h = -h;
 		const bool can_reuse =
-			m_upload_staging_buffer != VK_NULL_HANDLE &&
-			m_upload_staging_allocation != nullptr &&
-			m_upload_staging_mapped != nullptr &&
+			m_frame_slots[0].staging_buffer != VK_NULL_HANDLE &&
+			m_frame_slots[0].staging_allocation != nullptr &&
+			m_frame_slots[0].staging_mapped != nullptr &&
 			m_upload_texture_image != VK_NULL_HANDLE &&
 			m_upload_texture_allocation != nullptr &&
 			m_upload_texture_view != VK_NULL_HANDLE &&
@@ -634,7 +638,7 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 
 	const VkDeviceSize required_size = static_cast<VkDeviceSize>(w) * static_cast<VkDeviceSize>(h) * 4;
 	const bool had_resources =
-		m_upload_staging_buffer != VK_NULL_HANDLE ||
+		m_frame_slots[0].staging_buffer != VK_NULL_HANDLE ||
 		m_upload_texture_image != VK_NULL_HANDLE ||
 		m_upload_texture_view != VK_NULL_HANDLE;
 
@@ -642,6 +646,25 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 		write_log("VulkanRenderer: alloc_texture recreating upload resources (%dx%d)\n", w, h);
 		m_logged_upload_recreate = true;
 	}
+
+	// Pause render thread while reallocating staging buffers and texture
+	const bool was_running = m_render_thread_running.load(std::memory_order_acquire);
+	if (was_running)
+		pause_render_thread();
+
+	// Drain any READY slots and reset indices — stale frame metadata must not
+	// be consumed against newly allocated staging/texture resources.
+	for (auto& slot : m_frame_slots) {
+		slot.state.store(FrameSlot::State::FREE, std::memory_order_release);
+		slot.has_frame = false;
+	}
+	m_producer_index = 0;
+	m_consumer_index = 0;
+
+	auto resume_on_exit = [this, was_running]() {
+		if (was_running)
+			resume_render_thread();
+	};
 
 	for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
 		if (m_in_flight_fences[i] == VK_NULL_HANDLE)
@@ -651,19 +674,28 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 			write_log("VulkanRenderer: vkWaitForFences before upload resource recreate failed (frame=%u, VkResult=%d)\n",
 				i,
 				wait_result);
+			resume_on_exit();
 			return false;
 		}
 	}
 
-	VkBuffer new_staging_buffer = VK_NULL_HANDLE;
-	VmaAllocation new_staging_allocation = nullptr;
-	void* new_staging_mapped = nullptr;
-	bool new_staging_mapped_by_vma_map = false;
+	// Allocate per-frame staging buffers
+	std::array<FrameSlot, k_max_frames_in_flight> new_slots{};
+	for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
+		if (!allocate_frame_slot_staging(new_slots[i], required_size)) {
+			write_log("VulkanRenderer: failed to allocate staging buffer for frame slot %u\n", i);
+			for (uint32_t j = 0; j <= i; ++j)
+				cleanup_frame_slot_staging(new_slots[j]);
+			resume_on_exit();
+			return false;
+		}
+	}
+
 	VkImage new_texture_image = VK_NULL_HANDLE;
 	VmaAllocation new_texture_allocation = nullptr;
 	VkImageView new_texture_view = VK_NULL_HANDLE;
 
-	auto cleanup_new_upload_resources = [&]() {
+	auto cleanup_new_texture = [&]() {
 		if (new_texture_view != VK_NULL_HANDLE) {
 			vkDestroyImageView(m_device, new_texture_view, nullptr);
 			new_texture_view = VK_NULL_HANDLE;
@@ -673,48 +705,14 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 			new_texture_image = VK_NULL_HANDLE;
 			new_texture_allocation = nullptr;
 		}
-		if (new_staging_allocation != nullptr && new_staging_mapped != nullptr && new_staging_mapped_by_vma_map) {
-			vmaUnmapMemory(m_allocator, new_staging_allocation);
-		}
-		new_staging_mapped = nullptr;
-		new_staging_mapped_by_vma_map = false;
-		if (new_staging_buffer != VK_NULL_HANDLE && new_staging_allocation != nullptr) {
-			vmaDestroyBuffer(m_allocator, new_staging_buffer, new_staging_allocation);
-			new_staging_buffer = VK_NULL_HANDLE;
-			new_staging_allocation = nullptr;
-		}
 	};
 
-	VkBufferCreateInfo buffer_info{};
-	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.size = required_size;
-	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	VmaAllocationCreateInfo staging_alloc_info{};
-	staging_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-	staging_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-		VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-	VmaAllocationInfo staging_info{};
-	VkResult result = vmaCreateBuffer(m_allocator, &buffer_info, &staging_alloc_info,
-		&new_staging_buffer, &new_staging_allocation, &staging_info);
-	if (result != VK_SUCCESS) {
-		write_log("VulkanRenderer: vmaCreateBuffer for upload staging failed (VkResult=%d)\n", result);
-		cleanup_new_upload_resources();
-		return false;
-	}
-
-	new_staging_mapped = staging_info.pMappedData;
-	if (new_staging_mapped == nullptr) {
-		result = vmaMapMemory(m_allocator, new_staging_allocation, &new_staging_mapped);
-		if (result != VK_SUCCESS) {
-			write_log("VulkanRenderer: vmaMapMemory for upload staging failed (VkResult=%d)\n", result);
-			cleanup_new_upload_resources();
-			return false;
-		}
-		new_staging_mapped_by_vma_map = true;
-	}
+	auto cleanup_all_new_and_resume = [&]() {
+		cleanup_new_texture();
+		for (uint32_t i = 0; i < k_max_frames_in_flight; ++i)
+			cleanup_frame_slot_staging(new_slots[i]);
+		resume_on_exit();
+	};
 
 	VkImageCreateInfo image_info{};
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -734,11 +732,11 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	VmaAllocationCreateInfo image_alloc_info{};
 	image_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-	result = vmaCreateImage(m_allocator, &image_info, &image_alloc_info,
+	VkResult result = vmaCreateImage(m_allocator, &image_info, &image_alloc_info,
 		&new_texture_image, &new_texture_allocation, nullptr);
 	if (result != VK_SUCCESS) {
 		write_log("VulkanRenderer: vmaCreateImage for upload texture failed (VkResult=%d)\n", result);
-		cleanup_new_upload_resources();
+		cleanup_all_new_and_resume();
 		return false;
 	}
 
@@ -756,21 +754,17 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	result = vkCreateImageView(m_device, &view_info, nullptr, &new_texture_view);
 	if (result != VK_SUCCESS) {
 		write_log("VulkanRenderer: vkCreateImageView for upload texture failed (VkResult=%d)\n", result);
-		cleanup_new_upload_resources();
+		cleanup_all_new_and_resume();
 		return false;
 	}
 
 	if (!transition_image_to_shader_read(new_texture_image)) {
 		write_log("VulkanRenderer: failed to transition upload texture to shader-read layout\n");
-		cleanup_new_upload_resources();
+		cleanup_all_new_and_resume();
 		return false;
 	}
 
-	const VkBuffer old_staging_buffer = m_upload_staging_buffer;
-	const VmaAllocation old_staging_allocation = m_upload_staging_allocation;
-	void* old_staging_mapped = m_upload_staging_mapped;
-	const bool old_staging_mapped_by_vma_map = m_upload_staging_mapped_by_vma_map;
-	const VkDeviceSize old_staging_size = m_upload_staging_size;
+	// Save old texture state for rollback
 	const VkImage old_texture_image = m_upload_texture_image;
 	const VmaAllocation old_texture_allocation = m_upload_texture_allocation;
 	const VkImageView old_texture_view = m_upload_texture_view;
@@ -780,11 +774,22 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	const VkExtent2D old_texture_extent = m_upload_texture_extent;
 	const bool old_has_uploaded_frame = m_has_uploaded_frame;
 
-	m_upload_staging_buffer = new_staging_buffer;
-	m_upload_staging_allocation = new_staging_allocation;
-	m_upload_staging_mapped = new_staging_mapped;
-	m_upload_staging_mapped_by_vma_map = new_staging_mapped_by_vma_map;
-	m_upload_staging_size = required_size;
+	// Save old frame slot staging for rollback
+	std::array<StagingState, k_max_frames_in_flight> old_staging;
+	for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
+		old_staging[i] = {m_frame_slots[i].staging_buffer, m_frame_slots[i].staging_allocation,
+			m_frame_slots[i].staging_mapped, m_frame_slots[i].staging_mapped_by_vma_map,
+			m_frame_slots[i].staging_size};
+	}
+
+	// Install new resources
+	for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
+		m_frame_slots[i].staging_buffer = new_slots[i].staging_buffer;
+		m_frame_slots[i].staging_allocation = new_slots[i].staging_allocation;
+		m_frame_slots[i].staging_mapped = new_slots[i].staging_mapped;
+		m_frame_slots[i].staging_mapped_by_vma_map = new_slots[i].staging_mapped_by_vma_map;
+		m_frame_slots[i].staging_size = required_size;
+	}
 	m_upload_texture_image = new_texture_image;
 	m_upload_texture_allocation = new_texture_allocation;
 	m_upload_texture_view = new_texture_view;
@@ -799,11 +804,14 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	if (!update_texture_descriptor_set()) {
 		write_log("VulkanRenderer: failed to update descriptor set for upload texture\n");
 
-		m_upload_staging_buffer = old_staging_buffer;
-		m_upload_staging_allocation = old_staging_allocation;
-		m_upload_staging_mapped = old_staging_mapped;
-		m_upload_staging_mapped_by_vma_map = old_staging_mapped_by_vma_map;
-		m_upload_staging_size = old_staging_size;
+		// Rollback
+		for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
+			m_frame_slots[i].staging_buffer = old_staging[i].buffer;
+			m_frame_slots[i].staging_allocation = old_staging[i].allocation;
+			m_frame_slots[i].staging_mapped = old_staging[i].mapped;
+			m_frame_slots[i].staging_mapped_by_vma_map = old_staging[i].mapped_by_vma_map;
+			m_frame_slots[i].staging_size = old_staging[i].size;
+		}
 		m_upload_texture_image = old_texture_image;
 		m_upload_texture_allocation = old_texture_allocation;
 		m_upload_texture_view = old_texture_view;
@@ -813,15 +821,18 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 		m_upload_texture_extent = old_texture_extent;
 		m_has_uploaded_frame = old_has_uploaded_frame;
 
-		cleanup_new_upload_resources();
+		cleanup_all_new_and_resume();
 		return false;
 	}
 
-	if (old_staging_allocation != nullptr && old_staging_mapped != nullptr && old_staging_mapped_by_vma_map) {
-		vmaUnmapMemory(m_allocator, old_staging_allocation);
-	}
-	if (old_staging_buffer != VK_NULL_HANDLE && old_staging_allocation != nullptr) {
-		vmaDestroyBuffer(m_allocator, old_staging_buffer, old_staging_allocation);
+	// Clean up old resources
+	for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
+		if (old_staging[i].allocation != nullptr && old_staging[i].mapped != nullptr && old_staging[i].mapped_by_vma_map) {
+			vmaUnmapMemory(m_allocator, old_staging[i].allocation);
+		}
+		if (old_staging[i].buffer != VK_NULL_HANDLE && old_staging[i].allocation != nullptr) {
+			vmaDestroyBuffer(m_allocator, old_staging[i].buffer, old_staging[i].allocation);
+		}
 	}
 	if (old_texture_view != VK_NULL_HANDLE) {
 		vkDestroyImageView(m_device, old_texture_view, nullptr);
@@ -830,11 +841,14 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 		vmaDestroyImage(m_allocator, old_texture_image, old_texture_allocation);
 	}
 
-	write_log("VulkanRenderer: staging buffer created (%zu bytes for %dx%d)\n",
-		static_cast<size_t>(m_upload_staging_size), w, h);
+	write_log("VulkanRenderer: staging buffers created (%u x %zu bytes for %dx%d)\n",
+		k_max_frames_in_flight, static_cast<size_t>(required_size), w, h);
 	write_log("VulkanRenderer: texture image created (%dx%d, format=%d)\n", w, h, resolve_upload_format());
 
 	m_has_uploaded_frame = false;
+
+	if (was_running)
+		resume_render_thread();
 
 	return true;
 }
@@ -905,10 +919,11 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 
 	sync_crt_shader_selection(monid);
 
+	const auto& slot_check = m_frame_slots[m_producer_index];
 	const bool upload_resources_ready =
-		m_upload_staging_buffer != VK_NULL_HANDLE &&
-		m_upload_staging_allocation != nullptr &&
-		m_upload_staging_mapped != nullptr &&
+		slot_check.staging_buffer != VK_NULL_HANDLE &&
+		slot_check.staging_allocation != nullptr &&
+		slot_check.staging_mapped != nullptr &&
 		m_upload_texture_image != VK_NULL_HANDLE &&
 		m_upload_texture_allocation != nullptr &&
 		m_upload_texture_view != VK_NULL_HANDLE &&
@@ -923,9 +938,23 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 		}
 	}
 
-	if (m_upload_staging_mapped == nullptr ||
-		m_upload_staging_allocation == nullptr ||
-		m_upload_staging_buffer == VK_NULL_HANDLE ||
+	// Wait for producer slot to be FREE (blocks only if pipeline is full)
+	auto& slot = m_frame_slots[m_producer_index];
+	if (m_render_thread_running.load(std::memory_order_acquire)) {
+		std::unique_lock lock(m_frame_mutex);
+		m_frame_consumed_cv.wait(lock, [&slot, this] {
+			return slot.state.load(std::memory_order_acquire) == FrameSlot::State::FREE
+				|| m_render_thread_exit.load(std::memory_order_acquire);
+		});
+		if (m_render_thread_exit.load(std::memory_order_acquire)) {
+			m_has_uploaded_frame = false;
+			return false;
+		}
+	}
+
+	if (slot.staging_mapped == nullptr ||
+		slot.staging_allocation == nullptr ||
+		slot.staging_buffer == VK_NULL_HANDLE ||
 		m_upload_texture_image == VK_NULL_HANDLE ||
 		m_upload_texture_view == VK_NULL_HANDLE) {
 		m_has_uploaded_frame = false;
@@ -942,27 +971,181 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	const size_t dst_pitch = static_cast<size_t>(surface->w) * 4;
 	const size_t upload_size = dst_pitch * static_cast<size_t>(surface->h);
 
-	if (src_pitch < dst_pitch || upload_size > static_cast<size_t>(m_upload_staging_size)) {
+	if (src_pitch < dst_pitch || upload_size > static_cast<size_t>(slot.staging_size)) {
 		write_log("VulkanRenderer: upload buffer size mismatch (src_pitch=%zu dst_pitch=%zu upload_size=%zu staging_size=%zu)\n",
-			src_pitch, dst_pitch, upload_size, static_cast<size_t>(m_upload_staging_size));
+			src_pitch, dst_pitch, upload_size, static_cast<size_t>(slot.staging_size));
 		m_has_uploaded_frame = false;
 		return false;
 	}
 
-	const auto* src_bytes = static_cast<const uae_u8*>(surface->pixels);
-	auto* dst_bytes = static_cast<uae_u8*>(m_upload_staging_mapped);
-	for (int y = 0; y < surface->h; ++y) {
-		std::memcpy(
-			dst_bytes + static_cast<size_t>(y) * dst_pitch,
-			src_bytes + static_cast<size_t>(y) * src_pitch,
-			dst_pitch);
+	// Check for zero-copy RTG path
+	const amigadisplay* ad = &adisplays[monid];
+	bool use_zerocopy = false;
+	if (ad->picasso_on && currprefs.rtg_zerocopy) {
+		uae_u8* rtg_ptr = p96_get_render_buffer_pointer(monid);
+		if (rtg_ptr != nullptr && surface->pixels == rtg_ptr) {
+			// Surface already points to RTG VRAM — just record the pointer
+			slot.zerocopy = true;
+			slot.zerocopy_ptr = rtg_ptr;
+			slot.zerocopy_pitch = src_pitch;
+			use_zerocopy = true;
+		}
 	}
 
-	const VkResult flush_result = vmaFlushAllocation(m_allocator, m_upload_staging_allocation, 0, upload_size);
-	if (flush_result != VK_SUCCESS) {
-		write_log("VulkanRenderer: vmaFlushAllocation failed for frame upload (VkResult=%d)\n", flush_result);
-		m_has_uploaded_frame = false;
-		return false;
+	if (!use_zerocopy) {
+		slot.zerocopy = false;
+		slot.zerocopy_ptr = nullptr;
+
+		const auto* src_bytes = static_cast<const uae_u8*>(surface->pixels);
+		auto* dst_bytes = static_cast<uae_u8*>(slot.staging_mapped);
+		for (int y = 0; y < surface->h; ++y) {
+			std::memcpy(
+				dst_bytes + static_cast<size_t>(y) * dst_pitch,
+				src_bytes + static_cast<size_t>(y) * src_pitch,
+				dst_pitch);
+		}
+
+		const VkResult flush_result = vmaFlushAllocation(m_allocator, slot.staging_allocation, 0, upload_size);
+		if (flush_result != VK_SUCCESS) {
+			write_log("VulkanRenderer: vmaFlushAllocation failed for frame upload (VkResult=%d)\n", flush_result);
+			m_has_uploaded_frame = false;
+			return false;
+		}
+	}
+
+	// Snapshot frame metadata into slot
+	slot.monid = monid;
+	slot.texture_width = surface->w;
+	slot.texture_height = surface->h;
+	slot.crop = crop_rect;
+	slot.crt_active = m_crt_shader_active;
+	slot.crt_time = m_crt_time;
+	m_crt_time += 1.0f / 50.0f; // Advance CRT time on emu thread (not render thread)
+	slot.integer_scaling = m_integer_scaling;
+	slot.picasso_on = ad->picasso_on;
+
+	const AmigaMonitor* mon = &AMonitors[monid];
+	slot.scalepicasso = mon->scalepicasso;
+	slot.screen_is_picasso = mon->screen_is_picasso;
+	if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
+		slot.desired_aspect = crop_aspect;
+	} else {
+		slot.desired_aspect = calculate_desired_aspect(mon);
+	}
+
+	// --- Upload overlay textures on the emu thread (thread-safe surface access) ---
+	// Lock the overlay mutex to prevent the render thread from reading overlay
+	// textures (via record_overlay_copy/draw) while we modify them here.
+	std::lock_guard<std::mutex> overlay_lock(m_overlay_mutex);
+
+	// Bezel overlay (load from file if changed)
+	slot.draw_bezel = false;
+	if (amiberry_options.use_custom_bezel && amiberry_options.custom_bezel[0] != '\0'
+		&& strcmp(amiberry_options.custom_bezel, "none") != 0) {
+		if (m_loaded_bezel_name != amiberry_options.custom_bezel) {
+			cleanup_overlay_texture(m_bezel_tex);
+			m_loaded_bezel_name.clear();
+			std::string full_path = get_bezels_path() + amiberry_options.custom_bezel;
+			SDL_Surface* bezel_surf = IMG_Load(full_path.c_str());
+			if (bezel_surf) {
+				SDL_Surface* rgba = SDL_ConvertSurface(bezel_surf, SDL_PIXELFORMAT_ABGR8888);
+				SDL_DestroySurface(bezel_surf);
+				if (rgba) {
+					int min_x = rgba->w, min_y = rgba->h, max_x = 0, max_y = 0;
+					const auto* px = static_cast<const uint8_t*>(rgba->pixels);
+					for (int y = 0; y < rgba->h; y++) {
+						const auto* row = px + y * rgba->pitch;
+						for (int x = 0; x < rgba->w; x++) {
+							if (row[x * 4 + 3] < 128) {
+								if (x < min_x) min_x = x;
+								if (x > max_x) max_x = x;
+								if (y < min_y) min_y = y;
+								if (y > max_y) max_y = y;
+							}
+						}
+					}
+					if (max_x >= min_x && max_y >= min_y) {
+						m_bezel_hole_x = static_cast<float>(min_x) / rgba->w;
+						m_bezel_hole_y = static_cast<float>(min_y) / rgba->h;
+						m_bezel_hole_w = static_cast<float>(max_x - min_x + 1) / rgba->w;
+						m_bezel_hole_h = static_cast<float>(max_y - min_y + 1) / rgba->h;
+					} else {
+						m_bezel_hole_x = m_bezel_hole_y = 0;
+						m_bezel_hole_w = m_bezel_hole_h = 1.0f;
+					}
+					m_bezel_tex_w = rgba->w;
+					m_bezel_tex_h = rgba->h;
+					upload_overlay_texture(m_bezel_tex, rgba);
+					SDL_DestroySurface(rgba);
+					m_loaded_bezel_name = amiberry_options.custom_bezel;
+				}
+			}
+		}
+		slot.draw_bezel = (m_bezel_tex.descriptor_set != VK_NULL_HANDLE && m_bezel_tex_w > 0);
+	}
+
+	// Software cursor (RTG)
+	slot.draw_cursor = false;
+	if (ad->picasso_on && p96_uses_software_cursor()) {
+		SDL_Surface* cs = p96_get_cursor_overlay_surface();
+		if (cs) {
+			upload_overlay_texture(m_cursor_tex, cs);
+			slot.draw_cursor = true;
+		}
+		p96_get_cursor_position(&slot.cursor_x, &slot.cursor_y);
+		p96_get_cursor_dimensions(&slot.cursor_w, &slot.cursor_h);
+	}
+
+	// Virtual keyboard
+	slot.draw_vkbd = false;
+	{
+		VkbdRenderInfo vkbd_info{};
+		if (vkbd_allowed(monid) && vkbd_get_render_info(vkbd_info)) {
+			upload_overlay_texture(m_vkbd_tex, vkbd_info.surface);
+			slot.vkbd_x = vkbd_info.x;
+			slot.vkbd_y = vkbd_info.y;
+			slot.vkbd_pos_space_w = vkbd_info.position_space_w;
+			slot.vkbd_pos_space_h = vkbd_info.position_space_h;
+			slot.vkbd_surface_w = vkbd_info.surface ? vkbd_info.surface->w : 0;
+			slot.vkbd_surface_h = vkbd_info.surface ? vkbd_info.surface->h : 0;
+			slot.draw_vkbd = true;
+		}
+	}
+
+	// On-screen joystick
+	slot.draw_osj = false;
+	{
+		OsjRenderInfo osj_info{};
+		if (on_screen_joystick_is_enabled() && on_screen_joystick_get_render_info(osj_info)) {
+			upload_overlay_texture(m_osj_base_tex, osj_info.base.surface);
+			upload_overlay_texture(m_osj_knob_tex, osj_info.knob.surface);
+			upload_overlay_texture(m_osj_btn1_tex, osj_info.btn1.surface);
+			upload_overlay_texture(m_osj_btn2_tex, osj_info.btn2.surface);
+			if (osj_info.btnkb.surface)
+				upload_overlay_texture(m_osj_btnkb_tex, osj_info.btnkb.surface);
+			slot.osj_screen_w = osj_info.screen_w;
+			slot.osj_screen_h = osj_info.screen_h;
+			slot.osj_base_rect = osj_info.base.rect;
+			slot.osj_knob_rect = osj_info.knob.rect;
+			slot.osj_btn1_rect = osj_info.btn1.rect;
+			slot.osj_btn2_rect = osj_info.btn2.rect;
+			slot.osj_btnkb_rect = osj_info.btnkb.rect;
+			slot.draw_osj = true;
+		}
+	}
+
+	// OSD overlay
+	slot.draw_osd = m_osd_uploaded && m_osd_image != VK_NULL_HANDLE &&
+		m_osd_staging_buffer != VK_NULL_HANDLE && m_osd_descriptor_set != VK_NULL_HANDLE &&
+		m_osd_pipeline != VK_NULL_HANDLE && m_osd_width > 0 && m_osd_height > 0;
+
+	slot.has_frame = true;
+
+	if (m_render_thread_running.load(std::memory_order_acquire)) {
+		// Signal render thread
+		slot.state.store(FrameSlot::State::READY, std::memory_order_release);
+		m_frame_ready_cv.notify_one();
+		m_producer_index = (m_producer_index + 1) % k_max_frames_in_flight;
 	}
 
 	m_has_uploaded_frame = true;
@@ -979,6 +1162,22 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	if (currprefs.headless || !m_context_valid)
 		return;
 
+	// When the render thread is running, Vulkan submission and presentation happen
+	// asynchronously. Frame pacing for non-VSync modes is handled by the emulation's
+	// timing system in framewait() (custom.cpp) via the vs==0 software sleep path.
+	//
+	// Known limitation: VSync modes (vs > 0) expect present_frame to block for one
+	// display refresh period. Unlike OpenGL's SDL_GL_SetSwapInterval which can skip
+	// VBlanks to match 50Hz on a 120Hz display, Vulkan has no swap interval concept.
+	// VSync frame pacing with the render thread requires a future implementation
+	// (e.g. timeline semaphores or explicit frame rate limiting).
+	// For now, use non-VSync display modes with the Vulkan renderer.
+	if (m_render_thread_running.load(std::memory_order_acquire)) {
+		m_vsync.wait_vblank_timestamp = read_processor_time();
+		return;
+	}
+
+	// Single-threaded fallback path
 	if (m_swapchain_recreate_requested) {
 		recreate_swapchain();
 		if (m_swapchain_recreate_requested)
@@ -988,6 +1187,21 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	if (!m_has_uploaded_frame)
 		return;
 
+	// In single-threaded mode, the producer doesn't advance m_producer_index,
+	// so the frame is in the current producer slot. Use it directly.
+	const uint32_t slot_index = m_producer_index;
+	auto& slot = m_frame_slots[slot_index];
+	if (!slot.has_frame)
+		return;
+
+	record_and_submit(slot_index);
+	slot.has_frame = false;
+}
+
+void VulkanRenderer::record_and_submit(uint32_t slot_index)
+{
+	auto& slot = m_frame_slots[slot_index];
+
 	if (m_device == VK_NULL_HANDLE ||
 		m_swapchain == VK_NULL_HANDLE ||
 		m_graphics_queue == VK_NULL_HANDLE ||
@@ -996,7 +1210,7 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 		m_graphics_pipeline_layout == VK_NULL_HANDLE ||
 		m_render_pass == VK_NULL_HANDLE ||
 		m_texture_descriptor_set == VK_NULL_HANDLE ||
-		m_upload_staging_buffer == VK_NULL_HANDLE ||
+		slot.staging_buffer == VK_NULL_HANDLE ||
 		m_upload_texture_image == VK_NULL_HANDLE ||
 		m_swapchain_framebuffers.empty() ||
 		m_swapchain_render_finished_semaphores.empty() ||
@@ -1011,7 +1225,7 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	VkFence frame_fence = m_in_flight_fences[frame_index];
 	VkCommandBuffer command_buffer = m_graphics_command_buffers[frame_index];
 	if (frame_fence == VK_NULL_HANDLE || command_buffer == VK_NULL_HANDLE) {
-		write_log("VulkanRenderer: present_frame missing fence or command buffer for frame %u\n", frame_index);
+		write_log("VulkanRenderer: record_and_submit missing fence or command buffer for frame %u\n", frame_index);
 		return;
 	}
 
@@ -1107,9 +1321,25 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 		1
 	};
 
+	// For zero-copy RTG, we need to copy from the RTG pointer to the staging buffer now
+	// (the render thread deferred this from render_frame)
+	if (slot.zerocopy && slot.zerocopy_ptr != nullptr) {
+		const size_t dst_pitch = static_cast<size_t>(slot.texture_width) * 4;
+		const size_t upload_size = dst_pitch * static_cast<size_t>(slot.texture_height);
+		const auto* src_bytes = static_cast<const uae_u8*>(slot.zerocopy_ptr);
+		auto* dst_bytes = static_cast<uae_u8*>(slot.staging_mapped);
+		for (int y = 0; y < slot.texture_height; ++y) {
+			std::memcpy(
+				dst_bytes + static_cast<size_t>(y) * dst_pitch,
+				src_bytes + static_cast<size_t>(y) * slot.zerocopy_pitch,
+				dst_pitch);
+		}
+		vmaFlushAllocation(m_allocator, slot.staging_allocation, 0, upload_size);
+	}
+
 	vkCmdCopyBufferToImage(
 		command_buffer,
-		m_upload_staging_buffer,
+		slot.staging_buffer,
 		m_upload_texture_image,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1,
@@ -1126,9 +1356,7 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 	// Copy OSD staging buffer to OSD image (if OSD data available)
-	const bool draw_osd = m_osd_uploaded && m_osd_image != VK_NULL_HANDLE &&
-		m_osd_staging_buffer != VK_NULL_HANDLE && m_osd_descriptor_set != VK_NULL_HANDLE &&
-		m_osd_pipeline != VK_NULL_HANDLE && m_osd_width > 0 && m_osd_height > 0;
+	const bool draw_osd = slot.draw_osd;
 
 	if (draw_osd) {
 		record_image_layout_transition(
@@ -1158,98 +1386,33 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 
-	// --- Prepare overlay textures (bezel, cursor, vkbd, joystick) ---
-
-	// Bezel overlay
-	bool draw_bezel = false;
-	if (amiberry_options.use_custom_bezel && amiberry_options.custom_bezel[0] != '\0'
-		&& strcmp(amiberry_options.custom_bezel, "none") != 0) {
-		if (m_loaded_bezel_name != amiberry_options.custom_bezel) {
-			cleanup_overlay_texture(m_bezel_tex);
-			m_loaded_bezel_name.clear();
-			std::string full_path = get_bezels_path() + amiberry_options.custom_bezel;
-			SDL_Surface* bezel_surf = IMG_Load(full_path.c_str());
-			if (bezel_surf) {
-				// Convert and detect screen hole (transparent region)
-				SDL_Surface* rgba = SDL_ConvertSurface(bezel_surf, SDL_PIXELFORMAT_ABGR8888);
-				SDL_DestroySurface(bezel_surf);
-				if (rgba) {
-					// Scan alpha to find the screen hole bounding box
-					int min_x = rgba->w, min_y = rgba->h, max_x = 0, max_y = 0;
-					const auto* px = static_cast<const uint8_t*>(rgba->pixels);
-					for (int y = 0; y < rgba->h; y++) {
-						const auto* row = px + y * rgba->pitch;
-						for (int x = 0; x < rgba->w; x++) {
-							if (row[x * 4 + 3] < 128) {
-								if (x < min_x) min_x = x;
-								if (x > max_x) max_x = x;
-								if (y < min_y) min_y = y;
-								if (y > max_y) max_y = y;
-							}
-						}
-					}
-					if (max_x >= min_x && max_y >= min_y) {
-						m_bezel_hole_x = static_cast<float>(min_x) / rgba->w;
-						m_bezel_hole_y = static_cast<float>(min_y) / rgba->h;
-						m_bezel_hole_w = static_cast<float>(max_x - min_x + 1) / rgba->w;
-						m_bezel_hole_h = static_cast<float>(max_y - min_y + 1) / rgba->h;
-					} else {
-						m_bezel_hole_x = m_bezel_hole_y = 0;
-						m_bezel_hole_w = m_bezel_hole_h = 1.0f;
-					}
-					m_bezel_tex_w = rgba->w;
-					m_bezel_tex_h = rgba->h;
-					upload_overlay_texture(m_bezel_tex, rgba);
-					SDL_DestroySurface(rgba);
-					m_loaded_bezel_name = amiberry_options.custom_bezel;
-				}
-			}
-		}
-		draw_bezel = (m_bezel_tex.descriptor_set != VK_NULL_HANDLE && m_bezel_tex_w > 0);
-		if (draw_bezel) record_overlay_copy(command_buffer, m_bezel_tex);
-	}
-
-	// Software cursor (RTG)
-	bool draw_cursor = false;
+	// --- Overlay textures: use cached GPU textures, copy staging if dirty ---
+	// Overlay uploads happen on the emu thread in render_frame(). Here we record
+	// staging→image copies and draw commands. Lock the overlay mutex to prevent
+	// the emu thread from modifying overlay textures while we read them.
+	bool draw_bezel, draw_cursor, draw_vkbd, draw_osj;
 	{
-		const amigadisplay* ad = &adisplays[monid];
-		if (ad->picasso_on && p96_uses_software_cursor()) {
-			SDL_Surface* cs = p96_get_cursor_overlay_surface();
-			if (cs) {
-				upload_overlay_texture(m_cursor_tex, cs);
-				record_overlay_copy(command_buffer, m_cursor_tex);
-				draw_cursor = true;
-			}
+		std::lock_guard<std::mutex> overlay_lock(m_overlay_mutex);
+
+		draw_bezel = slot.draw_bezel && m_bezel_tex.descriptor_set != VK_NULL_HANDLE && m_bezel_tex_w > 0;
+		if (draw_bezel) record_overlay_copy(command_buffer, m_bezel_tex);
+
+		draw_cursor = slot.draw_cursor && m_cursor_tex.descriptor_set != VK_NULL_HANDLE;
+		if (draw_cursor) record_overlay_copy(command_buffer, m_cursor_tex);
+
+		draw_vkbd = slot.draw_vkbd && m_vkbd_tex.descriptor_set != VK_NULL_HANDLE;
+		if (draw_vkbd) record_overlay_copy(command_buffer, m_vkbd_tex);
+
+		draw_osj = slot.draw_osj && m_osj_base_tex.descriptor_set != VK_NULL_HANDLE;
+		if (draw_osj) {
+			record_overlay_copy(command_buffer, m_osj_base_tex);
+			record_overlay_copy(command_buffer, m_osj_knob_tex);
+			record_overlay_copy(command_buffer, m_osj_btn1_tex);
+			record_overlay_copy(command_buffer, m_osj_btn2_tex);
+			if (m_osj_btnkb_tex.descriptor_set != VK_NULL_HANDLE)
+				record_overlay_copy(command_buffer, m_osj_btnkb_tex);
 		}
-	}
-
-	// Virtual keyboard
-	bool draw_vkbd = false;
-	VkbdRenderInfo vkbd_info{};
-	if (vkbd_allowed(monid) && vkbd_get_render_info(vkbd_info)) {
-		upload_overlay_texture(m_vkbd_tex, vkbd_info.surface);
-		record_overlay_copy(command_buffer, m_vkbd_tex);
-		draw_vkbd = true;
-	}
-
-	// On-screen joystick
-	bool draw_osj = false;
-	OsjRenderInfo osj_info{};
-	if (on_screen_joystick_is_enabled() && on_screen_joystick_get_render_info(osj_info)) {
-		upload_overlay_texture(m_osj_base_tex, osj_info.base.surface);
-		upload_overlay_texture(m_osj_knob_tex, osj_info.knob.surface);
-		upload_overlay_texture(m_osj_btn1_tex, osj_info.btn1.surface);
-		upload_overlay_texture(m_osj_btn2_tex, osj_info.btn2.surface);
-		if (osj_info.btnkb.surface)
-			upload_overlay_texture(m_osj_btnkb_tex, osj_info.btnkb.surface);
-		record_overlay_copy(command_buffer, m_osj_base_tex);
-		record_overlay_copy(command_buffer, m_osj_knob_tex);
-		record_overlay_copy(command_buffer, m_osj_btn1_tex);
-		record_overlay_copy(command_buffer, m_osj_btn2_tex);
-		if (m_osj_btnkb_tex.descriptor_set != VK_NULL_HANDLE)
-			record_overlay_copy(command_buffer, m_osj_btnkb_tex);
-		draw_osj = true;
-	}
+	} // overlay_lock released — staging copies are recorded, GPU resources safe
 
 	VkClearValue clear_value{};
 	clear_value.color.float32[0] = 0.0f;
@@ -1270,7 +1433,7 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 
 	// Select CRT or passthrough pipeline for the main emulation quad
 	VkPipeline active_pipeline = m_graphics_pipeline;
-	if (m_crt_shader_active && m_crt_pipeline != VK_NULL_HANDLE) {
+	if (slot.crt_active && m_crt_pipeline != VK_NULL_HANDLE) {
 		active_pipeline = m_crt_pipeline;
 	}
 	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, active_pipeline);
@@ -1306,23 +1469,17 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	int destX = render_area_x, destY = render_area_y;
 	int destW = render_area_w, destH = render_area_h;
 
-	if (drawable_w > 0 && drawable_h > 0 && m_upload_texture_width > 0 && m_upload_texture_height > 0) {
-		const AmigaMonitor* mon = &AMonitors[monid];
-		float desired_aspect;
-		if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
-			desired_aspect = crop_aspect;
-		} else {
-			desired_aspect = calculate_desired_aspect(mon);
-		}
+	if (drawable_w > 0 && drawable_h > 0 && slot.texture_width > 0 && slot.texture_height > 0) {
+		float desired_aspect = slot.desired_aspect;
 		if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
 
-		bool use_center = mon->screen_is_picasso && mon->scalepicasso == RTG_MODE_CENTER;
-		bool use_integer = mon->screen_is_picasso
-			? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
-			: m_integer_scaling;
+		bool use_center = slot.screen_is_picasso && slot.scalepicasso == RTG_MODE_CENTER;
+		bool use_integer = slot.screen_is_picasso
+			? (slot.scalepicasso == RTG_MODE_INTEGER_SCALE)
+			: slot.integer_scaling;
 
-		const int src_w = m_upload_texture_width;
-		const int src_h = m_upload_texture_height;
+		const int src_w = slot.texture_width;
+		const int src_h = slot.texture_height;
 
 		if (render_area_x != 0 || render_area_y != 0 ||
 			render_area_w != drawable_w || render_area_h != drawable_h) {
@@ -1362,7 +1519,9 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 		}
 	}
 
-	// Update render_quad so input coordinate translation works correctly
+	// Update render_quad so input coordinate translation works correctly.
+	// Note: benign race with get_gfx_offset() on emu thread — coordinates
+	// change rarely and a torn read only affects mouse mapping for one frame.
 	render_quad.x = destX;
 	render_quad.y = destY;
 	render_quad.w = destW;
@@ -1401,32 +1560,32 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	crop_push_constants.u_max = 1.0f;
 	crop_push_constants.v_max = 1.0f;
 
-	if (m_upload_texture_width > 0 && m_upload_texture_height > 0) {
+	if (slot.texture_width > 0 && slot.texture_height > 0) {
 		bool is_cropped =
-			(crop_rect.x != 0 || crop_rect.y != 0 ||
-			crop_rect.w != m_upload_texture_width || crop_rect.h != m_upload_texture_height) &&
-			(crop_rect.w > 0 && crop_rect.h > 0);
+			(slot.crop.x != 0 || slot.crop.y != 0 ||
+			slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height) &&
+			(slot.crop.w > 0 && slot.crop.h > 0);
 
 		int crop_x = 0;
 		int crop_y = 0;
-		int crop_w = m_upload_texture_width;
-		int crop_h = m_upload_texture_height;
+		int crop_w = slot.texture_width;
+		int crop_h = slot.texture_height;
 
 		if (is_cropped) {
-			crop_x = std::max(0, crop_rect.x);
-			crop_y = std::max(0, crop_rect.y);
-			crop_w = std::min(crop_rect.w, m_upload_texture_width - crop_x);
-			crop_h = std::min(crop_rect.h, m_upload_texture_height - crop_y);
+			crop_x = std::max(0, slot.crop.x);
+			crop_y = std::max(0, slot.crop.y);
+			crop_w = std::min(slot.crop.w, slot.texture_width - crop_x);
+			crop_h = std::min(slot.crop.h, slot.texture_height - crop_y);
 			if (crop_w <= 0 || crop_h <= 0) {
 				crop_x = 0;
 				crop_y = 0;
-				crop_w = m_upload_texture_width;
-				crop_h = m_upload_texture_height;
+				crop_w = slot.texture_width;
+				crop_h = slot.texture_height;
 			}
 		}
 
-		const float inv_w = 1.0f / static_cast<float>(m_upload_texture_width);
-		const float inv_h = 1.0f / static_cast<float>(m_upload_texture_height);
+		const float inv_w = 1.0f / static_cast<float>(slot.texture_width);
+		const float inv_h = 1.0f / static_cast<float>(slot.texture_height);
 		crop_push_constants.u_min = std::clamp(static_cast<float>(crop_x) * inv_w, 0.0f, 1.0f);
 		crop_push_constants.v_min = std::clamp(static_cast<float>(crop_y) * inv_h, 0.0f, 1.0f);
 		crop_push_constants.u_max = std::clamp(static_cast<float>(crop_x + crop_w) * inv_w, 0.0f, 1.0f);
@@ -1434,20 +1593,18 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 	}
 
 	// Push constants — always push the full CRT-sized struct for layout compatibility.
-	// The passthrough shader only reads the first 16 bytes (cropUV); extra fields are ignored.
 	VulkanCrtPushConstants push_constants{};
 	push_constants.u_min = crop_push_constants.u_min;
 	push_constants.v_min = crop_push_constants.v_min;
 	push_constants.u_max = crop_push_constants.u_max;
 	push_constants.v_max = crop_push_constants.v_max;
 
-	if (m_crt_shader_active && m_crt_pipeline != VK_NULL_HANDLE) {
-		m_crt_time += 1.0f / 50.0f; // Approximate PAL frame time
+	if (slot.crt_active && m_crt_pipeline != VK_NULL_HANDLE) {
 		push_constants.resolution_x = viewport.width;
 		push_constants.resolution_y = viewport.height;
-		push_constants.size_x = static_cast<float>(m_upload_texture_width);
-		push_constants.size_y = static_cast<float>(m_upload_texture_height);
-		push_constants.time = m_crt_time;
+		push_constants.size_x = static_cast<float>(slot.texture_width);
+		push_constants.size_y = static_cast<float>(slot.texture_height);
+		push_constants.time = slot.crt_time;
 	}
 
 	vkCmdPushConstants(command_buffer, m_graphics_pipeline_layout,
@@ -1501,58 +1658,52 @@ void VulkanRenderer::present_frame(int monid, int /*mode*/)
 			bezel_display_x, bezel_display_y, bezel_display_w, bezel_display_h);
 	}
 
-	// Software cursor
+	// Software cursor (using snapshotted position from render_frame)
 	if (draw_cursor) {
-		int cx, cy, cw, ch;
-		p96_get_cursor_position(&cx, &cy);
-		p96_get_cursor_dimensions(&cw, &ch);
-		// Map cursor position from source coordinates to destination
-		if (m_upload_texture_width > 0 && m_upload_texture_height > 0) {
-			float sx = static_cast<float>(destW) / m_upload_texture_width;
-			float sy = static_cast<float>(destH) / m_upload_texture_height;
-			int dx = destX + static_cast<int>(cx * sx);
-			int dy = destY + static_cast<int>(cy * sy);
-			int dw = static_cast<int>(cw * sx);
-			int dh = static_cast<int>(ch * sy);
+		if (slot.texture_width > 0 && slot.texture_height > 0) {
+			float sx = static_cast<float>(destW) / slot.texture_width;
+			float sy = static_cast<float>(destH) / slot.texture_height;
+			int dx = destX + static_cast<int>(slot.cursor_x * sx);
+			int dy = destY + static_cast<int>(slot.cursor_y * sy);
+			int dw = static_cast<int>(slot.cursor_w * sx);
+			int dh = static_cast<int>(slot.cursor_h * sy);
 			if (dw > 0 && dh > 0)
 				record_overlay_draw(command_buffer, m_cursor_tex, dx, dy, dw, dh);
 		}
 	}
 
-	// Virtual keyboard
-	if (draw_vkbd && vkbd_info.position_space_w > 0 && vkbd_info.position_space_h > 0) {
-		float sx = static_cast<float>(drawable_w) / vkbd_info.position_space_w;
-		float sy = static_cast<float>(drawable_h) / vkbd_info.position_space_h;
-		int vx = static_cast<int>(vkbd_info.x * sx);
-		int vy = static_cast<int>(vkbd_info.y * sy);
-		int vw = static_cast<int>(vkbd_info.surface->w * sx);
-		int vh = static_cast<int>(vkbd_info.surface->h * sy);
+	// Virtual keyboard (using snapshotted positions from render_frame)
+	if (draw_vkbd && slot.vkbd_pos_space_w > 0 && slot.vkbd_pos_space_h > 0) {
+		float sx = static_cast<float>(drawable_w) / slot.vkbd_pos_space_w;
+		float sy = static_cast<float>(drawable_h) / slot.vkbd_pos_space_h;
+		int vx = static_cast<int>(slot.vkbd_x * sx);
+		int vy = static_cast<int>(slot.vkbd_y * sy);
+		int vw = static_cast<int>(slot.vkbd_surface_w * sx);
+		int vh = static_cast<int>(slot.vkbd_surface_h * sy);
 		if (vw > 0 && vh > 0)
 			record_overlay_draw(command_buffer, m_vkbd_tex, vx, vy, vw, vh);
 	}
 
-	// On-screen joystick
-	if (draw_osj && osj_info.screen_w > 0 && osj_info.screen_h > 0) {
-		// OSJ rects are in screen_w x screen_h coordinate space
-		// Map to drawable space
-		float sx = static_cast<float>(drawable_w) / osj_info.screen_w;
-		float sy = static_cast<float>(drawable_h) / osj_info.screen_h;
+	// On-screen joystick (using snapshotted positions from render_frame)
+	if (draw_osj && slot.osj_screen_w > 0 && slot.osj_screen_h > 0) {
+		float sx = static_cast<float>(drawable_w) / slot.osj_screen_w;
+		float sy = static_cast<float>(drawable_h) / slot.osj_screen_h;
 
-		auto draw_osj_element = [&](const OverlayTexture& tex, const OsjOverlayElement& elem) {
-			if (tex.descriptor_set == VK_NULL_HANDLE || elem.rect.w <= 0) return;
-			int ex = static_cast<int>(elem.rect.x * sx);
-			int ey = static_cast<int>(elem.rect.y * sy);
-			int ew = static_cast<int>(elem.rect.w * sx);
-			int eh = static_cast<int>(elem.rect.h * sy);
+		auto draw_osj_element = [&](const OverlayTexture& tex, const SDL_Rect& rect) {
+			if (tex.descriptor_set == VK_NULL_HANDLE || rect.w <= 0) return;
+			int ex = static_cast<int>(rect.x * sx);
+			int ey = static_cast<int>(rect.y * sy);
+			int ew = static_cast<int>(rect.w * sx);
+			int eh = static_cast<int>(rect.h * sy);
 			if (ew > 0 && eh > 0)
 				record_overlay_draw(command_buffer, tex, ex, ey, ew, eh);
 		};
 
-		draw_osj_element(m_osj_base_tex, osj_info.base);
-		draw_osj_element(m_osj_knob_tex, osj_info.knob);
-		draw_osj_element(m_osj_btn1_tex, osj_info.btn1);
-		draw_osj_element(m_osj_btn2_tex, osj_info.btn2);
-		draw_osj_element(m_osj_btnkb_tex, osj_info.btnkb);
+		draw_osj_element(m_osj_base_tex, slot.osj_base_rect);
+		draw_osj_element(m_osj_knob_tex, slot.osj_knob_rect);
+		draw_osj_element(m_osj_btn1_tex, slot.osj_btn1_rect);
+		draw_osj_element(m_osj_btn2_tex, slot.osj_btn2_rect);
+		draw_osj_element(m_osj_btnkb_tex, slot.osj_btnkb_rect);
 	}
 
 	vkCmdEndRenderPass(command_buffer);
@@ -2184,12 +2335,14 @@ VkSurfaceFormatKHR VulkanRenderer::choose_surface_format(const std::vector<VkSur
 
 VkPresentModeKHR VulkanRenderer::choose_present_mode(const std::vector<VkPresentModeKHR>& modes)
 {
-	// Prefer MAILBOX (triple-buffered, lowest latency with vsync)
+	// Prefer MAILBOX (triple-buffered, lowest latency without tearing).
+	// Frame pacing is handled by present_frame() sleeping until vsynctimebase
+	// has elapsed, independent of the GPU's present rate.
 	for (const auto& mode : modes) {
 		if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
 			return mode;
 	}
-	// FIFO is guaranteed to be available (vsync)
+	// FIFO is guaranteed to be available (vsync, blocks on VBlank)
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -2441,6 +2594,160 @@ bool VulkanRenderer::recreate_swapchain()
 		m_swapchain_extent.height,
 		m_swapchain_images.size());
 	return true;
+}
+
+// ============================================================================
+// Render thread
+// ============================================================================
+
+void VulkanRenderer::start_render_thread()
+{
+	if (m_render_thread_running.load(std::memory_order_acquire))
+		return;
+
+	m_render_thread_exit.store(false, std::memory_order_release);
+	m_render_thread_paused.store(false, std::memory_order_release);
+	m_pause_acknowledged.store(false, std::memory_order_release);
+	m_producer_index = 0;
+	m_consumer_index = 0;
+
+	for (auto& slot : m_frame_slots)
+		slot.state.store(FrameSlot::State::FREE, std::memory_order_release);
+
+	m_render_thread = std::thread(render_thread_func, this);
+	m_render_thread_running.store(true, std::memory_order_release);
+	write_log("VulkanRenderer: render thread started\n");
+}
+
+void VulkanRenderer::stop_render_thread()
+{
+	if (!m_render_thread_running.load(std::memory_order_acquire))
+		return;
+
+	write_log("VulkanRenderer: stopping render thread\n");
+
+	// Signal exit and wake the render thread from any wait
+	m_render_thread_exit.store(true, std::memory_order_release);
+	m_render_thread_paused.store(false, std::memory_order_release);
+	m_frame_ready_cv.notify_all();
+	m_frame_consumed_cv.notify_all();
+	m_pause_ack_cv.notify_all();
+
+	if (m_render_thread.joinable())
+		m_render_thread.join();
+
+	m_render_thread_running.store(false, std::memory_order_release);
+	m_render_thread_exit.store(false, std::memory_order_release);
+
+	// Reset slot states
+	for (auto& slot : m_frame_slots) {
+		slot.state.store(FrameSlot::State::FREE, std::memory_order_release);
+		slot.has_frame = false;
+	}
+	m_producer_index = 0;
+	m_consumer_index = 0;
+
+	write_log("VulkanRenderer: render thread stopped\n");
+}
+
+void VulkanRenderer::pause_render_thread()
+{
+	if (!m_render_thread_running.load(std::memory_order_acquire))
+		return;
+	if (m_render_thread_paused.load(std::memory_order_acquire))
+		return;
+
+	m_pause_acknowledged.store(false, std::memory_order_release);
+	m_render_thread_paused.store(true, std::memory_order_release);
+	m_frame_ready_cv.notify_all();
+
+	// Wait for the render thread to acknowledge the pause
+	std::unique_lock lock(m_pause_mutex);
+	m_pause_ack_cv.wait(lock, [this] {
+		return m_pause_acknowledged.load(std::memory_order_acquire)
+			|| m_render_thread_exit.load(std::memory_order_acquire);
+	});
+
+	write_log("VulkanRenderer: render thread paused\n");
+}
+
+void VulkanRenderer::resume_render_thread()
+{
+	if (!m_render_thread_running.load(std::memory_order_acquire))
+		return;
+	if (!m_render_thread_paused.load(std::memory_order_acquire))
+		return;
+
+	m_render_thread_paused.store(false, std::memory_order_release);
+	m_pause_acknowledged.store(false, std::memory_order_release);
+	m_frame_ready_cv.notify_all();
+
+	write_log("VulkanRenderer: render thread resumed\n");
+}
+
+void VulkanRenderer::render_thread_func(VulkanRenderer* self)
+{
+	write_log("VulkanRenderer: render thread entered\n");
+
+	while (!self->m_render_thread_exit.load(std::memory_order_acquire)) {
+		// Handle pause requests (GUI transition)
+		if (self->m_render_thread_paused.load(std::memory_order_acquire)) {
+			self->m_pause_acknowledged.store(true, std::memory_order_release);
+			self->m_pause_ack_cv.notify_one();
+
+			std::unique_lock lock(self->m_frame_mutex);
+			self->m_frame_ready_cv.wait(lock, [self] {
+				return !self->m_render_thread_paused.load(std::memory_order_acquire)
+					|| self->m_render_thread_exit.load(std::memory_order_acquire);
+			});
+			self->m_pause_acknowledged.store(false, std::memory_order_release);
+			continue;
+		}
+
+		// Wait for a READY frame or exit/pause signal
+		{
+			std::unique_lock lock(self->m_frame_mutex);
+			bool got_signal = self->m_frame_ready_cv.wait_for(lock, std::chrono::milliseconds(16), [self] {
+				return self->m_frame_slots[self->m_consumer_index].state.load(std::memory_order_acquire) == FrameSlot::State::READY
+					|| self->m_render_thread_exit.load(std::memory_order_acquire)
+					|| self->m_render_thread_paused.load(std::memory_order_acquire);
+			});
+			if (!got_signal) continue;
+		}
+
+		if (self->m_render_thread_exit.load(std::memory_order_acquire))
+			break;
+		if (self->m_render_thread_paused.load(std::memory_order_acquire))
+			continue;
+
+		auto& slot = self->m_frame_slots[self->m_consumer_index];
+		if (slot.state.load(std::memory_order_acquire) != FrameSlot::State::READY)
+			continue;
+
+		// Handle swapchain recreation on the render thread
+		if (self->m_swapchain_recreate_requested) {
+			self->recreate_swapchain();
+			if (self->m_swapchain_recreate_requested) {
+				// Recreation failed, skip this frame
+				slot.has_frame = false;
+				slot.state.store(FrameSlot::State::FREE, std::memory_order_release);
+				self->m_consumer_index = (self->m_consumer_index + 1) % k_max_frames_in_flight;
+				self->m_frame_consumed_cv.notify_one();
+				continue;
+			}
+		}
+
+		// Consume the frame
+		self->record_and_submit(self->m_consumer_index);
+
+		// Mark slot free and advance
+		slot.has_frame = false;
+		slot.state.store(FrameSlot::State::FREE, std::memory_order_release);
+		self->m_consumer_index = (self->m_consumer_index + 1) % k_max_frames_in_flight;
+		self->m_frame_consumed_cv.notify_one();
+	}
+
+	write_log("VulkanRenderer: render thread exiting\n");
 }
 
 bool VulkanRenderer::create_persistent_draw_resources()
@@ -3100,24 +3407,67 @@ void VulkanRenderer::cleanup_upload_resources()
 	m_upload_texture_width = 0;
 	m_upload_texture_height = 0;
 	m_upload_texture_cached_format = VK_FORMAT_UNDEFINED;
-	m_upload_staging_size = 0;
 	m_has_uploaded_frame = false;
 }
 
 void VulkanRenderer::cleanup_upload_staging()
 {
-	if (m_upload_staging_allocation != nullptr && m_upload_staging_mapped != nullptr && m_upload_staging_mapped_by_vma_map) {
-		vmaUnmapMemory(m_allocator, m_upload_staging_allocation);
+	for (uint32_t i = 0; i < k_max_frames_in_flight; ++i) {
+		cleanup_frame_slot_staging(m_frame_slots[i]);
 	}
-	m_upload_staging_mapped = nullptr;
-	m_upload_staging_mapped_by_vma_map = false;
+}
 
-	if (m_upload_staging_buffer != VK_NULL_HANDLE && m_upload_staging_allocation != nullptr) {
-		vmaDestroyBuffer(m_allocator, m_upload_staging_buffer, m_upload_staging_allocation);
+void VulkanRenderer::cleanup_frame_slot_staging(FrameSlot& slot)
+{
+	if (slot.staging_allocation != nullptr && slot.staging_mapped != nullptr && slot.staging_mapped_by_vma_map) {
+		vmaUnmapMemory(m_allocator, slot.staging_allocation);
+	}
+	slot.staging_mapped = nullptr;
+	slot.staging_mapped_by_vma_map = false;
+
+	if (slot.staging_buffer != VK_NULL_HANDLE && slot.staging_allocation != nullptr) {
+		vmaDestroyBuffer(m_allocator, slot.staging_buffer, slot.staging_allocation);
 	}
 
-	m_upload_staging_buffer = VK_NULL_HANDLE;
-	m_upload_staging_allocation = nullptr;
+	slot.staging_buffer = VK_NULL_HANDLE;
+	slot.staging_allocation = nullptr;
+	slot.staging_size = 0;
+}
+
+bool VulkanRenderer::allocate_frame_slot_staging(FrameSlot& slot, VkDeviceSize required_size)
+{
+	VkBufferCreateInfo buffer_info{};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.size = required_size;
+	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VmaAllocationCreateInfo staging_alloc_info{};
+	staging_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+	staging_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+		VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+	VmaAllocationInfo staging_info{};
+	VkResult result = vmaCreateBuffer(m_allocator, &buffer_info, &staging_alloc_info,
+		&slot.staging_buffer, &slot.staging_allocation, &staging_info);
+	if (result != VK_SUCCESS) {
+		write_log("VulkanRenderer: vmaCreateBuffer for frame slot staging failed (VkResult=%d)\n", result);
+		return false;
+	}
+
+	slot.staging_mapped = staging_info.pMappedData;
+	if (slot.staging_mapped == nullptr) {
+		result = vmaMapMemory(m_allocator, slot.staging_allocation, &slot.staging_mapped);
+		if (result != VK_SUCCESS) {
+			write_log("VulkanRenderer: vmaMapMemory for frame slot staging failed (VkResult=%d)\n", result);
+			cleanup_frame_slot_staging(slot);
+			return false;
+		}
+		slot.staging_mapped_by_vma_map = true;
+	}
+
+	slot.staging_size = required_size;
+	return true;
 }
 
 void VulkanRenderer::cleanup_upload_texture()
@@ -3932,6 +4282,7 @@ void VulkanRenderer::cleanup_imgui_descriptor_pool()
 
 void VulkanRenderer::prepare_gui_sharing(AmigaMonitor* /*mon*/)
 {
+	pause_render_thread();
 	if (m_device != VK_NULL_HANDLE) {
 		vkDeviceWaitIdle(m_device);
 	}
@@ -3939,11 +4290,10 @@ void VulkanRenderer::prepare_gui_sharing(AmigaMonitor* /*mon*/)
 
 void VulkanRenderer::restore_emulation_context(SDL_Window* /*window*/)
 {
-	// Vulkan doesn't have a "current context" like OpenGL.
-	// Just ensure the device is idle before resuming emulation rendering.
 	if (m_device != VK_NULL_HANDLE) {
 		vkDeviceWaitIdle(m_device);
 	}
+	resume_render_thread();
 }
 
 bool VulkanRenderer::render_gui_frame(void* draw_data_ptr)

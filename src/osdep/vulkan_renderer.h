@@ -18,6 +18,10 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 struct VmaAllocator_T;
 using VmaAllocator = VmaAllocator_T*;
@@ -126,11 +130,100 @@ private:
 	std::vector<VkSemaphore> m_swapchain_render_finished_semaphores;
 	std::vector<VkFence> m_swapchain_images_in_flight;
 
-	VkBuffer m_upload_staging_buffer = VK_NULL_HANDLE;
-	VmaAllocation m_upload_staging_allocation = nullptr;
-	void* m_upload_staging_mapped = nullptr;
-	bool m_upload_staging_mapped_by_vma_map = false;
-	VkDeviceSize m_upload_staging_size = 0;
+	// --- Per-frame staging (ring buffer for multi-threaded rendering) ---
+	struct FrameSlot {
+		VkBuffer staging_buffer = VK_NULL_HANDLE;
+		VmaAllocation staging_allocation = nullptr;
+		void* staging_mapped = nullptr;
+		bool staging_mapped_by_vma_map = false;
+		VkDeviceSize staging_size = 0;
+
+		// Frame metadata snapshot (written by producer, read by consumer)
+		int monid = 0;
+		int texture_width = 0;
+		int texture_height = 0;
+		bool has_frame = false;
+
+		// Overlay visibility snapshots
+		bool draw_osd = false;
+		bool draw_bezel = false;
+		bool draw_cursor = false;
+		bool draw_vkbd = false;
+		bool draw_osj = false;
+		int cursor_x = 0, cursor_y = 0, cursor_w = 0, cursor_h = 0;
+
+		// CRT shader state snapshot
+		bool crt_active = false;
+		float crt_time = 0.0f;
+
+		// VKBD position snapshot
+		int vkbd_x = 0, vkbd_y = 0;
+		int vkbd_pos_space_w = 0, vkbd_pos_space_h = 0;
+		int vkbd_surface_w = 0, vkbd_surface_h = 0;
+
+		// On-screen joystick position snapshot
+		int osj_screen_w = 0, osj_screen_h = 0;
+		SDL_Rect osj_base_rect{}, osj_knob_rect{};
+		SDL_Rect osj_btn1_rect{}, osj_btn2_rect{}, osj_btnkb_rect{};
+
+		// Crop + scaling state snapshot
+		SDL_Rect crop{};
+		bool integer_scaling = false;
+		bool picasso_on = false;
+		bool screen_is_picasso = false;
+		int scalepicasso = 0;
+		float desired_aspect = 4.0f / 3.0f;
+
+		// Zero-copy RTG path
+		bool zerocopy = false;
+		const void* zerocopy_ptr = nullptr;
+		size_t zerocopy_pitch = 0;
+
+		// Slot state for producer-consumer coordination
+		enum class State { FREE, READY };
+		std::atomic<State> state{State::FREE};
+
+		// Non-copyable/non-movable due to std::atomic member
+		FrameSlot() = default;
+		FrameSlot(const FrameSlot&) = delete;
+		FrameSlot& operator=(const FrameSlot&) = delete;
+		FrameSlot(FrameSlot&&) = delete;
+		FrameSlot& operator=(FrameSlot&&) = delete;
+	};
+
+	// Staging-only state for alloc_texture rollback (no atomic, copyable)
+	struct StagingState {
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VmaAllocation allocation = nullptr;
+		void* mapped = nullptr;
+		bool mapped_by_vma_map = false;
+		VkDeviceSize size = 0;
+	};
+	std::array<FrameSlot, k_max_frames_in_flight> m_frame_slots;
+	uint32_t m_producer_index = 0;  // written by emu thread only
+	uint32_t m_consumer_index = 0;  // written by render thread only
+
+	// --- Render thread ---
+	std::thread m_render_thread;
+	std::mutex m_frame_mutex;
+	std::condition_variable m_frame_ready_cv;
+	std::condition_variable m_frame_consumed_cv;
+	std::atomic<bool> m_render_thread_running{false};
+	std::atomic<bool> m_render_thread_exit{false};
+	std::atomic<bool> m_render_thread_paused{false};
+	std::mutex m_pause_mutex;
+	std::condition_variable m_pause_ack_cv;
+	std::atomic<bool> m_pause_acknowledged{false};
+
+	void start_render_thread();
+	void stop_render_thread();
+	void pause_render_thread();
+	void resume_render_thread();
+	static void render_thread_func(VulkanRenderer* self);
+	void record_and_submit(uint32_t slot_index);
+	std::mutex m_overlay_mutex; // protects overlay texture upload/read
+	bool allocate_frame_slot_staging(FrameSlot& slot, VkDeviceSize required_size);
+	void cleanup_frame_slot_staging(FrameSlot& slot);
 
 	VkImage m_upload_texture_image = VK_NULL_HANDLE;
 	VmaAllocation m_upload_texture_allocation = nullptr;
@@ -165,7 +258,7 @@ private:
 	bool m_logged_first_upload = false;
 	bool m_logged_first_submit = false;
 	bool m_logged_first_present = false;
-	bool m_swapchain_recreate_requested = false;
+	std::atomic<bool> m_swapchain_recreate_requested{false};
 	bool m_logged_zero_extent_skip = false;
 	bool m_integer_scaling = false;
 	bool m_linear_filter = false;
