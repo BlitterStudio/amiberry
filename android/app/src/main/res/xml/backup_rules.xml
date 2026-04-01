@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pre-Android 12 (API < 31) backup rules.
+    Backs up user configurations and preferences.
+-->
+<full-backup-content>
+    <include domain="external" path="conf/" />
+    <include domain="external" path="controllers/" />
+    <include domain="sharedpref" path="amiberry_prefs.xml" />
+    <exclude domain="external" path=".extracted_version" />
+    <exclude domain="external" path=".emulator_session" />
+    <exclude domain="external" path=".last_session.uae" />
+    <exclude domain="external" path=".current_settings.uae" />
+    <exclude domain="external" path=".temp_native_ui.uae" />
+    <exclude domain="external" path="data" />
+    <exclude domain="external" path="roms" />
+    <exclude domain="external" path="whdboot" />
+</full-backup-content>

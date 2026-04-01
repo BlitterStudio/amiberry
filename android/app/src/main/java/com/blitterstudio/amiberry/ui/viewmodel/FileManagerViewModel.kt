@@ -56,12 +56,24 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 		importJob = viewModelScope.launch(Dispatchers.IO) {
 			_isImporting.value = true
 			try {
-				val result = FileManager.importFile(getApplication(), uri, category)
+				val app = getApplication<Application>()
+
+				// Validate file extension before importing
+				val fileName = FileManager.getDisplayName(app, uri)
+				if (fileName != null) {
+					val ext = fileName.substringAfterLast('.', "").lowercase()
+					if (ext.isNotEmpty() && ext !in category.extensions) {
+						_importResult.value = app.getString(R.string.msg_unsupported_file_type)
+						return@launch
+					}
+				}
+
+				val result = FileManager.importFile(app, uri, category)
 				if (result != null) {
-					_importResult.value = getApplication<Application>().getString(R.string.msg_imported_successfully)
+					_importResult.value = app.getString(R.string.msg_imported_successfully)
 					repository.rescanCategory(category)
 				} else {
-					_importResult.value = getApplication<Application>().getString(R.string.msg_import_failed)
+					_importResult.value = app.getString(R.string.msg_import_failed)
 				}
 			} catch (e: CancellationException) {
 				throw e

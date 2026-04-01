@@ -27,6 +27,8 @@
 
     <application
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:icon="@mipmap/ic_launcher"
@@ -46,6 +48,39 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Open Amiga disk images, configs, and WHDLoad archives from file managers.
+                Split into two filters: file:// uses pathPattern matching; content:// uses
+                application/octet-stream since pathPattern is unreliable with SAF URIs.
+                Non-Amiga files are rejected in importAndLaunch() via extension check.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.adf" />
+                <data android:pathPattern=".*\\.adz" />
+                <data android:pathPattern=".*\\.dms" />
+                <data android:pathPattern=".*\\.ipf" />
+                <data android:pathPattern=".*\\.hdf" />
+                <data android:pathPattern=".*\\.iso" />
+                <data android:pathPattern=".*\\.cue" />
+                <data android:pathPattern=".*\\.chd" />
+                <data android:pathPattern=".*\\.lha" />
+                <data android:pathPattern=".*\\.lzx" />
+                <data android:pathPattern=".*\\.lzh" />
+                <data android:pathPattern=".*\\.uae" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
 

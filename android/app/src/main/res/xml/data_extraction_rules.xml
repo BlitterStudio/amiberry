@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ (API 31+) backup and device transfer rules.
+    Backs up user configurations and preferences.
+    Excludes extracted assets (re-extracted on first launch) and session markers.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="external" path="conf/" />
+        <include domain="external" path="controllers/" />
+        <include domain="sharedpref" path="amiberry_prefs.xml" />
+        <exclude domain="external" path=".extracted_version" />
+        <exclude domain="external" path=".emulator_session" />
+        <exclude domain="external" path=".last_session.uae" />
+        <exclude domain="external" path=".current_settings.uae" />
+        <exclude domain="external" path=".temp_native_ui.uae" />
+        <exclude domain="external" path="data/" />
+        <exclude domain="external" path="roms/" />
+        <exclude domain="external" path="whdboot/" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="external" path="conf/" />
+        <include domain="external" path="controllers/" />
+        <include domain="sharedpref" path="amiberry_prefs.xml" />
+        <exclude domain="external" path=".extracted_version" />
+        <exclude domain="external" path=".emulator_session" />
+        <exclude domain="external" path=".last_session.uae" />
+        <exclude domain="external" path=".current_settings.uae" />
+        <exclude domain="external" path=".temp_native_ui.uae" />
+        <exclude domain="external" path="data/" />
+        <exclude domain="external" path="roms/" />
+        <exclude domain="external" path="whdboot/" />
+    </device-transfer>
+</data-extraction-rules>

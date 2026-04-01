@@ -133,6 +133,12 @@ object FileManager {
 		File(base, "conf").let { if (!it.exists()) it.mkdirs() }
 	}
 
+	/**
+	 * Extract the display name from a content:// URI.
+	 * Public so callers can validate file extensions before importing.
+	 */
+	fun getDisplayName(context: Context, uri: Uri): String? = getFileName(context, uri)
+
 	private fun getFileName(context: Context, uri: Uri): String? {
 		// Try ContentResolver query first (works for most SAF URIs)
 		context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->

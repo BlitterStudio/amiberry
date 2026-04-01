@@ -24,6 +24,11 @@ class AppPreferences private constructor(context: Context) {
 		get() = prefs.getString(KEY_LAST_WHDLOAD, "") ?: ""
 		set(value) { prefs.edit { putString(KEY_LAST_WHDLOAD, value) } }
 
+	/** Fingerprint of the ROM directory at last rescan (file count + total size). */
+	var lastRomFingerprint: String
+		get() = prefs.getString(KEY_LAST_ROM_FINGERPRINT, "") ?: ""
+		set(value) { prefs.edit { putString(KEY_LAST_ROM_FINGERPRINT, value) } }
+
 	/**
 	 * Increment the emulator launch counter and return true if it's time
 	 * to request an in-app review (after every Nth successful launch).
@@ -51,6 +56,7 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
 		private const val KEY_STORAGE_PERMISSION_REQUESTED = "storage_permission_requested"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
+		private const val KEY_LAST_ROM_FINGERPRINT = "last_rom_fingerprint"
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
 		private const val REVIEW_INTERVAL = 20

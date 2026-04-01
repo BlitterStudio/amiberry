@@ -217,6 +217,12 @@
     <string name="crash_dialog_message">The emulator process exited unexpectedly. This may have been caused by an incompatible configuration or a missing ROM file. If this keeps happening, try a different Amiga model or check your ROM files.</string>
     <string name="crash_dialog_dismiss">OK</string>
 
+    <string name="asset_extraction_failed_title">Setup failed</string>
+    <string name="asset_extraction_failed_message">Amiberry could not extract its data files. Please ensure the device has enough free storage and try again.</string>
+    <string name="action_retry">Retry</string>
+
+    <string name="msg_unsupported_file_type">Unsupported file type for this category</string>
+
     <string name="storage_permission_banner_title">Limited file access</string>
     <string name="storage_permission_banner_message">Amiberry can only access files in its own app folder. To use ROM and disk image files from other locations, grant All Files Access.</string>
     <string name="storage_permission_banner_action">Grant Access</string>

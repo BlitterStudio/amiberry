@@ -1,6 +1,8 @@
 package com.blitterstudio.amiberry.ui
 
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -13,6 +15,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.EmulatorLauncher
+import com.blitterstudio.amiberry.data.FileManager
+import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.ui.theme.AmiberryTheme
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +29,8 @@ class MainActivity : ComponentActivity() {
 
 	private var isReady by mutableStateOf(false)
 	var emulatorCrashDetected by mutableStateOf(false)
+		private set
+	var assetExtractionFailed by mutableStateOf(false)
 		private set
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,20 +53,114 @@ class MainActivity : ComponentActivity() {
 		// blocking the first-launch experience and strengthens the Play Store
 		// case that the permission is user-initiated.
 		startAssetExtraction()
+
+		handleIncomingIntent(intent)
+	}
+
+	override fun onNewIntent(intent: Intent) {
+		super.onNewIntent(intent)
+		handleIncomingIntent(intent)
+	}
+
+	/**
+	 * Handle ACTION_VIEW intents from file managers.
+	 * Imports the file into app storage, then launches the emulator with it.
+	 */
+	private fun handleIncomingIntent(intent: Intent?) {
+		if (intent?.action != Intent.ACTION_VIEW) return
+		val uri = intent.data ?: return
+		// Clear the action so it isn't re-processed on config change
+		intent.action = null
+
+		pendingFileUri = uri
+	}
+
+	/** URI from an incoming ACTION_VIEW intent, processed after asset extraction. */
+	var pendingFileUri by mutableStateOf<Uri?>(null)
+		private set
+
+	fun clearPendingFileUri() {
+		pendingFileUri = null
+	}
+
+	/**
+	 * Import a file from a content/file URI and launch emulation with it.
+	 */
+	fun importAndLaunch(uri: Uri) {
+		lifecycleScope.launch(Dispatchers.IO) {
+			val fileName = FileManager.getDisplayName(this@MainActivity, uri) ?: uri.lastPathSegment ?: ""
+			val ext = fileName.substringAfterLast('.', "").lowercase()
+			val category = FileCategory.fromExtension(ext)
+
+			if (ext == "uae") {
+				// Config file: copy to conf dir and launch with it
+				val confDir = File(getExternalFilesDir(null), "conf")
+				if (!confDir.exists()) confDir.mkdirs()
+				val targetFile = File(confDir, fileName)
+				try {
+					contentResolver.openInputStream(uri)?.use { input ->
+						targetFile.outputStream().use { output -> input.copyTo(output) }
+					}
+					withContext(Dispatchers.Main) {
+						EmulatorLauncher.launchWithConfig(this@MainActivity, targetFile.absolutePath)
+					}
+				} catch (e: Exception) {
+					Log.e(TAG, "Failed to import config from intent", e)
+				}
+			} else if (category != null) {
+				val importedPath = FileManager.importFile(this@MainActivity, uri, category)
+				if (importedPath != null) {
+					withContext(Dispatchers.Main) {
+						when (category) {
+							FileCategory.WHDLOAD_GAMES ->
+								EmulatorLauncher.launchWhdload(this@MainActivity, importedPath)
+							FileCategory.FLOPPIES ->
+								EmulatorLauncher.launchQuickStart(this@MainActivity,
+									com.blitterstudio.amiberry.data.model.AmigaModel.A500,
+									floppyPath = importedPath)
+							FileCategory.CD_IMAGES ->
+								EmulatorLauncher.launchQuickStart(this@MainActivity,
+									com.blitterstudio.amiberry.data.model.AmigaModel.CD32,
+									cdPath = importedPath)
+							else -> {
+								// ROMs and hard drives: just import, don't auto-launch
+							}
+						}
+					}
+				}
+			} else {
+				Log.w(TAG, "Ignoring unsupported file from intent: $fileName")
+			}
+		}
 	}
 
 	private fun startAssetExtraction() {
 		lifecycleScope.launch(Dispatchers.IO) {
-			extractAssetsIfNeeded()
+			val success = extractAssetsIfNeeded()
 			ensureDirectories()
 			withContext(Dispatchers.Main) {
+				assetExtractionFailed = !success
 				isReady = true
 			}
 		}
 	}
 
-	private fun extractAssetsIfNeeded() {
-		val externalDir = getExternalFilesDir(null) ?: return
+	fun retryAssetExtraction() {
+		assetExtractionFailed = false
+		isReady = false
+		startAssetExtraction()
+	}
+
+	/**
+	 * @return true if assets are ready (already extracted or freshly extracted),
+	 *         false if extraction failed.
+	 */
+	private fun extractAssetsIfNeeded(): Boolean {
+		val externalDir = getExternalFilesDir(null)
+		if (externalDir == null) {
+			Log.e(TAG, "External files directory is unavailable")
+			return false
+		}
 		val versionFile = File(externalDir, ".extracted_version")
 		val currentVersion = try {
 			packageManager.getPackageInfo(packageName, 0).versionName
@@ -70,13 +170,19 @@ class MainActivity : ComponentActivity() {
 
 		if (versionFile.exists() && versionFile.readText().trim() == currentVersion) {
 			Log.d(TAG, "Assets already extracted for version $currentVersion, skipping")
-			return
+			return true
 		}
 
 		Log.d(TAG, "Extracting assets for version $currentVersion...")
-		copyAssets()
-		versionFile.writeText(currentVersion ?: "unknown")
-		Log.d(TAG, "Asset extraction complete")
+		return try {
+			copyAssets()
+			versionFile.writeText(currentVersion ?: "unknown")
+			Log.d(TAG, "Asset extraction complete")
+			true
+		} catch (e: Exception) {
+			Log.e(TAG, "Asset extraction failed", e)
+			false
+		}
 	}
 
 	private fun copyAssets() {
