@@ -720,9 +720,9 @@ static void flush_icache_none(int);
 //void (*flush_icache)(int) = flush_icache_none;
 
 #ifdef UAE
-static void disable_jit_on_runtime_alloc_failure(const char *what)
+void disable_jit_on_runtime_alloc_failure(const char *what)
 {
-	if (!cache_enabled)
+	if (!cache_enabled && currprefs.cachesize == 0 && changed_prefs.cachesize == 0)
 		return;
 
 	write_log("JIT: WARNING: %s\n", what);
@@ -4185,7 +4185,27 @@ void alloc_cache(void)
 			cache_size /= 2;
 		}
 	}
-	vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE);
+	if (!compiled_code)
+		return;
+	if (!vm_protect(compiled_code, cache_size * 1024,
+		VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE)) {
+#if defined(__APPLE__)
+		disable_jit_on_runtime_alloc_failure(
+			"Could not make the x86 JIT cache executable. "
+			"Signed macOS Intel builds need the "
+			"com.apple.security.cs.allow-unsigned-executable-memory entitlement.");
+#else
+		disable_jit_on_runtime_alloc_failure(
+			"Could not make the x86 JIT cache executable.");
+#endif
+		vm_release(compiled_code, cache_size * 1024);
+		compiled_code = 0;
+#if defined(CPU_x86_64)
+		vm_acquire_anchor = NULL;
+#endif
+		cache_size = 0;
+		return;
+	}
 	
 	if (compiled_code) {
 		jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p", cache_size, compiled_code, compiled_code + cache_size*1024);
