@@ -275,7 +275,15 @@ class MainActivity : ComponentActivity() {
 		super.onResume()
 		if (!isReady) return
 
-		if (EmulatorLauncher.checkAndClearCrashMarker(this)) {
+		// Check for user-initiated quit (pause menu → Quit to Launcher)
+		// before checking for crashes. Clean exit takes priority.
+		val wasCleanExit = EmulatorLauncher.checkAndClearCleanExit(this)
+
+		if (wasCleanExit) {
+			// User quit intentionally — clear any leftover session marker, no crash dialog
+			EmulatorLauncher.clearSessionMarker(this)
+			emulatorWasLaunched = false
+		} else if (EmulatorLauncher.checkAndClearCrashMarker(this)) {
 			emulatorCrashDetected = true
 			emulatorWasLaunched = false
 		} else if (emulatorWasLaunched) {

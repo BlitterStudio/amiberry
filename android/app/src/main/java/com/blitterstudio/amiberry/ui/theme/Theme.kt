@@ -31,12 +31,19 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun AmiberryTheme(
-	darkTheme: Boolean = isSystemInDarkTheme(),
 	content: @Composable () -> Unit
 ) {
 	val context = LocalContext.current
-	val useDynamicColor by AppPreferences.getInstance(context).useDynamicColor
+	val prefs = AppPreferences.getInstance(context)
+	val useDynamicColor by prefs.useDynamicColor
+	val themeMode by prefs.themeMode
 	val dynamicColor = useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+	val darkTheme = when (themeMode) {
+		"dark" -> true
+		"light" -> false
+		else -> isSystemInDarkTheme()
+	}
 
 	val colorScheme = when {
 		dynamicColor -> {

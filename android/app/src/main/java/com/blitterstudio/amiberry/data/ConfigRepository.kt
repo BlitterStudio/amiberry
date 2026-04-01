@@ -38,12 +38,17 @@ class ConfigRepository(private val context: Context) {
 		return ConfigParser.parse(File(path))
 	}
 
-	fun saveConfig(settings: EmulatorSettings, name: String, unknownLines: List<String> = emptyList()): File? {
+	fun saveConfig(settings: EmulatorSettings, name: String, unknownLines: List<String> = emptyList(), description: String = ""): File? {
 		val safeName = name.trim()
 		if (!isValidConfigName(safeName)) return null
 
 		return try {
 			val file = ConfigGenerator.writeConfig(context, settings, "$safeName.uae")
+
+			// Append description if provided
+			if (description.isNotBlank()) {
+				file.appendText("config_description=$description\n")
+			}
 
 			// Append preserved unknown lines from original config
 			if (unknownLines.isNotEmpty()) {

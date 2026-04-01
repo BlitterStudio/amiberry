@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -257,6 +258,68 @@ fun QuickStartScreen(
 				}
 			}
 
+			// Recent launches (filtered to existing files)
+			val recentLaunches = remember {
+				AppPreferences.getInstance(context).getRecentLaunches().filter { entry ->
+					val parts = entry.split(":", limit = 3)
+					when (parts.getOrNull(0)) {
+						"config", "whdload" -> {
+							val path = parts.getOrNull(1)
+							path != null && java.io.File(path).exists()
+						}
+						"quickstart" -> true // Model-based launches are always valid
+						else -> false
+					}
+				}
+			}
+			if (recentLaunches.isNotEmpty()) {
+				OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+					Column(modifier = Modifier.padding(16.dp)) {
+						Row(verticalAlignment = Alignment.CenterVertically) {
+							Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
+							Spacer(modifier = Modifier.width(8.dp))
+							Text(stringResource(R.string.quick_start_recent_title), style = MaterialTheme.typography.titleMedium)
+						}
+						Spacer(modifier = Modifier.height(8.dp))
+						recentLaunches.take(5).forEach { entry ->
+							val parts = entry.split(":", limit = 3)
+							val label = when (parts.getOrNull(0)) {
+								"quickstart" -> {
+									val modelName = parts.getOrNull(1) ?: "?"
+									val media = parts.getOrNull(2)?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+									if (media != null) "$modelName — $media" else modelName
+								}
+								"config" -> parts.getOrNull(1)?.substringAfterLast('/')?.removeSuffix(".uae") ?: "Config"
+								"whdload" -> parts.getOrNull(1)?.substringAfterLast('/')?.removeSuffix(".lha")?.removeSuffix(".lzx") ?: "WHDLoad"
+								else -> entry.take(40)
+							}
+							TextButton(
+								onClick = {
+									when (parts.getOrNull(0)) {
+										"config" -> parts.getOrNull(1)?.let {
+											EmulatorLauncher.launchWithConfig(context, it)
+										}
+										"whdload" -> parts.getOrNull(1)?.let {
+											EmulatorLauncher.launchWhdload(context, it)
+										}
+										"quickstart" -> {
+											val model = AmigaModel.entries.firstOrNull { it.cmdArg == parts.getOrNull(1) } ?: AmigaModel.A500
+											val media = parts.getOrNull(2)?.takeIf { it.isNotBlank() }
+											EmulatorLauncher.launchQuickStart(context, model,
+												floppyPath = if (model.hasFloppy) media else null,
+												cdPath = if (model.hasCd) media else null)
+										}
+									}
+								},
+								modifier = Modifier.fillMaxWidth()
+							) {
+								Text(label, modifier = Modifier.fillMaxWidth())
+							}
+						}
+					}
+				}
+			}
+
 			Card(
 				modifier = Modifier.fillMaxWidth(),
 				colors = CardDefaults.cardColors(
@@ -357,6 +420,24 @@ fun QuickStartScreen(
 					},
 					onEject = {
 						settingsViewModel.updateSettings { s -> s.copy(floppy0 = "") }
+					},
+					onImport = { floppyPickerLauncher.launch(arrayOf("*/*")) }
+				)
+
+				val selectedFloppy1Path = settingsViewModel.settings.floppy1
+				val selectedFloppy1 = floppies.firstOrNull { it.path == selectedFloppy1Path }
+				MediaSelector(
+					title = stringResource(R.string.quick_start_floppy_df1),
+					icon = Icons.Default.SaveAlt,
+					items = floppies,
+					selectedItem = selectedFloppy1,
+					selectedPath = selectedFloppy1Path,
+					emptyText = stringResource(R.string.quick_start_no_floppy_images),
+					onItemSelected = { file ->
+						settingsViewModel.updateSettings { s -> s.copy(floppy1 = file.path, floppy1Type = 0) }
+					},
+					onEject = {
+						settingsViewModel.updateSettings { s -> s.copy(floppy1 = "", floppy1Type = -1) }
 					},
 					onImport = { floppyPickerLauncher.launch(arrayOf("*/*")) }
 				)

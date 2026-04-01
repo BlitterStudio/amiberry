@@ -13,6 +13,10 @@ class AppPreferences private constructor(context: Context) {
 	var useDynamicColor = mutableStateOf(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
 		private set
 
+	/** Theme mode: "system", "light", or "dark" */
+	var themeMode = mutableStateOf(prefs.getString(KEY_THEME_MODE, "system") ?: "system")
+		private set
+
 	var hasSeenWelcome = mutableStateOf(prefs.getBoolean(KEY_HAS_SEEN_WELCOME, false))
 		private set
 
@@ -23,6 +27,23 @@ class AppPreferences private constructor(context: Context) {
 	var lastWhdloadPath: String
 		get() = prefs.getString(KEY_LAST_WHDLOAD, "") ?: ""
 		set(value) { prefs.edit { putString(KEY_LAST_WHDLOAD, value) } }
+
+	/**
+	 * Recently launched items (model:path or config:path), most recent first.
+	 * Stored as newline-separated entries, max [MAX_RECENT_ITEMS].
+	 */
+	fun getRecentLaunches(): List<String> {
+		val raw = prefs.getString(KEY_RECENT_LAUNCHES, "") ?: ""
+		return raw.split("\n").filter { it.isNotBlank() }
+	}
+
+	fun addRecentLaunch(entry: String) {
+		val current = getRecentLaunches().toMutableList()
+		current.remove(entry) // Remove duplicate if exists
+		current.add(0, entry) // Add to front
+		val trimmed = current.take(MAX_RECENT_ITEMS)
+		prefs.edit { putString(KEY_RECENT_LAUNCHES, trimmed.joinToString("\n")) }
+	}
 
 	/** Fingerprint of the ROM directory at last rescan (file count + total size). */
 	var lastRomFingerprint: String
@@ -45,6 +66,11 @@ class AppPreferences private constructor(context: Context) {
 		prefs.edit { putBoolean(KEY_DYNAMIC_COLOR, enabled) }
 	}
 
+	fun setThemeMode(mode: String) {
+		themeMode.value = mode
+		prefs.edit { putString(KEY_THEME_MODE, mode) }
+	}
+
 	fun setHasSeenWelcome(seen: Boolean) {
 		hasSeenWelcome.value = seen
 		prefs.edit { putBoolean(KEY_HAS_SEEN_WELCOME, seen) }
@@ -53,10 +79,13 @@ class AppPreferences private constructor(context: Context) {
 	companion object {
 		private const val PREFS_NAME = "amiberry_prefs"
 		private const val KEY_DYNAMIC_COLOR = "use_dynamic_color"
+		private const val KEY_THEME_MODE = "theme_mode"
 		private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
 		private const val KEY_STORAGE_PERMISSION_REQUESTED = "storage_permission_requested"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
 		private const val KEY_LAST_ROM_FINGERPRINT = "last_rom_fingerprint"
+		private const val KEY_RECENT_LAUNCHES = "recent_launches"
+		private const val MAX_RECENT_ITEMS = 10
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
 		private const val REVIEW_INTERVAL = 20

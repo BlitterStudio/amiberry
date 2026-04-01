@@ -115,16 +115,55 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-				Column(modifier = Modifier.padding(16.dp)) {
-					Text(stringResource(R.string.settings_display_app_theme), style = MaterialTheme.typography.titleMedium)
+		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+			Column(modifier = Modifier.padding(16.dp)) {
+				Text(stringResource(R.string.settings_display_app_theme), style = MaterialTheme.typography.titleMedium)
+				Spacer(modifier = Modifier.height(8.dp))
+
+				val context = LocalContext.current
+				val appPrefs = AppPreferences.getInstance(context)
+
+				// Theme mode selector
+				val themeMode by appPrefs.themeMode
+				val themeModeOptions = listOf(
+					"system" to stringResource(R.string.settings_display_theme_system),
+					"light" to stringResource(R.string.settings_display_theme_light),
+					"dark" to stringResource(R.string.settings_display_theme_dark)
+				)
+				var themeExpanded by remember { mutableStateOf(false) }
+				ExposedDropdownMenuBox(
+					expanded = themeExpanded,
+					onExpandedChange = { themeExpanded = it }
+				) {
+					OutlinedTextField(
+						value = themeModeOptions.firstOrNull { it.first == themeMode }?.second ?: themeMode,
+						onValueChange = {},
+						readOnly = true,
+						label = { Text(stringResource(R.string.settings_display_theme_label)) },
+						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeExpanded) },
+						modifier = Modifier
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+							.fillMaxWidth()
+					)
+					ExposedDropdownMenu(
+						expanded = themeExpanded,
+						onDismissRequest = { themeExpanded = false }
+					) {
+						themeModeOptions.forEach { (value, label) ->
+							DropdownMenuItem(
+								text = { Text(label) },
+								onClick = {
+									appPrefs.setThemeMode(value)
+									themeExpanded = false
+								}
+							)
+						}
+					}
+				}
+
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 					Spacer(modifier = Modifier.height(8.dp))
-
-					val context = LocalContext.current
-					val appPrefs = AppPreferences.getInstance(context)
 					val useDynamicColor by appPrefs.useDynamicColor
-
 					SwitchRow(
 						label = stringResource(R.string.settings_display_dynamic_color),
 						checked = useDynamicColor,

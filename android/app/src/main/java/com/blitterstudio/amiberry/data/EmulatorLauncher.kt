@@ -30,6 +30,11 @@ object EmulatorLauncher {
 
 		args.add("-G") // Skip ImGui GUI, start emulation directly
 
+		// Track recent launch
+		val mediaPath = floppyPath ?: cdPath ?: ""
+		val entry = "quickstart:${model.cmdArg}:$mediaPath"
+		AppPreferences.getInstance(context).addRecentLaunch(entry)
+
 		launchSdlActivity(context, args.toTypedArray())
 	}
 
@@ -40,6 +45,7 @@ object EmulatorLauncher {
 		val args = mutableListOf("--rescan-roms", "--config", configPath)
 		if (skipGui) args.add("-G")
 
+		AppPreferences.getInstance(context).addRecentLaunch("config:$configPath")
 		launchSdlActivity(context, args.toTypedArray())
 	}
 
@@ -49,6 +55,7 @@ object EmulatorLauncher {
 	 */
 	fun launchWhdload(context: Context, lhaPath: String) {
 		val args = arrayOf("--rescan-roms", "--autoload", lhaPath, "-G")
+		AppPreferences.getInstance(context).addRecentLaunch("whdload:$lhaPath")
 		launchSdlActivity(context, args)
 	}
 
@@ -78,6 +85,7 @@ object EmulatorLauncher {
 	}
 
 	private const val SESSION_MARKER = ".emulator_session"
+	private const val CLEAN_EXIT_MARKER = ".clean_exit"
 
 	/**
 	 * @param trackSession If true, writes a crash-detection marker and marks the
@@ -153,6 +161,32 @@ object EmulatorLauncher {
 		} catch (_: Exception) {
 			// Ignore
 		}
+	}
+
+	/**
+	 * Write a clean-exit marker so the main process knows this was a
+	 * user-initiated quit (e.g., from the pause menu), not a crash.
+	 * Called from the :sdl process before finish().
+	 */
+	fun writeCleanExitMarker(context: Context) {
+		try {
+			File(context.getExternalFilesDir(null), CLEAN_EXIT_MARKER).writeText("1")
+		} catch (_: Exception) {
+			// Best-effort
+		}
+	}
+
+	/**
+	 * Check and consume the clean-exit marker. Returns true if present
+	 * (meaning the user quit intentionally).
+	 */
+	fun checkAndClearCleanExit(context: Context): Boolean {
+		val marker = File(context.getExternalFilesDir(null), CLEAN_EXIT_MARKER)
+		if (marker.exists()) {
+			marker.delete()
+			return true
+		}
+		return false
 	}
 
 	/**

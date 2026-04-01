@@ -9,6 +9,7 @@
     <include domain="sharedpref" path="amiberry_prefs.xml" />
     <exclude domain="external" path=".extracted_version" />
     <exclude domain="external" path=".emulator_session" />
+    <exclude domain="external" path=".clean_exit" />
     <exclude domain="external" path=".last_session.uae" />
     <exclude domain="external" path=".current_settings.uae" />
     <exclude domain="external" path=".temp_native_ui.uae" />

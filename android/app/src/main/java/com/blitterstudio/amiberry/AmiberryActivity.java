@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -73,24 +74,20 @@ public class AmiberryActivity extends SDLActivity {
 	}
 
 	// ── Back-button handling ─────────────────────────────────────────────
-	// SDL3's SDLActivity.onBackPressed() is deprecated since API 33.
-	// On API 34+ with gesture navigation the system may never call it,
-	// causing the activity to finish instead of opening the ImGui GUI.
+	// Back button shows a native Android pause menu instead of directly
+	// opening the ImGui GUI.  This gives users a friendly exit path back
+	// to the Kotlin launcher UI.  The ImGui GUI is still reachable via
+	// the "Advanced Settings" option in the pause menu.
 	//
-	// We register an OnBackInvokedCallback that replicates the trap logic
-	// and injects the key event into SDL ourselves.  The manifest also
-	// sets android:enableOnBackInvokedCallback="true" on this activity so
-	// the legacy onBackPressed() path is fully bypassed on API 33+.
-	//
-	// On API ≤ 32 the attribute is ignored and SDLActivity.onBackPressed()
-	// handles back as before.
+	// On API 33+ we register an OnBackInvokedCallback (predictive back).
+	// On API ≤ 32 we override onBackPressed() for the legacy path.
 	// ─────────────────────────────────────────────────────────────────────
+
+	private boolean pauseMenuVisible = false;
 
 	/**
 	 * Query SDL's hint to check whether the native side wants the back
 	 * button trapped (i.e. delivered as a key event rather than finishing).
-	 *
-	 * SDL3: same JNI method, same hint name.
 	 */
 	private boolean isBackTrapped() {
 		return SDLActivity.nativeGetHintBoolean(HINT_TRAP_BACK, false);
@@ -100,28 +97,73 @@ public class AmiberryActivity extends SDLActivity {
 	 * Inject a KEYCODE_BACK down+up pair into SDL's native event queue.
 	 * The native side maps this to SDL_SCANCODE_AC_BACK → AKS_ENTERGUI,
 	 * which opens or closes the ImGui settings panel.
-	 *
-	 * SDL3: same JNI method signatures.
 	 */
 	private void sendBackToSDL() {
 		SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_BACK);
 		SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_BACK);
 	}
 
+	private void handleBackPress() {
+		if (isBackTrapped()) {
+			showPauseMenu();
+		} else {
+			finish();
+		}
+	}
+
+	/**
+	 * Show a native Android pause menu with options to resume, open the
+	 * ImGui advanced settings, or quit back to the Kotlin launcher.
+	 */
+	private void showPauseMenu() {
+		if (pauseMenuVisible) return;
+		pauseMenuVisible = true;
+
+		runOnUiThread(() -> {
+			String[] options = {
+				getString(R.string.pause_menu_resume),
+				getString(R.string.pause_menu_advanced_settings),
+				getString(R.string.pause_menu_quit)
+			};
+
+			new AlertDialog.Builder(this)
+				.setTitle(R.string.pause_menu_title)
+				.setItems(options, (dialog, which) -> {
+					switch (which) {
+						case 0: // Resume
+							break;
+						case 1: // Advanced Settings (ImGui)
+							sendBackToSDL();
+							break;
+						case 2: // Quit to launcher
+							com.blitterstudio.amiberry.data.EmulatorLauncher.INSTANCE.writeCleanExitMarker(AmiberryActivity.this);
+							finish();
+							break;
+					}
+				})
+				.setOnDismissListener(d -> {
+					pauseMenuVisible = false;
+					enterImmersiveMode();
+				})
+				.show();
+		});
+	}
+
 	private void registerBackHandler() {
 		if (Build.VERSION.SDK_INT >= 33) {
-			backCallback = () -> {
-				if (isBackTrapped()) {
-					sendBackToSDL();
-				} else {
-					finish();
-				}
-			};
+			backCallback = this::handleBackPress;
 			getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
 				OnBackInvokedDispatcher.PRIORITY_DEFAULT,
 				backCallback
 			);
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	@Override
+	public void onBackPressed() {
+		// Legacy path for API ≤ 32
+		handleBackPress();
 	}
 
 	@Override
