@@ -3,6 +3,7 @@
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
+#include "target.h"
 #include <string>
 #include <vector>
 
@@ -69,9 +70,18 @@ void render_panel_virtual_keyboard()
     ImGui::Indent(4.0f);
 
     // On-screen touch joystick (D-pad + fire buttons overlay)
+    bool osj_before = changed_prefs.onscreen_joystick;
     AmigaCheckbox("On-screen Joystick", &changed_prefs.onscreen_joystick);
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Show virtual D-pad and fire buttons for touchscreen control");
+    }
+    if (changed_prefs.onscreen_joystick != osj_before) {
+        // Apply immediately so the device appears in the Input panel
+        // without waiting for the emulation loop prefs check.
+        currprefs.onscreen_joystick = changed_prefs.onscreen_joystick;
+        import_joysticks();
+        inputdevice_config_change();
+        joystick_refresh_needed = true;
     }
 
     ImGui::Separator();
