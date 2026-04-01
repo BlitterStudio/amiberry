@@ -259,8 +259,9 @@ fun QuickStartScreen(
 				}
 			}
 
-			// Recent launches (filtered to existing files, recomputed on every resume)
-			val recentLaunches = AppPreferences.getInstance(context).getRecentLaunches().filter { entry ->
+			// Recent launches — reads observable state, recomposes when addRecentLaunch() is called
+			val allRecent by AppPreferences.getInstance(context).recentLaunches
+			val recentLaunches = allRecent.filter { entry ->
 				when (entry.optString("type")) {
 					"config", "whdload" -> {
 						val path = entry.optString("path")

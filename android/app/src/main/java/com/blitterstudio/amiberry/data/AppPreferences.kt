@@ -31,12 +31,17 @@ class AppPreferences private constructor(context: Context) {
 		set(value) { prefs.edit { putString(KEY_LAST_WHDLOAD, value) } }
 
 	/**
-	 * Recently launched items, most recent first.
-	 * Each entry is a JSON object: {"type":"quickstart","model":"A500","df0":"/path","df1":"","cd":""}
-	 * or {"type":"config","path":"/path/to/config.uae"} etc.
-	 * Stored as a JSON array string, max [MAX_RECENT_ITEMS].
+	 * Recently launched items, most recent first. Observable by Compose —
+	 * reading [recentLaunches] in a composable triggers recomposition when
+	 * [addRecentLaunch] updates the list.
+	 *
+	 * Each entry is a JSON object: {"type":"quickstart","model":"A500","df0":"...","df1":"","cd":""}
+	 * or {"type":"config","path":"..."} etc.
 	 */
-	fun getRecentLaunches(): List<JSONObject> {
+	var recentLaunches = mutableStateOf(loadRecentLaunches())
+		private set
+
+	private fun loadRecentLaunches(): List<JSONObject> {
 		val raw = prefs.getString(KEY_RECENT_LAUNCHES, "[]") ?: "[]"
 		return try {
 			val arr = JSONArray(raw)
@@ -46,8 +51,10 @@ class AppPreferences private constructor(context: Context) {
 		}
 	}
 
+	fun getRecentLaunches(): List<JSONObject> = recentLaunches.value
+
 	fun addRecentLaunch(entry: JSONObject) {
-		val current = getRecentLaunches().toMutableList()
+		val current = recentLaunches.value.toMutableList()
 		// Remove duplicate by comparing serialized form
 		val entryStr = entry.toString()
 		current.removeAll { it.toString() == entryStr }
@@ -56,6 +63,7 @@ class AppPreferences private constructor(context: Context) {
 		val arr = JSONArray()
 		trimmed.forEach { arr.put(it) }
 		prefs.edit { putString(KEY_RECENT_LAUNCHES, arr.toString()) }
+		recentLaunches.value = trimmed
 	}
 
 	/** Fingerprint of the ROM directory at last rescan (file count + total size). */
