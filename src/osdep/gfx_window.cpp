@@ -70,7 +70,7 @@ static void gfxmode_reset(int monid)
 {
 }
 
-void close_hwnds(struct AmigaMonitor* mon)
+void close_hwnds(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
 {
 	if (mon->screen_is_initialized)
 		releasecapture(mon);
@@ -87,23 +87,24 @@ void close_hwnds(struct AmigaMonitor* mon)
 		setmouseactive(mon->monitor_id, 0);
 
 	IRenderer* renderer_to_use = nullptr;
-		if (mon->monitor_id > 0 && mon->renderer) {
-			renderer_to_use = mon->renderer.get();
-		} else if (mon->monitor_id == 0 && g_renderer) {
-		 renderer_to_use = g_renderer.get();
-        }
+	if (mon->monitor_id > 0 && mon->renderer) {
+		renderer_to_use = mon->renderer.get();
+	} else if (mon->monitor_id == 0 && g_renderer) {
+		renderer_to_use = g_renderer.get();
+	}
 
+	const bool preserve_fullwindow_window = isfullscreen() < 0 && !force_destroy_fullwindow;
 	if (renderer_to_use) {
 		renderer_to_use->close_hwnds_cleanup(mon);
 		renderer_to_use->destroy_context();
-		if (!kmsdrm_detected && isfullscreen() >= 0) {
+		if (!kmsdrm_detected && !preserve_fullwindow_window) {
 			renderer_to_use->destroy_platform_renderer(mon);
 		}
 	}
 	if (mon->monitor_id > 0 && mon->renderer) {
 		mon->renderer.reset();
 	}
-	if (mon->amiga_window && !kmsdrm_detected && isfullscreen() >= 0)
+	if (mon->amiga_window && !kmsdrm_detected && !preserve_fullwindow_window)
 	{
 #if defined(__ANDROID__)
 		// Reuse existing window
@@ -375,7 +376,7 @@ void reopen_gfx(struct AmigaMonitor* mon)
 
 void open_screen(struct AmigaMonitor* mon)
 {
-	close_windows(mon);
+	close_windows(mon, false);
 	open_windows(mon, true, true);
 }
 
@@ -436,7 +437,7 @@ int reopen(struct AmigaMonitor* mon, int full, bool unacquire)
 	return 0;
 }
 
-void close_windows(struct AmigaMonitor* mon)
+void close_windows(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
 {
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
@@ -474,15 +475,15 @@ void close_windows(struct AmigaMonitor* mon)
 
 	freevidbuffer(mon->monitor_id, &avidinfo->drawbuffer);
 	freevidbuffer(mon->monitor_id, &avidinfo->tempbuffer);
-	close_hwnds(mon);
+	close_hwnds(mon, force_destroy_fullwindow);
 	mon->active = false;
 }
 
-void close_all_windows()
+void close_all_windows(const bool force_destroy_fullwindow)
 {
 	for (int i = MAX_AMIGAMONITORS - 1; i >= 0; i--) {
 		if (AMonitors[i].active)
-			close_windows(&AMonitors[i]);
+			close_windows(&AMonitors[i], force_destroy_fullwindow);
 	}
 }
 
@@ -918,7 +919,7 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (!mon->amiga_window) {
 		write_log(_T("creation of amiga window failed\n"));
-		close_hwnds(mon);
+		close_hwnds(mon, false);
 		return 0;
 	}
 
@@ -927,7 +928,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (renderer_to_use) {
 		if (!renderer_to_use->create_platform_renderer(mon)) {
 			write_log(_T("creation of platform renderer failed\n"));
-			close_hwnds(mon);
+			close_hwnds(mon, false);
 			return 0;
 		}
 		if (mon->amiga_renderer) {
@@ -1096,7 +1097,7 @@ bool doInit(AmigaMonitor* mon)
 			if (mon->amiga_window && renderer->has_context()) {
 				if (!create_windows(mon))
 				{
-					close_hwnds(mon);
+					close_hwnds(mon, false);
 					return false;
 				}
 			} else {
@@ -1113,7 +1114,7 @@ bool doInit(AmigaMonitor* mon)
 
 					if (!create_windows(mon))
 					{
-						close_hwnds(mon);
+						close_hwnds(mon, false);
 						return false;
 					}
 
@@ -1129,7 +1130,7 @@ bool doInit(AmigaMonitor* mon)
 					else
 					{
 						write_log("Renderer context init failed for mode %d on monitor %d. Retrying...\n", ctx_attempts, mon->monitor_id);
-						close_windows(mon);
+						close_windows(mon, false);
 						ctx_attempts++;
 					}
 				}
@@ -1142,7 +1143,7 @@ bool doInit(AmigaMonitor* mon)
 		} else {
 			if (!create_windows(mon))
 			{
-				close_hwnds(mon);
+				close_hwnds(mon, false);
 				return false;
 			}
 		}

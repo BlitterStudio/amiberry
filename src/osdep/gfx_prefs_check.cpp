@@ -414,7 +414,7 @@ int check_prefs_changed_gfx()
 					inputdevice_unacquire();
 					unacquired = true;
 				}
-				close_windows(mon);
+				close_windows(mon, false);
 				if (currprefs.gfx_api != changed_prefs.gfx_api || currprefs.gfx_api_options != changed_prefs.gfx_api_options) {
 					currprefs.gfx_api = changed_prefs.gfx_api;
 					currprefs.gfx_api_options = changed_prefs.gfx_api_options;
