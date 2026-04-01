@@ -68,6 +68,7 @@ bool joystick_refresh_needed = false;
 
 // Touch-drag scrolling state (converts finger swipes to ImGui scroll wheel events)
 static bool touch_scrolling = false;
+static bool touch_scroll_on_widget = false;  // true when finger-down landed on an active ImGui widget (e.g. scrollbar)
 static float touch_scroll_accum = 0.0f;
 static SDL_FingerID touch_scroll_finger = 0;
 
@@ -1865,10 +1866,12 @@ void run_gui()
 			else if (gui_event.type == SDL_EVENT_FINGER_DOWN) {
 				touch_scroll_finger = gui_event.tfinger.fingerID;
 				touch_scrolling = false;
+				touch_scroll_on_widget = false;
 				touch_scroll_accum = 0.0f;
 			}
 			else if (gui_event.type == SDL_EVENT_FINGER_MOTION
-				&& gui_event.tfinger.fingerID == touch_scroll_finger) {
+				&& gui_event.tfinger.fingerID == touch_scroll_finger
+				&& !touch_scroll_on_widget) {
 				int wh = 0;
 				SDL_GetWindowSize(mon->gui_window, nullptr, &wh);
 				const float dy_pixels = gui_event.tfinger.dy * static_cast<float>(wh);
@@ -1878,22 +1881,46 @@ void run_gui()
 				// so taps on buttons don't accidentally scroll
 				const float drag_threshold = 8.0f * DPIHandler::get_layout_scale();
 				if (!touch_scrolling && std::abs(touch_scroll_accum) > drag_threshold) {
+					// Check if the finger is on a scrollbar — if so, let ImGui
+					// handle the drag natively. We check here (not on FINGER_DOWN)
+					// because on touch screens HoveredWindow is null/stale until
+					// at least one frame renders with the touch position.
+					ImGuiContext& g = *ImGui::GetCurrentContext();
+					if (g.HoveredWindow) {
+						const ImVec2 mouse_pos = g.IO.MousePos;
+						for (int axis = 0; axis < 2; axis++) {
+							if ((axis == ImGuiAxis_Y && g.HoveredWindow->ScrollbarY) ||
+								(axis == ImGuiAxis_X && g.HoveredWindow->ScrollbarX)) {
+								ImRect sb = ImGui::GetWindowScrollbarRect(g.HoveredWindow, (ImGuiAxis)axis);
+								if (sb.Contains(mouse_pos)) {
+									touch_scroll_on_widget = true;
+									break;
+								}
+							}
+						}
+					}
+					if (touch_scroll_on_widget)
+						continue;
+
 					touch_scrolling = true;
 					// Cancel the synthetic mouse-down so ImGui doesn't treat
 					// the ongoing touch as a widget click-drag
 					ImGui::GetIO().AddMouseButtonEvent(0, false);
 				}
 				if (touch_scrolling) {
-					const float line_height = ImGui::GetTextLineHeightWithSpacing();
-					if (line_height > 0.0f) {
-						const float scroll_lines = dy_pixels / (line_height * 3.0f);
-						ImGui::GetIO().AddMouseWheelEvent(0.0f, scroll_lines);
+					// ImGui scrolls 5*FontRefSize pixels per 1.0 wheel unit.
+					// Divide by that to get 1:1 finger-to-content movement.
+					const float scroll_step = 5.0f * ImGui::GetFontSize();
+					if (scroll_step > 0.0f) {
+						const float scroll_units = dy_pixels / scroll_step;
+						ImGui::GetIO().AddMouseWheelEvent(0.0f, scroll_units);
 					}
 				}
 			}
 			else if (gui_event.type == SDL_EVENT_FINGER_UP
 				&& gui_event.tfinger.fingerID == touch_scroll_finger) {
 				touch_scrolling = false;
+				touch_scroll_on_widget = false;
 			}
 		}
 
@@ -1967,7 +1994,7 @@ void run_gui()
 
 		const float content_width = ImGui::GetContentRegionAvail().x;
 		const float content_height = ImGui::GetContentRegionAvail().y - button_bar_height;
-		const float splitter_thickness = 6.0f;
+		const float splitter_thickness = (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsTouchScreen) ? 16.0f : 6.0f;
 		const float min_sidebar = 120.0f;
 		const float max_sidebar = content_width * 0.40f;
 
