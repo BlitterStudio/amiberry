@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -190,6 +191,7 @@ fun QuickStartScreen(
 							context = context,
 							model = settingsViewModel.settings.baseModel,
 							floppyPath = settingsViewModel.settings.floppy0.takeIf { it.isNotBlank() },
+							floppy1Path = settingsViewModel.settings.floppy1.takeIf { it.isNotBlank() },
 							cdPath = settingsViewModel.settings.cdImage.takeIf { it.isNotBlank() }
 						)
 					}
@@ -251,6 +253,68 @@ fun QuickStartScreen(
 						) {
 							TextButton(onClick = { appPreferences.setHasSeenWelcome(true) }) {
 								Text(stringResource(R.string.welcome_dismiss))
+							}
+						}
+					}
+				}
+			}
+
+			// Recent launches — reads observable state, recomposes when addRecentLaunch() is called
+			val allRecent by AppPreferences.getInstance(context).recentLaunches
+			val recentLaunches = allRecent.filter { entry ->
+				when (entry.optString("type")) {
+					"config", "whdload" -> {
+						val path = entry.optString("path")
+						path.isNotEmpty() && java.io.File(path).exists()
+					}
+					"quickstart" -> {
+						listOf("df0", "df1", "cd").all { key ->
+							val p = entry.optString(key)
+							p.isEmpty() || java.io.File(p).exists()
+						}
+					}
+					else -> false
+				}
+			}
+			if (recentLaunches.isNotEmpty()) {
+				OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+					Column(modifier = Modifier.padding(16.dp)) {
+						Row(verticalAlignment = Alignment.CenterVertically) {
+							Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
+							Spacer(modifier = Modifier.width(8.dp))
+							Text(stringResource(R.string.quick_start_recent_title), style = MaterialTheme.typography.titleMedium)
+						}
+						Spacer(modifier = Modifier.height(8.dp))
+						recentLaunches.take(5).forEach { entry ->
+							val label = when (entry.optString("type")) {
+								"quickstart" -> {
+									val modelName = entry.optString("model", "?")
+									val df0 = entry.optString("df0").substringAfterLast('/').takeIf { it.isNotBlank() }
+									val df1 = entry.optString("df1").substringAfterLast('/').takeIf { it.isNotBlank() }
+									val media = listOfNotNull(df0, df1).joinToString(", ").takeIf { it.isNotBlank() }
+									if (media != null) "$modelName — $media" else modelName
+								}
+								"config" -> entry.optString("path").substringAfterLast('/').removeSuffix(".uae").ifEmpty { "Config" }
+								"whdload" -> entry.optString("path").substringAfterLast('/').removeSuffix(".lha").removeSuffix(".lzx").ifEmpty { "WHDLoad" }
+								else -> "?"
+							}
+							TextButton(
+								onClick = {
+									when (entry.optString("type")) {
+										"config" -> EmulatorLauncher.launchWithConfig(context, entry.optString("path"))
+										"whdload" -> EmulatorLauncher.launchWhdload(context, entry.optString("path"))
+										"quickstart" -> {
+											val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") } ?: AmigaModel.A500
+											EmulatorLauncher.launchQuickStart(context, model,
+												floppyPath = entry.optString("df0").takeIf { it.isNotBlank() },
+												floppy1Path = entry.optString("df1").takeIf { it.isNotBlank() },
+												cdPath = entry.optString("cd").takeIf { it.isNotBlank() })
+										}
+									}
+								},
+								modifier = Modifier.fillMaxWidth()
+							) {
+								Text(label, modifier = Modifier.fillMaxWidth())
 							}
 						}
 					}
@@ -357,6 +421,24 @@ fun QuickStartScreen(
 					},
 					onEject = {
 						settingsViewModel.updateSettings { s -> s.copy(floppy0 = "") }
+					},
+					onImport = { floppyPickerLauncher.launch(arrayOf("*/*")) }
+				)
+
+				val selectedFloppy1Path = settingsViewModel.settings.floppy1
+				val selectedFloppy1 = floppies.firstOrNull { it.path == selectedFloppy1Path }
+				MediaSelector(
+					title = stringResource(R.string.quick_start_floppy_df1),
+					icon = Icons.Default.SaveAlt,
+					items = floppies,
+					selectedItem = selectedFloppy1,
+					selectedPath = selectedFloppy1Path,
+					emptyText = stringResource(R.string.quick_start_no_floppy_images),
+					onItemSelected = { file ->
+						settingsViewModel.updateSettings { s -> s.copy(floppy1 = file.path, floppy1Type = 0) }
+					},
+					onEject = {
+						settingsViewModel.updateSettings { s -> s.copy(floppy1 = "", floppy1Type = -1) }
 					},
 					onImport = { floppyPickerLauncher.launch(arrayOf("*/*")) }
 				)

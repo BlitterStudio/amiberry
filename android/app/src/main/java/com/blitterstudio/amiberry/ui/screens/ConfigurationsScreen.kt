@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
@@ -53,6 +54,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
+import android.content.Intent
+import androidx.core.content.FileProvider
 import com.blitterstudio.amiberry.data.ConfigInfo
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
@@ -80,6 +83,7 @@ fun ConfigurationsScreen(
 	val deletedMessage = stringResource(R.string.msg_config_deleted)
 	val deleteFailedMessage = stringResource(R.string.msg_failed_delete_config)
 	val duplicateFailedMessage = stringResource(R.string.msg_failed_duplicate_config)
+	val shareFailedMessage = stringResource(R.string.msg_failed_share_config)
 
 	LaunchedEffect(Unit) {
 		viewModel.refresh()
@@ -152,6 +156,22 @@ fun ConfigurationsScreen(
 									)
 									snackbarHostState.showSnackbar(message)
 								}
+							},
+							onShare = {
+								val file = java.io.File(config.path)
+								if (file.exists()) {
+									try {
+										val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+										val shareIntent = Intent(Intent.ACTION_SEND).apply {
+											type = "application/octet-stream"
+											putExtra(Intent.EXTRA_STREAM, uri)
+											addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+										}
+										context.startActivity(Intent.createChooser(shareIntent, config.name))
+									} catch (e: Exception) {
+										scope.launch { snackbarHostState.showSnackbar(shareFailedMessage) }
+									}
+								}
 							}
 						)
 					}
@@ -167,7 +187,8 @@ private fun ConfigItem(
 	config: ConfigInfo,
 	onLoad: () -> Unit,
 	onDelete: () -> Unit,
-	onDuplicate: () -> Unit
+	onDuplicate: () -> Unit,
+	onShare: () -> Unit
 ) {
 	val context = LocalContext.current
 	var showMenu by remember { mutableStateOf(false) }
@@ -258,6 +279,14 @@ private fun ConfigItem(
 							},
 							leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
 						)
+							DropdownMenuItem(
+								text = { Text(stringResource(R.string.action_share)) },
+								onClick = {
+									onShare()
+									showMenu = false
+								},
+								leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+							)
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_delete)) },
 								onClick = {

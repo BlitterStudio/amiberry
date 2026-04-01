@@ -34,8 +34,10 @@
     <string name="action_advanced">Advanced</string>
     <string name="action_edit_advanced_imgui">Edit in Advanced mode (ImGui)</string>
     <string name="action_eject">Eject</string>
+    <string name="action_share">Share</string>
 
     <string name="label_configuration_name">Configuration Name</string>
+    <string name="label_configuration_description">Description (optional)</string>
     <string name="dialog_save_config_title">Save Configuration</string>
     <string name="dialog_save_config_message">Enter a name for this configuration.</string>
     <string name="dialog_delete_config_title">Delete Configuration</string>
@@ -51,11 +53,13 @@
     <string name="msg_config_deleted">Configuration deleted</string>
     <string name="msg_failed_delete_config">Failed to delete configuration</string>
     <string name="msg_failed_duplicate_config">Failed to duplicate configuration</string>
+    <string name="msg_failed_share_config">Failed to share configuration</string>
     <string name="msg_config_duplicated_as">Duplicated as %1$s</string>
 
     <string name="configurations_empty_title">No configurations saved yet</string>
     <string name="configurations_empty_message">Configure settings and launch emulation to generate config files, or use the Advanced (ImGui) interface to create them.</string>
 
+    <string name="quick_start_recent_title">Recent</string>
     <string name="quick_start_ready_title">Ready to Launch</string>
     <string name="quick_start_ready_subtitle">Choose a model and media, then press Start.</string>
     <string name="quick_start_model_summary">Model: %1$s</string>
@@ -67,6 +71,7 @@
     <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from File Manager before launch.</string>
     <string name="quick_start_amiga_model">Amiga Model</string>
     <string name="quick_start_floppy_df0">Floppy Disk (DF0)</string>
+    <string name="quick_start_floppy_df1">Floppy Disk (DF1)</string>
     <string name="quick_start_no_floppy_images">No floppy images found</string>
     <string name="quick_start_cd_image">CD Image</string>
     <string name="quick_start_no_cd_images">No CD images found</string>
@@ -147,6 +152,10 @@
     <string name="settings_display_correct_aspect_ratio">Correct Aspect Ratio</string>
     <string name="settings_display_auto_crop">Auto-Crop</string>
     <string name="settings_display_app_theme">App Theme</string>
+    <string name="settings_display_theme_label">Theme</string>
+    <string name="settings_display_theme_system">Follow System</string>
+    <string name="settings_display_theme_light">Light</string>
+    <string name="settings_display_theme_dark">Dark</string>
     <string name="settings_display_dynamic_color">Use Material You colors</string>
 
     <string name="settings_sound_title">Sound Settings</string>
@@ -213,6 +222,11 @@
     <string name="welcome_help_link">Learn more</string>
     <string name="welcome_dismiss">Got it</string>
 
+    <string name="pause_menu_title">Emulation Paused</string>
+    <string name="pause_menu_resume">Resume</string>
+    <string name="pause_menu_advanced_settings">Advanced Settings (ImGui)</string>
+    <string name="pause_menu_quit">Quit to Launcher</string>
+
     <string name="crash_dialog_title">Emulator stopped unexpectedly</string>
     <string name="crash_dialog_message">The emulator process exited unexpectedly. This may have been caused by an incompatible configuration or a missing ROM file. If this keeps happening, try a different Amiga model or check your ROM files.</string>
     <string name="crash_dialog_dismiss">OK</string>
@@ -222,6 +236,7 @@
     <string name="action_retry">Retry</string>
 
     <string name="msg_unsupported_file_type">Unsupported file type for this category</string>
+    <string name="search_placeholder">Search…</string>
 
     <string name="storage_permission_banner_title">Limited file access</string>
     <string name="storage_permission_banner_message">Amiberry can only access files in its own app folder. To use ROM and disk image files from other locations, grant All Files Access.</string>

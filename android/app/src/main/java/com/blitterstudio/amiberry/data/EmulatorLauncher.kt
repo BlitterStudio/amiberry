@@ -5,6 +5,7 @@ import android.content.Intent
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.FileCategory
+import org.json.JSONObject
 import java.io.File
 
 object EmulatorLauncher {
@@ -17,6 +18,7 @@ object EmulatorLauncher {
 		context: Context,
 		model: AmigaModel,
 		floppyPath: String? = null,
+		floppy1Path: String? = null,
 		cdPath: String? = null
 	) {
 		val args = mutableListOf("--rescan-roms", "--model", model.cmdArg)
@@ -24,11 +26,23 @@ object EmulatorLauncher {
 		if (floppyPath != null && model.hasFloppy) {
 			args.addAll(listOf("-0", floppyPath))
 		}
+		if (floppy1Path != null && model.hasFloppy) {
+			args.addAll(listOf("-1", floppy1Path))
+		}
 		if (cdPath != null && model.hasCd) {
 			args.addAll(listOf("-s", "cdimage0=$cdPath"))
 		}
 
 		args.add("-G") // Skip ImGui GUI, start emulation directly
+
+		// Track recent launch
+		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
+			put("type", "quickstart")
+			put("model", model.cmdArg)
+			put("df0", floppyPath ?: "")
+			put("df1", floppy1Path ?: "")
+			put("cd", cdPath ?: "")
+		})
 
 		launchSdlActivity(context, args.toTypedArray())
 	}
@@ -40,6 +54,10 @@ object EmulatorLauncher {
 		val args = mutableListOf("--rescan-roms", "--config", configPath)
 		if (skipGui) args.add("-G")
 
+		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
+			put("type", "config")
+			put("path", configPath)
+		})
 		launchSdlActivity(context, args.toTypedArray())
 	}
 
@@ -49,6 +67,10 @@ object EmulatorLauncher {
 	 */
 	fun launchWhdload(context: Context, lhaPath: String) {
 		val args = arrayOf("--rescan-roms", "--autoload", lhaPath, "-G")
+		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
+			put("type", "whdload")
+			put("path", lhaPath)
+		})
 		launchSdlActivity(context, args)
 	}
 
@@ -78,6 +100,7 @@ object EmulatorLauncher {
 	}
 
 	private const val SESSION_MARKER = ".emulator_session"
+	private const val CLEAN_EXIT_MARKER = ".clean_exit"
 
 	/**
 	 * @param trackSession If true, writes a crash-detection marker and marks the
@@ -153,6 +176,32 @@ object EmulatorLauncher {
 		} catch (_: Exception) {
 			// Ignore
 		}
+	}
+
+	/**
+	 * Write a clean-exit marker so the main process knows this was a
+	 * user-initiated quit (e.g., from the pause menu), not a crash.
+	 * Called from the :sdl process before finish().
+	 */
+	fun writeCleanExitMarker(context: Context) {
+		try {
+			File(context.getExternalFilesDir(null), CLEAN_EXIT_MARKER).writeText("1")
+		} catch (_: Exception) {
+			// Best-effort
+		}
+	}
+
+	/**
+	 * Check and consume the clean-exit marker. Returns true if present
+	 * (meaning the user quit intentionally).
+	 */
+	fun checkAndClearCleanExit(context: Context): Boolean {
+		val marker = File(context.getExternalFilesDir(null), CLEAN_EXIT_MARKER)
+		if (marker.exists()) {
+			marker.delete()
+			return true
+		}
+		return false
 	}
 
 	/**

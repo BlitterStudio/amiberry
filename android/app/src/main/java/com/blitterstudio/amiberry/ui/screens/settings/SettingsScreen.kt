@@ -182,7 +182,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		if (showSaveDialog) {
 			SaveConfigDialog(
 				onDismiss = { showSaveDialog = false },
-				onSave = { name ->
+				onSave = { name, description ->
 					val repo = ConfigRepository.getInstance(context)
 					val safeName = name.trim()
 					if (!repo.isValidConfigName(safeName)) {
@@ -191,7 +191,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						}
 						return@SaveConfigDialog
 					}
-					val savedFile = repo.saveConfig(viewModel.settings, safeName, viewModel.currentUnknownLines)
+					val savedFile = repo.saveConfig(viewModel.settings, safeName, viewModel.currentUnknownLines, description)
 					if (savedFile == null) {
 						scope.launch {
 							snackbarHostState.showSnackbar(failedSaveConfigMessage)
@@ -214,9 +214,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 @Composable
 fun SaveConfigDialog(
 	onDismiss: () -> Unit,
-	onSave: (String) -> Unit
+	onSave: (String, String) -> Unit
 ) {
 	var name by remember { mutableStateOf("") }
+	var description by remember { mutableStateOf("") }
 
 	AlertDialog(
 		onDismissRequest = onDismiss,
@@ -231,11 +232,18 @@ fun SaveConfigDialog(
 					label = { Text(stringResource(R.string.label_configuration_name)) },
 					singleLine = true
 				)
+				Spacer(modifier = Modifier.height(8.dp))
+				OutlinedTextField(
+					value = description,
+					onValueChange = { description = it },
+					label = { Text(stringResource(R.string.label_configuration_description)) },
+					singleLine = true
+				)
 			}
 		},
 		confirmButton = {
 			TextButton(
-				onClick = { onSave(name.trim()) },
+				onClick = { onSave(name.trim(), description.trim()) },
 				enabled = name.isNotBlank()
 			) {
 				Text(stringResource(R.string.action_save))

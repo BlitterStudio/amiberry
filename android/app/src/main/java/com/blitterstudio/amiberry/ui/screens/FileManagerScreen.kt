@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.SnackbarHost
@@ -57,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,14 +95,24 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	val pathCopiedMessage = stringResource(R.string.msg_path_copied)
 	val clipboardLabelPath = stringResource(R.string.clipboard_label_path)
 
+	var searchQuery by rememberSaveable { mutableStateOf("") }
+
 	val currentCategory = tabs[selectedTab].category
-	val files by when (currentCategory) {
+	val allFiles by when (currentCategory) {
 		FileCategory.ROMS -> viewModel.roms
 		FileCategory.FLOPPIES -> viewModel.floppies
 		FileCategory.HARD_DRIVES -> viewModel.hardDrives
 		FileCategory.CD_IMAGES -> viewModel.cdImages
 		FileCategory.WHDLOAD_GAMES -> viewModel.whdloadGames
 	}.collectAsState()
+
+	// Clear search when the bar would be hidden (≤5 files)
+	if (allFiles.size <= 5 && searchQuery.isNotEmpty()) {
+		searchQuery = ""
+	}
+
+	val files = if (searchQuery.isBlank()) allFiles
+		else allFiles.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
 	val importResult by viewModel.importResult.collectAsState()
 	val isScanning by viewModel.isScanning.collectAsState()
@@ -199,11 +212,31 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				tabs.forEachIndexed { index, tab ->
 					Tab(
 						selected = selectedTab == index,
-						onClick = { selectedTab = index },
+						onClick = { selectedTab = index; searchQuery = "" },
 						text = { Text(tab.title) },
 						icon = { Icon(tab.icon, contentDescription = tab.title, modifier = Modifier.size(18.dp)) }
 					)
 				}
+			}
+
+			if (allFiles.size > 5) {
+				OutlinedTextField(
+					value = searchQuery,
+					onValueChange = { searchQuery = it },
+					modifier = Modifier
+						.fillMaxWidth()
+						.padding(horizontal = 16.dp, vertical = 4.dp),
+					placeholder = { Text(stringResource(R.string.search_placeholder)) },
+					leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+					trailingIcon = {
+						if (searchQuery.isNotEmpty()) {
+							IconButton(onClick = { searchQuery = "" }) {
+								Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
+							}
+						}
+					},
+					singleLine = true
+				)
 			}
 
 			if (showProgress) {
