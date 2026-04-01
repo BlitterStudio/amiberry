@@ -285,7 +285,10 @@ fun QuickStartScreen(
 							val label = when (parts.getOrNull(0)) {
 								"quickstart" -> {
 									val modelName = parts.getOrNull(1) ?: "?"
-									val media = parts.getOrNull(2)?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+									val mediaParts = parts.getOrNull(2)?.split(";") ?: emptyList()
+									val df0 = mediaParts.getOrNull(0)?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+									val df1 = mediaParts.getOrNull(1)?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+									val media = listOfNotNull(df0, df1).joinToString(", ").takeIf { it.isNotBlank() }
 									if (media != null) "$modelName — $media" else modelName
 								}
 								"config" -> parts.getOrNull(1)?.substringAfterLast('/')?.removeSuffix(".uae") ?: "Config"
@@ -303,10 +306,14 @@ fun QuickStartScreen(
 										}
 										"quickstart" -> {
 											val model = AmigaModel.entries.firstOrNull { it.cmdArg == parts.getOrNull(1) } ?: AmigaModel.A500
-											val media = parts.getOrNull(2)?.takeIf { it.isNotBlank() }
+											val mediaParts = parts.getOrNull(2)?.split(";") ?: emptyList()
+											val df0 = mediaParts.getOrNull(0)?.takeIf { it.isNotBlank() }
+											val df1 = mediaParts.getOrNull(1)?.takeIf { it.isNotBlank() }
+											val cd = mediaParts.getOrNull(2)?.takeIf { it.isNotBlank() }
 											EmulatorLauncher.launchQuickStart(context, model,
-												floppyPath = if (model.hasFloppy) media else null,
-												cdPath = if (model.hasCd) media else null)
+												floppyPath = if (model.hasFloppy) df0 else null,
+												floppy1Path = if (model.hasFloppy) df1 else null,
+												cdPath = if (model.hasCd) cd else null)
 										}
 									}
 								},

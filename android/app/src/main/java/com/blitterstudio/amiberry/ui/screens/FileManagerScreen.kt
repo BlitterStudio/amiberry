@@ -106,6 +106,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 		FileCategory.WHDLOAD_GAMES -> viewModel.whdloadGames
 	}.collectAsState()
 
+	// Clear search when the bar would be hidden (≤5 files)
+	if (allFiles.size <= 5 && searchQuery.isNotEmpty()) {
+		searchQuery = ""
+	}
+
 	val files = if (searchQuery.isBlank()) allFiles
 		else allFiles.filter { it.name.contains(searchQuery, ignoreCase = true) }
 

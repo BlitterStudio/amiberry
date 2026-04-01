@@ -34,9 +34,9 @@ object EmulatorLauncher {
 
 		args.add("-G") // Skip ImGui GUI, start emulation directly
 
-		// Track recent launch
-		val mediaPath = floppyPath ?: cdPath ?: ""
-		val entry = "quickstart:${model.cmdArg}:$mediaPath"
+		// Track recent launch — encode all media as df0;df1;cd
+		val mediaParts = listOf(floppyPath ?: "", floppy1Path ?: "", cdPath ?: "")
+		val entry = "quickstart:${model.cmdArg}:${mediaParts.joinToString(";")}"
 		AppPreferences.getInstance(context).addRecentLaunch(entry)
 
 		launchSdlActivity(context, args.toTypedArray())
