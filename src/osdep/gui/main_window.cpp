@@ -1189,6 +1189,8 @@ void amiberry_gui_init()
 {
 	AmigaMonitor* mon = &AMonitors[0];
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
+	const bool gui_starting_on_kmsdrm =
+		(sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0);
 
 	// Initialize gui_window_rect size early so all paths (Windows shared-window,
 	// KMSDRM, new-window creation) use the correct dimensions.
@@ -1197,12 +1199,16 @@ void amiberry_gui_init()
 		gui_window_rect.w = std::max(GUI_WIDTH, static_cast<int>(std::lround(static_cast<float>(GUI_WIDTH) * gui_scale)));
 		gui_window_rect.h = std::max(GUI_HEIGHT, static_cast<int>(std::lround(static_cast<float>(GUI_HEIGHT) * gui_scale)));
 
-		// Override with persisted size if available, clamped to minimum
-		int saved_w = 0, saved_h = 0;
-		if (regqueryint(nullptr, _T("GUISizeW"), &saved_w) && regqueryint(nullptr, _T("GUISizeH"), &saved_h)) {
-			gui_window_rect.w = std::max(GUI_WIDTH, saved_w);
-			gui_window_rect.h = std::max(GUI_HEIGHT, saved_h);
-			write_log("Restoring GUI window size %dx%d from settings\n", gui_window_rect.w, gui_window_rect.h);
+		// KMSDRM always runs the GUI as a full-screen desktop window, so any
+		// persisted GUI size from windowed desktop sessions must be ignored.
+		if (!gui_starting_on_kmsdrm) {
+			// Override with persisted size if available, clamped to minimum
+			int saved_w = 0, saved_h = 0;
+			if (regqueryint(nullptr, _T("GUISizeW"), &saved_w) && regqueryint(nullptr, _T("GUISizeH"), &saved_h)) {
+				gui_window_rect.w = std::max(GUI_WIDTH, saved_w);
+				gui_window_rect.h = std::max(GUI_HEIGHT, saved_h);
+				write_log("Restoring GUI window size %dx%d from settings\n", gui_window_rect.w, gui_window_rect.h);
+			}
 		}
 
 		gui_window_size_initialized = true;
@@ -1279,11 +1285,26 @@ void amiberry_gui_init()
 	if (!mon->gui_window)
 	{
 		write_log("Creating Amiberry GUI window...\n");
-		int has_x = regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
-		int has_y = regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
-		if (!has_x || !has_y) {
-			gui_window_rect.x = SDL_WINDOWPOS_CENTERED;
-			gui_window_rect.y = SDL_WINDOWPOS_CENTERED;
+		int has_x = 0;
+		int has_y = 0;
+		if (!kmsdrm_detected) {
+			has_x = regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
+			has_y = regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
+			if (!has_x || !has_y) {
+				gui_window_rect.x = SDL_WINDOWPOS_CENTERED;
+				gui_window_rect.y = SDL_WINDOWPOS_CENTERED;
+			}
+		} else {
+			SDL_Rect display_bounds{};
+			SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
+			if (display_id)
+				SDL_GetDisplayBounds(display_id, &display_bounds);
+			gui_window_rect.x = display_bounds.x;
+			gui_window_rect.y = display_bounds.y;
+			gui_window_rect.w = display_bounds.w > 0 ? display_bounds.w : sdl_mode.w;
+			gui_window_rect.h = display_bounds.h > 0 ? display_bounds.h : sdl_mode.h;
+			write_log("KMSDRM GUI: forcing desktop-sized window %dx%d at %dx%d\n",
+				gui_window_rect.w, gui_window_rect.h, gui_window_rect.x, gui_window_rect.y);
 		}
 
 		uint32_t mode;
@@ -1299,8 +1320,9 @@ void amiberry_gui_init()
 		}
 		else
 		{
-			// otherwise go for Full-window (borderless fullscreen)
-			mode = SDL_WINDOW_FULLSCREEN;
+			// KMSDRM should enter desktop/fullwindow mode after creation, not by
+			// requesting a specific fullscreen resolution up front.
+			mode = 0;
 		}
 
 		if (currprefs.gui_alwaysontop)
@@ -1319,8 +1341,14 @@ void amiberry_gui_init()
 										   gui_window_rect.h,
 										   mode);
 		if (mon->gui_window && kmsdrm_detected) {
-			// For KMSDRM borderless fullscreen, use desktop mode
-			SDL_SetWindowFullscreenMode(mon->gui_window, NULL);
+			// Match the emulation window path: place the window on the target
+			// display, then enter desktop/fullwindow mode without changing the
+			// panel's active resolution.
+			SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
+			SDL_SyncWindow(mon->gui_window);
+			SDL_SetWindowFullscreenMode(mon->gui_window, nullptr);
+			SDL_SetWindowFullscreen(mon->gui_window, true);
+			SDL_SyncWindow(mon->gui_window);
 		}
 		if (mon->gui_window) {
 			// Sync rect to actual window size (SDL may adjust)
@@ -1330,7 +1358,14 @@ void amiberry_gui_init()
 			gui_window_rect.h = wh;
 
 			// Position: use saved position if available, otherwise center
-			if (has_x && has_y) {
+			if (kmsdrm_detected) {
+				SDL_DisplayID disp = SDL_GetDisplayForWindow(mon->gui_window);
+				SDL_Rect bounds{};
+				if (disp)
+					SDL_GetDisplayBounds(disp, &bounds);
+				gui_window_rect.x = bounds.x;
+				gui_window_rect.y = bounds.y;
+			} else if (has_x && has_y) {
 				// Clamp saved position+size to the target display's usable bounds
 				const int target_display = find_display_for_rect(gui_window_rect);
 				SDL_Rect usable = get_display_usable_bounds(target_display);
