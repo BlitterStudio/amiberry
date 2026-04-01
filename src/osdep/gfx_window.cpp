@@ -692,8 +692,12 @@ static int create_windows(struct AmigaMonitor* mon)
 		// that don't match SDL_GetDisplayBounds (e.g. Space-relative vs global),
 		// causing a false mismatch that triggers SDL_SetWindowFullscreen toggling
 		// — which produces a visible Spaces switching animation.
-		bool needs_resize = (w != nw || h != nh || x != nx || y != ny);
-		if (needs_resize && fullwindow) {
+		// KMSDRM reuses the GUI window for emulation. After returning from the
+		// GUI, force one fullwindow refresh to clear any stale shared-window
+		// sizing, then fall back to the normal fast path on later reopens.
+		const bool force_fullwindow_refresh = fullwindow && mon->pending_fullwindow_refresh;
+		bool needs_resize = force_fullwindow_refresh || (w != nw || h != nh || x != nx || y != ny);
+		if (needs_resize && fullwindow && !force_fullwindow_refresh) {
 			SDL_WindowFlags wflags = SDL_GetWindowFlags(mon->amiga_window);
 			if (wflags & SDL_WINDOW_FULLSCREEN) {
 				// Window is already fullscreen — check if it's on the right display
@@ -713,6 +717,11 @@ static int create_windows(struct AmigaMonitor* mon)
 			x = nx;
 			y = ny;
 			mon->in_sizemove++;
+
+			if (force_fullwindow_refresh) {
+				mon->pending_fullwindow_refresh = false;
+				write_log(_T("KMSDRM: forcing fullwindow refresh on shared window\n"));
+			}
 
 			// SDL3: position/size changes are deferred on fullscreen windows,
 			// so exit fullscreen first, reposition, then re-enter

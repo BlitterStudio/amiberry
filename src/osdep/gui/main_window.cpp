@@ -1667,6 +1667,10 @@ void amiberry_gui_halt()
 #endif
 	}
 
+	if (kmsdrm_detected && mon->gui_window && mon->gui_window == mon->amiga_window) {
+		mon->pending_fullwindow_refresh = true;
+	}
+
 #ifdef _WIN32
 	// Restore emulation window state
 	if (mon->amiga_window && saved_emu_w > 0) {
