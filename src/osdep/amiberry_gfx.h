@@ -180,7 +180,7 @@ extern int default_freq;
 
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
-extern void close_windows(AmigaMonitor*);
+extern void close_windows(AmigaMonitor*, bool force_destroy_fullwindow);
 extern void reopen_gfx(AmigaMonitor*);
 extern int reopen(AmigaMonitor*, int, bool);
 extern void updatewinfsmode(int monid, uae_prefs* p);

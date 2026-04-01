@@ -983,7 +983,7 @@ void graphics_leave()
 {
 	for (int i = 0; i < MAX_AMIGAMONITORS; i++)
 	{
-		close_windows(&AMonitors[i]);
+		close_windows(&AMonitors[i], true);
 	}
 	g_renderer.reset();
 }
@@ -1378,7 +1378,7 @@ bool toggle_rtg(const int monid, const int mode)
 void close_rtg(const int monid, const bool reset)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	close_windows(mon);
+	close_windows(mon, false);
 	if (reset) {
 		struct amigadisplay* ad = &adisplays[monid];
 		mon->screen_is_picasso = false;
@@ -1594,4 +1594,3 @@ void screenshot(int monid, int mode, int doprepare)
 
 	save_thumb(screenshot_filename);
 }
-

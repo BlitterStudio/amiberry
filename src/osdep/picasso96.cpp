@@ -3465,7 +3465,7 @@ void picasso_enablescreen(int monid, int on)
 			write_log(_T("picasso_enablescreen: Failed to create window for monitor %d\n"), monid);
 		}
 	} else if (monid > 0 && !on && AMonitors[monid].active) {
-		close_windows(&AMonitors[monid]);
+		close_windows(&AMonitors[monid], false);
 	}
 #endif
 
@@ -7252,4 +7252,3 @@ uae_u8 *save_p96 (size_t *len, uae_u8 *dstptr)
 }
 
 #endif
-
