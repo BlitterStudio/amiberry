@@ -975,7 +975,13 @@ static void install_exception_handler(void)
 		 * JIT allocator to place it near .data/JIT cache, then set RWX. */
 		veccode = (uae_u8 *) jit_vm_acquire(256, 0);
 		if (veccode) {
-			uae_vm_protect(veccode, 256, UAE_VM_READ_WRITE_EXECUTE);
+			if (!uae_vm_protect(veccode, 256, UAE_VM_READ_WRITE_EXECUTE)) {
+				disable_jit_on_runtime_alloc_failure(
+					"Could not make the x86 exception trampoline executable.");
+				uae_vm_free(veccode, 256);
+				veccode = NULL;
+				return;
+			}
 		} else {
 			write_log("JIT: FATAL: veccode allocation failed -- "
 				"cannot install exception handler, disabling JIT\n");

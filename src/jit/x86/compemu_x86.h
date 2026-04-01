@@ -180,6 +180,9 @@ extern void (*flush_icache)(int);
 #endif
 extern void alloc_cache(void);
 extern int check_for_cache_miss(void);
+#ifdef UAE
+extern void disable_jit_on_runtime_alloc_failure(const char *what);
+#endif
 
 /* JIT FPU compilation */
 struct jit_disable_opcodes {
