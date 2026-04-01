@@ -5,6 +5,7 @@ import android.content.Intent
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.FileCategory
+import org.json.JSONObject
 import java.io.File
 
 object EmulatorLauncher {
@@ -34,10 +35,14 @@ object EmulatorLauncher {
 
 		args.add("-G") // Skip ImGui GUI, start emulation directly
 
-		// Track recent launch — encode all media as df0;df1;cd
-		val mediaParts = listOf(floppyPath ?: "", floppy1Path ?: "", cdPath ?: "")
-		val entry = "quickstart:${model.cmdArg}:${mediaParts.joinToString(";")}"
-		AppPreferences.getInstance(context).addRecentLaunch(entry)
+		// Track recent launch
+		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
+			put("type", "quickstart")
+			put("model", model.cmdArg)
+			put("df0", floppyPath ?: "")
+			put("df1", floppy1Path ?: "")
+			put("cd", cdPath ?: "")
+		})
 
 		launchSdlActivity(context, args.toTypedArray())
 	}
@@ -49,7 +54,10 @@ object EmulatorLauncher {
 		val args = mutableListOf("--rescan-roms", "--config", configPath)
 		if (skipGui) args.add("-G")
 
-		AppPreferences.getInstance(context).addRecentLaunch("config:$configPath")
+		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
+			put("type", "config")
+			put("path", configPath)
+		})
 		launchSdlActivity(context, args.toTypedArray())
 	}
 
@@ -59,7 +67,10 @@ object EmulatorLauncher {
 	 */
 	fun launchWhdload(context: Context, lhaPath: String) {
 		val args = arrayOf("--rescan-roms", "--autoload", lhaPath, "-G")
-		AppPreferences.getInstance(context).addRecentLaunch("whdload:$lhaPath")
+		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
+			put("type", "whdload")
+			put("path", lhaPath)
+		})
 		launchSdlActivity(context, args)
 	}
 

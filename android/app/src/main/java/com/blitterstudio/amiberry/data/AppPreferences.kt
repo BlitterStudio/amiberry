@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
+import org.json.JSONArray
+import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
 
@@ -29,20 +31,31 @@ class AppPreferences private constructor(context: Context) {
 		set(value) { prefs.edit { putString(KEY_LAST_WHDLOAD, value) } }
 
 	/**
-	 * Recently launched items (model:path or config:path), most recent first.
-	 * Stored as newline-separated entries, max [MAX_RECENT_ITEMS].
+	 * Recently launched items, most recent first.
+	 * Each entry is a JSON object: {"type":"quickstart","model":"A500","df0":"/path","df1":"","cd":""}
+	 * or {"type":"config","path":"/path/to/config.uae"} etc.
+	 * Stored as a JSON array string, max [MAX_RECENT_ITEMS].
 	 */
-	fun getRecentLaunches(): List<String> {
-		val raw = prefs.getString(KEY_RECENT_LAUNCHES, "") ?: ""
-		return raw.split("\n").filter { it.isNotBlank() }
+	fun getRecentLaunches(): List<JSONObject> {
+		val raw = prefs.getString(KEY_RECENT_LAUNCHES, "[]") ?: "[]"
+		return try {
+			val arr = JSONArray(raw)
+			(0 until arr.length()).map { arr.getJSONObject(it) }
+		} catch (_: Exception) {
+			emptyList()
+		}
 	}
 
-	fun addRecentLaunch(entry: String) {
+	fun addRecentLaunch(entry: JSONObject) {
 		val current = getRecentLaunches().toMutableList()
-		current.remove(entry) // Remove duplicate if exists
-		current.add(0, entry) // Add to front
+		// Remove duplicate by comparing serialized form
+		val entryStr = entry.toString()
+		current.removeAll { it.toString() == entryStr }
+		current.add(0, entry)
 		val trimmed = current.take(MAX_RECENT_ITEMS)
-		prefs.edit { putString(KEY_RECENT_LAUNCHES, trimmed.joinToString("\n")) }
+		val arr = JSONArray()
+		trimmed.forEach { arr.put(it) }
+		prefs.edit { putString(KEY_RECENT_LAUNCHES, arr.toString()) }
 	}
 
 	/** Fingerprint of the ROM directory at last rescan (file count + total size). */

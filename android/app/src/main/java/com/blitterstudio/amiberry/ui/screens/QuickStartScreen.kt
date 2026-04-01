@@ -261,13 +261,17 @@ fun QuickStartScreen(
 
 			// Recent launches (filtered to existing files, recomputed on every resume)
 			val recentLaunches = AppPreferences.getInstance(context).getRecentLaunches().filter { entry ->
-				val parts = entry.split(":", limit = 3)
-				when (parts.getOrNull(0)) {
+				when (entry.optString("type")) {
 					"config", "whdload" -> {
-						val path = parts.getOrNull(1)
-						path != null && java.io.File(path).exists()
+						val path = entry.optString("path")
+						path.isNotEmpty() && java.io.File(path).exists()
 					}
-					"quickstart" -> true // Model-based launches are always valid
+					"quickstart" -> {
+						listOf("df0", "df1", "cd").all { key ->
+							val p = entry.optString(key)
+							p.isEmpty() || java.io.File(p).exists()
+						}
+					}
 					else -> false
 				}
 			}
@@ -281,39 +285,29 @@ fun QuickStartScreen(
 						}
 						Spacer(modifier = Modifier.height(8.dp))
 						recentLaunches.take(5).forEach { entry ->
-							val parts = entry.split(":", limit = 3)
-							val label = when (parts.getOrNull(0)) {
+							val label = when (entry.optString("type")) {
 								"quickstart" -> {
-									val modelName = parts.getOrNull(1) ?: "?"
-									val mediaParts = parts.getOrNull(2)?.split(";") ?: emptyList()
-									val df0 = mediaParts.getOrNull(0)?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
-									val df1 = mediaParts.getOrNull(1)?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+									val modelName = entry.optString("model", "?")
+									val df0 = entry.optString("df0").substringAfterLast('/').takeIf { it.isNotBlank() }
+									val df1 = entry.optString("df1").substringAfterLast('/').takeIf { it.isNotBlank() }
 									val media = listOfNotNull(df0, df1).joinToString(", ").takeIf { it.isNotBlank() }
 									if (media != null) "$modelName — $media" else modelName
 								}
-								"config" -> parts.getOrNull(1)?.substringAfterLast('/')?.removeSuffix(".uae") ?: "Config"
-								"whdload" -> parts.getOrNull(1)?.substringAfterLast('/')?.removeSuffix(".lha")?.removeSuffix(".lzx") ?: "WHDLoad"
-								else -> entry.take(40)
+								"config" -> entry.optString("path").substringAfterLast('/').removeSuffix(".uae").ifEmpty { "Config" }
+								"whdload" -> entry.optString("path").substringAfterLast('/').removeSuffix(".lha").removeSuffix(".lzx").ifEmpty { "WHDLoad" }
+								else -> "?"
 							}
 							TextButton(
 								onClick = {
-									when (parts.getOrNull(0)) {
-										"config" -> parts.getOrNull(1)?.let {
-											EmulatorLauncher.launchWithConfig(context, it)
-										}
-										"whdload" -> parts.getOrNull(1)?.let {
-											EmulatorLauncher.launchWhdload(context, it)
-										}
+									when (entry.optString("type")) {
+										"config" -> EmulatorLauncher.launchWithConfig(context, entry.optString("path"))
+										"whdload" -> EmulatorLauncher.launchWhdload(context, entry.optString("path"))
 										"quickstart" -> {
-											val model = AmigaModel.entries.firstOrNull { it.cmdArg == parts.getOrNull(1) } ?: AmigaModel.A500
-											val mediaParts = parts.getOrNull(2)?.split(";") ?: emptyList()
-											val df0 = mediaParts.getOrNull(0)?.takeIf { it.isNotBlank() }
-											val df1 = mediaParts.getOrNull(1)?.takeIf { it.isNotBlank() }
-											val cd = mediaParts.getOrNull(2)?.takeIf { it.isNotBlank() }
+											val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") } ?: AmigaModel.A500
 											EmulatorLauncher.launchQuickStart(context, model,
-												floppyPath = if (model.hasFloppy) df0 else null,
-												floppy1Path = if (model.hasFloppy) df1 else null,
-												cdPath = if (model.hasCd) cd else null)
+												floppyPath = entry.optString("df0").takeIf { it.isNotBlank() },
+												floppy1Path = entry.optString("df1").takeIf { it.isNotBlank() },
+												cdPath = entry.optString("cd").takeIf { it.isNotBlank() })
 										}
 									}
 								},
