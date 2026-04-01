@@ -55,6 +55,12 @@ OpenGLRenderer* get_opengl_renderer()
 	return dynamic_cast<OpenGLRenderer*>(g_renderer.get());
 }
 
+static bool is_kmsdrm_video_driver()
+{
+	const char* driver = SDL_GetCurrentVideoDriver();
+	return driver != nullptr && strcmpi(driver, "KMSDRM") == 0;
+}
+
 static void resolve_gl_pixel_format(uint32_t sdl_pixel_format, GLenum& fmt, GLenum& type, int& bpp)
 {
 	if (sdl_pixel_format == SDL_PIXELFORMAT_ARGB8888) {
@@ -148,7 +154,9 @@ SDL_WindowFlags OpenGLRenderer::get_window_flags() const
 {
 	SDL_WindowFlags flags = SDL_WINDOW_OPENGL;
 #if !defined(__ANDROID__)
-	flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+	if (!is_kmsdrm_video_driver()) {
+		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+	}
 #endif
 	return flags;
 }
@@ -1052,6 +1060,23 @@ void OpenGLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float s
 
 void OpenGLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 {
+	if (is_kmsdrm_video_driver()) {
+		int win_w = 0, win_h = 0;
+		int pix_w = 0, pix_h = 0;
+		SDL_GetWindowSize(w, &win_w, &win_h);
+		SDL_GetWindowSizeInPixels(w, &pix_w, &pix_h);
+		if ((pix_w != 0 && pix_w != win_w) || (pix_h != 0 && pix_h != win_h)) {
+			static bool logged_kmsdrm_drawable_mismatch = false;
+			if (!logged_kmsdrm_drawable_mismatch) {
+				write_log("KMSDRM: using window size as drawable size (window=%dx%d pixels=%dx%d)\n",
+					win_w, win_h, pix_w, pix_h);
+				logged_kmsdrm_drawable_mismatch = true;
+			}
+		}
+		*width = win_w;
+		*height = win_h;
+		return;
+	}
 	SDL_GetWindowSizeInPixels(w, width, height);
 }
 
