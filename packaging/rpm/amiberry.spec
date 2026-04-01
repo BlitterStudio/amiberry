@@ -88,6 +88,11 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Wed Apr 01 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.4-1
+- Bugfix release with improved bootstrap and portable mode handling
+- Fixed macOS Intel JIT startup crashes and KMSDRM fullscreen/drawable size issues
+- Added Vulkan render-thread support, GUI window state persistence, and Android UX improvements
+
 * Mon Mar 30 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.3-1
 - Stable v8.1.3 release
 
