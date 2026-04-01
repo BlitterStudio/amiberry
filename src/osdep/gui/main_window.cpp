@@ -704,7 +704,7 @@ SDL_Event touch_event;
 SDL_Texture* gui_texture;
 SDL_Rect gui_renderQuad;
 SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
-static bool gui_window_moved = false; // track if user moved the GUI window
+
 static bool gui_window_size_initialized = false;
 
 /* Flag for changes in rtarea:
@@ -1189,6 +1189,24 @@ void amiberry_gui_init()
 	AmigaMonitor* mon = &AMonitors[0];
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 
+	// Initialize gui_window_rect size early so all paths (Windows shared-window,
+	// KMSDRM, new-window creation) use the correct dimensions.
+	if (!gui_window_size_initialized) {
+		const float gui_scale = DPIHandler::get_layout_scale();
+		gui_window_rect.w = std::max(GUI_WIDTH, static_cast<int>(std::lround(static_cast<float>(GUI_WIDTH) * gui_scale)));
+		gui_window_rect.h = std::max(GUI_HEIGHT, static_cast<int>(std::lround(static_cast<float>(GUI_HEIGHT) * gui_scale)));
+
+		// Override with persisted size if available, clamped to minimum
+		int saved_w = 0, saved_h = 0;
+		if (regqueryint(nullptr, _T("GUISizeW"), &saved_w) && regqueryint(nullptr, _T("GUISizeH"), &saved_h)) {
+			gui_window_rect.w = std::max(GUI_WIDTH, saved_w);
+			gui_window_rect.h = std::max(GUI_HEIGHT, saved_h);
+			write_log("Restoring GUI window size %dx%d from settings\n", gui_window_rect.w, gui_window_rect.h);
+		}
+
+		gui_window_size_initialized = true;
+	}
+
 #ifdef __ANDROID__
 	if (mon->amiga_window && !mon->gui_window)
 		mon->gui_window = mon->amiga_window;
@@ -1211,8 +1229,20 @@ void amiberry_gui_init()
 		// Exit fullscreen for GUI if needed
 		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
 			SDL_SetWindowFullscreen(mon->gui_window, false);
-		SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
-		SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		// Use saved position if available, otherwise center
+		int gui_pos_x = 0, gui_pos_y = 0;
+		if (regqueryint(nullptr, _T("GUIPosX"), &gui_pos_x) && regqueryint(nullptr, _T("GUIPosY"), &gui_pos_y)) {
+			gui_window_rect.x = gui_pos_x;
+			gui_window_rect.y = gui_pos_y;
+			const int target_display = find_display_for_rect(gui_window_rect);
+			SDL_Rect usable = get_display_usable_bounds(target_display);
+			clamp_rect_to_bounds(gui_window_rect, usable, true);
+			SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
+			SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
+		} else {
+			SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
+			SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
 		SDL_SetWindowTitle(mon->gui_window, "Amiberry GUI");
 		SDL_SetWindowResizable(mon->gui_window, true);
 		SDL_SetWindowMouseGrab(mon->gui_window, false);
@@ -1245,30 +1275,14 @@ void amiberry_gui_init()
 		if (dm) sdl_mode = *dm;
 	}
 
-	if (!gui_window_size_initialized) {
-		const float gui_scale = DPIHandler::get_layout_scale();
-		gui_window_rect.w = std::max(GUI_WIDTH, static_cast<int>(std::lround(static_cast<float>(GUI_WIDTH) * gui_scale)));
-		gui_window_rect.h = std::max(GUI_HEIGHT, static_cast<int>(std::lround(static_cast<float>(GUI_HEIGHT) * gui_scale)));
-		gui_window_size_initialized = true;
-	}
-
 	if (!mon->gui_window)
 	{
 		write_log("Creating Amiberry GUI window...\n");
 		int has_x = regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
 		int has_y = regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
 		if (!has_x || !has_y) {
-			// Default to centered if we don't have stored position
 			gui_window_rect.x = SDL_WINDOWPOS_CENTERED;
 			gui_window_rect.y = SDL_WINDOWPOS_CENTERED;
-		} else {
-			// Clamp stored position/size to some display's usable bounds
-			const int target_display = find_display_for_rect(gui_window_rect);
-			SDL_Rect usable = get_display_usable_bounds(target_display);
-			if (clamp_rect_to_bounds(gui_window_rect, usable, true)) {
-				// Mark as adjusted so we persist corrected values
-				gui_window_moved = true;
-			}
 		}
 
 		uint32_t mode;
@@ -1307,40 +1321,40 @@ void amiberry_gui_init()
 			SDL_SetWindowFullscreenMode(mon->gui_window, NULL);
 		}
 		if (mon->gui_window) {
-			SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-		}
+			// Sync rect to actual window size (SDL may adjust)
+			int ww, wh;
+			SDL_GetWindowSize(mon->gui_window, &ww, &wh);
+			gui_window_rect.w = ww;
+			gui_window_rect.h = wh;
 
-		// Sync rect to actual window metrics (handles SDL_WINDOWPOS_CENTERED)
-		int wx, wy, ww, wh;
-		SDL_GetWindowPosition(mon->gui_window, &wx, &wy);
-		SDL_GetWindowSize(mon->gui_window, &ww, &wh);
-		gui_window_rect.x = wx;
-		gui_window_rect.y = wy;
-		gui_window_rect.w = ww;
-		gui_window_rect.h = wh;
-
-		// After creation, ensure window is fully visible; clamp to its current display
-		SDL_DisplayID disp = SDL_GetDisplayForWindow(mon->gui_window);
-		SDL_Rect usable = get_display_usable_bounds(disp);
-		SDL_Rect clamped = gui_window_rect;
-		bool adjusted = clamp_rect_to_bounds(clamped, usable, true);
-		if (adjusted) {
-			if (clamped.w != gui_window_rect.w || clamped.h != gui_window_rect.h)
-				SDL_SetWindowSize(mon->gui_window, clamped.w, clamped.h);
-			if (clamped.x != gui_window_rect.x || clamped.y != gui_window_rect.y)
-				SDL_SetWindowPosition(mon->gui_window, clamped.x, clamped.y);
-			gui_window_rect = clamped;
-			gui_window_moved = true; // ensure we persist corrected values
-		}
-
-		// Center SDL window within the usable display area (respects taskbar)
-		{
-			int win_w, win_h; SDL_GetWindowSize(mon->gui_window, &win_w, &win_h);
-			int cx = usable.x + (usable.w - win_w) / 2;
-			int cy = usable.y + (usable.h - win_h) / 2;
-			SDL_SetWindowPosition(mon->gui_window, cx, cy);
-			gui_window_rect.x = cx;
-			gui_window_rect.y = cy;
+			// Position: use saved position if available, otherwise center
+			if (has_x && has_y) {
+				// Clamp saved position+size to the target display's usable bounds
+				const int target_display = find_display_for_rect(gui_window_rect);
+				SDL_Rect usable = get_display_usable_bounds(target_display);
+				clamp_rect_to_bounds(gui_window_rect, usable, true);
+				if (gui_window_rect.w != ww || gui_window_rect.h != wh)
+					SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
+				SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
+			} else {
+				// Center on the usable area of the current display (respects taskbar)
+				SDL_DisplayID disp = SDL_GetDisplayForWindow(mon->gui_window);
+				SDL_Rect usable = get_display_usable_bounds(disp);
+				// Clamp size to display if needed
+				SDL_Rect clamped = gui_window_rect;
+				if (clamp_rect_to_bounds(clamped, usable, true)) {
+					if (clamped.w != gui_window_rect.w || clamped.h != gui_window_rect.h)
+						SDL_SetWindowSize(mon->gui_window, clamped.w, clamped.h);
+					gui_window_rect = clamped;
+				}
+				int win_w, win_h;
+				SDL_GetWindowSize(mon->gui_window, &win_w, &win_h);
+				int cx = usable.x + (usable.w - win_w) / 2;
+				int cy = usable.y + (usable.h - win_h) / 2;
+				SDL_SetWindowPosition(mon->gui_window, cx, cy);
+				gui_window_rect.x = cx;
+				gui_window_rect.y = cy;
+			}
 		}
 
 #ifndef __MACH__
@@ -1630,10 +1644,13 @@ void amiberry_gui_halt()
 	}
 
 	if (mon->gui_window && !kmsdrm_detected) {
-		if (gui_window_moved) {
-			regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
-			regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
-		}
+		// Always save position and size together so the ini stays consistent.
+		// Avoids stale position-only state causing top-left placement on first
+		// launch after upgrading from a version that didn't persist size.
+		regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
+		regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
+		regsetint(nullptr, _T("GUISizeW"), gui_window_rect.w);
+		regsetint(nullptr, _T("GUISizeH"), gui_window_rect.h);
 #if defined(__ANDROID__)
 		// Don't destroy the window on Android, as we reuse it
 #elif defined(_WIN32)
@@ -1830,12 +1847,13 @@ void run_gui()
 						SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
 					}
 				}
-				gui_window_moved = true;
+
 			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_RESIZED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
 				gui_window_rect.w = gui_event.window.data1;
 				gui_window_rect.h = gui_event.window.data2;
+
 			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
