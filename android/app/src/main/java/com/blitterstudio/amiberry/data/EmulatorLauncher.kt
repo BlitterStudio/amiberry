@@ -17,12 +17,16 @@ object EmulatorLauncher {
 		context: Context,
 		model: AmigaModel,
 		floppyPath: String? = null,
+		floppy1Path: String? = null,
 		cdPath: String? = null
 	) {
 		val args = mutableListOf("--rescan-roms", "--model", model.cmdArg)
 
 		if (floppyPath != null && model.hasFloppy) {
 			args.addAll(listOf("-0", floppyPath))
+		}
+		if (floppy1Path != null && model.hasFloppy) {
+			args.addAll(listOf("-1", floppy1Path))
 		}
 		if (cdPath != null && model.hasCd) {
 			args.addAll(listOf("-s", "cdimage0=$cdPath"))

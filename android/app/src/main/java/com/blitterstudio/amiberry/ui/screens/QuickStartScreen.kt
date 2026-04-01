@@ -191,6 +191,7 @@ fun QuickStartScreen(
 							context = context,
 							model = settingsViewModel.settings.baseModel,
 							floppyPath = settingsViewModel.settings.floppy0.takeIf { it.isNotBlank() },
+							floppy1Path = settingsViewModel.settings.floppy1.takeIf { it.isNotBlank() },
 							cdPath = settingsViewModel.settings.cdImage.takeIf { it.isNotBlank() }
 						)
 					}
@@ -258,18 +259,16 @@ fun QuickStartScreen(
 				}
 			}
 
-			// Recent launches (filtered to existing files)
-			val recentLaunches = remember {
-				AppPreferences.getInstance(context).getRecentLaunches().filter { entry ->
-					val parts = entry.split(":", limit = 3)
-					when (parts.getOrNull(0)) {
-						"config", "whdload" -> {
-							val path = parts.getOrNull(1)
-							path != null && java.io.File(path).exists()
-						}
-						"quickstart" -> true // Model-based launches are always valid
-						else -> false
+			// Recent launches (filtered to existing files, recomputed on every resume)
+			val recentLaunches = AppPreferences.getInstance(context).getRecentLaunches().filter { entry ->
+				val parts = entry.split(":", limit = 3)
+				when (parts.getOrNull(0)) {
+					"config", "whdload" -> {
+						val path = parts.getOrNull(1)
+						path != null && java.io.File(path).exists()
 					}
+					"quickstart" -> true // Model-based launches are always valid
+					else -> false
 				}
 			}
 			if (recentLaunches.isNotEmpty()) {
