@@ -674,6 +674,12 @@ int check_prefs_changed_gfx()
 	if (currprefs.onscreen_joystick != changed_prefs.onscreen_joystick)
 	{
 		currprefs.onscreen_joystick = changed_prefs.onscreen_joystick;
+		// Re-enumerate joysticks so the on-screen joystick device gets
+		// registered or removed from the input subsystem.
+		import_joysticks();
+		inputdevice_config_change();
+		joystick_refresh_needed = true;
+
 		if (currprefs.onscreen_joystick)
 		{
 			AmigaMonitor* mon = &AMonitors[0];

@@ -1395,12 +1395,6 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 	return false;
 }
 
-void import_joysticks()
-{
-	joystick_inited = 0;
-	init_joystick();
-}
-
 static void close_joystick()
 {
 	if (!joystick_inited)
@@ -1411,6 +1405,12 @@ static void close_joystick()
 	num_joystick = 0;
 	osj_device_index = -1;
 	di_free();
+}
+
+void import_joysticks()
+{
+	close_joystick();
+	init_joystick();
 }
 
 static int acquire_joystick(const int num, int flags)
