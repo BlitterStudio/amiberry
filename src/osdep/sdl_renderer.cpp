@@ -33,6 +33,12 @@ SDLRenderer* get_sdl_renderer()
 	return dynamic_cast<SDLRenderer*>(g_renderer.get());
 }
 
+static bool is_kmsdrm_video_driver()
+{
+	const char* driver = SDL_GetCurrentVideoDriver();
+	return driver != nullptr && strcmpi(driver, "KMSDRM") == 0;
+}
+
 // --- Context lifecycle ---
 
 bool SDLRenderer::init_context(SDL_Window* /*window*/)
@@ -57,7 +63,7 @@ bool SDLRenderer::has_context() const
 SDL_WindowFlags SDLRenderer::get_window_flags() const
 {
 #if !defined(__ANDROID__)
-	return SDL_WINDOW_HIGH_PIXEL_DENSITY;
+	return is_kmsdrm_video_driver() ? 0 : SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #else
 	return 0;
 #endif
@@ -384,6 +390,24 @@ void SDLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_
 
 void SDLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 {
+	if (is_kmsdrm_video_driver()) {
+		int win_w = 0, win_h = 0;
+		int pix_w = 0, pix_h = 0;
+		SDL_GetWindowSize(w, &win_w, &win_h);
+		SDL_GetWindowSizeInPixels(w, &pix_w, &pix_h);
+		if ((pix_w != 0 && pix_w != win_w) || (pix_h != 0 && pix_h != win_h)) {
+			static bool logged_kmsdrm_drawable_mismatch = false;
+			if (!logged_kmsdrm_drawable_mismatch) {
+				write_log("KMSDRM: using window size as drawable size (window=%dx%d pixels=%dx%d)\n",
+					win_w, win_h, pix_w, pix_h);
+				logged_kmsdrm_drawable_mismatch = true;
+			}
+		}
+		*width = win_w;
+		*height = win_h;
+		return;
+	}
+
 	// SDL3 software path: try to find the monitor owning this window
 	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
 		if (AMonitors[i].amiga_window == w && AMonitors[i].amiga_renderer) {

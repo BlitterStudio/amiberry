@@ -1310,7 +1310,8 @@ void amiberry_gui_init()
 		// Request native-resolution framebuffer on HiDPI displays.
 		// Android: NOT needed — display scaling is handled entirely via layout_scale.
 #if !defined(__ANDROID__)
-		mode |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+		if (!kmsdrm_detected)
+			mode |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #endif
 
 		mon->gui_window = SDL_CreateWindow("Amiberry GUI",
@@ -1460,7 +1461,13 @@ void amiberry_gui_init()
 	int win_w = 0, win_h = 0, pix_w = 0, pix_h = 0;
 	SDL_GetWindowSize(mon->gui_window, &win_w, &win_h);
 	SDL_GetWindowSizeInPixels(mon->gui_window, &pix_w, &pix_h);
-	const float font_dpi_scale = (win_w > 0) ? std::max(1.0f, static_cast<float>(pix_w) / static_cast<float>(win_w)) : 1.0f;
+	if (kmsdrm_detected && ((pix_w != 0 && pix_w != win_w) || (pix_h != 0 && pix_h != win_h))) {
+		write_log("KMSDRM GUI: using window size for DPI (window=%dx%d pixels=%dx%d)\n",
+			win_w, win_h, pix_w, pix_h);
+	}
+	const float font_dpi_scale = (kmsdrm_detected || win_w <= 0)
+		? 1.0f
+		: std::max(1.0f, static_cast<float>(pix_w) / static_cast<float>(win_w));
 #endif
 	style.FontScaleDpi = 1.0f / font_dpi_scale;
 
@@ -2508,7 +2515,9 @@ void run_gui()
 #endif
 		{
 			const ImGuiIO& render_io = ImGui::GetIO();
-			SDL_SetRenderScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
+			const float render_scale_x = kmsdrm_detected ? 1.0f : render_io.DisplayFramebufferScale.x;
+			const float render_scale_y = kmsdrm_detected ? 1.0f : render_io.DisplayFramebufferScale.y;
+			SDL_SetRenderScale(mon->gui_renderer, render_scale_x, render_scale_y);
 			SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
 							   static_cast<uint8_t>(0.60f * 255), static_cast<uint8_t>(1.00f * 255));
 			SDL_RenderClear(mon->gui_renderer);
