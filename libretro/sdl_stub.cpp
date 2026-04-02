@@ -937,6 +937,11 @@ bool SDL_SetWindowFullscreenMode(SDL_Window* window, const SDL_DisplayMode* mode
 	(void)mode;
 	return true;
 }
+const SDL_DisplayMode* SDL_GetWindowFullscreenMode(SDL_Window* window)
+{
+	(void)window;
+	return NULL;
+}
 bool SDL_SetWindowFullscreen(SDL_Window* window, bool fullscreen)
 {
 	(void)window;
