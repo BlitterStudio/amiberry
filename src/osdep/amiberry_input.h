@@ -125,6 +125,11 @@ extern void read_joystick_hat(int id, int hat, int value);
 // Returns the joystick device index of the built-in on-screen joystick, or -1 if not registered
 extern int get_onscreen_joystick_device_index();
 
+// Register the on-screen joystick device if not already present.
+// Unlike import_joysticks(), this does not re-enumerate physical devices,
+// so custom controller mappings are preserved.
+extern void ensure_onscreen_joystick_registered();
+
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
 
