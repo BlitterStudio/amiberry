@@ -125,7 +125,7 @@ static bool ValidatePhysicalDriveSelection(const uaedev_config_info& ci, std::st
     if (opened)
         return true;
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
     if (!_tcsncmp(ci.rootdir, _T("/dev/"), 5)) {
         error = "Amiberry couldn't open this device. Unmount it first and make sure macOS allows raw disk access.";
     } else {
@@ -1005,13 +1005,13 @@ static void ShowAddHardDriveModal()
         }
         if (is_mounted) {
             ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Warning: selected device is mounted by the host.");
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
             ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "macOS: unmount the drive before attaching (diskutil unmountDisk).");
 #endif
         }
         if (access_denied) {
             ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Warning: Amiberry cannot currently open this device.");
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
             ImGui::TextWrapped("macOS denied raw /dev access for this disk. Amiberry will automatically prompt for authorization to attach eligible unmounted disks.");
 #endif
         }

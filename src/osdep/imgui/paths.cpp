@@ -372,8 +372,8 @@ void render_panel_paths()
 		ImGui::Spacing();
 	};
 
-	// Portable mode toggle (functional on Windows/Linux, shown disabled on macOS, hidden on Android)
-#if !defined(__ANDROID__)
+	// Portable mode toggle (functional on Windows/Linux, shown disabled on macOS, hidden on Android/iOS)
+#if !defined(__ANDROID__) && !defined(AMIBERRY_IOS)
 	{
 		bool portable = get_portable_mode();
 		std::string portable_toggle_unavailable_reason;

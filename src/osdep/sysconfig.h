@@ -24,8 +24,26 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
+// Platform discrimination for Apple targets.
+// __MACH__ is defined on BOTH macOS and iOS. Use these instead:
+//   AMIBERRY_MACOS — macOS desktop (not iOS, not Catalyst)
+//   AMIBERRY_IOS   — iOS / iPadOS (also defined by CMake via -DAMIBERRY_IOS)
+// For code that genuinely applies to all Apple platforms, __MACH__ is still fine.
+#ifdef __MACH__
+#include <TargetConditionals.h>
+#if TARGET_OS_IOS || TARGET_OS_TV
+#ifndef AMIBERRY_IOS
+#define AMIBERRY_IOS
+#endif
+#elif TARGET_OS_OSX
+#ifndef AMIBERRY_MACOS
+#define AMIBERRY_MACOS
+#endif
+#endif
+#endif
+
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
-#if !defined(LIBRETRO_NO_JIT)
+#if !defined(LIBRETRO_NO_JIT) && !defined(AMIBERRY_IOS)
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif

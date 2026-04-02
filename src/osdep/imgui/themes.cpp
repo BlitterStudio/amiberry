@@ -136,7 +136,9 @@ static std::vector<FontEntry> enumerate_system_fonts()
 	if (!sys_path.empty())
 		dirs.push_back(sys_path);
 
-#ifdef __APPLE__
+#ifdef AMIBERRY_IOS
+	dirs.emplace_back("/System/Library/Fonts");
+#elif defined(AMIBERRY_MACOS)
 	dirs.emplace_back("/System/Library/Fonts");
 	dirs.emplace_back("/Library/Fonts");
 	const char* home = getenv("HOME");

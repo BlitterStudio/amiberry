@@ -73,7 +73,11 @@ static int g_max_handle = -1;
 #define OS_NAME _T("windows")
 #endif
 #else
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+#ifndef OS_NAME
+#define OS_NAME _T("ios")
+#endif
+#elif defined(AMIBERRY_MACOS)
 #ifndef OS_NAME
 #define OS_NAME _T("macos")
 #endif

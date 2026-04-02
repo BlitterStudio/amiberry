@@ -30,7 +30,7 @@
 #include <sys/wait.h>
 #endif
 
-#ifdef __APPLE__
+#ifdef AMIBERRY_MACOS
 #include <mach-o/dyld.h>
 #include <sys/xattr.h>
 #include <crt_externs.h>
@@ -267,7 +267,7 @@ static UpdateInfo s_update_result;
 #ifdef _WIN32
 static std::string s_windows_restart_script;
 #endif
-#ifdef __APPLE__
+#ifdef AMIBERRY_MACOS
 static std::string s_macos_new_executable;
 #endif
 
@@ -308,7 +308,7 @@ static std::string get_executable_path()
 	out.resize(static_cast<size_t>(needed));
 	WideCharToMultiByte(CP_UTF8, 0, pathw.data(), static_cast<int>(len), out.data(), needed, nullptr, nullptr);
 	return out;
-#elif defined(__APPLE__)
+#elif defined(AMIBERRY_MACOS)
 	uint32_t sz = 0;
 	_NSGetExecutablePath(nullptr, &sz);
 	if (sz == 0) {
@@ -336,7 +336,7 @@ static std::string get_platform_asset_suffix()
 {
 #if defined(_WIN32)
 	return "win64";
-#elif defined(__APPLE__)
+#elif defined(AMIBERRY_MACOS)
 	return "macOS-universal";
 #else
 	return "";
@@ -657,7 +657,7 @@ static std::string compute_sha256_hex(const std::string& file_path)
 
 UpdateMethod get_update_method()
 {
-#if defined(__ANDROID__) || defined(LIBRETRO)
+#if defined(__ANDROID__) || defined(LIBRETRO) || defined(AMIBERRY_IOS)
 	return UpdateMethod::DISABLED;
 #elif defined(__linux__)
 	if (getenv("FLATPAK_ID")) {
@@ -666,7 +666,7 @@ UpdateMethod get_update_method()
 	return UpdateMethod::NOTIFY_ONLY;
 #elif defined(_WIN32)
 	return UpdateMethod::SELF_UPDATE;
-#elif defined(__APPLE__)
+#elif defined(AMIBERRY_MACOS)
 	return UpdateMethod::SELF_UPDATE;
 #else
 	return UpdateMethod::NOTIFY_ONLY;
@@ -853,7 +853,7 @@ static int run_tool(const std::vector<std::string>& args)
 	argv.push_back(nullptr);
 
 	pid_t pid = 0;
-#ifdef __APPLE__
+#ifdef AMIBERRY_MACOS
 	int ret = posix_spawn(&pid, argv[0], nullptr, nullptr, argv.data(), *_NSGetEnviron());
 #else
 	extern char **environ;
@@ -869,7 +869,7 @@ static int run_tool(const std::vector<std::string>& args)
 }
 #endif
 
-#ifdef __APPLE__
+#ifdef AMIBERRY_MACOS
 static void remove_quarantine_recursive(const std::filesystem::path& path)
 {
 	removexattr(path.c_str(), "com.apple.quarantine", XATTR_NOFOLLOW);
@@ -1156,7 +1156,7 @@ bool apply_update(const std::string& downloaded_file, const UpdateInfo&)
 	write_log("Updater: Windows update prepared, script at %s\n", s_windows_restart_script.c_str());
 	return true;
 
-#elif defined(__APPLE__)
+#elif defined(AMIBERRY_MACOS)
 	const std::string exe_path = get_executable_path();
 	if (exe_path.empty()) {
 		write_log("Updater: failed to locate executable path\n");
@@ -1302,7 +1302,7 @@ void restart_after_update()
 		}
 	}
 	write_log("Updater: failed to launch Windows restart script\n");
-#elif defined(__APPLE__)
+#elif defined(AMIBERRY_MACOS)
 	// After apply_update() renames the .app bundle, _NSGetExecutablePath returns
 	// the stale path. Use the stored path to the new executable instead.
 	std::string exe = s_macos_new_executable;
