@@ -62,6 +62,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.1.5" date="2026-04-02">
+            <description>
+                <p>Android UI fixes</p>
+            </description>
+        </release>
         <release version="8.1.4" date="2026-04-01">
             <description>
                 <p>Bugfix release: improved bootstrap and portable mode handling, fixed macOS Intel JIT startup crashes, KMSDRM fullscreen and drawable size issues, window lifecycle and joystick/input bugs, added Vulkan multi-threaded rendering and GUI window state persistence, and refreshed Android recent launches and pause-menu UX.</p>
