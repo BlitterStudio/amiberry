@@ -34,11 +34,6 @@ option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
 
-# Vulkan and OpenGL are mutually exclusive rendering backends
-if(USE_VULKAN AND USE_OPENGL)
-    message(FATAL_ERROR "USE_VULKAN and USE_OPENGL are mutually exclusive. Please enable only one.")
-endif()
-
 # Automatically disable PCem on architectures without a PCem backend
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv"
    OR CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "loongarch")
@@ -61,6 +56,30 @@ if(ANDROID)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
     # Android 15+ (API 35) requires 16KB page size alignment for Play Store
     add_link_options("-Wl,-z,max-page-size=16384")
+endif()
+
+# iOS detection: CMAKE_SYSTEM_NAME is "iOS" when using -DCMAKE_SYSTEM_NAME=iOS
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(IOS TRUE)
+    set(USE_UAENET_PCAP OFF CACHE BOOL "pcap not available on iOS" FORCE)
+    set(USE_UAENET_TAP OFF CACHE BOOL "TAP backend not available on iOS" FORCE)
+    set(USE_DBUS OFF CACHE BOOL "DBus not available on iOS" FORCE)
+    set(USE_IPC_SOCKET OFF CACHE BOOL "IPC socket not available on iOS" FORCE)
+    set(USE_GPIOD OFF CACHE BOOL "GPIO not available on iOS" FORCE)
+    set(USE_LIBSERIALPORT OFF CACHE BOOL "Serial port not available on iOS" FORCE)
+    set(USE_PCEM OFF CACHE BOOL "PCem x86 emulation not available on iOS" FORCE)
+    set(USE_LIBMPEG2 OFF CACHE BOOL "LibMPEG2 not available on iOS" FORCE)
+    set(USE_VULKAN OFF CACHE BOOL "Vulkan not available on iOS (use Metal via SDL)" FORCE)
+    # iOS requires OpenGL ES, not desktop OpenGL
+    set(USE_OPENGL ON CACHE BOOL "Use OpenGL ES for rendering on iOS" FORCE)
+    set(USE_GLES ON CACHE BOOL "Force OpenGL ES on iOS" FORCE)
+    message(STATUS "iOS build enabled: sandbox features disabled")
+endif()
+
+# Vulkan and OpenGL are mutually exclusive rendering backends
+# (checked after platform blocks so iOS/Android can force-disable Vulkan first)
+if(USE_VULKAN AND USE_OPENGL)
+    message(FATAL_ERROR "USE_VULKAN and USE_OPENGL are mutually exclusive. Please enable only one.")
 endif()
 
 if(WIN32)

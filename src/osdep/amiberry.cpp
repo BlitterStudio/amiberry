@@ -79,7 +79,9 @@
 #include <string>
 #include <mach-o/dyld.h>
 #include <CoreFoundation/CoreFoundation.h>
+#ifdef AMIBERRY_MACOS
 #include <DiskArbitration/DiskArbitration.h>
+#endif
 #endif
 
 #ifdef AHI
@@ -6075,10 +6077,30 @@ void download_rtb(const std::string& filename)
 }
 #endif
 
+#ifdef AMIBERRY_IOS
+// iOS .app bundles are flat: the executable sits at the bundle root.
+// Returns the bundle root directory (e.g. /path/to/MyApp.app).
+static std::string get_ios_app_bundle_directory()
+{
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		const std::string path(exepath);
+		const size_t last_slash = path.rfind('/');
+		if (last_slash != std::string::npos)
+			return path.substr(0, last_slash);
+	}
+	return {};
+}
+#endif
+
 // this is where the required assets are stored, like fonts, icons, etc.
 std::string get_data_directory(bool portable_mode)
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+	return get_ios_app_bundle_directory() + "/data/";
+#elif defined(AMIBERRY_MACOS)
 	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
 	std::string directory;
@@ -6146,7 +6168,7 @@ std::string get_data_directory(bool portable_mode)
 
 // This path wil be used to create most of the user-specific files and directories
 // Kickstart ROMs, HDD images, Floppy images will live under this directory
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 static std::string get_default_macos_content_root()
 {
 	const auto user_home_dir = getenv("HOME");
@@ -6179,7 +6201,16 @@ static std::string get_default_posix_content_root()
 
 std::string get_home_directory(const bool portable_mode)
 {
-#if defined(__ANDROID__)
+#if defined(AMIBERRY_IOS)
+	// iOS: sandboxed Documents directory, similar to Android
+	const auto user_home_dir = getenv("HOME");
+	if (user_home_dir != nullptr && user_home_dir[0] != '\0')
+	{
+		write_log("iOS: Using home directory %s/Documents/Amiberry\n", user_home_dir);
+		return normalize_path_string(std::string(user_home_dir) + "/Documents/Amiberry");
+	}
+	return {};
+#elif defined(__ANDROID__)
 	const char* path = SDL_GetAndroidExternalStoragePath();
 	if (path) {
 		std::string home(path);
@@ -6211,7 +6242,7 @@ std::string get_home_directory(const bool portable_mode)
 		return get_windows_executable_directory();
 	}
 #endif
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	// macOS: check AMIBERRY_HOME_DIR first, then default to ~/Documents/Amiberry.
 	// Keep path discovery side-effect free so migrated setups do not recreate legacy folders.
 	{
@@ -6262,7 +6293,9 @@ std::string get_home_directory(const bool portable_mode)
 // The location of .uae configurations
 std::string get_config_directory(bool portable_mode)
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+	return join_path(get_home_directory(false), "Configurations");
+#elif defined(AMIBERRY_MACOS)
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
@@ -6331,7 +6364,10 @@ std::string get_config_directory(bool portable_mode)
 // Plugins that Amiberry can use, usually in the form of shared libraries
 std::string get_plugins_directory(bool portable_mode)
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+	// iOS: no plugins directory (no dynamic loading on iOS)
+	return {};
+#elif defined(AMIBERRY_MACOS)
 	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
 	std::string directory;
@@ -6423,7 +6459,10 @@ static std::string get_settings_directory(const bool portable_mode)
 	if (portable_mode)
 		return join_path(get_portable_root_directory(), "Settings");
 
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+	// iOS: settings in the Documents sandbox
+	return join_path(get_home_directory(false), "Settings");
+#elif defined(AMIBERRY_MACOS)
 	const auto user_home_dir = getenv("HOME");
 	if (user_home_dir != nullptr)
 		return normalize_path_string(std::string(user_home_dir) + "/Library/Application Support/Amiberry");
@@ -6465,7 +6504,9 @@ static std::vector<std::string> get_legacy_settings_candidate_directories(const 
 		return candidates;
 	}
 
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+	append_settings_candidate(candidates, join_path(get_home_directory(false), "Configurations"));
+#elif defined(AMIBERRY_MACOS)
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
 		append_settings_candidate(candidates, join_path(env_home_dir, "Configurations"));
@@ -6880,7 +6921,7 @@ static void collect_legacy_visual_cleanup_items()
 
 static std::string get_legacy_cleanup_destination_root()
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	const auto home_dir_env = getenv("HOME");
 	if (home_dir_env != nullptr && home_dir_env[0] != '\0')
 		return normalize_path_string(std::string(home_dir_env) + "/.Trash");
@@ -6991,7 +7032,7 @@ std::vector<std::string> get_legacy_cleanup_prompt_items()
 
 bool legacy_cleanup_uses_trash()
 {
-#if defined(__MACH__)
+#if defined(AMIBERRY_MACOS)
 	return true;
 #else
 	return false;
@@ -7125,7 +7166,7 @@ static bool ensure_directory_exists_if_missing(const std::string& directory_path
 	return true;
 }
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 static std::string get_macos_app_resources_directory()
 {
 	char exepath[MAX_DPATH];
@@ -7154,7 +7195,11 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 	const bool include_usr_local_share)
 {
 	std::vector<std::string> candidates;
-#ifdef __MACH__
+#ifdef AMIBERRY_IOS
+	const auto app_bundle_dir = get_ios_app_bundle_directory();
+	if (!app_bundle_dir.empty())
+		append_unique_path_candidate(candidates, join_path(app_bundle_dir, subdirectory));
+#elif defined(AMIBERRY_MACOS)
 	const auto app_resources_dir = get_macos_app_resources_directory();
 	if (!app_resources_dir.empty())
 		append_unique_path_candidate(candidates, join_path(app_resources_dir, subdirectory));
@@ -8724,7 +8769,7 @@ std::vector<std::string> get_cd_drives()
 	last_query_time = now;
 
 	std::vector<std::string> results{};
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	DASessionRef session = DASessionCreate(kCFAllocatorDefault);
 	if (!session) {
 		write_log("Failed to create DiskArbitration session, cannot auto-detect CD drives in system\n");

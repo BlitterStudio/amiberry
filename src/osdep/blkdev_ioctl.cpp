@@ -28,8 +28,8 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 
-#ifdef __MACH__
-// macOS
+#ifdef AMIBERRY_MACOS
+// macOS — IOKit/DiskArbitration CD-ROM access (not available on iOS)
 #include <errno.h>
 #include <sys/disk.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -1171,7 +1171,7 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 	if (log_scsi)
 		write_log(_T("IOCTL: opening IOCTL %s\n"), ciw->devname);
 	ciw->fd = open(ciw->devname, fullaccess ? O_RDWR : O_RDONLY);
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	if (ciw->fd == -1)
 		ciw->fd = open(ciw->devname, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 	if (ciw->fd == -1) {
@@ -1293,7 +1293,7 @@ static int spti_read(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int 
 
 extern void encode_l2(uae_u8* p, int address);
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 static int mac_cd_read_sector(struct dev_info_ioctl* ciw, int sector, uae_u8* dst, int num_sectors, uae_u8 sectorType)
 {
 	dk_cd_read_t rd{};
@@ -1320,7 +1320,7 @@ static int mac_cd_read_mode1(struct dev_info_ioctl* ciw, int sector, uae_u8* dst
 
 static int read2048(struct dev_info_ioctl* ciw, int sector)
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	return mac_cd_read_mode1(ciw, sector, ciw->tempbuffer);
 #else
 	off_t offset = (off_t)sector * 2048;
@@ -1351,7 +1351,7 @@ retry:
 		if (track < 0)
 			return 0;
 		got = false;
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 		if (isaudiotrack(&ciw->di.toc, sector) && sectorsize >= 2352 && data) {
 			uae_u8* temp_cd_buf = (uae_u8*)malloc(size * 2352);
 			if (temp_cd_buf) {
@@ -1498,7 +1498,7 @@ static int ioctl_command_play(int unitnum, int startlsn, int endlsn, int scan, p
 /* read qcode */
 static int ioctl_command_qcode(int unitnum, uae_u8* buf, int sector, bool all)
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	struct dev_info_ioctl* ciw = unitisopen(unitnum);
 	if (!ciw)
 		return 0;
@@ -1755,7 +1755,7 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 	if (!ciw)
 		return 0;
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	// macOS: prefer raw CD reads via DKIOCCDREAD to avoid block-size mismatches
 	if (!do_write && data) {
 		int remaining = size;
@@ -1851,7 +1851,7 @@ static int ioctl_command_read(int unitnum, uae_u8* data, int sector, int size)
 
 static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device_info* di)
 {
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	if (!open_createfile(ciw, 0))
 		return 0;
 
@@ -1939,7 +1939,7 @@ static int eject(int unitnum, bool eject)
     if (!open_createfile(ciw, 0))
         return 0;
     int ret = 0;
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
     if (eject) {
         if (ioctl(ciw->fd, DKIOCEJECT, 0) < 0)
             ret = 1;
@@ -1960,7 +1960,7 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	if (!ciw)
 		return 0;
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	struct cd_toc_head* th = &ciw->di.toc;
 	struct cd_toc* t = th->toc;
 
@@ -2271,7 +2271,7 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 {
 	ciw->cda.cdda_volume[0] = 0x7fff;
 	ciw->cda.cdda_volume[1] = 0x7fff;
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	uint32_t blocksize = 0;
 #endif
 	memset(&ciw->di, 0, sizeof(ciw->di));
@@ -2293,7 +2293,7 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 		goto error;
 	}
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	if (ioctl(ciw->fd, DKIOCGETBLOCKSIZE, &blocksize) == 0 && blocksize > 0)
 		ciw->di.bytespersector = (int)blocksize;
 	else
@@ -2352,7 +2352,7 @@ static int open_device(int unitnum, const char* ident, int flags)
 {
 	struct dev_info_ioctl* ciw = NULL;
 	if (ident && ident[0]) {
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 		char ident_buf[64];
 		const char* ident_match1 = ident;
 		const char* ident_match2 = ident;
@@ -2367,7 +2367,7 @@ static int open_device(int unitnum, const char* ident, int flags)
 		for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 			ciw = &ciw32[i];
 			if (unittable[i] == 0 && ciw->drvletter[0] != 0) {
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 				if (!strcmp(ciw->drvlettername, ident_match1) || !strcmp(ciw->drvlettername, ident_match2)) {
 #else
 				if (!strcmp(ciw->drvlettername, ident)) {
@@ -2442,7 +2442,7 @@ static int open_bus(int flags)
 		{
 			const char* open_path = drive.c_str();
 			write_log(_T("IOCTL evaluating drive: %s\n"), open_path);
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 			char open_buf[64];
 			if (!strncmp(open_path, "/dev/rdisk", 10)) {
 				snprintf(open_buf, sizeof(open_buf), "/dev/disk%s", open_path + 10);
@@ -2450,7 +2450,7 @@ static int open_bus(int flags)
 			}
 #endif
 			int fd = open(open_path, O_RDONLY | O_NONBLOCK);
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 			if (fd == -1) {
 				fd = open(open_path, O_RDONLY);
 			}
@@ -2470,11 +2470,11 @@ static int open_bus(int flags)
 				struct stat st;
 				if (fstat(fd, &st) == 0) {
 					bool is_block = S_ISBLK(st.st_mode);
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 					bool is_char = S_ISCHR(st.st_mode);
 #endif
 					if (is_block
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 						|| is_char
 #endif
 					) {

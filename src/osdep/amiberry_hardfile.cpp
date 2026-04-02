@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <cctype>
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 #include <sys/stat.h>
 #include <sys/disk.h>
 #include <sys/mount.h>
@@ -55,7 +55,7 @@ struct uae_driveinfo {
 	int access_denied;
 };
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 #  define off64_t off_t
 #  define fopen64 fopen
 #  define fseeko64 fseeko
@@ -323,7 +323,7 @@ static void scan_harddrives_linux()
 }
 #endif /* !_WIN32 */
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 static bool macos_get_media_info(const std::string& bsd_name, uae_u64* out_size, int* out_blocksize)
 {
 	if (!out_size || !out_blocksize)
@@ -654,7 +654,7 @@ static int scan_harddrives(bool force)
 	num_drives = 0;
 	memset(uae_drives, 0, sizeof(uae_drives));
 
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	scan_harddrives_macos();
 #elif defined(_WIN32)
 	scan_harddrives_windows();
@@ -819,7 +819,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 			hfd->ci.readonly = true;
 	}
 	open_error = errno;
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	if (h == nullptr && !strncmp(name, "/dev/", 5) && (open_error == EACCES || open_error == EPERM)) {
 		const int open_flags = hfd->ci.readonly ? O_RDONLY : O_RDWR;
 		std::string authopen_error;
@@ -857,7 +857,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	_tcscpy(hfd->product_rev, _T("0.4"));
 	if (h != nullptr) {
 		uae_s64 size;
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 	// check type of file using fstat on the already-open descriptor
 	// (more reliable than stat-by-path on network volumes like SMB/NFS)
 	int ret = fstat(fileno(h), &st);
@@ -904,7 +904,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 				write_log("HDF '%s' fseek(SEEK_SET) failed, error %d\n", name, errno);
 				goto end;
 			}
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
 		}
 #endif
 		size &= ~(hfd->ci.blocksize - 1);
@@ -930,7 +930,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	}
 	else {
 		write_log("HDF '%s' failed to open. error = %d\n", name, errno);
-#ifdef __MACH__
+#ifdef AMIBERRY_MACOS
         if (!strncmp(name, "/dev/", 5) && (errno == EACCES || errno == EPERM)) {
             write_log("macOS raw-disk access denied for '%s'.\n", name);
             write_log("Using macOS authopen fallback for raw-disk access. If the disk is mounted, unmount it first.\n");

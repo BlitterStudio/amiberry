@@ -453,6 +453,8 @@ endif()
 
 if(ANDROID)
     add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+elseif(IOS)
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
 elseif(WIN32)
     add_executable(${PROJECT_NAME} ${SOURCE_FILES} src/osdep/amiberry.rc)
 else()
@@ -483,18 +485,18 @@ endif()
 math(EXPR AMIBERRY_BUILD_MONTH_INT "${AMIBERRY_BUILD_MONTH}")
 math(EXPR AMIBERRY_BUILD_DAY_INT "${AMIBERRY_BUILD_DAY}")
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin" OR WIN32)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin" OR IOS OR WIN32)
     set(AMIBERRY_OUTPUT_NAME "${AMIBERRY_DISPLAY_NAME}")
 else()
     set(AMIBERRY_OUTPUT_NAME "${PROJECT_NAME}")
 endif()
 
+# Common bundle properties (shared between macOS and iOS)
 set_target_properties(${PROJECT_NAME} PROPERTIES
         OUTPUT_NAME "${AMIBERRY_OUTPUT_NAME}"
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_EXECUTABLE_NAME "${AMIBERRY_DISPLAY_NAME}"
         MACOSX_BUNDLE_INFO_STRING "${AMIBERRY_DISPLAY_NAME} ${PROJECT_VERSION}"
-        MACOSX_BUNDLE_ICON_FILE "data/icon"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.Amiberry"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.blitterstudio.Amiberry"
         MACOSX_BUNDLE_LONG_VERSION_STRING ${PROJECT_VERSION}
@@ -502,11 +504,31 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_COPYRIGHT "(c) ${AMIBERRY_BUILD_YEAR} Dimitris Panokostas"
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/MacOSXBundleInfo.plist.in"
 )
 
+# Platform-specific bundle overrides
+if(IOS)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+            MACOSX_BUNDLE_ICON_FILE "AppIcon"
+            MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/ios/iOSBundleInfo.plist.in"
+            XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+            XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "16.0"
+            XCODE_ATTRIBUTE_SUPPORTS_MACCATALYST "NO"
+    )
+else()
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+            MACOSX_BUNDLE_ICON_FILE "data/icon"
+            MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/MacOSXBundleInfo.plist.in"
+    )
+endif()
+
 # Select entitlements file based on build target
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+if(IOS)
+    set(AMIBERRY_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/packaging/ios/Amiberry.entitlements")
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${AMIBERRY_ENTITLEMENTS}"
+    )
+elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     if(MACOS_APP_STORE)
         set(AMIBERRY_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/packaging/macos/Amiberry-AppStore.entitlements")
     else()
@@ -522,7 +544,7 @@ if(MACOS_APP_STORE)
     target_sources(${PROJECT_NAME} PRIVATE src/osdep/macos_bookmarks.mm)
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
     target_sources(${PROJECT_NAME} PRIVATE src/osdep/macos_authopen.cpp)
 endif()
 
@@ -558,6 +580,10 @@ endif ()
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WINDOWS UTF8PROC_STATIC USE_STD_FILESYSTEM SDL_MAIN_HANDLED)
+endif()
+
+if(IOS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_IOS)
 endif()
 
 # Apply accumulated compile/link options from StandardProjectSettings.cmake
@@ -631,6 +657,8 @@ install(TARGETS ${PROJECT_NAME}
 # Settings for installing per platform
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include(cmake/linux/install.cmake)
+elseif (IOS)
+    include(cmake/ios/install.cmake)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     include(cmake/macos/install.cmake)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
