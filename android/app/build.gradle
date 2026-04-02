@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.plugin.compose'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.kotlin.plugin.compose)
 }
 
 // Firebase plugins are only applied when google-services.json is present.
@@ -25,7 +25,7 @@ def readCmakeVersionInfo = {
         throw new GradleException("Could not parse VERSION x.y.z from ${cmakeFile}")
     }
 
-    def preReleaseMatcher = (cmakeText =~ /(?m)^\s*set\(VERSION_PRE_RELEASE\s+"?([^"\)]*)"?/)
+    def preReleaseMatcher = (cmakeText =~ /(?m)^\s*set\(VERSION_PRE_RELEASE\s+"?([^")]*)"?/)
     Integer preRelease = null
     if (preReleaseMatcher.find()) {
         def raw = preReleaseMatcher.group(1).trim()
@@ -181,9 +181,9 @@ kotlin {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'com.google.android.material:material:1.13.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+    implementation libs.androidx.appcompat
+    implementation libs.material
+    implementation libs.androidx.constraintlayout
 
     // Firebase Crashlytics (crash reporting for JVM + native)
     // Only included when google-services.json is present
@@ -194,25 +194,25 @@ dependencies {
     }
 
     // Splash Screen API (Android 12+ compatible back to API 23)
-    implementation 'androidx.core:core-splashscreen:1.0.1'
+    implementation libs.androidx.core.splashscreen
 
     // Play In-App Review
-    implementation 'com.google.android.play:review-ktx:2.0.2'
+    implementation libs.review.ktx
 
     // Jetpack Compose
-    implementation platform('androidx.compose:compose-bom:2026.02.00')
-    implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.compose.ui:ui'
-    implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'androidx.compose.material:material-icons-extended'
-    implementation 'androidx.activity:activity-compose:1.12.4'
-    implementation 'androidx.navigation:navigation-compose:2.9.7'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.10.0'
-    debugImplementation 'androidx.compose.ui:ui-tooling'
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.ui
+    implementation libs.androidx.compose.ui.tooling.preview
+    implementation libs.androidx.compose.material.icons.extended
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.navigation.compose
+    implementation libs.androidx.lifecycle.viewmodel.compose
+    implementation libs.androidx.lifecycle.runtime.compose
+    debugImplementation libs.androidx.compose.ui.tooling
 
     // Unit tests
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation libs.junit
 }
 
 
