@@ -2162,6 +2162,21 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 
 static void handle_key_event(const SDL_Event& event)
 {
+#ifdef __ANDROID__
+	// Android back button must be handled before the focus check.
+	// When the native pause-menu AlertDialog is visible the SDL window
+	// loses focus, so isfocus() returns 0 and all key events would be
+	// dropped.  The pause menu's "Advanced Settings" option injects
+	// KEYCODE_BACK via JNI to open the ImGui GUI — that must always
+	// get through regardless of focus state.
+	if (event.key.scancode == SDL_SCANCODE_AC_BACK) {
+		if (event.key.down && !event.key.repeat) {
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+		}
+		return;
+	}
+#endif
+
 	// Allow keyboard input if we have any focus level
 	const int focus_level = isfocus();
 	if (event.key.repeat || !focus_level)
@@ -2176,19 +2191,6 @@ static void handle_key_event(const SDL_Event& event)
 
 	int scancode = event.key.scancode;
 	const auto pressed = event.key.down;
-
-	if (event.key.repeat || !focus_level)
-		return;
-
-#ifdef __ANDROID__
-	// Android back button opens GUI on physical devices
-	if (scancode == SDL_SCANCODE_AC_BACK) {
-		if (pressed) {
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-		}
-		return;
-	}
-#endif
 
 	// Ctrl+Alt releases mouse capture (like QEMU). Works on trackpads
 	// where there is no middle mouse button available.
@@ -3817,6 +3819,25 @@ void target_run()
 void target_quit()
 {
 	cancel_async_update_check();
+
+#ifdef __ANDROID__
+	// Write a clean-exit marker so the Kotlin launcher knows this was
+	// an intentional quit, not a crash.  SDL3's SDLActivity calls
+	// System.exit(0) after native main() returns, which kills the
+	// process without running onDestroy() — so marker cleanup from
+	// Java never executes.  Write from native code instead.
+	const char* ext = SDL_GetAndroidExternalStoragePath();
+	if (ext) {
+		std::string marker = std::string(ext) + "/.clean_exit";
+		FILE* f = fopen(marker.c_str(), "w");
+		if (f) {
+			fputs("1", f);
+			fclose(f);
+		}
+		std::string session = std::string(ext) + "/.emulator_session";
+		remove(session.c_str());
+	}
+#endif
 }
 
 void target_fixup_options(uae_prefs* p)

@@ -51,34 +51,49 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 		}
 	}
 
-	fun importFile(uri: Uri, category: FileCategory) {
+	fun importFiles(uris: List<Uri>, category: FileCategory) {
+		if (uris.isEmpty()) return
 		importJob?.cancel()
 		importJob = viewModelScope.launch(Dispatchers.IO) {
 			_isImporting.value = true
 			try {
 				val app = getApplication<Application>()
+				var successCount = 0
+				val totalCount = uris.size
 
-				// Validate file extension before importing
-				val fileName = FileManager.getDisplayName(app, uri)
-				if (fileName != null) {
-					val ext = fileName.substringAfterLast('.', "").lowercase()
-					if (ext.isNotEmpty() && ext !in category.extensions) {
-						_importResult.value = app.getString(R.string.msg_unsupported_file_type)
-						return@launch
+				for (uri in uris) {
+					// Validate file extension before importing
+					val fileName = FileManager.getDisplayName(app, uri)
+					if (fileName != null) {
+						val ext = fileName.substringAfterLast('.', "").lowercase()
+						if (ext.isNotEmpty() && ext !in category.extensions) {
+							continue
+						}
+					}
+
+					val result = FileManager.importFile(app, uri, category)
+					if (result != null) {
+						successCount++
 					}
 				}
 
-				val result = FileManager.importFile(app, uri, category)
-				if (result != null) {
-					_importResult.value = app.getString(R.string.msg_imported_successfully)
-					repository.rescanCategory(category)
+				_importResult.value = if (totalCount == 1) {
+					if (successCount == 1) {
+						app.getString(R.string.msg_imported_successfully)
+					} else {
+						app.getString(R.string.msg_import_failed)
+					}
 				} else {
-					_importResult.value = app.getString(R.string.msg_import_failed)
+					app.getString(R.string.msg_imported_multiple, successCount, totalCount)
+				}
+
+				if (successCount > 0) {
+					repository.rescanCategory(category)
 				}
 			} catch (e: CancellationException) {
 				throw e
 			} catch (e: Exception) {
-				Log.e(TAG, "Failed to import file", e)
+				Log.e(TAG, "Failed to import files", e)
 				_importResult.value = getApplication<Application>().getString(R.string.msg_import_failed)
 			} finally {
 				_isImporting.value = false

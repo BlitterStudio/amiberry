@@ -1,6 +1,6 @@
 {
   "name": "amiberry",
-  "version": "8.1.4",
+  "version": "8.1.5",
   "description": "Optimized Amiga emulator for various platforms",
   "homepage": "https://amiberry.com",
   "dependencies": [

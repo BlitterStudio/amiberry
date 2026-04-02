@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.1.4
+Version:        8.1.5
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
