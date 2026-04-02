@@ -28,6 +28,7 @@
 #include "gfx_colors.h"
 #include "sounddep/sound.h"
 #include "inputdevice.h"
+#include "amiberry_input.h"
 
 #include "threaddep/thread.h"
 #include "vkbd/vkbd.h"
@@ -1242,6 +1243,11 @@ bool doInit(AmigaMonitor* mon)
 	// Initialize on-screen joystick if enabled
 	if (currprefs.onscreen_joystick)
 	{
+		// Ensure the on-screen joystick device is registered without
+		// re-enumerating physical devices (which would wipe custom
+		// controller mappings loaded from config files).
+		ensure_onscreen_joystick_registered();
+
 		on_screen_joystick_init(mon->amiga_renderer);
 		int sw = 0, sh = 0;
 		IRenderer* renderer = get_renderer(mon->monitor_id);

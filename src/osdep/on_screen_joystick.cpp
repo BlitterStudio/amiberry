@@ -956,15 +956,17 @@ void on_screen_joystick_set_enabled(bool enabled)
 		int dev = get_onscreen_joystick_device_index();
 		if (dev >= 0) {
 			int target_id = JSEM_JOYS + dev;
-			if (changed_prefs.jports[1].id != target_id) {
-				changed_prefs.jports[1].id = target_id;
-				changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
-				// Also update currprefs immediately so input routing works
-				// right away, without waiting for the next config sync cycle.
-				currprefs.jports[1].id = target_id;
-				currprefs.jports[1].mode = JSEM_MODE_JOYSTICK;
-				inputdevice_config_change();
-			}
+			changed_prefs.jports[1].id = target_id;
+			changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
+			currprefs.jports[1].id = target_id;
+			currprefs.jports[1].mode = JSEM_MODE_JOYSTICK;
+			// Always signal a config change so the input subsystem
+			// rebuilds device mappings. At startup, fixup_prefs may
+			// have already resolved the port ID, but the input
+			// mappings were set up before that resolution — so the
+			// emulation loop must re-run inputdevice_updateconfig.
+			inputdevice_config_change();
+			joystick_refresh_needed = true;
 		}
 	}
 	else if (osj_initialized) {

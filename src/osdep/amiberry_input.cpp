@@ -1532,6 +1532,45 @@ int get_onscreen_joystick_device_index()
 	return osj_device_index;
 }
 
+void ensure_onscreen_joystick_registered()
+{
+	// If the on-screen joystick is already registered, nothing to do.
+	if (osj_device_index >= 0)
+		return;
+	if (num_joystick >= MAX_INPUT_DEVICES)
+		return;
+
+	osj_device_index = num_joystick;
+	struct didata* did = &di_joystick[osj_device_index];
+	cleardid(did);
+	did->name = "On-Screen Joystick";
+	did->joystick_name = "On-Screen Joystick";
+	did->is_controller = false;
+	did->controller = nullptr;
+	did->joystick = nullptr;
+	did->joystick_id = -1;
+	did->axles = 2;
+	did->buttons = 2;
+	did->buttons_real = 2;
+	did->axismappings[0] = 0;
+	did->axisname[0] = "X Axis";
+	did->axissort[0] = 0;
+	did->axistype[0] = AXISTYPE_NORMAL;
+	did->axismappings[1] = 1;
+	did->axisname[1] = "Y Axis";
+	did->axissort[1] = 1;
+	did->axistype[1] = AXISTYPE_NORMAL;
+	did->buttonmappings[0] = 0;
+	did->buttonname[0] = "Fire";
+	did->buttonsort[0] = 0;
+	did->buttonmappings[1] = 1;
+	did->buttonname[1] = "2nd Fire";
+	did->buttonsort[1] = 1;
+	fixthings(did);
+	num_joystick++;
+	write_log("On-Screen Joystick registered as JOY%d\n", osj_device_index);
+}
+
 static bool invert_axis(int axis, const didata* did)
 {
 	switch (axis)

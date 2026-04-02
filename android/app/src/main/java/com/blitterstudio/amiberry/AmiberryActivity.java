@@ -173,9 +173,14 @@ public class AmiberryActivity extends SDLActivity {
 			backCallback = null;
 		}
 		final boolean finishing = isFinishing();
-		// Clear the session marker on normal exit so the main process
-		// knows this was not a crash.
+		// Note: SDL3's SDLActivity calls System.exit(0) after native
+		// main() returns, which kills the process without reaching
+		// onDestroy().  Clean-exit markers are therefore written from
+		// native code in target_quit() instead.  This block is kept
+		// as a best-effort fallback for edge cases where onDestroy
+		// does run (e.g. the pause menu's explicit finish() call).
 		if (finishing) {
+			com.blitterstudio.amiberry.data.EmulatorLauncher.INSTANCE.writeCleanExitMarker(this);
 			com.blitterstudio.amiberry.data.EmulatorLauncher.INSTANCE.clearSessionMarker(this);
 		}
 		super.onDestroy();

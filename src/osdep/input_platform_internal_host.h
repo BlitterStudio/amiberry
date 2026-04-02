@@ -106,39 +106,7 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 	SDL_free(joysticks);
 
 	// Register the built-in on-screen joystick only when enabled
-	if (currprefs.onscreen_joystick && *num_joystick < MAX_INPUT_DEVICES) {
-		osj_device_index = *num_joystick;
-		struct didata* did = &di_joystick[osj_device_index];
-		cleardid(did);
-		did->name = "On-Screen Joystick";
-		did->joystick_name = "On-Screen Joystick";
-		did->is_controller = false;
-		did->controller = nullptr;
-		did->joystick = nullptr;
-		did->joystick_id = -1;
-		// 2 axes (X, Y) + 2 buttons (fire, 2nd fire)
-		did->axles = 2;
-		did->buttons = 2;
-		did->buttons_real = 2;
-		// Set up axis metadata
-		did->axismappings[0] = 0;
-		did->axisname[0] = "X Axis";
-		did->axissort[0] = 0;
-		did->axistype[0] = AXISTYPE_NORMAL;
-		did->axismappings[1] = 1;
-		did->axisname[1] = "Y Axis";
-		did->axissort[1] = 1;
-		did->axistype[1] = AXISTYPE_NORMAL;
-		// Set up button metadata
-		did->buttonmappings[0] = 0;
-		did->buttonname[0] = "Fire";
-		did->buttonsort[0] = 0;
-		did->buttonmappings[1] = 1;
-		did->buttonname[1] = "2nd Fire";
-		did->buttonsort[1] = 1;
-		// Create +/- button entries for axes (needed by the input mapping system)
-		fixthings(did);
-		(*num_joystick)++;
-		write_log("On-Screen Joystick registered as JOY%d\n", osj_device_index);
+	if (currprefs.onscreen_joystick) {
+		ensure_onscreen_joystick_registered();
 	}
 }
