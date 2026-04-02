@@ -688,22 +688,32 @@ static int create_windows(struct AmigaMonitor* mon)
 		}
 
 		// For fullwindow mode, skip the resize/reposition cycle if the window
-		// is already fullscreen on the correct display. On macOS,
+		// is already in desktop fullscreen on the correct display. On macOS,
 		// SDL_GetWindowPosition on a fullscreen window may return coordinates
 		// that don't match SDL_GetDisplayBounds (e.g. Space-relative vs global),
 		// causing a false mismatch that triggers SDL_SetWindowFullscreen toggling
 		// — which produces a visible Spaces switching animation.
+		//
+		// However, if the window is in exclusive fullscreen and we want desktop
+		// fullscreen (full-window), we must force the mode switch even when
+		// sizes match (both modes cover the full display).
+		// SDL_GetWindowFullscreenMode returns NULL for desktop fullscreen,
+		// non-NULL for exclusive fullscreen.
 		bool needs_resize = (w != nw || h != nh || x != nx || y != ny);
-		if (needs_resize && fullwindow) {
+		if (fullwindow) {
 			SDL_WindowFlags wflags = SDL_GetWindowFlags(mon->amiga_window);
 			if (wflags & SDL_WINDOW_FULLSCREEN) {
-				// Window is already fullscreen — check if it's on the right display
 				SDL_DisplayID current_display = SDL_GetDisplayForWindow(mon->amiga_window);
 				SDL_DisplayID target_display = md ? md->display_id : current_display;
-				if (current_display == target_display) {
-					// Already fullscreen on the correct display, skip the toggle
+				const SDL_DisplayMode* current_fs_mode = SDL_GetWindowFullscreenMode(mon->amiga_window);
+				if (current_display == target_display && current_fs_mode == nullptr) {
+					// Already in desktop fullscreen (full-window) on the correct display, skip
 					needs_resize = false;
-					write_log(_T("fullwindow: skipping resize — already fullscreen on target display\n"));
+					write_log(_T("fullwindow: skipping resize — already in desktop fullscreen on target display\n"));
+				} else if (current_fs_mode != nullptr) {
+					// Window is in exclusive fullscreen but we want desktop fullscreen — force switch
+					needs_resize = true;
+					write_log(_T("fullwindow: forcing mode switch from exclusive to desktop fullscreen\n"));
 				}
 			}
 		}
