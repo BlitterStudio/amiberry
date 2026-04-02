@@ -1118,10 +1118,8 @@ uae_u32 getlocaltime()
 	time_t utc = time(nullptr);
 	struct tm *lt = localtime(&utc);
 #if defined(_WIN32)
-	long tz_seconds;
-	_get_timezone(&tz_seconds);
 	int dst = lt->tm_isdst > 0 ? 3600 : 0;
-	return static_cast<uae_u32>(utc - tz_seconds + dst);
+	return static_cast<uae_u32>(utc - _timezone + dst);
 #else
 	return static_cast<uae_u32>(utc + lt->tm_gmtoff);
 #endif

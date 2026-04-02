@@ -97,7 +97,7 @@ float DPIHandler::get_layout_scale() {
         return (scaling_factor < 1.0f) ? 1.0f : scaling_factor;
     }
     return 1.0f;
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(_WIN32)
     float scale = read_scale_from_content_scale();
     if (scale <= 0.0f)
         scale = read_scale_from_display_mode();
@@ -147,8 +147,9 @@ int DPIHandler::unscale_window_dimension(const int value)
 }
 
 void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
-    // SDL renderer scale is only needed on macOS where drawable pixels differ from window points.
-#ifdef __MACH__
+    // SDL renderer scale is needed when drawable pixels differ from window points
+    // (macOS Retina and Windows with HIGH_PIXEL_DENSITY + DPI scaling).
+#if defined(__MACH__) || defined(_WIN32)
     auto scale{std::max(1.0f, std::round(get_scale()))};
     SDL_SetRenderScale(renderer, scale, scale);
 #endif
