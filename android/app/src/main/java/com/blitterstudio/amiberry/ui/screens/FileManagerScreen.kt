@@ -119,9 +119,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	val isImporting by viewModel.isImporting.collectAsState()
 	val showProgress = isScanning || isImporting
 	val filePickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let { viewModel.importFile(it, currentCategory) }
+		contract = ActivityResultContracts.OpenMultipleDocuments()
+	) { uris ->
+		if (uris.isNotEmpty()) {
+			viewModel.importFiles(uris, currentCategory)
+		}
 	}
 
 	LaunchedEffect(importResult) {
