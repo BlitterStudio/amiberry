@@ -14,8 +14,12 @@
 #ifdef USE_OPENGL
 
 #if defined(__ANDROID__) || defined(USE_GLES3)
-// Android/GLES3: Functions are provided by <GLES3/gl3.h>
+// GLES3: Functions are provided directly by the platform headers
+#if defined(AMIBERRY_IOS)
+#include <OpenGLES/ES3/gl.h>
+#else
 #include <GLES3/gl3.h>
+#endif
 #include <SDL3/SDL_opengles2.h>
 
 #else

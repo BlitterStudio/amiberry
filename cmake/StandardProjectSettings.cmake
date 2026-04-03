@@ -36,7 +36,8 @@ elseif(CMAKE_BUILD_TYPE)
 endif()
 
 # Platform-specific linker flags
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
+    # ELF/PE linker flags (not for Apple platforms)
     list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,--no-undefined" "-Wl,--as-needed")
 
     # ELF-specific flags (not available on Windows PE)

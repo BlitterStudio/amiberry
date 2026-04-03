@@ -722,12 +722,18 @@ public:
                 emscripten_run_script(str.c_str());
                 res = true;
 #elif defined(_IGFD_UNIX_)
+#if defined(AMIBERRY_IOS)
+                // iOS: use std::filesystem instead of system()
+                std::error_code ec;
+                res = std::filesystem::create_directories(vName, ec) || std::filesystem::exists(vName, ec);
+#else
                 char buffer[PATH_MAX] = {};
                 snprintf(buffer, PATH_MAX, "mkdir -p \"%s\"", vName.c_str());
                 const int dir_err = std::system(buffer);
                 if (dir_err != -1) {
                     res = true;
                 }
+#endif
 #endif  // _IGFD_WIN_
                 if (!res) {
                     IGFD_COUT << "Error creating directory " << vName << std::endl;
