@@ -71,7 +71,7 @@
 #include "vkbd/vkbd.h"
 #include "macos_bookmarks.h"
 #include <mutex>
-#ifndef LIBRETRO
+#if !defined(LIBRETRO) && defined(AMIBERRY_HAS_CURL)
 #include <curl/curl.h>
 #endif
 
@@ -3804,7 +3804,11 @@ void target_execute(const char* command)
 	try
 	{
 		write_log("Executing: %s\n", final_command.c_str());
+#ifndef AMIBERRY_IOS
 		system(final_command.c_str());
+#else
+		write_log("system() not available on iOS\n");
+#endif
 	}
 	catch (const std::exception& e)
 	{
@@ -5843,6 +5847,7 @@ bool set_portable_mode(bool enable)
 #endif
 
 #ifndef LIBRETRO
+#ifdef AMIBERRY_HAS_CURL
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
 {
 	auto* fp = static_cast<FILE*>(userdata);
@@ -6058,7 +6063,25 @@ void download_rtb(const std::string& filename)
 		download_file(url, destination, false);
 	}
 }
-#else
+#else // !AMIBERRY_HAS_CURL (no curl on this platform, e.g. iOS)
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
+{
+	write_log("download_file: not available (no CURL)\n");
+	return false;
+}
+
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup,
+	const std::function<bool(int64_t, int64_t)>& progress_cb, std::atomic<bool>* cancel_flag)
+{
+	write_log("download_file: not available (no CURL)\n");
+	return false;
+}
+
+void download_rtb(const std::string& filename)
+{
+}
+#endif // AMIBERRY_HAS_CURL
+#else // LIBRETRO
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
 	write_log("download_file: not available in libretro build\n");
@@ -6075,7 +6098,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 void download_rtb(const std::string& filename)
 {
 }
-#endif
+#endif // LIBRETRO
 
 #ifdef AMIBERRY_IOS
 // iOS .app bundles are flat: the executable sits at the bundle root.
@@ -8035,7 +8058,9 @@ uae_u32 emulib_target_getcpurate(const uae_u32 v, uae_u32* low)
 
 void target_shutdown()
 {
+#ifndef AMIBERRY_IOS
 	system("sudo poweroff");
+#endif
 }
 
 struct winuae	//this struct is put in a6 if you call

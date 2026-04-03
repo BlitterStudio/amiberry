@@ -29,7 +29,10 @@ endif ()
 
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
-    if (NOT ANDROID)
+    if(IOS)
+        # iOS: OpenGLES framework is linked via AMIBERRY_PLATFORM_LIBS in StandardProjectSettings.cmake
+        target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GLES3)
+    elseif (NOT ANDROID)
         if (USE_GLES)
             target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GLES3)
             target_link_libraries(${PROJECT_NAME} PRIVATE GLESv2 EGL)
@@ -52,6 +55,16 @@ if (USE_VULKAN)
         message(STATUS "  Vulkan validation layers will be requested (Debug build)")
     endif()
 endif ()
+
+# iOS: SDL3's static lib exports a dependency on -lGLESv2 (Linux library name).
+# On iOS, GLES is provided via -framework OpenGLES. Create an alias so the linker
+# doesn't fail on the missing library name.
+if(IOS)
+    if(NOT TARGET GLESv2)
+        add_library(GLESv2 INTERFACE IMPORTED)
+        # OpenGLES framework is already linked via AMIBERRY_PLATFORM_LIBS
+    endif()
+endif()
 
 # SDL3
 target_compile_definitions(${PROJECT_NAME} PRIVATE USE_SDL3)
@@ -414,6 +427,34 @@ if(ANDROID)
     endif()
     
     # --- Existing dependencies --- 
+elseif(IOS)
+    # iOS: SDL3 and SDL3_image must be pre-built and findable via CMAKE_FIND_ROOT_PATH.
+    # Most optional codecs and network libs are unavailable or unnecessary on iOS.
+    find_package(SDL3 CONFIG REQUIRED)
+    find_package(SDL3_image CONFIG REQUIRED)
+    find_package(ZLIB REQUIRED)
+    find_package(PNG QUIET)
+    if(PNG_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE PNG::PNG)
+    endif()
+
+    # nlohmann_json: header-only, fetch if not found
+    find_package(nlohmann_json CONFIG QUIET)
+    if(NOT nlohmann_json_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.3
+            GIT_SHALLOW TRUE
+        )
+        set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(json)
+    endif()
+    target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
+
+    # No FLAC, mpg123, or CURL on iOS
+    # - FLAC/mpg123: audio codec libs not needed (no CD audio ripping on mobile)
+    # - CURL: self-update is disabled on iOS
 else()
     find_package(SDL3 CONFIG REQUIRED)
     find_package(SDL3_image CONFIG REQUIRED)
@@ -549,7 +590,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
-add_subdirectory(external/floppybridge)
+if(NOT IOS)
+    add_subdirectory(external/floppybridge)
+endif()
 add_subdirectory(external/capsimage)
 
 # Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
@@ -567,11 +610,19 @@ endif()
 set(AMIBERRY_LIBS
         mt32emu
         ZLIB::ZLIB
-        CURL::libcurl
         nlohmann_json::nlohmann_json
         ${CMAKE_DL_LIBS}
         ${_SDL_IMAGE_LIB}
 )
+
+# CURL is used for self-update (not available on iOS)
+if(TARGET CURL::libcurl)
+    list(APPEND AMIBERRY_LIBS CURL::libcurl)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
+elseif(CURL_FOUND)
+    list(APPEND AMIBERRY_LIBS ${CURL_LIBRARIES})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
+endif()
 
 if (NOT ANDROID AND NOT WIN32)
     list(APPEND AMIBERRY_LIBS pthread)
@@ -638,7 +689,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 # without --recursive, or GitHub source archives), or when Linux build deps
 # (dbus-1) are missing — falls back to the built-in ImGuiFileDialog.
 set(NFD_AVAILABLE OFF)
-if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku"
+if(NOT ANDROID AND NOT IOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku"
         AND EXISTS "${CMAKE_SOURCE_DIR}/external/nativefiledialog-extended/CMakeLists.txt")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
         find_package(PkgConfig QUIET)
@@ -676,7 +727,11 @@ endif()
 
 # capsimage and floppybridge are plugins (not linked into amiberry) but are
 # copied by post-build commands. Explicit dependencies ensure they are built.
-add_dependencies(${PROJECT_NAME} floppybridge capsimage)
+if(IOS)
+    add_dependencies(${PROJECT_NAME} capsimage)
+else()
+    add_dependencies(${PROJECT_NAME} floppybridge capsimage)
+endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_library(UTIL_LIBRARY util)

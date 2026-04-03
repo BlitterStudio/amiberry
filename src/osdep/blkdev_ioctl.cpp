@@ -54,6 +54,10 @@
 #include <cam/scsi/scsi_all.h>
 #include <sys/errno.h>
 
+#elif defined(AMIBERRY_IOS)
+// iOS: no CD-ROM access, just provide errno
+#include <errno.h>
+
 #else
 // Linux
 #include <linux/cdrom.h>

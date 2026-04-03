@@ -4,7 +4,9 @@
 #include "options.h"
 #include "threaddep/thread.h"
 
+#ifdef AMIBERRY_HAS_CURL
 #include <curl/curl.h>
+#endif
 #include <nlohmann/json.hpp>
 
 #include <thread>
@@ -271,6 +273,7 @@ static std::string s_windows_restart_script;
 static std::string s_macos_new_executable;
 #endif
 
+#ifdef AMIBERRY_HAS_CURL
 static void ensure_curl_initialized()
 {
 	static std::once_flag s_once;
@@ -278,6 +281,7 @@ static void ensure_curl_initialized()
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 	});
 }
+#endif
 
 static bool starts_with(const std::string& v, const std::string& prefix)
 {
@@ -403,6 +407,7 @@ static size_t write_data_to_file(void* ptr, size_t size, size_t nmemb, void* str
 	return total;
 }
 
+#ifdef AMIBERRY_HAS_CURL
 static int progress_callback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t, curl_off_t)
 {
 	auto* ctx = static_cast<DownloadContext*>(clientp);
@@ -468,6 +473,7 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 	}
 	return true;
 }
+#endif // AMIBERRY_HAS_CURL
 
 static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 {
@@ -548,7 +554,11 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 	if (!sha256_url.empty() && is_allowed_download_url(sha256_url)) {
 		std::string sums_body;
 		long sums_code = 0;
+#ifdef AMIBERRY_HAS_CURL
 		if (http_get(sha256_url, sums_body, sums_code, nullptr) && sums_code >= 200 && sums_code < 300) {
+#else
+		if (false) {
+#endif
 			std::istringstream iss(sums_body);
 			std::string line;
 			static const std::regex sha_re(R"(^\s*([A-Fa-f0-9]{64})\s+\*?(.+?)\s*$)");
@@ -568,6 +578,7 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 	return true;
 }
 
+#ifdef AMIBERRY_HAS_CURL
 static bool read_release(UpdateChannel channel, UpdateInfo& out, std::atomic<bool>* cancel_flag)
 {
 	std::string url;
@@ -622,6 +633,7 @@ static bool read_release(UpdateChannel channel, UpdateInfo& out, std::atomic<boo
 	out.error_message = "No usable release found";
 	return false;
 }
+#endif // AMIBERRY_HAS_CURL
 
 static std::string compute_sha256_hex(const std::string& file_path)
 {
@@ -702,6 +714,7 @@ UpdateInfo check_for_updates(UpdateChannel channel)
 		return info;
 	}
 
+#ifdef AMIBERRY_HAS_CURL
 	if (!read_release(channel, info, &s_update_cancel)) {
 		if (s_update_cancel.load()) {
 			info.error_message = "Update check cancelled";
@@ -721,11 +734,20 @@ UpdateInfo check_for_updates(UpdateChannel channel)
 	if (!info.update_available) {
 		write_log("Updater: current %s is up to date with %s\n", info.current_version.c_str(), info.latest_version.c_str());
 	}
+#else
+	info.error_message = "Update checks are not available (no CURL)";
+#endif
 	return info;
 }
 
 std::string download_update(const UpdateInfo& info, DownloadProgressCallback progress_cb)
 {
+#ifndef AMIBERRY_HAS_CURL
+	(void)info;
+	(void)progress_cb;
+	write_log("Updater: download not available (no CURL)\n");
+	return {};
+#else
 	if (info.download_url.empty()) {
 		write_log("Updater: no download URL in update info\n");
 		return {};
@@ -822,6 +844,7 @@ std::string download_update(const UpdateInfo& info, DownloadProgressCallback pro
 	}
 
 	return final_path.string();
+#endif // AMIBERRY_HAS_CURL
 }
 
 bool verify_update_checksum(const std::string& file_path, const std::string& expected_sha256)

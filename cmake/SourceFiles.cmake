@@ -203,7 +203,6 @@ set(SOURCE_FILES
         src/machdep/support.cpp
         src/mame/a2410.cpp
         src/mame/tm34010/tms34010.cpp
-        external/floppybridge/src/floppybridge_lib.cpp
         src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
@@ -432,6 +431,10 @@ else ()
     message(STATUS "PCem support disabled")
 endif()
 
+# FloppyBridge plugin source (serial port — not available on iOS)
+if(NOT IOS)
+    list(APPEND SOURCE_FILES external/floppybridge/src/floppybridge_lib.cpp)
+endif()
 
 # On Windows, swap POSIX-specific CHD files for Windows equivalents
 if(WIN32)
