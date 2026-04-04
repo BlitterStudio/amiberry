@@ -46,13 +46,15 @@ def readCmakeVersionInfo = {
 }
 
 def computeAndroidVersionCode = { info ->
-    // Reserve 99 for the final release so x.y.z-betaN is always lower than x.y.z.
-    final int finalReleaseSlot = 99
-    if (info.preRelease != null && (info.preRelease < 1 || info.preRelease > (finalReleaseSlot - 1))) {
-        throw new GradleException("VERSION_PRE_RELEASE must be between 1 and 98 for Android versionCode mapping")
-    }
-
-    return info.major * 1_000_000 + info.minor * 10_000 + info.patch * 100 + (info.preRelease ?: finalReleaseSlot)
+    // Version prefix ensures version bumps always produce a higher code.
+    // Minute-of-day suffix (0–1439) makes each build unique within a day
+    // without requiring a CMake version bump.
+    // Formula: major * 100_000_000 + minor * 1_000_000 + patch * 10_000 + minuteOfDay
+    // Example: 8.1.5 at 14:30 → 801_050_870
+    // Max usable major version: 21 (2.1B int32 limit)
+    def now = java.util.Calendar.getInstance()
+    def minuteOfDay = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
+    return info.major * 100_000_000 + info.minor * 1_000_000 + info.patch * 10_000 + minuteOfDay
 }
 
 def formatAndroidVersionName = { info ->
