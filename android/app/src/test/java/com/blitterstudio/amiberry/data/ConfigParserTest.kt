@@ -209,7 +209,7 @@ class ConfigParserTest {
 			joyport1=joy0
 			amiberry.android_joyport1=onscreen_joy
 			amiberry.onscreen_joystick=true
-			amiberry.onscreen_keyboard=false
+			input.default_osk=false
 		""".trimIndent())
 		val result = ConfigParser.parse(file)
 		val s = result.settings

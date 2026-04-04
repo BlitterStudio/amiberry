@@ -31,7 +31,7 @@ object ConfigParser {
 		"sound_output", "sound_frequency", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"joyport0", "joyport1",
-		"amiberry.onscreen_joystick", "amiberry.onscreen_keyboard",
+		"amiberry.onscreen_joystick", "input.default_osk",
 		"amiberry.android_joyport1",
 		"use_gui", "config_description", "config_hardware_path"
 	)
@@ -133,7 +133,7 @@ object ConfigParser {
 				}
 			},
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
-			onScreenKeyboard = kv["amiberry.onscreen_keyboard"].toBool(true)
+			onScreenKeyboard = kv["input.default_osk"].toBool(true)
 		)
 	}
 

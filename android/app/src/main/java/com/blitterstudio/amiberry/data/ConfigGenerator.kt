@@ -89,7 +89,7 @@ object ConfigGenerator {
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
-		sb.appendLine("amiberry.onscreen_keyboard=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("input.default_osk=${settings.onScreenKeyboard.toCfg()}")
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")

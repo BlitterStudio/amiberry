@@ -149,8 +149,19 @@ fun InputTab(viewModel: SettingsViewModel) {
 					SwitchRow(
 						label = stringResource(R.string.settings_input_on_screen_joystick),
 						checked = settings.onScreenJoystick,
-						onCheckedChange = {
-							viewModel.updateSettings { s -> s.copy(onScreenJoystick = it) }
+						onCheckedChange = { isEnabled ->
+							viewModel.updateSettings { s ->
+								if (isEnabled) {
+									s.copy(onScreenJoystick = true, joyport1 = "onscreen_joy")
+								} else {
+									if (s.joyport1 == "onscreen_joy") {
+										// Revert to first joystick available (joy0 or joy1, usually joy1 for port 1)
+										s.copy(onScreenJoystick = false, joyport1 = "joy1")
+									} else {
+										s.copy(onScreenJoystick = false)
+									}
+								}
+							}
 						}
 					)
 
