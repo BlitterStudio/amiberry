@@ -38,6 +38,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,6 +113,10 @@ fun ConfigurationsScreen(
 							style = MaterialTheme.typography.bodySmall,
 							color = MaterialTheme.colorScheme.onSurfaceVariant
 						)
+						Spacer(modifier = Modifier.height(24.dp))
+						Button(onClick = { navController.navigate(Screen.Settings.route) }) {
+							Text(stringResource(R.string.configurations_empty_cta))
+						}
 				}
 			}
 		} else {

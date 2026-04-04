@@ -46,6 +46,23 @@ import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.EmulatorLauncher
+import com.blitterstudio.amiberry.data.FileManager
+import com.blitterstudio.amiberry.data.FileRepository
+import com.blitterstudio.amiberry.data.model.FileCategory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -61,6 +78,21 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	var showTopBarMenu by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
+
+	val romPickerLauncher = rememberLauncherForActivityResult(
+		contract = ActivityResultContracts.OpenDocument()
+	) { uri ->
+		uri?.let {
+			scope.launch {
+				val path = withContext(Dispatchers.IO) {
+					FileManager.importFile(context, it, FileCategory.ROMS)
+				}
+				if (path != null) {
+					FileRepository.getInstance(context).rescanCategory(FileCategory.ROMS)
+				}
+			}
+		}
+	}
 
 	val tabs = listOf(
 		stringResource(R.string.tab_cpu),
@@ -153,12 +185,45 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 			}
 
 			if (!canStart) {
-				Text(
-					text = romRequiredMessage,
-					color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-					style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-					modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-				)
+				Card(
+					modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+					colors = CardDefaults.cardColors(
+						containerColor = MaterialTheme.colorScheme.errorContainer
+					)
+				) {
+					Column(modifier = Modifier.padding(16.dp)) {
+						Row(verticalAlignment = Alignment.CenterVertically) {
+							Icon(
+								Icons.Default.Warning,
+								contentDescription = null,
+								modifier = Modifier.size(24.dp),
+								tint = MaterialTheme.colorScheme.onErrorContainer
+							)
+							Spacer(modifier = Modifier.width(8.dp))
+							Text(
+								stringResource(R.string.setup_required_title),
+								style = MaterialTheme.typography.titleMedium,
+								color = MaterialTheme.colorScheme.onErrorContainer
+							)
+						}
+						Spacer(modifier = Modifier.height(8.dp))
+						Text(
+							text = stringResource(R.string.setup_required_message),
+							style = MaterialTheme.typography.bodyMedium,
+							color = MaterialTheme.colorScheme.onErrorContainer
+						)
+						Spacer(modifier = Modifier.height(12.dp))
+						Button(
+							onClick = { romPickerLauncher.launch(arrayOf("*/*")) },
+							colors = ButtonDefaults.buttonColors(
+								containerColor = MaterialTheme.colorScheme.onErrorContainer,
+								contentColor = MaterialTheme.colorScheme.errorContainer
+							)
+						) {
+							Text(stringResource(R.string.action_import_rom))
+						}
+					}
+				}
 			}
 
 			// Tab content

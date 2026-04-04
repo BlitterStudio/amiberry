@@ -47,6 +47,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -270,6 +271,12 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 							style = MaterialTheme.typography.bodySmall,
 							color = MaterialTheme.colorScheme.onSurfaceVariant
 						)
+						Spacer(modifier = Modifier.height(24.dp))
+						Button(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+							Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+							Spacer(modifier = Modifier.width(8.dp))
+							Text(stringResource(R.string.file_manager_import_category, tabs[selectedTab].title))
+						}
 					}
 				}
 			} else {

@@ -42,6 +42,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -137,6 +139,21 @@ fun QuickStartScreen(
 				}
 				if (path != null) {
 					settingsViewModel.updateSettings { s -> s.copy(cdImage = path) }
+				}
+			}
+		}
+	}
+
+	val romPickerLauncher = rememberLauncherForActivityResult(
+		contract = ActivityResultContracts.OpenDocument()
+	) { uri ->
+		uri?.let {
+			scope.launch {
+				val path = withContext(Dispatchers.IO) {
+					FileManager.importFile(context, it, FileCategory.ROMS)
+				}
+				if (path != null) {
+					viewModel.rescanRoms()
 				}
 			}
 		}
@@ -259,6 +276,65 @@ fun QuickStartScreen(
 				}
 			}
 
+			if (!hasRoms) {
+				Card(
+					modifier = Modifier.fillMaxWidth(),
+					colors = CardDefaults.cardColors(
+						containerColor = MaterialTheme.colorScheme.errorContainer
+					)
+				) {
+					Column(modifier = Modifier.padding(16.dp)) {
+						Row(verticalAlignment = Alignment.CenterVertically) {
+							Icon(
+								Icons.Default.Warning,
+								contentDescription = null,
+								modifier = Modifier.size(24.dp),
+								tint = MaterialTheme.colorScheme.onErrorContainer
+							)
+							Spacer(modifier = Modifier.width(8.dp))
+							Text(
+								stringResource(R.string.setup_required_title),
+								style = MaterialTheme.typography.titleMedium,
+								color = MaterialTheme.colorScheme.onErrorContainer
+							)
+						}
+						Spacer(modifier = Modifier.height(8.dp))
+						Text(
+							text = stringResource(R.string.setup_required_message),
+							style = MaterialTheme.typography.bodyMedium,
+							color = MaterialTheme.colorScheme.onErrorContainer
+						)
+						Spacer(modifier = Modifier.height(12.dp))
+						Button(
+							onClick = { romPickerLauncher.launch(arrayOf("*/*")) },
+							colors = ButtonDefaults.buttonColors(
+								containerColor = MaterialTheme.colorScheme.onErrorContainer,
+								contentColor = MaterialTheme.colorScheme.errorContainer
+							)
+						) {
+							Text(stringResource(R.string.action_import_rom))
+						}
+					}
+				}
+			}
+
+			MediaSelector(
+				title = stringResource(R.string.quick_start_whdload_title),
+				icon = Icons.Default.SportsEsports,
+				items = whdloadGames,
+				selectedItem = selectedWhdloadGame,
+				selectedPath = selectedWhdloadGame?.path ?: "",
+				emptyText = stringResource(R.string.quick_start_no_whdload_games),
+				placeholder = stringResource(R.string.quick_start_select_game_placeholder),
+				helpText = stringResource(R.string.quick_start_whdload_help),
+				onItemSelected = { game -> viewModel.selectWhdload(game) },
+				onEject = { viewModel.selectWhdload(null) },
+				onImport = { whdloadPickerLauncher.launch(arrayOf("*/*")) },
+				displayName = { it.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh") }
+			)
+
+			HorizontalDivider()
+
 			// Recent launches — reads observable state, recomposes when addRecentLaunch() is called
 			val allRecent by AppPreferences.getInstance(context).recentLaunches
 			val recentLaunches = allRecent.filter { entry ->
@@ -326,45 +402,28 @@ fun QuickStartScreen(
 				colors = CardDefaults.cardColors(
 					containerColor = MaterialTheme.colorScheme.primaryContainer
 				)
-				) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Text(stringResource(R.string.quick_start_ready_title), style = MaterialTheme.typography.titleLarge)
-						Spacer(modifier = Modifier.height(4.dp))
-						Text(
-							text = stringResource(R.string.quick_start_ready_subtitle),
-							style = MaterialTheme.typography.bodyMedium,
-							color = MaterialTheme.colorScheme.onSurfaceVariant
-						)
-						Spacer(modifier = Modifier.height(12.dp))
-						Text(
-							text = stringResource(R.string.quick_start_model_summary, model.displayName),
-							style = MaterialTheme.typography.bodyMedium
-						)
-						Text(mediaSummary, style = MaterialTheme.typography.bodyMedium)
-						if (!hasRoms) {
-						Spacer(modifier = Modifier.height(10.dp))
-						Row(verticalAlignment = Alignment.CenterVertically) {
-							Icon(
-								Icons.Default.Warning,
-								contentDescription = null,
-								modifier = Modifier.size(20.dp),
-								tint = MaterialTheme.colorScheme.error
-							)
-								Spacer(modifier = Modifier.width(8.dp))
-								Text(
-									text = stringResource(R.string.quick_start_no_rom_warning),
-									style = MaterialTheme.typography.bodySmall,
-									color = MaterialTheme.colorScheme.error
-								)
-						}
-					}
+			) {
+				Column(modifier = Modifier.padding(16.dp)) {
+					Text(stringResource(R.string.quick_start_ready_title), style = MaterialTheme.typography.titleLarge)
+					Spacer(modifier = Modifier.height(4.dp))
+					Text(
+						text = stringResource(R.string.quick_start_ready_subtitle),
+						style = MaterialTheme.typography.bodyMedium,
+						color = MaterialTheme.colorScheme.onSurfaceVariant
+					)
+					Spacer(modifier = Modifier.height(12.dp))
+					Text(
+						text = stringResource(R.string.quick_start_model_summary, model.displayName),
+						style = MaterialTheme.typography.bodyMedium
+					)
+					Text(mediaSummary, style = MaterialTheme.typography.bodyMedium)
 				}
 			}
 
-				OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Text(stringResource(R.string.quick_start_amiga_model), style = MaterialTheme.typography.titleMedium)
-						Spacer(modifier = Modifier.height(8.dp))
+			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+				Column(modifier = Modifier.padding(16.dp)) {
+					Text(stringResource(R.string.quick_start_amiga_model), style = MaterialTheme.typography.titleMedium)
+					Spacer(modifier = Modifier.height(8.dp))
 
 					var modelExpanded by remember { mutableStateOf(false) }
 					ExposedDropdownMenuBox(
@@ -375,12 +434,12 @@ fun QuickStartScreen(
 							value = settingsViewModel.settings.baseModel.displayName,
 							onValueChange = {},
 							readOnly = true,
-								trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
-								modifier = Modifier
-									.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-									.fillMaxWidth(),
-								supportingText = { Text(settingsViewModel.settings.baseModel.description) }
-							)
+							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
+							modifier = Modifier
+								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+								.fillMaxWidth(),
+							supportingText = { Text(settingsViewModel.settings.baseModel.description) }
+						)
 						ExposedDropdownMenu(
 							expanded = modelExpanded,
 							onDismissRequest = { modelExpanded = false }
@@ -462,24 +521,8 @@ fun QuickStartScreen(
 				)
 			}
 
-			HorizontalDivider()
-
-			MediaSelector(
-				title = stringResource(R.string.quick_start_whdload_title),
-				icon = Icons.Default.SportsEsports,
-				items = whdloadGames,
-				selectedItem = selectedWhdloadGame,
-				selectedPath = selectedWhdloadGame?.path ?: "",
-				emptyText = stringResource(R.string.quick_start_no_whdload_games),
-				placeholder = stringResource(R.string.quick_start_select_game_placeholder),
-				helpText = stringResource(R.string.quick_start_whdload_help),
-				onItemSelected = { game -> viewModel.selectWhdload(game) },
-				onEject = { viewModel.selectWhdload(null) },
-				onImport = { whdloadPickerLauncher.launch(arrayOf("*/*")) },
-				displayName = { it.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh") }
-			)
-
 			Spacer(modifier = Modifier.height(80.dp))
 		}
 	}
 }
+

@@ -69,6 +69,11 @@
     <string name="quick_start_media_cd">CD selected</string>
     <string name="quick_start_media_none">No media selected</string>
     <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from File Manager before launch.</string>
+    <string name="setup_required_title">ROM Setup Required</string>
+    <string name="setup_required_message">An Amiga Kickstart ROM is required to start the emulator. Please import a valid ROM file.</string>
+    <string name="action_import_rom">Import ROM</string>
+    <string name="file_manager_import_category">Import %1$s</string>
+    <string name="configurations_empty_cta">Create Initial Configuration</string>
     <string name="quick_start_amiga_model">Amiga Model</string>
     <string name="quick_start_floppy_df0">Floppy Disk (DF0)</string>
     <string name="quick_start_floppy_df1">Floppy Disk (DF1)</string>

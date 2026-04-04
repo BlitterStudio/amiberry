@@ -66,4 +66,10 @@ class QuickStartViewModel(application: Application) : AndroidViewModel(applicati
 			repository.rescanCategory(FileCategory.WHDLOAD_GAMES)
 		}
 	}
+
+	fun rescanRoms() {
+		viewModelScope.launch {
+			repository.rescanCategory(FileCategory.ROMS)
+		}
+	}
 }
