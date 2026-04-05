@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+// dear imgui, v1.92.8 WIP
 // (tables and columns code)
 
 /*
@@ -699,7 +699,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
     }
 
     // Handle reordering request
-    // Note: we don't clear ReorderColumn after handling the request (FIXME: clarify why or add a test).
+    //// Note: we don't clear ReorderColumn after handling the request (FIXME: clarify why or add a test).
     if (table->InstanceCurrent == 0)
     {
         table->LastHeldHeaderColumn = table->HeldHeaderColumn;
@@ -709,6 +709,13 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
             TableSetColumnDisplayOrder(table, table->ReorderColumn, table->ReorderColumnDstOrder);
             table->ReorderColumnDstOrder = -1;
         }
+
+        // Release
+        ImGuiContext& g = *GImGui;
+        if (g.ActiveId == 0) // FIXME: Need to revisit. See 38f5e5a.
+            table->ReorderColumn = -1;
+        //if (table->HeldHeaderColumn == -1 && table->ReorderColumn != -1)
+        //    table->ReorderColumn = -1;
     }
 
     // Handle display order reset request
@@ -1695,19 +1702,6 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? (ImGuiTableColumnIdx)rows : 0;
     table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
-
-    // Ensure frozen columns are ordered in their section. We still allow multiple frozen columns to be reordered.
-    // FIXME-TABLE: This work for preserving 2143 into 21|43. How about 4321 turning into 21|43? (preserve relative order in each section)
-    for (int column_n = 0; column_n < table->FreezeColumnsRequest; column_n++)
-    {
-        int order_n = table->DisplayOrderToIndex[column_n];
-        if (order_n != column_n && order_n >= table->FreezeColumnsRequest)
-        {
-            ImSwap(table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder, table->Columns[table->DisplayOrderToIndex[column_n]].DisplayOrder);
-            ImSwap(table->DisplayOrderToIndex[order_n], table->DisplayOrderToIndex[column_n]);
-            table->IsSettingsDirty = true;
-        }
-    }
 }
 
 //-----------------------------------------------------------------------------
