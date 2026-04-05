@@ -2808,6 +2808,20 @@ static void core_entry(void)
 				log_cb(RETRO_LOG_INFO, "CD image: %s\n", game_path);
 			std::string cd_opt = std::string("cdimage0=") + game_path + ",image";
 			push_s_option(cd_opt);
+		} else if (game_ext == "hdf" || game_ext == "hdz") {
+			if (log_cb)
+				log_cb(RETRO_LOG_INFO, "HDF image: %s\n", game_path);
+			// Format: hardfile2=rw,DEVNAME:PATH,sectors,surfaces,reserved,blocksize,bootpri
+			push_s_option(std::string("hardfile2=rw,DH0:") + std::string(game_path) + ",0,0,0,512,0");
+			if (!save_dir.empty()) {
+				const std::string saves_path = save_dir + "/WHDSaves";
+				struct stat saves_st{};
+				if (stat(saves_path.c_str(), &saves_st) != 0)
+					mkdir(saves_path.c_str(), 0755);
+				push_s_option("filesystem2=rw,DH1:WHDSaves:" + saves_path + ",0");
+				if (log_cb)
+					log_cb(RETRO_LOG_INFO, "HDF saves dir: %s\n", saves_path.c_str());
+			}
 		} else {
 			safe_strdup(game_path);
 		}
