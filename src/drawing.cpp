@@ -2473,11 +2473,19 @@ int isvsync_chipset(void)
 	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
+#ifdef AMIBERRY
+	// Amiberry uses software timing (vs==0 path) for frame pacing on all platforms.
+	// The renderer independently sets SwapInterval for tear prevention.
+	// The WinUAE vs>0 path relies on swap blocking matching the Amiga refresh rate,
+	// which requires exclusive fullscreen mode switching (D3D) not available via SDL/OpenGL.
+	return 0;
+#else
 	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
 		return 1;
 	if (currprefs.m68k_speed >= 0)
 		return -1;
 	return currprefs.cachesize ? -3 : -2;
+#endif
 }
 
 int isvsync_rtg(void)
@@ -2485,11 +2493,15 @@ int isvsync_rtg(void)
 	struct amigadisplay *ad = &adisplays[0];
 	if (!ad->picasso_on || currprefs.gfx_apmode[1].gfx_vsync <= 0)
 		return 0;
+#ifdef AMIBERRY
+	return 0;
+#else
 	if (currprefs.gfx_apmode[1].gfx_vsyncmode == 0)
 		return 1;
 	if (currprefs.m68k_speed >= 0)
 		return -1;
 	return currprefs.cachesize ? -3 : -2;
+#endif
 }
 
 int isvsync(void)

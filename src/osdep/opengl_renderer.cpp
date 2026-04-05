@@ -344,9 +344,10 @@ void OpenGLRenderer::update_vsync(int monid)
 	const int vsync_mode = currprefs.gfx_apmode[idx].gfx_vsync;
 	int interval = 0;
 
-	if (vsync_mode > 0) {
+	if (currprefs.gfx_variable_sync && vsync_mode > 0) {
+		interval = -1;
+	} else if (vsync_mode > 0) {
 		if (vsync_mode > 1) {
-			// VSync 50/60Hz: Adapt for High Refresh Rate Monitors
 			if (m_vsync.cached_refresh_rate <= 0.0f) {
 				m_vsync.cached_refresh_rate = amiberry_getrefreshrate(monid);
 				write_log("VSync: Detected refresh rate: %.2f Hz\n", m_vsync.cached_refresh_rate);
@@ -369,10 +370,17 @@ void OpenGLRenderer::update_vsync(int monid)
 	}
 
 	if (m_vsync.current_interval != interval) {
-		if (SDL_GL_SetSwapInterval(interval)) {
+		if (interval == -1) {
+			if (!SDL_GL_SetSwapInterval(-1)) {
+				write_log("OpenGL VSync: Adaptive not supported (%s), falling back to interval 1\n", SDL_GetError());
+				interval = 1;
+				SDL_GL_SetSwapInterval(1);
+			} else {
+				write_log("OpenGL VSync: Adaptive VSync enabled\n");
+			}
+		} else if (SDL_GL_SetSwapInterval(interval)) {
 			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
-		}
-		else {
+		} else {
 			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
 		}
 		m_vsync.current_interval = interval;

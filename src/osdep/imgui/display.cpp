@@ -124,16 +124,20 @@ void render_panel_display() {
     ImGui::SameLine();
 
     // VSync Mapping
-    const char *vsync_items[] = {"-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz"};
-    // Calc current index
+    // Lagless VSync requires D3DKMTGetScanLine / D3DKMTWaitForVerticalBlankEvent (not implemented).
+    // Only Standard and Adaptive modes are functional.
+    const char *vsync_items[] = {"-", "Standard", "Standard 50/60Hz", "Adaptive"};
     int vsync_idx = 0;
-    if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1) vsync_idx = 1;
-    else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1)
-        vsync_idx = 2;
-    else if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
+    if (changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1) {
+        changed_prefs.gfx_apmode[0].gfx_vsync = 0;
+        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+    }
+    if (changed_prefs.gfx_variable_sync && changed_prefs.gfx_apmode[0].gfx_vsync > 0)
         vsync_idx = 3;
+    else if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
+        vsync_idx = 1;
     else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
-        vsync_idx = 4;
+        vsync_idx = 2;
 
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
     if (ImGui::BeginCombo("##NativeVSync", vsync_items[vsync_idx])) {
@@ -146,18 +150,19 @@ void render_panel_display() {
                 switch (vsync_idx) {
                     case 0: changed_prefs.gfx_apmode[0].gfx_vsync = 0;
                         changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        changed_prefs.gfx_variable_sync = 0;
                         break;
                     case 1: changed_prefs.gfx_apmode[0].gfx_vsync = 1;
-                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        changed_prefs.gfx_variable_sync = 0;
                         break;
                     case 2: changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        changed_prefs.gfx_variable_sync = 0;
                         break;
                     case 3: changed_prefs.gfx_apmode[0].gfx_vsync = 1;
                         changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-                        break;
-                    case 4: changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        changed_prefs.gfx_variable_sync = 1;
                         break;
                 }
             }
@@ -169,7 +174,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-    ShowHelpMarker("VSync mode: Lagless minimizes input lag, Standard waits for vertical blank, 50/60Hz variants enforce specific refresh rates");
+    ShowHelpMarker("VSync mode: Standard waits for vertical blank, 50/60Hz enforces refresh rate, Adaptive uses VRR (FreeSync/G-SYNC) with late-swap tearing fallback");
 
     ImGui::Spacing();
 
@@ -198,11 +203,13 @@ void render_panel_display() {
 
     ImGui::SameLine();
 
-    const char *vsync_rtg_items[] = {"-", "Lagless"};
-    // Calculate RTG VSync index from gfx_vsync value
+    const char *vsync_rtg_items[] = {"-", "Standard"};
     int rtg_vsync_idx = 0;
     if (changed_prefs.gfx_apmode[1].gfx_vsync > 0)
         rtg_vsync_idx = 1;
+    if (changed_prefs.gfx_apmode[1].gfx_vsyncmode == 1) {
+        changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
+    }
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 5.0f);
     if (ImGui::BeginCombo("##RTGVSync", vsync_rtg_items[rtg_vsync_idx])) {
         for (int n = 0; n < IM_ARRAYSIZE(vsync_rtg_items); n++) {
@@ -215,7 +222,7 @@ void render_panel_display() {
                     changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
                 } else if (n == 1) {
                     changed_prefs.gfx_apmode[1].gfx_vsync = 1;
-                    changed_prefs.gfx_apmode[1].gfx_vsyncmode = 1;
+                    changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
                 }
             }
             if (is_selected) {
