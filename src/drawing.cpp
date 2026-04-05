@@ -83,8 +83,6 @@ static uae_u8 *xlinebuffer_start, *xlinebuffer_end;
 static uae_u8 *xlinebuffer2_start, *xlinebuffer2_end;
 static uae_u8 *xlinebuffer_genlock_start, *xlinebuffer_genlock_end;
 
-static int *amiga2aspect_line_map, *native2amiga_line_map;
-static int native2amiga_line_map_height;
 static uae_u8 *row_map_genlock_buffer;
 static uae_u8 row_tmp8[MAX_PIXELS_PER_LINE * 32 / 8];
 static uae_u8 row_tmp8g[MAX_PIXELS_PER_LINE * 32 / 8];
@@ -316,7 +314,7 @@ bool denisea1000;
 
 bool direct_rgb;
 
-static int linedbl, linedbld;
+static int linedbl;
 
 int interlace_seen;
 int detected_screen_resolution;
@@ -457,6 +455,7 @@ static int linear_denise_frame_hbstrt_tmp, linear_denise_frame_hbstop_tmp;
 static int linear_denise_frame_hbstrt_sel, linear_denise_frame_hbstop_sel;
 static bool denise_blanking_changed;
 static int linear_denise_strobe_offset;
+static int denise_strobe_offset, horizontalzerooffset;
 static int denise_visible_lines, denise_visible_lines_counted;
 static uae_u16 hbstrt_denise_reg, hbstop_denise_reg;
 static uae_u16 fmode_denise, denise_bplfmode, denise_sprfmode;
@@ -547,9 +546,6 @@ static int denise_y_start, denise_y_end;
 
 static int denise_pixtotal, denise_pixtotalv, denise_linecnt, denise_startpos, denise_cck, denise_endcycle;
 static int denise_pixtotalskip_start, denise_pixtotalskip_end, denise_hdelay;
-#ifdef AMIBERRY
-static int denise_render_left_border = 0;
-#endif
 static int denise_pixtotal_max;
 static uae_u32 *buf1, *buf2, *buf_d;
 static uae_u8 *gbuf;
@@ -616,33 +612,15 @@ STATIC_INLINE int xshift(int x, int shift)
 
 int coord_native_to_amiga_x(int x)
 {
-#ifdef AMIBERRY
-	x += denise_render_left_border ? denise_render_left_border : visible_left_border;
-#else
-	x += visible_left_border;
-#endif
+	x += horizontalzerooffset / 2;
 	return x;
 }
 
 int coord_native_to_amiga_y(int y)
 {
-#ifdef AMIBERRY
-	if (!native2amiga_line_map || y < 0) {
-		return 0;
-	}
-	if (y >= native2amiga_line_map_height) {
-		y = native2amiga_line_map_height + thisframe_y_adjust - 1;
-	}
-	return native2amiga_line_map[y];
-#else
-	if (!native2amiga_line_map || y < 0) {
-		return 0;
-	}
-	if (y >= native2amiga_line_map_height) {
-		y = native2amiga_line_map_height - 1;
-	}
-	return native2amiga_line_map[y];
-#endif
+	y += (minfirstline_linear + LINES_AFTER_VSYNC) << linedbl;
+	y >>= linedbl;
+	return y;
 }
 
 void notice_screen_contents_lost(int monid)
@@ -1138,11 +1116,11 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 
 	y2 = plflastline_total + 1;
 	y1 = plffirstline_total;
-	if (minfirstline > y1)
-		y1 = minfirstline;
+	if (minfirstline_linear > y1)
+		y1 = minfirstline_linear;
 
 	h = y2 - y1;
-	dy = y1 - minfirstline;
+	dy = y1 - minfirstline_linear;
 
 	if (*pw > 0)
 		w = *pw;
@@ -1288,67 +1266,6 @@ static void gen_pfield_tables(void)
 	}
 }
 
-static void init_aspect_maps(void)
-{
-	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
-	struct vidbuffer *vb = vidinfo->inbuffer;
-	int i, maxl, h;
-
-	linedbld = linedbl = currprefs.gfx_vresolution;
-	if (doublescan > 0 && interlace_seen <= 0) {
-		linedbl = 0;
-		linedbld = 1;
-	}
-	maxl = (MAXVPOS + 1) << linedbld;
-	min_ypos_for_screen = minfirstline << linedbl;
-	max_drawn_amiga_line = -1;
-
-	vidinfo->xchange = 1 << (RES_MAX - currprefs.gfx_resolution);
-	vidinfo->ychange = linedbl ? 1 : 2;
-
-	visible_left_start = 0;
-	visible_right_stop = MAX_STOP;
-	visible_top_start = 0;
-	visible_bottom_stop = MAX_STOP;
-
-	h = vb->height_allocated;
-	if (h == 0)
-		/* Do nothing if the gfx driver hasn't initialized the screen yet */
-		return;
-
-	if (native2amiga_line_map)
-		xfree (native2amiga_line_map);
-	if (amiga2aspect_line_map)
-		xfree (amiga2aspect_line_map);
-
-	/* At least for this array the +1 is necessary. */
-	native2amiga_line_map_height = h;
-	amiga2aspect_line_map = xmalloc (int, (MAXVPOS + 1) * 2 + 1);
-	native2amiga_line_map = xmalloc (int, native2amiga_line_map_height);
-
-	for (i = 0; i < maxl; i++) {
-		int v = i - min_ypos_for_screen;
-		if (v >= h && max_drawn_amiga_line < 0)
-			max_drawn_amiga_line = v;
-		if (i < min_ypos_for_screen || v >= native2amiga_line_map_height)
-			v = -1;
-		amiga2aspect_line_map[i] = v;
-	}
-	if (max_drawn_amiga_line < 0)
-		max_drawn_amiga_line = maxl - min_ypos_for_screen;
-
-	for (i = 0; i < native2amiga_line_map_height; i++)
-		native2amiga_line_map[i] = -1;
-
-	for (i = maxl - 1; i >= min_ypos_for_screen; i--) {
-		int j;
-		if (amiga2aspect_line_map[i] == -1)
-			continue;
-		for (j = amiga2aspect_line_map[i]; j < native2amiga_line_map_height && native2amiga_line_map[j] == -1; j++)
-			native2amiga_line_map[j] = i >> linedbl;
-	}
-}
-
 void init_row_map(void)
 {
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
@@ -1385,7 +1302,21 @@ void init_row_map(void)
 	oldgenlock = init_genlock_data;
 	oldburst = row_map_color_burst_buffer ? 1 : 0;
 
-	init_aspect_maps();
+	int linedbld = currprefs.gfx_vresolution;
+	linedbl = linedbld;
+	if (doublescan > 0 && interlace_seen > 0) {
+		linedbl *= 2;
+	}
+	int maxl = (MAXVPOS + 1) << linedbld;
+	max_drawn_amiga_line = -1;
+
+	vidinfo->xchange = 1 << (RES_MAX - currprefs.gfx_resolution);
+	vidinfo->ychange = linedbl ? 1 : 2;
+
+	visible_left_start = 0;
+	visible_right_stop = MAX_STOP;
+	visible_top_start = 0;
+	visible_bottom_stop = MAX_STOP;
 }
 
 static bool cancenter(void)
@@ -1552,7 +1483,7 @@ static void center_image(void)
 	}
 
 	vidinfo->inbuffer->xoffset = visible_left_border << (RES_MAX - currprefs.gfx_resolution);
-	vidinfo->inbuffer->yoffset = (-vsync_start_offset) << VRES_MAX;
+	vidinfo->inbuffer->yoffset = minfirstline_linear << VRES_MAX;
 
 	int linedbl = currprefs.gfx_vresolution;
 	if (doublescan > 0 && interlace_seen <= 0) {
@@ -2284,7 +2215,7 @@ void full_redraw_all(void)
 	bool redraw = false;
 	struct amigadisplay *ad = &adisplays[monid];
 	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
-	if (vidinfo->inbuffer && vidinfo->inbuffer->height_allocated && amiga2aspect_line_map) {
+	if (vidinfo->inbuffer && vidinfo->inbuffer->height_allocated) {
 		notice_screen_contents_lost(monid);
 		if (!ad->picasso_on) {
 			redraw_frame();
@@ -4069,6 +4000,7 @@ static void handle_strobes(struct denise_rga *rd)
 	}
 	previous_strobe = rd->rga;
 	linear_denise_strobe_offset = rd->v * 8;
+	denise_strobe_offset = internal_pixel_cnt;
 	reset_strlong();
 	spr_nearest();
 }
@@ -5788,14 +5720,6 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 		setxlinebuffer(0, gfx_ypos);
 		xshift = linetoscr_x_adjust >> hresolution;
 		denise_pixtotal -= xshift;
-#ifdef AMIBERRY
-		// Compute effective left border from Denise rendering parameters.
-		// Buffer pixel 0 starts when denise_pixtotal reaches 0, which is
-		// (skip_start + xshift) * 2 half-CCKs after denise_hcounter's initial
-		// value. Convert to native pixels for use by input coordinate mapping.
-		int hcounter_at_buffer_start = (denise_hcounter + (denise_pixtotalskip_start + xshift) * 2) & 511;
-		denise_render_left_border = hcounter_at_buffer_start << hresolution;
-#endif
 	}
 
 	buf1 = (uae_u32*)xlinebuffer;
@@ -6214,6 +6138,8 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 	}
 
 	frame_internal_pixel_cnt = internal_pixel_cnt;
+	horizontalzerooffset = internal_pixel_cnt - denise_strobe_offset;
+	horizontalzerooffset += internal_pixel_start_cnt;
 
 	// detect horizontal blanking
 	if (!denise_vblank_active) {

@@ -489,6 +489,15 @@ static bool get_trace(uaecptr addr, int accessmode, int size, uae_u32 *data)
 				}
 			}
 			check_trace();
+
+			// Partially fix 6.0.x statefiles where 68000 word read value was stored as a zero.
+			// This can be only fixed when it was 68000 instruction prefetch.
+			if ((get_statefile_version() & 0xffffff00) == 0x00060000) {
+				if (!ctm->data && accessmode == 2 && currprefs.cpu_model <= 68010 && currprefs.cpu_cycle_exact && addr > regs.pc && addr < regs.pc + 20) {
+					return true;
+				}
+			}
+
 			*data = ctm->data;
 			return false;
 		}

@@ -70,6 +70,7 @@ static struct strlist *error_lines;
 static struct zfile *default_file, *configstore;
 static int uaeconfig;
 static int unicode_config = 0;
+static bool gfx_keep_aspect_seen;
 
 /* @@@ need to get rid of this... just cut part of the manual and print that
 * as a help text.  */
@@ -403,6 +404,20 @@ static const TCHAR *obsolete[] = {
 };
 
 #define UNEXPANDED _T("$(FILE_PATH)")
+
+static void fixup_prefs2(struct uae_prefs* p)
+{
+	// enable integer keep aspect if config has same horizontal and vertical zoom and standard resolution/doubling
+	if (!gfx_keep_aspect_seen) {
+		if (p->gf[GF_NORMAL].gfx_filter_horiz_zoom_mult == p->gf[GF_NORMAL].gfx_filter_vert_zoom_mult &&
+			p->gf[GF_NORMAL].gfx_filter_horiz_zoom == p->gf[GF_NORMAL].gfx_filter_vert_zoom &&
+			p->gf[GF_INTERLACE].gfx_filter_horiz_zoom_mult == p->gf[GF_INTERLACE].gfx_filter_vert_zoom_mult &&
+			p->gf[GF_INTERLACE].gfx_filter_horiz_zoom == p->gf[GF_INTERLACE].gfx_filter_vert_zoom &&
+			p->gfx_resolution == RES_HIRES && p->gfx_vresolution == VRES_DOUBLE) {
+			p->gfx_keep_aspect = true;
+		}
+	}
+}
 
 static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separator, bool min)
 {
@@ -3762,7 +3777,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 		|| cfgfile_intval (option, value, _T("gfx_center_horizontal_size"), &p->gfx_xcenter_size, 1)
 		|| cfgfile_intval (option, value, _T("gfx_center_vertical_size"), &p->gfx_ycenter_size, 1)
-		|| cfgfile_yesno(option, value, _T("gfx_keep_aspect"), &p->gfx_keep_aspect, 1)
 
 		|| cfgfile_intval (option, value, _T("filesys_max_size"), &p->filesys_limit, 1)
 		|| cfgfile_intval (option, value, _T("filesys_max_name_length"), &p->filesys_max_name, 1)
@@ -3892,6 +3906,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
+	if (cfgfile_yesno(option, value, _T("gfx_keep_aspect"), &p->gfx_keep_aspect, 1)) {
+		gfx_keep_aspect_seen = true;
+		return 1;
+	}
 
 	if (cfgfile_string(option, value, _T("gfx_colour_mode"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		return 1;
@@ -7491,6 +7509,7 @@ end:
 		}
 	}
 	fixup_prefs (p, userconfig != 0);
+	fixup_prefs2(p);
 	for (int i = 0; i < MAX_JPORTS_CUSTOM; i++) {
 		inputdevice_jportcustom_fixup(p, p->jports_custom[i].custom, i);
 	}
@@ -9000,6 +9019,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->lightboost_strobo_ratio = 50;
 
 	savestate_state = 0;
+	gfx_keep_aspect_seen = false;
 
 	target_default_options (p, type);
 

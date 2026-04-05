@@ -79,8 +79,6 @@
 
 #define SPRBORDER 0
 
-#define EXTRAHEIGHT_EXTREME 28
-
 #define LORES_TO_SHRES_SHIFT 2
 
 #ifdef SERIAL_PORT
@@ -397,7 +395,6 @@ static int next_lineno;
 int linear_vpos, linear_vpos_vb_start, linear_vpos_vb_end, linear_hpos, linear_vpos_prev[3], linear_hpos_prev[3];
 static int linear_vb_offset;
 static int linear_vpos_vsync;
-int vsync_start_offset;
 int linear_display_vpos;
 int current_linear_vpos, current_linear_hpos;
 static int current_linear_hblen, current_linear_hblen_temp;
@@ -617,8 +614,8 @@ int hdisplay_left_border;
 
 int denisehtotal;
 static int maxvpos_total = 511;
-int minfirstline = VBLANK_ENDLINE_PAL;
-int minfirstline_linear = VBLANK_ENDLINE_PAL;
+int minfirstline;
+int minfirstline_linear;
 float vblank_hz = VBLANK_HZ_PAL, fake_vblank_hz, vblank_hz_stored, vblank_hz_nom;
 float hblank_hz;
 static float vblank_hz_lof, vblank_hz_shf, vblank_hz_lace;
@@ -1565,12 +1562,197 @@ void resetfulllinestate(void)
 	displayreset_delayed |= 16 | 8 | 4 | 2;
 }
 
+static bool line_is_doubled(void)
+{
+	if (doflickerfix_active()) {
+		return true;
+	}
+	if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
+		return true;
+	}
+	if ((doublescan <= 0 || interlace_seen > 0) && currprefs.gfx_vresolution && currprefs.gfx_iscanlines) {
+		return true;
+	}
+	if (currprefs.gfx_vresolution && (doublescan <= 0 || interlace_seen > 0)) {
+		return true;
+	}
+	return false;
+}
+
+static void update_display_vars(void)
+{
+	struct vidbuf_description* vidinfo = &adisplays[0].gfxvidinfo;
+	struct vidbuffer* vb = vidinfo->inbuffer;
+	int isntsc = (beamcon0 & BEAMCON0_PAL) ? 0 : 1;
+	int islace = interlace_seen ? 1 : 0;
+	int res = GET_RES_AGNUS(bplcon0);
+	int eres = 0;
+
+	doublescan = 0;
+	doublescan2x = 0;
+	if (currprefs.gfx_scandoubler && doublescan == 0) {
+		doublescan = -1;
+	}
+	int hpixels = maxhpos_display * 2;
+	if (currprefs.gfx_resolution == RES_LORES) {
+		hpixels /= 2;
+	} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
+		hpixels *= 2;
+	}
+	int vpixels = vsync_lines - minfirstline;
+	int hpixelsd = hpixels * 85 / 100;
+	if (hpixelsd < vpixels) {
+		doublescan = 1;
+		if (programmedmode == 2) {
+			programmedmode = 1;
+		}
+		hpixelsd *= 2;
+	}
+	if (currprefs.gfx_keep_aspect) {
+		bool dbl = line_is_doubled();
+		if (dbl) {
+			vpixels *= 2;
+		}
+		if (hpixelsd < vpixels) {
+			doublescan2x = 1;
+			hpixelsd *= 2;
+			if (hpixelsd < vpixels) {
+				doublescan2x = 2;
+			}
+		} else if (hpixelsd > vpixels * 2) {
+			doublescan2x = -1;
+			if (hpixelsd > vpixels * 4) {
+				doublescan2x = -2;
+			}
+		}
+	}
+
+	int res2 = currprefs.gfx_resolution;
+
+	if (doublescan > 0) {
+		res2++;
+		eres++;
+	}
+	if (res2 > RES_MAX) {
+		res2 = RES_MAX;
+		eres--;
+	}
+
+	int vres2 = currprefs.gfx_vresolution;
+	if (doublescan > 0 && !islace) {
+		vres2--;
+	}
+
+	if (vres2 < 0) {
+		vres2 = 0;
+	}
+	if (vres2 > VRES_QUAD) {
+		vres2 = VRES_QUAD;
+	}
+
+	vb->inwidth = (current_linear_hpos_short - (display_hstart_cyclewait_skip_start + display_hstart_cyclewait_skip_end)) << (res2 + 1);
+	vb->inwidth2 = vb->inwidth;
+	vb->extrawidth = -2;
+	if (currprefs.gfx_extrawidth > 0) {
+		vb->extrawidth = currprefs.gfx_extrawidth << res2;
+	}
+	vb->extraheight = -2;
+	if (currprefs.gfx_extraheight > 0) {
+		vb->extraheight = currprefs.gfx_extraheight << vres2;
+	}
+
+	int vblines = current_linear_vblank_lines;
+	if (currprefs.cs_hvcsync >= HVSYNC_SYNCPOS) {
+		vblines = LINES_AFTER_VSYNC;
+	}
+	int hiddentopv = (vblines - display_vblankstart_skip);
+	int hiddenbottomv = display_vblankend_skip;
+	int maxv = current_linear_vpos - (hiddentopv + hiddenbottomv) + 1;
+	linear_vpos_vb_end = current_linear_vpos_vb_end - display_vblankstart_skip - 1;
+	minfirstline = vblines - (display_vblankstart_skip > 0 ? display_vblankstart_skip : 0) - 1;
+	minfirstline_linear = minfirstline - LINES_AFTER_VSYNC;
+	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
+		maxv = current_linear_vpos;
+		linear_vpos_vb_end = 0;
+	}
+	vb->inheight = maxv << vres2;
+	vb->inheight2 = vb->inheight;
+	vb->inxoffset = 0;
+
+	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
+		linear_vpos_vb_end = 1;
+		linear_vpos_vb_start = 0;
+	} else {
+		if (linear_vpos_vb_end < LINES_AFTER_VSYNC) {
+			linear_vpos_vb_end = LINES_AFTER_VSYNC;
+		}
+		linear_vpos_vb_start = current_linear_vpos_vb_start + display_vblankend_skip + 1;
+		if (linear_vpos_vb_start >= current_linear_vpos) {
+			linear_vpos_vb_start -= current_linear_vpos;
+		}
+	}
+
+	//write_log(_T("Width %d Height %d\n"), vb->inwidth, vb->inheight);
+
+	if (vb->inwidth < 16)
+		vb->inwidth = 16;
+	if (vb->inwidth2 < 16)
+		vb->inwidth2 = 16;
+	if (vb->inheight < 1)
+		vb->inheight = 1;
+	if (vb->inheight2 < 1)
+		vb->inheight2 = 1;
+
+	if (!vb->hardwiredpositioning) {
+		vb->outwidth = vb->inwidth;
+		vb->outheight = vb->inheight;
+	}
+
+	check_nocustom();
+
+	compute_vsynctime();
+
+	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (linetoggle ? 0.5f : 0.0f));
+
+#ifdef PICASSO96
+	init_hz_p96(0);
+#endif
+
+	set_config_changed();
+
+	custom_end_drawing();
+
+	if (currprefs.monitoremu_mon != 0) {
+		target_graphics_buffer_update(currprefs.monitoremu_mon, false);
+	}
+	target_graphics_buffer_update(0, false);
+
+	if (vb->inwidth > vb->width_allocated)
+		vb->inwidth = vb->width_allocated;
+	if (vb->inwidth2 > vb->width_allocated)
+		vb->inwidth2 = vb->width_allocated;
+
+	if (vb->inheight > vb->height_allocated)
+		vb->inheight = vb->height_allocated;
+	if (vb->inheight2 > vb->height_allocated)
+		vb->inheight2 = vb->height_allocated;
+
+	if (vb->outwidth > vb->width_allocated)
+		vb->outwidth = vb->width_allocated;
+
+	if (vb->outheight > vb->height_allocated)
+		vb->outheight = vb->height_allocated;
+
+	resetfulllinestate();
+}
+
+
 void compute_framesync(void)
 {
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	struct amigadisplay *ad = &adisplays[0];
-	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & BEAMCON0_PAL) ? 0 : 1;
+	int islace = interlace_seen ? 1 : 0;
 	bool found = false;
 
 	if (islace) {
@@ -1593,7 +1775,7 @@ void compute_framesync(void)
 			if (isvsync_chipset ()) {
 				if (!currprefs.gfx_variable_sync) {
 					if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
-						if ((fabs(vblank_hz - 50.0f) < 1 || fabs(vblank_hz - 60.0f) < 1 || fabs(vblank_hz - 100.0f) < 1 || fabs(vblank_hz - 120.0f) < 1) && currprefs.gfx_apmode[0].gfx_vsync == 2 && currprefs.gfx_apmode[0].gfx_fullscreen > 0) {
+						if ((fabs(vblank_hz - 50.0f) < 1 || fabs(vblank_hz - 60.0f) < 1 || fabs(vblank_hz - 100.0) < 1 || fabs(vblank_hz - 120.0f) < 1) && currprefs.gfx_apmode[0].gfx_vsync == 2 && currprefs.gfx_apmode[0].gfx_fullscreen > 0) {
 							vsync_switchmode(0, (int)vblank_hz);
 						}
 					}
@@ -1651,92 +1833,7 @@ void compute_framesync(void)
 	vb->inxoffset = -1;
 	vb->inyoffset = -1;
 
-	int res = GET_RES_AGNUS(bplcon0);
-	int eres = 0;
-
-	int res2 = currprefs.gfx_resolution;
-
-	if (doublescan > 0) {
-		res2++;
-		eres++;
-	}
-	if (res2 > RES_MAX) {
-		res2 = RES_MAX;
-		eres--;
-	}
-
-	int vres2 = currprefs.gfx_vresolution;
-	if (doublescan > 0 && !islace) {
-		vres2--;
-	}
-
-	if (vres2 < 0) {
-		vres2 = 0;
-	}
-	if (vres2 > VRES_QUAD) {
-		vres2 = VRES_QUAD;
-	}
-
-	vb->inwidth = (current_linear_hpos_short - (display_hstart_cyclewait_skip_start + display_hstart_cyclewait_skip_end)) << (res2 + 1);
-	vb->inwidth2 = vb->inwidth;
-	vb->extrawidth = -2;
-	if (currprefs.gfx_extrawidth > 0) {
-		vb->extrawidth = currprefs.gfx_extrawidth << res2;
-	}
-	vb->extraheight = -2;
-	if (currprefs.gfx_extraheight > 0) {
-		vb->extraheight = currprefs.gfx_extraheight << vres2;
-	}
-	int vblines = current_linear_vblank_lines;
-	if (currprefs.cs_hvcsync >= HVSYNC_SYNCPOS) {
-		vblines = LINES_AFTER_VSYNC;
-	}
-	int hiddentopv = (vblines - display_vblankstart_skip);
-	int hiddenbottomv = display_vblankend_skip;
-	int maxv = current_linear_vpos - (hiddentopv + hiddenbottomv) + 1;
-	linear_vpos_vb_end = current_linear_vpos_vb_end - display_vblankstart_skip - 1;
-	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-		maxv = current_linear_vpos;
-		linear_vpos_vb_end = 0;
-	}
-	vb->inheight = maxv << vres2;
-	vb->inheight2 = vb->inheight;
-	vb->inxoffset = 0;
-
-	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-		linear_vpos_vb_end = 1;
-		linear_vpos_vb_start = 0;
-	} else {
-		if (linear_vpos_vb_end < LINES_AFTER_VSYNC) {
-			linear_vpos_vb_end = LINES_AFTER_VSYNC;
-		}
-		linear_vpos_vb_start = current_linear_vpos_vb_start + display_vblankend_skip + 1;
-		if (linear_vpos_vb_start >= current_linear_vpos) {
-			linear_vpos_vb_start -= current_linear_vpos;
-		}
-	}
-
-	//write_log(_T("Width %d Height %d\n"), vb->inwidth, vb->inheight);
-
-	if (vb->inwidth < 16)
-		vb->inwidth = 16;
-	if (vb->inwidth2 < 16)
-		vb->inwidth2 = 16;
-	if (vb->inheight < 1)
-		vb->inheight = 1;
-	if (vb->inheight2 < 1)
-		vb->inheight2 = 1;
-
-	if (!vb->hardwiredpositioning) {
-		vb->outwidth = vb->inwidth;
-		vb->outheight = vb->inheight;
-	}
-
-	check_nocustom();
-
-	compute_vsynctime();
-
-	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (linetoggle ? 0.5f : 0.0f));
+	update_display_vars();
 
 	write_log(_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
 		isntsc ? _T("NTSC") : _T("PAL"),
@@ -1746,57 +1843,9 @@ void compute_framesync(void)
 		hblank_hz,
 		maxhpos, maxvpos, lof_store ? 1 : 0,
 		cr ? cr->index : -1,
-		cr != NULL && cr->label[0] != '\0' ? cr->label : _T("<?>"),
+		cr != NULL && cr->label != NULL ? cr->label : _T("<?>"),
 		currprefs.gfx_apmode[ad->picasso_on ? 1 : 0].gfx_display, ad->picasso_on, ad->picasso_requested_on
 	);
-
-#ifdef PICASSO96
-	init_hz_p96(0);
-#endif
-
-	set_config_changed();
-
-	custom_end_drawing();
-
-	if (currprefs.monitoremu_mon != 0) {
-		target_graphics_buffer_update(currprefs.monitoremu_mon, false);
-	}
-	target_graphics_buffer_update(0, false);
-
-	if (vb->inwidth > vb->width_allocated)
-		vb->inwidth = vb->width_allocated;
-	if (vb->inwidth2 > vb->width_allocated)
-		vb->inwidth2 = vb->width_allocated;
-
-	if (vb->inheight > vb->height_allocated)
-		vb->inheight = vb->height_allocated;
-	if (vb->inheight2 > vb->height_allocated)
-		vb->inheight2 = vb->height_allocated;
-
-	if (vb->outwidth > vb->width_allocated)
-		vb->outwidth = vb->width_allocated;
-
-	if (vb->outheight > vb->height_allocated)
-		vb->outheight = vb->height_allocated;
-
-	resetfulllinestate();
-}
-
-static bool line_is_doubled(void)
-{
-	if (doflickerfix_active()) {
-		return true;
-	}
-	if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
-		return true;
-	}
-	if ((doublescan <= 0 || interlace_seen > 0) && currprefs.gfx_vresolution && currprefs.gfx_iscanlines) {
-		return true;
-	}
-	if (currprefs.gfx_vresolution && (doublescan <= 0 || interlace_seen > 0)) {
-		return true;
-	}
-	return false;
 }
 
 /* set PAL/NTSC or custom timing variables */
@@ -1808,8 +1857,6 @@ static void init_beamcon0(void)
 
 	beamcon0 = new_beamcon0;
 
-	doublescan = 0;
-	doublescan2x = 0;
 	programmedmode = 0;
 	lines_after_beamcon_change = 5;
 
@@ -1837,11 +1884,6 @@ static void init_beamcon0(void)
 	beamcon0_dual = (new_beamcon0 & BEAMCON0_DUAL) != 0;
 	agnus_equdis = ecs_agnus && ((beamcon0 & BEAMCON0_VARCSYEN) || (beamcon0 & BEAMCON0_BLANKEN));
 
-#ifdef AMIBERRY // Don't change vblank_hz when opening P96 screens
-	if (picasso_is_active(0)) {
-		isntsc = currprefs.ntscmode ? 1 : 0;
-	}
-#endif
 	float clk = (float)(currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL);
 
 	int display_maxvpos = current_linear_vpos_nom;
@@ -1851,68 +1893,16 @@ static void init_beamcon0(void)
 	if (!isntsc) {
 		maxvpos = MAXVPOS_PAL;
 		maxhpos = MAXHPOS_PAL;
-		minfirstline = VBLANK_STOP_PAL;
 		vblank_hz_nom = vblank_hz = CHIPSET_CLOCK_PAL / ((float)display_maxvpos * display_maxhpos);
 	} else {
 		maxvpos = MAXVPOS_NTSC;
 		maxhpos = MAXHPOS_NTSC;
-		minfirstline = VBLANK_STOP_NTSC;
 		vblank_hz_nom = vblank_hz = CHIPSET_CLOCK_NTSC / ((float)display_maxvpos * display_maxhpos);
 		halfhpos = (beamcon0 & BEAMCON0_LOLDIS) ? 0 : 0.5f;
 	}
 	vblank_hz_shf = clk / ((display_maxvpos + 0.0f) * (display_maxhpos + halfhpos));
 	vblank_hz_lof = clk / ((display_maxvpos + 1.0f) * (display_maxhpos + halfhpos));
 	vblank_hz_lace = clk / ((display_maxvpos + 0.5f) * (display_maxhpos + halfhpos));
-
-#if 0
-	display_hstart_cyclewait_end = 4;
-	if (beamcon0_has_hsync) {
-		int hblen = current_linear_hblen * 2;
-		display_hstart_cyclewait = 4;
-		if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-			display_hstart_cyclewait_end = 0;
-		} else {
-			if (aexthblanken && !(beamcon0 & BEAMCON0_VARBEAMEN) && hblen > 0) {
-				maxhpos_display = maxhpos - ((hblen + 1) / 2);
-				hsstop_detect = current_linear_hs_hb_dist * 2 + 4;
-				display_hstart_cyclewait_end += hblen / 2 - 4;
-				display_hstart_cyclewait = current_linear_hs_hb_dist;
-				if (display_hstart_cyclewait < 0) {
-					display_hstart_cyclewait = 0;
-				}
-				display_hstart_cyclewait_end = hblen / 2 - display_hstart_cyclewait;
-				display_hstart_cyclewait += 1;
-			} else {
-				// hardwired
-				int hbstrtx = 0x10;
-				int hbstopx = ecs_denise ? 0x5d : 0x5e;
-				int hblen = hbstopx - hbstrtx;
-				maxhpos_display = maxhpos - (hblen / 2);
-				if (beamcon0_has_hsync) {
-					hsstop_detect = hsstrt * 2;
-				} else {
-					hsstop_detect = hsstop_detect2;
-				}
-
-				display_hstart_cyclewait = hbstopx / 2 - hsstrt;
-				//display_hstart_cyclewait += hsstrt_delay;
-			}
-		}
-	} else {
-		display_hstart_cyclewait = 0;
-		display_hstart_cyclewait_end = 0;
-		if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-			display_hstart_cyclewait = 32;
-			display_hstart_cyclewait_end = 9;
-		} else if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
-			display_hstart_cyclewait = 32;
-			display_hstart_cyclewait_end = 10;
-		} else if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
-			display_hstart_cyclewait = 22;
-			display_hstart_cyclewait_end = 5;
-		}
-	}
-#endif
 
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
 		// programmable scanrates (ECS Agnus)
@@ -1948,7 +1938,6 @@ static void init_beamcon0(void)
 	int hsylen = current_agnus_hslen_cck;
 	hsylen *= 2;
 	hsylen += currprefs.cs_hsyncadjust / 4;
-	//hsstop_detect = hbe;
 	if (hbe < hsylen) {
 		hbe = hsylen;
 	}
@@ -1974,7 +1963,6 @@ static void init_beamcon0(void)
 		maxhpos_display = hsync_ccks * 2;
 		display_hstart_cyclewait_start = 0;
 		display_hstart_cyclewait_end = 0;
-		minfirstline = 0;
 	}
 
 	if (display_hstart_cyclewait_start < 0) {
@@ -1991,165 +1979,27 @@ static void init_beamcon0(void)
 		denisehtotal += 1 << (CCK_SHRES_SHIFT - 1);
 	}
 
-#if 0
-	// calculate max possible display width in lores pixels
-	if ((beamcon0 & BEAMCON0_VARBEAMEN) && beamcon0_has_hsync) {
-		int hsstrt_delay = 2;
-		display_hstart_cyclewait = 0;
-		display_hstart_cyclewait_end = 0;
-		// assume VGA-like monitor if VARBEAMEN
-		if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-			maxhpos_display = maxhpos + 7;
-			if (beamcon0_has_hsync) {
-				hsstop_detect = hsstrt * 2;
-				if (hsstop_detect > maxhpos / 2 * 2 || hsstop_detect < 4 * 2) {
-					hsstop_detect = 4 * 2;
-				}
-			} else {
-				hsstop_detect = 4 * 2;
-			}
-			minfirstline = 0;
-		} else {
-			//int hblen = current_linear_hblen * 2;
-
-			if (aexthblanken && hblen > 0) {
-
-				maxhpos_display = maxhpos - ((hblen + 1) / 2);
-				hsstop_detect = hbe;
-				display_hstart_cyclewait_end += hblen / 2;
-				display_hstart_cyclewait = hbe / 2;
-				if (display_hstart_cyclewait < 0)	 {
-					display_hstart_cyclewait = 0;
-				}
-				display_hstart_cyclewait_end = hblen / 2 - display_hstart_cyclewait;
-				display_hstart_cyclewait += 1;
-
-			} else {
-
-				// hardwired
-				int hbstrtx = 0x10;
-				int hbstopx = ecs_denise ? 0x5d : 0x5e;
-				int hblen = hbstopx - hbstrtx;
-				maxhpos_display = maxhpos - (hblen / 2);
-				if (beamcon0_has_hsync) {
-					hsstop_detect = hsstrt * 2;
-				} else {
-					hsstop_detect = hsstop_detect2;
-				}
-
-				display_hstart_cyclewait = hbstopx / 2 - hsstrt;
-				display_hstart_cyclewait += hsstrt_delay;
-			}
-
-			if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME) {
-				int diff = (maxhpos - 2) - maxhpos_display;
-				if (diff > 0) {
-					hsstop_detect -= (diff / 2) * 2;
-				}
-				maxhpos_display = maxhpos - 2;
-			}
-
-			maxhpos_display *= 2;
-			if (display_hstart_cyclewait_end < 0) {
-				display_hstart_cyclewait_end = 0;
-			}
-		}
-
-	} else if (!(beamcon0 & BEAMCON0_VARBEAMEN)) {
-
-		maxhpos_display = maxhpos - (hblen / 2);
-		maxhpos_display *= 2;
-		maxhpos_display++;
-		hsstop_detect = hbe;
-		display_hstart_cyclewait = hbe / 2 + 3;
-		if (display_hstart_cyclewait < 0) {
-			display_hstart_cyclewait = 0;
-		}
-		display_hstart_cyclewait_end = hblen / 2 - display_hstart_cyclewait + 1;
-		display_hstart_cyclewait += 1;
-
-
-		//maxhpos_display = AMIGA_WIDTH_MAX;
-		//hsstop_detect = hsstop_detect2;
-
-		if (beamcon0 & bemcon0_hsync_mask) {
-			if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
-				hsstop_detect += 7;
-			} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-				hsstop_detect += 5;
-			} else if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-				maxhpos_display += EXTRAWIDTH_ULTRA;
-				minfirstline = 0;
-				hsstop_detect = hsyncstartpos_start_cycles * 2 - 4;
-			}
-		} else {
-
-			if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-				maxhpos_display += EXTRAWIDTH_ULTRA;
-				hsstop_detect = 18 * 2;
-				minfirstline = 1;
-			}
-		}
-
-	}
-
-	if (!(beamcon0 & BEAMCON0_VARBEAMEN) || !beamcon0_has_hsync) {
-		if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
-			// one pixel row missing from right border if OCS
-			if (!ecs_denise) {
-				maxhpos_display--;
-			}
-			minfirstline++;
-			if (maxvpos_display_vsync > 0) {
-				maxvpos_display_vsync--;
-			} else {
-				maxvpos_display--;
-			}
-		} else if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
-			maxhpos_display += EXTRAWIDTH_EXTREME;
-			hsstop_detect -= 4;
-		} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-			maxhpos_display += EXTRAWIDTH_BROADCAST;
-			hsstop_detect -= 1;
-		}
-	}
-#endif
-
 	if (currprefs.gfx_extrawidth > 0) {
 		maxhpos_display += currprefs.gfx_extrawidth;
-	}
-
-	//if (hsstop_detect < 0) {
-	//	hsstop_detect = 0;
-	//}
-	if (minfirstline < 0) {
-		minfirstline = 0;
 	}
 
 	int vbstart = linear_vpos_vblank_end;
 	if (currprefs.cs_hvcsync >= HVSYNC_SYNCPOS) {
 		vbstart = LINES_AFTER_VSYNC;
-		minfirstline = vbstart;
 	}
 
-	minfirstline_linear = vbstart;
 	maxvpos_display_vsync = 0;
 	display_vblankstart_skip = 0;
 	display_vblankend_skip = 0;
 	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		vsync_startline = LINES_AFTER_VSYNC;
-		minfirstline = 0;
-		minfirstline_linear = 0;
 		maxvpos_display_vsync = vsync_startline;
 		display_vblankstart_skip = -3000;
 	} else if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
-		minfirstline_linear -= EXTRAHEIGHT_EXTREME / 2;
-		minfirstline -= EXTRAHEIGHT_EXTREME / 2;
 		display_vblankstart_skip = vbstart;
 		display_vblankend_skip = 3;
 		maxvpos_display_vsync += 2;
 	} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-		minfirstline_linear -= 0;
 		maxvpos_display_vsync++;
 		display_vblankstart_skip = -1;
 		display_vblankend_skip = 2;
@@ -2159,56 +2009,13 @@ static void init_beamcon0(void)
 		display_vblankstart_skip = -1;
 		display_vblankend_skip = 2;
 	}
-	if (minfirstline_linear < 0) {
-		minfirstline_linear += current_linear_vpos_nom;
-	}
 
-	if ((beamcon0 & BEAMCON0_VARVBEN) && (beamcon0 & bemcon0_vsync_mask)) {
-		if (minfirstline < vsync_startline) {
-			minfirstline = vsync_startline;
-			minfirstline++;
-		}
-		if (minfirstline > vsync_lines / 2) {
-			minfirstline = vsync_startline;
-			minfirstline++;
-		}
-	} else if (beamcon0 & BEAMCON0_VARVBEN) {
-		if (minfirstline > vbstop) {
-			minfirstline = vbstop;
-			if (minfirstline < 3) {
-				minfirstline = 3;
-			}
-		}
-	}
 	if (beamcon0 & (BEAMCON0_VARVBEN | bemcon0_vsync_mask)) {
 		programmedmode = 2;
 	}
 
-	int eh = currprefs.gfx_extraheight;
-	if (eh > 0) {
-		if (beamcon0 & bemcon0_vsync_mask) {
-			minfirstline -= eh / 2;
-		} else {
-			minfirstline -= eh / 2;
-		}
-	}
-
 	if (display_hstart_cyclewait_end < 0) {
 		display_hstart_cyclewait_end = 0;
-	}
-
-	if (minfirstline < vsync_startline) {
-		minfirstline = vsync_startline;
-	}
-
-	if (minfirstline >= vsync_lines) {
-		minfirstline = vsync_lines - 1;
-	}
-
-	if (beamcon0 & bemcon0_vsync_mask) {
-		if (minfirstline < vsync_startline) {
-			minfirstline = vsync_startline;
-		}
 	}
 
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
@@ -2224,40 +2031,6 @@ static void init_beamcon0(void)
 		programmedmode = 2;
 	}
 
-	int hpixels = maxhpos_display * 2;
-	if (currprefs.gfx_resolution == RES_LORES) {
-		hpixels /= 2;
-	} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
-		hpixels *= 2;
-	}
-	int vpixels = vsync_lines - minfirstline;
-	int hpixelsd = hpixels * 80 / 100;
-	if (hpixelsd < vpixels) {
-		doublescan = 1;
-		if (programmedmode == 2) {
-			programmedmode = 1;
-		}
-		hpixelsd *= 2;
-	}
-	if (currprefs.gfx_keep_aspect) {
-		bool dbl = line_is_doubled();
-		if (dbl) {
-			vpixels *= 2;
-		}
-		if (hpixelsd < vpixels) {
-			doublescan2x = 1;
-			hpixelsd *= 2;
-			if (hpixelsd < vpixels) {
-				doublescan2x = 2;
-			}
-		} else if (hpixelsd > vpixels * 2) {
-			doublescan2x = -1;
-			if (hpixelsd > vpixels * 4) {
-				doublescan2x = -2;
-			}
-		}
-	}
-
 	if (maxvpos_nom >= MAXVPOS) {
 		maxvpos_nom = MAXVPOS;
 	}
@@ -2265,9 +2038,7 @@ static void init_beamcon0(void)
 	if (maxvpos_display >= MAXVPOS) {
 		maxvpos_display = MAXVPOS;
 	}
-	if (currprefs.gfx_scandoubler && doublescan == 0) {
-		doublescan = -1;
-	}
+
 	/* limit to sane values */
 	if (vblank_hz < 10) {
 		vblank_hz = 10;
@@ -10145,10 +9916,8 @@ static void vsync_mark(void)
 		}
 		vb_end_detect = false;
 		linear_vpos = 0;
-
 		int off = currprefs.cs_hvcsync >= HVSYNC_SYNCPOS ? LINES_AFTER_VSYNC : linear_vb_offset;
-		vsync_start_offset = -off;
-
+		minfirstline_linear = off;
 	}
 }
 
@@ -10259,7 +10028,7 @@ static void check_vsyncs_fast(void)
 	if (beamcon0_has_hsync) {
 		count_hsyncs(hsstrt, hsstop);
 	} else {
-		count_hsyncs(35, 18);
+		count_hsyncs(18, 35);
 	}
 	if (programmed_register_accessed_v && programmed_register_accessed_h) {
 		if (hcenter < maxhpos) {
@@ -12490,7 +12259,7 @@ uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 	}
 #endif
 
-	x_do_cycles_post(CYCLE_UNIT, 0);
+	x_do_cycles_post(CYCLE_UNIT, v);
 
 	regs.chipset_latch_rw = regs.chipset_latch_read = v;
 

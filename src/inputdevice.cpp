@@ -2653,6 +2653,11 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 			ob = true;
 			y = vidinfo->outbuffer->outheight - 1;
 		}
+		if (currprefs.gfx_resolution == RES_LORES) {
+			x *= 2;
+		} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
+			x /= 2;
+		}
 		x = coord_native_to_amiga_x(x);
 		if (y >= 0) {
 			y = coord_native_to_amiga_y(y) * 2;

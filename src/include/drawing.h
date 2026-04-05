@@ -25,7 +25,6 @@ extern int detected_screen_resolution;
 extern int hdisplay_left_border, denisehtotal;
 extern int vsync_startline;
 extern int video_recording_active;
-extern int vsync_start_offset;
 
 #include "amiga_constants.h"
 
