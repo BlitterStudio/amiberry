@@ -202,7 +202,7 @@ static void RenderDriveSlot(const int i)
              std::string startPath = changed_prefs.floppyslots[i].df;
              if (startPath.empty() && !last_floppy_dir.empty()) startPath = last_floppy_dir;
              if (startPath.empty()) startPath = get_floppy_path(); 
-             OpenFileDialogKey("FLOPPY", "Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
+             OpenFileDialogKey("FLOPPY", "Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
         }
         
         ImGui::EndDisabled();

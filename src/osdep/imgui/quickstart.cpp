@@ -320,7 +320,7 @@ void render_panel_quickstart() {
             else
                 tmp = get_floppy_path();
             OpenFileDialogKey("QUICKSTART", "Select disk image file",
-                           "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}",
+                           "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}",
                            tmp);
             qs_pending_floppy_drive = i;
         }
@@ -496,7 +496,7 @@ void render_panel_quickstart() {
             else
                 tmp = get_cdrom_path();
 
-            OpenFileDialogKey("QUICKSTART", "Select CD image file", ".cue,.bin,.iso,.ccd,.mds,.chd,.*", tmp);
+            OpenFileDialogKey("QUICKSTART", "Select CD image file", "CD Images (*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.bin,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", tmp);
             qs_pending_cd = true;
         }
 

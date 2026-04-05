@@ -36,7 +36,7 @@ void render_panel_diskswapper()
                  if (startPath.empty()) startPath = get_floppy_path();
 
                  // Use a standard filter similar to Floppy panel
-                 const char* filter = "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z){.adf,.adz,.dms,.ipf,.zip,.7z},All Files (*){.*}";
+                 const char* filter = "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}";
                  OpenFileDialogKey("DISKSWAP", "Select disk image file", filter, startPath);
             }
             ImGui::SameLine();
