@@ -433,10 +433,7 @@ extern bool handle_joyaxis(const SDL_Event& event, bool& nav_left, bool& nav_rig
 extern bool handle_finger(const SDL_Event& event, SDL_Event& touch_event);
 extern bool handle_mousewheel(const SDL_Event& event);
 
-enum
-{
-	MAX_HD_DEVICES = 8
-};
+
 
 extern void CreateDefaultDevicename(char* name);
 extern bool DevicenameExists(const char* name);

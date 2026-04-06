@@ -204,7 +204,9 @@ static void RenderMountedDrives()
     // WinUAE-style list: Device, Volume, Path, R/W, Size, BootPri
     // No explicit Edit/Del columns. Selection -> Button action.
     
-    BeginGroupBox("Mounted Drives");
+    char mounted_label[64];
+    snprintf(mounted_label, sizeof(mounted_label), "Mounted Drives (%d/%d)", changed_prefs.mountitems, MOUNT_CONFIG_SIZE);
+    BeginGroupBox(mounted_label);
 
     // Reserve more space for 3 rows of buttons + CD section
     ImGui::BeginChild("MountedDrivesList", ImVec2(0, -280), true); 
@@ -346,7 +348,7 @@ static void RenderMountedDrives()
         ImGui::EndTable();
     }
     ImGui::EndChild();
-    EndGroupBox("Mounted Drives");
+    EndGroupBox(mounted_label);
 }
 
 static void RenderActionButtons()
@@ -355,7 +357,10 @@ static void RenderActionButtons()
     float spacing = ImGui::GetStyle().ItemSpacing.x;
     float btn_w = (avail - spacing * 2) / 3.0f;
 
+    const bool at_capacity = (changed_prefs.mountitems >= MOUNT_CONFIG_SIZE);
+
     // Row 1: Add Directory, Add Hardfile, Add Hard Drive
+    ImGui::BeginDisabled(at_capacity);
     if (AmigaButton(ICON_FA_PLUS " Add Directory...", ImVec2(btn_w, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddDir;
     }
@@ -368,7 +373,7 @@ static void RenderActionButtons()
         current_hd_dialog_mode = HDDialogMode::AddHardDrive;
     }
 
-    // Row 2: Add CD Drive, Add Tape Drive, Create Hardfile
+    // Row 2: Add CD Drive, Add Tape Drive
     if (AmigaButton(ICON_FA_PLUS " Add CD Drive...", ImVec2(btn_w, BUTTON_HEIGHT))) {
          current_hd_dialog_mode = HDDialogMode::AddCD;
     }
@@ -376,6 +381,9 @@ static void RenderActionButtons()
     if (AmigaButton(ICON_FA_PLUS " Add Tape Drive...", ImVec2(btn_w, BUTTON_HEIGHT))) {
          current_hd_dialog_mode = HDDialogMode::AddTape;
     }
+    ImGui::EndDisabled();
+
+    // Create Hardfile is always available (creates file on disk, doesn't add mount entry)
     ImGui::SameLine();
     if (AmigaButton(ICON_FA_PLUS " Create Hardfile...", ImVec2(btn_w, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::CreateHDF;

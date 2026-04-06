@@ -1226,7 +1226,7 @@ void FilterFiles(vector<string>* files, const char* filter[])
 
 bool DevicenameExists(const char* name)
 {
-	for (auto i = 0; i < MAX_HD_DEVICES; ++i)
+	for (auto i = 0; i < changed_prefs.mountitems; ++i)
 	{
 		auto* uci = &changed_prefs.mountconfig[i];
 		auto* const ci = &uci->ci;
@@ -1248,12 +1248,14 @@ void CreateDefaultDevicename(char* name)
 	auto freeNum = 0;
 	auto foundFree = false;
 
-	while (!foundFree && freeNum < 10)
+	while (!foundFree && freeNum < MOUNT_CONFIG_SIZE)
 	{
-		_sntprintf(name, sizeof name, "DH%d", freeNum);
+		snprintf(name, 256, "DH%d", freeNum);
 		foundFree = !DevicenameExists(name);
 		++freeNum;
 	}
+	if (!foundFree)
+		name[0] = 0;
 }
 
 int tweakbootpri(int bp, int ab, int dnm)
