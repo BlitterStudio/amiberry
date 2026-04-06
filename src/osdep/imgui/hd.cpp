@@ -1440,7 +1440,16 @@ void render_panel_hd()
     ImGui::Spacing();
     RenderCDSection();
     ImGui::Spacing();
-    
+
+    AmigaCheckbox("Create .uaem metadata files", &changed_prefs.filesys_custom_uaefsdb);
+    ShowHelpMarker("When enabled, .uaem sidecar files are created alongside files in host directories to store Amiga file attributes, comments, and timestamps. Disable to prevent .uaem file creation.");
+    ImGui::SameLine();
+    ImGui::Dummy(ImVec2(20, 0));
+    ImGui::SameLine();
+    AmigaCheckbox("Disable UAEFSDB", &changed_prefs.filesys_no_uaefsdb);
+    ShowHelpMarker("When enabled, _UAEFSDB.___ binary metadata files are not created in host directories. This also disables filename translation for characters not supported by the host filesystem.");
+    ImGui::Spacing();
+
     // Logic to open Modals - Add Directory
     if (current_hd_dialog_mode == HDDialogMode::AddDir) {
         default_fsvdlg(&current_fsvdlg);

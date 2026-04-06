@@ -3084,6 +3084,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	write_filesys_config (p, f);
 	if (p->filesys_no_uaefsdb)
 		cfgfile_write_bool (f, _T("filesys_no_fsdb"), p->filesys_no_uaefsdb);
+	if (!p->filesys_custom_uaefsdb)
+		cfgfile_write_bool (f, _T("filesys_custom_uaefsdb"), p->filesys_custom_uaefsdb);
 	cfgfile_dwrite (f, _T("filesys_max_size"), _T("%d"), p->filesys_limit);
 	cfgfile_dwrite (f, _T("filesys_max_name_length"), _T("%d"), p->filesys_max_name);
 	cfgfile_dwrite (f, _T("filesys_max_file_size"), _T("%d"), p->filesys_max_file_size);
@@ -3840,6 +3842,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_yesno(option, value, _T("debug_mem"), &p->debug_mem)
 		|| cfgfile_yesno(option, value, _T("log_illegal_mem"), &p->illegal_mem)
 		|| cfgfile_yesno(option, value, _T("filesys_no_fsdb"), &p->filesys_no_uaefsdb)
+		|| cfgfile_yesno(option, value, _T("filesys_custom_uaefsdb"), &p->filesys_custom_uaefsdb)
 		|| cfgfile_yesno(option, value, _T("gfx_monochrome"), &p->gfx_grayscale)
 		|| cfgfile_yesno(option, value, _T("gfx_blacker_than_black"), &p->gfx_blackerthanblack)
 		|| cfgfile_yesno(option, value, _T("gfx_black_frame_insertion"), &p->lightboost_strobo)

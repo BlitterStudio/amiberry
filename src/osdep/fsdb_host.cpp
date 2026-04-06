@@ -213,6 +213,10 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 		return ERROR_OBJECT_NOT_AROUND;
 	}
 
+	if (!currprefs.filesys_custom_uaefsdb) {
+		return ERROR_OBJECT_NOT_AROUND;
+	}
+
 	const std::string uaem_path = std::string(nname) + ".uaem";
 	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
 	FILE* file = fopen(uaem_path_utf8.c_str(), "rb");
@@ -414,6 +418,10 @@ int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 		return ERROR_OBJECT_NOT_AROUND;
 	}
 
+	if (!currprefs.filesys_custom_uaefsdb) {
+		return 0;
+	}
+
 	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
 	const bool has_comment = info->comment && info->comment[0] != '\0';
 	const bool has_time = info->days != 0 || info->mins != 0 || info->ticks != 0;
@@ -601,8 +609,21 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 		}
 		return true;
 	}
-	timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
-	const int uaem_err = fsdb_write_uaem(name, &info);
+
+	// Only write .uaem if one already existed (to preserve attrs/comment with updated time)
+	// or if mode/comment actually need sidecar storage.
+	// The host filesystem already stores the timestamp via utimes() above,
+	// so we don't create a new .uaem just to record the time.
+	const bool had_uaem = (read_err == 0);
+	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
+	const bool has_comment = info.comment && info.comment[0] != '\0';
+	const bool mode_differs = info.mode != static_cast<uint32_t>(default_mode);
+
+	int uaem_err = 0;
+	if (had_uaem || mode_differs || has_comment) {
+		timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
+		uaem_err = fsdb_write_uaem(name, &info);
+	}
 	if (info.comment) {
 		xfree(info.comment);
 	}
