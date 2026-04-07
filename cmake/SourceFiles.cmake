@@ -659,14 +659,3 @@ install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-# Settings for installing per platform
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(cmake/linux/install.cmake)
-elseif (IOS)
-    include(cmake/ios/install.cmake)
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    include(cmake/macos/install.cmake)
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    include(cmake/windows/install.cmake)
-endif ()
