@@ -412,6 +412,18 @@ static int fsdb_write_uaem_file(const char* path_utf8, const fsdb_file_info* inf
 	return 0;
 }
 
+static bool fsdb_needs_uaem_sidecar(const fsdb_file_info* info)
+{
+	if (!info) {
+		return false;
+	}
+
+	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
+	const bool has_comment = info->comment && info->comment[0] != '\0';
+
+	return info->mode != static_cast<uint32_t>(default_mode) || has_comment;
+}
+
 int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 {
 	if (!nname || !info) {
@@ -422,10 +434,8 @@ int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 		return 0;
 	}
 
-	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
 	const bool has_comment = info->comment && info->comment[0] != '\0';
-	const bool has_time = info->days != 0 || info->mins != 0 || info->ticks != 0;
-	const bool need_uaem = info->mode != static_cast<uint32_t>(default_mode) || has_comment || has_time;
+	const bool need_uaem = fsdb_needs_uaem_sidecar(info);
 
 	const std::string uaem_path = std::string(nname) + ".uaem";
 	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
@@ -610,17 +620,13 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 		return true;
 	}
 
-	// Only write .uaem if one already existed (to preserve attrs/comment with updated time)
-	// or if mode/comment actually need sidecar storage.
-	// The host filesystem already stores the timestamp via utimes() above,
-	// so we don't create a new .uaem just to record the time.
+	// Refresh existing .uaem metadata so attrs/comments keep the updated time,
+	// but let fsdb_write_uaem() remove timestamp-only sidecars. The host
+	// filesystem already stores the timestamp via utimes() above.
 	const bool had_uaem = (read_err == 0);
-	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
-	const bool has_comment = info.comment && info.comment[0] != '\0';
-	const bool mode_differs = info.mode != static_cast<uint32_t>(default_mode);
 
 	int uaem_err = 0;
-	if (had_uaem || mode_differs || has_comment) {
+	if (had_uaem || fsdb_needs_uaem_sidecar(&info)) {
 		timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
 		uaem_err = fsdb_write_uaem(name, &info);
 	}
