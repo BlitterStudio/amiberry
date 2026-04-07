@@ -412,19 +412,26 @@ static int fsdb_write_uaem_file(const char* path_utf8, const fsdb_file_info* inf
 	return 0;
 }
 
-static bool fsdb_needs_uaem_sidecar(const fsdb_file_info* info)
+static bool fsdb_needs_uaem_sidecar(const a_inode* aino, const fsdb_file_info* info)
 {
 	if (!info) {
 		return false;
 	}
 
-	const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
-	const bool has_comment = info->comment && info->comment[0] != '\0';
+	if (info->comment && info->comment[0] != '\0') {
+		return true;
+	}
 
-	return info->mode != static_cast<uint32_t>(default_mode) || has_comment;
+	if (!aino) {
+		const int default_mode = A_FIBF_READ | A_FIBF_WRITE | A_FIBF_EXECUTE | A_FIBF_DELETE;
+		return info->mode != static_cast<uint32_t>(default_mode);
+	}
+
+	const int amigaos_mode = static_cast<int>(info->mode ^ 0xf);
+	return !fsdb_mode_representable_p(aino, amigaos_mode);
 }
 
-int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
+static int fsdb_write_uaem_internal(const a_inode* aino, const char* nname, const fsdb_file_info* info)
 {
 	if (!nname || !info) {
 		return ERROR_OBJECT_NOT_AROUND;
@@ -435,7 +442,7 @@ int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 	}
 
 	const bool has_comment = info->comment && info->comment[0] != '\0';
-	const bool need_uaem = fsdb_needs_uaem_sidecar(info);
+	const bool need_uaem = fsdb_needs_uaem_sidecar(aino, info);
 
 	const std::string uaem_path = std::string(nname) + ".uaem";
 	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
@@ -457,6 +464,11 @@ int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 
 	remove(tmp_path_utf8.c_str());
 	return fsdb_write_uaem_file(uaem_path_utf8.c_str(), info, has_comment);
+}
+
+int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
+{
+	return fsdb_write_uaem_internal(nullptr, nname, info);
 }
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
@@ -626,9 +638,9 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 	const bool had_uaem = (read_err == 0);
 
 	int uaem_err = 0;
-	if (had_uaem || fsdb_needs_uaem_sidecar(&info)) {
+	if (had_uaem || fsdb_needs_uaem_sidecar(nullptr, &info)) {
 		timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
-		uaem_err = fsdb_write_uaem(name, &info);
+		uaem_err = fsdb_write_uaem_internal(nullptr, name, &info);
 	}
 	if (info.comment) {
 		xfree(info.comment);
@@ -810,7 +822,7 @@ int fsdb_set_file_attrs(a_inode* aino)
 		if (aino->comment && aino->comment[0]) {
 			info.comment = my_strdup(aino->comment);
 		}
-		const int uaem_err = fsdb_write_uaem(aino->nname, &info);
+		const int uaem_err = fsdb_write_uaem_internal(aino, aino->nname, &info);
 		if (info.comment) {
 			xfree(info.comment);
 		}
