@@ -548,7 +548,10 @@ if(MACOS_APP_STORE)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
-    target_sources(${PROJECT_NAME} PRIVATE src/osdep/macos_authopen.cpp)
+    target_sources(${PROJECT_NAME} PRIVATE
+            src/osdep/macos_authopen.cpp
+            src/osdep/macos_window.mm
+    )
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

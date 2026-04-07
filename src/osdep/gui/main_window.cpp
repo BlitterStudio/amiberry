@@ -35,6 +35,7 @@
 #include "target.h"
 #include "tinyxml2.h"
 #include "file_dialog.h"
+#include "macos_window.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -1162,6 +1163,16 @@ static void release_sidebar_icons()
 	g_sidebar_icons.clear();
 }
 
+static void raise_gui_window(SDL_Window* window)
+{
+	if (!window)
+		return;
+
+	SDL_ShowWindow(window);
+	SDL_RaiseWindow(window);
+	macos_raise_window(window);
+}
+
 static void ensure_sidebar_icons_loaded()
 {
 	for (int i = 0; categories[i].category != nullptr; ++i) {
@@ -1605,6 +1616,8 @@ void amiberry_gui_init()
 	{
 		Quickstart_ApplyDefaults();
 	}
+	if (emulating || !currprefs.start_minimized)
+		raise_gui_window(mon->gui_window);
 #endif
 
 	// Quickstart models and configs initialization

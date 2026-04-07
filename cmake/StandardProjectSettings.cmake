@@ -111,7 +111,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
         list(APPEND AMIBERRY_PLATFORM_LINK_DIRS "/usr/local/lib")
     endif()
 
-    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "iconv")
+    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework AppKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "iconv")
 
     list(APPEND AMIBERRY_COMPILE_OPTIONS "$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-mno-omit-leaf-frame-pointer>")
 endif()

@@ -1013,6 +1013,26 @@ void releasecapture(const AmigaMonitor* mon)
 	mon_cursorclipped = 0;
 }
 
+static void restore_active_mouse_capture(AmigaMonitor* mon)
+{
+#ifndef LIBRETRO
+	if (!mon || !mon->amiga_window)
+		return;
+	if (mouseactive != mon->monitor_id + 1 || !focus || currprefs.input_tablet)
+		return;
+	if (SDL_GetWindowRelativeMouseMode(mon->amiga_window))
+		return;
+
+	write_log("Restoring relative mouse capture on monitor %d\n", mon->monitor_id);
+	if (!apply_mouse_capture_grabs(mon)) {
+		write_log("Mouse capture restore failed on monitor %d, keeping window uncaptured\n", mon->monitor_id);
+		focus = 0;
+		mouseactive = 0;
+		recapture = 0;
+	}
+#endif
+}
+
 void updatemouseclip(AmigaMonitor* mon)
 {
 	if (mon_cursorclipped) {
@@ -1839,6 +1859,7 @@ static void handle_focus_gained_event(AmigaMonitor* mon)
 			mon->monitor_id, pending_active);
 		setmouseactive(mon->monitor_id, pending_active);
 	}
+	restore_active_mouse_capture(mon);
 }
 
 static void handle_minimized_event(const AmigaMonitor* mon)
@@ -1892,7 +1913,7 @@ static void handle_resized_event(AmigaMonitor* mon, int width, int height)
 	update_hidpi_scale(mon);
 }
 
-static void handle_enter_event()
+static void handle_enter_event(AmigaMonitor* mon)
 {
 	mouseinside = true;
 	if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
@@ -1900,17 +1921,19 @@ static void handle_enter_event()
 		if (mousehack_alive())
 			setcursorshape(0);
 	}
+	restore_active_mouse_capture(mon);
 }
 
-static void handle_leave_event()
+static void handle_leave_event(AmigaMonitor* mon)
 {
 	mouseinside = false;
 #ifndef LIBRETRO
 	// SDL3 < 3.4.2 Wayland crash workaround: turn off relative mouse mode
 	// when the pointer leaves, so subsequent pump cycles don't hit a NULL
 	// window in pointer_dispatch_relative_motion. See SDL fab42a14, #1829.
-	const AmigaMonitor* mon = &AMonitors[0];
-	if (mon->amiga_window && SDL_GetWindowRelativeMouseMode(mon->amiga_window)) {
+	const char* video_driver = SDL_GetCurrentVideoDriver();
+	if (video_driver && strcmpi(video_driver, "wayland") == 0
+		&& mon->amiga_window && SDL_GetWindowRelativeMouseMode(mon->amiga_window)) {
 		SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
 	}
 #endif
@@ -1955,10 +1978,10 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 		handle_resized_event(mon, event.window.data1, event.window.data2);
 		break;
 	case SDL_EVENT_WINDOW_MOUSE_ENTER:
-		handle_enter_event();
+		handle_enter_event(mon);
 		break;
 	case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-		handle_leave_event();
+		handle_leave_event(mon);
 		break;
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		handle_focus_lost_event(mon);
