@@ -579,7 +579,7 @@ int check_prefs_changed_gfx()
 		pause_sound();
 		resume_sound();
 		//refreshtitle();
-		inputdevice_acquire(TRUE);
+		inputdevice_acquire(currprefs.capture_always);
 #ifndef	_DEBUG
 		setpriority(currprefs.active_capture_priority);
 #endif
