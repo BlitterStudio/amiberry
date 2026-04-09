@@ -1102,10 +1102,15 @@ struct device_info *sys_command_info (int unitnum, struct device_info *di, int q
 	dix = sys_command_info_session (unitnum, di, quick, -1);
 	if (dix && dix->media_inserted && !quick && !dix->audio_playing) {
 		TCHAR *name = NULL;
+#ifdef AMIBERRY
 		uae_u8 buf[4096];
+#else
+		uae_u8 buf[2048];
+#endif
 		if (sys_command_cd_read(unitnum, buf, 16, 1)) {
 			if ((buf[0] == 1 || buf[0] == 2) && !memcmp(buf + 1, "CD001", 5)) {
 				TCHAR *p;
+#ifdef AMIBERRY
 				char vol[33];
 				char sysid[33];
 				memcpy(vol, buf + 40, 32);
@@ -1114,6 +1119,10 @@ struct device_info *sys_command_info (int unitnum, struct device_info *di, int q
 				sysid[32] = 0;
 				au_copy(dix->volume_id, 32, vol);
 				au_copy(dix->system_id, 32, sysid);
+#else
+				au_copy(dix->volume_id, 32, (uae_char*)buf + 40);
+				au_copy(dix->system_id, 32, (uae_char*)buf + 8);
+#endif
 				p = dix->volume_id + _tcslen(dix->volume_id) - 1;
 				while (p > dix->volume_id && *p == ' ')
 					*p-- = 0;
@@ -1686,6 +1695,9 @@ int scsi_cd_emulate (int unitnum, uae_u8 *cmdbuf, int scsi_cmd_len,
 	}
 	break;
 	case 0x01: /* REZERO UNIT */
+		if (nodisk(&di))
+			goto nodisk;
+		stopplay(unitnum);
 		scsi_len = 0;
 		break;
 	case 0x1d: /* SEND DIAGNOSTICS */

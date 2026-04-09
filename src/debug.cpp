@@ -79,7 +79,7 @@ uae_u64 debug_illegal_mask;
 static int debug_mmu_mode;
 static bool break_if_enforcer;
 static uaecptr debug_pc;
-
+static bool debug_float;
 static int trace_cycles;
 static int last_hpos1, last_hpos2;
 static int last_vpos1, last_vpos2;
@@ -234,7 +234,7 @@ static const TCHAR *help[] = {
 	_T("  wd [<0-1>]            Enable illegal access logger. 1 = enable break.\n"),
 	_T("  L <file> <addr> [<n>] Load a block of Amiga memory.\n"),
 	_T("  S <file> <addr> <n>   Save a block of Amiga memory.\n"),
-	_T("  s \"<string>\"/<values> [<addr>] [<length>]\n"),
+	_T("  s \"<string>\"/<values> [<addr>] [<endaddr-1>]\n"),
 	_T("                        Search for string/bytes.\n"),
 	_T("  T or Tt               Show exec tasks and their PCs.\n"),
 	_T("  Td,Tl,Tr,Tp,Ts,TS,Ti,TO,TM,Tf Show devs, libs, resources, ports, semaphores,\n"),
@@ -254,7 +254,7 @@ static const TCHAR *help[] = {
 	_T("  vh [<ratio> <lines>]  \"Heat map\"\n"),
 	_T("  I <custom event>      Send custom event string\n"),
 #ifdef WITH_SOFTFLOAT
-	_T("  ?<value>              Hex ($, 0x)/Bin (%)/Dec (!) converter and calculator. Floating point is partially supported.\n"),
+	_T("  ?<value>              Hex ($, 0x)/Bin (%)/Dec (!) converter and calculator. \"?.\" to include also floating point formats.\n"),
 #else
 	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n"),
 #endif
@@ -1333,9 +1333,6 @@ static void converter(TCHAR **c)
 		return;
 	}
 
-	uae_u64 df = floatx80_to_float64(xf, &st);
-	uae_u32 sf = floatx80_to_float32(xf, &st);
-
 	int i, j;
 	for (i = 0, j = 0; i < 32; i++) {
 		s[j++] = (v & (1 << (31 - i))) ? '1' : '0';
@@ -1344,9 +1341,15 @@ static void converter(TCHAR **c)
 		}
 	}
 	s[j] = 0;
-	console_out_f(_T("$%08X = %%%s = %u = %d ($%08X.S = $%08X%08X.D = $%04X.%08X%08X.X = %f)\n"), v, s, v, (uae_s32)v,
-		sf, (uae_u32)(df >> 32), (uae_u32)df, (uae_u32)(xf.high), (uae_u32)(xf.low >> 32), (uae_u32)xf.low,
-		f80todouble(xf));
+	if (debug_float) {
+		uae_u64 df = floatx80_to_float64(xf, &st);
+		uae_u32 sf = floatx80_to_float32(xf, &st);
+		console_out_f(_T("$%08X = %%%s = %u = %d ($%08X.S = $%08X%08X.D = $%04X.%08X%08X.X = %f)\n"), v, s, v, (uae_s32)v,
+			sf, (uae_u32)(df >> 32), (uae_u32)df, (uae_u32)(xf.high), (uae_u32)(xf.low >> 32), (uae_u32)xf.low,
+			f80todouble(xf));
+	} else {
+		console_out_f(_T("$%08X = %%%s = %u = %d\n"), v, s, v, (uae_s32)v);
+	}
 #else
 	bool err;
 	uae_u32 v = readint(c, &err);
@@ -6481,7 +6484,7 @@ static void searchmem (TCHAR **cc)
 			endaddr = readhex(cc, NULL);
 		}
 	}
-	console_out_f (_T("Searching from %08X to %08X..\n"), addr + 1, endaddr);
+	console_out_f (_T("Searching from %08X to %08X..\n"), addr + 1, endaddr - 1);
 	nextaddr_init(addr);
 	bool out = false;
 	while ((addr = nextaddr(addr, endaddr, NULL, true, &out)) != 0xffffffff) {
@@ -7877,10 +7880,15 @@ static bool debug_line (TCHAR *input)
 			break;
 		case 'h':
 		case '?':
-			if (more_params (&inptr))
-				converter (&inptr);
-			else
+			if (more_params(&inptr)) {
+				if (peekchar(&inptr) == '.') {
+					debug_float = !debug_float;
+				} else {
+					converter(&inptr);
+				}
+			} else {
 				debug_help ();
+			}
 			break;
 	}
 	return false;

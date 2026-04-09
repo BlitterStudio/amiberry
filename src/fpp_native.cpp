@@ -415,7 +415,7 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 		if (wrd1 & 0x80000000) {
 			frac = -frac;
 		}
-		fpd->fp = ldexp(frac, ((wrd1 >> 16) & 0x7fff) - 16383);
+		fpd->fp = ldexp (frac, ((wrd1 >> 16) & 0x7fff) - 16383);
 	}
 #else
 		double frac;
@@ -643,9 +643,9 @@ static const TCHAR *fp_print(fpdata *fpd, int mode)
 		_sntprintf(fsout, sizeof fsout, _T("%c%s"), n ? '-' : '+', _T("nan"));
 	} else {
 #ifdef USE_LONG_DOUBLE
-		_sntprintf(fsout, sizeof fsout, _T("#%Le"), fpd->fp);
+		_sntprintf(fsout, sizeof fsout, _T("%Le"), fpd->fp);
 #else
-		_sntprintf(fsout, sizeof fsout, _T("#%e"), fpd->fp);
+		_sntprintf(fsout, sizeof fsout, _T("%e"), fpd->fp);
 #endif
 	}
 	if (mode == 0 || mode > _tcslen(fsout))
