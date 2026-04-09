@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <!--
+    The GitHub Actions artifact submitted to SignPath is itself a ZIP archive.
+    It contains:
+      - amiberry-*-portable.zip
+      - amiberry-*.exe
+
+    We intentionally sign only Amiberry-owned binaries:
+      - the Windows installer executable
+      - Amiberry.exe inside the portable ZIP
+
+    Bundled third-party DLLs are left untouched.
+  -->
+  <zip-file>
+    <zip-file path="amiberry-*-portable.zip">
+      <pe-file path="*/Amiberry.exe">
+        <authenticode-sign/>
+      </pe-file>
+    </zip-file>
+    <pe-file path="amiberry-*.exe">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

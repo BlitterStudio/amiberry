@@ -922,6 +922,132 @@ jobs:
         run: |
           cpack -G INNOSETUP --config out/build/windows-release/CPackConfig.cmake
 
+      - name: Detect SignPath configuration
+        id: signpath-config
+        shell: pwsh
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
+            "enabled=false" >> $env:GITHUB_OUTPUT
+            Write-Host "SignPath disabled for pull_request events."
+            exit 0
+          }
+
+          $required = @{
+            SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
+            SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
+            SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
+            SIGNPATH_SIGNING_POLICY_SLUG = $env:SIGNPATH_SIGNING_POLICY_SLUG
+            SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
+          }
+          $missing = @(
+            $required.GetEnumerator() |
+            Where-Object { [string]::IsNullOrWhiteSpace($_.Value) } |
+            ForEach-Object { $_.Key } |
+            Sort-Object
+          )
+
+          if ($missing.Count -gt 0) {
+            "enabled=false" >> $env:GITHUB_OUTPUT
+            Write-Host "SignPath disabled because the following settings are missing: $($missing -join ', ')"
+            exit 0
+          }
+
+          "enabled=true" >> $env:GITHUB_OUTPUT
+          Write-Host "SignPath enabled for this run."
+
+      - name: Upload unsigned Windows artifacts for SignPath
+        if: steps.signpath-config.outputs.enabled == 'true'
+        id: signpath-unsigned
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.artifact_name }}-signpath-unsigned
+          path: |
+            amiberry-*.zip
+            amiberry-*.exe
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      - name: Submit SignPath signing request
+        if: steps.signpath-config.outputs.enabled == 'true'
+        id: signpath
+        uses: SignPath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.signpath-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1200
+          output-artifact-directory: signpath-signed
+
+      - name: Replace unsigned artifacts with signed outputs
+        if: steps.signpath-config.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $downloadDir = Join-Path $PWD "signpath-signed"
+          if (-not (Test-Path $downloadDir)) {
+            throw "Signed artifact directory '$downloadDir' was not created."
+          }
+
+          $portableZip = Get-ChildItem $downloadDir -Recurse -File -Filter "amiberry-*-portable.zip" | Select-Object -First 1
+          if (-not $portableZip) {
+            throw "Signed portable ZIP was not found in '$downloadDir'."
+          }
+
+          $installer = Get-ChildItem $downloadDir -Recurse -File -Filter "amiberry-*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "Signed installer EXE was not found in '$downloadDir'."
+          }
+
+          Copy-Item $portableZip.FullName $PWD -Force
+          Copy-Item $installer.FullName $PWD -Force
+          Write-Host "Replaced workspace artifacts with SignPath-signed outputs."
+
+      - name: Verify SignPath-signed artifacts
+        if: steps.signpath-config.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "$PWD/amiberry-*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "Signed installer EXE not found in workspace."
+          }
+
+          $installerSignature = Get-AuthenticodeSignature $installer.FullName
+          if ($installerSignature.Status -eq "NotSigned" -or -not $installerSignature.SignerCertificate) {
+            throw "Installer EXE is missing an Authenticode signature."
+          }
+          Write-Host "Installer signature status: $($installerSignature.Status)"
+
+          $portableZip = Get-ChildItem "$PWD/amiberry-*-portable.zip" | Select-Object -First 1
+          if (-not $portableZip) {
+            throw "Signed portable ZIP not found in workspace."
+          }
+
+          $verifyRoot = Join-Path $PWD "portable-signed-smoke"
+          Remove-Item -Recurse -Force $verifyRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
+          Expand-Archive -Path $portableZip.FullName -DestinationPath $verifyRoot
+
+          $portableExe = Get-ChildItem $verifyRoot -Recurse -File -Filter "Amiberry.exe" | Select-Object -First 1
+          if (-not $portableExe) {
+            throw "Portable ZIP is missing Amiberry.exe after SignPath signing."
+          }
+
+          $portableSignature = Get-AuthenticodeSignature $portableExe.FullName
+          if ($portableSignature.Status -eq "NotSigned" -or -not $portableSignature.SignerCertificate) {
+            throw "Portable ZIP Amiberry.exe is missing an Authenticode signature."
+          }
+          Write-Host "Portable EXE signature status: $($portableSignature.Status)"
+
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v6
