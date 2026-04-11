@@ -5448,6 +5448,9 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 			*tmpp++ = 0;
 			_tcscpy (uci.rootdir, tmpp2);
 		}
+		str = cfgfile_subst_path_load(UNEXPANDED, &p->path_hardfile, uci.rootdir, true);
+		if (str)
+			_tcscpy(uci.rootdir, str);
 		_tcscpy (uci.volname, volname);
 		_tcscpy (uci.devname, devname);
 		if (! getintval (&tmpp, &uci.bootpri, 0))
@@ -5491,8 +5494,14 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 			}
 			tmpp += tmppr - tmppr2;
 		}
-		if (uci.rootdir[0] != ':')
+		if (uci.rootdir[0] != ':') {
+			if (type == 1 || type == 4) {
+				str = cfgfile_subst_path_load(UNEXPANDED, &p->path_hardfile, uci.rootdir, false);
+				if (str)
+					_tcscpy(uci.rootdir, str);
+			}
 			get_hd_geometry (&uci);
+		}
 		_tcscpy (uci.devname, devname);
 		if (! getintval (&tmpp, &uci.sectors, ',')
 			|| ! getintval (&tmpp, &uci.surfaces, ',')
@@ -5738,7 +5747,9 @@ static int cfgfile_parse_filesys (struct uae_prefs *p, const TCHAR *option, TCHA
 				goto invalid_fs;
 			_tcscpy (uci.rootdir, value);
 		}
-		str = cfgfile_subst_path_load (UNEXPANDED, &p->path_hardfile, uci.rootdir, true);
+		str = cfgfile_subst_path_load (UNEXPANDED, &p->path_hardfile, uci.rootdir, hdf ? false : true);
+		if (str)
+			_tcscpy (uci.rootdir, str);
 		if (uci.geometry[0])
 			parse_geo(uci.geometry, &uci, nullptr, false, false);
 #ifdef FILESYS
