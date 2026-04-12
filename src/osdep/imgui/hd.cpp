@@ -152,10 +152,10 @@ static void AddToMruCdList(const std::string& path)
 
 static std::string GetCdImageBrowseStartPath(const std::string& currentPath)
 {
-    if (!currentPath.empty() && !IsCdDevicePath(currentPath))
-        return currentPath;
+    if (IsCdDevicePath(currentPath))
+        return get_cdrom_browse_path();
 
-    return get_cdrom_browse_path();
+    return get_cdrom_browse_path(currentPath);
 }
 
 // Helper to handle TCHAR arrays in ImGui

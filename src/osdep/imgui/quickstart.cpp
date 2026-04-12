@@ -493,7 +493,7 @@ void render_panel_quickstart() {
             std::string tmp;
             if (std::strlen(changed_prefs.cdslots[0].name) > 0 &&
                 std::strncmp(changed_prefs.cdslots[0].name, "/dev/", 5) != 0)
-                tmp = changed_prefs.cdslots[0].name;
+                tmp = get_cdrom_browse_path(changed_prefs.cdslots[0].name);
             else
                 tmp = get_cdrom_browse_path();
 

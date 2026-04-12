@@ -4876,6 +4876,45 @@ std::string get_cdrom_browse_path()
 	return get_cdrom_path();
 }
 
+static std::string resolve_cdrom_relative_path(const multipath& paths, const std::filesystem::path& relativePath)
+{
+	for (const auto& basePath : paths.path)
+	{
+		if (basePath[0] == '\0' || _tcscmp(basePath, _T("./")) == 0 || _tcscmp(basePath, _T(".\\")) == 0)
+			continue;
+
+		std::error_code ec;
+		const auto candidate = std::filesystem::path(basePath) / relativePath;
+		if (std::filesystem::exists(candidate, ec))
+			return candidate.string();
+
+		const auto parent = candidate.parent_path();
+		ec.clear();
+		if (!parent.empty() && std::filesystem::is_directory(parent, ec))
+			return candidate.string();
+	}
+
+	return {};
+}
+
+std::string get_cdrom_browse_path(const std::string& currentPath)
+{
+	if (currentPath.empty())
+		return get_cdrom_browse_path();
+
+	const std::filesystem::path path(currentPath);
+	if (path.is_absolute())
+		return currentPath;
+
+	auto resolved = resolve_cdrom_relative_path(changed_prefs.path_cd, path);
+	if (resolved.empty())
+		resolved = resolve_cdrom_relative_path(currprefs.path_cd, path);
+	if (!resolved.empty())
+		return resolved;
+
+	return get_cdrom_browse_path();
+}
+
 void set_cdrom_path(const std::string& newpath)
 {
 	cdrom_path = newpath;
