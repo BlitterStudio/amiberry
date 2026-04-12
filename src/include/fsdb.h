@@ -175,6 +175,7 @@ extern uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence) n
 extern uae_s64 my_fsize (struct my_openfile_s*);
 extern unsigned int my_read (struct my_openfile_s*, void*, unsigned int);
 extern unsigned int my_write (struct my_openfile_s*, void*, unsigned int);
+extern void my_set_time_explicit(struct my_openfile_s*) noexcept;
 extern int my_truncate (const TCHAR *name, uae_u64 len);
 extern int dos_errno (void);
 extern bool my_existslink(const char* name);

@@ -146,6 +146,7 @@ struct my_openfile_s {
 	int fd{};
 	char* path{};
 	bool touched{};
+	bool explicit_time_set{};
 };
 
 #ifdef AMIBERRY
@@ -944,8 +945,10 @@ struct my_openfile_s* my_open(const TCHAR* name, int flags)
 
 	mos->path = strdup(name);
 	mos->touched = false;
+	mos->explicit_time_set = false;
 	if (flags & O_TRUNC) {
 		mos->touched = true;
+		mos->explicit_time_set = false;
 		fsdb_sync_file_time_from_host(mos->path);
 	}
 	return mos.release();
@@ -960,7 +963,10 @@ void my_close(struct my_openfile_s* mos)
 	if (close(mos->fd) != 0) {
 		write_log("my_close: close on file %s failed: %s\n", mos->path, strerror(errno));
 	} else if (mos->touched) {
-		my_utime(mos->path, nullptr);
+		if (!mos->explicit_time_set && !my_utime(mos->path, nullptr)) {
+			write_log("my_close: failed to update timestamp on file %s\n", mos->path);
+		}
+		fsdb_sync_file_time_from_host(mos->path);
 	}
 
 	free(mos->path);
@@ -992,6 +998,13 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	return static_cast<unsigned int>(bytes_read);
 }
 
+void my_set_time_explicit(struct my_openfile_s* mos) noexcept
+{
+	if (mos) {
+		mos->explicit_time_set = true;
+	}
+}
+
 [[nodiscard]] unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 {
 	// Early validation with combined null check message
@@ -1018,6 +1031,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 			if (total_written > 0) {
 				mos->touched = true;
+				mos->explicit_time_set = false;
 				fsdb_sync_file_time_from_host(mos->path);
 			}
 			write_log("my_write: write on file %s failed with error %s after %u bytes\n",
@@ -1034,6 +1048,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 		total_written += static_cast<unsigned int>(bytes_written);
 		mos->touched = true;
+		mos->explicit_time_set = false;
 	}
 
 	if (total_written > 0) {
@@ -1154,6 +1169,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 		mos->touched = true;
+		mos->explicit_time_set = false;
 		fsdb_sync_file_time_from_host(mos->path);
 		return 0;
 	}
