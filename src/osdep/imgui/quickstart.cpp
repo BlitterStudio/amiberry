@@ -491,10 +491,11 @@ void render_panel_quickstart() {
         const float cd_button_width = BUTTON_WIDTH * 1.33f;
         if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file", ImVec2(cd_button_width, 0))) {
             std::string tmp;
-            if (std::strlen(changed_prefs.cdslots[0].name) > 0)
-                tmp = changed_prefs.cdslots[0].name;
+            if (std::strlen(changed_prefs.cdslots[0].name) > 0 &&
+                std::strncmp(changed_prefs.cdslots[0].name, "/dev/", 5) != 0)
+                tmp = get_cdrom_browse_path(changed_prefs.cdslots[0].name);
             else
-                tmp = get_cdrom_path();
+                tmp = get_cdrom_browse_path();
 
             OpenFileDialogKey("QUICKSTART", "Select CD image file", "CD Images (*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.bin,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", tmp);
             qs_pending_cd = true;

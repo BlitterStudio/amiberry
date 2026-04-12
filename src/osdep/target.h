@@ -170,6 +170,8 @@ extern void set_floppy_path(const std::string& newpath);
 extern std::string get_harddrive_path();
 extern void set_harddrive_path(const std::string& newpath);
 extern std::string get_cdrom_path();
+extern std::string get_cdrom_browse_path();
+extern std::string get_cdrom_browse_path(const std::string& currentPath);
 extern void set_cdrom_path(const std::string& newpath);
 extern std::string get_themes_path();
 extern std::string get_shaders_path();

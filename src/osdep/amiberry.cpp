@@ -4854,6 +4854,67 @@ std::string get_cdrom_path()
 	return fix_trailing(cdrom_path);
 }
 
+static std::string get_first_valid_multipath_entry(const multipath& paths)
+{
+	for (const auto& path : paths.path)
+	{
+		if (path[0] != '\0' && _tcscmp(path, _T("./")) != 0 && _tcscmp(path, _T(".\\")) != 0)
+			return path;
+	}
+
+	return {};
+}
+
+std::string get_cdrom_browse_path()
+{
+	auto path = get_first_valid_multipath_entry(changed_prefs.path_cd);
+	if (path.empty())
+		path = get_first_valid_multipath_entry(currprefs.path_cd);
+	if (!path.empty())
+		return path;
+
+	return get_cdrom_path();
+}
+
+static std::string resolve_cdrom_relative_path(const multipath& paths, const std::filesystem::path& relativePath)
+{
+	for (const auto& basePath : paths.path)
+	{
+		if (basePath[0] == '\0' || _tcscmp(basePath, _T("./")) == 0 || _tcscmp(basePath, _T(".\\")) == 0)
+			continue;
+
+		std::error_code ec;
+		const auto candidate = std::filesystem::path(basePath) / relativePath;
+		if (std::filesystem::exists(candidate, ec))
+			return candidate.string();
+
+		const auto parent = candidate.parent_path();
+		ec.clear();
+		if (!parent.empty() && std::filesystem::is_directory(parent, ec))
+			return candidate.string();
+	}
+
+	return {};
+}
+
+std::string get_cdrom_browse_path(const std::string& currentPath)
+{
+	if (currentPath.empty())
+		return get_cdrom_browse_path();
+
+	const std::filesystem::path path(currentPath);
+	if (path.is_absolute())
+		return currentPath;
+
+	auto resolved = resolve_cdrom_relative_path(changed_prefs.path_cd, path);
+	if (resolved.empty())
+		resolved = resolve_cdrom_relative_path(currprefs.path_cd, path);
+	if (!resolved.empty())
+		return resolved;
+
+	return get_cdrom_browse_path();
+}
+
 void set_cdrom_path(const std::string& newpath)
 {
 	cdrom_path = newpath;
@@ -5478,6 +5539,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
 	int numROMs, numDisks, numCDs;
 	char tmpFile[MAX_DPATH];
+	TCHAR legacy_cd_path[MAX_DPATH];
+	TCHAR legacy_cd_path_option[CONFIG_BLEN];
 	int ret = 0;
 	std::string configured_base_path;
 
@@ -5522,6 +5585,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	}
 	else
 	{
+		_sntprintf(legacy_cd_path_option, sizeof legacy_cd_path_option / sizeof(TCHAR), _T("%s.cd_path"), TARGET_NAME);
 		ret |= cfgfile_string(option, value, "config_path", config_path);
 		ret |= cfgfile_string(option, value, "controllers_path", controllers_path);
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file);
@@ -5530,6 +5594,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "floppy_path", floppy_path);
 		ret |= cfgfile_string(option, value, "harddrive_path", harddrive_path);
 		ret |= cfgfile_string(option, value, "cdrom_path", cdrom_path);
+		if (cfgfile_string(option, value, _T("cd_path"), legacy_cd_path, sizeof legacy_cd_path)
+			|| cfgfile_string(option, value, legacy_cd_path_option, legacy_cd_path, sizeof legacy_cd_path))
+		{
+			cdrom_path = legacy_cd_path;
+			ret = 1;
+		}
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path);

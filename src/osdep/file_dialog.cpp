@@ -3,6 +3,7 @@
 
 #include <cfloat>
 #include <cctype>
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -216,10 +217,39 @@ namespace
 #endif
 	}
 
+	static std::string resolve_dialog_initial_directory(const std::string& initialPath)
+	{
+		if (initialPath.empty())
+			return {};
+
+		std::error_code ec;
+		std::filesystem::path path(initialPath);
+
+		if (std::filesystem::is_directory(path, ec))
+			return path.string();
+
+		ec.clear();
+		if (std::filesystem::exists(path, ec))
+		{
+			const auto parent = path.parent_path();
+			return parent.empty() ? path.string() : parent.string();
+		}
+
+		const auto parent = path.parent_path();
+		if (!parent.empty())
+		{
+			ec.clear();
+			if (std::filesystem::is_directory(parent, ec))
+				return parent.string();
+		}
+
+		return initialPath;
+	}
+
 	static void open_igfd_file_dialog(const char* key, const char* title, const char* filters, const std::string& initialPath)
 	{
 		IGFD::FileDialogConfig config;
-		config.path = initialPath;
+		config.path = resolve_dialog_initial_directory(initialPath);
 		config.countSelectionMax = 1;
 		config.flags = ImGuiFileDialogFlags_Modal;
 		ImGuiFileDialog::Instance()->OpenDialog(key, title, filters, config);
@@ -228,7 +258,7 @@ namespace
 	static void open_igfd_dir_dialog(const char* key, const std::string& initialPath)
 	{
 		IGFD::FileDialogConfig config;
-		config.path = initialPath;
+		config.path = resolve_dialog_initial_directory(initialPath);
 		config.countSelectionMax = 1;
 		config.flags = ImGuiFileDialogFlags_Modal;
 		ImGuiFileDialog::Instance()->OpenDialog(key, "Choose Directory", nullptr, config);
@@ -307,6 +337,7 @@ void OpenFileDialogKey(const char* key, const char* title, const char* filters, 
 	key = dialog_key_or_default(key);
 	title = title ? title : "Choose File";
 	filters = filters ? filters : ".*";
+	const auto dialogPath = resolve_dialog_initial_directory(initialPath);
 
 	if (can_use_native_dialog())
 	{
@@ -330,7 +361,7 @@ void OpenFileDialogKey(const char* key, const char* title, const char* filters, 
 				args.filterList = parsed.items.data();
 				args.filterCount = static_cast<nfdfiltersize_t>(parsed.items.size());
 			}
-			args.defaultPath = initialPath.empty() ? nullptr : initialPath.c_str();
+			args.defaultPath = dialogPath.empty() ? nullptr : dialogPath.c_str();
 			args.parentWindow = parentWindow;
 			result = NFD_SaveDialogU8_With(&outPath, &args);
 		}
@@ -342,7 +373,7 @@ void OpenFileDialogKey(const char* key, const char* title, const char* filters, 
 				args.filterList = parsed.items.data();
 				args.filterCount = static_cast<nfdfiltersize_t>(parsed.items.size());
 			}
-			args.defaultPath = initialPath.empty() ? nullptr : initialPath.c_str();
+			args.defaultPath = dialogPath.empty() ? nullptr : dialogPath.c_str();
 			args.parentWindow = parentWindow;
 			result = NFD_OpenDialogU8_With(&outPath, &args);
 		}
@@ -403,13 +434,14 @@ bool IsFileDialogOpenKey(const char* key)
 void OpenDirDialogKey(const char* key, const std::string& initialPath)
 {
 	key = dialog_key_or_default(key);
+	const auto dialogPath = resolve_dialog_initial_directory(initialPath);
 
 	if (can_use_native_dialog())
 	{
 #ifdef HAS_NFD
 		ensure_wayland_display();
 		nfdpickfolderu8args_t args{};
-		args.defaultPath = initialPath.empty() ? nullptr : initialPath.c_str();
+		args.defaultPath = dialogPath.empty() ? nullptr : dialogPath.c_str();
 
 		AmigaMonitor* mon = &AMonitors[0];
 		if (mon->gui_window)
