@@ -605,6 +605,7 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 	}
 
 	struct mytimeval mtv;
+	const auto path_utf8 = iso_8859_1_to_utf8(std::string_view(name));
 
 	bool ok = false;
 	try {
@@ -638,11 +639,11 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 		struct _utimbuf utb;
 		utb.actime = mtv.tv_sec;
 		utb.modtime = mtv.tv_sec;
-		ok = _utime(name, &utb) == 0;
+		ok = _utime(path_utf8.c_str(), &utb) == 0;
 #else
 		struct timeval times[2];
 		times[0] = times[1] = { mtv.tv_sec, mtv.tv_usec };
-		ok = utimes(name, times) == 0;
+		ok = utimes(path_utf8.c_str(), times) == 0;
 #endif
 	}
 	catch (...) {
