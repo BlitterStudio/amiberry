@@ -150,6 +150,14 @@ static void AddToMruCdList(const std::string& path)
         lstMRUCDList.resize(10);
 }
 
+static std::string GetCdImageBrowseStartPath(const std::string& currentPath)
+{
+    if (!currentPath.empty() && !IsCdDevicePath(currentPath))
+        return currentPath;
+
+    return get_cdrom_path();
+}
+
 // Helper to handle TCHAR arrays in ImGui
 static bool InputTextT(const char* label, TCHAR* buf, size_t buf_size, ImGuiInputTextFlags flags = 0)
 {
@@ -496,14 +504,9 @@ static void RenderCDSection()
     ImGui::SameLine();
     if (AmigaButton("...")) {
          char* curr_path = ua(changed_prefs.cdslots[0].name);
-         std::string startPath = curr_path;
-         if (startPath.empty()) {
-             char* tmp = ua(get_cdrom_path().c_str());
-             startPath = tmp;
-             xfree(tmp);
-         }
+         const std::string startPath = GetCdImageBrowseStartPath(curr_path);
          xfree(curr_path);
-         OpenFileDialogKey("HD_CD_SLOT", "Select CD image file", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
+         OpenFileDialogKey("HD_CD_SLOT", "Select CD image file", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", startPath);
     }
     
     ImGui::EndDisabled();
@@ -1218,7 +1221,7 @@ static void ShowEditCDDriveModal()
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("...")) {
-            OpenFileDialogKey("HD_CD_MODAL", "Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
+            OpenFileDialogKey("HD_CD_MODAL", "Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", GetCdImageBrowseStartPath(path_buf));
             selecting_cd_modal_image = true;
         }
 

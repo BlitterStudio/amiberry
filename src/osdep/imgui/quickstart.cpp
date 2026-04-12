@@ -491,7 +491,8 @@ void render_panel_quickstart() {
         const float cd_button_width = BUTTON_WIDTH * 1.33f;
         if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file", ImVec2(cd_button_width, 0))) {
             std::string tmp;
-            if (std::strlen(changed_prefs.cdslots[0].name) > 0)
+            if (std::strlen(changed_prefs.cdslots[0].name) > 0 &&
+                std::strncmp(changed_prefs.cdslots[0].name, "/dev/", 5) != 0)
                 tmp = changed_prefs.cdslots[0].name;
             else
                 tmp = get_cdrom_path();
