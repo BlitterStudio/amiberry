@@ -705,7 +705,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		if (prefs->cdslots[0].inuse && strlen(prefs->cdslots[0].name) > 0)
 			tmp = std::string(prefs->cdslots[0].name);
 		else
-			tmp = get_cdrom_path();
+			tmp = get_cdrom_browse_path();
 
 		if (!tmp.empty())
 		{

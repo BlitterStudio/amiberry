@@ -155,7 +155,7 @@ static std::string GetCdImageBrowseStartPath(const std::string& currentPath)
     if (!currentPath.empty() && !IsCdDevicePath(currentPath))
         return currentPath;
 
-    return get_cdrom_path();
+    return get_cdrom_browse_path();
 }
 
 // Helper to handle TCHAR arrays in ImGui

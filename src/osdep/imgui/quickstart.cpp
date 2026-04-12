@@ -495,7 +495,7 @@ void render_panel_quickstart() {
                 std::strncmp(changed_prefs.cdslots[0].name, "/dev/", 5) != 0)
                 tmp = changed_prefs.cdslots[0].name;
             else
-                tmp = get_cdrom_path();
+                tmp = get_cdrom_browse_path();
 
             OpenFileDialogKey("QUICKSTART", "Select CD image file", "CD Images (*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.bin,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", tmp);
             qs_pending_cd = true;
