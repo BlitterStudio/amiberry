@@ -143,8 +143,10 @@ struct my_opendir_s {
 };
 
 struct my_openfile_s {
-	int fd;
-	char* path;
+	int fd{};
+	char* path{};
+	bool touched{};
+	bool explicit_time_set{};
 };
 
 #ifdef AMIBERRY
@@ -670,6 +672,17 @@ std::string prefix_with_data_path(const std::string& filename)
 	return t - mktime(&gt);
 }
 
+[[nodiscard]] static long get_mtime_usec(const struct stat& st) noexcept
+{
+#ifdef _WIN32
+	return 0;
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	return static_cast<long>(st.st_mtimespec.tv_nsec / 1000);
+#else
+	return static_cast<long>(st.st_mtim.tv_nsec / 1000);
+#endif
+}
+
 [[nodiscard]] bool my_stat(const TCHAR* name, struct mystat* statbuf) noexcept
 {
 	try {
@@ -705,7 +718,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		statbuf->mode = ((file_status.permissions() & fs::perms::owner_read) != fs::perms::none ? FILEFLAG_READ : 0) |
 			((file_status.permissions() & fs::perms::owner_write) != fs::perms::none ? FILEFLAG_WRITE : 0);
 		statbuf->mtime.tv_sec = st.st_mtime + get_local_time_offset(st.st_mtime);
-		statbuf->mtime.tv_usec = 0;
+		statbuf->mtime.tv_usec = static_cast<uae_s32>(get_mtime_usec(st));
 
 		return true;
 	}
@@ -931,6 +944,13 @@ struct my_openfile_s* my_open(const TCHAR* name, int flags)
 	}
 
 	mos->path = strdup(name);
+	mos->touched = false;
+	mos->explicit_time_set = false;
+	if (flags & O_TRUNC) {
+		mos->touched = true;
+		mos->explicit_time_set = false;
+		fsdb_sync_file_time_from_host(mos->path);
+	}
 	return mos.release();
 }
 
@@ -942,6 +962,11 @@ void my_close(struct my_openfile_s* mos)
 
 	if (close(mos->fd) != 0) {
 		write_log("my_close: close on file %s failed: %s\n", mos->path, strerror(errno));
+	} else if (mos->touched) {
+		if (!mos->explicit_time_set && !my_utime(mos->path, nullptr)) {
+			write_log("my_close: failed to update timestamp on file %s\n", mos->path);
+		}
+		fsdb_sync_file_time_from_host(mos->path);
 	}
 
 	free(mos->path);
@@ -973,6 +998,13 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	return static_cast<unsigned int>(bytes_read);
 }
 
+void my_set_time_explicit(struct my_openfile_s* mos) noexcept
+{
+	if (mos) {
+		mos->explicit_time_set = true;
+	}
+}
+
 [[nodiscard]] unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 {
 	// Early validation with combined null check message
@@ -997,6 +1029,11 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 				continue;
 			}
 
+			if (total_written > 0) {
+				mos->touched = true;
+				mos->explicit_time_set = false;
+				fsdb_sync_file_time_from_host(mos->path);
+			}
 			write_log("my_write: write on file %s failed with error %s after %u bytes\n",
 				mos->path, strerror(errno), total_written);
 			return total_written; // Return partial progress on error
@@ -1010,6 +1047,13 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 		total_written += static_cast<unsigned int>(bytes_written);
+		mos->touched = true;
+		mos->explicit_time_set = false;
+	}
+
+	if (total_written > 0) {
+		mos->touched = true;
+		fsdb_sync_file_time_from_host(mos->path);
 	}
 
 	// Only log if we didn't write everything but didn't hit an error
@@ -1124,6 +1168,9 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			return -1;
 		}
 
+		mos->touched = true;
+		mos->explicit_time_set = false;
+		fsdb_sync_file_time_from_host(mos->path);
 		return 0;
 	}
 	catch (const std::exception& e) {

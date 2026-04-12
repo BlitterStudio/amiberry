@@ -6236,6 +6236,15 @@ static void	action_set_date(TrapContext *ctx, Unit *unit, dpacket *packet)
 		//write_log (_T("%llu.%u (%d,%d,%d) %s\n"), tv.tv_sec, tv.tv_usec, trap_get_long(ctx, date), trap_get_long(ctx, date + 4), trap_get_long(ctx, date + 8), a->nname);
 		if (!my_utime (a->nname, &tv))
 			err = dos_errno ();
+		else {
+			for (Key *k = unit->keys; k; k = k->next) {
+				if (!k->fd || k->fd->fstype != FS_DIRECTORY || !k->fd->of
+					|| !k->aino || !k->aino->nname || _tcscmp(k->aino->nname, a->nname) != 0) {
+					continue;
+				}
+				my_set_time_explicit(k->fd->of);
+			}
+		}
 	}
 	if (err != 0) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
