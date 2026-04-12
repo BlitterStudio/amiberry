@@ -798,6 +798,19 @@ static TCHAR *cfgfile_subst_path_load (const TCHAR *path, struct multipath *mp, 
 	return cfgfile_subst_path (path, mp->path[0], file);
 }
 
+static void cfgfile_resolve_filesys_rootdir (struct uae_prefs *p, struct uaedev_config_info *uci, bool dir)
+{
+	if (!uci->rootdir[0] || uci->rootdir[0] == ':')
+		return;
+
+	TCHAR *resolved = cfgfile_subst_path_load (UNEXPANDED, &p->path_hardfile, uci->rootdir, dir);
+	if (!resolved)
+		return;
+
+	_tcscpy (uci->rootdir, resolved);
+	xfree (resolved);
+}
+
 static bool isdefault (const TCHAR *s)
 {
 	TCHAR tmp[MAX_DPATH];
@@ -5398,7 +5411,6 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 {
 	struct uaedev_config_info uci{};
 	TCHAR *tmpp = _tcschr (value, ','), *tmpp2;
-	TCHAR *str = nullptr;
 	TCHAR devname[MAX_DPATH], volname[MAX_DPATH];
 
 	devname[0] = volname[0] = 0;
@@ -5448,9 +5460,7 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 			*tmpp++ = 0;
 			_tcscpy (uci.rootdir, tmpp2);
 		}
-		str = cfgfile_subst_path_load(UNEXPANDED, &p->path_hardfile, uci.rootdir, true);
-		if (str)
-			_tcscpy(uci.rootdir, str);
+		cfgfile_resolve_filesys_rootdir (p, &uci, true);
 		_tcscpy (uci.volname, volname);
 		_tcscpy (uci.devname, devname);
 		if (! getintval (&tmpp, &uci.bootpri, 0))
@@ -5494,14 +5504,10 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 			}
 			tmpp += tmppr - tmppr2;
 		}
-		if (uci.rootdir[0] != ':') {
-			if (type == 1 || type == 4) {
-				str = cfgfile_subst_path_load(UNEXPANDED, &p->path_hardfile, uci.rootdir, false);
-				if (str)
-					_tcscpy(uci.rootdir, str);
-			}
+		if (type == 1 || type == 4)
+			cfgfile_resolve_filesys_rootdir (p, &uci, false);
+		if (uci.rootdir[0] != ':')
 			get_hd_geometry (&uci);
-		}
 		_tcscpy (uci.devname, devname);
 		if (! getintval (&tmpp, &uci.sectors, ',')
 			|| ! getintval (&tmpp, &uci.surfaces, ',')
@@ -5618,7 +5624,6 @@ empty_fs:
 #ifdef FILESYS
 	add_filesys_config (p, nr, &uci);
 #endif
-	xfree (str);
 	return 1;
 
 invalid_fs:
@@ -5706,7 +5711,6 @@ static int cfgfile_parse_filesys (struct uae_prefs *p, const TCHAR *option, TCHA
 	{
 		struct uaedev_config_info uci{};
 		TCHAR *tmpp = _tcschr (value, ',');
-		TCHAR *str;
 		bool hdf;
 
 		uci_set_defaults (&uci, false);
@@ -5747,16 +5751,13 @@ static int cfgfile_parse_filesys (struct uae_prefs *p, const TCHAR *option, TCHA
 				goto invalid_fs;
 			_tcscpy (uci.rootdir, value);
 		}
-		str = cfgfile_subst_path_load (UNEXPANDED, &p->path_hardfile, uci.rootdir, hdf ? false : true);
-		if (str)
-			_tcscpy (uci.rootdir, str);
+		cfgfile_resolve_filesys_rootdir (p, &uci, !hdf);
 		if (uci.geometry[0])
 			parse_geo(uci.geometry, &uci, nullptr, false, false);
 #ifdef FILESYS
 		uci.type = hdf ? UAEDEV_HDF : UAEDEV_DIR;
 		add_filesys_config (p, -1, &uci);
 #endif
-		xfree (str);
 		return 1;
 invalid_fs:
 		cfgfile_warning(_T("Invalid filesystem/hardfile specification.\n"));
