@@ -210,6 +210,7 @@ extern std::string my_get_sha1_of_file(const char* filepath);
 char* fsdb_native_path(const char* root_dir, const char* amiga_path);
 void fsdb_get_file_time(a_inode* node, int* days, int* mins, int* ticks);
 int fsdb_set_file_time(a_inode* node, int days, int mins, int ticks);
+void fsdb_sync_file_time_from_host(const TCHAR* nname);
 int host_errno_to_dos_errno(int err);
 bool copyfile(const char* target, const char* source, bool replace);
 #endif

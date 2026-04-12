@@ -471,6 +471,38 @@ int fsdb_write_uaem(const char* nname, const fsdb_file_info* info)
 	return fsdb_write_uaem_internal(nullptr, nname, info);
 }
 
+void fsdb_sync_file_time_from_host(const TCHAR* nname)
+{
+	if (!nname || !currprefs.filesys_custom_uaefsdb) {
+		return;
+	}
+
+	fsdb_file_info info;
+	fsdb_init_file_info(&info);
+	if (fsdb_read_uaem(nname, &info) != 0) {
+		if (info.comment) {
+			xfree(info.comment);
+		}
+		return;
+	}
+
+	struct mystat statbuf {};
+	if (my_stat(nname, &statbuf)) {
+		int days, mins, ticks;
+		timeval_to_amiga(&statbuf.mtime, &days, &mins, &ticks, 50);
+		if (info.days != days || info.mins != mins || info.ticks != ticks) {
+			info.days = days;
+			info.mins = mins;
+			info.ticks = ticks;
+			fsdb_write_uaem_internal(nullptr, nname, &info);
+		}
+	}
+
+	if (info.comment) {
+		xfree(info.comment);
+	}
+}
+
 /* Return nonzero for any name we can't create on the native filesystem.  */
 static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* name, int isDirectory)
 {
