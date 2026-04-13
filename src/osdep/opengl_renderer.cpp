@@ -32,6 +32,7 @@
 #include "statusline.h"
 #include "vkbd/vkbd.h"
 #include "on_screen_joystick.h"
+#include "gui/gui_handling.h"
 #include <cmath>
 #include <SDL3_image/SDL_image.h>
 
@@ -59,6 +60,17 @@ static bool is_kmsdrm_video_driver()
 {
 	const char* driver = SDL_GetCurrentVideoDriver();
 	return driver != nullptr && strcmpi(driver, "KMSDRM") == 0;
+}
+
+static const uae_prefs& get_active_filter_prefs()
+{
+	return gui_running ? changed_prefs : currprefs;
+}
+
+static const char* get_selected_shader_name(const AmigaMonitor* mon)
+{
+	const auto& prefs = get_active_filter_prefs();
+	return mon->screen_is_picasso ? prefs.shader_rtg : prefs.shader;
 }
 
 static void resolve_gl_pixel_format(uint32_t sdl_pixel_format, GLenum& fmt, GLenum& type, int& bpp)
@@ -222,11 +234,7 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 	resolve_gl_pixel_format(pixel_format, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
 
 	auto mon = &AMonitors[monid];
-	const char* shader_name;
-	if (mon->screen_is_picasso)
-		shader_name = amiberry_options.shader_rtg;
-	else
-		shader_name = amiberry_options.shader;
+	const char* shader_name = get_selected_shader_name(mon);
 
 	// Skip shader recreation if already loaded with the same name.
 	// This preserves runtime parameter changes made by the user.
@@ -436,10 +444,15 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	}
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
 
+	const auto& filter_prefs = get_active_filter_prefs();
+
 	// Hot-reload shader if user changed it in the GUI while emulation is running
-	const char* wanted_shader = mon->screen_is_picasso ? amiberry_options.shader_rtg : amiberry_options.shader;
+	const char* wanted_shader = mon->screen_is_picasso ? filter_prefs.shader_rtg : filter_prefs.shader;
 	if (m_shader.loaded_name != wanted_shader && surface) {
 		alloc_texture(monid, surface->w, surface->h);
+	}
+	if (m_shader.crtemu != nullptr && m_shader.bezel_enabled != filter_prefs.use_bezel) {
+		update_crtemu_bezel();
 	}
 
 	// Compute bezel display area: letterbox/pillarbox the bezel image within the
@@ -448,7 +461,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	int bezelDisplayX = 0, bezelDisplayY = 0;
 	int bezelDisplayW = drawableWidth, bezelDisplayH = drawableHeight;
 
-	if (amiberry_options.use_custom_bezel && m_overlay.bezel_texture != 0 &&
+	if (filter_prefs.use_custom_bezel && m_overlay.bezel_texture != 0 &&
 		m_overlay.bezel_tex_w > 0 && m_overlay.bezel_tex_h > 0) {
 		float bezelAspect = static_cast<float>(m_overlay.bezel_tex_w) / m_overlay.bezel_tex_h;
 		float windowAspect = static_cast<float>(drawableWidth) / drawableHeight;
@@ -472,7 +485,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	int renderAreaX = 0, renderAreaY = 0;
 	int renderAreaW = drawableWidth, renderAreaH = drawableHeight;
 
-	if (amiberry_options.use_custom_bezel && m_overlay.bezel_texture != 0 && m_overlay.bezel_hole_w > 0.0f && m_overlay.bezel_hole_h > 0.0f) {
+	if (filter_prefs.use_custom_bezel && m_overlay.bezel_texture != 0 && m_overlay.bezel_hole_w > 0.0f && m_overlay.bezel_hole_h > 0.0f) {
 		renderAreaX = bezelDisplayX + static_cast<int>(m_overlay.bezel_hole_x * bezelDisplayW);
 		renderAreaY = bezelDisplayY + static_cast<int>(m_overlay.bezel_hole_y * bezelDisplayH);
 		renderAreaW = static_cast<int>(m_overlay.bezel_hole_w * bezelDisplayW);
@@ -908,6 +921,7 @@ void OpenGLRenderer::destroy_shaders()
 		m_shader.crtemu = nullptr;
 		m_shader.external = nullptr;
 		m_shader.preset = nullptr;
+		m_shader.bezel_enabled = false;
 		m_vsync.gl_initialized = false;
 		return;
 	}
@@ -927,6 +941,7 @@ void OpenGLRenderer::destroy_shaders()
 		destroy_shader_preset(m_shader.preset);
 		m_shader.preset = nullptr;
 	}
+	m_shader.bezel_enabled = false;
 	if (m_overlay.osd_program != 0 && glIsProgram(m_overlay.osd_program))
 	{
 		glDeleteProgram(m_overlay.osd_program);
@@ -1020,13 +1035,15 @@ void OpenGLRenderer::update_crtemu_bezel()
 {
 	if (m_shader.crtemu == nullptr)
 		return;
-	if (amiberry_options.use_bezel) {
+	const bool use_bezel = get_active_filter_prefs().use_bezel;
+	if (use_bezel) {
 		static CRTEMU_U32 frame_pixels[CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT];
 		crt_frame(frame_pixels);
 		crtemu_frame(m_shader.crtemu, frame_pixels, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
 	} else {
 		crtemu_frame(m_shader.crtemu, nullptr, 0, 0);
 	}
+	m_shader.bezel_enabled = use_bezel;
 }
 
 BezelHoleInfo OpenGLRenderer::get_bezel_hole_info() const
@@ -1461,23 +1478,23 @@ void OpenGLRenderer::destroy_bezel()
 
 void OpenGLRenderer::render_bezel(int x, int y, int w, int h)
 {
-	// Only re-evaluate bezel state when dirty (avoids per-frame string comparisons)
-	if (m_overlay.bezel_dirty) {
-		if (!amiberry_options.use_custom_bezel ||
-			strcmp(amiberry_options.custom_bezel, "none") == 0) {
-			if (m_overlay.bezel_texture != 0) {
-				destroy_bezel();
-			}
-			m_overlay.bezel_dirty = false;
-			return;
+	const auto& filter_prefs = get_active_filter_prefs();
+	if (!filter_prefs.use_custom_bezel ||
+		strcmp(filter_prefs.custom_bezel, "none") == 0) {
+		if (m_overlay.bezel_texture != 0) {
+			destroy_bezel();
 		}
+		m_overlay.bezel_dirty = false;
+		return;
+	}
 
-		if (m_overlay.loaded_bezel_name != amiberry_options.custom_bezel) {
-			if (m_overlay.bezel_texture != 0) {
-				destroy_bezel();
-			}
-			if (!load_bezel_texture(amiberry_options.custom_bezel)) return;
+	// Re-evaluate when explicitly invalidated or when the active config selects
+	// a different bezel than the one currently loaded.
+	if (m_overlay.bezel_dirty || m_overlay.loaded_bezel_name != filter_prefs.custom_bezel) {
+		if (m_overlay.bezel_texture != 0) {
+			destroy_bezel();
 		}
+		if (!load_bezel_texture(filter_prefs.custom_bezel)) return;
 		m_overlay.bezel_dirty = false;
 	}
 	if (m_overlay.bezel_texture == 0) return;

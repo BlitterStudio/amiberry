@@ -27,6 +27,7 @@
 #include "imgui_impl_vulkan.h"
 #include "picasso96.h"
 #include "target.h"
+#include "gui/gui_handling.h"
 #include "vkbd/vkbd.h"
 #include "on_screen_joystick.h"
 
@@ -37,6 +38,11 @@
 static const std::vector<const char*> device_extensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
+
+static const uae_prefs& get_active_filter_prefs()
+{
+	return gui_running ? changed_prefs : currprefs;
+}
 
 #ifndef NDEBUG
 // Validation layers for debug builds
@@ -546,7 +552,8 @@ void VulkanRenderer::destroy_platform_renderer(AmigaMonitor* /*mon*/)
 const char* VulkanRenderer::get_selected_shader_name(int monid) const
 {
 	const auto* mon = &AMonitors[monid];
-	return mon->screen_is_picasso ? amiberry_options.shader_rtg : amiberry_options.shader;
+	const auto& prefs = get_active_filter_prefs();
+	return mon->screen_is_picasso ? prefs.shader_rtg : prefs.shader;
 }
 
 void VulkanRenderer::sync_crt_shader_selection(int monid)
@@ -1049,12 +1056,13 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 
 	// Bezel overlay (load from file if changed)
 	slot.draw_bezel = false;
-	if (amiberry_options.use_custom_bezel && amiberry_options.custom_bezel[0] != '\0'
-		&& strcmp(amiberry_options.custom_bezel, "none") != 0) {
-		if (m_loaded_bezel_name != amiberry_options.custom_bezel) {
+	const auto& filter_prefs = get_active_filter_prefs();
+	if (filter_prefs.use_custom_bezel && filter_prefs.custom_bezel[0] != '\0'
+		&& strcmp(filter_prefs.custom_bezel, "none") != 0) {
+		if (m_loaded_bezel_name != filter_prefs.custom_bezel) {
 			cleanup_overlay_texture(m_bezel_tex);
 			m_loaded_bezel_name.clear();
-			std::string full_path = get_bezels_path() + amiberry_options.custom_bezel;
+			std::string full_path = get_bezels_path() + filter_prefs.custom_bezel;
 			SDL_Surface* bezel_surf = IMG_Load(full_path.c_str());
 			if (bezel_surf) {
 				SDL_Surface* rgba = SDL_ConvertSurface(bezel_surf, SDL_PIXELFORMAT_ABGR8888);
@@ -1086,7 +1094,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 					m_bezel_tex_h = rgba->h;
 					upload_overlay_texture(m_bezel_tex, rgba);
 					SDL_DestroySurface(rgba);
-					m_loaded_bezel_name = amiberry_options.custom_bezel;
+					m_loaded_bezel_name = filter_prefs.custom_bezel;
 				}
 			}
 		}

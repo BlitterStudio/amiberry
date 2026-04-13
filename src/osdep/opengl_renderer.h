@@ -30,6 +30,7 @@ struct ShaderState {
 	std::string external_name;
 	std::string loaded_name;      // cache key to avoid recreation
 	GLenum texture_filter_mode = GL_LINEAR;
+	bool bezel_enabled = false;
 };
 
 // OpenGL overlay resources: OSD, bezel, software cursor (owned by OpenGLRenderer)
