@@ -125,6 +125,41 @@ static int calculate_bit_shift(const expansionboardsettings *ebs, int item_idx)
 	return shift;
 }
 
+static int get_default_internal_ide_mode()
+{
+	if (changed_prefs.cs_ide == IDE_A600A1200 || changed_prefs.cs_ide == IDE_A4000)
+		return changed_prefs.cs_ide;
+	if (changed_prefs.cs_compatible == CP_A4000 || changed_prefs.cs_compatible == CP_A4000T)
+		return IDE_A4000;
+	return IDE_A600A1200;
+}
+
+static bool sync_internal_board_toggle(int romtype, bool enabled)
+{
+	switch (romtype & ROMTYPE_MASK) {
+		case ROMTYPE_MB_IDE:
+			changed_prefs.cs_ide = enabled ? get_default_internal_ide_mode() : 0;
+			break;
+		case ROMTYPE_SCSI_A3000:
+			if (enabled)
+				changed_prefs.cs_mbdmac = 1;
+			else if (changed_prefs.cs_mbdmac == 1)
+				changed_prefs.cs_mbdmac = 0;
+			break;
+		case ROMTYPE_SCSI_A4000T:
+			if (enabled)
+				changed_prefs.cs_mbdmac = 2;
+			else if (changed_prefs.cs_mbdmac == 2)
+				changed_prefs.cs_mbdmac = 0;
+			break;
+		default:
+			return false;
+	}
+
+	cfgfile_compatibility_romtype(&changed_prefs);
+	return true;
+}
+
 static void RefreshExpansionList() {
     displayed_rom_indices.clear();
     int first_match = -1;
@@ -368,7 +403,10 @@ void render_panel_expansions() {
 
     // Enable Checkbox
     if (ert && AmigaCheckbox("Enable Board", &enabled)) {
-        if (enabled) {
+        if (sync_internal_board_toggle(ert->romtype, enabled)) {
+            brc = get_device_rom(&changed_prefs, ert->romtype, scsiromselectednum, &index);
+            enabled = (brc != nullptr);
+        } else if (enabled) {
             if (!brc) {
                 brc = get_device_rom_new(&changed_prefs, ert->romtype, scsiromselectednum, &index);
             }
