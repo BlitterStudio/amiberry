@@ -76,6 +76,92 @@ static SDL_FingerID touch_scroll_finger = 0;
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
+// Config dirty tracking: fingerprint key fields from changed_prefs at load/save,
+// compare each frame to detect unsaved modifications.
+bool gui_config_dirty = false;
+static uint64_t gui_config_fingerprint = 0;
+static char gui_config_title_cache[512] = "";
+
+static uint64_t compute_config_fingerprint(const struct uae_prefs* p)
+{
+	// FNV-1a hash of key scalar fields that cover the most common settings
+	uint64_t h = 14695981039346656037ULL;
+	auto mix = [&](const void* data, size_t len) {
+		const auto* bytes = static_cast<const uint8_t*>(data);
+		for (size_t i = 0; i < len; i++) {
+			h ^= bytes[i];
+			h *= 1099511628211ULL;
+		}
+	};
+	// CPU / chipset
+	mix(&p->cpu_model, sizeof(p->cpu_model));
+	mix(&p->fpu_model, sizeof(p->fpu_model));
+	mix(&p->address_space_24, sizeof(p->address_space_24));
+	mix(&p->cpu_compatible, sizeof(p->cpu_compatible));
+	mix(&p->cpu_cycle_exact, sizeof(p->cpu_cycle_exact));
+	mix(&p->m68k_speed, sizeof(p->m68k_speed));
+	mix(&p->cachesize, sizeof(p->cachesize));
+	mix(&p->chipset_mask, sizeof(p->chipset_mask));
+	mix(&p->ntscmode, sizeof(p->ntscmode));
+	// Memory
+	mix(&p->chipmem.size, sizeof(p->chipmem.size));
+	mix(&p->bogomem.size, sizeof(p->bogomem.size));
+	mix(&p->fastmem[0].size, sizeof(p->fastmem[0].size));
+	mix(&p->z3fastmem[0].size, sizeof(p->z3fastmem[0].size));
+	// Sound
+	mix(&p->produce_sound, sizeof(p->produce_sound));
+	mix(&p->sound_stereo, sizeof(p->sound_stereo));
+	mix(&p->sound_freq, sizeof(p->sound_freq));
+	mix(&p->sound_interpol, sizeof(p->sound_interpol));
+	// Display
+	mix(&p->gfx_resolution, sizeof(p->gfx_resolution));
+	mix(&p->gfx_vresolution, sizeof(p->gfx_vresolution));
+	mix(&p->gfx_framerate, sizeof(p->gfx_framerate));
+	mix(&p->gfx_monitor[0].gfx_size_win, sizeof(p->gfx_monitor[0].gfx_size_win));
+	mix(&p->gfx_monitor[0].gfx_size_fs, sizeof(p->gfx_monitor[0].gfx_size_fs));
+	// Floppy paths (most common change)
+	for (int i = 0; i < 4; i++)
+		mix(p->floppyslots[i].df, sizeof(p->floppyslots[i].df));
+	// ROM
+	mix(p->romfile, sizeof(p->romfile));
+	mix(p->romextfile, sizeof(p->romextfile));
+	// Description (changes on save-as with new name)
+	mix(p->description, sizeof(p->description));
+	return h;
+}
+
+void gui_config_mark_clean()
+{
+	gui_config_fingerprint = compute_config_fingerprint(&changed_prefs);
+	gui_config_dirty = false;
+	gui_config_title_cache[0] = '\0'; // force title rebuild
+}
+
+static void update_gui_window_title(SDL_Window* window)
+{
+	// Recompute dirty state from fingerprint
+	bool dirty = (compute_config_fingerprint(&changed_prefs) != gui_config_fingerprint);
+	if (dirty != gui_config_dirty) {
+		gui_config_dirty = dirty;
+		gui_config_title_cache[0] = '\0'; // force rebuild
+	}
+
+	// Build title string only when it changes
+	char new_title[512];
+	if (last_active_config[0]) {
+		snprintf(new_title, sizeof(new_title), "Amiberry GUI - [%s%s]",
+			last_active_config, gui_config_dirty ? "*" : "");
+	} else {
+		snprintf(new_title, sizeof(new_title), "Amiberry GUI");
+	}
+
+	if (strcmp(new_title, gui_config_title_cache) != 0) {
+		strncpy(gui_config_title_cache, new_title, sizeof(gui_config_title_cache));
+		gui_config_title_cache[sizeof(gui_config_title_cache) - 1] = '\0';
+		SDL_SetWindowTitle(window, gui_config_title_cache);
+	}
+}
+
 #ifdef _WIN32
 static int saved_emu_x = 0, saved_emu_y = 0, saved_emu_w = 0, saved_emu_h = 0;
 static SDL_WindowFlags saved_emu_flags = 0;
@@ -1756,7 +1842,14 @@ void amiberry_gui_halt()
 #ifdef _WIN32
 	// Restore emulation window state
 	if (mon->amiga_window && saved_emu_w > 0) {
-		SDL_SetWindowTitle(mon->amiga_window, "Amiberry");
+		{
+			char emu_title[256];
+			if (last_active_config[0])
+				snprintf(emu_title, sizeof(emu_title), "Amiberry - [%s]", last_active_config);
+			else
+				snprintf(emu_title, sizeof(emu_title), "Amiberry");
+			SDL_SetWindowTitle(mon->amiga_window, emu_title);
+		}
 		SDL_SetWindowSize(mon->amiga_window, saved_emu_w, saved_emu_h);
 		SDL_SetWindowPosition(mon->amiga_window, saved_emu_x, saved_emu_y);
 		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
@@ -1859,6 +1952,10 @@ void run_gui()
 
 	amiberry_gui_init();
 	start_disabled = false;
+
+	// Take initial config fingerprint so the title shows clean state
+	gui_config_mark_clean();
+	gui_config_title_cache[0] = '\0';
 
 	{
 		std::string migration_title;
@@ -2054,6 +2151,9 @@ void run_gui()
 		apply_pending_font_rebuild();
 
 		ImGui::NewFrame();
+
+		// Update GUI window title with config name and dirty indicator
+		update_gui_window_title(mon->gui_window);
 
 		// While touch-scrolling, suppress hover highlight so items don't
 		// visually react to the finger position during a scroll gesture

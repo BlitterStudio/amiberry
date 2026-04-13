@@ -49,6 +49,9 @@
 
 #ifdef AMIBERRY
 
+// Config name for window title
+extern char last_active_config[];
+
 // Shared state defined in amiberry_gfx.cpp
 extern int wasfs[2];
 extern const TCHAR* wasfsname[2];
@@ -873,9 +876,11 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (renderer_to_use) {
 		flags |= renderer_to_use->get_window_flags();
 	}
-	TCHAR wintitle[64];
+	TCHAR wintitle[256];
 	if (mon->monitor_id > 0)
 		_stprintf(wintitle, _T("Amiberry [%d]"), mon->monitor_id + 1);
+	else if (last_active_config[0])
+		_stprintf(wintitle, _T("Amiberry - [%s]"), last_active_config);
 	else
 		_tcscpy(wintitle, _T("Amiberry"));
 	mon->amiga_window = SDL_CreateWindow(wintitle,

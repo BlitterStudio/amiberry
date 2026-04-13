@@ -171,6 +171,7 @@ void render_panel_configurations()
 		{
 			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 			strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
+			gui_config_mark_clean();
 		}
 	}
 	ImGui::SameLine();
@@ -186,6 +187,7 @@ void render_panel_configurations()
 		{
 			write_log("Config save: SUCCESS\n");
 			snprintf(last_active_config, MAX_DPATH, "%s", name);
+			gui_config_mark_clean();
 			ReadConfigFileList();
 			// Re-select the saved file
 			for (int i = 0; i < ConfigFilesList.size(); ++i) {
@@ -227,6 +229,7 @@ void render_panel_configurations()
 					extract_filename(save_as_path.c_str(), saved_name);
 					remove_file_extension(saved_name);
 					snprintf(last_active_config, MAX_DPATH, "%s", saved_name);
+					gui_config_mark_clean();
 					for (int i = 0; i < static_cast<int>(ConfigFilesList.size()); ++i)
 					{
 						if (strcmp(ConfigFilesList[i]->Name, saved_name) == 0)

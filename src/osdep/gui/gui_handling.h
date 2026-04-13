@@ -335,6 +335,10 @@ extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
 extern char last_active_config[MAX_DPATH];
 
+// Config dirty tracking: true when changed_prefs differs from last load/save
+extern bool gui_config_dirty;
+void gui_config_mark_clean();
+
 extern int quickstart_model;
 extern int quickstart_conf;
 
