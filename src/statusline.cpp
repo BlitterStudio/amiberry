@@ -576,13 +576,8 @@ void statusline_single_erase(int monid, uae_u8 *buf, int y, int totalwidth)
 	memset(buf, 0, 4 * totalwidth);
 }
 
-#ifdef AMIBERRY // no-op for now
+#ifdef AMIBERRY
 void statusline_updated(int monid)
-{
-
-}
-
-void statusline_render(int monid, uae_u8 *buf, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
 
 }
@@ -656,8 +651,6 @@ static const uae_u8 ldp_font[64][7] = {
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x00 }, // '_' (95)
 };
 
-#define LDP_CHAR_WIDTH 6
-#define LDP_CHAR_HEIGHT 7
 #define LDP_FONT_COLOR 0xFFFFFFFF
 
 void ldp_render(const char* txt, int len, uae_u8* buf, struct vidbuffer* dst, int x, int y, int mx, int my)
@@ -694,6 +687,80 @@ void ldp_render(const char* txt, int len, uae_u8* buf, struct vidbuffer* dst, in
 							if (dest_x >= 0 && dest_x < dst->inwidth) {
 								uae_u32* p = reinterpret_cast<uae_u32*>(rowbuf) + dest_x;
 								*p = LDP_FONT_COLOR;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// NOTE: This implementation renders directly in RGBA32 pixel format.
+// The rc/gc/bc/alpha color table arguments are not used; this function
+// is only called from update_leds() which uses an RGBA32 surface.
+void statusline_render(int monid, uae_u8 *buf, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
+{
+	const TCHAR *text = statusline_fetch();
+	if (!text || !buf || width <= 0 || height <= 0)
+		return;
+
+	int len = _tcslen(text);
+	if (len <= 0)
+		return;
+
+	int m = statusline_get_multiplier(monid) / 100;
+	if (m < 2) m = 2; // minimum 2x for readability
+
+	const int char_w = LDP_CHAR_WIDTH * m;
+	const int char_h = LDP_CHAR_HEIGHT * m;
+	const int padding = 2 * m;
+
+	// Center text horizontally
+	int text_width = len * char_w;
+	int x = (width - text_width) / 2;
+	if (x < padding) x = padding;
+	int y = padding;
+
+	// Draw background box behind text
+	int box_x0 = x - padding;
+	int box_y0 = y - padding;
+	int box_x1 = x + text_width + padding;
+	int box_y1 = y + char_h + padding;
+	if (box_x0 < 0) box_x0 = 0;
+	if (box_y0 < 0) box_y0 = 0;
+	if (box_x1 > width) box_x1 = width;
+	if (box_y1 > height) box_y1 = height;
+
+	for (int row = box_y0; row < box_y1; row++) {
+		uae_u32 *row_ptr = reinterpret_cast<uae_u32*>(buf + row * pitch);
+		for (int col = box_x0; col < box_x1; col++) {
+			row_ptr[col] = 0xC0000000; // semi-transparent black
+		}
+	}
+
+	// Draw text using ldp_font (ASCII 32-95 only, convert lowercase to upper)
+	for (int i = 0; i < len; i++) {
+		unsigned char c = static_cast<unsigned char>(text[i]);
+		if (c >= 'a' && c <= 'z')
+			c = c - 'a' + 'A';
+		if (c < 32 || c > 95)
+			c = 32;
+		int font_idx = c - 32;
+
+		for (int row = 0; row < LDP_CHAR_HEIGHT; row++) {
+			uae_u8 rowdata = ldp_font[font_idx][row];
+			for (int yy = 0; yy < m; yy++) {
+				int dest_y = y + row * m + yy;
+				if (dest_y < 0 || dest_y >= height)
+					continue;
+				uae_u32 *row_ptr = reinterpret_cast<uae_u32*>(buf + dest_y * pitch);
+				for (int col = 0; col < 5; col++) {
+					if (rowdata & (0x10 >> col)) {
+						for (int xx = 0; xx < m; xx++) {
+							int dest_x = x + (i * LDP_CHAR_WIDTH + col) * m + xx;
+							if (dest_x >= 0 && dest_x < width) {
+								row_ptr[dest_x] = 0xFFFFFFFF; // white
 							}
 						}
 					}

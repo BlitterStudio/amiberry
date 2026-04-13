@@ -1587,10 +1587,18 @@ void screenshot(int monid, int mode, int doprepare)
 	else
 		filename = "default.uae";
 
-	screenshot_filename = get_screenshot_path();
-	screenshot_filename += filename;
-	screenshot_filename = remove_file_extension(screenshot_filename);
-	screenshot_filename += ".png";
+	std::string base_path = get_screenshot_path();
+	base_path += remove_file_extension(filename);
 
-	save_thumb(screenshot_filename);
+	screenshot_filename = base_path + ".png";
+
+	// Avoid overwriting existing screenshots by appending a number
+	for (int counter = 1; counter <= 9999 && access(screenshot_filename.c_str(), F_OK) == 0; counter++) {
+		screenshot_filename = base_path + "_" + std::to_string(counter) + ".png";
+	}
+
+	if (save_thumb(screenshot_filename))
+		statusline_add_message(STATUSTYPE_OTHER, _T("Screenshot: %s"), extract_filename(screenshot_filename).c_str());
+	else
+		statusline_add_message(STATUSTYPE_OTHER, _T("Screenshot failed"));
 }

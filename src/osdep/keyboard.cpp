@@ -475,6 +475,18 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 			}
 		}
 
+		if (screenshot_key.scancode && scancode == screenshot_key.scancode)
+		{
+			if ((screenshot_key.modifiers.lctrl || screenshot_key.modifiers.rctrl) == ctrl_state
+				&& (screenshot_key.modifiers.lshift || screenshot_key.modifiers.rshift) == shift_state
+				&& (screenshot_key.modifiers.lalt || screenshot_key.modifiers.ralt) == alt_state
+				&& (screenshot_key.modifiers.lgui || screenshot_key.modifiers.rgui) == win_state)
+			{
+				inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, 1, nullptr);
+				scancode = 0;
+			}
+		}
+
 		if (scancode == SDL_SCANCODE_SYSREQ)
 			clipboard_disable(true);
 	}

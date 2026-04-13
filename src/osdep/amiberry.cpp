@@ -176,6 +176,7 @@ amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
 amiberry_hotkey vkbd_key;
 SDL_GamepadButton vkbd_button;
+amiberry_hotkey screenshot_key;
 
 bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
 bool mouse_grabbed = false;
@@ -370,6 +371,9 @@ static void set_key_configs(const uae_prefs* p)
 
 	if (strncmp(p->right_amiga, "", 1) != 0)
 		right_amiga_key = get_hotkey_from_config(p->right_amiga);
+
+	if (strncmp(p->screenshot, "", 1) != 0)
+		screenshot_key = get_hotkey_from_config(p->screenshot);
 
 	if (strncmp(p->vkbd_toggle, "", 1) != 0)
 		vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
@@ -2080,6 +2084,9 @@ static void handle_controller_button_event(const SDL_Event& event)
 	}
 	else if (button == vkbd_button) {
 		inputdevice_add_inputcode(AKS_OSK, state, nullptr);
+	}
+	else if (screenshot_key.button && button == screenshot_key.button) {
+		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, state, nullptr);
 	}
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
@@ -4312,6 +4319,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
 	cfgfile_target_dwrite_str(f, _T("left_amiga"), p->left_amiga);
 	cfgfile_target_dwrite_str(f, _T("right_amiga"), p->right_amiga);
+	cfgfile_target_dwrite_str(f, _T("screenshot"), p->screenshot);
 
 	if (p->drawbridge_driver > 0)
 	{
@@ -4456,6 +4464,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
 		|| cfgfile_string(option, value, "left_amiga", p->left_amiga, sizeof p->left_amiga)
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
+		|| cfgfile_string(option, value, "screenshot", p->screenshot, sizeof p->screenshot)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 

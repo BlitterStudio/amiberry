@@ -1061,6 +1061,7 @@ struct uae_prefs {
 	TCHAR minimize[256];
 	TCHAR left_amiga[256];
 	TCHAR right_amiga[256];
+	TCHAR screenshot[256];
 
 	/* input */
 

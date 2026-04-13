@@ -153,8 +153,8 @@ static inline bool gfx_platform_create_screenshot(SDL_Surface* amiga_surface, SD
 
 	if (amiga_surface != nullptr) {
 		*out_surface = SDL_CreateSurfaceFrom(
-			AMIGA_WIDTH_MAX << currprefs.gfx_resolution,
-			AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution,
+			amiga_surface->w,
+			amiga_surface->h,
 			amiga_surface->format,
 			amiga_surface->pixels,
 			amiga_surface->pitch);

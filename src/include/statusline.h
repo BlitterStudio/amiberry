@@ -24,6 +24,9 @@ extern int td_width;
 
 #define TD_TOTAL_HEIGHT (td_numbers_pady * 2 + td_numbers_height)
 
+#define LDP_CHAR_WIDTH 6
+#define LDP_CHAR_HEIGHT 7
+
 #define NUMBERS_NUM 20
 
 #define TD_BORDER 0x333333

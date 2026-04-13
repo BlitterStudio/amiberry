@@ -317,6 +317,8 @@ void render_panel_misc()
 		ShowHelpMarker("Keyboard shortcut to simulate Left Amiga key press");
 		HotkeyRow("Right Amiga:", changed_prefs.right_amiga);
 		ShowHelpMarker("Keyboard shortcut to simulate Right Amiga key press");
+		HotkeyRow("Screenshot:", changed_prefs.screenshot);
+		ShowHelpMarker("Keyboard shortcut or controller button to take a screenshot");
 
 		ImGui::Separator();
 

@@ -122,38 +122,58 @@ void update_leds(const int monid)
 	if (led_width <= 0)
 		led_width = 640;
 
+	// Calculate message area height (use at least 2x scale for readability)
+	const TCHAR* msg_text = statusline_fetch();
+	const int msg_m = m < 2 ? 2 : m;
+	const int msg_line_height = (LDP_CHAR_HEIGHT + 4) * msg_m;
+	const int msg_height = msg_text ? msg_line_height : 0;
+	const int total_height = led_height + msg_height;
+
 	bool surface_exists = mon->statusline_surface
 		&& mon->statusline_surface->w == led_width
-		&& mon->statusline_surface->h == led_height;
+		&& mon->statusline_surface->h == total_height;
 
 	if (surface_exists) {
 		static led_state_snapshot prev_snap = {};
 		static bool prev_valid = false;
+		static const TCHAR* prev_msg = nullptr;
 		led_state_snapshot cur_snap = {};
 		capture_led_state(monid, cur_snap);
-		if (prev_valid && memcmp(&cur_snap, &prev_snap, sizeof(cur_snap)) == 0) {
+		if (prev_valid && memcmp(&cur_snap, &prev_snap, sizeof(cur_snap)) == 0
+			&& prev_msg == msg_text) {
 			return;
 		}
 		prev_snap = cur_snap;
 		prev_valid = true;
+		prev_msg = msg_text;
 	}
 
 	if (!surface_exists) {
 		if (mon->statusline_surface) SDL_DestroySurface(mon->statusline_surface);
-		mon->statusline_surface = SDL_CreateSurface(led_width, led_height, SDL_PIXELFORMAT_RGBA32);
+		mon->statusline_surface = SDL_CreateSurface(led_width, total_height, SDL_PIXELFORMAT_RGBA32);
 	}
 
 	if (mon->statusline_surface) {
 		SDL_FillSurfaceRect(mon->statusline_surface, nullptr, 0x00000000);
 
+		// Render statusline message at the top (if any)
+		if (msg_text && msg_height > 0) {
+			statusline_render(monid,
+				static_cast<uae_u8*>(mon->statusline_surface->pixels),
+				mon->statusline_surface->pitch, led_width, msg_height,
+				rc, gc, bc, a);
+		}
+
+		// Render LED bar below the message area
 		for (int y = 0; y < led_height; y++) {
-			uae_u8* buf = static_cast<uae_u8*>(mon->statusline_surface->pixels) + y * mon->statusline_surface->pitch;
+			uae_u8* buf = static_cast<uae_u8*>(mon->statusline_surface->pixels)
+				+ (y + msg_height) * mon->statusline_surface->pitch;
 			draw_status_line_single(monid, buf, y, led_width, rc, gc, bc, a);
 		}
 	}
 
 	if (g_renderer)
-		g_renderer->sync_osd_texture(monid, led_width, led_height);
+		g_renderer->sync_osd_texture(monid, led_width, total_height);
 }
 
 #endif // AMIBERRY
