@@ -109,7 +109,8 @@ extern void debug_smc_clear(uaecptr addr, int size);
 #define BREAKPOINT_REG_FPIAR 34
 #define BREAKPOINT_REG_FPCR 35
 #define BREAKPOINT_REG_FPSR 36
-#define BREAKPOINT_REG_END 37
+#define BREAKPOINT_REG_FPx 37
+#define BREAKPOINT_REG_END 45
 
 #define BREAKPOINT_CMP_EQUAL 0
 #define BREAKPOINT_CMP_NEQUAL 1

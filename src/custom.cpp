@@ -8781,7 +8781,6 @@ void check_prefs_changed_custom(void)
 			dumpsync();
 		}
 	}
-	resetfulllinestate();
 
 #ifdef GFXFILTER
 	for (int i = 0; i < 2; i++) {
