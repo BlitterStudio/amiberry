@@ -242,6 +242,10 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/flashrom.cpp \
                $(AMIBERRY_DIR)/src/fpp.cpp \
                $(AMIBERRY_DIR)/src/fpp_native.cpp \
+               $(AMIBERRY_DIR)/src/fpp_softfloat.cpp \
+               $(AMIBERRY_DIR)/src/softfloat/softfloat.cpp \
+               $(AMIBERRY_DIR)/src/softfloat/softfloat_decimal.cpp \
+               $(AMIBERRY_DIR)/src/softfloat/softfloat_fpsp.cpp \
                $(AMIBERRY_DIR)/src/framebufferboards.cpp \
                $(AMIBERRY_DIR)/src/fsdb.cpp \
                $(AMIBERRY_DIR)/src/fsusage.cpp \
