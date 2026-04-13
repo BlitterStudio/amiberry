@@ -239,6 +239,11 @@ int check_prefs_changed_gfx()
 	c |= currprefs.rtg_hardwaresprite != changed_prefs.rtg_hardwaresprite ? 32 : 0;
 	c |= currprefs.rtg_multithread != changed_prefs.rtg_multithread ? 32 : 0;
 	c |= currprefs.rtg_zerocopy != changed_prefs.rtg_zerocopy ? 32 : 0;
+	c |= _tcscmp(currprefs.shader, changed_prefs.shader) ? 1 : 0;
+	c |= _tcscmp(currprefs.shader_rtg, changed_prefs.shader_rtg) ? 1 : 0;
+	c |= currprefs.use_bezel != changed_prefs.use_bezel ? 1 : 0;
+	c |= currprefs.use_custom_bezel != changed_prefs.use_custom_bezel ? 1 : 0;
+	c |= _tcscmp(currprefs.custom_bezel, changed_prefs.custom_bezel) ? 1 : 0;
 #endif
 
 	if (display_change_requested || c)
@@ -305,6 +310,11 @@ int check_prefs_changed_gfx()
 		}
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.scaling_method = changed_prefs.scaling_method;
+		_tcscpy(currprefs.shader, changed_prefs.shader);
+		_tcscpy(currprefs.shader_rtg, changed_prefs.shader_rtg);
+		currprefs.use_bezel = changed_prefs.use_bezel;
+		currprefs.use_custom_bezel = changed_prefs.use_custom_bezel;
+		_tcscpy(currprefs.custom_bezel, changed_prefs.custom_bezel);
 #endif
 
 		currprefs.rtg_horiz_zoom_mult = changed_prefs.rtg_horiz_zoom_mult;

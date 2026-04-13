@@ -4083,6 +4083,14 @@ void target_default_options(uae_prefs* p, const int type)
 	{
 		p->gfx_autoresolution = amiberry_options.default_gfx_autoresolution;
 	}
+
+	_tcscpy(p->shader, amiberry_options.shader[0] ? amiberry_options.shader : _T("none"));
+	_tcscpy(p->shader_rtg, amiberry_options.shader_rtg[0] ? amiberry_options.shader_rtg : _T("none"));
+	_tcscpy(p->custom_bezel, amiberry_options.custom_bezel[0] ? amiberry_options.custom_bezel : _T("none"));
+	p->use_custom_bezel = amiberry_options.use_custom_bezel
+		&& _tcsicmp(p->custom_bezel, _T("none")) != 0;
+	p->use_bezel = p->use_custom_bezel ? false : amiberry_options.use_bezel;
+
 	if (amiberry_options.default_line_mode == 1)
 	{
 		// Double line mode
@@ -4291,6 +4299,11 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
 	cfgfile_target_dwrite(f, _T("kbd_led_cap"), _T("%d"), p->kbd_led_cap);
 	cfgfile_target_dwrite(f, _T("scaling_method"), _T("%d"), p->scaling_method);
+	cfgfile_target_dwrite_str(f, _T("shader"), p->shader);
+	cfgfile_target_dwrite_str(f, _T("shader_rtg"), p->shader_rtg);
+	cfgfile_target_dwrite_bool(f, _T("use_bezel"), p->use_bezel);
+	cfgfile_target_dwrite_bool(f, _T("use_custom_bezel"), p->use_custom_bezel);
+	cfgfile_target_dwrite_str(f, _T("custom_bezel"), p->custom_bezel);
 
 	cfgfile_target_dwrite_str(f, _T("open_gui"), p->open_gui);
 	cfgfile_target_dwrite_str(f, _T("quit_amiberry"), p->quit_amiberry);
@@ -4445,6 +4458,38 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
+
+	if (cfgfile_string(option, value, _T("shader"), p->shader, sizeof p->shader)) {
+		if (!p->shader[0])
+			_tcscpy(p->shader, _T("none"));
+		return 1;
+	}
+
+	if (cfgfile_string(option, value, _T("shader_rtg"), p->shader_rtg, sizeof p->shader_rtg)) {
+		if (!p->shader_rtg[0])
+			_tcscpy(p->shader_rtg, _T("none"));
+		return 1;
+	}
+
+	if (cfgfile_yesno(option, value, _T("use_bezel"), &p->use_bezel)) {
+		if (p->use_bezel)
+			p->use_custom_bezel = false;
+		return 1;
+	}
+
+	if (cfgfile_yesno(option, value, _T("use_custom_bezel"), &p->use_custom_bezel)) {
+		if (p->use_custom_bezel)
+			p->use_bezel = false;
+		return 1;
+	}
+
+	if (cfgfile_string(option, value, _T("custom_bezel"), p->custom_bezel, sizeof p->custom_bezel)) {
+		if (!p->custom_bezel[0] || _tcsicmp(p->custom_bezel, _T("none")) == 0) {
+			_tcscpy(p->custom_bezel, _T("none"));
+			p->use_custom_bezel = false;
+		}
+		return 1;
+	}
 
 	if (cfgfile_yesno(option, value, _T("onscreen_joystick"), &p->onscreen_joystick))
 		return 1;

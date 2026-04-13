@@ -139,10 +139,24 @@ static int find_shader_index(const char* shader_name)
 			return static_cast<int>(i);
 		}
 	}
-	return 2;  // Default to "pc" (index 2)
+	return 0;  // Default to "none"
 }
 
 static bool show_shader_params_popup = false;
+
+static void save_filter_defaults()
+{
+	strncpy(amiberry_options.shader, changed_prefs.shader, sizeof(amiberry_options.shader) - 1);
+	amiberry_options.shader[sizeof(amiberry_options.shader) - 1] = '\0';
+	strncpy(amiberry_options.shader_rtg, changed_prefs.shader_rtg, sizeof(amiberry_options.shader_rtg) - 1);
+	amiberry_options.shader_rtg[sizeof(amiberry_options.shader_rtg) - 1] = '\0';
+	amiberry_options.use_custom_bezel = changed_prefs.use_custom_bezel &&
+		strcmp(changed_prefs.custom_bezel, "none") != 0;
+	amiberry_options.use_bezel = amiberry_options.use_custom_bezel ? false : changed_prefs.use_bezel;
+	strncpy(amiberry_options.custom_bezel, changed_prefs.custom_bezel, sizeof(amiberry_options.custom_bezel) - 1);
+	amiberry_options.custom_bezel[sizeof(amiberry_options.custom_bezel) - 1] = '\0';
+	save_amiberry_settings();
+}
 
 static void render_shader_parameters_popup()
 {
@@ -288,15 +302,16 @@ void render_panel_filter()
 	// Native Shader Selection
 	BeginGroupBox("Native Display Shader");
 	{
-		int native_idx = find_shader_index(amiberry_options.shader);
+		int native_idx = find_shader_index(changed_prefs.shader);
 		const float native_label_w = ImGui::CalcTextSize("Shader for native Amiga modes").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - native_label_w - spacing * 3);
 		if (ImGui::BeginCombo("##NativeShader", shader_items[native_idx])) {
 			for (int i = 0; i < static_cast<int>(shader_items.size()); i++) {
 				bool is_selected = (i == native_idx);
 				if (ImGui::Selectable(shader_items[i], is_selected)) {
-					strncpy(amiberry_options.shader, shader_names[i].c_str(),
-							sizeof(amiberry_options.shader) - 1);
+					strncpy(changed_prefs.shader, shader_names[i].c_str(),
+							sizeof(changed_prefs.shader) - 1);
+					changed_prefs.shader[sizeof(changed_prefs.shader) - 1] = '\0';
 				}
 				if (is_selected) ImGui::SetItemDefaultFocus();
 			}
@@ -314,15 +329,16 @@ void render_panel_filter()
 	// RTG Shader Selection
 	BeginGroupBox("RTG Display Shader");
 	{
-		int rtg_idx = find_shader_index(amiberry_options.shader_rtg);
+		int rtg_idx = find_shader_index(changed_prefs.shader_rtg);
 		const float rtg_label_w = ImGui::CalcTextSize("Shader for RTG/Picasso modes").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - rtg_label_w - spacing * 3);
 		if (ImGui::BeginCombo("##RTGShader", shader_items[rtg_idx])) {
 			for (int i = 0; i < static_cast<int>(shader_items.size()); i++) {
 				bool is_selected = (i == rtg_idx);
 				if (ImGui::Selectable(shader_items[i], is_selected)) {
-					strncpy(amiberry_options.shader_rtg, shader_names[i].c_str(),
-							sizeof(amiberry_options.shader_rtg) - 1);
+					strncpy(changed_prefs.shader_rtg, shader_names[i].c_str(),
+							sizeof(changed_prefs.shader_rtg) - 1);
+					changed_prefs.shader_rtg[sizeof(changed_prefs.shader_rtg) - 1] = '\0';
 				}
 				if (is_selected) ImGui::SetItemDefaultFocus();
 			}
@@ -341,35 +357,36 @@ void render_panel_filter()
 	BeginGroupBox("Bezel Overlay");
 	{
 		// Built-in CRT bezel (disabled when custom bezel is active)
-		if (amiberry_options.use_custom_bezel) ImGui::BeginDisabled();
-		if (AmigaCheckbox("Built-in CRT bezel", &amiberry_options.use_bezel)) {
+		if (changed_prefs.use_custom_bezel) ImGui::BeginDisabled();
+		if (AmigaCheckbox("Built-in CRT bezel", &changed_prefs.use_bezel)) {
 			if (g_renderer) g_renderer->update_crtemu_bezel();
 		}
 		ShowHelpMarker("Built-in CRT television bezel frame.\n"
 					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
 					   "Disabled when a custom bezel is selected.");
-		if (amiberry_options.use_custom_bezel) ImGui::EndDisabled();
+		if (changed_prefs.use_custom_bezel) ImGui::EndDisabled();
 
 		ImGui::Spacing();
 
 		// Custom bezel overlay (disabled when built-in bezel is active)
-		if (amiberry_options.use_bezel) ImGui::BeginDisabled();
+		if (changed_prefs.use_bezel) ImGui::BeginDisabled();
 
 		if (!bezels_initialized) scan_bezels();
 
-		int bezel_idx = find_bezel_index(amiberry_options.custom_bezel);
+		int bezel_idx = find_bezel_index(changed_prefs.custom_bezel);
 		const float bezel_label_w = ImGui::CalcTextSize("Custom bezel overlay").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - bezel_label_w - spacing * 3);
 		if (ImGui::BeginCombo("##CustomBezel", bezel_items.empty() ? "none" : bezel_items[bezel_idx])) {
 			for (int i = 0; i < static_cast<int>(bezel_items.size()); i++) {
 				bool is_selected = (i == bezel_idx);
 				if (ImGui::Selectable(bezel_items[i], is_selected)) {
-					strncpy(amiberry_options.custom_bezel, bezel_names[i].c_str(),
-							sizeof(amiberry_options.custom_bezel) - 1);
-					amiberry_options.use_custom_bezel = (strcmp(amiberry_options.custom_bezel, "none") != 0);
+					strncpy(changed_prefs.custom_bezel, bezel_names[i].c_str(),
+							sizeof(changed_prefs.custom_bezel) - 1);
+					changed_prefs.custom_bezel[sizeof(changed_prefs.custom_bezel) - 1] = '\0';
+					changed_prefs.use_custom_bezel = (strcmp(changed_prefs.custom_bezel, "none") != 0);
 					// If enabling custom bezel, disable built-in
-					if (amiberry_options.use_custom_bezel) {
-						amiberry_options.use_bezel = false;
+					if (changed_prefs.use_custom_bezel) {
+						changed_prefs.use_bezel = false;
 						if (g_renderer) g_renderer->update_crtemu_bezel();
 					}
 					if (g_renderer) g_renderer->update_custom_bezel();
@@ -385,7 +402,7 @@ void render_panel_filter()
 		ImGui::SameLine();
 		ImGui::Text("Custom bezel overlay");
 
-		if (amiberry_options.use_bezel) ImGui::EndDisabled();
+		if (changed_prefs.use_bezel) ImGui::EndDisabled();
 	}
 	EndGroupBox("Bezel Overlay");
 
@@ -408,8 +425,8 @@ void render_panel_filter()
 	}
 
 	// Save button
-	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save Settings", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
-		save_amiberry_settings();
+	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save Defaults", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+		save_filter_defaults();
 	}
 
 	// Render the shader parameters popup if open

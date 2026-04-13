@@ -999,6 +999,13 @@ struct uae_prefs {
 	int gfx_vertical_offset;
 	int gfx_correct_aspect;
 	int scaling_method;
+#ifdef AMIBERRY
+	char shader[128];
+	char shader_rtg[128];
+	bool use_bezel;
+	bool use_custom_bezel;
+	char custom_bezel[256];
+#endif
 
 	bool gui_alwaysontop;
 	bool main_alwaysontop;
