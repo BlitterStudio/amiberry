@@ -31,7 +31,8 @@
 #include "amiberry_input.h"
 
 #include "threaddep/thread.h"
-#include "vkbd/vkbd.h"
+#include "imgui_overlay.h"
+#include "imgui_osk.h"
 #include "on_screen_joystick.h"
 #include "fsdb_host.h"
 #include "uae/types.h"
@@ -46,6 +47,12 @@
 #include "display_modes.h"
 #include "irenderer.h"
 #include "renderer_factory.h"
+#ifdef USE_OPENGL
+#include "opengl_renderer.h"
+#endif
+#ifdef USE_VULKAN
+#include "vulkan_renderer.h"
+#endif
 
 #ifdef AMIBERRY
 
@@ -97,6 +104,11 @@ void close_hwnds(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
 		renderer_to_use = g_renderer.get();
 	}
 
+	// Shut down the ImGui overlay BEFORE the renderer destroys its context/device.
+	// The overlay's Vulkan backend needs the device alive for cleanup.
+	imgui_osk_shutdown();
+	imgui_overlay_shutdown();
+
 	const bool preserve_fullwindow_window = isfullscreen() < 0 && !force_destroy_fullwindow;
 	if (renderer_to_use) {
 		renderer_to_use->close_hwnds_cleanup(mon);
@@ -124,9 +136,6 @@ void close_hwnds(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
 		mon->amiga_window = nullptr;
 #endif
 	}
-
-	if (currprefs.vkbd_enabled)
-		vkbd_quit();
 
 	gfx_hdr = false;
 }
@@ -1244,16 +1253,46 @@ bool doInit(AmigaMonitor* mon)
 		setmouseactive(mon->monitor_id, -1);
 	}
 
-	//osk_setup(mon->monitor_id, -2);
-	if (vkbd_allowed(mon->monitor_id))
+	// Initialize the ImGui overlay context for the on-screen keyboard.
+	// Always init so toggle works; vkbd_allowed() gates rendering.
 	{
-		vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
-		vkbd_set_hires(currprefs.vkbd_hires);
-		vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
-		vkbd_set_language(string(currprefs.vkbd_language));
-		vkbd_set_style(string(currprefs.vkbd_style));
-		vkbd_init();
+		bool overlay_inited = false;
+#ifdef USE_VULKAN
+		auto* vk = get_vulkan_renderer();
+		if (vk && vk->get_vk_device()) {
+			ImGui_ImplVulkan_InitInfo vk_info{};
+			vk_info.Instance = vk->get_vk_instance();
+			vk_info.PhysicalDevice = vk->get_vk_physical_device();
+			vk_info.Device = vk->get_vk_device();
+			vk_info.QueueFamily = vk->get_vk_graphics_queue_family();
+			vk_info.Queue = vk->get_vk_graphics_queue();
+			// DescriptorPool is created internally by imgui_overlay_init_vulkan
+			vk_info.DescriptorPool = VK_NULL_HANDLE;
+			vk_info.MinImageCount = vk->get_vk_min_image_count();
+			vk_info.ImageCount = vk->get_vk_image_count();
+			vk_info.PipelineInfoMain.RenderPass = vk->get_vk_render_pass();
+			vk_info.PipelineInfoMain.Subpass = 0;
+			vk_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+			imgui_overlay_init_vulkan(mon->amiga_window, &vk_info);
+			overlay_inited = true;
+		}
+#endif
+		if (!overlay_inited) {
+			void* gl_ctx = nullptr;
+#ifdef USE_OPENGL
+			auto* gl_renderer = get_opengl_renderer();
+			if (gl_renderer)
+				gl_ctx = gl_renderer->get_gl_context();
+#endif
+			imgui_overlay_init(mon->amiga_window, mon->amiga_renderer, gl_ctx);
+		}
 	}
+	imgui_osk_init();
+	imgui_osk_set_transparency(
+		(currprefs.vkbd_transparency > 0)
+			? static_cast<float>(currprefs.vkbd_transparency) / 100.0f
+			: 0.85f);
+	imgui_osk_set_language(currprefs.vkbd_language);
 
 	// Initialize on-screen joystick if enabled
 	if (currprefs.onscreen_joystick)

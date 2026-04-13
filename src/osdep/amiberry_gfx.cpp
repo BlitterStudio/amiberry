@@ -41,7 +41,7 @@
 #include "devices.h"
 
 #include "threaddep/thread.h"
-#include "vkbd/vkbd.h"
+// imgui_osk.h included for vkbd_allowed() - no old vkbd dependency
 #include "on_screen_joystick.h"
 #include "fsdb_host.h"
 #include "savestate.h"
@@ -209,8 +209,7 @@ bool MonitorFromPoint(const SDL_Point pt)
 #ifdef AMIBERRY
 bool vkbd_allowed(const int monid)
 {
-	struct AmigaMonitor* mon = &AMonitors[monid];
-	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
+	return currprefs.vkbd_enabled;
 }
 
 static bool amiberry_renderframe(const int monid, int mode, int immediate)
@@ -1526,10 +1525,7 @@ void auto_crop_image()
 				cr.h = surface->h - cr.y;
 		}
 
-		if (vkbd_allowed(0))
-		{
-			vkbd_update_position_from_texture();
-		}
+		// ImGui OSK does not need position updates from texture
 	}
 
 	last_autocrop = currprefs.gfx_auto_crop;

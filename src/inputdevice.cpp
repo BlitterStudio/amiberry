@@ -74,7 +74,7 @@
 #ifdef AMIBERRY
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
-#include "vkbd/vkbd.h"
+#include "imgui_osk.h"
 #endif
 
 // 01 = host events
@@ -210,39 +210,41 @@ extern int draco_keyboard_get_rate(void);
 static int draco_keybord_repeat_cnt, draco_keybord_repeat_code;
 #endif
 
-static void osk_control(int x, int y, int button, int buttonstate)
+// OSK_* constants defined in imgui_osk.h
+
+// Accumulated OSK joystick state — directions and button are set/cleared
+// independently by different callers, so we track them across calls.
+static int osk_accumulated_state = 0;
+
+void osk_control(int x, int y, int button, int buttonstate)
 {
-	if (vkbd_allowed(0) && vkbd_is_active())
+	if (!imgui_osk_is_active()) {
+		osk_accumulated_state = 0;
+		return;
+	}
+	if (vkbd_allowed(0))
 	{
-		int vkbd_state = 0;
-		if (button && buttonstate)
-		{
-			vkbd_state |= VKBD_BUTTON;
-		}
-		x = std::min(x, 1);
-		x = std::max(x, -1);
-		y = std::min(y, 1);
-		y = std::max(y, -1);
-		if (x < 0) {
-			vkbd_state |= VKBD_LEFT;
-		}
-		if (x > 0) {
-			vkbd_state |= VKBD_RIGHT;
-		}
-		if (y < 0) {
-			vkbd_state |= VKBD_UP;
-		}
-		if (y > 0) {
-			vkbd_state |= VKBD_DOWN;
+		// Update accumulated direction state: always refresh direction bits
+		if (!button) {
+			// Direction event: replace all direction bits
+			osk_accumulated_state &= ~(OSK_LEFT | OSK_RIGHT | OSK_UP | OSK_DOWN);
+			if (x < 0) osk_accumulated_state |= OSK_LEFT;
+			if (x > 0) osk_accumulated_state |= OSK_RIGHT;
+			if (y < 0) osk_accumulated_state |= OSK_UP;
+			if (y > 0) osk_accumulated_state |= OSK_DOWN;
+		} else {
+			// Button event: update button bit
+			if (buttonstate)
+				osk_accumulated_state |= OSK_BUTTON;
+			else
+				osk_accumulated_state &= ~OSK_BUTTON;
 		}
 
 		int code;
 		int pressed;
-		if (vkbd_process(vkbd_state, &code, &pressed))
-		{
-			inputdevice_do_keyboard(code, pressed);
-		}
-		vkbd_process(0, &code, &pressed);
+		// imgui_osk_process handles inputdevice_do_keyboard internally
+		// via press_key/release_key — don't call it again here
+		imgui_osk_process(osk_accumulated_state, &code, &pressed);
 	}
 }
 
@@ -5295,7 +5297,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 	case AKS_OSK:
 		if (vkbd_allowed(0))
-			vkbd_toggle();
+			imgui_osk_toggle();
 		break;
 	case AKS_DISKSWAPPER_NEXT_INSERT0:
 		swapperslot++;
@@ -5534,7 +5536,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	case 4: /* ->Parallel port joystick adapter port #2 */
 		joy = ie->unit - 1;
 		if (ie->type & 4) {
-			if (vkbd_allowed(0) && vkbd_is_active()) {
+			if (vkbd_allowed(0) && imgui_osk_is_active()) {
 				osk_control(0, 0, 1 << ie->data, state);
 			}
 			else {
@@ -5785,19 +5787,13 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 			mouse_deltanoreset[joy][0] = 1;
 			mouse_deltanoreset[joy][1] = 1;
-			if (vkbd_allowed(0) && vkbd_is_active()) {
-				if (left) {
-					osk_control(-1, 0, 0, 0);
-				}
-				if (right) {
-					osk_control(1, 0, 0, 0);
-				}
-				if (top) {
-					osk_control(0, -1, 0, 0);
-				}
-				if (bot) {
-					osk_control(0, 1, 0, 0);
-				}
+			if (vkbd_allowed(0) && imgui_osk_is_active()) {
+				int dx = 0, dy = 0;
+				if (left) dx = -1;
+				else if (right) dx = 1;
+				if (top) dy = -1;
+				else if (bot) dy = 1;
+				osk_control(dx, dy, 0, 0);
 			}
 			else {
 				joydir[joy] = 0;

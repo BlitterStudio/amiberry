@@ -30,7 +30,8 @@
 #include "shader_preset.h"
 #include "target.h"
 #include "statusline.h"
-#include "vkbd/vkbd.h"
+#include "imgui_overlay.h"
+#include "imgui_osk.h"
 #include "on_screen_joystick.h"
 #include "gui/gui_handling.h"
 #include <cmath>
@@ -1642,11 +1643,13 @@ void OpenGLRenderer::render_software_cursor(const int monid, int x, int y, int w
 
 void OpenGLRenderer::render_vkbd(int monid)
 {
-	if (vkbd_allowed(monid))
+	if (vkbd_allowed(monid) && imgui_osk_should_render())
 	{
 		int dw, dh;
 		get_drawable_size(AMonitors[monid].amiga_window, &dw, &dh);
-		vkbd_redraw_gl(dw, dh);
+		imgui_overlay_begin_frame();
+		imgui_osk_render(dw, dh);
+		imgui_overlay_end_frame();
 	}
 }
 

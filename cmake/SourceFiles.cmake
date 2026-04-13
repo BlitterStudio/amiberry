@@ -270,8 +270,8 @@ set(SOURCE_FILES
         src/threaddep/threading.cpp
         src/osdep/file_dialog.cpp
         src/osdep/gui/main_window.cpp
-        src/osdep/vkbd/vkbd.cpp
-        src/osdep/vkbd/vkbd_gl.cpp
+        src/osdep/imgui_overlay.cpp
+        src/osdep/imgui_osk.cpp
         src/osdep/on_screen_joystick.cpp
         src/osdep/on_screen_joystick_gl.cpp
         src/newcpu.cpp

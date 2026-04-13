@@ -383,7 +383,7 @@ PANEL(misc,               "Miscellaneous",      "misc.png",       ICON_FA_WRENCH
 PANEL(themes,             "Themes",             "misc.png",       ICON_FA_GEAR) \
 PANEL(prio,               "Priority",           "misc.png",       ICON_FA_GAUGE_HIGH) \
 PANEL(savestates,         "Savestates",         "savestate.png",  ICON_FA_BOOKMARK) \
-PANEL(virtual_keyboard,   "Virtual Keyboard",   "keyboard.png",   ICON_FA_KEYBOARD) \
+PANEL(virtual_keyboard,   "On-Screen",          "keyboard.png",   ICON_FA_KEYBOARD) \
 PANEL(whdload,            "WHDLoad",            "drive.png",      ICON_FA_DOWNLOAD)
 
 #endif

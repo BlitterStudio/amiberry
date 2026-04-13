@@ -68,7 +68,7 @@
 #include "gui_handling_platform.h"
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
-#include "vkbd/vkbd.h"
+#include "imgui_osk.h"
 #include "macos_bookmarks.h"
 #include <mutex>
 #if !defined(LIBRETRO) && defined(AMIBERRY_HAS_CURL)
@@ -2082,8 +2082,41 @@ static void handle_controller_button_event(const SDL_Event& event)
 	else if (minimize_key.button && button == minimize_key.button) {
 		minimizewindow(0);
 	}
-	else if (button == vkbd_button) {
+	else if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID && button == vkbd_button) {
 		inputdevice_add_inputcode(AKS_OSK, state, nullptr);
+	}
+	else if (imgui_osk_is_active()) {
+		// When OSK is visible, intercept D-pad and face buttons at the SDL level
+		// before they reach UAE's input system. This ensures immediate response.
+		// Track per-button state so releasing one direction doesn't lose the other.
+		static bool dpad_up = false, dpad_down = false, dpad_left = false, dpad_right = false;
+		bool is_dir = true;
+		switch (button) {
+		case SDL_GAMEPAD_BUTTON_DPAD_UP:    dpad_up    = state; break;
+		case SDL_GAMEPAD_BUTTON_DPAD_DOWN:  dpad_down  = state; break;
+		case SDL_GAMEPAD_BUTTON_DPAD_LEFT:  dpad_left  = state; break;
+		case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: dpad_right = state; break;
+		default: is_dir = false; break;
+		}
+		if (is_dir) {
+			int dx = 0, dy = 0;
+			if (dpad_left)  dx = -1;
+			else if (dpad_right) dx = 1;
+			if (dpad_up)    dy = -1;
+			else if (dpad_down)  dy = 1;
+			osk_control(dx, dy, 0, 0);
+			return; // consume — don't pass to UAE input system
+		}
+		// Fire button (A/South) = press key
+		if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
+			osk_control(0, 0, 1, state);
+			return;
+		}
+		// B/East = close keyboard
+		if (button == SDL_GAMEPAD_BUTTON_EAST && state) {
+			imgui_osk_toggle();
+			return;
+		}
 	}
 	else if (screenshot_key.button && button == screenshot_key.button) {
 		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, state, nullptr);
@@ -2791,12 +2824,28 @@ static void process_event(const SDL_Event& event)
 		{
 			mon = monitor_from_window_id(event.tfinger.windowID);
 			mouse_monid = mon->monitor_id;
-			// Let on-screen joystick consume the event first if applicable
 			int ww = 0, wh = 0;
 			if (mon->amiga_window)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
 			bool consumed = false;
-			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0) {
+
+			// Let ImGui on-screen keyboard consume the event first when visible.
+			// OSK geometry is in drawable-pixel space, so convert touch coords
+			// using pixel size (not window size) for HiDPI correctness.
+			if (imgui_osk_is_active() && mon->amiga_window) {
+				int pw = 0, ph = 0;
+				SDL_GetWindowSizeInPixels(mon->amiga_window, &pw, &ph);
+				float sx = event.tfinger.x * pw;
+				float sy = event.tfinger.y * ph;
+				int fid = static_cast<int>(event.tfinger.fingerID);
+				if (event.type == SDL_EVENT_FINGER_DOWN)
+					consumed = imgui_osk_handle_finger_down(sx, sy, fid);
+				else
+					consumed = imgui_osk_handle_finger_up(sx, sy, fid);
+			}
+
+			// Then let on-screen joystick try
+			if (!consumed && on_screen_joystick_is_enabled() && ww > 0 && wh > 0) {
 				if (event.type == SDL_EVENT_FINGER_DOWN)
 					consumed = on_screen_joystick_handle_finger_down(event, ww, wh);
 				else
@@ -2804,17 +2853,8 @@ static void process_event(const SDL_Event& event)
 			}
 			// Check if the on-screen keyboard button was tapped
 			if (on_screen_joystick_keyboard_tapped()) {
-#ifdef __ANDROID__
-				// Toggle native Android soft keyboard
-				if (SDL_TextInputActive(mon->amiga_window))
-					SDL_StopTextInput(mon->amiga_window);
-				else
-					SDL_StartTextInput(mon->amiga_window);
-#else
-				// Toggle the virtual keyboard overlay on other platforms
 				if (vkbd_allowed(0))
-					vkbd_toggle();
-#endif
+					imgui_osk_toggle();
 			}
 			if (!consumed)
 				handle_finger_event(event);
@@ -2823,9 +2863,9 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 		case SDL_EVENT_MOUSE_BUTTON_UP:
-			// Skip touch-synthesized mouse events when the on-screen joystick is active,
-			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
-			if (on_screen_joystick_is_enabled() && event.button.which == SDL_TOUCH_MOUSEID)
+			// Skip touch-synthesized mouse events when the on-screen keyboard or joystick is active,
+			// otherwise touches also inject unwanted mouse input into Amiga port 1
+			if ((imgui_osk_is_active() || on_screen_joystick_is_enabled()) && event.button.which == SDL_TOUCH_MOUSEID)
 				break;
 			mon = monitor_from_window_id(event.button.windowID);
 			mouse_monid = mon->monitor_id;
@@ -2840,7 +2880,16 @@ static void process_event(const SDL_Event& event)
 			if (mon->amiga_window)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
 			bool consumed = false;
-			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
+			// Let ImGui on-screen keyboard consume motion first (drawable-pixel space)
+			if (imgui_osk_is_active() && mon->amiga_window) {
+				int pw = 0, ph = 0;
+				SDL_GetWindowSizeInPixels(mon->amiga_window, &pw, &ph);
+				float sx = event.tfinger.x * pw;
+				float sy = event.tfinger.y * ph;
+				int fid = static_cast<int>(event.tfinger.fingerID);
+				consumed = imgui_osk_handle_finger_motion(sx, sy, fid);
+			}
+			if (!consumed && on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
 				consumed = on_screen_joystick_handle_finger_motion(event, ww, wh);
 			if (!consumed)
 				handle_finger_motion_event(event);

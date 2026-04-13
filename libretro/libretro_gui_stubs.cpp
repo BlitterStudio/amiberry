@@ -2,7 +2,8 @@
 #include <vector>
 
 #include "sdl_compat.h"
-#include "vkbd/vkbd.h"
+#include "imgui_overlay.h"
+#include "imgui_osk.h"
 #include "on_screen_joystick.h"
 
 // serial_ports is declared in parser.h and defined in amiberry_gui.cpp (standalone).
@@ -37,75 +38,40 @@ int TTF_SetFontSizeDPI(TTF_Font* font, int ptsize, unsigned int hdpi, unsigned i
 	return 0;
 }
 
-void vkbd_set_hires(bool hires)
+// ImGui overlay stubs (not used in libretro builds)
+void imgui_overlay_init(SDL_Window* window, SDL_Renderer* sdl_renderer, void* gl_context)
 {
-	(void)hires;
+	(void)window; (void)sdl_renderer; (void)gl_context;
 }
+void imgui_overlay_shutdown() {}
+bool imgui_overlay_is_initialized() { return false; }
+void imgui_overlay_begin_frame() {}
+void imgui_overlay_end_frame() {}
+struct ImDrawData;
+ImDrawData* imgui_overlay_get_draw_data() { return nullptr; }
+void imgui_overlay_restore_context() {}
+bool imgui_overlay_is_vulkan() { return false; }
 
-void vkbd_set_language(VkbdLanguage language)
-{
-	(void)language;
-}
-
-void vkbd_set_style(VkbdStyle style)
-{
-	(void)style;
-}
-
-void vkbd_set_language(const std::string& language)
-{
-	(void)language;
-}
-
-void vkbd_set_style(const std::string& style)
-{
-	(void)style;
-}
-
-void vkbd_set_transparency(double transparency)
-{
-	(void)transparency;
-}
-
-void vkbd_set_keyboard_has_exit_button(bool keyboardHasExitButton)
-{
-	(void)keyboardHasExitButton;
-}
-
-void vkbd_init(void)
-{
-}
-
-void vkbd_quit(void)
-{
-}
-
-void vkbd_redraw(void)
-{
-}
-
-void vkbd_toggle(void)
-{
-}
-
-bool vkbd_process(int state, int* keycode, int* pressed)
+// ImGui on-screen keyboard stubs
+void imgui_osk_init() {}
+void imgui_osk_shutdown() {}
+void imgui_osk_toggle() {}
+bool imgui_osk_is_active() { return false; }
+bool imgui_osk_should_render() { return false; }
+void imgui_osk_render(int dw, int dh) { (void)dw; (void)dh; }
+bool imgui_osk_process(int state, int* keycode, int* pressed)
 {
 	(void)state;
-	if (keycode)
-		*keycode = 0;
-	if (pressed)
-		*pressed = 0;
+	if (keycode) *keycode = 0;
+	if (pressed) *pressed = 0;
 	return false;
 }
-
-bool vkbd_is_active(void)
-{
-	return false;
-}
-
-void vkbd_update_position_from_texture()
-{
-}
+bool imgui_osk_handle_finger_down(float x, float y, int id) { (void)x; (void)y; (void)id; return false; }
+bool imgui_osk_handle_finger_up(float x, float y, int id) { (void)x; (void)y; (void)id; return false; }
+bool imgui_osk_handle_finger_motion(float x, float y, int id) { (void)x; (void)y; (void)id; return false; }
+bool imgui_osk_hit_test(float x, float y) { (void)x; (void)y; return false; }
+void imgui_osk_set_transparency(float alpha) { (void)alpha; }
+void imgui_osk_set_language(const char* lang) { (void)lang; }
 
 // On-screen joystick stubs (not used in libretro builds)
 void on_screen_joystick_init(SDL_Renderer* renderer) { (void)renderer; }

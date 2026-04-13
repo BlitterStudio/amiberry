@@ -22,7 +22,8 @@
 #include "parallel.h"
 #include "sampler.h"
 
-#include "vkbd/vkbd.h"
+#include "imgui_overlay.h"
+#include "imgui_osk.h"
 #include "on_screen_joystick.h"
 
 #ifdef WITH_MIDIEMU
@@ -643,40 +644,33 @@ int check_prefs_changed_gfx()
 	}
 
 #ifdef AMIBERRY
-	// Virtual keyboard
+	// On-screen keyboard
 	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
-		currprefs.vkbd_hires != changed_prefs.vkbd_hires ||
 		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
-		currprefs.vkbd_exit != changed_prefs.vkbd_exit ||
 		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
-		_tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style) ||
 		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
 	{
 		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
-		currprefs.vkbd_hires = changed_prefs.vkbd_hires;
 		currprefs.vkbd_transparency = changed_prefs.vkbd_transparency;
-		currprefs.vkbd_exit = changed_prefs.vkbd_exit;
 		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);
-		_tcscpy(currprefs.vkbd_style, changed_prefs.vkbd_style);
 		_tcscpy(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle);
 
 		if (currprefs.vkbd_enabled)
 		{
-			vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
-			vkbd_set_hires(currprefs.vkbd_hires);
-			vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
-			vkbd_set_language(string(currprefs.vkbd_language));
-			vkbd_set_style(string(currprefs.vkbd_style));
+			float alpha = (currprefs.vkbd_transparency > 0)
+				? static_cast<float>(currprefs.vkbd_transparency) / 100.0f
+				: 0.85f;
+			imgui_osk_set_transparency(alpha);
+			imgui_osk_set_language(currprefs.vkbd_language);
 			vkbd_key = get_hotkey_from_config(string(currprefs.vkbd_toggle));
 			vkbd_button = SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle);
-			if (vkbd_allowed(0))
-				vkbd_init();
+			imgui_osk_init();
 		}
 		else
 		{
 			vkbd_key = {};
 			vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
-			vkbd_quit();
+			imgui_osk_shutdown();
 		}
 	}
 

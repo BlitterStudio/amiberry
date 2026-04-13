@@ -28,7 +28,9 @@
 #include "picasso96.h"
 #include "target.h"
 #include "gui/gui_handling.h"
-#include "vkbd/vkbd.h"
+#include "imgui_overlay.h"
+#include "imgui_osk.h"
+#include <imgui_impl_vulkan.h>
 #include "on_screen_joystick.h"
 
 #define VMA_IMPLEMENTATION
@@ -459,7 +461,6 @@ void VulkanRenderer::destroy_context()
 	cleanup_overlay_texture(m_osj_btn1_tex);
 	cleanup_overlay_texture(m_osj_knob_tex);
 	cleanup_overlay_texture(m_osj_base_tex);
-	cleanup_overlay_texture(m_vkbd_tex);
 	cleanup_overlay_texture(m_cursor_tex);
 	cleanup_overlay_texture(m_bezel_tex);
 	cleanup_osd_resources();
@@ -1113,21 +1114,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 		p96_get_cursor_dimensions(&slot.cursor_w, &slot.cursor_h);
 	}
 
-	// Virtual keyboard
-	slot.draw_vkbd = false;
-	{
-		VkbdRenderInfo vkbd_info{};
-		if (vkbd_allowed(monid) && vkbd_get_render_info(vkbd_info)) {
-			upload_overlay_texture(m_vkbd_tex, vkbd_info.surface);
-			slot.vkbd_x = vkbd_info.x;
-			slot.vkbd_y = vkbd_info.y;
-			slot.vkbd_pos_space_w = vkbd_info.position_space_w;
-			slot.vkbd_pos_space_h = vkbd_info.position_space_h;
-			slot.vkbd_surface_w = vkbd_info.surface ? vkbd_info.surface->w : 0;
-			slot.vkbd_surface_h = vkbd_info.surface ? vkbd_info.surface->h : 0;
-			slot.draw_vkbd = true;
-		}
-	}
+	// Virtual keyboard: ImGui OSK rendered later in this function within the render pass
 
 	// On-screen joystick
 	slot.draw_osj = false;
@@ -1407,7 +1394,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	// Overlay uploads happen on the emu thread in render_frame(). Here we record
 	// staging→image copies and draw commands. Lock the overlay mutex to prevent
 	// the emu thread from modifying overlay textures while we read them.
-	bool draw_bezel, draw_cursor, draw_vkbd, draw_osj;
+	bool draw_bezel, draw_cursor, draw_osj;
 	{
 		std::lock_guard<std::mutex> overlay_lock(m_overlay_mutex);
 
@@ -1416,9 +1403,6 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 
 		draw_cursor = slot.draw_cursor && m_cursor_tex.descriptor_set != VK_NULL_HANDLE;
 		if (draw_cursor) record_overlay_copy(command_buffer, m_cursor_tex);
-
-		draw_vkbd = slot.draw_vkbd && m_vkbd_tex.descriptor_set != VK_NULL_HANDLE;
-		if (draw_vkbd) record_overlay_copy(command_buffer, m_vkbd_tex);
 
 		draw_osj = slot.draw_osj && m_osj_base_tex.descriptor_set != VK_NULL_HANDLE;
 		if (draw_osj) {
@@ -1689,18 +1673,6 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 		}
 	}
 
-	// Virtual keyboard (using snapshotted positions from render_frame)
-	if (draw_vkbd && slot.vkbd_pos_space_w > 0 && slot.vkbd_pos_space_h > 0) {
-		float sx = static_cast<float>(drawable_w) / slot.vkbd_pos_space_w;
-		float sy = static_cast<float>(drawable_h) / slot.vkbd_pos_space_h;
-		int vx = static_cast<int>(slot.vkbd_x * sx);
-		int vy = static_cast<int>(slot.vkbd_y * sy);
-		int vw = static_cast<int>(slot.vkbd_surface_w * sx);
-		int vh = static_cast<int>(slot.vkbd_surface_h * sy);
-		if (vw > 0 && vh > 0)
-			record_overlay_draw(command_buffer, m_vkbd_tex, vx, vy, vw, vh);
-	}
-
 	// On-screen joystick (using snapshotted positions from render_frame)
 	if (draw_osj && slot.osj_screen_w > 0 && slot.osj_screen_h > 0) {
 		float sx = static_cast<float>(drawable_w) / slot.osj_screen_w;
@@ -1721,6 +1693,18 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 		draw_osj_element(m_osj_btn1_tex, slot.osj_btn1_rect);
 		draw_osj_element(m_osj_btn2_tex, slot.osj_btn2_rect);
 		draw_osj_element(m_osj_btnkb_tex, slot.osj_btnkb_rect);
+	}
+
+	// ImGui on-screen keyboard overlay
+	if (vkbd_allowed(monid) && imgui_osk_should_render() && imgui_overlay_is_vulkan())
+	{
+		imgui_overlay_begin_frame();
+		imgui_osk_render(drawable_w, drawable_h);
+		imgui_overlay_end_frame(); // calls ImGui::Render() but skips RenderDrawData for Vulkan
+		ImDrawData* draw_data = imgui_overlay_get_draw_data();
+		if (draw_data)
+			ImGui_ImplVulkan_RenderDrawData(draw_data, command_buffer);
+		imgui_overlay_restore_context();
 	}
 
 	vkCmdEndRenderPass(command_buffer);
@@ -2623,6 +2607,25 @@ bool VulkanRenderer::recreate_swapchain()
 
 	m_swapchain_recreate_requested = false;
 	m_imgui_pipeline_stale = true;
+
+	// Rebuild the overlay's ImGui Vulkan state for the new render pass / image count.
+	// Mirrors the GUI's m_imgui_pipeline_stale logic — full re-init if count changed.
+	{
+		ImGui_ImplVulkan_InitInfo overlay_info{};
+		overlay_info.Instance = m_instance;
+		overlay_info.PhysicalDevice = m_physical_device;
+		overlay_info.Device = m_device;
+		overlay_info.QueueFamily = m_graphics_queue_family;
+		overlay_info.Queue = m_graphics_queue;
+		// DescriptorPool filled by the overlay itself
+		overlay_info.MinImageCount = std::max(2u, static_cast<uint32_t>(m_swapchain_images.size()));
+		overlay_info.ImageCount = overlay_info.MinImageCount;
+		overlay_info.PipelineInfoMain.RenderPass = m_render_pass;
+		overlay_info.PipelineInfoMain.Subpass = 0;
+		overlay_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+		imgui_overlay_handle_vulkan_swapchain_change(&overlay_info);
+	}
+
 	write_log("VulkanRenderer: swapchain recreated (%ux%u, %zu images)\n",
 		m_swapchain_extent.width,
 		m_swapchain_extent.height,
@@ -4244,7 +4247,8 @@ void VulkanRenderer::render_software_cursor(int /*monid*/, int /*x*/, int /*y*/,
 
 void VulkanRenderer::render_vkbd(int /*monid*/)
 {
-	// VKBD rendering is done inline in present_frame() via the command buffer.
+	// Vulkan OSK rendering is done inline in present_frame() within the
+	// active render pass, not via this wrapper.
 }
 
 // --- On-screen joystick ---

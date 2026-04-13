@@ -148,18 +148,12 @@ private:
 		bool draw_osd = false;
 		bool draw_bezel = false;
 		bool draw_cursor = false;
-		bool draw_vkbd = false;
 		bool draw_osj = false;
 		int cursor_x = 0, cursor_y = 0, cursor_w = 0, cursor_h = 0;
 
 		// CRT shader state snapshot
 		bool crt_active = false;
 		float crt_time = 0.0f;
-
-		// VKBD position snapshot
-		int vkbd_x = 0, vkbd_y = 0;
-		int vkbd_pos_space_w = 0, vkbd_pos_space_h = 0;
-		int vkbd_surface_w = 0, vkbd_surface_h = 0;
 
 		// On-screen joystick position snapshot
 		int osj_screen_w = 0, osj_screen_h = 0;
@@ -298,8 +292,6 @@ private:
 	OverlayTexture m_cursor_tex{};
 
 	// --- VKBD overlay ---
-	OverlayTexture m_vkbd_tex{};
-
 	// --- On-screen joystick overlay ---
 	OverlayTexture m_osj_base_tex{};
 	OverlayTexture m_osj_knob_tex{};

@@ -20,7 +20,8 @@
 #include "amiberry_gfx.h"
 #include "display_modes.h"
 #include "gfx_platform_internal.h"
-#include "vkbd/vkbd.h"
+#include "imgui_overlay.h"
+#include "imgui_osk.h"
 #include "on_screen_joystick.h"
 
 #ifdef AMIBERRY
@@ -331,9 +332,16 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 
 void SDLRenderer::render_vkbd(int monid)
 {
-	if (vkbd_allowed(monid))
+	if (vkbd_allowed(monid) && imgui_osk_should_render())
 	{
-		vkbd_redraw();
+		AmigaMonitor* mon = &AMonitors[monid];
+		if (!mon->amiga_renderer) return;
+		int dw = 0, dh = 0;
+		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &dw, &dh);
+		if (dw <= 0 || dh <= 0) return;
+		imgui_overlay_begin_frame();
+		imgui_osk_render(dw, dh);
+		imgui_overlay_end_frame();
 	}
 }
 
