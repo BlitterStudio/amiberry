@@ -4245,6 +4245,22 @@ void target_default_options(uae_prefs* p, const int type)
 		_tcscpy(p->vkbd_style, ""); // This will use the default theme.
 	p->vkbd_transparency = amiberry_options.default_vkbd_transparency;
 	_tcscpy(p->vkbd_toggle, amiberry_options.default_vkbd_toggle);
+
+	// Initialize multipath search directories from Amiberry's configured paths.
+	// This allows configs to use bare filenames (e.g. "game.hdf") which get
+	// resolved against the default directories automatically.
+	auto rom = get_rom_path();
+	if (!rom.empty())
+		_tcsncpy(p->path_rom.path[0], rom.c_str(), PATH_MAX - 1);
+	auto floppy = get_floppy_path();
+	if (!floppy.empty())
+		_tcsncpy(p->path_floppy.path[0], floppy.c_str(), PATH_MAX - 1);
+	auto hd = get_harddrive_path();
+	if (!hd.empty())
+		_tcsncpy(p->path_hardfile.path[0], hd.c_str(), PATH_MAX - 1);
+	auto cd = get_cdrom_path();
+	if (!cd.empty())
+		_tcsncpy(p->path_cd.path[0], cd.c_str(), PATH_MAX - 1);
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), nullptr};
