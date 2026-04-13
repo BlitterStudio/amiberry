@@ -426,7 +426,14 @@ void fixup_cpu (struct uae_prefs *p)
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
 {
-	built_in_chipset_prefs (p);
+	const int saved_cs_ide = p->cs_ide;
+	const int saved_cs_mbdmac = p->cs_mbdmac;
+	built_in_chipset_prefs(p);
+	if (saved_cs_ide != p->cs_ide)
+		p->cs_ide = saved_cs_ide;
+	if (saved_cs_mbdmac != p->cs_mbdmac)
+		p->cs_mbdmac = saved_cs_mbdmac;
+
 	fixup_cpu (p);
 	cfgfile_compatibility_rtg(p);
 #ifdef AMIBERRY

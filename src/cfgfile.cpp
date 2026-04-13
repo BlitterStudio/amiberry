@@ -2850,21 +2850,14 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	if (is_board_enabled(p, ROMTYPE_CD32CART, 0)) {
 		cfgfile_dwrite_bool(f, _T("cd32fmv"), true);
 	}
-	if (is_board_enabled(p, ROMTYPE_MB_IDE, 0) && p->cs_ide == 1) {
-		cfgfile_dwrite_str(f, _T("ide"), _T("a600/a1200"));
-	}
-	if (is_board_enabled(p, ROMTYPE_MB_IDE, 0) && p->cs_ide == 2) {
-		cfgfile_dwrite_str(f, _T("ide"), _T("a4000"));
+	if (p->cs_ide >= 0 && p->cs_ide <= 2) {
+		cfgfile_write_strarr(f, _T("ide"), idemode, p->cs_ide);
 	}
 	if (is_board_enabled(p, ROMTYPE_CDTVSCSI, 0)) {
 		cfgfile_dwrite_bool(f, _T("scsi_cdtv"), true);
 	}
-	if (is_board_enabled(p, ROMTYPE_SCSI_A3000, 0)) {
-		cfgfile_dwrite_bool(f, _T("scsi_a3000"), true);
-	}
-	if (is_board_enabled(p, ROMTYPE_SCSI_A4000T, 0)) {
-		cfgfile_dwrite_bool(f, _T("scsi_a4000t"), true);
-	}
+	cfgfile_write_bool(f, _T("scsi_a3000"), p->cs_mbdmac == 1);
+	cfgfile_write_bool(f, _T("scsi_a4000t"), p->cs_mbdmac == 2);
 
 	cfgfile_dwrite_strarr(f, _T("z3mapping"), z3mapping, p->z3_mapping_mode);
 	cfgfile_dwrite_bool(f, _T("board_custom_order"), p->autoconfig_custom_sort);
@@ -6362,19 +6355,29 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_strval(option, value, _T("ide"), &p->cs_ide, idemode, 0)) {
 		if (p->cs_ide)
 			addbcromtype(p, ROMTYPE_MB_IDE, true, nullptr, 0);
+		else
+			addbcromtype(p, ROMTYPE_MB_IDE, false, nullptr, 0);
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("scsi_a3000"), &dummybool)) {
 		if (dummybool) {
+			addbcromtype(p, ROMTYPE_SCSI_A4000T, false, nullptr, 0);
 			addbcromtype(p, ROMTYPE_SCSI_A3000, true, nullptr, 0);
 			p->cs_mbdmac = 1;
+		} else if (p->cs_mbdmac == 1) {
+			addbcromtype(p, ROMTYPE_SCSI_A3000, false, nullptr, 0);
+			p->cs_mbdmac = 0;
 		}
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("scsi_a4000t"), &dummybool)) {
 		if (dummybool) {
+			addbcromtype(p, ROMTYPE_SCSI_A3000, false, nullptr, 0);
 			addbcromtype(p, ROMTYPE_SCSI_A4000T, true, nullptr, 0);
 			p->cs_mbdmac = 2;
+		} else if (p->cs_mbdmac == 2) {
+			addbcromtype(p, ROMTYPE_SCSI_A4000T, false, nullptr, 0);
+			p->cs_mbdmac = 0;
 		}
 		return 1;
 	}
