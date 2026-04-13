@@ -1362,9 +1362,33 @@ void amiberry_gui_init()
 			SDL_SyncWindow(mon->gui_window);
 		}
 		if (mon->gui_window) {
-			// Sync rect to actual window size (SDL may adjust)
+			// Keep the intended GUI size — SDL may create the window larger
+			// than requested (e.g. on macOS when returning from a full-window
+			// Space).  We enforce our intended size below instead of blindly
+			// accepting whatever SDL reports.
+			const int intended_w = gui_window_rect.w;
+			const int intended_h = gui_window_rect.h;
 			int ww, wh;
 			SDL_GetWindowSize(mon->gui_window, &ww, &wh);
+
+			SDL_WindowFlags wflags = SDL_GetWindowFlags(mon->gui_window);
+
+			// If the window ended up larger than intended (or maximized/
+			// fullscreen), force it back to the intended dimensions.
+			// This happens on macOS when returning from a full-window Space.
+			if (ww != intended_w || wh != intended_h
+				|| (wflags & (SDL_WINDOW_MAXIMIZED | SDL_WINDOW_FULLSCREEN))) {
+				write_log("GUI window: SDL reports %dx%d (flags=0x%x) but intended %dx%d — correcting\n",
+					ww, wh, (unsigned)wflags, intended_w, intended_h);
+				if (wflags & SDL_WINDOW_MAXIMIZED)
+					SDL_RestoreWindow(mon->gui_window);
+				if (wflags & SDL_WINDOW_FULLSCREEN)
+					SDL_SetWindowFullscreen(mon->gui_window, false);
+				SDL_SetWindowSize(mon->gui_window, intended_w, intended_h);
+				SDL_SyncWindow(mon->gui_window);
+				ww = intended_w;
+				wh = intended_h;
+			}
 			gui_window_rect.w = ww;
 			gui_window_rect.h = wh;
 
@@ -1703,10 +1727,17 @@ void amiberry_gui_halt()
 		// Always save position and size together so the ini stays consistent.
 		// Avoids stale position-only state causing top-left placement on first
 		// launch after upgrading from a version that didn't persist size.
+		// Skip saving dimensions when the window is maximized — the maximized
+		// size is transient (screen-dependent) and would overwrite the user's
+		// preferred normal-window size, causing it to appear maximized on every
+		// subsequent launch.
+		const bool is_maximized = (SDL_GetWindowFlags(mon->gui_window) & SDL_WINDOW_MAXIMIZED) != 0;
 		regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
 		regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
-		regsetint(nullptr, _T("GUISizeW"), gui_window_rect.w);
-		regsetint(nullptr, _T("GUISizeH"), gui_window_rect.h);
+		if (!is_maximized) {
+			regsetint(nullptr, _T("GUISizeW"), gui_window_rect.w);
+			regsetint(nullptr, _T("GUISizeH"), gui_window_rect.h);
+		}
 #if defined(__ANDROID__)
 		// Don't destroy the window on Android, as we reuse it
 #elif defined(_WIN32)
@@ -1907,9 +1938,12 @@ void run_gui()
 			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_RESIZED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
-				gui_window_rect.w = gui_event.window.data1;
-				gui_window_rect.h = gui_event.window.data2;
-
+				// Don't track size changes caused by the window being maximized —
+				// we only want to persist the user's normal (restored) window size.
+				if (!(SDL_GetWindowFlags(mon->gui_window) & SDL_WINDOW_MAXIMIZED)) {
+					gui_window_rect.w = gui_event.window.data1;
+					gui_window_rect.h = gui_event.window.data2;
+				}
 			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
