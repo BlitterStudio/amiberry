@@ -49,6 +49,10 @@ set(SOURCE_FILES
         src/flashrom.cpp
         src/fpp.cpp
         src/fpp_native.cpp
+        src/fpp_softfloat.cpp
+        src/softfloat/softfloat.cpp
+        src/softfloat/softfloat_decimal.cpp
+        src/softfloat/softfloat_fpsp.cpp
         src/framebufferboards.cpp
         src/fsdb.cpp
         src/fsusage.cpp
