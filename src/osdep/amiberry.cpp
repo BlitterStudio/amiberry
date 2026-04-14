@@ -333,6 +333,12 @@ static void set_key_configs(const uae_prefs* p)
 	enter_gui_button = SDL_GetGamepadButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID)
 		enter_gui_button = SDL_GetGamepadButtonFromString(amiberry_options.default_open_gui_key);
+#ifdef __ANDROID__
+	// Android: default Start button as pause/GUI toggle for hardware controllers
+	// (no F12 key available, and software back button isn't accessible from gamepads)
+	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID)
+		enter_gui_button = SDL_GAMEPAD_BUTTON_START;
+#endif
 	if (enter_gui_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (int port = 0; port < 2; port++)

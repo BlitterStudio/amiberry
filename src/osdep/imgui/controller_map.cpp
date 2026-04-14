@@ -307,7 +307,7 @@ static int StandardizeAxisValue(int nValue)
 	return 0;
 }
 
-static void SetCurrentBinding(int iBinding)
+static void SetCurrentBinding(int iBinding, int direction = 1)
 {
 	SDL_GamepadExtendedBind* pBinding;
 
@@ -324,14 +324,14 @@ static void SetCurrentBinding(int iBinding)
 
 	if (s_arrBindingOrder[iBinding] == -1)
 	{
-		SetCurrentBinding(iBinding + 1);
+		SetCurrentBinding(iBinding + direction, direction);
 		return;
 	}
 
 	if (s_arrBindingOrder[iBinding] == SDL_GAMEPAD_BUTTON_TOUCHPAD &&
 		!g_controller_map.bind_touchpad)
 	{
-		SetCurrentBinding(iBinding + 1);
+		SetCurrentBinding(iBinding + direction, direction);
 		return;
 	}
 	s_iCurrentBinding = iBinding;
@@ -398,7 +398,7 @@ static void ConfigureBinding(const SDL_GamepadExtendedBind* pBinding)
 			if (iIndex == SDL_GAMEPAD_BUTTON_EAST)
 			{
 				/* Go back to the previous binding */
-				SetCurrentBinding(s_iCurrentBinding - 1);
+				SetCurrentBinding(s_iCurrentBinding - 1, -1);
 				return;
 			}
 
@@ -799,7 +799,7 @@ bool ControllerMap_HandleEvent(const SDL_Event& event)
 	case SDL_EVENT_KEY_DOWN:
 		if (event.key.key == SDLK_BACKSPACE || event.key.key == SDLK_AC_BACK)
 		{
-			SetCurrentBinding(s_iCurrentBinding - 1);
+			SetCurrentBinding(s_iCurrentBinding - 1, -1);
 			return true;
 		}
 		if (event.key.key == SDLK_SPACE)
@@ -956,7 +956,7 @@ void ControllerMap_RenderModal()
 		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, buttons_y));
 		if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Back", ImVec2(BUTTON_WIDTH, 0)))
 		{
-			SetCurrentBinding(s_iCurrentBinding - 1);
+			SetCurrentBinding(s_iCurrentBinding - 1, -1);
 		}
 		ImGui::SameLine();
 		if (AmigaButton("Skip", ImVec2(BUTTON_WIDTH, 0)))

@@ -1294,7 +1294,7 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 	}
 	else
 	{
-		const std::string controller_name = did->controller_name;
+		const std::string controller_name = did->name;
 		const std::string controller_path = get_controllers_path();
 		const std::string controller_file = controller_path + controller_name + ".controller";
 		if (my_existsfile2(controller_file.c_str()))
