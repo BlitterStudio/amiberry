@@ -63,11 +63,14 @@ static void poll_input_devices() {
         input_device_ids.push_back(JSEM_JOYS + j);
     }
 
-    // Mice
+    // Mice — always prefixed with [Mouse] for parity with [Joystick] /
+    // [Gamepad] entries. In single-mouse mode there is exactly one entry
+    // ("[Mouse] System mouse"); in multi-mouse mode one entry per physical
+    // device.
     int num_mice = inputdevice_get_device_total(IDTYPE_MOUSE);
     for (int j = 0; j < num_mice; j++) {
         const char* name = inputdevice_get_device_name(IDTYPE_MOUSE, j);
-        std::string label = std::string("[Mouse] ") + (name ? name : "?");
+        std::string label = std::string("[Mouse] ") + (name && name[0] ? name : "?");
         input_device_names.push_back(label);
         input_device_ids.push_back(JSEM_MICE + j);
     }
@@ -259,6 +262,25 @@ void render_panel_input() {
         ImGui::SameLine();
         AmigaCheckbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
         ShowHelpMarker("Automatically switch Port 0 and Port 1 devices based on input activity");
+
+        // Multi-mouse toggle — live-applies via a targeted mouse re-init that
+        // preserves port bindings by index. We deliberately avoid
+        // inputdevice_devicechange() here: that routine rebinds by friendly
+        // name, and the "System mouse" ↔ SDL-device-name swap during a mode
+        // toggle would make the match fail and shuffle the port assignment.
+        ImGui::SameLine();
+        const bool prev_multi_mouse = changed_prefs.input_multi_mouse;
+        AmigaCheckbox("Multi-mouse support", &changed_prefs.input_multi_mouse);
+        ShowHelpMarker("Treat each physical mouse as a separate device for 2-player mouse games (e.g., Lemmings). "
+                       "Default: off — all mouse input is merged into a single System mouse, which is the most reliable option.");
+        if (prev_multi_mouse != changed_prefs.input_multi_mouse) {
+            inputdevice_mouse_reinit(&changed_prefs);
+            // Repopulate the dropdown labels immediately so this frame
+            // reflects the new device list (avoids a one-frame lag where
+            // the combo would still show the pre-toggle names).
+            poll_input_devices();
+            joystick_refresh_needed = false;
+        }
 
         ImGui::EndTable();
     }

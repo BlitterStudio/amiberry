@@ -1065,6 +1065,7 @@ void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 	cfgfile_dwrite(f, _T("input.devicematchflags"), _T("%d"), p->input_device_match_mask);
 	cfgfile_dwrite_bool(f, _T("input.autoswitchleftright"), p->input_autoswitchleftright);
 	cfgfile_dwrite_bool(f, _T("input.advancedmultiinput"), p->input_advancedmultiinput);
+	cfgfile_dwrite_bool(f, _T("input.multi_mouse"), p->input_multi_mouse);
 	cfgfile_dwrite_bool(f, _T("input.default_osk"), p->input_default_onscreen_keyboard);
 #ifndef AMIBERRY // not used in Amiberry
 	for (id = 0; id < MAX_INPUT_SETTINGS; id++) {
@@ -1627,6 +1628,8 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		pr->input_autoswitchleftright = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("advancedmultiinput")))
 		pr->input_advancedmultiinput = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
+	if (!_tcsicmp(p, _T("multi_mouse")))
+		pr->input_multi_mouse = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("default_osk")))
 		pr->input_default_onscreen_keyboard = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("keyboard_type"))) {
@@ -8443,6 +8446,76 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 	return true;
 }
 
+#ifdef AMIBERRY
+// Re-enumerate mouse devices in response to a preference change (currently just
+// input_multi_mouse). This is NOT the same as inputdevice_devicechange(), which
+// is designed for real hot-plug events and re-matches port bindings by friendly
+// name — that name changes during the multi-mouse toggle ("System mouse" ↔ the
+// underlying SDL device name) and would cause the match to fail, landing the
+// binding on joydefault and shuffling the port assignment.
+//
+// Here we preserve mouse port bindings by index (JSEM_MICE + N stays at
+// JSEM_MICE + N when still valid, or maps to JPORT_NONE when out of range).
+// Fixjport (called via inputdevice_validate_jports at the end) refreshes
+// idc.name/configname from the newly-enumerated device list.
+void inputdevice_mouse_reinit(struct uae_prefs *prefs)
+{
+	int acc = input_acquired;
+
+	// Snapshot which ports reference which mouse index.
+	int saved_mouse_idx[MAX_JPORTS];
+	for (int p = 0; p < MAX_JPORTS; p++) {
+		saved_mouse_idx[p] = -1;
+		int id = prefs->jports[p].id;
+		if (id >= JSEM_MICE && id < JSEM_END)
+			saved_mouse_idx[p] = id - JSEM_MICE;
+	}
+
+	// Sync the toggle into currprefs before re-init — init_mouse() reads
+	// currprefs.input_multi_mouse and must see the new value, regardless of
+	// which prefs struct the caller passed in.
+	currprefs.input_multi_mouse = prefs->input_multi_mouse;
+
+	inputdevice_unacquire();
+	idev[IDTYPE_MOUSE].close();
+	idev[IDTYPE_MOUSE].init();
+
+	// Restore port bindings. Policy:
+	//   - index still valid  → keep as-is
+	//   - index out of range → JPORT_NONE (do NOT all collapse onto index 0,
+	//     which would cause inputdevice_validate_jports to resolve duplicate
+	//     IDs unpredictably, migrating bindings to joysticks/keyboards).
+	int new_num = idev[IDTYPE_MOUSE].get_num();
+	bool any_cleared = false;
+	for (int p = 0; p < MAX_JPORTS; p++) {
+		if (saved_mouse_idx[p] < 0)
+			continue;
+		int new_idx = saved_mouse_idx[p];
+		if (new_idx >= new_num) {
+			// Lost the device this port was bound to — let the user re-pick.
+			freejport(prefs, p);
+			any_cleared = true;
+		} else {
+			prefs->jports[p].id = JSEM_MICE + new_idx;
+		}
+	}
+	// One full-sweep validation is cheaper and less interaction-prone than
+	// per-port calls, and fixjport refreshes idc.name / idc.configname so a
+	// later hot-plug can re-match correctly.
+	bool fixedports[MAX_JPORTS] = { false };
+	for (int p = 0; p < MAX_JPORTS; p++)
+		inputdevice_validate_jports(prefs, p, fixedports);
+
+	if (prefs == &changed_prefs)
+		inputdevice_copyconfig(&changed_prefs, &currprefs);
+	if (acc)
+		inputdevice_acquire(TRUE);
+	if (any_cleared)
+		write_log(_T("Mouse re-init: one or more ports lost their device and were reset to <none>\n"));
+	set_config_changed();
+}
+#endif
+
 
 // set default prefs to all input configuration settings
 void inputdevice_default_prefs (struct uae_prefs *p)
@@ -8463,6 +8536,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_keyboard_type = 0;
 	p->input_autoswitch = true;
 	p->input_autoswitchleftright = false;
+	p->input_multi_mouse = false;
 	p->input_device_match_mask = -1;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
 	p->input_default_onscreen_keyboard = true;
@@ -9267,6 +9341,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	dst->input_joymouse_speed = src->input_joymouse_speed;
 	dst->input_mouse_speed = src->input_mouse_speed;
 	dst->input_autofire_linecnt = src->input_autofire_linecnt;
+	dst->input_multi_mouse = src->input_multi_mouse;
 #ifdef AMIBERRY
 	strcpy(dst->open_gui, src->open_gui);
 	strcpy(dst->quit_amiberry, src->quit_amiberry);

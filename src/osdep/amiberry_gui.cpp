@@ -782,7 +782,13 @@ static void gui_to_prefs(void)
 
 static void after_leave_gui()
 {
+	// Capture the active multi-mouse mode before copyconfig overwrites it so
+	// we can detect user toggles made via "load config" (not just the Input
+	// panel checkbox) and re-enumerate mouse devices accordingly.
+	const bool prev_multi_mouse = currprefs.input_multi_mouse;
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
+	if (prev_multi_mouse != currprefs.input_multi_mouse)
+		inputdevice_mouse_reinit(&currprefs);
 	inputdevice_config_change_test();
 }
 

@@ -260,6 +260,9 @@ extern int getmousestate (int mouse);
 extern void inputdevice_updateconfig (struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
 extern void inputdevice_updateconfig_internal (struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
 extern bool inputdevice_devicechange (struct uae_prefs *prefs);
+#ifdef AMIBERRY
+extern void inputdevice_mouse_reinit(struct uae_prefs *prefs);
+#endif
 
 #define INTERNALEVENT_CPURESET 0
 #define INTERNALEVENT_KBRESET 1
