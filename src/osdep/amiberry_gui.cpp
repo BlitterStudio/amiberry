@@ -917,7 +917,10 @@ void gui_display(int shortcut)
 	// mode; on KMSDRM there is no WM to absorb stale events (see #1871).
 	SDL_PumpEvents();
 	SDL_FlushEvents(SDL_EVENT_MOUSE_MOTION, SDL_EVENT_MOUSE_WHEEL);
-	if (kmsdrm_detected && amiga_surface != nullptr)
+	// Shared-window cases (KMSDRM, x11-without-WM): force an immediate
+	// graphics buffer update so the emulator frame reappears instead of
+	// the last GUI frame lingering on the shared surface.
+	if (no_wm_detected && amiga_surface != nullptr)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);
 	}

@@ -201,3 +201,13 @@ extern bool force_auto_crop;
 extern SDL_GamepadButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;
+extern bool no_wm_detected;
+// Detects environments without a window manager: KMSDRM (always) or x11
+// without a WM (e.g. Batocera). Self-contained — probes SDL's video
+// driver itself, so callers don't need to pre-set kmsdrm_detected.
+// Sets BOTH kmsdrm_detected and no_wm_detected when KMSDRM is in use.
+// Idempotent: a definitive detection latches; if SDL video isn't
+// initialized yet (driver is null), the call is a no-op so a later call
+// can retry. Override via AMIBERRY_NO_WM env var ("1"/"0") on non-KMSDRM
+// platforms; KMSDRM is never overridable.
+void detect_no_wm();

@@ -198,7 +198,10 @@ namespace
 
 	static bool can_use_native_dialog()
 	{
-		if (kmsdrm_detected)
+		// Native dialogs need a window manager to host a separate dialog
+		// window. Both KMSDRM and x11-without-WM lack one — fall back to
+		// the in-process ImGuiFileDialog instead.
+		if (no_wm_detected)
 			return false;
 
 		if (currprefs.headless)

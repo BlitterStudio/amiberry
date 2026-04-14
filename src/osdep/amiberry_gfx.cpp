@@ -112,6 +112,91 @@ void update_system_pixel_format()
 static int dx = 0, dy = 0;
 const char* sdl_video_driver;
 bool kmsdrm_detected = false;
+bool no_wm_detected = false;
+
+// Detect when we're running without a window manager. This covers two cases:
+//   1. KMSDRM — inherently WM-less (console framebuffer / direct-to-display)
+//   2. x11 without a WM — e.g. kiosk-style setups like Batocera
+// Without a WM, separate windows can't be properly focus/stacking-managed,
+// so we must reuse a single shared window for both emulation and GUI
+// (see #1962).
+//
+// Self-contained: probes SDL's current video driver itself, so callers
+// don't need to set kmsdrm_detected first. Sets BOTH kmsdrm_detected and
+// no_wm_detected when KMSDRM is the driver. Idempotent — once a definitive
+// detection has been made, subsequent calls are no-ops. If SDL video isn't
+// initialized yet (driver is null), the call is a no-op so a later call
+// can retry.
+//
+// Override via AMIBERRY_NO_WM env var: "1" forces on, "0" forces off.
+// KMSDRM is never overridable.
+void detect_no_wm()
+{
+	static bool already_detected = false;
+	if (already_detected) return;
+
+	const char* driver = SDL_GetCurrentVideoDriver();
+	if (!driver) {
+		// SDL video not yet initialized — don't lock in a (false) result;
+		// allow a subsequent call to do real detection.
+		return;
+	}
+
+	// KMSDRM is always WM-less by definition — not overridable, as the
+	// emulator physically cannot run with separate windows under KMSDRM.
+	if (strcmpi(driver, "KMSDRM") == 0) {
+		kmsdrm_detected = true;
+		no_wm_detected = true;
+		already_detected = true;
+		return;
+	}
+
+	already_detected = true;
+
+	// Explicit override for non-KMSDRM platforms. Useful when the heuristic
+	// below gets it wrong (e.g. a user wants to test shared-window mode on
+	// a standard desktop, or Batocera ships a build that does export some
+	// session env var).
+	const char* override_env = getenv("AMIBERRY_NO_WM");
+	if (override_env) {
+		if (strcmp(override_env, "1") == 0) {
+			no_wm_detected = true;
+			write_log("AMIBERRY_NO_WM=1: forcing shared-window mode (driver=%s)\n", driver);
+			return;
+		}
+		if (strcmp(override_env, "0") == 0) {
+			write_log("AMIBERRY_NO_WM=0: skipping no-WM auto-detection (driver=%s)\n", driver);
+			return;
+		}
+	}
+
+	// Auto-detection: x11 driver without any desktop-session env vars set.
+	// Naturally skips on macOS/Windows/Wayland — only bare x11 reaches the
+	// heuristic. Note: this is a heuristic, not a definitive WM probe; users
+	// on minimalist x11 setups (xinit + twm/fvwm/xmonad without any session
+	// vars exported) can be misclassified — they should set AMIBERRY_NO_WM=0
+	// to opt out. A more rigorous _NET_SUPPORTING_WM_CHECK probe via X11
+	// interop could replace this if the heuristic proves troublesome.
+	if (strcmpi(driver, "x11") != 0)
+		return;
+
+	auto env_set = [](const char* name) {
+		const char* v = getenv(name);
+		return v && *v;
+	};
+
+	// Common desktop-session / WM env vars.
+	if (env_set("XDG_CURRENT_DESKTOP") || env_set("DESKTOP_SESSION")
+		|| env_set("GNOME_DESKTOP_SESSION_ID") || env_set("KDE_FULL_SESSION")
+		|| env_set("XFCE4_SESSION") || env_set("MATE_DESKTOP_SESSION_ID")
+		|| env_set("LXQT_SESSION_CONFIG") || env_set("SWAYSOCK")
+		|| env_set("I3SOCK") || env_set("HYPRLAND_INSTANCE_SIGNATURE")) {
+		return;
+	}
+
+	no_wm_detected = true;
+	write_log("x11 without window manager detected (driver=%s) — using shared-window mode for GUI (set AMIBERRY_NO_WM=0 to disable)\n", driver);
+}
 
 SDL_PixelFormat pixel_format = SDL_PIXELFORMAT_ABGR8888;
 

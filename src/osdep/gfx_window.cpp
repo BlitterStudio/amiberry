@@ -113,14 +113,17 @@ void close_hwnds(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
 	if (renderer_to_use) {
 		renderer_to_use->close_hwnds_cleanup(mon);
 		renderer_to_use->destroy_context();
-		if (!kmsdrm_detected && !preserve_fullwindow_window) {
+		// no_wm_detected covers both KMSDRM and x11-without-WM: in both
+		// cases the renderer is shared with the GUI and must not be torn
+		// down here.
+		if (!no_wm_detected && !preserve_fullwindow_window) {
 			renderer_to_use->destroy_platform_renderer(mon);
 		}
 	}
 	if (mon->monitor_id > 0 && mon->renderer) {
 		mon->renderer.reset();
 	}
-	if (mon->amiga_window && !kmsdrm_detected && !preserve_fullwindow_window)
+	if (mon->amiga_window && !no_wm_detected && !preserve_fullwindow_window)
 	{
 #if defined(__ANDROID__)
 		// Reuse existing window
@@ -596,12 +599,15 @@ static int create_windows(struct AmigaMonitor* mon)
 	struct MultiDisplay* md;
 
 #ifdef AMIBERRY
-	// Detect KMSDRM driver
 	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
-	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	// Detect WM-less environments (KMSDRM, or x11 without a WM like Batocera).
+	// Both require window sharing: without a WM, separate windows can't be
+	// focus/stacking-managed, leaving the GUI stuck foreground on resume
+	// (see #1962). detect_no_wm() also sets kmsdrm_detected when applicable.
+	detect_no_wm();
+	if (no_wm_detected)
 	{
-		kmsdrm_detected = true;
 		if (!mon->amiga_window && mon->gui_window)
 		{
 			mon->amiga_window = mon->gui_window;

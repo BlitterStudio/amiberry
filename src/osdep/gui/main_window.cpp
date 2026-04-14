@@ -1361,9 +1361,14 @@ void amiberry_gui_init()
 		&& mon->gui_window == mon->amiga_window);
 #endif
 
-	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	// Detect WM-less environments (KMSDRM, or x11 without a WM like Batocera)
+	// and share the amiga window for the GUI — separate windows can't be
+	// focus/stacking-managed without a WM, leaving the GUI stuck in the
+	// foreground on resume (see #1962). Note: detect_no_wm() also sets
+	// kmsdrm_detected when the driver is KMSDRM.
+	detect_no_wm();
+	if (no_wm_detected)
 	{
-		kmsdrm_detected = true;
 		if (!mon->gui_window && mon->amiga_window)
 		{
 			mon->gui_window = mon->amiga_window;
@@ -1372,7 +1377,6 @@ void amiberry_gui_init()
 		{
 			mon->gui_renderer = mon->amiga_renderer;
 		}
-		// SDL3: scale quality is per-texture, not a global hint
 	}
 	{
 		const SDL_DisplayMode* dm = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
@@ -1384,7 +1388,10 @@ void amiberry_gui_init()
 		write_log("Creating Amiberry GUI window...\n");
 		int has_x = 0;
 		int has_y = 0;
-		if (!kmsdrm_detected) {
+		// On no-WM systems (KMSDRM, x11-without-WM), saved positions and
+		// SDL_WINDOWPOS_CENTERED are meaningless — there's no WM to honor
+		// them. Size the window to the display instead.
+		if (!no_wm_detected) {
 			has_x = regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
 			has_y = regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
 			if (!has_x || !has_y) {
@@ -1400,12 +1407,12 @@ void amiberry_gui_init()
 			gui_window_rect.y = display_bounds.y;
 			gui_window_rect.w = display_bounds.w > 0 ? display_bounds.w : sdl_mode.w;
 			gui_window_rect.h = display_bounds.h > 0 ? display_bounds.h : sdl_mode.h;
-			write_log("KMSDRM GUI: forcing desktop-sized window %dx%d at %dx%d\n",
+			write_log("No-WM GUI: forcing desktop-sized window %dx%d at %dx%d\n",
 				gui_window_rect.w, gui_window_rect.h, gui_window_rect.x, gui_window_rect.y);
 		}
 
 		uint32_t mode;
-		if (!kmsdrm_detected)
+		if (!no_wm_detected)
 		{
 #ifdef __ANDROID__
 			mode = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE;
@@ -1417,8 +1424,9 @@ void amiberry_gui_init()
 		}
 		else
 		{
-			// KMSDRM should enter desktop/fullwindow mode after creation, not by
-			// requesting a specific fullscreen resolution up front.
+			// No-WM systems: don't request resize handles or fullscreen mode
+			// up front. KMSDRM enters desktop/fullwindow mode after creation
+			// (handled below for kmsdrm_detected only).
 			mode = 0;
 		}
 
@@ -1428,8 +1436,9 @@ void amiberry_gui_init()
 			mode |= SDL_WINDOW_HIDDEN;
 		// Request native-resolution framebuffer on HiDPI displays.
 		// Android: NOT needed — display scaling is handled entirely via layout_scale.
+		// No-WM: HiDPI scaling needs a compositor to be meaningful.
 #if !defined(__ANDROID__)
-		if (!kmsdrm_detected)
+		if (!no_wm_detected)
 			mode |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #endif
 
@@ -1478,8 +1487,9 @@ void amiberry_gui_init()
 			gui_window_rect.w = ww;
 			gui_window_rect.h = wh;
 
-			// Position: use saved position if available, otherwise center
-			if (kmsdrm_detected) {
+			// Position: use saved position if available, otherwise center.
+			// On no-WM systems use display origin (no WM to honor positions).
+			if (no_wm_detected) {
 				SDL_DisplayID disp = SDL_GetDisplayForWindow(mon->gui_window);
 				SDL_Rect bounds{};
 				if (disp)
@@ -1527,10 +1537,12 @@ void amiberry_gui_init()
 		}
 #endif
 	}
-	else if (kmsdrm_detected)
+	else if (no_wm_detected)
 	{
 		// Reset emulation's logical presentation on the shared renderer,
 		// otherwise the GUI overflows the smaller Amiga logical space.
+		// Applies to both KMSDRM and x11-without-WM — both share the
+		// amiga_renderer which has the Amiga's logical presentation set.
 		if (mon->gui_renderer) {
 			SDL_SetRenderLogicalPresentation(mon->gui_renderer, 0, 0,
 				SDL_LOGICAL_PRESENTATION_DISABLED);
@@ -1787,7 +1799,7 @@ void amiberry_gui_halt()
 		SDL_DestroyTexture(gui_texture);
 		gui_texture = nullptr;
 	}
-	if (mon->gui_renderer && !kmsdrm_detected)
+	if (mon->gui_renderer && !no_wm_detected)
 	{
 #if defined(__ANDROID__)
 		// Don't destroy the renderer on Android, as we reuse it
@@ -1809,7 +1821,7 @@ void amiberry_gui_halt()
 #endif
 	}
 
-	if (mon->gui_window && !kmsdrm_detected) {
+	if (mon->gui_window && !no_wm_detected) {
 		// Always save position and size together so the ini stays consistent.
 		// Avoids stale position-only state causing top-left placement on first
 		// launch after upgrading from a version that didn't persist size.
