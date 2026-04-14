@@ -62,9 +62,9 @@
         </screenshot>
     </screenshots>
     <releases>
-        <release version="8.1.5" date="2026-04-02">
+        <release version="8.1.5" date="2026-04-14">
             <description>
-                <p>Android UI fixes</p>
+                <p>Stable release: Android UI fixes, GUI improvements (loaded-config window title, screenshot controls in Misc panel, filter persistence per config, full CD/HD dialog path handling), optional Softfloat 80-bit FPU emulation, improved VSync frame pacing with adaptive mode, refreshed ImGui and WinUAE sync, macOS full-window focus fixes, iOS groundwork, relative filesystem/hardfile path fixes, and .uaem sidecar timestamp/metadata improvements.</p>
             </description>
         </release>
         <release version="8.1.4" date="2026-04-01">
