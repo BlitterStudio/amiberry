@@ -1481,10 +1481,11 @@ void render_panel_hd()
         char devname[256];
         CreateDefaultDevicename(devname);
         au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
-        
+
         edit_entry_index = -1;
-        hdf_info_text1.clear(); hdf_info_text2.clear(); 
-        
+        hdf_info_text1.clear(); hdf_info_text2.clear();
+
+        inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
         ImGui::OpenPopup("Hardfile Settings");
         show_hardfile_modal = true;
         current_hd_dialog_mode = HDDialogMode::None;
@@ -1564,7 +1565,8 @@ void render_panel_hd()
          }
          else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB) {
              memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
-             updatehdfinfo(true, false, false, hdf_info_text1, hdf_info_text2); 
+             updatehdfinfo(true, false, false, hdf_info_text1, hdf_info_text2);
+             inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
              ImGui::OpenPopup("Hardfile Settings");
              show_hardfile_modal = true;
          }
