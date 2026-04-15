@@ -3205,37 +3205,37 @@ struct visual_asset_path_set
 
 static const char* get_visual_assets_directory_name()
 {
-#if defined(__MACH__) || defined(_WIN32)
-	return "Visuals";
-#else
+#if defined(__ANDROID__)
 	return "visuals";
+#else
+	return "Visuals";
 #endif
 }
 
 static const char* get_themes_directory_name()
 {
-#if defined(__MACH__) || defined(_WIN32)
-	return "Themes";
-#else
+#if defined(__ANDROID__)
 	return "themes";
+#else
+	return "Themes";
 #endif
 }
 
 static const char* get_shaders_directory_name()
 {
-#if defined(__MACH__) || defined(_WIN32)
-	return "Shaders";
-#else
+#if defined(__ANDROID__)
 	return "shaders";
+#else
+	return "Shaders";
 #endif
 }
 
 static const char* get_bezels_directory_name()
 {
-#if defined(__MACH__) || defined(_WIN32)
-	return "Bezels";
-#else
+#if defined(__ANDROID__)
 	return "bezels";
+#else
+	return "Bezels";
 #endif
 }
 
@@ -3372,23 +3372,23 @@ static base_content_path_set get_base_content_path_set(const std::string& base_p
 	paths.video_dir = join_path(normalized_base, "videos");
 	apply_visual_asset_paths(paths, get_visual_asset_paths_from_content_root(normalized_base));
 #else
-	paths.config_path = join_path(normalized_base, "conf");
-	paths.controllers_path = join_path(normalized_base, "controllers");
-	paths.whdboot_path = join_path(normalized_base, "whdboot");
-	paths.whdload_arch_path = join_path(normalized_base, "lha");
-	paths.floppy_path = join_path(normalized_base, "floppies");
-	paths.harddrive_path = join_path(normalized_base, "harddrives");
-	paths.cdrom_path = join_path(normalized_base, "cdroms");
-	paths.logfile_path = join_path(normalized_base, "amiberry.log");
-	paths.rom_path = join_path(normalized_base, "roms");
-	paths.rp9_path = join_path(normalized_base, "rp9");
+	paths.config_path = join_path(normalized_base, "Configurations");
+	paths.controllers_path = join_path(normalized_base, "Controllers");
+	paths.whdboot_path = join_path(normalized_base, "Whdboot");
+	paths.whdload_arch_path = join_path(normalized_base, "Lha");
+	paths.floppy_path = join_path(normalized_base, "Floppies");
+	paths.harddrive_path = join_path(normalized_base, "Harddrives");
+	paths.cdrom_path = join_path(normalized_base, "CDROMs");
+	paths.logfile_path = join_path(normalized_base, "Amiberry.log");
+	paths.rom_path = join_path(normalized_base, "Roms");
+	paths.rp9_path = join_path(normalized_base, "RP9");
 	paths.saveimage_dir = normalized_base;
-	paths.savestate_dir = join_path(normalized_base, "savestates");
-	paths.ripper_path = join_path(normalized_base, "ripper");
-	paths.input_dir = join_path(normalized_base, "inputrecordings");
-	paths.screenshot_dir = join_path(normalized_base, "screenshots");
-	paths.nvram_dir = join_path(normalized_base, "nvram");
-	paths.video_dir = join_path(normalized_base, "videos");
+	paths.savestate_dir = join_path(normalized_base, "Savestates");
+	paths.ripper_path = join_path(normalized_base, "Ripper");
+	paths.input_dir = join_path(normalized_base, "Inputrecordings");
+	paths.screenshot_dir = join_path(normalized_base, "Screenshots");
+	paths.nvram_dir = join_path(normalized_base, "Nvram");
+	paths.video_dir = join_path(normalized_base, "Videos");
 	apply_visual_asset_paths(paths, get_visual_asset_paths_from_content_root(normalized_base));
 #endif
 	return paths;
@@ -7062,6 +7062,153 @@ static void migrate_legacy_visual_asset_directories()
 		legacy_migration_state.visuals_conflicts = true;
 }
 
+#if !defined(__MACH__) && !defined(_WIN32) && !defined(__ANDROID__)
+// Linux only: previous defaults used lowercase directory names (roms/, floppies/, ...).
+// Rename leftover lowercase variants to the new capitalized defaults so existing installs
+// continue to find their content, and so cross-platform packs (Windows/macOS layout) work.
+static void migrate_directory_case_if_needed(const std::string& current_path,
+	bool& migrated_any, bool& failed)
+{
+	if (current_path.empty())
+		return;
+
+	std::filesystem::path target(current_path);
+	while (!target.empty() && target.filename().empty())
+		target = target.parent_path();
+	if (target.empty())
+		return;
+
+	const auto parent = target.parent_path();
+	const auto basename = target.filename().string();
+	if (parent.empty() || basename.empty())
+		return;
+	if (!my_existsdir(parent.string().c_str()))
+		return;
+
+	std::error_code ec;
+	if (std::filesystem::exists(target, ec))
+		return;
+
+	std::string basename_lower = basename;
+	std::transform(basename_lower.begin(), basename_lower.end(), basename_lower.begin(),
+		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+	std::filesystem::directory_iterator it(parent, ec);
+	if (ec)
+		return;
+
+	const std::filesystem::directory_iterator end;
+	std::filesystem::path matched_source;
+	std::vector<std::filesystem::path> all_matches;
+	for (; it != end; it.increment(ec))
+	{
+		if (ec)
+			return;
+
+		auto entry_name = it->path().filename().string();
+		if (entry_name == basename)
+			return; // exact match exists already
+
+		std::string entry_lower = entry_name;
+		std::transform(entry_lower.begin(), entry_lower.end(), entry_lower.begin(),
+			[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+		if (entry_lower != basename_lower)
+			continue;
+
+		all_matches.push_back(it->path());
+		if (matched_source.empty())
+			matched_source = it->path();
+	}
+
+	if (matched_source.empty())
+		return;
+
+	if (all_matches.size() > 1)
+	{
+		std::string others;
+		for (std::size_t i = 0; i < all_matches.size(); ++i) {
+			if (i > 0) others += ", ";
+			others += all_matches[i].filename().string();
+		}
+		write_log("Directory case migration: multiple case-variant matches for %s in %s [%s]; renaming %s and leaving the rest in place — please reconcile manually\n",
+			basename.c_str(), parent.string().c_str(), others.c_str(),
+			matched_source.filename().string().c_str());
+	}
+
+	std::filesystem::rename(matched_source, target, ec);
+	if (ec)
+	{
+		write_log("Directory case migration: failed to rename %s -> %s: %s\n",
+			matched_source.string().c_str(), target.string().c_str(), ec.message().c_str());
+		failed = true;
+		return;
+	}
+
+	write_log("Directory case migration: renamed %s -> %s\n",
+		matched_source.string().c_str(), target.string().c_str());
+	migrated_any = true;
+}
+
+static void migrate_legacy_lowercase_content_directories()
+{
+	const auto baseline = get_base_content_override_baseline();
+	const auto current = get_current_base_content_path_set();
+
+	bool migrated_any = false;
+	bool failed = false;
+
+	const auto migrate_if_default = [&](const std::string& current_path,
+		const std::string& baseline_path)
+	{
+		if (current_path.empty())
+			return;
+		if (!path_strings_match(current_path, baseline_path))
+			return;
+		migrate_directory_case_if_needed(current_path, migrated_any, failed);
+	};
+
+	// Visual assets live one level deeper (Visuals/Themes etc.). Rename the parent
+	// "visuals" -> "Visuals" first so the child renames find the new parent.
+	if (path_strings_match(current.themes_path, baseline.themes_path)
+		&& !current.themes_path.empty())
+	{
+		std::filesystem::path themes(current.themes_path);
+		while (!themes.empty() && themes.filename().empty())
+			themes = themes.parent_path();
+		const auto visuals_dir = themes.parent_path();
+		if (!visuals_dir.empty())
+			migrate_directory_case_if_needed(visuals_dir.string(), migrated_any, failed);
+	}
+
+	migrate_if_default(current.controllers_path,  baseline.controllers_path);
+	migrate_if_default(current.whdboot_path,      baseline.whdboot_path);
+	migrate_if_default(current.whdload_arch_path, baseline.whdload_arch_path);
+	migrate_if_default(current.floppy_path,       baseline.floppy_path);
+	migrate_if_default(current.harddrive_path,    baseline.harddrive_path);
+	migrate_if_default(current.cdrom_path,        baseline.cdrom_path);
+	migrate_if_default(current.rom_path,          baseline.rom_path);
+	migrate_if_default(current.rp9_path,          baseline.rp9_path);
+	migrate_if_default(current.savestate_dir,     baseline.savestate_dir);
+	migrate_if_default(current.ripper_path,       baseline.ripper_path);
+	migrate_if_default(current.input_dir,         baseline.input_dir);
+	migrate_if_default(current.screenshot_dir,    baseline.screenshot_dir);
+	migrate_if_default(current.nvram_dir,         baseline.nvram_dir);
+	migrate_if_default(current.video_dir,         baseline.video_dir);
+	migrate_if_default(current.themes_path,       baseline.themes_path);
+	migrate_if_default(current.shaders_path,      baseline.shaders_path);
+	migrate_if_default(current.bezels_path,       baseline.bezels_path);
+	// Logfile is a regular file, but the same rename logic applies.
+	migrate_if_default(current.logfile_path,      baseline.logfile_path);
+
+	if (failed)
+		write_log("Directory case migration: completed with errors (see log above)\n");
+	else if (migrated_any)
+		write_log("Directory case migration: completed (lowercase directories renamed to capitalized)\n");
+}
+#else
+static void migrate_legacy_lowercase_content_directories() {}
+#endif
+
 static constexpr auto LEGACY_CLEANUP_DISMISSED_KEY = _T("LegacyCleanupDismissed");
 
 static void append_legacy_cleanup_item(const std::string& label, const std::string& path, const bool is_directory)
@@ -7935,22 +8082,22 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 	nvram_dir.append("\\Nvram\\");
 	video_dir.append("\\Videos\\");
 #else
-	controllers_path.append("/controllers/");
-	whdboot_path.append("/whdboot/");
-	whdload_arch_path.append("/lha/");
-	floppy_path.append("/floppies/");
-	harddrive_path.append("/harddrives/");
-	cdrom_path.append("/cdroms/");
-	logfile_path.append("/amiberry.log");
-	rom_path.append("/roms/");
-	rp9_path.append("/rp9/");
+	controllers_path.append("/Controllers/");
+	whdboot_path.append("/Whdboot/");
+	whdload_arch_path.append("/Lha/");
+	floppy_path.append("/Floppies/");
+	harddrive_path.append("/Harddrives/");
+	cdrom_path.append("/CDROMs/");
+	logfile_path.append("/Amiberry.log");
+	rom_path.append("/Roms/");
+	rp9_path.append("/RP9/");
 	saveimage_dir.append("/");
-	savestate_dir.append("/savestates/");
-	ripper_path.append("/ripper/");
-	input_dir.append("/inputrecordings/");
-	screenshot_dir.append("/screenshots/");
-	nvram_dir.append("/nvram/");
-	video_dir.append("/videos/");
+	savestate_dir.append("/Savestates/");
+	ripper_path.append("/Ripper/");
+	input_dir.append("/Inputrecordings/");
+	screenshot_dir.append("/Screenshots/");
+	nvram_dir.append("/Nvram/");
+	video_dir.append("/Videos/");
 #endif
 
 	apply_current_visual_asset_paths(get_visual_asset_paths_from_content_root(visual_content_root));
@@ -8532,6 +8679,7 @@ int amiberry_main(int argc, char* argv[])
 	if (config_found)
 		load_amiberry_settings();
 	migrate_legacy_visual_asset_directories();
+	migrate_legacy_lowercase_content_directories();
 	macos_bookmarks_init(settings_dir, get_legacy_bookmark_candidate_directories(portable_mode));
 	create_missing_amiberry_folders();
 	int whdboot_download_exit_code = 0;
