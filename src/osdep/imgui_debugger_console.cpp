@@ -11,9 +11,12 @@
 #include <vector>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
+#include "sysdeps.h"
+#include "options.h"
 #include "amiberry_gfx.h"
 #include "debug.h"
 namespace
