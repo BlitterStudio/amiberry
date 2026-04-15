@@ -160,3 +160,4 @@ android/local.properties
 build-debug
 .cache
 .sisyphus/
+.omg

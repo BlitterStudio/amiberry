@@ -97,6 +97,7 @@ extern amiberry_hotkey left_amiga_key;
 extern amiberry_hotkey right_amiga_key;
 extern amiberry_hotkey vkbd_key;
 extern amiberry_hotkey screenshot_key;
+extern amiberry_hotkey debugger_key;
 
 extern int emulating;
 extern bool config_loaded;

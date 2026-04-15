@@ -554,7 +554,12 @@ endif()
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
     target_sources(${PROJECT_NAME} PRIVATE
             src/osdep/macos_authopen.cpp
+            src/osdep/macos_debugger_console.mm
             src/osdep/macos_window.mm
+    )
+elseif(NOT IOS)
+    target_sources(${PROJECT_NAME} PRIVATE
+            src/osdep/imgui_debugger_console.cpp
     )
 endif()
 

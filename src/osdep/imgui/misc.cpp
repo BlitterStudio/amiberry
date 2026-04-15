@@ -319,6 +319,8 @@ void render_panel_misc()
 		ShowHelpMarker("Keyboard shortcut to simulate Right Amiga key press");
 		HotkeyRow("Screenshot:", changed_prefs.screenshot);
 		ShowHelpMarker("Keyboard shortcut or controller button to take a screenshot");
+		HotkeyRow("Debugger:", changed_prefs.debugger_trigger);
+		ShowHelpMarker("Keyboard shortcut or controller button to activate the built-in debugger");
 
 		ImGui::Separator();
 

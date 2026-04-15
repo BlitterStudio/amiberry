@@ -1062,6 +1062,7 @@ struct uae_prefs {
 	TCHAR left_amiga[256];
 	TCHAR right_amiga[256];
 	TCHAR screenshot[256];
+	TCHAR debugger_trigger[256];
 
 	/* input */
 

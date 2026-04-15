@@ -711,6 +711,8 @@ static const char* help_text_misc =
 	"- Action Replay: A key to open Action Replay/HRTmon. The Pause key is the default.\n"
 	"- FullScreen: A key to toggle Fullscreen/Fullwindow/Windowed mode. No default is set.\n"
 	"- Minimize: A key to minimize Amiberry. No default is set.\n"
+	"- Screenshot: A key or controller button to take a screenshot. No default is set.\n"
+	"- Debugger: A key or controller button to activate the built-in debugger. No default is set.\n"
 	"\n"
 	"Below that, you can assign your keyboard's LEDs to blink and indicate the activity\n"
 	"and status of various functions within the emulation. The available functions are:\n"
