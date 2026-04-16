@@ -1449,9 +1449,12 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 
 	// SetPanning can change the visible VRAM base (XYOffset) without changing
 	// mode dimensions/format. Ensure host buffer binding is refreshed so
-	// zero-copy paths follow the new source address.
+	// zero-copy paths follow the new source address. Use force=true so the
+	// early-return shortcut in target_graphics_buffer_update cannot skip the
+	// rebind (and so full_render_needed is always set) when the new source
+	// address happens to coincide with the previously bound pointer.
 	if (panning_state_changed) {
-		target_graphics_buffer_update(monid, false);
+		target_graphics_buffer_update(monid, true);
 	}
 
 	if (ad->picasso_on) {
@@ -3777,6 +3780,17 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 		bme_width, bme_height,
 		start_of_screen, state->BytesPerRow, state->BytesPerPixel, state->RGBFormat));
 
+#ifdef AMIBERRY
+	// SetPanning can change the visible VRAM base without SetDisplay being
+	// called (subsequent Picasso screens, e.g. switching between Workbench
+	// and a promoted application screen). Signal the host renderer to
+	// refresh its zero-copy binding at the next frame in addition to the
+	// SETPANNING state-change processing.
+	if (currprefs.rtg_zerocopy) {
+		adisplays[monid].picasso_zero_copy_update_needed = true;
+	}
+#endif
+
 	atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETPANNING);
 
 	unlockrtg();
@@ -6042,8 +6056,58 @@ static int render_thread(void *v)
 	return 0;
 }
 
+// RTG memory banks: use MEMORY_FUNCTIONS for the read/check/xlate halves but
+// provide custom put functions that also call mark_dirty(). Without this,
+// direct CPU writes to VRAM (software renderers, games bypassing the P96 API,
+// Lightwave's 2D viewports, etc.) are invisible to picasso_getwritewatch and
+// renderers that gate uploads on the dirty-rect list (SDL, Vulkan).
+// On WinUAE-native Windows builds the write-watch is provided by the OS
+// (GetWriteWatch) and mark_dirty is not defined, so fall back to the stock
+// MEMORY_FUNCTIONS in that case.
+#if !defined(_WIN32) || defined(AMIBERRY)
+#define GFXMEM_PUT_FUNCTIONS(name, index) \
+static void REGPARAM3 name ## _lput (uaecptr, uae_u32) REGPARAM; \
+static void REGPARAM2 name ## _lput (uaecptr addr, uae_u32 l) \
+{ \
+	uae_u8 *m; \
+	addr -= name ## _bank.startaccessmask; \
+	addr &= name ## _bank.mask; \
+	m = name ## _bank.baseaddr + addr; \
+	do_put_mem_long ((uae_u32 *)m, l); \
+	mark_dirty((index), m, 4); \
+} \
+static void REGPARAM3 name ## _wput (uaecptr, uae_u32) REGPARAM; \
+static void REGPARAM2 name ## _wput (uaecptr addr, uae_u32 w) \
+{ \
+	uae_u8 *m; \
+	addr -= name ## _bank.startaccessmask; \
+	addr &= name ## _bank.mask; \
+	m = name ## _bank.baseaddr + addr; \
+	do_put_mem_word ((uae_u16 *)m, w); \
+	mark_dirty((index), m, 2); \
+} \
+static void REGPARAM3 name ## _bput (uaecptr, uae_u32) REGPARAM; \
+static void REGPARAM2 name ## _bput (uaecptr addr, uae_u32 b) \
+{ \
+	addr -= name ## _bank.startaccessmask; \
+	addr &= name ## _bank.mask; \
+	name ## _bank.baseaddr[addr] = b; \
+	mark_dirty((index), name ## _bank.baseaddr + addr, 1); \
+}
+
+#define GFXMEM_MEMORY_FUNCTIONS(name, index) \
+MEMORY_LGET(name); \
+MEMORY_WGET(name); \
+MEMORY_BGET(name); \
+GFXMEM_PUT_FUNCTIONS(name, index) \
+MEMORY_CHECK(name); \
+MEMORY_XLATE(name);
+#else
+#define GFXMEM_MEMORY_FUNCTIONS(name, index) MEMORY_FUNCTIONS(name)
+#endif
+
 extern addrbank gfxmem_bank;
-MEMORY_FUNCTIONS(gfxmem);
+GFXMEM_MEMORY_FUNCTIONS(gfxmem, 0)
 addrbank gfxmem_bank = {
 	gfxmem_lget, gfxmem_wget, gfxmem_bget,
 	gfxmem_lput, gfxmem_wput, gfxmem_bput,
@@ -6052,7 +6116,7 @@ addrbank gfxmem_bank = {
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 extern addrbank gfxmem2_bank;
-MEMORY_FUNCTIONS(gfxmem2);
+GFXMEM_MEMORY_FUNCTIONS(gfxmem2, 1)
 addrbank gfxmem2_bank = {
 	gfxmem2_lget, gfxmem2_wget, gfxmem2_bget,
 	gfxmem2_lput, gfxmem2_wput, gfxmem2_bput,
@@ -6061,7 +6125,7 @@ addrbank gfxmem2_bank = {
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 extern addrbank gfxmem3_bank;
-MEMORY_FUNCTIONS(gfxmem3);
+GFXMEM_MEMORY_FUNCTIONS(gfxmem3, 2)
 addrbank gfxmem3_bank = {
 	gfxmem3_lget, gfxmem3_wget, gfxmem3_bget,
 	gfxmem3_lput, gfxmem3_wput, gfxmem3_bput,
@@ -6070,7 +6134,7 @@ addrbank gfxmem3_bank = {
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 extern addrbank gfxmem4_bank;
-MEMORY_FUNCTIONS(gfxmem4);
+GFXMEM_MEMORY_FUNCTIONS(gfxmem4, 3)
 addrbank gfxmem4_bank = {
 	gfxmem4_lget, gfxmem4_wget, gfxmem4_bget,
 	gfxmem4_lput, gfxmem4_wput, gfxmem4_bput,

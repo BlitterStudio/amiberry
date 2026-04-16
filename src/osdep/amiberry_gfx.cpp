@@ -313,14 +313,16 @@ static bool amiberry_renderframe(const int monid, int mode, int immediate)
 	{
 		update_leds(monid);
 	}
-#ifdef WITH_THREADED_CPU
+	// Consume the zero-copy refresh request. The flag is set by picasso96
+	// state changes (SetDisplay, SetPanning) and forces the host surface
+	// binding to follow the current Amiga VRAM address. This is orthogonal
+	// to WITH_THREADED_CPU so must not be wrapped by that define.
 	if (ad->picasso_zero_copy_update_needed) {
 		const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = false;
 		if (currprefs.rtg_zerocopy) {
 			target_graphics_buffer_update(monid, true);
 		}
 	}
-#endif
 	IRenderer* renderer = get_renderer(monid);
 	return renderer ? renderer->render_frame(monid, mode, immediate) : false;
 }
