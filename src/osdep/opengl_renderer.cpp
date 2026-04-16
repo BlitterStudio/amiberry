@@ -717,55 +717,58 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 // --- External shader rendering ---
 
+// Fullscreen quad used by render_external_shader. Uploaded once per VBO
+// creation with GL_STATIC_DRAW; attribute layout captured in the VAO so the
+// per-frame path only needs to bind the VAO and draw.
+//   Layout: VertexCoord (vec4: x,y,z,w), TexCoord (s,t, _,_)  — stride 8 floats
+//   Constant vertex color is supplied via glVertexAttrib4f at VAO setup time
+//   (captured in the VAO's generic attribute state for the default value).
+static const float k_external_shader_quad[] = {
+	// VertexCoord                TexCoord
+	-1.0f, -1.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f, 0.0f,  // Bottom-left
+	 1.0f, -1.0f, 0.0f, 1.0f,    1.0f, 1.0f, 0.0f, 0.0f,  // Bottom-right
+	 1.0f,  1.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f, 0.0f,  // Top-right
+	-1.0f,  1.0f, 0.0f, 1.0f,    0.0f, 0.0f, 0.0f, 0.0f   // Top-left
+};
+
 void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int monid,
 	const uae_u8* pixels, int width, int height, int pitch,
 	int viewport_x, int viewport_y, int viewport_width, int viewport_height)
 {
-	if (!shader || !shader->is_valid()) {
-		write_log("render_external_shader: shader is null or invalid\n");
-		return;
-	}
-
-	if (!pixels) {
-		write_log("render_external_shader: pixels is NULL!\n");
-		return;
-	}
-
-	// Clear any existing GL errors
-	(void)glGetError();
-
-	if (!shader->is_valid() || !glIsProgram(shader->get_program())) {
-		write_log("render_external_shader: shader program is invalid or lost. Attempting to reload...\n");
+	if (!shader || !shader->is_valid() || !pixels) {
 		return;
 	}
 
 	GLuint texture = shader->get_input_texture();
 	GLuint vbo = shader->get_input_vbo();
 	GLuint vao = shader->get_input_vao();
+
+	// Per-shader frame counter — only ticks while this shader actually renders.
 	static int frame_count = 0;
 
-	// Verify resources are still valid for this context
-	if (texture != 0 && !glIsTexture(texture)) {
-		write_log("render_external_shader: texture lost, resetting\n");
-		texture = 0;
-		shader->set_input_texture(0);
-	}
-	if (vbo != 0 && !glIsBuffer(vbo)) {
-		write_log("render_external_shader: VBO lost, resetting\n");
-		vbo = 0;
-		shader->set_input_vbo(0);
-	}
-	if (vao != 0 && !glIsVertexArray(vao)) {
-		write_log("render_external_shader: VAO lost, resetting\n");
-		vao = 0;
-		shader->set_input_vao(0);
+	// Per-shader texture upload cache. last_w/last_h/last_texture track whether
+	// we need a full glTexImage2D allocation or just a glTexSubImage2D upload.
+	// Reset when the shader program changes (i.e. user picked a different shader).
+	static GLuint last_shader_program = 0;
+	static int last_w = 0, last_h = 0;
+	static GLuint last_texture = 0;
+	const GLuint current_program = shader->get_program();
+	if (current_program != last_shader_program) {
+		last_shader_program = current_program;
+		last_w = 0;
+		last_h = 0;
+		last_texture = 0;
 	}
 
-	// Create texture if needed
+	// --- One-time resource setup -------------------------------------------
+	// Resources are created the first time this shader renders and then reused.
+	// We don't validate them with glIs* every frame — those calls cost a
+	// driver round-trip and are unnecessary when destruction goes through
+	// ExternalShader::cleanup().
 	if (texture == 0) {
 		glGenTextures(1, &texture);
 		if (texture == 0) {
-			write_log("ERROR: Failed to create texture!\n");
+			write_log("render_external_shader: glGenTextures failed\n");
 			return;
 		}
 		shader->set_input_texture(texture);
@@ -777,135 +780,99 @@ void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int mo
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
 
-	// Create VAO if needed
-	if (vao == 0) {
-		glGenVertexArrays(1, &vao);
+	if (vao == 0 || vbo == 0) {
 		if (vao == 0) {
-			write_log("ERROR: Failed to create VAO!\n");
-			return;
+			glGenVertexArrays(1, &vao);
+			if (vao == 0) {
+				write_log("render_external_shader: glGenVertexArrays failed\n");
+				return;
+			}
+			shader->set_input_vao(vao);
 		}
-		shader->set_input_vao(vao);
-	}
-	glBindVertexArray(vao);
-
-	// Create VBO if needed
-	if (vbo == 0) {
-		glGenBuffers(1, &vbo);
 		if (vbo == 0) {
-			write_log("ERROR: Failed to create VBO!\n");
-			return;
+			glGenBuffers(1, &vbo);
+			if (vbo == 0) {
+				write_log("render_external_shader: glGenBuffers failed\n");
+				return;
+			}
+			shader->set_input_vbo(vbo);
 		}
-		shader->set_input_vbo(vbo);
+
+		// Configure the VAO once: bind buffer, upload static quad, wire up
+		// attributes. GL captures the attribute→buffer binding inside the VAO
+		// so per-frame dispatch only needs glBindVertexArray + glDrawArrays.
+		glBindVertexArray(vao);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(k_external_shader_quad),
+			k_external_shader_quad, GL_STATIC_DRAW);
+
+		const GLsizei stride = 8 * sizeof(float);
+		// Attribute 0: VertexCoord (vec4)
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
+		// Attribute 1: Color (vec4) — constant white. Set the generic
+		// attribute once; it persists with the VAO's state.
+		glDisableVertexAttribArray(1);
+		glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
+		// Attribute 2: TexCoord (vec2 of 4 floats per vertex)
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
+			reinterpret_cast<void*>(4 * sizeof(float)));
+
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	// Ensure we're rendering to the default framebuffer (screen)
+	// --- Per-frame fast path -----------------------------------------------
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	// Set viewport explicitly
 	glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
-
-	// Set up GL state for 2D rendering
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
-	glDisable(GL_SCISSOR_TEST);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / m_gl_format.bpp);
 
-	// Track texture changes per-shader to handle shader switches properly
-	GLuint current_program = shader->get_program();
-	static int last_w = 0, last_h = 0;
-	static GLuint last_texture = 0;
-	static GLuint last_shader_program = 0;
-
-	// Reset cache if shader changed
-	if (current_program != last_shader_program) {
-		last_w = 0;
-		last_h = 0;
-		last_texture = 0;
-		last_shader_program = current_program;
-	}
-
 	if (width != last_w || height != last_h || texture != last_texture) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, m_gl_format.fmt, m_gl_format.type, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+			m_gl_format.fmt, m_gl_format.type, pixels);
 		last_w = width;
 		last_h = height;
 		last_texture = texture;
 	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, m_gl_format.fmt, m_gl_format.type, pixels);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
+			m_gl_format.fmt, m_gl_format.type, pixels);
 	}
-
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
-	// Use the shader
 	shader->use();
 
-	// Set uniforms
+	// Standard shader uniforms. Drivers cache uniform state per-program so
+	// setting these every frame is cheap; frame_count must update per call.
 	shader->set_texture_size(static_cast<float>(width), static_cast<float>(height));
 	shader->set_input_size(static_cast<float>(width), static_cast<float>(height));
 
-	int safe_output_w = (viewport_width >= width) ? viewport_width : width;
-	int safe_output_h = (viewport_height >= height) ? viewport_height : height;
-	shader->set_output_size(static_cast<float>(safe_output_w), static_cast<float>(safe_output_h));
+	const int safe_output_w = (viewport_width >= width) ? viewport_width : width;
+	const int safe_output_h = (viewport_height >= height) ? viewport_height : height;
+	shader->set_output_size(static_cast<float>(safe_output_w),
+		static_cast<float>(safe_output_h));
 	shader->set_frame_count(frame_count++);
 
-	// Set MVP matrix (orthographic projection for fullscreen quad)
-	float mvp[16] = {
+	// Identity MVP — no projection is needed for the fullscreen clip-space quad.
+	static const float mvp_identity[16] = {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	shader->set_mvp_matrix(mvp);
+	shader->set_mvp_matrix(mvp_identity);
 
-	// Apply parameter uniforms
 	shader->apply_parameter_uniforms();
-
-	// Bind texture
 	shader->bind_texture(texture, 0);
 
-	// Set up vertex data for fullscreen quad
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-	float vertices[] = {
-		// VertexCoord (x,y,z,w), TexCoord (s,t,0,0)
-		-1.0f, -1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f, 0.0f,  // Bottom-left
-		 1.0f, -1.0f, 0.0f, 1.0f,   1.0f, 1.0f, 0.0f, 0.0f,  // Bottom-right
-		 1.0f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f, 0.0f,  // Top-right
-		-1.0f,  1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f, 0.0f   // Top-left
-	};
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-
-	const GLsizei stride = 8 * sizeof(float);
-
-	// Attribute 0: VertexCoord (vec4: x, y, z, w)
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
-
-	// Attribute 1: Color (vec4) - Set to white by default
-	glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
-
-	// Attribute 2: TexCoord (vec2: s, t)
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float)));
-
-	// Draw fullscreen quad
+	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-	// Cleanup
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 // --- Shader management ---

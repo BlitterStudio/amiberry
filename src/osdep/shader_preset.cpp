@@ -51,11 +51,28 @@ void ShaderPreset::cleanup()
 	}
 	lut_textures_.clear();
 
+	if (source_texture_ != 0) {
+		if (glIsTexture(source_texture_))
+			glDeleteTextures(1, &source_texture_);
+		source_texture_ = 0;
+	}
 	if (original_texture_ != 0) {
 		if (glIsTexture(original_texture_))
 			glDeleteTextures(1, &original_texture_);
 		original_texture_ = 0;
 	}
+	if (flip_fbo_ != 0) {
+		// Matches pass.fbo cleanup above — glIsFramebuffer is not loaded
+		// through gl_platform's function pointer table, so skip the check.
+		glDeleteFramebuffers(1, &flip_fbo_);
+		flip_fbo_ = 0;
+	}
+	if (flip_program_ != 0) {
+		if (glIsProgram(flip_program_))
+			glDeleteProgram(flip_program_);
+		flip_program_ = 0;
+	}
+	flip_u_source_ = -1;
 	if (shared_vbo_ != 0) {
 		if (glIsBuffer(shared_vbo_))
 			glDeleteBuffers(1, &shared_vbo_);
@@ -593,9 +610,10 @@ void ShaderPreset::setup_shared_vertex_data()
 	glBindBuffer(GL_ARRAY_BUFFER, shared_vbo_);
 
 	// RetroArch convention: TexCoord (0,0) at bottom-left, (1,1) at top-right.
-	// The original texture is uploaded with rows flipped (see render()) so the
-	// texture matches GL convention and these coordinates produce correct output.
-	float vertices[] = {
+	// The SDL surface arrives top-down; an internal Y-flip pre-pass (see
+	// run_flip_pass) writes the properly-oriented image into original_texture_
+	// so these texcoords produce the correct orientation for user passes.
+	static const float vertices[] = {
 		// VertexCoord (x,y,z,w), TexCoord (s,t,0,0)
 		-1.0f, -1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f, 0.0f,  // Bottom-left
 		 1.0f, -1.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f, 0.0f,  // Bottom-right
@@ -604,8 +622,172 @@ void ShaderPreset::setup_shared_vertex_data()
 	};
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// Bake attribute configuration into the VAO so the per-pass loop only
+	// needs to bind the VAO to render. Matches the attribute locations
+	// assigned by ExternalShader (VertexCoord=0, Color=1, TexCoord=2).
+	const GLsizei stride = 8 * sizeof(float);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
+	// Attribute 1 is a constant white — supplied via glVertexAttrib4f.
+	glDisableVertexAttribArray(1);
+	glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
+		reinterpret_cast<void*>(4 * sizeof(float)));
+
 	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+// ---- Y-flip pre-pass ----
+
+// Minimal passthrough shader that samples the top-down source texture with
+// Y-inverted coordinates, producing a GL-convention image in the destination
+// FBO. Uses legacy-style `attribute`/`varying`/`gl_FragColor`/`texture2D` so
+// the same source compiles on both GLSL 120 (no preamble) and the modern
+// core/GLES preambles returned by get_gl_shader_preambles() (which `#define`
+// these to their core equivalents).
+namespace {
+
+const char* k_flip_vs =
+	"attribute vec4 VertexCoord;\n"
+	"attribute vec2 TexCoord;\n"
+	"varying vec2 vTex;\n"
+	"void main()\n"
+	"{\n"
+	"    gl_Position = VertexCoord;\n"
+	"    vTex = TexCoord;\n"
+	"}\n";
+
+const char* k_flip_fs =
+	"varying vec2 vTex;\n"
+	"uniform sampler2D Source;\n"
+	"void main()\n"
+	"{\n"
+	"    gl_FragColor = texture2D(Source, vec2(vTex.x, 1.0 - vTex.y));\n"
+	"}\n";
+
+} // namespace
+
+bool ShaderPreset::ensure_flip_resources()
+{
+	if (flip_program_ != 0) return true;
+
+	const auto& preambles = get_gl_shader_preambles();
+
+	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+	const char* vs_sources[] = { preambles.vs, k_flip_vs };
+	glShaderSource(vs, 2, vs_sources, nullptr);
+	glCompileShader(vs);
+	GLint compiled = 0;
+	glGetShaderiv(vs, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		char infoLog[512];
+		glGetShaderInfoLog(vs, sizeof(infoLog), nullptr, infoLog);
+		write_log("ShaderPreset flip VS compile error: %s\n", infoLog);
+		glDeleteShader(vs);
+		return false;
+	}
+
+	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+	const char* fs_sources[] = { preambles.fs, k_flip_fs };
+	glShaderSource(fs, 2, fs_sources, nullptr);
+	glCompileShader(fs);
+	glGetShaderiv(fs, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		char infoLog[512];
+		glGetShaderInfoLog(fs, sizeof(infoLog), nullptr, infoLog);
+		write_log("ShaderPreset flip FS compile error: %s\n", infoLog);
+		glDeleteShader(vs);
+		glDeleteShader(fs);
+		return false;
+	}
+
+	flip_program_ = glCreateProgram();
+	glAttachShader(flip_program_, vs);
+	glAttachShader(flip_program_, fs);
+	// Match the shared VAO's attribute locations.
+	glBindAttribLocation(flip_program_, 0, "VertexCoord");
+	glBindAttribLocation(flip_program_, 2, "TexCoord");
+	glLinkProgram(flip_program_);
+
+	GLint linked = 0;
+	glGetProgramiv(flip_program_, GL_LINK_STATUS, &linked);
+	glDeleteShader(vs);
+	glDeleteShader(fs);
+	if (!linked) {
+		char infoLog[512];
+		glGetProgramInfoLog(flip_program_, sizeof(infoLog), nullptr, infoLog);
+		write_log("ShaderPreset flip program link error: %s\n", infoLog);
+		glDeleteProgram(flip_program_);
+		flip_program_ = 0;
+		return false;
+	}
+
+	flip_u_source_ = glGetUniformLocation(flip_program_, "Source");
+
+	if (flip_fbo_ == 0) {
+		glGenFramebuffers(1, &flip_fbo_);
+	}
+
+	return flip_program_ != 0 && flip_fbo_ != 0;
+}
+
+bool ShaderPreset::run_flip_pass(int width, int height)
+{
+	if (!ensure_flip_resources()) return false;
+
+	// Ensure destination (original_texture_) matches the current frame size.
+	// flip_dest_w_/flip_dest_h_ are member fields — not function-local
+	// statics — so that multiple ShaderPreset instances keep independent
+	// caches, and recreating original_texture_ on the same instance still
+	// triggers a fresh glTexImage2D + FBO attach.
+	if (original_texture_ == 0) {
+		glGenTextures(1, &original_texture_);
+		glBindTexture(GL_TEXTURE_2D, original_texture_);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		flip_dest_w_ = 0;
+		flip_dest_h_ = 0;
+	}
+	if (width != flip_dest_w_ || height != flip_dest_h_) {
+		glBindTexture(GL_TEXTURE_2D, original_texture_);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+			GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		flip_dest_w_ = width;
+		flip_dest_h_ = height;
+
+		glBindFramebuffer(GL_FRAMEBUFFER, flip_fbo_);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_2D, original_texture_, 0);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			write_log("ShaderPreset flip FBO incomplete at %dx%d\n", width, height);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			return false;
+		}
+	} else {
+		glBindFramebuffer(GL_FRAMEBUFFER, flip_fbo_);
+	}
+
+	glViewport(0, 0, width, height);
+	// Flip pass never uses sRGB framebuffer encoding — the frame is already
+	// in its target color space.
+	glDisable(GL_FRAMEBUFFER_SRGB);
+
+	glUseProgram(flip_program_);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, source_texture_);
+	if (flip_u_source_ >= 0) {
+		glUniform1i(flip_u_source_, 0);
+	}
+
+	glBindVertexArray(shared_vao_);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	glBindVertexArray(0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return true;
 }
 
 // ---- Uniform and Texture Binding ----
@@ -803,17 +985,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 	glDisable(GL_BLEND);
 	glDisable(GL_SCISSOR_TEST);
 
-	// Create/update original input texture
-	if (original_texture_ == 0) {
-		glGenTextures(1, &original_texture_);
-		glBindTexture(GL_TEXTURE_2D, original_texture_);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	}
-
-	// Determine pixel format
+	// Determine pixel format for the raw Amiga surface upload.
 	GLenum gl_fmt = GL_RGBA;
 	GLenum gl_type = GL_UNSIGNED_BYTE;
 	int bpp = 4;
@@ -832,47 +1004,43 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 		bpp = 2;
 	}
 
-	// Upload Amiga frame to original texture, flipping rows so that the
-	// texture matches OpenGL convention (row 0 = bottom of image).
-	// SDL provides top-down pixel data (row 0 = top), so we upload each row
-	// in reverse order. This ensures RetroArch shaders see the image in
-	// the expected orientation with standard texture coordinates.
+	// Upload the Amiga frame top-down (no CPU row reversal). The flip is
+	// performed on the GPU via run_flip_pass() below, avoiding a per-frame
+	// full-surface memcpy (~8 MB at 1080p × 32 bpp).
+	if (source_texture_ == 0) {
+		glGenTextures(1, &source_texture_);
+		glBindTexture(GL_TEXTURE_2D, source_texture_);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, original_texture_);
+	glBindTexture(GL_TEXTURE_2D, source_texture_);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / bpp);
 
-	bool size_changed = (width != original_width_ || height != original_height_);
+	const bool size_changed = (width != original_width_ || height != original_height_);
 	if (size_changed) {
 		original_width_ = width;
 		original_height_ = height;
-		// Resize flip buffer
-		flip_buffer_.resize(static_cast<size_t>(width) * bpp * height);
-	}
-
-	// Flip rows into temporary buffer so the texture matches GL convention
-	// (row 0 = bottom of image). SDL provides top-down pixel data.
-	{
-		const int src_pitch = pitch;
-		const int dst_pitch = width * bpp;
-		const unsigned char* src_ptr = pixels;
-		unsigned char* dst_ptr = flip_buffer_.data();
-		for (int row = 0; row < height; row++) {
-			const unsigned char* src_row = src_ptr + row * src_pitch;
-			unsigned char* dst_row = dst_ptr + (height - 1 - row) * dst_pitch;
-			memcpy(dst_row, src_row, dst_pitch);
-		}
-	}
-
-	// Upload the flipped buffer in one call
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
-	if (size_changed) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-			gl_fmt, gl_type, flip_buffer_.data());
+			gl_fmt, gl_type, pixels);
 	} else {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
-			gl_fmt, gl_type, flip_buffer_.data());
+			gl_fmt, gl_type, pixels);
 	}
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
+	// Produce the correctly-oriented original_texture_ for user passes by
+	// running the internal Y-flip pass. Must happen after source_texture_
+	// is up-to-date and before any user pass reads OrigTexture.
+	if (!run_flip_pass(width, height)) {
+		// Flip pass failed (e.g. shader compile error); drop the frame
+		// rather than render an upside-down image.
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		return;
+	}
 
 	// Render each pass
 	int pass_count = static_cast<int>(passes_.size());
@@ -941,36 +1109,14 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 		// must happen here in the render loop where the correct GL context is active.
 		pass.shader->apply_parameter_uniforms();
 
-		// Draw fullscreen quad
+		// Draw fullscreen quad. Attribute layout is baked into the VAO
+		// (see setup_shared_vertex_data), so we only need to bind it.
 		glBindVertexArray(shared_vao_);
-		glBindBuffer(GL_ARRAY_BUFFER, shared_vbo_);
-
-		const GLsizei stride = 8 * sizeof(float);
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-
-		// Attribute 0: VertexCoord (vec4)
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
-
-		// Attribute 1: Color (constant white)
-		glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
-
-		// Attribute 2: TexCoord (vec2)
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float)));
-
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(2);
 	}
 
 	// Cleanup
 	glDisable(GL_FRAMEBUFFER_SRGB);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
