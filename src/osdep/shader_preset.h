@@ -119,6 +119,12 @@ private:
 		int& out_w, int& out_h);
 	bool load_lut_texture(LutTexture& lut);
 	void setup_shared_vertex_data();
+	// One-time GL resources for the internal Y-flip pre-pass. Compiled on
+	// first use. See the comment above flip_program_ for why this exists.
+	bool ensure_flip_resources();
+	// Render source_texture_ into original_texture_ via flip_fbo_, applying
+	// a Y-flip so that all user passes see the frame in GL convention.
+	bool run_flip_pass(int width, int height);
 	void cleanup();
 
 	// Uniform and texture binding for a pass
@@ -131,17 +137,32 @@ private:
 	std::vector<LutTexture> lut_textures_;
 	std::vector<ShaderParameter> all_parameters_;
 
-	// Original input texture (Amiga frame)
+	// Raw Amiga frame texture (uploaded directly from the top-down SDL
+	// surface, no CPU flip). Feeds the internal flip pass.
+	GLuint source_texture_ = 0;
+	// Original input texture (Amiga frame) in RetroArch / GL convention
+	// (row 0 at bottom-left). Populated each frame by the flip pass and
+	// exposed to user passes via the `OrigTexture` sampler.
 	GLuint original_texture_ = 0;
 	int original_width_ = 0;
 	int original_height_ = 0;
 
-	// Shared vertex resources
+	// Shared vertex resources — single quad in clip space used by all passes.
+	// Vertex attribute pointers are configured inside the VAO once at
+	// creation, so per-pass rendering only needs to bind the VAO.
 	GLuint shared_vbo_ = 0;
 	GLuint shared_vao_ = 0;
 
-	// Buffer for flipping pixel rows during texture upload
-	std::vector<unsigned char> flip_buffer_;
+	// Internal Y-flip pre-pass GL resources. The SDL Amiga surface is
+	// top-down (row 0 at top), but RetroArch shaders expect GL-convention
+	// input (row 0 at bottom). Instead of copying the whole frame every
+	// frame on the CPU to flip rows, we upload it as-is to source_texture_
+	// and do the flip on the GPU in a single trivial pre-pass, writing the
+	// properly-oriented image into original_texture_.
+	GLuint flip_program_ = 0;
+	GLuint flip_fbo_ = 0;
+	// Cached uniform location for the flip shader's texture sampler.
+	GLint flip_u_source_ = -1;
 
 	std::string preset_path_;
 	std::string base_dir_;
