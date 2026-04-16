@@ -163,6 +163,14 @@ private:
 	GLuint flip_fbo_ = 0;
 	// Cached uniform location for the flip shader's texture sampler.
 	GLint flip_u_source_ = -1;
+	// Current allocation size of original_texture_. Kept separate from
+	// original_width_/original_height_ (which track source upload size) so
+	// that recreating original_texture_ forces a re-allocation via
+	// glTexImage2D + FBO attachment even when the source size is unchanged.
+	// Must be a member (not a function-local static in run_flip_pass) so
+	// that multiple ShaderPreset instances do not share one cache.
+	int flip_dest_w_ = 0;
+	int flip_dest_h_ = 0;
 
 	std::string preset_path_;
 	std::string base_dir_;

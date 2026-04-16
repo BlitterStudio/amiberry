@@ -738,10 +738,10 @@ bool ShaderPreset::run_flip_pass(int width, int height)
 	if (!ensure_flip_resources()) return false;
 
 	// Ensure destination (original_texture_) matches the current frame size.
-	// We rely on the caller having already uploaded source_texture_ at these
-	// dimensions.
-	static int flip_dest_w = 0;
-	static int flip_dest_h = 0;
+	// flip_dest_w_/flip_dest_h_ are member fields — not function-local
+	// statics — so that multiple ShaderPreset instances keep independent
+	// caches, and recreating original_texture_ on the same instance still
+	// triggers a fresh glTexImage2D + FBO attach.
 	if (original_texture_ == 0) {
 		glGenTextures(1, &original_texture_);
 		glBindTexture(GL_TEXTURE_2D, original_texture_);
@@ -749,15 +749,15 @@ bool ShaderPreset::run_flip_pass(int width, int height)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		flip_dest_w = 0;
-		flip_dest_h = 0;
+		flip_dest_w_ = 0;
+		flip_dest_h_ = 0;
 	}
-	if (width != flip_dest_w || height != flip_dest_h) {
+	if (width != flip_dest_w_ || height != flip_dest_h_) {
 		glBindTexture(GL_TEXTURE_2D, original_texture_);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
 			GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-		flip_dest_w = width;
-		flip_dest_h = height;
+		flip_dest_w_ = width;
+		flip_dest_h_ = height;
 
 		glBindFramebuffer(GL_FRAMEBUFFER, flip_fbo_);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
