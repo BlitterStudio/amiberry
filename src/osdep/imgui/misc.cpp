@@ -188,14 +188,34 @@ static void ShowHotkeyPopup()
 		ImGui::Separator();
 
 		for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key++) {
+			// Skip modifier keys — they should only act as prefixes, not as the
+			// final key. Otherwise pressing Shift to type "Shift+F12" would
+			// immediately close the popup with just "LeftShift".
+			switch (key) {
+				case ImGuiKey_LeftCtrl:  case ImGuiKey_RightCtrl:
+				case ImGuiKey_LeftShift: case ImGuiKey_RightShift:
+				case ImGuiKey_LeftAlt:   case ImGuiKey_RightAlt:
+				case ImGuiKey_LeftSuper: case ImGuiKey_RightSuper:
+					continue;
+				default:
+					break;
+			}
 			if (ImGui::IsKeyPressed((ImGuiKey)key)) {
 				const char* key_name = ImGui::GetKeyName((ImGuiKey)key);
 				if (key_name && target_hotkey_string) {
+					// Emit side-specific modifier tokens (LCtrl/RCtrl/LShift/RShift/
+					// LAlt/RAlt/LGUI/RGUI) to match the parser in
+					// get_hotkey_from_config(). If both sides of a modifier are
+					// held, prefer the left variant.
 					std::string full_key;
-					if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) full_key += "Ctrl+";
-					if (ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift)) full_key += "Shift+";
-					if (ImGui::IsKeyDown(ImGuiKey_LeftAlt) || ImGui::IsKeyDown(ImGuiKey_RightAlt)) full_key += "Alt+";
-					if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper)) full_key += "Super+";
+					if      (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))   full_key += "LCtrl+";
+					else if (ImGui::IsKeyDown(ImGuiKey_RightCtrl))  full_key += "RCtrl+";
+					if      (ImGui::IsKeyDown(ImGuiKey_LeftShift))  full_key += "LShift+";
+					else if (ImGui::IsKeyDown(ImGuiKey_RightShift)) full_key += "RShift+";
+					if      (ImGui::IsKeyDown(ImGuiKey_LeftAlt))    full_key += "LAlt+";
+					else if (ImGui::IsKeyDown(ImGuiKey_RightAlt))   full_key += "RAlt+";
+					if      (ImGui::IsKeyDown(ImGuiKey_LeftSuper))  full_key += "LGUI+";
+					else if (ImGui::IsKeyDown(ImGuiKey_RightSuper)) full_key += "RGUI+";
 					full_key += key_name;
 					strncpy(target_hotkey_string, full_key.c_str(), 255);
 					ImGui::CloseCurrentPopup();
