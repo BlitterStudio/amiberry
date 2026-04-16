@@ -932,7 +932,16 @@ static void setcursorshape(const int monid)
 	}
 	else if (!picasso_setwincursor(monid)) {
 		SDL_SetCursor(normalcursor);
-		SDL_ShowCursor();
+		// When the mouse is captured in relative mode the OS pointer must stay
+		// hidden; SDL hides it internally, but on Windows the explicit
+		// HideCursor call keeps SDL's cursor-visibility intent in sync so the
+		// Windows pointer does not remain drawn alongside the Amiga pointer
+		// after re-grabbing (issue #1969).
+		if (mouseactive && !currprefs.input_tablet) {
+			SDL_HideCursor();
+		} else {
+			SDL_ShowCursor();
+		}
 	}
 }
 
@@ -1000,6 +1009,11 @@ static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 			write_log("SDL_SetWindowRelativeMouseMode(true) failed on monitor %d: %s\n",
 				mon->monitor_id, SDL_GetError());
 		}
+		// Keep the cursor-visibility intent synced with relative mode so a
+		// previous SDL_ShowCursor() call (e.g. from releasecapture) doesn't
+		// leave the OS pointer visible on top of the Amiga pointer after a
+		// re-grab on Windows (issue #1969).
+		SDL_HideCursor();
 	}
 
 	if (!mouse_grab_ok || !relative_ok) {
@@ -1862,14 +1876,23 @@ static void handle_focus_gained_event(AmigaMonitor* mon)
 	unsetminimized(mon->monitor_id);
 
 	if (mon->focus_transitioning && isfullscreen() <= 0 && mon->amiga_window) {
-		int cur_x, cur_y;
-		SDL_GetWindowPosition(mon->amiga_window, &cur_x, &cur_y);
-		if (cur_x != mon->pre_focus_x || cur_y != mon->pre_focus_y) {
-			mon->in_sizemove++;
-			SDL_SetWindowPosition(mon->amiga_window, mon->pre_focus_x, mon->pre_focus_y);
+		if (mon->moved_during_focus_transition) {
+			// User intentionally moved the window while focus was lost
+			// (e.g. dragging by the title bar on Windows). Keep the new
+			// position and persist it to prefs, since handle_moved_event
+			// skipped setsizemove during the transition.
+			setsizemove(mon, mon->amiga_window);
+		} else {
+			int cur_x, cur_y;
+			SDL_GetWindowPosition(mon->amiga_window, &cur_x, &cur_y);
+			if (cur_x != mon->pre_focus_x || cur_y != mon->pre_focus_y) {
+				mon->in_sizemove++;
+				SDL_SetWindowPosition(mon->amiga_window, mon->pre_focus_x, mon->pre_focus_y);
+			}
 		}
 	}
 	mon->focus_transitioning = false;
+	mon->moved_during_focus_transition = false;
 
 	int pending_active = 0;
 	if (consume_pending_mouse_capture(mon->monitor_id, &pending_active) && !mouseactive) {
@@ -1898,8 +1921,10 @@ static void handle_restored_event(const AmigaMonitor* mon)
 
 static void handle_moved_event(AmigaMonitor* mon)
 {
-	if (mon->focus_transitioning)
+	if (mon->focus_transitioning) {
+		mon->moved_during_focus_transition = true;
 		return;
+	}
 	setsizemove(mon, mon->amiga_window);
 }
 
@@ -1962,6 +1987,7 @@ static void handle_focus_lost_event(AmigaMonitor* mon)
 	if (isfullscreen() <= 0 && mon->amiga_window) {
 		SDL_GetWindowPosition(mon->amiga_window, &mon->pre_focus_x, &mon->pre_focus_y);
 		mon->focus_transitioning = true;
+		mon->moved_during_focus_transition = false;
 	}
 	amiberry_inactive(mon, minimized);
 	if (isfullscreen() <= 0 && currprefs.minimize_inactive)

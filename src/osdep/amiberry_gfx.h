@@ -107,6 +107,7 @@ struct AmigaMonitor {
 
 	int in_sizemove;
 	bool focus_transitioning;
+	bool moved_during_focus_transition;
 	int pre_focus_x, pre_focus_y;
 	int manual_painting_needed;
 	int minimized;

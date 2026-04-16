@@ -310,6 +310,7 @@ int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 
 	mon->in_sizemove = 0;
 	mon->focus_transitioning = false;
+	mon->moved_during_focus_transition = false;
 	mon->pre_focus_x = 0;
 	mon->pre_focus_y = 0;
 
