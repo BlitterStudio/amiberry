@@ -86,8 +86,16 @@ void render_panel_adv_chipset()
 	{
 		BeginDisableableGroup(controls_disabled);
 		
-		if (ImGui::BeginTable("FeaturesTable", 3))
+		// Use SizingFixedFit so each column is sized to its widest content.
+		// Without this, the table stretches to the full window width, which
+		// creates huge horizontal gaps between the 3 checkbox columns when the
+		// GUI window is resized wider than the default (see issue #1970).
+		if (ImGui::BeginTable("FeaturesTable", 3, ImGuiTableFlags_SizingFixedFit))
 		{
+			// Add some spacing between columns for readability
+			ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthFixed);
+			ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthFixed);
+			ImGui::TableSetupColumn("c3", ImGuiTableColumnFlags_WidthFixed);
 			ImGui::TableNextColumn();
 			AmigaCheckbox("CIA ROM Overlay", &changed_prefs.cs_ciaoverlay);
 			ShowHelpMarker("Enable CIA-based Kickstart ROM overlay mechanism");
