@@ -1998,7 +1998,12 @@ void run_gui()
 				uae_quit();
 				gui_running = false;
 			}
-			else if (gui_event.type == SDL_EVENT_KEY_DOWN && !ImGui::GetIO().WantTextInput) {
+			else if (gui_event.type == SDL_EVENT_KEY_DOWN
+				&& !ImGui::GetIO().WantTextInput
+				&& !HotkeyCapture_IsActive()) {
+				// HotkeyCapture_IsActive() gates F1/Q/F12 so the key the user is
+				// assigning (e.g. the F12 half of Shift+F12) isn't also consumed
+				// here as a GUI shortcut.
 				if (gui_event.key.key == SDLK_F1) {
 					// Show Help when F1 is pressed
 					const char* help_ptr = nullptr;

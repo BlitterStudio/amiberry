@@ -175,27 +175,51 @@ static constexpr int misc_items_count = IM_ARRAYSIZE(misc_items);
 
 static char* target_hotkey_string = nullptr;
 static bool  open_hotkey_popup = false;
+static bool  hotkey_capture_active = false;
+
+bool HotkeyCapture_IsActive()
+{
+	// Cannot use ImGui::IsPopupOpen here — this is called from the SDL event
+	// loop in run_gui(), where there is no current ImGui window on the stack
+	// and IsPopupOpen dereferences g.CurrentWindow.
+	return hotkey_capture_active;
+}
 
 static void ShowHotkeyPopup()
 {
 	if (open_hotkey_popup) {
 		ImGui::OpenPopup("Set Hotkey");
 		open_hotkey_popup = false;
+		hotkey_capture_active = true;
 	}
 
-	if (ImGui::BeginPopupModal("Set Hotkey", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+	// BeginPopupModal returns false once the popup has closed (via any path:
+	// captured key, Escape, Cancel button, programmatic close). Clear the
+	// capture-active flag here so HotkeyCapture_IsActive() tracks state
+	// centrally without per-close-path bookkeeping.
+	const bool popup_open = ImGui::BeginPopupModal("Set Hotkey", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+	if (!popup_open)
+		hotkey_capture_active = false;
+	if (popup_open) {
 		ImGui::Text("Press a key to map...");
 		ImGui::Separator();
 
 		for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key++) {
-			// Skip modifier keys — they should only act as prefixes, not as the
-			// final key. Otherwise pressing Shift to type "Shift+F12" would
-			// immediately close the popup with just "LeftShift".
+			// Skip modifier keys — they should only act as prefixes, not as
+			// the final key. This covers both the physical L/R modifier keys
+			// and the ReservedForMod* slots (named "ModCtrl"/"ModShift"/etc.
+			// in GetKeyName) which ImGui marks as pressed alongside the
+			// physical key. Without skipping these, pressing Shift would
+			// immediately close the popup with "LShift+ModShift".
 			switch (key) {
 				case ImGuiKey_LeftCtrl:  case ImGuiKey_RightCtrl:
 				case ImGuiKey_LeftShift: case ImGuiKey_RightShift:
 				case ImGuiKey_LeftAlt:   case ImGuiKey_RightAlt:
 				case ImGuiKey_LeftSuper: case ImGuiKey_RightSuper:
+				case ImGuiKey_ReservedForModCtrl:
+				case ImGuiKey_ReservedForModShift:
+				case ImGuiKey_ReservedForModAlt:
+				case ImGuiKey_ReservedForModSuper:
 					continue;
 				default:
 					break;
