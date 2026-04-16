@@ -382,23 +382,25 @@ jobs:
 
       - name: Send the file to be notarized by Apple
         run: |
-          set -euo pipefail
+          set -uo pipefail
           ZIP="Amiberry-${{ github.sha }}-macOS-universal.zip"
-          OUTPUT=$(xcrun notarytool submit "$ZIP" --wait \
+          # Stream notarytool output to both the log and a file, without
+          # letting `set -e` kill the script before we can echo the rejection.
+          xcrun notarytool submit "$ZIP" --wait \
             --apple-id "midwan@gmail.com" \
             --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} \
-            --team-id ${{ secrets.APPLE_TEAM_ID }} 2>&1)
-          echo "$OUTPUT"
-          SUBMISSION_ID=$(echo "$OUTPUT" | grep 'id:' | head -1 | awk '{print $2}')
-          if echo "$OUTPUT" | grep -q 'status: Accepted'; then
+            --team-id ${{ secrets.APPLE_TEAM_ID }} 2>&1 | tee notary.log
+          STATUS=${PIPESTATUS[0]}
+          SUBMISSION_ID=$(awk '/id:/ {print $2; exit}' notary.log)
+          if [ "$STATUS" -eq 0 ] && grep -q 'status: Accepted' notary.log; then
             echo "Notarization accepted."
           else
-            echo "::error::Notarization failed — fetching rejection log"
+            echo "::error::Notarization failed (notarytool exit=$STATUS) — fetching rejection log"
             if [ -n "$SUBMISSION_ID" ]; then
               xcrun notarytool log "$SUBMISSION_ID" \
                 --apple-id "midwan@gmail.com" \
                 --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} \
-                --team-id ${{ secrets.APPLE_TEAM_ID }}
+                --team-id ${{ secrets.APPLE_TEAM_ID }} || true
             fi
             exit 1
           fi
