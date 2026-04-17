@@ -24,9 +24,19 @@ GPG_ASC_URL="${REPO_BASE}/gpg.asc"
 GPG_KEYRING="/usr/share/keyrings/amiberry-archive-keyring.gpg"
 
 case "$ID" in
-    ubuntu|debian|raspbian)
+    ubuntu|debian|raspbian|devuan)
         echo "Detected ${PRETTY_NAME}"
-        
+
+        # Devuan is a Debian fork; map its codenames/version to the Debian equivalents
+        # so we can reuse the Debian repository suites.
+        if [ "$ID" = "devuan" ]; then
+            case "$VERSION_CODENAME" in
+                excalibur) VERSION_CODENAME="trixie";  VERSION_ID="13" ;;
+                daedalus)  VERSION_CODENAME="bookworm"; VERSION_ID="12" ;;
+                chimaera)  VERSION_CODENAME="bullseye"; VERSION_ID="11" ;;
+            esac
+        fi
+
         # Check if codename is supported
         case "$VERSION_CODENAME" in
             jammy|noble|plucky|bookworm|trixie)
@@ -58,7 +68,7 @@ case "$ID" in
                 MAJOR=$(echo "${VERSION_ID:-0}" | cut -d. -f1)
                 [ "${MAJOR:-0}" -ge 24 ] && USE_DEB822=1
                 ;;
-            debian|raspbian)
+            debian|raspbian|devuan)
                 MAJOR=$(echo "${VERSION_ID:-0}" | cut -d. -f1)
                 [ "${MAJOR:-0}" -ge 13 ] && USE_DEB822=1
                 ;;
@@ -113,7 +123,7 @@ EOF
     
     *)
         echo "Error: Unsupported distribution: $ID"
-        echo "Supported: Ubuntu (22.04+), Debian (12+), Fedora"
+        echo "Supported: Ubuntu (22.04+), Debian (12+), Devuan (5+), Fedora"
         echo ""
         echo "For manual installation, visit: https://packages.amiberry.com"
         exit 1
