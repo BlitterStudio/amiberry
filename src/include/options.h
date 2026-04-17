@@ -1087,6 +1087,7 @@ struct uae_prefs {
 	bool input_advancedmultiinput;
 	bool input_multi_mouse;
 	bool input_default_onscreen_keyboard;
+	bool input_joystick_up_button;
 	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device mouse_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device keyboard_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
