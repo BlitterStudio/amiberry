@@ -1198,7 +1198,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		oldtex_w[monid] = w;
 		oldtex_h[monid] = h;
 		oldtex_rtg[monid] = mon->screen_is_picasso;
-		
+		oldtex_zero_copy[monid] = 0;
+
 		// Even if buffer dimensions aren't ready yet, we need to ensure the shader is created
 		// for native mode. Use the surface dimensions that doInit already set up.
 		// This is critical for RTG→Native switches where the shader must be recreated for native mode.
@@ -1234,8 +1235,17 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (surface_ref && is_zero_copy_eligible && surface_ref->pixels != (void*)rtg_render_ptr) {
 		recreate_surface = true;
 	}
-	// If Zero-Copy is disabled, but we are still pointing to VRAM, we must recreate the surface
+	// If Zero-Copy is disabled, but we are still pointing to VRAM, we must recreate the surface.
+	// The current-pointer check catches "surface still points at the current RTG base"; the
+	// last-zero-copy check catches the transition where we previously bound the surface to a
+	// *different* screen's VRAM (e.g. 32-bit Workbench) and are now switching to a format/screen
+	// that is not zero-copy eligible (e.g. a promoted 8-bit screen at the same resolution). Without
+	// this, the surface would stay bound to the old screen's VRAM and picasso_flushpixels would
+	// corrupt it by converting the new screen's pixels into the old screen's backing bitmap.
 	if (surface_ref && !is_zero_copy_eligible && rtg_render_ptr && surface_ref->pixels == rtg_render_ptr) {
+		recreate_surface = true;
+	}
+	if (surface_ref && !is_zero_copy_eligible && oldtex_zero_copy[monid]) {
 		recreate_surface = true;
 	}
 
@@ -1293,6 +1303,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	oldtex_w[monid] = w;
 	oldtex_h[monid] = h;
 	oldtex_rtg[monid] = mon->screen_is_picasso;
+	oldtex_zero_copy[monid] = is_zero_copy_eligible ? 1 : 0;
 	//osk_setup(monid, -2);
 
 	write_log(_T("Buffer %d size (%d*%d) %s\n"), monid, w, h, mon->screen_is_picasso ? _T("RTG") : _T("Native"));

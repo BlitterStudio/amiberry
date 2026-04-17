@@ -1396,6 +1396,7 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	const bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
 	const bool uaegfx_active = is_uaegfx_active();
 	bool panning_state_changed = false;
+	bool gc_state_changed = false;
 
 	const int state = vidinfo->picasso_state_change;
 	if (state)
@@ -1420,6 +1421,7 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 			ad->picasso_requested_on = true;
 			set_config_changed();
 		}
+		gc_state_changed = true;
 	}
 	if (state & PICASSO_STATE_SETSWITCH) {
 		atomic_and(&vidinfo->picasso_state_change, ~PICASSO_STATE_SETSWITCH);
@@ -1453,8 +1455,15 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	// early-return shortcut in target_graphics_buffer_update cannot skip the
 	// rebind (and so full_render_needed is always set) when the new source
 	// address happens to coincide with the previously bound pointer.
-	if (panning_state_changed) {
+	// SetGC is a mode change (depth/dimensions): when two Picasso screens
+	// at the same resolution but different depth swap, the back-transition
+	// emits SetGC + SetPanning only — no SetSwitch/SetDisplay — so we also
+	// need to force the rebind + full repaint here, otherwise the host
+	// texture stays bound to (or shows) the previous screen's content.
+	if (panning_state_changed || gc_state_changed) {
 		target_graphics_buffer_update(monid, true);
+		mon->full_render_needed = true;
+		vidinfo->full_refresh = 1;
 	}
 
 	if (ad->picasso_on) {
@@ -3695,6 +3704,19 @@ static uae_u32 REGPARAM2 picasso_SetGC (TrapContext *ctx)
 	P96TRACE_SETUP((_T("SetGC(%d,%d,%d,%d)\n"), state->Width, state->Height, state->GC_Depth, border));
 
 	state->HostAddress = nullptr;
+
+#ifdef AMIBERRY
+	// SetGC is by definition a mode change (depth/dimensions). When two
+	// Picasso screens at the same resolution but different depth swap (e.g.
+	// 1080p/32 Workbench <-> 1080p/8 promoted application screen), neither
+	// SetSwitch nor SetDisplay is re-emitted; on the way back to Workbench
+	// only SetGC + SetPanning fire. Mirror SetPanning and signal the host
+	// renderer to force-refresh its zero-copy binding so the texture is
+	// rebound to the restored screen's VRAM and a full upload happens.
+	if (currprefs.rtg_zerocopy) {
+		adisplays[monid].picasso_zero_copy_update_needed = true;
+	}
+#endif
 
 	atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETGC);
 	unlockrtg();

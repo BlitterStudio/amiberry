@@ -29,7 +29,7 @@ void update_gfxparams(struct AmigaMonitor* mon);
 bool doInit(AmigaMonitor* mon);
 
 // Texture tracking arrays (shared with target_graphics_buffer_update)
-extern int oldtex_w[], oldtex_h[], oldtex_rtg[];
+extern int oldtex_w[], oldtex_h[], oldtex_rtg[], oldtex_zero_copy[];
 
 #ifdef USE_OPENGL
 bool set_opengl_attributes(int mode);

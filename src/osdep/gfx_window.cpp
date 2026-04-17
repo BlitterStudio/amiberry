@@ -1049,7 +1049,7 @@ static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf,
 	}
 }
 
-int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[MAX_AMIGAMONITORS];
+int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[MAX_AMIGAMONITORS], oldtex_zero_copy[MAX_AMIGAMONITORS];
 
 // updatepicasso96 remains in amiberry_gfx.cpp; declared here for doInit to call
 extern void updatepicasso96(struct AmigaMonitor* mon);
