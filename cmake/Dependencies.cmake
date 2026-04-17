@@ -34,7 +34,11 @@ if (USE_OPENGL)
         target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GLES3)
     elseif (NOT ANDROID)
         if (USE_GLES)
-            target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GLES3)
+            # IMGUI_IMPL_OPENGL_ES3 is needed here (not just on the imgui
+            # target) because main_window.cpp includes imgui_impl_opengl3.h
+            # directly to drive ImGui through the emulator's GL context when
+            # the GUI shares its window — see issue #1974.
+            target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GLES3 IMGUI_IMPL_OPENGL_ES3)
             target_link_libraries(${PROJECT_NAME} PRIVATE GLESv2 EGL)
         else()
             find_package(OpenGL REQUIRED)

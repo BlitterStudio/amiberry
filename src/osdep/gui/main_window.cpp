@@ -41,7 +41,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 #include "imgui_impl_opengl3.h"
 #include <SDL3/SDL_opengl.h>
 #endif
@@ -166,7 +166,7 @@ static void update_gui_window_title(SDL_Window* window)
 static int saved_emu_x = 0, saved_emu_y = 0, saved_emu_w = 0, saved_emu_h = 0;
 static SDL_WindowFlags saved_emu_flags = 0;
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 static bool gui_use_opengl = false;
 #endif
 #ifdef USE_VULKAN
@@ -431,7 +431,7 @@ ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 		return (ImTextureID)ds;
 	}
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 	if (gui_use_opengl) {
 		SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
 		if (!rgba) return ImTextureID_Invalid;
@@ -475,7 +475,7 @@ void gui_destroy_texture(ImTextureID tex)
 		return;
 	}
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 	if (gui_use_opengl) {
 		GLuint gl_tex = (GLuint)(intptr_t)tex;
 		glDeleteTextures(1, &gl_tex);
@@ -1323,9 +1323,6 @@ void amiberry_gui_init()
 	// conflicts that cause crashes. This mirrors the Android/KMSDRM pattern.
 	if (mon->amiga_window && !mon->gui_window)
 		mon->gui_window = mon->amiga_window;
-	if (mon->gui_window == mon->amiga_window && g_renderer) {
-		g_renderer->prepare_gui_sharing(mon);
-	}
 	if (mon->gui_window == mon->amiga_window) {
 		SDL_GetWindowPosition(mon->gui_window, &saved_emu_x, &saved_emu_y);
 		SDL_GetWindowSize(mon->gui_window, &saved_emu_w, &saved_emu_h);
@@ -1353,9 +1350,6 @@ void amiberry_gui_init()
 	}
 #endif
 
-#if defined(_WIN32) && defined(USE_OPENGL)
-	gui_use_opengl = (g_renderer && g_renderer->has_context() && mon->gui_window == mon->amiga_window);
-#endif
 #ifdef USE_VULKAN
 	gui_use_vulkan = (get_vulkan_renderer() != nullptr && g_renderer->has_context()
 		&& mon->gui_window == mon->amiga_window);
@@ -1378,6 +1372,21 @@ void amiberry_gui_init()
 			mon->gui_renderer = mon->amiga_renderer;
 		}
 	}
+
+#ifdef USE_OPENGL
+	// When the GUI shares the emulator's window and the emulator is driven by
+	// the OpenGL renderer, route ImGui through the existing GL context instead
+	// of creating a second SDL_Renderer on top of it. Two renderers presenting
+	// to the same surface (especially on KMSDRM / Pi V3D) leave the GUI frame
+	// un-presented after a few F12 cycles — see issue #1974. The Windows path
+	// already did this; we now do it on any platform where the window is shared.
+	gui_use_opengl = (mon->gui_window != nullptr
+		&& mon->gui_window == mon->amiga_window
+		&& g_renderer && g_renderer->has_context()
+		&& dynamic_cast<OpenGLRenderer*>(g_renderer.get()) != nullptr);
+	if (gui_use_opengl)
+		g_renderer->prepare_gui_sharing(mon);
+#endif
 	{
 		const SDL_DisplayMode* dm = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
 		if (dm) sdl_mode = *dm;
@@ -1551,7 +1560,7 @@ void amiberry_gui_init()
 
 {
 		bool skip_sdl_renderer = false;
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 		if (gui_use_opengl) skip_sdl_renderer = true;
 #endif
 #ifdef USE_VULKAN
@@ -1719,13 +1728,16 @@ void amiberry_gui_init()
 		}
 	} else
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 	if (gui_use_opengl) {
 		auto* gl_renderer = dynamic_cast<OpenGLRenderer*>(g_renderer.get());
 		SDL_GLContext ctx = gl_renderer ? gl_renderer->get_gl_context() : nullptr;
 		SDL_GL_MakeCurrent(mon->gui_window, ctx);
 		ImGui_ImplSDL3_InitForOpenGL(mon->gui_window, ctx);
-		ImGui_ImplOpenGL3_Init("#version 130");
+		// Pass nullptr so the backend auto-picks "#version 300 es" when
+		// IMGUI_IMPL_OPENGL_ES3 is defined (Pi/GLES build) and "#version 130"
+		// on desktop GL.
+		ImGui_ImplOpenGL3_Init(nullptr);
 	} else
 #endif
 	{
@@ -1774,7 +1786,7 @@ void amiberry_gui_halt()
 		ImGui_ImplVulkan_Shutdown();
 	} else
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 	if (gui_use_opengl)
 		ImGui_ImplOpenGL3_Shutdown();
 	else
@@ -1868,7 +1880,11 @@ void amiberry_gui_halt()
 			SDL_SetWindowFullscreen(mon->amiga_window, true);
 		saved_emu_w = saved_emu_h = 0;
 	}
-	// Restore emulation rendering context (GL: MakeCurrent + reset; Vulkan: wait idle; SDL: no-op)
+#endif
+#ifdef USE_OPENGL
+	// Restore emulation rendering context (MakeCurrent on emu's GL context +
+	// reset state + rebuild shaders on next frame). Runs wherever the GUI
+	// shared the emulator's window — Windows, KMSDRM, x11-without-WM.
 	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
 		g_renderer->restore_emulation_context(mon->amiga_window);
 	}
@@ -2152,7 +2168,7 @@ void run_gui()
 			ImGui_ImplVulkan_NewFrame();
 		else
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 		if (gui_use_opengl)
 			ImGui_ImplOpenGL3_NewFrame();
 		else
@@ -2696,7 +2712,7 @@ void run_gui()
 			}
 		} else
 #endif
-#if defined(_WIN32) && defined(USE_OPENGL)
+#ifdef USE_OPENGL
 		if (gui_use_opengl) {
 			const ImGuiIO& gl_io = ImGui::GetIO();
 			glViewport(0, 0,
