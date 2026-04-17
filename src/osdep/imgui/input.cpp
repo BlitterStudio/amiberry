@@ -282,6 +282,15 @@ void render_panel_input() {
             joystick_refresh_needed = false;
         }
 
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); // Skip Col 1
+        ImGui::TableNextColumn();
+        AmigaCheckbox("Map left face button (Xbox X / PS Square) as extra Joy Up", &changed_prefs.input_joystick_up_button);
+        ShowHelpMarker("Binds the left face button (Xbox X / PlayStation Square) as a duplicate of "
+                       "Joystick Up on Joystick and Default port modes, giving a free dedicated jump "
+                       "button on modern gamepads. In Default mode this overrides the rarely-used "
+                       "3rd fire button. Does not apply to CD32 or Gamepad modes.");
+
         ImGui::EndTable();
     }
     ImGui::Spacing();

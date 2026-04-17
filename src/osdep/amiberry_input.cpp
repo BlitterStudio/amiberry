@@ -1995,6 +1995,19 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			if (!button_map[0][SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER])
 				setid(uid, i, ID_BUTTON_OFFSET + SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 0, port, INPUTEVENT_KEY_RETURN, gp);
 		}
+
+		// FS-UAE-style extra Up bind on WEST (X/Square) so modern pads get a free jump button.
+		// Applies only in real joystick modes on ports 0/1; in DEFAULT mode this overrides the
+		// rarely-used 3rd fire button. Respect any user-defined custom mapping on WEST.
+		// Analog mode has its own default-mapping function (input_get_default_joystick_analog).
+		if (currprefs.input_joystick_up_button
+			&& port < 2
+			&& (mode == JSEM_MODE_DEFAULT || mode == JSEM_MODE_JOYSTICK)
+			&& !button_map[0][SDL_GAMEPAD_BUTTON_WEST])
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_GAMEPAD_BUTTON_WEST, 0, port,
+				port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP, gp);
+		}
 	}
 
 	// Set the events for any Custom Controls mapping

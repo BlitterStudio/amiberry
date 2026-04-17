@@ -1067,6 +1067,7 @@ void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 	cfgfile_dwrite_bool(f, _T("input.advancedmultiinput"), p->input_advancedmultiinput);
 	cfgfile_dwrite_bool(f, _T("input.multi_mouse"), p->input_multi_mouse);
 	cfgfile_dwrite_bool(f, _T("input.default_osk"), p->input_default_onscreen_keyboard);
+	cfgfile_dwrite_bool(f, _T("input.joystick_up_button"), p->input_joystick_up_button);
 #ifndef AMIBERRY // not used in Amiberry
 	for (id = 0; id < MAX_INPUT_SETTINGS; id++) {
 		TCHAR tmp[MAX_DPATH];
@@ -1632,6 +1633,8 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		pr->input_multi_mouse = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("default_osk")))
 		pr->input_default_onscreen_keyboard = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
+	if (!_tcsicmp(p, _T("joystick_up_button")))
+		pr->input_joystick_up_button = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("keyboard_type"))) {
 		cfgfile_strval(p, value, p, &pr->input_keyboard_type, kbtypes, 0);
 		keyboard_default = keyboard_default_table[pr->input_keyboard_type];
@@ -8540,6 +8543,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_device_match_mask = -1;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
 	p->input_default_onscreen_keyboard = true;
+	p->input_joystick_up_button = true;
 	inputdevice_default_kb_all (p);
 
 }
