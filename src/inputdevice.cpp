@@ -9346,6 +9346,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	dst->input_mouse_speed = src->input_mouse_speed;
 	dst->input_autofire_linecnt = src->input_autofire_linecnt;
 	dst->input_multi_mouse = src->input_multi_mouse;
+	dst->input_joystick_up_button = src->input_joystick_up_button;
 #ifdef AMIBERRY
 	strcpy(dst->open_gui, src->open_gui);
 	strcpy(dst->quit_amiberry, src->quit_amiberry);
