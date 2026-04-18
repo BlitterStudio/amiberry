@@ -136,6 +136,12 @@ endif()
 
 # Install system and packaging
 include(GNUInstallDirs)
+if (WIN32)
+    # Windows apps conventionally live directly under their install folder,
+    # not in a Unix-style bin/ subdirectory.
+    set(CMAKE_INSTALL_BINDIR ".")
+    set(CMAKE_INSTALL_LIBDIR ".")
+endif()
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/SourceFiles.cmake)
 include(cmake/Dependencies.cmake)

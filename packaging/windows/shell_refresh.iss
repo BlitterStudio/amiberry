@@ -35,3 +35,17 @@ begin
   if CurUninstallStep = usPostUninstall then
     RefreshProgramsShell(ExpandConstant('{group}'));
 end;
+
+<event('CurStepChanged')>
+procedure AmiberryWritePortableMarker(CurStep: TSetupStep);
+var
+  MarkerPath: String;
+begin
+  if CurStep <> ssPostInstall then
+    exit;
+  if not WizardIsTaskSelected('portable') then
+    exit;
+
+  MarkerPath := ExpandConstant('{app}\amiberry.portable');
+  SaveStringToFile(MarkerPath, '', False);
+end;

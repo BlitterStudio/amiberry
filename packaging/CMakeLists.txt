@@ -172,14 +172,19 @@ elseif (WIN32)
 	set(CPACK_INNOSETUP_ARCHITECTURE x64)
     set(CPACK_INNOSETUP_SETUP_PrivilegesRequired "lowest")
     set(CPACK_INNOSETUP_SETUP_PrivilegesRequiredOverridesAllowed "dialog")
-    set(CPACK_INNOSETUP_INSTALL_ROOT "{localappdata}\\\\Programs")
+    # {autopf} expands to Program Files when the user elevates via the
+    # "Install for all users" dialog, and to {localappdata}\Programs
+    # when installing only for the current user.
+    set(CPACK_INNOSETUP_INSTALL_ROOT "{autopf}")
     set(CPACK_INNOSETUP_PROGRAM_MENU_FOLDER "Amiberry")
     set(CPACK_INNOSETUP_CREATE_UNINSTALL_LINK ON)
     set(CPACK_PACKAGE_EXECUTABLES "Amiberry" "Amiberry")
     if(EXISTS "${CMAKE_SOURCE_DIR}/data/amiberry.ico")
         set(CPACK_INNOSETUP_ICON_FILE "${CMAKE_SOURCE_DIR}/data/amiberry.ico")
     endif()
-    set(CPACK_INNOSETUP_EXTRA_SCRIPTS "${CMAKE_SOURCE_DIR}/packaging/windows/fileassoc.iss")
+    set(CPACK_INNOSETUP_EXTRA_SCRIPTS
+        "${CMAKE_SOURCE_DIR}/packaging/windows/fileassoc.iss"
+        "${CMAKE_SOURCE_DIR}/packaging/windows/portable_mode.iss")
     set(CPACK_INNOSETUP_CODE_FILES "${CMAKE_SOURCE_DIR}/packaging/windows/shell_refresh.iss")
 else ()
     set(CPACK_GENERATOR TGZ)
