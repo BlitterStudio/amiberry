@@ -805,7 +805,7 @@ jobs:
           rm -rf out/package/windows-release
           cmake --install out/build/windows-release --prefix out/install/windows-release
 
-          PORTABLE_ROOT="out/install/windows-release/bin"
+          PORTABLE_ROOT="out/install/windows-release"
           test -f "$PORTABLE_ROOT/Amiberry.exe"
           : > "$PORTABLE_ROOT/amiberry.portable"
 
