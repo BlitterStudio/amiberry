@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include <algorithm>
+#include <SDL3/SDL.h>
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "filesys.h"
@@ -46,15 +47,18 @@ static bool create_hdf_dynamic = false;
 static bool create_hdf_rdb = false;
 static std::string harddrive_modal_error;
 
-// Cache get_filesys_unitconfig() results for HDF entries only.
-// HDF queries call hdf_open()/hdf_close() which is expensive I/O.
-// DIR/CD/tape queries are lightweight (stat, blkdev_get_info) and
-// must remain uncached so live media state stays visible.
+// Cache get_filesys_unitconfig() results to avoid expensive per-frame I/O.
+// HDF: hdf_open()/hdf_close(). CD/TAPE: blkdev_get_info() opens+closes the
+// device, which triggers parse_image() and spams logs when the backing file
+// is missing (issue #1979). DIR is cheap and uncached.
+// CD/TAPE also use a short time-based refresh so live media state stays visible.
 static struct {
 	bool valid = false;
 	int type = -1;
 	struct mountedinfo mi{};
 	TCHAR rootdir[MAX_DPATH]{};
+	TCHAR cdslot_name[MAX_DPATH]{};
+	uint64_t refreshed_ms = 0;
 } hdf_cache[MOUNT_CONFIG_SIZE];
 static int hdf_cache_mount_count = -1;
 
@@ -72,8 +76,8 @@ static int cached_get_filesys_unitconfig(struct uae_prefs *p, int row, struct mo
 
 	auto* ci = &p->mountconfig[row].ci;
 
-	// Only cache HDF entries — everything else goes through uncached
-	if (ci->type != UAEDEV_HDF)
+	// DIR is cheap — call directly. Everything else is cached.
+	if (ci->type == UAEDEV_DIR)
 		return get_filesys_unitconfig(p, row, mi);
 
 	// Invalidate all entries when mount list changes shape
@@ -84,11 +88,33 @@ static int cached_get_filesys_unitconfig(struct uae_prefs *p, int row, struct mo
 	}
 
 	auto& c = hdf_cache[row];
+
+	// For CD/TAPE the underlying CD image path lives in cdslots[unit].name,
+	// not ci->rootdir — track it separately so swapping the image invalidates.
+	const TCHAR* cdslot_name = _T("");
+	if (ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE) {
+		int unit = ci->device_emu_unit;
+		if (unit >= 0 && unit < MAX_TOTAL_SCSI_DEVICES)
+			cdslot_name = p->cdslots[unit].name;
+	}
+
 	if (c.valid && _tcscmp(c.rootdir, ci->rootdir) != 0)
 		c.valid = false;
+	if (c.valid && _tcscmp(c.cdslot_name, cdslot_name) != 0)
+		c.valid = false;
+
+	// Time-based refresh for CD/TAPE so physical-media insert/eject is visible.
+	if (c.valid && (ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE)) {
+		constexpr uint64_t cd_tape_refresh_ms = 2000;
+		if (SDL_GetTicks() - c.refreshed_ms > cd_tape_refresh_ms)
+			c.valid = false;
+	}
+
 	if (!c.valid) {
 		c.type = get_filesys_unitconfig(p, row, &c.mi);
 		_tcscpy(c.rootdir, ci->rootdir);
+		_tcscpy(c.cdslot_name, cdslot_name);
+		c.refreshed_ms = SDL_GetTicks();
 		c.valid = true;
 	}
 	memcpy(mi, &c.mi, sizeof(*mi));
@@ -207,17 +233,18 @@ static std::string format_size(long long size) {
     return {buffer};
 }
 
-static void RenderMountedDrives()
+static void RenderMountedDrives(float reserved_below)
 {
     // WinUAE-style list: Device, Volume, Path, R/W, Size, BootPri
     // No explicit Edit/Del columns. Selection -> Button action.
-    
+
     char mounted_label[64];
     snprintf(mounted_label, sizeof(mounted_label), "Mounted Drives (%d/%d)", changed_prefs.mountitems, MOUNT_CONFIG_SIZE);
     BeginGroupBox(mounted_label);
 
-    // Reserve more space for 3 rows of buttons + CD section
-    ImGui::BeginChild("MountedDrivesList", ImVec2(0, -280), true); 
+    // Reserve space for action buttons + CD section + metadata checkboxes below.
+    // Caller computes the reservation so it scales with font/DPI.
+    ImGui::BeginChild("MountedDrivesList", ImVec2(0, -reserved_below), true);
 
     if (ImGui::BeginTable("MountedDrivesTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
     {
@@ -455,8 +482,10 @@ static void RenderCDSection()
     {
         const auto cd_drives = get_cd_drives();
         bool current_in_list = false;
+        int id_counter = 0;
 
         for (const auto& drive : cd_drives) {
+            ImGui::PushID(id_counter++);
             const bool is_selected = (cd_name && strcmp(cd_name, drive.c_str()) == 0);
             if (is_selected) current_in_list = true;
             if (ImGui::Selectable(drive.c_str(), is_selected)) {
@@ -465,10 +494,12 @@ static void RenderCDSection()
                 changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
+            ImGui::PopID();
         }
 
         for (const auto& path : lstMRUCDList) {
             if (path.empty()) continue;
+            ImGui::PushID(id_counter++);
             const bool is_selected = (cd_name && strcmp(cd_name, path.c_str()) == 0);
             if (is_selected) current_in_list = true;
             if (ImGui::Selectable(path.c_str(), is_selected)) {
@@ -478,14 +509,17 @@ static void RenderCDSection()
                 AddToMruCdList(path);
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
+            ImGui::PopID();
         }
 
         if (!current_in_list && cd_name && *cd_name) {
+            ImGui::PushID(id_counter++);
             const bool is_selected = true;
             ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable(cd_name, is_selected)) {}
             ImGui::PopStyleColor();
             ImGui::SetItemDefaultFocus();
+            ImGui::PopID();
         }
         ImGui::EndCombo();
     }
@@ -1445,7 +1479,18 @@ static void ShowEditTapeDriveModal()
 void render_panel_hd()
 {
     ImGui::Indent(4.0f);
-    RenderMountedDrives();
+
+    // Dynamically reserve space below the mounted drives list so that the
+    // action buttons, CD section, and .uaem/UAEFSDB checkboxes stay visible
+    // regardless of font size or DPI (was a fixed 280px that clipped on some
+    // setups — see issue #1979).
+    //   4 frame-height rows: action buttons, CD automount/turbo, CD slot, metadata checkboxes
+    //   plus spacings between sections and groupbox chrome around the CD section.
+    const float frame_h  = ImGui::GetFrameHeightWithSpacing();
+    const float spacing  = ImGui::GetStyle().ItemSpacing.y;
+    const float reserved = 7.0f * frame_h + 12.0f * spacing + 70.0f;
+
+    RenderMountedDrives(reserved);
     ImGui::Spacing();
     RenderActionButtons();
     ImGui::Spacing();
