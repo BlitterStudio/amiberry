@@ -5918,7 +5918,7 @@ void inputdevice_vsync (void)
 			pausemode(1);
 		}
 	}
-	if (keyboard_reset_seq_mode && keyboard_reset_seq > 0) {
+	if (keyboard_reset_seq_mode) {
 		keyboard_reset_seq++;
 	}
 
@@ -5960,6 +5960,8 @@ void inputdevice_reset (void)
 	mousehack_reset ();
 	if (inputdevice_is_tablet ())
 		mousehack_enable ();
+	keyboard_reset_seq = 0;
+	keyboard_reset_seq_mode = 0;
 	bouncy = 0;
 	while (delayed_events) {
 		struct delayed_event *de = delayed_events;
