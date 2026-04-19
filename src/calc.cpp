@@ -47,6 +47,7 @@ static int op_preced(const int c)
     switch(c)    {
         case 0xf0: case 0xf1: case 0xf2:
         case '!':
+        case '~':
             return 4;
         case '*':  case '/': case '\\': case '%':
         case '|':  case '&': case '^':
@@ -68,7 +69,7 @@ static bool op_left_assoc(const int c)
     switch(c)    {
         // left to right
         case '*': case '/': case '%': case '+': case '-':
-        case '|': case '&': case '^':
+        case '|': case '&': case '^': case '~':
         case 0xf0: case 0xf1: case 0xf2:
             return true;
         // right to left
@@ -88,6 +89,7 @@ static unsigned int op_arg_count(const int c)
             return 2;
         case '!':
         case ':':
+        case '~':
         case 0xf0: case 0xf1: case 0xf2:
             return 1;
         default:
@@ -96,7 +98,7 @@ static unsigned int op_arg_count(const int c)
     return 0;
 }
  
-#define is_operator(c)  ((unsigned char)(c) == '+' || (unsigned char)(c) == '-' || (unsigned char)(c) == '/' || (unsigned char)(c) == '*' || (unsigned char)(c) == '!' || (unsigned char)(c) == '%' || (unsigned char)(c) == '=' || \
+#define is_operator(c)  ((unsigned char)(c) == '+' || (unsigned char)(c) == '-' || (unsigned char)(c) == '/' || (unsigned char)(c) == '*' || (unsigned char)(c) == '!' || (unsigned char)(c) == '%' || (unsigned char)(c) == '=' || (unsigned char)(c) == '~' || \
                          (unsigned char)(c) == '|' || (unsigned char)(c) == '&' || (unsigned char)(c) == '^' || (unsigned char)(c) == '@' || (unsigned char)(c) == ('@' | 0x80) || (unsigned char)(c) == '>' || (unsigned char)(c) == '<' || (unsigned char)(c) == ('>' | 0x80) || (unsigned char)(c) == ('<' | 0x80) || \
                          (unsigned char)(c) == '?' || (unsigned char)(c) == ':' || (unsigned char)(c) == 0xf0 || (unsigned char)(c) == 0xf1 || (unsigned char)(c) == 0xf2)
 #define is_function(c)  (c >= 'A' && c <= 'Z')
@@ -394,6 +396,9 @@ static bool docalcx(unsigned char op, double v1, double v2, double *valp)
         break;
         case ':':
         v = v1;
+        break;
+        case '~':
+		v = ~(int)v1;
         break;
 #ifdef DEBUGGER
         case 0xf0:
