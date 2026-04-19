@@ -1993,10 +1993,7 @@ static void blitter_start_init(void)
 {
 #if 0
 	if (blt_info.blit_main) {
-		write_log("Blitter start but blitter active");
-	}
-	if (blt_info.blit_finald) {
-		write_log("Blitter start but final D still pending");
+		write_log("Blitter start but blitter active\n");
 	}
 #endif
 

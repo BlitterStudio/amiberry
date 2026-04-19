@@ -507,7 +507,7 @@ uaecptr ShowEA(void *f, uaecptr pc, uae_u16 opcode, int reg, amodes mode, wordsi
 	uaecptr addr = pc;
 	uae_s16 disp16;
 	uae_s32 offset = 0;
-	TCHAR buffer[80];
+	TCHAR buffer[DIASM_BUFFER_SIZE];
 
 	if (actualea)
 		*actualea = 1;
