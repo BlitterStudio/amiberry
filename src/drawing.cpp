@@ -18,6 +18,7 @@
 #include <cctype>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -2494,7 +2495,8 @@ void drawing_init(void)
 }
 
 #if defined(AMIBERRY) && !defined(LIBRETRO)
-extern float amiberry_get_active_display_refreshrate(int monid);
+extern uint32_t amiberry_get_active_display_id(int monid);
+extern float amiberry_get_refreshrate_for_display_id(uint32_t display_id);
 
 // Returns true when the host monitor refresh matches the Amiga chipset target
 // within ~1 Hz, so SDL_GL_SwapWindow / SDL_RenderPresent blocking on the next
@@ -2508,11 +2510,11 @@ extern float amiberry_get_active_display_refreshrate(int monid);
 // The Vulkan renderer's present path does not block on vblank (see
 // vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
 //
-// The result is cached keyed on vblank_hz; a SDL query runs only when the
-// Amiga target refresh changes (PAL/NTSC switch, genlock, etc.) or when the
-// previous query failed (SDL not yet initialized — retry next call).
-// Changing the monitor refresh mid-session requires a config change that
-// moves vblank_hz or an emulator restart to be picked up.
+// The result is cached keyed on (vblank_hz, active-display-id). The display-id
+// is queried every call (cheap: SDL_GetDisplayForWindow is an O(1) lookup),
+// so dragging the window to another monitor or PAL/NTSC switches both
+// correctly invalidate the cache. The refresh-rate lookup itself only runs
+// on a miss.
 static bool amiberry_hw_vsync_pacing_ok(void)
 {
 #ifdef USE_VULKAN
@@ -2520,22 +2522,29 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 #else
 	// Sentinel: cached_vblank_hz <= 0 means "no successful probe yet" (or the
 	// previous probe failed). A successful probe — even one that reported a
-	// mismatch — stores the real vblank_hz so we don't re-query every frame.
+	// mismatch — stores vblank_hz + display_id so we don't re-query every frame.
 	static float cached_vblank_hz = -1.0f;
+	static uint32_t cached_display_id = 0;
 	static bool cached_result = false;
 	if (vblank_hz <= 0.0f)
 		return false;
+	const uint32_t display_id = amiberry_get_active_display_id(0);
+	if (!display_id)
+		return false;  // Window / display not resolvable yet, try again next call.
 	const bool probe_pending = (cached_vblank_hz <= 0.0f);
 	const bool vblank_changed = !probe_pending && std::fabs(cached_vblank_hz - vblank_hz) > 0.01f;
-	if (probe_pending || vblank_changed) {
-		const float monitor_hz = amiberry_get_active_display_refreshrate(0);
+	const bool display_changed = !probe_pending && cached_display_id != display_id;
+	if (probe_pending || vblank_changed || display_changed) {
+		const float monitor_hz = amiberry_get_refreshrate_for_display_id(display_id);
 		if (monitor_hz <= 0.0f) {
-			// SDL not ready / no display — keep sentinel so next call retries.
+			// SDL not ready yet — keep sentinel so next call retries.
 			cached_vblank_hz = -1.0f;
+			cached_display_id = 0;
 			cached_result = false;
 			return false;
 		}
 		cached_vblank_hz = vblank_hz;
+		cached_display_id = display_id;
 		cached_result = (std::fabs(monitor_hz - vblank_hz) < 1.0f);
 	}
 	return cached_result;

@@ -263,29 +263,41 @@ float amiberry_getrefreshrate(const int monid)
 	return mode->refresh_rate;
 }
 
-// Returns the current refresh rate of the display actually hosting the
-// emulator window (tracks mid-session window drags across monitors), falling
-// back to the display configured via gfx_apmode[].gfx_display, and finally to
-// SDL display 0. Returns 0.0f if SDL video isn't initialized yet.
-float amiberry_get_active_display_refreshrate(const int monid)
+// Returns the SDL_DisplayID (as uint32_t) of the display hosting the emulator
+// window (tracks window drags across monitors), falling back to the configured
+// display, then to SDL display 0. Returns 0 if nothing is usable yet.
+uint32_t amiberry_get_active_display_id(const int monid)
 {
-	SDL_DisplayID display_id = 0;
 	if (monid >= 0 && monid < MAX_AMIGAMONITORS) {
 		const AmigaMonitor* mon = &AMonitors[monid];
-		if (mon->amiga_window)
-			display_id = SDL_GetDisplayForWindow(mon->amiga_window);
+		if (mon->amiga_window) {
+			const SDL_DisplayID id = SDL_GetDisplayForWindow(mon->amiga_window);
+			if (id)
+				return static_cast<uint32_t>(id);
+		}
 	}
-	if (!display_id) {
-		const struct MultiDisplay* md = getdisplay(&currprefs, monid >= 0 ? monid : 0);
-		if (md)
-			display_id = md->display_id;
-	}
+	const struct MultiDisplay* md = getdisplay(&currprefs, monid >= 0 ? monid : 0);
+	if (md && md->display_id)
+		return static_cast<uint32_t>(md->display_id);
+	return 0;
+}
+
+// Returns the current refresh rate for the given SDL_DisplayID, or 0.0f if
+// the display isn't known to SDL. Separated from id resolution so callers can
+// key a cache on the display id cheaply without re-probing the refresh.
+float amiberry_get_refreshrate_for_display_id(const uint32_t display_id)
+{
 	if (!display_id)
 		return 0.0f;
-	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(display_id);
-	if (!mode)
-		return 0.0f;
-	return mode->refresh_rate;
+	const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(static_cast<SDL_DisplayID>(display_id));
+	return mode ? mode->refresh_rate : 0.0f;
+}
+
+// Returns the current refresh rate of the display actually hosting the
+// emulator window. Retained for callers that don't track the display id.
+float amiberry_get_active_display_refreshrate(const int monid)
+{
+	return amiberry_get_refreshrate_for_display_id(amiberry_get_active_display_id(monid));
 }
 
 void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
