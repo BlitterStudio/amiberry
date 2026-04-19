@@ -126,7 +126,7 @@ static volatile int shellexecute2_queued;
 static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx);
 static void filesys_shellexecute2_run_queue(void);
 static void shellexecute2_free(struct ShellExecute2 *se2);
-
+static bool exter_added;
 static int bootrom_header;
 
 static uae_u32 dlg (uae_u32 a)
@@ -1947,8 +1947,12 @@ bool filesys_heartbeat(void)
 
 void setsystime (void)
 {
-	if (!currprefs.tod_hack || !rtarea_bank.baseaddr)
+	if (!currprefs.tod_hack || !rtarea_bank.baseaddr) {
 		return;
+	}
+	if (!exter_added) {
+		return;
+	}
 	uae_ClockSync();
 }
 
@@ -7451,6 +7455,7 @@ static void filesys_reset2 (void)
 
 void filesys_reset (void)
 {
+	exter_added = false;
 	if (isrestore ())
 		return;
 	load_injected_icons();
@@ -9188,6 +9193,7 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		uaecptr diminfo = trap_get_areg(ctx, 2);
 		uaecptr dispinfo = trap_get_areg(ctx, 3);
 		uaecptr vp = trap_get_areg(ctx, 4);
+		exter_added = true;
 		return input_mousehack_status(ctx, mode, diminfo, dispinfo, vp, trap_get_dreg(ctx, 2));
 	} else if (mode == 10) {
 		amiga_clipboard_die(ctx);
