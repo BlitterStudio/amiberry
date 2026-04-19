@@ -2017,11 +2017,13 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 	case SDL_EVENT_WINDOW_MOVED:
 		handle_moved_event(mon);
 		break;
+#ifndef LIBRETRO
 	case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
 		// Window migrated to a different display — force the hw VSync pacing
 		// decision to re-probe against the new display's refresh rate.
 		amiberry_hw_vsync_pacing_invalidate();
 		break;
+#endif
 	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 	case SDL_EVENT_WINDOW_RESIZED:
 		handle_resized_event(mon, event.window.data1, event.window.data2);
@@ -2833,6 +2835,7 @@ static void process_event(const SDL_Event& event)
 			handle_clipboard_update_event();
 			break;
 
+#ifndef LIBRETRO
 		case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
 			// Display refresh-mode changed (user switched Hz in OS display
 			// settings, or HDMI re-linked at a new mode). Force the hw VSync
@@ -2840,6 +2843,7 @@ static void process_event(const SDL_Event& event)
 			// move or the Amiga target refresh to change.
 			amiberry_hw_vsync_pacing_invalidate();
 			break;
+#endif
 
 		case SDL_EVENT_JOYSTICK_ADDED:
 			handle_joy_device_event(event.jdevice.which, false, &currprefs);
