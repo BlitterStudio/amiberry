@@ -2494,7 +2494,7 @@ void drawing_init(void)
 }
 
 #if defined(AMIBERRY) && !defined(LIBRETRO)
-extern float amiberry_getrefreshrate(int monid);
+extern float amiberry_get_active_display_refreshrate(int monid);
 
 // Returns true when the host monitor refresh matches the Amiga chipset target
 // within ~1 Hz, so SDL_GL_SwapWindow / SDL_RenderPresent blocking on the next
@@ -2528,7 +2528,7 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 	const bool probe_pending = (cached_vblank_hz <= 0.0f);
 	const bool vblank_changed = !probe_pending && std::fabs(cached_vblank_hz - vblank_hz) > 0.01f;
 	if (probe_pending || vblank_changed) {
-		const float monitor_hz = amiberry_getrefreshrate(0);
+		const float monitor_hz = amiberry_get_active_display_refreshrate(0);
 		if (monitor_hz <= 0.0f) {
 			// SDL not ready / no display — keep sentinel so next call retries.
 			cached_vblank_hz = -1.0f;
@@ -2550,11 +2550,14 @@ int isvsync_chipset(void)
 		return 0;
 #ifdef AMIBERRY
 #ifndef LIBRETRO
-	// Standard VSync (gfx_vsyncmode == 0) with matched monitor refresh can use
-	// hardware pacing via swap blocking. Any other combination falls through to
-	// software timing — renderers still set SwapInterval independently for tear
-	// prevention.
-	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0 && amiberry_hw_vsync_pacing_ok())
+	// Standard VSync (gfx_vsyncmode == 0, not Adaptive/VRR) with matched monitor
+	// refresh can use hardware pacing via swap blocking. Any other combination
+	// falls through to software timing — renderers still set SwapInterval
+	// independently for tear prevention. Adaptive (gfx_variable_sync=1) stays on
+	// software timing because SwapInterval=-1 doesn't guarantee blocking on
+	// late frames.
+	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0 && !currprefs.gfx_variable_sync
+		&& amiberry_hw_vsync_pacing_ok())
 		return 1;
 #endif
 	return 0;
