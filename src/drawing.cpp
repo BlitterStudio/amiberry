@@ -15,8 +15,11 @@
 #include "sysdeps.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cassert>
+#include <cmath>
+#include <cstdint>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -2492,16 +2495,85 @@ void drawing_init(void)
 	reset_drawing();
 }
 
+#if defined(AMIBERRY) && !defined(LIBRETRO)
+// Cached host-monitor refresh rate in millihertz. Written ONLY on the SDL
+// main thread via amiberry_hw_vsync_pacing_invalidate(); read on the
+// emulator thread by amiberry_hw_vsync_pacing_ok(). 0 means "not probed
+// yet" or "probe failed / display not ready". Millihertz (×1000) lets us
+// use std::atomic<uint32_t> (guaranteed lock-free on all targets) instead
+// of std::atomic<float>, with enough precision for a ~1 Hz match tolerance.
+static std::atomic<uint32_t> hw_vsync_cached_monitor_hz_x1000{0};
+
+// Invoked on the SDL main thread in response to display / window events
+// (window migrated to another display, display mode changed) and once at
+// graphics_init() time. Re-probes SDL and caches the active display's
+// refresh rate for the emulator thread. SDL3's SDL_GetDisplayForWindow /
+// SDL_GetCurrentDisplayMode are documented as main-thread-only, so this
+// function must only be called from the main thread.
+void amiberry_hw_vsync_pacing_invalidate(void)
+{
+	const uint32_t display_id = amiberry_get_active_display_id(0);
+	const float monitor_hz = display_id
+		? amiberry_get_refreshrate_for_display_id(display_id)
+		: 0.0f;
+	const uint32_t hz_x1000 = monitor_hz > 0.0f
+		? static_cast<uint32_t>(monitor_hz * 1000.0f + 0.5f)
+		: 0;
+	hw_vsync_cached_monitor_hz_x1000.store(hz_x1000, std::memory_order_relaxed);
+}
+
+// Returns true when the host monitor refresh matches the Amiga chipset target
+// within ~1 Hz, so SDL_GL_SwapWindow / SDL_RenderPresent blocking on the next
+// vblank paces the emulator at the correct rate. When this is true we can
+// safely use the vs>0 framewait() path (hardware pacing) which preserves
+// smooth scrolling on matched setups (e.g. 50 Hz monitor + PAL). When false,
+// framewait() stays on the software-timing path — this avoids the #1947
+// audio-delay scenario (60 Hz monitor + 50 Hz PAL game: swap-block would
+// pace at 60 Hz).
+//
+// The Vulkan renderer's present path does not block on vblank (see
+// vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
+//
+// This runs on the emulator thread (via isvsync_chipset() → framewait()).
+// It does NOT call any SDL video APIs: it only reads the cached monitor Hz
+// published by amiberry_hw_vsync_pacing_invalidate() on the main thread.
+static bool amiberry_hw_vsync_pacing_ok(void)
+{
+#ifdef USE_VULKAN
+	return false;
+#else
+	if (vblank_hz <= 0.0f)
+		return false;
+	const uint32_t hz_x1000 = hw_vsync_cached_monitor_hz_x1000.load(std::memory_order_relaxed);
+	if (hz_x1000 == 0)
+		return false;  // Main thread hasn't probed yet (or the probe failed).
+	const float monitor_hz = static_cast<float>(hz_x1000) / 1000.0f;
+	return std::fabs(monitor_hz - vblank_hz) < 1.0f;
+#endif
+}
+#elif defined(AMIBERRY)
+// Libretro stub: declaration is visible via xwin.h's AMIBERRY block, so
+// provide an empty body here so callers link without the full pacing logic.
+void amiberry_hw_vsync_pacing_invalidate(void) {}
+#endif
+
 int isvsync_chipset(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
 #ifdef AMIBERRY
-	// Amiberry uses software timing (vs==0 path) for frame pacing on all platforms.
-	// The renderer independently sets SwapInterval for tear prevention.
-	// The WinUAE vs>0 path relies on swap blocking matching the Amiga refresh rate,
-	// which requires exclusive fullscreen mode switching (D3D) not available via SDL/OpenGL.
+#ifndef LIBRETRO
+	// Standard VSync (gfx_vsyncmode == 0, not Adaptive/VRR) with matched monitor
+	// refresh can use hardware pacing via swap blocking. Any other combination
+	// falls through to software timing — renderers still set SwapInterval
+	// independently for tear prevention. Adaptive (gfx_variable_sync=1) stays on
+	// software timing because SwapInterval=-1 doesn't guarantee blocking on
+	// late frames.
+	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0 && !currprefs.gfx_variable_sync
+		&& amiberry_hw_vsync_pacing_ok())
+		return 1;
+#endif
 	return 0;
 #else
 	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
@@ -2518,6 +2590,9 @@ int isvsync_rtg(void)
 	if (!ad->picasso_on || currprefs.gfx_apmode[1].gfx_vsync <= 0)
 		return 0;
 #ifdef AMIBERRY
+	// RTG/Picasso modes run at their own refresh rate (often 60/70/75 Hz),
+	// not chipset vblank_hz. Until we plumb the right target refresh through,
+	// stay on software timing for RTG to preserve the #1947 fix.
 	return 0;
 #else
 	if (currprefs.gfx_apmode[1].gfx_vsyncmode == 0)
