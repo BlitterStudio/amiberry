@@ -448,7 +448,21 @@ bool preinit_shm ()
 	canbang = true;
 #ifdef CPU_64_BIT
 	if ((uintptr_t)natmem_reserved + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
+#if defined(CPU_AARCH64)
 		write_log (_T("MMAN: INFO: natmem at %p exceeds 32-bit range - JIT direct mode allowed (64-bit clean)\n"), natmem_reserved);
+#else
+		/* x86-64 JIT still has 32-bit arithmetic paths (add_l_ri, LEA, PC_P)
+		 * that truncate natmem_offset to 32 bits. A high natmem would cause
+		 * JIT-emitted code to dereference a low garbage pointer (issue #1983).
+		 * Keep currprefs/changed_prefs in sync so later prefs-apply cannot
+		 * silently re-enable the broken path. */
+		write_log (_T("MMAN: WARNING: natmem at %p exceeds 32-bit range on x86-64 -")
+				   _T(" JIT not 64-bit clean, disabling JIT direct and translation cache\n"),
+				   natmem_reserved);
+		canbang = false;
+		currprefs.cachesize = 0;
+		changed_prefs.cachesize = 0;
+#endif
 	}
 #endif
 	return true;
