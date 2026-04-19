@@ -53,7 +53,7 @@ This prevents stale `cache_tags[]` or half-built blocks from executing after fal
 - If JIT disables itself, can any later preference sync undo that?
 - Does every early return after partial setup clean up block state?
 
-## Outstanding Work: make x86-64 JIT 64-bit clean (issue #1983)
+## Outstanding Work: make x86-64 JIT 64-bit clean (tracked in #1987, root cause #1983)
 
 ARM64 is fully 64-bit pointer-clean (PC_P is the only 64-bit vreg, all others hold
 32-bit M68k values; 19 fix points documented in the arm64 skill). x86-64 still has
