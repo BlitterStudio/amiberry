@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cassert>
+#include <cmath>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -2492,16 +2493,70 @@ void drawing_init(void)
 	reset_drawing();
 }
 
+#if defined(AMIBERRY) && !defined(LIBRETRO)
+extern float amiberry_getrefreshrate(int monid);
+
+// Returns true when the host monitor refresh matches the Amiga chipset target
+// within ~1 Hz, so SDL_GL_SwapWindow / SDL_RenderPresent blocking on the next
+// vblank paces the emulator at the correct rate. When this is true we can
+// safely use the vs>0 framewait() path (hardware pacing) which preserves
+// smooth scrolling on matched setups (e.g. 50 Hz monitor + PAL). When false,
+// framewait() stays on the software-timing path — this avoids the #1947
+// audio-delay scenario (60 Hz monitor + 50 Hz PAL game: swap-block would
+// pace at 60 Hz).
+//
+// The Vulkan renderer's present path does not block on vblank (see
+// vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
+//
+// The result is cached keyed on vblank_hz; a SDL query runs only when the
+// Amiga target refresh changes (PAL/NTSC switch, genlock, etc.) or when the
+// previous query failed (SDL not yet initialized — retry next call).
+// Changing the monitor refresh mid-session requires a config change that
+// moves vblank_hz or an emulator restart to be picked up.
+static bool amiberry_hw_vsync_pacing_ok(void)
+{
+#ifdef USE_VULKAN
+	return false;
+#else
+	// Sentinel: cached_vblank_hz <= 0 means "no successful probe yet" (or the
+	// previous probe failed). A successful probe — even one that reported a
+	// mismatch — stores the real vblank_hz so we don't re-query every frame.
+	static float cached_vblank_hz = -1.0f;
+	static bool cached_result = false;
+	if (vblank_hz <= 0.0f)
+		return false;
+	const bool probe_pending = (cached_vblank_hz <= 0.0f);
+	const bool vblank_changed = !probe_pending && std::fabs(cached_vblank_hz - vblank_hz) > 0.01f;
+	if (probe_pending || vblank_changed) {
+		const float monitor_hz = amiberry_getrefreshrate(0);
+		if (monitor_hz <= 0.0f) {
+			// SDL not ready / no display — keep sentinel so next call retries.
+			cached_vblank_hz = -1.0f;
+			cached_result = false;
+			return false;
+		}
+		cached_vblank_hz = vblank_hz;
+		cached_result = (std::fabs(monitor_hz - vblank_hz) < 1.0f);
+	}
+	return cached_result;
+#endif
+}
+#endif
+
 int isvsync_chipset(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
 #ifdef AMIBERRY
-	// Amiberry uses software timing (vs==0 path) for frame pacing on all platforms.
-	// The renderer independently sets SwapInterval for tear prevention.
-	// The WinUAE vs>0 path relies on swap blocking matching the Amiga refresh rate,
-	// which requires exclusive fullscreen mode switching (D3D) not available via SDL/OpenGL.
+#ifndef LIBRETRO
+	// Standard VSync (gfx_vsyncmode == 0) with matched monitor refresh can use
+	// hardware pacing via swap blocking. Any other combination falls through to
+	// software timing — renderers still set SwapInterval independently for tear
+	// prevention.
+	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0 && amiberry_hw_vsync_pacing_ok())
+		return 1;
+#endif
 	return 0;
 #else
 	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
@@ -2518,6 +2573,9 @@ int isvsync_rtg(void)
 	if (!ad->picasso_on || currprefs.gfx_apmode[1].gfx_vsync <= 0)
 		return 0;
 #ifdef AMIBERRY
+	// RTG/Picasso modes run at their own refresh rate (often 60/70/75 Hz),
+	// not chipset vblank_hz. Until we plumb the right target refresh through,
+	// stay on software timing for RTG to preserve the #1947 fix.
 	return 0;
 #else
 	if (currprefs.gfx_apmode[1].gfx_vsyncmode == 0)
