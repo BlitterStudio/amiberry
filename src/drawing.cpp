@@ -15,6 +15,7 @@
 #include "sysdeps.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cassert>
 #include <cmath>
@@ -2495,8 +2496,31 @@ void drawing_init(void)
 }
 
 #if defined(AMIBERRY) && !defined(LIBRETRO)
-extern uint32_t amiberry_get_active_display_id(int monid);
-extern float amiberry_get_refreshrate_for_display_id(uint32_t display_id);
+// Cached host-monitor refresh rate in millihertz. Written ONLY on the SDL
+// main thread via amiberry_hw_vsync_pacing_invalidate(); read on the
+// emulator thread by amiberry_hw_vsync_pacing_ok(). 0 means "not probed
+// yet" or "probe failed / display not ready". Millihertz (×1000) lets us
+// use std::atomic<uint32_t> (guaranteed lock-free on all targets) instead
+// of std::atomic<float>, with enough precision for a ~1 Hz match tolerance.
+static std::atomic<uint32_t> hw_vsync_cached_monitor_hz_x1000{0};
+
+// Invoked on the SDL main thread in response to display / window events
+// (window migrated to another display, display mode changed) and once at
+// graphics_init() time. Re-probes SDL and caches the active display's
+// refresh rate for the emulator thread. SDL3's SDL_GetDisplayForWindow /
+// SDL_GetCurrentDisplayMode are documented as main-thread-only, so this
+// function must only be called from the main thread.
+void amiberry_hw_vsync_pacing_invalidate(void)
+{
+	const uint32_t display_id = amiberry_get_active_display_id(0);
+	const float monitor_hz = display_id
+		? amiberry_get_refreshrate_for_display_id(display_id)
+		: 0.0f;
+	const uint32_t hz_x1000 = monitor_hz > 0.0f
+		? static_cast<uint32_t>(monitor_hz * 1000.0f + 0.5f)
+		: 0;
+	hw_vsync_cached_monitor_hz_x1000.store(hz_x1000, std::memory_order_relaxed);
+}
 
 // Returns true when the host monitor refresh matches the Amiga chipset target
 // within ~1 Hz, so SDL_GL_SwapWindow / SDL_RenderPresent blocking on the next
@@ -2510,46 +2534,27 @@ extern float amiberry_get_refreshrate_for_display_id(uint32_t display_id);
 // The Vulkan renderer's present path does not block on vblank (see
 // vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
 //
-// The result is cached keyed on (vblank_hz, active-display-id). The display-id
-// is queried every call (cheap: SDL_GetDisplayForWindow is an O(1) lookup),
-// so dragging the window to another monitor or PAL/NTSC switches both
-// correctly invalidate the cache. The refresh-rate lookup itself only runs
-// on a miss.
+// This runs on the emulator thread (via isvsync_chipset() → framewait()).
+// It does NOT call any SDL video APIs: it only reads the cached monitor Hz
+// published by amiberry_hw_vsync_pacing_invalidate() on the main thread.
 static bool amiberry_hw_vsync_pacing_ok(void)
 {
 #ifdef USE_VULKAN
 	return false;
 #else
-	// Sentinel: cached_vblank_hz <= 0 means "no successful probe yet" (or the
-	// previous probe failed). A successful probe — even one that reported a
-	// mismatch — stores vblank_hz + display_id so we don't re-query every frame.
-	static float cached_vblank_hz = -1.0f;
-	static uint32_t cached_display_id = 0;
-	static bool cached_result = false;
 	if (vblank_hz <= 0.0f)
 		return false;
-	const uint32_t display_id = amiberry_get_active_display_id(0);
-	if (!display_id)
-		return false;  // Window / display not resolvable yet, try again next call.
-	const bool probe_pending = (cached_vblank_hz <= 0.0f);
-	const bool vblank_changed = !probe_pending && std::fabs(cached_vblank_hz - vblank_hz) > 0.01f;
-	const bool display_changed = !probe_pending && cached_display_id != display_id;
-	if (probe_pending || vblank_changed || display_changed) {
-		const float monitor_hz = amiberry_get_refreshrate_for_display_id(display_id);
-		if (monitor_hz <= 0.0f) {
-			// SDL not ready yet — keep sentinel so next call retries.
-			cached_vblank_hz = -1.0f;
-			cached_display_id = 0;
-			cached_result = false;
-			return false;
-		}
-		cached_vblank_hz = vblank_hz;
-		cached_display_id = display_id;
-		cached_result = (std::fabs(monitor_hz - vblank_hz) < 1.0f);
-	}
-	return cached_result;
+	const uint32_t hz_x1000 = hw_vsync_cached_monitor_hz_x1000.load(std::memory_order_relaxed);
+	if (hz_x1000 == 0)
+		return false;  // Main thread hasn't probed yet (or the probe failed).
+	const float monitor_hz = static_cast<float>(hz_x1000) / 1000.0f;
+	return std::fabs(monitor_hz - vblank_hz) < 1.0f;
 #endif
 }
+#elif defined(AMIBERRY)
+// Libretro stub: declaration is visible via xwin.h's AMIBERRY block, so
+// provide an empty body here so callers link without the full pacing logic.
+void amiberry_hw_vsync_pacing_invalidate(void) {}
 #endif
 
 int isvsync_chipset(void)

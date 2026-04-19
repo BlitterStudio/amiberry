@@ -1089,6 +1089,10 @@ int graphics_init(bool mousecapture)
 			gfxmode_reset(currprefs.monitoremu_mon);
 			open_windows(&AMonitors[currprefs.monitoremu_mon], mousecapture, false);
 		}
+		// Prime the hw VSync pacing cache on the main thread — the emulator
+		// thread reads the cached value but must not call SDL video APIs
+		// directly (SDL3 documents them as main-thread-only).
+		amiberry_hw_vsync_pacing_invalidate();
 		return true;
 	}
 	return false;

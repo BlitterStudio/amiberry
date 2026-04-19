@@ -12,6 +12,10 @@
 #include "uae/types.h"
 #include "machdep/rpt.h"
 
+#ifdef AMIBERRY
+#include <cstdint>
+#endif
+
 typedef uae_u32 xcolnr;
 
 typedef int (*allocfunc_type)(int, int, int, xcolnr*);
@@ -45,6 +49,17 @@ extern void updatedisplayarea(int monid);
 extern int isvsync_chipset(void);
 extern int isvsync_rtg(void);
 extern int isvsync(void);
+
+#ifdef AMIBERRY
+// Display/refresh queries used by the hardware VSync pacing decision in
+// isvsync_chipset(). Defined in osdep/amiberry_gfx.cpp.
+extern uint32_t amiberry_get_active_display_id(int monid);
+extern float amiberry_get_refreshrate_for_display_id(uint32_t display_id);
+
+// Forces the hardware VSync pacing cache to re-probe on the next call. Called
+// from the SDL event loop on display mode / window-display changes.
+extern void amiberry_hw_vsync_pacing_invalidate(void);
+#endif
 
 extern void flush_line(struct vidbuffer*, int);
 extern void flush_block(struct vidbuffer*, int, int);
