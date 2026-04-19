@@ -124,6 +124,7 @@ static bool dmal_next;
 static int fast_lines_cnt;
 static bool lineoptimizations_draw_always;
 static int agnus_trigger_cck;
+static int init_beamcon_delay;
 
 static uae_u32 scandoubled_bpl_ptr[MAX_SCANDOUBLED_LINES + 1][2][MAX_PLANES];
 static bool scandoubled_bpl_ena[MAX_SCANDOUBLED_LINES + 1];
@@ -573,7 +574,7 @@ static uae_u32 cop1lc, cop2lc, copcon;
 */
 
 static bool agnus_phsync, agnus_phblank;
-static uae_u32 agnus_phblank_start_tmp, agnus_phblank_start, agnus_phblank_end, agnus_hsync_start;
+static uae_u32 agnus_phblank_start_tmp, agnus_phblank_start, agnus_phblank_end, agnus_hsync_start, agnus_vsync_start;
 static int hsync_ccks;
 static int current_linear_hs_hb_dist;
 static uae_u32 agnus_hsstrt_cck, agnus_hsstop_cck;
@@ -724,7 +725,7 @@ static int diwfirstword, diwlastword;
 static int last_diwlastword;
 static int hb_last_diwlastword;
 static int last_hdiw;
-static diw_states vdiwstate, hdiwstate;
+static diw_states vdiwstate;
 static int hdiwbplstart;
 static bool exthblank;
 
@@ -783,7 +784,6 @@ uae_u32 hsync_counter, vsync_counter;
 frame_time_t idletime;
 int bogusframe;
 static int display_vsync_counter, display_hsync_counter;
-static evt_t display_last_hsync, display_last_vsync;
 
 static bool ddf_limit_in, ddf_limit_out, ddf_limit, ddfstrt_match, hwi_old;
 static int ddf_stopping, ddf_enable_on;
@@ -1600,29 +1600,31 @@ static void update_display_vars(void)
 		hpixels *= 2;
 	}
 	int vpixels = vsync_lines - minfirstline;
-	int hpixelsd = hpixels * 85 / 100;
-	if (hpixelsd < vpixels) {
-		doublescan = 1;
-		if (programmedmode == 2) {
-			programmedmode = 1;
-		}
-		hpixelsd *= 2;
-	}
-	if (currprefs.gfx_keep_aspect) {
-		bool dbl = line_is_doubled();
-		if (dbl) {
-			vpixels *= 2;
-		}
+	if (vpixels > 0 && minfirstline > 0) {
+		int hpixelsd = hpixels * 85 / 100;
 		if (hpixelsd < vpixels) {
-			doublescan2x = 1;
-			hpixelsd *= 2;
-			if (hpixelsd < vpixels) {
-				doublescan2x = 2;
+			doublescan = 1;
+			if (programmedmode == 2) {
+				programmedmode = 1;
 			}
-		} else if (hpixelsd > vpixels * 2) {
-			doublescan2x = -1;
-			if (hpixelsd > vpixels * 4) {
-				doublescan2x = -2;
+			hpixelsd *= 2;
+		}
+		if (currprefs.gfx_keep_aspect) {
+			bool dbl = line_is_doubled();
+			if (dbl) {
+				vpixels *= 2;
+			}
+			if (hpixelsd < vpixels) {
+				doublescan2x = 1;
+				hpixelsd *= 2;
+				if (hpixelsd < vpixels) {
+					doublescan2x = 2;
+				}
+			} else if (hpixelsd > vpixels * 2) {
+				doublescan2x = -1;
+				if (hpixelsd > vpixels * 4) {
+					doublescan2x = -2;
+				}
 			}
 		}
 	}
@@ -1848,6 +1850,28 @@ void compute_framesync(void)
 	);
 }
 
+// do not switch to H/V sync cable mode if required programmed mode registers are uninitialized
+static bool valid_programmed_mode(void)
+{
+	if (beamcon0 & (BEAMCON0_VARHSYEN | BEAMCON0_VARCSYEN)) {
+		if (!programmed_register_accessed_h) {
+			return false;
+		}
+		if (hsstrt == 0xffff || hsstop == 0xffff) {
+			return false;
+		}
+	}
+	if (beamcon0 & (BEAMCON0_VARVSYEN | BEAMCON0_VARCSYEN)) {
+		if (!programmed_register_accessed_v) {
+			return false;
+		}
+		if (vsstrt == 0xffff || vsstop == 0xffff) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /* set PAL/NTSC or custom timing variables */
 static void init_beamcon0(void)
 {
@@ -1867,15 +1891,15 @@ static void init_beamcon0(void)
 	}
 	beamcon0_pal = !isntsc;
 
-	if (currprefs.cs_hvcsync == HVSYNC_COMBINED || currprefs.cs_hvcsync == HVSYNC_COMBINED_SYNC) {
+	if ((currprefs.cs_hvcsync == HVSYNC_COMBINED || currprefs.cs_hvcsync == HVSYNC_COMBINED_SYNC) && valid_programmed_mode()) {
 		bemcon0_hsync_mask = BEAMCON0_VARHSYEN | BEAMCON0_VARCSYEN;
 		bemcon0_vsync_mask = BEAMCON0_VARVSYEN | BEAMCON0_VARCSYEN;
-	} else if (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC) {
-		bemcon0_hsync_mask = BEAMCON0_VARCSYEN;
-		bemcon0_vsync_mask = BEAMCON0_VARCSYEN;
-	} else {
+	} else if (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC) {
 		bemcon0_hsync_mask = BEAMCON0_VARHSYEN;
 		bemcon0_vsync_mask = BEAMCON0_VARVSYEN;
+	} else {
+		bemcon0_hsync_mask = BEAMCON0_VARCSYEN;
+		bemcon0_vsync_mask = BEAMCON0_VARCSYEN;
 	}
 	beamcon0_has_hsync = (beamcon0 & bemcon0_hsync_mask) != 0;
 	beamcon0_has_vsync = (beamcon0 & bemcon0_vsync_mask) != 0;
@@ -2058,6 +2082,7 @@ static void init_beamcon0(void)
 	display_hstart_cyclewait_start = size;
 	resetfulllinestate();
 	updatehwhpostable();
+	init_beamcon_delay = -1;
 }
 
 static void init_hz_reset(void)
@@ -2370,15 +2395,17 @@ static void incpos(uae_u16 *hpp, uae_u16 *vpp)
 	if (syncs_stopped) {
 		return;
 	}
-	if (hp == 1) {
-		vp++;
-		if (vp == maxvpos + lof_store) {
-			vp = 0;
+	if (currprefs.cpu_memory_cycle_exact) {
+		if (hp == 1) {
+			vp++;
+			if (vp == maxvpos + lof_store) {
+				vp = 0;
+			}
 		}
-	}
-	hp++;
-	if (hp == maxhpos || hp == maxhpos_long) {
-		hp = 0;
+		hp++;
+		if (hp == maxhpos || hp == maxhpos_long) {
+			hp = 0;
+		}
 	}
 	if (canvhposw()) {
 		if (agnus_pos_change >= 1) {
@@ -4992,16 +5019,29 @@ static void vsync_check_vsyncmode(void)
 			}
 			if ((current_linear_hblen != current_linear_hblen_temp || denise_get_hbstate(true)) && currprefs.cs_hvcsync < HVSYNC_SYNCPOS) {
 				current_linear_hblen = current_linear_hblen_temp;
-				init_beamcon0();
 				framesync = true;
+				init_beamcon0();
 				display_redraw = true;
 			}
 		}
 	}
 
-	if (framesync) {
-		compute_framesync();
-		devices_syncchange();
+	// if no sync condition, wait until sync is back before recalculating display
+	if (!nosignal_cnt && !nosignal_trigger) {
+		if (framesync) {
+			compute_framesync();
+			devices_syncchange();
+			init_beamcon_delay = 0;
+		}
+		if (init_beamcon_delay < 0) {
+			init_beamcon_delay = 2;
+		} else if (init_beamcon_delay > 0) {
+			init_beamcon_delay--;
+			if (init_beamcon_delay == 0) {
+				compute_framesync();
+				devices_syncchange();
+			}
+		}
 	}
 
 	if (agnus_afterreset > 0) {
@@ -5111,46 +5151,6 @@ static void check_interlace(void)
 	prevlofs[0] = lof_display;
 }
 
-static void check_no_signal(void)
-{
-	evt_t c = get_cycles();
-	if (issyncstopped(bplcon0)) {
-		nosignal_trigger = true;
-	}
-	// Missing vsync
-	if (c > display_last_vsync + (CHIPSET_CLOCK_PAL / 10) * CYCLE_UNIT) {
-		nosignal_trigger = true;
-	}
-	// Missing hsync
-	if (c > display_last_hsync + (CHIPSET_CLOCK_PAL / 100) * CYCLE_UNIT) {
-		nosignal_trigger = true;
-	}
-	// Inverted CSYNC
-	if ((beamcon0 & BEAMCON0_CSYTRUE) && (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC)) {
-		nosignal_trigger = true;
-	}
-	// BLANKEN set: horizontal blanking is merged with CSYNC
-	if ((beamcon0 & BEAMCON0_BLANKEN) && (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC)) {
-		nosignal_trigger = true;
-	}
-	if ((beamcon0 & BEAMCON0_CSCBEN) && (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC)) {
-		nosignal_trigger = true;
-	}
-	if (beamcon0 & BEAMCON0_VARBEAMEN) {
-		if (htotal < 50 || htotal >= 255) {
-			nosignal_trigger = true;
-		}
-		if (vtotal < 100 || vtotal > 1000) {
-			nosignal_trigger = true;
-		}
-		// CSY output is invalid (no vsync part included) if HTOTAL is too small + hardwired CSYNC.
-		int csyh = (beamcon0 & 0x20) ? 0x8c : 0x8d;
-		if (htotal < csyh && !(beamcon0 & BEAMCON0_VARCSYEN) && (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC)) {
-			nosignal_trigger = true;
-		}
-	}
-}
-
 static void handle_nosignal(void)
 {
 	if (nosignal_status < 0) {
@@ -5168,13 +5168,15 @@ static void handle_nosignal(void)
 		struct amigadisplay *ad = &adisplays[0];
 		nosignal_trigger = false;
 		resetfulllinestate();
-		denise_clearbuffers();
+		if (!nosignal_cnt) {
+			denise_clearbuffers();
+		}
 		if (!ad->specialmonitoron) {
 			if (currprefs.gfx_monitorblankdelay > 0) {
 				nosignal_status = 1;
 				nosignal_cnt = (int)(currprefs.gfx_monitorblankdelay / (1000.0f / vblank_hz));
 				if (nosignal_cnt <= 0) {
-					nosignal_cnt = 1;
+					nosignal_cnt = 2;
 				}
 			} else {
 				nosignal_status = 2;
@@ -5182,6 +5184,50 @@ static void handle_nosignal(void)
 			}
 		}
 	}
+}
+
+static void check_no_signal(void)
+{
+	if (!nosignal_trigger) {
+
+		evt_t c = get_cycles();
+		uae_u32 cck = get_cck_cycles();
+
+		if (issyncstopped(bplcon0)) {
+			nosignal_trigger = true;
+		}
+		// Missing vsync
+		if (cck > agnus_vsync_start + 256 * 1000) {
+			nosignal_trigger = true;
+		}
+		// Missing hsync
+		if (cck > agnus_hsync_start + 400) {
+			nosignal_trigger = true;
+		}
+		// Inverted CSYNC
+		if ((beamcon0 & BEAMCON0_CSYTRUE) && (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC)) {
+			nosignal_trigger = true;
+		}
+		// BLANKEN set: horizontal blanking is merged with CSYNC
+		if ((beamcon0 & BEAMCON0_BLANKEN) && (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC)) {
+			nosignal_trigger = true;
+		}
+		if ((beamcon0 & BEAMCON0_CSCBEN) && (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC)) {
+			nosignal_trigger = true;
+		}
+		if (beamcon0 & BEAMCON0_VARBEAMEN) {
+			// CSY output is invalid (no vsync part included) if HTOTAL is too small + hardwired CSYNC.
+			int csyh = (beamcon0 & 0x20) ? 0x8c : 0x8d;
+			if (htotal < csyh && !(beamcon0 & BEAMCON0_VARCSYEN) && (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC)) {
+				nosignal_trigger = true;
+			}
+		}
+
+		if (nosignal_trigger && !nosignal_cnt) {
+			handle_nosignal();
+		}
+	}
+
 }
 
 static void virtual_vsync_check(void)
@@ -5213,8 +5259,6 @@ static void vsync_handler_post(void)
 #ifdef WITH_LUA
 	uae_lua_run_handler("on_uae_vsync");
 #endif
-
-	check_no_signal();
 
 #ifdef DEBUGGER
 	if (debug_copper) {
@@ -6433,8 +6477,6 @@ static bool uae_quit_check(void)
 // executed at start of scanline
 static void hsync_handler(bool vs)
 {
-	display_last_hsync = get_cycles();
-
 	hsync_handler_pre(vs);
 	if (vs) {
 		devices_vsync_pre();
@@ -6450,20 +6492,20 @@ static void hsync_handler(bool vs)
 		inputdevice_read_msg(true);
 		vsync_display_render();
 		vsync_display_rendered = false;
-		if ((currprefs.cs_hvcsync == HVSYNC_COMBINED || currprefs.cs_hvcsync == HVSYNC_COMBINED_SYNC)) {
+		if ((currprefs.cs_hvcsync == HVSYNC_COMBINED || currprefs.cs_hvcsync == HVSYNC_COMBINED_SYNC) && valid_programmed_mode()) {
 			if (beamcon0 & (BEAMCON0_VARVSYEN | BEAMCON0_VARCSYEN)) {
-				lof_display = lof_pdetect;
-			} else {
-				lof_display = lof_detect;
-			}
-		} else if (currprefs.cs_hvcsync == HVSYNC_CSYNC || currprefs.cs_hvcsync == HVSYNC_CSYNC_SYNC) {
-			if (beamcon0 & BEAMCON0_VARCSYEN) {
 				lof_display = lof_pdetect;
 			} else {
 				lof_display = lof_detect;
 			}
 		} else if (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC) {
 			if (beamcon0 & BEAMCON0_VARVSYEN) {
+				lof_display = lof_pdetect;
+			} else {
+				lof_display = lof_detect;
+			}
+		} else {
+			if (beamcon0 & BEAMCON0_VARCSYEN) {
 				lof_display = lof_pdetect;
 			} else {
 				lof_display = lof_detect;
@@ -6475,7 +6517,6 @@ static void hsync_handler(bool vs)
 		display_vsync_counter++;
 		maxvpos_display_vsync_next = true;
 		display_hsync_counter = 0;
-		display_last_vsync = get_cycles();
 		vsync_start_check();
 	} else if (vpos != vsync_startline + 1 && maxvpos_display_vsync_next) {
 		// protect against weird VPOSW writes causing continuous vblanks
@@ -6601,8 +6642,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	vsync_counter = 0;
 	display_vsync_counter = 0;
 	display_hsync_counter = 0;
-	display_last_hsync = get_cycles();
-	display_last_vsync = get_cycles();
+	agnus_vsync_start = get_cck_cycles();
 	agnus_hsync_start = get_cck_cycles();
 	next_lineno = 0;
 
@@ -6736,7 +6776,6 @@ void custom_reset(bool hardreset, bool keyboardreset)
 
 		diwhigh = 0;
 		diwhigh_written = 0;
-		hdiwstate = diw_states::DIW_waiting_start; // this does not reset at vblank
 
 		refptr = 0;
 		if (aga_mode) {
@@ -6929,10 +6968,10 @@ void dumpcustom(void)
 	console_out_f(_T("COP1LC: $%08x, COP2LC: $%08x COPPTR: $%08x\n"), cop1lc, cop2lc, cop_state.ip);
 	console_out_f(_T("DIWSTRT: $%04x DIWSTOP: $%04x DDFSTRT: $%04x DDFSTOP: $%04x\n"),
 		diwstrt, diwstop, ddfstrt, ddfstop);
-	console_out_f(_T("BPLCON 0: $%04x 1: $%04x 2: $%04x 3: $%04x 4: $%04x LOF=%d/%d HDIW=%d VDIW=%d\n"),
+	console_out_f(_T("BPLCON 0: $%04x 1: $%04x 2: $%04x 3: $%04x 4: $%04x LOF=%d/%d VDIW=%d\n"),
 		bplcon0, bplcon1, bplcon2, bplcon3, bplcon4,
 		lof_display, lof_store,
-		hdiwstate == diw_states::DIW_waiting_start ? 0 : 1, vdiwstate == diw_states::DIW_waiting_start ? 0 : 1);
+		vdiwstate == diw_states::DIW_waiting_start ? 0 : 1);
 	if (timeframes && vsync_counter) {
 		console_out_f(_T("Average frame time: %.2f ms [frames: %d time: %d]\n"),
 			(double)frametime / timeframes, vsync_counter, frametime);
@@ -7817,7 +7856,7 @@ uae_u8 *restore_custom(uae_u8 *src)
 	hcenter = RW;			/* 1E2 HCENTER */
 	diwhigh = RW;			/* 1E4 DIWHIGH */
 	diwhigh_written = (diwhigh & 0x8000) ? 1 : 0;
-	hdiwstate = (diwhigh & 0x4000) ? diw_states::DIW_waiting_stop : diw_states::DIW_waiting_start;
+	denise_set_hdiw((diwhigh & 0x4000) != 0);
 	vdiwstate = (diwhigh & 0x0080) ? diw_states::DIW_waiting_start : diw_states::DIW_waiting_stop;
 	diwhigh &= 0x3f3f;
 	BPLHMOD(RW);			/* 1E6 ? */
@@ -8065,7 +8104,7 @@ uae_u8 *save_custom(size_t *len, uae_u8 *dstptr, int full)
 	SW(hsstrt);			/* 1DE HSSTRT */
 	SW(vsstrt);			/* 1E0 VSSTRT */
 	SW(hcenter);		/* 1E2 HCENTER */
-	SW(diwhigh | (diwhigh_written ? 0x8000 : 0) | (hdiwstate == diw_states::DIW_waiting_stop ? 0x4000 : 0) | (vdiwstate == diw_states::DIW_waiting_start ? 0x0080 : 0)); /* 1E4 DIWHIGH */
+	SW(diwhigh | (diwhigh_written ? 0x8000 : 0) | (denise_get_hdiw() ? 0x4000 : 0) | (vdiwstate == diw_states::DIW_waiting_start ? 0x0080 : 0)); /* 1E4 DIWHIGH */
 	SW(bplhmod);				/* 1E6 */
 	SW(hhspr >> 16);	/* 1E8 */
 	SW(hhspr & 0xffff);	/* 1EA */
@@ -9894,6 +9933,7 @@ static void vsync_mark(void)
 {
 	if (vsync_linecnt) {
 		vsync_lines = vsync_linecnt;
+		agnus_vsync_start = get_cck_cycles();
 		vsync_linecnt = 0;
 		linear_vpos_prev[2] = linear_vpos_prev[1];
 		linear_vpos_prev[1] = linear_vpos_prev[0];
@@ -10997,6 +11037,8 @@ static void custom_trigger_start(void)
 
 		}
 	}
+
+	check_no_signal();
 
 	if (!(new_beamcon0 & BEAMCON0_PAL) && !(new_beamcon0 & BEAMCON0_LOLDIS)) {
 		lol = lol ? false : true;

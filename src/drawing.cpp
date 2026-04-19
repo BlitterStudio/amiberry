@@ -581,6 +581,15 @@ void toggle_inhibit_frame(int monid, int bit)
 	ad->inhibit_frame ^= 1 << bit;
 }
 
+void denise_set_hdiw(bool hdiw)
+{
+	denise_hdiw = hdiw;
+}
+bool denise_get_hdiw(void)
+{
+	return denise_hdiw;
+}
+
 static void clearbuffer(struct vidbuffer *dst)
 {
 	if (!dst->bufmem_allocated)
@@ -5704,7 +5713,7 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 		struct vidbuf_description* vidinfo = &adisplays[0].gfxvidinfo;
 		int l = 0;
 		while (l < vb->inheight) {
-			uae_u8* b = get_row(monid, l);
+			uae_u8 *b = get_row(monid, l);
 			memset(b, 0, vb->inwidth * vb->pixbytes);
 			l++;
 		}
@@ -6168,41 +6177,42 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 		ls->lol = lol;
 	}
 
-	frame_internal_pixel_cnt = internal_pixel_cnt;
+	if (internal_pixel_cnt > 0) {
+		frame_internal_pixel_cnt = internal_pixel_cnt;
+		// detect horizontal blanking
+		if (!denise_vblank_active) {
+			int ipc = internal_pixel_cnt + (denise_strlong_seen ? lol * 8 : 0);
+			linear_denise_frame_hbstrt = hbstrt_offset + (denise_strlong_seen ? lol * 8 : 0);
+			linear_denise_frame_hbstop = hbstop_offset;
+			//write_log("%d %d\n", linear_denise_frame_hbstrt, linear_denise_frame_hbstop);
 
-	// detect horizontal blanking
-	if (!denise_vblank_active) {
-		int ipc = internal_pixel_cnt + (denise_strlong_seen ? lol * 8 : 0);
-		linear_denise_frame_hbstrt = hbstrt_offset + (denise_strlong_seen ? lol * 8 : 0);
-		linear_denise_frame_hbstop = hbstop_offset;
-		//write_log("%d %d\n", linear_denise_frame_hbstrt, linear_denise_frame_hbstop);
-
-		if (linear_denise_frame_hbstrt == linear_denise_frame_hbstrt_tmp && linear_denise_frame_hbstop == linear_denise_frame_hbstop_tmp) {
-			denise_hbstrt_relative_cnt++;
-			if (denise_hbstrt_relative_cnt > maxvpos_display / 2) {
-				int ss = linear_denise_frame_hbstrt_sel;
-				int ee = linear_denise_frame_hbstop_sel;
-				linear_denise_frame_hbstrt_sel = linear_denise_frame_hbstrt_tmp;
-				linear_denise_frame_hbstop_sel = linear_denise_frame_hbstop_tmp;
-				if (linear_denise_frame_hbstrt_sel < 0 || linear_denise_frame_hbstop_sel < 0) {
-					linear_denise_frame_hbstrt_sel = -1;
-					linear_denise_frame_hbstop_sel = -1;
-				} else {
-					if (linear_denise_frame_hbstrt_sel > linear_denise_frame_hbstop_sel) {
-						linear_denise_frame_hbstrt_sel -= ipc;
+			if (linear_denise_frame_hbstrt == linear_denise_frame_hbstrt_tmp && linear_denise_frame_hbstop == linear_denise_frame_hbstop_tmp) {
+				denise_hbstrt_relative_cnt++;
+				if (denise_hbstrt_relative_cnt > maxvpos_display / 2) {
+					int ss = linear_denise_frame_hbstrt_sel;
+					int ee = linear_denise_frame_hbstop_sel;
+					linear_denise_frame_hbstrt_sel = linear_denise_frame_hbstrt_tmp;
+					linear_denise_frame_hbstop_sel = linear_denise_frame_hbstop_tmp;
+					if (linear_denise_frame_hbstrt_sel < 0 || linear_denise_frame_hbstop_sel < 0) {
+						linear_denise_frame_hbstrt_sel = -1;
+						linear_denise_frame_hbstop_sel = -1;
+					} else {
+						if (linear_denise_frame_hbstrt_sel > linear_denise_frame_hbstop_sel) {
+							linear_denise_frame_hbstrt_sel -= ipc;
+						}
+					}
+					linear_denise_frame_hbstrt_sel += linear_denise_strobe_offset + 2 * 8;
+					linear_denise_frame_hbstop_sel += linear_denise_strobe_offset + 2 * 8;
+					denise_hbstrt_relative_cnt = 0;
+					if (ss != linear_denise_frame_hbstrt_sel || ee != linear_denise_frame_hbstop_sel) {
+						denise_blanking_changed = true;
 					}
 				}
-				linear_denise_frame_hbstrt_sel += linear_denise_strobe_offset + 2 * 8;
-				linear_denise_frame_hbstop_sel += linear_denise_strobe_offset + 2 * 8;
+			} else {
+				linear_denise_frame_hbstrt_tmp = linear_denise_frame_hbstrt;
+				linear_denise_frame_hbstop_tmp = linear_denise_frame_hbstop;
 				denise_hbstrt_relative_cnt = 0;
-				if (ss != linear_denise_frame_hbstrt_sel || ee != linear_denise_frame_hbstop_sel) {
-					denise_blanking_changed = true;
-				}
 			}
-		} else {
-			linear_denise_frame_hbstrt_tmp = linear_denise_frame_hbstrt;
-			linear_denise_frame_hbstop_tmp = linear_denise_frame_hbstop;
-			denise_hbstrt_relative_cnt = 0;
 		}
 	}
 
