@@ -426,9 +426,51 @@ static bool g_portable_mode = false;
 #endif
 #ifndef _WIN32
 #include <sys/ioctl.h>
+#include <fcntl.h>
+#include <errno.h>
 #endif
 unsigned char kbd_led_status;
 char kbd_flags;
+int led_console_fd = -1;
+
+#if defined(__linux__) && !defined(__ANDROID__) && !defined(LIBRETRO)
+static void open_led_console(void)
+{
+	if (led_console_fd >= 0)
+		return;
+
+	static const char* const candidates[] = { "/dev/tty", "/dev/tty0", "/dev/console" };
+	int last_errno = 0;
+	for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); ++i) {
+		const int fd = open(candidates[i], O_RDWR | O_NOCTTY | O_CLOEXEC);
+		if (fd < 0) {
+			last_errno = errno;
+			continue;
+		}
+		unsigned char probe = 0;
+		if (ioctl(fd, KDGETLED, &probe) == 0) {
+			led_console_fd = fd;
+			write_log(_T("Keyboard LEDs: using %s for KD ioctls\n"), candidates[i]);
+			return;
+		}
+		last_errno = errno;
+		close(fd);
+	}
+	write_log(_T("Keyboard LEDs: no usable console TTY (errno=%d), LED indicators disabled\n"), last_errno);
+}
+
+static void close_led_console(void)
+{
+	if (led_console_fd >= 0) {
+		ioctl(led_console_fd, KDSETLED, 0xFF);
+		close(led_console_fd);
+		led_console_fd = -1;
+	}
+}
+#else
+static inline void open_led_console(void) {}
+static inline void close_led_console(void) {}
+#endif
 
 #include "amiberry_platform_internal.h"
 
@@ -8860,6 +8902,7 @@ int amiberry_main(int argc, char* argv[])
 	osdep_platform_init_ui();
 	keyboard_settrans();
 
+	open_led_console();
 	osdep_platform_sync_keyboard_leds();
 
 #ifdef USE_GPIOD
@@ -8925,12 +8968,8 @@ int amiberry_main(int argc, char* argv[])
 	if (chip)
 		gpiod_chip_close(chip);
 #endif
-#if defined(__linux__)
-	// restore keyboard LEDs to normal state
-	ioctl(0, KDSETLED, 0xFF);
-#else
-	// Unsolved for OS X
-#endif
+	// restore keyboard LEDs to normal state and release console fd
+	close_led_console();
 
 #ifdef SERIAL_PORT
 	shmem_serial_delete();

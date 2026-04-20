@@ -63,8 +63,12 @@ static inline void osdep_platform_init_ui()
 static inline void osdep_platform_sync_keyboard_leds()
 {
 #if defined(__linux__)
-	ioctl(0, KDGKBLED, &kbd_flags);
-	ioctl(0, KDGETLED, &kbd_led_status);
+	if (led_console_fd < 0)
+		return;
+	if (ioctl(led_console_fd, KDGKBLED, &kbd_flags) < 0)
+		return;
+	if (ioctl(led_console_fd, KDGETLED, &kbd_led_status) < 0)
+		return;
 	if (kbd_flags & 07 & LED_CAP)
 	{
 		kbd_led_status |= LED_CAP;
@@ -75,7 +79,7 @@ static inline void osdep_platform_sync_keyboard_leds()
 		kbd_led_status &= ~LED_CAP;
 		inputdevice_do_keyboard(AK_CAPSLOCK, 0);
 	}
-	ioctl(0, KDSETLED, kbd_led_status);
+	ioctl(led_console_fd, KDSETLED, kbd_led_status);
 #else
 	int caps = SDL_GetModState();
 	caps = caps & SDL_KMOD_CAPS;

@@ -57,6 +57,10 @@
 #endif
 #endif
 
+// Console fd for KDSETLED/KDGETLED, opened by open_led_console() in amiberry.cpp;
+// -1 when no usable console TTY is available — guard each ioctl with `>= 0`.
+extern int led_console_fd;
+
 int emulating = 0;
 bool config_loaded = false;
 int gui_active;
@@ -1051,7 +1055,8 @@ void gui_led(int led, int on, int brightness)
 		}
 	}
 
-	ioctl(0, KDGETLED, &kbd_led_status);
+	if (led_console_fd >= 0)
+		ioctl(led_console_fd, KDGETLED, &kbd_led_status);
 
 	// Handle floppy led status
 	if (led >= LED_DF0 && led <= LED_DF3)
@@ -1118,7 +1123,8 @@ void gui_led(int led, int on, int brightness)
 #endif
 	}
 
-	ioctl(0, KDSETLED, kbd_led_status);
+	if (led_console_fd >= 0)
+		ioctl(led_console_fd, KDSETLED, kbd_led_status);
 
 	// Temperature reading
 	if (static unsigned int temp_count = 0; temp_fd >= 0 && ++temp_count % 25 == 0) {
