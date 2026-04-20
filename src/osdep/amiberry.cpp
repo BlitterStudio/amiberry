@@ -4335,6 +4335,17 @@ void target_default_options(uae_prefs* p, const int type)
 
 	// Virtual keyboard default options
 	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
+
+#ifdef __ANDROID__
+	// Touch-only Android: enable on-screen controls by default. If a physical
+	// gamepad is already connected at startup, disable them so they don't
+	// obscure the emulation for users who have real hardware. User overrides
+	// from a loaded .uae config still take precedence (applied after defaults).
+	if (SDL_HasJoystick()) {
+		p->onscreen_joystick = false;
+		p->vkbd_enabled = false;
+	}
+#endif
 	p->vkbd_exit = amiberry_options.default_vkbd_exit;
 	p->vkbd_hires = amiberry_options.default_vkbd_hires;
 	if (amiberry_options.default_vkbd_language[0])

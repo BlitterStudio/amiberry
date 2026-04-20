@@ -1403,10 +1403,11 @@ struct amiberry_options
 	int default_soundcard = 0;
 #ifdef __ANDROID__
 	bool default_onscreen_joystick = true;
+	bool default_vkbd_enabled = true;
 #else
 	bool default_onscreen_joystick = false;
+	bool default_vkbd_enabled = false;
 #endif
-	bool default_vkbd_enabled;
 	bool default_vkbd_hires;
 	bool default_vkbd_exit;
 	char default_vkbd_language[128] = "US";

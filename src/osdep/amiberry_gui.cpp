@@ -934,9 +934,12 @@ void gui_display(int shortcut)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);
 	}
-#if defined(_WIN32)
-	// After GUI close on Windows+OpenGL, the emulation shaders were destroyed
-	// to let ImGui use the GL context. Force shader recreation now.
+#if defined(_WIN32) || defined(__ANDROID__)
+	// After GUI close on shared-window platforms (Windows, Android) where the
+	// OpenGL context was reused by ImGui, the emulation shaders were destroyed
+	// in prepare_gui_sharing(). Force shader recreation + an immediate buffer
+	// refresh so the emulator frame replaces the last GUI frame on resume
+	// (otherwise the GUI image lingers while audio already plays).
 	if (g_renderer && g_renderer->has_context() && amiga_surface != nullptr)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);
