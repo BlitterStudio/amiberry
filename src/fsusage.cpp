@@ -319,8 +319,18 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 #if !defined(STAT_STATFS2_FS_DATA) && !defined(STAT_READ_FILSYS)
 	/* !Ultrix && !SVR2 */
 
+#if defined(STAT_STATVFS)
+	/* statvfs: f_blocks/f_bavail are in units of f_frsize (fundamental block
+	 * size), not f_bsize (preferred I/O size). On macOS/APFS these differ
+	 * significantly (e.g. f_bsize=1 MiB, f_frsize=4 KiB), which otherwise
+	 * inflates reported sizes by orders of magnitude. */
+	const uae_s64 block_size = (uae_s64)(fsd.f_frsize ? fsd.f_frsize : fsd.f_bsize);
+	fsp->total = block_size * (uae_s64)fsd.f_blocks;
+	fsp->avail = block_size * (uae_s64)fsd.f_bavail;
+#else
 	fsp->total = (uae_s64)fsd.f_bsize * (uae_s64)fsd.f_blocks;
 	fsp->avail = (uae_s64)fsd.f_bsize * (uae_s64)fsd.f_bavail;
+#endif
 
 #endif /* not STAT_STATFS2_FS_DATA && not STAT_READ_FILSYS */
 
