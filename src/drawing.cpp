@@ -5837,6 +5837,8 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 		denise_pixtotal -= xshift;
 	}
 
+	denise_pixtotal *= 2;
+
 	buf1 = (uae_u32*)xlinebuffer;
 	if (!xlinebuffer2) {
 		xlinebuffer2 = xlinebuffer;
@@ -5865,10 +5867,11 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 				}
 			}
 		}
+		if (denise_strlong_seen && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME && !ecs_denise) {
+			int size = currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN ? 2 : 1;
+			denise_pixtotal -= 4 * size;
+		}
 	}
-	
-	denise_pixtotal_max--;
-	denise_pixtotal *= 2;
 
 	if (buf1) {
 		int maxw = addrdiff((uae_u32*)xlinebuffer_end, buf1);
