@@ -187,10 +187,18 @@ bool HotkeyCapture_IsActive()
 
 static void ShowHotkeyPopup()
 {
+	// Per-capture state used to distinguish "modifier-only" bindings (where the
+	// user presses and releases a single qualifier with nothing else) from the
+	// usual "modifier+key" combinations.
+	static bool non_mod_pressed_session = false;
+	static int  mod_press_count_session = 0;
+
 	if (open_hotkey_popup) {
 		ImGui::OpenPopup("Set Hotkey");
 		open_hotkey_popup = false;
 		hotkey_capture_active = true;
+		non_mod_pressed_session = false;
+		mod_press_count_session = 0;
 	}
 
 	// BeginPopupModal returns false once the popup has closed (via any path:
@@ -202,7 +210,30 @@ static void ShowHotkeyPopup()
 		hotkey_capture_active = false;
 	if (popup_open) {
 		ImGui::Text("Press a key to map...");
+		ImGui::TextDisabled("(release a modifier alone to assign just that qualifier)");
 		ImGui::Separator();
+
+		struct ModEntry { ImGuiKey key; const char* name; };
+		static const ModEntry mods[] = {
+			{ImGuiKey_LeftCtrl,   "LCtrl"},
+			{ImGuiKey_RightCtrl,  "RCtrl"},
+			{ImGuiKey_LeftShift,  "LShift"},
+			{ImGuiKey_RightShift, "RShift"},
+			{ImGuiKey_LeftAlt,    "LAlt"},
+			{ImGuiKey_RightAlt,   "RAlt"},
+			{ImGuiKey_LeftSuper,  "LGUI"},
+			{ImGuiKey_RightSuper, "RGUI"},
+		};
+
+		// Count modifier press transitions during this capture (no repeats)
+		// so we can later distinguish a clean single-modifier press from a
+		// multi-modifier combo.
+		for (const auto& m : mods) {
+			if (ImGui::IsKeyPressed(m.key, false))
+				++mod_press_count_session;
+		}
+
+		bool emitted = false;
 
 		for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key++) {
 			// Skip modifier keys — they should only act as prefixes, not as
@@ -225,8 +256,9 @@ static void ShowHotkeyPopup()
 					break;
 			}
 			if (ImGui::IsKeyPressed((ImGuiKey)key)) {
+				non_mod_pressed_session = true;
 				const char* key_name = ImGui::GetKeyName((ImGuiKey)key);
-				if (key_name && target_hotkey_string) {
+				if (key_name && target_hotkey_string && !emitted) {
 					// Emit side-specific modifier tokens (LCtrl/RCtrl/LShift/RShift/
 					// LAlt/RAlt/LGUI/RGUI) to match the parser in
 					// get_hotkey_from_config(). If both sides of a modifier are
@@ -243,6 +275,23 @@ static void ShowHotkeyPopup()
 					full_key += key_name;
 					strncpy(target_hotkey_string, full_key.c_str(), 255);
 					ImGui::CloseCurrentPopup();
+					emitted = true;
+				}
+			}
+		}
+
+		// Modifier-only binding: when a single modifier was pressed and is
+		// now released, with no other key seen during this capture, commit
+		// just that modifier. Required so users can map e.g. RCtrl alone to
+		// Right Amiga (issue #1990).
+		if (!emitted && !non_mod_pressed_session && mod_press_count_session == 1) {
+			for (const auto& m : mods) {
+				if (ImGui::IsKeyReleased(m.key)) {
+					if (target_hotkey_string) {
+						strncpy(target_hotkey_string, m.name, 255);
+						ImGui::CloseCurrentPopup();
+					}
+					break;
 				}
 			}
 		}
