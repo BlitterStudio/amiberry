@@ -64,7 +64,7 @@ android/app/src/main/java/com/blitterstudio/amiberry/
 ## CONVENTIONS
 
 - **Version single source of truth**: Root `CMakeLists.txt` `project(VERSION)` → Gradle parses at build
-- **versionCode formula**: `major*1M + minor*10K + patch*100 + slot` (slot 99 = final release)
+- **versionCode formula**: `major*100M + minor*1M + patch*10K + (daysSince2024*1440) + minuteOfDay`
 - **Config round-trip preservation**: Unknown .uae keys survive Kotlin parse→save cycle
 - **Dual-process**: UI in main process, SDL in `:sdl` process (killed on finish)
 - **Responsive nav**: NavigationRail (landscape) / NavigationBar (portrait)

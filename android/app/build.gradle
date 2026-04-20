@@ -46,15 +46,22 @@ def readCmakeVersionInfo = {
 }
 
 def computeAndroidVersionCode = { info ->
-    // Version prefix ensures version bumps always produce a higher code.
-    // Minute-of-day suffix (0–1439) makes each build unique within a day
-    // without requiring a CMake version bump.
-    // Formula: major * 100_000_000 + minor * 1_000_000 + patch * 10_000 + minuteOfDay
-    // Example: 8.1.5 at 14:30 → 801_050_870
-    // Max usable major version: 21 (2.1B int32 limit)
-    def now = java.util.Calendar.getInstance()
-    def minuteOfDay = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
-    return info.major * 100_000_000 + info.minor * 1_000_000 + info.patch * 10_000 + minuteOfDay
+    // Formula: major * 100,000,000 + minor * 1_000_000 + patch * 10_000 + (daysSinceEpoch * 1440) + minuteOfDay
+    // This ensures version code always increases even with multiple builds per day and across days,
+    // while keeping the major.minor.patch version visible in the leading digits.
+    // Max value check for 20.0.0 in 10 years: 2,000,000,000 + 5,256,000 = 2.005B (under 2.147B limit).
+    
+    def calendar = java.util.Calendar.getInstance()
+    def minuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
+    
+    // Epoch: 2024-01-01
+    def epochCalendar = java.util.Calendar.getInstance()
+    epochCalendar.set(2024, 0, 1, 0, 0, 0)
+    epochCalendar.set(java.util.Calendar.MILLISECOND, 0)
+    def diffMillis = calendar.timeInMillis - epochCalendar.timeInMillis
+    def daysSinceEpoch = (int) (diffMillis / (1000 * 60 * 60 * 24))
+    
+    return info.major * 100_000_000 + info.minor * 1_000_000 + info.patch * 10_000 + (daysSinceEpoch * 1440) + minuteOfDay
 }
 
 def formatAndroidVersionName = { info ->
