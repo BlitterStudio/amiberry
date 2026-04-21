@@ -309,24 +309,24 @@ static ImU32 col_key_return;
 
 static void init_colors()
 {
-	col_kb_bg          = IM_COL32(180, 165, 140, 255);  // warm tan background
-	col_key_normal     = IM_COL32(212, 196, 168, 255);  // beige
-	col_key_modifier   = IM_COL32(165, 155, 140, 255);  // darker beige
-	col_key_function   = IM_COL32(160, 133, 106, 255);  // brown
-	col_key_pressed    = IM_COL32(136, 112, 80, 255);   // dark, sunken
-	col_key_sticky_active = IM_COL32(204, 102, 0, 255); // amber
-	col_bevel_light    = IM_COL32(234, 224, 208, 255);   // highlight
-	col_bevel_dark     = IM_COL32(106, 90, 70, 255);     // shadow
-	col_key_label      = IM_COL32(40, 35, 30, 255);      // dark text
-	col_key_label_dark = IM_COL32(220, 210, 195, 255);   // light text (for dark keys)
-	col_amiga_l        = IM_COL32(204, 0, 0, 255);       // red (left Amiga)
-	col_amiga_r        = IM_COL32(0, 102, 204, 255);     // blue (right Amiga)
-	col_focus_border   = IM_COL32(255, 200, 0, 255);     // yellow focus highlight
-	col_key_shadow     = IM_COL32(60, 50, 40, 80);       // drop shadow
-	col_key_numpad     = IM_COL32(195, 185, 165, 255);   // slightly different beige
-	col_key_arrow      = IM_COL32(180, 170, 150, 255);   // arrow keys
-	col_key_space      = IM_COL32(220, 210, 190, 255);   // space bar (lighter)
-	col_key_return     = IM_COL32(195, 185, 165, 255);   // return key
+	col_kb_bg          = IM_COL32(70, 62, 52, 255);      // deep warm brown plate
+	col_key_normal     = IM_COL32(228, 214, 188, 255);   // creamy beige
+	col_key_modifier   = IM_COL32(178, 162, 138, 255);   // tan
+	col_key_function   = IM_COL32(118, 92, 70, 255);     // deep brown
+	col_key_pressed    = IM_COL32(255, 188, 90, 255);    // glowing amber (pressed)
+	col_key_sticky_active = IM_COL32(232, 128, 30, 255); // strong amber (sticky)
+	col_bevel_light    = IM_COL32(255, 246, 228, 255);   // bright highlight
+	col_bevel_dark     = IM_COL32(70, 56, 40, 255);      // deep shadow
+	col_key_label      = IM_COL32(32, 26, 20, 255);      // dark text
+	col_key_label_dark = IM_COL32(248, 240, 222, 255);   // light text (for dark keys)
+	col_amiga_l        = IM_COL32(220, 30, 30, 255);     // red (left Amiga)
+	col_amiga_r        = IM_COL32(40, 110, 220, 255);    // blue (right Amiga)
+	col_focus_border   = IM_COL32(255, 210, 60, 255);    // yellow focus highlight
+	col_key_shadow     = IM_COL32(0, 0, 0, 110);         // stronger drop shadow
+	col_key_numpad     = IM_COL32(206, 192, 168, 255);   // slightly cooler beige
+	col_key_arrow      = IM_COL32(188, 174, 150, 255);   // arrow keys
+	col_key_space      = IM_COL32(236, 224, 200, 255);   // space bar (lighter)
+	col_key_return     = IM_COL32(206, 192, 168, 255);   // return key
 }
 
 // ============================================================
@@ -367,7 +367,11 @@ static float s_unit_w = 0, s_unit_h = 0;
 // Total layout dimensions in units
 static constexpr float LAYOUT_W = 20.0f; // total width in key units
 static constexpr float LAYOUT_H = 6.1f;  // total height in key units
+#ifdef __ANDROID__
+static constexpr float KB_HEIGHT_FRAC = 0.55f; // larger keys for finger taps on phones
+#else
 static constexpr float KB_HEIGHT_FRAC = 0.42f; // keyboard occupies 42% of screen height
+#endif
 
 static bool is_modifier_key(int ak_code)
 {
@@ -458,14 +462,14 @@ static void draw_key(ImDrawList* dl, const OskKeyDef& key, int key_index,
 
 	body_col = apply_alpha(body_col, alpha);
 
-	float rounding = 3.0f;
+	float rounding = 6.0f;
 	float bevel = 2.0f;
 
-	// Drop shadow (offset down-right)
+	// Drop shadow (larger, softer, offset down)
 	ImU32 shadow = apply_alpha(col_key_shadow, alpha);
 	dl->AddRectFilled(
-		ImVec2(kx + 2, ky + 2),
-		ImVec2(kx + kw + 2, ky + kh + 2),
+		ImVec2(kx + 1, ky + 3),
+		ImVec2(kx + kw + 1, ky + kh + 3),
 		shadow, rounding);
 
 	// Key body
@@ -473,16 +477,28 @@ static void draw_key(ImDrawList* dl, const OskKeyDef& key, int key_index,
 		ImVec2(kx, ky), ImVec2(kx + kw, ky + kh),
 		body_col, rounding);
 
-	if (!is_pressed) {
-		// Top/left bevel highlight
-		ImU32 blight = apply_alpha(col_bevel_light, alpha * 0.6f);
-		dl->AddLine(ImVec2(kx + rounding, ky + 1), ImVec2(kx + kw - rounding, ky + 1), blight, bevel);
-		dl->AddLine(ImVec2(kx + 1, ky + rounding), ImVec2(kx + 1, ky + kh - rounding), blight, bevel);
+	if (is_pressed) {
+		// Glow ring around pressed key for strong feedback
+		ImU32 glow = apply_alpha(IM_COL32(255, 210, 100, 180), alpha);
+		dl->AddRect(
+			ImVec2(kx - 1, ky - 1), ImVec2(kx + kw + 1, ky + kh + 1),
+			glow, rounding + 1.0f, 0, 2.5f);
+	} else {
+		// Top highlight strip (subtle gloss)
+		ImU32 blight = apply_alpha(col_bevel_light, alpha * 0.55f);
+		dl->AddLine(ImVec2(kx + rounding * 0.5f, ky + 1.5f),
+			ImVec2(kx + kw - rounding * 0.5f, ky + 1.5f), blight, bevel);
 
-		// Bottom/right bevel shadow
-		ImU32 bdark = apply_alpha(col_bevel_dark, alpha * 0.5f);
-		dl->AddLine(ImVec2(kx + rounding, ky + kh - 1), ImVec2(kx + kw - rounding, ky + kh - 1), bdark, bevel);
-		dl->AddLine(ImVec2(kx + kw - 1, ky + rounding), ImVec2(kx + kw - 1, ky + kh - rounding), bdark, bevel);
+		// Bottom shadow strip
+		ImU32 bdark = apply_alpha(col_bevel_dark, alpha * 0.45f);
+		dl->AddLine(ImVec2(kx + rounding * 0.5f, ky + kh - 1.5f),
+			ImVec2(kx + kw - rounding * 0.5f, ky + kh - 1.5f), bdark, bevel);
+
+		// Outline for crisper definition against the dark plate
+		ImU32 border = apply_alpha(IM_COL32(40, 32, 24, 120), alpha);
+		dl->AddRect(
+			ImVec2(kx, ky), ImVec2(kx + kw, ky + kh),
+			border, rounding, 0, 1.0f);
 	}
 
 	// Amiga key decoration: colored stripe
@@ -512,7 +528,10 @@ static void draw_key(ImDrawList* dl, const OskKeyDef& key, int key_index,
 
 	// Determine label color
 	ImU32 label_col;
-	if (is_pressed || is_sticky || key.type == KEY_FUNCTION)
+	if (is_pressed)
+		// Pressed keys now glow bright amber — dark text reads better.
+		label_col = apply_alpha(col_key_label, alpha);
+	else if (is_sticky || key.type == KEY_FUNCTION)
 		label_col = apply_alpha(col_key_label_dark, alpha);
 	else
 		label_col = apply_alpha(col_key_label, alpha);
@@ -544,19 +563,22 @@ static void draw_key(ImDrawList* dl, const OskKeyDef& key, int key_index,
 		if (label && label[0]) {
 			ImFont* use_font = font;
 
-			// Scale font with the SMALLER dimension to avoid huge text on tall/wide keys
-			float ref_dim = (kh < kw) ? kh : kw;
-			float desired_size = ref_dim * 0.45f;
-			if (desired_size < 8.0f) desired_size = 8.0f;
-			if (desired_size > s_unit_h * 0.5f) desired_size = s_unit_h * 0.5f;
+			// Base size from key height — the natural target for label size
+			float desired_size = kh * 0.55f;
+			if (desired_size > s_unit_h * 0.6f) desired_size = s_unit_h * 0.6f;
 
-			// For long labels on small keys, use smaller font
-			size_t label_len = strlen(label);
-			if (label_len > 3) {
-				desired_size *= 0.7f;
-				if (font_small)
-					use_font = font_small;
+			// Shrink only if the label overflows the key width.
+			float max_w = kw * 0.88f;
+			ImVec2 ts = use_font->CalcTextSizeA(desired_size, FLT_MAX, 0.0f, label);
+			if (ts.x > max_w) {
+				desired_size *= max_w / ts.x;
 			}
+			if (desired_size < 10.0f) desired_size = 10.0f;
+
+			// Use the small pre-rasterised font for very small sizes to keep the
+			// pixel font crisp instead of forcing the large one to scale way down.
+			if (font_small && desired_size <= 18.0f)
+				use_font = font_small;
 
 			ImVec2 text_size = use_font->CalcTextSizeA(desired_size, FLT_MAX, 0.0f, label);
 			float tx = kx + (kw - text_size.x) * 0.5f;
@@ -691,18 +713,28 @@ void imgui_osk_render(int dw, int dh)
 
 	// Draw keyboard background plate
 	float bg_y = s_kb_y + anim_offset;
+
+	// Soft drop shadow above the keyboard to blend with the emulation view
+	float shadow_h = 16.0f;
+	ImU32 shadow_top = IM_COL32(0, 0, 0, 0);
+	ImU32 shadow_bot = apply_alpha(IM_COL32(0, 0, 0, 120), alpha);
+	dl->AddRectFilledMultiColor(
+		ImVec2(s_kb_x, bg_y - shadow_h),
+		ImVec2(s_kb_x + s_kb_w, bg_y),
+		shadow_top, shadow_top, shadow_bot, shadow_bot);
+
 	ImU32 bg_col = apply_alpha(col_kb_bg, alpha);
 	dl->AddRectFilled(
 		ImVec2(s_kb_x, bg_y),
 		ImVec2(s_kb_x + s_kb_w, bg_y + s_kb_h),
-		bg_col, 0.0f);
+		bg_col, 12.0f, ImDrawFlags_RoundCornersTop);
 
-	// Subtle top border
-	ImU32 border_col = apply_alpha(col_bevel_dark, alpha * 0.6f);
+	// Thin highlight along top edge
+	ImU32 border_light = apply_alpha(IM_COL32(200, 180, 150, 220), alpha);
 	dl->AddLine(
-		ImVec2(s_kb_x, bg_y),
-		ImVec2(s_kb_x + s_kb_w, bg_y),
-		border_col, 2.0f);
+		ImVec2(s_kb_x + 12.0f, bg_y + 1.0f),
+		ImVec2(s_kb_x + s_kb_w - 12.0f, bg_y + 1.0f),
+		border_light, 1.5f);
 
 	// Draw all keys
 	for (int i = 0; i < NUM_KEYS; i++) {

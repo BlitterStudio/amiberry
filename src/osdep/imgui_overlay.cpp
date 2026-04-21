@@ -52,14 +52,14 @@ static ImGuiContext* create_overlay_context()
 	cfg.OversampleV = 1;
 	cfg.PixelSnapH = true;
 	s_osk_font = io.Fonts->AddFontFromMemoryCompressedTTF(
-		AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, 16.0f, &cfg);
+		AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, 24.0f, &cfg);
 
 	ImFontConfig cfg_small;
 	cfg_small.OversampleH = 1;
 	cfg_small.OversampleV = 1;
 	cfg_small.PixelSnapH = true;
 	s_osk_font_small = io.Fonts->AddFontFromMemoryCompressedTTF(
-		AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, 12.0f, &cfg_small);
+		AmigaTopaz_compressed_data, AmigaTopaz_compressed_size, 16.0f, &cfg_small);
 
 	return prev;
 }
