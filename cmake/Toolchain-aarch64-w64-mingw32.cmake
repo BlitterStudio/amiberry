@@ -34,10 +34,12 @@ set(CMAKE_STRIP         ${_TRIPLE}-strip)
 set(CMAKE_C_COMPILER_TARGET   ${_TRIPLE})
 set(CMAKE_CXX_COMPILER_TARGET ${_TRIPLE})
 
-# Confine find_* calls to the cross sysroot + vcpkg overlays. Without this
-# CMake can pick up host Linux/macOS paths during tool discovery.
+# Constrain find_*() to the llvm-mingw per-target tree (headers, import
+# libs, CRT). Intentionally do NOT set CMAKE_SYSROOT: the clang driver
+# already knows where its libc++ headers live (<prefix>/lib/clang/<ver>/
+# and <prefix>/<triple>/include/c++/v1/), and forcing --sysroot to the
+# triple tree makes the driver miss the C++ standard library headers.
 if(DEFINED ENV{LLVM_MINGW_ROOT})
-    set(CMAKE_SYSROOT "$ENV{LLVM_MINGW_ROOT}/${_TRIPLE}")
     list(APPEND CMAKE_FIND_ROOT_PATH "$ENV{LLVM_MINGW_ROOT}/${_TRIPLE}")
 endif()
 
