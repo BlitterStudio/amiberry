@@ -1069,6 +1069,146 @@ jobs:
             amiberry-*.zip
             amiberry-*.exe
           retention-days: 7
+
+  # Windows ARM64 (Phase 1 bring-up): interpreter-only build on the
+  # GitHub-hosted windows-11-arm runner using llvm-mingw. Kept separate
+  # from build-windows because the toolchain and shell differ. Non-blocking
+  # during shakeout (continue-on-error: true) and intentionally NOT in the
+  # create-release job's needs list — promote once stable.
+  build-windows-arm64:
+    runs-on: windows-11-arm
+    timeout-minutes: 90
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: write
+    env:
+      LLVM_MINGW_TAG: "20250910"
+      LLVM_MINGW_FLAVOR: "ucrt-aarch64"
+      VCPKG_DEFAULT_TRIPLET: arm64-mingw-dynamic
+      VCPKG_DEFAULT_HOST_TRIPLET: arm64-mingw-dynamic
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Cache llvm-mingw toolchain
+        id: cache-llvm-mingw
+        uses: actions/cache@v5
+        with:
+          path: C:/llvm-mingw
+          key: llvm-mingw-${{ env.LLVM_MINGW_TAG }}-${{ env.LLVM_MINGW_FLAVOR }}
+
+      - name: Install llvm-mingw
+        if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $tag = "${env:LLVM_MINGW_TAG}"
+          $flavor = "${env:LLVM_MINGW_FLAVOR}"
+          $base = "llvm-mingw-$tag-$flavor"
+          $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$tag/$base.zip"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\llvm-mingw.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\llvm-mingw.zip" -DestinationPath "$env:RUNNER_TEMP\llvm-mingw"
+          New-Item -ItemType Directory -Force -Path "C:/llvm-mingw" | Out-Null
+          # The archive extracts into a single subdir named $base; flatten.
+          Move-Item "$env:RUNNER_TEMP\llvm-mingw\$base\*" "C:/llvm-mingw" -Force
+
+      - name: Expose llvm-mingw to subsequent steps
+        shell: pwsh
+        run: |
+          "LLVM_MINGW_ROOT=C:/llvm-mingw" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "C:/llvm-mingw/bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "C:/vcpkg/.git")) {
+            git clone --depth 1 https://github.com/microsoft/vcpkg.git C:/vcpkg
+          }
+          & C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          "VCPKG_ROOT=C:/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v5
+        with:
+          path: out/build/windows-arm64-release/vcpkg_installed
+          key: ${{ runner.os }}-arm64-vcpkg-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-aarch64-w64-mingw32.cmake') }}
+          restore-keys: |
+            ${{ runner.os }}-arm64-vcpkg-
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake --preset windows-arm64-release
+
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build out/build/windows-arm64-release -j$NUMBER_OF_PROCESSORS
+
+      - name: Install (portable layout)
+        shell: bash
+        run: |
+          rm -rf out/install/windows-arm64-release
+          rm -rf out/package/windows-arm64-release
+          cmake --install out/build/windows-arm64-release --prefix out/install/windows-arm64-release
+
+      - name: Package (Portable ZIP)
+        shell: bash
+        run: |
+          PORTABLE_ROOT="out/install/windows-arm64-release"
+          test -f "$PORTABLE_ROOT/Amiberry.exe"
+          : > "$PORTABLE_ROOT/amiberry.portable"
+
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            ZIP_NAME="amiberry-${{ github.ref_name }}-windows-arm64-portable.zip"
+          else
+            ZIP_NAME="amiberry-${{ github.sha }}-windows-arm64-portable.zip"
+          fi
+
+          PACKAGE_ROOT="out/package/windows-arm64-release/${ZIP_NAME%.zip}"
+          mkdir -p "$(dirname "$PACKAGE_ROOT")"
+          cmake -E copy_directory "$PORTABLE_ROOT" "$PACKAGE_ROOT"
+
+          ZIP_PATH="$PWD/$ZIP_NAME"
+          (cd out/package/windows-arm64-release && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
+
+      - name: Smoke test (--dump-paths)
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem "$PWD/amiberry-*-windows-arm64-portable.zip" | Select-Object -First 1
+          if (-not $zip) { throw "Portable ZIP not found." }
+
+          $verifyRoot = Join-Path $PWD "portable-smoke"
+          Remove-Item -Recurse -Force $verifyRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
+          Expand-Archive -Path $zip.FullName -DestinationPath $verifyRoot
+
+          $portableDir = Get-ChildItem $verifyRoot -Directory | Select-Object -First 1
+          $exePath = Join-Path $portableDir.FullName "Amiberry.exe"
+          if (-not (Test-Path $exePath)) { throw "Amiberry.exe missing from portable ZIP." }
+
+          $stdoutFile = Join-Path $verifyRoot "dump-paths.stdout"
+          $stderrFile = Join-Path $verifyRoot "dump-paths.stderr"
+          $proc = Start-Process -FilePath $exePath -ArgumentList "--dump-paths" `
+            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
+            -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+          if ($proc.ExitCode -ne 0) {
+            Write-Host "STDOUT:"; if (Test-Path $stdoutFile) { Get-Content $stdoutFile }
+            Write-Host "STDERR:"; if (Test-Path $stderrFile) { Get-Content $stderrFile }
+            throw "--dump-paths failed with exit code $($proc.ExitCode)."
+          }
+          Write-Host "ARM64 Amiberry.exe ran --dump-paths successfully."
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: amiberry-windows-arm64
+          path: amiberry-*-windows-arm64-portable.zip
+          retention-days: 7
+
   build-libretro:
     runs-on: ${{ matrix.os }}
     strategy:

@@ -30,6 +30,7 @@ option(USE_OPENGL        "Use OpenGL for rendering" ON)
 option(USE_GLES          "Use OpenGL ES instead of desktop OpenGL (for embedded Linux without GLX)" OFF)
 option(USE_VULKAN        "Use Vulkan for rendering (experimental, mutually exclusive with USE_OPENGL)" OFF)
 option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
+option(USE_JIT           "Enable 68K JIT recompiler (x86_64 and AArch64)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
@@ -93,6 +94,14 @@ if(WIN32)
     set(USE_LIBMPEG2 OFF CACHE BOOL "LibMPEG2 not available in vcpkg" FORCE)
     set(USE_LIBSERIALPORT OFF CACHE BOOL "LibSerialPort not available in vcpkg for MinGW" FORCE)
     set(USE_PORTMIDI OFF CACHE BOOL "PortMidi not available in vcpkg for MinGW" FORCE)
+
+    # Windows ARM64 (Phase 1): disable JIT until the vectored exception handler
+    # port lands. The x86 JIT cannot target aarch64 and the ARM64 JIT currently
+    # assumes POSIX signals for the segfault decoder.
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+        set(USE_JIT OFF CACHE BOOL "JIT not yet ported to Windows ARM64" FORCE)
+        message(STATUS "Windows ARM64 detected: JIT disabled for Phase 1 bring-up")
+    endif()
 endif()
 
 # TAP backend is Linux-only (not macOS, FreeBSD, Windows, or Android)
