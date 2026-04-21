@@ -464,14 +464,14 @@ else()
     find_package(SDL3 CONFIG REQUIRED)
     find_package(SDL3_image CONFIG REQUIRED)
     find_package(FLAC REQUIRED)
-    find_package(mpg123 REQUIRED)
+    if(USE_MPG123)
+        find_package(mpg123 REQUIRED)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MPG123)
+    endif()
     find_package(PNG REQUIRED)
     find_package(ZLIB REQUIRED)
     find_package(CURL REQUIRED)
     find_package(nlohmann_json CONFIG REQUIRED)
-
-    # mpg123 is available on desktop builds; enable mp3 decoding in code.
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MPG123)
 endif()
 
 if (USE_ZSTD)

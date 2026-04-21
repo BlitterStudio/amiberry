@@ -100,7 +100,11 @@ if(WIN32)
     # assumes POSIX signals for the segfault decoder.
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
         set(USE_JIT OFF CACHE BOOL "JIT not yet ported to Windows ARM64" FORCE)
-        message(STATUS "Windows ARM64 detected: JIT disabled for Phase 1 bring-up")
+        # mpg123's vcpkg port fails to build on aarch64-w64-mingw32 (its
+        # runtime CPU-feature probe assumes POSIX sigaction/sigsetjmp, which
+        # mingw-w64 does not provide). Skip MP3 support for Phase 1.
+        set(USE_MPG123 OFF CACHE BOOL "mpg123 vcpkg port broken on Windows ARM64 mingw" FORCE)
+        message(STATUS "Windows ARM64 detected: JIT and mpg123 disabled for Phase 1 bring-up")
     endif()
 endif()
 

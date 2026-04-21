@@ -12,7 +12,10 @@
       ]
     },
     "libflac",
-    "mpg123",
+    {
+      "name": "mpg123",
+      "platform": "!(windows & arm64)"
+    },
     "libpng",
     "zlib",
     "zstd",
