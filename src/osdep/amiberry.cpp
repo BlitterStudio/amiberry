@@ -5304,7 +5304,7 @@ int check_configfile(const char* file)
 {
 	char tmp[MAX_DPATH];
 
-	auto* f = fopen(file, "rte");
+	auto* f = uae_fopen(file, "rte");
 	if (f)
 	{
 		fclose(f);
@@ -5317,7 +5317,7 @@ int check_configfile(const char* file)
 	{
 		*(ptr + 1) = '\0';
 		strncat(tmp, "conf", MAX_DPATH - 1);
-		f = fopen(tmp, "rte");
+		f = uae_fopen(tmp, "rte");
 		if (f)
 		{
 			fclose(f);
@@ -5430,7 +5430,7 @@ void read_directory(const std::string& path, std::vector<std::string>* dirs, std
 void save_amiberry_settings()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
-	auto* const f = fopen(amiberry_conf_file.c_str(), "we");
+	auto* const f = uae_fopen(amiberry_conf_file.c_str(), "we");
 	if (!f)
 		return;
 
@@ -5789,7 +5789,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 
 	if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 	{
-		auto* const f = fopen(tmpFile, "rbe");
+		auto* const f = uae_fopen(tmpFile, "rbe");
 		if (f != nullptr)
 		{
 			fclose(f);
@@ -5799,7 +5799,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	}
 	else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
 	{
-		auto* const f = fopen(tmpFile, "rbe");
+		auto* const f = uae_fopen(tmpFile, "rbe");
 		if (f != nullptr)
 		{
 			fclose(f);
@@ -5809,7 +5809,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	}
 	else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
 	{
-		auto* const f = fopen(tmpFile, "rbe");
+		auto* const f = uae_fopen(tmpFile, "rbe");
 		if (f != nullptr)
 		{
 			fclose(f);

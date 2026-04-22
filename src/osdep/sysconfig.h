@@ -660,9 +660,14 @@ typedef int32_t uae_atomic;
 #endif
 
 /* MinGW's fopen does not support the glibc 'e' (O_CLOEXEC) mode flag.
- * Strip it on Windows since close-on-exec is not relevant there. */
-#ifdef _WIN32
+ * Provide uae_fopen() that strips it on Windows; passthrough elsewhere.
+ *
+ * Do NOT #define fopen here — a global macro replacement corrupts
+ * libc++ <fstream>, whose templates reference std::fopen. Call
+ * uae_fopen() explicitly at the handful of sites that use the 'e'
+ * flag. */
 #include <cstdio>
+#ifdef _WIN32
 #include <cstring>
 static inline FILE* uae_fopen(const char* path, const char* mode)
 {
@@ -675,7 +680,11 @@ static inline FILE* uae_fopen(const char* path, const char* mode)
 	winmode[j] = '\0';
 	return fopen(path, winmode);
 }
-#define fopen(path, mode) uae_fopen(path, mode)
+#else
+static inline FILE* uae_fopen(const char* path, const char* mode)
+{
+	return fopen(path, mode);
+}
 #endif
 
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */

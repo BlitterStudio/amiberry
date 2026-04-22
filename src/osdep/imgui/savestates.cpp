@@ -148,7 +148,7 @@ void render_panel_savestates() {
         ImGui::BeginDisabled(!has_state);
         if (AmigaButton(ICON_FA_UPLOAD " Load from Slot", ImVec2(slot_btn_w, BUTTON_HEIGHT))) {
             if (emulating && strlen(savestate_fname) > 0) {
-                FILE *f = fopen(savestate_fname, "rbe");
+                FILE *f = uae_fopen(savestate_fname, "rbe");
                 if (f) {
                     fclose(f);
                     savestate_initsave(savestate_fname, 1, 1, true);
