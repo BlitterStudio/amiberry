@@ -1,14 +1,3 @@
-#include "sysconfig.h"
-#include "sysdeps.h"
-#include "amiberry_update.h"
-#include "options.h"
-#include "threaddep/thread.h"
-
-#ifdef AMIBERRY_HAS_CURL
-#include <curl/curl.h>
-#endif
-#include <nlohmann/json.hpp>
-
 #include <thread>
 #include <mutex>
 #include <atomic>
@@ -22,6 +11,17 @@
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
+
+#include "sysconfig.h"
+#include "sysdeps.h"
+#include "amiberry_update.h"
+#include "options.h"
+#include "threaddep/thread.h"
+
+#ifdef AMIBERRY_HAS_CURL
+#include <curl/curl.h>
+#endif
+#include <nlohmann/json.hpp>
 
 #ifdef _WIN32
 #include <windows.h>

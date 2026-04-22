@@ -4,16 +4,15 @@
 #include <cctype>
 #include <climits>
 #include <unordered_map>
+#ifndef LIBRETRO
+#include <fstream>
+#endif
+#include <algorithm>
 
 #include "sysdeps.h"
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
-
-#ifndef LIBRETRO
-#include <fstream>
-#endif
-#include <algorithm>
 
 // Retroarch mapping reference: https://docs.libretro.com/guides/controller-autoconfiguration/
 

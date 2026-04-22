@@ -2,9 +2,12 @@
 #include <cstring>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <algorithm>
 #include <string>
 #include <filesystem>
+#include <array>
 #include <nlohmann/json.hpp>
 #include <SDL3_image/SDL_image.h>
 #include <dpi_handler.hpp>
