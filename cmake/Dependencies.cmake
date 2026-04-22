@@ -633,6 +633,15 @@ if (NOT ANDROID AND NOT WIN32)
     list(APPEND AMIBERRY_LIBS pthread)
 endif()
 
+# llvm-mingw on Windows ARM64 does not auto-link winpthread, so
+# clock_gettime / nanosleep (which live in libwinpthread-1 on mingw-w64)
+# come up as undefined at link time. On x86_64 MinGW-w64 GCC these are
+# pulled in implicitly, but that convenience is missing in the aarch64
+# clang driver. Link winpthread explicitly for WoA.
+if (WIN32 AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    list(APPEND AMIBERRY_LIBS winpthread)
+endif()
+
 if(TARGET FLAC)
     list(APPEND AMIBERRY_LIBS FLAC)
 elseif(FLAC_FOUND)
