@@ -8841,7 +8841,7 @@ int amiberry_main(int argc, char* argv[])
 	}
 
 	logging_init();
-#if defined (CPU_arm)
+#if defined (CPU_arm) && !defined (_WIN32)
 	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_segv;
 	action.sa_flags = SA_SIGINFO;
