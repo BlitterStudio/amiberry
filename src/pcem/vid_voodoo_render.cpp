@@ -778,7 +778,7 @@ static void voodoo_half_triangle(voodoo_t *voodoo, voodoo_params_t *params, vood
         }
 #ifndef NO_CODEGEN
         typedef uint8_t(__cdecl *VOODOO_DRAW)(voodoo_state_t*,voodoo_params_t*, int,int);
-#if (defined WIN32 || defined WIN64)
+#if (defined WIN32 || defined WIN64) && !(defined __aarch64__) && !(defined _M_ARM64)
         if (voodoo->use_recompiler)
                 voodoo_draw = (VOODOO_DRAW)voodoo_get_block(voodoo, params, state, odd_even);
         else
