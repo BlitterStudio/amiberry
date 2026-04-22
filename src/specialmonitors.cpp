@@ -2304,6 +2304,11 @@ static uae_u8 get_noise(void)
 }
 
 #ifndef LIBRETRO
+// debug.h / cpummu.h define `D` to an empty token as a UAE debug marker.
+// On aarch64-w64-mingw32, png.h -> pngconf.h -> setjmp.h declares
+// `double D[8];` inside struct _JUMP_BUFFER (the ARM64 FP save area),
+// which the preprocessor rewrites to `double [8];` and breaks the build.
+#undef D
 #include "png.h"
 
 struct png_cb
