@@ -31,7 +31,7 @@
 #include "sysdeps.h"
 
 #include <math.h>
-#if defined(CPU_AARCH64)
+#if defined(CPU_AARCH64) && !defined(_WIN32)
 #include <sys/mman.h>
 #endif
 
