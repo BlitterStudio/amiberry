@@ -8134,12 +8134,14 @@ void hardware_exception2(uaecptr addr, uae_u32 v, bool read, bool ins, int size)
 		}
 		// Non-MMU
 		exception2_setup(regs.opcode, addr, read, size, fc);
-#if defined(CPU_AARCH64)
+#if defined(CPU_AARCH64) && defined(JIT)
 		/* On ARM64, C++ exceptions cannot unwind through JIT-compiled
 		 * code (no DWARF unwinding tables in JIT code buffer). When
 		 * executing inside JIT-compiled code, use longjmp to immediately
 		 * return to the JIT loop where Exception() can be called with
-		 * the correct M68K state (saved by exception2_setup above). */
+		 * the correct M68K state (saved by exception2_setup above).
+		 * Only relevant when JIT is compiled in — jit_in_compiled_code
+		 * and jit_bus_error_jmpbuf are declared under #ifdef JIT. */
 		if (jit_in_compiled_code) {
 			longjmp(jit_bus_error_jmpbuf, 2);
 			/* not reached */
