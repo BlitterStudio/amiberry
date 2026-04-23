@@ -174,12 +174,12 @@ static bool gui_use_opengl = false;
 #endif
 #ifdef USE_VULKAN
 static bool gui_use_vulkan = false;
-// Track Vulkan resources for GUI textures so we can clean them up
+// Track Vulkan resources for GUI textures so we can clean them up.
+// ImGui 1.92.8+ manages its own samplers internally; we only own image/view.
 struct VkGuiTextureResources {
 	VkImage image;
 	VkDeviceMemory memory;
 	VkImageView view;
-	VkSampler sampler;
 };
 static std::unordered_map<uint64_t, VkGuiTextureResources> vk_gui_textures;
 #endif
@@ -330,27 +330,8 @@ ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 			}
 		}
 
-		// Create sampler
-		VkSampler sampler;
-		{
-			VkSamplerCreateInfo sampler_info{};
-			sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			sampler_info.magFilter = VK_FILTER_LINEAR;
-			sampler_info.minFilter = VK_FILTER_LINEAR;
-			sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			if (vkCreateSampler(device, &sampler_info, nullptr, &sampler) != VK_SUCCESS) {
-				vkDestroyImageView(device, image_view, nullptr);
-				vkDestroyImage(device, image, nullptr);
-				vkFreeMemory(device, image_memory, nullptr);
-				vkDestroyBuffer(device, staging_buffer, nullptr);
-				vkFreeMemory(device, staging_memory, nullptr);
-				SDL_DestroySurface(rgba);
-				return ImTextureID_Invalid;
-			}
-		}
+		// ImGui 1.92.8+ Vulkan backend manages samplers internally; we no
+		// longer create a per-texture VkSampler.
 
 		// Upload: transition, copy, transition
 		{
@@ -423,13 +404,13 @@ ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
 		vkFreeMemory(device, staging_memory, nullptr);
 		SDL_DestroySurface(rgba);
 
-		// Register with ImGui
-		VkDescriptorSet ds = ImGui_ImplVulkan_AddTexture(sampler, image_view,
+		// Register with ImGui (new 2-arg signature; sampler is backend-managed)
+		VkDescriptorSet ds = ImGui_ImplVulkan_AddTexture(image_view,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		// Store Vulkan resources for cleanup
 		uint64_t key = reinterpret_cast<uint64_t>(ds);
-		vk_gui_textures[key] = {image, image_memory, image_view, sampler};
+		vk_gui_textures[key] = {image, image_memory, image_view};
 
 		return (ImTextureID)ds;
 	}
@@ -469,7 +450,6 @@ void gui_destroy_texture(ImTextureID tex)
 		if (it != vk_gui_textures.end()) {
 			vkDeviceWaitIdle(device);
 			ImGui_ImplVulkan_RemoveTexture(ds);
-			vkDestroySampler(device, it->second.sampler, nullptr);
 			vkDestroyImageView(device, it->second.view, nullptr);
 			vkDestroyImage(device, it->second.image, nullptr);
 			vkFreeMemory(device, it->second.memory, nullptr);
