@@ -2221,8 +2221,21 @@ static void set_direct_memory(addrbank *ab)
 		return;
 	}
 	ab->baseaddr_direct_r = ab->baseaddr;
-	if (!(ab->flags & ABFLAG_ROM))
+	if (!(ab->flags & ABFLAG_ROM)) {
+#ifdef AMIBERRY
+		// RTG VRAM needs every CPU write to pass through the bank's *_put
+		// handler so mark_dirty() records the touched pages. WinUAE gets
+		// this for free from GetWriteWatch(); Amiberry tracks dirtiness
+		// manually (see GFXMEM_PUT_FUNCTIONS in picasso96.cpp). If we wire
+		// baseaddr_direct_w here, memory_put_*() short-circuits past the
+		// put handler and mark_dirty() is never called — breaking things
+		// like IconLib's alpha-drag (WritePixelArrayAlpha) which pokes
+		// pixels one at a time straight into VRAM.
+		if (ab->flags & ABFLAG_RTG)
+			return;
+#endif
 		ab->baseaddr_direct_w = ab->baseaddr;
+	}
 }
 
 #ifndef NATMEM_OFFSET

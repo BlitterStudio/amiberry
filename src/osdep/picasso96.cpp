@@ -6128,6 +6128,20 @@ MEMORY_XLATE(name);
 #define GFXMEM_MEMORY_FUNCTIONS(name, index) MEMORY_FUNCTIONS(name)
 #endif
 
+// On Amiberry, force JIT to route writes through the bank's *_put handlers
+// (by flagging the bank as special for writes via S_WRITE) so mark_dirty()
+// runs on every CPU poke to VRAM. WinUAE relies on GetWriteWatch() for this
+// instead, so leave its jit_write_flag at 0. Without S_WRITE, JIT blocks that
+// write directly to natmem (e.g. IconLib's WritePixelArrayAlpha loop during
+// an alpha drag) never mark the touched pages dirty and flushpixels uploads
+// nothing — the icon stays invisible until a boardinfo op (BltBitMap etc.)
+// re-marks the region.
+#if !defined(_WIN32) || defined(AMIBERRY)
+#define GFXMEM_JIT_WRITE_FLAG S_WRITE
+#else
+#define GFXMEM_JIT_WRITE_FLAG 0
+#endif
+
 extern addrbank gfxmem_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem, 0)
 addrbank gfxmem_bank = {
@@ -6135,7 +6149,7 @@ addrbank gfxmem_bank = {
 	gfxmem_lput, gfxmem_wput, gfxmem_bput,
 	gfxmem_xlate, gfxmem_check, nullptr, nullptr, _T("RTG RAM"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 extern addrbank gfxmem2_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem2, 1)
@@ -6144,7 +6158,7 @@ addrbank gfxmem2_bank = {
 	gfxmem2_lput, gfxmem2_wput, gfxmem2_bput,
 	gfxmem2_xlate, gfxmem2_check, nullptr, nullptr, _T("RTG RAM #2"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 extern addrbank gfxmem3_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem3, 2)
@@ -6153,7 +6167,7 @@ addrbank gfxmem3_bank = {
 	gfxmem3_lput, gfxmem3_wput, gfxmem3_bput,
 	gfxmem3_xlate, gfxmem3_check, nullptr, nullptr, _T("RTG RAM #3"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 extern addrbank gfxmem4_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem4, 3)
@@ -6162,7 +6176,7 @@ addrbank gfxmem4_bank = {
 	gfxmem4_lput, gfxmem4_wput, gfxmem4_bput,
 	gfxmem4_xlate, gfxmem4_check, nullptr, nullptr, _T("RTG RAM #4"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 
