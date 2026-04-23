@@ -172,25 +172,3 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif ()
 
 include(packaging/CMakeLists.txt)
-
-# Link libraries (FreeBSD needs correct order)
-if(TARGET amiberry AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-    target_link_options(amiberry PRIVATE -L/usr/local/lib)
-    # Apply FreeBSD pkg-config include/link dirs
-    if(FREEBSD_INCLUDE_DIRS)
-        target_include_directories(amiberry PRIVATE ${FREEBSD_INCLUDE_DIRS})
-    endif()
-    if(FREEBSD_LIBRARIES)
-        target_link_libraries(amiberry PRIVATE ${FREEBSD_LIBRARIES})
-    endif()
-
-    # forkpty() lives in libutil on FreeBSD
-    target_link_libraries(amiberry PRIVATE util)
-
-    # libiconv_* symbols come from ports/converters/libiconv
-    find_library(LIBICONV_LIBRARY NAMES iconv PATHS /usr/local/lib REQUIRED)
-    target_link_libraries(amiberry PRIVATE ${LIBICONV_LIBRARY})
-
-    # existing libs
-    target_link_libraries(amiberry PRIVATE ${LIBUSB_LIBRARY} serialport ${EXTRA_LIBS})
-endif()
