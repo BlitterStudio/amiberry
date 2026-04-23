@@ -129,8 +129,9 @@ static MiscListItem misc_items[] = {
 	 &changed_prefs.right_control_is_right_win_key, nullptr, 0, 0, MISC_NORMAL},
 
 	{"Swap Backslash (\\) and F11 keys",
-	 "Swap the host F11 and \\ (backslash/pipe) keys before they reach the Amiga. "
-	 "Useful when you want to use the \\| key to open the GUI instead of F11.",
+	 "Swap the host F11 and \\| keys before Amiga-side mapping. "
+	 "With this on, the host \\| key produces the Amiga \\ key (its natural label) "
+	 "and host F11 produces Amiga #.",
 	 nullptr, nullptr, 0, 0, MISC_KEY_SWAP_BS_F11},
 
 	{"Swap End and Page Up keys",
