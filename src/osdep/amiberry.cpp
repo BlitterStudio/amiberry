@@ -2373,9 +2373,9 @@ static void handle_key_event(const SDL_Event& event)
 
 	if (key_swap_hack == 1) {
 		if (scancode == SDL_SCANCODE_F11) {
-			scancode = SDL_SCANCODE_EQUALS;
+			scancode = SDL_SCANCODE_BACKSLASH;
 		}
-		else if (scancode == SDL_SCANCODE_EQUALS) {
+		else if (scancode == SDL_SCANCODE_BACKSLASH) {
 			scancode = SDL_SCANCODE_F11;
 		}
 	}

@@ -3,10 +3,17 @@
 #include "imgui_panels.h"
 #include "options.h"
 #include "statusline.h"
+#include "inputdevice.h"
+#include "registry.h"
 #include "gui/gui_handling.h"
 #include "target.h"
 
-enum MiscSpecial { MISC_NORMAL = 0, MISC_DARK_THEME };
+enum MiscSpecial {
+	MISC_NORMAL = 0,
+	MISC_DARK_THEME,
+	MISC_KEY_SWAP_BS_F11,
+	MISC_KEY_SWAP_END_PGUP,
+};
 
 struct MiscListItem {
 	const char* label;
@@ -120,6 +127,16 @@ static MiscListItem misc_items[] = {
 	{"RCtrl = RAmiga",
 	 "Map Right Control key to Right Amiga key",
 	 &changed_prefs.right_control_is_right_win_key, nullptr, 0, 0, MISC_NORMAL},
+
+	{"Swap Backslash (\\) and F11 keys",
+	 "Swap the host F11 and \\ (backslash/pipe) keys before they reach the Amiga. "
+	 "Useful when you want to use the \\| key to open the GUI instead of F11.",
+	 nullptr, nullptr, 0, 0, MISC_KEY_SWAP_BS_F11},
+
+	{"Swap End and Page Up keys",
+	 "Swap the host End and Page Up keys before they reach the Amiga. "
+	 "Useful on keyboard layouts where these keys are positioned differently.",
+	 nullptr, nullptr, 0, 0, MISC_KEY_SWAP_END_PGUP},
 
 	{"Power LED dims when audio filter is disabled",
 	 "Dim the power LED indicator when the audio filter is off",
@@ -345,6 +362,26 @@ void render_panel_misc()
 						load_theme(amiberry_options.gui_theme);
 						apply_imgui_theme();
 						save_amiberry_settings();
+					}
+				}
+				else if (item.special == MISC_KEY_SWAP_BS_F11)
+				{
+					bool checked = (key_swap_hack != 0);
+					if (AmigaCheckbox(item.label, &checked))
+					{
+						key_swap_hack = checked ? 1 : 0;
+						regsetint(nullptr, _T("KeySwapBackslashF11"), key_swap_hack);
+						regclosetree(nullptr); // flush amiberry.ini to disk
+					}
+				}
+				else if (item.special == MISC_KEY_SWAP_END_PGUP)
+				{
+					bool checked = (key_swap_end_pgup != 0);
+					if (AmigaCheckbox(item.label, &checked))
+					{
+						key_swap_end_pgup = checked ? 1 : 0;
+						regsetint(nullptr, _T("KeyEndPageUp"), key_swap_end_pgup);
+						regclosetree(nullptr); // flush amiberry.ini to disk
 					}
 				}
 				else
