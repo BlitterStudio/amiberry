@@ -992,23 +992,20 @@ static void debug_cycle_diagram(void)
 
 static void create_cycle_diagram_table(void)
 {
-	int fm, res, cycle, planes, rplanes, v;
-	int fetch_start, max_planes, freecycles;
-	const uae_s8 *cycle_sequence;
-
-	for (fm = 0; fm <= 2; fm++) {
-		for (res = 0; res <= 2; res++) {
-			max_planes = fm_maxplanes[fm * 4 + res];
-			fetch_start = 1 << fetchstarts[fm * 4 + res];
-			cycle_sequence = &cycle_sequences[(max_planes - 1) * 8];
+	for (int fm = 0; fm <= 2; fm++) {
+		for (int res = 0; res <= 2; res++) {
+			int max_planes = fm_maxplanes[fm * 4 + res];
+			int fetch_start = 1 << fetchstarts[fm * 4 + res];
+			const uae_s8 *cycle_sequence = &cycle_sequences[(max_planes - 1) * 8];
 			max_planes = 1 << max_planes;
-			for (planes = 0; planes <= 8; planes++) {
-				freecycles = 0;
-				for (cycle = 0; cycle < 32; cycle++) {
+			for (int planes = 0; planes <= 8; planes++) {
+				int freecycles = 0;
+				for (int cycle = 0; cycle < 32; cycle++) {
 					cycle_diagram_table[fm][res][planes][cycle] = -1;
 				}
 				if (planes <= max_planes) {
-					for (cycle = 0; cycle < fetch_start; cycle++) {
+					for (int cycle = 0; cycle < fetch_start; cycle++) {
+						int v;
 						if (cycle < max_planes && planes >= cycle_sequence[cycle & 7]) {
 							v = cycle_sequence[cycle & 7];
 						} else {
@@ -1020,7 +1017,7 @@ static void create_cycle_diagram_table(void)
 				}
 				cycle_diagram_free_cycles[fm][res][planes] = freecycles;
 				cycle_diagram_total_cycles[fm][res][planes] = fetch_start;
-				rplanes = planes;
+				int rplanes = planes;
 				if (rplanes > max_planes) {
 					rplanes = 0;
 				}
@@ -1118,8 +1115,12 @@ static void setup_fmodes(uae_u16 con0)
 	if (fmode_inuse != fmode) {
 		fetchmode_size = 16 << fetchmode;
 		fetchmode_mask = fetchmode_size - 1;
-		// Fetch mode/modulo change is delayed by 2 CCK
-		event2_newevent_xx(-1, 2 * CYCLE_UNIT, fmode, setup_fmodes_delayed);
+		if (!savestate_state) {
+			// Fetch mode/modulo change is delayed by 2 CCK
+			event2_newevent_xx(-1, 2 * CYCLE_UNIT, fmode, setup_fmodes_delayed);
+		} else {
+			setup_fmodes_delayed(fmode);
+		}
 	}
 	fmode_inuse = fmode;
 }
@@ -1202,7 +1203,7 @@ static void set_chipset_mode(bool imm)
 	if (imm || fmode != fmode_saved) {
 		denise_update_reg_queue(0x1fc, fmode, rga_denise_cycle_line);
 		setup_fmodes(bplcon0);
-		setup_fmodes_delayed(bplcon0);
+		setup_fmodes_delayed(fmode);
 	}
 }
 
@@ -1240,6 +1241,7 @@ static void update_mirrors(void)
 		}
 	}
 	ddf_mask = ecs_agnus ? 0xfe : 0xfc;
+	create_cycle_diagram_table();
 	set_chipset_mode(true);
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	check_lineoptimizations();
@@ -2093,6 +2095,7 @@ static void init_hz_reset(void)
 	linear_vpos = currprefs.ntscmode ? MAXVPOS_NTSC : MAXVPOS_PAL;
 	linear_hpos = currprefs.ntscmode ? MAXHPOS_NTSC : MAXHPOS_PAL;
 	linear_vpos += lof_store;
+	minfirstline = (currprefs.ntscmode ? VBLANK_ENDLINE_NTSC : VBLANK_ENDLINE_PAL) - 1;
 	//linear_vpos -= vsync_startline;
 	linear_vpos_prev[0] = linear_vpos;
 	linear_vpos_prev[1] = linear_vpos;
@@ -2207,7 +2210,6 @@ void init_custom(void)
 {
 	check_nocustom();
 	update_mirrors();
-	create_cycle_diagram_table();
 	reset_drawing();
 	init_hz();
 }
@@ -6786,7 +6788,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		CLXCON(0);
 		CLXCON2(0);
 		setup_fmodes(bplcon0);
-		setup_fmodes_delayed(bplcon0);
+		setup_fmodes_delayed(fmode);
 		beamcon0 = new_beamcon0 = beamcon0_saved = currprefs.ntscmode ? 0x00 : BEAMCON0_PAL;
 		blt_info.blit_main = 0;
 		blt_info.blit_pending = 0;
@@ -6872,7 +6874,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		BPLCON0(v);
 		FMODE(fmode);
 		setup_fmodes(bplcon0);
-		setup_fmodes_delayed(bplcon0);
+		setup_fmodes_delayed(fmode);
 		if (!aga_mode) {
 			for(int i = 0 ; i < 32 ; i++)  {
 				vv = denise_colors.color_regs_ecs[i];
@@ -6926,7 +6928,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 
 	sprite_width = GET_SPRITEWIDTH(fmode);
 	setup_fmodes(bplcon0);
-	setup_fmodes_delayed(bplcon0);
+	setup_fmodes_delayed(fmode);
 	setmaxhpos();
 	resetfulllinestate();
 	updateprghpostable();
@@ -7015,7 +7017,6 @@ int custom_init(void)
 	drawing_init();
 
 	update_mirrors();
-	create_cycle_diagram_table();
 
 	return 1;
 }
