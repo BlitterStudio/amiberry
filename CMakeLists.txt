@@ -161,7 +161,7 @@ include(cmake/Dependencies.cmake)
 
 # Install rules may need dependency targets, such as SDL3 and SDL3_image,
 # so include them after dependency discovery.
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR "FreeBSD")
     include(cmake/linux/install.cmake)
 elseif (IOS)
     include(cmake/ios/install.cmake)
