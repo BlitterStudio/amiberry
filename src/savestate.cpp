@@ -887,6 +887,7 @@ void restore_state (const TCHAR *filename)
 	restore_header (chunk);
 	xfree (chunk);
 	devices_restore_start();
+	set_cycles(0);
 	clear_events();
 	z2num = z3num = 0;
 	for (;;) {

@@ -124,14 +124,19 @@ void imgui_overlay_init_vulkan(SDL_Window* window, ImGui_ImplVulkan_InitInfo* vk
 	s_use_vulkan = true;
 	s_vk_device = vk_info->Device;
 
-	// Create a dedicated descriptor pool for the overlay (isolated from GUI pool)
-	VkDescriptorPoolSize pool_size = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 };
+	// Create a dedicated descriptor pool for the overlay (isolated from GUI pool).
+	// ImGui 1.92.8+ Vulkan backend uses separate sampled-image + sampler descriptors.
+	const uint32_t overlay_sampled_image_count = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
+	VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, overlay_sampled_image_count },
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,       IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE },
+	};
 	VkDescriptorPoolCreateInfo pool_ci{};
 	pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	pool_ci.maxSets = 4;
-	pool_ci.poolSizeCount = 1;
-	pool_ci.pPoolSizes = &pool_size;
+	pool_ci.maxSets = overlay_sampled_image_count + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE;
+	pool_ci.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+	pool_ci.pPoolSizes = pool_sizes;
 	VkResult result = vkCreateDescriptorPool(s_vk_device, &pool_ci, nullptr, &s_vk_descriptor_pool);
 	if (result != VK_SUCCESS) {
 		write_log("imgui_overlay: failed to create Vulkan descriptor pool (VkResult=%d)\n", result);

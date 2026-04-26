@@ -6911,6 +6911,10 @@ void m68k_go (int may_quit)
 
 			hsync_counter = 0;
 			vsync_counter = 0;
+			if (quit_program) {
+				set_cycles(start_cycles);
+				clear_events();
+			}
 			quit_program = 0;
 
 #ifdef SAVESTATE
