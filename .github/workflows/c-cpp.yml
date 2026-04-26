@@ -873,6 +873,8 @@ jobs:
 
           $expectedRoot = Normalize-PortablePath $portableDir.FullName
           $expectedMarker = "$expectedRoot/amiberry.portable"
+          $expectedConfig = "$expectedRoot/configurations"
+          $expectedSettings = "$expectedRoot/settings"
           $expectedData = "$expectedRoot/data"
           $expectedPlugins = "$expectedRoot/plugins"
           $blockedRoots = @()
@@ -901,8 +903,8 @@ jobs:
           Assert-PortablePath "portable_root" $expectedRoot
           Assert-PortablePath "portable_marker_file" $expectedMarker
           Assert-PortablePath "home_dir" $expectedRoot
-          Assert-PortablePath "config_path" "$expectedRoot/conf"
-          Assert-PortablePath "settings_dir" "$expectedRoot/settings"
+          Assert-PortablePath "config_path" $expectedConfig
+          Assert-PortablePath "settings_dir" $expectedSettings
           Assert-PortablePath "data_dir" $expectedData
           Assert-PortablePath "plugins_dir" $expectedPlugins
           Assert-NotUnderBlockedRoots "portable_root"
@@ -914,6 +916,9 @@ jobs:
           Assert-NotUnderBlockedRoots "plugins_dir"
           if (Test-Path (Join-Path $portableDir.FullName "Settings")) {
             throw "--dump-paths should not create Settings in the portable tree."
+          }
+          if (Test-Path (Join-Path $portableDir.FullName "Configurations")) {
+            throw "--dump-paths should not create Configurations in the portable tree."
           }
           if (Test-Path (Join-Path $portableDir.FullName "conf")) {
             throw "--dump-paths should not create conf in the portable tree."
