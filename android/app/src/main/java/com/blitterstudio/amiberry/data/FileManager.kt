@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import java.util.zip.CRC32
 import java.io.File
 
@@ -114,9 +115,9 @@ object FileManager {
 			if (seenPaths.add(file.path)) results.add(file)
 		}
 
-		// For ROMs, also check whdboot/Kickstarts
+		// For ROMs, also check WHDBoot/Kickstarts
 		if (category == FileCategory.ROMS) {
-			val kickstartsDir = File(rootDir, "whdboot/game-data/Kickstarts")
+			val kickstartsDir = File(rootDir, StoragePaths.WHDBOOT_KICKSTARTS)
 			for (file in scanDirectory(kickstartsDir, category.extensions)) {
 				if (seenPaths.add(file.path)) results.add(file)
 			}
@@ -130,7 +131,7 @@ object FileManager {
 		FileCategory.entries.forEach { category ->
 			File(base, category.dirName).let { if (!it.exists()) it.mkdirs() }
 		}
-		File(base, "conf").let { if (!it.exists()) it.mkdirs() }
+		File(base, StoragePaths.CONFIGURATIONS).let { if (!it.exists()) it.mkdirs() }
 	}
 
 	/**

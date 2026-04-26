@@ -12,6 +12,7 @@ import java.io.File
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	}
 
 	private fun restoreLastSession() {
-		val confDir = File(getApplication<Application>().getExternalFilesDir(null), "conf")
+		val confDir = File(getApplication<Application>().getExternalFilesDir(null), StoragePaths.CONFIGURATIONS)
 		val sessionFile = File(confDir, LAST_SESSION_FILE)
 		if (!sessionFile.exists()) return
 		try {

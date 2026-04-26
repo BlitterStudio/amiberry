@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -83,7 +84,7 @@ class FileManagerTest {
 
 	@Test
 	fun `scanDirectory finds files matching extensions`() {
-		val dir = tempDir.newFolder("floppies")
+		val dir = tempDir.newFolder(StoragePaths.FLOPPIES)
 		File(dir, "game1.adf").writeText("data")
 		File(dir, "game2.dms").writeText("data")
 		File(dir, "readme.txt").writeText("text")
@@ -165,10 +166,10 @@ class FileManagerTest {
 
 	@Test
 	fun `scanDirectory calculates CRC32 only for roms dir`() {
-		val romsDir = tempDir.newFolder("roms")
+		val romsDir = tempDir.newFolder(StoragePaths.ROMS)
 		File(romsDir, "kick.rom").writeText("kickstart data")
 
-		val floppiesDir = tempDir.newFolder("floppies")
+		val floppiesDir = tempDir.newFolder(StoragePaths.FLOPPIES)
 		File(floppiesDir, "game.adf").writeText("floppy data")
 
 		val romResults = FileManager.scanDirectory(romsDir, setOf("rom"))
@@ -183,7 +184,7 @@ class FileManagerTest {
 
 	@Test
 	fun `scanDirectory CRC32 is consistent for same content`() {
-		val dir = tempDir.newFolder("roms")
+		val dir = tempDir.newFolder(StoragePaths.ROMS)
 		File(dir, "kick1.rom").writeText("identical content")
 		File(dir, "kick2.rom").writeText("identical content")
 
@@ -197,7 +198,7 @@ class FileManagerTest {
 
 	@Test
 	fun `scanDirectory CRC32 differs for different content`() {
-		val dir = tempDir.newFolder("roms")
+		val dir = tempDir.newFolder(StoragePaths.ROMS)
 		File(dir, "kick13.rom").writeText("kickstart 1.3")
 		File(dir, "kick31.rom").writeText("kickstart 3.1")
 

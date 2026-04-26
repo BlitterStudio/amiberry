@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import java.io.File
 import java.io.IOException
@@ -15,7 +16,7 @@ data class ConfigInfo(
 class ConfigRepository(private val context: Context) {
 
 	private val confDir: File
-		get() = File(context.getExternalFilesDir(null), "conf").also {
+		get() = File(context.getExternalFilesDir(null), StoragePaths.CONFIGURATIONS).also {
 			if (!it.exists()) it.mkdirs()
 		}
 

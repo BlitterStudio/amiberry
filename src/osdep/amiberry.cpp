@@ -3296,38 +3296,102 @@ struct visual_asset_path_set
 
 static const char* get_visual_assets_directory_name()
 {
-#if defined(__ANDROID__)
-	return "visuals";
-#else
 	return "Visuals";
-#endif
+}
+
+static const char* get_configurations_directory_name()
+{
+	return "Configurations";
+}
+
+static const char* get_controllers_directory_name()
+{
+	return "Controllers";
+}
+
+static const char* get_whdboot_directory_name()
+{
+	return "WHDBoot";
+}
+
+static const char* get_whdload_archives_directory_name()
+{
+	return "LHA";
+}
+
+static const char* get_floppies_directory_name()
+{
+	return "Floppies";
+}
+
+static const char* get_harddrives_directory_name()
+{
+	return "HardDrives";
+}
+
+static const char* get_cdroms_directory_name()
+{
+	return "CDROMs";
+}
+
+static const char* get_roms_directory_name()
+{
+	return "ROMs";
+}
+
+static const char* get_rp9_directory_name()
+{
+	return "RP9";
+}
+
+static const char* get_savestates_directory_name()
+{
+	return "SaveStates";
+}
+
+static const char* get_ripper_directory_name()
+{
+	return "Ripper";
+}
+
+static const char* get_inputrecordings_directory_name()
+{
+	return "InputRecordings";
+}
+
+static const char* get_screenshots_directory_name()
+{
+	return "Screenshots";
+}
+
+static const char* get_nvram_directory_name()
+{
+	return "NVRAM";
+}
+
+static const char* get_videos_directory_name()
+{
+	return "Videos";
+}
+
+static const char* get_logfile_name()
+{
+	return "Amiberry.log";
 }
 
 static const char* get_themes_directory_name()
 {
-#if defined(__ANDROID__)
-	return "themes";
-#else
 	return "Themes";
-#endif
 }
 
 static const char* get_shaders_directory_name()
 {
-#if defined(__ANDROID__)
-	return "shaders";
-#else
 	return "Shaders";
-#endif
 }
 
 static const char* get_bezels_directory_name()
 {
-#if defined(__ANDROID__)
-	return "bezels";
-#else
 	return "Bezels";
-#endif
 }
 
 static visual_asset_path_set get_visual_asset_paths_from_content_root(const std::string& content_root)
@@ -3405,83 +3469,24 @@ static base_content_path_set get_base_content_path_set(const std::string& base_p
 	if (normalized_base.empty())
 		return paths;
 
-#ifdef __MACH__
-	paths.config_path = join_path(normalized_base, "Configurations");
-	paths.controllers_path = join_path(normalized_base, "Controllers");
-	paths.whdboot_path = join_path(normalized_base, "Whdboot");
-	paths.whdload_arch_path = join_path(normalized_base, "Lha");
-	paths.floppy_path = join_path(normalized_base, "Floppies");
-	paths.harddrive_path = join_path(normalized_base, "Harddrives");
-	paths.cdrom_path = join_path(normalized_base, "CDROMs");
-	paths.logfile_path = join_path(normalized_base, "Amiberry.log");
-	paths.rom_path = join_path(normalized_base, "Roms");
-	paths.rp9_path = join_path(normalized_base, "RP9");
+	paths.config_path = join_path(normalized_base, get_configurations_directory_name());
+	paths.controllers_path = join_path(normalized_base, get_controllers_directory_name());
+	paths.whdboot_path = join_path(normalized_base, get_whdboot_directory_name());
+	paths.whdload_arch_path = join_path(normalized_base, get_whdload_archives_directory_name());
+	paths.floppy_path = join_path(normalized_base, get_floppies_directory_name());
+	paths.harddrive_path = join_path(normalized_base, get_harddrives_directory_name());
+	paths.cdrom_path = join_path(normalized_base, get_cdroms_directory_name());
+	paths.logfile_path = join_path(normalized_base, get_logfile_name());
+	paths.rom_path = join_path(normalized_base, get_roms_directory_name());
+	paths.rp9_path = join_path(normalized_base, get_rp9_directory_name());
 	paths.saveimage_dir = normalized_base;
-	paths.savestate_dir = join_path(normalized_base, "Savestates");
-	paths.ripper_path = join_path(normalized_base, "Ripper");
-	paths.input_dir = join_path(normalized_base, "Inputrecordings");
-	paths.screenshot_dir = join_path(normalized_base, "Screenshots");
-	paths.nvram_dir = join_path(normalized_base, "Nvram");
-	paths.video_dir = join_path(normalized_base, "Videos");
+	paths.savestate_dir = join_path(normalized_base, get_savestates_directory_name());
+	paths.ripper_path = join_path(normalized_base, get_ripper_directory_name());
+	paths.input_dir = join_path(normalized_base, get_inputrecordings_directory_name());
+	paths.screenshot_dir = join_path(normalized_base, get_screenshots_directory_name());
+	paths.nvram_dir = join_path(normalized_base, get_nvram_directory_name());
+	paths.video_dir = join_path(normalized_base, get_videos_directory_name());
 	apply_visual_asset_paths(paths, get_visual_asset_paths_from_content_root(normalized_base));
-#elif defined(_WIN32)
-	paths.config_path = join_path(normalized_base, "Configurations");
-	paths.controllers_path = join_path(normalized_base, "Controllers");
-	paths.whdboot_path = join_path(normalized_base, "Whdboot");
-	paths.whdload_arch_path = join_path(normalized_base, "Lha");
-	paths.floppy_path = join_path(normalized_base, "Floppies");
-	paths.harddrive_path = join_path(normalized_base, "Harddrives");
-	paths.cdrom_path = join_path(normalized_base, "CDROMs");
-	paths.logfile_path = join_path(normalized_base, "Amiberry.log");
-	paths.rom_path = join_path(normalized_base, "Roms");
-	paths.rp9_path = join_path(normalized_base, "RP9");
-	paths.saveimage_dir = normalized_base;
-	paths.savestate_dir = join_path(normalized_base, "Savestates");
-	paths.ripper_path = join_path(normalized_base, "Ripper");
-	paths.input_dir = join_path(normalized_base, "Inputrecordings");
-	paths.screenshot_dir = join_path(normalized_base, "Screenshots");
-	paths.nvram_dir = join_path(normalized_base, "Nvram");
-	paths.video_dir = join_path(normalized_base, "Videos");
-	apply_visual_asset_paths(paths, get_visual_asset_paths_from_content_root(normalized_base));
-#elif defined(__ANDROID__)
-	paths.config_path = normalized_base;
-	paths.controllers_path = join_path(normalized_base, "controllers");
-	paths.whdboot_path = join_path(normalized_base, "whdboot");
-	paths.whdload_arch_path = join_path(normalized_base, "lha");
-	paths.floppy_path = join_path(normalized_base, "floppies");
-	paths.harddrive_path = join_path(normalized_base, "harddrives");
-	paths.cdrom_path = join_path(normalized_base, "cdroms");
-	paths.logfile_path = join_path(normalized_base, "amiberry.log");
-	paths.rom_path = join_path(normalized_base, "roms");
-	paths.rp9_path = join_path(normalized_base, "rp9");
-	paths.saveimage_dir = normalized_base;
-	paths.savestate_dir = join_path(normalized_base, "savestates");
-	paths.ripper_path = join_path(normalized_base, "ripper");
-	paths.input_dir = join_path(normalized_base, "inputrecordings");
-	paths.screenshot_dir = join_path(normalized_base, "screenshots");
-	paths.nvram_dir = join_path(normalized_base, "nvram");
-	paths.video_dir = join_path(normalized_base, "videos");
-	apply_visual_asset_paths(paths, get_visual_asset_paths_from_content_root(normalized_base));
-#else
-	paths.config_path = join_path(normalized_base, "Configurations");
-	paths.controllers_path = join_path(normalized_base, "Controllers");
-	paths.whdboot_path = join_path(normalized_base, "Whdboot");
-	paths.whdload_arch_path = join_path(normalized_base, "Lha");
-	paths.floppy_path = join_path(normalized_base, "Floppies");
-	paths.harddrive_path = join_path(normalized_base, "Harddrives");
-	paths.cdrom_path = join_path(normalized_base, "CDROMs");
-	paths.logfile_path = join_path(normalized_base, "Amiberry.log");
-	paths.rom_path = join_path(normalized_base, "Roms");
-	paths.rp9_path = join_path(normalized_base, "RP9");
-	paths.saveimage_dir = normalized_base;
-	paths.savestate_dir = join_path(normalized_base, "Savestates");
-	paths.ripper_path = join_path(normalized_base, "Ripper");
-	paths.input_dir = join_path(normalized_base, "Inputrecordings");
-	paths.screenshot_dir = join_path(normalized_base, "Screenshots");
-	paths.nvram_dir = join_path(normalized_base, "Nvram");
-	paths.video_dir = join_path(normalized_base, "Videos");
-	apply_visual_asset_paths(paths, get_visual_asset_paths_from_content_root(normalized_base));
-#endif
 	return paths;
 }
 
@@ -3629,6 +3634,19 @@ static bool path_strings_match(const std::string& lhs, const std::string& rhs)
 	return normalize_path_for_compare(lhs) == normalize_path_for_compare(rhs);
 }
 
+static std::string lowercase_path_for_compare(const std::string& path)
+{
+	auto normalized = normalize_path_for_compare(path);
+	std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+	return normalized;
+}
+
+static bool path_strings_match_case_insensitive(const std::string& lhs, const std::string& rhs)
+{
+	return lowercase_path_for_compare(lhs) == lowercase_path_for_compare(rhs);
+}
+
 static base_content_path_set get_base_content_override_baseline()
 {
 	if (!base_content_path.empty())
@@ -3661,10 +3679,11 @@ static std::string try_extract_base_content_root(const std::string& value, const
 	if (normalized_suffix.empty())
 		return normalize_path_string(normalized_value);
 
-	const auto suffix_with_separator = "/" + normalized_suffix;
-	if (normalized_value.size() <= suffix_with_separator.size())
+	const auto value_for_compare = lowercase_path_for_compare(normalized_value);
+	const auto suffix_with_separator = "/" + lowercase_path_for_compare(normalized_suffix);
+	if (value_for_compare.size() <= suffix_with_separator.size())
 		return {};
-	if (normalized_value.compare(normalized_value.size() - suffix_with_separator.size(),
+	if (value_for_compare.compare(value_for_compare.size() - suffix_with_separator.size(),
 		suffix_with_separator.size(), suffix_with_separator) != 0)
 		return {};
 
@@ -6682,7 +6701,7 @@ std::string get_config_directory(bool portable_mode)
 	if (portable_mode)
 	{
 		write_log("Portable mode: Setting config directory to executable path\n");
-		return get_windows_executable_directory() + "\\conf";
+		return normalize_path_string(get_windows_executable_directory() + "\\" + get_configurations_directory_name());
 	}
 	{
 		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
@@ -6692,19 +6711,20 @@ std::string get_config_directory(bool portable_mode)
 		const auto default_home_dir = get_default_windows_content_root();
 		if (!default_home_dir.empty())
 			return normalize_path_string(default_home_dir + "\\Configurations");
-		return get_windows_executable_directory() + "\\conf";
+		return normalize_path_string(get_windows_executable_directory() + "\\" + get_configurations_directory_name());
 	}
 #elif defined(__ANDROID__)
 	const char* path = SDL_GetAndroidExternalStoragePath();
 	if (path) {
-		return std::string(path) + "/conf/";
+		auto config_dir = join_path(path, get_configurations_directory_name());
+		return fix_trailing(config_dir);
 	}
-	return prefix_with_application_directory_path("conf/");
+	return prefix_with_application_directory_path(std::string(get_configurations_directory_name()) + "/");
 #else
 	if (portable_mode)
 	{
 		write_log("Portable mode: Setting config directory to executable path\n");
-		return join_path(get_portable_root_directory(), "conf");
+		return join_path(get_portable_root_directory(), get_configurations_directory_name());
 	}
 
 	const auto env_conf_dir = getenv("AMIBERRY_CONFIG_DIR");
@@ -6719,16 +6739,16 @@ std::string get_config_directory(bool portable_mode)
 	}
 	// 2: Check if the $AMIBERRY_HOME_DIR ENV variable is set
 	if (env_home_dir != nullptr && env_home_dir[0] != '\0')
-		return join_path(env_home_dir, "conf");
+		return join_path(env_home_dir, get_configurations_directory_name());
 
-	// 2: Check $HOME/Amiberry/conf
+	// 2: Check $HOME/Amiberry/Configurations
 	const auto default_home_dir = get_default_posix_content_root();
 	if (!default_home_dir.empty())
-		return join_path(default_home_dir, "conf");
+		return join_path(default_home_dir, get_configurations_directory_name());
 
 	// 3: Fallback to the executable directory when $HOME is unavailable.
 	write_log("Using config directory from executable path\n");
-	return join_path(get_portable_root_directory(), "conf");
+	return join_path(get_portable_root_directory(), get_configurations_directory_name());
 #endif
 }
 
@@ -6913,6 +6933,31 @@ static std::vector<std::string> get_legacy_settings_candidate_directories(const 
 	return candidates;
 }
 
+static std::vector<std::string> get_legacy_configuration_candidate_directories(const bool portable_mode)
+{
+	std::vector<std::string> candidates;
+
+	if (portable_mode)
+	{
+		append_settings_candidate(candidates, join_path(get_portable_root_directory(), "conf"));
+		return candidates;
+	}
+
+#if defined(_WIN32)
+	append_settings_candidate(candidates, get_windows_executable_directory() + "\\conf");
+#elif !defined(__ANDROID__) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS)
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	if (env_home_dir != nullptr && env_home_dir[0] != '\0' && my_existsdir(env_home_dir))
+		append_settings_candidate(candidates, join_path(env_home_dir, "conf"));
+
+	const auto default_home_dir = get_default_posix_content_root();
+	if (!default_home_dir.empty())
+		append_settings_candidate(candidates, join_path(default_home_dir, "conf"));
+#endif
+
+	return candidates;
+}
+
 static std::vector<std::string> get_legacy_bookmark_candidate_directories(const bool portable_mode)
 {
 	std::vector<std::string> candidates;
@@ -7038,7 +7083,7 @@ static void append_visual_asset_candidate(std::vector<visual_asset_path_set>& ca
 }
 
 static bool merge_directory_contents_if_needed(const std::string& source_dir, const std::string& destination_dir,
-	bool& failed, bool& conflicts)
+	bool& failed, bool& conflicts, const char* migration_label)
 {
 	failed = false;
 	conflicts = false;
@@ -7057,7 +7102,8 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 		std::filesystem::directory_options::skip_permission_denied, ec);
 	if (ec)
 	{
-		write_log("Visuals migration: failed to scan %s: %s\n", source_dir.c_str(), ec.message().c_str());
+		write_log("%s migration: failed to scan %s: %s\n",
+			migration_label, source_dir.c_str(), ec.message().c_str());
 		failed = true;
 		return false;
 	}
@@ -7067,7 +7113,8 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 	{
 		if (ec)
 		{
-			write_log("Visuals migration: failed while reading %s: %s\n", source_dir.c_str(), ec.message().c_str());
+			write_log("%s migration: failed while reading %s: %s\n",
+				migration_label, source_dir.c_str(), ec.message().c_str());
 			failed = true;
 			return copied_any;
 		}
@@ -7075,8 +7122,8 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 		const auto relative_path = std::filesystem::relative(iterator->path(), source_dir, ec);
 		if (ec)
 		{
-			write_log("Visuals migration: failed to relativize %s against %s: %s\n",
-				iterator->path().string().c_str(), source_dir.c_str(), ec.message().c_str());
+			write_log("%s migration: failed to relativize %s against %s: %s\n",
+				migration_label, iterator->path().string().c_str(), source_dir.c_str(), ec.message().c_str());
 			failed = true;
 			return copied_any;
 		}
@@ -7087,7 +7134,116 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 			std::filesystem::create_directories(destination_path, ec);
 			if (ec)
 			{
-				write_log("Visuals migration: failed to create %s: %s\n",
+				write_log("%s migration: failed to create %s: %s\n",
+					migration_label, destination_path.string().c_str(), ec.message().c_str());
+				failed = true;
+				return copied_any;
+			}
+			continue;
+		}
+
+		if (!iterator->is_regular_file())
+			continue;
+
+		std::filesystem::create_directories(destination_path.parent_path(), ec);
+		if (ec)
+		{
+			write_log("%s migration: failed to create %s: %s\n",
+				migration_label, destination_path.parent_path().string().c_str(), ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+
+		if (std::filesystem::exists(destination_path))
+		{
+			conflicts = true;
+			write_log("%s migration: keeping existing %s, skipping %s\n",
+				migration_label, destination_path.string().c_str(), iterator->path().string().c_str());
+			continue;
+		}
+
+		std::filesystem::copy_file(iterator->path(), destination_path, std::filesystem::copy_options::none, ec);
+		if (ec)
+		{
+			write_log("%s migration: failed to copy %s to %s: %s\n",
+				migration_label, iterator->path().string().c_str(), destination_path.string().c_str(), ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+
+		write_log("%s migration: imported %s from %s\n",
+			migration_label, destination_path.string().c_str(), iterator->path().string().c_str());
+		copied_any = true;
+	}
+
+	return copied_any;
+}
+
+static bool is_legacy_bootstrap_settings_file(const std::filesystem::path& relative_path)
+{
+	if (relative_path.has_parent_path())
+		return false;
+
+	auto filename = relative_path.filename().string();
+	std::transform(filename.begin(), filename.end(), filename.begin(),
+		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+	return filename == "amiberry.conf" || filename == "amiberry.ini";
+}
+
+static bool merge_legacy_configuration_directory_if_needed(const std::string& source_dir,
+	const std::string& destination_dir, bool& failed, bool& conflicts)
+{
+	failed = false;
+	conflicts = false;
+	if (source_dir.empty() || destination_dir.empty())
+		return false;
+	if (!my_existsdir(source_dir.c_str()))
+		return false;
+	if (path_strings_match(source_dir, destination_dir))
+		return false;
+
+	ensure_directory_exists(destination_dir);
+
+	bool copied_any = false;
+	std::error_code ec;
+	std::filesystem::recursive_directory_iterator iterator(source_dir,
+		std::filesystem::directory_options::skip_permission_denied, ec);
+	if (ec)
+	{
+		write_log("Configuration migration: failed to scan %s: %s\n", source_dir.c_str(), ec.message().c_str());
+		failed = true;
+		return false;
+	}
+
+	const std::filesystem::recursive_directory_iterator end;
+	for (; iterator != end; iterator.increment(ec))
+	{
+		if (ec)
+		{
+			write_log("Configuration migration: failed while reading %s: %s\n", source_dir.c_str(), ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+
+		const auto relative_path = std::filesystem::relative(iterator->path(), source_dir, ec);
+		if (ec)
+		{
+			write_log("Configuration migration: failed to relativize %s against %s: %s\n",
+				iterator->path().string().c_str(), source_dir.c_str(), ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+
+		if (is_legacy_bootstrap_settings_file(relative_path))
+			continue;
+
+		const auto destination_path = std::filesystem::path(destination_dir) / relative_path;
+		if (iterator->is_directory())
+		{
+			std::filesystem::create_directories(destination_path, ec);
+			if (ec)
+			{
+				write_log("Configuration migration: failed to create %s: %s\n",
 					destination_path.string().c_str(), ec.message().c_str());
 				failed = true;
 				return copied_any;
@@ -7101,7 +7257,7 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 		std::filesystem::create_directories(destination_path.parent_path(), ec);
 		if (ec)
 		{
-			write_log("Visuals migration: failed to create %s: %s\n",
+			write_log("Configuration migration: failed to create %s: %s\n",
 				destination_path.parent_path().string().c_str(), ec.message().c_str());
 			failed = true;
 			return copied_any;
@@ -7110,7 +7266,7 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 		if (std::filesystem::exists(destination_path))
 		{
 			conflicts = true;
-			write_log("Visuals migration: keeping existing %s, skipping %s\n",
+			write_log("Configuration migration: keeping existing %s, skipping %s\n",
 				destination_path.string().c_str(), iterator->path().string().c_str());
 			continue;
 		}
@@ -7118,18 +7274,65 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 		std::filesystem::copy_file(iterator->path(), destination_path, std::filesystem::copy_options::none, ec);
 		if (ec)
 		{
-			write_log("Visuals migration: failed to copy %s to %s: %s\n",
+			write_log("Configuration migration: failed to copy %s to %s: %s\n",
 				iterator->path().string().c_str(), destination_path.string().c_str(), ec.message().c_str());
 			failed = true;
 			return copied_any;
 		}
 
-		write_log("Visuals migration: imported %s from %s\n",
+		write_log("Configuration migration: imported %s from %s\n",
 			destination_path.string().c_str(), iterator->path().string().c_str());
 		copied_any = true;
 	}
 
 	return copied_any;
+}
+
+static void migrate_legacy_configuration_directories(const bool portable_mode)
+{
+	const auto baseline_config_path = get_base_content_override_baseline().config_path;
+	if (baseline_config_path.empty())
+		return;
+
+	bool config_path_is_legacy_default = path_strings_match(config_path, baseline_config_path);
+	for (const auto& candidate : get_legacy_configuration_candidate_directories(portable_mode))
+	{
+		if (path_strings_match(config_path, candidate))
+			config_path_is_legacy_default = true;
+	}
+	if (!config_path_is_legacy_default)
+		return;
+
+	bool failed = false;
+	bool conflicts = false;
+	bool migrated_any = false;
+	bool source_exists = false;
+	for (const auto& candidate : get_legacy_configuration_candidate_directories(portable_mode))
+	{
+		if (candidate.empty() || path_strings_match(candidate, baseline_config_path))
+			continue;
+		if (my_existsdir(candidate.c_str()))
+			source_exists = true;
+
+		bool copy_failed = false;
+		bool copy_conflicts = false;
+		if (merge_legacy_configuration_directory_if_needed(candidate, baseline_config_path, copy_failed, copy_conflicts))
+			migrated_any = true;
+		if (copy_failed)
+			failed = true;
+		if (copy_conflicts)
+			conflicts = true;
+	}
+
+	if (!failed)
+		config_path = baseline_config_path;
+
+	if (failed)
+		write_log("Configuration migration: completed with errors (see log above)\n");
+	else if (migrated_any)
+		write_log("Configuration migration: imported legacy files into %s\n", baseline_config_path.c_str());
+	else if (conflicts || source_exists)
+		write_log("Configuration migration: legacy directory already reconciled with %s\n", baseline_config_path.c_str());
 }
 
 static void migrate_legacy_visual_asset_directories()
@@ -7165,7 +7368,7 @@ static void migrate_legacy_visual_asset_directories()
 			bool copy_failed = false;
 			bool copy_conflicts = false;
 			const auto source_dir = get_visual_asset_path_for_descriptor(legacy_paths, descriptor);
-			if (merge_directory_contents_if_needed(source_dir, current_path, copy_failed, copy_conflicts))
+			if (merge_directory_contents_if_needed(source_dir, current_path, copy_failed, copy_conflicts, "Visuals"))
 				migrated_any = true;
 			if (copy_failed)
 				migration_failed = true;
@@ -7187,52 +7390,119 @@ static void migrate_legacy_visual_asset_directories()
 		legacy_migration_state.visuals_conflicts = true;
 }
 
-#if !defined(__MACH__) && !defined(_WIN32) && !defined(__ANDROID__)
-// Linux only: previous defaults used lowercase directory names (roms/, floppies/, ...).
-// Rename leftover lowercase variants to the new capitalized defaults so existing installs
-// continue to find their content, and so cross-platform packs (Windows/macOS layout) work.
-static void migrate_directory_case_if_needed(const std::string& current_path,
+static bool rename_path_to_canonical_case(const std::filesystem::path& source,
+	const std::filesystem::path& target, std::string& error_message)
+{
+	std::error_code ec;
+	std::filesystem::rename(source, target, ec);
+	if (!ec)
+		return true;
+
+	error_message = ec.message();
+
+	const auto parent = target.parent_path();
+	const auto filename = target.filename().string();
+	for (int suffix = 0; suffix < 1000; ++suffix)
+	{
+		std::filesystem::path temporary = parent / (filename + ".amiberry-case-migration-" + std::to_string(suffix));
+		ec.clear();
+		if (std::filesystem::exists(temporary, ec))
+			continue;
+
+		ec.clear();
+		std::filesystem::rename(source, temporary, ec);
+		if (ec)
+		{
+			error_message += "; temporary rename failed: ";
+			error_message += ec.message();
+			return false;
+		}
+
+		ec.clear();
+		std::filesystem::rename(temporary, target, ec);
+		if (!ec)
+			return true;
+
+		error_message += "; final rename failed: ";
+		error_message += ec.message();
+
+		std::error_code rollback_ec;
+		std::filesystem::rename(temporary, source, rollback_ec);
+		if (rollback_ec)
+		{
+			error_message += "; rollback failed: ";
+			error_message += rollback_ec.message();
+		}
+		return false;
+	}
+
+	error_message += "; no temporary migration name available";
+	return false;
+}
+
+enum class path_case_migration_result
+{
+	no_change,
+	migrated,
+	failed,
+};
+
+// Legacy content layouts used a mix of lowercase and partially capitalized names.
+// Rename case-only variants to the current canonical names so existing installs and
+// cross-platform content packs resolve to the same paths on case-sensitive filesystems.
+static path_case_migration_result migrate_path_case_if_needed(const std::string& target_path,
 	bool& migrated_any, bool& failed)
 {
-	if (current_path.empty())
-		return;
+	if (target_path.empty())
+		return path_case_migration_result::no_change;
 
-	std::filesystem::path target(current_path);
+	std::filesystem::path target(target_path);
 	while (!target.empty() && target.filename().empty())
 		target = target.parent_path();
 	if (target.empty())
-		return;
+		return path_case_migration_result::no_change;
 
 	const auto parent = target.parent_path();
 	const auto basename = target.filename().string();
 	if (parent.empty() || basename.empty())
-		return;
+		return path_case_migration_result::no_change;
 	if (!my_existsdir(parent.string().c_str()))
-		return;
-
-	std::error_code ec;
-	if (std::filesystem::exists(target, ec))
-		return;
+		return path_case_migration_result::no_change;
 
 	std::string basename_lower = basename;
 	std::transform(basename_lower.begin(), basename_lower.end(), basename_lower.begin(),
 		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
+	std::error_code ec;
 	std::filesystem::directory_iterator it(parent, ec);
 	if (ec)
-		return;
+	{
+		write_log("Directory case migration: failed to scan %s: %s\n",
+			parent.string().c_str(), ec.message().c_str());
+		failed = true;
+		return path_case_migration_result::failed;
+	}
 
 	const std::filesystem::directory_iterator end;
 	std::filesystem::path matched_source;
 	std::vector<std::filesystem::path> all_matches;
+	bool exact_match_exists = false;
 	for (; it != end; it.increment(ec))
 	{
 		if (ec)
-			return;
+		{
+			write_log("Directory case migration: failed while reading %s: %s\n",
+				parent.string().c_str(), ec.message().c_str());
+			failed = true;
+			return path_case_migration_result::failed;
+		}
 
 		auto entry_name = it->path().filename().string();
 		if (entry_name == basename)
-			return; // exact match exists already
+		{
+			exact_match_exists = true;
+			continue;
+		}
 
 		std::string entry_lower = entry_name;
 		std::transform(entry_lower.begin(), entry_lower.end(), entry_lower.begin(),
@@ -7246,7 +7516,34 @@ static void migrate_directory_case_if_needed(const std::string& current_path,
 	}
 
 	if (matched_source.empty())
-		return;
+		return path_case_migration_result::no_change;
+
+	if (exact_match_exists)
+	{
+		std::error_code type_ec;
+		if (std::filesystem::is_directory(matched_source, type_ec)
+			&& !type_ec
+			&& std::filesystem::is_directory(target, type_ec)
+			&& !type_ec)
+		{
+			bool copy_failed = false;
+			bool copy_conflicts = false;
+			if (merge_directory_contents_if_needed(matched_source.string(), target.string(),
+				copy_failed, copy_conflicts, "Directory case"))
+			{
+				migrated_any = true;
+				return path_case_migration_result::migrated;
+			}
+			if (copy_failed)
+			{
+				failed = true;
+				return path_case_migration_result::failed;
+			}
+		}
+		write_log("Directory case migration: canonical path %s already exists; leaving %s in place\n",
+			target.string().c_str(), matched_source.string().c_str());
+		return path_case_migration_result::no_change;
+	}
 
 	if (all_matches.size() > 1)
 	{
@@ -7260,51 +7557,55 @@ static void migrate_directory_case_if_needed(const std::string& current_path,
 			matched_source.filename().string().c_str());
 	}
 
-	std::filesystem::rename(matched_source, target, ec);
-	if (ec)
+	std::string error_message;
+	if (!rename_path_to_canonical_case(matched_source, target, error_message))
 	{
 		write_log("Directory case migration: failed to rename %s -> %s: %s\n",
-			matched_source.string().c_str(), target.string().c_str(), ec.message().c_str());
+			matched_source.string().c_str(), target.string().c_str(), error_message.c_str());
 		failed = true;
-		return;
+		return path_case_migration_result::failed;
 	}
 
 	write_log("Directory case migration: renamed %s -> %s\n",
 		matched_source.string().c_str(), target.string().c_str());
 	migrated_any = true;
+	return path_case_migration_result::migrated;
 }
 
 static void migrate_legacy_lowercase_content_directories()
 {
 	const auto baseline = get_base_content_override_baseline();
-	const auto current = get_current_base_content_path_set();
+	auto current = get_current_base_content_path_set();
 
 	bool migrated_any = false;
 	bool failed = false;
 
-	const auto migrate_if_default = [&](const std::string& current_path,
+	const auto migrate_if_default = [&](std::string& current_path,
 		const std::string& baseline_path)
 	{
-		if (current_path.empty())
+		if (current_path.empty() || baseline_path.empty())
 			return;
-		if (!path_strings_match(current_path, baseline_path))
+		if (!path_strings_match_case_insensitive(current_path, baseline_path))
 			return;
-		migrate_directory_case_if_needed(current_path, migrated_any, failed);
+		const auto migration_result = migrate_path_case_if_needed(baseline_path, migrated_any, failed);
+		if (migration_result != path_case_migration_result::failed)
+			current_path = baseline_path;
 	};
 
 	// Visual assets live one level deeper (Visuals/Themes etc.). Rename the parent
 	// "visuals" -> "Visuals" first so the child renames find the new parent.
-	if (path_strings_match(current.themes_path, baseline.themes_path)
+	if (path_strings_match_case_insensitive(current.themes_path, baseline.themes_path)
 		&& !current.themes_path.empty())
 	{
-		std::filesystem::path themes(current.themes_path);
+		std::filesystem::path themes(baseline.themes_path);
 		while (!themes.empty() && themes.filename().empty())
 			themes = themes.parent_path();
 		const auto visuals_dir = themes.parent_path();
 		if (!visuals_dir.empty())
-			migrate_directory_case_if_needed(visuals_dir.string(), migrated_any, failed);
+			migrate_path_case_if_needed(visuals_dir.string(), migrated_any, failed);
 	}
 
+	migrate_if_default(current.config_path,       baseline.config_path);
 	migrate_if_default(current.controllers_path,  baseline.controllers_path);
 	migrate_if_default(current.whdboot_path,      baseline.whdboot_path);
 	migrate_if_default(current.whdload_arch_path, baseline.whdload_arch_path);
@@ -7325,14 +7626,13 @@ static void migrate_legacy_lowercase_content_directories()
 	// Logfile is a regular file, but the same rename logic applies.
 	migrate_if_default(current.logfile_path,      baseline.logfile_path);
 
+	apply_base_content_path_set(current);
+
 	if (failed)
 		write_log("Directory case migration: completed with errors (see log above)\n");
 	else if (migrated_any)
-		write_log("Directory case migration: completed (lowercase directories renamed to capitalized)\n");
+		write_log("Directory case migration: completed (legacy names renamed to canonical names)\n");
 }
-#else
-static void migrate_legacy_lowercase_content_directories() {}
-#endif
 
 static constexpr auto LEGACY_CLEANUP_DISMISSED_KEY = _T("LegacyCleanupDismissed");
 
@@ -8085,6 +8385,25 @@ void create_missing_amiberry_folders()
 	refresh_builtin_theme_presets();
 }
 
+static void append_path_component(std::string& path, const char* component, const bool trailing_separator = true)
+{
+	if (path.empty() || component == nullptr)
+		return;
+
+#ifdef _WIN32
+	constexpr char separator = '\\';
+#else
+	constexpr char separator = '/';
+#endif
+	if (path.back() != '/' && path.back() != '\\')
+		path += separator;
+	if (component[0] == '\0')
+		return;
+	path += component;
+	if (trailing_separator)
+		path += separator;
+}
+
 static void init_amiberry_dirs(const bool portable_mode, const bool materialize_host_roots)
 {
 #ifdef __MACH__
@@ -8151,79 +8470,25 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 		// These go in $HOME/Amiberry by default
 		whdload_arch_path = floppy_path = harddrive_path = screenshot_dir =
 		savestate_dir = cdrom_path = logfile_path = rom_path = rp9_path =
-		home_dir;
+			home_dir;
 	}
 
-#ifdef __MACH__
-	controllers_path.append("/Controllers/");
-	whdboot_path.append("/Whdboot/");
-	whdload_arch_path.append("/Lha/");
-	floppy_path.append("/Floppies/");
-	harddrive_path.append("/Harddrives/");
-	cdrom_path.append("/CDROMs/");
-	logfile_path.append("/Amiberry.log");
-	rom_path.append("/Roms/");
-	rp9_path.append("/RP9/");
-	saveimage_dir.append("/");
-	savestate_dir.append("/Savestates/");
-	ripper_path.append("/Ripper/");
-	input_dir.append("/Inputrecordings/");
-	screenshot_dir.append("/Screenshots/");
-	nvram_dir.append("/Nvram/");
-	video_dir.append("/Videos/");
-#elif defined(__ANDROID__)
-    controllers_path.append("controllers/");
-    whdboot_path.append("whdboot/");
-    rom_path.append("roms/");
-    // Add other Android specific paths as needed, generally lowercase
-    whdload_arch_path.append("lha/");
-    floppy_path.append("floppies/");
-    harddrive_path.append("harddrives/");
-    cdrom_path.append("cdroms/");
-    logfile_path.append("amiberry.log");
-    rp9_path.append("rp9/");
-    saveimage_dir.append("/");
-    savestate_dir.append("savestates/");
-    ripper_path.append("ripper/");
-    input_dir.append("inputrecordings/");
-    screenshot_dir.append("screenshots/");
-    nvram_dir.append("nvram/");
-    video_dir.append("videos/");
-#elif defined(_WIN32)
-	controllers_path.append("\\Controllers\\");
-	whdboot_path.append("\\Whdboot\\");
-	whdload_arch_path.append("\\Lha\\");
-	floppy_path.append("\\Floppies\\");
-	harddrive_path.append("\\Harddrives\\");
-	cdrom_path.append("\\CDROMs\\");
-	logfile_path.append("\\Amiberry.log");
-	rom_path.append("\\Roms\\");
-	rp9_path.append("\\RP9\\");
-	saveimage_dir.append("\\");
-	savestate_dir.append("\\Savestates\\");
-	ripper_path.append("\\Ripper\\");
-	input_dir.append("\\Inputrecordings\\");
-	screenshot_dir.append("\\Screenshots\\");
-	nvram_dir.append("\\Nvram\\");
-	video_dir.append("\\Videos\\");
-#else
-	controllers_path.append("/Controllers/");
-	whdboot_path.append("/Whdboot/");
-	whdload_arch_path.append("/Lha/");
-	floppy_path.append("/Floppies/");
-	harddrive_path.append("/Harddrives/");
-	cdrom_path.append("/CDROMs/");
-	logfile_path.append("/Amiberry.log");
-	rom_path.append("/Roms/");
-	rp9_path.append("/RP9/");
-	saveimage_dir.append("/");
-	savestate_dir.append("/Savestates/");
-	ripper_path.append("/Ripper/");
-	input_dir.append("/Inputrecordings/");
-	screenshot_dir.append("/Screenshots/");
-	nvram_dir.append("/Nvram/");
-	video_dir.append("/Videos/");
-#endif
+	append_path_component(controllers_path, get_controllers_directory_name());
+	append_path_component(whdboot_path, get_whdboot_directory_name());
+	append_path_component(whdload_arch_path, get_whdload_archives_directory_name());
+	append_path_component(floppy_path, get_floppies_directory_name());
+	append_path_component(harddrive_path, get_harddrives_directory_name());
+	append_path_component(cdrom_path, get_cdroms_directory_name());
+	append_path_component(logfile_path, get_logfile_name(), false);
+	append_path_component(rom_path, get_roms_directory_name());
+	append_path_component(rp9_path, get_rp9_directory_name());
+	append_path_component(saveimage_dir, "");
+	append_path_component(savestate_dir, get_savestates_directory_name());
+	append_path_component(ripper_path, get_ripper_directory_name());
+	append_path_component(input_dir, get_inputrecordings_directory_name());
+	append_path_component(screenshot_dir, get_screenshots_directory_name());
+	append_path_component(nvram_dir, get_nvram_directory_name());
+	append_path_component(video_dir, get_videos_directory_name());
 
 	apply_current_visual_asset_paths(get_visual_asset_paths_from_content_root(visual_content_root));
 
@@ -8353,6 +8618,9 @@ static void load_amiberry_settings_from_file(const std::string& settings_file)
 		const auto inferred_serialized_base_path = infer_serialized_base_content_path(managed_path_lines);
 		std::vector<visual_asset_path_set> legacy_visual_candidate_paths;
 		legacy_visual_candidate_paths.emplace_back(get_legacy_default_visual_asset_paths(g_portable_mode));
+		if (has_base_content_path && !configured_base_path.empty())
+			legacy_visual_candidate_paths.emplace_back(
+				get_visual_asset_path_set(get_legacy_base_content_path_set(configured_base_path)));
 		if (!inferred_serialized_base_path.empty())
 			legacy_visual_candidate_paths.emplace_back(
 				get_visual_asset_path_set(get_legacy_base_content_path_set(inferred_serialized_base_path)));
@@ -8803,6 +9071,7 @@ int amiberry_main(int argc, char* argv[])
 	init_amiberry_dirs(portable_mode);
 	if (config_found)
 		load_amiberry_settings();
+	migrate_legacy_configuration_directories(portable_mode);
 	migrate_legacy_visual_asset_directories();
 	migrate_legacy_lowercase_content_directories();
 	macos_bookmarks_init(settings_dir, get_legacy_bookmark_candidate_directories(portable_mode));

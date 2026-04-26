@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry.data
 
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -64,7 +65,7 @@ class EmulatorLauncherTest {
 
 	@Test
 	fun `rom fingerprint changes when file is added`() {
-		val romDir = tempDir.newFolder("roms")
+		val romDir = tempDir.newFolder(StoragePaths.ROMS)
 		File(romDir, "kick13.rom").writeBytes(ByteArray(256 * 1024))
 
 		val fp1 = computeTestFingerprint(romDir)
@@ -76,7 +77,7 @@ class EmulatorLauncherTest {
 
 	@Test
 	fun `rom fingerprint stable when nothing changes`() {
-		val romDir = tempDir.newFolder("roms")
+		val romDir = tempDir.newFolder(StoragePaths.ROMS)
 		File(romDir, "kick13.rom").writeBytes(ByteArray(256 * 1024))
 
 		val fp1 = computeTestFingerprint(romDir)
@@ -87,7 +88,7 @@ class EmulatorLauncherTest {
 
 	@Test
 	fun `rom fingerprint ignores non-rom files`() {
-		val romDir = tempDir.newFolder("roms")
+		val romDir = tempDir.newFolder(StoragePaths.ROMS)
 		File(romDir, "kick13.rom").writeBytes(ByteArray(256 * 1024))
 
 		val fp1 = computeTestFingerprint(romDir)
