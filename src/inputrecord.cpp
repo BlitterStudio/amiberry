@@ -851,18 +851,29 @@ static int savedisk (const TCHAR *path, const TCHAR *file, uae_u8 *data, uae_u8 
 		filename[0] = 0;
 		struct zfile *zf = zfile_fopen (fname, _T("rb"), ZFD_NORMAL);
 		if (!zf) {
-			_tcscpy (tmp, path);
-			_tcscat (tmp, fname);
+			_tcsncpy(tmp, path, MAX_DPATH - 1);
+			tmp[MAX_DPATH - 1] = 0;
+			const auto tmp_len = _tcslen(tmp);
+			if (tmp_len < MAX_DPATH - 1)
+				_tcsncat(tmp, fname, MAX_DPATH - tmp_len - 1);
 			zf = zfile_fopen (tmp, _T("rb"), ZFD_NORMAL);
 			if (!zf)
 				write_log (_T("failed to open '%s'\n"), tmp);
 		}
 		if (zf) {
-			_tcscpy (tmp, path);
-			_tcscpy (filename, file);
-			_tcscat (filename, _T("."));
-			getfilepart (filename + _tcslen (filename), MAX_DPATH, zfile_getname (zf));
-			_tcscat (tmp, filename);
+			_tcsncpy(tmp, path, MAX_DPATH - 1);
+			tmp[MAX_DPATH - 1] = 0;
+			_tcsncpy(filename, file, MAX_DPATH - 1);
+			filename[MAX_DPATH - 1] = 0;
+			auto filename_len = _tcslen(filename);
+			if (filename_len < MAX_DPATH - 1)
+				_tcsncat(filename, _T("."), MAX_DPATH - filename_len - 1);
+			filename_len = _tcslen(filename);
+			if (filename_len < MAX_DPATH)
+				getfilepart(filename + filename_len, static_cast<int>(MAX_DPATH - filename_len), zfile_getname(zf));
+			const auto tmp_len = _tcslen(tmp);
+			if (tmp_len < MAX_DPATH - 1)
+				_tcsncat(tmp, filename, MAX_DPATH - tmp_len - 1);
 			struct zfile *zfd = zfile_fopen (tmp, _T("wb"));
 			if (zfd) {
 				int size = zfile_size32(zf);

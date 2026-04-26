@@ -3940,7 +3940,13 @@ bool samepath(const TCHAR* p1, const TCHAR* p2)
 
 void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 {
-	_tcscpy(outpath, inpath);
+	if (!outpath || size <= 0)
+		return;
+	outpath[0] = 0;
+	if (!inpath)
+		return;
+	_tcsncpy(outpath, inpath, size - 1);
+	outpath[size - 1] = 0;
 	auto* const p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
@@ -3949,12 +3955,17 @@ void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 
 void getfilepart(TCHAR* out, int size, const TCHAR* path)
 {
+	if (!out || size <= 0)
+		return;
 	out[0] = 0;
+	if (!path)
+		return;
 	const auto* const p = _tcsrchr(path, '/');
 	if (p)
-		_tcscpy(out, p + 1);
+		_tcsncpy(out, p + 1, size - 1);
 	else
-		_tcscpy(out, path);
+		_tcsncpy(out, path, size - 1);
+	out[size - 1] = 0;
 }
 
 uae_u8* target_load_keyfile(uae_prefs* p, const char* path, int* sizep, char* name)
@@ -3970,8 +3981,11 @@ void replace(std::string& str, const std::string& from, const std::string& to)
 	str.replace(start_pos, from.length(), to);
 }
 
-void target_execute(const char* command)
+bool target_execute(const char* command)
 {
+	if (!command)
+		return false;
+
 	AmigaMonitor* mon = &AMonitors[0];
 	releasecapture(mon);
 	mouseactive = 0;
@@ -3985,16 +3999,23 @@ void target_execute(const char* command)
 	try
 	{
 		write_log("Executing: %s\n", final_command.c_str());
-#ifndef AMIBERRY_IOS
-		system(final_command.c_str());
-#else
+	#ifndef AMIBERRY_IOS
+		const int result = system(final_command.c_str());
+		if (result != 0) {
+			write_log("system() failed when trying to execute: %s. Result: %d\n", command, result);
+			return false;
+		}
+	#else
 		write_log("system() not available on iOS\n");
-#endif
+		return false;
+	#endif
 	}
 	catch (const std::exception& e)
 	{
 		write_log("Exception thrown when trying to execute: %s. Exception: %s", command, e.what());
+		return false;
 	}
+	return true;
 }
 
 void target_run()

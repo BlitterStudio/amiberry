@@ -1,3 +1,6 @@
+#ifndef UAE_PRAGMAS_H
+#define UAE_PRAGMAS_H
+
 #include <proto/exec.h>
 #include <proto/dos.h>
 
@@ -161,7 +164,40 @@ static int ExecuteOnHost(UBYTE *name)
 {
     return calltrap (88, name);
 }
+
+#define HOST_SHELL_STATUS_INVALID 0
+#define HOST_SHELL_STATUS_RUNNING 1
+#define HOST_SHELL_STATUS_EXITED 0x80000000UL
+
+static int HostShell_View(UBYTE *filename)
+{
+    return calltrap(89, filename);
+}
+static int HostShell_Open(UBYTE *command)
+{
+    return calltrap(90, command);
+}
+static int HostShell_Read(ULONG handle, UBYTE *buffer, ULONG size)
+{
+    return calltrap(91, handle, buffer, size);
+}
+static int HostShell_Write(ULONG handle, UBYTE *buffer, ULONG size)
+{
+    return calltrap(92, handle, buffer, size);
+}
+static int HostShell_Close(ULONG handle)
+{
+    return calltrap(93, handle);
+}
+static ULONG HostShell_Status(ULONG handle)
+{
+    return calltrap(94, handle);
+}
 static int RunOnHost(UBYTE *name, ULONG out, ULONG outsize)
 {
-    return calltrap(89, name, out, outsize);
+    (void)out;
+    (void)outsize;
+    return HostShell_View(name);
 }
+
+#endif
