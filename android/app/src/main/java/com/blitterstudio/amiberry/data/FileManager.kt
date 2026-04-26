@@ -70,10 +70,10 @@ object FileManager {
 	/**
 	 * Scan a directory for files matching the given extensions.
 	 */
-	fun scanDirectory(dir: File, extensions: Set<String>): List<AmigaFile> {
+	fun scanDirectory(dir: File, extensions: Set<String>, categoryOverride: FileCategory? = null): List<AmigaFile> {
 		if (!dir.exists() || !dir.isDirectory) return emptyList()
 
-		val category = FileCategory.entries.firstOrNull { it.dirName == dir.name }
+		val category = categoryOverride ?: FileCategory.entries.firstOrNull { it.dirName == dir.name }
 
 		return dir.listFiles()
 			?.filter { file ->
@@ -105,20 +105,20 @@ object FileManager {
 
 		// Scan the category-specific directory
 		val categoryDir = getCategoryDir(context, category)
-		for (file in scanDirectory(categoryDir, category.extensions)) {
+		for (file in scanDirectory(categoryDir, category.extensions, category)) {
 			if (seenPaths.add(file.path)) results.add(file)
 		}
 
 		// Also scan the root app directory for matching files
 		val rootDir = File(getAppStoragePath(context))
-		for (file in scanDirectory(rootDir, category.extensions)) {
+		for (file in scanDirectory(rootDir, category.extensions, category)) {
 			if (seenPaths.add(file.path)) results.add(file)
 		}
 
 		// For ROMs, also check WHDBoot/Kickstarts
 		if (category == FileCategory.ROMS) {
 			val kickstartsDir = File(rootDir, StoragePaths.WHDBOOT_KICKSTARTS)
-			for (file in scanDirectory(kickstartsDir, category.extensions)) {
+			for (file in scanDirectory(kickstartsDir, category.extensions, category)) {
 				if (seenPaths.add(file.path)) results.add(file)
 			}
 		}

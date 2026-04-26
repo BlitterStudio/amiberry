@@ -507,6 +507,7 @@ struct legacy_migration_state_summary
 	bool visuals_migrated{};
 	bool visuals_failed{};
 	bool visuals_conflicts{};
+	bool settings_rewrite_needed{};
 
 	bool any_migrated() const
 	{
@@ -3684,6 +3685,28 @@ static std::string try_extract_base_content_root(const std::string& value, const
 		normalized_value.size() - suffix_with_separator.size()));
 }
 
+static std::string get_base_content_path_suffix(const std::string& placeholder_path, const std::string& placeholder_base)
+{
+	const auto normalized_path = normalize_path_for_compare(placeholder_path);
+	if (normalized_path.empty())
+		return {};
+
+	const auto normalized_base = normalize_path_for_compare(placeholder_base);
+	if (normalized_base.empty())
+		return normalized_path;
+
+	const auto path_for_compare = lowercase_path_for_compare(normalized_path);
+	const auto base_for_compare = lowercase_path_for_compare(normalized_base);
+	if (path_for_compare == base_for_compare)
+		return {};
+
+	const auto base_with_separator = base_for_compare + "/";
+	if (path_for_compare.rfind(base_with_separator, 0) == 0)
+		return normalize_path_string(normalized_path.substr(normalized_base.size() + 1));
+
+	return normalized_path;
+}
+
 static const managed_path_option_descriptor* find_base_content_managed_path_option(const TCHAR* option)
 {
 	for (const auto& descriptor : base_content_managed_path_options)
@@ -3714,7 +3737,7 @@ static std::string infer_serialized_base_content_path(const std::vector<managed_
 		if (line.descriptor == nullptr)
 			continue;
 
-		const auto& suffix = suffix_paths.*(line.descriptor->member);
+		const auto suffix = get_base_content_path_suffix(suffix_paths.*(line.descriptor->member), placeholder_base);
 		const auto candidate_root = try_extract_base_content_root(line.value, suffix);
 		if (!candidate_root.empty())
 			++candidate_counts[candidate_root];
@@ -3757,8 +3780,10 @@ static bool any_managed_path_line_matches_visual_paths(const std::vector<managed
 
 static std::string infer_content_root_from_configuration_path(const std::string& configuration_path)
 {
-	const auto placeholder_paths = get_base_content_path_set("__amiberry_base__");
-	return try_extract_base_content_root(configuration_path, placeholder_paths.config_path);
+	constexpr auto placeholder_base = "__amiberry_base__";
+	const auto placeholder_paths = get_base_content_path_set(placeholder_base);
+	const auto suffix = get_base_content_path_suffix(placeholder_paths.config_path, placeholder_base);
+	return try_extract_base_content_root(configuration_path, suffix);
 }
 
 static std::vector<std::string> get_base_content_directories(const base_content_path_set& paths)
@@ -7317,8 +7342,11 @@ static void migrate_legacy_configuration_directories(const bool portable_mode)
 			conflicts = true;
 	}
 
-	if (!failed)
+	if (!failed && !path_strings_match(config_path, baseline_config_path))
+	{
 		config_path = baseline_config_path;
+		legacy_migration_state.settings_rewrite_needed = true;
+	}
 
 	if (failed)
 		write_log("Configuration migration: completed with errors (see log above)\n");
@@ -7582,7 +7610,11 @@ static void migrate_legacy_lowercase_content_directories()
 			return;
 		const auto migration_result = migrate_path_case_if_needed(baseline_path, migrated_any, failed);
 		if (migration_result != path_case_migration_result::failed)
+		{
+			if (!path_strings_match(current_path, baseline_path))
+				legacy_migration_state.settings_rewrite_needed = true;
 			current_path = baseline_path;
+		}
 	};
 
 	// Visual assets live one level deeper (Visuals/Themes etc.). Rename the parent
@@ -7911,8 +7943,11 @@ static void update_startup_migration_notice_state()
 
 static void persist_bootstrap_settings_after_migration_if_needed()
 {
-	if (!legacy_migration_state.config_migrated || amiberry_conf_file_overridden_from_cli)
+	if ((!legacy_migration_state.config_migrated && !legacy_migration_state.settings_rewrite_needed)
+		|| amiberry_conf_file_overridden_from_cli)
+	{
 		return;
+	}
 
 	save_amiberry_settings();
 	write_log("Settings migration: rewrote bootstrap settings file at %s\n", amiberry_conf_file.c_str());

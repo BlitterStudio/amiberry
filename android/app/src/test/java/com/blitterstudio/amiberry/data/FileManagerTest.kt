@@ -183,6 +183,20 @@ class FileManagerTest {
 	}
 
 	@Test
+	fun `scanDirectory calculates CRC32 when category is supplied`() {
+		val whdbootDir = tempDir.newFolder(StoragePaths.WHDBOOT)
+		val kickstartsDir = File(whdbootDir, "save-data/Kickstarts")
+		kickstartsDir.mkdirs()
+		File(kickstartsDir, "kick.rom").writeText("kickstart data")
+
+		val result = FileManager.scanDirectory(kickstartsDir, setOf("rom"), FileCategory.ROMS)
+
+		assertEquals(1, result.size)
+		assertEquals(FileCategory.ROMS, result[0].category)
+		assertNotNull(result[0].crc32)
+	}
+
+	@Test
 	fun `scanDirectory CRC32 is consistent for same content`() {
 		val dir = tempDir.newFolder(StoragePaths.ROMS)
 		File(dir, "kick1.rom").writeText("identical content")
