@@ -370,17 +370,10 @@ static void set_key_configs(const uae_prefs* p)
 	else
 		fullscreen_key = get_hotkey_from_config(amiberry_options.default_fullscreen_toggle_key);
 
-	if (strncmp(p->minimize, "", 1) != 0)
-		minimize_key = get_hotkey_from_config(p->minimize);
-
-	if (strncmp(p->left_amiga, "", 1) != 0)
-		left_amiga_key = get_hotkey_from_config(p->left_amiga);
-
-	if (strncmp(p->right_amiga, "", 1) != 0)
-		right_amiga_key = get_hotkey_from_config(p->right_amiga);
-
-	if (strncmp(p->screenshot, "", 1) != 0)
-		screenshot_key = get_hotkey_from_config(p->screenshot);
+	minimize_key = get_hotkey_from_config(p->minimize);
+	left_amiga_key = get_hotkey_from_config(p->left_amiga);
+	right_amiga_key = get_hotkey_from_config(p->right_amiga);
+	screenshot_key = get_hotkey_from_config(p->screenshot);
 
 	debugger_key = get_hotkey_from_config(p->debugger_trigger);
 
