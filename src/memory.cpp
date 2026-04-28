@@ -1399,6 +1399,17 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				uaecptr a2 = addr - 32;
 				uaecptr a3 = m68k_getpc () - 32;
 				write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), addr, M68K_GETPC);
+				write_log (_T("JIT_H3_DIAG PC=%08X A7=%08X SR=%04X ISP=%08X MSP=%08X USP=%08X S=%d M=%d VBR=%08X\n"),
+					M68K_GETPC, regs.regs[15], regs.sr, regs.isp, regs.msp, regs.usp, regs.s, regs.m, regs.vbr);
+				write_log (_T("JIT_H3_DIAG D0-D7=%08X %08X %08X %08X %08X %08X %08X %08X\n"),
+					regs.regs[0], regs.regs[1], regs.regs[2], regs.regs[3],
+					regs.regs[4], regs.regs[5], regs.regs[6], regs.regs[7]);
+				write_log (_T("JIT_H3_DIAG A0-A7=%08X %08X %08X %08X %08X %08X %08X %08X\n"),
+					regs.regs[8], regs.regs[9], regs.regs[10], regs.regs[11],
+					regs.regs[12], regs.regs[13], regs.regs[14], regs.regs[15]);
+				write_log (_T("JIT_H3_DIAG A7FRAME %08X: %08X %08X %08X %08X\n"),
+					regs.regs[15], get_long_debug(regs.regs[15]), get_long_debug(regs.regs[15] + 4),
+					get_long_debug(regs.regs[15] + 8), get_long_debug(regs.regs[15] + 12));
 #ifdef DEBUGGER
 				if (debugging || DEBUG_STUPID) {
 					activate_debugger();
