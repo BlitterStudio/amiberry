@@ -5691,11 +5691,25 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #if USE_NORMAL_CALLING_CONVENTION
 					raw_push_l_r(REG_PAR1);
 #endif
-	#if X86_TARGET_64BIT
-				raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[i].location);
-#else
-				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[i].location);
+					{
+						uintptr native_pc = (uintptr)pc_hist[i].location;
+						uae_u32 m68k_pc = (uae_u32)(start_pc + ((char*)pc_hist[i].location - (char*)start_pc_p));
+#ifdef NATMEM_OFFSET
+						if (natmem_offset && native_pc >= (uintptr)natmem_offset &&
+							native_pc < (uintptr)natmem_offset + (uintptr)0x100000000ULL) {
+							m68k_pc = (uae_u32)(native_pc - (uintptr)natmem_offset);
+						}
 #endif
+#if X86_TARGET_64BIT
+						raw_mov_q_mi((uintptr)&regs.pc_p, native_pc);
+						raw_mov_q_mi((uintptr)&regs.pc_oldp, native_pc);
+#else
+						compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR native_pc);
+						compemu_raw_mov_l_mi(JITPTR &regs.pc_oldp, JITPTR native_pc);
+#endif
+						compemu_raw_mov_l_mi(JITPTR &regs.pc, m68k_pc);
+						compemu_raw_mov_l_mi(JITPTR &regs.instruction_pc, m68k_pc);
+					}
 					raw_dec_sp(STACK_SHADOW_SPACE);
 					compemu_raw_call(JITPTR cputbl[opcode]);
 					raw_inc_sp(STACK_SHADOW_SPACE);
