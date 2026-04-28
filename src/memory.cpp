@@ -63,6 +63,23 @@ static bool roms_modified;
 
 #define FLASHEMU 0
 
+#ifdef JIT
+static int jit_lowvec_write_diag_count;
+
+static void jit_log_lowvec_write(uaecptr addr, uae_u32 v, int size)
+{
+	if (!currprefs.cachesize || !jit_n_addr_unsafe || jit_lowvec_write_diag_count >= 32)
+		return;
+	if (addr >= 0x10e2 || addr + size <= 0x10dc)
+		return;
+	write_log(_T("JIT_LOWVEC_WRITE #%d size=%d addr=%08x value=%08x pc=%08x instrpc=%08x pc_p=%p A6=%08x A7=%08x old=%04x %04x %04x\n"),
+		jit_lowvec_write_diag_count, size, addr, v, m68k_getpc(), regs.instruction_pc, regs.pc_p,
+		m68k_areg(regs, 6), m68k_areg(regs, 7),
+		get_word_debug(0x10dc), get_word_debug(0x10de), get_word_debug(0x10e0));
+	jit_lowvec_write_diag_count++;
+}
+#endif
+
 static bool isdirectjit (void)
 {
 	return currprefs.cachesize && !currprefs.comptrustbyte;
@@ -4325,6 +4342,9 @@ uae_u32 memory_get_byte(uaecptr addr)
 
 void memory_put_long(uaecptr addr, uae_u32 v)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, v, 4);
+#endif
 	addrbank *ab = &get_mem_bank(addr);
 	if (!ab->baseaddr_direct_w) {
 		call_mem_put_func(ab->lput, addr, v);
@@ -4338,6 +4358,9 @@ void memory_put_long(uaecptr addr, uae_u32 v)
 }
 void memory_put_word(uaecptr addr, uae_u32 v)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, v, 2);
+#endif
 	addrbank *ab = &get_mem_bank(addr);
 	if (!ab->baseaddr_direct_w) {
 		call_mem_put_func(ab->wput, addr, v);
@@ -4351,6 +4374,9 @@ void memory_put_word(uaecptr addr, uae_u32 v)
 }
 void memory_put_byte(uaecptr addr, uae_u32 v)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, v, 1);
+#endif
 	addrbank *ab = &get_mem_bank(addr);
 	if (!ab->baseaddr_direct_w) {
 		call_mem_put_func(ab->bput, addr, v);
