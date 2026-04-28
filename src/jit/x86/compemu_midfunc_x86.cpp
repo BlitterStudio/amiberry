@@ -1401,9 +1401,10 @@ MIDFUNC(3,mov_l_brR,(W4 d, RR4 s, IMM offset))
 	CLOBBER_MOV;
 	s=readreg_offset(s,4);
 #if X86_TARGET_64BIT
-	/* R_MEMSTART already holds natmem_offset, so strip MEMBaseDiff
-	   from offset — only pass the accumulated register offset. */
-	offset=get_offset(sreg);
+	/* R_MEMSTART already holds natmem_offset, so strip only MEMBaseDiff
+	   while preserving the caller's displacement (for example vector
+	   offsets such as MEMBaseDiff + trapno * 4). */
+	offset=offset - MEMBaseDiff + get_offset(sreg);
 #else
 	offset+=get_offset(sreg);
 #endif
@@ -1428,7 +1429,7 @@ MIDFUNC(3,mov_w_brR,(W2 d, RR4 s, IMM offset))
 	remove_offset(d,-1);
 	s=readreg_offset(s,4);
 #if X86_TARGET_64BIT
-	offset=get_offset(sreg);
+	offset=offset - MEMBaseDiff + get_offset(sreg);
 #else
 	offset+=get_offset(sreg);
 #endif
@@ -1453,7 +1454,7 @@ MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
 	remove_offset(d,-1);
 	s=readreg_offset(s,4);
 #if X86_TARGET_64BIT
-	offset=get_offset(sreg);
+	offset=offset - MEMBaseDiff + get_offset(sreg);
 #else
 	offset+=get_offset(sreg);
 #endif
@@ -1648,7 +1649,7 @@ MIDFUNC(3,mov_l_bRr,(RR4 d, RR4 s, IMM offset))
 	s=readreg(s,4);
 	d=readreg_offset(d,4);
 #if X86_TARGET_64BIT
-	offset=get_offset(dreg);
+	offset=offset - MEMBaseDiff + get_offset(dreg);
 #else
 	offset+=get_offset(dreg);
 #endif
@@ -1674,7 +1675,7 @@ MIDFUNC(3,mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 	s=readreg(s,2);
 	d=readreg_offset(d,4);
 #if X86_TARGET_64BIT
-	offset=get_offset(dreg);
+	offset=offset - MEMBaseDiff + get_offset(dreg);
 #else
 	offset+=get_offset(dreg);
 #endif
@@ -1697,7 +1698,7 @@ MIDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 	s=readreg(s,1);
 	d=readreg_offset(d,4);
 #if X86_TARGET_64BIT
-	offset=get_offset(dreg);
+	offset=offset - MEMBaseDiff + get_offset(dreg);
 #else
 	offset+=get_offset(dreg);
 #endif
