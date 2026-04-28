@@ -436,6 +436,7 @@ void *jit_vm_acquire(uae_u32 size, int options)
 // %%% BRIAN KING WAS HERE %%%
 extern bool canbang;
 extern int jit_n_addr_unsafe;
+extern int jit_n_addr_bank_unsafe;
 
 #include "../compemu_prefs.cpp"
 
@@ -479,6 +480,16 @@ static inline int distrust_long(void)
 static inline int distrust_addr(void)
 {
 	return distrust_check(currprefs.comptrustnaddr);
+}
+
+static inline bool jit_use_memory_helpers(void)
+{
+	return jit_n_addr_bank_unsafe || (jit_n_addr_unsafe && !canbang);
+}
+
+static inline bool jit_use_compile_fallbacks(void)
+{
+	return jit_n_addr_bank_unsafe;
 }
 
 #else
@@ -3805,7 +3816,7 @@ static inline void writemem(int address, int source, int offset, int size, int t
 void writebyte(int address, int source, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_byte() || jit_n_addr_unsafe)
+	if ((special_mem & S_WRITE) || distrust_byte() || jit_use_memory_helpers())
 		writemem_special(address, source, 5 * SIZEOF_VOID_P, 1, tmp);
 	else
 #endif
@@ -3816,7 +3827,7 @@ static inline void writeword_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_word() || jit_n_addr_unsafe)
+	if ((special_mem & S_WRITE) || distrust_word() || jit_use_memory_helpers())
 		writemem_special(address, source, 4 * SIZEOF_VOID_P, 2, tmp);
 	else
 #endif
@@ -3837,7 +3848,7 @@ static inline void writelong_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_long() || jit_n_addr_unsafe)
+	if ((special_mem & S_WRITE) || distrust_long() || jit_use_memory_helpers())
 		writemem_special(address, source, 3 * SIZEOF_VOID_P, 4, tmp);
 	else
 #endif
@@ -3972,7 +3983,7 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 void readbyte(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_byte() || jit_n_addr_unsafe)
+	if ((special_mem & S_READ) || distrust_byte() || jit_use_memory_helpers())
 		readmem_special(address, dest, 2 * SIZEOF_VOID_P, 1, tmp);
 	else
 #endif
@@ -3982,7 +3993,7 @@ void readbyte(int address, int dest, int tmp)
 void readword(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_word() || jit_n_addr_unsafe)
+	if ((special_mem & S_READ) || distrust_word() || jit_use_memory_helpers())
 		readmem_special(address, dest, 1 * SIZEOF_VOID_P, 2, tmp);
 	else
 #endif
@@ -3992,7 +4003,7 @@ void readword(int address, int dest, int tmp)
 void readlong(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_long() || jit_n_addr_unsafe)
+	if ((special_mem & S_READ) || distrust_long() || jit_use_memory_helpers())
 		readmem_special(address, dest, 0 * SIZEOF_VOID_P, 4, tmp);
 	else
 #endif
@@ -4054,7 +4065,7 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	get_n_addr(address,dest,tmp);
 #else
 #ifdef UAE
-	if (special_mem || distrust_addr() || jit_n_addr_unsafe) {
+	if (special_mem || distrust_addr() || jit_use_memory_helpers()) {
 		get_n_addr(address,dest,tmp);
 		return;
 	}
@@ -5441,12 +5452,14 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 		liveflags[blocklen]=FLAG_ALL; /* All flags needed afterwards */
+		const bool unsafe_memory_helpers = jit_use_memory_helpers();
+		const bool unsafe_compile_fallbacks = jit_use_compile_fallbacks();
 		bool unsafe_special_mem_block = false;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;
 			uae_u32 op=DO_GET_OPCODE(currpcp);
-			if (jit_n_addr_unsafe && pc_hist[i].specmem)
+			if (unsafe_memory_helpers && pc_hist[i].specmem)
 				unsafe_special_mem_block = true;
 
 #if USE_CHECKSUM_INFO
@@ -5566,17 +5579,17 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compop_func **comptbl;
 				uae_u32 opcode=DO_GET_OPCODE(pc_hist[i].location);
 				needed_flags=(liveflags[i+1] & prop[opcode].set_flags);
-				const bool unsafe_dbcc = jit_n_addr_unsafe && is_dbcc_opcode(opcode);
+				const bool unsafe_dbcc = unsafe_compile_fallbacks && is_dbcc_opcode(opcode);
 				const bool unsafe_cmp_w_an_postinc_dn =
-					jit_n_addr_unsafe && is_cmp_w_an_postinc_dn_opcode(opcode);
-				const bool unsafe_control_flow = jit_n_addr_unsafe && prop[opcode].cflow != fl_normal && !unsafe_dbcc;
-				const bool unsafe_flags = jit_n_addr_unsafe && prop[opcode].set_flags &&
+					unsafe_compile_fallbacks && is_cmp_w_an_postinc_dn_opcode(opcode);
+				const bool unsafe_control_flow = unsafe_compile_fallbacks && prop[opcode].cflow != fl_normal && !unsafe_dbcc;
+				const bool unsafe_flags = unsafe_compile_fallbacks && prop[opcode].set_flags &&
 					!unsafe_cmp_w_an_postinc_dn;
-				if (jit_n_addr_unsafe)
+				if (unsafe_compile_fallbacks)
 					needed_flags=prop[opcode].set_flags;
 #ifdef UAE
 				special_mem=pc_hist[i].specmem;
-				if (!jit_n_addr_unsafe && !needed_flags && currprefs.compnf)
+				if (!unsafe_compile_fallbacks && !needed_flags && currprefs.compnf)
 #else
 				if (!needed_flags)
 #endif
@@ -5636,7 +5649,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 					comptbl[opcode](opcode);
 					freescratch();
-					if (!jit_n_addr_unsafe && !(liveflags[i+1] & FLAG_CZNV)) {
+					if (!unsafe_compile_fallbacks && !(liveflags[i+1] & FLAG_CZNV)) {
 						/* We can forget about flags */
 						dont_care_flags();
 					}
@@ -5736,7 +5749,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					raw_inc_sp(4);
 #endif
 
-					if (jit_n_addr_unsafe && unsafe_control_flow) {
+					if (unsafe_compile_fallbacks && unsafe_control_flow) {
 #ifdef UAE
 						raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
 #endif
