@@ -5723,6 +5723,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					raw_inc_sp(4);
 #endif
 
+					if (jit_n_addr_unsafe && prop[opcode].cflow != fl_normal) {
+#ifdef UAE
+						raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
+#endif
+						compemu_raw_jmp(JITPTR popall_do_nothing);
+					}
+
 					if (i < blocklen - 1) {
 						uae_u8* branchadd;
 
