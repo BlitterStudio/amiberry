@@ -878,7 +878,8 @@ LONG WINAPI EvalException(LPEXCEPTION_POINTERS info)
 	}
 	if (currprefs.comp_catchfault) {
 		// setup fake exception
-		exception2_setup(regs.opcode, uae_p32(address) - uae_p32(NATMEM_OFFSET), info->ExceptionRecord->ExceptionInformation[0] == 0, 1, regs.s ? 4 : 0);
+		uae_u32 amiga_addr = (uae_u32)(address - (uintptr_t)NATMEM_OFFSET);
+		exception2_setup(regs.opcode, amiga_addr, info->ExceptionRecord->ExceptionInformation[0] == 0, 1, regs.s ? 4 : 0);
 		return EXCEPTION_EXECUTE_HANDLER;
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
