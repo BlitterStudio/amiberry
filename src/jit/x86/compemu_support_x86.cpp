@@ -5841,8 +5841,17 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				/* Let's find out where next_handler is... */
 				if (was_comp && isinreg(PC_P)) {
 					r=live.state[PC_P].realreg;
-					compemu_raw_and_l_ri(r,TAGMASK);
-					int r2 = (r==0) ? 1 : 0;
+#if X86_TARGET_64BIT
+					int rtag = (r != R10_INDEX) ? R10_INDEX : R11_INDEX;
+					int r2 = (r != R11_INDEX && rtag != R11_INDEX) ? R11_INDEX : EAX_INDEX;
+#else
+					int rtag = (r != EAX_INDEX) ? EAX_INDEX : ECX_INDEX;
+					int r2 = (r != ECX_INDEX && rtag != ECX_INDEX) ? ECX_INDEX : EDX_INDEX;
+#endif
+					free_nreg(rtag);
+					free_nreg(r2);
+					compemu_raw_mov_l_rr(rtag,r);
+					compemu_raw_and_l_ri(rtag,TAGMASK);
 #if X86_TARGET_64BIT
 					raw_mov_q_ri(r2, JITPTR popall_do_nothing);
 #else
@@ -5850,10 +5859,10 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 #ifdef UAE
 					raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
-					raw_cmov_l_rm_indexed(r2, JITPTR cache_tags,r,sizeof(void *),NATIVE_CC_PL);
+					raw_cmov_l_rm_indexed(r2, JITPTR cache_tags,rtag,sizeof(void *),NATIVE_CC_PL);
 #else
 					compemu_raw_cmp_l_mi8((uintptr)specflags,0);
-					compemu_raw_cmov_l_rm_indexed(r2,(uintptr)cache_tags,r,sizeof(void *),NATIVE_CC_EQ);
+					compemu_raw_cmov_l_rm_indexed(r2,(uintptr)cache_tags,rtag,sizeof(void *),NATIVE_CC_EQ);
 #endif
 					compemu_raw_jmp_r(r2);
 				}
