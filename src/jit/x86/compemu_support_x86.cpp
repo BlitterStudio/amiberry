@@ -1986,6 +1986,15 @@ static inline void adjust_nreg(int r, uintptr val)
 }
 
 #if X86_TARGET_64BIT
+static inline void copy_vreg_nreg(int vreg, int dst, int src)
+{
+	if (vreg == PC_P) {
+		MOVQrr(src, dst);
+	} else {
+		compemu_raw_mov_l_rr(dst, src);
+	}
+}
+
 static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
 {
 	if (!val)
@@ -1997,6 +2006,11 @@ static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
 	}
 }
 #else
+static inline void copy_vreg_nreg(int /* vreg */, int dst, int src)
+{
+	compemu_raw_mov_l_rr(dst, src);
+}
+
 static inline void adjust_vreg_nreg(int /* vreg */, int nreg, uintptr val)
 {
 	adjust_nreg(nreg, val);
@@ -2144,6 +2158,12 @@ static inline void disassociate(int r)
 static inline void set_const(int r, uintptr val)
 {
 	disassociate(r);
+#if X86_TARGET_64BIT
+	/* Guest Dn/An/flag virtual registers are 32-bit M68K values.
+	   PC_P is the only virtual register that may hold a 64-bit host pointer. */
+	if (r != PC_P)
+		val = (uae_u32)val;
+#endif
 	live.state[r].val=val;
 	set_status(r,ISCONST);
 }
@@ -2393,15 +2413,14 @@ static inline void make_exclusive(int r, int size, int spec)
 	live.state[r].realind=nind;
 
 	if (size<live.state[r].validsize) {
+		copy_vreg_nreg(r,nr,rr);
 		if (live.state[r].val) {
-			/* Might as well compensate for the offset now */
+			/* Split first, then compensate for the deferred offset. */
 			adjust_vreg_nreg(r,nr,oldstate.val);
 			live.state[r].val=0;
 			live.state[r].dirtysize=4;
 			set_status(r,DIRTY);
 		}
-		else
-			compemu_raw_mov_l_rr(nr,rr);  /* Make another copy */
 	}
 	unlock2(rr);
 }
@@ -3007,8 +3026,16 @@ static void align_target(uae_u32 a)
 static inline int isinrom(uintptr addr)
 {
 #ifdef UAE
-	return (addr >= uae_p32(kickmem_bank.baseaddr) &&
-			addr < uae_p32(kickmem_bank.baseaddr + 8 * 65536));
+	if (addr >= (uintptr)kickmem_bank.baseaddr &&
+		addr < (uintptr)kickmem_bank.baseaddr + 8 * 65536) {
+		return 1;
+	}
+	if (rtarea_bank.baseaddr &&
+		addr >= (uintptr)rtarea_bank.baseaddr &&
+		addr < (uintptr)rtarea_bank.baseaddr + 65536) {
+		return 1;
+	}
+	return 0;
 #else
 	return ((addr >= (uintptr)ROMBaseHost) && (addr < (uintptr)ROMBaseHost + ROMSize));
 #endif
@@ -4076,6 +4103,7 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 		int hw_dest = writereg(dest, 4);
 		compemu_raw_mov_l_rr(hw_dest, hw_address);
 		ADDQrr(R_MEMSTART, hw_dest);
+		ANDQir((IMM)~1, hw_dest);
 		unlock2(hw_dest);
 		unlock2(hw_address);
 		forget_about(tmp);
@@ -5454,10 +5482,10 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		liveflags[blocklen]=FLAG_ALL; /* All flags needed afterwards */
 		const bool unsafe_memory_helpers = jit_use_memory_helpers();
 		const bool unsafe_compile_fallbacks = jit_use_compile_fallbacks();
-		const bool high_natmem_helper_rom_block =
-			unsafe_memory_helpers && !unsafe_compile_fallbacks &&
+		const bool high_natmem_rom_block =
+			jit_n_addr_unsafe && !jit_n_addr_bank_unsafe &&
 			isinrom((uintptr)pc_hist[0].location) != 0;
-		bool unsafe_special_mem_block = high_natmem_helper_rom_block;
+		bool unsafe_special_mem_block = high_natmem_rom_block;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;

@@ -1387,7 +1387,7 @@ MIDFUNC(3,mov_b_rR,(W1 d, RR4 s, IMM offset))
 }
 
 /* read the long at the address contained in s+offset and store in d */
-MIDFUNC(3,mov_l_brR,(W4 d, RR4 s, IMM offset))
+MIDFUNC(3,mov_l_brR,(W4 d, RR4 s, IMPTR offset))
 {
 	int sreg=s;
 #if !X86_TARGET_64BIT
@@ -1411,13 +1411,13 @@ MIDFUNC(3,mov_l_brR,(W4 d, RR4 s, IMM offset))
 #endif
 	d=writereg(d,4);
 
-	raw_mov_l_brR(d,s,offset);
+	raw_mov_l_brR(d,s,(IMM)offset);
 	unlock2(d);
 	unlock2(s);
 }
 
 /* read the word at the address contained in s+offset and store in d */
-MIDFUNC(3,mov_w_brR,(W2 d, RR4 s, IMM offset))
+MIDFUNC(3,mov_w_brR,(W2 d, RR4 s, IMPTR offset))
 {
 	int sreg=s;
 #if !X86_TARGET_64BIT
@@ -1436,13 +1436,13 @@ MIDFUNC(3,mov_w_brR,(W2 d, RR4 s, IMM offset))
 #endif
 	d=writereg(d,2);
 
-	raw_mov_w_brR(d,s,offset);
+	raw_mov_w_brR(d,s,(IMM)offset);
 	unlock2(d);
 	unlock2(s);
 }
 
 /* read the word at the address contained in s+offset and store in d */
-MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
+MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMPTR offset))
 {
 	int sreg=s;
 #if !X86_TARGET_64BIT
@@ -1461,7 +1461,7 @@ MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
 #endif
 	d=writereg(d,1);
 
-	raw_mov_b_brR(d,s,offset);
+	raw_mov_b_brR(d,s,(IMM)offset);
 	unlock2(d);
 	unlock2(s);
 }
@@ -1636,7 +1636,7 @@ MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
 }
 
 /* write d to the long at the address contained in s+offset */
-MIDFUNC(3,mov_l_bRr,(RR4 d, RR4 s, IMM offset))
+MIDFUNC(3,mov_l_bRr,(RR4 d, RR4 s, IMPTR offset))
 {
 	int dreg=d;
 #if !X86_TARGET_64BIT
@@ -1655,13 +1655,13 @@ MIDFUNC(3,mov_l_bRr,(RR4 d, RR4 s, IMM offset))
 	offset+=get_offset(dreg);
 #endif
 
-	raw_mov_l_bRr(d,s,offset);
+	raw_mov_l_bRr(d,s,(IMM)offset);
 	unlock2(d);
 	unlock2(s);
 }
 
 /* write the word at the address contained in s+offset and store in d */
-MIDFUNC(3,mov_w_bRr,(RR4 d, RR2 s, IMM offset))
+MIDFUNC(3,mov_w_bRr,(RR4 d, RR2 s, IMPTR offset))
 {
 	int dreg=d;
 
@@ -1680,12 +1680,12 @@ MIDFUNC(3,mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 #else
 	offset+=get_offset(dreg);
 #endif
-	raw_mov_w_bRr(d,s,offset);
+	raw_mov_w_bRr(d,s,(IMM)offset);
 	unlock2(d);
 	unlock2(s);
 }
 
-MIDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMM offset))
+MIDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMPTR offset))
 {
 	int dreg=d;
 #if !X86_TARGET_64BIT
@@ -1703,7 +1703,7 @@ MIDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 #else
 	offset+=get_offset(dreg);
 #endif
-	raw_mov_b_bRr(d,s,offset);
+	raw_mov_b_bRr(d,s,(IMM)offset);
 	unlock2(d);
 	unlock2(s);
 }
@@ -2097,7 +2097,10 @@ MIDFUNC(2,add_l,(RW4 d, RR4 s))
 
 #if X86_TARGET_64BIT
 	if (dreg == PC_P) {
-		ADDQrr(s,d);
+		const int scratch = (d != R11_INDEX && s != R11_INDEX) ? R11_INDEX : R10_INDEX;
+		free_nreg(scratch);
+		raw_sign_extend_32_rr(scratch,s);
+		ADDQrr(scratch,d);
 	} else
 #endif
 	raw_add_l(d,s);
@@ -2204,6 +2207,13 @@ static inline void raw_add_q_ri_ptr(int d, uintptr i)
 		ADDQrr(scratch, d);
 	}
 }
+
+static inline uintptr sign_extend_pc_disp(uintptr i)
+{
+	if (i <= static_cast<uintptr>(0xffffffffULL) && (i & static_cast<uintptr>(0x80000000ULL)))
+		return static_cast<uintptr>(static_cast<uae_s64>(static_cast<uae_s32>(i)));
+	return i;
+}
 #endif
 
 MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
@@ -2213,7 +2223,9 @@ MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
 		return;
 	if (isconst(d) && !needflags) {
 #if X86_TARGET_64BIT
-		if (d == PC_P || i > static_cast<IMPTR>(0xffffffffULL) ||
+		if (d == PC_P) {
+			live.state[d].val += sign_extend_pc_disp(static_cast<uintptr>(i));
+		} else if (i > static_cast<IMPTR>(0xffffffffULL) ||
 			live.state[d].val > static_cast<uintptr>(0xffffffffULL)) {
 			uintptr val = live.state[d].val;
 			if (val <= static_cast<uintptr>(0xffffffffULL) &&
@@ -2238,7 +2250,7 @@ MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
 	d=rmw(d,4,4);
 #if X86_TARGET_64BIT
 	if (dreg == PC_P) {
-		raw_add_q_ri_ptr(d, static_cast<uintptr>(i));
+		raw_add_q_ri_ptr(d, sign_extend_pc_disp(static_cast<uintptr>(i)));
 	} else if (i > static_cast<IMPTR>(0xffffffffULL)) {
 		raw_sign_extend_32_rr(d,d);
 		raw_add_q_ri_ptr(d, static_cast<uintptr>(i));
