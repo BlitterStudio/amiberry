@@ -8012,8 +8012,8 @@ static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool ins
 		write_log(_T("JIT_EX3_DIAG words pc=%04x fault_even=%04x vec3=%08x A7=%08x ISP=%08x USP=%08x\n"),
 			get_word_debug(curpc), get_word_debug(addr & ~1), get_long_debug(regs.vbr + 12),
 			m68k_areg(regs, 7), regs.isp, regs.usp);
-		write_log(_T("JIT_EX3_DIAG state regs.pc=%08x pc_old_v=%08x instr_words=%04x %04x %04x cur_words=%04x %04x %04x\n"),
-			regs.pc, get_virtual_address(regs.pc_oldp),
+		write_log(_T("JIT_EX3_DIAG state regs.pc=%08x pc_oldp=%p instr_words=%04x %04x %04x cur_words=%04x %04x %04x\n"),
+			regs.pc, regs.pc_oldp,
 			get_word_debug(regs.instruction_pc), get_word_debug(regs.instruction_pc + 2), get_word_debug(regs.instruction_pc + 4),
 			get_word_debug(curpc), get_word_debug(curpc + 2), get_word_debug(curpc + 4));
 		exception3_diag_count++;
