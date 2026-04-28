@@ -5559,9 +5559,11 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compop_func **comptbl;
 				uae_u32 opcode=DO_GET_OPCODE(pc_hist[i].location);
 				needed_flags=(liveflags[i+1] & prop[opcode].set_flags);
+				if (jit_n_addr_unsafe)
+					needed_flags=prop[opcode].set_flags;
 #ifdef UAE
 				special_mem=pc_hist[i].specmem;
-				if (!needed_flags && currprefs.compnf)
+				if (!jit_n_addr_unsafe && !needed_flags && currprefs.compnf)
 #else
 				if (!needed_flags)
 #endif
@@ -5621,7 +5623,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 					comptbl[opcode](opcode);
 					freescratch();
-					if (!(liveflags[i+1] & FLAG_CZNV)) {
+					if (!jit_n_addr_unsafe && !(liveflags[i+1] & FLAG_CZNV)) {
 						/* We can forget about flags */
 						dont_care_flags();
 					}
