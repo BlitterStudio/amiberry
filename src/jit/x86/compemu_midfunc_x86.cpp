@@ -821,11 +821,17 @@ MIDFUNC(2,setcc_m,(IMM d, IMM cc))
 
 MIDFUNC(3,cmov_l_rr,(RW4 d, RR4 s, IMM cc))
 {
+	int dreg=d;
 	if (d==s)
 		return;
 	CLOBBER_CMOV;
 	s=readreg(s,4);
 	d=rmw(d,4,4);
+#if X86_TARGET_64BIT
+	if (dreg == PC_P) {
+		CMOVQrr(cc,s,d);
+	} else
+#endif
 	raw_cmov_l_rr(d,s,cc);
 	unlock2(s);
 	unlock2(d);
@@ -1743,6 +1749,17 @@ MIDFUNC(2,mov_l_rr,(W4 d, RR4 s))
 		COMPCALL(mov_l_ri)(d,live.state[s].val);
 		return;
 	}
+#if X86_TARGET_64BIT
+	if (d == PC_P || s == PC_P) {
+		CLOBBER_MOV;
+		s=readreg_offset(s,4);
+		d=writereg(d,4);
+		MOVQrr(s,d);
+		unlock2(d);
+		unlock2(s);
+		return;
+	}
+#endif
 	olds=s;
 	disassociate(d);
 	s=readreg_offset(s,4);

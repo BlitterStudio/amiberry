@@ -2203,8 +2203,8 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		if (live.state[r].status!=UNDEF) {
 			if (isconst(r)) {
 #if X86_TARGET_64BIT
-				if (r == PC_P) {
-					/* PC_P holds a 64-bit host pointer — must use 64-bit load */
+				if (r == PC_P || live.state[r].val > (uintptr)0xffffffff) {
+					/* PC_P and temporary host pointers need the full 64-bit value. */
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
 #endif
@@ -2249,7 +2249,7 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		else {
 			if (live.state[r].status!=UNDEF) {
 #if X86_TARGET_64BIT
-				if (r == PC_P) {
+				if (r == PC_P || live.state[r].val > (uintptr)0xffffffff) {
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
 #endif
