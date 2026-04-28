@@ -5454,12 +5454,15 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		liveflags[blocklen]=FLAG_ALL; /* All flags needed afterwards */
 		const bool unsafe_memory_helpers = jit_use_memory_helpers();
 		const bool unsafe_compile_fallbacks = jit_use_compile_fallbacks();
+		const bool high_natmem_helper_rom_block =
+			unsafe_memory_helpers && !unsafe_compile_fallbacks &&
+			isinrom((uintptr)pc_hist[0].location) != 0;
 		bool unsafe_special_mem_block = false;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;
 			uae_u32 op=DO_GET_OPCODE(currpcp);
-			if (unsafe_memory_helpers && pc_hist[i].specmem)
+			if ((unsafe_compile_fallbacks || high_natmem_helper_rom_block) && pc_hist[i].specmem)
 				unsafe_special_mem_block = true;
 
 #if USE_CHECKSUM_INFO
