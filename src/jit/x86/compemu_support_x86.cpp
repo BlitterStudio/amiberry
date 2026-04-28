@@ -4067,6 +4067,13 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	shrl_l_ri(f,16);   /* The index into the baseaddr bank table */
 	mov_l_rm_indexed(dest,uae_p32(baseaddr),f,SIZEOF_VOID_P); /* FIXME: is SIZEOF_VOID_P correct? */
 	add_l(dest,address);
+#if X86_TARGET_64BIT
+	if (dest == PC_P) {
+		int hw_dest = rmw(dest, 4, 4);
+		ANDQir((IMM)~1, hw_dest);
+		unlock2(hw_dest);
+	} else
+#endif
 	and_l_ri (dest, ~1);
 	forget_about(tmp);
 #endif
