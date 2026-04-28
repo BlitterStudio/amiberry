@@ -17,6 +17,7 @@ import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.ui.theme.AmiberryTheme
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.Dispatchers
@@ -93,8 +94,8 @@ class MainActivity : ComponentActivity() {
 			val category = FileCategory.fromExtension(ext)
 
 			if (ext == "uae") {
-				// Config file: copy to conf dir and launch with it
-				val confDir = File(getExternalFilesDir(null), "conf")
+				// Config file: copy to Configurations dir and launch with it
+				val confDir = File(getExternalFilesDir(null), StoragePaths.CONFIGURATIONS)
 				if (!confDir.exists()) confDir.mkdirs()
 				val targetFile = File(confDir, fileName)
 				try {
@@ -213,7 +214,7 @@ class MainActivity : ComponentActivity() {
 
 		if (children != null && children.isNotEmpty()) {
 			// Directory: create and recurse
-			val targetDir = File(getExternalFilesDir(null), fullAssetPath)
+			val targetDir = File(getExternalFilesDir(null), storagePathForAsset(fullAssetPath))
 			if (!targetDir.exists()) targetDir.mkdirs()
 			for (child in children) {
 				copyAssetFileOrDir(child, fullAssetPath)
@@ -228,17 +229,30 @@ class MainActivity : ComponentActivity() {
 	 * Directories containing user-modifiable files that should not be overwritten
 	 * on version upgrades (users may have customized controller mappings, WHDLoad configs, etc.)
 	 */
-	private val userModifiableDirs = setOf("controllers", "whdboot", "conf")
+	private val userModifiableDirs = StoragePaths.userModifiableAssetDirs
+
+	private fun storagePathForAsset(assetPath: String): String {
+		val topDir = assetPath.substringBefore('/')
+		val remaining = assetPath.substringAfter('/', "")
+		val mappedTopDir = when (topDir) {
+			"controllers" -> StoragePaths.CONTROLLERS
+			"roms" -> StoragePaths.ROMS
+			"whdboot" -> StoragePaths.WHDBOOT
+			else -> topDir
+		}
+		return if (remaining.isEmpty()) mappedTopDir else "$mappedTopDir/$remaining"
+	}
 
 	private fun copyAssetFile(assetPath: String) {
 		try {
-			val outFile = File(getExternalFilesDir(null), assetPath)
+			val storagePath = storagePathForAsset(assetPath)
+			val outFile = File(getExternalFilesDir(null), storagePath)
 
 			// Skip overwriting files in user-modifiable directories if they already exist
 			if (outFile.exists()) {
-				val topDir = assetPath.substringBefore('/')
+				val topDir = storagePath.substringBefore('/')
 				if (topDir in userModifiableDirs) {
-					Log.d(TAG, "Preserving user-modified file: $assetPath")
+					Log.d(TAG, "Preserving user-modified file: $storagePath")
 					return
 				}
 			}
@@ -262,7 +276,7 @@ class MainActivity : ComponentActivity() {
 	 */
 	private fun ensureDirectories() {
 		val base = getExternalFilesDir(null) ?: return
-		listOf("roms", "floppies", "harddrives", "cdroms", "lha", "conf").forEach { dir ->
+		StoragePaths.userContentDirs.forEach { dir ->
 			File(base, dir).let { if (!it.exists()) it.mkdirs() }
 		}
 	}

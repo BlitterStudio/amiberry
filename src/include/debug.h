@@ -353,6 +353,7 @@ extern int get_dma_debug_color(struct dma_rec *dr, int line, uae_u32 *cp);
 #define TRACE_RANGE_PC 4
 #define TRACE_SKIP_LINE 5
 #define TRACE_RAM_PC 6
+#define TRACE_IMMEDIATE 7
 #define TRACE_CHECKONLY 10
 
 #else

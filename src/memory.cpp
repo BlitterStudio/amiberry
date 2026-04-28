@@ -19,6 +19,9 @@
 #include "memory.h"
 #include "rommgr.h"
 #include "zfile.h"
+#ifdef AMIBERRY
+#include "fsdb.h"
+#endif
 #include "custom.h"
 #include "newcpu.h"
 #include "autoconf.h"
@@ -1791,6 +1794,12 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 
 	if (romextfile[0] == '\0')
 		return false;
+#ifdef AMIBERRY
+	if (my_existsdir(romextfile)) {
+		write_log(_T("Extended ROM path '%s' is a directory, ignoring.\n"), romextfile);
+		return false;
+	}
+#endif
 #ifdef ARCADIA
 	if (is_arcadia_rom (romextfile) == ARCADIA_BIOS) {
 		extendedkickmem_type = EXTENDED_ROM_ARCADIA;

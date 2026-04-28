@@ -190,7 +190,7 @@ class ConfigGeneratorTest {
 			chipRam = 4,
 			slowRam = 0,
 			fastRam = 4,
-			romFile = "/roms/kick31.rom",
+			romFile = "/ROMs/kick31.rom",
 			floppy0 = "/disks/game.adf",
 			floppy0Type = 0,
 			soundOutput = "exact",

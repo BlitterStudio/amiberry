@@ -6150,6 +6150,7 @@ static void breakfunc(uae_u32 v)
 	debug_hpos = -1;
 	debug_cycles(2);
 	set_special(SPCFLAG_BRK);
+	trace_mode = TRACE_IMMEDIATE;
 }
 
 void debug_hsync(void)
@@ -6673,6 +6674,7 @@ static void debug_sprite(TCHAR **inptr)
 	int ypose, ypose_ecs;
 	int attach;
 	uae_u64 w1, w2, ww1, ww2;
+	bool detectsize = true;
 	int size = 1, width;
 	int ecs, sh10;
 	int y, i;
@@ -6683,16 +6685,28 @@ static void debug_sprite(TCHAR **inptr)
 	ignore_ws(inptr);
 	addr = readhex(inptr, NULL);
 	ignore_ws(inptr);
-	if (more_params (inptr))
+	if (more_params (inptr)) {
 		size = readhex(inptr, NULL);
+		detectsize = false;
+	}
 	if (size != 1 && size != 2 && size != 4) {
 		addr2 = size;
+		detectsize = true;
 		ignore_ws(inptr);
-		if (more_params(inptr))
+		if (more_params(inptr)) {
 			size = readint(inptr, NULL);
-		if (size != 1 && size != 2 && size != 4)
-			size = 1;
+			detectsize = false;
+		}
 	}
+	if ((size != 1 && size != 2 && size != 4) || detectsize) {
+		size = 1;
+		if (get_word_debug(addr + 2) == 0 && get_word_debug(addr + 4) != 0 && get_word_debug(addr + 6) == 0) {
+			size = 2;
+		} else if (get_word_debug(addr + 2) == 0 && get_word_debug(addr + 4) == 0 && get_word_debug(addr + 6) == 0 && get_word_debug(addr + 8) != 0) {
+			size = 4;
+		}
+	}
+
 	for (;;) {
 		ecs = 0;
 		sh10 = 0;

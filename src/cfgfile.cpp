@@ -1103,6 +1103,11 @@ void cfgfile_target_dwrite_escape(struct zfile *f, const TCHAR *option, const TC
 
 static void cfgfile_write_rom (struct zfile *f, struct multipath *mp, const TCHAR *romfile, const TCHAR *name)
 {
+#ifdef AMIBERRY
+	if (!romfile || !romfile[0])
+		return;
+#endif
+
 	TCHAR *str = cfgfile_subst_path (mp->path[0], UNEXPANDED, romfile);
 	str = cfgfile_put_multipath (mp, str);
 	cfgfile_write_str (f, name, str);

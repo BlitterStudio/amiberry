@@ -87,7 +87,7 @@ static inline int gfx_platform_save_png(const SDL_Surface* surface, const std::s
 	auto* const pix = static_cast<unsigned char*>(surface->pixels);
 	unsigned char writeBuffer[1920 * 3]{};
 
-	auto* const f = fopen(path.c_str(), "wbe");
+	auto* const f = uae_fopen(path.c_str(), "wbe");
 	if (!f)
 	{
 		write_log(_T("Failed to open file for writing: %s\n"), path.c_str());

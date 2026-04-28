@@ -2117,7 +2117,6 @@ static void init_hz_reset(void)
 	vsync_lines = linear_vpos;
 	vsync_linecnt = 0;
 	vb_end_detect = true;
-	init_hz();
 }
 
 void init_hz(void)
@@ -4382,7 +4381,7 @@ void blitter_done_notify(void)
 		}
 		if (debug_copper) {
 			int hpos = current_hpos();
-			record_copper_blitwait(cop_state.ip - 4, hpos, vpos);
+			record_copper_blitwait(cop_state.ip - 2, hpos, vpos);
 		}
 	}
 #endif
@@ -6832,6 +6831,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	check_harddis();
 
 	init_hz_reset();
+	init_hz();
 
 	audio_reset();
 	if (!isrestore()) {
@@ -7710,6 +7710,7 @@ void restore_custom_finish(void)
 		changed_prefs.genlock = currprefs.genlock = 1;
 		write_log(_T("statefile with BPLCON0 ERSY set without Genlock. Enabling Genlock.\n"));
 	}
+	init_hz_reset();
 }
 
 void restore_custom_start(void)
@@ -8274,6 +8275,12 @@ uae_u8 *restore_custom_extra(uae_u8 *src)
 	currprefs.cs_agnusmodel = changed_prefs.cs_agnusmodel = RBB;
 	currprefs.cs_agnussize = changed_prefs.cs_agnussize = RBB;
 	currprefs.cs_denisemodel = changed_prefs.cs_denisemodel = RBB;
+
+	// workaround for old savestates that had A1000 chipset extra with AGA mode configured.
+	if (currprefs.cs_agnusmodel = AGNUSMODEL_A1000 && aga_mode && currprefs.cs_compatible == CP_A1000) {
+		currprefs.cs_agnusmodel = changed_prefs.cs_agnusmodel = AGNUSMODEL_AGA;
+		currprefs.cs_compatible = changed_prefs.cs_compatible = CP_A1200;
+	}
 
 	return src;
 }
@@ -9042,7 +9049,7 @@ static void process_copper(struct rgabuf *r)
 
 #ifdef DEBUGGER
 		if (debug_copper && cop_state.irload2) {
-			record_copper(cop_state.ip - 4, cop_state.ip, cop_state.ir[0], cop_state.ir[1], agnus_hpos, vpos);
+			record_copper(cop_state.ip - 2, cop_state.ip, cop_state.ir[0], cop_state.ir[1], agnus_hpos, vpos);
 		}
 #endif
 	}
@@ -9058,13 +9065,13 @@ static void process_copper(struct rgabuf *r)
 			cop_state.strobe = 0;
 #ifdef DEBUGGER
 			if (debug_copper) {
-				record_copper(previp - 4, cop_state.ip, cop_state.ir[0], cop_state.ir[1], agnus_hpos, vpos);
+				record_copper(previp - 2, cop_state.ip, cop_state.ir[0], cop_state.ir[1], agnus_hpos, vpos);
 			}
 #endif
 		} else {
 #ifdef DEBUGGER
 			if (debug_copper && cop_state.irload2) {
-				record_copper(cop_state.ip - 4, cop_state.ip, cop_state.ir[0], cop_state.ir[1], agnus_hpos, vpos);
+				record_copper(cop_state.ip - 2, cop_state.ip, cop_state.ir[0], cop_state.ir[1], agnus_hpos, vpos);
 			}
 		}
 #endif
