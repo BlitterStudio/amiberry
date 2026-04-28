@@ -5709,8 +5709,7 @@ void execute_normal(void)
 		const uae_u32 before_regs_pc = r->pc;
 		const int before_branch_cc = ((beforepc >= 0x00f81c40 && beforepc < 0x00f81c80) &&
 			((get_word_debug(beforepc) & 0xf000) == 0x6000)) ? cctrue((get_word_debug(beforepc) >> 8) & 15) : -1;
-		const uae_u32 before_flags_cznv = regflags.cznv;
-		const uae_u32 before_flags_nzcv = regflags.nzcv;
+		const uae_u32 before_flags_cznv = GET_CZNV();
 		const uae_u32 before_flags_x = regflags.x;
 #endif
 		r->opcode = get_jit_opcode();
@@ -5735,9 +5734,9 @@ void execute_normal(void)
 			const uaecptr afterpc = m68k_getpc();
 			if ((beforepc >= 0x00f81c40 && beforepc < 0x00f81c80) ||
 				(afterpc >= 0x00f81c40 && afterpc < 0x00f81c80)) {
-				write_log(_T("JIT_ROMWIN_STEP #%d opcode=%04x before=%08x after=%08x cc=%d flags=%08x/%08x/%08x->%08x/%08x/%08x D0=%08x D1=%08x A0=%08x A1=%08x A6=%08x A7=%08x words=%04x %04x %04x\n"),
+				write_log(_T("JIT_ROMWIN_STEP #%d opcode=%04x before=%08x after=%08x cc=%d flags=%08x/%08x->%08x/%08x D0=%08x D1=%08x A0=%08x A1=%08x A6=%08x A7=%08x words=%04x %04x %04x\n"),
 					romwindow_step_diag_count, r->opcode, beforepc, afterpc, before_branch_cc,
-					before_flags_cznv, before_flags_nzcv, before_flags_x, regflags.cznv, regflags.nzcv, regflags.x,
+					before_flags_cznv, before_flags_x, GET_CZNV(), regflags.x,
 					m68k_dreg(*r, 0), m68k_dreg(*r, 1), m68k_areg(*r, 0), m68k_areg(*r, 1),
 					m68k_areg(*r, 6), m68k_areg(*r, 7),
 					get_word_debug(beforepc), get_word_debug(beforepc + 2), get_word_debug(beforepc + 4));
