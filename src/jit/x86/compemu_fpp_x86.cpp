@@ -730,11 +730,16 @@ void comp_ftrapcc_opp (uae_u32 /* opcode */, uaecptr /* oldpc */)
 void comp_fbcc_opp(uae_u32 opcode)
 {
 	uae_u32 start_68k_offset = m68k_pc_offset;
-	uae_u32 off;
+	uae_s32 off;
 	uintptr v1;
 	uintptr v2;
 	int cc;
 
+	if (!currprefs.compfpu)
+	{
+		FAIL(1);
+		return;
+	}
 	if (jit_disable.fbcc)
 	{
 		FAIL(1);
@@ -750,9 +755,16 @@ void comp_fbcc_opp(uae_u32 opcode)
 		off = (uae_s32) (uae_s16) comp_get_iword((m68k_pc_offset += 2) - 2);
 	} else
 	{
-		off = comp_get_ilong((m68k_pc_offset += 4) - 4);
+		off = (uae_s32) comp_get_ilong((m68k_pc_offset += 4) - 4);
 	}
-	mov_l_ri(S1, JITPTR (comp_pc_p + off - (m68k_pc_offset - start_68k_offset)));
+	/* Match the ARM64 FBcc fix: keep the signed displacement separate
+	 * from the 64-bit host pointer so non-PC_P set_const paths do not
+	 * lose pointer width or zero-extend backward branches. */
+	{
+		uae_s32 displacement = off - (uae_s32)(m68k_pc_offset - start_68k_offset);
+		mov_l_ri(S1, (uintptr)(uae_s32)displacement);
+		add_l_ri(S1, (uintptr)comp_pc_p);
+	}
 	mov_l_ri(PC_P, JITPTR comp_pc_p);
 
 	/* Now they are both constant. Might as well fold in m68k_pc_offset */
