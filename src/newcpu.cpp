@@ -3328,9 +3328,16 @@ static void Exception_normal (int nr)
 				regs.mmu_fault_addr = last_fault_for_exception_3;
 				Exception_build_stack_frame(oldpc, currpc, ssw, vector_nr, 0x08);
 				used_exception_build_stack_frame = true;
-			}
+		}
 #ifdef DEBUGGER
 			write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, regs.instruction_pc, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
+#endif
+#ifdef JIT
+			if (currprefs.cachesize && nr == 3) {
+				write_log(_T("JIT_EX3_FRAME fault=%08x stackpc=%08x currpc=%08x nextpc=%08x vector=%08x A7=%08x SR=%04x pc_p=%p\n"),
+					last_fault_for_exception_3, regs.instruction_pc, currpc, nextpc,
+					get_long_debug(regs.vbr + 4 * vector_nr), m68k_areg(regs, 7), regs.sr, regs.pc_p);
+			}
 #endif
 		} else if (regs.m && interrupt) { /* M + Interrupt */
 			m68k_areg (regs, 7) -= 2;
@@ -7975,6 +7982,7 @@ uae_u8 *restore_mmu(uae_u8 *src)
 
 static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool instructionaccess, bool notinstruction, uaecptr pc, int size, int fc, uae_u16 secondarysr)
 {
+	static int exception3_diag_count;
 	if (currprefs.cpu_model >= 68040)
 		addr &= ~1;
 	if (currprefs.cpu_model >= 68020) {
@@ -7994,6 +8002,19 @@ static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool ins
 	last_notinstruction_for_exception_3 = notinstruction;
 	last_size_for_exception_3 = size;
 	last_sr_for_exception3 = secondarysr;
+#ifdef JIT
+	if (currprefs.cachesize && exception3_diag_count < 8) {
+		uaecptr curpc = m68k_getpc();
+		write_log(_T("JIT_EX3_DIAG #%d opcode=%08x fault=%08x addrpc=%08x curpc=%08x instrpc=%08x size=%d fc=%d write=%d instr=%d notinstr=%d sr=%04x s=%d m=%d pc_p=%p pc_oldp=%p\n"),
+			exception3_diag_count, opcode, addr, last_addr_for_exception_3, curpc, regs.instruction_pc,
+			size, last_fc_for_exception_3, writeaccess ? 1 : 0, instructionaccess ? 1 : 0, notinstruction ? 1 : 0,
+			regs.sr, regs.s ? 1 : 0, regs.m ? 1 : 0, regs.pc_p, regs.pc_oldp);
+		write_log(_T("JIT_EX3_DIAG words pc=%04x fault_even=%04x vec3=%08x A7=%08x ISP=%08x USP=%08x\n"),
+			get_word_debug(curpc), get_word_debug(addr & ~1), get_long_debug(regs.vbr + 12),
+			m68k_areg(regs, 7), regs.isp, regs.usp);
+		exception3_diag_count++;
+	}
+#endif
 	Exception (3);
 #if EXCEPTION3_DEBUGGER
 	activate_debugger();
