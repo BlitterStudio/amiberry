@@ -5682,6 +5682,16 @@ void execute_normal(void)
 		/* Take note: This is the do-it-normal loop */
 		r->opcode = get_jit_opcode();
 
+#if defined(JIT) && defined(CPU_x86_64)
+		/* High x86-64 natmem disables direct JIT memory access, which
+		 * makes comptrust force special_mem_default to S_READ|S_WRITE|S_N_ADDR.
+		 * Keep the history field reserved for actual bank special flags;
+		 * codegen still uses distrust_* and jit_use_memory_helpers() for
+		 * the default helper-memory path. */
+		if (jit_n_addr_unsafe && !jit_n_addr_bank_unsafe && !canbang) {
+			special_mem = 0;
+		} else
+#endif
 		special_mem = special_mem_default;
 		pc_hist[blocklen].location = (uae_u16*)r->pc_p;
 

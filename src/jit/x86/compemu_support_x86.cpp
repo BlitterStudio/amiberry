@@ -5457,12 +5457,12 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		const bool high_natmem_helper_rom_block =
 			unsafe_memory_helpers && !unsafe_compile_fallbacks &&
 			isinrom((uintptr)pc_hist[0].location) != 0;
-		bool unsafe_special_mem_block = false;
+		bool unsafe_special_mem_block = high_natmem_helper_rom_block;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;
 			uae_u32 op=DO_GET_OPCODE(currpcp);
-			if ((unsafe_compile_fallbacks || high_natmem_helper_rom_block) && pc_hist[i].specmem)
+			if ((unsafe_compile_fallbacks || unsafe_memory_helpers) && pc_hist[i].specmem)
 				unsafe_special_mem_block = true;
 
 #if USE_CHECKSUM_INFO
