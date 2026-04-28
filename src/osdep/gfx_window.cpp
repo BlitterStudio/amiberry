@@ -373,10 +373,8 @@ int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 				gui_led(LED_DF0 + i, 0, -1);
 		}
 	}
-	if (upd > 0) {
+	if ((upd > 0) && isfocus()) {
 		inputdevice_acquire(TRUE);
-		if (!isfocus())
-			inputdevice_unacquire(input);
 	}
 
 	if (startpaused)
