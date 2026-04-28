@@ -645,6 +645,16 @@ static inline bool is_const_jump(uae_u32 opcode)
 	return (prop[opcode].cflow == fl_const_jump);
 }
 
+static inline bool is_dbcc_opcode(uae_u32 opcode)
+{
+	return (opcode & 0xf0f8) == 0x50c8;
+}
+
+static inline bool is_cmp_w_an_postinc_dn_opcode(uae_u32 opcode)
+{
+	return (opcode & 0xf1f8) == 0xb058;
+}
+
 #if 0
 static inline bool may_trap(uae_u32 opcode)
 {
@@ -5437,10 +5447,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 		liveflags[blocklen]=FLAG_ALL; /* All flags needed afterwards */
+		bool unsafe_special_mem_block = false;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;
 			uae_u32 op=DO_GET_OPCODE(currpcp);
+			if (jit_n_addr_unsafe && pc_hist[i].specmem)
+				unsafe_special_mem_block = true;
 
 #if USE_CHECKSUM_INFO
 			trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
@@ -5512,7 +5525,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			compemu_raw_sub_l_mi(JITPTR &(bi->count),1);
 			compemu_raw_jl(JITPTR popall_recompile_block);
 		}
-		if (optlev==0) { /* No need to actually translate */
+		if (optlev==0 || unsafe_special_mem_block) { /* No need to actually translate */
 			/* Execute normally without keeping stats */
 #if X86_TARGET_64BIT
 			raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[0].location);
@@ -5559,9 +5572,12 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compop_func **comptbl;
 				uae_u32 opcode=DO_GET_OPCODE(pc_hist[i].location);
 				needed_flags=(liveflags[i+1] & prop[opcode].set_flags);
-				const bool unsafe_control_flow = jit_n_addr_unsafe && prop[opcode].cflow != fl_normal;
-				const bool unsafe_flags = jit_n_addr_unsafe &&
-					(prop[opcode].set_flags || prop[opcode].use_flags);
+				const bool unsafe_dbcc = jit_n_addr_unsafe && is_dbcc_opcode(opcode);
+				const bool unsafe_cmp_w_an_postinc_dn =
+					jit_n_addr_unsafe && is_cmp_w_an_postinc_dn_opcode(opcode);
+				const bool unsafe_control_flow = jit_n_addr_unsafe && prop[opcode].cflow != fl_normal && !unsafe_dbcc;
+				const bool unsafe_flags = jit_n_addr_unsafe && prop[opcode].set_flags &&
+					!unsafe_cmp_w_an_postinc_dn;
 				if (jit_n_addr_unsafe)
 					needed_flags=prop[opcode].set_flags;
 #ifdef UAE
@@ -5726,7 +5742,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					raw_inc_sp(4);
 #endif
 
-					if (jit_n_addr_unsafe && (unsafe_control_flow || unsafe_flags)) {
+					if (jit_n_addr_unsafe && unsafe_control_flow) {
 #ifdef UAE
 						raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
 #endif
