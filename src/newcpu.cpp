@@ -5685,14 +5685,47 @@ void execute_normal(void)
 	blocklen = 0;
 	start_pc_p = r->pc_oldp;
 	start_pc = r->pc;
+#ifdef JIT
+	static int lowpc_entry_diag_count;
+	static int lowpc_step_diag_count;
+	if (currprefs.cachesize && jit_n_addr_unsafe) {
+		const uaecptr entrypc = m68k_getpc();
+		if (entrypc < 0x2000 && lowpc_entry_diag_count < 8) {
+			write_log(_T("JIT_LOWPC_ENTRY #%d pc=%08x regs.pc=%08x instrpc=%08x pc_p=%p pc_oldp=%p A7=%08x SR=%04x words=%04x %04x %04x\n"),
+				lowpc_entry_diag_count, entrypc, r->pc, r->instruction_pc, r->pc_p, r->pc_oldp,
+				m68k_areg(*r, 7), r->sr,
+				get_word_debug(entrypc), get_word_debug(entrypc + 2), get_word_debug(entrypc + 4));
+			lowpc_entry_diag_count++;
+		}
+	}
+#endif
 	for (;;) {
 		/* Take note: This is the do-it-normal loop */
+#ifdef JIT
+		const uaecptr beforepc = m68k_getpc();
+		uae_u8 *before_pc_p = r->pc_p;
+		uae_u8 *before_pc_oldp = r->pc_oldp;
+		const uae_u32 before_regs_pc = r->pc;
+#endif
 		r->opcode = get_jit_opcode();
 
 		special_mem = special_mem_default;
 		pc_hist[blocklen].location = (uae_u16*)r->pc_p;
 
 		(*cpufunctbl[r->opcode])(r->opcode);
+#ifdef JIT
+		if (currprefs.cachesize && jit_n_addr_unsafe && lowpc_step_diag_count < 16) {
+			const uaecptr afterpc = m68k_getpc();
+			if (beforepc < 0x2000 || afterpc < 0x2000) {
+				write_log(_T("JIT_LOWPC_STEP #%d opcode=%04x before=%08x after=%08x regs.pc=%08x/%08x instrpc=%08x pc_p=%p/%p pc_oldp=%p/%p words_before=%04x %04x %04x words_after=%04x %04x %04x\n"),
+					lowpc_step_diag_count, r->opcode, beforepc, afterpc, before_regs_pc, r->pc,
+					r->instruction_pc, before_pc_p, r->pc_p, before_pc_oldp, r->pc_oldp,
+					get_word_debug(beforepc), get_word_debug(beforepc + 2), get_word_debug(beforepc + 4),
+					get_word_debug(afterpc), get_word_debug(afterpc + 2), get_word_debug(afterpc + 4));
+				lowpc_step_diag_count++;
+			}
+		}
+#endif
 
 		cpu_cycles = 4 * CYCLE_UNIT;
 
