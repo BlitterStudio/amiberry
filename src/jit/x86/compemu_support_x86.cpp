@@ -5594,7 +5594,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 				failure = 1; // gb-- defaults to failure state
-				if (comptbl[opcode] && optlev>1 && !(jit_n_addr_unsafe && end_block(opcode))) {
+				if (comptbl[opcode] && optlev>1 && !(jit_n_addr_unsafe && prop[opcode].cflow != fl_normal)) {
 					failure=0;
 					if (!was_comp) {
 						comp_pc_p=(uae_u8*)pc_hist[i].location;
