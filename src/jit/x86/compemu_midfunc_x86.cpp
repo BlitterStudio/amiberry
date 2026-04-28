@@ -2185,12 +2185,47 @@ MIDFUNC(2,sub_b_ri,(RW1 d, IMM i))
 	unlock2(d);
 }
 
+#if X86_TARGET_64BIT
+static inline bool x86_imm_fits_s32(uintptr i)
+{
+	const intptr_t si = static_cast<intptr_t>(i);
+	return si >= static_cast<intptr_t>(-2147483647 - 1) &&
+		si <= static_cast<intptr_t>(2147483647);
+}
+
+static inline void raw_add_q_ri_ptr(int d, uintptr i)
+{
+	if (x86_imm_fits_s32(i)) {
+		ADDQir(static_cast<IMM>(i), d);
+	} else {
+		const int scratch = d != R11_INDEX ? R11_INDEX : R10_INDEX;
+		free_nreg(scratch);
+		MOVQir(i, scratch);
+		ADDQrr(scratch, d);
+	}
+}
+#endif
+
 MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
 {
+	int dreg=d;
 	if (!i && !needflags)
 		return;
 	if (isconst(d) && !needflags) {
-		live.state[d].val+=i;
+#if X86_TARGET_64BIT
+		if (d == PC_P || i > static_cast<IMPTR>(0xffffffffULL) ||
+			live.state[d].val > static_cast<uintptr>(0xffffffffULL)) {
+			uintptr val = live.state[d].val;
+			if (val <= static_cast<uintptr>(0xffffffffULL) &&
+				i > static_cast<IMPTR>(0xffffffffULL)) {
+				val = static_cast<uintptr>(static_cast<uae_s64>(static_cast<uae_s32>(val)));
+			}
+			live.state[d].val = val + i;
+		} else
+#endif
+		{
+			live.state[d].val=static_cast<uae_u32>(live.state[d].val + i);
+		}
 		return;
 	}
 #if USE_OFFSET
@@ -2201,6 +2236,14 @@ MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
 #endif
 	CLOBBER_ADD;
 	d=rmw(d,4,4);
+#if X86_TARGET_64BIT
+	if (dreg == PC_P) {
+		raw_add_q_ri_ptr(d, static_cast<uintptr>(i));
+	} else if (i > static_cast<IMPTR>(0xffffffffULL)) {
+		raw_sign_extend_32_rr(d,d);
+		raw_add_q_ri_ptr(d, static_cast<uintptr>(i));
+	} else
+#endif
 	raw_add_l_ri(d,(IMM)i);
 	unlock2(d);
 }
