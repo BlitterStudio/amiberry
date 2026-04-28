@@ -731,14 +731,9 @@ void comp_fbcc_opp(uae_u32 opcode)
 {
 	uae_u32 start_68k_offset = m68k_pc_offset;
 	uae_u32 off;
-	uae_u32 v1;
-	uae_u32 v2;
+	uintptr v1;
+	uintptr v2;
 	int cc;
-
-	// comp_pc_p points into natmem, which is allocated with UAE_VM_32BIT
-	// (low 4GB) on x86-64. This is independent of PIE/ASLR — natmem
-	// placement uses explicit mmap hints, not .text/.data ASLR.
-	assert((uintptr) comp_pc_p <= 0xffffffffUL);
 
 	if (jit_disable.fbcc)
 	{

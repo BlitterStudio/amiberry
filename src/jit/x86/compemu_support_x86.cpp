@@ -1962,12 +1962,30 @@ static inline int isinreg(int r)
 	return live.state[r].status==CLEAN || live.state[r].status==DIRTY;
 }
 
-static inline void adjust_nreg(int r, uae_u32 val)
+static inline void adjust_nreg(int r, uintptr val)
 {
 	if (!val)
 		return;
 	compemu_raw_lea_l_brr(r,r,val);
 }
+
+#if X86_TARGET_64BIT
+static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
+{
+	if (!val)
+		return;
+	if (vreg == PC_P) {
+		ADDQir((IMM)val, nreg);
+	} else {
+		adjust_nreg(nreg, val);
+	}
+}
+#else
+static inline void adjust_vreg_nreg(int /* vreg */, int nreg, uintptr val)
+{
+	adjust_nreg(nreg, val);
+}
+#endif
 
 static void tomem(int r)
 {
@@ -1977,7 +1995,7 @@ static void tomem(int r)
 		if (live.state[r].val && live.nat[rr].nholds==1
 			&& !live.nat[rr].locked) {
 			jit_log2("RemovingA offset %x from reg %d (%d) at %p", live.state[r].val,r,rr,target);
-			adjust_nreg(rr,live.state[r].val);
+			adjust_vreg_nreg(r,rr,live.state[r].val);
 			live.state[r].val=0;
 			live.state[r].dirtysize=4;
 			set_status(r,DIRTY);
@@ -2361,7 +2379,7 @@ static inline void make_exclusive(int r, int size, int spec)
 	if (size<live.state[r].validsize) {
 		if (live.state[r].val) {
 			/* Might as well compensate for the offset now */
-			compemu_raw_lea_l_brr(nr,rr,oldstate.val);
+			adjust_vreg_nreg(r,nr,oldstate.val);
 			live.state[r].val=0;
 			live.state[r].dirtysize=4;
 			set_status(r,DIRTY);
@@ -2403,7 +2421,7 @@ static inline void remove_offset(int r, int spec)
 
 	if (live.nat[rr].nholds==1) {
 		jit_log2("RemovingB offset %x from reg %d (%d) at %p", live.state[r].val,r,rr,target);
-		adjust_nreg(rr,live.state[r].val);
+		adjust_vreg_nreg(r,rr,live.state[r].val);
 		live.state[r].dirtysize=4;
 		live.state[r].val=0;
 		set_status(r,DIRTY);
@@ -4030,6 +4048,18 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	 would --- otherwise we end up translating everything twice */
 	get_n_addr(address,dest,tmp);
 #else
+#if X86_TARGET_64BIT
+	if (canbang && dest == PC_P) {
+		int hw_address = readreg(address, 4);
+		int hw_dest = writereg(dest, 4);
+		compemu_raw_mov_l_rr(hw_dest, hw_address);
+		ADDQrr(R_MEMSTART, hw_dest);
+		unlock2(hw_dest);
+		unlock2(hw_address);
+		forget_about(tmp);
+		return;
+	}
+#endif
 	int f=tmp;
 	if (address!=dest)
 		f=dest;

@@ -3168,6 +3168,12 @@ void memory_reset (void)
 	/* Start in direct n_addr mode; map_banks() will flip this if a bank
 	 * explicitly requires S_N_ADDR indirection. */
 	jit_n_addr_unsafe = 0;
+#if defined(CPU_x86_64) && defined(NATMEM_OFFSET)
+	if ((uintptr_t)natmem_offset + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
+		write_log(_T("JIT: jit_n_addr_unsafe enabled for high x86-64 natmem at %p\n"), natmem_offset);
+		jit_n_addr_unsafe = 1;
+	}
+#endif
 #endif
 	/* Use changed_prefs, as m68k_reset is called later.  */
 	if (last_address_space_24 != changed_prefs.address_space_24)
