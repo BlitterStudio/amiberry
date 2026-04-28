@@ -636,6 +636,13 @@ static int doinit_shm ()
 		write_log(_T("MMAN: Our special area: %p-%p (0x%08x %dM)\n"),
 			natmem_offset, natmem_offset + totalsize,
 			totalsize, totalsize / (1024 * 1024));
+#if defined(CPU_x86_64)
+		if (jit_direct_compatible_memory &&
+			(uintptr_t)natmem_offset + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
+			jit_direct_compatible_memory = false;
+			write_log(_T("MMAN: x86-64 high natmem disables JIT Direct but keeps JIT enabled.\n"));
+		}
+#endif
 		canbang = jit_direct_compatible_memory;
 	}
 
