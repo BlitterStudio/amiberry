@@ -5530,8 +5530,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 #ifdef JIT_DEBUG
 			if (JITDebug) {
+#if X86_TARGET_64BIT
+				raw_mov_q_mi((uintptr)&last_regs_pc_p,(uintptr)pc_hist[0].location);
+				raw_mov_q_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
+#else
 				compemu_raw_mov_l_mi((uintptr)&last_regs_pc_p,(uintptr)pc_hist[0].location);
 				compemu_raw_mov_l_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
+#endif
 			}
 #endif
 
