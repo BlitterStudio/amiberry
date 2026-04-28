@@ -68,12 +68,13 @@ static int jit_lowvec_write_diag_count;
 
 static void jit_log_lowvec_write(uaecptr addr, uae_u32 v, int size)
 {
-	if (!currprefs.cachesize || !jit_n_addr_unsafe || jit_lowvec_write_diag_count >= 32)
+	if (jit_lowvec_write_diag_count >= 64)
 		return;
 	if (addr >= 0x10e2 || addr + size <= 0x10dc)
 		return;
-	write_log(_T("JIT_LOWVEC_WRITE #%d size=%d addr=%08x value=%08x pc=%08x instrpc=%08x pc_p=%p A6=%08x A7=%08x old=%04x %04x %04x\n"),
-		jit_lowvec_write_diag_count, size, addr, v, m68k_getpc(), regs.instruction_pc, regs.pc_p,
+	write_log(_T("JIT_LOWVEC_WRITE #%d size=%d addr=%08x value=%08x cache=%d unsafe=%d pc=%08x instrpc=%08x pc_p=%p A6=%08x A7=%08x old=%04x %04x %04x\n"),
+		jit_lowvec_write_diag_count, size, addr, v, currprefs.cachesize, jit_n_addr_unsafe,
+		m68k_getpc(), regs.instruction_pc, regs.pc_p,
 		m68k_areg(regs, 6), m68k_areg(regs, 7),
 		get_word_debug(0x10dc), get_word_debug(0x10de), get_word_debug(0x10e0));
 	jit_lowvec_write_diag_count++;
@@ -631,6 +632,9 @@ static void REGPARAM2 chipmem_lput_ce2 (uaecptr addr, uae_u32 l)
 {
 	uae_u32 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, l, 4);
+#endif
 	addr &= chipmem_bank.mask;
 	m = (uae_u32 *)(chipmem_bank.baseaddr + addr);
 	ce2_timeout ();
@@ -641,6 +645,9 @@ static void REGPARAM2 chipmem_wput_ce2 (uaecptr addr, uae_u32 w)
 {
 	uae_u16 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, w, 2);
+#endif
 	addr &= chipmem_bank.mask;
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
 	ce2_timeout ();
@@ -649,6 +656,9 @@ static void REGPARAM2 chipmem_wput_ce2 (uaecptr addr, uae_u32 w)
 
 static void REGPARAM2 chipmem_bput_ce2 (uaecptr addr, uae_u32 b)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, b, 1);
+#endif
 	addr &= chipmem_bank.mask;
 	ce2_timeout ();
 	chipmem_bank.baseaddr[addr] = b;
@@ -702,6 +712,9 @@ static void REGPARAM2 chipmem_lput_limit(uaecptr addr, uae_u32 l)
 {
 	uae_u32 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, l, 4);
+#endif
 	addr &= chipmem_bank.mask;
 	if (addr >= 0x180000) {
 		return;
@@ -714,6 +727,9 @@ static void REGPARAM2 chipmem_wput_limit(uaecptr addr, uae_u32 w)
 {
 	uae_u16 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, w, 2);
+#endif
 	addr &= chipmem_bank.mask;
 	if (addr >= 0x180000) {
 		return;
@@ -724,6 +740,9 @@ static void REGPARAM2 chipmem_wput_limit(uaecptr addr, uae_u32 w)
 
 static void REGPARAM2 chipmem_bput_limit(uaecptr addr, uae_u32 b)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, b, 1);
+#endif
 	addr &= chipmem_bank.mask;
 	if (addr >= 0x180000) {
 		return;
@@ -763,6 +782,9 @@ void REGPARAM2 chipmem_lput (uaecptr addr, uae_u32 l)
 {
 	uae_u32 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, l, 4);
+#endif
 	addr &= chipmem_bank.mask;
 	m = (uae_u32 *)(chipmem_bank.baseaddr + addr);
 	do_put_mem_long (m, l);
@@ -772,6 +794,9 @@ void REGPARAM2 chipmem_wput (uaecptr addr, uae_u32 w)
 {
 	uae_u16 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, w, 2);
+#endif
 	addr &= chipmem_bank.mask;
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
 	do_put_mem_word (m, w);
@@ -779,6 +804,9 @@ void REGPARAM2 chipmem_wput (uaecptr addr, uae_u32 w)
 
 void REGPARAM2 chipmem_bput (uaecptr addr, uae_u32 b)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, b, 1);
+#endif
 	addr &= chipmem_bank.mask;
 	chipmem_bank.baseaddr[addr] = b;
 }
@@ -847,6 +875,9 @@ static void REGPARAM2 chipmem_agnus_lput (uaecptr addr, uae_u32 l)
 {
 	uae_u32 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, l, 4);
+#endif
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size - 3)
 		return;
@@ -858,6 +889,9 @@ void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w)
 {
 	uae_u16 *m;
 
+#ifdef JIT
+	jit_log_lowvec_write(addr, w, 2);
+#endif
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size - 1)
 		return;
@@ -867,6 +901,9 @@ void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w)
 
 static void REGPARAM2 chipmem_agnus_bput (uaecptr addr, uae_u32 b)
 {
+#ifdef JIT
+	jit_log_lowvec_write(addr, b, 1);
+#endif
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size)
 		return;
