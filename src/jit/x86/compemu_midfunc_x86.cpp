@@ -2083,6 +2083,7 @@ MIDFUNC(2,adc_b,(RW1 d, RR1 s))
 
 MIDFUNC(2,add_l,(RW4 d, RR4 s))
 {
+	int dreg=d;
 	if (isconst(s)) {
 		COMPCALL(add_l_ri)(d,live.state[s].val);
 		return;
@@ -2092,6 +2093,11 @@ MIDFUNC(2,add_l,(RW4 d, RR4 s))
 	s=readreg(s,4);
 	d=rmw(d,4,4);
 
+#if X86_TARGET_64BIT
+	if (dreg == PC_P) {
+		ADDQrr(s,d);
+	} else
+#endif
 	raw_add_l(d,s);
 
 	unlock2(d);
