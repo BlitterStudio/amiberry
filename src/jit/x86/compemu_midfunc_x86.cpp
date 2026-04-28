@@ -1748,13 +1748,22 @@ MIDFUNC(2,mov_l_rr,(W4 d, RR4 s))
 		return;
 	}
 	if (isconst(s)) {
+#if X86_TARGET_64BIT
+		if (s == PC_P) {
+			CLOBBER_MOV;
+			d=writereg(d,4);
+			raw_mov_q_ri(d,live.state[s].val);
+			unlock2(d);
+			return;
+		}
+#endif
 		COMPCALL(mov_l_ri)(d,live.state[s].val);
 		return;
 	}
 #if X86_TARGET_64BIT
 	if (d == PC_P || s == PC_P) {
 		CLOBBER_MOV;
-		s=readreg_offset(s,4);
+		s=readreg(s,4);
 		d=writereg(d,4);
 		MOVQrr(s,d);
 		unlock2(d);
