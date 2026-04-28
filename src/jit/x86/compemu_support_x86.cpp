@@ -441,6 +441,7 @@ void *jit_vm_acquire(uae_u32 size, int options)
 
 // %%% BRIAN KING WAS HERE %%%
 extern bool canbang;
+extern int jit_n_addr_unsafe;
 
 #include "../compemu_prefs.cpp"
 
@@ -3800,7 +3801,7 @@ static inline void writemem(int address, int source, int offset, int size, int t
 void writebyte(int address, int source, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_byte())
+	if ((special_mem & S_WRITE) || distrust_byte() || jit_n_addr_unsafe)
 		writemem_special(address, source, 5 * SIZEOF_VOID_P, 1, tmp);
 	else
 #endif
@@ -3811,7 +3812,7 @@ static inline void writeword_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_word())
+	if ((special_mem & S_WRITE) || distrust_word() || jit_n_addr_unsafe)
 		writemem_special(address, source, 4 * SIZEOF_VOID_P, 2, tmp);
 	else
 #endif
@@ -3832,7 +3833,7 @@ static inline void writelong_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_long())
+	if ((special_mem & S_WRITE) || distrust_long() || jit_n_addr_unsafe)
 		writemem_special(address, source, 3 * SIZEOF_VOID_P, 4, tmp);
 	else
 #endif
@@ -3967,7 +3968,7 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 void readbyte(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_byte())
+	if ((special_mem & S_READ) || distrust_byte() || jit_n_addr_unsafe)
 		readmem_special(address, dest, 2 * SIZEOF_VOID_P, 1, tmp);
 	else
 #endif
@@ -3977,7 +3978,7 @@ void readbyte(int address, int dest, int tmp)
 void readword(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_word())
+	if ((special_mem & S_READ) || distrust_word() || jit_n_addr_unsafe)
 		readmem_special(address, dest, 1 * SIZEOF_VOID_P, 2, tmp);
 	else
 #endif
@@ -3987,7 +3988,7 @@ void readword(int address, int dest, int tmp)
 void readlong(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_long())
+	if ((special_mem & S_READ) || distrust_long() || jit_n_addr_unsafe)
 		readmem_special(address, dest, 0 * SIZEOF_VOID_P, 4, tmp);
 	else
 #endif
@@ -3997,7 +3998,7 @@ void readlong(int address, int dest, int tmp)
 void get_n_addr(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if (special_mem || distrust_addr()) {
+	if (special_mem || distrust_addr() || jit_n_addr_unsafe) {
 		/* This one might appear a bit odd... */
 		readmem(address, dest, 6 * SIZEOF_VOID_P, 4, tmp);
 		return;
@@ -4048,6 +4049,12 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	 would --- otherwise we end up translating everything twice */
 	get_n_addr(address,dest,tmp);
 #else
+#ifdef UAE
+	if (special_mem || distrust_addr() || jit_n_addr_unsafe) {
+		get_n_addr(address,dest,tmp);
+		return;
+	}
+#endif
 #if X86_TARGET_64BIT
 	if (canbang && dest == PC_P) {
 		int hw_address = readreg(address, 4);
