@@ -4145,8 +4145,8 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
 	}
 	else { /* 68000 version */
 		if ((dp & 0x800) == 0) { /* Sign extend */
-			sign_extend_16_rr(target,reg);
-			lea_l_brr_indexed(target,base,target,1<<regd_shift,(uae_s32)((uae_s8)dp));
+			sign_extend_16_rr(tmp,reg);
+			lea_l_brr_indexed(target,base,tmp,1<<regd_shift,(uae_s32)((uae_s8)dp));
 		}
 		else {
 			lea_l_brr_indexed(target,base,reg,1<<regd_shift,(uae_s32)((uae_s8)dp));
