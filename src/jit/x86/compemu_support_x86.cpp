@@ -341,12 +341,8 @@ void *jit_vm_acquire(uae_u32 size, int options)
 
 #ifdef __linux__
 		result = find_nearest_gap(base, size, range);
-		if (result) {
-			write_log("JIT: VMA-aware alloc at %p (anchor=%p, dist=%+lld)\n",
-				result, (void *)base,
-				(long long)((intptr_t)result - (intptr_t)base));
+		if (result)
 			return result;
-		}
 #endif
 
 #ifdef MAP_FIXED_NOREPLACE
@@ -409,8 +405,6 @@ void *jit_vm_acquire(uae_u32 size, int options)
 					uae_vm_free(try_alloc, size);
 					continue;
 				}
-				write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
-					try_alloc, (void *)base, (long long)dist);
 				result = try_alloc;
 			}
 			if (!result) {

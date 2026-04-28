@@ -11098,19 +11098,6 @@ static void custom_trigger_start(void)
 		pctxcnt++;
 		if (pctxcnt == 50) {
 			int v = pctx / pctxcnt;
-#ifdef JIT
-			static int jit_progress_diag_count;
-			if (currprefs.cachesize && jit_n_addr_unsafe && jit_progress_diag_count < 128) {
-				uaecptr pc = M68K_GETPC;
-				write_log(_T("%03d%%%% JIT_PROGRESS #%d PC=%08x instrpc=%08x SR=%04x D0=%08x D1=%08x A0=%08x A1=%08x A6=%08x A7=%08x words=%04x %04x %04x INTENA=%04x INTREQ=%04x DMACON=%04x\n"),
-					v, jit_progress_diag_count, pc, regs.instruction_pc, regs.sr,
-					m68k_dreg(regs, 0), m68k_dreg(regs, 1), m68k_areg(regs, 0), m68k_areg(regs, 1),
-					m68k_areg(regs, 6), m68k_areg(regs, 7),
-					get_word_debug(pc), get_word_debug(pc + 2), get_word_debug(pc + 4),
-					intena, intreq, dmacon);
-				jit_progress_diag_count++;
-			} else
-#endif
 			write_log("%03d%%%%\n", v);
 			pctxcnt = 0;
 			pctx = 0;

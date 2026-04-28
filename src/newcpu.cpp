@@ -3332,13 +3332,6 @@ static void Exception_normal (int nr)
 #ifdef DEBUGGER
 			write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, regs.instruction_pc, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
 #endif
-#ifdef JIT
-			if (currprefs.cachesize && nr == 3) {
-				write_log(_T("JIT_EX3_FRAME fault=%08x stackpc=%08x currpc=%08x nextpc=%08x vector=%08x A7=%08x SR=%04x pc_p=%p\n"),
-					last_fault_for_exception_3, regs.instruction_pc, currpc, nextpc,
-					get_long_debug(regs.vbr + 4 * vector_nr), m68k_areg(regs, 7), regs.sr, regs.pc_p);
-			}
-#endif
 		} else if (regs.m && interrupt) { /* M + Interrupt */
 			m68k_areg (regs, 7) -= 2;
 			x_put_word (m68k_areg (regs, 7), vector_nr * 4);
@@ -5685,65 +5678,14 @@ void execute_normal(void)
 	blocklen = 0;
 	start_pc_p = r->pc_oldp;
 	start_pc = r->pc;
-#ifdef JIT
-	static int lowpc_entry_diag_count;
-	static int lowpc_step_diag_count;
-	static int romwindow_step_diag_count;
-	if (currprefs.cachesize && jit_n_addr_unsafe) {
-		const uaecptr entrypc = m68k_getpc();
-		if (entrypc < 0x2000 && lowpc_entry_diag_count < 8) {
-			write_log(_T("JIT_LOWPC_ENTRY #%d pc=%08x regs.pc=%08x instrpc=%08x pc_p=%p pc_oldp=%p A7=%08x SR=%04x words=%04x %04x %04x\n"),
-				lowpc_entry_diag_count, entrypc, r->pc, r->instruction_pc, r->pc_p, r->pc_oldp,
-				m68k_areg(*r, 7), r->sr,
-				get_word_debug(entrypc), get_word_debug(entrypc + 2), get_word_debug(entrypc + 4));
-			lowpc_entry_diag_count++;
-		}
-	}
-#endif
 	for (;;) {
 		/* Take note: This is the do-it-normal loop */
-#ifdef JIT
-		const uaecptr beforepc = m68k_getpc();
-		uae_u8 *before_pc_p = r->pc_p;
-		uae_u8 *before_pc_oldp = r->pc_oldp;
-		const uae_u32 before_regs_pc = r->pc;
-		const int before_branch_cc = ((beforepc >= 0x00f81c40 && beforepc < 0x00f81c80) &&
-			((get_word_debug(beforepc) & 0xf000) == 0x6000)) ? cctrue((get_word_debug(beforepc) >> 8) & 15) : -1;
-		const uae_u32 before_flags_cznv = GET_CZNV();
-		const uae_u32 before_flags_x = regflags.x;
-#endif
 		r->opcode = get_jit_opcode();
 
 		special_mem = special_mem_default;
 		pc_hist[blocklen].location = (uae_u16*)r->pc_p;
 
 		(*cpufunctbl[r->opcode])(r->opcode);
-#ifdef JIT
-		if (currprefs.cachesize && jit_n_addr_unsafe && lowpc_step_diag_count < 16) {
-			const uaecptr afterpc = m68k_getpc();
-			if (beforepc < 0x2000 || afterpc < 0x2000) {
-				write_log(_T("JIT_LOWPC_STEP #%d opcode=%04x before=%08x after=%08x regs.pc=%08x/%08x instrpc=%08x pc_p=%p/%p pc_oldp=%p/%p words_before=%04x %04x %04x words_after=%04x %04x %04x\n"),
-					lowpc_step_diag_count, r->opcode, beforepc, afterpc, before_regs_pc, r->pc,
-					r->instruction_pc, before_pc_p, r->pc_p, before_pc_oldp, r->pc_oldp,
-					get_word_debug(beforepc), get_word_debug(beforepc + 2), get_word_debug(beforepc + 4),
-					get_word_debug(afterpc), get_word_debug(afterpc + 2), get_word_debug(afterpc + 4));
-				lowpc_step_diag_count++;
-			}
-		}
-		if (currprefs.cachesize && jit_n_addr_unsafe && romwindow_step_diag_count < 64) {
-			const uaecptr afterpc = m68k_getpc();
-			if ((beforepc >= 0x00f81c40 && beforepc < 0x00f81c80) ||
-				(afterpc >= 0x00f81c40 && afterpc < 0x00f81c80)) {
-				write_log(_T("JIT_ROMWIN_STEP #%d opcode=%04x before=%08x after=%08x cc=%d flags=%08x/%08x->%08x/%08x D0=%08x D1=%08x A0=%08x A1=%08x A6=%08x A7=%08x words=%04x %04x %04x\n"),
-					romwindow_step_diag_count, r->opcode, beforepc, afterpc, before_branch_cc,
-					before_flags_cznv, before_flags_x, GET_CZNV(), regflags.x,
-					m68k_dreg(*r, 0), m68k_dreg(*r, 1), m68k_areg(*r, 0), m68k_areg(*r, 1),
-					m68k_areg(*r, 6), m68k_areg(*r, 7),
-					get_word_debug(beforepc), get_word_debug(beforepc + 2), get_word_debug(beforepc + 4));
-				romwindow_step_diag_count++;
-			}
-		}
-#endif
 
 		cpu_cycles = 4 * CYCLE_UNIT;
 
@@ -8033,7 +7975,6 @@ uae_u8 *restore_mmu(uae_u8 *src)
 
 static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool instructionaccess, bool notinstruction, uaecptr pc, int size, int fc, uae_u16 secondarysr)
 {
-	static int exception3_diag_count;
 	if (currprefs.cpu_model >= 68040)
 		addr &= ~1;
 	if (currprefs.cpu_model >= 68020) {
@@ -8053,23 +7994,6 @@ static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool ins
 	last_notinstruction_for_exception_3 = notinstruction;
 	last_size_for_exception_3 = size;
 	last_sr_for_exception3 = secondarysr;
-#ifdef JIT
-	if (currprefs.cachesize && exception3_diag_count < 8) {
-		uaecptr curpc = m68k_getpc();
-		write_log(_T("JIT_EX3_DIAG #%d opcode=%08x fault=%08x addrpc=%08x curpc=%08x instrpc=%08x size=%d fc=%d write=%d instr=%d notinstr=%d sr=%04x s=%d m=%d pc_p=%p pc_oldp=%p\n"),
-			exception3_diag_count, opcode, addr, last_addr_for_exception_3, curpc, regs.instruction_pc,
-			size, last_fc_for_exception_3, writeaccess ? 1 : 0, instructionaccess ? 1 : 0, notinstruction ? 1 : 0,
-			regs.sr, regs.s ? 1 : 0, regs.m ? 1 : 0, regs.pc_p, regs.pc_oldp);
-		write_log(_T("JIT_EX3_DIAG words pc=%04x fault_even=%04x vec3=%08x A7=%08x ISP=%08x USP=%08x\n"),
-			get_word_debug(curpc), get_word_debug(addr & ~1), get_long_debug(regs.vbr + 12),
-			m68k_areg(regs, 7), regs.isp, regs.usp);
-		write_log(_T("JIT_EX3_DIAG state regs.pc=%08x pc_oldp=%p instr_words=%04x %04x %04x cur_words=%04x %04x %04x\n"),
-			regs.pc, regs.pc_oldp,
-			get_word_debug(regs.instruction_pc), get_word_debug(regs.instruction_pc + 2), get_word_debug(regs.instruction_pc + 4),
-			get_word_debug(curpc), get_word_debug(curpc + 2), get_word_debug(curpc + 4));
-		exception3_diag_count++;
-	}
-#endif
 	Exception (3);
 #if EXCEPTION3_DEBUGGER
 	activate_debugger();
