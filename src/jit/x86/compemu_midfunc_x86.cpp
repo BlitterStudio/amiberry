@@ -822,13 +822,14 @@ MIDFUNC(2,setcc_m,(IMM d, IMM cc))
 MIDFUNC(3,cmov_l_rr,(RW4 d, RR4 s, IMM cc))
 {
 	int dreg=d;
+	int sreg=s;
 	if (d==s)
 		return;
 	CLOBBER_CMOV;
 	s=readreg(s,4);
 	d=rmw(d,4,4);
 #if X86_TARGET_64BIT
-	if (dreg == PC_P) {
+	if (dreg == PC_P || sreg == PC_P) {
 		CMOVQrr(cc,s,d);
 	} else
 #endif
