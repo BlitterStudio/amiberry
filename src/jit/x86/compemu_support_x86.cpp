@@ -5559,6 +5559,9 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compop_func **comptbl;
 				uae_u32 opcode=DO_GET_OPCODE(pc_hist[i].location);
 				needed_flags=(liveflags[i+1] & prop[opcode].set_flags);
+				const bool unsafe_control_flow = jit_n_addr_unsafe && prop[opcode].cflow != fl_normal;
+				const bool unsafe_live_flags = jit_n_addr_unsafe &&
+					((prop[opcode].set_flags & liveflags[i+1]) || prop[opcode].use_flags);
 				if (jit_n_addr_unsafe)
 					needed_flags=prop[opcode].set_flags;
 #ifdef UAE
@@ -5596,7 +5599,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 				failure = 1; // gb-- defaults to failure state
-				if (comptbl[opcode] && optlev>1 && !(jit_n_addr_unsafe && prop[opcode].cflow != fl_normal)) {
+				if (comptbl[opcode] && optlev>1 && !unsafe_control_flow && !unsafe_live_flags) {
 					failure=0;
 					if (!was_comp) {
 						comp_pc_p=(uae_u8*)pc_hist[i].location;
