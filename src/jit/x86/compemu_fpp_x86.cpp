@@ -616,6 +616,11 @@ void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 {
 	int reg;
 
+	if (!currprefs.compfpu)
+	{
+		FAIL(1);
+		return;
+	}
 	if (jit_disable.fscc)
 	{
 		FAIL(1);
@@ -1121,6 +1126,16 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 	int reg;
 	int src;
 
+	if (special_mem)
+	{
+		FAIL(1);
+		return;
+	}
+	if (!currprefs.compfpu)
+	{
+		FAIL(1);
+		return;
+	}
 	switch ((extra >> 13) & 0x7)
 	{
 	case 1:							/* illegal */
