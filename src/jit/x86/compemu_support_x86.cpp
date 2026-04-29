@@ -4193,6 +4193,7 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 #endif
 #if X86_TARGET_64BIT
 	if (canbang && dest == PC_P) {
+		clobber_flags();
 		int hw_address = readreg(address, 4);
 		int hw_dest = writereg(dest, 4);
 		compemu_raw_mov_l_rr(hw_dest, hw_address);
