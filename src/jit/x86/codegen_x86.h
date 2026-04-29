@@ -1594,6 +1594,7 @@ enum {
 /*									_format		Opcd		,Mod ,r	    ,m		,mem=dsp+sib	,imm... */
 
 #define LEALmr(MD, MB, MI, MS, RD)	(_REXLmr(MB, MI, RD),		_O_r_X		(0x8d		     ,_r4(RD)		,MD,MB,MI,MS		))
+#define LEAQmr(MD, MB, MI, MS, RD)	(_REXQmr(MB, MI, RD),		_O_r_X		(0x8d		     ,_r8(RD)		,MD,MB,MI,MS		))
 
 #define BSWAPLr(R)			(_REXLrr(0, R),			_OOr		(0x0fc8,_r4(R)							))
 #define BSWAPQr(R)			(_REXQrr(0, R),			_OOr		(0x0fc8,_r8(R)							))

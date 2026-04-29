@@ -1792,9 +1792,9 @@ MIDFUNC(2,mov_l_mr,(MEMW d, RR4 s))
 {
 #if X86_TARGET_64BIT
 	if (s == PC_P) {
-		/* PC_P holds a 64-bit host pointer — must use 64-bit store */
+		/* PC_P holds a 64-bit host pointer and needs allocator-aware scratch use. */
 		if (isconst(s)) {
-			raw_mov_q_mi(d, live.state[s].val);
+			store_const_q_mi(d, live.state[s].val);
 		} else {
 			CLOBBER_MOV;
 			s=readreg(s,4);

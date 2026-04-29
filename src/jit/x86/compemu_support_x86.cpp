@@ -2000,7 +2000,13 @@ static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
 	if (!val)
 		return;
 	if (vreg == PC_P) {
-		ADDQir((IMM)val, nreg);
+		const intptr_t svalue = static_cast<intptr_t>(val);
+		if (svalue >= static_cast<intptr_t>(-2147483647 - 1) &&
+			svalue <= static_cast<intptr_t>(2147483647)) {
+			LEAQmr(static_cast<IMM>(svalue), nreg, X86_NOREG, 1, nreg);
+		} else {
+			ADDQir((IMM)val, nreg);
+		}
 	} else {
 		adjust_nreg(nreg, val);
 	}
@@ -2060,6 +2066,35 @@ static inline int isconst(int r)
 	return live.state[r].status==ISCONST;
 }
 
+#if X86_TARGET_64BIT
+static inline void free_nreg(int r);
+
+static inline int get_unlocked_scratch_nreg(void)
+{
+	static const int candidates[] = {
+		R11_INDEX, R10_INDEX, R9_INDEX, R8_INDEX,
+		EAX_INDEX, ECX_INDEX, EDX_INDEX, EBX_INDEX,
+		EBP_INDEX, ESI_INDEX, EDI_INDEX, R13_INDEX, R14_INDEX
+	};
+
+	for (int r : candidates) {
+		if (!live.nat[r].locked)
+			return r;
+	}
+
+	jit_abort("No unlocked scratch register for 64-bit immediate store");
+	return R11_INDEX;
+}
+
+static inline void store_const_q_mi(uintptr d, uintptr s)
+{
+	int scratch = get_unlocked_scratch_nreg();
+	free_nreg(scratch);
+	raw_mov_q_ri(scratch, s);
+	raw_mov_q_mr(d, scratch);
+}
+#endif
+
 int is_const(int r)
 {
 	return isconst(r);
@@ -2075,8 +2110,8 @@ static inline void writeback_const(int r)
 
 #if X86_TARGET_64BIT
 	if (r == PC_P) {
-		/* PC_P holds a 64-bit host pointer — must use 64-bit store */
-		raw_mov_q_mi((uintptr)live.state[r].mem, live.state[r].val);
+		/* PC_P holds a 64-bit host pointer and needs allocator-aware scratch use. */
+		store_const_q_mi((uintptr)live.state[r].mem, live.state[r].val);
 	} else
 #endif
 	{
@@ -3138,6 +3173,43 @@ void sync_m68k_pc(void)
 	}
 }
 
+static inline uae_u32 get_virtual_compile_pc(uintptr native_pc)
+{
+	uae_u32 m68k_pc = (uae_u32)(start_pc + ((char*)native_pc - (char*)start_pc_p));
+#ifdef NATMEM_OFFSET
+	if (natmem_offset && native_pc >= (uintptr)natmem_offset &&
+		native_pc < (uintptr)natmem_offset + (uintptr)0x100000000ULL) {
+		m68k_pc = (uae_u32)(native_pc - (uintptr)natmem_offset);
+	}
+#endif
+	return m68k_pc;
+}
+
+static uintptr compiled_exception_native_pc;
+static uae_u32 compiled_exception_opcode;
+static bool compiled_exception_state_valid;
+static bool compiled_exception_state_emitted;
+
+static inline void prepare_compiled_exception_state(uintptr native_pc, uae_u32 opcode)
+{
+	compiled_exception_native_pc = native_pc;
+	compiled_exception_opcode = opcode;
+	compiled_exception_state_valid = true;
+	compiled_exception_state_emitted = false;
+}
+
+static inline void sync_compiled_exception_state(void)
+{
+	if (!compiled_exception_state_valid || compiled_exception_state_emitted)
+		return;
+
+	uae_u32 m68k_pc = get_virtual_compile_pc(compiled_exception_native_pc);
+	raw_mov_l_mi((uintptr)&regs.instruction_pc, m68k_pc);
+	raw_mov_w_mi((uintptr)&regs.opcode, compiled_exception_opcode);
+	raw_mov_w_mi((uintptr)&regs.ir, compiled_exception_opcode);
+	compiled_exception_state_emitted = true;
+}
+
 /* for building exception frames */
 void compemu_exc_make_frame(int format, int sr, int ret, int nr, int tmp)
 {
@@ -3843,9 +3915,10 @@ static inline void writemem(int address, int source, int offset, int size, int t
 void writebyte(int address, int source, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_byte() || jit_use_memory_helpers())
+	if ((special_mem & S_WRITE) || distrust_byte() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		writemem_special(address, source, 5 * SIZEOF_VOID_P, 1, tmp);
-	else
+	} else
 #endif
 		writemem_real(address,source,1,tmp,0);
 }
@@ -3854,9 +3927,10 @@ static inline void writeword_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_word() || jit_use_memory_helpers())
+	if ((special_mem & S_WRITE) || distrust_word() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		writemem_special(address, source, 4 * SIZEOF_VOID_P, 2, tmp);
-	else
+	} else
 #endif
 		writemem_real(address,source,2,tmp,clobber);
 }
@@ -3875,9 +3949,10 @@ static inline void writelong_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_long() || jit_use_memory_helpers())
+	if ((special_mem & S_WRITE) || distrust_long() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		writemem_special(address, source, 3 * SIZEOF_VOID_P, 4, tmp);
-	else
+	} else
 #endif
 		writemem_real(address,source,4,tmp,clobber);
 }
@@ -4010,9 +4085,10 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 void readbyte(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_byte() || jit_use_memory_helpers())
+	if ((special_mem & S_READ) || distrust_byte() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		readmem_special(address, dest, 2 * SIZEOF_VOID_P, 1, tmp);
-	else
+	} else
 #endif
 		readmem_real(address,dest,1,tmp);
 }
@@ -4020,9 +4096,10 @@ void readbyte(int address, int dest, int tmp)
 void readword(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_word() || jit_use_memory_helpers())
+	if ((special_mem & S_READ) || distrust_word() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		readmem_special(address, dest, 1 * SIZEOF_VOID_P, 2, tmp);
-	else
+	} else
 #endif
 		readmem_real(address,dest,2,tmp);
 }
@@ -4030,9 +4107,10 @@ void readword(int address, int dest, int tmp)
 void readlong(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_long() || jit_use_memory_helpers())
+	if ((special_mem & S_READ) || distrust_long() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		readmem_special(address, dest, 0 * SIZEOF_VOID_P, 4, tmp);
-	else
+	} else
 #endif
 		readmem_real(address,dest,4,tmp);
 }
@@ -4040,11 +4118,27 @@ void readlong(int address, int dest, int tmp)
 void get_n_addr(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if (special_mem || distrust_addr() || jit_n_addr_unsafe) {
+	if (special_mem || distrust_addr() || jit_use_memory_helpers()) {
 		/* This one might appear a bit odd... */
-		readmem(address, dest, 6 * SIZEOF_VOID_P, 4, tmp);
+		sync_compiled_exception_state();
+		readmem_special(address, dest, 6 * SIZEOF_VOID_P, 4, tmp);
 		return;
 	}
+#endif
+
+#if X86_TARGET_64BIT
+#ifdef NATMEM_OFFSET
+	if (canbang) {
+		int hw_address = readreg(address, 4);
+		int hw_dest = writereg(dest, 4);
+		compemu_raw_mov_l_rr(hw_dest, hw_address);
+		LEAQmr(0, R_MEMSTART, hw_dest, 1, hw_dest);
+		unlock2(hw_dest);
+		unlock2(hw_address);
+		forget_about(tmp);
+		return;
+	}
+#endif
 #endif
 
 	// a is the register containing the virtual address
@@ -4102,7 +4196,7 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 		int hw_address = readreg(address, 4);
 		int hw_dest = writereg(dest, 4);
 		compemu_raw_mov_l_rr(hw_dest, hw_address);
-		ADDQrr(R_MEMSTART, hw_dest);
+		LEAQmr(0, R_MEMSTART, hw_dest, 1, hw_dest);
 		ANDQir((IMM)~1, hw_dest);
 		unlock2(hw_dest);
 		unlock2(hw_address);
@@ -5653,6 +5747,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 				failure = 1; // gb-- defaults to failure state
+				prepare_compiled_exception_state((uintptr)pc_hist[i].location, opcode);
 				if (comptbl[opcode] && optlev>1 && !unsafe_control_flow && !unsafe_flags) {
 					failure=0;
 					if (!was_comp) {
@@ -5752,13 +5847,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 					{
 						uintptr native_pc = (uintptr)pc_hist[i].location;
-						uae_u32 m68k_pc = (uae_u32)(start_pc + ((char*)pc_hist[i].location - (char*)start_pc_p));
-#ifdef NATMEM_OFFSET
-						if (natmem_offset && native_pc >= (uintptr)natmem_offset &&
-							native_pc < (uintptr)natmem_offset + (uintptr)0x100000000ULL) {
-							m68k_pc = (uae_u32)(native_pc - (uintptr)natmem_offset);
-						}
-#endif
+						uae_u32 m68k_pc = get_virtual_compile_pc(native_pc);
 #if X86_TARGET_64BIT
 						raw_mov_q_mi((uintptr)&regs.pc_p, native_pc);
 						raw_mov_q_mi((uintptr)&regs.pc_oldp, native_pc);

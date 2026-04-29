@@ -60,7 +60,7 @@
 #include "jit/compemu.h"
 #include <signal.h>
 volatile int jit_exception_pending = 0;
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 #include <setjmp.h>
 jmp_buf jit_bus_error_jmpbuf;
 volatile bool jit_in_compiled_code = false;
@@ -5634,6 +5634,7 @@ void exec_nostats (void)
 
 	for (;;)
 	{
+		r->instruction_pc = m68k_getpc();
 		r->opcode = get_jit_opcode();
 
 		(*cpufunctbl[r->opcode])(r->opcode);
@@ -5680,6 +5681,7 @@ void execute_normal(void)
 	start_pc = r->pc;
 	for (;;) {
 		/* Take note: This is the do-it-normal loop */
+		r->instruction_pc = m68k_getpc();
 		r->opcode = get_jit_opcode();
 
 #if defined(JIT) && defined(CPU_x86_64)
@@ -5744,7 +5746,7 @@ static int cpu_thread_run_jit(void *v)
 	{
 		for (;;) {
 			check_debugger();
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 			{
 				int bus_error_exc = setjmp(jit_bus_error_jmpbuf);
 				if (bus_error_exc != 0) {
@@ -5763,18 +5765,24 @@ static int cpu_thread_run_jit(void *v)
 				jit_exception_pending = 0;
 				write_log(_T("JIT: Processing pending bus error in cpu_thread (exception %d, PC=%08x)\n"),
 					exc, (unsigned int)M68K_GETPC);
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+				jit_in_compiled_code = false;
+#endif
 				Exception(exc);
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+				jit_in_compiled_code = true;
+#endif
 			}
 #endif
 			/* Whenever we return from that, we should check spcflags */
 			if (regs.spcflags || cpu_thread_ilvl > 0) {
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 				jit_in_compiled_code = false;
 #endif
 				if (do_specialties_thread()) {
 					break;
 				}
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 				jit_in_compiled_code = true;
 #endif
 			}
@@ -5817,15 +5825,14 @@ static void m68k_run_jit(void)
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 		__try {
 #endif
-			#if defined(CPU_AARCH64)
+			#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 			/* setjmp point for bus error recovery from JIT-compiled code.
 			 * When hardware_exception2() is called from within JIT code,
 			 * it longjmps here instead of throwing (C++ throw can't
 			 * unwind through JIT code). exception2_setup() has already
 			 * saved the bus error details before the longjmp.
-			 * Placed OUTSIDE the inner loop so the cost of setjmp (which
-			 * saves all callee-saved registers) is only paid once per
-			 * exception, not on every JIT dispatch. */
+			 * Placed outside the inner loop so the cost of setjmp is not
+			 * paid on every JIT dispatch. */
 			{
 				int bus_error_exc = setjmp(jit_bus_error_jmpbuf);
 				if (bus_error_exc != 0) {
@@ -5849,26 +5856,32 @@ static void m68k_run_jit(void)
 					jit_exception_pending = 0;
 					write_log(_T("JIT: Processing pending bus error (exception %d, PC=%08x)\n"),
 						exc, (unsigned int)M68K_GETPC);
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+					jit_in_compiled_code = false;
+#endif
 					Exception(exc);
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+					jit_in_compiled_code = true;
+#endif
 				}
 #endif
 				/* Whenever we return from that, we should check spcflags */
 				check_uae_int_request();
 				if (regs.spcflags) {
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 					jit_in_compiled_code = false;
 #endif
 					if (do_specialties(0)) {
 						STOPTRY;
 						return;
 					}
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 					jit_in_compiled_code = true;
 #endif
 				}
 				// If T0, T1 or M got set: run normal emulation loop
 				if (regs.t0 || regs.t1 || regs.m) {
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 					jit_in_compiled_code = false;
 #endif
 					flush_icache(3);
@@ -5891,7 +5904,7 @@ static void m68k_run_jit(void)
 						bus_error();
 					} ENDTRY
 					unset_special(SPCFLAG_END_COMPILE);
-#if defined(CPU_AARCH64)
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 					jit_in_compiled_code = true;
 #endif
 				}
@@ -8107,7 +8120,11 @@ void exception3_write(uae_u32 opcode, uaecptr addr, int size, uae_u32 val, int f
 
 void exception2_setup(uae_u32 opcode, uaecptr addr, bool read, int size, uae_u32 fc)
 {
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+	last_addr_for_exception_3 = jit_in_compiled_code ? regs.instruction_pc : m68k_getpc();
+#else
 	last_addr_for_exception_3 = m68k_getpc();
+#endif
 	last_fault_for_exception_3 = addr;
 	last_writeaccess_for_exception_3 = read == 0;
 	last_op_for_exception_3 = opcode;
@@ -8149,14 +8166,10 @@ void hardware_exception2(uaecptr addr, uae_u32 v, bool read, bool ins, int size)
 		}
 		// Non-MMU
 		exception2_setup(regs.opcode, addr, read, size, fc);
-#if defined(CPU_AARCH64) && defined(JIT)
-		/* On ARM64, C++ exceptions cannot unwind through JIT-compiled
-		 * code (no DWARF unwinding tables in JIT code buffer). When
-		 * executing inside JIT-compiled code, use longjmp to immediately
-		 * return to the JIT loop where Exception() can be called with
-		 * the correct M68K state (saved by exception2_setup above).
-		 * Only relevant when JIT is compiled in — jit_in_compiled_code
-		 * and jit_bus_error_jmpbuf are declared under #ifdef JIT. */
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+		/* C++ exceptions cannot unwind through JIT-compiled code. When
+		 * executing inside JIT code, return to the JIT loop where
+		 * Exception() can be called with the M68K state saved above. */
 		if (jit_in_compiled_code) {
 			longjmp(jit_bus_error_jmpbuf, 2);
 			/* not reached */
