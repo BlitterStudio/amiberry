@@ -94,6 +94,21 @@ The portable ZIP includes the `amiberry.portable` marker, so writable paths stay
 
 Available on [Google Play](https://play.google.com/store/apps/details?id=com.blitterstudio.amiberry) (AArch64 & x86_64 with full ARM64 JIT support).
 
+### FreeBSD
+In order to install amiberry on FreeBSD simply use pkg
+
+```bash
+pkg install amiberry
+```
+
+Or if you prefer to install from Source then
+
+```bash
+git clone --depth 1 https://github.com/freebsd/freebsd-ports /usr/ports
+cd /usr/ports/emulators/amiberry
+make install
+```
+
 ## Documentation
 
 - **[Getting Started](https://github.com/BlitterStudio/amiberry/wiki/First-Installation)** — First installation guide
