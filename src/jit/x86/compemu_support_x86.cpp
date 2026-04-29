@@ -114,6 +114,7 @@ static void build_comp(void);
 #if defined(CPU_x86_64) && defined(__APPLE__)
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
+#include <mach/vm_region.h>
 #endif
 #define VM_PAGE_READ UAE_VM_READ
 #define VM_PAGE_WRITE UAE_VM_WRITE
@@ -240,35 +241,118 @@ static void *find_nearest_gap(uintptr base, uae_u32 size, uintptr range)
 #endif /* CPU_x86_64 && __linux__ */
 
 #if defined(CPU_x86_64) && defined(__APPLE__)
+#ifndef VM_FLAGS_FIXED
+#define VM_FLAGS_FIXED 0
+#endif
+
+static void *mach_vm_allocate_fixed(uintptr try_addr, uae_u32 size)
+{
+	mach_vm_address_t address = (mach_vm_address_t)try_addr;
+	const kern_return_t kr = mach_vm_allocate(
+		mach_task_self(), &address, size, VM_FLAGS_FIXED);
+	if (kr != KERN_SUCCESS)
+		return NULL;
+	if ((uintptr)address == try_addr)
+		return (void *)address;
+	mach_vm_deallocate(mach_task_self(), address, size);
+	return NULL;
+}
+
+static void *mach_vm_try_gap(uintptr gap_start, uintptr gap_end, uintptr base,
+	uae_u32 size, uintptr page, void *best, uintptr *best_dist)
+{
+	if (gap_end <= gap_start || gap_end - gap_start < size)
+		return best;
+
+	uintptr alloc_at;
+	if (base >= gap_start && base + size <= gap_end) {
+		alloc_at = base & ~(page - 1);
+		if (alloc_at < gap_start)
+			alloc_at += page;
+	} else if (gap_end <= base) {
+		alloc_at = (gap_end - size) & ~(page - 1);
+	} else {
+		alloc_at = (gap_start + page - 1) & ~(page - 1);
+	}
+	if (alloc_at < gap_start || alloc_at + size > gap_end)
+		return best;
+
+	const uintptr dist = (alloc_at >= base) ? (alloc_at - base) : (base - alloc_at);
+	if (dist >= *best_dist)
+		return best;
+
+	void *candidate = mach_vm_allocate_fixed(alloc_at, size);
+	if (!candidate)
+		return best;
+	if (best)
+		mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)best, size);
+	*best_dist = dist;
+	return candidate;
+}
+
 static void *mach_vm_acquire_near(uintptr base, uae_u32 size, uintptr range)
 {
-	const uintptr granularity = 0x10000;
-	const uintptr lo = (base > range) ? (base - range) : granularity;
+	const uintptr page = (uintptr)uae_vm_page_size();
+	const uintptr lo = (base > range) ? (base - range) : page;
 	const uintptr hi = base + range;
+	const uintptr rounded_size = (size + page - 1) & ~(page - 1);
 
-	for (uintptr offset = 0; offset < range; offset += granularity) {
+	void *best = NULL;
+	uintptr best_dist = UINTPTR_MAX;
+	uintptr prev_end = lo;
+	mach_vm_address_t address = (mach_vm_address_t)lo;
+
+	while ((uintptr)address < hi) {
+		mach_vm_size_t region_size = 0;
+		natural_t depth = 0;
+		vm_region_submap_info_data_64_t info;
+		mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+		const kern_return_t kr = mach_vm_region_recurse(
+			mach_task_self(), &address, &region_size, &depth,
+			(vm_region_recurse_info_t)&info, &count);
+		if (kr != KERN_SUCCESS)
+			break;
+
+		uintptr region_start = (uintptr)address;
+		uintptr region_end = region_start + (uintptr)region_size;
+		if (region_start > hi)
+			region_start = hi;
+		if (region_start > prev_end) {
+			best = mach_vm_try_gap(prev_end, region_start, base,
+				(uae_u32)rounded_size, page, best, &best_dist);
+			if (best_dist == 0)
+				return best;
+		}
+		if (region_end <= prev_end)
+			region_end = prev_end + page;
+		prev_end = region_end;
+		address = (mach_vm_address_t)region_end;
+	}
+
+	if (prev_end < hi) {
+		best = mach_vm_try_gap(prev_end, hi, base,
+			(uae_u32)rounded_size, page, best, &best_dist);
+	}
+	if (best)
+		return best;
+
+	const uintptr stride = rounded_size > 0x10000 ? 0x10000 : page;
+	for (uintptr offset = 0; offset < range; offset += stride) {
 		for (int dir = 0; dir < 2; dir++) {
 			if (offset == 0 && dir == 1)
 				continue;
 			if (dir == 1 && base <= offset)
 				continue;
-
 			uintptr try_addr = dir == 0 ? base + offset : base - offset;
-			try_addr &= ~(granularity - 1);
-			if (try_addr < lo || try_addr + size > hi)
+			try_addr &= ~(page - 1);
+			if (try_addr < lo || try_addr + rounded_size > hi)
 				continue;
-
-			mach_vm_address_t address = (mach_vm_address_t)try_addr;
-			const kern_return_t kr = mach_vm_allocate(
-				mach_task_self(), &address, size, 0);
-			if (kr != KERN_SUCCESS)
-				continue;
-			if ((uintptr)address == try_addr)
-				return (void *)address;
-			mach_vm_deallocate(mach_task_self(), address, size);
+			void *candidate = mach_vm_allocate_fixed(try_addr, (uae_u32)rounded_size);
+			if (candidate)
+				return candidate;
 		}
 	}
-	return NULL;
+	return best;
 }
 #endif /* CPU_x86_64 && __APPLE__ */
 
