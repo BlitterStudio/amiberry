@@ -2579,8 +2579,10 @@ static void handle_mouse_wheel_event(const SDL_Event& event)
 	if (isfocus() <= 0) return;
 
 	const int midx = get_mouse_index_from_sdl_id(event.wheel.which);
-	const auto val_y = event.wheel.y;
-	const auto val_x = event.wheel.x;
+	// SDL3 wheel.x/y are floats; integer_x/y accumulate fractional motion
+	// into whole ticks so slow touchpad scrolls aren't truncated to 0.
+	const auto val_y = event.wheel.integer_y;
+	const auto val_x = event.wheel.integer_x;
 
 	setmousestate(midx, 2, val_y, 0);
 	setmousestate(midx, 3, val_x, 0);
