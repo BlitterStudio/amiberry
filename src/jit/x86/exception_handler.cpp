@@ -495,6 +495,19 @@ static void log_unhandled_access(uae_u8 *fault_pc)
 	}
 }
 
+#if X86_TARGET_64BIT
+static inline void raw_jmp_abs_noclobber(uintptr t)
+{
+	/* jmp qword ptr [rip + 0]; dq target
+	   The signal-recovery trampoline must not use a scratch register:
+	   all host registers may hold live JIT state at the fault site. */
+	emit_byte(0xff);
+	emit_byte(0x25);
+	emit_long(0);
+	emit_quad(t);
+}
+#endif
+
 static int handle_ramsey_size_probe(uae_u32 addr, CONTEXT_T context, int len)
 {
 	/* Match the ARM/AArch64 JIT handlers: Kickstart probes just beyond the
@@ -743,7 +756,11 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	for (int i = 0; i < sizeof(vecbuf); i++) {
 		vecbuf[i] = target[i];
 	}
+#if X86_TARGET_64BIT
+	raw_jmp_abs_noclobber((uintptr)veccode);
+#else
 	raw_jmp(uae_p32(veccode));
+#endif
 
 #ifdef DEBUG_ACCESS
 	write_log(_T("JIT: Create jump to %p\n"), veccode);
@@ -782,7 +799,11 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 		raw_mov_b_mi(JITPTR CONTEXT_PC(context) + i, vecbuf[i]);
 	}
 	raw_mov_l_mi(uae_p32(&in_handler), 0);
+#if X86_TARGET_64BIT
+	raw_jmp_abs_noclobber((uintptr)CONTEXT_PC(context) + len);
+#else
 	raw_jmp(uae_p32(CONTEXT_PC(context)) + len);
+#endif
 
 	in_handler = 1;
 	target = original_target;
