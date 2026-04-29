@@ -2574,15 +2574,33 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 }
 
+static int get_mouse_wheel_ticks(const SDL_MouseWheelEvent& wheel, const int midx, const int axis)
+{
+#if !defined(LIBRETRO) && SDL_VERSION_ATLEAST(3, 2, 12)
+	return axis == 0 ? wheel.integer_x : wheel.integer_y;
+#else
+	// SDL 3.2.12 added integer_x/y. Older SDL and libretro only expose
+	// float x/y, so accumulate fractional wheel motion locally.
+	static float wheel_fraction[MAX_INPUT_DEVICES][2];
+	const int mouse = midx >= 0 && midx < MAX_INPUT_DEVICES ? midx : 0;
+	const float value = axis == 0 ? wheel.x : wheel.y;
+	const int whole_ticks = static_cast<int>(value);
+
+	wheel_fraction[mouse][axis] += value - whole_ticks;
+	const int accumulated_ticks = static_cast<int>(wheel_fraction[mouse][axis]);
+	wheel_fraction[mouse][axis] -= accumulated_ticks;
+
+	return whole_ticks + accumulated_ticks;
+#endif
+}
+
 static void handle_mouse_wheel_event(const SDL_Event& event)
 {
 	if (isfocus() <= 0) return;
 
 	const int midx = get_mouse_index_from_sdl_id(event.wheel.which);
-	// SDL3 wheel.x/y are floats; integer_x/y accumulate fractional motion
-	// into whole ticks so slow touchpad scrolls aren't truncated to 0.
-	const auto val_y = event.wheel.integer_y;
-	const auto val_x = event.wheel.integer_x;
+	const int val_y = get_mouse_wheel_ticks(event.wheel, midx, 1);
+	const int val_x = get_mouse_wheel_ticks(event.wheel, midx, 0);
 
 	setmousestate(midx, 2, val_y, 0);
 	setmousestate(midx, 3, val_x, 0);
