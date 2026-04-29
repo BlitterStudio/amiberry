@@ -61,6 +61,12 @@ High natmem above 4GB is supported. Do not treat it as a reason to disable JIT o
 - `UAE_VM_32BIT` / `MAP_32BIT` is a strategy, not a proof. A returned pointer can still be out of safe range under PIE layouts.
 - If a `MAP_32BIT` allocation is returned but rejected by range checks, consider the next fallback instead of disabling JIT immediately.
 
+## macOS x86-64 Allocator Rules
+
+- Darwin can ignore advisory `mmap()` address hints and return a valid mapping far from the requested anchor.
+- Use exact near-address allocation for x86-64 JIT buffers that need RIP-relative reach; do not accept a hinted result unless it is range-checked.
+- `veccode`, `popallspace`, block pools, and the JIT cache all need to stay within the same ±2GB anchor discipline.
+
 ## Windows x86-64 Allocator Rules
 
 - Treat the Windows path the same way conceptually: search near the active base first, then validate every fallback.

@@ -111,6 +111,10 @@ static void build_comp(void);
 #if defined(CPU_x86_64) && !defined(_WIN32)
 #include <sys/mman.h>
 #endif
+#if defined(CPU_x86_64) && defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#endif
 #define VM_PAGE_READ UAE_VM_READ
 #define VM_PAGE_WRITE UAE_VM_WRITE
 #define VM_PAGE_EXECUTE UAE_VM_EXECUTE
@@ -235,6 +239,39 @@ static void *find_nearest_gap(uintptr base, uae_u32 size, uintptr range)
 }
 #endif /* CPU_x86_64 && __linux__ */
 
+#if defined(CPU_x86_64) && defined(__APPLE__)
+static void *mach_vm_acquire_near(uintptr base, uae_u32 size, uintptr range)
+{
+	const uintptr granularity = 0x10000;
+	const uintptr lo = (base > range) ? (base - range) : granularity;
+	const uintptr hi = base + range;
+
+	for (uintptr offset = 0; offset < range; offset += granularity) {
+		for (int dir = 0; dir < 2; dir++) {
+			if (offset == 0 && dir == 1)
+				continue;
+			if (dir == 1 && base <= offset)
+				continue;
+
+			uintptr try_addr = dir == 0 ? base + offset : base - offset;
+			try_addr &= ~(granularity - 1);
+			if (try_addr < lo || try_addr + size > hi)
+				continue;
+
+			mach_vm_address_t address = (mach_vm_address_t)try_addr;
+			const kern_return_t kr = mach_vm_allocate(
+				mach_task_self(), &address, size, 0);
+			if (kr != KERN_SUCCESS)
+				continue;
+			if ((uintptr)address == try_addr)
+				return (void *)address;
+			mach_vm_deallocate(mach_task_self(), address, size);
+		}
+	}
+	return NULL;
+}
+#endif /* CPU_x86_64 && __APPLE__ */
+
 void *jit_vm_acquire(uae_u32 size, int options)
 {
 #if defined(CPU_x86_64)
@@ -341,6 +378,11 @@ void *jit_vm_acquire(uae_u32 size, int options)
 
 #ifdef __linux__
 		result = find_nearest_gap(base, size, range);
+		if (result)
+			return result;
+#endif
+#ifdef __APPLE__
+		result = mach_vm_acquire_near(base, size, range);
 		if (result)
 			return result;
 #endif
