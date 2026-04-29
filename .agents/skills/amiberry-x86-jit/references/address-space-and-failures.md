@@ -8,6 +8,10 @@
 - `disable_jit_on_runtime_alloc_failure(const char *what)`
 - `invalidate_block(blockinfo* bi)`
 - `flush_icache_hard(int)`
+- `jit_n_addr_unsafe`
+- `jit_n_addr_bank_unsafe`
+- `jit_use_memory_helpers()`
+- `jit_use_compile_fallbacks()`
 
 ## Recent Root-Cause Fixes
 
@@ -53,57 +57,46 @@ This prevents stale `cache_tags[]` or half-built blocks from executing after fal
 - If JIT disables itself, can any later preference sync undo that?
 - Does every early return after partial setup clean up block state?
 
-## Outstanding Work: make x86-64 JIT 64-bit clean (tracked in #1987, root cause #1983)
+## High-Natmem Direct JIT Support (issue #1987)
 
-ARM64 is fully 64-bit pointer-clean (PC_P is the only 64-bit vreg, all others hold
-32-bit M68k values; 19 fix points documented in the arm64 skill). x86-64 still has
-32-bit arithmetic paths that truncate `natmem_offset` to 32 bits when it lives
-above 4GB:
+x86-64 high natmem is supported. Natmem may live above 4GB and the JIT should keep
+direct compiled performance unless a real special memory bank requires helper
+paths.
 
-- `add_l_ri` / `adjust_nreg` / LEA sequences that fold natmem-relative offsets.
-- PC_P helpers that emit 32-bit adds against `natmem_offset`.
-- `comp_pc_p` arithmetic assumed to fit in 32 bits.
+Current behavior:
 
-Current behavior (mitigation, not fix): `preinit_shm()` in `src/osdep/amiberry_mem.cpp`
-detects `natmem_reserved + size > 4GB` on non-`CPU_AARCH64` 64-bit builds and:
+- `preinit_shm()` may reserve 4GB natmem on 64-bit JIT builds and drops the low-address
+  requirement for x86-64.
+- `memory_reset()` sets `jit_n_addr_unsafe` when natmem exceeds the 32-bit range.
+- `map_banks()` sets `jit_n_addr_bank_unsafe` only when a real bank advertises
+  `S_N_ADDR`; this is the signal for broad helper/fallback behavior.
+- `R_MEMSTART` holds `natmem_offset` on x86-64, and direct loads/stores use it as the
+  64-bit base register.
+- `PC_P` uses 64-bit loads, stores, cmovs, and adds. Non-`PC_P` virtual registers remain
+  32-bit M68K values.
 
-- logs `MMAN: WARNING: natmem at ... exceeds 32-bit range on x86-64 - JIT not 64-bit clean`;
-- sets `canbang = false`;
-- forces `currprefs.cachesize = changed_prefs.cachesize = 0` so JIT is off.
+Key fixes that must not regress:
 
-This is safe but kills JIT on macOS x86-64 hosts where the kernel refuses every
-low-address hint (e.g. heavy ASLR, 40 GB RAM).
+- `set_const()` masks non-`PC_P` constants to 32 bits, so host pointers must not be
+  stored as generic constants in scratch virtual registers.
+- `mov_l_rr()` special-cases constant `PC_P` copies with a 64-bit materialized register;
+  the generic `mov_l_ri()` shortcut would truncate when the destination is not `PC_P`.
+- Non-constant `PC_P` copies must use `readreg()` rather than `readreg_offset()` when the
+  logical value, including deferred offset, is required.
+- FBcc target handling keeps signed displacement separate from the 64-bit host pointer.
+- Helper fallback paths update `regs.pc_p`, `regs.pc_oldp`, `regs.pc`, and
+  `regs.instruction_pc` with pointer-width and M68K-width values respectively.
+- Generic H3/default memory-fault logging must not carry x86 JIT investigation tags.
 
-### Reproducer (issue #1983)
+Historical reproducer:
 
-- macOS 26.3 x86-64, 40 GB RAM, A1200 config with 68040/FPU, 128 MB Z3, JIT 16384 direct.
-- `uae_vm_reserve(2GB, UAE_VM_32BIT)` loop 0x80000000 → 0x20000000 all return `0x11b0dc000`
-  and get rejected as > 32-bit; fallback `VirtualAlloc(nullptr, ...)` shim drops
-  `UAE_VM_32BIT` (`amiberry_mem.cpp:117`) and accepts the high address.
-- Without the guard, JIT-emitted helper computes
-  `(uae_u32)natmem_offset + amiga_pc = 0x1b0dc000 + 0xf80e5a = 0x1c05ce5a`
-  and dereferences that garbage pointer → SIGSEGV in a C helper (PC outside JIT cache)
-  → `exception_handler.cpp:950 Caught SIGSEGV outside JIT code` → abort.
+- macOS x86-64 or Linux/WSL with natmem above 4GB, A1200 68040/FPU, Z3, JIT direct.
+- Older code truncated `natmem_offset` or `PC_P`, causing H3/software failures, yellow
+  reset loops, or interpreter-level performance after fallback.
 
-### Path to a real fix
+Verification checklist:
 
-1. Audit and promote to 64-bit all sites that read `natmem_offset` into a register
-   before indexing. Candidates (look for `NATMEM_OFFSET`, `natmem_offset`,
-   `MEMBASEADDR` uses, `(uae_u32)...` casts near natmem arithmetic):
-   - `src/jit/x86/compemu_support_x86.cpp` — `add_l_ri`, `adjust_nreg`, LEA emit paths.
-   - `src/jit/x86/compemu_fpp_x86.cpp` — FPU natmem loads.
-   - PC_P emission sites (search for `comp_pc_p`).
-2. Remove or condition-out any `ADDR32` prefix emission (already done in some paths;
-   confirm none remain in the hot loop).
-3. Once clean, drop the `preinit_shm` guard above and switch `uae_vm_reserve` in
-   `amiberry_mem.cpp:391` to also drop `UAE_VM_32BIT` on x86-64 (mirror the ARM64
-   branch).
-4. Verify on macOS x86-64 where the kernel always places natmem above 4GB, and on
-   Linux x86-64 with PIE + aggressive ASLR.
-
-### Secondary bug to fix alongside
-
-The `VirtualAlloc` POSIX shim in `src/osdep/amiberry_mem.cpp:76-129` calls
-`uae_vm_reserve(dwSize, 0)` unconditionally, dropping any 32-bit flag the caller
-intended. If `UAE_VM_32BIT` handling is preserved long-term, the shim should take
-a flag arg or the caller should go through `uae_vm_reserve` directly.
+- Build Windows and Linux x86-64 release targets.
+- Run high-natmem SysInfo/Workbench smoke with logging; expect timeout/normal run, not
+  H3, software failure, CPU halted, or `Register 16 should be constant`.
+- Confirm JIT-level performance, not interpreter-level MIPS.

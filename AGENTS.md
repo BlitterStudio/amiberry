@@ -52,7 +52,7 @@ amiberry/
 | Add GUI panel | `src/osdep/imgui/` | One file per panel, add to `cmake/SourceFiles.cmake` |
 | Add config option | `src/cfgfile.cpp` + `src/include/options.h` | 10K-line parser, add GUI in imgui/ |
 | Platform-specific code | `src/osdep/amiberry_*.cpp` | Use `#ifdef __ANDROID__` / `_WIN32` / `__APPLE__` |
-| JIT bug | `src/jit/arm/compemu_support_arm.cpp` | Block compilation, flags, see `amiberry-arm64-jit` skill |
+| JIT bug | `src/jit/arm/` or `src/jit/x86/` | ARM64 flags/codegen: `amiberry-arm64-jit`; x86-64 allocator/high-natmem/RIP-relative: `amiberry-x86-jit` |
 | Custom chip emulation | `src/custom.cpp` | 68K custom chip (Agnus, Denise, Paula) |
 | CPU emulation | `src/newcpu.cpp` + `src/cpuemu_*.cpp` | Interpreter + generated opcode handlers |
 | Memory mapping | `src/memory.cpp` + `src/osdep/amiberry_mem.cpp` | Natmem + bank system |
@@ -95,6 +95,43 @@ amiberry/
 - **Inter-block flag optimization** currently **disabled** (`#if 0` in `compile_block()`) on ARM64
 - **Android version** derived from root `CMakeLists.txt` `project(VERSION)` — single source of truth
 
+## RUNTIME ARCHITECTURE NOTES
+
+### Startup, CLI, and ROM Detection
+
+- `amiberry_main()` handles an early arg scan before `initialize_ini()`; flags that affect ROM scanning must be handled there (`--log`, `--jit-selftest`, `--rescan-roms`).
+- `initialize_ini()` loads `amiberry.ini` and may call `scan_roms()` before `parse_cmdline_and_init_file()`.
+- `--model` and `--config` are processed in command-line order later in `parse_cmdline()`, so a config loaded after a model can override ROM choices.
+- Android always passes `--rescan-roms` so newly added ROMs are detected.
+
+### Natmem and JIT Memory
+
+- Natmem maps the Amiga address space into contiguous host virtual memory for direct `natmem_offset + m68k_addr` access.
+- 64-bit JIT builds may reserve up to 4GB; banks are committed during `memory_reset()`, and `commit_natmem_gaps()` fills unmapped gaps with read-only zero pages when needed.
+- Avoid `memset` on POSIX zero-fill pages; the kernel already zero-fills and explicit writes can cause large resident-memory spikes.
+- ARM64 and x86-64 both treat `PC_P` (virtual register 16) as the only 64-bit virtual register; all Dn/An/temp non-`PC_P` virtual registers hold 32-bit M68K values.
+- x86-64 direct high-natmem mode is supported: `R_MEMSTART` holds `natmem_offset`, `PC_P` uses pointer-width operations, and real `S_N_ADDR` banks are tracked separately via `jit_n_addr_bank_unsafe`.
+
+### Rendering and Input
+
+- `IRenderer` abstracts rendering; active backends are `OpenGLRenderer` and `SDLRenderer`, created through `renderer_factory`.
+- OpenGL shader/overlay infrastructure lives in extracted `_gl` files, but render entry points stay in their owning modules when they need file-local state.
+- Custom bezels render after the Amiga frame/cursor and before OSD, virtual keyboard, and touch controls.
+- For new joystick/touch input code, use `setjoystickstate()` / `setjoybuttonstate()` rather than `send_input_event()`.
+
+### Android App
+
+- The Kotlin/Compose app launches native SDL in a separate `:sdl` process using `SDL_ARGS`; there is no JNI runtime-control channel.
+- Android version metadata comes from the root `CMakeLists.txt`: `project(VERSION)` plus `VERSION_PRE_RELEASE`; `versionCode` is generated to keep Play Store uploads monotonic.
+- `SettingsViewModel.applyConstraints()` enforces hardware constraints: 68000/68010 disables Z3/JIT, cycle-exact disables JIT, JIT requires 68020+, and Z3 requires 32-bit address space.
+
+### Windows Port
+
+- Windows builds use MinGW-w64/GCC with vcpkg dependencies; many WinUAE `_WIN32` code paths now compile in Amiberry.
+- Include `<winsock2.h>` before Windows headers that can define conflicting `byte` symbols.
+- Use `std::filesystem::copy()` instead of symlinks on Windows and Android.
+- `data/` must exist beside the executable for normal runtime; use `--log` when expecting `write_log()` output.
+
 ## COMMANDS
 
 ```bash
@@ -133,11 +170,10 @@ cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build
 ## NOTES
 
 - **No automated tests** — manual testing with Amiga software is the methodology
-- **CLAUDE.md** at `.claude/CLAUDE.md` has comprehensive architecture docs (390 lines) — read it first
 - **CI** builds 15+ platform variants (see `.github/workflows/c-cpp.yml`)
 - **macOS user data** moved to `~/Documents/Amiberry` (startup migration from `~/Library/Application Support/Amiberry`)
 - **WinUAE upstream**: Core files (`custom.cpp`, `newcpu.cpp`, `memory.cpp`, etc.) track WinUAE — use `winuae-amiberry-merge` skill for porting
-- **JIT debugging**: Use `amiberry-arm64-jit` skill — covers 12 root-cause bug fixes
+- **JIT debugging**: Use `amiberry-arm64-jit` for ARM64 flag/codegen issues and `amiberry-x86-jit` for x86-64 allocator, RIP-relative, high-natmem, or direct-memory issues
 - **Troubleshooting**: Use `troubleshoot-amiberry` skill — full edit-build-run-test cycle with MCP tools
 
 ## CHILD AGENTS.md

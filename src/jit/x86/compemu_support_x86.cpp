@@ -111,6 +111,11 @@ static void build_comp(void);
 #if defined(CPU_x86_64) && !defined(_WIN32)
 #include <sys/mman.h>
 #endif
+#if defined(CPU_x86_64) && defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <mach/vm_region.h>
+#endif
 #define VM_PAGE_READ UAE_VM_READ
 #define VM_PAGE_WRITE UAE_VM_WRITE
 #define VM_PAGE_EXECUTE UAE_VM_EXECUTE
@@ -235,6 +240,122 @@ static void *find_nearest_gap(uintptr base, uae_u32 size, uintptr range)
 }
 #endif /* CPU_x86_64 && __linux__ */
 
+#if defined(CPU_x86_64) && defined(__APPLE__)
+#ifndef VM_FLAGS_FIXED
+#define VM_FLAGS_FIXED 0
+#endif
+
+static void *mach_vm_allocate_fixed(uintptr try_addr, uae_u32 size)
+{
+	mach_vm_address_t address = (mach_vm_address_t)try_addr;
+	const kern_return_t kr = mach_vm_allocate(
+		mach_task_self(), &address, size, VM_FLAGS_FIXED);
+	if (kr != KERN_SUCCESS)
+		return NULL;
+	if ((uintptr)address == try_addr)
+		return (void *)address;
+	mach_vm_deallocate(mach_task_self(), address, size);
+	return NULL;
+}
+
+static void *mach_vm_try_gap(uintptr gap_start, uintptr gap_end, uintptr base,
+	uae_u32 size, uintptr page, void *best, uintptr *best_dist)
+{
+	if (gap_end <= gap_start || gap_end - gap_start < size)
+		return best;
+
+	uintptr alloc_at;
+	if (base >= gap_start && base + size <= gap_end) {
+		alloc_at = base & ~(page - 1);
+		if (alloc_at < gap_start)
+			alloc_at += page;
+	} else if (gap_end <= base) {
+		alloc_at = (gap_end - size) & ~(page - 1);
+	} else {
+		alloc_at = (gap_start + page - 1) & ~(page - 1);
+	}
+	if (alloc_at < gap_start || alloc_at + size > gap_end)
+		return best;
+
+	const uintptr dist = (alloc_at >= base) ? (alloc_at - base) : (base - alloc_at);
+	if (dist >= *best_dist)
+		return best;
+
+	void *candidate = mach_vm_allocate_fixed(alloc_at, size);
+	if (!candidate)
+		return best;
+	if (best)
+		mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)best, size);
+	*best_dist = dist;
+	return candidate;
+}
+
+static void *mach_vm_acquire_near(uintptr base, uae_u32 size, uintptr range)
+{
+	const uintptr page = (uintptr)uae_vm_page_size();
+	const uintptr lo = (base > range) ? (base - range) : page;
+	const uintptr hi = base + range;
+	const uintptr rounded_size = (size + page - 1) & ~(page - 1);
+
+	void *best = NULL;
+	uintptr best_dist = UINTPTR_MAX;
+	uintptr prev_end = lo;
+	mach_vm_address_t address = (mach_vm_address_t)lo;
+
+	while ((uintptr)address < hi) {
+		mach_vm_size_t region_size = 0;
+		natural_t depth = 0;
+		vm_region_submap_info_data_64_t info;
+		mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+		const kern_return_t kr = mach_vm_region_recurse(
+			mach_task_self(), &address, &region_size, &depth,
+			(vm_region_recurse_info_t)&info, &count);
+		if (kr != KERN_SUCCESS)
+			break;
+
+		uintptr region_start = (uintptr)address;
+		uintptr region_end = region_start + (uintptr)region_size;
+		if (region_start > hi)
+			region_start = hi;
+		if (region_start > prev_end) {
+			best = mach_vm_try_gap(prev_end, region_start, base,
+				(uae_u32)rounded_size, page, best, &best_dist);
+			if (best_dist == 0)
+				return best;
+		}
+		if (region_end <= prev_end)
+			region_end = prev_end + page;
+		prev_end = region_end;
+		address = (mach_vm_address_t)region_end;
+	}
+
+	if (prev_end < hi) {
+		best = mach_vm_try_gap(prev_end, hi, base,
+			(uae_u32)rounded_size, page, best, &best_dist);
+	}
+	if (best)
+		return best;
+
+	const uintptr stride = rounded_size > 0x10000 ? 0x10000 : page;
+	for (uintptr offset = 0; offset < range; offset += stride) {
+		for (int dir = 0; dir < 2; dir++) {
+			if (offset == 0 && dir == 1)
+				continue;
+			if (dir == 1 && base <= offset)
+				continue;
+			uintptr try_addr = dir == 0 ? base + offset : base - offset;
+			try_addr &= ~(page - 1);
+			if (try_addr < lo || try_addr + rounded_size > hi)
+				continue;
+			void *candidate = mach_vm_allocate_fixed(try_addr, (uae_u32)rounded_size);
+			if (candidate)
+				return candidate;
+		}
+	}
+	return best;
+}
+#endif /* CPU_x86_64 && __APPLE__ */
+
 void *jit_vm_acquire(uae_u32 size, int options)
 {
 #if defined(CPU_x86_64)
@@ -341,12 +462,13 @@ void *jit_vm_acquire(uae_u32 size, int options)
 
 #ifdef __linux__
 		result = find_nearest_gap(base, size, range);
-		if (result) {
-			write_log("JIT: VMA-aware alloc at %p (anchor=%p, dist=%+lld)\n",
-				result, (void *)base,
-				(long long)((intptr_t)result - (intptr_t)base));
+		if (result)
 			return result;
-		}
+#endif
+#ifdef __APPLE__
+		result = mach_vm_acquire_near(base, size, range);
+		if (result)
+			return result;
 #endif
 
 #ifdef MAP_FIXED_NOREPLACE
@@ -409,8 +531,6 @@ void *jit_vm_acquire(uae_u32 size, int options)
 					uae_vm_free(try_alloc, size);
 					continue;
 				}
-				write_log("JIT: cache fallback at %p (anchor=%p, dist=%+lld)\n",
-					try_alloc, (void *)base, (long long)dist);
 				result = try_alloc;
 			}
 			if (!result) {
@@ -441,6 +561,8 @@ void *jit_vm_acquire(uae_u32 size, int options)
 
 // %%% BRIAN KING WAS HERE %%%
 extern bool canbang;
+extern int jit_n_addr_unsafe;
+extern int jit_n_addr_bank_unsafe;
 
 #include "../compemu_prefs.cpp"
 
@@ -484,6 +606,16 @@ static inline int distrust_long(void)
 static inline int distrust_addr(void)
 {
 	return distrust_check(currprefs.comptrustnaddr);
+}
+
+static inline bool jit_use_memory_helpers(void)
+{
+	return jit_n_addr_bank_unsafe || (jit_n_addr_unsafe && !canbang);
+}
+
+static inline bool jit_use_compile_fallbacks(void)
+{
+	return jit_n_addr_bank_unsafe;
 }
 
 #else
@@ -642,6 +774,16 @@ static inline int end_block(uae_u32 opcode)
 static inline bool is_const_jump(uae_u32 opcode)
 {
 	return (prop[opcode].cflow == fl_const_jump);
+}
+
+static inline bool is_dbcc_opcode(uae_u32 opcode)
+{
+	return (opcode & 0xf0f8) == 0x50c8;
+}
+
+static inline bool is_cmp_w_an_postinc_dn_opcode(uae_u32 opcode)
+{
+	return (opcode & 0xf1f8) == 0xb058;
 }
 
 #if 0
@@ -1962,12 +2104,50 @@ static inline int isinreg(int r)
 	return live.state[r].status==CLEAN || live.state[r].status==DIRTY;
 }
 
-static inline void adjust_nreg(int r, uae_u32 val)
+static inline void adjust_nreg(int r, uintptr val)
 {
 	if (!val)
 		return;
 	compemu_raw_lea_l_brr(r,r,val);
 }
+
+#if X86_TARGET_64BIT
+static inline void copy_vreg_nreg(int vreg, int dst, int src)
+{
+	if (vreg == PC_P) {
+		MOVQrr(src, dst);
+	} else {
+		compemu_raw_mov_l_rr(dst, src);
+	}
+}
+
+static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
+{
+	if (!val)
+		return;
+	if (vreg == PC_P) {
+		const intptr_t svalue = static_cast<intptr_t>(val);
+		if (svalue >= static_cast<intptr_t>(-2147483647 - 1) &&
+			svalue <= static_cast<intptr_t>(2147483647)) {
+			LEAQmr(static_cast<IMM>(svalue), nreg, X86_NOREG, 1, nreg);
+		} else {
+			ADDQir((IMM)val, nreg);
+		}
+	} else {
+		adjust_nreg(nreg, val);
+	}
+}
+#else
+static inline void copy_vreg_nreg(int /* vreg */, int dst, int src)
+{
+	compemu_raw_mov_l_rr(dst, src);
+}
+
+static inline void adjust_vreg_nreg(int /* vreg */, int nreg, uintptr val)
+{
+	adjust_nreg(nreg, val);
+}
+#endif
 
 static void tomem(int r)
 {
@@ -1977,7 +2157,7 @@ static void tomem(int r)
 		if (live.state[r].val && live.nat[rr].nholds==1
 			&& !live.nat[rr].locked) {
 			jit_log2("RemovingA offset %x from reg %d (%d) at %p", live.state[r].val,r,rr,target);
-			adjust_nreg(rr,live.state[r].val);
+			adjust_vreg_nreg(r,rr,live.state[r].val);
 			live.state[r].val=0;
 			live.state[r].dirtysize=4;
 			set_status(r,DIRTY);
@@ -2012,6 +2192,35 @@ static inline int isconst(int r)
 	return live.state[r].status==ISCONST;
 }
 
+#if X86_TARGET_64BIT
+static inline void free_nreg(int r);
+
+static inline int get_unlocked_scratch_nreg(void)
+{
+	static const int candidates[] = {
+		R11_INDEX, R10_INDEX, R9_INDEX, R8_INDEX,
+		EAX_INDEX, ECX_INDEX, EDX_INDEX, EBX_INDEX,
+		EBP_INDEX, ESI_INDEX, EDI_INDEX, R13_INDEX, R14_INDEX
+	};
+
+	for (int r : candidates) {
+		if (!live.nat[r].locked)
+			return r;
+	}
+
+	jit_abort("No unlocked scratch register for 64-bit immediate store");
+	return R11_INDEX;
+}
+
+static inline void store_const_q_mi(uintptr d, uintptr s)
+{
+	int scratch = get_unlocked_scratch_nreg();
+	free_nreg(scratch);
+	raw_mov_q_ri(scratch, s);
+	raw_mov_q_mr(d, scratch);
+}
+#endif
+
 int is_const(int r)
 {
 	return isconst(r);
@@ -2027,8 +2236,8 @@ static inline void writeback_const(int r)
 
 #if X86_TARGET_64BIT
 	if (r == PC_P) {
-		/* PC_P holds a 64-bit host pointer — must use 64-bit store */
-		raw_mov_q_mi((uintptr)live.state[r].mem, live.state[r].val);
+		/* PC_P holds a 64-bit host pointer and needs allocator-aware scratch use. */
+		store_const_q_mi((uintptr)live.state[r].mem, live.state[r].val);
 	} else
 #endif
 	{
@@ -2110,6 +2319,12 @@ static inline void disassociate(int r)
 static inline void set_const(int r, uintptr val)
 {
 	disassociate(r);
+#if X86_TARGET_64BIT
+	/* Guest Dn/An/flag virtual registers are 32-bit M68K values.
+	   PC_P is the only virtual register that may hold a 64-bit host pointer. */
+	if (r != PC_P)
+		val = (uae_u32)val;
+#endif
 	live.state[r].val=val;
 	set_status(r,ISCONST);
 }
@@ -2185,8 +2400,8 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		if (live.state[r].status!=UNDEF) {
 			if (isconst(r)) {
 #if X86_TARGET_64BIT
-				if (r == PC_P) {
-					/* PC_P holds a 64-bit host pointer — must use 64-bit load */
+				if (r == PC_P || live.state[r].val > (uintptr)0xffffffff) {
+					/* PC_P and temporary host pointers need the full 64-bit value. */
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
 #endif
@@ -2231,7 +2446,7 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		else {
 			if (live.state[r].status!=UNDEF) {
 #if X86_TARGET_64BIT
-				if (r == PC_P) {
+				if (r == PC_P || live.state[r].val > (uintptr)0xffffffff) {
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
 #endif
@@ -2359,15 +2574,14 @@ static inline void make_exclusive(int r, int size, int spec)
 	live.state[r].realind=nind;
 
 	if (size<live.state[r].validsize) {
+		copy_vreg_nreg(r,nr,rr);
 		if (live.state[r].val) {
-			/* Might as well compensate for the offset now */
-			compemu_raw_lea_l_brr(nr,rr,oldstate.val);
+			/* Split first, then compensate for the deferred offset. */
+			adjust_vreg_nreg(r,nr,oldstate.val);
 			live.state[r].val=0;
 			live.state[r].dirtysize=4;
 			set_status(r,DIRTY);
 		}
-		else
-			compemu_raw_mov_l_rr(nr,rr);  /* Make another copy */
 	}
 	unlock2(rr);
 }
@@ -2403,7 +2617,7 @@ static inline void remove_offset(int r, int spec)
 
 	if (live.nat[rr].nholds==1) {
 		jit_log2("RemovingB offset %x from reg %d (%d) at %p", live.state[r].val,r,rr,target);
-		adjust_nreg(rr,live.state[r].val);
+		adjust_vreg_nreg(r,rr,live.state[r].val);
 		live.state[r].dirtysize=4;
 		live.state[r].val=0;
 		set_status(r,DIRTY);
@@ -2973,8 +3187,16 @@ static void align_target(uae_u32 a)
 static inline int isinrom(uintptr addr)
 {
 #ifdef UAE
-	return (addr >= uae_p32(kickmem_bank.baseaddr) &&
-			addr < uae_p32(kickmem_bank.baseaddr + 8 * 65536));
+	if (addr >= (uintptr)kickmem_bank.baseaddr &&
+		addr < (uintptr)kickmem_bank.baseaddr + 8 * 65536) {
+		return 1;
+	}
+	if (rtarea_bank.baseaddr &&
+		addr >= (uintptr)rtarea_bank.baseaddr &&
+		addr < (uintptr)rtarea_bank.baseaddr + 65536) {
+		return 1;
+	}
+	return 0;
 #else
 	return ((addr >= (uintptr)ROMBaseHost) && (addr < (uintptr)ROMBaseHost + ROMSize));
 #endif
@@ -3075,6 +3297,43 @@ void sync_m68k_pc(void)
 		comp_pc_p+=m68k_pc_offset;
 		m68k_pc_offset=0;
 	}
+}
+
+static inline uae_u32 get_virtual_compile_pc(uintptr native_pc)
+{
+	uae_u32 m68k_pc = (uae_u32)(start_pc + ((char*)native_pc - (char*)start_pc_p));
+#ifdef NATMEM_OFFSET
+	if (natmem_offset && native_pc >= (uintptr)natmem_offset &&
+		native_pc < (uintptr)natmem_offset + (uintptr)0x100000000ULL) {
+		m68k_pc = (uae_u32)(native_pc - (uintptr)natmem_offset);
+	}
+#endif
+	return m68k_pc;
+}
+
+static uintptr compiled_exception_native_pc;
+static uae_u32 compiled_exception_opcode;
+static bool compiled_exception_state_valid;
+static bool compiled_exception_state_emitted;
+
+static inline void prepare_compiled_exception_state(uintptr native_pc, uae_u32 opcode)
+{
+	compiled_exception_native_pc = native_pc;
+	compiled_exception_opcode = opcode;
+	compiled_exception_state_valid = true;
+	compiled_exception_state_emitted = false;
+}
+
+static inline void sync_compiled_exception_state(void)
+{
+	if (!compiled_exception_state_valid || compiled_exception_state_emitted)
+		return;
+
+	uae_u32 m68k_pc = get_virtual_compile_pc(compiled_exception_native_pc);
+	raw_mov_l_mi((uintptr)&regs.instruction_pc, m68k_pc);
+	raw_mov_w_mi((uintptr)&regs.opcode, compiled_exception_opcode);
+	raw_mov_w_mi((uintptr)&regs.ir, compiled_exception_opcode);
+	compiled_exception_state_emitted = true;
 }
 
 /* for building exception frames */
@@ -3782,9 +4041,10 @@ static inline void writemem(int address, int source, int offset, int size, int t
 void writebyte(int address, int source, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_byte())
+	if ((special_mem & S_WRITE) || distrust_byte() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		writemem_special(address, source, 5 * SIZEOF_VOID_P, 1, tmp);
-	else
+	} else
 #endif
 		writemem_real(address,source,1,tmp,0);
 }
@@ -3793,9 +4053,10 @@ static inline void writeword_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_word())
+	if ((special_mem & S_WRITE) || distrust_word() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		writemem_special(address, source, 4 * SIZEOF_VOID_P, 2, tmp);
-	else
+	} else
 #endif
 		writemem_real(address,source,2,tmp,clobber);
 }
@@ -3814,9 +4075,10 @@ static inline void writelong_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
-	if ((special_mem & S_WRITE) || distrust_long())
+	if ((special_mem & S_WRITE) || distrust_long() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		writemem_special(address, source, 3 * SIZEOF_VOID_P, 4, tmp);
-	else
+	} else
 #endif
 		writemem_real(address,source,4,tmp,clobber);
 }
@@ -3949,9 +4211,10 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 void readbyte(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_byte())
+	if ((special_mem & S_READ) || distrust_byte() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		readmem_special(address, dest, 2 * SIZEOF_VOID_P, 1, tmp);
-	else
+	} else
 #endif
 		readmem_real(address,dest,1,tmp);
 }
@@ -3959,9 +4222,10 @@ void readbyte(int address, int dest, int tmp)
 void readword(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_word())
+	if ((special_mem & S_READ) || distrust_word() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		readmem_special(address, dest, 1 * SIZEOF_VOID_P, 2, tmp);
-	else
+	} else
 #endif
 		readmem_real(address,dest,2,tmp);
 }
@@ -3969,9 +4233,10 @@ void readword(int address, int dest, int tmp)
 void readlong(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if ((special_mem & S_READ) || distrust_long())
+	if ((special_mem & S_READ) || distrust_long() || jit_use_memory_helpers()) {
+		sync_compiled_exception_state();
 		readmem_special(address, dest, 0 * SIZEOF_VOID_P, 4, tmp);
-	else
+	} else
 #endif
 		readmem_real(address,dest,4,tmp);
 }
@@ -3979,11 +4244,27 @@ void readlong(int address, int dest, int tmp)
 void get_n_addr(int address, int dest, int tmp)
 {
 #ifdef UAE
-	if (special_mem || distrust_addr()) {
+	if (special_mem || distrust_addr() || jit_use_memory_helpers()) {
 		/* This one might appear a bit odd... */
-		readmem(address, dest, 6 * SIZEOF_VOID_P, 4, tmp);
+		sync_compiled_exception_state();
+		readmem_special(address, dest, 6 * SIZEOF_VOID_P, 4, tmp);
 		return;
 	}
+#endif
+
+#if X86_TARGET_64BIT
+#ifdef NATMEM_OFFSET
+	if (canbang) {
+		int hw_address = readreg(address, 4);
+		int hw_dest = writereg(dest, 4);
+		compemu_raw_mov_l_rr(hw_dest, hw_address);
+		LEAQmr(0, R_MEMSTART, hw_dest, 1, hw_dest);
+		unlock2(hw_dest);
+		unlock2(hw_address);
+		forget_about(tmp);
+		return;
+	}
+#endif
 #endif
 
 	// a is the register containing the virtual address
@@ -4030,6 +4311,26 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	 would --- otherwise we end up translating everything twice */
 	get_n_addr(address,dest,tmp);
 #else
+#ifdef UAE
+	if (special_mem || distrust_addr() || jit_use_memory_helpers()) {
+		get_n_addr(address,dest,tmp);
+		return;
+	}
+#endif
+#if X86_TARGET_64BIT
+	if (canbang && dest == PC_P) {
+		clobber_flags();
+		int hw_address = readreg(address, 4);
+		int hw_dest = writereg(dest, 4);
+		compemu_raw_mov_l_rr(hw_dest, hw_address);
+		LEAQmr(0, R_MEMSTART, hw_dest, 1, hw_dest);
+		ANDQir((IMM)~1, hw_dest);
+		unlock2(hw_dest);
+		unlock2(hw_address);
+		forget_about(tmp);
+		return;
+	}
+#endif
 	int f=tmp;
 	if (address!=dest)
 		f=dest;
@@ -4037,6 +4338,13 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	shrl_l_ri(f,16);   /* The index into the baseaddr bank table */
 	mov_l_rm_indexed(dest,uae_p32(baseaddr),f,SIZEOF_VOID_P); /* FIXME: is SIZEOF_VOID_P correct? */
 	add_l(dest,address);
+#if X86_TARGET_64BIT
+	if (dest == PC_P) {
+		int hw_dest = rmw(dest, 4, 4);
+		ANDQir((IMM)~1, hw_dest);
+		unlock2(hw_dest);
+	} else
+#endif
 	and_l_ri (dest, ~1);
 	forget_about(tmp);
 #endif
@@ -4101,8 +4409,8 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
 	}
 	else { /* 68000 version */
 		if ((dp & 0x800) == 0) { /* Sign extend */
-			sign_extend_16_rr(target,reg);
-			lea_l_brr_indexed(target,base,target,1<<regd_shift,(uae_s32)((uae_s8)dp));
+			sign_extend_16_rr(tmp,reg);
+			lea_l_brr_indexed(target,base,tmp,1<<regd_shift,(uae_s32)((uae_s8)dp));
 		}
 		else {
 			lea_l_brr_indexed(target,base,reg,1<<regd_shift,(uae_s32)((uae_s8)dp));
@@ -5393,10 +5701,18 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 		liveflags[blocklen]=FLAG_ALL; /* All flags needed afterwards */
+		const bool unsafe_memory_helpers = jit_use_memory_helpers();
+		const bool unsafe_compile_fallbacks = jit_use_compile_fallbacks();
+		const bool high_natmem_rom_block =
+			jit_n_addr_unsafe && !jit_n_addr_bank_unsafe &&
+			isinrom((uintptr)pc_hist[0].location) != 0;
+		bool unsafe_special_mem_block = high_natmem_rom_block;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;
 			uae_u32 op=DO_GET_OPCODE(currpcp);
+			if ((unsafe_compile_fallbacks || unsafe_memory_helpers) && pc_hist[i].specmem)
+				unsafe_special_mem_block = true;
 
 #if USE_CHECKSUM_INFO
 			trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
@@ -5468,7 +5784,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			compemu_raw_sub_l_mi(JITPTR &(bi->count),1);
 			compemu_raw_jl(JITPTR popall_recompile_block);
 		}
-		if (optlev==0) { /* No need to actually translate */
+		if (optlev==0 || unsafe_special_mem_block) { /* No need to actually translate */
 			/* Execute normally without keeping stats */
 #if X86_TARGET_64BIT
 			raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[0].location);
@@ -5500,8 +5816,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 #ifdef JIT_DEBUG
 			if (JITDebug) {
+#if X86_TARGET_64BIT
+				raw_mov_q_mi((uintptr)&last_regs_pc_p,(uintptr)pc_hist[0].location);
+				raw_mov_q_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
+#else
 				compemu_raw_mov_l_mi((uintptr)&last_regs_pc_p,(uintptr)pc_hist[0].location);
 				compemu_raw_mov_l_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
+#endif
 			}
 #endif
 
@@ -5510,9 +5831,17 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compop_func **comptbl;
 				uae_u32 opcode=DO_GET_OPCODE(pc_hist[i].location);
 				needed_flags=(liveflags[i+1] & prop[opcode].set_flags);
+				const bool unsafe_dbcc = unsafe_compile_fallbacks && is_dbcc_opcode(opcode);
+				const bool unsafe_cmp_w_an_postinc_dn =
+					unsafe_compile_fallbacks && is_cmp_w_an_postinc_dn_opcode(opcode);
+				const bool unsafe_control_flow = unsafe_compile_fallbacks && prop[opcode].cflow != fl_normal && !unsafe_dbcc;
+				const bool unsafe_flags = unsafe_compile_fallbacks && prop[opcode].set_flags &&
+					!unsafe_cmp_w_an_postinc_dn;
+				if (unsafe_compile_fallbacks)
+					needed_flags=prop[opcode].set_flags;
 #ifdef UAE
 				special_mem=pc_hist[i].specmem;
-				if (!needed_flags && currprefs.compnf)
+				if (!unsafe_compile_fallbacks && !needed_flags && currprefs.compnf)
 #else
 				if (!needed_flags)
 #endif
@@ -5545,7 +5874,8 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 
 				failure = 1; // gb-- defaults to failure state
-				if (comptbl[opcode] && optlev>1) {
+				prepare_compiled_exception_state((uintptr)pc_hist[i].location, opcode);
+				if (comptbl[opcode] && optlev>1 && !unsafe_control_flow && !unsafe_flags) {
 					failure=0;
 					if (!was_comp) {
 						comp_pc_p=(uae_u8*)pc_hist[i].location;
@@ -5572,7 +5902,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 					comptbl[opcode](opcode);
 					freescratch();
-					if (!(liveflags[i+1] & FLAG_CZNV)) {
+					if (!unsafe_compile_fallbacks && !(liveflags[i+1] & FLAG_CZNV)) {
 						/* We can forget about flags */
 						dont_care_flags();
 					}
@@ -5642,11 +5972,19 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #if USE_NORMAL_CALLING_CONVENTION
 					raw_push_l_r(REG_PAR1);
 #endif
-	#if X86_TARGET_64BIT
-				raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[i].location);
+					{
+						uintptr native_pc = (uintptr)pc_hist[i].location;
+						uae_u32 m68k_pc = get_virtual_compile_pc(native_pc);
+#if X86_TARGET_64BIT
+						raw_mov_q_mi((uintptr)&regs.pc_p, native_pc);
+						raw_mov_q_mi((uintptr)&regs.pc_oldp, native_pc);
 #else
-				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[i].location);
+						compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR native_pc);
+						compemu_raw_mov_l_mi(JITPTR &regs.pc_oldp, JITPTR native_pc);
 #endif
+						compemu_raw_mov_l_mi(JITPTR &regs.pc, m68k_pc);
+						compemu_raw_mov_l_mi(JITPTR &regs.instruction_pc, m68k_pc);
+					}
 					raw_dec_sp(STACK_SHADOW_SPACE);
 					compemu_raw_call(JITPTR cputbl[opcode]);
 					raw_inc_sp(STACK_SHADOW_SPACE);
@@ -5657,6 +5995,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #if USE_NORMAL_CALLING_CONVENTION
 					raw_inc_sp(4);
 #endif
+
+					if (unsafe_compile_fallbacks && unsafe_control_flow) {
+#ifdef UAE
+						raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
+#endif
+						compemu_raw_jmp(JITPTR popall_do_nothing);
+					}
 
 					if (i < blocklen - 1) {
 						uae_u8* branchadd;
@@ -5792,8 +6137,17 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				/* Let's find out where next_handler is... */
 				if (was_comp && isinreg(PC_P)) {
 					r=live.state[PC_P].realreg;
-					compemu_raw_and_l_ri(r,TAGMASK);
-					int r2 = (r==0) ? 1 : 0;
+#if X86_TARGET_64BIT
+					int rtag = (r != R10_INDEX) ? R10_INDEX : R11_INDEX;
+					int r2 = (r != R11_INDEX && rtag != R11_INDEX) ? R11_INDEX : EAX_INDEX;
+#else
+					int rtag = (r != EAX_INDEX) ? EAX_INDEX : ECX_INDEX;
+					int r2 = (r != ECX_INDEX && rtag != ECX_INDEX) ? ECX_INDEX : EDX_INDEX;
+#endif
+					free_nreg(rtag);
+					free_nreg(r2);
+					compemu_raw_mov_l_rr(rtag,r);
+					compemu_raw_and_l_ri(rtag,TAGMASK);
 #if X86_TARGET_64BIT
 					raw_mov_q_ri(r2, JITPTR popall_do_nothing);
 #else
@@ -5801,10 +6155,10 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 #ifdef UAE
 					raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
-					raw_cmov_l_rm_indexed(r2, JITPTR cache_tags,r,sizeof(void *),NATIVE_CC_PL);
+					raw_cmov_l_rm_indexed(r2, JITPTR cache_tags,rtag,sizeof(void *),NATIVE_CC_PL);
 #else
 					compemu_raw_cmp_l_mi8((uintptr)specflags,0);
-					compemu_raw_cmov_l_rm_indexed(r2,(uintptr)cache_tags,r,sizeof(void *),NATIVE_CC_EQ);
+					compemu_raw_cmov_l_rm_indexed(r2,(uintptr)cache_tags,rtag,sizeof(void *),NATIVE_CC_EQ);
 #endif
 					compemu_raw_jmp_r(r2);
 				}
