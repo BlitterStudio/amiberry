@@ -65,6 +65,7 @@ High natmem above 4GB is supported. Do not treat it as a reason to disable JIT o
 
 - Darwin can ignore advisory `mmap()` address hints and return a valid mapping far from the requested anchor.
 - Use exact near-address allocation for x86-64 JIT buffers that need RIP-relative reach; do not accept a hinted result unless it is range-checked.
+- Intel macOS Mach-O binaries reserve 4GB `__PAGEZERO` by default; shrink pagezero for JIT builds so low near-address fallback space is actually allocatable.
 - `veccode`, `popallspace`, block pools, and the JIT cache all need to stay within the same ±2GB anchor discipline.
 
 ## Windows x86-64 Allocator Rules
