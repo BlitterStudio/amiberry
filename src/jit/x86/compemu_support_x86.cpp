@@ -2112,6 +2112,49 @@ static inline void adjust_nreg(int r, uintptr val)
 }
 
 #if X86_TARGET_64BIT
+static inline void free_nreg(int r);
+
+static inline bool x86_imm_fits_s32(uintptr i)
+{
+	const intptr_t si = static_cast<intptr_t>(i);
+	return si >= static_cast<intptr_t>(-2147483647 - 1) &&
+		si <= static_cast<intptr_t>(2147483647);
+}
+
+static inline int get_unlocked_scratch_nreg_excluding(int avoid1, int avoid2)
+{
+	static const int candidates[] = {
+		R11_INDEX, R10_INDEX, R9_INDEX, R8_INDEX,
+		EAX_INDEX, ECX_INDEX, EDX_INDEX, EBX_INDEX,
+		EBP_INDEX, ESI_INDEX, EDI_INDEX, R13_INDEX, R14_INDEX
+	};
+
+	for (int r : candidates) {
+		if (r != avoid1 && r != avoid2 && !live.nat[r].locked)
+			return r;
+	}
+
+	jit_abort("No unlocked scratch register for 64-bit pointer operation");
+	return R11_INDEX;
+}
+
+static inline int get_unlocked_scratch_nreg(void)
+{
+	return get_unlocked_scratch_nreg_excluding(-1, -1);
+}
+
+static inline void x86_add_q_ri_ptr(int d, uintptr i, int avoid = -1)
+{
+	if (x86_imm_fits_s32(i)) {
+		ADDQir(static_cast<IMM>(i), d);
+	} else {
+		const int scratch = get_unlocked_scratch_nreg_excluding(d, avoid);
+		free_nreg(scratch);
+		MOVQir(i, scratch);
+		ADDQrr(scratch, d);
+	}
+}
+
 static inline void copy_vreg_nreg(int vreg, int dst, int src)
 {
 	if (vreg == PC_P) {
@@ -2131,7 +2174,7 @@ static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
 			svalue <= static_cast<intptr_t>(2147483647)) {
 			LEAQmr(static_cast<IMM>(svalue), nreg, X86_NOREG, 1, nreg);
 		} else {
-			ADDQir((IMM)val, nreg);
+			x86_add_q_ri_ptr(nreg, val);
 		}
 	} else {
 		adjust_nreg(nreg, val);
@@ -2193,25 +2236,6 @@ static inline int isconst(int r)
 }
 
 #if X86_TARGET_64BIT
-static inline void free_nreg(int r);
-
-static inline int get_unlocked_scratch_nreg(void)
-{
-	static const int candidates[] = {
-		R11_INDEX, R10_INDEX, R9_INDEX, R8_INDEX,
-		EAX_INDEX, ECX_INDEX, EDX_INDEX, EBX_INDEX,
-		EBP_INDEX, ESI_INDEX, EDI_INDEX, R13_INDEX, R14_INDEX
-	};
-
-	for (int r : candidates) {
-		if (!live.nat[r].locked)
-			return r;
-	}
-
-	jit_abort("No unlocked scratch register for 64-bit immediate store");
-	return R11_INDEX;
-}
-
 static inline void store_const_q_mi(uintptr d, uintptr s)
 {
 	int scratch = get_unlocked_scratch_nreg();
@@ -3774,11 +3798,10 @@ void flush_reg(int reg)
 				if (reg == PC_P) {
 					/* PC_P is a 64-bit pointer — must use 64-bit load/add/store.
 					   compemu_raw_add_l_mi is only 32-bit and would leave
-					   upper 32 bits of regs.pc_p unmodified.
-					   ADDQir (REX.W ADD) preserves all 64 bits of the register. */
+					   upper 32 bits of regs.pc_p unmodified. */
 					int r_tmp = REG_PC_TMP;
 					raw_mov_q_rm(r_tmp, (uintptr)live.state[reg].mem);
-					ADDQir((IMM)live.state[reg].val, r_tmp);
+					x86_add_q_ri_ptr(r_tmp, live.state[reg].val);
 					raw_mov_q_mr((uintptr)live.state[reg].mem, r_tmp);
 				} else
 #endif

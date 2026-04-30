@@ -3328,7 +3328,7 @@ static void Exception_normal (int nr)
 				regs.mmu_fault_addr = last_fault_for_exception_3;
 				Exception_build_stack_frame(oldpc, currpc, ssw, vector_nr, 0x08);
 				used_exception_build_stack_frame = true;
-		}
+			}
 #ifdef DEBUGGER
 			write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, regs.instruction_pc, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
 #endif

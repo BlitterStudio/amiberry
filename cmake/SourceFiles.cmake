@@ -641,10 +641,20 @@ elseif(NOT IOS
     # The x86-64 JIT needs helper/code buffers within RIP-relative range of
     # globals; fixed __TEXT at 4GB plus a small pagezero leaves usable low
     # address space for those buffers without letting PIE slide globals too low.
-    target_link_options(${PROJECT_NAME} PRIVATE
+    # Keep these scoped to the x86_64 slice so universal builds do not change
+    # arm64 image layout.
+    set(AMIBERRY_MACOS_X86_LINK_OPTIONS
             "-Wl,-no_pie"
             "-Wl,-segaddr,__TEXT,0x100000000"
             "-Wl,-pagezero_size,0x10000")
+    if(CMAKE_OSX_ARCHITECTURES MATCHES ";")
+        foreach(AMIBERRY_MACOS_X86_LINK_OPTION IN LISTS AMIBERRY_MACOS_X86_LINK_OPTIONS)
+            target_link_options(${PROJECT_NAME} PRIVATE
+                    "SHELL:-Xarch_x86_64 ${AMIBERRY_MACOS_X86_LINK_OPTION}")
+        endforeach()
+    else()
+        target_link_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_MACOS_X86_LINK_OPTIONS})
+    endif()
 elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # x86_64 JIT is now 64-bit pointer-clean: no longer needs ASLR-disabling
     # linker flags or forced low image base.

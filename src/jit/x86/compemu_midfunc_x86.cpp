@@ -2106,7 +2106,7 @@ MIDFUNC(2,add_l,(RW4 d, RR4 s))
 
 #if X86_TARGET_64BIT
 	if (dreg == PC_P) {
-		const int scratch = (d != R11_INDEX && s != R11_INDEX) ? R11_INDEX : R10_INDEX;
+		const int scratch = get_unlocked_scratch_nreg_excluding(d, s);
 		free_nreg(scratch);
 		raw_sign_extend_32_rr(scratch,s);
 		ADDQrr(scratch,d);
@@ -2198,25 +2198,6 @@ MIDFUNC(2,sub_b_ri,(RW1 d, IMM i))
 }
 
 #if X86_TARGET_64BIT
-static inline bool x86_imm_fits_s32(uintptr i)
-{
-	const intptr_t si = static_cast<intptr_t>(i);
-	return si >= static_cast<intptr_t>(-2147483647 - 1) &&
-		si <= static_cast<intptr_t>(2147483647);
-}
-
-static inline void raw_add_q_ri_ptr(int d, uintptr i)
-{
-	if (x86_imm_fits_s32(i)) {
-		ADDQir(static_cast<IMM>(i), d);
-	} else {
-		const int scratch = d != R11_INDEX ? R11_INDEX : R10_INDEX;
-		free_nreg(scratch);
-		MOVQir(i, scratch);
-		ADDQrr(scratch, d);
-	}
-}
-
 static inline uintptr sign_extend_pc_disp(uintptr i)
 {
 	if (i <= static_cast<uintptr>(0xffffffffULL) && (i & static_cast<uintptr>(0x80000000ULL)))
@@ -2259,10 +2240,10 @@ MIDFUNC(2,add_l_ri,(RW4 d, IMPTR i))
 	d=rmw(d,4,4);
 #if X86_TARGET_64BIT
 	if (dreg == PC_P) {
-		raw_add_q_ri_ptr(d, sign_extend_pc_disp(static_cast<uintptr>(i)));
+		x86_add_q_ri_ptr(d, sign_extend_pc_disp(static_cast<uintptr>(i)));
 	} else if (i > static_cast<IMPTR>(0xffffffffULL)) {
 		raw_sign_extend_32_rr(d,d);
-		raw_add_q_ri_ptr(d, static_cast<uintptr>(i));
+		x86_add_q_ri_ptr(d, static_cast<uintptr>(i));
 	} else
 #endif
 	raw_add_l_ri(d,(IMM)i);

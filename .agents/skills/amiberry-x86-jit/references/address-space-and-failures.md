@@ -74,6 +74,9 @@ Current behavior:
   64-bit base register.
 - `PC_P` uses 64-bit loads, stores, cmovs, and adds. Non-`PC_P` virtual registers remain
   32-bit M68K values.
+- Intel macOS links the x86_64 slice with `__TEXT` fixed at 4GB and a small
+  `__PAGEZERO`; keep those flags arch-scoped so arm64/universal builds keep their
+  normal image layout.
 
 Key fixes that must not regress:
 
