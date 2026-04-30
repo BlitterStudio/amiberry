@@ -22,11 +22,11 @@ enum class FileCategory(
 	val displayName: String,
 	val extensions: Set<String>
 ) {
-	ROMS("roms", "ROMs", setOf("rom", "bin")),
-	FLOPPIES("floppies", "Floppies", setOf("adf", "adz", "dms", "ipf", "zip", "gz")),
-	HARD_DRIVES("harddrives", "Hard Drives", setOf("hdf", "hdi", "vhd")),
-	CD_IMAGES("cdroms", "CD Images", setOf("iso", "cue", "chd", "nrg", "mds")),
-	WHDLOAD_GAMES("lha", "WHDLoad Games", setOf("lha", "lzx", "lzh"));
+	ROMS(StoragePaths.ROMS, "ROMs", setOf("rom", "bin")),
+	FLOPPIES(StoragePaths.FLOPPIES, "Floppies", setOf("adf", "adz", "dms", "ipf", "zip", "gz")),
+	HARD_DRIVES(StoragePaths.HARD_DRIVES, "Hard Drives", setOf("hdf", "hdi", "vhd")),
+	CD_IMAGES(StoragePaths.CDROMS, "CD Images", setOf("iso", "cue", "chd", "nrg", "mds")),
+	WHDLOAD_GAMES(StoragePaths.WHDLOAD_ARCHIVES, "WHDLoad Games", setOf("lha", "lzx", "lzh"));
 
 	companion object {
 		fun fromExtension(ext: String): FileCategory? {

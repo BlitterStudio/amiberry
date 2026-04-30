@@ -43,7 +43,7 @@
 #endif
 
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
-#if !defined(LIBRETRO_NO_JIT) && !defined(AMIBERRY_IOS)
+#if !defined(LIBRETRO_NO_JIT) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_NO_JIT)
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
@@ -660,9 +660,14 @@ typedef int32_t uae_atomic;
 #endif
 
 /* MinGW's fopen does not support the glibc 'e' (O_CLOEXEC) mode flag.
- * Strip it on Windows since close-on-exec is not relevant there. */
-#ifdef _WIN32
+ * Provide uae_fopen() that strips it on Windows; passthrough elsewhere.
+ *
+ * Do NOT #define fopen here — a global macro replacement corrupts
+ * libc++ <fstream>, whose templates reference std::fopen. Call
+ * uae_fopen() explicitly at the handful of sites that use the 'e'
+ * flag. */
 #include <cstdio>
+#ifdef _WIN32
 #include <cstring>
 static inline FILE* uae_fopen(const char* path, const char* mode)
 {
@@ -675,7 +680,11 @@ static inline FILE* uae_fopen(const char* path, const char* mode)
 	winmode[j] = '\0';
 	return fopen(path, winmode);
 }
-#define fopen(path, mode) uae_fopen(path, mode)
+#else
+static inline FILE* uae_fopen(const char* path, const char* mode)
+{
+	return fopen(path, mode);
+}
 #endif
 
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */

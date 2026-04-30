@@ -116,7 +116,7 @@ For each identified issue:
 - WinUAE uses MSVC — requires `_MSC_VER`-specific code
 - Many `#ifdef _WIN32` blocks from WinUAE now activate in Amiberry on Windows
 - `sysconfig.h` previously `#undef _WIN32` to suppress this; that was removed
-- JIT is non-functional on 64-bit Windows (pointers > 32-bit); interpreter mode is used
+- x86-64 JIT is supported on Windows; preserve pointer-width `uintptr`/`PC_P` handling when porting WinUAE code that assumes 32-bit host pointers
 
 ### 3a. Preserve Upstream Merge Safety
 
@@ -314,7 +314,7 @@ When WinUAE updates WASAPI audio code:
 ### 1b. Black Screen on Windows with USE_OPENGL (64-bit)
 **Symptom:** Emulation starts but screen stays black. Queue type 0/1/2 entries never processed.
 **Cause:** JIT `check_uae_p32()` detects 64-bit pointers → `jit_abort()` → `uae_reset(1,0)` → `quit_program=4` permanently. `waitqueue()` in `drawing.cpp` blocks all pixel-drawing queue entries when `quit_program != 0`.
-**Fix:** In `src/jit/x86/compemu_x86.h`, `check_uae_p32()` logs instead of calling `jit_abort()` under `#ifdef AMIBERRY`. JIT is non-functional on 64-bit Windows; interpreter mode handles everything.
+**Fix:** In `src/jit/x86/compemu_x86.h`, `uae_p32()` must preserve pointer width on x86-64. If this path regresses, inspect x86 JIT pointer handling instead of assuming Windows should fall back to interpreter mode.
 
 ### 2. Mouse Coordinate Drift
 **Symptom:** Mouse clicks are offset from the cursor, especially on macOS or High-DPI screens.

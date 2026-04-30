@@ -229,12 +229,10 @@ void render_panel_chipset() {
         // RIGHT COLUMN
         BeginGroupBox("Options");
         {
-            ImGui::BeginDisabled(changed_prefs.cpu_cycle_exact);
             if (AmigaCheckbox("Immediate Blitter", &changed_prefs.immediate_blits)) {
                 if (changed_prefs.immediate_blits) changed_prefs.waiting_blits = false;
             }
             ShowHelpMarker("Blitter operations complete instantly. Faster but less accurate.");
-            ImGui::EndDisabled();
 
             bool disable_wait_blits = (changed_prefs.immediate_blits || (
                                            changed_prefs.cpu_memory_cycle_exact && changed_prefs.cpu_model <= 68010));

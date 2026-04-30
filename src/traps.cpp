@@ -1312,54 +1312,49 @@ void trap_get_words(TrapContext *ctx, uae_u16 *haddr, uaecptr addr, int cnt)
 int trap_put_string(TrapContext *ctx, const void *haddrp, uaecptr addr, int maxlen)
 {
 	int len = 0;
-	uae_u8 *haddr = (uae_u8*)haddrp;
-	if (trap_is_indirect_null(ctx)) {
-		uae_u8 *p = ctx->host_trap_data + RTAREA_TRAP_DATA_EXTRA;
-		for (;;) {
-			uae_u8 v = *haddr++;
-			*p++ = v;
-			if (!v)
-				break;
+	const uae_u8 *haddr = (const uae_u8*)haddrp;
+	if (maxlen < 0) {
+		while (haddr[len])
 			len++;
-		}
-		call_hardware_trap_back(ctx, TRAPCMD_PUT_STRING, ctx->amiga_trap_data + RTAREA_TRAP_DATA_EXTRA, addr, maxlen, 0);
-	} else {
-		for (;;) {
-			uae_u8 v = *haddr++;
-			put_byte(addr, v);
-			addr++;
-			if (!v)
-				break;
-			len++;
-		}
+		trap_put_bytes(ctx, haddr, addr, len + 1);
+		return len;
 	}
-	return len;
+
+	if (maxlen == 0)
+		return 0;
+
+	while (len < maxlen - 1 && haddr[len])
+		len++;
+
+	if (!haddr[len]) {
+		trap_put_bytes(ctx, haddr, addr, len + 1);
+		return len;
+	}
+
+	trap_put_bytes(ctx, haddr, addr, maxlen - 1);
+	trap_put_byte(ctx, addr + maxlen - 1, 0);
+	return maxlen;
 }
 int trap_get_string(TrapContext *ctx, void *haddrp, uaecptr addr, int maxlen)
 {
 	int len = 0;
 	uae_u8 *haddr = (uae_u8*)haddrp;
-	if (trap_is_indirect_null(ctx)) {
-		uae_u8 *p = ctx->host_trap_data + RTAREA_TRAP_DATA_EXTRA;
-		call_hardware_trap_back(ctx, TRAPCMD_GET_STRING, addr, ctx->amiga_trap_data + RTAREA_TRAP_DATA_EXTRA, maxlen, 0);
-		for (;;) {
-			uae_u8 v = *p++;
-			*haddr++ = v;
-			if (!v)
-				break;
-			len++;
-		}
-	} else {
-		for (;;) {
-			uae_u8 v = get_byte(addr);
-			*haddr++ = v;
-			addr++;
-			if (!v)
-				break;
-		}
+
+	if (maxlen <= 0)
+		return 0;
+
+	while (len < maxlen - 1) {
+		uae_u8 v = trap_get_byte(ctx, addr + len);
+		haddr[len] = v;
+		if (!v)
+			return len;
 		len++;
 	}
-	return len;
+
+	haddr[len] = 0;
+	if (!trap_get_byte(ctx, addr + len))
+		return len;
+	return maxlen;
 }
 uae_char *trap_get_alloc_string(TrapContext *ctx, uaecptr addr, int maxlen)
 {

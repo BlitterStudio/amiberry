@@ -19,6 +19,9 @@
 #include "memory.h"
 #include "rommgr.h"
 #include "zfile.h"
+#ifdef AMIBERRY
+#include "fsdb.h"
+#endif
 #include "custom.h"
 #include "newcpu.h"
 #include "autoconf.h"
@@ -54,6 +57,7 @@ static bool rom_write_enabled;
 int special_mem, special_mem_default;
 /* do not use get_n_addr */
 int jit_n_addr_unsafe;
+int jit_n_addr_bank_unsafe;
 #endif
 static int mem_hardreset;
 static bool roms_modified;
@@ -1791,6 +1795,12 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 
 	if (romextfile[0] == '\0')
 		return false;
+#ifdef AMIBERRY
+	if (my_existsdir(romextfile)) {
+		write_log(_T("Extended ROM path '%s' is a directory, ignoring.\n"), romextfile);
+		return false;
+	}
+#endif
 #ifdef ARCADIA
 	if (is_arcadia_rom (romextfile) == ARCADIA_BIOS) {
 		extendedkickmem_type = EXTENDED_ROM_ARCADIA;
@@ -2221,8 +2231,21 @@ static void set_direct_memory(addrbank *ab)
 		return;
 	}
 	ab->baseaddr_direct_r = ab->baseaddr;
-	if (!(ab->flags & ABFLAG_ROM))
+	if (!(ab->flags & ABFLAG_ROM)) {
+#ifdef AMIBERRY
+		// RTG VRAM needs every CPU write to pass through the bank's *_put
+		// handler so mark_dirty() records the touched pages. WinUAE gets
+		// this for free from GetWriteWatch(); Amiberry tracks dirtiness
+		// manually (see GFXMEM_PUT_FUNCTIONS in picasso96.cpp). If we wire
+		// baseaddr_direct_w here, memory_put_*() short-circuits past the
+		// put handler and mark_dirty() is never called — breaking things
+		// like IconLib's alpha-drag (WritePixelArrayAlpha) which pokes
+		// pixels one at a time straight into VRAM.
+		if (ab->flags & ABFLAG_RTG)
+			return;
+#endif
 		ab->baseaddr_direct_w = ab->baseaddr;
+	}
 }
 
 #ifndef NATMEM_OFFSET
@@ -3146,6 +3169,13 @@ void memory_reset (void)
 	/* Start in direct n_addr mode; map_banks() will flip this if a bank
 	 * explicitly requires S_N_ADDR indirection. */
 	jit_n_addr_unsafe = 0;
+	jit_n_addr_bank_unsafe = 0;
+#if defined(CPU_x86_64) && defined(NATMEM_OFFSET)
+	if ((uintptr_t)natmem_offset + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
+		write_log(_T("JIT: jit_n_addr_unsafe enabled for high x86-64 natmem at %p\n"), natmem_offset);
+		jit_n_addr_unsafe = 1;
+	}
+#endif
 #endif
 	/* Use changed_prefs, as m68k_reset is called later.  */
 	if (last_address_space_24 != changed_prefs.address_space_24)
@@ -3788,12 +3818,13 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 #ifdef JIT
 	if ((bank->jit_read_flag | bank->jit_write_flag) & S_N_ADDR) {
 #ifdef AMIBERRY
-		if (!jit_n_addr_unsafe) {
+		if (!jit_n_addr_bank_unsafe) {
 			write_log(_T("JIT: jit_n_addr_unsafe enabled by bank '%s' at %08x (r=%d w=%d)\n"),
 				bank->name ? bank->name : _T("<unnamed>"), start << 16, bank->jit_read_flag, bank->jit_write_flag);
 		}
 #endif
 		jit_n_addr_unsafe = 1;
+		jit_n_addr_bank_unsafe = 1;
 	}
 #endif
 

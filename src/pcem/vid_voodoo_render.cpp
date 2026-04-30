@@ -646,7 +646,7 @@ static inline void voodoo_tmu_fetch_and_blend(voodoo_t *voodoo, voodoo_params_t 
                 state->tex_a[0] ^= 0xff;
 }
 
-#if (defined i386 || defined __i386 || defined __i386__ || defined _X86_ || defined WIN32 || defined _WIN32 || defined _WIN32) && !(defined __amd64__)
+#if (defined i386 || defined __i386 || defined __i386__ || defined _X86_ || defined WIN32 || defined _WIN32 || defined _WIN32) && !(defined __amd64__) && !(defined __aarch64__) && !(defined _M_ARM64)
 #include "vid_voodoo_codegen_x86.h"
 #elif (defined __amd64__ && defined WIN64)
 #include "vid_voodoo_codegen_x86-64.h"
@@ -778,7 +778,7 @@ static void voodoo_half_triangle(voodoo_t *voodoo, voodoo_params_t *params, vood
         }
 #ifndef NO_CODEGEN
         typedef uint8_t(__cdecl *VOODOO_DRAW)(voodoo_state_t*,voodoo_params_t*, int,int);
-#if (defined WIN32 || defined WIN64)
+#if (defined WIN32 || defined WIN64) && !(defined __aarch64__) && !(defined _M_ARM64)
         if (voodoo->use_recompiler)
                 voodoo_draw = (VOODOO_DRAW)voodoo_get_block(voodoo, params, state, odd_even);
         else

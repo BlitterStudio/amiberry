@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -44,7 +45,7 @@ class ConfigRepositoryTest {
 
 	@Test
 	fun `config save and reload preserves unknown lines`() {
-		val confDir = tempDir.newFolder("conf")
+		val confDir = tempDir.newFolder(StoragePaths.CONFIGURATIONS)
 
 		val settings = EmulatorSettings(cpuModel = 68020, chipset = "aga")
 		val unknownLines = listOf("custom_option=value", "another_key=42")
@@ -96,7 +97,7 @@ class ConfigRepositoryTest {
 
 	@Test
 	fun `duplicating a config creates an identical copy`() {
-		val confDir = tempDir.newFolder("conf")
+		val confDir = tempDir.newFolder(StoragePaths.CONFIGURATIONS)
 		val original = File(confDir, "original.uae")
 		original.writeText("cpu_model=68000\nchipset=ocs\n")
 
@@ -109,7 +110,7 @@ class ConfigRepositoryTest {
 
 	@Test
 	fun `duplicate does not overwrite existing file`() {
-		val confDir = tempDir.newFolder("conf")
+		val confDir = tempDir.newFolder(StoragePaths.CONFIGURATIONS)
 		val original = File(confDir, "original.uae")
 		original.writeText("cpu_model=68000\n")
 

@@ -1696,7 +1696,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	}
 
 	// ImGui on-screen keyboard overlay
-	if (vkbd_allowed(monid) && imgui_osk_should_render() && imgui_overlay_is_vulkan())
+	if (vkbd_allowed(slot.monid) && imgui_osk_should_render() && imgui_overlay_is_vulkan())
 	{
 		imgui_overlay_begin_frame();
 		imgui_osk_render(drawable_w, drawable_h);
@@ -4287,17 +4287,20 @@ bool VulkanRenderer::create_imgui_descriptor_pool()
 {
 	if (m_device == VK_NULL_HANDLE) return false;
 
-	// ImGui needs a descriptor pool for font textures and any additional textures
-	// registered via ImGui_ImplVulkan_AddTexture (used by gui_create_texture).
+	// ImGui 1.92.8+ Vulkan backend uses separate sampled-image + sampler descriptors
+	// (was combined image sampler). We provide the pool; AddTexture() allocates one
+	// SAMPLED_IMAGE descriptor set per registered texture, samplers are shared.
+	const uint32_t sampled_image_count = 64;
 	VkDescriptorPoolSize pool_sizes[] = {
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 64 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, sampled_image_count },
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,       IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE },
 	};
 
 	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	pool_info.maxSets = 64;
-	pool_info.poolSizeCount = 1;
+	pool_info.maxSets = sampled_image_count + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE;
+	pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
 	pool_info.pPoolSizes = pool_sizes;
 
 	VkResult result = vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_imgui_descriptor_pool);

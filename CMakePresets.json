@@ -120,6 +120,43 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       }
+    },
+    {
+      "name": "windows-arm64-debug",
+      "displayName": "Windows ARM64 Debug (llvm-mingw)",
+      "description": "Target Windows on ARM64 using llvm-mingw (clang). Requires LLVM_MINGW_ROOT env var.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-aarch64-w64-mingw32.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-mingw-dynamic",
+        "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-arm64-release",
+      "displayName": "Windows ARM64 Release (llvm-mingw)",
+      "description": "Target Windows on ARM64 using llvm-mingw (clang). Requires LLVM_MINGW_ROOT env var.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-aarch64-w64-mingw32.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-mingw-dynamic",
+        "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
     }
   ],
   "buildPresets": [
@@ -168,6 +205,18 @@
     {
       "name": "windows-release",
       "configurePreset": "windows-release",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-arm64-debug",
+      "configurePreset": "windows-arm64-debug",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-arm64-release",
+      "configurePreset": "windows-arm64-release",
       "jobs": 0,
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     }

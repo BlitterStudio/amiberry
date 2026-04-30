@@ -1,12 +1,13 @@
 #ifdef USE_OPENGL
-#include "external_shader.h"
-#include "sysdeps.h"
-#include "uae.h"
-#include "zfile.h"
 #include <fstream>
 #include <sstream>
 #include <regex>
 #include <cstring>
+
+#include "external_shader.h"
+#include "sysdeps.h"
+#include "uae.h"
+#include "zfile.h"
 
 // Constructor
 ExternalShader::ExternalShader()

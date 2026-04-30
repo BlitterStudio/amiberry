@@ -6,8 +6,8 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="external" path="conf/" />
-        <include domain="external" path="controllers/" />
+        <include domain="external" path="Configurations/" />
+        <include domain="external" path="Controllers/" />
         <include domain="sharedpref" path="amiberry_prefs.xml" />
         <exclude domain="external" path=".extracted_version" />
         <exclude domain="external" path=".emulator_session" />
@@ -16,12 +16,12 @@
         <exclude domain="external" path=".current_settings.uae" />
         <exclude domain="external" path=".temp_native_ui.uae" />
         <exclude domain="external" path="data/" />
-        <exclude domain="external" path="roms/" />
-        <exclude domain="external" path="whdboot/" />
+        <exclude domain="external" path="ROMs/" />
+        <exclude domain="external" path="WHDBoot/" />
     </cloud-backup>
     <device-transfer>
-        <include domain="external" path="conf/" />
-        <include domain="external" path="controllers/" />
+        <include domain="external" path="Configurations/" />
+        <include domain="external" path="Controllers/" />
         <include domain="sharedpref" path="amiberry_prefs.xml" />
         <exclude domain="external" path=".extracted_version" />
         <exclude domain="external" path=".emulator_session" />
@@ -30,7 +30,7 @@
         <exclude domain="external" path=".current_settings.uae" />
         <exclude domain="external" path=".temp_native_ui.uae" />
         <exclude domain="external" path="data/" />
-        <exclude domain="external" path="roms/" />
-        <exclude domain="external" path="whdboot/" />
+        <exclude domain="external" path="ROMs/" />
+        <exclude domain="external" path="WHDBoot/" />
     </device-transfer>
 </data-extraction-rules>

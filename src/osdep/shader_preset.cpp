@@ -1,13 +1,14 @@
 #ifdef USE_OPENGL
-#include "shader_preset.h"
-#include "sysdeps.h"
-#include "uae.h"
-#include <SDL3_image/SDL_image.h>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <filesystem>
 #include <cstring>
+
+#include "shader_preset.h"
+#include "sysdeps.h"
+#include "uae.h"
+#include <SDL3_image/SDL_image.h>
 
 #ifndef GL_BGRA
 #ifdef GL_BGRA_EXT

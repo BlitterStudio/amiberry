@@ -5,6 +5,7 @@ import android.content.Intent
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.json.JSONObject
 import java.io.File
 
@@ -129,7 +130,7 @@ object EmulatorLauncher {
 	/**
 	 * Check if ROM files have changed since the last launch.
 	 * Checks all directories that FileManager.scanForCategory(ROMS) scans:
-	 * roms/, root app dir, and whdboot/game-data/Kickstarts/.
+	 * ROMs/, root app dir, and WHDBoot/save-data/Kickstarts/.
 	 */
 	private fun needsRomRescan(context: Context): Boolean {
 		val prefs = AppPreferences.getInstance(context)
@@ -137,7 +138,7 @@ object EmulatorLauncher {
 		val dirs = listOf(
 			FileManager.getCategoryDir(context, FileCategory.ROMS),
 			File(base),
-			File(base, "whdboot/game-data/Kickstarts")
+			File(base, StoragePaths.WHDBOOT_KICKSTARTS)
 		)
 		val currentFingerprint = dirs.joinToString("|") { computeDirFingerprint(it) }
 

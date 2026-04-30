@@ -161,3 +161,6 @@ build-debug
 .cache
 .sisyphus/
 .omg
+
+# Local planning / scratch notes (not for the repo)
+notes/

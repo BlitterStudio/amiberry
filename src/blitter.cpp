@@ -454,7 +454,7 @@ static void blitter_end(void)
 static void blitter_done_all(bool all)
 {
 	blt_info.blit_main = 0;
-	blt_info.blit_queued = blitter_cycle_exact ? BLITTER_MAX_PIPELINED_CYCLES : 0;
+	blt_info.blit_queued = blitter_cycle_exact && !immediate_blits ? BLITTER_MAX_PIPELINED_CYCLES : 0;
 	blt_info.finishcycle_dmacon = get_cycles();
 	blt_info.finishcycle_copper = get_cycles() + 1 * CYCLE_UNIT;
 	blitter_interrupt();
@@ -1716,7 +1716,7 @@ static bool is_done(void)
 
 void generate_blitter(void)
 {
-	if (!blitter_cycle_exact) {
+	if (!blitter_cycle_exact || immediate_blits) {
 		return;
 	}
 
@@ -2103,6 +2103,9 @@ void do_blitter(int copper, uaecptr pc)
 
 	if (blitter_cycle_exact) {
 		if (immediate_blits) {
+			blitter_delayed_update = 0;
+			blt_info.blit_pending = 0;
+			blt_info.blit_queued = 0;
 			blt_info.blitzero = 1;
 			if (dmaen(DMA_BLITTER)) {
 				blitter_doit();

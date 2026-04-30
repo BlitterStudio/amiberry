@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import java.io.File
 
@@ -98,7 +99,7 @@ object ConfigGenerator {
 	}
 
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {
-		val confDir = File(context.getExternalFilesDir(null), "conf")
+		val confDir = File(context.getExternalFilesDir(null), StoragePaths.CONFIGURATIONS)
 		if (!confDir.exists()) confDir.mkdirs()
 		val file = File(confDir, filename)
 		file.writeText(generate(settings))

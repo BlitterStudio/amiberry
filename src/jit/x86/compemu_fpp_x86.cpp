@@ -616,6 +616,11 @@ void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 {
 	int reg;
 
+	if (!currprefs.compfpu)
+	{
+		FAIL(1);
+		return;
+	}
 	if (jit_disable.fscc)
 	{
 		FAIL(1);
@@ -730,16 +735,16 @@ void comp_ftrapcc_opp (uae_u32 /* opcode */, uaecptr /* oldpc */)
 void comp_fbcc_opp(uae_u32 opcode)
 {
 	uae_u32 start_68k_offset = m68k_pc_offset;
-	uae_u32 off;
-	uae_u32 v1;
-	uae_u32 v2;
+	uae_s32 off;
+	uintptr v1;
+	uintptr v2;
 	int cc;
 
-	// comp_pc_p points into natmem, which is allocated with UAE_VM_32BIT
-	// (low 4GB) on x86-64. This is independent of PIE/ASLR — natmem
-	// placement uses explicit mmap hints, not .text/.data ASLR.
-	assert((uintptr) comp_pc_p <= 0xffffffffUL);
-
+	if (!currprefs.compfpu)
+	{
+		FAIL(1);
+		return;
+	}
 	if (jit_disable.fbcc)
 	{
 		FAIL(1);
@@ -755,9 +760,16 @@ void comp_fbcc_opp(uae_u32 opcode)
 		off = (uae_s32) (uae_s16) comp_get_iword((m68k_pc_offset += 2) - 2);
 	} else
 	{
-		off = comp_get_ilong((m68k_pc_offset += 4) - 4);
+		off = (uae_s32) comp_get_ilong((m68k_pc_offset += 4) - 4);
 	}
-	mov_l_ri(S1, JITPTR (comp_pc_p + off - (m68k_pc_offset - start_68k_offset)));
+	/* Match the ARM64 FBcc fix: keep the signed displacement separate
+	 * from the 64-bit host pointer so non-PC_P set_const paths do not
+	 * lose pointer width or zero-extend backward branches. */
+	{
+		uae_s32 displacement = off - (uae_s32)(m68k_pc_offset - start_68k_offset);
+		mov_l_ri(S1, (uintptr)(uae_s32)displacement);
+		add_l_ri(S1, (uintptr)comp_pc_p);
+	}
 	mov_l_ri(PC_P, JITPTR comp_pc_p);
 
 	/* Now they are both constant. Might as well fold in m68k_pc_offset */
@@ -1114,6 +1126,16 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 	int reg;
 	int src;
 
+	if (special_mem)
+	{
+		FAIL(1);
+		return;
+	}
+	if (!currprefs.compfpu)
+	{
+		FAIL(1);
+		return;
+	}
 	switch ((extra >> 13) & 0x7)
 	{
 	case 1:							/* illegal */

@@ -32,6 +32,9 @@
 
 #include "threaddep/thread.h"
 #include "imgui_overlay.h"
+#ifdef USE_VULKAN
+#include "imgui_impl_vulkan.h"
+#endif
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
 #include "fsdb_host.h"

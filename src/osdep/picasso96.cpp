@@ -177,6 +177,17 @@ static int newcursor_x, newcursor_y;
 static int cursorwidth, cursorheight, cursorok;
 static uae_u8 *cursordata;
 static uae_u32 cursorrgb[4], cursorrgbn[4];
+#ifdef AMIBERRY
+// Truecolor sprite (P96 >=3.x alpha-capable hardware pointer). When the
+// Amiga-side P96 advertises a truecolor RGBFormat in SetSprite(), sprite
+// image data is ARGB32 instead of 2-bit planar. IconLib uploads alpha-
+// blended drag icons through this path. cursor_argb holds host-endian
+// 0xAARRGGBB pixels; empty if current sprite is classic 2-bit planar.
+static uae_u32 *cursor_argb = nullptr;
+// RGBFormat most recently passed to SetSprite(). RGBFB_CLUT (=0) means
+// classic planar; any truecolor value triggers the ARGB path.
+static RGBFTYPE sprite_rgbformat = RGBFB_CLUT;
+#endif
 static int cursordeactivate, setupcursor_needed;
 static bool cursorvisible;
 #if defined(_WIN32) && !defined(AMIBERRY)
@@ -878,32 +889,63 @@ void p96_get_cursor_dimensions(int *w, int *h)
 // Update the software cursor overlay surface from cursor data
 static void update_cursor_overlay_surface()
 {
-	if (!cursordata || !cursorwidth || !cursorheight || !hwsprite)
+	if (!cursorwidth || !cursorheight || !hwsprite)
+		return;
+	// Need at least one data source — classic 2-bit or truecolor ARGB.
+	if (!cursordata && !cursor_argb)
 		return;
 
-	// (Re)create surface if dimensions changed
+	// Surface pixel format depends on sprite source: classic 2-bit uses
+	// RGBA32 (authored by updatesprcolors with R/B swapped for LE); truecolor
+	// sprite uses ARGB8888 where each uint32 pixel is packed 0xAARRGGBB in
+	// host order — the form our cursor_argb buffer carries.
+	const SDL_PixelFormat want_fmt = cursor_argb
+		? SDL_PIXELFORMAT_ARGB8888
+		: SDL_PIXELFORMAT_RGBA32;
+
+	// (Re)create surface if dimensions or format changed
 	if (!cursor_overlay_surface ||
 		cursor_overlay_surface->w != cursorwidth ||
-		cursor_overlay_surface->h != cursorheight) {
+		cursor_overlay_surface->h != cursorheight ||
+		cursor_overlay_surface->format != want_fmt) {
 
 		if (cursor_overlay_surface) {
 			SDL_DestroySurface(cursor_overlay_surface);
 		}
-		cursor_overlay_surface = SDL_CreateSurface(cursorwidth, cursorheight, SDL_PIXELFORMAT_RGBA32);
+		cursor_overlay_surface = SDL_CreateSurface(cursorwidth, cursorheight, want_fmt);
 		if (!cursor_overlay_surface)
 			return;
+		// Zero any pitch padding once at create time. The per-row copies
+		// below only write cursorwidth*4 bytes, so if SDL picked a pitch
+		// larger than that (alignment), trailing bytes would otherwise
+		// hold uninitialized data and display as fringe artifacts.
+		SDL_FillSurfaceRect(cursor_overlay_surface, nullptr, 0);
 	}
 
-	// Copy cursor data to overlay surface
-	for (int y = 0; y < cursorheight; y++) {
-		uae_u8 *p1 = cursordata + cursorwidth * y;
-		auto *p2 = reinterpret_cast<uae_u32*>(static_cast<uint8_t*>(cursor_overlay_surface->pixels) + cursor_overlay_surface->pitch * y);
-		for (int x = 0; x < cursorwidth; x++) {
-			uae_u8 c = *p1++;
-			if (c < 4) {
-				*p2 = cursorrgbn[c];
+	if (cursor_argb) {
+		// Truecolor path: packed uint32 copy, one row at a time (pitch may
+		// exceed cursorwidth*4 if SDL aligned the surface).
+		for (int y = 0; y < cursorheight; y++) {
+			const uae_u32 *src = cursor_argb + cursorwidth * y;
+			auto *dst = reinterpret_cast<uae_u32*>(
+				static_cast<uint8_t*>(cursor_overlay_surface->pixels) +
+				cursor_overlay_surface->pitch * y);
+			memcpy(dst, src, cursorwidth * 4);
+		}
+	} else {
+		// Classic 2-bit path unchanged.
+		for (int y = 0; y < cursorheight; y++) {
+			uae_u8 *p1 = cursordata + cursorwidth * y;
+			auto *p2 = reinterpret_cast<uae_u32*>(
+				static_cast<uint8_t*>(cursor_overlay_surface->pixels) +
+				cursor_overlay_surface->pitch * y);
+			for (int x = 0; x < cursorwidth; x++) {
+				uae_u8 c = *p1++;
+				if (c < 4) {
+					*p2 = cursorrgbn[c];
+				}
+				p2++;
 			}
-			p2++;
 		}
 	}
 
@@ -931,8 +973,13 @@ void p96_cleanup_cursor_overlay()
 		SDL_DestroySurface(cursor_overlay_surface);
 		cursor_overlay_surface = nullptr;
 	}
+	// Release the truecolor sprite pixel buffer symmetric with allocation
+	// in setspriteimage. picasso_reset2 also handles warm reboots; this
+	// path covers emulator shutdown and config teardown.
+	xfree(cursor_argb);
+	cursor_argb = nullptr;
+	sprite_rgbformat = RGBFB_CLUT;
 	// Note: texture cleanup is handled by the renderer in amiberry_gfx.cpp
-
 }
 #endif
 
@@ -945,7 +992,7 @@ static void setupcursor()
 		return;
 
 	setupcursor_needed = 1;
-	if (cursordata && cursorwidth && cursorheight) {
+	if ((cursordata || cursor_argb) && cursorwidth && cursorheight) {
 		// Always update the overlay surface (used in software cursor mode)
 		// We use a software overlay for RTG cursors to ensure consistency
 		// across different mouse modes (relative/absolute) and drivers.
@@ -2152,6 +2199,13 @@ static int createwindowscursor(int monid, int set, int chipset)
 		goto exit;
 	}
 
+	// Truecolor RTG sprite: SDL_Cursor path (2-bit index + palette expansion)
+	// can't represent per-pixel alpha, so skip and let the software overlay
+	// path (update_cursor_overlay_surface) render the pointer instead.
+	if (!chipset && cursor_argb) {
+		goto exit;
+	}
+
 	if (chipset) {
 		w = sprite_0_width;
 		h = sprite_0_height;
@@ -2481,6 +2535,24 @@ int picasso_setwincursor(int monid)
 	return 0;
 }
 
+#ifdef AMIBERRY
+// Returns true when the current sprite RGBFormat selects a truecolor path
+// (ARGB32 pixel data, per-pixel alpha). RGBFB_CLUT and RGBFB_NONE keep the
+// classic 2-bit planar decode path that this function has always used.
+static bool is_truecolor_sprite()
+{
+	switch (sprite_rgbformat) {
+	case RGBFB_A8R8G8B8:
+	case RGBFB_A8B8G8R8:
+	case RGBFB_R8G8B8A8:
+	case RGBFB_B8G8R8A8:
+		return true;
+	default:
+		return false;
+	}
+}
+#endif
+
 static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 {
 	uae_u32 flags;
@@ -2494,6 +2566,10 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 		return 0;
 	xfree (cursordata);
 	cursordata = nullptr;
+#ifdef AMIBERRY
+	xfree(cursor_argb);
+	cursor_argb = nullptr;
+#endif
 	bpp = 4;
 	w = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseWidth);
 	h = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseHeight);
@@ -2511,6 +2587,80 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 		hiressprite - 1, doubledsprite, bi + PSSO_BoardInfo_MouseImage));
 
 	const uaecptr iptr = trap_get_long(ctx, bi + PSSO_BoardInfo_MouseImage);
+
+#ifdef AMIBERRY
+	if (is_truecolor_sprite()) {
+		// Truecolor sprite: pixel data is w*h packed 4-byte pixels in
+		// sprite_rgbformat byte order. No planar header, no hires/big
+		// scaling (those flags are 2-bit-sprite only). Target layout is
+		// packed uint32 0xAARRGGBB (SDL_PIXELFORMAT_ARGB8888), built from
+		// the per-format byte order so host endianness doesn't matter.
+		const int tc_datasize = w * h * 4;
+		if (!w || !h || iptr == 0 || !valid_address(iptr, tc_datasize)) {
+			cursordeactivate = 1;
+			ret = 1;
+			goto end;
+		}
+		auto *raw = xmalloc(uae_u8, tc_datasize);
+		cursor_argb = xmalloc(uae_u32, w * h);
+		if (!raw || !cursor_argb) {
+			xfree(raw);
+			xfree(cursor_argb);
+			cursor_argb = nullptr;
+			cursordeactivate = 1;
+			ret = 1;
+			goto end;
+		}
+		// One batched Amiga→host memory read instead of w*h trap_get_long
+		// calls (~2K traps for a 48x46 icon — measurable overhead on every
+		// SetSpriteImage when IconLib re-uploads the drag icon).
+		trap_get_bytes(ctx, raw, iptr, tc_datasize);
+
+		// No default case: is_truecolor_sprite() gates entry to this block
+		// and only returns true for these four 32-bit-with-alpha formats.
+		// If you add a new truecolor format there, also add a case here —
+		// the compiler's -Wswitch warning will flag the mismatch.
+		for (int i = 0, n = w * h; i < n; i++) {
+			const uae_u8 *p = raw + i * 4;
+			uae_u8 a = 0, r = 0, g = 0, b = 0;
+			switch (sprite_rgbformat) {
+			case RGBFB_A8R8G8B8: a = p[0]; r = p[1]; g = p[2]; b = p[3]; break;
+			case RGBFB_A8B8G8R8: a = p[0]; b = p[1]; g = p[2]; r = p[3]; break;
+			case RGBFB_R8G8B8A8: r = p[0]; g = p[1]; b = p[2]; a = p[3]; break;
+			case RGBFB_B8G8R8A8: b = p[0]; g = p[1]; r = p[2]; a = p[3]; break;
+			default: break;
+			}
+			cursor_argb[i] = (uae_u32(a) << 24) | (uae_u32(r) << 16) |
+			                 (uae_u32(g) << 8)  | b;
+		}
+		xfree(raw);
+
+		cursorwidth = std::min(w, CURSORMAXWIDTH);
+		cursorheight = std::min(h, CURSORMAXHEIGHT);
+
+		// One-shot log: records the first time IconLib (or any P96 client)
+		// actually picks up the advertised SoftSpriteFlags capability and
+		// uploads truecolor sprite data. If alpha-drag later regresses and
+		// this line is absent from the log, we know the handshake broke at
+		// the board/driver level rather than in the decode.
+		static bool logged_truecolor_sprite = false;
+		if (!logged_truecolor_sprite) {
+			write_log(_T("P96: first truecolor sprite accepted (fmt=%d, %dx%d)\n"),
+				(int)sprite_rgbformat, cursorwidth, cursorheight);
+			logged_truecolor_sprite = true;
+		}
+
+		createwindowscursor(currprefs.rtgboards[0].monitor_id, 1, 0);
+		setupcursor();
+		ret = 1;
+		cursorok = TRUE;
+		P96TRACE_SPR((_T("truecolor sprite created (fmt=%d, %dx%d)\n"),
+			(int)sprite_rgbformat, cursorwidth, cursorheight));
+		goto end;
+	}
+#endif
+
+	{
 	const int datasize = 4 * hiressprite + h * 4 * hiressprite;
 
 	if (!w || !h || iptr == 0 || !valid_address(iptr, datasize)) {
@@ -2561,6 +2711,7 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	ret = 1;
 	cursorok = TRUE;
 	P96TRACE_SPR ((_T("hardware sprite created\n")));
+	}
 end:
 	return ret;
 }
@@ -2612,6 +2763,19 @@ static uae_u32 REGPARAM2 picasso_SetSprite (TrapContext *ctx)
 	const uae_u32 activate = trap_get_dreg(ctx, 0);
 	if (!hwsprite)
 		return 0;
+#ifdef AMIBERRY
+	// d7 carries the RGBFormat P96 will use for subsequent SetSpriteImage()
+	// calls. RGBFB_CLUT selects the classic 2-bit planar sprite; anything
+	// else (RGBFB_A8R8G8B8 etc.) means the sprite data is truecolor and we
+	// need to decode per-pixel RGBA. We remember this across SetSpriteImage
+	// so the decode path can branch on it.
+	//
+	// Amiga-supplied values can be arbitrary; if d7 holds something outside
+	// the RGBFTYPE enum, is_truecolor_sprite() returns false for unknown
+	// values and setspriteimage falls through to the classic decode. That
+	// is the intended safety net — no range check here on purpose.
+	sprite_rgbformat = static_cast<RGBFTYPE>(trap_get_dreg(ctx, 7));
+#endif
 	if (activate) {
 		picasso_SetSpriteImage (ctx);
 		cursorvisible = true;
@@ -3272,6 +3436,19 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	}
 
 	trap_put_long(ctx, ABI + PSSO_BoardInfo_Flags, flags);
+#ifdef AMIBERRY
+	// SoftSpriteFlags advertises the RGBFormats in which the board accepts
+	// sprite image data. Setting the 32-bit-with-alpha formats tells P96's
+	// graphics driver / IconLib that this board accepts a truecolor mouse
+	// pointer and it can call SetSprite() with a non-planar RGBFormat and
+	// SetSpriteImage() with packed ARGB pixel data (see setspriteimage's
+	// truecolor branch). Only meaningful when we actually advertise
+	// BIF_HARDWARESPRITE.
+	if (hwsprite) {
+		const uae_u16 softspritefmts = static_cast<uae_u16>(RGBMASK_32BIT);
+		trap_put_word(ctx, ABI + PSSO_BoardInfo_SoftSpriteFlags, softspritefmts);
+	}
+#endif
 	if (debug_rtg_blitter != 3)
 		write_log (_T("P96: Blitter mode = %x!\n"), debug_rtg_blitter);
 
@@ -6128,6 +6305,20 @@ MEMORY_XLATE(name);
 #define GFXMEM_MEMORY_FUNCTIONS(name, index) MEMORY_FUNCTIONS(name)
 #endif
 
+// On Amiberry, force JIT to route writes through the bank's *_put handlers
+// (by flagging the bank as special for writes via S_WRITE) so mark_dirty()
+// runs on every CPU poke to VRAM. WinUAE relies on GetWriteWatch() for this
+// instead, so leave its jit_write_flag at 0. Without S_WRITE, JIT blocks that
+// write directly to natmem (e.g. IconLib's WritePixelArrayAlpha loop during
+// an alpha drag) never mark the touched pages dirty and flushpixels uploads
+// nothing — the icon stays invisible until a boardinfo op (BltBitMap etc.)
+// re-marks the region.
+#if !defined(_WIN32) || defined(AMIBERRY)
+#define GFXMEM_JIT_WRITE_FLAG S_WRITE
+#else
+#define GFXMEM_JIT_WRITE_FLAG 0
+#endif
+
 extern addrbank gfxmem_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem, 0)
 addrbank gfxmem_bank = {
@@ -6135,7 +6326,7 @@ addrbank gfxmem_bank = {
 	gfxmem_lput, gfxmem_wput, gfxmem_bput,
 	gfxmem_xlate, gfxmem_check, nullptr, nullptr, _T("RTG RAM"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 extern addrbank gfxmem2_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem2, 1)
@@ -6144,7 +6335,7 @@ addrbank gfxmem2_bank = {
 	gfxmem2_lput, gfxmem2_wput, gfxmem2_bput,
 	gfxmem2_xlate, gfxmem2_check, nullptr, nullptr, _T("RTG RAM #2"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 extern addrbank gfxmem3_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem3, 2)
@@ -6153,7 +6344,7 @@ addrbank gfxmem3_bank = {
 	gfxmem3_lput, gfxmem3_wput, gfxmem3_bput,
 	gfxmem3_xlate, gfxmem3_check, nullptr, nullptr, _T("RTG RAM #3"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 extern addrbank gfxmem4_bank;
 GFXMEM_MEMORY_FUNCTIONS(gfxmem4, 3)
@@ -6162,7 +6353,7 @@ addrbank gfxmem4_bank = {
 	gfxmem4_lput, gfxmem4_wput, gfxmem4_bput,
 	gfxmem4_xlate, gfxmem4_check, nullptr, nullptr, _T("RTG RAM #4"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, GFXMEM_JIT_WRITE_FLAG
 };
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 
@@ -6929,6 +7120,20 @@ static void picasso_reset2(int monid)
 		resetpalette(state);
 		state->dualclut = false;
 		state->advDragging = false;
+#ifdef AMIBERRY
+		// Drop any cached truecolor sprite state so warm reboots don't keep
+		// stale pixels or carry a stale RGBFormat across a fresh SetSprite().
+		// cursor_argb and sprite_rgbformat are file-scope globals shared
+		// across all monitors because uaegfx exposes a single hardware
+		// sprite to the Amiga — reset exactly once, on the primary monitor,
+		// not per-board. If sprite state ever becomes per-board, move this
+		// into a per-state struct instead of gating on monid.
+		if (!monid) {
+			xfree(cursor_argb);
+			cursor_argb = nullptr;
+			sprite_rgbformat = RGBFB_CLUT;
+		}
+#endif
 		InitPicasso96(monid);
 	}
 
