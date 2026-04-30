@@ -96,6 +96,28 @@ static int delete_trigger(blockinfo* bi, void* pc)
 	return 0;
 }
 
+static int windows_arm64_exception_size(const int transfer_size)
+{
+	switch (transfer_size) {
+	case SIZE_BYTE:
+		return sz_byte;
+	case SIZE_WORD:
+		return sz_word;
+	case SIZE_INT:
+	default:
+		return sz_long;
+	}
+}
+
+static void windows_arm64_jit_bus_error(const uaecptr amiga_addr, const bool read, const int transfer_size)
+{
+	exception2_setup(regs.opcode, amiga_addr, read, windows_arm64_exception_size(transfer_size), regs.s ? 4 : 0);
+	flush_icache(3);
+	countdown = 0;
+	set_special(SPCFLAG_END_COMPILE);
+	longjmp(jit_bus_error_jmpbuf, 2);
+}
+
 static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS info)
 {
 	if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
@@ -141,23 +163,54 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	const uae_u32 imm12 = (opcode >> 10) & 0xfff;
 	bool reg_indexed = false;
 	bool unsigned_imm = false;
+	bool unscaled_imm = false;
 
 	unsigned int masked_op = opcode & 0xffe00c00;
 	switch (masked_op) {
+	case 0x38000000: // STURB_wXi
+		transfer_size = SIZE_BYTE;
+		transfer_type = TYPE_STORE;
+		unscaled_imm = true;
+		break;
 	case 0x38200800: // STRB_wXx
 		transfer_size = SIZE_BYTE;
 		transfer_type = TYPE_STORE;
 		reg_indexed = true;
+		break;
+	case 0x38400000: // LDURB_wXi
+		transfer_size = SIZE_BYTE;
+		transfer_type = TYPE_LOAD;
+		unscaled_imm = true;
+		break;
+	case 0x78000000: // STURH_wXi
+		transfer_size = SIZE_WORD;
+		transfer_type = TYPE_STORE;
+		unscaled_imm = true;
 		break;
 	case 0x78200800: // STRH_wXx
 		transfer_size = SIZE_WORD;
 		transfer_type = TYPE_STORE;
 		reg_indexed = true;
 		break;
+	case 0x78400000: // LDURH_wXi
+		transfer_size = SIZE_WORD;
+		transfer_type = TYPE_LOAD;
+		unscaled_imm = true;
+		break;
+	case 0xb8000000: // STUR_wXi
+		transfer_size = SIZE_INT;
+		transfer_type = TYPE_STORE;
+		unscaled_imm = true;
+		break;
 	case 0xb8200800: // STR_wXx
 		transfer_size = SIZE_INT;
 		transfer_type = TYPE_STORE;
 		reg_indexed = true;
+		break;
+	case 0xb8400000: // LDUR_wXi
+		transfer_size = SIZE_INT;
+		transfer_type = TYPE_LOAD;
+		unscaled_imm = true;
 		break;
 	case 0x38600800: // LDRB_wXx
 		transfer_size = SIZE_BYTE;
@@ -273,12 +326,20 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 			}
 		} else if (unsigned_imm) {
 			offset = static_cast<uae_u64>(imm12) << scale_bits;
+		} else if (unscaled_imm) {
+			const uae_u32 imm9 = (opcode >> 12) & 0x1ff;
+			const auto signed_imm9 = static_cast<uae_s64>(imm9 & 0x100 ? static_cast<int>(imm9) - 0x200 : static_cast<int>(imm9));
+			offset = static_cast<uae_u64>(signed_imm9);
 		}
 
 		const uae_u64 eff_addr = rn_val + offset;
 		if (eff_addr != static_cast<uae_u64>(fault_addr)) {
 			write_log(_T("JIT: Windows ARM64 EA mismatch fault=%016llx ea=%016llx opcode=%08x\n"),
 				static_cast<unsigned long long>(fault_addr), static_cast<unsigned long long>(eff_addr), opcode);
+			if (arm64_quarantine_candidate && jit_in_compiled_code) {
+				windows_arm64_jit_bus_error(amiga_addr, transfer_type == TYPE_LOAD, transfer_size);
+			}
+			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
 		if (ab == &dummy_bank) {
@@ -341,10 +402,8 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	if (arm64_quarantine_candidate && jit_in_compiled_code) {
 		write_log(_T("JIT: Windows ARM64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
 			opcode, amiga_addr);
-		flush_icache(3);
-		countdown = 0;
-		set_special(SPCFLAG_END_COMPILE);
-		longjmp(jit_bus_error_jmpbuf, 2);
+		const bool read = info->ExceptionRecord->NumberParameters == 0 || info->ExceptionRecord->ExceptionInformation[0] == 0;
+		windows_arm64_jit_bus_error(amiga_addr, read, transfer_size);
 	}
 
 	write_log(_T("JIT: Windows ARM64 unhandled access violation at PC=%p fault=%p amiga=%08x opcode=%08x bank=%s\n"),
