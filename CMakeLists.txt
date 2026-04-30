@@ -95,16 +95,12 @@ if(WIN32)
     set(USE_LIBSERIALPORT OFF CACHE BOOL "LibSerialPort not available in vcpkg for MinGW" FORCE)
     set(USE_PORTMIDI OFF CACHE BOOL "PortMidi not available in vcpkg for MinGW" FORCE)
 
-    # Windows ARM64 (Phase 1): disable JIT until the vectored exception handler
-    # port lands. The x86 JIT cannot target aarch64 and the ARM64 JIT currently
-    # assumes POSIX signals for the segfault decoder.
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
-        set(USE_JIT OFF CACHE BOOL "JIT not yet ported to Windows ARM64" FORCE)
         # mpg123's vcpkg port fails to build on aarch64-w64-mingw32 (its
         # runtime CPU-feature probe assumes POSIX sigaction/sigsetjmp, which
-        # mingw-w64 does not provide). Skip MP3 support for Phase 1.
+        # mingw-w64 does not provide). Skip MP3 support for this target.
         set(USE_MPG123 OFF CACHE BOOL "mpg123 vcpkg port broken on Windows ARM64 mingw" FORCE)
-        message(STATUS "Windows ARM64 detected: JIT and mpg123 disabled for Phase 1 bring-up")
+        message(STATUS "Windows ARM64 detected: mpg123 disabled")
     endif()
 endif()
 
