@@ -632,6 +632,29 @@ if(NOT ANDROID AND NOT WIN32
     # which is PIE-compatible.
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
     target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+elseif(NOT IOS
+        AND CMAKE_SYSTEM_NAME STREQUAL "Darwin"
+        AND USE_JIT
+        AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64"
+             OR CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)x86_64($|;)"))
+    # Intel macOS Mach-O binaries normally reserve a 4GB __PAGEZERO segment.
+    # The x86-64 JIT needs helper/code buffers within RIP-relative range of
+    # globals; fixed __TEXT at 4GB plus a small pagezero leaves usable low
+    # address space for those buffers without letting PIE slide globals too low.
+    # Keep these scoped to the x86_64 slice so universal builds do not change
+    # arm64 image layout.
+    set(AMIBERRY_MACOS_X86_LINK_OPTIONS
+            "-Wl,-no_pie"
+            "-Wl,-segaddr,__TEXT,0x100000000"
+            "-Wl,-pagezero_size,0x10000")
+    if(CMAKE_OSX_ARCHITECTURES MATCHES ";")
+        foreach(AMIBERRY_MACOS_X86_LINK_OPTION IN LISTS AMIBERRY_MACOS_X86_LINK_OPTIONS)
+            target_link_options(${PROJECT_NAME} PRIVATE
+                    "SHELL:-Xarch_x86_64 ${AMIBERRY_MACOS_X86_LINK_OPTION}")
+        endforeach()
+    else()
+        target_link_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_MACOS_X86_LINK_OPTIONS})
+    endif()
 elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # x86_64 JIT is now 64-bit pointer-clean: no longer needs ASLR-disabling
     # linker flags or forced low image base.

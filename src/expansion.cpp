@@ -265,6 +265,7 @@ static bool ks11orolder(void)
 static uae_u8 expamem[65536 + 4];
 static uae_u8 expamem_write_space[65536 + 4];
 #define AUTOMATIC_AUTOCONFIG_MAX_ADDRESS 0x80
+#define EXPAMEM_READ_WARNING_LIMIT 64
 static int expamem_autoconfig_mode;
 static addrbank*(*expamem_map)(struct autoconfig_info*);
 
@@ -279,6 +280,8 @@ static uae_u8 slots_e8[8] = { 0 };
 static uae_u8 slots_20[(8 * 1024 * 1024) / 65536] = { 0 };
 
 static int z3hack_override;
+static int expamem_z2_lget_warning_count;
+static int expamem_z2_wget_warning_count;
 
 void set_expamem_z3_hack_mode(int mode)
 {
@@ -393,6 +396,8 @@ static void expamem_init_clear (void)
 	memset (expamem, 0xff, sizeof expamem);
 	expamem_hi = expamem_lo = 0;
 	expamem_map = NULL;
+	expamem_z2_lget_warning_count = 0;
+	expamem_z2_wget_warning_count = 0;
 }
 /* autoconfig area is "non-existing" after last device */
 static void expamem_init_clear_zero (void)
@@ -704,7 +709,12 @@ static uae_u32 REGPARAM2 expamem_lget (uaecptr addr)
 		}
 		return expamem_bank_current->sub_banks ? expamem_bank_current->sub_banks[0].bank->lget(addr) : expamem_bank_current->lget(addr);
 	}
-	write_log (_T("warning: Z2 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
+	if (expamem_z2_lget_warning_count < EXPAMEM_READ_WARNING_LIMIT) {
+		write_log (_T("warning: Z2 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
+		expamem_z2_lget_warning_count++;
+		if (expamem_z2_lget_warning_count == EXPAMEM_READ_WARNING_LIMIT)
+			write_log (_T("warning: suppressing further Z2 READ.L autoconfig warnings\n"));
+	}
 	return (expamem_wget (addr) << 16) | expamem_wget (addr + 2);
 }
 
@@ -726,7 +736,12 @@ static uae_u32 REGPARAM2 expamem_wget (uaecptr addr)
 		cpuboards[currprefs.cpuboard_type].subtypes[currprefs.cpuboard_subtype].e8(addr, &val, 2, false);
 		v = val;
 	}
-	write_log (_T("warning: READ.W from address $%08x=%04x PC=%x\n"), addr, v & 0xffff, M68K_GETPC);
+	if (expamem_z2_wget_warning_count < EXPAMEM_READ_WARNING_LIMIT) {
+		write_log (_T("warning: READ.W from address $%08x=%04x PC=%x\n"), addr, v & 0xffff, M68K_GETPC);
+		expamem_z2_wget_warning_count++;
+		if (expamem_z2_wget_warning_count == EXPAMEM_READ_WARNING_LIMIT)
+			write_log (_T("warning: suppressing further Z2 READ.W autoconfig warnings\n"));
+	}
 	return v;
 }
 

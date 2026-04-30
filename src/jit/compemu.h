@@ -12,7 +12,8 @@
 #endif
 
 extern volatile int jit_exception_pending;
-#if defined(CPU_AARCH64)
+#if defined(CPU_AARCH64) || defined(CPU_x86_64) || defined(__x86_64__) || defined(_M_AMD64)
+#define JIT_HAS_BUS_ERROR_RECOVERY 1
 #include <setjmp.h>
 extern jmp_buf jit_bus_error_jmpbuf;
 extern volatile bool jit_in_compiled_code;
