@@ -98,9 +98,9 @@ if(WIN32)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
         # mpg123's vcpkg port fails to build on aarch64-w64-mingw32 (its
         # runtime CPU-feature probe assumes POSIX sigaction/sigsetjmp, which
-        # mingw-w64 does not provide). Skip MP3 support for Phase 1.
+        # mingw-w64 does not provide). Skip MP3 support for this target.
         set(USE_MPG123 OFF CACHE BOOL "mpg123 vcpkg port broken on Windows ARM64 mingw" FORCE)
-        message(STATUS "Windows ARM64 detected: mpg123 disabled for Phase 1 bring-up")
+        message(STATUS "Windows ARM64 detected: mpg123 disabled")
     endif()
 endif()
 

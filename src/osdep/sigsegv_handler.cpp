@@ -128,11 +128,22 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	const uintptr fault_pc = static_cast<uintptr>(info->ContextRecord->Pc);
 	if (!windows_arm64_jit_pc(fault_pc))
 		return EXCEPTION_CONTINUE_SEARCH;
+	if (!natmem_offset)
+		return EXCEPTION_CONTINUE_SEARCH;
 
+	if (info->ExceptionRecord->NumberParameters < 2)
+		return EXCEPTION_CONTINUE_SEARCH;
+	const auto access_type = info->ExceptionRecord->ExceptionInformation[0];
+	if (access_type != 0 && access_type != 1)
+		return EXCEPTION_CONTINUE_SEARCH;
 	const uintptr fault_addr = static_cast<uintptr>(info->ExceptionRecord->ExceptionInformation[1]);
-	const uae_u32 fault_addr32 = static_cast<uae_u32>(fault_addr);
-	const uae_u32 natmem32 = static_cast<uae_u32>(reinterpret_cast<uintptr>(natmem_offset));
-	const uaecptr amiga_addr = fault_addr32 - natmem32;
+	const uintptr amiga_addr_wide = fault_addr - reinterpret_cast<uintptr>(natmem_offset);
+	if (amiga_addr_wide > 0xffffffffULL) {
+		write_log(_T("JIT: Windows ARM64 AV outside natmem PC=%p fault=%p\n"),
+			reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr));
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	const uaecptr amiga_addr = static_cast<uaecptr>(amiga_addr_wide);
 
 	if (a3000lmem_bank.allocated_size > 0 &&
 		amiga_addr >= a3000lmem_bank.start - 0x00100000 &&
@@ -402,7 +413,7 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	if (arm64_quarantine_candidate && jit_in_compiled_code) {
 		write_log(_T("JIT: Windows ARM64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
 			opcode, amiga_addr);
-		const bool read = info->ExceptionRecord->NumberParameters == 0 || info->ExceptionRecord->ExceptionInformation[0] == 0;
+		const bool read = access_type == 0;
 		windows_arm64_jit_bus_error(amiga_addr, read, transfer_size);
 	}
 
