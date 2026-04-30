@@ -639,11 +639,11 @@ elseif(NOT IOS
              OR CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)x86_64($|;)"))
     # Intel macOS Mach-O binaries normally reserve a 4GB __PAGEZERO segment.
     # The x86-64 JIT needs helper/code buffers within RIP-relative range of
-    # globals; a fixed image at 4GB plus a small pagezero leaves usable low
+    # globals; fixed __TEXT at 4GB plus a small pagezero leaves usable low
     # address space for those buffers without letting PIE slide globals too low.
     target_link_options(${PROJECT_NAME} PRIVATE
             "-Wl,-no_pie"
-            "-Wl,-image_base,0x100000000"
+            "-Wl,-segaddr,__TEXT,0x100000000"
             "-Wl,-pagezero_size,0x10000")
 elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # x86_64 JIT is now 64-bit pointer-clean: no longer needs ASLR-disabling
