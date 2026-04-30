@@ -39,10 +39,85 @@
 #ifdef _WIN32
 /* On Windows x86_64, JIT exception handling is done via
  * AddVectoredExceptionHandler in jit/x86/exception_handler.cpp.
- * This file only provides stubs for the POSIX signal handler API. */
+ * Windows ARM64 uses the ARM64 JIT and installs its vectored handler here. */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #include <SDL3/SDL.h>
+#if defined(JIT) && defined(CPU_AARCH64)
+extern uae_u8* current_compile_p;
+extern uae_u8* compiled_code;
+extern uae_u8* popallspace;
+#endif
 
 static int max_signals = 200;
+static void* installed_arm64_vector_handler;
+
+#if defined(JIT) && defined(CPU_AARCH64)
+typedef uae_u64 uintptr;
+
+static bool windows_arm64_jit_pc(uintptr pc)
+{
+	return (compiled_code && pc >= reinterpret_cast<uintptr>(compiled_code) && pc < reinterpret_cast<uintptr>(current_compile_p)) ||
+		(popallspace && pc >= reinterpret_cast<uintptr>(popallspace) && pc < reinterpret_cast<uintptr>(popallspace + POPALLSPACE_SIZE));
+}
+
+static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS info)
+{
+	if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
+		return EXCEPTION_CONTINUE_SEARCH;
+	if (!canbang || currprefs.cachesize == 0)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	const uintptr fault_pc = static_cast<uintptr>(info->ContextRecord->Pc);
+	if (!windows_arm64_jit_pc(fault_pc))
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	const uintptr fault_addr = static_cast<uintptr>(info->ExceptionRecord->ExceptionInformation[1]);
+	const uae_u32 fault_addr32 = static_cast<uae_u32>(fault_addr);
+	const uae_u32 natmem32 = static_cast<uae_u32>(reinterpret_cast<uintptr>(natmem_offset));
+	const uaecptr amiga_addr = fault_addr32 - natmem32;
+
+	if (a3000lmem_bank.allocated_size > 0 &&
+		amiga_addr >= a3000lmem_bank.start - 0x00100000 &&
+		amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
+		write_log(_T("JIT: Windows ARM64 ramsey_low probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		info->ContextRecord->Pc += 4;
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	if (a3000hmem_bank.allocated_size > 0 &&
+		amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size &&
+		amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
+		write_log(_T("JIT: Windows ARM64 ramsey_high probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		info->ContextRecord->Pc += 4;
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	addrbank* ab = &get_mem_bank(amiga_addr);
+	if (ab == &dummy_bank && jit_in_compiled_code) {
+		write_log(_T("JIT: Windows ARM64 unmapped access at 0x%08x from PC=%p, returning to interpreter.\n"),
+			amiga_addr, reinterpret_cast<void*>(fault_pc));
+		flush_icache(3);
+		countdown = 0;
+		set_special(SPCFLAG_END_COMPILE);
+		longjmp(jit_bus_error_jmpbuf, 2);
+	}
+
+	write_log(_T("JIT: Windows ARM64 unhandled access violation at PC=%p fault=%p amiga=%08x bank=%s\n"),
+		reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr), amiga_addr,
+		ab && ab->name ? ab->name : _T("NONE"));
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static void install_windows_arm64_jit_exception_handler()
+{
+	if (!installed_arm64_vector_handler) {
+		write_log(_T("JIT: Installing Windows ARM64 vectored exception handler\n"));
+		installed_arm64_vector_handler = AddVectoredExceptionHandler(0, windows_arm64_jit_exception_handler);
+	}
+}
+#endif
 
 void init_max_signals()
 {
@@ -50,6 +125,9 @@ void init_max_signals()
 	max_signals = 20;
 #else
 	max_signals = 200;
+#endif
+#if defined(JIT) && defined(CPU_AARCH64)
+	install_windows_arm64_jit_exception_handler();
 #endif
 }
 

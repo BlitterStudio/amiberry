@@ -1075,8 +1075,8 @@ jobs:
             amiberry-*.exe
           retention-days: 7
 
-  # Windows ARM64 (Phase 1 bring-up): interpreter-only build on the
-  # GitHub-hosted windows-11-arm runner using llvm-mingw. Kept separate
+  # Windows ARM64 bring-up: native build on the GitHub-hosted
+  # windows-11-arm runner using llvm-mingw. Kept separate
   # from build-windows because the toolchain and shell differ. Non-blocking
   # during shakeout (continue-on-error: true) and intentionally NOT in the
   # create-release job's needs list — promote once stable.
