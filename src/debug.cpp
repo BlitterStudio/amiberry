@@ -1609,13 +1609,20 @@ static void dump_custom_regs(bool aga, bool ext)
 			addr1, custd[cnt1].name, v1, extra1,
 			addr2, custd[cnt2].name, v2, extra2);
 		for (;;) {
-			cnt1++;
-			if (!(custd[cnt1].special & CD_NONE))
+			if (!custd[cnt1].name) {
 				break;
+			}
+			cnt1++;
+			if (!custd[cnt1].name || !(custd[cnt1].special & CD_NONE)) {
+				break;
+			}
 		}
 		for (;;) {
+			if (!custd[cnt2].name) {
+				break;
+			}
 			cnt2++;
-			if (!(custd[cnt2].special & CD_NONE))
+			if (!custd[cnt2].name || !(custd[cnt2].special & CD_NONE))
 				break;
 		}
 	}
