@@ -24,8 +24,10 @@ struct bltinfo {
     uae_u16 bltsize;
     uae_u16 bltcon0, bltcon1;
     int got_cycle;
-    uae_u32 nasty_cnt, wait_nasty;
-    int blitter_nasty, blit_interrupt;
+    uae_s32 nasty_cnt, wait_nasty;
+    int blitter_nasty;
+    bool blit_interrupt;
+    bool blit_interrupt_trigger;
     int blit_main, blit_pending, blit_count_done;
     int blit_queued;
     evt_t finishcycle_dmacon, finishcycle_copper;

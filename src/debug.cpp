@@ -217,7 +217,7 @@ static const TCHAR *help[] = {
 	_T("  od                    Enable/disable Copper vpos/hpos tracing.\n"),
 	_T("  ot                    Copper single step trace.\n"),
 	_T("  ob <addr>             Copper breakpoint.\n"),
-	_T("  H[H][s] <cnt>         Show PC history (HH=full CPU info, s=disable DMA info) <cnt> instructions.\n"),
+	_T("  H[H][D] <cnt>         Show PC history (HH=full CPU info, D=disable DMA info) <cnt> instructions.\n"),
 	_T("  C <value>             Search for values like energy or lifes in games.\n"),
 	_T("  mmu <fc>              Set current MMU translation function code for all debugging instructions.\n"),
 	_T("  mmud                  Dump MMU tables.\n"),
@@ -6149,15 +6149,20 @@ static void show_exec_lists (TCHAR *t)
 static int debug_vpos = -1;
 static int debug_hpos = -1;
 
-static void breakfunc(uae_u32 v)
+static void internal_debug(void)
 {
-	write_log(_T("Cycle breakpoint hit\n"));
 	debugging = 1;
 	debug_vpos = -1;
 	debug_hpos = -1;
 	debug_cycles(2);
 	set_special(SPCFLAG_BRK);
 	trace_mode = TRACE_IMMEDIATE;
+}
+
+static void breakfunc(uae_u32 v)
+{
+	write_log(_T("Cycle breakpoint hit\n"));
+	internal_debug();
 }
 
 void debug_hsync(void)
@@ -7386,9 +7391,10 @@ static bool debug_line (TCHAR *input)
 			if (*inptr == 'l') {
 				next_char (&inptr);
 				if (more_params (&inptr)) {
-					debug_illegal_mask = readhex(&inptr, NULL);
-					if (more_params(&inptr))
-						debug_illegal_mask |= ((uae_u64)readhex(&inptr, NULL)) << 32;
+					debug_illegal_mask = ((uae_u64)readhex(&inptr, NULL)) << 32;
+					if (more_params(&inptr)) {
+						debug_illegal_mask |= readhex(&inptr, NULL);
+					}
 				} else {
 					debug_illegal_mask = debug_illegal ? 0 : -1;
 					debug_illegal_mask &= ~((uae_u64)255 << 24); // mask interrupts
@@ -7664,7 +7670,6 @@ static bool debug_line (TCHAR *input)
 				uae_u32 oldpc = m68k_getpc ();
 				int lastframes, lastvpos, lasthpos;
 				struct regstruct save_regs = regs;
-				bool dmadata = true;
 
 				badly = 0;
 				if (inptr[0] == 'H') {
@@ -7674,10 +7679,6 @@ static bool debug_line (TCHAR *input)
 				dmadbg = 0;
 				if (inptr[0] == 'D') {
 					dmadbg = 1;
-					inptr++;
-				}
-				if (inptr[0] == 's') {
-					dmadata = false;
 					inptr++;
 				}
 				if (more_params(&inptr))
@@ -7709,7 +7710,7 @@ static bool debug_line (TCHAR *input)
 						if (badly) {
 							m68k_dumpstate(NULL, 0xffffffff);
 						} else {
-							if (dmadbg && lastvpos >= 0 && dmadata) {
+							if (dmadbg && lastvpos >= 0) {
 								dma_disasm(lastframes, lastvpos, lasthpos, history[temp].fp, history[temp].vpos, history[temp].hpos);
 							}
 							lastframes = history[temp].fp;
@@ -8066,12 +8067,18 @@ void debug_exception(int nr)
 {
 	if (debug_illegal) {
 		if (nr <= 63 && (debug_illegal_mask & ((uae_u64)1 << nr))) {
-			write_log(_T("Exception %d breakpoint\n"), nr);
-			activate_debugger();
+			console_out_f(_T("Exception %d breakpoint\n"), nr);
+			debug_vpos = -1;
+			debug_hpos = -1;
+			debug_cycles(2);
+			internal_debug();
 		}
 	}
 	if (trace_param[0] == 0xffffffff && trace_mode == TRACE_SKIP_INS) {
-		activate_debugger();
+		debug_vpos = -1;
+		debug_hpos = -1;
+		debug_cycles(2);
+		internal_debug();
 	}
 }
 
