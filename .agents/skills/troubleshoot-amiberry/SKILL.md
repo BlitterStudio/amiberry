@@ -58,7 +58,7 @@ ninja -j12
 - Build dir: `out/build/windows-debug` (or `windows-release`)
 - Kill stale `amiberry.exe` before rebuild if "permission denied"
 - `write_log()` is silent unless `--log` flag or `write_logfile` config is set
-- JIT is non-functional on 64-bit Windows (interpreter mode works fine)
+- x86-64 JIT is supported on Windows; for high-natmem, pointer-width, or performance regressions use the `amiberry-x86-jit` skill
 - PowerShell `$env:` variables get stripped in bash inline commands; use `.ps1` files with `-File`
 
 ## Troubleshooting Workflow

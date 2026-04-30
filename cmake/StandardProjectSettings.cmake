@@ -18,7 +18,10 @@ endif()
 # Accumulate compile and link flags in variables.
 # These are applied to the amiberry target in SourceFiles.cmake after the target is created,
 # so they do not leak into third-party FetchContent builds.
-set(AMIBERRY_COMPILE_OPTIONS "-pipe")
+set(AMIBERRY_COMPILE_OPTIONS "")
+if(NOT WIN32)
+    list(APPEND AMIBERRY_COMPILE_OPTIONS "-pipe")
+endif()
 set(AMIBERRY_LINK_OPTIONS "")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
