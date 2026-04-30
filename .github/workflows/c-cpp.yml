@@ -1180,7 +1180,7 @@ jobs:
           ZIP_PATH="$PWD/$ZIP_NAME"
           (cd out/package/windows-arm64-release && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
 
-      - name: Smoke test (--dump-paths)
+      - name: Smoke test (--dump-paths, --jit-selftest)
         shell: pwsh
         run: |
           $zip = Get-ChildItem "$PWD/amiberry-*-windows-arm64-portable.zip" | Select-Object -First 1
@@ -1206,6 +1206,18 @@ jobs:
             throw "--dump-paths failed with exit code $($proc.ExitCode)."
           }
           Write-Host "ARM64 Amiberry.exe ran --dump-paths successfully."
+
+          $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
+          $jitStderrFile = Join-Path $verifyRoot "jit-selftest.stderr"
+          $jitProc = Start-Process -FilePath $exePath -ArgumentList "--jit-selftest" `
+            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
+            -RedirectStandardOutput $jitStdoutFile -RedirectStandardError $jitStderrFile
+          if ($jitProc.ExitCode -ne 0) {
+            Write-Host "JIT SELFTEST STDOUT:"; if (Test-Path $jitStdoutFile) { Get-Content $jitStdoutFile }
+            Write-Host "JIT SELFTEST STDERR:"; if (Test-Path $jitStderrFile) { Get-Content $jitStderrFile }
+            throw "--jit-selftest failed with exit code $($jitProc.ExitCode)."
+          }
+          Write-Host "ARM64 Amiberry.exe ran --jit-selftest successfully."
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
