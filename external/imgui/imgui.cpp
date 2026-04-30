@@ -3659,6 +3659,7 @@ static const ImGuiStyleVarInfo GStyleVarsInfo[] =
     { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TableAngledHeadersTextAlign)},// ImGuiStyleVar_TableAngledHeadersTextAlign
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TreeLinesSize)},              // ImGuiStyleVar_TreeLinesSize
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TreeLinesRounding)},          // ImGuiStyleVar_TreeLinesRounding
+    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, DragDropTargetRounding)},     // ImGuiStyleVar_DragDropTargetRounding
     { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ButtonTextAlign) },           // ImGuiStyleVar_ButtonTextAlign
     { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SelectableTextAlign) },       // ImGuiStyleVar_SelectableTextAlign
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SeparatorSize)},              // ImGuiStyleVar_SeparatorSize
@@ -4753,8 +4754,12 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // This marking is to be able to provide info for IsItemDeactivatedAfterEdit().
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
+
+    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_EditedInternal;
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_NoMarkEdited)
         return;
+    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
+
     if (g.ActiveId == id || g.ActiveId == 0)
     {
         // FIXME: Can't we fully rely on LastItemData yet?
@@ -4768,9 +4773,6 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
     // FIXME: This assert is getting a bit meaningless over time. It helped detect some unusual use cases but eventually it is becoming an unnecessary restriction.
     IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
-
-    //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
-    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 }
 
 bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)
@@ -15117,7 +15119,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     {
         ImRect bb = g.DragDropTargetRect;
         bb.Expand(-3.5f);
-        RenderDragDropTargetRectEx(GetForegroundDrawList(), bb);
+        RenderDragDropTargetRectEx(GetForegroundDrawList(), bb, g.Style.DragDropTargetRounding);
     }
     else if (draw_target_rect)
     {
@@ -15148,16 +15150,16 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
     bool push_clip_rect = !window->ClipRect.Contains(bb_display);
     if (push_clip_rect)
         window->DrawList->PushClipRectFullScreen();
-    RenderDragDropTargetRectEx(window->DrawList, bb_display);
+    RenderDragDropTargetRectEx(window->DrawList, bb_display, g.Style.DragDropTargetRounding);
     if (push_clip_rect)
         window->DrawList->PopClipRect();
 }
 
-void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb)
+void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb, float rounding)
 {
     ImGuiContext& g = *GImGui;
-    draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTargetBg), g.Style.DragDropTargetRounding, 0);
-    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), g.Style.DragDropTargetRounding, 0, g.Style.DragDropTargetBorderSize);
+    draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTargetBg), rounding, 0);
+    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), rounding, 0, g.Style.DragDropTargetBorderSize);
 }
 
 const ImGuiPayload* ImGui::GetDragDropPayload()
