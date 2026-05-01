@@ -47,7 +47,7 @@ void render_panel_adv_chipset()
 		ShowHelpMarker("MSM6242B RTC chip (used in A2000)");
 		ImGui::SameLine();
 		AmigaRadioButton("RF5C01A", &changed_prefs.cs_rtc, 2);
-		ShowHelpMarker("RP5C01A RTC chip (used in A3000/A4000)");
+		ShowHelpMarker("RF5C01A RTC chip (used in A3000/A4000)");
 		ImGui::SameLine();
 		AmigaRadioButton("A2000 MSM6242B", &changed_prefs.cs_rtc, 3);
 		ShowHelpMarker("MSM6242B with A2000-specific behavior");
