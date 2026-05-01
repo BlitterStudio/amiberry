@@ -2455,26 +2455,32 @@ void run_gui()
 		ImGui::Dummy(ImVec2(0, 2.0f));
 
 		// Button bar
-		// Left-aligned buttons (Shutdown, Reset, Quit, Restart, Help)
+		// Left-aligned buttons (Shutdown, Reboot, Quit, Reload, Help)
 		if (!amiberry_options.disable_shutdown_button) {
 			if (AmigaButton(ICON_FA_POWER_OFF " Shutdown", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				uae_quit();
 				gui_running = false;
 				host_poweroff = true;
 			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Shut down the host system");
 			ImGui::SameLine();
 		}
-		if (AmigaButton(ICON_FA_ROTATE_RIGHT " Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_ROTATE_RIGHT " Reboot", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_reset(1, 1);
 			gui_running = false;
 		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Cold reset the emulated Amiga");
 		ImGui::SameLine();
 		if (AmigaButton(ICON_FA_RIGHT_FROM_BRACKET " Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_quit();
 			gui_running = false;
 		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Exit Amiberry");
 		ImGui::SameLine();
-		if (AmigaButton(ICON_FA_ARROWS_ROTATE " Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton(ICON_FA_ARROWS_ROTATE " Reload", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			char tmp[MAX_DPATH] = {0};
 			get_configuration_path(tmp, sizeof tmp);
 			if (strlen(last_loaded_config) > 0) {
@@ -2487,6 +2493,8 @@ void run_gui()
 			uae_restart(&changed_prefs, -1, tmp);
 			gui_running = false;
 		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Reload current configuration and restart emulation");
 
 		// Right-aligned buttons
 		float right_buttons_width = (BUTTON_WIDTH * 2) + style.ItemSpacing.x;
