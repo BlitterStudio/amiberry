@@ -2461,7 +2461,7 @@ static void handle_android_two_finger_swipe(const SDL_Event& event)
 {
 	if (event.type == SDL_EVENT_FINGER_DOWN) {
 		if (android_active_fingers < 2) {
-			int slot = android_active_fingers;
+			int slot = (android_finger_ids[0] == 0) ? 0 : 1;
 			android_finger_ids[slot] = event.tfinger.fingerID;
 			android_finger_start_y[slot] = event.tfinger.y;
 			android_finger_y[slot] = event.tfinger.y;
