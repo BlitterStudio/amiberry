@@ -19,7 +19,7 @@ static const char* help_text_about =
 	"\n"
 	"\"Quit\": This quits Amiberry, as you'd expect.\n"
 	"\n"
-	"\"Restart\": This button will stop emulation (if running), reload Amiberry and reset\n"
+	"\"Reload\": This button will stop emulation (if running), reload Amiberry and reset\n"
 	" the currently loaded configuration. This has a similar effect as if you Quit and start\n"
 	" Amiberry again.\n"
 	" It can be useful if you want to change a setting that cannot be changed on-the-fly,\n"
@@ -28,7 +28,7 @@ static const char* help_text_about =
 	"\"Help\": This will display some on-screen help/documentation, relating to the Panel\n"
 	" you are currently in.\n"
 	"\n"
-	"\"Reset\": This button will trigger a hard reset of the emulation, which will reboot\n"
+	"\"Reboot\": This button will trigger a hard reset of the emulation, which will reboot\n"
 	" with the current settings.\n"
 	"\n"
 	"\"Start\": This button starts the emulation, using the current settings you have set.\n";
