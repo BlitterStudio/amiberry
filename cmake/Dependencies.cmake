@@ -376,7 +376,7 @@ if(ANDROID)
         )
         # ENet doesn't export a target in older versions, so we might need to be careful
         # But lsalzman/enet usually has CMake support.
-        FetchContent_MakeAvailable(enet) 
+        FetchContent_MakeAvailable(enet)
         target_link_libraries(${PROJECT_NAME} PRIVATE enet)
 
         # Ensure the enet/enet.h header is visible when compiling amiberry on Android.
@@ -430,8 +430,8 @@ if(ANDROID)
             target_include_directories(${PROJECT_NAME} PRIVATE "${libserialport_SOURCE_DIR}")
         endif()
     endif()
-    
-    # --- Existing dependencies --- 
+
+    # --- Existing dependencies ---
 elseif(IOS)
     # iOS: SDL3 and SDL3_image must be pre-built and findable via CMAKE_FIND_ROOT_PATH.
     # Most optional codecs and network libs are unavailable or unnecessary on iOS.
@@ -747,14 +747,17 @@ else()
     add_dependencies(${PROJECT_NAME} floppybridge capsimage)
 endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_library(UTIL_LIBRARY util)
     if(UTIL_LIBRARY)
         target_link_libraries(${PROJECT_NAME} PRIVATE ${UTIL_LIBRARY})
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
-endif()
-if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    find_library(UTIL_LIBRARY util REQUIRED)
+    # REQUIRED will make sure the build fails earlier if libutil isn't found
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${UTIL_LIBRARY} iconv)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
     target_link_libraries(${PROJECT_NAME} PRIVATE network iconv bsd)
 endif()
 
