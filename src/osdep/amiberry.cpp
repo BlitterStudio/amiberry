@@ -146,6 +146,11 @@ static int focus;
 static int mouseinside;
 static int pending_mousecapture_monid = -1;
 static int pending_mousecapture_active;
+// Sticky flag: set when the user explicitly releases the mouse (Ctrl-Alt,
+// middle-button untrap, magic-mouse edge release). Suppresses automatic
+// recapture on focus_gained and the window-position snap-back heuristic
+// so that release sticks until the user clicks back inside the window.
+static bool user_released_capture;
 int mouseactive;
 int mouse_monid;
 int minimized;
@@ -1194,6 +1199,10 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 		active = 1;
 
 	mouseactive = active ? mon->monitor_id + 1 : 0;
+	// Any successful capture transition clears the user-release intent so
+	// later focus events can apply capture_always normally again.
+	if (mouseactive)
+		user_released_capture = false;
 
 	mon->mouseposx = mon->mouseposy = 0;
 
@@ -1323,7 +1332,7 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 	}
 	getcapslock();
 	wait_keyrelease();
-	if (isfullscreen() > 0 || currprefs.capture_always) {
+	if (isfullscreen() > 0 || (currprefs.capture_always && !user_released_capture)) {
 		setmouseactive(mon->monitor_id, 1);
 		inputdevice_acquire(TRUE);
 	}
@@ -1409,6 +1418,7 @@ void enablecapture(const int monid)
 {
 	if (pause_emulation > 2)
 		return;
+	user_released_capture = false;
 	setmouseactive(monid, 1);
 	if (sound_closed < 0) {
 		resumesoundpaused();
@@ -1420,6 +1430,7 @@ void enablecapture(const int monid)
 
 void disablecapture()
 {
+	user_released_capture = true;
 	setmouseactive(0, 0);
 	focus = 0;
 	mouseinside = false;
@@ -1500,14 +1511,21 @@ void activationtoggle(const int monid, const bool inactiveonly)
 {
 	if (mouseactive) {
 		if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
+			// disablecapture() sets user_released_capture itself.
 			disablecapture();
 			minimizewindow(monid);
 		} else {
+			user_released_capture = true;
 			setmouseactive(monid, 0);
 		}
 	} else {
-		if (!inactiveonly)
+		if (!inactiveonly) {
+			// Pre-clear so that if setmouseactive2 rejects this re-capture
+			// attempt (e.g. window hidden, cursor not normalcursor), the
+			// next focus_gained can still apply capture_always normally.
+			user_released_capture = false;
 			setmouseactive(monid, 1);
+		}
 	}
 }
 
@@ -1918,7 +1936,12 @@ static void handle_focus_gained_event(AmigaMonitor* mon)
 			// position and persist it to prefs, since handle_moved_event
 			// skipped setsizemove during the transition.
 			setsizemove(mon, mon->amiga_window);
-		} else {
+		} else if (!user_released_capture) {
+			// Snap-back is only safe for involuntary focus losses such as
+			// alt-tab. If the user explicitly released capture, treat any
+			// position change as deliberate (e.g. a title-bar drag whose
+			// MOVED events are still queued behind this focus_gained on
+			// Windows' modal drag loop) and leave the new position alone.
 			int cur_x, cur_y;
 			SDL_GetWindowPosition(mon->amiga_window, &cur_x, &cur_y);
 			if (cur_x != mon->pre_focus_x || cur_y != mon->pre_focus_y) {
