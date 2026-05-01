@@ -1199,6 +1199,8 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 		active = 1;
 
 	mouseactive = active ? mon->monitor_id + 1 : 0;
+	// Any successful capture transition clears the user-release intent so
+	// later focus events can apply capture_always normally again.
 	if (mouseactive)
 		user_released_capture = false;
 
@@ -1508,15 +1510,19 @@ int isfocus()
 void activationtoggle(const int monid, const bool inactiveonly)
 {
 	if (mouseactive) {
-		user_released_capture = true;
 		if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
+			// disablecapture() sets user_released_capture itself.
 			disablecapture();
 			minimizewindow(monid);
 		} else {
+			user_released_capture = true;
 			setmouseactive(monid, 0);
 		}
 	} else {
 		if (!inactiveonly) {
+			// Pre-clear so that if setmouseactive2 rejects this re-capture
+			// attempt (e.g. window hidden, cursor not normalcursor), the
+			// next focus_gained can still apply capture_always normally.
 			user_released_capture = false;
 			setmouseactive(monid, 1);
 		}
