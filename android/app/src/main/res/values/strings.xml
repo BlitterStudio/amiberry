@@ -228,11 +228,6 @@
     <string name="welcome_help_link">Learn more</string>
     <string name="welcome_dismiss">Got it</string>
 
-    <string name="pause_menu_title">Emulation Paused</string>
-    <string name="pause_menu_resume">Resume</string>
-    <string name="pause_menu_advanced_settings">Advanced Settings (ImGui)</string>
-    <string name="pause_menu_quit">Quit to Launcher</string>
-
     <string name="crash_dialog_title">Emulator stopped unexpectedly</string>
     <string name="crash_dialog_message">The emulator process exited unexpectedly. This may have been caused by an incompatible configuration or a missing ROM file. If this keeps happening, try a different Amiga model or check your ROM files.</string>
     <string name="crash_dialog_dismiss">OK</string>
