@@ -169,7 +169,17 @@ elseif (WIN32)
 	# Use a version-free install directory so upgrades replace the existing
 	# installation instead of creating a separate folder per version.
 	set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")
-	set(CPACK_INNOSETUP_ARCHITECTURE x64)
+	if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+		set(CPACK_INNOSETUP_ARCHITECTURE arm64)
+	elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(CPACK_INNOSETUP_ARCHITECTURE x64)
+		# Allow the x64 installer to run on Windows 11 ARM64 under x64
+		# emulation. Plain "x64" excludes ARM64 machines.
+		set(CPACK_INNOSETUP_SETUP_ArchitecturesAllowed "x64compatible")
+		set(CPACK_INNOSETUP_SETUP_ArchitecturesInstallIn64BitMode "x64compatible")
+	else()
+		set(CPACK_INNOSETUP_ARCHITECTURE x86)
+	endif()
     set(CPACK_INNOSETUP_SETUP_PrivilegesRequired "lowest")
     set(CPACK_INNOSETUP_SETUP_PrivilegesRequiredOverridesAllowed "dialog")
     # {autopf} expands to Program Files when the user elevates via the

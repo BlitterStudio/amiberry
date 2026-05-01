@@ -39,10 +39,398 @@
 #ifdef _WIN32
 /* On Windows x86_64, JIT exception handling is done via
  * AddVectoredExceptionHandler in jit/x86/exception_handler.cpp.
- * This file only provides stubs for the POSIX signal handler API. */
+ * Windows ARM64 uses the ARM64 JIT and installs its vectored handler here. */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #include <SDL3/SDL.h>
+#if defined(JIT) && defined(CPU_AARCH64)
+extern uae_u8* current_compile_p;
+extern uae_u8* compiled_code;
+extern uae_u8* popallspace;
+extern blockinfo* active;
+extern blockinfo* dormant;
+extern void invalidate_block(blockinfo* bi);
+extern void raise_in_cl_list(blockinfo* bi);
+#endif
 
 static int max_signals = 200;
+static void* installed_arm64_vector_handler;
+
+#if defined(JIT) && defined(CPU_AARCH64)
+typedef uae_u64 uintptr;
+
+enum transfer_type_t {
+	TYPE_UNKNOWN,
+	TYPE_LOAD,
+	TYPE_STORE
+};
+
+enum type_size_t {
+	SIZE_UNKNOWN,
+	SIZE_BYTE,
+	SIZE_WORD,
+	SIZE_INT
+};
+
+static bool windows_arm64_jit_pc(uintptr pc)
+{
+	return (compiled_code && pc >= reinterpret_cast<uintptr>(compiled_code) && pc < reinterpret_cast<uintptr>(current_compile_p)) ||
+		(popallspace && pc >= reinterpret_cast<uintptr>(popallspace) && pc < reinterpret_cast<uintptr>(popallspace + POPALLSPACE_SIZE));
+}
+
+static int delete_trigger(blockinfo* bi, void* pc)
+{
+	while (bi) {
+		if (bi->handler && (uae_u8*)bi->direct_handler <= pc && (uae_u8*)bi->nexthandler > pc) {
+			write_log(_T("JIT: Deleted trigger (%p < %p < %p) %p\n"),
+				bi->handler, pc, bi->nexthandler, bi->pc_p);
+			invalidate_block(bi);
+			raise_in_cl_list(bi);
+			set_special(0);
+			return 1;
+		}
+		bi = bi->next;
+	}
+	return 0;
+}
+
+static int windows_arm64_exception_size(const int transfer_size)
+{
+	switch (transfer_size) {
+	case SIZE_BYTE:
+		return sz_byte;
+	case SIZE_WORD:
+		return sz_word;
+	case SIZE_INT:
+	default:
+		return sz_long;
+	}
+}
+
+static void windows_arm64_jit_bus_error(const uaecptr amiga_addr, const bool read, const int transfer_size)
+{
+	exception2_setup(regs.opcode, amiga_addr, read, windows_arm64_exception_size(transfer_size), regs.s ? 4 : 0);
+	flush_icache(3);
+	countdown = 0;
+	set_special(SPCFLAG_END_COMPILE);
+	longjmp(jit_bus_error_jmpbuf, 2);
+}
+
+static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS info)
+{
+	if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
+		return EXCEPTION_CONTINUE_SEARCH;
+	if (!canbang || currprefs.cachesize == 0)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	const uintptr fault_pc = static_cast<uintptr>(info->ContextRecord->Pc);
+	if (!windows_arm64_jit_pc(fault_pc))
+		return EXCEPTION_CONTINUE_SEARCH;
+	if (!natmem_offset)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	if (info->ExceptionRecord->NumberParameters < 2)
+		return EXCEPTION_CONTINUE_SEARCH;
+	const auto access_type = info->ExceptionRecord->ExceptionInformation[0];
+	if (access_type != 0 && access_type != 1)
+		return EXCEPTION_CONTINUE_SEARCH;
+	const uintptr fault_addr = static_cast<uintptr>(info->ExceptionRecord->ExceptionInformation[1]);
+	const uintptr amiga_addr_wide = fault_addr - reinterpret_cast<uintptr>(natmem_offset);
+	if (amiga_addr_wide > 0xffffffffULL) {
+		write_log(_T("JIT: Windows ARM64 AV outside natmem PC=%p fault=%p\n"),
+			reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr));
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	const uaecptr amiga_addr = static_cast<uaecptr>(amiga_addr_wide);
+
+	if (a3000lmem_bank.allocated_size > 0 &&
+		amiga_addr >= a3000lmem_bank.start - 0x00100000 &&
+		amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
+		write_log(_T("JIT: Windows ARM64 ramsey_low probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		info->ContextRecord->Pc += 4;
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	if (a3000hmem_bank.allocated_size > 0 &&
+		amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size &&
+		amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
+		write_log(_T("JIT: Windows ARM64 ramsey_high probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		info->ContextRecord->Pc += 4;
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	addrbank* ab = &get_mem_bank(amiga_addr);
+	const bool arm64_quarantine_candidate = (ab == &dummy_bank);
+	const unsigned int opcode = *reinterpret_cast<uae_u32*>(fault_pc);
+	transfer_type_t transfer_type = TYPE_UNKNOWN;
+	int transfer_size = SIZE_UNKNOWN;
+
+	const int rd = opcode & 0x1f;
+	const int rn = (opcode >> 5) & 0x1f;
+	const int rm = (opcode >> 16) & 0x1f;
+	const uae_u32 option = (opcode >> 13) & 0x7;
+	const uae_u32 sbit = (opcode >> 12) & 0x1;
+	const uae_u32 imm12 = (opcode >> 10) & 0xfff;
+	bool reg_indexed = false;
+	bool unsigned_imm = false;
+	bool unscaled_imm = false;
+
+	unsigned int masked_op = opcode & 0xffe00c00;
+	switch (masked_op) {
+	case 0x38000000: // STURB_wXi
+		transfer_size = SIZE_BYTE;
+		transfer_type = TYPE_STORE;
+		unscaled_imm = true;
+		break;
+	case 0x38200800: // STRB_wXx
+		transfer_size = SIZE_BYTE;
+		transfer_type = TYPE_STORE;
+		reg_indexed = true;
+		break;
+	case 0x38400000: // LDURB_wXi
+		transfer_size = SIZE_BYTE;
+		transfer_type = TYPE_LOAD;
+		unscaled_imm = true;
+		break;
+	case 0x78000000: // STURH_wXi
+		transfer_size = SIZE_WORD;
+		transfer_type = TYPE_STORE;
+		unscaled_imm = true;
+		break;
+	case 0x78200800: // STRH_wXx
+		transfer_size = SIZE_WORD;
+		transfer_type = TYPE_STORE;
+		reg_indexed = true;
+		break;
+	case 0x78400000: // LDURH_wXi
+		transfer_size = SIZE_WORD;
+		transfer_type = TYPE_LOAD;
+		unscaled_imm = true;
+		break;
+	case 0xb8000000: // STUR_wXi
+		transfer_size = SIZE_INT;
+		transfer_type = TYPE_STORE;
+		unscaled_imm = true;
+		break;
+	case 0xb8200800: // STR_wXx
+		transfer_size = SIZE_INT;
+		transfer_type = TYPE_STORE;
+		reg_indexed = true;
+		break;
+	case 0xb8400000: // LDUR_wXi
+		transfer_size = SIZE_INT;
+		transfer_type = TYPE_LOAD;
+		unscaled_imm = true;
+		break;
+	case 0x38600800: // LDRB_wXx
+		transfer_size = SIZE_BYTE;
+		transfer_type = TYPE_LOAD;
+		reg_indexed = true;
+		break;
+	case 0x78600800: // LDRH_wXx
+		transfer_size = SIZE_WORD;
+		transfer_type = TYPE_LOAD;
+		reg_indexed = true;
+		break;
+	case 0xb8600800: // LDR_wXx
+		transfer_size = SIZE_INT;
+		transfer_type = TYPE_LOAD;
+		reg_indexed = true;
+		break;
+	default:
+		break;
+	}
+
+	if (transfer_size == SIZE_UNKNOWN) {
+		masked_op = opcode & 0xffc00000;
+		switch (masked_op) {
+		case 0x39000000: // STRB_wXi
+			transfer_size = SIZE_BYTE;
+			transfer_type = TYPE_STORE;
+			unsigned_imm = true;
+			break;
+		case 0x79000000: // STRH_wXi
+			transfer_size = SIZE_WORD;
+			transfer_type = TYPE_STORE;
+			unsigned_imm = true;
+			break;
+		case 0xb9000000: // STR_wXi
+			transfer_size = SIZE_INT;
+			transfer_type = TYPE_STORE;
+			unsigned_imm = true;
+			break;
+		case 0x39400000: // LDRB_wXi
+			transfer_size = SIZE_BYTE;
+			transfer_type = TYPE_LOAD;
+			unsigned_imm = true;
+			break;
+		case 0x79400000: // LDRH_wXi
+			transfer_size = SIZE_WORD;
+			transfer_type = TYPE_LOAD;
+			unsigned_imm = true;
+			break;
+		case 0xb9400000: // LDR_wXi
+			transfer_size = SIZE_INT;
+			transfer_type = TYPE_LOAD;
+			unsigned_imm = true;
+			break;
+		default:
+			break;
+		}
+	}
+
+	const auto get_reg_w = [&](const int reg) -> uae_u32 {
+		if (reg == 31)
+			return 0;
+		return static_cast<uae_u32>(info->ContextRecord->X[reg]);
+	};
+	const auto get_reg_x = [&](const int reg) -> uae_u64 {
+		if (reg == 31)
+			return 0;
+		return static_cast<uae_u64>(info->ContextRecord->X[reg]);
+	};
+	const auto get_base_x = [&](const int reg) -> uae_u64 {
+		if (reg == 31)
+			return static_cast<uae_u64>(info->ContextRecord->Sp);
+		return get_reg_x(reg);
+	};
+	const auto set_reg_w = [&](const int reg, const uae_u32 value) {
+		if (reg == 31)
+			return;
+		info->ContextRecord->X[reg] = value;
+	};
+
+	if (transfer_size != SIZE_UNKNOWN) {
+		const uae_u64 rn_val = get_base_x(rn);
+		uae_u64 rm_x = 0;
+		uae_u64 offset = 0;
+		const int scale_bits = transfer_size == SIZE_WORD ? 1 : transfer_size == SIZE_INT ? 2 : 0;
+		if (reg_indexed) {
+			const uae_u32 shift = sbit ? static_cast<uae_u32>(scale_bits) : 0;
+			rm_x = get_reg_x(rm);
+			offset = rm_x;
+			switch (option) {
+			case 0b010: // UXTW
+				offset = static_cast<uae_u64>(static_cast<uae_u32>(rm_x)) << shift;
+				break;
+			case 0b011: // LSL
+				offset = rm_x << shift;
+				break;
+			case 0b110: { // SXTW
+				uae_s64 s = static_cast<uae_s64>(static_cast<uae_s32>(static_cast<uae_u32>(rm_x)));
+				if (shift)
+					s <<= shift;
+				offset = static_cast<uae_u64>(s);
+				break;
+			}
+			case 0b111: { // SXTX
+				uae_s64 s = static_cast<uae_s64>(rm_x);
+				if (shift)
+					s <<= shift;
+				offset = static_cast<uae_u64>(s);
+				break;
+			}
+			default:
+				offset = rm_x << shift;
+				break;
+			}
+		} else if (unsigned_imm) {
+			offset = static_cast<uae_u64>(imm12) << scale_bits;
+		} else if (unscaled_imm) {
+			const uae_u32 imm9 = (opcode >> 12) & 0x1ff;
+			const auto signed_imm9 = static_cast<uae_s64>(imm9 & 0x100 ? static_cast<int>(imm9) - 0x200 : static_cast<int>(imm9));
+			offset = static_cast<uae_u64>(signed_imm9);
+		}
+
+		const uae_u64 eff_addr = rn_val + offset;
+		if (eff_addr != static_cast<uae_u64>(fault_addr)) {
+			write_log(_T("JIT: Windows ARM64 EA mismatch fault=%016llx ea=%016llx opcode=%08x\n"),
+				static_cast<unsigned long long>(fault_addr), static_cast<unsigned long long>(eff_addr), opcode);
+			if (arm64_quarantine_candidate && jit_in_compiled_code) {
+				windows_arm64_jit_bus_error(amiga_addr, transfer_type == TYPE_LOAD, transfer_size);
+			}
+			return EXCEPTION_CONTINUE_SEARCH;
+		}
+
+		if (ab == &dummy_bank) {
+			if (transfer_type == TYPE_LOAD) {
+				set_reg_w(rd, 0);
+				write_log(_T("JIT: Windows ARM64 dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
+			} else {
+				write_log(_T("JIT: Windows ARM64 dummy_bank store at %08x ignored\n"), amiga_addr);
+			}
+		} else if (transfer_type == TYPE_LOAD) {
+			uae_u32 newval = get_reg_w(rd);
+			switch (transfer_size) {
+			case SIZE_BYTE:
+				newval = static_cast<uae_u8>(get_byte_jit(amiga_addr));
+				break;
+			case SIZE_WORD:
+				newval = uae_bswap_16(static_cast<uae_u16>(get_word_jit(amiga_addr)));
+				break;
+			case SIZE_INT:
+				newval = uae_bswap_32(get_long_jit(amiga_addr));
+				break;
+			default:
+				break;
+			}
+			set_reg_w(rd, newval);
+		} else {
+			const uae_u32 regval = get_reg_w(rd);
+			switch (transfer_size) {
+			case SIZE_BYTE:
+				put_byte_jit(amiga_addr, regval);
+				break;
+			case SIZE_WORD:
+				put_word_jit(amiga_addr, uae_bswap_16(static_cast<uae_u16>(regval)));
+				break;
+			case SIZE_INT:
+				put_long_jit(amiga_addr, uae_bswap_32(regval));
+				break;
+			default:
+				break;
+			}
+		}
+
+		info->ContextRecord->Pc += 4;
+		countdown = 0;
+		set_special(SPCFLAG_END_COMPILE);
+		if (arm64_quarantine_candidate) {
+			flush_icache(3);
+		}
+
+		bool deleted = delete_trigger(active, reinterpret_cast<void*>(fault_pc));
+		if (!deleted) {
+			deleted = delete_trigger(dormant, reinterpret_cast<void*>(fault_pc));
+		}
+		if (!deleted) {
+			set_special(0);
+		}
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	if (arm64_quarantine_candidate && jit_in_compiled_code) {
+		write_log(_T("JIT: Windows ARM64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
+			opcode, amiga_addr);
+		const bool read = access_type == 0;
+		windows_arm64_jit_bus_error(amiga_addr, read, transfer_size);
+	}
+
+	write_log(_T("JIT: Windows ARM64 unhandled access violation at PC=%p fault=%p amiga=%08x opcode=%08x bank=%s\n"),
+		reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr), amiga_addr, opcode,
+		ab && ab->name ? ab->name : _T("NONE"));
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static void install_windows_arm64_jit_exception_handler()
+{
+	if (!installed_arm64_vector_handler) {
+		write_log(_T("JIT: Installing Windows ARM64 vectored exception handler\n"));
+		installed_arm64_vector_handler = AddVectoredExceptionHandler(0, windows_arm64_jit_exception_handler);
+	}
+}
+#endif
 
 void init_max_signals()
 {
@@ -50,6 +438,9 @@ void init_max_signals()
 	max_signals = 20;
 #else
 	max_signals = 200;
+#endif
+#if defined(JIT) && defined(CPU_AARCH64)
+	install_windows_arm64_jit_exception_handler();
 #endif
 }
 

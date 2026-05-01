@@ -37,7 +37,7 @@ static uae_u32 blit_tracer[2 * 10000000];
 // 32 = logging (no line)
 
 #if BLITTER_DEBUG
-int log_blitter = 1 | 16;
+int log_blitter = 1 | 2 | 16;
 #else
 int log_blitter = 0;
 #endif
@@ -427,7 +427,8 @@ static void blitter_interrupt(void)
 	if (blt_info.blit_interrupt) {
 		return;
 	}
-	blt_info.blit_interrupt = 1;
+	blt_info.blit_interrupt = true;
+	blt_info.blit_interrupt_trigger = true;
 	INTREQ_INT(6, 3);
 }
 
@@ -439,11 +440,8 @@ static void blitter_end(void)
 	unset_special(SPCFLAG_BLTNASTY);
 #if BLITTER_DEBUG
 	if (log_blitter & 1) {
-
-		if (blt_info.vblitsize > 100) {
-			blitter_dump();
-		}
-
+		write_log(_T("blitter end:\n"));
+		blitter_dump();
 		write_log(_T("cycles %d, missed %d, total %d\n"),
 			blit_totalcyclecounter, blit_misscyclecounter, blit_totalcyclecounter + blit_misscyclecounter);
 
@@ -1736,7 +1734,6 @@ void generate_blitter(void)
 		}
 	}
 
-
 	if (!blt_info.blit_count_done) {
 		blt_info.blit_queued = BLITTER_MAX_PIPELINED_CYCLES;
 	}
@@ -2006,7 +2003,8 @@ static void blitter_start_init(void)
 	blit_bltset(1 | 2);
 	blitter_delayed_update = true;
 	maybe_load_mods();
-	blt_info.blit_interrupt = 0;
+	blt_info.blit_interrupt = false;
+	blt_info.blit_interrupt_trigger = false;
 
 	blt_info.bltaold = 0;
 	blt_info.bltbold = 0;
@@ -2031,6 +2029,10 @@ void do_blitter(int copper, uaecptr pc)
 	if ((log_blitter & 2)) {
 		if (blt_info.blit_main) {
 			write_log (_T("blitter was already active! PC=%08x\n"), M68K_GETPC);
+		}
+		if (shifter_d_armed || shifter[0] || shifter[1] || shifter[2] || shifter[3] ||
+			shifter_d1 || shifter_d_aga) {
+			write_log(_T("blitter was already active! PC=%08x\n"), M68K_GETPC);
 		}
 	}
 #endif
@@ -2338,7 +2340,7 @@ void restore_blitter_finish(void)
 	blitter_cycle_exact = currprefs.blitter_cycle_exact;
 	immediate_blits = currprefs.immediate_blits;
 	if (blt_statefile_type == 0) {
-		blt_info.blit_interrupt = 1;
+		blt_info.blit_interrupt = true;
 		if (blt_info.blit_pending) {
 			write_log (_T("blitter was started but DMA was inactive during save\n"));
 			//do_blitter (0);
@@ -2483,7 +2485,9 @@ uae_u8 *restore_blitter_new(uae_u8 *src)
 	tmp = restore_u8();
 	blitlinepixel = (tmp & 1) != 0;
 	blitlineloop = (tmp & 2) != 0;
-	blt_info.blit_interrupt = restore_u8();
+	tmp = restore_u8();
+	blt_info.blit_interrupt = (tmp & 1) != 0;
+	blt_info.blit_interrupt_trigger = (tmp & 2) != 0;
 	blt_delayed_irq = restore_u8();
 	blt_info.blitzero = restore_u8();
 	blt_info.got_cycle = restore_u8();
@@ -2674,7 +2678,7 @@ uae_u8 *save_blitter_new(size_t *len, uae_u8 *dstptr)
 	save_u8(blitlinepixel);
 	save_u8((blt_info.bltcon1 & BLTSING) != 0);
 	save_u8((blitlinepixel ? 1 : 0) | (blitlineloop ? 2 : 0));
-	save_u8(blt_info.blit_interrupt);
+	save_u8((blt_info.blit_interrupt ? 1 : 0) | (blt_info.blit_interrupt_trigger ? 2 : 0));
 	save_u8(blt_delayed_irq);
 	save_u8(blt_info.blitzero);
 	save_u8(blt_info.got_cycle);

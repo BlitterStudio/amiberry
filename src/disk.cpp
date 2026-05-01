@@ -1413,9 +1413,11 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 			_tcsncpy (currprefs.floppyslots[dnum].df, fname_in, 255);
 			currprefs.floppyslots[dnum].df[255] = 0;
 		}
+		if (changed_prefs.floppyslots[dnum].df != fname_in) {
+			_tcsncpy (changed_prefs.floppyslots[dnum].df, fname_in, 255);
+			changed_prefs.floppyslots[dnum].df[255] = 0;
+		}
 		currprefs.floppyslots[dnum].forcedwriteprotect = forcedwriteprotect;
-		_tcsncpy (changed_prefs.floppyslots[dnum].df, fname_in, 255);
-		changed_prefs.floppyslots[dnum].df[255] = 0;
 		changed_prefs.floppyslots[dnum].forcedwriteprotect = forcedwriteprotect;
 		if (drv->newname != fname_in) {
 			_tcsncpy(drv->newname, fname_in, MAX_DPATH - 1);
