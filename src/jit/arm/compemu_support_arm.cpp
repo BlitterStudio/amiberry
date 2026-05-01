@@ -34,6 +34,12 @@
 #if defined(CPU_AARCH64) && !defined(_WIN32)
 #include <sys/mman.h>
 #endif
+#if defined(CPU_AARCH64) && defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 #ifdef JIT_DEBUG_MEM_CORRUPTION
 #include <signal.h>
