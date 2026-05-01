@@ -708,7 +708,9 @@ STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
   }
 #endif
 
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(_WIN32) && defined(CPU_AARCH64)
+	FlushInstructionCache(GetCurrentProcess(), start, (SIZE_T)((char *)stop - (char *)start));
+#elif defined(__APPLE__) && defined(CPU_AARCH64)
 	sys_icache_invalidate(start, (char *)stop - (char *)start);
 #else
 	__builtin___clear_cache((char *)start, (char *)stop);

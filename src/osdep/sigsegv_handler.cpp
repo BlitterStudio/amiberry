@@ -423,11 +423,48 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
+static const TCHAR* windows_arm64_av_type(const ULONG_PTR access_type)
+{
+	switch (access_type) {
+	case 0:
+		return _T("read");
+	case 1:
+		return _T("write");
+	case 8:
+		return _T("execute");
+	default:
+		return _T("unknown");
+	}
+}
+
+static LONG WINAPI windows_arm64_jit_unhandled_exception_filter(PEXCEPTION_POINTERS info)
+{
+	const auto* er = info->ExceptionRecord;
+	const auto* ctx = info->ContextRecord;
+	const uintptr fault_pc = static_cast<uintptr>(ctx->Pc);
+	write_log(_T("JIT: Windows ARM64 unhandled exception code=%08lx PC=%p in_jit=%d\n"),
+		er->ExceptionCode, reinterpret_cast<void*>(fault_pc), windows_arm64_jit_pc(fault_pc) ? 1 : 0);
+	if (er->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && er->NumberParameters >= 2) {
+		const uintptr fault_addr = static_cast<uintptr>(er->ExceptionInformation[1]);
+		write_log(_T("JIT: Windows ARM64 unhandled AV type=%s target=%p natmem=%p amiga=%08x\n"),
+			windows_arm64_av_type(er->ExceptionInformation[0]), reinterpret_cast<void*>(fault_addr),
+			natmem_offset, natmem_offset ? static_cast<uaecptr>(fault_addr - reinterpret_cast<uintptr>(natmem_offset)) : 0);
+	}
+	write_log(_T("JIT: Windows ARM64 ranges compiled=%p current=%p popall=%p-%p M68K PC=%08x pc_p=%p spcflags=%08x\n"),
+		compiled_code, current_compile_p, popallspace, popallspace ? popallspace + POPALLSPACE_SIZE : nullptr,
+		static_cast<uae_u32>(M68K_GETPC), regs.pc_p, regs.spcflags);
+	if (windows_arm64_jit_pc(fault_pc)) {
+		write_log(_T("JIT: Windows ARM64 instruction at PC=%08x\n"), *reinterpret_cast<uae_u32*>(fault_pc));
+	}
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
 static void install_windows_arm64_jit_exception_handler()
 {
 	if (!installed_arm64_vector_handler) {
 		write_log(_T("JIT: Installing Windows ARM64 vectored exception handler\n"));
 		installed_arm64_vector_handler = AddVectoredExceptionHandler(0, windows_arm64_jit_exception_handler);
+		SetUnhandledExceptionFilter(windows_arm64_jit_unhandled_exception_filter);
 	}
 }
 #endif
