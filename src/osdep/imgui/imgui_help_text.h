@@ -321,7 +321,9 @@ static const char* help_text_expansions =
 	"\"CD32 Full Motion Video cartridge\" enables the FMV module for the CD32, which is\n"
 	"only useful if you're emulating a CD32 of course.\n"
 	"\n"
-	"\"uaenet.device\" is currently disabled.\n";
+	"\"uaenet.device\" enables direct network device emulation using the host network\n"
+	"interface (libpcap or TAP). This allows Amiga software to send and receive raw\n"
+	"Ethernet frames on the host network.\n";
 
 static const char* help_text_rtg =
 	"This panel allows you add a graphics card to your emulated Amiga\n"
