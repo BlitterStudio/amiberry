@@ -814,10 +814,19 @@ LOWFUNC(NONE,READ,3,raw_mov_b_rR,(W1 d, R4 s, IMM offset))
 LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, R4 s, IMM offset))
 {
 #if X86_TARGET_64BIT
-	/* Use [R_MEMSTART + s + offset] — R_MEMSTART holds natmem_offset.
-	   Caller passes only the accumulated register offset (not MEMBaseDiff)
-	   on x86-64, since R_MEMSTART already provides the natmem base. */
-	MOVLmr(offset, R_MEMSTART, s, 1, d);
+	/* Use LEA+MOV to ensure M68K 32-bit address wrapping.
+	   x86-64 [base + index + disp32] computes in 64-bit, so when the
+	   M68K register + displacement wraps past 32 bits, the host address
+	   is 4GB off.  LEA r32,[r64+disp32] truncates to 32 bits (zeroing
+	   the upper half), giving the correct M68K effective address.
+	   Skip the LEA when offset==0 — the register already holds the
+	   full M68K address and no wrapping is possible. */
+	if (offset != 0) {
+		LEALmr(offset, s, X86_NOREG, 1, d);
+		MOVLmr(0, R_MEMSTART, d, 1, d);
+	} else {
+		MOVLmr(0, R_MEMSTART, s, 1, d);
+	}
 #else
 	ADDR32 MOVLmr(offset, s, X86_NOREG, 1, d);
 #endif
@@ -826,7 +835,13 @@ LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, R4 s, IMM offset))
 LOWFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, R4 s, IMM offset))
 {
 #if X86_TARGET_64BIT
-	MOVWmr(offset, R_MEMSTART, s, 1, d);
+	/* See raw_mov_l_brR for the LEA+MOV rationale. */
+	if (offset != 0) {
+		LEALmr(offset, s, X86_NOREG, 1, d);
+		MOVWmr(0, R_MEMSTART, d, 1, d);
+	} else {
+		MOVWmr(0, R_MEMSTART, s, 1, d);
+	}
 #else
 	ADDR32 MOVWmr(offset, s, X86_NOREG, 1, d);
 #endif
@@ -835,7 +850,12 @@ LOWFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, R4 s, IMM offset))
 LOWFUNC(NONE,READ,3,raw_mov_b_brR,(W1 d, R4 s, IMM offset))
 {
 #if X86_TARGET_64BIT
-	MOVBmr(offset, R_MEMSTART, s, 1, d);
+	if (offset != 0) {
+		LEALmr(offset, s, X86_NOREG, 1, d);
+		MOVBmr(0, R_MEMSTART, d, 1, d);
+	} else {
+		MOVBmr(0, R_MEMSTART, s, 1, d);
+	}
 #else
 	ADDR32 MOVBmr(offset, s, X86_NOREG, 1, d);
 #endif
