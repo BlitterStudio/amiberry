@@ -190,8 +190,9 @@ static void libretro_debug_open()
 {
 	if (libretro_debug_file)
 		return;
+	// Opt-in only — libretro cores must not write files by default.
 	const char* env = getenv("AMIBERRY_LIBRETRO_DEBUG");
-	if (env && !strcmp(env, "0"))
+	if (!env || strcmp(env, "1") != 0)
 		return;
 	const std::string dir = get_log_directory();
 	const std::string path = dir.empty() ? std::string("amiberry_libretro_debug.log")
@@ -2854,7 +2855,6 @@ static void core_entry(void)
 
 void retro_init(void)
 {
-	libretro_debug_open();
 	if (!main_fiber)
 		main_fiber = co_active();
 	
@@ -2989,6 +2989,17 @@ void retro_set_environment(retro_environment_t cb)
 			content_dir = dir;
 		if (save_dir.empty())
 			save_dir = system_dir;
+
+		// Prevent $HOME/Amiberry creation — see get_home_directory() in amiberry.cpp.
+		// Prefer save_dir (always writable per libretro spec); falls back to system_dir.
+		if (!save_dir.empty()) {
+#ifdef _WIN32
+			_putenv_s("AMIBERRY_HOME_DIR", save_dir.c_str());
+#else
+			setenv("AMIBERRY_HOME_DIR", save_dir.c_str(), 1);
+#endif
+		}
+
 		libretro_debug_open();
 		libretro_debug_log("env system_dir='%s' save_dir='%s' content_dir='%s'\n",
 			system_dir.c_str(), save_dir.c_str(), content_dir.c_str());
