@@ -326,19 +326,18 @@ amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 
 static void set_key_configs(const uae_prefs* p)
 {
-	if (strncmp(p->open_gui, "", 1) != 0)
-		// If we have a value in the config, we use that instead
-		enter_gui_key = get_hotkey_from_config(p->open_gui);
-	else
-		// Otherwise we go for the default found in amiberry.conf
-		enter_gui_key = get_hotkey_from_config(amiberry_options.default_open_gui_key);
-	// if nothing was found in amiberry.conf either, we default back to F12
+	// amiberry.conf defaults are already applied via target_default_options()
+	// during config loading, so p->* already contains the system defaults if
+	// the .uae config didn't override them. Always use p->* directly — the
+	// previous fallback to amiberry_options prevented users from clearing
+	// hotkeys (empty string was treated as "not set" and the default was
+	// re-applied, even though the user explicitly cleared it).
+
+	enter_gui_key = get_hotkey_from_config(p->open_gui);
 	if (enter_gui_key.scancode == 0)
 		enter_gui_key.scancode = SDL_SCANCODE_F12;
 
 	enter_gui_button = SDL_GetGamepadButtonFromString(p->open_gui);
-	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID)
-		enter_gui_button = SDL_GetGamepadButtonFromString(amiberry_options.default_open_gui_key);
 #ifdef __ANDROID__
 	// Android: default Start button as pause/GUI toggle for hardware controllers
 	// (no F12 key available, and software back button isn't accessible from gamepads)
@@ -358,22 +357,13 @@ static void set_key_configs(const uae_prefs* p)
 		}
 	}
 	
-	if (strncmp(p->quit_amiberry, "", 1) != 0)
-		quit_key = get_hotkey_from_config(p->quit_amiberry);
-	else
-		quit_key = get_hotkey_from_config(amiberry_options.default_quit_key);
+	quit_key = get_hotkey_from_config(p->quit_amiberry);
 
-	if (strncmp(p->action_replay, "", 1) != 0)
-		action_replay_key = get_hotkey_from_config(p->action_replay);
-	else
-		action_replay_key = get_hotkey_from_config(amiberry_options.default_ar_key);
+	action_replay_key = get_hotkey_from_config(p->action_replay);
 	if (action_replay_key.scancode == 0)
 		action_replay_key.scancode = SDL_SCANCODE_PAUSE;
 
-	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
-		fullscreen_key = get_hotkey_from_config(p->fullscreen_toggle);
-	else
-		fullscreen_key = get_hotkey_from_config(amiberry_options.default_fullscreen_toggle_key);
+	fullscreen_key = get_hotkey_from_config(p->fullscreen_toggle);
 
 	minimize_key = get_hotkey_from_config(p->minimize);
 	left_amiga_key = get_hotkey_from_config(p->left_amiga);
@@ -382,14 +372,9 @@ static void set_key_configs(const uae_prefs* p)
 
 	debugger_key = get_hotkey_from_config(p->debugger_trigger);
 
-	if (strncmp(p->vkbd_toggle, "", 1) != 0)
-		vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
-	else
-		vkbd_key = get_hotkey_from_config(amiberry_options.default_vkbd_toggle);
+	vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
 
 	vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
-	if (vkbd_button == SDL_GAMEPAD_BUTTON_INVALID)
-		vkbd_button = SDL_GetGamepadButtonFromString(amiberry_options.default_vkbd_toggle);
 	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (int port = 0; port < 2; port++)
