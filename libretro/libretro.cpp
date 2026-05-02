@@ -2991,11 +2991,12 @@ void retro_set_environment(retro_environment_t cb)
 			save_dir = system_dir;
 
 		// Prevent $HOME/Amiberry creation — see get_home_directory() in amiberry.cpp.
-		if (!system_dir.empty()) {
+		// Prefer save_dir (always writable per libretro spec); falls back to system_dir.
+		if (!save_dir.empty()) {
 #ifdef _WIN32
-			_putenv_s("AMIBERRY_HOME_DIR", system_dir.c_str());
+			_putenv_s("AMIBERRY_HOME_DIR", save_dir.c_str());
 #else
-			setenv("AMIBERRY_HOME_DIR", system_dir.c_str(), 1);
+			setenv("AMIBERRY_HOME_DIR", save_dir.c_str(), 1);
 #endif
 		}
 
