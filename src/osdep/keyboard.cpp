@@ -422,7 +422,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				scancode = 0;
+				return true;
 			}
 			
 		}
@@ -435,7 +435,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-				scancode = 0;
+				return true;
 			}
 		}
 
@@ -447,7 +447,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, 1, nullptr);
-				scancode = 0;
+				return true;
 			}
 		}
 
@@ -459,7 +459,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) == win_state)
 			{
 				minimizewindow(0);
-				scancode = 0;
+				return true;
 			}
 		}
 
@@ -471,7 +471,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (vkbd_key.modifiers.lgui || vkbd_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
-				scancode = 0;
+				return true;
 			}
 		}
 
@@ -483,7 +483,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (screenshot_key.modifiers.lgui || screenshot_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, 1, nullptr);
-				scancode = 0;
+				return true;
 			}
 		}
 
@@ -495,7 +495,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (debugger_key.modifiers.lgui || debugger_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_ENTERDEBUGGER, 1, nullptr);
-				scancode = 0;
+				return true;
 			}
 		}
 
