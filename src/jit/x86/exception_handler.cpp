@@ -544,7 +544,11 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	 * Amiga address itself is always 32-bit. */
 	uintptr_t amiga_addr_wide = fault_addr - (uintptr_t) NATMEM_OFFSET;
 	if (amiga_addr_wide > (uintptr_t) 0xffffffff) {
-		return 0;
+		if (amiga_addr_wide < 0x200000000ULL) {
+			/* Single 32-bit wrap from JIT address computation. */
+		} else {
+			return 0;
+		}
 	}
 #endif
 
@@ -673,10 +677,22 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	/* Compute Amiga address first, then range-check. The host fault address
 	 * can exceed 32-bit when natmem_offset + amiga_addr > 4GB, but the
 	 * Amiga address itself is always 32-bit. Example: natmem at 0x80000000,
-	 * Amiga addr 0x80000004 -> host 0x100000004 (>32-bit on host, valid Amiga). */
+	 * Amiga addr 0x80000004 -> host 0x100000004 (>32-bit on host, valid Amiga).
+	 *
+	 * The x86-64 JIT uses [R_MEMSTART + index + disp32] which computes in
+	 * 64-bit.  When the M68K 32-bit (index + displacement) wraps past 32
+	 * bits, the 64-bit sum is exactly 4GB too high.  The lower 32 bits of
+	 * amiga_addr_wide give the correct M68K address.  Reject addresses that
+	 * are too far out — a single 32-bit wrap can produce at most
+	 * 0xFFFFFFFF + 0x7FFFFFFF = 0x17FFFFFFE. */
 	uintptr_t amiga_addr_wide = fault_addr - (uintptr_t) NATMEM_OFFSET;
 	if (amiga_addr_wide > (uintptr_t) 0xffffffff) {
-		return 0;
+		if (amiga_addr_wide < 0x200000000ULL) {
+			/* Single 32-bit wrap — fall through, addr=(uae_u32) gives the
+			 * correct M68K address via truncation. */
+		} else {
+			return 0;
+		}
 	}
 #endif
 
