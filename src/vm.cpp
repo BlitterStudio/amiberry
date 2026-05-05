@@ -229,6 +229,18 @@ static void *uae_vm_alloc_with_flags(size_t size, int flags, int protect)
 	}
 
 	if (address == NULL) {
+#ifdef _WIN32
+		const DWORD win_err = GetLastError();
+		write_log("VM: uae_vm_alloc(%zu, %d, %d) VirtualAlloc failed (GetLastError=%lu)\n",
+			size, flags, protect, (unsigned long)win_err);
+#if defined(CPU_AARCH64)
+		if (protect == UAE_VM_READ_WRITE_EXECUTE) {
+			write_log("VM: Windows ARM64 RWX allocation denied — likely blocked by "
+				"Virtualization-based Security (VBS) / Hypervisor-protected Code "
+				"Integrity (HVCI) or Arbitrary Code Guard in this VM/host.\n");
+		}
+#endif
+#else
 		const int err = errno;
 		if (flags & UAE_VM_JIT) {
 #if defined(__APPLE__) && defined(CPU_AARCH64)
@@ -251,6 +263,7 @@ static void *uae_vm_alloc_with_flags(size_t size, int flags, int protect)
 			}
 #endif
 		}
+#endif
 	    return NULL;
 	}
 #ifdef TRACK_ALLOCATIONS
