@@ -886,12 +886,39 @@ static inline uae_u32 arm64_mov_w0_imm16(uae_u16 imm)
 	return 0x52800000u | (static_cast<uae_u32>(imm) << 5);
 }
 
-int run_jit_selftest_cli(void)
+#if defined(CPU_AARCH64) || defined(CPU_x86_64)
+// Emit a "return imm32" stub for the host architecture. Returns the number
+// of bytes written. The stub is the smallest function we can call from C++:
+//   ARM64:   MOV w0, #imm16 ; RET            (8 bytes, low 16 bits used)
+//   x86_64:  MOV EAX, imm32 ; RET            (6 bytes, full 32 bits used)
+// EAX/W0 is the integer return register on both ABIs.
+static size_t jit_selftest_emit_return_imm(uae_u8* dst, uae_u32 imm)
 {
 #if defined(CPU_AARCH64)
-	constexpr uae_u16 first_result = 0x1234;
-	constexpr uae_u16 patched_result = 0x4B1D;
 	constexpr uae_u32 arm64_ret = 0xD65F03C0u;
+	auto* code = reinterpret_cast<uae_u32*>(dst);
+	code[0] = arm64_mov_w0_imm16(static_cast<uae_u16>(imm));
+	code[1] = arm64_ret;
+	return 8;
+#else // CPU_x86_64
+	dst[0] = 0xB8; // MOV EAX, imm32
+	dst[1] = static_cast<uae_u8>(imm & 0xff);
+	dst[2] = static_cast<uae_u8>((imm >> 8) & 0xff);
+	dst[3] = static_cast<uae_u8>((imm >> 16) & 0xff);
+	dst[4] = static_cast<uae_u8>((imm >> 24) & 0xff);
+	dst[5] = 0xC3; // RET
+	return 6;
+#endif
+}
+#endif
+
+int run_jit_selftest_cli(void)
+{
+#if defined(CPU_AARCH64) || defined(CPU_x86_64)
+	// Use 16-bit-friendly values so the same constants work for the ARM64
+	// MOV w0, #imm16 path and the x86_64 MOV EAX, imm32 path.
+	constexpr uae_u32 first_result = 0x1234u;
+	constexpr uae_u32 patched_result = 0x4B1Du;
 	const int page_size = uae_vm_page_size();
 	if (page_size <= 0) {
 		write_log("JIT selftest: invalid VM page size (%d)\n", page_size);
@@ -907,14 +934,12 @@ int run_jit_selftest_cli(void)
 		return 3;
 	}
 
-	auto* code = reinterpret_cast<uae_u32*>(page);
 	using jit_fn_t = uae_u32 (*)();
 	auto* fn = reinterpret_cast<jit_fn_t>(page);
 
 	uae_vm_jit_write_protect(false);
-	code[0] = arm64_mov_w0_imm16(first_result);
-	code[1] = arm64_ret;
-	__builtin___clear_cache(reinterpret_cast<char*>(code), reinterpret_cast<char*>(code + 2));
+	const size_t code_size = jit_selftest_emit_return_imm(page, first_result);
+	__builtin___clear_cache(reinterpret_cast<char*>(page), reinterpret_cast<char*>(page + code_size));
 	uae_vm_jit_write_protect(true);
 
 	const uae_u32 first_value = fn();
@@ -925,8 +950,8 @@ int run_jit_selftest_cli(void)
 	}
 
 	uae_vm_jit_write_protect(false);
-	code[0] = arm64_mov_w0_imm16(patched_result);
-	__builtin___clear_cache(reinterpret_cast<char*>(code), reinterpret_cast<char*>(code + 2));
+	const size_t patched_size = jit_selftest_emit_return_imm(page, patched_result);
+	__builtin___clear_cache(reinterpret_cast<char*>(page), reinterpret_cast<char*>(page + patched_size));
 	uae_vm_jit_write_protect(true);
 
 	const uae_u32 patched_value = fn();
@@ -963,7 +988,7 @@ void usage()
 	std::cout << " -h                         Show this help." << '\n';
 	std::cout << " --help                     \n" << '\n';
 	std::cout << " --log                      Show log output to console." << '\n';
-	std::cout << " --jit-selftest             Run ARM64 JIT VM/write/execute selftest and exit." << '\n';
+	std::cout << " --jit-selftest             Run JIT VM/write/execute selftest (ARM64 or x86_64) and exit." << '\n';
 	std::cout << " --dump-paths               Resolve startup paths, print them, and exit." << '\n';
 	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
