@@ -1189,6 +1189,14 @@ bool doInit(AmigaMonitor* mon)
 
 				if (!ctx_success) {
 					write_log("All renderer context attempts failed for monitor %d. Aborting doInit.\n", mon->monitor_id);
+#if defined(_WIN32)
+					write_log("HINT: If running inside a VM (VMware/Parallels/Hyper-V) without an OpenGL ICD,\n");
+					write_log("HINT: try the Mesa3D 'llvmpipe' build (mesa-llvmpipe-arm64 from\n");
+					write_log("HINT: https://github.com/mmozeiko/build-mesa/releases) — drop opengl32.dll\n");
+					write_log("HINT: next to Amiberry.exe.  llvmpipe is software-only but exposes a\n");
+					write_log("HINT: standard pixel-format set that SDL accepts; mesa-d3d12 trades that\n");
+					write_log("HINT: for hardware acceleration but exposes a much narrower format set.\n");
+#endif
 					return false;
 				}
 			}
