@@ -1139,7 +1139,15 @@ bool doInit(AmigaMonitor* mon)
 				int ctx_attempts = 0;
 				bool ctx_success = false;
 
-				while (ctx_attempts < 2 && !ctx_success) {
+				/* Modes 0..3:
+				 *   0 = preferred  : GL 3.3 Core, RGBA8, no depth/stencil
+				 *   1 = legacy     : GL 2.1 Compat, RGBA8, no depth/stencil
+				 *   2 = minimal-3.3: GL 3.3 Core, only DOUBLEBUFFER set
+				 *   3 = minimal-2.1: GL 2.1 Compat, only DOUBLEBUFFER set
+				 * Modes 2/3 exist for drivers with a narrow pixel-format set
+				 * (e.g. Mesa3D d3d12 on Windows ARM64 VMs). */
+				constexpr int max_ctx_modes = 4;
+				while (ctx_attempts < max_ctx_modes && !ctx_success) {
 					if (!renderer->set_context_attributes(ctx_attempts))
 					{
 						write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
@@ -1355,49 +1363,58 @@ bool doInit(AmigaMonitor* mon)
 	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
 #endif
 
-	if (mode == 0) {
-		if (likely_gles_only) {
-			// GLES-only systems (e.g., Raspberry Pi with KMSDRM): Try GLES 3.0
-			write_log(_T("Requesting OpenGL ES 3.0 context (GLES-only driver detected)...\n"));
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-		} else {
-			// Desktop OpenGL (x86, x86_64, ARM desktops, macOS): Try Core Profile 3.3
-			write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#ifdef AMIBERRY_MACOS
-			// macOS requires the forward-compatible flag for OpenGL 3.2+ Core Profile
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-#endif
-		}
-	} else {
-		// Fallback: Legacy OpenGL 2.1 Compatibility
-		write_log(_T("Requesting OpenGL 2.1 Compatibility context...\n"));
+	/* Mode 0 / 1 -> request a GL 3.3 Core context with sensible RGBA8
+	 * pixel-format hints.  Mode 2 / 3 -> retry with the bare minimum
+	 * (just the GL version + DOUBLEBUFFER), so a driver with a narrow
+	 * pixel-format set (e.g. Mesa3D d3d12 on Windows ARM64 VMs, which
+	 * does not expose a format with the 16-bit depth / RGBA8 / alpha
+	 * combination SDL would otherwise enforce) still has a chance. */
+	const bool minimal_attrs = (mode >= 2);
+	const bool legacy_profile = (mode == 1) || (mode == 3);
+
+	if (legacy_profile) {
+		write_log(_T("Requesting OpenGL 2.1 Compatibility context (mode=%d, minimal=%d)...\n"),
+			mode, minimal_attrs ? 1 : 0);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	} else if (likely_gles_only) {
+		// GLES-only systems (e.g., Raspberry Pi with KMSDRM): Try GLES 3.0
+		write_log(_T("Requesting OpenGL ES 3.0 context (GLES-only driver detected, mode=%d, minimal=%d)...\n"),
+			mode, minimal_attrs ? 1 : 0);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	} else {
+		// Desktop OpenGL (x86, x86_64, ARM desktops, macOS): Try Core Profile 3.3
+		write_log(_T("Requesting OpenGL 3.3 Core context (mode=%d, minimal=%d)...\n"),
+			mode, minimal_attrs ? 1 : 0);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#ifdef AMIBERRY_MACOS
+		// macOS requires the forward-compatible flag for OpenGL 3.2+ Core Profile
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+#endif
 	}
 
-	// Sensible defaults.
+	/* Always request DOUBLEBUFFER so the GL renderer can present without
+	 * tearing.  Amiberry never uses the depth or stencil buffer
+	 * (opengl_renderer / shader_preset call glDisable(GL_DEPTH_TEST) and
+	 * glDisable(GL_STENCIL_TEST) at startup), so request none. */
 	success &= SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	/* Amiberry never uses the depth or stencil buffer (the renderer does
-	 * glDisable(GL_DEPTH_TEST) / glDisable(GL_STENCIL_TEST) at startup),
-	 * so request none of either.  Asking for DEPTH_SIZE>=16 narrowed the
-	 * set of compatible pixel formats and broke window creation on
-	 * Mesa3D's d3d12 backend in Windows ARM64 VMs ("No matching GL pixel
-	 * format available"). */
 	success &= SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
 	success &= SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
-	// Optional: request RGBA8
-	success &= SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
-	success &= SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	success &= SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
-	success &= SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	if (!minimal_attrs) {
+		// Optional: request RGBA8 (skipped on minimal mode for VM-friendly
+		// drivers like Mesa3D d3d12 that may only expose RGBX/RGB10A2 etc.)
+		success &= SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
+		success &= SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+		success &= SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
+		success &= SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	}
 
 	return success;
 }
