@@ -1149,8 +1149,17 @@ bool doInit(AmigaMonitor* mon)
 
 					if (!create_windows(mon))
 					{
-						close_hwnds(mon, false);
-						return false;
+						/* SDL_CreateWindow can fail at this point with "No
+						 * matching GL pixel format available" when the GL
+						 * driver doesn't expose a pixel format compatible
+						 * with the attributes we just set (seen with Mesa
+						 * d3d12 on Windows ARM64 VMs).  Treat it as a
+						 * context-mode failure and retry with the next
+						 * mode rather than aborting the whole init. */
+						write_log("Window creation failed for renderer mode %d on monitor %d. Retrying with next mode...\n",
+							ctx_attempts, mon->monitor_id);
+						ctx_attempts++;
+						continue;
 					}
 
 					renderer = get_renderer(mon->monitor_id);
@@ -1375,7 +1384,13 @@ bool doInit(AmigaMonitor* mon)
 
 	// Sensible defaults.
 	success &= SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	success &= SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	/* Amiberry never uses the depth or stencil buffer (the renderer does
+	 * glDisable(GL_DEPTH_TEST) / glDisable(GL_STENCIL_TEST) at startup),
+	 * so request none of either.  Asking for DEPTH_SIZE>=16 narrowed the
+	 * set of compatible pixel formats and broke window creation on
+	 * Mesa3D's d3d12 backend in Windows ARM64 VMs ("No matching GL pixel
+	 * format available"). */
+	success &= SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
 	success &= SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
 	// Optional: request RGBA8
