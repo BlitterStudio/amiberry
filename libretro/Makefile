@@ -207,7 +207,12 @@ LDFLAGS += -lm -lpthread
 endif
 
 ifeq ($(platform), win)
-LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm
+# llvm-mingw / MSYS2 CLANG64: clang's mingw driver does not auto-link
+# libwinpthread the way GCC's does, so pthread/sem symbols (used by the
+# SDL stubs in libretro/sdl_stub.o etc.) come up undefined at link time.
+# Link winpthread explicitly. The link is also harmless under MinGW-w64
+# GCC, where it's normally pulled in implicitly.
+LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
 endif
 
 # Source files - Core Amiga Emulation
