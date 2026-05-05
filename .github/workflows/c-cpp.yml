@@ -1077,9 +1077,12 @@ jobs:
 
   # Windows ARM64 bring-up: native build on the GitHub-hosted
   # windows-11-arm runner using llvm-mingw. Kept separate
-  # from build-windows because the toolchain and shell differ. Non-blocking
-  # during shakeout (continue-on-error: true) and intentionally NOT in the
-  # create-release job's needs list — promote once stable.
+  # from build-windows because the toolchain and shell differ.  Still
+  # non-blocking during shakeout (continue-on-error: true); listed as a
+  # create-release dependency so tagged releases can pick up the ARM64
+  # installer/ZIP when the job succeeds, but a failed ARM64 job does
+  # not block the release (continue-on-error lets the downstream job
+  # proceed regardless of conclusion).
   build-windows-arm64:
     runs-on: windows-11-arm
     timeout-minutes: 90
@@ -1524,7 +1527,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-libretro]
+    needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
