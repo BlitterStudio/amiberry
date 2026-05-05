@@ -1148,6 +1148,24 @@ bool doInit(AmigaMonitor* mon)
 				 * (e.g. Mesa3D d3d12 on Windows ARM64 VMs). */
 				constexpr int max_ctx_modes = 4;
 				while (ctx_attempts < max_ctx_modes && !ctx_success) {
+					/* Refresh the renderer pointer at the top of every
+					 * iteration.  A previous failed create_windows() may
+					 * have called close_hwnds() — which resets
+					 * mon->renderer for secondary monitors (monitor_id > 0)
+					 * — leaving any cached pointer dangling.  Re-fetching
+					 * here also lets the OpenGL attribute calls below
+					 * apply to the right (or freshly recreated) renderer.
+					 * SDL GL attributes are process-global so even the
+					 * fallback to g_renderer is safe — the attributes
+					 * affect the next SDL_CreateWindow regardless of
+					 * which IRenderer instance is used to set them. */
+					renderer = get_renderer(mon->monitor_id);
+					if (!renderer) {
+						write_log("No renderer available for monitor %d after retry; aborting doInit.\n",
+							mon->monitor_id);
+						return false;
+					}
+
 					if (!renderer->set_context_attributes(ctx_attempts))
 					{
 						write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
@@ -1170,7 +1188,15 @@ bool doInit(AmigaMonitor* mon)
 						continue;
 					}
 
+					/* Re-fetch the renderer because create_windows() can
+					 * recreate mon->renderer for secondary monitors when
+					 * the previous one was reset. */
 					renderer = get_renderer(mon->monitor_id);
+					if (!renderer) {
+						write_log("Renderer disappeared for monitor %d after window creation; aborting doInit.\n",
+							mon->monitor_id);
+						return false;
+					}
 
 					renderer->destroy_shaders();
 					renderer->destroy_context();
