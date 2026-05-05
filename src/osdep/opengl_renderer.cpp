@@ -122,13 +122,23 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 	// Load OpenGL extension functions (does nothing on Android/GLES3)
 	if (!gl_platform_init()) {
 		const GLubyte* ver = glGetString(GL_VERSION);
-		if (!ver) {
-			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
-			SDL_GL_DestroyContext(m_gl_context);
-			m_gl_context = nullptr;
-			return false;
-		}
-		write_log(_T("!!! OpenGL version: %hs\n"), ver);
+		const GLubyte* ren = glGetString(GL_RENDERER);
+		write_log(_T("!!! OpenGL extension loading failed (version=%hs renderer=%hs); "
+			"the host GL driver is too old (shaders/VBO/VAO required).\n"),
+			ver ? reinterpret_cast<const char*>(ver) : "<null>",
+			ren ? reinterpret_cast<const char*>(ren) : "<null>");
+#if defined(_WIN32)
+		write_log(_T("!!! On Windows this usually means the default \"GDI Generic\" "
+			"software OpenGL 1.1 implementation is being used (common in VMs without "
+			"GPU passthrough).  Install Mesa3D or use a hardware-accelerated GPU.\n"));
+#endif
+		/* gl_platform_init() failing leaves shader/VBO/VAO function pointers
+		 * NULL.  Continuing would crash later on the first draw call, so abort
+		 * GL context creation here and let the caller decide (either fall back
+		 * to the SDL renderer or exit cleanly). */
+		SDL_GL_DestroyContext(m_gl_context);
+		m_gl_context = nullptr;
+		return false;
 	}
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));

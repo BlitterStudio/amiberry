@@ -3024,6 +3024,8 @@ STATIC_INLINE void create_popalls(void)
         const uint32 cache_kb = currprefs.cachesize > 0 ? currprefs.cachesize : MAX_JIT_CACHE;
         const size_t cache_bytes = (size_t)cache_kb * 1024;
         const size_t combined_size = POPALLSPACE_SIZE + cache_bytes;
+        jit_log("ARM64: allocating popallspace+cache (cache=%u KB, total=%zu bytes)",
+            cache_kb, combined_size);
         popallspace = alloc_code(combined_size);
         if (popallspace) {
             popall_combined_alloc_size = combined_size;
@@ -3036,6 +3038,8 @@ STATIC_INLINE void create_popalls(void)
             popall_combined_alloc_size = 0;
             popall_combined_cache_start = NULL;
             popall_combined_cache_kb = 0;
+            jit_log("ARM64: combined popallspace+cache allocation failed; retrying popallspace-only (%u bytes)",
+                (unsigned)POPALLSPACE_SIZE);
             popallspace = alloc_code(POPALLSPACE_SIZE);
         }
         if (popallspace == NULL) {
@@ -3045,7 +3049,17 @@ STATIC_INLINE void create_popalls(void)
             jit_log("WARNING: Could not allocate popallspace!");
             if (currprefs.cachesize > 0)
             {
+#if defined(_WIN32) && defined(CPU_AARCH64)
+                /* Windows ARM64: RWX allocations can be denied by VBS/HVCI or
+                 * similar security policies (commonly seen in VMware WoA VMs).
+                 * Rather than jit_abort() (which kills the process), log
+                 * clearly and fall back to the interpreter — the caller will
+                 * call disable_jit_runtime() on our NULL pushall_call_handler. */
+                jit_log("ARM64: Windows RWX allocation denied — disabling JIT. "
+                    "Check VBS/HVCI/Arbitrary Code Guard policy in the VM.");
+#else
                 jit_abort("Could not allocate popallspace!");
+#endif
             }
             /* This is not fatal if JIT is not used. If JIT is
              * turned on, it will crash, but it would have crashed

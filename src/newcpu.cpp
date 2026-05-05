@@ -5808,6 +5808,18 @@ static int cpu_thread_run_jit(void *v)
 
 static void m68k_run_jit(void)
 {
+	/* Guard against a silent JIT init failure: calling a NULL
+	 * pushall_call_handler would crash at host PC=0.  Turn the cache
+	 * off and fall back to the interpreter on the next scheduler pass
+	 * instead.  Must run before the cpu_thread dispatch below. */
+	if (pushall_call_handler == NULL) {
+		write_log(_T("JIT: pushall_call_handler is NULL; disabling JIT and falling back to interpreter.\n"));
+		currprefs.cachesize = 0;
+		changed_prefs.cachesize = 0;
+		set_special(SPCFLAG_BRK);
+		return;
+	}
+
 #ifdef WITH_THREADED_CPU
 	if (currprefs.cpu_thread) {
 		run_cpu_thread(cpu_thread_run_jit);

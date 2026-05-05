@@ -152,11 +152,14 @@ sudo apt install amiberry</code></pre>
 
   <div class="platform-card windows">
     <h3>🪟 Windows</h3>
-    <p>Download from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>:</p>
+    <p>Download from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>. Both <strong>x64</strong> and <strong>ARM64</strong> (Windows-on-ARM / Snapdragon&nbsp;X, Copilot+) builds are published:</p>
     <ul>
-      <li><strong>Installer</strong> — run the <code>.exe</code> installer for a guided setup</li>
+      <li><strong>Installer</strong> — run the <code>.exe</code> installer for a guided setup (pick the one matching your CPU)</li>
       <li><strong>Portable ZIP</strong> — extract the <code>*-portable.zip</code> archive and run <code>Amiberry.exe</code>; it already includes the <code>amiberry.portable</code> marker</li>
     </ul>
+    <p class="platform-alt">
+      Running ARM64 in a VM (VMware Fusion / Parallels / Hyper-V)?  Drop <code>opengl32.dll</code> from <a href="https://github.com/mmozeiko/build-mesa/releases"><code>mesa-llvmpipe-arm64</code></a> next to <code>Amiberry.exe</code> so the GUI can start — guest VMs typically lack an OpenGL ICD.
+    </p>
   </div>
 
   <div class="platform-card android">

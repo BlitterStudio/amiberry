@@ -1139,7 +1139,33 @@ bool doInit(AmigaMonitor* mon)
 				int ctx_attempts = 0;
 				bool ctx_success = false;
 
-				while (ctx_attempts < 2 && !ctx_success) {
+				/* Modes 0..3:
+				 *   0 = preferred  : GL 3.3 Core, RGBA8, no depth/stencil
+				 *   1 = legacy     : GL 2.1 Compat, RGBA8, no depth/stencil
+				 *   2 = minimal-3.3: GL 3.3 Core, only DOUBLEBUFFER set
+				 *   3 = minimal-2.1: GL 2.1 Compat, only DOUBLEBUFFER set
+				 * Modes 2/3 exist for drivers with a narrow pixel-format set
+				 * (e.g. Mesa3D d3d12 on Windows ARM64 VMs). */
+				constexpr int max_ctx_modes = 4;
+				while (ctx_attempts < max_ctx_modes && !ctx_success) {
+					/* Refresh the renderer pointer at the top of every
+					 * iteration.  A previous failed create_windows() may
+					 * have called close_hwnds() — which resets
+					 * mon->renderer for secondary monitors (monitor_id > 0)
+					 * — leaving any cached pointer dangling.  Re-fetching
+					 * here also lets the OpenGL attribute calls below
+					 * apply to the right (or freshly recreated) renderer.
+					 * SDL GL attributes are process-global so even the
+					 * fallback to g_renderer is safe — the attributes
+					 * affect the next SDL_CreateWindow regardless of
+					 * which IRenderer instance is used to set them. */
+					renderer = get_renderer(mon->monitor_id);
+					if (!renderer) {
+						write_log("No renderer available for monitor %d after retry; aborting doInit.\n",
+							mon->monitor_id);
+						return false;
+					}
+
 					if (!renderer->set_context_attributes(ctx_attempts))
 					{
 						write_log("Failed to set context attributes for mode %d\n", ctx_attempts);
@@ -1149,11 +1175,28 @@ bool doInit(AmigaMonitor* mon)
 
 					if (!create_windows(mon))
 					{
-						close_hwnds(mon, false);
-						return false;
+						/* SDL_CreateWindow can fail at this point with "No
+						 * matching GL pixel format available" when the GL
+						 * driver doesn't expose a pixel format compatible
+						 * with the attributes we just set (seen with Mesa
+						 * d3d12 on Windows ARM64 VMs).  Treat it as a
+						 * context-mode failure and retry with the next
+						 * mode rather than aborting the whole init. */
+						write_log("Window creation failed for renderer mode %d on monitor %d. Retrying with next mode...\n",
+							ctx_attempts, mon->monitor_id);
+						ctx_attempts++;
+						continue;
 					}
 
+					/* Re-fetch the renderer because create_windows() can
+					 * recreate mon->renderer for secondary monitors when
+					 * the previous one was reset. */
 					renderer = get_renderer(mon->monitor_id);
+					if (!renderer) {
+						write_log("Renderer disappeared for monitor %d after window creation; aborting doInit.\n",
+							mon->monitor_id);
+						return false;
+					}
 
 					renderer->destroy_shaders();
 					renderer->destroy_context();
@@ -1172,6 +1215,14 @@ bool doInit(AmigaMonitor* mon)
 
 				if (!ctx_success) {
 					write_log("All renderer context attempts failed for monitor %d. Aborting doInit.\n", mon->monitor_id);
+#if defined(_WIN32)
+					write_log("HINT: If running inside a VM (VMware/Parallels/Hyper-V) without an OpenGL ICD,\n");
+					write_log("HINT: try the Mesa3D 'llvmpipe' build (mesa-llvmpipe-arm64 from\n");
+					write_log("HINT: https://github.com/mmozeiko/build-mesa/releases) — drop opengl32.dll\n");
+					write_log("HINT: next to Amiberry.exe.  llvmpipe is software-only but exposes a\n");
+					write_log("HINT: standard pixel-format set that SDL accepts; mesa-d3d12 trades that\n");
+					write_log("HINT: for hardware acceleration but exposes a much narrower format set.\n");
+#endif
 					return false;
 				}
 			}
@@ -1346,43 +1397,58 @@ bool doInit(AmigaMonitor* mon)
 	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
 #endif
 
-	if (mode == 0) {
-		if (likely_gles_only) {
-			// GLES-only systems (e.g., Raspberry Pi with KMSDRM): Try GLES 3.0
-			write_log(_T("Requesting OpenGL ES 3.0 context (GLES-only driver detected)...\n"));
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-		} else {
-			// Desktop OpenGL (x86, x86_64, ARM desktops, macOS): Try Core Profile 3.3
-			write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#ifdef AMIBERRY_MACOS
-			// macOS requires the forward-compatible flag for OpenGL 3.2+ Core Profile
-			success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-#endif
-		}
-	} else {
-		// Fallback: Legacy OpenGL 2.1 Compatibility
-		write_log(_T("Requesting OpenGL 2.1 Compatibility context...\n"));
+	/* Mode 0 / 1 -> request a GL 3.3 Core context with sensible RGBA8
+	 * pixel-format hints.  Mode 2 / 3 -> retry with the bare minimum
+	 * (just the GL version + DOUBLEBUFFER), so a driver with a narrow
+	 * pixel-format set (e.g. Mesa3D d3d12 on Windows ARM64 VMs, which
+	 * does not expose a format with the 16-bit depth / RGBA8 / alpha
+	 * combination SDL would otherwise enforce) still has a chance. */
+	const bool minimal_attrs = (mode >= 2);
+	const bool legacy_profile = (mode == 1) || (mode == 3);
+
+	if (legacy_profile) {
+		write_log(_T("Requesting OpenGL 2.1 Compatibility context (mode=%d, minimal=%d)...\n"),
+			mode, minimal_attrs ? 1 : 0);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	} else if (likely_gles_only) {
+		// GLES-only systems (e.g., Raspberry Pi with KMSDRM): Try GLES 3.0
+		write_log(_T("Requesting OpenGL ES 3.0 context (GLES-only driver detected, mode=%d, minimal=%d)...\n"),
+			mode, minimal_attrs ? 1 : 0);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	} else {
+		// Desktop OpenGL (x86, x86_64, ARM desktops, macOS): Try Core Profile 3.3
+		write_log(_T("Requesting OpenGL 3.3 Core context (mode=%d, minimal=%d)...\n"),
+			mode, minimal_attrs ? 1 : 0);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#ifdef AMIBERRY_MACOS
+		// macOS requires the forward-compatible flag for OpenGL 3.2+ Core Profile
+		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+#endif
 	}
 
-	// Sensible defaults.
+	/* Always request DOUBLEBUFFER so the GL renderer can present without
+	 * tearing.  Amiberry never uses the depth or stencil buffer
+	 * (opengl_renderer / shader_preset call glDisable(GL_DEPTH_TEST) and
+	 * glDisable(GL_STENCIL_TEST) at startup), so request none. */
 	success &= SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	success &= SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	success &= SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
 	success &= SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
-	// Optional: request RGBA8
-	success &= SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
-	success &= SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	success &= SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
-	success &= SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	if (!minimal_attrs) {
+		// Optional: request RGBA8 (skipped on minimal mode for VM-friendly
+		// drivers like Mesa3D d3d12 that may only expose RGBX/RGB10A2 etc.)
+		success &= SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
+		success &= SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+		success &= SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
+		success &= SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	}
 
 	return success;
 }
