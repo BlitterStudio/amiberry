@@ -145,18 +145,24 @@ ifeq ($(platform), win)
    # Prefer llvm-mingw / MSYS2 CLANG64 on Windows: the main Amiberry build is
    # Clang/LLD-based, so the libretro core uses the same toolchain to keep ABI
    # and runtime libs aligned. Fall back to MinGW-w64 GCC if clang isn't found.
+   #
+   # NOTE: use `=` (not `?=`) because GNU make's implicit defaults
+   # (CC=cc, CXX=g++) count as "already defined" for `?=`, so `?=` would be
+   # a no-op and we'd fall back to `g++` which doesn't exist in CLANG64.
+   # Command-line overrides like `make CC=foo CXX=bar` still win because the
+   # command line beats makefile assignments in GNU make.
    ifneq ($(shell command -v x86_64-w64-mingw32-clang 2>/dev/null),)
-      CC ?= x86_64-w64-mingw32-clang
-      CXX ?= x86_64-w64-mingw32-clang++
+      CC = x86_64-w64-mingw32-clang
+      CXX = x86_64-w64-mingw32-clang++
    else ifneq ($(wildcard /clang64/bin/clang.exe),)
-      CC ?= /clang64/bin/clang
-      CXX ?= /clang64/bin/clang++
+      CC = /clang64/bin/clang
+      CXX = /clang64/bin/clang++
    else ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
-      CC ?= x86_64-w64-mingw32-gcc
-      CXX ?= x86_64-w64-mingw32-g++
+      CC = x86_64-w64-mingw32-gcc
+      CXX = x86_64-w64-mingw32-g++
    else ifneq ($(wildcard /mingw64/bin/gcc.exe),)
-      CC ?= /mingw64/bin/gcc
-      CXX ?= /mingw64/bin/g++
+      CC = /mingw64/bin/gcc
+      CXX = /mingw64/bin/g++
    endif
 endif
 
