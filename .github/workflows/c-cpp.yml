@@ -1240,18 +1240,14 @@ jobs:
           path: amiberry-*-windows-x64-llvm-portable.zip
           retention-days: 7
 
-  # Windows ARM64 bring-up: native build on the GitHub-hosted
-  # windows-11-arm runner using llvm-mingw. Kept separate
-  # from build-windows because the toolchain and shell differ.  Still
-  # non-blocking during shakeout (continue-on-error: true); listed as a
-  # create-release dependency so tagged releases can pick up the ARM64
-  # installer/ZIP when the job succeeds, but a failed ARM64 job does
-  # not block the release (continue-on-error lets the downstream job
-  # proceed regardless of conclusion).
+  # Windows ARM64: native build on the GitHub-hosted windows-11-arm
+  # runner using llvm-mingw. Kept separate from build-windows because
+  # the toolchain and shell differ. Promoted out of the shakeout
+  # phase — this job is now mandatory and a failure blocks the
+  # workflow (and downstream create-release).
   build-windows-arm64:
     runs-on: windows-11-arm
     timeout-minutes: 90
-    continue-on-error: true
     permissions:
       contents: read
       actions: write
