@@ -753,9 +753,13 @@ jobs:
         name: ${{ matrix.artifact_name }}
         path: "amiberry-*.zip"
 
+  # Windows x64: native build on windows-latest using llvm-mingw (clang).
+  # Shares the toolchain with build-windows-arm64 so Windows on Arm and x64
+  # use a single compiler stack. Replaced the previous MSYS2/MinGW-w64 GCC
+  # build once the llvm-mingw shakeout was stable.
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: write
@@ -766,45 +770,87 @@ jobs:
           - name: x64
             artifact_name: amiberry-windows-x64
             release_suffix: windows-x64
+    env:
+      LLVM_MINGW_TAG: "20260421"
+      LLVM_MINGW_FLAVOR: "ucrt-x86_64"
+      VCPKG_DEFAULT_TRIPLET: x64-mingw-dynamic
+      VCPKG_DEFAULT_HOST_TRIPLET: x64-mingw-dynamic
     steps:
       - name: Check out repository code
         uses: actions/checkout@v5
         with:
           submodules: recursive
 
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
+      - name: Cache llvm-mingw toolchain
+        id: cache-llvm-mingw
+        uses: actions/cache@v5
         with:
-          msystem: MINGW64
-          update: false
-          install: >-
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
+          path: C:/llvm-mingw
+          key: llvm-mingw-${{ env.LLVM_MINGW_TAG }}-${{ env.LLVM_MINGW_FLAVOR }}
+
+      - name: Install llvm-mingw
+        if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $tag = "${env:LLVM_MINGW_TAG}"
+          $flavor = "${env:LLVM_MINGW_FLAVOR}"
+          $base = "llvm-mingw-$tag-$flavor"
+          $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$tag/$base.zip"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\llvm-mingw.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\llvm-mingw.zip" -DestinationPath "$env:RUNNER_TEMP\llvm-mingw"
+          New-Item -ItemType Directory -Force -Path "C:/llvm-mingw" | Out-Null
+          # The archive extracts into a single subdir named $base; flatten.
+          Move-Item "$env:RUNNER_TEMP\llvm-mingw\$base\*" "C:/llvm-mingw" -Force
+
+      - name: Expose llvm-mingw to subsequent steps
+        shell: pwsh
+        run: |
+          "LLVM_MINGW_ROOT=C:/llvm-mingw" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "C:/llvm-mingw/bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "C:/vcpkg/.git")) {
+            git clone --depth 1 https://github.com/microsoft/vcpkg.git C:/vcpkg
+          }
+          & C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          "VCPKG_ROOT=C:/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v5
         with:
           path: out/build/windows-release/vcpkg_installed
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          # Include LLVM_MINGW_TAG so a toolchain bump invalidates the
+          # cache: deps built with one CRT/runtime can be ABI-incompatible
+          # with binaries linked by the new toolchain (the original
+          # x64-mingw-dynamic + 20250910 cache showed up as
+          # "undefined symbol: clock_gettime64" link errors).
+          key: ${{ runner.os }}-x64-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-x86_64-w64-mingw32.cmake') }}
           restore-keys: |
-            ${{ runner.os }}-vcpkg-
+            ${{ runner.os }}-x64-vcpkg-${{ env.LLVM_MINGW_TAG }}-
 
-      - name: Build for Windows (${{ matrix.name }})
-        shell: msys2 {0}
-        env:
-          VCPKG_ROOT: C:/vcpkg
+      - name: Configure
+        shell: bash
         run: |
           cmake --preset windows-release
-          cmake --build out/build/windows-release -j$(nproc)
 
-      - name: Package (Portable ZIP)
-        shell: msys2 {0}
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build out/build/windows-release -j$NUMBER_OF_PROCESSORS
+
+      - name: Install (portable layout)
+        shell: bash
         run: |
           rm -rf out/install/windows-release
           rm -rf out/package/windows-release
           cmake --install out/build/windows-release --prefix out/install/windows-release
 
+      - name: Package (Portable ZIP)
+        shell: bash
+        run: |
           PORTABLE_ROOT="out/install/windows-release"
           test -f "$PORTABLE_ROOT/Amiberry.exe"
           : > "$PORTABLE_ROOT/amiberry.portable"
@@ -923,6 +969,20 @@ jobs:
           if (Test-Path (Join-Path $portableDir.FullName "conf")) {
             throw "--dump-paths should not create conf in the portable tree."
           }
+
+          # x86_64 builds include the JIT, so exercise --jit-selftest from the
+          # portable layout. Mirrors the build-windows-arm64 smoke test.
+          $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
+          $jitStderrFile = Join-Path $verifyRoot "jit-selftest.stderr"
+          $jitProc = Start-Process -FilePath $exePath -ArgumentList "--jit-selftest" `
+            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
+            -RedirectStandardOutput $jitStdoutFile -RedirectStandardError $jitStderrFile
+          if ($jitProc.ExitCode -ne 0) {
+            Write-Host "JIT SELFTEST STDOUT:"; if (Test-Path $jitStdoutFile) { Get-Content $jitStdoutFile }
+            Write-Host "JIT SELFTEST STDERR:"; if (Test-Path $jitStderrFile) { Get-Content $jitStderrFile }
+            throw "--jit-selftest failed with exit code $($jitProc.ExitCode)."
+          }
+          Write-Host "x64 (llvm-mingw) Amiberry.exe ran --jit-selftest successfully."
 
       - name: Package (InnoSetup)
         shell: pwsh
@@ -1075,176 +1135,13 @@ jobs:
             amiberry-*.exe
           retention-days: 7
 
-  # Windows x64 llvm-mingw bring-up: same architecture target as the
-  # build-windows MSYS2/GCC job but using the same llvm-mingw (clang)
-  # toolchain that build-windows-arm64 already uses.  Phase 3 of the
-  # WoA port plan — once this is stable for a few release cycles we
-  # can drop build-windows + the MSYS2 setup and unify Windows on a
-  # single compiler.  Non-blocking during shakeout, separate artifact
-  # name so it doesn't collide with the GCC-MinGW x64 artifact.
-  build-windows-x64-llvm:
-    runs-on: windows-latest
-    timeout-minutes: 90
-    continue-on-error: true
-    permissions:
-      contents: read
-      actions: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: x64-llvm
-            artifact_name: amiberry-windows-x64-llvm
-            release_suffix: windows-x64-llvm
-    env:
-      LLVM_MINGW_TAG: "20260421"
-      LLVM_MINGW_FLAVOR: "ucrt-x86_64"
-      VCPKG_DEFAULT_TRIPLET: x64-mingw-dynamic
-      VCPKG_DEFAULT_HOST_TRIPLET: x64-mingw-dynamic
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-
-      - name: Cache llvm-mingw toolchain
-        id: cache-llvm-mingw
-        uses: actions/cache@v5
-        with:
-          path: C:/llvm-mingw
-          key: llvm-mingw-${{ env.LLVM_MINGW_TAG }}-${{ env.LLVM_MINGW_FLAVOR }}
-
-      - name: Install llvm-mingw
-        if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $tag = "${env:LLVM_MINGW_TAG}"
-          $flavor = "${env:LLVM_MINGW_FLAVOR}"
-          $base = "llvm-mingw-$tag-$flavor"
-          $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$tag/$base.zip"
-          Write-Host "Downloading $url"
-          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP\llvm-mingw.zip"
-          Expand-Archive -Path "$env:RUNNER_TEMP\llvm-mingw.zip" -DestinationPath "$env:RUNNER_TEMP\llvm-mingw"
-          New-Item -ItemType Directory -Force -Path "C:/llvm-mingw" | Out-Null
-          # The archive extracts into a single subdir named $base; flatten.
-          Move-Item "$env:RUNNER_TEMP\llvm-mingw\$base\*" "C:/llvm-mingw" -Force
-
-      - name: Expose llvm-mingw to subsequent steps
-        shell: pwsh
-        run: |
-          "LLVM_MINGW_ROOT=C:/llvm-mingw" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "C:/llvm-mingw/bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-      - name: Bootstrap vcpkg
-        shell: pwsh
-        run: |
-          if (-not (Test-Path "C:/vcpkg/.git")) {
-            git clone --depth 1 https://github.com/microsoft/vcpkg.git C:/vcpkg
-          }
-          & C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
-          "VCPKG_ROOT=C:/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Cache vcpkg installed packages
-        uses: actions/cache@v5
-        with:
-          path: out/build/windows-x64-release/vcpkg_installed
-          # Include LLVM_MINGW_TAG so a toolchain bump invalidates the
-          # cache: deps built with one CRT/runtime can be ABI-incompatible
-          # with binaries linked by the new toolchain (the original
-          # x64-mingw-dynamic + 20250910 cache showed up as
-          # "undefined symbol: clock_gettime64" link errors).
-          key: ${{ runner.os }}-x64-llvm-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-x86_64-w64-mingw32.cmake') }}
-          restore-keys: |
-            ${{ runner.os }}-x64-llvm-vcpkg-${{ env.LLVM_MINGW_TAG }}-
-
-      - name: Configure
-        shell: bash
-        run: |
-          cmake --preset windows-x64-release
-
-      - name: Build
-        shell: bash
-        run: |
-          cmake --build out/build/windows-x64-release -j$NUMBER_OF_PROCESSORS
-
-      - name: Install (portable layout)
-        shell: bash
-        run: |
-          rm -rf out/install/windows-x64-release
-          rm -rf out/package/windows-x64-release
-          cmake --install out/build/windows-x64-release --prefix out/install/windows-x64-release
-
-      - name: Package (Portable ZIP)
-        shell: bash
-        run: |
-          PORTABLE_ROOT="out/install/windows-x64-release"
-          test -f "$PORTABLE_ROOT/Amiberry.exe"
-          : > "$PORTABLE_ROOT/amiberry.portable"
-
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            ZIP_NAME="amiberry-${{ github.ref_name }}-windows-x64-llvm-portable.zip"
-          else
-            ZIP_NAME="amiberry-${{ github.sha }}-windows-x64-llvm-portable.zip"
-          fi
-
-          PACKAGE_ROOT="out/package/windows-x64-release/${ZIP_NAME%.zip}"
-          mkdir -p "$(dirname "$PACKAGE_ROOT")"
-          cmake -E copy_directory "$PORTABLE_ROOT" "$PACKAGE_ROOT"
-
-          ZIP_PATH="$PWD/$ZIP_NAME"
-          (cd out/package/windows-x64-release && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
-
-      - name: Smoke test (--dump-paths, --jit-selftest)
-        shell: pwsh
-        run: |
-          $zip = Get-ChildItem "$PWD/amiberry-*-windows-x64-llvm-portable.zip" | Select-Object -First 1
-          if (-not $zip) { throw "Portable ZIP not found." }
-
-          $verifyRoot = Join-Path $PWD "portable-smoke"
-          Remove-Item -Recurse -Force $verifyRoot -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
-          Expand-Archive -Path $zip.FullName -DestinationPath $verifyRoot
-
-          $portableDir = Get-ChildItem $verifyRoot -Directory | Select-Object -First 1
-          $exePath = Join-Path $portableDir.FullName "Amiberry.exe"
-          if (-not (Test-Path $exePath)) { throw "Amiberry.exe missing from portable ZIP." }
-
-          $stdoutFile = Join-Path $verifyRoot "dump-paths.stdout"
-          $stderrFile = Join-Path $verifyRoot "dump-paths.stderr"
-          $proc = Start-Process -FilePath $exePath -ArgumentList "--dump-paths" `
-            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
-            -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
-          if ($proc.ExitCode -ne 0) {
-            Write-Host "STDOUT:"; if (Test-Path $stdoutFile) { Get-Content $stdoutFile }
-            Write-Host "STDERR:"; if (Test-Path $stderrFile) { Get-Content $stderrFile }
-            throw "--dump-paths failed with exit code $($proc.ExitCode)."
-          }
-          Write-Host "x64 (llvm-mingw) Amiberry.exe ran --dump-paths successfully."
-
-          $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
-          $jitStderrFile = Join-Path $verifyRoot "jit-selftest.stderr"
-          $jitProc = Start-Process -FilePath $exePath -ArgumentList "--jit-selftest" `
-            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
-            -RedirectStandardOutput $jitStdoutFile -RedirectStandardError $jitStderrFile
-          if ($jitProc.ExitCode -ne 0) {
-            Write-Host "JIT SELFTEST STDOUT:"; if (Test-Path $jitStdoutFile) { Get-Content $jitStdoutFile }
-            Write-Host "JIT SELFTEST STDERR:"; if (Test-Path $jitStderrFile) { Get-Content $jitStderrFile }
-            throw "--jit-selftest failed with exit code $($jitProc.ExitCode)."
-          }
-          Write-Host "x64 (llvm-mingw) Amiberry.exe ran --jit-selftest successfully."
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: ${{ matrix.artifact_name }}
-          path: amiberry-*-windows-x64-llvm-portable.zip
-          retention-days: 7
-
   # Windows ARM64: native build on the GitHub-hosted windows-11-arm
-  # runner using llvm-mingw. Kept separate from build-windows because
-  # the toolchain and shell differ. Promoted out of the shakeout
-  # phase — this job is now mandatory and a failure blocks the
-  # workflow (and downstream create-release).
+  # runner using the same llvm-mingw toolchain as build-windows.  Kept
+  # as a separate job because it cross-runs on a different runner image
+  # (windows-11-arm) and needs to install InnoSetup at runtime, but the
+  # toolchain, presets, and packaging are otherwise the same.  This job
+  # is mandatory and a failure blocks the workflow (and downstream
+  # create-release).
   build-windows-arm64:
     runs-on: windows-11-arm
     timeout-minutes: 90
@@ -1610,9 +1507,13 @@ jobs:
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          # Use the CLANG64 subsystem so the libretro core is also built
+          # with llvm-mingw / clang, matching build-windows. The
+          # mingw-w64-clang-x86_64-toolchain package provides clang,
+          # clang++, lld, libc++, libunwind, libwinpthread.
+          msystem: CLANG64
           update: false
-          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib make
+          install: mingw-w64-clang-x86_64-toolchain mingw-w64-clang-x86_64-zlib make
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'

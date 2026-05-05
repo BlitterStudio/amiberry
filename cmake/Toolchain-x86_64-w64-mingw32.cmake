@@ -4,8 +4,9 @@
 # which invoke `clang --target=<triple>` with the right sysroot already
 # configured. Download from: https://github.com/mstorsjo/llvm-mingw
 #
-# Usage via the windows-x64-* CMake presets; this file is loaded as
-# VCPKG_CHAINLOAD_TOOLCHAIN_FILE so vcpkg still runs on top.
+# Usage via the windows-* CMake presets (windows-debug / windows-release);
+# this file is loaded as VCPKG_CHAINLOAD_TOOLCHAIN_FILE so vcpkg still
+# runs on top.
 #
 # The llvm-mingw install root can be provided via the LLVM_MINGW_ROOT
 # environment variable. When set, its bin/ is prepended to the search

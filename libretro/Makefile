@@ -142,17 +142,35 @@ else
 endif
 
 ifeq ($(platform), win)
-   ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
-      CC ?= x86_64-w64-mingw32-gcc
-      CXX ?= x86_64-w64-mingw32-g++
+   # Prefer llvm-mingw / MSYS2 CLANG64 on Windows: the main Amiberry build is
+   # Clang/LLD-based, so the libretro core uses the same toolchain to keep ABI
+   # and runtime libs aligned. Fall back to MinGW-w64 GCC if clang isn't found.
+   #
+   # NOTE: use `=` (not `?=`) because GNU make's implicit defaults
+   # (CC=cc, CXX=g++) count as "already defined" for `?=`, so `?=` would be
+   # a no-op and we'd fall back to `g++` which doesn't exist in CLANG64.
+   # Command-line overrides like `make CC=foo CXX=bar` still win because the
+   # command line beats makefile assignments in GNU make.
+   ifneq ($(shell command -v x86_64-w64-mingw32-clang 2>/dev/null),)
+      CC = x86_64-w64-mingw32-clang
+      CXX = x86_64-w64-mingw32-clang++
+   else ifneq ($(wildcard /clang64/bin/clang.exe),)
+      CC = /clang64/bin/clang
+      CXX = /clang64/bin/clang++
+   else ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
+      CC = x86_64-w64-mingw32-gcc
+      CXX = x86_64-w64-mingw32-g++
    else ifneq ($(wildcard /mingw64/bin/gcc.exe),)
-      CC ?= /mingw64/bin/gcc
-      CXX ?= /mingw64/bin/g++
+      CC = /mingw64/bin/gcc
+      CXX = /mingw64/bin/g++
    endif
 endif
 
-# Ensure Windows target macros are set when using MinGW, even if platform isn't detected.
-ifneq (,$(findstring mingw32,$(shell $(CXX) -dumpmachine 2>/dev/null)))
+# Ensure Windows target macros are set when using MinGW or llvm-mingw, even
+# if platform isn't detected. clang's -dumpmachine on a mingw target reports
+# e.g. x86_64-w64-windows-gnu, while GCC reports x86_64-w64-mingw32 — match
+# either by looking for the "mingw" or "windows-gnu" substrings.
+ifneq (,$(or $(findstring mingw,$(shell $(CXX) -dumpmachine 2>/dev/null)),$(findstring windows-gnu,$(shell $(CXX) -dumpmachine 2>/dev/null))))
    FLAGS += -D_WIN32 -DWIN32 -D__MINGW32__ -D__MINGW64__
 endif
 
@@ -189,7 +207,12 @@ LDFLAGS += -lm -lpthread
 endif
 
 ifeq ($(platform), win)
-LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm
+# llvm-mingw / MSYS2 CLANG64: clang's mingw driver does not auto-link
+# libwinpthread the way GCC's does, so pthread/sem symbols (used by the
+# SDL stubs in libretro/sdl_stub.o etc.) come up undefined at link time.
+# Link winpthread explicitly. The link is also harmless under MinGW-w64
+# GCC, where it's normally pulled in implicitly.
+LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
 endif
 
 # Source files - Core Amiga Emulation

@@ -88,13 +88,14 @@
     },
     {
       "name": "windows-debug",
-      "displayName": "Windows Debug (MinGW)",
-      "description": "Target Windows systems with MinGW-w64 and Debug build type.",
+      "displayName": "Windows x64 Debug (llvm-mingw)",
+      "description": "Target Windows on x86_64 using llvm-mingw (clang). Requires LLVM_MINGW_ROOT env var (or the llvm-mingw bin/ directory on PATH).",
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-x86_64-w64-mingw32.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
         "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
       },
@@ -106,12 +107,13 @@
     },
     {
       "name": "windows-release",
-      "displayName": "Windows Release (MinGW)",
-      "description": "Target Windows systems with MinGW-w64 and Release build type.",
+      "displayName": "Windows x64 Release (llvm-mingw)",
+      "description": "Target Windows on x86_64 using llvm-mingw (clang). Requires LLVM_MINGW_ROOT env var (or the llvm-mingw bin/ directory on PATH).",
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-x86_64-w64-mingw32.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
         "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
       },
@@ -150,43 +152,6 @@
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-aarch64-w64-mingw32.cmake",
         "VCPKG_TARGET_TRIPLET": "arm64-mingw-dynamic",
-        "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
-      },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    },
-    {
-      "name": "windows-x64-debug",
-      "displayName": "Windows x64 Debug (llvm-mingw)",
-      "description": "Target Windows on x86_64 using llvm-mingw (clang). Requires LLVM_MINGW_ROOT env var. Parallel alternative to the GCC-MinGW windows-debug preset; will eventually replace it.",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-x86_64-w64-mingw32.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
-        "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
-      },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    },
-    {
-      "name": "windows-x64-release",
-      "displayName": "Windows x64 Release (llvm-mingw)",
-      "description": "Target Windows on x86_64 using llvm-mingw (clang). Requires LLVM_MINGW_ROOT env var. Parallel alternative to the GCC-MinGW windows-release preset; will eventually replace it.",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/Toolchain-x86_64-w64-mingw32.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
         "VCPKG_HOST_TRIPLET": "x64-mingw-dynamic"
       },
       "condition": {
@@ -254,18 +219,6 @@
     {
       "name": "windows-arm64-release",
       "configurePreset": "windows-arm64-release",
-      "jobs": 0,
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
-    },
-    {
-      "name": "windows-x64-debug",
-      "configurePreset": "windows-x64-debug",
-      "jobs": 0,
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
-    },
-    {
-      "name": "windows-x64-release",
-      "configurePreset": "windows-x64-release",
       "jobs": 0,
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     }

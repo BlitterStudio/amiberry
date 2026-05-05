@@ -100,7 +100,7 @@ For each identified issue:
 
 // To distinguish Amiberry from WinUAE on Windows:
 #if defined(_WIN32) && defined(AMIBERRY)
-    // Amiberry on Windows (MinGW-w64/GCC)
+    // Amiberry on Windows (llvm-mingw / Clang)
 #elif defined(_WIN32)
     // WinUAE (MSVC)
 #endif
@@ -112,11 +112,12 @@ For each identified issue:
 ```
 
 **Key difference: Amiberry on Windows vs WinUAE:**
-- Amiberry uses MinGW-w64 (GCC) — provides POSIX headers (`unistd.h`, `dirent.h`, etc.)
+- Amiberry uses llvm-mingw (Clang + lld + libc++ targeting the mingw-w64 ABI) — provides POSIX headers (`unistd.h`, `dirent.h`, etc.) and links against libc++. The previous MinGW-w64 / GCC build was retired.
 - WinUAE uses MSVC — requires `_MSC_VER`-specific code
 - Many `#ifdef _WIN32` blocks from WinUAE now activate in Amiberry on Windows
 - `sysconfig.h` previously `#undef _WIN32` to suppress this; that was removed
 - x86-64 JIT is supported on Windows; preserve pointer-width `uintptr`/`PC_P` handling when porting WinUAE code that assumes 32-bit host pointers
+- When porting code that depends on libstdc++-only behaviour (e.g. `__GLIBCXX__` checks, GNU libstdc++ ABI quirks), make sure the equivalent libc++ headers and types are used; both Windows and Android Amiberry builds now ship libc++.
 
 ### 3a. Preserve Upstream Merge Safety
 

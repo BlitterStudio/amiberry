@@ -127,7 +127,8 @@ amiberry/
 
 ### Windows Port
 
-- Windows builds use MinGW-w64/GCC with vcpkg dependencies; many WinUAE `_WIN32` code paths now compile in Amiberry.
+- Windows builds use llvm-mingw (clang + lld + libc++) with vcpkg dependencies; many WinUAE `_WIN32` code paths now compile in Amiberry. The previous MinGW-w64 / GCC toolchain has been retired — both x64 and ARM64 share a single Clang-based toolchain.
+- The CMake `windows-release` / `windows-debug` presets chainload `cmake/Toolchain-x86_64-w64-mingw32.cmake`; ARM64 uses `cmake/Toolchain-aarch64-w64-mingw32.cmake`. Both require `LLVM_MINGW_ROOT` (or the llvm-mingw `bin/` directory on `PATH`).
 - Include `<winsock2.h>` before Windows headers that can define conflicting `byte` symbols.
 - Use `std::filesystem::copy()` instead of symlinks on Windows and Android.
 - `data/` must exist beside the executable for normal runtime; use `--log` when expecting `write_log()` output.
@@ -138,7 +139,7 @@ amiberry/
 # Configure + build (Linux/macOS)
 cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j$(nproc)
 
-# Windows (MinGW-w64 + vcpkg)
+# Windows (llvm-mingw + vcpkg)
 cmake --preset windows-release && cmake --build out/build/windows-release
 
 # Android
