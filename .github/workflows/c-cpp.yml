@@ -1097,7 +1097,7 @@ jobs:
             artifact_name: amiberry-windows-x64-llvm
             release_suffix: windows-x64-llvm
     env:
-      LLVM_MINGW_TAG: "20250910"
+      LLVM_MINGW_TAG: "20260421"
       LLVM_MINGW_FLAVOR: "ucrt-x86_64"
       VCPKG_DEFAULT_TRIPLET: x64-mingw-dynamic
       VCPKG_DEFAULT_HOST_TRIPLET: x64-mingw-dynamic
@@ -1148,9 +1148,14 @@ jobs:
         uses: actions/cache@v5
         with:
           path: out/build/windows-x64-release/vcpkg_installed
-          key: ${{ runner.os }}-x64-llvm-vcpkg-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-x86_64-w64-mingw32.cmake') }}
+          # Include LLVM_MINGW_TAG so a toolchain bump invalidates the
+          # cache: deps built with one CRT/runtime can be ABI-incompatible
+          # with binaries linked by the new toolchain (the original
+          # x64-mingw-dynamic + 20250910 cache showed up as
+          # "undefined symbol: clock_gettime64" link errors).
+          key: ${{ runner.os }}-x64-llvm-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-x86_64-w64-mingw32.cmake') }}
           restore-keys: |
-            ${{ runner.os }}-x64-llvm-vcpkg-
+            ${{ runner.os }}-x64-llvm-vcpkg-${{ env.LLVM_MINGW_TAG }}-
 
       - name: Configure
         shell: bash
@@ -1258,7 +1263,7 @@ jobs:
             artifact_name: amiberry-windows-arm64
             release_suffix: windows-arm64
     env:
-      LLVM_MINGW_TAG: "20250910"
+      LLVM_MINGW_TAG: "20260421"
       LLVM_MINGW_FLAVOR: "ucrt-aarch64"
       VCPKG_DEFAULT_TRIPLET: arm64-mingw-dynamic
       VCPKG_DEFAULT_HOST_TRIPLET: arm64-mingw-dynamic
@@ -1309,9 +1314,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: out/build/windows-arm64-release/vcpkg_installed
-          key: ${{ runner.os }}-arm64-vcpkg-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-aarch64-w64-mingw32.cmake') }}
+          # Include LLVM_MINGW_TAG so a toolchain bump invalidates the
+          # cache (avoids ABI mismatches between deps built with one
+          # toolchain and binaries linked with another).
+          key: ${{ runner.os }}-arm64-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-aarch64-w64-mingw32.cmake') }}
           restore-keys: |
-            ${{ runner.os }}-arm64-vcpkg-
+            ${{ runner.os }}-arm64-vcpkg-${{ env.LLVM_MINGW_TAG }}-
 
       - name: Configure
         shell: bash
