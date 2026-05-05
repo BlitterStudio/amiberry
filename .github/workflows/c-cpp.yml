@@ -759,7 +759,11 @@ jobs:
   # build once the llvm-mingw shakeout was stable.
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 90
+    # Cold-cache runs (vcpkg + llvm-mingw downloads) finish in ~24 min,
+    # warm-cache runs in ~10-15 min — see build-windows-arm64 for comparison.
+    # 60 min gives ~2.5x headroom over the cold-cache observation, plenty for
+    # SignPath round-trips and any transient slowness.
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: write
@@ -1144,7 +1148,11 @@ jobs:
   # create-release).
   build-windows-arm64:
     runs-on: windows-11-arm
-    timeout-minutes: 90
+    # Cold-cache runs finish in ~24 min, warm-cache runs in ~8 min. The
+    # extra time vs. x64 mostly comes from the InnoSetup-via-Chocolatey
+    # install path (windows-11-arm doesn't preinstall ISCC). 60 min keeps
+    # us in line with build-windows.
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: write

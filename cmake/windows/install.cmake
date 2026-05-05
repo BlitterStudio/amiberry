@@ -73,23 +73,17 @@ install(CODE "
     endif()
 ")
 
-# Bundle MinGW runtime DLLs (not managed by vcpkg). Runtime list depends on
-# which MinGW flavor we're using:
-#   - GCC MinGW-w64: libgcc_s_seh-1 / libstdc++-6 / libwinpthread-1
-#   - llvm-mingw (clang): libc++ / libunwind / libwinpthread-1 (also SEH for aarch64)
-# We detect via CMAKE_CXX_COMPILER_ID — clang → llvm-mingw list, GNU → gcc list.
+# Bundle the llvm-mingw runtime DLLs (not managed by vcpkg). Amiberry on
+# Windows is built exclusively with llvm-mingw (clang + lld + libc++); the
+# legacy MSYS2 / MinGW-w64 GCC build was retired together with PR #2026, so
+# we only need the libc++ / libunwind / libwinpthread runtime here.
 get_filename_component(_MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(_MINGW_RUNTIME_DLLS libc++.dll libunwind.dll libwinpthread-1.dll)
-else()
-    set(_MINGW_RUNTIME_DLLS libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll)
-endif()
+set(_MINGW_RUNTIME_DLLS libc++.dll libunwind.dll libwinpthread-1.dll)
 
 install(CODE "
     foreach(_dll ${_MINGW_RUNTIME_DLLS})
         if(EXISTS \"${_MINGW_BIN_DIR}/\${_dll}\")
-            message(STATUS \"Installing MinGW runtime: \${_dll}\")
+            message(STATUS \"Installing llvm-mingw runtime: \${_dll}\")
             file(INSTALL \"${_MINGW_BIN_DIR}/\${_dll}\"
                  DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}\")
         endif()

@@ -635,11 +635,11 @@ endif()
 
 # llvm-mingw (clang) on Windows does not auto-link winpthread, so
 # clock_gettime / nanosleep (which live in libwinpthread-1 on mingw-w64)
-# come up as undefined at link time. MinGW-w64 GCC pulls these in
-# implicitly via its driver spec, but the clang driver does not — this
-# affects both Windows ARM64 and the x86_64 llvm-mingw build. Link
-# winpthread explicitly whenever the Windows compiler is Clang.
-if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+# come up as undefined at link time. The legacy MinGW-w64 GCC build —
+# which pulled winpthread in implicitly via its driver spec — was retired
+# in PR #2026, so on Windows we now always need this explicit link for
+# both Windows ARM64 and x86_64.
+if (WIN32)
     list(APPEND AMIBERRY_LIBS winpthread)
 endif()
 
