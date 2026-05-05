@@ -142,7 +142,16 @@ else
 endif
 
 ifeq ($(platform), win)
-   ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
+   # Prefer llvm-mingw / MSYS2 CLANG64 on Windows: the main Amiberry build is
+   # Clang/LLD-based, so the libretro core uses the same toolchain to keep ABI
+   # and runtime libs aligned. Fall back to MinGW-w64 GCC if clang isn't found.
+   ifneq ($(shell command -v x86_64-w64-mingw32-clang 2>/dev/null),)
+      CC ?= x86_64-w64-mingw32-clang
+      CXX ?= x86_64-w64-mingw32-clang++
+   else ifneq ($(wildcard /clang64/bin/clang.exe),)
+      CC ?= /clang64/bin/clang
+      CXX ?= /clang64/bin/clang++
+   else ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
       CC ?= x86_64-w64-mingw32-gcc
       CXX ?= x86_64-w64-mingw32-g++
    else ifneq ($(wildcard /mingw64/bin/gcc.exe),)
@@ -151,8 +160,11 @@ ifeq ($(platform), win)
    endif
 endif
 
-# Ensure Windows target macros are set when using MinGW, even if platform isn't detected.
-ifneq (,$(findstring mingw32,$(shell $(CXX) -dumpmachine 2>/dev/null)))
+# Ensure Windows target macros are set when using MinGW or llvm-mingw, even
+# if platform isn't detected. clang's -dumpmachine on a mingw target reports
+# e.g. x86_64-w64-windows-gnu, while GCC reports x86_64-w64-mingw32 — match
+# either by looking for the "mingw" or "windows-gnu" substrings.
+ifneq (,$(or $(findstring mingw,$(shell $(CXX) -dumpmachine 2>/dev/null)),$(findstring windows-gnu,$(shell $(CXX) -dumpmachine 2>/dev/null))))
    FLAGS += -D_WIN32 -DWIN32 -D__MINGW32__ -D__MINGW64__
 endif
 

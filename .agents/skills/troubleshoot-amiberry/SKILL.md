@@ -21,7 +21,7 @@ The MCP server (`amiberry-mcp-server`) provides tools for runtime control.
 **Determine the platform** before building:
 - **macOS**: Build natively with `cmake`
 - **Linux / WSL2**: Build with `cmake` (use `wsl -e` prefix if on Windows host)
-- **Windows (native)**: Build with MinGW-w64/GCC via CMake presets and Ninja
+- **Windows (native)**: Build with llvm-mingw (clang + lld) via CMake presets and Ninja
 
 ## Build Commands
 
@@ -39,12 +39,13 @@ cmake --build build -j$(nproc)
 wsl -e bash -c "cd ~/amiberry && cmake --build build -j$(nproc)"
 ```
 
-### Windows (native MinGW-w64)
+### Windows (native llvm-mingw)
 ```powershell
-# Use the helper script (sets PATH for CLion's cmake/ninja/mingw, VCPKG_ROOT)
+# Use the helper script if present (sets PATH for cmake/ninja/llvm-mingw, VCPKG_ROOT, LLVM_MINGW_ROOT)
 powershell -ExecutionPolicy Bypass -File "build_and_run.ps1"
 
 # Or manually:
+$env:LLVM_MINGW_ROOT = "C:\llvm-mingw"
 $env:VCPKG_ROOT = "D:\Github\vcpkg"
 cmake --preset windows-debug
 cd out/build/windows-debug
@@ -56,6 +57,8 @@ ninja -j12
 
 **Windows build notes:**
 - Build dir: `out/build/windows-debug` (or `windows-release`)
+- Toolchain: llvm-mingw (clang + lld + libc++) via `cmake/Toolchain-x86_64-w64-mingw32.cmake`. The MinGW-w64 / GCC build was retired; do not try to mix GCC and clang outputs.
+- `LLVM_MINGW_ROOT` must point at an extracted llvm-mingw release (or `C:\llvm-mingw\bin` must be on PATH)
 - Kill stale `amiberry.exe` before rebuild if "permission denied"
 - `write_log()` is silent unless `--log` flag or `write_logfile` config is set
 - x86-64 JIT is supported on Windows; for high-natmem, pointer-width, or performance regressions use the `amiberry-x86-jit` skill

@@ -146,8 +146,8 @@ Uses the original Amiberry implementation — `select()` in a background thread,
 ### Distinguishing Amiberry from WinUAE on Windows
 ```cpp
 #if defined(_WIN32) && defined(AMIBERRY)
-    // Amiberry on Windows (MinGW-w64/GCC)
-    // Has POSIX headers (unistd.h, dirent.h) via MinGW
+    // Amiberry on Windows (llvm-mingw / Clang + libc++)
+    // Has POSIX headers (unistd.h, dirent.h) via mingw-w64 CRT
 #elif defined(_WIN32)
     // WinUAE (MSVC) - not built by Amiberry
 #endif
