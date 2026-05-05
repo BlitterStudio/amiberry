@@ -449,12 +449,61 @@ static LONG WINAPI windows_arm64_jit_unhandled_exception_filter(PEXCEPTION_POINT
 		write_log(_T("JIT: Windows ARM64 unhandled AV type=%s target=%p natmem=%p amiga=%08x\n"),
 			windows_arm64_av_type(er->ExceptionInformation[0]), reinterpret_cast<void*>(fault_addr),
 			natmem_offset, natmem_offset ? static_cast<uaecptr>(fault_addr - reinterpret_cast<uintptr>(natmem_offset)) : 0);
+		/* Flag the classic "32-bit value with bit 31 set sign-extended
+		 * to 64-bit" pattern so we can correlate future reports with
+		 * natmem-placement regressions. */
+		if ((fault_addr >> 32) == 0xFFFFFFFFu) {
+			write_log(_T("JIT: Windows ARM64 fault target looks sign-extended (upper32=FFFFFFFF)\n"));
+		}
 	}
 	write_log(_T("JIT: Windows ARM64 ranges compiled=%p current=%p popall=%p-%p M68K PC=%08x pc_p=%p spcflags=%08x\n"),
 		compiled_code, current_compile_p, popallspace, popallspace ? popallspace + POPALLSPACE_SIZE : nullptr,
 		static_cast<uae_u32>(M68K_GETPC), regs.pc_p, regs.spcflags);
-	if (windows_arm64_jit_pc(fault_pc)) {
-		write_log(_T("JIT: Windows ARM64 instruction at PC=%08x\n"), *reinterpret_cast<uae_u32*>(fault_pc));
+	/* Dump X0..X30, SP, LR so we can inspect which register held the bad
+	 * effective-address base when the fault hit.  Grouped four per line to
+	 * keep the log readable. */
+	write_log(_T("JIT: Windows ARM64 X0=%016llx  X1=%016llx  X2=%016llx  X3=%016llx\n"),
+		(unsigned long long)ctx->X[0], (unsigned long long)ctx->X[1],
+		(unsigned long long)ctx->X[2], (unsigned long long)ctx->X[3]);
+	write_log(_T("JIT: Windows ARM64 X4=%016llx  X5=%016llx  X6=%016llx  X7=%016llx\n"),
+		(unsigned long long)ctx->X[4], (unsigned long long)ctx->X[5],
+		(unsigned long long)ctx->X[6], (unsigned long long)ctx->X[7]);
+	write_log(_T("JIT: Windows ARM64 X8=%016llx  X9=%016llx X10=%016llx X11=%016llx\n"),
+		(unsigned long long)ctx->X[8], (unsigned long long)ctx->X[9],
+		(unsigned long long)ctx->X[10], (unsigned long long)ctx->X[11]);
+	write_log(_T("JIT: Windows ARM64 X12=%016llx X13=%016llx X14=%016llx X15=%016llx\n"),
+		(unsigned long long)ctx->X[12], (unsigned long long)ctx->X[13],
+		(unsigned long long)ctx->X[14], (unsigned long long)ctx->X[15]);
+	write_log(_T("JIT: Windows ARM64 X16=%016llx X17=%016llx X18=%016llx X19=%016llx\n"),
+		(unsigned long long)ctx->X[16], (unsigned long long)ctx->X[17],
+		(unsigned long long)ctx->X[18], (unsigned long long)ctx->X[19]);
+	write_log(_T("JIT: Windows ARM64 X20=%016llx X21=%016llx X22=%016llx X23=%016llx\n"),
+		(unsigned long long)ctx->X[20], (unsigned long long)ctx->X[21],
+		(unsigned long long)ctx->X[22], (unsigned long long)ctx->X[23]);
+	write_log(_T("JIT: Windows ARM64 X24=%016llx X25=%016llx X26=%016llx X27=%016llx\n"),
+		(unsigned long long)ctx->X[24], (unsigned long long)ctx->X[25],
+		(unsigned long long)ctx->X[26], (unsigned long long)ctx->X[27]);
+	write_log(_T("JIT: Windows ARM64 X28=%016llx X29=%016llx LR=%016llx  SP=%016llx\n"),
+		(unsigned long long)ctx->X[28], (unsigned long long)ctx->X[29],
+		(unsigned long long)ctx->Lr, (unsigned long long)ctx->Sp);
+	/* Print the faulting instruction regardless of whether the PC is in
+	 * the JIT cache or in the main executable.  Probe the page with
+	 * VirtualQuery before the read so a nested fault while logging the
+	 * primary fault does not tear down the process. */
+	MEMORY_BASIC_INFORMATION mbi{};
+	bool pc_readable = false;
+	if (VirtualQuery(reinterpret_cast<LPCVOID>(fault_pc), &mbi, sizeof(mbi)) == sizeof(mbi)) {
+		const DWORD mask = PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ |
+			PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_WRITECOPY;
+		pc_readable = (mbi.State == MEM_COMMIT) && ((mbi.Protect & mask) != 0) &&
+			((mbi.Protect & PAGE_GUARD) == 0) && ((mbi.Protect & PAGE_NOACCESS) == 0);
+	}
+	if (pc_readable) {
+		const uae_u32 insn = *reinterpret_cast<const uae_u32*>(fault_pc);
+		write_log(_T("JIT: Windows ARM64 instruction at PC insn=%08x jit=%d\n"),
+			insn, windows_arm64_jit_pc(fault_pc) ? 1 : 0);
+	} else {
+		write_log(_T("JIT: Windows ARM64 could not read instruction at fault PC\n"));
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
