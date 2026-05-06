@@ -230,12 +230,11 @@ static void libretro_debug_log(const char* fmt, ...)
 // Returns true if AMIBERRY_HOME_DIR is set after this call.
 static bool sync_amiberry_home_dir_from_frontend()
 {
-	// Already set — nothing to do. We never overwrite a previously set value
-	// because amiberry consumes the env var only at startup, and re-exporting
-	// after that point has no effect.
-	if (const char* existing = getenv("AMIBERRY_HOME_DIR"); existing && existing[0] != '\0')
-		return true;
-
+	// Always refresh system_dir / save_dir from the frontend, regardless of
+	// whether AMIBERRY_HOME_DIR is already set. These are consumed by other
+	// libretro paths (BIOS discovery, kickstart lookup, save data layout) and
+	// must reflect the frontend's current values, not be skipped just because
+	// the env var was inherited from a prior session or a parent shell.
 	if (environ_cb) {
 		const char* dir = nullptr;
 		if (system_dir.empty() && environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
@@ -245,6 +244,13 @@ static bool sync_amiberry_home_dir_from_frontend()
 		if (save_dir.empty())
 			save_dir = system_dir;
 	}
+
+	// Don't overwrite a value the user (or a parent process) has already exported.
+	// amiberry consumes the env var once at startup, so re-exporting after that
+	// has no effect anyway, and respecting the inherited value lets advanced
+	// users/CIs pin a custom layout without code changes.
+	if (const char* existing = getenv("AMIBERRY_HOME_DIR"); existing && existing[0] != '\0')
+		return true;
 
 	// Prefer save_dir (always writable per libretro spec); fall back to system_dir.
 	const std::string& target = !save_dir.empty() ? save_dir : system_dir;
