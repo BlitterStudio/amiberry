@@ -6769,12 +6769,23 @@ std::string get_home_directory(const bool portable_mode)
 			write_log("macOS: Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 			return { env_home_dir };
 		}
+#ifdef LIBRETRO
+		// libretro: never fall back to ~/Documents/Amiberry. The libretro shim
+		// must always provide AMIBERRY_HOME_DIR; if it didn't, the frontend has
+		// not configured a system/save directory and we should not create files
+		// in the user's home tree. Returning empty causes init_amiberry_dirs()
+		// to leave host paths empty and create_missing_amiberry_folders() to skip
+		// directory creation. See libretro/libretro.cpp::sync_amiberry_home_dir_from_frontend.
+		write_log("libretro: AMIBERRY_HOME_DIR not set — refusing to fall back to host home dir\n");
+		return {};
+#else
 		const auto default_home_dir = get_default_macos_content_root();
 		if (!default_home_dir.empty())
 		{
 			write_log("macOS: Using home directory %s\n", default_home_dir.c_str());
 			return default_home_dir;
 		}
+#endif
 	}
 #endif
 	if (portable_mode)
@@ -6792,6 +6803,11 @@ std::string get_home_directory(const bool portable_mode)
 		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 		return { env_home_dir };
 	}
+#ifdef LIBRETRO
+	// libretro: never fall back to $HOME/Amiberry. See macOS branch above for rationale.
+	write_log("libretro: AMIBERRY_HOME_DIR not set — refusing to fall back to host home dir\n");
+	return {};
+#else
 	// 2: Check $HOME/Amiberry
 	const auto default_home_dir = get_default_posix_content_root();
 	if (!default_home_dir.empty())
@@ -6805,6 +6821,7 @@ std::string get_home_directory(const bool portable_mode)
 	const auto portable_root = get_portable_root_directory();
 	write_log("Fallback: Setting home directory to executable path\n");
 	return portable_root;
+#endif
 }
 
 // The location of .uae configurations
@@ -6818,11 +6835,17 @@ std::string get_config_directory(bool portable_mode)
 		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
 			return normalize_path_string(std::string(env_home_dir) + "/Configurations");
 
+#ifdef LIBRETRO
+		// libretro: never fall back to ~/Documents/Amiberry/Configurations.
+		// See get_home_directory() for rationale.
+		return {};
+#else
 		const auto default_home_dir = get_default_macos_content_root();
 		if (!default_home_dir.empty())
 			return join_path(default_home_dir, "Configurations");
 
 		return {};
+#endif
 	}
 #elif defined(_WIN32)
 	if (portable_mode)
@@ -6868,6 +6891,11 @@ std::string get_config_directory(bool portable_mode)
 	if (env_home_dir != nullptr && env_home_dir[0] != '\0')
 		return join_path(env_home_dir, get_configurations_directory_name());
 
+#ifdef LIBRETRO
+	// libretro: never fall back to $HOME/Amiberry/Configurations.
+	// See get_home_directory() for rationale.
+	return {};
+#else
 	// 2: Check $HOME/Amiberry/Configurations
 	const auto default_home_dir = get_default_posix_content_root();
 	if (!default_home_dir.empty())
@@ -6876,6 +6904,7 @@ std::string get_config_directory(bool portable_mode)
 	// 3: Fallback to the executable directory when $HOME is unavailable.
 	write_log("Using config directory from executable path\n");
 	return join_path(get_portable_root_directory(), get_configurations_directory_name());
+#endif
 #endif
 }
 
@@ -6938,6 +6967,10 @@ std::string get_plugins_directory(bool portable_mode)
 		write_log("Using plugins directory from AMIBERRY_HOME_DIR/plugins\n");
 		return { std::string(env_home_dir) + "/plugins" };
 	}
+#ifdef LIBRETRO
+	// libretro: never fall back to $HOME/Amiberry/plugins. See get_home_directory() for rationale.
+	return {};
+#else
 	// 4: Check for ~/Amiberry/plugins.
 	// Keep path discovery side-effect free so migrated/customized setups do not recreate default folders.
 	const auto default_home_dir = get_default_posix_content_root();
@@ -6950,6 +6983,7 @@ std::string get_plugins_directory(bool portable_mode)
 	// 5: Fallback to the executable directory when no other plugin path is available.
 	write_log("Using plugins directory from executable path\n");
 	return join_path(get_portable_root_directory(), "plugins");
+#endif
 #endif
 }
 
@@ -6976,6 +7010,21 @@ static std::string get_settings_directory(const bool portable_mode)
 {
 	if (portable_mode)
 		return join_path(get_portable_root_directory(), "Settings");
+
+#ifdef LIBRETRO
+	// libretro: settings live alongside frontend-provided save data, not in the
+	// user's standalone config dir. This isolates libretro state from standalone use,
+	// so the libretro core neither inherits the user's saved $HOME/Amiberry path
+	// overrides nor overwrites the standalone amiberry.conf when it saves its own.
+	// Returning empty (when AMIBERRY_HOME_DIR is unset) causes resolve_bootstrap_settings_paths
+	// to skip directory creation and amiberry_conf_file to be empty (no load, no save).
+	{
+		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
+			return { env_home_dir };
+		return {};
+	}
+#endif
 
 #ifdef AMIBERRY_IOS
 	// iOS: settings in the Documents sandbox
