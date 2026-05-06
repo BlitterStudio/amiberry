@@ -227,19 +227,26 @@ static void libretro_debug_log(const char* fmt, ...)
 // lifecycle points (retro_set_environment, retro_init, retro_load_game, core_entry)
 // to guarantee AMIBERRY_HOME_DIR is set before amiberry_main() runs.
 //
+// Thread safety: this function calls setenv()/_putenv_s(), neither of which is
+// thread-safe on glibc when other threads call getenv/setenv concurrently. All
+// current call sites run on the libretro frontend thread before amiberry_main()
+// spins up its worker threads (audio, JIT, akiko, etc.), so there is no race in
+// the current codebase. If a future change moves any call site to a context where
+// emulation threads are already running, that change must add synchronization.
+//
 // Returns true if AMIBERRY_HOME_DIR is set after this call.
 static bool sync_amiberry_home_dir_from_frontend()
 {
-	// Always refresh system_dir / save_dir from the frontend, regardless of
-	// whether AMIBERRY_HOME_DIR is already set. These are consumed by other
+	// Refresh system_dir / save_dir from the frontend on every call, regardless
+	// of whether AMIBERRY_HOME_DIR is already set. These are consumed by other
 	// libretro paths (BIOS discovery, kickstart lookup, save data layout) and
-	// must reflect the frontend's current values, not be skipped just because
-	// the env var was inherited from a prior session or a parent shell.
+	// must reflect the frontend's current values — they must not be skipped just
+	// because the env var was inherited from a prior session or a parent shell.
 	if (environ_cb) {
 		const char* dir = nullptr;
-		if (system_dir.empty() && environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
+		if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir && dir[0] != '\0')
 			system_dir = dir;
-		if (save_dir.empty() && environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &dir) && dir)
+		if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &dir) && dir && dir[0] != '\0')
 			save_dir = dir;
 		if (save_dir.empty())
 			save_dir = system_dir;
@@ -249,7 +256,8 @@ static bool sync_amiberry_home_dir_from_frontend()
 	// amiberry consumes the env var once at startup, so re-exporting after that
 	// has no effect anyway, and respecting the inherited value lets advanced
 	// users/CIs pin a custom layout without code changes.
-	if (const char* existing = getenv("AMIBERRY_HOME_DIR"); existing && existing[0] != '\0')
+	const char* existing = getenv("AMIBERRY_HOME_DIR");
+	if (existing && existing[0] != '\0')
 		return true;
 
 	// Prefer save_dir (always writable per libretro spec); fall back to system_dir.
@@ -2649,9 +2657,9 @@ static void core_entry(void)
 				"Configure your frontend's system/save directories to avoid creating files in unexpected locations.\n");
 		libretro_debug_log("core_entry: AMIBERRY_HOME_DIR unset — frontend did not provide system/save dir\n");
 	}
+	const char* home_dir_env = getenv("AMIBERRY_HOME_DIR");
 	libretro_debug_log("core_entry start: game_path='%s' AMIBERRY_HOME_DIR='%s'\n",
-		game_path,
-		getenv("AMIBERRY_HOME_DIR") ? getenv("AMIBERRY_HOME_DIR") : "");
+		game_path, home_dir_env ? home_dir_env : "");
 	std::vector<char*> argv;
 	argv.reserve(32);
 	bool argv_alloc_failed = false;
