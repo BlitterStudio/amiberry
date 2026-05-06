@@ -1539,8 +1539,15 @@ void OpenGLRenderer::render_software_cursor(const int monid, int x, int y, int w
 					glGenTextures(1, &m_overlay.cursor_texture);
 				}
 				glBindTexture(GL_TEXTURE_2D, m_overlay.cursor_texture);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				// Pixel-art cursor: GL_NEAREST keeps the sprite crisp when the
+				// RTG surface is scaled. GL_CLAMP_TO_EDGE prevents the default
+				// GL_REPEAT wrap from sampling the opposite edge at sub-pixel
+				// boundaries, which produced 1px fringe artifacts that
+				// flickered as the cursor moved (issue #2022).
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, s->w, s->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, s->pixels);
 			}
