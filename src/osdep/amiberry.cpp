@@ -2158,6 +2158,14 @@ static void handle_controller_button_event(const SDL_Event& event)
 	const auto state = event.gbutton.down;
 	const auto which = event.gbutton.which;
 
+#ifdef __ANDROID__
+	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga software)
+	if (button == SDL_GAMEPAD_BUTTON_GUIDE) {
+		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
+		return;
+	}
+#endif
+
 	if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 	}
@@ -2245,6 +2253,16 @@ static void handle_joy_button_event(const SDL_Event& event)
 		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
+#ifdef __ANDROID__
+		// On Android, allow menu button without hotkey — devices may have no
+		// accessible hotkey modifier (e.g. built-in gamepad on handhelds).
+		if (button == did->mapping.menu_button && state)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
+#endif
+
 		// Update per-device hotkey state in event order (not polled)
 		if (button == did->mapping.hotkey_button)
 		{
@@ -2322,12 +2340,9 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 static void handle_key_event(const SDL_Event& event)
 {
 #ifdef __ANDROID__
-	// Android back button must be handled before the focus check.
-	// When the native pause-menu AlertDialog is visible the SDL window
-	// loses focus, so isfocus() returns 0 and all key events would be
-	// dropped.  The pause menu's "Advanced Settings" option injects
-	// KEYCODE_BACK via JNI to open the ImGui GUI — that must always
-	// get through regardless of focus state.
+	// SDL3 traps the Android back button (SDL_HINT_ANDROID_TRAP_BACK_BUTTON=1)
+	// and delivers it as SDL_SCANCODE_AC_BACK.  Always open the GUI regardless
+	// of SDL window focus state.
 	if (event.key.scancode == SDL_SCANCODE_AC_BACK) {
 		if (event.key.down && !event.key.repeat) {
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
@@ -2410,6 +2425,66 @@ static void handle_key_event(const SDL_Event& event)
 
 #ifndef LIBRETRO
 static int pen_in_proximity;
+#endif
+
+#ifdef __ANDROID__
+static int android_active_fingers = 0;
+static float android_finger_start_y[2] = { -1.0f, -1.0f };
+static float android_finger_y[2] = { -1.0f, -1.0f };
+static SDL_FingerID android_finger_ids[2] = {};
+static bool android_swipe_triggered = false;
+
+static int android_find_finger_slot(SDL_FingerID id)
+{
+	for (int i = 0; i < 2; i++)
+		if (android_finger_ids[i] == id)
+			return i;
+	return -1;
+}
+
+static void handle_android_two_finger_swipe(const SDL_Event& event)
+{
+	if (event.type == SDL_EVENT_FINGER_DOWN) {
+		if (android_active_fingers < 2) {
+			int slot = (android_finger_ids[0] == 0) ? 0 : 1;
+			android_finger_ids[slot] = event.tfinger.fingerID;
+			android_finger_start_y[slot] = event.tfinger.y;
+			android_finger_y[slot] = event.tfinger.y;
+		}
+		android_active_fingers++;
+		android_swipe_triggered = false;
+	} else if (event.type == SDL_EVENT_FINGER_UP) {
+		int slot = android_find_finger_slot(event.tfinger.fingerID);
+		if (slot >= 0) {
+			android_finger_ids[slot] = 0;
+			android_finger_start_y[slot] = -1.0f;
+			android_finger_y[slot] = -1.0f;
+		}
+		android_active_fingers--;
+		if (android_active_fingers <= 0) {
+			android_active_fingers = 0;
+			android_finger_ids[0] = android_finger_ids[1] = 0;
+			android_finger_start_y[0] = android_finger_start_y[1] = -1.0f;
+			android_finger_y[0] = android_finger_y[1] = -1.0f;
+			android_swipe_triggered = false;
+		}
+	} else if (event.type == SDL_EVENT_FINGER_MOTION) {
+		if (android_swipe_triggered || android_active_fingers != 2)
+			return;
+
+		int slot = android_find_finger_slot(event.tfinger.fingerID);
+		if (slot < 0)
+			return;
+
+		android_finger_y[slot] = event.tfinger.y;
+
+		if (android_finger_y[0] - android_finger_start_y[0] >= 0.15f &&
+			android_finger_y[1] - android_finger_start_y[1] >= 0.15f) {
+			android_swipe_triggered = true;
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+		}
+	}
+}
 #endif
 
 static void handle_finger_event(const SDL_Event& event)
@@ -2980,6 +3055,9 @@ static void process_event(const SDL_Event& event)
 				if (vkbd_allowed(0))
 					imgui_osk_toggle();
 			}
+#ifdef __ANDROID__
+			handle_android_two_finger_swipe(event);
+#endif
 			if (!consumed)
 				handle_finger_event(event);
 			break;
@@ -3015,6 +3093,9 @@ static void process_event(const SDL_Event& event)
 			}
 			if (!consumed && on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
 				consumed = on_screen_joystick_handle_finger_motion(event, ww, wh);
+#ifdef __ANDROID__
+			handle_android_two_finger_swipe(event);
+#endif
 			if (!consumed)
 				handle_finger_motion_event(event);
 			break;

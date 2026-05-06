@@ -298,6 +298,29 @@ static void ShowHotkeyPopup()
 			}
 		}
 
+		if (!emitted) {
+			int gamepad_count = 0;
+			SDL_JoystickID* ids = SDL_GetGamepads(&gamepad_count);
+			if (ids) {
+				for (int gi = 0; gi < gamepad_count && !emitted; gi++) {
+					SDL_Gamepad* gp = SDL_GetGamepadFromID(ids[gi]);
+					if (!gp) continue;
+					for (int b = 0; b < SDL_GAMEPAD_BUTTON_COUNT && !emitted; b++) {
+						if (SDL_GetGamepadButton(gp, static_cast<SDL_GamepadButton>(b))) {
+							const char* name = SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(b));
+							if (name && target_hotkey_string) {
+								strncpy(target_hotkey_string, name, 255);
+								non_mod_pressed_session = true;
+								ImGui::CloseCurrentPopup();
+								emitted = true;
+							}
+						}
+					}
+				}
+				SDL_free(ids);
+			}
+		}
+
 		// Modifier-only binding: when a single modifier was pressed and is
 		// now released, with no other key seen during this capture, commit
 		// just that modifier. Required so users can map e.g. RCtrl alone to
