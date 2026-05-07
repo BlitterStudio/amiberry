@@ -58,6 +58,7 @@ void render_panel_rtg() {
     ImGui::Separator();
 
     struct rtgboardconfig *rbc = &changed_prefs.rtgboards[0];
+    const bool rtg_was_enabled = rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE;
 
     int current_board_idx = 0;
     if (rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -98,6 +99,10 @@ void render_panel_rtg() {
                     rbc->rtgmem_size = 8 * 1024 * 1024;
                 }
             }
+        }
+        const bool rtg_is_enabled = rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE;
+        if (!rtg_was_enabled && rtg_is_enabled) {
+            changed_prefs.rtg_zerocopy = true;
         }
         cfgfile_compatibility_rtg(&changed_prefs);
     }
