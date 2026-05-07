@@ -8893,6 +8893,9 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 
 	p->rtg_horiz_zoom_mult = 1.0;
 	p->rtg_vert_zoom_mult = 1.0;
+#ifdef AMIBERRY
+	p->rtg_zerocopy = true;
+#endif
 
 	_tcscpy (p->floppyslots[0].df, _T(""));
 	_tcscpy (p->floppyslots[1].df, _T(""));
