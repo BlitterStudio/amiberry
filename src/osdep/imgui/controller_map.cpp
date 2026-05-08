@@ -837,47 +837,36 @@ void ControllerMap_RenderModal()
 		g_controller_map.popup_open_requested = false;
 	}
 
-	// Compute a fixed window height to avoid scrollbars while fitting all content.
+	// Compute window dimensions.
 	const float ui_scale = DPIHandler::get_layout_scale();
 	const float scaled_screen_w = SCREEN_WIDTH * ui_scale;
-	const float text_line_h = ImGui::GetTextLineHeightWithSpacing();
 	const float wrap_w = scaled_screen_w - 2.0f * DISTANCE_BORDER;
-	const ImVec2 info_size = ImGui::CalcTextSize(
-		"Press the buttons on your controller when indicated.\n"
-		"Backspace/Back goes to previous, Space skips, ESC cancels.", nullptr, false, wrap_w);
-	const float scaled_bg_h = static_cast<float>(g_controller_map.bg_h) * ui_scale;
-	const float desired_height =
-		DISTANCE_BORDER + info_size.y + DISTANCE_NEXT_Y +
-		text_line_h + DISTANCE_NEXT_Y +
-		scaled_bg_h + DISTANCE_NEXT_Y * 0.5f +
-		text_line_h * 2.0f + DISTANCE_NEXT_Y +
-		BUTTON_HEIGHT + DISTANCE_BORDER;
 
-	ImGui::SetNextWindowSize(ImVec2(scaled_screen_w, desired_height), ImGuiCond_Always);
+	// Use auto-sizing for height to ensure everything fits regardless of title bar or font size.
+	ImGui::SetNextWindowSize(ImVec2(scaled_screen_w, 0.0f), ImGuiCond_Always);
 	if (ImGui::BeginPopupModal(kControllerMapTitle, nullptr,
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 	{
-		const ImVec2 window_pos = ImGui::GetWindowPos();
-		const ImVec2 content_min = ImGui::GetWindowContentRegionMin();
-		const ImVec2 origin = ImVec2(window_pos.x + content_min.x, window_pos.y + content_min.y);
-
 		const char* info_line1 = "Press the buttons on your controller when indicated.";
 		const char* info_line2 = "Backspace/Back goes to previous, Space skips, ESC cancels.";
 
-		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, DISTANCE_BORDER));
+		ImGui::SetCursorPosX(DISTANCE_BORDER);
 		ImGui::PushTextWrapPos(DISTANCE_BORDER + wrap_w);
 		ImGui::TextUnformatted(info_line1);
+		ImGui::SetCursorPosX(DISTANCE_BORDER);
 		ImGui::TextUnformatted(info_line2);
 		ImGui::PopTextWrapPos();
 
-		const float message_y = DISTANCE_BORDER + info_size.y + DISTANCE_NEXT_Y;
-		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, message_y));
+		ImGui::Spacing();
+		ImGui::SetCursorPosX(DISTANCE_BORDER);
 		ImGui::Text("Device: %s", g_controller_map.joystick_name.c_str());
 
 		if (!g_controller_map.error_text.empty())
 		{
+			ImGui::SetCursorPosX(DISTANCE_BORDER);
 			ImGui::TextWrapped("%s", g_controller_map.error_text.c_str());
 			ImGui::Spacing();
+			ImGui::SetCursorPosX(DISTANCE_BORDER);
 			if (AmigaButton(ICON_FA_XMARK " Close", ImVec2(BUTTON_WIDTH, 0)))
 			{
 				ImGui::CloseCurrentPopup();
@@ -897,10 +886,12 @@ void ControllerMap_RenderModal()
 
 			ImTextureID bg_tex = use_back && g_controller_map.background_back ? g_controller_map.background_back : g_controller_map.background_front;
 
-			const float bg_top_y = message_y + text_line_h + DISTANCE_NEXT_Y;
+			ImGui::Spacing();
+			const ImVec2 cursor_screen_pos = ImGui::GetCursorScreenPos();
 			const float scaled_bg_w = static_cast<float>(g_controller_map.bg_w) * ui_scale;
-			const ImVec2 img_pos = ImVec2(origin.x + (scaled_screen_w - scaled_bg_w) * 0.5f,
-										  origin.y + bg_top_y);
+			const float scaled_bg_h = static_cast<float>(g_controller_map.bg_h) * ui_scale;
+			const ImVec2 img_pos = ImVec2(cursor_screen_pos.x + (scaled_screen_w - scaled_bg_w) * 0.5f - ImGui::GetStyle().WindowPadding.x,
+										  cursor_screen_pos.y);
 			const ImVec2 img_size = ImVec2(scaled_bg_w, scaled_bg_h);
 
 			ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -944,16 +935,18 @@ void ControllerMap_RenderModal()
 				dl_overlay->AddCircleFilled(marker_center, marker_size.x * 0.5f, tint, 24);
 			}
 
+			// Reserve the vertical space occupied by the image so subsequent items are placed correctly.
+			ImGui::Dummy(img_size);
 		}
 
-		const float press_y = message_y + text_line_h + DISTANCE_NEXT_Y + scaled_bg_h + DISTANCE_NEXT_Y * 0.5f;
-		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, press_y));
+		ImGui::Spacing();
+		ImGui::SetCursorPosX(DISTANCE_BORDER);
 		ImGui::Text("Press: %s", s_arrBindingDisplay[iElement].input.c_str());
-		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, press_y + text_line_h));
+		ImGui::SetCursorPosX(DISTANCE_BORDER);
 		ImGui::Text("Step %d / %d", s_iCurrentBinding + 1, BINDING_COUNT);
 
-		const float buttons_y = SCREEN_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT;
-		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, buttons_y));
+		ImGui::Spacing();
+		ImGui::SetCursorPosX(DISTANCE_BORDER);
 		if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Back", ImVec2(BUTTON_WIDTH, 0)))
 		{
 			SetCurrentBinding(s_iCurrentBinding - 1, -1);
