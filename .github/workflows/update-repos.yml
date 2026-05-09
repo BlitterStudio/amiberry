@@ -99,7 +99,7 @@ jobs:
             [ -f "$deb" ] || { echo "No .deb files to process"; break; }
             debname=$(basename "$deb")
             echo "Processing: $debname"
-            codename=$(echo "$debname" | grep -oP '\+\K[^_]+(?=_[^_]+\.deb$)' || echo "")
+            codename=$(echo "$debname" | sed -nE 's/.*\+(jammy|noble|questing|resolute|bookworm|trixie)([.+~-][^_]*)?_[^_]+\.deb$/\1/p')
             if [ -z "$codename" ]; then
               echo "  WARNING: Cannot extract codename from $debname - skipping"
               continue
