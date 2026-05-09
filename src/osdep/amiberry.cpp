@@ -4204,7 +4204,10 @@ static void heal_unavailable_display_index(int& display, const char* label)
 {
 	if (display <= 0)
 		return;
-	if (target_get_display_name(display, false))
+	int display_count = 0;
+	while (display_count < MAX_DISPLAYS && Displays[display_count].monitorname)
+		display_count++;
+	if (display_count == 0 || display <= display_count)
 		return;
 
 	const int previous_display = display;
