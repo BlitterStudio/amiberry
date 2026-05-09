@@ -511,8 +511,9 @@ static int alError(const TCHAR* format, ...)
 	if (err == AL_NO_ERROR)
 		return 0;
 	va_start(parms, format);
-	_vsntprintf(buffer, sizeof buffer - 1, format, parms);
-	_stprintf(buffer + _tcslen(buffer), _T(": ERR=%x\n"), err);
+	_vsntprintf(buffer, sizeof buffer / sizeof(TCHAR), format, parms);
+	va_end(parms);
+	_sntprintf(buffer + _tcslen(buffer), sizeof buffer / sizeof(TCHAR) - _tcslen(buffer), _T(": ERR=%x\n"), err);
 	write_log(_T("%s"), buffer);
 	return err;
 }

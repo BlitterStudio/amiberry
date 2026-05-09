@@ -4344,7 +4344,7 @@ void target_default_options(uae_prefs* p, const int type)
 			p->gf[GF_RTG].gfx_filter = 1;
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
-		//	_stprintf(p->input_config_name[i], buf, i + 1);
+		//	_sntprintf(p->input_config_name[i], sizeof p->input_config_name[i] / sizeof(TCHAR), buf, i + 1);
 		//p->aviout_xoffset = -1;
 		//p->aviout_yoffset = -1;
 	}

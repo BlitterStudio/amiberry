@@ -516,7 +516,7 @@ static void scan_harddrives_windows()
 		if (!(logical_drives & 1))
 			continue;
 		TCHAR vol_path[16];
-		_stprintf(vol_path, _T("\\\\.\\%c:"), letter);
+		_sntprintf(vol_path, sizeof vol_path / sizeof(TCHAR), _T("\\\\.\\%c:"), letter);
 		HANDLE hVol = CreateFile(vol_path, 0,
 			FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (hVol == INVALID_HANDLE_VALUE)
@@ -538,7 +538,7 @@ static void scan_harddrives_windows()
 
 	for (int drv = 0; drv < 32; drv++) {
 		TCHAR dev_path[64];
-		_stprintf(dev_path, _T("\\\\.\\PhysicalDrive%d"), drv);
+		_sntprintf(dev_path, sizeof dev_path / sizeof(TCHAR), _T("\\\\.\\PhysicalDrive%d"), drv);
 
 		// Probe with zero access first (just check existence)
 		HANDLE h = CreateFile(dev_path, 0,

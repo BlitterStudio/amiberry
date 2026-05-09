@@ -897,9 +897,9 @@ static int create_windows(struct AmigaMonitor* mon)
 	}
 	TCHAR wintitle[256];
 	if (mon->monitor_id > 0)
-		_stprintf(wintitle, _T("Amiberry [%d]"), mon->monitor_id + 1);
+		_sntprintf(wintitle, sizeof wintitle / sizeof(TCHAR), _T("Amiberry [%d]"), mon->monitor_id + 1);
 	else if (last_active_config[0])
-		_stprintf(wintitle, _T("Amiberry - [%s]"), last_active_config);
+		_sntprintf(wintitle, sizeof wintitle / sizeof(TCHAR), _T("Amiberry - [%s]"), last_active_config);
 	else
 		_tcscpy(wintitle, _T("Amiberry"));
 	mon->amiga_window = SDL_CreateWindow(wintitle,

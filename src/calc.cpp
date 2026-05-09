@@ -466,7 +466,7 @@ static TCHAR *stacktostr(struct calcstack *st)
 	static TCHAR out[256];
 	if (st->s)
 		return st->s;
-	_stprintf(out, _T("%f"), st->val);
+	_sntprintf(out, sizeof out / sizeof(TCHAR), _T("%f"), st->val);
 	return out;
 }
 #endif
@@ -803,4 +803,3 @@ bool iscalcformula (const TCHAR *formula)
 	}
 	return false;
 }
-

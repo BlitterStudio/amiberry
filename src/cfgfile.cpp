@@ -2537,17 +2537,17 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		if (!p->gfx_monitor[i].enabled)
 			continue;
 		TCHAR tmp[256];
-		_stprintf(tmp, _T("gfx_monitor%d_display"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_display"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_display);
-		_stprintf(tmp, _T("gfx_monitor%d_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_fullscreen"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_fullscreen);
-		_stprintf(tmp, _T("gfx_monitor%d_width_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_windowed"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_win.width);
-		_stprintf(tmp, _T("gfx_monitor%d_height_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_windowed"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_win.height);
-		_stprintf(tmp, _T("gfx_monitor%d_width_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_fullscreen"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_fs.width);
-		_stprintf(tmp, _T("gfx_monitor%d_height_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_fullscreen"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_fs.height);
 	}
 
@@ -4161,24 +4161,24 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
 		TCHAR tmp[256];
-		_stprintf(tmp, _T("gfx_monitor%d_display"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_display"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_display, 1)) {
 			p->gfx_monitor[i].enabled = true;
 			return 1;
 		}
-		_stprintf(tmp, _T("gfx_monitor%d_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_fullscreen"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_fullscreen, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_width_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_windowed"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_win.width, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_height_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_windowed"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_win.height, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_width_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_fullscreen"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_fs.width, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_height_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_fullscreen"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_fs.height, 1))
 			return 1;
 	}
