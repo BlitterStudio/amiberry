@@ -4062,7 +4062,12 @@ void fullpath(TCHAR* path, int size, bool userelative)
 	}
 	else if (path[0] != 0)
 	{
-		write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
+		const auto path_len = _tcslen(path);
+		const bool pseudo_path = path[0] == ':';
+		const bool optional_geometry_file = errno == ENOENT && path_len >= 4
+			&& _tcsicmp(path + path_len - 4, _T(".geo")) == 0;
+		if (!pseudo_path && !optional_geometry_file)
+			write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
 	}
 }
 
@@ -4194,6 +4199,21 @@ void target_quit()
 #endif
 }
 
+#ifdef AMIBERRY
+static void heal_unavailable_display_index(int& display, const char* label)
+{
+	if (display <= 0)
+		return;
+	if (target_get_display_name(display, false))
+		return;
+
+	const int previous_display = display;
+	display = 1;
+	if (previous_display != display)
+		write_log("Configured %s display %d is not available, using primary display\n", label, previous_display);
+}
+#endif
+
 void target_fixup_options(uae_prefs* p)
 {
 	if (p->automount_cddrives && !p->scsi)
@@ -4232,6 +4252,12 @@ void target_fixup_options(uae_prefs* p)
 	{
 		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
+	}
+	heal_unavailable_display_index(p->gfx_apmode[APMODE_NATIVE].gfx_display, "native");
+	heal_unavailable_display_index(p->gfx_apmode[APMODE_RTG].gfx_display, "RTG");
+	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
+		if (p->gfx_monitor[i].enabled)
+			heal_unavailable_display_index(p->gfx_monitor[i].gfx_display, "monitor");
 	}
 #ifdef WITH_THREADED_CPU
 	// JIT and CPU Thread can now work together.
