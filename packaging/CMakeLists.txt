@@ -84,9 +84,8 @@ endif()
 if(USE_LIBSERIALPORT)
     string(APPEND _deb_deps ", libserialport0")
 endif()
-if(USE_PORTMIDI)
-    string(APPEND _deb_deps ", libportmidi0")
-endif()
+# PortMidi's runtime package follows its SONAME (libportmidi0, libportmidi2,
+# ...). Let dpkg-shlibdeps add the distro-correct dependency.
 if(USE_LIBENET)
     string(APPEND _deb_deps ", libenet7")
 endif()
