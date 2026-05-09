@@ -62,6 +62,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.1.6" date="2026-05-09">
+            <description>
+                <p>Stable release: Windows ARM64 and llvm-mingw build improvements, extensive x86-64 and ARM64 JIT fixes, RTG zero-copy enabled by default, OpenGL and VSync robustness improvements, Android input/back-button fixes, libretro path isolation, FreeBSD build/install updates, GUI polish, refreshed ImGui and WinUAE sync, and configuration healing for duplicate path entries.</p>
+            </description>
+        </release>
         <release version="8.1.5" date="2026-04-14">
             <description>
                 <p>Stable release: Android UI fixes, GUI improvements (loaded-config window title, screenshot controls in Misc panel, filter persistence per config, full CD/HD dialog path handling), optional Softfloat 80-bit FPU emulation, improved VSync frame pacing with adaptive mode, refreshed ImGui and WinUAE sync, macOS full-window focus fixes, iOS groundwork, relative filesystem/hardfile path fixes, and .uaem sidecar timestamp/metadata improvements.</p>

@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.1.5
+Version:        8.1.6
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -88,6 +88,11 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Sat May 09 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.6-1
+- Stable v8.1.6 release
+- Windows ARM64 and llvm-mingw build improvements
+- JIT, RTG, OpenGL, VSync, Android input, libretro path, and config healing fixes
+
 * Tue Apr 14 2026 Dimitris Panokostas <midwan@gmail.com> - 8.1.5-1
 - Stable v8.1.5 release
 
