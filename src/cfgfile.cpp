@@ -7633,14 +7633,68 @@ void cfgfile_backup(const TCHAR *path)
 int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 {
 	struct zfile *fh;
+#ifdef AMIBERRY
+	/*
+	 * Atomic save (issue #1345): write to <filename>.tmp.<pid>, fsync the
+	 * file, fsync the directory, then rename(2) atomically into place.
+	 * fopen("w") on the final path commits a 0-byte truncate to the
+	 * filesystem journal immediately, while the data write only reaches
+	 * disk on the next writeback pass (~5 s default on ext4).  If the
+	 * process exits or the host is killed in that window, the .uae is
+	 * left at 0 bytes.  rename(2) on POSIX guarantees the final path is
+	 * either the previous content or the new content, never empty.
+	 */
+	TCHAR tmpname[MAX_DPATH];
+	_sntprintf (tmpname, MAX_DPATH, _T("%s.tmp.%d"), filename, (int)getpid ());
+
+	fh = zfile_fopen (tmpname, _T("w"), ZFD_NORMAL);
+	if (! fh) {
+		write_log (_T("cfgfile_save: zfile_fopen failed for '%s'\n"), tmpname);
+		return 0;
+	}
+
+	if (!type)
+		type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+	cfgfile_save_options (fh, p, type);
+	zfile_fclose (fh);
+
+	{
+		int fd = open (tmpname, O_RDONLY);
+		if (fd >= 0) {
+			(void) fsync (fd);
+			close (fd);
+		}
+	}
 
 	cfgfile_backup (filename);
-#ifdef AMIBERRY
-	// MinGW's msvcrt.dll does not support the "ccs=UTF-8" fopen extension
-	fh = zfile_fopen (filename, _T("w"), ZFD_NORMAL);
+
+	if (my_rename (tmpname, filename) != 0) {
+		write_log (_T("cfgfile_save: rename '%s' -> '%s' failed: %s\n"),
+			tmpname, filename, strerror (errno));
+		my_unlink (tmpname);
+		return 0;
+	}
+
+	{
+		TCHAR dirbuf[MAX_DPATH];
+		_tcsncpy (dirbuf, filename, MAX_DPATH);
+		dirbuf[MAX_DPATH - 1] = 0;
+		TCHAR *slash = _tcsrchr (dirbuf, '/');
+		if (slash) {
+			*slash = 0;
+			int dfd = open (dirbuf[0] ? dirbuf : _T("/"),
+				O_RDONLY | O_DIRECTORY);
+			if (dfd >= 0) {
+				(void) fsync (dfd);
+				close (dfd);
+			}
+		}
+	}
+
+	return 1;
 #else
+	cfgfile_backup (filename);
 	fh = zfile_fopen (filename, _T("w, ccs=UTF-8"), ZFD_NORMAL);
-#endif
 	if (! fh) {
 		write_log(_T("cfgfile_save: zfile_fopen failed for '%s'\n"), filename);
 		return 0;
@@ -7651,6 +7705,7 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	cfgfile_save_options (fh, p, type);
 	zfile_fclose (fh);
 	return 1;
+#endif
 }
 
 struct uae_prefs *cfgfile_open(const TCHAR *filename, int *type)
