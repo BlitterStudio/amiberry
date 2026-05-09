@@ -39,7 +39,7 @@ case "$ID" in
 
         # Check if codename is supported
         case "$VERSION_CODENAME" in
-            jammy|noble|plucky|bookworm|trixie)
+            jammy|noble|questing|resolute|bookworm|trixie)
                 ;;
             *)
                 echo "Warning: ${VERSION_CODENAME} is not officially supported."

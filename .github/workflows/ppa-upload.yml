@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install packaging tools
         run: |
@@ -40,6 +40,31 @@ jobs:
         run: |
           printf '[amiberry-ppa]\nfqdn = ppa.launchpad.net\nmethod = ftp\nincoming = ~midwan-a/ubuntu/amiberry\nlogin = anonymous\nallow_unsigned_uploads = 0\n' > ~/.dput.cf
 
+      - name: Build and upload source package for resolute
+        env:
+          DEBEMAIL: midwan@gmail.com
+          DEBFULLNAME: "Dimitris Panokostas"
+        run: |
+          TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+
+          mkdir -p /tmp/ppa-build/resolute
+          cp -r . /tmp/ppa-build/resolute/amiberry
+          cd /tmp/ppa-build/resolute/amiberry
+
+          rm -f debian/changelog
+          dch --create --package amiberry \
+            --newversion "${VERSION}" \
+            --distribution resolute \
+            "Release ${VERSION}"
+
+          dpkg-buildpackage -S -d -us -uc
+
+          debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
+            /tmp/ppa-build/resolute/amiberry_*_source.changes
+
+          dput amiberry-ppa /tmp/ppa-build/resolute/amiberry_*_source.changes
+
       - name: Build and upload source package for noble
         env:
           DEBEMAIL: midwan@gmail.com
@@ -54,9 +79,9 @@ jobs:
 
           rm -f debian/changelog
           dch --create --package amiberry \
-            --newversion "${VERSION}" \
+            --newversion "${VERSION}~noble1" \
             --distribution noble \
-            "Release ${VERSION}"
+            "Release ${VERSION} (Ubuntu 24.04 Noble rebuild)"
 
           dpkg-buildpackage -S -d -us -uc
 

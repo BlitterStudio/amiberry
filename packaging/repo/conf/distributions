@@ -19,10 +19,19 @@ SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
 Origin: Amiberry
 Label: Amiberry
 Suite: stable
-Codename: plucky
+Codename: questing
 Architectures: amd64 arm64
 Components: main
-Description: Amiberry APT repository (Ubuntu 25.10 Plucky)
+Description: Amiberry APT repository (Ubuntu 25.10 Questing)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
+Codename: resolute
+Architectures: amd64 arm64
+Components: main
+Description: Amiberry APT repository (Ubuntu 26.04 Resolute)
 SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
 
 Origin: Amiberry

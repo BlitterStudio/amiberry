@@ -30,11 +30,11 @@ permissions:
 
 jobs:
   build-apt-repo:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install tools
         run: |
@@ -77,7 +77,7 @@ jobs:
         run: |
           PAGES_URL="https://packages.amiberry.com"
           mkdir -p /tmp/apt-repo
-          for codename in jammy noble plucky bookworm trixie; do
+          for codename in jammy noble questing resolute bookworm trixie; do
             for arch in amd64 arm64; do
               pkgs_url="${PAGES_URL}/apt/dists/${codename}/main/binary-${arch}/Packages.gz"
               if curl -sf --max-time 10 "$pkgs_url" -o /tmp/packages-${codename}-${arch}.gz 2>/dev/null; then
@@ -109,18 +109,18 @@ jobs:
           done
 
       - name: Upload APT repo artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apt-repo
           path: /tmp/apt-repo
           retention-days: 1
 
   build-yum-repo:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install tools
         run: |
@@ -229,28 +229,28 @@ jobs:
           done
 
       - name: Upload YUM repo artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: yum-repo
           path: /tmp/yum-repo
           retention-days: 1
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: [build-apt-repo, build-yum-repo]
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Download APT repo artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: apt-repo
           path: /tmp/apt-repo
 
       - name: Download YUM repo artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: yum-repo
           path: /tmp/yum-repo
