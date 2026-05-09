@@ -6,11 +6,52 @@ permissions:
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to package (e.g. v8.1.6)'
+        required: true
+        type: string
+      source_ref:
+        description: 'Git ref to build from'
+        required: true
+        default: master
+        type: string
+      ppa_revision:
+        description: 'PPA-only Debian revision to append (e.g. 0ppa1)'
+        required: true
+        default: 0ppa1
+        type: string
+      series:
+        description: 'Ubuntu series to upload'
+        required: true
+        default: resolute
+        type: choice
+        options:
+          - resolute
+          - noble
+          - jammy
+          - all
   workflow_call:
     inputs:
       tag_name:
         description: 'Release tag (e.g. v8.0.0)'
         required: true
+        type: string
+      source_ref:
+        description: 'Git ref to build from'
+        required: false
+        default: ''
+        type: string
+      ppa_revision:
+        description: 'PPA-only Debian revision to append'
+        required: false
+        default: ''
+        type: string
+      series:
+        description: 'Ubuntu series to upload'
+        required: false
+        default: all
         type: string
     secrets:
       GPG_PRIVATE_KEY:
@@ -23,6 +64,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Install packaging tools
         run: |
@@ -40,13 +83,39 @@ jobs:
         run: |
           printf '[amiberry-ppa]\nfqdn = ppa.launchpad.net\nmethod = ftp\nincoming = ~midwan-a/ubuntu/amiberry\nlogin = anonymous\nallow_unsigned_uploads = 0\n' > ~/.dput.cf
 
+      - name: Resolve PPA upload inputs
+        env:
+          TAG_INPUT: ${{ inputs.tag_name || github.event.release.tag_name }}
+          PPA_REVISION_INPUT: ${{ inputs.ppa_revision }}
+        run: |
+          if [ -z "$TAG_INPUT" ]; then
+            echo "Missing release tag input" >&2
+            exit 1
+          fi
+
+          if [ -n "$PPA_REVISION_INPUT" ] && ! [[ "$PPA_REVISION_INPUT" =~ ^[0-9A-Za-z.+~]+$ ]]; then
+            echo "Invalid PPA revision: $PPA_REVISION_INPUT" >&2
+            exit 1
+          fi
+
+          {
+            echo "PPA_TAG=$TAG_INPUT"
+            echo "PPA_VERSION=${TAG_INPUT#v}"
+            echo "PPA_REVISION=$PPA_REVISION_INPUT"
+          } >> "$GITHUB_ENV"
+
       - name: Build and upload source package for resolute
+        if: ${{ (inputs.series || 'all') == 'all' || (inputs.series || 'all') == 'resolute' }}
         env:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
+          PACKAGE_VERSION="$PPA_VERSION"
+          RELEASE_MESSAGE="Release $PPA_VERSION"
+          if [ -n "$PPA_REVISION" ]; then
+            PACKAGE_VERSION="${PPA_VERSION}-${PPA_REVISION}"
+            RELEASE_MESSAGE="Release $PPA_VERSION (PPA revision $PPA_REVISION)"
+          fi
 
           mkdir -p /tmp/ppa-build/resolute
           cp -r . /tmp/ppa-build/resolute/amiberry
@@ -54,9 +123,9 @@ jobs:
 
           rm -f debian/changelog
           dch --create --package amiberry \
-            --newversion "${VERSION}" \
+            --newversion "$PACKAGE_VERSION" \
             --distribution resolute \
-            "Release ${VERSION}"
+            "$RELEASE_MESSAGE"
 
           dpkg-buildpackage -S -d -us -uc
 
@@ -66,12 +135,17 @@ jobs:
           dput amiberry-ppa /tmp/ppa-build/resolute/amiberry_*_source.changes
 
       - name: Build and upload source package for noble
+        if: ${{ (inputs.series || 'all') == 'all' || (inputs.series || 'all') == 'noble' }}
         env:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
+          PACKAGE_VERSION="${PPA_VERSION}~noble1"
+          RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 24.04 Noble rebuild)"
+          if [ -n "$PPA_REVISION" ]; then
+            PACKAGE_VERSION="${PPA_VERSION}-${PPA_REVISION}~noble1"
+            RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 24.04 Noble PPA revision $PPA_REVISION)"
+          fi
 
           mkdir -p /tmp/ppa-build/noble
           cp -r . /tmp/ppa-build/noble/amiberry
@@ -79,9 +153,9 @@ jobs:
 
           rm -f debian/changelog
           dch --create --package amiberry \
-            --newversion "${VERSION}~noble1" \
+            --newversion "$PACKAGE_VERSION" \
             --distribution noble \
-            "Release ${VERSION} (Ubuntu 24.04 Noble rebuild)"
+            "$RELEASE_MESSAGE"
 
           dpkg-buildpackage -S -d -us -uc
 
@@ -91,12 +165,17 @@ jobs:
           dput amiberry-ppa /tmp/ppa-build/noble/amiberry_*_source.changes
 
       - name: Build and upload source package for jammy
+        if: ${{ (inputs.series || 'all') == 'all' || (inputs.series || 'all') == 'jammy' }}
         env:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
+          PACKAGE_VERSION="${PPA_VERSION}~jammy1"
+          RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 22.04 Jammy rebuild)"
+          if [ -n "$PPA_REVISION" ]; then
+            PACKAGE_VERSION="${PPA_VERSION}-${PPA_REVISION}~jammy1"
+            RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 22.04 Jammy PPA revision $PPA_REVISION)"
+          fi
 
           mkdir -p /tmp/ppa-build/jammy
           cp -r . /tmp/ppa-build/jammy/amiberry
@@ -104,9 +183,9 @@ jobs:
 
           rm -f debian/changelog
           dch --create --package amiberry \
-            --newversion "${VERSION}~jammy1" \
+            --newversion "$PACKAGE_VERSION" \
             --distribution jammy \
-            "Release ${VERSION} (Ubuntu 22.04 Jammy rebuild)"
+            "$RELEASE_MESSAGE"
 
           dpkg-buildpackage -S -d -us -uc
 
