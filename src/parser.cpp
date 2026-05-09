@@ -721,7 +721,7 @@ int enumserialports (void)
 	TCHAR devname[MAX_DPATH];
 	for (int i = 0; i < 32; i++) {
 		TCHAR comname[16];
-		_stprintf(comname, _T("COM%d"), i);
+		_sntprintf(comname, sizeof comname / sizeof(TCHAR), _T("COM%d"), i);
 		if (QueryDosDevice(comname, devname, sizeof(devname) / sizeof(TCHAR))) {
 			serial_ports.emplace_back(comname);
 			cnt++;

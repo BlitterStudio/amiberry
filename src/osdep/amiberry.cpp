@@ -4062,7 +4062,12 @@ void fullpath(TCHAR* path, int size, bool userelative)
 	}
 	else if (path[0] != 0)
 	{
-		write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
+		const auto path_len = _tcslen(path);
+		const bool pseudo_path = path[0] == ':';
+		const bool optional_geometry_file = errno == ENOENT && path_len >= 4
+			&& _tcsicmp(path + path_len - 4, _T(".geo")) == 0;
+		if (!pseudo_path && !optional_geometry_file)
+			write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
 	}
 }
 
@@ -4194,6 +4199,24 @@ void target_quit()
 #endif
 }
 
+#ifdef AMIBERRY
+static void heal_unavailable_display_index(int& display, const char* label)
+{
+	if (display <= 0)
+		return;
+	int display_count = 0;
+	while (display_count < MAX_DISPLAYS && Displays[display_count].monitorname)
+		display_count++;
+	if (display_count == 0 || display <= display_count)
+		return;
+
+	const int previous_display = display;
+	display = 1;
+	if (previous_display != display)
+		write_log("Configured %s display %d is not available, using primary display\n", label, previous_display);
+}
+#endif
+
 void target_fixup_options(uae_prefs* p)
 {
 	if (p->automount_cddrives && !p->scsi)
@@ -4232,6 +4255,12 @@ void target_fixup_options(uae_prefs* p)
 	{
 		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
+	}
+	heal_unavailable_display_index(p->gfx_apmode[APMODE_NATIVE].gfx_display, "native");
+	heal_unavailable_display_index(p->gfx_apmode[APMODE_RTG].gfx_display, "RTG");
+	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
+		if (p->gfx_monitor[i].enabled)
+			heal_unavailable_display_index(p->gfx_monitor[i].gfx_display, "monitor");
 	}
 #ifdef WITH_THREADED_CPU
 	// JIT and CPU Thread can now work together.
@@ -4344,7 +4373,7 @@ void target_default_options(uae_prefs* p, const int type)
 			p->gf[GF_RTG].gfx_filter = 1;
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
-		//	_stprintf(p->input_config_name[i], buf, i + 1);
+		//	_sntprintf(p->input_config_name[i], sizeof p->input_config_name[i] / sizeof(TCHAR), buf, i + 1);
 		//p->aviout_xoffset = -1;
 		//p->aviout_yoffset = -1;
 	}

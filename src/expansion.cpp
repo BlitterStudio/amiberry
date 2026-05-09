@@ -3152,7 +3152,7 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 						}
 					}
 				}
-				_stprintf(label, _T("%s (%s)"), aci->cst->name, man);
+				_sntprintf(label, sizeof label / sizeof(TCHAR), _T("%s (%s)"), aci->cst->name, man);
 #endif
 				_tcscpy(label, aci->cst->name);
 			}

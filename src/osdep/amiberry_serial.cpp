@@ -190,7 +190,7 @@ bool shmem_serial_create()
 	}
 
 	if (ftruncate(fd, sizeof(sermap_buffer) * 2) == -1) {
-		write_log("Failed to set size of shared memory");
+		write_log("Failed to set size of shared memory: %s\n", strerror(errno));
 		close(fd);
 		return false;
 	}

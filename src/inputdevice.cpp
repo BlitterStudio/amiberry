@@ -3522,7 +3522,7 @@ static void mouseupdate (int pct, bool vsync)
 #if OUTPUTDEBUG
 			if (v1 || v2) {
 				TCHAR xx1[256];
-				_stprintf(xx1, _T("%p %d VX=%d VY=%d X=%d Y=%d DX=%d DY=%d VS=%d\n"),
+				_sntprintf(xx1, sizeof xx1 / sizeof(TCHAR), _T("%p %d VX=%d VY=%d X=%d Y=%d DX=%d DY=%d VS=%d\n"),
 					GetCurrentProcess(), timeframes, v1, v2, mouse_x[i], mouse_y[i], mouse_frame_x[i] - mouse_x[i], mouse_frame_y[i] - mouse_y[i], vsync);
 				OutputDebugString(xx1);
 			}
@@ -9987,7 +9987,7 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 
 #if OUTPUTDEBUG
 	TCHAR xx1[256];
-	_stprintf(xx1, _T("%p %d M=%d A=%d D=%d IA=%d\n"), GetCurrentProcess(), timeframes, mouse, axis, data, isabs);
+	_sntprintf(xx1, sizeof xx1 / sizeof(TCHAR), _T("%p %d M=%d A=%d D=%d IA=%d\n"), GetCurrentProcess(), timeframes, mouse, axis, data, isabs);
 	OutputDebugString(xx1);
 #endif
 
@@ -10071,7 +10071,7 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 #if OUTPUTDEBUG
 		if (id->eventid[ID_AXIS_OFFSET + axis][i]) {
 			TCHAR xx2[256];
-			_stprintf(xx2, _T("%p %d -> %d ID=%d\n"), GetCurrentProcess(), timeframes, v, id->eventid[ID_AXIS_OFFSET + axis][i]);
+			_sntprintf(xx2, sizeof xx2 / sizeof(TCHAR), _T("%p %d -> %d ID=%d\n"), GetCurrentProcess(), timeframes, v, id->eventid[ID_AXIS_OFFSET + axis][i]);
 			OutputDebugString(xx2);
 		}
 #endif

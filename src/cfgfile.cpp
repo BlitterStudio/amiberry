@@ -789,6 +789,49 @@ static TCHAR *cfgfile_put_multipath (struct multipath *mp, const TCHAR *s)
 	return my_strdup (s);
 }
 
+#ifdef AMIBERRY
+static bool cfgfile_multipath_entry_matches(const TCHAR *path1, const TCHAR *path2)
+{
+	if (!path1[0] || !path2[0])
+		return false;
+
+	TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH];
+	_tcsncpy(tmp1, path1, MAX_DPATH - 1);
+	tmp1[MAX_DPATH - 1] = 0;
+	_tcsncpy(tmp2, path2, MAX_DPATH - 1);
+	tmp2[MAX_DPATH - 1] = 0;
+
+	fix_trailing(tmp1);
+	fix_trailing(tmp2);
+
+#ifdef _WIN32
+	for (TCHAR *p = tmp1; *p; p++) {
+		if (*p == '\\')
+			*p = '/';
+	}
+	for (TCHAR *p = tmp2; *p; p++) {
+		if (*p == '\\')
+			*p = '/';
+	}
+#endif
+
+#if defined(_WIN32) || defined(__APPLE__)
+	return _tcsicmp(tmp1, tmp2) == 0;
+#else
+	return _tcscmp(tmp1, tmp2) == 0;
+#endif
+}
+
+static bool cfgfile_multipath_contains_entry(const struct multipath *mp, const TCHAR *path, int entries)
+{
+	for (int i = 0; i < entries; i++) {
+		if (cfgfile_multipath_entry_matches(mp->path[i], path))
+			return true;
+	}
+	return false;
+}
+#endif
+
 
 static TCHAR *cfgfile_subst_path_load (const TCHAR *path, struct multipath *mp, const TCHAR *file, bool dir)
 {
@@ -1169,6 +1212,16 @@ static void cfgfile_dwrite_path (struct zfile *f, struct multipath *mp, const TC
 	cfgfile_dwrite_str (f, option, s);
 	xfree (s);
 }
+
+#ifdef AMIBERRY
+static void cfgfile_write_multipath(struct zfile *f, const TCHAR *option, const struct multipath *mp)
+{
+	for (int i = 0; i < MAX_PATHS; i++) {
+		if (mp->path[i][0] && !cfgfile_multipath_contains_entry(mp, mp->path[i], i))
+			cfgfile_write_str(f, option, mp->path[i]);
+	}
+}
+#endif
 
 static void cfgfile_write_multichoice(struct zfile *f, const TCHAR *option, const TCHAR *table[], int value)
 {
@@ -2061,6 +2114,16 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 	}
 
+#ifdef AMIBERRY
+	_sntprintf(tmp, sizeof tmp, _T("%s.rom_path"), TARGET_NAME);
+	cfgfile_write_multipath(f, tmp, &p->path_rom);
+	_sntprintf(tmp, sizeof tmp, _T("%s.floppy_path"), TARGET_NAME);
+	cfgfile_write_multipath(f, tmp, &p->path_floppy);
+	_sntprintf(tmp, sizeof tmp, _T("%s.hardfile_path"), TARGET_NAME);
+	cfgfile_write_multipath(f, tmp, &p->path_hardfile);
+	_sntprintf(tmp, sizeof tmp, _T("%s.cd_path"), TARGET_NAME);
+	cfgfile_write_multipath(f, tmp, &p->path_cd);
+#else
 	for (i = 0; i < MAX_PATHS; i++) {
 		if (p->path_rom.path[i][0]) {
 			_sntprintf (tmp, sizeof tmp, _T("%s.rom_path"), TARGET_NAME);
@@ -2085,6 +2148,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			cfgfile_write_str (f, tmp, p->path_cd.path[i]);
 		}
 	}
+#endif
 
 	cfg_write (_T("; host-specific"), f);
 
@@ -2473,17 +2537,17 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		if (!p->gfx_monitor[i].enabled)
 			continue;
 		TCHAR tmp[256];
-		_stprintf(tmp, _T("gfx_monitor%d_display"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_display"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_display);
-		_stprintf(tmp, _T("gfx_monitor%d_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_fullscreen"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_fullscreen);
-		_stprintf(tmp, _T("gfx_monitor%d_width_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_windowed"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_win.width);
-		_stprintf(tmp, _T("gfx_monitor%d_height_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_windowed"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_win.height);
-		_stprintf(tmp, _T("gfx_monitor%d_width_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_fullscreen"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_fs.width);
-		_stprintf(tmp, _T("gfx_monitor%d_height_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_fullscreen"), i);
 		cfgfile_write(f, tmp, _T("%d"), p->gfx_monitor[i].gfx_size_fs.height);
 	}
 
@@ -3403,6 +3467,19 @@ static int cfgfile_multipath (const TCHAR *option, const TCHAR *value, const TCH
 	TCHAR tmploc[MAX_DPATH];
 	if (!cfgfile_string (option, value, name, tmploc, MAX_DPATH))
 		return 0;
+#ifdef AMIBERRY
+	const auto s = target_expand_environment (tmploc, nullptr, 0);
+	_tcsncpy (tmploc, s, MAX_DPATH - 1);
+	tmploc[MAX_DPATH - 1] = 0;
+	fix_trailing (tmploc);
+	xfree (s);
+	if (cfgfile_multipath_contains_entry(mp, tmploc, MAX_PATHS))
+		return 1;
+	for (int i = 0; i < MAX_PATHS; i++) {
+		if (mp->path[i][0] == 0 || (i == 0 && (!_tcscmp (mp->path[i], _T(".\\")) || !_tcscmp (mp->path[i], _T("./"))))) {
+			_tcsncpy (mp->path[i], tmploc, MAX_DPATH - 1);
+			mp->path[i][MAX_DPATH - 1] = 0;
+#else
 	for (int i = 0; i < MAX_PATHS; i++) {
 		if (mp->path[i][0] == 0 || (i == 0 && (!_tcscmp (mp->path[i], _T(".\\")) || !_tcscmp (mp->path[i], _T("./"))))) {
 			const auto s = target_expand_environment (tmploc, nullptr, 0);
@@ -3410,6 +3487,7 @@ static int cfgfile_multipath (const TCHAR *option, const TCHAR *value, const TCH
 			mp->path[i][MAX_DPATH - 1] = 0;
 			fix_trailing (mp->path[i]);
 			xfree (s);
+#endif
 			//target_multipath_modified(p);
 			return 1;
 		}
@@ -4083,24 +4161,24 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
 		TCHAR tmp[256];
-		_stprintf(tmp, _T("gfx_monitor%d_display"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_display"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_display, 1)) {
 			p->gfx_monitor[i].enabled = true;
 			return 1;
 		}
-		_stprintf(tmp, _T("gfx_monitor%d_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_fullscreen"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_fullscreen, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_width_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_windowed"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_win.width, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_height_windowed"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_windowed"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_win.height, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_width_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_width_fullscreen"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_fs.width, 1))
 			return 1;
-		_stprintf(tmp, _T("gfx_monitor%d_height_fullscreen"), i);
+		_sntprintf(tmp, sizeof tmp / sizeof(TCHAR), _T("gfx_monitor%d_height_fullscreen"), i);
 		if (cfgfile_intval(option, value, tmp, &p->gfx_monitor[i].gfx_size_fs.height, 1))
 			return 1;
 	}

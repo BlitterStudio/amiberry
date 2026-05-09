@@ -3679,7 +3679,7 @@ int debugmem_get_symbol(uaecptr addr, TCHAR *out, int maxsize)
 						if (!first)
 							*p2++ = ',';
 						first = false;
-						_stprintf(p2, _T("%s:+%05X"), sv->name, sv->offset);
+						_sntprintf(p2, sizeof txt2 / sizeof(TCHAR) - (p2 - txt2), _T("%s:+%05X"), sv->name, sv->offset);
 						if (size <= _tcslen(txt2))
 							break;
 						size -= _tcslen(txt2);
@@ -3716,7 +3716,7 @@ int debugmem_get_sourceline(uaecptr addr, TCHAR *out, int maxsize)
 		for (int i = 0; i < codefilecnt; i++) {
 			struct debugcodefile *cf = codefiles[i];
 			if (cf && addr >= cf->start_pc && addr < cf->end_pc) {
-				_stprintf(out, _T("Source file: %s\n"), cf->name);
+				_sntprintf(out, maxsize, _T("Source file: %s\n"), cf->name);
 				return -1;
 			}
 		}

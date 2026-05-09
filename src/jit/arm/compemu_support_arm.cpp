@@ -3021,25 +3021,32 @@ STATIC_INLINE void create_popalls(void)
 #if defined(CPU_AARCH64)
         /* On ARM64, allocate popallspace + JIT cache as one contiguous block
          * to guarantee the cache is within B/BL branch range (+-128 MB). */
-        const uint32 cache_kb = currprefs.cachesize > 0 ? currprefs.cachesize : MAX_JIT_CACHE;
-        const size_t cache_bytes = (size_t)cache_kb * 1024;
-        const size_t combined_size = POPALLSPACE_SIZE + cache_bytes;
-        jit_log("ARM64: allocating popallspace+cache (cache=%u KB, total=%zu bytes)",
-            cache_kb, combined_size);
-        popallspace = alloc_code(combined_size);
-        if (popallspace) {
-            popall_combined_alloc_size = combined_size;
-            popall_combined_cache_start = popallspace + POPALLSPACE_SIZE;
-            popall_combined_cache_kb = cache_kb;
-            jit_log("ARM64: combined popallspace+cache allocation at %p (%u KB cache)",
-                popallspace, cache_kb);
+        if (currprefs.cachesize > 0) {
+            const uint32 cache_kb = currprefs.cachesize;
+            const size_t cache_bytes = (size_t)cache_kb * 1024;
+            const size_t combined_size = POPALLSPACE_SIZE + cache_bytes;
+            jit_log("ARM64: allocating popallspace+cache (cache=%u KB, total=%zu bytes)",
+                cache_kb, combined_size);
+            popallspace = alloc_code(combined_size);
+            if (popallspace) {
+                popall_combined_alloc_size = combined_size;
+                popall_combined_cache_start = popallspace + POPALLSPACE_SIZE;
+                popall_combined_cache_kb = cache_kb;
+                jit_log("ARM64: combined popallspace+cache allocation at %p (%u KB cache)",
+                    popallspace, cache_kb);
+            } else {
+                /* Fall back to popallspace-only allocation */
+                popall_combined_alloc_size = 0;
+                popall_combined_cache_start = NULL;
+                popall_combined_cache_kb = 0;
+                jit_log("ARM64: combined popallspace+cache allocation failed; retrying popallspace-only (%u bytes)",
+                    (unsigned)POPALLSPACE_SIZE);
+                popallspace = alloc_code(POPALLSPACE_SIZE);
+            }
         } else {
-            /* Fall back to popallspace-only allocation */
             popall_combined_alloc_size = 0;
             popall_combined_cache_start = NULL;
             popall_combined_cache_kb = 0;
-            jit_log("ARM64: combined popallspace+cache allocation failed; retrying popallspace-only (%u bytes)",
-                (unsigned)POPALLSPACE_SIZE);
             popallspace = alloc_code(POPALLSPACE_SIZE);
         }
         if (popallspace == NULL) {
@@ -3353,6 +3360,8 @@ void build_comp(void)
 		return;
 	}
 	alloc_cache();
+	if (currprefs.cachesize == 0)
+		return;
 	if (!compiled_code) {
 		disable_jit_runtime("failed to allocate ARM64 JIT code cache");
 		return;
