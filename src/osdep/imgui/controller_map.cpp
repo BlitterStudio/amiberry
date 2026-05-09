@@ -813,10 +813,6 @@ bool ControllerMap_HandleEvent(const SDL_Event& event)
 			return true;
 		}
 		break;
-	case SDL_EVENT_MOUSE_BUTTON_DOWN:
-	case SDL_EVENT_FINGER_DOWN:
-		SetCurrentBinding(s_iCurrentBinding + 1);
-		return true;
 	default:
 		break;
 	}
