@@ -7662,6 +7662,48 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	cfgfile_save_options (fh, p, type);
 	zfile_fclose (fh);
 
+	/* zfile's write/flush/close paths swallow errors: zfile_ferror() is a
+	 * stub returning 0, cfg_write() does not check zfile_fwrite()'s
+	 * return value, and zfile_fclose() is void and discards fclose()'s
+	 * status. So an ENOSPC/EIO during the actual write or during stdio
+	 * flushing will silently leave a truncated temp file behind, and
+	 * cfgfile_save_options() will look like it succeeded.
+	 *
+	 * Validate the on-disk content before we accept the temp: every
+	 * well-formed cfgfile ends with a newline (the cfg_write helpers
+	 * always append one). If the last byte is not '\n' the write is
+	 * almost certainly truncated — drop the temp and refuse to replace
+	 * the live file. We can't do an exact size check because
+	 * cfgfile_save_options does not report how much it intended to
+	 * write, but the trailing-newline invariant is reliable. */
+	{
+		struct stat st;
+		if (stat (tmpname, &st) != 0 || st.st_size <= 0) {
+			write_log (_T("cfgfile_save: temp '%s' missing or empty (write failed silently?)\n"),
+				tmpname);
+			my_unlink (tmpname);
+			return 0;
+		}
+		int vfd = open (tmpname, O_RDONLY);
+		if (vfd < 0) {
+			write_log (_T("cfgfile_save: open temp '%s' for validation failed: %s\n"),
+				tmpname, strerror (errno));
+			my_unlink (tmpname);
+			return 0;
+		}
+		char tail = 0;
+		if (lseek (vfd, -1, SEEK_END) < 0
+		    || read (vfd, &tail, 1) != 1
+		    || tail != '\n') {
+			write_log (_T("cfgfile_save: temp '%s' does not end with newline (truncated?); aborting\n"),
+				tmpname);
+			close (vfd);
+			my_unlink (tmpname);
+			return 0;
+		}
+		close (vfd);
+	}
+
 	/* Make the temp file's data durable before we touch the live file.
 	 * If anything in this block fails, the temp is suspect, so we drop
 	 * it and bail without replacing the existing config. */
