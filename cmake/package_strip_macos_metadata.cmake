@@ -25,8 +25,9 @@ file(GLOB_RECURSE _amiberry_stage_entries
 
 foreach(_amiberry_entry IN LISTS _amiberry_stage_entries)
     get_filename_component(_amiberry_name "${_amiberry_entry}" NAME)
+    list(FIND _amiberry_apple_metadata_names "${_amiberry_name}" _amiberry_metadata_index)
 
-    if(_amiberry_name IN_LIST _amiberry_apple_metadata_names
+    if(NOT _amiberry_metadata_index EQUAL -1
             OR _amiberry_name MATCHES "^\\._")
         if(IS_DIRECTORY "${_amiberry_entry}")
             file(REMOVE_RECURSE "${_amiberry_entry}")
