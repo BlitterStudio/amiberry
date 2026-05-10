@@ -7633,16 +7633,20 @@ void cfgfile_backup(const TCHAR *path)
 int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 {
 	struct zfile *fh;
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 	/*
-	 * Atomic save (issue #1345): write to <filename>.tmp.<pid>, fsync the
-	 * file, fsync the directory, then rename(2) atomically into place.
-	 * fopen("w") on the final path commits a 0-byte truncate to the
-	 * filesystem journal immediately, while the data write only reaches
-	 * disk on the next writeback pass (~5 s default on ext4).  If the
-	 * process exits or the host is killed in that window, the .uae is
-	 * left at 0 bytes.  rename(2) on POSIX guarantees the final path is
-	 * either the previous content or the new content, never empty.
+	 * Atomic save (issue #1345). Write to <filename>.tmp.<pid>, fsync the
+	 * data, hard-link the previous file to configuration.backup, then
+	 * rename(2) the temp into place. fopen("w") directly on the final
+	 * path commits a 0-byte truncate to the journal immediately while
+	 * the data write only reaches disk on the next writeback pass (~5 s
+	 * default on ext4). If the process exits or the host is killed in
+	 * that window, the .uae is left at 0 bytes. rename(2) on POSIX
+	 * guarantees the final path is either the previous content or the
+	 * new content, never empty.
+	 *
+	 * POSIX-only: needs fsync, O_DIRECTORY and link(2). Windows AMIBERRY
+	 * builds (and WinUAE) take the legacy path below.
 	 */
 	TCHAR tmpname[MAX_DPATH];
 	_sntprintf (tmpname, MAX_DPATH, _T("%s.tmp.%d"), filename, (int)getpid ());
@@ -7658,15 +7662,59 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	cfgfile_save_options (fh, p, type);
 	zfile_fclose (fh);
 
+	/* Make the temp file's data durable before we touch the live file.
+	 * If anything in this block fails, the temp is suspect, so we drop
+	 * it and bail without replacing the existing config. */
 	{
 		int fd = open (tmpname, O_RDONLY);
-		if (fd >= 0) {
-			(void) fsync (fd);
+		if (fd < 0) {
+			write_log (_T("cfgfile_save: open('%s') for fsync failed: %s\n"),
+				tmpname, strerror (errno));
+			my_unlink (tmpname);
+			return 0;
+		}
+		if (fsync (fd) != 0) {
+			write_log (_T("cfgfile_save: fsync of '%s' failed: %s\n"),
+				tmpname, strerror (errno));
 			close (fd);
+			my_unlink (tmpname);
+			return 0;
+		}
+		if (close (fd) != 0) {
+			write_log (_T("cfgfile_save: close of '%s' failed: %s\n"),
+				tmpname, strerror (errno));
+			my_unlink (tmpname);
+			return 0;
 		}
 	}
 
-	cfgfile_backup (filename);
+	/* Resolve the parent directory once: needed both for the backup slot
+	 * and for the directory fsync below. Empty dirname means "current
+	 * directory" — fsync of "." still gives durable rename semantics. */
+	TCHAR dirpath[MAX_DPATH];
+	_tcsncpy (dirpath, filename, MAX_DPATH);
+	dirpath[MAX_DPATH - 1] = 0;
+	{
+		TCHAR *slash = _tcsrchr (dirpath, '/');
+		if (slash) {
+			*slash = 0;
+			if (!dirpath[0])
+				_tcscpy (dirpath, _T("/"));
+		} else {
+			_tcscpy (dirpath, _T("."));
+		}
+	}
+
+	/* Best-effort backup of the previous content. We use link(2) instead
+	 * of rename/move so the live file stays in place if the next rename
+	 * fails or the process dies before reaching it. Errors here are
+	 * non-fatal: a failing backup must never block a successful save. */
+	{
+		TCHAR backup[MAX_DPATH];
+		_sntprintf (backup, MAX_DPATH, _T("%s/configuration.backup"), dirpath);
+		my_unlink (backup);
+		(void) link (filename, backup);
+	}
 
 	if (my_rename (tmpname, filename) != 0) {
 		write_log (_T("cfgfile_save: rename '%s' -> '%s' failed: %s\n"),
@@ -7675,26 +7723,24 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 		return 0;
 	}
 
+	/* fsync the parent directory so the rename itself is durable. */
 	{
-		TCHAR dirbuf[MAX_DPATH];
-		_tcsncpy (dirbuf, filename, MAX_DPATH);
-		dirbuf[MAX_DPATH - 1] = 0;
-		TCHAR *slash = _tcsrchr (dirbuf, '/');
-		if (slash) {
-			*slash = 0;
-			int dfd = open (dirbuf[0] ? dirbuf : _T("/"),
-				O_RDONLY | O_DIRECTORY);
-			if (dfd >= 0) {
-				(void) fsync (dfd);
-				close (dfd);
-			}
+		int dfd = open (dirpath, O_RDONLY | O_DIRECTORY);
+		if (dfd >= 0) {
+			(void) fsync (dfd);
+			close (dfd);
 		}
 	}
 
 	return 1;
 #else
 	cfgfile_backup (filename);
+#ifdef AMIBERRY
+	/* Windows AMIBERRY builds: msvcrt.dll has no "ccs=UTF-8" fopen mode. */
+	fh = zfile_fopen (filename, _T("w"), ZFD_NORMAL);
+#else
 	fh = zfile_fopen (filename, _T("w, ccs=UTF-8"), ZFD_NORMAL);
+#endif
 	if (! fh) {
 		write_log(_T("cfgfile_save: zfile_fopen failed for '%s'\n"), filename);
 		return 0;
