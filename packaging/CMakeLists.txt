@@ -96,6 +96,10 @@ if(USE_UAENET_PCAP)
     string(APPEND _deb_deps ", libpcap0.8")
 endif()
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+# Force the DEB payload to use a plain GNU tar format. PAX headers can carry
+# host extended attributes such as macOS com.apple.* metadata, which dpkg/tar
+# may warn about during install.
+set(CPACK_DEBIAN_ARCHIVE_TYPE "gnutar")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "${_deb_deps}")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(_deb_shlib_private_dirs "")
@@ -153,6 +157,11 @@ set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
 
 # Strip binaries
 set(CPACK_STRIP_FILES TRUE)
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+    set(CPACK_PRE_BUILD_SCRIPTS
+            "${CMAKE_SOURCE_DIR}/cmake/package_strip_macos_metadata.cmake")
+endif()
 
 # Generator selection per platform
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")

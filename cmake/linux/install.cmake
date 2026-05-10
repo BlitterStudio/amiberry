@@ -179,16 +179,20 @@ endif()
 
 # This one contains the gamecontrollersdb.txt file
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 # This one contains the data files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 # This one contains the AROS kickstart files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 # This one contains the whdboot files
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 # Install desktop file
 install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

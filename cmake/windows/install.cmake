@@ -39,13 +39,17 @@ install(FILES $<TARGET_FILE:floppybridge>
         DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION ${CMAKE_INSTALL_BINDIR})
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-        DESTINATION ${CMAKE_INSTALL_BINDIR})
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-        DESTINATION ${CMAKE_INSTALL_BINDIR})
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION ${CMAKE_INSTALL_BINDIR})
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 
 # Bundle vcpkg runtime DLLs into the install directory using applocal.ps1
 # (same mechanism vcpkg uses at build time to copy DLLs next to the executable).
