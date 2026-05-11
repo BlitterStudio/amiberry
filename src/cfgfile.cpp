@@ -7635,99 +7635,97 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	struct zfile *fh;
 #if defined(AMIBERRY) && !defined(_WIN32)
 	/*
-	 * Atomic save (issue #1345). Write to <filename>.tmp.<pid>, fsync the
-	 * data, hard-link the previous file to configuration.backup, then
-	 * rename(2) the temp into place. fopen("w") directly on the final
-	 * path commits a 0-byte truncate to the journal immediately while
-	 * the data write only reaches disk on the next writeback pass (~5 s
-	 * default on ext4). If the process exits or the host is killed in
-	 * that window, the .uae is left at 0 bytes. rename(2) on POSIX
-	 * guarantees the final path is either the previous content or the
-	 * new content, never empty.
+	 * Atomic save (issue #1345).
 	 *
-	 * POSIX-only: needs fsync, O_DIRECTORY and link(2). Windows AMIBERRY
-	 * builds (and WinUAE) take the legacy path below.
+	 * Step 1 — serialise the config to an in-memory zfile so we can see
+	 * the exact byte count we intend to write. Going through the regular
+	 * file-backed zfile won't work for error detection: zfile_ferror() is
+	 * a stub returning 0, cfg_write() discards zfile_fwrite()'s return
+	 * value, and zfile_fclose() is void and discards fclose()'s status,
+	 * so an ENOSPC/EIO during write or stdio flush is invisible at this
+	 * layer — and a partial-but-line-aligned truncation can pass any
+	 * "ends in newline" sanity check.
+	 *
+	 * Step 2 — write the buffer to <filename>.tmp.<pid> with raw
+	 * write(2). The kernel returns the actual byte count, so an ENOSPC
+	 * or EIO at any point makes the partial write observable and we
+	 * abort without touching the live file.
+	 *
+	 * Step 3 — fsync the temp file, link the previous content to
+	 * configuration.backup as a hard link (so the live file stays in
+	 * place even if the rename fails), rename(2) the temp into place,
+	 * fsync the parent directory.
+	 *
+	 * POSIX-only: needs fsync, O_DIRECTORY, link(2). Windows AMIBERRY
+	 * and WinUAE take the legacy path below.
 	 */
 	TCHAR tmpname[MAX_DPATH];
 	_sntprintf (tmpname, MAX_DPATH, _T("%s.tmp.%d"), filename, (int)getpid ());
 
-	fh = zfile_fopen (tmpname, _T("w"), ZFD_NORMAL);
+	fh = zfile_fopen_empty (NULL, _T("cfgfile_save_buffer"), 0);
 	if (! fh) {
-		write_log (_T("cfgfile_save: zfile_fopen failed for '%s'\n"), tmpname);
+		write_log (_T("cfgfile_save: zfile_fopen_empty failed\n"));
 		return 0;
 	}
-
 	if (!type)
 		type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
 	cfgfile_save_options (fh, p, type);
-	zfile_fclose (fh);
 
-	/* zfile's write/flush/close paths swallow errors: zfile_ferror() is a
-	 * stub returning 0, cfg_write() does not check zfile_fwrite()'s
-	 * return value, and zfile_fclose() is void and discards fclose()'s
-	 * status. So an ENOSPC/EIO during the actual write or during stdio
-	 * flushing will silently leave a truncated temp file behind, and
-	 * cfgfile_save_options() will look like it succeeded.
-	 *
-	 * Validate the on-disk content before we accept the temp: every
-	 * well-formed cfgfile ends with a newline (the cfg_write helpers
-	 * always append one). If the last byte is not '\n' the write is
-	 * almost certainly truncated — drop the temp and refuse to replace
-	 * the live file. We can't do an exact size check because
-	 * cfgfile_save_options does not report how much it intended to
-	 * write, but the trailing-newline invariant is reliable. */
-	{
-		struct stat st;
-		if (stat (tmpname, &st) != 0 || st.st_size <= 0) {
-			write_log (_T("cfgfile_save: temp '%s' missing or empty (write failed silently?)\n"),
-				tmpname);
-			my_unlink (tmpname);
-			return 0;
-		}
-		int vfd = open (tmpname, O_RDONLY);
-		if (vfd < 0) {
-			write_log (_T("cfgfile_save: open temp '%s' for validation failed: %s\n"),
-				tmpname, strerror (errno));
-			my_unlink (tmpname);
-			return 0;
-		}
-		char tail = 0;
-		if (lseek (vfd, -1, SEEK_END) < 0
-		    || read (vfd, &tail, 1) != 1
-		    || tail != '\n') {
-			write_log (_T("cfgfile_save: temp '%s' does not end with newline (truncated?); aborting\n"),
-				tmpname);
-			close (vfd);
-			my_unlink (tmpname);
-			return 0;
-		}
-		close (vfd);
+	size_t buflen = 0;
+	uae_u8 *bufptr = zfile_get_data_pointer (fh, &buflen);
+	if (!bufptr || buflen == 0) {
+		write_log (_T("cfgfile_save: serialised config is empty\n"));
+		zfile_fclose (fh);
+		return 0;
 	}
 
-	/* Make the temp file's data durable before we touch the live file.
-	 * If anything in this block fails, the temp is suspect, so we drop
-	 * it and bail without replacing the existing config. */
-	{
-		int fd = open (tmpname, O_RDONLY);
-		if (fd < 0) {
-			write_log (_T("cfgfile_save: open('%s') for fsync failed: %s\n"),
-				tmpname, strerror (errno));
+	int wfd = open (tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (wfd < 0) {
+		write_log (_T("cfgfile_save: open('%s') for writing failed: %s\n"),
+			tmpname, strerror (errno));
+		zfile_fclose (fh);
+		return 0;
+	}
+
+	size_t written = 0;
+	while (written < buflen) {
+		ssize_t n = write (wfd, bufptr + written, buflen - written);
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			write_log (_T("cfgfile_save: write to '%s' failed at %zu/%zu bytes: %s\n"),
+				tmpname, written, buflen, strerror (errno));
+			close (wfd);
 			my_unlink (tmpname);
+			zfile_fclose (fh);
 			return 0;
 		}
-		if (fsync (fd) != 0) {
-			write_log (_T("cfgfile_save: fsync of '%s' failed: %s\n"),
-				tmpname, strerror (errno));
-			close (fd);
+		if (n == 0) {
+			write_log (_T("cfgfile_save: write to '%s' returned 0 at %zu/%zu bytes (no space?)\n"),
+				tmpname, written, buflen);
+			close (wfd);
 			my_unlink (tmpname);
+			zfile_fclose (fh);
 			return 0;
 		}
-		if (close (fd) != 0) {
-			write_log (_T("cfgfile_save: close of '%s' failed: %s\n"),
-				tmpname, strerror (errno));
-			my_unlink (tmpname);
-			return 0;
-		}
+		written += (size_t) n;
+	}
+
+	zfile_fclose (fh);
+	fh = NULL;
+
+	if (fsync (wfd) != 0) {
+		write_log (_T("cfgfile_save: fsync of '%s' failed: %s\n"),
+			tmpname, strerror (errno));
+		close (wfd);
+		my_unlink (tmpname);
+		return 0;
+	}
+	if (close (wfd) != 0) {
+		write_log (_T("cfgfile_save: close of '%s' failed: %s\n"),
+			tmpname, strerror (errno));
+		my_unlink (tmpname);
+		return 0;
 	}
 
 	/* Resolve the parent directory once: needed both for the backup slot
