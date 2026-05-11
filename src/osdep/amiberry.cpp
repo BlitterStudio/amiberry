@@ -417,23 +417,121 @@ char kbd_flags;
 int led_console_fd = -1;
 
 #if defined(__linux__) && !defined(__ANDROID__) && !defined(LIBRETRO)
+static char led_console_name[128];
+static bool led_console_reported_io_error = false;
+
+static void remember_led_console_name(const int fd, const char* fallback)
+{
+	if (ttyname_r(fd, led_console_name, sizeof led_console_name) != 0 || led_console_name[0] == '\0') {
+		strncpy(led_console_name, fallback, sizeof led_console_name - 1);
+		led_console_name[sizeof led_console_name - 1] = '\0';
+	}
+}
+
+static void log_led_console_io_error(const char* op)
+{
+	if (led_console_reported_io_error)
+		return;
+
+	led_console_reported_io_error = true;
+	write_log(_T("Keyboard LEDs: %s failed on %s (errno=%d: %s), disabling keyboard LED updates\n"),
+		op, led_console_name[0] != '\0' ? led_console_name : "console TTY", errno, strerror(errno));
+}
+
+static bool probe_led_console(const int fd, const char* path, unsigned char* leds)
+{
+	if (ioctl(fd, KDGETLED, leds) < 0)
+		return false;
+
+	// Probe writes too: a readable console fd is not sufficient for activity LEDs.
+	if (ioctl(fd, KDSETLED, *leds) < 0)
+		return false;
+
+	remember_led_console_name(fd, path);
+	return true;
+}
+
+bool amiberry_led_console_get_leds(unsigned char* leds)
+{
+	if (led_console_fd < 0)
+		return false;
+	if (ioctl(led_console_fd, KDGETLED, leds) == 0)
+		return true;
+
+	log_led_console_io_error("KDGETLED");
+	close(led_console_fd);
+	led_console_fd = -1;
+	return false;
+}
+
+bool amiberry_led_console_set_leds(const unsigned char leds)
+{
+	if (led_console_fd < 0)
+		return false;
+	if (ioctl(led_console_fd, KDSETLED, leds) == 0)
+		return true;
+
+	log_led_console_io_error("KDSETLED");
+	close(led_console_fd);
+	led_console_fd = -1;
+	return false;
+}
+
+bool amiberry_led_console_get_flags(char* flags)
+{
+	if (led_console_fd < 0)
+		return false;
+	if (ioctl(led_console_fd, KDGKBLED, flags) == 0)
+		return true;
+
+	log_led_console_io_error("KDGKBLED");
+	close(led_console_fd);
+	led_console_fd = -1;
+	return false;
+}
+
 static void open_led_console(void)
 {
 	if (led_console_fd >= 0)
 		return;
 
-	static const char* const candidates[] = { "/dev/tty", "/dev/tty0", "/dev/console" };
+	char stdin_tty[128] = {};
+	const bool have_stdin_tty = ttyname_r(STDIN_FILENO, stdin_tty, sizeof stdin_tty) == 0 && stdin_tty[0] != '\0';
+	const char* const candidates[] = {
+		"/dev/tty0",
+		have_stdin_tty ? stdin_tty : nullptr,
+		"/dev/tty",
+		"/dev/console"
+	};
 	int last_errno = 0;
 	for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); ++i) {
+		if (candidates[i] == nullptr)
+			continue;
+
+		bool seen = false;
+		for (size_t j = 0; j < i; ++j) {
+			if (candidates[j] != nullptr && strcmp(candidates[i], candidates[j]) == 0) {
+				seen = true;
+				break;
+			}
+		}
+		if (seen)
+			continue;
+
 		const int fd = open(candidates[i], O_RDWR | O_NOCTTY | O_CLOEXEC);
 		if (fd < 0) {
 			last_errno = errno;
 			continue;
 		}
 		unsigned char probe = 0;
-		if (ioctl(fd, KDGETLED, &probe) == 0) {
+		if (probe_led_console(fd, candidates[i], &probe)) {
 			led_console_fd = fd;
-			write_log(_T("Keyboard LEDs: using %s for KD ioctls\n"), candidates[i]);
+			kbd_led_status = probe;
+			led_console_reported_io_error = false;
+			if (strcmp(candidates[i], led_console_name) == 0)
+				write_log(_T("Keyboard LEDs: using %s for KD ioctls\n"), led_console_name);
+			else
+				write_log(_T("Keyboard LEDs: using %s (%s) for KD ioctls\n"), candidates[i], led_console_name);
 			return;
 		}
 		last_errno = errno;
@@ -451,6 +549,21 @@ static void close_led_console(void)
 	}
 }
 #else
+bool amiberry_led_console_get_leds(unsigned char* leds)
+{
+	(void)leds;
+	return false;
+}
+bool amiberry_led_console_set_leds(const unsigned char leds)
+{
+	(void)leds;
+	return false;
+}
+bool amiberry_led_console_get_flags(char* flags)
+{
+	(void)flags;
+	return false;
+}
 static inline void open_led_console(void) {}
 static inline void close_led_console(void) {}
 #endif
