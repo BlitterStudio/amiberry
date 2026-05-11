@@ -419,6 +419,7 @@ int led_console_fd = -1;
 #if defined(__linux__) && !defined(__ANDROID__) && !defined(LIBRETRO)
 static char led_console_name[128];
 static bool led_console_reported_io_error = false;
+static bool led_console_updates_disabled = false;
 
 static void remember_led_console_name(const int fd, const char* fallback)
 {
@@ -428,13 +429,14 @@ static void remember_led_console_name(const int fd, const char* fallback)
 	}
 }
 
-static void log_led_console_io_error(const char* op)
+static void disable_led_console_updates(const char* op)
 {
+	led_console_updates_disabled = true;
 	if (led_console_reported_io_error)
 		return;
 
 	led_console_reported_io_error = true;
-	write_log(_T("Keyboard LEDs: %s failed on %s (errno=%d: %s), disabling keyboard LED updates\n"),
+	write_log(_T("Keyboard LEDs: %s failed on %s (errno=%d: %s), disabling keyboard LED activity updates\n"),
 		op, led_console_name[0] != '\0' ? led_console_name : "console TTY", errno, strerror(errno));
 }
 
@@ -453,40 +455,34 @@ static bool probe_led_console(const int fd, const char* path, unsigned char* led
 
 bool amiberry_led_console_get_leds(unsigned char* leds)
 {
-	if (led_console_fd < 0)
+	if (led_console_fd < 0 || led_console_updates_disabled)
 		return false;
 	if (ioctl(led_console_fd, KDGETLED, leds) == 0)
 		return true;
 
-	log_led_console_io_error("KDGETLED");
-	close(led_console_fd);
-	led_console_fd = -1;
+	disable_led_console_updates("KDGETLED");
 	return false;
 }
 
 bool amiberry_led_console_set_leds(const unsigned char leds)
 {
-	if (led_console_fd < 0)
+	if (led_console_fd < 0 || led_console_updates_disabled)
 		return false;
 	if (ioctl(led_console_fd, KDSETLED, leds) == 0)
 		return true;
 
-	log_led_console_io_error("KDSETLED");
-	close(led_console_fd);
-	led_console_fd = -1;
+	disable_led_console_updates("KDSETLED");
 	return false;
 }
 
 bool amiberry_led_console_get_flags(char* flags)
 {
-	if (led_console_fd < 0)
+	if (led_console_fd < 0 || led_console_updates_disabled)
 		return false;
 	if (ioctl(led_console_fd, KDGKBLED, flags) == 0)
 		return true;
 
-	log_led_console_io_error("KDGKBLED");
-	close(led_console_fd);
-	led_console_fd = -1;
+	disable_led_console_updates("KDGKBLED");
 	return false;
 }
 
@@ -528,6 +524,7 @@ static void open_led_console(void)
 			led_console_fd = fd;
 			kbd_led_status = probe;
 			led_console_reported_io_error = false;
+			led_console_updates_disabled = false;
 			if (strcmp(candidates[i], led_console_name) == 0)
 				write_log(_T("Keyboard LEDs: using %s for KD ioctls\n"), led_console_name);
 			else
