@@ -151,6 +151,16 @@ if (WIN32)
     set(CMAKE_INSTALL_BINDIR ".")
     set(CMAKE_INSTALL_LIBDIR ".")
 endif()
+set(AMIBERRY_PACKAGE_METADATA_EXCLUDES
+    PATTERN ".DS_Store" EXCLUDE
+    PATTERN "._*" EXCLUDE
+    PATTERN "__MACOSX" EXCLUDE
+    PATTERN ".AppleDouble" EXCLUDE
+    PATTERN ".LSOverride" EXCLUDE
+    PATTERN ".Spotlight-V100" EXCLUDE
+    PATTERN ".Trashes" EXCLUDE
+    PATTERN ".fseventsd" EXCLUDE
+)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/SourceFiles.cmake)
 include(cmake/Dependencies.cmake)

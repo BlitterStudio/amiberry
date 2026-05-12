@@ -60,14 +60,18 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
 
     # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources)
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+            ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
     # This one contains the data files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources)
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+            ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
     # This one contains the AROS kickstart files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources)
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+            ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
     # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources)
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+            ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 endif ()
