@@ -34,23 +34,51 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -DAPP_BINARY=$<TARGET_FILE:${PROJECT_NAME}> -P ${CMAKE_SOURCE_DIR}/cmake/macos/dedupe_frameworks_rpath.cmake)
 
-# Codesign all bundled code with the same team identity
-# This removes the need for com.apple.security.cs.disable-library-validation
-set(MACOS_CODESIGN_IDENTITY "" CACHE STRING "Code signing identity for macOS (e.g. 'Developer ID Application: Name (TEAMID)')")
-if(MACOS_CODESIGN_IDENTITY)
-    # Sign plugins
+# Codesign local/intermediate bundles after dylibbundler and install_name_tool
+# have finished mutating load commands. CI re-signs the final universal bundle
+# with the Developer ID identity before notarization.
+option(MACOS_CODESIGN_BUNDLE
+    "Codesign local/intermediate macOS app bundles after copying dependencies"
+    ON)
+string(CONCAT _amiberry_codesign_identity_help
+    "Code signing identity for local/intermediate macOS bundles "
+    "(empty for non-App Store ad-hoc, '-' for explicit ad-hoc, "
+    "or 'Developer ID Application: Name (TEAMID)')")
+set(MACOS_CODESIGN_IDENTITY "" CACHE STRING "${_amiberry_codesign_identity_help}")
+string(CONCAT _amiberry_codesign_options_help
+    "Additional codesign --options value for local/intermediate macOS bundles (for example: runtime,hard)")
+set(MACOS_CODESIGN_OPTIONS "" CACHE STRING "${_amiberry_codesign_options_help}")
+if(MACOS_CODESIGN_BUNDLE)
+    find_program(CODESIGN_EXECUTABLE codesign)
+    if(NOT CODESIGN_EXECUTABLE)
+        message(FATAL_ERROR
+            "codesign executable not found; "
+            "set MACOS_CODESIGN_BUNDLE=OFF to skip macOS bundle signing"
+        )
+    endif()
+
+    if(MACOS_APP_STORE AND MACOS_CODESIGN_IDENTITY STREQUAL "")
+        message(FATAL_ERROR
+            "MACOS_APP_STORE builds require MACOS_CODESIGN_IDENTITY; "
+            "ad-hoc signing must be requested explicitly with '-'"
+        )
+    endif()
+
+    set(_amiberry_codesign_identity "${MACOS_CODESIGN_IDENTITY}")
+    if(_amiberry_codesign_identity STREQUAL "")
+        set(_amiberry_codesign_identity "-")
+    endif()
+
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND codesign --force --sign "${MACOS_CODESIGN_IDENTITY}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:capsimage>
-        COMMENT "Codesigning capsimage plugin")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND codesign --force --sign "${MACOS_CODESIGN_IDENTITY}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>
-        COMMENT "Codesigning floppybridge plugin")
-    # Sign all bundled frameworks
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND bash -c "find '$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/' -name '*.dylib' -exec codesign --force --sign '${MACOS_CODESIGN_IDENTITY}' {} \\;"
-        COMMENT "Codesigning bundled frameworks")
+        COMMAND "${CMAKE_COMMAND}"
+            "-DAPP_BUNDLE=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
+            "-DCODESIGN_EXECUTABLE=${CODESIGN_EXECUTABLE}"
+            "-DAMIBERRY_CODESIGN_IDENTITY=${_amiberry_codesign_identity}"
+            "-DAMIBERRY_CODESIGN_OPTIONS=${MACOS_CODESIGN_OPTIONS}"
+            "-DAMIBERRY_ENTITLEMENTS=${AMIBERRY_ENTITLEMENTS}"
+            -P "${CMAKE_SOURCE_DIR}/cmake/macos/codesign_bundle.cmake"
+        COMMENT "Codesigning Amiberry app bundle"
+        VERBATIM)
 endif()
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
