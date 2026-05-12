@@ -41,12 +41,17 @@
 #include <cerrno>
 #include <poll.h>
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 using namespace Amiberry::IPC;
 
 // Socket state
 static int server_socket = -1;
 static std::string socket_path;
 static bool ipc_active = false;
+static bool ipc_quit_requested = false;
 
 // Command handler type
 typedef std::function<std::string(const std::vector<std::string>&)> CommandHandler;
@@ -91,7 +96,7 @@ static std::string make_response(bool success, const std::vector<std::string>& d
 static std::string HandleQuit(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received QUIT" << std::endl;
-	uae_quit();
+	ipc_quit_requested = true;
 	return make_response(true);
 }
 
@@ -2539,22 +2544,68 @@ static std::string ProcessCommand(const std::string& line)
 	return make_response(false, {"Unknown command: " + cmd});
 }
 
+static void ConfigureClientSocket(int client_socket)
+{
+#ifdef SO_NOSIGPIPE
+	const int set = 1;
+	setsockopt(client_socket, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(set));
+#endif
+	const int flags = fcntl(client_socket, F_GETFL, 0);
+	if (flags >= 0) {
+		fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
+	}
+}
+
+static bool SendResponse(int client_socket, const std::string& response)
+{
+	const char* data = response.c_str();
+	size_t remaining = response.length();
+
+	while (remaining > 0) {
+		const ssize_t written = send(client_socket, data, remaining, MSG_NOSIGNAL);
+		if (written > 0) {
+			data += written;
+			remaining -= written;
+			continue;
+		}
+		if (written < 0 && errno == EINTR) {
+			continue;
+		}
+		if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			struct pollfd pfd{};
+			pfd.fd = client_socket;
+			pfd.events = POLLOUT;
+
+			int ret;
+			do {
+				ret = poll(&pfd, 1, 100);
+			} while (ret < 0 && errno == EINTR);
+
+			if (ret > 0 && (pfd.revents & POLLOUT)) {
+				continue;
+			}
+		}
+		return false;
+	}
+
+	return true;
+}
+
 // Handle a single client connection
 static void HandleClient(int client_socket)
 {
 	char buffer[4096];
 	std::string accumulated;
+	bool quit_after_reply = false;
 
-	// Set non-blocking
-	int flags = fcntl(client_socket, F_GETFL, 0);
-	fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
+	ConfigureClientSocket(client_socket);
 
 	// Read with timeout
 	struct pollfd pfd{};
 	pfd.fd = client_socket;
 	pfd.events = POLLIN;
 
-	while (true) {
+	while (!quit_after_reply) {
 		int ret = poll(&pfd, 1, 100); // 100ms timeout
 		if (ret <= 0) break;
 
@@ -2577,12 +2628,24 @@ static void HandleClient(int client_socket)
 
 			if (!line.empty()) {
 				std::string response = ProcessCommand(line);
-				write(client_socket, response.c_str(), response.length());
+				quit_after_reply = ipc_quit_requested;
+				SendResponse(client_socket, response);
+				if (quit_after_reply) {
+					break;
+				}
 			}
 		}
 	}
 
+	if (quit_after_reply) {
+		shutdown(client_socket, SHUT_WR);
+	}
 	close(client_socket);
+
+	if (quit_after_reply) {
+		ipc_quit_requested = false;
+		uae_quit();
+	}
 }
 
 // Helper: Check if a socket is stale (no process listening)
