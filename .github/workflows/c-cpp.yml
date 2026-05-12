@@ -777,9 +777,9 @@ jobs:
     runs-on: windows-2025
     # Cold-cache runs (vcpkg + llvm-mingw downloads) finish in ~24 min,
     # warm-cache runs in ~10-15 min — see build-windows-arm64 for comparison.
-    # 60 min gives ~2.5x headroom over the cold-cache observation, plenty for
-    # SignPath round-trips and any transient slowness.
-    timeout-minutes: 60
+    # Release signing can require manual SignPath approval, so keep enough
+    # headroom for the build, signing round-trip, and approval window.
+    timeout-minutes: 120
     permissions:
       contents: read
       actions: write
@@ -855,6 +855,12 @@ jobs:
         shell: bash
         run: |
           cmake --preset windows-release
+          PRODUCT_VERSION="$(cat out/build/windows-release/amiberry-product-version.txt)"
+          if [ -z "$PRODUCT_VERSION" ]; then
+            echo "Could not determine the Amiberry product version from the build tree." >&2
+            exit 1
+          fi
+          echo "AMIBERRY_PRODUCT_VERSION=$PRODUCT_VERSION" >> "$GITHUB_ENV"
 
       - name: Build
         shell: bash
@@ -1016,7 +1022,8 @@ jobs:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
           SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_TEST_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_TEST_SIGNING_POLICY_SLUG || vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
           SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
         run: |
           if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
@@ -1025,28 +1032,52 @@ jobs:
             exit 0
           }
 
-          $required = @{
+          $isReleaseTag = $env:GITHUB_REF_TYPE -eq "tag"
+          if ($isReleaseTag) {
+            $policyKind = "release"
+            $signingPolicySlug = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
+            $signingPolicySetting = "SIGNPATH_RELEASE_SIGNING_POLICY_SLUG"
+            $waitTimeoutSeconds = "5400"
+          } else {
+            $policyKind = "test"
+            $signingPolicySlug = $env:SIGNPATH_TEST_SIGNING_POLICY_SLUG
+            $signingPolicySetting = "SIGNPATH_TEST_SIGNING_POLICY_SLUG (or legacy SIGNPATH_SIGNING_POLICY_SLUG)"
+            $waitTimeoutSeconds = "1200"
+          }
+
+          $required = [ordered]@{
             SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
             SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
             SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
-            SIGNPATH_SIGNING_POLICY_SLUG = $env:SIGNPATH_SIGNING_POLICY_SLUG
             SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
+            AMIBERRY_PRODUCT_VERSION = $env:AMIBERRY_PRODUCT_VERSION
           }
-          $missing = @(
-            $required.GetEnumerator() |
-            Where-Object { [string]::IsNullOrWhiteSpace($_.Value) } |
-            ForEach-Object { $_.Key } |
-            Sort-Object
-          )
+          $missing = @()
+          foreach ($item in $required.GetEnumerator()) {
+            if ([string]::IsNullOrWhiteSpace($item.Value)) {
+              $missing += $item.Key
+            }
+          }
+          if ([string]::IsNullOrWhiteSpace($signingPolicySlug)) {
+            $missing += $signingPolicySetting
+          }
+          $missing = $missing | Sort-Object
 
           if ($missing.Count -gt 0) {
+            if ($isReleaseTag) {
+              throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
+            }
             "enabled=false" >> $env:GITHUB_OUTPUT
             Write-Host "SignPath disabled because the following settings are missing: $($missing -join ', ')"
             exit 0
           }
 
           "enabled=true" >> $env:GITHUB_OUTPUT
-          Write-Host "SignPath enabled for this run."
+          "signing-policy-slug=$signingPolicySlug" >> $env:GITHUB_OUTPUT
+          "policy-kind=$policyKind" >> $env:GITHUB_OUTPUT
+          "wait-timeout-seconds=$waitTimeoutSeconds" >> $env:GITHUB_OUTPUT
+          "product-version=$($env:AMIBERRY_PRODUCT_VERSION)" >> $env:GITHUB_OUTPUT
+          Write-Host "SignPath $policyKind signing enabled with policy '$signingPolicySlug'."
 
       - name: Upload unsigned Windows artifacts for SignPath
         if: steps.signpath-config.outputs.enabled == 'true'
@@ -1069,12 +1100,14 @@ jobs:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          signing-policy-slug: ${{ steps.signpath-config.outputs.signing-policy-slug }}
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
           github-artifact-id: ${{ steps.signpath-unsigned.outputs.artifact-id }}
           wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 1200
+          wait-for-completion-timeout-in-seconds: ${{ steps.signpath-config.outputs.wait-timeout-seconds }}
           output-artifact-directory: signpath-signed
+          parameters: |
+            version: "${{ steps.signpath-config.outputs.product-version }}"
 
       - name: Replace unsigned artifacts with signed outputs
         if: steps.signpath-config.outputs.enabled == 'true'
@@ -1166,9 +1199,9 @@ jobs:
     runs-on: windows-11-arm
     # Cold-cache runs finish in ~24 min, warm-cache runs in ~8 min. The
     # extra time vs. x64 mostly comes from the InnoSetup-via-Chocolatey
-    # install path (windows-11-arm doesn't preinstall ISCC). 60 min keeps
-    # us in line with build-windows.
-    timeout-minutes: 60
+    # install path (windows-11-arm doesn't preinstall ISCC). Release signing
+    # can require manual SignPath approval, so match build-windows headroom.
+    timeout-minutes: 120
     permissions:
       contents: read
       actions: write
@@ -1242,6 +1275,12 @@ jobs:
         shell: bash
         run: |
           cmake --preset windows-arm64-release
+          PRODUCT_VERSION="$(cat out/build/windows-arm64-release/amiberry-product-version.txt)"
+          if [ -z "$PRODUCT_VERSION" ]; then
+            echo "Could not determine the Amiberry product version from the build tree." >&2
+            exit 1
+          fi
+          echo "AMIBERRY_PRODUCT_VERSION=$PRODUCT_VERSION" >> "$GITHUB_ENV"
 
       - name: Build
         shell: bash
@@ -1355,7 +1394,8 @@ jobs:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
           SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_TEST_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_TEST_SIGNING_POLICY_SLUG || vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
           SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
         run: |
           if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
@@ -1364,28 +1404,52 @@ jobs:
             exit 0
           }
 
-          $required = @{
+          $isReleaseTag = $env:GITHUB_REF_TYPE -eq "tag"
+          if ($isReleaseTag) {
+            $policyKind = "release"
+            $signingPolicySlug = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
+            $signingPolicySetting = "SIGNPATH_RELEASE_SIGNING_POLICY_SLUG"
+            $waitTimeoutSeconds = "5400"
+          } else {
+            $policyKind = "test"
+            $signingPolicySlug = $env:SIGNPATH_TEST_SIGNING_POLICY_SLUG
+            $signingPolicySetting = "SIGNPATH_TEST_SIGNING_POLICY_SLUG (or legacy SIGNPATH_SIGNING_POLICY_SLUG)"
+            $waitTimeoutSeconds = "1200"
+          }
+
+          $required = [ordered]@{
             SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
             SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
             SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
-            SIGNPATH_SIGNING_POLICY_SLUG = $env:SIGNPATH_SIGNING_POLICY_SLUG
             SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
+            AMIBERRY_PRODUCT_VERSION = $env:AMIBERRY_PRODUCT_VERSION
           }
-          $missing = @(
-            $required.GetEnumerator() |
-            Where-Object { [string]::IsNullOrWhiteSpace($_.Value) } |
-            ForEach-Object { $_.Key } |
-            Sort-Object
-          )
+          $missing = @()
+          foreach ($item in $required.GetEnumerator()) {
+            if ([string]::IsNullOrWhiteSpace($item.Value)) {
+              $missing += $item.Key
+            }
+          }
+          if ([string]::IsNullOrWhiteSpace($signingPolicySlug)) {
+            $missing += $signingPolicySetting
+          }
+          $missing = $missing | Sort-Object
 
           if ($missing.Count -gt 0) {
+            if ($isReleaseTag) {
+              throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
+            }
             "enabled=false" >> $env:GITHUB_OUTPUT
             Write-Host "SignPath disabled because the following settings are missing: $($missing -join ', ')"
             exit 0
           }
 
           "enabled=true" >> $env:GITHUB_OUTPUT
-          Write-Host "SignPath enabled for this run."
+          "signing-policy-slug=$signingPolicySlug" >> $env:GITHUB_OUTPUT
+          "policy-kind=$policyKind" >> $env:GITHUB_OUTPUT
+          "wait-timeout-seconds=$waitTimeoutSeconds" >> $env:GITHUB_OUTPUT
+          "product-version=$($env:AMIBERRY_PRODUCT_VERSION)" >> $env:GITHUB_OUTPUT
+          Write-Host "SignPath $policyKind signing enabled with policy '$signingPolicySlug'."
 
       - name: Upload unsigned Windows artifacts for SignPath
         if: steps.signpath-config.outputs.enabled == 'true'
@@ -1408,12 +1472,14 @@ jobs:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          signing-policy-slug: ${{ steps.signpath-config.outputs.signing-policy-slug }}
           artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
           github-artifact-id: ${{ steps.signpath-unsigned.outputs.artifact-id }}
           wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 1200
+          wait-for-completion-timeout-in-seconds: ${{ steps.signpath-config.outputs.wait-timeout-seconds }}
           output-artifact-directory: signpath-signed
+          parameters: |
+            version: "${{ steps.signpath-config.outputs.product-version }}"
 
       - name: Replace unsigned artifacts with signed outputs
         if: steps.signpath-config.outputs.enabled == 'true'
@@ -1649,6 +1715,8 @@ jobs:
           allowUpdates: true
           omitBodyDuringUpdate: true
           generateReleaseNotes: true
+          body: |
+            Windows release binaries are signed through SignPath. See the Code signing policy: https://amiberry.com/code-signing-policy
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/amiberry-libretro-*.*

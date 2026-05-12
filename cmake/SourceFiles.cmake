@@ -463,7 +463,7 @@ if(ANDROID)
 elseif(IOS)
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
 elseif(WIN32)
-    add_executable(${PROJECT_NAME} ${SOURCE_FILES} src/osdep/amiberry.rc)
+    add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 else()
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
 endif()
@@ -496,6 +496,17 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin" OR IOS OR WIN32)
     set(AMIBERRY_OUTPUT_NAME "${AMIBERRY_DISPLAY_NAME}")
 else()
     set(AMIBERRY_OUTPUT_NAME "${PROJECT_NAME}")
+endif()
+
+if(WIN32)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    set(AMIBERRY_WINDOWS_RESOURCE "${CMAKE_CURRENT_BINARY_DIR}/generated/amiberry.rc")
+    configure_file(
+            "${CMAKE_SOURCE_DIR}/src/osdep/amiberry.rc.in"
+            "${AMIBERRY_WINDOWS_RESOURCE}"
+            @ONLY
+    )
+    target_sources(${PROJECT_NAME} PRIVATE "${AMIBERRY_WINDOWS_RESOURCE}")
 endif()
 
 # Common bundle properties (shared between macOS and iOS)

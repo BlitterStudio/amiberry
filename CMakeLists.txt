@@ -132,6 +132,7 @@ set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
 set(AMIBERRY_DISPLAY_NAME "Amiberry")
 set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
+file(WRITE "${CMAKE_BINARY_DIR}/amiberry-product-version.txt" "${PROJECT_VERSION}\n")
 
 # FreeBSD-specific paths and libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")

@@ -12,13 +12,16 @@
 
     Bundled third-party DLLs are left untouched.
   -->
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
   <zip-file>
     <zip-file path="amiberry-*-portable.zip">
-      <pe-file path="*/Amiberry.exe">
+      <pe-file path="*/Amiberry.exe" product-name="Amiberry" product-version="${version}" company-name="BlitterStudio">
         <authenticode-sign/>
       </pe-file>
     </zip-file>
-    <pe-file path="amiberry-*.exe">
+    <pe-file path="amiberry-*.exe" product-name="Amiberry" product-version="${version}" company-name="BlitterStudio">
       <authenticode-sign/>
     </pe-file>
   </zip-file>
