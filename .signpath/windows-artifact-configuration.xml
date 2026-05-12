@@ -21,7 +21,7 @@
         <authenticode-sign/>
       </pe-file>
     </zip-file>
-    <pe-file path="amiberry-*.exe" product-version="${version}" company-name="BlitterStudio">
+    <pe-file path="amiberry-*.exe">
       <authenticode-sign/>
     </pe-file>
   </zip-file>
