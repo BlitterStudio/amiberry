@@ -34,24 +34,23 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -DAPP_BINARY=$<TARGET_FILE:${PROJECT_NAME}> -P ${CMAKE_SOURCE_DIR}/cmake/macos/dedupe_frameworks_rpath.cmake)
 
-# Codesign all bundled code with the same team identity
-# This removes the need for com.apple.security.cs.disable-library-validation
-set(MACOS_CODESIGN_IDENTITY "" CACHE STRING "Code signing identity for macOS (e.g. 'Developer ID Application: Name (TEAMID)')")
-if(MACOS_CODESIGN_IDENTITY)
-    # Sign plugins
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND codesign --force --sign "${MACOS_CODESIGN_IDENTITY}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:capsimage>
-        COMMENT "Codesigning capsimage plugin")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND codesign --force --sign "${MACOS_CODESIGN_IDENTITY}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>
-        COMMENT "Codesigning floppybridge plugin")
-    # Sign all bundled frameworks
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND bash -c "find '$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/' -name '*.dylib' -exec codesign --force --sign '${MACOS_CODESIGN_IDENTITY}' {} \\;"
-        COMMENT "Codesigning bundled frameworks")
+# Codesign all bundled code after dylibbundler/install_name_tool have finished
+# mutating load commands.  Local builds use ad-hoc signing unless a real
+# Developer ID identity is supplied.
+set(MACOS_CODESIGN_IDENTITY "" CACHE STRING "Code signing identity for macOS ('-' for ad-hoc, or 'Developer ID Application: Name (TEAMID)')")
+set(AMIBERRY_CODESIGN_IDENTITY "${MACOS_CODESIGN_IDENTITY}")
+if(AMIBERRY_CODESIGN_IDENTITY STREQUAL "")
+    set(AMIBERRY_CODESIGN_IDENTITY "-")
 endif()
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -DAPP_BUNDLE=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>
+        -DAMIBERRY_CODESIGN_IDENTITY=${AMIBERRY_CODESIGN_IDENTITY}
+        -DAMIBERRY_ENTITLEMENTS=${AMIBERRY_ENTITLEMENTS}
+        -P ${CMAKE_SOURCE_DIR}/cmake/macos/codesign_bundle.cmake
+    COMMENT "Codesigning Amiberry app bundle"
+    VERBATIM)
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(FILES $<TARGET_FILE:capsimage>
