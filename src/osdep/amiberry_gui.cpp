@@ -57,9 +57,10 @@
 #endif
 #endif
 
-// Console fd for KDSETLED/KDGETLED, opened by open_led_console() in amiberry.cpp;
-// -1 when no usable console TTY is available — guard each ioctl with `>= 0`.
-extern int led_console_fd;
+#if defined(__linux__)
+extern bool amiberry_led_console_get_leds(unsigned char* leds);
+extern bool amiberry_led_console_set_leds(unsigned char leds);
+#endif
 
 int emulating = 0;
 bool config_loaded = false;
@@ -1039,7 +1040,7 @@ static int want_temp = 1; // Make this a negative number to disable Temperature 
 
 void gui_led(int led, int on, int brightness)
 {
-	unsigned char kbd_led_status;
+	unsigned char kbd_led_status = 0;
 
 	// Check current prefs/ update if changed
 	if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
@@ -1058,24 +1059,23 @@ void gui_led(int led, int on, int brightness)
 		}
 	}
 
-	if (led_console_fd >= 0)
-		ioctl(led_console_fd, KDGETLED, &kbd_led_status);
+	const bool have_keyboard_leds = amiberry_led_console_get_leds(&kbd_led_status);
 
 	// Handle floppy led status
 	if (led >= LED_DF0 && led <= LED_DF3)
 	{
-		if (currprefs.kbd_led_num == led)
+		if (have_keyboard_leds && currprefs.kbd_led_num == led)
 		{
 			if (on) kbd_led_status |= LED_NUM;
 			
 			else kbd_led_status &= ~LED_NUM;
 		}
-		if (currprefs.kbd_led_scr == led)
+		if (have_keyboard_leds && currprefs.kbd_led_scr == led)
 		{
 			if (on) kbd_led_status |= LED_SCR;
 			else kbd_led_status &= ~LED_SCR;
 		}
-		if (currprefs.kbd_led_cap == led)
+		if (have_keyboard_leds && currprefs.kbd_led_cap == led)
 		{
 			if (on) kbd_led_status |= LED_CAP;
 			else kbd_led_status &= ~LED_CAP;
@@ -1094,17 +1094,17 @@ void gui_led(int led, int on, int brightness)
 	// Handle power, hd/cd led status
 	if (led == LED_POWER || led == LED_HD || led == LED_CD)
 	{
-		if (currprefs.kbd_led_num == led)
+		if (have_keyboard_leds && currprefs.kbd_led_num == led)
 		{
 			if (on) kbd_led_status |= LED_NUM;
 			else kbd_led_status &= ~LED_NUM;
 		}
-		if (currprefs.kbd_led_scr == led)
+		if (have_keyboard_leds && currprefs.kbd_led_scr == led)
 		{
 			if (on) kbd_led_status |= LED_SCR;
 			else kbd_led_status &= ~LED_SCR;
 		}
-		if (currprefs.kbd_led_cap == led)
+		if (have_keyboard_leds && currprefs.kbd_led_cap == led)
 		{
 			if (on) kbd_led_status |= LED_CAP;
 			else kbd_led_status &= ~LED_CAP;
@@ -1126,8 +1126,8 @@ void gui_led(int led, int on, int brightness)
 #endif
 	}
 
-	if (led_console_fd >= 0)
-		ioctl(led_console_fd, KDSETLED, kbd_led_status);
+	if (have_keyboard_leds)
+		amiberry_led_console_set_leds(kbd_led_status);
 
 	// Temperature reading
 	if (static unsigned int temp_count = 0; temp_fd >= 0 && ++temp_count % 25 == 0) {
