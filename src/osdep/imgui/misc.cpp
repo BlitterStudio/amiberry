@@ -5,6 +5,7 @@
 #include "statusline.h"
 #include "inputdevice.h"
 #include "registry.h"
+#include "gui.h"
 #include "gui/gui_handling.h"
 #include "target.h"
 
@@ -484,6 +485,8 @@ void render_panel_misc()
 			ImGui::TableSetupColumn("Combo", ImGuiTableColumnFlags_WidthStretch);
 
 			const char* led_items[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD"};
+			const int led_values[] = {-1, LED_POWER, LED_DF0, LED_DF1, LED_DF2, LED_DF3, LED_HD, LED_CD};
+			static_assert(IM_ARRAYSIZE(led_items) == IM_ARRAYSIZE(led_values));
 
 			auto LedRow = [&](const char* label, int* val) {
 				ImGui::TableNextRow();
@@ -493,7 +496,15 @@ void render_panel_misc()
 				ImGui::TableNextColumn();
 				ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 				const std::string combo_label = "##" + std::string(label);
-				ImGui::Combo(combo_label.c_str(), val, led_items, IM_ARRAYSIZE(led_items));
+				int combo_index = 0;
+				for (int i = 0; i < IM_ARRAYSIZE(led_values); ++i) {
+					if (*val == led_values[i]) {
+						combo_index = i;
+						break;
+					}
+				}
+				if (ImGui::Combo(combo_label.c_str(), &combo_index, led_items, IM_ARRAYSIZE(led_items)))
+					*val = led_values[combo_index];
 				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 			};
 
