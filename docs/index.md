@@ -248,6 +248,9 @@ Amiberry is free and open source. Corporate sponsors help keep development susta
       <p class="tier-price">€50/mo</p>
     </div>
     <p class="tier-description">Named on website, listed in release notes.</p>
+    <ul class="sponsor-names">
+      <li><a href="https://lame.team/" target="_blank" rel="noopener">Lame</a></li>
+    </ul>
     <div class="sponsor-slots">
       <a href="https://ko-fi.com/midwan" class="sponsor-badge">
         <img src="/assets/badges/badge-supporter.svg" alt="Become a Supporter"/>

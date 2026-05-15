@@ -453,6 +453,27 @@ hr {
     margin: 0;
   }
 
+  .sponsor-names {
+    list-style: none;
+    margin: 0.7rem 0 0;
+    padding: 0 1.2rem;
+
+    li {
+      font-size: 0.85rem;
+      color: #1f2328;
+      margin-bottom: 0.25rem;
+      line-height: 1.4;
+
+      a {
+        color: #1a6fb5;
+        font-weight: 600;
+        text-decoration: none;
+
+        &:hover { text-decoration: underline; }
+      }
+    }
+  }
+
   .sponsor-slots {
     padding: 0.8rem 1.2rem 1.2rem;
     display: flex;
