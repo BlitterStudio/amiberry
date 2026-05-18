@@ -170,7 +170,7 @@ int check_prefs_changed_gfx()
 
 		c |= gf->gfx_filter_aspect != gfc->gfx_filter_aspect ? (1) : 0;
 		c |= gf->gfx_filter_rotation != gfc->gfx_filter_rotation ? (1) : 0;
-		c |= gf->gfx_filter_keep_aspect != gfc->gfx_filter_keep_aspect ? (1) : 0;
+		c |= gf->gfx_filter_aspect_type != gfc->gfx_filter_aspect_type ? (1) : 0;
 		c |= gf->gfx_filter_keep_autoscale_aspect != gfc->gfx_filter_keep_autoscale_aspect ? (1) : 0;
 		c |= gf->gfx_filter_luminance != gfc->gfx_filter_luminance ? (1) : 0;
 		c |= gf->gfx_filter_contrast != gfc->gfx_filter_contrast ? (1) : 0;

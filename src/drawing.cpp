@@ -288,8 +288,6 @@ static bool denise_lock(void)
 	return true;
 }
 
-int scandoubled_line;
-
 struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
 
 typedef enum
@@ -1996,8 +1994,6 @@ static void setnativeposition(struct vidbuffer *vb)
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	vb->inwidth = vidinfo->inbuffer->inwidth;
 	vb->inheight = vidinfo->inbuffer->inheight;
-	vb->inwidth2 = vidinfo->inbuffer->inwidth2;
-	vb->inheight2 = vidinfo->inbuffer->inheight2;
 	vb->outwidth = vidinfo->inbuffer->outwidth;
 	vb->outheight = vidinfo->inbuffer->outheight;
 }

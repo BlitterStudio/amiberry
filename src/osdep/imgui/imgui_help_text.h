@@ -606,6 +606,8 @@ static const char* help_text_io =
 	"        this option, to emulate a null-modem cable connection. Some games supported\n"
 	"        this feature.\n"
 	"\n"
+	"CR/LF conversion: Translate serial line endings between Amiga and host conventions.\n"
+	"\n"
 	"uaeserial.device: You can use this option if you want to use multiple serial ports,\n"
 	"         by mapping Amiga side unit X = host serial port X\n"
 	"\n"

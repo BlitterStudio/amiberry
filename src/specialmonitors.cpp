@@ -93,8 +93,6 @@ static bool specialmonitor_setresolution(struct vidbuffer *src, struct vidbuffer
 	dst->outheight = height;
 	dst->inwidth = width;
 	dst->inheight = height;
-	dst->inwidth2 = width;
-	dst->inheight2 = height;
 	src->hardwiredpositioning = !nativeposition;
 	dst->hardwiredpositioning = !nativeposition;
 

@@ -57,7 +57,7 @@
 #define TAG_IGNORE 1
 #define TAG_MORE   2
 #define TAG_SKIP   3
-#define TAG_USER   (1 << 31)
+#define TAG_USER   (1UL << 31)
 
 #define NSDEVTYPE_UNKNOWN       0
 #define NSDEVTYPE_GAMEPORT      1

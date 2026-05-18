@@ -116,11 +116,20 @@ STATIC_INLINE evt_t get_cycles(void)
 {
 	return currcycle;
 }
-STATIC_INLINE uae_u32 get_cck_cycles(void)
+STATIC_INLINE evt_t get_cck_cycles(void)
 {
 	return currcycle_cck;
 }
-
+STATIC_INLINE uae_s32 get_cck_cycles_sub(evt_t cck1, evt_t cck2)
+{
+	assert(cck1 - cck2 < 0x10000000);
+	assert(cck1 - cck2 > -0x10000000);
+	return (uae_s32)(cck1 - cck2);
+}
+STATIC_INLINE uae_s32 get_cck_cycles_diff(evt_t cck)
+{
+	return get_cck_cycles_sub(get_cck_cycles(), cck);
+}
 STATIC_INLINE void set_cycles (evt_t x)
 {
 	currcycle = x;

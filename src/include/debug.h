@@ -116,10 +116,10 @@ extern void debug_smc_clear(uaecptr addr, int size);
 #define BREAKPOINT_CMP_NEQUAL 1
 #define BREAKPOINT_CMP_SMALLER_EQUAL 2
 #define BREAKPOINT_CMP_LARGER_EQUAL 3
-#define BREAKPOINT_CMP_SMALLER 2
-#define BREAKPOINT_CMP_LARGER 3
-#define BREAKPOINT_CMP_RANGE 4
-#define BREAKPOINT_CMP_NRANGE 5
+#define BREAKPOINT_CMP_SMALLER 4
+#define BREAKPOINT_CMP_LARGER 5
+#define BREAKPOINT_CMP_RANGE 6
+#define BREAKPOINT_CMP_NRANGE 7
 
 struct breakpoint_node {
 	uae_u32 value1;

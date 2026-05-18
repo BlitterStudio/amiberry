@@ -706,8 +706,9 @@ static void checkreceive_serial ()
 	static int ninebitdata;
 	int recdata;
 
-	if (!canreceive())
+	if (!canreceive()) {
 		return;
+	}
 
 	if (ninebit) {
 		bool breakcond;
@@ -836,26 +837,49 @@ static void checkreceive_serial ()
 #endif
 }
 
-static void outser()
+static bool outser()
 {
 	if (datainoutput <= 0)
-		return;
+		return true;
 #ifdef USE_LIBSERIALPORT
+	if (!port) {
+		datainoutput = 0;
+		return true;
+	}
 	memcpy(outputbufferout, outputbuffer, datainoutput);
-	int bytes_written = sp_blocking_write(port, outputbufferout, datainoutput, 1000);
+	int bytes_written = sp_blocking_write(port, outputbufferout, datainoutput, timeout);
 	if (bytes_written < 0) {
 		write_log("Failed to write to serial port: %d\n", bytes_written);
+		datainoutput = 0;
+		return false;
 	}
-	else if (bytes_written != datainoutput) {
-		write_log("Only wrote %d of %d bytes!\n", bytes_written, datainoutput);
+	if (bytes_written > datainoutput) {
+		bytes_written = datainoutput;
 	}
-#endif
+	if (bytes_written > 0) {
+		const int remaining = datainoutput - bytes_written;
+		if (remaining > 0) {
+			memmove(outputbuffer, outputbuffer + bytes_written, remaining);
+		}
+		datainoutput = remaining;
+	}
+	if (datainoutput > 0) {
+		return false;
+	}
+#else
 	datainoutput = 0;
+#endif
+	return true;
 }
 
 void writeser_flush()
 {
-	outser();
+	while (datainoutput > 0) {
+		const int pending = datainoutput;
+		if (!outser() && datainoutput >= pending) {
+			break;
+		}
+	}
 }
 
 void writeser(int c)
@@ -1370,7 +1394,7 @@ void SERPER(uae_u16 w)
 		serial_period_receive_ccks = maxhpos;
 		safe_receive = true;
 	}
-	if (sermap_enabled || serxdevice_enabled) {
+	if (sermap_enabled || serxdevice_enabled || currprefs.m68k_speed < 0) {
 		safe_receive = true;
 	}
 
@@ -1506,8 +1530,9 @@ uae_u16 SERDATR()
 	if (!data_in_serdatr) {
 		// interrupt was previously cleared but SERDATR was not read.
 		// Clear it now when SERDATR was read.
-		INTREQ_f(1 << 11);
+		INTREQ_INT(11, 0);
 	}
+	serdatr_last_got = 0;
 	return serdatr;
 }
 

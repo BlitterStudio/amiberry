@@ -195,6 +195,13 @@ void render_panel_io()
 		ShowHelpMarker("Emulate serial port status lines (RTS, CTS, DTR, DSR, CD)");
 		ImGui::TableNextColumn(); AmigaCheckbox("Serial status: Ring Indicator", &changed_prefs.serial_ri);
 		ShowHelpMarker("Emulate the RI serial line used by modems");
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		bool serial_crlf = changed_prefs.serial_crlf != 0;
+		if (AmigaCheckbox("CR/LF conversion", &serial_crlf)) {
+			changed_prefs.serial_crlf = serial_crlf ? 1 : 0;
+		}
+		ShowHelpMarker("Translate serial line endings between Amiga and host CR/LF conventions");
 		ImGui::EndTable();
 	}
 

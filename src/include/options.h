@@ -373,6 +373,11 @@ struct apmode
 
 #define MAX_LUA_STATES 16
 
+#define ASPECT_TYPE_NONE 0
+#define ASPECT_TYPE_VGA 1
+#define ASPECT_TYPE_TV_AUTO 2
+#define ASPECT_TYPE_TV_PAL 3
+#define ASPECT_TYPE_TV_NTSC 4
 
 #define MAX_FILTERDATA 3
 #define GF_NORMAL 0
@@ -401,7 +406,7 @@ struct gfx_filterdata
 	int gfx_filter_noise, gfx_filter_blur;
 	int gfx_filter_saturation, gfx_filter_luminance, gfx_filter_contrast;
 	int gfx_filter_gamma, gfx_filter_gamma_ch[3];
-	int gfx_filter_keep_aspect, gfx_filter_aspect;
+	int gfx_filter_aspect_type, gfx_filter_aspect;
 	int gfx_filter_autoscale;
 	int gfx_filter_integerscalelimit;
 	int gfx_filter_keep_autoscale_aspect;
@@ -1146,7 +1151,6 @@ extern void cfgfile_target_write_bool(struct zfile* f, const TCHAR* option, bool
 extern void cfgfile_target_dwrite_bool(struct zfile* f, const TCHAR* option, bool b);
 
 extern void cfgfile_write_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
-//extern void cfgfile_write_str_escape(struct zfile *f, const TCHAR *option, const TCHAR *value);
 extern void cfgfile_dwrite_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
 extern void cfgfile_target_write_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
 extern void cfgfile_target_dwrite_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
