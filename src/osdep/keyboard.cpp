@@ -424,14 +424,9 @@ static bool handle_amiberry_hotkey(const int scancode, const int newstate,
 	return false;
 }
 
-bool my_kbd_host_hotkey_handler(const int scancode, const int newstate)
+bool my_kbd_host_hotkey_handler(const int scancode, const int newstate,
+	const bool ctrl_state, const bool shift_state, const bool alt_state, const bool win_state)
 {
-	const bool* state = SDL_GetKeyboardState(nullptr);
-	const bool ctrl_state = state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
-	const bool shift_state = state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT];
-	const bool alt_state = state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT];
-	const bool win_state = state[SDL_SCANCODE_LGUI] || state[SDL_SCANCODE_RGUI];
-
 	return handle_amiberry_hotkey(scancode, newstate, ctrl_state, shift_state, alt_state, win_state);
 }
 

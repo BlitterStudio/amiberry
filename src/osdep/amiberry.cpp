@@ -2481,6 +2481,81 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 	}
 }
 
+static int normalize_host_key_scancode(int scancode)
+{
+	if (key_swap_hack == 1) {
+		if (scancode == SDL_SCANCODE_F11) {
+			scancode = SDL_SCANCODE_BACKSLASH;
+		}
+		else if (scancode == SDL_SCANCODE_BACKSLASH) {
+			scancode = SDL_SCANCODE_F11;
+		}
+	}
+	if (key_swap_end_pgup) {
+		if (scancode == SDL_SCANCODE_END) {
+			scancode = SDL_SCANCODE_PAGEUP;
+		}
+		else if (scancode == SDL_SCANCODE_PAGEUP) {
+			scancode = SDL_SCANCODE_END;
+		}
+	}
+	if (left_amiga_key.scancode && scancode == left_amiga_key.scancode) {
+		scancode = SDL_SCANCODE_LGUI;
+	}
+	if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key) && scancode == SDL_SCANCODE_RCTRL)
+	{
+		scancode = SDL_SCANCODE_RGUI;
+	}
+	if (right_amiga_key.scancode && scancode == right_amiga_key.scancode)
+	{
+		scancode = SDL_SCANCODE_RGUI;
+	}
+	return scancode;
+}
+
+static void apply_host_modifier_state(const int scancode,
+	bool& ctrl_state, bool& shift_state, bool& alt_state, bool& win_state)
+{
+	switch (scancode)
+	{
+	case SDL_SCANCODE_LCTRL:
+	case SDL_SCANCODE_RCTRL:
+		ctrl_state = true;
+		break;
+	case SDL_SCANCODE_LSHIFT:
+	case SDL_SCANCODE_RSHIFT:
+		shift_state = true;
+		break;
+	case SDL_SCANCODE_LALT:
+	case SDL_SCANCODE_RALT:
+		alt_state = true;
+		break;
+	case SDL_SCANCODE_LGUI:
+	case SDL_SCANCODE_RGUI:
+		win_state = true;
+		break;
+	default:
+		break;
+	}
+}
+
+static void get_host_hotkey_modifier_state(const int event_scancode, const bool pressed,
+	bool& ctrl_state, bool& shift_state, bool& alt_state, bool& win_state)
+{
+	ctrl_state = false;
+	shift_state = false;
+	alt_state = false;
+	win_state = false;
+
+	const bool* state = SDL_GetKeyboardState(nullptr);
+	for (int i = 0; i < SDL_SCANCODE_COUNT; ++i) {
+		if (state[i])
+			apply_host_modifier_state(normalize_host_key_scancode(i), ctrl_state, shift_state, alt_state, win_state);
+	}
+	if (pressed)
+		apply_host_modifier_state(event_scancode, ctrl_state, shift_state, alt_state, win_state);
+}
+
 static void handle_key_event(const SDL_Event& event)
 {
 #ifdef __ANDROID__
@@ -2525,36 +2600,12 @@ static void handle_key_event(const SDL_Event& event)
 		}
 	}
 
-	if (key_swap_hack == 1) {
-		if (scancode == SDL_SCANCODE_F11) {
-			scancode = SDL_SCANCODE_BACKSLASH;
-		}
-		else if (scancode == SDL_SCANCODE_BACKSLASH) {
-			scancode = SDL_SCANCODE_F11;
-		}
-	}
-	if (key_swap_end_pgup) {
-		if (scancode == SDL_SCANCODE_END) {
-			scancode = SDL_SCANCODE_PAGEUP;
-		}
-		else if (scancode == SDL_SCANCODE_PAGEUP) {
-			scancode = SDL_SCANCODE_END;
-		}
-	}
-	if (left_amiga_key.scancode && scancode == left_amiga_key.scancode) {
-		scancode = SDL_SCANCODE_LGUI;
-	}
-	if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key) && scancode == SDL_SCANCODE_RCTRL)
-	{
-		scancode = SDL_SCANCODE_RGUI;
-	}
-	if (right_amiga_key.scancode && scancode == right_amiga_key.scancode)
-	{
-		scancode = SDL_SCANCODE_RGUI;
-	}
+	scancode = normalize_host_key_scancode(scancode);
 
 	if (!mouseactive) {
-		my_kbd_host_hotkey_handler(scancode, pressed);
+		bool ctrl_state, shift_state, alt_state, win_state;
+		get_host_hotkey_modifier_state(scancode, pressed, ctrl_state, shift_state, alt_state, win_state);
+		my_kbd_host_hotkey_handler(scancode, pressed, ctrl_state, shift_state, alt_state, win_state);
 		return;
 	}
 

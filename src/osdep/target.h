@@ -76,7 +76,7 @@ extern std::string screenshot_filename;
 extern void logging_init();
 
 extern bool my_kbd_handler(int, int, int, bool);
-extern bool my_kbd_host_hotkey_handler(int, int);
+extern bool my_kbd_host_hotkey_handler(int, int, bool, bool, bool, bool);
 extern void clearallkeys();
 extern int getcapslock();
 
