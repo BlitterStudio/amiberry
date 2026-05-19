@@ -422,11 +422,11 @@ static inline int x86_RIP_addressing_possible(uintptr addr, uintptr offset)
 #if X86_TARGET_64BIT
 	/*
 	 * address of the next instruction.
-	 * The opcode has already been emitted,
-	 * so this is the size of a 32-bit displacement +
+	 * The opcode has already been emitted, but the ModR/M byte has not,
+	 * so this is the size of the ModR/M byte + a 32-bit displacement +
 	 * the size of any immediate value that is part of the instruction (offset),
 	 */
-	uintptr next = (uintptr)get_target() + 4 + offset;
+	uintptr next = (uintptr)get_target() + 1 + 4 + offset;
 	if (addr >= next) {
 		return addr - next <= 0x7fffffffULL;
 	}
