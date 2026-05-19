@@ -15,6 +15,7 @@
 #include "fsdb.h"
 #include "uae.h"
 #include "xwin.h"
+#include "target.h"
 #include "tabletlibrary.h"
 
 enum
@@ -375,11 +376,8 @@ int keyhack (const int scancode, const int pressed, const int num)
 	if (currprefs.alt_tab_release)
 	{
 		if (pressed && scancode == SDL_SCANCODE_TAB && (key_altpressed() || state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT])) {
-			const AmigaMonitor* mon = &AMonitors[0];
-			if (mon->amiga_window) {
-				SDL_SetWindowMouseGrab(mon->amiga_window, false);
-				SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
-			}
+			if (ismouseactive())
+				disablecapture();
 			return -1;
 		}
 	}

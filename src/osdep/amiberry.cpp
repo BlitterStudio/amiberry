@@ -151,6 +151,8 @@ static int pending_mousecapture_active;
 // recapture on focus_gained and the window-position snap-back heuristic
 // so that release sticks until the user clicks back inside the window.
 static bool user_released_capture;
+static bool suppress_capture_click_release;
+static SDL_MouseID suppress_capture_click_mouse_id;
 int mouseactive;
 int mouse_monid;
 int minimized;
@@ -973,7 +975,7 @@ void setsoundpaused()
 #endif
 }
 
-bool resumepaused(const int priority)
+static bool resumepaused_internal(const int priority, const bool restorecapture)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 	if (pause_emulation > priority)
@@ -987,12 +989,23 @@ bool resumepaused(const int priority)
 		pausemouseactive = 0;
 		// In Amiberry, we'll do this for Full Window and Fullscreen both.
 		// Otherwise, KMSDRM did not get the focus after resuming from the GUI
-		setmouseactive(mon->monitor_id, isfullscreen() != 0 ? 1 : -1);
+		if (restorecapture)
+			setmouseactive(mon->monitor_id, isfullscreen() != 0 ? 1 : -1);
 	}
 	pause_emulation = 0;
 	setsystime();
 	wait_keyrelease();
 	return true;
+}
+
+bool resumepaused(const int priority)
+{
+	return resumepaused_internal(priority, true);
+}
+
+bool resumepaused_without_mouse_capture(const int priority)
+{
+	return resumepaused_internal(priority, false);
 }
 
 bool setpaused(const int priority)
@@ -1006,9 +1019,8 @@ bool setpaused(const int priority)
 	pause_emulation = priority;
 	devices_pause();
 	setsoundpaused();
-	pausemouseactive = 1;
+	pausemouseactive = mouseactive;
 	if (isfullscreen() <= 0) {
-		pausemouseactive = mouseactive;
 		setmouseactive(mon->monitor_id, 0);
 	}
 	return true;
@@ -1169,11 +1181,25 @@ static bool apply_mouse_capture_grabs(AmigaMonitor*) { return true; }
 
 void releasecapture(const AmigaMonitor* mon)
 {
-	SDL_SetWindowMouseGrab(mon->amiga_window, false);
-	SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
-	SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
+	if (mon && mon->amiga_window) {
+		SDL_SetWindowMouseGrab(mon->amiga_window, false);
+		SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
+		SDL_SetWindowRelativeMouseMode(mon->amiga_window, false);
+	}
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
+}
+
+static void releasecapture_state_only()
+{
+	AmigaMonitor* mon = &AMonitors[0];
+	if (mouseactive > 0 && mouseactive <= MAX_AMIGAMONITORS)
+		mon = &AMonitors[mouseactive - 1];
+	releasecapture(mon);
+	mouseactive = 0;
+	recapture = 0;
+	suppress_capture_click_release = false;
+	clear_pending_mouse_capture();
 }
 
 static void restore_active_mouse_capture(AmigaMonitor* mon)
@@ -1248,12 +1274,10 @@ bool ismouseactive ()
 
 void target_inputdevice_unacquire(const bool full)
 {
-	const AmigaMonitor* mon = &AMonitors[0];
 	close_tablet(tablet);
 	tablet = NULL;
 	if (full) {
-		SDL_SetWindowMouseGrab(mon->amiga_window, false);
-		SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
+		releasecapture_state_only();
 	}
 }
 void target_inputdevice_acquire()
@@ -1261,8 +1285,6 @@ void target_inputdevice_acquire()
 	const AmigaMonitor* mon = &AMonitors[0];
 	target_inputdevice_unacquire(false);
 	tablet = open_tablet(mon->amiga_window);
-	SDL_SetWindowMouseGrab(mon->amiga_window, true);
-	SDL_SetWindowKeyboardGrab(mon->amiga_window, !currprefs.alt_tab_release);
 }
 
 static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause)
@@ -1276,8 +1298,15 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 		return;
 	const int lastmouseactive = mouseactive;
 
-	if (active == 0)
-		releasecapture(mon);
+	if (active == 0) {
+		AmigaMonitor* capture_mon = mon;
+		if (lastmouseactive > 0 && lastmouseactive <= MAX_AMIGAMONITORS)
+			capture_mon = &AMonitors[lastmouseactive - 1];
+		releasecapture(capture_mon);
+		suppress_capture_click_release = false;
+		if (lastmouseactive)
+			wait_keyrelease();
+	}
 	if (mouseactive == active && active >= 0)
 		return;
 
@@ -1427,9 +1456,8 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 	}
 	getcapslock();
 	wait_keyrelease();
-	if (isfullscreen() > 0 || (currprefs.capture_always && !user_released_capture)) {
+	if (currprefs.capture_always && !user_released_capture) {
 		setmouseactive(mon->monitor_id, 1);
-		inputdevice_acquire(TRUE);
 	}
 	clipboard_active(1, 1);
 }
@@ -1537,6 +1565,12 @@ void disablecapture()
 		setsoundpaused();
 		sound_closed = -1;
 	}
+}
+
+void suppresscapture()
+{
+	user_released_capture = true;
+	clear_pending_mouse_capture();
 }
 
 void setmouseactivexy(const int monid, int x, int y, const int dir)
@@ -2465,13 +2499,6 @@ static void handle_key_event(const SDL_Event& event)
 	const int focus_level = isfocus();
 	if (event.key.repeat || !focus_level)
 		return;
-	
-	// Only apply the virtual mouse focus restriction in windowed mode.
-	// In fullscreen/full-window modes (including KMSDRM console), keyboard should work
-	// because console mode never receives SDL_EVENT_WINDOW_MOUSE_ENTER, leaving mouseinside false.
-	if (isfullscreen() == 0 && focus_level < 2 && 
-		currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
-		return;
 
 	int scancode = event.key.scancode;
 	const auto pressed = event.key.down;
@@ -2525,6 +2552,19 @@ static void handle_key_event(const SDL_Event& event)
 	{
 		scancode = SDL_SCANCODE_RGUI;
 	}
+
+	if (!mouseactive) {
+		my_kbd_host_hotkey_handler(scancode, pressed);
+		return;
+	}
+
+	// Only apply the virtual mouse focus restriction in windowed mode.
+	// In fullscreen/full-window modes (including KMSDRM console), keyboard should work
+	// because console mode never receives SDL_EVENT_WINDOW_MOUSE_ENTER, leaving mouseinside false.
+	if (isfullscreen() == 0 && focus_level < 2 &&
+		currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+		return;
+
 	scancode = keyhack(scancode, pressed, 0);
 	if (scancode >= 0)
 	{
@@ -2599,7 +2639,7 @@ static void handle_android_two_finger_swipe(const SDL_Event& event)
 
 static void handle_finger_event(const SDL_Event& event)
 {
-	if (!isfocus())
+	if (!mouseactive || isfocus() <= 0)
 		return;
 #ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
@@ -2644,14 +2684,28 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 	const auto clicks = event.button.clicks;
 	const int midx = get_mouse_index_from_sdl_id(event.button.which);
 
+	if (suppress_capture_click_release && button == SDL_BUTTON_LEFT
+		&& event.button.which == suppress_capture_click_mouse_id) {
+		suppress_capture_click_release = false;
+		if (!state)
+			return;
+	}
+
 	if (button == SDL_BUTTON_LEFT && !mouseactive && (!mousehack_alive() || currprefs.input_tablet != TABLET_MOUSEHACK ||
 		(currprefs.input_tablet == TABLET_MOUSEHACK && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))))
 	{
+		if (!state)
+			return;
 		mouseinside = true;
-		if (!pause_emulation || currprefs.active_nocapture_pause)
+		if (!pause_emulation || currprefs.active_nocapture_pause) {
 			setmouseactive(mon->monitor_id, (clicks == 1 || isfullscreen() > 0) ? 2 : 1);
+			if (mouseactive) {
+				suppress_capture_click_release = true;
+				suppress_capture_click_mouse_id = event.button.which;
+			}
+		}
 	}
-	else if (isfocus())
+	else if (mouseactive && isfocus() > 0)
 	{
 		switch (button)
 		{
@@ -2685,7 +2739,7 @@ static void handle_finger_motion_event(const SDL_Event& event)
 	if (pen_in_proximity && currprefs.input_tablet > 0)
 		return;
 #endif
-	if (isfocus() && event.tfinger.fingerID == 0)
+	if (mouseactive && isfocus() > 0 && event.tfinger.fingerID == 0)
 	{
 		// Use relative movement for better control (Laptop touchpad style)
 		// Scale normalized coords (0..1) to window pixels
@@ -2720,7 +2774,7 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		return;
 	}
 
-	if (isfocus() <= 0) return;
+	if (!mouseactive || isfocus() <= 0) return;
 
 	const int midx = get_mouse_index_from_sdl_id(event.motion.which);
 
@@ -2789,7 +2843,7 @@ static int get_mouse_wheel_ticks(const SDL_MouseWheelEvent& wheel, const int mid
 
 static void handle_mouse_wheel_event(const SDL_Event& event)
 {
-	if (isfocus() <= 0) return;
+	if (!mouseactive || isfocus() <= 0) return;
 
 	const int midx = get_mouse_index_from_sdl_id(event.wheel.which);
 	const int val_y = get_mouse_wheel_ticks(event.wheel, midx, 1);
@@ -4247,9 +4301,7 @@ bool target_execute(const char* command)
 	if (!command)
 		return false;
 
-	AmigaMonitor* mon = &AMonitors[0];
-	releasecapture(mon);
-	mouseactive = 0;
+	disablecapture();
 
 	write_log("Target_execute received: %s\n", command);
 	

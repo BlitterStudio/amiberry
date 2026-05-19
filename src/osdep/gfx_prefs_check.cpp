@@ -580,6 +580,8 @@ int check_prefs_changed_gfx()
 		resume_sound();
 		//refreshtitle();
 		inputdevice_acquire(TRUE);
+		if (mouseactive > 0)
+			setmouseactive(mouseactive - 1, 2);
 #ifndef	_DEBUG
 		setpriority(currprefs.active_capture_priority);
 #endif
