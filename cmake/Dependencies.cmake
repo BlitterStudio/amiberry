@@ -600,92 +600,89 @@ if(NOT IOS)
 endif()
 add_subdirectory(external/capsimage)
 
-# Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
-# On Android, SDL3_image is already linked via the FetchContent target (line ~187).
-if(ANDROID)
-    set(_SDL_IMAGE_LIB "")
-elseif(TARGET SDL3_image::SDL3_image)
-    set(_SDL_IMAGE_LIB SDL3_image::SDL3_image)
-elseif(SDL3_IMAGE_LIBRARIES)
-    set(_SDL_IMAGE_LIB ${SDL3_IMAGE_LIBRARIES})
-else()
-    set(_SDL_IMAGE_LIB SDL3_image)
-endif()
+    # Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
+    # On Android, SDL3_image is already linked via the FetchContent target (line ~187).
+    if(ANDROID)
+        # Android SDL3/SDL3_image are already linked directly above.
+        set(_SDL_IMAGE_LIB "")
+    elseif(TARGET SDL3_image::SDL3_image)
+        set(_SDL_IMAGE_LIB SDL3_image::SDL3_image)
+    elseif(SDL3_IMAGE_LIBRARIES)
+        set(_SDL_IMAGE_LIB ${SDL3_IMAGE_LIBRARIES})
+    else()
+        set(_SDL_IMAGE_LIB SDL3_image)
+    endif()
 
-set(AMIBERRY_LIBS
+    # Direct target linking preserves transitive includes & compile definitions
+    target_link_libraries(${PROJECT_NAME} PRIVATE
         mt32emu
         ZLIB::ZLIB
         nlohmann_json::nlohmann_json
         ${CMAKE_DL_LIBS}
-        ${_SDL_IMAGE_LIB}
-)
+    )
 
-# CURL is used for self-update (not available on iOS)
-if(TARGET CURL::libcurl)
-    list(APPEND AMIBERRY_LIBS CURL::libcurl)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
-elseif(CURL_FOUND)
-    list(APPEND AMIBERRY_LIBS ${CURL_LIBRARIES})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
-endif()
+    if(_SDL_IMAGE_LIB)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${_SDL_IMAGE_LIB})
+    endif()
 
-if (NOT ANDROID AND NOT WIN32)
-    list(APPEND AMIBERRY_LIBS pthread)
-endif()
+    # CURL is used for self-update (not available on iOS)
+    if(TARGET CURL::libcurl)
+        target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
+    elseif(CURL_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${CURL_LIBRARIES})
+        target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
+    endif()
 
-# llvm-mingw (clang) on Windows does not auto-link winpthread, so
-# clock_gettime / nanosleep (which live in libwinpthread-1 on mingw-w64)
-# come up as undefined at link time. The legacy MinGW-w64 GCC build —
-# which pulled winpthread in implicitly via its driver spec — was retired
-# in PR #2026, so on Windows we now always need this explicit link for
-# both Windows ARM64 and x86_64.
-if (WIN32)
-    list(APPEND AMIBERRY_LIBS winpthread)
-endif()
+    if (NOT ANDROID AND NOT WIN32)
+        target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+    endif()
 
-if(TARGET FLAC)
-    list(APPEND AMIBERRY_LIBS FLAC)
-elseif(FLAC_FOUND)
-     # Fallback if FLAC_FOUND is set but target not visible (old FindFLAC)
-     list(APPEND AMIBERRY_LIBS ${FLAC_LIBRARIES})
-endif()
+    # llvm-mingw (clang) on Windows does not auto-link winpthread
+    if (WIN32)
+        target_link_libraries(${PROJECT_NAME} PRIVATE winpthread)
+    endif()
 
-if(TARGET PNG::PNG)
-    list(APPEND AMIBERRY_LIBS PNG::PNG)
-elseif(TARGET png_static)
-    list(APPEND AMIBERRY_LIBS png_static)
-elseif(TARGET png)
-    list(APPEND AMIBERRY_LIBS png)
-elseif(PNG_FOUND)
-    list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
-endif()
+    if(TARGET FLAC)
+        target_link_libraries(${PROJECT_NAME} PRIVATE FLAC)
+    elseif(FLAC_FOUND)
+         target_link_libraries(${PROJECT_NAME} PRIVATE ${FLAC_LIBRARIES})
+    endif()
 
-if(TARGET MPG123::libmpg123)
-    list(APPEND AMIBERRY_LIBS MPG123::libmpg123)
-elseif(TARGET libmpg123)
-    list(APPEND AMIBERRY_LIBS libmpg123)
-elseif(MPG123_FOUND)
-    list(APPEND AMIBERRY_LIBS ${MPG123_LIBRARIES})
-endif()
+    if(TARGET PNG::PNG)
+        target_link_libraries(${PROJECT_NAME} PRIVATE PNG::PNG)
+    elseif(TARGET png_static)
+        target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
+    elseif(TARGET png)
+        target_link_libraries(${PROJECT_NAME} PRIVATE png)
+    elseif(PNG_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${PNG_LIBRARIES})
+    endif()
 
-if(TARGET libzstd_static)
-    list(APPEND AMIBERRY_LIBS libzstd_static)
-elseif(TARGET zstd)
-    list(APPEND AMIBERRY_LIBS zstd)
-elseif(ZSTD_FOUND)
-    list(APPEND AMIBERRY_LIBS ${ZSTD_LIBRARIES})
-endif()
+    if(TARGET MPG123::libmpg123)
+        target_link_libraries(${PROJECT_NAME} PRIVATE MPG123::libmpg123)
+    elseif(TARGET libmpg123)
+        target_link_libraries(${PROJECT_NAME} PRIVATE libmpg123)
+    elseif(MPG123_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${MPG123_LIBRARIES})
+    endif()
 
-if(ANDROID)
-    list(APPEND AMIBERRY_LIBS log android)
-endif()
+    if(TARGET libzstd_static)
+        target_link_libraries(${PROJECT_NAME} PRIVATE libzstd_static)
+    elseif(TARGET zstd)
+        target_link_libraries(${PROJECT_NAME} PRIVATE zstd)
+    elseif(ZSTD_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+    endif()
 
-# Do not add SDL as a raw library name; Android must link SDL via the CMake target above.
-if(ANDROID)
-    list(REMOVE_ITEM AMIBERRY_LIBS SDL3 pthread)
-endif()
+    if(ANDROID)
+        target_link_libraries(${PROJECT_NAME} PRIVATE log android)
+    endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBS})
+    # Do not add SDL as a raw library name; Android must link SDL via the CMake target above.
+    if(ANDROID)
+        # No need to remove from list anymore since we link directly
+    endif()
 
 # ImGui is always enabled
 if(USE_OPENGL)
