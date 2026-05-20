@@ -5,12 +5,12 @@ when merging to Amiberry.
 
 Note: Most core emulation code (CPU, chipset, etc.) is identical between WinUAE
 and Amiberry. This script focuses on platform-specific code that requires adaptation:
-- Graphics (Direct3D → OpenGL)
-- Audio (WASAPI → SDL2)
-- Input (DirectInput → SDL2)
+- Graphics (Direct3D → OpenGL/Vulkan/SDL3 renderer)
+- Audio (WASAPI → SDL3)
+- Input (DirectInput → SDL3)
 - GUI (Win32 → ImGui)
 - File I/O (Windows APIs → POSIX)
-- Threading (Win32 → SDL2/pthreads)
+- Threading (Win32 → SDL3/pthreads)
 """
 
 import re

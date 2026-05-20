@@ -18,16 +18,17 @@ Update the version string in ALL of these files:
 
 | File | Field / Line | Notes |
 |------|-------------|-------|
-| `CMakeLists.txt` (root, line ~4) | `project(amiberry VERSION X.Y.Z)` | Single source of truth; Android derives from this |
+| `CMakeLists.txt` (root) | `VERSION X.Y.Z` inside `project(amiberry ...)` and `VERSION_PRE_RELEASE` | Single source of truth; Android and CPack derive from this. Clear `VERSION_PRE_RELEASE` for stable releases; use a numeric value for pre-releases |
 | `vcpkg.json` | `"version": "X.Y.Z"` | Must match CMake |
 | `packaging/linux/Amiberry.metainfo.xml` | Add new `<release>` entry at top of `<releases>` | Include date (YYYY-MM-DD) and `<description><p>` summary |
 | `packaging/rpm/amiberry.spec` | `Version:` field + new `%changelog` entry | Use RPM date format: `* Thu Mar 26 2026 Dimitris Panokostas <midwan@gmail.com> - X.Y.Z-1` |
-| `packaging/flatpak/com.blitterstudio.amiberry.yml` | `tag: vX.Y.Z` | The `commit:` hash is updated on the flathub repo, not here |
+| `packaging/flatpak/com.blitterstudio.amiberry.yml` | `tag: vX.Y.Z` plus matching `commit:` if maintained here | The Flathub repo may still need its own manifest update |
 
 ### 2. Commit, Push, Tag
 
 ```bash
-git add packaging/flatpak/com.blitterstudio.amiberry.yml \
+git add CMakeLists.txt \
+       packaging/flatpak/com.blitterstudio.amiberry.yml \
        packaging/linux/Amiberry.metainfo.xml \
        packaging/rpm/amiberry.spec \
        vcpkg.json
@@ -42,7 +43,6 @@ The tag push triggers CI builds and artifact publishing via `.github/workflows/c
 ### 3. Files NOT Needing Manual Update
 
 - **Android version**: Derived automatically from `CMakeLists.txt` `project(VERSION)` via Gradle
-- **Flatpak commit hash**: Updated on the flathub repo, not in this repo
 - **DEB packaging**: Version derived from CMake at build time
 
 ## Release Notes

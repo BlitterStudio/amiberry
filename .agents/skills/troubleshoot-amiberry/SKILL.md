@@ -1,22 +1,16 @@
 ---
 name: troubleshoot-amiberry
-description: Autonomous troubleshooting workflow for Amiberry bugs. Use this when investigating, reproducing, or fixing bugs in Amiberry, especially renderer or input regressions, HiDPI or SDL3 logical-presentation bugs, Vulkan capability or swapchain failures, or general crash and behavior regressions. Provides a complete edit-build-run-test-fix cycle using the Amiberry MCP server tools for process management, IPC control, screenshot analysis, log monitoring, and crash detection.
-allowed-tools: Bash(cmake:*), Bash(make:*), Bash(wsl:*), Read, Write, Edit, Grep, Glob
-argument-hint: [bug description or issue number]
+description: Use when investigating, reproducing, or fixing Amiberry bugs, especially renderer or input regressions, HiDPI or SDL3 logical-presentation bugs, Vulkan capability or swapchain failures, crash regressions, or behavior regressions. Follow an edit-build-run-test-fix cycle, using Amiberry MCP runtime-control tools when they are configured and falling back to normal process, log, screenshot, and debugger tools otherwise.
 ---
 
 # Amiberry Autonomous Troubleshooting
 
 Debug and fix Amiberry bugs through iterative edit-build-run-test-fix cycles with minimal user interaction.
 
-## Bug to investigate
-
-$ARGUMENTS
-
 ## Environment
 
 Amiberry source is at the current working directory (or a nearby `amiberry/` directory).
-The MCP server (`amiberry-mcp-server`) provides tools for runtime control.
+If the Amiberry MCP server (`amiberry-mcp-server`) is configured, use it for runtime control and observation. If it is not available, fall back to normal process launch, logs, screenshots, and debugger tools.
 
 **Determine the platform** before building:
 - **macOS**: Build natively with `cmake`
@@ -31,12 +25,12 @@ The MCP server (`amiberry-mcp-server`) provides tools for runtime control.
 cmake -B build -DCMAKE_BUILD_TYPE=Debug -DUSE_IPC_SOCKET=ON
 
 # Build (subsequent changes)
-cmake --build build -j$(nproc)
+cmake --build build --parallel
 ```
 
 ### Windows host targeting WSL2
 ```bash
-wsl -e bash -c "cd ~/amiberry && cmake --build build -j$(nproc)"
+wsl -e bash -c "cd ~/amiberry && cmake --build build --parallel"
 ```
 
 ### Windows (native llvm-mingw)
@@ -71,8 +65,8 @@ ninja -j12
 1. Read the bug description / issue carefully
 2. Identify which subsystem is likely involved (graphics, input, audio, CPU emulation, chipset, config, GUI, etc.)
 3. Search the codebase for relevant code:
-   - Use `Grep` to find related functions, variables, error messages
-   - Use `Glob` to find relevant source files
+   - Use `rg` to find related functions, variables, error messages
+   - Use `rg --files` to find relevant source files
    - Read the code to understand the current behavior
 4. Form a hypothesis about the root cause
 
@@ -120,12 +114,12 @@ Before editing, decide whether the bug is in a shared subsystem or only one rend
 
 ### Phase 3: Fix
 
-1. **Make code changes** using Edit tool on the Amiberry source files
+1. **Make code changes** using `apply_patch` on the Amiberry source files
 2. **Keep changes minimal** - fix only what's broken, don't refactor surrounding code
 3. **Kill the running instance**: Use `kill_amiberry`
 4. **Rebuild**:
    ```bash
-   cmake --build build -j$(nproc)
+   cmake --build build --parallel
    ```
 5. Check build output for errors. If build fails, fix and retry.
 
@@ -160,7 +154,9 @@ Summarize:
 - How to verify the fix
 - Any side effects or concerns
 
-## Available MCP Tools Reference
+## Amiberry MCP Tools Reference
+
+Use these tools when the Amiberry MCP server is available in the current session.
 
 ### Process Lifecycle
 | Tool | Purpose |
@@ -246,7 +242,7 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 
 ## macOS Path Notes
 
-- macOS HOME directory is `~/Library/Application Support/Amiberry` (contains a space).
+- macOS user data now defaults to `~/Documents/Amiberry`; startup migration handles legacy `~/Library/Application Support/Amiberry`.
 - When constructing shell commands with paths, always quote arguments.
 - `download_file()` properly quotes paths in curl/wget commands via `popen()`.
 - `create_missing_amiberry_folders()` uses `std::filesystem::copy()` instead of `system("cp -R ...")`.
@@ -271,7 +267,7 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 ## Input & On-Screen Joystick Troubleshooting
 
 - **On-screen D-pad acts like a mouse instead of joystick**: Two possible causes:
-  1. **SDL touch-to-mouse synthesis**: SDL2 synthesizes `SDL_MOUSEBUTTONDOWN`/`SDL_MOUSEMOTION` from touch events by default. Fix: filter `event.button.which == SDL_TOUCH_MOUSEID` / `event.motion.which == SDL_TOUCH_MOUSEID` in mouse event handlers when on-screen joystick is active (done in `amiberry.cpp`).
+  1. **SDL touch-to-mouse synthesis**: SDL3 can synthesize `SDL_EVENT_MOUSE_BUTTON_*` / `SDL_EVENT_MOUSE_MOTION` from touch events. Fix: filter `event.button.which == SDL_TOUCH_MOUSEID` / `event.motion.which == SDL_TOUCH_MOUSEID` in mouse event handlers when on-screen joystick or the on-screen keyboard is active. Pen/stylus paths also use `SDL_PEN_MOUSEID` filtering in `amiberry_input.cpp`.
   2. **Wrong port assignment**: Another device (e.g., Android accelerometer) may be assigned to Port 1, overriding the on-screen joystick. The on-screen joystick auto-assigns to Port 1 via `on_screen_joystick_set_enabled(true)`, but check `changed_prefs.jports[1].id` to verify.
 
 - **On-screen joystick not appearing in Input dropdown**: The virtual device is only registered when `currprefs.onscreen_joystick` is enabled. Check this preference first. Then verify registration in `init_joystick()` (`input_platform_internal_host.h`): `num_joystick < MAX_INPUT_DEVICES` and `osj_device_index` is set. The device appears as "On-Screen Joystick" in the joystick device list.
@@ -288,5 +284,5 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - **Winsock differences**: `close()` → `closesocket()`, `ioctl()` → `ioctlsocket()`, `errno` → `WSAGetLastError()`. Check `src/slirp/` for patterns.
 - **No log output**: `write_log()` returns early if neither `--log` nor `write_logfile` is enabled. Always pass `--log` when debugging.
 - **GUI crash on startup (missing data dir)**: If the `data/` directory (fonts, icons) is missing from the runtime working directory, ImGui's `AddFontFromFileTTF` asserts and crashes in debug builds (exit code 3). Fix: `main_window.cpp` checks `std::filesystem::exists(font_path)` before loading. Deployment fix: copy `data/` from source tree to working directory.
-- **Config save does nothing**: MinGW links `msvcrt.dll` which doesn't support `"ccs=UTF-8"` fopen mode (`errno=22`). Fixed with plain `"w"`/`"rt"`/`"wt"` modes under `#ifdef AMIBERRY` in `cfgfile.cpp` and `ini.cpp`.
+- **Config save does nothing**: WinUAE-style `"ccs=UTF-8"` modes and POSIX `'e'` close-on-exec modes are not portable across Amiberry's Windows path. Use plain `"w"`/`"rt"`/`"wt"` modes under `#ifdef AMIBERRY` in `cfgfile.cpp`/`ini.cpp`, and use `uae_fopen()` for paths that need `'e'` stripped on Windows.
 - **Hardfile RDB not detected in GUI**: ImGui `hd.cpp` was missing `hardfile_testrdb()` call after HDF file selection, causing geometry to stay at 32,1,2 instead of auto-detecting RDB (0,0,0). Fixed in commit `c2b5c053`.

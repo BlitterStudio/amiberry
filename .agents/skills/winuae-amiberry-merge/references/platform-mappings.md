@@ -16,16 +16,16 @@ These areas typically require minimal or no changes when merging, unless they in
 
 Changes in these WinUAE subsystems **always require adaptation**:
 
-1. **Rendering Pipeline** (Direct3D → OpenGL + SDL2)
-2. **Audio Output** (WASAPI → SDL2 audio)
-3. **Input Handling** (DirectInput → SDL2)
-4. **Threading** (Win32 threads → SDL2 threading)
+1. **Rendering Pipeline** (Direct3D → OpenGL/Vulkan + SDL3 renderer path)
+2. **Audio Output** (WASAPI → SDL3 audio)
+3. **Input Handling** (DirectInput → SDL3 events, joysticks, and gamepads)
+4. **Threading** (Win32 threads → SDL3 threading primitives or platform abstractions)
 5. **GUI** (Win32 dialogs → ImGui)
 6. **File System** (Windows APIs → POSIX/C++ filesystem)
 
-## Windows to SDL2 Mappings
+## Windows to SDL3 Mappings
 
-**Note:** Amiberry currently uses SDL2, with plans to migrate to SDL3 eventually. For now, all mappings target SDL2 APIs.
+**Note:** Amiberry has migrated to SDL3. Use SDL3 API names (`SDL_Gamepad*`, `SDL_EVENT_*`, `SDL_GetWindowSizeInPixels`, `SDL_RenderTexture`, etc.) when porting WinUAE code.
 
 ### Window/Display Management
 - `CreateWindow()` → `SDL_CreateWindow()`
@@ -37,17 +37,17 @@ Changes in these WinUAE subsystems **always require adaptation**:
 ### Input Handling
 - `GetAsyncKeyState()` → `SDL_GetKeyboardState()`
 - `GetKeyState()` → `SDL_GetKeyboardState()`
-- DirectInput → `SDL_Joystick*()` / `SDL_GameController*()`
+- DirectInput → `SDL_GetJoysticks()` / `SDL_OpenJoystick()` / `SDL_OpenGamepad()` and SDL3 events
 - Raw Input → SDL event system
 - `SetCursor()` → `SDL_SetCursor()`
 - `ShowCursor()` → `SDL_ShowCursor()`
 
 ### Graphics/Rendering
-- Direct3D → OpenGL rendering (Amiberry uses OpenGL for GPU acceleration)
-- DirectDraw → SDL2 + OpenGL
-- GDI operations → SDL2 surface operations
+- Direct3D → OpenGL/Vulkan/SDL3 renderer backend depending on the active Amiberry path
+- DirectDraw → SDL3 surfaces/textures plus renderer-specific upload paths
+- GDI operations → SDL3 surface operations
 - `BitBlt()` → `SDL_BlitSurface()` / OpenGL texture uploads
-- `StretchBlt()` → `SDL_BlitScaled()` / OpenGL scaled rendering
+- `StretchBlt()` → `SDL_BlitSurfaceScaled()` / renderer scaling
 - D3D shaders → OpenGL shaders (GLSL)
 - D3D resources → OpenGL textures/buffers
 
@@ -61,10 +61,10 @@ Changes in these WinUAE subsystems **always require adaptation**:
 - `WaitForSingleObject()` → `SDL_WaitThread()`
 - `CRITICAL_SECTION` → `SDL_mutex` / `SDL_LockMutex()` / `SDL_UnlockMutex()`
 - `EnterCriticalSection()` / `LeaveCriticalSection()` → `SDL_LockMutex()` / `SDL_UnlockMutex()`
-- `CreateEvent()` → `SDL_CreateSemaphore()` or `SDL_CreateCond()`
-- `SetEvent()` / `ResetEvent()` → `SDL_SemPost()` / `SDL_CondSignal()`
+- `CreateEvent()` → `SDL_CreateSemaphore()` or `SDL_CreateCondition()`
+- `SetEvent()` / `ResetEvent()` → `SDL_SignalSemaphore()` / `SDL_SignalCondition()` plus explicit state where reset semantics are needed
 
-**Note:** Amiberry uses SDL2 for all threading. Only use pthreads directly if SDL2 doesn't provide the needed functionality.
+**Note:** Prefer SDL3 threading primitives for portable code. Only use pthreads or Win32 primitives directly when SDL3 does not provide the needed behavior and the platform guard is explicit.
 
 ### File System
 - `CreateFile()` → `fopen()` or C++ filesystem
@@ -81,11 +81,11 @@ Changes in these WinUAE subsystems **always require adaptation**:
 - `Sleep()` → `SDL_Delay()` or `std::this_thread::sleep_for()`
 
 ### System Info
-- `GetSystemMetrics()` → `SDL_GetDisplayBounds()` / `SDL_GetDisplayMode()`
+- `GetSystemMetrics()` → `SDL_GetDisplayBounds()` / `SDL_GetDesktopDisplayMode()`
 - `GetVersionEx()` → Platform-specific or remove
 - Registry access → Config files (libconfig, INI, JSON)
 
-### Winsock (MinGW-w64 on Windows)
+### Winsock (llvm-mingw on Windows)
 
 When Amiberry runs natively on Windows, socket code needs these adaptations:
 - `close(sock)` → `closesocket(sock)`
@@ -112,12 +112,12 @@ Uses WinUAE's native model — WSAAsyncSelect + hidden HWND + dedicated `sock_th
 - `GetAdaptersAddresses()` for network interface queries (SIOCGIF* ioctls)
 - `WSAIoctl(SIO_GET_INTERFACE_LIST)` for interface enumeration
 
-**MinGW adaptation notes:**
+**llvm-mingw adaptation notes:**
 - No SEH (`__try/__except`) — thread functions called directly, no exception filter
 - `hInst` → `GetModuleHandle(NULL)` (no WinUAE win32.h dependency)
 - `IDI_APPICON` → NULL for hidden window
 - TCHAR/`au()` conversions removed — Amiberry uses `char` strings
-- `_IOWR` macro renamed to `_IOWR_BSD` to avoid MinGW conflict
+- `_IOWR` macro renamed to `_IOWR_BSD` to avoid mingw-w64 header conflicts
 
 **POSIX (`#else /* !_WIN32 */`):**
 Uses the original Amiberry implementation — `select()` in a background thread, `pipe()` for abort signaling, `fcntl()` for non-blocking. Untouched by the Windows port.
@@ -133,7 +133,7 @@ Uses the original Amiberry implementation — `select()` in a background thread,
 ### Standard Pattern
 ```cpp
 #ifdef _WIN32
-    // Windows-specific code (both WinUAE/MSVC and Amiberry/MinGW-w64)
+    // Windows-specific code (both WinUAE/MSVC and Amiberry/llvm-mingw)
 #elif defined(__APPLE__)
     // macOS-specific code
 #elif defined(ANDROID)
@@ -170,14 +170,14 @@ Uses the original Amiberry implementation — `select()` in a background thread,
 ```cpp
 #ifdef _WIN32
     #include <windows.h>
-    // Note: MinGW-w64 also provides unistd.h, dirent.h, etc.
+    // Note: llvm-mingw/mingw-w64 also provides unistd.h, dirent.h, etc.
 #else
     #include <unistd.h>
-    #include <SDL.h>
+    #include <SDL3/SDL.h>
 #endif
 ```
 
-**std::byte ambiguity (MinGW):** `sysdeps.h` has `using namespace std;` which pulls `std::byte` into the global namespace. Windows headers (`rpcndr.h`) also define a `byte` typedef. This causes ambiguity errors in `objidl.h` and other COM headers. Fix: `sysconfig.h` includes `<winsock2.h>` at the very top (before any C++ std headers) so Windows' `byte` typedef is established first. Any new file that includes Windows headers on Windows should ensure `sysconfig.h` is included first.
+**std::byte ambiguity (Windows headers):** `sysdeps.h` has `using namespace std;` which pulls `std::byte` into the global namespace. Windows headers (`rpcndr.h`) also define a `byte` typedef. This causes ambiguity errors in `objidl.h` and other COM headers. Fix: `sysconfig.h` includes `<winsock2.h>` at the very top (before any C++ std headers) so Windows' `byte` typedef is established first. Any new file that includes Windows headers on Windows should ensure `sysconfig.h` is included first.
 
 **Android-specific UI considerations:**
 ```cpp
@@ -252,25 +252,27 @@ WinUAE and Amiberry handle VSync differently due to the underlying graphics APIs
 In Amiberry, `amiberry_gfx.cpp` manages the frame timing.
 - **Critical Function:** `set_custom_limits(maxvpos, maxhpos, min_vpos, min_hpos, check_only)`
 - **Usage:** In `lockscr()`, Amiberry calls `set_custom_limits(-1, -1, -1, -1, false)` to ensure blanking limits are open before the frame is drawn.
-- **Sync Point:** Frame limits are enforced in `SDL2_renderframe`.
+- **Sync Point:** Frame limits are enforced through `amiberry_renderframe()` and the active `IRenderer` backend.
 - **Difference:** WinUAE often handles this in `drawing.cpp`. When merging `drawing.cpp` updates, ensure you **do not** accidentally re-enable WinUAE's `vbcopy` or limit checks that conflict with Amiberry's custom limits.
 
 ## Input Mapping & Coordinates
 
 ### Mouse Coordinates
-Amiberry manually handles HiDPI/Retina scaling because SDL2 events report in "Points" (screen coordinates) while OpenGL renders in "Pixels" (drawable size).
+Amiberry handles HiDPI/Retina and SDL logical-presentation scaling differently per renderer. SDL3 events arrive in window coordinates; OpenGL paths need conversion to drawable pixels, while the SDL renderer can convert through `SDL_RenderCoordinatesFromWindow()`.
 
 **WinUAE Pattern:**
 Often assumes 1:1 mapping or uses Windows DWM scaling.
 
-**Amiberry Implementation (`handle_mouse_motion_event`):**
+**Amiberry Implementation (`handle_mouse_motion_event` / pen helpers):**
 ```cpp
-SDL_GetWindowSize(win, &win_w, &win_h);       // Logical size (Points)
-SDL_GL_GetDrawableSize(win, &draw_w, &draw_h); // Pixel size (Pixels)
-float scale_x = (float)draw_w / (float)win_w;
-x = (Sint32)(x * scale_x);
+if (mon->amiga_renderer) {
+    SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, x, y, &rx, &ry);
+} else if (mon->hidpi_needs_scaling) {
+    x *= mon->hidpi_scale_x;
+    y *= mon->hidpi_scale_y;
+}
 ```
-**Guidance:** If merging input code, ensure raw mouse coordinates are NOT used directly for Amiga positioning without this scaling, otherwise mouse movement will desync on macOS/High-DPI displays.
+**Guidance:** If merging input code, ensure raw mouse, pen, and tablet coordinates are not used directly for Amiga positioning without following the renderer-specific conversion path.
 
 ## RTG / Picasso96 Optimizations
 

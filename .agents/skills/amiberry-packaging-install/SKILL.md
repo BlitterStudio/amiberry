@@ -5,8 +5,8 @@ description: >
   distro packaging changes, `BUNDLE_SDL`, RPATH and shared-library bundling work, DEB or RPM
   dependency adjustments, CI matrix packaging toggles, Windows portable install detection, and
   executable-directory vs current-working-directory path bugs in files such as
-  `cmake/linux/install.cmake`, `packaging/CMakeLists.txt`, `.github/workflows/c-cpp.yml`, and
-  `src/osdep/amiberry.cpp`.
+  `cmake/linux/install.cmake`, `cmake/windows/install.cmake`, `packaging/CMakeLists.txt`,
+  `.github/workflows/c-cpp.yml`, and `src/osdep/amiberry.cpp`.
 ---
 
 # Amiberry Packaging And Install Layout Reference
@@ -16,7 +16,7 @@ description: >
 - Use this skill for packaging and install layout work, not emulator-core fixes.
 - Focus areas:
   - Linux packages and install-time library layout
-  - Windows portable install and executable-relative path resolution
+  - Windows portable install, llvm-mingw runtime DLL bundling, and executable-relative path resolution
   - CI packaging toggles that change shipped dependencies
 
 ## Linux Packaging Rules
@@ -32,6 +32,7 @@ description: >
 - Never assume the current working directory is the executable directory.
 - Portable markers such as `amiberry.portable` must be checked next to `amiberry.exe`, not only in the process working directory.
 - Reuse one executable-directory helper for config, home, plugins, and data path decisions so launch-context differences do not split behavior.
+- Windows packages must bundle the llvm-mingw runtime DLLs (`libc++.dll`, `libunwind.dll`, `libwinpthread-1.dll`) from `LLVM_MINGW_ROOT/bin`; vcpkg does not own these.
 - Validate both portable and non-portable mode startup paths after changes.
 
 ## Change Workflow
@@ -65,3 +66,4 @@ description: >
   - launch from the executable directory
   - launch from a different working directory
   - verify `amiberry.portable` next to the executable changes config/home resolution as intended
+  - inspect the installed/package directory for the llvm-mingw runtime DLLs

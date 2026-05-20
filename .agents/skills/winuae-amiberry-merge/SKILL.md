@@ -1,11 +1,11 @@
 ---
 name: winuae-amiberry-merge
-description: Assist with merging updates and synchronizing functionality from the upstream WinUAE repository (Windows) to Amiberry (Linux/macOS/Android/Windows). Includes a guide for porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, analyzing platform-specific code, and preserving upstream-sync safety when Amiberry needs local divergences in WinUAE-tracked files. Use this for analyzing upstream commits, identifying Windows-specific code, adapting GUI panels, handling `#ifdef AMIBERRY` splits, and verifying feature parity.
+description: Use when merging or analyzing upstream WinUAE changes for Amiberry's SDL3/CMake codebase across Linux, macOS, Android, Windows, FreeBSD, Haiku, and iOS work-in-progress targets. Covers porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, adapting platform-specific code, preserving upstream-sync safety for local Amiberry divergences, handling `#ifdef AMIBERRY` splits, and verifying feature parity.
 ---
 
 # WinUAE to Amiberry Merge Assistant
 
-Help merge updates from WinUAE (Windows-only, MSVC) to Amiberry (multi-platform: Linux/macOS/Android/Windows with MinGW-w64).
+Help merge updates from WinUAE (Windows-only, MSVC) to Amiberry (multi-platform: Linux/macOS/Android/Windows with llvm-mingw on Windows).
 
 ## Overview
 
@@ -14,13 +14,13 @@ WinUAE is the upstream Windows-based Amiga emulator. Amiberry is a cross-platfor
 **Core emulation is identical:** Most emulation code (CPU, chipset, floppy, HDD) requires no changes when merging.
 
 **Platform layer differs:**
-- **Rendering:** WinUAE uses Direct3D; Amiberry uses OpenGL + SDL2
-- **Audio:** WinUAE uses WASAPI; Amiberry uses SDL2 audio
-- **Input:** WinUAE uses DirectInput; Amiberry uses SDL2
-- **Threading:** WinUAE uses Win32 threads; Amiberry uses SDL2 threading
+- **Rendering:** WinUAE uses Direct3D; Amiberry uses OpenGL/Vulkan plus the SDL3 renderer path
+- **Audio:** WinUAE uses WASAPI; Amiberry uses SDL3 audio
+- **Input:** WinUAE uses DirectInput; Amiberry uses SDL3 events, joysticks, and gamepads
+- **Threading:** WinUAE uses Win32 threads; Amiberry uses SDL3 threading primitives where possible
 - **GUI:** WinUAE uses Win32 dialogs; Amiberry uses Dear ImGui (in `src/osdep/imgui/`)
 - **Build:** WinUAE uses Visual Studio; Amiberry uses CMake (+ Gradle for Android)
-- **Platforms:** Amiberry targets Linux, macOS, Android, and Windows (SDL2, migrating to SDL3 eventually)
+- **Platforms:** Amiberry targets Linux, macOS, Android, Windows, FreeBSD, Haiku, and iOS work-in-progress targets using SDL3
 - **CI/CD:** GitHub Actions builds all platforms on each commit
 
 ## Merge Workflow
@@ -53,10 +53,10 @@ python scripts/analyze_gui_code.py <path-to-changed-files>
 
 The scripts will flag:
 - **Direct3D** code needing OpenGL adaptation
-- **WASAPI** audio needing SDL2 audio adaptation
-- **DirectInput** needing SDL2 input
-- **Win32 threading** needing SDL2 threading
-- Win32 API calls needing SDL2/POSIX equivalents
+- **WASAPI** audio needing SDL3 audio adaptation
+- **DirectInput** needing SDL3 input
+- **Win32 threading** needing SDL3 threading or platform abstraction adaptation
+- Win32 API calls needing SDL3/POSIX/C++ standard-library equivalents
 - GUI code needing ImGui implementation
 - File system code needing path handling fixes
 
@@ -66,10 +66,10 @@ The scripts will flag:
 
 For each identified issue:
 
-**Windows API → SDL2/POSIX:**
+**Windows API → SDL3/POSIX:**
 - Consult `references/platform-mappings.md` for common API translations
-- Use SDL2 when available for cross-platform abstraction (rendering, audio, input, threading)
-- Fall back to POSIX APIs only when SDL2 doesn't provide equivalent functionality
+- Use SDL3 when available for cross-platform abstraction (rendering, audio, input, threading)
+- Fall back to POSIX/C++ standard-library APIs only when SDL3 doesn't provide equivalent functionality
 - Add platform-specific guards using `#ifdef` when necessary
 
 **GUI Changes:**
@@ -87,7 +87,7 @@ For each identified issue:
 **Platform Guards:**
 ```cpp
 #ifdef _WIN32
-    // Windows-specific (both WinUAE/MSVC and Amiberry/MinGW-w64)
+    // Windows-specific (both WinUAE/MSVC and Amiberry/llvm-mingw)
     // Note: Amiberry on Windows DOES define _WIN32, so many WinUAE
     // Windows code paths are active. Use #ifdef AMIBERRY to distinguish.
 #elif defined(__APPLE__)
@@ -139,7 +139,7 @@ Rules:
 ### 4. Apply Changes
 
 Adapt the WinUAE code for Amiberry:
-- Replace Windows APIs with SDL2/POSIX equivalents
+- Replace Windows APIs with SDL3/POSIX/C++ standard-library equivalents
 - Implement or modify ImGui UI for any GUI changes
 - Add appropriate platform guards for macOS/Android specifics
 - Update CMakeLists.txt if new files are added
@@ -278,7 +278,7 @@ When WinUAE updates Direct3D rendering:
 ### Scenario: Input System Changes
 
 When WinUAE updates input handling:
-- DirectInput → SDL2 input system
+- DirectInput → SDL3 input system
 - May need updates to both keyboard and joystick handling
 - Check `GetAsyncKeyState` usage → `SDL_GetKeyboardState`
 - Test on actual hardware if possible
@@ -286,7 +286,7 @@ When WinUAE updates input handling:
 ### Scenario: Audio System Changes
 
 When WinUAE updates WASAPI audio code:
-- Adapt to SDL2 audio subsystem
+- Adapt to SDL3 audio subsystem
 - Check buffer sizes and latency settings
 - Verify sample rate handling
 - Test audio quality and synchronization
@@ -299,18 +299,18 @@ When WinUAE updates WASAPI audio code:
 **Example:** `hd.cpp` was missing `hardfile_testrdb()` after HDF file selection — WinUAE calls this in `HarddiskDlgProc` to auto-detect RDB and reset geometry. The ImGui port omitted it.
 **Fix:** When debugging GUI issues, always compare the ImGui panel code against the corresponding WinUAE dialog procedure for missing function calls, especially `values_from_*`, `fix_values_*`, and helper functions called on control changes.
 
-### 0b. fopen Mode Strings on MinGW
+### 0b. fopen Mode Strings on Windows
 **Symptom:** `fopen()` returns NULL with `errno=22 (EINVAL)` on Windows.
-**Cause:** MinGW GCC links `msvcrt.dll` (not `ucrtbase.dll`). The `"ccs=UTF-8"` fopen mode extension is UCRT-only. WinUAE (MSVC) links `ucrtbase.dll` where this works.
-**Fix:** Under `#ifdef AMIBERRY`, use plain modes (`"w"`, `"rt"`, `"wt"`) without `ccs=UTF-8`. Also note: the `'e'` flag (close-on-exec) is not valid on Windows — strip it.
+**Cause:** WinUAE-style mode strings such as `"ccs=UTF-8"` and POSIX close-on-exec modes such as `'e'` are not portable across Amiberry's Windows and POSIX file abstractions.
+**Fix:** Under `#ifdef AMIBERRY`, use plain modes (`"w"`, `"rt"`, `"wt"`) without `ccs=UTF-8`. Use `uae_fopen()` for paths that need the `'e'` flag stripped on Windows.
 
 ### 1. The "Black Screen" on Standard VSync
 **Symptom:** Amiga emulation runs (Audio works) but screen is black when `VSync Standard` is active.
 **Cause:** Amiberry manages frame timing differently than WinUAE. WinUAE's `drawing.cpp` often contains blanking limit checks that conflict with Amiberry's `amiberry_gfx.cpp`.
 **Fix:**
 - Ensure `set_custom_limits(-1, -1, -1, -1, false)` is called in `lockscr()` (see `amiberry_gfx.cpp`).
-- Do NOT port WinUAE's `vbcopy()` changes if they enforce alpha channels incorrectly for SDL2.
-- Check `show_screen_maybe()` logic; Amiberry handles presentation in `SDL2_renderframe`.
+- Do NOT port WinUAE's `vbcopy()` changes if they enforce alpha channels incorrectly for SDL3/OpenGL/Vulkan renderer paths.
+- Check `show_screen_maybe()` and `amiberry_renderframe()` logic; Amiberry presents frames through the active `IRenderer` backend.
 
 ### 1b. Black Screen on Windows with USE_OPENGL (64-bit)
 **Symptom:** Emulation starts but screen stays black. Queue type 0/1/2 entries never processed.
@@ -319,10 +319,11 @@ When WinUAE updates WASAPI audio code:
 
 ### 2. Mouse Coordinate Drift
 **Symptom:** Mouse clicks are offset from the cursor, especially on macOS or High-DPI screens.
-**Cause:** SDL2 Events report "Screen Coordinates" (Points), but OpenGL renders in "Pixels".
+**Cause:** SDL3 mouse and pen events report window coordinates, while OpenGL renders in drawable pixels and the SDL renderer may use logical presentation coordinates.
 **Fix:**
 - Do NOT use raw event coordinates directly for Amiga input.
-- You must apply a scaling factor using `SDL_GetWindowSize` vs `SDL_GL_GetDrawableSize`.
+- For OpenGL, use the cached HiDPI scale factors derived from window size vs pixel size.
+- For the SDL renderer, convert raw window coordinates with `SDL_RenderCoordinatesFromWindow()`.
 - See `handle_mouse_motion_event` in `amiberry.cpp` for the correct implementation.
 
 ### 3. ImGui Scaling on Android/Touch
