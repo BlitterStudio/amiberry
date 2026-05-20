@@ -19,9 +19,9 @@ description: >
 - Do not use this skill for x86-64 allocator, `MAP_32BIT`, `VirtualAlloc`, or RIP-relative `±2GB` problems in `src/jit/x86/`.
 - If the failing symbol lives in `compemu_support_x86.cpp` or `compemu_x86.h`, switch to `amiberry-x86-jit`.
 
-## Current Status (2026-03)
+## Current Repository Status Check (2026-05-20)
 
-**All known bugs: FIXED.** All fixes are root-cause, not guards/bandaids.
+The code paths referenced by the known root-cause fixes below are present in the current tree. Treat the benchmark numbers as historical reference points, and rerun the regression configs after any ARM64 JIT change.
 
 | Test Config | Result |
 |---|---|
@@ -175,14 +175,17 @@ See [references/fixes-and-optimizations.md](references/fixes-and-optimizations.m
 
 ### Build & Deploy (macOS)
 ```bash
-# Touch files (ninja doesn't always detect edits)
+# Use the active out-of-tree build directory; this example uses ./build.
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+# Touch files if Ninja does not detect generated/JIT source dependencies.
 touch src/jit/arm/compemu_support_arm.cpp src/jit/arm/codegen_arm64.cpp
 
 # Build
-cmake --build cmake-build-release --target Amiberry -j$(sysctl -n hw.ncpu)
+cmake --build build --target Amiberry --parallel
 
-# Deploy
-cp -f cmake-build-release/Amiberry.app/Contents/MacOS/Amiberry \
+# Optional local app replacement
+cp -f build/Amiberry.app/Contents/MacOS/Amiberry \
   /Applications/Amiberry.app/Contents/MacOS/Amiberry
 codesign --force --deep --sign - /Applications/Amiberry.app/Contents/MacOS/Amiberry
 ```
