@@ -2171,9 +2171,8 @@ gen_opcode(unsigned int opcode)
 			comprintf("\tsub_w_ri(src,1);\n");
 			comprintf("\tend_needflags();\n");
 			start_brace();
-			comprintf("\tuintptr v2;\n"
-				"\tuintptr v1=get_const(PC_P);\n");
-			comprintf("\tv2=get_const(offs);\n"
+			comprintf("\tuintptr v1=get_const(PC_P);\n");
+			comprintf("\tuintptr v2=get_const(offs);\n"
 				"\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CC);
 			break;
 
