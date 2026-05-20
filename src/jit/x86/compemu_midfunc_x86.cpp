@@ -813,7 +813,7 @@ MIDFUNC(2,setcc,(W1 d, IMM cc))
 	unlock2(d);
 }
 
-MIDFUNC(2,setcc_m,(IMM d, IMM cc))
+MIDFUNC(2,setcc_m,(MEMW d, IMM cc))
 {
 	CLOBBER_SETCC;
 	raw_setcc_m(d,cc);
@@ -1999,7 +1999,7 @@ MIDFUNC(2,and_b,(RW1 d, RR1 s))
 }
 
 // gb-- used for making an fpcr value in compemu_fpp.cpp
-MIDFUNC(2,or_l_rm,(RW4 d, IMM s))
+MIDFUNC(2,or_l_rm,(RW4 d, MEMR s))
 {
 	CLOBBER_OR;
 	d=rmw(d,4,4);
