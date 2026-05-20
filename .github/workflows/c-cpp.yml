@@ -554,7 +554,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: /var/cache/apt/archives
-          key: ${{ runner.os }}-${{ matrix.name }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
+          key: ${{ runner.os }}-${{ matrix.name }}-apt-${{ hashFiles('CMakeLists.txt', 'cmake/**/*.cmake', '.github/workflows/c-cpp.yml') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.name }}-apt-
 

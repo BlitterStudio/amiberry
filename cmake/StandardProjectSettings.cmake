@@ -18,68 +18,81 @@ endif()
 # Accumulate compile and link flags in variables.
 # These are applied to the amiberry target in SourceFiles.cmake after the target is created,
 # so they do not leak into third-party FetchContent builds.
+set(AMIBERRY_GNU_LIKE_COMPILER OFF)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(AMIBERRY_GNU_LIKE_COMPILER ON)
+endif()
+
 set(AMIBERRY_COMPILE_OPTIONS "")
-if(NOT WIN32)
+if(AMIBERRY_GNU_LIKE_COMPILER AND NOT WIN32)
     list(APPEND AMIBERRY_COMPILE_OPTIONS "-pipe")
 endif()
 set(AMIBERRY_LINK_OPTIONS "")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    list(APPEND AMIBERRY_COMPILE_OPTIONS "-Og" "-funwind-tables" "-DDEBUG")
+if(AMIBERRY_GNU_LIKE_COMPILER)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        list(APPEND AMIBERRY_COMPILE_OPTIONS "-Og" "-funwind-tables" "-DDEBUG")
 
-    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        list(APPEND AMIBERRY_COMPILE_OPTIONS "-ggdb")
-    else()
-        list(APPEND AMIBERRY_COMPILE_OPTIONS "-g")
+        if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+            list(APPEND AMIBERRY_COMPILE_OPTIONS "-ggdb")
+        else()
+            list(APPEND AMIBERRY_COMPILE_OPTIONS "-g")
+        endif()
+    elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+        list(APPEND AMIBERRY_COMPILE_OPTIONS "-fdata-sections" "-ffunction-sections")
+    elseif(CMAKE_BUILD_TYPE)
+        list(APPEND AMIBERRY_COMPILE_OPTIONS "-O1")
     endif()
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    list(APPEND AMIBERRY_COMPILE_OPTIONS "-fdata-sections" "-ffunction-sections")
-elseif(CMAKE_BUILD_TYPE)
-    list(APPEND AMIBERRY_COMPILE_OPTIONS "-O1")
 endif()
 
 # Platform-specific linker flags
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
-    # ELF/PE linker flags (not for Apple platforms)
-    list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,--no-undefined" "-Wl,--as-needed")
+if(AMIBERRY_GNU_LIKE_COMPILER)
+    if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
+        # ELF/PE linker flags (not for Apple platforms)
+        list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,--no-undefined" "-Wl,--as-needed")
 
-    # ELF-specific flags (not available on Windows PE)
-    if(NOT WIN32)
-        list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-z,combreloc")
-    endif()
-
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        list(APPEND AMIBERRY_LINK_OPTIONS
-            "-Wl,--gc-sections"
-            "-Wl,--strip-all"
-            "-Wl,-O1"
-        )
-
-        # ELF-specific hardening flags (not available on Windows PE)
+        # ELF-specific flags (not available on Windows PE)
         if(NOT WIN32)
-            list(APPEND AMIBERRY_LINK_OPTIONS
-                "-Wl,-z,relro"
-                "-Wl,-z,now"
-            )
+            list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-z,combreloc")
         endif()
 
-        # GNU ld-only flags (do not work on FreeBSD or Windows)
-        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        if(CMAKE_BUILD_TYPE STREQUAL "Release")
             list(APPEND AMIBERRY_LINK_OPTIONS
-                "-Wl,--sort-common=descending"
-                "-Wl,--hash-style=gnu"
+                "-Wl,--gc-sections"
+                "-Wl,--strip-all"
+                "-Wl,-O1"
             )
+
+            # ELF-specific hardening flags (not available on Windows PE)
+            if(NOT WIN32)
+                list(APPEND AMIBERRY_LINK_OPTIONS
+                    "-Wl,-z,relro"
+                    "-Wl,-z,now"
+                )
+            endif()
+
+            # GNU ld-only flags (do not work on FreeBSD or Windows)
+            if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+                list(APPEND AMIBERRY_LINK_OPTIONS
+                    "-Wl,--sort-common=descending"
+                    "-Wl,--hash-style=gnu"
+                )
+            endif()
         endif()
-    endif()
-else()
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-dead_strip")
+    else()
+        if(CMAKE_BUILD_TYPE STREQUAL "Release")
+            list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-dead_strip")
+        endif()
     endif()
 endif()
 
 if(WITH_OPTIMIZE)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        include(${CMAKE_SOURCE_DIR}/cmake/optimize.cmake)
+        if(AMIBERRY_GNU_LIKE_COMPILER)
+            include(${CMAKE_SOURCE_DIR}/cmake/optimize.cmake)
+        else()
+            message(FATAL_ERROR "WITH_OPTIMIZE requires a GNU-like C/C++ compiler")
+        endif()
     else()
         message(FATAL_ERROR "WITH_OPTIMIZE can only be used on Release builds")
     endif()

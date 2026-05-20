@@ -37,19 +37,26 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 include(CMakeDependentOption)
 
+# iOS detection: CMAKE_SYSTEM_NAME is "iOS" when using -DCMAKE_SYSTEM_NAME=iOS.
+# Keep this explicit because many build files gate iOS-only features on IOS.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(IOS TRUE)
+endif()
+
 # Feature options
 option(USE_PCEM          "Use PCem for hardware emulation (no support for RISC-V)" ON)
 option(USE_LIBSERIALPORT "Use LibSerialPort for serial port emulation" ON)
 option(USE_LIBENET       "Use LibENET for network emulation" ON)
 option(USE_PORTMIDI      "Use PortMidi for MIDI emulation" ON)
 option(USE_LIBMPEG2      "Use LibMPEG2 for CD32 FMV support" ON)
+option(USE_MPG123        "Use mpg123 for MP3 decoding" ON)
 option(USE_UAENET_PCAP   "Use libpcap for uaenet (Linux/macOS)" ON)
 option(USE_UAENET_TAP    "Use TAP backend for uaenet (Linux only)" ON)
 option(USE_ZSTD 	     "Use Zstandard for CHD compressed disk images" ON)
 option(USE_GPIOD         "Use GPIOD to control GPIO LEDs" OFF)
 option(USE_DBUS          "Use DBus to control the emulator" OFF)
 option(USE_OPENGL        "Use OpenGL for rendering" ON)
-option(USE_GLES          "Use OpenGL ES instead of desktop OpenGL (for embedded Linux without GLX)" OFF)
+cmake_dependent_option(USE_GLES "Use OpenGL ES instead of desktop OpenGL (for embedded Linux without GLX)" OFF "USE_OPENGL" OFF)
 option(USE_VULKAN        "Use Vulkan for rendering (experimental, mutually exclusive with USE_OPENGL)" OFF)
 option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
 option(USE_JIT           "Enable 68K JIT recompiler (x86_64 and AArch64)" ON)
@@ -57,8 +64,7 @@ option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
 
-# Handle dependent options gracefully
-cmake_dependent_option(USE_GLES "Force OpenGL ES on target" ON "USE_OPENGL" OFF)
+# Vulkan and OpenGL are mutually exclusive rendering backends.
 if(USE_VULKAN AND USE_OPENGL)
     message(WARNING "USE_VULKAN and USE_OPENGL are mutually exclusive. Disabling USE_OPENGL.")
     set(USE_OPENGL OFF CACHE BOOL "Use OpenGL for rendering" FORCE)
@@ -135,15 +141,16 @@ endif()
 
 # Pre-release version suffix
 set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
+set(AMIBERRY_PRODUCT_VERSION "${PROJECT_VERSION}")
 if(VERSION_PRE_RELEASE)
-    set(PROJECT_VERSION "${PROJECT_VERSION}-${VERSION_PRE_RELEASE}")
+    set(AMIBERRY_PRODUCT_VERSION "${PROJECT_VERSION}-${VERSION_PRE_RELEASE}")
 endif()
 
 # Project identity & metadata
 set(AMIBERRY_DISPLAY_NAME "Amiberry")
 set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
-file(WRITE "${CMAKE_BINARY_DIR}/amiberry-product-version.txt" "${PROJECT_VERSION}\n")
+file(WRITE "${CMAKE_BINARY_DIR}/amiberry-product-version.txt" "${AMIBERRY_PRODUCT_VERSION}\n")
 
 # FreeBSD-specific paths and libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")

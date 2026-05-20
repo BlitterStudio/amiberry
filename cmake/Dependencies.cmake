@@ -42,7 +42,7 @@ if (USE_OPENGL)
             target_link_libraries(${PROJECT_NAME} PRIVATE GLESv2 EGL)
         else()
             find_package(OpenGL REQUIRED)
-            target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
+            target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL)
         endif()
     else()
         target_link_libraries(${PROJECT_NAME} PRIVATE GLESv3 EGL)
@@ -600,89 +600,89 @@ if(NOT IOS)
 endif()
 add_subdirectory(external/capsimage)
 
-    # Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
-    # On Android, SDL3_image is already linked via the FetchContent target (line ~187).
-    if(ANDROID)
-        # Android SDL3/SDL3_image are already linked directly above.
-        set(_SDL_IMAGE_LIB "")
-    elseif(TARGET SDL3_image::SDL3_image)
-        set(_SDL_IMAGE_LIB SDL3_image::SDL3_image)
-    elseif(SDL3_IMAGE_LIBRARIES)
-        set(_SDL_IMAGE_LIB ${SDL3_IMAGE_LIBRARIES})
-    else()
-        set(_SDL_IMAGE_LIB SDL3_image)
-    endif()
+# Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
+# On Android, SDL3_image is already linked via the FetchContent target.
+if(ANDROID)
+    set(_SDL_IMAGE_LIB "")
+elseif(TARGET SDL3_image::SDL3_image)
+    set(_SDL_IMAGE_LIB SDL3_image::SDL3_image)
+elseif(SDL3_IMAGE_LIBRARIES)
+    set(_SDL_IMAGE_LIB ${SDL3_IMAGE_LIBRARIES})
+else()
+    set(_SDL_IMAGE_LIB SDL3_image)
+endif()
 
-    # Direct target linking preserves transitive includes & compile definitions
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        mt32emu
-        ZLIB::ZLIB
-        nlohmann_json::nlohmann_json
-        ${CMAKE_DL_LIBS}
-    )
+# Direct target linking preserves transitive includes and compile definitions.
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    mt32emu
+    ZLIB::ZLIB
+    nlohmann_json::nlohmann_json
+    ${CMAKE_DL_LIBS}
+)
 
-    if(_SDL_IMAGE_LIB)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${_SDL_IMAGE_LIB})
-    endif()
+if(_SDL_IMAGE_LIB)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${_SDL_IMAGE_LIB})
+endif()
 
-    # CURL is used for self-update (not available on iOS)
-    if(TARGET CURL::libcurl)
-        target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
-    elseif(CURL_FOUND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${CURL_LIBRARIES})
-        target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
-    endif()
+# CURL is used for self-update (not available on iOS)
+if(TARGET CURL::libcurl)
+    target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
+elseif(CURL_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${CURL_LIBRARIES})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
+endif()
 
-    if (NOT ANDROID AND NOT WIN32)
-        target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
-    endif()
+if (NOT ANDROID AND NOT WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+endif()
 
-    # llvm-mingw (clang) on Windows does not auto-link winpthread
-    if (WIN32)
-        target_link_libraries(${PROJECT_NAME} PRIVATE winpthread)
-    endif()
+# llvm-mingw (clang) on Windows does not auto-link winpthread.
+if (WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE winpthread)
+endif()
 
-    if(TARGET FLAC)
-        target_link_libraries(${PROJECT_NAME} PRIVATE FLAC)
-    elseif(FLAC_FOUND)
-         target_link_libraries(${PROJECT_NAME} PRIVATE ${FLAC_LIBRARIES})
-    endif()
+if(TARGET FLAC::FLAC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE FLAC::FLAC)
+elseif(TARGET FLAC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE FLAC)
+elseif(FLAC_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${FLAC_LIBRARIES})
+endif()
 
-    if(TARGET PNG::PNG)
-        target_link_libraries(${PROJECT_NAME} PRIVATE PNG::PNG)
-    elseif(TARGET png_static)
-        target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
-    elseif(TARGET png)
-        target_link_libraries(${PROJECT_NAME} PRIVATE png)
-    elseif(PNG_FOUND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${PNG_LIBRARIES})
-    endif()
+if(TARGET PNG::PNG)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PNG::PNG)
+elseif(TARGET png_static)
+    target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
+elseif(TARGET png)
+    target_link_libraries(${PROJECT_NAME} PRIVATE png)
+elseif(PNG_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${PNG_LIBRARIES})
+endif()
 
+if(USE_MPG123)
     if(TARGET MPG123::libmpg123)
         target_link_libraries(${PROJECT_NAME} PRIVATE MPG123::libmpg123)
     elseif(TARGET libmpg123)
         target_link_libraries(${PROJECT_NAME} PRIVATE libmpg123)
+    elseif(mpg123_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${mpg123_LIBRARIES})
     elseif(MPG123_FOUND)
         target_link_libraries(${PROJECT_NAME} PRIVATE ${MPG123_LIBRARIES})
     endif()
+endif()
 
-    if(TARGET libzstd_static)
-        target_link_libraries(${PROJECT_NAME} PRIVATE libzstd_static)
-    elseif(TARGET zstd)
-        target_link_libraries(${PROJECT_NAME} PRIVATE zstd)
-    elseif(ZSTD_FOUND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
-    endif()
+if(TARGET libzstd_static)
+    target_link_libraries(${PROJECT_NAME} PRIVATE libzstd_static)
+elseif(TARGET zstd)
+    target_link_libraries(${PROJECT_NAME} PRIVATE zstd)
+elseif(ZSTD_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+endif()
 
-    if(ANDROID)
-        target_link_libraries(${PROJECT_NAME} PRIVATE log android)
-    endif()
-
-    # Do not add SDL as a raw library name; Android must link SDL via the CMake target above.
-    if(ANDROID)
-        # No need to remove from list anymore since we link directly
-    endif()
+if(ANDROID)
+    target_link_libraries(${PROJECT_NAME} PRIVATE log android)
+endif()
 
 # ImGui is always enabled
 if(USE_OPENGL)
