@@ -209,8 +209,9 @@ void handleAbout(bool checkForUpdates, FloppyBridge::BridgeAbout** output) {
 #endif
     }
 #ifdef _WIN32
-    if (output) 
+    if (output) {
         if (BridgeInformationUpdate.isUpdateAvailable) *output = (FloppyBridge::BridgeAbout*)&BridgeInformationUpdate; else *output = (FloppyBridge::BridgeAbout*)&BridgeInformation;
+    }
 
 #else
     if (output) *output = (FloppyBridge::BridgeAbout*)&BridgeInformation;

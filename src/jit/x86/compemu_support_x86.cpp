@@ -3824,7 +3824,7 @@ void flush_reg(int reg)
 		}
 		Dif (live.state[reg].val && reg!=PC_P)
 		{
-			jit_log("Register %d still has val %x", reg, live.state[reg].val);
+			jit_log("Register %d still has val %llx", reg, (uae_u64)live.state[reg].val);
 		}
 	}
 }

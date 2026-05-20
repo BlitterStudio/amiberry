@@ -289,7 +289,7 @@ static bool do_protect(void *address, size_t size, int protect)
 #ifdef _WIN32
 	DWORD old;
 	if (VirtualProtect(address, size, protect_to_native(protect), &old) == 0) {
-		write_log("VM: uae_vm_protect(%p, %zu, %d) VirtualProtect failed (%d)\n",
+		write_log("VM: uae_vm_protect(%p, %zu, %d) VirtualProtect failed (%lu)\n",
 				address, size, protect, GetLastError());
 		return false;
 	}
