@@ -1833,7 +1833,7 @@ void compute_framesync(void)
 		hblank_hz,
 		maxhpos, maxvpos, lof_store ? 1 : 0,
 		cr ? cr->index : -1,
-		cr != NULL && cr->label != NULL ? cr->label : _T("<?>"),
+		cr != nullptr && cr->label[0] != '\0' ? cr->label : _T("<?>"),
 		currprefs.gfx_apmode[ad->picasso_on ? 1 : 0].gfx_display, ad->picasso_on, ad->picasso_requested_on
 	);
 }
@@ -8268,7 +8268,7 @@ uae_u8 *restore_custom_extra(uae_u8 *src)
 	currprefs.cs_denisemodel = changed_prefs.cs_denisemodel = RBB;
 
 	// workaround for old savestates that had A1000 chipset extra with AGA mode configured.
-	if (currprefs.cs_agnusmodel = AGNUSMODEL_A1000 && aga_mode && currprefs.cs_compatible == CP_A1000) {
+	if (currprefs.cs_agnusmodel == AGNUSMODEL_A1000 && aga_mode && currprefs.cs_compatible == CP_A1000) {
 		currprefs.cs_agnusmodel = changed_prefs.cs_agnusmodel = AGNUSMODEL_AGA;
 		currprefs.cs_compatible = changed_prefs.cs_compatible = CP_A1200;
 	}
@@ -10852,9 +10852,7 @@ static int can_fast_custom(void)
 			}
 		}
 	}
-	if (0 || 1)
-		return 1;
-	return 0;
+	return 1;
 }
 
 static void do_imm_dmal(void)

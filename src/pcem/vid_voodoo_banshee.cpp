@@ -1813,9 +1813,10 @@ void banshee_hwcursor_draw(svga_t *svga, int displine)
         {                                                               \
                 int c;                                                  \
                 int wp = 0;                                             \
-                uint32_t base_addr = (buf == banshee->overlay_buffer[1]) ? src_addr2 : src_addr;        \
+                uint32_t *dst = &(buf)[0];                              \
+                uint32_t base_addr = (dst == banshee->overlay_buffer[1]) ? src_addr2 : src_addr; \
                                                                         \
-                for (c = 0; c < voodoo->overlay.overlay_bytes; c += 2) \
+                for (c = 0; c < voodoo->overlay.overlay_bytes; c += 2)  \
                 {                                                       \
                         uint16_t data = *(uint16_t *)&svga->vram[(base_addr + (c & 127) + (c >> 7)*128*32) & svga->vram_mask];               \
                         int r = data & 0x1f;                            \
@@ -1823,9 +1824,9 @@ void banshee_hwcursor_draw(svga_t *svga, int displine)
                         int b = data >> 11;                             \
                                                                         \
                         if (banshee->vidProcCfg & VIDPROCCFG_OVERLAY_CLUT_BYPASS) \
-                                buf[wp++] = (r << 3) | (g << 10) | (b << 19); \
+                                dst[wp++] = (r << 3) | (g << 10) | (b << 19); \
                         else                                            \
-                                buf[wp++] = (clut[r << 3] & 0x0000ff) | \
+                                dst[wp++] = (clut[r << 3] & 0x0000ff) | \
                                             (clut[g << 2] & 0x00ff00) | \
                                             (clut[b << 3] & 0xff0000);  \
                 }                                                       \

@@ -1193,7 +1193,7 @@ static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
 			if (v >= 128 && v < 192 && (currprefs.ecs_genlock_features_colorkey_mask[2] & (1LL << (v - 128)))) {
 				return false;
 			}
-			if (v >= 192 && v < 256 && (currprefs.ecs_genlock_features_colorkey_mask[3] & (1LL << (v - 192)))) {
+			if (v >= 192 && (currprefs.ecs_genlock_features_colorkey_mask[3] & (1LL << (v - 192)))) {
 				return false;
 			}
 		} else {
@@ -5800,33 +5800,35 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 		switch (how)
 		{
 			case nln_lower_black_always:
-			if (gfx_ypos + 1 < vb->inheight) {
-				setxlinebuffer(0, gfx_ypos + 1);
-				memset(xlinebuffer, 0, vb->inwidth * vb->pixbytes);
-			}
-			break;
+				if (gfx_ypos + 1 < vb->inheight) {
+					setxlinebuffer(0, gfx_ypos + 1);
+					memset(xlinebuffer, 0, vb->inwidth * vb->pixbytes);
+				}
+				break;
 			case nln_upper_black_always:
-			if (gfx_ypos > 0) {
-				setxlinebuffer(0, gfx_ypos - 1);
-				memset(xlinebuffer, 0, vb->inwidth * vb->pixbytes);
-			}
-			break;
+				if (gfx_ypos > 0) {
+					setxlinebuffer(0, gfx_ypos - 1);
+					memset(xlinebuffer, 0, vb->inwidth * vb->pixbytes);
+				}
+				break;
 			case nln_doubled:
-			if (gfx_ypos + 1 < vb->inheight) {
-				setxlinebuffer(0, gfx_ypos + 1);
-				xlinebuffer2 = xlinebuffer;
-				xlinebuffer2_start = xlinebuffer_start;
-				xlinebuffer2_end = xlinebuffer_end;
-				denise_y_end++;
-			}
-			break;
+				if (gfx_ypos + 1 < vb->inheight) {
+					setxlinebuffer(0, gfx_ypos + 1);
+					xlinebuffer2 = xlinebuffer;
+					xlinebuffer2_start = xlinebuffer_start;
+					xlinebuffer2_end = xlinebuffer_end;
+					denise_y_end++;
+				}
+				break;
 			case nln_nblack:
-			if (gfx_ypos + 1 < vb->inheight) {
-				setxlinebuffer(0, gfx_ypos + 1);
-				memset(xlinebuffer, 0, vb->inwidth * vb->pixbytes);
-				denise_y_end++;
-			}
-			break;
+				if (gfx_ypos + 1 < vb->inheight) {
+					setxlinebuffer(0, gfx_ypos + 1);
+					memset(xlinebuffer, 0, vb->inwidth * vb->pixbytes);
+					denise_y_end++;
+				}
+				break;
+			default:
+				break;
 		}
 		setxlinebuffer(0, gfx_ypos);
 		xshift = linetoscr_x_adjust >> hresolution;

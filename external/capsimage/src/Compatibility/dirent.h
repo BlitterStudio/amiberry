@@ -198,13 +198,27 @@
  * only defined for compatibility.  These macros should always return false
  * on Windows.
  */
+#ifndef S_ISFIFO
 #define	S_ISFIFO(mode) (((mode) & S_IFMT) == S_IFIFO)
+#endif
+#ifndef S_ISDIR
 #define	S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+#endif
+#ifndef S_ISREG
 #define	S_ISREG(mode)  (((mode) & S_IFMT) == S_IFREG)
+#endif
+#ifndef S_ISLNK
 #define	S_ISLNK(mode)  (((mode) & S_IFMT) == S_IFLNK)
+#endif
+#ifndef S_ISSOCK
 #define	S_ISSOCK(mode) (((mode) & S_IFMT) == S_IFSOCK)
+#endif
+#ifndef S_ISCHR
 #define	S_ISCHR(mode)  (((mode) & S_IFMT) == S_IFCHR)
+#endif
+#ifndef S_ISBLK
 #define	S_ISBLK(mode)  (((mode) & S_IFMT) == S_IFBLK)
+#endif
 
 /* Return the exact length of d_namlen without zero terminator */
 #define _D_EXACT_NAMLEN(p) ((p)->d_namlen)

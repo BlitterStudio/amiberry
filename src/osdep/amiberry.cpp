@@ -658,7 +658,7 @@ char last_active_config[MAX_DPATH] = {};
 int max_uae_width;
 int max_uae_height;
 
-extern "C" int main(int argc, char* argv[]);
+int main(int argc, char* argv[]);
 static void init_amiberry_dirs(bool portable_mode, bool materialize_host_roots = true);
 void save_amiberry_settings();
 
