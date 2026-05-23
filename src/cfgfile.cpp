@@ -49,6 +49,7 @@
 #include "amiberry_input.h"
 #ifndef _WIN32
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #else
 /* MinGW: need inet_addr/inet_ntoa and struct in_addr for SLIRP IP config.
    Cannot include <winsock2.h> here as it conflicts with Amiberry's SOCKET typedef.
@@ -7679,12 +7680,23 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 		return 0;
 	}
 
+	/* Preserve the existing config's mode so a private 0600 file does not
+	 * become world-readable after save. fchmod() bypasses umask. */
+	struct stat old_st;
+	const bool have_old_mode = (stat (filename, &old_st) == 0);
+
 	int wfd = open (tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (wfd < 0) {
 		write_log (_T("cfgfile_save: open('%s') for writing failed: %s\n"),
 			tmpname, strerror (errno));
 		zfile_fclose (fh);
 		return 0;
+	}
+	if (have_old_mode) {
+		if (fchmod (wfd, old_st.st_mode & 07777) != 0) {
+			write_log (_T("cfgfile_save: fchmod '%s' to 0%o failed: %s (continuing)\n"),
+				tmpname, (unsigned) (old_st.st_mode & 07777), strerror (errno));
+		}
 	}
 
 	size_t written = 0;
@@ -7696,7 +7708,7 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 			write_log (_T("cfgfile_save: write to '%s' failed at %zu/%zu bytes: %s\n"),
 				tmpname, written, buflen, strerror (errno));
 			close (wfd);
-			my_unlink (tmpname);
+			unlink (tmpname);
 			zfile_fclose (fh);
 			return 0;
 		}
@@ -7704,7 +7716,7 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 			write_log (_T("cfgfile_save: write to '%s' returned 0 at %zu/%zu bytes (no space?)\n"),
 				tmpname, written, buflen);
 			close (wfd);
-			my_unlink (tmpname);
+			unlink (tmpname);
 			zfile_fclose (fh);
 			return 0;
 		}
@@ -7718,13 +7730,13 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 		write_log (_T("cfgfile_save: fsync of '%s' failed: %s\n"),
 			tmpname, strerror (errno));
 		close (wfd);
-		my_unlink (tmpname);
+		unlink (tmpname);
 		return 0;
 	}
 	if (close (wfd) != 0) {
 		write_log (_T("cfgfile_save: close of '%s' failed: %s\n"),
 			tmpname, strerror (errno));
-		my_unlink (tmpname);
+		unlink (tmpname);
 		return 0;
 	}
 
@@ -7752,23 +7764,35 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	{
 		TCHAR backup[MAX_DPATH];
 		_sntprintf (backup, MAX_DPATH, _T("%s/configuration.backup"), dirpath);
-		my_unlink (backup);
+		unlink (backup);
 		(void) link (filename, backup);
 	}
 
-	if (my_rename (tmpname, filename) != 0) {
+	if (rename (tmpname, filename) != 0) {
 		write_log (_T("cfgfile_save: rename '%s' -> '%s' failed: %s\n"),
 			tmpname, filename, strerror (errno));
-		my_unlink (tmpname);
+		unlink (tmpname);
 		return 0;
 	}
 
-	/* fsync the parent directory so the rename itself is durable. */
+	/* fsync the parent directory so the rename itself is durable. The save
+	 * has already succeeded at this point (rename(2) is atomic and the file
+	 * is visible), so any failure here is a durability warning, not a save
+	 * failure — we log it but still return success. */
 	{
 		int dfd = open (dirpath, O_RDONLY | O_DIRECTORY);
-		if (dfd >= 0) {
-			(void) fsync (dfd);
-			close (dfd);
+		if (dfd < 0) {
+			write_log (_T("cfgfile_save: open dir '%s' for fsync failed: %s — save succeeded but durability not guaranteed\n"),
+				dirpath, strerror (errno));
+		} else {
+			if (fsync (dfd) != 0) {
+				write_log (_T("cfgfile_save: fsync of dir '%s' failed: %s — save succeeded but durability not guaranteed\n"),
+					dirpath, strerror (errno));
+			}
+			if (close (dfd) != 0) {
+				write_log (_T("cfgfile_save: close of dir '%s' failed: %s\n"),
+					dirpath, strerror (errno));
+			}
 		}
 	}
 
