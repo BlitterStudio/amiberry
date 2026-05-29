@@ -5383,7 +5383,9 @@ const struct cputbl op_smalltbl_2[] = {
 { op_46fb_0_ff, NULL, 0x46fb, 2, { 2, 0 }, 0 }, /* MV2SR */
 { op_46fc_0_ff, NULL, 0x46fc, 4, { 0, 0 }, 0 }, /* MV2SR */
 { op_4800_2_ff, NULL, 0x4800, 2, { 0, 0 }, 0 }, /* NBCD */
-{ op_4808_1_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+#ifndef CPUEMU_68000_ONLY
+{ op_4808_2_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+#endif
 { op_4810_2_ff, NULL, 0x4810, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4818_2_ff, NULL, 0x4818, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4820_2_ff, NULL, 0x4820, 2, { 0, 0 }, 0 }, /* NBCD */
@@ -5497,7 +5499,7 @@ const struct cputbl op_smalltbl_2[] = {
 { op_4cfa_2_ff, NULL, 0x4cfa, 6, { 0, 0 }, 0 }, /* MVMEL */
 { op_4cfb_2_ff, NULL, 0x4cfb, 4, { 2, 0 }, 0 }, /* MVMEL */
 { op_4e40_0_ff, NULL, 0x4e40, 2, { 0, 0 }, 0 }, /* TRAP */
-{ op_4e50_1_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
+{ op_4e50_2_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
 { op_4e58_0_ff, NULL, 0x4e58, 2, { 0, 0 }, 0 }, /* UNLK */
 { op_4e60_2_ff, NULL, 0x4e60, 2, { 0, 0 }, 0 }, /* MVR2USP */
 { op_4e68_0_ff, NULL, 0x4e68, 2, { 0, 0 }, 0 }, /* MVUSP2R */
@@ -7227,7 +7229,7 @@ const struct cputbl op_smalltbl_3[] = {
 { op_46fb_0_ff, NULL, 0x46fb, 2, { 2, 0 }, 0 }, /* MV2SR */
 { op_46fc_0_ff, NULL, 0x46fc, 4, { 0, 0 }, 0 }, /* MV2SR */
 { op_4800_2_ff, NULL, 0x4800, 2, { 0, 0 }, 0 }, /* NBCD */
-{ op_4808_1_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+{ op_4808_2_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
 { op_4810_2_ff, NULL, 0x4810, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4818_2_ff, NULL, 0x4818, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4820_2_ff, NULL, 0x4820, 2, { 0, 0 }, 0 }, /* NBCD */
@@ -7341,7 +7343,7 @@ const struct cputbl op_smalltbl_3[] = {
 { op_4cfa_2_ff, NULL, 0x4cfa, 6, { 0, 0 }, 0 }, /* MVMEL */
 { op_4cfb_2_ff, NULL, 0x4cfb, 4, { 2, 0 }, 0 }, /* MVMEL */
 { op_4e40_0_ff, NULL, 0x4e40, 2, { 0, 0 }, 0 }, /* TRAP */
-{ op_4e50_1_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
+{ op_4e50_2_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
 { op_4e58_0_ff, NULL, 0x4e58, 2, { 0, 0 }, 0 }, /* UNLK */
 { op_4e60_2_ff, NULL, 0x4e60, 2, { 0, 0 }, 0 }, /* MVR2USP */
 { op_4e68_0_ff, NULL, 0x4e68, 2, { 0, 0 }, 0 }, /* MVUSP2R */
@@ -49714,7 +49716,9 @@ const struct cputbl op_smalltbl_42[] = {
 { op_46fb_40_ff, NULL, 0x46fb, 2, { 2, 0 }, 0 }, /* MV2SR */
 { op_46fc_40_ff, NULL, 0x46fc, 4, { 0, 0 }, 0 }, /* MV2SR */
 { op_4800_42_ff, NULL, 0x4800, 2, { 0, 0 }, 0 }, /* NBCD */
-{ op_4808_41_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+#ifndef CPUEMU_68000_ONLY
+{ op_4808_42_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+#endif
 { op_4810_42_ff, NULL, 0x4810, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4818_42_ff, NULL, 0x4818, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4820_42_ff, NULL, 0x4820, 2, { 0, 0 }, 0 }, /* NBCD */
@@ -49828,7 +49832,7 @@ const struct cputbl op_smalltbl_42[] = {
 { op_4cfa_42_ff, NULL, 0x4cfa, 6, { 0, 0 }, 0 }, /* MVMEL */
 { op_4cfb_42_ff, NULL, 0x4cfb, 4, { 2, 0 }, 0 }, /* MVMEL */
 { op_4e40_40_ff, NULL, 0x4e40, 2, { 0, 0 }, 0 }, /* TRAP */
-{ op_4e50_41_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
+{ op_4e50_42_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
 { op_4e58_40_ff, NULL, 0x4e58, 2, { 0, 0 }, 0 }, /* UNLK */
 { op_4e60_42_ff, NULL, 0x4e60, 2, { 0, 0 }, 0 }, /* MVR2USP */
 { op_4e68_40_ff, NULL, 0x4e68, 2, { 0, 0 }, 0 }, /* MVUSP2R */
@@ -51558,7 +51562,7 @@ const struct cputbl op_smalltbl_43[] = {
 { op_46fb_40_ff, NULL, 0x46fb, 2, { 2, 0 }, 0 }, /* MV2SR */
 { op_46fc_40_ff, NULL, 0x46fc, 4, { 0, 0 }, 0 }, /* MV2SR */
 { op_4800_42_ff, NULL, 0x4800, 2, { 0, 0 }, 0 }, /* NBCD */
-{ op_4808_41_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+{ op_4808_42_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
 { op_4810_42_ff, NULL, 0x4810, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4818_42_ff, NULL, 0x4818, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4820_42_ff, NULL, 0x4820, 2, { 0, 0 }, 0 }, /* NBCD */
@@ -51672,7 +51676,7 @@ const struct cputbl op_smalltbl_43[] = {
 { op_4cfa_42_ff, NULL, 0x4cfa, 6, { 0, 0 }, 0 }, /* MVMEL */
 { op_4cfb_42_ff, NULL, 0x4cfb, 4, { 2, 0 }, 0 }, /* MVMEL */
 { op_4e40_40_ff, NULL, 0x4e40, 2, { 0, 0 }, 0 }, /* TRAP */
-{ op_4e50_41_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
+{ op_4e50_42_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
 { op_4e58_40_ff, NULL, 0x4e58, 2, { 0, 0 }, 0 }, /* UNLK */
 { op_4e60_42_ff, NULL, 0x4e60, 2, { 0, 0 }, 0 }, /* MVR2USP */
 { op_4e68_40_ff, NULL, 0x4e68, 2, { 0, 0 }, 0 }, /* MVUSP2R */
@@ -67293,7 +67297,9 @@ const struct cputbl op_smalltbl_52[] = {
 { op_46fb_50_ff, NULL, 0x46fb, 2, { 2, 0 }, 0 }, /* MV2SR */
 { op_46fc_50_ff, NULL, 0x46fc, 4, { 0, 0 }, 0 }, /* MV2SR */
 { op_4800_52_ff, NULL, 0x4800, 2, { 0, 0 }, 0 }, /* NBCD */
-{ op_4808_51_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+#ifndef CPUEMU_68000_ONLY
+{ op_4808_52_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+#endif
 { op_4810_52_ff, NULL, 0x4810, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4818_52_ff, NULL, 0x4818, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4820_52_ff, NULL, 0x4820, 2, { 0, 0 }, 0 }, /* NBCD */
@@ -67407,7 +67413,7 @@ const struct cputbl op_smalltbl_52[] = {
 { op_4cfa_52_ff, NULL, 0x4cfa, 6, { 0, 0 }, 0 }, /* MVMEL */
 { op_4cfb_52_ff, NULL, 0x4cfb, 4, { 2, 0 }, 0 }, /* MVMEL */
 { op_4e40_50_ff, NULL, 0x4e40, 2, { 0, 0 }, 0 }, /* TRAP */
-{ op_4e50_51_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
+{ op_4e50_52_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
 { op_4e58_50_ff, NULL, 0x4e58, 2, { 0, 0 }, 0 }, /* UNLK */
 { op_4e60_52_ff, NULL, 0x4e60, 2, { 0, 0 }, 0 }, /* MVR2USP */
 { op_4e68_50_ff, NULL, 0x4e68, 2, { 0, 0 }, 0 }, /* MVUSP2R */
@@ -69137,7 +69143,7 @@ const struct cputbl op_smalltbl_53[] = {
 { op_46fb_50_ff, NULL, 0x46fb, 2, { 2, 0 }, 0 }, /* MV2SR */
 { op_46fc_50_ff, NULL, 0x46fc, 4, { 0, 0 }, 0 }, /* MV2SR */
 { op_4800_52_ff, NULL, 0x4800, 2, { 0, 0 }, 0 }, /* NBCD */
-{ op_4808_51_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
+{ op_4808_52_ff, NULL, 0x4808, 6, { 0, 0 }, 0 }, /* LINK */
 { op_4810_52_ff, NULL, 0x4810, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4818_52_ff, NULL, 0x4818, 2, { 0, 0 }, 0 }, /* NBCD */
 { op_4820_52_ff, NULL, 0x4820, 2, { 0, 0 }, 0 }, /* NBCD */
@@ -69251,7 +69257,7 @@ const struct cputbl op_smalltbl_53[] = {
 { op_4cfa_52_ff, NULL, 0x4cfa, 6, { 0, 0 }, 0 }, /* MVMEL */
 { op_4cfb_52_ff, NULL, 0x4cfb, 4, { 2, 0 }, 0 }, /* MVMEL */
 { op_4e40_50_ff, NULL, 0x4e40, 2, { 0, 0 }, 0 }, /* TRAP */
-{ op_4e50_51_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
+{ op_4e50_52_ff, NULL, 0x4e50, 4, { 0, 0 }, 0 }, /* LINK */
 { op_4e58_50_ff, NULL, 0x4e58, 2, { 0, 0 }, 0 }, /* UNLK */
 { op_4e60_52_ff, NULL, 0x4e60, 2, { 0, 0 }, 0 }, /* MVR2USP */
 { op_4e68_50_ff, NULL, 0x4e68, 2, { 0, 0 }, 0 }, /* MVUSP2R */

@@ -218,6 +218,7 @@ void REGPARAM2 op_003c_35_ff(uae_u32 opcode)
 	uae_s16 src = get_iword_mmu030c_state(2);
 	/* OP zero */
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr |= src;
 	MakeFromSR();
 	intlev_load(); 
@@ -2030,6 +2031,7 @@ void REGPARAM2 op_023c_35_ff(uae_u32 opcode)
 	/* OP zero */
 	src &= 0xFF;
 	src |= 0xff00;
+	if(regs.t0) check_t0_trace();
 	regs.sr &= src;
 	MakeFromSR();
 	intlev_load(); 
@@ -5511,6 +5513,7 @@ void REGPARAM2 op_0a3c_35_ff(uae_u32 opcode)
 	uae_s16 src = get_iword_mmu030c_state(2);
 	/* OP zero */
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr ^= src;
 	MakeFromSR();
 	intlev_load(); 

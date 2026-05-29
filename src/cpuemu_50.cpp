@@ -40869,6 +40869,7 @@ uae_u32 REGPARAM2 op_003c_52_ff(uae_u32 opcode)
 	MakeSR();
 	uae_s16 src = get_iiword_jit(2);
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr |= src;
 	MakeFromSR();
 	m68k_incpc(4);
@@ -40900,6 +40901,7 @@ uae_u32 REGPARAM2 op_023c_52_ff(uae_u32 opcode)
 	uae_s16 src = get_iiword_jit(2);
 	src &= 0xFF;
 	src |= 0xff00;
+	if(regs.t0) check_t0_trace();
 	regs.sr &= src;
 	MakeFromSR();
 	m68k_incpc(4);
@@ -40930,6 +40932,7 @@ uae_u32 REGPARAM2 op_0a3c_52_ff(uae_u32 opcode)
 	MakeSR();
 	uae_s16 src = get_iiword_jit(2);
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr ^= src;
 	MakeFromSR();
 	m68k_incpc(4);
@@ -42424,6 +42427,27 @@ uae_u32 REGPARAM2 op_4800_52_ff(uae_u32 opcode)
 }
 /* 2 0,0   */
 
+/* LINK.L An,#<data>.L */
+#ifndef CPUEMU_68000_ONLY
+uae_u32 REGPARAM2 op_4808_52_ff(uae_u32 opcode)
+{
+	uae_u32 real_opcode = opcode;
+	uae_u32 srcreg = (real_opcode & 7);
+	uae_s32 src = m68k_areg(regs, srcreg);
+	uaecptr olda;
+	olda = m68k_areg(regs, 7) - 4;
+	m68k_areg(regs, 7) = olda;
+	uae_s32 offs;
+	offs = get_iilong_jit(2);
+	x_put_long(olda, src);
+	m68k_areg(regs, srcreg) = (m68k_areg(regs, 7));
+	m68k_areg(regs, 7) += offs;
+	m68k_incpc(6);
+	return 0;
+}
+/* 6 0,0   */
+
+#endif
 /* NBCD.B (An) */
 uae_u32 REGPARAM2 op_4810_52_ff(uae_u32 opcode)
 {
@@ -43287,6 +43311,24 @@ uae_u32 REGPARAM2 op_4cfb_52_ff(uae_u32 opcode)
 	return 0;
 }
 /* 4 2,0   */
+
+/* LINK.W An,#<data>.W */
+uae_u32 REGPARAM2 op_4e50_52_ff(uae_u32 opcode)
+{
+	uae_u32 real_opcode = opcode;
+	uae_u32 srcreg = (real_opcode & 7);
+	uae_s32 src = m68k_areg(regs, srcreg);
+	uaecptr olda;
+	olda = m68k_areg(regs, 7) - 4;
+	m68k_areg(regs, 7) = olda;
+	uae_s16 offs = get_iiword_jit(2);
+	x_put_long(olda, src);
+	m68k_areg(regs, srcreg) = (m68k_areg(regs, 7));
+	m68k_areg(regs, 7) += offs;
+	m68k_incpc(4);
+	return 0;
+}
+/* 4 0,0   */
 
 /* MVR2USP.L An */
 uae_u32 REGPARAM2 op_4e60_52_ff(uae_u32 opcode)
@@ -45192,6 +45234,7 @@ uae_u32 REGPARAM2 op_003c_53_ff(uae_u32 opcode)
 	MakeSR();
 	uae_s16 src = get_iiword_jit(2);
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr |= src;
 	MakeFromSR();
 	m68k_incpc(4);
@@ -45223,6 +45266,7 @@ uae_u32 REGPARAM2 op_023c_53_ff(uae_u32 opcode)
 	uae_s16 src = get_iiword_jit(2);
 	src &= 0xFF;
 	src |= 0xff00;
+	if(regs.t0) check_t0_trace();
 	regs.sr &= src;
 	MakeFromSR();
 	m68k_incpc(4);
@@ -45253,6 +45297,7 @@ uae_u32 REGPARAM2 op_0a3c_53_ff(uae_u32 opcode)
 	MakeSR();
 	uae_s16 src = get_iiword_jit(2);
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr ^= src;
 	MakeFromSR();
 	m68k_incpc(4);

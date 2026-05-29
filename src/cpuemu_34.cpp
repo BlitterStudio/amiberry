@@ -201,6 +201,7 @@ uae_u32 REGPARAM2 op_003c_34_ff(uae_u32 opcode)
 	MakeSR();
 	uae_s16 src = get_iword_mmu030c_state(2);
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr |= src;
 	MakeFromSR();
 	m68k_incpci(4);
@@ -1872,6 +1873,7 @@ uae_u32 REGPARAM2 op_023c_34_ff(uae_u32 opcode)
 	uae_s16 src = get_iword_mmu030c_state(2);
 	src &= 0xFF;
 	src |= 0xff00;
+	if(regs.t0) check_t0_trace();
 	regs.sr &= src;
 	MakeFromSR();
 	m68k_incpci(4);
@@ -5108,6 +5110,7 @@ uae_u32 REGPARAM2 op_0a3c_34_ff(uae_u32 opcode)
 	MakeSR();
 	uae_s16 src = get_iword_mmu030c_state(2);
 	src &= 0xFF;
+	if(regs.t0) check_t0_trace();
 	regs.sr ^= src;
 	MakeFromSR();
 	m68k_incpci(4);
