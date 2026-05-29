@@ -7623,24 +7623,68 @@ void cfgfile_backup(const TCHAR *path)
 
 	get_configuration_path(dpath, sizeof(dpath) / sizeof(TCHAR));
 	_tcscat (dpath, _T("configuration.backup"));
+#ifdef AMIBERRY
+	/* Non-destructive backup: copy (not move) the current config to the backup
+	   slot so the live file survives if the subsequent atomic save fails.
+	   Best-effort -- a backup failure must never block the save. */
+	if (!my_existsfile (path))
+		return;
+	bool hidden = my_isfilehidden (dpath);
+	if (!copyfile (dpath, path, true))
+		write_log (_T("cfgfile_backup: failed to back up '%s' to '%s' (continuing)\n"), path, dpath);
+	else if (hidden)
+		my_setfilehidden (dpath, hidden);
+#else
 	bool hidden = my_isfilehidden (dpath);
 	my_unlink (dpath);
 	my_rename (path, dpath);
 	if (hidden)
 		my_setfilehidden (dpath, hidden);
+#endif
 }
 
 int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 {
 	struct zfile *fh;
+#ifdef AMIBERRY
+	/*
+	 * Atomic save (issue #1345). The previous fopen("w") path truncated the
+	 * live file up front, so a crash before kernel writeback (~5s on ext4)
+	 * left a 0-byte config that could crash Amiberry on next launch.
+	 *
+	 * We serialise to an in-memory zfile first so we can guarantee a non-empty
+	 * byte count before touching disk, then hand the buffer to the platform
+	 * helper my_save_file_atomic(), which writes a temp file, flushes it
+	 * durably, and atomically renames it into place. On any failure the live
+	 * file is left untouched -- it is never truncated or partially written.
+	 */
+	if (!type)
+		type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+
+	fh = zfile_fopen_empty (NULL, _T("cfgfile_save_buffer"), 0);
+	if (! fh) {
+		write_log (_T("cfgfile_save: zfile_fopen_empty failed\n"));
+		return 0;
+	}
+	cfgfile_save_options (fh, p, type);
+
+	size_t buflen = 0;
+	uae_u8 *bufptr = zfile_get_data_pointer (fh, &buflen);
+	if (!bufptr || buflen == 0) {
+		write_log (_T("cfgfile_save: serialised config is empty, not saving\n"));
+		zfile_fclose (fh);
+		return 0;
+	}
 
 	cfgfile_backup (filename);
-#ifdef AMIBERRY
-	// MinGW's msvcrt.dll does not support the "ccs=UTF-8" fopen extension
-	fh = zfile_fopen (filename, _T("w"), ZFD_NORMAL);
+	const int ok = my_save_file_atomic (filename, bufptr, buflen) ? 1 : 0;
+	if (!ok)
+		write_log (_T("cfgfile_save: atomic save of '%s' failed\n"), filename);
+	zfile_fclose (fh);
+	return ok;
 #else
+	cfgfile_backup (filename);
 	fh = zfile_fopen (filename, _T("w, ccs=UTF-8"), ZFD_NORMAL);
-#endif
 	if (! fh) {
 		write_log(_T("cfgfile_save: zfile_fopen failed for '%s'\n"), filename);
 		return 0;
@@ -7651,6 +7695,7 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	cfgfile_save_options (fh, p, type);
 	zfile_fclose (fh);
 	return 1;
+#endif
 }
 
 struct uae_prefs *cfgfile_open(const TCHAR *filename, int *type)

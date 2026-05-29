@@ -1557,6 +1557,265 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	}
 }
 
+/*
+ * Atomically replace `filename` with `len` bytes from `data`.
+ *
+ * The save either fully succeeds (filename holds the new content) or the
+ * previous file is left untouched -- there is never a 0-byte or partially
+ * written file on disk (issue #1345). On success the data is durable.
+ *
+ * The raw `filename` is used (no iso_8859_1_to_utf8 conversion): the config
+ * loader reads via uae_tfopen() == fopen(path), so the file must be written at
+ * the same OS path it will later be read from.
+ *
+ * Failures of the durability flush (fsync/_commit) that mean "this filesystem
+ * cannot flush" (EINVAL/EOPNOTSUPP/ENOTSUP) are tolerated -- the bytes are
+ * already written; only crash-durability is waived. Real I/O errors fail the
+ * save and leave the original file intact.
+ */
+#ifdef _WIN32
+[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
+{
+	if (!filename || !data) {
+		write_log("my_save_file_atomic: null argument\n");
+		return false;
+	}
+
+	std::string target(filename);
+	/* Follow symlinks/reparse points like fopen("w"): resolve to the real file
+	   so the replace updates the target rather than clobbering the link. */
+	{
+		const DWORD attr = GetFileAttributesA(target.c_str());
+		if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_REPARSE_POINT)) {
+			const HANDLE h = CreateFileA(target.c_str(), 0,
+				FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+				nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+			if (h != INVALID_HANDLE_VALUE) {
+				char resolved[MAX_PATH];
+				const DWORD n = GetFinalPathNameByHandleA(h, resolved, sizeof(resolved),
+					FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+				CloseHandle(h);
+				if (n > 0 && n < sizeof(resolved)) {
+					const char* rp = resolved;
+					if (strncmp(rp, "\\\\?\\", 4) == 0)	/* strip the \\?\ prefix */
+						rp += 4;
+					target.assign(rp);
+				}
+			}
+		}
+	}
+	/* Temp name unique per process, thread and call, so two concurrent saves to
+	   the same target never share a temp file. */
+	static volatile LONG s_tmpseq = 0;
+	const LONG seq = InterlockedIncrement(&s_tmpseq);
+	const std::string tmp = target + ".tmp."
+		+ std::to_string((unsigned long)GetCurrentProcessId()) + "."
+		+ std::to_string((unsigned long)GetCurrentThreadId()) + "."
+		+ std::to_string((unsigned long)seq);
+
+	/* Text mode ("w") matches the legacy fopen("w") path so CRLF line endings
+	   are preserved byte-for-byte on Windows. */
+	FILE* fp = fopen(tmp.c_str(), "w");
+	if (!fp) {
+		write_log("my_save_file_atomic: fopen('%s') failed: %s\n", tmp.c_str(), strerror(errno));
+		return false;
+	}
+
+	const char* p = static_cast<const char*>(data);
+	size_t written = 0;
+	while (written < len) {
+		const size_t n = fwrite(p + written, 1, len - written, fp);
+		if (n == 0) {
+			write_log("my_save_file_atomic: fwrite to '%s' failed at %zu/%zu bytes: %s\n",
+				tmp.c_str(), written, len, strerror(errno));
+			fclose(fp);
+			remove(tmp.c_str());
+			return false;
+		}
+		written += n;
+	}
+
+	if (fflush(fp) != 0) {
+		write_log("my_save_file_atomic: fflush '%s' failed: %s\n", tmp.c_str(), strerror(errno));
+		fclose(fp);
+		remove(tmp.c_str());
+		return false;
+	}
+	if (_commit(_fileno(fp)) != 0) {
+		const int e = errno;
+		if (e == EINVAL) {
+			write_log("my_save_file_atomic: _commit '%s' unsupported (errno=%d), continuing\n", tmp.c_str(), e);
+		} else {
+			write_log("my_save_file_atomic: _commit '%s' failed: %s\n", tmp.c_str(), strerror(e));
+			fclose(fp);
+			remove(tmp.c_str());
+			return false;
+		}
+	}
+	if (fclose(fp) != 0) {
+		write_log("my_save_file_atomic: fclose '%s' failed: %s\n", tmp.c_str(), strerror(errno));
+		remove(tmp.c_str());
+		return false;
+	}
+
+	/* Atomic replace. ReplaceFile preserves the original's attributes/ACLs;
+	   it requires the target to exist, so fall back to MoveFileEx for a new
+	   file. Both write through to disk for rename durability. */
+	bool ok;
+	if (GetFileAttributesA(target.c_str()) != INVALID_FILE_ATTRIBUTES) {
+		ok = ReplaceFileA(target.c_str(), tmp.c_str(), nullptr,
+			REPLACEFILE_WRITE_THROUGH | REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
+		if (!ok) {
+			/* Target may have been deleted between the check and here, or its
+			   filesystem may not support ReplaceFile. Fall back to a plain
+			   atomic replace (loses attribute preservation, but completes). */
+			write_log("my_save_file_atomic: ReplaceFileA '%s' failed: %lu, falling back to MoveFileEx\n",
+				target.c_str(), GetLastError());
+			ok = MoveFileExA(tmp.c_str(), target.c_str(),
+				MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+			if (!ok)
+				write_log("my_save_file_atomic: MoveFileEx fallback -> '%s' failed: %lu\n",
+					target.c_str(), GetLastError());
+		}
+	} else {
+		ok = MoveFileExA(tmp.c_str(), target.c_str(),
+			MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+		if (!ok)
+			write_log("my_save_file_atomic: MoveFileExA -> '%s' failed: %lu\n", target.c_str(), GetLastError());
+	}
+	if (!ok) {
+		remove(tmp.c_str());
+		return false;
+	}
+	return true;
+}
+#else
+[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
+{
+	if (!filename || !data) {
+		write_log("my_save_file_atomic: null argument\n");
+		return false;
+	}
+
+	/* Follow symlinks like the previous fopen("w") path: if `filename` is a
+	   symlink, write through to its real target and leave the link itself
+	   intact. Resolving here makes the temp file land in the real target's
+	   directory, so the atomic rename replaces the real file (same filesystem)
+	   rather than clobbering the symlink. */
+	std::string target(filename);
+	struct stat lst{};
+	if (lstat(target.c_str(), &lst) == 0 && S_ISLNK(lst.st_mode)) {
+		char* resolved = realpath(target.c_str(), nullptr);
+		if (resolved) {
+			target.assign(resolved);
+			free(resolved);
+		}
+		/* If realpath fails (e.g. dangling link) fall back to the link path. */
+	}
+
+	/* Preserve the existing file's mode so a private (e.g. 0600) config does
+	   not become world-readable after a save. */
+	struct stat old_st{};
+	const bool have_old_mode = (stat(target.c_str(), &old_st) == 0);
+
+	/* Unique temp in the SAME directory as the target (so rename(2) is atomic
+	   and on the same filesystem). mkstemp creates it 0600 and unique, which
+	   avoids both a world-readable window and any PID-reuse collision. */
+	std::string tmpl = target + ".tmp.XXXXXX";
+	const int fd = mkstemp(&tmpl[0]);
+	if (fd < 0) {
+		write_log("my_save_file_atomic: mkstemp('%s') failed: %s\n", tmpl.c_str(), strerror(errno));
+		return false;
+	}
+	const char* tmpname = tmpl.c_str();
+
+	const char* p = static_cast<const char*>(data);
+	size_t written = 0;
+	while (written < len) {
+		const ssize_t n = write(fd, p + written, len - written);
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			write_log("my_save_file_atomic: write '%s' failed at %zu/%zu bytes: %s\n",
+				tmpname, written, len, strerror(errno));
+			close(fd);
+			unlink(tmpname);
+			return false;
+		}
+		if (n == 0) {
+			/* write(2) does not return 0 for a regular file with a non-zero
+			   count; treat it as an error rather than spinning. */
+			write_log("my_save_file_atomic: write '%s' returned 0 at %zu/%zu bytes\n",
+				tmpname, written, len);
+			close(fd);
+			unlink(tmpname);
+			return false;
+		}
+		written += (size_t)n;
+	}
+
+	/* Widen to the final mode only now that the full content is on the temp. */
+	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : (mode_t)0644;
+	if (fchmod(fd, final_mode) != 0) {
+		write_log("my_save_file_atomic: fchmod '%s' to 0%o failed: %s (continuing)\n",
+			tmpname, (unsigned)final_mode, strerror(errno));
+	}
+
+	if (fsync(fd) != 0) {
+		const int e = errno;
+		if (e == EINVAL || e == EOPNOTSUPP
+#if defined(ENOTSUP) && (ENOTSUP != EOPNOTSUPP)
+			|| e == ENOTSUP
+#endif
+			) {
+			write_log("my_save_file_atomic: fsync '%s' unsupported (errno=%d), continuing\n", tmpname, e);
+		} else {
+			write_log("my_save_file_atomic: fsync '%s' failed: %s\n", tmpname, strerror(e));
+			close(fd);
+			unlink(tmpname);
+			return false;
+		}
+	}
+	if (close(fd) != 0) {
+		write_log("my_save_file_atomic: close '%s' failed: %s\n", tmpname, strerror(errno));
+		unlink(tmpname);
+		return false;
+	}
+
+	if (rename(tmpname, target.c_str()) != 0) {
+		write_log("my_save_file_atomic: rename '%s' -> '%s' failed: %s\n",
+			tmpname, target.c_str(), strerror(errno));
+		unlink(tmpname);
+		return false;
+	}
+
+	/* fsync the parent directory so the rename itself is durable. The save has
+	   already succeeded (rename is atomic and the file is visible), so a failure
+	   here is a durability warning, not a save failure. */
+	std::string dir = target;
+	const size_t slash = dir.find_last_of('/');
+	if (slash == std::string::npos)
+		dir = ".";
+	else if (slash == 0)
+		dir = "/";
+	else
+		dir.erase(slash);
+#ifndef O_DIRECTORY
+#define O_DIRECTORY 0	/* not POSIX-mandated; opening a dir O_RDONLY still works */
+#endif
+	const int dfd = open(dir.c_str(), O_RDONLY | O_DIRECTORY);
+	if (dfd < 0) {
+		write_log("my_save_file_atomic: open dir '%s' for fsync failed: %s (save ok, durability not guaranteed)\n",
+			dir.c_str(), strerror(errno));
+	} else {
+		if (fsync(dfd) != 0)
+			write_log("my_save_file_atomic: fsync dir '%s' failed: %s (save ok)\n", dir.c_str(), strerror(errno));
+		close(dfd);
+	}
+	return true;
+}
+#endif
+
 [[nodiscard]] uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence) noexcept
 {
 	// Input validation with detailed error reporting
