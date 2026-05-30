@@ -29,7 +29,7 @@ static void lts_ecs_shres_dhires(void)
 				dpix_val1 = bordercolor_ecs_shres;
 				dpix_val2 = bordercolor_ecs_shres;
 				dpix_val3 = bordercolor_ecs_shres;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					shifted = true;
 					pix0 = getbpl2();
 					shiftbpl2();
@@ -151,7 +151,7 @@ static void lts_ecs_shres_dhires_filtered(void)
 				dpix_val1 = bordercolor_ecs_shres;
 				dpix_val2 = bordercolor_ecs_shres;
 				dpix_val3 = bordercolor_ecs_shres;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					shifted = true;
 					pix0 = getbpl2();
 					shiftbpl2();
@@ -275,7 +275,7 @@ static void lts_ecs_shres_dshres(void)
 				dpix_val1 = bordercolor_ecs_shres;
 				dpix_val2 = bordercolor_ecs_shres;
 				dpix_val3 = bordercolor_ecs_shres;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					shifted = true;
 					pix0 = getbpl2();
 					shiftbpl2();
@@ -424,7 +424,7 @@ static void lts_ecs_shres_dhires_genlock(void)
 				dpix_val1 = bordercolor_ecs_shres;
 				dpix_val2 = bordercolor_ecs_shres;
 				dpix_val3 = bordercolor_ecs_shres;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					shifted = true;
 					pix0 = getbpl2();
 					shiftbpl2();
@@ -552,7 +552,7 @@ static void lts_ecs_shres_dhires_genlock_filtered(void)
 				dpix_val1 = bordercolor_ecs_shres;
 				dpix_val2 = bordercolor_ecs_shres;
 				dpix_val3 = bordercolor_ecs_shres;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					shifted = true;
 					pix0 = getbpl2();
 					shiftbpl2();
@@ -684,7 +684,7 @@ static void lts_ecs_shres_dshres_genlock(void)
 				dpix_val1 = bordercolor_ecs_shres;
 				dpix_val2 = bordercolor_ecs_shres;
 				dpix_val3 = bordercolor_ecs_shres;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					shifted = true;
 					pix0 = getbpl2();
 					shiftbpl2();

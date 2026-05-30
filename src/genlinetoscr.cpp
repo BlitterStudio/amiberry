@@ -590,7 +590,7 @@ static void gen_pix_aga(void)
 		}
 		outf("	dpix_val%d = bordercolor;", off);
 		if (modetype > 0) {
-			outf("	if (denise_hdiw && bpl1dat_trigger) {");
+			outf("	if (denise_hdiw && bpl1dat_trigger && !diw_disable) {");
 			outf("	pix%d = loaded_pixs[%d];", off, off);
 			outf("	clxdat |= bplcoltable[pix%d];", off);
 			gen_bplpixmode_aga(off);
@@ -625,7 +625,7 @@ static void gen_pix_aga(void)
 					}
 					outf("	dpix_val%d = bordercolor;", off);
 					if (modetype > 0) {
-						outf("	if (denise_hdiw && bpl1dat_trigger) {");
+						outf("	if (denise_hdiw && bpl1dat_trigger && !diw_disable) {");
 						outf("	pix%d = loaded_pixs[%d];", off, off);
 						outf("	clxdat |= bplcoltable[pix%d];", off);
 						gen_bplpixmode_aga(off);
@@ -645,7 +645,7 @@ static void gen_pix_aga(void)
 						outf("if (!denise_blank_active) {");
 						outf("	dpix_val%d = bordercolor;", off);
 						if (modetype > 0) {
-							outf("	if (denise_hdiw && bpl1dat_trigger) {");
+							outf("	if (denise_hdiw && bpl1dat_trigger && !diw_disable) {");
 							outf("	pix%d = loaded_pixs[%d];", off, off);
 							outf("	decode_ham_pixel_aga(pix%d);", off);
 						}
@@ -776,7 +776,7 @@ static void gen_pix(void)
 			}
 			outf("	dpix_val%d = bordercolor;", i);
 			if (modetype > 0) {
-				outf("	if (denise_hdiw && bpl1dat_trigger) {");
+				outf("	if (denise_hdiw && bpl1dat_trigger && !diw_disable) {");
 				gen_getbpl(i, maxplanes);
 				outf("	clxdat |= bplcoltable[pix%d];", i);
 				if (planes > 4) {
@@ -1821,7 +1821,7 @@ int main (int argc, char *argv[])
 				outf("	dpix_val1 = bordercolor_ecs_shres;");
 				outf("	dpix_val2 = bordercolor_ecs_shres;");
 				outf("	dpix_val3 = bordercolor_ecs_shres;");
-				outf("	if (denise_hdiw && bpl1dat_trigger) {");
+				outf("	if (denise_hdiw && bpl1dat_trigger && !diw_disable) {");
 				outf("  shifted = true;");
 				outf("pix0 = getbpl2();");
 				outf("shiftbpl2();");
