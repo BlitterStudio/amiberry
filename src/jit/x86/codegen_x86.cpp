@@ -236,18 +236,37 @@ static inline void x86_64_addr32(void)
 #endif
 }
 
-static inline void x86_64_rex(bool /* w */, uae_u32 * /* r */, uae_u32 * /* x */, uae_u32 *b)
+static inline void x86_64_rex(bool w, uae_u32 *r, uae_u32 *x, uae_u32 *b)
 {
 #ifdef CPU_x86_64
 	int rex_byte = 0x40;
-	if (*b >= R8_INDEX) {
+	/* Each of r/x/b is optional: a NULL pointer means that REX field is not
+	   used by this instruction. The previous version dereferenced 'b'
+	   unconditionally and ignored 'r'/'x' entirely, which crashed when a
+	   caller (e.g. raw_fldcw_m_indexed, which only needs REX.X for its index
+	   register) passed b == NULL. */
+	if (w) {
+		rex_byte |= 8;			/* REX.W */
+	}
+	if (r && *r >= R8_INDEX) {
+		*r -= R8_INDEX;
+		rex_byte |= 4;			/* REX.R */
+	}
+	if (x && *x >= R8_INDEX) {
+		*x -= R8_INDEX;
+		rex_byte |= 2;			/* REX.X */
+	}
+	if (b && *b >= R8_INDEX) {
 		*b -= R8_INDEX;
-		rex_byte |= 1;
+		rex_byte |= 1;			/* REX.B */
 	}
 	if (rex_byte != 0x40) {
 		emit_byte(rex_byte);
 	}
 #else
+	UNUSED(w);
+	UNUSED(r);
+	UNUSED(x);
 	UNUSED(b);
 #endif
 }
