@@ -3451,7 +3451,6 @@ void memory_reset (void)
 		commit_natmem_gaps();
 	}
 #endif
-
 	write_log (_T("memory init end\n"));
 }
 
@@ -3817,12 +3816,10 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 
 #ifdef JIT
 	if ((bank->jit_read_flag | bank->jit_write_flag) & S_N_ADDR) {
-#ifdef AMIBERRY
 		if (!jit_n_addr_bank_unsafe) {
 			write_log(_T("JIT: jit_n_addr_unsafe enabled by bank '%s' at %08x (r=%d w=%d)\n"),
 				bank->name ? bank->name : _T("<unnamed>"), start << 16, bank->jit_read_flag, bank->jit_write_flag);
 		}
-#endif
 		jit_n_addr_unsafe = 1;
 		jit_n_addr_bank_unsafe = 1;
 	}

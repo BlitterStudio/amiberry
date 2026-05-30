@@ -882,6 +882,7 @@ extern shmpiece *shm_start;
 extern uae_u8* natmem_offset;
 extern uae_u8 *natmem_reserved;
 extern size_t natmem_reserved_size;
+void commit_natmem_gaps(void);
 
 #endif
 

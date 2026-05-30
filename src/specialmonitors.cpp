@@ -84,6 +84,7 @@ static int monitor;
 extern uae_u16 bplcon0;
 
 static uae_u8 graffiti_palette[256 * 4];
+static bool graffiti_gaudio;
 
 static bool specialmonitor_setresolution(struct vidbuffer *src, struct vidbuffer *dst, int width, int height, bool nativeposition)
 {
@@ -1903,6 +1904,11 @@ static bool do_hame(struct vidbuffer *src, struct vidbuffer *dst)
 	return v;
 }
 
+void specialmonitor_gaudio(bool gaudio, int vpos)
+{
+	graffiti_gaudio |= gaudio;
+}
+
 static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 {
 	struct vidbuf_description *avidinfo = &adisplays[dst->monitor_id].gfxvidinfo;
@@ -1910,14 +1916,16 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 	int ystart, yend, isntsc;
 	int xstart, xend;
 	uae_u8 *srcbuf, *srcend;
-	uae_u8 *dstbuf;
+	uae_u8 *dstbuf, *dstbufend;
 	bool command, hires, found;
 	int xadd, xpixadd, extrapix;
 	int waitline = 0, dbl;
 	uae_u8 read_mask = 0xff, color = 0, color2 = 0;
 
-	if (!(bplcon0 & 0x0100)) // GAUD
+	if (!graffiti_gaudio) {
 		return false;
+	}
+	graffiti_gaudio = false;
 
 	command = true;
 	found = false;
@@ -1944,19 +1952,35 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 	}
 
 	srcbuf = src->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes + (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * src->pixbytes;
+
+	srcbuf = src->bufmem;
+
 	srcend = src->bufmem + (((yend << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes;
 	extrapix = 0;
 
 	dstbuf = dst->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * dst->rowbytes + (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * dst->pixbytes;
+	dstbufend = dst->bufmemend - 8 * dst->width_allocated * dst->pixbytes;
 
 	y = 0;
-	while (srcend > srcbuf && dst->bufmemend > dstbuf) {
+	while (srcend > srcbuf && dstbufend > dstbuf) {
 		uae_u8 *srcp = srcbuf + extrapix;
 		uae_u8 *dstp = dstbuf;
 
 		x = xstart;
+		bool first = true;
 		while (x < xend) {
 			
+			if (command && first) {
+				if (FR(src, srcp) || FG(src, srcp) || FB(src, srcp) || FI(src, srcp)) {
+					first = false;
+				} else {
+					x += xpixadd;
+					srcp += xadd;
+					dstp += dst->pixbytes * xpixadd;
+					continue;
+				}
+			}
+
 			uae_u8 mask = 0x80;
 			uae_u8 chunky[4] = { 0, 0, 0, 0 };
 			while (mask) {
@@ -1986,7 +2010,7 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 							command = false;
 							dbl = 1;
 							waitline = 2;
-							if (0 && (cmd & 16)) {
+							if (cmd & 16) {
 								hires = true;
 								xadd /= 2;
 								xpixadd /= 2;
@@ -2159,7 +2183,7 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 		panel_width_draw = px == 2 ? 352 : 336;
 		pxcnt = 3;
 		hires = false;
-		srcxoffset = (112 << RES_MAX) - 360;
+		srcxoffset = (112 << RES_MAX) - 360; // 112*4-360=88 (312) 112*4-272=176 (172)
 		if (px > 2)
 			return false;
 		total_width = 336 + 336 + 352;
@@ -2168,7 +2192,7 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 		panel_width_draw = 512;
 		pxcnt = 2;
 		hires = true;
-		srcxoffset = (128 << RES_MAX) - 360;
+		srcxoffset = (128 << RES_MAX) - 360; // 128*4-360=152 (312) 128*4-272=240 (172)
 		if (px > 1)
 			return false;
 		total_width = 512 + 512;
@@ -2358,7 +2382,7 @@ static bool load_genlock_image(void)
 		bfree = bb;
 	}
 
-	if (png_sig_cmp(b, 0, 8) != 0)
+	if (!png_check_sig(b, 8))
 		goto end;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
@@ -2674,7 +2698,7 @@ skip:
 		for (x = 0; x < src->inwidth; x++) {
 			uae_u8 *s2 = s + src->rowbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
-			if (*s_genlock == 0xff) {
+			if (*s_genlock == 0xffff) {
 				PUT_PRGBA(d, d2, dst, 0, 0, 0, 0, 0, doublelines, false);
 			} else if ((!zclken && is_transparent(*s_genlock)) || (zclken && ztoggle)) {
 				a = amix2;
@@ -3418,10 +3442,10 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 #if 0
 				static bool xxx;
 				if (y == opal->control_y + 1) {
-					write_log(_T("%02x "), val);
+					write_log("%02x ", val);
 					xxx = true;
 				} else if (xxx) {
-					write_log(_T("\n"));
+					write_log("\n");
 					xxx = false;
 				}
 #endif
