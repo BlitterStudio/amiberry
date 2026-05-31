@@ -2026,8 +2026,8 @@ MIDFUNC(4,jnf_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2057,8 +2057,8 @@ MIDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2073,8 +2073,10 @@ MIDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 	ROR_xxi(d, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value:
+	// N = source bit (width-1), Z = (low `width` bits of source == 0).
+	SBFX_wwii(REG_WORK1, s, 0, width);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(offs);
@@ -2096,8 +2098,8 @@ MIDFUNC(4,jnf_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2129,8 +2131,8 @@ MIDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2145,8 +2147,13 @@ MIDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 	ROR_xxi(d, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -2169,8 +2176,8 @@ MIDFUNC(4,jnf_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2204,8 +2211,8 @@ MIDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2220,8 +2227,13 @@ MIDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 	ROR_xxi(d, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -2288,8 +2300,10 @@ MIDFUNC(5,jff_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
 	LSR_xxi(d, d2, 32);
 	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value:
+	// N = source bit (width-1), Z = (low `width` bits of source == 0).
+	SBFX_wwii(REG_WORK1, s, 0, width);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(offs);
@@ -2360,8 +2374,13 @@ MIDFUNC(5,jff_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
 	LSR_xxi(d, d2, 32);
 	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -2435,8 +2454,13 @@ MIDFUNC(5,jff_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
 	LSR_xxi(d, d2, 32);
 	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
