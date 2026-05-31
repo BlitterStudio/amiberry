@@ -425,6 +425,7 @@
 #define EOR_xxCflag(Xd,Xn)        _W(immCflag | immOP_EOR | ((Xn) << 5) | (Xd))
 #define CLEAR_xxZflag(Xd,Xn)      _W(immZflagInv | immOP_AND | ((Xn) << 5) | (Xd))
 #define CLEAR_xxCflag(Xd,Xn)      _W(immCflagInv | immOP_AND | ((Xn) << 5) | (Xd))
+#define SET_xxNflag(Xd,Xn)        _W(immNflag | immOP_ORR | ((Xn) << 5) | (Xd))
 #define SET_xxZflag(Xd,Xn)        _W(immZflag | immOP_ORR | ((Xn) << 5) | (Xd))
 #define SET_xxVflag(Xd,Xn)        _W(immVflag | immOP_ORR | ((Xn) << 5) | (Xd))
 #define SET_xxCflag(Xd,Xn)        _W(immCflag | immOP_ORR | ((Xn) << 5) | (Xd))

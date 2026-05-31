@@ -1014,7 +1014,7 @@ MIDFUNC(2,jff_ASL_b_reg,(RW1 d, RR4 i))
 {
 	i = readreg(i);
 	d = rmw(d);
-	int x = writereg(FLAGX);
+	int x = rmw(FLAGX);
 
 	LSL_wwi(REG_WORK3, d, 24);
 	ANDS_ww3f(REG_WORK1, i);
@@ -1052,7 +1052,7 @@ MIDFUNC(2,jff_ASL_b_reg,(RW1 d, RR4 i))
 	}
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// <end>
 	write_jmp_target(branchadd, (uintptr)get_target());
@@ -1072,7 +1072,7 @@ MIDFUNC(2,jff_ASL_w_reg,(RW2 d, RR4 i))
 
 	i = readreg(i);
 	d = rmw(d);
-	int x = writereg(FLAGX);
+	int x = rmw(FLAGX);
 
 	LSL_wwi(REG_WORK3, d, 16);
 	ANDS_ww3f(REG_WORK1, i);
@@ -1110,7 +1110,7 @@ MIDFUNC(2,jff_ASL_w_reg,(RW2 d, RR4 i))
 	}
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// <end>
 	write_jmp_target(branchadd, (uintptr)get_target());
@@ -1130,7 +1130,7 @@ MIDFUNC(2,jff_ASL_l_reg,(RW4 d, RR4 i))
 
 	i = readreg(i);
 	d = rmw(d);
-	int x = writereg(FLAGX);
+	int x = rmw(FLAGX);
 
 	ANDS_ww3f(REG_WORK1, i);
 	BNE_i(3);
@@ -1168,7 +1168,7 @@ MIDFUNC(2,jff_ASL_l_reg,(RW4 d, RR4 i))
 	}
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// Clean upper 32 bits of d after 64-bit LSL_xxx used for carry extraction
 	MOV_ww(d, d);
@@ -1410,9 +1410,9 @@ MIDFUNC(2,jnf_ASR_b_reg,(RW1 d, RR4 i))
 	i = readreg(i);
 	d = rmw(d);
 
-	SIGNED8_REG_2_REG(REG_WORK1, d);
+	SXTB_xx(REG_WORK1, d);
 	AND_ww3f(REG_WORK2, i);
-	ASR_www(REG_WORK1, REG_WORK1, REG_WORK2);
+	ASR_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	unlock2(d);
@@ -1430,9 +1430,9 @@ MIDFUNC(2,jnf_ASR_w_reg,(RW2 d, RR4 i))
 	i = readreg(i);
 	d = rmw(d);
 
-	SIGNED16_REG_2_REG(REG_WORK1, d);
+	SXTH_xx(REG_WORK1, d);
 	AND_ww3f(REG_WORK2, i);
-	ASR_www(REG_WORK1, REG_WORK1, REG_WORK2);
+	ASR_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	unlock2(d);
@@ -1451,7 +1451,9 @@ MIDFUNC(2,jnf_ASR_l_reg,(RW4 d, RR4 i))
 	d = rmw(d);
 
 	AND_ww3f(REG_WORK1, i);
-	ASR_www(d, d, REG_WORK1);
+	SXTW_xw(REG_WORK2, d);             // sign-extend low 32 bits to 64
+	ASR_xxx(d, REG_WORK2, REG_WORK1);  // 64-bit shift so count 32..63 yields all sign
+	MOV_ww(d, d);                      // keep low 32 bits
 
 	unlock2(d);
 	unlock2(i);
@@ -1467,8 +1469,9 @@ MIDFUNC(2,jff_ASR_b_reg,(RW1 d, RR4 i))
 
 	i = readreg(i);
 	d = rmw(d);
+	int x = rmw(FLAGX);
 
-	SIGNED8_REG_2_REG(REG_WORK3, d);
+	SXTB_xx(REG_WORK3, d);
 	ANDS_ww3f(REG_WORK1, i);
 	BNE_i(3);               // No shift -> X flag unchanged
 
@@ -1478,24 +1481,25 @@ MIDFUNC(2,jff_ASR_b_reg,(RW1 d, RR4 i))
 	B_i(0); // <end>
 
 	// shift count > 0
-	ASR_www(REG_WORK2, REG_WORK3, REG_WORK1);
+	ASR_xxx(REG_WORK2, REG_WORK3, REG_WORK1);
 	BFI_wwii(d, REG_WORK2, 0, 8);
 	TST_ww(REG_WORK2, REG_WORK2);
 
 	// Calculate C Flag
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	ASR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	ASR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// <end>
 	write_jmp_target(branchadd, (uintptr)get_target());
 
+	unlock2(x);
 	unlock2(d);
 	unlock2(i);
 }
@@ -1510,8 +1514,9 @@ MIDFUNC(2,jff_ASR_w_reg,(RW2 d, RR4 i))
 
 	i = readreg(i);
 	d = rmw(d);
+	int x = rmw(FLAGX);
 
-	SIGNED16_REG_2_REG(REG_WORK3, d);
+	SXTH_xx(REG_WORK3, d);
 	ANDS_ww3f(REG_WORK1, i);
 	BNE_i(3);               // No shift -> X flag unchanged
 
@@ -1521,24 +1526,25 @@ MIDFUNC(2,jff_ASR_w_reg,(RW2 d, RR4 i))
 	B_i(0); // <end>
 
 	// shift count > 0
-	ASR_www(REG_WORK2, REG_WORK3, REG_WORK1);
+	ASR_xxx(REG_WORK2, REG_WORK3, REG_WORK1);
 	BFI_wwii(d, REG_WORK2, 0, 16);
 	TST_ww(REG_WORK2, REG_WORK2);
 
 	// Calculate C Flag
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	ASR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	ASR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// <end>
 	write_jmp_target(branchadd, (uintptr)get_target());
 
+	unlock2(x);
 	unlock2(d);
 	unlock2(i);
 }
@@ -1553,6 +1559,7 @@ MIDFUNC(2,jff_ASR_l_reg,(RW4 d, RR4 i))
 
 	i = readreg(i);
 	d = rmw(d);
+	int x = rmw(FLAGX);
 
 	ANDS_ww3f(REG_WORK1, i);
 	BNE_i(3);               // No shift -> X flag unchanged
@@ -1563,24 +1570,26 @@ MIDFUNC(2,jff_ASR_l_reg,(RW4 d, RR4 i))
 	B_i(0); // <end>
 
 	// shift count > 0
-	MOV_ww(REG_WORK3, d);
-	ASR_www(d, d, REG_WORK1);
+	SXTW_xw(REG_WORK3, d);             // sign-extended original
+	ASR_xxx(d, REG_WORK3, REG_WORK1);  // 64-bit shift so count 32..63 yields all sign
+	MOV_ww(d, d);                      // keep low 32 bits
 	TST_ww(d, d);
 
-	// Calculate C Flag
+	// Calculate C Flag (64-bit so count-1 >= 32 yields the sign bit)
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	ASR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	ASR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// <end>
 	write_jmp_target(branchadd, (uintptr)get_target());
 
+	unlock2(x);
 	unlock2(d);
 	unlock2(i);
 }
@@ -2026,8 +2035,8 @@ MIDFUNC(4,jnf_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2057,8 +2066,8 @@ MIDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2073,8 +2082,10 @@ MIDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 	ROR_xxi(d, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value:
+	// N = source bit (width-1), Z = (low `width` bits of source == 0).
+	SBFX_wwii(REG_WORK1, s, 0, width);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(offs);
@@ -2096,8 +2107,8 @@ MIDFUNC(4,jnf_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2129,8 +2140,8 @@ MIDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2145,8 +2156,13 @@ MIDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 	ROR_xxi(d, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -2169,8 +2185,8 @@ MIDFUNC(4,jnf_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2204,8 +2220,8 @@ MIDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 
 	BFI_xxii(d, d, 32, 32);
 
-	MOVN_xi(REG_WORK2, 0);
-	LSR_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	MOVN_wi(REG_WORK2, 0);                    // 0x00000000ffffffff (32-bit ones)
+	LSR_xxx(REG_WORK2, REG_WORK2, REG_WORK4); // 64-bit shift so width==32 -> mask 0
 	BFI_xxii(REG_WORK2, REG_WORK2, 32, 32);
 	ROR_xxx(REG_WORK2, REG_WORK2, REG_WORK3);
 	AND_xxx(d, d, REG_WORK2);
@@ -2220,8 +2236,13 @@ MIDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 	ROR_xxi(d, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -2288,8 +2309,10 @@ MIDFUNC(5,jff_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
 	LSR_xxi(d, d2, 32);
 	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value:
+	// N = source bit (width-1), Z = (low `width` bits of source == 0).
+	SBFX_wwii(REG_WORK1, s, 0, width);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(offs);
@@ -2360,8 +2383,13 @@ MIDFUNC(5,jff_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
 	LSR_xxi(d, d2, 32);
 	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -2435,8 +2463,13 @@ MIDFUNC(5,jff_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
 	LSR_xxi(d, d2, 32);
 	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
-	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
-	TST_xx(REG_WORK1, REG_WORK1);
+	// Flags come from the source field, not the positioned/masked value.
+	// Shift the source left by (32 - width) so bit 31 = source bit (width-1):
+	// N = that bit, Z = (low `width` bits of source == 0).
+	MOV_wi(REG_WORK2, 32);
+	SUB_www(REG_WORK2, REG_WORK2, REG_WORK4);
+	LSL_www(REG_WORK1, s, REG_WORK2);
+	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
 	unlock2(width);
@@ -3159,13 +3192,37 @@ MIDFUNC(2,jff_DIVU,(RW4 d, RR4 s))
 	UDIV_www(REG_WORK1, d, REG_WORK3);
 
 	LSR_wwi(REG_WORK2, REG_WORK1, 16); 							// if result of this is not 0, DIVU overflows
-	CBZ_wi(REG_WORK2, 4);
-	// Here we handle overflow
-	MOV_wish(REG_WORK1, 0x9000, 16); // set V and N
-	MSR_NZCV_x(REG_WORK1);
-	B_i(6);
+	uae_u32* branch_no_ov = (uae_u32*)get_target();
+	CBZ_wi(REG_WORK2, 0);            // no overflow -> calc flags and remainder
 
-	// Here we have to calc flags and remainder
+	// Overflow: V set, C cleared; N/Z depend on CPU model (setdivuflags()).
+	if (currprefs.cpu_model >= 68040) {
+		// V set, C cleared, N and Z unchanged
+		MRS_NZCV_x(REG_WORK1);
+		SET_xxVflag(REG_WORK1, REG_WORK1);
+		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
+	} else if (currprefs.cpu_model >= 68020) {
+		// V set, N set if dividend < 0, Z and C unchanged
+		MRS_NZCV_x(REG_WORK1);
+		SET_xxVflag(REG_WORK1, REG_WORK1);
+		TBZ_wii(d, 31, 2);
+		SET_xxNflag(REG_WORK1, REG_WORK1);
+	} else if (currprefs.cpu_model == 68010) {
+		// 68010: V set, Z/C cleared, N cleared only if both operands are negative.
+		MOV_wish(REG_WORK1, 0x9000, 16);
+		TBZ_wii(d, 31, 3);
+		TBZ_wii(REG_WORK3, 15, 2);
+		MOV_wish(REG_WORK1, 0x1000, 16);
+	} else {
+		// 68000: V set, N set, Z cleared, C cleared
+		MOV_wish(REG_WORK1, 0x9000, 16);
+	}
+	MSR_NZCV_x(REG_WORK1);
+	uae_u32* branch_ov_end = (uae_u32*)get_target();
+	B_i(0);                          // -> end_of_op
+
+	// No overflow: calc flags and remainder
+	write_jmp_target(branch_no_ov, (uintptr)get_target());
 	LSL_wwi(REG_WORK2, REG_WORK1, 16);
 	TST_ww(REG_WORK2, REG_WORK2);    // N and Z ok, C and V cleared
 
@@ -3174,6 +3231,7 @@ MIDFUNC(2,jff_DIVU,(RW4 d, RR4 s))
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	// end_of_op
+	write_jmp_target(branch_ov_end, (uintptr)get_target());
 	flags_carry_inverted = false;
 	if (init_regs_used) {
 		write_jmp_target(branchadd, (uintptr)get_target());
@@ -3313,16 +3371,49 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 	// check for overflow
 	MOVN_wi(REG_WORK2, 0x7fff);           // REG_WORK2 is now 0xffff8000
 	ANDS_www(REG_WORK3, REG_WORK1, REG_WORK2);
-	BEQ_i(6); 														// positive result, no overflow
+	uae_u32* branch_nov1 = (uae_u32*)get_target();
+	BEQ_i(0); 														// positive result, no overflow
 	CMP_ww(REG_WORK3, REG_WORK2);
-	BEQ_i(4);															// no overflow
+	uae_u32* branch_nov2 = (uae_u32*)get_target();
+	BEQ_i(0);															// no overflow
 
-	// Here we handle overflow
-	MOV_wish(REG_WORK1, 0x9000, 16); // set V and N
-	MSR_NZCV_x(REG_WORK1);
-	B_i(10);
+	// Overflow: V set, C cleared; N/Z depend on CPU model (setdivsflags()).
+	if (currprefs.cpu_model >= 68040) {
+		// V set, C cleared, N and Z unchanged
+		MRS_NZCV_x(REG_WORK1);
+		SET_xxVflag(REG_WORK1, REG_WORK1);
+		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
+		MSR_NZCV_x(REG_WORK1);
+	} else if (currprefs.cpu_model >= 68020) {
+		// V set; unless the magnitude overflows too, N and Z come from the
+		// low byte of |quotient| (= |quotient/divisor|, truncating division).
+		ASR_wwi(REG_WORK2, REG_WORK1, 31);
+		EOR_www(REG_WORK3, REG_WORK1, REG_WORK2);
+		SUB_www(REG_WORK3, REG_WORK3, REG_WORK2);   // REG_WORK3 = |quotient|
+		MOV_wish(REG_WORK1, 0x1000, 16);            // V set, N=Z=C=0
+		LSR_wwi(REG_WORK2, REG_WORK3, 16);
+		uae_u32* branch_absov = (uae_u32*)get_target();
+		CBNZ_wi(REG_WORK2, 0);                       // magnitude overflow -> N=Z=0
+		UXTB_ww(REG_WORK2, REG_WORK3);               // low byte of |quotient|
+		uae_u32* branch_nz = (uae_u32*)get_target();
+		CBNZ_wi(REG_WORK2, 0);                       // byte != 0 -> skip Z
+		SET_xxZflag(REG_WORK1, REG_WORK1);
+		write_jmp_target(branch_nz, (uintptr)get_target());
+		TBZ_wii(REG_WORK3, 7, 2);                     // byte sign bit clear -> skip N
+		SET_xxNflag(REG_WORK1, REG_WORK1);
+		write_jmp_target(branch_absov, (uintptr)get_target());
+		MSR_NZCV_x(REG_WORK1);
+	} else {
+		// 68000/010: V set, N set, Z cleared, C cleared
+		MOV_wish(REG_WORK1, 0x9000, 16);
+		MSR_NZCV_x(REG_WORK1);
+	}
+	uae_u32* branch_ov_end = (uae_u32*)get_target();
+	B_i(0);                          // -> end_of_op
 
-	// calc flags
+	// No overflow: calc flags
+	write_jmp_target(branch_nov1, (uintptr)get_target());
+	write_jmp_target(branch_nov2, (uintptr)get_target());
 	LSL_wwi(REG_WORK2, REG_WORK1, 16);
 	TST_ww(REG_WORK2, REG_WORK2);         // N and Z ok, C and V cleared
 
@@ -3341,6 +3432,7 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	// end_of_op
+	write_jmp_target(branch_ov_end, (uintptr)get_target());
 	flags_carry_inverted = false;
 	if (init_regs_used) {
 		write_jmp_target(branchadd, (uintptr)get_target());
@@ -3469,7 +3561,7 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 
 	EOR_www(REG_WORK3, rem, d);	// If sign of remainder and first operand differs, change sign of remainder
 	TBZ_wii(REG_WORK3, 31, 2);
-	NEG_ww(REG_WORK2, REG_WORK2);
+	NEG_ww(rem, rem);
 
 	MOV_ww(d, REG_WORK1);
 	TST_ww(d, d);
@@ -4082,6 +4174,7 @@ MIDFUNC(2,jff_LSL_b_reg,(RW1 d, RR4 i))
 	}
 
 	INIT_REGS_b(d, i);
+	int x = rmw(FLAGX);
 
 	LSL_wwi(REG_WORK3, d, 24);
 	ANDS_ww3f(REG_WORK1, i);
@@ -4100,13 +4193,14 @@ MIDFUNC(2,jff_LSL_b_reg,(RW1 d, RR4 i))
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 	B_i(2);
 
 	// No shift
 	write_jmp_target(branchadd, (uintptr)get_target());
 	TST_ww(REG_WORK3, REG_WORK3);
 
+	unlock2(x);
 	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_LSL_b_reg,(RW1 d, RR4 i))
@@ -4119,6 +4213,7 @@ MIDFUNC(2,jff_LSL_w_reg,(RW2 d, RR4 i))
 	}
 
 	INIT_REGS_w(d, i);
+	int x = rmw(FLAGX);
 
 	LSL_wwi(REG_WORK3, d, 16);
 	ANDS_ww3f(REG_WORK1, i);
@@ -4136,13 +4231,14 @@ MIDFUNC(2,jff_LSL_w_reg,(RW2 d, RR4 i))
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 	B_i(2);
 
 	// No shift
 	write_jmp_target(branchadd, (uintptr)get_target());
 	TST_ww(REG_WORK3, REG_WORK3);
 
+	unlock2(x);
 	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_LSL_w_reg,(RW2 d, RR4 i))
@@ -4155,6 +4251,7 @@ MIDFUNC(2,jff_LSL_l_reg,(RW4 d, RR4 i))
 	}
 
 	INIT_REGS_l(d, i);
+	int x = rmw(FLAGX);
 
 	ANDS_ww3f(REG_WORK1, i);
 	uae_u32* branchadd = (uae_u32*)get_target();
@@ -4170,7 +4267,7 @@ MIDFUNC(2,jff_LSL_l_reg,(RW4 d, RR4 i))
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	// Clean upper 32 bits of d after 64-bit LSL_xxx used for carry extraction
 	MOV_ww(d, d);
@@ -4181,6 +4278,7 @@ MIDFUNC(2,jff_LSL_l_reg,(RW4 d, RR4 i))
 	write_jmp_target(branchadd, (uintptr)get_target());
 	TST_ww(d, d);
 
+	unlock2(x);
 	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_LSL_l_reg,(RW4 d, RR4 i))
@@ -4411,7 +4509,7 @@ MIDFUNC(2,jnf_LSR_b_reg,(RW1 d, RR4 i))
 
 	UNSIGNED8_REG_2_REG(REG_WORK1, d);
 	AND_ww3f(REG_WORK2, i);
-	LSR_www(REG_WORK1, REG_WORK1, REG_WORK2);
+	LSR_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	EXIT_REGS(d, i);
@@ -4429,7 +4527,7 @@ MIDFUNC(2,jnf_LSR_w_reg,(RW2 d, RR4 i))
 
 	UNSIGNED16_REG_2_REG(REG_WORK1, d);
 	AND_ww3f(REG_WORK2, i);
-	LSR_www(REG_WORK1, REG_WORK1, REG_WORK2);
+	LSR_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	EXIT_REGS(d, i);
@@ -4449,7 +4547,8 @@ MIDFUNC(2,jnf_LSR_l_reg,(RW4 d, RR4 i))
 	INIT_REGS_l(d, i);
 
 	AND_ww3f(REG_WORK1, i);
-	LSR_www(d, d, REG_WORK1);
+	MOV_ww(d, d);                   // ensure upper 32 bits are zero for the 64-bit shift
+	LSR_xxx(d, d, REG_WORK1);       // 64-bit shift so count 32..63 yields 0
 
 	EXIT_REGS(d, i);
 }
@@ -4463,26 +4562,27 @@ MIDFUNC(2,jff_LSR_b_reg,(RW1 d, RR4 i))
 	}
 
 	INIT_REGS_b(d, i);
+	int x = rmw(FLAGX);
 
 	ANDS_ww3f(REG_WORK1, i);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	BEQ_i(0);                       // No shift -> X flag unchanged
 
 	UNSIGNED8_REG_2_REG(REG_WORK3, d);
-	LSR_www(REG_WORK2, REG_WORK3, REG_WORK1);
+	LSR_xxx(REG_WORK2, REG_WORK3, REG_WORK1);
 	BFI_wwii(d, REG_WORK2, 0, 8);
 	TST_ww(REG_WORK2, REG_WORK2);
 
 	// Calculate C Flag
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	LSR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	LSR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	B_i(3);
 
@@ -4491,6 +4591,7 @@ MIDFUNC(2,jff_LSR_b_reg,(RW1 d, RR4 i))
 	SIGNED8_REG_2_REG(REG_WORK2, d);        // Make sure, sign is in MSB if shift count is 0 (to get correct N flag)
 	TST_ww(REG_WORK2, REG_WORK2);
 
+	unlock2(x);
 	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_LSR_b_reg,(RW1 d, RR4 i))
@@ -4503,26 +4604,27 @@ MIDFUNC(2,jff_LSR_w_reg,(RW2 d, RR4 i))
 	}
 
 	INIT_REGS_w(d, i);
+	int x = rmw(FLAGX);
 
 	ANDS_ww3f(REG_WORK1, i);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	BEQ_i(0);                       // No shift -> X flag unchanged
 
 	UXTH_ww(REG_WORK3, d);                  // Shift count is not 0 -> unsigned required
-	LSR_www(REG_WORK2, REG_WORK3, REG_WORK1);
+	LSR_xxx(REG_WORK2, REG_WORK3, REG_WORK1);
 	BFI_wwii(d, REG_WORK2, 0, 16);
 	TST_ww(REG_WORK2, REG_WORK2);
 
 	// Calculate C Flag
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	LSR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	LSR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	B_i(3);
 
@@ -4531,6 +4633,7 @@ MIDFUNC(2,jff_LSR_w_reg,(RW2 d, RR4 i))
 	SIGNED16_REG_2_REG(REG_WORK2, d);       // Make sure, sign is in MSB if shift count is 0 (to get correct N flag)
 	TST_ww(REG_WORK2, REG_WORK2);
 
+	unlock2(x);
 	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_LSR_w_reg,(RW2 d, RR4 i))
@@ -4543,25 +4646,26 @@ MIDFUNC(2,jff_LSR_l_reg,(RW4 d, RR4 i))
 	}
 
 	INIT_REGS_l(d, i);
+	int x = rmw(FLAGX);
 
 	ANDS_ww3f(REG_WORK1, i);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	BEQ_i(0);                       // No shift -> X flag unchanged
 
-	MOV_ww(REG_WORK3, d);
-	LSR_www(d, d, REG_WORK1);
+	MOV_ww(REG_WORK3, d);              // zero-extended original
+	LSR_xxx(d, REG_WORK3, REG_WORK1);  // 64-bit shift so count 32..63 yields 0
 	TST_ww(d, d);
 
-	// Calculate C Flag
+	// Calculate C Flag (64-bit so count-1 >= 32 yields 0)
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	LSR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	LSR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
 	MSR_NZCV_x(REG_WORK4);
 
 	flags_carry_inverted = false;
-	DUPLICACTE_CARRY
+	CSET_xc(x, NATIVE_CC_CS);
 
 	B_i(2);
 
@@ -4569,6 +4673,7 @@ MIDFUNC(2,jff_LSR_l_reg,(RW4 d, RR4 i))
 	write_jmp_target(branchadd, (uintptr)get_target());
 	TST_ww(d, d);
 
+	unlock2(x);
 	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_LSR_l_reg,(RW4 d, RR4 i))
@@ -5060,8 +5165,13 @@ MIDFUNC(2,jff_MULS32,(RW4 d, RR4 s))
 	TST_ww(d, d);
 
 	if (needed_flags & FLAG_V) {
-		LSR_xxi(REG_WORK1, d, 32);
-		CBZ_wi(REG_WORK1, 4);
+		// Signed overflow if the product does not fit in signed 32 bits,
+		// i.e. the high 32 bits are not the sign-extension of bit 31.
+		// (Testing high32 != 0 is wrong: it falsely flags every negative
+		// result, whose high 32 bits are 0xffffffff.)
+		SXTW_xw(REG_WORK1, d);
+		EOR_xxx(REG_WORK1, REG_WORK1, d);
+		CBZ_xi(REG_WORK1, 4);
 		MRS_NZCV_x(REG_WORK4);
 		SET_xxVflag(REG_WORK4, REG_WORK4);
 		MSR_NZCV_x(REG_WORK4);
@@ -5098,16 +5208,9 @@ MIDFUNC(2,jff_MULS64,(RW4 d, RW4 s))
 	LSR_xxi(s, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
-	if (needed_flags & FLAG_V) {
-		// check overflow: no overflow if high part is 0 or 0xffffffff
-		SMULH_xxx(REG_WORK3, REG_WORK1, REG_WORK2);
-		CBZ_xi(REG_WORK3, 6);
-		ADD_wwi(REG_WORK3, REG_WORK3, 1);
-		CBZ_xi(REG_WORK3, 4);
-		MRS_NZCV_x(REG_WORK4);
-		SET_xxVflag(REG_WORK4, REG_WORK4);
-		MSR_NZCV_x(REG_WORK4);
-	}
+	// 64-bit-result MULS.L (extra & 0x0400): the full product is stored in
+	// Dh:Dl, so there is never an overflow and V is always cleared.
+	// TST_xx above already cleared V.
 
 	flags_carry_inverted = false;
 	unlock2(s);
@@ -5231,25 +5334,14 @@ MIDFUNC(2,jff_MULU64,(RW4 d, RW4 s))
 	s = rmw(s);
 	d = rmw(d);
 
-	if (needed_flags & FLAG_V) {
-		MOV_ww(REG_WORK1, d);
-		MOV_ww(REG_WORK2, s);
-		UMULL_xww(d, REG_WORK1, REG_WORK2);
-	} else {
-		UMULL_xww(d, d, s);
-	}
+	UMULL_xww(d, d, s);
 	TST_xx(d, d);
 	LSR_xxi(s, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
-	if (needed_flags & FLAG_V) {
-		// check overflow: no overflow if high part is 0
-		UMULH_xxx(REG_WORK3, REG_WORK1, REG_WORK2);
-		CBZ_xi(REG_WORK3, 4);
-		MRS_NZCV_x(REG_WORK4);
-		SET_xxVflag(REG_WORK4, REG_WORK4);
-		MSR_NZCV_x(REG_WORK4);
-	}
+	// 64-bit-result MULU.L (extra & 0x0400): the full product is stored in
+	// Dh:Dl, so there is never an overflow and V is always cleared.
+	// TST_xx above already cleared V.
 
 	flags_carry_inverted = false;
 	unlock2(s);
@@ -5308,9 +5400,12 @@ MIDFUNC(1,jff_NEG_b,(RW1 d))
 {
 	INIT_REG_b(d);
 
-	SIGNED8_REG_2_REG(REG_WORK1, d);
+	// Negate at byte width so N/Z/V/C reflect the byte result, not a
+	// 32-bit negate of the sign-extended operand (which never sets V and
+	// gives wrong N/C for operand 0x80). Mirrors jff_SUB_b.
+	LSL_wwi(REG_WORK1, d, 24);
 	NEGS_ww(REG_WORK1, REG_WORK1);
-	BFI_wwii(d, REG_WORK1, 0, 8);
+	BFXIL_xxii(d, REG_WORK1, 24, 8);
 
 	flags_carry_inverted = true;
 	DUPLICACTE_CARRY
@@ -5323,9 +5418,11 @@ MIDFUNC(1,jff_NEG_w,(RW2 d))
 {
 	INIT_REG_w(d);
 
-	SIGNED16_REG_2_REG(REG_WORK1, d);
+	// Negate at word width (see jff_NEG_b). 32-bit negate of the
+	// sign-extended operand never sets V and mis-sets N/C for 0x8000.
+	LSL_wwi(REG_WORK1, d, 16);
 	NEGS_ww(REG_WORK1, REG_WORK1);
-	BFI_wwii(d, REG_WORK1, 0, 16);
+	BFXIL_xxii(d, REG_WORK1, 16, 16);
 
 	flags_carry_inverted = true;
 	DUPLICACTE_CARRY
@@ -5900,7 +5997,7 @@ MENDFUNC(2,jff_ORSR,(IM32 s, IM8 x))
  * N Set if the most significant bit of the result is set. Cleared otherwise.
  * Z Set if the result is zero. Cleared otherwise.
  * V Always cleared.
- * C Set according to the last bit rotated out of the operand. Cleared when the rotate count is zero.
+ * C Set according to the last bit rotated out of the operand. Set to X when the rotate count is zero.
  *
  */
 MIDFUNC(2,jnf_ROL_b_imm,(RW1 d, IM8 i))
@@ -6105,7 +6202,7 @@ MIDFUNC(2,jff_ROL_b,(RW1 d, RR4 i))
 
 	INIT_REGS_b(d, i);
 
-	UBFIZ_xxii(REG_WORK1, i, 0, 5); // AND_rri(REG_WORK1, i, 0x1f);
+	AND_ww3f(REG_WORK1, i);         // true count (0..63), so count==32 is not mistaken for 0
 	CBNZ_wi(REG_WORK1, 4);
 
 	// shift count is 0
@@ -6145,7 +6242,7 @@ MIDFUNC(2,jff_ROL_w,(RW2 d, RR4 i))
 
 	INIT_REGS_w(d, i);
 
-	UBFIZ_xxii(REG_WORK1, i, 0, 5); // AND_rri(REG_WORK1, i, 0x1f);
+	AND_ww3f(REG_WORK1, i);         // true count (0..63), so count==32 is not mistaken for 0
 	CBNZ_wi(REG_WORK1, 4);
 
 	// shift count is 0
@@ -6184,7 +6281,7 @@ MIDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
 
 	INIT_REGS_l(d, i);
 
-	UBFIZ_xxii(REG_WORK1, i, 0, 5); // AND_rri(REG_WORK1, i, 0x1f);
+	AND_ww3f(REG_WORK1, i);         // true count (0..63), so count==32 is not mistaken for 0
 	CBNZ_wi(REG_WORK1, 3);
 
 	// shift count is 0
@@ -6206,8 +6303,7 @@ MIDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
 	write_jmp_target(branchadd, (uintptr)get_target());
 
 	flags_carry_inverted = false;
-	unlock2(d);
-	unlock2(i);
+	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
 
@@ -6221,7 +6317,7 @@ MENDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
  * N Set if the most significant bit of the result is set. Cleared otherwise.
  * Z Set if the result is zero. Cleared otherwise.
  * V Always cleared.
- * C Set according to the last bit rotated out of the operand. Cleared when the rotate count is zero.
+ * C Set according to the last bit rotated out of the operand. Set to X when the rotate count is zero.
  *
  * Target is never a register.
  */
@@ -6389,14 +6485,19 @@ MIDFUNC(2,jff_ROXL_b,(RW1 d, RR4 i))
 	CMP_wi(REG_WORK1, 8);
 	BLE_i(2);
 	SUB_wwi(REG_WORK1, REG_WORK1, 9);
-	CBNZ_wi(REG_WORK1, 4);			// need to rotate
+	uae_u32* branch_rotate = (uae_u32*)get_target();
+	CBNZ_wi(REG_WORK1, 0);			// need to rotate
 
 	LSL_wwi(REG_WORK1, d, 24);
 	TST_ww(REG_WORK1, REG_WORK1);
+	MRS_NZCV_x(REG_WORK4);
+	BFI_wwii(REG_WORK4, x, 29, 1);
+	MSR_NZCV_x(REG_WORK4);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);			// end of op
 
 	// need to rotate
+	write_jmp_target(branch_rotate, (uintptr)get_target());
 	MOV_ww(REG_WORK2, d);
 	BFI_wwii(REG_WORK2, x, 8, 1);         // move x to left side of d
 	BFI_wwii(REG_WORK2, REG_WORK2, 9, 9); // duplicate 9 bits
@@ -6437,14 +6538,19 @@ MIDFUNC(2,jff_ROXL_w,(RW2 d, RR4 i))
 	CMP_wi(REG_WORK1, 16);
 	BLE_i(2);
 	SUB_wwi(REG_WORK1, REG_WORK1, 17);
-	CBNZ_wi(REG_WORK1, 4);			// need to rotate
+	uae_u32* branch_rotate = (uae_u32*)get_target();
+	CBNZ_wi(REG_WORK1, 0);			// need to rotate
 
 	LSL_wwi(REG_WORK1, d, 16);
 	TST_ww(REG_WORK1, REG_WORK1);
+	MRS_NZCV_x(REG_WORK4);
+	BFI_wwii(REG_WORK4, x, 29, 1);
+	MSR_NZCV_x(REG_WORK4);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);			// end of op
 
 	// need to rotate
+	write_jmp_target(branch_rotate, (uintptr)get_target());
 	MOV_ww(REG_WORK2, d);
 	BFI_wwii(REG_WORK2, x, 16, 1);          // move x to left side of d
 	BFI_xxii(REG_WORK2, REG_WORK2, 17, 17); // duplicate 17 bits
@@ -6483,13 +6589,18 @@ MIDFUNC(2,jff_ROXL_l,(RW4 d, RR4 i))
 	CMP_wi(REG_WORK1, 32);
 	BLE_i(2);
 	SUB_wwi(REG_WORK1, REG_WORK1, 33);
-	CBNZ_wi(REG_WORK1, 3);			// need to rotate
+	uae_u32* branch_rotate = (uae_u32*)get_target();
+	CBNZ_wi(REG_WORK1, 0);			// need to rotate
 
 	TST_ww(d, d);
+	MRS_NZCV_x(REG_WORK4);
+	BFI_wwii(REG_WORK4, x, 29, 1);
+	MSR_NZCV_x(REG_WORK4);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);			// end of op
 
 	// need to rotate
+	write_jmp_target(branch_rotate, (uintptr)get_target());
 	MOV_ww(REG_WORK2, d);
 	BFI_xxii(REG_WORK2, x, 32, 1);          // move x to left side of d
 	BFI_xxii(REG_WORK2, REG_WORK2, 33, 31); // duplicate 31 bits
@@ -6960,14 +7071,19 @@ MIDFUNC(2,jff_ROXR_b,(RW1 d, RR4 i))
 	CMP_wi(REG_WORK1, 8);
 	BLE_i(2);
 	SUB_wwi(REG_WORK1, REG_WORK1, 9);
-	CBNZ_wi(REG_WORK1, 4);			// need to rotate
+	uae_u32* branch_rotate = (uae_u32*)get_target();
+	CBNZ_wi(REG_WORK1, 0);			// need to rotate
 
 	LSL_wwi(REG_WORK1, d, 24);
 	TST_ww(REG_WORK1, REG_WORK1);
+	MRS_NZCV_x(REG_WORK4);
+	BFI_wwii(REG_WORK4, x, 29, 1);
+	MSR_NZCV_x(REG_WORK4);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);			// end of op
 
 	// need to rotate
+	write_jmp_target(branch_rotate, (uintptr)get_target());
 	MOV_ww(REG_WORK2, d);
 	BFI_wwii(REG_WORK2, x, 8, 1);         // move x to left side of d
 	BFI_wwii(REG_WORK2, REG_WORK2, 9, 9); // duplicate 9 bits
@@ -7009,14 +7125,19 @@ MIDFUNC(2,jff_ROXR_w,(RW2 d, RR4 i))
 	CMP_wi(REG_WORK1, 16);
 	BLE_i(2);
 	SUB_wwi(REG_WORK1, REG_WORK1, 17);
-	CBNZ_wi(REG_WORK1, 4);			// need to rotate
+	uae_u32* branch_rotate = (uae_u32*)get_target();
+	CBNZ_wi(REG_WORK1, 0);			// need to rotate
 
 	LSL_wwi(REG_WORK1, d, 16);
 	TST_ww(REG_WORK1, REG_WORK1);
+	MRS_NZCV_x(REG_WORK4);
+	BFI_wwii(REG_WORK4, x, 29, 1);
+	MSR_NZCV_x(REG_WORK4);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);			// end of op
 
 	// need to rotate
+	write_jmp_target(branch_rotate, (uintptr)get_target());
 	MOV_ww(REG_WORK2, d);
 	BFI_wwii(REG_WORK2, x, 16, 1);          // move x to left side of d
 	BFI_xxii(REG_WORK2, REG_WORK2, 17, 17); // duplicate 17 bits
@@ -7055,13 +7176,18 @@ MIDFUNC(2,jff_ROXR_l,(RW4 d, RR4 i))
 	CMP_wi(REG_WORK1, 32);
 	BLE_i(2);
 	SUB_wwi(REG_WORK1, REG_WORK1, 33);
-	CBNZ_wi(REG_WORK1, 3);			// need to rotate
+	uae_u32* branch_rotate = (uae_u32*)get_target();
+	CBNZ_wi(REG_WORK1, 0);			// need to rotate
 
 	TST_ww(d, d);
+	MRS_NZCV_x(REG_WORK4);
+	BFI_wwii(REG_WORK4, x, 29, 1);
+	MSR_NZCV_x(REG_WORK4);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);			// end of op
 
 	// need to rotate
+	write_jmp_target(branch_rotate, (uintptr)get_target());
 	MOV_ww(REG_WORK2, d);
 	BFI_xxii(REG_WORK2, x, 32, 1);          // move x to left side of d
 	BFI_xxii(REG_WORK2, REG_WORK2, 33, 31); // duplicate 31 bits
