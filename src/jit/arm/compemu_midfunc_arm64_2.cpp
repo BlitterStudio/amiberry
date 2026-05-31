@@ -5308,9 +5308,12 @@ MIDFUNC(1,jff_NEG_b,(RW1 d))
 {
 	INIT_REG_b(d);
 
-	SIGNED8_REG_2_REG(REG_WORK1, d);
+	// Negate at byte width so N/Z/V/C reflect the byte result, not a
+	// 32-bit negate of the sign-extended operand (which never sets V and
+	// gives wrong N/C for operand 0x80). Mirrors jff_SUB_b.
+	LSL_wwi(REG_WORK1, d, 24);
 	NEGS_ww(REG_WORK1, REG_WORK1);
-	BFI_wwii(d, REG_WORK1, 0, 8);
+	BFXIL_xxii(d, REG_WORK1, 24, 8);
 
 	flags_carry_inverted = true;
 	DUPLICACTE_CARRY
@@ -5323,9 +5326,11 @@ MIDFUNC(1,jff_NEG_w,(RW2 d))
 {
 	INIT_REG_w(d);
 
-	SIGNED16_REG_2_REG(REG_WORK1, d);
+	// Negate at word width (see jff_NEG_b). 32-bit negate of the
+	// sign-extended operand never sets V and mis-sets N/C for 0x8000.
+	LSL_wwi(REG_WORK1, d, 16);
 	NEGS_ww(REG_WORK1, REG_WORK1);
-	BFI_wwii(d, REG_WORK1, 0, 16);
+	BFXIL_xxii(d, REG_WORK1, 16, 16);
 
 	flags_carry_inverted = true;
 	DUPLICACTE_CARRY
