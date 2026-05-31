@@ -6206,8 +6206,7 @@ MIDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
 	write_jmp_target(branchadd, (uintptr)get_target());
 
 	flags_carry_inverted = false;
-	unlock2(d);
-	unlock2(i);
+	EXIT_REGS(d, i);
 }
 MENDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
 
