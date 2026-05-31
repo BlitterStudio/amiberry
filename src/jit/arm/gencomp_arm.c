@@ -3078,12 +3078,24 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (!noflags) {
 		comprintf("\t if (extra & 0x0400) {\n"); /* Need full 64 bit result */
 		comprintf("\t   int r3=(extra & 7);\n");
-		comprintf("\t   mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
-		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
-		comprintf("\t\t	  jff_MULS64(r2,r3);\n");
-		comprintf("\t	} else { \n");
-		comprintf("\t\t	  jff_MULU64(r2,r3);\n");
-		comprintf("\t	} \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   if (r2 == r3) {\n");
+		comprintf("\t     mov_l_rr(tmp,r2);\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and tmp */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jff_MULS64(tmp,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jff_MULU64(tmp,r3);\n");
+		comprintf("\t     } \n");
+		comprintf("\t     if (currprefs.cpu_model >= 68040)\n");
+		comprintf("\t       mov_l_rr(r2,tmp);\n");
+		comprintf("\t   } else {\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jff_MULS64(r2,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jff_MULU64(r2,r3);\n");
+		comprintf("\t     } \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   }\n");
 		comprintf("\t } else {\n"); /* Only want 32 bit result */
 		/* operands in dst and r2, result goes into r2 */
 		/* shouldn't matter whether it's signed or unsigned?!? */
@@ -3096,12 +3108,24 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	} else {
 		comprintf("\t if (extra & 0x0400) {\n"); /* Need full 64 bit result */
 		comprintf("\t   int r3=(extra & 7);\n");
-		comprintf("\t   mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
-		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
-		comprintf("\t\t	  jnf_MULS64(r2,r3);\n");
-		comprintf("\t	} else { \n");
-		comprintf("\t\t	  jnf_MULU64(r2,r3);\n");
-		comprintf("\t	} \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   if (r2 == r3) {\n");
+		comprintf("\t     mov_l_rr(tmp,r2);\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and tmp */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jnf_MULS64(tmp,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jnf_MULU64(tmp,r3);\n");
+		comprintf("\t     } \n");
+		comprintf("\t     if (currprefs.cpu_model >= 68040)\n");
+		comprintf("\t       mov_l_rr(r2,tmp);\n");
+		comprintf("\t   } else {\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jnf_MULS64(r2,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jnf_MULU64(r2,r3);\n");
+		comprintf("\t     } \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   }\n");
 		comprintf("\t } else {\n"); /* Only want 32 bit result */
 		/* operands in dst and r2, result foes into r2 */
 		/* shouldn't matter whether it's signed or unsigned?!? */
