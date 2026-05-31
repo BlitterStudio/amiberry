@@ -3159,13 +3159,31 @@ MIDFUNC(2,jff_DIVU,(RW4 d, RR4 s))
 	UDIV_www(REG_WORK1, d, REG_WORK3);
 
 	LSR_wwi(REG_WORK2, REG_WORK1, 16); 							// if result of this is not 0, DIVU overflows
-	CBZ_wi(REG_WORK2, 4);
-	// Here we handle overflow
-	MOV_wish(REG_WORK1, 0x9000, 16); // set V and N
-	MSR_NZCV_x(REG_WORK1);
-	B_i(6);
+	uae_u32* branch_no_ov = (uae_u32*)get_target();
+	CBZ_wi(REG_WORK2, 0);            // no overflow -> calc flags and remainder
 
-	// Here we have to calc flags and remainder
+	// Overflow: V set, C cleared; N/Z depend on CPU model (setdivuflags()).
+	if (currprefs.cpu_model >= 68040) {
+		// V set, C cleared, N and Z unchanged
+		MRS_NZCV_x(REG_WORK1);
+		SET_xxVflag(REG_WORK1, REG_WORK1);
+		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
+	} else if (currprefs.cpu_model >= 68020) {
+		// V set, N set if dividend < 0, Z and C unchanged
+		MRS_NZCV_x(REG_WORK1);
+		SET_xxVflag(REG_WORK1, REG_WORK1);
+		TBZ_wii(d, 31, 2);
+		SET_xxNflag(REG_WORK1, REG_WORK1);
+	} else {
+		// 68000/010: V set, N set, Z cleared, C cleared
+		MOV_wish(REG_WORK1, 0x9000, 16);
+	}
+	MSR_NZCV_x(REG_WORK1);
+	uae_u32* branch_ov_end = (uae_u32*)get_target();
+	B_i(0);                          // -> end_of_op
+
+	// No overflow: calc flags and remainder
+	write_jmp_target(branch_no_ov, (uintptr)get_target());
 	LSL_wwi(REG_WORK2, REG_WORK1, 16);
 	TST_ww(REG_WORK2, REG_WORK2);    // N and Z ok, C and V cleared
 
@@ -3174,6 +3192,7 @@ MIDFUNC(2,jff_DIVU,(RW4 d, RR4 s))
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	// end_of_op
+	write_jmp_target(branch_ov_end, (uintptr)get_target());
 	flags_carry_inverted = false;
 	if (init_regs_used) {
 		write_jmp_target(branchadd, (uintptr)get_target());
@@ -3313,16 +3332,49 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 	// check for overflow
 	MOVN_wi(REG_WORK2, 0x7fff);           // REG_WORK2 is now 0xffff8000
 	ANDS_www(REG_WORK3, REG_WORK1, REG_WORK2);
-	BEQ_i(6); 														// positive result, no overflow
+	uae_u32* branch_nov1 = (uae_u32*)get_target();
+	BEQ_i(0); 														// positive result, no overflow
 	CMP_ww(REG_WORK3, REG_WORK2);
-	BEQ_i(4);															// no overflow
+	uae_u32* branch_nov2 = (uae_u32*)get_target();
+	BEQ_i(0);															// no overflow
 
-	// Here we handle overflow
-	MOV_wish(REG_WORK1, 0x9000, 16); // set V and N
-	MSR_NZCV_x(REG_WORK1);
-	B_i(10);
+	// Overflow: V set, C cleared; N/Z depend on CPU model (setdivsflags()).
+	if (currprefs.cpu_model >= 68040) {
+		// V set, C cleared, N and Z unchanged
+		MRS_NZCV_x(REG_WORK1);
+		SET_xxVflag(REG_WORK1, REG_WORK1);
+		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
+		MSR_NZCV_x(REG_WORK1);
+	} else if (currprefs.cpu_model >= 68020) {
+		// V set; unless the magnitude overflows too, N and Z come from the
+		// low byte of |quotient| (= |quotient/divisor|, truncating division).
+		ASR_wwi(REG_WORK2, REG_WORK1, 31);
+		EOR_www(REG_WORK3, REG_WORK1, REG_WORK2);
+		SUB_www(REG_WORK3, REG_WORK3, REG_WORK2);   // REG_WORK3 = |quotient|
+		MOV_wish(REG_WORK1, 0x1000, 16);            // V set, N=Z=C=0
+		LSR_wwi(REG_WORK2, REG_WORK3, 16);
+		uae_u32* branch_absov = (uae_u32*)get_target();
+		CBNZ_wi(REG_WORK2, 0);                       // magnitude overflow -> N=Z=0
+		UXTB_ww(REG_WORK2, REG_WORK3);               // low byte of |quotient|
+		uae_u32* branch_nz = (uae_u32*)get_target();
+		CBNZ_wi(REG_WORK2, 0);                       // byte != 0 -> skip Z
+		SET_xxZflag(REG_WORK1, REG_WORK1);
+		write_jmp_target(branch_nz, (uintptr)get_target());
+		TBZ_wii(REG_WORK3, 7, 2);                     // byte sign bit clear -> skip N
+		SET_xxNflag(REG_WORK1, REG_WORK1);
+		write_jmp_target(branch_absov, (uintptr)get_target());
+		MSR_NZCV_x(REG_WORK1);
+	} else {
+		// 68000/010: V set, N set, Z cleared, C cleared
+		MOV_wish(REG_WORK1, 0x9000, 16);
+		MSR_NZCV_x(REG_WORK1);
+	}
+	uae_u32* branch_ov_end = (uae_u32*)get_target();
+	B_i(0);                          // -> end_of_op
 
-	// calc flags
+	// No overflow: calc flags
+	write_jmp_target(branch_nov1, (uintptr)get_target());
+	write_jmp_target(branch_nov2, (uintptr)get_target());
 	LSL_wwi(REG_WORK2, REG_WORK1, 16);
 	TST_ww(REG_WORK2, REG_WORK2);         // N and Z ok, C and V cleared
 
@@ -3341,6 +3393,7 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	// end_of_op
+	write_jmp_target(branch_ov_end, (uintptr)get_target());
 	flags_carry_inverted = false;
 	if (init_regs_used) {
 		write_jmp_target(branchadd, (uintptr)get_target());
@@ -3469,7 +3522,7 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 
 	EOR_www(REG_WORK3, rem, d);	// If sign of remainder and first operand differs, change sign of remainder
 	TBZ_wii(REG_WORK3, 31, 2);
-	NEG_ww(REG_WORK2, REG_WORK2);
+	NEG_ww(rem, rem);
 
 	MOV_ww(d, REG_WORK1);
 	TST_ww(d, d);
