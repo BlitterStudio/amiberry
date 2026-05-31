@@ -6150,7 +6150,7 @@ MIDFUNC(2,jff_ROL_b,(RW1 d, RR4 i))
 
 	INIT_REGS_b(d, i);
 
-	UBFIZ_xxii(REG_WORK1, i, 0, 5); // AND_rri(REG_WORK1, i, 0x1f);
+	AND_ww3f(REG_WORK1, i);         // true count (0..63), so count==32 is not mistaken for 0
 	CBNZ_wi(REG_WORK1, 4);
 
 	// shift count is 0
@@ -6190,7 +6190,7 @@ MIDFUNC(2,jff_ROL_w,(RW2 d, RR4 i))
 
 	INIT_REGS_w(d, i);
 
-	UBFIZ_xxii(REG_WORK1, i, 0, 5); // AND_rri(REG_WORK1, i, 0x1f);
+	AND_ww3f(REG_WORK1, i);         // true count (0..63), so count==32 is not mistaken for 0
 	CBNZ_wi(REG_WORK1, 4);
 
 	// shift count is 0
@@ -6229,7 +6229,7 @@ MIDFUNC(2,jff_ROL_l,(RW4 d, RR4 i))
 
 	INIT_REGS_l(d, i);
 
-	UBFIZ_xxii(REG_WORK1, i, 0, 5); // AND_rri(REG_WORK1, i, 0x1f);
+	AND_ww3f(REG_WORK1, i);         // true count (0..63), so count==32 is not mistaken for 0
 	CBNZ_wi(REG_WORK1, 3);
 
 	// shift count is 0
