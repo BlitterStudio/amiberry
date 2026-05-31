@@ -1451,7 +1451,9 @@ MIDFUNC(2,jnf_ASR_l_reg,(RW4 d, RR4 i))
 	d = rmw(d);
 
 	AND_ww3f(REG_WORK1, i);
-	ASR_www(d, d, REG_WORK1);
+	SXTW_xw(REG_WORK2, d);             // sign-extend low 32 bits to 64
+	ASR_xxx(d, REG_WORK2, REG_WORK1);  // 64-bit shift so count 32..63 yields all sign
+	MOV_ww(d, d);                      // keep low 32 bits
 
 	unlock2(d);
 	unlock2(i);
@@ -1563,13 +1565,14 @@ MIDFUNC(2,jff_ASR_l_reg,(RW4 d, RR4 i))
 	B_i(0); // <end>
 
 	// shift count > 0
-	MOV_ww(REG_WORK3, d);
-	ASR_www(d, d, REG_WORK1);
+	SXTW_xw(REG_WORK3, d);             // sign-extended original
+	ASR_xxx(d, REG_WORK3, REG_WORK1);  // 64-bit shift so count 32..63 yields all sign
+	MOV_ww(d, d);                      // keep low 32 bits
 	TST_ww(d, d);
 
-	// Calculate C Flag
+	// Calculate C Flag (64-bit so count-1 >= 32 yields the sign bit)
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	ASR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	ASR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
@@ -4526,7 +4529,8 @@ MIDFUNC(2,jnf_LSR_l_reg,(RW4 d, RR4 i))
 	INIT_REGS_l(d, i);
 
 	AND_ww3f(REG_WORK1, i);
-	LSR_www(d, d, REG_WORK1);
+	MOV_ww(d, d);                   // ensure upper 32 bits are zero for the 64-bit shift
+	LSR_xxx(d, d, REG_WORK1);       // 64-bit shift so count 32..63 yields 0
 
 	EXIT_REGS(d, i);
 }
@@ -4625,13 +4629,13 @@ MIDFUNC(2,jff_LSR_l_reg,(RW4 d, RR4 i))
 	uae_u32* branchadd = (uae_u32*)get_target();
 	BEQ_i(0);                       // No shift -> X flag unchanged
 
-	MOV_ww(REG_WORK3, d);
-	LSR_www(d, d, REG_WORK1);
+	MOV_ww(REG_WORK3, d);              // zero-extended original
+	LSR_xxx(d, REG_WORK3, REG_WORK1);  // 64-bit shift so count 32..63 yields 0
 	TST_ww(d, d);
 
-	// Calculate C Flag
+	// Calculate C Flag (64-bit so count-1 >= 32 yields 0)
 	SUB_wwi(REG_WORK2, REG_WORK1, 1);
-	LSR_www(REG_WORK2, REG_WORK3, REG_WORK2);
+	LSR_xxx(REG_WORK2, REG_WORK3, REG_WORK2);
 	TBZ_wii(REG_WORK2, 0, 4);
 	MRS_NZCV_x(REG_WORK4);
 	SET_xxCflag(REG_WORK4, REG_WORK4);
