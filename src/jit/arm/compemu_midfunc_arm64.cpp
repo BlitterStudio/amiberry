@@ -162,6 +162,13 @@ MIDFUNC(0,make_flags_live,(void))
 }
 MENDFUNC(0,make_flags_live,(void))
 
+MIDFUNC(0,save_flags,(void))
+{
+	make_flags_live_internal();
+	flush_flags();
+}
+MENDFUNC(0,save_flags,(void))
+
 MIDFUNC(2,mov_l_mi,(IMPTR d, IMPTR s))
 {
 	/* d usually points to memory in regs struct, but can also be a global
