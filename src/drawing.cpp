@@ -139,8 +139,10 @@ static void draw_denise_line(int gfx_ypos, nln_how how, uae_u32 linecnt, int sta
 
 static void sprwrite(int reg, uae_u32 v);
 static void sprwrite_64(int reg, uae_u64 v);
-static int spr_unalign_reg, spr_unalign_val;
-static uae_u64 spr_unalign_val64;
+// 0 = SPRxPOS/CTL, 1 = SPRxDATx
+static int spr_unalign_reg[2];
+static uae_u32 spr_unalign_val[2];
+static uae_u64 spr_unalign_val64[2];
 static bool denise_sprfmode64, denise_bplfmode64;
 
 static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
@@ -152,17 +154,16 @@ static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
 		struct denise_rga *rd = &rga_denise[pos];
 		if (rd->line == linecnt && rd->rga != 0x1fe && (rd->rga < 0x38 || rd->rga >= 0x40)) {
 			denise_update_reg(rd->rga, rd->v, linecnt);
-			if (spr_unalign_reg) {
-				int sreg = spr_unalign_reg - 0x140;
-				bool datx = (sreg & 4) != 0;
-				if (datx) {
-					if (denise_sprfmode64) {
-						sprwrite_64(sreg, spr_unalign_val64);
-					} else {
-						sprwrite(sreg, spr_unalign_val);
-					}
+			if (spr_unalign_reg[0]) {
+				int sreg = spr_unalign_reg[0] - 0x140;
+				sprwrite(sreg, spr_unalign_val[0]);
+			}
+			if (spr_unalign_reg[1]) {
+				int sreg = spr_unalign_reg[1] - 0x140;
+				if (denise_sprfmode64) {
+					sprwrite_64(sreg, spr_unalign_val64[1]);
 				} else {
-					sprwrite(sreg, spr_unalign_val);
+					sprwrite(sreg, spr_unalign_val[1]);
 				}
 			}
 		}
@@ -3655,7 +3656,8 @@ void denise_reset(bool hard)
 	sprite_pixdata = 0;
 	aga_unalign0 = 0;
 	aga_unalign1 = 0;
-	spr_unalign_reg = 0;
+	spr_unalign_reg[0] = 0;
+	spr_unalign_reg[1] = 0;
 	bpl1dat_unalign = 0;
 	reswitch_unalign = 0;
 	for (int i = 0; i < 256; i++) {
@@ -3931,12 +3933,9 @@ static void expand_drga_early2x(struct denise_rga *rd)
 		case 0x174: case 0x176:
 		case 0x17c: case 0x17e:
 		{
-			int sreg = rd->rga - 0x140;
-			int num = sreg / 8;
-			struct denise_spr *s = &dspr[num];
-			spr_unalign_reg = rd->rga;
-			spr_unalign_val = rd->v;
-			spr_unalign_val64 = rd->v64;
+			spr_unalign_reg[1] = rd->rga;
+			spr_unalign_val[1] = rd->v;
+			spr_unalign_val64[1] = rd->v64;
 		}
 		break;
 	}
@@ -3973,8 +3972,8 @@ static void expand_drga_early(struct denise_rga *rd)
 		case 0x168: case 0x16a:
 		case 0x170: case 0x172:
 		case 0x178: case 0x17a:
-			spr_unalign_reg = rd->rga;
-			spr_unalign_val = rd->v;
+			spr_unalign_reg[0] = rd->rga;
+			spr_unalign_val[0] = rd->v;
 			break;
 
 		// SPRxDATA/SPRxDATB
@@ -5210,10 +5209,10 @@ static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
 #if DEBUG_ALWAYS_UNALIGNED_DRAWING
 	lts_unaligned_ecs(cnt, cnt_next, h);
 #endif
-	if (h && spr_unalign_reg) {
+	if (h && spr_unalign_reg[0]) {
 		matchsprites2(cnt << 2);
-		sprwrite(spr_unalign_reg - 0x140, spr_unalign_val);
-		spr_unalign_reg = 0;
+		sprwrite(spr_unalign_reg[0] - 0x140, spr_unalign_val[0]);
+		spr_unalign_reg[0] = 0;
 	}
 #if DEBUG_ALWAYS_UNALIGNED_DRAWING
 	return true;
@@ -5320,7 +5319,7 @@ static bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
 			return true;
 		}
 	}
-	if (h && spr_unalign_reg) {
+	if (h && (spr_unalign_reg[0] || spr_unalign_reg[1])) {
 		lts_unaligned_aga(cnt, cnt_next, h);
 		return true;
 	}
@@ -6651,20 +6650,20 @@ static void lts_unaligned_aga(int cnt, int cnt_next, int h)
 					bpl1dat_unalign = false;
 				}
 
-				if (spr_unalign_reg) {
-					int sreg = spr_unalign_reg - 0x140;
-					bool datx = (sreg & 4) != 0;
-					if (datx) {
-						if (denise_sprfmode64) {
-							sprwrite_64(sreg, spr_unalign_val64);
-						} else {
-							sprwrite(sreg, spr_unalign_val);
-						}
+				if (spr_unalign_reg[1]) {
+					int sreg = spr_unalign_reg[1] - 0x140;
+					if (denise_sprfmode64) {
+						sprwrite_64(sreg, spr_unalign_val64[1]);
 					} else {
-						matchsprites2_aga(cnt);
-						sprwrite(sreg, spr_unalign_val);
+						sprwrite(sreg, spr_unalign_val[1]);
 					}
-					spr_unalign_reg = 0;
+					spr_unalign_reg[1] = 0;
+				}
+				if (spr_unalign_reg[0]) {
+					int sreg = spr_unalign_reg[0] - 0x140;
+					matchsprites2_aga(cnt);
+					sprwrite(sreg, spr_unalign_val[0]);
+					spr_unalign_reg[0] = 0;
 				}
 			}
 

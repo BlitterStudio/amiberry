@@ -408,6 +408,7 @@ static int current_linear_vblank_lines;
 static int current_linear_vpos_vb_start, current_linear_vpos_vb_end, current_linear_vpos_vb_vsync;
 static int current_linear_vpos_temp, current_linear_hpos_temp;
 static int current_linear_temp_change;
+static int linear_vpos_values_changed;
 static bool display_redraw;
 static int display_hstart_cyclewait_start, display_hstart_cyclewait_cnt, display_hstart_cyclewait_end;
 static int display_hstart_cyclewait_skip_start, display_hstart_cyclewait_skip_end;
@@ -4989,7 +4990,10 @@ static void vsync_check_vsyncmode(void)
 		if (abs(current_linear_vblank_lines - linear_vpos_vblank_lines) >= 2 ||
 			abs(current_linear_vpos_vb_end - linear_vpos_vblank_end) >= 2 ||
 			abs(current_linear_vpos_vb_start - linear_vpos_vblank_start) >= 2 ||
-			abs(current_linear_vpos_vb_vsync - linear_vpos_vblank_vsync) >= 2) {
+			abs(current_linear_vpos_vb_vsync - linear_vpos_vblank_vsync) >= 2 ||
+			abs(current_linear_hpos - current_linear_hpos_temp) >= 1 ||
+			abs(current_linear_vpos - current_linear_vpos_temp) >= 2)
+		{
 			current_linear_temp_change = 2;
 		}
 	}
@@ -5002,13 +5006,24 @@ static void vsync_check_vsyncmode(void)
 	if (current_linear_temp_change > 0) {
 		current_linear_temp_change--;
 		if (current_linear_temp_change == 0) {
-			if (current_linear_hpos != current_linear_hpos_temp ||
-				current_linear_vpos != current_linear_vpos_temp ||
+			bool changed = false;
+			// Horizontal check immediately
+			if (current_linear_hpos != current_linear_hpos_temp) {
+				changed = true;
+			}
+			// vertical values: ignore single field glitches
+			if (current_linear_vpos != current_linear_vpos_temp ||
 				current_linear_vblank_lines != linear_vpos_vblank_lines ||
 				current_linear_vpos_vb_end != linear_vpos_vblank_end ||
 				current_linear_vpos_vb_start != linear_vpos_vblank_start ||
 				current_linear_vpos_vb_vsync != linear_vpos_vblank_vsync) {
-
+				if (linear_vpos_values_changed) {
+					changed = true;
+				} else {
+					linear_vpos_values_changed++;
+				}
+			}
+			if (changed) {
 				current_linear_hpos = current_linear_hpos_temp;
 				current_linear_vpos = current_linear_vpos_temp;
 				current_linear_vblank_lines = linear_vpos_vblank_lines;
@@ -5017,6 +5032,7 @@ static void vsync_check_vsyncmode(void)
 				current_linear_vpos_vb_vsync = linear_vpos_vblank_vsync;
 				current_linear_hpos_short = current_linear_hpos - maxhpos_lol;
 				current_linear_vpos_nom = current_linear_vpos - lof_store;
+				linear_vpos_values_changed = 0;
 				init_beamcon0();
 				framesync = true;
 				display_redraw = true;
