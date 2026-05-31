@@ -5060,8 +5060,13 @@ MIDFUNC(2,jff_MULS32,(RW4 d, RR4 s))
 	TST_ww(d, d);
 
 	if (needed_flags & FLAG_V) {
-		LSR_xxi(REG_WORK1, d, 32);
-		CBZ_wi(REG_WORK1, 4);
+		// Signed overflow if the product does not fit in signed 32 bits,
+		// i.e. the high 32 bits are not the sign-extension of bit 31.
+		// (Testing high32 != 0 is wrong: it falsely flags every negative
+		// result, whose high 32 bits are 0xffffffff.)
+		SXTW_xw(REG_WORK1, d);
+		EOR_xxx(REG_WORK1, REG_WORK1, d);
+		CBZ_xi(REG_WORK1, 4);
 		MRS_NZCV_x(REG_WORK4);
 		SET_xxVflag(REG_WORK4, REG_WORK4);
 		MSR_NZCV_x(REG_WORK4);
@@ -5098,16 +5103,9 @@ MIDFUNC(2,jff_MULS64,(RW4 d, RW4 s))
 	LSR_xxi(s, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
-	if (needed_flags & FLAG_V) {
-		// check overflow: no overflow if high part is 0 or 0xffffffff
-		SMULH_xxx(REG_WORK3, REG_WORK1, REG_WORK2);
-		CBZ_xi(REG_WORK3, 6);
-		ADD_wwi(REG_WORK3, REG_WORK3, 1);
-		CBZ_xi(REG_WORK3, 4);
-		MRS_NZCV_x(REG_WORK4);
-		SET_xxVflag(REG_WORK4, REG_WORK4);
-		MSR_NZCV_x(REG_WORK4);
-	}
+	// 64-bit-result MULS.L (extra & 0x0400): the full product is stored in
+	// Dh:Dl, so there is never an overflow and V is always cleared.
+	// TST_xx above already cleared V.
 
 	flags_carry_inverted = false;
 	unlock2(s);
@@ -5231,25 +5229,14 @@ MIDFUNC(2,jff_MULU64,(RW4 d, RW4 s))
 	s = rmw(s);
 	d = rmw(d);
 
-	if (needed_flags & FLAG_V) {
-		MOV_ww(REG_WORK1, d);
-		MOV_ww(REG_WORK2, s);
-		UMULL_xww(d, REG_WORK1, REG_WORK2);
-	} else {
-		UMULL_xww(d, d, s);
-	}
+	UMULL_xww(d, d, s);
 	TST_xx(d, d);
 	LSR_xxi(s, d, 32);
 	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
-	if (needed_flags & FLAG_V) {
-		// check overflow: no overflow if high part is 0
-		UMULH_xxx(REG_WORK3, REG_WORK1, REG_WORK2);
-		CBZ_xi(REG_WORK3, 4);
-		MRS_NZCV_x(REG_WORK4);
-		SET_xxVflag(REG_WORK4, REG_WORK4);
-		MSR_NZCV_x(REG_WORK4);
-	}
+	// 64-bit-result MULU.L (extra & 0x0400): the full product is stored in
+	// Dh:Dl, so there is never an overflow and V is always cleared.
+	// TST_xx above already cleared V.
 
 	flags_carry_inverted = false;
 	unlock2(s);
