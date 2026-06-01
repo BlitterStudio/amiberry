@@ -542,6 +542,7 @@ int check_prefs_changed_gfx()
 		currprefs.turbo_boot != changed_prefs.turbo_boot ||
 		currprefs.right_control_is_right_win_key != changed_prefs.right_control_is_right_win_key)
 	{
+		const bool capture_policy_enabled = !currprefs.capture_always && changed_prefs.capture_always;
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
 		currprefs.keyboard_leds[0] = changed_prefs.keyboard_leds[0];
 		currprefs.keyboard_leds[1] = changed_prefs.keyboard_leds[1];
@@ -582,6 +583,8 @@ int check_prefs_changed_gfx()
 		inputdevice_acquire(TRUE);
 		if (mouseactive > 0)
 			setmouseactive(mouseactive - 1, 2);
+		else if (capture_policy_enabled)
+			setmouseactive(0, 1);
 #ifndef	_DEBUG
 		setpriority(currprefs.active_capture_priority);
 #endif

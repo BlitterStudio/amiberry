@@ -1272,6 +1272,13 @@ bool ismouseactive ()
 	return mouseactive > 0;
 }
 
+static bool accepts_uncaptured_guest_input()
+{
+	return currprefs.input_tablet >= TABLET_MOUSEHACK
+		&& (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)
+		&& mousehack_alive();
+}
+
 void target_inputdevice_unacquire(const bool full)
 {
 	close_tablet(tablet);
@@ -1456,7 +1463,7 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 	}
 	getcapslock();
 	wait_keyrelease();
-	if (currprefs.capture_always && !user_released_capture) {
+	if (!user_released_capture && (currprefs.capture_always || (isfullscreen() != 0 && !currprefs.start_uncaptured))) {
 		setmouseactive(mon->monitor_id, 1);
 	}
 	clipboard_active(1, 1);
@@ -2605,8 +2612,9 @@ static void handle_key_event(const SDL_Event& event)
 	if (!mouseactive) {
 		bool ctrl_state, shift_state, alt_state, win_state;
 		get_host_hotkey_modifier_state(scancode, pressed, ctrl_state, shift_state, alt_state, win_state);
-		my_kbd_host_hotkey_handler(scancode, pressed, ctrl_state, shift_state, alt_state, win_state);
-		return;
+		if (my_kbd_host_hotkey_handler(scancode, pressed, ctrl_state, shift_state, alt_state, win_state)
+			|| !accepts_uncaptured_guest_input())
+			return;
 	}
 
 	// Only apply the virtual mouse focus restriction in windowed mode.
@@ -2756,7 +2764,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 			}
 		}
 	}
-	else if (mouseactive && isfocus() > 0)
+	else if ((mouseactive || accepts_uncaptured_guest_input()) && isfocus() > 0)
 	{
 		switch (button)
 		{
@@ -2825,7 +2833,7 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		return;
 	}
 
-	if (!mouseactive || isfocus() <= 0) return;
+	if ((!mouseactive && !accepts_uncaptured_guest_input()) || isfocus() <= 0) return;
 
 	const int midx = get_mouse_index_from_sdl_id(event.motion.which);
 
@@ -2894,7 +2902,7 @@ static int get_mouse_wheel_ticks(const SDL_MouseWheelEvent& wheel, const int mid
 
 static void handle_mouse_wheel_event(const SDL_Event& event)
 {
-	if (!mouseactive || isfocus() <= 0) return;
+	if ((!mouseactive && !accepts_uncaptured_guest_input()) || isfocus() <= 0) return;
 
 	const int midx = get_mouse_index_from_sdl_id(event.wheel.which);
 	const int val_y = get_mouse_wheel_ticks(event.wheel, midx, 1);

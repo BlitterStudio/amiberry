@@ -878,6 +878,8 @@ void gui_display(int shortcut)
 	gui_active++;
 	const bool restore_capture = ismouseactive();
 	const bool restore_capture_was_automatic = restore_capture && currprefs.capture_always;
+	const bool old_capture_always = currprefs.capture_always;
+	const bool old_start_uncaptured = currprefs.start_uncaptured;
 
 	if (setpaused(7)) {
 		inputdevice_unacquire();
@@ -918,7 +920,9 @@ void gui_display(int shortcut)
 
 	if (resumepaused_without_mouse_capture(7)) {
 		const bool restore_capture_allowed = restore_capture && (!restore_capture_was_automatic || currprefs.capture_always);
-		if (restore_capture_allowed) {
+		const bool capture_policy_enabled = currprefs.capture_always && !old_capture_always;
+		const bool fullscreen_start_capture_enabled = isfullscreen() != 0 && old_start_uncaptured && !currprefs.start_uncaptured;
+		if (restore_capture_allowed || capture_policy_enabled || fullscreen_start_capture_enabled) {
 			setmouseactive(0, 1);
 			if (!ismouseactive()) {
 				inputdevice_acquire(FALSE);

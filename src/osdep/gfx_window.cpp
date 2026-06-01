@@ -343,7 +343,8 @@ int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 	if (gfx_platform_skip_window_activation())
 		return ret;
 
-	const bool startcapture = !started && !currprefs.start_uncaptured && !currprefs.start_minimized && currprefs.capture_always;
+	const bool startcapture = !started && !currprefs.start_uncaptured && !currprefs.start_minimized
+		&& (currprefs.capture_always || isfullscreen() != 0);
 	bool startactive = (started && mouseactive) || startcapture;
 	bool startpaused = !started && ((currprefs.start_minimized && currprefs.minimized_pause) || (currprefs.start_uncaptured && currprefs.inactive_pause && isfullscreen() <= 0));
 	bool startminimized = !started && currprefs.start_minimized && isfullscreen() <= 0;
