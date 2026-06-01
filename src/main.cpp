@@ -1019,7 +1019,7 @@ void usage()
 	std::cout << " -S <value>                 Sound parameter specification." << '\n';
 	std::cout << " -R <value>                 Output framerate in frames per second." << '\n';
 	std::cout << " -i                         Enable illegal memory." << '\n';
-	std::cout << " -J <xy>                    Specify joystick 0 (x) and 1 (y). Possible values: 0/1 for joystick, M for mouse, and a/b/c." <<
+	std::cout << " -J <xy>                    Specify joystick 0 (x) and 1 (y). Possible values: 0/1 for joystick, M for mouse, and a/b/c/d." <<
 		'\n';
 	std::cout << " -w <value>                 CPU emulation speed. Possible values: 0 (Cycle Exact), -1 (Max)." << '\n';
 	std::cout << " -G                         Don't show the GUI, start emulation directly." << '\n';
