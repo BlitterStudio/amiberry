@@ -7856,6 +7856,15 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					else
 						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER4];
 				}
+				else if (JSEM_ISCURSORLEFTFIRE(i, prefs))
+				{
+					if (cd32)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_CK_LEFTFIRE];
+					else if (mode == JSEM_MODE_GAMEPAD)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CK_LEFTFIRE3];
+					else
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CK_LEFTFIRE];
+				}
 #endif
 				if (kb) {
 					switch (mode)
@@ -7924,6 +7933,10 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CK];
 				else if (JSEM_ISSOMEWHEREELSE (i, prefs))
 					kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_SE];
+#ifdef AMIBERRY
+				else if (JSEM_ISCURSORLEFTFIRE(i, prefs))
+					kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CK_LEFTFIRE];
+#endif
 				if (kb) {
 					setcompakb(prefs, kb, i == 3 ? ip_parjoy2default : ip_parjoy1default, i, prefs->jports[i].autofire);
 					used[joy] = 1;
