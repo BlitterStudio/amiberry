@@ -3335,8 +3335,10 @@ void build_comp(void)
         }
         prop[cft_map(opcode)].set_flags = table68k[opcode].flagdead;
         prop[cft_map(opcode)].use_flags = table68k[opcode].flaglive;
-        if (table68k[opcode].mnemo == i_DIVU)
+        if (table68k[opcode].mnemo == i_DIVU) {
             prop[cft_map(opcode)].use_flags |= FLAG_CZNV;
+            nfcompfunctbl[cft_map(opcode)] = compfunctbl[cft_map(opcode)];
+        }
         /* Unconditional jumps don't evaluate condition codes, so they
          * don't actually use any flags themselves */
         if (prop[cft_map(opcode)].cflow & fl_const_jump)
