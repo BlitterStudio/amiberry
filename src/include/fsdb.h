@@ -11,6 +11,7 @@
 #define UAE_FSDB_H
 
 #include "uae/types.h"
+#include <cstddef>		/* size_t (used by my_save_file_atomic) */
 
 #ifndef FSDB_FILE
 #define FSDB_FILE _T("_UAEFSDB.___")
@@ -165,6 +166,10 @@ extern int my_rmdir(const TCHAR* path) noexcept;
 extern int my_mkdir (const TCHAR*);
 extern int my_unlink(const TCHAR* path) noexcept;
 extern int my_rename(const TCHAR* oldname, const TCHAR* newname) noexcept;
+/* Atomically replace `filename` with `len` bytes from `data`, preserving the
+   previous file's permissions/attributes. On success the data is durable; on
+   any failure `filename` is left untouched. Returns true on success. */
+[[nodiscard]] extern bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept;
 extern int my_setcurrentdir (const TCHAR *curdir, TCHAR *oldcur);
 bool my_isfilehidden(const char* path) noexcept;
 bool my_setfilehidden(const TCHAR* path, bool hidden) noexcept;

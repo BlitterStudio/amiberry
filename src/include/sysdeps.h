@@ -44,8 +44,11 @@ using namespace std;
 #define CPU_arm 1
 #define ARM_ASSEMBLY 1
 #define ARMV6_ASSEMBLY 1
-#elif defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__)
+#elif defined(CPU_AARCH64) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__)
 #define CPU_arm 1
+#ifndef CPU_AARCH64
+#define CPU_AARCH64 1
+#endif
 #define CPU_64_BIT 1
 #define ARM_ASSEMBLY 1
 #define ARMV6_ASSEMBLY 1

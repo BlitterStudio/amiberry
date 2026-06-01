@@ -114,6 +114,7 @@ struct denise_rga_queue
 	bool lol, lof;
 	int hdelay;
 	bool blanked;
+	bool borderline;
 	uae_u16 strobe;
 	int strobe_pos;
 	int erase;
@@ -134,12 +135,14 @@ static void denise_handle_quick_strobe(uae_u16 strobe, int offset, int vpos);
 static void draw_denise_vsync(int);
 static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
 static void draw_denise_line(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
-	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool finalseg, struct linestate *ls);
+	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls);
 
 static void sprwrite(int reg, uae_u32 v);
 static void sprwrite_64(int reg, uae_u64 v);
-static int spr_unalign_reg, spr_unalign_val;
-static uae_u64 spr_unalign_val64;
+// 0 = SPRxPOS/CTL, 1 = SPRxDATx
+static int spr_unalign_reg[2];
+static uae_u32 spr_unalign_val[2];
+static uae_u64 spr_unalign_val64[2];
 static bool denise_sprfmode64, denise_bplfmode64;
 
 static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
@@ -151,17 +154,16 @@ static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
 		struct denise_rga *rd = &rga_denise[pos];
 		if (rd->line == linecnt && rd->rga != 0x1fe && (rd->rga < 0x38 || rd->rga >= 0x40)) {
 			denise_update_reg(rd->rga, rd->v, linecnt);
-			if (spr_unalign_reg) {
-				int sreg = spr_unalign_reg - 0x140;
-				bool datx = (sreg & 4) != 0;
-				if (datx) {
-					if (denise_sprfmode64) {
-						sprwrite_64(sreg, spr_unalign_val64);
-					} else {
-						sprwrite(sreg, spr_unalign_val);
-					}
+			if (spr_unalign_reg[0]) {
+				int sreg = spr_unalign_reg[0] - 0x140;
+				sprwrite(sreg, spr_unalign_val[0]);
+			}
+			if (spr_unalign_reg[1]) {
+				int sreg = spr_unalign_reg[1] - 0x140;
+				if (denise_sprfmode64) {
+					sprwrite_64(sreg, spr_unalign_val64[1]);
 				} else {
-					sprwrite(sreg, spr_unalign_val);
+					sprwrite(sreg, spr_unalign_val[1]);
 				}
 			}
 		}
@@ -202,7 +204,7 @@ static void read_denise_line_queue(void)
 
 	if (q->type == 0) {
 		draw_denise_line(q->gfx_ypos, q->how, q->linecnt, q->startpos, q->startcycle, q->endcycle, q->skip_start, q->skip_end, q->dtotal,
-			q->calib_start, q->calib_len, q->lol, q->hdelay, q->blanked, q->finalseg, q->ls);
+			q->calib_start, q->calib_len, q->lol, q->hdelay, q->blanked, q->borderline, q->finalseg, q->ls);
 		next = q->finalseg;
 	} else if (q->type == 1) {
 		draw_denise_bitplane_line_fast(q->gfx_ypos, q->how, q->ls);
@@ -467,6 +469,7 @@ static int bpldat_fmode;
 static int fetchmode_size_denise, fetchmode_mask_denise;
 static int delayed_vblank_ecs, delayed_pvblank_aga;
 static bool denise_hdiw, denise_hblank, denise_phblank, denise_vblank, denise_pvblank;
+static bool diw_disable;
 static bool denise_blank_active, denise_blank_active2, denise_hblank_active, denise_vblank_active;
 static bool debug_special_csync, debug_special_hvsync;
 static bool exthblankon_ecs, exthblankon_ecsonly, exthblankon_aga;
@@ -3653,7 +3656,8 @@ void denise_reset(bool hard)
 	sprite_pixdata = 0;
 	aga_unalign0 = 0;
 	aga_unalign1 = 0;
-	spr_unalign_reg = 0;
+	spr_unalign_reg[0] = 0;
+	spr_unalign_reg[1] = 0;
 	bpl1dat_unalign = 0;
 	reswitch_unalign = 0;
 	for (int i = 0; i < 256; i++) {
@@ -3929,12 +3933,9 @@ static void expand_drga_early2x(struct denise_rga *rd)
 		case 0x174: case 0x176:
 		case 0x17c: case 0x17e:
 		{
-			int sreg = rd->rga - 0x140;
-			int num = sreg / 8;
-			struct denise_spr *s = &dspr[num];
-			spr_unalign_reg = rd->rga;
-			spr_unalign_val = rd->v;
-			spr_unalign_val64 = rd->v64;
+			spr_unalign_reg[1] = rd->rga;
+			spr_unalign_val[1] = rd->v;
+			spr_unalign_val64[1] = rd->v64;
 		}
 		break;
 	}
@@ -3971,8 +3972,8 @@ static void expand_drga_early(struct denise_rga *rd)
 		case 0x168: case 0x16a:
 		case 0x170: case 0x172:
 		case 0x178: case 0x17a:
-			spr_unalign_reg = rd->rga;
-			spr_unalign_val = rd->v;
+			spr_unalign_reg[0] = rd->rga;
+			spr_unalign_val[0] = rd->v;
 			break;
 
 		// SPRxDATA/SPRxDATB
@@ -5208,10 +5209,10 @@ static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
 #if DEBUG_ALWAYS_UNALIGNED_DRAWING
 	lts_unaligned_ecs(cnt, cnt_next, h);
 #endif
-	if (h && spr_unalign_reg) {
+	if (h && spr_unalign_reg[0]) {
 		matchsprites2(cnt << 2);
-		sprwrite(spr_unalign_reg - 0x140, spr_unalign_val);
-		spr_unalign_reg = 0;
+		sprwrite(spr_unalign_reg[0] - 0x140, spr_unalign_val[0]);
+		spr_unalign_reg[0] = 0;
 	}
 #if DEBUG_ALWAYS_UNALIGNED_DRAWING
 	return true;
@@ -5318,7 +5319,7 @@ static bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
 			return true;
 		}
 	}
-	if (h && spr_unalign_reg) {
+	if (h && (spr_unalign_reg[0] || spr_unalign_reg[1])) {
 		lts_unaligned_aga(cnt, cnt_next, h);
 		return true;
 	}
@@ -6055,7 +6056,7 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 }
 
 static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
-	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool finalseg, struct linestate *ls)
+	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls)
 {
 	bool fullline = false;
 
@@ -6105,6 +6106,7 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 
 	bool line_is_blanked = false;
 	bool hidden = this_line->linear_vpos >= denise_vblank_extra_bottom || this_line->linear_vpos < denise_vblank_extra_top;
+	diw_disable = borderline;
 
 	if ((denise_pixtotal_max == -0x7fffffff && denise_vsync_bpl_detect) || blanked) {
 
@@ -6648,20 +6650,20 @@ static void lts_unaligned_aga(int cnt, int cnt_next, int h)
 					bpl1dat_unalign = false;
 				}
 
-				if (spr_unalign_reg) {
-					int sreg = spr_unalign_reg - 0x140;
-					bool datx = (sreg & 4) != 0;
-					if (datx) {
-						if (denise_sprfmode64) {
-							sprwrite_64(sreg, spr_unalign_val64);
-						} else {
-							sprwrite(sreg, spr_unalign_val);
-						}
+				if (spr_unalign_reg[1]) {
+					int sreg = spr_unalign_reg[1] - 0x140;
+					if (denise_sprfmode64) {
+						sprwrite_64(sreg, spr_unalign_val64[1]);
 					} else {
-						matchsprites2_aga(cnt);
-						sprwrite(sreg, spr_unalign_val);
+						sprwrite(sreg, spr_unalign_val[1]);
 					}
-					spr_unalign_reg = 0;
+					spr_unalign_reg[1] = 0;
+				}
+				if (spr_unalign_reg[0]) {
+					int sreg = spr_unalign_reg[0] - 0x140;
+					matchsprites2_aga(cnt);
+					sprwrite(sreg, spr_unalign_val[0]);
+					spr_unalign_reg[0] = 0;
 				}
 			}
 
@@ -8367,7 +8369,7 @@ void denise_handle_quick_strobe_queue(uae_u16 strobe, int strobe_pos, int endpos
 }
 
 void draw_denise_line_queue(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int endpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
-	int calib_start, int calib_len, bool lof, bool lol, int hdelay, bool blanked, bool finalseg, struct linestate *ls)
+	int calib_start, int calib_len, bool lof, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls)
 {
 	if (multithread_denise_active()) {
 
@@ -8395,6 +8397,7 @@ void draw_denise_line_queue(int gfx_ypos, nln_how how, uae_u32 linecnt, int star
 		q->vpos = vpos;
 		q->hdelay = hdelay;
 		q->blanked = blanked;
+		q->borderline = borderline;
 		q->finalseg = finalseg;
 		q->linear_vpos = linear_display_vpos;
 		q->linear_vpos_vb_start = linear_vpos_vb_start;
@@ -8405,7 +8408,7 @@ void draw_denise_line_queue(int gfx_ypos, nln_how how, uae_u32 linecnt, int star
 	} else {
 
 		updatelinedata();
-		draw_denise_line(gfx_ypos, how, linecnt, startpos, startcycle, endcycle, skip_start, skip_end, dtotal, calib_start, calib_len, lol, hdelay, blanked, finalseg, ls);
+		draw_denise_line(gfx_ypos, how, linecnt, startpos, startcycle, endcycle, skip_start, skip_end, dtotal, calib_start, calib_len, lol, hdelay, blanked, borderline, finalseg, ls);
 		if (finalseg) {
 			update_overlapped_cycles(endpos);
 		}

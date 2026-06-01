@@ -5583,8 +5583,12 @@ static void gen_opcode (unsigned int opcode)
 		genamode(curi, curi->smode, "srcreg", curi->size, "src", 1, 0, cpu_level == 1 ? GF_NOREFILL : 0);
 		if (curi->size == sz_byte) {
 			out("src &= 0xFF;\n");
-			if (curi->mnemo == i_ANDSR)
+			if (curi->mnemo == i_ANDSR) {
 				out("src |= 0xff00;\n");
+			}
+			if (cpu_level == 2 || cpu_level == 3) {
+				check_trace();
+			}
 		} else {
 			check_trace();
 		}
@@ -7321,8 +7325,11 @@ static void gen_opcode (unsigned int opcode)
 			genastore("m68k_areg(regs, 7)", curi->smode, "srcreg", sz_long, "src");
 			out("m68k_areg(regs, 7) += offs;\n");
 			fill_prefetch_next_t();
-			if (!next_level_060_to_040())
-				next_level_020_to_010();
+			if (!next_level_060_to_040()) {
+				if (!next_level_040_to_030()) {
+					next_level_020_to_010();
+				}
+			}
 		}
 		break;
 	case i_UNLK:

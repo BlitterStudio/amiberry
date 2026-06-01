@@ -236,18 +236,37 @@ static inline void x86_64_addr32(void)
 #endif
 }
 
-static inline void x86_64_rex(bool /* w */, uae_u32 * /* r */, uae_u32 * /* x */, uae_u32 *b)
+static inline void x86_64_rex(bool w, uae_u32 *r, uae_u32 *x, uae_u32 *b)
 {
 #ifdef CPU_x86_64
 	int rex_byte = 0x40;
-	if (*b >= R8_INDEX) {
+	/* Each of r/x/b is optional: a NULL pointer means that REX field is not
+	   used by this instruction. The previous version dereferenced 'b'
+	   unconditionally and ignored 'r'/'x' entirely, which crashed when a
+	   caller (e.g. raw_fldcw_m_indexed, which only needs REX.X for its index
+	   register) passed b == NULL. */
+	if (w) {
+		rex_byte |= 8;			/* REX.W */
+	}
+	if (r && *r >= R8_INDEX) {
+		*r -= R8_INDEX;
+		rex_byte |= 4;			/* REX.R */
+	}
+	if (x && *x >= R8_INDEX) {
+		*x -= R8_INDEX;
+		rex_byte |= 2;			/* REX.X */
+	}
+	if (b && *b >= R8_INDEX) {
 		*b -= R8_INDEX;
-		rex_byte |= 1;
+		rex_byte |= 1;			/* REX.B */
 	}
 	if (rex_byte != 0x40) {
 		emit_byte(rex_byte);
 	}
 #else
+	UNUSED(w);
+	UNUSED(r);
+	UNUSED(x);
 	UNUSED(b);
 #endif
 }
@@ -2426,15 +2445,22 @@ LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 LOWFUNC(NONE,READ,2,raw_fldcw_m_indexed,(R4 index, MEMR base))
 {
 #if X86_TARGET_64BIT
-	/* x86-64: [index + disp32] can't reach 64-bit addresses.
-	   Load base into RAX, use FLDCW [RAX + index*1] via SIB encoding. */
-	MOVQir(base, X86_RAX);
+	/* x86-64: [index + disp32] can't reach a 64-bit base address, so the base
+	   must be materialized in a register, then used as FLDCW [scratch + index*1]
+	   via SIB encoding. RAX/RCX are allocatable (not in always_used[]) and may
+	   hold a live m68k value here, and this LOWFUNC has no way to declare a
+	   register clobber - so preserve the scratch register across the FLDCW.
+	   The scratch is chosen to differ from the index register. */
+	int scratch = (_rR(index) == _rR(X86_RAX)) ? X86_RCX : X86_RAX;
+	PUSHQr(scratch);
+	MOVQir(base, scratch);
 	x86_64_prefix(false, false, NULL, &index, NULL);
 	emit_byte(0xd9);
 	/* ModRM: mod=00, reg=5 (FLDCW), rm=100 (SIB follows) */
 	emit_byte(0x2c);
-	/* SIB: scale=00 (x1), index=index_reg, base=RAX (000) */
-	emit_byte((_r(index) << 3) | 0x00);
+	/* SIB: scale=00 (x1), index=index_reg, base=scratch */
+	emit_byte((_r(index) << 3) | _r(scratch));
+	POPQr(scratch);
 #else
 	x86_64_prefix(true, false, NULL, NULL, &index);
 	emit_byte(0xd9);

@@ -153,7 +153,7 @@ static const char* help_text_configurations =
 	"To create/save a new configuration, set all emulator options as required, then enter\n"
 	"a new \"Name\", optionally provide a short description, and then click on the \"Save\"\n"
 	"button. When trying to Save a configuration, if the supplied filename already exists,\n"
-	"it will be automatically renamed to \"configuration.backup\", to keep as a backup.\n"
+	"a copy of the previous version is automatically kept as \"configuration.backup\".\n"
 	"\n"
 	"Please note a special case exists when creating/saving a configuration file for use\n"
 	"with floppy disk images and whdload archives. The auto-config logic in Amiberry will\n"

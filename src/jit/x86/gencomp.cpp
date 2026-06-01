@@ -113,6 +113,22 @@
 #define NEXT_CPU_LEVEL 4
 #endif
 
+#ifdef AMIBERRY
+#define COMP_HEADER_INCLUDE "comptbl_x86.h"
+#define COMPEMU_INCLUDE "compemu_x86.h"
+#define FLAGS_X86_INCLUDE "flags_x86.h"
+#define GEN_COMP_HEADER "comptbl_x86.h"
+#define GEN_COMP_STBL "compstbl_x86.cpp"
+#define GEN_COMPEMU "compemu_x86.cpp"
+#else
+#define COMP_HEADER_INCLUDE "comptbl.h"
+#define COMPEMU_INCLUDE JIT_PATH "compemu.h"
+#define FLAGS_X86_INCLUDE JIT_PATH "flags_x86.h"
+#define GEN_COMP_HEADER GEN_PATH "comptbl.h"
+#define GEN_COMP_STBL GEN_PATH "compstbl.cpp"
+#define GEN_COMPEMU GEN_PATH "compemu.cpp"
+#endif
+
 #define BOOL_TYPE		"int"
 #define failure			global_failure=1
 #define FAILURE			global_failure=1
@@ -137,6 +153,137 @@ static int global_fpu;
 static char endstr[1000];
 
 #include "flags_x86.h"
+
+#ifdef AMIBERRY
+static const char *amiberry_gen_path;
+static const char *amiberry_dispatch_path;
+
+static bool file_exists(const char *path)
+{
+	FILE *f = fopen(path, "rb");
+	if (!f)
+		return false;
+	fclose(f);
+	return true;
+}
+
+static void init_amiberry_output_paths(void)
+{
+	if (file_exists("gencomp.cpp")) {
+		amiberry_gen_path = "";
+		amiberry_dispatch_path = "../";
+	} else if (file_exists("jit/x86/gencomp.cpp")) {
+		amiberry_gen_path = "jit/x86/";
+		amiberry_dispatch_path = "jit/";
+	} else if (file_exists("src/jit/x86/gencomp.cpp")) {
+		amiberry_gen_path = "src/jit/x86/";
+		amiberry_dispatch_path = "src/jit/";
+	} else {
+		amiberry_gen_path = "";
+		amiberry_dispatch_path = "../";
+	}
+}
+
+static void make_path(char *dst, size_t dst_size, const char *dir, const char *name)
+{
+	snprintf(dst, dst_size, "%s%s", dir, name);
+}
+
+static FILE *open_output_or_abort(const char *path)
+{
+	FILE *f = fopen(path, "wb");
+	if (!f) {
+		fprintf(stderr, "failed to open %s for writing\n", path);
+		abort();
+	}
+	return f;
+}
+
+static void write_amiberry_file_header(FILE *f)
+{
+	fprintf(f, "//\n");
+	fprintf(f, "// Created by midwan on 22/12/2023.\n");
+	fprintf(f, "//\n\n");
+}
+
+static void write_amiberry_cpu_dispatch(FILE *f, const char *arm_include, const char *x86_include)
+{
+	fprintf(f, "#if defined(CPU_arm) || defined(CPU_AARCH64) || defined(__arm__) || defined(_M_ARM) || \\\n");
+	fprintf(f, "\tdefined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)\n");
+	fprintf(f, "#include \"%s\"\n", arm_include);
+	fprintf(f, "#elif defined(__x86_64__) || defined(_M_AMD64)\n");
+	fprintf(f, "#include \"%s\"\n", x86_include);
+	fprintf(f, "#endif\n");
+}
+
+static void write_amiberry_dispatchers(void)
+{
+	char path[1024];
+	FILE *f;
+
+	make_path(path, sizeof path, amiberry_dispatch_path, "comptbl.h");
+	f = open_output_or_abort(path);
+	write_amiberry_file_header(f);
+	fprintf(f, "#ifndef AMIBERRY_COMPTBL_H\n");
+	fprintf(f, "#define AMIBERRY_COMPTBL_H\n\n");
+	write_amiberry_cpu_dispatch(f, "arm/comptbl_arm.h", "x86/comptbl_x86.h");
+	fprintf(f, "\n#endif //AMIBERRY_COMPTBL_H\n");
+	fclose(f);
+
+	make_path(path, sizeof path, amiberry_dispatch_path, "compstbl.cpp");
+	f = open_output_or_abort(path);
+	write_amiberry_file_header(f);
+	write_amiberry_cpu_dispatch(f, "arm/compstbl_arm.cpp", "x86/compstbl_x86.cpp");
+	fclose(f);
+
+	make_path(path, sizeof path, amiberry_dispatch_path, "compemu.cpp");
+	f = open_output_or_abort(path);
+	write_amiberry_file_header(f);
+	write_amiberry_cpu_dispatch(f, "arm/compemu_arm.cpp", "x86/compemu_x86.cpp");
+	fclose(f);
+}
+
+static void make_amiberry_gen_path(char *dst, size_t dst_size, const char *name)
+{
+	make_path(dst, dst_size, amiberry_gen_path, name);
+}
+#endif
+
+#if defined(UAE) && !defined(AMIBERRY)
+static void write_winuae_header_prefix(FILE *f)
+{
+	fprintf(f, "#if defined(CPU_AARCH64)\n");
+	fprintf(f, "#include \"%s\"\n", "arm/comptbl_arm.h");
+	fprintf(f, "#else\n");
+}
+
+static void write_winuae_header_suffix(FILE *f)
+{
+	fprintf(f, "#endif /* CPU_AARCH64 */\n");
+}
+
+static void write_winuae_source_prefix(FILE *f, const char *arm_source)
+{
+	fprintf(f, "#if defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)\n");
+	fprintf(f, "#include \"%s\"\n", arm_source);
+	fprintf(f, "#else\n");
+}
+
+static void write_winuae_compemu_prefix(FILE *f)
+{
+	write_winuae_source_prefix(f, "arm/compemu_arm.cpp");
+}
+
+static void write_winuae_compemu_suffix(FILE *f)
+{
+	fprintf(f, "#endif /* CPU_AARCH64 */\n");
+}
+
+static void write_winuae_source_suffix(FILE *f)
+{
+	fprintf(f, "#endif /* CPU_AARCH64 */\n");
+}
+#endif
 
 #ifndef __attribute__
 #  ifndef __GNUC__
@@ -2171,8 +2318,9 @@ gen_opcode(unsigned int opcode)
 			comprintf("\tsub_w_ri(src,1);\n");
 			comprintf("\tend_needflags();\n");
 			start_brace();
-			comprintf("\tuintptr v1=get_const(PC_P);\n");
-			comprintf("\tuintptr v2=get_const(offs);\n"
+			comprintf("\tuintptr v2;\n"
+				"\tuintptr v1=get_const(PC_P);\n");
+			comprintf("\tv2=get_const(offs);\n"
 				"\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CC);
 			break;
 
@@ -3152,7 +3300,7 @@ generate_includes(FILE *f)
 #endif
 	fprintf(f, "#include \"readcpu.h\"\n");
 	fprintf(f, "#include \"newcpu.h\"\n");
-	fprintf(f, "#include \"comptbl.h\"\n");
+	fprintf(f, "#include \"" COMP_HEADER_INCLUDE "\"\n");
 	fprintf(f, "#include \"debug.h\"\n");
 }
 
@@ -3506,7 +3654,16 @@ generate_func(int noflags)
 			"#define PART_6 1\n"
 			"#define PART_7 1\n"
 			"#define PART_8 1\n"
+#if defined(UAE) && !defined(AMIBERRY)
+			"#endif\n");
+#else
 			"#endif\n\n");
+#endif
+#if defined(UAE) && !defined(AMIBERRY)
+		if (!noflags)
+			write_winuae_compemu_suffix(stdout);
+		printf("\n");
+#endif
 #ifdef UAE
 
 		printf("#ifdef USE_JIT_FPU\n");
@@ -3547,6 +3704,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 int main(void)
 #endif
 {
+#ifdef AMIBERRY
+	char header_path[1024];
+	char stbl_path[1024];
+	char compemu_path[1024];
+
+	init_amiberry_output_paths();
+	write_amiberry_dispatchers();
+	make_amiberry_gen_path(header_path, sizeof header_path, GEN_COMP_HEADER);
+	make_amiberry_gen_path(stbl_path, sizeof stbl_path, GEN_COMP_STBL);
+	make_amiberry_gen_path(compemu_path, sizeof compemu_path, GEN_COMPEMU);
+#endif
+
 	init_table68k();
 
 	opcode_map = (int *)malloc(sizeof(int) * nr_cpuop_funcs);
@@ -3559,22 +3728,38 @@ int main(void)
 	 * cputbl.h that way), but cpuopti can't cope.  That could be fixed, but
 	 * I don't dare to touch the 68k version.  */
 
-	headerfile = fopen(GEN_PATH "comptbl.h", "wb");
+#ifdef AMIBERRY
+	headerfile = open_output_or_abort(header_path);
+#else
+	headerfile = fopen(GEN_COMP_HEADER, "wb");
+#endif
+#if defined(UAE) && !defined(AMIBERRY)
+	write_winuae_header_prefix(headerfile);
+#endif
 	fprintf(headerfile, ""
 		"extern const struct comptbl op_smalltbl_0_comp_nf[];\n"
 		"extern const struct comptbl op_smalltbl_0_comp_ff[];\n"
 		"");
 
-	stblfile = fopen(GEN_PATH "compstbl.cpp", "wb");
-	if (freopen(GEN_PATH "compemu.cpp", "wb", stdout) == NULL) {
+#ifdef AMIBERRY
+	stblfile = open_output_or_abort(stbl_path);
+	if (freopen(compemu_path, "wb", stdout) == NULL) {
+#else
+	stblfile = fopen(GEN_COMP_STBL, "wb");
+	if (freopen(GEN_COMPEMU, "wb", stdout) == NULL) {
+#endif
 		abort();
 	}
 
+#if defined(UAE) && !defined(AMIBERRY)
+	write_winuae_source_prefix(stblfile, "arm/compstbl_arm.cpp");
+	write_winuae_compemu_prefix(stdout);
+#endif
 	generate_includes(stdout);
 	generate_includes(stblfile);
 
-	printf("#include \"" JIT_PATH "compemu.h\"\n");
-	printf("#include \"" JIT_PATH "flags_x86.h\"\n");
+	printf("#include \"" COMPEMU_INCLUDE "\"\n");
+	printf("#include \"" FLAGS_X86_INCLUDE "\"\n");
 
 	noflags = 0;
 	generate_func(noflags);
@@ -3594,6 +3779,10 @@ int main(void)
 
 	printf("#endif\n");
 	fprintf(stblfile, "#endif\n");
+#if defined(UAE) && !defined(AMIBERRY)
+	write_winuae_source_suffix(stblfile);
+	write_winuae_header_suffix(headerfile);
+#endif
 
 	free(opcode_map);
 	free(opcode_last_postfix);

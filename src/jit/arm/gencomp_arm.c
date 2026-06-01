@@ -6,7 +6,7 @@
  *
  *  Adaptation for ARAnyM/ARM, copyright 2001-2015
  *    Milan Jurik, Jens Heitmann
- * 
+ *
  *  Basilisk II (C) 1997-2005 Christian Bauer
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -211,32 +211,32 @@ static inline void gen_update_next_handler(void) {
 
 static void gen_writebyte(const char *address, const char *source)
 {
-	comprintf("\twritebyte(%s, %s, scratchie);\n", address, source);
+	comprintf("\twritebyte(%s, %s);\n", address, source);
 }
 
 static void gen_writeword(const char *address, const char *source)
 {
-	comprintf("\twriteword(%s, %s, scratchie);\n", address, source);
+	comprintf("\twriteword(%s, %s);\n", address, source);
 }
 
 static void gen_writelong(const char *address, const char *source)
 {
-	comprintf("\twritelong(%s, %s, scratchie);\n", address, source);
+	comprintf("\twritelong(%s, %s);\n", address, source);
 }
 
 static void gen_readbyte(const char *address, const char* dest)
 {
-	comprintf("\treadbyte(%s, %s, scratchie);\n", address, dest);
+	comprintf("\treadbyte(%s, %s);\n", address, dest);
 }
 
 static void gen_readword(const char *address, const char *dest)
 {
-	comprintf("\treadword(%s,%s,scratchie);\n", address, dest);
+	comprintf("\treadword(%s, %s);\n", address, dest);
 }
 
 static void gen_readlong(const char *address, const char *dest)
 {
-	comprintf("\treadlong(%s, %s, scratchie);\n", address, dest);
+	comprintf("\treadlong(%s, %s);\n", address, dest);
 }
 
 static const char *
@@ -388,7 +388,7 @@ static void genamode(amodes mode, const char *reg, wordsizes size, const char *n
 		break;
 	case Ad8r:
 		comprintf("\tint %sa = scratchie++;\n", name);
-		comprintf("\tcalc_disp_ea_020(%s + 8, %s, %sa, scratchie);\n", reg, gen_nextiword(), name);
+		comprintf("\tcalc_disp_ea_020(%s + 8, %s, %sa);\n", reg, gen_nextiword(), name);
 		break;
 
 	case PC16:
@@ -405,7 +405,7 @@ static void genamode(amodes mode, const char *reg, wordsizes size, const char *n
 		start_brace();
 		comprintf("\tmov_l_ri(pctmp,address);\n");
 
-		comprintf("\tcalc_disp_ea_020(pctmp, %s, %sa, scratchie);\n", gen_nextiword(), name);
+		comprintf("\tcalc_disp_ea_020(pctmp, %s, %sa);\n", gen_nextiword(), name);
 		break;
 	case absw:
 		comprintf("\tint %sa = scratchie++;\n", name);
@@ -681,8 +681,8 @@ static void gen_move16(uae_u32 opcode, struct instr *curi) {
 	comprintf("\tint tmp=scratchie;\n");
 	comprintf("\tscratchie+=4;\n");
 
-	comprintf("\tget_n_addr(src,src,scratchie);\n"
-			"\tget_n_addr(dst,dst,scratchie);\n"
+	comprintf("\tget_n_addr(src,src);\n"
+			"\tget_n_addr(dst,dst);\n"
 			"\tmov_l_rR(tmp+0,src,0);\n"
 			"\tmov_l_rR(tmp+1,src,4);\n"
 			"\tmov_l_rR(tmp+2,src,8);\n"
@@ -705,7 +705,7 @@ static void genmovemel(uae_u16 opcode) {
 	comprintf("\tsigned char offset=0;\n");
 	genamode(table68k[opcode].dmode, "dstreg", table68k[opcode].size, "src", 2,
 			1);
-	comprintf("\tget_n_addr(srca,native,scratchie);\n");
+	comprintf("\tget_n_addr(srca,native);\n");
 
 	comprintf("\tfor (i=0;i<16;i++) {\n"
 			"\t\tif ((mask>>i)&1) {\n");
@@ -741,7 +741,7 @@ static void genmovemle(uae_u16 opcode) {
 	genamode(table68k[opcode].dmode, "dstreg", table68k[opcode].size, "src", 2,
 			1);
 
-	comprintf("\tget_n_addr(srca,native,scratchie);\n");
+	comprintf("\tget_n_addr(srca,native);\n");
 
 	if (table68k[opcode].dmode != Apdi) {
 		comprintf("\tfor (i=0;i<16;i++) {\n"
@@ -990,7 +990,7 @@ static void genflags(flagtypes type, wordsizes size, const char *value, const ch
 	case flag_logical_noclobber:
 		failure;
 		/* fall through */
-	
+
 	case flag_and:
 	case flag_or:
 	case flag_eor:
@@ -1229,7 +1229,7 @@ static void gen_add(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf(
 				"\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 	} else {
-		comprintf("\t jnf_ADD(tmp,dst,src);\n");
+		comprintf("\t jnf_ADD_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -1296,7 +1296,7 @@ static void gen_addx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 	} else {
 		comprintf("\t restore_carry();\n"); /* Reload the X flag into C */
-		comprintf("\t jnf_ADDX(tmp,dst,src);\n");
+		comprintf("\t jnf_ADDX_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -1324,7 +1324,7 @@ static void gen_and(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	} else {
-		comprintf("\t jnf_AND(tmp,dst,src);\n");
+		comprintf("\t jnf_AND_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -1362,7 +1362,7 @@ static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -1385,7 +1385,7 @@ static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 					"\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 		} else {
 			start_brace();
-			comprintf("\t jnf_LSL_reg(tmp,data,cnt);\n");
+			comprintf("\t jnf_LSL_%s_reg(tmp,data,cnt);\n", ssize);
 		}
 	} else {
 		start_brace();
@@ -1399,7 +1399,7 @@ static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 			comprintf(
 					"\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 		} else {
-			comprintf("\t jnf_LSL_imm(tmp,data,srcreg);\n");
+			comprintf("\t jnf_LSL_%s_imm(tmp,data,srcreg);\n", ssize);
 		}
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
@@ -1410,7 +1410,7 @@ static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -1421,7 +1421,7 @@ static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	 thing ;-) */
 	comprintf("if (needed_flags & FLAG_V) {\n"
 			"  FAIL(1);\n"
-			"  return;\n"
+			"  return 0;\n"
 			"} \n");
 
 	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
@@ -1635,7 +1635,7 @@ static void gen_asr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -1660,7 +1660,7 @@ static void gen_asr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 			comprintf("\t jnf_ASR_%s_reg(tmp,data,cnt);\n", ssize);
 		}
 	} else {
-		char *op;
+		const char *op;
 		if (!noflags) {
 			comprintf("\t make_flags_live();\n");
 			comprintf("\t start_needflags();\n");
@@ -1686,7 +1686,7 @@ static void gen_asr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -2130,11 +2130,11 @@ static void gen_clr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	comprintf("\t int tmp=scratchie++;\n");
 	if (!noflags) {
 		comprintf("\t start_needflags();\n");
-		comprintf("\t jff_CLR(tmp);\n");
+		comprintf("\t jff_CLR_%s(tmp);\n", ssize);
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	} else {
-		comprintf("\t jnf_CLR(tmp);\n");
+		comprintf("\t jnf_CLR_%s(tmp);\n", ssize);
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
 #else
@@ -2276,7 +2276,6 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	gen_update_next_handler();
 #else
 	isjump;
-	uses_cmov;
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "offs", 1, 0);
 
@@ -2301,7 +2300,6 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	comprintf("\tm68k_pc_offset=0;\n");
 
 	start_brace();
-	comprintf("\tint nsrc=scratchie++;\n");
 
 	if (curi->cc >= 2) {
 		comprintf("\tmake_flags_live();\n"); /* Load the flags */
@@ -2313,21 +2311,12 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	case 0: /* This is an elaborate nop? */
 		break;
 	case 1:
-		comprintf("\tstart_needflags();\n");
 		comprintf("\tsub_w_ri(src,1);\n");
-		comprintf("\t end_needflags();\n");
 		start_brace();
 		comprintf("\tuintptr v1=get_const(PC_P);\n");
 		comprintf("\tuintptr v2=get_const(offs);\n"
-				"\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CC);
+				"\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CS);
 		break;
-
-	case 8:
-		failure;
-		break; /* Work out details! FIXME */
-	case 9:
-		failure;
-		break; /* Not critical, though! */
 
 	case 2:
 	case 3:
@@ -2335,25 +2324,18 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	case 5:
 	case 6:
 	case 7:
+	case 8:
+	case 9:
 	case 10:
 	case 11:
 	case 12:
 	case 13:
 	case 14:
 	case 15:
-		comprintf("\tmov_l_rr(nsrc,src);\n");
-		comprintf("\tlea_l_brr(scratchie,src,(uae_s32)-1);\n"
-				"\tmov_w_rr(src,scratchie);\n");
-		comprintf("\tcmov_l_rr(offs,PC_P,%d);\n", cond_codes[curi->cc]);
-		comprintf("\tcmov_l_rr(src,nsrc,%d);\n", cond_codes[curi->cc]);
-		/* OK, now for cc=true, we have src==nsrc and offs==PC_P,
-		 so whether we move them around doesn't matter. However,
-		 if cc=false, we have offs==jump_pc, and src==nsrc-1 */
-
-		comprintf("\t start_needflags();\n");
-		comprintf("\ttest_w_rr(nsrc,nsrc);\n");
-		comprintf("\t end_needflags();\n");
-		comprintf("\tcmov_l_rr(PC_P,offs,%d);\n", NATIVE_CC_NE);
+		comprintf("\tuintptr v1=get_const(PC_P);\n");
+		comprintf("\tuintptr v2=get_const(offs);\n");
+		comprintf("\tjff_DBCC(src,%d);\n", cond_codes[curi->cc]);
+		comprintf("\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CS);
 		break;
 	default:
 		assert(0);
@@ -2378,7 +2360,7 @@ static void gen_eor(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	} else {
-		comprintf("\t jnf_EOR(tmp,dst,src);\n");
+		comprintf("\t jnf_EOR_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -2478,7 +2460,7 @@ static void gen_lsl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -2500,7 +2482,7 @@ static void gen_lsl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 					"\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 		} else {
 			start_brace();
-			comprintf("\t jnf_LSL_reg(tmp,data,cnt);\n");
+			comprintf("\t jnf_LSL_%s_reg(tmp,data,cnt);\n", ssize);
 		}
 	} else {
 		start_brace();
@@ -2514,7 +2496,7 @@ static void gen_lsl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 			comprintf(
 					"\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 		} else {
-			comprintf("\t jnf_LSL_imm(tmp,data,srcreg);\n");
+			comprintf("\t jnf_LSL_%s_imm(tmp,data,srcreg);\n", ssize);
 		}
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
@@ -2523,7 +2505,7 @@ static void gen_lsl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -2738,7 +2720,7 @@ static void gen_lsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -2763,7 +2745,7 @@ static void gen_lsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		}
 	} else {
 		start_brace();
-		char *op;
+		const char *op;
 		if (!noflags) {
 			comprintf("\t make_flags_live();\n");
 			comprintf("\t start_needflags();\n");
@@ -2788,7 +2770,7 @@ static void gen_lsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3096,12 +3078,24 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (!noflags) {
 		comprintf("\t if (extra & 0x0400) {\n"); /* Need full 64 bit result */
 		comprintf("\t   int r3=(extra & 7);\n");
-		comprintf("\t   mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
-		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
-		comprintf("\t\t	  jff_MULS64(r2,r3);\n");
-		comprintf("\t	} else { \n");
-		comprintf("\t\t	  jff_MULU64(r2,r3);\n");
-		comprintf("\t	} \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   if (r2 == r3) {\n");
+		comprintf("\t     mov_l_rr(tmp,r2);\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and tmp */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jff_MULS64(tmp,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jff_MULU64(tmp,r3);\n");
+		comprintf("\t     } \n");
+		comprintf("\t     if (currprefs.cpu_model >= 68040)\n");
+		comprintf("\t       mov_l_rr(r2,tmp);\n");
+		comprintf("\t   } else {\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jff_MULS64(r2,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jff_MULU64(r2,r3);\n");
+		comprintf("\t     } \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   }\n");
 		comprintf("\t } else {\n"); /* Only want 32 bit result */
 		/* operands in dst and r2, result goes into r2 */
 		/* shouldn't matter whether it's signed or unsigned?!? */
@@ -3114,12 +3108,24 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	} else {
 		comprintf("\t if (extra & 0x0400) {\n"); /* Need full 64 bit result */
 		comprintf("\t   int r3=(extra & 7);\n");
-		comprintf("\t   mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
-		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
-		comprintf("\t\t	  jnf_MULS64(r2,r3);\n");
-		comprintf("\t	} else { \n");
-		comprintf("\t\t	  jnf_MULU64(r2,r3);\n");
-		comprintf("\t	} \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   if (r2 == r3) {\n");
+		comprintf("\t     mov_l_rr(tmp,r2);\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and tmp */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jnf_MULS64(tmp,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jnf_MULU64(tmp,r3);\n");
+		comprintf("\t     } \n");
+		comprintf("\t     if (currprefs.cpu_model >= 68040)\n");
+		comprintf("\t       mov_l_rr(r2,tmp);\n");
+		comprintf("\t   } else {\n");
+		comprintf("\t     mov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
+		comprintf("\t     if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t       jnf_MULS64(r2,r3);\n");
+		comprintf("\t     } else { \n");
+		comprintf("\t       jnf_MULU64(r2,r3);\n");
+		comprintf("\t     } \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
+		comprintf("\t   }\n");
 		comprintf("\t } else {\n"); /* Only want 32 bit result */
 		/* operands in dst and r2, result foes into r2 */
 		/* shouldn't matter whether it's signed or unsigned?!? */
@@ -3246,7 +3252,7 @@ static void gen_neg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		duplicate_carry();
 		comprintf("\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 	} else {
-		comprintf("\t jnf_NEG(tmp,src);\n");
+		comprintf("\t jnf_NEG_%s(tmp,src);\n", ssize);
 	}
 
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
@@ -3280,7 +3286,7 @@ static void gen_negx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 	} else {
 		comprintf("\t restore_inverted_carry();\n"); /* Reload the X flag into C */
-		comprintf("\t jnf_NEGX(dst,src);\n");
+		comprintf("\t jnf_NEGX_%s(dst,src);\n", ssize);
 	}
 
 	genastore("dst", curi->smode, "srcreg", curi->size, "src");
@@ -3309,7 +3315,7 @@ static void gen_not(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	} else {
-		comprintf("\t jnf_NOT(tmp,src);\n", ssize);
+		comprintf("\t jnf_NOT_%s(tmp,src);\n", ssize);
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
 #else
@@ -3337,7 +3343,7 @@ static void gen_or(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	} else {
-		comprintf("\t jnf_OR(tmp, dst,src);\n");
+		comprintf("\t jnf_OR_%s(tmp, dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -3375,7 +3381,7 @@ static void gen_rol(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3401,7 +3407,7 @@ static void gen_rol(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3475,7 +3481,7 @@ static void gen_ror(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3500,7 +3506,7 @@ static void gen_ror(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3584,7 +3590,7 @@ static void gen_roxl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3652,7 +3658,7 @@ static void gen_roxr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
 				"  FAIL(1);\n"
-				"  return;\n"
+				"  return 0;\n"
 				"} \n");
 		start_brace();
 	}
@@ -3759,21 +3765,14 @@ static void gen_scc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	start_brace();
 	comprintf("\tint val = scratchie++;\n");
 
-	/* We set val to 0 if we really should use 255, and to 1 for real 0 */
 	switch (curi->cc) {
 	case 0: /* Unconditional set */
-		comprintf("\tmov_l_ri(val,0);\n");
+		comprintf("\tmov_b_ri(val,0xff);\n");
 		break;
 	case 1:
 		/* Unconditional not-set */
-		comprintf("\tmov_l_ri(val,1);\n");
+		comprintf("\tmov_b_ri(val,0);\n");
 		break;
-	case 8:
-		failure;
-		break; /* Work out details! FIXME */
-	case 9:
-		failure;
-		break; /* Not critical, though! */
 
 	case 2:
 	case 3:
@@ -3781,6 +3780,8 @@ static void gen_scc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	case 5:
 	case 6:
 	case 7:
+	case 8:
+	case 9:
 	case 10:
 	case 11:
 	case 12:
@@ -3788,14 +3789,12 @@ static void gen_scc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	case 14:
 	case 15:
 		comprintf("\tmake_flags_live();\n"); /* Load the flags */
-		/* All condition codes can be inverted by changing the LSB */
-		comprintf("\tsetcc(val,%d);\n", cond_codes[curi->cc] ^ 1);
+		comprintf("\tjnf_SCC(val,%d);\n", cond_codes[curi->cc]);
 		break;
 	default:
 		assert(0);
 		break;
 	}
-	comprintf("\tsub_b_ri(val,1);\n");
 	genastore("val", curi->smode, "srcreg", curi->size, "src");
 #endif
 }
@@ -3884,7 +3883,7 @@ static void gen_subx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
 	} else {
 		comprintf("\t restore_inverted_carry();\n"); /* Reload the X flag into C */
-		comprintf("\t jnf_SUBX(tmp,dst,src);\n");
+		comprintf("\t jnf_SUBX_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -4192,9 +4191,9 @@ gen_opcode(unsigned long int opcode) {
 		comprintf("\tarm_ADD_l_ri8(offs,4);\n");
 		start_brace();
 		comprintf("\tint newad=scratchie++;\n"
-				"\treadlong(15,newad,scratchie);\n"
+				"\treadlong(15,newad);\n"
 				"\tmov_l_mr((uintptr)&regs.pc,newad);\n"
-				"\tget_n_addr_jmp(newad,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(newad,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n"
 				"\tarm_ADD_l(15,offs);\n");
@@ -4206,7 +4205,7 @@ gen_opcode(unsigned long int opcode) {
 		genamode(curi->smode, "srcreg", sz_long, "src", 1, 0);
 		genamode(curi->dmode, "dstreg", curi->size, "offs", 1, 0);
 		comprintf("\tsub_l_ri(15,4);\n"
-				"\twritelong_clobber(15,src,scratchie);\n"
+				"\twritelong_clobber(15,src);\n"
 				"\tmov_l_rr(src,15);\n");
 		if (curi->size == sz_word)
 			comprintf("\tsign_extend_16_rr(offs,offs);\n");
@@ -4217,16 +4216,16 @@ gen_opcode(unsigned long int opcode) {
 	case i_UNLK:
 		genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 		comprintf("\tmov_l_rr(15,src);\n"
-				"\treadlong(15,src,scratchie);\n"
+				"\treadlong(15,src);\n"
 				"\tarm_ADD_l_ri8(15,4);\n");
 		genastore("src", curi->smode, "srcreg", curi->size, "src");
 		break;
 
 	case i_RTS:
 		comprintf("\tint newad=scratchie++;\n"
-				"\treadlong(15,newad,scratchie);\n"
+				"\treadlong(15,newad);\n"
 				"\tmov_l_mr((uintptr)&regs.pc,newad);\n"
-				"\tget_n_addr_jmp(newad,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(newad,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n"
 				"\tlea_l_brr(15,15,4);\n");
@@ -4253,9 +4252,9 @@ gen_opcode(unsigned long int opcode) {
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
-				"\twritelong_clobber(15,ret,scratchie);\n");
+				"\twritelong_clobber(15,ret);\n");
 		comprintf("\tmov_l_mr((uintptr)&regs.pc,srca);\n"
-				"\tget_n_addr_jmp(srca,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(srca,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n");
 		gen_update_next_handler();
@@ -4265,7 +4264,7 @@ gen_opcode(unsigned long int opcode) {
 		isjump;
 		genamode(curi->smode, "srcreg", curi->size, "src", 0, 0);
 		comprintf("\tmov_l_mr((uintptr)&regs.pc,srca);\n"
-				"\tget_n_addr_jmp(srca,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(srca,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n");
 		gen_update_next_handler();
@@ -4279,7 +4278,7 @@ gen_opcode(unsigned long int opcode) {
 			 * comp_get_ilong returns uae_u32 which zero-extends to uintptr on
 			 * 64-bit platforms, but BSR displacement is signed. Without this,
 			 * backward branches corrupt comp_pc_p (upper bits overflow). */
-			comprintf("\tif (isconst(src)) live.state[src].val = (uintptr)(uae_s32)(uae_u32)live.state[src].val;\n");
+			comprintf("\tmov_l_ri(src,(uae_s32)(uae_u32)get_const(src));\n");
 		}
 		start_brace();
 		comprintf(
@@ -4287,11 +4286,11 @@ gen_opcode(unsigned long int opcode) {
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
-				"\twritelong_clobber(15,ret,scratchie);\n");
+				"\twritelong_clobber(15,ret);\n");
 		comprintf("\tarm_ADD_l_ri(src,m68k_pc_offset_thisinst+2);\n");
 		comprintf("\tm68k_pc_offset=0;\n");
 		comprintf("\tarm_ADD_l(PC_P,src);\n");
-		comprintf("\tcomp_pc_p=(uae_u8*)get_const(PC_P);\n");
+		comprintf("\tcomp_pc_p=compemu_host_pc_from_const(get_const(PC_P));\n");
 		break;
 
 	case i_Bcc:
@@ -4310,7 +4309,7 @@ gen_opcode(unsigned long int opcode) {
 			 * comp_get_ilong returns uae_u32 which zero-extends to uintptr on
 			 * 64-bit platforms, but Bcc displacement is signed. Without this,
 			 * backward branches compute wrong target addresses (upper bits overflow). */
-			comprintf("\tif (isconst(src)) live.state[src].val = (uintptr)(uae_s32)(uae_u32)live.state[src].val;\n");
+			comprintf("\tmov_l_ri(src,(uae_s32)(uae_u32)get_const(src));\n");
 			break;
 		}
 		comprintf(
@@ -4337,7 +4336,7 @@ gen_opcode(unsigned long int opcode) {
 		switch (curi->cc) {
 		case 0: /* Unconditional jump */
 			comprintf("\tmov_l_rr(PC_P,src);\n");
-			comprintf("\tcomp_pc_p=(uae_u8*)get_const(PC_P);\n");
+			comprintf("\tcomp_pc_p=compemu_host_pc_from_const(get_const(PC_P));\n");
 			break;
 		case 1:
 			break; /* This is silly! */
@@ -4653,24 +4652,6 @@ gen_opcode(unsigned long int opcode) {
 		failure;
 		break;
 #endif
-	case i_EMULOP_RETURN:
-		isjump;
-		failure;
-		break;
-
-	case i_EMULOP:
-		failure;
-		break;
-
-	case i_NATFEAT_ID:
-	case i_NATFEAT_CALL:
-		failure;
-		break;
-
-	case i_MMUOP:
-		isjump;
-		failure;
-		break;
 	default:
 		assert(0);
 		break;
@@ -4679,17 +4660,206 @@ gen_opcode(unsigned long int opcode) {
 	finish_braces();
 	sync_m68k_pc();
 	if (global_mayfail)
-		comprintf("\tif (failure)  m68k_pc_offset=m68k_pc_offset_thisinst;\n");
+		comprintf("\tif (failure) m68k_pc_offset = m68k_pc_offset_thisinst;\n");
 	return global_failure;
 }
 
-static void generate_includes(FILE * f) {
+static void generate_compemu_includes(FILE * f) {
+	fprintf(f, "#include \"sysconfig.h\"\n");
+	fprintf(f, "#if defined(JIT)\n");
 	fprintf(f, "#include \"sysdeps.h\"\n");
-	fprintf(f, "#include \"machdep/m68k.h\"\n");
-	fprintf(f, "#include \"memory-uae.h\"\n");
+	fprintf(f, "#include \"options.h\"\n");
+	fprintf(f, "#include \"memory.h\"\n");
+	fprintf(f, "#include \"newcpu.h\"\n");
+	fprintf(f, "#include \"custom.h\"\n");
+	fprintf(f, "#include \"comptbl_arm.h\"\n");
+	fprintf(f, "#include \"compemu_arm.h\"\n");
+	fprintf(f, "\n");
+	fprintf(f, "static inline void start_needflags(void) {}\n");
+	fprintf(f, "static inline void end_needflags(void) {}\n");
+	fprintf(f, "static inline void duplicate_carry(void) {}\n");
+	fprintf(f, "static inline void restore_carry(void) {}\n");
+	fprintf(f, "static inline void restore_inverted_carry(void) {}\n");
+	fprintf(f, "static inline void gencomp_move_b(uae_u32 d, uae_u32 s) { jnf_MOVE_b(d, s); }\n");
+	fprintf(f, "static inline void gencomp_move_w(uae_u32 d, uae_u32 s) { jnf_MOVE_w(d, s); }\n");
+	fprintf(f, "static inline void gencomp_move_l(uae_u32 d, uae_u32 s) { mov_l_rr(d, s); }\n");
+	fprintf(f, "static inline void mov_b_rr(uae_u32 d, uae_u32 s) { gencomp_move_b(d, s); }\n");
+	fprintf(f, "static inline void mov_w_rr(uae_u32 d, uae_u32 s) { gencomp_move_w(d, s); }\n");
+	fprintf(f, "static inline void sign_extend_8_rr(uae_u32 d, uae_u32 s) { gencomp_move_l(d, s); jnf_EXT_b(d); }\n");
+	fprintf(f, "static inline void mid_bswap_16(uae_u32 r) { (void)r; }\n");
+	fprintf(f, "static inline void mid_bswap_32(uae_u32 r) { (void)r; }\n");
+	fprintf(f, "static inline void mov_w_rR(uae_u32 d, uae_u32 s, uae_s32 offset) { jnf_MVMEL_w(d, s, offset); }\n");
+	fprintf(f, "static inline void mov_l_rR(uae_u32 d, uae_u32 s, uae_s32 offset) { jnf_MVMEL_l(d, s, offset); }\n");
+	fprintf(f, "static inline void mov_w_Rr(uae_u32 d, uae_u32 s, uae_s32 offset) { jnf_MVMLE_w(d, s, offset); }\n");
+	fprintf(f, "static inline void mov_l_Rr(uae_u32 d, uae_u32 s, uae_s32 offset) { jnf_MVMLE_l(d, s, offset); }\n");
+	fprintf(f, "static inline void jnf_ADD_imm(uae_u32 d, uae_u32 s, uae_s32 v) { gencomp_move_l(d, s); jnf_ADD_l_imm(d, v); }\n");
+	fprintf(f, "static inline void jnf_MOVE(uae_u32 d, uae_u32 s) { gencomp_move_l(d, s); }\n");
+	fprintf(f, "static inline void jnf_ROXLW(uae_u32 d, uae_u32 s) { gencomp_move_w(d, s); uae_u32 c = alloc_scratch(); mov_l_ri(c, 1); jnf_ROXL_w(d, c); }\n");
+	fprintf(f, "static inline void jff_ROXLW(uae_u32 d, uae_u32 s) { gencomp_move_w(d, s); uae_u32 c = alloc_scratch(); mov_l_ri(c, 1); jff_ROXL_w(d, c); }\n");
+	fprintf(f, "static inline void jnf_ROXRW(uae_u32 d, uae_u32 s) { gencomp_move_w(d, s); uae_u32 c = alloc_scratch(); mov_l_ri(c, 1); jnf_ROXR_w(d, c); }\n");
+	fprintf(f, "static inline void jff_ROXRW(uae_u32 d, uae_u32 s) { gencomp_move_w(d, s); uae_u32 c = alloc_scratch(); mov_l_ri(c, 1); jff_ROXR_w(d, c); }\n");
+	fprintf(f, "#define GENCOMP_BINOP3(name, movefunc) static inline void name(uae_u32 d, uae_u32 a, uae_u32 b) { movefunc(d, a); name(d, b); }\n");
+	fprintf(f, "#define GENCOMP_UNOP2(name, movefunc) static inline void name(uae_u32 d, uae_u32 s) { movefunc(d, s); name(d); }\n");
+	fprintf(f, "#define GENCOMP_SHIFT3(name, movefunc) static inline void name(uae_u32 d, uae_u32 s, uae_u32 c) { movefunc(d, s); name(d, c); }\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_ADD_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_ADD_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_ADD_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_ADD_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_ADD_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_ADD_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_ADDX_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_ADDX_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_ADDX_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_ADDX_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_ADDX_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_ADDX_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_AND_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_AND_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_AND_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_AND_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_AND_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_AND_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_EOR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_EOR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_EOR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_EOR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_EOR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_EOR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_OR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_OR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_OR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_OR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_OR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_OR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_SUB_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_SUB_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_SUB_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_SUB_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_SUB_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_SUB_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_SUBX_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_SUBX_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jnf_SUBX_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_SUBX_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_SUBX_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_BINOP3(jff_SUBX_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_ASLW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_ASLW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_ASRW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_ASRW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_EXT_b, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_EXT_w, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_EXT_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_EXT_b, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_EXT_w, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_EXT_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_LSLW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_LSLW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_LSRW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_LSRW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NEG_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NEG_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NEG_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NEG_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NEG_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NEG_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NEGX_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NEGX_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NEGX_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NEGX_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NEGX_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NEGX_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NOT_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NOT_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_NOT_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NOT_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NOT_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_NOT_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_ROLW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_ROLW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jnf_RORW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_UNOP2(jff_RORW, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASL_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASL_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASL_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASL_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASL_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASL_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ASR_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ASR_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ASR_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASR_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASR_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASR_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ASR_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ASR_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ASR_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASR_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASR_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ASR_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSL_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSL_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSL_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSL_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSL_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSL_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSL_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSL_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSL_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSL_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSL_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSL_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSR_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSR_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSR_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSR_b_imm, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSR_w_imm, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSR_l_imm, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSR_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSR_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_LSR_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSR_b_reg, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSR_w_reg, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_LSR_l_reg, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROL_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROL_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROL_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROL_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROL_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROL_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROXL_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROXL_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROXL_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROXL_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROXL_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROXL_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROXR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROXR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jnf_ROXR_l, gencomp_move_l)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROXR_b, gencomp_move_b)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROXR_w, gencomp_move_w)\n");
+	fprintf(f, "GENCOMP_SHIFT3(jff_ROXR_l, gencomp_move_l)\n");
+	fprintf(f, "#undef GENCOMP_SHIFT3\n");
+	fprintf(f, "#undef GENCOMP_UNOP2\n");
+	fprintf(f, "#undef GENCOMP_BINOP3\n");
+	fprintf(f, "\n");
+}
+
+static void generate_compstbl_includes(FILE * f) {
+	fprintf(f, "#include \"sysconfig.h\"\n");
+	fprintf(f, "#if defined(JIT)\n");
+	fprintf(f, "#include \"sysdeps.h\"\n");
+	fprintf(f, "#include \"options.h\"\n");
+	fprintf(f, "#include \"uae/memory.h\"\n");
 	fprintf(f, "#include \"readcpu.h\"\n");
 	fprintf(f, "#include \"newcpu.h\"\n");
-	fprintf(f, "#include \"comptbl.h\"\n");
+	fprintf(f, "#include \"comptbl_arm.h\"\n");
 	fprintf(f, "#include \"debug.h\"\n");
 }
 
@@ -4802,7 +4972,7 @@ static void generate_one_opcode(int rp, int noflags) {
 	int have_srcreg = 0;
 	int have_dstreg = 0;
 	const char *name;
-	
+
 	if (table68k[opcode].mnemo == i_ILLG || table68k[opcode].clev > cpu_level)
 		return;
 
@@ -4974,7 +5144,7 @@ static void generate_one_opcode(int rp, int noflags) {
 		if (global_fpu)
 			flags |= 32;
 
-		comprintf("}\n");
+		comprintf("\treturn 0;\n}\n");
 
 		name = lookuptab[i].name;
 		if (aborted) {
@@ -4989,8 +5159,8 @@ static void generate_one_opcode(int rp, int noflags) {
 					opcode, postfix, tbl);
 			printf ("/* %s */\n", outopcode (name, opcode));
 			printf(
-					"void REGPARAM2 op_%x_%d_comp_%s(uae_u32 opcode) /* %s */\n{\n",
-					opcode, postfix, tbl, name);
+					"uae_u32 REGPARAM2 op_%x_%d_comp_%s(uae_u32 opcode) {\n",
+					opcode, postfix, tbl);
 			com_flush();
 		}
 	}
@@ -5065,7 +5235,7 @@ int main(void)
 	 * cputbl.h that way), but cpuopti can't cope.  That could be fixed, but
 	 * I don't dare to touch the 68k version.  */
 
-	headerfile = fopen("comptbl.h", "wb");
+	headerfile = fopen("comptbl_arm.h", "wb");
 	fprintf (headerfile, ""
 		"extern const struct comptbl op_smalltbl_0_comp_nf[];\n"
 		"extern const struct comptbl op_smalltbl_0_comp_ff[];\n"
@@ -5077,10 +5247,8 @@ int main(void)
 		assert(0);
 	}
 
-	generate_includes(stdout);
-	generate_includes(stblfile);
-
-	printf("#include \"jit/compemu.h\"\n");
+	generate_compemu_includes(stdout);
+	generate_compstbl_includes(stblfile);
 
 	noflags = 0;
 	generate_func(noflags);
@@ -5097,6 +5265,9 @@ int main(void)
 	read_counts();
 	noflags = 1;
 	generate_func(noflags);
+
+	printf("#endif\n");
+	fprintf(stblfile, "#endif\n");
 
 	free(opcode_map);
 	free(opcode_last_postfix);

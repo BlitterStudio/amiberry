@@ -23,7 +23,7 @@ static void lts_aga_fm0_n0_p4_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -96,7 +96,7 @@ static void lts_aga_fm0_n1_p4_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -172,7 +172,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -250,7 +250,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -685,7 +685,7 @@ static void lts_aga_fm0_n0_p8_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -758,7 +758,7 @@ static void lts_aga_fm0_n1_p8_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -834,7 +834,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -912,7 +912,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -1111,7 +1111,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -1184,7 +1184,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -1379,7 +1379,7 @@ static void lts_aga_fm0_n0_p4_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -1469,7 +1469,7 @@ static void lts_aga_fm0_n1_p4_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -1562,7 +1562,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -1657,7 +1657,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -2211,7 +2211,7 @@ static void lts_aga_fm0_n0_p8_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -2301,7 +2301,7 @@ static void lts_aga_fm0_n1_p8_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -2394,7 +2394,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -2489,7 +2489,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -2739,7 +2739,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -2829,7 +2829,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -3073,7 +3073,7 @@ static void lts_aga_fm0_n0_p4_ihires_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -3143,7 +3143,7 @@ static void lts_aga_fm0_n0_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -3163,7 +3163,7 @@ static void lts_aga_fm0_n0_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -3234,7 +3234,7 @@ static void lts_aga_fm0_n1_p4_ihires_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -3307,7 +3307,7 @@ static void lts_aga_fm0_n1_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -3330,7 +3330,7 @@ static void lts_aga_fm0_n1_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -3404,7 +3404,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -3479,7 +3479,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -3504,7 +3504,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -3580,7 +3580,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dlores_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -3658,7 +3658,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -3686,7 +3686,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dlores_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -5694,7 +5694,7 @@ static void lts_aga_fm0_n0_p4_ihires_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -5781,7 +5781,7 @@ static void lts_aga_fm0_n0_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -5809,7 +5809,7 @@ static void lts_aga_fm0_n0_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -5890,7 +5890,7 @@ static void lts_aga_fm0_n1_p4_ihires_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -5980,7 +5980,7 @@ static void lts_aga_fm0_n1_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -6011,7 +6011,7 @@ static void lts_aga_fm0_n1_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -6095,7 +6095,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -6187,7 +6187,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -6220,7 +6220,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -6306,7 +6306,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dlores_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -6401,7 +6401,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -6437,7 +6437,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dlores_spr_filtered_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -9333,7 +9333,7 @@ static void lts_aga_fm0_n0_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -9360,7 +9360,7 @@ static void lts_aga_fm0_n0_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -9450,7 +9450,7 @@ static void lts_aga_fm0_n1_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -9488,7 +9488,7 @@ static void lts_aga_fm0_n1_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -9589,7 +9589,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -9621,7 +9621,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -9716,7 +9716,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -9759,7 +9759,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -10333,7 +10333,7 @@ static void lts_aga_fm0_n0_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -10360,7 +10360,7 @@ static void lts_aga_fm0_n0_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -10450,7 +10450,7 @@ static void lts_aga_fm0_n1_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -10488,7 +10488,7 @@ static void lts_aga_fm0_n1_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -10589,7 +10589,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -10621,7 +10621,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -10716,7 +10716,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -10759,7 +10759,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -11021,7 +11021,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -11048,7 +11048,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -11138,7 +11138,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -11176,7 +11176,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -11434,7 +11434,7 @@ static void lts_aga_fm0_n0_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -11470,7 +11470,7 @@ static void lts_aga_fm0_n0_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -11585,7 +11585,7 @@ static void lts_aga_fm0_n1_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -11632,7 +11632,7 @@ static void lts_aga_fm0_n1_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -11758,7 +11758,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -11799,7 +11799,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -11919,7 +11919,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -11971,7 +11971,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -12774,7 +12774,7 @@ static void lts_aga_fm0_n0_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -12810,7 +12810,7 @@ static void lts_aga_fm0_n0_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -12925,7 +12925,7 @@ static void lts_aga_fm0_n1_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -12972,7 +12972,7 @@ static void lts_aga_fm0_n1_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -13098,7 +13098,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -13139,7 +13139,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -13259,7 +13259,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -13311,7 +13311,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -13666,7 +13666,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -13702,7 +13702,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -13817,7 +13817,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -13864,7 +13864,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -14213,7 +14213,7 @@ static void lts_aga_fm0_n0_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -14234,7 +14234,7 @@ static void lts_aga_fm0_n0_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -14318,7 +14318,7 @@ static void lts_aga_fm0_n1_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -14342,7 +14342,7 @@ static void lts_aga_fm0_n1_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -14429,7 +14429,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -14455,7 +14455,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -14544,7 +14544,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -14573,7 +14573,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dhires_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -15914,7 +15914,7 @@ static void lts_aga_fm0_n0_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -15944,7 +15944,7 @@ static void lts_aga_fm0_n0_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -16053,7 +16053,7 @@ static void lts_aga_fm0_n1_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -16086,7 +16086,7 @@ static void lts_aga_fm0_n1_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -16198,7 +16198,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -16233,7 +16233,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -16347,7 +16347,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -16385,7 +16385,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dhires_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -26429,7 +26429,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -26456,7 +26456,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -26483,7 +26483,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -26510,7 +26510,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -26622,7 +26622,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -26660,7 +26660,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -26698,7 +26698,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -26736,7 +26736,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -26859,7 +26859,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -26891,7 +26891,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -26923,7 +26923,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -26955,7 +26955,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -27072,7 +27072,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -27115,7 +27115,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -27158,7 +27158,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -27201,7 +27201,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -28025,7 +28025,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -28052,7 +28052,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -28079,7 +28079,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -28106,7 +28106,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -28218,7 +28218,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -28256,7 +28256,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -28294,7 +28294,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -28332,7 +28332,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -28455,7 +28455,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -28487,7 +28487,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -28519,7 +28519,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -28551,7 +28551,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -28668,7 +28668,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -28711,7 +28711,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -28754,7 +28754,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -28797,7 +28797,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -29157,7 +29157,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -29184,7 +29184,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = decode_ham_pixel_aga(pix1);
@@ -29211,7 +29211,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -29238,7 +29238,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = decode_ham_pixel_aga(pix3);
@@ -29350,7 +29350,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -29388,7 +29388,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = decode_ham_pixel_aga(pix1);
@@ -29426,7 +29426,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -29464,7 +29464,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = decode_ham_pixel_aga(pix3);
@@ -29820,7 +29820,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -29856,7 +29856,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -29892,7 +29892,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -29928,7 +29928,7 @@ static void lts_aga_fm0_n0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -30081,7 +30081,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -30128,7 +30128,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -30175,7 +30175,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -30222,7 +30222,7 @@ static void lts_aga_fm0_n1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -30386,7 +30386,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -30427,7 +30427,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -30468,7 +30468,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -30509,7 +30509,7 @@ static void lts_aga_fm0_dpf0_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -30667,7 +30667,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -30719,7 +30719,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -30771,7 +30771,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -30823,7 +30823,7 @@ static void lts_aga_fm0_dpf1_p4_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -32096,7 +32096,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -32132,7 +32132,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -32168,7 +32168,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -32204,7 +32204,7 @@ static void lts_aga_fm0_n0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -32357,7 +32357,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -32404,7 +32404,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -32451,7 +32451,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -32498,7 +32498,7 @@ static void lts_aga_fm0_n1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -32662,7 +32662,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -32703,7 +32703,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -32744,7 +32744,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -32785,7 +32785,7 @@ static void lts_aga_fm0_dpf0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -32943,7 +32943,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -32995,7 +32995,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -33047,7 +33047,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -33099,7 +33099,7 @@ static void lts_aga_fm0_dpf1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -33636,7 +33636,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -33672,7 +33672,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = decode_ham_pixel_aga(pix1);
@@ -33708,7 +33708,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -33744,7 +33744,7 @@ static void lts_aga_fm0_ham0_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = decode_ham_pixel_aga(pix3);
@@ -33897,7 +33897,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = decode_ham_pixel_aga(pix0);
@@ -33944,7 +33944,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = decode_ham_pixel_aga(pix1);
@@ -33991,7 +33991,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = decode_ham_pixel_aga(pix2);
@@ -34038,7 +34038,7 @@ static void lts_aga_fm0_ham1_p8_ilores_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = decode_ham_pixel_aga(pix3);
@@ -34569,7 +34569,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -34596,7 +34596,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -34623,7 +34623,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -34650,7 +34650,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -34762,7 +34762,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -34800,7 +34800,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -34838,7 +34838,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -34876,7 +34876,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -34999,7 +34999,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -35031,7 +35031,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -35063,7 +35063,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -35095,7 +35095,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -35212,7 +35212,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -35255,7 +35255,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -35298,7 +35298,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -35341,7 +35341,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -37326,7 +37326,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -37362,7 +37362,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -37398,7 +37398,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -37434,7 +37434,7 @@ static void lts_aga_fm0_n0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -37587,7 +37587,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					dpix_val0 = denise_colors.acolors[pix0 ^ bplcon4_denise_xor_val];
@@ -37634,7 +37634,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					dpix_val1 = denise_colors.acolors[pix1 ^ bplcon4_denise_xor_val];
@@ -37681,7 +37681,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					dpix_val2 = denise_colors.acolors[pix2 ^ bplcon4_denise_xor_val];
@@ -37728,7 +37728,7 @@ static void lts_aga_fm0_n1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					dpix_val3 = denise_colors.acolors[pix3 ^ bplcon4_denise_xor_val];
@@ -37892,7 +37892,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -37933,7 +37933,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -37974,7 +37974,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -38015,7 +38015,7 @@ static void lts_aga_fm0_dpf0_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];
@@ -38173,7 +38173,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix0 = get_genlock_transparency_border();
 				dpix_val0 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix0 = loaded_pixs[0];
 					clxdat |= bplcoltable[pix0];
 					uae_u8 val0 = dpf_lookup[pix0];
@@ -38225,7 +38225,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix1 = get_genlock_transparency_border();
 				dpix_val1 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix1 = loaded_pixs[1];
 					clxdat |= bplcoltable[pix1];
 					uae_u8 val1 = dpf_lookup[pix1];
@@ -38277,7 +38277,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix2 = get_genlock_transparency_border();
 				dpix_val2 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix2 = loaded_pixs[2];
 					clxdat |= bplcoltable[pix2];
 					uae_u8 val2 = dpf_lookup[pix2];
@@ -38329,7 +38329,7 @@ static void lts_aga_fm0_dpf1_p4_ihires_dshres_spr_genlock(void)
 			if (!denise_blank_active) {
 				gpix3 = get_genlock_transparency_border();
 				dpix_val3 = bordercolor;
-				if (denise_hdiw && bpl1dat_trigger) {
+				if (denise_hdiw && bpl1dat_trigger && !diw_disable) {
 					pix3 = loaded_pixs[3];
 					clxdat |= bplcoltable[pix3];
 					uae_u8 val3 = dpf_lookup[pix3];

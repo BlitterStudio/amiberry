@@ -286,7 +286,7 @@ struct regstruct
 	evt_t ce020_tail_cycles;
 	int memory_waitstate_cycles;
 
-#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64
 #ifdef JIT
 	/* store scratch regs also in this struct to avoid load of mem pointer */
 	uae_u32 scratchregs[VREGS - S1];
