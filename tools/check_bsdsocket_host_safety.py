@@ -63,6 +63,8 @@ def main():
 		"host_setsockopt must reject null option buffers before mapping values", failures)
 	require("len < minlen" in setsockopt or "len < (uae_u32)minlen" in setsockopt,
 		"host_setsockopt must reject short option buffers before reading them", failures)
+	require("if (!register_socket_events" in setsockopt and "old_ftable" in setsockopt,
+		"SO_EVENTMASK registration failures must be reported and roll back the stored mask", failures)
 
 	getsockopt = extract_body(posix, "uae_u32 host_getsockopt")
 	require("getsockopt_result_size" in getsockopt,
@@ -74,6 +76,13 @@ def main():
 
 	require("socket_fd_usable_for_select" in posix,
 		"POSIX select paths must guard fds against FD_SETSIZE overflow", failures)
+	require("static bool register_socket_events" in posix,
+		"register_socket_events must return success/failure to SO_EVENTMASK callers", failures)
+
+	threadfunc = extract_body(posix, "static int bsdlib_threadfunc")
+	waitselect_case = threadfunc[threadfunc.find("case 5:"):threadfunc.find("case 6:")]
+	require("SETERRNO" in waitselect_case,
+		"WaitSelect worker failures must propagate errno to bsdsocket callers", failures)
 
 	if failures:
 		for failure in failures:

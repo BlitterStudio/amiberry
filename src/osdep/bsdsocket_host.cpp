@@ -3712,21 +3712,24 @@ static void stop_event_monitor()
 }
 
 // Register a socket for event monitoring
-static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s, int eventmask)
+static bool register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s, int eventmask)
 {
 	if (!valid_amiga_socket_descriptor(sb, sd)) {
-		return;
+		errno = EBADF;
+		return false;
 	}
 	if (!socket_fd_usable_for_select(s)) {
 		write_log("BSDSOCK: Cannot monitor socket %d (native fd %d) with select() limit %d\n",
 			sd, s, FD_SETSIZE);
-		return;
+		errno = EINVAL;
+		return false;
 	}
 
 	if (!g_event_monitor) {
 		if (!start_event_monitor()) {
 			write_log("BSDSOCK: Failed to start event monitor for socket %d\n", sd);
-			return;
+			errno = ENOMEM;
+			return false;
 		}
 	}
 	
@@ -3767,6 +3770,7 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 	write_pipe(g_event_monitor->wake_pipe[1], &wake, 1);
 	
 	SDL_UnlockMutex(g_event_monitor->mutex);
+	return true;
 }
 
 // Unregister a socket from event monitoring
@@ -4354,6 +4358,9 @@ static int bsdlib_threadfunc(void* arg)
 
 		case 5:       /* WaitSelect */
 			sb->resultval = bsdthr_WaitSelect(sb);
+			if ((int)sb->resultval < 0) {
+				SETERRNO;
+			}
 			break;
 
 		case 6:       /* Accept */
@@ -4885,16 +4892,24 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 			eventflags |= REP_WRITE;
 			write_log("BSDSOCK: Force-enabled REP_WRITE for socket %d (requested mask 0x%x -> 0x%x)\n", sd, get_long(optval), eventflags);
 		}
-		
+
 		BSDTRACE((_T("BSDSOCK: SO_EVENTMASK called for socket %d, eventflags=0x%x\n"), sd, eventflags));
-		
+
 		// Store event mask in ftable (using lower bits)
+		uae_u32 old_ftable = sb->ftable[sd];
 		sb->ftable[sd] = (sb->ftable[sd] & ~REP_ALL) | (eventflags & REP_ALL);
-		
+
 		// Register or unregister with event monitor
 		if (eventflags & REP_ALL) {
 			// Register socket for event monitoring
-			register_socket_events(sb, sd, s, eventflags & REP_ALL);
+			if (!register_socket_events(sb, sd, s, eventflags & REP_ALL)) {
+				int saved_errno = errno;
+				sb->ftable[sd] = old_ftable;
+				sb->resultval = -1;
+				errno = saved_errno;
+				SETERRNO;
+				return;
+			}
 		} else {
 			// Unregister socket from event monitoring
 			unregister_socket_events(sb, sd);
