@@ -70,8 +70,6 @@ struct a2410_struct
 
 static struct a2410_struct a2410_data;
 
-extern addrbank tms_bank;
-
 int mscreen::hpos()
 {
 	if (a2410_data.a2410_displayend) {

@@ -4584,10 +4584,10 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->commandpathstart[0] = 0;
 		//p->commandpathend[0] = 0;
 		//p->statusbar = 1;
-	#ifdef USE_VULKAN
-	p->gfx_api = 5;
+#ifdef USE_VULKAN
+		p->gfx_api = 5;
 #else
-	p->gfx_api = 4;
+		p->gfx_api = 4;
 #endif
 		if (p->gf[GF_NORMAL].gfx_filter == 0)
 			p->gf[GF_NORMAL].gfx_filter = 1;

@@ -2872,6 +2872,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("rtc"), rtctype, p->cs_rtc);
 	cfgfile_dwrite(f, _T("chipset_rtc_adjust"), _T("%d"), p->cs_rtc_adjust);
 	cfgfile_dwrite_bool(f, _T("cia_overlay"), p->cs_ciaoverlay);
+	cfgfile_dwrite_bool(f, _T("df0idhw"), p->cs_df0idhw);
 	cfgfile_dwrite_bool(f, _T("ksmirror_e0"), p->cs_ksmirror_e0);
 	cfgfile_dwrite_bool(f, _T("ksmirror_a8"), p->cs_ksmirror_a8);
 	cfgfile_dwrite_bool(f, _T("cd32cd"), p->cs_cd32cd);
@@ -2919,14 +2920,21 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	if (is_board_enabled(p, ROMTYPE_CD32CART, 0)) {
 		cfgfile_dwrite_bool(f, _T("cd32fmv"), true);
 	}
-	if (p->cs_ide >= 0 && p->cs_ide <= 2) {
-		cfgfile_write_strarr(f, _T("ide"), idemode, p->cs_ide);
+	if (is_board_enabled(p, ROMTYPE_MB_IDE, 0) && p->cs_ide == 1) {
+		cfgfile_dwrite_str(f, _T("ide"), _T("a600/a1200"));
+	}
+	if (is_board_enabled(p, ROMTYPE_MB_IDE, 0) && p->cs_ide == 2) {
+		cfgfile_dwrite_str(f, _T("ide"), _T("a4000"));
 	}
 	if (is_board_enabled(p, ROMTYPE_CDTVSCSI, 0)) {
 		cfgfile_dwrite_bool(f, _T("scsi_cdtv"), true);
 	}
-	cfgfile_write_bool(f, _T("scsi_a3000"), p->cs_mbdmac == 1);
-	cfgfile_write_bool(f, _T("scsi_a4000t"), p->cs_mbdmac == 2);
+	if (is_board_enabled(p, ROMTYPE_SCSI_A3000, 0)) {
+		cfgfile_dwrite_bool(f, _T("scsi_a3000"), true);
+	}
+	if (is_board_enabled(p, ROMTYPE_SCSI_A4000T, 0)) {
+		cfgfile_dwrite_bool(f, _T("scsi_a4000t"), true);
+	}
 
 	cfgfile_dwrite_strarr(f, _T("z3mapping"), z3mapping, p->z3_mapping_mode);
 	cfgfile_dwrite_bool(f, _T("board_custom_order"), p->autoconfig_custom_sort);
@@ -2995,8 +3003,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool(f, _T("gfxcard_paletteswitch"), p->rtg_paletteswitch);
 	cfgfile_dwrite_bool(f, _T("gfxcard_dacswitch"), p->rtg_dacswitch);
 	cfgfile_write_bool(f, _T("gfxcard_multithread"), p->rtg_multithread);
+#ifdef AMIBERRY
 	cfgfile_write_bool(f, _T("gfxcard_zerocopy"), p->rtg_zerocopy);
-
+#endif
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		TCHAR tmp2[100];
 		struct rtgboardconfig *rbc = &p->rtgboards[i];
@@ -3947,11 +3956,17 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_yesno(option, value, _T("cputester"), &p->cputester)
 		|| cfgfile_yesno(option, value, _T("bsdsocket_emu"), &p->socket_emu))
 		return 1;
-
-	if (!_tcscmp(option, _T("gfx_api")) && !_tcsicmp(value, _T("sdl2"))) {
+#ifdef USE_VULKAN
+	if (!_tcscmp(option, _T("gfx_api")) && !_tcsicmp(value, _T("vulkan"))) {
+		p->gfx_api = 5;
+		return 1;
+	}
+#else
+	if (!_tcscmp(option, _T("gfx_api")) && !_tcsicmp(value, _T("sdl"))) {
 		p->gfx_api = 4;
 		return 1;
 	}
+#endif
 
 	if (cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode1, 1)
 		|| cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode2, 0)
@@ -4387,7 +4402,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				}
 			} else if (!_tcscmp (value, _T("direct3d"))) {
 				if (!p->gfx_api)
-					p->gfx_api = 1; // forwards compatibiity
+					p->gfx_api = 1; // forwards compatibility
 			} else {
 				gf->gfx_filter = 0;
 			}
@@ -6183,6 +6198,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("cdtvram"), &p->cs_cdtvram)
 		|| cfgfile_yesno(option, value, _T("a1000ram"), &p->cs_a1000ram)
 		|| cfgfile_yesno(option, value, _T("cia_overlay"), &p->cs_ciaoverlay)
+		|| cfgfile_yesno(option, value, _T("df0idhw"), &p->cs_df0idhw)
 		|| cfgfile_yesno(option, value, _T("ksmirror_e0"), &p->cs_ksmirror_e0)
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
 		|| cfgfile_yesno(option, value, _T("resetwarning"), &p->cs_resetwarning)
@@ -6200,7 +6216,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("gfxcard_paletteswitch"), &p->rtg_paletteswitch)
 		|| cfgfile_yesno(option, value, _T("gfxcard_dacswitch"), &p->rtg_dacswitch)
 		|| cfgfile_yesno(option, value, _T("gfxcard_multithread"), &p->rtg_multithread)
+#ifdef AMIBERRY
 		|| cfgfile_yesno(option, value, _T("gfxcard_zerocopy"), &p->rtg_zerocopy)
+#endif
 		|| cfgfile_yesno(option, value, _T("synchronize_clock"), &p->tod_hack)
 		|| cfgfile_coords(option, value, _T("lightpen_offset"), &p->lightpen_offset[0][0], &p->lightpen_offset[0][1])
 		|| cfgfile_coords(option, value, _T("lightpen_offset_gfx"), &p->lightpen_offset[1][0], &p->lightpen_offset[1][1])
@@ -6438,29 +6456,19 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_strval(option, value, _T("ide"), &p->cs_ide, idemode, 0)) {
 		if (p->cs_ide)
 			addbcromtype(p, ROMTYPE_MB_IDE, true, nullptr, 0);
-		else
-			addbcromtype(p, ROMTYPE_MB_IDE, false, nullptr, 0);
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("scsi_a3000"), &dummybool)) {
 		if (dummybool) {
-			addbcromtype(p, ROMTYPE_SCSI_A4000T, false, nullptr, 0);
 			addbcromtype(p, ROMTYPE_SCSI_A3000, true, nullptr, 0);
 			p->cs_mbdmac = 1;
-		} else if (p->cs_mbdmac == 1) {
-			addbcromtype(p, ROMTYPE_SCSI_A3000, false, nullptr, 0);
-			p->cs_mbdmac = 0;
 		}
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("scsi_a4000t"), &dummybool)) {
 		if (dummybool) {
-			addbcromtype(p, ROMTYPE_SCSI_A3000, false, nullptr, 0);
 			addbcromtype(p, ROMTYPE_SCSI_A4000T, true, nullptr, 0);
 			p->cs_mbdmac = 2;
-		} else if (p->cs_mbdmac == 2) {
-			addbcromtype(p, ROMTYPE_SCSI_A4000T, false, nullptr, 0);
-			p->cs_mbdmac = 0;
 		}
 		return 1;
 	}
@@ -6500,7 +6508,12 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_yesno(option, value, _T("toccata_mixer"), &dummybool))
 	{
 		if (dummybool) {
-			addbcromtype(p, ROMTYPE_TOCCATA, true, nullptr, 0);
+			int idx = 0;
+			addbcromtype(p, ROMTYPE_TOCCATA, true, NULL, 0);
+			struct boardromconfig *brc = get_device_rom(p, ROMTYPE_TOCCATA, 0, &idx);
+			if (brc) {
+				brc->roms[idx].device_settings |= 1;
+			}
 		}
 		return 1;
 	}
