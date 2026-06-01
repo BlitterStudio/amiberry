@@ -1677,11 +1677,14 @@ static void codec_start(struct snddev_data *data)
 		data->streamid = audio_enable_stream(true, -1, 2, audio_state_sndboard_toccata, data);
 	}
 	if (data->snddev_active & STATUS_FIFO_RECORD) {
-#ifdef _WIN32
 		data->capture_buffer_size = 48000 * 2 * 2; // 1s at 48000/stereo/16bit
 		data->capture_buffer = xcalloc(uae_u8, data->capture_buffer_size);
-		sndboard_init_capture(data->freq_adjusted);
-#endif
+		if (!sndboard_init_capture(data->freq_adjusted)) {
+			write_log(_T("SNDDEV capture unavailable, recording disabled\n"));
+			data->snddev_active &= ~STATUS_FIFO_RECORD;
+			xfree(data->capture_buffer);
+			data->capture_buffer = NULL;
+		}
 	}
 }
 
@@ -1691,9 +1694,7 @@ static void codec_stop(struct snddev_data *data)
 		return;
 	write_log(_T("CODEC stop\n"));
 	data->snddev_active = 0;
-#ifdef _WIN32
 	sndboard_free_capture();
-#endif
 	int streamid = data->streamid;
 	data->streamid = 0;
 	audio_enable_stream(false, streamid, 0, NULL, NULL);
@@ -1722,7 +1723,6 @@ static void sndboard_rethink(void)
 
 static void sndboard_process_capture(struct snddev_data *data)
 {
-#ifdef _WIN32
 	int frames;
 	uae_u8 *buffer = sndboard_get_buffer(&frames);
 	if (buffer && frames) {
@@ -1740,7 +1740,6 @@ static void sndboard_process_capture(struct snddev_data *data)
 		}
 	}
 	sndboard_release_buffer(buffer, frames);
-#endif
 }
 
 static void check_prelude_interrupt(struct snddev_data *data)
@@ -2837,7 +2836,7 @@ static SWVoiceOut *qemu_voice_out;
 
 static bool audio_state_sndboard_qemu(int streamid, void *params)
 {
-	SWVoiceOut *out = qemu_voice_out;
+	SWVoiceOut *out = (SWVoiceOut*)params;
 
 	if (!out || !out->active)
 		return false;
@@ -2882,13 +2881,28 @@ static bool audio_state_sndboard_qemu(int streamid, void *params)
 	return true;
 }
 
-static void calculate_volume_qemu(void)
+static void calculate_volume_qemu(SWVoiceOut *out)
 {
-	SWVoiceOut *out = qemu_voice_out;
 	if (!out)
 		return;
 	out->left_volume = (100 - currprefs.sound_volume_board) * 32768 / 100;
 	out->right_volume = (100 - currprefs.sound_volume_board) * 32768 / 100;
+}
+
+static void calculate_volume_qemu_all(void)
+{
+	for (SWVoiceOut *out = qemu_voice_out; out; out = out->next) {
+		calculate_volume_qemu(out);
+	}
+}
+
+static bool qemu_voice_out_active(void)
+{
+	for (SWVoiceOut *out = qemu_voice_out; out; out = out->next) {
+		if (out->active)
+			return true;
+	}
+	return false;
 }
 
 void AUD_close_in(QEMUSoundCard *card, SWVoiceIn *sw)
@@ -2896,25 +2910,31 @@ void AUD_close_in(QEMUSoundCard *card, SWVoiceIn *sw)
 }
 int AUD_read(SWVoiceIn *sw, void *pcm_buf, int size)
 {
-	return size;
+	return 0;
 }
 int AUD_write(SWVoiceOut *sw, void *pcm_buf, int size)
 {
+	if (!sw || !pcm_buf || size <= 0)
+		return 0;
+	if (size > (int)sizeof(sw->samplebuf))
+		size = sizeof(sw->samplebuf);
 	memcpy(sw->samplebuf, pcm_buf, size);
 	sw->samplebuf_total = size;
 	return sw->samplebuf_total;
 }
 void AUD_set_active_out(SWVoiceOut *sw, int on)
 {
+	if (!sw)
+		return;
 	sw->active = on != 0;
 	sw->event_time = (int)(base_event_clock * CYCLE_UNIT / sw->freq);
 	sw->samplebuf_index = 0;
 	sw->samplebuf_total = 0;
-	calculate_volume_qemu();
+	calculate_volume_qemu(sw);
 	audio_enable_stream(false, sw->streamid, 2, NULL, NULL);
 	sw->streamid = 0;
 	if (on) {
-		sw->streamid = audio_enable_stream(true, -1, 2, audio_state_sndboard_qemu, NULL);
+		sw->streamid = audio_enable_stream(true, -1, 2, audio_state_sndboard_qemu, sw);
 	}
 }
 void AUD_set_active_in(SWVoiceIn *sw, int on)
@@ -2926,8 +2946,15 @@ int  AUD_is_active_in(SWVoiceIn *sw)
 }
 void AUD_close_out(QEMUSoundCard *card, SWVoiceOut *sw)
 {
-	qemu_voice_out = NULL;
 	if (sw) {
+		SWVoiceOut **outp = &qemu_voice_out;
+		while (*outp) {
+			if (*outp == sw) {
+				*outp = sw->next;
+				break;
+			}
+			outp = &(*outp)->next;
+		}
 		audio_enable_stream(false, sw->streamid, 0, NULL, NULL);
 		sw->streamid = 0;
 		xfree(sw);
@@ -2952,8 +2979,11 @@ SWVoiceOut *AUD_open_out(
 	struct audsettings *settings)
 {
 	SWVoiceOut *out = sw;
-	if (!sw)
+	if (!sw) {
 		out = xcalloc(SWVoiceOut, 1);
+		out->next = qemu_voice_out;
+		qemu_voice_out = out;
+	}
 	int bits = 8;
 
 	if (settings->fmt >= AUD_FMT_U16)
@@ -2973,8 +3003,6 @@ SWVoiceOut *AUD_open_out(
 	write_log(_T("QEMU AUDIO: freq=%d ch=%d bits=%d (fmt=%d) '%s'\n"), out->freq, out->ch, bits, settings->fmt, name2);
 	xfree(name2);
 
-	qemu_voice_out = out;
-
 	return out;
 }
 
@@ -2989,7 +3017,7 @@ static void sndboard_vsync(void)
 		sndboard_vsync_toccata(&snddev[0]);
 	if (fm801_active)
 		sndboard_vsync_fm801();
-	if (qemu_voice_out && qemu_voice_out->active)
+	if (qemu_voice_out_active())
 		sndboard_vsync_qemu();
 }
 
@@ -2999,8 +3027,7 @@ void sndboard_ext_volume(void)
 		calculate_volume_toccata(&snddev[0]);
 	if (fm801_active)
 		calculate_volume_fm801();
-	if (qemu_voice_out && qemu_voice_out->active)
-		calculate_volume_qemu();
+	calculate_volume_qemu_all();
 }
 
 static void snd_init(void)

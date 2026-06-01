@@ -106,7 +106,7 @@ void uae_Signal_with_Func(uaecptr task, uae_u32 mask, UAE_PROCESSED state)
 {
 	uae_nativesem_wait();
 	write_comm_pipe_int(&native2amiga_pending, 0 | 0x80, 0);
-	write_comm_pipe_pvoid(&native2amiga_pending, (void *) state, 0);
+	write_comm_pipe_pvoid(&native2amiga_pending, (void*)state, 0);
 	write_comm_pipe_u32(&native2amiga_pending, task, 0);
 	write_comm_pipe_int(&native2amiga_pending, mask, 1);
 	do_uae_int_requested();

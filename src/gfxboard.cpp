@@ -5096,6 +5096,7 @@ bool gfxboard_init_memory (struct autoconfig_info *aci)
 				gb->p4rom = flashromfile_open(_T("picasso_iv_flash.rom"));
 		}
 		if (gb->p4rom) {
+			zfile_fseek (gb->p4rom, 0, SEEK_SET);
 			zfile_fread (gb->p4autoconfig, sizeof gb->p4autoconfig, 1, gb->p4rom);
 			copyp4autoconfig (gb, gb->board->configtype == 3 ? 192 : 0);
 			if (gb->board->configtype == 3) {

@@ -9,6 +9,7 @@
  */
 
 
+#include "sysconfig.h"
 #include "cdata.h"
 #include "crc_csum.h"
 
