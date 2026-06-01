@@ -367,6 +367,69 @@ static constexpr int np[] = {
 	SDL_SCANCODE_KP_3, 3, SDL_SCANCODE_KP_4, 4, SDL_SCANCODE_KP_5, 5, SDL_SCANCODE_KP_6, 6, SDL_SCANCODE_KP_7, 7,
 	SDL_SCANCODE_KP_8, 8, SDL_SCANCODE_KP_9, 9, -1 };
 
+static bool hotkey_modifiers_match(const amiberry_hotkey& hotkey,
+	const bool ctrl_state, const bool shift_state, const bool alt_state, const bool win_state)
+{
+	return (hotkey.modifiers.lctrl || hotkey.modifiers.rctrl) == ctrl_state
+		&& (hotkey.modifiers.lshift || hotkey.modifiers.rshift) == shift_state
+		&& (hotkey.modifiers.lalt || hotkey.modifiers.ralt) == alt_state
+		&& (hotkey.modifiers.lgui || hotkey.modifiers.rgui) == win_state;
+}
+
+static bool hotkey_matches(const amiberry_hotkey& hotkey, const int scancode,
+	const bool ctrl_state, const bool shift_state, const bool alt_state, const bool win_state)
+{
+	return hotkey.scancode && scancode == hotkey.scancode
+		&& hotkey_modifiers_match(hotkey, ctrl_state, shift_state, alt_state, win_state);
+}
+
+static bool handle_amiberry_hotkey(const int scancode, const int newstate,
+	const bool ctrl_state, const bool shift_state, const bool alt_state, const bool win_state)
+{
+	if (!newstate)
+		return false;
+
+	if (hotkey_matches(quit_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		uae_quit();
+		return true;
+	}
+	if (hotkey_matches(enter_gui_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+		return true;
+	}
+	if (hotkey_matches(action_replay_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+		return true;
+	}
+	if (hotkey_matches(fullscreen_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, 1, nullptr);
+		return true;
+	}
+	if (hotkey_matches(minimize_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		minimizewindow(0);
+		return true;
+	}
+	if (hotkey_matches(vkbd_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+		return true;
+	}
+	if (hotkey_matches(screenshot_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, 1, nullptr);
+		return true;
+	}
+	if (hotkey_matches(debugger_key, scancode, ctrl_state, shift_state, alt_state, win_state)) {
+		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, 1, nullptr);
+		return true;
+	}
+	return false;
+}
+
+bool my_kbd_host_hotkey_handler(const int scancode, const int newstate,
+	const bool ctrl_state, const bool shift_state, const bool alt_state, const bool win_state)
+{
+	return handle_amiberry_hotkey(scancode, newstate, ctrl_state, shift_state, alt_state, win_state);
+}
+
 bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease)
 {
 	int code = 0;
@@ -401,104 +464,9 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	const bool win_state = key_winpressed();
 	const bool special_state = key_specialpressed();
 
+	if (handle_amiberry_hotkey(scancode, newstate, ctrl_state, shift_state, alt_state, win_state))
+		return true;
 	if (newstate) {
-		if (quit_key.scancode && scancode == quit_key.scancode)
-		{
-			if ((quit_key.modifiers.lctrl || quit_key.modifiers.rctrl) == ctrl_state
-				&& (quit_key.modifiers.lshift || quit_key.modifiers.rshift) == shift_state
-				&& (quit_key.modifiers.lalt || quit_key.modifiers.ralt) == alt_state
-				&& (quit_key.modifiers.lgui || quit_key.modifiers.rgui) == win_state)
-			{
-				uae_quit();
-				return true;
-			}
-		}
-
-		if (enter_gui_key.scancode && scancode == enter_gui_key.scancode)
-		{
-			if ((enter_gui_key.modifiers.lctrl || enter_gui_key.modifiers.rctrl) == ctrl_state
-				&& (enter_gui_key.modifiers.lshift || enter_gui_key.modifiers.rshift) == shift_state
-				&& (enter_gui_key.modifiers.lalt || enter_gui_key.modifiers.ralt) == alt_state
-				&& (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) == win_state)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				return true;
-			}
-			
-		}
-
-		if (action_replay_key.scancode && scancode == action_replay_key.scancode)
-		{
-			if ((action_replay_key.modifiers.lctrl || action_replay_key.modifiers.rctrl) == ctrl_state
-				&& (action_replay_key.modifiers.lshift || action_replay_key.modifiers.rshift) == shift_state
-				&& (action_replay_key.modifiers.lalt || action_replay_key.modifiers.ralt) == alt_state
-				&& (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) == win_state)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-				return true;
-			}
-		}
-
-		if (fullscreen_key.scancode && scancode == fullscreen_key.scancode)
-		{
-			if ((fullscreen_key.modifiers.lctrl || fullscreen_key.modifiers.rctrl) == ctrl_state
-				&& (fullscreen_key.modifiers.lshift || fullscreen_key.modifiers.rshift) == shift_state
-				&& (fullscreen_key.modifiers.lalt || fullscreen_key.modifiers.ralt) == alt_state
-				&& (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) == win_state)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, 1, nullptr);
-				return true;
-			}
-		}
-
-		if (minimize_key.scancode && scancode == minimize_key.scancode)
-		{
-			if ((minimize_key.modifiers.lctrl || minimize_key.modifiers.rctrl) == ctrl_state
-				&& (minimize_key.modifiers.lshift || minimize_key.modifiers.rshift) == shift_state
-				&& (minimize_key.modifiers.lalt || minimize_key.modifiers.ralt) == alt_state
-				&& (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) == win_state)
-			{
-				minimizewindow(0);
-				return true;
-			}
-		}
-
-		if (vkbd_key.scancode && scancode == vkbd_key.scancode)
-		{
-			if ((vkbd_key.modifiers.lctrl || vkbd_key.modifiers.rctrl) == ctrl_state
-				&& (vkbd_key.modifiers.lshift || vkbd_key.modifiers.rshift) == shift_state
-				&& (vkbd_key.modifiers.lalt || vkbd_key.modifiers.ralt) == alt_state
-				&& (vkbd_key.modifiers.lgui || vkbd_key.modifiers.rgui) == win_state)
-			{
-				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
-				return true;
-			}
-		}
-
-		if (screenshot_key.scancode && scancode == screenshot_key.scancode)
-		{
-			if ((screenshot_key.modifiers.lctrl || screenshot_key.modifiers.rctrl) == ctrl_state
-				&& (screenshot_key.modifiers.lshift || screenshot_key.modifiers.rshift) == shift_state
-				&& (screenshot_key.modifiers.lalt || screenshot_key.modifiers.ralt) == alt_state
-				&& (screenshot_key.modifiers.lgui || screenshot_key.modifiers.rgui) == win_state)
-			{
-				inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, 1, nullptr);
-				return true;
-			}
-		}
-
-		if (debugger_key.scancode && scancode == debugger_key.scancode)
-		{
-			if ((debugger_key.modifiers.lctrl || debugger_key.modifiers.rctrl) == ctrl_state
-				&& (debugger_key.modifiers.lshift || debugger_key.modifiers.rshift) == shift_state
-				&& (debugger_key.modifiers.lalt || debugger_key.modifiers.ralt) == alt_state
-				&& (debugger_key.modifiers.lgui || debugger_key.modifiers.rgui) == win_state)
-			{
-				inputdevice_add_inputcode(AKS_ENTERDEBUGGER, 1, nullptr);
-				return true;
-			}
-		}
-
 		if (scancode == SDL_SCANCODE_SYSREQ)
 			clipboard_disable(true);
 	}

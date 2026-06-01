@@ -29,6 +29,7 @@
 #include "sounddep/sound.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
+#include "target.h"
 
 #include "threaddep/thread.h"
 #include "imgui_overlay.h"
@@ -337,10 +338,14 @@ int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 	if (!ret) {
 		return ret;
 	}
+	if (!started && currprefs.start_uncaptured)
+		suppresscapture();
 	if (gfx_platform_skip_window_activation())
 		return ret;
 
-	bool startactive = (started && mouseactive) || (!started && !currprefs.start_uncaptured && !currprefs.start_minimized);
+	const bool startcapture = !started && !currprefs.start_uncaptured && !currprefs.start_minimized
+		&& (currprefs.capture_always || isfullscreen() != 0);
+	bool startactive = (started && mouseactive) || startcapture;
 	bool startpaused = !started && ((currprefs.start_minimized && currprefs.minimized_pause) || (currprefs.start_uncaptured && currprefs.inactive_pause && isfullscreen() <= 0));
 	bool startminimized = !started && currprefs.start_minimized && isfullscreen() <= 0;
 	int input = 0;
@@ -1310,10 +1315,6 @@ bool doInit(AmigaMonitor* mon)
 #ifdef RETROPLATFORM
 	rp_set_hwnd_delayed();
 #endif
-
-	if (isfullscreen() != 0) {
-		setmouseactive(mon->monitor_id, -1);
-	}
 
 	// Initialize the ImGui overlay context for the on-screen keyboard.
 	// Always init so toggle works; vkbd_allowed() gates rendering.

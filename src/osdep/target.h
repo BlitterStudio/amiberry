@@ -76,12 +76,14 @@ extern std::string screenshot_filename;
 extern void logging_init();
 
 extern bool my_kbd_handler(int, int, int, bool);
+extern bool my_kbd_host_hotkey_handler(int, int, bool, bool, bool, bool);
 extern void clearallkeys();
 extern int getcapslock();
 
 extern void releasecapture(const struct AmigaMonitor*);
 extern void enablecapture(int monid);
 extern void disablecapture();
+extern void suppresscapture();
 extern void activationtoggle(int monid, bool inactiveonly);
 extern bool create_screenshot();
 extern int save_thumb(const std::string& path);
@@ -215,6 +217,7 @@ extern void read_rom_list(bool);
 extern int scan_roms(int show);
 
 extern bool resumepaused(int priority);
+extern bool resumepaused_without_mouse_capture(int priority);
 extern bool setpaused(int priority);
 extern void unsetminimized(int monid);
 extern void setminimized(int monid);
