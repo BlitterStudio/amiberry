@@ -7882,6 +7882,7 @@ static void parse_joy_spec (struct uae_prefs *p, const TCHAR *spec)
 	case 'A': case 'a': v0 = JSEM_KBDLAYOUT; break;
 	case 'B': case 'b': v0 = JSEM_KBDLAYOUT + 1; break;
 	case 'C': case 'c': v0 = JSEM_KBDLAYOUT + 2; break;
+	case 'D': case 'd': v0 = JSEM_KBDLAYOUT + 8; break;
 	default: goto bad;
 	}
 
@@ -7892,6 +7893,7 @@ static void parse_joy_spec (struct uae_prefs *p, const TCHAR *spec)
 	case 'A': case 'a': v1 = JSEM_KBDLAYOUT; break;
 	case 'B': case 'b': v1 = JSEM_KBDLAYOUT + 1; break;
 	case 'C': case 'c': v1 = JSEM_KBDLAYOUT + 2; break;
+	case 'D': case 'd': v1 = JSEM_KBDLAYOUT + 8; break;
 	default: goto bad;
 	}
 	if (v0 == v1)
@@ -7901,7 +7903,7 @@ static void parse_joy_spec (struct uae_prefs *p, const TCHAR *spec)
 bad:
 	write_log (_T("Bad joystick mode specification. Use -J xy, where x and y\n")
 		_T("can be 0 for joystick 0, 1 for joystick 1, M for mouse, and\n")
-		_T("a, b or c for different keyboard settings.\n"));
+		_T("a, b, c or d for different keyboard settings.\n"));
 
 	p->jports[0].id = v0;
 	p->jports[1].id = v1;

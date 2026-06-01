@@ -187,9 +187,10 @@
     <string name="settings_input_device_joystick_0">Joystick 0</string>
     <string name="settings_input_device_joystick_1">Joystick 1</string>
     <string name="settings_input_device_on_screen_joystick">On-Screen Joystick</string>
-    <string name="settings_input_device_keyboard_layout_1">Keyboard Layout 1</string>
-    <string name="settings_input_device_keyboard_layout_2">Keyboard Layout 2</string>
-    <string name="settings_input_device_keyboard_layout_3">Keyboard Layout 3</string>
+    <string name="settings_input_device_keyboard_layout_1">Keyboard Layout A</string>
+    <string name="settings_input_device_keyboard_layout_2">Keyboard Layout B</string>
+    <string name="settings_input_device_keyboard_layout_3">Keyboard Layout C</string>
+    <string name="settings_input_device_keyboard_layout_4">Keyboard Layout D</string>
 
     <string name="settings_storage_kickstart_rom_title">Kickstart ROM</string>
     <string name="settings_storage_no_roms_found">No ROMs found. Import via the Files tab.</string>
