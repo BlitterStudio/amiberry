@@ -44,6 +44,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 		add("kbd1" to stringResource(R.string.settings_input_device_keyboard_layout_1))
 		add("kbd2" to stringResource(R.string.settings_input_device_keyboard_layout_2))
 		add("kbd3" to stringResource(R.string.settings_input_device_keyboard_layout_3))
+		add("kbd9" to stringResource(R.string.settings_input_device_keyboard_layout_4))
 	}
 
 	Column(

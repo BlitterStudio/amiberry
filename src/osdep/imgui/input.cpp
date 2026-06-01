@@ -42,6 +42,7 @@ static void poll_input_devices() {
     add("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)", JSEM_KBDLAYOUT);
     add("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)", JSEM_KBDLAYOUT + 1);
     add("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)", JSEM_KBDLAYOUT + 2);
+    add("Keyboard Layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)", JSEM_KBDLAYOUT + 8);
     add("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)", JSEM_KBDLAYOUT + 3);
 
     for (int j = 0; j < 4; j++) {
