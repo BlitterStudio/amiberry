@@ -741,55 +741,97 @@ static void genmovemle(uae_u16 opcode) {
 	genamode(table68k[opcode].dmode, "dstreg", table68k[opcode].size, "src", 2,
 			1);
 
+	if (table68k[opcode].dmode == Apdi) {
+		comprintf("\tif (!special_mem && !(mask & (1 << (7 - dstreg)))) {\n");
+		comprintf("\t\tget_n_addr(srca,native);\n");
+		comprintf("\t\tfor (i=0;i<16;i++) {\n"
+				"\t\t\tif ((mask>>i)&1) {\n");
+		switch (table68k[opcode].size) {
+		case sz_long:
+			comprintf("\t\t\t\toffset-=4;\n"
+					"\t\t\t\tmov_l_rr(tmp,15-i);\n"
+					"\t\t\t\tmid_bswap_32(tmp);\n"
+					"\t\t\t\tmov_l_Rr(native,tmp,offset);\n");
+			break;
+		case sz_word:
+			comprintf("\t\t\t\toffset-=2;\n"
+					"\t\t\t\tmov_l_rr(tmp,15-i);\n"
+					"\t\t\t\tmid_bswap_16(tmp);\n"
+					"\t\t\t\tmov_w_Rr(native,tmp,offset);\n");
+			break;
+		default:
+			assert(0);
+			break;
+		}
+		comprintf("\t\t\t}\n"
+				"\t\t}\n");
+		comprintf("\t\tlea_l_brr(8+dstreg,srca,(uae_s32)offset);\n");
+		comprintf("\t} else {\n");
+		switch (table68k[opcode].size) {
+		case sz_long:
+			comprintf("\t\tint base=scratchie++;\n"
+					"\t\tlea_l_brr(base,srca,-4);\n");
+			break;
+		case sz_word:
+			comprintf("\t\tint base=scratchie++;\n"
+					"\t\tlea_l_brr(base,srca,-2);\n");
+			break;
+		default:
+			assert(0);
+			break;
+		}
+		comprintf("\t\tfor (i=0;i<16;i++) {\n"
+				"\t\t\tif ((mask>>i)&1) {\n");
+		switch (table68k[opcode].size) {
+		case sz_long:
+			comprintf("\t\t\t\tint value=15-i;\n"
+					"\t\t\t\tsub_l_ri(srca,4);\n"
+					"\t\t\t\tif (value == srca)\n"
+					"\t\t\t\t\tvalue=base;\n"
+					"\t\t\t\twritelong(srca,value);\n");
+			break;
+		case sz_word:
+			comprintf("\t\t\t\tint value=15-i;\n"
+					"\t\t\t\tsub_l_ri(srca,2);\n"
+					"\t\t\t\tif (value == srca)\n"
+					"\t\t\t\t\tvalue=base;\n"
+					"\t\t\t\twriteword(srca,value);\n");
+			break;
+		default:
+			assert(0);
+			break;
+		}
+		comprintf("\t\t\t}\n"
+				"\t\t}\n");
+		comprintf("\t\tmov_l_rr(8+dstreg,srca);\n");
+		comprintf("\t}\n");
+		return;
+	}
+
 	comprintf("\tget_n_addr(srca,native);\n");
 
-	if (table68k[opcode].dmode != Apdi) {
-		comprintf("\tfor (i=0;i<16;i++) {\n"
-				"\t\tif ((mask>>i)&1) {\n");
-		switch (table68k[opcode].size) {
-		case sz_long:
-			comprintf("\t\t\tmov_l_rr(tmp,i);\n"
-					"\t\t\tmid_bswap_32(tmp);\n"
-					"\t\t\tmov_l_Rr(native,tmp,offset);\n"
-					"\t\t\toffset+=4;\n");
-			break;
-		case sz_word:
-			comprintf("\t\t\tmov_l_rr(tmp,i);\n"
-					"\t\t\tmid_bswap_16(tmp);\n"
-					"\t\t\tmov_w_Rr(native,tmp,offset);\n"
-					"\t\t\toffset+=2;\n");
-			break;
-		default:
-			assert(0);
-			break;
-		}
-	} else { /* Pre-decrement */
-		comprintf("\tfor (i=0;i<16;i++) {\n"
-				"\t\tif ((mask>>i)&1) {\n");
-		switch (table68k[opcode].size) {
-		case sz_long:
-			comprintf("\t\t\toffset-=4;\n"
-					"\t\t\tmov_l_rr(tmp,15-i);\n"
-					"\t\t\tmid_bswap_32(tmp);\n"
-					"\t\t\tmov_l_Rr(native,tmp,offset);\n");
-			break;
-		case sz_word:
-			comprintf("\t\t\toffset-=2;\n"
-					"\t\t\tmov_l_rr(tmp,15-i);\n"
-					"\t\t\tmid_bswap_16(tmp);\n"
-					"\t\t\tmov_w_Rr(native,tmp,offset);\n");
-			break;
-		default:
-			assert(0);
-			break;
-		}
+	comprintf("\tfor (i=0;i<16;i++) {\n"
+			"\t\tif ((mask>>i)&1) {\n");
+	switch (table68k[opcode].size) {
+	case sz_long:
+		comprintf("\t\t\tmov_l_rr(tmp,i);\n"
+				"\t\t\tmid_bswap_32(tmp);\n"
+				"\t\t\tmov_l_Rr(native,tmp,offset);\n"
+				"\t\t\toffset+=4;\n");
+		break;
+	case sz_word:
+		comprintf("\t\t\tmov_l_rr(tmp,i);\n"
+				"\t\t\tmid_bswap_16(tmp);\n"
+				"\t\t\tmov_w_Rr(native,tmp,offset);\n"
+				"\t\t\toffset+=2;\n");
+		break;
+	default:
+		assert(0);
+		break;
 	}
 
 	comprintf("\t\t}\n"
 			"\t}");
-	if (table68k[opcode].dmode == Apdi) {
-		comprintf("\t\t\tlea_l_brr(8+dstreg,srca,(uae_s32)offset);\n");
-	}
 }
 
 static void duplicate_carry(void) {
