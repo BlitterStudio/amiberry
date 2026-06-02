@@ -278,6 +278,16 @@ static int start_thread (struct s2devstruct *dev)
 	return dev->thread_running;
 }
 
+static void free_tempbuf(TrapContext *ctx, struct priv_s2devstruct *pdev)
+{
+	if (pdev->tempbuf) {
+		trap_call_add_areg(ctx, 1, pdev->tempbuf);
+		trap_call_add_dreg(ctx, 0, pdev->td->mtu + ETH_HEADER_SIZE + 2);
+		trap_call_lib(ctx, trap_get_long(ctx, 4), -0xD2); /* FreeMem */
+		pdev->tempbuf = 0;
+	}
+}
+
 static uae_u32 REGPARAM2 dev_close_2 (TrapContext *ctx)
 {
 	uae_u32 request = trap_get_areg(ctx, 1);
@@ -296,16 +306,10 @@ static uae_u32 REGPARAM2 dev_close_2 (TrapContext *ctx)
 	if (log_net)
 		write_log (_T("%s:%d close, open=%d req=%08X\n"), SANA2NAME, pdev->unit, dev->opencnt, request);
 	trap_put_long(ctx, request + 24, 0);
+	free_tempbuf(ctx, pdev);
 	dev->opencnt--;
-	pdev->inuse = 0;
 	if (!dev->opencnt) {
 		dev->exclusive = 0;
-		if (pdev->tempbuf) {
-			trap_call_add_areg(ctx, 1, pdev->tempbuf);
-			trap_call_add_dreg(ctx, 0, pdev->td->mtu + ETH_HEADER_SIZE + 2);
-			trap_call_lib(ctx, trap_get_long(ctx, 4), -0xD2); /* FreeMem */
-			pdev->tempbuf = 0;
-		}
 		ethernet_close (pdev->td, dev->sysdata);
 		xfree (dev->sysdata);
 		dev->sysdata = NULL;
@@ -316,6 +320,7 @@ static uae_u32 REGPARAM2 dev_close_2 (TrapContext *ctx)
 		uae_sem_post(&pipe_sem);
 		write_log (_T("%s: opencnt == 0, all instances closed\n"), SANA2NAME);
 	}
+	memset(pdev, 0, sizeof(struct priv_s2devstruct));
 	trap_put_word(ctx, trap_get_areg(ctx, 6) + 32, trap_get_word(ctx, trap_get_areg(ctx, 6) + 32) - 1);
 	return 0;
 }
@@ -337,6 +342,14 @@ static int openfail (TrapContext *ctx, uaecptr ioreq, int error)
 	if (log_net)
 		write_log (_T("-> failed with error %d\n"), error);
 	return (uae_u32)-1;
+}
+
+static int openfail_reserved(TrapContext *ctx, uaecptr ioreq, struct priv_s2devstruct *pdev, int error)
+{
+	trap_put_longt(ctx, ioreq + 24, 0);
+	free_tempbuf(ctx, pdev);
+	memset(pdev, 0, sizeof(struct priv_s2devstruct));
+	return openfail(ctx, ioreq, error);
 }
 
 static uaecptr uaenet_worker;
@@ -429,6 +442,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 	if (i == MAX_OPEN_DEVICES)
 		return openfail(ctx, ioreq, IOERR_UNITBUSY);
 
+	memset(pdev, 0, sizeof(struct priv_s2devstruct));
 	trap_put_longt(ctx, ioreq + 24, pdev - pdevst);
 	pdev->unit = unit;
 	pdev->flags = flags;
@@ -437,7 +451,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 	pdev->promiscuous = (flags & SANA2OPF_PROM) ? 1 : 0;
 
 	if (pdev->td == NULL || pdev->td->active == 0)
-		return openfail(ctx, ioreq, IOERR_OPENFAIL);
+		return openfail_reserved(ctx, ioreq, pdev, IOERR_OPENFAIL);
 
 	if (dev->opencnt == 0) {
 		dev->unit = unit;
@@ -445,7 +459,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 		if (!ethernet_open (pdev->td, dev->sysdata, dev, uaenet_gotdata, uaenet_getdata, pdev->promiscuous, NULL)) {
 			xfree (dev->sysdata);
 			dev->sysdata = NULL;
-			return openfail(ctx, ioreq, IOERR_OPENFAIL);
+			return openfail_reserved(ctx, ioreq, pdev, IOERR_OPENFAIL);
 		}
 		write_log (_T("%s: initializing unit %d\n"), getdevname (), unit);
 		dev->td = pdev->td;
@@ -508,11 +522,24 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 		}
 		if (!pdev->tempbuf) {
 			if (dev->opencnt == 0) {
-				ethernet_close (pdev->td, dev->sysdata);
+				if (dev->thread_running) {
+					uae_sem_wait(&pipe_sem);
+					write_comm_pipe_pvoid(&dev->requests, NULL, 0);
+					write_comm_pipe_pvoid(&dev->requests, NULL, 0);
+					write_comm_pipe_u32(&dev->requests, 0, 1);
+					uae_sem_post(&pipe_sem);
+					uae_sem_wait(&dev->sync_sem);
+				}
+				if (dev->td && dev->sysdata)
+					ethernet_close (dev->td, dev->sysdata);
 				xfree (dev->sysdata);
 				dev->sysdata = NULL;
+				dev->td = NULL;
+				dev->adapter = 0;
+				dev->online = 0;
+				dev->configured = 0;
 			}
-			return openfail(ctx, ioreq, S2ERR_BAD_ARGUMENT);
+			return openfail_reserved(ctx, ioreq, pdev, S2ERR_BAD_ARGUMENT);
 		}
 		/* buffermanagement */
 		trap_put_long(ctx, ioreq + 32 + 4 + 4 + SANA2_MAX_ADDR_BYTES * 2 + 4 + 4 + 4, pdev->tempbuf);
@@ -1302,7 +1329,7 @@ static int dev_do_io_2 (TrapContext *ctx, struct s2devstruct *dev, uae_u8 *reque
 			uae_u32 wanted_events = get_long_host(request + 32);
 			if (wanted_events & ~KNOWN_EVENTS) {
 				io_error = S2ERR_NOT_SUPPORTED;
-				events = S2WERR_BAD_EVENT;
+				wire_error = S2WERR_BAD_EVENT;
 			} else {
 				if (dev->online)
 					events = S2EVENT_ONLINE;
@@ -1460,8 +1487,8 @@ static uae_u32 REGPARAM2 dev_beginio (TrapContext *ctx)
 		if (command == CMD_WRITE || command == S2_BROADCAST || command == S2_MULTICAST) {
 			struct s2packet *s2p;
 			if (!pdev->copyfrombuff || !pdev->copytobuff) {
-				put_long_host(request + 32, S2ERR_BAD_ARGUMENT);
-				put_byte_host(request + 31, S2WERR_BUFF_ERROR);
+				put_long_host(request + 32, S2WERR_BUFF_ERROR);
+				put_byte_host(request + 31, S2ERR_BAD_ARGUMENT);
 			} else {
 				if (command == S2_BROADCAST) {
 					uae_u8 *dstaddr = request + 32 + 4 + 4 + SANA2_MAX_ADDR_BYTES;
@@ -1849,7 +1876,7 @@ static void dev_reset (void)
 			struct asyncreq *ar = dev->ar;
 			while (ar) {
 				if (!ar->ready) {
-					dev->ar->ready = 1;
+					ar->ready = 1;
 				}
 				ar = ar->next;
 			}
