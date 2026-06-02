@@ -1794,21 +1794,39 @@ static uae_u32 REGPARAM2 uaenet_int_handler(TrapContext *ctx)
 	}
 }
 
+static bool uaenet_vsync_has_work(struct s2devstruct *dev)
+{
+	if (dev->readqueue)
+		return true;
+
+	for (struct asyncreq *ar = dev->ar; ar; ar = ar->next) {
+		if (!ar->ready) {
+			const uae_u32 command = get_word_host(ar->request + 28);
+			if (command == CMD_FLUSH || command == S2_ONLINE)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 static void uaenet_vsync(void)
 {
 	if (!irq_init)
 		return;
+	for (int i = 0; i < MAX_TOTAL_NET_DEVICES; i++) {
+		struct s2devstruct *dev = &devst[i];
+		if (dev->td && dev->sysdata)
+			ethernet_receive_poll(dev->td, dev->sysdata);
+	}
 	if (uae_sem_trywait(&async_sem))
 		return;
 	bool pending = false;
 	for (int i = 0; i < MAX_TOTAL_NET_DEVICES; i++) {
 		struct s2devstruct *dev = &devst[i];
-		if (dev->online) {
-			if(dev->readqueue)
-				pending = true;
-		}
-		if (dev->ar) {
+		if (uaenet_vsync_has_work(dev)) {
 			pending = true;
+			break;
 		}
 	}
 	if (uaenet_int_late || pending)

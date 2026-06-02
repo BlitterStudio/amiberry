@@ -146,10 +146,11 @@ static void uaenet_queue_one(struct uaenet_data *ud, const uae_u8 *data, int len
     if (!ud || len <= 0 || len > MAX_FRAME_LEN)
         return;
 
-    if (ud->packetsinbuffer > 50)
-        return;
-
     uae_sem_wait(&ud->queue_sem);
+    if (ud->packetsinbuffer > 50) {
+        uae_sem_post(&ud->queue_sem);
+        return;
+    }
 
     q = xcalloc(struct uaenet_queue, 1);
     q->data = xmalloc(uae_u8, len);
@@ -285,7 +286,7 @@ static int uaenet_checkpacket(struct uaenet_data *ud)
 {
     struct uaenet_queue *q;
 
-    if (!ud || !ud->first)
+    if (!ud)
         return 0;
 
     uae_sem_wait(&ud->queue_sem);
