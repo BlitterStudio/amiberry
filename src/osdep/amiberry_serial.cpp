@@ -1621,15 +1621,16 @@ static void serial_status_debug(const TCHAR* s)
 uae_u8 serial_readstatus(uae_u8 v, uae_u8 dir)
 {
 #ifdef USE_LIBSERIALPORT
-	sp_signal signal;
+	int signal = 0;
 	uae_u8 serbits = oldserbits;
 
 	if (serloop_enabled) {
 		if (serstatus & 0x80) { // DTR -> DSR + CD
-			signal = SP_SIG_DSR;
+			signal |= SP_SIG_DSR;
+			signal |= SP_SIG_DCD;
 		}
 		if (serstatus & 0x10) { // RTS -> CTS
-			signal = SP_SIG_CTS;
+			signal |= SP_SIG_CTS;
 		}
 #ifdef RETROPLATFORM
 	} else if (rp_ismodem()) {
@@ -1651,20 +1652,30 @@ uae_u8 serial_readstatus(uae_u8 v, uae_u8 dir)
 #ifdef SERIAL_MAP
 	} else if (sermap_enabled) {
 		if (sermap_flags & 1) {
-			signal = SP_SIG_DSR;
+			signal |= SP_SIG_DSR;
 		}
 		if (sermap_flags & 2) {
-			signal = SP_SIG_DCD;
+			signal |= SP_SIG_DCD;
 		}
 		if (sermap_flags & 4) {
-			signal = SP_SIG_CTS;
+			signal |= SP_SIG_CTS;
 		}
 #endif
+	} else if (tcpserial) {
+		if (tcp_is_connected()) {
+			signal |= SP_SIG_DSR;
+			signal |= SP_SIG_DCD;
+			signal |= SP_SIG_CTS;
+		}
 	} else if (currprefs.use_serial) {
 #ifdef SERIAL_PORT
 		/* Read the current config from the port into that configuration. */
-		if (port != nullptr)
-			check(sp_get_signals(port, &signal));
+		if (port != nullptr) {
+			sp_signal port_signal = static_cast<sp_signal>(0);
+			if (check(sp_get_signals(port, &port_signal)) == SP_OK) {
+				signal = port_signal;
+			}
+		}
 #endif
 	}
 	else {
