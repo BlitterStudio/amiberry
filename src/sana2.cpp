@@ -1800,8 +1800,11 @@ static bool uaenet_vsync_has_work(struct s2devstruct *dev)
 		return true;
 
 	for (struct asyncreq *ar = dev->ar; ar; ar = ar->next) {
-		if (!ar->ready && get_word_host(ar->request + 28) == CMD_FLUSH)
-			return true;
+		if (!ar->ready) {
+			const uae_u32 command = get_word_host(ar->request + 28);
+			if (command == CMD_FLUSH || command == S2_ONLINE)
+				return true;
+		}
 	}
 
 	return false;
