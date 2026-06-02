@@ -822,6 +822,16 @@ static void checkreceive_serial ()
 				}
 			}
 			serial_recv_previous = recdata;
+			if (currprefs.serial_crlf && recdata == 10) {
+				// Lone LF (the CR+LF case is stripped above): Unix clients
+				// (nc, telnet, socat) terminate lines with LF, but AmigaOS
+				// line handlers (AUX:/console, shell) only submit a line on
+				// CR. Map the LF to CR so typed input is acted upon. Opt-in
+				// via the Convert CR/LF option. See issue #2052.
+				// serial_recv_previous keeps the original LF so a run of LFs
+				// each maps to CR instead of being mistaken for a CR+LF pair.
+				recdata = 13;
+			}
 			serdatr = recdata;
 			serdatr |= 0x0100;
 			if (break_in_serdatr < -1) {
