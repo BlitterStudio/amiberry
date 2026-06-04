@@ -234,11 +234,26 @@ LOWFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 }
 LENDFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 
+STATIC_INLINE void compemu_raw_store_pc_state_from_work1(void)
+{
+  uintptr idx = (uintptr)&regs.pc_p - (uintptr)&regs;
+  STR_rRI(REG_WORK1, R_REGSTRUCT, idx);
+  idx = (uintptr)&regs.pc_oldp - (uintptr)&regs;
+  STR_rRI(REG_WORK1, R_REGSTRUCT, idx);
+
+#ifdef NATMEM_OFFSET
+  SUB_rrr(REG_WORK2, REG_WORK1, R_MEMSTART);
+  idx = (uintptr)&regs.pc - (uintptr)&regs;
+  STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  idx = (uintptr)&regs.instruction_pc - (uintptr)&regs;
+  STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+#endif
+}
+
 LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 {
-  LOAD_U32(REG_WORK2, s);
-  uintptr idx = (uintptr) &(regs.pc_p) - (uintptr) &regs;
-  STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  LOAD_U32(REG_WORK1, s);
+  compemu_raw_store_pc_state_from_work1();
 }
 LENDFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 

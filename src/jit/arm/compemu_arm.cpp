@@ -11355,6 +11355,11 @@ uae_u32 REGPARAM2 op_4808_0_comp_ff(uae_u32 opcode) {
 	uae_s32 srcreg = (opcode & 7);
 	uae_u32 m68k_pc_offset_thisinst = m68k_pc_offset;
 	m68k_pc_offset += 2;
+	if (srcreg == 7) {
+		m68k_pc_offset = m68k_pc_offset_thisinst;
+		FAIL(1);
+		return 0;
+	}
 	int dodgy = 0;
 	if (srcreg == 7) dodgy = 1;
 	int src = dodgy ? alloc_scratch() : srcreg + 8;
@@ -13964,6 +13969,11 @@ uae_u32 REGPARAM2 op_4e50_0_comp_ff(uae_u32 opcode) {
 	uae_s32 srcreg = (opcode & 7);
 	uae_u32 m68k_pc_offset_thisinst = m68k_pc_offset;
 	m68k_pc_offset += 2;
+	if (srcreg == 7) {
+		m68k_pc_offset = m68k_pc_offset_thisinst;
+		FAIL(1);
+		return 0;
+	}
 	int dodgy = 0;
 	if (srcreg == 7) dodgy = 1;
 	int src = dodgy ? alloc_scratch() : srcreg + 8;
@@ -38554,6 +38564,11 @@ uae_u32 REGPARAM2 op_4808_0_comp_nf(uae_u32 opcode) {
 	uae_s32 srcreg = (opcode & 7);
 	uae_u32 m68k_pc_offset_thisinst = m68k_pc_offset;
 	m68k_pc_offset += 2;
+	if (srcreg == 7) {
+		m68k_pc_offset = m68k_pc_offset_thisinst;
+		FAIL(1);
+		return 0;
+	}
 	int dodgy = 0;
 	if (srcreg == 7) dodgy = 1;
 	int src = dodgy ? alloc_scratch() : srcreg + 8;
@@ -41066,6 +41081,11 @@ uae_u32 REGPARAM2 op_4e50_0_comp_nf(uae_u32 opcode) {
 	uae_s32 srcreg = (opcode & 7);
 	uae_u32 m68k_pc_offset_thisinst = m68k_pc_offset;
 	m68k_pc_offset += 2;
+	if (srcreg == 7) {
+		m68k_pc_offset = m68k_pc_offset_thisinst;
+		FAIL(1);
+		return 0;
+	}
 	int dodgy = 0;
 	if (srcreg == 7) dodgy = 1;
 	int src = dodgy ? alloc_scratch() : srcreg + 8;

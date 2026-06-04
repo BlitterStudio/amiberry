@@ -4244,6 +4244,11 @@ gen_opcode(unsigned long int opcode) {
 		break;
 
 	case i_LINK:
+		comprintf("\tif (srcreg == 7) {\n"
+				"\t\tm68k_pc_offset = m68k_pc_offset_thisinst;\n"
+				"\t\tFAIL(1);\n"
+				"\t\treturn 0;\n"
+				"\t}\n");
 		genamode(curi->smode, "srcreg", sz_long, "src", 1, 0);
 		genamode(curi->dmode, "dstreg", curi->size, "offs", 1, 0);
 		comprintf("\tsub_l_ri(15,4);\n"
