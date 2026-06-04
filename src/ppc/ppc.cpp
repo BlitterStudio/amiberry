@@ -225,7 +225,7 @@ static void uae_patch_library_ppc(UAE_DLHANDLE handle)
 
 static bool load_qemu_implementation(void)
 {
-#ifdef WITH_QEMU_CPU
+#ifdef WITH_QEMU_PPC
 	write_log(_T("PPC: Loading QEmu implementation\n"));
 	memset(&impl, 0, sizeof(impl));
 

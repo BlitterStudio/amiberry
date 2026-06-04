@@ -545,7 +545,7 @@ if (USE_LIBENET)
 endif ()
 
 if (USE_PCEM)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM WITH_QEMU_CPU)
 endif ()
 
 if (USE_PPC)
@@ -553,7 +553,7 @@ if (USE_PPC)
 endif()
 
 if (USE_PPC AND USE_QEMU_PPC)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_QEMU_CPU)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_QEMU_PPC)
 endif()
 
 # Add libpcap for uaenet (Linux/macOS)
