@@ -429,6 +429,9 @@ SOURCES_QEMUVGA := $(AMIBERRY_DIR)/src/qemuvga/qemu.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/qemuuaeglue.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/vga.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/cirrus_vga.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/esp.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/lsi53c710.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/lsi53c895a.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/ne2000.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/es1370.cpp
 
