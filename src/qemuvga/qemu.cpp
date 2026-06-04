@@ -2,7 +2,7 @@
 #include "sysdeps.h"
 
 #include "uae/dlopen.h"
-#ifdef WITH_PPC
+#ifdef WITH_QEMU_PPC
 #include "uae/ppc.h"
 #endif
 #include "uae/qemu.h"
@@ -19,7 +19,7 @@ UAE_DEFINE_IMPORT_FUNCTION(qemu_uae_ppc_in_cpu_thread)
 
 static void init_ppc(UAE_DLHANDLE handle)
 {
-#ifdef WITH_PPC
+#ifdef WITH_QEMU_PPC
 	UAE_IMPORT_FUNCTION(handle, qemu_uae_ppc_init);
 	UAE_IMPORT_FUNCTION(handle, qemu_uae_ppc_in_cpu_thread);
 

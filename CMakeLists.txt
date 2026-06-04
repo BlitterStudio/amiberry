@@ -90,6 +90,7 @@ if(ANDROID)
     set(USE_GPIOD OFF CACHE BOOL "Use GPIOD to control GPIO LEDs" FORCE)
     set(USE_LIBMPEG2 OFF CACHE BOOL "Use LibMPEG2 for CD32 FMV support" FORCE)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
+    set(USE_PPC OFF CACHE BOOL "PPC accelerator support requires the QEMU-UAE plugin on Android" FORCE)
     set(USE_QEMU_PPC OFF CACHE BOOL "QEMU-UAE PPC plugin loading is not supported on Android yet" FORCE)
     # Android 15+ (API 35) requires 16KB page size alignment for Play Store
     add_link_options("-Wl,-z,max-page-size=16384")
