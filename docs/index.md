@@ -200,6 +200,10 @@ Guides, tutorials, and references to help you get the most out of Amiberry.
     <span class="resource-icon">🔨</span>
     Build from Source
   </a>
+  <a href="/ppc-qemu-plugin" class="resource-link">
+    <span class="resource-icon">PPC</span>
+    QEMU-UAE PPC Plugin
+  </a>
   <a href="https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting" class="resource-link">
     <span class="resource-icon">🔍</span>
     Troubleshooting
