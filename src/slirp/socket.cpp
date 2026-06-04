@@ -397,6 +397,8 @@ void sorecvfrom(struct socket *so)
 	    u_char code=ICMP_UNREACH_PORT;
 
 		int error = WSAGetLastError();
+	    if(len == -1 && IS_EAGAIN(error))
+	      return;
 	    if(error  == WSAEHOSTUNREACH) code=ICMP_UNREACH_HOST;
 	    else if(error  == WSAENETUNREACH) code=ICMP_UNREACH_NET;
 	    
@@ -440,6 +442,10 @@ void sorecvfrom(struct socket *so)
 	    u_char code=ICMP_UNREACH_PORT;
 		int error = WSAGetLastError();
 
+	    if (IS_EAGAIN(error)) {
+	      m_free(m);
+	      return;
+	    }
 	    if(error == WSAEHOSTUNREACH) code=ICMP_UNREACH_HOST;
 	    else if(error == WSAENETUNREACH) code=ICMP_UNREACH_NET;
 	    

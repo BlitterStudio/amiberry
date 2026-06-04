@@ -939,7 +939,7 @@ void uae_ppc_interrupt(bool active)
 		return;
 	}
 
-	PPCLockStatus status = get_ppc_lock(PPC_KEEP_SPINLOCK);
+	PPCLockStatus status = get_ppc_lock(PPC_RELEASE_SPINLOCK);
 	impl.external_interrupt(active);
 	release_ppc_lock(status);
 }

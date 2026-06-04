@@ -8,7 +8,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "ethernet.h"
+#include "uaenet.h"
 
 #if defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
 #ifdef WITH_UAENET_PCAP
@@ -737,7 +737,7 @@ void uaenet_enumerate_free()
 }
 
 // Return the size of the uaenet_data structure
-int uaenet_getdatalenght(void)
+int uaenet_getdatalength(void)
 {
     return sizeof(struct uaenet_data);
 }

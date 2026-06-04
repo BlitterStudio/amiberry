@@ -3,10 +3,9 @@
 #include "sysdeps.h"
 
 #include "ethernet.h"
-#if defined(_WIN32) && !defined(AMIBERRY)
-#include "win32_uaenet.h"
-#elif defined (AMIBERRY)
-#include "amiberry_uaenet.h"
+#if defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
+#define HAVE_UAENET_BACKEND
+#include "uaenet.h"
 #endif
 #include "threaddep/thread.h"
 #include "options.h"
@@ -105,15 +104,13 @@ void ethernet_trigger (struct netdriverdata *ndd, void *vsd)
 		}
 		return;
 #endif
-		// TAP and PCAP share the same uaenet implementation; case labels are
-		// conditionally compiled, code block runs if either backend is defined.
-#ifdef WITH_UAENET_TAP
-		case UAENET_TAP:
-#endif
+#ifdef HAVE_UAENET_BACKEND
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
 #endif
-#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 		uaenet_trigger (vsd);
 		return;
 #endif
@@ -126,13 +123,13 @@ void ethernet_receive_poll (struct netdriverdata *ndd, void *vsd)
 		return;
 	switch (ndd->type)
 	{
-#ifdef WITH_UAENET_TAP
-		case UAENET_TAP:
-#endif
+#ifdef HAVE_UAENET_BACKEND
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
 #endif
-#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 		uaenet_receive_poll (vsd);
 		return;
 #endif
@@ -154,7 +151,12 @@ int ethernet_open (struct netdriverdata *ndd, void *vsd, void *user, ethernet_go
 			slirp_data = ed;
 			uae_sem_init (&slirp_sem1, 0, 1);
 			uae_sem_init (&slirp_sem2, 0, 1);
-			uae_slirp_init();
+			if (uae_slirp_init() < 0) {
+				slirp_data = NULL;
+				uae_sem_destroy (&slirp_sem1);
+				uae_sem_destroy (&slirp_sem2);
+				return 0;
+			}
 			for (int i = 0; i < MAX_SLIRP_REDIRS; i++) {
 				struct slirp_redir *sr = &currprefs.slirp_redirs[i];
 				if (sr->proto) {
@@ -188,17 +190,23 @@ int ethernet_open (struct netdriverdata *ndd, void *vsd, void *user, ethernet_go
 				}
 			}
 			netmode = ndd->type;
-			uae_slirp_start ();
+			if (!uae_slirp_start ()) {
+				uae_slirp_cleanup ();
+				slirp_data = NULL;
+				uae_sem_destroy (&slirp_sem1);
+				uae_sem_destroy (&slirp_sem2);
+				return 0;
+			}
 		}
 		return 1;
+#endif
+#ifdef HAVE_UAENET_BACKEND
+#ifdef WITH_UAENET_PCAP
+		case UAENET_PCAP:
 #endif
 #ifdef WITH_UAENET_TAP
 		case UAENET_TAP:
 #endif
-#ifdef WITH_UAENET_PCAP
-		case UAENET_PCAP:
-#endif
-#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		if (uaenet_open (vsd, ndd, user, gotfunc, getfunc, promiscuous, mac)) {
 			netmode = ndd->type;
 			return 1;
@@ -219,21 +227,21 @@ void ethernet_close (struct netdriverdata *ndd, void *vsd)
 		case UAENET_SLIRP:
 		case UAENET_SLIRP_INBOUND:
 		if (slirp_data) {
-			slirp_data = NULL;
 			uae_slirp_end ();
 			uae_slirp_cleanup ();
+			slirp_data = NULL;
 			uae_sem_destroy (&slirp_sem1);
 			uae_sem_destroy (&slirp_sem2);
 		}
 		return;
 #endif
-#ifdef WITH_UAENET_TAP
-		case UAENET_TAP:
-#endif
+#ifdef HAVE_UAENET_BACKEND
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
 #endif
-#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 		return uaenet_close (vsd);
 #endif
 	}
@@ -329,13 +337,13 @@ void ethernet_close_driver (struct netdriverdata *ndd)
 		case UAENET_SLIRP:
 		case UAENET_SLIRP_INBOUND:
 		return;
-#ifdef WITH_UAENET_TAP
-		case UAENET_TAP:
-#endif
+#ifdef HAVE_UAENET_BACKEND
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
 #endif
-#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 		return uaenet_close_driver (ndd);
 #endif
 	}
@@ -349,14 +357,14 @@ int ethernet_getdatalength (struct netdriverdata *ndd)
 		case UAENET_SLIRP:
 		case UAENET_SLIRP_INBOUND:
 		return sizeof (struct ethernet_data);
-#ifdef WITH_UAENET_TAP
-		case UAENET_TAP:
-#endif
+#ifdef HAVE_UAENET_BACKEND
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
 #endif
-#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
-		return uaenet_getdatalenght ();
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
+		return uaenet_getdatalength ();
 #endif
 	}
 	return 0;

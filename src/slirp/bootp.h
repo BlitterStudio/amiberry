@@ -113,3 +113,4 @@ struct bootp_t {
 #include "unpacked.h"
 
 void bootp_input(struct mbuf *m);
+void bootp_reset(void);

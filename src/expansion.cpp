@@ -6153,6 +6153,14 @@ const struct expansionromtype expansionroms[] = {
 		false, 2, NULL,
 		{ 0xd2, 0x07, 0x00, 0x00, 0x14, 0x4A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x08 }
 	},
+	{
+		_T("aide"), _T("AIDE"), _T("Matthias Heinrichs"),
+		NULL, aide_init, NULL, aide_add_ide_unit, ROMTYPE_AIDE | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_IDE,
+		0, 0, 0, false, NULL,
+		false, 0, NULL
+	},
 
 	/* PC Bridgeboards */
 #ifdef WITH_X86
@@ -6357,6 +6365,7 @@ const struct expansionromtype expansionroms[] = {
 #endif
 
 		/* Network */
+#ifdef A2065
 	{
 		_T("a2065"), _T("A2065"), _T("Commodore"),
 		NULL, a2065_init, NULL, NULL, ROMTYPE_A2065 | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z2, true,
@@ -6375,6 +6384,7 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, ethernet_settings,
 		{ 0xc1, 0xc9, 0x00, 0x00, 2167 >> 8, 2167 & 255, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 	},
+#endif
 #ifdef WITH_QEMU_CPU
 	{
 		_T("ariadne2"), _T("Ariadne II"), _T("Village Tronic"),

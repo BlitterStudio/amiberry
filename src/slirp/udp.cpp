@@ -334,6 +334,7 @@ SLIRP_SOCKET udp_attach(struct socket *so)
 	 * (sendto() on an unbound socket will bind it), it's done
 	 * here so that emulation of ytalk etc. don't have to do it
 	 */
+		fd_nonblock(so->s);
 		memset(&addr, 0, sizeof(struct sockaddr_in));
 		addr.sin_family = AF_INET;
 		addr.sin_port = 0;

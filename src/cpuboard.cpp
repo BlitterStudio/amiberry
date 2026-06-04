@@ -1416,6 +1416,7 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					flash_unlocked = 1;
 				else
 					flash_unlocked &= ~2;
+#ifdef WITH_PPC
 				if (v & P5_LOCK_CPU) {
 					if (v & 0x80) {
 						if (uae_ppc_cpu_unlock())
@@ -1429,6 +1430,7 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					write_log(_T("CSIII_REG_LOCK bit 0 = %d!\n"), (v & 0x80) ? 1 : 0);
 #endif
 				}
+#endif
 				io_reg[CSIII_REG_LOCK] = regval;
 			} else {
 				uae_u32 regval;
@@ -1470,6 +1472,7 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 							write_log(_T("CS: SCSI reset\n"));
 						map_banks(&blizzardf0_bank, 0xf00000 >> 16, 0x60000 >> 16, 0);
 					}
+#ifdef WITH_PPC
 					if (!(io_reg[CSIII_REG_SHADOW] & P5_SELF_RESET) || uae_self_is_ppc() == false) {
 						if ((oldval & P5_PPC_RESET) && !(regval & P5_PPC_RESET)) {
 							uae_ppc_cpu_stop();
@@ -1480,7 +1483,12 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 						io_reg[CSIII_REG_RESET] &= ~P5_PPC_RESET;
 						io_reg[CSIII_REG_RESET] |= oldval & P5_PPC_RESET;
 					}
+#endif
+#ifdef WITH_PPC
 					if (!(io_reg[CSIII_REG_SHADOW] & P5_SELF_RESET) || uae_self_is_ppc() == true) {
+#else
+					if (!(io_reg[CSIII_REG_SHADOW] & P5_SELF_RESET)) {
+#endif
 						if ((regval & P5_M68K_RESET) && !(oldval & P5_M68K_RESET)) {
 							m68k_reset();
 							write_log(_T("CS: M68K Reset\n"));
@@ -1500,7 +1508,9 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					}
 					if (!(io_reg[CSIII_REG_SHADOW] & P5_SELF_RESET)) {
 						if (!(regval & P5_AMIGA_RESET)) {
+#ifdef WITH_PPC
 							uae_ppc_cpu_stop();
+#endif
 							uae_reset(0, 0);
 							write_log(_T("CS: Amiga Reset\n"));
 							io_reg[addr] |= P5_AMIGA_RESET;
@@ -1514,8 +1524,10 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 					regval &= ~P5_M68k_IPL_MASK;
 					regval |= oldval & P5_M68k_IPL_MASK;
 					bool active = (regval & P5_DISABLE_INT) == 0;
+#ifdef WITH_PPC
 					if (!active)
 						clear_ppc_interrupt();
+#endif
 					io_reg[addr] = regval;
 #if CPUBOARD_IRQ_LOG > 0
 					if ((regval & P5_DISABLE_INT) != (oldval & P5_DISABLE_INT))
@@ -2354,7 +2366,11 @@ static void makefakeppcrom(uae_u8 *rom, int type)
 
 bool is_ppc_cpu(struct uae_prefs *p)
 {
+#ifdef WITH_PPC
 	return is_ppc(p);
+#else
+	return false;
+#endif
 }
 
 bool cpuboard_maprom(void)
@@ -2618,6 +2634,13 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 	struct uae_prefs *p = aci->prefs;
 	uae_u32 romtype = 0, romtype2 = 0;
 	uae_u8 autoconfig_data[16] = { 0 };
+
+#ifndef WITH_PPC
+	if (is_ppc(p)) {
+		write_log(_T("CPU board: PPC accelerator requires PPC support.\n"));
+		return false;
+	}
+#endif
 
 	boardname = cpuboards[p->cpuboard_type].subtypes[p->cpuboard_subtype].name;
 	aci->label = boardname;

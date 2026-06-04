@@ -8,6 +8,7 @@
 #define UAENET_SLIRP_INBOUND 2
 #define UAENET_PCAP 3
 #define UAENET_TAP 4
+#define UAENET_TUN 5
 
 struct netdriverdata
 {

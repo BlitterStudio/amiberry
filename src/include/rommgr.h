@@ -219,6 +219,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_KBMCU		0x00100094
 #define ROMTYPE_RIPPLE		0x00100095
 #define ROMTYPE_512KWOM		0x00100096
+#define ROMTYPE_AIDE		0x00100097
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000

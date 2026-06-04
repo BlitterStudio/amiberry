@@ -11,7 +11,7 @@
 #include "sysconfig.h"
 #include "slirp_config.h"
 
-#define SLIRP_ICMP 0
+#define SLIRP_ICMP 1
 
 #ifdef _WIN32
 #include <stdint.h>
@@ -88,6 +88,10 @@ typedef int ioctlsockopt_t;
 #endif
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
+#endif
+
+#ifndef container_of
+#define container_of(address, type, field) ((type *)((char *)(address) - (uintptr_t)(&((type *)0)->field)))
 #endif
 
 #ifdef NEED_TYPEDEFS

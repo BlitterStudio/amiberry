@@ -116,15 +116,23 @@ static bool load_rom(const TCHAR* path, const TCHAR* name)
 	return false;
 }
 
+static void set_mt32_rom_path(TCHAR *path)
+{
+	get_rom_path(path, sizeof(path) / sizeof(TCHAR));
+	fix_trailing(path);
+	_tcscat(path, _T("mt32-roms"));
+	fix_trailing(path);
+}
 
 static void midi_emu_add_roms(void)
 {
 	TCHAR path[MAX_DPATH];
-	get_rom_path(path, sizeof(path) / sizeof(TCHAR));
-	_tcscat(path, _T("mt32-roms/"));
-//	if (!my_existsdir(path)) {
-//		_tcscpy(path, _T("c:\\mt32-rom-data\\"));
-//	}
+	set_mt32_rom_path(path);
+#ifdef _WIN32
+	if (!my_existsdir(path)) {
+		_tcscpy(path, _T("c:\\mt32-rom-data\\"));
+	}
+#endif
 	if (!my_existsdir(path)) {
 		write_log(_T("mt32emu: rom path missing\n"));
 		return;
@@ -173,10 +181,13 @@ bool midi_emu_available(const TCHAR *id)
 		if (rc == 0) {
 			get_rom_path(path, sizeof(path) / sizeof(TCHAR));
 		} else if (rc == 1) {
-			get_rom_path(path, sizeof(path) / sizeof(TCHAR));
-			_tcscat(path, _T("mt32-roms/"));
-		//} else if (rc == 2) {
-		//	_tcscpy(path, _T("C:\\mt32-rom-data\\"));
+			set_mt32_rom_path(path);
+		} else if (rc == 2) {
+#ifdef _WIN32
+			_tcscpy(path, _T("C:\\mt32-rom-data\\"));
+#else
+			continue;
+#endif
 		}
 		if (!my_existsdir(path)) {
 			continue;
@@ -265,8 +276,8 @@ int midi_emu_open(const TCHAR *id)
 	}
 	const char *s = mt32emu_get_library_version_string();
 	write_log("mt32emu version: %s\n", s);
-	mt32emu_report_handler_i handler;
-	mt32context = mt32emu_create_context(handler, NULL);
+	mt32emu_report_handler_i report_handler = { NULL };
+	mt32context = mt32emu_create_context(report_handler, NULL);
 	if (!mt32context) {
 		write_log("mt32emu_create_context() failed\n");
 		return 0;

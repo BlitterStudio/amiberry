@@ -61,7 +61,7 @@ struct icmpstat {
 }
 
 extern struct icmpstat icmpstat;
-#if 0
+#if SLIRP_ICMP
 extern struct socket icmp; 
 extern struct socket *icmp_last_so;
 #endif

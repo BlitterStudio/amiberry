@@ -137,6 +137,7 @@ int slirp_init(void)
 
     link_up = 1;
 
+    bootp_reset();
     if_init();
     ip_init();
 
@@ -159,6 +160,7 @@ void slirp_cleanup(void)
 {
     ip_cleanup();
     m_cleanup();
+	bootp_reset();
 	link_up = 0;
 }
 
@@ -302,7 +304,7 @@ int slirp_select_fill(int *pnfds,
 			}
 		}
 
-#if 0
+#if SLIRP_ICMP
         /*
          * ICMP sockets
          */
@@ -450,21 +452,20 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 				 * Check for non-blocking, still-connecting sockets
 				 */
 				if (so->so_state & SS_ISFCONNECTING) {
-					/* Connected */
-					so->so_state &= ~SS_ISFCONNECTING;
-
-					ret = send(so->s, (const char*)&ret, 0, 0);
-					if (ret < 0) {
-						/* XXXXX Must fix, zero bytes is a NOP */
-						int error = WSAGetLastError();
-						if (error == EAGAIN || error == WSAEWOULDBLOCK  ||
-							error == WSAEINPROGRESS  || error == WSAENOTCONN)
+					int error = 0;
+					socklen_t error_len = sizeof(error);
+					if (getsockopt(so->s, SOL_SOCKET, SO_ERROR,
+						(char*)&error, &error_len) < 0)
+						error = WSAGetLastError();
+					if (error) {
+						if (error == EAGAIN || error == WSAEWOULDBLOCK ||
+							error == WSAEINPROGRESS || error == WSAENOTCONN)
 							continue;
-			      
 						/* else failed */
 						so->so_state = SS_NOFDREF;
+					} else {
+						so->so_state &= ~SS_ISFCONNECTING;
 					}
-					/* else so->so_state &= ~SS_ISFCONNECTING; */
 
 					/*
 					 * Continue tcp_input
@@ -533,7 +534,7 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 			}
 		}
 
-#if 0
+#if SLIRP_ICMP
         /*
          * Check incoming ICMP relies.
          */

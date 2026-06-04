@@ -60,7 +60,8 @@
 #define DEV_IDE (DOTTO_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
 #define RIPPLE_IDE (DEV_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
 #define XSURF_IDE (RIPPLE_IDE + 2 * MAX_DUPLICATE_EXPANSION_BOARDS)
-#define TOTAL_IDE (XSURF_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
+#define AIDE_IDE (XSURF_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
+#define TOTAL_IDE (AIDE_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
 
 #define ALF_ROM_OFFSET 0x0100
 #define GVP_IDE_ROM_OFFSET 0x8000
@@ -128,6 +129,7 @@ static struct ide_board *dotto_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 static struct ide_board *dev_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 static struct ide_board *ripple_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 static struct ide_board *xsurf_board[MAX_DUPLICATE_EXPANSION_BOARDS];
+static struct ide_board *aide_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 
 static struct ide_hdf *idecontroller_drive[TOTAL_IDE * 2];
 static struct ide_thread_state idecontroller_its;
@@ -680,6 +682,19 @@ static int get_ripple_reg(uaecptr addr, struct ide_board *board, int *portnum)
 	return reg;
 }
 
+
+static int get_aide_reg(uaecptr addr, struct ide_board *board)
+{
+	int reg = -1;
+	if (addr & 0x3000) {
+		reg = (addr >> 2) & 7;
+		if (addr & 0x1000)
+			reg |= IDE_SECONDARY;
+	}
+
+	return reg;
+}
+
 static int getidenum(struct ide_board *board, struct ide_board **arr)
 {
 	for (int i = 0; i < MAX_DUPLICATE_EXPANSION_BOARDS; i++) {
@@ -1142,6 +1157,11 @@ static uae_u32 ide_read_byte2(struct ide_board *board, uaecptr addr)
 				v = get_ide_reg_multi(board,regnum,portnum,1);
 			}
 
+	} else if (board->type == AIDE_IDE) {
+		int regnum = get_aide_reg(addr,board);
+		if (regnum >= 0)
+			v = get_ide_reg(board,regnum);
+
 	}
 
 	return v;
@@ -1495,6 +1515,11 @@ static uae_u32 ide_read_word(struct ide_board *board, uaecptr addr)
 				v = get_ide_reg_multi(board, regnum, portnum, 1);
 			}
 
+		} else if (board->type == AIDE_IDE) {
+			int regnum = get_aide_reg(addr,board);
+			if (regnum == IDE_DATA) {
+				v = get_ide_reg_multi(board, regnum, 0, 1);
+			}
 		}
 
 	}
@@ -1932,6 +1957,12 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 			if (board->ide[portnum] && reg >= 0) {
 				put_ide_reg_multi(board,reg,v,portnum,1);
 			}
+
+		} else if (board->type == AIDE_IDE) {
+			int reg = get_aide_reg(addr,board);
+			if (reg >= 0) {
+				put_ide_reg(board,reg,v);
+			}
 		}
 	}
 }
@@ -2164,6 +2195,11 @@ static void ide_write_word(struct ide_board *board, uaecptr addr, uae_u16 v)
 				if (reg >= 0 && board->ide[portnum])
 					put_ide_reg_multi(board,reg,v,portnum,1);
 			}
+
+		} else if (board->type == AIDE_IDE) {
+				int reg = get_aide_reg(addr, board);
+				if (reg >= 0)
+					put_ide_reg_multi(board,reg,v,0,1);
 		}
 	}
 }
@@ -3429,6 +3465,39 @@ bool ripple_init(struct autoconfig_info *aci)
 void ripple_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
 	add_ide_standard_unit(ch, ci, rc, ripple_board, RIPPLE_IDE, false, false, 4);
+}
+
+bool aide_init(struct autoconfig_info *aci)
+{
+
+	aci->zorro = 0;
+	aci->start = 0xEF0000;
+	aci->size  = 0x10000;
+	ide_add_reset();
+
+	if (!aci->doinit) {
+		return true;
+	}
+
+	struct ide_board *ide = getide(aci);
+	if (!ide)
+		return false;
+
+	ide->configured  = 1;
+	ide->bank        = &ide_bank_generic;
+	ide->type        = AIDE_IDE;
+	ide->intena      = false;
+	ide->baseaddress = aci->start;
+	ide->mask        = 65535;
+
+	map_banks(ide->bank, aci->start >> 16, aci->size >> 16, 0);
+
+	return true;
+}
+
+void aide_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	add_ide_standard_unit(ch, ci, rc, aide_board, AIDE_IDE, false, false, 2);
 }
 
 bool xsurf_init_ide(struct autoconfig_info *aci)

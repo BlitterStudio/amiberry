@@ -2397,7 +2397,7 @@ bool mapped_malloc (addrbank *ab)
 	ab->baseaddr_direct_w = NULL;
 	ab->flags &= ~ABFLAG_MAPPED;
 
-	if (ab->label && ab->label[0] == '*') {
+	if (canbang && ab->label && ab->label[0] == '*') {
 		if (ab->start == 0 || ab->start == 0xffffffff) {
 			write_log(_T("mapped_malloc(*) without start address!\n"));
 			return false;

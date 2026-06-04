@@ -88,6 +88,7 @@ static int icmp_send(struct socket *so, struct mbuf *m, int hlen)
     if (so->s == -1) {
         return -1;
     }
+    fd_nonblock(so->s);
 
     so->so_m = m;
     so->so_faddr = ip->ip_dst;
@@ -164,9 +165,9 @@ void icmp_input(struct mbuf *m, int hlen)
   DEBUG_ARG("icmp_type = %d", icp->icmp_type);
   switch (icp->icmp_type) {
   case ICMP_ECHO:
-    icp->icmp_type = ICMP_ECHOREPLY;
     ip->ip_len += hlen;	             /* since ip_input subtracts this */
     if (ip->ip_dst.s_addr == alias_addr.s_addr) {
+      icp->icmp_type = ICMP_ECHOREPLY;
       icmp_reflect(m);
     } else {
       struct socket *so;
@@ -176,6 +177,7 @@ void icmp_input(struct mbuf *m, int hlen)
 	  if (icmp_send(so, m, hlen) == 0)
         return;
 #endif
+	  icp->icmp_type = ICMP_ECHOREPLY;
 	  if(udp_attach(so) == -1) {
 	DEBUG_MISC(("icmp_input udp_attach errno = %d-%s\n", 
 		    errno,strerror(errno)));
@@ -431,6 +433,7 @@ void icmp_receive(struct socket *so)
     int hlen = ip->ip_hl << 2;
     u_char error_code;
     struct icmp *icp;
+    uae_u8 reply[2048];
     int id, len;
 
     m->m_data += hlen;
@@ -438,8 +441,40 @@ void icmp_receive(struct socket *so)
     icp = mtod(m, struct icmp *);
 
     id = icp->icmp_id;
-    len = recv(so->s, (char*)icp, m->m_len, 0);
-    icp->icmp_id = id;
+    len = recv(so->s, (char*)reply, sizeof(reply), 0);
+    if (len > 0) {
+        int offset = 0;
+        int reply_len;
+
+        if (len >= (int)sizeof(struct ip) && (reply[0] >> 4) == 4) {
+            int iphlen = (reply[0] & 0x0f) << 2;
+            struct ip *reply_ip = (struct ip*)reply;
+            if (iphlen >= (int)sizeof(struct ip) && iphlen <= len &&
+                reply_ip->ip_p == IPPROTO_ICMP) {
+                offset = iphlen;
+            }
+        }
+
+        reply_len = len - offset;
+        if (reply_len <= 0) {
+            errno = EPROTO;
+            len = -1;
+        } else {
+            if ((size_t)reply_len > M_ROOM(m)) {
+                char *base = (m->m_flags & M_EXT) ? m->m_ext : m->m_dat;
+                m_inc(m, (int)(m->m_data - base + reply_len));
+            }
+            if ((size_t)reply_len > M_ROOM(m)) {
+                errno = ENOMEM;
+                len = -1;
+            } else {
+                memcpy(m->m_data, reply + offset, reply_len);
+                m->m_len = reply_len;
+                icp = mtod(m, struct icmp *);
+                icp->icmp_id = id;
+            }
+        }
+    }
 
     m->m_data -= hlen;
     m->m_len += hlen;
