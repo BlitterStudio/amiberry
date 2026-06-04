@@ -67,12 +67,14 @@ void render_panel_cpu() {
                             changed_prefs.cachesize == 0 &&
                             changed_prefs.cpu_compatible;
 
+#ifdef WITH_PPC
     bool enable_ppc =
             changed_prefs.cpu_model >= 68040 &&
             (changed_prefs.ppc_mode == 1 ||
              (changed_prefs.ppc_mode == 0 && !is_ppc_cpu(&changed_prefs)));
     bool enable_ppc_idle =
             changed_prefs.ppc_mode != 0; // simplified based on enabled check
+#endif
 
     bool enable_cpu_speed_slider = !changed_prefs.cpu_cycle_exact;
     bool enable_24bit =
@@ -467,7 +469,12 @@ void render_panel_cpu() {
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
 
-        const bool no_thread = (changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
+        const bool no_thread = (changed_prefs.cpu_compatible ||
+#ifdef WITH_PPC
+                                changed_prefs.ppc_mode ||
+#endif
+                                changed_prefs.cpu_memory_cycle_exact ||
+                                changed_prefs.cpu_model < 68020);
         ImGui::BeginDisabled(no_thread || emulating);
         AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ShowHelpMarker("Run CPU emulation on a separate thread. Experimental.");
@@ -476,6 +483,7 @@ void render_panel_cpu() {
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("Cycle-Exact CPU Emulation Speed");
 
+#ifdef WITH_PPC
         if (BeginGroupBox("PowerPC CPU Options", true)) {
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
@@ -506,6 +514,7 @@ void render_panel_cpu() {
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         }
         EndGroupBox("PowerPC CPU Options");
+#endif
 
         if (BeginGroupBox("x86 Bridgeboard CPU options", true)) {
         ImGui::BeginDisabled(!enable_x86_group);
