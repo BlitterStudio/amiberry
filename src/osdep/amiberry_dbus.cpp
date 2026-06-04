@@ -486,7 +486,7 @@ static void HandleSendKey(DBusMessage* msg)
 	if (err.is_set()) {
 		status = false;
 	} else {
-		inputdevice_add_inputcode(keycode, state, nullptr);
+		inputdevice_do_keyboard(keycode, state);
 	}
 	SendReply(msg, status);
 }
