@@ -159,6 +159,7 @@ android/local.properties
 .claude/settings.local.json
 build-debug
 .cache
+.qemu-uae-plugin/
 .sisyphus/
 .omg
 

@@ -29,6 +29,11 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  QEMU_UAE_RELEASE_REPO: BlitterStudio/amiberry-qemu-uae
+  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.2
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
   build-macOS:
     runs-on: ${{ matrix.runner }}
@@ -79,9 +84,12 @@ jobs:
           brew update
           brew bundle
 
+      - name: Download QEMU-UAE plugin
+        run: .github/scripts/download-qemu-uae-plugin.sh qemu-uae-macos-universal.zip
+
       - name: Build for macOS (${{ matrix.name }})
         run: |
-          cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
+          cmake -B build -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" && cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Archive intermediate app bundle
         run: |
@@ -290,6 +298,13 @@ jobs:
             done
           fi
 
+          QEMU_PLUGIN="$UNI_PLUGINS/qemu-uae.dylib"
+          if [ ! -f "$QEMU_PLUGIN" ]; then
+            echo "::error::Universal app bundle is missing qemu-uae.dylib"
+            exit 1
+          fi
+          lipo -verify_arch x86_64 arm64 "$QEMU_PLUGIN"
+
           # Verify the main binary is universal
           echo "=== Universal binary info ==="
           lipo -info universal-app/Amiberry.app/Contents/MacOS/Amiberry
@@ -492,6 +507,7 @@ jobs:
             sdl_source: setup-sdl
             codename: jammy
             extra_cmake_args: -DBUNDLE_SDL=ON
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: 24.04-amd64
             runner: ubuntu-24.04
             container: ubuntu:24.04
@@ -499,6 +515,7 @@ jobs:
             sdl_source: setup-sdl
             codename: noble
             extra_cmake_args: -DBUNDLE_SDL=ON
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: 25.10-amd64
             runner: ubuntu-24.04
             container: ubuntu:25.10
@@ -506,6 +523,7 @@ jobs:
             sdl_source: setup-sdl
             codename: questing
             extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
@@ -513,6 +531,7 @@ jobs:
             sdl_source: apt
             codename: questing
             extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
           - name: 26.04-amd64
             runner: ubuntu-24.04
             container: ubuntu:26.04
@@ -520,6 +539,7 @@ jobs:
             sdl_source: apt
             codename: resolute
             extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: 26.04-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:26.04
@@ -527,6 +547,7 @@ jobs:
             sdl_source: apt
             codename: resolute
             extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
     steps:
       - name: Install prerequisites
         run: |
@@ -579,13 +600,16 @@ jobs:
         if: matrix.sdl_source == 'apt'
         run: sudo apt-get install -y libsdl3-dev libsdl3-image-dev
 
+      - name: Download QEMU-UAE plugin
+        run: .github/scripts/download-qemu-uae-plugin.sh ${{ matrix.qemu_uae_asset }}
+
       - name: make for Ubuntu ${{ matrix.name }} with setup-sdl
         if: matrix.sdl_source == 'setup-sdl'
         env:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} ${{ matrix.extra_cmake_args }} && cmake --build build -j$(nproc)
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" ${{ matrix.extra_cmake_args }} && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: make for Ubuntu ${{ matrix.name }} with apt SDL3
@@ -594,8 +618,15 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j$(nproc)
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
+
+      - name: Verify QEMU-UAE plugin in DEB
+        run: |
+          for deb in amiberry_*.deb; do
+            echo "Checking $deb"
+            dpkg-deb -c "$deb" | grep -E '/amiberry/qemu-uae\.so$'
+          done
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -632,21 +663,27 @@ jobs:
             artifact_name: amiberry-fedora-x86_64
             release_suffix: fedora-x86_64
             codename: fc44
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: aarch64
             runner: ubuntu-24.04-arm
             image: midwan/amiberry-fedora-arm64:latest
             artifact_name: amiberry-fedora-aarch64
             release_suffix: fedora-aarch64
             codename: fc44
+            qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
     steps:
     - uses: actions/checkout@v6
       with:
         submodules: recursive
 
+    - name: Download QEMU-UAE plugin
+      run: .github/scripts/download-qemu-uae-plugin.sh ${{ matrix.qemu_uae_asset }}
+
     - name: Run the build process with Docker
       run: |
+        QEMU_PLUGIN="/build/${QEMU_UAE_PLUGIN_RELATIVE}"
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake"
+          bash -c "test -f '$QEMU_PLUGIN' && cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN='$QEMU_PLUGIN' && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake && rpm -qlp /build/amiberry-*.rpm | grep -E '/amiberry/qemu-uae\\.so$'"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -683,21 +720,27 @@ jobs:
             release_name: debian-bookworm-amd64
             codename: bookworm
             extra_cmake_args: -DBUNDLE_SDL=ON
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: trixie
             image: midwan/amiberry-debian-x86_64:trixie
             artifact_name: amiberry-debian-trixie-amd64
             release_name: debian-trixie-amd64
             codename: trixie
             extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
 
+      - name: Download QEMU-UAE plugin
+        run: .github/scripts/download-qemu-uae-plugin.sh ${{ matrix.qemu_uae_asset }}
+
       - name: Run the build process with Docker
         run: |
+          QEMU_PLUGIN="/build/${QEMU_UAE_PLUGIN_RELATIVE}"
           docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-            bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+            bash -c "test -f '$QEMU_PLUGIN' && cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN='$QEMU_PLUGIN' ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake && dpkg-deb -c /build/amiberry_*.deb | grep -E '/amiberry/qemu-uae\\.so$'"
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -734,21 +777,27 @@ jobs:
             release_name: debian-bookworm-arm64
             codename: bookworm
             extra_cmake_args: -DBUNDLE_SDL=ON
+            qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
           - name: trixie
             image: midwan/amiberry-debian-aarch64:trixie
             artifact_name: amiberry-debian-trixie-arm64
             release_name: debian-trixie-arm64
             codename: trixie
             extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
     steps:
     - uses: actions/checkout@v6
       with:
         submodules: recursive
 
+    - name: Download QEMU-UAE plugin
+      run: .github/scripts/download-qemu-uae-plugin.sh ${{ matrix.qemu_uae_asset }}
+
     - name: Run the build process with Docker
       run: |
+        QEMU_PLUGIN="/build/${QEMU_UAE_PLUGIN_RELATIVE}"
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+          bash -c "test -f '$QEMU_PLUGIN' && cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN='$QEMU_PLUGIN' ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake && dpkg-deb -c /build/amiberry_*.deb | grep -E '/amiberry/qemu-uae\\.so$'"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -851,10 +900,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-x64-vcpkg-${{ env.LLVM_MINGW_TAG }}-
 
+      - name: Download QEMU-UAE plugin
+        shell: pwsh
+        run: .github/scripts/download-qemu-uae-plugin.ps1 -Asset qemu-uae-windows-x64.zip
+
       - name: Configure
         shell: bash
         run: |
-          cmake --preset windows-release
+          cmake --preset windows-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN"
           PRODUCT_VERSION="$(cat out/build/windows-release/amiberry-product-version.txt)"
           if [ -z "$PRODUCT_VERSION" ]; then
             echo "Could not determine the Amiberry product version from the build tree." >&2
@@ -915,6 +968,10 @@ jobs:
           $exePath = Join-Path $portableDir.FullName "Amiberry.exe"
           if (-not (Test-Path $exePath)) {
             throw "Portable ZIP is missing Amiberry.exe."
+          }
+          $qemuPluginPath = Join-Path $portableDir.FullName "plugins/qemu-uae.dll"
+          if (-not (Test-Path $qemuPluginPath)) {
+            throw "Portable ZIP is missing plugins/qemu-uae.dll."
           }
 
           $alternateWorkingDir = Join-Path $verifyRoot "alternate-cwd"
@@ -1161,12 +1218,22 @@ jobs:
           if (-not $portableExe) {
             throw "Portable ZIP is missing Amiberry.exe after SignPath signing."
           }
+          $portablePlugin = Get-ChildItem $verifyRoot -Recurse -File -Filter "qemu-uae.dll" | Select-Object -First 1
+          if (-not $portablePlugin) {
+            throw "Portable ZIP is missing qemu-uae.dll after SignPath signing."
+          }
 
           $portableSignature = Get-AuthenticodeSignature $portableExe.FullName
           if ($portableSignature.Status -eq "NotSigned" -or -not $portableSignature.SignerCertificate) {
             throw "Portable ZIP Amiberry.exe is missing an Authenticode signature."
           }
           Write-Host "Portable EXE signature status: $($portableSignature.Status)"
+
+          $pluginSignature = Get-AuthenticodeSignature $portablePlugin.FullName
+          if ($pluginSignature.Status -eq "NotSigned" -or -not $pluginSignature.SignerCertificate) {
+            throw "Portable ZIP qemu-uae.dll is missing an Authenticode signature."
+          }
+          Write-Host "QEMU-UAE plugin signature status: $($pluginSignature.Status)"
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
@@ -1271,10 +1338,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-arm64-vcpkg-${{ env.LLVM_MINGW_TAG }}-
 
+      - name: Download QEMU-UAE plugin
+        shell: pwsh
+        run: .github/scripts/download-qemu-uae-plugin.ps1 -Asset qemu-uae-windows-arm64.zip
+
       - name: Configure
         shell: bash
         run: |
-          cmake --preset windows-arm64-release
+          cmake --preset windows-arm64-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN"
           PRODUCT_VERSION="$(cat out/build/windows-arm64-release/amiberry-product-version.txt)"
           if [ -z "$PRODUCT_VERSION" ]; then
             echo "Could not determine the Amiberry product version from the build tree." >&2
@@ -1328,6 +1399,8 @@ jobs:
           $portableDir = Get-ChildItem $verifyRoot -Directory | Select-Object -First 1
           $exePath = Join-Path $portableDir.FullName "Amiberry.exe"
           if (-not (Test-Path $exePath)) { throw "Amiberry.exe missing from portable ZIP." }
+          $qemuPluginPath = Join-Path $portableDir.FullName "plugins/qemu-uae.dll"
+          if (-not (Test-Path $qemuPluginPath)) { throw "plugins/qemu-uae.dll missing from portable ZIP." }
 
           $stdoutFile = Join-Path $verifyRoot "dump-paths.stdout"
           $stderrFile = Join-Path $verifyRoot "dump-paths.stderr"
@@ -1533,12 +1606,22 @@ jobs:
           if (-not $portableExe) {
             throw "Portable ZIP is missing Amiberry.exe after SignPath signing."
           }
+          $portablePlugin = Get-ChildItem $verifyRoot -Recurse -File -Filter "qemu-uae.dll" | Select-Object -First 1
+          if (-not $portablePlugin) {
+            throw "Portable ZIP is missing qemu-uae.dll after SignPath signing."
+          }
 
           $portableSignature = Get-AuthenticodeSignature $portableExe.FullName
           if ($portableSignature.Status -eq "NotSigned" -or -not $portableSignature.SignerCertificate) {
             throw "Portable ZIP Amiberry.exe is missing an Authenticode signature."
           }
           Write-Host "Portable EXE signature status: $($portableSignature.Status)"
+
+          $pluginSignature = Get-AuthenticodeSignature $portablePlugin.FullName
+          if ($pluginSignature.Status -eq "NotSigned" -or -not $pluginSignature.SignerCertificate) {
+            throw "Portable ZIP qemu-uae.dll is missing an Authenticode signature."
+          }
+          Write-Host "QEMU-UAE plugin signature status: $($pluginSignature.Status)"
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
