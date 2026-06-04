@@ -548,6 +548,14 @@ if (USE_PCEM)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM)
 endif ()
 
+if (USE_PPC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_PPC)
+endif()
+
+if (USE_PPC AND USE_QEMU_PPC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_QEMU_CPU)
+endif()
+
 # Add libpcap for uaenet (Linux/macOS)
 if (USE_UAENET_PCAP)
     find_path(PCAP_INCLUDE_DIR pcap.h)

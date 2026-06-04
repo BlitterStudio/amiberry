@@ -141,7 +141,6 @@
 #define WITH_BUILTIN_SLIRP
 #define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */ // defined externally in Amiberry
-#define WITH_PPC
 #define WITH_TOCCATA
 #define WITH_PCI
 
@@ -150,7 +149,6 @@
 #define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
 #define NCR9X /* 53C9X SCSI */
 #define WITH_X86
-#define WITH_QEMU_CPU
 #define WITH_DRACO
 #endif
 
