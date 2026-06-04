@@ -195,11 +195,22 @@ static void load_dummy_implementation(void)
 	impl.stop = dummy_ppc_cpu_stop;
 	impl.atomic_raise_ext_exception = dummy_ppc_cpu_atomic_raise_ext_exception;
 	impl.atomic_cancel_ext_exception = dummy_ppc_cpu_atomic_cancel_ext_exception;
-	impl.map_memory = dummy_ppc_cpu_map_memory;
 	impl.set_pc = dummy_ppc_cpu_set_pc;
 	impl.run_continuous = dummy_ppc_cpu_run_continuous;
 	impl.run_single = dummy_ppc_cpu_run_single;
 	impl.pause = dummy_ppc_cpu_pause;
+}
+
+template<typename T>
+static bool require_qemu_symbol(UAE_DLHANDLE handle, T& function, const char *name)
+{
+	function = (T)uae_dlsym(handle, name);
+	if (!function) {
+		write_log("PPC: qemu-uae plugin missing required symbol: %s\n", name);
+		return false;
+	}
+	write_log("PPC: Imported %s\n", name);
+	return true;
 }
 
 static void uae_patch_library_ppc(UAE_DLHANDLE handle)
@@ -238,17 +249,20 @@ static bool load_qemu_implementation(void)
 
 	/* Retrieve function pointers from library */
 
-	impl.init = (ppc_cpu_init_function) uae_dlsym(handle, "ppc_cpu_init");
+	if (!require_qemu_symbol(handle, impl.init, "ppc_cpu_init") ||
+		!require_qemu_symbol(handle, impl.external_interrupt, "qemu_uae_ppc_external_interrupt") ||
+		!require_qemu_symbol(handle, impl.map_memory, "ppc_cpu_map_memory") ||
+		!require_qemu_symbol(handle, impl.run_continuous, "ppc_cpu_run_continuous") ||
+		!require_qemu_symbol(handle, impl.check_state, "ppc_cpu_check_state") ||
+		!require_qemu_symbol(handle, impl.set_state, "ppc_cpu_set_state") ||
+		!require_qemu_symbol(handle, impl.reset, "ppc_cpu_reset") ||
+		!require_qemu_symbol(handle, impl.in_cpu_thread, "qemu_uae_ppc_in_cpu_thread") ||
+		!require_qemu_symbol(handle, impl.lock, "qemu_uae_lock")) {
+		notify_user(NUMSG_NO_PPC);
+		return false;
+	}
 	//impl.free = (ppc_cpu_free_function) uae_dlsym(handle, "ppc_cpu_free");
 	//impl.stop = (ppc_cpu_stop_function) uae_dlsym(handle, "ppc_cpu_stop");
-	impl.external_interrupt = (qemu_uae_ppc_external_interrupt_function) uae_dlsym(handle, "qemu_uae_ppc_external_interrupt");
-	impl.map_memory = (ppc_cpu_map_memory_function) uae_dlsym(handle, "ppc_cpu_map_memory");
-	impl.run_continuous = (ppc_cpu_run_continuous_function) uae_dlsym(handle, "ppc_cpu_run_continuous");
-	impl.check_state = (ppc_cpu_check_state_function) uae_dlsym(handle, "ppc_cpu_check_state");
-	impl.set_state = (ppc_cpu_set_state_function) uae_dlsym(handle, "ppc_cpu_set_state");
-	impl.reset = (ppc_cpu_reset_function) uae_dlsym(handle, "ppc_cpu_reset");
-	impl.in_cpu_thread = (qemu_uae_ppc_in_cpu_thread_function) uae_dlsym(handle, "qemu_uae_ppc_in_cpu_thread");
-	impl.lock = (qemu_uae_lock_function) uae_dlsym(handle, "qemu_uae_lock");
 
 	// FIXME: not needed, handled internally by uae_dlopen_plugin
 	// uae_dlopen_patch_common(handle);
@@ -324,6 +338,9 @@ enum PPCLockStatus {
 
 static PPCLockStatus get_ppc_lock(PPCLockMethod method)
 {
+	if (!using_qemu() || !impl.in_cpu_thread || !impl.lock) {
+		return PPC_NO_LOCK_NEEDED;
+	}
 	if (impl.in_cpu_thread()) {
 		return PPC_NO_LOCK_NEEDED;
 	} else if (method == PPC_RELEASE_SPINLOCK) {
@@ -359,6 +376,9 @@ static PPCLockStatus get_ppc_lock(PPCLockMethod method)
 
 static void release_ppc_lock(PPCLockStatus status)
 {
+	if (!impl.lock) {
+		return;
+	}
 	if (status == PPC_NO_LOCK_NEEDED) {
 		return;
 	} else if (status == PPC_LOCKED_WITHOUT_SPINLOCK) {
@@ -455,7 +475,7 @@ bool uae_self_is_ppc(void)
 {
 	if (ppc_state == PPC_STATE_INACTIVE)
 		return false;
-	return impl.in_cpu_thread();
+	return impl.in_cpu_thread && impl.in_cpu_thread();
 }
 
 void uae_ppc_wakeup_main(void)
@@ -936,6 +956,9 @@ void uae_ppc_interrupt(bool active)
 		} else {
 			impl.atomic_cancel_ext_exception();
 		}
+		return;
+	}
+	if (!using_qemu() || !impl.external_interrupt) {
 		return;
 	}
 
