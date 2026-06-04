@@ -998,9 +998,9 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	// Check for zero-copy RTG path
 	const amigadisplay* ad = &adisplays[monid];
 	bool use_zerocopy = false;
-	if (ad->picasso_on && currprefs.rtg_zerocopy) {
+	if (ad->picasso_on && p96_is_zero_copy_surface(monid, surface->pixels)) {
 		uae_u8* rtg_ptr = p96_get_render_buffer_pointer(monid);
-		if (rtg_ptr != nullptr && surface->pixels == rtg_ptr) {
+		if (rtg_ptr != nullptr) {
 			// Surface already points to RTG VRAM — just record the pointer
 			slot.zerocopy = true;
 			slot.zerocopy_ptr = rtg_ptr;

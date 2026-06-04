@@ -101,7 +101,7 @@ void render_panel_rtg() {
             }
         }
         const bool rtg_is_enabled = rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE;
-        if (!rtg_was_enabled && rtg_is_enabled) {
+        if (!rtg_was_enabled && rtg_is_enabled && rbc->rtgmem_type < GFXBOARD_HARDWARE) {
             changed_prefs.rtg_zerocopy = true;
         }
         cfgfile_compatibility_rtg(&changed_prefs);
@@ -327,8 +327,13 @@ void render_panel_rtg() {
         }
         ShowHelpMarker("Scale by whole number multiples only (2x, 3x, etc.) for sharp pixels");
 
-        AmigaCheckbox("Zero Copy (Buffer sharing)", &changed_prefs.rtg_zerocopy);
-        ShowHelpMarker("Share buffers directly between emulation and display for better performance");
+        bool zero_copy_enabled = is_uae_rtg && changed_prefs.rtg_zerocopy;
+        ImGui::BeginDisabled(!is_uae_rtg);
+        if (AmigaCheckbox("Zero Copy (Buffer sharing)", &zero_copy_enabled)) {
+            changed_prefs.rtg_zerocopy = zero_copy_enabled;
+        }
+        ImGui::EndDisabled();
+        ShowHelpMarker("Share UAE RTG buffers directly between emulation and display for better performance");
 
         ImGui::EndDisabled(); // display_opts_en
 
