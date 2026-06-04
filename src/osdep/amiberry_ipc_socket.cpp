@@ -459,7 +459,7 @@ static std::string HandleSendKey(const std::vector<std::string>& args)
 		return make_response(false, {"Invalid keycode or state"});
 	}
 
-	inputdevice_add_inputcode(keycode, state, nullptr);
+	inputdevice_do_keyboard(keycode, state);
 
 	return make_response(true);
 }
