@@ -79,6 +79,12 @@ Missing-plugin check:
 
 ## Release Policy
 
-The first QEMU-UAE PPC plugin release should treat Linux x86-64 as the primary artifact target. Linux ARM64, macOS, and Windows x64 should be enabled as soon as matching plugin artifacts and runtime dependencies are available.
+The QEMU-UAE PPC plugin repository should publish artifacts for the desktop platforms that can load Amiberry dynamic plugins:
 
-Android, iOS, Haiku, and Windows ARM64 are not release blockers for the initial QEMU 11 PPC integration. They must remain build-clean with PPC plugin support disabled or without bundled plugin artifacts.
+- Linux x86-64 and ARM64: `qemu-uae.so`
+- macOS universal: `qemu-uae.dylib`
+- Windows x64 and ARM64: `qemu-uae.dll`
+
+Linux artifacts should be built from an older baseline such as Ubuntu 22.04 so they remain usable on newer supported distributions. macOS artifacts should be merged into a universal dylib before bundling into the universal app. Windows artifacts should be built with a UCRT/Clang toolchain compatible with Amiberry's llvm-mingw Windows builds.
+
+Android and iOS remain unsupported for QEMU-UAE PPC until dynamic plugin loading and platform packaging constraints are solved. FreeBSD and Haiku are not release blockers for the first multi-platform plugin artifact set, but the host build must remain clean without bundled plugin artifacts.
