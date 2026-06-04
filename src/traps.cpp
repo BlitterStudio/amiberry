@@ -213,6 +213,9 @@ struct TrapContext
 
 	/* Thread which effects the trap context. */
 	uae_thread_id thread;
+	/* Completion signal when using the reusable extended trap thread. */
+	uae_sem_t thread_done_sem;
+	int pooled_thread;
 	/* For IPC between the main emulator. */
 	uae_sem_t switch_to_emu_sem;
 	/* context and the trap context. */
@@ -265,14 +268,18 @@ static uaecptr exit_trap_trapaddr;
 static uae_sem_t trap_mutex;
 static TrapContext *current_context;
 
+static smp_comm_pipe extended_trap_thread_pipe;
+static uae_thread_id extended_trap_thread_id;
+static uae_sem_t extended_trap_thread_sem;
+static volatile bool extended_trap_thread_running;
+static volatile bool extended_trap_thread_busy;
+
 
 /*
-* Thread body for trap context
+* Execute one trap context.
 */
-static int trap_thread (void *arg)
+static void execute_trap_context(TrapContext *context)
 {
-	TrapContext *context = (TrapContext *) arg;
-
 	/* Wait until main thread is ready to switch to the
 	* this trap context. */
 	uae_sem_wait (&context->switch_to_trap_sem);
@@ -306,11 +313,99 @@ static int trap_thread (void *arg)
 	uae_sem_post (&context->switch_to_emu_sem);
 
 	/* Good bye, cruel world... */
+}
 
-	/* dummy return value */
+/*
+* Thread body for one-shot trap contexts
+*/
+static int trap_thread(void *arg)
+{
+	execute_trap_context((TrapContext *)arg);
 	return 0;
 }
 
+/*
+* Reusable thread body for sequential extended traps.
+*/
+static int extended_trap_thread(void *arg)
+{
+	(void)arg;
+
+	for (;;) {
+		TrapContext *context = (TrapContext *)read_comm_pipe_pvoid_blocking(&extended_trap_thread_pipe);
+		if (!context)
+			break;
+
+		execute_trap_context(context);
+
+		uae_sem_wait(&extended_trap_thread_sem);
+		extended_trap_thread_busy = false;
+		uae_sem_post(&extended_trap_thread_sem);
+		uae_sem_post(&context->thread_done_sem);
+	}
+	return 0;
+}
+
+static void init_extended_trap_thread(void)
+{
+	if (extended_trap_thread_running)
+		return;
+
+	init_comm_pipe(&extended_trap_thread_pipe, 100, 1);
+	if (uae_sem_init(&extended_trap_thread_sem, 0, 1)) {
+		destroy_comm_pipe(&extended_trap_thread_pipe);
+		return;
+	}
+	extended_trap_thread_busy = false;
+	if (uae_start_thread(_T("extended-trap"), extended_trap_thread, NULL, &extended_trap_thread_id)) {
+		extended_trap_thread_running = true;
+	} else {
+		uae_sem_destroy(&extended_trap_thread_sem);
+		destroy_comm_pipe(&extended_trap_thread_pipe);
+	}
+}
+
+static void free_extended_trap_thread(void)
+{
+	if (!extended_trap_thread_running)
+		return;
+
+	write_comm_pipe_pvoid(&extended_trap_thread_pipe, NULL, 1);
+	uae_wait_thread(&extended_trap_thread_id);
+	destroy_comm_pipe(&extended_trap_thread_pipe);
+	uae_sem_destroy(&extended_trap_thread_sem);
+	extended_trap_thread_running = false;
+	extended_trap_thread_busy = false;
+}
+
+static bool start_reusable_extended_trap_thread(TrapContext *context)
+{
+	init_extended_trap_thread();
+	if (!extended_trap_thread_running)
+		return false;
+
+	bool available = false;
+	uae_sem_wait(&extended_trap_thread_sem);
+	if (!extended_trap_thread_busy) {
+		extended_trap_thread_busy = true;
+		available = true;
+	}
+	uae_sem_post(&extended_trap_thread_sem);
+
+	if (!available)
+		return false;
+
+	if (uae_sem_init(&context->thread_done_sem, 0, 0)) {
+		uae_sem_wait(&extended_trap_thread_sem);
+		extended_trap_thread_busy = false;
+		uae_sem_post(&extended_trap_thread_sem);
+		return false;
+	}
+
+	context->pooled_thread = 1;
+	write_comm_pipe_pvoid(&extended_trap_thread_pipe, context, 1);
+	return true;
+}
 
 /*
 * Set up extended trap context and call handler function
@@ -330,7 +425,16 @@ static void trap_HandleExtendedTrap(TrapHandler handler_func, int has_retval)
 		copytocpucontext(&context->saved_regs);
 
 		/* Start thread to handle new trap context. */
-		uae_start_thread_fast(trap_thread, (void *)context, &context->thread);
+		bool thread_started = start_reusable_extended_trap_thread(context);
+		if (!thread_started) {
+			thread_started = uae_start_thread_fast(trap_thread, (void *)context, &context->thread) != 0;
+		}
+		if (!thread_started) {
+			uae_sem_destroy(&context->switch_to_trap_sem);
+			uae_sem_destroy(&context->switch_to_emu_sem);
+			xfree(context);
+			return;
+		}
 
 		/* Switch to trap context to begin execution of
 		* trap handler function.
@@ -489,7 +593,12 @@ static uae_u32 REGPARAM2 exit_trap_handler(TrapContext *dummy_ctx)
 	}
 
 	/* Wait for trap context thread to exit. */
-	uae_wait_thread(&context->thread);
+	if (context->pooled_thread) {
+		uae_sem_wait(&context->thread_done_sem);
+		uae_sem_destroy(&context->thread_done_sem);
+	} else {
+		uae_wait_thread(&context->thread);
+	}
 
 	/* Restore 68k state saved at trap entry. */
 	//regs = context->saved_regs;
@@ -873,6 +982,7 @@ void reset_traps(void)
 
 void free_traps(void)
 {
+	free_extended_trap_thread();
 	for (int i = 0; i < TRAP_THREADS; i++) {
 		hardware_trap_state[i] = 0;
 		if (trap_thread_id[i]) {
