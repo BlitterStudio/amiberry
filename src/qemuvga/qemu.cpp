@@ -29,6 +29,16 @@ static bool require_qemu_symbol(UAE_DLHANDLE handle, T& function, const char *na
 	return true;
 }
 
+static bool require_qemu_symbol(UAE_DLHANDLE handle, const char *name)
+{
+	if (!uae_dlsym(handle, name)) {
+		write_log("qemu-uae: missing required symbol: %s\n", name);
+		return false;
+	}
+	write_log("Imported %s\n", name);
+	return true;
+}
+
 #define REQUIRE_QEMU_SYMBOL(handle, function_name) require_qemu_symbol(handle, function_name, #function_name)
 
 static bool init_ppc(UAE_DLHANDLE handle)
@@ -36,6 +46,15 @@ static bool init_ppc(UAE_DLHANDLE handle)
 #ifdef WITH_QEMU_PPC
 	if (!REQUIRE_QEMU_SYMBOL(handle, qemu_uae_ppc_init) ||
 		!REQUIRE_QEMU_SYMBOL(handle, qemu_uae_ppc_in_cpu_thread)) {
+		return false;
+	}
+	if (!require_qemu_symbol(handle, "ppc_cpu_init") ||
+		!require_qemu_symbol(handle, "qemu_uae_ppc_external_interrupt") ||
+		!require_qemu_symbol(handle, "ppc_cpu_map_memory") ||
+		!require_qemu_symbol(handle, "ppc_cpu_run_continuous") ||
+		!require_qemu_symbol(handle, "ppc_cpu_set_state") ||
+		!require_qemu_symbol(handle, "ppc_cpu_reset") ||
+		!require_qemu_symbol(handle, "qemu_uae_lock")) {
 		return false;
 	}
 

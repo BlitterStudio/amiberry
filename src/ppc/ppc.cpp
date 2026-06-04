@@ -253,7 +253,6 @@ static bool load_qemu_implementation(void)
 		!require_qemu_symbol(handle, impl.external_interrupt, "qemu_uae_ppc_external_interrupt") ||
 		!require_qemu_symbol(handle, impl.map_memory, "ppc_cpu_map_memory") ||
 		!require_qemu_symbol(handle, impl.run_continuous, "ppc_cpu_run_continuous") ||
-		!require_qemu_symbol(handle, impl.check_state, "ppc_cpu_check_state") ||
 		!require_qemu_symbol(handle, impl.set_state, "ppc_cpu_set_state") ||
 		!require_qemu_symbol(handle, impl.reset, "ppc_cpu_reset") ||
 		!require_qemu_symbol(handle, impl.in_cpu_thread, "qemu_uae_ppc_in_cpu_thread") ||
