@@ -3110,32 +3110,19 @@ STATIC_INLINE void create_popalls(void)
 
     /* now the exit points */
     popall_execute_normal_setpc = get_target();
-    uintptr idx = (uintptr) & (regs.pc_p) - (uintptr)&regs;
-#if defined(CPU_AARCH64)
-    STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
-#else
-    STR_rRI(REG_WORK1, R_REGSTRUCT, idx);
-#endif
+    compemu_raw_store_pc_state_from_work1();
     popall_execute_normal = get_target();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)execute_normal);
 
     popall_check_checksum_setpc = get_target();
-#if defined(CPU_AARCH64)
-    STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
-#else
-    STR_rRI(REG_WORK1, R_REGSTRUCT, idx);
-#endif
+    compemu_raw_store_pc_state_from_work1();
     popall_check_checksum = get_target();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)check_checksum);
 
     popall_exec_nostats_setpc = get_target();
-#if defined(CPU_AARCH64)
-    STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
-#else
-    STR_rRI(REG_WORK1, R_REGSTRUCT, idx);
-#endif
+    compemu_raw_store_pc_state_from_work1();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)exec_nostats);
 
