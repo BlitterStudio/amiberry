@@ -545,11 +545,15 @@ if (USE_LIBENET)
 endif ()
 
 if (USE_PCEM)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM WITH_QEMU_CPU)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM)
 endif ()
 
 if (USE_PPC)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_PPC)
+endif()
+
+if (USE_PCEM OR USE_PPC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_QEMU_CPU)
 endif()
 
 if (USE_PPC AND USE_QEMU_PPC)
