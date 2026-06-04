@@ -4498,7 +4498,7 @@ static void execute_ins(uaecptr endpc, uaecptr targetpc, struct instr *dp, bool 
 		if (((regs.pc == endpc && feature_interrupts < 2) || (regs.pc == targetpc && feature_interrupts < 2)) && !cpu_stopped) {
 			// Trace is only added as an exception if there was no other exceptions
 			// Trace stacked with other exception is handled later
-			if (flag_SPCFLAG_DOTRACE && !test_exception && trace_store_pc == 0xffffffffff) {
+			if (flag_SPCFLAG_DOTRACE && !test_exception && trace_store_pc == 0xffffffff) {
 				Exception(9);
 				break;
 			}
