@@ -32,17 +32,20 @@ Android and iOS currently build with PPC plugin support disabled because dynamic
 
 ## Build Notes
 
-Source builds do not download or build QEMU automatically. Build the plugin separately, then place it in the plugin directory or pass a packaging option when one is available.
+Source builds do not download or build QEMU automatically. Build the plugin separately, then place it in the plugin directory or pass `-DQEMU_UAE_PLUGIN=/path/to/qemu-uae` to bundle a prebuilt artifact into the install/package layout.
 
 Useful Amiberry configure combinations:
 
 ```bash
 cmake -B build -DUSE_PPC=ON -DUSE_QEMU_PPC=ON
+cmake -B build -DUSE_PPC=ON -DUSE_QEMU_PPC=ON -DQEMU_UAE_PLUGIN=/path/to/qemu-uae.so
 cmake -B build-no-ppc -DUSE_PPC=OFF
 cmake -B build-ppc-no-qemu -DUSE_PPC=ON -DUSE_QEMU_PPC=OFF
 ```
 
 `USE_PPC=ON` enables PPC accelerator board support in Amiberry. `USE_QEMU_PPC=ON` enables runtime loading of the QEMU-UAE PPC implementation. PCem/QEMU device glue remains controlled by `USE_PCEM`.
+
+`QEMU_UAE_PLUGIN` is optional. When set, CMake validates that the artifact exists and that QEMU PPC support is enabled, then installs it beside the other Amiberry plugins.
 
 ## Runtime Behavior
 

@@ -65,6 +65,7 @@ option(USE_JIT           "Enable 68K JIT recompiler (x86_64 and AArch64)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
+set(QEMU_UAE_PLUGIN "" CACHE FILEPATH "Path to a prebuilt qemu-uae plugin artifact to bundle")
 
 # Vulkan and OpenGL are mutually exclusive rendering backends.
 if(USE_VULKAN AND USE_OPENGL)
@@ -127,6 +128,18 @@ elseif(WIN32)
     endif()
 elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(USE_UAENET_TAP OFF CACHE BOOL "TAP backend only available on Linux" FORCE)
+endif()
+
+if(QEMU_UAE_PLUGIN)
+    if(NOT USE_PPC OR NOT USE_QEMU_PPC)
+        message(FATAL_ERROR "QEMU_UAE_PLUGIN requires USE_PPC=ON and USE_QEMU_PPC=ON")
+    endif()
+    get_filename_component(QEMU_UAE_PLUGIN "${QEMU_UAE_PLUGIN}" ABSOLUTE BASE_DIR "${CMAKE_SOURCE_DIR}")
+    if(NOT EXISTS "${QEMU_UAE_PLUGIN}")
+        message(FATAL_ERROR "QEMU_UAE_PLUGIN does not exist: ${QEMU_UAE_PLUGIN}")
+    endif()
+    set(QEMU_UAE_PLUGIN "${QEMU_UAE_PLUGIN}" CACHE FILEPATH "Path to a prebuilt qemu-uae plugin artifact to bundle" FORCE)
+    message(STATUS "Bundling QEMU-UAE PPC plugin: ${QEMU_UAE_PLUGIN}")
 endif()
 
 # macOS helpers use Objective-C++ for Cocoa window activation.

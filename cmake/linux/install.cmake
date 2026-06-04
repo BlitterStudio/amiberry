@@ -23,6 +23,10 @@ install(FILES $<TARGET_FILE:capsimage>
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
 install(FILES $<TARGET_FILE:floppybridge>
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
+if(QEMU_UAE_PLUGIN)
+    install(FILES "${QEMU_UAE_PLUGIN}"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
+endif()
 
 # Bundle SDL3 shared libraries for distros that don't ship them (e.g. Debian Bookworm).
 # The .so files are resolved from the imported CMake targets created by find_package(SDL3).
