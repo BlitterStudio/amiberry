@@ -52,3 +52,33 @@ cmake -B build-ppc-no-qemu -DUSE_PPC=ON -DUSE_QEMU_PPC=OFF
 With a compatible plugin installed, selecting a CyberStorm PPC or Blizzard PPC board and enabling PPC CPU emulation should load the QEMU implementation. If the plugin is missing, too old, or missing required symbols, Amiberry logs the plugin error and falls back to another available PPC implementation or the dummy implementation.
 
 Non-PPC builds hide PPC accelerator options, clear stale PPC config state, and do not save PPC-only config keys.
+
+## Runtime Smoke Test
+
+Requirements:
+
+- A compatible `qemu-uae` plugin in the Amiberry plugins directory.
+- CyberStorm PPC or Blizzard PPC ROMs.
+- A PPC-capable AmigaOS setup.
+
+Recommended checks:
+
+1. Start Amiberry with `--log`.
+2. Select a CyberStorm PPC or Blizzard PPC accelerator board.
+3. Enable PPC CPU emulation and leave the PPC implementation on `Automatic`, or select `QEMU`.
+4. Boot the PPC-capable system.
+5. Confirm the log contains `PPC: Loading QEmu implementation`.
+6. Confirm the log does not fall back to `PPC: Loading dummy implementation`.
+7. Confirm the guest sees the expected PPC accelerator.
+
+Missing-plugin check:
+
+1. Remove or rename the `qemu-uae` plugin.
+2. Boot the same PPC configuration with `--log`.
+3. Confirm Amiberry reports the plugin load failure and falls back cleanly instead of crashing.
+
+## Release Policy
+
+The first QEMU-UAE PPC plugin release should treat Linux x86-64 as the primary artifact target. Linux ARM64, macOS, and Windows x64 should be enabled as soon as matching plugin artifacts and runtime dependencies are available.
+
+Android, iOS, Haiku, and Windows ARM64 are not release blockers for the initial QEMU 11 PPC integration. They must remain build-clean with PPC plugin support disabled or without bundled plugin artifacts.
