@@ -111,6 +111,10 @@ static void sanitize_accelerator_selection()
         changed_prefs.cpuboard_type = 0;
         changed_prefs.cpuboard_subtype = 0;
         changed_prefs.cpuboard_settings = 0;
+        changed_prefs.ppc_mode = 0;
+        changed_prefs.ppc_model[0] = 0;
+        changed_prefs.ppc_implementation = 0;
+        changed_prefs.ppc_cpu_idle = 0;
     }
 #endif
 }
