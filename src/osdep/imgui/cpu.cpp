@@ -7,6 +7,9 @@
 #include "cpuboard.h"
 #include "memory.h"
 #include "x86.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 
 #ifndef MAX_JIT_CACHE
 #define MAX_JIT_CACHE 16384
@@ -500,6 +503,26 @@ void render_panel_cpu() {
         }
         ShowHelpMarker("Enable PowerPC CPU emulation for CyberStorm PPC or Blizzard PPC boards.");
         ImGui::EndDisabled();
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("PPC implementation");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(slider_width);
+        const char *ppc_impl_names[] = {"Automatic", "Dummy", "PearPC", "QEMU"};
+        int ppc_impl = changed_prefs.ppc_implementation;
+        if (ppc_impl < PPC_IMPLEMENTATION_AUTO || ppc_impl > PPC_IMPLEMENTATION_QEMU) {
+            ppc_impl = PPC_IMPLEMENTATION_AUTO;
+        }
+        ImGui::BeginDisabled(emulating);
+        if (ImGui::Combo("##PPCImplementation", &ppc_impl, ppc_impl_names, IM_ARRAYSIZE(ppc_impl_names))) {
+            changed_prefs.ppc_implementation = ppc_impl;
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+        ImGui::EndDisabled();
+#ifndef WITH_QEMU_PPC
+        ImGui::TextDisabled("QEMU PPC plugin support is not compiled into this build.");
+#endif
+        ShowHelpMarker("Select the PPC backend. Automatic tries QEMU first when plugin support is compiled, then falls back to other available implementations.");
 
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Stopped M68K CPU idle mode");

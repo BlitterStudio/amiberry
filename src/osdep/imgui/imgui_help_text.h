@@ -194,8 +194,9 @@ static const char* help_text_cpu =
 	"The FPU option allows you to enable the FPU. This is only available for the 68020, 68030,\n"
 	"68040 and 68060 CPUs.\n"
 	"\n"
-	"The PPC emulation option allows you to enable the PowerPC emulation. This is only available\n"
-	"for the 68040 and 68060 CPUs and requires an extra plugin (qemu-uae) to be available.\n";
+	"The PPC emulation option enables CyberStorm PPC and Blizzard PPC accelerator support.\n"
+	"QEMU-based PPC emulation requires a compatible qemu-uae plugin in the configured plugins path.\n"
+	"Amiberry currently requires qemu-uae API 3.8 or newer.\n";
 
 static const char* help_text_chipset =
 	"If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,\n"
