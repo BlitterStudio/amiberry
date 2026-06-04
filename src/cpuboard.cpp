@@ -295,6 +295,10 @@ static bool is_ppc(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC) || ISCPUBOARDP(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
 }
+bool cpuboard_is_ppc_accelerator(struct uae_prefs *p)
+{
+	return is_ppc(p);
+}
 static bool is_tekmagic(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_GVP, BOARD_GVP_SUB_TEKMAGIC);
@@ -2367,7 +2371,7 @@ static void makefakeppcrom(uae_u8 *rom, int type)
 bool is_ppc_cpu(struct uae_prefs *p)
 {
 #ifdef WITH_PPC
-	return is_ppc(p);
+	return cpuboard_is_ppc_accelerator(p);
 #else
 	return false;
 #endif
@@ -2636,7 +2640,7 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 	uae_u8 autoconfig_data[16] = { 0 };
 
 #ifndef WITH_PPC
-	if (is_ppc(p)) {
+	if (cpuboard_is_ppc_accelerator(p)) {
 		write_log(_T("CPU board: PPC accelerator requires PPC support.\n"));
 		return false;
 	}

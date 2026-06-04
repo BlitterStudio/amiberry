@@ -302,6 +302,11 @@ void fixup_cpu (struct uae_prefs *p)
 	}
 
 #ifndef WITH_PPC
+	if (cpuboard_is_ppc_accelerator(p)) {
+		p->cpuboard_type = 0;
+		p->cpuboard_subtype = 0;
+		p->cpuboard_settings = 0;
+	}
 	p->ppc_mode = 0;
 	p->ppc_model[0] = 0;
 	// PPC_IMPLEMENTATION_AUTO is only visible when WITH_PPC includes uae/ppc.h.
