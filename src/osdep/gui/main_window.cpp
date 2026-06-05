@@ -1892,7 +1892,7 @@ static void handle_drop_file_event(const SDL_Event& event)
 		uae_restart(&currprefs, -1, dropped_file);
 		gui_running = false;
 	}
-	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0)
+	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0 || strcasecmp(ext.c_str(), ".7z") == 0)
 	{
 		// Insert floppy image
 		disk_insert(0, dropped_file);

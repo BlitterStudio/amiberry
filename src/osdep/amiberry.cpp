@@ -9088,10 +9088,42 @@ static std::string get_macos_app_resources_directory()
 }
 #endif
 
+#ifdef LIBRETRO
+static void append_libretro_whdboot_seed_root_candidates(std::vector<std::string>& candidates,
+	const char* env_name)
+{
+	const auto* root = std::getenv(env_name);
+	if (root == nullptr || root[0] == '\0')
+		return;
+
+	const std::string root_path = root;
+	append_unique_path_candidate(candidates, join_path(root_path, "whdboot"));
+	append_unique_path_candidate(candidates, join_path(join_path(root_path, "amiberry"), "whdboot"));
+	append_unique_path_candidate(candidates, join_path(join_path(root_path, "Amiberry"), "whdboot"));
+	append_unique_path_candidate(candidates, root_path);
+}
+
+static void append_libretro_whdboot_seed_source_candidates(std::vector<std::string>& candidates,
+	const std::string& subdirectory)
+{
+	if (subdirectory != "whdboot")
+		return;
+
+	append_libretro_whdboot_seed_root_candidates(candidates, "AMIBERRY_WHDBOOT_ASSETS_DIR");
+	append_libretro_whdboot_seed_root_candidates(candidates, "AMIBERRY_WHDBOOT_PATH");
+	append_libretro_whdboot_seed_root_candidates(candidates, "AMIBERRY_LIBRETRO_SYSTEM_DIR");
+	append_libretro_whdboot_seed_root_candidates(candidates, "AMIBERRY_LIBRETRO_SAVE_DIR");
+	append_libretro_whdboot_seed_root_candidates(candidates, "AMIBERRY_LIBRETRO_CONTENT_DIR");
+}
+#endif
+
 static std::vector<std::string> get_seed_source_candidates(const std::string& subdirectory,
 	const bool include_usr_local_share)
 {
 	std::vector<std::string> candidates;
+#ifdef LIBRETRO
+	append_libretro_whdboot_seed_source_candidates(candidates, subdirectory);
+#endif
 #ifdef AMIBERRY_IOS
 	const auto app_bundle_dir = get_ios_app_bundle_directory();
 	if (!app_bundle_dir.empty())
@@ -9114,6 +9146,8 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 static bool copy_missing_directory_contents_if_exists(const std::string& source_dir, const std::string& destination_dir)
 {
 	if (source_dir.empty() || destination_dir.empty() || !my_existsdir(source_dir.c_str()))
+		return false;
+	if (path_strings_match(source_dir, destination_dir))
 		return false;
 
 	ensure_directory_exists(destination_dir);
@@ -9376,22 +9410,22 @@ whdboot_download_result download_whdboot_assets(
 	return result;
 }
 
-static bool whdboot_seed_files_missing()
+static bool whdboot_seed_files_missing_at(const std::string& root_path)
 {
-	if (!file_exists(join_path(whdboot_path, "WHDLoad")))
+	if (!file_exists(join_path(root_path, "WHDLoad")))
 		return true;
-	if (!file_exists(join_path(whdboot_path, "JST")))
+	if (!file_exists(join_path(root_path, "JST")))
 		return true;
-	if (!file_exists(join_path(whdboot_path, "AmiQuit")))
+	if (!file_exists(join_path(root_path, "AmiQuit")))
 		return true;
 
-	const auto boot_data_zip = join_path(whdboot_path, "boot-data.zip");
-	const auto boot_data_dir = join_path(whdboot_path, "boot-data");
+	const auto boot_data_zip = join_path(root_path, "boot-data.zip");
+	const auto boot_data_dir = join_path(root_path, "boot-data");
 	if (!file_exists(boot_data_zip) && !my_existsdir(boot_data_dir.c_str()))
 		return true;
 
-	const auto json_destination = join_path(whdboot_path, "game-data/whdload_db.json");
-	const auto xml_destination = join_path(whdboot_path, "game-data/whdload_db.xml");
+	const auto json_destination = join_path(root_path, "game-data/whdload_db.json");
+	const auto xml_destination = join_path(root_path, "game-data/whdload_db.xml");
 	if (!file_exists(json_destination) && !file_exists(xml_destination))
 		return true;
 
@@ -9404,7 +9438,7 @@ static bool whdboot_seed_files_missing()
 	};
 	for (const auto* filename : required_rtb_files)
 	{
-		const auto destination = join_path(whdboot_path, std::string("save-data/Kickstarts/") + filename);
+		const auto destination = join_path(root_path, std::string("save-data/Kickstarts/") + filename);
 		if (!file_exists(destination))
 			return true;
 	}
@@ -9412,13 +9446,39 @@ static bool whdboot_seed_files_missing()
 	return false;
 }
 
+static bool whdboot_seed_files_missing()
+{
+	return whdboot_seed_files_missing_at(whdboot_path);
+}
+
+#ifdef LIBRETRO
+static bool seed_whdboot_files_from_candidates(const std::vector<std::string>& source_candidates)
+{
+	for (const auto& candidate : source_candidates)
+	{
+		if (path_strings_match(candidate, whdboot_path))
+			continue;
+		if (whdboot_seed_files_missing_at(candidate))
+			continue;
+		if (copy_missing_directory_contents_if_exists(candidate, whdboot_path))
+			return true;
+	}
+
+	return false;
+}
+#endif
+
 static void seed_default_whdboot_files_if_needed()
 {
 	if (!whdboot_seed_files_missing())
 		return;
 
 	const auto source_candidates = get_seed_source_candidates("whdboot", true);
+#ifdef LIBRETRO
+	if (!seed_whdboot_files_from_candidates(source_candidates))
+#else
 	if (!seed_missing_directory_contents_from_candidates(whdboot_path, source_candidates))
+#endif
 	{
 		write_log("No WHDLoad boot files found in bundled or system data locations\n");
 		write_log("Skipping automatic download during startup. Use the Paths panel or --download-whdboot to fetch them explicitly.\n");
@@ -9496,7 +9556,9 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 	plugins_dir = get_plugins_directory(portable_mode);
 	const auto visual_content_root = home_dir;
 
-#ifdef __MACH__
+#ifdef LIBRETRO
+	if constexpr (true)
+#elif defined(__MACH__)
 	if constexpr (true)
 #elif defined(__ANDROID__)
     if constexpr (true)
@@ -9506,7 +9568,8 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 	if (portable_mode)
 #endif
 	{
-		// These paths are relative to the XDG_DATA_HOME directory
+		// These paths are rooted in home_dir. In libretro builds this is the
+		// frontend-provided system/save directory, not Amiberry's standalone XDG tree.
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
 		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
 		home_dir;
