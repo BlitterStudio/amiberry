@@ -9,6 +9,7 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#include <errno.h>
 #ifdef _WIN32
 #include <io.h>
 #include <direct.h>
@@ -90,6 +91,7 @@ static int last_sensitivity = -1;
 static bool last_input_log_file = false;
 static FILE* input_log_file = nullptr;
 static bool fastforward_forced = false;
+static bool minimum_audio_latency_requested = false;
 static bool libretro_analog_enabled = true;
 static bool last_analog_enabled = true;
 static int last_vsync_setting = -1;
@@ -220,6 +222,17 @@ static void libretro_debug_log(const char* fmt, ...)
 	va_end(ap);
 }
 
+static void set_env_path(const char* name, const std::string& value)
+{
+	if (!name || !*name || value.empty())
+		return;
+#ifdef _WIN32
+	_putenv_s(name, value.c_str());
+#else
+	setenv(name, value.c_str(), 1);
+#endif
+}
+
 // Re-query system_dir / save_dir from the frontend and (re)export AMIBERRY_HOME_DIR
 // so amiberry's get_home_directory() resolves paths inside the frontend-provided
 // directory instead of falling back to $HOME/Amiberry. Some frontends only populate
@@ -251,6 +264,10 @@ static bool sync_amiberry_home_dir_from_frontend()
 		if (save_dir.empty())
 			save_dir = system_dir;
 	}
+
+	set_env_path("AMIBERRY_LIBRETRO_SYSTEM_DIR", system_dir);
+	set_env_path("AMIBERRY_LIBRETRO_SAVE_DIR", save_dir);
+	set_env_path("AMIBERRY_LIBRETRO_CONTENT_DIR", content_dir);
 
 	// Don't overwrite a value the user (or a parent process) has already exported.
 	// amiberry consumes the env var once at startup, so re-exporting after that
@@ -1113,6 +1130,44 @@ static std::string path_join(const std::string& dir, const std::string& file)
 	return dir + "/" + file;
 }
 
+static bool dir_exists(const std::string& path);
+
+static bool ensure_host_directory(const std::string& path)
+{
+	if (path.empty())
+		return false;
+	if (dir_exists(path))
+		return true;
+
+#ifdef _WIN32
+	const int result = _mkdir(path.c_str());
+#else
+	const int result = mkdir(path.c_str(), 0755);
+#endif
+	if (result == 0 || dir_exists(path))
+		return true;
+
+	if (log_cb)
+		log_cb(RETRO_LOG_WARN, "Failed to create directory %s: %s\n", path.c_str(), strerror(errno));
+	return false;
+}
+
+static void ensure_whdload_save_dirs(const std::string& save_root)
+{
+	if (save_root.empty())
+		return;
+
+	ensure_host_directory(save_root);
+	static const char* subdirectories[] = {
+		"Autoboots",
+		"Debugs",
+		"Kickstarts",
+		"Savegames",
+	};
+	for (const auto* subdirectory : subdirectories)
+		ensure_host_directory(path_join(save_root, subdirectory));
+}
+
 static std::string to_lower_copy(std::string value)
 {
 	std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(tolower(c)); });
@@ -1205,36 +1260,22 @@ static bool vfs_read_all(const char* path, std::vector<uint8_t>& out)
 
 static void setup_whdload_paths()
 {
+	const char* whdboot_assets_dir = nullptr;
 	if (!system_dir.empty())
-		set_whdbootpath(system_dir);
+		whdboot_assets_dir = system_dir.c_str();
 	else if (!save_dir.empty())
-		set_whdbootpath(save_dir);
+		whdboot_assets_dir = save_dir.c_str();
 	else if (!content_dir.empty())
-		set_whdbootpath(content_dir);
-
-	const char* whdboot_env = nullptr;
-	if (!system_dir.empty())
-		whdboot_env = system_dir.c_str();
-	else if (!save_dir.empty())
-		whdboot_env = save_dir.c_str();
-	else if (!content_dir.empty())
-		whdboot_env = content_dir.c_str();
-	if (whdboot_env && *whdboot_env) {
-#ifdef _WIN32
-		_putenv_s("AMIBERRY_WHDBOOT_PATH", whdboot_env);
-#else
-		setenv("AMIBERRY_WHDBOOT_PATH", whdboot_env, 1);
-#endif
+		whdboot_assets_dir = content_dir.c_str();
+	if (whdboot_assets_dir && *whdboot_assets_dir) {
+		set_env_path("AMIBERRY_WHDBOOT_PATH", whdboot_assets_dir);
+		set_env_path("AMIBERRY_WHDBOOT_ASSETS_DIR", whdboot_assets_dir);
 	}
 
 	if (!save_dir.empty()) {
-#ifdef _WIN32
-		_putenv_s("WHDBOOT_SAVE_DATA", save_dir.c_str());
-		_putenv_s("AMIBERRY_WHDBOOT_SAVE_DATA", save_dir.c_str());
-#else
-		setenv("WHDBOOT_SAVE_DATA", save_dir.c_str(), 1);
-		setenv("AMIBERRY_WHDBOOT_SAVE_DATA", save_dir.c_str(), 1);
-#endif
+		ensure_whdload_save_dirs(save_dir);
+		set_env_path("WHDBOOT_SAVE_DATA", save_dir);
+		set_env_path("AMIBERRY_WHDBOOT_SAVE_DATA", save_dir);
 	}
 }
 
@@ -2502,10 +2543,13 @@ static void keyboard_cb(bool down, unsigned keycode, uint32_t character, uint16_
 
 static void poll_input(void)
 {
-	if (!input_poll_cb || !input_state_cb)
+	if (!input_poll_cb)
 		return;
 
 	input_poll_cb();
+	if (!input_state_cb)
+		return;
+
 	const bool analog_enabled = libretro_analog_enabled;
 	const bool clear_analog = !analog_enabled && last_analog_enabled;
 
@@ -2790,24 +2834,23 @@ static void core_entry(void)
 	safe_strdup("-G"); // No GUI
 
 	std::string rom_path_value;
-	if (!system_dir.empty()) {
+	if (!system_dir.empty() || !save_dir.empty()) {
+		const auto use_kick_dir_if_present = [&](const std::string& kick_dir) {
+			if (rom_path_value.empty() && dir_exists(kick_dir))
+				rom_path_value = kick_dir;
+		};
 		if (!save_dir.empty()) {
-			const std::string kick_dir = path_join(save_dir, "Kickstarts");
-			if (dir_exists(kick_dir))
-				rom_path_value = kick_dir;
+			use_kick_dir_if_present(path_join(save_dir, "Kickstarts"));
+			use_kick_dir_if_present(path_join(path_join(save_dir, "whdboot"), "save-data/Kickstarts"));
 		}
-		if (rom_path_value.empty()) {
-			const std::string kick_dir = path_join(system_dir, "Kickstarts");
-			if (dir_exists(kick_dir))
-				rom_path_value = kick_dir;
-		}
-		if (rom_path_value.empty()) {
-			const std::string kick_dir = path_join(system_dir, "save-data/Kickstarts");
-			if (dir_exists(kick_dir))
-				rom_path_value = kick_dir;
+		if (!system_dir.empty()) {
+			use_kick_dir_if_present(path_join(system_dir, "Kickstarts"));
+			use_kick_dir_if_present(path_join(path_join(system_dir, "whdboot"), "save-data/Kickstarts"));
+			use_kick_dir_if_present(path_join(path_join(path_join(system_dir, "amiberry"), "whdboot"), "save-data/Kickstarts"));
+			use_kick_dir_if_present(path_join(system_dir, "save-data/Kickstarts"));
 		}
 		if (rom_path_value.empty())
-			rom_path_value = system_dir;
+			rom_path_value = !system_dir.empty() ? system_dir : save_dir;
 		const std::string rom_path = "rom_path=" + rom_path_value;
 		push_s_option(rom_path);
 	}
@@ -2885,9 +2928,7 @@ static void core_entry(void)
 			push_s_option(std::string("hardfile2=rw,DH0:") + std::string(game_path) + ",0,0,0,512,0");
 			if (!save_dir.empty()) {
 				const std::string saves_path = save_dir + "/WHDSaves";
-				struct stat saves_st{};
-				if (stat(saves_path.c_str(), &saves_st) != 0)
-					mkdir(saves_path.c_str(), 0755);
+				ensure_host_directory(saves_path);
 				push_s_option("filesystem2=rw,DH1:WHDSaves:" + saves_path + ",0");
 				if (log_cb)
 					log_cb(RETRO_LOG_INFO, "HDF saves dir: %s\n", saves_path.c_str());
@@ -2922,13 +2963,75 @@ static void core_entry(void)
 	libretro_yield();
 }
 
-void retro_init(void)
+static bool ensure_core_fiber()
 {
 	if (!main_fiber)
 		main_fiber = co_active();
-	
-	if (!core_fiber)
+
+	if (!core_fiber) {
 		core_fiber = co_create(CORE_FIBER_STACK_SIZE, core_entry);
+		core_shutdown_complete = false;
+	}
+
+	return core_fiber != nullptr;
+}
+
+static void shutdown_core_fiber()
+{
+	if (!core_fiber)
+		return;
+
+	// Pump the core fiber so it can process uae_quit() and run the
+	// device cleanup chain (joins threads like akiko_thread).
+	// Each co_switch runs roughly one emulated frame.
+	if (core_started && !core_shutdown_complete) {
+		uae_quit();
+		for (int i = 0; i < 200 && !core_shutdown_complete; i++)
+			co_switch(core_fiber);
+
+		if (!core_shutdown_complete && log_cb)
+			log_cb(RETRO_LOG_WARN, "Core did not complete shutdown after 200 frames.\n");
+	}
+}
+
+static void delete_core_fiber()
+{
+	if (!core_fiber)
+		return;
+
+	co_delete(core_fiber);
+	core_fiber = NULL;
+}
+
+static void reset_core_runtime_state()
+{
+	if (fastforward_forced) {
+		warpmode(0);
+		fastforward_forced = false;
+	}
+	set_fastforward_override(false);
+	core_started = false;
+	core_shutdown_complete = false;
+	memory_map_set = false;
+	ff_override_active = false;
+	last_refresh_rate = -1.0f;
+	last_geometry_width = -1;
+	last_geometry_height = -1;
+}
+
+static void apply_minimum_audio_latency()
+{
+	if (minimum_audio_latency_requested || !environ_cb)
+		return;
+
+	unsigned audio_latency = 64;
+	environ_cb(RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY, &audio_latency);
+	minimum_audio_latency_requested = true;
+}
+
+void retro_init(void)
+{
+	ensure_core_fiber();
 
 	// Defensive: some frontends populate system_dir/save_dir between
 	// retro_set_environment and retro_init, so re-query and re-export
@@ -2939,37 +3042,19 @@ void retro_init(void)
 		log_cb(RETRO_LOG_INFO, "retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
 	libretro_debug_log("retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
 
-	core_started = false;
-	memory_map_set = false;
-	ff_override_active = false;
-	last_geometry_width = -1;
-	last_geometry_height = -1;
+	reset_core_runtime_state();
+	minimum_audio_latency_requested = false;
 }
 
 void retro_deinit(void)
 {
-	if (core_fiber)
-	{
-		// Pump the core fiber so it can process uae_quit() and run the
-		// device cleanup chain (joins threads like akiko_thread).
-		// Each co_switch runs roughly one emulated frame.
-		if (core_started && !core_shutdown_complete) {
-			uae_quit();
-			for (int i = 0; i < 200 && !core_shutdown_complete; i++)
-				co_switch(core_fiber);
-		}
-		co_delete(core_fiber);
-		core_fiber = NULL;
-	}
+	shutdown_core_fiber();
+	delete_core_fiber();
 	libretro_debug_close();
 	update_input_log_file(false);
 	last_input_log_file = false;
-	fastforward_forced = false;
-	last_refresh_rate = -1.0f;
-	core_started = false;
-	core_shutdown_complete = false;
-	memory_map_set = false;
-	ff_override_active = false;
+	reset_core_runtime_state();
+	minimum_audio_latency_requested = false;
 	content_is_cd = false;
 	cheat_entries.clear();
 }
@@ -2995,7 +3080,7 @@ void retro_get_system_info(struct retro_system_info *info)
 	/* info->valid_extensions = "adf|uae|ipf|zip|lha|hdf|rp9"; */
 	info->valid_extensions = "adf|adz|dms|fdi|raw|ipf|hdf|hdz|lha|lzh|zip|7z|uae|rp9|m3u|m3u8|iso|cue|ccd|nrg|mds|chd";
 	info->need_fullpath    = true;
-	info->block_extract    = false;
+	info->block_extract    = true;
 }
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
@@ -3117,10 +3202,6 @@ void retro_set_environment(retro_environment_t cb)
 
 	if (!environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
 		memset(&perf_cb, 0, sizeof(perf_cb));
-	{
-		unsigned audio_latency = 64;
-		environ_cb(RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY, &audio_latency);
-	}
 	{
 		struct retro_audio_buffer_status_callback audio_buf_cb = { audio_buffer_status_cb };
 		if (!environ_cb(RETRO_ENVIRONMENT_SET_AUDIO_BUFFER_STATUS_CALLBACK, &audio_buf_cb))
@@ -3255,9 +3336,15 @@ void retro_reset(void)
 
 void retro_run(void)
 {
+	apply_minimum_audio_latency();
+
+	if (!ensure_core_fiber())
+		return;
+
 	if (!core_started) {
 		if (log_cb)
 			log_cb(RETRO_LOG_INFO, "retro_run: starting core, core_fiber=%p\n", (void*)core_fiber);
+		poll_input();
 		co_switch(core_fiber);
 		core_started = true;
 		update_memory_map();
@@ -3314,6 +3401,12 @@ void retro_run(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
+	if (core_started || core_shutdown_complete) {
+		shutdown_core_fiber();
+		delete_core_fiber();
+	}
+	ensure_core_fiber();
+	reset_core_runtime_state();
 	libretro_debug_open();
 	// Defensive: by retro_load_game time, frontends that delay path setup will
 	// have populated system_dir/save_dir, even if they were empty during
@@ -3512,7 +3605,9 @@ bool retro_load_game(const struct retro_game_info *info)
 
 void retro_unload_game(void)
 {
-	uae_quit();
+	shutdown_core_fiber();
+	delete_core_fiber();
+	reset_core_runtime_state();
 	cheat_entries.clear();
 	if (!whdload_temp_path.empty()) {
 		if (vfs_available && vfs_iface.remove)
