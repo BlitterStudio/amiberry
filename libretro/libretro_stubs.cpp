@@ -522,6 +522,13 @@ static int libretro_add_rom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 	return 1;
 }
 
+static bool libretro_is_rom_key_file(const std::string& path)
+{
+	const auto name_pos = path.find_last_of("/\\");
+	const std::string name = name_pos == std::string::npos ? path : path.substr(name_pos + 1);
+	return _tcsicmp(name.c_str(), _T("rom.key")) == 0;
+}
+
 static bool libretro_is_rom_ext(const std::string& path, const bool deepscan)
 {
 	if (path.empty())
@@ -557,7 +564,11 @@ static int libretro_scan_rom_entry(struct zfile* f, void* user)
 {
 	auto* rsd = static_cast<libretro_rom_scan_data*>(user);
 	const TCHAR* path = zfile_getname(f);
-	const TCHAR* romkey = _T("rom.key");
+
+	if (libretro_is_rom_key_file(path)) {
+		addkeyfile(path);
+		return 0;
+	}
 
 	if (!libretro_is_rom_ext(path, true))
 		return 0;
@@ -568,15 +579,13 @@ static int libretro_scan_rom_entry(struct zfile* f, void* user)
 		if (rd->type & ROMTYPE_KEY)
 			addkeyfile(path);
 		rsd->got = 1;
-	} else if (_tcslen(path) > _tcslen(romkey) && !_tcsicmp(path + _tcslen(path) - _tcslen(romkey), romkey)) {
-		addkeyfile(path);
 	}
 	return 0;
 }
 
 static int libretro_scan_rom_file(const std::string& path, UAEREG* fkey, const bool deepscan)
 {
-	if (!libretro_is_rom_ext(path, deepscan))
+	if (!libretro_is_rom_key_file(path) && !libretro_is_rom_ext(path, deepscan))
 		return 0;
 
 	libretro_rom_scan_data rsd = { fkey, 0 };
@@ -589,6 +598,8 @@ static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bo
 	struct dirent* entry;
 	struct stat statbuf {};
 	int ret = 0;
+	std::vector<std::string> files;
+	std::vector<std::string> dirs;
 
 	write_log(_T("libretro ROM scan directory '%s'\n"), path.c_str());
 
@@ -607,15 +618,26 @@ static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bo
 			continue;
 
 		if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
-			if (libretro_scan_rom_file(tmppath, fkey, deepscan))
-				ret = 1;
+			files.push_back(tmppath);
 		} else if (deepscan && S_ISDIR(statbuf.st_mode) && entry->d_name[0] != '.' && level < 2) {
-			if (libretro_scan_rom_dir(fkey, tmppath, deepscan, level + 1))
-				ret = 1;
+			dirs.push_back(tmppath);
 		}
 	}
 
 	closedir(dp);
+
+	for (const auto& file : files) {
+		if (libretro_is_rom_key_file(file))
+			libretro_scan_rom_file(file, fkey, deepscan);
+	}
+	for (const auto& file : files) {
+		if (!libretro_is_rom_key_file(file) && libretro_scan_rom_file(file, fkey, deepscan))
+			ret = 1;
+	}
+	for (const auto& dir : dirs) {
+		if (libretro_scan_rom_dir(fkey, dir, deepscan, level + 1))
+			ret = 1;
+	}
 	return ret;
 }
 

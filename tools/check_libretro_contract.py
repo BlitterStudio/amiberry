@@ -276,6 +276,14 @@ def main():
 		failures,
 	)
 	require(
+		"static bool libretro_is_rom_key_file" in stub_text
+		and "if (libretro_is_rom_key_file(path)) {\n\t\taddkeyfile(path);\n\t\treturn 0;\n\t}" in stub_text
+		and "if (!libretro_is_rom_key_file(path) && !libretro_is_rom_ext(path, deepscan))" in stub_text
+		and "for (const auto& file : files) {\n\t\tif (libretro_is_rom_key_file(file))\n\t\t\tlibretro_scan_rom_file(file, fkey, deepscan);\n\t}" in stub_text,
+		"libretro ROM scanning must let rom.key through and register keys before encrypted ROM candidates",
+		failures,
+	)
+	require(
 		"if (initial)\n\t\trescan_roms = true;" in amiberry_text,
 		"libretro initial startup must rescan ROMs because it has no GUI rescan path",
 		failures,
