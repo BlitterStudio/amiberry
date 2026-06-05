@@ -11,7 +11,7 @@
 #define QEMU_UAE_VERSION_MAJOR 3
 
 /* The qemu-uae minor version must be at least this */
-#define QEMU_UAE_VERSION_MINOR 5
+#define QEMU_UAE_VERSION_MINOR 8
 
 UAE_DECLARE_IMPORT_FUNCTION(
 	void, qemu_uae_version, int *major, int *minor, int *revision)

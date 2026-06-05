@@ -356,7 +356,7 @@ static bool amiberry_renderframe(const int monid, int mode, int immediate)
 	// to WITH_THREADED_CPU so must not be wrapped by that define.
 	if (ad->picasso_zero_copy_update_needed) {
 		const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = false;
-		if (currprefs.rtg_zerocopy) {
+		if (p96_is_zero_copy_enabled(monid)) {
 			target_graphics_buffer_update(monid, true);
 		}
 	}
@@ -668,11 +668,8 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 		return nullptr;
 	}
 
-	if (currprefs.rtg_zerocopy) {
-		uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
-		if (rtg_vram != nullptr && surface->pixels == rtg_vram) {
-			return nullptr;
-		}
+	if (p96_is_zero_copy_surface(monid, surface->pixels)) {
+		return nullptr;
 	}
 
 
@@ -1209,7 +1206,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && surface_ref && surface_ref->format == pixel_format) {
 		bool skip_update = true;
-		if (mon->screen_is_picasso) {
+		if (mon->screen_is_picasso && p96_is_zero_copy_enabled(mon->monitor_id)) {
 			uae_u8* rtg_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
 			if (rtg_ptr && surface_ref->pixels != rtg_ptr) {
 				skip_update = false;
@@ -1256,7 +1253,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	uae_u8* rtg_render_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
 	bool is_zero_copy_eligible = false;
 	
-	if (mon->screen_is_picasso && currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtg_zerocopy) {
+	if (mon->screen_is_picasso && p96_is_zero_copy_enabled(mon->monitor_id)) {
 		int p96_bpp = state->BytesPerPixel;
 
 		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);

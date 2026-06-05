@@ -301,6 +301,19 @@ void fixup_cpu (struct uae_prefs *p)
 		break;
 	}
 
+#ifndef WITH_PPC
+	if (cpuboard_is_ppc_accelerator(p)) {
+		p->cpuboard_type = 0;
+		p->cpuboard_subtype = 0;
+		p->cpuboard_settings = 0;
+	}
+	p->ppc_mode = 0;
+	p->ppc_model[0] = 0;
+	// PPC_IMPLEMENTATION_AUTO is only visible when WITH_PPC includes uae/ppc.h.
+	p->ppc_implementation = 0;
+	p->ppc_cpu_idle = 0;
+#endif
+
 	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020)) {
 		p->cpu_thread = false;
 		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));

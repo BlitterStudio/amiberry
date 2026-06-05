@@ -52,6 +52,73 @@ enum RomDialogSource {
 };
 static RomDialogSource rom_dialog_source = ROM_DIALOG_NONE;
 
+static bool is_accelerator_subtype_available(int type, int subtype)
+{
+#ifdef WITH_PPC
+    (void)type;
+    (void)subtype;
+    return true;
+#else
+    struct uae_prefs candidate = changed_prefs;
+    candidate.cpuboard_type = type;
+    candidate.cpuboard_subtype = subtype;
+    return !cpuboard_is_ppc_accelerator(&candidate);
+#endif
+}
+
+static bool is_accelerator_type_available(int type)
+{
+#ifdef WITH_PPC
+    (void)type;
+    return true;
+#else
+    if (type == 0 || !cpuboards[type].subtypes) {
+        return true;
+    }
+
+    bool has_subtypes = false;
+    for (int i = 0; cpuboards[type].subtypes[i].name; i++) {
+        has_subtypes = true;
+        if (is_accelerator_subtype_available(type, i)) {
+            return true;
+        }
+    }
+    return !has_subtypes;
+#endif
+}
+
+static int get_available_accelerator_subtype(int type)
+{
+    const int default_subtype = cpuboards[type].defaultsubtype;
+    if (is_accelerator_subtype_available(type, default_subtype)) {
+        return default_subtype;
+    }
+
+    if (cpuboards[type].subtypes) {
+        for (int i = 0; cpuboards[type].subtypes[i].name; i++) {
+            if (is_accelerator_subtype_available(type, i)) {
+                return i;
+            }
+        }
+    }
+    return 0;
+}
+
+static void sanitize_accelerator_selection()
+{
+#ifndef WITH_PPC
+    if (cpuboard_is_ppc_accelerator(&changed_prefs)) {
+        changed_prefs.cpuboard_type = 0;
+        changed_prefs.cpuboard_subtype = 0;
+        changed_prefs.cpuboard_settings = 0;
+        changed_prefs.ppc_mode = 0;
+        changed_prefs.ppc_model[0] = 0;
+        changed_prefs.ppc_implementation = 0;
+        changed_prefs.ppc_cpu_idle = 0;
+    }
+#endif
+}
+
 // WinUAE sync: copycpuboardmem() syncs CPU board memory with the appropriate memory subsystem
 void copycpuboardmem(bool tomem)
 {
@@ -692,6 +759,7 @@ void render_panel_expansions() {
 
     // Accelerator Settings
     BeginGroupBox("Accelerator Board Settings");
+    sanitize_accelerator_selection();
     const int type = changed_prefs.cpuboard_type;
     const cpuboardsubtype *st = &cpuboards[type].subtypes[changed_prefs.cpuboard_subtype];
 
@@ -704,15 +772,18 @@ void render_panel_expansions() {
         ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
         if (ImGui::BeginCombo("##AccelType", cpuboards[changed_prefs.cpuboard_type].name)) {
             for (int i = 0; cpuboards[i].name; i++) {
+                if (!is_accelerator_type_available(i)) {
+                    continue;
+                }
                 const bool is_selected = (changed_prefs.cpuboard_type == i);
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                 if (ImGui::Selectable(cpuboards[i].name, is_selected)) {
                     changed_prefs.cpuboard_type = i;
-                    changed_prefs.cpuboard_subtype = cpuboards[i].defaultsubtype;
+                    changed_prefs.cpuboard_subtype = get_available_accelerator_subtype(i);
                     changed_prefs.cpuboard_settings = 0;
                     // WinUAE sync: Adjust ppc_mode based on CPU board type
-                    if (is_ppc_cpu(&changed_prefs)) {
+                    if (cpuboard_is_ppc_accelerator(&changed_prefs)) {
                         changed_prefs.ppc_mode = 2;
                     } else if (changed_prefs.ppc_mode == 2) {
                         changed_prefs.ppc_mode = 0;
@@ -736,6 +807,10 @@ void render_panel_expansions() {
             if (ImGui::BeginCombo("##AccelSub", subtypes[changed_prefs.cpuboard_subtype].name)) {
                 int i = 0;
                 while (subtypes[i].name) {
+                    if (!is_accelerator_subtype_available(type, i)) {
+                        i++;
+                        continue;
+                    }
                     const bool is_selected = (changed_prefs.cpuboard_subtype == i);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);

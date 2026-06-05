@@ -31,12 +31,22 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         $<TARGET_FILE:floppybridge>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/)
+if(QEMU_UAE_PLUGIN)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            "${QEMU_UAE_PLUGIN}"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/)
+endif()
 
 # Install plugin DLLs to plugins/ subdirectory
 install(FILES $<TARGET_FILE:capsimage>
         DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
 install(FILES $<TARGET_FILE:floppybridge>
         DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
+if(QEMU_UAE_PLUGIN)
+    install(FILES "${QEMU_UAE_PLUGIN}"
+            DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
+endif()
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
         DESTINATION ${CMAKE_INSTALL_BINDIR}

@@ -141,16 +141,18 @@
 #define WITH_BUILTIN_SLIRP
 #define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */ // defined externally in Amiberry
-#define WITH_PPC
 #define WITH_TOCCATA
 #define WITH_PCI
 
-// PCem support and any dependent features
-#ifdef USE_PCEM
+// CPU-board SCSI support is needed by PCem boards and PPC accelerators.
+#if defined(USE_PCEM) || defined(WITH_PPC)
 #define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
 #define NCR9X /* 53C9X SCSI */
+#endif
+
+// PCem support and dependent x86 bridgeboard features.
+#ifdef USE_PCEM
 #define WITH_X86
-#define WITH_QEMU_CPU
 #define WITH_DRACO
 #endif
 

@@ -26,6 +26,12 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:floppybridge>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>)
+if(QEMU_UAE_PLUGIN)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${QEMU_UAE_PLUGIN}"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+endif()
 
 # Gather all dependencies with dylibbundler
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -86,6 +92,10 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+    if(QEMU_UAE_PLUGIN)
+        install(FILES "${QEMU_UAE_PLUGIN}"
+                DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+    endif()
 
     # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers

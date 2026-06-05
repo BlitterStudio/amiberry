@@ -17,6 +17,7 @@ int cpuboard_maxmemory(struct uae_prefs *p);
 bool cpuboard_32bit(struct uae_prefs *p);
 bool cpuboard_jitdirectompatible(struct uae_prefs *p);
 bool is_ppc_cpu(struct uae_prefs *);
+bool cpuboard_is_ppc_accelerator(struct uae_prefs *p);
 bool cpuboard_io_special(int addr, uae_u32 *val, int size, bool write);
 void cpuboard_overlay_override(void);
 void cpuboard_setboard(struct uae_prefs *p, int type, int subtype);

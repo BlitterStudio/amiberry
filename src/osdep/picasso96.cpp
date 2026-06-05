@@ -1130,6 +1130,25 @@ static bool is_uaegfx_active()
 	return true;
 }
 
+#ifdef AMIBERRY
+bool p96_is_zero_copy_enabled(int monid)
+{
+	if (!currprefs.rtg_zerocopy)
+		return false;
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return false;
+	return is_uaegfx_active();
+}
+
+bool p96_is_zero_copy_surface(int monid, const void* pixels)
+{
+	if (!pixels || !p96_is_zero_copy_enabled(monid))
+		return false;
+	const uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
+	return rtg_vram && pixels == rtg_vram;
+}
+#endif
+
 static void rtg_render()
 {
 	int monid = currprefs.rtgboards[0].monitor_id;
@@ -3905,7 +3924,7 @@ static uae_u32 REGPARAM2 picasso_SetGC (TrapContext *ctx)
 	// only SetGC + SetPanning fire. Mirror SetPanning and signal the host
 	// renderer to force-refresh its zero-copy binding so the texture is
 	// rebound to the restored screen's VRAM and a full upload happens.
-	if (currprefs.rtg_zerocopy) {
+	if (p96_is_zero_copy_enabled(monid)) {
 		adisplays[monid].picasso_zero_copy_update_needed = true;
 	}
 #endif
@@ -4000,7 +4019,7 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	// and a promoted application screen). Signal the host renderer to
 	// refresh its zero-copy binding at the next frame in addition to the
 	// SETPANNING state-change processing.
-	if (currprefs.rtg_zerocopy) {
+	if (p96_is_zero_copy_enabled(monid)) {
 		adisplays[monid].picasso_zero_copy_update_needed = true;
 	}
 #endif
@@ -4806,7 +4825,7 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 
 	// Force update check when Display state changes (On/Off)
 #ifdef AMIBERRY
-	if (currprefs.rtg_zerocopy) {
+	if (p96_is_zero_copy_enabled(monid)) {
 		adisplays[monid].picasso_zero_copy_update_needed = true;
 	}
 #endif
@@ -6084,13 +6103,14 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 				dstp = gfx_lock_picasso(monid, dofull);
 			}
 			
-			// AMIBERRY: Zero Copy support
-			// If we are in Zero Copy mode, dstp is nullptr but we still want to process dirty regions
-			// so we can invalidate the texture correctly (partial updates)
+			// AMIBERRY: UAE RTG zero-copy support. If the host surface is bound
+			// directly to UAE RTG memory, dstp is nullptr but we still need to
+			// process dirty regions so the texture is invalidated correctly.
 			bool zero_copy = false;
-			if (dstp == nullptr) {
+			if (dstp == nullptr && p96_is_zero_copy_enabled(monid)) {
 				uae_u8* rtg_ptr = p96_get_render_buffer_pointer(monid);
-				if (rtg_ptr != nullptr) {
+				SDL_Surface* surface = get_amiga_surface(monid);
+				if (rtg_ptr != nullptr && surface != nullptr && surface->pixels == rtg_ptr) {
 					zero_copy = true;
 				}
 			}

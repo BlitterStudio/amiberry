@@ -7,6 +7,9 @@
 #include "cpuboard.h"
 #include "memory.h"
 #include "x86.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 
 #ifndef MAX_JIT_CACHE
 #define MAX_JIT_CACHE 16384
@@ -67,12 +70,14 @@ void render_panel_cpu() {
                             changed_prefs.cachesize == 0 &&
                             changed_prefs.cpu_compatible;
 
+#ifdef WITH_PPC
     bool enable_ppc =
             changed_prefs.cpu_model >= 68040 &&
             (changed_prefs.ppc_mode == 1 ||
              (changed_prefs.ppc_mode == 0 && !is_ppc_cpu(&changed_prefs)));
     bool enable_ppc_idle =
             changed_prefs.ppc_mode != 0; // simplified based on enabled check
+#endif
 
     bool enable_cpu_speed_slider = !changed_prefs.cpu_cycle_exact;
     bool enable_24bit =
@@ -467,7 +472,12 @@ void render_panel_cpu() {
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
 
-        const bool no_thread = (changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
+        const bool no_thread = (changed_prefs.cpu_compatible ||
+#ifdef WITH_PPC
+                                changed_prefs.ppc_mode ||
+#endif
+                                changed_prefs.cpu_memory_cycle_exact ||
+                                changed_prefs.cpu_model < 68020);
         ImGui::BeginDisabled(no_thread || emulating);
         AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ShowHelpMarker("Run CPU emulation on a separate thread. Experimental.");
@@ -476,6 +486,7 @@ void render_panel_cpu() {
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("Cycle-Exact CPU Emulation Speed");
 
+#ifdef WITH_PPC
         if (BeginGroupBox("PowerPC CPU Options", true)) {
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
@@ -494,6 +505,26 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::AlignTextToFramePadding();
+        ImGui::Text("PPC implementation");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(slider_width);
+        const char *ppc_impl_names[] = {"Automatic", "Dummy", "PearPC", "QEMU"};
+        int ppc_impl = changed_prefs.ppc_implementation;
+        if (ppc_impl < PPC_IMPLEMENTATION_AUTO || ppc_impl > PPC_IMPLEMENTATION_QEMU) {
+            ppc_impl = PPC_IMPLEMENTATION_AUTO;
+        }
+        ImGui::BeginDisabled(emulating);
+        if (ImGui::Combo("##PPCImplementation", &ppc_impl, ppc_impl_names, IM_ARRAYSIZE(ppc_impl_names))) {
+            changed_prefs.ppc_implementation = ppc_impl;
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+        ImGui::EndDisabled();
+#ifndef WITH_QEMU_PPC
+        ImGui::TextDisabled("QEMU PPC plugin support is not compiled into this build.");
+#endif
+        ShowHelpMarker("Select the PPC backend. Automatic tries QEMU first when plugin support is compiled, then falls back to other available implementations.");
+
+        ImGui::AlignTextToFramePadding();
         ImGui::Text("Stopped M68K CPU idle mode");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(slider_width);
@@ -506,6 +537,7 @@ void render_panel_cpu() {
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         }
         EndGroupBox("PowerPC CPU Options");
+#endif
 
         if (BeginGroupBox("x86 Bridgeboard CPU options", true)) {
         ImGui::BeginDisabled(!enable_x86_group);

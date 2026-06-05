@@ -117,7 +117,7 @@ AMIBERRY_VERSION_PATCH := $(word 3,$(subst ., ,$(AMIBERRY_VERSION)))
 LIBRETRO_SUPPORTED_EXTENSIONS := $(shell sed -n 's/^[[:space:]]*info->valid_extensions = "\(.*\)";/\1/p' $(LIBRETRO_DIR)/libretro.cpp | head -1)
 
 # Add Amiberry defines
-FLAGS += -DAMIBERRY -DLIBRETRO -DUTF8PROC_STATIC -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
+FLAGS += -DAMIBERRY -DLIBRETRO -DWITH_PPC -DWITH_QEMU_CPU -DUTF8PROC_STATIC -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
 FLAGS += -DAMIBERRY_VERSION=\"$(AMIBERRY_VERSION)\" -DAMIBERRY_VERSION_PRE_RELEASE=\"\"
 FLAGS += -DAMIBERRY_VERSION_MAJOR=$(AMIBERRY_VERSION_MAJOR) -DAMIBERRY_VERSION_MINOR=$(AMIBERRY_VERSION_MINOR) -DAMIBERRY_VERSION_PATCH=$(AMIBERRY_VERSION_PATCH)
 FLAGS += -DAMIBERRY_IS_PRE_RELEASE=0
@@ -429,6 +429,9 @@ SOURCES_QEMUVGA := $(AMIBERRY_DIR)/src/qemuvga/qemu.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/qemuuaeglue.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/vga.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/cirrus_vga.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/esp.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/lsi53c710.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/lsi53c895a.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/ne2000.cpp \
                   $(AMIBERRY_DIR)/src/qemuvga/es1370.cpp
 
@@ -622,6 +625,7 @@ SOURCES_MISC := $(AMIBERRY_DIR)/src/caps/caps_amiberry.cpp \
 SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(SOURCES_PPC) $(SOURCES_QEMUVGA) $(SOURCES_ARCHIVE) $(SOURCES_SLIRP) $(SOURCES_MISC)
 
 ifeq ($(USE_PCEM),1)
+FLAGS += -DUSE_PCEM
 SOURCES_CXX += $(SOURCES_PCEM)
 endif
 
