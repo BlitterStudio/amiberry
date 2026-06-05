@@ -26,16 +26,56 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:floppybridge>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>)
+
+set(_amiberry_dylibbundler_search_args
+        -s /usr/local/lib
+        -s /usr/local/opt/glib/lib
+        -s /usr/local/opt/gettext/lib
+        -s /usr/local/opt/pcre2/lib
+        -s /opt/homebrew/lib
+        -s /opt/homebrew/opt/glib/lib
+        -s /opt/homebrew/opt/gettext/lib
+        -s /opt/homebrew/opt/pcre2/lib)
+
 if(QEMU_UAE_PLUGIN)
+    get_filename_component(_amiberry_qemu_uae_plugin_name "${QEMU_UAE_PLUGIN}" NAME)
+    set(_amiberry_qemu_uae_plugin_output
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/${_amiberry_qemu_uae_plugin_name}")
+
+    set(_amiberry_qemu_uae_plugin_arches ${CMAKE_OSX_ARCHITECTURES})
+    if(NOT _amiberry_qemu_uae_plugin_arches)
+        set(_amiberry_qemu_uae_plugin_arches "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+    list(LENGTH _amiberry_qemu_uae_plugin_arches _amiberry_qemu_uae_plugin_arch_count)
+    if(_amiberry_qemu_uae_plugin_arch_count EQUAL 1)
+        list(GET _amiberry_qemu_uae_plugin_arches 0 _amiberry_qemu_uae_plugin_arch)
+        if(_amiberry_qemu_uae_plugin_arch STREQUAL "aarch64")
+            set(_amiberry_qemu_uae_plugin_arch "arm64")
+        endif()
+    else()
+        set(_amiberry_qemu_uae_plugin_arch "")
+    endif()
+
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${QEMU_UAE_PLUGIN}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+            COMMAND "${CMAKE_COMMAND}"
+                "-DQEMU_UAE_PLUGIN_INPUT=${QEMU_UAE_PLUGIN}"
+                "-DQEMU_UAE_PLUGIN_OUTPUT=${_amiberry_qemu_uae_plugin_output}"
+                "-DQEMU_UAE_PLUGIN_ARCH=${_amiberry_qemu_uae_plugin_arch}"
+                -P "${CMAKE_SOURCE_DIR}/cmake/macos/prepare_qemu_plugin.cmake"
+            COMMENT "Preparing QEMU-UAE PPC plugin"
+            VERBATIM)
 endif()
 
 # Gather all dependencies with dylibbundler
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/ -s /usr/local/lib)
+        COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/ ${_amiberry_dylibbundler_search_args})
+
+if(QEMU_UAE_PLUGIN)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND dylibbundler -of -cd -b -x "${_amiberry_qemu_uae_plugin_output}" -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/ ${_amiberry_dylibbundler_search_args}
+            COMMENT "Bundling QEMU-UAE PPC plugin dependencies"
+            VERBATIM)
+endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -DAPP_BINARY=$<TARGET_FILE:${PROJECT_NAME}> -P ${CMAKE_SOURCE_DIR}/cmake/macos/dedupe_frameworks_rpath.cmake)
@@ -93,7 +133,7 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     if(QEMU_UAE_PLUGIN)
-        install(FILES "${QEMU_UAE_PLUGIN}"
+        install(FILES "${_amiberry_qemu_uae_plugin_output}"
                 DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     endif()
 

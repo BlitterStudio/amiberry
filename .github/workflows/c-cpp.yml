@@ -333,17 +333,36 @@ jobs:
           echo "=== Verifying dylib dependencies resolve ==="
           missing_deps=0
           MAIN_BIN="universal-app/Amiberry.app/Contents/MacOS/Amiberry"
-          for arch in x86_64 arm64; do
-            while read -r line; do
-              dep_name=$(echo "$line" | sed -E 's|.*@executable_path/../Frameworks/([^ ]+).*|\1|')
-              if [ ! -f "$UNI_FW/$dep_name" ]; then
-                echo "  MISSING ($arch): $dep_name"
+
+          check_framework_refs() {
+            local binary="$1"
+            local label="$2"
+            for arch in x86_64 arm64; do
+              if ! lipo "$binary" -verify_arch "$arch" >/dev/null 2>&1; then
+                continue
+              fi
+              while read -r line; do
+                dep_name=$(echo "$line" | sed -E 's|.*@executable_path/../Frameworks/([^ ]+).*|\1|')
+                if [ ! -f "$UNI_FW/$dep_name" ]; then
+                  echo "  MISSING ($arch, $label): $dep_name"
+                  missing_deps=1
+                fi
+              done < <(otool -arch "$arch" -L "$binary" 2>/dev/null | grep '@executable_path/../Frameworks/' || true)
+              if otool -arch "$arch" -L "$binary" 2>/dev/null | grep -E '/opt/homebrew|/usr/local'; then
+                echo "  EXTERNAL HOMEBREW DEPENDENCY ($arch, $label)"
                 missing_deps=1
               fi
-            done < <(otool -arch "$arch" -L "$MAIN_BIN" 2>/dev/null | grep '@executable_path/../Frameworks/' || true)
+            done
+          }
+
+          check_framework_refs "$MAIN_BIN" "Amiberry"
+          for dylib in "$UNI_PLUGINS"/*.dylib "$UNI_FW"/*.dylib; do
+            [ -f "$dylib" ] || continue
+            [ -L "$dylib" ] && continue
+            check_framework_refs "$dylib" "$(basename "$dylib")"
           done
           if [ "$missing_deps" = "1" ]; then
-            echo "::error::Some @executable_path dylib references cannot be resolved — the app will crash on load"
+            echo "::error::Some dylib references are unresolved or still point at Homebrew paths"
             exit 1
           fi
 
