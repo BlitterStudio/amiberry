@@ -133,7 +133,7 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     if(QEMU_UAE_PLUGIN)
-        install(FILES "${QEMU_UAE_PLUGIN}"
+        install(FILES "${_amiberry_qemu_uae_plugin_output}"
                 DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     endif()
 
