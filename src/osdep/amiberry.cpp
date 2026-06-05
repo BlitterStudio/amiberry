@@ -4611,7 +4611,11 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->filesystem_mangle_reserved_names = true;
 	}
 
+#ifdef LIBRETRO
+	multithread_enabled = false;
+#else
 	multithread_enabled = true;
+#endif
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
@@ -9877,7 +9881,12 @@ void read_rom_list(bool initial)
 	UAEREG* fkey = regcreatetree(nullptr, _T("DetectedROMs"));
 	if (fkey == nullptr)
 		return;
-	if (!exists || forceroms) {
+	bool rescan_roms = !exists || forceroms;
+#ifdef LIBRETRO
+	if (initial)
+		rescan_roms = true;
+#endif
+	if (rescan_roms) {
 		//if (initial) {
 		//	scaleresource_init(NULL, 0);
 		//}

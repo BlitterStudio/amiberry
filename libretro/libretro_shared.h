@@ -16,6 +16,7 @@ extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
 extern retro_log_printf_t log_cb;
 extern bool pixel_format_xrgb8888;
+extern unsigned libretro_audio_frames_this_run;
 
 void libretro_yield(void);
 void reset_parse_cmdline(void);

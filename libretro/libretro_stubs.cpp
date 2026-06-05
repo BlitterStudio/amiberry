@@ -5,10 +5,23 @@
 #include "filesys.h"
 #include "disk.h"
 #include "blkdev.h"
+#include "rommgr.h"
+#include "zfile.h"
+#include "registry.h"
+#include "fsdb.h"
+#include "uae.h"
 
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <dirent.h>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#endif
 
 #ifdef LIBRETRO
 unsigned int gui_ledstate = 0;
@@ -382,10 +395,297 @@ void save_theme(const std::string& theme_filename)
 	(void)theme_filename;
 }
 
+struct libretro_rom_scan_candidate
+{
+	std::string path;
+	bool deepscan;
+};
+
+struct libretro_rom_scan_data
+{
+	UAEREG* fkey;
+	int got;
+};
+
+static std::string libretro_path_join(const std::string& dir, const std::string& file)
+{
+	if (dir.empty())
+		return file;
+	if (file.empty())
+		return dir;
+	const char last = dir.back();
+	if (last == '/' || last == '\\')
+		return dir + file;
+	return dir + "/" + file;
+}
+
+static void libretro_append_scan_candidate(std::vector<libretro_rom_scan_candidate>& candidates,
+	const std::string& path, const bool deepscan)
+{
+	if (path.empty())
+		return;
+
+	TCHAR resolved[MAX_DPATH] = {};
+#ifdef _WIN32
+	if (_fullpath(resolved, path.c_str(), MAX_DPATH) == nullptr)
+		return;
+#else
+	if (realpath(path.c_str(), resolved) == nullptr)
+		return;
+#endif
+
+	for (auto& candidate : candidates) {
+		if (_tcsicmp(candidate.path.c_str(), resolved) == 0) {
+			candidate.deepscan = candidate.deepscan || deepscan;
+			return;
+		}
+	}
+
+	candidates.push_back({ resolved, deepscan });
+}
+
+static void libretro_append_scan_root(std::vector<libretro_rom_scan_candidate>& candidates,
+	const char* root)
+{
+	if (!root || !*root)
+		return;
+
+	const std::string root_path = root;
+	libretro_append_scan_candidate(candidates, root_path, false);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "roms"), true);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "Kickstarts"), true);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "save-data/Kickstarts"), true);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "whdboot/save-data/Kickstarts"), true);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "amiberry/whdboot/save-data/Kickstarts"), true);
+}
+
+static int libretro_rom_ext_priority(const TCHAR* path, const int size)
+{
+	const TCHAR* s = _tcsrchr(path, '.');
+	if (s == nullptr)
+		return 80;
+	if (!my_existsfile(path))
+		return 100;
+
+	int pri = 10;
+	struct mystat ms {};
+	if (my_stat(path, &ms) && ms.size == size)
+		pri--;
+	return pri;
+}
+
+static int libretro_add_rom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
+{
+	TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH], tmp3[MAX_DPATH];
+	char pathname[MAX_DPATH];
+
+	_sntprintf(tmp1, sizeof tmp1, _T("ROM_%03d"), rd->id);
+	if (rd->group) {
+		TCHAR* p = tmp1 + _tcslen(tmp1);
+		_sntprintf(p, sizeof tmp1 - _tcslen(tmp1), _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
+	}
+	getromname(rd, tmp2);
+	pathname[0] = 0;
+
+	if (name)
+		_tcscpy(pathname, name);
+	if (rd->crc32 == 0xffffffff) {
+		if (rd->configname)
+			_sntprintf(tmp2, sizeof tmp2, _T(":%s"), rd->configname);
+		else
+			_sntprintf(tmp2, sizeof tmp2, _T(":ROM_%03d"), rd->id);
+	}
+
+	int size = sizeof tmp3 / sizeof(TCHAR);
+	if (regquerystr(fkey, tmp1, tmp3, &size)) {
+		TCHAR* s = _tcschr(tmp3, '"');
+		if (s && _tcslen(s) > 1) {
+			TCHAR* s2 = s + 1;
+			s = _tcschr(s2, '"');
+			if (s)
+				*s = 0;
+			const int pri1 = libretro_rom_ext_priority(s2, rd->size);
+			const int pri2 = libretro_rom_ext_priority(pathname, rd->size);
+			if (pri2 >= pri1)
+				return 1;
+		}
+	}
+
+	fullpath(pathname, sizeof(pathname) / sizeof(TCHAR));
+	if (pathname[0]) {
+		_tcscat(tmp2, _T(" / \""));
+		_tcscat(tmp2, pathname);
+		_tcscat(tmp2, _T("\""));
+	}
+	if (!regsetstr(fkey, tmp1, tmp2))
+		return 0;
+	return 1;
+}
+
+static bool libretro_is_rom_key_file(const std::string& path)
+{
+	const auto name_pos = path.find_last_of("/\\");
+	const std::string name = name_pos == std::string::npos ? path : path.substr(name_pos + 1);
+	return _tcsicmp(name.c_str(), _T("rom.key")) == 0;
+}
+
+static bool libretro_is_rom_ext(const std::string& path, const bool deepscan)
+{
+	if (path.empty())
+		return false;
+	const auto ext_pos = path.find_last_of('.');
+	if (ext_pos == std::string::npos)
+		return false;
+
+	std::string ext = path.substr(ext_pos + 1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), [](const unsigned char ch) {
+		return static_cast<char>(std::tolower(ch));
+	});
+
+	static const char* extensions[] = {
+		"rom", "roz", "bin", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32"
+	};
+	for (const auto* candidate : extensions) {
+		if (ext == candidate)
+			return true;
+	}
+	if (ext.size() >= 2 && ext[0] == 'u' && std::isdigit(static_cast<unsigned char>(ext[1])))
+		return true;
+	if (!deepscan)
+		return false;
+	for (auto i = 0; uae_archive_extensions[i]; i++) {
+		if (_tcsicmp(ext.c_str(), uae_archive_extensions[i]) == 0)
+			return true;
+	}
+	return false;
+}
+
+static int libretro_scan_rom_entry(struct zfile* f, void* user)
+{
+	auto* rsd = static_cast<libretro_rom_scan_data*>(user);
+	const TCHAR* path = zfile_getname(f);
+
+	if (libretro_is_rom_key_file(path)) {
+		addkeyfile(path);
+		return 0;
+	}
+
+	if (!libretro_is_rom_ext(path, true))
+		return 0;
+
+	struct romdata* rd = scan_single_rom_file(f);
+	if (rd) {
+		libretro_add_rom(rsd->fkey, rd, path);
+		if (rd->type & ROMTYPE_KEY)
+			addkeyfile(path);
+		rsd->got = 1;
+	}
+	return 0;
+}
+
+static int libretro_scan_rom_file(const std::string& path, UAEREG* fkey, const bool deepscan)
+{
+	if (!libretro_is_rom_key_file(path) && !libretro_is_rom_ext(path, deepscan))
+		return 0;
+
+	libretro_rom_scan_data rsd = { fkey, 0 };
+	zfile_zopen(path, libretro_scan_rom_entry, &rsd);
+	return rsd.got;
+}
+
+static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bool deepscan, const int level)
+{
+	struct dirent* entry;
+	struct stat statbuf {};
+	int ret = 0;
+	std::vector<std::string> files;
+	std::vector<std::string> dirs;
+
+	write_log(_T("libretro ROM scan directory '%s'\n"), path.c_str());
+
+	DIR* dp = opendir(path.c_str());
+	if (dp == nullptr)
+		return 0;
+
+	while ((entry = readdir(dp)) != nullptr) {
+		if (entry->d_name[0] == '.' && (entry->d_name[1] == 0 ||
+			(entry->d_name[1] == '.' && entry->d_name[2] == 0))) {
+			continue;
+		}
+
+		const std::string tmppath = libretro_path_join(path, entry->d_name);
+		if (stat(tmppath.c_str(), &statbuf) == -1)
+			continue;
+
+		if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
+			files.push_back(tmppath);
+		} else if (deepscan && S_ISDIR(statbuf.st_mode) && entry->d_name[0] != '.' && level < 2) {
+			dirs.push_back(tmppath);
+		}
+	}
+
+	closedir(dp);
+
+	for (const auto& file : files) {
+		if (libretro_is_rom_key_file(file))
+			libretro_scan_rom_file(file, fkey, deepscan);
+	}
+	for (const auto& file : files) {
+		if (!libretro_is_rom_key_file(file) && libretro_scan_rom_file(file, fkey, deepscan))
+			ret = 1;
+	}
+	for (const auto& dir : dirs) {
+		if (libretro_scan_rom_dir(fkey, dir, deepscan, level + 1))
+			ret = 1;
+	}
+	return ret;
+}
+
 int scan_roms(int show)
 {
 	(void)show;
-	return 0;
+
+	static int recursive;
+	if (recursive)
+		return 0;
+	recursive++;
+
+	regdeletetree(nullptr, _T("DetectedROMs"));
+	UAEREG* fkey = regcreatetree(nullptr, _T("DetectedROMs"));
+	if (fkey == nullptr) {
+		recursive--;
+		return 0;
+	}
+
+	std::vector<libretro_rom_scan_candidate> candidates;
+	const std::string rom_path = get_rom_path();
+	libretro_append_scan_candidate(candidates, rom_path, false);
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SYSTEM_DIR"));
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SAVE_DIR"));
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_WHDBOOT_ASSETS_DIR"));
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_WHDBOOT_PATH"));
+	libretro_append_scan_root(candidates, getenv("WHDBOOT_SAVE_DATA"));
+	libretro_append_scan_candidate(candidates, changed_prefs.path_rom.path[0], false);
+
+	int cnt = 0;
+	for (const auto& candidate : candidates) {
+		if (libretro_scan_rom_dir(fkey, candidate.path, candidate.deepscan, 0))
+			cnt++;
+	}
+
+	for (int id = 1; ; id++) {
+		struct romdata* rd = getromdatabyid(id);
+		if (!rd)
+			break;
+		if (rd->crc32 == 0xffffffff)
+			libretro_add_rom(fkey, rd, nullptr);
+	}
+
+	write_log(_T("libretro ROM scan: %d matching path(s) across %zu candidate(s)\n"), cnt, candidates.size());
+	read_rom_list(false);
+	regclosetree(fkey);
+	recursive--;
+	return cnt;
 }
 
 void cancel_async_update_check()
