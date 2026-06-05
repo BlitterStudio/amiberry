@@ -8,6 +8,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "libretro" / "libretro.cpp"
 AMIBERRY_SOURCE = ROOT / "src" / "osdep" / "amiberry.cpp"
+MAIN_SOURCE = ROOT / "src" / "main.cpp"
+MAIN_WINDOW_SOURCE = ROOT / "src" / "osdep" / "gui" / "main_window.cpp"
 
 
 def extract_body(text, signature):
@@ -54,6 +56,8 @@ def require(condition, message, failures):
 def main():
 	text = SOURCE.read_text(encoding="utf-8")
 	amiberry_text = AMIBERRY_SOURCE.read_text(encoding="utf-8")
+	main_text = MAIN_SOURCE.read_text(encoding="utf-8")
+	main_window_text = MAIN_WINDOW_SOURCE.read_text(encoding="utf-8")
 	failures = []
 
 	set_environment = extract_body(text, "void retro_set_environment(retro_environment_t cb)")
@@ -71,6 +75,8 @@ def main():
 		amiberry_text,
 		"static void append_libretro_whdboot_seed_source_candidates(std::vector<std::string>& candidates,\n\tconst std::string& subdirectory)",
 	)
+	parse_cmdline = extract_body(main_text, "static void parse_cmdline (int argc, TCHAR **argv)")
+	drop_handler = extract_body(main_window_text, "static void handle_drop_file_event(const SDL_Event& event)")
 	copy_seed_dir = extract_body(
 		amiberry_text,
 		"static bool copy_missing_directory_contents_if_exists(const std::string& source_dir, const std::string& destination_dir)",
@@ -106,6 +112,17 @@ def main():
 	require(
 		"info->block_extract    = true;" in retro_get_system_info,
 		"retro_get_system_info() must block frontend archive extraction for Amiberry-managed archive formats",
+		failures,
+	)
+	require(
+		'info->valid_extensions = "adf|adz|dms|fdi|raw|ipf|hdf|hdz|lha|lzh|zip|7z|uae|rp9|m3u|m3u8|iso|cue|ccd|nrg|mds|chd";' in retro_get_system_info
+		and '_tcscmp(txt2.c_str(), ".7z") == 0' in parse_cmdline,
+		"libretro must not block frontend extraction for advertised .7z content unless .7z loads directly",
+		failures,
+	)
+	require(
+		'strcasecmp(ext.c_str(), ".7z") == 0' in drop_handler,
+		"desktop drag/drop floppy archive handling must include .7z when CLI direct loading does",
 		failures,
 	)
 	require(

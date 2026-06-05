@@ -1428,6 +1428,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				|| _tcscmp(txt2.c_str(), ".dms") == 0
 				|| _tcscmp(txt2.c_str(), ".ipf") == 0
 				|| _tcscmp(txt2.c_str(), ".zip") == 0
+				|| _tcscmp(txt2.c_str(), ".7z") == 0
 				)
 			{
 				write_log("Floppy... %s\n", txt);
