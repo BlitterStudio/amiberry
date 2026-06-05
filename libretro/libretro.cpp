@@ -493,6 +493,11 @@ static void update_memory_map()
 	memory_map_set = true;
 }
 
+static bool core_is_running()
+{
+	return core_started && !core_shutdown_complete;
+}
+
 static void update_led_interface()
 {
 	if (!led_state_cb)
@@ -2541,12 +2546,19 @@ static void keyboard_cb(bool down, unsigned keycode, uint32_t character, uint16_
 		my_kbd_handler(0, scancode, down ? 1 : 0, false);
 }
 
-static void poll_input(void)
+static bool poll_frontend_input(void)
 {
 	if (!input_poll_cb)
-		return;
+		return false;
 
 	input_poll_cb();
+	return true;
+}
+
+static void poll_input(void)
+{
+	if (!poll_frontend_input())
+		return;
 	if (!input_state_cb)
 		return;
 
@@ -3331,6 +3343,9 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
 
 void retro_reset(void)
 {
+	if (!core_is_running())
+		return;
+
 	uae_reset(0, 0);
 }
 
@@ -3338,14 +3353,23 @@ void retro_run(void)
 {
 	apply_minimum_audio_latency();
 
-	if (!ensure_core_fiber())
+	if (!ensure_core_fiber()) {
+		poll_frontend_input();
 		return;
+	}
+
+	if (core_shutdown_complete) {
+		poll_frontend_input();
+		return;
+	}
 
 	if (!core_started) {
 		if (log_cb)
 			log_cb(RETRO_LOG_INFO, "retro_run: starting core, core_fiber=%p\n", (void*)core_fiber);
-		poll_input();
+		poll_frontend_input();
 		co_switch(core_fiber);
+		if (core_shutdown_complete)
+			return;
 		core_started = true;
 		update_memory_map();
 		return;
@@ -3389,6 +3413,8 @@ void retro_run(void)
 	}
 	poll_input();
 	co_switch(core_fiber);
+	if (core_shutdown_complete)
+		return;
 	apply_cheats();
 	update_memory_map();
 	update_led_interface();
@@ -3644,6 +3670,9 @@ size_t retro_serialize_size(void)
 
 bool retro_serialize(void *data, size_t size)
 {
+	if (!core_is_running() || !data || size == 0)
+		return false;
+
 	struct zfile *f = zfile_fopen_empty(NULL, _T("libretro"));
 	if (!f) return false;
 
@@ -3671,6 +3700,9 @@ bool retro_serialize(void *data, size_t size)
 
 bool retro_unserialize(const void *data, size_t size)
 {
+	if (!core_is_running() || !data || size == 0)
+		return false;
+
 	struct zfile *f = zfile_fopen_data(_T("libretro"), (uae_u64)size, (const uae_u8*)data);
 	if (!f) return false;
 
@@ -3682,6 +3714,9 @@ extern addrbank chipmem_bank;
 
 void *retro_get_memory_data(unsigned id)
 {
+	if (!core_is_running() || !chipmem_bank.baseaddr)
+		return NULL;
+
 	switch (id)
 	{
 		case RETRO_MEMORY_SYSTEM_RAM:
@@ -3693,6 +3728,9 @@ void *retro_get_memory_data(unsigned id)
 
 size_t retro_get_memory_size(unsigned id)
 {
+	if (!core_is_running() || !chipmem_bank.baseaddr)
+		return 0;
+
 	switch (id)
 	{
 		case RETRO_MEMORY_SYSTEM_RAM:

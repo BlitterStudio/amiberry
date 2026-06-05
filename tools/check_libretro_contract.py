@@ -61,11 +61,22 @@ def main():
 	failures = []
 
 	set_environment = extract_body(text, "void retro_set_environment(retro_environment_t cb)")
+	poll_frontend_input = ""
+	try:
+		poll_frontend_input = extract_body(text, "static bool poll_frontend_input(void)")
+	except AssertionError:
+		failures.append("libretro first-frame input polling must be split from Amiberry input injection")
+	poll_input = extract_body(text, "static void poll_input(void)")
 	retro_run = extract_body(text, "void retro_run(void)")
 	startup = extract_if_body(retro_run, "if (!core_started)")
+	retro_reset = extract_body(text, "void retro_reset(void)")
 	retro_deinit = extract_body(text, "void retro_deinit(void)")
 	retro_unload_game = extract_body(text, "void retro_unload_game(void)")
 	retro_get_system_info = extract_body(text, "void retro_get_system_info(struct retro_system_info *info)")
+	retro_serialize = extract_body(text, "bool retro_serialize(void *data, size_t size)")
+	retro_unserialize = extract_body(text, "bool retro_unserialize(const void *data, size_t size)")
+	retro_get_memory_data = extract_body(text, "void *retro_get_memory_data(unsigned id)")
+	retro_get_memory_size = extract_body(text, "size_t retro_get_memory_size(unsigned id)")
 	setup_whdload_paths = extract_body(text, "static void setup_whdload_paths()")
 	get_seed_source_candidates = extract_body(
 		amiberry_text,
@@ -92,11 +103,60 @@ def main():
 		"retro_run() must apply minimum audio latency from the allowed callback",
 		failures,
 	)
-	poll_pos = startup.find("poll_input();")
+	frontend_poll_pos = startup.find("poll_frontend_input();")
 	switch_pos = startup.find("co_switch(core_fiber)")
 	require(
-		poll_pos != -1 and switch_pos != -1 and poll_pos < switch_pos,
-		"the first retro_run() path must poll input before switching to the core fiber",
+		frontend_poll_pos != -1 and switch_pos != -1 and frontend_poll_pos < switch_pos,
+		"the first retro_run() path must poll the frontend before switching to the core fiber",
+		failures,
+	)
+	require(
+		"poll_input();" not in startup,
+		"the first retro_run() path must not inject frontend input before Amiberry input devices are initialized",
+		failures,
+	)
+	require(
+		"input_poll_cb();" in poll_frontend_input and "poll_frontend_input()" in poll_input,
+		"normal libretro input polling must keep calling the frontend input_poll callback",
+		failures,
+	)
+	require(
+		"static bool core_is_running()" in text
+		and "return core_started && !core_shutdown_complete;" in text,
+		"libretro callbacks must have a shared live-core guard",
+		failures,
+	)
+	require(
+		"if (core_shutdown_complete)" in retro_run
+		and "if (!ensure_core_fiber()) {\n\t\tpoll_frontend_input();\n\t\treturn;\n\t}" in retro_run
+		and "if (core_shutdown_complete)\n\t\t\treturn;" in startup
+		and "if (core_shutdown_complete) {\n\t\tpoll_frontend_input();\n\t\treturn;\n\t}" in retro_run,
+		"retro_run() must poll the frontend before early returns that skip runtime work",
+		failures,
+	)
+	require(
+		"if (!core_is_running())\n\t\treturn;" in retro_reset,
+		"retro_reset() must not call UAE reset before the core is running",
+		failures,
+	)
+	require(
+		"if (!core_is_running() || !data || size == 0)\n\t\treturn false;" in retro_serialize,
+		"retro_serialize() must reject calls before live core state exists",
+		failures,
+	)
+	require(
+		"if (!core_is_running() || !data || size == 0)\n\t\treturn false;" in retro_unserialize,
+		"retro_unserialize() must reject calls before live core state exists",
+		failures,
+	)
+	require(
+		"if (!core_is_running() || !chipmem_bank.baseaddr)\n\t\treturn NULL;" in retro_get_memory_data,
+		"retro_get_memory_data() must not expose memory before chip RAM is live",
+		failures,
+	)
+	require(
+		"if (!core_is_running() || !chipmem_bank.baseaddr)\n\t\treturn 0;" in retro_get_memory_size,
+		"retro_get_memory_size() must not report memory before chip RAM is live",
 		failures,
 	)
 	require(
