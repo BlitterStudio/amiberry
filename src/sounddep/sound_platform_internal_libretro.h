@@ -24,7 +24,7 @@ static inline bool sound_platform_output_audio(struct sound_data* sd, uae_u16* s
 {
 	const auto frames = sd->sndbufsize / (sd->channels * 2);
 	if (audio_batch_cb) {
-		audio_batch_cb((const int16_t*)sndbuffer, frames);
+		libretro_audio_frames_this_run += static_cast<unsigned>(audio_batch_cb((const int16_t*)sndbuffer, frames));
 	} else if (audio_cb) {
 		const auto* samples = reinterpret_cast<const int16_t*>(sndbuffer);
 		for (int i = 0; i < frames; i++) {
@@ -32,6 +32,7 @@ static inline bool sound_platform_output_audio(struct sound_data* sd, uae_u16* s
 			const int16_t right = (sd->channels > 1) ? samples[i * sd->channels + 1] : left;
 			audio_cb(left, right);
 		}
+		libretro_audio_frames_this_run += frames;
 	}
 	return true;
 }

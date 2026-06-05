@@ -7236,7 +7236,8 @@ static int filesys_iteration(UnitInfo *ui)
 	morelocks = (uae_u32)read_comm_pipe_int_blocking(ui->unit_pipe);
 
 	if (ui->reset_state == FS_GO_DOWN) {
-		trap_background_set_complete(ctx);
+		if (ctx)
+			trap_background_set_complete(ctx);
 		if (pck != 0)
 		   return 1;
 		/* Death message received. */

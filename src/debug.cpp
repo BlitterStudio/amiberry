@@ -5471,9 +5471,18 @@ end:
 
 static uae_u8 *dump_xlate (uae_u32 addr)
 {
-	if (!mem_banks[addr >> 16]->check (addr, 1))
+	addrbank *bank = mem_banks[addr >> 16];
+	if (!bank || !bank->check || !bank->xlateaddr || !bank->check (addr, 1))
 		return NULL;
-	return mem_banks[addr >> 16]->xlateaddr (addr);
+	return bank->xlateaddr (addr);
+}
+
+static uae_u8 *dump_xlate_range (uae_u32 addr, uae_u32 size)
+{
+	addrbank *bank = mem_banks[addr >> 16];
+	if (!bank || !bank->check || !bank->xlateaddr || !bank->check(addr, size))
+		return NULL;
+	return bank->xlateaddr(addr);
 }
 
 #if 0
@@ -5501,11 +5510,18 @@ typedef struct UaeMemoryMap {
 
 static const TCHAR *bankmodes[] = { _T("F32"), _T("C16"), _T("C32"), _T("CIA"), _T("F16"), _T("F16X") };
 
+static const TCHAR *dump_bankmode (int mode)
+{
+	if (mode < 0 || mode >= static_cast<int>(sizeof bankmodes / sizeof bankmodes[0]))
+		return _T("?");
+	return bankmodes[mode];
+}
+
 static void memory_map_dump_3(UaeMemoryMap *map, int log)
 {
 	bool imold;
 	int i, j, max;
-	addrbank *a1 = mem_banks[0];
+	addrbank *a1 = mem_banks[0] ? mem_banks[0] : &dummy_bank;
 	TCHAR txt[256];
 
 	map->num_regions = 0;
@@ -5516,7 +5532,7 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 	for (i = 0; i < max + 1; i++) {
 		addrbank *a2 = NULL;
 		if (i < max)
-			a2 = mem_banks[i];
+			a2 = mem_banks[i] ? mem_banks[i] : &dummy_bank;
 		if (a1 != a2) {
 			int k, mirrored, mirrored2, size, size_out;
 			TCHAR size_ext;
@@ -5545,20 +5561,24 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 				int bankoffset2 = bankoffset;
 				if (sb) {
 					uaecptr daddr;
-					if (!sb->bank)
-						break;
-					daddr = (j << 16) | bankoffset;
-					a1 = get_sub_bank(&daddr);
-					name = a1->name;
-					for (;;) {
-						bankoffset2 += MEMORY_MIN_SUBBANK;
-						if (bankoffset2 >= 65536)
+						if (!sb->bank)
 							break;
-						daddr = (j << 16) | bankoffset2;
-						addrbank *dab = get_sub_bank(&daddr);
-						if (dab != a1)
-							break;
-					}
+						daddr = (j << 16) | bankoffset;
+						a1 = get_sub_bank(&daddr);
+						if (!a1)
+							a1 = &dummy_bank;
+						name = a1->name;
+						for (;;) {
+							bankoffset2 += MEMORY_MIN_SUBBANK;
+							if (bankoffset2 >= 65536)
+								break;
+							daddr = (j << 16) | bankoffset2;
+							addrbank *dab = get_sub_bank(&daddr);
+							if (!dab)
+								dab = &dummy_bank;
+							if (dab != a1)
+								break;
+						}
 					sb++;
 					size = (bankoffset2 - bankoffset) / 1024;
 					region_size = size * 1024;
@@ -5578,19 +5598,21 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 				}
 				_sntprintf (txt, sizeof txt, _T("%08X %7d%c/%d = %7d%c %s%s%c %s %s"), (j << 16) | bankoffset, size_out, size_ext,
 					mirrored, mirrored ? size_out / mirrored : size_out, size_ext,
-					(a1->flags & ABFLAG_CACHE_ENABLE_INS) ? _T("I") : _T("-"),
-					(a1->flags & ABFLAG_CACHE_ENABLE_DATA) ? _T("D") : _T("-"),
-					a1->baseaddr == NULL ? ' ' : '*',
-					bankmodes[ce_banktype[j]],
-					name);
-				tmp[0] = 0;
-				if ((a1->flags & ABFLAG_ROM) && mirrored) {
-					TCHAR *p = txt + _tcslen (txt);
-					uae_u32 crc = 0xffffffff;
-					if (a1->check(((j << 16) | bankoffset), (size * 1024) / mirrored))
-						crc = get_crc32 (a1->xlateaddr((j << 16) | bankoffset), (size * 1024) / mirrored);
-					struct romdata *rd = getromdatabycrc (crc);
-					_sntprintf (p, sizeof p, _T(" (%08X)"), crc);
+						(a1->flags & ABFLAG_CACHE_ENABLE_INS) ? _T("I") : _T("-"),
+						(a1->flags & ABFLAG_CACHE_ENABLE_DATA) ? _T("D") : _T("-"),
+						a1->baseaddr == NULL ? ' ' : '*',
+						dump_bankmode(ce_banktype[j]),
+						name);
+					tmp[0] = 0;
+					if ((a1->flags & ABFLAG_ROM) && mirrored) {
+						TCHAR *p = txt + _tcslen (txt);
+						uae_u32 crc = 0xffffffff;
+						uae_u32 crc_size = (size * 1024) / mirrored;
+						uae_u8 *crc_mem = dump_xlate_range((j << 16) | bankoffset, crc_size);
+						if (crc_mem)
+							crc = get_crc32(crc_mem, crc_size);
+						struct romdata *rd = getromdatabycrc (crc);
+						_sntprintf (p, sizeof p, _T(" (%08X)"), crc);
 					if (rd) {
 						tmp[0] = '=';
 						getromname (rd, tmp + 1);

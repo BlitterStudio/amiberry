@@ -2,9 +2,7 @@
 #include "sdl_compat.h"
 
 #include <ctype.h>
-#include <errno.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +32,9 @@ struct SDL_Condition {
 };
 
 struct SDL_Semaphore {
-	sem_t sem;
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+	Uint32 value;
 };
 
 struct SDL_Window {
@@ -479,54 +479,67 @@ SDL_Semaphore* SDL_CreateSemaphore(Uint32 initial_value)
 	if (!s) {
 		return nullptr;
 	}
-	if (sem_init(&s->sem, 0, initial_value) != 0) {
+	if (pthread_mutex_init(&s->mutex, nullptr) != 0) {
 		free(s);
 		return nullptr;
 	}
+	if (pthread_cond_init(&s->cond, nullptr) != 0) {
+		pthread_mutex_destroy(&s->mutex);
+		free(s);
+		return nullptr;
+	}
+	s->value = initial_value;
 	return s;
 }
 void SDL_DestroySemaphore(SDL_Semaphore* s)
 {
 	if (!s) return;
-	sem_destroy(&s->sem);
+	pthread_cond_destroy(&s->cond);
+	pthread_mutex_destroy(&s->mutex);
 	free(s);
 }
 void SDL_SignalSemaphore(SDL_Semaphore* s)
 {
 	if (s) {
-		sem_post(&s->sem);
+		pthread_mutex_lock(&s->mutex);
+		s->value++;
+		pthread_cond_signal(&s->cond);
+		pthread_mutex_unlock(&s->mutex);
 	}
 }
 void SDL_WaitSemaphore(SDL_Semaphore* s)
 {
 	if (!s) return;
-	while (sem_wait(&s->sem) != 0 && errno == EINTR) {
+	pthread_mutex_lock(&s->mutex);
+	while (s->value == 0) {
+		pthread_cond_wait(&s->cond, &s->mutex);
 	}
+	s->value--;
+	pthread_mutex_unlock(&s->mutex);
 }
 bool SDL_TryWaitSemaphore(SDL_Semaphore* s)
 {
-	return s && sem_trywait(&s->sem) == 0;
+	if (!s) {
+		return false;
+	}
+	pthread_mutex_lock(&s->mutex);
+	const bool available = s->value > 0;
+	if (available) {
+		s->value--;
+	}
+	pthread_mutex_unlock(&s->mutex);
+	return available;
 }
 bool SDL_WaitSemaphoreTimeout(SDL_Semaphore* s, Sint32 ms)
 {
 	if (!s) {
 		return false;
 	}
-#if defined(__APPLE__)
-	Uint64 start = SDL_GetTicks();
-	for (;;) {
-		if (sem_trywait(&s->sem) == 0) {
-			return true;
-		}
-		if (errno != EAGAIN && errno != EINTR) {
-			return false;
-		}
-		if ((SDL_GetTicks() - start) >= (Uint64)ms) {
-			return false;
-		}
-		SDL_Delay(1);
+	if (ms < 0) {
+		SDL_WaitSemaphore(s);
+		return true;
 	}
-#else
+
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	ts.tv_sec += ms / 1000;
@@ -535,15 +548,26 @@ bool SDL_WaitSemaphoreTimeout(SDL_Semaphore* s, Sint32 ms)
 		ts.tv_sec++;
 		ts.tv_nsec -= 1000000000L;
 	}
-	return sem_timedwait(&s->sem, &ts) == 0;
-#endif
+
+	pthread_mutex_lock(&s->mutex);
+	int ret = 0;
+	while (s->value == 0 && ret == 0) {
+		ret = pthread_cond_timedwait(&s->cond, &s->mutex, &ts);
+	}
+	const bool available = s->value > 0;
+	if (available) {
+		s->value--;
+	}
+	pthread_mutex_unlock(&s->mutex);
+	return available;
 }
 Uint32 SDL_GetSemaphoreValue(SDL_Semaphore* s)
 {
 	if (!s) return 0;
-	int v = 0;
-	sem_getvalue(&s->sem, &v);
-	return (Uint32)((v < 0) ? 0 : v);
+	pthread_mutex_lock(&s->mutex);
+	const Uint32 value = s->value;
+	pthread_mutex_unlock(&s->mutex);
+	return value;
 }
 
 SDL_Thread* SDL_CreateThread(SDL_ThreadFunction fn, const char* name, void* data)

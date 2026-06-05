@@ -69,6 +69,7 @@ retro_environment_t environ_cb;
 retro_input_poll_t input_poll_cb;
 retro_input_state_t input_state_cb;
 retro_log_printf_t log_cb;
+unsigned libretro_audio_frames_this_run;
 
 static char game_path[1024];
 static bool core_started = false;
@@ -1302,6 +1303,22 @@ static bool file_readable(const char* path)
 	return path && *path && access(path, R_OK) == 0;
 }
 
+static std::string canonicalize_existing_host_path(const std::string& path)
+{
+	if (path.empty())
+		return path;
+
+	char resolved[MAX_DPATH] = {};
+#ifdef _WIN32
+	if (_fullpath(resolved, path.c_str(), sizeof(resolved)) != nullptr)
+#else
+	if (realpath(path.c_str(), resolved) != nullptr)
+#endif
+		return resolved;
+
+	return path;
+}
+
 // Detected CD content type for auto-model selection
 enum cd_content_type {
 	CD_CONTENT_NONE = 0,    // Not a CD image, or unrecognized
@@ -1562,26 +1579,6 @@ static bool dir_exists(const std::string& path)
 		return false;
 	struct stat st {};
 	return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
-}
-
-static bool find_kickstart_in_dir(const std::string& dir, const char* name, char* out, size_t out_size)
-{
-	if (dir.empty() || !name || !*name)
-		return false;
-	const std::string full = path_join(dir, name);
-	if (!file_readable(full.c_str()))
-		return false;
-	snprintf(out, out_size, "%s", full.c_str());
-	return true;
-}
-
-static bool pick_whdload_kickstart(const std::string& dir, char* out, size_t out_size)
-{
-	if (find_kickstart_in_dir(dir, "kick205.rom", out, out_size))
-		return true;
-	if (find_kickstart_in_dir(dir, "kick31.rom", out, out_size))
-		return true;
-	return false;
 }
 
 // Map a model preset name to its base model family for kickstart/CD detection.
@@ -2221,6 +2218,54 @@ static float get_core_refresh_rate()
 	if (vblank_hz > 1.0f)
 		return vblank_hz;
 	return currprefs.ntscmode ? 60.0f : 50.0f;
+}
+
+static double libretro_audio_deficit_frames = 0.0;
+
+static void libretro_emit_audio_starvation_guard()
+{
+	if (!audio_batch_cb && !audio_cb)
+		return;
+
+	const float refresh_rate = get_core_refresh_rate();
+	const int audio_rate = audio_rate_for_av_info();
+	if (refresh_rate <= 1.0f || audio_rate <= 0)
+		return;
+
+	const double expected_frames = static_cast<double>(audio_rate) / refresh_rate;
+	libretro_audio_deficit_frames += expected_frames;
+	libretro_audio_deficit_frames -= libretro_audio_frames_this_run;
+	const double max_deferred_frames = expected_frames * 2.0;
+
+	if (libretro_audio_deficit_frames < -max_deferred_frames)
+		libretro_audio_deficit_frames = -max_deferred_frames;
+	if (libretro_audio_deficit_frames > max_deferred_frames * 4.0)
+		libretro_audio_deficit_frames = max_deferred_frames * 4.0;
+
+	if (libretro_audio_frames_this_run > 0 || libretro_audio_deficit_frames <= max_deferred_frames)
+		return;
+
+	unsigned missing_frames = static_cast<unsigned>(libretro_audio_deficit_frames - max_deferred_frames);
+	while (missing_frames > 0) {
+		const unsigned chunk = std::min(missing_frames, 1024U);
+		int16_t silence[1024 * 2] = {};
+		if (audio_batch_cb) {
+			const size_t accepted = audio_batch_cb(silence, chunk);
+			if (accepted == 0)
+				break;
+			libretro_audio_frames_this_run += static_cast<unsigned>(accepted);
+			libretro_audio_deficit_frames -= accepted;
+			if (accepted < chunk)
+				break;
+			missing_frames -= chunk;
+		} else {
+			for (unsigned i = 0; i < chunk; i++)
+				audio_cb(0, 0);
+			libretro_audio_frames_this_run += chunk;
+			libretro_audio_deficit_frames -= chunk;
+			missing_frames -= chunk;
+		}
+	}
 }
 
 static int mousemap_from_option(const char* value)
@@ -2874,10 +2919,7 @@ static void core_entry(void)
 		if (user_kick_override) {
 			have_kick = resolve_kickstart_override_value(cached_kickstart_override.c_str(), kick_path, sizeof(kick_path)) ||
 				find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path));
-		} else if (is_whdload) {
-			if (!rom_path_value.empty())
-				have_kick = pick_whdload_kickstart(rom_path_value, kick_path, sizeof(kick_path));
-		} else {
+		} else if (!is_whdload) {
 			have_kick = find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path));
 		}
 
@@ -3029,6 +3071,7 @@ static void reset_core_runtime_state()
 	last_refresh_rate = -1.0f;
 	last_geometry_width = -1;
 	last_geometry_height = -1;
+	libretro_audio_deficit_frames = 0.0;
 }
 
 static void apply_minimum_audio_latency()
@@ -3367,7 +3410,10 @@ void retro_run(void)
 		if (log_cb)
 			log_cb(RETRO_LOG_INFO, "retro_run: starting core, core_fiber=%p\n", (void*)core_fiber);
 		poll_frontend_input();
+		libretro_audio_frames_this_run = 0;
 		co_switch(core_fiber);
+		if (!core_shutdown_complete)
+			libretro_emit_audio_starvation_guard();
 		if (core_shutdown_complete)
 			return;
 		core_started = true;
@@ -3412,7 +3458,10 @@ void retro_run(void)
 		}
 	}
 	poll_input();
+	libretro_audio_frames_this_run = 0;
 	co_switch(core_fiber);
+	if (!core_shutdown_complete)
+		libretro_emit_audio_starvation_guard();
 	if (core_shutdown_complete)
 		return;
 	apply_cheats();
@@ -3503,6 +3552,9 @@ bool retro_load_game(const struct retro_game_info *info)
 				}
 			}
 		}
+
+		if (!extracted)
+			whd_path = canonicalize_existing_host_path(whd_path);
 
 		if (!extracted && (has_non_ascii(whd_path) || !file_readable(whd_path.c_str()))) {
 			std::vector<uint8_t> data;
