@@ -128,9 +128,10 @@ def main():
 	)
 	require(
 		"if (core_shutdown_complete)" in retro_run
+		and "if (!ensure_core_fiber()) {\n\t\tpoll_frontend_input();\n\t\treturn;\n\t}" in retro_run
 		and "if (core_shutdown_complete)\n\t\t\treturn;" in startup
-		and "if (core_shutdown_complete)\n\t\treturn;" in retro_run,
-		"retro_run() must not continue into runtime work after the core has shut down",
+		and "if (core_shutdown_complete) {\n\t\tpoll_frontend_input();\n\t\treturn;\n\t}" in retro_run,
+		"retro_run() must poll the frontend before early returns that skip runtime work",
 		failures,
 	)
 	require(

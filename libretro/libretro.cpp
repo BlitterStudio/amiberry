@@ -3353,11 +3353,15 @@ void retro_run(void)
 {
 	apply_minimum_audio_latency();
 
-	if (!ensure_core_fiber())
+	if (!ensure_core_fiber()) {
+		poll_frontend_input();
 		return;
+	}
 
-	if (core_shutdown_complete)
+	if (core_shutdown_complete) {
+		poll_frontend_input();
 		return;
+	}
 
 	if (!core_started) {
 		if (log_cb)
