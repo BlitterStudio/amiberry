@@ -19,9 +19,6 @@
 #include <vector>
 #include <algorithm>
 #include <sys/stat.h>
-#ifdef _WIN32
-#include <direct.h>
-#endif
 
 #ifdef LIBRETRO
 unsigned int gui_ledstate = 0;
