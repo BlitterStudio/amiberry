@@ -2541,12 +2541,19 @@ static void keyboard_cb(bool down, unsigned keycode, uint32_t character, uint16_
 		my_kbd_handler(0, scancode, down ? 1 : 0, false);
 }
 
-static void poll_input(void)
+static bool poll_frontend_input(void)
 {
 	if (!input_poll_cb)
-		return;
+		return false;
 
 	input_poll_cb();
+	return true;
+}
+
+static void poll_input(void)
+{
+	if (!poll_frontend_input())
+		return;
 	if (!input_state_cb)
 		return;
 
@@ -3344,7 +3351,7 @@ void retro_run(void)
 	if (!core_started) {
 		if (log_cb)
 			log_cb(RETRO_LOG_INFO, "retro_run: starting core, core_fiber=%p\n", (void*)core_fiber);
-		poll_input();
+		poll_frontend_input();
 		co_switch(core_fiber);
 		core_started = true;
 		update_memory_map();

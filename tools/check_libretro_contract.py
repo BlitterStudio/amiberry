@@ -61,6 +61,12 @@ def main():
 	failures = []
 
 	set_environment = extract_body(text, "void retro_set_environment(retro_environment_t cb)")
+	poll_frontend_input = ""
+	try:
+		poll_frontend_input = extract_body(text, "static bool poll_frontend_input(void)")
+	except AssertionError:
+		failures.append("libretro first-frame input polling must be split from Amiberry input injection")
+	poll_input = extract_body(text, "static void poll_input(void)")
 	retro_run = extract_body(text, "void retro_run(void)")
 	startup = extract_if_body(retro_run, "if (!core_started)")
 	retro_deinit = extract_body(text, "void retro_deinit(void)")
@@ -92,11 +98,21 @@ def main():
 		"retro_run() must apply minimum audio latency from the allowed callback",
 		failures,
 	)
-	poll_pos = startup.find("poll_input();")
+	frontend_poll_pos = startup.find("poll_frontend_input();")
 	switch_pos = startup.find("co_switch(core_fiber)")
 	require(
-		poll_pos != -1 and switch_pos != -1 and poll_pos < switch_pos,
-		"the first retro_run() path must poll input before switching to the core fiber",
+		frontend_poll_pos != -1 and switch_pos != -1 and frontend_poll_pos < switch_pos,
+		"the first retro_run() path must poll the frontend before switching to the core fiber",
+		failures,
+	)
+	require(
+		"poll_input();" not in startup,
+		"the first retro_run() path must not inject frontend input before Amiberry input devices are initialized",
+		failures,
+	)
+	require(
+		"input_poll_cb();" in poll_frontend_input and "poll_frontend_input()" in poll_input,
+		"normal libretro input polling must keep calling the frontend input_poll callback",
 		failures,
 	)
 	require(
