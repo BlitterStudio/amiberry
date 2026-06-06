@@ -232,8 +232,20 @@ bool ppc_interrupt(int new_m68k_ipl)
 		uae_u8 ppcipl = (~io_reg[CSIII_REG_IPL_EMU]) & P5_PPC_IPL_MASK;
 		if (new_m68k_ipl < 0)
 			new_m68k_ipl = 0;
-		io_reg[CSIII_REG_IPL_EMU] &= ~P5_M68k_IPL_MASK;
-		io_reg[CSIII_REG_IPL_EMU] |= (new_m68k_ipl << 3) ^ P5_M68k_IPL_MASK;
+		/* This runs on the emulation thread while the PPC CPU thread can
+		 * concurrently write io_reg[CSIII_REG_IPL_EMU] (the CyberStorm IO bank
+		 * is ABFLAG_THREADSAFE, so PPC writes skip the spinlock). The two
+		 * threads own disjoint bitfields of this byte: the PPC owns the PPC-IPL
+		 * bits (P5_PPC_IPL_MASK), we own only the M68k-IPL bits
+		 * (P5_M68k_IPL_MASK). A plain read-modify-write here writes back the
+		 * PPC-IPL bits as we read them and can lose the PPC's update (e.g. the
+		 * PPC lowering its IPL to 0 to accept interrupts), leaving ppcipl stuck
+		 * and no interrupts ever forwarded. Use atomic bit ops so we only ever
+		 * modify the M68k-IPL bits and never clobber the PPC-IPL bits. */
+		__atomic_and_fetch(&io_reg[CSIII_REG_IPL_EMU],
+			(uae_u8)~P5_M68k_IPL_MASK, __ATOMIC_SEQ_CST);
+		__atomic_or_fetch(&io_reg[CSIII_REG_IPL_EMU],
+			(uae_u8)((new_m68k_ipl << 3) ^ P5_M68k_IPL_MASK), __ATOMIC_SEQ_CST);
 		if (new_m68k_ipl > ppcipl) {
 			set_ppc_interrupt();
 		} else {
