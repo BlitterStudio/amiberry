@@ -1536,15 +1536,22 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 						io_reg[CSIII_REG_RESET] |= oldval & P5_AMIGA_RESET;
 					}
 				} else if (addr == CSIII_REG_IPL_EMU) {
-					// M68K_IPL_MASK is read-only
+					// M68k-IPL bits (P5_M68k_IPL_MASK) are read-only here and are
+					// owned by the emulation thread (ppc_interrupt()). The PPC owns
+					// the rest. The CyberStorm IO bank is ABFLAG_THREADSAFE, so this
+					// handler can run on the PPC thread concurrently with
+					// ppc_interrupt() on the emulation thread. Update only the
+					// PPC-owned bits atomically so we never clobber a concurrent
+					// M68k-IPL update with a stale full-byte store (which would make
+					// the PPC read a stale Amiga interrupt level and stall).
 					regval &= ~P5_M68k_IPL_MASK;
-					regval |= oldval & P5_M68k_IPL_MASK;
 					bool active = (regval & P5_DISABLE_INT) == 0;
 #ifdef WITH_PPC
 					if (!active)
 						clear_ppc_interrupt();
 #endif
-					io_reg[addr] = regval;
+					__atomic_and_fetch(&io_reg[addr], (uae_u8)P5_M68k_IPL_MASK, __ATOMIC_SEQ_CST);
+					__atomic_or_fetch(&io_reg[addr], (uae_u8)regval, __ATOMIC_SEQ_CST);
 #if CPUBOARD_IRQ_LOG > 0
 					if ((regval & P5_DISABLE_INT) != (oldval & P5_DISABLE_INT))
 						write_log(_T("CS: interrupt state: %s\n"), (regval & P5_DISABLE_INT) ? _T("disabled") : _T("enabled"));
