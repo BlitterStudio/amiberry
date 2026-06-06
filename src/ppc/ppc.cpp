@@ -48,6 +48,37 @@ static CRITICAL_SECTION ppc_cs1, ppc_cs2;
 static bool ppc_cs_initialized;
 #else
 static SDL_Mutex* ppc_mutex, *ppc_mutex2;
+/* Userspace spin budget before falling back to a blocking lock. Mirrors the
+ * Windows CRITICAL_SECTION spin count (CRITICAL_SECTION_SPIN_COUNT): the
+ * PPC<->emulation handoff lock is taken on every PPC access to a non-thread-safe
+ * memory bank, so contention is usually for only a handful of cycles. Spinning
+ * with SDL_TryLockMutex (a userspace CAS, no syscall) avoids a kernel sleep/wake
+ * on that common short-hold case; we only block once the spin budget is spent.
+ * Without this, the SDL/pthread mutex blocks immediately on every contention,
+ * which is a large slowdown on this extremely hot path (the Windows path never
+ * had this problem because CRITICAL_SECTIONs spin first). */
+#define PPC_SPINLOCK_SPIN_COUNT 5000
+/* CPU "pause"/"yield" hint for spin-wait loops. Self-contained (no SDL
+ * dependency) so it builds in every configuration, including the libretro
+ * target whose threaddep does not pull in SDL3's SDL_atomic.h
+ * (SDL_CPUPauseInstruction). */
+static inline void ppc_spinlock_cpu_relax(void)
+{
+#if defined(__x86_64__) || defined(__i386__)
+	__asm__ __volatile__("pause");
+#elif defined(__aarch64__) || defined(__arm__)
+	__asm__ __volatile__("yield");
+#endif
+}
+static void ppc_spinlock_lock(SDL_Mutex *mutex)
+{
+	for (int i = 0; i < PPC_SPINLOCK_SPIN_COUNT; i++) {
+		if (SDL_TryLockMutex(mutex))
+			return;
+		ppc_spinlock_cpu_relax();
+	}
+	SDL_LockMutex(mutex);
+}
 #endif
 
 void uae_ppc_spinlock_get(void)
@@ -59,9 +90,9 @@ void uae_ppc_spinlock_get(void)
 	ppc_spinlock_waiting = false;
 	LeaveCriticalSection(&ppc_cs2);
 #else
-	SDL_LockMutex(ppc_mutex2);
+	ppc_spinlock_lock(ppc_mutex2);
 	ppc_spinlock_waiting = true;
-	SDL_LockMutex(ppc_mutex);
+	ppc_spinlock_lock(ppc_mutex);
 	ppc_spinlock_waiting = false;
 	SDL_UnlockMutex(ppc_mutex2);
 #endif
@@ -102,6 +133,22 @@ static void uae_ppc_spinlock_create(void)
 	spinlock_cnt = 0;
 #endif
 	ppc_cs_initialized = true;
+#else
+	/* Create the SDL mutexes backing the PPC<->emulation handoff lock. Without
+	 * this they stay NULL and SDL_LockMutex(NULL)/SDL_UnlockMutex(NULL) are
+	 * no-ops, so on macOS/Linux there was NO mutual exclusion between the PPC
+	 * CPU thread and the emulation thread at all (the Windows CRITICAL_SECTION
+	 * path was the only one that initialized the lock). SDL mutexes are
+	 * recursive, matching the CRITICAL_SECTION semantics this code relies on. */
+	if (ppc_mutex) {
+		SDL_DestroyMutex(ppc_mutex);
+		SDL_DestroyMutex(ppc_mutex2);
+	}
+	ppc_mutex = SDL_CreateMutex();
+	ppc_mutex2 = SDL_CreateMutex();
+#if SPINLOCK_DEBUG
+	spinlock_cnt = 0;
+#endif
 #endif
 }
 
