@@ -39,15 +39,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.ConfigGenerator
+import com.blitterstudio.amiberry.data.AdvancedLaunchActions
+import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileManager
+import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
+import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.model.FileCategory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -61,9 +65,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.blitterstudio.amiberry.ui.findActivity
+import com.blitterstudio.amiberry.ui.launchImportGuarded
+import com.blitterstudio.amiberry.ui.launchGuarded
+import com.blitterstudio.amiberry.ui.rememberImportInFlightGuard
+import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -73,39 +82,50 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
+	val launchGuard = rememberLaunchInFlightGuard()
+	val launchInProgress = launchGuard.isLaunching
+	val importGuard = rememberImportInFlightGuard()
+	val importInProgress = importGuard.isImporting
 	var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 	var showSaveDialog by remember { mutableStateOf(false) }
 	var showTopBarMenu by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
+	fun importResultMessage(result: FileManager.ImportResult): String {
+		val message = ImportFeedback.fromImportResult(result)
+		return context.getString(message.stringRes, message.argument)
+	}
 
 	val romPickerLauncher = rememberLauncherForActivityResult(
 		contract = ActivityResultContracts.OpenDocument()
 	) { uri ->
 		uri?.let {
-			scope.launch {
-				val path = withContext(Dispatchers.IO) {
-					FileManager.importFile(context, it, FileCategory.ROMS)
+			scope.launchImportGuarded(importGuard) {
+				val result = withContext(Dispatchers.IO) {
+					FileManager.importFileWithResult(context, it, FileCategory.ROMS).also { importResult ->
+						if (importResult is FileManager.ImportResult.Imported) {
+							FileRepository.getInstance(context).rescanCategory(FileCategory.ROMS)
+						}
+					}
 				}
-				if (path != null) {
-					FileRepository.getInstance(context).rescanCategory(FileCategory.ROMS)
+				if (result is FileManager.ImportResult.Imported) {
+					viewModel.updateSettings { s -> s.copy(romFile = result.path) }
 				}
+				snackbarHostState.showSnackbar(importResultMessage(result))
 			}
 		}
 	}
 
-	val tabs = listOf(
-		stringResource(R.string.tab_cpu),
-		stringResource(R.string.tab_chipset),
-		stringResource(R.string.tab_memory),
-		stringResource(R.string.tab_display),
-		stringResource(R.string.tab_sound),
-		stringResource(R.string.tab_input),
-		stringResource(R.string.tab_storage)
-	)
-	val invalidConfigNameMessage = stringResource(R.string.msg_invalid_config_name)
-	val failedSaveConfigMessage = stringResource(R.string.msg_failed_save_config)
+	val tabs = SettingsTabs.all
+	val validSelectedTab = SettingsTabs.validSelectedIndex(selectedTab)
 	val romRequiredMessage = stringResource(R.string.msg_rom_required_before_start)
+	val configWriteFailedMessage = stringResource(R.string.msg_failed_save_config)
+	val advancedLaunchFailedMessage = stringResource(AdvancedLaunchActions.launchFailedMessage().stringRes)
+	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
+		val message = ConfigurationSaveActions.messageFor(result)
+		return message.argument?.let { context.getString(message.stringRes, it) }
+			?: context.getString(message.stringRes)
+	}
 
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -131,16 +151,30 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_advanced)) },
 							leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+							enabled = !launchInProgress,
 							onClick = {
 								showTopBarMenu = false
-								val configFile = ConfigGenerator.writeConfig(
-									context, viewModel.settings, ".temp_native_ui.uae"
-								)
-								if (viewModel.currentUnknownLines.isNotEmpty()) {
-									configFile.appendText("\n; Preserved settings from original config\n")
-									viewModel.currentUnknownLines.forEach { configFile.appendText("$it\n") }
+								val advancedSettings = viewModel.settings
+								val advancedUnknownLines = viewModel.currentUnknownLines
+								scope.launchGuarded(launchGuard) {
+									val configFile = try {
+										withContext(Dispatchers.IO) {
+											viewModel.writeSettingsConfig(
+												advancedSettings,
+												AdvancedLaunchActions.SETTINGS_ADVANCED_CONFIG,
+												advancedUnknownLines
+											)
+										}
+									} catch (_: Exception) {
+										snackbarHostState.showSnackbar(advancedLaunchFailedMessage)
+										return@launchGuarded
+									}
+									runCatching {
+										EmulatorLauncher.launchAdvancedGui(context, configFile.absolutePath)
+									}.onFailure {
+										snackbarHostState.showSnackbar(advancedLaunchFailedMessage)
+									}
 								}
-								EmulatorLauncher.launchAdvancedGui(context, configFile.absolutePath)
 							}
 						)
 					}
@@ -150,17 +184,54 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		floatingActionButton = {
 			ExtendedFloatingActionButton(
 				onClick = {
+					if (launchInProgress) {
+						return@ExtendedFloatingActionButton
+					}
 					if (!canStart) {
 						scope.launch {
 							snackbarHostState.showSnackbar(romRequiredMessage)
 						}
 						return@ExtendedFloatingActionButton
 					}
-					val args = viewModel.generateLaunchArgs()
-					EmulatorLauncher.launchWithArgs(context, args)
+					val launchSettings = viewModel.settings
+					val launchUnknownLines = viewModel.currentUnknownLines
+					scope.launchGuarded(launchGuard) {
+						val configFile = try {
+							withContext(Dispatchers.IO) {
+								viewModel.writeSettingsConfig(
+									launchSettings,
+									".current_settings.uae",
+									launchUnknownLines
+								)
+							}
+						} catch (_: Exception) {
+							snackbarHostState.showSnackbar(configWriteFailedMessage)
+							return@launchGuarded
+						}
+						EmulatorLauncher.launchSettingsConfig(
+							context,
+							launchSettings.baseModel,
+							configFile.absolutePath
+						)
+					}
 				},
-				icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
-				text = { Text(stringResource(R.string.action_start)) }
+				icon = {
+					if (launchInProgress) {
+						CircularProgressIndicator(
+							modifier = Modifier.size(18.dp),
+							strokeWidth = 2.dp
+						)
+					} else {
+						Icon(Icons.Default.PlayArrow, contentDescription = null)
+					}
+				},
+				text = {
+					Text(
+						stringResource(
+							if (launchInProgress) R.string.action_launching else R.string.action_start
+						)
+					)
+				}
 			)
 		}
 	) { innerPadding ->
@@ -170,16 +241,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				.padding(innerPadding)
 		) {
 			PrimaryScrollableTabRow(
-				selectedTabIndex = selectedTab,
+				selectedTabIndex = validSelectedTab,
 				modifier = Modifier
 					.fillMaxWidth()
 					.focusGroup()
 			) {
-				tabs.forEachIndexed { index, title ->
+				tabs.forEachIndexed { index, tab ->
 					Tab(
-						selected = selectedTab == index,
+						selected = validSelectedTab == index,
 						onClick = { selectedTab = index },
-						text = { Text(title) }
+						modifier = Modifier.testTag(tab.testTag),
+						text = { Text(stringResource(tab.titleRes)) }
 					)
 				}
 			}
@@ -214,13 +286,22 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						)
 						Spacer(modifier = Modifier.height(12.dp))
 						Button(
-							onClick = { romPickerLauncher.launch(arrayOf("*/*")) },
+							onClick = {
+								if (!importInProgress) {
+									romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+								}
+							},
+							enabled = !importInProgress,
 							colors = ButtonDefaults.buttonColors(
 								containerColor = MaterialTheme.colorScheme.onErrorContainer,
 								contentColor = MaterialTheme.colorScheme.errorContainer
 							)
 						) {
-							Text(stringResource(R.string.action_import_rom))
+							Text(
+								stringResource(
+									if (importInProgress) R.string.action_importing else R.string.action_import_rom
+								)
+							)
 						}
 					}
 				}
@@ -232,14 +313,21 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					.weight(1f)
 					.fillMaxWidth()
 			) {
-				when (selectedTab) {
-					0 -> CpuTab(viewModel)
-					1 -> ChipsetTab(viewModel)
-					2 -> MemoryTab(viewModel)
-					3 -> DisplayTab(viewModel)
-					4 -> SoundTab(viewModel)
-					5 -> InputTab(viewModel)
-					6 -> StorageTab(viewModel)
+				when (SettingsTabs.tabFor(selectedTab)) {
+					SettingsTab.Cpu -> CpuTab(viewModel)
+					SettingsTab.Chipset -> ChipsetTab(viewModel)
+					SettingsTab.Memory -> MemoryTab(viewModel)
+					SettingsTab.Display -> DisplayTab(viewModel)
+					SettingsTab.Sound -> SoundTab(viewModel)
+					SettingsTab.Input -> InputTab(viewModel)
+					SettingsTab.Storage -> StorageTab(
+						viewModel = viewModel,
+						onImportResult = { result ->
+							scope.launch {
+								snackbarHostState.showSnackbar(importResultMessage(result))
+							}
+						}
+					)
 				}
 			}
 		}
@@ -250,25 +338,19 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				onSave = { name, description ->
 					val repo = ConfigRepository.getInstance(context)
 					val safeName = name.trim()
-					if (!repo.isValidConfigName(safeName)) {
-						scope.launch {
-							snackbarHostState.showSnackbar(invalidConfigNameMessage)
-						}
-						return@SaveConfigDialog
-					}
-					val savedFile = repo.saveConfig(viewModel.settings, safeName, viewModel.currentUnknownLines, description)
-					if (savedFile == null) {
-						scope.launch {
-							snackbarHostState.showSnackbar(failedSaveConfigMessage)
-						}
-						return@SaveConfigDialog
-					}
-					showSaveDialog = false
-					@Suppress("LocalContextGetResourceValueCall")
 					scope.launch {
-						snackbarHostState.showSnackbar(
-							context.getString(R.string.msg_saved_configuration, savedFile.name)
-						)
+						val result = withContext(Dispatchers.IO) {
+							repo.saveConfigResult(
+								viewModel.settings,
+								safeName,
+								viewModel.currentUnknownLines,
+								description
+							)
+						}
+						if (result is ConfigurationSaveActions.SaveResult.Saved) {
+							showSaveDialog = false
+						}
+						snackbarHostState.showSnackbar(saveMessage(result))
 					}
 				}
 			)

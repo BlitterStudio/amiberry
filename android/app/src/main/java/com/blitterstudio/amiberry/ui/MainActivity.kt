@@ -1,10 +1,15 @@
 package com.blitterstudio.amiberry.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,13 +19,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.blitterstudio.amiberry.data.AppPreferences
+import com.blitterstudio.amiberry.data.AssetExtraction
+import com.blitterstudio.amiberry.data.AssetExtractionFailureActions
+import com.blitterstudio.amiberry.data.CrashRecoveryActions
 import com.blitterstudio.amiberry.data.EmulatorLauncher
-import com.blitterstudio.amiberry.data.FileManager
-import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.EmulatorResumeRecovery
+import com.blitterstudio.amiberry.data.ImportFeedback
+import com.blitterstudio.amiberry.data.IntentImportExecutor
+import com.blitterstudio.amiberry.data.LaunchDiagnostics
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.ui.theme.AmiberryTheme
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -28,11 +39,19 @@ import java.io.IOException
 
 class MainActivity : ComponentActivity() {
 
-	private var isReady by mutableStateOf(false)
+	var isReady by mutableStateOf(false)
+		private set
 	var emulatorCrashDetected by mutableStateOf(false)
 		private set
 	var assetExtractionFailed by mutableStateOf(false)
 		private set
+	var assetExtractionFailureSummary by mutableStateOf<AssetExtraction.CopySummary?>(null)
+		private set
+	var assetExtractionInProgress by mutableStateOf(false)
+		private set
+	private val importLaunchGuard = LaunchInFlightGuard()
+	val importLaunchInProgress: Boolean
+		get() = importLaunchGuard.isLaunching
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		val splashScreen = installSplashScreen()
@@ -60,6 +79,7 @@ class MainActivity : ComponentActivity() {
 
 	override fun onNewIntent(intent: Intent) {
 		super.onNewIntent(intent)
+		setIntent(intent)
 		handleIncomingIntent(intent)
 	}
 
@@ -88,79 +108,100 @@ class MainActivity : ComponentActivity() {
 	 * Import a file from a content/file URI and launch emulation with it.
 	 */
 	fun importAndLaunch(uri: Uri) {
+		if (!importLaunchGuard.begin()) {
+			Log.d(TAG, "Ignoring incoming file intent while another import launch is in progress")
+			return
+		}
 		lifecycleScope.launch(Dispatchers.IO) {
-			val fileName = FileManager.getDisplayName(this@MainActivity, uri) ?: uri.lastPathSegment ?: ""
-			val ext = fileName.substringAfterLast('.', "").lowercase()
-			val category = FileCategory.fromExtension(ext)
-
-			if (ext == "uae") {
-				// Config file: copy to Configurations dir and launch with it
-				val confDir = File(getExternalFilesDir(null), StoragePaths.CONFIGURATIONS)
-				if (!confDir.exists()) confDir.mkdirs()
-				val targetFile = File(confDir, fileName)
-				try {
-					contentResolver.openInputStream(uri)?.use { input ->
-						targetFile.outputStream().use { output -> input.copyTo(output) }
-					}
-					withContext(Dispatchers.Main) {
-						EmulatorLauncher.launchWithConfig(this@MainActivity, targetFile.absolutePath)
-					}
+			try {
+				val preparedImport = try {
+					IntentImportExecutor.importAndPrepare(this@MainActivity, uri)
 				} catch (e: Exception) {
-					Log.e(TAG, "Failed to import config from intent", e)
-				}
-			} else if (category != null) {
-				val importedPath = FileManager.importFile(this@MainActivity, uri, category)
-				if (importedPath != null) {
-					withContext(Dispatchers.Main) {
-						when (category) {
-							FileCategory.WHDLOAD_GAMES ->
-								EmulatorLauncher.launchWhdload(this@MainActivity, importedPath)
-							FileCategory.FLOPPIES ->
-								EmulatorLauncher.launchQuickStart(this@MainActivity,
-									com.blitterstudio.amiberry.data.model.AmigaModel.A500,
-									floppyPath = importedPath)
-							FileCategory.CD_IMAGES ->
-								EmulatorLauncher.launchQuickStart(this@MainActivity,
-									com.blitterstudio.amiberry.data.model.AmigaModel.CD32,
-									cdPath = importedPath)
-							else -> {
-								// ROMs and hard drives: just import, don't auto-launch
-							}
-						}
+					Log.e(TAG, "Failed to handle incoming file intent", e)
+					ImportFeedback.importFailed(uri.lastPathSegment ?: "file").let { feedback ->
+						IntentImportExecutor.PreparedImport(feedback)
 					}
 				}
-			} else {
-				Log.w(TAG, "Ignoring unsupported file from intent: $fileName")
+				withContext(Dispatchers.Main) {
+					showImportFeedback(preparedImport.feedback)
+					launchPreparedImport(preparedImport.launch)
+				}
+			} finally {
+				withContext(NonCancellable + Dispatchers.Main) {
+					importLaunchGuard.finish()
+				}
 			}
 		}
 	}
 
+	private fun launchPreparedImport(launch: IntentImportExecutor.Launch?) {
+		when (launch) {
+			is IntentImportExecutor.Launch.SavedConfig -> EmulatorLauncher.launchWithConfig(
+				this,
+				launch.configPath,
+				controlSettings = launch.controlSettings
+			)
+			is IntentImportExecutor.Launch.QuickStart -> EmulatorLauncher.launchQuickStart(
+				context = this,
+				model = launch.model,
+				floppyPath = launch.floppyPath,
+				floppy1Path = launch.floppy1Path,
+				cdPath = launch.cdPath,
+				configPath = launch.configPath
+			)
+			is IntentImportExecutor.Launch.WhdLoad -> EmulatorLauncher.launchWhdload(
+				this,
+				launch.lhaPath,
+				launch.configPath
+			)
+			null -> Unit
+		}
+	}
+
+	private fun showImportFeedback(message: ImportFeedback.Message) {
+		Toast.makeText(this, getString(message.stringRes, message.argument), Toast.LENGTH_SHORT).show()
+	}
+
 	private fun startAssetExtraction() {
+		if (assetExtractionInProgress) {
+			Log.d(TAG, "Ignoring asset extraction start while extraction is already in progress")
+			return
+		}
+		assetExtractionInProgress = true
 		lifecycleScope.launch(Dispatchers.IO) {
-			val success = extractAssetsIfNeeded()
-			ensureDirectories()
-			withContext(Dispatchers.Main) {
-				assetExtractionFailed = !success
-				isReady = true
+			try {
+				val copySummary = extractAssetsIfNeeded()
+				ensureDirectories()
+				withContext(Dispatchers.Main) {
+					assetExtractionFailureSummary = copySummary.takeUnless { it.isSuccess }
+					assetExtractionFailed = !copySummary.isSuccess
+					isReady = true
+					processResumeRecovery()
+				}
+			} finally {
+				withContext(NonCancellable + Dispatchers.Main) {
+					assetExtractionInProgress = false
+				}
 			}
 		}
 	}
 
 	fun retryAssetExtraction() {
 		assetExtractionFailed = false
+		assetExtractionFailureSummary = null
 		isReady = false
 		startAssetExtraction()
 	}
 
 	/**
-	 * @return true if assets are ready (already extracted or freshly extracted),
-	 *         false if extraction failed.
+	 * @return successful summary if assets are ready (already extracted or freshly extracted),
+	 *         failed summary if extraction failed.
 	 */
-	private fun extractAssetsIfNeeded(): Boolean {
+	private fun extractAssetsIfNeeded(): AssetExtraction.CopySummary {
 		val externalDir = getExternalFilesDir(null)
 		if (externalDir == null) {
 			Log.e(TAG, "External files directory is unavailable")
-			return false
+			return AssetExtraction.CopySummary.failed("<external-files-dir>")
 		}
 		val versionFile = File(externalDir, ".extracted_version")
 		val currentVersion = try {
@@ -171,57 +212,69 @@ class MainActivity : ComponentActivity() {
 
 		if (versionFile.exists() && versionFile.readText().trim() == currentVersion) {
 			Log.d(TAG, "Assets already extracted for version $currentVersion, skipping")
-			return true
+			return AssetExtraction.CopySummary.Empty
 		}
 
 		Log.d(TAG, "Extracting assets for version $currentVersion...")
 		return try {
-			copyAssets()
+			val copySummary = copyAssets()
+			if (!copySummary.isSuccess) {
+				Log.e(TAG, "Asset extraction failed for: ${copySummary.failedAssets.joinToString()}")
+				return copySummary
+			}
 			versionFile.writeText(currentVersion ?: "unknown")
-			Log.d(TAG, "Asset extraction complete")
-			true
+			Log.d(TAG, "Asset extraction complete: copied=${copySummary.copiedFiles}, preserved=${copySummary.preservedFiles}")
+			copySummary
 		} catch (e: Exception) {
 			Log.e(TAG, "Asset extraction failed", e)
-			false
+			AssetExtraction.CopySummary.failed("<asset-extraction>")
 		}
 	}
 
-	private fun copyAssets() {
+	private fun copyAssets(): AssetExtraction.CopySummary {
 		val assetManager = assets
 		val files = try {
-			assetManager.list("") ?: return
+			assetManager.list("") ?: return AssetExtraction.CopySummary.failed("<asset-root>")
 		} catch (e: IOException) {
 			Log.e(TAG, "Failed to get asset file list", e)
-			return
+			return AssetExtraction.CopySummary.failed("<asset-root>")
 		}
 
-		val skipDirs = setOf("images", "sounds", "webkit", "kioskmode")
+		var summary = AssetExtraction.CopySummary.Empty
 		for (filename in files) {
-			if (filename in skipDirs || filename.startsWith("_")) continue
-			copyAssetFileOrDir(filename, "")
+			if (AssetExtraction.shouldSkipTopLevelAsset(filename)) continue
+			summary += copyAssetFileOrDir(filename, "")
 		}
+		return summary
 	}
 
-	private fun copyAssetFileOrDir(filename: String, parentPath: String) {
+	private fun copyAssetFileOrDir(filename: String, parentPath: String): AssetExtraction.CopySummary {
 		val assetManager = assets
 		val fullAssetPath = if (parentPath.isNotEmpty()) "$parentPath/$filename" else filename
 
 		val children = try {
 			assetManager.list(fullAssetPath)
 		} catch (e: IOException) {
+			Log.e(TAG, "Failed to list asset path: $fullAssetPath", e)
 			null
 		}
 
 		if (children != null && children.isNotEmpty()) {
 			// Directory: create and recurse
-			val targetDir = File(getExternalFilesDir(null), storagePathForAsset(fullAssetPath))
-			if (!targetDir.exists()) targetDir.mkdirs()
-			for (child in children) {
-				copyAssetFileOrDir(child, fullAssetPath)
+			val externalDir = getExternalFilesDir(null) ?: return AssetExtraction.CopySummary.failed(fullAssetPath)
+			val targetDir = File(externalDir, AssetExtraction.storagePathForAsset(fullAssetPath))
+			if (!targetDir.exists() && !targetDir.mkdirs()) {
+				Log.e(TAG, "Failed to create asset target directory: ${targetDir.absolutePath}")
+				return AssetExtraction.CopySummary.failed(fullAssetPath)
 			}
+			var summary = AssetExtraction.CopySummary.Empty
+			for (child in children) {
+				summary += copyAssetFileOrDir(child, fullAssetPath)
+			}
+			return summary
 		} else {
 			// File: copy it
-			copyAssetFile(fullAssetPath)
+			return copyAssetFile(fullAssetPath)
 		}
 	}
 
@@ -229,36 +282,23 @@ class MainActivity : ComponentActivity() {
 	 * Directories containing user-modifiable files that should not be overwritten
 	 * on version upgrades (users may have customized controller mappings, WHDLoad configs, etc.)
 	 */
-	private val userModifiableDirs = StoragePaths.userModifiableAssetDirs
-
-	private fun storagePathForAsset(assetPath: String): String {
-		val topDir = assetPath.substringBefore('/')
-		val remaining = assetPath.substringAfter('/', "")
-		val mappedTopDir = when (topDir) {
-			"controllers" -> StoragePaths.CONTROLLERS
-			"roms" -> StoragePaths.ROMS
-			"whdboot" -> StoragePaths.WHDBOOT
-			else -> topDir
-		}
-		return if (remaining.isEmpty()) mappedTopDir else "$mappedTopDir/$remaining"
-	}
-
-	private fun copyAssetFile(assetPath: String) {
+	private fun copyAssetFile(assetPath: String): AssetExtraction.CopySummary {
 		try {
-			val storagePath = storagePathForAsset(assetPath)
-			val outFile = File(getExternalFilesDir(null), storagePath)
+			val externalDir = getExternalFilesDir(null) ?: return AssetExtraction.CopySummary.failed(assetPath)
+			val storagePath = AssetExtraction.storagePathForAsset(assetPath)
+			val outFile = File(externalDir, storagePath)
 
 			// Skip overwriting files in user-modifiable directories if they already exist
-			if (outFile.exists()) {
-				val topDir = storagePath.substringBefore('/')
-				if (topDir in userModifiableDirs) {
-					Log.d(TAG, "Preserving user-modified file: $storagePath")
-					return
-				}
+			if (outFile.exists() && AssetExtraction.shouldPreserveExistingAsset(storagePath)) {
+				Log.d(TAG, "Preserving user-modified file: $storagePath")
+				return AssetExtraction.CopySummary.preserved()
 			}
 
 			outFile.parentFile?.let { parent ->
-				if (!parent.exists()) parent.mkdirs()
+				if (!parent.exists() && !parent.mkdirs()) {
+					Log.e(TAG, "Failed to create asset parent directory: ${parent.absolutePath}")
+					return AssetExtraction.CopySummary.failed(assetPath)
+				}
 			}
 
 			assets.open(assetPath).use { input ->
@@ -266,8 +306,10 @@ class MainActivity : ComponentActivity() {
 					input.copyTo(output)
 				}
 			}
+			return AssetExtraction.CopySummary.copied()
 		} catch (e: IOException) {
 			Log.e(TAG, "Failed to copy asset: $assetPath", e)
+			return AssetExtraction.CopySummary.failed(assetPath)
 		}
 	}
 
@@ -284,29 +326,47 @@ class MainActivity : ComponentActivity() {
 	/** Tracks whether the emulator was running so we can distinguish
 	 *  "returning from emulation" vs normal activity resume. */
 	private var emulatorWasLaunched = false
+	private var isActivityResumed = false
 
 	override fun onResume() {
 		super.onResume()
-		if (!isReady) return
+		isActivityResumed = true
+		processResumeRecovery()
+	}
 
+	override fun onPause() {
+		isActivityResumed = false
+		super.onPause()
+	}
+
+	private fun processResumeRecovery() {
+		if (EmulatorResumeRecovery.shouldDefer(isReady = isReady, isResumed = isActivityResumed)) {
+			return
+		}
 		// Check for user-initiated quit (pause menu → Quit to Launcher)
 		// before checking for crashes. Clean exit takes priority.
+		val hadTrackedSession = EmulatorLauncher.hasSessionMarker(this)
 		val wasCleanExit = EmulatorLauncher.checkAndClearCleanExit(this)
+		val wasCrash = !wasCleanExit && EmulatorLauncher.checkAndClearCrashMarker(this)
+		val decision = EmulatorResumeRecovery.decide(
+			wasCleanExit = wasCleanExit,
+			wasCrash = wasCrash,
+			emulatorWasLaunched = emulatorWasLaunched,
+			hadTrackedSession = hadTrackedSession
+		)
 
-		if (wasCleanExit) {
-			// User quit intentionally — clear any leftover session marker, no crash dialog
+		if (decision.clearSessionMarker) {
 			EmulatorLauncher.clearSessionMarker(this)
-			emulatorWasLaunched = false
-		} else if (EmulatorLauncher.checkAndClearCrashMarker(this)) {
+		}
+		if (decision.showCrashDialog) {
 			emulatorCrashDetected = true
-			emulatorWasLaunched = false
-		} else if (emulatorWasLaunched) {
-			// Successful emulator session — check if we should request a review
-			emulatorWasLaunched = false
+		}
+		if (decision.countSuccessfulSession) {
 			if (AppPreferences.getInstance(this).incrementLaunchCountAndCheckReview()) {
 				requestInAppReview()
 			}
 		}
+		emulatorWasLaunched = decision.keepLaunchTracked
 	}
 
 	/** Called by EmulatorLauncher before starting the SDL activity. */
@@ -325,6 +385,76 @@ class MainActivity : ComponentActivity() {
 	fun clearCrashFlag() {
 		emulatorCrashDetected = false
 	}
+
+	fun crashDiagnosticsSummary(): String? =
+		CrashRecoveryActions.summary(latestLaunchDiagnostics())
+
+	fun copyCrashDiagnosticsToClipboard() {
+		val packageInfo = runCatching {
+			packageManager.getPackageInfo(packageName, 0)
+		}.getOrNull()
+		val payload = CrashRecoveryActions.copyPayload(
+			entry = latestLaunchDiagnostics(),
+			packageName = packageName,
+			versionName = packageInfo?.versionName ?: "unknown",
+			versionCode = packageInfo?.let { info ->
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+					info.longVersionCode
+				} else {
+					@Suppress("DEPRECATION")
+					info.versionCode.toLong()
+				}
+			} ?: 0L,
+			sdkInt = Build.VERSION.SDK_INT
+		)
+		val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+		clipboard.setPrimaryClip(ClipData.newPlainText("Amiberry crash diagnostics", payload))
+
+		val message = CrashRecoveryActions.copyMessage()
+		Toast.makeText(
+			this,
+			message.argument?.let { getString(message.stringRes, it) } ?: getString(message.stringRes),
+			Toast.LENGTH_SHORT
+		).show()
+	}
+
+	fun assetExtractionFailureDetails(): String? =
+		AssetExtractionFailureActions.summary(assetExtractionFailureSummary)
+
+	fun copyAssetExtractionFailureDetailsToClipboard() {
+		val packageInfo = runCatching {
+			packageManager.getPackageInfo(packageName, 0)
+		}.getOrNull()
+		val payload = AssetExtractionFailureActions.copyPayload(
+			copySummary = assetExtractionFailureSummary,
+			packageName = packageName,
+			versionName = packageInfo?.versionName ?: "unknown",
+			versionCode = packageInfo?.let { info ->
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+					info.longVersionCode
+				} else {
+					@Suppress("DEPRECATION")
+					info.versionCode.toLong()
+				}
+			} ?: 0L,
+			sdkInt = Build.VERSION.SDK_INT,
+			externalDirPath = getExternalFilesDir(null)?.absolutePath
+		)
+		val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+		clipboard.setPrimaryClip(ClipData.newPlainText("Amiberry setup failure", payload))
+
+		val message = AssetExtractionFailureActions.copyMessage()
+		Toast.makeText(
+			this,
+			message.argument?.let { getString(message.stringRes, it) } ?: getString(message.stringRes),
+			Toast.LENGTH_SHORT
+		).show()
+	}
+
+	private fun latestLaunchDiagnostics(): LaunchDiagnostics.Entry? =
+		runCatching {
+			LaunchDiagnostics.read(File(filesDir, LaunchDiagnostics.LAST_LAUNCH_FILE))
+		}.getOrNull()
 
 	companion object {
 		private const val TAG = "Amiberry-Main"

@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
@@ -61,9 +62,138 @@ class FileManagerTest {
 
 	@Test
 	fun `fromExtension returns null for unknown extension`() {
+		assertNull(FileCategory.fromExtension("exe"))
 		assertNull(FileCategory.fromExtension("txt"))
 		assertNull(FileCategory.fromExtension("jpg"))
 		assertNull(FileCategory.fromExtension(""))
+	}
+
+	// --- Import filename safety ---
+
+	@Test
+	fun `safeImportFileName strips path traversal and directory separators`() {
+		assertEquals("A500.uae", FileManager.safeImportFileName("../configs/A500.uae"))
+		assertEquals("A1200.uae", FileManager.safeImportFileName("..\\configs\\A1200.uae"))
+		assertEquals("game.adf", FileManager.safeImportFileName("/storage/downloads/game.adf"))
+	}
+
+	@Test
+	fun `safeImportFileName replaces unsafe characters and falls back for blank names`() {
+		assertEquals("bad_name_.adf", FileManager.safeImportFileName("bad:name?.adf"))
+		assertEquals("imported_file", FileManager.safeImportFileName(".."))
+		assertEquals("imported_file", FileManager.safeImportFileName("   "))
+	}
+
+	@Test
+	fun `uniqueImportTarget does not overwrite existing imported file`() {
+		val dir = tempDir.newFolder("configs")
+		File(dir, "Workbench.uae").writeText("first")
+		File(dir, "Workbench_1.uae").writeText("second")
+
+		val target = FileManager.uniqueImportTarget(dir, "Workbench.uae")
+
+		assertEquals("Workbench_2.uae", target.name)
+	}
+
+	@Test
+	fun `importFileNameForCategory sanitizes and accepts matching extensions case insensitively`() {
+		assertEquals(
+			"Game_Disk.ADF",
+			FileManager.importFileNameForCategory("../downloads/Game:Disk.ADF", FileCategory.FLOPPIES)
+		)
+		assertEquals(
+			"Kickstart.ROM",
+			FileManager.importFileNameForCategory("Kickstart.ROM", FileCategory.ROMS)
+		)
+	}
+
+	@Test
+	fun `importFileNameForCategory rejects missing or unsupported extensions`() {
+		assertNull(FileManager.importFileNameForCategory("disk", FileCategory.FLOPPIES))
+		assertNull(FileManager.importFileNameForCategory("notes.txt", FileCategory.FLOPPIES))
+		assertNull(FileManager.importFileNameForCategory("archive.zip", FileCategory.WHDLOAD_GAMES))
+	}
+
+	@Test
+	fun `importCandidateForCategory accepts matching names with sanitized filename`() {
+		val candidate = FileManager.importCandidateForCategory("../downloads/Game:Disk.ADF", FileCategory.FLOPPIES)
+
+		assertEquals(FileManager.ImportCandidate.Importable("Game_Disk.ADF"), candidate)
+	}
+
+	@Test
+	fun `importCandidateForCategory rejects unsupported and extensionless names with feedback details`() {
+		assertEquals(
+			FileManager.ImportCandidate.Unsupported("notes.txt", "txt"),
+			FileManager.importCandidateForCategory("notes.txt", FileCategory.FLOPPIES)
+		)
+		assertEquals(
+			FileManager.ImportCandidate.Unsupported("disk", ""),
+			FileManager.importCandidateForCategory("disk", FileCategory.FLOPPIES)
+		)
+	}
+
+	// --- Managed file deletion safety ---
+
+	@Test
+	fun `deleteManagedFile deletes category files under app storage`() {
+		val baseDir = tempDir.newFolder("app-storage")
+		val floppyDir = File(baseDir, StoragePaths.FLOPPIES).also { it.mkdirs() }
+		val floppy = File(floppyDir, "game.adf").also { it.writeText("disk") }
+
+		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(floppy, FileCategory.FLOPPIES))
+
+		assertTrue(deleted)
+		assertFalse(floppy.exists())
+	}
+
+	@Test
+	fun `deleteManagedFile allows matching media in root app storage`() {
+		val baseDir = tempDir.newFolder("app-storage")
+		val floppy = File(baseDir, "game.adf").also { it.writeText("disk") }
+
+		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(floppy, FileCategory.FLOPPIES))
+
+		assertTrue(deleted)
+		assertFalse(floppy.exists())
+	}
+
+	@Test
+	fun `deleteManagedFile refuses paths outside app storage`() {
+		val baseDir = tempDir.newFolder("app-storage")
+		val outside = tempDir.newFile("outside.adf").also { it.writeText("disk") }
+
+		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(outside, FileCategory.FLOPPIES))
+
+		assertFalse(deleted)
+		assertTrue(outside.exists())
+	}
+
+	@Test
+	fun `deleteManagedFile refuses wrong extensions and directories`() {
+		val baseDir = tempDir.newFolder("app-storage")
+		val wrongExtension = File(baseDir, "notes.txt").also { it.writeText("text") }
+		val directory = File(baseDir, "folder.adf").also { it.mkdirs() }
+
+		assertFalse(FileManager.deleteManagedFile(baseDir, amigaFile(wrongExtension, FileCategory.FLOPPIES)))
+		assertFalse(FileManager.deleteManagedFile(baseDir, amigaFile(directory, FileCategory.FLOPPIES)))
+		assertTrue(wrongExtension.exists())
+		assertTrue(directory.exists())
+	}
+
+	@Test
+	fun `isManagedCategoryFile refuses traversal outside app storage`() {
+		val baseDir = tempDir.newFolder("app-storage")
+		val outside = tempDir.newFile("outside.adf").also { it.writeText("disk") }
+		val traversalPath = File(baseDir, "../${outside.name}").path
+
+		assertFalse(
+			FileManager.isManagedCategoryFile(
+				baseDir,
+				amigaFile(File(traversalPath), FileCategory.FLOPPIES)
+			)
+		)
+		assertTrue(outside.exists())
 	}
 
 	// --- scanDirectory ---
@@ -262,4 +392,14 @@ class FileManagerTest {
 			}
 		}
 	}
+
+	private fun amigaFile(file: File, category: FileCategory): AmigaFile =
+		AmigaFile(
+			path = file.path,
+			name = file.name,
+			extension = file.extension.lowercase(),
+			size = if (file.isFile) file.length() else 0L,
+			lastModified = file.lastModified(),
+			category = category
+		)
 }

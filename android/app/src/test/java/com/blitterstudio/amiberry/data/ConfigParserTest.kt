@@ -188,8 +188,8 @@ class ConfigParserTest {
 		val file = writeConfig("""
 			gfx_width=800
 			gfx_height=600
-			gfx_correct_aspect=false
-			gfx_auto_crop=true
+			amiberry.gfx_correct_aspect=false
+			amiberry.gfx_auto_crop=true
 		""".trimIndent())
 		val result = ConfigParser.parse(file)
 		val s = result.settings
@@ -198,6 +198,18 @@ class ConfigParserTest {
 		assertEquals(600, s.gfxHeight)
 		assertFalse(s.correctAspect)
 		assertTrue(s.autoCrop)
+	}
+
+	@Test
+	fun `parse legacy android display settings`() {
+		val file = writeConfig("""
+			gfx_correct_aspect=false
+			gfx_auto_crop=true
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertFalse(result.settings.correctAspect)
+		assertTrue(result.settings.autoCrop)
 	}
 
 	// --- Input settings ---
@@ -219,6 +231,27 @@ class ConfigParserTest {
 		assertEquals("onscreen_joy", s.joyport1)
 		assertTrue(s.onScreenJoystick)
 		assertFalse(s.onScreenKeyboard)
+	}
+
+	@Test
+	fun `parse input uses native vkbd key before default osk`() {
+		val file = writeConfig("""
+			amiberry.vkbd_enabled=true
+			input.default_osk=false
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.onScreenKeyboard)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `parse input uses native vkbd key without default osk`() {
+		val file = writeConfig("amiberry.vkbd_enabled=false")
+		val result = ConfigParser.parse(file)
+
+		assertFalse(result.settings.onScreenKeyboard)
+		assertTrue(result.unknownLines.isEmpty())
 	}
 
 	@Test

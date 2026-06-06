@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Pre-Android 12 (API < 31) backup rules.
-    Backs up user configurations and preferences.
+    Backs up only user configurations, controller mappings, and preferences.
+    Generated emulator payloads, ROMs, WHDLoad data, and session files must
+    not be restored across devices.
 -->
 <full-backup-content>
     <include domain="external" path="Configurations/" />
     <include domain="external" path="Controllers/" />
     <include domain="sharedpref" path="amiberry_prefs.xml" />
-    <exclude domain="external" path=".extracted_version" />
-    <exclude domain="external" path=".emulator_session" />
-    <exclude domain="external" path=".clean_exit" />
-    <exclude domain="external" path=".last_session.uae" />
-    <exclude domain="external" path=".current_settings.uae" />
-    <exclude domain="external" path=".temp_native_ui.uae" />
-    <exclude domain="external" path="data" />
-    <exclude domain="external" path="ROMs" />
-    <exclude domain="external" path="WHDBoot" />
+    <exclude domain="external" path="Configurations/.android_controls.uae" />
+    <exclude domain="external" path="Configurations/.current_settings.uae" />
+    <exclude domain="external" path="Configurations/.intent_quickstart_settings.uae" />
+    <exclude domain="external" path="Configurations/.last_session.uae" />
+    <exclude domain="external" path="Configurations/.quickstart_settings.uae" />
+    <exclude domain="external" path="Configurations/.temp_native_ui.uae" />
 </full-backup-content>

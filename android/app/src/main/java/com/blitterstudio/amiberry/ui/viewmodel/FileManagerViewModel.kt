@@ -8,11 +8,12 @@ import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FileRepository
+import com.blitterstudio.amiberry.data.ImportBatchFeedback
+import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,8 +36,6 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 	private val _isImporting = MutableStateFlow(false)
 	val isImporting: StateFlow<Boolean> = _isImporting.asStateFlow()
 
-	private var importJob: Job? = null
-
 	init {
 		rescan()
 	}
@@ -53,38 +52,33 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
 	fun importFiles(uris: List<Uri>, category: FileCategory) {
 		if (uris.isEmpty()) return
-		importJob?.cancel()
-		importJob = viewModelScope.launch(Dispatchers.IO) {
-			_isImporting.value = true
+		if (_isImporting.value) {
+			return
+		}
+		_isImporting.value = true
+		viewModelScope.launch(Dispatchers.IO) {
 			try {
 				val app = getApplication<Application>()
 				var successCount = 0
 				val totalCount = uris.size
+				var firstResult: FileManager.ImportResult? = null
+				val results = mutableListOf<FileManager.ImportResult>()
 
 				for (uri in uris) {
-					// Validate file extension before importing
-					val fileName = FileManager.getDisplayName(app, uri)
-					if (fileName != null) {
-						val ext = fileName.substringAfterLast('.', "").lowercase()
-						if (ext.isNotEmpty() && ext !in category.extensions) {
-							continue
-						}
-					}
-
-					val result = FileManager.importFile(app, uri, category)
-					if (result != null) {
+					val result = FileManager.importFileWithResult(app, uri, category)
+					results += result
+					if (firstResult == null) firstResult = result
+					if (result is FileManager.ImportResult.Imported) {
 						successCount++
 					}
 				}
 
 				_importResult.value = if (totalCount == 1) {
-					if (successCount == 1) {
-						app.getString(R.string.msg_imported_successfully)
-					} else {
-						app.getString(R.string.msg_import_failed)
-					}
+					val message = ImportFeedback.fromImportResult(firstResult ?: FileManager.ImportResult.Failed("file"))
+					app.getString(message.stringRes, message.argument)
 				} else {
-					app.getString(R.string.msg_imported_multiple, successCount, totalCount)
+					val message = ImportBatchFeedback.messageFor(results)
+					app.getString(message.stringRes, *message.args.map { it as Any }.toTypedArray())
 				}
 
 				if (successCount > 0) {
@@ -105,7 +99,8 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 		viewModelScope.launch(Dispatchers.IO) {
 			try {
 				val app = getApplication<Application>()
-				val deleted = java.io.File(file.path).delete()
+				val baseDir = app.getExternalFilesDir(null)
+				val deleted = baseDir != null && FileManager.deleteManagedFile(baseDir, file)
 				if (deleted) {
 					_importResult.value = app.getString(R.string.msg_deleted_file, file.name)
 					repository.rescanCategory(file.category)

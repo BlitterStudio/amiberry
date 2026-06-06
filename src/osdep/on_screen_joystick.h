@@ -30,6 +30,9 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_
 bool on_screen_joystick_is_enabled();
 void on_screen_joystick_set_enabled(bool enabled);
 
+// Release all active touch-control state without changing the enabled setting.
+void on_screen_joystick_release_all();
+
 // Returns true if the keyboard button was just tapped (and consumed).
 // Call after handling finger events; resets to false after reading.
 bool on_screen_joystick_keyboard_tapped();

@@ -20,12 +20,16 @@
     <string name="quick_start_title">Quick Start</string>
     <string name="file_manager_title">File Manager</string>
     <string name="configurations_title">Saved Configurations</string>
+    <string name="configurations_refresh">Refresh configurations</string>
 
     <string name="more_options">More options</string>
     <string name="action_start">Start</string>
+    <string name="action_launching">Launching</string>
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_back">Back</string>
     <string name="action_import">Import</string>
+    <string name="action_importing">Importing</string>
     <string name="action_delete">Delete</string>
     <string name="action_duplicate">Duplicate</string>
     <string name="action_launch">Launch</string>
@@ -35,6 +39,12 @@
     <string name="action_edit_advanced_imgui">Edit in Advanced mode (ImGui)</string>
     <string name="action_eject">Eject</string>
     <string name="action_share">Share</string>
+    <string name="action_clear_search">Clear search</string>
+    <string name="action_launch_named">Launch %1$s</string>
+    <string name="action_edit_named">Edit %1$s</string>
+    <string name="action_delete_named">Delete %1$s</string>
+    <string name="action_eject_named">Eject %1$s</string>
+    <string name="action_more_for_named">More options for %1$s</string>
 
     <string name="label_configuration_name">Configuration Name</string>
     <string name="label_configuration_description">Description (optional)</string>
@@ -44,6 +54,7 @@
     <string name="dialog_delete_config_message">Delete "%1$s"? This cannot be undone.</string>
 
     <string name="msg_invalid_config_name">Invalid configuration name</string>
+    <string name="msg_config_already_exists">A configuration with that name already exists</string>
     <string name="msg_failed_save_config">Failed to save configuration</string>
     <string name="msg_saved_configuration">Saved %1$s</string>
     <string name="msg_rom_required_before_start">Import/select a Kickstart ROM before starting.</string>
@@ -54,7 +65,11 @@
     <string name="msg_failed_delete_config">Failed to delete configuration</string>
     <string name="msg_failed_duplicate_config">Failed to duplicate configuration</string>
     <string name="msg_failed_share_config">Failed to share configuration</string>
+    <string name="msg_failed_launch_config">Failed to launch configuration</string>
+    <string name="msg_failed_launch_advanced">Failed to open Advanced mode</string>
     <string name="msg_config_duplicated_as">Duplicated as %1$s</string>
+    <string name="msg_link_open_failed">No app can open this link</string>
+    <string name="msg_support_info_copied">Support info copied</string>
 
     <string name="configurations_empty_title">No configurations saved yet</string>
     <string name="configurations_empty_message">Configure settings and launch emulation to generate config files, or use the Advanced (ImGui) interface to create them.</string>
@@ -69,6 +84,10 @@
     <string name="quick_start_media_cd">CD selected</string>
     <string name="quick_start_media_none">No media selected</string>
     <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from File Manager before launch.</string>
+    <string name="quick_start_no_compatible_models">No compatible models found</string>
+    <string name="quick_start_no_compatible_models_help">Import a supported Kickstart ROM to enable model selection.</string>
+    <string name="quick_start_no_compatible_models_message">No recognized Kickstart ROM matches the Quick Start models. Import a supported model ROM or use a saved configuration.</string>
+    <string name="quick_start_config_write_failed">Failed to write Quick Start settings</string>
     <string name="setup_required_title">ROM Setup Required</string>
     <string name="setup_required_message">An Amiga Kickstart ROM is required to start the emulator. Please import a valid ROM file.</string>
     <string name="action_import_rom">Import ROM</string>
@@ -84,6 +103,7 @@
     <string name="quick_start_whdload_help">Select an .lha game to auto-configure and launch</string>
     <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha files to get started.</string>
     <string name="quick_start_select_game_placeholder">(select a game)</string>
+    <string name="quick_start_scanning_media">Scanning media</string>
 
     <string name="file_manager_tab_roms">ROMs</string>
     <string name="file_manager_tab_whdload">WHDLoad</string>
@@ -92,11 +112,23 @@
     <string name="file_manager_tab_cds">CDs</string>
     <string name="file_manager_app_storage">App Storage</string>
     <string name="file_manager_copy_path">Copy path</string>
+    <string name="file_manager_refresh">Refresh files</string>
     <string name="file_manager_no_files_found">No %1$s found</string>
     <string name="file_manager_empty_help">Tap + to import files, or copy them to:\n%1$s/%2$s/</string>
+    <string name="file_manager_empty_help_with_extensions">Tap + to import %3$s files, or copy them to:\n%1$s/%2$s/</string>
+    <string name="file_manager_no_search_results">No matching files</string>
+    <string name="file_manager_search_help">Try a different search term or clear the search.</string>
+    <string name="file_manager_scanning_files">Scanning files</string>
+    <string name="file_manager_importing_files">Importing files</string>
     <string name="msg_imported_successfully">Imported successfully</string>
     <string name="msg_imported_multiple">Imported %1$d of %2$d files</string>
+    <string name="msg_imported_multiple_with_failures">Imported %1$d of %2$d files (%3$d unsupported, %4$d failed)</string>
+    <string name="msg_imported_none">No files imported (%1$d unsupported, %2$d failed)</string>
     <string name="msg_import_failed">Import failed</string>
+    <string name="msg_intent_imported_config_as">Imported config as %1$s</string>
+    <string name="msg_intent_imported_file">Imported %1$s</string>
+    <string name="msg_intent_unsupported_file_type">Unsupported file type: %1$s</string>
+    <string name="msg_intent_import_failed">Could not import %1$s</string>
     <string name="msg_deleted_file">Deleted %1$s</string>
     <string name="msg_failed_delete_file">Failed to delete %1$s</string>
 
@@ -112,12 +144,18 @@
     <string name="settings_cpu_section_title">CPU</string>
     <string name="settings_cpu_model_label">CPU Model</string>
     <string name="settings_cpu_fastest_possible">Fastest Possible</string>
+    <string name="settings_cpu_fastest_disabled_cycle_exact">Cycle-exact mode uses real CPU speed.</string>
     <string name="settings_cpu_more_compatible">More Compatible</string>
+    <string name="settings_cpu_compatible_disabled_jit">68040 and 68060 JIT disable compatible mode.</string>
     <string name="settings_cpu_24bit_addressing">24-bit Addressing</string>
+    <string name="settings_cpu_24bit_forced_68000">68000 and 68010 CPUs always use 24-bit addressing.</string>
     <string name="settings_cpu_fpu_label">FPU</string>
     <string name="settings_cpu_fpu_internal">CPU Internal</string>
     <string name="settings_cpu_jit_cache_label">JIT Cache (KB)</string>
     <string name="settings_cpu_jit_cache_value">%1$d KB</string>
+    <string name="settings_cpu_jit_disabled_cpu">JIT requires a 68020 or newer CPU.</string>
+    <string name="settings_cpu_jit_disabled_cycle_exact">JIT is disabled while cycle-exact mode is enabled.</string>
+    <string name="settings_cpu_jit_disabled_24bit">JIT is disabled while 24-bit addressing is enabled.</string>
 
     <string name="settings_chipset_ocs">OCS</string>
     <string name="settings_chipset_ecs_agnus">ECS Agnus</string>
@@ -127,6 +165,7 @@
     <string name="settings_chipset_section_title">Chipset</string>
     <string name="settings_chipset_label">Chipset</string>
     <string name="settings_chipset_immediate_blitter">Immediate Blitter</string>
+    <string name="settings_chipset_immediate_blitter_disabled_cycle_exact">Cycle-exact mode disables immediate blitter shortcuts.</string>
     <string name="settings_chipset_cycle_exact">Cycle-Exact</string>
     <string name="settings_chipset_ntsc">NTSC</string>
     <string name="settings_chipset_collision_level_label">Collision Level</string>
@@ -146,7 +185,9 @@
     <string name="settings_memory_summary_z3_fast">Z3 Fast: %1$d MB</string>
     <string name="settings_memory_summary_total">Total: %1$.1f MB</string>
     <string name="settings_memory_value_mb">%1$d MB</string>
+    <string name="settings_memory_value_mb_decimal">%1$.1f MB</string>
     <string name="settings_memory_value_kb">%1$d KB</string>
+    <string name="settings_memory_z3_disabled_24bit">Z3 Fast RAM requires 32-bit addressing.</string>
 
     <string name="settings_display_title">Display Settings</string>
     <string name="settings_display_resolution_label">Resolution</string>
@@ -175,7 +216,7 @@
     <string name="settings_sound_frequency_hz">%1$d Hz</string>
     <string name="settings_sound_channels_mono">Mono</string>
     <string name="settings_sound_channels_stereo">Stereo</string>
-    <string name="settings_sound_channels_mixed">Mixed (75%% stereo)</string>
+    <string name="settings_sound_channels_mixed" formatted="false">Mixed (75% stereo)</string>
 
     <string name="settings_input_port_assignments_title">Port Assignments</string>
     <string name="settings_input_port0_label">Port 0 (Mouse Port)</string>
@@ -214,6 +255,8 @@
     <string name="about_title">About Amiberry</string>
     <string name="about_description">Amiberry is an optimized Amiga emulator, bringing the classic Amiga experience to modern devices. Based on UAE (Unix Amiga Emulator), it supports a wide range of Amiga models from the A500 to the A4000, CD32, and CDTV.</string>
     <string name="about_version_label">Version</string>
+    <string name="about_support_title">Support Info</string>
+    <string name="about_copy_support_info">Copy support info</string>
     <string name="about_license_title">License</string>
     <string name="about_license_body">GNU General Public License v3 (GPLv3)\n\nAmiberry is free and open-source software. You are free to use, modify, and distribute it under the terms of the GPLv3.</string>
     <string name="about_links_title">Links</string>
@@ -231,11 +274,18 @@
 
     <string name="crash_dialog_title">Emulator stopped unexpectedly</string>
     <string name="crash_dialog_message">The emulator process exited unexpectedly. This may have been caused by an incompatible configuration or a missing ROM file. If this keeps happening, try a different Amiga model or check your ROM files.</string>
+    <string name="crash_dialog_diagnostics_summary">Last launch: %1$s</string>
+    <string name="crash_dialog_copy_diagnostics">Copy Diagnostics</string>
     <string name="crash_dialog_dismiss">OK</string>
+    <string name="msg_crash_diagnostics_copied">Crash diagnostics copied</string>
 
     <string name="asset_extraction_failed_title">Setup failed</string>
     <string name="asset_extraction_failed_message">Amiberry could not extract its data files. Please ensure the device has enough free storage and try again.</string>
+    <string name="asset_extraction_failure_summary">Failed assets: %1$s</string>
+    <string name="asset_extraction_copy_details">Copy Details</string>
     <string name="action_retry">Retry</string>
+    <string name="action_retrying">Retrying</string>
+    <string name="msg_asset_extraction_details_copied">Setup failure details copied</string>
 
     <string name="msg_unsupported_file_type">Unsupported file type for this category</string>
     <string name="search_placeholder">Search…</string>
@@ -243,4 +293,5 @@
     <string name="storage_permission_banner_title">Limited file access</string>
     <string name="storage_permission_banner_message">Amiberry can only access files in its own app folder. To use ROM and disk image files from other locations, grant All Files Access.</string>
     <string name="storage_permission_banner_action">Grant Access</string>
+    <string name="msg_storage_permission_settings_failed">Could not open storage permission settings</string>
 </resources>

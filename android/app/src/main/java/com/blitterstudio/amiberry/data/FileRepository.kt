@@ -3,16 +3,21 @@ package com.blitterstudio.amiberry.data
 import android.content.Context
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class FileRepository(private val context: Context) {
+class FileRepository internal constructor(
+	private val scanCategory: (FileCategory) -> List<AmigaFile>
+) {
 
-	private val scanLock = AtomicBoolean(false)
+	constructor(context: Context) : this({ category -> FileManager.scanForCategory(context, category) })
+
+	private val scanMutex = Mutex()
 	private val _isScanning = MutableStateFlow(false)
 	val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
@@ -32,28 +37,35 @@ class FileRepository(private val context: Context) {
 	val whdloadGames: StateFlow<List<AmigaFile>> = _whdloadGames.asStateFlow()
 
 	suspend fun rescan() = withContext(Dispatchers.IO) {
-		if (!scanLock.compareAndSet(false, true)) return@withContext
-		_isScanning.value = true
-		try {
-			_roms.value = FileManager.scanForCategory(context, FileCategory.ROMS)
-			_floppies.value = FileManager.scanForCategory(context, FileCategory.FLOPPIES)
-			_hardDrives.value = FileManager.scanForCategory(context, FileCategory.HARD_DRIVES)
-			_cdImages.value = FileManager.scanForCategory(context, FileCategory.CD_IMAGES)
-			_whdloadGames.value = FileManager.scanForCategory(context, FileCategory.WHDLOAD_GAMES)
-		} finally {
-			_isScanning.value = false
-			scanLock.set(false)
+		scanMutex.withLock {
+			_isScanning.value = true
+			try {
+				_roms.value = scanCategory(FileCategory.ROMS)
+				_floppies.value = scanCategory(FileCategory.FLOPPIES)
+				_hardDrives.value = scanCategory(FileCategory.HARD_DRIVES)
+				_cdImages.value = scanCategory(FileCategory.CD_IMAGES)
+				_whdloadGames.value = scanCategory(FileCategory.WHDLOAD_GAMES)
+			} finally {
+				_isScanning.value = false
+			}
 		}
 	}
 
 	suspend fun rescanCategory(category: FileCategory) = withContext(Dispatchers.IO) {
-		val files = FileManager.scanForCategory(context, category)
-		when (category) {
-			FileCategory.ROMS -> _roms.value = files
-			FileCategory.FLOPPIES -> _floppies.value = files
-			FileCategory.HARD_DRIVES -> _hardDrives.value = files
-			FileCategory.CD_IMAGES -> _cdImages.value = files
-			FileCategory.WHDLOAD_GAMES -> _whdloadGames.value = files
+		scanMutex.withLock {
+			_isScanning.value = true
+			try {
+				val files = scanCategory(category)
+				when (category) {
+					FileCategory.ROMS -> _roms.value = files
+					FileCategory.FLOPPIES -> _floppies.value = files
+					FileCategory.HARD_DRIVES -> _hardDrives.value = files
+					FileCategory.CD_IMAGES -> _cdImages.value = files
+					FileCategory.WHDLOAD_GAMES -> _whdloadGames.value = files
+				}
+			} finally {
+				_isScanning.value = false
+			}
 		}
 	}
 

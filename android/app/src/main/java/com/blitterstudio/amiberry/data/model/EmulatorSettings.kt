@@ -99,15 +99,18 @@ data class EmulatorSettings(
 				AmigaModel.A4000 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68040, chipset = "aga",
 					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false,
-					fpuModel = 68040, cpuSpeed = "max", jitCacheSize = 16384, jitFpu = true
+					fpuModel = 68040, cpuCompatible = false, cpuSpeed = "max",
+					jitCacheSize = 16384, jitFpu = true
 				)
 				AmigaModel.CD32 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68020, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true
+					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true,
+					floppy0Type = -1, floppy1Type = -1
 				)
 				AmigaModel.CDTV -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
+					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true,
+					floppy0Type = -1, floppy1Type = -1
 				)
 			}
 		}

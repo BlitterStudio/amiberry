@@ -947,6 +947,23 @@ bool on_screen_joystick_is_enabled()
 	return osj_enabled;
 }
 
+void on_screen_joystick_release_all()
+{
+	if (!osj_initialized)
+		return;
+
+	joy_up = joy_down = joy_left = joy_right = false;
+	joy_fire1 = joy_fire2 = false;
+	joy_kb_pressed = false;
+	kb_tapped = false;
+	knob_offset_x = 0.0f;
+	knob_offset_y = 0.0f;
+	knob_active = false;
+	inject_directions();
+	inject_buttons();
+	active_fingers.clear();
+}
+
 void on_screen_joystick_set_enabled(bool enabled)
 {
 	osj_enabled = enabled;
@@ -970,16 +987,7 @@ void on_screen_joystick_set_enabled(bool enabled)
 		}
 	}
 	else if (osj_initialized) {
-		joy_up = joy_down = joy_left = joy_right = false;
-		joy_fire1 = joy_fire2 = false;
-		joy_kb_pressed = false;
-		kb_tapped = false;
-		knob_offset_x = 0.0f;
-		knob_offset_y = 0.0f;
-		knob_active = false;
-		inject_directions();
-		inject_buttons();
-		active_fingers.clear();
+		on_screen_joystick_release_all();
 	}
 }
 

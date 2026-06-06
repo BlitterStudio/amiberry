@@ -3,7 +3,6 @@ package com.blitterstudio.amiberry.ui.components
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.data.StoragePermissionActions
 import com.blitterstudio.amiberry.ui.hasFullStorageAccess
 
 /**
@@ -33,8 +34,11 @@ import com.blitterstudio.amiberry.ui.hasFullStorageAccess
  * Renders nothing if permission is already granted or on Android 10 and below.
  */
 @Composable
-fun StoragePermissionBanner(modifier: Modifier = Modifier) {
-	if (hasFullStorageAccess()) return
+fun StoragePermissionBanner(
+	modifier: Modifier = Modifier,
+	onMessage: (ConfigurationActions.Message) -> Unit = {}
+) {
+	if (!StoragePermissionActions.shouldShowBanner(hasFullStorageAccess())) return
 
 	val context = LocalContext.current
 
@@ -62,14 +66,23 @@ fun StoragePermissionBanner(modifier: Modifier = Modifier) {
 				)
 				TextButton(
 					onClick = {
-						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+						val opened = StoragePermissionActions
+							.permissionRequests(context.packageName, Build.VERSION.SDK_INT)
+							.any { request ->
+								val intent = Intent(request.action).apply {
+									request.dataUri?.let { data = Uri.parse(it) }
+								}
+
+								runCatching {
+									context.startActivity(intent)
+								}.isSuccess
+							}
+
+						if (!opened) {
 							try {
-								val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-								intent.data = Uri.parse("package:${context.packageName}")
-								context.startActivity(intent)
+								onMessage(StoragePermissionActions.openSettingsFailedMessage())
 							} catch (_: Exception) {
-								val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-								context.startActivity(intent)
+								// Message delivery is owned by the parent screen; keep the banner resilient.
 							}
 						}
 					}

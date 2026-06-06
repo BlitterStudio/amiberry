@@ -21,8 +21,8 @@ class ConfigRepository(private val context: Context) {
 		}
 
 	fun listConfigs(): List<ConfigInfo> {
-		return confDir.listFiles { f -> f.extension == "uae" && !f.name.startsWith(".") }
-			?.map { file ->
+		return ConfigFiles.listUserConfigFiles(confDir)
+			.map { file ->
 				val parsed = ConfigParser.parse(file)
 				ConfigInfo(
 					path = file.absolutePath,
@@ -31,8 +31,7 @@ class ConfigRepository(private val context: Context) {
 					description = parsed.description
 				)
 			}
-			?.sortedByDescending { it.lastModified }
-			?: emptyList()
+			.sortedByDescending { it.lastModified }
 	}
 
 	fun loadConfig(path: String): ConfigParser.ParsedConfig {
@@ -40,11 +39,28 @@ class ConfigRepository(private val context: Context) {
 	}
 
 	fun saveConfig(settings: EmulatorSettings, name: String, unknownLines: List<String> = emptyList(), description: String = ""): File? {
-		val safeName = name.trim()
-		if (!isValidConfigName(safeName)) return null
+		return when (val result = saveConfigResult(settings, name, unknownLines, description)) {
+			is ConfigurationSaveActions.SaveResult.Saved -> result.file
+			ConfigurationSaveActions.SaveResult.AlreadyExists,
+			ConfigurationSaveActions.SaveResult.Failed,
+			ConfigurationSaveActions.SaveResult.InvalidName -> null
+		}
+	}
+
+	fun saveConfigResult(
+		settings: EmulatorSettings,
+		name: String,
+		unknownLines: List<String> = emptyList(),
+		description: String = ""
+	): ConfigurationSaveActions.SaveResult {
+		val target = when (val saveTarget = ConfigurationSaveActions.targetForName(confDir, name)) {
+			is ConfigurationSaveActions.SaveTarget.Ready -> saveTarget.file
+			ConfigurationSaveActions.SaveTarget.InvalidName -> return ConfigurationSaveActions.SaveResult.InvalidName
+			ConfigurationSaveActions.SaveTarget.AlreadyExists -> return ConfigurationSaveActions.SaveResult.AlreadyExists
+		}
 
 		return try {
-			val file = ConfigGenerator.writeConfig(context, settings, "$safeName.uae")
+			val file = ConfigGenerator.writeConfig(context, settings, target.name)
 
 			// Append description if provided
 			if (description.isNotBlank()) {
@@ -57,9 +73,9 @@ class ConfigRepository(private val context: Context) {
 				unknownLines.forEach { file.appendText("$it\n") }
 			}
 
-			file
+			ConfigurationSaveActions.SaveResult.Saved(file)
 		} catch (_: IOException) {
-			null
+			ConfigurationSaveActions.SaveResult.Failed
 		}
 	}
 
@@ -68,41 +84,19 @@ class ConfigRepository(private val context: Context) {
 	 * Rejects path separators, parent directory references, and blank names.
 	 */
 	fun isValidConfigName(name: String): Boolean {
-		if (name.isBlank()) return false
-		if (name.contains('/') || name.contains('\\') || name.contains("..")) return false
-		return try {
-			val testFile = File(confDir, "$name.uae")
-			testFile.parentFile?.canonicalPath == confDir.canonicalPath
-		} catch (_: IOException) {
-			false
-		}
+		return ConfigFiles.targetFileForName(confDir, name) != null
 	}
 
 	fun deleteConfig(path: String): Boolean {
-		return File(path).delete()
+		return ConfigFiles.deleteConfig(confDir, path)
 	}
 
 	fun renameConfig(path: String, newName: String): File? {
-		val safeName = newName.trim()
-		if (!isValidConfigName(safeName)) return null
-		val oldFile = File(path)
-		if (!oldFile.exists()) return null
-		val newFile = File(oldFile.parentFile, "$safeName.uae")
-		return if (oldFile.renameTo(newFile)) newFile else null
+		return ConfigFiles.renameConfig(confDir, path, newName)
 	}
 
 	fun duplicateConfig(path: String, newName: String): File? {
-		val safeName = newName.trim()
-		if (!isValidConfigName(safeName)) return null
-		val source = File(path)
-		if (!source.exists()) return null
-		val target = File(source.parentFile, "$safeName.uae")
-		return try {
-			source.copyTo(target, overwrite = false)
-			target
-		} catch (_: IOException) {
-			null
-		}
+		return ConfigFiles.duplicateConfig(confDir, path, newName)
 	}
 
 	companion object {

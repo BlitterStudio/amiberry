@@ -1,9 +1,13 @@
 package com.blitterstudio.amiberry.ui
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -21,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.findActivity
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -30,7 +35,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.blitterstudio.amiberry.data.GlobalDialogState
+import com.blitterstudio.amiberry.data.PendingImportState
 import com.blitterstudio.amiberry.ui.navigation.Screen
+import com.blitterstudio.amiberry.ui.navigation.shouldMoveTaskToBack
 import com.blitterstudio.amiberry.ui.screens.AboutScreen
 import com.blitterstudio.amiberry.ui.screens.ConfigurationsScreen
 import com.blitterstudio.amiberry.ui.screens.FileManagerScreen
@@ -41,41 +49,90 @@ import com.blitterstudio.amiberry.ui.screens.settings.SettingsScreen
 fun AmiberryApp() {
 	val navController = rememberNavController()
 	val activity = LocalContext.current.findActivity() as? MainActivity
+	val crashDetected = activity?.emulatorCrashDetected == true
+	val assetExtractionFailed = activity?.assetExtractionFailed == true
+	val visibleGlobalDialog = GlobalDialogState.visibleDialog(
+		crashDetected = crashDetected,
+		assetExtractionFailed = assetExtractionFailed
+	)
 
-	// Show crash recovery dialog when emulator process died unexpectedly
-	if (activity?.emulatorCrashDetected == true) {
-		AlertDialog(
-			onDismissRequest = { activity.clearCrashFlag() },
-			title = { Text(stringResource(R.string.crash_dialog_title)) },
-			text = { Text(stringResource(R.string.crash_dialog_message)) },
-			confirmButton = {
-				TextButton(onClick = { activity.clearCrashFlag() }) {
-					Text(stringResource(R.string.crash_dialog_dismiss))
+	when (visibleGlobalDialog) {
+		GlobalDialogState.VisibleDialog.AssetExtractionFailure -> activity?.let { activity ->
+			val assetExtractionDetails = activity.assetExtractionFailureDetails()
+			val assetExtractionInProgress = activity.assetExtractionInProgress == true
+			AlertDialog(
+				onDismissRequest = {},
+				title = { Text(stringResource(R.string.asset_extraction_failed_title)) },
+				text = {
+					Column {
+						Text(stringResource(R.string.asset_extraction_failed_message))
+						if (assetExtractionDetails != null) {
+							Spacer(modifier = Modifier.height(8.dp))
+							Text(stringResource(R.string.asset_extraction_failure_summary, assetExtractionDetails))
+						}
+					}
+				},
+				dismissButton = {
+					TextButton(onClick = { activity.copyAssetExtractionFailureDetailsToClipboard() }) {
+						Text(stringResource(R.string.asset_extraction_copy_details))
+					}
+				},
+				confirmButton = {
+					TextButton(onClick = { activity.retryAssetExtraction() }, enabled = !assetExtractionInProgress) {
+						Text(
+							stringResource(
+								if (assetExtractionInProgress) R.string.action_retrying else R.string.action_retry
+							)
+						)
+					}
 				}
-			}
-		)
-	}
-
-	// Show asset extraction failure dialog with retry
-	if (activity?.assetExtractionFailed == true) {
-		AlertDialog(
-			onDismissRequest = {},
-			title = { Text(stringResource(R.string.asset_extraction_failed_title)) },
-			text = { Text(stringResource(R.string.asset_extraction_failed_message)) },
-			confirmButton = {
-				TextButton(onClick = { activity.retryAssetExtraction() }) {
-					Text(stringResource(R.string.action_retry))
+			)
+		}
+		GlobalDialogState.VisibleDialog.CrashRecovery -> activity?.let { activity ->
+			val crashSummary = activity.crashDiagnosticsSummary()
+			AlertDialog(
+				onDismissRequest = { activity.clearCrashFlag() },
+				title = { Text(stringResource(R.string.crash_dialog_title)) },
+				text = {
+					Column {
+						Text(stringResource(R.string.crash_dialog_message))
+						if (crashSummary != null) {
+							Spacer(modifier = Modifier.height(8.dp))
+							Text(stringResource(R.string.crash_dialog_diagnostics_summary, crashSummary))
+						}
+					}
+				},
+				dismissButton = {
+					TextButton(onClick = { activity.copyCrashDiagnosticsToClipboard() }) {
+						Text(stringResource(R.string.crash_dialog_copy_diagnostics))
+					}
+				},
+				confirmButton = {
+					TextButton(onClick = { activity.clearCrashFlag() }) {
+						Text(stringResource(R.string.crash_dialog_dismiss))
+					}
 				}
-			}
-		)
+			)
+		}
+		GlobalDialogState.VisibleDialog.None -> Unit
 	}
 
 	// Handle pending file from ACTION_VIEW intent
 	val pendingUri = activity?.pendingFileUri
-	LaunchedEffect(pendingUri) {
-		if (pendingUri != null) {
-			activity?.clearPendingFileUri()
-			activity?.importAndLaunch(pendingUri)
+	val assetsReady = activity?.isReady == true
+	val importLaunchInProgress = activity?.importLaunchInProgress == true
+	LaunchedEffect(pendingUri, assetsReady, assetExtractionFailed, importLaunchInProgress) {
+		val mainActivity = activity ?: return@LaunchedEffect
+		val uri = pendingUri ?: return@LaunchedEffect
+		if (PendingImportState.shouldProcess(
+				hasPendingUri = true,
+				assetsReady = assetsReady,
+				assetExtractionFailed = assetExtractionFailed,
+				importLaunchInProgress = importLaunchInProgress
+			)
+		) {
+			mainActivity.clearPendingFileUri()
+			mainActivity.importAndLaunch(uri)
 		}
 	}
 
@@ -84,6 +141,16 @@ fun AmiberryApp() {
 
 	val navBackStackEntry by navController.currentBackStackEntryAsState()
 	val currentDestination = navBackStackEntry?.destination
+
+	BackHandler(
+		enabled = shouldMoveTaskToBack(
+			route = currentDestination?.route,
+			crashDialogVisible = crashDetected,
+			assetExtractionFailed = assetExtractionFailed
+		)
+	) {
+		activity?.moveTaskToBack(true)
+	}
 
 	if (useNavRail) {
 		Row(modifier = Modifier.fillMaxSize()) {

@@ -1639,7 +1639,7 @@ void OpenGLRenderer::render_vkbd(int monid)
 
 void OpenGLRenderer::render_onscreen_joystick(int monid)
 {
-	if (on_screen_joystick_is_enabled())
+	if (on_screen_joystick_is_enabled() && !imgui_osk_should_render())
 	{
 		int dw, dh;
 		get_drawable_size(AMonitors[monid].amiga_window, &dw, &dh);

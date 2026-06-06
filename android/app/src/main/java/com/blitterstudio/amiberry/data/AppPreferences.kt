@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
-import org.json.JSONArray
 import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
@@ -43,33 +42,20 @@ class AppPreferences private constructor(context: Context) {
 
 	private fun loadRecentLaunches(): List<JSONObject> {
 		val raw = prefs.getString(KEY_RECENT_LAUNCHES, "[]") ?: "[]"
-		return try {
-			val arr = JSONArray(raw)
-			(0 until arr.length()).map { arr.getJSONObject(it) }
-		} catch (_: Exception) {
-			emptyList()
-		}
+		return RecentLaunches.parse(raw)
 	}
 
 	fun getRecentLaunches(): List<JSONObject> = recentLaunches.value
 
 	fun addRecentLaunch(entry: JSONObject) {
-		val current = recentLaunches.value.toMutableList()
-		// Remove duplicate by comparing serialized form
-		val entryStr = entry.toString()
-		current.removeAll { it.toString() == entryStr }
-		current.add(0, entry)
-		val trimmed = current.take(MAX_RECENT_ITEMS)
-		val arr = JSONArray()
-		trimmed.forEach { arr.put(it) }
-		prefs.edit { putString(KEY_RECENT_LAUNCHES, arr.toString()) }
-		recentLaunches.value = trimmed
+		replaceRecentLaunches(RecentLaunches.add(recentLaunches.value, entry))
 	}
 
-	/** Fingerprint of the ROM directory at last rescan (file count + total size). */
-	var lastRomFingerprint: String
-		get() = prefs.getString(KEY_LAST_ROM_FINGERPRINT, "") ?: ""
-		set(value) { prefs.edit { putString(KEY_LAST_ROM_FINGERPRINT, value) } }
+	fun replaceRecentLaunches(entries: List<JSONObject>) {
+		val trimmed = entries.take(RecentLaunches.MAX_ITEMS)
+		prefs.edit { putString(KEY_RECENT_LAUNCHES, RecentLaunches.serialize(trimmed)) }
+		recentLaunches.value = trimmed
+	}
 
 	/**
 	 * Increment the emulator launch counter and return true if it's time
@@ -104,9 +90,7 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
 		private const val KEY_STORAGE_PERMISSION_REQUESTED = "storage_permission_requested"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
-		private const val KEY_LAST_ROM_FINGERPRINT = "last_rom_fingerprint"
 		private const val KEY_RECENT_LAUNCHES = "recent_launches"
-		private const val MAX_RECENT_ITEMS = 10
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
 		private const val REVIEW_INTERVAL = 20
