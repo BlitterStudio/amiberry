@@ -58,6 +58,7 @@
 #endif
 #ifdef JIT
 #include "jit/compemu.h"
+#include "uae/vm.h"
 #include <signal.h>
 volatile int jit_exception_pending = 0;
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
@@ -5860,6 +5861,19 @@ static void m68k_run_jit(void)
 			jit_in_compiled_code = true;
 #endif
 			for (;;) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+				/* The qemu-uae PPC plugin generates TCG code on this (m68k)
+				 * thread during PPC init/reset (reached via do_specialties()
+				 * below) and leaves the thread in JIT *write* mode through
+				 * pthread_jit_write_protect_np(). On Apple Silicon a MAP_JIT
+				 * page is per-thread either writable or executable, so the next
+				 * dispatch into translated m68k code would fault with
+				 * EXC_BAD_ACCESS (code=2). Re-assert execute mode here so we
+				 * never run a translated block from a write-protected page.
+				 * Only needed while the PPC CPU is in use. */
+				if (currprefs.ppc_mode)
+					uae_vm_jit_write_protect(true);
+#endif
 				((compiled_handler*)(pushall_call_handler))();
 				/* Check for pending exception from SIGSEGV handler (x86-64) */
 #if defined(CPU_x86_64) || defined(_M_AMD64)

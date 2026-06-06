@@ -752,7 +752,15 @@ STATIC_INLINE void jit_end_write_window(void);
 #endif
 STATIC_INLINE void write_jmp_target(uae_u32 *jmpaddr, uintptr a);
 
-static int jit_write_window_depth = 0;
+/* pthread_jit_write_protect_np() toggles the W^X state per-thread, so the
+ * nesting counter that gates it must be per-thread too. With the QEMU PPC
+ * plugin a second thread (the TCG vCPU) drives the JIT via SMC/block
+ * invalidation (write_jmp_target) at the same time the main thread is inside
+ * compile_block(). A shared global counter lets the two threads' begin/end
+ * pairs interleave, so the main thread's "restore execute mode" is skipped and
+ * it faults (EXC_BAD_ACCESS code=2) the instant it runs the freshly compiled
+ * block. thread_local keeps each thread's window depth and W^X state coherent. */
+static thread_local int jit_write_window_depth = 0;
 
 STATIC_INLINE void jit_begin_write_window(void)
 {
