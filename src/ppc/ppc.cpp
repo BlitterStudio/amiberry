@@ -102,6 +102,22 @@ static void uae_ppc_spinlock_create(void)
 	spinlock_cnt = 0;
 #endif
 	ppc_cs_initialized = true;
+#else
+	/* Create the SDL mutexes backing the PPC<->emulation handoff lock. Without
+	 * this they stay NULL and SDL_LockMutex(NULL)/SDL_UnlockMutex(NULL) are
+	 * no-ops, so on macOS/Linux there was NO mutual exclusion between the PPC
+	 * CPU thread and the emulation thread at all (the Windows CRITICAL_SECTION
+	 * path was the only one that initialized the lock). SDL mutexes are
+	 * recursive, matching the CRITICAL_SECTION semantics this code relies on. */
+	if (ppc_mutex) {
+		SDL_DestroyMutex(ppc_mutex);
+		SDL_DestroyMutex(ppc_mutex2);
+	}
+	ppc_mutex = SDL_CreateMutex();
+	ppc_mutex2 = SDL_CreateMutex();
+#if SPINLOCK_DEBUG
+	spinlock_cnt = 0;
+#endif
 #endif
 }
 
