@@ -3376,9 +3376,20 @@ void update_clipboard()
 	osdep_platform_update_clipboard();
 }
 
+extern bool uae_self_is_ppc(void);
+
 int handle_msgpump(bool vblank)
 {
 	if (!osdep_platform_use_event_pump())
+		return 0;
+	/* SDL/Cocoa event pumping must never run on the qemu-uae PPC CPU thread.
+	 * That thread can reach here through a CIA register read
+	 * (uae_ppc_io_mem_read -> ReadCIAA -> handle_joystick_buttons ->
+	 * handle_msgpump); on macOS, calling the Cocoa event loop off the main
+	 * thread aborts the process ("nextEventMatchingMask should only be called
+	 * from the Main Thread!"). The host event loop is pumped by the emulation
+	 * thread every frame, so skipping it here is safe. */
+	if (uae_self_is_ppc())
 		return 0;
 	lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
 	auto got_event = 0;
