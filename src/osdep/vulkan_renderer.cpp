@@ -1120,7 +1120,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.draw_osj = false;
 	{
 		OsjRenderInfo osj_info{};
-		if (on_screen_joystick_is_enabled() && on_screen_joystick_get_render_info(osj_info)) {
+		if (on_screen_joystick_is_enabled() && !imgui_osk_should_render() && on_screen_joystick_get_render_info(osj_info)) {
 			upload_overlay_texture(m_osj_base_tex, osj_info.base.surface);
 			upload_overlay_texture(m_osj_knob_tex, osj_info.knob.surface);
 			upload_overlay_texture(m_osj_btn1_tex, osj_info.btn1.surface);

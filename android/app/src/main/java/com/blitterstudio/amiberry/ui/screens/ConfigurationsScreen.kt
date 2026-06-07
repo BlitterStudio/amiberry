@@ -23,10 +23,12 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,11 +59,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
 import android.content.Intent
 import androidx.core.content.FileProvider
+import com.blitterstudio.amiberry.data.AdvancedLaunchActions
+import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.ConfigInfo
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
+import com.blitterstudio.amiberry.ui.launchGuarded
 import com.blitterstudio.amiberry.ui.navigation.Screen
+import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -79,12 +85,12 @@ fun ConfigurationsScreen(
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
+	val launchGuard = rememberLaunchInFlightGuard()
+	val launchInProgress = launchGuard.isLaunching
 	val configs by viewModel.configs.collectAsState()
-	val loadFailedMessage = stringResource(R.string.msg_failed_load_config)
-	val deletedMessage = stringResource(R.string.msg_config_deleted)
-	val deleteFailedMessage = stringResource(R.string.msg_failed_delete_config)
-	val duplicateFailedMessage = stringResource(R.string.msg_failed_duplicate_config)
-	val shareFailedMessage = stringResource(R.string.msg_failed_share_config)
+	fun actionMessage(message: ConfigurationActions.Message): String =
+		message.argument?.let { context.getString(message.stringRes, it) }
+			?: context.getString(message.stringRes)
 
 	LaunchedEffect(Unit) {
 		viewModel.refresh()
@@ -93,7 +99,17 @@ fun ConfigurationsScreen(
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
-			TopAppBar(title = { Text(stringResource(R.string.configurations_title)) })
+			TopAppBar(
+				title = { Text(stringResource(R.string.configurations_title)) },
+				actions = {
+					IconButton(onClick = { viewModel.refresh() }) {
+						Icon(
+							Icons.Default.Refresh,
+							contentDescription = stringResource(R.string.configurations_refresh)
+						)
+					}
+				}
+			)
 		}
 	) { innerPadding ->
 		Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -127,54 +143,100 @@ fun ConfigurationsScreen(
 				items(configs, key = { it.path }) { config ->
 					ConfigItem(
 						config = config,
+						launchInProgress = launchInProgress,
 						onLoad = {
 							scope.launch {
-									runCatching { viewModel.loadConfig(config.path) }
-										.onSuccess { parsedConfig ->
-											settingsViewModel.loadConfig(parsedConfig)
+								when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
+									is ConfigurationActions.LoadResult.Loaded -> {
+										settingsViewModel.loadConfig(result.value)
 										navController.navigate(Screen.Settings.route) {
 											popUpTo(Screen.Configurations.route) { inclusive = false }
 										}
-										}
-										.onFailure {
-											scope.launch {
-												snackbarHostState.showSnackbar(loadFailedMessage)
-											}
-										}
+									}
+									is ConfigurationActions.LoadResult.Failed -> {
+										snackbarHostState.showSnackbar(actionMessage(result.message))
+									}
 								}
-							},
+							}
+						},
 							onDelete = {
 								scope.launch {
 									val deleted = viewModel.deleteConfig(config.path)
-									snackbarHostState.showSnackbar(
-										if (deleted) deletedMessage else deleteFailedMessage
-									)
+									snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.deleteMessage(deleted)))
 								}
 							},
 							onDuplicate = {
 								scope.launch {
 									val result = viewModel.duplicateConfig(config.path)
-									@Suppress("LocalContextGetResourceValueCall")
-									val message = result.fold(
-										onSuccess = { context.getString(R.string.msg_config_duplicated_as, it.name) },
-										onFailure = { duplicateFailedMessage }
-									)
-									snackbarHostState.showSnackbar(message)
+									snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.duplicateMessage(result)))
 								}
 							},
 							onShare = {
-								val file = java.io.File(config.path)
-								if (file.exists()) {
-									try {
-										val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-										val shareIntent = Intent(Intent.ACTION_SEND).apply {
-											type = "application/octet-stream"
-											putExtra(Intent.EXTRA_STREAM, uri)
-											addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+								when (val target = ConfigurationActions.shareTarget(config.path)) {
+									is ConfigurationActions.ShareTarget.Ready -> {
+										try {
+											val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target.file)
+											val shareIntent = Intent(Intent.ACTION_SEND).apply {
+												type = "application/octet-stream"
+												putExtra(Intent.EXTRA_STREAM, uri)
+												addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+											}
+											context.startActivity(Intent.createChooser(shareIntent, config.name))
+										} catch (e: Exception) {
+											scope.launch {
+												snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.shareFailedMessage()))
+											}
 										}
-										context.startActivity(Intent.createChooser(shareIntent, config.name))
-									} catch (e: Exception) {
-										scope.launch { snackbarHostState.showSnackbar(shareFailedMessage) }
+									}
+									is ConfigurationActions.ShareTarget.Failed -> {
+										scope.launch {
+											snackbarHostState.showSnackbar(actionMessage(target.message))
+										}
+									}
+								}
+							},
+							onAdvancedEdit = {
+								when (val target = AdvancedLaunchActions.savedConfigTarget(config.path)) {
+									is AdvancedLaunchActions.ConfigTarget.Ready -> {
+										scope.launchGuarded(launchGuard) {
+											runCatching {
+												EmulatorLauncher.launchAdvancedGui(context, target.path)
+											}.onFailure {
+												snackbarHostState.showSnackbar(
+													actionMessage(AdvancedLaunchActions.launchFailedMessage())
+												)
+											}
+										}
+									}
+									is AdvancedLaunchActions.ConfigTarget.Failed -> {
+										scope.launch {
+											snackbarHostState.showSnackbar(actionMessage(target.message))
+										}
+									}
+								}
+							},
+							onLaunch = {
+								val configPath = config.path
+								val controlSettings = settingsViewModel.settings
+								when (val target = ConfigurationActions.launchTarget(configPath)) {
+									is ConfigurationActions.LaunchTarget.Ready -> {
+										scope.launchGuarded(launchGuard) {
+											runCatching {
+												EmulatorLauncher.launchWithConfig(
+													context,
+													target.path,
+													skipGui = true,
+													controlSettings = controlSettings
+												)
+											}.onFailure {
+												snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.Message(R.string.msg_failed_launch_config)))
+											}
+										}
+									}
+									is ConfigurationActions.LaunchTarget.Failed -> {
+										scope.launch {
+											snackbarHostState.showSnackbar(actionMessage(target.message))
+										}
 									}
 								}
 							}
@@ -190,12 +252,14 @@ fun ConfigurationsScreen(
 @Composable
 private fun ConfigItem(
 	config: ConfigInfo,
+	launchInProgress: Boolean,
 	onLoad: () -> Unit,
 	onDelete: () -> Unit,
 	onDuplicate: () -> Unit,
-	onShare: () -> Unit
+	onShare: () -> Unit,
+	onAdvancedEdit: () -> Unit,
+	onLaunch: () -> Unit
 ) {
-	val context = LocalContext.current
 	var showMenu by remember { mutableStateOf(false) }
 	var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -238,19 +302,24 @@ private fun ConfigItem(
 				modifier = Modifier.wrapContentWidth(),
 				verticalAlignment = Alignment.CenterVertically
 			) {
-				IconButton(onClick = {
-					EmulatorLauncher.launchWithConfig(context, config.path, skipGui = true)
-				}) {
-						Icon(
-							Icons.Default.PlayArrow,
-							contentDescription = stringResource(R.string.action_launch),
-							modifier = Modifier.size(24.dp)
-						)
+				IconButton(onClick = onLaunch, enabled = !launchInProgress) {
+						if (launchInProgress) {
+							CircularProgressIndicator(
+								modifier = Modifier.size(20.dp),
+								strokeWidth = 2.dp
+							)
+						} else {
+							Icon(
+								Icons.Default.PlayArrow,
+								contentDescription = stringResource(R.string.action_launch_named, config.name),
+								modifier = Modifier.size(24.dp)
+							)
+						}
 					}
 					IconButton(onClick = onLoad) {
 						Icon(
 							Icons.Default.Edit,
-							contentDescription = stringResource(R.string.action_edit_config),
+							contentDescription = stringResource(R.string.action_edit_named, config.name),
 							modifier = Modifier.size(24.dp)
 						)
 					}
@@ -260,7 +329,7 @@ private fun ConfigItem(
 						IconButton(onClick = { showMenu = true }) {
 							Icon(
 								Icons.Default.MoreVert,
-								contentDescription = stringResource(R.string.more_options),
+								contentDescription = stringResource(R.string.action_more_for_named, config.name),
 								modifier = Modifier.size(24.dp)
 							)
 						}
@@ -271,9 +340,10 @@ private fun ConfigItem(
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_edit_advanced_imgui)) },
 								onClick = {
-									EmulatorLauncher.launchAdvancedGui(context, config.path)
+									onAdvancedEdit()
 									showMenu = false
 								},
+								enabled = !launchInProgress,
 								leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
 							)
 							DropdownMenuItem(

@@ -33,6 +33,7 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 @Composable
 fun ChipsetTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
+	val immediateBlitsReason = SettingsControlAvailability.immediateBlitsReasonRes(settings)
 	val chipsetLabels = mapOf(
 		"ocs" to stringResource(R.string.settings_chipset_ocs),
 		"ecs_agnus" to stringResource(R.string.settings_chipset_ecs_agnus),
@@ -96,6 +97,8 @@ fun ChipsetTab(viewModel: SettingsViewModel) {
 				SwitchRow(
 					label = stringResource(R.string.settings_chipset_immediate_blitter),
 					checked = settings.immediateBlits,
+					enabled = SettingsControlAvailability.isImmediateBlitsEditable(settings),
+					supportingText = immediateBlitsReason?.let { stringResource(it) },
 					onCheckedChange = { viewModel.updateSettings { s -> s.copy(immediateBlits = it) } }
 				)
 

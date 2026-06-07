@@ -17,7 +17,10 @@ void imgui_osk_shutdown();
 // Toggle the keyboard visibility (slide in/out).
 void imgui_osk_toggle();
 
-// Returns true if the keyboard is visible or animating.
+// Hide the keyboard if it is visible.
+void imgui_osk_hide();
+
+// Returns true if the keyboard is visible.
 bool imgui_osk_is_active();
 
 // Returns true if the keyboard should be rendered this frame.

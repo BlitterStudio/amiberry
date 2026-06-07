@@ -39,6 +39,7 @@
         <!-- Native Compose UI (launcher) -->
         <activity android:name="com.blitterstudio.amiberry.ui.MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Amiberry.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -100,6 +101,7 @@
             android:process=":sdl"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|navigation"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:enableOnBackInvokedCallback="true"
             android:exported="false">
             <meta-data android:name="SDL_MAIN_LIBRARY_NAMES" android:value="amiberry" />
         </activity>

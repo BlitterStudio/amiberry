@@ -30,8 +30,9 @@ object ConfigParser {
 		"cdimage0",
 		"sound_output", "sound_frequency", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
+		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
 		"joyport0", "joyport1",
-		"amiberry.onscreen_joystick", "input.default_osk",
+		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "input.default_osk",
 		"amiberry.android_joyport1",
 		"use_gui", "config_description", "config_hardware_path"
 	)
@@ -118,8 +119,8 @@ object ConfigParser {
 
 			gfxWidth = kv["gfx_width"]?.toIntOrNull() ?: 720,
 			gfxHeight = kv["gfx_height"]?.toIntOrNull() ?: 568,
-			correctAspect = kv["gfx_correct_aspect"].toBool(true),
-			autoCrop = kv["gfx_auto_crop"].toBool(false),
+			correctAspect = (kv["amiberry.gfx_correct_aspect"] ?: kv["gfx_correct_aspect"]).toBool(true),
+			autoCrop = (kv["amiberry.gfx_auto_crop"] ?: kv["gfx_auto_crop"]).toBool(false),
 
 			joyport0 = kv["joyport0"] ?: "mouse",
 			// Round-trip: prefer the explicit Android joyport1 key if present,
@@ -133,7 +134,7 @@ object ConfigParser {
 				}
 			},
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
-			onScreenKeyboard = kv["input.default_osk"].toBool(true)
+			onScreenKeyboard = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
 		)
 	}
 

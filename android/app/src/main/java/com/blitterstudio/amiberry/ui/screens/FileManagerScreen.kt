@@ -26,12 +26,14 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,10 +68,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
@@ -95,10 +102,16 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	)
 	val pathCopiedMessage = stringResource(R.string.msg_path_copied)
 	val clipboardLabelPath = stringResource(R.string.clipboard_label_path)
+	fun actionMessage(message: ConfigurationActions.Message): String =
+		message.argument?.let { context.getString(message.stringRes, it) }
+			?: context.getString(message.stringRes)
 
 	var searchQuery by rememberSaveable { mutableStateOf("") }
 
 	val currentCategory = tabs[selectedTab].category
+	val acceptedExtensions = remember(currentCategory) {
+		FilePickerFilters.extensionLabelsFor(currentCategory).joinToString(", ")
+	}
 	val allFiles by when (currentCategory) {
 		FileCategory.ROMS -> viewModel.roms
 		FileCategory.FLOPPIES -> viewModel.floppies
@@ -107,22 +120,28 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 		FileCategory.WHDLOAD_GAMES -> viewModel.whdloadGames
 	}.collectAsState()
 
-	// Clear search when the bar would be hidden (≤5 files)
-	if (allFiles.size <= 5 && searchQuery.isNotEmpty()) {
-		searchQuery = ""
+	val showSearch = shouldShowFileManagerSearch(allFiles.size)
+	val effectiveSearchQuery = effectiveFileManagerSearchQuery(searchQuery, allFiles.size)
+
+	LaunchedEffect(showSearch, searchQuery) {
+		if (!showSearch && searchQuery.isNotEmpty()) {
+			searchQuery = ""
+		}
 	}
 
-	val files = if (searchQuery.isBlank()) allFiles
-		else allFiles.filter { it.name.contains(searchQuery, ignoreCase = true) }
+	val files = filterFileManagerFiles(allFiles, effectiveSearchQuery)
 
 	val importResult by viewModel.importResult.collectAsState()
 	val isScanning by viewModel.isScanning.collectAsState()
 	val isImporting by viewModel.isImporting.collectAsState()
 	val showProgress = isScanning || isImporting
+	val progressDescription = stringResource(
+		if (isImporting) R.string.file_manager_importing_files else R.string.file_manager_scanning_files
+	)
 	val filePickerLauncher = rememberLauncherForActivityResult(
 		contract = ActivityResultContracts.OpenMultipleDocuments()
 	) { uris ->
-		if (uris.isNotEmpty()) {
+		if (uris.isNotEmpty() && !showProgress) {
 			viewModel.importFiles(uris, currentCategory)
 		}
 	}
@@ -137,13 +156,47 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
-			TopAppBar(title = { Text(stringResource(R.string.file_manager_title)) })
+			TopAppBar(
+				title = { Text(stringResource(R.string.file_manager_title)) },
+				actions = {
+					IconButton(
+						onClick = { viewModel.rescan() },
+						enabled = !showProgress
+					) {
+						Icon(
+							Icons.Default.Refresh,
+							contentDescription = stringResource(R.string.file_manager_refresh)
+						)
+					}
+				}
+			)
 		},
 		floatingActionButton = {
 			ExtendedFloatingActionButton(
-				onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-				icon = { Icon(Icons.Default.Add, contentDescription = null) },
-				text = { Text(stringResource(R.string.action_import)) }
+				onClick = {
+					if (showProgress) {
+						return@ExtendedFloatingActionButton
+					}
+					filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
+				},
+				modifier = Modifier.semantics { if (showProgress) disabled() },
+				icon = {
+					if (isImporting) {
+						CircularProgressIndicator(
+							modifier = Modifier.size(18.dp),
+							strokeWidth = 2.dp
+						)
+					} else {
+						Icon(Icons.Default.Add, contentDescription = null)
+					}
+				},
+				text = {
+					Text(
+						stringResource(
+							if (isImporting) R.string.action_importing else R.string.action_import
+						)
+					)
+				}
 			)
 		}
 	) { innerPadding ->
@@ -153,7 +206,10 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				.padding(innerPadding)
 		) {
 			StoragePermissionBanner(
-				modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+				modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+				onMessage = { message ->
+					scope.launch { snackbarHostState.showSnackbar(actionMessage(message)) }
+				}
 			)
 
 			OutlinedCard(
@@ -222,7 +278,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			}
 
-			if (allFiles.size > 5) {
+			if (showSearch) {
 				OutlinedTextField(
 					value = searchQuery,
 					onValueChange = { searchQuery = it },
@@ -234,7 +290,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					trailingIcon = {
 						if (searchQuery.isNotEmpty()) {
 							IconButton(onClick = { searchQuery = "" }) {
-								Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
+								Icon(
+									Icons.Default.Clear,
+									contentDescription = stringResource(R.string.action_clear_search),
+									modifier = Modifier.size(18.dp)
+								)
 							}
 						}
 					},
@@ -243,10 +303,15 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			}
 
 			if (showProgress) {
-				LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+				LinearProgressIndicator(
+					modifier = Modifier
+						.fillMaxWidth()
+						.semantics { contentDescription = progressDescription }
+				)
 			}
 
 			if (files.isEmpty() && !isScanning) {
+				val searchHasNoResults = effectiveSearchQuery.isNotBlank() && allFiles.isNotEmpty()
 				Box(
 					modifier = Modifier
 						.fillMaxSize()
@@ -255,27 +320,55 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				) {
 					Column(horizontalAlignment = Alignment.CenterHorizontally) {
 						Text(
-							text = stringResource(
-								R.string.file_manager_no_files_found,
-								tabs[selectedTab].title.lowercase(Locale.getDefault())
-							),
+							text = if (searchHasNoResults) {
+								stringResource(R.string.file_manager_no_search_results)
+							} else {
+								stringResource(
+									R.string.file_manager_no_files_found,
+									tabs[selectedTab].title.lowercase(Locale.getDefault())
+								)
+							},
 							style = MaterialTheme.typography.bodyLarge
 						)
 						Spacer(modifier = Modifier.height(8.dp))
 						Text(
-							text = stringResource(
-								R.string.file_manager_empty_help,
-								viewModel.getStoragePath(),
-								currentCategory.dirName
-							),
+							text = if (searchHasNoResults) {
+								stringResource(R.string.file_manager_search_help)
+							} else {
+								stringResource(
+									R.string.file_manager_empty_help_with_extensions,
+									viewModel.getStoragePath(),
+									currentCategory.dirName,
+									acceptedExtensions
+								)
+							},
 							style = MaterialTheme.typography.bodySmall,
 							color = MaterialTheme.colorScheme.onSurfaceVariant
 						)
 						Spacer(modifier = Modifier.height(24.dp))
-						Button(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
-							Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+						Button(
+							onClick = {
+								if (searchHasNoResults) {
+									searchQuery = ""
+								} else {
+									filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
+								}
+							},
+							enabled = searchHasNoResults || !showProgress
+						) {
+							Icon(
+								if (searchHasNoResults) Icons.Default.Clear else Icons.Default.Add,
+								contentDescription = null,
+								modifier = Modifier.size(18.dp)
+							)
 							Spacer(modifier = Modifier.width(8.dp))
-							Text(stringResource(R.string.file_manager_import_category, tabs[selectedTab].title))
+							Text(
+								if (searchHasNoResults) {
+									stringResource(R.string.action_clear_search)
+								} else {
+									stringResource(R.string.file_manager_import_category, tabs[selectedTab].title)
+								}
+							)
 						}
 					}
 				}
@@ -287,6 +380,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					items(files, key = { it.path }) { file ->
 						FileItem(
 							file = file,
+							deleteEnabled = !showProgress,
 							onDelete = { viewModel.deleteFile(file) }
 						)
 					}
@@ -297,7 +391,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 }
 
 @Composable
-private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
+private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Unit) {
 	var showDeleteDialog by remember { mutableStateOf(false) }
 
 	Card(modifier = Modifier.fillMaxWidth().dpadFocusIndicator()) {
@@ -329,10 +423,13 @@ private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
 			}
-			IconButton(onClick = { showDeleteDialog = true }) {
+			IconButton(
+				onClick = { showDeleteDialog = true },
+				enabled = deleteEnabled
+			) {
 				Icon(
 					Icons.Default.Delete,
-					contentDescription = stringResource(R.string.action_delete),
+					contentDescription = stringResource(R.string.action_delete_named, file.name),
 					modifier = Modifier.size(20.dp),
 					tint = MaterialTheme.colorScheme.onSurfaceVariant
 				)
@@ -346,10 +443,13 @@ private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
 			title = { Text(stringResource(R.string.file_manager_delete_title)) },
 			text = { Text(stringResource(R.string.file_manager_delete_message, file.name)) },
 			confirmButton = {
-				TextButton(onClick = {
-					onDelete()
-					showDeleteDialog = false
-				}) {
+				TextButton(
+					onClick = {
+						onDelete()
+						showDeleteDialog = false
+					},
+					enabled = deleteEnabled
+				) {
 					Text(
 						stringResource(R.string.action_delete),
 						color = MaterialTheme.colorScheme.error
@@ -370,3 +470,14 @@ private data class TabInfo(
 	val title: String,
 	val icon: ImageVector
 )
+
+internal fun shouldShowFileManagerSearch(fileCount: Int): Boolean =
+	fileCount > FILE_MANAGER_SEARCH_THRESHOLD
+
+internal fun effectiveFileManagerSearchQuery(query: String, fileCount: Int): String =
+	if (shouldShowFileManagerSearch(fileCount)) query else ""
+
+internal fun filterFileManagerFiles(files: List<AmigaFile>, query: String): List<AmigaFile> =
+	if (query.isBlank()) files else files.filter { it.name.contains(query, ignoreCase = true) }
+
+private const val FILE_MANAGER_SEARCH_THRESHOLD = 5

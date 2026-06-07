@@ -13,6 +13,7 @@
 
 #include "keyboard.h"
 #include "inputdevice.h"
+#include "on_screen_joystick.h"
 
 // Font accessors declared in imgui_overlay.h
 
@@ -28,7 +29,6 @@ enum OskKeyType {
 	KEY_AMIGA_R,
 	KEY_RETURN,
 	KEY_ARROW,
-	KEY_NUMPAD,
 };
 
 // ============================================================
@@ -46,7 +46,7 @@ struct OskKeyDef {
 // A500 US keyboard layout
 // ============================================================
 // Layout uses a coordinate system where one standard key = 1.0 units wide.
-// Row heights are 1.0 units. The full keyboard is ~21 units wide (main + numpad).
+// Row heights are 1.0 units. The keyboard is ~17 units wide (main + cursor keys).
 
 // Row Y positions
 static constexpr float ROW_FUNC  = 0.0f;
@@ -59,10 +59,7 @@ static constexpr float ROW_SPACE = 5.2f;
 static constexpr float KEY_H = 0.9f;  // key height (slightly less than 1.0 for gap)
 static constexpr float FUNC_H = 0.7f; // function key height (shorter)
 
-// Numpad X offset (gap of 0.5 after main section ending at ~15.5)
-static constexpr float NP_X = 16.0f;
-
-// Arrow cluster X offset (right of main keys, left of numpad)
+// Arrow cluster X offset (right of main keys)
 static constexpr float AR_X = 14.0f;
 
 static const OskKeyDef s_keys_us[] = {
@@ -152,42 +149,13 @@ static const OskKeyDef s_keys_us[] = {
 	// ---- Row 5: Space row ----
 	{0.0f,  ROW_SPACE, 1.5f, KEY_H, AK_LALT,  "Alt",  nullptr, KEY_MODIFIER},
 	{1.5f,  ROW_SPACE, 1.5f, KEY_H, AK_LAMI,  "A",    nullptr, KEY_AMIGA_L},
-	{3.0f,  ROW_SPACE, 8.5f, KEY_H, AK_SPC,   "",     nullptr, KEY_SPACE},
-	{11.5f, ROW_SPACE, 1.5f, KEY_H, AK_RAMI,  "A",    nullptr, KEY_AMIGA_R},
-	{13.0f, ROW_SPACE, 1.5f, KEY_H, AK_RALT,  "Alt",  nullptr, KEY_MODIFIER},
+	{3.0f,  ROW_SPACE, 8.0f, KEY_H, AK_SPC,   "",     nullptr, KEY_SPACE},
+	{11.0f, ROW_SPACE, 1.5f, KEY_H, AK_RAMI,  "A",    nullptr, KEY_AMIGA_R},
+	{12.5f, ROW_SPACE, 1.5f, KEY_H, AK_RALT,  "Alt",  nullptr, KEY_MODIFIER},
 	// Cursor Left/Down/Right
 	{AR_X,       ROW_SPACE, 1.0f, KEY_H, AK_LF, "<", nullptr, KEY_ARROW},
 	{AR_X + 1.0f,ROW_SPACE, 1.0f, KEY_H, AK_DN, "v", nullptr, KEY_ARROW},
 	{AR_X + 2.0f,ROW_SPACE, 1.0f, KEY_H, AK_RT, ">", nullptr, KEY_ARROW},
-
-	// ---- Numpad ----
-	// Row 0 (function row level): ( ) / *
-	{NP_X,       ROW_FUNC, 1.0f, FUNC_H, AK_NPLPAREN, "(", nullptr, KEY_NUMPAD},
-	{NP_X + 1.0f,ROW_FUNC, 1.0f, FUNC_H, AK_NPRPAREN, ")", nullptr, KEY_NUMPAD},
-	{NP_X + 2.0f,ROW_FUNC, 1.0f, FUNC_H, AK_NPDIV,    "/", nullptr, KEY_NUMPAD},
-	{NP_X + 3.0f,ROW_FUNC, 1.0f, FUNC_H, AK_NPMUL,    "*", nullptr, KEY_NUMPAD},
-
-	// Row 1: 7 8 9 -
-	{NP_X,       ROW_NUM, 1.0f, KEY_H, AK_NP7, "7", nullptr, KEY_NUMPAD},
-	{NP_X + 1.0f,ROW_NUM, 1.0f, KEY_H, AK_NP8, "8", nullptr, KEY_NUMPAD},
-	{NP_X + 2.0f,ROW_NUM, 1.0f, KEY_H, AK_NP9, "9", nullptr, KEY_NUMPAD},
-	{NP_X + 3.0f,ROW_NUM, 1.0f, KEY_H, AK_NPSUB,"-", nullptr, KEY_NUMPAD},
-
-	// Row 2: 4 5 6 +
-	{NP_X,       ROW_QWERT, 1.0f, KEY_H, AK_NP4, "4", nullptr, KEY_NUMPAD},
-	{NP_X + 1.0f,ROW_QWERT, 1.0f, KEY_H, AK_NP5, "5", nullptr, KEY_NUMPAD},
-	{NP_X + 2.0f,ROW_QWERT, 1.0f, KEY_H, AK_NP6, "6", nullptr, KEY_NUMPAD},
-	{NP_X + 3.0f,ROW_QWERT, 1.0f, KEY_H, AK_NPADD,"+", nullptr, KEY_NUMPAD},
-
-	// Row 3: 1 2 3 Enter (spans 2 rows)
-	{NP_X,       ROW_HOME, 1.0f, KEY_H, AK_NP1, "1", nullptr, KEY_NUMPAD},
-	{NP_X + 1.0f,ROW_HOME, 1.0f, KEY_H, AK_NP2, "2", nullptr, KEY_NUMPAD},
-	{NP_X + 2.0f,ROW_HOME, 1.0f, KEY_H, AK_NP3, "3", nullptr, KEY_NUMPAD},
-	{NP_X + 3.0f,ROW_HOME, 1.0f, KEY_H * 2.0f + 0.1f, AK_ENT, "Ent", nullptr, KEY_NUMPAD},
-
-	// Row 4: 0 (wide) .
-	{NP_X,       ROW_SHIFT, 2.0f, KEY_H, AK_NP0,   "0",  nullptr, KEY_NUMPAD},
-	{NP_X + 2.0f,ROW_SHIFT, 1.0f, KEY_H, AK_NPDEL, ".",  nullptr, KEY_NUMPAD},
 };
 
 static const int NUM_KEYS = sizeof(s_keys_us) / sizeof(s_keys_us[0]);
@@ -302,7 +270,6 @@ static ImU32 col_amiga_l;
 static ImU32 col_amiga_r;
 static ImU32 col_focus_border;
 static ImU32 col_key_shadow;
-static ImU32 col_key_numpad;
 static ImU32 col_key_arrow;
 static ImU32 col_key_space;
 static ImU32 col_key_return;
@@ -323,7 +290,6 @@ static void init_colors()
 	col_amiga_r        = IM_COL32(40, 110, 220, 255);    // blue (right Amiga)
 	col_focus_border   = IM_COL32(255, 210, 60, 255);    // yellow focus highlight
 	col_key_shadow     = IM_COL32(0, 0, 0, 110);         // stronger drop shadow
-	col_key_numpad     = IM_COL32(206, 192, 168, 255);   // slightly cooler beige
 	col_key_arrow      = IM_COL32(188, 174, 150, 255);   // arrow keys
 	col_key_space      = IM_COL32(236, 224, 200, 255);   // space bar (lighter)
 	col_key_return     = IM_COL32(206, 192, 168, 255);   // return key
@@ -365,13 +331,21 @@ static float s_kb_x = 0, s_kb_y = 0, s_kb_w = 0, s_kb_h = 0;
 static float s_unit_w = 0, s_unit_h = 0;
 
 // Total layout dimensions in units
-static constexpr float LAYOUT_W = 20.0f; // total width in key units
+static constexpr float LAYOUT_W = 17.0f; // total width in key units
 static constexpr float LAYOUT_H = 6.1f;  // total height in key units
 #ifdef __ANDROID__
 static constexpr float KB_HEIGHT_FRAC = 0.55f; // larger keys for finger taps on phones
 #else
 static constexpr float KB_HEIGHT_FRAC = 0.42f; // keyboard occupies 42% of screen height
 #endif
+
+static void reset_navigation_state()
+{
+	s_prev_joy_state = 0;
+	s_repeat_dir = 0;
+	s_repeat_start_time = 0;
+	s_repeat_last_time = 0;
+}
 
 static bool is_modifier_key(int ak_code)
 {
@@ -439,7 +413,6 @@ static ImU32 get_key_color(const OskKeyDef& key)
 	case KEY_AMIGA_R:   return col_key_modifier;
 	case KEY_RETURN:    return col_key_return;
 	case KEY_ARROW:     return col_key_arrow;
-	case KEY_NUMPAD:    return col_key_numpad;
 	default:            return col_key_normal;
 	}
 }
@@ -606,7 +579,7 @@ void imgui_osk_init()
 	s_sticky_keys.clear();
 	s_finger_keys.clear();
 	s_pressed_keys.clear();
-	s_prev_joy_state = 0;
+	reset_navigation_state();
 	s_viewport_w = 0;
 	s_viewport_h = 0;
 	s_initialized = true;
@@ -627,17 +600,16 @@ void imgui_osk_toggle()
 	if (!s_initialized)
 		return;
 
-	s_visible = !s_visible;
+	if (s_visible) {
+		imgui_osk_hide();
+		return;
+	}
+
+	s_visible = true;
 	s_animating = true;
 	s_anim_start_time = SDL_GetTicks();
-
-	// Reset joystick navigation state when opening
-	if (s_visible) {
-		s_prev_joy_state = 0;
-		s_repeat_dir = 0;
-		s_repeat_start_time = 0;
-		s_repeat_last_time = 0;
-	}
+	on_screen_joystick_release_all();
+	reset_navigation_state();
 }
 
 bool imgui_osk_is_active()
@@ -773,12 +745,20 @@ static int find_key_at(float screen_x, float screen_y)
 
 bool imgui_osk_hit_test(float screen_x, float screen_y)
 {
-	if (!s_visible || s_anim_progress < 1.0f)
+	if (!imgui_osk_should_render())
 		return false;
 
 	float anim_offset = 0.0f;
+	if (s_animating) {
+		if (s_visible)
+			anim_offset = s_kb_h * (1.0f - s_anim_progress);
+		else
+			anim_offset = s_kb_h * s_anim_progress;
+	}
+
 	float bg_y = s_kb_y + anim_offset;
-	return screen_y >= bg_y && screen_y <= bg_y + s_kb_h;
+	return screen_x >= s_kb_x && screen_x <= s_kb_x + s_kb_w &&
+		screen_y >= bg_y && screen_y <= bg_y + s_kb_h;
 }
 
 static void press_key(int ak_code)
@@ -814,6 +794,29 @@ static void release_key(int ak_code)
 			inputdevice_do_keyboard(mod, 0);
 		}
 	}
+}
+
+static void release_pressed_keys()
+{
+	std::set<int> pressed_keys = s_pressed_keys;
+	for (int key_idx : pressed_keys) {
+		if (key_idx >= 0 && key_idx < NUM_KEYS)
+			release_key(s_keys_us[key_idx].ak_code);
+	}
+	s_finger_keys.clear();
+	s_pressed_keys.clear();
+}
+
+void imgui_osk_hide()
+{
+	if (!s_initialized || !s_visible)
+		return;
+
+	release_pressed_keys();
+	s_visible = false;
+	s_animating = true;
+	s_anim_start_time = SDL_GetTicks();
+	reset_navigation_state();
 }
 
 bool imgui_osk_handle_finger_down(float screen_x, float screen_y, int finger_id)

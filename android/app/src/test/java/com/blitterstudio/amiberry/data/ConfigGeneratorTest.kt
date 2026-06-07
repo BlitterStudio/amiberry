@@ -2,10 +2,13 @@ package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class ConfigGeneratorTest {
 
@@ -74,6 +77,19 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `generate constrained cycle exact chipset settings without immediate blits`() {
+		val constrained = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(cycleExact = true, immediateBlits = true),
+			hasTouchScreen = true
+		)
+		val output = ConfigGenerator.generate(constrained)
+		val lines = output.lines()
+
+		assertContainsLine(lines, "cycle_exact=true")
+		assertContainsLine(lines, "immediate_blits=false")
+	}
+
+	@Test
 	fun `generate omits ROM when empty`() {
 		val output = ConfigGenerator.generate(EmulatorSettings(romFile = "", romExtFile = ""))
 		assertNotContains(output, "kickstart_rom_file=")
@@ -117,6 +133,102 @@ class ConfigGeneratorTest {
 		assertContains(output, "amiberry.android_joyport1=joy0")
 	}
 
+	@Test
+	fun `generate writes enabled on-screen control contract`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(
+				joyport1 = "onscreen_joy",
+				onScreenJoystick = true,
+				onScreenKeyboard = true
+			)
+		)
+		val lines = output.lines()
+
+		assertFalse(lines.any { it.startsWith("joyport1=") })
+		assertContainsLine(lines, "amiberry.android_joyport1=onscreen_joy")
+		assertContainsLine(lines, "amiberry.onscreen_joystick=true")
+		assertContainsLine(lines, "amiberry.vkbd_enabled=true")
+		assertContainsLine(lines, "input.default_osk=true")
+	}
+
+	@Test
+	fun `generate writes disabled on-screen control contract`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(
+				joyport1 = "joy1",
+				onScreenJoystick = false,
+				onScreenKeyboard = false
+			)
+		)
+		val lines = output.lines()
+
+		assertContainsLine(lines, "joyport1=joy1")
+		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
+		assertContainsLine(lines, "amiberry.onscreen_joystick=false")
+		assertContainsLine(lines, "amiberry.vkbd_enabled=false")
+		assertContainsLine(lines, "input.default_osk=false")
+	}
+
+	@Test
+	fun `generate control config writes Android controls without hardware settings`() {
+		val output = ConfigGenerator.generateControlConfig(
+			EmulatorSettings(
+				joyport0 = "mouse",
+				joyport1 = "joy1",
+				onScreenJoystick = false,
+				onScreenKeyboard = false
+			)
+		)
+		val lines = output.lines()
+
+		assertContainsLine(lines, "joyport0=mouse")
+		assertContainsLine(lines, "joyport1=joy1")
+		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
+		assertContainsLine(lines, "amiberry.onscreen_joystick=false")
+		assertContainsLine(lines, "amiberry.vkbd_enabled=false")
+		assertContainsLine(lines, "input.default_osk=false")
+		assertContainsLine(lines, "use_gui=no")
+		assertNotContains(output, "cpu_model=")
+		assertNotContains(output, "chipset=")
+		assertNotContains(output, "floppy0=")
+	}
+
+	@Test
+	fun `generate control config lets on-screen joystick auto assign port one`() {
+		val output = ConfigGenerator.generateControlConfig(
+			EmulatorSettings(
+				joyport1 = "onscreen_joy",
+				onScreenJoystick = true
+			)
+		)
+		val lines = output.lines()
+
+		assertFalse(lines.any { it.startsWith("joyport1=") })
+		assertContainsLine(lines, "amiberry.android_joyport1=onscreen_joy")
+		assertContainsLine(lines, "amiberry.onscreen_joystick=true")
+	}
+
+	@Test
+	fun `transient generated configs are written under no-backup storage`() {
+		val externalFilesDir = tempDir.newFolder("external")
+		val noBackupFilesDir = tempDir.newFolder("no_backup")
+
+		ConfigGenerator.transientConfigFileNames.forEach { filename ->
+			val dir = ConfigGenerator.configDirectoryFor(externalFilesDir, noBackupFilesDir, filename)
+			assertEquals(File(noBackupFilesDir, StoragePaths.CONFIGURATIONS), dir)
+		}
+	}
+
+	@Test
+	fun `user saved configs are written under external storage`() {
+		val externalFilesDir = tempDir.newFolder("external_user")
+		val noBackupFilesDir = tempDir.newFolder("no_backup_user")
+
+		val dir = ConfigGenerator.configDirectoryFor(externalFilesDir, noBackupFilesDir, "Workbench.uae")
+
+		assertEquals(File(externalFilesDir, StoragePaths.CONFIGURATIONS), dir)
+	}
+
 	// --- Always-present keys ---
 
 	@Test
@@ -139,6 +251,14 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `generate CD model defaults keep floppy drives disabled`() {
+		val output = ConfigGenerator.generate(EmulatorSettings.fromModel(AmigaModel.CD32))
+
+		assertContainsLine(output.lines(), "floppy0type=-1")
+		assertContainsLine(output.lines(), "floppy1type=-1")
+	}
+
+	@Test
 	fun `generate always includes sound settings`() {
 		val output = ConfigGenerator.generate(EmulatorSettings())
 		assertContains(output, "sound_output=")
@@ -149,10 +269,14 @@ class ConfigGeneratorTest {
 	@Test
 	fun `generate always includes display settings`() {
 		val output = ConfigGenerator.generate(EmulatorSettings())
+		val lines = output.lines()
+
 		assertContains(output, "gfx_width=")
 		assertContains(output, "gfx_height=")
-		assertContains(output, "gfx_correct_aspect=")
-		assertContains(output, "gfx_auto_crop=")
+		assertTrue(lines.any { it.startsWith("amiberry.gfx_correct_aspect=") })
+		assertTrue(lines.any { it.startsWith("amiberry.gfx_auto_crop=") })
+		assertFalse(lines.any { it.startsWith("gfx_correct_aspect=") })
+		assertFalse(lines.any { it.startsWith("gfx_auto_crop=") })
 	}
 
 	// --- Full A4000 config ---
@@ -163,6 +287,7 @@ class ConfigGeneratorTest {
 		val output = ConfigGenerator.generate(settings)
 
 		assertContains(output, "cpu_model=68040")
+		assertContains(output, "cpu_compatible=false")
 		assertContains(output, "chipset=aga")
 		assertContains(output, "fpu_model=68040")
 		assertContains(output, "cachesize=16384")
@@ -256,6 +381,10 @@ class ConfigGeneratorTest {
 
 	private fun assertContains(text: String, substring: String) {
 		assertTrue("Expected to find '$substring' in output", text.contains(substring))
+	}
+
+	private fun assertContainsLine(lines: List<String>, expected: String) {
+		assertTrue("Expected to find exact line '$expected' in output", lines.any { it == expected })
 	}
 
 	private fun assertNotContains(text: String, substring: String) {

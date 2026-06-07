@@ -1,7 +1,13 @@
 package com.blitterstudio.amiberry.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,10 +35,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -40,18 +50,52 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AboutActions
+import com.blitterstudio.amiberry.data.AboutSupportInfo
+import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.ui.hasFullStorageAccess
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
 	val context = LocalContext.current
-	val versionName = try {
-		context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+	val scope = rememberCoroutineScope()
+	val snackbarHostState = remember { SnackbarHostState() }
+	val packageInfo = try {
+		context.packageManager.getPackageInfo(context.packageName, 0)
 	} catch (_: Exception) {
-		"unknown"
+		null
 	}
+	val versionName = packageInfo?.versionName ?: "unknown"
+	val versionCode = packageInfo?.longVersionCode ?: 0L
+	val buildType = if ((context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+		"debug"
+	} else {
+		"release"
+	}
+	val supportInfo = AboutSupportInfo.format(
+		versionName = versionName,
+		versionCode = versionCode,
+		packageName = context.packageName,
+		buildType = buildType,
+		androidRelease = Build.VERSION.RELEASE.orEmpty(),
+		sdkInt = Build.VERSION.SDK_INT,
+		primaryAbi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
+		device = listOf(Build.MANUFACTURER, Build.MODEL)
+			.filter { it.isNotBlank() }
+			.joinToString(separator = " "),
+		hasFullStorageAccess = hasFullStorageAccess(context),
+		externalFilesDir = context.getExternalFilesDir(null)?.absolutePath
+	)
+	fun actionMessage(message: ConfigurationActions.Message): String =
+		message.argument?.let { context.getString(message.stringRes, it) }
+			?: context.getString(message.stringRes)
+	val linkOpenFailedMessage = actionMessage(AboutActions.openLinkFailedMessage())
+	val supportInfoCopiedMessage = actionMessage(AboutActions.supportInfoCopiedMessage())
 
 	Scaffold(
+		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
 			TopAppBar(
 				title = { Text(stringResource(R.string.about_title)) },
@@ -59,7 +103,7 @@ fun AboutScreen(onBack: () -> Unit) {
 					IconButton(onClick = onBack) {
 						Icon(
 							Icons.AutoMirrored.Filled.ArrowBack,
-							contentDescription = null
+							contentDescription = stringResource(R.string.action_back)
 						)
 					}
 				}
@@ -110,34 +154,45 @@ fun AboutScreen(onBack: () -> Unit) {
 						style = MaterialTheme.typography.titleMedium
 					)
 					Spacer(modifier = Modifier.height(8.dp))
-					LinkRow(
-						icon = Icons.Default.Code,
-						text = stringResource(R.string.about_link_github),
-						onClick = {
-							context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BlitterStudio/amiberry")))
-						}
+					AboutActions.externalLinks().forEach { link ->
+						LinkRow(
+							icon = iconForLink(link.id),
+							text = stringResource(link.labelRes),
+							onClick = {
+								openExternalLink(context, link.url) {
+									scope.launch { snackbarHostState.showSnackbar(linkOpenFailedMessage) }
+								}
+							}
+						)
+					}
+				}
+			}
+
+			// Support info
+			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+				Column(modifier = Modifier.padding(16.dp)) {
+					Text(
+						stringResource(R.string.about_support_title),
+						style = MaterialTheme.typography.titleMedium
 					)
-					LinkRow(
-						icon = Icons.AutoMirrored.Filled.MenuBook,
-						text = stringResource(R.string.about_link_wiki),
-						onClick = {
-							context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BlitterStudio/amiberry/wiki")))
-						}
+					Spacer(modifier = Modifier.height(8.dp))
+					Text(
+						text = supportInfo,
+						style = MaterialTheme.typography.bodyMedium,
+						color = MaterialTheme.colorScheme.onSurfaceVariant
 					)
-					LinkRow(
-						icon = Icons.AutoMirrored.Filled.Chat,
-						text = stringResource(R.string.about_link_discord),
+					Spacer(modifier = Modifier.height(8.dp))
+					TextButton(
 						onClick = {
-							context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/wWndKTGpGV")))
+							val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+							clipboard.setPrimaryClip(
+								ClipData.newPlainText(context.getString(R.string.about_support_title), supportInfo)
+							)
+							scope.launch { snackbarHostState.showSnackbar(supportInfoCopiedMessage) }
 						}
-					)
-					LinkRow(
-						icon = Icons.Default.Shield,
-						text = stringResource(R.string.about_link_privacy),
-						onClick = {
-							context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://amiberry.com/privacy-policy")))
-						}
-					)
+					) {
+						Text(stringResource(R.string.about_copy_support_info))
+					}
 				}
 			}
 
@@ -175,6 +230,24 @@ fun AboutScreen(onBack: () -> Unit) {
 
 			Spacer(modifier = Modifier.height(16.dp))
 		}
+	}
+}
+
+private fun iconForLink(id: AboutActions.LinkId): ImageVector =
+	when (id) {
+		AboutActions.LinkId.SourceCode -> Icons.Default.Code
+		AboutActions.LinkId.Wiki -> Icons.AutoMirrored.Filled.MenuBook
+		AboutActions.LinkId.Discord -> Icons.AutoMirrored.Filled.Chat
+		AboutActions.LinkId.Privacy -> Icons.Default.Shield
+	}
+
+private fun openExternalLink(context: Context, url: String, onFailure: () -> Unit) {
+	try {
+		context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+	} catch (_: ActivityNotFoundException) {
+		onFailure()
+	} catch (_: SecurityException) {
+		onFailure()
 	}
 }
 

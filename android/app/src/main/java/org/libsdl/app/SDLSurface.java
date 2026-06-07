@@ -42,6 +42,29 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     // Is SurfaceView ready for rendering
     public boolean mIsSurfaceReady;
 
+    private static int sMouseButtonTransitionState;
+    private boolean mMouseLifecycleButtonActive;
+
+    static boolean beginMouseButtonTransition(int buttonState) {
+        if (sMouseButtonTransitionState == buttonState) {
+            return false;
+        }
+        sMouseButtonTransitionState = buttonState;
+        return true;
+    }
+
+    static boolean finishMouseButtonTransition(int buttonState) {
+        if (sMouseButtonTransitionState == buttonState) {
+            return false;
+        }
+        sMouseButtonTransitionState = buttonState;
+        return true;
+    }
+
+    static boolean mouseButtonTransitionActive() {
+        return sMouseButtonTransitionState != 0;
+    }
+
     // Startup
     public SDLSurface(Context context) {
         super(context);
@@ -260,7 +283,43 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                 y = motionListener.getEventY(event, i);
                 relative = motionListener.inRelativeMode();
 
-                SDLActivity.onNativeMouse(buttonState, action, x, y, relative);
+                switch (action) {
+                    case MotionEvent.ACTION_BUTTON_PRESS:
+                        if (beginMouseButtonTransition(buttonState)) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_BUTTON_RELEASE:
+                        if (finishMouseButtonTransition(buttonState)) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_DOWN:
+                        if (!mouseButtonTransitionActive() && buttonState != 0) {
+                            mMouseLifecycleButtonActive = true;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (!mouseButtonTransitionActive() && mMouseLifecycleButtonActive) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_CANCEL:
+                        if (!mouseButtonTransitionActive() && mMouseLifecycleButtonActive) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(0, MotionEvent.ACTION_UP, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        SDLActivity.onNativeMouse(0, MotionEvent.ACTION_MOVE, x, y, relative);
+                        break;
+                    default:
+                        break;
+                }
             } else if (toolType == MotionEvent.TOOL_TYPE_STYLUS || toolType == MotionEvent.TOOL_TYPE_ERASER) {
                 pointerId = event.getPointerId(i);
                 x = event.getX(i);
@@ -274,8 +333,11 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
                 // BUTTON_STYLUS_PRIMARY is 2^5, so shift by 4, and apply SDL_PEN_INPUT_DOWN/SDL_PEN_INPUT_ERASER_TIP
                 int buttonState = (event.getButtonState() >> 4) | (1 << (toolType == MotionEvent.TOOL_TYPE_STYLUS ? 0 : 30));
+                if ((event.getButtonState() & MotionEvent.BUTTON_TERTIARY) != 0) {
+                    buttonState |= 0x08;
+                }
 
-                SDLActivity.onNativePen(pointerId, buttonState, action, x, y, p);
+                SDLActivity.onNativePen(pointerId, SDLActivity.getMotionListener().getPenDeviceType(event.getDevice()), buttonState, action, x, y, p);
             } else { // MotionEvent.TOOL_TYPE_FINGER or MotionEvent.TOOL_TYPE_UNKNOWN
                 pointerId = event.getPointerId(i);
                 x = getNormalizedX(event.getX(i));

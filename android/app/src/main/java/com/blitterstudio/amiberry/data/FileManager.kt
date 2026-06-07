@@ -7,12 +7,39 @@ import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.StoragePaths
-import java.util.zip.CRC32
 import java.io.File
+import java.io.IOException
+import java.util.zip.CRC32
 
 object FileManager {
 
 	private const val TAG = "Amiberry-FileManager"
+
+	sealed interface ImportCandidate {
+		val safeName: String
+
+		data class Importable(override val safeName: String) : ImportCandidate
+		data class Unsupported(
+			override val safeName: String,
+			val extension: String
+		) : ImportCandidate
+	}
+
+	sealed interface ImportResult {
+		val safeName: String
+
+		data class Imported(
+			val path: String,
+			override val safeName: String
+		) : ImportResult
+
+		data class Unsupported(
+			override val safeName: String,
+			val extension: String
+		) : ImportResult
+
+		data class Failed(override val safeName: String) : ImportResult
+	}
 
 	fun getAppStoragePath(context: Context): String {
 		return context.getExternalFilesDir(null)?.absolutePath ?: ""
@@ -27,32 +54,37 @@ object FileManager {
 	 * Returns the local file path on success, or null on failure.
 	 */
 	fun importFile(context: Context, uri: Uri, category: FileCategory): String? {
-		val fileName = getFileName(context, uri) ?: "imported_file"
+		return when (val result = importFileWithResult(context, uri, category)) {
+			is ImportResult.Imported -> result.path
+			is ImportResult.Failed,
+			is ImportResult.Unsupported -> null
+		}
+	}
+
+	fun importFileWithResult(context: Context, uri: Uri, category: FileCategory): ImportResult {
+		val candidate = importCandidateForCategory(getFileName(context, uri), category)
+		return when (candidate) {
+			is ImportCandidate.Importable -> copyImportFile(context, uri, category, candidate.safeName)
+			is ImportCandidate.Unsupported -> ImportResult.Unsupported(candidate.safeName, candidate.extension)
+		}
+	}
+
+	private fun copyImportFile(
+		context: Context,
+		uri: Uri,
+		category: FileCategory,
+		fileName: String
+	): ImportResult {
 		val targetDir = getCategoryDir(context, category)
 		if (!targetDir.exists()) targetDir.mkdirs()
 
-		val targetFile = File(targetDir, fileName)
-
-		// Avoid overwriting: add suffix if file exists
-		val finalFile = if (targetFile.exists()) {
-			val baseName = targetFile.nameWithoutExtension
-			val ext = targetFile.extension
-			var counter = 1
-			var candidate = File(targetDir, "${baseName}_$counter.$ext")
-			while (candidate.exists()) {
-				counter++
-				candidate = File(targetDir, "${baseName}_$counter.$ext")
-			}
-			candidate
-		} else {
-			targetFile
-		}
+		val finalFile = uniqueImportTarget(targetDir, fileName)
 
 		return try {
 			val inputStream = context.contentResolver.openInputStream(uri)
 			if (inputStream == null) {
 				Log.e(TAG, "Failed to open input stream for URI: $uri")
-				return null
+				return ImportResult.Failed(fileName)
 			}
 			inputStream.use { input ->
 				finalFile.outputStream().use { output ->
@@ -60,10 +92,10 @@ object FileManager {
 				}
 			}
 			Log.d(TAG, "Imported ${finalFile.name} to ${finalFile.absolutePath}")
-			finalFile.absolutePath
+			ImportResult.Imported(finalFile.absolutePath, finalFile.name)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import file from URI: $uri", e)
-			null
+			ImportResult.Failed(fileName)
 		}
 	}
 
@@ -140,6 +172,76 @@ object FileManager {
 	 */
 	fun getDisplayName(context: Context, uri: Uri): String? = getFileName(context, uri)
 
+	internal fun safeImportFileName(rawName: String?, fallbackName: String = "imported_file"): String {
+		val leafName = rawName
+			.orEmpty()
+			.trim()
+			.replace('\\', '/')
+			.substringAfterLast('/')
+			.trim()
+
+		val safeName = leafName
+			.map { char ->
+				if (char.isLetterOrDigit() || char in SAFE_FILENAME_CHARS) char else '_'
+			}
+			.joinToString(separator = "")
+			.trim(' ', '.')
+
+		return safeName.ifBlank { fallbackName }
+	}
+
+	internal fun importFileNameForCategory(rawName: String?, category: FileCategory): String? {
+		return when (val candidate = importCandidateForCategory(rawName, category)) {
+			is ImportCandidate.Importable -> candidate.safeName
+			is ImportCandidate.Unsupported -> null
+		}
+	}
+
+	internal fun importCandidateForCategory(rawName: String?, category: FileCategory): ImportCandidate {
+		val fileName = safeImportFileName(rawName)
+		val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+		if (extension.isBlank() || extension !in category.extensions) {
+			return ImportCandidate.Unsupported(fileName, extension)
+		}
+		return ImportCandidate.Importable(fileName)
+	}
+
+	internal fun uniqueImportTarget(targetDir: File, fileName: String): File {
+		val targetFile = File(targetDir, fileName)
+		if (!targetFile.exists()) return targetFile
+
+		val baseName = targetFile.nameWithoutExtension
+		val ext = targetFile.extension
+		var counter = 1
+		var candidate = File(targetDir, importTargetName(baseName, ext, counter))
+		while (candidate.exists()) {
+			counter++
+			candidate = File(targetDir, importTargetName(baseName, ext, counter))
+		}
+		return candidate
+	}
+
+	internal fun isManagedCategoryFile(baseDir: File, file: AmigaFile): Boolean {
+		return try {
+			val canonicalBase = baseDir.canonicalFile
+			val target = File(file.path).canonicalFile
+			target.isFile &&
+				target.isUnder(canonicalBase) &&
+				target.extension.lowercase() in file.category.extensions
+		} catch (_: IOException) {
+			false
+		}
+	}
+
+	fun deleteManagedFile(baseDir: File, file: AmigaFile): Boolean {
+		if (!isManagedCategoryFile(baseDir, file)) return false
+		return try {
+			File(file.path).canonicalFile.delete()
+		} catch (_: IOException) {
+			false
+		}
+	}
+
 	private fun getFileName(context: Context, uri: Uri): String? {
 		// Try ContentResolver query first (works for most SAF URIs)
 		context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -169,5 +271,16 @@ object FileManager {
 			Log.w(TAG, "Failed to calculate CRC32 for ${file.absolutePath}", e)
 			null
 		}
+	}
+
+	private val SAFE_FILENAME_CHARS = setOf(' ', '.', '_', '-', '(', ')', '+')
+
+	private fun importTargetName(baseName: String, extension: String, counter: Int): String =
+		if (extension.isBlank()) "${baseName}_$counter" else "${baseName}_$counter.$extension"
+
+	private fun File.isUnder(baseDir: File): Boolean {
+		val basePath = baseDir.path.trimEnd(File.separatorChar)
+		val targetPath = path
+		return targetPath == basePath || targetPath.startsWith(basePath + File.separator)
 	}
 }

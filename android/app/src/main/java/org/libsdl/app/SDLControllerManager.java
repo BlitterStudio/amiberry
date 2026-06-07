@@ -664,6 +664,10 @@ class SDLHapticHandler {
 }
 
 class SDLGenericMotionListener_API14 implements View.OnGenericMotionListener {
+    protected static final int SDL_PEN_DEVICE_TYPE_UNKNOWN = 0;
+    protected static final int SDL_PEN_DEVICE_TYPE_DIRECT = 1;
+    protected static final int SDL_PEN_DEVICE_TYPE_INDIRECT = 2;
+
     // Generic Motion (mouse hover, joystick...) events go here
     @Override
     public boolean onGenericMotion(View v, MotionEvent event) {
@@ -695,6 +699,24 @@ class SDLGenericMotionListener_API14 implements View.OnGenericMotionListener {
                         consumed = true;
                         break;
 
+                    case MotionEvent.ACTION_BUTTON_PRESS:
+                        x = getEventX(event, i);
+                        y = getEventY(event, i);
+                        if (SDLSurface.beginMouseButtonTransition(event.getButtonState())) {
+                            SDLActivity.onNativeMouse(event.getButtonState(), MotionEvent.ACTION_DOWN, x, y, checkRelativeEvent(event));
+                        }
+                        consumed = true;
+                        break;
+
+                    case MotionEvent.ACTION_BUTTON_RELEASE:
+                        x = getEventX(event, i);
+                        y = getEventY(event, i);
+                        if (SDLSurface.finishMouseButtonTransition(event.getButtonState())) {
+                            SDLActivity.onNativeMouse(event.getButtonState(), MotionEvent.ACTION_UP, x, y, checkRelativeEvent(event));
+                        }
+                        consumed = true;
+                        break;
+
                     default:
                         break;
                 }
@@ -714,8 +736,11 @@ class SDLGenericMotionListener_API14 implements View.OnGenericMotionListener {
 
                         // BUTTON_STYLUS_PRIMARY is 2^5, so shift by 4, and apply SDL_PEN_INPUT_DOWN/SDL_PEN_INPUT_ERASER_TIP
                         int buttons = (event.getButtonState() >> 4) | (1 << (toolType == MotionEvent.TOOL_TYPE_STYLUS ? 0 : 30));
+                        if ((event.getButtonState() & MotionEvent.BUTTON_TERTIARY) != 0) {
+                            buttons |= 0x08;
+                        }
 
-                        SDLActivity.onNativePen(event.getPointerId(i), buttons, action, x, y, p);
+                        SDLActivity.onNativePen(event.getPointerId(i), getPenDeviceType(event.getDevice()), buttons, action, x, y, p);
                         consumed = true;
                         break;
                 }
@@ -753,6 +778,9 @@ class SDLGenericMotionListener_API14 implements View.OnGenericMotionListener {
         return event.getY(pointerIndex);
     }
 
+    int getPenDeviceType(InputDevice penDevice) {
+        return SDL_PEN_DEVICE_TYPE_UNKNOWN;
+    }
 }
 
 class SDLGenericMotionListener_API24 extends SDLGenericMotionListener_API14 {
@@ -846,5 +874,17 @@ class SDLGenericMotionListener_API26 extends SDLGenericMotionListener_API24 {
     public float getEventY(MotionEvent event, int pointerIndex) {
         // Relative mouse in capture mode will only have relative for X/Y
         return event.getY(pointerIndex);
+    }
+}
+
+class SDLGenericMotionListener_API29 extends SDLGenericMotionListener_API26 {
+    @Override
+    int getPenDeviceType(InputDevice penDevice)
+    {
+        if (penDevice == null) {
+            return SDL_PEN_DEVICE_TYPE_UNKNOWN;
+        }
+
+        return penDevice.isExternal() ? SDL_PEN_DEVICE_TYPE_INDIRECT : SDL_PEN_DEVICE_TYPE_DIRECT;
     }
 }

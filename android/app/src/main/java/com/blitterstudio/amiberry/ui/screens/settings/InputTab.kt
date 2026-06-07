@@ -23,29 +23,46 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
+internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List<String> = buildList {
+	add("none")
+	add("mouse")
+	add("joy0")
+	add("joy1")
+	if (hasTouchScreen && portIndex == 1) {
+		add("onscreen_joy")
+	}
+	add("kbd1")
+	add("kbd2")
+	add("kbd3")
+	add("kbd9")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
+	val hasTouchScreen = hasTouchScreen()
 
-	val portOptions = buildList {
-		add("mouse" to stringResource(R.string.settings_input_device_mouse))
-		add("joy0" to stringResource(R.string.settings_input_device_joystick_0))
-		add("joy1" to stringResource(R.string.settings_input_device_joystick_1))
-		if (hasTouchScreen()) {
-			add("onscreen_joy" to stringResource(R.string.settings_input_device_on_screen_joystick))
-		}
-		add("kbd1" to stringResource(R.string.settings_input_device_keyboard_layout_1))
-		add("kbd2" to stringResource(R.string.settings_input_device_keyboard_layout_2))
-		add("kbd3" to stringResource(R.string.settings_input_device_keyboard_layout_3))
-		add("kbd9" to stringResource(R.string.settings_input_device_keyboard_layout_4))
-	}
+	val optionLabels = mapOf(
+		"none" to stringResource(R.string.settings_option_none),
+		"mouse" to stringResource(R.string.settings_input_device_mouse),
+		"joy0" to stringResource(R.string.settings_input_device_joystick_0),
+		"joy1" to stringResource(R.string.settings_input_device_joystick_1),
+		"onscreen_joy" to stringResource(R.string.settings_input_device_on_screen_joystick),
+		"kbd1" to stringResource(R.string.settings_input_device_keyboard_layout_1),
+		"kbd2" to stringResource(R.string.settings_input_device_keyboard_layout_2),
+		"kbd3" to stringResource(R.string.settings_input_device_keyboard_layout_3),
+		"kbd9" to stringResource(R.string.settings_input_device_keyboard_layout_4)
+	)
+	val port0Options = inputDeviceOptionIds(hasTouchScreen, portIndex = 0).map { it to optionLabels.getValue(it) }
+	val port1Options = inputDeviceOptionIds(hasTouchScreen, portIndex = 1).map { it to optionLabels.getValue(it) }
 
 	Column(
 		modifier = Modifier
@@ -62,7 +79,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 
 				// Port 0
 				var port0Expanded by remember { mutableStateOf(false) }
-				val port0Label = portOptions.firstOrNull { it.first == settings.joyport0 }?.second
+				val port0Label = port0Options.firstOrNull { it.first == settings.joyport0 }?.second
 					?: settings.joyport0
 
 				ExposedDropdownMenuBox(
@@ -76,6 +93,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_input_port0_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port0Expanded) },
 						modifier = Modifier
+							.testTag("input-port0-dropdown")
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -83,9 +101,10 @@ fun InputTab(viewModel: SettingsViewModel) {
 						expanded = port0Expanded,
 						onDismissRequest = { port0Expanded = false }
 					) {
-						portOptions.forEach { (value, label) ->
+						port0Options.forEach { (value, label) ->
 							DropdownMenuItem(
 								text = { Text(label) },
+								modifier = Modifier.testTag("input-port0-option-$value"),
 								onClick = {
 									viewModel.updateSettings { s -> s.copy(joyport0 = value) }
 									port0Expanded = false
@@ -99,7 +118,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 
 				// Port 1
 				var port1Expanded by remember { mutableStateOf(false) }
-				val port1Label = portOptions.firstOrNull { it.first == settings.joyport1 }?.second
+				val port1Label = port1Options.firstOrNull { it.first == settings.joyport1 }?.second
 					?: settings.joyport1
 
 				ExposedDropdownMenuBox(
@@ -113,6 +132,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_input_port1_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port1Expanded) },
 						modifier = Modifier
+							.testTag("input-port1-dropdown")
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -120,17 +140,12 @@ fun InputTab(viewModel: SettingsViewModel) {
 						expanded = port1Expanded,
 						onDismissRequest = { port1Expanded = false }
 					) {
-						portOptions.forEach { (value, label) ->
+						port1Options.forEach { (value, label) ->
 							DropdownMenuItem(
 								text = { Text(label) },
+								modifier = Modifier.testTag("input-port1-option-$value"),
 								onClick = {
-									viewModel.updateSettings { s ->
-										if (value == "onscreen_joy") {
-											s.copy(joyport1 = value, onScreenJoystick = true)
-										} else {
-											s.copy(joyport1 = value)
-										}
-									}
+									viewModel.updateSettings { s -> InputSettingsActions.selectPort1Device(s, value) }
 									port1Expanded = false
 								}
 							)
@@ -141,7 +156,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 		}
 
 		// On-screen controls (only shown on devices with a touchscreen)
-		if (hasTouchScreen()) {
+		if (hasTouchScreen) {
 			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 				Column(modifier = Modifier.padding(16.dp)) {
 					Text(stringResource(R.string.settings_input_on_screen_controls_title), style = MaterialTheme.typography.titleMedium)
@@ -151,18 +166,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 						label = stringResource(R.string.settings_input_on_screen_joystick),
 						checked = settings.onScreenJoystick,
 						onCheckedChange = { isEnabled ->
-							viewModel.updateSettings { s ->
-								if (isEnabled) {
-									s.copy(onScreenJoystick = true, joyport1 = "onscreen_joy")
-								} else {
-									if (s.joyport1 == "onscreen_joy") {
-										// Revert to first joystick available (joy0 or joy1, usually joy1 for port 1)
-										s.copy(onScreenJoystick = false, joyport1 = "joy1")
-									} else {
-										s.copy(onScreenJoystick = false)
-									}
-								}
-							}
+							viewModel.updateSettings { s -> InputSettingsActions.setOnScreenJoystick(s, isEnabled) }
 						}
 					)
 

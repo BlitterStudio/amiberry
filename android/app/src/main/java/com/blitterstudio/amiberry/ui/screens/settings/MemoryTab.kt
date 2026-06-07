@@ -27,6 +27,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import kotlin.math.roundToInt
+
+internal sealed interface MemoryAmountDisplay {
+	data object None : MemoryAmountDisplay
+	data class Kilobytes(val kb: Int) : MemoryAmountDisplay
+	data class WholeMegabytes(val mb: Int) : MemoryAmountDisplay
+	data class FractionalMegabytes(val tenths: Int) : MemoryAmountDisplay
+}
+
+internal fun memoryAmountDisplayValue(kb: Int): MemoryAmountDisplay {
+	if (kb <= 0) return MemoryAmountDisplay.None
+	if (kb < 1024) return MemoryAmountDisplay.Kilobytes(kb)
+
+	val tenths = ((kb / 1024.0) * 10).roundToInt()
+	return if (tenths % 10 == 0) {
+		MemoryAmountDisplay.WholeMegabytes(tenths / 10)
+	} else {
+		MemoryAmountDisplay.FractionalMegabytes(tenths)
+	}
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +107,7 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 				)
 
 				// Z3 RAM (only for 32-bit addressing)
-				if (!settings.address24Bit) {
+				if (SettingsControlAvailability.isZ3MemoryVisible(settings)) {
 					Spacer(modifier = Modifier.height(8.dp))
 
 					MemoryDropdown(
@@ -96,6 +116,15 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 						selectedValue = settings.z3Ram,
 						onValueChange = { viewModel.updateSettings { s -> s.copy(z3Ram = it) } }
 					)
+				} else {
+					Spacer(modifier = Modifier.height(8.dp))
+					SettingsControlAvailability.z3HiddenReasonRes(settings)?.let { reason ->
+						Text(
+							text = stringResource(reason),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant
+						)
+					}
 				}
 			}
 		}
@@ -191,10 +220,12 @@ private fun MemoryDropdown(
 
 @Composable
 private fun formatMemory(kb: Int, noneLabel: String): String {
-	if (kb <= 0) return noneLabel
-	return if (kb >= 1024) {
-		stringResource(R.string.settings_memory_value_mb, kb / 1024)
-	} else {
-		stringResource(R.string.settings_memory_value_kb, kb)
+	return when (val amount = memoryAmountDisplayValue(kb)) {
+		MemoryAmountDisplay.None -> noneLabel
+		is MemoryAmountDisplay.Kilobytes -> stringResource(R.string.settings_memory_value_kb, amount.kb)
+		is MemoryAmountDisplay.WholeMegabytes -> stringResource(R.string.settings_memory_value_mb, amount.mb)
+		is MemoryAmountDisplay.FractionalMegabytes -> {
+			stringResource(R.string.settings_memory_value_mb_decimal, amount.tenths / 10.0)
+		}
 	}
 }

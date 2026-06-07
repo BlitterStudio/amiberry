@@ -40,6 +40,9 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 @Composable
 fun CpuTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
+	val fastestSpeedReason = SettingsControlAvailability.fastestSpeedReasonRes(settings)
+	val cpuCompatibleReason = SettingsControlAvailability.cpuCompatibleReasonRes(settings)
+	val address24BitReason = SettingsControlAvailability.address24BitReasonRes(settings.cpuModel)
 
 	Column(
 		modifier = Modifier
@@ -133,7 +136,8 @@ fun CpuTab(viewModel: SettingsViewModel) {
 				SwitchRow(
 					label = stringResource(R.string.settings_cpu_fastest_possible),
 					checked = settings.cpuSpeed == "max",
-					enabled = !settings.cycleExact,
+					enabled = SettingsControlAvailability.isFastestSpeedEditable(settings),
+					supportingText = fastestSpeedReason?.let { stringResource(it) },
 					onCheckedChange = {
 						viewModel.updateSettings { s ->
 							s.copy(cpuSpeed = if (it) "max" else "real")
@@ -144,13 +148,16 @@ fun CpuTab(viewModel: SettingsViewModel) {
 				SwitchRow(
 					label = stringResource(R.string.settings_cpu_more_compatible),
 					checked = settings.cpuCompatible,
+					enabled = SettingsControlAvailability.isCpuCompatibleEditable(settings),
+					supportingText = cpuCompatibleReason?.let { stringResource(it) },
 					onCheckedChange = { viewModel.updateSettings { s -> s.copy(cpuCompatible = it) } }
 				)
 
 				SwitchRow(
 					label = stringResource(R.string.settings_cpu_24bit_addressing),
 					checked = settings.address24Bit,
-					enabled = settings.cpuModel <= 68010,
+					enabled = SettingsControlAvailability.isAddress24BitEditable(settings.cpuModel),
+					supportingText = address24BitReason?.let { stringResource(it) },
 					onCheckedChange = { viewModel.updateSettings { s -> s.copy(address24Bit = it) } }
 				)
 
@@ -158,12 +165,11 @@ fun CpuTab(viewModel: SettingsViewModel) {
 				if (settings.cpuModel >= 68020) {
 					Spacer(modifier = Modifier.height(8.dp))
 					var fpuExpanded by remember { mutableStateOf(false) }
-					val fpuOptions = buildList {
-						add(0 to stringResource(R.string.settings_option_none))
-						add(68881 to "68881")
-						add(68882 to "68882")
-						if (settings.cpuModel >= 68040) {
-							add(settings.cpuModel to stringResource(R.string.settings_cpu_fpu_internal))
+					val fpuOptions = SettingsControlAvailability.fpuOptionValues(settings.cpuModel).map { value ->
+						value to when (value) {
+							0 -> stringResource(R.string.settings_option_none)
+							settings.cpuModel -> stringResource(R.string.settings_cpu_fpu_internal)
+							else -> "$value"
 						}
 					}
 					ExposedDropdownMenuBox(
@@ -204,7 +210,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 					Text(stringResource(R.string.settings_cpu_jit_cache_label), style = MaterialTheme.typography.bodyMedium)
 					val jitValues = listOf(0, 1024, 2048, 4096, 8192, 16384)
 					val currentIndex = jitValues.indexOf(settings.jitCacheSize).coerceAtLeast(0)
-					val isJitAllowed = !settings.cycleExact && !settings.address24Bit
+					val isJitAllowed = SettingsControlAvailability.isJitAllowed(settings)
 					Slider(
 						value = currentIndex.toFloat(),
 						onValueChange = { idx ->
@@ -216,11 +222,12 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						enabled = isJitAllowed
 					)
 					Text(
-						text = if (settings.jitCacheSize == 0) {
-							stringResource(R.string.settings_common_disabled)
-						} else {
-							stringResource(R.string.settings_cpu_jit_cache_value, settings.jitCacheSize)
-						},
+						text = SettingsControlAvailability.jitDisabledReasonRes(settings)?.let { stringResource(it) }
+							?: if (settings.jitCacheSize == 0) {
+								stringResource(R.string.settings_common_disabled)
+							} else {
+								stringResource(R.string.settings_cpu_jit_cache_value, settings.jitCacheSize)
+							},
 						style = MaterialTheme.typography.bodySmall,
 						color = if (isJitAllowed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 					)
@@ -236,9 +243,10 @@ fun SwitchRow(
 	label: String,
 	checked: Boolean,
 	onCheckedChange: (Boolean) -> Unit,
-	enabled: Boolean = true
+	enabled: Boolean = true,
+	supportingText: String? = null
 ) {
-	Row(
+	Column(
 		modifier = Modifier
 			.fillMaxWidth()
 			.toggleable(
@@ -247,20 +255,31 @@ fun SwitchRow(
 				role = Role.Switch,
 				onValueChange = onCheckedChange
 			)
-			.padding(vertical = 4.dp),
-		verticalAlignment = Alignment.CenterVertically,
-		horizontalArrangement = Arrangement.SpaceBetween
+			.padding(vertical = 4.dp)
 	) {
-		Text(
-			text = label,
-			style = MaterialTheme.typography.bodyMedium,
-			color = if (enabled) MaterialTheme.colorScheme.onSurface
-			else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-		)
-		Switch(
-			checked = checked,
-			onCheckedChange = null,
-			enabled = enabled
-		)
+		Row(
+			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.SpaceBetween,
+			modifier = Modifier.fillMaxWidth()
+		) {
+			Text(
+				text = label,
+				style = MaterialTheme.typography.bodyMedium,
+				color = if (enabled) MaterialTheme.colorScheme.onSurface
+				else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+			)
+			Switch(
+				checked = checked,
+				onCheckedChange = null,
+				enabled = enabled
+			)
+		}
+		if (!supportingText.isNullOrBlank()) {
+			Text(
+				text = supportingText,
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+			)
+		}
 	}
 }

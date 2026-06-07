@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,6 +36,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,18 +45,31 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.FileManager
+import com.blitterstudio.amiberry.data.FilePickerFilters
+import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.ui.ImportInFlightGuard
+import com.blitterstudio.amiberry.ui.launchImportGuarded
+import com.blitterstudio.amiberry.ui.rememberImportInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StorageTab(viewModel: SettingsViewModel) {
+fun StorageTab(
+	viewModel: SettingsViewModel,
+	onImportResult: (FileManager.ImportResult) -> Unit = {}
+) {
 	val context = LocalContext.current
 	val settings = viewModel.settings
 	val roms by viewModel.availableRoms.collectAsState()
 	val floppies by viewModel.availableFloppies.collectAsState()
 	val cds by viewModel.availableCds.collectAsState()
+	val importGuard = rememberImportInFlightGuard()
+	val importInProgress = importGuard.isImporting
 
 	Column(
 		modifier = Modifier
@@ -73,7 +88,7 @@ fun StorageTab(viewModel: SettingsViewModel) {
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
-				if (roms.isEmpty()) {
+				if (!shouldShowStorageFileDropdown(roms, settings.romFile)) {
 					Text(
 						stringResource(R.string.settings_storage_no_roms_found),
 						style = MaterialTheme.typography.bodySmall,
@@ -110,7 +125,10 @@ fun StorageTab(viewModel: SettingsViewModel) {
 					onSelect = { viewModel.updateSettings { s -> s.copy(floppy0 = it) } },
 					onClear = { viewModel.updateSettings { s -> s.copy(floppy0 = "") } },
 					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy0Type = it) } },
-					context = context
+					context = context,
+					importGuard = importGuard,
+					importInProgress = importInProgress,
+					onImportResult = onImportResult
 				)
 
 				Spacer(modifier = Modifier.height(8.dp))
@@ -124,7 +142,44 @@ fun StorageTab(viewModel: SettingsViewModel) {
 					onSelect = { viewModel.updateSettings { s -> s.copy(floppy1 = it) } },
 					onClear = { viewModel.updateSettings { s -> s.copy(floppy1 = "") } },
 					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy1Type = it) } },
-					context = context
+					context = context,
+					importGuard = importGuard,
+					importInProgress = importInProgress,
+					onImportResult = onImportResult
+				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				// DF2
+				FloppyDriveRow(
+					label = stringResource(R.string.settings_storage_drive_df2),
+					files = floppies,
+					selectedPath = settings.floppy2,
+					driveType = settings.floppy2Type,
+					onSelect = { viewModel.updateSettings { s -> s.copy(floppy2 = it) } },
+					onClear = { viewModel.updateSettings { s -> s.copy(floppy2 = "") } },
+					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy2Type = it) } },
+					context = context,
+					importGuard = importGuard,
+					importInProgress = importInProgress,
+					onImportResult = onImportResult
+				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				// DF3
+				FloppyDriveRow(
+					label = stringResource(R.string.settings_storage_drive_df3),
+					files = floppies,
+					selectedPath = settings.floppy3,
+					driveType = settings.floppy3Type,
+					onSelect = { viewModel.updateSettings { s -> s.copy(floppy3 = it) } },
+					onClear = { viewModel.updateSettings { s -> s.copy(floppy3 = "") } },
+					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy3Type = it) } },
+					context = context,
+					importGuard = importGuard,
+					importInProgress = importInProgress,
+					onImportResult = onImportResult
 				)
 			}
 		}
@@ -139,7 +194,7 @@ fun StorageTab(viewModel: SettingsViewModel) {
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
-				if (cds.isEmpty()) {
+				if (!shouldShowStorageFileDropdown(cds, settings.cdImage)) {
 					Text(
 						stringResource(R.string.settings_storage_no_cd_images_found),
 						style = MaterialTheme.typography.bodySmall,
@@ -158,6 +213,9 @@ fun StorageTab(viewModel: SettingsViewModel) {
 		}
 	}
 }
+
+internal fun shouldShowStorageFileDropdown(files: List<AmigaFile>, selectedPath: String): Boolean =
+	files.isNotEmpty() || selectedPath.isNotBlank()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,12 +244,12 @@ private fun FileDropdown(
 				value = selectedName,
 				onValueChange = {},
 				readOnly = true,
-					label = { Text(label) },
-					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-					modifier = Modifier
-						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-						.fillMaxWidth()
-				)
+				label = { Text(label) },
+				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+				modifier = Modifier
+					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+					.fillMaxWidth()
+			)
 			ExposedDropdownMenu(
 				expanded = expanded,
 				onDismissRequest = { expanded = false }
@@ -216,7 +274,7 @@ private fun FileDropdown(
 		}
 		if (selectedPath.isNotEmpty()) {
 			IconButton(onClick = onClear) {
-				Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject))
+				Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject_named, selectedName))
 			}
 		}
 	}
@@ -232,8 +290,12 @@ private fun FloppyDriveRow(
 	onSelect: (String) -> Unit,
 	onClear: () -> Unit,
 	onTypeChange: (Int) -> Unit,
-	context: android.content.Context
+	context: android.content.Context,
+	importGuard: ImportInFlightGuard,
+	importInProgress: Boolean,
+	onImportResult: (FileManager.ImportResult) -> Unit
 ) {
+	val scope = rememberCoroutineScope()
 	val driveTypeOptions = listOf(
 		0 to stringResource(R.string.settings_storage_drive_type_dd),
 		1 to stringResource(R.string.settings_storage_drive_type_hd),
@@ -295,12 +357,32 @@ private fun FloppyDriveRow(
 				ActivityResultContracts.OpenDocument()
 			) { uri ->
 				uri?.let {
-					val path = FileManager.importFile(context, it, FileCategory.FLOPPIES)
-					if (path != null) onSelect(path)
+					scope.launchImportGuarded(importGuard) {
+						val result = withContext(Dispatchers.IO) {
+							FileManager.importFileWithResult(context, it, FileCategory.FLOPPIES).also { importResult ->
+								if (importResult is FileManager.ImportResult.Imported) {
+									FileRepository.getInstance(context).rescanCategory(FileCategory.FLOPPIES)
+								}
+							}
+						}
+						if (result is FileManager.ImportResult.Imported) onSelect(result.path)
+						onImportResult(result)
+					}
 				}
 			}
-			TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
-				Text(stringResource(R.string.settings_storage_import_disk_image))
+			TextButton(onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES)) }, enabled = !importInProgress) {
+				if (importInProgress) {
+					CircularProgressIndicator(
+						modifier = Modifier.size(16.dp),
+						strokeWidth = 2.dp
+					)
+					Spacer(modifier = Modifier.width(4.dp))
+				}
+				Text(
+					stringResource(
+						if (importInProgress) R.string.action_importing else R.string.settings_storage_import_disk_image
+					)
+				)
 			}
 		}
 	}

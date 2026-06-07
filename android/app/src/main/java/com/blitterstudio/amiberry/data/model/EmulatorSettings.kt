@@ -50,7 +50,7 @@ data class EmulatorSettings(
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
 	val soundFreq: Int = 44100,
-	val soundChannels: String = "stereo",  // mono, stereo, mixed
+	val soundChannels: String = "stereo",
 
 	// Display
 	val gfxWidth: Int = 720,
@@ -99,15 +99,18 @@ data class EmulatorSettings(
 				AmigaModel.A4000 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68040, chipset = "aga",
 					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false,
-					fpuModel = 68040, cpuSpeed = "max", jitCacheSize = 16384, jitFpu = true
+					fpuModel = 68040, cpuCompatible = false, cpuSpeed = "max",
+					jitCacheSize = 16384, jitFpu = true
 				)
 				AmigaModel.CD32 -> EmulatorSettings(
 					baseModel = model, cpuModel = 68020, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true
+					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true,
+					floppy0Type = -1, floppy1Type = -1
 				)
 				AmigaModel.CDTV -> EmulatorSettings(
 					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
+					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true,
+					floppy0Type = -1, floppy1Type = -1
 				)
 			}
 		}
@@ -161,6 +164,18 @@ data class EmulatorSettings(
 			"interrupts" to "Emulated (no output)",
 			"normal" to "Normal",
 			"exact" to "Exact"
+		)
+
+		val soundChannelOptions = listOf(
+			"mono" to "Mono",
+			"stereo" to "Stereo",
+			"clonedstereo" to "Cloned stereo",
+			"4ch" to "4 channel",
+			"clonedstereo6ch" to "Cloned stereo 6 channel",
+			"6ch" to "6 channel",
+			"clonedstereo8ch" to "Cloned stereo 8 channel",
+			"8ch" to "8 channel",
+			"mixed" to "Mixed (75% stereo)"
 		)
 	}
 }

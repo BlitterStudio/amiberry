@@ -47,10 +47,19 @@ fun SoundTab(viewModel: SettingsViewModel) {
 	)
 
 	val channelOptions = listOf(
-		"mono" to stringResource(R.string.settings_sound_channels_mono),
-		"stereo" to stringResource(R.string.settings_sound_channels_stereo),
-		"mixed" to stringResource(R.string.settings_sound_channels_mixed)
-	)
+		"mono" to R.string.settings_sound_channels_mono,
+		"stereo" to R.string.settings_sound_channels_stereo,
+		"clonedstereo" to R.string.settings_sound_channels_cloned_stereo,
+		"4ch" to R.string.settings_sound_channels_4ch,
+		"clonedstereo6ch" to R.string.settings_sound_channels_cloned_stereo_6ch,
+		"6ch" to R.string.settings_sound_channels_6ch,
+		"clonedstereo8ch" to R.string.settings_sound_channels_cloned_stereo_8ch,
+		"8ch" to R.string.settings_sound_channels_8ch,
+		"mixed" to R.string.settings_sound_channels_mixed
+	).toMap()
+	val channelLabels = EmulatorSettings.soundChannelOptions.map { (value, fallback) ->
+		value to channelOptions[value]?.let { stringResource(it) }.orEmpty().ifBlank { fallback }
+	}
 
 	Column(
 		modifier = Modifier
@@ -142,7 +151,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 
 				// Channels
 				var channelExpanded by remember { mutableStateOf(false) }
-				val channelLabel = channelOptions.firstOrNull { it.first == settings.soundChannels }?.second
+				val channelLabel = channelLabels.firstOrNull { it.first == settings.soundChannels }?.second
 					?: settings.soundChannels
 
 				ExposedDropdownMenuBox(
@@ -163,7 +172,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						expanded = channelExpanded,
 						onDismissRequest = { channelExpanded = false }
 					) {
-						channelOptions.forEach { (value, label) ->
+						channelLabels.forEach { (value, label) ->
 							DropdownMenuItem(
 								text = { Text(label) },
 								onClick = {

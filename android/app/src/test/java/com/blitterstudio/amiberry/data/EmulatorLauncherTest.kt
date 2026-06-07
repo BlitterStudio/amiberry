@@ -1,11 +1,9 @@
 package com.blitterstudio.amiberry.data
 
-import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class EmulatorLauncherTest {
 
@@ -61,62 +59,69 @@ class EmulatorLauncherTest {
 		assertFalse(elapsed in 1 until (12 * 60 * 60 * 1000L))
 	}
 
-	// --- ROM fingerprint ---
-
 	@Test
-	fun `rom fingerprint changes when file is added`() {
-		val romDir = tempDir.newFolder(StoragePaths.ROMS)
-		File(romDir, "kick13.rom").writeBytes(ByteArray(256 * 1024))
+	fun `prepare launch args preserves rom rescan flag`() {
+		val args = arrayOf("--rescan-roms", "--model", "A500", "-G")
 
-		val fp1 = computeTestFingerprint(romDir)
-		File(romDir, "kick31.rom").writeBytes(ByteArray(512 * 1024))
-		val fp2 = computeTestFingerprint(romDir)
-
-		assertNotEquals(fp1, fp2)
+		assertArrayEquals(args, EmulatorLauncher.prepareLaunchArgs(args))
 	}
 
 	@Test
-	fun `rom fingerprint stable when nothing changes`() {
-		val romDir = tempDir.newFolder(StoragePaths.ROMS)
-		File(romDir, "kick13.rom").writeBytes(ByteArray(256 * 1024))
+	fun `prepare launch args prepends missing rom rescan flag`() {
+		val args = arrayOf("--model", "A500", "-G")
 
-		val fp1 = computeTestFingerprint(romDir)
-		val fp2 = computeTestFingerprint(romDir)
-
-		assertEquals(fp1, fp2)
+		assertArrayEquals(
+			arrayOf("--rescan-roms", "--model", "A500", "-G"),
+			EmulatorLauncher.prepareLaunchArgs(args)
+		)
 	}
 
 	@Test
-	fun `rom fingerprint ignores non-rom files`() {
-		val romDir = tempDir.newFolder(StoragePaths.ROMS)
-		File(romDir, "kick13.rom").writeBytes(ByteArray(256 * 1024))
-
-		val fp1 = computeTestFingerprint(romDir)
-		File(romDir, "readme.txt").writeText("not a rom")
-		val fp2 = computeTestFingerprint(romDir)
-
-		assertEquals(fp1, fp2)
+	fun `prepare launch args defaults to rom rescan when empty`() {
+		assertArrayEquals(
+			arrayOf("--rescan-roms"),
+			EmulatorLauncher.prepareLaunchArgs(emptyArray())
+		)
 	}
 
 	@Test
-	fun `rom fingerprint empty for nonexistent dir`() {
-		val romDir = File(tempDir.root, "nonexistent")
-		assertEquals("empty", computeTestFingerprint(romDir))
+	fun `tracked launch clears stale clean exit marker before writing session marker`() {
+		val baseDir = tempDir.newFolder()
+		val cleanExitMarker = baseDir.resolve(".clean_exit")
+		val sessionMarker = baseDir.resolve(".emulator_session")
+
+		cleanExitMarker.writeText("1")
+
+		EmulatorLauncher.prepareTrackedSessionMarkers(baseDir, nowMs = 1234L)
+
+		assertFalse(cleanExitMarker.exists())
+		assertEquals("1234", sessionMarker.readText())
 	}
 
-	/**
-	 * Mirror of EmulatorLauncher.computeRomFingerprint for testing
-	 * (the private method is not directly accessible from tests)
-	 */
-	private fun computeTestFingerprint(romDir: File): String {
-		if (!romDir.exists()) return "empty"
-		val romExtensions = setOf("rom", "bin")
-		val romFiles = romDir.listFiles { f ->
-			f.isFile && f.extension.lowercase() in romExtensions
-		} ?: return "empty"
-		val count = romFiles.size
-		val totalSize = romFiles.sumOf { it.length() }
-		val latestModified = romFiles.maxOfOrNull { it.lastModified() } ?: 0L
-		return "$count:$totalSize:$latestModified"
+	@Test
+	fun `untracked launch clears stale session markers without creating a new one`() {
+		val baseDir = tempDir.newFolder()
+		val cleanExitMarker = baseDir.resolve(".clean_exit")
+		val sessionMarker = baseDir.resolve(".emulator_session")
+
+		cleanExitMarker.writeText("1")
+		sessionMarker.writeText("old")
+
+		EmulatorLauncher.prepareUntrackedLaunchMarkers(baseDir)
+
+		assertFalse(cleanExitMarker.exists())
+		assertFalse(sessionMarker.exists())
+	}
+
+	@Test
+	fun `session marker existence identifies tracked session`() {
+		val baseDir = tempDir.newFolder()
+		val sessionMarker = baseDir.resolve(".emulator_session")
+
+		assertFalse(EmulatorLauncher.sessionMarkerExists(baseDir))
+
+		sessionMarker.writeText("1234")
+
+		assertTrue(EmulatorLauncher.sessionMarkerExists(baseDir))
 	}
 }

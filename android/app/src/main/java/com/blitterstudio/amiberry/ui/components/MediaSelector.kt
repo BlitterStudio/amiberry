@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,6 +58,7 @@ import com.blitterstudio.amiberry.data.model.AmigaFile
  * @param onItemSelected Called when user selects an item from the dropdown
  * @param onEject Called when user ejects the current selection
  * @param onImport Called when user taps the import button
+ * @param importInProgress Disables the import button and shows busy feedback during a direct import
  * @param displayName Optional transform for item display names (default: AmigaFile.name)
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +75,7 @@ fun MediaSelector(
 	onItemSelected: (AmigaFile) -> Unit,
 	onEject: () -> Unit,
 	onImport: () -> Unit,
+	importInProgress: Boolean = false,
 	displayName: (AmigaFile) -> String = { it.name },
 	modifier: Modifier = Modifier
 ) {
@@ -88,10 +91,21 @@ fun MediaSelector(
 					Spacer(modifier = Modifier.width(8.dp))
 					Text(title, style = MaterialTheme.typography.titleMedium)
 				}
-				TextButton(onClick = onImport) {
-					Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
+				TextButton(onClick = onImport, enabled = !importInProgress) {
+					if (importInProgress) {
+						CircularProgressIndicator(
+							modifier = Modifier.size(16.dp),
+							strokeWidth = 2.dp
+						)
+					} else {
+						Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
+					}
 					Spacer(modifier = Modifier.width(4.dp))
-					Text(stringResource(R.string.action_import))
+					Text(
+						stringResource(
+							if (importInProgress) R.string.action_importing else R.string.action_import
+						)
+					)
 				}
 			}
 			if (helpText != null) {
@@ -158,7 +172,10 @@ fun MediaSelector(
 
 					if (selectedPath.isNotBlank()) {
 						IconButton(onClick = onEject) {
-							Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject))
+							Icon(
+								Icons.Default.Eject,
+								contentDescription = stringResource(R.string.action_eject_named, title)
+							)
 						}
 					}
 				}

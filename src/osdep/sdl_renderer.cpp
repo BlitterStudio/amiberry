@@ -347,7 +347,7 @@ void SDLRenderer::render_vkbd(int monid)
 
 void SDLRenderer::render_onscreen_joystick(int monid)
 {
-	if (on_screen_joystick_is_enabled())
+	if (on_screen_joystick_is_enabled() && !imgui_osk_should_render())
 	{
 		AmigaMonitor* mon = &AMonitors[monid];
 		on_screen_joystick_redraw(mon->amiga_renderer);

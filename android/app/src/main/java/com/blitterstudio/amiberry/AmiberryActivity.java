@@ -1,8 +1,12 @@
 package com.blitterstudio.amiberry;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.WindowManager;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -16,16 +20,18 @@ import org.libsdl.app.SDLActivity;
  * Also forces fullscreen immersive mode so the system bars don't overlap the
  * emulation display.
  *
- * Back-button handling: SDL3's trapping mechanism (SDL_HINT_ANDROID_TRAP_BACK_BUTTON=1)
- * intercepts KEYCODE_BACK in dispatchKeyEvent() and delivers it as SDL_SCANCODE_AC_BACK.
- * The native side maps this to AKS_ENTERGUI, which opens the ImGui GUI — consistent
- * with all other platforms.  No Java-side back handling is needed.
+ * Back-button handling: legacy Back and Android 13+ predictive Back both use
+ * dispatchBackToSdl(), which synthesizes KEYCODE_BACK for SDL.  The native side
+ * receives SDL_SCANCODE_AC_BACK, closes the on-screen keyboard first, then uses
+ * Back as the ImGui GUI shortcut.
  */
 public class AmiberryActivity extends SDLActivity {
+	private OnBackInvokedCallback backCallback;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		registerBackCallback();
 		enterImmersiveMode();
 	}
 
@@ -35,6 +41,13 @@ public class AmiberryActivity extends SDLActivity {
 		if (hasFocus) {
 			enterImmersiveMode();
 		}
+	}
+
+	@Override
+	@SuppressWarnings("deprecation")
+	@android.annotation.SuppressLint("GestureBackNavigation")
+	public void onBackPressed() {
+		dispatchBackToSdl();
 	}
 
 	@Override
@@ -55,13 +68,14 @@ public class AmiberryActivity extends SDLActivity {
 				return args;
 			}
 		}
-		// Default: no arguments, opens ImGui GUI
-		return new String[0];
+		// Default: open ImGui GUI but still rescan ROMs after Android recreates this activity.
+		return new String[] {"--rescan-roms"};
 	}
 
 	@Override
 	protected void onDestroy() {
 		final boolean finishing = isFinishing();
+		unregisterBackCallback();
 		// Note: SDL3's SDLActivity calls System.exit(0) after native
 		// main() returns, which kills the process without reaching
 		// onDestroy().  Clean-exit markers are therefore written from
@@ -70,7 +84,6 @@ public class AmiberryActivity extends SDLActivity {
 		// does run.
 		if (finishing) {
 			com.blitterstudio.amiberry.data.EmulatorLauncher.INSTANCE.writeCleanExitMarker(this);
-			com.blitterstudio.amiberry.data.EmulatorLauncher.INSTANCE.clearSessionMarker(this);
 		}
 		super.onDestroy();
 		// Amiberry runs in a dedicated :sdl process; terminate it when this
@@ -88,5 +101,30 @@ public class AmiberryActivity extends SDLActivity {
 		controller.setSystemBarsBehavior(
 			WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+	}
+
+	private void registerBackCallback() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || backCallback != null) {
+			return;
+		}
+
+		backCallback = this::dispatchBackToSdl;
+		getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+			OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+			backCallback);
+	}
+
+	private void unregisterBackCallback() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || backCallback == null) {
+			return;
+		}
+
+		getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
+		backCallback = null;
+	}
+
+	private void dispatchBackToSdl() {
+		SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_BACK);
+		SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_BACK);
 	}
 }
