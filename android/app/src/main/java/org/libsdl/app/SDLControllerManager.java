@@ -699,6 +699,24 @@ class SDLGenericMotionListener_API14 implements View.OnGenericMotionListener {
                         consumed = true;
                         break;
 
+                    case MotionEvent.ACTION_BUTTON_PRESS:
+                        x = getEventX(event, i);
+                        y = getEventY(event, i);
+                        if (SDLSurface.beginMouseButtonTransition(event.getButtonState())) {
+                            SDLActivity.onNativeMouse(event.getButtonState(), MotionEvent.ACTION_DOWN, x, y, checkRelativeEvent(event));
+                        }
+                        consumed = true;
+                        break;
+
+                    case MotionEvent.ACTION_BUTTON_RELEASE:
+                        x = getEventX(event, i);
+                        y = getEventY(event, i);
+                        if (SDLSurface.finishMouseButtonTransition(event.getButtonState())) {
+                            SDLActivity.onNativeMouse(event.getButtonState(), MotionEvent.ACTION_UP, x, y, checkRelativeEvent(event));
+                        }
+                        consumed = true;
+                        break;
+
                     default:
                         break;
                 }

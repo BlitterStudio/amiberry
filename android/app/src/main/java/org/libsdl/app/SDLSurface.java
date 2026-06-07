@@ -42,6 +42,29 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     // Is SurfaceView ready for rendering
     public boolean mIsSurfaceReady;
 
+    private static int sMouseButtonTransitionState;
+    private boolean mMouseLifecycleButtonActive;
+
+    static boolean beginMouseButtonTransition(int buttonState) {
+        if (sMouseButtonTransitionState == buttonState) {
+            return false;
+        }
+        sMouseButtonTransitionState = buttonState;
+        return true;
+    }
+
+    static boolean finishMouseButtonTransition(int buttonState) {
+        if (sMouseButtonTransitionState == buttonState) {
+            return false;
+        }
+        sMouseButtonTransitionState = buttonState;
+        return true;
+    }
+
+    static boolean mouseButtonTransitionActive() {
+        return sMouseButtonTransitionState != 0;
+    }
+
     // Startup
     public SDLSurface(Context context) {
         super(context);
@@ -262,10 +285,34 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
                 switch (action) {
                     case MotionEvent.ACTION_BUTTON_PRESS:
-                        SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative);
+                        if (beginMouseButtonTransition(buttonState)) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative);
+                        }
                         break;
                     case MotionEvent.ACTION_BUTTON_RELEASE:
-                        SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative);
+                        if (finishMouseButtonTransition(buttonState)) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_DOWN:
+                        if (!mouseButtonTransitionActive() && buttonState != 0) {
+                            mMouseLifecycleButtonActive = true;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (!mouseButtonTransitionActive() && mMouseLifecycleButtonActive) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative);
+                        }
+                        break;
+                    case MotionEvent.ACTION_CANCEL:
+                        if (!mouseButtonTransitionActive() && mMouseLifecycleButtonActive) {
+                            mMouseLifecycleButtonActive = false;
+                            SDLActivity.onNativeMouse(0, MotionEvent.ACTION_UP, x, y, relative);
+                        }
                         break;
                     case MotionEvent.ACTION_MOVE:
                         SDLActivity.onNativeMouse(0, MotionEvent.ACTION_MOVE, x, y, relative);

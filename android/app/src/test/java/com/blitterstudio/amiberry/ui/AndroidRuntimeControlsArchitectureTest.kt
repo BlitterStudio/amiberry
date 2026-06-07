@@ -129,9 +129,13 @@ class AndroidRuntimeControlsArchitectureTest {
 	@Test
 	fun `Android physical mouse buttons use button transitions instead of touch lifecycle actions`() {
 		val surface = File("src/main/java/org/libsdl/app/SDLSurface.java").readText()
+		val controllerManager = File("src/main/java/org/libsdl/app/SDLControllerManager.java").readText()
 		val mouseBranch = Regex(
 			"""if \(toolType == MotionEvent\.TOOL_TYPE_MOUSE\) \{([\s\S]*?)\R\s*\} else if \(toolType == MotionEvent\.TOOL_TYPE_STYLUS"""
 		).find(surface)?.groupValues?.get(1).orEmpty()
+		val genericMouseBranch = Regex(
+			"""if \(toolType == MotionEvent\.TOOL_TYPE_MOUSE\) \{([\s\S]*?)\R\s*\} else if \(toolType == MotionEvent\.TOOL_TYPE_STYLUS"""
+		).find(controllerManager)?.groupValues?.get(1).orEmpty()
 
 		assertTrue(
 			"SDLSurface.onTouch() should keep a distinct TOOL_TYPE_MOUSE branch.",
@@ -147,9 +151,26 @@ class AndroidRuntimeControlsArchitectureTest {
 			mouseBranch.contains("SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative)") &&
 				mouseBranch.contains("SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative)")
 		)
+		assertTrue(
+			"Mouse lifecycle ACTION_DOWN/ACTION_UP should remain as a fallback for devices that do not deliver explicit button transitions.",
+			mouseBranch.contains("case MotionEvent.ACTION_DOWN:") &&
+				mouseBranch.contains("case MotionEvent.ACTION_UP:") &&
+				mouseBranch.contains("mMouseLifecycleButtonActive")
+		)
+		assertTrue(
+			"Lifecycle mouse fallback should be suppressed while an explicit button transition owns the press.",
+			mouseBranch.contains("mouseButtonTransitionActive()")
+		)
 		assertFalse(
 			"Mouse tool ACTION_DOWN/ACTION_UP lifecycle events should not be forwarded directly as button transitions.",
 			mouseBranch.contains("SDLActivity.onNativeMouse(buttonState, action, x, y, relative)")
+		)
+		assertTrue(
+			"Generic motion should forward explicit mouse button press/release events before touch lifecycle fallback sees them.",
+			genericMouseBranch.contains("case MotionEvent.ACTION_BUTTON_PRESS:") &&
+				genericMouseBranch.contains("case MotionEvent.ACTION_BUTTON_RELEASE:") &&
+				genericMouseBranch.contains("SDLSurface.beginMouseButtonTransition(event.getButtonState())") &&
+				genericMouseBranch.contains("SDLSurface.finishMouseButtonTransition(event.getButtonState())")
 		)
 	}
 
