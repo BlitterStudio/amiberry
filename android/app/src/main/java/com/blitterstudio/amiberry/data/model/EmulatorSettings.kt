@@ -50,7 +50,7 @@ data class EmulatorSettings(
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
 	val soundFreq: Int = 44100,
-	val soundChannels: String = "stereo",  // mono, stereo, mixed
+	val soundChannels: String = "stereo",
 
 	// Display
 	val gfxWidth: Int = 720,
@@ -164,6 +164,18 @@ data class EmulatorSettings(
 			"interrupts" to "Emulated (no output)",
 			"normal" to "Normal",
 			"exact" to "Exact"
+		)
+
+		val soundChannelOptions = listOf(
+			"mono" to "Mono",
+			"stereo" to "Stereo",
+			"clonedstereo" to "Cloned stereo",
+			"4ch" to "4 channel",
+			"clonedstereo6ch" to "Cloned stereo 6 channel",
+			"6ch" to "6 channel",
+			"clonedstereo8ch" to "Cloned stereo 8 channel",
+			"8ch" to "8 channel",
+			"mixed" to "Mixed (75% stereo)"
 		)
 	}
 }

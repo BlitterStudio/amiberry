@@ -40,6 +40,51 @@ class FileManagerScreenArchitectureTest {
 		)
 	}
 
+	@Test
+	fun `file manager disables delete actions while scan or import is in progress`() {
+		val screen = source()
+
+		assertTrue(
+			"File list rows should receive the same busy state used by refresh/import controls.",
+			screen.contains("deleteEnabled = !showProgress")
+		)
+		assertTrue(
+			"Delete icon buttons should be disabled while file operations are already running.",
+			Regex("""IconButton\([\s\S]*enabled = deleteEnabled""")
+				.containsMatchIn(screen)
+		)
+		assertTrue(
+			"Delete confirmation should also be disabled if a scan/import starts while the dialog is open.",
+			Regex("""TextButton\([\s\S]*enabled = deleteEnabled""")
+				.containsMatchIn(screen)
+		)
+	}
+
+	@Test
+	fun `file manager disables import actions while scan or import is in progress`() {
+		val screen = source()
+
+		assertTrue(
+			"File picker callback should ignore selected URIs while any file operation is already active.",
+			screen.contains("if (uris.isNotEmpty() && !showProgress)")
+		)
+		assertTrue(
+			"Floating import action should ignore taps while a scan or import is active.",
+			Regex("""ExtendedFloatingActionButton[\s\S]*if \(showProgress\) \{[\s\S]*return@ExtendedFloatingActionButton""")
+				.containsMatchIn(screen)
+		)
+		assertTrue(
+			"Floating import action should expose disabled semantics while file operations are active.",
+			Regex("""ExtendedFloatingActionButton\([\s\S]*Modifier\.semantics \{ if \(showProgress\) disabled\(\) \}""")
+				.containsMatchIn(screen)
+		)
+		assertTrue(
+			"Empty-state import button should be disabled while scanning or importing unless it is clearing search results.",
+			Regex("""Button\([\s\S]*enabled = searchHasNoResults \|\| !showProgress""")
+				.containsMatchIn(screen)
+		)
+	}
+
 	private fun source(): String =
 		File("src/main/java/com/blitterstudio/amiberry/ui/screens/FileManagerScreen.kt").readText()
 }

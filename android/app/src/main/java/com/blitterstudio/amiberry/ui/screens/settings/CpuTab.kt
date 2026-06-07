@@ -165,12 +165,11 @@ fun CpuTab(viewModel: SettingsViewModel) {
 				if (settings.cpuModel >= 68020) {
 					Spacer(modifier = Modifier.height(8.dp))
 					var fpuExpanded by remember { mutableStateOf(false) }
-					val fpuOptions = buildList {
-						add(0 to stringResource(R.string.settings_option_none))
-						add(68881 to "68881")
-						add(68882 to "68882")
-						if (settings.cpuModel >= 68040) {
-							add(settings.cpuModel to stringResource(R.string.settings_cpu_fpu_internal))
+					val fpuOptions = SettingsControlAvailability.fpuOptionValues(settings.cpuModel).map { value ->
+						value to when (value) {
+							0 -> stringResource(R.string.settings_option_none)
+							settings.cpuModel -> stringResource(R.string.settings_cpu_fpu_internal)
+							else -> "$value"
 						}
 					}
 					ExposedDropdownMenuBox(

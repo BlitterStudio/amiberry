@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class SettingsControlAvailabilityTest {
 
@@ -84,6 +85,25 @@ class SettingsControlAvailabilityTest {
 		assertEquals(
 			R.string.settings_memory_z3_disabled_24bit,
 			SettingsControlAvailability.z3HiddenReasonRes(settings)
+		)
+	}
+
+	@Test
+	fun `fpu option values match CPUs that can keep the selected FPU`() {
+		assertEquals(listOf(0), SettingsControlAvailability.fpuOptionValues(68000))
+		assertEquals(listOf(0, 68881, 68882), SettingsControlAvailability.fpuOptionValues(68020))
+		assertEquals(listOf(0, 68881, 68882), SettingsControlAvailability.fpuOptionValues(68030))
+		assertEquals(listOf(0, 68040), SettingsControlAvailability.fpuOptionValues(68040))
+		assertEquals(listOf(0, 68060), SettingsControlAvailability.fpuOptionValues(68060))
+	}
+
+	@Test
+	fun `cpu tab builds FPU dropdown from shared availability helper`() {
+		val cpuTab = File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/CpuTab.kt").readText()
+
+		assertTrue(
+			"CpuTab should not maintain a separate FPU option list that can diverge from constraints.",
+			cpuTab.contains("SettingsControlAvailability.fpuOptionValues(settings.cpuModel)")
 		)
 	}
 }

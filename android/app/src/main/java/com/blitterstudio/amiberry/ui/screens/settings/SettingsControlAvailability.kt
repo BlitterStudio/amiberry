@@ -45,6 +45,12 @@ object SettingsControlAvailability {
 		else -> null
 	}
 
+	fun fpuOptionValues(cpuModel: Int): List<Int> = when {
+		cpuModel < 68020 -> listOf(0)
+		cpuModel < 68040 -> listOf(0, 68881, 68882)
+		else -> listOf(0, cpuModel)
+	}
+
 	fun isZ3MemoryVisible(settings: EmulatorSettings): Boolean =
 		!settings.address24Bit
 

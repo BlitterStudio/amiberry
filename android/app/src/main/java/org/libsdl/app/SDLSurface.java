@@ -260,7 +260,19 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                 y = motionListener.getEventY(event, i);
                 relative = motionListener.inRelativeMode();
 
-                SDLActivity.onNativeMouse(buttonState, action, x, y, relative);
+                switch (action) {
+                    case MotionEvent.ACTION_BUTTON_PRESS:
+                        SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative);
+                        break;
+                    case MotionEvent.ACTION_BUTTON_RELEASE:
+                        SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative);
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        SDLActivity.onNativeMouse(0, MotionEvent.ACTION_MOVE, x, y, relative);
+                        break;
+                    default:
+                        break;
+                }
             } else if (toolType == MotionEvent.TOOL_TYPE_STYLUS || toolType == MotionEvent.TOOL_TYPE_ERASER) {
                 pointerId = event.getPointerId(i);
                 x = event.getX(i);
@@ -274,8 +286,11 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
                 // BUTTON_STYLUS_PRIMARY is 2^5, so shift by 4, and apply SDL_PEN_INPUT_DOWN/SDL_PEN_INPUT_ERASER_TIP
                 int buttonState = (event.getButtonState() >> 4) | (1 << (toolType == MotionEvent.TOOL_TYPE_STYLUS ? 0 : 30));
+                if ((event.getButtonState() & MotionEvent.BUTTON_TERTIARY) != 0) {
+                    buttonState |= 0x08;
+                }
 
-                SDLActivity.onNativePen(pointerId, buttonState, action, x, y, p);
+                SDLActivity.onNativePen(pointerId, SDLActivity.getMotionListener().getPenDeviceType(event.getDevice()), buttonState, action, x, y, p);
             } else { // MotionEvent.TOOL_TYPE_FINGER or MotionEvent.TOOL_TYPE_UNKNOWN
                 pointerId = event.getPointerId(i);
                 x = getNormalizedX(event.getX(i));

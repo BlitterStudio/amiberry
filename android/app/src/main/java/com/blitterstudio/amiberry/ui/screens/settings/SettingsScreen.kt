@@ -120,6 +120,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	val validSelectedTab = SettingsTabs.validSelectedIndex(selectedTab)
 	val romRequiredMessage = stringResource(R.string.msg_rom_required_before_start)
 	val configWriteFailedMessage = stringResource(R.string.msg_failed_save_config)
+	val launchFailedMessage = stringResource(R.string.msg_failed_launch_config)
 	val advancedLaunchFailedMessage = stringResource(AdvancedLaunchActions.launchFailedMessage().stringRes)
 	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
 		val message = ConfigurationSaveActions.messageFor(result)
@@ -208,11 +209,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 							snackbarHostState.showSnackbar(configWriteFailedMessage)
 							return@launchGuarded
 						}
-						EmulatorLauncher.launchSettingsConfig(
-							context,
-							launchSettings.baseModel,
-							configFile.absolutePath
-						)
+						runCatching {
+							EmulatorLauncher.launchSettingsConfig(
+								context,
+								launchSettings.baseModel,
+								configFile.absolutePath
+							)
+						}.onFailure {
+							snackbarHostState.showSnackbar(launchFailedMessage)
+						}
 					}
 				},
 				icon = {

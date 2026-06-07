@@ -29,12 +29,12 @@ class FileManagerImportGuardArchitectureTest {
 			.readText()
 
 		assertTrue(
-			"File picker callback should ignore selected URIs while an import is already active.",
-			screen.contains("if (uris.isNotEmpty() && !isImporting)")
+			"File picker callback should ignore selected URIs while a scan or import is already active.",
+			screen.contains("if (uris.isNotEmpty() && !showProgress)")
 		)
 		assertTrue(
-			"Floating import action should ignore repeated taps while an import is active.",
-			Regex("""ExtendedFloatingActionButton[\s\S]*if \(isImporting\) \{[\s\S]*return@ExtendedFloatingActionButton""")
+			"Floating import action should ignore repeated taps while a scan or import is active.",
+			Regex("""ExtendedFloatingActionButton[\s\S]*if \(showProgress\) \{[\s\S]*return@ExtendedFloatingActionButton""")
 				.containsMatchIn(screen)
 		)
 		assertTrue(
@@ -46,8 +46,8 @@ class FileManagerImportGuardArchitectureTest {
 			screen.contains("R.string.action_importing")
 		)
 		assertTrue(
-			"Empty-state import button should be disabled while importing unless it is clearing search results.",
-			Regex("""Button\([\s\S]*enabled = searchHasNoResults \|\| !isImporting""")
+			"Empty-state import button should be disabled while scanning or importing unless it is clearing search results.",
+			Regex("""Button\([\s\S]*enabled = searchHasNoResults \|\| !showProgress""")
 				.containsMatchIn(screen)
 		)
 	}

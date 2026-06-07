@@ -5,6 +5,11 @@ object PendingImportState {
 		hasPendingUri: Boolean,
 		assetsReady: Boolean,
 		assetExtractionFailed: Boolean,
+		crashRecoveryVisible: Boolean = false,
 		importLaunchInProgress: Boolean
-	): Boolean = hasPendingUri && assetsReady && !assetExtractionFailed && !importLaunchInProgress
+	): Boolean = hasPendingUri &&
+		assetsReady &&
+		!assetExtractionFailed &&
+		!crashRecoveryVisible &&
+		!importLaunchInProgress
 }

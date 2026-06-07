@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -140,7 +141,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	val filePickerLauncher = rememberLauncherForActivityResult(
 		contract = ActivityResultContracts.OpenMultipleDocuments()
 	) { uris ->
-		if (uris.isNotEmpty() && !isImporting) {
+		if (uris.isNotEmpty() && !showProgress) {
 			viewModel.importFiles(uris, currentCategory)
 		}
 	}
@@ -173,11 +174,12 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 		floatingActionButton = {
 			ExtendedFloatingActionButton(
 				onClick = {
-					if (isImporting) {
+					if (showProgress) {
 						return@ExtendedFloatingActionButton
 					}
 					filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
 				},
+				modifier = Modifier.semantics { if (showProgress) disabled() },
 				icon = {
 					if (isImporting) {
 						CircularProgressIndicator(
@@ -352,7 +354,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 									filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
 								}
 							},
-							enabled = searchHasNoResults || !isImporting
+							enabled = searchHasNoResults || !showProgress
 						) {
 							Icon(
 								if (searchHasNoResults) Icons.Default.Clear else Icons.Default.Add,
@@ -378,6 +380,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					items(files, key = { it.path }) { file ->
 						FileItem(
 							file = file,
+							deleteEnabled = !showProgress,
 							onDelete = { viewModel.deleteFile(file) }
 						)
 					}
@@ -388,7 +391,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 }
 
 @Composable
-private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
+private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Unit) {
 	var showDeleteDialog by remember { mutableStateOf(false) }
 
 	Card(modifier = Modifier.fillMaxWidth().dpadFocusIndicator()) {
@@ -420,7 +423,10 @@ private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
 			}
-			IconButton(onClick = { showDeleteDialog = true }) {
+			IconButton(
+				onClick = { showDeleteDialog = true },
+				enabled = deleteEnabled
+			) {
 				Icon(
 					Icons.Default.Delete,
 					contentDescription = stringResource(R.string.action_delete_named, file.name),
@@ -437,10 +443,13 @@ private fun FileItem(file: AmigaFile, onDelete: () -> Unit) {
 			title = { Text(stringResource(R.string.file_manager_delete_title)) },
 			text = { Text(stringResource(R.string.file_manager_delete_message, file.name)) },
 			confirmButton = {
-				TextButton(onClick = {
-					onDelete()
-					showDeleteDialog = false
-				}) {
+				TextButton(
+					onClick = {
+						onDelete()
+						showDeleteDialog = false
+					},
+					enabled = deleteEnabled
+				) {
 					Text(
 						stringResource(R.string.action_delete),
 						color = MaterialTheme.colorScheme.error

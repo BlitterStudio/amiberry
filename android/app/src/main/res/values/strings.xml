@@ -216,6 +216,12 @@
     <string name="settings_sound_frequency_hz">%1$d Hz</string>
     <string name="settings_sound_channels_mono">Mono</string>
     <string name="settings_sound_channels_stereo">Stereo</string>
+    <string name="settings_sound_channels_cloned_stereo">Cloned stereo</string>
+    <string name="settings_sound_channels_4ch">4 channel</string>
+    <string name="settings_sound_channels_cloned_stereo_6ch">Cloned stereo 6 channel</string>
+    <string name="settings_sound_channels_6ch">6 channel</string>
+    <string name="settings_sound_channels_cloned_stereo_8ch">Cloned stereo 8 channel</string>
+    <string name="settings_sound_channels_8ch">8 channel</string>
     <string name="settings_sound_channels_mixed" formatted="false">Mixed (75% stereo)</string>
 
     <string name="settings_input_port_assignments_title">Port Assignments</string>
@@ -239,6 +245,8 @@
     <string name="settings_storage_floppy_drives_title">Floppy Drives</string>
     <string name="settings_storage_drive_df0">DF0</string>
     <string name="settings_storage_drive_df1">DF1</string>
+    <string name="settings_storage_drive_df2">DF2</string>
+    <string name="settings_storage_drive_df3">DF3</string>
     <string name="settings_storage_cd_image_title">CD Image</string>
     <string name="settings_storage_no_cd_images_found">No CD images found. Import via the Files tab.</string>
     <string name="settings_storage_cd_image_label">CD Image</string>

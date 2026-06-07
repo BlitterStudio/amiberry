@@ -48,12 +48,16 @@ class MainActivityImportLaunchGuardArchitectureTest {
 		)
 		assertTrue(
 			"AmiberryApp should include importLaunchInProgress in pending import effect keys.",
-			Regex("""LaunchedEffect\(pendingUri, assetsReady, assetExtractionFailed, importLaunchInProgress\)""")
+			Regex("""LaunchedEffect\(pendingUri, assetsReady, crashDetected, assetExtractionFailed, importLaunchInProgress\)""")
 				.containsMatchIn(app)
 		)
 		assertTrue(
 			"PendingImportState should block processing while a direct import launch is already active.",
 			app.contains("importLaunchInProgress = importLaunchInProgress")
+		)
+		assertTrue(
+			"Pending ACTION_VIEW imports should wait while the crash recovery dialog is visible.",
+			app.contains("crashRecoveryVisible = crashDetected")
 		)
 	}
 }

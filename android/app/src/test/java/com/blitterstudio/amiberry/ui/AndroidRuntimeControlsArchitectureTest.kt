@@ -106,7 +106,7 @@ class AndroidRuntimeControlsArchitectureTest {
 	@Test
 	fun `OSK hit testing includes the animated keyboard rectangle`() {
 		val osk = File("../../src/osdep/imgui_osk.cpp").readText()
-		val hitTest = Regex("""bool imgui_osk_hit_test\(float screen_x, float screen_y\)\n\{[\s\S]*?\n\}""")
+		val hitTest = Regex("""bool imgui_osk_hit_test\(float screen_x, float screen_y\)\R\{[\s\S]*?\R\}""")
 			.find(osk)
 			?.value
 			.orEmpty()
@@ -123,6 +123,68 @@ class AndroidRuntimeControlsArchitectureTest {
 		assertFalse(
 			"OSK hit testing should not only work after the keyboard is fully visible.",
 			hitTest.contains("s_anim_progress < 1.0f")
+		)
+	}
+
+	@Test
+	fun `Android physical mouse buttons use button transitions instead of touch lifecycle actions`() {
+		val surface = File("src/main/java/org/libsdl/app/SDLSurface.java").readText()
+		val mouseBranch = Regex(
+			"""if \(toolType == MotionEvent\.TOOL_TYPE_MOUSE\) \{([\s\S]*?)\R\s*\} else if \(toolType == MotionEvent\.TOOL_TYPE_STYLUS"""
+		).find(surface)?.groupValues?.get(1).orEmpty()
+
+		assertTrue(
+			"SDLSurface.onTouch() should keep a distinct TOOL_TYPE_MOUSE branch.",
+			mouseBranch.isNotEmpty()
+		)
+		assertTrue(
+			"Physical mouse button input should be handled from ACTION_BUTTON_PRESS/RELEASE so ChromeOS long-presses do not see lifecycle ACTION_UP as a release.",
+			mouseBranch.contains("case MotionEvent.ACTION_BUTTON_PRESS:") &&
+				mouseBranch.contains("case MotionEvent.ACTION_BUTTON_RELEASE:")
+		)
+		assertTrue(
+			"SDL expects mouse button transitions as ACTION_DOWN/ACTION_UP with the current Android button-state mask.",
+			mouseBranch.contains("SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_DOWN, x, y, relative)") &&
+				mouseBranch.contains("SDLActivity.onNativeMouse(buttonState, MotionEvent.ACTION_UP, x, y, relative)")
+		)
+		assertFalse(
+			"Mouse tool ACTION_DOWN/ACTION_UP lifecycle events should not be forwarded directly as button transitions.",
+			mouseBranch.contains("SDLActivity.onNativeMouse(buttonState, action, x, y, relative)")
+		)
+	}
+
+	@Test
+	fun `Android SDL Java shim matches SDL 3_4 pen JNI contract`() {
+		val activity = File("src/main/java/org/libsdl/app/SDLActivity.java").readText()
+		val surface = File("src/main/java/org/libsdl/app/SDLSurface.java").readText()
+		val controllerManager = File("src/main/java/org/libsdl/app/SDLControllerManager.java").readText()
+
+		assertTrue(
+			"SDL 3.4 expects onNativePen to include the pen device type before button state.",
+			activity.contains(
+				"public static native void onNativePen(int penId, int device_type, int button, int action, float x, float y, float p);"
+			)
+		)
+		assertTrue(
+			"Surface pen events should pass the SDL motion listener's pen device type to native SDL.",
+			surface.contains(
+				"SDLActivity.onNativePen(pointerId, SDLActivity.getMotionListener().getPenDeviceType(event.getDevice()), buttonState, action, x, y, p);"
+			)
+		)
+		assertTrue(
+			"Generic pen hover events should pass the pen device type to native SDL.",
+			controllerManager.contains(
+				"SDLActivity.onNativePen(event.getPointerId(i), getPenDeviceType(event.getDevice()), buttons, action, x, y, p);"
+			)
+		)
+		assertTrue(
+			"API 29+ can distinguish direct pens from indirect external tablets for SDL 3.4.",
+			controllerManager.contains("class SDLGenericMotionListener_API29 extends SDLGenericMotionListener_API26") &&
+				controllerManager.contains("return penDevice.isExternal() ? SDL_PEN_DEVICE_TYPE_INDIRECT : SDL_PEN_DEVICE_TYPE_DIRECT;")
+		)
+		assertTrue(
+			"SDLActivity should use the API 29 motion listener when available.",
+			activity.contains("mMotionListener = new SDLGenericMotionListener_API29();")
 		)
 	}
 }

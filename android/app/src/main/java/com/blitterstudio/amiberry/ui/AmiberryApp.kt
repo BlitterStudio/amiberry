@@ -121,13 +121,14 @@ fun AmiberryApp() {
 	val pendingUri = activity?.pendingFileUri
 	val assetsReady = activity?.isReady == true
 	val importLaunchInProgress = activity?.importLaunchInProgress == true
-	LaunchedEffect(pendingUri, assetsReady, assetExtractionFailed, importLaunchInProgress) {
+	LaunchedEffect(pendingUri, assetsReady, crashDetected, assetExtractionFailed, importLaunchInProgress) {
 		val mainActivity = activity ?: return@LaunchedEffect
 		val uri = pendingUri ?: return@LaunchedEffect
 		if (PendingImportState.shouldProcess(
 				hasPendingUri = true,
 				assetsReady = assetsReady,
 				assetExtractionFailed = assetExtractionFailed,
+				crashRecoveryVisible = crashDetected,
 				importLaunchInProgress = importLaunchInProgress
 			)
 		) {

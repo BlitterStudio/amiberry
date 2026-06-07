@@ -152,17 +152,7 @@ object EmulatorSettingsConstraints {
 		"kbd3",
 		"kbd9"
 	)
-	private val NATIVE_SOUND_CHANNELS = setOf(
-		"mono",
-		"stereo",
-		"clonedstereo",
-		"4ch",
-		"clonedstereo6ch",
-		"6ch",
-		"clonedstereo8ch",
-		"8ch",
-		"mixed"
-	)
+	private val NATIVE_SOUND_CHANNELS = EmulatorSettings.soundChannelOptions.map { it.first }.toSet()
 
 	private data class NormalizedFloppyDrive(
 		val path: String,

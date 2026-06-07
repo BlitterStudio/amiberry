@@ -31,6 +31,19 @@ class PendingImportStateTest {
 	}
 
 	@Test
+	fun `pending import waits while crash recovery is visible`() {
+		assertFalse(
+			PendingImportState.shouldProcess(
+				hasPendingUri = true,
+				assetsReady = true,
+				assetExtractionFailed = false,
+				crashRecoveryVisible = true,
+				importLaunchInProgress = false
+			)
+		)
+	}
+
+	@Test
 	fun `pending import waits while another direct import launch is in progress`() {
 		assertFalse(
 			PendingImportState.shouldProcess(

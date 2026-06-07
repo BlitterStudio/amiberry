@@ -67,6 +67,25 @@ class AndroidLaunchBusyUiArchitectureTest {
 		)
 	}
 
+	@Test
+	fun `settings start launch reports SDL start failures separately from config write failures`() {
+		val settings = source("screens/settings/SettingsScreen.kt")
+
+		assertTrue(
+			"Settings should keep a separate snackbar message for writing .current_settings.uae.",
+			settings.contains("val configWriteFailedMessage = stringResource(R.string.msg_failed_save_config)")
+		)
+		assertTrue(
+			"Settings should keep a separate snackbar message for SDL launch failures.",
+			settings.contains("val launchFailedMessage = stringResource(R.string.msg_failed_launch_config)")
+		)
+		assertTrue(
+			"Settings Start should report failures from EmulatorLauncher.launchSettingsConfig.",
+			Regex("""runCatching\s*\{[\s\S]*EmulatorLauncher\.launchSettingsConfig\([\s\S]*\)[\s\S]*\}\.onFailure\s*\{[\s\S]*snackbarHostState\.showSnackbar\(launchFailedMessage\)""")
+				.containsMatchIn(settings)
+		)
+	}
+
 	private fun source(relativePath: String): String {
 		val file = File("src/main/java/com/blitterstudio/amiberry/ui/$relativePath")
 		return if (file.exists()) file.readText() else ""

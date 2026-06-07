@@ -147,6 +147,40 @@ fun StorageTab(
 					importInProgress = importInProgress,
 					onImportResult = onImportResult
 				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				// DF2
+				FloppyDriveRow(
+					label = stringResource(R.string.settings_storage_drive_df2),
+					files = floppies,
+					selectedPath = settings.floppy2,
+					driveType = settings.floppy2Type,
+					onSelect = { viewModel.updateSettings { s -> s.copy(floppy2 = it) } },
+					onClear = { viewModel.updateSettings { s -> s.copy(floppy2 = "") } },
+					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy2Type = it) } },
+					context = context,
+					importGuard = importGuard,
+					importInProgress = importInProgress,
+					onImportResult = onImportResult
+				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				// DF3
+				FloppyDriveRow(
+					label = stringResource(R.string.settings_storage_drive_df3),
+					files = floppies,
+					selectedPath = settings.floppy3,
+					driveType = settings.floppy3Type,
+					onSelect = { viewModel.updateSettings { s -> s.copy(floppy3 = it) } },
+					onClear = { viewModel.updateSettings { s -> s.copy(floppy3 = "") } },
+					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy3Type = it) } },
+					context = context,
+					importGuard = importGuard,
+					importInProgress = importInProgress,
+					onImportResult = onImportResult
+				)
 			}
 		}
 
