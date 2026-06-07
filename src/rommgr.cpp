@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 341
+#define NEXT_ROM_ID 342
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -867,6 +867,8 @@ static struct romdata roms[] = {
 	0xf5384f6a, 0xa3bab2ad,0xd9555353,0x64d6e5fc,0x5bedac05,0xe35fad0b, NULL, NULL },
 	{ _T("A1060 BIOS 2.06"), 2, 6, 2, 6, _T("A1060\0"), 16384, 147, 0, 0, ROMTYPE_A1060, 0, 0, _T("380619-03"),
 	0x185f2bbd, 0xeba74ad1,0x000a5351,0xa5d99179,0xbf75f831,0xac2d2402, NULL, NULL },
+	{ _T("A1060 BIOS 2.07"), 2, 7, 2, 7, _T("A1060\0"), 16384, 341, 0, 0, ROMTYPE_A1060, 0, 0, _T("380619-04"),
+	0xe44ac214, 0x0990ea8c,0x509ead36,0x7391741d,0xf2d4542c,0xcb9d8fb7, NULL, NULL },
 	{ _T("A2088 BIOS 3.4"), 3, 4, 3, 4, _T("A2088\0"), 16384, 148, 0, 0, ROMTYPE_A2088, 0, 0, _T("380788-04"),
 	0x05552160, 0xd1defdee, 0x1c0eae41, 0x07d81e26, 0x74915cd2, 0x9d352f2e, NULL, NULL },
 	{ _T("A2088 BIOS 3.5"), 3, 5, 3, 5, _T("A2088\0"), 16384, 158, 0, 0, ROMTYPE_A2088, 0, 0, _T("380788-04"),

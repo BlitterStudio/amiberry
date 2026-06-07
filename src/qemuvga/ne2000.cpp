@@ -1174,7 +1174,6 @@ static void gotfunc(void *devv, const uae_u8 *databuf, int len)
 	// immediately check if we don't need this packet. for better performance.
 	if (!ne2000_canreceive(&ncs, databuf))
 		return;
-	ne2000_receive_check();
 	if (len > MAX_PACKET_SIZE) 
 		return;
 	uae_sem_wait(&ne2000_sem);

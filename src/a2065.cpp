@@ -32,6 +32,8 @@ static int log_transmit = 1;
 static int log_receive = 1;
 int a2065_promiscuous = 0;
 
+#define RECEIVE_QUEUE_SIZE 256
+#define RECEIVE_DRAIN_LIMIT 16
 #define A2065_CHIP_OFFSET 0x4000
 #define ARIADNE_CHIP_OFFSET 0x370
 #define A2065_RAP (A2065_CHIP_OFFSET + 2)
@@ -58,6 +60,10 @@ static uae_sem_t sync_sem;
 
 static struct netdriverdata *td;
 static void *sysdata;
+static uae_u8 *receive_buffer;
+static volatile int receive_buffer_read, receive_buffer_write;
+static int receive_buffer_size[RECEIVE_QUEUE_SIZE];
+static uae_sem_t receive_sem;
 
 static volatile int am_initialized;
 static volatile int transmitnow;
@@ -145,6 +151,15 @@ static void dumppacket (const TCHAR *n, uae_u8 *packet, int len)
 #define MAX_PACKET_SIZE 4000
 static uae_u8 transmitbuffer[MAX_PACKET_SIZE];
 static volatile int transmitlen;
+
+static void receive_queue_clear(void)
+{
+	if (!receive_sem)
+		return;
+	uae_sem_wait(&receive_sem);
+	receive_buffer_read = receive_buffer_write = 0;
+	uae_sem_post(&receive_sem);
+}
 
 static int dofakemac (uae_u8 *packet)
 {
@@ -448,16 +463,98 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 	devices_rethink_all(rethink_a2065);
 }
 
+static int receive_queue_peek_size(void)
+{
+	int size = 0;
+
+	if (!receive_sem)
+		return 0;
+	uae_sem_wait(&receive_sem);
+	if (receive_buffer_read != receive_buffer_write)
+		size = receive_buffer_size[receive_buffer_read];
+	uae_sem_post(&receive_sem);
+	return size;
+}
+
+static bool receive_queue_pop(uae_u8 *data, int *len)
+{
+	bool got = false;
+
+	if (!receive_sem || !receive_buffer)
+		return false;
+	uae_sem_wait(&receive_sem);
+	if (receive_buffer_read != receive_buffer_write) {
+		const int offset = receive_buffer_read * MAX_PACKET_SIZE;
+		*len = receive_buffer_size[receive_buffer_read];
+		memcpy(data, receive_buffer + offset, *len);
+		receive_buffer_read++;
+		receive_buffer_read &= (RECEIVE_QUEUE_SIZE - 1);
+		got = true;
+	}
+	uae_sem_post(&receive_sem);
+	return got;
+}
+
+static bool receive_space_available(int len)
+{
+	int needed;
+
+	if (!am_initialized || !(csr[0] & CSR0_RXON) || !am_rdr_rlen)
+		return false;
+	needed = len < 60 ? 60 : len;
+	if (!(csr[4] & 0x0400)) /* ASTRP_RCV */
+		needed += 4;
+	for (int i = 0; i < am_rdr_rlen; i++) {
+		const int offset = (rdr_offset + i) % am_rdr_rlen;
+		const uae_u32 off = am_rdr_rdra + offset * 8;
+		const uae_u16 rmd1 = get_ram_word(off + 2);
+		const uae_u16 rmd2 = get_ram_word(off + 4);
+		if (!(rmd1 & RX_OWN))
+			return false;
+		needed -= 65536 - rmd2;
+		if (needed <= 0)
+			return true;
+	}
+	return false;
+}
+
+static void receive_queue_drain(void)
+{
+	uae_u8 packet[MAX_PACKET_SIZE];
+
+	for (int i = 0; i < RECEIVE_DRAIN_LIMIT; i++) {
+		int len = receive_queue_peek_size();
+		if (len <= 0)
+			return;
+		if (!receive_space_available(len))
+			return;
+		if (!receive_queue_pop(packet, &len))
+			return;
+		gotfunc2(NULL, packet, len);
+	}
+}
+
 static void gotfunc(void *devv, const uae_u8 *databuf, int len)
 {
-	if (!am_initialized)
+	if (!am_initialized || !(csr[0] & CSR0_RXON))
 		return;
-	if (!am_rdr_rlen)
+	if (!receive_sem || !receive_buffer)
+		return;
+	if (len <= 0 || len > MAX_PACKET_SIZE)
 		return;
 
-	uae_sem_wait(&sync_sem);
-	gotfunc2(devv, databuf, len);
-	uae_sem_post(&sync_sem);
+	uae_sem_wait(&receive_sem);
+	const int nextwrite = (receive_buffer_write + 1) & (RECEIVE_QUEUE_SIZE - 1);
+	if (nextwrite == receive_buffer_read) {
+		uae_sem_post(&receive_sem);
+		if (log_a2065)
+			write_log(_T("7990: receive queue full\n"));
+		return;
+	}
+	memcpy(receive_buffer + receive_buffer_write * MAX_PACKET_SIZE, databuf, len);
+	receive_buffer_size[receive_buffer_write] = len;
+	receive_buffer_write = nextwrite;
+	uae_sem_post(&receive_sem);
 }
 
 static int getfunc (void *devv, uae_u8 *d, int *len)
@@ -598,11 +695,7 @@ static void a2065_hsync_handler(void)
 {
 	static int cnt;
 
-	// Deliver any received packets queued by the PCAP worker thread.
-	// Must be done here (emulation thread) to avoid concurrent access
-	// to Am7990 chip state (csr[], boardram, interrupts).
-	if (td && sysdata)
-		ethernet_receive_poll(td, sysdata);
+	receive_queue_drain();
 
 	cnt--;
 	if (cnt < 0 || transmitnow) {
@@ -632,6 +725,7 @@ static void chip_init2(void)
 	chip_init_mask();
 
 	ethernet_close(td, sysdata);
+	receive_queue_clear();
 	if (td != NULL) {
 		if (!sysdata)
 			sysdata = xcalloc(uae_u8, ethernet_getdatalength(td));
@@ -1039,18 +1133,17 @@ static void a2065_reset(int hardreset)
 		return;
 	}
 
-	uae_sem_wait(&sync_sem);
-
 	am_initialized = 0;
 
 	ethernet_close(td, sysdata);
+	receive_queue_clear();
+
+	uae_sem_wait(&sync_sem);
 
 	for (int i = 0; i < RAP_SIZE; i++)
 		csr[i] = 0;
 	csr[0] = CSR0_STOP;
-	csr[1] = 0;
-	csr[2] = 0;
-	csr[3] = 0;
+	csr[1] = csr[2] = csr[3] = 0;
 	csr[4] = 0x0115;
 	dbyteswap = 0;
 	rap = 0;
@@ -1067,6 +1160,15 @@ static void a2065_reset(int hardreset)
 static void a2065_free(void)
 {
 	a2065_reset(1);
+	if (receive_sem) {
+		uae_sem_wait(&receive_sem);
+		xfree(receive_buffer);
+		receive_buffer = NULL;
+		receive_buffer_read = receive_buffer_write = 0;
+		uae_sem_post(&receive_sem);
+		uae_sem_destroy(&receive_sem);
+		receive_sem = NULL;
+	}
 }
 
 static bool a2065_config (struct autoconfig_info *aci)
@@ -1076,6 +1178,13 @@ static bool a2065_config (struct autoconfig_info *aci)
 	if (!sync_sem) {
 		uae_sem_init(&sync_sem, 0, 1);
 	}
+	if (!receive_sem) {
+		uae_sem_init(&receive_sem, 0, 1);
+	}
+	if (!receive_buffer) {
+		receive_buffer = xcalloc(uae_u8, MAX_PACKET_SIZE * RECEIVE_QUEUE_SIZE);
+	}
+	receive_queue_clear();
 
 	if (!aci) {
 		return false;
