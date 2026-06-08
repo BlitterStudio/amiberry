@@ -624,18 +624,16 @@ jobs:
 
       - name: make for Ubuntu ${{ matrix.name }} with setup-sdl
         if: matrix.sdl_source == 'setup-sdl'
-        env:
-          CCACHE_DIR: ~/.ccache
         run: |
+          export CCACHE_DIR="$HOME/.ccache"
           export PATH="/usr/lib/ccache:$PATH"
           cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH="${{ steps.sdl.outputs.prefix }}" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" ${{ matrix.extra_cmake_args }} && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: make for Ubuntu ${{ matrix.name }} with apt SDL3
         if: matrix.sdl_source == 'apt'
-        env:
-          CCACHE_DIR: ~/.ccache
         run: |
+          export CCACHE_DIR="$HOME/.ccache"
           export PATH="/usr/lib/ccache:$PATH"
           cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
