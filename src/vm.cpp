@@ -436,6 +436,36 @@ void *uae_vm_reserve(size_t size, int flags)
 		address = try_reserve(0, size, flags);
 	}
 #else
+#if defined(CPU_AARCH64) && defined(CPU_64_BIT) && !defined(__APPLE__)
+	/* Linux/Android ARM64: reserve natmem at a 4GB-aligned base so the low 32
+	 * bits of every natmem-derived host pointer (for the low Amiga addresses
+	 * where code actually executes: ROM, chip RAM, rtarea) have bit 31 clear.
+	 * The ARM64 JIT sign-extends 32-bit values (SXTW) in branch-displacement
+	 * handling; a base whose low 32 bits have bit 31 set (e.g. a kernel-chosen
+	 * 0x7ffd_e73e_0000) turns an Amiga PC like 0x00eb72ab into the host pointer
+	 * 0x7ffd_e8297_2ab (low 32 = 0xe82972ab), which SXTW promotes to a
+	 * 0xFFFFFFFF-prefixed kernel-space address and crashes (odd-PC/NULL
+	 * dispatch). macOS and Windows-on-ARM already get a clean above-4GB base
+	 * (kernel-chosen / explicit); match that here. See the matching
+	 * _WIN32 + CPU_AARCH64 path above. */
+	if ((flags & UAE_VM_32BIT) == 0) {
+		static const uintptr_t aarch64_clean_bases[] = {
+			0x100000000ULL, 0x200000000ULL, 0x300000000ULL, 0x400000000ULL,
+		};
+		for (size_t i = 0;
+		     address == NULL && i < sizeof(aarch64_clean_bases) / sizeof(aarch64_clean_bases[0]);
+		     i++) {
+			void *p = try_reserve(aarch64_clean_bases[i], size, flags);
+			if (p == NULL)
+				continue;
+			if (((uintptr_t) p & 0x80000000ULL) == 0) {
+				address = p;          /* low 32 bits clean: bit 31 clear */
+			} else {
+				munmap(p, size);      /* kernel ignored the hint; base is dirty */
+			}
+		}
+	}
+#endif
 #ifdef CPU_64_BIT
 	if (flags & UAE_VM_32BIT) {
 #else
