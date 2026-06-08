@@ -458,10 +458,17 @@ void *uae_vm_reserve(size_t size, int flags)
 			void *p = try_reserve(aarch64_clean_bases[i], size, flags);
 			if (p == NULL)
 				continue;
-			if (((uintptr_t) p & 0x80000000ULL) == 0) {
-				address = p;          /* low 32 bits clean: bit 31 clear */
+			/* Require the base to be truly 4GB-aligned (low 32 bits == 0), not
+			 * merely bit-31-clear.  These hints are advisory (not MAP_FIXED), so
+			 * the kernel may hand back a different address; a base like
+			 * 0x7f800000 has bit 31 clear but adding a low Amiga code offset
+			 * (e.g. ROM at 0xf80000) yields 0x80780000 -> bit 31 set, which the
+			 * SXTW branch path still corrupts.  Only a 4GB-aligned base keeps the
+			 * whole low executable range (Amiga < 0x80000000) bit-31-clean. */
+			if (((uintptr_t) p & 0xFFFFFFFFULL) == 0) {
+				address = p;          /* 4GB-aligned: low 32 bits all zero */
 			} else {
-				munmap(p, size);      /* kernel ignored the hint; base is dirty */
+				munmap(p, size);      /* kernel ignored the hint; base is unusable */
 			}
 		}
 	}
