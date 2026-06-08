@@ -2020,15 +2020,12 @@ static inline int isinrom(uintptr addr)
         addr < (uintptr)kickmem_bank.baseaddr + 8 * 65536) {
         return 1;
     }
-    /* NOTE: rtarea (the UAE Boot ROM) is deliberately NOT treated as ROM here.
-     * isinrom() drives trace_in_rom, which makes the block compiler skip the
-     * self-modifying-code checksum (it assumes ROM never changes). But rtarea
-     * is ABFLAG_ROMIN - a ROM *image in RAM* that the hardware-trap machinery
-     * rewrites at runtime (trampolines, dispatch addresses, trap data). A block
-     * compiled from rtarea before such a write would otherwise stay stale
-     * forever and compute a wrong (often odd) jump target -> NULL trap dispatch
-     * crash. Letting these blocks be checksummed makes them revalidate and
-     * recompile when rtarea changes. */
+    /* Treat UAE Boot ROM (rtarea) as ROM too for ARM64 JIT safety guards. */
+    if (rtarea_bank.baseaddr &&
+        addr >= (uintptr)rtarea_bank.baseaddr &&
+        addr < (uintptr)rtarea_bank.baseaddr + 65536) {
+        return 1;
+    }
     return 0;
 #else
     return ((addr >= (uintptr)ROMBaseHost) && (addr < (uintptr)ROMBaseHost + ROMSize));
