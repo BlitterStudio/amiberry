@@ -1955,9 +1955,15 @@ void save_theme(const std::string& theme_filename)
 
 void load_theme(const std::string& theme_filename)
 {
-	// Pre-fill all fields with light-theme defaults so that old theme files
-	// missing the new color fields get sensible values instead of black.
-	load_default_theme();
+	// Pre-fill all fields with sensible defaults so that old theme files
+	// missing the new color fields get usable values instead of black.
+	// For the built-in "Dark.theme" preset, fall back to the dark defaults:
+	// it has no file on disk by default, so without this the saved dark
+	// theme would silently revert to the light preset on startup.
+	if (theme_filename == "Dark.theme")
+		load_default_dark_theme();
+	else
+		load_default_theme();
 
 	std::string filename = get_themes_path();
 	filename.append(theme_filename);
