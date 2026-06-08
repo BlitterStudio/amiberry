@@ -2855,6 +2855,30 @@ void alloc_cache(void)
     }
 }
 
+/* Clamp a checksum range so it cannot read past the end of the rtarea
+ * (UAE Boot ROM) region. The block compiler pads each checksum range by
+ * LONGEST_68K_INST (256) bytes to cover the last instruction's operands; for a
+ * block at the top of rtarea that padding would run into the uncommitted Amiga
+ * memory gap that follows it (PROT_NONE in indirect mode, since
+ * commit_natmem_gaps() is canbang-gated), faulting calc_checksum(). rtarea is
+ * only checksummed now that it is no longer treated as immutable ROM (see
+ * isinrom()); other banks are followed by committed memory, so this is scoped
+ * to rtarea. */
+static inline uae_s32 clamp_checksum_len_to_rtarea(const uae_u8* start_p, uae_s32 len)
+{
+    if (rtarea_bank.baseaddr) {
+        uintptr lo = (uintptr)rtarea_bank.baseaddr;
+        uintptr hi = lo + 65536; /* RTAREA_SIZE */
+        uintptr s = (uintptr)start_p;
+        if (s >= lo && s < hi) {
+            uae_s32 maxlen = (uae_s32)(hi - s);
+            if (len > maxlen)
+                len = maxlen;
+        }
+    }
+    return len;
+}
+
 static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
 {
     uae_u32 k1 = 0;
@@ -3565,7 +3589,8 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             if (follow_const_jumps && is_const_jump(op)) {
                 checksum_info* csi = alloc_checksum_info();
                 csi->start_p = (uae_u8*)min_pcp;
-                csi->length = JITPTR max_pcp - JITPTR min_pcp + LONGEST_68K_INST;
+                csi->length = clamp_checksum_len_to_rtarea(csi->start_p,
+                    JITPTR max_pcp - JITPTR min_pcp + LONGEST_68K_INST);
                 csi->next = bi->csi;
                 bi->csi = csi;
                 max_pcp = (uintptr)currpcp;
@@ -3585,7 +3610,8 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 
         checksum_info* csi = alloc_checksum_info();
         csi->start_p = (uae_u8*)min_pcp;
-        csi->length = max_pcp - min_pcp + LONGEST_68K_INST;
+        csi->length = clamp_checksum_len_to_rtarea(csi->start_p,
+            max_pcp - min_pcp + LONGEST_68K_INST);
         csi->next = bi->csi;
         bi->csi = csi;
 
