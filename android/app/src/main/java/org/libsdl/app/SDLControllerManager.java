@@ -20,21 +20,23 @@ import android.view.View;
 public class SDLControllerManager
 {
 
-    public static native int nativeSetupJNI();
+    public static native void nativeSetupJNI();
 
     public static native void nativeAddJoystick(int device_id, String name, String desc,
                                                 int vendor_id, int product_id,
                                                 int button_mask,
-                                                int naxes, int axis_mask, int nhats, boolean can_rumble);
+                                                int naxes, int axis_mask, int nhats, boolean can_rumble,
+                                                boolean can_rumble_triggers, boolean can_set_led, boolean can_send_effect);
     public static native void nativeRemoveJoystick(int device_id);
     public static native void nativeAddHaptic(int device_id, String name);
     public static native void nativeRemoveHaptic(int device_id);
-    public static native boolean onNativePadDown(int device_id, int keycode);
-    public static native boolean onNativePadUp(int device_id, int keycode);
+    public static native boolean onNativePadDown(int device_id, int keycode, int scancode);
+    public static native boolean onNativePadUp(int device_id, int keycode, int scancode);
     public static native void onNativeJoy(int device_id, int axis,
                                           float value);
     public static native void onNativeHat(int device_id, int hat_id,
                                           int x, int y);
+    public static native void onNativeJoySensor(int device_id, int sensor_type, long sensor_timestamp, float x, float y, float z);
 
     protected static SDLJoystickHandler mJoystickHandler;
     protected static SDLHapticHandler mHapticHandler;
@@ -71,6 +73,18 @@ public class SDLControllerManager
      */
     public static void pollInputDevices() {
         mJoystickHandler.pollInputDevices();
+    }
+
+    /**
+     * This method is called by SDL using JNI.
+     */
+    public static void joystickSetLED(int device_id, int red, int green, int blue) {
+    }
+
+    /**
+     * This method is called by SDL using JNI.
+     */
+    public static void joystickSetSensorsEnabled(int device_id, boolean enabled) {
     }
 
     /**
@@ -255,7 +269,8 @@ class SDLJoystickHandler_API16 extends SDLJoystickHandler {
                     mJoysticks.add(joystick);
                     SDLControllerManager.nativeAddJoystick(joystick.device_id, joystick.name, joystick.desc,
                             getVendorId(joystickDevice), getProductId(joystickDevice),
-                            getButtonMask(joystickDevice), joystick.axes.size(), getAxisMask(joystick.axes), joystick.hats.size()/2, can_rumble);
+                            getButtonMask(joystickDevice), joystick.axes.size(), getAxisMask(joystick.axes), joystick.hats.size()/2,
+                            can_rumble, false, false, false);
                 }
             }
         }

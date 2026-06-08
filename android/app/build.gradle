@@ -1,8 +1,17 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.plugin.compose)
+}
+
+abstract class AndroidVersionCodeEpochMinuteSource implements ValueSource<Long, ValueSourceParameters.None> {
+    @Override
+    Long obtain() {
+        return Math.floorDiv(System.currentTimeMillis(), 60_000L)
+    }
 }
 
 // Firebase plugins are only applied when google-services.json is present.
@@ -45,13 +54,14 @@ def readCmakeVersionInfo = {
     ]
 }
 
-def computeAndroidVersionCode = { info ->
+def computeAndroidVersionCode = { info, epochMinute ->
     // Formula: major * 100,000,000 + minor * 1_000_000 + patch * 10_000 + (daysSinceEpoch * 1440) + minuteOfDay
     // This ensures version code always increases even with multiple builds per day and across days,
     // while keeping the major.minor.patch version visible in the leading digits.
     // Max value check for 20.0.0 in 10 years: 2,000,000,000 + 5,256,000 = 2.005B (under 2.147B limit).
     
     def calendar = java.util.Calendar.getInstance()
+    calendar.setTimeInMillis(epochMinute * 60_000L)
     def minuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
     
     // Epoch: 2024-01-01
@@ -70,7 +80,8 @@ def formatAndroidVersionName = { info ->
 }
 
 def cmakeVersionInfo = readCmakeVersionInfo()
-def computedVersionCode = computeAndroidVersionCode(cmakeVersionInfo)
+def androidVersionCodeEpochMinute = providers.of(AndroidVersionCodeEpochMinuteSource) {}.get()
+def computedVersionCode = computeAndroidVersionCode(cmakeVersionInfo, androidVersionCodeEpochMinute)
 def computedVersionName = formatAndroidVersionName(cmakeVersionInfo)
 def versionCodeOverride = providers.gradleProperty("ANDROID_VERSION_CODE").orNull
 def androidVersionCode = computedVersionCode
