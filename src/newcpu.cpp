@@ -4357,6 +4357,26 @@ static void check_uae_int_request(void)
 #endif
 				atomic_and(&uae_int_requested, ~0x010000);
 #ifdef WITH_PPC
+			} else if (!irq2 && !(intreq & 0x0008)) {
+				/*
+				 * The CyberStorm board IRQ (e.g. an NCR SCSI completion) is
+				 * still pending, but the level-2 PORTS bit it raised has been
+				 * acknowledged without the PPC having serviced the controller.
+				 * The board IRQ is level-triggered (it stays asserted in
+				 * io_reg[CSIII_REG_IRQ] until the PPC acks the NCR), yet the
+				 * PORTS bit forwarding it is edge-driven - cpuboard_rethink()
+				 * only re-raises it on a device state change. The PPC runs on
+				 * its own QEMU vCPU thread, so the first PORTS delivery can be
+				 * missed/raced; after that the pending board IRQ has no path
+				 * back to the PPC and the OS4 boot hangs until a manual
+				 * pause/resume ("the kick"). Re-present it here so OS4 gets
+				 * another chance to service the controller. Gated on the PORTS
+				 * bit being clear, so it is self-limiting (one interrupt at a
+				 * time) and stops as soon as the NCR is serviced and the board
+				 * IRQ clears.
+				 */
+				int_request_do(false);
+				irq2 = true;
 			}
 #endif
 		}
