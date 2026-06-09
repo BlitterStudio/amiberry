@@ -197,6 +197,11 @@ static int HostShell_OpenPipe(UBYTE *command)
 {
     return calltrap(95, command);
 }
+/* 0=unknown (older build), 1=POSIX/Linux, 2=macOS, 3=Windows */
+static int GetHostPlatform(void)
+{
+    return calltrap(96);
+}
 static int RunOnHost(UBYTE *name, ULONG out, ULONG outsize)
 {
     (void)out;
