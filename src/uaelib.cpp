@@ -526,6 +526,87 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 #endif
 }
 
+static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
+{
+	char cmd[MAX_DPATH];
+	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
+		return 0;
+	if (cmd[0] == '\0')
+		return 0;
+
+#if defined(_WIN32)
+	// Not supported on Windows yet
+	return 0;
+#else
+	// Plain pipes instead of a pty: binary-safe output, no terminal
+	// line-ending processing, clean EOF once the pipe drains.
+	int inpipe[2];
+	int outpipe[2];
+	if (pipe(inpipe) < 0)
+		return 0;
+	if (pipe(outpipe) < 0) {
+		close(inpipe[0]);
+		close(inpipe[1]);
+		return 0;
+	}
+
+	pid_t pid = fork();
+	if (pid == 0) {
+		// Child process
+		dup2(inpipe[0], 0);
+		dup2(outpipe[1], 1);
+		int devnull = open("/dev/null", O_WRONLY);
+		if (devnull >= 0) {
+			dup2(devnull, 2);
+			if (devnull > 2)
+				close(devnull);
+		}
+		close(inpipe[0]);
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+
+		const char* shell = getenv("SHELL");
+		if (!shell) shell = "/bin/sh";
+		const char* shell_name = strrchr(shell, '/');
+		if (shell_name) shell_name++; else shell_name = shell;
+
+		execl(shell, shell_name, "-c", cmd, (char*)NULL);
+		_exit(127);
+	} else if (pid > 0) {
+		// Parent process
+		close(inpipe[0]);
+		close(outpipe[1]);
+
+		int flags = fcntl(outpipe[0], F_GETFL, 0);
+		if (flags < 0 || fcntl(outpipe[0], F_SETFL, flags | O_NONBLOCK) < 0) {
+			close(inpipe[1]);
+			close(outpipe[0]);
+			kill(pid, SIGTERM);
+			waitpid(pid, NULL, 0);
+			return 0;
+		}
+
+		ShellSession session;
+		session.pid = pid;
+		session.infd = inpipe[1];
+		session.outfd = outpipe[0];
+		session.pipe_in = NULL;
+		session.pipe_out = NULL;
+		session.exited = false;
+		session.exit_status = 0;
+
+		uae_u32 handle = next_session_handle++;
+		shell_sessions[handle] = session;
+		return handle;
+	}
+
+	close(inpipe[1]);
+	close(outpipe[0]);
+	return 0;
+#endif
+}
+
 static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
 {
 #if defined(_WIN32)
@@ -834,6 +915,7 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		case 92: return uaelib_host_write(ctx, ARG1, ARG2, ARG3);
 		case 93: return uaelib_host_close(ctx, ARG1);
 		case 94: return uaelib_host_status(ctx, ARG1);
+		case 95: return uaelib_host_open_pipe(ctx, ARG1);
 
 		case 100:
 		{

@@ -193,6 +193,10 @@ static ULONG HostShell_Status(ULONG handle)
 {
     return calltrap(94, handle);
 }
+static int HostShell_OpenPipe(UBYTE *command)
+{
+    return calltrap(95, command);
+}
 static int RunOnHost(UBYTE *name, ULONG out, ULONG outsize)
 {
     (void)out;
