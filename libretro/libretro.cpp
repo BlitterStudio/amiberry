@@ -2222,6 +2222,87 @@ static float get_core_refresh_rate()
 
 static double libretro_audio_deficit_frames = 0.0;
 
+// Smoothing FIFO between the Amiga audio engine and the libretro frontend.
+// The engine flushes audio in fixed 768-frame chunks that do not align with
+// the video-frame boundary, producing a 768/1536 sawtooth in the per-frame
+// sample count. The standalone build absorbs this in the SDL host audio queue;
+// libretro has no such queue, so we buffer here and emit a steady ~samples-per
+// -frame each video frame. This mirrors what SDL does for the standalone path.
+static std::vector<int16_t> libretro_audio_fifo;   // interleaved stereo S16
+static double libretro_audio_emit_frac = 0.0;
+
+void libretro_audio_enqueue(const int16_t* stereo_frames, unsigned frames)
+{
+	if (!frames || !stereo_frames)
+		return;
+	libretro_audio_fifo.insert(libretro_audio_fifo.end(),
+		stereo_frames, stereo_frames + static_cast<size_t>(frames) * 2);
+}
+
+void libretro_audio_reset(void)
+{
+	libretro_audio_fifo.clear();
+	libretro_audio_emit_frac = 0.0;
+	libretro_audio_deficit_frames = 0.0;
+}
+
+// Emit one video frame worth of audio from the FIFO, steering the queue toward
+// a small target depth so the output stays close to a constant samples-per-frame
+// instead of the raw sawtooth. Called once per retro_run after the core fiber
+// has produced the frame's audio.
+static void libretro_drain_audio_frame()
+{
+	if (!audio_batch_cb && !audio_cb) {
+		libretro_audio_fifo.clear();
+		return;
+	}
+
+	const float refresh_rate = get_core_refresh_rate();
+	const int audio_rate = audio_rate_for_av_info();
+	if (refresh_rate <= 1.0f || audio_rate <= 0)
+		return;
+
+	const double per_frame = static_cast<double>(audio_rate) / refresh_rate;
+	const size_t avail = libretro_audio_fifo.size() / 2;
+
+	// Keep ~1.5 video frames buffered as a shock absorber and steer gently
+	// toward it. The correction is small (tens of samples), so per-frame output
+	// stays smooth while average throughput still tracks the core's true rate.
+	const double target_depth = per_frame * 1.5;
+	libretro_audio_emit_frac += per_frame + (static_cast<double>(avail) - target_depth) * 0.05;
+
+	long want = static_cast<long>(libretro_audio_emit_frac);
+	if (want < 0)
+		want = 0;
+	libretro_audio_emit_frac -= want;
+	if (static_cast<size_t>(want) > avail) {
+		want = static_cast<long>(avail);
+		libretro_audio_emit_frac = 0.0;
+	}
+	if (want <= 0)
+		return;
+
+	if (audio_batch_cb) {
+		size_t done = 0;
+		while (done < static_cast<size_t>(want)) {
+			const size_t chunk = std::min(static_cast<size_t>(want) - done, static_cast<size_t>(2048));
+			const size_t accepted = audio_batch_cb(libretro_audio_fifo.data() + done * 2, chunk);
+			libretro_audio_frames_this_run += static_cast<unsigned>(accepted);
+			done += accepted;
+			if (accepted < chunk)
+				break;   // frontend back-pressure; keep the rest for next frame
+		}
+		libretro_audio_fifo.erase(libretro_audio_fifo.begin(),
+			libretro_audio_fifo.begin() + done * 2);
+	} else {
+		for (long i = 0; i < want; i++)
+			audio_cb(libretro_audio_fifo[i * 2], libretro_audio_fifo[i * 2 + 1]);
+		libretro_audio_frames_this_run += static_cast<unsigned>(want);
+		libretro_audio_fifo.erase(libretro_audio_fifo.begin(),
+			libretro_audio_fifo.begin() + static_cast<size_t>(want) * 2);
+	}
+}
+
 static void libretro_emit_audio_starvation_guard()
 {
 	if (!audio_batch_cb && !audio_cb)
@@ -3071,7 +3152,7 @@ static void reset_core_runtime_state()
 	last_refresh_rate = -1.0f;
 	last_geometry_width = -1;
 	last_geometry_height = -1;
-	libretro_audio_deficit_frames = 0.0;
+	libretro_audio_reset();
 }
 
 static void apply_minimum_audio_latency()
@@ -3389,6 +3470,7 @@ void retro_reset(void)
 	if (!core_is_running())
 		return;
 
+	libretro_audio_reset();
 	uae_reset(0, 0);
 }
 
@@ -3412,8 +3494,10 @@ void retro_run(void)
 		poll_frontend_input();
 		libretro_audio_frames_this_run = 0;
 		co_switch(core_fiber);
-		if (!core_shutdown_complete)
+		if (!core_shutdown_complete) {
+			libretro_drain_audio_frame();
 			libretro_emit_audio_starvation_guard();
+		}
 		if (core_shutdown_complete)
 			return;
 		core_started = true;
@@ -3460,8 +3544,10 @@ void retro_run(void)
 	poll_input();
 	libretro_audio_frames_this_run = 0;
 	co_switch(core_fiber);
-	if (!core_shutdown_complete)
+	if (!core_shutdown_complete) {
+		libretro_drain_audio_frame();
 		libretro_emit_audio_starvation_guard();
+	}
 	if (core_shutdown_complete)
 		return;
 	apply_cheats();

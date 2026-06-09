@@ -20,6 +20,8 @@ extern unsigned libretro_audio_frames_this_run;
 
 void libretro_yield(void);
 void reset_parse_cmdline(void);
+void libretro_audio_enqueue(const int16_t* stereo_frames, unsigned frames);
+void libretro_audio_reset(void);
 
 #endif
 
