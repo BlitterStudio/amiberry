@@ -970,6 +970,7 @@ void gui_restart()
 #ifdef USE_IMGUI
 // IMGUI runtime state and helpers
 static bool show_message_box = false;
+static bool message_box_open = false;
 static char message_box_title[128] = {0};
 static std::string message_box_message;
 static bool start_disabled = false; // Added for disable_resume logic
@@ -1925,10 +1926,18 @@ static std::string legacy_cleanup_error_message;
 
 void ShowMessageBox(const char* title, const char* message)
 {
+    const char* new_title = title ? title : "Message";
+    const char* new_message = message ? message : "";
+    // If the requested message differs from the one currently posted, force the render
+    // loop to (re)open the popup on its next rising edge. Without this, a new message
+    // requested while an older one is still open (e.g. pressing F1 for Help) would never
+    // appear - its popup id is never OpenPopup'd - and the dialog would wedge open.
+    if (strcmp(message_box_title, new_title) != 0 || message_box_message != new_message)
+        message_box_open = false;
     // Safely copy and ensure null-termination
-    strncpy(message_box_title, title ? title : "Message", sizeof(message_box_title) - 1);
+    strncpy(message_box_title, new_title, sizeof(message_box_title) - 1);
     message_box_title[sizeof(message_box_title) - 1] = '\0';
-    message_box_message = message ? message : "";
+    message_box_message = new_message;
     show_message_box = true;
 }
 
@@ -2542,8 +2551,16 @@ void run_gui()
             // Lock width to desired_w; allow height to grow up to 85% viewport
             ImGui::SetNextWindowSizeConstraints(ImVec2(desired_w, 0.0f), ImVec2(desired_w, vh * 0.85f));
 
-            ImGui::OpenPopup(message_box_title);
-            if (ImGui::BeginPopupModal(message_box_title, &show_message_box, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+            // Open the popup once on the rising edge. Calling OpenPopup() every frame
+            // made the dialog impossible to dismiss whenever a caller kept re-requesting
+            // it each frame (e.g. a panel that re-scans every frame): the popup would
+            // reopen the instant it was closed.
+            if (!message_box_open) {
+                ImGui::OpenPopup(message_box_title);
+                message_box_open = true;
+            }
+
+            if (ImGui::BeginPopupModal(message_box_title, &message_box_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
             {
                 // Scrollable message area; height scales with viewport
                 const float max_child_h = vh * 0.65f;
@@ -2561,7 +2578,7 @@ void run_gui()
                 if (avail > btn_w)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - btn_w));
                 if (AmigaButton("OK", ImVec2(btn_w, btn_h)) || ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-                    show_message_box = false;
+                    message_box_open = false;
                     ImGui::CloseCurrentPopup();
                 }
                 if (ImGui::IsWindowAppearing())
@@ -2569,6 +2586,11 @@ void run_gui()
 
                 ImGui::EndPopup();
             }
+
+            // Once dismissed (OK/Enter/Escape or the title-bar close button), clear the
+            // request so the box stays closed until a new message is explicitly shown.
+            if (!message_box_open)
+                show_message_box = false;
         }
 
 		if (open_legacy_cleanup_popup && !show_message_box && !show_disk_info) {

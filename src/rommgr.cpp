@@ -24,6 +24,10 @@
 
 static struct romlist *rl;
 static int romlist_cnt;
+// Bumped on every change to the rom list contents (add/clear). Lets callers that
+// cache derived data detect a rebuild even when the entry count is unchanged
+// (e.g. a rescan that swaps ROMs for a different set of the same size).
+static int romlist_gen;
 
 struct romlist *romlist_getit (void)
 {
@@ -33,6 +37,11 @@ struct romlist *romlist_getit (void)
 int romlist_count (void)
 {
 	return romlist_cnt;
+}
+
+int romlist_get_generation (void)
+{
+	return romlist_gen;
 }
 
 TCHAR *romlist_get (const struct romdata *rd)
@@ -71,6 +80,7 @@ void romlist_add (const TCHAR *path, struct romdata *rd)
 		return;
 	}
 	romlist_cnt++;
+	romlist_gen++;
 	rl = xrealloc (struct romlist, rl, romlist_cnt);
 	rl2 = rl + romlist_cnt - 1;
 	rl2->path = my_strdup (path);
@@ -1121,6 +1131,7 @@ void romlist_clear (void)
 	xfree (rl);
 	rl = 0;
 	romlist_cnt = 0;
+	romlist_gen++;
 	parent = 0;
 	pn = NULL;
 	for (i = 0; roms[i].name; i++) {
@@ -1176,6 +1187,7 @@ static void romlist_cleanup(void)
 					if (cnt > 0)
 						memmove(rl2, rl2 + 1, cnt * sizeof (struct romlist));
 					romlist_cnt--;
+					romlist_gen++;
 				}
 				i++;
 			}

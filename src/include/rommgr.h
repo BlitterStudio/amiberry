@@ -306,6 +306,7 @@ extern struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out);
 extern void addkeydir (const TCHAR *path);
 extern void addkeyfile (const TCHAR *path);
 extern int romlist_count (void);
+extern int romlist_get_generation (void);
 extern struct romlist *romlist_getit (void);
 extern int configure_rom (struct uae_prefs *p, const int *rom, int msg);
 
