@@ -1,12 +1,14 @@
 # AMIBERRY — PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-23
-**Commit:** e018b60e
+**Generated:** 2025-07-13
+**Commit:** 2de9ef1ec
 **Branch:** master
 
 ## OVERVIEW
 
-Amiga emulator (UAE-based) targeting Linux/macOS/Windows/Android/FreeBSD. C/C++ core (~1.3M lines), CMake build, multi-architecture JIT (ARM64/x86-64). Heterogeneous hardware emulation: M68K + PPC + x86(PCem) + DSP3210 + keyboard MCUs.
+Amiga emulator (UAE-based) targeting Linux, macOS, Windows, Android, FreeBSD, Haiku, and iOS (WIP). C/C++ core (~1.3M lines), CMake build, multi-architecture JIT (ARM64/x86-64). Runs on ARM, x86, RISC-V, and LoongArch64 hardware — from Raspberry Pi to desktop workstations. Heterogeneous hardware emulation: M68K + PPC + x86(PCem) + DSP3210 + keyboard MCUs.
+
+**Git submodules** (3): `libretro/libretro-common`, `libretro/libco`, `external/nativefiledialog-extended`. Always checkout with `--recurse-submodules` or run `git submodule update --init --recursive`.
 
 ## STRUCTURE
 
@@ -80,7 +82,7 @@ amiberry/
 - **NEVER** use `send_input_event()` for new input code — use `setjoystickstate()`/`setjoybuttonstate()`
 - **NEVER** assume symlinks work — Windows/Android need `std::filesystem::copy()`
 - **NEVER** use in-tree builds — CMake enforces out-of-tree
-- **DO NOT** enable `#if 0` blocks without understanding context (546 disabled blocks, many intentionally off)
+- **DO NOT** enable `#if 0` blocks without understanding context (629+ disabled blocks, many intentionally off)
 - **DO NOT** run `memset` on POSIX zero-fill pages (causes OOM on Android natmem gaps)
 - **DO NOT** modify ROM scanning in `parse_cmdline()` — must be in early arg loop (before `initialize_ini()`)
 - FPU SNAN detection is **broken** — cannot reliably detect signaling NaN via host FPU
@@ -132,6 +134,7 @@ amiberry/
 - Include `<winsock2.h>` before Windows headers that can define conflicting `byte` symbols.
 - Use `std::filesystem::copy()` instead of symlinks on Windows and Android.
 - `data/` must exist beside the executable for normal runtime; use `--log` when expecting `write_log()` output.
+- **Portable mode**: `amiberry.portable` marker file next to `.exe` forces all writable paths (config, saves) into the executable directory. Packaged portable ZIPs include this marker by default.
 
 ## COMMANDS
 
@@ -151,13 +154,19 @@ cd android && ./gradlew assembleRelease
 # Run with logging
 ./build/amiberry --log
 
+# Diagnostic: resolve startup paths and exit
+./build/amiberry --dump-paths
+
+# Diagnostic: JIT selftest (ARM64 or x86_64) and exit
+./build/amiberry --jit-selftest
+
 # Cross-compile ARM64
 cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build
 ```
 
 ## SDL3 KMSDRM STATUS (RPi Console)
 
-**As of SDL 3.4.2 (March 2026):** KMSDRM has critical open bugs. See `docs/sdl3_migration/13_kmsdrm_known_issues.md` for full details.
+**As of SDL 3.4.x:** KMSDRM has critical open bugs for headless RPi console use.
 
 - 🔴 **Keyboard input broken** ([SDL #15166](https://github.com/libsdl-org/SDL/issues/15166)) — TTY grabs all keyboard; SDL app receives nothing. Milestoned SDL 3.6.0.
 - 🔴 **VT switching broken** ([SDL #13145](https://github.com/libsdl-org/SDL/issues/13145)) — Ctrl+Alt+Fn non-functional. Milestoned SDL 3.6.0.
@@ -176,6 +185,8 @@ cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build
 - **WinUAE upstream**: Core files (`custom.cpp`, `newcpu.cpp`, `memory.cpp`, etc.) track WinUAE — use `winuae-amiberry-merge` skill for porting
 - **JIT debugging**: Use `amiberry-arm64-jit` for ARM64 flag/codegen issues and `amiberry-x86-jit` for x86-64 allocator, RIP-relative, high-natmem, or direct-memory issues
 - **Troubleshooting**: Use `troubleshoot-amiberry` skill — full edit-build-run-test cycle with MCP tools
+- **QEMU-UAE PPC plugin**: Bundle a prebuilt artifact with `-DQEMU_UAE_PLUGIN=<path>` (requires `USE_PPC=ON` + `USE_QEMU_PPC=ON`). Installed alongside the binary by platform install scripts.
+- **BUNDLE_SDL** (Linux): Enables bundling of SDL3 shared libraries for distros without them (Debian Bookworm etc.). Controlled via `-DBUNDLE_SDL=ON`; see `cmake/linux/install.cmake`.
 
 ## CHILD AGENTS.md
 
