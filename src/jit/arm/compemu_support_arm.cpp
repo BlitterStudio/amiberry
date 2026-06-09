@@ -3527,31 +3527,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         }
         current_block_pc_p = JITPTR pc_hist[0].location;
 
-        /* DEBUG (temporary): a valid m68k block start is always even. natmem's
-         * base is page-aligned, so an odd host location means an odd m68k PC,
-         * which can only happen if an earlier block computed a bogus branch
-         * target. Dump the register file (the predecessor's state is still live
-         * here, before this odd block runs and crashes) so we can identify the
-         * mis-compiled instruction. Fires at most a few times. */
-        if ((JITPTR pc_hist[0].location) & 1) {
-            static int jit_odd_pc_dumps = 0;
-            if (jit_odd_pc_dumps++ < 8) {
-#ifdef NATMEM_OFFSET
-                uae_u32 odd_amiga = (uae_u32)((JITPTR pc_hist[0].location) - (uintptr)NATMEM_OFFSET);
-#else
-                uae_u32 odd_amiga = (uae_u32)(JITPTR pc_hist[0].location);
-#endif
-                write_log(_T("JIT-ODD-PC[%d]: block start amiga=%08x host=%p blocklen=%d pc=%08x pc_oldp=%p instr_pc=%08x\n"),
-                    jit_odd_pc_dumps, odd_amiga, (void*)(JITPTR pc_hist[0].location),
-                    blocklen, (uae_u32)m68k_getpc(), (void*)regs.pc_oldp, (uae_u32)regs.instruction_pc);
-                for (int rr = 0; rr < 16; rr += 2) {
-                    write_log(_T("  %c%d=%08x  %c%d=%08x\n"),
-                        rr < 8 ? 'D' : 'A', rr & 7, (uae_u32)regs.regs[rr],
-                        (rr + 1) < 8 ? 'D' : 'A', (rr + 1) & 7, (uae_u32)regs.regs[rr + 1]);
-                }
-            }
-        }
-
         /* Save successor needed_flags BEFORE remove_deps clears them.
            On recompilation, deps still point to the previous successor blocks.
            Use their needed_flags to initialize liveflags[blocklen] more

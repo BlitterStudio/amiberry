@@ -148,6 +148,36 @@ void REGPARAM2 m68k_handle_trap (unsigned int trap_num)
 	struct Trap *trap = &traps[trap_num];
 	uae_u32 retval = 0;
 
+	/* DEBUG (temporary): the JIT intermittently lands here with a bogus trap
+	 * number - a misread A-line opcode fetched at an odd PC after a compiled
+	 * block computed a bad branch target. Dump m68k state, the 68k stack (to
+	 * catch a corrupted RTS return address) and the rtarea code around the PC,
+	 * then return instead of calling a NULL handler (which crashes as blr 0). */
+	if (trap_num >= trap_count || trap->handler == NULL) {
+		static int bad_trap_dbg = 0;
+		if (bad_trap_dbg++ < 6) {
+			uaecptr pc = m68k_getpc();
+			uaecptr ppc = pc & ~1u;
+			uaecptr a7 = m68k_areg(regs, 7);
+			write_log(_T("BAD-TRAP[%d]: num=%u count=%u handler=%p pc=%08x oldp=%p instr_pc=%08x\n"),
+				bad_trap_dbg, trap_num, (unsigned)trap_count,
+				(trap_num < trap_count ? (void*)trap->handler : (void*)NULL),
+				pc, (void*)regs.pc_oldp, (uae_u32)regs.instruction_pc);
+			for (int rr = 0; rr < 16; rr += 2)
+				write_log(_T("  %c%d=%08x  %c%d=%08x\n"),
+					rr < 8 ? 'D' : 'A', rr & 7, (uae_u32)regs.regs[rr],
+					(rr + 1) < 8 ? 'D' : 'A', (rr + 1) & 7, (uae_u32)regs.regs[rr + 1]);
+			write_log(_T("  code @%08x:"), ppc - 8);
+			for (int w = -8; w <= 10; w += 2)
+				write_log(_T(" %04x"), get_word(ppc + w));
+			write_log(_T("\n  A7=%08x stack:"), a7);
+			for (int s = -8; s <= 28; s += 4)
+				write_log(_T(" [%+d]%08x"), s, get_long(a7 + s));
+			write_log(_T("\n"));
+		}
+		return;
+	}
+
 	int has_retval = (trap->flags & TRAPFLAG_NO_RETVAL) == 0;
 	int implicit_rts = (trap->flags & TRAPFLAG_DORET) != 0;
 
