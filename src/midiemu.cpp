@@ -118,7 +118,7 @@ static bool load_rom(const TCHAR* path, const TCHAR* name)
 
 static void set_mt32_rom_path(TCHAR *path)
 {
-	get_rom_path(path, sizeof(path) / sizeof(TCHAR));
+	get_rom_path(path, MAX_DPATH);
 	fix_trailing(path);
 	_tcscat(path, _T("mt32-roms"));
 	fix_trailing(path);
