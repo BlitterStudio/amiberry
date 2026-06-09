@@ -3501,6 +3501,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         int was_comp = 0;
         uae_u8 liveflags[MAXRUN + 1];
         bool trace_in_rom = isinrom((uintptr)pc_hist[0].location) != 0;
+        bool ram_trap_block = false;
         uintptr max_pcp = (uintptr)pc_hist[blocklen - 1].location;
         uintptr min_pcp = max_pcp;
         uae_u32 cl = cacheline(pc_hist[0].location);
@@ -3595,6 +3596,8 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 unsafe_special_mem_block = true;
 #endif
             trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
+            if ((prop[op].cflow & fl_trap) && !isinrom((uintptr)currpcp))
+                ram_trap_block = true;
             if (follow_const_jumps && is_const_jump(op)) {
                 checksum_info* csi = alloc_checksum_info();
                 csi->start_p = (uae_u8*)min_pcp;
@@ -3623,6 +3626,17 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bi->csi = csi;
 
         bi->needed_flags = liveflags[0];
+
+#if defined(CPU_AARCH64)
+        if (ram_trap_block) {
+            /* RAM test code can rewrite branch targets around fallback/trap opcodes
+             * before active compiled blocks are invalidated. Interpret these blocks
+             * so exception frames use the current instruction PC. */
+            optlev = 0;
+            bi->optlevel = optlev;
+            bi->count = -1;
+        }
+#endif
 
         /* This is the non-direct handler */
         was_comp = 0;
