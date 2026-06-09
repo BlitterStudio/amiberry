@@ -384,19 +384,27 @@ enum midops {
 // Structure to hold session details
 struct ShellSession {
 	int pid;
-	int infd;  // Master PTY fd (read/write)
-	int outfd; // Master PTY fd (read/write)
+	int infd;  // Master PTY fd (read/write), or pipe CRT fds
+	int outfd; // Master PTY fd (read/write), or pipe CRT fds
 	FILE* pipe_in;
 	FILE* pipe_out;
 	bool exited;
 	int exit_status;
+#if defined(_WIN32)
+	void* process; // HANDLE of the child process
+#endif
 };
 
 #include <vector>
 #include <map>
+#include <string>
 #include <unistd.h>
 #ifndef _WIN32
 #include <sys/wait.h>
+#endif
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
 #endif
 #include <fcntl.h>
 #include <signal.h>
@@ -437,7 +445,22 @@ static uae_u32 host_shell_pack_exit_status(int exit_status)
 static uae_u32 host_shell_update_status(ShellSession& session)
 {
 #if defined(_WIN32)
-	return HOST_SHELL_STATUS_INVALID;
+	if (session.process == NULL)
+		return HOST_SHELL_STATUS_INVALID;
+	if (session.exited)
+		return host_shell_pack_exit_status(session.exit_status);
+
+	DWORD code = 0;
+	if (!GetExitCodeProcess((HANDLE)session.process, &code))
+		return HOST_SHELL_STATUS_INVALID;
+	if (code == STILL_ACTIVE)
+		return HOST_SHELL_STATUS_RUNNING;
+
+	session.exited = true;
+	session.exit_status = (int)(code & 0xff);
+	if (code != 0 && session.exit_status == 0)
+		session.exit_status = 1;
+	return host_shell_pack_exit_status(session.exit_status);
 #else
 	if (session.exited)
 		return host_shell_pack_exit_status(session.exit_status);
@@ -526,10 +549,198 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 #endif
 }
 
+static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
+{
+	char cmd[MAX_DPATH];
+	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
+		return 0;
+	if (cmd[0] == '\0')
+		return 0;
+
+#if defined(_WIN32)
+	// Run the command through the command interpreter with anonymous
+	// pipes; stderr is discarded. The pipe handles are mapped onto CRT
+	// fds so the session bookkeeping matches the POSIX side.
+	SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+	HANDLE in_read = NULL, in_write = NULL;
+	HANDLE out_read = NULL, out_write = NULL;
+
+	if (!CreatePipe(&in_read, &in_write, &sa, 0))
+		return 0;
+	if (!CreatePipe(&out_read, &out_write, &sa, 0)) {
+		CloseHandle(in_read);
+		CloseHandle(in_write);
+		return 0;
+	}
+	SetHandleInformation(in_write, HANDLE_FLAG_INHERIT, 0);
+	SetHandleInformation(out_read, HANDLE_FLAG_INHERIT, 0);
+
+	HANDLE nul = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, NULL);
+
+	const char* comspec = getenv("COMSPEC");
+	if (!comspec)
+		comspec = "cmd.exe";
+	std::string cmdline = std::string("\"") + comspec + "\" /C " + cmd;
+
+	STARTUPINFOA si = {};
+	si.cb = sizeof si;
+	si.dwFlags = STARTF_USESTDHANDLES;
+	si.hStdInput = in_read;
+	si.hStdOutput = out_write;
+	si.hStdError = nul;
+
+	PROCESS_INFORMATION pi = {};
+	BOOL created = CreateProcessA(NULL, &cmdline[0], NULL, NULL, TRUE,
+		CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+
+	CloseHandle(in_read);
+	CloseHandle(out_write);
+	if (nul)
+		CloseHandle(nul);
+
+	if (!created) {
+		CloseHandle(in_write);
+		CloseHandle(out_read);
+		return 0;
+	}
+	CloseHandle(pi.hThread);
+
+	ShellSession session;
+	session.pid = (int)pi.dwProcessId;
+	session.infd = _open_osfhandle((intptr_t)in_write, 0);
+	session.outfd = _open_osfhandle((intptr_t)out_read, _O_RDONLY);
+	session.pipe_in = NULL;
+	session.pipe_out = NULL;
+	session.exited = false;
+	session.exit_status = 0;
+	session.process = (void*)pi.hProcess;
+
+	if (session.infd < 0 || session.outfd < 0) {
+		if (session.infd >= 0)
+			_close(session.infd);
+		else
+			CloseHandle(in_write);
+		if (session.outfd >= 0)
+			_close(session.outfd);
+		else
+			CloseHandle(out_read);
+		TerminateProcess(pi.hProcess, 1);
+		CloseHandle(pi.hProcess);
+		return 0;
+	}
+
+	uae_u32 handle = next_session_handle++;
+	shell_sessions[handle] = session;
+	return handle;
+#else
+	// Plain pipes instead of a pty: binary-safe output, no terminal
+	// line-ending processing, clean EOF once the pipe drains.
+	int inpipe[2];
+	int outpipe[2];
+	if (pipe(inpipe) < 0)
+		return 0;
+	if (pipe(outpipe) < 0) {
+		close(inpipe[0]);
+		close(inpipe[1]);
+		return 0;
+	}
+
+	pid_t pid = fork();
+	if (pid == 0) {
+		// Child process
+		dup2(inpipe[0], 0);
+		dup2(outpipe[1], 1);
+		int devnull = open("/dev/null", O_WRONLY);
+		if (devnull >= 0) {
+			dup2(devnull, 2);
+			if (devnull > 2)
+				close(devnull);
+		}
+		close(inpipe[0]);
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+
+		const char* shell = getenv("SHELL");
+		if (!shell) shell = "/bin/sh";
+		const char* shell_name = strrchr(shell, '/');
+		if (shell_name) shell_name++; else shell_name = shell;
+
+		execl(shell, shell_name, "-c", cmd, (char*)NULL);
+		_exit(127);
+	} else if (pid > 0) {
+		// Parent process
+		close(inpipe[0]);
+		close(outpipe[1]);
+
+		int flags = fcntl(outpipe[0], F_GETFL, 0);
+		if (flags < 0 || fcntl(outpipe[0], F_SETFL, flags | O_NONBLOCK) < 0) {
+			close(inpipe[1]);
+			close(outpipe[0]);
+			kill(pid, SIGTERM);
+			waitpid(pid, NULL, 0);
+			return 0;
+		}
+
+		ShellSession session;
+		session.pid = pid;
+		session.infd = inpipe[1];
+		session.outfd = outpipe[0];
+		session.pipe_in = NULL;
+		session.pipe_out = NULL;
+		session.exited = false;
+		session.exit_status = 0;
+
+		uae_u32 handle = next_session_handle++;
+		shell_sessions[handle] = session;
+		return handle;
+	}
+
+	close(inpipe[1]);
+	close(outpipe[0]);
+	return 0;
+#endif
+}
+
 static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
 {
 #if defined(_WIN32)
-	return -1; // Not supported on Windows yet
+	if (size == 0 || size > HOST_SHELL_IO_MAX)
+		return -1;
+
+	if (shell_sessions.find(handle) == shell_sessions.end())
+		return -1;
+
+	ShellSession& session = shell_sessions[handle];
+	HANDLE h = (HANDLE)_get_osfhandle(session.outfd);
+	if (h == INVALID_HANDLE_VALUE)
+		return -1;
+
+	DWORD avail = 0;
+	if (!PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL)) {
+		// broken pipe: child exited and the buffer has drained
+		return -1;
+	}
+	if (avail == 0) {
+		if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) != 0) {
+			// drain race: data may have arrived between the peek and the wait
+			if (!PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) || avail == 0)
+				return -1;
+		} else {
+			return 0;
+		}
+	}
+
+	DWORD want = avail < size ? avail : size;
+	std::vector<char> buf(want);
+	DWORD got = 0;
+	if (!ReadFile(h, buf.data(), want, &got, NULL))
+		return -1;
+	if (got > 0) {
+		trap_put_bytes(ctx, (uae_u8*)buf.data(), buffer, got);
+		return got;
+	}
+	return 0;
 #else
 	if (size == 0 || size > HOST_SHELL_IO_MAX)
 		return -1;
@@ -565,7 +776,21 @@ static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer
 static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
 {
 #if defined(_WIN32)
-	return -1; // Not supported on Windows yet
+	if (size == 0 || size > HOST_SHELL_IO_MAX)
+		return -1;
+
+	if (shell_sessions.find(handle) == shell_sessions.end())
+		return -1;
+
+	ShellSession& session = shell_sessions[handle];
+	if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) != 0)
+		return -1;
+
+	std::vector<char> buf(size);
+	trap_get_bytes(ctx, (uae_u8*)buf.data(), buffer, size);
+
+	int written = _write(session.infd, buf.data(), size);
+	return written;
 #else
 	if (size == 0 || size > HOST_SHELL_IO_MAX)
 		return -1;
@@ -588,7 +813,28 @@ static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffe
 static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 {
 #if defined(_WIN32)
-	return 0; // Not supported on Windows yet
+	if (shell_sessions.find(handle) == shell_sessions.end())
+		return 0;
+
+	ShellSession& session = shell_sessions[handle];
+	int closed_fd = session.infd;
+	if (session.infd >= 0) {
+		_close(session.infd);
+		session.infd = -1;
+	}
+	if (session.outfd >= 0 && session.outfd != closed_fd) {
+		_close(session.outfd);
+		session.outfd = -1;
+	}
+	if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) == 0) {
+		TerminateProcess((HANDLE)session.process, 1);
+		WaitForSingleObject((HANDLE)session.process, 2000);
+	}
+	if (session.process != NULL)
+		CloseHandle((HANDLE)session.process);
+
+	shell_sessions.erase(handle);
+	return 1;
 #else
 	if (shell_sessions.find(handle) == shell_sessions.end())
 		return 0;
@@ -609,6 +855,19 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 	}
 
 	shell_sessions.erase(handle);
+	return 1;
+#endif
+}
+
+// Host platform ids reported by trap 96; 0 (unknown trap on older
+// builds) means the guest should assume a POSIX host.
+static uae_u32 uaelib_host_get_platform(void)
+{
+#if defined(_WIN32)
+	return 3;
+#elif defined(__APPLE__)
+	return 2;
+#else
 	return 1;
 #endif
 }
@@ -834,6 +1093,8 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		case 92: return uaelib_host_write(ctx, ARG1, ARG2, ARG3);
 		case 93: return uaelib_host_close(ctx, ARG1);
 		case 94: return uaelib_host_status(ctx, ARG1);
+		case 95: return uaelib_host_open_pipe(ctx, ARG1);
+		case 96: return uaelib_host_get_platform();
 
 		case 100:
 		{
