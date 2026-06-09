@@ -288,18 +288,21 @@ struct ROMOption {
 };
 
 static const std::vector<ROMOption>& GetAvailableROMs(int romtype, int romtype_extra) {
-    // The ROM database is built once per session (see roms_initialized in rom.cpp), so the
-    // option list for a given (romtype, romtype_extra) doesn't change frame-to-frame. This
-    // is called once per ROM selector every frame, so memoize it instead of rebuilding the
-    // vector each time. Invalidate if the ROM database size changes (rescan / keyring load).
+    // The ROM database normally doesn't change frame-to-frame, and this is called once per
+    // ROM selector every frame, so memoize the option list per (romtype, romtype_extra)
+    // instead of rebuilding the vector each time. Invalidate whenever the rom list is
+    // rebuilt - keyed on its generation, not its count, so a rescan that swaps ROMs for a
+    // different set of the same size (scan_roms(true)) still refreshes the dropdowns.
     static std::map<std::pair<int, int>, std::vector<ROMOption>> cache;
-    static int cached_count = -1;
+    static int cached_gen = -1;
+
+    const int gen = romlist_get_generation();
+    if (gen != cached_gen) {
+        cache.clear();
+        cached_gen = gen;
+    }
 
     const int count = romlist_count();
-    if (count != cached_count) {
-        cache.clear();
-        cached_count = count;
-    }
 
     const auto key = std::make_pair(romtype, romtype_extra);
     const auto it = cache.find(key);
