@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <map>
+#include <utility>
 #include <vector>
 #include <string>
 #include "imgui.h"
@@ -285,15 +287,31 @@ struct ROMOption {
     bool is_disabled_opt;
 };
 
-static std::vector<ROMOption> GetAvailableROMs(int romtype, int romtype_extra) {
+static const std::vector<ROMOption>& GetAvailableROMs(int romtype, int romtype_extra) {
+    // The ROM database is built once per session (see roms_initialized in rom.cpp), so the
+    // option list for a given (romtype, romtype_extra) doesn't change frame-to-frame. This
+    // is called once per ROM selector every frame, so memoize it instead of rebuilding the
+    // vector each time. Invalidate if the ROM database size changes (rescan / keyring load).
+    static std::map<std::pair<int, int>, std::vector<ROMOption>> cache;
+    static int cached_count = -1;
+
+    const int count = romlist_count();
+    if (count != cached_count) {
+        cache.clear();
+        cached_count = count;
+    }
+
+    const auto key = std::make_pair(romtype, romtype_extra);
+    const auto it = cache.find(key);
+    if (it != cache.end())
+        return it->second;
+
     std::vector<ROMOption> options;
 
     // WinUAE adds "ROM Disabled" effectively by allowing NULL path or specific selection
     options.push_back({"ROM Disabled", "", true});
 
     const romlist *rl = romlist_getit();
-    const int count = romlist_count();
-
     for (int i = 0; i < count; i++) {
         const romdata *rd = rl[i].rd;
         if (!rd) continue;
@@ -306,7 +324,7 @@ static std::vector<ROMOption> GetAvailableROMs(int romtype, int romtype_extra) {
             options.push_back({rd->name, rl[i].path, false});
         }
     }
-    return options;
+    return cache.emplace(key, std::move(options)).first->second;
 }
 
 void render_panel_expansions() {
@@ -557,7 +575,7 @@ void render_panel_expansions() {
             }
 
             // Check for available ROMs for this type
-            std::vector<ROMOption> rom_options = GetAvailableROMs(ert->romtype, ert->romtype_extra);
+            const std::vector<ROMOption>& rom_options = GetAvailableROMs(ert->romtype, ert->romtype_extra);
 
             ImGui::Text("ROM Image:");
             ImGui::SameLine();
@@ -842,7 +860,7 @@ void render_panel_expansions() {
             char rom_path[MAX_DPATH] = "";
             if (brc) strncpy(rom_path, brc->roms[idx].romfile, MAX_DPATH);
 
-            std::vector<ROMOption> accel_rom_options = GetAvailableROMs(st->romtype, st->romtype_extra);
+            const std::vector<ROMOption>& accel_rom_options = GetAvailableROMs(st->romtype, st->romtype_extra);
 
             ImGui::PushItemWidth(-BUTTON_WIDTH / 2);
             ImGui::BeginDisabled(!gui_enabled);

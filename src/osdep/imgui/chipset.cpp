@@ -78,6 +78,9 @@ static void init_lists() {
     special_monitor_ptr.clear();
     for (const auto &s: special_monitor_strs)
         special_monitor_ptr.push_back(s.c_str());
+
+    // Latch the guard so these lists are built once, not rebuilt every frame.
+    initialized = true;
 }
 
 

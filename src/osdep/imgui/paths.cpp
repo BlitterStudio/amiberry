@@ -4,6 +4,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 #include "sysdeps.h"
 #include "options.h"
@@ -201,6 +202,35 @@ static void start_controllers_download()
 	}).detach();
 }
 
+// Cache path-existence results so the Paths panel doesn't stat() every path on every
+// frame just to colour the input field red. Re-checks the filesystem only when a row's
+// path string (or file/dir kind) actually changes. Keyed by the caller-supplied row id.
+// Actions that create/remove folders without changing the path text (Reset, Rescan,
+// base-content Apply) must call invalidate_path_exists_cache() so the indicators refresh.
+namespace {
+	struct PathExistsEntry { std::string path; bool is_file; bool exists; };
+	std::unordered_map<std::string, PathExistsEntry> g_path_exists_cache;
+}
+
+static void invalidate_path_exists_cache()
+{
+	g_path_exists_cache.clear();
+}
+
+static bool path_exists_cached(const char* id, const std::string& path, bool is_file)
+{
+	if (path.empty())
+		return true; // treat an empty path as valid to avoid clutter
+
+	PathExistsEntry& e = g_path_exists_cache[id];
+	if (e.path != path || e.is_file != is_file) {
+		e.path = path;
+		e.is_file = is_file;
+		e.exists = is_file ? my_existsfile(path.c_str()) : my_existsdir(path.c_str());
+	}
+	return e.exists;
+}
+
 void render_panel_paths()
 {
 	char tmp[MAX_DPATH];
@@ -221,6 +251,7 @@ void render_panel_paths()
 			create_missing_directories_for_base_content_path(s_base_content_path_apply_value);
 		save_amiberry_settings();
 		sync_base_content_path_input();
+		invalidate_path_exists_cache(); // derived paths/folders changed
 
 		if (s_base_content_path_apply_value.empty())
 		{
@@ -285,17 +316,8 @@ void render_panel_paths()
 
 		ImGui::SetNextItemWidth(input_width);
 
-		// Validation check
-		bool exists = false;
-		if (path.empty()) {
-			exists = true; // Treat an empty path as valid (or at least not error) to avoid clutter
-		} else {
-			if (is_file) {
-				exists = my_existsfile(path.c_str());
-			} else {
-				exists = my_existsdir(path.c_str());
-			}
-		}
+		// Validation check (cached; only stat()s when this row's path changes)
+		const bool exists = path_exists_cached(id, path, is_file);
 
 		if (!exists) {
 			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
@@ -348,7 +370,7 @@ void render_panel_paths()
 		ImGui::PushID(id);
 		ImGui::Text("%s", label);
 
-		const bool exists = path.empty() || my_existsdir(path.c_str());
+		const bool exists = path_exists_cached(id, path, false);
 		if (!exists)
 			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 
@@ -464,7 +486,7 @@ void render_panel_paths()
 		input_width = BUTTON_WIDTH;
 
 	ImGui::SetNextItemWidth(input_width);
-	const bool base_content_exists = s_base_content_path_input.empty() || my_existsdir(s_base_content_path_input.c_str());
+	const bool base_content_exists = path_exists_cached("BASE_CONTENT", s_base_content_path_input, false);
 	if (!base_content_exists)
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 
@@ -582,6 +604,7 @@ void render_panel_paths()
 		reset_default_paths();
 		save_amiberry_settings();
 		sync_base_content_path_input();
+		invalidate_path_exists_cache(); // paths (and any newly-created folders) changed
 		ShowMessageBox("Reset Paths", "All paths have been reset to their default values.");
 	}
 	ImGui::SameLine();
@@ -591,6 +614,7 @@ void render_panel_paths()
 		scan_roms(true);
 		symlink_roms(&changed_prefs);
 		import_joysticks();
+		invalidate_path_exists_cache(); // missing folders were just created
 
 		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- Missing folders created\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
