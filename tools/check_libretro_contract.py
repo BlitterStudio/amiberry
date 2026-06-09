@@ -93,6 +93,8 @@ def main():
 	retro_load_game = extract_body(text, "bool retro_load_game(const struct retro_game_info *info)")
 	reset_core_runtime_state = extract_body(text, "static void reset_core_runtime_state()")
 	libretro_emit_audio_starvation_guard = extract_body(text, "static void libretro_emit_audio_starvation_guard()")
+	libretro_drain_audio_frame = extract_body(text, "static void libretro_drain_audio_frame()")
+	libretro_audio_reset = extract_body(text, "void libretro_audio_reset(void)")
 	libretro_scan_roms = extract_body(stub_text, "int scan_roms(int show)")
 	sdl_create_semaphore = extract_body(sdl_stub_text, "SDL_Semaphore* SDL_CreateSemaphore(Uint32 initial_value)")
 	sdl_wait_semaphore = extract_body(sdl_stub_text, "void SDL_WaitSemaphore(SDL_Semaphore* s)")
@@ -144,14 +146,26 @@ def main():
 		and "if (libretro_audio_frames_this_run > 0 || libretro_audio_deficit_frames <= max_deferred_frames)" in libretro_emit_audio_starvation_guard
 		and "audio_batch_cb(silence, chunk)" in libretro_emit_audio_starvation_guard
 		and "audio_cb(0, 0)" in libretro_emit_audio_starvation_guard
-		and "libretro_audio_deficit_frames = 0.0;" in reset_core_runtime_state,
+		and "libretro_audio_deficit_frames = 0.0;" in libretro_audio_reset
+		and "libretro_audio_reset();" in reset_core_runtime_state,
 		"retro_run() must guard true libretro audio starvation without padding normal bursty audio frames",
 		failures,
 	)
+	# The Amiga engine flushes audio in fixed chunks that do not align with the
+	# video-frame boundary (a 768/1536 per-frame sawtooth). The libretro path has
+	# no SDL host queue to absorb it, so it must buffer in a FIFO and re-pace the
+	# stream once per video frame, accounting only the frames the frontend accepts.
 	require(
-		"libretro_audio_frames_this_run += static_cast<unsigned>(audio_batch_cb((const int16_t*)sndbuffer, frames));" in sound_platform_output_audio
-		and "libretro_audio_frames_this_run += frames;" in sound_platform_output_audio,
-		"libretro audio accounting must track frames accepted by the frontend callbacks",
+		"libretro_audio_enqueue(samples" in sound_platform_output_audio
+		and "libretro_audio_frames_this_run" not in sound_platform_output_audio,
+		"libretro audio output must enqueue into the smoothing FIFO, not push to the frontend directly",
+		failures,
+	)
+	require(
+		retro_run.count("libretro_drain_audio_frame();") >= 2
+		and "libretro_audio_fifo" in libretro_drain_audio_frame
+		and "libretro_audio_frames_this_run += static_cast<unsigned>(accepted);" in libretro_drain_audio_frame,
+		"libretro audio must be paced per video frame and account frames accepted by the frontend callbacks",
 		failures,
 	)
 	frontend_poll_pos = startup.find("poll_frontend_input();")

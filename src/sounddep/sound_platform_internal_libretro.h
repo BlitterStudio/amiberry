@@ -22,17 +22,23 @@ static inline bool sound_platform_open_audio(struct sound_data* sd, int index)
 
 static inline bool sound_platform_output_audio(struct sound_data* sd, uae_u16* sndbuffer)
 {
+	// The Amiga audio engine flushes in fixed-size chunks (paula_sndbufsize)
+	// that don't divide evenly into the per-video-frame sample count, so the
+	// raw per-frame output is a 768/1536 sawtooth. The standalone build hides
+	// this behind the SDL host audio queue; the libretro frontend does not get
+	// that buffer, so we enqueue here and re-pace the stream once per video
+	// frame in retro_run (see libretro_drain_audio_frame). Always feed stereo.
 	const auto frames = sd->sndbufsize / (sd->channels * 2);
-	if (audio_batch_cb) {
-		libretro_audio_frames_this_run += static_cast<unsigned>(audio_batch_cb((const int16_t*)sndbuffer, frames));
-	} else if (audio_cb) {
-		const auto* samples = reinterpret_cast<const int16_t*>(sndbuffer);
+	const auto* samples = reinterpret_cast<const int16_t*>(sndbuffer);
+	if (sd->channels == 2) {
+		libretro_audio_enqueue(samples, static_cast<unsigned>(frames));
+	} else {
 		for (int i = 0; i < frames; i++) {
 			const int16_t left = samples[i * sd->channels];
 			const int16_t right = (sd->channels > 1) ? samples[i * sd->channels + 1] : left;
-			audio_cb(left, right);
+			const int16_t pair[2] = { left, right };
+			libretro_audio_enqueue(pair, 1);
 		}
-		libretro_audio_frames_this_run += frames;
 	}
 	return true;
 }
