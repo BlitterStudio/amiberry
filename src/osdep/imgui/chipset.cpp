@@ -11,7 +11,6 @@
 
 #include "gui/gui_handling.h"
 
-static bool initialized = false;
 static std::vector<std::string> keyboard_items_strs;
 static std::vector<const char *> keyboard_items_ptr;
 static std::vector<std::string> special_monitor_strs;
@@ -78,9 +77,6 @@ static void init_lists() {
     special_monitor_ptr.clear();
     for (const auto &s: special_monitor_strs)
         special_monitor_ptr.push_back(s.c_str());
-
-    // Latch the guard so these lists are built once, not rebuilt every frame.
-    initialized = true;
 }
 
 
@@ -88,7 +84,15 @@ void render_panel_chipset() {
     // Global padding for the whole panel
     ImGui::Indent(4.0f);
 
-    if (!initialized) init_lists();
+    // Build the keyboard/special-monitor lists once, and rebuild only when the ROM list
+    // changes (e.g. after a rescan) so the "[ROM not found]" labels stay accurate -
+    // instead of rebuilding every frame.
+    static int cached_rom_gen = -1;
+    const int rom_gen = romlist_get_generation();
+    if (rom_gen != cached_rom_gen) {
+        init_lists();
+        cached_rom_gen = rom_gen;
+    }
 
     // Determine Chipset Selection Index (Logic from WinUAE values_to_chipsetdlg)
     int chipset_selection = 0; // Default to OCS

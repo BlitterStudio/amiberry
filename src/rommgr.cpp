@@ -1187,6 +1187,7 @@ static void romlist_cleanup(void)
 					if (cnt > 0)
 						memmove(rl2, rl2 + 1, cnt * sizeof (struct romlist));
 					romlist_cnt--;
+					romlist_gen++;
 				}
 				i++;
 			}

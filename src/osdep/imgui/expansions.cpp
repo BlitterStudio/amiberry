@@ -302,8 +302,6 @@ static const std::vector<ROMOption>& GetAvailableROMs(int romtype, int romtype_e
         cached_gen = gen;
     }
 
-    const int count = romlist_count();
-
     const auto key = std::make_pair(romtype, romtype_extra);
     const auto it = cache.find(key);
     if (it != cache.end())
@@ -315,6 +313,7 @@ static const std::vector<ROMOption>& GetAvailableROMs(int romtype, int romtype_e
     options.push_back({"ROM Disabled", "", true});
 
     const romlist *rl = romlist_getit();
+    const int count = romlist_count();
     for (int i = 0; i < count; i++) {
         const romdata *rd = rl[i].rd;
         if (!rd) continue;

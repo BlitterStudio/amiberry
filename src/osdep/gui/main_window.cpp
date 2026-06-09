@@ -1926,10 +1926,18 @@ static std::string legacy_cleanup_error_message;
 
 void ShowMessageBox(const char* title, const char* message)
 {
+    const char* new_title = title ? title : "Message";
+    const char* new_message = message ? message : "";
+    // If the requested message differs from the one currently posted, force the render
+    // loop to (re)open the popup on its next rising edge. Without this, a new message
+    // requested while an older one is still open (e.g. pressing F1 for Help) would never
+    // appear - its popup id is never OpenPopup'd - and the dialog would wedge open.
+    if (strcmp(message_box_title, new_title) != 0 || message_box_message != new_message)
+        message_box_open = false;
     // Safely copy and ensure null-termination
-    strncpy(message_box_title, title ? title : "Message", sizeof(message_box_title) - 1);
+    strncpy(message_box_title, new_title, sizeof(message_box_title) - 1);
     message_box_title[sizeof(message_box_title) - 1] = '\0';
-    message_box_message = message ? message : "";
+    message_box_message = new_message;
     show_message_box = true;
 }
 
