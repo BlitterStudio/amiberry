@@ -561,6 +561,11 @@ static bool uaesnd_directload(struct uaesndboard_data *data, struct uaesndboard_
 	if (reg < 0 || reg == 20) {
 		s->replen = get_long_host(s->io + 20);
 	}
+	if (reg < 0 || reg == 24 || reg == 26) {
+		// repeat count + volume share a long word; reload volume so
+		// current-set volume writes take effect while playing
+		s->volume = get_word_host(s->io + 26);
+	}
 	return uaesnd_validate(data, s);
 }
 
@@ -685,7 +690,9 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 				if (sign)
 					sample -= 0x8000;
 				uae_s16 samples = (uae_s16)sample;
-				s->sample[i] = samples * ((s->volume + 1) / 2 + (data->volume[i] + 1) / 2) / 32768;
+				// scale by set volume and board channel volume multiplicatively
+				// so volume 0 is silent (the old averaged formula had a 0.5 gain floor)
+				s->sample[i] = samples * s->volume / 32768 * data->volume[i] / 32768;
 			}
 			if (len < 0)
 				addr -= s->framesize;
@@ -1205,8 +1212,9 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	if (!ert)
 		return false;
 	data->streammask = 0;
-	data->volume[0] = 32768;
-	data->volume[1] = 32768;
+	for (int i = 0; i < MAX_UAE_CHANNELS; i++) {
+		data->volume[i] = 32768;
+	}
 	put_long_host(data->info + 0, (UAEMAJOR << 16) | (UAEMINOR << 8) | (UAESUBREV));
 	put_long_host(data->info + 4, (1 << 16) | (0));
 	put_long_host(data->info + 8, currprefs.sound_freq);
