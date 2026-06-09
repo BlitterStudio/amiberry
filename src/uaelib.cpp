@@ -358,10 +358,14 @@ static int native_dos_op(TrapContext *ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 }
 
 #ifdef AMIBERRY
+// Host command strings are not paths: MAX_DPATH is PATH_MAX, which is
+// only 260 on Windows, far too small for generated shell commands.
+#define HOST_SHELL_CMD_MAX 4096
+
 // Execute a command on the Host OS
 static uae_u32 emulib_execute_on_host(TrapContext* ctx, uaecptr name)
 {
-	char real_name[MAX_DPATH];
+	char real_name[HOST_SHELL_CMD_MAX];
 	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= static_cast<int>(sizeof real_name))
 		return 0; /* ENAMETOOLONG */
 
@@ -492,7 +496,7 @@ static uae_u32 host_shell_update_status(ShellSession& session)
 
 static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 {
-	char cmd[MAX_DPATH];
+	char cmd[HOST_SHELL_CMD_MAX];
 	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
 		return 0;
 
@@ -551,7 +555,7 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 
 static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 {
-	char cmd[MAX_DPATH];
+	char cmd[HOST_SHELL_CMD_MAX];
 	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
 		return 0;
 	if (cmd[0] == '\0')
@@ -897,7 +901,7 @@ static std::string quote_path(const char* path) {
 }
 
 static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
-	char file[MAX_DPATH];
+	char file[HOST_SHELL_CMD_MAX];
 	if (trap_get_string(ctx, file, filename, sizeof file) >= sizeof file)
 		return 0;
 
