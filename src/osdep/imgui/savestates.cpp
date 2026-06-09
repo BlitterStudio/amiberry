@@ -74,6 +74,15 @@ void render_panel_savestates() {
     static int last_state_num = -1;
     bool force_reload = false;
 
+    // Cached savestate file info, refreshed only when the target file changes or after a
+    // save/delete - avoids stat()ing the savestate file twice on every frame.
+    static bool ss_info_dirty = true;
+    static char ss_info_path[MAX_DPATH] = "";
+    static bool ss_info_has_state = false;
+    static bool ss_info_exists = false;
+    static std::string ss_info_filename;
+    static std::string ss_info_timestamp;
+
     if (current_state_num != last_state_num) {
         gui_update();
         last_state_num = current_state_num;
@@ -119,20 +128,34 @@ void render_panel_savestates() {
 
         ImGui::Spacing();
 
-        bool has_state = strlen(savestate_fname) > 0;
-        if (has_state) {
-            struct stat st{};
-            if (stat(savestate_fname, &st) == 0) {
-                ImGui::Text("Filename: %s", extract_filename(std::string(savestate_fname)).c_str());
-                ImGui::Text("%s", get_file_timestamp(savestate_fname).c_str());
+        if (ss_info_dirty || strncmp(ss_info_path, savestate_fname, MAX_DPATH) != 0) {
+            strncpy(ss_info_path, savestate_fname, MAX_DPATH);
+            ss_info_path[MAX_DPATH - 1] = '\0';
+            ss_info_dirty = false;
+            ss_info_has_state = strlen(savestate_fname) > 0;
+            ss_info_exists = false;
+            if (ss_info_has_state) {
+                struct stat st{};
+                ss_info_exists = (stat(savestate_fname, &st) == 0);
+                ss_info_filename = extract_filename(std::string(savestate_fname));
+                ss_info_timestamp = ss_info_exists ? get_file_timestamp(savestate_fname) : std::string();
+            }
+        }
+
+        if (ss_info_has_state) {
+            if (ss_info_exists) {
+                ImGui::Text("Filename: %s", ss_info_filename.c_str());
+                ImGui::Text("%s", ss_info_timestamp.c_str());
             } else {
                 ImGui::Text("Filename: No savestate found");
-                ImGui::Text("%s", extract_filename(std::string(savestate_fname)).c_str());
+                ImGui::Text("%s", ss_info_filename.c_str());
             }
         } else {
             ImGui::Text("No savestate loaded");
             ImGui::TextUnformatted("\n");
         }
+
+        const bool has_state = ss_info_has_state;
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -170,6 +193,7 @@ void render_panel_savestates() {
                     save_thumb(screenshot_filename);
                     ClearScreenshotTexture();
                 }
+                ss_info_dirty = true; // file was just (re)written
             } else {
                 ShowAlert("Saving state", "Emulation hasn't started yet.");
             }
@@ -229,6 +253,7 @@ void render_panel_savestates() {
             remove(savestate_fname);
             if (!screenshot_filename.empty()) remove(screenshot_filename.c_str());
             ClearScreenshotTexture();
+            ss_info_dirty = true; // file was just deleted
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();

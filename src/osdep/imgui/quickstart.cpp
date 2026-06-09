@@ -182,10 +182,25 @@ void render_panel_quickstart() {
         initial_sync_done = true;
     }
 
-    // Refresh MRU display lists once per frame
-    qs_refresh_disk_list_model();
-    qs_refresh_cd_list_model();
-    qs_refresh_whd_list_model();
+    // Rebuild the MRU display models only when the underlying lists change, instead of
+    // reallocating these strings on every frame.
+    static std::vector<std::string> qs_disk_src, qs_cd_src, qs_whd_src, qs_cd_drives_src;
+    if (qs_disk_src != lstMRUDiskList) {
+        qs_disk_src = lstMRUDiskList;
+        qs_refresh_disk_list_model();
+    }
+    {
+        const auto cd_drives = get_cd_drives();
+        if (qs_cd_src != lstMRUCDList || qs_cd_drives_src != cd_drives) {
+            qs_cd_src = lstMRUCDList;
+            qs_cd_drives_src = cd_drives;
+            qs_refresh_cd_list_model();
+        }
+    }
+    if (qs_whd_src != lstMRUWhdloadList) {
+        qs_whd_src = lstMRUWhdloadList;
+        qs_refresh_whd_list_model();
+    }
 
     // State for asynchronous file dialogs in this panel
     static int qs_pending_floppy_drive = -1;

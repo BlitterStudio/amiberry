@@ -17,8 +17,22 @@ void render_panel_hwinfo()
 {
     ImGui::Indent(4.0f);
 
-    // Ensure the card list is populated based on current prefs
-    expansion_scan_autoconfig(&changed_prefs, false);
+    // Populate the card list from current prefs only when this panel is (re)entered or
+    // after an in-panel change - NOT every frame. Re-scanning every frame re-ran the
+    // expansion board init (re-opening flash ROM files, etc.) and, for a board with a
+    // missing ROM (e.g. Picasso IV), re-fired gui_message() every frame, which made the
+    // resulting message box impossible to dismiss (it reopened the instant it was closed).
+    static int last_render_frame = -100;
+    static bool needs_scan = true;
+    const int this_frame = ImGui::GetFrameCount();
+    if (this_frame != last_render_frame + 1)
+        needs_scan = true; // not rendered last frame => panel was just (re)entered
+    last_render_frame = this_frame;
+
+    if (needs_scan) {
+        expansion_scan_autoconfig(&changed_prefs, false);
+        needs_scan = false;
+    }
 
     static int selected_row = -1;
 
@@ -91,6 +105,7 @@ void render_panel_hwinfo()
         if (changed_prefs.autoconfig_custom_sort) {
             expansion_set_autoconfig_sort(&changed_prefs);
         }
+        needs_scan = true; // refresh the displayed order on the next frame
     }
     
     ImGui::SameLine();
