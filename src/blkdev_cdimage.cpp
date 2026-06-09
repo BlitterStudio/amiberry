@@ -13,9 +13,6 @@
 */
 #include "sysconfig.h"
 #include "sysdeps.h"
-#if defined(HAVE_SYS_TIMEB_H) && !defined(__ANDROID__)
-#include <sys/timeb.h>
-#endif
 #include <time.h>
 #include <sys/types.h>
 #ifndef _WIN32
@@ -42,7 +39,9 @@
 #if CHD_FLAC_USE_DRFLAC
 #include "dr_flac.h"
 #else
+#ifndef FLAC__NO_DLL
 #define FLAC__NO_DLL
+#endif
 #include "FLAC/stream_decoder.h"
 #endif
 
@@ -625,21 +624,12 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 		if (oldplay != cdu->cdda_play) {
 			struct cdtoc *t;
 			int sector, diff;
-#if defined(_MSC_VER) && defined(WIN32)
-			struct _timeb tb1, tb2;
-#elif defined(HAVE_SYS_TIMEB_H)
-			/* MinGW provides clock_gettime/timespec (POSIX-compatible) */
 			struct timespec ts1, ts2;
-#else
-#warning Missing timing functions
-#endif
 
 			idleframes = 0;
 			silentframes = 0;
 			foundsub = false;
-#ifdef HAVE_SYS_TIMEB_H
 			clock_gettime(CLOCK_REALTIME, &ts1);
-#endif
 			cdda_pos = cdu->cdda_start;
 			oldplay = cdu->cdda_play;
 			sector = cdu->cd_last_pos = cdda_pos;
@@ -694,13 +684,9 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			cdda_pos -= idleframes;
 
 			if (*outpos < 0) {
-#ifdef HAVE_SYS_TIMEB_H
 				clock_gettime(CLOCK_REALTIME, &ts2);
 				diff = (int)(ts2.tv_sec * (uae_s64)1000 + (ts2.tv_nsec / 1000000) - (ts1.tv_sec * (uae_s64)1000 + (ts1.tv_nsec / 1000000)));
 				diff -= cdu->cdda_delay;
-#else
-				diff = 0;
-#endif
 				if (idleframes >= 0 && diff < 0 && cdu->cdda_play > 0)
 					sleep_millis(-diff);
 				setstate (cdu, AUDIO_STATUS_IN_PROGRESS, cdda_pos);
