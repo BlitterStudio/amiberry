@@ -3501,7 +3501,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         int was_comp = 0;
         uae_u8 liveflags[MAXRUN + 1];
         bool trace_in_rom = isinrom((uintptr)pc_hist[0].location) != 0;
+#if defined(CPU_AARCH64)
         bool ram_trap_block = false;
+#endif
         uintptr max_pcp = (uintptr)pc_hist[blocklen - 1].location;
         uintptr min_pcp = max_pcp;
         uae_u32 cl = cacheline(pc_hist[0].location);
@@ -3596,8 +3598,10 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 unsafe_special_mem_block = true;
 #endif
             trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
+#if defined(CPU_AARCH64)
             if ((prop[op].cflow & fl_trap) && !isinrom((uintptr)currpcp))
                 ram_trap_block = true;
+#endif
             if (follow_const_jumps && is_const_jump(op)) {
                 checksum_info* csi = alloc_checksum_info();
                 csi->start_p = (uae_u8*)min_pcp;
