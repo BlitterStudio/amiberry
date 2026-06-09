@@ -679,6 +679,15 @@ void render_panel_paths()
 		}
 		else if (s_whdboot_complete.load() || s_whdboot_failed.load())
 		{
+			// A successful download created the WHDBoot folder tree without changing any
+			// path text, so refresh the cached existence indicators once (on the GUI
+			// thread, to avoid racing the worker that populated the cache earlier).
+			static bool s_whdboot_result_handled = false;
+			if (!s_whdboot_result_handled)
+			{
+				invalidate_path_exists_cache();
+				s_whdboot_result_handled = true;
+			}
 			ImGui::Spacing();
 			{
 				std::lock_guard<std::mutex> lock(s_whdboot_mutex);
@@ -692,6 +701,7 @@ void render_panel_paths()
 			{
 				s_whdboot_complete.store(false);
 				s_whdboot_failed.store(false);
+				s_whdboot_result_handled = false;
 			}
 		}
 
