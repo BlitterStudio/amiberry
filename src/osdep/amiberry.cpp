@@ -131,6 +131,7 @@ int multithread_enabled = 1;
 static TCHAR* inipath = nullptr;
 extern FILE* debugfile;
 static int forceroms;
+static bool force_perf_log;
 static void* tablet;
 SDL_Cursor* normalcursor;
 
@@ -165,6 +166,7 @@ static volatile bool cpu_wakeup_event_triggered;
 
 int quickstart_model = 0;
 int quickstart_conf = 0;
+int quickstart_compa = 0;
 bool host_poweroff = false;
 int relativepaths = 0;
 int saveimageoriginalpath = 0;
@@ -4612,6 +4614,14 @@ void target_default_options(uae_prefs* p, const int type)
 			p->gf[GF_NORMAL].gfx_filter = 1;
 		if (p->gf[GF_RTG].gfx_filter == 0)
 			p->gf[GF_RTG].gfx_filter = 1;
+		if (amiberry_options.default_disable_cycle_exact)
+		{
+			// Slow-host default: Approximate accuracy instead of full cycle-exact.
+			// Quickstart presets and explicit configs may still re-enable it.
+			p->cpu_cycle_exact = false;
+			p->cpu_memory_cycle_exact = false;
+			p->blitter_cycle_exact = false;
+		}
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
 		//	_sntprintf(p->input_config_name[i], sizeof p->input_config_name[i] / sizeof(TCHAR), buf, i + 1);
@@ -5955,6 +5965,10 @@ void save_amiberry_settings()
 
 	// Enable frameskip by default?
 	write_bool_option("default_frameskip", amiberry_options.default_frameskip);
+	write_bool_option("perf_log", amiberry_options.perf_log);
+	write_bool_option("slow_host_warning", amiberry_options.slow_host_warning);
+	write_bool_option("default_disable_cycle_exact", amiberry_options.default_disable_cycle_exact);
+	write_int_option("default_quickstart_compatibility", amiberry_options.default_quickstart_compatibility);
 
 	// Correct Aspect Ratio by default?
 	write_bool_option("default_correct_aspect_ratio", amiberry_options.default_correct_aspect_ratio);
@@ -6347,6 +6361,10 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
 		ret |= cfgfile_intval(option, value, "default_gfx_autoresolution", &amiberry_options.default_gfx_autoresolution, 1);
 		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
+		ret |= cfgfile_yesno(option, value, "perf_log", &amiberry_options.perf_log);
+		ret |= cfgfile_yesno(option, value, "slow_host_warning", &amiberry_options.slow_host_warning);
+		ret |= cfgfile_yesno(option, value, "default_disable_cycle_exact", &amiberry_options.default_disable_cycle_exact);
+		ret |= cfgfile_intval(option, value, "default_quickstart_compatibility", &amiberry_options.default_quickstart_compatibility, 1);
 		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
 		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_crop);
 		ret |= cfgfile_yesno(option, value, "default_auto_crop", &amiberry_options.default_auto_crop);
@@ -10180,6 +10198,8 @@ int amiberry_main(int argc, char* argv[])
 			download_whdboot = true;
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
 			forceroms = 1;
+		if (_tcscmp(argv[i], _T("--perf-log")) == 0)
+			force_perf_log = true;
 	}
 
 	if (run_jit_selftest)
@@ -10254,6 +10274,20 @@ int amiberry_main(int argc, char* argv[])
 	init_amiberry_dirs(portable_mode);
 	if (config_found)
 		load_amiberry_settings();
+	else if (host_detect_slow_sbc())
+	{
+		// First run on a known-slow board: enable resolution autoswitch by
+		// default. It drops the output to lores only when the displayed content
+		// allows it (lossless), cutting per-CCK Denise cost while keeping full
+		// cycle-exact accuracy and compatibility. Persisted to amiberry.conf,
+		// so the user can change it. (Accuracy is deliberately NOT lowered here:
+		// clearing the cycle-exact flags is a no-op for the common <=68020
+		// cpu_compatible case and only risks breaking timing-sensitive titles.)
+		amiberry_options.default_gfx_autoresolution = 1;
+	}
+	if (force_perf_log)
+		amiberry_options.perf_log = true;
+	quickstart_compa = amiberry_options.default_quickstart_compatibility;
 	migrate_legacy_configuration_directories(portable_mode);
 	migrate_legacy_visual_asset_directories();
 	migrate_legacy_lowercase_content_directories();

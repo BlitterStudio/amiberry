@@ -42,6 +42,9 @@
 #endif
 #include "devices.h"
 #include "gfxboard.h"
+#ifdef AMIBERRY
+#include "perf_monitor.h"
+#endif
 
 #if defined(CPU_AARCH64)
 #include <arm_neon.h>
@@ -8256,6 +8259,9 @@ static bool multithread_denise_active(void)
 
 void draw_denise_border_line_fast_queue(int gfx_ypos, bool blank, enum nln_how how, struct linestate *ls)
 {
+#ifdef AMIBERRY
+	perf_lines.fast++;
+#endif
 	if (multithread_denise_active()) {
 		
 		if (!waitqueue(2)) {
@@ -8285,6 +8291,9 @@ void draw_denise_border_line_fast_queue(int gfx_ypos, bool blank, enum nln_how h
 
 void draw_denise_bitplane_line_fast_queue(int gfx_ypos, enum nln_how how, struct linestate *ls)
 {
+#ifdef AMIBERRY
+	perf_lines.fast++;
+#endif
 	if (multithread_denise_active()) {
 		
 		if (!waitqueue(1)) {
@@ -8371,6 +8380,9 @@ void denise_handle_quick_strobe_queue(uae_u16 strobe, int strobe_pos, int endpos
 void draw_denise_line_queue(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int endpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
 	int calib_start, int calib_len, bool lof, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls)
 {
+#ifdef AMIBERRY
+	perf_lines.full++;
+#endif
 	if (multithread_denise_active()) {
 
 		if (!waitqueue(0)) {

@@ -329,6 +329,8 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(LIBRETRO_DIR)/sdl_stub.cpp \
                 $(LIBRETRO_DIR)/libretro_gui_stubs.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry.cpp \
+                $(AMIBERRY_DIR)/src/osdep/perf_monitor.cpp \
+                $(AMIBERRY_DIR)/src/osdep/host_detect.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_gfx.cpp \
                 $(AMIBERRY_DIR)/src/osdep/gfx_window.cpp \
                 $(AMIBERRY_DIR)/src/osdep/gfx_colors.cpp \

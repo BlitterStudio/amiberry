@@ -125,6 +125,7 @@ extern int net_enumerated;
 extern struct netdriverdata** target_ethernet_enumerate();
 extern void target_startup_msg(const TCHAR* title, const TCHAR* msg);
 extern int multithread_enabled;
+extern bool host_detect_slow_sbc(void);
 
 void save_amiberry_settings();
 void update_display(struct uae_prefs*);

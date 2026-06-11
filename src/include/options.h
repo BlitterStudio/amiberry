@@ -1377,6 +1377,10 @@ struct amiberry_options
 	int default_scaling_method = -1;
 	int default_gfx_autoresolution = 0;
 	bool default_frameskip = false;
+	bool perf_log = false;
+	bool slow_host_warning = true;
+	bool default_disable_cycle_exact = false;
+	int default_quickstart_compatibility = 0;
 	bool default_correct_aspect_ratio = true;
 	bool default_auto_crop = false;
 	int default_width = 720;

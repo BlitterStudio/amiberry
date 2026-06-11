@@ -57,6 +57,9 @@
 #ifdef WITH_SPECIALMONITORS
 #include "specialmonitors.h"
 #endif
+#ifdef AMIBERRY
+#include "perf_monitor.h"
+#endif
 
 #define VPOSW_DISABLED 0
 #define VPOSW_DEBUG 0
@@ -4792,6 +4795,9 @@ void fpscounter_reset(void)
 	bogusframe = 2;
 	lastframetime = read_processor_time();
 	idletime = 0;
+#ifdef AMIBERRY
+	perf_monitor_reset();
+#endif
 }
 
 static void fpscounter(bool frameok)
@@ -4808,6 +4814,9 @@ static void fpscounter(bool frameok)
 
 	mavg(&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
 	mavg(&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
+#ifdef AMIBERRY
+	perf_monitor_frame(last, idletime, vsynctimebase, frameok);
+#endif
 	idletime = 0;
 
 	frametime += last;
@@ -10556,12 +10565,20 @@ static bool checkprevfieldlinestateequal(void)
 			if (always > 0) {
 				draw_blank_fast(l, linear_display_vpos + 1);
 			}
+#ifdef AMIBERRY
+			else {
+				perf_lines.skipped++;
+			}
+#endif
 			ret = true;
 		} else if (type == LINETYPE_BORDER) {
 			if (1) {
 				bool brdblank = (bplcon0 & 1) && (bplcon3 & 0x20);
 				uae_u32 c = aga_mode ? agnus_colors.color_regs_aga[0] : agnus_colors.color_regs_ecs[0];
 				if (!always && c == l->color0 && brdblank == l->brdblank) {
+#ifdef AMIBERRY
+					perf_lines.skipped++;
+#endif
 					ret = true;
 				} else if (always || currprefs.cs_optimizations == DISPLAY_OPTIMIZATIONS_FULL) {
 					storelinestate();
