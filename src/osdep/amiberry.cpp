@@ -10276,11 +10276,14 @@ int amiberry_main(int argc, char* argv[])
 		load_amiberry_settings();
 	else if (host_detect_slow_sbc())
 	{
-		// First run on a known-slow board: default new configs and the
-		// Quickstart compatibility slider to Approximate accuracy.
-		// Persisted to amiberry.conf, so the user can change it.
-		amiberry_options.default_disable_cycle_exact = true;
-		amiberry_options.default_quickstart_compatibility = 1;
+		// First run on a known-slow board: enable resolution autoswitch by
+		// default. It drops the output to lores only when the displayed content
+		// allows it (lossless), cutting per-CCK Denise cost while keeping full
+		// cycle-exact accuracy and compatibility. Persisted to amiberry.conf,
+		// so the user can change it. (Accuracy is deliberately NOT lowered here:
+		// clearing the cycle-exact flags is a no-op for the common <=68020
+		// cpu_compatible case and only risks breaking timing-sensitive titles.)
+		amiberry_options.default_gfx_autoresolution = 1;
 	}
 	if (force_perf_log)
 		amiberry_options.perf_log = true;
