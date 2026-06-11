@@ -1,48 +1,85 @@
-This licence is based on the MAME licence and is intended for use in all non-commercial projects and environments. Other licensing options are available. Don't hesitate - please contact us at licensing@kryoflux.com.
+KryoFlux Products & Services Limited
+57 Warburton Road
+Twickenham, England TW2 6EW
 
+Non-Commercial Source Code License
 
-PREAMBLE
+Copyright (c) 2002-2026 KryoFlux Products & Services Limited
 
-The purpose ("Purpose") of the SPS DECODER LIBRARY ("CLL", "CAPSImage", "CAPSImg", etc.) is to enable third party software to use The Software Preservation Society Interchangeable Preservation Format ("IPF"), Software Preservation Society Capture Tool RAW ("CT RAW", "RAW") and KryoFlux STREAM ("KF STREAM", "RAW") format files as produced by e.g. The Software Preservation Analyser, KryoFlux - High Definition Flux Sampler for USB or KryoFlux FREE.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, and distribute the Software, subject to the following terms and
+conditions:
 
+1. Definitions
 
-LICENCE
-	
-Redistribution and use of the SPS DECODER LIBRARY code is permitted provided that the following conditions are met:
+"Commercial use" means any use of the Software primarily intended for or
+directed toward commercial advantage or monetary compensation, including but
+not limited to use in connection with a paid product, paid service, internal
+business operations, or any activity performed for the benefit of a business
+or organization in exchange for compensation.
 
-- Redistributions may not be sold, nor may they be used in a commercial product or activity.
+"Research use" means use of the Software for scholarly, scientific, technical,
+or experimental investigation, including reproducible research and evaluation,
+provided such use is not primarily intended for commercial advantage.
 
-- Redistributions that are modified from the original source must include the complete source code, including the source code for all components used by a binary built from the modified sources. However, as a special exception, the source code distributed need not include anything that is normally distributed (in either source or binary form) with the major components (compiler, kernel, and so on) of the operating system on which the executable runs, unless that component itself accompanies the executable.
+"Educational use" means use of the Software for teaching, learning, academic
+instruction, coursework, classroom demonstrations, or other non-commercial
+educational activities.
 
-- Aforementioned modifications to the code can be made to enhance the code or to make it compile on other platforms than originally supported. Modifications must still satisfy the Purpose. Any file formats other than those listed under Purpose must not be enabled through the SPS DECODER LIBRARY.  
+2. Grant of Rights
 
-- Redistributions must reproduce the following copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+Subject to compliance with this license, the copyright holder grants you a
+limited, non-exclusive, non-transferable, and revocable license to use, copy,
+modify, and distribute the Software solely for non-commercial, research, and
+educational purposes.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+3. Restrictions
 
+You may not:
 
-COPYRIGHT
+a. use the Software for any commercial purpose without prior written permission
+   from the copyright holder;
 
-SPS DECODER LIBRARY Copyright (c) 2001-2014 by István Fábián under exclusive licence to KryoFlux Products & Services Ltd, 80 Allington Way, Maidstone, ME16 0HN, United Kingdom. All rights reserved.
+b. sublicense, sell, lease, rent, or otherwise commercially exploit the
+   Software or any derivative work thereof;
 
+c. remove or alter any copyright, license, or attribution notices included with
+   the Software;
 
-COMMON QUESTIONS
+d. distribute the Software or derivative works except in compliance with this
+   license.
 
-Q. Can I include the SPS DECODER LIBRARY with my commercial product?
-A. No. The SPS DECODER LIBRARY is not licensed for commercial use. Using SPS DECODER LIBRARY as a "freebie" or including it at "no cost" with your product still constitutes commerical usage and is forbidden by the licence.
+4. Redistribution
 
-Q. Can I sell my product with the SPS DECODER LIBRARY or associated logos (e.g. SPS, KryoFlux) on it?
-A. No. Putting the name or logo on your product makes it appear that the product is something officially endorsed.
+You may redistribute the Software, with or without modifications, provided that
+this license text and all applicable copyright notices are included in all
+copies or substantial portions of the Software.
 
-Q. Can I use the SPS DECODER LIBRARY or the SPS logo to advertise my product?
-A. No. Using the name or logo in your advertising makes it appear that the product is something officially endorsed.
+5. Warranty Disclaimer
 
-Q. Can I use the term "SPS DECODER LIBRARY" in the name of my software?
-A. Generally, no, especially if it is something that is sold. However, if you are producing a free SPS DECODER LIBRARY-related piece of software, it is common that permission is granted. Send a query to double-check first, please.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
 
-Q. Can I ask for donations for the work I did on my port of SPS DECODER LIBRARY to platform X?
-A. No. You would be earning money from the SPS DECODER LIBRARY trademark and copyrights, and that would be a commercial use, which is prohibited by the licence. It is our wish that SPS DECODER LIBRARY remains free.
+6. Limitation of Liability
 
-v1.02
-2014-05-20
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
+7. Termination
+
+Any violation of this license automatically terminates the rights granted under
+this license. Upon termination, you must cease all use and distribution of the
+Software and any derivative works, except to the extent required by applicable
+law.
+
+8. Governing Law
+
+This license shall be governed by and construed in accordance with the laws of
+England and Wales, without regard to its conflict of laws principles.
+
+v1.00
+2026-05-28

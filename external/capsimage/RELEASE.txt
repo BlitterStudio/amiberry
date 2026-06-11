@@ -1,0 +1,16 @@
+SPS DECODER LIBRARY (SPStudio_Dev) v5.2 SOURCE CODE release package
+
+This software is not free for commercial use; please read the licence.
+
+This distribution contains the source code and documentation for the 
+SPS DECODER LIBRARY v5.2 for Windows(tm), macOS (tm) and Linux. 
+Detailed documentation about using, compiling and development can
+be found in the CAPSLib* PDF file in this package.
+
+If you encounter any problems, please let us know by posting here:
+https://forum.kryoflux.com
+
+Please use the forums for bug reports, do not submit tickets for this.
+
+Thank you for your support,
+The Software Preservation Society

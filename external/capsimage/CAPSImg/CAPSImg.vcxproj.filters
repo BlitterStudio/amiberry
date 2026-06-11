@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\Core">
+      <UniqueIdentifier>{30de4b83-878c-4101-82a9-530dacce21a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Core">
+      <UniqueIdentifier>{62d8740f-b14b-48a8-9032-9933e538c6cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\API">
+      <UniqueIdentifier>{82dbc896-2f8d-43ac-bc22-9ed604d5177d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\System">
+      <UniqueIdentifier>{ec72bf4d-cd30-434b-a281-c33d13e858cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\System">
+      <UniqueIdentifier>{25fdd46a-32a5-48cb-afe5-1f9b9bedf878}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Codec">
+      <UniqueIdentifier>{431dc049-1da1-42f6-8386-d222efdf38d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Codec">
+      <UniqueIdentifier>{7274e959-2022-4c0b-a232-3dd54df6ec91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Device">
+      <UniqueIdentifier>{13466ea6-0fb6-4ebd-87a9-c373d65dba0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Compatibility">
+      <UniqueIdentifier>{c2f8966c-5a58-45cc-852b-6274ba971193}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Core\CRC.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Core\CommonTypes.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\CapsAPI.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\CapsFDC.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\CapsForm.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\CapsLib.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\ComLib.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsFDCEmulator.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Core\BaseFile.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsFormatMFM.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Core\DiskFile.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="DiskImage.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsLoader.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsCore.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsImageStd.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Core\MemoryFile.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsImage.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="DiskImageFactory.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="StreamImage.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="StreamCueImage.h">
+      <Filter>Header Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\CapsLibVersion.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LibIPF\CapsLibAll.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Core\BitBuffer.h">
+      <Filter>Header Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Codec\DiskEncoding.h">
+      <Filter>Header Files\Codec</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Codec\CTRawCodec.h">
+      <Filter>Header Files\Codec</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Codec\CapsDefinitions.h">
+      <Filter>Header Files\Codec</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Device\C2Comm.h">
+      <Filter>Header Files\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Device\uilsb.h">
+      <Filter>Header Files\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Compatibility\Win32\stream64.h">
+      <Filter>Header Files\Compatibility</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Core\CRC.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsFormatMFM.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CAPSImg.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsFDCEmulator.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsLoader.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="DiskImage.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Core\BaseFile.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Core\DiskFile.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Core\MemoryFile.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsAPI.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsImageStd.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsImage.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="DiskImageFactory.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="StreamImage.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="StreamCueImage.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Core\BitBuffer.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Codec\DiskEncoding.cpp">
+      <Filter>Source Files\Codec</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Codec\CTRawCodec.cpp">
+      <Filter>Source Files\Codec</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Codec\CTRawCodecDecompressor.cpp">
+      <Filter>Source Files\Codec</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CAPSImg.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
