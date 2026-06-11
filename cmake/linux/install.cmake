@@ -19,7 +19,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_SOURCE_DIR}/whdboot
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
 
-install(FILES $<TARGET_FILE:capsimage>
+install(FILES $<TARGET_FILE:CAPSImage>
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
 install(FILES $<TARGET_FILE:floppybridge>
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})

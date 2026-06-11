@@ -20,8 +20,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:capsimage>
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:capsimage>)
+        $<TARGET_FILE:CAPSImage>
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:CAPSImage>)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:floppybridge>
@@ -128,7 +128,7 @@ if(MACOS_CODESIGN_BUNDLE)
 endif()
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
-    install(FILES $<TARGET_FILE:capsimage>
+    install(FILES $<TARGET_FILE:CAPSImage>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)

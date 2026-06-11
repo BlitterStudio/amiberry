@@ -106,8 +106,11 @@ enum {
 
 #ifdef _DEBUG
 #define NODEFAULT   assert(0)
-#else
+#elif defined(_MSC_VER)
 #define NODEFAULT   __assume(0)
+#else
+// MinGW (GCC/Clang) does not provide __assume
+#define NODEFAULT   __builtin_unreachable()
 #endif
 
 #else // POSIX

@@ -83,7 +83,8 @@ extern "C" void GetLocalTime(LPSYSTEMTIME lpSystemTime);
 
 
 // add missing 64 bit stream functions to stdio
-#ifdef _WIN32
+// MinGW already provides fopen64/fseeko64/ftello64 and off64_t natively
+#if defined(_WIN32) && !defined(__MINGW32__)
 #include <stream64.h>
 #endif
 

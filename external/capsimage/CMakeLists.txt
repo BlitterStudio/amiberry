@@ -31,8 +31,15 @@ set(CAPSIMAGE_VERSION_PATCH 0)
 set(CAPSIMAGE_VERSION
     "${CAPSIMAGE_VERSION_MAJOR}.${CAPSIMAGE_VERSION_MINOR}.${CAPSIMAGE_VERSION_PATCH}")
 
+# Detect whether this is the top-level project or embedded into another
+# build via add_subdirectory() (e.g. by an emulator bundling the library).
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(CAPSIMAGE_MASTER_PROJECT ON)
+else()
+    set(CAPSIMAGE_MASTER_PROJECT OFF)
+endif()
 
-if(APPLE)
+if(APPLE AND CAPSIMAGE_MASTER_PROJECT)
     option(CAPSIMAGE_MACOS_UNIVERSAL
         "Build macOS universal binary for x86_64 and arm64"
         OFF)
@@ -95,8 +102,15 @@ set(CAPSIMAGE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/StreamCueImage.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/StreamImage.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/stdafx.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Posix/posixfix.cpp"
 )
+
+if(WIN32)
+    list(APPEND CAPSIMAGE_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/dllmain.cpp")
+else()
+    list(APPEND CAPSIMAGE_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Posix/posixfix.cpp")
+endif()
 
 set(CAPSIMAGE_PUBLIC_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsAPI.h"
@@ -127,8 +141,6 @@ set_target_properties(CAPSImage PROPERTIES
 target_include_directories(CAPSImage
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/Core"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Posix"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/GCC4x"
         "${CMAKE_CURRENT_SOURCE_DIR}/Codec"
         "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg"
         "${CMAKE_CURRENT_SOURCE_DIR}/Device"
@@ -137,10 +149,22 @@ target_include_directories(CAPSImage
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CAPSImage>"
 )
 
+if(WIN32)
+    target_include_directories(CAPSImage PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Win32")
+    target_compile_definitions(CAPSImage PRIVATE _CRT_SECURE_NO_WARNINGS)
+    # Keep the historical DLL name (CAPSImg.dll) on Windows.
+    set_target_properties(CAPSImage PROPERTIES OUTPUT_NAME CAPSImg PREFIX "")
+else()
+    target_include_directories(CAPSImage PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Posix"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/GCC4x")
+endif()
+
 #target_link_libraries(CAPSImage PRIVATE fmt::fmt)
 
 # Static libgcc/libstdc++ helps distributing binaries across older Linux distros.
-if(NOT APPLE)
+if(NOT APPLE AND NOT MSVC)
     target_link_options(CAPSImage PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
@@ -167,6 +191,14 @@ target_link_libraries(CAPSImageDev INTERFACE CAPSImage::CAPSImage CAPSImage::Hea
 # -----------------------------------------------------------------------------
 # Install
 # -----------------------------------------------------------------------------
+
+# When embedded via add_subdirectory(), the parent project handles packaging
+# and installation, so skip the install/CPack rules by default.
+option(CAPSIMAGE_INSTALL
+    "Generate install rules and packaging targets"
+    ${CAPSIMAGE_MASTER_PROJECT})
+
+if(CAPSIMAGE_INSTALL)
 
 message(STATUS "Library install dir: ${CMAKE_INSTALL_LIBDIR}")
 message(STATUS "Header install dir:  ${CMAKE_INSTALL_INCLUDEDIR}/CAPSImage")
@@ -262,3 +294,5 @@ set(CPACK_RPM_PACKAGE_RELEASE 1)
 set(CPACK_FREEBSD_PACKAGE_MAINTAINER ${CPACK_PACKAGE_CONTACT})
 
 include(CPack)
+
+endif() # CAPSIMAGE_INSTALL
