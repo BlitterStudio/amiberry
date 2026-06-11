@@ -92,6 +92,7 @@ def main():
 	setup_whdload_paths = extract_body(text, "static void setup_whdload_paths()")
 	retro_load_game = extract_body(text, "bool retro_load_game(const struct retro_game_info *info)")
 	reset_core_runtime_state = extract_body(text, "static void reset_core_runtime_state()")
+	get_core_refresh_rate = extract_body(text, "static float get_core_refresh_rate()")
 	libretro_emit_audio_starvation_guard = extract_body(text, "static void libretro_emit_audio_starvation_guard()")
 	libretro_drain_audio_frame = extract_body(text, "static void libretro_drain_audio_frame()")
 	libretro_audio_reset = extract_body(text, "void libretro_audio_reset(void)")
@@ -128,6 +129,13 @@ def main():
 	require(
 		"RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY" not in set_environment,
 		"minimum audio latency must not be set from retro_set_environment()",
+		failures,
+	)
+	require(
+		"return vblank_hz" not in get_core_refresh_rate
+		and "currprefs.ntscmode ? 60.0f : 50.0f" in get_core_refresh_rate
+		and "RETRO_ENVIRONMENT_SET_GEOMETRY" in text,
+		"libretro frontend timing must stay PAL/NTSC-stable; native mode changes should use SET_GEOMETRY, not full A/V resets",
 		failures,
 	)
 	require(

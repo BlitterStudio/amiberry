@@ -130,8 +130,6 @@ static unsigned retro_led_state[RETRO_LED_NUM] = { 0 };
 struct retro_midi_interface *midi_iface_ptr = nullptr;
 #endif
 
-extern float vblank_hz;
-
 static constexpr int DEFAULT_GFX_WIDTH = 640;
 static constexpr int DEFAULT_GFX_HEIGHT = 480;
 static constexpr int MAX_GFX_WIDTH = 1920;
@@ -2215,8 +2213,10 @@ static int vsync_setting_from_option(const char* value)
 
 static float get_core_refresh_rate()
 {
-	if (vblank_hz > 1.0f)
-		return vblank_hz;
+	// Libretro frontend timing must stay stable across native Amiga mode
+	// changes. The emulator's vblank_hz can legitimately vary between short,
+	// long, and interlaced fields; publishing those small changes via
+	// SET_SYSTEM_AV_INFO makes RetroArch reinitialize audio/video.
 	return currprefs.ntscmode ? 60.0f : 50.0f;
 }
 
