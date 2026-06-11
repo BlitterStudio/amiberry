@@ -4613,6 +4613,14 @@ void target_default_options(uae_prefs* p, const int type)
 			p->gf[GF_NORMAL].gfx_filter = 1;
 		if (p->gf[GF_RTG].gfx_filter == 0)
 			p->gf[GF_RTG].gfx_filter = 1;
+		if (amiberry_options.default_disable_cycle_exact)
+		{
+			// Slow-host default: Approximate accuracy instead of full cycle-exact.
+			// Quickstart presets and explicit configs may still re-enable it.
+			p->cpu_cycle_exact = false;
+			p->cpu_memory_cycle_exact = false;
+			p->blitter_cycle_exact = false;
+		}
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
 		//	_sntprintf(p->input_config_name[i], sizeof p->input_config_name[i] / sizeof(TCHAR), buf, i + 1);
@@ -10265,6 +10273,14 @@ int amiberry_main(int argc, char* argv[])
 	init_amiberry_dirs(portable_mode);
 	if (config_found)
 		load_amiberry_settings();
+	else if (host_detect_slow_sbc())
+	{
+		// First run on a known-slow board: default new configs and the
+		// Quickstart compatibility slider to Approximate accuracy.
+		// Persisted to amiberry.conf, so the user can change it.
+		amiberry_options.default_disable_cycle_exact = true;
+		amiberry_options.default_quickstart_compatibility = 1;
+	}
 	if (force_perf_log)
 		amiberry_options.perf_log = true;
 	migrate_legacy_configuration_directories(portable_mode);

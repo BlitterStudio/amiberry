@@ -216,6 +216,7 @@ set(SOURCE_FILES
         src/osdep/clipboard.cpp
         src/osdep/amiberry_hardfile.cpp
         src/osdep/keyboard.cpp
+        src/osdep/host_detect.cpp
         src/osdep/midi.cpp
         src/osdep/perf_monitor.cpp
         src/osdep/mp3decoder.cpp
