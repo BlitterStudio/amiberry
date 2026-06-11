@@ -10565,12 +10565,20 @@ static bool checkprevfieldlinestateequal(void)
 			if (always > 0) {
 				draw_blank_fast(l, linear_display_vpos + 1);
 			}
+#ifdef AMIBERRY
+			else {
+				perf_lines.skipped++;
+			}
+#endif
 			ret = true;
 		} else if (type == LINETYPE_BORDER) {
 			if (1) {
 				bool brdblank = (bplcon0 & 1) && (bplcon3 & 0x20);
 				uae_u32 c = aga_mode ? agnus_colors.color_regs_aga[0] : agnus_colors.color_regs_ecs[0];
 				if (!always && c == l->color0 && brdblank == l->brdblank) {
+#ifdef AMIBERRY
+					perf_lines.skipped++;
+#endif
 					ret = true;
 				} else if (always || currprefs.cs_optimizations == DISPLAY_OPTIMIZATIONS_FULL) {
 					storelinestate();
