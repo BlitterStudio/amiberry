@@ -130,6 +130,18 @@ elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(USE_UAENET_TAP OFF CACHE BOOL "TAP backend only available on Linux" FORCE)
 endif()
 
+# Tune Linux aarch64 builds for the slowest supported board (Raspberry Pi 4 /
+# Cortex-A72). -mtune only affects instruction scheduling - the ISA baseline
+# stays generic armv8-a, so the same binary runs unchanged (and essentially
+# unaffected) on faster out-of-order cores such as the A76 or Neoverse.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND ARCH_LOWER MATCHES "aarch64|arm64" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(AMIBERRY_ARM_TUNE "cortex-a72" CACHE STRING "CPU passed to -mtune for Linux aarch64 builds (set empty to disable)")
+    if(AMIBERRY_ARM_TUNE)
+        add_compile_options(-mtune=${AMIBERRY_ARM_TUNE})
+        message(STATUS "Linux aarch64: adding -mtune=${AMIBERRY_ARM_TUNE}")
+    endif()
+endif()
+
 if(QEMU_UAE_PLUGIN)
     if(NOT USE_PPC OR NOT USE_QEMU_PPC)
         message(FATAL_ERROR "QEMU_UAE_PLUGIN requires USE_PPC=ON and USE_QEMU_PPC=ON")
