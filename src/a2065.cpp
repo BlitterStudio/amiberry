@@ -783,10 +783,11 @@ static uae_u16 chip_wget (uaecptr addr)
 				v |= CSR0_ERR;
 			break;
 			// chip id
-			case 88:
+			// vvvvpppp pppppppp ppppmmmm mmmmmmm1
+			case 89:
 			v = 1 << (28 - 16);
 			break;
-			case 89:
+			case 88:
 			v = 0x3003;
 			break;
 		}
