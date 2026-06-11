@@ -103,8 +103,21 @@ static void qs_set_control_state(int model, bool &df1_visible, bool &cd_visible,
     }
 }
 
+// Maximum compatibility-slider level per Quickstart model. Models routed to
+// set_68020_compa (A1200=4, CD32=8) support level 4 (JIT); the 68000 models
+// top out at level 3 (see set_68000_compa in cfgfile.cpp).
+static int qs_compa_max(const int model) {
+    return (model == 4 || model == 8) ? 4 : 3;
+}
+
 void Quickstart_ApplyDefaults() {
-    built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
+    // Compatibility tier: 0 = full cycle-exact ... 3/4 = fastest (see
+    // set_68000_compa / set_68020_compa in cfgfile.cpp)
+    if (quickstart_compa < 0)
+        quickstart_compa = 0;
+    if (quickstart_compa > qs_compa_max(quickstart_model))
+        quickstart_compa = qs_compa_max(quickstart_model);
+    built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, quickstart_compa, 0);
 
     // Enforce constraints similar to WinUAE
     if (quickstart_model <= 4) { // A500, A500+, A600, A1000, A1200
@@ -294,6 +307,34 @@ void render_panel_quickstart() {
             // Bevel around the combo frame
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         }
+
+        // Compatibility vs Required CPU Power row
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Compatibility:");
+        ImGui::TableSetColumnIndex(1);
+        static const char* compa_labels[] = {
+            "Best compatibility (cycle-exact)",
+            "Good compatibility (approximate)",
+            "Less compatible (faster CPU)",
+            "Low compatibility (fastest CPU)",
+            "Low compatibility (JIT)"
+        };
+        const int compa_max = qs_compa_max(quickstart_model);
+        if (quickstart_compa > compa_max)
+            quickstart_compa = compa_max;
+        if (quickstart_compa < 0)
+            quickstart_compa = 0;
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::SliderInt("##QSCompatibility", &quickstart_compa, 0, compa_max, compa_labels[quickstart_compa])) {
+            Quickstart_ApplyDefaults();
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            ImGui::SetTooltip("Trade emulation accuracy for less host CPU usage.\n"
+                "Use 'Good compatibility' or lower on slow systems (e.g. Raspberry Pi 4).");
+        }
+
         ImGui::EndTable();
     }
     EndGroupBox("Emulated Hardware");

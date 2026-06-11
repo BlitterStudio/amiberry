@@ -166,6 +166,7 @@ static volatile bool cpu_wakeup_event_triggered;
 
 int quickstart_model = 0;
 int quickstart_conf = 0;
+int quickstart_compa = 0;
 bool host_poweroff = false;
 int relativepaths = 0;
 int saveimageoriginalpath = 0;
@@ -10283,6 +10284,7 @@ int amiberry_main(int argc, char* argv[])
 	}
 	if (force_perf_log)
 		amiberry_options.perf_log = true;
+	quickstart_compa = amiberry_options.default_quickstart_compatibility;
 	migrate_legacy_configuration_directories(portable_mode);
 	migrate_legacy_visual_asset_directories();
 	migrate_legacy_lowercase_content_directories();

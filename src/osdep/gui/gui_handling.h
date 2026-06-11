@@ -341,6 +341,7 @@ void gui_config_mark_clean();
 
 extern int quickstart_model;
 extern int quickstart_conf;
+extern int quickstart_compa;
 
 typedef struct {
 	char Name[MAX_DPATH];
