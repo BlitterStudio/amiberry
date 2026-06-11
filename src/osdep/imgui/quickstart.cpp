@@ -330,6 +330,7 @@ void render_panel_quickstart() {
         if (ImGui::SliderInt("##QSCompatibility", &quickstart_compa, 0, compa_max, compa_labels[quickstart_compa])) {
             Quickstart_ApplyDefaults();
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             ImGui::SetTooltip("Trade emulation accuracy for less host CPU usage.\n"
                 "Use 'Good compatibility' or lower on slow systems (e.g. Raspberry Pi 4).");
