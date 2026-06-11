@@ -2684,23 +2684,20 @@ void run_gui()
 		}
 		if (ImGui::BeginPopupModal("Performance Warning", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
 		{
-			ImGui::TextWrapped("This system cannot maintain full emulation speed with the current "
-				"accuracy settings (the emulated Amiga is running below 100%% speed, which also "
-				"distorts audio).");
+			ImGui::TextWrapped("This system cannot keep up with the current settings - the emulated "
+				"Amiga is running below full speed, which also affects audio.");
 			ImGui::Spacing();
-			ImGui::TextWrapped("Switching to Approximate accuracy disables cycle-exact CPU, memory "
-				"and blitter timing. Most games and applications run correctly with it, and it is "
-				"significantly faster. A few timing-sensitive titles may require full cycle-exact "
-				"accuracy.");
+			ImGui::TextWrapped("Enabling resolution autoswitch lets Amiberry drop the output to low "
+				"resolution when the displayed screen allows it, which significantly reduces the "
+				"rendering cost. Emulation accuracy is unchanged - only horizontal sharpness is "
+				"softened on high-resolution screens.");
 			ImGui::Spacing();
 			ImGui::Separator();
 			static bool perf_warning_dont_ask = false;
 			ImGui::Checkbox("Don't warn me again", &perf_warning_dont_ask);
 			ImGui::Spacing();
-			if (AmigaButton("Switch to Approximate", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
-				changed_prefs.cpu_cycle_exact = false;
-				changed_prefs.cpu_memory_cycle_exact = false;
-				changed_prefs.blitter_cycle_exact = false;
+			if (AmigaButton("Enable resolution autoswitch", ImVec2(BUTTON_WIDTH * 2.4f, BUTTON_HEIGHT))) {
+				changed_prefs.gfx_autoresolution = 1;
 				perf_monitor_clear_warning();
 				if (perf_warning_dont_ask) {
 					amiberry_options.slow_host_warning = false;

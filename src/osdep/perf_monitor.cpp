@@ -87,7 +87,7 @@ void perf_monitor_frame(uae_s64 frame_ns, uae_s64 idle_ns, uae_s64 vsynctime_ns,
 			warning_pending = true;
 			warning_emitted = true;
 			write_log(_T("PERF: sustained frame overruns detected (%d of last %d frames >10%% over budget). ")
-				_T("This host cannot maintain full emulation speed with the current accuracy settings.\n"),
+				_T("This host cannot maintain full emulation speed with the current settings.\n"),
 				overrun_count, PERF_OVERRUN_WINDOW);
 		}
 	}
