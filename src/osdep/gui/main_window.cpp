@@ -36,6 +36,7 @@
 #include "imgui_internal.h"
 #include "savestate.h"
 #include "target.h"
+#include "perf_monitor.h"
 #include "tinyxml2.h"
 #include "file_dialog.h"
 #include "macos_window.h"
@@ -1921,6 +1922,7 @@ static bool show_disk_info = false;
 static char disk_info_title[128] = {0};
 static std::vector<std::string> disk_info_text;
 static bool open_legacy_cleanup_popup = false;
+static bool open_perf_warning_popup = false;
 static std::vector<std::string> legacy_cleanup_text;
 static std::string legacy_cleanup_error_message;
 
@@ -1988,6 +1990,10 @@ void run_gui()
 	legacy_cleanup_text = get_legacy_cleanup_prompt_items();
 	if (open_legacy_cleanup_popup)
 		legacy_cleanup_error_message.clear();
+
+	// Slow-host warning raised during emulation: surface it now that the GUI is open
+	if (perf_monitor_warning_pending())
+		open_perf_warning_popup = true;
 
 	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
@@ -2666,6 +2672,51 @@ void run_gui()
 				ImGui::CloseCurrentPopup();
 			}
 
+			ImGui::EndPopup();
+		}
+
+		if (open_perf_warning_popup && !show_message_box) {
+			const float pw_vw = vp->Size.x;
+			ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(pw_vw * 0.56f, 0.0f), ImGuiCond_Appearing);
+			ImGui::OpenPopup("Performance Warning");
+			open_perf_warning_popup = false;
+		}
+		if (ImGui::BeginPopupModal("Performance Warning", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+		{
+			ImGui::TextWrapped("This system cannot maintain full emulation speed with the current "
+				"accuracy settings (the emulated Amiga is running below 100%% speed, which also "
+				"distorts audio).");
+			ImGui::Spacing();
+			ImGui::TextWrapped("Switching to Approximate accuracy disables cycle-exact CPU, memory "
+				"and blitter timing. Most games and applications run correctly with it, and it is "
+				"significantly faster. A few timing-sensitive titles may require full cycle-exact "
+				"accuracy.");
+			ImGui::Spacing();
+			ImGui::Separator();
+			static bool perf_warning_dont_ask = false;
+			ImGui::Checkbox("Don't warn me again", &perf_warning_dont_ask);
+			ImGui::Spacing();
+			if (AmigaButton("Switch to Approximate", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+				changed_prefs.cpu_cycle_exact = false;
+				changed_prefs.cpu_memory_cycle_exact = false;
+				changed_prefs.blitter_cycle_exact = false;
+				perf_monitor_clear_warning();
+				if (perf_warning_dont_ask) {
+					amiberry_options.slow_host_warning = false;
+					save_amiberry_settings();
+				}
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (AmigaButton("Keep settings", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+				perf_monitor_clear_warning();
+				if (perf_warning_dont_ask) {
+					amiberry_options.slow_host_warning = false;
+					save_amiberry_settings();
+				}
+				ImGui::CloseCurrentPopup();
+			}
 			ImGui::EndPopup();
 		}
 
