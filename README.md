@@ -89,8 +89,6 @@ brew install --cask amiberry
 
 Download the [installer or portable ZIP](https://github.com/BlitterStudio/amiberry/releases/latest).  x64 and ARM64 (Windows-on-ARM / Snapdragon X, Copilot+) builds are both published.  The portable ZIP includes the `amiberry.portable` marker, so writable paths stay next to `Amiberry.exe` without extra setup.
 
-Windows release binaries are signed through SignPath. See the [Code signing policy](https://amiberry.com/code-signing-policy).
-
 > **Windows ARM64 in a VM (VMware Fusion / Parallels / Hyper-V):** the guest usually has no OpenGL ICD installed, so Amiberry's GL init fails at startup.  Drop Mesa3D's `opengl32.dll` (`mesa-llvmpipe-arm64` from [mmozeiko/build-mesa](https://github.com/mmozeiko/build-mesa/releases)) next to `Amiberry.exe` — that gives you software OpenGL 3.3+ and the GUI comes up.  Native WoA hardware doesn't need this workaround.
 
 ### Android
@@ -111,6 +109,10 @@ git clone --depth 1 https://github.com/freebsd/freebsd-ports /usr/ports
 cd /usr/ports/emulators/amiberry
 make install
 ```
+
+## Code Signing
+
+Release binaries are signed through SignPath. See the [Code signing policy](https://amiberry.com/code-signing-policy) for signing scope, release approval roles, and privacy notes.
 
 ## Documentation
 
