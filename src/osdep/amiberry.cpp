@@ -131,6 +131,7 @@ int multithread_enabled = 1;
 static TCHAR* inipath = nullptr;
 extern FILE* debugfile;
 static int forceroms;
+static bool force_perf_log;
 static void* tablet;
 SDL_Cursor* normalcursor;
 
@@ -5955,6 +5956,10 @@ void save_amiberry_settings()
 
 	// Enable frameskip by default?
 	write_bool_option("default_frameskip", amiberry_options.default_frameskip);
+	write_bool_option("perf_log", amiberry_options.perf_log);
+	write_bool_option("slow_host_warning", amiberry_options.slow_host_warning);
+	write_bool_option("default_disable_cycle_exact", amiberry_options.default_disable_cycle_exact);
+	write_int_option("default_quickstart_compatibility", amiberry_options.default_quickstart_compatibility);
 
 	// Correct Aspect Ratio by default?
 	write_bool_option("default_correct_aspect_ratio", amiberry_options.default_correct_aspect_ratio);
@@ -6347,6 +6352,10 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
 		ret |= cfgfile_intval(option, value, "default_gfx_autoresolution", &amiberry_options.default_gfx_autoresolution, 1);
 		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
+		ret |= cfgfile_yesno(option, value, "perf_log", &amiberry_options.perf_log);
+		ret |= cfgfile_yesno(option, value, "slow_host_warning", &amiberry_options.slow_host_warning);
+		ret |= cfgfile_yesno(option, value, "default_disable_cycle_exact", &amiberry_options.default_disable_cycle_exact);
+		ret |= cfgfile_intval(option, value, "default_quickstart_compatibility", &amiberry_options.default_quickstart_compatibility, 1);
 		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
 		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_crop);
 		ret |= cfgfile_yesno(option, value, "default_auto_crop", &amiberry_options.default_auto_crop);
@@ -10180,6 +10189,8 @@ int amiberry_main(int argc, char* argv[])
 			download_whdboot = true;
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
 			forceroms = 1;
+		if (_tcscmp(argv[i], _T("--perf-log")) == 0)
+			force_perf_log = true;
 	}
 
 	if (run_jit_selftest)
@@ -10254,6 +10265,8 @@ int amiberry_main(int argc, char* argv[])
 	init_amiberry_dirs(portable_mode);
 	if (config_found)
 		load_amiberry_settings();
+	if (force_perf_log)
+		amiberry_options.perf_log = true;
 	migrate_legacy_configuration_directories(portable_mode);
 	migrate_legacy_visual_asset_directories();
 	migrate_legacy_lowercase_content_directories();
