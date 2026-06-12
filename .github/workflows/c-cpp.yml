@@ -541,7 +541,7 @@ jobs:
             artifact_name: amiberry-ubuntu-25.10-amd64
             sdl_source: setup-sdl
             codename: questing
-            extra_cmake_args:
+            extra_cmake_args: -DBUNDLE_SDL=ON
             qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
@@ -611,7 +611,7 @@ jobs:
         uses: libsdl-org/setup-sdl@4ebea449684c989388fe6bcea0460e300d13a5ae
         with:
           install-linux-dependencies: true
-          version: 3.4.4
+          version: 3.4.10
           version-sdl-image: 3.4.4
           pre-release: false
 
