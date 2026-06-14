@@ -46,6 +46,14 @@ extern addrbank uaesndboard_bank_z2, uaesndboard_bank_z3;
 
 #define MAX_UAE_CHANNELS 8
 #define MAX_UAE_STREAMS 8
+#define UAESND_CAP_24_32BIT 1
+#define UAESND_CAP_MONO_HPAN 2
+#define UAESND_CAP_DIAGNOSTICS 4
+#define UAESND_DIAG_VERSION 1
+#define UAESND_ERR_NONE 0
+#define UAESND_ERR_INVALID_SET 1
+#define UAESND_ERR_STREAM_ALLOC 2
+
 struct uaesndboard_stream
 {
 	int streamid;
@@ -97,9 +105,34 @@ struct uaesndboard_data
 	int volume[MAX_UAE_CHANNELS];
 	struct uaesndboard_stream stream[MAX_UAE_STREAMS];
 	uae_u8 info[256];
+	uae_u32 invalid_set_count;
+	uae_u32 stream_alloc_failure_count;
+	uae_u32 stream_start_count;
+	uae_u32 stream_stop_count;
+	uae_u32 stream_irq_count;
+	uae_u32 timer_irq_count;
+	uae_u32 last_error_code;
 };
 
 static struct uaesndboard_data uaesndboard[MAX_DUPLICATE_SOUND_BOARDS];
+
+static void uaesnd_update_info(struct uaesndboard_data *data)
+{
+	put_long_host(data->info + 24, UAESND_CAP_24_32BIT | UAESND_CAP_MONO_HPAN | UAESND_CAP_DIAGNOSTICS);
+	put_long_host(data->info + 28, UAESND_DIAG_VERSION);
+	put_long_host(data->info + 32, data->invalid_set_count);
+	put_long_host(data->info + 36, data->stream_alloc_failure_count);
+	put_long_host(data->info + 40, data->stream_start_count);
+	put_long_host(data->info + 44, data->stream_stop_count);
+	put_long_host(data->info + 48, data->stream_irq_count);
+	put_long_host(data->info + 52, data->timer_irq_count);
+	put_long_host(data->info + 56, data->last_error_code);
+}
+
+static void uaesnd_set_error(struct uaesndboard_data *data, uae_u32 error_code)
+{
+	data->last_error_code = error_code;
+}
 
 /*
 	autoconfig data:
@@ -136,8 +169,8 @@ static struct uaesndboard_data uaesndboard[MAX_DUPLICATE_SOUND_BOARDS];
 	35.B if mono stream, bit mask that selects output channels. (0=default, redirect to left and right channels)
 	(Can be used for example when playing tracker modules by using 4 single channel streams)
 	stereo or higher: channel mode.
-	36.W horizontal panning (-32767 to 32767). Not yet implemented  Must be zero.
-	38.W front to back panning (-32767 to 32767). Not yet implemented. Must be zero.
+	36.W horizontal panning (-32767 to 32767). Implemented for mono streams.
+	38.W front to back panning (-32767 to 32767). Reserved. Must be zero.
 	40.L original address (RO)
 	44.L original length (RO)
 
@@ -168,6 +201,15 @@ static struct uaesndboard_data uaesndboard[MAX_DUPLICATE_SOUND_BOARDS];
 	$008E.B max number of simultaneous audio streams (currently 8)
 	$0090.L offset to RAM from board base address (or zero if no RAM)
 	$0094.L size of RAM (or zero if no RAM)
+	$0098.L UAESND capability bit mask. 0=24/32-bit samples, 1=mono horizontal panning, 2=diagnostics.
+	$009C.L diagnostics block version.
+	$00A0.L invalid sample set count.
+	$00A4.L host stream allocation failure count.
+	$00A8.L stream start count.
+	$00AC.L stream stop count.
+	$00B0.L stream IRQ count.
+	$00B4.L timer IRQ count.
+	$00B8.L last error code. 0=none, 1=invalid sample set, 2=stream allocation failure.
 
 	$00E0.L allocated streams, bit mask. Hardware level stream allocation feature, use single test and set/clear instruction or
 			disable interrupts before allocating/freeing streams. If stream bit is not set, stream's address range is inactive.
@@ -297,6 +339,7 @@ static void uaesndboard_stop(struct uaesndboard_data *data, struct uaesndboard_s
 	write_log("UAESND %d: STOP\n", s - data->stream);
 #endif
 
+	data->stream_stop_count++;
 	s->play = 0;
 	s->next = 0;
 	data->streammask &= ~(1 << (s - data->stream));
@@ -323,6 +366,8 @@ static void uaesndboard_maybe_alloc_stream(struct uaesndboard_data *data, struct
 #endif
 
 		if (!s->streamid) {
+			data->stream_alloc_failure_count++;
+			uaesnd_set_error(data, UAESND_ERR_STREAM_ALLOC);
 			uaesndboard_stop(data, s);
 		}
 	}
@@ -401,6 +446,7 @@ static void uaesndboard_start(struct uaesndboard_data *data, struct uaesndboard_
 #endif
 
 	s->play = 1;
+	data->stream_start_count++;
 	for (int i = 0; i < MAX_UAE_CHANNELS; i++) {
 		s->sample[i] = 0;
 	}
@@ -586,13 +632,20 @@ static bool uaesnd_directload(struct uaesndboard_data *data, struct uaesndboard_
 		s->panx = get_word_host(s->io + 36);
 		s->pany = get_word_host(s->io + 38);
 	}
-	return uaesnd_validate(data, s);
+	if (!uaesnd_validate(data, s)) {
+		data->invalid_set_count++;
+		uaesnd_set_error(data, UAESND_ERR_INVALID_SET);
+		return false;
+	}
+	return true;
 }
 
 static bool uaesnd_next(struct uaesndboard_data *data, struct uaesndboard_stream *s, uaecptr addr)
 {
 	if ((addr & 3) || !valid_address(addr, STREAM_STRUCT_SIZE) || addr < 0x100) {
 		write_log(_T("UAESND: invalid sample set pointer %08x\n"), addr);
+		data->invalid_set_count++;
+		uaesnd_set_error(data, UAESND_ERR_INVALID_SET);
 		return false;
 	}
 
@@ -601,7 +654,12 @@ static bool uaesnd_next(struct uaesndboard_data *data, struct uaesndboard_stream
 	s->first = 10;
 	s->repeating = false;
 
-	return uaesnd_validate(data, s);
+	if (!uaesnd_validate(data, s)) {
+		data->invalid_set_count++;
+		uaesnd_set_error(data, UAESND_ERR_INVALID_SET);
+		return false;
+	}
+	return true;
 }
 
 static void uaesnd_stream_start(struct uaesndboard_data *data, struct uaesndboard_stream *s, bool always)
@@ -624,8 +682,12 @@ static void uaesnd_stream_start(struct uaesndboard_data *data, struct uaesndboar
 
 static void uaesnd_irq(struct uaesndboard_stream *s, uae_u8 mask)
 {
+	struct uaesndboard_data *data = &uaesndboard[0];
 	uae_u8 enablemask = s->masterintenamask;
 	uae_u8 intenamask = s->intenamask | 0x10 | 0x20 | 0x40;
+	data->stream_irq_count++;
+	if (mask & 0x10)
+		data->timer_irq_count++;
 	s->intreqmask |= mask;
 	if ((intenamask & mask) && (enablemask & mask)) {
 		s->intreqmask |= 0x80;
@@ -950,6 +1012,7 @@ static uae_u32 REGPARAM2 uaesndboard_bget(uaecptr addr)
 			s->io[0x93] = (s->play ? 1 : 0) | (s->streamid > 0 ? 2 : 0) | (s->repeating ? 4 : 0);
 			v = get_byte_host(s->io + reg);
 		} else if (addr >= 0x80 && addr < 0xe0) {
+			uaesnd_update_info(data);
 			v = get_byte_host(data->info + (addr & 0x7f));
 		} else if (addr >= 0xe0 && addr <= 0xe3) {
 			v = data->streamallocmask >> (8 * (3 - (addr - 0xe0)));
@@ -992,6 +1055,7 @@ static uae_u32 REGPARAM2 uaesndboard_wget(uaecptr addr)
 			}
 			v = get_word_host(s->io + reg);
 		} else if (addr >= 0x80 && addr < 0xe0 - 1) {
+			uaesnd_update_info(data);
 			v = get_word_host(data->info + (addr & 0x7f));
 		} else if (addr == 0xe0) {
 			v = data->streamallocmask >> 16;
@@ -1033,6 +1097,7 @@ static uae_u32 REGPARAM2 uaesndboard_lget(uaecptr addr)
 				s->intreqmask = 0;
 			v = get_long_host(s->io + reg);
 		} else if (addr >= 0x80 && addr < 0xe0 - 3) {
+			uaesnd_update_info(data);
 			v = get_long_host(data->info + (addr & 0x7f));
 		} else if (addr == 0xe0) {
 			v = data->streamallocmask;
@@ -1229,6 +1294,13 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	data->enabled = true;
 	data->z3 = z == 3;
 	memset(data->acmemory, 0xff, sizeof data->acmemory);
+	data->invalid_set_count = 0;
+	data->stream_alloc_failure_count = 0;
+	data->stream_start_count = 0;
+	data->stream_stop_count = 0;
+	data->stream_irq_count = 0;
+	data->timer_irq_count = 0;
+	data->last_error_code = UAESND_ERR_NONE;
 	const struct expansionromtype *ert = get_device_expansion_rom(z == 3 ? ROMTYPE_UAESNDZ3 : ROMTYPE_UAESNDZ2);
 	if (!ert)
 		return false;
@@ -1244,6 +1316,7 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	put_byte_host(data->info + 14, MAX_UAE_STREAMS);
 	put_long_host(data->info + 16, data->z3 ? 8 * 1024 * 1024 : 0x8000);
 	put_long_host(data->info + 20, data->z3 ? 8 * 1024 * 1024 : 0x8000);
+	uaesnd_update_info(data);
 	for (int i = 0; i < 16; i++) {
 		uae_u8 b = ert->autoconfig[i];
 		ew(data->acmemory, i * 4, b);

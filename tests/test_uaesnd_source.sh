@@ -19,6 +19,20 @@ grep -F -q 'reg == 36 || reg == 38' src/sndboard.cpp
 grep -F -q 's->panx = get_word_host(s->io + 36);' src/sndboard.cpp
 grep -F -q 's->pany = get_word_host(s->io + 38);' src/sndboard.cpp
 grep -F -q 'highestch = i + 1;' src/sndboard.cpp
+grep -F -q '#define UAESND_CAP_24_32BIT' src/sndboard.cpp
+grep -F -q '#define UAESND_CAP_MONO_HPAN' src/sndboard.cpp
+grep -F -q '#define UAESND_CAP_DIAGNOSTICS' src/sndboard.cpp
+grep -F -q 'uae_u32 invalid_set_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 stream_alloc_failure_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 stream_start_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 stream_stop_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 stream_irq_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 timer_irq_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 last_error_code;' src/sndboard.cpp
+grep -F -q 'static void uaesnd_update_info(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'put_long_host(data->info + 24, UAESND_CAP_' src/sndboard.cpp
+grep -F -q 'put_long_host(data->info + 32, data->invalid_set_count);' src/sndboard.cpp
+grep -F -q 'put_long_host(data->info + 52, data->timer_irq_count);' src/sndboard.cpp
 if grep -F -q 'Panning values must be zeros' src/sndboard.cpp; then
 	echo "UAESND should accept and apply non-zero panning values" >&2
 	exit 1
