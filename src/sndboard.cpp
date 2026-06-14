@@ -17,6 +17,7 @@
 #include "debug.h"
 #include "sndboard.h"
 #include "audio.h"
+#include "sounddep/sound.h"
 #include "autoconf.h"
 #include "pci_hw.h"
 #include "uaesnd_capture_fifo.h"
@@ -3623,6 +3624,8 @@ static SDL_AudioStream *capture_stream;
 static uae_u8 *capture_buffer;
 static int capture_buffer_size;
 static bool capture_started;
+static int capture_read_count;
+static bool capture_nonzero_seen;
 
 static uae_u8 *sndboard_get_buffer(int *frames)
 {
@@ -3648,6 +3651,22 @@ static uae_u8 *sndboard_get_buffer(int *frames)
 	}
 	bytes_read &= ~3;
 	*frames = bytes_read / 4;
+	if (bytes_read > 0) {
+		bool has_signal = false;
+		for (int i = 0; i < bytes_read; i++) {
+			if (capture_buffer[i] != 0) {
+				has_signal = true;
+				break;
+			}
+		}
+		capture_read_count++;
+		if (has_signal && !capture_nonzero_seen) {
+			capture_nonzero_seen = true;
+			write_log(_T("sndboard SDL capture received first non-silent buffer after %d reads\n"), capture_read_count);
+		} else if (!has_signal && capture_read_count <= 5) {
+			write_log(_T("sndboard SDL capture read %d bytes of silence from host input\n"), bytes_read);
+		}
+	}
 	return *frames > 0 ? capture_buffer : NULL;
 }
 
@@ -3668,6 +3687,8 @@ static void sndboard_free_capture(int owner)
 	capture_buffer = NULL;
 	capture_buffer_size = 0;
 	capture_started = false;
+	capture_read_count = 0;
+	capture_nonzero_seen = false;
 	capture_owner = SNDBOARD_CAPTURE_OWNER_NONE;
 }
 
@@ -3684,7 +3705,20 @@ static bool sndboard_init_capture(int freq, int owner)
 	spec.channels = 2;
 	spec.freq = freq;
 
-	capture_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, NULL, NULL);
+	enumerate_sound_devices();
+
+	const int recordcard = currprefs.samplersoundcard;
+	const bool use_default_device = recordcard < 0 || recordcard >= MAX_SOUND_DEVICES
+		|| record_devices[recordcard] == NULL;
+	const SDL_AudioDeviceID device_id = use_default_device
+		? SDL_AUDIO_DEVICE_DEFAULT_RECORDING
+		: (SDL_AudioDeviceID)record_devices[recordcard]->id;
+
+	capture_stream = SDL_OpenAudioDeviceStream(device_id, &spec, NULL, NULL);
+	if (!capture_stream && !use_default_device) {
+		write_log(_T("sndboard SDL capture selected device failed, retrying with default: %s\n"), SDL_GetError());
+		capture_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, NULL, NULL);
+	}
 	if (!capture_stream) {
 		write_log(_T("sndboard SDL capture init failed: %s\n"), SDL_GetError());
 		sndboard_free_capture(owner);
@@ -3698,7 +3732,10 @@ static bool sndboard_init_capture(int freq, int owner)
 
 	SDL_ResumeAudioStreamDevice(capture_stream);
 	capture_started = true;
-	write_log(_T("sndboard SDL capture started: freq=%d\n"), freq);
+	capture_read_count = 0;
+	capture_nonzero_seen = false;
+	write_log(_T("sndboard SDL capture started: freq=%d device=%s\n"),
+		freq, use_default_device ? _T("default") : record_devices[recordcard]->name);
 	return true;
 }
 

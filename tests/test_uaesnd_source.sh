@@ -88,6 +88,10 @@ grep -F -q 'SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING' src/sn
 grep -F -q 'SDL_GetAudioStreamAvailable(capture_stream)' src/sndboard.cpp
 grep -F -q 'SDL_GetAudioStreamData(capture_stream, capture_buffer, bytes)' src/sndboard.cpp
 grep -F -q 'spec.format = SDL_AUDIO_S16LE;' src/sndboard.cpp
+grep -F -q 'currprefs.samplersoundcard' src/sndboard.cpp
+grep -F -q 'record_devices[recordcard]' src/sndboard.cpp
+grep -F -q 'currprefs.samplersoundcard' src/osdep/ahi_v1.cpp
+grep -F -q 'record_devices[recordcard]' src/osdep/ahi_v1.cpp
 grep -F -q 'SDL_DestroyAudioStream(capture_stream)' src/sndboard.cpp
 grep -F -q 'uae_u32 invalid_set_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 stream_alloc_failure_count;' src/sndboard.cpp
