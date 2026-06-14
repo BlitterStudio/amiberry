@@ -235,6 +235,12 @@ static void uaesnd_capture_write_byte(struct uaesnd_capture_state *capture, uae_
 	capture->available = uaesnd_capture_available(capture);
 }
 
+static void uaesnd_capture_write_s16be(struct uaesnd_capture_state *capture, int sample)
+{
+	uaesnd_capture_write_byte(capture, sample >> 8);
+	uaesnd_capture_write_byte(capture, sample);
+}
+
 static void uaesnd_capture_process(struct uaesndboard_data *data)
 {
 	if (!(data->capture.status & UAESND_CAPTURE_STATUS_ACTIVE))
@@ -242,9 +248,11 @@ static void uaesnd_capture_process(struct uaesndboard_data *data)
 	int frames = 0;
 	uae_u8 *buffer = sndboard_get_buffer(&frames);
 	if (buffer && frames > 0) {
-		int bytes = frames * 2 * 2;
-		for (int i = 0; i < bytes; i++)
-			uaesnd_capture_write_byte(&data->capture, buffer[i]);
+		int samples = frames * 2;
+		for (int i = 0; i < samples; i++) {
+			int sample = (uae_s16)(buffer[i * 2 + 0] | (buffer[i * 2 + 1] << 8));
+			uaesnd_capture_write_s16be(&data->capture, sample);
+		}
 	}
 	sndboard_release_buffer(buffer, frames);
 }
@@ -3556,7 +3564,7 @@ static bool sndboard_init_capture(int freq)
 		sndboard_free_capture();
 
 	SDL_AudioSpec spec;
-	spec.format = SDL_AUDIO_S16;
+	spec.format = SDL_AUDIO_S16LE;
 	spec.channels = 2;
 	spec.freq = freq;
 

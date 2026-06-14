@@ -39,6 +39,8 @@ grep -F -q 'static void uaesnd_capture_start(struct uaesndboard_data *data)' src
 grep -F -q 'static void uaesnd_capture_stop(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_process(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static void uaesnd_capture_write_s16be' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_write_s16be(&data->capture, sample)' src/sndboard.cpp
 grep -F -q 'sndboard_init_capture(data->capture.frequency)' src/sndboard.cpp
 grep -F -q 'sndboard_get_buffer(&frames)' src/sndboard.cpp
 grep -F -q 'sndboard_release_buffer(buffer, frames)' src/sndboard.cpp
@@ -48,6 +50,7 @@ grep -F -q 'static SDL_AudioStream *capture_stream;' src/sndboard.cpp
 grep -F -q 'SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING' src/sndboard.cpp
 grep -F -q 'SDL_GetAudioStreamAvailable(capture_stream)' src/sndboard.cpp
 grep -F -q 'SDL_GetAudioStreamData(capture_stream, capture_buffer, bytes)' src/sndboard.cpp
+grep -F -q 'spec.format = SDL_AUDIO_S16LE;' src/sndboard.cpp
 grep -F -q 'SDL_DestroyAudioStream(capture_stream)' src/sndboard.cpp
 grep -F -q 'uae_u32 invalid_set_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 stream_alloc_failure_count;' src/sndboard.cpp
