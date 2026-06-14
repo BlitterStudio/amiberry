@@ -219,6 +219,7 @@ set(SOURCE_FILES
         src/osdep/host_detect.cpp
         src/osdep/midi.cpp
         src/osdep/perf_monitor.cpp
+        src/osdep/mhi_host.cpp
         src/osdep/mp3decoder.cpp
         src/osdep/picasso96.cpp
         src/osdep/writelog.cpp
