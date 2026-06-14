@@ -582,6 +582,10 @@ static bool uaesnd_directload(struct uaesndboard_data *data, struct uaesndboard_
 		// current-set volume writes take effect while playing
 		s->volume = get_word_host(s->io + 26);
 	}
+	if (reg < 0 || reg == 36 || reg == 38) {
+		s->panx = get_word_host(s->io + 36);
+		s->pany = get_word_host(s->io + 38);
+	}
 	return uaesnd_validate(data, s);
 }
 

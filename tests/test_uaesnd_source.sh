@@ -15,6 +15,9 @@ grep -F -q 's->framesize = uaesnd_sample_bytes(s->bitmode) * s->ch;' src/sndboar
 grep -F -q 'static void uaesnd_apply_mono_pan' src/sndboard.cpp
 grep -F -q 's->sample[0] = smp * (32768 - s->panx) / 32768;' src/sndboard.cpp
 grep -F -q 's->sample[1] = smp * (32768 + s->panx) / 32768;' src/sndboard.cpp
+grep -F -q 'reg == 36 || reg == 38' src/sndboard.cpp
+grep -F -q 's->panx = get_word_host(s->io + 36);' src/sndboard.cpp
+grep -F -q 's->pany = get_word_host(s->io + 38);' src/sndboard.cpp
 grep -F -q 'highestch = i + 1;' src/sndboard.cpp
 if grep -F -q 'Panning values must be zeros' src/sndboard.cpp; then
 	echo "UAESND should accept and apply non-zero panning values" >&2
