@@ -60,11 +60,14 @@ extern addrbank uaesndboard_bank_z2, uaesndboard_bank_z3;
 #define UAESND_ERR_STREAM_ALLOC 2
 #define UAESND_CAPTURE_REG_DATA 0xc0
 #define UAESND_CAPTURE_REG_OVERRUNS 0xc4
+#define UAESND_CAPTURE_REG_INTREQ 0xc8
+#define UAESND_CAPTURE_REG_THRESHOLD 0xcc
 #define UAESND_CAPTURE_REG_CONTROL 0xd0
 #define UAESND_CAPTURE_REG_STATUS 0xd4
 #define UAESND_CAPTURE_REG_FREQUENCY 0xd8
 #define UAESND_CAPTURE_REG_AVAILABLE 0xdc
 #define UAESND_CAPTURE_CONTROL_ENABLE 1
+#define UAESND_CAPTURE_CONTROL_IRQ_ENABLE 2
 #define UAESND_CAPTURE_STATUS_UNAVAILABLE 1
 #define UAESND_CAPTURE_STATUS_ACTIVE 2
 #define UAESND_CAPTURE_STATUS_OVERRUN 4
@@ -114,6 +117,8 @@ struct uaesnd_capture_state
 	uae_u32 frequency;
 	uae_u32 available;
 	uae_u32 overrun_count;
+	uae_u32 intreq;
+	uae_u32 threshold;
 	int buffer_size;
 	int read_index;
 	int write_index;
@@ -217,6 +222,7 @@ static void uaesnd_capture_stop(struct uaesndboard_data *data)
 	data->capture.buffer_size = 0;
 	data->capture.control &= ~UAESND_CAPTURE_CONTROL_ENABLE;
 	data->capture.status = 0;
+	data->capture.intreq = 0;
 	uaesnd_capture_reset_buffer(&data->capture);
 }
 
@@ -253,8 +259,16 @@ static void uaesnd_capture_process(struct uaesndboard_data *data)
 			int sample = (uae_s16)(buffer[i * 2 + 0] | (buffer[i * 2 + 1] << 8));
 			uaesnd_capture_write_s16be(&data->capture, sample);
 		}
+		if ((data->capture.control & UAESND_CAPTURE_CONTROL_IRQ_ENABLE) && data->capture.threshold > 0 && data->capture.available >= data->capture.threshold)
+			data->capture.intreq = 1;
 	}
 	sndboard_release_buffer(buffer, frames);
+}
+
+static bool uaesnd_capture_rethink(struct uaesndboard_data *data)
+{
+	uaesnd_capture_process(data);
+	return (data->capture.control & UAESND_CAPTURE_CONTROL_IRQ_ENABLE) && data->capture.intreq != 0;
 }
 
 static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)
@@ -275,6 +289,8 @@ static void uaesnd_capture_fill_regs(struct uaesndboard_data *data, uae_u8 *regs
 {
 	uaesnd_capture_process(data);
 	put_long_host(regs + (UAESND_CAPTURE_REG_OVERRUNS - UAESND_CAPTURE_REG_DATA), data->capture.overrun_count);
+	put_long_host(regs + (UAESND_CAPTURE_REG_INTREQ - UAESND_CAPTURE_REG_DATA), data->capture.intreq);
+	put_long_host(regs + (UAESND_CAPTURE_REG_THRESHOLD - UAESND_CAPTURE_REG_DATA), data->capture.threshold);
 	put_long_host(regs + (UAESND_CAPTURE_REG_CONTROL - UAESND_CAPTURE_REG_DATA), data->capture.control);
 	put_long_host(regs + (UAESND_CAPTURE_REG_STATUS - UAESND_CAPTURE_REG_DATA), data->capture.status);
 	put_long_host(regs + (UAESND_CAPTURE_REG_FREQUENCY - UAESND_CAPTURE_REG_DATA), data->capture.frequency);
@@ -310,6 +326,10 @@ static void uaesnd_capture_apply_reg(struct uaesndboard_data *data, int reg, uae
 			uaesnd_capture_stop(data);
 	} else if (reg == UAESND_CAPTURE_REG_FREQUENCY) {
 		data->capture.frequency = value;
+	} else if (reg == UAESND_CAPTURE_REG_INTREQ) {
+		data->capture.intreq = value;
+	} else if (reg == UAESND_CAPTURE_REG_THRESHOLD) {
+		data->capture.threshold = value;
 	}
 }
 
@@ -511,6 +531,9 @@ static bool uaesnd_rethink(void)
 	for (int j = 0; j < MAX_DUPLICATE_SOUND_BOARDS; j++) {
 		struct uaesndboard_data *data = &uaesndboard[j];
 		if (data->enabled) {
+			if (uaesnd_capture_rethink(data)) {
+				irq = true;
+			}
 			for (int i = 0; i < MAX_UAE_STREAMS; i++) {
 				if (data->streamintenamask & (1 << i)) {
 					struct uaesndboard_stream *s = &uaesndboard[j].stream[i];
@@ -1517,6 +1540,8 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	data->capture.frequency = currprefs.sound_freq;
 	data->capture.available = 0;
 	data->capture.overrun_count = 0;
+	data->capture.intreq = 0;
+	data->capture.threshold = 0;
 	data->capture.buffer_size = 0;
 	data->capture.read_index = 0;
 	data->capture.write_index = 0;

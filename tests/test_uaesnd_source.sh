@@ -28,6 +28,9 @@ grep -F -q '#define UAESND_CAPTURE_REG_STATUS' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_AVAILABLE' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_DATA' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_OVERRUNS' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_INTREQ' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_THRESHOLD' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_CONTROL_IRQ_ENABLE 2' src/sndboard.cpp
 grep -F -q 'UAESND_CAP_DIAGNOSTICS | UAESND_CAP_CAPTURE' src/sndboard.cpp
 grep -F -q 'struct uaesnd_capture_state' src/sndboard.cpp
 grep -F -q 'uae_u8 *buffer;' src/sndboard.cpp
@@ -35,9 +38,12 @@ grep -F -q 'int buffer_size;' src/sndboard.cpp
 grep -F -q 'int read_index;' src/sndboard.cpp
 grep -F -q 'int write_index;' src/sndboard.cpp
 grep -F -q 'uae_u32 overrun_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 intreq;' src/sndboard.cpp
+grep -F -q 'uae_u32 threshold;' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_start(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_stop(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_process(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static bool uaesnd_capture_rethink(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_write_s16be' src/sndboard.cpp
 grep -F -q 'uaesnd_capture_write_s16be(&data->capture, sample)' src/sndboard.cpp
