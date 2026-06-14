@@ -40,6 +40,8 @@ grep -F -q 'int write_index;' src/sndboard.cpp
 grep -F -q 'uae_u32 overrun_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 intreq;' src/sndboard.cpp
 grep -F -q 'uae_u32 threshold;' src/sndboard.cpp
+grep -F -q 'uae_u32 frame_count;' src/sndboard.cpp
+grep -F -q 'uae_u32 dropped_byte_count;' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_start(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_stop(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_process(struct uaesndboard_data *data)' src/sndboard.cpp
@@ -69,6 +71,9 @@ grep -F -q 'static void uaesnd_update_info(struct uaesndboard_data *data)' src/s
 grep -F -q 'put_long_host(data->info + 24, UAESND_CAP_' src/sndboard.cpp
 grep -F -q 'put_long_host(data->info + 32, data->invalid_set_count);' src/sndboard.cpp
 grep -F -q 'put_long_host(data->info + 52, data->timer_irq_count);' src/sndboard.cpp
+grep -F -q 'put_long_host(data->info + 60, data->capture.frame_count);' src/sndboard.cpp
+grep -F -q 'put_long_host(data->info + 64, data->capture.dropped_byte_count);' src/sndboard.cpp
+grep -F -q 'data->capture.status &= value;' src/sndboard.cpp
 if grep -F -q 'Panning values must be zeros' src/sndboard.cpp; then
 	echo "UAESND should accept and apply non-zero panning values" >&2
 	exit 1

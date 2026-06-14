@@ -119,6 +119,8 @@ struct uaesnd_capture_state
 	uae_u32 overrun_count;
 	uae_u32 intreq;
 	uae_u32 threshold;
+	uae_u32 frame_count;
+	uae_u32 dropped_byte_count;
 	int buffer_size;
 	int read_index;
 	int write_index;
@@ -162,6 +164,8 @@ static void uaesnd_update_info(struct uaesndboard_data *data)
 	put_long_host(data->info + 48, data->stream_irq_count);
 	put_long_host(data->info + 52, data->timer_irq_count);
 	put_long_host(data->info + 56, data->last_error_code);
+	put_long_host(data->info + 60, data->capture.frame_count);
+	put_long_host(data->info + 64, data->capture.dropped_byte_count);
 }
 
 static void uaesnd_set_error(struct uaesndboard_data *data, uae_u32 error_code)
@@ -234,6 +238,7 @@ static void uaesnd_capture_write_byte(struct uaesnd_capture_state *capture, uae_
 	if (next == capture->read_index) {
 		capture->read_index = (capture->read_index + 1) % capture->buffer_size;
 		capture->overrun_count++;
+		capture->dropped_byte_count++;
 		capture->status |= UAESND_CAPTURE_STATUS_OVERRUN;
 	}
 	capture->buffer[capture->write_index] = value;
@@ -254,6 +259,7 @@ static void uaesnd_capture_process(struct uaesndboard_data *data)
 	int frames = 0;
 	uae_u8 *buffer = sndboard_get_buffer(&frames);
 	if (buffer && frames > 0) {
+		data->capture.frame_count += frames;
 		int samples = frames * 2;
 		for (int i = 0; i < samples; i++) {
 			int sample = (uae_s16)(buffer[i * 2 + 0] | (buffer[i * 2 + 1] << 8));
@@ -330,6 +336,8 @@ static void uaesnd_capture_apply_reg(struct uaesndboard_data *data, int reg, uae
 		data->capture.intreq = value;
 	} else if (reg == UAESND_CAPTURE_REG_THRESHOLD) {
 		data->capture.threshold = value;
+	} else if (reg == UAESND_CAPTURE_REG_STATUS) {
+		data->capture.status &= value;
 	}
 }
 
@@ -1542,6 +1550,8 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	data->capture.overrun_count = 0;
 	data->capture.intreq = 0;
 	data->capture.threshold = 0;
+	data->capture.frame_count = 0;
+	data->capture.dropped_byte_count = 0;
 	data->capture.buffer_size = 0;
 	data->capture.read_index = 0;
 	data->capture.write_index = 0;
