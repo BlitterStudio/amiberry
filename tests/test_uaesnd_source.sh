@@ -26,9 +26,29 @@ grep -F -q '#define UAESND_CAP_CAPTURE' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_CONTROL' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_STATUS' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_AVAILABLE' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_DATA' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_OVERRUNS' src/sndboard.cpp
+grep -F -q 'UAESND_CAP_DIAGNOSTICS | UAESND_CAP_CAPTURE' src/sndboard.cpp
 grep -F -q 'struct uaesnd_capture_state' src/sndboard.cpp
+grep -F -q 'uae_u8 *buffer;' src/sndboard.cpp
+grep -F -q 'int buffer_size;' src/sndboard.cpp
+grep -F -q 'int read_index;' src/sndboard.cpp
+grep -F -q 'int write_index;' src/sndboard.cpp
+grep -F -q 'uae_u32 overrun_count;' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_start(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_stop(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static void uaesnd_capture_process(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'sndboard_init_capture(data->capture.frequency)' src/sndboard.cpp
+grep -F -q 'sndboard_get_buffer(&frames)' src/sndboard.cpp
+grep -F -q 'sndboard_release_buffer(buffer, frames)' src/sndboard.cpp
+grep -F -q 'sndboard_free_capture()' src/sndboard.cpp
+grep -F -q '#include <SDL3/SDL.h>' src/sndboard.cpp
+grep -F -q 'static SDL_AudioStream *capture_stream;' src/sndboard.cpp
+grep -F -q 'SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING' src/sndboard.cpp
+grep -F -q 'SDL_GetAudioStreamAvailable(capture_stream)' src/sndboard.cpp
+grep -F -q 'SDL_GetAudioStreamData(capture_stream, capture_buffer, bytes)' src/sndboard.cpp
+grep -F -q 'SDL_DestroyAudioStream(capture_stream)' src/sndboard.cpp
 grep -F -q 'uae_u32 invalid_set_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 stream_alloc_failure_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 stream_start_count;' src/sndboard.cpp

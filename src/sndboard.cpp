@@ -23,6 +23,10 @@
 #include "rommgr.h"
 #include "devices.h"
 
+#if defined(AMIBERRY)
+#include <SDL3/SDL.h>
+#endif
+
 #define DEBUG_SNDDEV 0
 #define DEBUG_SNDDEV_READ 0
 #define DEBUG_SNDDEV_WRITE 0
@@ -54,12 +58,16 @@ extern addrbank uaesndboard_bank_z2, uaesndboard_bank_z3;
 #define UAESND_ERR_NONE 0
 #define UAESND_ERR_INVALID_SET 1
 #define UAESND_ERR_STREAM_ALLOC 2
+#define UAESND_CAPTURE_REG_DATA 0xc0
+#define UAESND_CAPTURE_REG_OVERRUNS 0xc4
 #define UAESND_CAPTURE_REG_CONTROL 0xd0
 #define UAESND_CAPTURE_REG_STATUS 0xd4
 #define UAESND_CAPTURE_REG_FREQUENCY 0xd8
 #define UAESND_CAPTURE_REG_AVAILABLE 0xdc
 #define UAESND_CAPTURE_CONTROL_ENABLE 1
 #define UAESND_CAPTURE_STATUS_UNAVAILABLE 1
+#define UAESND_CAPTURE_STATUS_ACTIVE 2
+#define UAESND_CAPTURE_STATUS_OVERRUN 4
 
 struct uaesndboard_stream
 {
@@ -105,6 +113,11 @@ struct uaesnd_capture_state
 	uae_u32 status;
 	uae_u32 frequency;
 	uae_u32 available;
+	uae_u32 overrun_count;
+	int buffer_size;
+	int read_index;
+	int write_index;
+	uae_u8 *buffer;
 };
 
 struct uaesndboard_data
@@ -135,7 +148,7 @@ static struct uaesndboard_data uaesndboard[MAX_DUPLICATE_SOUND_BOARDS];
 
 static void uaesnd_update_info(struct uaesndboard_data *data)
 {
-	put_long_host(data->info + 24, UAESND_CAP_24_32BIT | UAESND_CAP_MONO_HPAN | UAESND_CAP_DIAGNOSTICS);
+	put_long_host(data->info + 24, UAESND_CAP_24_32BIT | UAESND_CAP_MONO_HPAN | UAESND_CAP_DIAGNOSTICS | UAESND_CAP_CAPTURE);
 	put_long_host(data->info + 28, UAESND_DIAG_VERSION);
 	put_long_host(data->info + 32, data->invalid_set_count);
 	put_long_host(data->info + 36, data->stream_alloc_failure_count);
@@ -154,36 +167,119 @@ static void uaesnd_set_error(struct uaesndboard_data *data, uae_u32 error_code)
 static bool uaesnd_capture_addr(uaecptr addr)
 {
 	addr &= 65535;
-	return addr >= UAESND_CAPTURE_REG_CONTROL && addr < 0xe0;
+	return addr >= UAESND_CAPTURE_REG_DATA && addr < 0xe0;
+}
+
+static uae_u32 uaesnd_capture_available(struct uaesnd_capture_state *capture)
+{
+	if (!capture->buffer || capture->buffer_size <= 0)
+		return 0;
+	if (capture->write_index >= capture->read_index)
+		return capture->write_index - capture->read_index;
+	return capture->buffer_size - capture->read_index + capture->write_index;
+}
+
+static void uaesnd_capture_reset_buffer(struct uaesnd_capture_state *capture)
+{
+	capture->read_index = 0;
+	capture->write_index = 0;
+	capture->available = 0;
 }
 
 static void uaesnd_capture_start(struct uaesndboard_data *data)
 {
+	if (data->capture.status & UAESND_CAPTURE_STATUS_ACTIVE)
+		return;
+	if (data->capture.frequency == 0)
+		data->capture.frequency = currprefs.sound_freq;
+	data->capture.buffer_size = data->capture.frequency * 2 * 2;
+	if (data->capture.buffer_size < 4096)
+		data->capture.buffer_size = 4096;
+	data->capture.buffer = xcalloc(uae_u8, data->capture.buffer_size);
+	uaesnd_capture_reset_buffer(&data->capture);
 	data->capture.control |= UAESND_CAPTURE_CONTROL_ENABLE;
-	data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
-	data->capture.available = 0;
+	if (!sndboard_init_capture(data->capture.frequency)) {
+		xfree(data->capture.buffer);
+		data->capture.buffer = NULL;
+		data->capture.buffer_size = 0;
+		data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
+		return;
+	}
+	data->capture.status = UAESND_CAPTURE_STATUS_ACTIVE;
 }
 
 static void uaesnd_capture_stop(struct uaesndboard_data *data)
 {
+	if (data->capture.status & UAESND_CAPTURE_STATUS_ACTIVE)
+		sndboard_free_capture();
+	xfree(data->capture.buffer);
+	data->capture.buffer = NULL;
+	data->capture.buffer_size = 0;
 	data->capture.control &= ~UAESND_CAPTURE_CONTROL_ENABLE;
-	data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
-	data->capture.available = 0;
+	data->capture.status = 0;
+	uaesnd_capture_reset_buffer(&data->capture);
+}
+
+static void uaesnd_capture_write_byte(struct uaesnd_capture_state *capture, uae_u8 value)
+{
+	if (!capture->buffer || capture->buffer_size <= 1)
+		return;
+	int next = (capture->write_index + 1) % capture->buffer_size;
+	if (next == capture->read_index) {
+		capture->read_index = (capture->read_index + 1) % capture->buffer_size;
+		capture->overrun_count++;
+		capture->status |= UAESND_CAPTURE_STATUS_OVERRUN;
+	}
+	capture->buffer[capture->write_index] = value;
+	capture->write_index = next;
+	capture->available = uaesnd_capture_available(capture);
+}
+
+static void uaesnd_capture_process(struct uaesndboard_data *data)
+{
+	if (!(data->capture.status & UAESND_CAPTURE_STATUS_ACTIVE))
+		return;
+	int frames = 0;
+	uae_u8 *buffer = sndboard_get_buffer(&frames);
+	if (buffer && frames > 0) {
+		int bytes = frames * 2 * 2;
+		for (int i = 0; i < bytes; i++)
+			uaesnd_capture_write_byte(&data->capture, buffer[i]);
+	}
+	sndboard_release_buffer(buffer, frames);
+}
+
+static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)
+{
+	uaesnd_capture_process(data);
+	struct uaesnd_capture_state *capture = &data->capture;
+	if (!capture->buffer || capture->read_index == capture->write_index) {
+		capture->available = 0;
+		return 0;
+	}
+	uae_u8 value = capture->buffer[capture->read_index];
+	capture->read_index = (capture->read_index + 1) % capture->buffer_size;
+	capture->available = uaesnd_capture_available(capture);
+	return value;
 }
 
 static void uaesnd_capture_fill_regs(struct uaesndboard_data *data, uae_u8 *regs)
 {
-	put_long_host(regs + 0, data->capture.control);
-	put_long_host(regs + 4, data->capture.status);
-	put_long_host(regs + 8, data->capture.frequency);
-	put_long_host(regs + 12, data->capture.available);
+	uaesnd_capture_process(data);
+	put_long_host(regs + (UAESND_CAPTURE_REG_OVERRUNS - UAESND_CAPTURE_REG_DATA), data->capture.overrun_count);
+	put_long_host(regs + (UAESND_CAPTURE_REG_CONTROL - UAESND_CAPTURE_REG_DATA), data->capture.control);
+	put_long_host(regs + (UAESND_CAPTURE_REG_STATUS - UAESND_CAPTURE_REG_DATA), data->capture.status);
+	put_long_host(regs + (UAESND_CAPTURE_REG_FREQUENCY - UAESND_CAPTURE_REG_DATA), data->capture.frequency);
+	put_long_host(regs + (UAESND_CAPTURE_REG_AVAILABLE - UAESND_CAPTURE_REG_DATA), data->capture.available);
 }
 
 static uae_u8 uaesnd_capture_bget(struct uaesndboard_data *data, uaecptr addr)
 {
-	uae_u8 regs[16];
+	if ((addr & ~3) == UAESND_CAPTURE_REG_DATA)
+		return uaesnd_capture_read_byte(data);
+	uae_u8 regs[32] = {};
 	uaesnd_capture_fill_regs(data, regs);
-	return regs[(addr - UAESND_CAPTURE_REG_CONTROL) & 15];
+	return regs[(addr - UAESND_CAPTURE_REG_DATA) & 31];
 }
 
 static uae_u16 uaesnd_capture_wget(struct uaesndboard_data *data, uaecptr addr)
@@ -211,8 +307,8 @@ static void uaesnd_capture_apply_reg(struct uaesndboard_data *data, int reg, uae
 
 static void uaesnd_capture_put(struct uaesndboard_data *data, uaecptr addr, uae_u32 value, int size)
 {
-	uae_u8 regs[16];
-	int offset = (addr - UAESND_CAPTURE_REG_CONTROL) & 15;
+	uae_u8 regs[32] = {};
+	int offset = (addr - UAESND_CAPTURE_REG_DATA) & 31;
 	int reg = (addr & ~3) & 65535;
 	uaesnd_capture_fill_regs(data, regs);
 	if (size == 4) {
@@ -222,7 +318,7 @@ static void uaesnd_capture_put(struct uaesndboard_data *data, uaecptr addr, uae_
 	} else {
 		regs[offset] = value;
 	}
-	uaesnd_capture_apply_reg(data, reg, get_long_host(regs + (reg - UAESND_CAPTURE_REG_CONTROL)));
+	uaesnd_capture_apply_reg(data, reg, get_long_host(regs + (reg - UAESND_CAPTURE_REG_DATA)));
 }
 
 /*
@@ -1409,9 +1505,14 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	data->timer_irq_count = 0;
 	data->last_error_code = UAESND_ERR_NONE;
 	data->capture.control = 0;
-	data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
+	data->capture.status = 0;
 	data->capture.frequency = currprefs.sound_freq;
 	data->capture.available = 0;
+	data->capture.overrun_count = 0;
+	data->capture.buffer_size = 0;
+	data->capture.read_index = 0;
+	data->capture.write_index = 0;
+	data->capture.buffer = NULL;
 	const struct expansionromtype *ert = get_device_expansion_rom(z == 3 ? ROMTYPE_UAESNDZ3 : ROMTYPE_UAESNDZ2);
 	if (!ert)
 		return false;
@@ -1451,6 +1552,7 @@ static void uaesndboard_free(void)
 {
 	for (int j = 0; j < MAX_DUPLICATE_SOUND_BOARDS; j++) {
 		struct uaesndboard_data *data = &uaesndboard[j];
+		uaesnd_capture_stop(data);
 		data->enabled = false;
 	}
 	mapped_free(&uaesndboard_ram_bank);
@@ -1461,6 +1563,7 @@ static void uaesndboard_reset(int hardreset)
 {
 	for (int j = 0; j < MAX_DUPLICATE_SOUND_BOARDS; j++) {
 		struct uaesndboard_data *data = &uaesndboard[j];
+		uaesnd_capture_stop(data);
 		if (data->enabled) {
 			for (int i = 0; i < MAX_UAE_STREAMS; i++) {
 				if (data->stream[i].streamid) {
@@ -3394,6 +3497,84 @@ Exit:;
 	write_log(_T("sndboard capture init failed %08x\n"), hr);
 	sndboard_free_capture();
 	return false;
+}
+
+#elif defined(AMIBERRY) && !defined(LIBRETRO)
+
+static SDL_AudioStream *capture_stream;
+static uae_u8 *capture_buffer;
+static int capture_buffer_size;
+static bool capture_started;
+
+static uae_u8 *sndboard_get_buffer(int *frames)
+{
+	*frames = -1;
+	if (!capture_started || !capture_stream)
+		return NULL;
+	int available = SDL_GetAudioStreamAvailable(capture_stream);
+	if (available < 0) {
+		write_log(_T("sndboard SDL capture available failed: %s\n"), SDL_GetError());
+		return NULL;
+	}
+	int bytes = available & ~3;
+	if (bytes <= 0) {
+		*frames = 0;
+		return NULL;
+	}
+	if (bytes > capture_buffer_size)
+		bytes = capture_buffer_size & ~3;
+	int bytes_read = SDL_GetAudioStreamData(capture_stream, capture_buffer, bytes);
+	if (bytes_read < 0) {
+		write_log(_T("sndboard SDL capture read failed: %s\n"), SDL_GetError());
+		return NULL;
+	}
+	bytes_read &= ~3;
+	*frames = bytes_read / 4;
+	return *frames > 0 ? capture_buffer : NULL;
+}
+
+static void sndboard_release_buffer(uae_u8 *buffer, int frames)
+{
+}
+
+static void sndboard_free_capture(void)
+{
+	if (capture_stream) {
+		SDL_PauseAudioStreamDevice(capture_stream);
+		SDL_DestroyAudioStream(capture_stream);
+		capture_stream = NULL;
+	}
+	xfree(capture_buffer);
+	capture_buffer = NULL;
+	capture_buffer_size = 0;
+	capture_started = false;
+}
+
+static bool sndboard_init_capture(int freq)
+{
+	if (capture_started)
+		sndboard_free_capture();
+
+	SDL_AudioSpec spec;
+	spec.format = SDL_AUDIO_S16;
+	spec.channels = 2;
+	spec.freq = freq;
+
+	capture_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, NULL, NULL);
+	if (!capture_stream) {
+		write_log(_T("sndboard SDL capture init failed: %s\n"), SDL_GetError());
+		return false;
+	}
+
+	capture_buffer_size = ((freq + 49) / 50) * 4;
+	if (capture_buffer_size < 4096)
+		capture_buffer_size = 4096;
+	capture_buffer = xcalloc(uae_u8, capture_buffer_size);
+
+	SDL_ResumeAudioStreamDevice(capture_stream);
+	capture_started = true;
+	write_log(_T("sndboard SDL capture started: freq=%d\n"), freq);
+	return true;
 }
 
 #else
