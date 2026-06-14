@@ -22,6 +22,7 @@
 #endif
 #include <sys/stat.h>
 #include <algorithm>
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -2221,6 +2222,10 @@ static float get_core_refresh_rate()
 }
 
 static double libretro_audio_deficit_frames = 0.0;
+static std::atomic<bool> libretro_frontend_audio_active{false};
+static std::atomic<unsigned> libretro_frontend_audio_occupancy{100};
+static std::atomic<bool> libretro_frontend_audio_underrun_likely{false};
+static unsigned libretro_frontend_audio_underrun_log_skip = 0;
 
 // Smoothing FIFO between the Amiga audio engine and the libretro frontend.
 // The engine flushes audio in fixed 768-frame chunks that do not align with
@@ -2230,6 +2235,40 @@ static double libretro_audio_deficit_frames = 0.0;
 // -frame each video frame. This mirrors what SDL does for the standalone path.
 static std::vector<int16_t> libretro_audio_fifo;   // interleaved stereo S16
 static double libretro_audio_emit_frac = 0.0;
+static int16_t libretro_audio_last_left = 0;
+static int16_t libretro_audio_last_right = 0;
+static bool libretro_audio_have_last_sample = false;
+
+static void libretro_audio_note_emitted(const int16_t* stereo_frames, size_t frames)
+{
+	if (!stereo_frames || frames == 0)
+		return;
+
+	const size_t last = (frames - 1) * 2;
+	libretro_audio_last_left = stereo_frames[last];
+	libretro_audio_last_right = stereo_frames[last + 1];
+	libretro_audio_have_last_sample = true;
+}
+
+static void libretro_fill_audio_padding(int16_t* stereo_frames, unsigned frames)
+{
+	if (!frames || !stereo_frames)
+		return;
+
+	if (!libretro_audio_have_last_sample) {
+		std::fill(stereo_frames, stereo_frames + static_cast<size_t>(frames) * 2, 0);
+		return;
+	}
+
+	const int start_left = libretro_audio_last_left;
+	const int start_right = libretro_audio_last_right;
+	for (unsigned i = 0; i < frames; i++) {
+		const int remaining = static_cast<int>(frames - i);
+		const int denom = static_cast<int>(frames) + 1;
+		stereo_frames[i * 2] = static_cast<int16_t>(start_left * remaining / denom);
+		stereo_frames[i * 2 + 1] = static_cast<int16_t>(start_right * remaining / denom);
+	}
+}
 
 void libretro_audio_enqueue(const int16_t* stereo_frames, unsigned frames)
 {
@@ -2244,6 +2283,10 @@ void libretro_audio_reset(void)
 	libretro_audio_fifo.clear();
 	libretro_audio_emit_frac = 0.0;
 	libretro_audio_deficit_frames = 0.0;
+	libretro_audio_last_left = 0;
+	libretro_audio_last_right = 0;
+	libretro_audio_have_last_sample = false;
+	libretro_frontend_audio_underrun_likely.store(false, std::memory_order_relaxed);
 }
 
 // Emit one video frame worth of audio from the FIFO, steering the queue toward
@@ -2269,7 +2312,16 @@ static void libretro_drain_audio_frame()
 	// toward it. The correction is small (tens of samples), so per-frame output
 	// stays smooth while average throughput still tracks the core's true rate.
 	const double target_depth = per_frame * 1.5;
-	libretro_audio_emit_frac += per_frame + (static_cast<double>(avail) - target_depth) * 0.05;
+	double emit = per_frame + (static_cast<double>(avail) - target_depth) * 0.05;
+	if (libretro_frontend_audio_active.load(std::memory_order_relaxed)
+		&& libretro_frontend_audio_underrun_likely.load(std::memory_order_relaxed)
+		&& avail > static_cast<size_t>(per_frame)) {
+		const unsigned occupancy = libretro_frontend_audio_occupancy.load(std::memory_order_relaxed);
+		const double low = static_cast<double>(50U - std::min(occupancy, 50U)) / 50.0;
+		const double boost = per_frame * (0.15 + low * 0.35);
+		emit += std::min(boost, static_cast<double>(avail) - per_frame);
+	}
+	libretro_audio_emit_frac += emit;
 
 	long want = static_cast<long>(libretro_audio_emit_frac);
 	if (want < 0)
@@ -2287,6 +2339,7 @@ static void libretro_drain_audio_frame()
 		while (done < static_cast<size_t>(want)) {
 			const size_t chunk = std::min(static_cast<size_t>(want) - done, static_cast<size_t>(2048));
 			const size_t accepted = audio_batch_cb(libretro_audio_fifo.data() + done * 2, chunk);
+			libretro_audio_note_emitted(libretro_audio_fifo.data() + done * 2, accepted);
 			libretro_audio_frames_this_run += static_cast<unsigned>(accepted);
 			done += accepted;
 			if (accepted < chunk)
@@ -2297,6 +2350,7 @@ static void libretro_drain_audio_frame()
 	} else {
 		for (long i = 0; i < want; i++)
 			audio_cb(libretro_audio_fifo[i * 2], libretro_audio_fifo[i * 2 + 1]);
+		libretro_audio_note_emitted(libretro_audio_fifo.data(), static_cast<size_t>(want));
 		libretro_audio_frames_this_run += static_cast<unsigned>(want);
 		libretro_audio_fifo.erase(libretro_audio_fifo.begin(),
 			libretro_audio_fifo.begin() + static_cast<size_t>(want) * 2);
@@ -2329,11 +2383,13 @@ static void libretro_emit_audio_starvation_guard()
 	unsigned missing_frames = static_cast<unsigned>(libretro_audio_deficit_frames - max_deferred_frames);
 	while (missing_frames > 0) {
 		const unsigned chunk = std::min(missing_frames, 1024U);
-		int16_t silence[1024 * 2] = {};
+		int16_t padding[1024 * 2];
+		libretro_fill_audio_padding(padding, chunk);
 		if (audio_batch_cb) {
-			const size_t accepted = audio_batch_cb(silence, chunk);
+			const size_t accepted = audio_batch_cb(padding, chunk);
 			if (accepted == 0)
 				break;
+			libretro_audio_note_emitted(padding, accepted);
 			libretro_audio_frames_this_run += static_cast<unsigned>(accepted);
 			libretro_audio_deficit_frames -= accepted;
 			if (accepted < chunk)
@@ -2341,7 +2397,8 @@ static void libretro_emit_audio_starvation_guard()
 			missing_frames -= chunk;
 		} else {
 			for (unsigned i = 0; i < chunk; i++)
-				audio_cb(0, 0);
+				audio_cb(padding[i * 2], padding[i * 2 + 1]);
+			libretro_audio_note_emitted(padding, chunk);
 			libretro_audio_frames_this_run += chunk;
 			libretro_audio_deficit_frames -= chunk;
 			missing_frames -= chunk;
@@ -3233,10 +3290,17 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
 static void RETRO_CALLCONV audio_buffer_status_cb(bool active, unsigned occupancy, bool underrun_likely)
 {
-	(void)active;
-	(void)occupancy;
-	if (underrun_likely && log_cb)
+	libretro_frontend_audio_active.store(active, std::memory_order_relaxed);
+	libretro_frontend_audio_occupancy.store(occupancy, std::memory_order_relaxed);
+	libretro_frontend_audio_underrun_likely.store(underrun_likely, std::memory_order_relaxed);
+	if (!underrun_likely) {
+		libretro_frontend_audio_underrun_log_skip = 0;
+		return;
+	}
+	if (log_cb && libretro_frontend_audio_underrun_log_skip++ == 0)
 		log_cb(RETRO_LOG_DEBUG, "Audio buffer underrun likely (occupancy=%u%%)\n", occupancy);
+	if (libretro_frontend_audio_underrun_log_skip >= 120)
+		libretro_frontend_audio_underrun_log_skip = 0;
 }
 
 void retro_set_environment(retro_environment_t cb)

@@ -93,8 +93,10 @@ def main():
 	retro_load_game = extract_body(text, "bool retro_load_game(const struct retro_game_info *info)")
 	reset_core_runtime_state = extract_body(text, "static void reset_core_runtime_state()")
 	get_core_refresh_rate = extract_body(text, "static float get_core_refresh_rate()")
+	audio_buffer_status_cb = extract_body(text, "static void RETRO_CALLCONV audio_buffer_status_cb(bool active, unsigned occupancy, bool underrun_likely)")
 	libretro_emit_audio_starvation_guard = extract_body(text, "static void libretro_emit_audio_starvation_guard()")
 	libretro_drain_audio_frame = extract_body(text, "static void libretro_drain_audio_frame()")
+	libretro_fill_audio_padding = extract_body(text, "static void libretro_fill_audio_padding(int16_t* stereo_frames, unsigned frames)")
 	libretro_audio_reset = extract_body(text, "void libretro_audio_reset(void)")
 	libretro_scan_roms = extract_body(stub_text, "int scan_roms(int show)")
 	sdl_create_semaphore = extract_body(sdl_stub_text, "SDL_Semaphore* SDL_CreateSemaphore(Uint32 initial_value)")
@@ -152,11 +154,26 @@ def main():
 		and "libretro_audio_deficit_frames -= libretro_audio_frames_this_run;" in libretro_emit_audio_starvation_guard
 		and "libretro_audio_deficit_frames = max_deferred_frames * 4.0;" in libretro_emit_audio_starvation_guard
 		and "if (libretro_audio_frames_this_run > 0 || libretro_audio_deficit_frames <= max_deferred_frames)" in libretro_emit_audio_starvation_guard
-		and "audio_batch_cb(silence, chunk)" in libretro_emit_audio_starvation_guard
-		and "audio_cb(0, 0)" in libretro_emit_audio_starvation_guard
+		and "libretro_fill_audio_padding(padding, chunk)" in libretro_emit_audio_starvation_guard
+		and "audio_batch_cb(padding, chunk)" in libretro_emit_audio_starvation_guard
+		and "audio_cb(padding[i * 2], padding[i * 2 + 1])" in libretro_emit_audio_starvation_guard
+		and "libretro_audio_note_emitted(padding, accepted)" in libretro_emit_audio_starvation_guard
 		and "libretro_audio_deficit_frames = 0.0;" in libretro_audio_reset
 		and "libretro_audio_reset();" in reset_core_runtime_state,
-		"retro_run() must guard true libretro audio starvation without padding normal bursty audio frames",
+		"retro_run() must guard true libretro audio starvation with click-safe padding, without padding normal bursty audio frames",
+		failures,
+	)
+	require(
+		"libretro_frontend_audio_active.store(active" in audio_buffer_status_cb
+		and "libretro_frontend_audio_occupancy.store(occupancy" in audio_buffer_status_cb
+		and "libretro_frontend_audio_underrun_likely.store(underrun_likely" in audio_buffer_status_cb
+		and "libretro_frontend_audio_underrun_log_skip++ == 0" in audio_buffer_status_cb
+		and "libretro_frontend_audio_underrun_likely.load" in libretro_drain_audio_frame
+		and "libretro_frontend_audio_occupancy.load" in libretro_drain_audio_frame
+		and "emit += std::min(boost" in libretro_drain_audio_frame
+		and "libretro_audio_last_left" in libretro_fill_audio_padding
+		and "std::fill(stereo_frames" in libretro_fill_audio_padding,
+		"libretro audio must react to frontend underrun warnings and ramp starvation padding from the last emitted sample",
 		failures,
 	)
 	# The Amiga engine flushes audio in fixed chunks that do not align with the
