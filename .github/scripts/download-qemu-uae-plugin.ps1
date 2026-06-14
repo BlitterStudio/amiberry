@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 }
 
 $repo = if ([string]::IsNullOrWhiteSpace($env:QEMU_UAE_RELEASE_REPO)) { "BlitterStudio/amiberry-qemu-uae" } else { $env:QEMU_UAE_RELEASE_REPO }
-$tag = if ([string]::IsNullOrWhiteSpace($env:QEMU_UAE_RELEASE_TAG)) { "v11.0.1-amiberry.2" } else { $env:QEMU_UAE_RELEASE_TAG }
+$tag = if ([string]::IsNullOrWhiteSpace($env:QEMU_UAE_RELEASE_TAG)) { "v11.0.1-amiberry.3" } else { $env:QEMU_UAE_RELEASE_TAG }
 $downloadDir = Join-Path $OutputDirectory "download"
 $extractDir = Join-Path $OutputDirectory "extract"
 
