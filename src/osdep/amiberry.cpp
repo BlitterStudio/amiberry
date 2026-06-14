@@ -5655,6 +5655,13 @@ void get_nvram_path(TCHAR* out, const int size)
 
 std::string get_plugins_path()
 {
+	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
+	if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
+	{
+		std::string path = env_plugins_dir;
+		return fix_trailing(path);
+	}
+
 	return fix_trailing(plugins_dir);
 }
 
