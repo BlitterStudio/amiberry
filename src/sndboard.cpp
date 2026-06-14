@@ -425,11 +425,20 @@ static bool get_indirect(struct uaesndboard_stream *s, uaecptr saddr)
 	return true;
 }
 
+static int uaesnd_sample_bytes(uae_u8 bitmode)
+{
+	switch (bitmode & 7)
+	{
+	case 3: return 4;
+	case 2: return 3;
+	case 1: return 2;
+	default: return 1;
+	}
+}
+
 static bool uaesnd_validate(struct uaesndboard_data *data, struct uaesndboard_stream *s)
 {
-	int samplebits = (s->bitmode & 1) ? 16 : 8;
-
-	s->framesize = samplebits * s->ch / 8;
+	s->framesize = uaesnd_sample_bytes(s->bitmode) * s->ch;
 
 	if (s->flags != 0) {
 		write_log(_T("UAESND: Flags must be zero (%08x)\n"), s->flags);
@@ -483,15 +492,22 @@ static bool uaesnd_validate(struct uaesndboard_data *data, struct uaesndboard_st
 			return false;
 		}
 	}
-	if (s->panx || s->pany) {
-		write_log(_T("UAESND: Panning values must be zeros\n"));
-		return false;
-	}
 	uaesnd_setfreq(data, s);
 	for (int i = s->ch; i < MAX_UAE_CHANNELS; i++) {
 		s->sample[i] = 0;
 	}
 	return true;
+}
+
+static void uaesnd_apply_mono_pan(struct uaesndboard_stream *s, int *highestch)
+{
+	if (s->ch != 1 || !s->panx)
+		return;
+	int smp = s->sample[0];
+	s->sample[0] = smp * (32768 - s->panx) / 32768;
+	s->sample[1] = smp * (32768 + s->panx) / 32768;
+	if (*highestch < 2)
+		*highestch = 2;
 }
 
 static void uaesnd_load(struct uaesndboard_stream *s, uaecptr addr)
@@ -771,15 +787,15 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 			}
 		}
 	}
-	if (s->ch == 1 && s->chmode) {
-		int smp = s->sample[0];
-		for (int i = 1; i < MAX_UAE_CHANNELS; i++) {
-			if ((1 << i) & s->chmode) {
-				s->sample[i] = smp;
-				if (i > highestch)
-					highestch = i;
+		if (s->ch == 1 && s->chmode) {
+			int smp = s->sample[0];
+			for (int i = 1; i < MAX_UAE_CHANNELS; i++) {
+				if ((1 << i) & s->chmode) {
+					s->sample[i] = smp;
+					if (i + 1 > highestch)
+						highestch = i + 1;
+				}
 			}
-		}
 	} else if (s->ch == 4 && s->chmode == 1) {
 		s->sample[2] = s->sample[4];
 		s->sample[3] = s->sample[5];
@@ -800,6 +816,7 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 		s->sample[6] = c;
 		s->sample[7] = lfe;
 	}
+	uaesnd_apply_mono_pan(s, &highestch);
 	audio_state_stream_state(streamid, s->sample, highestch, s->event_time);
 	return true;
 }

@@ -224,7 +224,6 @@ set(SOURCE_FILES
         src/osdep/writelog.cpp
         src/osdep/amiberry.cpp
         src/osdep/main.cpp
-        src/osdep/ahi_v2.cpp
         src/osdep/amiberry_dbus.cpp
         src/osdep/amiberry_ipc_socket.cpp
         src/osdep/amiberry_filesys.cpp

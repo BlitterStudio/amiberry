@@ -360,7 +360,6 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/vpar.cpp \
                 $(AMIBERRY_DIR)/src/osdep/libretro/writelog.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v1.cpp \
-                $(AMIBERRY_DIR)/src/osdep/ahi_v2.cpp \
                 $(AMIBERRY_DIR)/src/osdep/bsdsocket_host.cpp \
                 $(AMIBERRY_DIR)/src/osdep/fsdb_host.cpp \
                 $(AMIBERRY_DIR)/src/osdep/picasso96.cpp \

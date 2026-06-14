@@ -72,7 +72,6 @@
 //#define USE_X86_FPUCW 1
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
-//#define AHI_v2 // AHI v2 was never completed on the Amiga-side
 #define ENFORCER /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */

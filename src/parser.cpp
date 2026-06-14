@@ -596,9 +596,6 @@ void initparallel (void)
 		calltrap (deftrapres (ahi_demux, 0, _T("ahi_winuae")));
 		dw (RTS);
 		org (a);
-#ifdef AHI_V2
-		init_ahi_v2 ();
-#endif
 	}
 #endif
 #endif
