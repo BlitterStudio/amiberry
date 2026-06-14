@@ -19,6 +19,7 @@
 #include "audio.h"
 #include "autoconf.h"
 #include "pci_hw.h"
+#include "uaesnd_capture_fifo.h"
 #include "qemuvga/qemuaudio.h"
 #include "rommgr.h"
 #include "devices.h"
@@ -78,9 +79,6 @@ extern addrbank uaesndboard_bank_z2, uaesndboard_bank_z3;
 #define UAESND_CAPTURE_BLOCK_REG_DONE 0x908
 #define UAESND_CAPTURE_BLOCK_REG_COMMAND 0x90c
 #define UAESND_CAPTURE_BLOCK_COMMAND_COPY 1
-#define UAESND_CAPTURE_STATUS_UNAVAILABLE 1
-#define UAESND_CAPTURE_STATUS_ACTIVE 2
-#define UAESND_CAPTURE_STATUS_OVERRUN 4
 
 struct uaesndboard_stream
 {
@@ -118,26 +116,6 @@ struct uaesndboard_stream
 	int timer_cnt;
 	int timer_event_time;
 	int sample[MAX_UAE_CHANNELS];
-};
-
-struct uaesnd_capture_state
-{
-	uae_u32 control;
-	uae_u32 status;
-	uae_u32 frequency;
-	uae_u32 available;
-	uae_u32 overrun_count;
-	uae_u32 intreq;
-	uae_u32 threshold;
-	uae_u32 frame_count;
-	uae_u32 dropped_byte_count;
-	uae_u32 block_address;
-	uae_u32 block_frames;
-	uae_u32 block_done;
-	int buffer_size;
-	int read_index;
-	int write_index;
-	uae_u8 *buffer;
 };
 
 struct uaesndboard_data
@@ -199,22 +177,6 @@ static bool uaesnd_capture_block_addr(uaecptr addr)
 	return addr >= UAESND_CAPTURE_BLOCK_REG_ADDRESS && addr < UAESND_CAPTURE_BLOCK_REG_COMMAND + 4;
 }
 
-static uae_u32 uaesnd_capture_available(struct uaesnd_capture_state *capture)
-{
-	if (!capture->buffer || capture->buffer_size <= 0)
-		return 0;
-	if (capture->write_index >= capture->read_index)
-		return capture->write_index - capture->read_index;
-	return capture->buffer_size - capture->read_index + capture->write_index;
-}
-
-static void uaesnd_capture_reset_buffer(struct uaesnd_capture_state *capture)
-{
-	capture->read_index = 0;
-	capture->write_index = 0;
-	capture->available = 0;
-}
-
 static void uaesnd_capture_start(struct uaesndboard_data *data)
 {
 	if (data->capture.status & UAESND_CAPTURE_STATUS_ACTIVE)
@@ -225,7 +187,7 @@ static void uaesnd_capture_start(struct uaesndboard_data *data)
 	if (data->capture.buffer_size < 4096)
 		data->capture.buffer_size = 4096;
 	data->capture.buffer = xcalloc(uae_u8, data->capture.buffer_size);
-	uaesnd_capture_reset_buffer(&data->capture);
+	uaesnd_capture_fifo_reset(&data->capture);
 	data->capture.control |= UAESND_CAPTURE_CONTROL_ENABLE;
 	if (!sndboard_init_capture(data->capture.frequency, SNDBOARD_CAPTURE_OWNER_UAESND)) {
 		xfree(data->capture.buffer);
@@ -247,29 +209,7 @@ static void uaesnd_capture_stop(struct uaesndboard_data *data)
 	data->capture.control &= ~UAESND_CAPTURE_CONTROL_ENABLE;
 	data->capture.status = 0;
 	data->capture.intreq = 0;
-	uaesnd_capture_reset_buffer(&data->capture);
-}
-
-static void uaesnd_capture_write_byte(struct uaesnd_capture_state *capture, uae_u8 value)
-{
-	if (!capture->buffer || capture->buffer_size <= 1)
-		return;
-	int next = (capture->write_index + 1) % capture->buffer_size;
-	if (next == capture->read_index) {
-		capture->read_index = (capture->read_index + 1) % capture->buffer_size;
-		capture->overrun_count++;
-		capture->dropped_byte_count++;
-		capture->status |= UAESND_CAPTURE_STATUS_OVERRUN;
-	}
-	capture->buffer[capture->write_index] = value;
-	capture->write_index = next;
-	capture->available = uaesnd_capture_available(capture);
-}
-
-static void uaesnd_capture_write_s16be(struct uaesnd_capture_state *capture, int sample)
-{
-	uaesnd_capture_write_byte(capture, sample >> 8);
-	uaesnd_capture_write_byte(capture, sample);
+	uaesnd_capture_fifo_reset(&data->capture);
 }
 
 static void uaesnd_capture_process(struct uaesndboard_data *data)
@@ -283,7 +223,7 @@ static void uaesnd_capture_process(struct uaesndboard_data *data)
 		int samples = frames * 2;
 		for (int i = 0; i < samples; i++) {
 			int sample = (uae_s16)(buffer[i * 2 + 0] | (buffer[i * 2 + 1] << 8));
-			uaesnd_capture_write_s16be(&data->capture, sample);
+			uaesnd_capture_fifo_write_s16be(&data->capture, sample);
 		}
 		if ((data->capture.control & UAESND_CAPTURE_CONTROL_IRQ_ENABLE) && data->capture.threshold > 0 && data->capture.available >= data->capture.threshold)
 			data->capture.intreq = 1;
@@ -308,14 +248,21 @@ static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)
 {
 	struct uaesnd_capture_state *capture = &data->capture;
 	uaesnd_capture_refresh_if_empty(data);
-	if (!capture->buffer || capture->read_index == capture->write_index) {
-		capture->available = 0;
+	uae_u8 value = 0;
+	if (!uaesnd_capture_fifo_read_byte(capture, &value))
 		return 0;
-	}
-	uae_u8 value = capture->buffer[capture->read_index];
-	capture->read_index = (capture->read_index + 1) % capture->buffer_size;
-	capture->available = uaesnd_capture_available(capture);
 	return value;
+}
+
+struct uaesnd_capture_guest_writer
+{
+	uaecptr address;
+};
+
+static void uaesnd_capture_block_write_guest(void *opaque, uae_u32 offset, uae_u8 value)
+{
+	struct uaesnd_capture_guest_writer *writer = (struct uaesnd_capture_guest_writer *)opaque;
+	put_byte(writer->address + offset, value);
 }
 
 static void uaesnd_capture_block_copy(struct uaesndboard_data *data)
@@ -333,10 +280,8 @@ static void uaesnd_capture_block_copy(struct uaesndboard_data *data)
 		uaesnd_set_error(data, UAESND_ERR_CAPTURE_BLOCK_ADDRESS);
 		return;
 	}
-	for (uae_u32 i = 0; i < bytes; i++) {
-		put_byte(data->capture.block_address + i, uaesnd_capture_read_byte(data));
-	}
-	data->capture.block_done = frames;
+	struct uaesnd_capture_guest_writer writer = { data->capture.block_address };
+	data->capture.block_done = uaesnd_capture_fifo_copy_block(&data->capture, frames, &writer, uaesnd_capture_block_write_guest);
 }
 
 static void uaesnd_capture_fill_regs(struct uaesndboard_data *data, uae_u8 *regs)
@@ -381,11 +326,11 @@ static void uaesnd_capture_apply_reg(struct uaesndboard_data *data, int reg, uae
 	} else if (reg == UAESND_CAPTURE_REG_FREQUENCY) {
 		data->capture.frequency = value;
 	} else if (reg == UAESND_CAPTURE_REG_INTREQ) {
-		data->capture.intreq &= value;
+		uaesnd_capture_fifo_ack_intreq(&data->capture, value);
 	} else if (reg == UAESND_CAPTURE_REG_THRESHOLD) {
 		data->capture.threshold = value;
 	} else if (reg == UAESND_CAPTURE_REG_STATUS) {
-		data->capture.status &= value;
+		uaesnd_capture_fifo_clear_status(&data->capture, value);
 	}
 }
 
