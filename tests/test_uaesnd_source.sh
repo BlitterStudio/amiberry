@@ -22,6 +22,13 @@ grep -F -q 'highestch = i + 1;' src/sndboard.cpp
 grep -F -q '#define UAESND_CAP_24_32BIT' src/sndboard.cpp
 grep -F -q '#define UAESND_CAP_MONO_HPAN' src/sndboard.cpp
 grep -F -q '#define UAESND_CAP_DIAGNOSTICS' src/sndboard.cpp
+grep -F -q '#define UAESND_CAP_CAPTURE' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_CONTROL' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_STATUS' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_REG_AVAILABLE' src/sndboard.cpp
+grep -F -q 'struct uaesnd_capture_state' src/sndboard.cpp
+grep -F -q 'static void uaesnd_capture_start(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static void uaesnd_capture_stop(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'uae_u32 invalid_set_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 stream_alloc_failure_count;' src/sndboard.cpp
 grep -F -q 'uae_u32 stream_start_count;' src/sndboard.cpp

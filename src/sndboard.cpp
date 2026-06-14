@@ -49,10 +49,17 @@ extern addrbank uaesndboard_bank_z2, uaesndboard_bank_z3;
 #define UAESND_CAP_24_32BIT 1
 #define UAESND_CAP_MONO_HPAN 2
 #define UAESND_CAP_DIAGNOSTICS 4
+#define UAESND_CAP_CAPTURE 8
 #define UAESND_DIAG_VERSION 1
 #define UAESND_ERR_NONE 0
 #define UAESND_ERR_INVALID_SET 1
 #define UAESND_ERR_STREAM_ALLOC 2
+#define UAESND_CAPTURE_REG_CONTROL 0xd0
+#define UAESND_CAPTURE_REG_STATUS 0xd4
+#define UAESND_CAPTURE_REG_FREQUENCY 0xd8
+#define UAESND_CAPTURE_REG_AVAILABLE 0xdc
+#define UAESND_CAPTURE_CONTROL_ENABLE 1
+#define UAESND_CAPTURE_STATUS_UNAVAILABLE 1
 
 struct uaesndboard_stream
 {
@@ -91,6 +98,15 @@ struct uaesndboard_stream
 	int timer_event_time;
 	int sample[MAX_UAE_CHANNELS];
 };
+
+struct uaesnd_capture_state
+{
+	uae_u32 control;
+	uae_u32 status;
+	uae_u32 frequency;
+	uae_u32 available;
+};
+
 struct uaesndboard_data
 {
 	bool enabled;
@@ -112,6 +128,7 @@ struct uaesndboard_data
 	uae_u32 stream_irq_count;
 	uae_u32 timer_irq_count;
 	uae_u32 last_error_code;
+	struct uaesnd_capture_state capture;
 };
 
 static struct uaesndboard_data uaesndboard[MAX_DUPLICATE_SOUND_BOARDS];
@@ -132,6 +149,80 @@ static void uaesnd_update_info(struct uaesndboard_data *data)
 static void uaesnd_set_error(struct uaesndboard_data *data, uae_u32 error_code)
 {
 	data->last_error_code = error_code;
+}
+
+static bool uaesnd_capture_addr(uaecptr addr)
+{
+	addr &= 65535;
+	return addr >= UAESND_CAPTURE_REG_CONTROL && addr < 0xe0;
+}
+
+static void uaesnd_capture_start(struct uaesndboard_data *data)
+{
+	data->capture.control |= UAESND_CAPTURE_CONTROL_ENABLE;
+	data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
+	data->capture.available = 0;
+}
+
+static void uaesnd_capture_stop(struct uaesndboard_data *data)
+{
+	data->capture.control &= ~UAESND_CAPTURE_CONTROL_ENABLE;
+	data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
+	data->capture.available = 0;
+}
+
+static void uaesnd_capture_fill_regs(struct uaesndboard_data *data, uae_u8 *regs)
+{
+	put_long_host(regs + 0, data->capture.control);
+	put_long_host(regs + 4, data->capture.status);
+	put_long_host(regs + 8, data->capture.frequency);
+	put_long_host(regs + 12, data->capture.available);
+}
+
+static uae_u8 uaesnd_capture_bget(struct uaesndboard_data *data, uaecptr addr)
+{
+	uae_u8 regs[16];
+	uaesnd_capture_fill_regs(data, regs);
+	return regs[(addr - UAESND_CAPTURE_REG_CONTROL) & 15];
+}
+
+static uae_u16 uaesnd_capture_wget(struct uaesndboard_data *data, uaecptr addr)
+{
+	return (uaesnd_capture_bget(data, addr) << 8) | uaesnd_capture_bget(data, addr + 1);
+}
+
+static uae_u32 uaesnd_capture_lget(struct uaesndboard_data *data, uaecptr addr)
+{
+	return (uaesnd_capture_wget(data, addr) << 16) | uaesnd_capture_wget(data, addr + 2);
+}
+
+static void uaesnd_capture_apply_reg(struct uaesndboard_data *data, int reg, uae_u32 value)
+{
+	if (reg == UAESND_CAPTURE_REG_CONTROL) {
+		data->capture.control = value;
+		if (value & UAESND_CAPTURE_CONTROL_ENABLE)
+			uaesnd_capture_start(data);
+		else
+			uaesnd_capture_stop(data);
+	} else if (reg == UAESND_CAPTURE_REG_FREQUENCY) {
+		data->capture.frequency = value;
+	}
+}
+
+static void uaesnd_capture_put(struct uaesndboard_data *data, uaecptr addr, uae_u32 value, int size)
+{
+	uae_u8 regs[16];
+	int offset = (addr - UAESND_CAPTURE_REG_CONTROL) & 15;
+	int reg = (addr & ~3) & 65535;
+	uaesnd_capture_fill_regs(data, regs);
+	if (size == 4) {
+		put_long_host(regs + offset, value);
+	} else if (size == 2) {
+		put_word_host(regs + offset, value);
+	} else {
+		regs[offset] = value;
+	}
+	uaesnd_capture_apply_reg(data, reg, get_long_host(regs + (reg - UAESND_CAPTURE_REG_CONTROL)));
 }
 
 /*
@@ -210,6 +301,10 @@ static void uaesnd_set_error(struct uaesndboard_data *data, uae_u32 error_code)
 	$00B0.L stream IRQ count.
 	$00B4.L timer IRQ count.
 	$00B8.L last error code. 0=none, 1=invalid sample set, 2=stream allocation failure.
+	$00D0.L capture control. Bit 0=request capture enable.
+	$00D4.L capture status. Bit 0=capture unavailable.
+	$00D8.L capture frequency in Hz.
+	$00DC.L capture bytes available.
 
 	$00E0.L allocated streams, bit mask. Hardware level stream allocation feature, use single test and set/clear instruction or
 			disable interrupts before allocating/freeing streams. If stream bit is not set, stream's address range is inactive.
@@ -1011,6 +1106,8 @@ static uae_u32 REGPARAM2 uaesndboard_bget(uaecptr addr)
 				s->intreqmask = 0;
 			s->io[0x93] = (s->play ? 1 : 0) | (s->streamid > 0 ? 2 : 0) | (s->repeating ? 4 : 0);
 			v = get_byte_host(s->io + reg);
+		} else if (uaesnd_capture_addr(addr)) {
+			v = uaesnd_capture_bget(data, addr);
 		} else if (addr >= 0x80 && addr < 0xe0) {
 			uaesnd_update_info(data);
 			v = get_byte_host(data->info + (addr & 0x7f));
@@ -1054,6 +1151,8 @@ static uae_u32 REGPARAM2 uaesndboard_wget(uaecptr addr)
 				s->intreqmask = 0;
 			}
 			v = get_word_host(s->io + reg);
+		} else if (uaesnd_capture_addr(addr)) {
+			v = uaesnd_capture_wget(data, addr);
 		} else if (addr >= 0x80 && addr < 0xe0 - 1) {
 			uaesnd_update_info(data);
 			v = get_word_host(data->info + (addr & 0x7f));
@@ -1096,6 +1195,8 @@ static uae_u32 REGPARAM2 uaesndboard_lget(uaecptr addr)
 			if (reg == 0x84)
 				s->intreqmask = 0;
 			v = get_long_host(s->io + reg);
+		} else if (uaesnd_capture_addr(addr)) {
+			v = uaesnd_capture_lget(data, addr);
 		} else if (addr >= 0x80 && addr < 0xe0 - 3) {
 			uaesnd_update_info(data);
 			v = get_long_host(data->info + (addr & 0x7f));
@@ -1148,6 +1249,8 @@ static void REGPARAM2 uaesndboard_bput(uaecptr addr, uae_u32 b)
 			int reg = addr & 255;
 			put_byte_host(s->io + reg, b);
 			uaesnd_put(data, s, reg);
+		} else if (uaesnd_capture_addr(addr)) {
+			uaesnd_capture_put(data, addr, b, 1);
 		} else if (addr >= 0xe0 && addr <= 0xe3) {
 			uae_u32 v = data->streamallocmask;
 			int shift = 8 * (3 - (addr - 0xe0));
@@ -1196,6 +1299,8 @@ static void REGPARAM2 uaesndboard_wput(uaecptr addr, uae_u32 b)
 			int reg = addr & 255;
 			put_word_host(s->io + reg, b);
 			uaesnd_put(data, s, reg);
+		} else if (uaesnd_capture_addr(addr)) {
+			uaesnd_capture_put(data, addr, b, 2);
 		} else if (addr == 0xe4 + 2) {
 			uaesnd_latch_mask(data, b);
 		} else if (addr == 0xe8 + 2) {
@@ -1222,6 +1327,8 @@ static void REGPARAM2 uaesndboard_lput(uaecptr addr, uae_u32 b)
 			int reg = addr & 255;
 			put_long_host(s->io + reg, b);
 			uaesnd_put(data, s, reg);
+		} else if (uaesnd_capture_addr(addr)) {
+			uaesnd_capture_put(data, addr, b, 4);
 		} else if (addr == 0xe0) {
 			uaesnd_streammask(data, data->streammask & b);
 			data->streamallocmask = b;
@@ -1301,6 +1408,10 @@ bool uaesndboard_init (struct autoconfig_info *aci, int z)
 	data->stream_irq_count = 0;
 	data->timer_irq_count = 0;
 	data->last_error_code = UAESND_ERR_NONE;
+	data->capture.control = 0;
+	data->capture.status = UAESND_CAPTURE_STATUS_UNAVAILABLE;
+	data->capture.frequency = currprefs.sound_freq;
+	data->capture.available = 0;
 	const struct expansionromtype *ert = get_device_expansion_rom(z == 3 ? ROMTYPE_UAESNDZ3 : ROMTYPE_UAESNDZ2);
 	if (!ert)
 		return false;
