@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+sh tests/test_uaesnd_capture_fifo.sh
+
 test ! -e src/uaesnd_ahi.s
 test ! -e src/osdep/ahi_v2.cpp
 test ! -e src/osdep/ahi_v2.h
@@ -23,6 +25,11 @@ grep -F -q '#define UAESND_CAP_24_32BIT' src/sndboard.cpp
 grep -F -q '#define UAESND_CAP_MONO_HPAN' src/sndboard.cpp
 grep -F -q '#define UAESND_CAP_DIAGNOSTICS' src/sndboard.cpp
 grep -F -q '#define UAESND_CAP_CAPTURE' src/sndboard.cpp
+grep -F -q '#define UAESND_CAP_CAPTURE_BLOCK' src/sndboard.cpp
+grep -F -q '#define UAESND_ERR_CAPTURE_BLOCK_ADDRESS 3' src/sndboard.cpp
+grep -F -q '#define SNDBOARD_CAPTURE_OWNER_NONE 0' src/sndboard.cpp
+grep -F -q '#define SNDBOARD_CAPTURE_OWNER_TOCCATA 1' src/sndboard.cpp
+grep -F -q '#define SNDBOARD_CAPTURE_OWNER_UAESND 2' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_CONTROL' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_STATUS' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_AVAILABLE' src/sndboard.cpp
@@ -31,28 +38,50 @@ grep -F -q '#define UAESND_CAPTURE_REG_OVERRUNS' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_INTREQ' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_REG_THRESHOLD' src/sndboard.cpp
 grep -F -q '#define UAESND_CAPTURE_CONTROL_IRQ_ENABLE 2' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_BLOCK_REG_ADDRESS 0x900' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_BLOCK_REG_FRAMES 0x904' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_BLOCK_REG_DONE 0x908' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_BLOCK_REG_COMMAND 0x90c' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_BLOCK_COMMAND_COPY 1' src/sndboard.cpp
+grep -F -q '#define UAESND_CAPTURE_STATUS_OVERRUN 4' src/include/uaesnd_capture_fifo.h
 grep -F -q 'UAESND_CAP_DIAGNOSTICS | UAESND_CAP_CAPTURE' src/sndboard.cpp
-grep -F -q 'struct uaesnd_capture_state' src/sndboard.cpp
-grep -F -q 'uae_u8 *buffer;' src/sndboard.cpp
-grep -F -q 'int buffer_size;' src/sndboard.cpp
-grep -F -q 'int read_index;' src/sndboard.cpp
-grep -F -q 'int write_index;' src/sndboard.cpp
-grep -F -q 'uae_u32 overrun_count;' src/sndboard.cpp
-grep -F -q 'uae_u32 intreq;' src/sndboard.cpp
-grep -F -q 'uae_u32 threshold;' src/sndboard.cpp
-grep -F -q 'uae_u32 frame_count;' src/sndboard.cpp
-grep -F -q 'uae_u32 dropped_byte_count;' src/sndboard.cpp
+grep -F -q 'UAESND_CAP_CAPTURE_BLOCK' src/sndboard.cpp
+grep -F -q '#include "uaesnd_capture_fifo.h"' src/sndboard.cpp
+grep -F -q 'struct uaesnd_capture_state' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u8 *buffer;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'int buffer_size;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'int read_index;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'int write_index;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 overrun_count;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 intreq;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 threshold;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 frame_count;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 dropped_byte_count;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 block_address;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 block_frames;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'uae_u32 block_done;' src/include/uaesnd_capture_fifo.h
+grep -F -q 'static inline void uaesnd_capture_fifo_write_s16be' src/include/uaesnd_capture_fifo.h
+grep -F -q 'static inline bool uaesnd_capture_fifo_read_byte' src/include/uaesnd_capture_fifo.h
+grep -F -q 'static inline uae_u32 uaesnd_capture_fifo_copy_block' src/include/uaesnd_capture_fifo.h
 grep -F -q 'static void uaesnd_capture_start(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_stop(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static void uaesnd_capture_process(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static bool uaesnd_capture_rethink(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static void uaesnd_capture_block_copy(struct uaesndboard_data *data)' src/sndboard.cpp
+grep -F -q 'static bool uaesnd_capture_block_addr(uaecptr addr)' src/sndboard.cpp
+grep -F -q 'static void uaesnd_capture_refresh_if_empty(struct uaesndboard_data *data)' src/sndboard.cpp
 grep -F -q 'static uae_u8 uaesnd_capture_read_byte(struct uaesndboard_data *data)' src/sndboard.cpp
-grep -F -q 'static void uaesnd_capture_write_s16be' src/sndboard.cpp
-grep -F -q 'uaesnd_capture_write_s16be(&data->capture, sample)' src/sndboard.cpp
-grep -F -q 'sndboard_init_capture(data->capture.frequency)' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_refresh_if_empty(data);' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_fifo_write_s16be(&data->capture, sample)' src/sndboard.cpp
+grep -F -q 'sndboard_init_capture(data->capture.frequency, SNDBOARD_CAPTURE_OWNER_UAESND)' src/sndboard.cpp
+grep -F -q 'sndboard_free_capture(SNDBOARD_CAPTURE_OWNER_UAESND)' src/sndboard.cpp
+grep -F -q 'sndboard_init_capture(data->freq_adjusted, SNDBOARD_CAPTURE_OWNER_TOCCATA)' src/sndboard.cpp
+grep -F -q 'sndboard_free_capture(SNDBOARD_CAPTURE_OWNER_TOCCATA)' src/sndboard.cpp
+grep -F -q 'static int capture_owner = SNDBOARD_CAPTURE_OWNER_NONE;' src/sndboard.cpp
+grep -F -q 'if (capture_started && capture_owner != owner)' src/sndboard.cpp
+grep -F -q 'if (capture_owner != owner)' src/sndboard.cpp
 grep -F -q 'sndboard_get_buffer(&frames)' src/sndboard.cpp
 grep -F -q 'sndboard_release_buffer(buffer, frames)' src/sndboard.cpp
-grep -F -q 'sndboard_free_capture()' src/sndboard.cpp
 grep -F -q '#include <SDL3/SDL.h>' src/sndboard.cpp
 grep -F -q 'static SDL_AudioStream *capture_stream;' src/sndboard.cpp
 grep -F -q 'SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_RECORDING' src/sndboard.cpp
@@ -73,7 +102,21 @@ grep -F -q 'put_long_host(data->info + 32, data->invalid_set_count);' src/sndboa
 grep -F -q 'put_long_host(data->info + 52, data->timer_irq_count);' src/sndboard.cpp
 grep -F -q 'put_long_host(data->info + 60, data->capture.frame_count);' src/sndboard.cpp
 grep -F -q 'put_long_host(data->info + 64, data->capture.dropped_byte_count);' src/sndboard.cpp
-grep -F -q 'data->capture.status &= value;' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_fifo_clear_status(&data->capture, value);' src/sndboard.cpp
+grep -F -q 'uaesnd_set_error(data, UAESND_ERR_CAPTURE_BLOCK_ADDRESS);' src/sndboard.cpp
+grep -F -q 'data->capture.block_done = uaesnd_capture_fifo_copy_block' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_block_lget(data, addr)' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_block_put(data, addr, b, 4)' src/sndboard.cpp
+grep -F -q 'uaesnd_capture_fifo_ack_intreq(&data->capture, value);' src/sndboard.cpp
+grep -F -q 'bool any_irq = false;' src/sndboard.cpp
+grep -F -q 'bool capture_irq = uaesnd_capture_rethink(data);' src/sndboard.cpp
+grep -F -q 'bool stream_irq = false;' src/sndboard.cpp
+grep -F -q 'if (capture_irq || stream_irq)' src/sndboard.cpp
+grep -F -q 'return any_irq;' src/sndboard.cpp
+if grep -F -q 'if (!irq)' src/sndboard.cpp; then
+	echo "UAESND stream interrupt bookkeeping must not depend on capture IRQ state" >&2
+	exit 1
+fi
 if grep -F -q 'Panning values must be zeros' src/sndboard.cpp; then
 	echo "UAESND should accept and apply non-zero panning values" >&2
 	exit 1

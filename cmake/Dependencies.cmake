@@ -135,9 +135,12 @@ if(ANDROID)
         FetchContent_Declare(
             mpg123
             # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
-            # Pin to a specific commit for reproducible builds.
+            # Pin to an mpg123 1.33.6-era commit for reproducible builds. Later upstream
+            # release commits raise the embedded CMake port minimum to 3.27; keep this
+            # compatible with Amiberry's current CMake baseline until that policy changes.
             GIT_REPOSITORY https://github.com/madebr/mpg123.git
-            GIT_TAG        a06133928e6518bd65314c9cea12ccb5588703e9
+            GIT_TAG        70cf64fe5c6a9031921cd88378aceea8311e0673
+            SOURCE_SUBDIR  ports/cmake
         )
     endif()
 
