@@ -2788,63 +2788,63 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		if (cr->rate == 0)
 			_tcscpy(tmp, _T("0"));
 		else
-			_sntprintf (tmp, sizeof tmp, _T("%f"), cr->rate);
-		TCHAR *s = tmp + _tcslen (tmp);
+			_sntprintf (tmp, sizeof tmp / sizeof(TCHAR), _T("%f"), cr->rate);
 		if (cr->label[0] > 0 && i < MAX_CHIPSET_REFRESH)
-			s += _sntprintf (s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",t=%s"), cr->label);
+			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",t=%s"), cr->label);
 		if (cr->horiz > 0)
-			s += _sntprintf (s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",h=%d"), cr->horiz);
+			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",h=%d"), cr->horiz);
 		if (cr->vert > 0)
-			s += _sntprintf (s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",v=%d"), cr->vert);
+			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",v=%d"), cr->vert);
 		if (cr->locked)
-			_tcscat (s, _T(",locked"));
+			_tcscat (tmp, _T(",locked"));
 		if (cr->ntsc == 1)
-			_tcscat (s, _T(",ntsc"));
+			_tcscat (tmp, _T(",ntsc"));
 		else if (cr->ntsc == 0)
-			_tcscat (s, _T(",pal"));
+			_tcscat (tmp, _T(",pal"));
 		else if (cr->ntsc == 2)
-			_tcscat(s, _T(",custom"));
+			_tcscat(tmp, _T(",custom"));
 		if (cr->lace > 0)
-			_tcscat (s, _T(",lace"));
+			_tcscat (tmp, _T(",lace"));
 		else if (cr->lace == 0)
-			_tcscat (s, _T(",nlace"));
+			_tcscat (tmp, _T(",nlace"));
 		if ((cr->resolution & 7) != 7) {
 			if (cr->resolution & 1)
-				_tcscat(s, _T(",lores"));
+				_tcscat(tmp, _T(",lores"));
 			if (cr->resolution & 2)
-				_tcscat(s, _T(",hires"));
+				_tcscat(tmp, _T(",hires"));
 			if (cr->resolution & 4)
-				_tcscat(s, _T(",shres"));
+				_tcscat(tmp, _T(",shres"));
 			if (cr->resolution_pct > 0 && cr->resolution_pct < 100)
-				s += _sntprintf(s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T("rpct=%d"), cr->resolution_pct);
+				cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T("rpct=%d"), cr->resolution_pct);
 		}
 		if (cr->framelength > 0)
-			_tcscat (s, _T(",lof"));
+			_tcscat (tmp, _T(",lof"));
 		else if (cr->framelength == 0)
-			_tcscat (s, _T(",shf"));
+			_tcscat (tmp, _T(",shf"));
 		if (cr->vsync > 0)
-			_tcscat (s, _T(",vsync"));
+			_tcscat (tmp, _T(",vsync"));
 		else if (cr->vsync == 0)
-			_tcscat (s, _T(",nvsync"));
+			_tcscat (tmp, _T(",nvsync"));
 		if (cr->rtg)
-			_tcscat (s, _T(",rtg"));
+			_tcscat (tmp, _T(",rtg"));
 		if (cr->exit)
-			_tcscat(s, _T(",exit"));
+			_tcscat(tmp, _T(",exit"));
 		if (cr->defaultdata)
-			_tcscat(s, _T(",default"));
+			_tcscat(tmp, _T(",default"));
 		if (cr->filterprofile[0]) {
 			TCHAR *se = cfgfile_escape(cr->filterprofile, _T(","), true, false);
-			s += _sntprintf(s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",filter=%s"), se);
+			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",filter=%s"), se);
 			xfree(se);
 		}
 		if (cr->commands[0]) {
-			_tcscat (s, _T(",cmd="));
-			_tcscat (s, cr->commands);
-			for (int j = 0; j < _tcslen (s); j++) {
-				if (s[j] == '\n')
-					s[j] = ',';
+			TCHAR *cmd = tmp + _tcslen(tmp);
+			_tcscat (tmp, _T(",cmd="));
+			_tcscat (tmp, cr->commands);
+			for (int j = 0; j < _tcslen(cmd); j++) {
+				if (cmd[j] == '\n')
+					cmd[j] = ',';
 			}
-			s[_tcslen (s) - 1] = 0;
+			cmd[_tcslen(cmd) - 1] = 0;
 		}
 		if (i == CHIPSET_REFRESH_PAL) {
 			if (cr->locked)
