@@ -2522,13 +2522,13 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 
 	if (rd->type & (ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)) {
 		get_nvram_path(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
-		_sntprintf(p->flashfile + _tcslen(p->flashfile), sizeof p->flashfile + _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
+		_sntprintf(p->flashfile + _tcslen(p->flashfile), sizeof p->flashfile / sizeof(TCHAR) - _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
 		clean_path(p->flashfile);
 	}
 #ifdef ARCADIA
 	if (rd->type & ROMTYPE_ALG) {
 		get_video_path(p->genlock_video_file, sizeof(p->genlock_video_file) / sizeof(TCHAR));
-		_sntprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), sizeof p->genlock_video_file + _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
+		_sntprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), sizeof p->genlock_video_file / sizeof(TCHAR) - _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
 		clean_path(p->genlock_video_file);
 	}
 #endif

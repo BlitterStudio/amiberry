@@ -3170,11 +3170,11 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 				} else {
 					_tcscpy(label, _T("<no name>"));
 				}
-			}
-			if (aci->devnum > 0) {
-				TCHAR *s = label + _tcslen(label);
-				_sntprintf(s, sizeof s, _T(" [%d]"), aci->devnum + 1);
-			}
+				}
+				if (aci->devnum > 0) {
+					TCHAR *s = label + _tcslen(label);
+					_sntprintf(s, sizeof label / sizeof(TCHAR) - (s - label), _T(" [%d]"), aci->devnum + 1);
+				}
 
 			if ((aci->zorro == 1 || aci->zorro == 2 || aci->zorro == 3) && aci->addrbank != &expamem_none && (aci->autoconfig_raw[0] != 0xff || aci->autoconfigp)) {
 				uae_u8 ac2[16];

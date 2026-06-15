@@ -2208,7 +2208,7 @@ static struct inode *isofs_find_entry(struct inode *dir, char *tmpname, TCHAR *t
 }
 
 /* Acorn extensions written by Matthew Wilcox <willy@bofh.ai> 1998 */
-static int get_acorn_filename(struct iso_directory_record *de, char *retname, struct inode *inode)
+static int get_acorn_filename(struct iso_directory_record *de, char *retname, size_t retname_size, struct inode *inode)
 {
 	int std;
 	unsigned char *chr;
@@ -2228,7 +2228,7 @@ static int get_acorn_filename(struct iso_directory_record *de, char *retname, st
 		*retname = '!';
 	if (((de->flags[0] & 2) == 0) && (chr[13] == 0xff) && ((chr[12] & 0xf0) == 0xf0)) {
 		retname[retnamlen] = ',';
-		_sntprintf(retname+retnamlen+1, sizeof retname+retnamlen+1, "%3.3x",
+		_sntprintf(retname + retnamlen + 1, retname_size - retnamlen - 1, "%3.3x",
 			((chr[12] & 0xf) << 8) | chr[11]);
 		retnamlen += 4;
 	}
@@ -2366,7 +2366,7 @@ static int do_isofs_readdir(struct inode *inode, struct file *filp, char *tmpnam
 				len = 1;
 			} else
 			if (sbi->s_mapping == 'a') {
-				len = get_acorn_filename(de, tmpname, inode);
+				len = get_acorn_filename(de, tmpname, 1024, inode);
 				p = tmpname;
 			} else
 			if (sbi->s_mapping == 'n') {
