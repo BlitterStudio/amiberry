@@ -72,6 +72,8 @@ static int uaeconfig;
 static int unicode_config = 0;
 static bool gfx_keep_aspect_seen;
 
+static void cfgfile_append_optionf(TCHAR *buf, size_t bufsize, const TCHAR *format, ...);
+
 /* @@@ need to get rid of this... just cut part of the manual and print that
 * as a help text.  */
 struct cfg_lines
@@ -1376,7 +1378,7 @@ static void write_filesys_config (struct uae_prefs *p, struct zfile *f)
 			}
 		}
 		if (ci->controller_type_unit > 0)
-			_sntprintf(hdcs + _tcslen(hdcs), sizeof hdcs + _tcslen(hdcs), _T("-%d"), ci->controller_type_unit + 1);
+			cfgfile_append_optionf(hdcs, sizeof hdcs / sizeof(TCHAR), _T("-%d"), ci->controller_type_unit + 1);
 
 		auto* str1b = cfgfile_escape (str1, _T(":,"), true, false);
 		auto* str1c = cfgfile_escape_min(str1);
@@ -1680,6 +1682,19 @@ static void cfgfile_write_rom_settings(const struct expansionboardsettings *ebs,
 	}
 }
 
+static void cfgfile_append_optionf(TCHAR *buf, size_t bufsize, const TCHAR *format, ...)
+{
+	size_t len = _tcslen(buf);
+	if (len >= bufsize)
+		return;
+
+	va_list parms;
+	va_start(parms, format);
+	_vsntprintf(buf + len, bufsize - len, format, parms);
+	va_end(parms);
+	buf[bufsize - 1] = 0;
+}
+
 static bool is_custom_romboard(struct boardromconfig *br)
 {
 	return ((br->device_type & ROMTYPE_MASK) == ROMTYPE_UAEBOARDZ2 || (br->device_type & ROMTYPE_MASK) == ROMTYPE_UAEBOARDZ3);
@@ -1712,7 +1727,6 @@ static void cfgfile_write_board_rom(struct uae_prefs *prefs, struct zfile *f, st
 				ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
 				TCHAR buf2[256];
 				buf2[0] = 0;
-				auto* p = buf2;
 				_sntprintf(buf, sizeof buf, _T("%s%s_rom_options"), name, i ? _T("_ext") : _T(""));
 				if (ert->subtypes) {
 					const auto* srt = ert->subtypes;
@@ -1721,13 +1735,12 @@ static void cfgfile_write_board_rom(struct uae_prefs *prefs, struct zfile *f, st
 						srt++;
 						k--;
 					}
-					_sntprintf(p, sizeof p, _T("subtype=%s"), srt->configname);
+					cfgfile_append_optionf(buf2, sizeof buf2 / sizeof(TCHAR), _T("subtype=%s"), srt->configname);
 				}
 				if (br->device_order > 0 && prefs->autoconfig_custom_sort) {
 					if (buf2[0])
 						_tcscat(buf2, _T(","));
-					TCHAR *p2 = buf2 + _tcslen(buf2);
-					_sntprintf(p2, sizeof p2, _T("order=%d"), br->device_order);
+					cfgfile_append_optionf(buf2, sizeof buf2 / sizeof(TCHAR), _T("order=%d"), br->device_order);
 				}
 				if (rc->autoboot_disabled) {
 					if (buf2[0])
@@ -1758,15 +1771,13 @@ static void cfgfile_write_board_rom(struct uae_prefs *prefs, struct zfile *f, st
 					if (rc->manufacturer) {
 						if (buf2[0])
 							_tcscat(buf2, _T(","));
-						TCHAR *p2 = buf2 + _tcslen(buf2);
-						_sntprintf(p2, sizeof p2, _T("mid=%u,pid=%u"), rc->manufacturer, rc->product);
+						cfgfile_append_optionf(buf2, sizeof buf2 / sizeof(TCHAR), _T("mid=%u,pid=%u"), rc->manufacturer, rc->product);
 					}
 					if (rc->autoconfig[0]) {
 						uae_u8 *ac = rc->autoconfig;
 						if (buf2[0])
 							_tcscat(buf2, _T(","));
-						TCHAR *p2 = buf2 + _tcslen(buf2);
-						_sntprintf(p2, sizeof p2, _T("data=%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x"),
+						cfgfile_append_optionf(buf2, sizeof buf2 / sizeof(TCHAR), _T("data=%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x"),
 							ac[0], ac[1], ac[2], ac[3], ac[4], ac[5], ac[6], ac[7],
 							ac[8], ac[9], ac[10], ac[11], ac[12], ac[13], ac[14], ac[15]);
 					}
@@ -1968,18 +1979,14 @@ static void cfgfile_writeromboard(struct uae_prefs *prefs, struct zfile *f, int 
 	else
 		_tcscpy(tmp1, _T("romboard_options"));
 	tmp2[0] = 0;
-	TCHAR *p = tmp2;
-	_sntprintf(p, sizeof p, _T("start=%08x,end=%08x"), rb->start_address, rb->end_address);
-	p += _tcslen(p);
+	cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("start=%08x,end=%08x"), rb->start_address, rb->end_address);
 	if (rb->lf.loadfile[0]) {
-		_tcscat(p, _T(","));
-		p += _tcslen(p);
+		_tcscat(tmp2, _T(","));
 		TCHAR *path = cfgfile_escape(rb->lf.loadfile, nullptr, true, false);
 		if (rb->lf.loadoffset || rb->lf.fileoffset || rb->lf.filesize) {
-			_sntprintf(p, sizeof p, _T("offset=%u,fileoffset=%u,filesize=%u,"), rb->lf.loadoffset, rb->lf.fileoffset, rb->lf.filesize);
-			p += _tcslen(p);
+			cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("offset=%u,fileoffset=%u,filesize=%u,"), rb->lf.loadoffset, rb->lf.fileoffset, rb->lf.filesize);
 		}
-		_sntprintf(p, sizeof p, _T("file=%s"), path);
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("file=%s"), path);
 		xfree(path);
 	}
 	if (tmp2[0]) {
@@ -1995,90 +2002,76 @@ static void cfgfile_writeramboard(struct uae_prefs *prefs, struct zfile *f, cons
 	else
 		_sntprintf(tmp1, sizeof tmp1, _T("%s_options"), name);
 	tmp2[0] = 0;
-	TCHAR *p = tmp2;
 	if (rb->device_order > 0 && prefs->autoconfig_custom_sort) {
 		if (tmp2[0])
-			*p++ = ',';
-		_sntprintf(p, sizeof p, _T("order=%d"), rb->device_order);
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("order=%d"), rb->device_order);
 	}
 	if (rb->manufacturer) {
 		if (tmp2[0])
-			*p++ = ',';
-		_sntprintf(p, sizeof p, _T("mid=%u,pid=%u"), rb->manufacturer, rb->product);
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("mid=%u,pid=%u"), rb->manufacturer, rb->product);
 	}
 	if (rb->no_reset_unmap) {
 		if (tmp2[0])
-			*p++ = ',';
-		_tcscpy(p, _T("no_reset_unmap=true"));
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		_tcscat(tmp2, _T("no_reset_unmap=true"));
 	}
 	if (rb->nodma) {
 		if (tmp2[0])
-			*p++ = ',';
-		_tcscpy(p, _T("nodma=true"));
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		_tcscat(tmp2, _T("nodma=true"));
 	}
 	if (rb->force16bit) {
 		if (tmp2[0])
-			*p++ = ',';
-		_tcscpy(p, _T("force16bit=true"));
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		_tcscat(tmp2, _T("force16bit=true"));
 	}
 	if (rb->fault) {
 		if (tmp2[0])
-			*p++ = ',';
-		_sntprintf(p, sizeof p, _T("fault=%d"), rb->fault);
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("fault=%d"), rb->fault);
 	}
 	if (!_tcsicmp(tmp1, _T("chipmem_options")) || !_tcsicmp(tmp1, _T("bogomem_options"))) {
 		if (!rb->chipramtiming) {
 			if (tmp2[0])
-				*p++ = ',';
-			_tcscpy(p, _T("slow=false"));
-			p += _tcslen(p);
+				_tcscat(tmp2, _T(","));
+			_tcscat(tmp2, _T("slow=false"));
 		}
 	} else {
 		if (rb->chipramtiming) {
 			if (tmp2[0])
-				*p++ = ',';
-			_tcscpy(p, _T("slow=true"));
-			p += _tcslen(p);
+				_tcscat(tmp2, _T(","));
+			_tcscat(tmp2, _T("slow=true"));
 		}
 	}
 	if (rb->autoconfig_inuse) {
 		uae_u8 *ac = rb->autoconfig;
 		if (tmp2[0])
-			*p++ = ',';
-		_sntprintf(p, sizeof p, _T("data=%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x"),
+			_tcscat(tmp2, _T(","));
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("data=%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x"),
 			ac[0], ac[1], ac[2], ac[3], ac[4], ac[5], ac[6], ac[7],
 			ac[8], ac[9], ac[10], ac[11], ac[12], ac[13], ac[14], ac[15]);
-		p += _tcslen(p);
 	}
 	if (rb->manual_config && rb->start_address && rb->end_address) {
 		if (tmp2[0])
-			*p++ = ',';
-		_sntprintf(p, sizeof p, _T("start=%08x,end=%08x"), rb->start_address, rb->end_address);
-		p += _tcslen(p);
+			_tcscat(tmp2, _T(","));
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("start=%08x,end=%08x"), rb->start_address, rb->end_address);
 	}
 	if (rb->write_address) {
-		_sntprintf(p, sizeof p, _T(",write_address=%08x"), rb->write_address);
-		p += _tcslen(p);
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T(",write_address=%08x"), rb->write_address);
 	}
 	if (rb->lf.loadfile[0]) {
-		if (tmp2[0]) {
-			_tcscat(p, _T(","));
-			p += _tcslen(p);
-		}
+		if (tmp2[0])
+			_tcscat(tmp2, _T(","));
 		TCHAR *path = cfgfile_escape(rb->lf.loadfile, nullptr, true, false);
-		_sntprintf(p, sizeof p, _T("offset=%u,fileoffset=%u,filesize=%u,file=%s"), rb->lf.loadoffset, rb->lf.fileoffset, rb->lf.filesize, path);
+		cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("offset=%u,fileoffset=%u,filesize=%u,file=%s"), rb->lf.loadoffset, rb->lf.fileoffset, rb->lf.filesize, path);
 		xfree(path);
 	}
 	if (rb->readonly) {
 		if (tmp2[0])
-			_tcscat(p, _T(","));
-		_tcscat(p, _T("readonly"));
+			_tcscat(tmp2, _T(","));
+		_tcscat(tmp2, _T("readonly"));
 	}
 	if (tmp2[0]) {
 		cfgfile_write(f, tmp1, tmp2);
@@ -2728,7 +2721,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				if (tmp[0]) {
 					_tcscat(tmp, _T(","));
 				}
-				_sntprintf(tmp + _tcslen(tmp), sizeof tmp + _tcslen(tmp), _T("%d"), i);
+				cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T("%d"), i);
 			}
 		}
 		for (int i = 0; i < 8; i++) {
@@ -2736,7 +2729,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				if (tmp[0]) {
 					_tcscat(tmp, _T(","));
 				}
-				_sntprintf(tmp + _tcslen(tmp), sizeof tmp + _tcslen(tmp), _T("p%d"), i);
+				cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T("p%d"), i);
 			}
 		}
 		cfgfile_dwrite_str(f, _T("genlock_effects"), tmp);
@@ -2798,11 +2791,11 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			_sntprintf (tmp, sizeof tmp, _T("%f"), cr->rate);
 		TCHAR *s = tmp + _tcslen (tmp);
 		if (cr->label[0] > 0 && i < MAX_CHIPSET_REFRESH)
-			s += _sntprintf (s, sizeof s, _T(",t=%s"), cr->label);
+			s += _sntprintf (s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",t=%s"), cr->label);
 		if (cr->horiz > 0)
-			s += _sntprintf (s, sizeof s, _T(",h=%d"), cr->horiz);
+			s += _sntprintf (s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",h=%d"), cr->horiz);
 		if (cr->vert > 0)
-			s += _sntprintf (s, sizeof s, _T(",v=%d"), cr->vert);
+			s += _sntprintf (s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",v=%d"), cr->vert);
 		if (cr->locked)
 			_tcscat (s, _T(",locked"));
 		if (cr->ntsc == 1)
@@ -2823,7 +2816,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			if (cr->resolution & 4)
 				_tcscat(s, _T(",shres"));
 			if (cr->resolution_pct > 0 && cr->resolution_pct < 100)
-				s += _sntprintf(s, sizeof s, _T("rpct=%d"), cr->resolution_pct);
+				s += _sntprintf(s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T("rpct=%d"), cr->resolution_pct);
 		}
 		if (cr->framelength > 0)
 			_tcscat (s, _T(",lof"));
@@ -2841,7 +2834,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			_tcscat(s, _T(",default"));
 		if (cr->filterprofile[0]) {
 			TCHAR *se = cfgfile_escape(cr->filterprofile, _T(","), true, false);
-			s += _sntprintf(s, sizeof s, _T(",filter=%s"), se);
+			s += _sntprintf(s, sizeof tmp / sizeof(TCHAR) - (s - tmp), _T(",filter=%s"), se);
 			xfree(se);
 		}
 		if (cr->commands[0]) {
@@ -3027,7 +3020,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			if (rbc->monitor_id) {
 				if (tmp2[0])
 					_tcscat(tmp2, _T(","));
-				_sntprintf(tmp2 + _tcslen(tmp2), sizeof tmp2 + _tcslen(tmp2), _T("monitor=%d"), rbc->monitor_id);
+				cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("monitor=%d"), rbc->monitor_id);
 			}
 			if (!rbc->autoswitch) {
 				if (tmp2[0])
