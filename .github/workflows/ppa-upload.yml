@@ -102,6 +102,7 @@ jobs:
             echo "PPA_TAG=$TAG_INPUT"
             echo "PPA_VERSION=${TAG_INPUT#v}"
             echo "PPA_REVISION=$PPA_REVISION_INPUT"
+            echo "PPA_BACKPORT_REVISION=${PPA_REVISION_INPUT:-0ppa1}"
           } >> "$GITHUB_ENV"
 
       - name: Build and upload source package for resolute
@@ -140,12 +141,8 @@ jobs:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          PACKAGE_VERSION="${PPA_VERSION}~noble1"
-          RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 24.04 Noble rebuild)"
-          if [ -n "$PPA_REVISION" ]; then
-            PACKAGE_VERSION="${PPA_VERSION}-${PPA_REVISION}~noble1"
-            RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 24.04 Noble PPA revision $PPA_REVISION)"
-          fi
+          PACKAGE_VERSION="${PPA_VERSION}-${PPA_BACKPORT_REVISION}~noble1"
+          RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 24.04 Noble PPA revision $PPA_BACKPORT_REVISION)"
 
           mkdir -p /tmp/ppa-build/noble
           cp -r . /tmp/ppa-build/noble/amiberry
@@ -170,12 +167,8 @@ jobs:
           DEBEMAIL: midwan@gmail.com
           DEBFULLNAME: "Dimitris Panokostas"
         run: |
-          PACKAGE_VERSION="${PPA_VERSION}~jammy1"
-          RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 22.04 Jammy rebuild)"
-          if [ -n "$PPA_REVISION" ]; then
-            PACKAGE_VERSION="${PPA_VERSION}-${PPA_REVISION}~jammy1"
-            RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 22.04 Jammy PPA revision $PPA_REVISION)"
-          fi
+          PACKAGE_VERSION="${PPA_VERSION}-${PPA_BACKPORT_REVISION}~jammy1"
+          RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 22.04 Jammy PPA revision $PPA_BACKPORT_REVISION)"
 
           mkdir -p /tmp/ppa-build/jammy
           cp -r . /tmp/ppa-build/jammy/amiberry
