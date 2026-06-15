@@ -2000,19 +2000,19 @@ void debugger_scan_libraries(void)
 }
 
 
-bool debugger_get_library_symbol(uaecptr base, uaecptr addr, TCHAR *out)
+bool debugger_get_library_symbol(uaecptr base, uaecptr addr, TCHAR *out, size_t outsize)
 {
 	for (int i = 0; i < libnamecnt; i++) {
 		struct libname *name = &libnames[i];
 		if (name->base == base) {
-			for (int j = 0; j < libsymbolcnt; j++) {
-				struct libsymbol *lvo = &libsymbols[j];
-				if (lvo->lib == name) {
-					if (lvo->value == addr) {
-						_sntprintf(out, sizeof out, _T("%s/%s"), name->name, lvo->name);
-						return true;
+				for (int j = 0; j < libsymbolcnt; j++) {
+					struct libsymbol *lvo = &libsymbols[j];
+					if (lvo->lib == name) {
+						if (lvo->value == addr) {
+							_sntprintf(out, outsize, _T("%s/%s"), name->name, lvo->name);
+							return true;
+						}
 					}
-				}
 			}
 		}
 	}
@@ -3793,7 +3793,7 @@ int debugmem_get_sourceline(uaecptr addr, TCHAR *out, int maxsize)
 	return -1;
 }
 
-int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, TCHAR *name)
+int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, size_t outsize, TCHAR *name, size_t namesize)
 {
 	if (out)
 		out[0] = 0;
@@ -3802,26 +3802,26 @@ int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, TCHAR
 	if (exact)
 		*exact = false;
 	struct debugmemallocs *alloc = ismysegment(addr);
-	if (alloc) {
+		if (alloc) {
 		if (exact && alloc->start + 8 + debugmem_bank.start == addr)
 			*exact = true;
-		if (out)
-			_sntprintf(out, sizeof out, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
-		if (name)
-			_sntprintf(name, sizeof name, _T("Segment %d: %08x %08x-%08x"),
-				alloc->id, alloc->idtype, alloc->start + debugmem_bank.start, alloc->start + alloc->size - 1 + debugmem_bank.start);
+			if (out)
+				_sntprintf(out, outsize, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
+			if (name)
+				_sntprintf(name, namesize, _T("Segment %d: %08x %08x-%08x"),
+					alloc->id, alloc->idtype, alloc->start + debugmem_bank.start, alloc->start + alloc->size - 1 + debugmem_bank.start);
 		if (ext)
 			*ext = false;
 		return alloc->id;
 	} else {
 		struct debugmemallocs *alloc;
 		struct debugsegtracker *seg = findsegment(addr, &alloc);
-		if (seg) {
-			if (out)
-				_sntprintf(out, sizeof out, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
-			if (name)
-				_sntprintf(name, sizeof name, _T("Segment %d ('%s') %08x %08x-%08x"),
-					alloc->internalid, seg->name, alloc->idtype, alloc->start, alloc->start + alloc->size - 1);
+			if (seg) {
+				if (out)
+					_sntprintf(out, outsize, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
+				if (name)
+					_sntprintf(name, namesize, _T("Segment %d ('%s') %08x %08x-%08x"),
+						alloc->internalid, seg->name, alloc->idtype, alloc->start, alloc->start + alloc->size - 1);
 			if (ext)
 				*ext = true;
 			return alloc->id;
@@ -3987,12 +3987,12 @@ bool debugmem_list_stackframe(bool super)
 	for (int i = 0; i < cnt; i++) {
 		struct debugstackframe *sf = super ? &stackframessuper[i] : &stackframes[i];
 		console_out_f(_T("%08x -> %08x SP=%08x"), sf->current_pc, sf->branch_pc, sf->stack);
-		if (sf->sr & 0x2000)
-			console_out_f(_T(" SR=%04x"), sf->sr);
-		TCHAR txt1[256], txt2[256];
-		if (debugmem_get_segment(sf->branch_pc, NULL, NULL, txt1, txt2)) {
-			console_out_f(_T(" %s %s"), txt1, txt2);
-		}
+			if (sf->sr & 0x2000)
+				console_out_f(_T(" SR=%04x"), sf->sr);
+			TCHAR txt1[256], txt2[256];
+			if (debugmem_get_segment(sf->branch_pc, NULL, NULL, txt1, sizeof txt1 / sizeof(TCHAR), txt2, sizeof txt2 / sizeof(TCHAR))) {
+				console_out_f(_T(" %s %s"), txt1, txt2);
+			}
 		if (debugmem_get_symbol(sf->branch_pc, txt1, sizeof(txt1) / sizeof(TCHAR))) {
 			console_out_f(_T(" %s"), txt1);
 		}

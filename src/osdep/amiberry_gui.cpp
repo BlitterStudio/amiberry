@@ -166,7 +166,7 @@ static int addrom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 	_sntprintf(tmp1, sizeof tmp1, _T("ROM_%03d"), rd->id);
 	if (rd->group) {
 		TCHAR* p = tmp1 + _tcslen(tmp1);
-		_sntprintf(p, sizeof p, _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
+		_sntprintf(p, sizeof tmp1 / sizeof(TCHAR) - (p - tmp1), _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
 	}
 	getromname(rd, tmp2);
 	pathname[0] = 0;
@@ -1785,7 +1785,7 @@ void DisplayDiskInfo(int num)
 	char nameonly[MAX_DPATH];
 	char linebuffer[512];
 
-	DISK_examine_image(&changed_prefs, num, &di, true, nullptr);
+	DISK_examine_image(&changed_prefs, num, &di, true, nullptr, 0);
 	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, nullptr, nullptr, nullptr);
 	extract_filename(tmp1, nameonly);
 	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);

@@ -208,7 +208,7 @@ struct ini_data *ini_load(const TCHAR *path, bool sort)
 				struct ini_line *il = ini.inidata[c];
 				if (il && !_tcscmp(il->section, section)) {
 					section_id++;
-					_sntprintf(section + _tcslen(section), sizeof section + _tcslen(section), _T("|%d"), section_id);
+					_sntprintf(section + _tcslen(section), sizeof section / sizeof(TCHAR) - _tcslen(section), _T("|%d"), section_id);
 					break;
 				}
 			}
@@ -327,7 +327,7 @@ bool ini_nextsection(struct ini_data *ini, TCHAR *section)
 	const TCHAR *s = _tcschr(nextsect, '|');
 	if (s) {
 		int sectionid = _tstol(s + 1);
-		_sntprintf(nextsect + (s - nextsect) + 1, sizeof nextsect + (s - nextsect) + 1, _T("%d"), sectionid + 1);
+		_sntprintf(nextsect + (s - nextsect) + 1, sizeof nextsect / sizeof(TCHAR) - (s - nextsect) - 1, _T("%d"), sectionid + 1);
 	} else {
 		_tcscpy(nextsect + _tcslen(nextsect), _T("|2"));
 	}

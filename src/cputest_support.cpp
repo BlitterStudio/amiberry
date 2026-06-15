@@ -66,7 +66,7 @@ void init_fpucw_x87_80(void)
 {
 }
 
-int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, TCHAR *name)
+int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, size_t outsize, TCHAR *name, size_t namesize)
 {
 	return 0;
 }
@@ -78,7 +78,7 @@ int debugmem_get_sourceline(uaecptr addr, TCHAR *out, int maxsize)
 {
 	return -1;
 }
-bool debugger_get_library_symbol(uaecptr base, uaecptr addr, TCHAR *out)
+bool debugger_get_library_symbol(uaecptr base, uaecptr addr, TCHAR *out, size_t outsize)
 {
 	return false;
 }
