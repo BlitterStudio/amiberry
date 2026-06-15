@@ -30,6 +30,16 @@ Amiberry looks for a plugin named `qemu-uae` through the existing plugin loader.
 
 Android and iOS currently build with PPC plugin support disabled because dynamic plugin loading is not wired for those targets.
 
+## Runtime Dependencies
+
+The QEMU-UAE plugin is dynamically loaded at runtime, so packages must ship both the plugin and the libraries needed to load it:
+
+- macOS app bundles include `qemu-uae.dylib` under `Contents/Resources/plugins` and bundle dependent dylibs under `Contents/Frameworks`.
+- Windows packages include `plugins/qemu-uae.dll`; plugin runtime DLLs such as GLib, GModule, zlib, and libwinpthread are installed beside `Amiberry.exe`.
+- Linux DEB/RPM packages install `qemu-uae.so` under Amiberry's plugin library directory and declare required system packages, including libglib/GLib and zlib.
+
+Package CI must verify both plugin presence and dependency resolution. A package that contains the plugin file but cannot load it is broken.
+
 ## Build Notes
 
 Source builds do not download or build QEMU automatically. Build the plugin separately, then place it in the plugin directory or pass `-DQEMU_UAE_PLUGIN=/path/to/qemu-uae` to bundle a prebuilt artifact into the install/package layout.

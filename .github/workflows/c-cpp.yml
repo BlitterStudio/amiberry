@@ -31,7 +31,7 @@ permissions:
 
 env:
   QEMU_UAE_RELEASE_REPO: BlitterStudio/amiberry-qemu-uae
-  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.3
+  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.4
   GH_TOKEN: ${{ github.token }}
 
 jobs:
@@ -622,6 +622,12 @@ jobs:
       - name: Download QEMU-UAE plugin
         run: .github/scripts/download-qemu-uae-plugin.sh ${{ matrix.qemu_uae_asset }}
 
+      - name: Verify QEMU-UAE plugin dependencies
+        run: |
+          for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+            readelf -d "$QEMU_UAE_PLUGIN" | grep -F "Shared library: [$needed]"
+          done
+
       - name: make for Ubuntu ${{ matrix.name }} with setup-sdl
         if: matrix.sdl_source == 'setup-sdl'
         run: |
@@ -643,6 +649,7 @@ jobs:
           for deb in amiberry_*.deb; do
             echo "Checking $deb"
             dpkg-deb -c "$deb" | grep -E '/amiberry/qemu-uae\.so$'
+            dpkg-deb -I "$deb" control | grep -E 'Depends: .*libglib2\.0-0'
           done
 
       - name: Upload artifact
@@ -699,8 +706,19 @@ jobs:
     - name: Run the build process with Docker
       run: |
         QEMU_PLUGIN="/build/${QEMU_UAE_PLUGIN_RELATIVE}"
-        docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "test -f '$QEMU_PLUGIN' && cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN='$QEMU_PLUGIN' && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake && rpm -qlp /build/amiberry-*.rpm | grep -E '/amiberry/qemu-uae\\.so$'"
+        docker run --rm -v "${{ github.workspace }}:/build" ${{ matrix.image }} \
+          bash -euo pipefail -c '
+            QEMU_PLUGIN="$1"
+            test -f "$QEMU_PLUGIN"
+            for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+              readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
+            done
+            cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_PLUGIN"
+            cmake --build build -j$(nproc)
+            cpack -G RPM --config build/CPackConfig.cmake
+            rpm -qlp /build/amiberry-*.rpm | grep -E "/amiberry/qemu-uae\\.so$"
+            rpm -qpR /build/amiberry-*.rpm | grep -E "^glib2($|[ <>=])"
+          ' bash "$QEMU_PLUGIN"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -756,8 +774,19 @@ jobs:
       - name: Run the build process with Docker
         run: |
           QEMU_PLUGIN="/build/${QEMU_UAE_PLUGIN_RELATIVE}"
-          docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-            bash -c "test -f '$QEMU_PLUGIN' && cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN='$QEMU_PLUGIN' ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake && dpkg-deb -c /build/amiberry_*.deb | grep -E '/amiberry/qemu-uae\\.so$'"
+          docker run --rm -v "${{ github.workspace }}:/build" ${{ matrix.image }} \
+            bash -euo pipefail -c '
+              QEMU_PLUGIN="$1"
+              test -f "$QEMU_PLUGIN"
+              for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+                readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
+              done
+              cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_PLUGIN" ${{ matrix.extra_cmake_args }}
+              cmake --build build -j$(nproc)
+              cpack -G DEB --config build/CPackConfig.cmake
+              dpkg-deb -c /build/amiberry_*.deb | grep -E "/amiberry/qemu-uae\\.so$"
+              dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libglib2\\.0-0"
+            ' bash "$QEMU_PLUGIN"
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -813,8 +842,19 @@ jobs:
     - name: Run the build process with Docker
       run: |
         QEMU_PLUGIN="/build/${QEMU_UAE_PLUGIN_RELATIVE}"
-        docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "test -f '$QEMU_PLUGIN' && cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN='$QEMU_PLUGIN' ${{ matrix.extra_cmake_args }} && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake && dpkg-deb -c /build/amiberry_*.deb | grep -E '/amiberry/qemu-uae\\.so$'"
+        docker run --rm -v "${{ github.workspace }}:/build" ${{ matrix.image }} \
+          bash -euo pipefail -c '
+            QEMU_PLUGIN="$1"
+            test -f "$QEMU_PLUGIN"
+            for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+              readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
+            done
+            cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_PLUGIN" ${{ matrix.extra_cmake_args }}
+            cmake --build build -j$(nproc)
+            cpack -G DEB --config build/CPackConfig.cmake
+            dpkg-deb -c /build/amiberry_*.deb | grep -E "/amiberry/qemu-uae\\.so$"
+            dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libglib2\\.0-0"
+          ' bash "$QEMU_PLUGIN"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -924,7 +964,7 @@ jobs:
       - name: Configure
         shell: bash
         run: |
-          cmake --preset windows-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN"
+          cmake --preset windows-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" -DQEMU_UAE_PLUGIN_DIR="$QEMU_UAE_PLUGIN_DIR"
           PRODUCT_VERSION="$(cat out/build/windows-release/amiberry-product-version.txt)"
           if [ -z "$PRODUCT_VERSION" ]; then
             echo "Could not determine the Amiberry product version from the build tree." >&2
@@ -989,6 +1029,66 @@ jobs:
           $qemuPluginPath = Join-Path $portableDir.FullName "plugins/qemu-uae.dll"
           if (-not (Test-Path $qemuPluginPath)) {
             throw "Portable ZIP is missing plugins/qemu-uae.dll."
+          }
+          $runtimeDlls = @("zlib1.dll", "libglib-2.0-0.dll", "libgmodule-2.0-0.dll", "libwinpthread-1.dll")
+          foreach ($runtimeDll in $runtimeDlls) {
+            $runtimeDllPath = Join-Path $portableDir.FullName $runtimeDll
+            if (-not (Test-Path $runtimeDllPath)) {
+              throw "Portable ZIP is missing $runtimeDll beside Amiberry.exe."
+            }
+          }
+
+          $loaderSource = Join-Path $verifyRoot "load-qemu-uae.c"
+          $loaderExe = Join-Path $verifyRoot "load-qemu-uae.exe"
+          @'
+          #include <stdio.h>
+          #include <windows.h>
+
+          int main(int argc, char **argv) {
+            char pluginPath[32768];
+            int written;
+            HMODULE plugin;
+
+            if (argc != 2) {
+              fprintf(stderr, "usage: %s <portable-root>\n", argv[0]);
+              return 2;
+            }
+            if (!SetDllDirectoryA(argv[1])) {
+              fprintf(stderr, "SetDllDirectoryA failed: %lu\n", GetLastError());
+              return 3;
+            }
+            written = snprintf(pluginPath, sizeof(pluginPath), "%s\\plugins\\qemu-uae.dll", argv[1]);
+            if (written < 0 || written >= (int)sizeof(pluginPath)) {
+              fprintf(stderr, "plugin path is too long\n");
+              return 4;
+            }
+            plugin = LoadLibraryA(pluginPath);
+            if (!plugin) {
+              fprintf(stderr, "LoadLibraryA failed: %lu\n", GetLastError());
+              return 5;
+            }
+            if (!GetProcAddress(plugin, "qemu_uae_version")) {
+              fprintf(stderr, "qemu_uae_version export missing: %lu\n", GetLastError());
+              FreeLibrary(plugin);
+              return 6;
+            }
+            FreeLibrary(plugin);
+            return 0;
+          }
+          '@ | Set-Content -Path $loaderSource -Encoding ascii
+          & clang $loaderSource -o $loaderExe
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to compile QEMU-UAE LoadLibrary smoke test."
+          }
+          $oldPath = $env:PATH
+          try {
+            $env:PATH = "$($portableDir.FullName);$(Join-Path $env:WINDIR 'System32')"
+            & $loaderExe $portableDir.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "QEMU-UAE LoadLibrary smoke test failed with exit code $LASTEXITCODE."
+            }
+          } finally {
+            $env:PATH = $oldPath
           }
 
           $alternateWorkingDir = Join-Path $verifyRoot "alternate-cwd"
@@ -1358,7 +1458,7 @@ jobs:
       - name: Configure
         shell: bash
         run: |
-          cmake --preset windows-arm64-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN"
+          cmake --preset windows-arm64-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" -DQEMU_UAE_PLUGIN_DIR="$QEMU_UAE_PLUGIN_DIR"
           PRODUCT_VERSION="$(cat out/build/windows-arm64-release/amiberry-product-version.txt)"
           if [ -z "$PRODUCT_VERSION" ]; then
             echo "Could not determine the Amiberry product version from the build tree." >&2
@@ -1414,6 +1514,66 @@ jobs:
           if (-not (Test-Path $exePath)) { throw "Amiberry.exe missing from portable ZIP." }
           $qemuPluginPath = Join-Path $portableDir.FullName "plugins/qemu-uae.dll"
           if (-not (Test-Path $qemuPluginPath)) { throw "plugins/qemu-uae.dll missing from portable ZIP." }
+          $runtimeDlls = @("zlib1.dll", "libglib-2.0-0.dll", "libgmodule-2.0-0.dll", "libwinpthread-1.dll")
+          foreach ($runtimeDll in $runtimeDlls) {
+            $runtimeDllPath = Join-Path $portableDir.FullName $runtimeDll
+            if (-not (Test-Path $runtimeDllPath)) {
+              throw "$runtimeDll missing from portable ZIP beside Amiberry.exe."
+            }
+          }
+
+          $loaderSource = Join-Path $verifyRoot "load-qemu-uae.c"
+          $loaderExe = Join-Path $verifyRoot "load-qemu-uae.exe"
+          @'
+          #include <stdio.h>
+          #include <windows.h>
+
+          int main(int argc, char **argv) {
+            char pluginPath[32768];
+            int written;
+            HMODULE plugin;
+
+            if (argc != 2) {
+              fprintf(stderr, "usage: %s <portable-root>\n", argv[0]);
+              return 2;
+            }
+            if (!SetDllDirectoryA(argv[1])) {
+              fprintf(stderr, "SetDllDirectoryA failed: %lu\n", GetLastError());
+              return 3;
+            }
+            written = snprintf(pluginPath, sizeof(pluginPath), "%s\\plugins\\qemu-uae.dll", argv[1]);
+            if (written < 0 || written >= (int)sizeof(pluginPath)) {
+              fprintf(stderr, "plugin path is too long\n");
+              return 4;
+            }
+            plugin = LoadLibraryA(pluginPath);
+            if (!plugin) {
+              fprintf(stderr, "LoadLibraryA failed: %lu\n", GetLastError());
+              return 5;
+            }
+            if (!GetProcAddress(plugin, "qemu_uae_version")) {
+              fprintf(stderr, "qemu_uae_version export missing: %lu\n", GetLastError());
+              FreeLibrary(plugin);
+              return 6;
+            }
+            FreeLibrary(plugin);
+            return 0;
+          }
+          '@ | Set-Content -Path $loaderSource -Encoding ascii
+          & clang $loaderSource -o $loaderExe
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to compile QEMU-UAE LoadLibrary smoke test."
+          }
+          $oldPath = $env:PATH
+          try {
+            $env:PATH = "$($portableDir.FullName);$(Join-Path $env:WINDIR 'System32')"
+            & $loaderExe $portableDir.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "QEMU-UAE LoadLibrary smoke test failed with exit code $LASTEXITCODE."
+            }
+          } finally {
+            $env:PATH = $oldPath
+          }
 
           $stdoutFile = Join-Path $verifyRoot "dump-paths.stdout"
           $stderrFile = Join-Path $verifyRoot "dump-paths.stderr"
