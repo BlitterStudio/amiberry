@@ -31,7 +31,7 @@ permissions:
 
 env:
   QEMU_UAE_RELEASE_REPO: BlitterStudio/amiberry-qemu-uae
-  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.3
+  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.4
   GH_TOKEN: ${{ github.token }}
 
 jobs:
