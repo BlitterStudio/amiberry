@@ -31,7 +31,7 @@ permissions:
 
 env:
   QEMU_UAE_RELEASE_REPO: BlitterStudio/amiberry-qemu-uae
-  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.4
+  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.5
   GH_TOKEN: ${{ github.token }}
 
 jobs:
@@ -1030,14 +1030,6 @@ jobs:
           if (-not (Test-Path $qemuPluginPath)) {
             throw "Portable ZIP is missing plugins/qemu-uae.dll."
           }
-          $runtimeDlls = @("zlib1.dll", "libglib-2.0-0.dll", "libgmodule-2.0-0.dll", "libwinpthread-1.dll")
-          foreach ($runtimeDll in $runtimeDlls) {
-            $runtimeDllPath = Join-Path $portableDir.FullName $runtimeDll
-            if (-not (Test-Path $runtimeDllPath)) {
-              throw "Portable ZIP is missing $runtimeDll beside Amiberry.exe."
-            }
-          }
-
           $loaderSource = Join-Path $verifyRoot "load-qemu-uae.c"
           $loaderExe = Join-Path $verifyRoot "load-qemu-uae.exe"
           @'
@@ -1514,14 +1506,6 @@ jobs:
           if (-not (Test-Path $exePath)) { throw "Amiberry.exe missing from portable ZIP." }
           $qemuPluginPath = Join-Path $portableDir.FullName "plugins/qemu-uae.dll"
           if (-not (Test-Path $qemuPluginPath)) { throw "plugins/qemu-uae.dll missing from portable ZIP." }
-          $runtimeDlls = @("zlib1.dll", "libglib-2.0-0.dll", "libgmodule-2.0-0.dll", "libwinpthread-1.dll")
-          foreach ($runtimeDll in $runtimeDlls) {
-            $runtimeDllPath = Join-Path $portableDir.FullName $runtimeDll
-            if (-not (Test-Path $runtimeDllPath)) {
-              throw "$runtimeDll missing from portable ZIP beside Amiberry.exe."
-            }
-          }
-
           $loaderSource = Join-Path $verifyRoot "load-qemu-uae.c"
           $loaderExe = Join-Path $verifyRoot "load-qemu-uae.exe"
           @'

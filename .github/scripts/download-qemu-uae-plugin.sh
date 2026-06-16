@@ -8,7 +8,7 @@ fi
 
 asset="$1"
 repo="${QEMU_UAE_RELEASE_REPO:-BlitterStudio/amiberry-qemu-uae}"
-tag="${QEMU_UAE_RELEASE_TAG:-v11.0.1-amiberry.3}"
+tag="${QEMU_UAE_RELEASE_TAG:-v11.0.1-amiberry.5}"
 output_dir="${2:-${GITHUB_WORKSPACE:-$PWD}/.qemu-uae-plugin}"
 download_dir="$output_dir/download"
 extract_dir="$output_dir/extract"
