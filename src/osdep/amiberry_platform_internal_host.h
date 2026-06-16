@@ -57,6 +57,8 @@ static inline void osdep_platform_shutdown_sdl()
 static inline void osdep_platform_init_ui()
 {
 	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT);
+	if (!normalcursor)
+		normalcursor = SDL_GetDefaultCursor();
 	clipboard_init();
 }
 

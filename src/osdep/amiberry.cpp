@@ -1265,6 +1265,11 @@ bool ismouseactive ()
 	return mouseactive > 0;
 }
 
+bool was_capture_user_released()
+{
+	return user_released_capture;
+}
+
 static bool accepts_uncaptured_guest_input()
 {
 	return currprefs.input_tablet >= TABLET_MOUSEHACK
@@ -1311,7 +1316,7 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 		return;
 
 	if (!isrp && active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		if (SDL_GetCursor() != normalcursor)
+		if (normalcursor && SDL_GetCursor() != normalcursor)
 			return;
 	}
 	if (active) {

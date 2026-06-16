@@ -338,17 +338,21 @@ static int read_block(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int
 			if (dtotal != 2048)
 				return ret;
 			if (sectorsize >= 2352) {
-				memset(data, 0, 16);
-				memcpy(data + 16, p, 2048);
-				encode_l2(data, sector + 150);
-				if (sectorsize > 2352)
-					memset(data + 2352, 0, sectorsize - 2352);
-				data += sectorsize;
+				if (data) {
+					memset(data, 0, 16);
+					memcpy(data + 16, p, 2048);
+					encode_l2(data, sector + 150);
+					if (sectorsize > 2352)
+						memset(data + 2352, 0, sectorsize - 2352);
+					data += sectorsize;
+				}
 				ret += sectorsize;
 			}
 			else if (sectorsize == 2048) {
-				memcpy(data, p, 2048);
-				data += sectorsize;
+				if (data) {
+					memcpy(data, p, 2048);
+					data += sectorsize;
+				}
 				ret += sectorsize;
 			}
 			got = true;
@@ -1401,17 +1405,21 @@ retry:
 			if (dtotal != 2048)
 				return ret;
 			if (sectorsize >= 2352) {
-				memset(data, 0, 16);
-				memcpy(data + 16, p, 2048);
-				encode_l2(data, sector + 150);
-				if (sectorsize > 2352)
-					memset(data + 2352, 0, sectorsize - 2352);
-				data += sectorsize;
+				if (data) {
+					memset(data, 0, 16);
+					memcpy(data + 16, p, 2048);
+					encode_l2(data, sector + 150);
+					if (sectorsize > 2352)
+						memset(data + 2352, 0, sectorsize - 2352);
+					data += sectorsize;
+				}
 				ret += sectorsize;
 			}
 			else if (sectorsize == 2048) {
-				memcpy(data, p, 2048);
-				data += sectorsize;
+				if (data) {
+					memcpy(data, p, 2048);
+					data += sectorsize;
+				}
 				ret += sectorsize;
 			}
 			got = true;
