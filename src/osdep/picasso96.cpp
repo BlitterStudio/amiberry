@@ -4130,11 +4130,11 @@ static uae_u32 REGPARAM2 picasso_InvertRect (TrapContext *ctx)
 
 	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
 		P96TRACE((_T("InvertRect %dbpp 0x%02x\n"), Bpp, mask));
+		if (!validatecoords(ctx, &ri, ri.RGBFormat, &X, &Y, &Width, &Height))
+			return 1;
 #ifdef AMIBERRY
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, Height * ri.BytesPerRow);
 #endif
-		if (!validatecoords(ctx, &ri, ri.RGBFormat, &X, &Y, &Width, &Height))
-			return 1;
 
 		if (Bpp > 1)
 			mask = 0xFF;
@@ -4181,7 +4181,7 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 	auto Mask = static_cast<uae_u8>(trap_get_dreg(ctx, 5));
 	const auto RGBFmt = static_cast<uae_u8>(trap_get_dreg(ctx, 7));
 	uae_u8 *oldstart;
-	int Bpp;
+	const int Bpp = GetBytesPerPixel(RGBFmt);
 	struct RenderInfo ri{};
 	uae_u32 result = 0;
 
@@ -4194,8 +4194,6 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 #ifdef AMIBERRY
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, Height * ri.BytesPerRow);
 #endif
-
-		Bpp = GetBytesPerPixel(RGBFmt);
 
 		P96TRACE((_T("FillRect(%d, %d, %d, %d) Pen 0x%x BPP %d BPR %d Mask 0x%02x\n"),
 			X, Y, Width, Height, Pen, Bpp, ri.BytesPerRow, Mask));
@@ -4651,7 +4649,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 	uae_u8* uae_mem;
 	uae_u8 *tmpl_base;
 	uae_u32 rgbmask;
-	int Bpp;
+	const int Bpp = GetBytesPerPixel(RGBFmt);
 
 	if (NOBLITTER)
 		return 0;
@@ -4663,7 +4661,6 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, H * ri.BytesPerRow);
 #endif
 		rgbmask = rgbfmasks[RGBFmt];
-		Bpp = GetBytesPerPixel(RGBFmt);
 		uae_mem = ri.Memory + Y * ri.BytesPerRow + X * Bpp; /* offset into address */
 
 		if (tmp.DrawMode & INVERS)
