@@ -1070,7 +1070,7 @@ int graphics_init(bool mousecapture)
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping graphics initialization.\n");
 		g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
-		update_pixel_format();
+		update_pixel_format(0);
 		if (amiga_surface == nullptr) {
 			amiga_surface = SDL_CreateSurface(1920, 1080, pixel_format);
 			if (!amiga_surface) {
@@ -1083,7 +1083,7 @@ int graphics_init(bool mousecapture)
 	}
 
 	g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
-	update_pixel_format();
+	update_pixel_format(0);
 	AMonitors[0].active = true;
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
@@ -1197,9 +1197,9 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (mon->screen_is_picasso) {
 		w = state->Width;
 		h = state->Height;
-		update_pixel_format();
+		update_pixel_format(monid);
 	} else {
-		update_pixel_format();
+		update_pixel_format(monid);
 		vb = avidinfo->inbuffer;
 		vbout = avidinfo->outbuffer;
 		if (!vb) {
@@ -1263,7 +1263,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
 
-		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && pixel_format == SDL_PIXELFORMAT_ABGR8888) {
+		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp &&
+			p96_rgbformat_matches_host_pixel_format(state->RGBFormat, pixel_format)) {
 			is_zero_copy_eligible = true;
 		}
 	}
