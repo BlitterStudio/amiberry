@@ -42,6 +42,21 @@ constexpr uae_u32 MHIF_PAUSED = 3;
 constexpr uae_u32 UAE_MHI_PARAM_VOLUME = 0;
 constexpr uae_u32 UAE_MHI_PARAM_PANNING = 1;
 
+constexpr uae_u32 UAE_MHI_QUERY_MPEG1 = 1;
+constexpr uae_u32 UAE_MHI_QUERY_MPEG2 = 2;
+constexpr uae_u32 UAE_MHI_QUERY_MPEG25 = 3;
+constexpr uae_u32 UAE_MHI_QUERY_MPEG4 = 4;
+constexpr uae_u32 UAE_MHI_QUERY_LAYER1 = 10;
+constexpr uae_u32 UAE_MHI_QUERY_LAYER2 = 11;
+constexpr uae_u32 UAE_MHI_QUERY_LAYER3 = 12;
+constexpr uae_u32 UAE_MHI_QUERY_VARIABLE_BITRATE = 20;
+constexpr uae_u32 UAE_MHI_QUERY_JOINT_STEREO = 21;
+constexpr uae_u32 UAE_MHI_QUERY_VOLUME_CONTROL = 40;
+constexpr uae_u32 UAE_MHI_QUERY_PANNING_CONTROL = 41;
+constexpr uae_u32 UAE_MHI_QUERY_IS_HARDWARE = 1010;
+constexpr uae_u32 UAE_MHI_QUERY_IS_68K = 1011;
+constexpr uae_u32 UAE_MHI_QUERY_IS_PPC = 1012;
+
 struct MhiEncodedBuffer {
 	std::vector<uae_u8> data;
 	size_t offset = 0;
@@ -69,9 +84,11 @@ struct MhiHostSession {
 	std::deque<MhiEncodedBuffer> encoded;
 	std::deque<uae_u32> completed_tokens;
 	std::vector<uae_s16> pcm;
+	std::vector<uae_s16> pending_pcm;
 	size_t pcm_read = 0;
 	size_t pcm_write = 0;
 	size_t pcm_used = 0;
+	size_t pending_pcm_read = 0;
 #if defined(HAVE_MPG123)
 	mpg123_handle *mpg = nullptr;
 #endif
@@ -137,6 +154,41 @@ static bool push_pcm_frames(MhiHostSession *session, const uae_s16 *samples, siz
 	}
 	session->pcm_used += frames;
 	return true;
+}
+
+static size_t push_pcm_frames_available(MhiHostSession *session, const uae_s16 *samples, size_t frames)
+{
+	const size_t pushed = std::min(frames, pcm_free_frames(session));
+	if (pushed > 0)
+		push_pcm_frames(session, samples, pushed);
+	return pushed;
+}
+
+static bool flush_pending_pcm_locked(MhiHostSession *session)
+{
+	if (session->pending_pcm_read >= session->pending_pcm.size() / 2) {
+		session->pending_pcm.clear();
+		session->pending_pcm_read = 0;
+		return true;
+	}
+
+	const auto *samples = session->pending_pcm.data() + session->pending_pcm_read * 2;
+	const size_t frames = session->pending_pcm.size() / 2 - session->pending_pcm_read;
+	const size_t pushed = push_pcm_frames_available(session, samples, frames);
+	session->pending_pcm_read += pushed;
+	if (pushed > 0)
+		session->out_of_data = false;
+	if (session->pending_pcm_read >= session->pending_pcm.size() / 2) {
+		session->pending_pcm.clear();
+		session->pending_pcm_read = 0;
+		return true;
+	}
+	return false;
+}
+
+static bool has_pending_pcm(const MhiHostSession *session)
+{
+	return session->pending_pcm_read < session->pending_pcm.size() / 2;
 }
 
 static bool complete_token_locked(MhiHostSession *session, uae_u32 token)
@@ -206,6 +258,8 @@ static void clear_queues_locked(MhiHostSession *session)
 	session->pcm_read = 0;
 	session->pcm_write = 0;
 	session->pcm_used = 0;
+	session->pending_pcm.clear();
+	session->pending_pcm_read = 0;
 	session->out_of_data = false;
 	session->decoder_error = false;
 	session->decoder_needs_drain = false;
@@ -250,6 +304,15 @@ static bool decode_chunk(MhiHostSession *session, const std::vector<uae_u8> &chu
 	bool needs_drain = true;
 
 	lock_decoder(session);
+	lock_session(session);
+	if (!flush_pending_pcm_locked(session)) {
+		session->decoder_needs_drain = true;
+		unlock_session(session);
+		unlock_decoder(session);
+		return false;
+	}
+	unlock_session(session);
+
 	for (;;) {
 		size_t done = 0;
 		const int ret = mpg123_decode(session->mpg, input, input_size,
@@ -260,11 +323,16 @@ static bool decode_chunk(MhiHostSession *session, const std::vector<uae_u8> &chu
 		if (done > 0) {
 			const size_t frames = done / (sizeof(uae_s16) * 2);
 			lock_session(session);
-			const bool pushed = push_pcm_frames(session, reinterpret_cast<uae_s16*>(decoded), frames);
-			if (pushed)
+			const auto *samples = reinterpret_cast<uae_s16*>(decoded);
+			const size_t pushed = push_pcm_frames_available(session, samples, frames);
+			if (pushed > 0)
 				session->out_of_data = false;
+			if (pushed < frames) {
+				session->pending_pcm.assign(samples + pushed * 2, samples + frames * 2);
+				session->pending_pcm_read = 0;
+			}
 			unlock_session(session);
-			if (!pushed) {
+			if (pushed < frames) {
 				result = false;
 				needs_drain = true;
 				break;
@@ -313,7 +381,8 @@ static int mhi_decode_worker(void *opaque)
 		lock_session(session);
 		const bool running = session->worker_running;
 		const bool paused = session->paused || !session->playing;
-		const bool drain = session->decoder_needs_drain && pcm_free_frames(session) >= min_free_decode_frames();
+		const bool drain = (session->decoder_needs_drain || has_pending_pcm(session))
+			&& pcm_free_frames(session) >= min_free_decode_frames();
 		unlock_session(session);
 		if (!running)
 			break;
@@ -593,7 +662,25 @@ uae_u32 mhi_host_set_param(TrapContext*, uae_u32 handle, uae_u32 param, uae_u32 
 	return 1;
 }
 
-uae_u32 mhi_host_query(TrapContext*, uae_u32)
+uae_u32 mhi_host_query(TrapContext*, uae_u32 query)
 {
-	return 0;
+	switch (query) {
+		case UAE_MHI_QUERY_MPEG1:
+		case UAE_MHI_QUERY_MPEG2:
+		case UAE_MHI_QUERY_MPEG25:
+		case UAE_MHI_QUERY_LAYER1:
+		case UAE_MHI_QUERY_LAYER2:
+		case UAE_MHI_QUERY_LAYER3:
+		case UAE_MHI_QUERY_VARIABLE_BITRATE:
+		case UAE_MHI_QUERY_JOINT_STEREO:
+		case UAE_MHI_QUERY_VOLUME_CONTROL:
+		case UAE_MHI_QUERY_PANNING_CONTROL:
+			return 1;
+		case UAE_MHI_QUERY_MPEG4:
+		case UAE_MHI_QUERY_IS_HARDWARE:
+		case UAE_MHI_QUERY_IS_68K:
+		case UAE_MHI_QUERY_IS_PPC:
+		default:
+			return 0;
+	}
 }
