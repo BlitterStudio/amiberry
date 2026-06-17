@@ -30,7 +30,7 @@ extern int linear_hpos;
 void custom_trigger_start_fast(void);
 
 evt_t event_cycles, nextevent, currcycle;
-uae_u32 currcycle_cck;
+evt_t currcycle_cck;
 int is_syncline;
 static int syncline_cnt;
 frame_time_t is_syncline_end;

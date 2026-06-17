@@ -229,7 +229,7 @@ struct dma_rec
 {
 	int hpos, vpos[2];
 	int frame;
-	uae_u32 tick;
+	evt_t tick;
 	int dhpos[2];
     uae_u16 reg;
     uae_u64 dat;
