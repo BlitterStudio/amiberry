@@ -267,6 +267,9 @@ typedef struct voodoo_t
         event_t *render_not_full_event[4];
         event_t *wake_render_thread[4];
 
+        /* Amiberry local delta: SDL helper threads are joinable, so Voodoo
+           workers must observe device teardown and return before close joins. */
+        volatile int thread_run;
         int voodoo_busy;
         int render_voodoo_busy[4];
 
