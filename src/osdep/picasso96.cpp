@@ -58,6 +58,7 @@
 #include "options.h"
 #ifdef AMIBERRY
 #include "amiberry_gfx.h"
+#include "gfx_colors.h"
 #include "gfx_window.h"
 #include "display_modes.h"
 #endif
@@ -1360,13 +1361,17 @@ static void setconvert(int monid)
 		vidinfo->picasso_convert[0] = vidinfo->picasso_convert[1] = getconvert(state->RGBFormat, picasso_vidinfo[monid].pixbytes);
 	}
 #ifdef AMIBERRY
-	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_B5G6R5PC;
+	vidinfo->host_mode = p96_get_host_rgb_format_for_monitor(monid, picasso_vidinfo[monid].pixbytes);
 #else
 	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_B8G8R8A8 : RGBFB_B5G6R5PC;
 #endif
 	if (picasso_vidinfo[monid].pixbytes == 4)
 #ifdef AMIBERRY
-		alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGBA
+		alloc_colors_rgb(8, 8, 8,
+			vidinfo->host_mode == RGBFB_B8G8R8A8 ? 16 : 0,
+			8,
+			vidinfo->host_mode == RGBFB_B8G8R8A8 ? 0 : 16,
+			0, 0, 0, 0, p96rc, p96gc, p96bc);
 #else
 		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGRA
 		
@@ -4687,10 +4692,11 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 
 		uae_u8 *tmpl_buffer = nullptr;
 		if (indirect) {
-			const int tmpl_size = H * tmp.BytesPerRow * Bpp;
+			const int tmpl_offset = tmp.XOffset / 8;
+			const int tmpl_size = tmpl_offset + H * tmp.BytesPerRow;
 			tmpl_buffer = xcalloc(uae_u8, tmpl_size + 1);
 			trap_get_bytes(ctx, tmpl_buffer, tmp.AMemory, tmpl_size);
-			tmpl_base = tmpl_buffer + tmp.XOffset / 8;
+			tmpl_base = tmpl_buffer + tmpl_offset;
 		} else {
 			tmpl_base = tmp.Memory + tmp.XOffset / 8;
 		}
@@ -5493,6 +5499,13 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 			dx++;
 		}
 		break;
+	case RGBFB_B8G8R8A8_32:
+		while (x < endx) {
+			((uae_u32*)dst2)[dx] = ((uae_u32*)src2)[x] & 0x00ffffff;
+			x++;
+			dx++;
+		}
+		break;
 
 		/* 15/16bit->32bit */
 	case RGBFB_R5G6B5PC_32:
@@ -5680,6 +5693,15 @@ void copyrow_scale(int monid, uae_u8 *src, uae_u8 *src_screen, uae_u8 *dst,
 				sx += sxadd;
 				CKCHECK
 					reinterpret_cast<uae_u32*>(dst2)[dx] = reinterpret_cast<uae_u32*>(src2)[x] >> 8;
+				dx++;
+			}
+			break;
+		case RGBFB_B8G8R8A8_32:
+			while (sx < endx) {
+				x = sx >> 8;
+				sx += sxadd;
+				CKCHECK
+					reinterpret_cast<uae_u32*>(dst2)[dx] = reinterpret_cast<uae_u32*>(src2)[x] & 0x00ffffff;
 				dx++;
 			}
 			break;
