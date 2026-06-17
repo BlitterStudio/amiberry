@@ -4687,10 +4687,11 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 
 		uae_u8 *tmpl_buffer = nullptr;
 		if (indirect) {
-			const int tmpl_size = H * tmp.BytesPerRow * Bpp;
+			const int tmpl_offset = tmp.XOffset / 8;
+			const int tmpl_size = tmpl_offset + H * tmp.BytesPerRow;
 			tmpl_buffer = xcalloc(uae_u8, tmpl_size + 1);
 			trap_get_bytes(ctx, tmpl_buffer, tmp.AMemory, tmpl_size);
-			tmpl_base = tmpl_buffer + tmp.XOffset / 8;
+			tmpl_base = tmpl_buffer + tmpl_offset;
 		} else {
 			tmpl_base = tmp.Memory + tmp.XOffset / 8;
 		}
