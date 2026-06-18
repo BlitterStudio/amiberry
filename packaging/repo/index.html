@@ -253,13 +253,18 @@
                         <td>apt</td>
                     </tr>
                     <tr>
-                        <td>Fedora</td>
-                        <td>42, 43, 44</td>
-                        <td>dnf</td>
+                        <td>Ubuntu derivatives</td>
+                        <td>Linux Mint 21.x/22.x, Elementary OS 7/8, Pop!_OS 22.04/24.04, Zorin OS 17/18</td>
+                        <td>apt</td>
                     </tr>
                     <tr>
-                        <td>RHEL / CentOS / Rocky / AlmaLinux</td>
-                        <td>8, 9</td>
+                        <td>Debian derivatives</td>
+                        <td>LMDE 6/7, Parrot OS 6/7, SparkyLinux 7/8, Devuan 5/6</td>
+                        <td>apt</td>
+                    </tr>
+                    <tr>
+                        <td>Fedora</td>
+                        <td>44</td>
                         <td>dnf</td>
                     </tr>
                 </tbody>
@@ -277,7 +282,7 @@
                             <code>sudo curl -fsSL https://packages.amiberry.com/gpg.key -o /usr/share/keyrings/amiberry-archive-keyring.gpg</code>
                         </div>
                     </li>
-                    <li>Add the repository to your sources (replace <code>jammy</code> with your release codename):
+                    <li>Add the repository to your sources (replace <code>jammy</code> with your supported repository suite):
                         <div class="code-block">
                             <code>echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/amiberry-archive-keyring.gpg] https://packages.amiberry.com/apt jammy main" | sudo tee /etc/apt/sources.list.d/amiberry.list</code>
                         </div>
@@ -292,7 +297,7 @@ sudo apt install amiberry</code>
             </div>
             
             <div class="manual-section">
-                <h3>Fedora / RHEL / CentOS / Rocky / AlmaLinux</h3>
+                <h3>Fedora</h3>
                 <ol>
                     <li>Download the repository configuration:
                         <div class="code-block">
@@ -329,7 +334,7 @@ sudo apt install amiberry</code>
         <section>
             <h2>Troubleshooting</h2>
             <div class="warning">
-                <strong>Repository not found?</strong> Make sure you've replaced the release codename (e.g., <code>jammy</code>, <code>bookworm</code>) with your actual distribution release. Run <code>lsb_release -cs</code> to find your codename.
+                <strong>Repository not found?</strong> Make sure you are using a supported repository suite (e.g., <code>jammy</code>, <code>noble</code>, <code>bookworm</code>, or <code>trixie</code>). Derivative distributions must use the matching Ubuntu or Debian base suite.
             </div>
             <div class="warning">
                 <strong>GPG signature verification failed?</strong> Ensure the GPG key was downloaded correctly and placed in <code>/usr/share/keyrings/amiberry-archive-keyring.gpg</code>.
