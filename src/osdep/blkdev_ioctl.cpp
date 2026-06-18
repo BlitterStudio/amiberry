@@ -316,20 +316,23 @@ static int read_block(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int
 		got = false;
 		if (!ciw->usesptiread && sectorsize == 2048 && ciw->trackmode[track] == 0) {
 			if (read2048(ciw, sector) == 2048) {
-				memcpy(data, p, 2048);
-				data += sectorsize;
+				if (data) {
+					memcpy(data, p, 2048);
+					data += sectorsize;
+				}
 				ret += sectorsize;
 				got = true;
 			}
 		}
 		if (!got && !ciw->usesptiread) {
-			int len = spti_read(ciw, unitnum, data, sector, sectorsize);
+			uae_u8* out = p;
+			int len = spti_read(ciw, unitnum, out, sector, sectorsize);
 			if (len) {
 				if (data) {
-					memcpy(data, p, sectorsize);
+					memcpy(data, out, sectorsize);
 					data += sectorsize;
-					ret += sectorsize;
 				}
+				ret += sectorsize;
 				got = true;
 			}
 		}
@@ -338,14 +341,16 @@ static int read_block(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int
 			if (dtotal != 2048)
 				return ret;
 			if (sectorsize >= 2352) {
-				if (data) {
-					memset(data, 0, 16);
-					memcpy(data + 16, p, 2048);
-					encode_l2(data, sector + 150);
-					if (sectorsize > 2352)
-						memset(data + 2352, 0, sectorsize - 2352);
+				uae_u8 mode1[2048];
+				memcpy(mode1, p, sizeof mode1);
+				uae_u8* out = data ? data : p;
+				memset(out, 0, 16);
+				memcpy(out + 16, mode1, sizeof mode1);
+				encode_l2(out, sector + 150);
+				if (sectorsize > 2352)
+					memset(out + 2352, 0, sectorsize - 2352);
+				if (data)
 					data += sectorsize;
-				}
 				ret += sectorsize;
 			}
 			else if (sectorsize == 2048) {
@@ -1383,20 +1388,23 @@ retry:
 		got = false;
 		if (!ciw->usesptiread && sectorsize == 2048 && ciw->trackmode[track] == 0) {
 			if (read2048(ciw, sector) == 2048) {
-				memcpy(data, p, 2048);
-				data += sectorsize;
+				if (data) {
+					memcpy(data, p, 2048);
+					data += sectorsize;
+				}
 				ret += sectorsize;
 				got = true;
 			}
 		}
 		if (!got && !ciw->usesptiread) {
-			int len = spti_read(ciw, unitnum, data, sector, sectorsize);
+			uae_u8* out = p;
+			int len = spti_read(ciw, unitnum, out, sector, sectorsize);
 			if (len) {
 				if (data) {
-					memcpy(data, p, sectorsize);
+					memcpy(data, out, sectorsize);
 					data += sectorsize;
-					ret += sectorsize;
 				}
+				ret += sectorsize;
 				got = true;
 			}
 		}
@@ -1405,14 +1413,16 @@ retry:
 			if (dtotal != 2048)
 				return ret;
 			if (sectorsize >= 2352) {
-				if (data) {
-					memset(data, 0, 16);
-					memcpy(data + 16, p, 2048);
-					encode_l2(data, sector + 150);
-					if (sectorsize > 2352)
-						memset(data + 2352, 0, sectorsize - 2352);
+				uae_u8 mode1[2048];
+				memcpy(mode1, p, sizeof mode1);
+				uae_u8* out = data ? data : p;
+				memset(out, 0, 16);
+				memcpy(out + 16, mode1, sizeof mode1);
+				encode_l2(out, sector + 150);
+				if (sectorsize > 2352)
+					memset(out + 2352, 0, sectorsize - 2352);
+				if (data)
 					data += sectorsize;
-				}
 				ret += sectorsize;
 			}
 			else if (sectorsize == 2048) {
