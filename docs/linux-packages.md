@@ -21,7 +21,7 @@ After setup, install with `sudo apt install amiberry` (Debian/Ubuntu) or `sudo d
 
 ## Manual Installation — Ubuntu / Debian
 
-### Modern format (Ubuntu 24.04+, Debian 12+)
+### Modern format (Ubuntu 24.04+, Debian 13+)
 
 ```bash
 # Download GPG key
@@ -41,7 +41,7 @@ Signed-By: /usr/share/keyrings/amiberry-archive-keyring.gpg" \
 sudo apt update && sudo apt install amiberry
 ```
 
-### Legacy format (Ubuntu 22.04, or if DEB822 format is not supported)
+### Legacy format (Ubuntu 22.04, Debian 12, or if DEB822 format is not supported)
 
 ```bash
 # Download GPG key
@@ -89,16 +89,40 @@ sudo dnf update amiberry
 
 ## Supported Distributions
 
-| Distribution | Version | Architectures |
-|-------------|---------|---------------|
-| Ubuntu | 22.04 LTS (Jammy Jellyfish) | amd64 |
-| Ubuntu | 24.04 LTS (Noble Numbat) | amd64 |
-| Ubuntu | 25.10 (Plucky Puffin) | amd64, arm64 |
-| Debian | 12 (Bookworm) | amd64, arm64 |
-| Debian | 13 (Trixie) | amd64, arm64 |
-| Fedora | Latest | x86_64, aarch64 |
+| Distribution | Version | Repository suite | Architectures |
+|-------------|---------|------------------|---------------|
+| Ubuntu | 22.04 LTS (Jammy) | jammy | amd64 |
+| Ubuntu | 24.04 LTS (Noble) | noble | amd64 |
+| Ubuntu | 25.10 (Questing) | questing | amd64, arm64 |
+| Ubuntu | 26.04 LTS (Resolute) | resolute | amd64, arm64 |
+| Debian | 12 (Bookworm) | bookworm | amd64, arm64 |
+| Debian | 13 (Trixie) | trixie | amd64, arm64 |
+| Raspberry Pi OS | Bookworm, Trixie | bookworm, trixie | arm64 |
+| Fedora | 44 | rpm | x86_64, aarch64 |
 
-> **Note**: Raspberry Pi OS (64-bit) users can use the Debian Bookworm (arm64) package.
+The install script also maps compatible derivatives to the matching base suite:
+
+| Distribution | Version | Repository suite |
+|-------------|---------|------------------|
+| Linux Mint | 21.x | jammy |
+| Linux Mint | 22.x | noble |
+| LMDE | 6 | bookworm |
+| LMDE | 7 | trixie |
+| Elementary OS | 7 | jammy |
+| Elementary OS | 8 | noble |
+| Pop!_OS | 22.04 | jammy |
+| Pop!_OS | 24.04 | noble |
+| Zorin OS | 17 | jammy |
+| Zorin OS | 18 | noble |
+| Devuan | 5 | bookworm |
+| Devuan | 6 | trixie |
+| Parrot OS | 6 | bookworm |
+| Parrot OS | 7 | trixie |
+| SparkyLinux | 7 | bookworm |
+| SparkyLinux | 8 | trixie |
+
+For manual APT setup on derivatives, use the repository suite shown above instead
+of the derivative distribution codename.
 
 ---
 
