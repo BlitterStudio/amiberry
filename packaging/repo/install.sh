@@ -47,58 +47,70 @@ set_debian_suite() {
     esac
 }
 
-case "$ID" in
-    ubuntu)
-        set_ubuntu_suite "${VERSION_CODENAME:-}"
-        APT_VERSION_ID="${VERSION_ID:-$APT_VERSION_ID}"
-        ;;
-    debian|raspbian)
-        set_debian_suite "${VERSION_CODENAME:-}"
-        APT_VERSION_ID="${VERSION_ID:-$APT_VERSION_ID}"
-        ;;
-    devuan)
-        # Devuan is a Debian fork; map its codenames/version to the Debian
-        # equivalents so we can reuse the Debian repository suites.
-        case "${VERSION_CODENAME:-}" in
-            excalibur) set_debian_suite "trixie" ;;
-            daedalus)  set_debian_suite "bookworm" ;;
-            chimaera)  set_debian_suite "bullseye" ;;
-            *)         set_debian_suite "${VERSION_CODENAME:-}" ;;
+case " ${NAME:-} ${PRETTY_NAME:-} " in
+    *"Parrot"*)
+        case "${VERSION_ID:-}:${VERSION_CODENAME:-}" in
+            6*:*)  set_debian_suite "bookworm" ;;
+            7*:*)  set_debian_suite "trixie" ;;
+            *:lory) set_debian_suite "bookworm" ;;
         esac
         ;;
-    linuxmint)
-        if [ -n "${UBUNTU_CODENAME:-}" ]; then
-            set_ubuntu_suite "$UBUNTU_CODENAME"
-        else
+esac
+
+if [ -z "$APT_SUITE" ]; then
+    case "$ID" in
+        ubuntu)
+            set_ubuntu_suite "${VERSION_CODENAME:-}"
+            APT_VERSION_ID="${VERSION_ID:-$APT_VERSION_ID}"
+            ;;
+        debian|raspbian)
+            set_debian_suite "${VERSION_CODENAME:-}"
+            APT_VERSION_ID="${VERSION_ID:-$APT_VERSION_ID}"
+            ;;
+        devuan)
+            # Devuan is a Debian fork; map its codenames/version to the Debian
+            # equivalents so we can reuse the Debian repository suites.
+            case "${VERSION_CODENAME:-}" in
+                excalibur) set_debian_suite "trixie" ;;
+                daedalus)  set_debian_suite "bookworm" ;;
+                chimaera)  set_debian_suite "bullseye" ;;
+                *)         set_debian_suite "${VERSION_CODENAME:-}" ;;
+            esac
+            ;;
+        linuxmint)
+            if [ -n "${UBUNTU_CODENAME:-}" ]; then
+                set_ubuntu_suite "$UBUNTU_CODENAME"
+            else
+                case "${VERSION_ID:-}" in
+                    6*) set_debian_suite "bookworm" ;;
+                    7*) set_debian_suite "trixie" ;;
+                esac
+            fi
+            ;;
+        elementary|pop|zorin)
+            if [ -n "${UBUNTU_CODENAME:-}" ]; then
+                set_ubuntu_suite "$UBUNTU_CODENAME"
+            else
+                case "$ID:${VERSION_ID:-}" in
+                    elementary:7*|pop:22.04*|zorin:17*) set_ubuntu_suite "jammy" ;;
+                    elementary:8*|pop:24.04*|zorin:18*) set_ubuntu_suite "noble" ;;
+                esac
+            fi
+            ;;
+        parrot)
             case "${VERSION_ID:-}" in
                 6*) set_debian_suite "bookworm" ;;
                 7*) set_debian_suite "trixie" ;;
             esac
-        fi
-        ;;
-    elementary|pop|zorin)
-        if [ -n "${UBUNTU_CODENAME:-}" ]; then
-            set_ubuntu_suite "$UBUNTU_CODENAME"
-        else
-            case "$ID:${VERSION_ID:-}" in
-                elementary:7*|pop:22.04*|zorin:17*) set_ubuntu_suite "jammy" ;;
-                elementary:8*|pop:24.04*|zorin:18*) set_ubuntu_suite "noble" ;;
+            ;;
+        sparky)
+            case "${VERSION_ID:-}" in
+                7*) set_debian_suite "bookworm" ;;
+                8*) set_debian_suite "trixie" ;;
             esac
-        fi
-        ;;
-    parrot)
-        case "${VERSION_ID:-}" in
-            6*) set_debian_suite "bookworm" ;;
-            7*) set_debian_suite "trixie" ;;
-        esac
-        ;;
-    sparky)
-        case "${VERSION_ID:-}" in
-            7*) set_debian_suite "bookworm" ;;
-            8*) set_debian_suite "trixie" ;;
-        esac
-        ;;
-esac
+            ;;
+    esac
+fi
 
 if [ -z "$APT_SUITE" ] && [ -n "${UBUNTU_CODENAME:-}" ]; then
     set_ubuntu_suite "$UBUNTU_CODENAME"
