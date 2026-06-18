@@ -203,7 +203,6 @@ typedef void (PPCCALL *ppc_cpu_pause_function)(int pause);
 typedef bool (PPCCALL *ppc_cpu_check_state_function)(int state);
 typedef void (PPCCALL *ppc_cpu_set_state_function)(int state);
 typedef void (PPCCALL *ppc_cpu_reset_function)(void);
-typedef void (PPCCALL *ppc_cpu_flush_jit_function)(void);
 
 /* Function pointers to active PPC implementation */
 
@@ -229,7 +228,6 @@ static struct impl {
 	ppc_cpu_check_state_function check_state;
 	ppc_cpu_set_state_function set_state;
 	ppc_cpu_reset_function reset;
-	ppc_cpu_flush_jit_function flush_jit;
 	qemu_uae_ppc_in_cpu_thread_function in_cpu_thread;
 	qemu_uae_ppc_external_interrupt_function external_interrupt;
 	qemu_uae_lock_function lock;
@@ -311,10 +309,6 @@ static bool load_qemu_implementation(void)
 	}
 	//impl.free = (ppc_cpu_free_function) uae_dlsym(handle, "ppc_cpu_free");
 	//impl.stop = (ppc_cpu_stop_function) uae_dlsym(handle, "ppc_cpu_stop");
-	impl.flush_jit = (ppc_cpu_flush_jit_function) uae_dlsym(handle, "ppc_cpu_flush_jit");
-	if (impl.flush_jit) {
-		write_log("PPC: Imported optional ppc_cpu_flush_jit\n");
-	}
 
 	// FIXME: not needed, handled internally by uae_dlopen_plugin
 	// uae_dlopen_patch_common(handle);
@@ -698,9 +692,6 @@ static int ppc_thread(void *v)
 
 void uae_ppc_execute_check(void)
 {
-	if (using_qemu() && impl.flush_jit) {
-		impl.flush_jit();
-	}
 	if (ppc_spinlock_waiting) {
 		uae_ppc_spinlock_release();
 		uae_ppc_spinlock_get();
@@ -709,9 +700,6 @@ void uae_ppc_execute_check(void)
 
 void uae_ppc_execute_quick()
 {
-	if (using_qemu() && impl.flush_jit) {
-		impl.flush_jit();
-	}
 	uae_ppc_spinlock_release();
 	sleep_millis_main(1);
 	uae_ppc_spinlock_get();
