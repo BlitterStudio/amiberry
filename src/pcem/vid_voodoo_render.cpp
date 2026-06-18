@@ -1578,11 +1578,13 @@ static int render_thread(void *param, int odd_even)
 {
         voodoo_t *voodoo = (voodoo_t *)param;
 
-        while (1)
+        while (voodoo->thread_run)
         {
                 thread_set_event(voodoo->render_not_full_event[odd_even]);
                 thread_wait_event(voodoo->wake_render_thread[odd_even], -1);
                 thread_reset_event(voodoo->wake_render_thread[odd_even]);
+                if (!voodoo->thread_run)
+                        break;
                 voodoo->render_voodoo_busy[odd_even] = 1;
 
                 while (!PARAM_EMPTY(odd_even))
@@ -1604,6 +1606,7 @@ static int render_thread(void *param, int odd_even)
 
                 voodoo->render_voodoo_busy[odd_even] = 0;
         }
+        voodoo->render_voodoo_busy[odd_even] = 0;
         return 0;
 }
 
@@ -1628,8 +1631,8 @@ void voodoo_queue_triangle(voodoo_t *voodoo, voodoo_params_t *params)
 {
         voodoo_params_t *params_new = &voodoo->params_buffer[voodoo->params_write_idx & PARAM_MASK];
 
-        while (PARAM_FULL(0) || (voodoo->render_threads >= 2 && PARAM_FULL(1)) ||
-                (voodoo->render_threads == 4 && (PARAM_FULL(2) || PARAM_FULL(3))))
+        while (voodoo->thread_run && (PARAM_FULL(0) || (voodoo->render_threads >= 2 && PARAM_FULL(1)) ||
+                (voodoo->render_threads == 4 && (PARAM_FULL(2) || PARAM_FULL(3)))))
         {
                 thread_reset_event(voodoo->render_not_full_event[0]);
                 if (voodoo->render_threads >= 2)
@@ -1648,6 +1651,8 @@ void voodoo_queue_triangle(voodoo_t *voodoo, voodoo_params_t *params)
                 if (voodoo->render_threads == 4 && PARAM_FULL(3))
                         thread_wait_event(voodoo->render_not_full_event[3], -1); /*Wait for room in ringbuffer*/
         }
+        if (!voodoo->thread_run)
+                return;
 
         voodoo_use_texture(voodoo, params, 0);
         if (voodoo->dual_tmus)

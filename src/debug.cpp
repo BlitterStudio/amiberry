@@ -1977,7 +1977,7 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 	dx = width - xplus * ((maxhpos + 1) & ~1) - 16;
 
 	bool ended = false;
-	uae_u32 tick = dr->tick;
+	evt_t tick = dr->tick;
 	uae_s8 intlev = 0;
 	for (x = 0; x < NR_DMA_REC_COLS_MAX; x++) {
 		uae_u32 c = debug_colors[0].l[0];
@@ -3136,7 +3136,7 @@ static struct dma_rec *find_dma_record(int hpos, int vpos, int toggle)
 				if ((dr->hpos == 2 || dr->hpos == hpos && hpos >= 2) && dr->vpos[dma_record_vpos_type] == vpos) {
 					for (;;) {
 						dr = &dma_record_data[idx];
-						int tick = dr->tick;
+						evt_t tick = dr->tick;
 						if (dr->vpos[dma_record_vpos_type] == vpos && dr->frame == frame) {
 							if (dr->hpos == hpos) {
 								break;

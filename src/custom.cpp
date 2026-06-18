@@ -813,7 +813,7 @@ static bool safecpu(void)
 static void check_nocustom(void)
 {
 	struct amigadisplay* ad = &adisplays[0];
-	if (ad->picasso_on) {
+	if (ad->picasso_on && currprefs.picasso96_nocustom) {
 		custom_disabled = true;
 		line_disabled |= 2;
 	} else {

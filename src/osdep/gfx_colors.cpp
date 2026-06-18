@@ -21,39 +21,60 @@
 
 #ifdef AMIBERRY
 
-void update_pixel_format()
+static bool p96_monitor_uses_hardware_rtg(const int monid)
+{
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		const rtgboardconfig& rbc = currprefs.rtgboards[i];
+		if (rbc.monitor_id == monid && rbc.rtgmem_type >= GFXBOARD_HARDWARE) {
+			return true;
+		}
+	}
+	return false;
+}
+
+SDL_PixelFormat p96_get_host_pixel_format(const RGBFTYPE rgbfmt, const bool hardware_rtg)
+{
+	if (hardware_rtg || rgbfmt == RGBFB_B8G8R8A8) {
+		return SDL_PIXELFORMAT_ARGB8888;
+	}
+	return SDL_PIXELFORMAT_ABGR8888;
+}
+
+SDL_PixelFormat p96_get_host_pixel_format_for_monitor(const int monid)
+{
+	const int safe_monid = monid >= 0 && monid < MAX_AMIGAMONITORS ? monid : 0;
+	return p96_get_host_pixel_format(picasso96_state[safe_monid].RGBFormat, p96_monitor_uses_hardware_rtg(safe_monid));
+}
+
+bool p96_rgbformat_matches_host_pixel_format(const RGBFTYPE rgbfmt, const SDL_PixelFormat format)
+{
+	return (rgbfmt == RGBFB_R8G8B8A8 && format == SDL_PIXELFORMAT_ABGR8888) ||
+		(rgbfmt == RGBFB_B8G8R8A8 && format == SDL_PIXELFORMAT_ARGB8888);
+}
+
+RGBFTYPE p96_get_host_rgb_format(const SDL_PixelFormat format, const int pixbytes)
+{
+	if (pixbytes == 4) {
+		return format == SDL_PIXELFORMAT_ARGB8888 ? RGBFB_B8G8R8A8 : RGBFB_R8G8B8A8;
+	}
+	return RGBFB_B5G6R5PC;
+}
+
+RGBFTYPE p96_get_host_rgb_format_for_monitor(const int monid, const int pixbytes)
+{
+	return p96_get_host_rgb_format(p96_get_host_pixel_format_for_monitor(monid), pixbytes);
+}
+
+void update_pixel_format(const int monid)
 {
 	// TODO LIBRETRO support picasso96 ABGR
 	if (gfx_platform_override_pixel_format(&pixel_format))
 		return;
 
-	const bool is_packed_16bit_rtg =
-		picasso96_state[0].RGBFormat == RGBFB_R5G6B5 ||
-		picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC ||
-		picasso96_state[0].RGBFormat == RGBFB_R5G5B5 ||
-		picasso96_state[0].RGBFormat == RGBFB_R5G5B5PC ||
-		picasso96_state[0].RGBFormat == RGBFB_B5G6R5PC ||
-		picasso96_state[0].RGBFormat == RGBFB_B5G5R5PC ||
-		picasso96_state[0].RGBFormat == RGBFB_Y4U2V2;
-
-	if (is_packed_16bit_rtg) {
-		// Keep emulated 16-bit RTG formats, but present them through the
-		// mature 32-bit host path. The native 16-bit host path is incomplete
-		// across backends: KMSDRM already needed a workaround, and SDL3/X11
-		// reports show the same class of failures when switching to 16-bit RTG.
-		pixel_format = currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE
-			? SDL_PIXELFORMAT_ARGB8888
-			: SDL_PIXELFORMAT_ABGR8888;
-		return;
-	}
-
-	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
-	{
-		pixel_format = SDL_PIXELFORMAT_ARGB8888; // Custom boards (e.g. PicassoII) output BGRA
-	}
-	else {
-		pixel_format = SDL_PIXELFORMAT_ABGR8888; // Default for native output, UAE RTG (32-bit)
-	}
+	// Keep RTG presentation on the mature 32-bit host path. The native
+	// 16-bit host path is incomplete across backends, so 15/16-bit RTG modes
+	// are converted into one of these directly presentable 32-bit layouts.
+	pixel_format = p96_get_host_pixel_format_for_monitor(monid);
 }
 
 /* Color management */
@@ -64,7 +85,7 @@ static int alpha;
 
 void init_colors(const int monid)
 {
-	update_pixel_format();
+	update_pixel_format(monid);
 	AmigaMonitor* mon = &AMonitors[monid];
 	/* init colors */
 

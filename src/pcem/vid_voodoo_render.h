@@ -320,10 +320,10 @@ static inline void voodoo_wake_render_thread(voodoo_t *voodoo)
 
 static inline void voodoo_wait_for_render_thread_idle(voodoo_t *voodoo)
 {
-        while (!PARAM_EMPTY(0) || (voodoo->render_threads >= 2 && !PARAM_EMPTY(1)) ||
+        while (voodoo->thread_run && (!PARAM_EMPTY(0) || (voodoo->render_threads >= 2 && !PARAM_EMPTY(1)) ||
                 (voodoo->render_threads == 4 && (!PARAM_EMPTY(2) || !PARAM_EMPTY(3))) ||
                 voodoo->render_voodoo_busy[0] || (voodoo->render_threads >= 2 && voodoo->render_voodoo_busy[1]) ||
-                (voodoo->render_threads == 4 && (voodoo->render_voodoo_busy[2] || voodoo->render_voodoo_busy[3])))
+                (voodoo->render_threads == 4 && (voodoo->render_voodoo_busy[2] || voodoo->render_voodoo_busy[3]))))
         {
                 voodoo_wake_render_thread(voodoo);
                 if (!PARAM_EMPTY(0) || voodoo->render_voodoo_busy[0])
