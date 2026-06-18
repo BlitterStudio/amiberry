@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <utility>
 #include <cstring>
 #include <cstdio>
 
@@ -502,13 +503,13 @@ static void addmode(const struct MultiDisplay* md, const SDL_DisplayMode* dm, co
 	//}
 
 	i = 0;
-	while (md->DisplayModes[i].inuse) {
+	while (i < MAX_PICASSO_MODES && md->DisplayModes[i].inuse) {
 		if (md->DisplayModes[i].res.width == w && md->DisplayModes[i].res.height == h) {
-			for (j = 0; j < MAX_REFRESH_RATES; j++) {
+			for (j = 0; j < MAX_REFRESH_RATES - 1; j++) {
 				if (md->DisplayModes[i].refresh[j] == 0 || md->DisplayModes[i].refresh[j] == freq)
 					break;
 			}
-			if (j < MAX_REFRESH_RATES) {
+			if (j < MAX_REFRESH_RATES - 1) {
 				md->DisplayModes[i].refresh[j] = freq;
 				md->DisplayModes[i].refreshtype[j] = (lace ? REFRESH_RATE_LACE : 0) | (rawmode ? REFRESH_RATE_RAW : 0);
 				md->DisplayModes[i].refresh[j + 1] = 0;
@@ -520,7 +521,7 @@ static void addmode(const struct MultiDisplay* md, const SDL_DisplayMode* dm, co
 		i++;
 	}
 	i = 0;
-	while (md->DisplayModes[i].inuse)
+	while (i < MAX_PICASSO_MODES && md->DisplayModes[i].inuse)
 		i++;
 	if (i >= MAX_PICASSO_MODES - 1)
 		return;
@@ -557,31 +558,30 @@ static void sortmodes(const struct MultiDisplay* md)
 	int i = 0, idx = -1;
 	unsigned int pw = -1, ph = -1;
 
-	while (md->DisplayModes[i].inuse)
+	while (i < MAX_PICASSO_MODES && md->DisplayModes[i].inuse)
 		i++;
 	qsort(md->DisplayModes, i, sizeof(struct PicassoResolution), resolution_compare);
-	for (i = 0; md->DisplayModes[i].inuse; i++)
+	for (i = 0; i < MAX_PICASSO_MODES && md->DisplayModes[i].inuse; i++)
 	{
-		int j, k;
-		for (j = 0; md->DisplayModes[i].refresh[j]; j++) {
-			for (k = j + 1; md->DisplayModes[i].refresh[k]; k++) {
-				if (md->DisplayModes[i].refresh[j] > md->DisplayModes[i].refresh[k]) {
-					int t = md->DisplayModes[i].refresh[j];
-					md->DisplayModes[i].refresh[j] = md->DisplayModes[i].refresh[k];
-					md->DisplayModes[i].refresh[k] = t;
-					t = md->DisplayModes[i].refreshtype[j];
-					md->DisplayModes[i].refreshtype[j] = md->DisplayModes[i].refreshtype[k];
-					md->DisplayModes[i].refreshtype[k] = t;
+		struct PicassoResolution* pr = &md->DisplayModes[i];
+		int nrefresh = 0;
+		while (nrefresh < MAX_REFRESH_RATES && pr->refresh[nrefresh])
+			nrefresh++;
+		for (int j = 0; j < nrefresh; j++) {
+			for (int k = j + 1; k < nrefresh; k++) {
+				if (pr->refresh[j] > pr->refresh[k]) {
+					std::swap(pr->refresh[j], pr->refresh[k]);
+					std::swap(pr->refreshtype[j], pr->refreshtype[k]);
 				}
 			}
 		}
-		if (md->DisplayModes[i].res.height != ph || md->DisplayModes[i].res.width != pw)
+		if (pr->res.height != ph || pr->res.width != pw)
 		{
-			ph = md->DisplayModes[i].res.height;
-			pw = md->DisplayModes[i].res.width;
+			ph = pr->res.height;
+			pw = pr->res.width;
 			idx++;
 		}
-		md->DisplayModes[i].residx = idx;
+		pr->residx = idx;
 	}
 }
 
@@ -590,10 +590,10 @@ static void modesList(struct MultiDisplay* md)
 	int i, j;
 
 	i = 0;
-	while (md->DisplayModes[i].inuse) {
+	while (i < MAX_PICASSO_MODES && md->DisplayModes[i].inuse) {
 		write_log(_T("%d: %s%s ("), i, md->DisplayModes[i].rawmode ? _T("!") : _T(""), md->DisplayModes[i].name);
 		j = 0;
-		while (md->DisplayModes[i].refresh[j] > 0) {
+		while (j < MAX_REFRESH_RATES && md->DisplayModes[i].refresh[j] > 0) {
 			if (j > 0)
 				write_log(_T(","));
 			if (md->DisplayModes[i].refreshtype[j] & REFRESH_RATE_RAW)
@@ -747,14 +747,14 @@ void sortdisplays()
 					continue;
 				int found = 0;
 				int idx2 = 0;
-				while (md->DisplayModes[idx2].inuse && !found)
+				while (idx2 < MAX_PICASSO_MODES && md->DisplayModes[idx2].inuse && !found)
 				{
 					struct PicassoResolution* pr = &md->DisplayModes[idx2];
 					if (dm->w == w && dm->h == h && SDL_BITSPERPIXEL(dm->format) == b) {
 						deskhz = std::max(static_cast<int>(dm->refresh_rate), deskhz);
 					}
 					if (pr->res.width == dm->w && pr->res.height == dm->h) {
-						for (i = 0; pr->refresh[i]; i++) {
+						for (i = 0; i < MAX_REFRESH_RATES && pr->refresh[i]; i++) {
 							if (pr->refresh[i] == static_cast<int>(dm->refresh_rate)) {
 								found = 1;
 								break;
@@ -772,7 +772,7 @@ void sortdisplays()
 		sortmodes(md);
 		modesList(md);
 		i = 0;
-		while (md->DisplayModes[i].inuse)
+		while (i < MAX_PICASSO_MODES && md->DisplayModes[i].inuse)
 			i++;
 		write_log(_T("%d display modes.\n"), i);
 		md++;
