@@ -76,6 +76,7 @@ struct MhiHostSession {
 	bool out_of_data = false;
 	bool decoder_error = false;
 	bool decoder_needs_drain = false;
+	bool decoder_busy = false;
 	int streamid = 0;
 	int output_rate = MHI_HOST_DEFAULT_RATE;
 	int volume = 100;
@@ -83,6 +84,7 @@ struct MhiHostSession {
 	size_t encoded_bytes = 0;
 	std::deque<MhiEncodedBuffer> encoded;
 	std::deque<uae_u32> completed_tokens;
+	std::vector<uae_u32> pending_decode_tokens;
 	std::vector<uae_s16> pcm;
 	std::vector<uae_s16> pending_pcm;
 	size_t pcm_read = 0;
@@ -144,13 +146,16 @@ static bool push_pcm_frames(MhiHostSession *session, const uae_s16 *samples, siz
 		return true;
 	if (frames > pcm_free_frames(session))
 		return false;
-	for (size_t i = 0; i < frames; i++) {
-		const size_t dst = session->pcm_write * 2;
-		session->pcm[dst] = samples[i * 2];
-		session->pcm[dst + 1] = samples[i * 2 + 1];
-		session->pcm_write++;
-		if (session->pcm_write >= pcm_capacity_frames(session))
+
+	const size_t capacity = pcm_capacity_frames(session);
+	size_t written = 0;
+	while (written < frames) {
+		const size_t chunk = std::min(frames - written, capacity - session->pcm_write);
+		std::copy_n(samples + written * 2, chunk * 2, session->pcm.data() + session->pcm_write * 2);
+		session->pcm_write += chunk;
+		if (session->pcm_write >= capacity)
 			session->pcm_write = 0;
+		written += chunk;
 	}
 	session->pcm_used += frames;
 	return true;
@@ -191,11 +196,29 @@ static bool has_pending_pcm(const MhiHostSession *session)
 	return session->pending_pcm_read < session->pending_pcm.size() / 2;
 }
 
-static bool complete_token_locked(MhiHostSession *session, uae_u32 token)
+static bool playback_drained_locked(const MhiHostSession *session)
 {
-	if (token != 0)
-		session->completed_tokens.push_back(token);
-	return token != 0 && session->task != 0 && session->sigmask != 0;
+	return session->encoded_bytes == 0
+		&& session->pcm_used == 0
+		&& !has_pending_pcm(session)
+		&& session->pending_decode_tokens.empty()
+		&& !session->decoder_needs_drain
+		&& !session->decoder_busy;
+}
+
+static bool complete_pending_decode_tokens_locked(MhiHostSession *session)
+{
+	if (session->pending_decode_tokens.empty())
+		return false;
+	bool queued = false;
+	for (const uae_u32 token : session->pending_decode_tokens) {
+		if (token != 0) {
+			session->completed_tokens.push_back(token);
+			queued = true;
+		}
+	}
+	session->pending_decode_tokens.clear();
+	return queued && session->task != 0 && session->sigmask != 0;
 }
 
 static void signal_if_needed(MhiHostSession *session, bool signal)
@@ -207,6 +230,7 @@ static void signal_if_needed(MhiHostSession *session, bool signal)
 static bool pop_pcm_frame(MhiHostSession *session, int *samples)
 {
 	bool ok = false;
+	bool signal = false;
 	int volume = 100;
 	int panning = 50;
 
@@ -220,12 +244,15 @@ static bool pop_pcm_frame(MhiHostSession *session, int *samples)
 			session->pcm_read = 0;
 		session->pcm_used--;
 		ok = true;
-	} else if (session->playing && session->encoded_bytes == 0 && !session->decoder_needs_drain && !session->decoder_error) {
+	}
+	if (session->playing && !session->paused && playback_drained_locked(session) && !session->decoder_error && !session->out_of_data) {
 		session->out_of_data = true;
+		signal = (session->task != 0 && session->sigmask != 0);
 	}
 	volume = session->volume;
 	panning = session->panning;
 	unlock_session(session);
+	signal_if_needed(session, signal);
 
 	if (ok) {
 		const int left = std::clamp(volume * (100 - std::max(0, panning - 50)) / 100, 0, 100);
@@ -255,6 +282,7 @@ static void clear_queues_locked(MhiHostSession *session)
 	session->encoded.clear();
 	session->encoded_bytes = 0;
 	session->completed_tokens.clear();
+	session->pending_decode_tokens.clear();
 	session->pcm_read = 0;
 	session->pcm_write = 0;
 	session->pcm_used = 0;
@@ -263,16 +291,16 @@ static void clear_queues_locked(MhiHostSession *session)
 	session->out_of_data = false;
 	session->decoder_error = false;
 	session->decoder_needs_drain = false;
+	session->decoder_busy = false;
 }
 
-static bool copy_encoded_chunk(MhiHostSession *session, std::vector<uae_u8> &chunk)
+static bool copy_encoded_chunk(MhiHostSession *session, std::vector<uae_u8> &chunk, std::vector<uae_u32> &tokens)
 {
-	bool signal = false;
-
 	lock_session(session);
 	const size_t count = std::min<size_t>(MHI_HOST_DECODE_CHUNK, session->encoded_bytes);
 	if (count > 0 && pcm_free_frames(session) >= min_free_decode_frames()) {
 		chunk.clear();
+		tokens.clear();
 		chunk.reserve(count);
 		while (chunk.size() < count && !session->encoded.empty()) {
 			MhiEncodedBuffer &front = session->encoded.front();
@@ -282,20 +310,22 @@ static bool copy_encoded_chunk(MhiHostSession *session, std::vector<uae_u8> &chu
 			front.offset += wanted;
 			session->encoded_bytes -= wanted;
 			if (front.offset == front.data.size()) {
-				signal = complete_token_locked(session, front.token) || signal;
+				tokens.push_back(front.token);
 				session->encoded.pop_front();
 			}
 		}
+		if (!chunk.empty())
+			session->decoder_busy = true;
 	} else {
 		chunk.clear();
+		tokens.clear();
 	}
 	unlock_session(session);
-	signal_if_needed(session, signal);
 	return !chunk.empty();
 }
 
 #if defined(HAVE_MPG123)
-static bool decode_chunk(MhiHostSession *session, const std::vector<uae_u8> &chunk)
+static bool decode_chunk(MhiHostSession *session, const std::vector<uae_u8> &chunk, const std::vector<uae_u32> &tokens)
 {
 	uae_u8 decoded[MHI_HOST_DECODE_OUT];
 	const unsigned char *input = chunk.empty() ? nullptr : chunk.data();
@@ -305,8 +335,10 @@ static bool decode_chunk(MhiHostSession *session, const std::vector<uae_u8> &chu
 
 	lock_decoder(session);
 	lock_session(session);
+	session->pending_decode_tokens.insert(session->pending_decode_tokens.end(), tokens.begin(), tokens.end());
 	if (!flush_pending_pcm_locked(session)) {
 		session->decoder_needs_drain = true;
+		session->decoder_busy = false;
 		unlock_session(session);
 		unlock_decoder(session);
 		return false;
@@ -366,8 +398,11 @@ static bool decode_chunk(MhiHostSession *session, const std::vector<uae_u8> &chu
 	}
 	lock_session(session);
 	session->decoder_needs_drain = needs_drain;
+	const bool signal = !needs_drain ? complete_pending_decode_tokens_locked(session) : false;
+	session->decoder_busy = false;
 	unlock_session(session);
 	unlock_decoder(session);
+	signal_if_needed(session, signal);
 	return result;
 }
 #endif
@@ -376,6 +411,7 @@ static int mhi_decode_worker(void *opaque)
 {
 	auto *session = static_cast<MhiHostSession*>(opaque);
 	std::vector<uae_u8> chunk;
+	std::vector<uae_u32> tokens;
 
 	for (;;) {
 		lock_session(session);
@@ -393,13 +429,14 @@ static int mhi_decode_worker(void *opaque)
 #if defined(HAVE_MPG123)
 		if (drain) {
 			chunk.clear();
-		} else if (!copy_encoded_chunk(session, chunk)) {
+			tokens.clear();
+		} else if (!copy_encoded_chunk(session, chunk, tokens)) {
 			sleep_millis(2);
 			continue;
 		}
-		decode_chunk(session, chunk);
+		decode_chunk(session, chunk, tokens);
 #else
-		if (!copy_encoded_chunk(session, chunk)) {
+		if (!copy_encoded_chunk(session, chunk, tokens)) {
 			sleep_millis(2);
 			continue;
 		}
@@ -444,6 +481,19 @@ static void destroy_session(MhiHostSession *session)
 	uae_sem_destroy(&session->lock);
 	delete session;
 }
+
+#if defined(HAVE_MPG123)
+static bool configure_mpg123_output(MhiHostSession *session)
+{
+	if (mpg123_param(session->mpg, MPG123_FORCE_RATE, session->output_rate, 0.0) != MPG123_OK
+		|| mpg123_format_none(session->mpg) != MPG123_OK
+		|| mpg123_format(session->mpg, session->output_rate, MPG123_STEREO, MPG123_ENC_SIGNED_16) != MPG123_OK) {
+		write_log(_T("MHI: failed to configure mpg123 output format: %s\n"), mpg123_strerror(session->mpg));
+		return false;
+	}
+	return true;
+}
+#endif
 
 static int clamp_percent(uae_u32 value)
 {
@@ -494,9 +544,10 @@ uae_u32 mhi_host_alloc(TrapContext*, uaecptr task, uae_u32 sigmask)
 		delete session;
 		return 0;
 	}
-	mpg123_param(session->mpg, MPG123_FORCE_RATE, session->output_rate, 0.0);
-	mpg123_format_none(session->mpg);
-	mpg123_format(session->mpg, session->output_rate, MPG123_STEREO, MPG123_ENC_SIGNED_16);
+	if (!configure_mpg123_output(session)) {
+		destroy_session(session);
+		return 0;
+	}
 	if (mpg123_open_feed(session->mpg) != MPG123_OK) {
 		destroy_session(session);
 		return 0;
@@ -519,6 +570,7 @@ uae_u32 mhi_host_free(TrapContext*, uae_u32 handle)
 	auto *session = find_session(handle);
 	if (!session)
 		return 0;
+
 	active_session = nullptr;
 	write_log(_T("MHI: free decoder handle %u\n"), handle);
 	destroy_session(session);
@@ -591,7 +643,8 @@ uae_u32 mhi_host_play(TrapContext*, uae_u32 handle)
 		session->streamid = audio_enable_stream(true, -1, 2, mhi_audio_state, session);
 	session->playing = session->streamid > 0;
 	session->paused = false;
-	session->out_of_data = false;
+	if (!playback_drained_locked(session))
+		session->out_of_data = false;
 	unlock_session(session);
 	if (session->streamid > 0) {
 		audio_activate();
@@ -606,6 +659,7 @@ uae_u32 mhi_host_stop(TrapContext*, uae_u32 handle)
 	auto *session = find_session(handle);
 	if (!session)
 		return 0;
+
 	lock_session(session);
 	session->playing = false;
 	session->paused = false;
