@@ -2470,7 +2470,7 @@ static void libretro_emit_audio_starvation_guard()
 	if (libretro_audio_deficit_frames > max_deferred_frames * 4.0)
 		libretro_audio_deficit_frames = max_deferred_frames * 4.0;
 
-	if (libretro_audio_frames_this_run > 0 || libretro_audio_deficit_frames <= max_deferred_frames)
+	if (libretro_audio_deficit_frames <= max_deferred_frames)
 		return;
 
 	unsigned missing_frames = static_cast<unsigned>(libretro_audio_deficit_frames - max_deferred_frames);
