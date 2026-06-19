@@ -3032,21 +3032,44 @@ static struct zfile *flashromfile_open_source(const TCHAR *name)
 
 static bool copy_flashrom_source_to_nvram(struct zfile *source, const TCHAR *path)
 {
+	const uae_s64 source_size = zfile_size(source);
+	if (source_size <= 0)
+		return false;
+
 	struct zfile *out = zfile_fopen(path, _T("wb"), 0);
 	if (!out)
 		return false;
 
 	zfile_fseek(source, 0, SEEK_SET);
 	uae_u8 buffer[8192];
+	uae_s64 copied = 0;
 	for (;;) {
 		const size_t got = zfile_fread(buffer, 1, sizeof buffer, source);
 		if (got == 0)
 			break;
-		zfile_fwrite(buffer, 1, got, out);
+		if (zfile_fwrite(buffer, 1, got, out) != got) {
+			zfile_fclose(out);
+			my_unlink(path);
+			zfile_fseek(source, 0, SEEK_SET);
+			return false;
+		}
+		copied += got;
 	}
 	zfile_fclose(out);
 	zfile_fseek(source, 0, SEEK_SET);
+	if (copied != source_size) {
+		my_unlink(path);
+		return false;
+	}
 	return true;
+}
+
+static bool accelerator_flash_shadow_valid(struct zfile *shadow, struct zfile *source)
+{
+	const uae_s64 shadow_size = zfile_size(shadow);
+	if (shadow_size <= 0)
+		return false;
+	return source == NULL || shadow_size == zfile_size(source);
 }
 
 struct zfile *flashromfile_open_accelerator(const TCHAR *name)
@@ -3055,13 +3078,19 @@ struct zfile *flashromfile_open_accelerator(const TCHAR *name)
 	if (!accelerator_flash_path(name, path, sizeof path / sizeof(TCHAR)))
 		return NULL;
 
+	struct zfile *source = flashromfile_open_source(name);
 	struct zfile *f = zfile_fopen(path, _T("rb+"), ZFD_NONE);
 	if (f) {
-		write_log(_T("Accelerator flash file '%s' loaded from NVRAM, RW.\n"), path);
-		return f;
+		if (accelerator_flash_shadow_valid(f, source)) {
+			zfile_fclose(source);
+			write_log(_T("Accelerator flash file '%s' loaded from NVRAM, RW.\n"), path);
+			return f;
+		}
+		write_log(_T("Accelerator flash file '%s' invalid size, recreating from source.\n"), path);
+		zfile_fclose(f);
+		my_unlink(path);
 	}
 
-	struct zfile *source = flashromfile_open_source(name);
 	if (!source)
 		return NULL;
 
