@@ -86,6 +86,8 @@ done
 
 if [[ -n "${RETROARCH_BIN:-}" ]]; then
 	retroarch_bin="$RETROARCH_BIN"
+elif [[ -x "/Applications/RetroArch Nightly.app/Contents/MacOS/RetroArch" ]]; then
+	retroarch_bin="/Applications/RetroArch Nightly.app/Contents/MacOS/RetroArch"
 elif [[ -x /Applications/RetroArch.app/Contents/MacOS/RetroArch ]]; then
 	retroarch_bin=/Applications/RetroArch.app/Contents/MacOS/RetroArch
 elif command -v retroarch >/dev/null 2>&1; then
@@ -163,6 +165,7 @@ if [[ "$os_name" == "Darwin" ]]; then
 fi
 
 core="$repo_root/libretro/amiberry_libretro.$core_ext"
+arch_stamp="$repo_root/libretro/.amiberry_libretro_build_arch"
 
 if [[ "$do_build" -eq 1 ]]; then
 	build_args=(ARCH="$target_arch")
@@ -171,6 +174,14 @@ if [[ "$do_build" -eq 1 ]]; then
 	fi
 
 	needs_clean=0
+	if [[ -e "$arch_stamp" ]]; then
+		previous_arch="$(cat "$arch_stamp")"
+		if [[ "$previous_arch" != "$target_arch" ]]; then
+			needs_clean=1
+		fi
+	elif find "$repo_root/libretro" "$repo_root/src" -name '*.o' -print -quit | grep -q .; then
+		needs_clean=1
+	fi
 	if [[ -e "$core" ]]; then
 		core_file_info="$(file "$core")"
 		if [[ "$core_file_info" != *"$target_arch"* ]]; then
@@ -179,6 +190,7 @@ if [[ "$do_build" -eq 1 ]]; then
 	fi
 	if [[ "$needs_clean" -eq 1 ]]; then
 		make -C "$repo_root/libretro" clean
+		rm -f "$arch_stamp"
 	fi
 
 	if command -v sysctl >/dev/null 2>&1; then
@@ -192,6 +204,7 @@ if [[ "$do_build" -eq 1 ]]; then
 	[[ -n "$jobs" ]] || jobs=4
 
 	make -C "$repo_root/libretro" -j"$jobs" "${build_args[@]}"
+	printf '%s\n' "$target_arch" > "$arch_stamp"
 	rm -f "$repo_root/libretro/amiberry_libretro.info" "$repo_root/libretro/libco/libco.o"
 fi
 

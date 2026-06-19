@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <atomic>
+#include <climits>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -176,6 +177,7 @@ extern "C" const char* libretro_get_system_dir(void)
 }
 
 static FILE* libretro_debug_file = nullptr;
+static std::string libretro_debug_path;
 
 static std::string get_log_directory()
 {
@@ -190,8 +192,6 @@ static std::string get_log_directory()
 
 static void libretro_debug_open()
 {
-	if (libretro_debug_file)
-		return;
 	// Opt-in only — libretro cores must not write files by default.
 	const char* env = getenv("AMIBERRY_LIBRETRO_DEBUG");
 	if (!env || strcmp(env, "1") != 0)
@@ -199,9 +199,18 @@ static void libretro_debug_open()
 	const std::string dir = get_log_directory();
 	const std::string path = dir.empty() ? std::string("amiberry_libretro_debug.log")
 		: dir + "/amiberry_libretro_debug.log";
+	if (libretro_debug_file) {
+		if (path == libretro_debug_path || save_dir.empty())
+			return;
+		fclose(libretro_debug_file);
+		libretro_debug_file = nullptr;
+		libretro_debug_path.clear();
+	}
 	libretro_debug_file = fopen(path.c_str(), "a");
-	if (libretro_debug_file)
+	if (libretro_debug_file) {
+		libretro_debug_path = path;
 		setvbuf(libretro_debug_file, nullptr, _IOLBF, 0);
+	}
 }
 
 static void libretro_debug_close()
@@ -210,6 +219,7 @@ static void libretro_debug_close()
 		return;
 	fclose(libretro_debug_file);
 	libretro_debug_file = nullptr;
+	libretro_debug_path.clear();
 }
 
 static void libretro_debug_log(const char* fmt, ...)
@@ -2238,12 +2248,80 @@ static double libretro_audio_emit_frac = 0.0;
 static int16_t libretro_audio_last_left = 0;
 static int16_t libretro_audio_last_right = 0;
 static bool libretro_audio_have_last_sample = false;
+static uint64_t libretro_audio_trace_frame = 0;
+static unsigned libretro_audio_trace_min_fifo = UINT_MAX;
+static unsigned libretro_audio_trace_max_fifo = 0;
+static unsigned libretro_audio_trace_min_emit = UINT_MAX;
+static unsigned libretro_audio_trace_max_emit = 0;
+static unsigned libretro_audio_trace_padding = 0;
+static unsigned libretro_audio_trace_backpressure = 0;
+static unsigned libretro_audio_trace_underruns = 0;
+static int libretro_audio_trace_max_step = 0;
+
+static bool libretro_audio_trace_enabled()
+{
+	const char* env = getenv("AMIBERRY_LIBRETRO_AUDIO_TRACE");
+	return env && strcmp(env, "1") == 0;
+}
+
+static void libretro_audio_trace_samples(const int16_t* stereo_frames, size_t frames)
+{
+	if (!libretro_audio_trace_enabled() || !stereo_frames || frames == 0)
+		return;
+
+	int prev_left = libretro_audio_have_last_sample ? libretro_audio_last_left : stereo_frames[0];
+	int prev_right = libretro_audio_have_last_sample ? libretro_audio_last_right : stereo_frames[1];
+	for (size_t i = 0; i < frames; i++) {
+		const int left = stereo_frames[i * 2];
+		const int right = stereo_frames[i * 2 + 1];
+		libretro_audio_trace_max_step = std::max(libretro_audio_trace_max_step, std::abs(left - prev_left));
+		libretro_audio_trace_max_step = std::max(libretro_audio_trace_max_step, std::abs(right - prev_right));
+		prev_left = left;
+		prev_right = right;
+	}
+}
+
+static void libretro_audio_trace_frame_done(unsigned fifo_frames, unsigned emitted_frames)
+{
+	if (!libretro_audio_trace_enabled())
+		return;
+
+	libretro_audio_trace_frame++;
+	libretro_audio_trace_min_fifo = std::min(libretro_audio_trace_min_fifo, fifo_frames);
+	libretro_audio_trace_max_fifo = std::max(libretro_audio_trace_max_fifo, fifo_frames);
+	libretro_audio_trace_min_emit = std::min(libretro_audio_trace_min_emit, emitted_frames);
+	libretro_audio_trace_max_emit = std::max(libretro_audio_trace_max_emit, emitted_frames);
+	if ((libretro_audio_trace_frame % 300) != 0)
+		return;
+
+	const unsigned min_fifo = libretro_audio_trace_min_fifo == UINT_MAX ? 0 : libretro_audio_trace_min_fifo;
+	const unsigned min_emit = libretro_audio_trace_min_emit == UINT_MAX ? 0 : libretro_audio_trace_min_emit;
+	libretro_debug_log("audio trace: frame=%llu fifo=%u..%u emit=%u..%u maxstep=%d padding=%u backpressure=%u underrun=%u occ=%u deficit=%.2f\n",
+		static_cast<unsigned long long>(libretro_audio_trace_frame),
+		min_fifo, libretro_audio_trace_max_fifo,
+		min_emit, libretro_audio_trace_max_emit,
+		libretro_audio_trace_max_step,
+		libretro_audio_trace_padding,
+		libretro_audio_trace_backpressure,
+		libretro_audio_trace_underruns,
+		libretro_frontend_audio_occupancy.load(std::memory_order_relaxed),
+		libretro_audio_deficit_frames);
+	libretro_audio_trace_min_fifo = UINT_MAX;
+	libretro_audio_trace_max_fifo = 0;
+	libretro_audio_trace_min_emit = UINT_MAX;
+	libretro_audio_trace_max_emit = 0;
+	libretro_audio_trace_padding = 0;
+	libretro_audio_trace_backpressure = 0;
+	libretro_audio_trace_underruns = 0;
+	libretro_audio_trace_max_step = 0;
+}
 
 static void libretro_audio_note_emitted(const int16_t* stereo_frames, size_t frames)
 {
 	if (!stereo_frames || frames == 0)
 		return;
 
+	libretro_audio_trace_samples(stereo_frames, frames);
 	const size_t last = (frames - 1) * 2;
 	libretro_audio_last_left = stereo_frames[last];
 	libretro_audio_last_right = stereo_frames[last + 1];
@@ -2287,6 +2365,15 @@ void libretro_audio_reset(void)
 	libretro_audio_last_right = 0;
 	libretro_audio_have_last_sample = false;
 	libretro_frontend_audio_underrun_likely.store(false, std::memory_order_relaxed);
+	libretro_audio_trace_frame = 0;
+	libretro_audio_trace_min_fifo = UINT_MAX;
+	libretro_audio_trace_max_fifo = 0;
+	libretro_audio_trace_min_emit = UINT_MAX;
+	libretro_audio_trace_max_emit = 0;
+	libretro_audio_trace_padding = 0;
+	libretro_audio_trace_backpressure = 0;
+	libretro_audio_trace_underruns = 0;
+	libretro_audio_trace_max_step = 0;
 }
 
 // Emit one video frame worth of audio from the FIFO, steering the queue toward
@@ -2334,6 +2421,7 @@ static void libretro_drain_audio_frame()
 	if (want <= 0)
 		return;
 
+	unsigned emitted = 0;
 	if (audio_batch_cb) {
 		size_t done = 0;
 		while (done < static_cast<size_t>(want)) {
@@ -2341,9 +2429,12 @@ static void libretro_drain_audio_frame()
 			const size_t accepted = audio_batch_cb(libretro_audio_fifo.data() + done * 2, chunk);
 			libretro_audio_note_emitted(libretro_audio_fifo.data() + done * 2, accepted);
 			libretro_audio_frames_this_run += static_cast<unsigned>(accepted);
+			emitted += static_cast<unsigned>(accepted);
 			done += accepted;
-			if (accepted < chunk)
+			if (accepted < chunk) {
+				libretro_audio_trace_backpressure++;
 				break;   // frontend back-pressure; keep the rest for next frame
+			}
 		}
 		libretro_audio_fifo.erase(libretro_audio_fifo.begin(),
 			libretro_audio_fifo.begin() + done * 2);
@@ -2352,9 +2443,11 @@ static void libretro_drain_audio_frame()
 			audio_cb(libretro_audio_fifo[i * 2], libretro_audio_fifo[i * 2 + 1]);
 		libretro_audio_note_emitted(libretro_audio_fifo.data(), static_cast<size_t>(want));
 		libretro_audio_frames_this_run += static_cast<unsigned>(want);
+		emitted = static_cast<unsigned>(want);
 		libretro_audio_fifo.erase(libretro_audio_fifo.begin(),
 			libretro_audio_fifo.begin() + static_cast<size_t>(want) * 2);
 	}
+	libretro_audio_trace_frame_done(static_cast<unsigned>(avail), emitted);
 }
 
 static void libretro_emit_audio_starvation_guard()
@@ -2391,6 +2484,7 @@ static void libretro_emit_audio_starvation_guard()
 				break;
 			libretro_audio_note_emitted(padding, accepted);
 			libretro_audio_frames_this_run += static_cast<unsigned>(accepted);
+			libretro_audio_trace_padding += static_cast<unsigned>(accepted);
 			libretro_audio_deficit_frames -= accepted;
 			if (accepted < chunk)
 				break;
@@ -2400,6 +2494,7 @@ static void libretro_emit_audio_starvation_guard()
 				audio_cb(padding[i * 2], padding[i * 2 + 1]);
 			libretro_audio_note_emitted(padding, chunk);
 			libretro_audio_frames_this_run += chunk;
+			libretro_audio_trace_padding += chunk;
 			libretro_audio_deficit_frames -= chunk;
 			missing_frames -= chunk;
 		}
@@ -3286,6 +3381,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 	info->geometry.aspect_ratio = 4.0f / 3.0f;
 	info->timing.fps            = get_core_refresh_rate();
 	info->timing.sample_rate    = static_cast<double>(audio_rate_for_av_info());
+	last_refresh_rate           = info->timing.fps;
 }
 
 static void RETRO_CALLCONV audio_buffer_status_cb(bool active, unsigned occupancy, bool underrun_likely)
@@ -3293,6 +3389,8 @@ static void RETRO_CALLCONV audio_buffer_status_cb(bool active, unsigned occupanc
 	libretro_frontend_audio_active.store(active, std::memory_order_relaxed);
 	libretro_frontend_audio_occupancy.store(occupancy, std::memory_order_relaxed);
 	libretro_frontend_audio_underrun_likely.store(underrun_likely, std::memory_order_relaxed);
+	if (underrun_likely)
+		libretro_audio_trace_underruns++;
 	if (!underrun_likely) {
 		libretro_frontend_audio_underrun_log_skip = 0;
 		return;
