@@ -81,7 +81,7 @@ jobs:
 
       - name: Configure dput
         run: |
-          printf '[amiberry-ppa]\nfqdn = ppa.launchpad.net\nmethod = ftp\nincoming = ~midwan-a/ubuntu/amiberry\nlogin = anonymous\nallow_unsigned_uploads = 0\n' > ~/.dput.cf
+          printf '[amiberry-ppa]\nfqdn = ppa.launchpad.net\nmethod = ftp\nincoming = ~midwan-a/ubuntu/amiberry\nlogin = anonymous\nallow_unsigned_uploads = 0\npassive_ftp = 1\n' > ~/.dput.cf
 
       - name: Resolve PPA upload inputs
         env:
@@ -118,22 +118,8 @@ jobs:
             RELEASE_MESSAGE="Release $PPA_VERSION (PPA revision $PPA_REVISION)"
           fi
 
-          mkdir -p /tmp/ppa-build/resolute
-          cp -r . /tmp/ppa-build/resolute/amiberry
-          cd /tmp/ppa-build/resolute/amiberry
-
-          rm -f debian/changelog
-          dch --create --package amiberry \
-            --newversion "$PACKAGE_VERSION" \
-            --distribution resolute \
-            "$RELEASE_MESSAGE"
-
-          dpkg-buildpackage -S -d -us -uc
-
-          debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
-            /tmp/ppa-build/resolute/amiberry_*_source.changes
-
-          dput amiberry-ppa /tmp/ppa-build/resolute/amiberry_*_source.changes
+          bash .github/scripts/upload-launchpad-ppa-source.sh \
+            resolute "$PACKAGE_VERSION" "$RELEASE_MESSAGE"
 
       - name: Build and upload source package for noble
         if: ${{ (inputs.series || 'all') == 'all' || (inputs.series || 'all') == 'noble' }}
@@ -144,22 +130,8 @@ jobs:
           PACKAGE_VERSION="${PPA_VERSION}-${PPA_BACKPORT_REVISION}~noble1"
           RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 24.04 Noble PPA revision $PPA_BACKPORT_REVISION)"
 
-          mkdir -p /tmp/ppa-build/noble
-          cp -r . /tmp/ppa-build/noble/amiberry
-          cd /tmp/ppa-build/noble/amiberry
-
-          rm -f debian/changelog
-          dch --create --package amiberry \
-            --newversion "$PACKAGE_VERSION" \
-            --distribution noble \
-            "$RELEASE_MESSAGE"
-
-          dpkg-buildpackage -S -d -us -uc
-
-          debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
-            /tmp/ppa-build/noble/amiberry_*_source.changes
-
-          dput amiberry-ppa /tmp/ppa-build/noble/amiberry_*_source.changes
+          bash .github/scripts/upload-launchpad-ppa-source.sh \
+            noble "$PACKAGE_VERSION" "$RELEASE_MESSAGE"
 
       - name: Build and upload source package for jammy
         if: ${{ (inputs.series || 'all') == 'all' || (inputs.series || 'all') == 'jammy' }}
@@ -170,19 +142,5 @@ jobs:
           PACKAGE_VERSION="${PPA_VERSION}-${PPA_BACKPORT_REVISION}~jammy1"
           RELEASE_MESSAGE="Release $PPA_VERSION (Ubuntu 22.04 Jammy PPA revision $PPA_BACKPORT_REVISION)"
 
-          mkdir -p /tmp/ppa-build/jammy
-          cp -r . /tmp/ppa-build/jammy/amiberry
-          cd /tmp/ppa-build/jammy/amiberry
-
-          rm -f debian/changelog
-          dch --create --package amiberry \
-            --newversion "$PACKAGE_VERSION" \
-            --distribution jammy \
-            "$RELEASE_MESSAGE"
-
-          dpkg-buildpackage -S -d -us -uc
-
-          debsign -k D74D52525340C442A4F8B657A12B57C04E1FE282 \
-            /tmp/ppa-build/jammy/amiberry_*_source.changes
-
-          dput amiberry-ppa /tmp/ppa-build/jammy/amiberry_*_source.changes
+          bash .github/scripts/upload-launchpad-ppa-source.sh \
+            jammy "$PACKAGE_VERSION" "$RELEASE_MESSAGE"
