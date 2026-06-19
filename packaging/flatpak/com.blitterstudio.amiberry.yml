@@ -147,7 +147,7 @@ modules:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
         tag: v8.2.2
-        commit: 6169a246f88cb88c42aac97ac5985cc571f45a3d
+        commit: 61bafad1d049ee5a766c2b9007b6b5fe7898e0ec
         x-checker-data:
           type: git
           tag-pattern: ^v([\d.]+)$
