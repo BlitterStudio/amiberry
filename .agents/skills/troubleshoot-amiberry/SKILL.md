@@ -1,6 +1,6 @@
 ---
 name: troubleshoot-amiberry
-description: Use when investigating, reproducing, or fixing Amiberry bugs, especially renderer or input regressions, HiDPI or SDL3 logical-presentation bugs, Vulkan capability or swapchain failures, crash regressions, or behavior regressions. Follow an edit-build-run-test-fix cycle, using Amiberry MCP runtime-control tools when they are configured and falling back to normal process, log, screenshot, and debugger tools otherwise.
+description: Use when investigating, reproducing, or fixing Amiberry bugs, especially renderer or input regressions, RTG/Picasso96 pixel-format or presentation bugs, HiDPI or SDL3 logical-presentation bugs, Vulkan capability or swapchain failures, MHI/audio playback regressions, threaded device shutdown hangs, OS4 filesystem packet fallback issues, PPC/QEMU runtime performance regressions, crash regressions, or behavior regressions. Follow an edit-build-run-test-fix cycle, using Amiberry MCP runtime-control tools when they are configured and falling back to normal process, log, screenshot, and debugger tools otherwise.
 ---
 
 # Amiberry Autonomous Troubleshooting
@@ -69,6 +69,18 @@ ninja -j12
    - Use `rg --files` to find relevant source files
    - Read the code to understand the current behavior
 4. Form a hypothesis about the root cause
+
+### Phase 1a: Load Subsystem References
+
+Read one of these references when the bug matches its trigger. Do not load all references by default.
+
+| Reference | Read when |
+|-----------|-----------|
+| [references/rtg-picasso96.md](references/rtg-picasso96.md) | RTG, Picasso96, BGRA/RGBA, zero-copy, color-channel, or `picasso96_state` presentation bugs |
+| [references/audio-mhi.md](references/audio-mhi.md) | MHI, MP3, mpg123, `mhi_host.cpp`, audio underflow, decode backpressure, or playback drain bugs |
+| [references/threaded-device-shutdown.md](references/threaded-device-shutdown.md) | Shutdown hangs, joinable worker threads, PCAP/uaenet teardown, or PCem Voodoo FIFO/render thread bugs |
+| [references/os4-filesystem-packets.md](references/os4-filesystem-packets.md) | OS4 filesystem packet compatibility, `filesys.cpp`, `ACTION_EXAMINEDATA*`, or unknown DOS packet fallback bugs |
+| [references/ppc-qemu-runtime.md](references/ppc-qemu-runtime.md) | QEMU-UAE PPC runtime behavior, plugin JIT flush, spinlock, execute-loop, or PPC slowdown bugs |
 
 ### Phase 2: Reproduce
 
@@ -255,6 +267,7 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - If the screen looks wrong, `pause_emulation` + `runtime_screenshot_view` gives a stable frame
 - If a fix touches input coordinates, explicitly note which coordinate space each variable is in
 - If a fix touches rendering quality, verify OSD, main frame, and external shader paths independently
+- If a fix touches RTG/P96 presentation, check guest pixel format metadata and host SDL surface format separately
 - For timing-sensitive bugs, use `runtime_set_config` to change CPU speed or floppy speed
 - For crashes, the signal name in `get_crash_info` tells you a lot: SIGSEGV = null pointer/bad memory, SIGABRT = assertion/abort, SIGBUS = alignment
 - Build with Debug type (`-DCMAKE_BUILD_TYPE=Debug`) for better crash info
