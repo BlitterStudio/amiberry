@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.2.1
+Version:        8.2.2
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -88,6 +88,11 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Fri Jun 19 2026 Dimitris Panokostas <midwan@gmail.com> - 8.2.2-1
+- Stable v8.2.2 bugfix release
+- Fixed libretro/MHI audio starvation and playback backpressure, raw CD reads, and OS4 examinedata fallback
+- Improved RTG/P96 presentation and dirty tracking, PPC QEMU JIT flushes, KMSDRM mouse capture, config saves, and derivative distro packaging
+
 * Mon Jun 15 2026 Dimitris Panokostas <midwan@gmail.com> - 8.2.1-1
 - Stable v8.2.1 bugfix release
 - Improved libretro audio underrun recovery

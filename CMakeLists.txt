@@ -12,7 +12,7 @@ if(POLICY CMP0177)
 endif()
 
 project(amiberry
-    VERSION 8.2.1
+    VERSION 8.2.2
     LANGUAGES C CXX
     DESCRIPTION "Optimized Amiga emulator for various platforms"
     HOMEPAGE_URL "https://amiberry.com"
