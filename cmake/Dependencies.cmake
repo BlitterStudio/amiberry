@@ -86,7 +86,9 @@ if(ANDROID)
     # Android: build third-party deps from source via FetchContent (pinned tags)
     # -------------------------------------------------------------------------
     # Note: Desktop builds use system packages (see non-ANDROID branch below).
-    set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+    # Android release builds must not reuse stale FetchContent checkouts when
+    # a pinned dependency tag changes; SDL's Java/JNI shims must stay in lockstep.
+    set(FETCHCONTENT_UPDATES_DISCONNECTED OFF)
 
     # SDL3 / SDL3_image (built from source on Android)
     FetchContent_Declare(
