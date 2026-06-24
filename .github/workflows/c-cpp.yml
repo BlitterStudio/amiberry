@@ -82,7 +82,13 @@ jobs:
       - name: Install dependencies (Homebrew)
         run: |
           brew update
-          brew bundle
+          # `brew bundle` installs formulae concurrently, so sdl3 (which depends on
+          # cmake) races the cmake entry for the cmake lock and intermittently fails
+          # ("a `brew install --formula sdl3` process has already locked .../cmake").
+          # Install the shared build dependency first, then retry the bundle once to
+          # ride out any remaining transient lock contention.
+          brew install cmake || true
+          brew bundle || { sleep 10; brew bundle; }
 
       - name: Download QEMU-UAE plugin
         run: .github/scripts/download-qemu-uae-plugin.sh qemu-uae-macos-universal.zip
