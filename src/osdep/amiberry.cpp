@@ -10,6 +10,12 @@
 #else
 #include <io.h>
 #endif
+#ifdef __ANDROID__
+#include <sched.h>
+#include <sys/syscall.h>
+#include <cerrno>
+#include <cstdint>
+#endif
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -54,6 +60,7 @@
 #include <sstream>
 
 #include "amiberry_input.h"
+#include "amiberry_adpf.h"
 #include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
@@ -4409,10 +4416,143 @@ bool target_execute(const char* command)
 	return true;
 }
 
+#ifdef __ANDROID__
+// --- Android emulation-thread tuning -------------------------------------
+//
+// On big.LITTLE Android devices two scheduler behaviours hurt emulation a few
+// seconds into a game, once the initial CPU boost settles:
+//   1. the scheduler migrates the thread onto an efficiency ("little") core, and
+//   2. a power-saving CPU profile keeps the core frequency low.
+// Either way the same workload suddenly runs much slower: host CPU usage
+// climbs, the emulation can no longer keep up with the Amiga refresh and audio
+// underruns.  We counter (1) by pinning the thread to the performance cluster
+// and (2) by raising its uclamp frequency floor.  Both only affect the calling
+// thread, so they must run on the emulation thread (target_run() does).
+
+// uclamp / sched_setattr are not wrapped by bionic, so declare the minimal bits
+// we need.  The layout matches the kernel's struct sched_attr (uclamp version).
+struct amiberry_sched_attr {
+	uint32_t size;
+	uint32_t sched_policy;
+	uint64_t sched_flags;
+	int32_t  sched_nice;
+	uint32_t sched_priority;
+	uint64_t sched_runtime;
+	uint64_t sched_deadline;
+	uint64_t sched_period;
+	uint32_t sched_util_min;
+	uint32_t sched_util_max;
+};
+#ifndef SCHED_FLAG_KEEP_POLICY
+#define SCHED_FLAG_KEEP_POLICY 0x08
+#endif
+#ifndef SCHED_FLAG_KEEP_PARAMS
+#define SCHED_FLAG_KEEP_PARAMS 0x10
+#endif
+#ifndef SCHED_FLAG_UTIL_CLAMP_MIN
+#define SCHED_FLAG_UTIL_CLAMP_MIN 0x20
+#endif
+
+// Pin the calling (emulation) thread to the performance ("big") cluster.
+// Note: threads created afterwards inherit this affinity mask.  That is
+// acceptable here - the threads spawned later (audio, display, device I/O) are
+// all emulation work that also benefits from the fast cores, and the multi-core
+// big clusters this targets have ample headroom.
+static void pin_emulation_thread_to_big_cores()
+{
+	const long ncpu = sysconf(_SC_NPROCESSORS_CONF);
+	if (ncpu <= 1 || ncpu > CPU_SETSIZE)
+		return;
+
+	// Read each core's hardware max frequency; big cores clock higher than
+	// little ones.  cpuinfo_max_freq is the fixed silicon ceiling, so unlike
+	// scaling_max_freq it is unaffected by the governor's current power profile.
+	// An offline core has no cpufreq node and stays marked unknown (-1), so we
+	// never pin to a core we could not classify.
+	std::vector<long> max_freq(static_cast<size_t>(ncpu), -1);
+	long highest = 0;
+	int read_count = 0;
+	for (long i = 0; i < ncpu; i++) {
+		char path[128];
+		snprintf(path, sizeof path,
+			"/sys/devices/system/cpu/cpu%ld/cpufreq/cpuinfo_max_freq", i);
+		FILE* f = fopen(path, "r");
+		if (f) {
+			long v = 0;
+			if (fscanf(f, "%ld", &v) == 1) {
+				max_freq[i] = v;
+				read_count++;
+				if (v > highest)
+					highest = v;
+			}
+			fclose(f);
+		}
+	}
+	// Could not classify any core: leave scheduling untouched.
+	if (read_count == 0 || highest == 0)
+		return;
+
+	// Treat every core within 25% of the fastest readable core as a performance
+	// core.  This keeps the whole big cluster on multi-tier SoCs (e.g. the 1
+	// prime + 3 big A77 cores of a Snapdragon 865) while excluding the A55
+	// efficiency cores, which clock well below that threshold.
+	const long threshold = highest * 3 / 4;
+	cpu_set_t set;
+	CPU_ZERO(&set);
+	int perf_cores = 0;
+	for (long i = 0; i < ncpu; i++) {
+		if (max_freq[i] >= threshold) {
+			CPU_SET(static_cast<int>(i), &set);
+			perf_cores++;
+		}
+	}
+	// Every core we could read is the same speed (no distinct big cluster).
+	// Comparing against read_count - not ncpu - also prevents pinning to little
+	// cores in the unlikely case that every big core was offline during
+	// detection: those little cores would then all match and we bail out here.
+	if (perf_cores == 0 || perf_cores == read_count)
+		return;
+
+	if (sched_setaffinity(0, sizeof set, &set) == 0)
+		write_log("Pinned emulation thread to %d performance core(s) of %ld\n", perf_cores, ncpu);
+	else
+		write_log("Failed to set emulation thread CPU affinity: %s\n", strerror(errno));
+}
+
+// Raise the calling (emulation) thread's uclamp frequency floor so the cpufreq
+// governor clocks its core up even under a power-saving profile - mirroring the
+// device's "High performance" mode, but scoped to this thread.  Requires a
+// kernel with uclamp support (5.3+); on older kernels the syscall fails and we
+// simply continue without the boost.
+static void boost_emulation_thread_frequency()
+{
+	amiberry_sched_attr attr = {};
+	attr.size = sizeof attr;
+	attr.sched_flags = SCHED_FLAG_KEEP_POLICY | SCHED_FLAG_KEEP_PARAMS | SCHED_FLAG_UTIL_CLAMP_MIN;
+	attr.sched_util_min = 1024; // 0-1024; request maximum utilisation -> highest frequency
+	if (syscall(__NR_sched_setattr, 0, &attr, 0u) == 0)
+		write_log("Boosted emulation thread frequency (uclamp util_min=1024)\n");
+	else
+		write_log("uclamp frequency boost unavailable: %s\n", strerror(errno));
+}
+#endif
+
 void target_run()
 {
 	// Reset counter for access violations
 	init_max_signals();
+#ifdef __ANDROID__
+	// On API 31+ let the OS adaptively manage CPU frequency and core placement
+	// through an ADPF hint session.  When that is unavailable (older API, the
+	// hint API could not be resolved) or disabled via use_adpf, fall back to
+	// statically pinning the emulation thread to the big cores and raising its
+	// uclamp frequency floor.
+	const bool adpf_active = amiberry_options.use_adpf && adpf_init(gettid());
+	if (!adpf_active) {
+		pin_emulation_thread_to_big_cores();
+		boost_emulation_thread_frequency();
+	}
+#endif
 }
 
 void target_quit()
@@ -4420,6 +4560,7 @@ void target_quit()
 	cancel_async_update_check();
 
 #ifdef __ANDROID__
+	adpf_cleanup();
 	// Write a clean-exit marker so the Kotlin launcher knows this was
 	// an intentional quit, not a crash.  SDL3's SDLActivity calls
 	// System.exit(0) after native main() returns, which kills the
@@ -5969,6 +6110,7 @@ void save_amiberry_settings()
 	write_bool_option("default_frameskip", amiberry_options.default_frameskip);
 	write_bool_option("perf_log", amiberry_options.perf_log);
 	write_bool_option("slow_host_warning", amiberry_options.slow_host_warning);
+	write_bool_option("use_adpf", amiberry_options.use_adpf);
 	write_bool_option("default_disable_cycle_exact", amiberry_options.default_disable_cycle_exact);
 	write_int_option("default_quickstart_compatibility", amiberry_options.default_quickstart_compatibility);
 
@@ -6365,6 +6507,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
 		ret |= cfgfile_yesno(option, value, "perf_log", &amiberry_options.perf_log);
 		ret |= cfgfile_yesno(option, value, "slow_host_warning", &amiberry_options.slow_host_warning);
+		ret |= cfgfile_yesno(option, value, "use_adpf", &amiberry_options.use_adpf);
 		ret |= cfgfile_yesno(option, value, "default_disable_cycle_exact", &amiberry_options.default_disable_cycle_exact);
 		ret |= cfgfile_intval(option, value, "default_quickstart_compatibility", &amiberry_options.default_quickstart_compatibility, 1);
 		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);

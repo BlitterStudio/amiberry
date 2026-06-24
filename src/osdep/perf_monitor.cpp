@@ -2,6 +2,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "perf_monitor.h"
+#include "amiberry_adpf.h"
 
 struct perf_line_counters perf_lines;
 
@@ -72,6 +73,13 @@ void perf_monitor_frame(uae_s64 frame_ns, uae_s64 idle_ns, uae_s64 vsynctime_ns,
 	if (vsynctime_ns <= 0 || frame_ns <= 0) {
 		return;
 	}
+
+#ifdef __ANDROID__
+	// Feed the per-frame work and target durations to the ADPF hint session so
+	// the OS can scale CPU frequency to meet our deadline.  Active only on API
+	// 31+; a no-op otherwise.  actual work = frame time minus the sync-sleep.
+	adpf_report_frame(frame_ns - idle_ns, vsynctime_ns);
+#endif
 
 	// --- Slow-host detection (always active unless disabled or already fired) ---
 	if (amiberry_options.slow_host_warning && !warning_emitted && !currprefs.turbo_emulation) {

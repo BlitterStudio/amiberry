@@ -1379,6 +1379,7 @@ struct amiberry_options
 	bool default_frameskip = false;
 	bool perf_log = false;
 	bool slow_host_warning = true;
+	bool use_adpf = true;
 	bool default_disable_cycle_exact = false;
 	int default_quickstart_compatibility = 0;
 	bool default_correct_aspect_ratio = true;
