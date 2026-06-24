@@ -1577,7 +1577,7 @@ bool ImGui::TextLinkOpenURL(const char* label, const char* url)
     bool pressed = TextLink(label);
     if (pressed && g.PlatformIO.Platform_OpenInShellFn != NULL)
         g.PlatformIO.Platform_OpenInShellFn(&g, url);
-    SetItemTooltip(LocalizeGetMsg(ImGuiLocKey_OpenLink_s), url); // It is more reassuring for user to _always_ display URL when we same as label
+    SetItemTooltip(LocalizeGetMsg(ImGuiLocKey_OpenLink_s), url); // It is more reassuring for user to _always_ display URL when it is the same as the label.
     if (BeginPopupContextItem())
     {
         if (MenuItem(LocalizeGetMsg(ImGuiLocKey_CopyLink)))
@@ -7116,9 +7116,9 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             if (hovered || selected)
             {
                 const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-                RenderFrame(frame_bb.Min, frame_bb.Max, bg_col, false);
+                RenderFrame(frame_bb.Min, frame_bb.Max, bg_col, false, 0.0f);
             }
-            RenderNavCursor(frame_bb, id, nav_render_cursor_flags);
+            RenderNavCursor(frame_bb, id, nav_render_cursor_flags | ImGuiNavRenderCursorFlags_NoRounding);
             if (span_all_columns && !span_all_columns_label)
                 TablePopBackgroundChannel();
             if (flags & ImGuiTreeNodeFlags_Bullet)
@@ -9638,7 +9638,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
         float icon_w = (icon && icon[0]) ? CalcTextSize(icon, NULL).x : 0.0f;
         float shortcut_w = (shortcut && shortcut[0]) ? CalcTextSize(shortcut, NULL).x : 0.0f;
-        float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
+        float checkmark_w = IM_TRUNC(g.FontSize * 1.20f); // FIXME: Always accounted for, even in a menu with none, because 'selected' has no neutral setting.
         float min_w = offsets->DeclColumns(icon_w, label_size.x, shortcut_w, checkmark_w); // Feedback for next frame
         float stretch_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
         ImVec2 text_pos(pos.x, pos.y + window->DC.CurrLineTextBaseOffset);

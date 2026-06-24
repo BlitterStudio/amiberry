@@ -402,7 +402,6 @@ ImDrawListSharedData::ImDrawListSharedData()
         const float a = ((float)i * 2 * IM_PI) / (float)IM_COUNTOF(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
-    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 ImDrawListSharedData::~ImDrawListSharedData()
@@ -412,17 +411,17 @@ ImDrawListSharedData::~ImDrawListSharedData()
 
 void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 {
-    if (CircleSegmentMaxError == max_error)
+    if (CircleTessellationMaxError == max_error)
         return;
 
     IM_ASSERT(max_error > 0.0f);
-    CircleSegmentMaxError = max_error;
+    CircleTessellationMaxError = max_error;
     for (int i = 0; i < IM_COUNTOF(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
+        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleTessellationMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
     }
-    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
+    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleTessellationMaxError);
 }
 
 ImDrawList::ImDrawList(ImDrawListSharedData* shared_data)
@@ -660,7 +659,7 @@ int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
     if (radius_idx >= 0 && radius_idx < IM_COUNTOF(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
-        return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
+        return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleTessellationMaxError);
 }
 
 // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
@@ -2691,6 +2690,7 @@ ImFontAtlas::~ImFontAtlas()
 // Calling this mid-frame will discard the CPU-side copy of the texture data which is generally unreliable as you may have textures queued for creation or updates.
 void ImFontAtlas::Clear()
 {
+    IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlas::Clear()\n");
     bool backup_renderer_has_textures = RendererHasTextures;
     RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
     ClearFonts();
@@ -2701,6 +2701,7 @@ void ImFontAtlas::Clear()
 void ImFontAtlas::ClearFonts()
 {
     // FIXME-NEWATLAS: Illegal to remove currently bound font.
+    IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlas::ClearFonts()\n");
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     for (ImFont* font : Fonts)
         ImFontAtlasBuildNotifySetFont(this, font, NULL);
@@ -2776,6 +2777,28 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
     IM_ASSERT(atlas->Builder == NULL || atlas->Builder->FrameCount < frame_count); // Protection against being called twice.
     atlas->RendererHasTextures = renderer_has_textures;
 
+    // Update texture status and discard old textures.
+    // (we do this first thing to handle an edge case: if user mistakenly calls ClearFonts()+SetStatus(OK) during
+    //  rendering, it would ImFontAtlasBuildMain() rebuilding before tex->Updates[] gets a chance to be cleared)
+    // (if somehow we need to move this back lower in the function, we could manually call the code to clear Updates[]).
+    for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
+    {
+        // Update and remove if requested
+        ImTextureData* tex = atlas->TexList[tex_n];
+        if (tex->Status == ImTextureStatus_WantCreate && atlas->RendererHasTextures)
+            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture's TexID/BackendUserData but did not update Status to OK.");
+
+        bool remove_from_list = ImTextureDataUpdateNewFrame(tex);
+        if (remove_from_list)
+        {
+            IM_ASSERT(atlas->TexData != tex);
+            tex->DestroyPixels();
+            IM_DELETE(tex);
+            atlas->TexList.erase(atlas->TexList.begin() + tex_n);
+            tex_n--;
+        }
+    }
+
     // Check that font atlas was built or backend support texture reload in which case we can build now
     if (atlas->RendererHasTextures)
     {
@@ -2814,25 +2837,6 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
         IM_ASSERT(dst_n + builder->BakedDiscardedCount == src_n);
         builder->BakedPool.Size -= builder->BakedDiscardedCount;
         builder->BakedDiscardedCount = 0;
-    }
-
-    // Update texture status
-    for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
-    {
-        // Update and remove if requested
-        ImTextureData* tex = atlas->TexList[tex_n];
-        if (tex->Status == ImTextureStatus_WantCreate && atlas->RendererHasTextures)
-            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture's TexID/BackendUserData but did not update Status to OK.");
-
-        bool remove_from_list = ImTextureDataUpdateNewFrame(tex);
-        if (remove_from_list)
-        {
-            IM_ASSERT(atlas->TexData != tex);
-            tex->DestroyPixels();
-            IM_DELETE(tex);
-            atlas->TexList.erase(atlas->TexList.begin() + tex_n);
-            tex_n--;
-        }
     }
 }
 
