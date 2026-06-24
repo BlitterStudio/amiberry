@@ -1,75 +1,316 @@
-cmake_minimum_required(VERSION 3.16)
-project(capsimage)
+# CMakeList.txt
+# CAPSImage library + public headers only
 
-set(PROJECT_TITLE CAPSImage)
-set(PROJECT_TITLE_WIN32 CAPSImg)
+cmake_minimum_required(VERSION 3.10)
 
-set(MAJOR_VERSION 5)
-set(MINOR_VERSION 1)
+# read CAPSImage version from header file
+set(CAPSLIB_VERSION_HEADER
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsLibVersion.h")
 
-option(BUILD_SHARED_LIBS "Build a dynamic library instead of static library" ON)
+function(capsimage_read_define out_var define_name)
+    file(STRINGS "${CAPSLIB_VERSION_HEADER}" line
+        REGEX "^[ \t]*#[ \t]*define[ \t]+${define_name}[ \t]+[0-9]+")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  option(BUILD_FRAMEWORK "Build a macOS framework instead of a shared library" OFF)
-  set(BUILD_SHARED_LIBS ON)
+    if(NOT line)
+        message(FATAL_ERROR "Missing ${define_name} in ${CAPSLIB_VERSION_HEADER}")
+    endif()
+
+    string(REGEX REPLACE
+        "^.*${define_name}[ \t]+([0-9]+).*$"
+        "\\1"
+        value
+        "${line}")
+
+    set(${out_var} "${value}" PARENT_SCOPE)
+endfunction()
+
+capsimage_read_define(CAPSIMAGE_VERSION_MAJOR CAPS_LIB_RELEASE)
+capsimage_read_define(CAPSIMAGE_VERSION_MINOR CAPS_LIB_REVISION)
+set(CAPSIMAGE_VERSION_PATCH 0)
+
+set(CAPSIMAGE_VERSION
+    "${CAPSIMAGE_VERSION_MAJOR}.${CAPSIMAGE_VERSION_MINOR}.${CAPSIMAGE_VERSION_PATCH}")
+
+# Detect whether this is the top-level project or embedded into another
+# build via add_subdirectory() (e.g. by an emulator bundling the library).
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(CAPSIMAGE_MASTER_PROJECT ON)
+else()
+    set(CAPSIMAGE_MASTER_PROJECT OFF)
 endif()
 
-option(ADD_INCLUDE_SUFFIX "Add major version suffix to include directory" OFF)
-if (ADD_INCLUDE_SUFFIX)
-  set(INCLUDE_SUFFIX ${MAJOR_VERSION})
-  message(STATUS "Using '${INCLUDE_SUFFIX}' suffix on include directory")
+if(APPLE AND CAPSIMAGE_MASTER_PROJECT)
+    option(CAPSIMAGE_MACOS_UNIVERSAL
+        "Build macOS universal binary for x86_64 and arm64"
+        OFF)
+
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.5"
+        CACHE STRING "macOS deployment target" FORCE)
+
+    if(CAPSIMAGE_MACOS_UNIVERSAL)
+        set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64"
+            CACHE STRING "macOS architectures" FORCE)
+
+        message(STATUS "Configuring macOS Universal Build: ${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        message(STATUS "Configuring macOS native architecture build")
+    endif()
 endif()
 
-include(CheckStructHasMember)
-CHECK_STRUCT_HAS_MEMBER("struct dirent" d_type dirent.h HAVE_STRUCT_DIRENT_D_TYPE LANGUAGE CXX)
+# Keep the project name stable because it is used for install/export paths.
+project(CAPSImage VERSION ${CAPSIMAGE_VERSION} LANGUAGES C CXX)
 
-file(GLOB SOURCES src/Core/*.cpp src/CAPSImg/*.cpp src/Codec/*.cpp)
-file(GLOB HEADERS src/Core/*.h src/CAPSImg/*.h src/Codec/*.h src/Device/*.h)
-file(GLOB API_HEADERS src/LibIPF/*.h;src/Core/CommonTypes.h)
-set(API_HEADERS ${API_HEADERS} ${CMAKE_BINARY_DIR}/CapsLibVersion.h)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
-add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${API_HEADERS})
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
 
-#set_target_properties(${PROJECT_NAME} PROPERTIES
-#  VERSION ${MAJOR_VERSION}.${MINOR_VERSION}
-#  SOVERSION ${MAJOR_VERSION}
-#  CXX_STANDARD 11)
+#include(FetchContent)
+#set(FMT_INSTALL OFF CACHE INTERNAL "Disable fmt install")
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-  ${CMAKE_BINARY_DIR}
-  src/LibIPF
-  src/CAPSImg
-  src/Core
-  src/Codec
-  src/Device)
+#FetchContent_Declare(
+#    fmt
+#    GIT_REPOSITORY https://github.com/fmtlib/fmt
+#    GIT_TAG        e69e5f977d458f2650bb346dadf2ad30c5320281 # 10.2.1
+#)
+#FetchContent_MakeAvailable(fmt)
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND BUILD_FRAMEWORK)
-  set_target_properties(${PROJECT_NAME} PROPERTIES
-    OUTPUT_NAME ${PROJECT_TITLE}
-    FRAMEWORK TRUE
-    FRAMEWORK_VERSION C
-    MACOSX_FRAMEWORK_IDENTIFIER com.kryoflux)
-  set_source_files_properties(${API_HEADERS} PROPERTIES
-    MACOSX_PACKAGE_LOCATION Headers/caps${INCLUDE_SUFFIX})
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
+# -----------------------------------------------------------------------------
+# Sources
+# -----------------------------------------------------------------------------
+
+set(CAPSIMAGE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/Codec/CTRawCodec.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Codec/CTRawCodecDecompressor.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Codec/DiskEncoding.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/BaseFile.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/BitBuffer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/CRC.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/DiskFile.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/MemoryFile.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CapsAPI.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CapsFDCEmulator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CapsFormatMFM.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CapsImage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CapsImageStd.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CAPSImg.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/CapsLoader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/DiskImage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/DiskImageFactory.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/StreamCueImage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/StreamImage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/stdafx.cpp"
+)
+
+if(WIN32)
+    list(APPEND CAPSIMAGE_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg/dllmain.cpp")
+else()
+    list(APPEND CAPSIMAGE_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Posix/posixfix.cpp")
 endif()
 
-if (WIN32)
-  set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_TITLE_WIN32})
-  target_include_directories(${PROJECT_NAME} PRIVATE src/Compatibility)
+set(CAPSIMAGE_PUBLIC_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsAPI.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsFDC.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsForm.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsLib.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsLibAll.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsLibVersion.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/ComLib.h"
+    # CapsLibAll.h includes CommonTypes.h (which lives under Core/), so it must
+    # be installed alongside the LibIPF headers; otherwise a consumer including
+    # <CAPSImage/CapsLibAll.h> from the installed dev package fails to find it.
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/CommonTypes.h"
+)
+
+# -----------------------------------------------------------------------------
+# Target: runtime library
+# -----------------------------------------------------------------------------
+
+add_library(CAPSImage SHARED ${CAPSIMAGE_SOURCES})
+add_library(CAPSImage::CAPSImage ALIAS CAPSImage)
+
+set_target_properties(CAPSImage PROPERTIES
+    VERSION     "${PROJECT_VERSION}"
+    SOVERSION   "${PROJECT_VERSION_MAJOR}"
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+    OUTPUT_NAME CAPSImage
+)
+
+target_include_directories(CAPSImage
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/Core"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Codec"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CAPSImg"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Device"
+    PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/LibIPF>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CAPSImage>"
+)
+
+if(WIN32)
+    target_include_directories(CAPSImage PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Win32")
+    target_compile_definitions(CAPSImage PRIVATE _CRT_SECURE_NO_WARNINGS)
+    # Keep the historical DLL name (CAPSImg.dll) on Windows.
+    set_target_properties(CAPSImage PROPERTIES OUTPUT_NAME CAPSImg PREFIX "")
+else()
+    target_include_directories(CAPSImage PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/Posix"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Compatibility/GCC4x")
 endif()
 
-configure_file(src/config.h.in ${CMAKE_BINARY_DIR}/config.h)
-configure_file(src/LibIPF/CapsLibVersion.h.in ${CMAKE_BINARY_DIR}/CapsLibVersion.h)
-target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_CONFIG_H=1)
+#target_link_libraries(CAPSImage PRIVATE fmt::fmt)
 
-#install(TARGETS ${PROJECT_NAME}
-#  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/amiberry
-#  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-#  FRAMEWORK DESTINATION "/Library/Frameworks"
-#  PUBLIC_HEADER DESTINATION include/caps${INCLUDE_SUFFIX})
+# Static libgcc/libstdc++ helps distributing binaries across older Linux
+# distros, but the static runtime libraries are not installed everywhere
+# (e.g. Fedora ships libstdc++.a in a separate libstdc++-static package).
+# Only enable static linking when the toolchain can actually satisfy it;
+# otherwise fall back to the shared runtime libraries.
+if(NOT APPLE AND NOT MSVC)
+    include(CheckCXXSourceCompiles)
+    set(_capsimage_saved_required_flags "${CMAKE_REQUIRED_FLAGS}")
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -static-libgcc -static-libstdc++")
+    check_cxx_source_compiles("int main() { return 0; }" CAPSIMAGE_HAVE_STATIC_LIBSTDCXX)
+    set(CMAKE_REQUIRED_FLAGS "${_capsimage_saved_required_flags}")
+    if(CAPSIMAGE_HAVE_STATIC_LIBSTDCXX)
+        target_link_options(CAPSImage PRIVATE -static-libgcc -static-libstdc++)
+    endif()
+endif()
 
-#if (NOT APPLE OR NOT BUILD_FRAMEWORK)
-#  install(FILES ${API_HEADERS} DESTINATION include/caps${INCLUDE_SUFFIX})
-#endif()
+# -----------------------------------------------------------------------------
+# Target: public headers / development usage
+# -----------------------------------------------------------------------------
+
+add_library(CAPSImageHeaders INTERFACE)
+add_library(CAPSImage::Headers ALIAS CAPSImageHeaders)
+
+#target_sources(CAPSImageHeaders INTERFACE ${CAPSIMAGE_PUBLIC_HEADERS})
+
+target_include_directories(CAPSImageHeaders INTERFACE
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/LibIPF>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/CAPSImage>"
+)
+
+# Optional convenience target: consumers can link one target and get both the
+# shared library and the public include path.
+add_library(CAPSImageDev INTERFACE)
+add_library(CAPSImage::Dev ALIAS CAPSImageDev)
+target_link_libraries(CAPSImageDev INTERFACE CAPSImage::CAPSImage CAPSImage::Headers)
+
+# -----------------------------------------------------------------------------
+# Install
+# -----------------------------------------------------------------------------
+
+# When embedded via add_subdirectory(), the parent project handles packaging
+# and installation, so skip the install/CPack rules by default.
+option(CAPSIMAGE_INSTALL
+    "Generate install rules and packaging targets"
+    ${CAPSIMAGE_MASTER_PROJECT})
+
+if(CAPSIMAGE_INSTALL)
+
+message(STATUS "Library install dir: ${CMAKE_INSTALL_LIBDIR}")
+message(STATUS "Header install dir:  ${CMAKE_INSTALL_INCLUDEDIR}/CAPSImage")
+
+install(TARGETS CAPSImage
+    EXPORT CAPSImageTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Development
+)
+
+install(TARGETS CAPSImageHeaders CAPSImageDev
+    EXPORT CAPSImageTargets
+)
+
+install(FILES ${CAPSIMAGE_PUBLIC_HEADERS}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CAPSImage
+    COMPONENT Development
+)
+
+install(EXPORT CAPSImageTargets
+    NAMESPACE CAPSImage::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CAPSImage
+    COMPONENT Development
+)
+
+if(NOT ANDROID AND UNIX AND NOT APPLE)
+    # Backwards-compatible lowercase .so symlink. CMAKE_INSTALL_LIBDIR must be
+    # expanded here at configure time (it is not defined in the generated
+    # install script, where it would otherwise resolve to an empty string);
+    # DESTDIR and CMAKE_INSTALL_PREFIX are resolved at install time.
+    install(CODE "
+        execute_process(
+            COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink libCAPSImage.so libcapsimage.so
+            WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+        )
+    " COMPONENT Runtime)
+endif()
+
+# -----------------------------------------------------------------------------
+# CPack
+# -----------------------------------------------------------------------------
+
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    set(CPACK_GENERATOR FREEBSD)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(CPACK_GENERATOR TGZ DEB RPM)
+endif()
+
+set(CPACK_PACKAGE_NAME "capsimage")
+set(CPACK_PACKAGE_CONTACT "info@kryoflux.com")
+set(CPACK_PACKAGE_VENDOR "KryoFlux Products & Services Ltd.")
+set(CMAKE_PROJECT_HOMEPAGE_URL "https://www.kryoflux.com")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CAPSImage shared library")
+set(CPACK_PACKAGE_DESCRIPTION "CAPSImage shared library\nCopyright (c) 2010-2026 KryoFlux Products & Services Ltd")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_STRIP_FILES ON)
+
+set(CPACK_COMPONENTS_ALL Runtime Development)
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+set(CPACK_DEB_COMPONENT_INSTALL ON)
+set(CPACK_RPM_COMPONENT_INSTALL ON)
+set(CPACK_MONOLITHIC_INSTALL OFF)
+
+set(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "CAPSImage runtime library")
+set(CPACK_COMPONENT_RUNTIME_DESCRIPTION "CAPSImage shared library runtime files")
+set(CPACK_COMPONENT_DEVELOPMENT_DISPLAY_NAME "CAPSImage development headers")
+set(CPACK_COMPONENT_DEVELOPMENT_DESCRIPTION "CAPSImage public headers and CMake export files")
+set(CPACK_COMPONENT_DEVELOPMENT_DEPENDS Runtime)
+
+# DEB component packages: capsimage + capsimage-dev
+set(CPACK_DEBIAN_RUNTIME_PACKAGE_NAME "capsimage")
+set(CPACK_DEBIAN_DEVELOPMENT_PACKAGE_NAME "capsimage-dev")
+set(CPACK_DEBIAN_RUNTIME_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_DEVELOPMENT_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_RUNTIME_PACKAGE_SECTION "libs")
+set(CPACK_DEBIAN_DEVELOPMENT_PACKAGE_SECTION "libdevel")
+set(CPACK_DEBIAN_DEVELOPMENT_PACKAGE_DEPENDS "capsimage (= ${PROJECT_VERSION})")
+
+# RPM component packages: capsimage + capsimage-devel
+set(CPACK_RPM_RUNTIME_PACKAGE_NAME "capsimage")
+set(CPACK_RPM_DEVELOPMENT_PACKAGE_NAME "capsimage-devel")
+set(CPACK_RPM_RUNTIME_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_DEVELOPMENT_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_PACKAGE_LICENSE "non-free binary")
+set(CPACK_RPM_RUNTIME_PACKAGE_GROUP "System/Libraries")
+set(CPACK_RPM_DEVELOPMENT_PACKAGE_GROUP "Development/Libraries")
+set(CPACK_RPM_RUNTIME_PACKAGE_PROVIDES "libCAPSImage.so.5")
+set(CPACK_RPM_DEVELOPMENT_PACKAGE_REQUIRES "capsimage = ${PROJECT_VERSION}-${CPACK_RPM_PACKAGE_RELEASE}")
+set(CPACK_RPM_PACKAGE_RELEASE 1)
+
+# FreeBSD PKG setup
+set(CPACK_FREEBSD_PACKAGE_MAINTAINER ${CPACK_PACKAGE_CONTACT})
+
+include(CPack)
+
+endif() # CAPSIMAGE_INSTALL

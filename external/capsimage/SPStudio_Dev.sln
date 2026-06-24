@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.960
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CAPSImg", "CAPSImg\CAPSImg.vcxproj", "{312805B9-E240-4140-BE32-5454C32BBE8E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Debug|Win32.Build.0 = Debug|Win32
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Debug|x64.ActiveCfg = Debug|x64
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Debug|x64.Build.0 = Debug|x64
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Release|Win32.ActiveCfg = Release|Win32
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Release|Win32.Build.0 = Release|Win32
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Release|x64.ActiveCfg = Release|x64
+		{312805B9-E240-4140-BE32-5454C32BBE8E}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A11B2FA6-CF92-4298-BC6B-0D3C4EC7BF4D}
+	EndGlobalSection
+EndGlobal

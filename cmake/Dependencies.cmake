@@ -618,6 +618,15 @@ if(NOT IOS)
     add_subdirectory(external/floppybridge)
 endif()
 add_subdirectory(external/capsimage)
+# Keep the plugin filenames Amiberry's loader expects (libCAPSImg.dll on
+# Windows, libcapsimage.so/.dylib elsewhere), without version suffixes.
+if(WIN32)
+    set_target_properties(CAPSImage PROPERTIES OUTPUT_NAME CAPSImg PREFIX "lib")
+else()
+    set_target_properties(CAPSImage PROPERTIES OUTPUT_NAME capsimage)
+endif()
+set_property(TARGET CAPSImage PROPERTY VERSION)
+set_property(TARGET CAPSImage PROPERTY SOVERSION)
 
 # Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables.
 # On Android, SDL3_image is already linked via the FetchContent target.
@@ -759,9 +768,9 @@ endif()
 # capsimage and floppybridge are plugins (not linked into amiberry) but are
 # copied by post-build commands. Explicit dependencies ensure they are built.
 if(IOS)
-    add_dependencies(${PROJECT_NAME} capsimage)
+    add_dependencies(${PROJECT_NAME} CAPSImage)
 else()
-    add_dependencies(${PROJECT_NAME} floppybridge capsimage)
+    add_dependencies(${PROJECT_NAME} floppybridge CAPSImage)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
