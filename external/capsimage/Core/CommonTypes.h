@@ -1,6 +1,12 @@
 #ifndef COMMONTYPES_H
 #define COMMONTYPES_H
 
+// Fixed-width integer types are used unqualified below (and by the public
+// headers that pull this in via CapsLibAll.h). Use <stdint.h> rather than
+// <cstdint> so the global-namespace names are available to both C and C++
+// consumers of the installed dev package.
+#include <stdint.h>
+
 typedef uintmax_t file_size_t;
 typedef intmax_t file_pos_t;
 

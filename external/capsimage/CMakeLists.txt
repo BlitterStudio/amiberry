@@ -120,6 +120,10 @@ set(CAPSIMAGE_PUBLIC_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsLibAll.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/CapsLibVersion.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/LibIPF/ComLib.h"
+    # CapsLibAll.h includes CommonTypes.h (which lives under Core/), so it must
+    # be installed alongside the LibIPF headers; otherwise a consumer including
+    # <CAPSImage/CapsLibAll.h> from the installed dev package fails to find it.
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/CommonTypes.h"
 )
 
 # -----------------------------------------------------------------------------
@@ -163,9 +167,20 @@ endif()
 
 #target_link_libraries(CAPSImage PRIVATE fmt::fmt)
 
-# Static libgcc/libstdc++ helps distributing binaries across older Linux distros.
+# Static libgcc/libstdc++ helps distributing binaries across older Linux
+# distros, but the static runtime libraries are not installed everywhere
+# (e.g. Fedora ships libstdc++.a in a separate libstdc++-static package).
+# Only enable static linking when the toolchain can actually satisfy it;
+# otherwise fall back to the shared runtime libraries.
 if(NOT APPLE AND NOT MSVC)
-    target_link_options(CAPSImage PRIVATE -static-libgcc -static-libstdc++)
+    include(CheckCXXSourceCompiles)
+    set(_capsimage_saved_required_flags "${CMAKE_REQUIRED_FLAGS}")
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -static-libgcc -static-libstdc++")
+    check_cxx_source_compiles("int main() { return 0; }" CAPSIMAGE_HAVE_STATIC_LIBSTDCXX)
+    set(CMAKE_REQUIRED_FLAGS "${_capsimage_saved_required_flags}")
+    if(CAPSIMAGE_HAVE_STATIC_LIBSTDCXX)
+        target_link_options(CAPSImage PRIVATE -static-libgcc -static-libstdc++)
+    endif()
 endif()
 
 # -----------------------------------------------------------------------------
@@ -226,13 +241,16 @@ install(EXPORT CAPSImageTargets
 )
 
 if(NOT ANDROID AND UNIX AND NOT APPLE)
-    # Backwards-compatible lowercase .so symlink.
-    install(CODE [[
+    # Backwards-compatible lowercase .so symlink. CMAKE_INSTALL_LIBDIR must be
+    # expanded here at configure time (it is not defined in the generated
+    # install script, where it would otherwise resolve to an empty string);
+    # DESTDIR and CMAKE_INSTALL_PREFIX are resolved at install time.
+    install(CODE "
         execute_process(
-            COMMAND "${CMAKE_COMMAND}" -E create_symlink libCAPSImage.so libcapsimage.so
-            WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
+            COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink libCAPSImage.so libcapsimage.so
+            WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
         )
-    ]] COMPONENT Runtime)
+    " COMPONENT Runtime)
 endif()
 
 # -----------------------------------------------------------------------------
