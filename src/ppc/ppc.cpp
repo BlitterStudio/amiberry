@@ -6,6 +6,7 @@
 #include "threaddep/thread.h"
 #include "machdep/rpt.h"
 #include "memory.h"
+#include "newcpu.h"
 #include "cpuboard.h"
 #include "debug.h"
 #include "custom.h"
@@ -203,6 +204,7 @@ typedef void (PPCCALL *ppc_cpu_pause_function)(int pause);
 typedef bool (PPCCALL *ppc_cpu_check_state_function)(int state);
 typedef void (PPCCALL *ppc_cpu_set_state_function)(int state);
 typedef void (PPCCALL *ppc_cpu_reset_function)(void);
+typedef void (PPCCALL *ppc_cpu_flush_jit_function)(void);
 
 /* Function pointers to active PPC implementation */
 
@@ -228,6 +230,7 @@ static struct impl {
 	ppc_cpu_check_state_function check_state;
 	ppc_cpu_set_state_function set_state;
 	ppc_cpu_reset_function reset;
+	ppc_cpu_flush_jit_function flush_jit;
 	qemu_uae_ppc_in_cpu_thread_function in_cpu_thread;
 	qemu_uae_ppc_external_interrupt_function external_interrupt;
 	qemu_uae_lock_function lock;
@@ -309,6 +312,10 @@ static bool load_qemu_implementation(void)
 	}
 	//impl.free = (ppc_cpu_free_function) uae_dlsym(handle, "ppc_cpu_free");
 	//impl.stop = (ppc_cpu_stop_function) uae_dlsym(handle, "ppc_cpu_stop");
+	impl.flush_jit = (ppc_cpu_flush_jit_function) uae_dlsym(handle, "ppc_cpu_flush_jit");
+	if (impl.flush_jit) {
+		write_log(_T("PPC: Imported optional ppc_cpu_flush_jit\n"));
+	}
 
 	// FIXME: not needed, handled internally by uae_dlopen_plugin
 	// uae_dlopen_patch_common(handle);
@@ -693,6 +700,16 @@ static int ppc_thread(void *v)
 void uae_ppc_execute_check(void)
 {
 	if (ppc_spinlock_waiting) {
+		/* #2114: request a PPC JIT/TLB flush at an actual m68k->PPC handoff (the
+		 * PPC is about to run, possibly executing code/page-tables the m68k just
+		 * patched in shared RAM, which bypass QEMU's PPC softmmu). This only sets
+		 * an atomic flag; the PPC vcpu performs the real synchronous flush at its
+		 * next cpu_exec safe point. NOT on every execute_check() call (the m68k
+		 * busy-wait hits this millions of times/sec) and never while the m68k is
+		 * halted (OS4) -- both would drown the PPC in retranslation. */
+		if (using_qemu() && impl.flush_jit && !regs.halted) {
+			impl.flush_jit();
+		}
 		uae_ppc_spinlock_release();
 		uae_ppc_spinlock_get();
 	}
@@ -700,6 +717,9 @@ void uae_ppc_execute_check(void)
 
 void uae_ppc_execute_quick()
 {
+	if (using_qemu() && impl.flush_jit && !regs.halted) {
+		impl.flush_jit();
+	}
 	uae_ppc_spinlock_release();
 	sleep_millis_main(1);
 	uae_ppc_spinlock_get();
