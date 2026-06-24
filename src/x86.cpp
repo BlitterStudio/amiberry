@@ -1962,9 +1962,17 @@ static uae_u8 vlsi_in(struct x86_bridge *xb, int portnum)
 	return v;
 }
 
+// Defined in atonce.cpp: routes x86 I/O to the ATonce 286 trap mechanism when
+// no PC bridgeboard (A2088/A2286/...) owns the x86 side, i.e. bridges[0]==NULL.
+extern uint32_t atonce_x86_io(uint16_t port, int dir, uint32_t val, int size);
+
 void portout(uint16_t portnum, uint8_t v)
 {
 	struct x86_bridge *xb = bridges[0];
+	if (!xb) {
+		atonce_x86_io(portnum, 0, v, 1);
+		return;
+	}
 	uae_u8 *io = xb->io_ports;
 	int aio = -1;
 	uae_u8 enables = xb->amiga_io[IO_MODE_REGISTER];
@@ -2319,6 +2327,10 @@ end:
 void portout16(uint16_t portnum, uint16_t value)
 {
 	struct x86_bridge *xb = bridges[0];
+	if (!xb) {
+		atonce_x86_io(portnum, 0, value, 2);
+		return;
+	}
 
 	if (portnum >= MAX_IO_PORT)
 		return;
@@ -2348,6 +2360,10 @@ void portout16(uint16_t portnum, uint16_t value)
 
 void portout32(uint16_t portnum, uint32_t value)
 {
+	if (!bridges[0]) {
+		atonce_x86_io(portnum, 0, value, 4);
+		return;
+	}
 	if (portnum >= MAX_IO_PORT)
 		return;
 
@@ -2368,6 +2384,9 @@ void portout32(uint16_t portnum, uint32_t value)
 uint8_t portin(uint16_t portnum)
 {
 	struct x86_bridge *xb = bridges[0];
+	if (!xb) {
+		return (uint8_t)atonce_x86_io(portnum, 1, 0, 1);
+	}
 	int aio = -1;
 	uae_u8 enables = xb->amiga_io[IO_MODE_REGISTER];
 	bool mda_emu = (enables & 8) != 0;
@@ -2718,6 +2737,9 @@ end:
 uint16_t portin16(uint16_t portnum)
 {
 	struct x86_bridge *xb = bridges[0];
+	if (!xb) {
+		return (uint16_t)atonce_x86_io(portnum, 1, 0, 2);
+	}
 	uae_u16 v = 0;
 
 	if (portnum >= MAX_IO_PORT)
@@ -2749,6 +2771,9 @@ uint32_t portin32(uint16_t portnum)
 {
 	uint32_t v = 0;
 
+	if (!bridges[0]) {
+		return atonce_x86_io(portnum, 1, 0, 4);
+	}
 	if (portnum >= MAX_IO_PORT)
 		return v;
 
@@ -3490,7 +3515,8 @@ int is_x86_cpu(struct uae_prefs *p)
 			is_device_rom(p, ROMTYPE_A2088, 0) < 0 &&
 			is_device_rom(p, ROMTYPE_A2088T, 0) < 0 &&
 			is_device_rom(p, ROMTYPE_A2286, 0) < 0 &&
-			is_device_rom(p, ROMTYPE_A2386, 0) < 0) {
+			is_device_rom(p, ROMTYPE_A2386, 0) < 0 &&
+			is_device_rom(p, ROMTYPE_ATONCE, 0) < 0) {
 			if (p == &currprefs)
 				x86_found = -1;
 			return X86_STATE_INACTIVE;
@@ -3569,11 +3595,20 @@ int device_get_config_int(const char *s)
 	if (!strcmp(s, "dithering")) {
 		return 1;
 	}
+	if (!strcmp(s, "dithersub")) {
+		return 1;
+	}
 	if (!strcmp(s, "dacfilter")) {
 		return 1;
 	}
 	if (!strcmp(s, "recompiler")) {
 		return 1;
+	}
+	if (!strcmp(s, "sli") || !strcmp(s, "type")) {
+		return 0;
+	}
+	if (!strcmp(s, "framebuffer_memory") || !strcmp(s, "texture_memory")) {
+		return 2;
 	}
 	if (!strcmp(s, "memory")) {
 		return pcem_getvramsize() >> 20;

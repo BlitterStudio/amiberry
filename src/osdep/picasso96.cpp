@@ -126,6 +126,9 @@ static uae_sem_t render_cs = nullptr;
 #define PICASSO_STATE_SETDAC 8
 #define PICASSO_STATE_SETSWITCH 16
 
+#define HOR_BLANK 8
+#define VER_BLANK 8
+
 #if defined(X86_MSVC_ASSEMBLY)
 #define SWAPSPEEDUP
 #endif
@@ -2876,15 +2879,15 @@ static void FillBoardInfo(TrapContext *ctx, uaecptr amigamemptr, struct LibResol
 	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_Height, height);
 	trap_put_byte(ctx, amigamemptr + PSSO_ModeInfo_Depth, depth);
 	trap_put_byte(ctx, amigamemptr + PSSO_ModeInfo_Flags, 0);
-	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_HorTotal, width + 8);
-	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_HorBlankSize, 8);
+	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_HorTotal, width + HOR_BLANK);
+	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_HorBlankSize, HOR_BLANK);
 	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_HorSyncStart, 2);
 	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_HorSyncSize, 2);
 	trap_put_byte(ctx, amigamemptr + PSSO_ModeInfo_HorSyncSkew, 0);
 	trap_put_byte(ctx, amigamemptr + PSSO_ModeInfo_HorEnableSkew, 0);
 
-	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_VerTotal, height + 8);
-	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_VerBlankSize, 8);
+	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_VerTotal, height + VER_BLANK);
+	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_VerBlankSize, VER_BLANK);
 	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_VerSyncStart, 2);
 	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_VerSyncSize, 2);
 
@@ -2893,7 +2896,7 @@ static void FillBoardInfo(TrapContext *ctx, uaecptr amigamemptr, struct LibResol
 
     int freq = currprefs.gfx_apmode[GF_RTG].gfx_refreshrate;
 	trap_put_long(ctx, amigamemptr + PSSO_ModeInfo_PixelClock,
-		width * height * (freq ? abs(freq) : default_freq));
+	(width + HOR_BLANK ) * (height + VER_BLANK) * (freq ? abs(freq) : default_freq));
 }
 
 struct modeids {

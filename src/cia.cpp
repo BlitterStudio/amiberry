@@ -19,6 +19,9 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"
+#ifdef WITH_X86
+#include "atonce.h"
+#endif
 #ifdef SERIAL_PORT
 #include "serial.h"
 #endif
@@ -586,9 +589,7 @@ static void CIA_update_check(void)
 				ovfl[0] = 2;
 			}
 		}
-#ifndef AMIBERRY
 		assert(c->t[0].timer < 0x10000);
-#endif
 
 		// Timer B
 		cc = 0;
@@ -608,9 +609,7 @@ static void CIA_update_check(void)
 				}
 			}
 		}
-#ifndef AMIBERRY
 		assert(c->t[1].timer < 0x10000);
-#endif
 
 		// B INMODE=10 or 11 (B counting A underflows)
 		if (ovfl[0] && ((c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE1 | CR_START) || (c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE | CR_INMODE1 | CR_START))) {
@@ -2647,6 +2646,16 @@ static uae_u32 REGPARAM2 cia_bget(uaecptr addr)
 	uae_u8 v = 0;
 	uae_u32 flags = 0;
 
+#ifdef WITH_X86
+	// ATonce sits in the 68000 socket: it decodes before Gary
+	{
+		uae_u32 av;
+		if (atonce_cia_access(addr, &av, 1, 0)) {
+			return (uae_u8)av;
+		}
+	}
+#endif
+
 	if (isgarynocia(addr))
 		return dummy_get(addr, 1, false, 0);
 
@@ -2710,6 +2719,15 @@ static uae_u32 REGPARAM2 cia_wget(uaecptr addr)
 	int r = (addr & 0xf00) >> 8;
 	uae_u16 v = 0;
 	uae_u32 flags = 0;
+
+#ifdef WITH_X86
+	{
+		uae_u32 av;
+		if (atonce_cia_access(addr, &av, 2, 0)) {
+			return (uae_u16)av;
+		}
+	}
+#endif
 
 	if (isgarynocia(addr))
 		return dummy_get(addr, 2, false, 0);
@@ -2810,6 +2828,14 @@ static void REGPARAM2 cia_bput(uaecptr addr, uae_u32 value)
 	if (cia_debug(addr, value, sz_byte))
 		return;
 
+#ifdef WITH_X86
+	{
+		uae_u32 av = value;
+		if (atonce_cia_access(addr, &av, 1, 1))
+			return;
+	}
+#endif
+
 	if (isgarynocia(addr)) {
 		dummy_put(addr, 1, false);
 		return;
@@ -2852,6 +2878,14 @@ static void REGPARAM2 cia_wput(uaecptr addr, uae_u32 v)
 
 	if (cia_debug(addr, v, sz_word))
 		return;
+
+#ifdef WITH_X86
+	{
+		uae_u32 av = v;
+		if (atonce_cia_access(addr, &av, 2, 1))
+			return;
+	}
+#endif
 
 	if (isgarynocia(addr)) {
 		dummy_put(addr, 2, false);

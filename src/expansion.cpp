@@ -60,6 +60,7 @@
 #endif
 #ifdef WITH_X86
 #include "x86.h"
+#include "atonce.h"
 #endif
 #include "filesys.h"
 #include "ethernet.h"
@@ -4588,6 +4589,23 @@ static const struct expansionboardsettings x86vga_settings[] = {
 	}
 };
 
+static const struct expansionboardsettings atonce_bridge_settings[] = {
+	{
+		// 0
+		_T("Automount first MBR hardfile"),
+		_T("automounthdf"),
+	},
+	{
+		// 19 (not yet implemented)
+		_T("FPU"),
+		_T("fpu"),
+		false, false, 19
+	},
+	{
+		NULL
+	}
+};
+
 
 static const struct expansionboardsettings x86at286_bridge_settings[] = {
 	{
@@ -6204,6 +6222,17 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_X86_BRIDGE,
 		0, 0, 0, false, NULL,
 		false, 0, x86at386_bridge_settings
+	},
+	{
+		// Vortex ATonce Plus: 286 board in the A500 68000 socket. Not a Zorro
+		// bridgeboard: no autoconfig, no BIOS ROM file (the x86 BIOS is loaded
+		// from the floppy .dsg into Amiga chip RAM by the 68k driver).
+		_T("atonceplus"), _T("ATonce Plus"), _T("Vortex"),
+		NULL, atonce_init, NULL, NULL, ROMTYPE_ATONCE | ROMTYPE_NONE, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_X86_BRIDGE,
+		0, 0, 0, false, NULL,
+		false, 0, atonce_bridge_settings
 	},
 #endif
 

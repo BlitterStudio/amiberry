@@ -6,6 +6,7 @@ set(SOURCE_FILES
         src/amax.cpp
         src/ar.cpp
         src/arcadia.cpp
+		src/atonce.cpp
         src/audio.cpp
         src/autoconf.cpp
         src/blitfunc.cpp

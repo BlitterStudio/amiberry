@@ -1267,7 +1267,7 @@ static uae_u8 e9346[64 * 2] = {
 	0x80, 0x00, 0x10, 0x00 // CONFIG1-4
 };
 
-static bool ne2000_init_2(struct pci_board_state *pcibs, int romtype, const TCHAR *mac)
+static bool ne2000_init_2(struct pci_board_state *pcibs, int romtype, const TCHAR *mac, bool swapmac)
 {
 	ne2000_free(pcibs);
 	ncs.device = &ne2000_pci_board;
@@ -1321,12 +1321,22 @@ static bool ne2000_init_2(struct pci_board_state *pcibs, int romtype, const TCHA
 	ncs.ne2000state->idbytes[0] = 0x50;
 	ncs.ne2000state->idbytes[1] = 0x43;
 
-	e9346[4] = m[0];
-	e9346[5] = m[1];
-	e9346[6] = m[2];
-	e9346[7] = m[3];
-	e9346[8] = m[4];
-	e9346[9] = m[5];
+	if (swapmac) {
+		// Ariadne 2 EEPROM has MAC byteswapped
+		e9346[4] = m[1];
+		e9346[5] = m[0];
+		e9346[6] = m[3];
+		e9346[7] = m[2];
+		e9346[8] = m[5];
+		e9346[9] = m[4];
+	} else {
+		e9346[4] = m[0];
+		e9346[5] = m[1];
+		e9346[6] = m[2];
+		e9346[7] = m[3];
+		e9346[8] = m[4];
+		e9346[9] = m[5];
+	}
 	ncs.ne2000state->eeprom = eeprom93xx_new(e9346, 64, NULL);
 
 	return true;
@@ -1334,17 +1344,17 @@ static bool ne2000_init_2(struct pci_board_state *pcibs, int romtype, const TCHA
 
 static bool ne2000_init(struct pci_board_state *pcibs, struct autoconfig_info *aci)
 {
-	return ne2000_init_2(pcibs, ROMTYPE_NE2KPCI, aci && aci->rc ? aci->rc->configtext : NULL);
+	return ne2000_init_2(pcibs, ROMTYPE_NE2KPCI, aci && aci->rc ? aci->rc->configtext : NULL, false);
 }
 
 static bool ne2000_init_pcmcia(struct pci_board_state *pcibs, struct autoconfig_info *aci)
 {
-	return ne2000_init_2(pcibs, ROMTYPE_NE2KPCMCIA, aci && aci->rc ? aci->rc->configtext : NULL);
+	return ne2000_init_2(pcibs, ROMTYPE_NE2KPCMCIA, aci && aci->rc ? aci->rc->configtext : NULL, false);
 }
 
 static bool ne2000_init_x86(struct pci_board_state *pcibs, struct autoconfig_info *aci)
 {
-	return ne2000_init_2(pcibs, ROMTYPE_NE2KISA, aci && aci->rc ? aci->rc->configtext : NULL);
+	return ne2000_init_2(pcibs, ROMTYPE_NE2KISA, aci && aci->rc ? aci->rc->configtext : NULL, false);
 }
 
 static const struct pci_config ne2000_pci_config =
@@ -1986,7 +1996,7 @@ bool ariadne2_init(struct autoconfig_info *aci)
 
 	ne->ariadne2_board_state = xcalloc(pci_board_state, 1);
 	ne->ariadne2_board_state->irq_callback = ariadne2_irq_callback;
-	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext))
+	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, true))
 		return false;
 	ne2000_byteswapsupported(&ne2000state);
 
@@ -2013,7 +2023,7 @@ bool hydra_init(struct autoconfig_info *aci)
 
 	ne->ariadne2_board_state = xcalloc(pci_board_state, 1);
 	ne->ariadne2_board_state->irq_callback = ariadne2_irq_callback;
-	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext))
+	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, false))
 		return false;
 	ne2000_setisdp8390(&ne2000state);
 
@@ -2040,7 +2050,7 @@ bool lanrover_init(struct autoconfig_info *aci)
 
 	ne->ariadne2_board_state = xcalloc(pci_board_state, 1);
 	ne->ariadne2_board_state->irq_callback = ariadne2_irq_callback;
-	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext))
+	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, false))
 		return false;
 	ne2000_setisdp8390(&ne2000state);
 	ne->level6 = (aci->rc->device_settings & 1) != 0;
@@ -2068,7 +2078,7 @@ bool xsurf_init(struct autoconfig_info *aci)
 
 	ne->ariadne2_board_state = xcalloc(pci_board_state, 1);
 	ne->ariadne2_board_state->irq_callback = ariadne2_irq_callback;
-	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext))
+	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, false))
 		return false;
 	isapnp_init(&ne->pnp, rtl8019as_pnpdata, sizeof rtl8019as_pnpdata, rt_pnp_init_key, 32);
 	ne2000_byteswapsupported(&ne2000state);
@@ -2097,7 +2107,7 @@ bool xsurf100_init(struct autoconfig_info *aci)
 
 	ne->ariadne2_board_state = xcalloc(pci_board_state, 1);
 	ne->ariadne2_board_state->irq_callback = ariadne2_irq_callback;
-	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext))
+	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, false))
 		return false;
 	ne2000_setident(&ne2000state, 0x50, 0x70);
 
