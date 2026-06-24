@@ -161,9 +161,6 @@ sudo apt install amiberry</code></pre>
     <p class="platform-alt">
       Running ARM64 in a VM (VMware Fusion / Parallels / Hyper-V)?  Drop <code>opengl32.dll</code> from <a href="https://github.com/mmozeiko/build-mesa/releases"><code>mesa-llvmpipe-arm64</code></a> next to <code>Amiberry.exe</code> so the GUI can start — guest VMs typically lack an OpenGL ICD.
     </p>
-    <p class="platform-alt">
-      Windows release binaries are signed through SignPath. See the <a href="/code-signing-policy">Code signing policy</a>.
-    </p>
   </div>
 
   <div class="platform-card android">

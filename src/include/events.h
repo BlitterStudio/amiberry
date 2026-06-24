@@ -43,7 +43,7 @@ extern void clear_events(void);
 extern bool is_cycle_ce(uaecptr);
 
 extern evt_t currcycle, nextevent;
-extern uae_u32 currcycle_cck;
+extern evt_t currcycle_cck;
 extern int is_syncline;
 extern evt_t is_syncline_end;
 typedef void (*evfunc)(void);

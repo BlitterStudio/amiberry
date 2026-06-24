@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 }
 
 $repo = if ([string]::IsNullOrWhiteSpace($env:QEMU_UAE_RELEASE_REPO)) { "BlitterStudio/amiberry-qemu-uae" } else { $env:QEMU_UAE_RELEASE_REPO }
-$tag = if ([string]::IsNullOrWhiteSpace($env:QEMU_UAE_RELEASE_TAG)) { "v11.0.1-amiberry.2" } else { $env:QEMU_UAE_RELEASE_TAG }
+$tag = if ([string]::IsNullOrWhiteSpace($env:QEMU_UAE_RELEASE_TAG)) { "v11.0.1-amiberry.7" } else { $env:QEMU_UAE_RELEASE_TAG }
 $downloadDir = Join-Path $OutputDirectory "download"
 $extractDir = Join-Path $OutputDirectory "extract"
 
@@ -88,7 +88,9 @@ if (-not $plugin) {
 }
 
 $absPlugin = (Resolve-Path $plugin.FullName).Path
+$pluginDir = (Resolve-Path (Split-Path -Parent $absPlugin)).Path
 $cmakePlugin = $absPlugin -replace '\\', '/'
+$cmakePluginDir = $pluginDir -replace '\\', '/'
 
 if ([string]::IsNullOrWhiteSpace($env:GITHUB_WORKSPACE)) {
 	$workspace = (Get-Location).Path
@@ -99,11 +101,13 @@ $relativePlugin = (Get-RelativePathCompat -BasePath $workspace -TargetPath $absP
 
 if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_ENV)) {
 	"QEMU_UAE_PLUGIN=$cmakePlugin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+	"QEMU_UAE_PLUGIN_DIR=$cmakePluginDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 	"QEMU_UAE_PLUGIN_RELATIVE=$relativePlugin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 }
 
 if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_OUTPUT)) {
 	"qemu_uae_plugin=$cmakePlugin" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+	"qemu_uae_plugin_dir=$cmakePluginDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 	"qemu_uae_plugin_relative=$relativePlugin" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 }
 

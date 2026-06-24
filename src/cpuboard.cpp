@@ -2905,12 +2905,12 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 				autoconfig_rom = read_rom(rl->rd);
 		}
 	} else {
-		autoconfig_rom = flashromfile_open(romname);
+		autoconfig_rom = flashromfile_open_accelerator(romname);
 		if (!autoconfig_rom) {
 			if (rl)
-				autoconfig_rom = flashromfile_open(rl->path);
+				autoconfig_rom = flashromfile_open_accelerator(rl->path);
 			if (!autoconfig_rom)
-				autoconfig_rom = flashromfile_open(defaultromname);
+				autoconfig_rom = flashromfile_open_accelerator(defaultromname);
 		}
 		if (!autoconfig_rom) {
 			if (aci->doinit)

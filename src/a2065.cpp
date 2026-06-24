@@ -255,6 +255,7 @@ static void rethink_a2065(void)
 {
 	if (!configured)
 		return;
+	bool wasintr = (csr[0] & CSR0_INTR) != 0;
 	csr[0] &= ~CSR0_INTR;
 	uae_u16 mask = csr[0];
 	if (AM79C960)
@@ -263,11 +264,13 @@ static void rethink_a2065(void)
 		csr[0] |= CSR0_INTR;
 	if ((csr[0] & (CSR0_INTR | CSR0_INEA)) == (CSR0_INTR | CSR0_INEA)) {
 		safe_interrupt_set(IRQ_SOURCE_A2065, 0, false);
-		if (log_a2065 > 2)
+		if (log_a2065 > 1 && !wasintr) {
 			write_log(_T("7990 +IRQ\n"));
-	}
-	if (log_a2065) {
-		write_log(_T("7990 -IRQ\n"));
+		}
+	} else if (wasintr) {
+		if (log_a2065 > 1) {
+			write_log(_T("7990 -IRQ\n"));
+		}
 	}
 }
 
@@ -555,6 +558,7 @@ static void gotfunc(void *devv, const uae_u8 *databuf, int len)
 	receive_buffer_size[receive_buffer_write] = len;
 	receive_buffer_write = nextwrite;
 	uae_sem_post(&receive_sem);
+	device_add_main_thread_callback(receive_queue_drain);
 }
 
 static int getfunc (void *devv, uae_u8 *d, int *len)
@@ -783,10 +787,11 @@ static uae_u16 chip_wget (uaecptr addr)
 				v |= CSR0_ERR;
 			break;
 			// chip id
-			case 88:
+			// vvvvpppp pppppppp ppppmmmm mmmmmmm1
+			case 89:
 			v = 1 << (28 - 16);
 			break;
-			case 89:
+			case 88:
 			v = 0x3003;
 			break;
 		}
@@ -813,7 +818,7 @@ static void chip_wput (uaecptr addr, uae_u16 v)
 		uae_u16 t;
 
 		if (log_a2065 > 2)
-			write_log (_T("7990_CHIPWPUT: CSR%d=%04X PC=%08X\n"), rap, v & 0xffff, M68K_GETPC);
+			write_log(_T("7990_CHIPWPUT: CSR%d=%04X PC=%08X\n"), rap, v & 0xffff, M68K_GETPC);
 
 		switch (rap)
 		{
@@ -831,7 +836,7 @@ static void chip_wput (uaecptr addr, uae_u16 v)
 
 				csr[0] = CSR0_STOP;
 				if (log_a2065)
-					write_log (_T("7990: STOP. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
+					write_log(_T("7990: STOP. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
 				csr[3] = 0;
 				dbyteswap = 0;
 
@@ -843,24 +848,24 @@ static void chip_wput (uaecptr addr, uae_u16 v)
 				if (!(am_mode & MODE_DRX))
 					csr[0] |= CSR0_RXON;
 				if ((csr[0] & CSR0_INIT) && !(oreg & CSR0_INIT)) {
-					chip_init ();
+					chip_init();
 					csr[0] |= CSR0_IDON;
 					am_initialized = 1;
 					if (log_a2065)
-						write_log (_T("7990: INIT+START. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
+						write_log(_T("7990: INIT+START. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
 				}
 				if (log_a2065)
-					write_log (_T("7990: START. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
-			
+					write_log(_T("7990: START. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
+
 			} else if ((csr[0] & CSR0_INIT) && !(oreg & CSR0_INIT) && (oreg & CSR0_STOP)) {
 
-				chip_init ();
+				chip_init();
 				csr[0] |= CSR0_IDON;
 				csr[0] &= ~(CSR0_RXON | CSR0_TXON | CSR0_STOP);
 				am_initialized = 1;
 				csr[3] = 0;
 				if (log_a2065)
-					write_log (_T("7990: INIT. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
+					write_log(_T("7990: INIT. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
 			}
 
 			if ((csr[0] & CSR0_STRT)) {
@@ -891,27 +896,23 @@ static void chip_wput (uaecptr addr, uae_u16 v)
 			}
 			break;
 		case 3:
+			// interrupt masks
 			if ((csr[0] & 4) || AM79C960) {
 				csr[3] = v;
-				if (AM79C960)
+				if (AM79C960) {
 					csr[3] &= 0x4000 | 0x1000 | 0x800 | 0x400 | 0x200 | 0x100 | 0x10 | 8;
-				else
+				} else {
 					csr[3] &= 7;
+				}
 			}
 			dbyteswap = 0;
-			/*
-			 * Some drivers set this but only work if no byteswapping
-			 * is done. Weird..
-			 * dbyteswap = (csr[3] & CSR3_BSWP) ? 1 : 0;
-			*/
+			if (!AM79C960) {
+				dbyteswap = (csr[3] & CSR3_BSWP) ? 1 : 0;
+			}
 			break;
 
 		// Am79C960 extra
 
-		// interrupt masks
-		case 4:
-			v &= ~(0x80 | 0x40);
-			break;
 		// logical address filter
 		case 8:
 			am_ladrf &= 0x0000ffffffffffff;

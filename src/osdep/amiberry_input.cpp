@@ -466,15 +466,6 @@ static void di_dev_free(struct didata* did)
 	cleardid(did);
 }
 
-static void di_free()
-{
-	for (auto i = 0; i < MAX_INPUT_DEVICES; i++) {
-		di_dev_free(&di_joystick[i]);
-		di_dev_free(&di_mouse[i]);
-		di_dev_free(&di_keyboard[i]);
-	}
-}
-
 static int tablet_detected;
 static int tablet_initialized;
 static int axmax, aymax, azmax;
@@ -783,12 +774,12 @@ static int init_mouse()
 
 static void close_mouse()
 {
-	for (auto i = 0; i < num_mouse; i++)
+	for (auto i = 0; i < MAX_INPUT_DEVICES; i++)
 		di_dev_free(&di_mouse[i]);
 	memset(mouse_id_map, 0, sizeof mouse_id_map);
 	for (auto& s : mouse_unique_names)
 		s.clear();
-	di_free();
+	num_mouse = 1;
 }
 
 static int acquire_mouse(const int num, int flags)
@@ -1500,11 +1491,10 @@ static void close_joystick()
 	if (!joystick_inited)
 		return;
 	joystick_inited = 0;
-	for (auto i = 0; i < num_joystick; i++)
+	for (auto i = 0; i < MAX_INPUT_DEVICES; i++)
 		di_dev_free(&di_joystick[i]);
 	num_joystick = 0;
 	osj_device_index = -1;
-	di_free();
 }
 
 void import_joysticks()

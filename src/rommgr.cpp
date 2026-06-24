@@ -2522,13 +2522,13 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 
 	if (rd->type & (ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)) {
 		get_nvram_path(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
-		_sntprintf(p->flashfile + _tcslen(p->flashfile), sizeof p->flashfile + _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
+		_sntprintf(p->flashfile + _tcslen(p->flashfile), sizeof p->flashfile / sizeof(TCHAR) - _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
 		clean_path(p->flashfile);
 	}
 #ifdef ARCADIA
 	if (rd->type & ROMTYPE_ALG) {
 		get_video_path(p->genlock_video_file, sizeof(p->genlock_video_file) / sizeof(TCHAR));
-		_sntprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), sizeof p->genlock_video_file + _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
+		_sntprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), sizeof p->genlock_video_file / sizeof(TCHAR) - _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
 		clean_path(p->genlock_video_file);
 	}
 #endif
@@ -2973,6 +2973,136 @@ struct zfile *flashromfile_open(const TCHAR *name)
 	if (f) {
 		write_log(_T("Flash file '%s' loaded, %s.\n"), name, rw ? _T("RW") : _T("RO"));
 	}
+	return f;
+}
+
+static const TCHAR *get_path_basename(const TCHAR *name)
+{
+	const TCHAR *sep1 = _tcsrchr(name, '\\');
+	const TCHAR *sep2 = _tcsrchr(name, '/');
+	const TCHAR *sep = sep1;
+	if (!sep || (sep2 && sep2 > sep))
+		sep = sep2;
+	return sep ? sep + 1 : name;
+}
+
+static bool accelerator_flash_path(const TCHAR *name, TCHAR *path, int size)
+{
+	if (name == NULL || !name[0])
+		return false;
+
+	get_nvram_path(path, size);
+	const TCHAR *base = get_path_basename(name);
+	if (!base[0])
+		return false;
+
+	if (_tcslen(path) + _tcslen(base) + 4 >= static_cast<size_t>(size))
+		return false;
+
+	_tcsncat(path, base, size - _tcslen(path) - 1);
+	path[size - 1] = 0;
+
+	TCHAR *ext = _tcsrchr(path, '.');
+	const TCHAR *slash1 = _tcsrchr(path, '\\');
+	const TCHAR *slash2 = _tcsrchr(path, '/');
+	const TCHAR *slash = slash1;
+	if (!slash || (slash2 && slash2 > slash))
+		slash = slash2;
+	if (ext && (!slash || ext > slash)) {
+		_tcsncpy(ext, _T(".nvr"), size - (ext - path) - 1);
+		path[size - 1] = 0;
+	} else {
+		_tcsncat(path, _T(".nvr"), size - _tcslen(path) - 1);
+		path[size - 1] = 0;
+	}
+	return true;
+}
+
+static struct zfile *flashromfile_open_source(const TCHAR *name)
+{
+	struct zfile *f = zfile_fopen(name, _T("rb"), ZFD_NORMAL);
+	if (f)
+		return f;
+
+	TCHAR path[MAX_DPATH];
+	get_rom_path(path, sizeof path / sizeof(TCHAR));
+	_tcscat(path, name);
+	return zfile_fopen(path, _T("rb"), ZFD_NORMAL);
+}
+
+static bool copy_flashrom_source_to_nvram(struct zfile *source, const TCHAR *path)
+{
+	const uae_s64 source_size = zfile_size(source);
+	if (source_size <= 0)
+		return false;
+
+	struct zfile *out = zfile_fopen(path, _T("wb"), 0);
+	if (!out)
+		return false;
+
+	zfile_fseek(source, 0, SEEK_SET);
+	uae_u8 buffer[8192];
+	uae_s64 copied = 0;
+	for (;;) {
+		const size_t got = zfile_fread(buffer, 1, sizeof buffer, source);
+		if (got == 0)
+			break;
+		if (zfile_fwrite(buffer, 1, got, out) != got) {
+			zfile_fclose(out);
+			my_unlink(path);
+			zfile_fseek(source, 0, SEEK_SET);
+			return false;
+		}
+		copied += got;
+	}
+	zfile_fclose(out);
+	zfile_fseek(source, 0, SEEK_SET);
+	if (copied != source_size) {
+		my_unlink(path);
+		return false;
+	}
+	return true;
+}
+
+static bool accelerator_flash_shadow_valid(struct zfile *shadow, struct zfile *source)
+{
+	const uae_s64 shadow_size = zfile_size(shadow);
+	if (shadow_size <= 0)
+		return false;
+	return source == NULL || shadow_size == zfile_size(source);
+}
+
+struct zfile *flashromfile_open_accelerator(const TCHAR *name)
+{
+	TCHAR path[MAX_DPATH];
+	if (!accelerator_flash_path(name, path, sizeof path / sizeof(TCHAR)))
+		return NULL;
+
+	struct zfile *source = flashromfile_open_source(name);
+	struct zfile *f = zfile_fopen(path, _T("rb+"), ZFD_NONE);
+	if (f) {
+		if (accelerator_flash_shadow_valid(f, source)) {
+			zfile_fclose(source);
+			write_log(_T("Accelerator flash file '%s' loaded from NVRAM, RW.\n"), path);
+			return f;
+		}
+		write_log(_T("Accelerator flash file '%s' invalid size, recreating from source.\n"), path);
+		zfile_fclose(f);
+		my_unlink(path);
+	}
+
+	if (!source)
+		return NULL;
+
+	if (!copy_flashrom_source_to_nvram(source, path)) {
+		write_log(_T("Accelerator flash file '%s' could not be created, using source read-only.\n"), path);
+		return source;
+	}
+	zfile_fclose(source);
+
+	f = zfile_fopen(path, _T("rb+"), ZFD_NONE);
+	if (f)
+		write_log(_T("Accelerator flash file '%s' initialized in NVRAM, RW.\n"), path);
 	return f;
 }
 

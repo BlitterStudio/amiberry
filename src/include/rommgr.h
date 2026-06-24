@@ -220,6 +220,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_RIPPLE		0x00100095
 #define ROMTYPE_512KWOM		0x00100096
 #define ROMTYPE_AIDE		0x00100097
+#define ROMTYPE_ATONCE		0x00100098
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
@@ -332,6 +333,7 @@ void board_prefs_changed(int romtype, int devnum);
 bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags);
 struct zfile *load_rom_rc_zfile(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags);
 struct zfile *flashromfile_open(const TCHAR *name);
+struct zfile *flashromfile_open_accelerator(const TCHAR *name);
 
 #define EXPANSION_ORDER_MAX 10000
 

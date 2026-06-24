@@ -29,6 +29,22 @@ if(AMIBERRY_GNU_LIKE_COMPILER AND NOT WIN32)
 endif()
 set(AMIBERRY_LINK_OPTIONS "")
 
+# Tune default Linux aarch64 builds for the slowest supported board
+# (Raspberry Pi 4 / Cortex-A72). -mtune only affects instruction scheduling;
+# the ISA baseline stays generic armv8-a. Leave WITH_OPTIMIZE builds alone so
+# their native CPU flags remain authoritative.
+if(AMIBERRY_GNU_LIKE_COMPILER
+        AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
+        AND ARCH_LOWER MATCHES "aarch64|arm64")
+    set(AMIBERRY_ARM_TUNE "cortex-a72" CACHE STRING "CPU passed to -mtune for Linux aarch64 builds (set empty to disable)")
+    if(WITH_OPTIMIZE)
+        message(STATUS "Linux aarch64: WITH_OPTIMIZE enabled, not applying default -mtune=${AMIBERRY_ARM_TUNE}")
+    elseif(AMIBERRY_ARM_TUNE)
+        list(APPEND AMIBERRY_COMPILE_OPTIONS "-mtune=${AMIBERRY_ARM_TUNE}")
+        message(STATUS "Linux aarch64: adding -mtune=${AMIBERRY_ARM_TUNE}")
+    endif()
+endif()
+
 if(AMIBERRY_GNU_LIKE_COMPILER)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         list(APPEND AMIBERRY_COMPILE_OPTIONS "-Og" "-funwind-tables" "-DDEBUG")

@@ -36,6 +36,16 @@ if(QEMU_UAE_PLUGIN)
             COMMAND ${CMAKE_COMMAND} -E copy
             "${QEMU_UAE_PLUGIN}"
             $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/)
+    if(QEMU_UAE_PLUGIN_DIR)
+        file(GLOB _QEMU_UAE_PLUGIN_SIDECARS CONFIGURE_DEPENDS "${QEMU_UAE_PLUGIN_DIR}/*.dll")
+        list(REMOVE_ITEM _QEMU_UAE_PLUGIN_SIDECARS "${QEMU_UAE_PLUGIN}")
+        if(_QEMU_UAE_PLUGIN_SIDECARS)
+            add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${_QEMU_UAE_PLUGIN_SIDECARS}
+                    $<TARGET_FILE_DIR:${PROJECT_NAME}>/)
+        endif()
+    endif()
 endif()
 
 # Install plugin DLLs to plugins/ subdirectory
@@ -46,6 +56,10 @@ install(FILES $<TARGET_FILE:floppybridge>
 if(QEMU_UAE_PLUGIN)
     install(FILES "${QEMU_UAE_PLUGIN}"
             DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins)
+    if(_QEMU_UAE_PLUGIN_SIDECARS)
+        install(FILES ${_QEMU_UAE_PLUGIN_SIDECARS}
+                DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
 endif()
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers

@@ -28,6 +28,7 @@
 #include "picasso96.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
+#include "perf_monitor.h"
 #include "sounddep/sound.h"
 #include "inputdevice.h"
 #ifdef WITH_MIDI
@@ -438,7 +439,9 @@ bool render_screen(const int monid, const int mode, const bool immediate)
 			return mon->render_ok;
 		}
 	}
+	const frame_time_t perf_t0 = read_processor_time();
 	mon->render_ok = amiberry_renderframe(monid, mode, immediate);
+	perf_monitor_add_render(read_processor_time() - perf_t0);
 	return mon->render_ok;
 }
 
@@ -515,7 +518,9 @@ void show_screen(const int monid, int mode)
 		return;
 	}
 
+	const frame_time_t perf_t0 = read_processor_time();
 	renderer->present_frame(monid, mode);
+	perf_monitor_add_present(read_processor_time() - perf_t0);
 	mon->render_ok = false;
 }
 
@@ -1065,7 +1070,7 @@ int graphics_init(bool mousecapture)
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping graphics initialization.\n");
 		g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
-		update_pixel_format();
+		update_pixel_format(0);
 		if (amiga_surface == nullptr) {
 			amiga_surface = SDL_CreateSurface(1920, 1080, pixel_format);
 			if (!amiga_surface) {
@@ -1078,7 +1083,7 @@ int graphics_init(bool mousecapture)
 	}
 
 	g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
-	update_pixel_format();
+	update_pixel_format(0);
 	AMonitors[0].active = true;
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
@@ -1192,9 +1197,9 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (mon->screen_is_picasso) {
 		w = state->Width;
 		h = state->Height;
-		update_pixel_format();
+		update_pixel_format(monid);
 	} else {
-		update_pixel_format();
+		update_pixel_format(monid);
 		vb = avidinfo->inbuffer;
 		vbout = avidinfo->outbuffer;
 		if (!vb) {
@@ -1258,7 +1263,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
 
-		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && pixel_format == SDL_PIXELFORMAT_ABGR8888) {
+		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp &&
+			p96_rgbformat_matches_host_pixel_format(state->RGBFormat, pixel_format)) {
 			is_zero_copy_eligible = true;
 		}
 	}

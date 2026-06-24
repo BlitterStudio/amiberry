@@ -30,6 +30,16 @@ Amiberry looks for a plugin named `qemu-uae` through the existing plugin loader.
 
 Android and iOS currently build with PPC plugin support disabled because dynamic plugin loading is not wired for those targets.
 
+## Runtime Dependencies
+
+The QEMU-UAE plugin is dynamically loaded at runtime, so packages must ship the plugin and ensure any libraries needed to load it are available:
+
+- macOS app bundles include `qemu-uae.dylib` under `Contents/Resources/plugins` and bundle dependent dylibs under `Contents/Frameworks`.
+- Windows packages include `plugins/qemu-uae.dll`. Official Windows plugin release artifacts are statically linked for their GLib/GModule/zlib plugin dependencies, so no extra QEMU-UAE runtime DLLs are expected beside `Amiberry.exe`.
+- Linux DEB/RPM packages install `qemu-uae.so` under Amiberry's plugin library directory and declare required system packages, including libglib/GLib and zlib.
+
+Package CI must verify both plugin presence and dependency resolution. A package that contains the plugin file but cannot load it is broken.
+
 ## Build Notes
 
 Source builds do not download or build QEMU automatically. Build the plugin separately, then place it in the plugin directory or pass `-DQEMU_UAE_PLUGIN=/path/to/qemu-uae` to bundle a prebuilt artifact into the install/package layout.
@@ -85,6 +95,6 @@ The QEMU-UAE PPC plugin repository should publish artifacts for the desktop plat
 - macOS universal: `qemu-uae.dylib`
 - Windows x64 and ARM64: `qemu-uae.dll`
 
-Linux artifacts should be built from an older baseline such as Ubuntu 22.04 so they remain usable on newer supported distributions. macOS artifacts should be merged into a universal dylib before bundling into the universal app. Windows artifacts should be built with a UCRT/Clang toolchain compatible with Amiberry's llvm-mingw Windows builds.
+Linux artifacts should be built from an older baseline such as Ubuntu 22.04 so they remain usable on newer supported distributions. macOS artifacts should be merged into a universal dylib before bundling into the universal app. Windows artifacts should be built with a UCRT/Clang toolchain compatible with Amiberry's llvm-mingw Windows builds and should statically link their non-system plugin dependencies.
 
 Android and iOS remain unsupported for QEMU-UAE PPC until dynamic plugin loading and platform packaging constraints are solved. FreeBSD and Haiku are not release blockers for the first multi-platform plugin artifact set, but the host build must remain clean without bundled plugin artifacts.

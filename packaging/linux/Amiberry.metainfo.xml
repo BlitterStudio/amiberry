@@ -62,6 +62,21 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.2.2" date="2026-06-19">
+            <description>
+                <p>Stable bugfix release: fixed libretro audio starvation and MHI playback backpressure, improved RTG/P96 presentation and dirty tracking, corrected raw CD reads and OS4 examinedata fallback, reduced PPC QEMU JIT flush slowdowns, and improved shutdown, KMSDRM mouse capture, bounded string/config saves, and derivative-distro packaging.</p>
+            </description>
+        </release>
+        <release version="8.2.1" date="2026-06-15">
+            <description>
+                <p>Stable bugfix release: improved libretro audio underrun recovery, corrected sampler-device handling for capture, and refreshed WinUAE main-thread callback handling.</p>
+            </description>
+        </release>
+        <release version="8.2.0" date="2026-06-12">
+            <description>
+                <p>Stable release: major Raspberry Pi 4 and slow ARM host performance improvements, a new performance monitor, PPC/QEMU-UAE plugin hardening, extensive ARM64 and x86-64 JIT fixes, libretro startup/WHDLoad/audio/path fixes, Android input and launch improvements, network/serial/bsdsocket fixes, keyboard layout D support, GUI responsiveness work, refreshed SDL3/ImGui/WinUAE updates, and packaging/signing improvements across Linux, macOS, Windows, Android, and Flatpak.</p>
+            </description>
+        </release>
         <release version="8.1.6" date="2026-05-09">
             <description>
                 <p>Stable release: Windows ARM64 and llvm-mingw build improvements, extensive x86-64 and ARM64 JIT fixes, RTG zero-copy enabled by default, OpenGL and VSync robustness improvements, Android input/back-button fixes, libretro path isolation, FreeBSD build/install updates, GUI polish, refreshed ImGui and WinUAE sync, and configuration healing for duplicate path entries.</p>

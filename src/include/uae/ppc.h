@@ -108,6 +108,7 @@ void PPCCALL ppc_cpu_stop(void);
 void PPCCALL ppc_cpu_atomic_raise_ext_exception(void);
 void PPCCALL ppc_cpu_atomic_cancel_ext_exception(void);
 void PPCCALL ppc_cpu_map_memory(PPCMemoryRegion *regions, int count);
+void PPCCALL ppc_cpu_flush_jit(void);
 void PPCCALL ppc_cpu_set_pc(int cpu, uint32_t value);
 void PPCCALL ppc_cpu_run_continuous(void);
 void PPCCALL ppc_cpu_run_single(int count);

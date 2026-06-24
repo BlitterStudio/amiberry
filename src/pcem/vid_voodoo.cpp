@@ -1023,6 +1023,7 @@ void *voodoo_card_init()
         voodoo->render_not_full_event[1] = thread_create_event();
         voodoo->render_not_full_event[2] = thread_create_event();
         voodoo->render_not_full_event[3] = thread_create_event();
+        voodoo->thread_run = 1;
         voodoo->fifo_thread = thread_create(voodoo_fifo_thread, voodoo);
         voodoo->render_thread[0] = thread_create(voodoo_render_thread_1, voodoo);
         if (voodoo->render_threads >= 2)
@@ -1145,6 +1146,7 @@ void *voodoo_2d3d_card_init(int type)
         voodoo->render_not_full_event[1] = thread_create_event();
         voodoo->render_not_full_event[2] = thread_create_event();
         voodoo->render_not_full_event[3] = thread_create_event();
+        voodoo->thread_run = 1;
         voodoo->fifo_thread = thread_create(voodoo_fifo_thread, voodoo);
         voodoo->render_thread[0] = thread_create(voodoo_render_thread_1, voodoo);
         if (voodoo->render_threads >= 2)
@@ -1298,6 +1300,23 @@ void voodoo_card_close(voodoo_t *voodoo)
 #endif
 #endif
 
+        voodoo->thread_run = 0;
+        thread_set_event(voodoo->wake_fifo_thread);
+        thread_set_event(voodoo->wake_render_thread[0]);
+        thread_set_event(voodoo->render_not_full_event[0]);
+        if (voodoo->render_threads >= 2)
+        {
+                thread_set_event(voodoo->wake_render_thread[1]);
+                thread_set_event(voodoo->render_not_full_event[1]);
+        }
+        if (voodoo->render_threads == 4)
+        {
+                thread_set_event(voodoo->wake_render_thread[2]);
+                thread_set_event(voodoo->wake_render_thread[3]);
+                thread_set_event(voodoo->render_not_full_event[2]);
+                thread_set_event(voodoo->render_not_full_event[3]);
+        }
+
         thread_kill(voodoo->fifo_thread);
         thread_kill(voodoo->render_thread[0]);
         if (voodoo->render_threads >= 2)
@@ -1312,8 +1331,12 @@ void voodoo_card_close(voodoo_t *voodoo)
         thread_destroy_event(voodoo->wake_fifo_thread);
         thread_destroy_event(voodoo->wake_render_thread[0]);
         thread_destroy_event(voodoo->wake_render_thread[1]);
+        thread_destroy_event(voodoo->wake_render_thread[2]);
+        thread_destroy_event(voodoo->wake_render_thread[3]);
         thread_destroy_event(voodoo->render_not_full_event[0]);
         thread_destroy_event(voodoo->render_not_full_event[1]);
+        thread_destroy_event(voodoo->render_not_full_event[2]);
+        thread_destroy_event(voodoo->render_not_full_event[3]);
 
         for (c = 0; c < TEX_CACHE_MAX; c++)
         {

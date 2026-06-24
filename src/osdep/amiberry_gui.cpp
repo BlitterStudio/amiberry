@@ -166,7 +166,7 @@ static int addrom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 	_sntprintf(tmp1, sizeof tmp1, _T("ROM_%03d"), rd->id);
 	if (rd->group) {
 		TCHAR* p = tmp1 + _tcslen(tmp1);
-		_sntprintf(p, sizeof p, _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
+		_sntprintf(p, sizeof tmp1 / sizeof(TCHAR) - (p - tmp1), _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
 	}
 	getromname(rd, tmp2);
 	pathname[0] = 0;
@@ -922,8 +922,19 @@ void gui_display(int shortcut)
 		const bool restore_capture_allowed = restore_capture && (!restore_capture_was_automatic || currprefs.capture_always);
 		const bool capture_policy_enabled = currprefs.capture_always && !old_capture_always;
 		const bool fullscreen_start_capture_enabled = isfullscreen() != 0 && old_start_uncaptured && !currprefs.start_uncaptured;
-		if (restore_capture_allowed || capture_policy_enabled || fullscreen_start_capture_enabled) {
-			setmouseactive(0, 1);
+		// Apply the same capture policy as amiberry_active(): if
+		// capture_always is on (or fullscreen with start-captured), recapture
+		// regardless of whether the mouse happened to be captured before the
+		// GUI was opened.  Mirror the user_released_capture guard so an
+		// intentional release is not overridden by closing the GUI.
+		const bool capture_policy_active = !was_capture_user_released()
+			&& (currprefs.capture_always
+				|| (isfullscreen() != 0 && !currprefs.start_uncaptured));
+		if (restore_capture_allowed || capture_policy_enabled || fullscreen_start_capture_enabled || capture_policy_active) {
+			// Use active=-1 for programmatic recapture: this bypasses
+			// the cursor-identity gate in setmouseactive2 which is
+			// meant for user-initiated click-to-capture only.
+			setmouseactive(0, -1);
 			if (!ismouseactive()) {
 				inputdevice_acquire(FALSE);
 				inputdevice_releasebuttons();
@@ -1785,7 +1796,7 @@ void DisplayDiskInfo(int num)
 	char nameonly[MAX_DPATH];
 	char linebuffer[512];
 
-	DISK_examine_image(&changed_prefs, num, &di, true, nullptr);
+	DISK_examine_image(&changed_prefs, num, &di, true, nullptr, 0);
 	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, nullptr, nullptr, nullptr);
 	extract_filename(tmp1, nameonly);
 	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);

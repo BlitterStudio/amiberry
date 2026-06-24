@@ -1977,7 +1977,7 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 	dx = width - xplus * ((maxhpos + 1) & ~1) - 16;
 
 	bool ended = false;
-	uae_u32 tick = dr->tick;
+	evt_t tick = dr->tick;
 	uae_s8 intlev = 0;
 	for (x = 0; x < NR_DMA_REC_COLS_MAX; x++) {
 		uae_u32 c = debug_colors[0].l[0];
@@ -3136,7 +3136,7 @@ static struct dma_rec *find_dma_record(int hpos, int vpos, int toggle)
 				if ((dr->hpos == 2 || dr->hpos == hpos && hpos >= 2) && dr->vpos[dma_record_vpos_type] == vpos) {
 					for (;;) {
 						dr = &dma_record_data[idx];
-						int tick = dr->tick;
+						evt_t tick = dr->tick;
 						if (dr->vpos[dma_record_vpos_type] == vpos && dr->frame == frame) {
 							if (dr->hpos == hpos) {
 								break;
@@ -3268,21 +3268,21 @@ static void decode_dma_record(int hpos, int vpos, int count, int toggle, bool lo
 			get_record_dma_info(dr_start, dr, l1l, l1bl, l1cl, l2l, l3l, l4l, l5l, l6l, &split, &ipl);
 
 			TCHAR *p = l1 + _tcslen(l1);
-			_sntprintf(p, sizeof p,_T("%15s  "), l1l);
+			_sntprintf(p, sizeof l1 / sizeof(TCHAR) - (p - l1),_T("%15s  "), l1l);
 			p = l1b + _tcslen(l1b);
-			_sntprintf(p, sizeof p,_T("%15s  "), l1bl);
+			_sntprintf(p, sizeof l1b / sizeof(TCHAR) - (p - l1b),_T("%15s  "), l1bl);
 			p = l1c + _tcslen(l1c);
-			_sntprintf(p, sizeof p,_T("%15s  "), l1cl);
+			_sntprintf(p, sizeof l1c / sizeof(TCHAR) - (p - l1c),_T("%15s  "), l1cl);
 			p = l2 + _tcslen(l2);
-			_sntprintf(p, sizeof p, _T("%15s  "), l2l);
+			_sntprintf(p, sizeof l2 / sizeof(TCHAR) - (p - l2), _T("%15s  "), l2l);
 			p = l3 + _tcslen(l3);
-			_sntprintf(p, sizeof p, _T("%15s  "), l3l);
+			_sntprintf(p, sizeof l3 / sizeof(TCHAR) - (p - l3), _T("%15s  "), l3l);
 			p = l4 + _tcslen(l4);
-			_sntprintf(p, sizeof p, _T("%15s  "), l4l);
+			_sntprintf(p, sizeof l4 / sizeof(TCHAR) - (p - l4), _T("%15s  "), l4l);
 			p = l5 + _tcslen(l5);
-			_sntprintf(p, sizeof p, _T("%15s  "), l5l);
+			_sntprintf(p, sizeof l5 / sizeof(TCHAR) - (p - l5), _T("%15s  "), l5l);
 			p = l6 + _tcslen(l6);
-			_sntprintf(p, sizeof p, _T("%15s  "), l6l);
+			_sntprintf(p, sizeof l6 / sizeof(TCHAR) - (p - l6), _T("%15s  "), l6l);
 
 			if (split != 0xffffffff) {
 				if (split < 0x10000) {

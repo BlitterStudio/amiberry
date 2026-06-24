@@ -416,6 +416,16 @@ void picintc(uint16_t num)
 
 uint8_t picinterrupt()
 {
+#ifdef UAE
+        // ATonce: the LCA supplies INTR vectors directly (no 8259 on board)
+        extern int atonce_intr_vector;
+        if (atonce_intr_vector >= 0) {
+                uint8_t v = (uint8_t)atonce_intr_vector;
+                atonce_intr_vector = -1;
+                pic_intpending = 0;
+                return v;
+        }
+#endif
         uint8_t temp=pic.pend&~pic.mask;
         int c;
         for (c = 0; c < 8; c++)

@@ -86,7 +86,9 @@ if(ANDROID)
     # Android: build third-party deps from source via FetchContent (pinned tags)
     # -------------------------------------------------------------------------
     # Note: Desktop builds use system packages (see non-ANDROID branch below).
-    set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+    # Android release builds must not reuse stale FetchContent checkouts when
+    # a pinned dependency tag changes; SDL's Java/JNI shims must stay in lockstep.
+    set(FETCHCONTENT_UPDATES_DISCONNECTED OFF)
 
     # SDL3 / SDL3_image (built from source on Android)
     FetchContent_Declare(
@@ -135,9 +137,12 @@ if(ANDROID)
         FetchContent_Declare(
             mpg123
             # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
-            # Pin to a specific commit for reproducible builds.
+            # Pin to an mpg123 1.33.6-era commit for reproducible builds. Later upstream
+            # release commits raise the embedded CMake port minimum to 3.27; keep this
+            # compatible with Amiberry's current CMake baseline until that policy changes.
             GIT_REPOSITORY https://github.com/madebr/mpg123.git
-            GIT_TAG        a06133928e6518bd65314c9cea12ccb5588703e9
+            GIT_TAG        70cf64fe5c6a9031921cd88378aceea8311e0673
+            SOURCE_SUBDIR  ports/cmake
         )
     endif()
 

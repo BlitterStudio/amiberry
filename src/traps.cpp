@@ -814,7 +814,7 @@ void free_host_trap_context(TrapContext *ctx)
 {
 	if (trap_is_indirect()) {
 		int trap_slot = RTAREA_TRAP_DATA_NUM;
-		atomic_dec(&outtrap_alloc[trap_slot]);
+		atomic_dec(&outtrap_alloc[trap_slot - RTAREA_TRAP_DATA_NUM]);
 	}
 }
 

@@ -359,6 +359,10 @@ static struct uaedev_mount_info mountinfo;
 
 /* OS4 64-bit filesize packets */
 #define ACTION_FILESYSTEM_ATTR         3005
+#define ACTION_EXAMINEDATA             3030
+#define ACTION_EXAMINEDATA_FH          3031
+#define ACTION_EXAMINEDATA_OBJ         3032
+#define ACTION_EXAMINEDATA_DIR         3040
 #define ACTION_CHANGE_FILE_POSITION64  8001
 #define ACTION_GET_FILE_POSITION64     8002
 #define ACTION_CHANGE_FILE_SIZE64      8003
@@ -7197,6 +7201,13 @@ static int handle_packet(TrapContext *ctx, Unit *unit, dpacket *pck, uae_u32 msg
 	case ACTION_GET_FILE_POSITION64: action_get_file_position64 (ctx, unit, pck); break;
 	case ACTION_CHANGE_FILE_SIZE64: action_change_file_size64 (ctx, unit, pck); break;
 	case ACTION_GET_FILE_SIZE64: action_get_file_size64 (ctx, unit, pck); break;
+	case ACTION_EXAMINEDATA:
+	case ACTION_EXAMINEDATA_FH:
+	case ACTION_EXAMINEDATA_OBJ:
+	case ACTION_EXAMINEDATA_DIR:
+		PUT_PCK_RES1(pck, DOS_FALSE);
+		PUT_PCK_RES2(pck, ERROR_ACTION_NOT_KNOWN);
+		break;
 
 		/* MOS packet types */
 	case ACTION_SEEK64: action_seek64(ctx, unit, pck); break;
@@ -8408,7 +8419,7 @@ static void dumprdbblock(const uae_u8 *buf, int block)
 		TCHAR outbuf[81];
 		for (int j = 0; j < w; j++) {
 			uae_u8 v = buf[i + j];
-			_sntprintf(outbuf + 2 * j, sizeof outbuf + 2 * j, _T("%02X"), v);
+			_sntprintf(outbuf + 2 * j, sizeof outbuf / sizeof(TCHAR) - 2 * j, _T("%02X"), v);
 			outbuf[2 * w + 1 + j] = (v >= 32 && v <= 126) ? v : '.';
 		}
 		outbuf[2 * w] = ' ';

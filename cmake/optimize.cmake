@@ -33,7 +33,6 @@ else()
                 list(APPEND OPTIMIZED_FLAGS "${flag}")
             endif()
         endforeach()
-        message(STATUS "Applied compiler optimization flags: ${OPTIMIZED_FLAGS}")
     else()
         message(WARNING "Could not extract GCC optimization flags")
     endif()
@@ -45,6 +44,5 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
     list(APPEND PERF_FLAGS "-fprefetch-loop-arrays" "-finline-limit=600")
 endif()
 
-list(APPEND AMIBERRY_COMPILE_OPTIONS ${OPTIMIZED_FLAGS} ${PERF_FLAGS})
-
-
+add_compile_options(${OPTIMIZED_FLAGS} ${PERF_FLAGS})
+message(STATUS "Applied compiler optimization flags: ${OPTIMIZED_FLAGS} ${PERF_FLAGS}")

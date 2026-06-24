@@ -1370,7 +1370,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 #else
 	if (!fake) {
 #endif
-		DISK_examine_image(p, dnum, &disk_info_data, false, NULL);
+		DISK_examine_image(p, dnum, &disk_info_data, false, NULL, 0);
 	}
 	drive_image_free(drv);
 	DISK_validate_filename (p, fname_in, dnum, outname, 1, &drv->wrprot, &drv->crc32, &drv->diskfile);
@@ -5656,43 +5656,61 @@ static void abrcheck(struct diskinfo *di)
 }
 
 #ifdef FLOPPYBRIDGE
-static void get_floppybridgeinfo(struct uae_prefs *prefs, TCHAR *infotext, int num)
+static void append_floppybridgeinfo(TCHAR *infotext, size_t infotext_size, const TCHAR *text)
 {
-	if (!infotext) {
+	size_t len = _tcslen(infotext);
+	if (len >= infotext_size)
 		return;
-	}
+
+	_tcsncpy(infotext + len, text, infotext_size - len);
+	infotext[infotext_size - 1] = 0;
+}
+
+static void append_floppybridgeinfof(TCHAR *infotext, size_t infotext_size, const TCHAR *format, ...)
+{
+	size_t len = _tcslen(infotext);
+	if (len >= infotext_size)
+		return;
+
+	va_list parms;
+	va_start(parms, format);
+	_vsntprintf(infotext + len, infotext_size - len, format, parms);
+	va_end(parms);
+	infotext[infotext_size - 1] = 0;
+}
+
+static void get_floppybridgeinfo(struct uae_prefs *prefs, TCHAR *infotext, size_t infotext_size, int num)
+{
+	if (!infotext || !infotext_size)
+		return;
+
 	floppybridge_init(prefs);
 	if (bridgeinfoloaded <= 1) {
 		FloppyBridgeAPI::getBridgeDriverInformation(true, bridgeinfo);
 		bridgeinfoloaded = 2;
 	}
-	TCHAR *p = infotext;
-	_tcscat(p, bridgeinfo.about);
-	p += _tcslen(p);
+	append_floppybridgeinfo(infotext, infotext_size, bridgeinfo.about);
 	if (bridgeinfo.isUpdateAvailable) {
-		_sntprintf(p, sizeof p, _T(" v%u.%u (v%u.%u) "), bridgeinfo.majorVersion, bridgeinfo.minorVersion, bridgeinfo.updateMajorVersion, bridgeinfo.updateMinorVersion);
+		append_floppybridgeinfof(infotext, infotext_size, _T(" v%u.%u (v%u.%u) "), bridgeinfo.majorVersion, bridgeinfo.minorVersion, bridgeinfo.updateMajorVersion, bridgeinfo.updateMinorVersion);
 	} else {
-		_sntprintf(p, sizeof p, _T(" v%u.%u "), bridgeinfo.majorVersion, bridgeinfo.minorVersion);
+		append_floppybridgeinfof(infotext, infotext_size, _T(" v%u.%u "), bridgeinfo.majorVersion, bridgeinfo.minorVersion);
 	}
-	p += _tcslen(p);
-	_sntprintf(p, sizeof p, _T("(%s)"), bridgeinfo.url);
-	_tcscat(p, _T("\r\n\r\n"));
-	p += _tcslen(p);
+	append_floppybridgeinfof(infotext, infotext_size, _T("(%s)"), bridgeinfo.url);
+	append_floppybridgeinfo(infotext, infotext_size, _T("\r\n\r\n"));
 	if (bridge_driver[num]) {
 		const FloppyDiskBridge::BridgeDriver *bd = bridge_driver[num];
 		TCHAR *name = au(bd->name);
 		TCHAR *man = au(bd->manufacturer);
 		TCHAR *url = au(bd->url);
-		_sntprintf(p, sizeof p, _T("%s, %s (%s)\r\n"), name, man, url);
+		append_floppybridgeinfof(infotext, infotext_size, _T("%s, %s (%s)\r\n"), name, man, url);
 		xfree(url);
 		xfree(man);
 		xfree(name);
-		p += _tcslen(p);
 	}
 }
 #endif
 
-int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool deepcheck, TCHAR *infotext)
+int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool deepcheck, TCHAR *infotext, size_t infotext_size)
 {
 	int drvsec;
 	int ret, i;
@@ -5716,7 +5734,7 @@ int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool d
 
 #ifdef FLOPPYBRIDGE
 	if (fb) {
-		get_floppybridgeinfo(p, infotext, num);
+		get_floppybridgeinfo(p, infotext, infotext_size, num);
 	}
 #endif
 

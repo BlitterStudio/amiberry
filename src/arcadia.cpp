@@ -1762,10 +1762,10 @@ int touch_serial_write(void)
 			y = 999 - y;
 
 			*p++ = 0x01;
-			_sntprintf((char*)p, sizeof p, "%03d", x);
+			_sntprintf((char*)p, 4, "%03d", x);
 			p += 3;
 			*p++ = ',';
-			_sntprintf((char*)p, sizeof p, "%03d", y);
+			_sntprintf((char*)p, 4, "%03d", y);
 			p += 3;
 			*p++ = 0x0d;
 			touch_write_buf_offset = addrdiff(p, touch_data_w);
@@ -2326,4 +2326,3 @@ bool cubo_init(struct autoconfig_info *aci)
 	device_add_vsync_pre(arcadia_vsync);
 	return true;
 }
-

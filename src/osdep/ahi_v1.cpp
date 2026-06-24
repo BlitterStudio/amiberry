@@ -57,6 +57,8 @@ static SDL_AudioStream* ahi_stream = nullptr;
 static SDL_AudioStream* ahi_rec_stream = nullptr;
 
 static int ahi_write_pos;
+static int ahi_record_read_count;
+static bool ahi_record_nonzero_seen;
 
 struct winuae	//this struct is put in a6 if you call
 	//execute native function
@@ -87,6 +89,8 @@ void ahi_close_sound()
 		SDL_DestroyAudioStream(ahi_rec_stream);
 		ahi_rec_stream = nullptr;
 	}
+	ahi_record_read_count = 0;
+	ahi_record_nonzero_seen = false;
 	if (ahisndbuffer)
 	{
 		xfree(ahisndbuffer);
@@ -177,8 +181,22 @@ static int ahi_init_record ()
 	spec.channels = sound_channels_ahi;
 	spec.freq = sound_freq_ahi;
 
-	ahi_rec_stream = SDL_OpenAudioDeviceStream(
-		SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, nullptr, nullptr);
+	enumerate_sound_devices();
+
+	const int recordcard = currprefs.samplersoundcard;
+	const bool use_default_device = recordcard < 0 || recordcard >= MAX_SOUND_DEVICES
+		|| record_devices[recordcard] == nullptr;
+	const SDL_AudioDeviceID device_id = use_default_device
+		? SDL_AUDIO_DEVICE_DEFAULT_RECORDING
+		: static_cast<SDL_AudioDeviceID>(record_devices[recordcard]->id);
+
+	ahi_rec_stream = SDL_OpenAudioDeviceStream(device_id, &spec, nullptr, nullptr);
+
+	if (!ahi_rec_stream && !use_default_device) {
+		write_log(_T("AHI: Failed to open selected recording device, retrying with default: %s\n"), SDL_GetError());
+		ahi_rec_stream = SDL_OpenAudioDeviceStream(
+			SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, nullptr, nullptr);
+	}
 	if (!ahi_rec_stream) {
 		write_log(_T("AHI: SDL_OpenAudioDeviceStream() recording failure: %s\n"), SDL_GetError());
 		record_enabled = -1;
@@ -187,7 +205,11 @@ static int ahi_init_record ()
 
 	SDL_ResumeAudioStreamDevice(ahi_rec_stream); // Start recording
 	record_enabled = 1;
-	write_log(_T("AHI: Init AHI Audio Recording \n"));
+	ahi_record_read_count = 0;
+	ahi_record_nonzero_seen = false;
+	write_log(_T("AHI: Init AHI Audio Recording Rate %d, Channels %d, Device %s\n"),
+		sound_freq_ahi, sound_channels_ahi,
+		use_default_device ? _T("default") : record_devices[recordcard]->name);
 	return 1;
 }
 
@@ -378,6 +400,20 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 				free(sndbufrecpt);
 				return -1;
 			}
+			bool has_signal = false;
+			for (int i = 0; i < bytes_read / 2; i++) {
+				if (sndbufrecpt[i] != 0) {
+					has_signal = true;
+					break;
+				}
+			}
+			ahi_record_read_count++;
+			if (has_signal && !ahi_record_nonzero_seen) {
+				ahi_record_nonzero_seen = true;
+				write_log(_T("AHI: Recording received first non-silent buffer after %d reads\n"), ahi_record_read_count);
+			} else if (!has_signal && ahi_record_read_count <= 5) {
+				write_log(_T("AHI: Recording read %d bytes of silence from host input\n"), bytes_read);
+			}
 
 			auto* sptr = sndbufrecpt;
 			for (int i = 0; i < amigablksize; i++) {
@@ -540,9 +576,6 @@ void init_ahi()
 		calltrap(deftrapres(ahi_demux, 0, _T("ahi_winuae")));
 		dw(RTS);
 		org(a);
-#ifdef AHI_V2
-		init_ahi_v2();
-#endif
 	}
 #endif
 }

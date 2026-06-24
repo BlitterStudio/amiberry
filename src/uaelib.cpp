@@ -27,6 +27,9 @@
 #include "picasso96.h"
 #include "filesys.h"
 #ifdef AMIBERRY
+#ifndef LIBRETRO
+#include "mhi_host.h"
+#endif
 #include "target.h"
 #include "parser.h" // for midi ports
 #endif
@@ -1104,6 +1107,28 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		{
 			return uaelib_midi(ctx, ARG1, ARG2, ARG3);
 		}
+#ifndef LIBRETRO
+		case UAE_MHI_TRAP_ALLOC:
+			return mhi_host_alloc(ctx, ARG1, ARG2);
+		case UAE_MHI_TRAP_FREE:
+			return mhi_host_free(ctx, ARG1);
+		case UAE_MHI_TRAP_QUEUE:
+			return mhi_host_queue(ctx, ARG1, ARG2, ARG3, ARG4);
+		case UAE_MHI_TRAP_GET_EMPTY:
+			return mhi_host_get_empty(ctx, ARG1);
+		case UAE_MHI_TRAP_STATUS:
+			return mhi_host_status(ctx, ARG1);
+		case UAE_MHI_TRAP_PLAY:
+			return mhi_host_play(ctx, ARG1);
+		case UAE_MHI_TRAP_STOP:
+			return mhi_host_stop(ctx, ARG1);
+		case UAE_MHI_TRAP_PAUSE:
+			return mhi_host_pause(ctx, ARG1);
+		case UAE_MHI_TRAP_SET_PARAM:
+			return mhi_host_set_param(ctx, ARG1, ARG2, ARG3);
+		case UAE_MHI_TRAP_QUERY:
+			return mhi_host_query(ctx, ARG1);
+#endif
 #endif
 	}
 	return 0;

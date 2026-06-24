@@ -310,6 +310,21 @@ static int uaenet_checkpacket(struct uaenet_data *ud)
     return 1;
 }
 
+static void uaenet_request_worker_stop(struct uaenet_data *ud)
+{
+    if (!ud)
+        return;
+
+    ud->active = false;
+    ud->active2 = false;
+
+#ifdef WITH_UAENET_PCAP
+    if (ud->handle) {
+        pcap_breakloop(ud->handle);
+    }
+#endif
+}
+
 #ifdef WITH_UAENET_PCAP
 // Thread to handle network traffic
 static int uaenet_worker_thread(void *arg)
@@ -331,6 +346,11 @@ static int uaenet_worker_thread(void *arg)
             int res = pcap_next_ex(ud->handle, &header, &pkt_data);
             if (res == 1 && header && pkt_data) {
                 uaenet_queue(ud, pkt_data, header->caplen);
+            } else if (res == PCAP_ERROR_BREAK) {
+                break;
+            } else if (res == PCAP_ERROR) {
+                write_log(_T("UAENET: pcap_next_ex failed: %s\n"), pcap_geterr(ud->handle));
+                break;
             }
         }
     }
@@ -346,8 +366,7 @@ static void uaenet_close_driver_internal(struct uaenet_data *ud)
     if (!ud)
         return;
 
-    ud->active = false;
-    ud->active2 = false;
+    uaenet_request_worker_stop(ud);
 
     if (ud->tid) {
         write_log(_T("UAENET: Waiting for thread to terminate..\n"));
@@ -444,8 +463,7 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
 #endif
     ) {
         write_log(_T("UAENET: Re-opening '%s', shutting down existing state\n"), ndd->name);
-        ud->active = false;
-        ud->active2 = false;
+        uaenet_request_worker_stop(ud);
         if (ud->tid) {
             uae_wait_thread(&ud->tid);
             ud->tid = 0;

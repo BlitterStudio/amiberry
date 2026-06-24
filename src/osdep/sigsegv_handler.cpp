@@ -1751,8 +1751,7 @@ void signal_term(int signum, siginfo_t* info, void* ptr)
 	trace_end();
 #endif
 
-	SDL_Quit();
-	exit(1);
+	_exit(0);
 }
 
 #endif /* !_WIN32 */
