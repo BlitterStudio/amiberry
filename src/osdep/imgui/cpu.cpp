@@ -138,34 +138,40 @@ void render_panel_cpu() {
 
     ImGui::BeginGroup(); // Left Column
     {
-        BeginGroupBox("CPU");
+        const float left_group_min_width = BUTTON_WIDTH * 2.0f;
+
+        if (BeginGroupBox("CPU", true)) {
 
         int old_cpu_model = changed_prefs.cpu_model;
-        if (AmigaRadioButton("68000", &changed_prefs.cpu_model, 68000))
-            settings_changed = true;
-        ShowHelpMarker("Original Amiga 500/1000/2000 CPU.");
-        
-        if (AmigaRadioButton("68010", &changed_prefs.cpu_model, 68010))
-            settings_changed = true;
-        ShowHelpMarker("Slightly faster version of 68000, used in some accelerators.");
 
-        if (AmigaRadioButton("68020", &changed_prefs.cpu_model, 68020))
+        static const int cpu_models[] = { 68000, 68010, 68020, 68030, 68040, 68060 };
+        static const char* const cpu_model_labels[] = {
+            "68000 (A500/A1000/A2000)",
+            "68010",
+            "68020 (A1200)",
+            "68030 (A3000/A4000)",
+            "68040",
+            "68060"
+        };
+        int cpu_model_idx = 0;
+        for (int i = 0; i < IM_ARRAYSIZE(cpu_models); i++) {
+            if (cpu_models[i] == changed_prefs.cpu_model) {
+                cpu_model_idx = i;
+                break;
+            }
+        }
+        // Size the closed combo to the longest descriptive label so it isn't
+        // clipped; the dropdown list auto-sizes regardless.
+        const float cpu_combo_width = ImGui::CalcTextSize("68000 (A500/A1000/A2000)").x +
+            ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f;
+        ImGui::SetNextItemWidth(cpu_combo_width);
+        if (ImGui::Combo("##CPUModel", &cpu_model_idx, cpu_model_labels, IM_ARRAYSIZE(cpu_model_labels))) {
+            changed_prefs.cpu_model = cpu_models[cpu_model_idx];
             settings_changed = true;
-        ShowHelpMarker("Amiga 1200 CPU. 32-bit.");
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+        ShowHelpMarker("CPU model. 68020+ are 32-bit; 68040/68060 include FPU and MMU. Higher models are faster.");
 
-        if (AmigaRadioButton("68030", &changed_prefs.cpu_model, 68030))
-            settings_changed = true;
-        ShowHelpMarker("Amiga 3000/4000 CPU. Includes MMU.");
-
-        if (AmigaRadioButton("68040", &changed_prefs.cpu_model, 68040))
-            settings_changed = true;
-        ShowHelpMarker("Faster 32-bit CPU with integrated FPU and MMU.");
-
-        if (AmigaRadioButton("68060", &changed_prefs.cpu_model, 68060))
-            settings_changed = true;
-        ShowHelpMarker("Fastest Amiga CPU.");
-
-        const float left_group_min_width = BUTTON_WIDTH * 2.0f;
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
 
         if (settings_changed && old_cpu_model != changed_prefs.cpu_model) {
@@ -297,6 +303,7 @@ void render_panel_cpu() {
         ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
         ImGui::EndDisabled();
         ImGui::Spacing();
+        }
         EndGroupBox("CPU");
 
         if (BeginGroupBox("MMU", true)) {
@@ -321,7 +328,7 @@ void render_panel_cpu() {
         }
         EndGroupBox("MMU");
 
-        BeginGroupBox("FPU");
+        if (BeginGroupBox("FPU", true)) {
         int current_fpu_sel = 0;
         if (changed_prefs.fpu_model == 68881)
             current_fpu_sel = 1;
@@ -375,6 +382,7 @@ void render_panel_cpu() {
         ShowHelpMarker("Emulate unimplemented FPU instructions in software.");
         ImGui::EndDisabled();
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
+        }
         EndGroupBox("FPU");
     }
     ImGui::EndGroup();
@@ -385,7 +393,9 @@ void render_panel_cpu() {
 
     ImGui::BeginGroup(); // Right Column
     {
-        BeginGroupBox("CPU Speed");
+        const float right_group_min_width = BUTTON_WIDTH * 5.0f;
+
+        if (BeginGroupBox("CPU Speed", true)) {
         // Logic: WinUAE sets m68k_speed to -1 for "Fastest Possible", 0 for "Cycle Exact/Approx"
         // Also updates throttle.
         int speed_mode = changed_prefs.m68k_speed < 0 ? -1 : 0;
@@ -433,11 +443,11 @@ void render_panel_cpu() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         ImGui::EndDisabled();
 
-        float right_group_min_width = BUTTON_WIDTH * 5.0f;
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
+        }
         EndGroupBox("CPU Speed");
 
-        BeginGroupBox("Cycle-Exact CPU Emulation Speed");
+        if (BeginGroupBox("Cycle-Exact CPU Emulation Speed", true)) {
         const char *freq_items[] = {"1x", "2x (A500)", "4x (A1200)", "8x", "16x"};
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Frequency");
@@ -484,10 +494,11 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
         
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
+        }
         EndGroupBox("Cycle-Exact CPU Emulation Speed");
 
 #ifdef WITH_PPC
-        if (BeginGroupBox("PowerPC CPU Options", true)) {
+        if (BeginGroupBox("PowerPC CPU Options", true, false)) {
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
         if (AmigaCheckbox("PPC CPU emulation", &ppc_bool)) {
@@ -539,7 +550,7 @@ void render_panel_cpu() {
         EndGroupBox("PowerPC CPU Options");
 #endif
 
-        if (BeginGroupBox("x86 Bridgeboard CPU options", true)) {
+        if (BeginGroupBox("x86 Bridgeboard CPU options", true, false)) {
         ImGui::BeginDisabled(!enable_x86_group);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Speed");

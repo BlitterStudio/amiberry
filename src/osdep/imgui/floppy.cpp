@@ -253,7 +253,7 @@ static void RenderDriveSlot(const int i)
 #ifdef FLOPPYBRIDGE
 static void RenderDrawBridge()
 {
-    BeginGroupBox("DrawBridge (FloppyBridge)");
+    if (BeginGroupBox("DrawBridge (FloppyBridge)", true, false)) {
 
     // --- Driver Selection ---
     ImGui::AlignTextToFramePadding();
@@ -399,6 +399,7 @@ static void RenderDrawBridge()
     ShowHelpMarker("Select drive cable type: IBM PC (A/B) or SHUGART (0-3) standard");
     ImGui::EndDisabled();
     ImGui::Spacing();
+    }
     EndGroupBox("DrawBridge (FloppyBridge)");
 }
 #endif

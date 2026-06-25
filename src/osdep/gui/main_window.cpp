@@ -1023,7 +1023,7 @@ void AmigaCircularBevel(const ImVec2 center, const float radius, const bool rece
 static bool g_groupbox_collapsed = false;
 static bool g_groupbox_collapsible = false;
 
-bool BeginGroupBox(const char* name, bool collapsible)
+bool BeginGroupBox(const char* name, bool collapsible, bool default_open)
 {
 	// Add breathing room between consecutive group boxes.
 	// Skip the extra spacing when we are near the top of the panel
@@ -1040,7 +1040,7 @@ bool BeginGroupBox(const char* name, bool collapsible)
 	if (collapsible) {
 		ImGuiID id = ImGui::GetID("##collapse");
 		ImGuiStorage* storage = ImGui::GetStateStorage();
-		bool open = storage->GetBool(id, true);
+		bool open = storage->GetBool(id, default_open);
 		const char* arrow = open ? ICON_FA_CHEVRON_DOWN : ICON_FA_CHEVRON_RIGHT;
 		std::string toggle_label = std::string(arrow) + " " + name;
 		if (ImGui::Selectable(toggle_label.c_str(), false, 0, ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
@@ -1048,6 +1048,14 @@ bool BeginGroupBox(const char* name, bool collapsible)
 			storage->SetBool(id, open);
 		}
 		if (!open) {
+			// When collapsed the header Selectable is the group's only/last item.
+			// A Selectable sizes its render/click rect to the full available width
+			// (WorkRect.Max.x), and ImGui::EndGroup() folds the last item's rect
+			// into the group's bounding box. That full-width rect would otherwise
+			// leak into the enclosing layout and push a side-by-side column off
+			// screen (issue #2118). Submit a zero-size item so the collapsed group
+			// reports a sane width based on the header label only.
+			ImGui::Dummy(ImVec2(0.0f, 0.0f));
 			g_groupbox_collapsed = true;
 			return false;
 		}

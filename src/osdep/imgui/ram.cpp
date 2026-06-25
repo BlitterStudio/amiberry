@@ -354,7 +354,7 @@ void render_panel_ram() {
 
     EndGroupBox("Memory Settings");
 
-    if (BeginGroupBox("Advanced Memory Settings", true)) {
+    if (BeginGroupBox("Advanced Memory Settings", true, false)) {
 
     // WinUAE sync: Validate current selection is still valid (e.g., after switching to 24-bit mode)
     if (!z3_enabled && current_advanced_ram_idx >= ADVANCED_RAM_Z3_BASE) {
