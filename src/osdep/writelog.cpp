@@ -686,6 +686,11 @@ bool console_isch ()
 	if (consoleopen == CONSOLEOPEN_DEBUGGER_WINDOW)
 		return debugger_window_has_input();
 #endif
+	// A redirected command stream has no async "abort key": its bytes belong to
+	// console_get(), and poll() on a regular file is always ready. Report no input
+	// so iscancel() never fires and console_getch() can't steal command bytes.
+	if (debugger_stdin_redirected())
+		return false;
 	struct pollfd fds;
 	fds.fd = STDIN_FILENO;
 	fds.events = POLLIN;
