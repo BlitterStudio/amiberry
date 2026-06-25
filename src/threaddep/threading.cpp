@@ -49,6 +49,13 @@ void uae_end_thread(uae_thread_id* thread)
 	uae_wait_thread(thread);
 }
 
+// WARNING: this does NOT reset an already-created semaphore. If *sem is
+// non-null it merely SIGNALS it (count++), inflating the count. Calling this
+// again on a long-lived binary mutex (e.g. on a reset/install path) pushes its
+// count above 1, after which uae_sem_wait/trywait no longer enforces mutual
+// exclusion and two threads can enter the critical section at once.
+// Re-init sites MUST guard with `if (!sem)` (create-once) or destroy the
+// semaphore first (`if (sem) uae_sem_destroy(&sem);`) before calling this.
 int uae_sem_init(uae_sem_t* sem, int dummy, int initial_state)
 {
 	if (*sem)

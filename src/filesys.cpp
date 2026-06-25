@@ -9506,8 +9506,15 @@ void filesys_install (void)
 
 	TRACEI ((_T("Installing filesystem\n")));
 
-	uae_sem_init(&singlethread_int_sem, 0, 1);
-	uae_sem_init(&shellexec_sem, 0, 1);
+	// Create exactly once: uae_sem_init() on an already-created semaphore
+	// SIGNALS it (count++) instead of resetting. filesys_install() runs again on
+	// every hardreset (via memory_init/virtualdevice_init), so re-initializing
+	// would inflate these mutexes above 1 and break mutual exclusion with the
+	// filesys threads. Mirrors the thread_sema guard in virtualdevice_init().
+	if (!singlethread_int_sem)
+		uae_sem_init(&singlethread_int_sem, 0, 1);
+	if (!shellexec_sem)
+		uae_sem_init(&shellexec_sem, 0, 1);
 	init_comm_pipe(&shellexecute_pipe, 100, 1);
 
 	ROM_filesys_resname = ds_ansi ("UAEfs.resource");

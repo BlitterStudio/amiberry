@@ -373,9 +373,17 @@ void vpar_open()
 			par_fd = open(file_name, O_RDWR | O_NONBLOCK | O_BINARY | oflag);
 			write_log("parallel: open file='%s' mode=%d -> fd=%d\n", file_name, par_mode, par_fd);
 		}
+		/* Create the mutex exactly once. uae_sem_init() on an already-created
+		 * semaphore SIGNALS it (count++) instead of resetting. vpar_open() runs
+		 * on every reset (via initparallel), and vpar_thread clears
+		 * vpar_init_done on exit when the file can't be opened (par_fd == -1),
+		 * so the vpar_init_done guard does NOT prevent re-init across resets.
+		 * Inflating vpar_sem above 1 would break mutual exclusion on pctl/pdat
+		 * between vpar_thread and the emulation thread. */
+		if (!vpar_sem)
+			uae_sem_init(&vpar_sem, 0, 1);
 		/* start vpar reader thread */
 		if (!vpar_init_done) {
-			uae_sem_init(&vpar_sem, 0, 1);
 			uae_start_thread (_T("parser_ack"), vpar_thread, nullptr, nullptr);
 			vpar_init_done = 1;
 		}

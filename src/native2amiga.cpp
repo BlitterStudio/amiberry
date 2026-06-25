@@ -29,7 +29,13 @@ static uae_sem_t n2asem = 0;
 void native2amiga_install (void)
 {
 	init_comm_pipe (&native2amiga_pending, 300, 2);
-	uae_sem_init (&n2asem, 0, 1);
+	// Create exactly once: uae_sem_init() on an already-created semaphore
+	// SIGNALS it (count++) instead of resetting. native2amiga_install() runs
+	// again on every quit-to-GUI restart (real_main2 inside the restart loop)
+	// and n2asem is never destroyed, so re-initializing would inflate this
+	// mutex above 1 and break the mutual exclusion uae_Cause() relies on.
+	if (!n2asem)
+		uae_sem_init (&n2asem, 0, 1);
 }
 
 void native2amiga_reset (void)

@@ -1911,9 +1911,19 @@ static void netdev_start_threads(void)
 		return;
 	if (log_net)
 		write_log(_T("netdev_start_threads()\n"));
-	uae_sem_init(&change_sem, 0, 1);
-	uae_sem_init(&pipe_sem, 0, 1);
-	uae_sem_init(&async_sem, 0, 1);
+	// These are process-lifetime global mutexes. uae_sem_init() on an
+	// already-created semaphore does NOT reset it; it calls SDL_SignalSemaphore(),
+	// which inflates the count. netdev_start_threads() runs on every reset, so
+	// re-initializing here would push the count above 1 and break mutual
+	// exclusion, letting dev_thread free an asyncreq node while the extended-trap
+	// thread (uaenet_int_handler2) is still walking dev->ar -> use-after-free crash.
+	// Create them exactly once.
+	if (!change_sem)
+		uae_sem_init(&change_sem, 0, 1);
+	if (!pipe_sem)
+		uae_sem_init(&pipe_sem, 0, 1);
+	if (!async_sem)
+		uae_sem_init(&async_sem, 0, 1);
 }
 
 static void netdev_reset(int hardreset)
