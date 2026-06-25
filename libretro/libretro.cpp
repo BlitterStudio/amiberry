@@ -659,6 +659,7 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_analog_sensitivity", "Analog Sensitivity; 18|15|20|25|30|10" },
 	{ "amiberry_analog", "Analog Input; enabled|disabled" },
 	{ "amiberry_internal_vsync", "Internal VSync; disabled|standard|standard_50" },
+	{ "amiberry_crop_overscan", "Crop Overscan; disabled|enabled" },
 	{ "amiberry_joy_as_mouse", "Joystick As Mouse; disabled|port1|port2|both" },
 	{ "amiberry_input_log", "Input Log File; disabled|enabled" },
 #ifdef WITH_MIDI
@@ -998,6 +999,20 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ NULL, NULL }
 		},
 		"auto"
+	},
+	{
+		"amiberry_crop_overscan",
+		"Crop Overscan",
+		"Crop Overscan",
+		"Trim the Amiga overscan borders so the active game area fills the display. Uses content-aware detection of the drawn region. No effect in RTG/Workbench (Picasso96) modes.",
+		NULL,
+		"video",
+		{
+			{ "disabled", NULL },
+			{ "enabled", NULL },
+			{ NULL, NULL }
+		},
+		"disabled"
 	},
 #ifdef WITH_MIDI
 	{
