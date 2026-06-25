@@ -444,6 +444,28 @@ class ConfigParserTest {
 		assertEquals(AmigaModel.A600, result.settings.baseModel)
 	}
 
+	// --- Integer scaling ---
+
+	@Test
+	fun `parse scaling and autoresolution`() {
+		val file = writeConfig("""
+			scaling_method=2
+			gfx_autoresolution=1
+		""".trimIndent())
+		val s = ConfigParser.parse(file).settings
+
+		assertEquals(2, s.scalingMethod)
+		assertEquals(1, s.gfxAutoresolution)
+		assertTrue(ConfigParser.parse(file).unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `parse scaling defaults when absent`() {
+		val s = ConfigParser.parse(writeConfig("cpu_model=68000")).settings
+		assertEquals(-1, s.scalingMethod)
+		assertEquals(0, s.gfxAutoresolution)
+	}
+
 	// --- Whitespace handling ---
 
 	@Test

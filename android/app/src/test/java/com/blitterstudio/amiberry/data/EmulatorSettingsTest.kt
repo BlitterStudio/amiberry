@@ -318,6 +318,15 @@ class EmulatorSettingsTest {
 		assertEquals("stereo", constrained.soundChannels)
 	}
 
+	// --- Integer scaling defaults ---
+
+	@Test
+	fun `default settings have integer scaling off`() {
+		val s = EmulatorSettings()
+		assertEquals(-1, s.scalingMethod)
+		assertEquals(0, s.gfxAutoresolution)
+	}
+
 	@Test
 	fun `constraints normalize floppy drive types and hidden disk paths`() {
 		val constrained = EmulatorSettingsConstraints.apply(

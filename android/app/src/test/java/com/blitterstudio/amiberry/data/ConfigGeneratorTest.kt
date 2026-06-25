@@ -377,6 +377,24 @@ class ConfigGeneratorTest {
 		assertEquals("onscreen_joy", parsed.settings.joyport1)
 	}
 
+	// --- Integer scaling ---
+
+	@Test
+	fun `generate emits default scaling keys`() {
+		val output = ConfigGenerator.generate(EmulatorSettings())
+		assertContains(output, "scaling_method=-1")
+		assertContains(output, "gfx_autoresolution=0")
+	}
+
+	@Test
+	fun `generate emits integer scaling when enabled`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(scalingMethod = 2, gfxAutoresolution = 1)
+		)
+		assertContains(output, "scaling_method=2")
+		assertContains(output, "gfx_autoresolution=1")
+	}
+
 	// --- Helpers ---
 
 	private fun assertContains(text: String, substring: String) {

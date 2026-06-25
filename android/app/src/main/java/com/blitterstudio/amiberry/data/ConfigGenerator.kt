@@ -85,6 +85,8 @@ object ConfigGenerator {
 		sb.appendLine("gfx_height=${settings.gfxHeight}")
 		sb.appendLine("amiberry.gfx_correct_aspect=${settings.correctAspect.toCfg()}")
 		sb.appendLine("amiberry.gfx_auto_crop=${settings.autoCrop.toCfg()}")
+		sb.appendLine("scaling_method=${settings.scalingMethod}")
+		sb.appendLine("gfx_autoresolution=${settings.gfxAutoresolution}")
 
 		// Input
 		sb.appendLine("joyport0=${settings.joyport0}")
