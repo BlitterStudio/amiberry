@@ -453,11 +453,11 @@ class ConfigParserTest {
 			scaling_method=2
 			gfx_autoresolution=1
 		""".trimIndent())
-		val s = ConfigParser.parse(file).settings
+		val result = ConfigParser.parse(file)
 
-		assertEquals(2, s.scalingMethod)
-		assertEquals(1, s.gfxAutoresolution)
-		assertTrue(ConfigParser.parse(file).unknownLines.isEmpty())
+		assertEquals(2, result.settings.scalingMethod)
+		assertEquals(1, result.settings.gfxAutoresolution)
+		assertTrue(result.unknownLines.isEmpty())
 	}
 
 	@Test
@@ -511,6 +511,9 @@ class ConfigParserTest {
 		val result = ConfigParser.parse(file)
 
 		assertEquals(1, result.settings.hardDrives.size)
+		assertEquals("/hd/system.hdf", result.settings.hardDrives[0].path)
+		assertFalse(result.settings.hardDrives[0].readOnly)
+		assertEquals(0, result.settings.hardDrives[0].bootPriority)
 		assertTrue(result.unknownLines.none { it.startsWith("uaehf0=") })
 	}
 
@@ -534,6 +537,15 @@ class ConfigParserTest {
 		val file = writeConfig(
 			"hardfile2=rw,DH0:/hd/scsi.hdf,0,0,0,512,0,,scsi0"
 		)
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves malformed short hardfile2 line`() {
+		val file = writeConfig("hardfile2=rw,:/hd/x.hdf,0")
 		val result = ConfigParser.parse(file)
 
 		assertTrue(result.settings.hardDrives.isEmpty())
