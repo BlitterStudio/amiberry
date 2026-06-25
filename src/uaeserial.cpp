@@ -874,9 +874,17 @@ void uaeserialdev_install (void)
 
 void uaeserialdev_start_threads (void)
 {
-	uae_sem_init(&change_sem, 0, 1);
-	uae_sem_init(&async_sem, 0, 1);
-	uae_sem_init(&pipe_sem, 0, 1);
+	// Process-lifetime global mutexes. uae_sem_init() on an already-created
+	// semaphore SIGNALS it (count++) instead of resetting. This runs on every
+	// reset, so re-initializing would inflate the count above 1 and break mutual
+	// exclusion, letting dev_thread free an asyncreq while a trap handler walks
+	// dev->ar -> use-after-free. Create them exactly once.
+	if (!change_sem)
+		uae_sem_init(&change_sem, 0, 1);
+	if (!async_sem)
+		uae_sem_init(&async_sem, 0, 1);
+	if (!pipe_sem)
+		uae_sem_init(&pipe_sem, 0, 1);
 }
 
 void uaeserialdev_reset (void)

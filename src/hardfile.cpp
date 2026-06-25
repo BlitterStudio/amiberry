@@ -3076,7 +3076,13 @@ void hardfile_install (void)
 	uae_u32 initcode, openfunc, closefunc, expungefunc;
 	uae_u32 beginiofunc, abortiofunc;
 
-	uae_sem_init (&change_sem, 0, 1);
+	// Create exactly once: uae_sem_init() on an already-created semaphore
+	// SIGNALS it (count++) instead of resetting. hardfile_install() runs again
+	// on every hardreset (via memory_init/virtualdevice_init), so re-initializing
+	// would inflate change_sem above 1 and break mutual exclusion with
+	// hardfile_thread. Mirrors the thread_sema guard in virtualdevice_init().
+	if (!change_sem)
+		uae_sem_init (&change_sem, 0, 1);
 
 	ROM_hardfile_resname = ds (currprefs.uaescsidevmode == 1 ? _T("scsi.device") : _T("uaehf.device"));
 	ROM_hardfile_resid = ds (_T("UAE hardfile.device 0.6"));

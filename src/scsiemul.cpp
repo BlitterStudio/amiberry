@@ -1524,7 +1524,13 @@ void scsidev_start_threads (void)
 		return;
 	if (log_scsi)
 		write_log (_T("scsidev_start_threads()\n"));
-	uae_sem_init (&change_sem, 0, 1);
+	// Process-lifetime global mutex. uae_sem_init() on an already-created
+	// semaphore SIGNALS it (count++) instead of resetting; this runs on every
+	// reset, so re-initializing would inflate the count and break mutual
+	// exclusion between dev_thread and the other accessors of change_sem.
+	// Create it exactly once.
+	if (!change_sem)
+		uae_sem_init (&change_sem, 0, 1);
 }
 
 void scsidev_reset (void)

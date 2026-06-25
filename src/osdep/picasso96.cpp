@@ -118,7 +118,7 @@ static int p96hsync_counter;
 static uae_thread_id render_tid = nullptr;
 static smp_comm_pipe *render_pipe = nullptr;
 static volatile int render_thread_state;
-static uae_sem_t render_cs = nullptr;
+static SDL_Mutex *render_cs = nullptr;
 
 #define PICASSO_STATE_SETDISPLAY 1
 #define PICASSO_STATE_SETPANNING 2
@@ -274,7 +274,7 @@ void lockrtg()
 #if defined(_WIN32) && !defined(AMIBERRY)
 		EnterCriticalSection(&render_cs);
 #else
-		uae_sem_wait(&render_cs);
+		SDL_LockMutex(render_cs);
 #endif
 }
 
@@ -284,7 +284,7 @@ void unlockrtg()
 #if defined(_WIN32) && !defined(AMIBERRY)
 		LeaveCriticalSection(&render_cs);
 #else
-		uae_sem_post(&render_cs);
+		SDL_UnlockMutex(render_cs);
 #endif
 }
 
@@ -7148,12 +7148,16 @@ static void picasso_reset2(int monid)
 			init_comm_pipe(render_pipe, 10, 1);
 		}
 #ifdef AMIBERRY
+		// Recursive mutex. lockrtg()/unlockrtg() nest on the same thread
+		// (e.g. picasso_refresh() -> setconvert(), both take the lock), so a
+		// non-recursive primitive self-deadlocks. SDL mutexes are reentrant and
+		// provide real cross-thread mutual exclusion between the emulation thread
+		// and the RTG render_thread (rtg_multithread) — matching the recursive
+		// CRITICAL_SECTION used by the WinUAE-native build. The previous code
+		// used a semaphore initialized to -1 (~4B permits) so the lock never
+		// blocked, i.e. no mutual exclusion at all.
 		if (render_cs == nullptr) {
-			#if defined(__HAIKU__)
-			uae_sem_init(&render_cs, 0, 1);
-#else
-			uae_sem_init(&render_cs, 0, -1);
-#endif
+			render_cs = SDL_CreateMutex();
 		}
 #endif
 		if (render_thread_state <= 0) {
@@ -7225,7 +7229,7 @@ static void picasso_free()
 		destroy_comm_pipe(render_pipe);
 		xfree(render_pipe);
 		render_pipe = nullptr;
-		uae_sem_destroy(&render_cs);
+		SDL_DestroyMutex(render_cs);
 		render_cs = nullptr;
 		if (render_tid) {
 			uae_wait_thread(&render_tid);
