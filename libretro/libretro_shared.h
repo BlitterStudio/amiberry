@@ -23,6 +23,21 @@ void reset_parse_cmdline(void);
 void libretro_audio_enqueue(const int16_t* stereo_frames, unsigned frames);
 void libretro_audio_reset(void);
 
+struct libretro_crop {
+	int x;
+	int y;
+	int w;
+	int h;
+	float aspect;
+	bool active;
+};
+
+// Computes the content-aware overscan crop for monitor 0 when the
+// amiberry_crop_overscan option is enabled. Returns active=false (and callers
+// fall back to the full frame) when cropping is off, no surface exists, RTG is
+// active, or the detected limits are degenerate.
+libretro_crop libretro_compute_crop(void);
+
 #endif
 
 #endif

@@ -51,6 +51,9 @@ extern "C" {
 #include "amiberry_gfx.h"
 #include "zfile.h"
 #include "target.h"
+#include "custom.h"
+#include "xwin.h"
+#include "drawing.h"
 #ifdef WITH_CHD
 #include "archivers/chd/chd.h"
 #include "archivers/chd/cdrom.h"
@@ -2122,6 +2125,66 @@ static const char* get_option_value(const char* key)
 	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		return var.value;
 	return nullptr;
+}
+
+static bool crop_overscan_enabled()
+{
+	const char* v = get_option_value("amiberry_crop_overscan");
+	return v && strcmp(v, "enabled") == 0;
+}
+
+libretro_crop libretro_compute_crop(void)
+{
+	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
+
+	if (!crop_overscan_enabled())
+		return crop;
+
+	// RTG/Workbench (Picasso96) has no overscan borders — nothing to crop.
+	if (adisplays[0].picasso_on)
+		return crop;
+
+	SDL_Surface* surface = get_amiga_surface(0);
+	if (!surface || surface->w <= 0 || surface->h <= 0)
+		return crop;
+
+	int cw = 0, ch = 0, cx = 0, cy = 0, crealh = 0;
+	int hres = currprefs.gfx_resolution;
+	int vres = currprefs.gfx_vresolution;
+	get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+
+	// Clamp to surface bounds (mirrors auto_crop_image, amiberry_gfx.cpp:1660-1668).
+	if (cx < 0) cx = 0;
+	if (cy < 0) cy = 0;
+	if (cx >= surface->w) cx = 0;
+	if (cy >= surface->h) cy = 0;
+	if (cw <= 0 || cx + cw > surface->w) cw = surface->w - cx;
+	if (ch <= 0 || cy + ch > surface->h) ch = surface->h - cy;
+
+	if (cw <= 0 || ch <= 0)
+		return crop;
+
+	// PAR-corrected display aspect (mirrors auto_crop_image, amiberry_gfx.cpp:1623-1651).
+	int width = cw;
+	int height = ch;
+	if (vres == VRES_NONDOUBLE) {
+		if (hres == RES_HIRES || hres == RES_SUPERHIRES)
+			height *= 2;
+	} else {
+		if (hres == RES_LORES)
+			width *= 2;
+	}
+	const bool is_ntsc = (vblank_hz > 55.0f);
+	if (is_ntsc)
+		height = height * 6 / 5;
+
+	crop.x = cx;
+	crop.y = cy;
+	crop.w = cw;
+	crop.h = ch;
+	crop.aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+	crop.active = true;
+	return crop;
 }
 
 static int parse_audio_rate_value(const char* value)
