@@ -1975,6 +1975,24 @@ void disable_resume()
 	}
 }
 
+// Persist sidebar section collapse state in amiberry.ini, using the same
+// registry abstraction as GUIPosX/GUISizeW. Keys are "NavCollapse<key>".
+static bool get_nav_section_collapsed(const char* key, bool default_collapsed)
+{
+	TCHAR name[64];
+	_sntprintf(name, sizeof name, _T("NavCollapse%s"), key);
+	int val = default_collapsed ? 1 : 0;
+	regqueryint(nullptr, name, &val);
+	return val != 0;
+}
+
+static void set_nav_section_collapsed(const char* key, bool collapsed)
+{
+	TCHAR name[64];
+	_sntprintf(name, sizeof name, _T("NavCollapse%s"), key);
+	regsetint(nullptr, name, collapsed ? 1 : 0);
+}
+
 void run_gui()
 {
 	gui_running = true;
@@ -2255,15 +2273,15 @@ void run_gui()
 		const float row_h = std::max(base_row_h, icon_h_target + 2.0f * s.FramePadding.y);
 		const ImVec4 col_act = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
 
-		struct SidebarGroup { int first_index; const char* label; };
+		struct SidebarGroup { int first_index; const char* label; const char* key; };
 		static const SidebarGroup sidebar_groups[] = {
-			{ 0,  "General" },
-			{ 4,  "Hardware" },
-			{ 9,  "Storage" },
-			{ 11, "Expansion" },
-			{ 14, "Output" },
-			{ 17, "Input / IO" },
-			{ 20, "Utility" },
+			{ 0,  "General",    "General" },
+			{ 4,  "Hardware",   "Hardware" },
+			{ 9,  "Storage",    "Storage" },
+			{ 11, "Expansion",  "Expansion" },
+			{ 14, "Output",     "Output" },
+			{ 17, "Input / IO", "InputIO" },
+			{ 20, "Utility",    "Utility" },
 		};
 		constexpr int num_groups = sizeof(sidebar_groups) / sizeof(sidebar_groups[0]);
 		int next_group = 0;
@@ -2290,52 +2308,122 @@ void run_gui()
 			return false;
 		};
 
+		// Per-section collapse state. General (index 0) is never collapsible.
+		static const bool section_default_collapsed[num_groups] = {
+			false, // General  (unused - always visible)
+			false, // Hardware
+			false, // Storage
+			true,  // Expansion
+			false, // Output
+			true,  // Input / IO
+			true,  // Utility
+		};
+		static bool section_collapsed[num_groups];
+		static bool nav_collapse_loaded = false;
+		if (!nav_collapse_loaded) {
+			for (int g = 0; g < num_groups; ++g)
+				section_collapsed[g] = get_nav_section_collapsed(
+					sidebar_groups[g].key, section_default_collapsed[g]);
+			nav_collapse_loaded = true;
+		}
+
 		// Keyboard navigation (when filter box is not focused)
 		if (!ImGui::GetIO().WantTextInput) {
-			int total_panels = 0;
-			while (categories[total_panels].category != nullptr) total_panels++;
+			int total_panels_nav = 0;
+			while (categories[total_panels_nav].category != nullptr) total_panels_nav++;
+
+			auto group_of = [&](int idx) -> int {
+				int gg = 0;
+				for (int k = 1; k < num_groups; ++k) {
+					if (idx >= sidebar_groups[k].first_index) gg = k; else break;
+				}
+				return gg;
+			};
+			auto nav_hidden = [&](int idx) -> bool {
+				if (has_filter) return !icontains(categories[idx].category, sidebar_filter);
+				const int gg = group_of(idx);
+				if (gg == 0) return false;        // General always visible
+				return section_collapsed[gg];     // collapsed sections are skipped
+			};
+
 			if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
 				int next = last_active_panel - 1;
-				if (has_filter) {
-					while (next >= 0 && !icontains(categories[next].category, sidebar_filter)) --next;
-				}
+				while (next >= 0 && nav_hidden(next)) --next;
 				if (next >= 0) last_active_panel = next;
 			}
 			if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
 				int next = last_active_panel + 1;
-				if (has_filter) {
-					while (next < total_panels && !icontains(categories[next].category, sidebar_filter)) ++next;
-				}
-				if (next < total_panels) last_active_panel = next;
+				while (next < total_panels_nav && nav_hidden(next)) ++next;
+				if (next < total_panels_nav) last_active_panel = next;
 			}
 		}
 
+		int total_panels = 0;
+		while (categories[total_panels].category != nullptr) total_panels++;
 		bool any_rendered = false;
+		bool prev_group_collapsed = false;
 		for (int i = 0; categories[i].category != nullptr; ++i) {
 			if (has_filter && !icontains(categories[i].category, sidebar_filter))
 				continue;
 
 			if (next_group < num_groups && i >= sidebar_groups[next_group].first_index) {
-				if (group_has_visible(next_group)) {
-					if (any_rendered) {
-						ImGui::Dummy(ImVec2(0, 8.0f));
+				const int g = next_group;
+				const int g_end = (g + 1 < num_groups) ? sidebar_groups[g + 1].first_index : total_panels;
+				bool group_collapsed = false;
+				if (group_has_visible(g)) {
+					// Separate groups only after an expanded one; consecutive
+					// collapsed headers stack tightly (just the ItemSpacing gap).
+					if (any_rendered && !prev_group_collapsed) {
+						ImGui::Dummy(ImVec2(0, 4.0f));
 					}
+					const bool collapsible = (g != 0); // General is always visible
+					// The active panel's section auto-expands so its highlight is never hidden.
+					const bool active_in = (last_active_panel >= sidebar_groups[g].first_index &&
+						last_active_panel < g_end);
+					group_collapsed = collapsible && section_collapsed[g] && !has_filter && !active_in;
 					ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 					label_col.w *= 0.7f;
-					ImGui::PushStyleColor(ImGuiCol_Text, label_col);
-					ImGui::SetCursorPosX(ImGui::GetCursorPosX() + s.FramePadding.x + 2.0f);
-					ImGui::SetWindowFontScale(0.85f);
 					std::string upper_label;
-					for (const char* c = sidebar_groups[next_group].label; *c; ++c)
+					for (const char* c = sidebar_groups[g].label; *c; ++c)
 						upper_label += static_cast<char>(toupper(static_cast<unsigned char>(*c)));
-					ImGui::TextUnformatted(upper_label.c_str());
-					ImGui::SetWindowFontScale(1.0f);
-					ImGui::PopStyleColor();
-					ImGui::Dummy(ImVec2(0, 2.0f));
+					if (collapsible) {
+						const char* chevron = group_collapsed ? ICON_FA_CHEVRON_RIGHT : ICON_FA_CHEVRON_DOWN;
+						// "###secN" keeps the widget ID stable while the chevron glyph changes.
+						std::string header = std::string(chevron) + "  " + upper_label + "###sec" + std::to_string(g);
+						ImVec4 hover_col = lighten(col_act, 0.05f); hover_col.w = 0.25f;
+						ImGui::PushStyleColor(ImGuiCol_Text, label_col);
+						ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+						ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hover_col);
+						ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0, 0, 0, 0));
+						ImGui::SetWindowFontScale(0.85f);
+						if (ImGui::Selectable(header.c_str(), false)) {
+							section_collapsed[g] = !section_collapsed[g];
+							set_nav_section_collapsed(sidebar_groups[g].key, section_collapsed[g]);
+						}
+						ImGui::SetWindowFontScale(1.0f);
+						ImGui::PopStyleColor(4);
+					} else {
+						ImGui::PushStyleColor(ImGuiCol_Text, label_col);
+						ImGui::SetCursorPosX(ImGui::GetCursorPosX() + s.FramePadding.x + 2.0f);
+						ImGui::SetWindowFontScale(0.85f);
+						ImGui::TextUnformatted(upper_label.c_str());
+						ImGui::SetWindowFontScale(1.0f);
+						ImGui::PopStyleColor();
+					}
+					if (!group_collapsed)
+						ImGui::Dummy(ImVec2(0, 2.0f));
 				}
 				next_group++;
 				while (next_group < num_groups && sidebar_groups[next_group].first_index <= i)
 					next_group++;
+				prev_group_collapsed = group_collapsed;
+				if (group_collapsed) {
+					// Header drawn; skip this group's rows. Park i at the group's last
+					// index so the for-loop's ++i lands on the next group's first index.
+					any_rendered = true;
+					i = g_end - 1;
+					continue;
+				}
 			}
 			any_rendered = true;
 			ImGui::Indent(6.0f);
