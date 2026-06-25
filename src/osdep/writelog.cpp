@@ -22,6 +22,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <poll.h>
+#include <sys/stat.h>
 #endif
 
 #if defined(__ANDROID__)
@@ -63,6 +64,39 @@ static SDL_Window* previousactivewindow;
 static uae_sem_t log_sem;
 static int log_sem_init;
 
+#ifndef _WIN32
+// Returns true when the fd is a redirected regular file or pipe — i.e. the
+// debugger's stream is connected to `<file` / `>file` / a `| pipe`, not a TTY
+// and not /dev/null / a character device / a closed fd. Used to route the
+// interactive debugger to the launching shell's stdin/stdout (issue #2117)
+// instead of the ImGui/Cocoa debugger window.
+static bool fd_is_redirected(int fd)
+{
+	struct stat st{};
+	if (fstat(fd, &st) != 0)
+		return false;
+	return S_ISREG(st.st_mode) || S_ISFIFO(st.st_mode);
+}
+
+// fd types are stable for the process lifetime, so cache the result.
+static bool debugger_stdin_redirected()
+{
+	static const bool v = fd_is_redirected(STDIN_FILENO);
+	return v;
+}
+
+static bool debugger_stdout_redirected()
+{
+	static const bool v = fd_is_redirected(STDOUT_FILENO);
+	return v;
+}
+
+static bool debugger_stdio_redirected()
+{
+	return debugger_stdin_redirected() || debugger_stdout_redirected();
+}
+#endif
+
 #if defined(AMIBERRY_MACOS) || (!defined(__ANDROID__) && !defined(AMIBERRY_IOS))
 static constexpr int CONSOLEOPEN_DEBUGGER_WINDOW = 2;
 
@@ -71,7 +105,8 @@ static bool console_debugger_available()
 #if defined(_WIN32)
 	return true;
 #else
-	return console_logging && isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+	return (console_logging && isatty(STDIN_FILENO) && isatty(STDOUT_FILENO))
+		|| debugger_stdio_redirected();
 #endif
 }
 
