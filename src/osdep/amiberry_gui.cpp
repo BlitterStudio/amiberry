@@ -1519,6 +1519,7 @@ void new_cddrive(int entry)
 	struct uaedev_config_info ci{};
 	ci.device_emu_unit = 0;
 	ci.controller_type = current_cddlg.ci.controller_type;
+	ci.controller_type_unit = current_cddlg.ci.controller_type_unit;
 	ci.controller_unit = current_cddlg.ci.controller_unit;
 #ifdef AMIBERRY
 	_tcscpy(ci.rootdir, current_cddlg.ci.rootdir);
@@ -1534,6 +1535,7 @@ void new_tapedrive(int entry)
 	struct uaedev_config_data* uci;
 	struct uaedev_config_info ci{};
 	ci.controller_type = current_tapedlg.ci.controller_type;
+	ci.controller_type_unit = current_tapedlg.ci.controller_type_unit;
 	ci.controller_unit = current_tapedlg.ci.controller_unit;
 	ci.readonly = current_tapedlg.ci.readonly;
 	_tcscpy(ci.rootdir, current_tapedlg.ci.rootdir);
