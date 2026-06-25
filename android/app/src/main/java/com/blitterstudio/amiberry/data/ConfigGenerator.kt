@@ -75,6 +75,14 @@ object ConfigGenerator {
 			sb.appendLine("cdimage0=${settings.cdImage}")
 		}
 
+		// Hard drives (hardfiles on the UAE controller)
+		settings.hardDrives.forEachIndexed { index, hd ->
+			if (hd.path.isNotEmpty()) {
+				val access = if (hd.readOnly) "ro" else "rw"
+				sb.appendLine("hardfile2=$access,:${hd.path},0,0,0,512,${hd.bootPriority},,uae$index")
+			}
+		}
+
 		// Sound
 		sb.appendLine("sound_output=${settings.soundOutput}")
 		sb.appendLine("sound_frequency=${settings.soundFreq}")

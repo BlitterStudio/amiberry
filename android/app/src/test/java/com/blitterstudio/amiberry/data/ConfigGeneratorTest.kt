@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.data.model.HardDrive
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
@@ -112,6 +113,37 @@ class ConfigGeneratorTest {
 	fun `generate includes cdimage when nonempty`() {
 		val output = ConfigGenerator.generate(EmulatorSettings(cdImage = "/path/game.iso"))
 		assertContains(output, "cdimage0=/path/game.iso")
+	}
+
+	// --- Hard drives ---
+
+	@Test
+	fun `generate omits hardfile lines when no hard drives`() {
+		val output = ConfigGenerator.generate(EmulatorSettings())
+		assertNotContains(output, "hardfile2=")
+	}
+
+	@Test
+	fun `generate emits hardfile2 line per drive with controller index`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(
+				hardDrives = listOf(
+					HardDrive(path = "/hd/system.hdf", readOnly = false, bootPriority = 0),
+					HardDrive(path = "/hd/work.hdf", readOnly = true, bootPriority = -1)
+				)
+			)
+		)
+		val lines = output.lines()
+		assertContainsLine(lines, "hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0")
+		assertContainsLine(lines, "hardfile2=ro,:/hd/work.hdf,0,0,0,512,-1,,uae1")
+	}
+
+	@Test
+	fun `generate skips hard drive with empty path`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(hardDrives = listOf(HardDrive(path = "")))
+		)
+		assertNotContains(output, "hardfile2=")
 	}
 
 	// --- Joystick port 1 special handling ---

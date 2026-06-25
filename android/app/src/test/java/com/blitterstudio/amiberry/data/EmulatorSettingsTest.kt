@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.data.model.HardDrive
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -316,6 +317,13 @@ class EmulatorSettingsTest {
 		assertEquals("exact", constrained.soundOutput)
 		assertEquals(44100, constrained.soundFreq)
 		assertEquals("stereo", constrained.soundChannels)
+	}
+
+	// --- Hard drives ---
+
+	@Test
+	fun `default settings have no hard drives`() {
+		assertTrue(EmulatorSettings().hardDrives.isEmpty())
 	}
 
 	// --- Integer scaling defaults ---

@@ -47,6 +47,9 @@ data class EmulatorSettings(
 	// CD
 	val cdImage: String = "",
 
+	// Hard drives (hardfiles)
+	val hardDrives: List<HardDrive> = emptyList(),
+
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
 	val soundFreq: Int = 44100,
