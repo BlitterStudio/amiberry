@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import com.blitterstudio.amiberry.data.model.HardDrive
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -444,6 +445,28 @@ class ConfigParserTest {
 		assertEquals(AmigaModel.A600, result.settings.baseModel)
 	}
 
+	// --- Integer scaling ---
+
+	@Test
+	fun `parse scaling and autoresolution`() {
+		val file = writeConfig("""
+			scaling_method=2
+			gfx_autoresolution=1
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertEquals(2, result.settings.scalingMethod)
+		assertEquals(1, result.settings.gfxAutoresolution)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `parse scaling defaults when absent`() {
+		val s = ConfigParser.parse(writeConfig("cpu_model=68000")).settings
+		assertEquals(-1, s.scalingMethod)
+		assertEquals(0, s.gfxAutoresolution)
+	}
+
 	// --- Whitespace handling ---
 
 	@Test
@@ -456,5 +479,130 @@ class ConfigParserTest {
 
 		assertEquals(68020, result.settings.cpuModel)
 		assertEquals("aga", result.settings.chipset)
+	}
+
+	// --- Hard drives ---
+
+	@Test
+	fun `parse multiple hardfile2 lines into hard drives`() {
+		val file = writeConfig("""
+			hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+			hardfile2=ro,:/hd/work.hdf,0,0,0,512,-1,,uae1
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+		val drives = result.settings.hardDrives
+
+		assertEquals(2, drives.size)
+		assertEquals("/hd/system.hdf", drives[0].path)
+		assertFalse(drives[0].readOnly)
+		assertEquals(0, drives[0].bootPriority)
+		assertEquals("/hd/work.hdf", drives[1].path)
+		assertTrue(drives[1].readOnly)
+		assertEquals(-1, drives[1].bootPriority)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `parse drops redundant uaehf hdf lines`() {
+		val file = writeConfig("""
+			hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+			uaehf0=hdf,rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertEquals(1, result.settings.hardDrives.size)
+		assertEquals("/hd/system.hdf", result.settings.hardDrives[0].path)
+		assertFalse(result.settings.hardDrives[0].readOnly)
+		assertEquals(0, result.settings.hardDrives[0].bootPriority)
+		assertTrue(result.unknownLines.none { it.startsWith("uaehf0=") })
+	}
+
+	@Test
+	fun `parse preserves directory mounts and cd uaehf lines`() {
+		val file = writeConfig("""
+			filesystem2=rw,DH0:Work:/host/dir,0
+			uaehf1=dir,rw,DH0:Work:/host/dir,0
+			uaehf2=cd0,rw,:/host/disc.iso
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("filesystem2=") })
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf1=dir") })
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf2=cd0") })
+	}
+
+	@Test
+	fun `parse preserves non-uae controller hardfile2`() {
+		val file = writeConfig(
+			"hardfile2=rw,DH0:/hd/scsi.hdf,0,0,0,512,0,,scsi0"
+		)
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves malformed short hardfile2 line`() {
+		val file = writeConfig("hardfile2=rw,:/hd/x.hdf,0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves standalone uaehf hdf without matching hardfile2`() {
+		// Legacy/native seed configs ship a uaehf with no hardfile2 twin
+		// (see src/osdep/amiberry.cpp). Dropping it would delete the drive on save.
+		val file = writeConfig("uaehf0=hdf,rw,DH0:/hd/system.hdf,0,0,0,512,0,,uae0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf0=") })
+	}
+
+	@Test
+	fun `parse preserves uaehf hdf whose controller has no matching hardfile2`() {
+		val file = writeConfig("""
+			hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+			uaehf1=hdf,rw,DH1:/hd/extra.hdf,0,0,0,512,0,,uae1
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		// Only the uae0 hardfile2 is adopted; the uae1 twin has no matching hardfile2.
+		assertEquals(1, result.settings.hardDrives.size)
+		assertEquals("/hd/system.hdf", result.settings.hardDrives[0].path)
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf1=") })
+	}
+
+	@Test
+	fun `parse preserves hardfile2 with custom geometry`() {
+		// UAE controller but non-RDB geometry must not be flattened to 0,0,0,512.
+		val file = writeConfig("hardfile2=rw,:/hd/custom.hdf,63,16,2,512,0,,uae0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves hardfile2 with device name and filesystem`() {
+		val file = writeConfig("hardfile2=rw,DH0:/hd/x.hdf,0,0,0,512,0,myfs,uae0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves hardfile2 with extra trailing fields`() {
+		// highcyl / physical geometry / flags appended after the controller.
+		val file = writeConfig("hardfile2=rw,:/hd/x.hdf,0,0,0,512,0,,uae0,1024,1024/16/63")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
 	}
 }

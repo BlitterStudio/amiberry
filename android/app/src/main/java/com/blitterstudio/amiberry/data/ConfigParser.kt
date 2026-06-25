@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.HardDrive
 import java.io.File
 import java.io.IOException
 
@@ -31,6 +32,7 @@ object ConfigParser {
 		"sound_output", "sound_frequency", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
+		"scaling_method", "gfx_autoresolution",
 		"joyport0", "joyport1",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "input.default_osk",
 		"amiberry.android_joyport1",
@@ -50,6 +52,12 @@ object ConfigParser {
 		}
 		val kvPairs = mutableMapOf<String, String>()
 		val unknownLines = mutableListOf<String>()
+		val hardDrives = mutableListOf<HardDrive>()
+		// UAE controller units of the simple hardfile2 lines we adopted into hardDrives.
+		val adoptedControllers = mutableSetOf<String>()
+		// uaehf=hdf lines, deferred until the whole file is scanned: a uaehf only duplicates
+		// a hardfile2 mount when we actually adopted a hardfile2 on the same controller.
+		val uaehfHdfLines = mutableListOf<Pair<String, String?>>()
 
 		for (line in lines) {
 			val trimmed = line.trim()
@@ -64,20 +72,37 @@ object ConfigParser {
 			val key = trimmed.substring(0, eqIndex).trim()
 			val value = trimmed.substring(eqIndex + 1).trim()
 
-			if (key in knownKeys) {
-				kvPairs[key] = value
-			} else {
+			when {
+				key == "hardfile2" -> {
+					val drive = parseHardfile2(value)
+					if (drive != null) {
+						hardDrives.add(drive)
+						hardfile2Controller(value)?.let { adoptedControllers.add(it) }
+					} else {
+						unknownLines.add(line)
+					}
+				}
+				isUaehfHdf(key, value) -> uaehfHdfLines.add(line to uaehfController(value))
+				key in knownKeys -> kvPairs[key] = value
+				else -> unknownLines.add(line)
+			}
+		}
+
+		// Drop a uaehf=hdf line only when it twins a hardfile2 we adopted (same controller);
+		// otherwise preserve it verbatim so standalone/legacy mounts survive a save.
+		for ((line, controller) in uaehfHdfLines) {
+			if (controller == null || controller !in adoptedControllers) {
 				unknownLines.add(line)
 			}
 		}
 
-		val settings = buildSettings(kvPairs)
+		val settings = buildSettings(kvPairs, hardDrives)
 		val description = kvPairs["config_description"] ?: ""
 
 		return ParsedConfig(settings, unknownLines, description)
 	}
 
-	private fun buildSettings(kv: Map<String, String>): EmulatorSettings {
+	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {
 		return EmulatorSettings(
 			baseModel = guessModel(kv),
 			cpuModel = kv["cpu_model"]?.toIntOrNull() ?: 68000,
@@ -112,6 +137,7 @@ object ConfigParser {
 			floppy3Type = kv["floppy3type"]?.toIntOrNull() ?: -1,
 
 			cdImage = kv["cdimage0"] ?: "",
+			hardDrives = hardDrives,
 
 			soundOutput = kv["sound_output"] ?: "exact",
 			soundFreq = kv["sound_frequency"]?.toIntOrNull() ?: 44100,
@@ -121,6 +147,8 @@ object ConfigParser {
 			gfxHeight = kv["gfx_height"]?.toIntOrNull() ?: 568,
 			correctAspect = (kv["amiberry.gfx_correct_aspect"] ?: kv["gfx_correct_aspect"]).toBool(true),
 			autoCrop = (kv["amiberry.gfx_auto_crop"] ?: kv["gfx_auto_crop"]).toBool(false),
+			scalingMethod = kv["scaling_method"]?.toIntOrNull() ?: -1,
+			gfxAutoresolution = kv["gfx_autoresolution"]?.toIntOrNull() ?: 0,
 
 			joyport0 = kv["joyport0"] ?: "mouse",
 			// Round-trip: prefer the explicit Android joyport1 key if present,
@@ -164,6 +192,45 @@ object ConfigParser {
 			// OCS with 512KB chip + 512KB slow = A500 (or A2000), default A500
 			else -> AmigaModel.A500
 		}
+	}
+
+	private val uaehfKeyRegex = Regex("""uaehf[0-7]""")
+	private val uaeControllerRegex = Regex("""uae\d+""")
+
+	/** A uaehf<n>=hdf,... line (the twin native also writes for an HDF mount). */
+	private fun isUaehfHdf(key: String, value: String): Boolean =
+		uaehfKeyRegex.matches(key) && value.trimStart().startsWith("hdf,")
+
+	/** UAE controller unit (e.g. "uae0") of an adopted simple hardfile2 line. */
+	private fun hardfile2Controller(value: String): String? =
+		value.split(',').getOrNull(8)?.trim()?.takeIf { uaeControllerRegex.matches(it) }
+
+	/** UAE controller unit of a uaehf=hdf line: one of its fields holds a `uae<n>` token. */
+	private fun uaehfController(value: String): String? =
+		value.split(',').map { it.trim() }.firstOrNull { uaeControllerRegex.matches(it) }
+
+	/**
+	 * Parse a `hardfile2` value ONLY when it is the exact simple UAE-controller RDB form
+	 * this app generates: `<ro|rw>,:<path>,0,0,0,512,<bootpri>,,uae<n>`. Any other form
+	 * (custom geometry/blocksize, an explicit filesystem, a device name, extra trailing
+	 * fields/flags, or a non-UAE controller) returns null so the caller preserves the line
+	 * verbatim — otherwise those mount parameters would be lost on a parse/save round trip.
+	 */
+	private fun parseHardfile2(value: String): HardDrive? {
+		val parts = value.split(',')
+		if (parts.size != 9) return null
+		val access = parts[0].trim()
+		if (!access.equals("ro", ignoreCase = true) && !access.equals("rw", ignoreCase = true)) return null
+		if (!parts[1].startsWith(":")) return null                       // empty device name only
+		if (parts[2].trim() != "0" || parts[3].trim() != "0" ||
+			parts[4].trim() != "0" || parts[5].trim() != "512") return null  // RDB / auto geometry
+		if (parts[7].trim().isNotEmpty()) return null                    // no explicit filesystem
+		if (!uaeControllerRegex.matches(parts[8].trim())) return null
+		val path = parts[1].substring(1).trim()
+		if (path.isEmpty()) return null
+		val bootPriority = parts[6].trim().toIntOrNull() ?: return null
+		val readOnly = access.equals("ro", ignoreCase = true)
+		return HardDrive(path = path, readOnly = readOnly, bootPriority = bootPriority)
 	}
 
 	private fun String?.toBool(default: Boolean): Boolean {

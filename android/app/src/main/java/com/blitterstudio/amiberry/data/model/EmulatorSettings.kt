@@ -47,6 +47,9 @@ data class EmulatorSettings(
 	// CD
 	val cdImage: String = "",
 
+	// Hard drives (hardfiles)
+	val hardDrives: List<HardDrive> = emptyList(),
+
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
 	val soundFreq: Int = 44100,
@@ -57,6 +60,8 @@ data class EmulatorSettings(
 	val gfxHeight: Int = 568,
 	val correctAspect: Boolean = true,
 	val autoCrop: Boolean = false,
+	val scalingMethod: Int = -1,        // -1 Auto, 0 Nearest, 1 Linear, 2 Integer
+	val gfxAutoresolution: Int = 0,     // 0 Disabled, 1 Always On, 10/33/66 = % (raw native value)
 
 	// Input
 	val joyport0: String = "mouse",
