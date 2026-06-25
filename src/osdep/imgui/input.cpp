@@ -389,7 +389,7 @@ void render_panel_input() {
     static const int digital_joymousespeed_values[] = {2, 5, 10, 15, 20};
     static const int analog_joymousespeed_values[] = {5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150};
 
-    if (BeginGroupBox("Game Controller Settings", true)) {
+    if (BeginGroupBox("Game Controller Settings", true, false)) {
     // Joystick Dead Zone
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Joystick dead zone:");
@@ -479,7 +479,7 @@ void render_panel_input() {
     }
     EndGroupBox("Game Controller Settings");
 
-    if (BeginGroupBox("Mouse extra settings", true)) {
+    if (BeginGroupBox("Mouse extra settings", true, false)) {
 
     if (ImGui::BeginTable("MouseExtrasTable", 2, ImGuiTableFlags_None)) {
         // Row 1
