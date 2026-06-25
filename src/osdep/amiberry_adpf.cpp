@@ -4,6 +4,7 @@
 
 #include <android/api-level.h>
 #include <dlfcn.h>
+#include <mutex>
 
 #include "sysconfig.h"
 #include "sysdeps.h" // write_log
@@ -27,8 +28,18 @@ static pfn_updateTarget  p_updateTarget;
 static pfn_reportActual  p_reportActual;
 static pfn_closeSession  p_closeSession;
 
+// Guards the session and the tid table below: adpf_register_thread() may be
+// called from both the main thread and the CPU thread, while adpf_report_frame()
+// runs on the frame thread.  Contention only happens once, at CPU-thread
+// startup; thereafter the lock is uncontended (taken once per frame).
+static std::mutex g_lock;
+static APerformanceHintManager* g_manager;
 static APerformanceHintSession* g_session;
 static int64_t g_last_target_ns;
+
+#define ADPF_MAX_THREADS 8
+static int32_t g_tids[ADPF_MAX_THREADS];
+static int     g_ntids;
 
 static const int64_t ADPF_PROVISIONAL_TARGET_NS = 20000000; // 20 ms (PAL)
 
@@ -54,31 +65,58 @@ static bool resolve_api(void)
 	return true;
 }
 
-bool adpf_init(int32_t emu_tid)
+// Create a session covering every currently-registered tid.  Builds the new
+// session before closing the old one, so a failed rebuild leaves the previous
+// (working) session intact rather than dropping coverage.  Caller holds g_lock.
+static bool rebuild_session_locked(void)
 {
-	adpf_cleanup(); // idempotent: drop any prior session
+	if (g_ntids == 0)
+		return false;
+	if (!g_manager) {
+		g_manager = p_getManager();
+		if (!g_manager)
+			return false;
+	}
+	APerformanceHintSession* ns =
+		p_createSession(g_manager, g_tids, (size_t)g_ntids, ADPF_PROVISIONAL_TARGET_NS);
+	if (!ns)
+		return false;
+	if (g_session)
+		p_closeSession(g_session);
+	g_session = ns;
+	g_last_target_ns = ADPF_PROVISIONAL_TARGET_NS;
+	return true;
+}
+
+bool adpf_register_thread(int32_t tid)
+{
+	std::lock_guard<std::mutex> guard(g_lock);
 
 	if (!resolve_api())
 		return false;
 
-	APerformanceHintManager* mgr = p_getManager();
-	if (!mgr)
-		return false;
+	// Already registered: report current coverage without rebuilding.
+	for (int i = 0; i < g_ntids; i++) {
+		if (g_tids[i] == tid)
+			return g_session != nullptr;
+	}
+	if (g_ntids >= ADPF_MAX_THREADS)
+		return g_session != nullptr;
 
-	int32_t tids[1] = { emu_tid };
-	g_session = p_createSession(mgr, tids, 1, ADPF_PROVISIONAL_TARGET_NS);
-	if (!g_session) {
-		write_log("ADPF: createSession failed (tid=%d)\n", emu_tid);
+	g_tids[g_ntids++] = tid;
+	if (!rebuild_session_locked()) {
+		write_log("ADPF: createSession failed (tid=%d)\n", tid);
+		g_ntids--; // roll back so this thread can use the static fallback
 		return false;
 	}
-	g_last_target_ns = ADPF_PROVISIONAL_TARGET_NS;
-	write_log("ADPF: hint session active, tid=%d, target=%.1fms\n",
-		emu_tid, ADPF_PROVISIONAL_TARGET_NS / 1e6);
+	write_log("ADPF: hint session active, %d thread(s), tid=%d, target=%.1fms\n",
+		g_ntids, tid, ADPF_PROVISIONAL_TARGET_NS / 1e6);
 	return true;
 }
 
 void adpf_report_frame(int64_t actual_work_ns, int64_t target_ns)
 {
+	std::lock_guard<std::mutex> guard(g_lock);
 	if (!g_session)
 		return;
 	if (actual_work_ns < 1)
@@ -94,16 +132,18 @@ void adpf_report_frame(int64_t actual_work_ns, int64_t target_ns)
 
 void adpf_cleanup(void)
 {
+	std::lock_guard<std::mutex> guard(g_lock);
 	if (g_session && p_closeSession) {
 		p_closeSession(g_session);
 		g_session = nullptr;
 	}
+	g_ntids = 0;
 }
 
 #else // !__ANDROID__
 
 // Cross-platform no-op stubs so non-Android builds link cleanly.
-bool adpf_init(int32_t) { return false; }
+bool adpf_register_thread(int32_t) { return false; }
 void adpf_report_frame(int64_t, int64_t) {}
 void adpf_cleanup(void) {}
 

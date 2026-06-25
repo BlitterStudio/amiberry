@@ -4535,6 +4535,24 @@ static void boost_emulation_thread_frequency()
 	else
 		write_log("uclamp frequency boost unavailable: %s\n", strerror(errno));
 }
+
+// Tune the CALLING thread for sustained emulation performance.  Called on the
+// main thread from target_run(); also called on the dedicated CPU thread (when
+// cpu_threaded is enabled) so the thread actually executing the m68k core is
+// covered - target_run() runs before that thread exists, so it cannot tune it.
+// On API 31+ the OS adaptively manages CPU frequency and core placement through
+// the ADPF hint session.  When ADPF is unavailable for this thread (older API,
+// the hint API could not be resolved or the device has no hint backend) or it
+// is disabled via use_adpf, fall back to statically pinning the thread to the
+// big cores and raising its uclamp frequency floor.
+void amiberry_tune_emulation_thread()
+{
+	const bool adpf_active = amiberry_options.use_adpf && adpf_register_thread(gettid());
+	if (!adpf_active) {
+		pin_emulation_thread_to_big_cores();
+		boost_emulation_thread_frequency();
+	}
+}
 #endif
 
 void target_run()
@@ -4542,16 +4560,7 @@ void target_run()
 	// Reset counter for access violations
 	init_max_signals();
 #ifdef __ANDROID__
-	// On API 31+ let the OS adaptively manage CPU frequency and core placement
-	// through an ADPF hint session.  When that is unavailable (older API, the
-	// hint API could not be resolved) or disabled via use_adpf, fall back to
-	// statically pinning the emulation thread to the big cores and raising its
-	// uclamp frequency floor.
-	const bool adpf_active = amiberry_options.use_adpf && adpf_init(gettid());
-	if (!adpf_active) {
-		pin_emulation_thread_to_big_cores();
-		boost_emulation_thread_frequency();
-	}
+	amiberry_tune_emulation_thread();
 #endif
 }
 
