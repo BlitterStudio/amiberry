@@ -258,6 +258,14 @@
     <string name="settings_storage_type_label">Type</string>
     <string name="settings_storage_disk_label">Disk</string>
     <string name="settings_storage_import_disk_image">Import disk image...</string>
+    <string name="settings_storage_hard_drives_title">Hard Drives</string>
+    <string name="settings_storage_hard_drive_label">Hard drive %1$d</string>
+    <string name="settings_storage_hardfile_label">HDF image</string>
+    <string name="settings_storage_import_hardfile">Import HDF image...</string>
+    <string name="settings_storage_add_hard_drive">Add hard drive</string>
+    <string name="settings_storage_remove_hard_drive">Remove hard drive</string>
+    <string name="settings_storage_hard_drive_read_only">Read-only</string>
+    <string name="settings_storage_boot_priority">Boot priority</string>
 
     <string name="clipboard_label_path">path</string>
     <string name="placeholder_none">(none)</string>

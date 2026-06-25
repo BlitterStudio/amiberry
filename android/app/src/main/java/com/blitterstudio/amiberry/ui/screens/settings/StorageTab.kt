@@ -13,11 +13,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Eject
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.ui.text.input.KeyboardType
+import com.blitterstudio.amiberry.data.model.HardDrive
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -68,6 +74,7 @@ fun StorageTab(
 	val roms by viewModel.availableRoms.collectAsState()
 	val floppies by viewModel.availableFloppies.collectAsState()
 	val cds by viewModel.availableCds.collectAsState()
+	val hardDrives by viewModel.availableHardDrives.collectAsState()
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
 
@@ -208,6 +215,59 @@ fun StorageTab(
 						onSelect = { viewModel.updateSettings { s -> s.copy(cdImage = it) } },
 						onClear = { viewModel.updateSettings { s -> s.copy(cdImage = "") } }
 					)
+				}
+			}
+		}
+
+		// Hard drives
+		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+			Column(modifier = Modifier.padding(16.dp)) {
+				Row(verticalAlignment = Alignment.CenterVertically) {
+					Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(20.dp))
+					Spacer(modifier = Modifier.width(8.dp))
+					Text(stringResource(R.string.settings_storage_hard_drives_title), style = MaterialTheme.typography.titleMedium)
+				}
+				Spacer(modifier = Modifier.height(8.dp))
+
+				settings.hardDrives.forEachIndexed { index, drive ->
+					HardDriveRow(
+						index = index,
+						drive = drive,
+						files = hardDrives,
+						onPathChange = { newPath ->
+							viewModel.updateSettings { s ->
+								s.copy(hardDrives = s.hardDrives.updatedAt(index) { it.copy(path = newPath) })
+							}
+						},
+						onReadOnlyChange = { ro ->
+							viewModel.updateSettings { s ->
+								s.copy(hardDrives = s.hardDrives.updatedAt(index) { it.copy(readOnly = ro) })
+							}
+						},
+						onBootPriorityChange = { bp ->
+							viewModel.updateSettings { s ->
+								s.copy(hardDrives = s.hardDrives.updatedAt(index) { it.copy(bootPriority = bp) })
+							}
+						},
+						onRemove = {
+							viewModel.updateSettings { s ->
+								s.copy(hardDrives = s.hardDrives.removedAt(index))
+							}
+						},
+						context = context,
+						importGuard = importGuard,
+						importInProgress = importInProgress,
+						onImportResult = onImportResult
+					)
+					Spacer(modifier = Modifier.height(8.dp))
+				}
+
+				TextButton(onClick = {
+					viewModel.updateSettings { s -> s.copy(hardDrives = s.hardDrives + HardDrive(path = "")) }
+				}) {
+					Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+					Spacer(modifier = Modifier.width(4.dp))
+					Text(stringResource(R.string.settings_storage_add_hard_drive))
 				}
 			}
 		}
@@ -385,5 +445,101 @@ private fun FloppyDriveRow(
 				)
 			}
 		}
+	}
+}
+
+private fun List<HardDrive>.updatedAt(index: Int, transform: (HardDrive) -> HardDrive): List<HardDrive> =
+	mapIndexed { i, hd -> if (i == index) transform(hd) else hd }
+
+private fun List<HardDrive>.removedAt(index: Int): List<HardDrive> =
+	filterIndexed { i, _ -> i != index }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HardDriveRow(
+	index: Int,
+	drive: HardDrive,
+	files: List<AmigaFile>,
+	onPathChange: (String) -> Unit,
+	onReadOnlyChange: (Boolean) -> Unit,
+	onBootPriorityChange: (Int) -> Unit,
+	onRemove: () -> Unit,
+	context: android.content.Context,
+	importGuard: ImportInFlightGuard,
+	importInProgress: Boolean,
+	onImportResult: (FileManager.ImportResult) -> Unit
+) {
+	val scope = rememberCoroutineScope()
+
+	Column(modifier = Modifier.fillMaxWidth()) {
+		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+			Text(
+				stringResource(R.string.settings_storage_hard_drive_label, index),
+				style = MaterialTheme.typography.labelMedium,
+				modifier = Modifier.weight(1f)
+			)
+			IconButton(onClick = onRemove) {
+				Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.settings_storage_remove_hard_drive))
+			}
+		}
+
+		FileDropdown(
+			label = stringResource(R.string.settings_storage_hardfile_label),
+			files = files,
+			selectedPath = drive.path,
+			onSelect = onPathChange,
+			onClear = { onPathChange("") }
+		)
+
+		val importLauncher = rememberLauncherForActivityResult(
+			ActivityResultContracts.OpenDocument()
+		) { uri ->
+			uri?.let {
+				scope.launchImportGuarded(importGuard) {
+					val result = withContext(Dispatchers.IO) {
+						FileManager.importFileWithResult(context, it, FileCategory.HARD_DRIVES).also { importResult ->
+							if (importResult is FileManager.ImportResult.Imported) {
+								FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
+							}
+						}
+					}
+					if (result is FileManager.ImportResult.Imported) onPathChange(result.path)
+					onImportResult(result)
+				}
+			}
+		}
+		TextButton(
+			onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES)) },
+			enabled = !importInProgress
+		) {
+			if (importInProgress) {
+				CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+				Spacer(modifier = Modifier.width(4.dp))
+			}
+			Text(
+				stringResource(
+					if (importInProgress) R.string.action_importing else R.string.settings_storage_import_hardfile
+				)
+			)
+		}
+
+		SwitchRow(
+			label = stringResource(R.string.settings_storage_hard_drive_read_only),
+			checked = drive.readOnly,
+			onCheckedChange = onReadOnlyChange
+		)
+
+		var bootText by remember(drive.bootPriority) { mutableStateOf(drive.bootPriority.toString()) }
+		OutlinedTextField(
+			value = bootText,
+			onValueChange = { input ->
+				bootText = input
+				input.toIntOrNull()?.let { onBootPriorityChange(it) }
+			},
+			label = { Text(stringResource(R.string.settings_storage_boot_priority)) },
+			singleLine = true,
+			keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+			modifier = Modifier.fillMaxWidth()
+		)
 	}
 }

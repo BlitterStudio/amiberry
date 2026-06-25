@@ -32,6 +32,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	val availableRoms: StateFlow<List<AmigaFile>> = repository.roms
 	val availableFloppies: StateFlow<List<AmigaFile>> = repository.floppies
 	val availableCds: StateFlow<List<AmigaFile>> = repository.cdImages
+	val availableHardDrives: StateFlow<List<AmigaFile>> = repository.hardDrives
 
 	init {
 		restoreLastSession()
