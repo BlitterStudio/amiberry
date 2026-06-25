@@ -204,6 +204,8 @@
     <string name="settings_display_theme_light">Light</string>
     <string name="settings_display_theme_dark">Dark</string>
     <string name="settings_display_dynamic_color">Use Material You colors</string>
+    <string name="settings_display_integer_scaling">Integer Scaling</string>
+    <string name="settings_display_integer_scaling_desc">Pixel-perfect scaling. Sets the scaling method to Integer and turns Resolution Autoswitch to Always On.</string>
 
     <string name="settings_sound_title">Sound Settings</string>
     <string name="settings_sound_output_label">Sound Output</string>

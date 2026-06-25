@@ -112,6 +112,17 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 					viewModel.updateSettings { s -> s.copy(autoCrop = it) }
 				}
 			)
+			SwitchRow(
+				label = stringResource(R.string.settings_display_integer_scaling),
+				checked = settings.scalingMethod == 2 && settings.gfxAutoresolution == 1,
+				onCheckedChange = { on ->
+					viewModel.updateSettings { s ->
+						if (on) s.copy(scalingMethod = 2, gfxAutoresolution = 1)
+						else s.copy(scalingMethod = -1, gfxAutoresolution = 0)
+					}
+				},
+				supportingText = stringResource(R.string.settings_display_integer_scaling_desc)
+			)
 			}
 		}
 
