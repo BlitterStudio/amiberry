@@ -539,7 +539,12 @@ static void writeconsole_2 (const TCHAR *buffer)
 #ifdef _WIN32
 		fprintf(stdout, "%s", buffer);
 #else
-		SDL_Log("%s", buffer);
+		if (debugger_stdio_redirected()) {
+			fprintf(stdout, "%s", buffer);
+			fflush(stdout);
+		} else {
+			SDL_Log("%s", buffer);
+		}
 #endif
 	}
 	else if (realconsole) {
