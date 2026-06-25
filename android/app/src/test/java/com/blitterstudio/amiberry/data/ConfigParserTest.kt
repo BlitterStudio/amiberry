@@ -551,4 +551,58 @@ class ConfigParserTest {
 		assertTrue(result.settings.hardDrives.isEmpty())
 		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
 	}
+
+	@Test
+	fun `parse preserves standalone uaehf hdf without matching hardfile2`() {
+		// Legacy/native seed configs ship a uaehf with no hardfile2 twin
+		// (see src/osdep/amiberry.cpp). Dropping it would delete the drive on save.
+		val file = writeConfig("uaehf0=hdf,rw,DH0:/hd/system.hdf,0,0,0,512,0,,uae0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf0=") })
+	}
+
+	@Test
+	fun `parse preserves uaehf hdf whose controller has no matching hardfile2`() {
+		val file = writeConfig("""
+			hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+			uaehf1=hdf,rw,DH1:/hd/extra.hdf,0,0,0,512,0,,uae1
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		// Only the uae0 hardfile2 is adopted; the uae1 twin has no matching hardfile2.
+		assertEquals(1, result.settings.hardDrives.size)
+		assertEquals("/hd/system.hdf", result.settings.hardDrives[0].path)
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf1=") })
+	}
+
+	@Test
+	fun `parse preserves hardfile2 with custom geometry`() {
+		// UAE controller but non-RDB geometry must not be flattened to 0,0,0,512.
+		val file = writeConfig("hardfile2=rw,:/hd/custom.hdf,63,16,2,512,0,,uae0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves hardfile2 with device name and filesystem`() {
+		val file = writeConfig("hardfile2=rw,DH0:/hd/x.hdf,0,0,0,512,0,myfs,uae0")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
+
+	@Test
+	fun `parse preserves hardfile2 with extra trailing fields`() {
+		// highcyl / physical geometry / flags appended after the controller.
+		val file = writeConfig("hardfile2=rw,:/hd/x.hdf,0,0,0,512,0,,uae0,1024,1024/16/63")
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
+	}
 }

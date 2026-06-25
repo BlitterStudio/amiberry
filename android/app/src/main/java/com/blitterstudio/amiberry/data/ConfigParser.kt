@@ -53,6 +53,11 @@ object ConfigParser {
 		val kvPairs = mutableMapOf<String, String>()
 		val unknownLines = mutableListOf<String>()
 		val hardDrives = mutableListOf<HardDrive>()
+		// UAE controller units of the simple hardfile2 lines we adopted into hardDrives.
+		val adoptedControllers = mutableSetOf<String>()
+		// uaehf=hdf lines, deferred until the whole file is scanned: a uaehf only duplicates
+		// a hardfile2 mount when we actually adopted a hardfile2 on the same controller.
+		val uaehfHdfLines = mutableListOf<Pair<String, String?>>()
 
 		for (line in lines) {
 			val trimmed = line.trim()
@@ -70,14 +75,24 @@ object ConfigParser {
 			when {
 				key == "hardfile2" -> {
 					val drive = parseHardfile2(value)
-					if (drive != null) hardDrives.add(drive)
-					else unknownLines.add(line)
+					if (drive != null) {
+						hardDrives.add(drive)
+						hardfile2Controller(value)?.let { adoptedControllers.add(it) }
+					} else {
+						unknownLines.add(line)
+					}
 				}
-				isRedundantUaehfHdf(key, value) -> {
-					// Redundant twin of hardfile2 for HDF mounts — drop to avoid double-mount.
-				}
+				isUaehfHdf(key, value) -> uaehfHdfLines.add(line to uaehfController(value))
 				key in knownKeys -> kvPairs[key] = value
 				else -> unknownLines.add(line)
+			}
+		}
+
+		// Drop a uaehf=hdf line only when it twins a hardfile2 we adopted (same controller);
+		// otherwise preserve it verbatim so standalone/legacy mounts survive a save.
+		for ((line, controller) in uaehfHdfLines) {
+			if (controller == null || controller !in adoptedControllers) {
+				unknownLines.add(line)
 			}
 		}
 
@@ -180,24 +195,41 @@ object ConfigParser {
 	}
 
 	private val uaehfKeyRegex = Regex("""uaehf[0-7]""")
+	private val uaeControllerRegex = Regex("""uae\d+""")
 
-	/** uaehf<n>=hdf,... duplicates a hardfile2 line; recognise so we can drop it. */
-	private fun isRedundantUaehfHdf(key: String, value: String): Boolean =
+	/** A uaehf<n>=hdf,... line (the twin native also writes for an HDF mount). */
+	private fun isUaehfHdf(key: String, value: String): Boolean =
 		uaehfKeyRegex.matches(key) && value.trimStart().startsWith("hdf,")
 
+	/** UAE controller unit (e.g. "uae0") of an adopted simple hardfile2 line. */
+	private fun hardfile2Controller(value: String): String? =
+		value.split(',').getOrNull(8)?.trim()?.takeIf { uaeControllerRegex.matches(it) }
+
+	/** UAE controller unit of a uaehf=hdf line: one of its fields holds a `uae<n>` token. */
+	private fun uaehfController(value: String): String? =
+		value.split(',').map { it.trim() }.firstOrNull { uaeControllerRegex.matches(it) }
+
 	/**
-	 * Parse a `hardfile2` value of the simple UAE-controller RDB form
-	 * `rw,:/path,0,0,0,512,0,,uae0`. Returns null for forms we don't manage
-	 * (non-UAE controller, missing path) so the caller preserves them verbatim.
+	 * Parse a `hardfile2` value ONLY when it is the exact simple UAE-controller RDB form
+	 * this app generates: `<ro|rw>,:<path>,0,0,0,512,<bootpri>,,uae<n>`. Any other form
+	 * (custom geometry/blocksize, an explicit filesystem, a device name, extra trailing
+	 * fields/flags, or a non-UAE controller) returns null so the caller preserves the line
+	 * verbatim — otherwise those mount parameters would be lost on a parse/save round trip.
 	 */
 	private fun parseHardfile2(value: String): HardDrive? {
 		val parts = value.split(',')
-		if (parts.size < 9) return null
-		if (!parts[8].trim().startsWith("uae")) return null
-		val path = parts[1].substringAfter(':', "").trim()
+		if (parts.size != 9) return null
+		val access = parts[0].trim()
+		if (!access.equals("ro", ignoreCase = true) && !access.equals("rw", ignoreCase = true)) return null
+		if (!parts[1].startsWith(":")) return null                       // empty device name only
+		if (parts[2].trim() != "0" || parts[3].trim() != "0" ||
+			parts[4].trim() != "0" || parts[5].trim() != "512") return null  // RDB / auto geometry
+		if (parts[7].trim().isNotEmpty()) return null                    // no explicit filesystem
+		if (!uaeControllerRegex.matches(parts[8].trim())) return null
+		val path = parts[1].substring(1).trim()
 		if (path.isEmpty()) return null
-		val readOnly = parts[0].trim().equals("ro", ignoreCase = true)
-		val bootPriority = parts[6].trim().toIntOrNull() ?: 0
+		val bootPriority = parts[6].trim().toIntOrNull() ?: return null
+		val readOnly = access.equals("ro", ignoreCase = true)
 		return HardDrive(path = path, readOnly = readOnly, bootPriority = bootPriority)
 	}
 
