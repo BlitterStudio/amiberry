@@ -1330,7 +1330,7 @@ static void ShowEditCDDriveModal()
                     AddToMruCdList(path_buf);
             }
 
-            new_cddrive(-1);
+            new_cddrive(edit_entry_index);
             invalidate_hdf_cache();
             gui_force_rtarea_hdchange(); 
             ImGui::CloseCurrentPopup();
@@ -1456,7 +1456,7 @@ static void ShowEditTapeDriveModal()
                 
                 inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, path_buf[0] != 0);
 
-                new_tapedrive(-1);
+                new_tapedrive(edit_entry_index);
                 invalidate_hdf_cache();
                 gui_force_rtarea_hdchange(); 
                 ImGui::CloseCurrentPopup();
@@ -1570,7 +1570,8 @@ void render_panel_hd()
                 is_board_enabled(&changed_prefs, ROMTYPE_GVPS2, 0) || is_board_enabled(&changed_prefs, ROMTYPE_A4091, 0) ||
                 (changed_prefs.cs_mbdmac & 3)) ? HD_CONTROLLER_TYPE_SCSI_AUTO : HD_CONTROLLER_TYPE_IDE_AUTO;
         inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
-        
+
+        edit_entry_index = -1;
         ImGui::OpenPopup("CD Drive Settings");
         show_cd_modal = true;
         current_hd_dialog_mode = HDDialogMode::None;
@@ -1581,6 +1582,7 @@ void render_panel_hd()
         default_tapedlg(&current_tapedlg);
         inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, current_tapedlg.ci.rootdir[0] != 0);
 
+        edit_entry_index = -1;
         ImGui::OpenPopup("Tape Drive Settings");
         show_tape_modal = true;
         current_hd_dialog_mode = HDDialogMode::None;
@@ -1595,11 +1597,13 @@ void render_panel_hd()
          
          if (uci->type == UAEDEV_CD) {
              memcpy(&current_cddlg.ci, uci, sizeof(struct uaedev_config_info));
+             inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
              ImGui::OpenPopup("CD Drive Settings");
              show_cd_modal = true;
          }
          else if (uci->type == UAEDEV_TAPE) {
              memcpy(&current_tapedlg.ci, uci, sizeof(struct uaedev_config_info));
+             inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, current_tapedlg.ci.rootdir[0] != 0);
              ImGui::OpenPopup("Tape Drive Settings");
              show_tape_modal = true;
          }

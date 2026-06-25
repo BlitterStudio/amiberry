@@ -1519,6 +1519,7 @@ void new_cddrive(int entry)
 	struct uaedev_config_info ci{};
 	ci.device_emu_unit = 0;
 	ci.controller_type = current_cddlg.ci.controller_type;
+	ci.controller_type_unit = current_cddlg.ci.controller_type_unit;
 	ci.controller_unit = current_cddlg.ci.controller_unit;
 #ifdef AMIBERRY
 	_tcscpy(ci.rootdir, current_cddlg.ci.rootdir);
@@ -1534,6 +1535,7 @@ void new_tapedrive(int entry)
 	struct uaedev_config_data* uci;
 	struct uaedev_config_info ci{};
 	ci.controller_type = current_tapedlg.ci.controller_type;
+	ci.controller_type_unit = current_tapedlg.ci.controller_type_unit;
 	ci.controller_unit = current_tapedlg.ci.controller_unit;
 	ci.readonly = current_tapedlg.ci.readonly;
 	_tcscpy(ci.rootdir, current_tapedlg.ci.rootdir);
@@ -1606,7 +1608,12 @@ void addhdcontroller(const struct expansionromtype* erc, int firstid, int flags)
 void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 {
 	controller.clear();
-	controller.push_back({ HD_CONTROLLER_TYPE_UAE, _T("UAE (uaehf.device)") });
+	// A CD-ROM cannot be attached to the UAE (uaehf.device) controller as a
+	// mountconfig entry: add_filesys_config() rejects it (UAE CDs are handled
+	// via the uaescsi.device/cdslot mechanism instead). Offering it here would
+	// let the user pick a controller that silently fails to apply.
+	if (devtype != UAEDEV_CD)
+		controller.push_back({ HD_CONTROLLER_TYPE_UAE, _T("UAE (uaehf.device)") });
 	controller.push_back({ HD_CONTROLLER_TYPE_IDE_AUTO, _T("IDE (Auto)") });
 
 	for (auto i = 0; expansionroms[i].name; i++) {
