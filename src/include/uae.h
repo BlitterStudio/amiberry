@@ -34,6 +34,11 @@ extern bool target_execute(const char* command);
 extern void target_reset (void);
 extern void target_addtorecent (const TCHAR*, int);
 extern void target_run (void);
+#ifdef __ANDROID__
+// Tune the calling thread (CPU frequency / big-core placement) for emulation.
+// Called from target_run() on the main thread and from the dedicated CPU thread.
+extern void amiberry_tune_emulation_thread(void);
+#endif
 extern void target_quit (void);
 extern void target_restart (void);
 extern void target_getdate(int *y, int *m, int *d);

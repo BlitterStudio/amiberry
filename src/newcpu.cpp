@@ -5791,6 +5791,11 @@ typedef void compiled_handler (void);
 static int cpu_thread_run_jit(void *v)
 {
 	cpu_thread_tid = uae_thread_get_id(nullptr);
+#ifdef __ANDROID__
+	// This thread runs the m68k core in cpu_threaded mode; target_run() tuned
+	// the main thread before this thread existed, so tune ourselves here too.
+	amiberry_tune_emulation_thread();
+#endif
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 	cpu_thread_active = 1;
@@ -6756,6 +6761,11 @@ static int cpu_thread_run_2(void *v)
 	struct regstruct *r = &regs;
 
 	cpu_thread_tid = uae_thread_get_id(nullptr);
+#ifdef __ANDROID__
+	// This thread runs the m68k core in cpu_threaded mode; target_run() tuned
+	// the main thread before this thread existed, so tune ourselves here too.
+	amiberry_tune_emulation_thread();
+#endif
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 
