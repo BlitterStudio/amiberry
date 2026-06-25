@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.HardDrive
 import java.io.File
 import java.io.IOException
 
@@ -51,6 +52,7 @@ object ConfigParser {
 		}
 		val kvPairs = mutableMapOf<String, String>()
 		val unknownLines = mutableListOf<String>()
+		val hardDrives = mutableListOf<HardDrive>()
 
 		for (line in lines) {
 			val trimmed = line.trim()
@@ -65,20 +67,27 @@ object ConfigParser {
 			val key = trimmed.substring(0, eqIndex).trim()
 			val value = trimmed.substring(eqIndex + 1).trim()
 
-			if (key in knownKeys) {
-				kvPairs[key] = value
-			} else {
-				unknownLines.add(line)
+			when {
+				key == "hardfile2" -> {
+					val drive = parseHardfile2(value)
+					if (drive != null) hardDrives.add(drive)
+					else unknownLines.add(line)
+				}
+				isRedundantUaehfHdf(key, value) -> {
+					// Redundant twin of hardfile2 for HDF mounts — drop to avoid double-mount.
+				}
+				key in knownKeys -> kvPairs[key] = value
+				else -> unknownLines.add(line)
 			}
 		}
 
-		val settings = buildSettings(kvPairs)
+		val settings = buildSettings(kvPairs, hardDrives)
 		val description = kvPairs["config_description"] ?: ""
 
 		return ParsedConfig(settings, unknownLines, description)
 	}
 
-	private fun buildSettings(kv: Map<String, String>): EmulatorSettings {
+	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {
 		return EmulatorSettings(
 			baseModel = guessModel(kv),
 			cpuModel = kv["cpu_model"]?.toIntOrNull() ?: 68000,
@@ -113,6 +122,7 @@ object ConfigParser {
 			floppy3Type = kv["floppy3type"]?.toIntOrNull() ?: -1,
 
 			cdImage = kv["cdimage0"] ?: "",
+			hardDrives = hardDrives,
 
 			soundOutput = kv["sound_output"] ?: "exact",
 			soundFreq = kv["sound_frequency"]?.toIntOrNull() ?: 44100,
@@ -167,6 +177,28 @@ object ConfigParser {
 			// OCS with 512KB chip + 512KB slow = A500 (or A2000), default A500
 			else -> AmigaModel.A500
 		}
+	}
+
+	private val uaehfKeyRegex = Regex("""uaehf[0-7]""")
+
+	/** uaehf<n>=hdf,... duplicates a hardfile2 line; recognise so we can drop it. */
+	private fun isRedundantUaehfHdf(key: String, value: String): Boolean =
+		uaehfKeyRegex.matches(key) && value.trimStart().startsWith("hdf,")
+
+	/**
+	 * Parse a `hardfile2` value of the simple UAE-controller RDB form
+	 * `rw,:/path,0,0,0,512,0,,uae0`. Returns null for forms we don't manage
+	 * (non-UAE controller, missing path) so the caller preserves them verbatim.
+	 */
+	private fun parseHardfile2(value: String): HardDrive? {
+		val parts = value.split(',')
+		if (parts.size < 9) return null
+		if (!parts[8].trim().startsWith("uae")) return null
+		val path = parts[1].substringAfter(':', "").trim()
+		if (path.isEmpty()) return null
+		val readOnly = parts[0].trim().equals("ro", ignoreCase = true)
+		val bootPriority = parts[6].trim().toIntOrNull() ?: 0
+		return HardDrive(path = path, readOnly = readOnly, bootPriority = bootPriority)
 	}
 
 	private fun String?.toBool(default: Boolean): Boolean {

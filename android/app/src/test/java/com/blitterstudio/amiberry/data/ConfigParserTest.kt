@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import com.blitterstudio.amiberry.data.model.HardDrive
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -478,5 +479,64 @@ class ConfigParserTest {
 
 		assertEquals(68020, result.settings.cpuModel)
 		assertEquals("aga", result.settings.chipset)
+	}
+
+	// --- Hard drives ---
+
+	@Test
+	fun `parse multiple hardfile2 lines into hard drives`() {
+		val file = writeConfig("""
+			hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+			hardfile2=ro,:/hd/work.hdf,0,0,0,512,-1,,uae1
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+		val drives = result.settings.hardDrives
+
+		assertEquals(2, drives.size)
+		assertEquals("/hd/system.hdf", drives[0].path)
+		assertFalse(drives[0].readOnly)
+		assertEquals(0, drives[0].bootPriority)
+		assertEquals("/hd/work.hdf", drives[1].path)
+		assertTrue(drives[1].readOnly)
+		assertEquals(-1, drives[1].bootPriority)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `parse drops redundant uaehf hdf lines`() {
+		val file = writeConfig("""
+			hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+			uaehf0=hdf,rw,:/hd/system.hdf,0,0,0,512,0,,uae0
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertEquals(1, result.settings.hardDrives.size)
+		assertTrue(result.unknownLines.none { it.startsWith("uaehf0=") })
+	}
+
+	@Test
+	fun `parse preserves directory mounts and cd uaehf lines`() {
+		val file = writeConfig("""
+			filesystem2=rw,DH0:Work:/host/dir,0
+			uaehf1=dir,rw,DH0:Work:/host/dir,0
+			uaehf2=cd0,rw,:/host/disc.iso
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("filesystem2=") })
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf1=dir") })
+		assertTrue(result.unknownLines.any { it.startsWith("uaehf2=cd0") })
+	}
+
+	@Test
+	fun `parse preserves non-uae controller hardfile2`() {
+		val file = writeConfig(
+			"hardfile2=rw,DH0:/hd/scsi.hdf,0,0,0,512,0,,scsi0"
+		)
+		val result = ConfigParser.parse(file)
+
+		assertTrue(result.settings.hardDrives.isEmpty())
+		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
 	}
 }

@@ -409,6 +409,23 @@ class ConfigGeneratorTest {
 		assertEquals("onscreen_joy", parsed.settings.joyport1)
 	}
 
+	// --- Hard drive round-trip ---
+
+	@Test
+	fun `round-trip preserves hard drives`() {
+		val original = EmulatorSettings(
+			hardDrives = listOf(
+				HardDrive(path = "/hd/system.hdf", readOnly = false, bootPriority = 0),
+				HardDrive(path = "/hd/work.hdf", readOnly = true, bootPriority = 2)
+			)
+		)
+		val file = tempDir.newFile("roundtrip_hd.uae")
+		file.writeText(ConfigGenerator.generate(original))
+		val result = ConfigParser.parse(file).settings
+
+		assertEquals(original.hardDrives, result.hardDrives)
+	}
+
 	// --- Integer scaling ---
 
 	@Test
