@@ -108,6 +108,7 @@ static bool ff_override_supported = false;
 static bool ff_override_active = false;
 static int last_geometry_width = -1;
 static int last_geometry_height = -1;
+static float last_geometry_aspect = -1.0f;
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
@@ -578,12 +579,23 @@ static void update_geometry()
 	if (!environ_cb)
 		return;
 
-	const int width = gfx_GetWidth(&AMonitors[0]);
-	const int height = gfx_GetHeight(&AMonitors[0]);
+	int width = gfx_GetWidth(&AMonitors[0]);
+	int height = gfx_GetHeight(&AMonitors[0]);
+	float aspect = 4.0f / 3.0f;
+
+	libretro_crop crop = libretro_compute_crop();
+	if (crop.active) {
+		width = crop.w;
+		height = crop.h;
+		if (crop.aspect > 0.0f)
+			aspect = crop.aspect;
+	}
+
 	if (width <= 0 || height <= 0)
 		return;
 
-	if (width == last_geometry_width && height == last_geometry_height)
+	if (width == last_geometry_width && height == last_geometry_height
+		&& aspect == last_geometry_aspect)
 		return;
 
 	struct retro_game_geometry geom;
@@ -591,10 +603,11 @@ static void update_geometry()
 	geom.base_height = height;
 	geom.max_width = std::max(width, MAX_GFX_WIDTH);
 	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
-	geom.aspect_ratio = 4.0f / 3.0f;
+	geom.aspect_ratio = aspect;
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
 	last_geometry_height = height;
+	last_geometry_aspect = aspect;
 }
 
 static void log_input_button(unsigned port, const char* name, int state)
@@ -3382,6 +3395,7 @@ static void reset_core_runtime_state()
 	last_refresh_rate = -1.0f;
 	last_geometry_width = -1;
 	last_geometry_height = -1;
+	last_geometry_aspect = -1.0f;
 	libretro_audio_reset();
 }
 
