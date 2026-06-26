@@ -87,7 +87,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
 	var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-	var showSaveDialog by remember { mutableStateOf(false) }
+	var showSaveAsDialog by remember { mutableStateOf(false) }
+	var overwriteRequest by remember { mutableStateOf<OverwriteRequest?>(null) }
 	var showTopBarMenu by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
@@ -132,8 +133,34 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
 			TopAppBar(
-				title = { Text(stringResource(R.string.settings_title)) },
+				title = {
+					Column {
+						Text(viewModel.currentConfigName ?: stringResource(R.string.settings_new_configuration))
+						if (viewModel.isDirty) {
+							Text(
+								text = stringResource(R.string.settings_unsaved_changes),
+								style = MaterialTheme.typography.labelSmall,
+								color = MaterialTheme.colorScheme.onSurfaceVariant
+							)
+						}
+					}
+				},
 				actions = {
+					TextButton(
+						onClick = {
+							if (viewModel.currentConfigName == null) {
+								showSaveAsDialog = true
+							} else {
+								scope.launch {
+									val result = viewModel.saveTracked()
+									snackbarHostState.showSnackbar(saveMessage(result))
+								}
+							}
+						},
+						enabled = viewModel.currentConfigName == null || viewModel.isDirty
+					) {
+						Text(stringResource(R.string.action_save))
+					}
 					IconButton(onClick = { showTopBarMenu = true }) {
 						Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
 					}
@@ -142,11 +169,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						onDismissRequest = { showTopBarMenu = false }
 					) {
 						DropdownMenuItem(
-							text = { Text(stringResource(R.string.action_save_configuration)) },
+							text = { Text(stringResource(R.string.action_save_as)) },
 							leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) },
 							onClick = {
 								showTopBarMenu = false
-								showSaveDialog = true
+								showSaveAsDialog = true
 							}
 						)
 						DropdownMenuItem(
@@ -337,39 +364,67 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 			}
 		}
 
-		if (showSaveDialog) {
-			SaveConfigDialog(
-				onDismiss = { showSaveDialog = false },
-				onSave = { name, description ->
-					val repo = ConfigRepository.getInstance(context)
-					val safeName = name.trim()
-					scope.launch {
-						val result = withContext(Dispatchers.IO) {
-							repo.saveConfigResult(
-								viewModel.settings,
-								safeName,
-								viewModel.currentUnknownLines,
-								description
-							)
+		if (showSaveAsDialog) {
+				SaveConfigDialog(
+					initialName = viewModel.currentConfigName.orEmpty(),
+					initialDescription = viewModel.currentConfigDescription,
+					onDismiss = { showSaveAsDialog = false },
+					onSave = { name, description ->
+						scope.launch {
+							when (val result = viewModel.saveAs(name, description, allowOverwrite = false)) {
+								is ConfigurationSaveActions.SaveResult.Saved -> {
+									showSaveAsDialog = false
+									snackbarHostState.showSnackbar(saveMessage(result))
+								}
+								ConfigurationSaveActions.SaveResult.AlreadyExists ->
+									overwriteRequest = OverwriteRequest(name, description)
+								else -> snackbarHostState.showSnackbar(saveMessage(result))
+							}
 						}
-						if (result is ConfigurationSaveActions.SaveResult.Saved) {
-							showSaveDialog = false
-						}
-						snackbarHostState.showSnackbar(saveMessage(result))
 					}
-				}
-			)
-		}
+				)
+			}
+
+			overwriteRequest?.let { request ->
+				AlertDialog(
+					onDismissRequest = { overwriteRequest = null },
+					title = { Text(stringResource(R.string.dialog_overwrite_config_title)) },
+					text = { Text(stringResource(R.string.dialog_overwrite_config_message, request.name)) },
+					confirmButton = {
+						TextButton(onClick = {
+							scope.launch {
+								val result = viewModel.saveAs(request.name, request.description, allowOverwrite = true)
+								overwriteRequest = null
+								if (result is ConfigurationSaveActions.SaveResult.Saved) {
+									showSaveAsDialog = false
+								}
+								snackbarHostState.showSnackbar(saveMessage(result))
+							}
+						}) {
+							Text(stringResource(R.string.action_overwrite))
+						}
+					},
+					dismissButton = {
+						TextButton(onClick = { overwriteRequest = null }) {
+							Text(stringResource(R.string.action_cancel))
+						}
+					}
+				)
+			}
 	}
 }
 
+private data class OverwriteRequest(val name: String, val description: String)
+
 @Composable
 fun SaveConfigDialog(
+	initialName: String,
+	initialDescription: String,
 	onDismiss: () -> Unit,
 	onSave: (String, String) -> Unit
 ) {
-	var name by remember { mutableStateOf("") }
-	var description by remember { mutableStateOf("") }
+	var name by remember { mutableStateOf(initialName) }
+	var description by remember { mutableStateOf(initialDescription) }
 
 	AlertDialog(
 		onDismissRequest = onDismiss,
