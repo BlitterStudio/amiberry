@@ -51,6 +51,9 @@ extern "C" {
 #include "amiberry_gfx.h"
 #include "zfile.h"
 #include "target.h"
+#include "custom.h"
+#include "xwin.h"
+#include "drawing.h"
 #ifdef WITH_CHD
 #include "archivers/chd/chd.h"
 #include "archivers/chd/cdrom.h"
@@ -105,6 +108,7 @@ static bool ff_override_supported = false;
 static bool ff_override_active = false;
 static int last_geometry_width = -1;
 static int last_geometry_height = -1;
+static float last_geometry_aspect = -1.0f;
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
@@ -575,12 +579,23 @@ static void update_geometry()
 	if (!environ_cb)
 		return;
 
-	const int width = gfx_GetWidth(&AMonitors[0]);
-	const int height = gfx_GetHeight(&AMonitors[0]);
+	int width = gfx_GetWidth(&AMonitors[0]);
+	int height = gfx_GetHeight(&AMonitors[0]);
+	float aspect = 4.0f / 3.0f;
+
+	libretro_crop crop = libretro_compute_crop();
+	if (crop.active) {
+		width = crop.w;
+		height = crop.h;
+		if (crop.aspect > 0.0f)
+			aspect = crop.aspect;
+	}
+
 	if (width <= 0 || height <= 0)
 		return;
 
-	if (width == last_geometry_width && height == last_geometry_height)
+	if (width == last_geometry_width && height == last_geometry_height
+		&& aspect == last_geometry_aspect)
 		return;
 
 	struct retro_game_geometry geom;
@@ -588,10 +603,11 @@ static void update_geometry()
 	geom.base_height = height;
 	geom.max_width = std::max(width, MAX_GFX_WIDTH);
 	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
-	geom.aspect_ratio = 4.0f / 3.0f;
+	geom.aspect_ratio = aspect;
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
 	last_geometry_height = height;
+	last_geometry_aspect = aspect;
 }
 
 static void log_input_button(unsigned port, const char* name, int state)
@@ -659,6 +675,7 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_analog_sensitivity", "Analog Sensitivity; 18|15|20|25|30|10" },
 	{ "amiberry_analog", "Analog Input; enabled|disabled" },
 	{ "amiberry_internal_vsync", "Internal VSync; disabled|standard|standard_50" },
+	{ "amiberry_crop_overscan", "Crop Overscan; disabled|enabled" },
 	{ "amiberry_joy_as_mouse", "Joystick As Mouse; disabled|port1|port2|both" },
 	{ "amiberry_input_log", "Input Log File; disabled|enabled" },
 #ifdef WITH_MIDI
@@ -998,6 +1015,20 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ NULL, NULL }
 		},
 		"auto"
+	},
+	{
+		"amiberry_crop_overscan",
+		"Crop Overscan",
+		"Crop Overscan",
+		"Trim the Amiga overscan borders so the active game area fills the display. Uses content-aware detection of the drawn region. No effect in RTG/Workbench (Picasso96) modes.",
+		NULL,
+		"video",
+		{
+			{ "disabled", NULL },
+			{ "enabled", NULL },
+			{ NULL, NULL }
+		},
+		"disabled"
 	},
 #ifdef WITH_MIDI
 	{
@@ -2107,6 +2138,66 @@ static const char* get_option_value(const char* key)
 	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		return var.value;
 	return nullptr;
+}
+
+static bool crop_overscan_enabled()
+{
+	const char* v = get_option_value("amiberry_crop_overscan");
+	return v && strcmp(v, "enabled") == 0;
+}
+
+libretro_crop libretro_compute_crop(void)
+{
+	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
+
+	if (!crop_overscan_enabled())
+		return crop;
+
+	// RTG/Workbench (Picasso96) has no overscan borders — nothing to crop.
+	if (adisplays[0].picasso_on)
+		return crop;
+
+	SDL_Surface* surface = get_amiga_surface(0);
+	if (!surface || surface->w <= 0 || surface->h <= 0)
+		return crop;
+
+	int cw = 0, ch = 0, cx = 0, cy = 0, crealh = 0;
+	int hres = currprefs.gfx_resolution;
+	int vres = currprefs.gfx_vresolution;
+	get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+
+	// Clamp to surface bounds (mirrors auto_crop_image, amiberry_gfx.cpp:1660-1668).
+	if (cx < 0) cx = 0;
+	if (cy < 0) cy = 0;
+	if (cx >= surface->w) cx = 0;
+	if (cy >= surface->h) cy = 0;
+	if (cw <= 0 || cx + cw > surface->w) cw = surface->w - cx;
+	if (ch <= 0 || cy + ch > surface->h) ch = surface->h - cy;
+
+	if (cw <= 0 || ch <= 0)
+		return crop;
+
+	// PAR-corrected display aspect (mirrors auto_crop_image, amiberry_gfx.cpp:1623-1651).
+	int width = cw;
+	int height = ch;
+	if (vres == VRES_NONDOUBLE) {
+		if (hres == RES_HIRES || hres == RES_SUPERHIRES)
+			height *= 2;
+	} else {
+		if (hres == RES_LORES)
+			width *= 2;
+	}
+	const bool is_ntsc = (vblank_hz > 55.0f);
+	if (is_ntsc)
+		height = height * 6 / 5;
+
+	crop.x = cx;
+	crop.y = cy;
+	crop.w = cw;
+	crop.h = ch;
+	crop.aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+	crop.active = true;
+	return crop;
 }
 
 static int parse_audio_rate_value(const char* value)
@@ -3304,6 +3395,7 @@ static void reset_core_runtime_state()
 	last_refresh_rate = -1.0f;
 	last_geometry_width = -1;
 	last_geometry_height = -1;
+	last_geometry_aspect = -1.0f;
 	libretro_audio_reset();
 }
 

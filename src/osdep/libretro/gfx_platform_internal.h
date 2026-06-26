@@ -45,7 +45,21 @@ static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 {
 	if (surface) {
 		if (video_cb) {
-			video_cb(surface->pixels, surface->w, surface->h, surface->pitch);
+			const uae_u8* pixels = static_cast<const uae_u8*>(surface->pixels);
+			int w = surface->w;
+			int h = surface->h;
+			libretro_crop crop = libretro_compute_crop();
+			if (crop.active
+				&& crop.x >= 0 && crop.y >= 0
+				&& crop.w > 0 && crop.h > 0
+				&& crop.x + crop.w <= surface->w
+				&& crop.y + crop.h <= surface->h) {
+				pixels += crop.y * surface->pitch
+					+ crop.x * SDL_BYTESPERPIXEL(surface->format);
+				w = crop.w;
+				h = crop.h;
+			}
+			video_cb(pixels, w, h, surface->pitch);
 		} else {
 			static bool warned = false;
 			if (!warned) {
