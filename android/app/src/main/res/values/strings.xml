@@ -56,6 +56,9 @@
     <string name="dialog_overwrite_config_title">Overwrite configuration?</string>
     <string name="dialog_overwrite_config_message">A configuration named \"%1$s\" already exists. Overwrite it?</string>
     <string name="action_overwrite">Overwrite</string>
+    <string name="action_discard">Discard</string>
+    <string name="dialog_unsaved_changes_title">Unsaved changes</string>
+    <string name="dialog_unsaved_changes_message">Save your changes to \"%1$s\" before leaving?</string>
     <string name="dialog_delete_config_title">Delete Configuration</string>
     <string name="dialog_delete_config_message">Delete "%1$s"? This cannot be undone.</string>
 

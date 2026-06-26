@@ -44,6 +44,15 @@ import com.blitterstudio.amiberry.ui.screens.ConfigurationsScreen
 import com.blitterstudio.amiberry.ui.screens.FileManagerScreen
 import com.blitterstudio.amiberry.ui.screens.QuickStartScreen
 import com.blitterstudio.amiberry.ui.screens.settings.SettingsScreen
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.blitterstudio.amiberry.data.ConfigurationSaveActions
+import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun AmiberryApp() {
@@ -143,6 +152,29 @@ fun AmiberryApp() {
 	val navBackStackEntry by navController.currentBackStackEntryAsState()
 	val currentDestination = navBackStackEntry?.destination
 
+	val settingsViewModel: SettingsViewModel =
+		viewModel(LocalContext.current.findActivity() as ComponentActivity)
+	val navScope = rememberCoroutineScope()
+	var pendingNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+	fun navigateToRoute(route: String) {
+		navController.navigate(route) {
+			popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+			launchSingleTop = true
+			restoreState = true
+		}
+	}
+
+	val onSettingsRoute = currentDestination?.hierarchy?.any { it.route == Screen.Settings.route } == true
+
+	fun guardedNavigate(action: () -> Unit) {
+		if (onSettingsRoute && settingsViewModel.isDirty) {
+			pendingNavigation = action
+		} else {
+			action()
+		}
+	}
+
 	BackHandler(
 		enabled = shouldMoveTaskToBack(
 			route = currentDestination?.route,
@@ -151,6 +183,46 @@ fun AmiberryApp() {
 		)
 	) {
 		activity?.moveTaskToBack(true)
+	}
+
+	BackHandler(enabled = onSettingsRoute && settingsViewModel.isDirty) {
+		pendingNavigation = { activity?.moveTaskToBack(true) }
+	}
+
+	pendingNavigation?.let { proceed ->
+		val configName = settingsViewModel.currentConfigName.orEmpty()
+		AlertDialog(
+			onDismissRequest = { pendingNavigation = null },
+			title = { Text(stringResource(R.string.dialog_unsaved_changes_title)) },
+			text = { Text(stringResource(R.string.dialog_unsaved_changes_message, configName)) },
+			confirmButton = {
+				TextButton(onClick = {
+					navScope.launch {
+						val result = settingsViewModel.saveTracked()
+						if (result is ConfigurationSaveActions.SaveResult.Saved) {
+							pendingNavigation = null
+							proceed()
+						}
+					}
+				}) {
+					Text(stringResource(R.string.action_save))
+				}
+			},
+			dismissButton = {
+				Row {
+					TextButton(onClick = {
+						settingsViewModel.discardChanges()
+						pendingNavigation = null
+						proceed()
+					}) {
+						Text(stringResource(R.string.action_discard))
+					}
+					TextButton(onClick = { pendingNavigation = null }) {
+						Text(stringResource(R.string.action_cancel))
+					}
+				}
+			}
+		)
 	}
 
 	if (useNavRail) {
@@ -162,15 +234,7 @@ fun AmiberryApp() {
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
 							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-						onClick = {
-							navController.navigate(screen.route) {
-								popUpTo(navController.graph.findStartDestination().id) {
-									saveState = true
-								}
-								launchSingleTop = true
-								restoreState = true
-							}
-						}
+						onClick = { guardedNavigate { navigateToRoute(screen.route) } }
 					)
 				}
 			}
@@ -188,15 +252,7 @@ fun AmiberryApp() {
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
 							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-							onClick = {
-								navController.navigate(screen.route) {
-									popUpTo(navController.graph.findStartDestination().id) {
-										saveState = true
-									}
-									launchSingleTop = true
-									restoreState = true
-								}
-							}
+							onClick = { guardedNavigate { navigateToRoute(screen.route) } }
 						)
 					}
 				}
