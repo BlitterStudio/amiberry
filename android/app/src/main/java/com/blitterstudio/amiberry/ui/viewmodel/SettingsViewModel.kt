@@ -15,19 +15,39 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.ConfigParser
+import com.blitterstudio.amiberry.data.ConfigRepository
+import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.ui.hasTouchScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
 	private val repository = FileRepository.getInstance(application)
+	private val configRepository = ConfigRepository.getInstance(application)
 
 	var settings by mutableStateOf(EmulatorSettings())
 		private set
 
 	var currentUnknownLines by mutableStateOf<List<String>>(emptyList())
 		private set
+
+	var currentConfigName by mutableStateOf<String?>(null)
+		private set
+
+	var currentConfigDescription by mutableStateOf("")
+		private set
+
+	// State-backed so updating the baseline (on save/load, when `settings` itself does not
+	// change) still triggers recomposition of anything observing isDirty.
+	private var baselineSettings by mutableStateOf(EmulatorSettings())
+	private var baselineUnknownLines by mutableStateOf<List<String>>(emptyList())
+
+	val isDirty: Boolean
+		get() = currentConfigName != null &&
+			(settings != baselineSettings || currentUnknownLines != baselineUnknownLines)
 
 	val availableRoms: StateFlow<List<AmigaFile>> = repository.roms
 	val availableFloppies: StateFlow<List<AmigaFile>> = repository.floppies
@@ -81,11 +101,58 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		saveLastSession()
 	}
 
-	fun loadConfig(parsed: ConfigParser.ParsedConfig) {
+	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String) {
 		settings = applyConstraints(parsed.settings)
 		currentUnknownLines = parsed.unknownLines
+		currentConfigName = name
+		currentConfigDescription = parsed.description
 		autoSelectDefaultRomIfNeeded(availableRoms.value)
+		baselineSettings = settings
+		baselineUnknownLines = currentUnknownLines
 		saveLastSession()
+	}
+
+	/** Overwrite the config currently being edited. Requires an open config. */
+	suspend fun saveTracked(): ConfigurationSaveActions.SaveResult {
+		val name = currentConfigName ?: return ConfigurationSaveActions.SaveResult.InvalidName
+		return saveAs(name, currentConfigDescription, allowOverwrite = true)
+	}
+
+	/**
+	 * Save under [name]. With [allowOverwrite] false, a collision with a *different*
+	 * existing config returns AlreadyExists so the UI can confirm. On success the saved
+	 * config becomes the tracked config and the dirty baseline is reset.
+	 */
+	suspend fun saveAs(
+		name: String,
+		description: String,
+		allowOverwrite: Boolean
+	): ConfigurationSaveActions.SaveResult {
+		val savedSettings = settings
+		val savedUnknownLines = currentUnknownLines
+		val result = withContext(Dispatchers.IO) {
+			configRepository.saveResolved(
+				settings = savedSettings,
+				requestedName = name,
+				currentConfigName = currentConfigName,
+				unknownLines = savedUnknownLines,
+				description = description,
+				allowOverwrite = allowOverwrite
+			)
+		}
+		if (result is ConfigurationSaveActions.SaveResult.Saved) {
+			currentConfigName = result.file.nameWithoutExtension
+			currentConfigDescription = description
+			baselineSettings = savedSettings
+			baselineUnknownLines = savedUnknownLines
+		}
+		return result
+	}
+
+	/** Revert in-memory edits back to the last saved/loaded values of the open config. */
+	fun discardChanges() {
+		settings = baselineSettings
+		currentUnknownLines = baselineUnknownLines
 	}
 
 	private fun autoSelectDefaultRomIfNeeded(roms: List<AmigaFile>) {

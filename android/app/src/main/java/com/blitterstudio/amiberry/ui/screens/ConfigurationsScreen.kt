@@ -148,7 +148,7 @@ fun ConfigurationsScreen(
 							scope.launch {
 								when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
 									is ConfigurationActions.LoadResult.Loaded -> {
-										settingsViewModel.loadConfig(result.value)
+										settingsViewModel.loadConfig(result.value, config.name)
 										navController.navigate(Screen.Settings.route) {
 											popUpTo(Screen.Configurations.route) { inclusive = false }
 										}

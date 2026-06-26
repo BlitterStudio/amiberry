@@ -24,4 +24,14 @@ class ConfigurationsScreenArchitectureTest {
 			source.contains("R.string.configurations_refresh")
 		)
 	}
+
+	@Test
+	fun `editing a config passes its name so the editor can save it back`() {
+		val source = File("src/main/java/com/blitterstudio/amiberry/ui/screens/ConfigurationsScreen.kt").readText()
+
+		assertTrue(
+			"Edit should hand the config name to the Settings editor so Save can overwrite it.",
+			source.contains("settingsViewModel.loadConfig(result.value, config.name)")
+		)
+	}
 }
