@@ -34,7 +34,6 @@
     <string name="action_duplicate">Duplicate</string>
     <string name="action_launch">Launch</string>
     <string name="action_edit_config">Edit Config</string>
-    <string name="action_save_configuration">Save Configuration</string>
     <string name="action_advanced">Advanced</string>
     <string name="action_save_as">Save As…</string>
     <string name="action_edit_advanced_imgui">Edit in Advanced mode (ImGui)</string>

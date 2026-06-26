@@ -153,6 +153,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	fun discardChanges() {
 		settings = baselineSettings
 		currentUnknownLines = baselineUnknownLines
+		saveLastSession()
 	}
 
 	private fun autoSelectDefaultRomIfNeeded(roms: List<AmigaFile>) {

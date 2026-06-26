@@ -34,4 +34,16 @@ class AppShellUnsavedChangesArchitectureTest {
 		assertTrue(source.contains("settingsViewModel.discardChanges()"))
 		assertTrue(source.contains("R.string.action_discard"))
 	}
+
+	@Test
+	fun `guard does not fire when re-selecting the current Settings tab`() {
+		assertTrue(source.contains("targetRoute != Screen.Settings.route"))
+		assertTrue(source.contains("guardedNavigate(screen.route)"))
+	}
+
+	@Test
+	fun `guard save failure surfaces feedback instead of getting stuck`() {
+		assertTrue(source.contains("Toast"))
+		assertTrue(source.contains("R.string.msg_failed_save_config"))
+	}
 }

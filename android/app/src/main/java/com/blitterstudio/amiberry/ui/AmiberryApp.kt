@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.ui
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
@@ -57,7 +58,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun AmiberryApp() {
 	val navController = rememberNavController()
-	val activity = LocalContext.current.findActivity() as? MainActivity
+	val context = LocalContext.current
+	val activity = context.findActivity() as? MainActivity
 	val crashDetected = activity?.emulatorCrashDetected == true
 	val assetExtractionFailed = activity?.assetExtractionFailed == true
 	val visibleGlobalDialog = GlobalDialogState.visibleDialog(
@@ -167,8 +169,8 @@ fun AmiberryApp() {
 
 	val onSettingsRoute = currentDestination?.hierarchy?.any { it.route == Screen.Settings.route } == true
 
-	fun guardedNavigate(action: () -> Unit) {
-		if (onSettingsRoute && settingsViewModel.isDirty) {
+	fun guardedNavigate(targetRoute: String, action: () -> Unit) {
+		if (targetRoute != Screen.Settings.route && onSettingsRoute && settingsViewModel.isDirty) {
 			pendingNavigation = action
 		} else {
 			action()
@@ -202,6 +204,13 @@ fun AmiberryApp() {
 						if (result is ConfigurationSaveActions.SaveResult.Saved) {
 							pendingNavigation = null
 							proceed()
+						} else {
+							pendingNavigation = null
+							Toast.makeText(
+								context,
+								context.getString(R.string.msg_failed_save_config),
+								Toast.LENGTH_SHORT
+							).show()
 						}
 					}
 				}) {
@@ -234,7 +243,7 @@ fun AmiberryApp() {
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
 							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-						onClick = { guardedNavigate { navigateToRoute(screen.route) } }
+						onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } }
 					)
 				}
 			}
@@ -252,7 +261,7 @@ fun AmiberryApp() {
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
 							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-							onClick = { guardedNavigate { navigateToRoute(screen.route) } }
+							onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } }
 						)
 					}
 				}
