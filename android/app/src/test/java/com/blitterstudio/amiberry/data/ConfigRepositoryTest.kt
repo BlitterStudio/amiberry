@@ -128,6 +128,33 @@ class ConfigRepositoryTest {
 		assertTrue(existing.readText().contains("68020"))
 	}
 
+	@Test
+	fun `saveResolved gates a different-config collision behind allowOverwrite`() {
+		val source = File("src/main/java/com/blitterstudio/amiberry/data/ConfigRepository.kt").readText()
+
+		assertTrue(
+			"ConfigRepository should expose saveResolved(...) with currentConfigName and allowOverwrite.",
+			Regex("""fun saveResolved\([\s\S]*currentConfigName[\s\S]*allowOverwrite""")
+				.containsMatchIn(source)
+		)
+		assertTrue(
+			"saveResolved should resolve the request through ConfigSaveResolver.",
+			source.contains("ConfigSaveResolver.resolve(")
+		)
+		assertTrue(
+			"A collision with a different config must return AlreadyExists unless allowOverwrite is set.",
+			Regex("""CollisionWithOther[\s\S]*if \(allowOverwrite\)[\s\S]*else return[\s\S]*AlreadyExists""")
+				.containsMatchIn(source)
+		)
+	}
+
+	@Test
+	fun `overwriteConfigAtPath writes the exact user config file`() {
+		val source = File("src/main/java/com/blitterstudio/amiberry/data/ConfigRepository.kt").readText()
+		assertTrue(source.contains("fun overwriteConfigAtPath("))
+		assertTrue(source.contains("ConfigFiles.userConfigFile(confDir, path)"))
+	}
+
 	/**
 	 * Mirror of ConfigRepository.isValidConfigName for testing without Context.
 	 */

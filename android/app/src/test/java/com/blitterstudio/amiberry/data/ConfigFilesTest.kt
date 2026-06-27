@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -101,6 +102,29 @@ class ConfigFilesTest {
 		assertNull(ConfigFiles.targetFileForName(confDir, ".hidden"))
 		assertNull(ConfigFiles.targetFileForName(confDir, "a/b"))
 		assertNull(ConfigFiles.targetFileForName(confDir, "a\\b"))
+	}
+
+	@Test
+	fun `userConfigFile preserves the exact filename and extension case`() {
+		val confDir = tempDir.newFolder("Configurations")
+		// Capture the name-based filename BEFORE the file exists so canonical resolution
+		// cannot fold Workbench.uae → Workbench.UAE on case-insensitive filesystems (Windows).
+		val nameBasedName = ConfigFiles.targetFileForName(confDir, "Workbench")!!.name
+		val upper = File(confDir, "Workbench.UAE")
+		upper.writeText("cpu_model=68000\n")
+
+		val resolved = ConfigFiles.userConfigFile(confDir, upper.absolutePath)
+
+		assertEquals(upper.canonicalFile, resolved)
+		// A name-based target would have forced a different lowercase-extension file:
+		assertNotEquals(resolved!!.name, nameBasedName)
+	}
+
+	@Test
+	fun `userConfigFile rejects a path outside the configurations dir`() {
+		val confDir = tempDir.newFolder("Configurations")
+		val outside = tempDir.newFile("Outside.uae")
+		assertNull(ConfigFiles.userConfigFile(confDir, outside.absolutePath))
 	}
 
 	private fun configFile(confDir: File, name: String, text: String): File =

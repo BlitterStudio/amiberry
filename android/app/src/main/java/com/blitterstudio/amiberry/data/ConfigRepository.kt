@@ -58,22 +58,65 @@ class ConfigRepository(private val context: Context) {
 			ConfigurationSaveActions.SaveTarget.InvalidName -> return ConfigurationSaveActions.SaveResult.InvalidName
 			ConfigurationSaveActions.SaveTarget.AlreadyExists -> return ConfigurationSaveActions.SaveResult.AlreadyExists
 		}
+		return writeConfigFile(target, settings, unknownLines, description)
+	}
 
+	/**
+	 * Save honoring the config currently being edited: silently overwrites the open
+	 * config, writes brand-new names, and only reports AlreadyExists when the name
+	 * collides with a *different* existing config and [allowOverwrite] is false.
+	 */
+	fun saveResolved(
+		settings: EmulatorSettings,
+		requestedName: String,
+		currentConfigName: String?,
+		unknownLines: List<String> = emptyList(),
+		description: String = "",
+		allowOverwrite: Boolean = false
+	): ConfigurationSaveActions.SaveResult {
+		val target = when (val resolution = ConfigSaveResolver.resolve(confDir, requestedName, currentConfigName)) {
+			ConfigSaveResolver.Resolution.InvalidName -> return ConfigurationSaveActions.SaveResult.InvalidName
+			is ConfigSaveResolver.Resolution.WriteNew -> resolution.file
+			is ConfigSaveResolver.Resolution.OverwriteTracked -> resolution.file
+			is ConfigSaveResolver.Resolution.CollisionWithOther ->
+				if (allowOverwrite) resolution.file
+				else return ConfigurationSaveActions.SaveResult.AlreadyExists
+		}
+		return writeConfigFile(target, settings, unknownLines, description)
+	}
+
+	/**
+	 * Overwrite the exact config file at [path], preserving its original filename and
+	 * extension case — used when re-saving the config the user opened. Returns InvalidName
+	 * if [path] is not a user config inside the configurations directory.
+	 */
+	fun overwriteConfigAtPath(
+		path: String,
+		settings: EmulatorSettings,
+		unknownLines: List<String> = emptyList(),
+		description: String = ""
+	): ConfigurationSaveActions.SaveResult {
+		val target = ConfigFiles.userConfigFile(confDir, path)
+			?: return ConfigurationSaveActions.SaveResult.InvalidName
+		return writeConfigFile(target, settings, unknownLines, description)
+	}
+
+	private fun writeConfigFile(
+		target: File,
+		settings: EmulatorSettings,
+		unknownLines: List<String>,
+		description: String
+	): ConfigurationSaveActions.SaveResult {
 		return try {
-			val file = ConfigGenerator.writeConfig(context, settings, target.name)
-
-			// Append description if provided
+			target.writeText(ConfigGenerator.generate(settings))
 			if (description.isNotBlank()) {
-				file.appendText("config_description=$description\n")
+				target.appendText("config_description=$description\n")
 			}
-
-			// Append preserved unknown lines from original config
 			if (unknownLines.isNotEmpty()) {
-				file.appendText("\n; Preserved settings from original config\n")
-				unknownLines.forEach { file.appendText("$it\n") }
+				target.appendText("\n; Preserved settings from original config\n")
+				unknownLines.forEach { target.appendText("$it\n") }
 			}
-
-			ConfigurationSaveActions.SaveResult.Saved(file)
+			ConfigurationSaveActions.SaveResult.Saved(target)
 		} catch (_: IOException) {
 			ConfigurationSaveActions.SaveResult.Failed
 		}

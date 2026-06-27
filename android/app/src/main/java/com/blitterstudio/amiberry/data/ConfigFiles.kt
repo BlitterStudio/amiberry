@@ -73,6 +73,9 @@ object ConfigFiles {
 	fun isUserConfigFileName(name: String): Boolean =
 		!name.startsWith(".") && name.substringAfterLast('.', "").equals("uae", ignoreCase = true)
 
+	/** Resolve a stored absolute [path] to its File only if it is a user config inside [confDir]. */
+	fun userConfigFile(confDir: File, path: String): File? = userConfigFileFromPath(confDir, path)
+
 	private fun normalizedBaseName(name: String): String? {
 		val trimmed = name.trim()
 		if (trimmed.isBlank()) return null

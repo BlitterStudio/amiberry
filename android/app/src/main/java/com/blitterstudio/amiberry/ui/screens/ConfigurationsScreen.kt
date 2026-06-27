@@ -66,6 +66,8 @@ import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchGuarded
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
@@ -74,6 +76,14 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+
+private fun NavController.switchToTab(route: String) {
+	navigate(route) {
+		popUpTo(graph.findStartDestination().id) { saveState = true }
+		launchSingleTop = true
+		restoreState = true
+	}
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +140,7 @@ fun ConfigurationsScreen(
 							color = MaterialTheme.colorScheme.onSurfaceVariant
 						)
 						Spacer(modifier = Modifier.height(24.dp))
-						Button(onClick = { navController.navigate(Screen.Settings.route) }) {
+						Button(onClick = { navController.switchToTab(Screen.Settings.route) }) {
 							Text(stringResource(R.string.configurations_empty_cta))
 						}
 				}
@@ -148,10 +158,8 @@ fun ConfigurationsScreen(
 							scope.launch {
 								when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
 									is ConfigurationActions.LoadResult.Loaded -> {
-										settingsViewModel.loadConfig(result.value)
-										navController.navigate(Screen.Settings.route) {
-											popUpTo(Screen.Configurations.route) { inclusive = false }
-										}
+										settingsViewModel.loadConfig(result.value, config.name, config.path)
+										navController.switchToTab(Screen.Settings.route)
 									}
 									is ConfigurationActions.LoadResult.Failed -> {
 										snackbarHostState.showSnackbar(actionMessage(result.message))

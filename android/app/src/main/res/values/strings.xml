@@ -34,8 +34,8 @@
     <string name="action_duplicate">Duplicate</string>
     <string name="action_launch">Launch</string>
     <string name="action_edit_config">Edit Config</string>
-    <string name="action_save_configuration">Save Configuration</string>
     <string name="action_advanced">Advanced</string>
+    <string name="action_save_as">Save As…</string>
     <string name="action_edit_advanced_imgui">Edit in Advanced mode (ImGui)</string>
     <string name="action_eject">Eject</string>
     <string name="action_share">Share</string>
@@ -50,6 +50,14 @@
     <string name="label_configuration_description">Description (optional)</string>
     <string name="dialog_save_config_title">Save Configuration</string>
     <string name="dialog_save_config_message">Enter a name for this configuration.</string>
+    <string name="settings_new_configuration">New configuration</string>
+    <string name="settings_unsaved_changes">Unsaved changes</string>
+    <string name="dialog_overwrite_config_title">Overwrite configuration?</string>
+    <string name="dialog_overwrite_config_message">A configuration named \"%1$s\" already exists. Overwrite it?</string>
+    <string name="action_overwrite">Overwrite</string>
+    <string name="action_discard">Discard</string>
+    <string name="dialog_unsaved_changes_title">Unsaved changes</string>
+    <string name="dialog_unsaved_changes_message">Save your changes to \"%1$s\" before leaving?</string>
     <string name="dialog_delete_config_title">Delete Configuration</string>
     <string name="dialog_delete_config_message">Delete "%1$s"? This cannot be undone.</string>
 
