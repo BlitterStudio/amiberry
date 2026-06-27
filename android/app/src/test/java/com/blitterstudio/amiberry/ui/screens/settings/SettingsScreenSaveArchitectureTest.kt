@@ -47,4 +47,11 @@ class SettingsScreenSaveArchitectureTest {
 				.containsMatchIn(source)
 		)
 	}
+
+	@Test
+	fun `settings screen exposes dependency feedback and intent presets`() {
+		assertTrue(source.contains("SettingsAdjustmentBanner("))
+		assertTrue(source.contains("SettingsPresetSelector("))
+		assertTrue(source.contains("viewModel.applyIntentPreset"))
+	}
 }

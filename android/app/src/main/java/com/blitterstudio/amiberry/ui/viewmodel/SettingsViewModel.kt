@@ -15,6 +15,10 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
+import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotices
+import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
+import com.blitterstudio.amiberry.data.model.SettingsIntentPresets
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
@@ -32,6 +36,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	private val appPreferences = AppPreferences.getInstance(application)
 
 	var settings by mutableStateOf(EmulatorSettings())
+		private set
+
+	var adjustmentNotices by mutableStateOf<List<SettingsAdjustmentNotice>>(emptyList())
 		private set
 
 	var currentUnknownLines by mutableStateOf<List<String>>(emptyList())
@@ -113,13 +120,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			onScreenJoystick = previousSettings.onScreenJoystick,
 			onScreenKeyboard = previousSettings.onScreenKeyboard
 		)
-		settings = applyConstraints(newSettings)
+		applyConstrainedSettings(newSettings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
 
 	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String, path: String) {
-		settings = applyConstraints(appPreferences.applyRememberedAndroidControls(parsed.settings, parsed.explicitKeys))
+		applyConstrainedSettings(
+			appPreferences.applyRememberedAndroidControls(parsed.settings, parsed.explicitKeys),
+			publishNotices = true
+		)
 		currentUnknownLines = parsed.unknownLines
 		currentConfigName = name
 		currentConfigDescription = parsed.description
@@ -194,6 +204,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	fun discardChanges() {
 		settings = baselineSettings
 		currentUnknownLines = baselineUnknownLines
+		clearAdjustmentNotices()
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
@@ -218,9 +229,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	fun updateSettings(transform: (EmulatorSettings) -> EmulatorSettings) {
 		val newSettings = transform(settings)
-		settings = applyConstraints(newSettings)
+		applyConstrainedSettings(newSettings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
+	}
+
+	fun applyIntentPreset(preset: SettingsIntentPreset) {
+		applyConstrainedSettings(
+			SettingsIntentPresets.apply(settings, preset),
+			publishNotices = true
+		)
+		appPreferences.saveAndroidControls(settings)
+		saveLastSession()
+	}
+
+	fun clearAdjustmentNotices() {
+		adjustmentNotices = emptyList()
 	}
 
 	fun applyWhdLoadAutoConfig(file: AmigaFile) {
@@ -235,7 +259,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 				)
 			} ?: return@launch
 
-			settings = applyConstraints(detectedSettings)
+			applyConstrainedSettings(detectedSettings, publishNotices = true)
 			appPreferences.saveAndroidControls(settings)
 			saveLastSession()
 		}
@@ -262,4 +286,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	 */
 	private fun applyConstraints(s: EmulatorSettings): EmulatorSettings =
 		EmulatorSettingsConstraints.apply(s, hasTouchScreen = hasTouchScreen(getApplication()))
+
+	private fun applyConstrainedSettings(requested: EmulatorSettings, publishNotices: Boolean) {
+		val constrained = applyConstraints(requested)
+		settings = constrained
+		if (publishNotices) {
+			adjustmentNotices = SettingsAdjustmentNotices.fromAdjustment(requested, constrained)
+		}
+	}
 }
