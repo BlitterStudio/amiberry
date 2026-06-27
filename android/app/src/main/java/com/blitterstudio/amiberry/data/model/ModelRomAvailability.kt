@@ -15,6 +15,9 @@ object ModelRomAvailability {
 		return selectRomsForModel(model, roms).kick != null
 	}
 
+	fun isRecognizedRom(rom: AmigaFile): Boolean =
+		detectRomId(rom) != null
+
 	fun selectRomsForModel(model: AmigaModel, roms: List<AmigaFile>): SelectedRoms {
 		if (roms.isEmpty()) return SelectedRoms(null, null)
 		val profile = MODEL_ROM_PROFILE[model] ?: return SelectedRoms(null, null)

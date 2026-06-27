@@ -150,6 +150,12 @@
     <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha files to get started.</string>
     <string name="quick_start_select_game_placeholder">(select a game)</string>
     <string name="quick_start_scanning_media">Scanning media</string>
+    <string name="rom_readiness_scanned">ROMs scanned: %1$d</string>
+    <string name="rom_readiness_recognized">Recognized Kickstart ROMs: %1$d</string>
+    <string name="rom_readiness_available_models">Available Quick Start models: %1$s</string>
+    <string name="rom_readiness_no_available_models">No launchable Quick Start models yet.</string>
+    <string name="rom_readiness_unknown_roms">Unrecognized ROM files: %1$d</string>
+    <string name="rom_readiness_missing_models">Missing common models: %1$s</string>
 
     <string name="file_manager_tab_roms">ROMs</string>
     <string name="file_manager_tab_whdload">WHDLoad</string>

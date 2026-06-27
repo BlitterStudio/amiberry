@@ -27,4 +27,13 @@ class QuickStartLayoutTest {
 		assertTrue(quickStartScreen.contains("EffectiveSummaryCard("))
 		assertTrue(quickStartScreen.contains("RecentLaunches.details(entry)"))
 	}
+
+	@Test
+	fun `quick start setup warning includes ROM readiness diagnostics`() {
+		val quickStartScreen = File("src/main/java/com/blitterstudio/amiberry/ui/screens/QuickStartScreen.kt")
+			.readText()
+
+		assertTrue(quickStartScreen.contains("RomReadinessDiagnostics.from(roms)"))
+		assertTrue(quickStartScreen.contains("RomReadinessSummary("))
+	}
 }

@@ -79,6 +79,7 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.launchGuarded
@@ -136,6 +137,7 @@ fun QuickStartScreen(
 	val isScanning by FileRepository.getInstance(context).isScanning.collectAsState()
 	val hasRoms = roms.isNotEmpty()
 	val availableModels = remember(roms) { ModelRomAvailability.availableModels(roms) }
+	val romDiagnostics = remember(roms) { RomReadinessDiagnostics.from(roms) }
 	val selectedModelAvailable = model in availableModels
 	val modeAvailableModels = remember(availableModels, selectedLaunchMode) {
 		when (selectedLaunchMode) {
@@ -510,6 +512,7 @@ fun QuickStartScreen(
 							style = MaterialTheme.typography.bodyMedium,
 							color = MaterialTheme.colorScheme.onErrorContainer
 						)
+						RomReadinessSummary(romDiagnostics)
 						Spacer(modifier = Modifier.height(12.dp))
 						Button(
 							onClick = {
@@ -776,6 +779,58 @@ fun QuickStartScreen(
 			)
 
 			Spacer(modifier = Modifier.height(80.dp))
+		}
+	}
+}
+
+@Composable
+private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
+	Column(
+		modifier = Modifier.padding(top = 12.dp),
+		verticalArrangement = Arrangement.spacedBy(4.dp)
+	) {
+		Text(
+			stringResource(R.string.rom_readiness_scanned, diagnostics.scannedRomCount),
+			style = MaterialTheme.typography.bodySmall,
+			color = MaterialTheme.colorScheme.onErrorContainer
+		)
+		Text(
+			stringResource(R.string.rom_readiness_recognized, diagnostics.recognizedRomCount),
+			style = MaterialTheme.typography.bodySmall,
+			color = MaterialTheme.colorScheme.onErrorContainer
+		)
+		if (diagnostics.availableModels.isEmpty()) {
+			Text(
+				stringResource(R.string.rom_readiness_no_available_models),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onErrorContainer
+			)
+		} else {
+			Text(
+				stringResource(
+					R.string.rom_readiness_available_models,
+					diagnostics.availableModels.joinToString { it.cmdArg }
+				),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onErrorContainer
+			)
+		}
+		if (diagnostics.unknownRomCount > 0) {
+			Text(
+				stringResource(R.string.rom_readiness_unknown_roms, diagnostics.unknownRomCount),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onErrorContainer
+			)
+		}
+		if (diagnostics.missingCommonModels.isNotEmpty()) {
+			Text(
+				stringResource(
+					R.string.rom_readiness_missing_models,
+					diagnostics.missingCommonModels.joinToString { it.cmdArg }
+				),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onErrorContainer
+			)
 		}
 	}
 }
