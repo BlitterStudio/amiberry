@@ -40,6 +40,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	var currentConfigDescription by mutableStateOf("")
 		private set
 
+	var currentConfigPath by mutableStateOf<String?>(null)
+		private set
+
 	// State-backed so updating the baseline (on save/load, when `settings` itself does not
 	// change) still triggers recomposition of anything observing isDirty.
 	private var baselineSettings by mutableStateOf(EmulatorSettings())
@@ -101,21 +104,43 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		saveLastSession()
 	}
 
-	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String) {
+	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String, path: String) {
 		settings = applyConstraints(parsed.settings)
 		currentUnknownLines = parsed.unknownLines
 		currentConfigName = name
 		currentConfigDescription = parsed.description
+		currentConfigPath = path
 		autoSelectDefaultRomIfNeeded(availableRoms.value)
 		baselineSettings = settings
 		baselineUnknownLines = currentUnknownLines
 		saveLastSession()
 	}
 
-	/** Overwrite the config currently being edited. Requires an open config. */
+	/** Overwrite the exact config file currently being edited. Requires an open config. */
 	suspend fun saveTracked(): ConfigurationSaveActions.SaveResult {
-		val name = currentConfigName ?: return ConfigurationSaveActions.SaveResult.InvalidName
-		return saveAs(name, currentConfigDescription, allowOverwrite = true)
+		val path = currentConfigPath
+		if (path == null) {
+			// No exact path tracked — fall back to name-based save.
+			val name = currentConfigName ?: return ConfigurationSaveActions.SaveResult.InvalidName
+			return saveAs(name, currentConfigDescription, allowOverwrite = true)
+		}
+		val savedSettings = settings
+		val savedUnknownLines = currentUnknownLines
+		val result = withContext(Dispatchers.IO) {
+			configRepository.overwriteConfigAtPath(
+				path = path,
+				settings = savedSettings,
+				unknownLines = savedUnknownLines,
+				description = currentConfigDescription
+			)
+		}
+		if (result is ConfigurationSaveActions.SaveResult.Saved) {
+			currentConfigName = result.file.nameWithoutExtension
+			currentConfigPath = result.file.absolutePath
+			baselineSettings = savedSettings
+			baselineUnknownLines = savedUnknownLines
+		}
+		return result
 	}
 
 	/**
@@ -142,6 +167,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		}
 		if (result is ConfigurationSaveActions.SaveResult.Saved) {
 			currentConfigName = result.file.nameWithoutExtension
+			currentConfigPath = result.file.absolutePath
 			currentConfigDescription = description
 			baselineSettings = savedSettings
 			baselineUnknownLines = savedUnknownLines

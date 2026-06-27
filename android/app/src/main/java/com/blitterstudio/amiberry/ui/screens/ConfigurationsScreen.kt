@@ -158,7 +158,7 @@ fun ConfigurationsScreen(
 							scope.launch {
 								when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
 									is ConfigurationActions.LoadResult.Loaded -> {
-										settingsViewModel.loadConfig(result.value, config.name)
+										settingsViewModel.loadConfig(result.value, config.name, config.path)
 										navController.switchToTab(Screen.Settings.route)
 									}
 									is ConfigurationActions.LoadResult.Failed -> {

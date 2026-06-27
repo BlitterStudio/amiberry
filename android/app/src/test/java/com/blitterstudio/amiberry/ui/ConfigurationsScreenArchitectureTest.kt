@@ -32,7 +32,7 @@ class ConfigurationsScreenArchitectureTest {
 
 		assertTrue(
 			"Edit should hand the config name to the Settings editor so Save can overwrite it.",
-			source.contains("settingsViewModel.loadConfig(result.value, config.name)")
+			source.contains("settingsViewModel.loadConfig(result.value, config.name, config.path)")
 		)
 	}
 

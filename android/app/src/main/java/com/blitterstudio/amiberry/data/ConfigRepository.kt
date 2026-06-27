@@ -85,6 +85,22 @@ class ConfigRepository(private val context: Context) {
 		return writeConfigFile(target, settings, unknownLines, description)
 	}
 
+	/**
+	 * Overwrite the exact config file at [path], preserving its original filename and
+	 * extension case — used when re-saving the config the user opened. Returns InvalidName
+	 * if [path] is not a user config inside the configurations directory.
+	 */
+	fun overwriteConfigAtPath(
+		path: String,
+		settings: EmulatorSettings,
+		unknownLines: List<String> = emptyList(),
+		description: String = ""
+	): ConfigurationSaveActions.SaveResult {
+		val target = ConfigFiles.userConfigFile(confDir, path)
+			?: return ConfigurationSaveActions.SaveResult.InvalidName
+		return writeConfigFile(target, settings, unknownLines, description)
+	}
+
 	private fun writeConfigFile(
 		target: File,
 		settings: EmulatorSettings,
@@ -92,15 +108,15 @@ class ConfigRepository(private val context: Context) {
 		description: String
 	): ConfigurationSaveActions.SaveResult {
 		return try {
-			val file = ConfigGenerator.writeConfig(context, settings, target.name)
+			target.writeText(ConfigGenerator.generate(settings))
 			if (description.isNotBlank()) {
-				file.appendText("config_description=$description\n")
+				target.appendText("config_description=$description\n")
 			}
 			if (unknownLines.isNotEmpty()) {
-				file.appendText("\n; Preserved settings from original config\n")
-				unknownLines.forEach { file.appendText("$it\n") }
+				target.appendText("\n; Preserved settings from original config\n")
+				unknownLines.forEach { target.appendText("$it\n") }
 			}
-			ConfigurationSaveActions.SaveResult.Saved(file)
+			ConfigurationSaveActions.SaveResult.Saved(target)
 		} catch (_: IOException) {
 			ConfigurationSaveActions.SaveResult.Failed
 		}

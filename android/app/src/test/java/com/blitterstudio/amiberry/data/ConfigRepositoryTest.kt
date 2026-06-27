@@ -148,6 +148,13 @@ class ConfigRepositoryTest {
 		)
 	}
 
+	@Test
+	fun `overwriteConfigAtPath writes the exact user config file`() {
+		val source = File("src/main/java/com/blitterstudio/amiberry/data/ConfigRepository.kt").readText()
+		assertTrue(source.contains("fun overwriteConfigAtPath("))
+		assertTrue(source.contains("ConfigFiles.userConfigFile(confDir, path)"))
+	}
+
 	/**
 	 * Mirror of ConfigRepository.isValidConfigName for testing without Context.
 	 */

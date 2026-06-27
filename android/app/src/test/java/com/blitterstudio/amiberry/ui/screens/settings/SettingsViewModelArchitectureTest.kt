@@ -40,4 +40,11 @@ class SettingsViewModelArchitectureTest {
 		assertTrue(source.contains("fun discardChanges()"))
 		assertTrue(source.contains("configRepository.saveResolved("))
 	}
+
+	@Test
+	fun `tracks the exact config path and overwrites it on save`() {
+		assertTrue(source.contains("var currentConfigPath"))
+		assertTrue(source.contains("configRepository.overwriteConfigAtPath("))
+		assertTrue(Regex("""fun loadConfig\([\s\S]*name: String,\s*path: String""").containsMatchIn(source))
+	}
 }
