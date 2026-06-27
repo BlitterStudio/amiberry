@@ -75,9 +75,19 @@ jobs:
             (readlink $f | grep -q -s "/Library") && echo Removing "$f" && rm -f "$f"; \
           done || exit 0
 
-      - name: Pre-install gobject-introspection from source
+      - name: Ensure GLib is available for QEMU-UAE plugin bundling
         if: matrix.arch == 'intel'
-        run: brew install --build-from-source gobject-introspection
+        run: |
+          # Intel runners normally include GLib already. Avoid upgrading it via
+          # the old gobject-introspection workaround, since Homebrew postinstall
+          # failures there can fail CI even when the libraries are usable.
+          if ! brew --prefix glib >/dev/null 2>&1; then
+            brew install glib || true
+          fi
+
+          glib_prefix="$(brew --prefix glib)"
+          test -f "$glib_prefix/lib/libglib-2.0.0.dylib"
+          test -f "$glib_prefix/lib/libgmodule-2.0.0.dylib"
 
       - name: Install dependencies (Homebrew)
         run: |
