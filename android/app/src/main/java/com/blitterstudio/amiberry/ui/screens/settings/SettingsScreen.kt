@@ -59,6 +59,7 @@ import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.SettingsChange
 import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
 import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -98,6 +99,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	var showSaveAsDialog by remember { mutableStateOf(false) }
 	var overwriteRequest by remember { mutableStateOf<OverwriteRequest?>(null) }
 	var showTopBarMenu by remember { mutableStateOf(false) }
+	var showReviewChangesDialog by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
 	fun importResultMessage(result: FileManager.ImportResult): String {
@@ -176,6 +178,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						expanded = showTopBarMenu,
 						onDismissRequest = { showTopBarMenu = false }
 					) {
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_review_changes)) },
+							leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+							enabled = viewModel.isDirty,
+							onClick = {
+								showTopBarMenu = false
+								showReviewChangesDialog = true
+							}
+						)
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_save_as)) },
 							leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) },
@@ -402,6 +413,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				)
 			}
 
+			if (showReviewChangesDialog) {
+				SettingsChangesDialog(
+					changes = viewModel.changeSummary,
+					onDismiss = { showReviewChangesDialog = false }
+				)
+			}
+
 			overwriteRequest?.let { request ->
 				AlertDialog(
 					onDismissRequest = { overwriteRequest = null },
@@ -568,6 +586,47 @@ private fun SettingsAdjustmentNotice.messageRes(): Int = when (this) {
 	SettingsAdjustmentNotice.OnScreenControlsRequireTouch -> R.string.settings_adjustment_touch_required
 	SettingsAdjustmentNotice.OnScreenJoystickMovedToPort1 -> R.string.settings_adjustment_touch_port
 	SettingsAdjustmentNotice.InvalidInputDeviceReset -> R.string.settings_adjustment_input_reset
+}
+
+@Composable
+private fun SettingsChangesDialog(
+	changes: List<SettingsChange>,
+	onDismiss: () -> Unit
+) {
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = { Text(stringResource(R.string.dialog_review_changes_title)) },
+		text = {
+			Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+				if (changes.isEmpty()) {
+					Text(stringResource(R.string.dialog_review_changes_empty))
+				} else {
+					changes.take(12).forEach { change ->
+						Column {
+							Text(change.label, style = MaterialTheme.typography.labelLarge)
+							Text(
+								stringResource(R.string.dialog_review_changes_row, change.before, change.after),
+								style = MaterialTheme.typography.bodySmall,
+								color = MaterialTheme.colorScheme.onSurfaceVariant
+							)
+						}
+					}
+					if (changes.size > 12) {
+						Text(
+							stringResource(R.string.dialog_review_changes_more, changes.size - 12),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant
+						)
+					}
+				}
+			}
+		},
+		confirmButton = {
+			TextButton(onClick = onDismiss) {
+				Text(stringResource(R.string.action_done))
+			}
+		}
+	)
 }
 
 private data class OverwriteRequest(val name: String, val description: String)

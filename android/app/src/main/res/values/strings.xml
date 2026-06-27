@@ -41,6 +41,8 @@
     <string name="action_share">Share</string>
     <string name="action_clear_search">Clear search</string>
     <string name="action_dismiss">Dismiss</string>
+    <string name="action_done">Done</string>
+    <string name="action_review_changes">Review Changes</string>
     <string name="action_launch_named">Launch %1$s</string>
     <string name="action_edit_named">Edit %1$s</string>
     <string name="action_delete_named">Delete %1$s</string>
@@ -84,6 +86,10 @@
     <string name="action_discard">Discard</string>
     <string name="dialog_unsaved_changes_title">Unsaved changes</string>
     <string name="dialog_unsaved_changes_message">Save your changes to \"%1$s\" before leaving?</string>
+    <string name="dialog_review_changes_title">Review Changes</string>
+    <string name="dialog_review_changes_empty">Only preserved advanced settings changed.</string>
+    <string name="dialog_review_changes_row">%1$s -> %2$s</string>
+    <string name="dialog_review_changes_more">And %1$d more.</string>
     <string name="dialog_delete_config_title">Delete Configuration</string>
     <string name="dialog_delete_config_message">Delete "%1$s"? This cannot be undone.</string>
 
@@ -107,6 +113,12 @@
 
     <string name="configurations_empty_title">No configurations saved yet</string>
     <string name="configurations_empty_message">Configure settings and launch emulation to generate config files, or use the Advanced (ImGui) interface to create them.</string>
+    <string name="configurations_no_search_results">No matching configurations</string>
+    <string name="configurations_search_help">Try another search term or filter.</string>
+    <string name="configurations_search_label">Search configurations</string>
+    <string name="configurations_filter_all">All</string>
+    <string name="configurations_filter_described">Described</string>
+    <string name="configurations_filter_recent">Recent</string>
 
     <string name="quick_start_recent_title">Recent</string>
     <string name="quick_start_recent_empty">No recent launches yet.</string>

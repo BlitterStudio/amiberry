@@ -54,4 +54,11 @@ class SettingsScreenSaveArchitectureTest {
 		assertTrue(source.contains("SettingsPresetSelector("))
 		assertTrue(source.contains("viewModel.applyIntentPreset"))
 	}
+
+	@Test
+	fun `settings screen exposes a review changes dialog`() {
+		assertTrue(source.contains("R.string.action_review_changes"))
+		assertTrue(source.contains("SettingsChangesDialog("))
+		assertTrue(source.contains("viewModel.changeSummary"))
+	}
 }

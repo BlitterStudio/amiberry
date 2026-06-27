@@ -15,6 +15,8 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.SettingsChange
+import com.blitterstudio.amiberry.data.model.SettingsChangeSummary
 import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
 import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotices
 import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
@@ -61,6 +63,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	val isDirty: Boolean
 		get() = currentConfigName != null &&
 			(settings != baselineSettings || currentUnknownLines != baselineUnknownLines)
+
+	val changeSummary: List<SettingsChange>
+		get() = SettingsChangeSummary.diff(baselineSettings, settings)
 
 	val availableRoms: StateFlow<List<AmigaFile>> = repository.roms
 	val availableFloppies: StateFlow<List<AmigaFile>> = repository.floppies
