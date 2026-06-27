@@ -39,7 +39,11 @@ int CDiskImage::Lock(std::unique_ptr<CBaseFile> pf)
 // release file
 int CDiskImage::Unlock()
 {
-	return imgeUnsupported;
+	// the base class is only used as an empty placeholder container, so there
+	// is nothing locked to release; report success. CAPSLockImage[Memory] now
+	// calls Unlock() before (re)locking and aborts on any non-imgeOk result, so
+	// returning an error here would make the first lock of every image fail.
+	return imgeOk;
 }
 
 // load image file and test for erros
