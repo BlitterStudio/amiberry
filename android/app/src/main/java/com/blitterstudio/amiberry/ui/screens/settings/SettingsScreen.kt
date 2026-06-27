@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -17,8 +19,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
@@ -53,6 +59,9 @@ import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.SettingsChange
+import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
+import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Row
@@ -90,6 +99,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	var showSaveAsDialog by remember { mutableStateOf(false) }
 	var overwriteRequest by remember { mutableStateOf<OverwriteRequest?>(null) }
 	var showTopBarMenu by remember { mutableStateOf(false) }
+	var showReviewChangesDialog by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
 	fun importResultMessage(result: FileManager.ImportResult): String {
@@ -168,6 +178,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						expanded = showTopBarMenu,
 						onDismissRequest = { showTopBarMenu = false }
 					) {
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_review_changes)) },
+							leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+							enabled = viewModel.isDirty,
+							onClick = {
+								showTopBarMenu = false
+								showReviewChangesDialog = true
+							}
+						)
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_save_as)) },
 							leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) },
@@ -288,6 +307,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				}
 			}
 
+			SettingsPresetSelector(
+				onPresetSelected = { preset -> viewModel.applyIntentPreset(preset) }
+			)
+
+			SettingsAdjustmentBanner(
+				notices = viewModel.adjustmentNotices,
+				onDismiss = viewModel::clearAdjustmentNotices
+			)
+
 			if (!canStart) {
 				Card(
 					modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -385,6 +413,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				)
 			}
 
+			if (showReviewChangesDialog) {
+				SettingsChangesDialog(
+					changes = viewModel.changeSummary,
+					onDismiss = { showReviewChangesDialog = false }
+				)
+			}
+
 			overwriteRequest?.let { request ->
 				AlertDialog(
 					onDismissRequest = { overwriteRequest = null },
@@ -412,6 +447,186 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				)
 			}
 	}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsPresetSelector(
+	onPresetSelected: (SettingsIntentPreset) -> Unit
+) {
+	var expanded by remember { mutableStateOf(false) }
+
+	OutlinedCard(
+		modifier = Modifier
+			.fillMaxWidth()
+			.padding(horizontal = 16.dp, vertical = 8.dp)
+	) {
+		Column(modifier = Modifier.padding(12.dp)) {
+			ExposedDropdownMenuBox(
+				expanded = expanded,
+				onExpandedChange = { expanded = it }
+			) {
+				OutlinedTextField(
+					value = stringResource(R.string.settings_preset_select),
+					onValueChange = {},
+					readOnly = true,
+					label = { Text(stringResource(R.string.settings_presets_title)) },
+					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+					modifier = Modifier
+						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+						.fillMaxWidth()
+				)
+				ExposedDropdownMenu(
+					expanded = expanded,
+					onDismissRequest = { expanded = false }
+				) {
+					SettingsIntentPreset.entries.forEach { preset ->
+						DropdownMenuItem(
+							text = {
+								Column {
+									Text(stringResource(preset.titleRes()))
+									Text(
+										stringResource(preset.descriptionRes()),
+										style = MaterialTheme.typography.bodySmall,
+										color = MaterialTheme.colorScheme.onSurfaceVariant
+									)
+								}
+							},
+							onClick = {
+								onPresetSelected(preset)
+								expanded = false
+							}
+						)
+					}
+				}
+			}
+		}
+	}
+}
+
+@Composable
+private fun SettingsAdjustmentBanner(
+	notices: List<SettingsAdjustmentNotice>,
+	onDismiss: () -> Unit
+) {
+	if (notices.isEmpty()) return
+
+	Card(
+		modifier = Modifier
+			.fillMaxWidth()
+			.padding(horizontal = 16.dp, vertical = 8.dp),
+		colors = CardDefaults.cardColors(
+			containerColor = MaterialTheme.colorScheme.secondaryContainer
+		)
+	) {
+		Column(
+			modifier = Modifier.padding(16.dp),
+			verticalArrangement = Arrangement.spacedBy(8.dp)
+		) {
+			Row(verticalAlignment = Alignment.CenterVertically) {
+				Icon(
+					Icons.Default.Info,
+					contentDescription = null,
+					modifier = Modifier.size(22.dp),
+					tint = MaterialTheme.colorScheme.onSecondaryContainer
+				)
+				Spacer(modifier = Modifier.width(8.dp))
+				Text(
+					stringResource(R.string.settings_adjustments_title),
+					style = MaterialTheme.typography.titleMedium,
+					color = MaterialTheme.colorScheme.onSecondaryContainer
+				)
+			}
+			notices.take(4).forEach { notice ->
+				Text(
+					stringResource(notice.messageRes()),
+					style = MaterialTheme.typography.bodyMedium,
+					color = MaterialTheme.colorScheme.onSecondaryContainer
+				)
+			}
+			if (notices.size > 4) {
+				Text(
+					stringResource(R.string.settings_adjustments_more, notices.size - 4),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSecondaryContainer
+				)
+			}
+			TextButton(onClick = onDismiss) {
+				Text(stringResource(R.string.action_dismiss))
+			}
+		}
+	}
+}
+
+private fun SettingsIntentPreset.titleRes(): Int = when (this) {
+	SettingsIntentPreset.Compatibility -> R.string.settings_preset_compatibility
+	SettingsIntentPreset.Balanced -> R.string.settings_preset_balanced
+	SettingsIntentPreset.Performance -> R.string.settings_preset_performance
+	SettingsIntentPreset.PixelPerfect -> R.string.settings_preset_pixel_perfect
+	SettingsIntentPreset.TouchControls -> R.string.settings_preset_touch_controls
+}
+
+private fun SettingsIntentPreset.descriptionRes(): Int = when (this) {
+	SettingsIntentPreset.Compatibility -> R.string.settings_preset_compatibility_desc
+	SettingsIntentPreset.Balanced -> R.string.settings_preset_balanced_desc
+	SettingsIntentPreset.Performance -> R.string.settings_preset_performance_desc
+	SettingsIntentPreset.PixelPerfect -> R.string.settings_preset_pixel_perfect_desc
+	SettingsIntentPreset.TouchControls -> R.string.settings_preset_touch_controls_desc
+}
+
+private fun SettingsAdjustmentNotice.messageRes(): Int = when (this) {
+	SettingsAdjustmentNotice.AgaRequires68020 -> R.string.settings_adjustment_aga_cpu
+	SettingsAdjustmentNotice.CpuRequires32BitAddressing -> R.string.settings_adjustment_cpu_32bit
+	SettingsAdjustmentNotice.CycleExactDisabledJit -> R.string.settings_adjustment_cycle_exact_jit
+	SettingsAdjustmentNotice.CycleExactDisabledImmediateBlits -> R.string.settings_adjustment_cycle_exact_blits
+	SettingsAdjustmentNotice.Z3Requires32BitAddressing -> R.string.settings_adjustment_z3_32bit
+	SettingsAdjustmentNotice.IntegerScalingSynced -> R.string.settings_adjustment_integer_scaling
+	SettingsAdjustmentNotice.JitRequires68020 -> R.string.settings_adjustment_jit_cpu
+	SettingsAdjustmentNotice.JitRequires32BitAddressing -> R.string.settings_adjustment_jit_32bit
+	SettingsAdjustmentNotice.OnScreenControlsRequireTouch -> R.string.settings_adjustment_touch_required
+	SettingsAdjustmentNotice.OnScreenJoystickMovedToPort1 -> R.string.settings_adjustment_touch_port
+	SettingsAdjustmentNotice.InvalidInputDeviceReset -> R.string.settings_adjustment_input_reset
+}
+
+@Composable
+private fun SettingsChangesDialog(
+	changes: List<SettingsChange>,
+	onDismiss: () -> Unit
+) {
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = { Text(stringResource(R.string.dialog_review_changes_title)) },
+		text = {
+			Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+				if (changes.isEmpty()) {
+					Text(stringResource(R.string.dialog_review_changes_empty))
+				} else {
+					changes.take(12).forEach { change ->
+						Column {
+							Text(change.label, style = MaterialTheme.typography.labelLarge)
+							Text(
+								stringResource(R.string.dialog_review_changes_row, change.before, change.after),
+								style = MaterialTheme.typography.bodySmall,
+								color = MaterialTheme.colorScheme.onSurfaceVariant
+							)
+						}
+					}
+					if (changes.size > 12) {
+						Text(
+							stringResource(R.string.dialog_review_changes_more, changes.size - 12),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant
+						)
+					}
+				}
+			}
+		},
+		confirmButton = {
+			TextButton(onClick = onDismiss) {
+				Text(stringResource(R.string.action_done))
+			}
+		}
+	)
 }
 
 private data class OverwriteRequest(val name: String, val description: String)

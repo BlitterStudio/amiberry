@@ -448,9 +448,9 @@ class ConfigParserTest {
 	// --- Integer scaling ---
 
 	@Test
-	fun `parse scaling and autoresolution`() {
+	fun `parse target-prefixed scaling and autoresolution`() {
 		val file = writeConfig("""
-			scaling_method=2
+			amiberry.scaling_method=2
 			gfx_autoresolution=1
 		""".trimIndent())
 		val result = ConfigParser.parse(file)
@@ -461,10 +461,37 @@ class ConfigParserTest {
 	}
 
 	@Test
+	fun `parse legacy bare scaling key`() {
+		val file = writeConfig("scaling_method=2")
+		val result = ConfigParser.parse(file)
+
+		assertEquals(2, result.settings.scalingMethod)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
 	fun `parse scaling defaults when absent`() {
 		val s = ConfigParser.parse(writeConfig("cpu_model=68000")).settings
 		assertEquals(-1, s.scalingMethod)
 		assertEquals(0, s.gfxAutoresolution)
+	}
+
+	@Test
+	fun `parse exposes explicit keys for Android control fallback decisions`() {
+		val explicitFile = tempDir.newFile("explicit_android_controls.uae")
+		explicitFile.writeText("""
+			amiberry.onscreen_joystick=false
+			amiberry.vkbd_enabled=false
+		""".trimIndent())
+		val absentFile = tempDir.newFile("absent_android_controls.uae")
+		absentFile.writeText("cpu_model=68000")
+		val explicit = ConfigParser.parse(explicitFile)
+		val absent = ConfigParser.parse(absentFile)
+
+		assertTrue("amiberry.onscreen_joystick" in explicit.explicitKeys)
+		assertTrue("amiberry.vkbd_enabled" in explicit.explicitKeys)
+		assertFalse("amiberry.onscreen_joystick" in absent.explicitKeys)
+		assertFalse("amiberry.vkbd_enabled" in absent.explicitKeys)
 	}
 
 	// --- Whitespace handling ---

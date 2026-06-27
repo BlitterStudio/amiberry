@@ -49,4 +49,13 @@ class ConfigurationsScreenArchitectureTest {
 			source.contains("popUpTo(Screen.Configurations.route)")
 		)
 	}
+
+	@Test
+	fun `configurations screen exposes search and list filters`() {
+		val source = File("src/main/java/com/blitterstudio/amiberry/ui/screens/ConfigurationsScreen.kt").readText()
+
+		assertTrue(source.contains("ConfigurationSearchControls("))
+		assertTrue(source.contains("filterConfigurations("))
+		assertTrue(source.contains("ConfigurationListFilter"))
+	}
 }

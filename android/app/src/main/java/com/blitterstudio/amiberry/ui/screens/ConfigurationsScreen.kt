@@ -19,11 +19,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -35,6 +37,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -49,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +103,18 @@ fun ConfigurationsScreen(
 	val launchGuard = rememberLaunchInFlightGuard()
 	val launchInProgress = launchGuard.isLaunching
 	val configs by viewModel.configs.collectAsState()
+	var searchQuery by rememberSaveable { mutableStateOf("") }
+	var selectedFilterName by rememberSaveable { mutableStateOf(ConfigurationListFilter.All.name) }
+	val selectedFilter = ConfigurationListFilter.fromName(selectedFilterName)
+	val showConfigurationSearch = shouldShowConfigurationSearch(configs.size)
+	val effectiveFilter = if (showConfigurationSearch) selectedFilter else ConfigurationListFilter.All
+	val filteredConfigs = remember(configs, searchQuery, effectiveFilter) {
+		filterConfigurations(
+			configs = configs,
+			query = if (showConfigurationSearch) searchQuery else "",
+			filter = effectiveFilter
+		)
+	}
 	fun actionMessage(message: ConfigurationActions.Message): String =
 		message.argument?.let { context.getString(message.stringRes, it) }
 			?: context.getString(message.stringRes)
@@ -146,11 +163,39 @@ fun ConfigurationsScreen(
 				}
 			}
 		} else {
-			LazyColumn(
-				contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-				verticalArrangement = Arrangement.spacedBy(8.dp)
-			) {
-				items(configs, key = { it.path }) { config ->
+			if (showConfigurationSearch) {
+				ConfigurationSearchControls(
+					query = searchQuery,
+					selectedFilter = selectedFilter,
+					onQueryChange = { searchQuery = it },
+					onClearSearch = { searchQuery = "" },
+					onFilterSelected = { selectedFilterName = it.name }
+				)
+			}
+
+			if (filteredConfigs.isEmpty()) {
+				Box(
+					modifier = Modifier
+						.fillMaxSize()
+						.padding(32.dp),
+					contentAlignment = Alignment.Center
+				) {
+					Column(horizontalAlignment = Alignment.CenterHorizontally) {
+						Text(stringResource(R.string.configurations_no_search_results), style = MaterialTheme.typography.bodyLarge)
+						Spacer(modifier = Modifier.height(8.dp))
+						Text(
+							stringResource(R.string.configurations_search_help),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant
+						)
+					}
+				}
+			} else {
+				LazyColumn(
+					contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+					verticalArrangement = Arrangement.spacedBy(8.dp)
+				) {
+					items(filteredConfigs, key = { it.path }) { config ->
 					ConfigItem(
 						config = config,
 						launchInProgress = launchInProgress,
@@ -250,10 +295,93 @@ fun ConfigurationsScreen(
 							}
 						)
 					}
+				}
 			}
 		}
 	}
 }
+}
+
+@Composable
+private fun ConfigurationSearchControls(
+	query: String,
+	selectedFilter: ConfigurationListFilter,
+	onQueryChange: (String) -> Unit,
+	onClearSearch: () -> Unit,
+	onFilterSelected: (ConfigurationListFilter) -> Unit
+) {
+	Column(
+		modifier = Modifier
+			.fillMaxWidth()
+			.padding(horizontal = 16.dp, vertical = 8.dp),
+		verticalArrangement = Arrangement.spacedBy(8.dp)
+	) {
+		OutlinedTextField(
+			value = query,
+			onValueChange = onQueryChange,
+			label = { Text(stringResource(R.string.configurations_search_label)) },
+			leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+			trailingIcon = {
+				if (query.isNotBlank()) {
+					IconButton(onClick = onClearSearch) {
+						Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear_search))
+					}
+				}
+			},
+			singleLine = true,
+			modifier = Modifier.fillMaxWidth()
+		)
+		Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+			ConfigurationFilterButton(
+				filter = ConfigurationListFilter.All,
+				selectedFilter = selectedFilter,
+				modifier = Modifier.weight(1f),
+				onFilterSelected = onFilterSelected
+			)
+			ConfigurationFilterButton(
+				filter = ConfigurationListFilter.WithDescription,
+				selectedFilter = selectedFilter,
+				modifier = Modifier.weight(1f),
+				onFilterSelected = onFilterSelected
+			)
+			ConfigurationFilterButton(
+				filter = ConfigurationListFilter.Recent,
+				selectedFilter = selectedFilter,
+				modifier = Modifier.weight(1f),
+				onFilterSelected = onFilterSelected
+			)
+		}
+	}
+}
+
+@Composable
+private fun ConfigurationFilterButton(
+	filter: ConfigurationListFilter,
+	selectedFilter: ConfigurationListFilter,
+	modifier: Modifier,
+	onFilterSelected: (ConfigurationListFilter) -> Unit
+) {
+	if (filter == selectedFilter) {
+		Button(
+			onClick = { onFilterSelected(filter) },
+			modifier = modifier
+		) {
+			Text(stringResource(filter.labelRes()))
+		}
+	} else {
+		OutlinedButton(
+			onClick = { onFilterSelected(filter) },
+			modifier = modifier
+		) {
+			Text(stringResource(filter.labelRes()))
+		}
+	}
+}
+
+private fun ConfigurationListFilter.labelRes(): Int = when (this) {
+	ConfigurationListFilter.All -> R.string.configurations_filter_all
+	ConfigurationListFilter.WithDescription -> R.string.configurations_filter_described
+	ConfigurationListFilter.Recent -> R.string.configurations_filter_recent
 }
 
 @OptIn(ExperimentalFoundationApi::class)

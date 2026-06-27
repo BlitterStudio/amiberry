@@ -14,6 +14,11 @@ object EmulatorSettingsConstraints {
 			result = result.copy(address24Bit = true, z3Ram = 0, jitCacheSize = 0)
 		}
 
+		// 24-bit addressing is a 68020 compatibility option; later CPUs use 32-bit addressing
+		if (result.cpuModel >= 68030 && result.address24Bit) {
+			result = result.copy(address24Bit = false)
+		}
+
 		// Cycle-exact forces real speed and disables JIT
 		if (result.cycleExact) {
 			result = result.copy(cpuSpeed = "real", jitCacheSize = 0, immediateBlits = false)
@@ -33,6 +38,12 @@ object EmulatorSettingsConstraints {
 			soundFreq = if (result.soundFreq > 0) result.soundFreq else DEFAULT_SOUND_FREQUENCY,
 			soundChannels = normalizeSoundChannels(result.soundChannels)
 		)
+
+		if (result.scalingMethod == SCALING_METHOD_INTEGER && result.gfxAutoresolution != AUTORESOLUTION_ALWAYS) {
+			result = result.copy(gfxAutoresolution = AUTORESOLUTION_ALWAYS)
+		} else if (result.gfxAutoresolution == AUTORESOLUTION_ALWAYS && result.scalingMethod != SCALING_METHOD_INTEGER) {
+			result = result.copy(scalingMethod = SCALING_METHOD_INTEGER)
+		}
 
 		val floppy0 = normalizeFloppyDrive(result.floppy0, result.floppy0Type)
 		val floppy1 = normalizeFloppyDrive(result.floppy1, result.floppy1Type)
@@ -137,6 +148,8 @@ object EmulatorSettingsConstraints {
 	private const val DEFAULT_SOUND_OUTPUT = "exact"
 	private const val DEFAULT_SOUND_FREQUENCY = 44100
 	private const val DEFAULT_SOUND_CHANNELS = "stereo"
+	private const val SCALING_METHOD_INTEGER = 2
+	private const val AUTORESOLUTION_ALWAYS = 1
 	private const val DEFAULT_JOYPORT0 = "mouse"
 	private const val DEFAULT_JOYPORT1 = "joy1"
 	private const val FLOPPY_TYPE_DISABLED = -1
