@@ -17,4 +17,14 @@ class QuickStartLayoutTest {
 				.containsMatchIn(quickStartScreen)
 		)
 	}
+
+	@Test
+	fun `quick start screen exposes mode selection effective summary and rich recent cards`() {
+		val quickStartScreen = File("src/main/java/com/blitterstudio/amiberry/ui/screens/QuickStartScreen.kt")
+			.readText()
+
+		assertTrue(quickStartScreen.contains("QuickStartModeSelector("))
+		assertTrue(quickStartScreen.contains("EffectiveSummaryCard("))
+		assertTrue(quickStartScreen.contains("RecentLaunches.details(entry)"))
+	}
 }

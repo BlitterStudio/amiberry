@@ -83,9 +83,21 @@
     <string name="configurations_empty_message">Configure settings and launch emulation to generate config files, or use the Advanced (ImGui) interface to create them.</string>
 
     <string name="quick_start_recent_title">Recent</string>
-    <string name="quick_start_ready_title">Ready to Launch</string>
-    <string name="quick_start_ready_subtitle">Choose a model and media, then press Start.</string>
+    <string name="quick_start_recent_empty">No recent launches yet.</string>
+    <string name="quick_start_launch_mode_title">Launch Mode</string>
+    <string name="quick_start_mode_whdload">WHDLoad</string>
+    <string name="quick_start_mode_disk">Disk</string>
+    <string name="quick_start_mode_cd">CD</string>
+    <string name="quick_start_mode_recent">Recent</string>
+    <string name="quick_start_ready_title">Current Settings</string>
+    <string name="quick_start_ready_subtitle">These are the settings that will be used for this launch mode.</string>
     <string name="quick_start_model_summary">Model: %1$s</string>
+    <string name="quick_start_summary_model">Model</string>
+    <string name="quick_start_summary_cpu">CPU</string>
+    <string name="quick_start_summary_chipset">Chipset</string>
+    <string name="quick_start_summary_memory">Memory</string>
+    <string name="quick_start_summary_media">Media</string>
+    <string name="quick_start_summary_controls">Controls</string>
     <string name="quick_start_media_whdload">WHDLoad game selected</string>
     <string name="quick_start_media_floppy_cd">Floppy and CD selected</string>
     <string name="quick_start_media_floppy">Floppy selected</string>

@@ -8,6 +8,12 @@ import java.io.File
 object RecentLaunches {
 	const val MAX_ITEMS = 10
 
+	data class Details(
+		val title: String,
+		val typeLabel: String,
+		val detail: String
+	)
+
 	fun parse(raw: String): List<JSONObject> {
 		return try {
 			val arr = JSONArray(raw)
@@ -100,8 +106,49 @@ object RecentLaunches {
 		}
 	}
 
+	fun details(entry: JSONObject): Details {
+		return when (entry.optString("type")) {
+			"quickstart" -> quickStartDetails(entry)
+			"config" -> Details(
+				title = label(entry),
+				typeLabel = "Configuration",
+				detail = entry.optString("path")
+			)
+			"whdload" -> Details(
+				title = label(entry),
+				typeLabel = "WHDLoad",
+				detail = entry.optString("path")
+			)
+			else -> Details(
+				title = "?",
+				typeLabel = "Unknown",
+				detail = ""
+			)
+		}
+	}
+
 	fun sameEntries(left: List<JSONObject>, right: List<JSONObject>): Boolean =
 		left.size == right.size && left.zip(right).all { (a, b) -> a.toString() == b.toString() }
+
+	private fun quickStartDetails(entry: JSONObject): Details {
+		val modelName = entry.optString("model", "?")
+		val mediaDetails = MEDIA_KEYS
+			.mapNotNull { key ->
+				val name = fileName(entry.optString(key)).takeIf { it.isNotBlank() } ?: return@mapNotNull null
+				"${key.uppercase()}: $name"
+			}
+		val firstMedia = mediaDetails.firstOrNull()?.substringAfter(": ") ?: modelName
+		val detail = if (mediaDetails.isEmpty()) {
+			modelName
+		} else {
+			"$modelName - ${mediaDetails.joinToString(", ")}"
+		}
+		return Details(
+			title = firstMedia,
+			typeLabel = "Quick Start",
+			detail = detail
+		)
+	}
 
 	private fun fileName(path: String): String =
 		path.substringAfterLast('/').substringAfterLast('\\')

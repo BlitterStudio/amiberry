@@ -65,6 +65,23 @@ class RecentLaunchesTest {
 	}
 
 	@Test
+	fun `details provide type and media context for richer recent cards`() {
+		val quickstart = RecentLaunches.details(
+			quickstart(model = "A500", df0 = "/media/Workbench.adf", df1 = "/media/Extras.adf")
+		)
+		val config = RecentLaunches.details(entry("config", path = "/configs/Workbench.uae"))
+		val whdload = RecentLaunches.details(entry("whdload", path = "/whdload/Lotus.lha"))
+
+		assertEquals("Workbench.adf", quickstart.title)
+		assertEquals("Quick Start", quickstart.typeLabel)
+		assertEquals("A500 - DF0: Workbench.adf, DF1: Extras.adf", quickstart.detail)
+		assertEquals("Configuration", config.typeLabel)
+		assertEquals("/configs/Workbench.uae", config.detail)
+		assertEquals("WHDLoad", whdload.typeLabel)
+		assertEquals("/whdload/Lotus.lha", whdload.detail)
+	}
+
+	@Test
 	fun `adding a recent launch moves duplicates to the front and caps the list`() {
 		val existing = (1..12).map { entry("config", path = "/configs/$it.uae") }
 		val duplicate = entry("config", path = "/configs/5.uae")

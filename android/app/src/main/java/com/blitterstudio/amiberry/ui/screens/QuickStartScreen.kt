@@ -30,12 +30,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -53,9 +53,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -122,6 +124,9 @@ fun QuickStartScreen(
 	val launchInProgress = launchGuard.isLaunching
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
+	val appPreferences = remember { AppPreferences.getInstance(context) }
+	var selectedLaunchModeName by rememberSaveable { mutableStateOf(QuickStartLaunchMode.WHDLOAD.name) }
+	val selectedLaunchMode = QuickStartLaunchMode.fromName(selectedLaunchModeName)
 	val model = settingsViewModel.settings.baseModel
 	val floppies by viewModel.availableFloppies.collectAsState()
 	val cds by viewModel.availableCds.collectAsState()
@@ -132,7 +137,32 @@ fun QuickStartScreen(
 	val hasRoms = roms.isNotEmpty()
 	val availableModels = remember(roms) { ModelRomAvailability.availableModels(roms) }
 	val selectedModelAvailable = model in availableModels
-	val canStart = if (selectedWhdloadGame != null) hasRoms else selectedModelAvailable
+	val modeAvailableModels = remember(availableModels, selectedLaunchMode) {
+		when (selectedLaunchMode) {
+			QuickStartLaunchMode.CD -> availableModels.filter { it.hasCd }
+			QuickStartLaunchMode.DISK -> availableModels.filter { it.hasFloppy }
+			QuickStartLaunchMode.WHDLOAD,
+			QuickStartLaunchMode.RECENT -> availableModels
+		}
+	}
+	val selectedModeModelAvailable = model in modeAvailableModels
+	val canStart = QuickStartUiState.canStart(
+		launchMode = selectedLaunchMode,
+		hasRoms = hasRoms,
+		selectedModelAvailable = selectedModeModelAvailable,
+		hasSelectedWhdloadGame = selectedWhdloadGame != null
+	)
+	val allRecent by appPreferences.recentLaunches
+	val recentFileExists: (String) -> Boolean = remember {
+		{ path -> File(path).exists() }
+	}
+	val recentLaunches = remember(allRecent, availableModels) {
+		RecentLaunches.available(allRecent, availableModels, recentFileExists)
+	}
+	val storedRecentLaunches = remember(allRecent) {
+		RecentLaunches.pruneMissingFiles(allRecent, recentFileExists)
+	}
+	val hasSeenWelcome by appPreferences.hasSeenWelcome
 
 	val selectedFloppyPath = settingsViewModel.settings.floppy0
 	val selectedFloppy1Path = settingsViewModel.settings.floppy1
@@ -142,30 +172,25 @@ fun QuickStartScreen(
 	val mediaFileExists: (String) -> Boolean = remember {
 		{ path -> File(path).exists() }
 	}
-	val mediaSummaryWhdload = stringResource(R.string.quick_start_media_whdload)
-	val mediaSummaryBoth = stringResource(R.string.quick_start_media_floppy_cd)
-	val mediaSummaryFloppy = stringResource(R.string.quick_start_media_floppy)
-	val mediaSummaryCd = stringResource(R.string.quick_start_media_cd)
-	val mediaSummaryNone = stringResource(R.string.quick_start_media_none)
 	val noCompatibleModelMessage = stringResource(R.string.quick_start_no_compatible_models_message)
 	val configWriteFailedMessage = stringResource(R.string.quick_start_config_write_failed)
 	val scanningMediaDescription = stringResource(R.string.quick_start_scanning_media)
 	var floppyImportTarget by remember { mutableStateOf(0) }
 	var whdloadAutoConfigPath by remember { mutableStateOf<String?>(null) }
-	val mediaSummary = when {
-		selectedWhdloadGame != null -> mediaSummaryWhdload
-		selectedFloppyPath.isNotBlank() && selectedCdPath.isNotBlank() -> mediaSummaryBoth
-		selectedFloppyPath.isNotBlank() -> mediaSummaryFloppy
-		selectedCdPath.isNotBlank() -> mediaSummaryCd
-		else -> mediaSummaryNone
-	}
 	fun actionMessage(message: ConfigurationActions.Message): String =
 		message.argument?.let { context.getString(message.stringRes, it) }
 			?: context.getString(message.stringRes)
 
-	LaunchedEffect(availableModels, model) {
-		val firstAvailableModel = availableModels.firstOrNull()
-		if (firstAvailableModel != null && model !in availableModels) {
+	LaunchedEffect(availableModels, modeAvailableModels, model, selectedLaunchMode) {
+		val selectableModels = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
+			selectedLaunchMode == QuickStartLaunchMode.CD
+		) {
+			modeAvailableModels
+		} else {
+			availableModels
+		}
+		val firstAvailableModel = selectableModels.firstOrNull()
+		if (firstAvailableModel != null && model !in selectableModels) {
 			settingsViewModel.applyModel(firstAvailableModel)
 		}
 	}
@@ -319,45 +344,50 @@ fun QuickStartScreen(
 						if (launchInProgress) {
 							return@ExtendedFloatingActionButton
 						}
-						if (selectedWhdloadGame != null) {
-							val whdloadPath = selectedWhdloadGame.path
-							val controlSettings = settingsViewModel.settings
-							scope.launchGuarded(launchGuard) {
-								val configFile = try {
-									withContext(Dispatchers.IO) {
-										AndroidLaunchConfig.writeControlConfig(context, controlSettings)
+						when (selectedLaunchMode) {
+							QuickStartLaunchMode.WHDLOAD -> {
+								val whdloadPath = selectedWhdloadGame?.path ?: return@ExtendedFloatingActionButton
+								val controlSettings = settingsViewModel.settings
+								scope.launchGuarded(launchGuard) {
+									val configFile = try {
+										withContext(Dispatchers.IO) {
+											AndroidLaunchConfig.writeControlConfig(context, controlSettings)
+										}
+									} catch (_: Exception) {
+										snackbarHostState.showSnackbar(configWriteFailedMessage)
+										return@launchGuarded
 									}
-								} catch (_: Exception) {
-									snackbarHostState.showSnackbar(configWriteFailedMessage)
-									return@launchGuarded
+									EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
 								}
-								EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
 							}
-						} else {
-							val launchSettings = settingsViewModel.settings
-							val launchUnknownLines = settingsViewModel.currentUnknownLines
-							scope.launchGuarded(launchGuard) {
-								val configFile = try {
-									withContext(Dispatchers.IO) {
-										settingsViewModel.writeSettingsConfig(
-											launchSettings,
-											AndroidLaunchConfig.QUICKSTART_CONFIG,
-											launchUnknownLines
-										)
+							QuickStartLaunchMode.DISK,
+							QuickStartLaunchMode.CD -> {
+								val launchSettings = settingsViewModel.settings
+								val launchUnknownLines = settingsViewModel.currentUnknownLines
+								scope.launchGuarded(launchGuard) {
+									val configFile = try {
+										withContext(Dispatchers.IO) {
+											settingsViewModel.writeSettingsConfig(
+												launchSettings,
+												AndroidLaunchConfig.QUICKSTART_CONFIG,
+												launchUnknownLines
+											)
+										}
+									} catch (_: Exception) {
+										snackbarHostState.showSnackbar(configWriteFailedMessage)
+										return@launchGuarded
 									}
-								} catch (_: Exception) {
-									snackbarHostState.showSnackbar(configWriteFailedMessage)
-									return@launchGuarded
+									EmulatorLauncher.launchQuickStart(
+										context = context,
+										model = launchSettings.baseModel,
+										floppyPath = launchSettings.floppy0.takeIf { it.isNotBlank() },
+										floppy1Path = launchSettings.floppy1.takeIf { it.isNotBlank() },
+										cdPath = launchSettings.cdImage.takeIf { it.isNotBlank() },
+										configPath = configFile.absolutePath
+									)
 								}
-								EmulatorLauncher.launchQuickStart(
-									context = context,
-									model = launchSettings.baseModel,
-									floppyPath = launchSettings.floppy0.takeIf { it.isNotBlank() },
-									floppy1Path = launchSettings.floppy1.takeIf { it.isNotBlank() },
-									cdPath = launchSettings.cdImage.takeIf { it.isNotBlank() },
-									configPath = configFile.absolutePath
-								)
 							}
+							QuickStartLaunchMode.RECENT -> Unit
 						}
 					},
 					icon = {
@@ -402,9 +432,6 @@ fun QuickStartScreen(
 					scope.launch { snackbarHostState.showSnackbar(actionMessage(message)) }
 				}
 			)
-
-			val appPreferences = remember { AppPreferences.getInstance(context) }
-			val hasSeenWelcome by appPreferences.hasSeenWelcome
 
 			if (!hasSeenWelcome) {
 				Card(
@@ -506,290 +533,459 @@ fun QuickStartScreen(
 				}
 			}
 
-			MediaSelector(
-				title = stringResource(R.string.quick_start_whdload_title),
-				icon = Icons.Default.SportsEsports,
-				items = whdloadGames,
-				selectedItem = selectedWhdloadGame,
-				selectedPath = selectedWhdloadGame?.path ?: "",
-				emptyText = stringResource(R.string.quick_start_no_whdload_games),
-				placeholder = stringResource(R.string.quick_start_select_game_placeholder),
-				helpText = stringResource(R.string.quick_start_whdload_help),
-				onItemSelected = { game -> viewModel.selectWhdload(game) },
-				onEject = { viewModel.selectWhdload(null) },
-				onImport = {
-					if (!importInProgress) {
-						whdloadPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.WHDLOAD_GAMES))
-					}
-				},
-				importInProgress = importInProgress,
-				displayName = { it.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh") }
-			)
-
-			HorizontalDivider()
-
-			// Recent launches — reads observable state, recomposes when addRecentLaunch() is called
-			val allRecent by appPreferences.recentLaunches
-			val recentFileExists: (String) -> Boolean = remember {
-				{ path -> java.io.File(path).exists() }
-			}
-			val recentLaunches = remember(allRecent, availableModels) {
-				RecentLaunches.available(allRecent, availableModels, recentFileExists)
-			}
-			val storedRecentLaunches = remember(allRecent) {
-				RecentLaunches.pruneMissingFiles(allRecent, recentFileExists)
-			}
 			LaunchedEffect(allRecent, storedRecentLaunches) {
 				if (!RecentLaunches.sameEntries(allRecent, storedRecentLaunches)) {
 					appPreferences.replaceRecentLaunches(storedRecentLaunches)
 				}
 			}
-			if (recentLaunches.isNotEmpty()) {
-				OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Row(verticalAlignment = Alignment.CenterVertically) {
-							Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
-							Spacer(modifier = Modifier.width(8.dp))
-							Text(stringResource(R.string.quick_start_recent_title), style = MaterialTheme.typography.titleMedium)
-						}
-						Spacer(modifier = Modifier.height(8.dp))
-						recentLaunches.take(5).forEach { entry ->
-							val label = RecentLaunches.label(entry)
-							TextButton(
-								onClick = {
-									when (entry.optString("type")) {
-										"config" -> {
-											val configPath = entry.optString("path")
-											val controlSettings = settingsViewModel.settings
-											scope.launchGuarded(launchGuard) {
-												EmulatorLauncher.launchWithConfig(
-													context,
-													configPath,
-													controlSettings = controlSettings
-												)
-											}
-										}
-										"whdload" -> {
-											val whdloadPath = entry.optString("path")
-											val controlSettings = settingsViewModel.settings
-											scope.launchGuarded(launchGuard) {
-												val configFile = try {
-													withContext(Dispatchers.IO) {
-														AndroidLaunchConfig.writeControlConfig(context, controlSettings)
-													}
-												} catch (_: Exception) {
-													snackbarHostState.showSnackbar(configWriteFailedMessage)
-													return@launchGuarded
-												}
-												EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
-											}
-										}
-										"quickstart" -> {
-											val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") } ?: AmigaModel.A500
-											if (model in availableModels) {
-												val recentFloppy0 = entry.optString("df0")
-												val recentFloppy1 = entry.optString("df1")
-												val recentCd = entry.optString("cd")
-												val currentSettings = settingsViewModel.settings
-												scope.launchGuarded(launchGuard) {
-													val configFile = try {
-														withContext(Dispatchers.IO) {
-															val settingsSnapshot = buildRecentQuickStartSettingsSnapshot(
-																model = model,
-																roms = roms,
-																currentSettings = currentSettings,
-																floppy0 = recentFloppy0,
-																floppy1 = recentFloppy1,
-																cdImage = recentCd
-															)
-															settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG)
-														}
-													} catch (_: Exception) {
-														snackbarHostState.showSnackbar(configWriteFailedMessage)
-														return@launchGuarded
-													}
-													EmulatorLauncher.launchQuickStart(context, model,
-														floppyPath = recentFloppy0.takeIf { it.isNotBlank() },
-														floppy1Path = recentFloppy1.takeIf { it.isNotBlank() },
-														cdPath = recentCd.takeIf { it.isNotBlank() },
-														configPath = configFile.absolutePath)
-												}
-											} else {
-												scope.launch {
-													snackbarHostState.showSnackbar(noCompatibleModelMessage)
-												}
-											}
-										}
-									}
-								},
-								enabled = !launchInProgress,
-								modifier = Modifier.fillMaxWidth()
-							) {
-								Text(label, modifier = Modifier.fillMaxWidth())
+
+			QuickStartModeSelector(
+				selectedMode = selectedLaunchMode,
+				onModeSelected = { selectedLaunchModeName = it.name }
+			)
+
+			when (selectedLaunchMode) {
+				QuickStartLaunchMode.WHDLOAD -> {
+					MediaSelector(
+						title = stringResource(R.string.quick_start_whdload_title),
+						icon = Icons.Default.SportsEsports,
+						items = whdloadGames,
+						selectedItem = selectedWhdloadGame,
+						selectedPath = selectedWhdloadGame?.path ?: "",
+						emptyText = stringResource(R.string.quick_start_no_whdload_games),
+						placeholder = stringResource(R.string.quick_start_select_game_placeholder),
+						helpText = stringResource(R.string.quick_start_whdload_help),
+						onItemSelected = { game -> viewModel.selectWhdload(game) },
+						onEject = { viewModel.selectWhdload(null) },
+						onImport = {
+							if (!importInProgress) {
+								whdloadPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.WHDLOAD_GAMES))
 							}
-						}
+						},
+						importInProgress = importInProgress,
+						displayName = { it.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh") }
+					)
+				}
+				QuickStartLaunchMode.DISK -> {
+					ModelSelectorCard(
+						model = model,
+						availableModels = modeAvailableModels,
+						selectedModelAvailable = selectedModeModelAvailable,
+						onModelSelected = settingsViewModel::applyModel
+					)
+					if (selectedModeModelAvailable && model.hasFloppy) {
+						MediaSelector(
+							title = stringResource(R.string.quick_start_floppy_df0),
+							icon = Icons.Default.SaveAlt,
+							items = floppies,
+							selectedItem = selectedFloppy,
+							selectedPath = selectedFloppyPath,
+							emptyText = stringResource(R.string.quick_start_no_floppy_images),
+							onItemSelected = { file ->
+								settingsViewModel.updateSettings { s -> s.copy(floppy0 = file.path) }
+							},
+							onEject = {
+								settingsViewModel.updateSettings { s -> s.copy(floppy0 = "") }
+							},
+							onImport = {
+								if (!importInProgress) {
+									floppyImportTarget = 0
+									floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
+								}
+							},
+							importInProgress = importInProgress
+						)
+
+						val selectedFloppy1 = floppies.firstOrNull { it.path == selectedFloppy1Path }
+						MediaSelector(
+							title = stringResource(R.string.quick_start_floppy_df1),
+							icon = Icons.Default.SaveAlt,
+							items = floppies,
+							selectedItem = selectedFloppy1,
+							selectedPath = selectedFloppy1Path,
+							emptyText = stringResource(R.string.quick_start_no_floppy_images),
+							onItemSelected = { file ->
+								settingsViewModel.updateSettings { s -> s.copy(floppy1 = file.path, floppy1Type = 0) }
+							},
+							onEject = {
+								settingsViewModel.updateSettings { s -> s.copy(floppy1 = "", floppy1Type = -1) }
+							},
+							onImport = {
+								if (!importInProgress) {
+									floppyImportTarget = 1
+									floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
+								}
+							},
+							importInProgress = importInProgress
+						)
 					}
 				}
-			}
-
-			Card(
-				modifier = Modifier.fillMaxWidth(),
-				colors = CardDefaults.cardColors(
-					containerColor = MaterialTheme.colorScheme.primaryContainer
-				)
-			) {
-				Column(modifier = Modifier.padding(16.dp)) {
-					Text(stringResource(R.string.quick_start_ready_title), style = MaterialTheme.typography.titleLarge)
-					Spacer(modifier = Modifier.height(4.dp))
-					Text(
-						text = stringResource(R.string.quick_start_ready_subtitle),
-						style = MaterialTheme.typography.bodyMedium,
-						color = MaterialTheme.colorScheme.onSurfaceVariant
+				QuickStartLaunchMode.CD -> {
+					ModelSelectorCard(
+						model = model,
+						availableModels = modeAvailableModels,
+						selectedModelAvailable = selectedModeModelAvailable,
+						onModelSelected = settingsViewModel::applyModel
 					)
-					Spacer(modifier = Modifier.height(12.dp))
-					Text(
-						text = stringResource(
-							R.string.quick_start_model_summary,
-							if (selectedModelAvailable) model.displayName else stringResource(R.string.quick_start_no_compatible_models)
-						),
-						style = MaterialTheme.typography.bodyMedium
-					)
-					Text(mediaSummary, style = MaterialTheme.typography.bodyMedium)
-				}
-			}
-
-			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-				Column(modifier = Modifier.padding(16.dp)) {
-					Text(stringResource(R.string.quick_start_amiga_model), style = MaterialTheme.typography.titleMedium)
-					Spacer(modifier = Modifier.height(8.dp))
-
-					var modelExpanded by remember { mutableStateOf(false) }
-					ExposedDropdownMenuBox(
-						expanded = modelExpanded,
-						onExpandedChange = { modelExpanded = it && availableModels.isNotEmpty() }
-					) {
-						OutlinedTextField(
-							value = if (selectedModelAvailable) {
-								settingsViewModel.settings.baseModel.displayName
-							} else {
-								stringResource(R.string.quick_start_no_compatible_models)
+					if (selectedModeModelAvailable && model.hasCd) {
+						MediaSelector(
+							title = stringResource(R.string.quick_start_cd_image),
+							icon = Icons.Default.Album,
+							items = cds,
+							selectedItem = selectedCd,
+							selectedPath = selectedCdPath,
+							emptyText = stringResource(R.string.quick_start_no_cd_images),
+							onItemSelected = { file ->
+								settingsViewModel.updateSettings { s -> s.copy(cdImage = file.path) }
 							},
-							onValueChange = {},
-							readOnly = true,
-							enabled = availableModels.isNotEmpty(),
-							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
-							modifier = Modifier
-								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-								.fillMaxWidth(),
-							supportingText = {
-								Text(
-									if (selectedModelAvailable) {
-										settingsViewModel.settings.baseModel.description
-									} else {
-										stringResource(R.string.quick_start_no_compatible_models_help)
-									}
-								)
-							}
+							onEject = {
+								settingsViewModel.updateSettings { s -> s.copy(cdImage = "") }
+							},
+							onImport = {
+								if (!importInProgress) {
+									cdPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.CD_IMAGES))
+								}
+							},
+							importInProgress = importInProgress
 						)
-						ExposedDropdownMenu(
-							expanded = modelExpanded,
-							onDismissRequest = { modelExpanded = false }
-						) {
-							availableModels.forEach { m ->
-								DropdownMenuItem(
-									text = {
-										Column {
-											Text(m.displayName)
+					}
+				}
+				QuickStartLaunchMode.RECENT -> {
+					OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+						Column(modifier = Modifier.padding(16.dp)) {
+							Row(verticalAlignment = Alignment.CenterVertically) {
+								Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
+								Spacer(modifier = Modifier.width(8.dp))
+								Text(stringResource(R.string.quick_start_recent_title), style = MaterialTheme.typography.titleMedium)
+							}
+							Spacer(modifier = Modifier.height(8.dp))
+							if (recentLaunches.isEmpty()) {
+								Text(
+									stringResource(R.string.quick_start_recent_empty),
+									style = MaterialTheme.typography.bodyMedium,
+									color = MaterialTheme.colorScheme.onSurfaceVariant
+								)
+							} else {
+								recentLaunches.take(5).forEach { entry ->
+									val details = RecentLaunches.details(entry)
+									TextButton(
+										onClick = {
+											when (entry.optString("type")) {
+												"config" -> {
+													val configPath = entry.optString("path")
+													val controlSettings = settingsViewModel.settings
+													scope.launchGuarded(launchGuard) {
+														EmulatorLauncher.launchWithConfig(
+															context,
+															configPath,
+															controlSettings = controlSettings
+														)
+													}
+												}
+												"whdload" -> {
+													val whdloadPath = entry.optString("path")
+													val controlSettings = settingsViewModel.settings
+													scope.launchGuarded(launchGuard) {
+														val configFile = try {
+															withContext(Dispatchers.IO) {
+																AndroidLaunchConfig.writeControlConfig(context, controlSettings)
+															}
+														} catch (_: Exception) {
+															snackbarHostState.showSnackbar(configWriteFailedMessage)
+															return@launchGuarded
+														}
+														EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
+													}
+												}
+												"quickstart" -> {
+													val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") } ?: AmigaModel.A500
+													if (model in availableModels) {
+														val recentFloppy0 = entry.optString("df0")
+														val recentFloppy1 = entry.optString("df1")
+														val recentCd = entry.optString("cd")
+														val currentSettings = settingsViewModel.settings
+														scope.launchGuarded(launchGuard) {
+															val configFile = try {
+																withContext(Dispatchers.IO) {
+																	val settingsSnapshot = buildRecentQuickStartSettingsSnapshot(
+																		model = model,
+																		roms = roms,
+																		currentSettings = currentSettings,
+																		floppy0 = recentFloppy0,
+																		floppy1 = recentFloppy1,
+																		cdImage = recentCd
+																	)
+																	settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG)
+																}
+															} catch (_: Exception) {
+																snackbarHostState.showSnackbar(configWriteFailedMessage)
+																return@launchGuarded
+															}
+															EmulatorLauncher.launchQuickStart(
+																context,
+																model,
+																floppyPath = recentFloppy0.takeIf { it.isNotBlank() },
+																floppy1Path = recentFloppy1.takeIf { it.isNotBlank() },
+																cdPath = recentCd.takeIf { it.isNotBlank() },
+																configPath = configFile.absolutePath
+															)
+														}
+													} else {
+														scope.launch {
+															snackbarHostState.showSnackbar(noCompatibleModelMessage)
+														}
+													}
+												}
+											}
+										},
+										enabled = !launchInProgress,
+										modifier = Modifier.fillMaxWidth()
+									) {
+										Column(
+											modifier = Modifier.fillMaxWidth(),
+											horizontalAlignment = Alignment.Start
+										) {
+											Text(details.title, style = MaterialTheme.typography.titleSmall)
 											Text(
-												m.description,
+												"${details.typeLabel} - ${details.detail}",
 												style = MaterialTheme.typography.bodySmall,
 												color = MaterialTheme.colorScheme.onSurfaceVariant
 											)
 										}
-									},
-									onClick = {
-										settingsViewModel.applyModel(m)
-										modelExpanded = false
 									}
-								)
+								}
 							}
 						}
 					}
 				}
 			}
 
-			if (selectedModelAvailable && model.hasFloppy) {
-				MediaSelector(
-					title = stringResource(R.string.quick_start_floppy_df0),
-					icon = Icons.Default.SaveAlt,
-					items = floppies,
-					selectedItem = selectedFloppy,
-					selectedPath = selectedFloppyPath,
-					emptyText = stringResource(R.string.quick_start_no_floppy_images),
-					onItemSelected = { file ->
-						settingsViewModel.updateSettings { s -> s.copy(floppy0 = file.path) }
+			EffectiveSummaryCard(
+				summary = QuickStartUiState.buildEffectiveSummary(
+					settings = settingsViewModel.settings,
+					launchMode = selectedLaunchMode,
+					selectedModelAvailable = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
+						selectedLaunchMode == QuickStartLaunchMode.CD
+					) {
+						selectedModeModelAvailable
+					} else {
+						selectedModelAvailable
 					},
-					onEject = {
-						settingsViewModel.updateSettings { s -> s.copy(floppy0 = "") }
-					},
-					onImport = {
-						if (!importInProgress) {
-							floppyImportTarget = 0
-							floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
-						}
-					},
-					importInProgress = importInProgress
+					selectedWhdloadName = selectedWhdloadGame?.name
 				)
-
-				val selectedFloppy1 = floppies.firstOrNull { it.path == selectedFloppy1Path }
-				MediaSelector(
-					title = stringResource(R.string.quick_start_floppy_df1),
-					icon = Icons.Default.SaveAlt,
-					items = floppies,
-					selectedItem = selectedFloppy1,
-					selectedPath = selectedFloppy1Path,
-					emptyText = stringResource(R.string.quick_start_no_floppy_images),
-					onItemSelected = { file ->
-						settingsViewModel.updateSettings { s -> s.copy(floppy1 = file.path, floppy1Type = 0) }
-					},
-					onEject = {
-						settingsViewModel.updateSettings { s -> s.copy(floppy1 = "", floppy1Type = -1) }
-					},
-					onImport = {
-						if (!importInProgress) {
-							floppyImportTarget = 1
-							floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
-						}
-					},
-					importInProgress = importInProgress
-				)
-			}
-
-			if (selectedModelAvailable && model.hasCd) {
-				MediaSelector(
-					title = stringResource(R.string.quick_start_cd_image),
-					icon = Icons.Default.Album,
-					items = cds,
-					selectedItem = selectedCd,
-					selectedPath = selectedCdPath,
-					emptyText = stringResource(R.string.quick_start_no_cd_images),
-					onItemSelected = { file ->
-						settingsViewModel.updateSettings { s -> s.copy(cdImage = file.path) }
-					},
-					onEject = {
-						settingsViewModel.updateSettings { s -> s.copy(cdImage = "") }
-					},
-					onImport = {
-						if (!importInProgress) {
-							cdPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.CD_IMAGES))
-						}
-					},
-					importInProgress = importInProgress
-				)
-			}
+			)
 
 			Spacer(modifier = Modifier.height(80.dp))
 		}
 	}
 }
 
+@Composable
+private fun QuickStartModeSelector(
+	selectedMode: QuickStartLaunchMode,
+	onModeSelected: (QuickStartLaunchMode) -> Unit
+) {
+	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+		Column(
+			modifier = Modifier.padding(16.dp),
+			verticalArrangement = Arrangement.spacedBy(8.dp)
+		) {
+			Text(
+				stringResource(R.string.quick_start_launch_mode_title),
+				style = MaterialTheme.typography.titleMedium
+			)
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+				QuickStartModeButton(
+					mode = QuickStartLaunchMode.WHDLOAD,
+					selectedMode = selectedMode,
+					modifier = Modifier.weight(1f),
+					onModeSelected = onModeSelected
+				)
+				QuickStartModeButton(
+					mode = QuickStartLaunchMode.DISK,
+					selectedMode = selectedMode,
+					modifier = Modifier.weight(1f),
+					onModeSelected = onModeSelected
+				)
+			}
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+				QuickStartModeButton(
+					mode = QuickStartLaunchMode.CD,
+					selectedMode = selectedMode,
+					modifier = Modifier.weight(1f),
+					onModeSelected = onModeSelected
+				)
+				QuickStartModeButton(
+					mode = QuickStartLaunchMode.RECENT,
+					selectedMode = selectedMode,
+					modifier = Modifier.weight(1f),
+					onModeSelected = onModeSelected
+				)
+			}
+		}
+	}
+}
+
+@Composable
+private fun QuickStartModeButton(
+	mode: QuickStartLaunchMode,
+	selectedMode: QuickStartLaunchMode,
+	modifier: Modifier,
+	onModeSelected: (QuickStartLaunchMode) -> Unit
+) {
+	val selected = mode == selectedMode
+	if (selected) {
+		Button(
+			onClick = { onModeSelected(mode) },
+			modifier = modifier
+		) {
+			QuickStartModeButtonContent(mode)
+		}
+	} else {
+		OutlinedButton(
+			onClick = { onModeSelected(mode) },
+			modifier = modifier
+		) {
+			QuickStartModeButtonContent(mode)
+		}
+	}
+}
+
+@Composable
+private fun QuickStartModeButtonContent(mode: QuickStartLaunchMode) {
+	Icon(mode.icon(), contentDescription = null, modifier = Modifier.size(18.dp))
+	Spacer(modifier = Modifier.width(6.dp))
+	Text(stringResource(mode.labelRes()))
+}
+
+private fun QuickStartLaunchMode.labelRes(): Int = when (this) {
+	QuickStartLaunchMode.WHDLOAD -> R.string.quick_start_mode_whdload
+	QuickStartLaunchMode.DISK -> R.string.quick_start_mode_disk
+	QuickStartLaunchMode.CD -> R.string.quick_start_mode_cd
+	QuickStartLaunchMode.RECENT -> R.string.quick_start_mode_recent
+}
+
+private fun QuickStartLaunchMode.icon(): ImageVector = when (this) {
+	QuickStartLaunchMode.WHDLOAD -> Icons.Default.SportsEsports
+	QuickStartLaunchMode.DISK -> Icons.Default.SaveAlt
+	QuickStartLaunchMode.CD -> Icons.Default.Album
+	QuickStartLaunchMode.RECENT -> Icons.Default.History
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModelSelectorCard(
+	model: AmigaModel,
+	availableModels: List<AmigaModel>,
+	selectedModelAvailable: Boolean,
+	onModelSelected: (AmigaModel) -> Unit
+) {
+	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+		Column(modifier = Modifier.padding(16.dp)) {
+			Text(stringResource(R.string.quick_start_amiga_model), style = MaterialTheme.typography.titleMedium)
+			Spacer(modifier = Modifier.height(8.dp))
+
+			var modelExpanded by remember { mutableStateOf(false) }
+			ExposedDropdownMenuBox(
+				expanded = modelExpanded,
+				onExpandedChange = { modelExpanded = it && availableModels.isNotEmpty() }
+			) {
+				OutlinedTextField(
+					value = if (selectedModelAvailable) {
+						model.displayName
+					} else {
+						stringResource(R.string.quick_start_no_compatible_models)
+					},
+					onValueChange = {},
+					readOnly = true,
+					enabled = availableModels.isNotEmpty(),
+					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
+					modifier = Modifier
+						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+						.fillMaxWidth(),
+					supportingText = {
+						Text(
+							if (selectedModelAvailable) {
+								model.description
+							} else {
+								stringResource(R.string.quick_start_no_compatible_models_help)
+							}
+						)
+					}
+				)
+				ExposedDropdownMenu(
+					expanded = modelExpanded,
+					onDismissRequest = { modelExpanded = false }
+				) {
+					availableModels.forEach { availableModel ->
+						DropdownMenuItem(
+							text = {
+								Column {
+									Text(availableModel.displayName)
+									Text(
+										availableModel.description,
+										style = MaterialTheme.typography.bodySmall,
+										color = MaterialTheme.colorScheme.onSurfaceVariant
+									)
+								}
+							},
+							onClick = {
+								onModelSelected(availableModel)
+								modelExpanded = false
+							}
+						)
+					}
+				}
+			}
+		}
+	}
+}
+
+@Composable
+private fun EffectiveSummaryCard(summary: QuickStartEffectiveSummary) {
+	Card(
+		modifier = Modifier.fillMaxWidth(),
+		colors = CardDefaults.cardColors(
+			containerColor = MaterialTheme.colorScheme.primaryContainer
+		)
+	) {
+		Column(
+			modifier = Modifier.padding(16.dp),
+			verticalArrangement = Arrangement.spacedBy(8.dp)
+		) {
+			Text(stringResource(R.string.quick_start_ready_title), style = MaterialTheme.typography.titleLarge)
+			Text(
+				text = stringResource(R.string.quick_start_ready_subtitle),
+				style = MaterialTheme.typography.bodyMedium,
+				color = MaterialTheme.colorScheme.onSurfaceVariant
+			)
+			SummaryRow(stringResource(R.string.quick_start_summary_model), summary.model)
+			SummaryRow(stringResource(R.string.quick_start_summary_cpu), summary.cpu)
+			SummaryRow(stringResource(R.string.quick_start_summary_chipset), summary.chipset)
+			SummaryRow(stringResource(R.string.quick_start_summary_memory), summary.memory)
+			SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
+			SummaryRow(stringResource(R.string.quick_start_summary_controls), summary.controls)
+		}
+	}
+}
+
+@Composable
+private fun SummaryRow(label: String, value: String) {
+	Row(
+		modifier = Modifier.fillMaxWidth(),
+		horizontalArrangement = Arrangement.spacedBy(12.dp)
+	) {
+		Text(
+			label,
+			modifier = Modifier.weight(0.35f),
+			style = MaterialTheme.typography.bodyMedium,
+			color = MaterialTheme.colorScheme.onPrimaryContainer
+		)
+		Text(
+			value,
+			modifier = Modifier.weight(0.65f),
+			style = MaterialTheme.typography.bodyMedium,
+			color = MaterialTheme.colorScheme.onPrimaryContainer
+		)
+	}
+}
