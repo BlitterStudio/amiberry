@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.FileRepository
 import java.io.File
@@ -17,6 +18,7 @@ import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
+import com.blitterstudio.amiberry.data.WhdLoadAutoConfig
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +29,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	private val repository = FileRepository.getInstance(application)
 	private val configRepository = ConfigRepository.getInstance(application)
+	private val appPreferences = AppPreferences.getInstance(application)
 
 	var settings by mutableStateOf(EmulatorSettings())
 		private set
@@ -58,29 +61,34 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	val availableHardDrives: StateFlow<List<AmigaFile>> = repository.hardDrives
 
 	init {
-		restoreLastSession()
+		if (!restoreLastSession()) {
+			settings = appPreferences.applyRememberedAndroidControls(settings, emptySet())
+		}
 		settings = applyConstraints(settings)
+		appPreferences.saveAndroidControls(settings)
 		viewModelScope.launch {
 			repository.rescan()
 			autoSelectDefaultRomIfNeeded(availableRoms.value)
 		}
 	}
 
-	private fun restoreLastSession() {
+	private fun restoreLastSession(): Boolean {
 		val context = getApplication<Application>()
 		val sessionFile = ConfigGenerator.configFile(context, LAST_SESSION_FILE)
 		val legacySessionFile = ConfigGenerator.legacyExternalConfigFile(context, LAST_SESSION_FILE)
 		val readableSessionFile = when {
 			sessionFile.exists() -> sessionFile
 			legacySessionFile.exists() -> legacySessionFile
-			else -> return
+			else -> return false
 		}
 		try {
 			val parsed = ConfigParser.parse(readableSessionFile)
-			settings = parsed.settings
+			settings = appPreferences.applyRememberedAndroidControls(parsed.settings, parsed.explicitKeys)
 			currentUnknownLines = parsed.unknownLines
+			return true
 		} catch (_: Exception) {
 			// Corrupted session file — start with defaults
+			return false
 		}
 	}
 
@@ -96,16 +104,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	fun applyModel(model: AmigaModel) {
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, availableRoms.value)
+		val previousSettings = settings
 		val newSettings = EmulatorSettings.fromModel(model).copy(
 			romFile = selectedRoms.kick?.path.orEmpty(),
-			romExtFile = selectedRoms.ext?.path.orEmpty()
+			romExtFile = selectedRoms.ext?.path.orEmpty(),
+			joyport0 = previousSettings.joyport0,
+			joyport1 = previousSettings.joyport1,
+			onScreenJoystick = previousSettings.onScreenJoystick,
+			onScreenKeyboard = previousSettings.onScreenKeyboard
 		)
 		settings = applyConstraints(newSettings)
+		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
 
 	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String, path: String) {
-		settings = applyConstraints(parsed.settings)
+		settings = applyConstraints(appPreferences.applyRememberedAndroidControls(parsed.settings, parsed.explicitKeys))
 		currentUnknownLines = parsed.unknownLines
 		currentConfigName = name
 		currentConfigDescription = parsed.description
@@ -113,6 +127,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		autoSelectDefaultRomIfNeeded(availableRoms.value)
 		baselineSettings = settings
 		baselineUnknownLines = currentUnknownLines
+		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
 
@@ -179,6 +194,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	fun discardChanges() {
 		settings = baselineSettings
 		currentUnknownLines = baselineUnknownLines
+		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
 
@@ -203,7 +219,26 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	fun updateSettings(transform: (EmulatorSettings) -> EmulatorSettings) {
 		val newSettings = transform(settings)
 		settings = applyConstraints(newSettings)
+		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
+	}
+
+	fun applyWhdLoadAutoConfig(file: AmigaFile) {
+		val currentSettings = settings
+		viewModelScope.launch {
+			val detectedSettings = withContext(Dispatchers.IO) {
+				WhdLoadAutoConfig.settingsFor(
+					context = getApplication(),
+					whdLoadFile = file,
+					availableRoms = availableRoms.value,
+					currentSettings = currentSettings
+				)
+			} ?: return@launch
+
+			settings = applyConstraints(detectedSettings)
+			appPreferences.saveAndroidControls(settings)
+			saveLastSession()
+		}
 	}
 
 	fun writeSettingsConfig(

@@ -431,7 +431,9 @@ class ConfigGeneratorTest {
 	@Test
 	fun `generate emits default scaling keys`() {
 		val output = ConfigGenerator.generate(EmulatorSettings())
-		assertContains(output, "scaling_method=-1")
+		val lines = output.lines()
+		assertContains(output, "amiberry.scaling_method=-1")
+		assertFalse(lines.any { it == "scaling_method=-1" })
 		assertContains(output, "gfx_autoresolution=0")
 	}
 
@@ -440,7 +442,7 @@ class ConfigGeneratorTest {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(scalingMethod = 2, gfxAutoresolution = 1)
 		)
-		assertContains(output, "scaling_method=2")
+		assertContains(output, "amiberry.scaling_method=2")
 		assertContains(output, "gfx_autoresolution=1")
 	}
 

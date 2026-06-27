@@ -7,11 +7,14 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 object SettingsControlAvailability {
 
 	fun isAddress24BitEditable(cpuModel: Int): Boolean =
-		cpuModel > 68010
+		cpuModel == 68020
 
 	@StringRes
-	fun address24BitReasonRes(cpuModel: Int): Int? =
-		if (isAddress24BitEditable(cpuModel)) null else R.string.settings_cpu_24bit_forced_68000
+	fun address24BitReasonRes(cpuModel: Int): Int? = when {
+		isAddress24BitEditable(cpuModel) -> null
+		cpuModel <= 68010 -> R.string.settings_cpu_24bit_forced_68000
+		else -> R.string.settings_cpu_24bit_unavailable_32bit
+	}
 
 	fun isFastestSpeedEditable(settings: EmulatorSettings): Boolean =
 		!settings.cycleExact

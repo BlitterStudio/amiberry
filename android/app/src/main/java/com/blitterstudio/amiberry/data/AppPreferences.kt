@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
@@ -28,6 +29,30 @@ class AppPreferences private constructor(context: Context) {
 	var lastWhdloadPath: String
 		get() = prefs.getString(KEY_LAST_WHDLOAD, "") ?: ""
 		set(value) { prefs.edit { putString(KEY_LAST_WHDLOAD, value) } }
+
+	fun rememberedAndroidControls(): EmulatorSettings =
+		EmulatorSettings(
+			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, DEFAULT_JOYPORT0) ?: DEFAULT_JOYPORT0,
+			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, DEFAULT_JOYPORT1) ?: DEFAULT_JOYPORT1,
+			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
+			onScreenKeyboard = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD)
+		)
+
+	fun applyRememberedAndroidControls(settings: EmulatorSettings, explicitKeys: Set<String>): EmulatorSettings =
+		AndroidControlSettings.withFallback(
+			settings = settings,
+			explicitKeys = explicitKeys,
+			fallback = rememberedAndroidControls()
+		)
+
+	fun saveAndroidControls(settings: EmulatorSettings) {
+		prefs.edit {
+			putString(KEY_LAST_JOYPORT0, settings.joyport0)
+			putString(KEY_LAST_JOYPORT1, settings.joyport1)
+			putBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, settings.onScreenJoystick)
+			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, settings.onScreenKeyboard)
+		}
+	}
 
 	/**
 	 * Recently launched items, most recent first. Observable by Compose —
@@ -90,10 +115,18 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
 		private const val KEY_STORAGE_PERMISSION_REQUESTED = "storage_permission_requested"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
+		private const val KEY_LAST_JOYPORT0 = "last_joyport0"
+		private const val KEY_LAST_JOYPORT1 = "last_joyport1"
+		private const val KEY_LAST_ON_SCREEN_JOYSTICK = "last_on_screen_joystick"
+		private const val KEY_LAST_ON_SCREEN_KEYBOARD = "last_on_screen_keyboard"
 		private const val KEY_RECENT_LAUNCHES = "recent_launches"
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
 		private const val REVIEW_INTERVAL = 20
+		private const val DEFAULT_JOYPORT0 = "mouse"
+		private const val DEFAULT_JOYPORT1 = "onscreen_joy"
+		private const val DEFAULT_ON_SCREEN_JOYSTICK = true
+		private const val DEFAULT_ON_SCREEN_KEYBOARD = true
 
 		@Volatile
 		private var instance: AppPreferences? = null

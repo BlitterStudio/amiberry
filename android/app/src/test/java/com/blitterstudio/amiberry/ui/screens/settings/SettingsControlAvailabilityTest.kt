@@ -11,7 +11,7 @@ import java.io.File
 class SettingsControlAvailabilityTest {
 
 	@Test
-	fun `24-bit addressing is fixed for 68000 and editable for 68020 plus`() {
+	fun `24-bit addressing is forced for 68000 editable only for 68020 and unavailable after 68020`() {
 		assertFalse(SettingsControlAvailability.isAddress24BitEditable(cpuModel = 68000))
 		assertEquals(
 			R.string.settings_cpu_24bit_forced_68000,
@@ -20,6 +20,12 @@ class SettingsControlAvailabilityTest {
 
 		assertTrue(SettingsControlAvailability.isAddress24BitEditable(cpuModel = 68020))
 		assertEquals(null, SettingsControlAvailability.address24BitReasonRes(cpuModel = 68020))
+
+		assertFalse(SettingsControlAvailability.isAddress24BitEditable(cpuModel = 68030))
+		assertEquals(
+			R.string.settings_cpu_24bit_unavailable_32bit,
+			SettingsControlAvailability.address24BitReasonRes(cpuModel = 68030)
+		)
 	}
 
 	@Test

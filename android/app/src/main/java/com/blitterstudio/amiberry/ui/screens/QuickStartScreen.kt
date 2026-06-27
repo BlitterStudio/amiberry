@@ -151,6 +151,7 @@ fun QuickStartScreen(
 	val configWriteFailedMessage = stringResource(R.string.quick_start_config_write_failed)
 	val scanningMediaDescription = stringResource(R.string.quick_start_scanning_media)
 	var floppyImportTarget by remember { mutableStateOf(0) }
+	var whdloadAutoConfigPath by remember { mutableStateOf<String?>(null) }
 	val mediaSummary = when {
 		selectedWhdloadGame != null -> mediaSummaryWhdload
 		selectedFloppyPath.isNotBlank() && selectedCdPath.isNotBlank() -> mediaSummaryBoth
@@ -166,6 +167,18 @@ fun QuickStartScreen(
 		val firstAvailableModel = availableModels.firstOrNull()
 		if (firstAvailableModel != null && model !in availableModels) {
 			settingsViewModel.applyModel(firstAvailableModel)
+		}
+	}
+
+	LaunchedEffect(selectedWhdloadGame?.path) {
+		val game = selectedWhdloadGame
+		if (game == null) {
+			whdloadAutoConfigPath = null
+			return@LaunchedEffect
+		}
+		if (whdloadAutoConfigPath != game.path) {
+			whdloadAutoConfigPath = game.path
+			settingsViewModel.applyWhdLoadAutoConfig(game)
 		}
 	}
 

@@ -16,7 +16,8 @@ object ConfigParser {
 	data class ParsedConfig(
 		val settings: EmulatorSettings,
 		val unknownLines: List<String>,
-		val description: String
+		val description: String,
+		val explicitKeys: Set<String> = emptySet()
 	)
 
 	// Keys we know how to parse into EmulatorSettings
@@ -32,7 +33,7 @@ object ConfigParser {
 		"sound_output", "sound_frequency", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
-		"scaling_method", "gfx_autoresolution",
+		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution",
 		"joyport0", "joyport1",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "input.default_osk",
 		"amiberry.android_joyport1",
@@ -69,7 +70,7 @@ object ConfigParser {
 				continue
 			}
 
-			val key = trimmed.substring(0, eqIndex).trim()
+			val key = trimmed.substring(0, eqIndex).trim().lowercase()
 			val value = trimmed.substring(eqIndex + 1).trim()
 
 			when {
@@ -99,7 +100,7 @@ object ConfigParser {
 		val settings = buildSettings(kvPairs, hardDrives)
 		val description = kvPairs["config_description"] ?: ""
 
-		return ParsedConfig(settings, unknownLines, description)
+		return ParsedConfig(settings, unknownLines, description, kvPairs.keys.toSet())
 	}
 
 	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {
@@ -147,7 +148,7 @@ object ConfigParser {
 			gfxHeight = kv["gfx_height"]?.toIntOrNull() ?: 568,
 			correctAspect = (kv["amiberry.gfx_correct_aspect"] ?: kv["gfx_correct_aspect"]).toBool(true),
 			autoCrop = (kv["amiberry.gfx_auto_crop"] ?: kv["gfx_auto_crop"]).toBool(false),
-			scalingMethod = kv["scaling_method"]?.toIntOrNull() ?: -1,
+			scalingMethod = (kv["amiberry.scaling_method"] ?: kv["scaling_method"])?.toIntOrNull() ?: -1,
 			gfxAutoresolution = kv["gfx_autoresolution"]?.toIntOrNull() ?: 0,
 
 			joyport0 = kv["joyport0"] ?: "mouse",

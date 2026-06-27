@@ -157,6 +157,7 @@
     <string name="settings_cpu_compatible_disabled_jit">68040 and 68060 JIT disable compatible mode.</string>
     <string name="settings_cpu_24bit_addressing">24-bit Addressing</string>
     <string name="settings_cpu_24bit_forced_68000">68000 and 68010 CPUs always use 24-bit addressing.</string>
+    <string name="settings_cpu_24bit_unavailable_32bit">68030 and newer CPUs use 32-bit addressing.</string>
     <string name="settings_cpu_fpu_label">FPU</string>
     <string name="settings_cpu_fpu_internal">CPU Internal</string>
     <string name="settings_cpu_jit_cache_label">JIT Cache (KB)</string>
