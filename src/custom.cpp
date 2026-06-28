@@ -4424,8 +4424,9 @@ static void cursorsprite(struct sprite *s)
 		sprite_0_colors[3] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[19]);
 	}
 	sprite_0_width = sprite_width;
-	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) &&
-		currprefs.input_magic_mouse_cursor == MAGICMOUSE_HOST_ONLY && mousehack_alive()) {
+	if (amiberry_cursor_host_only_enabled(currprefs.input_tablet,
+		currprefs.input_mouse_untrap, MOUSEUNTRAP_MAGIC,
+		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY) && mousehack_alive()) {
 		magic_sprite_mask &= ~SPRITE_RENDER_MASK(0);
 	} else {
 		magic_sprite_mask |= SPRITE_RENDER_MASK(0);

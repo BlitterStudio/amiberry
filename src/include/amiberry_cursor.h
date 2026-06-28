@@ -26,9 +26,11 @@ static inline std::uint32_t amiberry_cursor_rgba32_from_rgb24(std::uint32_t rgb)
 }
 
 static inline bool amiberry_cursor_host_only_enabled(int input_tablet,
+	int input_mouse_untrap, int magic_mouse_untrap_value,
 	int input_magic_mouse_cursor, int host_only_cursor_value)
 {
 	return input_tablet > 0
+		&& (input_mouse_untrap & magic_mouse_untrap_value) != 0
 		&& input_magic_mouse_cursor == host_only_cursor_value;
 }
 

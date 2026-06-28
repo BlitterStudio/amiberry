@@ -258,6 +258,7 @@ static uaecptr oldscr = 0;
 static bool magic_mouse_host_only_enabled()
 {
 	return amiberry_cursor_host_only_enabled(currprefs.input_tablet,
+		currprefs.input_mouse_untrap, MOUSEUNTRAP_MAGIC,
 		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY);
 }
 
