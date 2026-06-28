@@ -328,6 +328,7 @@ bool check_rga_free_slot_in(void);
 struct rgabuf *read_rga(int slot);
 struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p);
 extern uae_u16 clxdat;
+extern uae_u32 magic_sprite_mask;
 
 void custom_end_drawing(void);
 void resetfulllinestate(void);
