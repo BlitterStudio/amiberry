@@ -969,6 +969,9 @@ static void setupcursor()
 		return;
 
 	if (magic_mouse_host_only_enabled()) {
+		if (cursordata && cursorwidth && cursorheight) {
+			createwindowscursor(rbc->monitor_id, 1, 0);
+		}
 		setupcursor_needed = 0;
 		return;
 	}

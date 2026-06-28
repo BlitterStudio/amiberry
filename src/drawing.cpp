@@ -4525,7 +4525,6 @@ static uae_u32 decode_pixel(uint8_t pix)
 
 static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
 {
-	vs &= magic_sprite_mask;
 	uae_u8 c = vs >> 16;
 	uae_u16 v = (uae_u16)vs;
 	if (currprefs.collision_level) {
@@ -4554,12 +4553,12 @@ static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
 
 static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 {
-	vs &= magic_sprite_mask;
-	uae_u8 c = vs >> 16;
-	uae_u16 v = (uae_u16)vs;
 	if (currprefs.collision_level) {
 		denise_collide_sprites(apixel, vs);
 	}
+	vs &= magic_sprite_mask;
+	uae_u8 c = vs >> 16;
+	uae_u16 v = (uae_u16)vs;
 	int *shift_lookup = bpldualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
 	int maskshift, plfmask;
 	maskshift = shift_lookup[apixel];
