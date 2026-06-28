@@ -30,6 +30,7 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
+#include "amiberry_cursor.h"
 #ifdef SERIAL_PORT
 #include "serial.h"
 #endif
@@ -693,11 +694,13 @@ static struct sprite spr[MAX_SPRITES];
 uaecptr sprite_0;
 int sprite_0_width, sprite_0_height, sprite_0_doubled;
 uae_u32 sprite_0_colors[4];
-static uae_u8 magic_sprite_mask = 0xff;
+uae_u32 magic_sprite_mask = 0xffffffff;
 
 static int sprite_width;
 static int sprite_sprctlmask;
 int sprite_buffer_res;
+
+#define SPRITE_RENDER_MASK(num) ((3u << ((num) * 2)) | (1u << ((num) + 16)))
 
 static uae_s16 bpl1mod, bpl2mod;
 static uaecptr bplpt[MAX_PLANES];
@@ -4416,17 +4419,17 @@ static void cursorsprite(struct sprite *s)
 		sprite_0_colors[2] = agnus_colors.color_regs_aga[sbasecol + 2] & 0xffffff;
 		sprite_0_colors[3] = agnus_colors.color_regs_aga[sbasecol + 3] & 0xffffff;
 	} else {
-		sprite_0_colors[1] = xcolors[agnus_colors.color_regs_ecs[17] & 0xfff];
-		sprite_0_colors[2] = xcolors[agnus_colors.color_regs_ecs[18] & 0xfff];
-		sprite_0_colors[3] = xcolors[agnus_colors.color_regs_ecs[19] & 0xfff];
+		sprite_0_colors[1] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[17]);
+		sprite_0_colors[2] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[18]);
+		sprite_0_colors[3] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[19]);
 	}
 	sprite_0_width = sprite_width;
-	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		if (currprefs.input_magic_mouse_cursor == MAGICMOUSE_HOST_ONLY && mousehack_alive()) {
-			magic_sprite_mask &= ~1;
-		} else {
-			magic_sprite_mask |= 1;
-		}
+	if (amiberry_cursor_host_only_enabled(currprefs.input_tablet,
+		currprefs.input_mouse_untrap, MOUSEUNTRAP_MAGIC,
+		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY) && mousehack_alive()) {
+		magic_sprite_mask &= ~SPRITE_RENDER_MASK(0);
+	} else {
+		magic_sprite_mask |= SPRITE_RENDER_MASK(0);
 	}
 }
 
