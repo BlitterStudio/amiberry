@@ -1540,7 +1540,7 @@ uae_u16 SERDATR()
 	if (!data_in_serdatr) {
 		// interrupt was previously cleared but SERDATR was not read.
 		// Clear it now when SERDATR was read.
-		INTREQ_INT(11, 0);
+		INTREQ_f(1 << 11);
 	}
 	serdatr_last_got = 0;
 	return serdatr;
