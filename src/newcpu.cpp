@@ -1782,7 +1782,7 @@ void flush_cpu_caches_040(uae_u16 opcode)
 
 	flush_cpu_caches_040_2(cache, scope, addr, push, pushinv);
 #ifdef WITH_PPC
-	if (cache) {
+	if (cache & 2) {
 		uae_ppc_mark_code_cache_dirty();
 	}
 #endif

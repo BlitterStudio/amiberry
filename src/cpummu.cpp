@@ -32,6 +32,9 @@
 #include "newcpu.h"
 #include "cpummu.h"
 #include "debug.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 
 #define MMUDUMP 1
 
@@ -1403,6 +1406,9 @@ void REGPARAM2 mmu_op_real(uae_u32 opcode, uae_u16 extra)
 			mmu_flush_atc(addr, super, glob);
 		}
 		flush_internals();
+#ifdef WITH_PPC
+		uae_ppc_mark_code_cache_dirty();
+#endif
 #ifdef USE_JIT
 		flush_icache(0);
 #endif

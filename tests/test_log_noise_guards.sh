@@ -21,8 +21,15 @@ if ! grep -F -q 'no autoconfig (unassigned)' src/expansion.cpp; then
 	missing=1
 fi
 
-if ! grep -F -q 'uae_ppc_mark_code_cache_dirty();' src/newcpu.cpp; then
-	echo "68040 cache flushes must mark QEMU PPC JIT state dirty" >&2
+cache_flush_body=$(sed -n '/void flush_cpu_caches_040/,/void cpu_invalidate_cache/p' src/newcpu.cpp)
+if ! printf '%s\n' "$cache_flush_body" | grep -F -q 'if (cache & 2)' ||
+	! printf '%s\n' "$cache_flush_body" | grep -F -q 'uae_ppc_mark_code_cache_dirty();'; then
+	echo "68040 instruction-cache flushes must mark QEMU PPC JIT state dirty" >&2
+	missing=1
+fi
+
+if ! grep -F -q 'uae_ppc_mark_code_cache_dirty();' src/cpummu.cpp; then
+	echo "68040 MMU ATC flushes must mark QEMU PPC JIT/TLB state dirty" >&2
 	missing=1
 fi
 
