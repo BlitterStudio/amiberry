@@ -21,4 +21,19 @@ if ! grep -F -q 'no autoconfig (unassigned)' src/expansion.cpp; then
 	missing=1
 fi
 
+if ! grep -F -q 'uae_ppc_mark_code_cache_dirty();' src/newcpu.cpp; then
+	echo "68040 cache flushes must mark QEMU PPC JIT state dirty" >&2
+	missing=1
+fi
+
+if grep -n -A 6 -E 'void uae_ppc_execute_(check|quick)' src/ppc/ppc.cpp | grep -F -q 'impl.flush_jit();'; then
+	echo "QEMU PPC JIT flush must not be called directly from execute hot paths" >&2
+	missing=1
+fi
+
+if ! grep -F -q 'qemu_ppc_jit_flush_pending' src/ppc/ppc.cpp; then
+	echo "QEMU PPC JIT flush requests must be coalesced with a pending flag" >&2
+	missing=1
+fi
+
 exit "$missing"

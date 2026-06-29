@@ -42,6 +42,7 @@ static volatile int spinlock_cnt;
 #endif
 
 static volatile bool ppc_spinlock_waiting;
+static volatile bool qemu_ppc_jit_flush_pending;
 
 #ifdef WIN32_SPINLOCK
 #define CRITICAL_SECTION_SPIN_COUNT 5000
@@ -378,6 +379,24 @@ static bool using_pearpc(void)
 	return ppc_implementation == PPC_IMPLEMENTATION_PEARPC;
 }
 
+void uae_ppc_mark_code_cache_dirty(void)
+{
+	qemu_ppc_jit_flush_pending = true;
+}
+
+/* QEMU PPC can execute direct-mapped shared RAM that the m68k patched outside
+ * QEMU's softmmu. Use m68k cache flushes as the dirty signal and consume one
+ * JIT/TLB flush at the next m68k->PPC handoff (#2114), instead of flushing on
+ * every scheduler poll. */
+static void request_qemu_ppc_jit_flush(void)
+{
+	if (!qemu_ppc_jit_flush_pending || !using_qemu() || !impl.flush_jit || regs.halted) {
+		return;
+	}
+	qemu_ppc_jit_flush_pending = false;
+	impl.flush_jit();
+}
+
 enum PPCLockMethod {
 	PPC_RELEASE_SPINLOCK,
 	PPC_KEEP_SPINLOCK,
@@ -671,6 +690,7 @@ static void uae_ppc_cpu_reset(void)
 
 	if (using_qemu()) {
 		impl.reset();
+		qemu_ppc_jit_flush_pending = true;
 	} else if (using_pearpc()) {
 		write_log(_T("PPC: Init\n"));
 		impl.set_pc(0, 0xfff00100);
@@ -700,16 +720,7 @@ static int ppc_thread(void *v)
 void uae_ppc_execute_check(void)
 {
 	if (ppc_spinlock_waiting) {
-		/* #2114: request a PPC JIT/TLB flush at an actual m68k->PPC handoff (the
-		 * PPC is about to run, possibly executing code/page-tables the m68k just
-		 * patched in shared RAM, which bypass QEMU's PPC softmmu). This only sets
-		 * an atomic flag; the PPC vcpu performs the real synchronous flush at its
-		 * next cpu_exec safe point. NOT on every execute_check() call (the m68k
-		 * busy-wait hits this millions of times/sec) and never while the m68k is
-		 * halted (OS4) -- both would drown the PPC in retranslation. */
-		if (using_qemu() && impl.flush_jit && !regs.halted) {
-			impl.flush_jit();
-		}
+		request_qemu_ppc_jit_flush();
 		uae_ppc_spinlock_release();
 		uae_ppc_spinlock_get();
 	}
@@ -717,9 +728,7 @@ void uae_ppc_execute_check(void)
 
 void uae_ppc_execute_quick()
 {
-	if (using_qemu() && impl.flush_jit && !regs.halted) {
-		impl.flush_jit();
-	}
+	request_qemu_ppc_jit_flush();
 	uae_ppc_spinlock_release();
 	sleep_millis_main(1);
 	uae_ppc_spinlock_get();

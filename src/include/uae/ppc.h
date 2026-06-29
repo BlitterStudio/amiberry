@@ -47,6 +47,7 @@ void uae_ppc_wakeup_main(void);
 
 void uae_ppc_execute_quick(void);
 void uae_ppc_execute_check(void);
+void uae_ppc_mark_code_cache_dirty(void);
 void uae_ppc_spinlock_reset(void);
 void uae_ppc_spinlock_get(void);
 void uae_ppc_spinlock_release(void);
