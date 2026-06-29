@@ -246,6 +246,15 @@ static void ne2000_reset2(NE2000State *s)
 	s->config[1] = 0;
 }
 
+static void log_packet(const uae_u8 *p, int size)
+{
+	write_log(" \n");
+	for (int i = 0; i < size; i++) {
+		write_log("%02X", p[i]);
+	}
+	write_log("\n");
+}
+
 static void ne2000_update_irq(NE2000State *s)
 {
     int isr;
@@ -354,7 +363,7 @@ static ssize_t ne2000_receive(NetClientState *nc, const uint8_t *buf, size_t siz
 		const uae_u8 *srcmac = buf + 6;
 		write_log(_T("NE2000<!DST:%02X.%02X.%02X.%02X.%02X.%02X SRC:%02X.%02X.%02X.%02X.%02X.%02X E=%04X S=%d\n"),
 			dstmac[0], dstmac[1], dstmac[2], dstmac[3], dstmac[4], dstmac[5],
-			srcmac[6], srcmac[7], srcmac[8], srcmac[9], srcmac[10], srcmac[11],
+			srcmac[0], srcmac[1], srcmac[2], srcmac[3], srcmac[4], srcmac[5],
 			(buf[12] << 8) | buf[13], size);
 	}
 
@@ -467,7 +476,7 @@ static void ne2000_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 						bool crcmode = (s->txcr & 1) != 0;
 						uint32_t crc1, crc2;
 						// loopback mode uses 16-bit transfers but even bytes are ignored.
-						int byteoffset = s->byteswapsupported && (s->dcfg & 2)  ? 0 : 1;
+						int byteoffset = 0;//s->byteswapsupported && (s->dcfg & 2)  ? 0 : 1;
 						int looplen = transmitlen / 2;
 						uae_u8 *loop = xmalloc(uae_u8, looplen + 4);
 						for (int i = 0; i < looplen; i++) {
@@ -518,8 +527,9 @@ static void ne2000_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 							const uae_u8 *srcmac = transmitbuffer + 6;
 							write_log(_T("NE2000>!DST:%02X.%02X.%02X.%02X.%02X.%02X SRC:%02X.%02X.%02X.%02X.%02X.%02X E=%04X S=%d\n"),
 								dstmac[0], dstmac[1], dstmac[2], dstmac[3], dstmac[4], dstmac[5],
-								srcmac[6], srcmac[7], srcmac[8], srcmac[9], srcmac[10], srcmac[11],
+								srcmac[0], srcmac[1], srcmac[2], srcmac[3], srcmac[4], srcmac[5],
 								(transmitbuffer[12] << 8) | transmitbuffer[13], transmitlen);
+							log_packet(transmitbuffer, transmitlen);
 						}
 
 
@@ -735,6 +745,13 @@ static uint32_t ne2000_ioport_read(void *opaque, uint32_t addr)
 			ret = s->config[3];
 			break;
 
+		case EN0_NCR:
+		case EN0_COUNTER0:
+		case EN0_COUNTER1:
+		case EN0_COUNTER2:
+			ret = 0;
+			break;
+
 		case EN3_9346CR:
 			s->e9346cr &= ~1;
 			s->e9346cr |= eeprom93xx_read(s->eeprom) ? 1 : 0;
@@ -765,8 +782,9 @@ static inline void ne2000_mem_writew(NE2000State *s, uint32_t addr, uint32_t val
     addr &= ~1; /* XXX: check exact behaviour if not even */
     if (s->dp8390 || addr < 32 ||
         (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
-        *(uint16_t *)(s->mem + addr) = cpu_to_le16(val);
-    }
+		s->mem[addr + 1] = val >> 8;
+		s->mem[addr + 0] = val & 0xff;
+	}
 }
 
 static inline void ne2000_mem_writel(NE2000State *s, uint32_t addr, uint32_t val)
@@ -774,7 +792,10 @@ static inline void ne2000_mem_writel(NE2000State *s, uint32_t addr, uint32_t val
     addr &= ~1; /* XXX: check exact behaviour if not even */
     if (s->dp8390 || addr < 32 ||
         (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
-        stl_le_p(s->mem + addr, val);
+		s->mem[addr + 3] = val >> 24;
+		s->mem[addr + 2] = (val >> 16) & 0xff;
+		s->mem[addr + 1] = (val >> 8) & 0xff;
+		s->mem[addr + 0] = val & 0xff;
     }
 }
 
@@ -793,7 +814,8 @@ static inline uint32_t ne2000_mem_readw(NE2000State *s, uint32_t addr)
     addr &= ~1; /* XXX: check exact behaviour if not even */
     if (s->dp8390 || addr < 32 ||
         (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
-        return le16_to_cpu(*(uint16_t *)(s->mem + addr));
+		uint16_t val = (s->mem[addr + 1] << 8) | (s->mem[addr + 0]);
+		return val;
     } else {
         return 0xffff;
     }
@@ -804,7 +826,8 @@ static inline uint32_t ne2000_mem_readl(NE2000State *s, uint32_t addr)
     addr &= ~1; /* XXX: check exact behaviour if not even */
     if (s->dp8390 || addr < 32 ||
         (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
-        return ldl_le_p(s->mem + addr);
+        uint32_t val = (s->mem[addr + 3] << 24) | (s->mem[addr + 2] << 16) | (s->mem[addr + 1] << 8) | (s->mem[addr + 0]);
+        return val;
     } else {
         return 0xffffffff;
     }
@@ -828,7 +851,7 @@ static inline void ne2000_dma_update(NE2000State *s, int len)
     }
 }
 
-static void ne2000_asic_ioport_write(void *opaque, uint32_t addr, uint32_t val)
+static void ne2000_asic_ioport_write(void *opaque, uint32_t addr, uint32_t val, int size)
 {
     NE2000State *s = (NE2000State*)opaque;
 
@@ -837,7 +860,7 @@ static void ne2000_asic_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 #endif
     if (s->rcnt == 0)
         return;
-    if (s->dcfg & 0x01) {
+    if ((s->dcfg & 0x01) && size == 2) {
 		/* 16 bit access */
 		if (s->byteswapsupported && (s->dcfg & 0x02)) {
 			val &= 0xffff;
@@ -849,11 +872,11 @@ static void ne2000_asic_ioport_write(void *opaque, uint32_t addr, uint32_t val)
     } else {
         /* 8 bit access */
         ne2000_mem_writeb(s, s->rsar, val);
-        ne2000_dma_update(s, 1);
+        ne2000_dma_update(s, (s->dcfg & 0x01) ? 2 : 1);
     }
 }
 
-static uint32_t ne2000_asic_ioport_read(void *opaque, uint32_t addr)
+static uint32_t ne2000_asic_ioport_read(void *opaque, uint32_t addr, int size)
 {
     NE2000State *s = (NE2000State*)opaque;
     int ret;
@@ -861,7 +884,7 @@ static uint32_t ne2000_asic_ioport_read(void *opaque, uint32_t addr)
 	uint32_t rsasr = s->rsar;
 #endif
 
-    if (s->dcfg & 0x01) {
+    if ((s->dcfg & 0x01) && size == 2) {
         /* 16 bit access */
         ret = ne2000_mem_readw(s, s->rsar);
 		if (s->byteswapsupported && (s->dcfg & 0x02)) {
@@ -873,7 +896,7 @@ static uint32_t ne2000_asic_ioport_read(void *opaque, uint32_t addr)
     } else {
         /* 8 bit access */
         ret = ne2000_mem_readb(s, s->rsar);
-        ne2000_dma_update(s, 1);
+        ne2000_dma_update(s, (s->dcfg & 0x01) ? 2 : 1);
     }
 #ifdef DEBUG_NE2000
     write_log("NE2000: asic read val=0x%04x addr=%08x cnt=%08x\n", ret, rsasr, s->rcnt);
@@ -987,7 +1010,7 @@ static uint64_t ne2000_read(void *opaque, hwaddr addr, unsigned size)
 		}
 	} else if (addr >= 0x10 && addr <= 0x17) {
         if (size <= 2) {
-            v = ne2000_asic_ioport_read(s, addr);
+            v = ne2000_asic_ioport_read(s, addr, size);
         } else {
             v = ne2000_asic_ioport_readl(s, addr);
         }
@@ -1020,7 +1043,7 @@ static void ne2000_write(void *opaque, hwaddr addr, uint64_t data64, unsigned si
 		}
 	} else if (addr >= 0x10 && addr <= 0x17) {
 		if (size <= 2) {
-            ne2000_asic_ioport_write(s, addr, data);
+            ne2000_asic_ioport_write(s, addr, data, size);
         } else {
             ne2000_asic_ioport_writel(s, addr, data);
         }
@@ -1251,15 +1274,11 @@ static void ne2000_setident(void *opaque, uae_u8 id0, uae_u8 id1)
 	s->idbytes[1] = id1;
 
 }
-static void ne2000_byteswapsupported(void *opaque)
-{
-	NE2000State *s = (NE2000State*)opaque;
-	s->byteswapsupported = true;
-}
 static void ne2000_setisdp8390(void *opaque)
 {
 	NE2000State *s = (NE2000State*)opaque;
 	s->dp8390 = true;
+	s->byteswapsupported = true;
 }
 
 
@@ -1631,6 +1650,7 @@ static int toariadne2(struct ne2000_s *ne, uaecptr addr, uae_u32 *vp, int size, 
 		addr -= 0x600;
 		addr >>= 1;
 		addr &= 0x1f;
+		*bs = true;
 		return addr;
 	} else if (ne->ne2000_romtype == ROMTYPE_LANROVER) {
 		if ((addr & 0xc000) == 0x8000) {
@@ -1737,6 +1757,7 @@ static int toariadne2(struct ne2000_s *ne, uaecptr addr, uae_u32 *vp, int size, 
 			if (ne->pnp.activated && isa_addr >= ne->pnp.io_port * 2 && isa_addr < (ne->pnp.io_port + ne->pnp.io_port_size) * 2) {
 				isa_addr -= ne->pnp.io_port * 2;
 				isa_addr >>= 1;
+				*bs = true;
 				return isa_addr;
 			}
 		}
@@ -1998,7 +2019,6 @@ bool ariadne2_init(struct autoconfig_info *aci)
 	ne->ariadne2_board_state->irq_callback = ariadne2_irq_callback;
 	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, true))
 		return false;
-	ne2000_byteswapsupported(&ne2000state);
 
 	init();
 
@@ -2081,7 +2101,6 @@ bool xsurf_init(struct autoconfig_info *aci)
 	if (!ne2000_init_2(ne->ariadne2_board_state, ne->ne2000_romtype, aci->rc->configtext, false))
 		return false;
 	isapnp_init(&ne->pnp, rtl8019as_pnpdata, sizeof rtl8019as_pnpdata, rt_pnp_init_key, 32);
-	ne2000_byteswapsupported(&ne2000state);
 	ne2000_setident(&ne2000state, 0x50, 0x70);
 
 	init();
