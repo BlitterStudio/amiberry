@@ -3384,6 +3384,31 @@ int cfgfile_strval (const TCHAR *option, const TCHAR *value, const TCHAR *name, 
 	return cfgfile_strval (option, value, name, nullptr, location, table, more);
 }
 
+static int cfgfile_ppc_cpu_idle(const TCHAR *option, const TCHAR *value, int *location)
+{
+	if (_tcscmp(option, _T("ppc_cpu_idle")) != 0) {
+		return 0;
+	}
+	if (!_tcsicmp(value, _T("disabled"))) {
+		*location = 0;
+		return 1;
+	}
+	if (!_tcsicmp(value, _T("max"))) {
+		*location = 10;
+		return 1;
+	}
+
+	TCHAR *endptr = nullptr;
+	const int idle = static_cast<int>(_tcstol(value, &endptr, 10));
+	if (endptr != value && *endptr == 0 && idle >= 0 && idle <= 10) {
+		*location = idle;
+		return 1;
+	}
+
+	cfgfile_warning(_T("Unknown value ('%s') for option '%s'.\n"), value, option);
+	return -1;
+}
+
 static int cfgfile_strboolval (const TCHAR *option, const TCHAR *value, const TCHAR *name, bool *location, const TCHAR *table[], int more)
 {
 	int locationint;
@@ -6718,7 +6743,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		}
 		return 1;
 	}
-	if (cfgfile_strval(option, value, _T("ppc_cpu_idle"), &p->ppc_cpu_idle, ppc_cpu_idle, 0))
+	if (cfgfile_ppc_cpu_idle(option, value, &p->ppc_cpu_idle))
 		return 1;
 #endif
 

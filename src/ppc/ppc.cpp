@@ -43,6 +43,8 @@ static volatile int spinlock_cnt;
 
 static volatile bool ppc_spinlock_waiting;
 static volatile bool qemu_ppc_jit_flush_pending;
+static constexpr int QEMU_QUICK_HANDOFF_IDLE_MAX = 10;
+static int qemu_ppc_quick_handoff_count;
 
 #ifdef WIN32_SPINLOCK
 #define CRITICAL_SECTION_SPIN_COUNT 5000
@@ -377,6 +379,31 @@ static bool using_qemu(void)
 static bool using_pearpc(void)
 {
 	return ppc_implementation == PPC_IMPLEMENTATION_PEARPC;
+}
+
+static int qemu_ppc_quick_handoff_sleep_ms(void)
+{
+	if (!using_qemu()) {
+		qemu_ppc_quick_handoff_count = 0;
+		return 1;
+	}
+
+	const int idle = currprefs.ppc_cpu_idle;
+	if (idle <= 0) {
+		qemu_ppc_quick_handoff_count = 0;
+		return 0;
+	}
+	if (idle >= QEMU_QUICK_HANDOFF_IDLE_MAX) {
+		qemu_ppc_quick_handoff_count = 0;
+		return 1;
+	}
+
+	const int sleep_interval = QEMU_QUICK_HANDOFF_IDLE_MAX + 1 - idle;
+	if (++qemu_ppc_quick_handoff_count >= sleep_interval) {
+		qemu_ppc_quick_handoff_count = 0;
+		return 1;
+	}
+	return 0;
 }
 
 void uae_ppc_mark_code_cache_dirty(void)
@@ -730,7 +757,7 @@ void uae_ppc_execute_quick()
 {
 	request_qemu_ppc_jit_flush();
 	uae_ppc_spinlock_release();
-	sleep_millis_main(1);
+	sleep_millis_main(qemu_ppc_quick_handoff_sleep_ms());
 	uae_ppc_spinlock_get();
 }
 

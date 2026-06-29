@@ -43,4 +43,21 @@ if ! grep -F -q 'qemu_ppc_jit_flush_pending' src/ppc/ppc.cpp; then
 	missing=1
 fi
 
+if ! grep -F -q 'cfgfile_ppc_cpu_idle' src/cfgfile.cpp ||
+	! grep -F -q '!_tcsicmp(value, _T("max"))' src/cfgfile.cpp ||
+	! grep -F -q 'idle >= 0 && idle <= 10' src/cfgfile.cpp; then
+	echo "ppc_cpu_idle config parsing must accept disabled/max and numeric 0..10" >&2
+	missing=1
+fi
+
+ppc_quick_body=$(sed -n '/void uae_ppc_execute_quick/,/void uae_ppc_emulate/p' src/ppc/ppc.cpp)
+if ! grep -F -q 'QEMU_QUICK_HANDOFF_IDLE_MAX' src/ppc/ppc.cpp ||
+	! grep -F -q 'const int sleep_interval = QEMU_QUICK_HANDOFF_IDLE_MAX + 1 - idle;' src/ppc/ppc.cpp ||
+	! grep -F -q 'idle <= 0' src/ppc/ppc.cpp ||
+	! grep -F -q 'idle >= QEMU_QUICK_HANDOFF_IDLE_MAX' src/ppc/ppc.cpp ||
+	! printf '%s\n' "$ppc_quick_body" | grep -F -q 'sleep_millis_main(qemu_ppc_quick_handoff_sleep_ms());'; then
+	echo "QEMU PPC quick handoffs must scale throttling with PPC idle" >&2
+	missing=1
+fi
+
 exit "$missing"
