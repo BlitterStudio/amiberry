@@ -38,6 +38,7 @@ void led_filter_audio (void);
 void set_audio (void);
 int audio_activate (void);
 void audio_deactivate (void);
+void audio_clear_output_buffers (void);
 void audio_vsync (void);
 void audio_sampleripper(int);
 void write_wavheader (struct zfile *wavfile, size_t size, uae_u32 freq);

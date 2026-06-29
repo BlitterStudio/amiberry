@@ -1494,6 +1494,12 @@ void audio_deactivate (void)
 	audio_event_reset ();
 }
 
+void audio_clear_output_buffers (void)
+{
+	reset_sound ();
+	clear_sound_buffers ();
+}
+
 int audio_activate (void)
 {
 	int ret = 0;
