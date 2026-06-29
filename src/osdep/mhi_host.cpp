@@ -571,9 +571,15 @@ uae_u32 mhi_host_free(TrapContext*, uae_u32 handle)
 	if (!session)
 		return 0;
 
+	lock_session(session);
+	const bool flush_output = session->streamid > 0 && !playback_drained_locked(session);
+	unlock_session(session);
+
 	active_session = nullptr;
 	write_log(_T("MHI: free decoder handle %u\n"), handle);
 	destroy_session(session);
+	if (flush_output)
+		audio_clear_output_buffers();
 	return 1;
 }
 
@@ -661,6 +667,7 @@ uae_u32 mhi_host_stop(TrapContext*, uae_u32 handle)
 		return 0;
 
 	lock_session(session);
+	const bool flush_output = session->streamid > 0 && !playback_drained_locked(session);
 	session->playing = false;
 	session->paused = false;
 	unlock_session(session);
@@ -678,6 +685,8 @@ uae_u32 mhi_host_stop(TrapContext*, uae_u32 handle)
 	unlock_session(session);
 #endif
 	stop_stream(session);
+	if (flush_output)
+		audio_clear_output_buffers();
 	write_log(_T("MHI: stop\n"));
 	return 1;
 }
