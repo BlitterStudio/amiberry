@@ -2564,6 +2564,14 @@ static void libretro_emit_audio_starvation_guard()
 	if (libretro_audio_deficit_frames <= max_deferred_frames)
 		return;
 
+	// The FIFO drain handles normal pacing and small long-term drift while real
+	// audio is flowing. Do not repay that debt with synthetic padding, because
+	// repeated ramp-to-zero inserts are audible on sustained music.
+	if (libretro_audio_frames_this_run > 0) {
+		libretro_audio_deficit_frames = max_deferred_frames;
+		return;
+	}
+
 	unsigned missing_frames = static_cast<unsigned>(libretro_audio_deficit_frames - max_deferred_frames);
 	while (missing_frames > 0) {
 		const unsigned chunk = std::min(missing_frames, 1024U);

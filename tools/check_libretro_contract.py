@@ -154,13 +154,15 @@ def main():
 		and "libretro_audio_deficit_frames -= libretro_audio_frames_this_run;" in libretro_emit_audio_starvation_guard
 		and "libretro_audio_deficit_frames = max_deferred_frames * 4.0;" in libretro_emit_audio_starvation_guard
 		and "if (libretro_audio_deficit_frames <= max_deferred_frames)" in libretro_emit_audio_starvation_guard
+		and "if (libretro_audio_frames_this_run > 0)" in libretro_emit_audio_starvation_guard
+		and "libretro_audio_deficit_frames = max_deferred_frames;" in libretro_emit_audio_starvation_guard
 		and "libretro_fill_audio_padding(padding, chunk)" in libretro_emit_audio_starvation_guard
 		and "audio_batch_cb(padding, chunk)" in libretro_emit_audio_starvation_guard
 		and "audio_cb(padding[i * 2], padding[i * 2 + 1])" in libretro_emit_audio_starvation_guard
 		and "libretro_audio_note_emitted(padding, accepted)" in libretro_emit_audio_starvation_guard
 		and "libretro_audio_deficit_frames = 0.0;" in libretro_audio_reset
 		and "libretro_audio_reset();" in reset_core_runtime_state,
-		"retro_run() must guard sustained libretro audio starvation with click-safe padding, without padding normal bursty audio frames",
+		"retro_run() must guard sustained libretro audio starvation with click-safe padding, without adding synthetic padding while real audio is flowing",
 		failures,
 	)
 	require(
