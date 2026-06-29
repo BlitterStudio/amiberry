@@ -1275,6 +1275,15 @@ static void banshee_cmd_write(banshee_t *banshee, uint32_t addr, uint32_t val)
                 case cmdRdPtrL0:
                 voodoo->cmdfifo_rp = val;
                 break;
+                case cmdBump0:
+                case cmdRdPtrH0:
+                case cmdHoleCnt0:
+                /* Amiberry local delta: G-REX/OpenPCI Voodoo3 drivers clear
+                   these CMDFIFO auxiliary registers frequently. FIFO progress is
+                   tracked from framebuffer writes, so zero writes are no-ops. */
+                if (val)
+                        pclog("Unhandled non-zero banshee_cmd_write: addr=%08x val=%08x\n", addr, val);
+                break;
                 case cmdAMin0:
                 voodoo->cmdfifo_amin = val;
                 break;

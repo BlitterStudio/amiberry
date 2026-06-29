@@ -3259,8 +3259,13 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 			} else {
 				cd->base = aci->start;
 				cd->size = aci->size;
-				if (log)
-					write_log(_T("'%s' no autoconfig %08x - %08x.\n"), aci->label ? aci->label : _T("<no name>"), cd->base, cd->base + cd->size - 1);
+				if (log) {
+					const TCHAR *board_label = aci->label ? aci->label : _T("<no name>");
+					if (cd->base == 0xffffffff || cd->size == 0)
+						write_log(_T("'%s' no autoconfig (unassigned).\n"), board_label);
+					else
+						write_log(_T("'%s' no autoconfig %08x - %08x.\n"), board_label, cd->base, cd->base + cd->size - 1);
+				}
 			}
 			_tcscpy(aci->name, label);
 			if (cd->flags & CARD_FLAG_CHILD)

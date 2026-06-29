@@ -963,7 +963,6 @@ static void freehandle(struct hardfilehandle* h)
 }
 
 void hdf_close_target(struct hardfiledata* hfd) {
-	write_log("hdf_close_target\n");
 	freehandle (hfd->handle);
 	xfree(hfd->handle);
 	xfree(hfd->emptyname);
