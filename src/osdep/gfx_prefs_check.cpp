@@ -187,6 +187,9 @@ int check_prefs_changed_gfx()
 	c |= currprefs.gfx_luminance != changed_prefs.gfx_luminance ? (1 | 256) : 0;
 	c |= currprefs.gfx_contrast != changed_prefs.gfx_contrast ? (1 | 256) : 0;
 	c |= currprefs.gfx_gamma != changed_prefs.gfx_gamma ? (1 | 256) : 0;
+	c |= currprefs.gfx_gamma_ch[0] != changed_prefs.gfx_gamma_ch[0] ? (1 | 256) : 0;
+	c |= currprefs.gfx_gamma_ch[1] != changed_prefs.gfx_gamma_ch[1] ? (1 | 256) : 0;
+	c |= currprefs.gfx_gamma_ch[2] != changed_prefs.gfx_gamma_ch[2] ? (1 | 256) : 0;
 
 	c |= currprefs.gfx_resolution != changed_prefs.gfx_resolution ? (128) : 0;
 	c |= currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ? (128) : 0;
@@ -324,6 +327,9 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_luminance = changed_prefs.gfx_luminance;
 		currprefs.gfx_contrast = changed_prefs.gfx_contrast;
 		currprefs.gfx_gamma = changed_prefs.gfx_gamma;
+		currprefs.gfx_gamma_ch[0] = changed_prefs.gfx_gamma_ch[0];
+		currprefs.gfx_gamma_ch[1] = changed_prefs.gfx_gamma_ch[1];
+		currprefs.gfx_gamma_ch[2] = changed_prefs.gfx_gamma_ch[2];
 
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
