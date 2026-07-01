@@ -213,6 +213,8 @@ extern void apply_auto_crop_policy(const SDL_Surface* surface, SDL_Rect& rect,
 	int hres, int vres, bool is_ntsc, AutoCropState& state, bool reset);
 extern bool vkbd_allowed(int monid);
 extern float calculate_desired_aspect(const AmigaMonitor* mon);
+extern float calculate_rtg_integer_scale(int render_width, int render_height,
+	int src_width, int src_height, int scale_limit);
 extern void quit_drawing_thread();
 extern void start_drawing_thread();
 extern bool target_graphics_buffer_update(const int monid, const bool force);

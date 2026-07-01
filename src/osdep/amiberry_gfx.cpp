@@ -784,6 +784,55 @@ float calculate_desired_aspect(const AmigaMonitor* mon)
 	return 4.0f / 3.0f;
 }
 
+float calculate_rtg_integer_scale(int render_width, int render_height,
+	int src_width, int src_height, int scale_limit)
+{
+	if (render_width <= 0 || render_height <= 0 || src_width <= 0 || src_height <= 0) {
+		return 1.0f;
+	}
+
+	if (scale_limit < 0) {
+		scale_limit = 0;
+	} else if (scale_limit > 3) {
+		scale_limit = 3;
+	}
+
+	const int scale_unit = 1 << scale_limit;
+	const float fdivx = static_cast<float>(render_width) / static_cast<float>(src_width);
+	const float fdivy = static_cast<float>(render_height) / static_cast<float>(src_height);
+	float scale = (fdivx < 1.0f || fdivy < 1.0f) ? 1.0f : std::min(fdivx, fdivy);
+
+	const int scale_steps = static_cast<int>(scale * scale_unit);
+	scale = static_cast<float>(scale_steps) / static_cast<float>(scale_unit);
+
+	if (fdivx < 1.0f || fdivy < 1.0f) {
+		float adjust = 0.5f / static_cast<float>(scale_unit);
+		scale = 1.0f;
+		float previous_scale = scale;
+
+		for (;;) {
+			if (scale <= adjust) {
+				adjust /= 2.0f;
+				if (adjust < 0.10f) {
+					break;
+				}
+			}
+			scale -= adjust;
+			if (scale < 0.10f) {
+				scale = 0.10f;
+				break;
+			}
+			if (fdivx > 2.0f * scale || fdivy > 2.0f * scale) {
+				scale = previous_scale;
+				break;
+			}
+			previous_scale = scale;
+		}
+	}
+
+	return scale;
+}
+
 void show_screen(const int monid, int mode)
 {
 	// Skip all rendering if headless mode

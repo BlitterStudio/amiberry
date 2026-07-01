@@ -1042,8 +1042,10 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.picasso_on = ad->picasso_on;
 
 	const AmigaMonitor* mon = &AMonitors[monid];
+	const auto& filter_prefs = get_active_filter_prefs();
 	slot.scalepicasso = mon->scalepicasso;
 	slot.screen_is_picasso = mon->screen_is_picasso;
+	slot.rtg_integer_scale_limit = filter_prefs.gf[GF_RTG].gfx_filter_integerscalelimit;
 	if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
 		slot.desired_aspect = crop_aspect;
 	} else {
@@ -1057,7 +1059,6 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 
 	// Bezel overlay (load from file if changed)
 	slot.draw_bezel = false;
-	const auto& filter_prefs = get_active_filter_prefs();
 	if (filter_prefs.use_custom_bezel && filter_prefs.custom_bezel[0] != '\0'
 		&& strcmp(filter_prefs.custom_bezel, "none") != 0) {
 		if (m_loaded_bezel_name != filter_prefs.custom_bezel) {
@@ -1506,13 +1507,20 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 
 			if (use_integer && src_w > 0 && src_h > 0) {
 				int display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
-				int h_scale = destH / display_h;
-				if (h_scale < 1) h_scale = 1;
-				int w_scale = render_area_w / src_w;
-				if (w_scale > h_scale) w_scale = h_scale;
-				if (w_scale < 1) w_scale = 1;
-				destW = src_w * w_scale;
-				destH = display_h * h_scale;
+				if (slot.screen_is_picasso) {
+					const float scale = calculate_rtg_integer_scale(render_area_w, render_area_h,
+						src_w, display_h, slot.rtg_integer_scale_limit);
+					destW = std::max(1, static_cast<int>(static_cast<float>(src_w) * scale + 0.5f));
+					destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
+				} else {
+					int h_scale = destH / display_h;
+					if (h_scale < 1) h_scale = 1;
+					int w_scale = render_area_w / src_w;
+					if (w_scale > h_scale) w_scale = h_scale;
+					if (w_scale < 1) w_scale = 1;
+					destW = src_w * w_scale;
+					destH = display_h * h_scale;
+				}
 			}
 
 			destX = render_area_x + (render_area_w - destW) / 2;

@@ -166,6 +166,7 @@ private:
 		bool picasso_on = false;
 		bool screen_is_picasso = false;
 		int scalepicasso = 0;
+		int rtg_integer_scale_limit = 0;
 		float desired_aspect = 4.0f / 3.0f;
 
 		// Zero-copy RTG path

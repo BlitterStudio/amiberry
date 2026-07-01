@@ -304,11 +304,11 @@ void render_panel_rtg() {
         // Left Column: Scaling options (enabled when any RTG is active)
         ImGui::BeginDisabled(!display_opts_en);
 
-        int current_autoscale_mode = changed_prefs.gf[1].gfx_filter_autoscale;
+        int current_autoscale_mode = changed_prefs.gf[GF_RTG].gfx_filter_autoscale;
 
         bool scale_smaller = (current_autoscale_mode == RTG_MODE_SCALE);
         if (AmigaCheckbox("Scale if smaller than display size", &scale_smaller)) {
-            changed_prefs.gf[1].gfx_filter_autoscale = scale_smaller ? RTG_MODE_SCALE : 0;
+            changed_prefs.gf[GF_RTG].gfx_filter_autoscale = scale_smaller ? RTG_MODE_SCALE : 0;
         }
         ShowHelpMarker("Automatically scale RTG output if resolution is smaller than display");
 
@@ -317,15 +317,32 @@ void render_panel_rtg() {
 
         bool always_center = (current_autoscale_mode == RTG_MODE_CENTER);
         if (AmigaCheckbox("Always center", &always_center)) {
-            changed_prefs.gf[1].gfx_filter_autoscale = always_center ? RTG_MODE_CENTER : 0;
+            changed_prefs.gf[GF_RTG].gfx_filter_autoscale = always_center ? RTG_MODE_CENTER : 0;
         }
         ShowHelpMarker("Center RTG display on screen without scaling");
 
         bool int_scale = (current_autoscale_mode == RTG_MODE_INTEGER_SCALE);
         if (AmigaCheckbox("Integer scaling", &int_scale)) {
-            changed_prefs.gf[1].gfx_filter_autoscale = int_scale ? RTG_MODE_INTEGER_SCALE : 0;
+            changed_prefs.gf[GF_RTG].gfx_filter_autoscale = int_scale ? RTG_MODE_INTEGER_SCALE : 0;
         }
         ShowHelpMarker("Scale by whole number multiples only (2x, 3x, etc.) for sharp pixels");
+
+        int_scale = changed_prefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_INTEGER_SCALE;
+        ImGui::BeginDisabled(!int_scale);
+        ImGui::Text("Integer scale limit:");
+        ImGui::SameLine();
+        static const char *rtg_scale_limits[] = {"1/1", "1/2", "1/4", "1/8"};
+        int rtg_scale_limit = changed_prefs.gf[GF_RTG].gfx_filter_integerscalelimit;
+        if (rtg_scale_limit < 0 || rtg_scale_limit >= IM_ARRAYSIZE(rtg_scale_limits)) {
+            rtg_scale_limit = 0;
+        }
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::Combo("##RTGIntegerScaleLimit", &rtg_scale_limit, rtg_scale_limits, IM_ARRAYSIZE(rtg_scale_limits))) {
+            changed_prefs.gf[GF_RTG].gfx_filter_integerscalelimit = rtg_scale_limit;
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ImGui::EndDisabled();
+        ShowHelpMarker("Allow RTG integer scaling to use fractional 1/x steps when an exact whole-number scale does not fit.");
 
         bool zero_copy_enabled = is_uae_rtg && changed_prefs.rtg_zerocopy;
         ImGui::BeginDisabled(!is_uae_rtg);
