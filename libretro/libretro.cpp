@@ -49,6 +49,7 @@ extern "C" {
 #include "blkdev.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
+#include "irenderer.h"
 #include "zfile.h"
 #include "target.h"
 #include "custom.h"
@@ -118,6 +119,7 @@ static int libretro_crop_last_hres = 0;
 static int libretro_crop_last_vres = 0;
 static bool libretro_crop_last_is_ntsc = false;
 static bool libretro_crop_was_enabled = false;
+static bool libretro_crop_used_renderer = false;
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
@@ -2155,6 +2157,34 @@ static bool crop_overscan_enabled()
 	return v && strcmp(v, "enabled") == 0;
 }
 
+static bool libretro_crop_from_renderer(const SDL_Surface* surface, libretro_crop& crop)
+{
+	if (!surface)
+		return false;
+
+	const IRenderer* renderer = get_renderer(0);
+	if (!renderer)
+		return false;
+
+	const SDL_Rect& rect = renderer->crop_rect;
+	if (rect.x < 0 || rect.y < 0 || rect.w <= 0 || rect.h <= 0
+		|| rect.x + rect.w > surface->w || rect.y + rect.h > surface->h) {
+		return false;
+	}
+
+	crop.x = rect.x;
+	crop.y = rect.y;
+	crop.w = rect.w;
+	crop.h = rect.h;
+	crop.aspect = renderer->crop_aspect;
+	if (crop.aspect <= 0.0f && renderer->crop_display_h > 0) {
+		crop.aspect = static_cast<float>(renderer->crop_display_w)
+			/ static_cast<float>(renderer->crop_display_h);
+	}
+	crop.active = true;
+	return true;
+}
+
 static void libretro_invalidate_crop_cache()
 {
 	libretro_cached_crop_valid = false;
@@ -2167,6 +2197,7 @@ static void libretro_reset_crop_policy()
 	libretro_crop_last_vres = 0;
 	libretro_crop_last_is_ntsc = false;
 	libretro_crop_was_enabled = false;
+	libretro_crop_used_renderer = false;
 	libretro_invalidate_crop_cache();
 }
 
@@ -2204,6 +2235,27 @@ libretro_crop libretro_compute_crop(void)
 	if (!surface || surface->w <= 0 || surface->h <= 0) {
 		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
+	}
+
+	if (currprefs.gfx_auto_crop) {
+		auto_crop_image();
+		if (libretro_crop_from_renderer(surface, crop)) {
+			if (!libretro_crop_used_renderer) {
+				libretro_crop_state = {};
+				libretro_crop_last_hres = 0;
+				libretro_crop_last_vres = 0;
+				libretro_crop_last_is_ntsc = false;
+				libretro_crop_used_renderer = true;
+			}
+			return libretro_cache_crop(crop);
+		}
+	}
+	if (libretro_crop_used_renderer) {
+		libretro_crop_state = {};
+		libretro_crop_last_hres = 0;
+		libretro_crop_last_vres = 0;
+		libretro_crop_last_is_ntsc = false;
+		libretro_crop_used_renderer = false;
 	}
 
 	int cw = 0, ch = 0, cx = 0, cy = 0, crealh = 0;
