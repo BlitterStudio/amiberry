@@ -113,6 +113,11 @@ static uint64_t libretro_crop_frame = 0;
 static uint64_t libretro_cached_crop_frame = 0;
 static bool libretro_cached_crop_valid = false;
 static libretro_crop libretro_cached_crop = {};
+static AutoCropState libretro_crop_state;
+static int libretro_crop_last_hres = 0;
+static int libretro_crop_last_vres = 0;
+static bool libretro_crop_last_is_ntsc = false;
+static bool libretro_crop_was_enabled = false;
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
@@ -2155,6 +2160,16 @@ static void libretro_invalidate_crop_cache()
 	libretro_cached_crop_valid = false;
 }
 
+static void libretro_reset_crop_policy()
+{
+	libretro_crop_state = {};
+	libretro_crop_last_hres = 0;
+	libretro_crop_last_vres = 0;
+	libretro_crop_last_is_ntsc = false;
+	libretro_crop_was_enabled = false;
+	libretro_invalidate_crop_cache();
+}
+
 static libretro_crop libretro_cache_crop(const libretro_crop& crop)
 {
 	libretro_cached_crop = crop;
@@ -2170,16 +2185,26 @@ libretro_crop libretro_compute_crop(void)
 
 	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
 
-	if (!crop_overscan_enabled())
+	if (!crop_overscan_enabled()) {
+		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
+	}
+	if (!libretro_crop_was_enabled) {
+		libretro_reset_crop_policy();
+		libretro_crop_was_enabled = true;
+	}
 
 	// RTG/Workbench (Picasso96) has no overscan borders — nothing to crop.
-	if (adisplays[0].picasso_on)
+	if (adisplays[0].picasso_on) {
+		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
+	}
 
 	SDL_Surface* surface = get_amiga_surface(0);
-	if (!surface || surface->w <= 0 || surface->h <= 0)
+	if (!surface || surface->w <= 0 || surface->h <= 0) {
+		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
+	}
 
 	int cw = 0, ch = 0, cx = 0, cy = 0, crealh = 0;
 	int hres = currprefs.gfx_resolution;
@@ -2187,15 +2212,14 @@ libretro_crop libretro_compute_crop(void)
 	get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
 
 	const bool is_ntsc = (vblank_hz > 55.0f);
-	static AutoCropState crop_state;
-	static int last_hres = 0, last_vres = 0;
-	static bool last_is_ntsc = false;
-	const bool reset_policy = last_hres != hres || last_vres != vres || last_is_ntsc != is_ntsc;
+	const bool reset_policy = libretro_crop_last_hres != hres
+		|| libretro_crop_last_vres != vres
+		|| libretro_crop_last_is_ntsc != is_ntsc;
 	SDL_Rect crop_rect = { cx, cy, cw, ch };
-	apply_auto_crop_policy(surface, crop_rect, hres, vres, is_ntsc, crop_state, reset_policy);
-	last_hres = hres;
-	last_vres = vres;
-	last_is_ntsc = is_ntsc;
+	apply_auto_crop_policy(surface, crop_rect, hres, vres, is_ntsc, libretro_crop_state, reset_policy);
+	libretro_crop_last_hres = hres;
+	libretro_crop_last_vres = vres;
+	libretro_crop_last_is_ntsc = is_ntsc;
 
 	cx = crop_rect.x;
 	cy = crop_rect.y;
@@ -3420,7 +3444,7 @@ static void reset_core_runtime_state()
 	last_geometry_width = -1;
 	last_geometry_height = -1;
 	last_geometry_aspect = -1.0f;
-	libretro_invalidate_crop_cache();
+	libretro_reset_crop_policy();
 	libretro_audio_reset();
 }
 
