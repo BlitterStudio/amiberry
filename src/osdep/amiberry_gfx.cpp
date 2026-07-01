@@ -110,6 +110,297 @@ void update_system_pixel_format()
 	}
 }
 
+constexpr int auto_crop_base_width = 320;
+constexpr int auto_crop_normal_min_height = 180;
+constexpr int auto_crop_cinematic_min_height = 120;
+constexpr int auto_crop_pal_guard_height = 240;
+constexpr int auto_crop_ntsc_guard_height = 216;
+constexpr int auto_crop_full_width_tolerance = 4;
+constexpr int auto_crop_guard_top_base_tolerance = 8;
+constexpr int auto_crop_wide_aspect_w = 21;
+constexpr int auto_crop_wide_aspect_h = 9;
+constexpr int auto_crop_shrink_stable_frames = 6;
+
+static int auto_crop_rect_right(const SDL_Rect& rect)
+{
+	return rect.x + rect.w;
+}
+
+static int auto_crop_rect_bottom(const SDL_Rect& rect)
+{
+	return rect.y + rect.h;
+}
+
+static bool auto_crop_rect_equals(const SDL_Rect& a, const SDL_Rect& b)
+{
+	return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h;
+}
+
+static bool auto_crop_rect_contains(const SDL_Rect& outer, const SDL_Rect& inner)
+{
+	return outer.x <= inner.x
+		&& outer.y <= inner.y
+		&& auto_crop_rect_right(outer) >= auto_crop_rect_right(inner)
+		&& auto_crop_rect_bottom(outer) >= auto_crop_rect_bottom(inner);
+}
+
+static bool auto_crop_rect_grows_beyond(const SDL_Rect& rect, const SDL_Rect& previous)
+{
+	return auto_crop_rect_contains(rect, previous) && !auto_crop_rect_equals(rect, previous);
+}
+
+static bool auto_crop_rect_reveals_new_edges(const SDL_Rect& rect, const SDL_Rect& previous)
+{
+	return rect.x < previous.x
+		|| rect.y < previous.y
+		|| auto_crop_rect_right(rect) > auto_crop_rect_right(previous)
+		|| auto_crop_rect_bottom(rect) > auto_crop_rect_bottom(previous);
+}
+
+static SDL_Rect auto_crop_rect_union(const SDL_Rect& a, const SDL_Rect& b)
+{
+	const int x = std::min(a.x, b.x);
+	const int y = std::min(a.y, b.y);
+	const int right = std::max(auto_crop_rect_right(a), auto_crop_rect_right(b));
+	const int bottom = std::max(auto_crop_rect_bottom(a), auto_crop_rect_bottom(b));
+	return { x, y, right - x, bottom - y };
+}
+
+static void clamp_auto_crop_rect(const SDL_Surface* surface, SDL_Rect& rect)
+{
+	if (!surface || surface->w <= 0 || surface->h <= 0) {
+		rect = {};
+		return;
+	}
+
+	if (rect.w <= 0 || rect.h <= 0 || rect.x >= surface->w || rect.y >= surface->h) {
+		rect = { 0, 0, surface->w, surface->h };
+		return;
+	}
+
+	if (rect.x < 0) {
+		rect.w += rect.x;
+		rect.x = 0;
+	}
+	if (rect.y < 0) {
+		rect.h += rect.y;
+		rect.y = 0;
+	}
+	if (rect.w <= 0 || rect.h <= 0) {
+		rect = { 0, 0, surface->w, surface->h };
+		return;
+	}
+	if (auto_crop_rect_right(rect) > surface->w) {
+		rect.w = surface->w - rect.x;
+	}
+	if (auto_crop_rect_bottom(rect) > surface->h) {
+		rect.h = surface->h - rect.y;
+	}
+}
+
+static int auto_crop_minimum_width(const int hres)
+{
+	const int clamped_hres = std::clamp(hres, RES_LORES, RES_SUPERHIRES);
+	return auto_crop_base_width << clamped_hres;
+}
+
+void auto_crop_display_dimensions(const int w, const int h, const int hres,
+	const int vres, const bool is_ntsc, int& display_w, int& display_h)
+{
+	display_w = w;
+	display_h = h;
+
+	if (vres == VRES_NONDOUBLE) {
+		if (hres == RES_HIRES || hres == RES_SUPERHIRES) {
+			display_h *= 2;
+		}
+	} else {
+		if (hres == RES_LORES) {
+			display_w *= 2;
+		}
+	}
+
+	if (is_ntsc) {
+		display_h = display_h * 6 / 5;
+	}
+}
+
+static bool auto_crop_uses_cinematic_minimum(const SDL_Rect& rect,
+	const int hres, const int vres, const bool is_ntsc)
+{
+	const int clamped_hres = std::clamp(hres, RES_LORES, RES_SUPERHIRES);
+	const int min_w = auto_crop_base_width << clamped_hres;
+	const int width_tolerance = auto_crop_full_width_tolerance << clamped_hres;
+	if (rect.w < min_w - width_tolerance || rect.h <= 0) {
+		return false;
+	}
+
+	int display_w, display_h;
+	auto_crop_display_dimensions(rect.w, rect.h, hres, vres, is_ntsc, display_w, display_h);
+	return display_h > 0 && display_w * auto_crop_wide_aspect_h >= display_h * auto_crop_wide_aspect_w;
+}
+
+static int auto_crop_minimum_height(const bool use_cinematic_minimum, const int vres)
+{
+	const int base_height = use_cinematic_minimum ? auto_crop_cinematic_min_height : auto_crop_normal_min_height;
+	return vres > VRES_NONDOUBLE ? base_height << 1 : base_height;
+}
+
+static int auto_crop_guard_height(const int vres, const bool is_ntsc)
+{
+	const int base_height = is_ntsc ? auto_crop_ntsc_guard_height : auto_crop_pal_guard_height;
+	return vres > VRES_NONDOUBLE ? base_height << 1 : base_height;
+}
+
+static int auto_crop_guard_top_tolerance(const int vres)
+{
+	return vres > VRES_NONDOUBLE ? auto_crop_guard_top_base_tolerance << 1 : auto_crop_guard_top_base_tolerance;
+}
+
+static int auto_crop_expanded_origin(const int pos, const int size, const int min_size,
+	const int limit, const int preferred_pos, const bool has_preferred)
+{
+	if (min_size <= size || limit <= 0) {
+		return pos;
+	}
+
+	const int expanded_size = std::min(min_size, limit);
+	const int min_origin = pos + size - expanded_size;
+	const int max_origin = pos;
+	const int centered_origin = pos - (expanded_size - size) / 2;
+	const int wanted_origin = has_preferred ? preferred_pos : centered_origin;
+	int origin = std::clamp(wanted_origin, min_origin, max_origin);
+	origin = std::clamp(origin, 0, limit - expanded_size);
+	return origin;
+}
+
+static void expand_auto_crop_rect_to_minimum(const SDL_Surface* surface, SDL_Rect& rect,
+	const int hres, const int vres, const bool is_ntsc, const SDL_Rect* preferred_rect)
+{
+	if (!surface || surface->w <= 0 || surface->h <= 0 || rect.w <= 0 || rect.h <= 0) {
+		return;
+	}
+
+	const int surface_w = surface->w;
+	const int surface_h = surface->h;
+	const int min_w = std::min(auto_crop_minimum_width(hres), surface_w);
+	const bool use_cinematic_minimum = auto_crop_uses_cinematic_minimum(rect, hres, vres, is_ntsc);
+	const int min_h = std::min(auto_crop_minimum_height(use_cinematic_minimum, vres), surface_h);
+	const int preferred_x = preferred_rect ? preferred_rect->x : 0;
+	const int preferred_y = preferred_rect ? preferred_rect->y : 0;
+	const bool has_preferred = preferred_rect && preferred_rect->w > 0 && preferred_rect->h > 0;
+
+	const int x = auto_crop_expanded_origin(rect.x, rect.w, min_w, surface_w, preferred_x, has_preferred);
+	const int y = auto_crop_expanded_origin(rect.y, rect.h, min_h, surface_h, preferred_y,
+		has_preferred && !use_cinematic_minimum);
+	rect.x = x;
+	rect.y = y;
+	rect.w = std::max(rect.w, min_w);
+	rect.h = std::max(rect.h, min_h);
+	clamp_auto_crop_rect(surface, rect);
+}
+
+static void preserve_auto_crop_bottom_edge(const SDL_Surface* surface, SDL_Rect& rect,
+	const int vres, const bool is_ntsc, const SDL_Rect& guard_rect, const bool guard_valid)
+{
+	if (!surface || surface->h <= 0 || rect.h <= 0 || !guard_valid || guard_rect.h <= 0) {
+		return;
+	}
+
+	const int surface_h = surface->h;
+	if (rect.y > guard_rect.y + auto_crop_guard_top_tolerance(vres)) {
+		return;
+	}
+
+	const int guard_h = std::min(auto_crop_guard_height(vres, is_ntsc), surface_h);
+	if (rect.h >= guard_h) {
+		return;
+	}
+
+	const int previous_bottom = auto_crop_rect_bottom(guard_rect);
+	const int rect_bottom = auto_crop_rect_bottom(rect);
+	if (rect_bottom >= previous_bottom) {
+		return;
+	}
+
+	const int guarded_bottom = std::min({ previous_bottom, surface_h, rect.y + guard_h });
+	if (guarded_bottom > rect_bottom) {
+		rect.h = guarded_bottom - rect.y;
+		clamp_auto_crop_rect(surface, rect);
+	}
+}
+
+void apply_auto_crop_policy(const SDL_Surface* surface, SDL_Rect& rect,
+	const int hres, const int vres, const bool is_ntsc, AutoCropState& state, const bool reset)
+{
+	clamp_auto_crop_rect(surface, rect);
+	if (rect.w <= 0 || rect.h <= 0) {
+		return;
+	}
+
+	const int surface_w = surface->w;
+	const int surface_h = surface->h;
+	const bool surface_changed = state.surface != surface
+		|| state.surface_w != surface_w
+		|| state.surface_h != surface_h;
+	if (reset || surface_changed || !state.valid) {
+		state = {};
+		state.surface = surface;
+		state.surface_w = surface_w;
+		state.surface_h = surface_h;
+		expand_auto_crop_rect_to_minimum(surface, rect, hres, vres, is_ntsc, nullptr);
+		state.rect = rect;
+		state.guard_rect = rect;
+		state.valid = true;
+		state.guard_valid = true;
+		return;
+	}
+
+	expand_auto_crop_rect_to_minimum(surface, rect, hres, vres, is_ntsc, &state.rect);
+	preserve_auto_crop_bottom_edge(surface, rect, vres, is_ntsc, state.guard_rect, state.guard_valid);
+	if (auto_crop_rect_equals(rect, state.rect)) {
+		state.shrink_frames = 0;
+		state.pending_valid = false;
+		return;
+	}
+
+	if (auto_crop_rect_grows_beyond(rect, state.rect)) {
+		state.rect = rect;
+		state.guard_rect = rect;
+		state.guard_valid = true;
+		state.shrink_frames = 0;
+		state.pending_valid = false;
+		return;
+	}
+
+	if (auto_crop_rect_reveals_new_edges(rect, state.rect)) {
+		rect = auto_crop_rect_union(rect, state.rect);
+		clamp_auto_crop_rect(surface, rect);
+		state.rect = rect;
+		state.guard_rect = rect;
+		state.guard_valid = true;
+		state.shrink_frames = 0;
+		state.pending_valid = false;
+		return;
+	}
+
+	if (!state.pending_valid || !auto_crop_rect_equals(rect, state.pending_rect)) {
+		state.pending_rect = rect;
+		state.pending_valid = true;
+		state.shrink_frames = 1;
+	} else {
+		state.shrink_frames++;
+	}
+
+	if (state.shrink_frames >= auto_crop_shrink_stable_frames) {
+		state.rect = rect;
+		state.shrink_frames = 0;
+		state.pending_valid = false;
+	} else {
+		rect = state.rect;
+	}
+}
+
 static int dx = 0, dy = 0;
 const char* sdl_video_driver;
 bool kmsdrm_detected = false;
@@ -1595,7 +1886,11 @@ void auto_crop_image()
 	if (currprefs.gfx_auto_crop)
 	{
 		static int last_cw = 0, last_ch = 0, last_cx = 0, last_cy = 0;
+		static int last_hres = 0, last_vres = 0;
 		static bool last_is_ntsc = false;
+		static SDL_Surface* last_surface = nullptr;
+		static int last_surface_w = 0, last_surface_h = 0;
+		static AutoCropState crop_state;
 		int cw, ch, cx, cy, crealh = 0;
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
@@ -1605,36 +1900,54 @@ void auto_crop_image()
 		// currprefs.ntscmode which may not reflect the chipset state
 		// (e.g. WHDLoad games that switch PAL/NTSC at runtime).
 		bool is_ntsc = (vblank_hz > 55.0f);
+		SDL_Surface* surface = get_amiga_surface(0);
+		const int surface_w = surface ? surface->w : 0;
+		const int surface_h = surface ? surface->h : 0;
 
 		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop
 			&& last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy
-			&& last_is_ntsc == is_ntsc)
+			&& last_hres == hres && last_vres == vres
+			&& last_is_ntsc == is_ntsc
+			&& last_surface == surface
+			&& last_surface_w == surface_w
+			&& last_surface_h == surface_h
+			&& crop_state.shrink_frames == 0)
 		{
 			return;
 		}
+
+		const int raw_cw = cw;
+		const int raw_ch = ch;
+		const int raw_cx = cx;
+		const int raw_cy = cy;
+		const bool reset_policy = force_auto_crop || last_autocrop != currprefs.gfx_auto_crop
+			|| last_hres != hres || last_vres != vres
+			|| last_is_ntsc != is_ntsc
+			|| last_surface != surface
+			|| last_surface_w != surface_w
+			|| last_surface_h != surface_h;
 
 		last_cw = cw;
 		last_ch = ch;
 		last_cx = cx;
 		last_cy = cy;
+		last_hres = hres;
+		last_vres = vres;
 		last_is_ntsc = is_ntsc;
+		last_surface = surface;
+		last_surface_w = surface_w;
+		last_surface_h = surface_h;
 		force_auto_crop = false;
 
-		int width = cw;
-		int height = ch;
-		if (vres == VRES_NONDOUBLE)
-		{
-			if (hres == RES_HIRES || hres == RES_SUPERHIRES)
-				height *= 2;
-		}
-		else
-		{
-			if (hres == RES_LORES)
-				width *= 2;
-		}
+		SDL_Rect crop_rect = { cx, cy, cw, ch };
+		apply_auto_crop_policy(surface, crop_rect, hres, vres, is_ntsc, crop_state, reset_policy);
+		cx = crop_rect.x;
+		cy = crop_rect.y;
+		cw = crop_rect.w;
+		ch = crop_rect.h;
 
-		if (is_ntsc)
-			height = height * 6 / 5;
+		int width, height;
+		auto_crop_display_dimensions(cw, ch, hres, vres, is_ntsc, width, height);
 
 		if (currprefs.gfx_correct_aspect == 0)
 		{
@@ -1651,21 +1964,10 @@ void auto_crop_image()
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		renderer->crop_display_w = width;
 		renderer->crop_display_h = height;
-		write_log(_T("auto_crop: cw=%d ch=%d cx=%d cy=%d hres=%d vres=%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
-			cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
+		write_log(_T("auto_crop: raw=%dx%d+%d+%d final=%dx%d+%d+%d hres=%d vres=%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
 		rq = { dx, dy, width, height };
-		cr = { cx, cy, cw, ch };
-		SDL_Surface* surface = get_amiga_surface(0);
-		if (surface) {
-			if (cr.x < 0) cr.x = 0;
-			if (cr.y < 0) cr.y = 0;
-			if (cr.x >= surface->w) cr.x = 0;
-			if (cr.y >= surface->h) cr.y = 0;
-			if (cr.w <= 0 || cr.x + cr.w > surface->w)
-				cr.w = surface->w - cr.x;
-			if (cr.h <= 0 || cr.y + cr.h > surface->h)
-				cr.h = surface->h - cr.y;
-		}
+		cr = crop_rect;
 
 		// ImGui OSK does not need position updates from texture
 	}
