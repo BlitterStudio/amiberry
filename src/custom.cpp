@@ -8861,24 +8861,24 @@ void check_prefs_changed_custom(void)
 		}
 	}
 
-#ifdef GFXFILTER
 	for (int i = 0; i < 2; i++) {
 		int idx = i == 0 ? 0 : 2;
 		struct gfx_filterdata *fd = &currprefs.gf[idx];
 		struct gfx_filterdata *fdcp = &changed_prefs.gf[idx];
 
+#ifdef GFXFILTER
 		fd->gfx_filter_horiz_zoom = fdcp->gfx_filter_horiz_zoom;
 		fd->gfx_filter_vert_zoom = fdcp->gfx_filter_vert_zoom;
 		fd->gfx_filter_horiz_offset = fdcp->gfx_filter_horiz_offset;
 		fd->gfx_filter_vert_offset = fdcp->gfx_filter_vert_offset;
 		fd->gfx_filter_scanlines = fdcp->gfx_filter_scanlines;
+#endif
 
 		fd->gfx_filter_left_border = fdcp->gfx_filter_left_border;
 		fd->gfx_filter_right_border = fdcp->gfx_filter_right_border;
 		fd->gfx_filter_top_border = fdcp->gfx_filter_top_border;
 		fd->gfx_filter_bottom_border = fdcp->gfx_filter_bottom_border;
 	}
-#endif
 }
 
 static uae_u16 fetch16(struct rgabuf *r)

@@ -2601,7 +2601,29 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		struct gfx_filterdata *gf = &p->gf[j];
 		const TCHAR *ext = j == 0 ? NULL : (j == 1 ? _T("_rtg") : _T("_lace"));
 		cfgfile_dwrite_strarr(f, _T("gfx_filter_autoscale"), ext, j != GF_RTG ? autoscale : autoscale_rtg, gf->gfx_filter_autoscale);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_vert_zoom_multf"), ext, _T("%f"), gf->gfx_filter_vert_zoom_mult);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_horiz_zoom_multf"), ext, _T("%f"), gf->gfx_filter_horiz_zoom_mult);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_left_border"), ext, _T("%d"), gf->gfx_filter_left_border);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_right_border"), ext, _T("%d"), gf->gfx_filter_right_border);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_top_border"), ext, _T("%d"), gf->gfx_filter_top_border);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_bottom_border"), ext, _T("%d"), gf->gfx_filter_bottom_border);
+		cfgfile_dwrite_ext(f, _T("gfx_filter_blur"), ext, _T("%d"), gf->gfx_filter_blur);
 	}
+
+	cfgfile_dwrite (f, _T("gfx_luminance"), _T("%d"), p->gfx_luminance);
+	cfgfile_dwrite (f, _T("gfx_contrast"), _T("%d"), p->gfx_contrast);
+	cfgfile_dwrite (f, _T("gfx_gamma"), _T("%d"), p->gfx_gamma);
+	cfgfile_dwrite (f, _T("gfx_gamma_r"), _T("%d"), p->gfx_gamma_ch[0]);
+	cfgfile_dwrite (f, _T("gfx_gamma_g"), _T("%d"), p->gfx_gamma_ch[1]);
+	cfgfile_dwrite (f, _T("gfx_gamma_b"), _T("%d"), p->gfx_gamma_ch[2]);
+
+	cfgfile_dwrite (f, _T("gfx_center_horizontal_position"), _T("%d"), p->gfx_xcenter_pos < MANUAL_SCALE_MIN_RANGE ? -1 : (p->gfx_xcenter_pos < 0 ? p->gfx_xcenter_pos - 1 : p->gfx_xcenter_pos));
+	cfgfile_dwrite (f, _T("gfx_center_vertical_position"), _T("%d"), p->gfx_ycenter_pos < MANUAL_SCALE_MIN_RANGE ? -1 : (p->gfx_ycenter_pos < 0 ? p->gfx_ycenter_pos - 1 : p->gfx_ycenter_pos));
+	cfgfile_dwrite (f, _T("gfx_center_horizontal_size"), _T("%d"), p->gfx_xcenter_size);
+	cfgfile_dwrite (f, _T("gfx_center_vertical_size"), _T("%d"), p->gfx_ycenter_size);
+
+	cfgfile_dwrite (f, _T("rtg_vert_zoom_multf"), _T("%f"), p->rtg_vert_zoom_mult);
+	cfgfile_dwrite (f, _T("rtg_horiz_zoom_multf"), _T("%f"), p->rtg_horiz_zoom_mult);
 
 #ifdef GFXFILTER
 	for (int j = 0; j < MAX_FILTERDATA; j++) {
@@ -2637,15 +2659,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		cfgfile_dwrite_strarr(f, _T("gfx_filter_mode2"), ext, filtermode2v, gf->gfx_filter_filtermodev);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_vert_zoomf"), ext, _T("%f"), gf->gfx_filter_vert_zoom);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_horiz_zoomf"), ext, _T("%f"), gf->gfx_filter_horiz_zoom);
-		cfgfile_dwrite_ext(f, _T("gfx_filter_vert_zoom_multf"), ext, _T("%f"), gf->gfx_filter_vert_zoom_mult);
-		cfgfile_dwrite_ext(f, _T("gfx_filter_horiz_zoom_multf"), ext, _T("%f"), gf->gfx_filter_horiz_zoom_mult);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_vert_offsetf"), ext, _T("%f"), gf->gfx_filter_vert_offset);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_horiz_offsetf"), ext, _T("%f"), gf->gfx_filter_horiz_offset);
-
-		cfgfile_dwrite_ext(f, _T("gfx_filter_left_border"), ext, _T("%d"), gf->gfx_filter_left_border);
-		cfgfile_dwrite_ext(f, _T("gfx_filter_right_border"), ext, _T("%d"), gf->gfx_filter_right_border);
-		cfgfile_dwrite_ext(f, _T("gfx_filter_top_border"), ext, _T("%d"), gf->gfx_filter_top_border);
-		cfgfile_dwrite_ext(f, _T("gfx_filter_bottom_border"), ext, _T("%d"), gf->gfx_filter_bottom_border);
 
 		cfgfile_dwrite_ext(f, _T("gfx_filter_scanlines"), ext, _T("%d"), gf->gfx_filter_scanlines);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_scanlinelevel"), ext, _T("%d"), gf->gfx_filter_scanlinelevel);
@@ -2660,7 +2675,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		cfgfile_dwrite_ext(f, _T("gfx_filter_gamma_g"), ext, _T("%d"), gf->gfx_filter_gamma_ch[1]);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_gamma_b"), ext, _T("%d"), gf->gfx_filter_gamma_ch[2]);
 
-		cfgfile_dwrite_ext(f, _T("gfx_filter_blur"), ext, _T("%d"), gf->gfx_filter_blur);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_noise"), ext, _T("%d"), gf->gfx_filter_noise);
 		cfgfile_dwrite_bool(f, _T("gfx_filter_bilinear"), ext, gf->gfx_filter_bilinear != 0);
 
@@ -2676,20 +2690,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 		cfgfile_dwrite_ext(f, _T("gfx_filter_rotation"), ext, _T("%d"), gf->gfx_filter_rotation);
 	}
-	cfgfile_dwrite (f, _T("gfx_luminance"), _T("%d"), p->gfx_luminance);
-	cfgfile_dwrite (f, _T("gfx_contrast"), _T("%d"), p->gfx_contrast);
-	cfgfile_dwrite (f, _T("gfx_gamma"), _T("%d"), p->gfx_gamma);
-	cfgfile_dwrite (f, _T("gfx_gamma_r"), _T("%d"), p->gfx_gamma_ch[0]);
-	cfgfile_dwrite (f, _T("gfx_gamma_g"), _T("%d"), p->gfx_gamma_ch[1]);
-	cfgfile_dwrite (f, _T("gfx_gamma_b"), _T("%d"), p->gfx_gamma_ch[2]);
-
-	cfgfile_dwrite (f, _T("gfx_center_horizontal_position"), _T("%d"), p->gfx_xcenter_pos < MANUAL_SCALE_MIN_RANGE ? -1 : (p->gfx_xcenter_pos < 0 ? p->gfx_xcenter_pos - 1 : p->gfx_xcenter_pos));
-	cfgfile_dwrite (f, _T("gfx_center_vertical_position"), _T("%d"), p->gfx_ycenter_pos < MANUAL_SCALE_MIN_RANGE ? -1 : (p->gfx_ycenter_pos < 0 ? p->gfx_ycenter_pos - 1 : p->gfx_ycenter_pos));
-	cfgfile_dwrite (f, _T("gfx_center_horizontal_size"), _T("%d"), p->gfx_xcenter_size);
-	cfgfile_dwrite (f, _T("gfx_center_vertical_size"), _T("%d"), p->gfx_ycenter_size);
-
-	cfgfile_dwrite (f, _T("rtg_vert_zoom_multf"), _T("%.f"), p->rtg_vert_zoom_mult);
-	cfgfile_dwrite (f, _T("rtg_horiz_zoom_multf"), _T("%.f"), p->rtg_horiz_zoom_mult);
 
 #endif
 
@@ -4078,7 +4078,14 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	for (int j = 0; j < MAX_FILTERDATA; j++) {
 		struct gfx_filterdata *gf = &p->gf[j];
 		const TCHAR *ext = j == 0 ? NULL : (j == 1 ? _T("_rtg") : _T("_lace"));
-		if (cfgfile_strval (option, value, _T("gfx_filter_autoscale"), ext, &gf->gfx_filter_autoscale, j != GF_RTG ? autoscale : autoscale_rtg, 0))
+		if (cfgfile_strval (option, value, _T("gfx_filter_autoscale"), ext, &gf->gfx_filter_autoscale, j != GF_RTG ? autoscale : autoscale_rtg, 0)
+			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_zoom_multf"), ext, &gf->gfx_filter_vert_zoom_mult)
+			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_zoom_multf"), ext, &gf->gfx_filter_horiz_zoom_mult)
+			|| cfgfile_intval(option, value, _T("gfx_filter_left_border"), ext, &gf->gfx_filter_left_border, 1)
+			|| cfgfile_intval(option, value, _T("gfx_filter_right_border"), ext, &gf->gfx_filter_right_border, 1)
+			|| cfgfile_intval(option, value, _T("gfx_filter_top_border"), ext, &gf->gfx_filter_top_border, 1)
+			|| cfgfile_intval(option, value, _T("gfx_filter_bottom_border"), ext, &gf->gfx_filter_bottom_border, 1)
+			|| cfgfile_intval(option, value, _T("gfx_filter_blur"), ext, &gf->gfx_filter_blur, 1))
 			{
 				return 1;
 			}
@@ -4092,14 +4099,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			|| cfgfile_strval(option, value, _T("gfx_filter_autoscale_limit"), ext, &gf->gfx_filter_integerscalelimit, autoscalelimit, 0)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_zoomf"), ext, &gf->gfx_filter_vert_zoom)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_zoomf"), ext, &gf->gfx_filter_horiz_zoom)
-			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_zoom_multf"), ext, &gf->gfx_filter_vert_zoom_mult)
-			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_zoom_multf"), ext, &gf->gfx_filter_horiz_zoom_mult)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_offsetf"), ext, &gf->gfx_filter_vert_offset)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_offsetf"), ext, &gf->gfx_filter_horiz_offset)
-			|| cfgfile_intval(option, value, _T("gfx_filter_left_border"), ext, &gf->gfx_filter_left_border, 1)
-			|| cfgfile_intval(option, value, _T("gfx_filter_right_border"), ext, &gf->gfx_filter_right_border, 1)
-			|| cfgfile_intval(option, value, _T("gfx_filter_top_border"), ext, &gf->gfx_filter_top_border, 1)
-			|| cfgfile_intval(option, value, _T("gfx_filter_bottom_border"), ext, &gf->gfx_filter_bottom_border, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_scanlines"), ext, &gf->gfx_filter_scanlines, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_scanlinelevel"), ext, &gf->gfx_filter_scanlinelevel, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_scanlineratio"), ext, &gf->gfx_filter_scanlineratio, 1)
@@ -4111,7 +4112,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			|| cfgfile_intval(option, value, _T("gfx_filter_gamma_r"), ext, &gf->gfx_filter_gamma_ch[0], 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_gamma_g"), ext, &gf->gfx_filter_gamma_ch[1], 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_gamma_b"), ext, &gf->gfx_filter_gamma_ch[2], 1)
-			|| cfgfile_intval(option, value, _T("gfx_filter_blur"), ext, &gf->gfx_filter_blur, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_noise"), ext, &gf->gfx_filter_noise, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_bilinear"), ext, &gf->gfx_filter_bilinear, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_keep_autoscale_aspect"), ext, &gf->gfx_filter_keep_autoscale_aspect, 1)
