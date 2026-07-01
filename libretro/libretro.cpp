@@ -109,6 +109,10 @@ static bool ff_override_active = false;
 static int last_geometry_width = -1;
 static int last_geometry_height = -1;
 static float last_geometry_aspect = -1.0f;
+static uint64_t libretro_crop_frame = 0;
+static uint64_t libretro_cached_crop_frame = 0;
+static bool libretro_cached_crop_valid = false;
+static libretro_crop libretro_cached_crop = {};
 bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
@@ -2146,20 +2150,36 @@ static bool crop_overscan_enabled()
 	return v && strcmp(v, "enabled") == 0;
 }
 
+static void libretro_invalidate_crop_cache()
+{
+	libretro_cached_crop_valid = false;
+}
+
+static libretro_crop libretro_cache_crop(const libretro_crop& crop)
+{
+	libretro_cached_crop = crop;
+	libretro_cached_crop_frame = libretro_crop_frame;
+	libretro_cached_crop_valid = true;
+	return crop;
+}
+
 libretro_crop libretro_compute_crop(void)
 {
+	if (libretro_cached_crop_valid && libretro_cached_crop_frame == libretro_crop_frame)
+		return libretro_cached_crop;
+
 	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
 
 	if (!crop_overscan_enabled())
-		return crop;
+		return libretro_cache_crop(crop);
 
 	// RTG/Workbench (Picasso96) has no overscan borders — nothing to crop.
 	if (adisplays[0].picasso_on)
-		return crop;
+		return libretro_cache_crop(crop);
 
 	SDL_Surface* surface = get_amiga_surface(0);
 	if (!surface || surface->w <= 0 || surface->h <= 0)
-		return crop;
+		return libretro_cache_crop(crop);
 
 	int cw = 0, ch = 0, cx = 0, cy = 0, crealh = 0;
 	int hres = currprefs.gfx_resolution;
@@ -2182,7 +2202,7 @@ libretro_crop libretro_compute_crop(void)
 	cw = crop_rect.w;
 	ch = crop_rect.h;
 	if (cw <= 0 || ch <= 0)
-		return crop;
+		return libretro_cache_crop(crop);
 
 	int width, height;
 	auto_crop_display_dimensions(cw, ch, hres, vres, is_ntsc, width, height);
@@ -2193,7 +2213,7 @@ libretro_crop libretro_compute_crop(void)
 	crop.h = ch;
 	crop.aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 	crop.active = true;
-	return crop;
+	return libretro_cache_crop(crop);
 }
 
 static int parse_audio_rate_value(const char* value)
@@ -3400,6 +3420,7 @@ static void reset_core_runtime_state()
 	last_geometry_width = -1;
 	last_geometry_height = -1;
 	last_geometry_aspect = -1.0f;
+	libretro_invalidate_crop_cache();
 	libretro_audio_reset();
 }
 
@@ -3734,6 +3755,7 @@ void retro_reset(void)
 
 void retro_run(void)
 {
+	libretro_crop_frame++;
 	apply_minimum_audio_latency();
 
 	if (!ensure_core_fiber()) {

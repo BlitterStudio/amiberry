@@ -149,6 +149,23 @@ static bool auto_crop_rect_grows_beyond(const SDL_Rect& rect, const SDL_Rect& pr
 	return auto_crop_rect_contains(rect, previous) && !auto_crop_rect_equals(rect, previous);
 }
 
+static bool auto_crop_rect_reveals_new_edges(const SDL_Rect& rect, const SDL_Rect& previous)
+{
+	return rect.x < previous.x
+		|| rect.y < previous.y
+		|| auto_crop_rect_right(rect) > auto_crop_rect_right(previous)
+		|| auto_crop_rect_bottom(rect) > auto_crop_rect_bottom(previous);
+}
+
+static SDL_Rect auto_crop_rect_union(const SDL_Rect& a, const SDL_Rect& b)
+{
+	const int x = std::min(a.x, b.x);
+	const int y = std::min(a.y, b.y);
+	const int right = std::max(auto_crop_rect_right(a), auto_crop_rect_right(b));
+	const int bottom = std::max(auto_crop_rect_bottom(a), auto_crop_rect_bottom(b));
+	return { x, y, right - x, bottom - y };
+}
+
 static void clamp_auto_crop_rect(const SDL_Surface* surface, SDL_Rect& rect)
 {
 	if (!surface || surface->w <= 0 || surface->h <= 0) {
@@ -348,6 +365,17 @@ void apply_auto_crop_policy(const SDL_Surface* surface, SDL_Rect& rect,
 	}
 
 	if (auto_crop_rect_grows_beyond(rect, state.rect)) {
+		state.rect = rect;
+		state.guard_rect = rect;
+		state.guard_valid = true;
+		state.shrink_frames = 0;
+		state.pending_valid = false;
+		return;
+	}
+
+	if (auto_crop_rect_reveals_new_edges(rect, state.rect)) {
+		rect = auto_crop_rect_union(rect, state.rect);
+		clamp_auto_crop_rect(surface, rect);
 		state.rect = rect;
 		state.guard_rect = rect;
 		state.guard_valid = true;
