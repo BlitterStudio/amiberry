@@ -78,6 +78,19 @@ struct winuae_currentmode {
 	int freq;
 };
 
+struct AutoCropState {
+	const SDL_Surface* surface = nullptr;
+	int surface_w = 0;
+	int surface_h = 0;
+	SDL_Rect rect{};
+	SDL_Rect guard_rect{};
+	SDL_Rect pending_rect{};
+	int shrink_frames = 0;
+	bool valid = false;
+	bool guard_valid = false;
+	bool pending_valid = false;
+};
+
 #define MAX_AMIGAMONITORS 4
 struct AmigaMonitor {
 	int monitor_id;
@@ -194,6 +207,10 @@ extern void gfx_unlock();
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 extern void auto_crop_image();
+extern void auto_crop_display_dimensions(int w, int h, int hres, int vres, bool is_ntsc,
+	int& display_w, int& display_h);
+extern void apply_auto_crop_policy(const SDL_Surface* surface, SDL_Rect& rect,
+	int hres, int vres, bool is_ntsc, AutoCropState& state, bool reset);
 extern bool vkbd_allowed(int monid);
 extern float calculate_desired_aspect(const AmigaMonitor* mon);
 extern void quit_drawing_thread();
