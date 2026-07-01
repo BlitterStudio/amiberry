@@ -2166,30 +2166,26 @@ libretro_crop libretro_compute_crop(void)
 	int vres = currprefs.gfx_vresolution;
 	get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
 
-	// Clamp to surface bounds (mirrors auto_crop_image, amiberry_gfx.cpp:1660-1668).
-	if (cx < 0) cx = 0;
-	if (cy < 0) cy = 0;
-	if (cx >= surface->w) cx = 0;
-	if (cy >= surface->h) cy = 0;
-	if (cw <= 0 || cx + cw > surface->w) cw = surface->w - cx;
-	if (ch <= 0 || cy + ch > surface->h) ch = surface->h - cy;
+	const bool is_ntsc = (vblank_hz > 55.0f);
+	static AutoCropState crop_state;
+	static int last_hres = 0, last_vres = 0;
+	static bool last_is_ntsc = false;
+	const bool reset_policy = last_hres != hres || last_vres != vres || last_is_ntsc != is_ntsc;
+	SDL_Rect crop_rect = { cx, cy, cw, ch };
+	apply_auto_crop_policy(surface, crop_rect, hres, vres, is_ntsc, crop_state, reset_policy);
+	last_hres = hres;
+	last_vres = vres;
+	last_is_ntsc = is_ntsc;
 
+	cx = crop_rect.x;
+	cy = crop_rect.y;
+	cw = crop_rect.w;
+	ch = crop_rect.h;
 	if (cw <= 0 || ch <= 0)
 		return crop;
 
-	// PAR-corrected display aspect (mirrors auto_crop_image, amiberry_gfx.cpp:1623-1651).
-	int width = cw;
-	int height = ch;
-	if (vres == VRES_NONDOUBLE) {
-		if (hres == RES_HIRES || hres == RES_SUPERHIRES)
-			height *= 2;
-	} else {
-		if (hres == RES_LORES)
-			width *= 2;
-	}
-	const bool is_ntsc = (vblank_hz > 55.0f);
-	if (is_ntsc)
-		height = height * 6 / 5;
+	int width, height;
+	auto_crop_display_dimensions(cw, ch, hres, vres, is_ntsc, width, height);
 
 	crop.x = cx;
 	crop.y = cy;
