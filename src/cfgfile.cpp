@@ -2622,8 +2622,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite (f, _T("gfx_center_horizontal_size"), _T("%d"), p->gfx_xcenter_size);
 	cfgfile_dwrite (f, _T("gfx_center_vertical_size"), _T("%d"), p->gfx_ycenter_size);
 
-	cfgfile_dwrite (f, _T("rtg_vert_zoom_multf"), _T("%.f"), p->rtg_vert_zoom_mult);
-	cfgfile_dwrite (f, _T("rtg_horiz_zoom_multf"), _T("%.f"), p->rtg_horiz_zoom_mult);
+	cfgfile_dwrite (f, _T("rtg_vert_zoom_multf"), _T("%f"), p->rtg_vert_zoom_mult);
+	cfgfile_dwrite (f, _T("rtg_horiz_zoom_multf"), _T("%f"), p->rtg_horiz_zoom_mult);
 
 #ifdef GFXFILTER
 	for (int j = 0; j < MAX_FILTERDATA; j++) {

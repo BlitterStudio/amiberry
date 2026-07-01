@@ -80,6 +80,14 @@ unconditional_save_options = [
 for snippet in unconditional_save_options:
 	require_outside_gfxfilter(save_region, snippet, "cfgfile save")
 
+for option in ("rtg_vert_zoom_multf", "rtg_horiz_zoom_multf"):
+	rounded = f'cfgfile_dwrite (f, _T("{option}"), _T("%.f")'
+	fractional = f'cfgfile_dwrite (f, _T("{option}"), _T("%f")'
+	if rounded in save_region:
+		fail(f"{option} must preserve fractional values when saved")
+	if fractional not in save_region:
+		fail(f"{option} must be saved with a fractional float format")
+
 parse_region = region_between(
 	cfgfile,
 	'if (cfgfile_yesno(option, value, _T("magic_mouse"), &vb))',
