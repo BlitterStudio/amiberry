@@ -1031,15 +1031,15 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_crop_overscan",
 		"Crop Overscan",
 		"Crop Overscan",
-		"Trim the Amiga overscan borders. Automatic uses content-aware detection of the drawn region; fixed presets use stable centered crops for games with unstable display changes. No effect in RTG/Workbench (Picasso96) modes.",
+		"Trim the Amiga overscan borders. Automatic uses content-aware detection of the drawn region; fixed presets use increasingly tighter centered crops for games with unstable display changes. No effect in RTG/Workbench (Picasso96) modes.",
 		NULL,
 		"video",
 		{
 			{ "disabled", "Disabled" },
 			{ "enabled", "Automatic" },
-			{ "small", "Fixed Small" },
-			{ "medium", "Fixed Medium" },
-			{ "large", "Fixed Large" },
+			{ "small", "Fixed 320x256" },
+			{ "medium", "Fixed 320x240" },
+			{ "large", "Fixed 320x200" },
 			{ NULL, NULL }
 		},
 		"disabled"
@@ -2165,6 +2165,12 @@ enum class libretro_crop_mode
 	fixed_large
 };
 
+static libretro_crop libretro_submitted_crop = {};
+static libretro_crop libretro_pending_crop = {};
+static bool libretro_submitted_crop_valid = false;
+static bool libretro_pending_crop_valid = false;
+static int libretro_pending_crop_frames = 0;
+
 static libretro_crop_mode get_libretro_crop_mode()
 {
 	const char* v = get_option_value("amiberry_crop_overscan");
@@ -2177,6 +2183,83 @@ static libretro_crop_mode get_libretro_crop_mode()
 	if (strcmp(v, "large") == 0)
 		return libretro_crop_mode::fixed_large;
 	return libretro_crop_mode::auto_crop;
+}
+
+static bool libretro_crop_equals(const libretro_crop& a, const libretro_crop& b)
+{
+	return a.active == b.active
+		&& a.x == b.x
+		&& a.y == b.y
+		&& a.w == b.w
+		&& a.h == b.h;
+}
+
+static bool libretro_crop_fits_surface(const SDL_Surface* surface, const libretro_crop& crop)
+{
+	return surface
+		&& crop.active
+		&& crop.x >= 0
+		&& crop.y >= 0
+		&& crop.w > 0
+		&& crop.h > 0
+		&& crop.x + crop.w <= surface->w
+		&& crop.y + crop.h <= surface->h;
+}
+
+static void libretro_reset_submitted_crop()
+{
+	libretro_submitted_crop = {};
+	libretro_pending_crop = {};
+	libretro_submitted_crop_valid = false;
+	libretro_pending_crop_valid = false;
+	libretro_pending_crop_frames = 0;
+}
+
+static bool libretro_crop_expands_to_include_current(const libretro_crop& current, const libretro_crop& next)
+{
+	return next.x <= current.x
+		&& next.y <= current.y
+		&& next.x + next.w >= current.x + current.w
+		&& next.y + next.h >= current.y + current.h
+		&& !libretro_crop_equals(current, next);
+}
+
+static libretro_crop libretro_stabilize_auto_crop(const SDL_Surface* surface, const libretro_crop& crop)
+{
+	if (!crop.active) {
+		libretro_reset_submitted_crop();
+		return crop;
+	}
+	if (!libretro_submitted_crop_valid || !libretro_crop_fits_surface(surface, libretro_submitted_crop)) {
+		libretro_submitted_crop = crop;
+		libretro_submitted_crop_valid = true;
+		libretro_pending_crop_valid = false;
+		libretro_pending_crop_frames = 0;
+		return crop;
+	}
+	if (libretro_crop_equals(crop, libretro_submitted_crop)) {
+		libretro_pending_crop_valid = false;
+		libretro_pending_crop_frames = 0;
+		return libretro_submitted_crop;
+	}
+
+	if (!libretro_pending_crop_valid || !libretro_crop_equals(crop, libretro_pending_crop)) {
+		libretro_pending_crop = crop;
+		libretro_pending_crop_valid = true;
+		libretro_pending_crop_frames = 1;
+	} else {
+		libretro_pending_crop_frames++;
+	}
+
+	const int required_frames = libretro_crop_expands_to_include_current(libretro_submitted_crop, crop)
+		? 12 : 60;
+	if (libretro_pending_crop_frames >= required_frames) {
+		libretro_submitted_crop = crop;
+		libretro_pending_crop_valid = false;
+		libretro_pending_crop_frames = 0;
+	}
+
+	return libretro_submitted_crop;
 }
 
 static bool libretro_crop_from_renderer(const SDL_Surface* surface, libretro_crop& crop)
@@ -2286,16 +2369,16 @@ static bool libretro_fixed_crop_from_surface(const SDL_Surface* surface,
 	int target_h = 0;
 	switch (mode) {
 		case libretro_crop_mode::fixed_small:
-			target_w = 708;
-			target_h = 544;
+			target_w = 640;
+			target_h = 512;
 			break;
 		case libretro_crop_mode::fixed_medium:
-			target_w = 672;
-			target_h = 528;
+			target_w = 640;
+			target_h = 480;
 			break;
 		case libretro_crop_mode::fixed_large:
 			target_w = 640;
-			target_h = 512;
+			target_h = 400;
 			break;
 		default:
 			return false;
@@ -2494,6 +2577,7 @@ static void libretro_reset_crop_policy()
 	libretro_crop_last_is_ntsc = false;
 	libretro_crop_was_enabled = false;
 	libretro_crop_used_renderer = false;
+	libretro_reset_submitted_crop();
 	libretro_invalidate_crop_cache();
 }
 
@@ -2536,6 +2620,7 @@ libretro_crop libretro_compute_crop(void)
 	}
 
 	if (crop_mode != libretro_crop_mode::auto_crop) {
+		libretro_reset_submitted_crop();
 		libretro_disable_core_auto_crop();
 		if (libretro_fixed_crop_from_surface(surface, crop_mode, crop))
 			return libretro_cache_crop(crop);
@@ -2552,6 +2637,7 @@ libretro_crop libretro_compute_crop(void)
 		if (libretro_crop_from_renderer(surface, crop)) {
 			libretro_trim_black_crop_edges(surface, crop);
 			libretro_expand_crop_to_minimum_frame(surface, crop);
+			crop = libretro_stabilize_auto_crop(surface, crop);
 			if (!libretro_crop_used_renderer) {
 				libretro_crop_state = {};
 				libretro_crop_last_hres = 0;
@@ -2603,6 +2689,7 @@ libretro_crop libretro_compute_crop(void)
 	crop.active = true;
 	libretro_trim_black_crop_edges(surface, crop);
 	libretro_expand_crop_to_minimum_frame(surface, crop);
+	crop = libretro_stabilize_auto_crop(surface, crop);
 	return libretro_cache_crop(crop);
 }
 
