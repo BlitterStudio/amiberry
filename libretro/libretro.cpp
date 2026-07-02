@@ -2287,8 +2287,17 @@ static void libretro_trim_black_crop_edges(const SDL_Surface* surface, libretro_
 		bottom_trim++;
 	}
 
-	if (left_trim + right_trim < 8 || top_trim + bottom_trim < 8)
+	const bool horizontal_trim = left_trim + right_trim >= 8;
+	// Vertical-only black bands are common during intros and loading screens;
+	// require a horizontal border before applying vertical edge trims.
+	const bool vertical_trim = horizontal_trim && top_trim + bottom_trim >= 8;
+	if (!horizontal_trim)
 		return;
+
+	if (!vertical_trim) {
+		rect.y = crop.y;
+		rect.h = crop.h;
+	}
 
 	if (rect.x == crop.x && rect.y == crop.y && rect.w == crop.w && rect.h == crop.h)
 		return;
