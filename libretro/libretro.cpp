@@ -686,7 +686,7 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_analog_sensitivity", "Analog Sensitivity; 18|15|20|25|30|10" },
 	{ "amiberry_analog", "Analog Input; enabled|disabled" },
 	{ "amiberry_internal_vsync", "Internal VSync; disabled|standard|standard_50" },
-	{ "amiberry_crop_overscan", "Crop Overscan; disabled|enabled" },
+	{ "amiberry_crop_overscan", "Crop Overscan; disabled|enabled|small|medium|large" },
 	{ "amiberry_joy_as_mouse", "Joystick As Mouse; disabled|port1|port2|both" },
 	{ "amiberry_input_log", "Input Log File; disabled|enabled" },
 #ifdef WITH_MIDI
@@ -1031,12 +1031,15 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_crop_overscan",
 		"Crop Overscan",
 		"Crop Overscan",
-		"Trim the Amiga overscan borders so the active game area fills the display. Uses content-aware detection of the drawn region. No effect in RTG/Workbench (Picasso96) modes.",
+		"Trim the Amiga overscan borders. Automatic uses content-aware detection of the drawn region; fixed presets use stable centered crops for games with unstable display changes. No effect in RTG/Workbench (Picasso96) modes.",
 		NULL,
 		"video",
 		{
-			{ "disabled", NULL },
-			{ "enabled", NULL },
+			{ "disabled", "Disabled" },
+			{ "enabled", "Automatic" },
+			{ "small", "Fixed Small" },
+			{ "medium", "Fixed Medium" },
+			{ "large", "Fixed Large" },
 			{ NULL, NULL }
 		},
 		"disabled"
@@ -2151,13 +2154,30 @@ static const char* get_option_value(const char* key)
 	return nullptr;
 }
 
-static bool crop_overscan_enabled()
+static void libretro_reset_crop_policy();
+
+enum class libretro_crop_mode
+{
+	disabled,
+	auto_crop,
+	fixed_small,
+	fixed_medium,
+	fixed_large
+};
+
+static libretro_crop_mode get_libretro_crop_mode()
 {
 	const char* v = get_option_value("amiberry_crop_overscan");
-	return v && strcmp(v, "enabled") == 0;
+	if (!v || strcmp(v, "disabled") == 0)
+		return libretro_crop_mode::disabled;
+	if (strcmp(v, "small") == 0)
+		return libretro_crop_mode::fixed_small;
+	if (strcmp(v, "medium") == 0)
+		return libretro_crop_mode::fixed_medium;
+	if (strcmp(v, "large") == 0)
+		return libretro_crop_mode::fixed_large;
+	return libretro_crop_mode::auto_crop;
 }
-
-static void libretro_reset_crop_policy();
 
 static bool libretro_crop_from_renderer(const SDL_Surface* surface, libretro_crop& crop)
 {
@@ -2202,6 +2222,95 @@ static uint32_t libretro_crop_rgb_mask(const SDL_Surface* surface)
 	if (!details)
 		return 0;
 	return details->Rmask | details->Gmask | details->Bmask;
+}
+
+static int libretro_crop_minimum_trim_height()
+{
+	return currprefs.gfx_vresolution > VRES_NONDOUBLE ? 360 : 180;
+}
+
+static void libretro_update_crop_aspect(libretro_crop& crop)
+{
+	int width, height;
+	auto_crop_display_dimensions(crop.w, crop.h, currprefs.gfx_resolution,
+		currprefs.gfx_vresolution, vblank_hz > 55.0f, width, height);
+	crop.aspect = height > 0 ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+}
+
+static void libretro_expand_crop_to_minimum_frame(const SDL_Surface* surface, libretro_crop& crop)
+{
+	if (!surface || !crop.active || crop.w <= 0 || crop.h <= 0)
+		return;
+	if (crop.x < 0 || crop.y < 0 || crop.x + crop.w > surface->w || crop.y + crop.h > surface->h)
+		return;
+
+	constexpr int min_frame_width = 480;
+	constexpr int min_frame_height = 360;
+	const int target_w = std::min(min_frame_width, surface->w);
+	const int target_h = std::min(min_frame_height, surface->h);
+	if (crop.w >= target_w && crop.h >= target_h)
+		return;
+
+	SDL_Rect rect = { crop.x, crop.y, crop.w, crop.h };
+	if (rect.w < target_w) {
+		rect.x -= (target_w - rect.w) / 2;
+		rect.w = target_w;
+	}
+	if (rect.h < target_h) {
+		rect.y -= (target_h - rect.h) / 2;
+		rect.h = target_h;
+	}
+	if (rect.x < 0)
+		rect.x = 0;
+	if (rect.y < 0)
+		rect.y = 0;
+	if (rect.x + rect.w > surface->w)
+		rect.x = surface->w - rect.w;
+	if (rect.y + rect.h > surface->h)
+		rect.y = surface->h - rect.h;
+
+	crop.x = rect.x;
+	crop.y = rect.y;
+	crop.w = rect.w;
+	crop.h = rect.h;
+	libretro_update_crop_aspect(crop);
+}
+
+static bool libretro_fixed_crop_from_surface(const SDL_Surface* surface,
+	const libretro_crop_mode mode, libretro_crop& crop)
+{
+	if (!surface || surface->w <= 0 || surface->h <= 0)
+		return false;
+
+	int target_w = 0;
+	int target_h = 0;
+	switch (mode) {
+		case libretro_crop_mode::fixed_small:
+			target_w = 708;
+			target_h = 544;
+			break;
+		case libretro_crop_mode::fixed_medium:
+			target_w = 672;
+			target_h = 528;
+			break;
+		case libretro_crop_mode::fixed_large:
+			target_w = 640;
+			target_h = 512;
+			break;
+		default:
+			return false;
+	}
+
+	target_w = std::clamp(target_w, std::min(320, surface->w), surface->w);
+	target_h = std::clamp(target_h, std::min(240, surface->h), surface->h);
+	crop.x = (surface->w - target_w) / 2;
+	crop.y = (surface->h - target_h) / 2;
+	crop.w = target_w;
+	crop.h = target_h;
+	crop.active = crop.w > 0 && crop.h > 0;
+	if (crop.active)
+		libretro_update_crop_aspect(crop);
+	return crop.active;
 }
 
 static bool libretro_crop_line_is_color(const SDL_Surface* surface, const SDL_Rect& rect,
@@ -2256,7 +2365,7 @@ static void libretro_trim_black_crop_edges(const SDL_Surface* surface, libretro_
 		return;
 
 	constexpr int min_width = 320;
-	constexpr int min_height = 200;
+	const int min_height = libretro_crop_minimum_trim_height();
 	const int max_x_trim = std::max(1, rect.w / 8);
 	const int max_y_trim = std::max(1, rect.h / 8);
 	int left_trim = 0;
@@ -2306,16 +2415,12 @@ static void libretro_trim_black_crop_edges(const SDL_Surface* surface, libretro_
 	crop.y = rect.y;
 	crop.w = rect.w;
 	crop.h = rect.h;
-
-	int width, height;
-	auto_crop_display_dimensions(crop.w, crop.h, currprefs.gfx_resolution,
-		currprefs.gfx_vresolution, vblank_hz > 55.0f, width, height);
-	crop.aspect = height > 0 ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+	libretro_update_crop_aspect(crop);
 }
 
 static void libretro_enable_core_auto_crop()
 {
-	if (!crop_overscan_enabled())
+	if (get_libretro_crop_mode() != libretro_crop_mode::auto_crop)
 		return;
 
 	const bool changed = !currprefs.gfx_auto_crop
@@ -2354,6 +2459,28 @@ static void libretro_enable_core_auto_crop()
 	}
 }
 
+static void libretro_disable_core_auto_crop()
+{
+	const bool changed = currprefs.gfx_auto_crop
+		|| changed_prefs.gfx_auto_crop
+		|| currprefs.gfx_manual_crop
+		|| changed_prefs.gfx_manual_crop;
+
+	currprefs.gfx_auto_crop = false;
+	changed_prefs.gfx_auto_crop = false;
+	currprefs.gfx_manual_crop = false;
+	changed_prefs.gfx_manual_crop = false;
+	force_auto_crop = false;
+
+	if (changed) {
+		libretro_reset_crop_policy();
+		last_geometry_width = -1;
+		last_geometry_height = -1;
+		last_geometry_aspect = -1.0f;
+		set_config_changed();
+	}
+}
+
 static void libretro_invalidate_crop_cache()
 {
 	libretro_cached_crop_valid = false;
@@ -2381,16 +2508,12 @@ static libretro_crop libretro_cache_crop(const libretro_crop& crop)
 libretro_crop libretro_compute_crop(void)
 {
 	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
+	const libretro_crop_mode crop_mode = get_libretro_crop_mode();
 
-	if (!crop_overscan_enabled()) {
+	if (crop_mode == libretro_crop_mode::disabled) {
 		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
 	}
-
-	// WHDLoad/autoload paths can apply title-specific graphics settings after
-	// the core option dirty pass has already run. Keep the libretro crop option
-	// authoritative so it continues to use the native autocrop path.
-	libretro_enable_core_auto_crop();
 
 	if (libretro_cached_crop_valid && libretro_cached_crop_frame == libretro_crop_frame)
 		return libretro_cached_crop;
@@ -2412,10 +2535,23 @@ libretro_crop libretro_compute_crop(void)
 		return libretro_cache_crop(crop);
 	}
 
+	if (crop_mode != libretro_crop_mode::auto_crop) {
+		libretro_disable_core_auto_crop();
+		if (libretro_fixed_crop_from_surface(surface, crop_mode, crop))
+			return libretro_cache_crop(crop);
+		return libretro_cache_crop(crop);
+	}
+
+	// WHDLoad/autoload paths can apply title-specific graphics settings after
+	// the core option dirty pass has already run. Keep the libretro crop option
+	// authoritative so it continues to use the native autocrop path.
+	libretro_enable_core_auto_crop();
+
 	if (currprefs.gfx_auto_crop) {
 		auto_crop_image();
 		if (libretro_crop_from_renderer(surface, crop)) {
 			libretro_trim_black_crop_edges(surface, crop);
+			libretro_expand_crop_to_minimum_frame(surface, crop);
 			if (!libretro_crop_used_renderer) {
 				libretro_crop_state = {};
 				libretro_crop_last_hres = 0;
@@ -2466,6 +2602,7 @@ libretro_crop libretro_compute_crop(void)
 	crop.aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 	crop.active = true;
 	libretro_trim_black_crop_edges(surface, crop);
+	libretro_expand_crop_to_minimum_frame(surface, crop);
 	return libretro_cache_crop(crop);
 }
 
@@ -3468,7 +3605,7 @@ static void core_entry(void)
 			push_s_option("ntsc=false");
 	}
 
-	if (crop_overscan_enabled()) {
+	if (get_libretro_crop_mode() == libretro_crop_mode::auto_crop) {
 		push_s_option("gfx_auto_crop=true");
 		push_s_option("gfx_manual_crop=false");
 		push_s_option("gfx_horizontal_offset=0");
@@ -4056,7 +4193,10 @@ void retro_run(void)
 #ifdef WITH_MIDI
 		apply_libretro_midi_options();
 #endif
-		libretro_enable_core_auto_crop();
+		if (get_libretro_crop_mode() == libretro_crop_mode::auto_crop)
+			libretro_enable_core_auto_crop();
+		else
+			libretro_disable_core_auto_crop();
 		update_core_option_visibility();
 		libretro_options_dirty = false;
 	}
