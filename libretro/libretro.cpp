@@ -686,7 +686,7 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_analog_sensitivity", "Analog Sensitivity; 18|15|20|25|30|10" },
 	{ "amiberry_analog", "Analog Input; enabled|disabled" },
 	{ "amiberry_internal_vsync", "Internal VSync; disabled|standard|standard_50" },
-	{ "amiberry_crop_overscan", "Crop Overscan; disabled|enabled|small|medium|large" },
+	{ "amiberry_crop_overscan", "Crop Overscan; disabled|enabled|small|medium|large|extra" },
 	{ "amiberry_joy_as_mouse", "Joystick As Mouse; disabled|port1|port2|both" },
 	{ "amiberry_input_log", "Input Log File; disabled|enabled" },
 #ifdef WITH_MIDI
@@ -1040,6 +1040,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ "small", "Fixed 320x256" },
 			{ "medium", "Fixed 320x240" },
 			{ "large", "Fixed 320x200" },
+			{ "extra", "Fixed 320x180" },
 			{ NULL, NULL }
 		},
 		"disabled"
@@ -2162,7 +2163,8 @@ enum class libretro_crop_mode
 	auto_crop,
 	fixed_small,
 	fixed_medium,
-	fixed_large
+	fixed_large,
+	fixed_extra
 };
 
 static libretro_crop libretro_submitted_crop = {};
@@ -2182,6 +2184,8 @@ static libretro_crop_mode get_libretro_crop_mode()
 		return libretro_crop_mode::fixed_medium;
 	if (strcmp(v, "large") == 0)
 		return libretro_crop_mode::fixed_large;
+	if (strcmp(v, "extra") == 0)
+		return libretro_crop_mode::fixed_extra;
 	return libretro_crop_mode::auto_crop;
 }
 
@@ -2359,6 +2363,41 @@ static void libretro_expand_crop_to_minimum_frame(const SDL_Surface* surface, li
 	libretro_update_crop_aspect(crop);
 }
 
+static bool libretro_crop_anchor_from_display_limits(const SDL_Surface* surface, int& anchor_x, int& anchor_y)
+{
+	if (!surface || surface->w <= 0 || surface->h <= 0)
+		return false;
+
+	int cw = 0, ch = 0, cx = 0, cy = 0, crealh = 0;
+	int hres = currprefs.gfx_resolution;
+	int vres = currprefs.gfx_vresolution;
+	get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+	if (cw <= 0 || ch <= 0)
+		return false;
+
+	SDL_Rect rect = { cx, cy, cw, ch };
+	if (rect.x < 0) {
+		rect.w += rect.x;
+		rect.x = 0;
+	}
+	if (rect.y < 0) {
+		rect.h += rect.y;
+		rect.y = 0;
+	}
+	if (rect.x >= surface->w || rect.y >= surface->h || rect.w <= 0 || rect.h <= 0)
+		return false;
+	if (rect.x + rect.w > surface->w)
+		rect.w = surface->w - rect.x;
+	if (rect.y + rect.h > surface->h)
+		rect.h = surface->h - rect.y;
+	if (rect.w <= 0 || rect.h <= 0)
+		return false;
+
+	anchor_x = rect.x + rect.w / 2;
+	anchor_y = rect.y + rect.h / 2;
+	return true;
+}
+
 static bool libretro_fixed_crop_from_surface(const SDL_Surface* surface,
 	const libretro_crop_mode mode, libretro_crop& crop)
 {
@@ -2380,14 +2419,21 @@ static bool libretro_fixed_crop_from_surface(const SDL_Surface* surface,
 			target_w = 640;
 			target_h = 400;
 			break;
+		case libretro_crop_mode::fixed_extra:
+			target_w = 640;
+			target_h = 360;
+			break;
 		default:
 			return false;
 	}
 
 	target_w = std::clamp(target_w, std::min(320, surface->w), surface->w);
 	target_h = std::clamp(target_h, std::min(240, surface->h), surface->h);
-	crop.x = (surface->w - target_w) / 2;
-	crop.y = (surface->h - target_h) / 2;
+	int anchor_x = surface->w / 2;
+	int anchor_y = surface->h / 2;
+	libretro_crop_anchor_from_display_limits(surface, anchor_x, anchor_y);
+	crop.x = std::clamp(anchor_x - target_w / 2, 0, surface->w - target_w);
+	crop.y = std::clamp(anchor_y - target_h / 2, 0, surface->h - target_h);
 	crop.w = target_w;
 	crop.h = target_h;
 	crop.active = crop.w > 0 && crop.h > 0;
