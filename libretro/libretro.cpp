@@ -2187,6 +2187,123 @@ static bool libretro_crop_from_renderer(const SDL_Surface* surface, libretro_cro
 	return true;
 }
 
+static uint32_t libretro_crop_read_pixel(const SDL_Surface* surface, const int x, const int y)
+{
+	const auto* base = static_cast<const uint8_t*>(surface->pixels);
+	const auto* pixel = base + y * surface->pitch + x * SDL_BYTESPERPIXEL(surface->format);
+	uint32_t value = 0;
+	memcpy(&value, pixel, SDL_BYTESPERPIXEL(surface->format));
+	return value;
+}
+
+static uint32_t libretro_crop_rgb_mask(const SDL_Surface* surface)
+{
+	const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(surface->format);
+	if (!details)
+		return 0;
+	return details->Rmask | details->Gmask | details->Bmask;
+}
+
+static bool libretro_crop_line_is_color(const SDL_Surface* surface, const SDL_Rect& rect,
+	const bool vertical, const int pos, const uint32_t color, const uint32_t rgb_mask)
+{
+	const uint32_t rgb = color & rgb_mask;
+	if (vertical) {
+		for (int y = rect.y; y < rect.y + rect.h; y++) {
+			if ((libretro_crop_read_pixel(surface, pos, y) & rgb_mask) != rgb)
+				return false;
+		}
+		return true;
+	}
+
+	for (int x = rect.x; x < rect.x + rect.w; x++) {
+		if ((libretro_crop_read_pixel(surface, x, pos) & rgb_mask) != rgb)
+			return false;
+	}
+	return true;
+}
+
+static bool libretro_crop_has_content_color(const SDL_Surface* surface, const SDL_Rect& rect,
+	const uint32_t color, const uint32_t rgb_mask)
+{
+	const uint32_t rgb = color & rgb_mask;
+	for (int y = rect.y; y < rect.y + rect.h; y++) {
+		for (int x = rect.x; x < rect.x + rect.w; x++) {
+			if ((libretro_crop_read_pixel(surface, x, y) & rgb_mask) != rgb)
+				return true;
+		}
+	}
+	return false;
+}
+
+static void libretro_trim_black_crop_edges(const SDL_Surface* surface, libretro_crop& crop)
+{
+	if (!surface || !crop.active || crop.w <= 0 || crop.h <= 0)
+		return;
+	if (crop.x < 0 || crop.y < 0 || crop.x + crop.w > surface->w || crop.y + crop.h > surface->h)
+		return;
+	if (SDL_BYTESPERPIXEL(surface->format) != 4)
+		return;
+
+	SDL_Rect rect = { crop.x, crop.y, crop.w, crop.h };
+	const uint32_t rgb_mask = libretro_crop_rgb_mask(surface);
+	if (rgb_mask == 0)
+		return;
+	const uint32_t border_color = libretro_crop_read_pixel(surface, rect.x, rect.y);
+	if ((border_color & rgb_mask) != 0)
+		return;
+	if (!libretro_crop_has_content_color(surface, rect, border_color, rgb_mask))
+		return;
+
+	constexpr int min_width = 320;
+	constexpr int min_height = 200;
+	const int max_x_trim = std::max(1, rect.w / 8);
+	const int max_y_trim = std::max(1, rect.h / 8);
+	int left_trim = 0;
+	int right_trim = 0;
+	int top_trim = 0;
+	int bottom_trim = 0;
+
+	while (rect.w > min_width && left_trim < max_x_trim
+		&& libretro_crop_line_is_color(surface, rect, true, rect.x, border_color, rgb_mask)) {
+		rect.x++;
+		rect.w--;
+		left_trim++;
+	}
+	while (rect.w > min_width && right_trim < max_x_trim
+		&& libretro_crop_line_is_color(surface, rect, true, rect.x + rect.w - 1, border_color, rgb_mask)) {
+		rect.w--;
+		right_trim++;
+	}
+	while (rect.h > min_height && top_trim < max_y_trim
+		&& libretro_crop_line_is_color(surface, rect, false, rect.y, border_color, rgb_mask)) {
+		rect.y++;
+		rect.h--;
+		top_trim++;
+	}
+	while (rect.h > min_height && bottom_trim < max_y_trim
+		&& libretro_crop_line_is_color(surface, rect, false, rect.y + rect.h - 1, border_color, rgb_mask)) {
+		rect.h--;
+		bottom_trim++;
+	}
+
+	if (left_trim + right_trim < 8 || top_trim + bottom_trim < 8)
+		return;
+
+	if (rect.x == crop.x && rect.y == crop.y && rect.w == crop.w && rect.h == crop.h)
+		return;
+
+	crop.x = rect.x;
+	crop.y = rect.y;
+	crop.w = rect.w;
+	crop.h = rect.h;
+
+	int width, height;
+	auto_crop_display_dimensions(crop.w, crop.h, currprefs.gfx_resolution,
+		currprefs.gfx_vresolution, vblank_hz > 55.0f, width, height);
+	crop.aspect = height > 0 ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+}
+
 static void libretro_enable_core_auto_crop()
 {
 	if (!crop_overscan_enabled())
@@ -2254,15 +2371,21 @@ static libretro_crop libretro_cache_crop(const libretro_crop& crop)
 
 libretro_crop libretro_compute_crop(void)
 {
-	if (libretro_cached_crop_valid && libretro_cached_crop_frame == libretro_crop_frame)
-		return libretro_cached_crop;
-
 	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
 
 	if (!crop_overscan_enabled()) {
 		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
 	}
+
+	// WHDLoad/autoload paths can apply title-specific graphics settings after
+	// the core option dirty pass has already run. Keep the libretro crop option
+	// authoritative so it continues to use the native autocrop path.
+	libretro_enable_core_auto_crop();
+
+	if (libretro_cached_crop_valid && libretro_cached_crop_frame == libretro_crop_frame)
+		return libretro_cached_crop;
+
 	if (!libretro_crop_was_enabled) {
 		libretro_reset_crop_policy();
 		libretro_crop_was_enabled = true;
@@ -2283,6 +2406,7 @@ libretro_crop libretro_compute_crop(void)
 	if (currprefs.gfx_auto_crop) {
 		auto_crop_image();
 		if (libretro_crop_from_renderer(surface, crop)) {
+			libretro_trim_black_crop_edges(surface, crop);
 			if (!libretro_crop_used_renderer) {
 				libretro_crop_state = {};
 				libretro_crop_last_hres = 0;
@@ -2332,6 +2456,7 @@ libretro_crop libretro_compute_crop(void)
 	crop.h = ch;
 	crop.aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 	crop.active = true;
+	libretro_trim_black_crop_edges(surface, crop);
 	return libretro_cache_crop(crop);
 }
 
