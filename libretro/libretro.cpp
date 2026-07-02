@@ -2157,6 +2157,8 @@ static bool crop_overscan_enabled()
 	return v && strcmp(v, "enabled") == 0;
 }
 
+static void libretro_reset_crop_policy();
+
 static bool libretro_crop_from_renderer(const SDL_Surface* surface, libretro_crop& crop)
 {
 	if (!surface)
@@ -2183,6 +2185,47 @@ static bool libretro_crop_from_renderer(const SDL_Surface* surface, libretro_cro
 	}
 	crop.active = true;
 	return true;
+}
+
+static void libretro_enable_core_auto_crop()
+{
+	if (!crop_overscan_enabled())
+		return;
+
+	const bool changed = !currprefs.gfx_auto_crop
+		|| !changed_prefs.gfx_auto_crop
+		|| currprefs.gfx_manual_crop
+		|| changed_prefs.gfx_manual_crop
+		|| currprefs.gfx_horizontal_offset != 0
+		|| changed_prefs.gfx_horizontal_offset != 0
+		|| currprefs.gfx_vertical_offset != 0
+		|| changed_prefs.gfx_vertical_offset != 0
+		|| currprefs.gfx_xcenter != 0
+		|| changed_prefs.gfx_xcenter != 0
+		|| currprefs.gfx_ycenter != 0
+		|| changed_prefs.gfx_ycenter != 0;
+
+	currprefs.gfx_auto_crop = true;
+	changed_prefs.gfx_auto_crop = true;
+	currprefs.gfx_manual_crop = false;
+	changed_prefs.gfx_manual_crop = false;
+	currprefs.gfx_horizontal_offset = 0;
+	changed_prefs.gfx_horizontal_offset = 0;
+	currprefs.gfx_vertical_offset = 0;
+	changed_prefs.gfx_vertical_offset = 0;
+	currprefs.gfx_xcenter = 0;
+	changed_prefs.gfx_xcenter = 0;
+	currprefs.gfx_ycenter = 0;
+	changed_prefs.gfx_ycenter = 0;
+
+	if (changed) {
+		force_auto_crop = true;
+		libretro_reset_crop_policy();
+		last_geometry_width = -1;
+		last_geometry_height = -1;
+		last_geometry_aspect = -1.0f;
+		set_config_changed();
+	}
 }
 
 static void libretro_invalidate_crop_cache()
@@ -3291,6 +3334,15 @@ static void core_entry(void)
 			push_s_option("ntsc=false");
 	}
 
+	if (crop_overscan_enabled()) {
+		push_s_option("gfx_auto_crop=true");
+		push_s_option("gfx_manual_crop=false");
+		push_s_option("gfx_horizontal_offset=0");
+		push_s_option("gfx_vertical_offset=0");
+		push_s_option("gfx_center_horizontal=none");
+		push_s_option("gfx_center_vertical=none");
+	}
+
 #ifdef WITH_MIDI
 	{
 		const char* midi_opt = get_option_value("amiberry_midi_output");
@@ -3870,6 +3922,7 @@ void retro_run(void)
 #ifdef WITH_MIDI
 		apply_libretro_midi_options();
 #endif
+		libretro_enable_core_auto_crop();
 		update_core_option_visibility();
 		libretro_options_dirty = false;
 	}
