@@ -306,9 +306,13 @@ static int SelectedFunction = 0;
 
 using ConfigCategory = struct config_category
 {
+	const char* id;
 	const char* category;
 	const char* imagepath;
 	const char* icon; // Font icon UTF-8 codepoint (Font Awesome), nullptr to fall back to imagepath
+	const char* group;
+	bool expert_only;
+	int simple_order;
 #ifdef USE_IMGUI
 	// ImGui-specific: direct render function and optional static help text
 	void (*RenderFunc)();
@@ -355,38 +359,43 @@ extern vector<ConfigFileInfo*> ConfigFilesList;
 #ifdef USE_IMGUI
 // Forward declaration shared with ImGui backend as well
 void disable_resume();
+int gui_find_panel_index(const char* id);
+bool gui_active_panel_is(const char* id);
+void gui_show_panel(const char* id, bool enable_expert_settings = false);
+void gui_start_from_current_config();
 
 #include "icons_fa.h"
 
 #define IMGUI_PANEL_LIST \
-PANEL(about,              "About",              "amigainfo.png",  ICON_FA_CIRCLE_INFO) \
-PANEL(paths,              "Paths",              "paths.png",      ICON_FA_FOLDER_OPEN) \
-PANEL(quickstart,         "Quickstart",         "quickstart.png", ICON_FA_ROCKET) \
-PANEL(configurations,     "Configurations",     "file.png",       ICON_FA_FILE_LINES) \
-PANEL(cpu,                "CPU and FPU",        "cpu.png",        ICON_FA_MICROCHIP) \
-PANEL(chipset,            "Chipset",            "cpu.png",        ICON_FA_MICROCHIP) \
-PANEL(adv_chipset,        "Adv. Chipset",       "cpu.png",        ICON_FA_GEARS) \
-PANEL(rom,                "ROM",                "chip.png",       ICON_FA_SIM_CARD) \
-PANEL(ram,                "RAM",                "chip.png",       ICON_FA_MEMORY) \
-PANEL(floppy,             "Floppy drives",      "35floppy.png",   ICON_FA_FLOPPY_DISK) \
-PANEL(hd,                 "Hard drives/CD",     "drive.png",      ICON_FA_HARD_DRIVE) \
-PANEL(expansions,         "Expansions",         "expansion.png",  ICON_FA_PUZZLE_PIECE) \
-PANEL(rtg,                "RTG board",          "expansion.png",  ICON_FA_TV) \
-PANEL(hwinfo,             "Hardware info",      "expansion.png",  ICON_FA_CIRCLE_INFO) \
-PANEL(display,            "Display",            "screen.png",     ICON_FA_DESKTOP) \
-PANEL(filter,             "Filter",             "misc.png",       ICON_FA_SLIDERS) \
-PANEL(sound,              "Sound",              "sound.png",      ICON_FA_VOLUME_HIGH) \
-PANEL(input,              "Input",              "joystick.png",   ICON_FA_GAMEPAD) \
-PANEL(io,                 "IO Ports",           "port.png",       ICON_FA_PLUG) \
-PANEL(custom,             "Custom controls",    "controller.png", ICON_FA_GEARS) \
-PANEL(diskswapper,        "Disk swapper",       "35floppy.png",   ICON_FA_SHUFFLE) \
-PANEL(misc,               "Miscellaneous",      "misc.png",       ICON_FA_WRENCH) \
-PANEL(global_settings,    "Global Settings",    "misc.png",       ICON_FA_SLIDERS) \
-PANEL(themes,             "Themes",             "misc.png",       ICON_FA_GEAR) \
-PANEL(prio,               "Priority",           "misc.png",       ICON_FA_GAUGE_HIGH) \
-PANEL(savestates,         "Savestates",         "savestate.png",  ICON_FA_BOOKMARK) \
-PANEL(virtual_keyboard,   "On-Screen",          "keyboard.png",   ICON_FA_KEYBOARD) \
-PANEL(whdload,            "WHDLoad",            "drive.png",      ICON_FA_DOWNLOAD)
+PANEL(play,               "Play",               "quickstart.png", ICON_FA_PLAY,         "General",    false, 0) \
+PANEL(about,              "About",              "amigainfo.png",  ICON_FA_CIRCLE_INFO,  "General",    false, 5) \
+PANEL(paths,              "Paths",              "paths.png",      ICON_FA_FOLDER_OPEN,  "General",    false, 4) \
+PANEL(quickstart,         "Quickstart",         "quickstart.png", ICON_FA_ROCKET,       "General",    true, -1) \
+PANEL(configurations,     "Configurations",     "file.png",       ICON_FA_FILE_LINES,   "General",    false, 1) \
+PANEL(cpu,                "CPU and FPU",        "cpu.png",        ICON_FA_MICROCHIP,    "Hardware",   true, -1) \
+PANEL(chipset,            "Chipset",            "cpu.png",        ICON_FA_MICROCHIP,    "Hardware",   true, -1) \
+PANEL(adv_chipset,        "Adv. Chipset",       "cpu.png",        ICON_FA_GEARS,        "Hardware",   true, -1) \
+PANEL(rom,                "ROM",                "chip.png",       ICON_FA_SIM_CARD,     "Hardware",   true, -1) \
+PANEL(ram,                "RAM",                "chip.png",       ICON_FA_MEMORY,       "Hardware",   true, -1) \
+PANEL(floppy,             "Floppy drives",      "35floppy.png",   ICON_FA_FLOPPY_DISK,  "Storage",    true, -1) \
+PANEL(hd,                 "Hard drives/CD",     "drive.png",      ICON_FA_HARD_DRIVE,   "Storage",    true, -1) \
+PANEL(expansions,         "Expansions",         "expansion.png",  ICON_FA_PUZZLE_PIECE, "Expansion",  true, -1) \
+PANEL(rtg,                "RTG board",          "expansion.png",  ICON_FA_TV,           "Expansion",  true, -1) \
+PANEL(hwinfo,             "Hardware info",      "expansion.png",  ICON_FA_CIRCLE_INFO,  "Expansion",  true, -1) \
+PANEL(display,            "Display",            "screen.png",     ICON_FA_DESKTOP,      "Output",     false, 2) \
+PANEL(filter,             "Filter",             "misc.png",       ICON_FA_SLIDERS,      "Output",     true, -1) \
+PANEL(sound,              "Sound",              "sound.png",      ICON_FA_VOLUME_HIGH,  "Output",     true, -1) \
+PANEL(input,              "Input",              "joystick.png",   ICON_FA_GAMEPAD,      "Input / IO", false, 3) \
+PANEL(io,                 "IO Ports",           "port.png",       ICON_FA_PLUG,         "Input / IO", true, -1) \
+PANEL(custom,             "Custom controls",    "controller.png", ICON_FA_GEARS,        "Input / IO", true, -1) \
+PANEL(diskswapper,        "Disk swapper",       "35floppy.png",   ICON_FA_SHUFFLE,      "Utility",    true, -1) \
+PANEL(misc,               "Miscellaneous",      "misc.png",       ICON_FA_WRENCH,       "Utility",    true, -1) \
+PANEL(global_settings,    "Global Settings",    "misc.png",       ICON_FA_SLIDERS,      "Utility",    true, -1) \
+PANEL(themes,             "Themes",             "misc.png",       ICON_FA_GEAR,         "Utility",    true, -1) \
+PANEL(prio,               "Priority",           "misc.png",       ICON_FA_GAUGE_HIGH,   "Utility",    true, -1) \
+PANEL(savestates,         "Savestates",         "savestate.png",  ICON_FA_BOOKMARK,     "Utility",    true, -1) \
+PANEL(virtual_keyboard,   "On-Screen",          "keyboard.png",   ICON_FA_KEYBOARD,     "Utility",    true, -1) \
+PANEL(whdload,            "WHDLoad",            "drive.png",      ICON_FA_DOWNLOAD,     "Storage",    true, -1)
 
 #endif
 
