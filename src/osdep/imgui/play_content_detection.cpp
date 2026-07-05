@@ -1,0 +1,119 @@
+#include "imgui/play_content_detection.h"
+
+#include <algorithm>
+#include <cctype>
+
+namespace
+{
+std::string get_display_name(const std::string& path)
+{
+	const auto separator = path.find_last_of("/\\");
+	if (separator == std::string::npos) {
+		return path;
+	}
+
+	if (separator + 1 >= path.size()) {
+		return path;
+	}
+
+	return path.substr(separator + 1);
+}
+
+std::string get_lowercase_extension(const std::string& path)
+{
+	const auto display_name = get_display_name(path);
+	const auto dot = display_name.find_last_of('.');
+	if (dot == std::string::npos || dot + 1 >= display_name.size()) {
+		return {};
+	}
+
+	auto extension = display_name.substr(dot);
+	std::transform(extension.begin(), extension.end(), extension.begin(), [](const unsigned char ch) {
+		return static_cast<char>(std::tolower(ch));
+	});
+	return extension;
+}
+
+bool is_one_of(const std::string& extension, const std::vector<const char*>& extensions)
+{
+	return std::find(extensions.begin(), extensions.end(), extension) != extensions.end();
+}
+}
+
+PlayContentDetection play_detect_content(const std::string& path, bool is_directory)
+{
+	PlayContentDetection detection;
+	detection.original_path = path;
+	detection.display_name = get_display_name(path);
+
+	if (is_directory) {
+		detection.type = PlayContentType::WhdLoad;
+		detection.suggested_model = PlaySuggestedModel::A1200;
+		return detection;
+	}
+
+	const auto extension = get_lowercase_extension(path);
+
+	if (extension == ".uae") {
+		detection.type = PlayContentType::Configuration;
+		return detection;
+	}
+
+	if (is_one_of(extension, { ".adf", ".adz", ".ipf", ".dms", ".fdi", ".scp", ".wrp", ".dsq" })) {
+		detection.type = PlayContentType::Floppy;
+		detection.suggested_model = PlaySuggestedModel::A500;
+		return detection;
+	}
+
+	if (is_one_of(extension, { ".cue", ".bin", ".iso", ".ccd", ".mds", ".chd", ".nrg" })) {
+		detection.type = PlayContentType::Cd;
+		detection.suggested_model = PlaySuggestedModel::Cd32;
+		detection.follow_up = PlayFollowUp::ChooseCdMachine;
+		return detection;
+	}
+
+	if (is_one_of(extension, { ".hdf", ".hdz", ".hda", ".vhd" })) {
+		detection.type = PlayContentType::Hardfile;
+		detection.follow_up = PlayFollowUp::AttachHardfileInExpert;
+		return detection;
+	}
+
+	if (extension == ".img") {
+		detection.type = PlayContentType::Ambiguous;
+		detection.follow_up = PlayFollowUp::ChooseDiskOrHardfile;
+		detection.choices = { PlayContentType::Floppy, PlayContentType::Hardfile };
+		return detection;
+	}
+
+	if (is_one_of(extension, { ".lha", ".lzh", ".zip", ".7z", ".lzx" })) {
+		detection.type = PlayContentType::Ambiguous;
+		detection.suggested_model = PlaySuggestedModel::A1200;
+		detection.follow_up = PlayFollowUp::ChooseArchiveContent;
+		detection.choices = { PlayContentType::WhdLoad, PlayContentType::Floppy };
+		return detection;
+	}
+
+	return detection;
+}
+
+const char* play_content_type_name(const PlayContentType type)
+{
+	switch (type) {
+		case PlayContentType::Configuration:
+			return "Configuration";
+		case PlayContentType::WhdLoad:
+			return "WHDLoad";
+		case PlayContentType::Floppy:
+			return "Floppy";
+		case PlayContentType::Cd:
+			return "CD";
+		case PlayContentType::Hardfile:
+			return "Hardfile";
+		case PlayContentType::Unknown:
+			return "Unknown";
+		case PlayContentType::Ambiguous:
+			return "Ambiguous";
+	}
+
+	return "Unknown";
+}
