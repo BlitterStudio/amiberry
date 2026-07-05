@@ -26,6 +26,7 @@ struct PlayDisplayDefaults
 	PlayScreenMode screen_mode = PlayScreenMode::Windowed;
 	PlayScalingMode scaling = PlayScalingMode::Auto;
 	PlayShaderChoice shader = PlayShaderChoice::None;
+	bool auto_crop = false;
 };
 
 struct PlayDisplayPrefs
@@ -35,6 +36,7 @@ struct PlayDisplayPrefs
 	int scaling_method = -1;
 	int gfx_autoresolution = 0;
 	int shader_choice = static_cast<int>(PlayShaderChoice::None);
+	bool gfx_auto_crop = false;
 };
 
 PlayDisplayPrefs play_apply_display_defaults(const PlayDisplayDefaults& defaults);

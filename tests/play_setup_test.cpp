@@ -29,6 +29,7 @@ static void test_fullwindow_integer_crt_defaults()
 	expect_eq(prefs.gfx_autoresolution, 1, "Integer scaling must enable autoresolution");
 	expect_eq(prefs.shader_choice, static_cast<int>(PlayShaderChoice::Crt),
 		"CRT shader choice must be preserved");
+	expect_eq(prefs.gfx_auto_crop, false, "AutoCrop must default to disabled");
 }
 
 static void test_windowed_auto_none_defaults()
@@ -47,6 +48,7 @@ static void test_windowed_auto_none_defaults()
 	expect_eq(prefs.gfx_autoresolution, 0, "Auto scaling must disable autoresolution");
 	expect_eq(prefs.shader_choice, static_cast<int>(PlayShaderChoice::None),
 		"No shader choice must be preserved");
+	expect_eq(prefs.gfx_auto_crop, false, "Auto scaling must not enable AutoCrop");
 }
 
 static void test_smooth_scaling_defaults()
@@ -65,6 +67,21 @@ static void test_smooth_scaling_defaults()
 	expect_eq(prefs.gfx_autoresolution, 0, "Smooth scaling must disable autoresolution");
 	expect_eq(prefs.shader_choice, static_cast<int>(PlayShaderChoice::Monitor1084),
 		"1084 shader choice must be preserved");
+	expect_eq(prefs.gfx_auto_crop, false, "Smooth scaling must not enable AutoCrop");
+}
+
+static void test_autocrop_default_is_preserved()
+{
+	PlayDisplayDefaults defaults{
+		PlayScreenMode::FullWindow,
+		PlayScalingMode::Integer,
+		PlayShaderChoice::None
+	};
+	defaults.auto_crop = true;
+
+	const auto prefs = play_apply_display_defaults(defaults);
+
+	expect_eq(prefs.gfx_auto_crop, true, "AutoCrop default must be preserved");
 }
 
 static void test_no_dependency_state_helpers_stay_false()
@@ -83,6 +100,7 @@ int main()
 	test_fullwindow_integer_crt_defaults();
 	test_windowed_auto_none_defaults();
 	test_smooth_scaling_defaults();
+	test_autocrop_default_is_preserved();
 	test_no_dependency_state_helpers_stay_false();
 
 	return failures == 0 ? 0 : 1;

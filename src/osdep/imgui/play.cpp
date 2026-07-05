@@ -27,6 +27,7 @@ static bool display_defaults_initialized = false;
 static PlayContentDetection selected_content;
 static PlayContentType selected_content_choice = PlayContentType::Unknown;
 static bool has_selected_content = false;
+static bool selected_content_applied = false;
 static std::string applied_config_summary;
 
 static const char* shader_choice_name(const PlayShaderChoice choice)
@@ -154,6 +155,7 @@ static void initialize_display_defaults()
 	else
 		display_defaults.shader = PlayShaderChoice::None;
 
+	display_defaults.auto_crop = changed_prefs.gfx_auto_crop;
 	display_defaults_initialized = true;
 }
 
@@ -174,6 +176,9 @@ static void apply_display_defaults_to_changed_prefs()
 	changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = prefs.rtg_fullscreen;
 	changed_prefs.scaling_method = prefs.scaling_method;
 	changed_prefs.gfx_autoresolution = prefs.gfx_autoresolution;
+	changed_prefs.gfx_auto_crop = prefs.gfx_auto_crop;
+	if (changed_prefs.gfx_auto_crop)
+		changed_prefs.gfx_manual_crop = false;
 
 	const char* shader = shader_choice_name(display_defaults.shader);
 	copy_shader_name(changed_prefs.shader, sizeof changed_prefs.shader, shader);
@@ -187,6 +192,7 @@ static void save_display_defaults()
 	amiberry_options.default_fullscreen_mode = prefs.native_fullscreen;
 	amiberry_options.default_scaling_method = prefs.scaling_method;
 	amiberry_options.default_gfx_autoresolution = prefs.gfx_autoresolution;
+	amiberry_options.default_auto_crop = prefs.gfx_auto_crop;
 
 	const char* shader = shader_choice_name(display_defaults.shader);
 	copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, shader);
@@ -329,6 +335,7 @@ static std::string describe_current_config()
 static void mark_content_applied()
 {
 	applied_config_summary = describe_current_config();
+	selected_content_applied = true;
 }
 
 static bool attach_selected_hardfile()
@@ -590,6 +597,13 @@ static void render_display_defaults()
 	if (display_defaults.scaling == PlayScalingMode::Integer)
 		ImGui::TextWrapped("Integer scaling works best with Resolution Autoswitch set to Always On. This flow enables that automatically.");
 
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted("AutoCrop:");
+	ImGui::SameLine(BUTTON_WIDTH * 1.8f);
+	if (AmigaCheckbox("##AutoCrop", &display_defaults.auto_crop))
+		apply_display_defaults_to_changed_prefs();
+	ShowHelpMarker("Automatically crop black borders from the display.");
+
 	int shader = static_cast<int>(display_defaults.shader);
 	if (render_combo("Shader:", &shader, shader_items, IM_ARRAYSIZE(shader_items))) {
 		display_defaults.shader = static_cast<PlayShaderChoice>(shader);
@@ -621,6 +635,7 @@ static void render_content_picker()
 		const bool is_directory = std::filesystem::is_directory(selected_path, ec);
 		selected_content = play_detect_content(selected_path, is_directory);
 		selected_content_choice = PlayContentType::Unknown;
+		selected_content_applied = false;
 		applied_config_summary.clear();
 		has_selected_content = true;
 	}
@@ -637,12 +652,17 @@ static void render_content_picker()
 				if (choice == PlayContentType::Hardfile) {
 					if (AmigaButton("Use as hardfile...", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT))) {
 						selected_content_choice = PlayContentType::Hardfile;
+						selected_content_applied = false;
+						applied_config_summary.clear();
 						apply_selected_content(selected_content_choice);
 					}
 				} else {
 					std::string label = std::string("Use as ") + play_content_type_name(choice);
-					if (AmigaButton(label.c_str(), ImVec2(BUTTON_WIDTH * 1.6f, BUTTON_HEIGHT)))
+					if (AmigaButton(label.c_str(), ImVec2(BUTTON_WIDTH * 1.6f, BUTTON_HEIGHT))) {
 						selected_content_choice = choice;
+						selected_content_applied = false;
+						applied_config_summary.clear();
+					}
 				}
 				ImGui::SameLine();
 			}
@@ -658,13 +678,8 @@ static void render_content_picker()
 				render_setup_status_row("Configured:", applied_config_summary.c_str());
 
 			ImGui::Spacing();
-			if (AmigaButton("Apply selection", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT)))
+			if (AmigaButton("Use this content", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT)))
 				apply_selected_content(action_type);
-			ImGui::SameLine();
-			if (AmigaButton(ICON_FA_PLAY " Start selection", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT))) {
-				if (apply_selected_content(action_type))
-					gui_start_from_current_config();
-			}
 			ImGui::SameLine();
 			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
 				gui_show_panel("quickstart", true);
@@ -696,10 +711,8 @@ void render_panel_play()
 	if (BeginGroupBox("Play", true, true)) {
 		render_content_picker();
 		ImGui::Spacing();
-		if (AmigaButton(ICON_FA_PLAY " Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-			gui_start_from_current_config();
-		ImGui::SameLine();
-		if (AmigaButton(ICON_FA_ROCKET " Open Quickstart", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
+		if (!has_selected_content &&
+			AmigaButton(ICON_FA_ROCKET " Open Quickstart", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
 			gui_show_panel("quickstart", true);
 	}
 	EndGroupBox("Play");
@@ -714,4 +727,17 @@ void render_panel_play()
 		if (AmigaButton("Show first-run setup", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 			play_set_setup_dismissed(false);
 	}
+}
+
+bool play_has_content_selection()
+{
+	return has_selected_content;
+}
+
+bool play_prepare_selected_content_for_start()
+{
+	if (!has_selected_content || selected_content_applied)
+		return true;
+
+	return apply_selected_content(selected_action_type());
 }

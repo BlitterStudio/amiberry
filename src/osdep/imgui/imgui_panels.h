@@ -36,6 +36,8 @@ bool AmigaRadioButton(const char* label, int* v, int v_button);
 void ShowHelpMarker(const char* desc);
 
 void render_panel_play();
+bool play_has_content_selection();
+bool play_prepare_selected_content_for_start();
 void render_panel_about();
 void render_panel_paths();
 void render_panel_quickstart();

@@ -55,6 +55,7 @@ void play_apply_display_defaults(const PlayDisplayDefaults& defaults, PlayDispla
 	}
 
 	prefs.shader_choice = shader_choice_to_prefs(defaults.shader);
+	prefs.gfx_auto_crop = defaults.auto_crop;
 }
 
 PlayDisplayPrefs play_apply_display_defaults(const PlayDisplayDefaults& defaults)

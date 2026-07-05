@@ -2723,8 +2723,11 @@ void run_gui()
 			}
 		} else {
 			if (AmigaButton(ICON_FA_PLAY " Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
-				uae_reset(0, 1);
-				gui_running = false;
+				const bool has_play_selection = gui_active_panel_is("play") && play_has_content_selection();
+				if (!has_play_selection || play_prepare_selected_content_for_start()) {
+					uae_reset(0, 1);
+					gui_running = false;
+				}
 			}
 		}
 		ImGui::PopStyleColor(3);
