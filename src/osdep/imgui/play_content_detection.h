@@ -19,6 +19,7 @@ enum class PlaySuggestedModel
 	KeepExisting,
 	A500,
 	A1200,
+	A1200Expanded,
 	Cd32
 };
 

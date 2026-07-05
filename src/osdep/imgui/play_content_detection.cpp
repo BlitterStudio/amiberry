@@ -34,9 +34,41 @@ std::string get_lowercase_extension(const std::string& path)
 	return extension;
 }
 
+std::string get_lowercase_name(const std::string& path)
+{
+	auto name = get_display_name(path);
+	std::transform(name.begin(), name.end(), name.begin(), [](const unsigned char ch) {
+		return static_cast<char>(std::tolower(ch));
+	});
+	return name;
+}
+
 bool is_one_of(const std::string& extension, const std::vector<const char*>& extensions)
 {
 	return std::find(extensions.begin(), extensions.end(), extension) != extensions.end();
+}
+
+bool is_name_separator(const char ch)
+{
+	return !std::isalnum(static_cast<unsigned char>(ch));
+}
+
+bool has_aga_token(const std::string& path)
+{
+	const auto name = get_lowercase_name(path);
+	size_t offset = 0;
+	for (;;) {
+		const auto pos = name.find("aga", offset);
+		if (pos == std::string::npos)
+			return false;
+
+		const bool before_ok = pos == 0 || is_name_separator(name[pos - 1]);
+		const bool after_ok = pos + 3 >= name.size() || is_name_separator(name[pos + 3]);
+		if (before_ok && after_ok)
+			return true;
+
+		offset = pos + 3;
+	}
 }
 }
 
@@ -61,7 +93,7 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 
 	if (is_one_of(extension, { ".adf", ".adz", ".ipf", ".dms", ".fdi", ".scp", ".wrp", ".dsq" })) {
 		detection.type = PlayContentType::Floppy;
-		detection.suggested_model = PlaySuggestedModel::A500;
+		detection.suggested_model = has_aga_token(path) ? PlaySuggestedModel::A1200 : PlaySuggestedModel::A500;
 		return detection;
 	}
 
@@ -74,6 +106,7 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 
 	if (is_one_of(extension, { ".hdf", ".hdz", ".hda", ".vhd" })) {
 		detection.type = PlayContentType::Hardfile;
+		detection.suggested_model = PlaySuggestedModel::A1200Expanded;
 		detection.follow_up = PlayFollowUp::AttachHardfileInExpert;
 		return detection;
 	}
@@ -85,7 +118,13 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 		return detection;
 	}
 
-	if (is_one_of(extension, { ".lha", ".lzh", ".zip", ".7z", ".lzx" })) {
+	if (is_one_of(extension, { ".lha", ".lzh", ".lzx" })) {
+		detection.type = PlayContentType::WhdLoad;
+		detection.suggested_model = PlaySuggestedModel::A1200;
+		return detection;
+	}
+
+	if (is_one_of(extension, { ".zip", ".7z" })) {
 		detection.type = PlayContentType::Ambiguous;
 		detection.suggested_model = PlaySuggestedModel::A1200;
 		detection.follow_up = PlayFollowUp::ChooseArchiveContent;

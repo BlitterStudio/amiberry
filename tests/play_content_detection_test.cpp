@@ -45,6 +45,15 @@ static void test_floppy_extensions_suggest_a500()
 	expect_eq(adf.suggested_model, PlaySuggestedModel::A500, "floppies must suggest A500");
 }
 
+static void test_aga_floppy_names_suggest_a1200()
+{
+	const auto detection = play_detect_content("Game_AGA.adf", false);
+
+	expect_eq(detection.type, PlayContentType::Floppy, "AGA-named .adf must still be detected as floppy");
+	expect_eq(detection.suggested_model, PlaySuggestedModel::A1200,
+		"AGA-named floppy content must suggest A1200");
+}
+
 static void test_cd_extensions_suggest_cd32_and_follow_up()
 {
 	const auto cue = play_detect_content("Game.cue", false);
@@ -61,6 +70,8 @@ static void test_hardfile_extensions_attach_in_expert()
 	const auto detection = play_detect_content("Workbench.hdf", false);
 
 	expect_eq(detection.type, PlayContentType::Hardfile, ".hdf must be detected as hardfile");
+	expect_eq(detection.suggested_model, PlaySuggestedModel::A1200Expanded,
+		"hardfiles must suggest A1200 expanded");
 	expect_eq(detection.follow_up, PlayFollowUp::AttachHardfileInExpert,
 		"hardfiles must be attached through expert follow-up");
 }
@@ -83,16 +94,25 @@ static void test_img_can_be_disk_or_hardfile()
 	expect_choice(detection.choices, PlayContentType::Hardfile, ".img choices must include hardfile");
 }
 
-static void test_archives_can_be_whdload_or_floppy()
+static void test_lha_archives_are_whdload()
 {
 	const auto detection = play_detect_content("game.lha", false);
 
-	expect_eq(detection.type, PlayContentType::Ambiguous, ".lha must be ambiguous");
+	expect_eq(detection.type, PlayContentType::WhdLoad, ".lha must be detected as WHDLoad");
 	expect_eq(detection.suggested_model, PlaySuggestedModel::A1200, ".lha must suggest A1200");
+	expect_eq(detection.follow_up, PlayFollowUp::None,
+		".lha must not ask for archive content type");
+}
+
+static void test_generic_archives_stay_ambiguous()
+{
+	const auto detection = play_detect_content("game.zip", false);
+
+	expect_eq(detection.type, PlayContentType::Ambiguous, ".zip can still contain disk images or WHDLoad content");
 	expect_eq(detection.follow_up, PlayFollowUp::ChooseArchiveContent,
-		".lha must ask for archive content type");
-	expect_choice(detection.choices, PlayContentType::WhdLoad, ".lha choices must include WHDLoad");
-	expect_choice(detection.choices, PlayContentType::Floppy, ".lha choices must include floppy");
+		".zip must ask for archive content type");
+	expect_choice(detection.choices, PlayContentType::WhdLoad, ".zip choices must include WHDLoad");
+	expect_choice(detection.choices, PlayContentType::Floppy, ".zip choices must include floppy");
 }
 
 static void test_directories_are_whdload_candidates()
@@ -108,11 +128,13 @@ int main()
 {
 	test_configurations_keep_existing_model();
 	test_floppy_extensions_suggest_a500();
+	test_aga_floppy_names_suggest_a1200();
 	test_cd_extensions_suggest_cd32_and_follow_up();
 	test_hardfile_extensions_attach_in_expert();
 	test_unknown_extensions_remain_unknown();
 	test_img_can_be_disk_or_hardfile();
-	test_archives_can_be_whdload_or_floppy();
+	test_lha_archives_are_whdload();
+	test_generic_archives_stay_ambiguous();
 	test_directories_are_whdload_candidates();
 
 	return failures == 0 ? 0 : 1;
