@@ -59,7 +59,12 @@ static void test_smooth_scaling_defaults()
 
 	const auto prefs = play_apply_display_defaults(defaults);
 
+	expect_eq(prefs.native_fullscreen, 1, "Fullscreen must set native fullscreen to 1");
+	expect_eq(prefs.rtg_fullscreen, 1, "Fullscreen must set RTG fullscreen to 1");
 	expect_eq(prefs.scaling_method, 1, "Smooth scaling must set scaling method to 1");
+	expect_eq(prefs.gfx_autoresolution, 0, "Smooth scaling must disable autoresolution");
+	expect_eq(prefs.shader_choice, static_cast<int>(PlayShaderChoice::Monitor1084),
+		"1084 shader choice must be preserved");
 }
 
 static void test_no_dependency_state_helpers_stay_false()

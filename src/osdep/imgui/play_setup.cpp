@@ -19,6 +19,20 @@ static int screen_mode_to_fullscreen(const PlayScreenMode mode)
 	return 0;
 }
 
+static int shader_choice_to_prefs(const PlayShaderChoice choice)
+{
+	switch (choice) {
+	case PlayShaderChoice::None:
+		return 0;
+	case PlayShaderChoice::Crt:
+		return 1;
+	case PlayShaderChoice::Monitor1084:
+		return 2;
+	}
+
+	return 0;
+}
+
 void play_apply_display_defaults(const PlayDisplayDefaults& defaults, PlayDisplayPrefs& prefs)
 {
 	const auto fullscreen = screen_mode_to_fullscreen(defaults.screen_mode);
@@ -40,7 +54,7 @@ void play_apply_display_defaults(const PlayDisplayDefaults& defaults, PlayDispla
 		break;
 	}
 
-	prefs.shader_choice = static_cast<int>(defaults.shader);
+	prefs.shader_choice = shader_choice_to_prefs(defaults.shader);
 }
 
 PlayDisplayPrefs play_apply_display_defaults(const PlayDisplayDefaults& defaults)
