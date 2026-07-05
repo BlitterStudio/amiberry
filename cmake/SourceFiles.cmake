@@ -349,6 +349,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/filter.cpp
 		src/osdep/imgui/expansions.cpp
 		src/osdep/imgui/floppy.cpp
+		src/osdep/imgui/global_settings.cpp
 		src/osdep/imgui/hd.cpp
 		src/osdep/imgui/hwinfo.cpp
 		src/osdep/imgui/input.cpp

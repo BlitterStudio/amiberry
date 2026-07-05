@@ -4932,7 +4932,7 @@ void target_default_options(uae_prefs* p, const int type)
 	// On-screen joystick
 	p->onscreen_joystick = amiberry_options.default_onscreen_joystick;
 
-	// Virtual keyboard default options
+	// On-screen keyboard default options
 	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
 
 #ifdef __ANDROID__
@@ -4945,16 +4945,10 @@ void target_default_options(uae_prefs* p, const int type)
 		p->vkbd_enabled = false;
 	}
 #endif
-	p->vkbd_exit = amiberry_options.default_vkbd_exit;
-	p->vkbd_hires = amiberry_options.default_vkbd_hires;
 	if (amiberry_options.default_vkbd_language[0])
 		_tcscpy(p->vkbd_language, amiberry_options.default_vkbd_language);
 	else
 		_tcscpy(p->vkbd_language, ""); // This will use the default language.
-	if (amiberry_options.default_vkbd_style[0])
-		_tcscpy(p->vkbd_style, amiberry_options.default_vkbd_style);
-	else
-		_tcscpy(p->vkbd_style, ""); // This will use the default theme.
 	p->vkbd_transparency = amiberry_options.default_vkbd_transparency;
 	_tcscpy(p->vkbd_toggle, amiberry_options.default_vkbd_toggle);
 
@@ -5122,11 +5116,8 @@ void target_save_options(zfile* f, uae_prefs* p)
 
 	cfgfile_target_dwrite_bool(f, _T("onscreen_joystick"), p->onscreen_joystick);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
-	cfgfile_target_dwrite_bool(f, _T("vkbd_hires"), p->vkbd_hires);
-	cfgfile_target_dwrite_bool(f, _T("vkbd_exit"), p->vkbd_exit);
 	cfgfile_target_dwrite(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
 	cfgfile_target_dwrite_str(f, _T("vkbd_language"), p->vkbd_language);
-	cfgfile_target_dwrite_str(f, _T("vkbd_style"), p->vkbd_style);
 	cfgfile_target_dwrite_str(f, _T("vkbd_toggle"), p->vkbd_toggle);
 }
 
@@ -5782,9 +5773,31 @@ void set_rom_path(const std::string& newpath)
 	macos_bookmark_store(newpath);
 }
 
+std::string get_rp9_path()
+{
+	return fix_trailing(rp9_path);
+}
+
 void get_rp9_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(rp9_path).c_str(), size - 1);
+}
+
+void set_rp9_path(const std::string& newpath)
+{
+	rp9_path = newpath;
+	macos_bookmark_store(newpath);
+}
+
+std::string get_saveimage_path()
+{
+	return fix_trailing(saveimage_dir);
+}
+
+void set_saveimage_path(const std::string& newpath)
+{
+	saveimage_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 void get_savestate_path(char* out, const int size)
@@ -5796,9 +5809,32 @@ void get_savestate_path(char* out, const int size)
 	_tcsncpy(out, fix_trailing(savestate_dir).c_str(), size - 1);
 }
 
+std::string get_savestate_path()
+{
+	if (path_statefile[0])
+		return path_statefile;
+	return fix_trailing(savestate_dir);
+}
+
+std::string get_ripper_path()
+{
+	return fix_trailing(ripper_path);
+}
+
 void fetch_ripperpath(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(ripper_path).c_str(), size - 1);
+}
+
+void set_ripper_path(const std::string& newpath)
+{
+	ripper_path = newpath;
+	macos_bookmark_store(newpath);
+}
+
+std::string get_inputrecordings_path()
+{
+	return fix_trailing(input_dir);
 }
 
 void fetch_inputfilepath(TCHAR* out, const int size)
@@ -5806,9 +5842,20 @@ void fetch_inputfilepath(TCHAR* out, const int size)
 	_tcsncpy(out, fix_trailing(input_dir).c_str(), size - 1);
 }
 
+void set_inputrecordings_path(const std::string& newpath)
+{
+	input_dir = newpath;
+	macos_bookmark_store(newpath);
+}
+
 void get_nvram_path(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(nvram_dir).c_str(), size - 1);
+}
+
+std::string get_nvram_path()
+{
+	return fix_trailing(nvram_dir);
 }
 
 std::string get_plugins_path()
@@ -5838,6 +5885,11 @@ void get_video_path(char* out, const int size)
 	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
 }
 
+std::string get_video_path()
+{
+	return fix_trailing(video_dir);
+}
+
 std::string get_themes_path()
 {
 	return fix_trailing(themes_path);
@@ -5856,6 +5908,17 @@ std::string get_bezels_path()
 void get_floppy_sounds_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(floppy_sounds_dir).c_str(), size - 1);
+}
+
+std::string get_floppy_sounds_path()
+{
+	return fix_trailing(floppy_sounds_dir);
+}
+
+void set_floppy_sounds_path(const std::string& newpath)
+{
+	floppy_sounds_dir = newpath;
+	macos_bookmark_store(newpath);
 }
 
 int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int isdefault)
@@ -6034,12 +6097,12 @@ void read_directory(const std::string& path, std::vector<std::string>* dirs, std
 		sort(files->begin(), files->end());
 }
 
-void save_amiberry_settings()
+bool save_amiberry_settings_with_result()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
 	auto* const f = uae_fopen(amiberry_conf_file.c_str(), "we");
 	if (!f)
-		return;
+		return false;
 
 	char buffer[MAX_DPATH];
 
@@ -6216,22 +6279,13 @@ void save_amiberry_settings()
 	// Enable Virtual Keyboard by default
 	write_bool_option("default_vkbd_enabled", amiberry_options.default_vkbd_enabled);
 
-	// Show the High-res version of the Virtual Keyboard by default
-	write_bool_option("default_vkbd_hires", amiberry_options.default_vkbd_hires);
-
-	// Enable Quit functionality through Virtual Keyboard by default
-	write_bool_option("default_vkbd_exit", amiberry_options.default_vkbd_exit);
-
-	// Default Language for the Virtual Keyboard
+	// Default layout for the On-screen Keyboard
 	write_string_option("default_vkbd_language", amiberry_options.default_vkbd_language);
 
-	// Default Style for the Virtual Keyboard
-	write_string_option("default_vkbd_style", amiberry_options.default_vkbd_style);
-
-	// Default transparency for the Virtual Keyboard
+	// Default transparency for the On-screen Keyboard
 	write_int_option("default_vkbd_transparency", amiberry_options.default_vkbd_transparency);
 
-	// Default controller button for toggling the Virtual Keyboard
+	// Default controller button for toggling the On-screen Keyboard
 	write_string_option("default_vkbd_toggle", amiberry_options.default_vkbd_toggle);
 
 	// GUI Theme
@@ -6313,7 +6367,14 @@ void save_amiberry_settings()
 		write_string_option("WHDLoadfile", i);
 	}
 	
-	fclose(f);
+	const bool write_ok = ferror(f) == 0;
+	const bool close_ok = fclose(f) == 0;
+	return write_ok && close_ok;
+}
+
+void save_amiberry_settings()
+{
+	(void)save_amiberry_settings_with_result();
 }
 
 void get_string(FILE* f, char* dst, const int size)
@@ -6553,12 +6614,15 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
 		ret |= cfgfile_yesno(option, value, "default_onscreen_joystick", &amiberry_options.default_onscreen_joystick);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
-		ret |= cfgfile_yesno(option, value, "default_vkbd_hires", &amiberry_options.default_vkbd_hires);
-		ret |= cfgfile_yesno(option, value, "default_vkbd_exit", &amiberry_options.default_vkbd_exit);
 		ret |= cfgfile_string(option, value, "default_vkbd_language", amiberry_options.default_vkbd_language, sizeof amiberry_options.default_vkbd_language);
-		ret |= cfgfile_string(option, value, "default_vkbd_style", amiberry_options.default_vkbd_style, sizeof amiberry_options.default_vkbd_style);
 		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
+		// Legacy bitmap vkbd defaults. Accept old amiberry.conf files, but do not apply or re-save these.
+		bool legacy_vkbd_bool;
+		char legacy_vkbd_string[128];
+		ret |= cfgfile_yesno(option, value, "default_vkbd_hires", &legacy_vkbd_bool);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_exit", &legacy_vkbd_bool);
+		ret |= cfgfile_string(option, value, "default_vkbd_style", legacy_vkbd_string, sizeof legacy_vkbd_string);
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);

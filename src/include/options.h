@@ -1417,10 +1417,7 @@ struct amiberry_options
 	bool default_onscreen_joystick = false;
 	bool default_vkbd_enabled = false;
 #endif
-	bool default_vkbd_hires;
-	bool default_vkbd_exit;
 	char default_vkbd_language[128] = "US";
-	char default_vkbd_style[128] = "Original";
 	int default_vkbd_transparency;
 	char default_vkbd_toggle[128] = "guide";
 	char gui_theme[128] = "Default.theme";

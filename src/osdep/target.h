@@ -128,6 +128,7 @@ extern int multithread_enabled;
 extern bool host_detect_slow_sbc(void);
 
 void save_amiberry_settings();
+bool save_amiberry_settings_with_result();
 void update_display(struct uae_prefs*);
 void clearscreen();
 void graphics_subshutdown();
@@ -147,15 +148,29 @@ extern bool can_have_1gb();
 string prefix_with_application_directory_path(string currentpath);
 #endif
 
+extern std::string get_configuration_path();
 extern void get_configuration_path(char* out, int size);
 extern std::string get_base_content_path();
 extern std::vector<std::string> get_base_content_missing_directories(const std::string& newpath);
 extern void set_base_content_path(const std::string& newpath);
 extern void create_missing_directories_for_base_content_path(const std::string& newpath);
 extern void set_configuration_path(const std::string& newpath);
+extern std::string get_nvram_path();
 extern void set_nvram_path(const std::string& newpath);
+extern std::string get_plugins_path();
 extern void set_plugins_path(const std::string& newpath);
+extern std::string get_floppy_sounds_path();
+extern void set_floppy_sounds_path(const std::string& newpath);
+extern std::string get_saveimage_path();
+extern void set_saveimage_path(const std::string& newpath);
+extern std::string get_ripper_path();
+extern void set_ripper_path(const std::string& newpath);
+extern std::string get_inputrecordings_path();
+extern void set_inputrecordings_path(const std::string& newpath);
+extern std::string get_video_path();
+extern void set_video_path(const std::string& newpath);
 extern void set_screenshot_path(const std::string& newpath);
+extern std::string get_savestate_path();
 extern void set_savestate_path(const std::string& newpath);
 extern void set_themes_path(const std::string& newpath);
 extern void set_shaders_path(const std::string& newpath);
@@ -188,7 +203,10 @@ extern void set_logfile_enabled(bool enabled);
 extern std::string get_logfile_path();
 extern void set_logfile_path(const std::string& newpath);
 
+extern std::string get_rom_path();
 extern void set_rom_path(const std::string& newpath);
+extern std::string get_rp9_path();
+extern void set_rp9_path(const std::string& newpath);
 extern void get_rp9_path(char* out, int size);
 extern std::string get_screenshot_path();
 

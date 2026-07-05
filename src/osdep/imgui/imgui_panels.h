@@ -58,6 +58,7 @@ void render_panel_io();
 void render_panel_custom();
 void render_panel_diskswapper();
 void render_panel_misc();
+void render_panel_global_settings();
 // Returns true while the Misc panel's hotkey-capture modal is open.
 // Used by the GUI main loop to suppress its own keyboard shortcuts while
 // the user is picking a key combination.

@@ -801,6 +801,17 @@ static const char* help_text_misc =
 	"- Use RetroArch Reset button: Same as above for the retroarch mapping for Resetting\n"
 	"  the emulation.\n";
 
+static const char* help_text_global_settings =
+	"This panel exposes global Amiberry defaults that are saved in amiberry.conf, plus a\n"
+	"small set of user-facing UI/input settings saved in amiberry.ini.\n"
+	"\n"
+	"These settings are loaded during startup before normal .uae configurations are\n"
+	"applied. Individual configurations can still override many of these defaults.\n"
+	"\n"
+	"Use the collapsible groups to find a category, then press Save Global Settings to\n"
+	"write changes back to disk. Some changes only affect newly loaded configurations or\n"
+	"the next emulator start.\n";
+
 static const char* help_text_prio =
 	"In this panel you can configure the task priority for Amiberry, under different usage\n"
 	"scenarios. In most cases, the default settings work fine here.\n"
