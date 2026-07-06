@@ -121,10 +121,13 @@ void render_panel_configurations()
 
 			if (ImGui::IsMouseDoubleClicked(0))
 			{
-				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
-				strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
-				uae_reset(1, 1);
-				gui_running = false;
+				if (target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0))
+				{
+					play_clear_content_selection();
+					strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
+					uae_reset(1, 1);
+					gui_running = false;
+				}
 			}
 		}
 
@@ -169,9 +172,12 @@ void render_panel_configurations()
 	{
 		if (selected != -1)
 		{
-			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
-			strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
-			gui_config_mark_clean();
+			if (target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0))
+			{
+				play_clear_content_selection();
+				strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
+				gui_config_mark_clean();
+			}
 		}
 	}
 	ImGui::SameLine();

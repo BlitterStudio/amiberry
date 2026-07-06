@@ -3,6 +3,20 @@
 // Help text string literals for all ImGui panels.
 // Extracted from the HelpPanel*() functions in the Guisan Panel*.cpp files.
 
+static const char* help_text_play =
+	"The Play panel is the recommended starting point for new users. It keeps the common\n"
+	"startup flow in one place: setup guidance, Kickstart ROM path setup, display defaults,\n"
+	"and content selection.\n"
+	"\n"
+	"Simple mode keeps the sidebar focused on Play, Configurations, Display, Input, Paths,\n"
+	"and About. Enable Expert settings when you need access to all detailed emulator panels.\n"
+	"\n"
+	"AROS ROMs are bundled and can be used as a fallback, but original Kickstart ROMs give\n"
+	"the best compatibility. If you add Kickstarts, choose their folder and rescan ROMs.\n"
+	"\n"
+	"Integer scaling gives the sharpest pixels. In this simple flow, enabling it also turns\n"
+	"Resolution Autoswitch to Always On for the best results.\n";
+
 static const char* help_text_about =
 	"This panel contains information about the version of Amiberry, when it was changed,\n"
 	"which version of SDL3 it was compiled against and currently using.\n"

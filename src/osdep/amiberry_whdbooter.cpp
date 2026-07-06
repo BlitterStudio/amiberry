@@ -5,6 +5,7 @@
  *
  */
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -12,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
+#include <system_error>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "sysdeps.h"
@@ -1272,6 +1274,76 @@ static void detect_slave_hardware_from_header(const char* filepath,
 	}
 }
 
+struct auto_detect_slave_entry {
+	std::string filename;
+	std::string subpath;
+};
+
+static std::string lowercase_string(std::string value)
+{
+	std::transform(value.begin(), value.end(), value.begin(),
+		[](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
+	return value;
+}
+
+static bool is_slave_filename(const std::string& name)
+{
+	const auto lower_name = lowercase_string(name);
+	return lower_name.length() > 6 &&
+		lower_name.compare(lower_name.length() - 6, 6, ".slave") == 0;
+}
+
+static bool apply_auto_detected_slave(const char* filepath,
+	const std::vector<auto_detect_slave_entry>& found_slaves,
+	game_hardware_options& game_detail,
+	const char* source_type)
+{
+	if (found_slaves.empty())
+	{
+		write_log("WHDBooter - Auto-detect: no .slave files found in %s\n", source_type);
+		return false;
+	}
+
+	const auto filename_lower = lowercase_string(whdload_prefs.filename);
+
+	const auto* best = &found_slaves[0];
+	for (const auto& s : found_slaves)
+	{
+		const auto slave_lower = lowercase_string(s.filename);
+		const std::string slave_base = slave_lower.substr(0, slave_lower.length() - 6);
+		if (slave_base == filename_lower)
+		{
+			best = &s;
+			break;
+		}
+	}
+
+	whdload_prefs.sub_path = best->subpath;
+	whdload_prefs.slave_default = best->filename;
+	whdload_prefs.selected_slave = whdload_slave{};
+	whdload_prefs.selected_slave.filename = best->filename;
+	whdload_prefs.selected_slave.sub_path = best->subpath;
+	whdload_prefs.selected_slave.has_sub_path = true;
+	whdload_prefs.slave_count = static_cast<int>(found_slaves.size());
+
+	whdload_prefs.slaves.clear();
+	for (const auto& s : found_slaves)
+	{
+		whdload_slave slave;
+		slave.filename = s.filename;
+		slave.sub_path = s.subpath;
+		slave.has_sub_path = true;
+		whdload_prefs.slaves.emplace_back(slave);
+	}
+
+	detect_slave_hardware_from_header(filepath, best->subpath, best->filename, game_detail);
+
+	write_log("WHDBooter - Auto-detected slave: %s (subpath: %s, total slaves found: %d, source: %s)\n",
+		best->filename.c_str(), best->subpath.c_str(), static_cast<int>(found_slaves.size()), source_type);
+
+	return true;
+}
+
 static bool auto_detect_slave_from_archive(const char* filepath,
 	game_hardware_options& game_detail)
 {
@@ -1282,11 +1354,7 @@ static bool auto_detect_slave_from_archive(const char* filepath,
 		return false;
 	}
 
-	struct slave_entry {
-		std::string filename;
-		std::string subpath;
-	};
-	std::vector<slave_entry> found_slaves;
+	std::vector<auto_detect_slave_entry> found_slaves;
 
 	std::function<void(struct znode*, const std::string&)> scan_nodes;
 	scan_nodes = [&](struct znode* node, const std::string& current_path) {
@@ -1296,14 +1364,8 @@ static bool auto_detect_slave_from_archive(const char* filepath,
 
 			if (node->type == ZNODE_FILE && name.length() > 6)
 			{
-				std::string lower_name = name;
-				std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
-					[](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
-				if (lower_name.length() >= 6 &&
-					lower_name.compare(lower_name.length() - 6, 6, ".slave") == 0)
-				{
+				if (is_slave_filename(name))
 					found_slaves.push_back({name, current_path});
-				}
 			}
 
 			if (node->child)
@@ -1319,50 +1381,64 @@ static bool auto_detect_slave_from_archive(const char* filepath,
 	scan_nodes(zv->root.child, "");
 	zfile_fclose_archive(zv);
 
-	if (found_slaves.empty())
+	return apply_auto_detected_slave(filepath, found_slaves, game_detail, "archive");
+}
+
+static bool auto_detect_slave_from_directory(const char* filepath,
+	game_hardware_options& game_detail)
+{
+	std::error_code ec;
+	if (!std::filesystem::is_directory(filepath, ec))
+		return false;
+
+	const std::filesystem::path root(filepath);
+	std::vector<auto_detect_slave_entry> found_slaves;
+	constexpr auto options = std::filesystem::directory_options::skip_permission_denied;
+
+	try
 	{
-		write_log("WHDBooter - Auto-detect: no .slave files found in archive\n");
+		std::filesystem::recursive_directory_iterator it(root, options, ec);
+		const std::filesystem::recursive_directory_iterator end;
+		for (; !ec && it != end; it.increment(ec))
+		{
+			std::error_code type_ec;
+			if (!it->is_regular_file(type_ec) || type_ec)
+				continue;
+
+			const auto filename = it->path().filename().string();
+			if (!is_slave_filename(filename))
+				continue;
+
+			std::string subpath;
+			std::error_code relative_ec;
+			const auto relative_parent = std::filesystem::relative(it->path().parent_path(), root, relative_ec);
+			if (!relative_ec && !relative_parent.empty())
+			{
+				const auto relative_parent_string = relative_parent.generic_string();
+				if (relative_parent_string != ".")
+					subpath = relative_parent_string;
+			}
+
+			found_slaves.push_back({filename, subpath});
+		}
+	}
+	catch (const std::filesystem::filesystem_error& e)
+	{
+		write_log("WHDBooter - Auto-detect: failed to scan directory %s: %s\n", filepath, e.what());
 		return false;
 	}
 
-	auto to_lower = [](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); };
+	if (ec)
+		write_log("WHDBooter - Auto-detect: stopped scanning directory %s: %s\n", filepath, ec.message().c_str());
 
-	std::string filename_lower = whdload_prefs.filename;
-	std::transform(filename_lower.begin(), filename_lower.end(), filename_lower.begin(), to_lower);
+	return apply_auto_detected_slave(filepath, found_slaves, game_detail, "directory");
+}
 
-	const slave_entry* best = &found_slaves[0];
-	for (const auto& s : found_slaves)
-	{
-		std::string slave_lower = s.filename;
-		std::transform(slave_lower.begin(), slave_lower.end(), slave_lower.begin(), to_lower);
-		std::string slave_base = slave_lower.substr(0, slave_lower.length() - 6);
-		if (slave_base == filename_lower)
-		{
-			best = &s;
-			break;
-		}
-	}
-
-	whdload_prefs.sub_path = best->subpath;
-	whdload_prefs.slave_default = best->filename;
-	whdload_prefs.selected_slave = whdload_slave{};
-	whdload_prefs.selected_slave.filename = best->filename;
-	whdload_prefs.slave_count = static_cast<int>(found_slaves.size());
-
-	whdload_prefs.slaves.clear();
-	for (const auto& s : found_slaves)
-	{
-		whdload_slave slave;
-		slave.filename = s.filename;
-		whdload_prefs.slaves.emplace_back(slave);
-	}
-
-	detect_slave_hardware_from_header(filepath, best->subpath, best->filename, game_detail);
-
-	write_log("WHDBooter - Auto-detected slave: %s (subpath: %s, total slaves found: %d)\n",
-		best->filename.c_str(), best->subpath.c_str(), static_cast<int>(found_slaves.size()));
-
-	return true;
+static std::string selected_slave_sub_path()
+{
+	if (whdload_prefs.selected_slave.has_sub_path)
+		return whdload_prefs.selected_slave.sub_path;
+	return whdload_prefs.sub_path;
 }
 
 void create_startup_sequence()
@@ -1381,10 +1457,11 @@ void create_startup_sequence()
 	whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
 	whd_bootscript << "ENDIF\n";
 
-	whd_bootscript << "CD \"Games:" << whdload_prefs.sub_path << "\"\n";
-	const std::string slave_path = whdload_prefs.sub_path.empty()
+	const std::string sub_path = selected_slave_sub_path();
+	whd_bootscript << "CD \"Games:" << sub_path << "\"\n";
+	const std::string slave_path = sub_path.empty()
 		? whdload_prefs.selected_slave.filename
-		: whdload_prefs.sub_path + "/" + whdload_prefs.selected_slave.filename;
+		: sub_path + "/" + whdload_prefs.selected_slave.filename;
 	if (amiberry_options.use_jst_instead_of_whd)
 		whd_bootscript << "JST SLAVE=\"Games:" << slave_path << "\"";
 	else
@@ -1434,7 +1511,7 @@ void create_startup_sequence()
 	}
 
 	// SPECIAL SAVE PATH
-	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << whdload_prefs.sub_path << "\"";
+	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << sub_path << "\"";
 
 	// DATA PATH
 	if (!whdload_prefs.selected_slave.data_path.empty())
@@ -1520,7 +1597,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	}
 }
 
-void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
+void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool preserve_quickstart_hardware)
 {
 #ifdef __ANDROID__
 	const bool android_onscreen_joystick = prefs->onscreen_joystick;
@@ -1620,19 +1697,32 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		write_log("WHDBooter - Could not load whdload_db.json or whdload_db.xml - do not exist?\n");
 	}
 
-	bool used_archive_auto_detect = false;
+	bool used_slave_auto_detect = false;
 	if (whdload_prefs.selected_slave.filename.empty())
 	{
-		write_log("WHDBooter - No XML match found, scanning archive for .slave files\n");
-		used_archive_auto_detect = auto_detect_slave_from_archive(filepath, game_detail);
+		std::error_code ec;
+		if (std::filesystem::is_directory(filepath, ec))
+		{
+			write_log("WHDBooter - No XML match found, scanning directory for .slave files\n");
+			used_slave_auto_detect = auto_detect_slave_from_directory(filepath, game_detail);
+		}
+		else
+		{
+			write_log("WHDBooter - No XML match found, scanning archive for .slave files\n");
+			used_slave_auto_detect = auto_detect_slave_from_archive(filepath, game_detail);
+		}
 	}
 
 	build_uae_config_filename(whdload_prefs.filename);
-	if (std::filesystem::exists(uae_config))
+	if (!preserve_quickstart_hardware && std::filesystem::exists(uae_config))
 	{
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
+	}
+	else if (preserve_quickstart_hardware && std::filesystem::exists(uae_config))
+	{
+		write_log("WHDBooter - %s found; preserving Play Quickstart hardware override.\n", uae_config.c_str());
 	}
 
 	if (!whdload_prefs.selected_slave.filename.empty())
@@ -1708,9 +1798,13 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	const auto is_mt32 = _tcsstr(filename, _T("MT32")) != nullptr || _tcsstr(filename, _T("mt32")) != nullptr;
 
 	const auto chipset_unknown = strcmpi(game_detail.chipset.c_str(), "nul") == 0;
-	const auto use_a1200_for_unknown = chipset_unknown && used_archive_auto_detect;
+	const auto use_a1200_for_unknown = chipset_unknown && used_slave_auto_detect;
 
-	if (is_aga || is_cd32 || !a600_available || use_a1200_for_unknown)
+	if (preserve_quickstart_hardware)
+	{
+		write_log("WHDBooter - Host: preserving Play Quickstart hardware override\n");
+	}
+	else if (is_aga || is_cd32 || !a600_available || use_a1200_for_unknown)
 	{
 		write_log("WHDBooter - Host: A1200 ROM selected%s\n",
 			use_a1200_for_unknown ? " (no database hardware info, using A1200 as default)" : "");
@@ -1761,8 +1855,15 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 
 	//  SET THE GAME COMPATIBILITY SETTINGS
 	// BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC
-	write_log("WHDBooter - Host: setting up game compatibility settings\n");
-	set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32 || use_a1200_for_unknown);
+	if (preserve_quickstart_hardware)
+	{
+		write_log("WHDBooter - Host: preserving Play Quickstart compatibility settings\n");
+	}
+	else
+	{
+		write_log("WHDBooter - Host: setting up game compatibility settings\n");
+		set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32 || use_a1200_for_unknown);
+	}
 
 	write_log("WHDBooter - Host: settings applied\n\n");
 }

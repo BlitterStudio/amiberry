@@ -203,12 +203,12 @@ static void start_controllers_download()
 }
 
 // Cache path-existence results so the Paths panel doesn't stat() every path on every
-// frame just to colour the input field red. Re-checks the filesystem only when a row's
+// frame just to color the input field red. Re-checks the filesystem only when a row's
 // path string (or file/dir kind) actually changes. Keyed by the caller-supplied row id.
 // Actions that create/remove folders without changing the path text (Reset, Rescan,
 // base-content Apply) must call invalidate_path_exists_cache() so the indicators refresh.
 namespace {
-	struct PathExistsEntry { std::string path; bool is_file; bool exists; };
+	struct PathExistsEntry { std::string path; bool is_file{}; bool exists{}; };
 	std::unordered_map<std::string, PathExistsEntry> g_path_exists_cache;
 }
 
