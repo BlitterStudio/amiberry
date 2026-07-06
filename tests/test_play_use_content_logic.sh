@@ -24,6 +24,11 @@ if ! grep -F -q 'if (play_prepare_selected_content_for_start())' "$source_file";
 	exit 1
 fi
 
+if ! grep -F -q 'mark_selected_content_pending();' "$source_file"; then
+	echo "Changing the Quickstart model after applying Play content must force content reapplication" >&2
+	exit 1
+fi
+
 if grep -F -q '_tcscpy(current_hfdlg.ci.rootdir, selected_content.original_path.c_str());' "$source_file"; then
 	echo "Selected hardfile paths must be copied with a bounded helper" >&2
 	exit 1

@@ -375,6 +375,12 @@ void mark_content_applied()
 	reset_quickstart_override_tracking();
 }
 
+void mark_selected_content_pending()
+{
+	selected_content_applied = false;
+	applied_config_summary.clear();
+}
+
 bool attach_selected_hardfile()
 {
 #ifdef FILESYS
@@ -529,8 +535,7 @@ void select_content_choice(const PlayContentType choice)
 		return;
 
 	selected_content_choice = choice;
-	selected_content_applied = false;
-	applied_config_summary.clear();
+	mark_selected_content_pending();
 }
 
 void select_content_path(const std::string& selected_path)
@@ -539,9 +544,8 @@ void select_content_path(const std::string& selected_path)
 	const bool is_directory = std::filesystem::is_directory(selected_path, ec);
 	selected_content = play_detect_content(selected_path, is_directory);
 	selected_content_choice = PlayContentType::Unknown;
-	selected_content_applied = false;
+	mark_selected_content_pending();
 	reset_quickstart_override_tracking();
-	applied_config_summary.clear();
 	has_selected_content = true;
 }
 
@@ -737,6 +741,7 @@ void render_content_picker()
 				play_prepare_selected_content_for_start();
 			ImGui::SameLine();
 			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
+				mark_selected_content_pending();
 				begin_quickstart_override_tracking();
 				gui_show_panel("quickstart", true);
 			}

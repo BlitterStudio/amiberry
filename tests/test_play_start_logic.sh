@@ -18,6 +18,11 @@ if ! grep -F -q 'play_prepare_selected_content_for_start()' "$source_file"; then
 	exit 1
 fi
 
+if ! grep -F -q 'amiberry_options.quickstart_start ? "quickstart" : "play"' "$source_file"; then
+	echo "Startup without a loaded config must honor the saved Quickstart startup preference" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'action_type == PlayContentType::Unknown' "src/osdep/imgui/play.cpp"; then
 	echo "Unsupported Play selections must not block starting the current configuration" >&2
 	exit 1
