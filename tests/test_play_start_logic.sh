@@ -18,6 +18,11 @@ if ! grep -F -q 'play_prepare_selected_content_for_start()' "$source_file"; then
 	exit 1
 fi
 
+if ! grep -F -q 'action_type == PlayContentType::Unknown' "src/osdep/imgui/play.cpp"; then
+	echo "Unsupported Play selections must not block starting the current configuration" >&2
+	exit 1
+fi
+
 direct_start_resets=$(grep -F -c 'uae_reset(0, 1);' "$source_file")
 if [ "$direct_start_resets" -ne 1 ]; then
 	echo "GUI start paths must route through one shared Play preparation helper" >&2

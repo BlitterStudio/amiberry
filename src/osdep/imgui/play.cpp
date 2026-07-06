@@ -696,8 +696,10 @@ void render_content_picker()
 				gui_show_panel("quickstart", true);
 			if (action_type == PlayContentType::Hardfile) {
 				ImGui::SameLine();
-				if (AmigaButton(ICON_FA_HARD_DRIVE " Edit storage...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
-					gui_show_panel("hd", true);
+				if (AmigaButton(ICON_FA_HARD_DRIVE " Edit storage...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
+					if (play_prepare_selected_content_for_start())
+						gui_show_panel("hd", true);
+				}
 			}
 		}
 	}
@@ -751,5 +753,9 @@ bool play_prepare_selected_content_for_start()
 	if (!has_selected_content || selected_content_applied)
 		return true;
 
-	return apply_selected_content(selected_action_type());
+	const PlayContentType action_type = selected_action_type();
+	if (action_type == PlayContentType::Unknown)
+		return true;
+
+	return apply_selected_content(action_type);
 }
