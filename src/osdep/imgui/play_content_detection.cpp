@@ -135,6 +135,28 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 	return detection;
 }
 
+PlaySuggestedModel play_suggested_model_for_action(const PlayContentDetection& detection,
+	const PlayContentType action_type)
+{
+	if (detection.type == action_type && detection.suggested_model != PlaySuggestedModel::KeepExisting)
+		return detection.suggested_model;
+
+	switch (action_type) {
+		case PlayContentType::Floppy:
+			return PlaySuggestedModel::A500;
+		case PlayContentType::WhdLoad:
+			return PlaySuggestedModel::A1200;
+		case PlayContentType::Cd:
+			return PlaySuggestedModel::Cd32;
+		case PlayContentType::Hardfile:
+			return PlaySuggestedModel::A1200Expanded;
+		default:
+			break;
+	}
+
+	return PlaySuggestedModel::KeepExisting;
+}
+
 const char* play_content_type_name(const PlayContentType type)
 {
 	switch (type) {

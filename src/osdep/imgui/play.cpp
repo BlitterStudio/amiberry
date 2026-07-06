@@ -98,23 +98,7 @@ const char* suggested_profile_text(const PlayContentType type, const PlaySuggest
 
 PlaySuggestedModel suggested_model_for_action(const PlayContentType type)
 {
-	if (selected_content.type == type && selected_content.suggested_model != PlaySuggestedModel::KeepExisting)
-		return selected_content.suggested_model;
-
-	switch (type) {
-	case PlayContentType::Floppy:
-		return PlaySuggestedModel::A500;
-	case PlayContentType::WhdLoad:
-		return PlaySuggestedModel::A1200;
-	case PlayContentType::Cd:
-		return PlaySuggestedModel::Cd32;
-	case PlayContentType::Hardfile:
-		return PlaySuggestedModel::A1200Expanded;
-	default:
-		break;
-	}
-
-	return PlaySuggestedModel::KeepExisting;
+	return play_suggested_model_for_action(selected_content, type);
 }
 
 void initialize_display_defaults()
@@ -390,7 +374,7 @@ bool apply_configuration_content()
 
 bool apply_floppy_content()
 {
-	apply_quickstart_model(selected_content.suggested_model);
+	apply_quickstart_model(suggested_model_for_action(PlayContentType::Floppy));
 	apply_display_defaults_to_changed_prefs();
 	remember_parent_directory(selected_content.original_path);
 
@@ -680,7 +664,7 @@ void render_content_picker()
 
 			ImGui::Spacing();
 			if (AmigaButton("Use this content", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT)))
-				apply_selected_content(action_type);
+				play_prepare_selected_content_for_start();
 			ImGui::SameLine();
 			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
 				gui_show_panel("quickstart", true);

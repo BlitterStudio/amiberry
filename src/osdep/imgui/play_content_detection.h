@@ -44,4 +44,5 @@ struct PlayContentDetection
 };
 
 PlayContentDetection play_detect_content(const std::string& path, bool is_directory);
+PlaySuggestedModel play_suggested_model_for_action(const PlayContentDetection& detection, PlayContentType action_type);
 const char* play_content_type_name(PlayContentType type);

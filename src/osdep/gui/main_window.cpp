@@ -2005,6 +2005,10 @@ void gui_start_from_current_config()
 	if (start_disabled)
 		return;
 
+	const bool has_play_selection = play_has_content_selection();
+	if (has_play_selection && !play_prepare_selected_content_for_start())
+		return;
+
 	uae_reset(0, 1);
 	gui_running = false;
 }
@@ -2104,8 +2108,7 @@ void run_gui()
 						gui_running = false;
 					}
 					else {
-						uae_reset(0, 1);
-						gui_running = false;
+						gui_start_from_current_config();
 					}
 				}
 			}
@@ -2723,11 +2726,7 @@ void run_gui()
 			}
 		} else {
 			if (AmigaButton(ICON_FA_PLAY " Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
-				const bool has_play_selection = play_has_content_selection();
-				if (!has_play_selection || play_prepare_selected_content_for_start()) {
-					uae_reset(0, 1);
-					gui_running = false;
-				}
+				gui_start_from_current_config();
 			}
 		}
 		ImGui::PopStyleColor(3);

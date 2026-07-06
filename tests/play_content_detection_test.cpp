@@ -115,6 +115,22 @@ static void test_generic_archives_stay_ambiguous()
 	expect_choice(detection.choices, PlayContentType::Floppy, ".zip choices must include floppy");
 }
 
+static void test_ambiguous_archive_floppy_action_suggests_a500()
+{
+	const auto detection = play_detect_content("game.zip", false);
+
+	expect_eq(play_suggested_model_for_action(detection, PlayContentType::Floppy), PlaySuggestedModel::A500,
+		"Ambiguous archives resolved as floppies must suggest A500");
+}
+
+static void test_direct_aga_floppy_action_keeps_a1200()
+{
+	const auto detection = play_detect_content("Game_AGA.adf", false);
+
+	expect_eq(play_suggested_model_for_action(detection, PlayContentType::Floppy), PlaySuggestedModel::A1200,
+		"Direct AGA floppies must keep the detected A1200 suggestion");
+}
+
 static void test_directories_are_whdload_candidates()
 {
 	const auto detection = play_detect_content("Games/AlienBreed", true);
@@ -135,6 +151,8 @@ int main()
 	test_img_can_be_disk_or_hardfile();
 	test_lha_archives_are_whdload();
 	test_generic_archives_stay_ambiguous();
+	test_ambiguous_archive_floppy_action_suggests_a500();
+	test_direct_aga_floppy_action_keeps_a1200();
 	test_directories_are_whdload_candidates();
 
 	return failures == 0 ? 0 : 1;
