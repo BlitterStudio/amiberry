@@ -4,6 +4,8 @@ set -euo pipefail
 source_file="src/osdep/imgui/play.cpp"
 quickstart_source_file="src/osdep/imgui/quickstart.cpp"
 whdbooter_source_file="src/osdep/amiberry_whdbooter.cpp"
+options_source_file="src/include/options.h"
+whdload_source_file="src/osdep/imgui/whdload.cpp"
 
 action_apply_count=$(grep -F -c 'apply_selected_content(action_type);' "$source_file")
 if [ "$action_apply_count" -ne 1 ]; then
@@ -93,6 +95,41 @@ fi
 
 if ! grep -F -q 'auto_detect_slave_from_directory(filepath, game_detail)' "$whdbooter_source_file"; then
 	echo "WHDLoad folder fallback must call the directory scanner" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'bool preserve_quickstart_hardware = false' "$options_source_file"; then
+	echo "WHDBooter must expose an opt-in path for preserving Play Quickstart overrides" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str(), manual_quickstart_override);' "$source_file"; then
+	echo "Play WHDLoad content must preserve manual Quickstart model overrides" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'preserve_quickstart_hardware' "$whdbooter_source_file" ||
+	! grep -F -q 'preserving Play Quickstart hardware override' "$whdbooter_source_file"; then
+	echo "WHDBooter must skip hardware reset when Play asks to preserve Quickstart overrides" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'std::string sub_path;' "$options_source_file" ||
+	! grep -F -q 'bool has_sub_path = false;' "$options_source_file"; then
+	echo "WHDLoad slave entries must retain per-slave subpaths" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'slave.sub_path = s.subpath;' "$whdbooter_source_file" ||
+	! grep -F -q 'slave.has_sub_path = true;' "$whdbooter_source_file" ||
+	! grep -F -q 'selected_slave_sub_path()' "$whdbooter_source_file"; then
+	echo "Auto-detected WHDLoad slaves must rebuild startup with the selected slave subpath" >&2
+	exit 1
+fi
+
+if ! grep -F -q 's.sub_path + "/" + s.filename' "$whdload_source_file" ||
+	! grep -F -q 'same_slave(whdload_prefs.slaves[i], whdload_prefs.selected_slave)' "$whdload_source_file"; then
+	echo "WHDLoad panel must distinguish auto-detected slaves by subpath" >&2
 	exit 1
 fi
 

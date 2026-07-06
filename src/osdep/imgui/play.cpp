@@ -536,10 +536,11 @@ bool apply_floppy_content()
 
 bool apply_whdload_content()
 {
+	const bool manual_quickstart_override = quickstart_override_changed();
 	apply_quickstart_model_unless_overridden(PlaySuggestedModel::A1200);
 	whdload_prefs.whdload_filename = selected_content.original_path;
 	add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
-	whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+	whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str(), manual_quickstart_override);
 	apply_display_defaults_to_changed_prefs();
 	set_last_active_config(whdload_prefs.whdload_filename.c_str());
 	mark_content_applied();

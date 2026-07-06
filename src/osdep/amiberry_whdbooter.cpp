@@ -1322,6 +1322,8 @@ static bool apply_auto_detected_slave(const char* filepath,
 	whdload_prefs.slave_default = best->filename;
 	whdload_prefs.selected_slave = whdload_slave{};
 	whdload_prefs.selected_slave.filename = best->filename;
+	whdload_prefs.selected_slave.sub_path = best->subpath;
+	whdload_prefs.selected_slave.has_sub_path = true;
 	whdload_prefs.slave_count = static_cast<int>(found_slaves.size());
 
 	whdload_prefs.slaves.clear();
@@ -1329,6 +1331,8 @@ static bool apply_auto_detected_slave(const char* filepath,
 	{
 		whdload_slave slave;
 		slave.filename = s.filename;
+		slave.sub_path = s.subpath;
+		slave.has_sub_path = true;
 		whdload_prefs.slaves.emplace_back(slave);
 	}
 
@@ -1430,6 +1434,13 @@ static bool auto_detect_slave_from_directory(const char* filepath,
 	return apply_auto_detected_slave(filepath, found_slaves, game_detail, "directory");
 }
 
+static std::string selected_slave_sub_path()
+{
+	if (whdload_prefs.selected_slave.has_sub_path)
+		return whdload_prefs.selected_slave.sub_path;
+	return whdload_prefs.sub_path;
+}
+
 void create_startup_sequence()
 {
 	std::ostringstream whd_bootscript;
@@ -1446,10 +1457,11 @@ void create_startup_sequence()
 	whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
 	whd_bootscript << "ENDIF\n";
 
-	whd_bootscript << "CD \"Games:" << whdload_prefs.sub_path << "\"\n";
-	const std::string slave_path = whdload_prefs.sub_path.empty()
+	const std::string sub_path = selected_slave_sub_path();
+	whd_bootscript << "CD \"Games:" << sub_path << "\"\n";
+	const std::string slave_path = sub_path.empty()
 		? whdload_prefs.selected_slave.filename
-		: whdload_prefs.sub_path + "/" + whdload_prefs.selected_slave.filename;
+		: sub_path + "/" + whdload_prefs.selected_slave.filename;
 	if (amiberry_options.use_jst_instead_of_whd)
 		whd_bootscript << "JST SLAVE=\"Games:" << slave_path << "\"";
 	else
@@ -1499,7 +1511,7 @@ void create_startup_sequence()
 	}
 
 	// SPECIAL SAVE PATH
-	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << whdload_prefs.sub_path << "\"";
+	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << sub_path << "\"";
 
 	// DATA PATH
 	if (!whdload_prefs.selected_slave.data_path.empty())
@@ -1585,7 +1597,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	}
 }
 
-void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
+void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool preserve_quickstart_hardware)
 {
 #ifdef __ANDROID__
 	const bool android_onscreen_joystick = prefs->onscreen_joystick;
@@ -1702,11 +1714,15 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	}
 
 	build_uae_config_filename(whdload_prefs.filename);
-	if (std::filesystem::exists(uae_config))
+	if (!preserve_quickstart_hardware && std::filesystem::exists(uae_config))
 	{
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
+	}
+	else if (preserve_quickstart_hardware && std::filesystem::exists(uae_config))
+	{
+		write_log("WHDBooter - %s found; preserving Play Quickstart hardware override.\n", uae_config.c_str());
 	}
 
 	if (!whdload_prefs.selected_slave.filename.empty())
@@ -1784,7 +1800,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	const auto chipset_unknown = strcmpi(game_detail.chipset.c_str(), "nul") == 0;
 	const auto use_a1200_for_unknown = chipset_unknown && used_slave_auto_detect;
 
-	if (is_aga || is_cd32 || !a600_available || use_a1200_for_unknown)
+	if (preserve_quickstart_hardware)
+	{
+		write_log("WHDBooter - Host: preserving Play Quickstart hardware override\n");
+	}
+	else if (is_aga || is_cd32 || !a600_available || use_a1200_for_unknown)
 	{
 		write_log("WHDBooter - Host: A1200 ROM selected%s\n",
 			use_a1200_for_unknown ? " (no database hardware info, using A1200 as default)" : "");
@@ -1835,8 +1855,15 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 
 	//  SET THE GAME COMPATIBILITY SETTINGS
 	// BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC
-	write_log("WHDBooter - Host: setting up game compatibility settings\n");
-	set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32 || use_a1200_for_unknown);
+	if (preserve_quickstart_hardware)
+	{
+		write_log("WHDBooter - Host: preserving Play Quickstart compatibility settings\n");
+	}
+	else
+	{
+		write_log("WHDBooter - Host: setting up game compatibility settings\n");
+		set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32 || use_a1200_for_unknown);
+	}
 
 	write_log("WHDBooter - Host: settings applied\n\n");
 }
