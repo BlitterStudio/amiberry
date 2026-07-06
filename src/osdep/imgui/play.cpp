@@ -880,10 +880,9 @@ void play_clear_content_selection()
 	reset_quickstart_override_tracking();
 }
 
-void play_mark_selected_content_pending()
+bool play_is_adjusting_selected_content_model()
 {
-	if (has_selected_content)
-		mark_selected_content_pending();
+	return has_selected_content && quickstart_override_tracking;
 }
 
 bool play_prepare_selected_content_for_start()

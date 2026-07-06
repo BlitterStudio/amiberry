@@ -118,7 +118,6 @@ void Quickstart_ApplyDefaults() {
     if (quickstart_compa > qs_compa_max(quickstart_model))
         quickstart_compa = qs_compa_max(quickstart_model);
     built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, quickstart_compa, 0);
-    play_mark_selected_content_pending();
 
     // Enforce constraints similar to WinUAE
     if (quickstart_model <= 4) { // A500, A500+, A600, A1000, A1200
@@ -186,6 +185,12 @@ void Quickstart_ApplyDefaults() {
         default:
             break;
     }
+}
+
+static void apply_quickstart_defaults_from_quickstart() {
+    if (!play_is_adjusting_selected_content_model())
+        play_clear_content_selection();
+    Quickstart_ApplyDefaults();
 }
 
 void render_panel_quickstart() {
@@ -256,7 +261,7 @@ void render_panel_quickstart() {
                         qs_configs.push_back(config);
                     }
                     quickstart_conf = 0;
-                    Quickstart_ApplyDefaults();
+                    apply_quickstart_defaults_from_quickstart();
                 }
                 ImGui::PopID();
                 if (is_selected) {
@@ -295,7 +300,7 @@ void render_panel_quickstart() {
                     ImGui::PushID(i);
                     if (ImGui::Selectable(qs_configs[i], is_selected)) {
                         quickstart_conf = i;
-                        Quickstart_ApplyDefaults();
+                        apply_quickstart_defaults_from_quickstart();
                     }
                     ImGui::PopID();
                     if (is_selected) {
@@ -329,7 +334,7 @@ void render_panel_quickstart() {
             quickstart_compa = 0;
         ImGui::SetNextItemWidth(-1);
         if (ImGui::SliderInt("##QSCompatibility", &quickstart_compa, 0, compa_max, compa_labels[quickstart_compa])) {
-            Quickstart_ApplyDefaults();
+            apply_quickstart_defaults_from_quickstart();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
@@ -355,6 +360,7 @@ void render_panel_quickstart() {
         // 1. Checkbox DFx:
         if (!is_editable) ImGui::BeginDisabled();
         if (AmigaCheckbox(label, &drive_enabled)) {
+            play_clear_content_selection();
             if (drive_enabled) {
                 changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
             } else {
@@ -408,6 +414,7 @@ void render_panel_quickstart() {
 
                 if (allowed) {
                     if (ImGui::Selectable(floppy_drive_types[n], is_selected)) {
+                        play_clear_content_selection();
                         selectedFloppyType = n;
                         int sub = 0;
                         int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);
@@ -472,6 +479,7 @@ void render_panel_quickstart() {
         if (!eject_enabled) ImGui::BeginDisabled();
         snprintf(label, sizeof(label), ICON_FA_EJECT "##QSFloppyEject%d", i);
         if (AmigaButton(label, ImVec2(SMALL_BUTTON_WIDTH, 0))) {
+            play_clear_content_selection();
             disk_eject(i);
             changed_prefs.floppyslots[i].df[0] = 0;
             qs_invalidate_wp_cache(i);
@@ -499,6 +507,7 @@ void render_panel_quickstart() {
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                 if (ImGui::Selectable(items[n], is_selected)) {
+                    play_clear_content_selection();
                     combo_index = n;
                     if (combo_index == 0) {
                         disk_eject(i);
@@ -568,6 +577,7 @@ void render_panel_quickstart() {
         bool cd_controls_enabled = changed_prefs.cdslots[0].inuse;
         if (!cd_controls_enabled) ImGui::BeginDisabled();
         if (AmigaButton(ICON_FA_EJECT " Eject", ImVec2(eject_button_width, 0))) {
+            play_clear_content_selection();
             changed_prefs.cdslots[0].name[0] = 0;
             changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
         }
@@ -612,6 +622,7 @@ void render_panel_quickstart() {
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                 if (ImGui::Selectable(cd_items[n], is_selected)) {
+                    play_clear_content_selection();
                     combo_index = n;
                     if (combo_index == 0) {
                         changed_prefs.cdslots[0].name[0] = 0;
@@ -667,6 +678,7 @@ void render_panel_quickstart() {
     ImGui::SameLine();
 
     if (AmigaButton(ICON_FA_EJECT "##QSWHD", ImVec2(SMALL_BUTTON_WIDTH, 0))) {
+        play_clear_content_selection();
         whdload_prefs.whdload_filename.clear();
     }
 
@@ -688,6 +700,7 @@ void render_panel_quickstart() {
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable(whd_items[n], is_selected)) {
+                play_clear_content_selection();
                 combo_whd_index = n;
                 if (combo_whd_index == 0) {
                     whdload_prefs.whdload_filename.clear();
@@ -726,12 +739,13 @@ void render_panel_quickstart() {
 
     ImGui::Spacing();
     if (AmigaButton(ICON_FA_CHECK " Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
-        Quickstart_ApplyDefaults();
+        apply_quickstart_defaults_from_quickstart();
     }
 
     {
         std::string filePath;
         if (ConsumeFileDialogResultKey("QUICKSTART", filePath)) {
+            play_clear_content_selection();
             if (qs_pending_floppy_drive >= 0 && qs_pending_floppy_drive < 2) {
                 int i = qs_pending_floppy_drive;
                 if (!filePath.empty()) {
