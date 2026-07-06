@@ -172,6 +172,7 @@ void copy_shader_name(char* destination, const size_t destination_size, const ch
 
 void apply_display_defaults_to_changed_prefs()
 {
+	initialize_display_defaults();
 	const PlayDisplayPrefs prefs = play_apply_display_defaults(display_defaults);
 
 	changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = prefs.native_fullscreen;

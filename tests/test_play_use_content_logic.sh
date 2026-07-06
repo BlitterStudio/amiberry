@@ -111,6 +111,17 @@ if ! grep -F -q 'refresh_quickstart_config_list();' "$source_file"; then
 	exit 1
 fi
 
+if ! awk '
+	/void apply_display_defaults_to_changed_prefs\(\)/ { in_apply = 1; next }
+	in_apply && /\{/ { in_body = 1; next }
+	in_body && /initialize_display_defaults\(\);/ { found = 1; exit }
+	in_body && /play_apply_display_defaults/ { exit }
+	END { exit found ? 0 : 1 }
+' "$source_file"; then
+	echo "Play content must initialize display defaults before applying them" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'const bool manual_quickstart_override = quickstart_override_changed();' "$source_file"; then
 	echo "CD Play content must detect manual Quickstart overrides before CD autoload" >&2
 	exit 1
