@@ -7,6 +7,7 @@
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "filesys.h"
+#include "zfile.h"
 #include "autoconf.h"
 #include "blkdev.h"
 #include "rommgr.h"
@@ -45,7 +46,39 @@ static bool show_tape_modal = false;
 static int create_hdf_size_mb = 100;
 static bool create_hdf_dynamic = false;
 static bool create_hdf_rdb = false;
+static std::string create_hdf_error;
 static std::string harddrive_modal_error;
+
+static bool path_has_extension(const TCHAR* path, const TCHAR* extension)
+{
+	const auto path_len = _tcslen(path);
+	const auto ext_len = _tcslen(extension);
+	return path_len >= ext_len && !_tcsicmp(path + path_len - ext_len, extension);
+}
+
+static bool create_raw_hdf(const TCHAR* path, const uae_u64 size)
+{
+	if (path[0] == 0 || size == 0)
+		return false;
+
+	auto* const file = zfile_fopen(path, _T("wb"), 0);
+	if (!file)
+		return false;
+
+	static const uae_u8 zero_buffer[1024 * 1024] = {};
+	uae_u64 remaining = size;
+	bool created = true;
+	while (remaining > 0) {
+		const size_t to_write = static_cast<size_t>(std::min<uae_u64>(remaining, sizeof zero_buffer));
+		if (zfile_fwrite(zero_buffer, to_write, 1, file) != 1) {
+			created = false;
+			break;
+		}
+		remaining -= to_write;
+	}
+	zfile_fclose(file);
+	return created;
+}
 
 // Cache get_filesys_unitconfig() results to avoid expensive per-frame I/O.
 // HDF: hdf_open()/hdf_close(). CD/TAPE: blkdev_get_info() opens+closes the
@@ -906,8 +939,8 @@ static void ShowCreateHardfileModal()
         ImGui::SameLine();
         ImGui::InputInt("##Size(MB)", &create_hdf_size_mb);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-        AmigaCheckbox("Dynamic HDF (Sparse)", &create_hdf_dynamic);
-        ShowHelpMarker("Create a sparse file that grows as data is written");
+        AmigaCheckbox("Dynamic VHD", &create_hdf_dynamic);
+        ShowHelpMarker("Create a dynamic VHD container instead of a raw HDF file");
         AmigaCheckbox("RDB Mode", &create_hdf_rdb);
         ShowHelpMarker("Create with Rigid Disk Block (partitionable)");
         ImGui::EndGroup();
@@ -932,6 +965,7 @@ static void ShowCreateHardfileModal()
         if (selecting_create_hdf_path && ConsumeFileDialogResultKey("HD_CREATE_HDF", result_path)) {
              if (!result_path.empty()) {
                   au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), result_path.c_str());
+                  create_hdf_error.clear();
              }
              selecting_create_hdf_path = false;
         } else if (selecting_create_hdf_path && !IsFileDialogOpenKey("HD_CREATE_HDF")) {
@@ -942,15 +976,47 @@ static void ShowCreateHardfileModal()
 
         ImGui::Separator();
 
+        if (!create_hdf_error.empty()) {
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s", create_hdf_error.c_str());
+            ImGui::Separator();
+        }
+
         if (AmigaButton(ICON_FA_PLUS " Create", ImVec2(BUTTON_WIDTH, 0))) {
+            create_hdf_error.clear();
+            if (create_hdf_size_mb < 1)
+                create_hdf_size_mb = 1;
             uae_u64 size_bytes = (uae_u64)create_hdf_size_mb * 1024 * 1024;
-            if (vhd_create(current_hfdlg.ci.rootdir, size_bytes, create_hdf_dynamic ? 1 : 0)) {
+            TCHAR create_path[MAX_DPATH];
+            _tcsncpy(create_path, current_hfdlg.ci.rootdir, MAX_DPATH - 1);
+            create_path[MAX_DPATH - 1] = 0;
+
+            bool created = false;
+            if (create_hdf_dynamic) {
+                bool path_was_converted = false;
+                if (path_has_extension(create_path, _T(".hdf"))) {
+                    _tcscpy(create_path + _tcslen(create_path) - 4, _T(".vhd"));
+                    path_was_converted = true;
+                }
+                if (path_was_converted && zfile_exists(create_path)) {
+                    char* path = ua(create_path);
+                    create_hdf_error = "Dynamic VHD target already exists: ";
+                    create_hdf_error += path ? path : "";
+                    xfree(path);
+                } else {
+                    created = vhd_create(create_path, size_bytes, 0) != 0;
+                }
+            } else {
+                created = create_raw_hdf(create_path, size_bytes);
+            }
+
+            if (created) {
                 show_create_hdf_modal = false;
                 ImGui::CloseCurrentPopup();
             }
         }
         ImGui::SameLine();
         if (AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, 0))) {
+            create_hdf_error.clear();
             show_create_hdf_modal = false;
             ImGui::CloseCurrentPopup();
         }
@@ -1556,6 +1622,7 @@ void render_panel_hd()
     if (current_hd_dialog_mode == HDDialogMode::CreateHDF) {
         default_hfdlg(&current_hfdlg, false);
         current_hfdlg.ci.rootdir[0] = 0; 
+        create_hdf_error.clear();
         
         ImGui::OpenPopup("Create Hardfile");
         show_create_hdf_modal = true;
