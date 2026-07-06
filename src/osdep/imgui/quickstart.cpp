@@ -193,6 +193,11 @@ static void apply_quickstart_defaults_from_quickstart() {
     Quickstart_ApplyDefaults();
 }
 
+static void clear_play_content_if_quickstart_source() {
+    if (!play_is_adjusting_selected_content_model())
+        play_clear_content_selection();
+}
+
 void render_panel_quickstart() {
     // Check if we need to apply Quickstart defaults on first show
     static bool initial_sync_done = false;
@@ -360,7 +365,7 @@ void render_panel_quickstart() {
         // 1. Checkbox DFx:
         if (!is_editable) ImGui::BeginDisabled();
         if (AmigaCheckbox(label, &drive_enabled)) {
-            play_clear_content_selection();
+            clear_play_content_if_quickstart_source();
             if (drive_enabled) {
                 changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
             } else {
@@ -414,7 +419,7 @@ void render_panel_quickstart() {
 
                 if (allowed) {
                     if (ImGui::Selectable(floppy_drive_types[n], is_selected)) {
-                        play_clear_content_selection();
+                        clear_play_content_if_quickstart_source();
                         selectedFloppyType = n;
                         int sub = 0;
                         int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);

@@ -45,8 +45,18 @@ if ! grep -F -q 'selected_content_still_attached()' "$source_file"; then
 	exit 1
 fi
 
-if ! grep -F -q 'play_mark_selected_content_pending();' "$quickstart_source_file"; then
-	echo "Quickstart default changes must force any applied Play content to be reapplied" >&2
+if grep -F -q 'play_mark_selected_content_pending();' "$quickstart_source_file"; then
+	echo "Quickstart defaults must not globally mark Play content pending" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'apply_quickstart_defaults_from_quickstart();' "$quickstart_source_file"; then
+	echo "Quickstart UI defaults must use the ownership-aware helper" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'clear_play_content_if_quickstart_source();' "$quickstart_source_file"; then
+	echo "Quickstart configuration-only controls must preserve Play selections while editing the selected model" >&2
 	exit 1
 fi
 
@@ -57,6 +67,11 @@ fi
 
 if ! grep -F -q 'copy_path_to_buffer(current_hfdlg.ci.rootdir' "$source_file"; then
 	echo "Selected hardfile paths must be bounded to the rootdir buffer" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'current_hardfile_attachment_path().empty()' "$source_file"; then
+	echo "Reapplying selected hardfile content must not add duplicate mount entries" >&2
 	exit 1
 fi
 

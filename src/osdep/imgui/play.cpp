@@ -454,6 +454,9 @@ bool selected_content_still_attached()
 bool attach_selected_hardfile()
 {
 #ifdef FILESYS
+	if (!current_hardfile_attachment_path().empty())
+		return true;
+
 	if (changed_prefs.mountitems >= MOUNT_CONFIG_SIZE) {
 		ShowMessageBox("Hardfile", "The hardfile list is full. Remove an existing entry first.");
 		return false;
