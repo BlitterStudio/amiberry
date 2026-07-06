@@ -91,7 +91,7 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 		return detection;
 	}
 
-	if (is_one_of(extension, { ".adf", ".adz", ".ipf", ".dms", ".fdi", ".scp", ".wrp", ".dsq" })) {
+	if (is_one_of(extension, { ".adf", ".adz", ".ipf", ".dms", ".fdi", ".scp", ".wrp", ".dsq", ".gz", ".xz" })) {
 		detection.type = PlayContentType::Floppy;
 		detection.suggested_model = has_aga_token(path) ? PlaySuggestedModel::A1200 : PlaySuggestedModel::A500;
 		return detection;

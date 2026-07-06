@@ -45,6 +45,16 @@ static void test_floppy_extensions_suggest_a500()
 	expect_eq(adf.suggested_model, PlaySuggestedModel::A500, "floppies must suggest A500");
 }
 
+static void test_compressed_floppy_extensions_suggest_a500()
+{
+	const auto gz = play_detect_content("Disk.adf.gz", false);
+	const auto xz = play_detect_content("disk.xz", false);
+
+	expect_eq(gz.type, PlayContentType::Floppy, ".adf.gz must be detected as floppy");
+	expect_eq(xz.type, PlayContentType::Floppy, ".xz must be detected as floppy");
+	expect_eq(gz.suggested_model, PlaySuggestedModel::A500, "compressed floppies must suggest A500");
+}
+
 static void test_aga_floppy_names_suggest_a1200()
 {
 	const auto detection = play_detect_content("Game_AGA.adf", false);
@@ -153,6 +163,7 @@ int main()
 {
 	test_configurations_keep_existing_model();
 	test_floppy_extensions_suggest_a500();
+	test_compressed_floppy_extensions_suggest_a500();
 	test_aga_floppy_names_suggest_a1200();
 	test_cd_extensions_suggest_cd32_and_follow_up();
 	test_chd_can_be_cd_or_hardfile();
