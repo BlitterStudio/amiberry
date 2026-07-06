@@ -2,6 +2,7 @@
 set -euo pipefail
 
 source_file="src/osdep/imgui/play.cpp"
+quickstart_source_file="src/osdep/imgui/quickstart.cpp"
 
 action_apply_count=$(grep -F -c 'apply_selected_content(action_type);' "$source_file")
 if [ "$action_apply_count" -ne 1 ]; then
@@ -26,6 +27,16 @@ fi
 
 if ! grep -F -q 'mark_selected_content_pending();' "$source_file"; then
 	echo "Changing the Quickstart model after applying Play content must force content reapplication" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'selected_content_still_attached()' "$source_file"; then
+	echo "Play start must verify previously applied content is still attached before skipping reapplication" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'play_mark_selected_content_pending();' "$quickstart_source_file"; then
+	echo "Quickstart default changes must force any applied Play content to be reapplied" >&2
 	exit 1
 fi
 

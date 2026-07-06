@@ -26,6 +26,8 @@ PlayContentDetection selected_content;
 auto selected_content_choice = PlayContentType::Unknown;
 bool has_selected_content = false;
 bool selected_content_applied = false;
+auto applied_content_type = PlayContentType::Unknown;
+std::string applied_content_attachment_path;
 bool quickstart_override_tracking = false;
 int quickstart_override_model = 0;
 int quickstart_override_conf = 0;
@@ -368,8 +370,52 @@ std::string describe_current_config()
 	return summary;
 }
 
+std::string current_hardfile_attachment_path()
+{
+#ifdef FILESYS
+	for (int i = 0; i < changed_prefs.mountitems && i < MOUNT_CONFIG_SIZE; ++i) {
+		const auto& ci = changed_prefs.mountconfig[i].ci;
+		if (ci.type == UAEDEV_HDF && selected_content.original_path == ci.rootdir)
+			return ci.rootdir;
+	}
+#endif
+	return {};
+}
+
+std::string current_attachment_path_for_type(const PlayContentType type)
+{
+	switch (type) {
+	case PlayContentType::Floppy:
+		return changed_prefs.floppyslots[0].df;
+	case PlayContentType::WhdLoad:
+		return whdload_prefs.whdload_filename;
+	case PlayContentType::Cd:
+		return changed_prefs.cdslots[0].inuse ? changed_prefs.cdslots[0].name : "";
+	case PlayContentType::Hardfile:
+		return current_hardfile_attachment_path();
+	case PlayContentType::Configuration:
+		return selected_content.original_path;
+	case PlayContentType::Ambiguous:
+	case PlayContentType::Unknown:
+		return {};
+	}
+
+	return {};
+}
+
+PlayContentType selected_action_type()
+{
+	if (!has_selected_content)
+		return PlayContentType::Unknown;
+	if (selected_content_choice != PlayContentType::Unknown)
+		return selected_content_choice;
+	return selected_content.type;
+}
+
 void mark_content_applied()
 {
+	applied_content_type = selected_action_type();
+	applied_content_attachment_path = current_attachment_path_for_type(applied_content_type);
 	applied_config_summary = describe_current_config();
 	selected_content_applied = true;
 	reset_quickstart_override_tracking();
@@ -378,7 +424,19 @@ void mark_content_applied()
 void mark_selected_content_pending()
 {
 	selected_content_applied = false;
+	applied_content_type = PlayContentType::Unknown;
+	applied_content_attachment_path.clear();
 	applied_config_summary.clear();
+}
+
+bool selected_content_still_attached()
+{
+	if (applied_content_type == PlayContentType::Configuration)
+		return true;
+	if (applied_content_attachment_path.empty())
+		return false;
+
+	return current_attachment_path_for_type(applied_content_type) == applied_content_attachment_path;
 }
 
 bool attach_selected_hardfile()
@@ -518,15 +576,6 @@ bool apply_selected_content(const PlayContentType type)
 	}
 
 	return false;
-}
-
-PlayContentType selected_action_type()
-{
-	if (!has_selected_content)
-		return PlayContentType::Unknown;
-	if (selected_content_choice != PlayContentType::Unknown)
-		return selected_content_choice;
-	return selected_content.type;
 }
 
 void select_content_choice(const PlayContentType choice)
@@ -799,9 +848,15 @@ bool play_has_content_selection()
 	return has_selected_content;
 }
 
+void play_mark_selected_content_pending()
+{
+	if (has_selected_content)
+		mark_selected_content_pending();
+}
+
 bool play_prepare_selected_content_for_start()
 {
-	if (!has_selected_content || selected_content_applied)
+	if (!has_selected_content || (selected_content_applied && selected_content_still_attached()))
 		return true;
 
 	const PlayContentType action_type = selected_action_type();

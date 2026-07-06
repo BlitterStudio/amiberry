@@ -118,6 +118,7 @@ void Quickstart_ApplyDefaults() {
     if (quickstart_compa > qs_compa_max(quickstart_model))
         quickstart_compa = qs_compa_max(quickstart_model);
     built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, quickstart_compa, 0);
+    play_mark_selected_content_pending();
 
     // Enforce constraints similar to WinUAE
     if (quickstart_model <= 4) { // A500, A500+, A600, A1000, A1200
