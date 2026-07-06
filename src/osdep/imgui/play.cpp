@@ -247,6 +247,16 @@ bool quickstart_override_changed()
 			quickstart_compa != quickstart_override_compa);
 }
 
+void refresh_quickstart_config_list()
+{
+	qs_configs.clear();
+	for (auto& config : amodels[quickstart_model].configs) {
+		if (config[0] == '\0')
+			break;
+		qs_configs.push_back(config);
+	}
+}
+
 void apply_quickstart_model(const PlaySuggestedModel model)
 {
 	int model_index = -1;
@@ -273,6 +283,7 @@ void apply_quickstart_model(const PlaySuggestedModel model)
 	quickstart_model = model_index;
 	quickstart_conf = config_index;
 	quickstart_compa = selected_content.suggested_compatibility;
+	refresh_quickstart_config_list();
 	Quickstart_ApplyDefaults();
 }
 

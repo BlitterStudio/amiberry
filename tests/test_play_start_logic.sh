@@ -23,6 +23,11 @@ if ! grep -F -q 'amiberry_options.quickstart_start ? "quickstart" : "play"' "$so
 	exit 1
 fi
 
+if ! grep -F -q 'amiberry_options.quickstart_start);' "$source_file"; then
+	echo "Quickstart startup must enable expert mode so simple-mode filtering does not switch back to Play" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'action_type == PlayContentType::Unknown' "src/osdep/imgui/play.cpp"; then
 	echo "Unsupported Play selections must not block starting the current configuration" >&2
 	exit 1

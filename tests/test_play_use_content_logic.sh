@@ -60,6 +60,11 @@ if ! grep -F -q 'apply_quickstart_model_unless_overridden' "$source_file"; then
 	exit 1
 fi
 
+if ! grep -F -q 'refresh_quickstart_config_list();' "$source_file"; then
+	echo "Play must refresh Quickstart configuration choices when changing the Quickstart model" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'const bool manual_quickstart_override = quickstart_override_changed();' "$source_file"; then
 	echo "CD Play content must detect manual Quickstart overrides before CD autoload" >&2
 	exit 1

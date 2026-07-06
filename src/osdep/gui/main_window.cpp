@@ -2068,7 +2068,8 @@ void run_gui()
 		open_perf_warning_popup = true;
 
 	if (!emulating && strlen(last_loaded_config) == 0)
-		gui_show_panel(amiberry_options.quickstart_start ? "quickstart" : "play");
+		gui_show_panel(amiberry_options.quickstart_start ? "quickstart" : "play",
+			amiberry_options.quickstart_start);
 
 	// Main loop
 	while (gui_running) {
