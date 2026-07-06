@@ -696,7 +696,7 @@ void render_content_picker()
 
 	std::string selected_path;
 	if (ConsumeFileDialogResultKey("PLAY_CONTENT", selected_path) ||
-		ConsumeFileDialogResultKey("PLAY_CONTENT_DIR", selected_path))
+		ConsumeDirDialogResultKey("PLAY_CONTENT_DIR", selected_path))
 		select_content_path(selected_path);
 
 	if (has_selected_content) {

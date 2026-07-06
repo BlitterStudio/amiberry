@@ -55,7 +55,12 @@ if ! grep -F -q 'OpenDirDialogKey("PLAY_CONTENT_DIR"' "$source_file"; then
 	exit 1
 fi
 
-if ! grep -F -q 'ConsumeFileDialogResultKey("PLAY_CONTENT_DIR"' "$source_file"; then
-	echo "Play content picker must consume selected directory paths" >&2
+if grep -F -q 'ConsumeFileDialogResultKey("PLAY_CONTENT_DIR"' "$source_file"; then
+	echo "Play folder picker must use the directory result consumer" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'ConsumeDirDialogResultKey("PLAY_CONTENT_DIR"' "$source_file"; then
+	echo "Play content picker must consume selected directory paths with directory semantics" >&2
 	exit 1
 fi
