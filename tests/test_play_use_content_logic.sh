@@ -25,6 +25,11 @@ if ! grep -F -q 'return has_selected_content && !selected_content_applied;' "$so
 	exit 1
 fi
 
+if ! grep -F -q 'void play_clear_content_selection()' "$source_file"; then
+	echo "Play must expose a way to clear stale selections after non-Play config loads" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'if (play_prepare_selected_content_for_start())' "$source_file"; then
 	echo "Hardfile storage editing must attach selected content before opening the storage panel" >&2
 	exit 1

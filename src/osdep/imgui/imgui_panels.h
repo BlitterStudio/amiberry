@@ -37,6 +37,7 @@ void ShowHelpMarker(const char* desc);
 
 void render_panel_play();
 bool play_has_content_selection();
+void play_clear_content_selection();
 void play_mark_selected_content_pending();
 bool play_prepare_selected_content_for_start();
 void render_panel_about();

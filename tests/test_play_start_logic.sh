@@ -2,6 +2,7 @@
 set -euo pipefail
 
 source_file="src/osdep/gui/main_window.cpp"
+configurations_source_file="src/osdep/imgui/configurations.cpp"
 
 if grep -F -q 'gui_active_panel_is("play") && play_has_content_selection()' "$source_file"; then
 	echo "Start must prepare pending Play selections even after leaving the Play panel" >&2
@@ -30,6 +31,11 @@ fi
 
 if ! grep -F -q 'action_type == PlayContentType::Unknown' "src/osdep/imgui/play.cpp"; then
 	echo "Unsupported Play selections must not block starting the current configuration" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'play_clear_content_selection();' "$configurations_source_file"; then
+	echo "Loading a config outside Play must clear stale Play selections before Start" >&2
 	exit 1
 fi
 

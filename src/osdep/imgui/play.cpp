@@ -871,6 +871,15 @@ bool play_has_content_selection()
 	return has_selected_content && !selected_content_applied;
 }
 
+void play_clear_content_selection()
+{
+	selected_content = PlayContentDetection{};
+	selected_content_choice = PlayContentType::Unknown;
+	has_selected_content = false;
+	mark_selected_content_pending();
+	reset_quickstart_override_tracking();
+}
+
 void play_mark_selected_content_pending()
 {
 	if (has_selected_content)
