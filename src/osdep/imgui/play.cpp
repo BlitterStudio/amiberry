@@ -814,9 +814,11 @@ void render_content_picker()
 				render_setup_status_row("Configured:", applied_config_summary.c_str());
 
 			ImGui::Spacing();
-			if (AmigaButton("Use this content", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT)))
-				play_prepare_selected_content_for_start();
-			ImGui::SameLine();
+			if (!selected_content_applied) {
+				if (AmigaButton("Apply setup", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT)))
+					play_prepare_selected_content_for_start();
+				ImGui::SameLine();
+			}
 			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
 				mark_selected_content_pending();
 				begin_quickstart_override_tracking();

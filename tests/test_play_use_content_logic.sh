@@ -18,8 +18,28 @@ if grep -F -q 'apply_selected_content(selected_content_choice);' "$source_file";
 	exit 1
 fi
 
+if grep -F -q 'Use this content' "$source_file"; then
+	echo "Play setup apply action must not use the old content-action label" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'AmigaButton("Apply setup"' "$source_file"; then
+	echo "Play must expose an explicit setup-apply action before Start" >&2
+	exit 1
+fi
+
+if ! awk '
+	/if \(!selected_content_applied\)/ { in_pending = 1; next }
+	in_pending && /AmigaButton\("Apply setup"/ { found = 1; exit }
+	in_pending && /ICON_FA_ROCKET " Change model\.\.\."/ { exit }
+	END { exit found ? 0 : 1 }
+' "$source_file"; then
+	echo "Play must hide Apply setup after selected content is already applied" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'play_prepare_selected_content_for_start();' "$source_file"; then
-	echo "Use this content must avoid reapplying already-prepared Play content" >&2
+	echo "Apply setup must avoid reapplying already-prepared Play content" >&2
 	exit 1
 fi
 
