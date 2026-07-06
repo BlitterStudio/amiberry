@@ -533,6 +533,18 @@ void select_content_choice(const PlayContentType choice)
 	applied_config_summary.clear();
 }
 
+void select_content_path(const std::string& selected_path)
+{
+	std::error_code ec;
+	const bool is_directory = std::filesystem::is_directory(selected_path, ec);
+	selected_content = play_detect_content(selected_path, is_directory);
+	selected_content_choice = PlayContentType::Unknown;
+	selected_content_applied = false;
+	reset_quickstart_override_tracking();
+	applied_config_summary.clear();
+	has_selected_content = true;
+}
+
 void render_setup_status_row(const char* label, const char* value)
 {
 	ImGui::AlignTextToFramePadding();
@@ -679,18 +691,13 @@ void render_content_picker()
 			"Amiga Content (*.uae,*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg,*.hdf,*.hdz,*.hda,*.vhd,*.img){.uae,.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.cue,.bin,.iso,.ccd,.mds,.chd,.nrg,.hdf,.hdz,.hda,.vhd,.img},All Files (*){.*}",
 			get_floppy_path());
 	}
+	if (AmigaButton(ICON_FA_FOLDER_OPEN " Choose folder...", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+		OpenDirDialogKey("PLAY_CONTENT_DIR", get_floppy_path());
 
 	std::string selected_path;
-	if (ConsumeFileDialogResultKey("PLAY_CONTENT", selected_path)) {
-		std::error_code ec;
-		const bool is_directory = std::filesystem::is_directory(selected_path, ec);
-		selected_content = play_detect_content(selected_path, is_directory);
-		selected_content_choice = PlayContentType::Unknown;
-		selected_content_applied = false;
-		reset_quickstart_override_tracking();
-		applied_config_summary.clear();
-		has_selected_content = true;
-	}
+	if (ConsumeFileDialogResultKey("PLAY_CONTENT", selected_path) ||
+		ConsumeFileDialogResultKey("PLAY_CONTENT_DIR", selected_path))
+		select_content_path(selected_path);
 
 	if (has_selected_content) {
 		ImGui::Spacing();

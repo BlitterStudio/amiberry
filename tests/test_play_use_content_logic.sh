@@ -49,3 +49,13 @@ if [ "$direct_quickstart_count" -ne 0 ]; then
 	echo "Play content model setup must preserve manual Quickstart overrides" >&2
 	exit 1
 fi
+
+if ! grep -F -q 'OpenDirDialogKey("PLAY_CONTENT_DIR"' "$source_file"; then
+	echo "Play content picker must allow selecting extracted WHDLoad directories" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'ConsumeFileDialogResultKey("PLAY_CONTENT_DIR"' "$source_file"; then
+	echo "Play content picker must consume selected directory paths" >&2
+	exit 1
+fi
