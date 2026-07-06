@@ -10,7 +10,6 @@
 #include "filesys.h"
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
-#include "blkdev.h"
 #include "custom.h"
 #include "disk.h"
 #include "options.h"
@@ -18,19 +17,18 @@
 #include "play_setup.h"
 #include "rommgr.h"
 #include "target.h"
-#include "uae.h"
 
 namespace {
 
-static PlayDisplayDefaults display_defaults;
-static bool display_defaults_initialized = false;
-static PlayContentDetection selected_content;
-static PlayContentType selected_content_choice = PlayContentType::Unknown;
-static bool has_selected_content = false;
-static bool selected_content_applied = false;
-static std::string applied_config_summary;
+PlayDisplayDefaults display_defaults;
+bool display_defaults_initialized = false;
+PlayContentDetection selected_content;
+auto selected_content_choice = PlayContentType::Unknown;
+bool has_selected_content = false;
+bool selected_content_applied = false;
+std::string applied_config_summary;
 
-static const char* shader_choice_name(const PlayShaderChoice choice)
+const char* shader_choice_name(const PlayShaderChoice choice)
 {
 	switch (choice) {
 	case PlayShaderChoice::None:
@@ -44,7 +42,7 @@ static const char* shader_choice_name(const PlayShaderChoice choice)
 	return "none";
 }
 
-static const char* follow_up_text(const PlayFollowUp follow_up)
+const char* follow_up_text(const PlayFollowUp follow_up)
 {
 	switch (follow_up) {
 	case PlayFollowUp::None:
@@ -62,7 +60,7 @@ static const char* follow_up_text(const PlayFollowUp follow_up)
 	return "";
 }
 
-static const char* suggested_model_name(const PlaySuggestedModel model)
+const char* suggested_model_name(const PlaySuggestedModel model)
 {
 	switch (model) {
 	case PlaySuggestedModel::KeepExisting:
@@ -80,7 +78,7 @@ static const char* suggested_model_name(const PlaySuggestedModel model)
 	return "Current/configured machine";
 }
 
-static const char* suggested_profile_text(const PlayContentType type, const PlaySuggestedModel model)
+const char* suggested_profile_text(const PlayContentType type, const PlaySuggestedModel model)
 {
 	if (type == PlayContentType::Configuration)
 		return "Configuration file settings";
@@ -98,7 +96,7 @@ static const char* suggested_profile_text(const PlayContentType type, const Play
 	return "Current settings";
 }
 
-static PlaySuggestedModel suggested_model_for_action(const PlayContentType type)
+PlaySuggestedModel suggested_model_for_action(const PlayContentType type)
 {
 	if (selected_content.type == type && selected_content.suggested_model != PlaySuggestedModel::KeepExisting)
 		return selected_content.suggested_model;
@@ -119,7 +117,7 @@ static PlaySuggestedModel suggested_model_for_action(const PlayContentType type)
 	return PlaySuggestedModel::KeepExisting;
 }
 
-static void initialize_display_defaults()
+void initialize_display_defaults()
 {
 	if (display_defaults_initialized)
 		return;
@@ -159,7 +157,7 @@ static void initialize_display_defaults()
 	display_defaults_initialized = true;
 }
 
-static void copy_shader_name(char* destination, const size_t destination_size, const char* value)
+void copy_shader_name(char* destination, const size_t destination_size, const char* value)
 {
 	if (destination_size == 0)
 		return;
@@ -168,7 +166,7 @@ static void copy_shader_name(char* destination, const size_t destination_size, c
 	destination[destination_size - 1] = '\0';
 }
 
-static void apply_display_defaults_to_changed_prefs()
+void apply_display_defaults_to_changed_prefs()
 {
 	const PlayDisplayPrefs prefs = play_apply_display_defaults(display_defaults);
 
@@ -185,7 +183,7 @@ static void apply_display_defaults_to_changed_prefs()
 	copy_shader_name(changed_prefs.shader_rtg, sizeof changed_prefs.shader_rtg, shader);
 }
 
-static void save_display_defaults()
+void save_display_defaults()
 {
 	const PlayDisplayPrefs prefs = play_apply_display_defaults(display_defaults);
 
@@ -201,14 +199,14 @@ static void save_display_defaults()
 	save_amiberry_settings();
 }
 
-static void remember_parent_directory(const std::string& path)
+void remember_parent_directory(const std::string& path)
 {
 	const auto separator = path.find_last_of("/\\");
 	if (separator != std::string::npos)
 		last_floppy_dir = path.substr(0, separator);
 }
 
-static void copy_path_to_buffer(char* destination, const size_t destination_size, const std::string& path)
+void copy_path_to_buffer(char* destination, const size_t destination_size, const std::string& path)
 {
 	if (destination_size == 0)
 		return;
@@ -217,7 +215,7 @@ static void copy_path_to_buffer(char* destination, const size_t destination_size
 	destination[destination_size - 1] = '\0';
 }
 
-static void apply_quickstart_model(const PlaySuggestedModel model)
+void apply_quickstart_model(const PlaySuggestedModel model)
 {
 	int model_index = -1;
 	int config_index = 0;
@@ -246,7 +244,7 @@ static void apply_quickstart_model(const PlaySuggestedModel model)
 	Quickstart_ApplyDefaults();
 }
 
-static const char* machine_name_from_prefs()
+const char* machine_name_from_prefs()
 {
 	switch (changed_prefs.cs_compatible) {
 	case CP_A500:
@@ -280,7 +278,7 @@ static const char* machine_name_from_prefs()
 	return "Custom Amiga";
 }
 
-static const char* chipset_name_from_prefs()
+const char* chipset_name_from_prefs()
 {
 	if (changed_prefs.chipset_mask & CSMASK_AGA)
 		return "AGA";
@@ -289,7 +287,7 @@ static const char* chipset_name_from_prefs()
 	return "OCS";
 }
 
-static std::string format_memory_size(const unsigned long long bytes)
+std::string format_memory_size(const unsigned long long bytes)
 {
 	char buffer[64];
 	if (bytes >= 1024ULL * 1024ULL)
@@ -299,7 +297,7 @@ static std::string format_memory_size(const unsigned long long bytes)
 	return buffer;
 }
 
-static unsigned long long total_fast_memory()
+unsigned long long total_fast_memory()
 {
 	unsigned long long total = 0;
 	for (int i = 0; i < MAX_RAM_BOARDS; ++i) {
@@ -313,7 +311,7 @@ static unsigned long long total_fast_memory()
 	return total;
 }
 
-static std::string describe_current_config()
+std::string describe_current_config()
 {
 	char buffer[256];
 	snprintf(buffer, sizeof buffer, "%s, %d, %s, %s Chip RAM",
@@ -332,13 +330,13 @@ static std::string describe_current_config()
 	return summary;
 }
 
-static void mark_content_applied()
+void mark_content_applied()
 {
 	applied_config_summary = describe_current_config();
 	selected_content_applied = true;
 }
 
-static bool attach_selected_hardfile()
+bool attach_selected_hardfile()
 {
 #ifdef FILESYS
 	if (changed_prefs.mountitems >= MOUNT_CONFIG_SIZE) {
@@ -378,7 +376,7 @@ static bool attach_selected_hardfile()
 #endif
 }
 
-static bool apply_configuration_content()
+bool apply_configuration_content()
 {
 	if (!target_cfgfile_load(&changed_prefs, selected_content.original_path.c_str(), CONFIG_TYPE_DEFAULT, 0)) {
 		ShowMessageBox("Load Configuration", "Failed to load configuration.");
@@ -390,7 +388,7 @@ static bool apply_configuration_content()
 	return true;
 }
 
-static bool apply_floppy_content()
+bool apply_floppy_content()
 {
 	apply_quickstart_model(selected_content.suggested_model);
 	apply_display_defaults_to_changed_prefs();
@@ -416,7 +414,7 @@ static bool apply_floppy_content()
 	return true;
 }
 
-static bool apply_whdload_content()
+bool apply_whdload_content()
 {
 	apply_quickstart_model(PlaySuggestedModel::A1200);
 	whdload_prefs.whdload_filename = selected_content.original_path;
@@ -428,7 +426,7 @@ static bool apply_whdload_content()
 	return true;
 }
 
-static bool apply_hardfile_content()
+bool apply_hardfile_content()
 {
 	apply_quickstart_model(PlaySuggestedModel::A1200Expanded);
 	apply_display_defaults_to_changed_prefs();
@@ -440,7 +438,7 @@ static bool apply_hardfile_content()
 	return true;
 }
 
-static bool apply_cd_content()
+bool apply_cd_content()
 {
 	apply_quickstart_model(PlaySuggestedModel::Cd32);
 
@@ -454,7 +452,7 @@ static bool apply_cd_content()
 	return true;
 }
 
-static bool apply_selected_content(const PlayContentType type)
+bool apply_selected_content(const PlayContentType type)
 {
 	switch (type) {
 	case PlayContentType::Configuration:
@@ -476,7 +474,7 @@ static bool apply_selected_content(const PlayContentType type)
 	return false;
 }
 
-static PlayContentType selected_action_type()
+PlayContentType selected_action_type()
 {
 	if (!has_selected_content)
 		return PlayContentType::Unknown;
@@ -485,7 +483,7 @@ static PlayContentType selected_action_type()
 	return selected_content.type;
 }
 
-static void render_setup_status_row(const char* label, const char* value)
+void render_setup_status_row(const char* label, const char* value)
 {
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(label);
@@ -493,7 +491,7 @@ static void render_setup_status_row(const char* label, const char* value)
 	ImGui::TextWrapped("%s", value);
 }
 
-static bool is_builtin_aros_rom(const romdata* rd)
+bool is_builtin_aros_rom(const romdata* rd)
 {
 	if (!rd)
 		return false;
@@ -502,7 +500,7 @@ static bool is_builtin_aros_rom(const romdata* rd)
 	return rd->configname && _tcscmp(rd->configname, _T("AROS")) == 0;
 }
 
-static bool has_real_kickstart_roms()
+bool has_real_kickstart_roms()
 {
 	const int count = romlist_count();
 	const romlist* list = romlist_getit();
@@ -520,7 +518,7 @@ static bool has_real_kickstart_roms()
 	return false;
 }
 
-static void render_rom_setup()
+void render_rom_setup()
 {
 	if (has_real_kickstart_roms())
 		render_setup_status_row("Kickstart ROMs:", "Kickstart ROMs detected.");
@@ -550,15 +548,16 @@ static void render_rom_setup()
 	ImGui::SameLine();
 	if (AmigaButton(ICON_FA_SIM_CARD " Open ROM settings", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 		gui_show_panel("rom", true);
+	ImGui::Spacing();
 }
 
-static bool render_combo(const char* label, int* value, const char* const* items, const int item_count)
+bool render_combo(const char* label, int* value, const char* const* items, const int item_count)
 {
 	bool changed = false;
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(label);
-	ImGui::SameLine(BUTTON_WIDTH * 1.8f);
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+	ImGui::SameLine(BUTTON_WIDTH * 1.5f);
+	ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
 	if (ImGui::BeginCombo((std::string("##") + label).c_str(), items[*value])) {
 		for (int i = 0; i < item_count; ++i) {
 			const bool selected = *value == i;
@@ -572,10 +571,11 @@ static bool render_combo(const char* label, int* value, const char* const* items
 		ImGui::EndCombo();
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	ImGui::Spacing();
 	return changed;
 }
 
-static void render_display_defaults()
+void render_display_defaults()
 {
 	initialize_display_defaults();
 
@@ -599,7 +599,7 @@ static void render_display_defaults()
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted("AutoCrop:");
-	ImGui::SameLine(BUTTON_WIDTH * 1.8f);
+	ImGui::SameLine(BUTTON_WIDTH * 1.5f);
 	if (AmigaCheckbox("##AutoCrop", &display_defaults.auto_crop))
 		apply_display_defaults_to_changed_prefs();
 	ShowHelpMarker("Automatically crop black borders from the display.");
@@ -619,9 +619,10 @@ static void render_display_defaults()
 		save_display_defaults();
 		ShowMessageBox("Display Defaults", "Display defaults saved.");
 	}
+	ImGui::Spacing();
 }
 
-static void render_content_picker()
+void render_content_picker()
 {
 	if (AmigaButton(ICON_FA_FOLDER_OPEN " Choose content...", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
 		OpenFileDialogKey("PLAY_CONTENT", "Choose Amiga content",
@@ -712,9 +713,10 @@ void render_panel_play()
 		render_content_picker();
 		ImGui::Spacing();
 		if (!has_selected_content &&
-			AmigaButton(ICON_FA_ROCKET " Open Quickstart", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
+			AmigaButton(ICON_FA_ROCKET " Open Quickstart", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 			gui_show_panel("quickstart", true);
 	}
+	ImGui::Spacing();
 	EndGroupBox("Play");
 
 	if (BeginGroupBox("Display defaults", true, true)) {
