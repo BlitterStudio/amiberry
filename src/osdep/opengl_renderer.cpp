@@ -160,7 +160,7 @@ void OpenGLRenderer::destroy_context()
 	{
 		SDL_GL_DestroyContext(m_gl_context);
 		m_gl_context = nullptr;
-		m_vsync.current_interval = -1;
+		m_vsync.current_interval = INVALID_SWAP_INTERVAL;
 		m_vsync.cached_refresh_rate = 0.0f;
 		m_vsync.gl_initialized = false;
 	}
@@ -364,7 +364,7 @@ void OpenGLRenderer::update_vsync(int monid)
 	int interval = 0;
 
 	if (currprefs.gfx_variable_sync && vsync_mode > 0) {
-		interval = -1;
+		interval = ADAPTIVE_SWAP_INTERVAL;
 	} else if (vsync_mode > 0) {
 		if (vsync_mode > 1) {
 			if (m_vsync.cached_refresh_rate <= 0.0f) {
@@ -389,11 +389,17 @@ void OpenGLRenderer::update_vsync(int monid)
 	}
 
 	if (m_vsync.current_interval != interval) {
-		if (interval == -1) {
-			if (!SDL_GL_SetSwapInterval(-1)) {
-				write_log("OpenGL VSync: Adaptive not supported (%s), falling back to interval 1\n", SDL_GetError());
-				interval = 1;
-				SDL_GL_SetSwapInterval(1);
+		const int requested_interval = interval;
+		if (interval == ADAPTIVE_SWAP_INTERVAL) {
+			if (!SDL_GL_SetSwapInterval(ADAPTIVE_SWAP_INTERVAL)) {
+				const std::string adaptive_error = SDL_GetError();
+				if (!SDL_GL_SetSwapInterval(1)) {
+					write_log("OpenGL VSync: Adaptive not supported (%s), fallback interval 1 failed: %s (will not retry)\n",
+						adaptive_error.c_str(), SDL_GetError());
+				} else {
+					write_log("OpenGL VSync: Adaptive not supported (%s), falling back to interval 1\n",
+						adaptive_error.c_str());
+				}
 			} else {
 				write_log("OpenGL VSync: Adaptive VSync enabled\n");
 			}
@@ -402,7 +408,7 @@ void OpenGLRenderer::update_vsync(int monid)
 		} else {
 			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
 		}
-		m_vsync.current_interval = interval;
+		m_vsync.current_interval = requested_interval;
 	}
 }
 
@@ -421,18 +427,18 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	const auto time = SDL_GetTicks();
 
-	// Handle VSync options
-	update_vsync(monid);
-
-	int drawableWidth, drawableHeight;
-	get_drawable_size(mon->amiga_window, &drawableWidth, &drawableHeight);
-
 	// Ensure GL context is current for this window
 	if (m_gl_context && mon->amiga_window) {
 		if (!SDL_GL_MakeCurrent(mon->amiga_window, m_gl_context)) {
 			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
 	}
+
+	// Handle VSync options after making the emulation context current.
+	update_vsync(monid);
+
+	int drawableWidth, drawableHeight;
+	get_drawable_size(mon->amiga_window, &drawableWidth, &drawableHeight);
 
 	// Reset GL state to a known baseline - only on first frame after context creation
 	if (!m_vsync.gl_initialized) {
@@ -1112,7 +1118,7 @@ void OpenGLRenderer::restore_emulation_context(SDL_Window* window)
 	if (window && has_context()) {
 		SDL_GL_MakeCurrent(window, m_gl_context);
 		reset_state();
-		clear_shader_cache();
+		m_vsync.current_interval = INVALID_SWAP_INTERVAL;
 	}
 }
 

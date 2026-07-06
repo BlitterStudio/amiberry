@@ -1877,11 +1877,11 @@ void amiberry_gui_halt()
 	}
 #endif
 #ifdef USE_OPENGL
-	// Restore emulation rendering context (MakeCurrent on emu's GL context +
-	// reset state + rebuild shaders on next frame). Runs wherever the GUI
-	// shared the emulator's window — Windows, KMSDRM, x11-without-WM.
-	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
-		g_renderer->restore_emulation_context(mon->amiga_window);
+	// Restore the emulation GL context even after a separate SDL-renderer GUI.
+	// Some backends can leave presentation state such as swap interval changed.
+	if (auto* gl_renderer = get_opengl_renderer();
+		gl_renderer && mon->amiga_window && gl_renderer->has_context()) {
+		gl_renderer->restore_emulation_context(mon->amiga_window);
 	}
 #endif
 #ifdef USE_VULKAN
