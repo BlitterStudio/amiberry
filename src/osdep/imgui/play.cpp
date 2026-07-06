@@ -868,7 +868,7 @@ void render_panel_play()
 
 bool play_has_content_selection()
 {
-	return has_selected_content;
+	return has_selected_content && !selected_content_applied;
 }
 
 void play_mark_selected_content_pending()

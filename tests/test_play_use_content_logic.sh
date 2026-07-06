@@ -20,6 +20,11 @@ if ! grep -F -q 'play_prepare_selected_content_for_start();' "$source_file"; the
 	exit 1
 fi
 
+if ! grep -F -q 'return has_selected_content && !selected_content_applied;' "$source_file"; then
+	echo "Global Start must only treat unapplied Play selections as pending" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'if (play_prepare_selected_content_for_start())' "$source_file"; then
 	echo "Hardfile storage editing must attach selected content before opening the storage panel" >&2
 	exit 1
