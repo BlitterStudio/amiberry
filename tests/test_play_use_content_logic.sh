@@ -3,6 +3,7 @@ set -euo pipefail
 
 source_file="src/osdep/imgui/play.cpp"
 quickstart_source_file="src/osdep/imgui/quickstart.cpp"
+whdbooter_source_file="src/osdep/amiberry_whdbooter.cpp"
 
 action_apply_count=$(grep -F -c 'apply_selected_content(action_type);' "$source_file")
 if [ "$action_apply_count" -ne 1 ]; then
@@ -72,6 +73,26 @@ fi
 
 if ! grep -F -q 'current_hardfile_attachment_path().empty()' "$source_file"; then
 	echo "Reapplying selected hardfile content must not add duplicate mount entries" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'auto_detect_slave_from_directory' "$whdbooter_source_file"; then
+	echo "WHDLoad folder selections must scan plain directories for slave files" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'std::filesystem::is_directory(filepath' "$whdbooter_source_file"; then
+	echo "WHDLoad fallback must branch on selected folders before archive scanning" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'std::filesystem::recursive_directory_iterator' "$whdbooter_source_file"; then
+	echo "WHDLoad folder fallback must recurse selected directories for .slave files" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'auto_detect_slave_from_directory(filepath, game_detail)' "$whdbooter_source_file"; then
+	echo "WHDLoad folder fallback must call the directory scanner" >&2
 	exit 1
 fi
 
