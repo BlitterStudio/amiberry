@@ -26,6 +26,10 @@ PlayContentDetection selected_content;
 auto selected_content_choice = PlayContentType::Unknown;
 bool has_selected_content = false;
 bool selected_content_applied = false;
+bool quickstart_override_tracking = false;
+int quickstart_override_model = 0;
+int quickstart_override_conf = 0;
+int quickstart_override_compa = 0;
 std::string applied_config_summary;
 
 const char* shader_choice_name(const PlayShaderChoice choice)
@@ -219,6 +223,27 @@ void copy_path_to_buffer(char* destination, const size_t destination_size, const
 	destination[destination_size - 1] = '\0';
 }
 
+void begin_quickstart_override_tracking()
+{
+	quickstart_override_model = quickstart_model;
+	quickstart_override_conf = quickstart_conf;
+	quickstart_override_compa = quickstart_compa;
+	quickstart_override_tracking = true;
+}
+
+void reset_quickstart_override_tracking()
+{
+	quickstart_override_tracking = false;
+}
+
+bool quickstart_override_changed()
+{
+	return quickstart_override_tracking &&
+		(quickstart_model != quickstart_override_model ||
+			quickstart_conf != quickstart_override_conf ||
+			quickstart_compa != quickstart_override_compa);
+}
+
 void apply_quickstart_model(const PlaySuggestedModel model)
 {
 	int model_index = -1;
@@ -246,6 +271,15 @@ void apply_quickstart_model(const PlaySuggestedModel model)
 	quickstart_conf = config_index;
 	quickstart_compa = selected_content.suggested_compatibility;
 	Quickstart_ApplyDefaults();
+}
+
+void apply_quickstart_model_unless_overridden(const PlaySuggestedModel model)
+{
+	if (quickstart_override_changed())
+		return;
+
+	apply_quickstart_model(model);
+	reset_quickstart_override_tracking();
 }
 
 const char* machine_name_from_prefs()
@@ -338,6 +372,7 @@ void mark_content_applied()
 {
 	applied_config_summary = describe_current_config();
 	selected_content_applied = true;
+	reset_quickstart_override_tracking();
 }
 
 bool attach_selected_hardfile()
@@ -350,7 +385,8 @@ bool attach_selected_hardfile()
 
 	default_hfdlg(&current_hfdlg, false);
 	current_hfdlg.ci.type = UAEDEV_HDF;
-	_tcscpy(current_hfdlg.ci.rootdir, selected_content.original_path.c_str());
+	copy_path_to_buffer(current_hfdlg.ci.rootdir, sizeof current_hfdlg.ci.rootdir,
+		selected_content.original_path);
 
 	if (current_hfdlg.ci.devname[0] == 0) {
 		char devname[256];
@@ -394,7 +430,7 @@ bool apply_configuration_content()
 
 bool apply_floppy_content()
 {
-	apply_quickstart_model(suggested_model_for_action(PlayContentType::Floppy));
+	apply_quickstart_model_unless_overridden(suggested_model_for_action(PlayContentType::Floppy));
 	apply_display_defaults_to_changed_prefs();
 	remember_parent_directory(selected_content.original_path);
 
@@ -420,7 +456,7 @@ bool apply_floppy_content()
 
 bool apply_whdload_content()
 {
-	apply_quickstart_model(PlaySuggestedModel::A1200);
+	apply_quickstart_model_unless_overridden(PlaySuggestedModel::A1200);
 	whdload_prefs.whdload_filename = selected_content.original_path;
 	add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 	whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
@@ -432,7 +468,7 @@ bool apply_whdload_content()
 
 bool apply_hardfile_content()
 {
-	apply_quickstart_model(PlaySuggestedModel::A1200Expanded);
+	apply_quickstart_model_unless_overridden(PlaySuggestedModel::A1200Expanded);
 	apply_display_defaults_to_changed_prefs();
 	if (!attach_selected_hardfile())
 		return false;
@@ -444,7 +480,7 @@ bool apply_hardfile_content()
 
 bool apply_cd_content()
 {
-	apply_quickstart_model(PlaySuggestedModel::Cd32);
+	apply_quickstart_model_unless_overridden(PlaySuggestedModel::Cd32);
 
 	char path[MAX_DPATH];
 	copy_path_to_buffer(path, sizeof path, selected_content.original_path);
@@ -651,6 +687,7 @@ void render_content_picker()
 		selected_content = play_detect_content(selected_path, is_directory);
 		selected_content_choice = PlayContentType::Unknown;
 		selected_content_applied = false;
+		reset_quickstart_override_tracking();
 		applied_config_summary.clear();
 		has_selected_content = true;
 	}
@@ -692,8 +729,10 @@ void render_content_picker()
 			if (AmigaButton("Use this content", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT)))
 				play_prepare_selected_content_for_start();
 			ImGui::SameLine();
-			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT)))
+			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
+				begin_quickstart_override_tracking();
 				gui_show_panel("quickstart", true);
+			}
 			if (action_type == PlayContentType::Hardfile) {
 				ImGui::SameLine();
 				if (AmigaButton(ICON_FA_HARD_DRIVE " Edit storage...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
