@@ -151,7 +151,7 @@ PlaySuggestedModel play_suggested_model_for_action(const PlayContentDetection& d
 
 	switch (action_type) {
 		case PlayContentType::Floppy:
-			return PlaySuggestedModel::A500;
+			return has_aga_token(detection.original_path) ? PlaySuggestedModel::A1200 : PlaySuggestedModel::A500;
 		case PlayContentType::WhdLoad:
 			return PlaySuggestedModel::A1200;
 		case PlayContentType::Cd:

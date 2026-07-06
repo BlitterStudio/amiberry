@@ -132,6 +132,12 @@ if ! grep -F -q 'OpenDirDialogKey("PLAY_CONTENT_DIR"' "$source_file"; then
 	exit 1
 fi
 
+if ! grep -F -q '*.fdi,*.scp,*.wrp,*.dsq' "$source_file" ||
+	! grep -F -q '.fdi,.scp,.wrp,.dsq' "$source_file"; then
+	echo "Play content picker must include all detected floppy formats" >&2
+	exit 1
+fi
+
 if grep -F -q 'ConsumeFileDialogResultKey("PLAY_CONTENT_DIR"' "$source_file"; then
 	echo "Play folder picker must use the directory result consumer" >&2
 	exit 1

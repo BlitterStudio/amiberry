@@ -142,6 +142,17 @@ static void test_ambiguous_archive_floppy_action_suggests_a500()
 		"Ambiguous archives resolved as floppies must suggest A500");
 }
 
+static void test_aga_ambiguous_floppy_actions_suggest_a1200()
+{
+	const auto archive = play_detect_content("Game_AGA.zip", false);
+	const auto disk = play_detect_content("Game_AGA.img", false);
+
+	expect_eq(play_suggested_model_for_action(archive, PlayContentType::Floppy), PlaySuggestedModel::A1200,
+		"AGA-named ambiguous archives resolved as floppies must suggest A1200");
+	expect_eq(play_suggested_model_for_action(disk, PlayContentType::Floppy), PlaySuggestedModel::A1200,
+		"AGA-named .img files resolved as floppies must suggest A1200");
+}
+
 static void test_direct_aga_floppy_action_keeps_a1200()
 {
 	const auto detection = play_detect_content("Game_AGA.adf", false);
@@ -173,6 +184,7 @@ int main()
 	test_lha_archives_are_whdload();
 	test_generic_archives_stay_ambiguous();
 	test_ambiguous_archive_floppy_action_suggests_a500();
+	test_aga_ambiguous_floppy_actions_suggest_a1200();
 	test_direct_aga_floppy_action_keeps_a1200();
 	test_directories_are_whdload_candidates();
 

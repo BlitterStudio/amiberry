@@ -767,7 +767,7 @@ void render_content_picker()
 {
 	if (AmigaButton(ICON_FA_FOLDER_OPEN " Choose content...", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
 		OpenFileDialogKey("PLAY_CONTENT", "Choose Amiga content",
-			"Amiga Content (*.uae,*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg,*.hdf,*.hdz,*.hda,*.vhd,*.img,*.gz,*.xz){.uae,.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.cue,.bin,.iso,.ccd,.mds,.chd,.nrg,.hdf,.hdz,.hda,.vhd,.img,.gz,.xz},All Files (*){.*}",
+			"Amiga Content (*.uae,*.adf,*.adz,*.dms,*.fdi,*.scp,*.wrp,*.dsq,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg,*.hdf,*.hdz,*.hda,*.vhd,*.img,*.gz,*.xz){.uae,.adf,.adz,.dms,.fdi,.scp,.wrp,.dsq,.ipf,.zip,.7z,.lha,.lzh,.lzx,.cue,.bin,.iso,.ccd,.mds,.chd,.nrg,.hdf,.hdz,.hda,.vhd,.img,.gz,.xz},All Files (*){.*}",
 			get_floppy_path());
 	}
 	if (AmigaButton(ICON_FA_FOLDER_OPEN " Choose folder...", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
