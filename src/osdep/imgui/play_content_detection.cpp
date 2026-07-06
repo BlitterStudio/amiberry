@@ -97,10 +97,17 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 		return detection;
 	}
 
-	if (is_one_of(extension, { ".cue", ".bin", ".iso", ".ccd", ".mds", ".chd", ".nrg" })) {
+	if (is_one_of(extension, { ".cue", ".bin", ".iso", ".ccd", ".mds", ".nrg" })) {
 		detection.type = PlayContentType::Cd;
 		detection.suggested_model = PlaySuggestedModel::Cd32;
 		detection.follow_up = PlayFollowUp::ChooseCdMachine;
+		return detection;
+	}
+
+	if (extension == ".chd") {
+		detection.type = PlayContentType::Ambiguous;
+		detection.follow_up = PlayFollowUp::ChooseCdOrHardfile;
+		detection.choices = { PlayContentType::Cd, PlayContentType::Hardfile };
 		return detection;
 	}
 

@@ -37,6 +37,8 @@ const char* shader_choice_name(const PlayShaderChoice choice)
 		return "tv";
 	case PlayShaderChoice::Monitor1084:
 		return "1084";
+	case PlayShaderChoice::Custom:
+		return nullptr;
 	}
 
 	return "none";
@@ -51,6 +53,8 @@ const char* follow_up_text(const PlayFollowUp follow_up)
 		return "Archive type is ambiguous. Choose whether it is a floppy archive or WHDLoad content.";
 	case PlayFollowUp::ChooseDiskOrHardfile:
 		return "Disk image type is ambiguous. Choose floppy disk or hardfile in Expert settings.";
+	case PlayFollowUp::ChooseCdOrHardfile:
+		return "CHD files can be CD media or hardfiles. Choose the matching content type.";
 	case PlayFollowUp::ChooseCdMachine:
 		return "CD media usually works best with a CD32 or CDTV-oriented setup.";
 	case PlayFollowUp::AttachHardfileInExpert:
@@ -130,9 +134,18 @@ void initialize_display_defaults()
 		break;
 	}
 
-	if (strcmp(changed_prefs.shader, "1084") == 0)
+	const auto is_custom_shader = [](const char* shader) {
+		return shader[0] != '\0' &&
+			strcmp(shader, "none") != 0 &&
+			strcmp(shader, "tv") != 0 &&
+			strcmp(shader, "1084") != 0;
+	};
+
+	if (is_custom_shader(changed_prefs.shader) || is_custom_shader(changed_prefs.shader_rtg))
+		display_defaults.shader = PlayShaderChoice::Custom;
+	else if (strcmp(changed_prefs.shader, "1084") == 0)
 		display_defaults.shader = PlayShaderChoice::Monitor1084;
-	else if (changed_prefs.shader[0] != '\0' && strcmp(changed_prefs.shader, "none") != 0)
+	else if (strcmp(changed_prefs.shader, "tv") == 0)
 		display_defaults.shader = PlayShaderChoice::Crt;
 	else
 		display_defaults.shader = PlayShaderChoice::None;
@@ -162,9 +175,11 @@ void apply_display_defaults_to_changed_prefs()
 	if (changed_prefs.gfx_auto_crop)
 		changed_prefs.gfx_manual_crop = false;
 
-	const char* shader = shader_choice_name(display_defaults.shader);
-	copy_shader_name(changed_prefs.shader, sizeof changed_prefs.shader, shader);
-	copy_shader_name(changed_prefs.shader_rtg, sizeof changed_prefs.shader_rtg, shader);
+	if (!prefs.preserve_shader) {
+		const char* shader = shader_choice_name(display_defaults.shader);
+		copy_shader_name(changed_prefs.shader, sizeof changed_prefs.shader, shader);
+		copy_shader_name(changed_prefs.shader_rtg, sizeof changed_prefs.shader_rtg, shader);
+	}
 }
 
 void save_display_defaults()
@@ -176,9 +191,14 @@ void save_display_defaults()
 	amiberry_options.default_gfx_autoresolution = prefs.gfx_autoresolution;
 	amiberry_options.default_auto_crop = prefs.gfx_auto_crop;
 
-	const char* shader = shader_choice_name(display_defaults.shader);
-	copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, shader);
-	copy_shader_name(amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg, shader);
+	if (prefs.preserve_shader) {
+		copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, changed_prefs.shader);
+		copy_shader_name(amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg, changed_prefs.shader_rtg);
+	} else {
+		const char* shader = shader_choice_name(display_defaults.shader);
+		copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, shader);
+		copy_shader_name(amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg, shader);
+	}
 
 	save_amiberry_settings();
 }
@@ -467,6 +487,16 @@ PlayContentType selected_action_type()
 	return selected_content.type;
 }
 
+void select_content_choice(const PlayContentType choice)
+{
+	if (selected_content_choice == choice)
+		return;
+
+	selected_content_choice = choice;
+	selected_content_applied = false;
+	applied_config_summary.clear();
+}
+
 void render_setup_status_row(const char* label, const char* value)
 {
 	ImGui::AlignTextToFramePadding();
@@ -565,7 +595,7 @@ void render_display_defaults()
 
 	static const char* screen_items[] = { "Windowed", "Full-window", "Fullscreen" };
 	static const char* scaling_items[] = { "Auto", "Integer", "Smooth" };
-	static const char* shader_items[] = { "None", "CRT", "1084" };
+	static const char* shader_items[] = { "None", "CRT", "1084", "Custom" };
 
 	int screen_mode = static_cast<int>(display_defaults.screen_mode);
 	if (render_combo("Screen mode:", &screen_mode, screen_items, IM_ARRAYSIZE(screen_items))) {
@@ -636,17 +666,13 @@ void render_content_picker()
 			for (const PlayContentType choice : selected_content.choices) {
 				if (choice == PlayContentType::Hardfile) {
 					if (AmigaButton("Use as hardfile...", ImVec2(BUTTON_WIDTH * 1.7f, BUTTON_HEIGHT))) {
-						selected_content_choice = PlayContentType::Hardfile;
-						selected_content_applied = false;
-						applied_config_summary.clear();
-						apply_selected_content(selected_content_choice);
+						select_content_choice(PlayContentType::Hardfile);
+						play_prepare_selected_content_for_start();
 					}
 				} else {
 					std::string label = std::string("Use as ") + play_content_type_name(choice);
 					if (AmigaButton(label.c_str(), ImVec2(BUTTON_WIDTH * 1.6f, BUTTON_HEIGHT))) {
-						selected_content_choice = choice;
-						selected_content_applied = false;
-						applied_config_summary.clear();
+						select_content_choice(choice);
 					}
 				}
 				ImGui::SameLine();

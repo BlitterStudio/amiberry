@@ -28,6 +28,8 @@ static int shader_choice_to_prefs(const PlayShaderChoice choice)
 		return 1;
 	case PlayShaderChoice::Monitor1084:
 		return 2;
+	case PlayShaderChoice::Custom:
+		return -1;
 	}
 
 	return 0;
@@ -55,6 +57,7 @@ void play_apply_display_defaults(const PlayDisplayDefaults& defaults, PlayDispla
 	}
 
 	prefs.shader_choice = shader_choice_to_prefs(defaults.shader);
+	prefs.preserve_shader = defaults.shader == PlayShaderChoice::Custom;
 	prefs.gfx_auto_crop = defaults.auto_crop;
 }
 

@@ -84,6 +84,20 @@ static void test_autocrop_default_is_preserved()
 	expect_eq(prefs.gfx_auto_crop, true, "AutoCrop default must be preserved");
 }
 
+static void test_custom_shader_is_preserved()
+{
+	const PlayDisplayDefaults defaults{
+		PlayScreenMode::Windowed,
+		PlayScalingMode::Auto,
+		PlayShaderChoice::Custom
+	};
+
+	const auto prefs = play_apply_display_defaults(defaults);
+
+	expect_eq(prefs.preserve_shader, true, "Custom shader choices must preserve current shader names");
+	expect_eq(prefs.shader_choice, -1, "Custom shader choices must not map to a preset shader");
+}
+
 static void test_no_dependency_state_helpers_stay_false()
 {
 	play_set_expert_settings_enabled(true);
@@ -101,6 +115,7 @@ int main()
 	test_windowed_auto_none_defaults();
 	test_smooth_scaling_defaults();
 	test_autocrop_default_is_preserved();
+	test_custom_shader_is_preserved();
 	test_no_dependency_state_helpers_stay_false();
 
 	return failures == 0 ? 0 : 1;

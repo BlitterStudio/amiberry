@@ -28,6 +28,7 @@ enum class PlayFollowUp
 	None,
 	ChooseArchiveContent,
 	ChooseDiskOrHardfile,
+	ChooseCdOrHardfile,
 	ChooseCdMachine,
 	AttachHardfileInExpert
 };

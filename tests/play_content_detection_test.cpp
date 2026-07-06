@@ -57,12 +57,21 @@ static void test_aga_floppy_names_suggest_a1200()
 static void test_cd_extensions_suggest_cd32_and_follow_up()
 {
 	const auto cue = play_detect_content("Game.cue", false);
-	const auto chd = play_detect_content("Game.chd", false);
 
 	expect_eq(cue.type, PlayContentType::Cd, ".cue must be detected as CD");
-	expect_eq(chd.type, PlayContentType::Cd, ".chd must be detected as CD");
 	expect_eq(cue.suggested_model, PlaySuggestedModel::Cd32, "CD content must suggest CD32");
 	expect_eq(cue.follow_up, PlayFollowUp::ChooseCdMachine, "CD content must ask for CD machine choice");
+}
+
+static void test_chd_can_be_cd_or_hardfile()
+{
+	const auto detection = play_detect_content("Game.chd", false);
+
+	expect_eq(detection.type, PlayContentType::Ambiguous, ".chd must allow CD or hardfile handling");
+	expect_eq(detection.follow_up, PlayFollowUp::ChooseCdOrHardfile,
+		".chd must ask whether it is CD media or a hardfile");
+	expect_choice(detection.choices, PlayContentType::Cd, ".chd choices must include CD");
+	expect_choice(detection.choices, PlayContentType::Hardfile, ".chd choices must include hardfile");
 }
 
 static void test_hardfile_extensions_attach_in_expert()
@@ -146,6 +155,7 @@ int main()
 	test_floppy_extensions_suggest_a500();
 	test_aga_floppy_names_suggest_a1200();
 	test_cd_extensions_suggest_cd32_and_follow_up();
+	test_chd_can_be_cd_or_hardfile();
 	test_hardfile_extensions_attach_in_expert();
 	test_unknown_extensions_remain_unknown();
 	test_img_can_be_disk_or_hardfile();
