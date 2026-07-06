@@ -79,6 +79,7 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 	detection.display_name = get_display_name(path);
 
 	if (is_directory) {
+		// WHDBooter scans selected folders for .slave files when the database has no match.
 		detection.type = PlayContentType::WhdLoad;
 		detection.suggested_model = PlaySuggestedModel::A1200;
 		return detection;
