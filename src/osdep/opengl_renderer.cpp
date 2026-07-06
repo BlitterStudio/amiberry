@@ -421,18 +421,18 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	const auto time = SDL_GetTicks();
 
-	// Handle VSync options
-	update_vsync(monid);
-
-	int drawableWidth, drawableHeight;
-	get_drawable_size(mon->amiga_window, &drawableWidth, &drawableHeight);
-
 	// Ensure GL context is current for this window
 	if (m_gl_context && mon->amiga_window) {
 		if (!SDL_GL_MakeCurrent(mon->amiga_window, m_gl_context)) {
 			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
 	}
+
+	// Handle VSync options after making the emulation context current.
+	update_vsync(monid);
+
+	int drawableWidth, drawableHeight;
+	get_drawable_size(mon->amiga_window, &drawableWidth, &drawableHeight);
 
 	// Reset GL state to a known baseline - only on first frame after context creation
 	if (!m_vsync.gl_initialized) {
@@ -1112,7 +1112,7 @@ void OpenGLRenderer::restore_emulation_context(SDL_Window* window)
 	if (window && has_context()) {
 		SDL_GL_MakeCurrent(window, m_gl_context);
 		reset_state();
-		clear_shader_cache();
+		m_vsync.current_interval = -1;
 	}
 }
 
