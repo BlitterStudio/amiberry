@@ -1,4 +1,5 @@
 #include "sysdeps.h"
+#include "blkdev.h"
 #include "imgui.h"
 
 #include <cstring>
@@ -542,13 +543,24 @@ bool apply_hardfile_content()
 	return true;
 }
 
+void mount_selected_cd_image(const char* path)
+{
+	copy_path_to_buffer(changed_prefs.cdslots[0].name, sizeof changed_prefs.cdslots[0].name, path);
+	changed_prefs.cdslots[0].inuse = true;
+	changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+}
+
 bool apply_cd_content()
 {
+	const bool manual_quickstart_override = quickstart_override_changed();
 	apply_quickstart_model_unless_overridden(PlaySuggestedModel::Cd32);
 
 	char path[MAX_DPATH];
 	copy_path_to_buffer(path, sizeof path, selected_content.original_path);
-	cd_auto_prefs(&changed_prefs, path);
+	if (manual_quickstart_override)
+		mount_selected_cd_image(path);
+	else
+		cd_auto_prefs(&changed_prefs, path);
 	apply_display_defaults_to_changed_prefs();
 	add_file_to_mru_list(lstMRUCDList, selected_content.original_path);
 	set_last_active_config(selected_content.original_path.c_str());

@@ -60,6 +60,16 @@ if ! grep -F -q 'apply_quickstart_model_unless_overridden' "$source_file"; then
 	exit 1
 fi
 
+if ! grep -F -q 'const bool manual_quickstart_override = quickstart_override_changed();' "$source_file"; then
+	echo "CD Play content must detect manual Quickstart overrides before CD autoload" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'mount_selected_cd_image(path);' "$source_file"; then
+	echo "CD Play content with manual Quickstart overrides must mount the CD without rebuilding the model" >&2
+	exit 1
+fi
+
 direct_quickstart_count=$(grep -F -c 'apply_quickstart_model(PlaySuggestedModel::' "$source_file" || true)
 if [ "$direct_quickstart_count" -ne 0 ]; then
 	echo "Play content model setup must preserve manual Quickstart overrides" >&2
