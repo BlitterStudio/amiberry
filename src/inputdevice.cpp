@@ -27,6 +27,7 @@
 #include "options.h"
 #include "keyboard.h"
 #include "inputdevice.h"
+#include "amiberry_input_helpers.h"
 
 #include <algorithm>
 #include "inputrecord.h"
@@ -2679,22 +2680,11 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		y = (int)(y * fmy);
 		x -= (int)(fdx * 1.0) - 0;
 		y -= (int)(fdy * 1.0) - 2;
-		if (x < 0) {
-			ob = true;
-			x = 0;
-		}
-		if (x * fmx >= vidinfo->outbuffer->outwidth) {
-			ob = true;
-			x = vidinfo->outbuffer->outwidth - 1;
-		}
-		if (y < 0) {
-			ob = true;
-			y = 0;
-		}
-		if (y * fmy >= vidinfo->outbuffer->outheight) {
-			ob = true;
-			y = vidinfo->outbuffer->outheight - 1;
-		}
+		bool axis_ob = false;
+		x = amiberry_input_clamp_native_axis(x, vidinfo->outbuffer->outwidth, &axis_ob);
+		ob |= axis_ob;
+		y = amiberry_input_clamp_native_axis(y, vidinfo->outbuffer->outheight, &axis_ob);
+		ob |= axis_ob;
 		if (currprefs.gfx_resolution == RES_LORES) {
 			x *= 2;
 		} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
