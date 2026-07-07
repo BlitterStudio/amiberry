@@ -6,6 +6,7 @@ typedef std::uint16_t uae_u16;
 typedef std::uint32_t uae_u32;
 
 #include "amiberry_cursor.h"
+#include "amiberry_input_helpers.h"
 
 static int failures;
 
@@ -86,6 +87,24 @@ static void test_rtg_cursor_keeps_softsprite_fallback_disabled()
 		"RTG cursor must not force P96 software pointer fallback in 32-bit modes");
 }
 
+static void test_native_axis_clamp_uses_native_extent()
+{
+	bool out_of_bounds = true;
+	int value = amiberry_input_clamp_native_axis(239, 240, &out_of_bounds);
+	expect_eq(value, 239, "last native pixel must stay in range");
+	expect_true(!out_of_bounds, "last native pixel must not be treated as out of bounds");
+
+	out_of_bounds = false;
+	value = amiberry_input_clamp_native_axis(240, 240, &out_of_bounds);
+	expect_eq(value, 239, "one-past-native pixel must clamp to the last pixel");
+	expect_true(out_of_bounds, "one-past-native pixel must be reported out of bounds");
+
+	out_of_bounds = false;
+	value = amiberry_input_clamp_native_axis(-1, 240, &out_of_bounds);
+	expect_eq(value, 0, "negative native pixel must clamp to zero");
+	expect_true(out_of_bounds, "negative native pixel must be reported out of bounds");
+}
+
 int main()
 {
 	test_rgb12_expands_to_rgb24();
@@ -93,5 +112,6 @@ int main()
 	test_rgba32_cursor_pixels_use_raw_rgb_order();
 	test_host_only_forces_separate_rtg_sprite();
 	test_rtg_cursor_keeps_softsprite_fallback_disabled();
+	test_native_axis_clamp_uses_native_extent();
 	return failures == 0 ? 0 : 1;
 }
