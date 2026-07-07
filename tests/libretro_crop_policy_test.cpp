@@ -98,11 +98,24 @@ static void test_fixed_crop_shifts_to_keep_content_visible()
 	expect_eq(crop.h, 20, "Fixed crop height should remain fixed");
 }
 
+static void test_libretro_stabilizer_uses_short_mode_change_delays()
+{
+	LibretroCropRect current{ 8, 8, 320, 200 };
+	LibretroCropRect expanded{ 6, 6, 324, 204 };
+	LibretroCropRect tighter{ 8, 8, 320, 180 };
+
+	expect_eq(libretro_crop_stable_frames_required(current, expanded), 6,
+		"Expanding crops should settle quickly");
+	expect_eq(libretro_crop_stable_frames_required(current, tighter), 18,
+		"Shrinking crops should not wait a full second");
+}
+
 int main()
 {
 	test_expands_to_visible_pixels_below_crop();
 	test_ignores_isolated_outside_pixels();
 	test_fixed_crop_shifts_to_keep_content_visible();
+	test_libretro_stabilizer_uses_short_mode_change_delays();
 
 	return failures == 0 ? 0 : 1;
 }

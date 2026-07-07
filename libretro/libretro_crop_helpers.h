@@ -21,6 +21,9 @@ struct LibretroCropPixelBuffer {
 	uint32_t rgb_mask;
 };
 
+constexpr int libretro_crop_expand_stable_frames = 6;
+constexpr int libretro_crop_settle_stable_frames = 18;
+
 inline int libretro_crop_rect_right(const LibretroCropRect& rect)
 {
 	return rect.x + rect.w;
@@ -39,6 +42,24 @@ inline bool libretro_crop_rect_valid(const LibretroCropRect& rect)
 inline bool libretro_crop_rect_equals(const LibretroCropRect& a, const LibretroCropRect& b)
 {
 	return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h;
+}
+
+inline bool libretro_crop_expands_to_include_current(const LibretroCropRect& current,
+	const LibretroCropRect& next)
+{
+	return next.x <= current.x
+		&& next.y <= current.y
+		&& libretro_crop_rect_right(next) >= libretro_crop_rect_right(current)
+		&& libretro_crop_rect_bottom(next) >= libretro_crop_rect_bottom(current)
+		&& !libretro_crop_rect_equals(current, next);
+}
+
+inline int libretro_crop_stable_frames_required(const LibretroCropRect& current,
+	const LibretroCropRect& next)
+{
+	return libretro_crop_expands_to_include_current(current, next)
+		? libretro_crop_expand_stable_frames
+		: libretro_crop_settle_stable_frames;
 }
 
 inline bool libretro_crop_buffer_valid(const LibretroCropPixelBuffer& buffer)

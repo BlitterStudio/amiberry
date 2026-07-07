@@ -2220,15 +2220,6 @@ static void libretro_reset_submitted_crop()
 	libretro_pending_crop_frames = 0;
 }
 
-static bool libretro_crop_expands_to_include_current(const libretro_crop& current, const libretro_crop& next)
-{
-	return next.x <= current.x
-		&& next.y <= current.y
-		&& next.x + next.w >= current.x + current.w
-		&& next.y + next.h >= current.y + current.h
-		&& !libretro_crop_equals(current, next);
-}
-
 static libretro_crop libretro_stabilize_auto_crop(const SDL_Surface* surface, const libretro_crop& crop)
 {
 	if (!crop.active) {
@@ -2256,8 +2247,19 @@ static libretro_crop libretro_stabilize_auto_crop(const SDL_Surface* surface, co
 		libretro_pending_crop_frames++;
 	}
 
-	const int required_frames = libretro_crop_expands_to_include_current(libretro_submitted_crop, crop)
-		? 12 : 60;
+	const LibretroCropRect current_rect = {
+		libretro_submitted_crop.x,
+		libretro_submitted_crop.y,
+		libretro_submitted_crop.w,
+		libretro_submitted_crop.h
+	};
+	const LibretroCropRect next_rect = {
+		crop.x,
+		crop.y,
+		crop.w,
+		crop.h
+	};
+	const int required_frames = libretro_crop_stable_frames_required(current_rect, next_rect);
 	if (libretro_pending_crop_frames >= required_frames) {
 		libretro_submitted_crop = crop;
 		libretro_pending_crop_valid = false;
