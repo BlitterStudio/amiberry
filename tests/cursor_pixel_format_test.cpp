@@ -64,19 +64,15 @@ static void test_rgba32_cursor_pixels_use_raw_rgb_order()
 static void test_host_only_forces_separate_rtg_sprite()
 {
 	const int host_only = 2;
-	const int magic_untrap = 2;
-	const int middle_untrap = 1;
 
-	const bool enabled = amiberry_cursor_host_only_enabled(1, magic_untrap, magic_untrap, host_only, host_only);
-	expect_true(enabled, "host-only cursor mode must be detected when virtual mouse and Magic Mouse are active");
-	expect_true(!amiberry_cursor_host_only_enabled(0, magic_untrap, magic_untrap, host_only, host_only),
+	const bool enabled = amiberry_cursor_host_only_enabled(1, host_only, host_only, true);
+	expect_true(enabled, "host-only cursor mode must be detected from virtual mouse and cursor selection");
+	expect_true(!amiberry_cursor_host_only_enabled(0, host_only, host_only, true),
 		"host-only cursor mode must require virtual mouse mode");
-	expect_true(!amiberry_cursor_host_only_enabled(1, 0, magic_untrap, host_only, host_only),
-		"host-only cursor mode must require Magic Mouse untrap");
-	expect_true(!amiberry_cursor_host_only_enabled(1, middle_untrap, magic_untrap, host_only, host_only),
-		"host-only cursor mode must not activate for middle-button untrap only");
-	expect_true(!amiberry_cursor_host_only_enabled(1, magic_untrap, magic_untrap, 0, host_only),
+	expect_true(!amiberry_cursor_host_only_enabled(1, 0, host_only, true),
 		"host-only cursor mode must require host-only cursor selection");
+	expect_true(!amiberry_cursor_host_only_enabled(1, host_only, host_only, false),
+		"host-only cursor mode must require a visible host cursor path");
 
 	expect_true(amiberry_cursor_rtg_needs_separate_sprite(false, enabled),
 		"RTG Host Only must force separate P96 sprite handling");
