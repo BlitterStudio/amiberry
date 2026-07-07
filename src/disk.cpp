@@ -327,18 +327,7 @@ static void disk_date (uae_u8 *p)
 	struct mytimeval mtv;
 
 	gettimeofday (&tv, NULL);
-#ifndef __PSP2__
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    struct tm *lt = localtime(&tv.tv_sec);
-    tv.tv_sec -= lt->tm_gmtoff;
-#elif defined(__linux__)
-    extern long timezone;
-    tv.tv_sec -= timezone;
-#else
-    // fallback or no adjustment
-#endif
-
-#endif
+	tv.tv_sec = getlocaltime();
 	mtv.tv_sec = tv.tv_sec;
 	mtv.tv_usec = tv.tv_usec;
 	timeval_to_amiga (&mtv, &days, &mins, &ticks, 50);
