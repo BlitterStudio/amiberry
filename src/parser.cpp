@@ -11,7 +11,9 @@
 
 #include <cstring>
 #include <cstdio>
+#include <filesystem>
 #include <pthread.h>
+#include <string>
 
 #undef SERIAL_ENET
 
@@ -36,6 +38,7 @@
 #include "drawing.h"
 #include "vpar.h"
 #include "ahi_v1.h"
+#include "zfile.h"
 
 #ifdef POSIX_SERIAL
 #include <termios.h>
@@ -80,10 +83,13 @@ struct termios tios;
 
 #define PARALLEL_MODE_NONE 0
 #define PARALLEL_MODE_TCP_PRINTER 1
+#define PARALLEL_MODE_FILE_PRINTER 2
 
 int parallel_mode = 0;
 static uae_socket parallel_tcp_listener = UAE_SOCKET_INVALID;
 static uae_socket parallel_tcp = UAE_SOCKET_INVALID;
+static struct zfile* parallel_file = nullptr;
+static std::string parallel_file_path;
 
 static bool parallel_tcp_connected(void)
 {
@@ -137,6 +143,91 @@ static void parallel_tcp_close(void)
 	write_log("TCP: Parallel listener socket closed\n");
 }
 
+static bool is_file_printer_name(const TCHAR* name)
+{
+	return name && !_tcsnicmp(name, _T("FILE:"), 5);
+}
+
+static std::filesystem::path get_file_printer_directory()
+{
+	std::filesystem::path directory(currprefs.prtname + 5);
+	if (directory.empty()) {
+		directory = get_data_path();
+	} else if (directory.is_relative()) {
+		directory = std::filesystem::path(get_data_path()) / directory;
+	}
+	return directory;
+}
+
+static bool open_file_printer()
+{
+	if (parallel_file != nullptr) {
+		return true;
+	}
+	if (!is_file_printer_name(currprefs.prtname)) {
+		return false;
+	}
+
+	const auto directory = get_file_printer_directory();
+	if (directory.empty()) {
+		write_log(_T("PRINTER: File printer directory is empty.\n"));
+		return false;
+	}
+
+	std::error_code ec;
+	std::filesystem::create_directories(directory, ec);
+	if (ec) {
+		const auto dir = directory.string();
+		write_log(_T("PRINTER: Failed to create file printer directory \"%s\": %s\n"), dir.c_str(), ec.message().c_str());
+		return false;
+	}
+
+	for (int idx = 0; idx < 1000; idx++) {
+		char filename[32];
+		std::snprintf(filename, sizeof filename, "Print_%03d.dat", idx);
+		const auto candidate = directory / filename;
+		if (std::filesystem::exists(candidate, ec) && !ec) {
+			continue;
+		}
+
+		parallel_file_path = candidate.string();
+		parallel_file = zfile_fopen(parallel_file_path.c_str(), _T("wb"));
+		if (parallel_file != nullptr) {
+			write_log(_T("PRINTER: Opening file printer \"%s\".\n"), parallel_file_path.c_str());
+			return true;
+		}
+
+		write_log(_T("PRINTER: ERROR - Couldn't open file printer \"%s\" for output.\n"), parallel_file_path.c_str());
+		parallel_file_path.clear();
+		return false;
+	}
+
+	const auto dir = directory.string();
+	write_log(_T("PRINTER: ERROR - No free Print_###.dat filename in \"%s\".\n"), dir.c_str());
+	return false;
+}
+
+void closeprinter(void)
+{
+	if (parallel_file != nullptr) {
+		zfile_fclose(parallel_file);
+		parallel_file = nullptr;
+		write_log(_T("PRINTER: Closing file printer \"%s\".\n"), parallel_file_path.c_str());
+		parallel_file_path.clear();
+	}
+}
+
+int isprinteropen(void)
+{
+	if (parallel_file != nullptr) {
+		return 1;
+	}
+	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER && parallel_tcp_listener != UAE_SOCKET_INVALID) {
+		return 1;
+	}
+	return 0;
+}
+
 void parallel_ack(void)
 {
 	if (0) {
@@ -158,15 +249,18 @@ void parallel_poll_ack(void)
 
 void parallel_exit(void)
 {
+	closeprinter();
 	parallel_tcp_close();
 #ifdef WITH_VPAR
 	vpar_close();
 #endif
+	parallel_mode = PARALLEL_MODE_NONE;
 }
 
 int isprinter (void)
 {
-	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {
+	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER ||
+		parallel_mode == PARALLEL_MODE_FILE_PRINTER) {
 		return 1;
 	}
 #ifdef WITH_VPAR
@@ -179,7 +273,7 @@ int isprinter (void)
 
 void flushprinter (void)
 {
-	// not implemented
+	closeprinter();
 }
 
 void doprinter (uae_u8 val)
@@ -189,6 +283,11 @@ void doprinter (uae_u8 val)
 			if (uae_socket_write(parallel_tcp, &val, 1) != 1) {
 				parallel_tcp_disconnect ();
 			}
+		}
+	} else if (parallel_mode == PARALLEL_MODE_FILE_PRINTER) {
+		if (open_file_printer() && zfile_fwrite(&val, 1, 1, parallel_file) != 1) {
+			write_log(_T("PRINTER: ERROR - Couldn't write to file printer \"%s\".\n"), parallel_file_path.c_str());
+			closeprinter();
 		}
 	}
 
@@ -577,8 +676,14 @@ void initparallel (void)
 #ifdef AMIBERRY
 	write_log("initparallel\n");
 #endif
+	closeprinter();
+	parallel_tcp_close();
+	parallel_mode = PARALLEL_MODE_NONE;
+
 	if (_tcsnicmp(currprefs.prtname, "tcp:", 4) == 0) {
 		parallel_tcp_open(currprefs.prtname);
+	} else if (is_file_printer_name(currprefs.prtname)) {
+		parallel_mode = PARALLEL_MODE_FILE_PRINTER;
 	} else {
 #ifdef WITH_VPAR
 		vpar_open();

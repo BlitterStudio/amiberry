@@ -885,8 +885,8 @@ struct uae_prefs {
 	TCHAR cartident[256];
 	int cart_internal;
 	TCHAR pci_devices[256];
-	TCHAR prtname[256];
-	TCHAR sername[256];
+	TCHAR prtname[MAX_DPATH];
+	TCHAR sername[MAX_DPATH];
 	TCHAR a2065name[MAX_DPATH];
 	TCHAR ne2000pciname[MAX_DPATH];
 	TCHAR ne2000pcmcianame[MAX_DPATH];

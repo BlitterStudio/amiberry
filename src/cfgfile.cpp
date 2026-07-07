@@ -8112,7 +8112,10 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 
 	case 'r': cmdpath (p->romfile, arg, 255); break;
 	case 'K': cmdpath (p->romextfile, arg, 255); break;
-	case 'p': _tcsncpy (p->prtname, arg, 255); p->prtname[255] = 0; break;
+	case 'p':
+		_tcsncpy(p->prtname, arg, sizeof p->prtname / sizeof(TCHAR) - 1);
+		p->prtname[sizeof p->prtname / sizeof(TCHAR) - 1] = 0;
+		break;
 	/*  case 'I': _tcsncpy (p->sername, arg, 255); p->sername[255] = 0; currprefs.use_serial = 1; break; */
 	case 'm': case 'M': parse_filesys_spec (p, c == 'M', arg); break;
 	case 'W': parse_hardfile_spec (p, arg); break;
