@@ -1419,40 +1419,22 @@ again:
         break;
 
     case 3:
-        if ((insn & (1 << 29)) == 0) {
-            /* Memory move.  */
+        /* Memory Move (DCMD 0xc0) is the only group-3 instruction on the
+           53C710; the Load/Store forms are 53C810+. Reject anything else as
+           an illegal instruction rather than running away on garbage fetched
+           from a non-responding address. */
+        if ((insn >> 24) != 0xc0) {
+            lsi_script_dma_interrupt(s, LSI_DSTAT_IID);
+            break;
+        }
+        {
             uint32_t dest;
             /* ??? The docs imply the destination address is loaded into
                the TEMP register.  However the Linux drivers rely on
-               the value being presrved.  */
+               the value being preserved.  */
             dest = read_dword(s, s->dsp);
             s->dsp += 4;
             lsi_memcpy(s, dest, addr, insn & 0xffffff);
-        } else {
-            uint8_t data[7];
-            int reg;
-            int n;
-            int i;
-
-            if (insn & (1 << 28)) {
-                addr = s->dsa + sextract32(addr, 0, 24);
-            }
-            n = (insn & 7);
-            reg = (insn >> 16) & 0xff;
-            if (insn & (1 << 24)) {
-				pci710_dma_read(pci_dev, addr, data, n);
-                DPRINTF("Load reg 0x%x size %d addr 0x%08x = %08x\n", reg, n,
-                        addr, *(int *)data);
-                for (i = 0; i < n; i++) {
-                    lsi_reg_writeb(s, reg + i, data[i]);
-                }
-            } else {
-                DPRINTF("Store reg 0x%x size %d addr 0x%08x\n", reg, n, addr);
-                for (i = 0; i < n; i++) {
-                    data[i] = lsi_reg_readb(s, reg + i);
-                }
-				pci710_dma_write(pci_dev, addr, data, n);
-            }
         }
     }
     if (insn_processed > 10000 && !s->waiting) {
