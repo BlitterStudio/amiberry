@@ -1651,6 +1651,23 @@ static uint8_t lsi_reg_readb(LSIState710 *s, int offset)
 }
 #endif
 
+/* SCSI loopback self-test (ncr7xx -t8): with CTEST4.SLBE (0x10) and
+   SCNTL1.ADB set, the SODL/SOCL output latches feed straight back into the
+   SBDL/SBCL input registers - there is no real bus on the emulated board. */
+static bool lsi_scsi_loopback(LSIState710 *s)
+{
+    return (s->ctest4 & 0x10) && (s->scntl1 & LSI_SCNTL1_ADB);
+}
+
+/* Generated SCSI data parity: odd by default, even when SCNTL1.AESP is set. */
+static int lsi_scsi_parity(LSIState710 *s, uint8_t val)
+{
+    int p = __builtin_popcount(val) & 1;
+    if (!(s->scntl1 & LSI_SCNTL1_AESP))
+        p ^= 1;
+    return p;
+}
+
 static uint8_t lsi_reg_readb2(LSIState710 *s, int offset)
 {
     uint8_t tmp;
@@ -1683,7 +1700,19 @@ static uint8_t lsi_reg_readb2(LSIState710 *s, int offset)
         /* This is needed by the linux drivers.  We currently only update it
            during the MSG IN phase.  */
         return s->sidl;
+    case 0xa: /* SBDL - SCSI bus data lines */
+        /* Loopback self-test: the SODL output latch feeds straight back;
+           the idle bus otherwise reads all-deasserted. */
+        return lsi_scsi_loopback(s) ? s->sodl : 0;
     case 0xb: /* SBCL */
+		if (lsi_scsi_loopback(s)) {
+			/* Loopback: SBCL mirrors the SOCL latch. ACK/REQ (bits 3 and 6)
+			   assert only in target mode (SCNTL0.TRG, bit 0). */
+			tmp = s->socl;
+			if (!(s->scntl0 & 0x01))
+				tmp &= ~0x48;
+			return tmp;
+		}
 		tmp = 0;
 		if (s->scntl1 & LSI_SCNTL1_CON) {
 			/* NetBSD 1.x checks for REQ */
@@ -1707,7 +1736,16 @@ static uint8_t lsi_reg_readb2(LSIState710 *s, int offset)
         lsi_update_irq(s);
        return tmp;
     case 0x0e: /* SSTAT1 */
-        return s->sstat1;
+        /* PAR (bit 0) is the generated parity of the driven data in
+           loopback with parity generation (SCNTL0.EPG, bit 2); RST (bit 1)
+           reflects a SCNTL1.RST bus-reset request. */
+        tmp = s->sstat1 & ~0x03;
+        if (s->scntl1 & LSI_SCNTL1_RST)
+            tmp |= 0x02;
+        if (lsi_scsi_loopback(s) && (s->scntl0 & 0x04)
+            && lsi_scsi_parity(s, s->sodl))
+            tmp |= 0x01;
+        return tmp;
     case 0x0f: /* SSTAT2 */
         /* High nibble is the SCSI FIFO byte count. */
         return (s->sstat2 & 0x0f) | (s->scsi_fifo_count << 4);
@@ -1855,9 +1893,12 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
             s->scsi_fifo[s->scsi_fifo_count++] = (par << 8) | val;
         }
         break;
-	case 0x0b: /* SBCL */
-		lsi_set_phase (s, val & PHASE_MASK);
-		break;
+    case 0x07: /* SOCL - SCSI output control latch */
+        s->socl = val;
+        break;
+    case 0x0b: /* SBCL */
+        lsi_set_phase (s, val & PHASE_MASK);
+        break;
     case 0x0c: case 0x0d: case 0x0e: case 0x0f:
         /* Linux writes to these readonly registers on startup.  */
         return;
