@@ -749,6 +749,14 @@ static void a2065_hsync_handler(void)
 {
 	static int cnt;
 
+	/* Pull host->guest frames out of the uaenet worker queue into the a2065
+	 * receive_buffer. Delivery was refactored to poll-based (uaenet_receive_poll
+	 * on the emulation thread) and wired into sana2, but the a2065 hsync handler
+	 * was left only draining its own buffer -- so received frames never arrived.
+	 * Without this, host->guest networking is dead (ping/telnet/ftp), while
+	 * guest->host TX still works. */
+	if (td != NULL)
+		ethernet_receive_poll(td, sysdata);
 	receive_queue_drain();
 
 	cnt--;
