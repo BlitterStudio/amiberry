@@ -429,6 +429,11 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 
 	// winpcap does not include checksum bytes
 	if (!(csr[4] & 0x0400)) { // ASTRP_RCV
+		if (len > MAX_PACKET_SIZE - 4) {
+			if (log_a2065)
+				write_log (_T("7990: oversize frame with FCS, %d bytes\n"), len);
+			return;
+		}
 		crc32 = get_crc32 (d, len);
 		d[len++] = crc32 >> 24;
 		d[len++] = crc32 >> 16;
@@ -525,15 +530,41 @@ static bool receive_queue_pop(uae_u8 *data, int *len)
 	return got;
 }
 
-static bool receive_space_available(int len)
+static int receive_packet_buffer_size(int len)
 {
-	int needed;
-
-	if (!am_initialized || !(csr[0] & CSR0_RXON) || !am_rdr_rlen)
-		return false;
-	needed = len < 60 ? 60 : len;
+	if (len <= 0 || len > MAX_PACKET_SIZE)
+		return -1;
+	if (!(csr[4] & 0x0400) && len > MAX_PACKET_SIZE - 4) /* ASTRP_RCV */
+		return -1;
+	int needed = len < 60 ? 60 : len;
 	if (!(csr[4] & 0x0400)) /* ASTRP_RCV */
 		needed += 4;
+	return needed;
+}
+
+static bool receive_packet_can_fit(int len)
+{
+	int needed = receive_packet_buffer_size(len);
+
+	if (needed < 0 || !am_initialized || !am_rdr_rlen)
+		return false;
+	for (int i = 0; i < am_rdr_rlen; i++) {
+		const int offset = (rdr_offset + i) % am_rdr_rlen;
+		const uae_u32 off = am_rdr_rdra + offset * 8;
+		const uae_u16 rmd2 = get_ram_word(off + 4);
+		needed -= 65536 - rmd2;
+		if (needed <= 0)
+			return true;
+	}
+	return false;
+}
+
+static bool receive_space_available(int len)
+{
+	int needed = receive_packet_buffer_size(len);
+
+	if (needed < 0 || !am_initialized || !(csr[0] & CSR0_RXON) || !am_rdr_rlen)
+		return false;
 	for (int i = 0; i < am_rdr_rlen; i++) {
 		const int offset = (rdr_offset + i) % am_rdr_rlen;
 		const uae_u32 off = am_rdr_rdra + offset * 8;
@@ -556,6 +587,13 @@ static void receive_queue_drain(void)
 		int len = receive_queue_peek_size();
 		if (len <= 0)
 			return;
+		if (!receive_packet_can_fit(len)) {
+			if (!receive_queue_pop(packet, &len))
+				return;
+			if (log_a2065)
+				write_log(_T("7990: dropping frame that does not fit receive ring, %d bytes\n"), len);
+			continue;
+		}
 		if (!receive_space_available(len))
 			return;
 		if (!receive_queue_pop(packet, &len))

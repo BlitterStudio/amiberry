@@ -38,6 +38,7 @@ extern struct in_addr alias_addr;
 extern struct in_addr our_addr;
 extern struct in_addr loopback_addr;
 extern struct in_addr dns_addr;
+extern int dns_addr_valid;
 extern char *username;
 extern char *socket_path;
 extern int towrite_max;

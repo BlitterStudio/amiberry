@@ -200,6 +200,11 @@ void icmp_input(struct mbuf *m, int hlen)
 	/* It's an alias */
 	switch(ntohl(so->so_faddr.s_addr) & 0xff) {
 	case CTL_DNS:
+	  if (!dns_addr_valid) {
+	    icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_NET, 0, "DNS disabled");
+	    udp_detach(so);
+	    goto end_error;
+	  }
 	  addr.sin_addr = dns_addr;
 	  break;
 	case CTL_ALIAS:

@@ -403,6 +403,11 @@ int tcp_fconnect(struct socket *so)
       /* It's an alias */
       switch(ntohl(so->so_faddr.s_addr) & 0xff) {
       case CTL_DNS:
+	if (!dns_addr_valid) {
+	  closesocket(s);
+	  so->s = -1;
+	  return 0;
+	}
 	addr.sin_addr = dns_addr;
 	break;
       case CTL_ALIAS:
