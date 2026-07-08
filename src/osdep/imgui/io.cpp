@@ -1,10 +1,14 @@
 #include "imgui.h"
 #include "sysdeps.h"
+#include <string>
+#include <vector>
 #include "imgui_panels.h"
 #include "options.h"
 #include "sounddep/sound.h"
 #include "parser.h"
+#include "file_dialog.h"
 #include "gui/gui_handling.h"
+#include "uae.h"
 
 static const char* dongle_items[] = {
 	"none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer",
@@ -18,6 +22,57 @@ static std::vector<std::string> sampler_names;
 static std::vector<std::string> serial_port_names;
 static std::vector<std::string> midi_in_names;
 static std::vector<std::string> midi_out_names;
+
+static constexpr const char* PRINTER_FILE_DIALOG_KEY = "IO_PRINTER_FILE";
+
+static bool IsPrintToFile()
+{
+	return !_tcsnicmp(changed_prefs.prtname, _T("FILE:"), 5);
+}
+
+static std::string GetPrintToFileDefaultDirectory()
+{
+	return home_dir.empty() ? get_data_path() : home_dir;
+}
+
+static std::string GetPrintToFileDirectory()
+{
+	if (!IsPrintToFile())
+		return GetPrintToFileDefaultDirectory();
+
+	char* path = ua(changed_prefs.prtname + 5);
+	std::string result = path ? path : "";
+	xfree(path);
+	if (result.empty())
+		result = GetPrintToFileDefaultDirectory();
+	return result;
+}
+
+static void SetPrintToFileDirectory(const std::string& path)
+{
+	const std::string printer = "FILE:" + path;
+	au_copy(changed_prefs.prtname, sizeof changed_prefs.prtname / sizeof(TCHAR), printer.c_str());
+	changed_prefs.samplersoundcard = -1;
+}
+
+static std::string GetPrinterLabel()
+{
+	if (IsPrintToFile()) {
+		const auto directory = GetPrintToFileDirectory();
+		if (!directory.empty())
+			return "Print to file (" + directory + ")";
+		return "Print to file";
+	}
+
+	if (changed_prefs.prtname[0]) {
+		char* current_printer = ua(changed_prefs.prtname);
+		std::string label = current_printer ? current_printer : "";
+		xfree(current_printer);
+		return label;
+	}
+
+	return "none";
+}
 
 static void RefreshDevices()
 {
@@ -111,6 +166,37 @@ void render_panel_io()
 	// Parallel Port
 	// ---------------------------------------------------------
 	BeginGroupBox("Parallel Port");
+
+	int printer_idx = 0;
+	if (IsPrintToFile())
+		printer_idx = 1;
+	else if (changed_prefs.prtname[0])
+		printer_idx = 2;
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("Printer:"); ImGui::SameLine();
+	ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+	const auto printer_label = GetPrinterLabel();
+	if (ImGui::BeginCombo("##Printer", printer_label.c_str())) {
+		if (ImGui::Selectable("none", printer_idx == 0)) {
+			changed_prefs.prtname[0] = 0;
+		}
+		if (ImGui::Selectable("Print to file", printer_idx == 1)) {
+			OpenDirDialogKey(PRINTER_FILE_DIALOG_KEY, GetPrintToFileDirectory());
+		}
+		if (printer_idx == 2) {
+			ImGui::Selectable(printer_label.c_str(), true);
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	ShowHelpMarker("Write Amiga parallel printer output to numbered Print_###.dat files in the selected folder");
+
+	std::string printer_path;
+	if (ConsumeDirDialogResultKey(PRINTER_FILE_DIALOG_KEY, printer_path)) {
+		SetPrintToFileDirectory(printer_path);
+	}
+	ImGui::Spacing();
 
 	// Sampler
 	int sampler_idx = changed_prefs.samplersoundcard + 1;

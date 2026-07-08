@@ -356,6 +356,9 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/io.cpp
 		src/osdep/imgui/misc.cpp
 		src/osdep/imgui/paths.cpp
+		src/osdep/imgui/play.cpp
+		src/osdep/imgui/play_content_detection.cpp
+		src/osdep/imgui/play_setup.cpp
 		src/osdep/imgui/prio.cpp
 		src/osdep/imgui/quickstart.cpp
 		src/osdep/imgui/ram.cpp

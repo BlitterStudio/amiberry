@@ -5011,6 +5011,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
 
 #ifdef AMIBERRY
+	cfgfile_target_dwrite_str_escape(f, _T("parallel_port"), p->prtname[0] ? p->prtname : _T("none"));
 	cfgfile_target_dwrite_str_escape(f, _T("midiout_device_name"), p->midioutdev[0] ? p->midioutdev : _T("none"));
 	cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), p->midiindev[0] ? p->midiindev : _T("none"));
 #else
@@ -5418,7 +5419,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 
 	if (cfgfile_yesno(option, value, _T("start_not_captured"), &p->start_uncaptured))
 		return 1;
-	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], 256)) {
+	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], sizeof p->sername / sizeof(TCHAR))) {
 		if (p->sername[0])
 			p->use_serial = true;
 		else
@@ -5426,12 +5427,12 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		return 1;
 	}
 
-	if (cfgfile_string_escape(option, value, _T("parallel_port"), &p->prtname[0], 256)) {
+	if (cfgfile_string_escape(option, value, _T("parallel_port"), &p->prtname[0], sizeof p->prtname / sizeof(TCHAR))) {
 		if (!_tcscmp(p->prtname, _T("none")))
 			p->prtname[0] = 0;
 		if (!_tcscmp(p->prtname, _T("default"))) {
 			p->prtname[0] = 0;
-			//unsigned long size = 256;
+			//unsigned long size = sizeof p->prtname / sizeof(TCHAR);
 			//GetDefaultPrinter(p->prtname, &size);
 		}
 		return 1;

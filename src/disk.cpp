@@ -327,18 +327,7 @@ static void disk_date (uae_u8 *p)
 	struct mytimeval mtv;
 
 	gettimeofday (&tv, NULL);
-#ifndef __PSP2__
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    struct tm *lt = localtime(&tv.tv_sec);
-    tv.tv_sec -= lt->tm_gmtoff;
-#elif defined(__linux__)
-    extern long timezone;
-    tv.tv_sec -= timezone;
-#else
-    // fallback or no adjustment
-#endif
-
-#endif
+	tv.tv_sec = getlocaltime();
 	mtv.tv_sec = tv.tv_sec;
 	mtv.tv_usec = tv.tv_usec;
 	timeval_to_amiga (&mtv, &days, &mins, &ticks, 50);
@@ -2851,26 +2840,33 @@ static int drive_write_adf_amigados (drive *drv)
 }
 
 /* write raw track to disk file */
-static int drive_write_ext2 (uae_u16 *bigmfmbuf, struct zfile *diskfile, trackid *ti, int tracklen)
+static int drive_write_ext2(uae_u16 *bigmfmbuf, struct zfile *diskfile, trackid *ti, int tracklen)
 {
-	int len, i, offset;
-
-	offset = 0;
-	len = (tracklen + 7) / 8;
-	if (len > ti->len) {
-		write_log (_T("disk raw write: image file's track %d is too small (%d < %d)!\n"), ti->track, ti->len, len);
-		offset = (len - ti->len) / 2;
-		len = ti->len;
+	int len;
+	if (floppy_writemode <= 0) {
+		len = FLOPPY_WRITE_LEN * 2;
+		tracklen = len * 8;
+	} else {
+		len = (tracklen + 7) / 8;
+		if (len > ti->len) {
+			write_log(_T("disk raw write: image file's track %d is too small (%d < %d)!\n"), ti->track, ti->len, len);
+		}
 	}
-	diskfile_update (diskfile, ti, tracklen, TRACK_RAW);
-	for (i = 0; i < ti->len / 2; i++) {
-		uae_u16 *mfm = bigmfmbuf + ((i + offset) % MAXMFMBUF);
-		uae_u16 *mfmw = bigmfmbufw + ((i + offset) % MAXMFMBUF);
-		uae_u8 *data = (uae_u8 *) mfm;
-		*mfmw = 256 * *data + *(data + 1);
+	if (len > 0) {
+		if (len > ti->len) {
+			len = ti->len;
+		}
+		int maxlen = len > MAXMFMBUF ? MAXMFMBUF : len;
+		for (int i = 0; i < ti->len / 2; i++) {
+			uae_u16 *mfm = bigmfmbuf + (i % maxlen);
+			uae_u16 *mfmw = bigmfmbufw + (i % maxlen);
+			uae_u8 *data = (uae_u8*)mfm;
+			*mfmw = 256 * *data + *(data + 1);
+		}
+		diskfile_update(diskfile, ti, tracklen, TRACK_RAW);
+		zfile_fseek(diskfile, ti->offs, SEEK_SET);
+		zfile_fwrite(bigmfmbufw, 1, maxlen, diskfile);
 	}
-	zfile_fseek (diskfile, ti->offs, SEEK_SET);
-	zfile_fwrite (bigmfmbufw, 1, len, diskfile);
 	return 1;
 }
 
@@ -2928,7 +2924,7 @@ static bool convert_adf_to_ext2 (drive *drv, int mode)
 	return true;
 }
 
-static void drive_write_data (drive * drv)
+static void drive_write_data (drive *drv)
 {
 	int ret = -1;
 	int tr = drv->cyl * 2 + side;
@@ -4065,9 +4061,12 @@ static int disk_doupdate_write(int floppybits, int trackspeed)
 					for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 						drive *drv2 = &floppy[dr];
 						if (drives[dr]) {
+							if (!drv2->writtento) {
+								drv2->bigmfmbuf[((drv2->mfmpos >> 4) - 1) % drv2->tracklen] = 0x5555;
+								drv2->writtento = 1;
+							}
 							drv2->bigmfmbuf[drv2->mfmpos >> 4] = w;
-							drv2->bigmfmbuf[(drv2->mfmpos >> 4) + 1] = 0x5555;
-							drv2->writtento = 1;
+							drv2->bigmfmbuf[((drv2->mfmpos >> 4) + 1) % drv2->tracklen] = 0x5555;
 #ifdef FLOPPYBRIDGE
 							if (drv2->bridge) {
 								wasBridge = true;
@@ -4098,10 +4097,10 @@ static int disk_doupdate_write(int floppybits, int trackspeed)
 							if ((selected | disabled) & (1 << dr))
 								continue;
 							drive_write_data(drv);
+							}
 						}
 					}
 				}
-			}
 			if (canloaddskbytr()) {
 				dskbytr_val = 0x8000;
 			}

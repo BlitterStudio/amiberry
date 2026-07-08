@@ -257,9 +257,10 @@ static uaecptr oldscr = 0;
 #ifdef AMIBERRY
 static bool magic_mouse_host_only_enabled()
 {
+	const bool host_cursor_available = currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen != GFX_FULLSCREEN;
 	return amiberry_cursor_host_only_enabled(currprefs.input_tablet,
-		currprefs.input_mouse_untrap, MOUSEUNTRAP_MAGIC,
-		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY);
+		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY,
+		host_cursor_available);
 }
 
 static bool p96_needs_separate_cursor_sprite()

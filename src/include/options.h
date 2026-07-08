@@ -570,6 +570,8 @@ struct whdload_custom
 struct whdload_slave
 {
 	std::string filename;
+	std::string sub_path;
+	bool has_sub_path = false;
 	std::string data_path;
 	whdload_custom custom1;
 	whdload_custom custom2;
@@ -883,8 +885,8 @@ struct uae_prefs {
 	TCHAR cartident[256];
 	int cart_internal;
 	TCHAR pci_devices[256];
-	TCHAR prtname[256];
-	TCHAR sername[256];
+	TCHAR prtname[MAX_DPATH];
+	TCHAR sername[MAX_DPATH];
 	TCHAR a2065name[MAX_DPATH];
 	TCHAR ne2000pciname[MAX_DPATH];
 	TCHAR ne2000pcmcianame[MAX_DPATH];
@@ -1245,7 +1247,7 @@ extern bool cfgfile_createconfigstore(struct uae_prefs* p);
 extern void cfgfile_get_shader_config(struct uae_prefs* p, int rtg);
 
 #ifdef AMIBERRY
-extern void whdload_auto_prefs(struct uae_prefs* prefs, const char* filepath);
+extern void whdload_auto_prefs(struct uae_prefs* prefs, const char* filepath, bool preserve_quickstart_hardware = false);
 extern void cd_auto_prefs(struct uae_prefs* prefs, char* filepath);
 extern void symlink_roms(struct uae_prefs* prefs);
 extern void drawbridge_update_profiles(struct uae_prefs* prefs);

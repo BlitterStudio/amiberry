@@ -55,9 +55,11 @@
 #endif
 #include <array>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include "imgui/imgui_panels.h"
 #include "imgui/imgui_help_text.h"
+#include "imgui/play_setup.h"
 #include "icons_fa.h"
 #include "fa_solid_900_compressed.h"
 #include "AmigaTopaz_compressed.h"
@@ -68,7 +70,7 @@ int last_x = 0;
 int last_y = 0;
 
 bool gui_running = false;
-static int last_active_panel = 3;
+static int last_active_panel = 0;
 bool joystick_refresh_needed = false;
 
 // Touch-drag scrolling state (converts finger swipes to ImGui scroll wheel events)
@@ -1875,11 +1877,11 @@ void amiberry_gui_halt()
 	}
 #endif
 #ifdef USE_OPENGL
-	// Restore emulation rendering context (MakeCurrent on emu's GL context +
-	// reset state + rebuild shaders on next frame). Runs wherever the GUI
-	// shared the emulator's window — Windows, KMSDRM, x11-without-WM.
-	if (gui_use_opengl && mon->amiga_window && g_renderer && g_renderer->has_context()) {
-		g_renderer->restore_emulation_context(mon->amiga_window);
+	// Restore the emulation GL context even after a separate SDL-renderer GUI.
+	// Some backends can leave presentation state such as swap interval changed.
+	if (auto* gl_renderer = get_opengl_renderer();
+		gl_renderer && mon->amiga_window && gl_renderer->has_context()) {
+		gl_renderer->restore_emulation_context(mon->amiga_window);
 	}
 #endif
 #ifdef USE_VULKAN
@@ -1961,11 +1963,55 @@ void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 
 // Provide IMGUI categories using centralized panel list
 ConfigCategory categories[] = {
-#define PANEL(id, label, img, ico) { label, img, ico, render_panel_##id, help_text_##id },
+#define PANEL(id, label, img, ico, group_name, expert, order) \
+	{ #id, label, img, ico, group_name, expert, order, render_panel_##id, help_text_##id },
 	IMGUI_PANEL_LIST
 #undef PANEL
-	{ nullptr, nullptr, nullptr, nullptr, nullptr }
+	{ nullptr, nullptr, nullptr, nullptr, nullptr, false, -1, nullptr, nullptr }
 };
+
+int gui_find_panel_index(const char* id)
+{
+	if (!id)
+		return -1;
+
+	for (int i = 0; categories[i].category != nullptr; ++i) {
+		if (categories[i].id && strcmp(categories[i].id, id) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+bool gui_active_panel_is(const char* id)
+{
+	const int index = gui_find_panel_index(id);
+	return index >= 0 && last_active_panel == index;
+}
+
+void gui_show_panel(const char* id, const bool enable_expert_settings)
+{
+	const int index = gui_find_panel_index(id);
+	if (index < 0)
+		return;
+
+	if (enable_expert_settings)
+		play_set_expert_settings_enabled(true);
+	last_active_panel = index;
+}
+
+void gui_start_from_current_config()
+{
+	if (start_disabled)
+		return;
+
+	const bool has_play_selection = play_has_content_selection();
+	if (has_play_selection && !play_prepare_selected_content_for_start())
+		return;
+
+	uae_reset(0, 1);
+	gui_running = false;
+}
 
 void disable_resume()
 {
@@ -2021,8 +2067,9 @@ void run_gui()
 	if (perf_monitor_warning_pending())
 		open_perf_warning_popup = true;
 
-	if (!emulating && amiberry_options.quickstart_start)
-		last_active_panel = 2;
+	if (!emulating && strlen(last_loaded_config) == 0)
+		gui_show_panel(amiberry_options.quickstart_start ? "quickstart" : "play",
+			amiberry_options.quickstart_start);
 
 	// Main loop
 	while (gui_running) {
@@ -2062,8 +2109,7 @@ void run_gui()
 						gui_running = false;
 					}
 					else {
-						uae_reset(0, 1);
-						gui_running = false;
+						gui_start_from_current_config();
 					}
 				}
 			}
@@ -2263,6 +2309,19 @@ void run_gui()
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 		ImGui::Dummy(ImVec2(0, 4.0f));
 
+		bool expert_mode = play_expert_settings_enabled();
+		if (AmigaCheckbox("Expert settings", &expert_mode)) {
+			play_set_expert_settings_enabled(expert_mode);
+			if (!expert_mode && last_active_panel >= 0 && categories[last_active_panel].expert_only)
+				gui_show_panel("play");
+		}
+		ShowHelpMarker("Show all advanced emulator panels. Turn this off for the focused Play setup flow.");
+		if (!expert_mode && (last_active_panel < 0 || categories[last_active_panel].category == nullptr ||
+			categories[last_active_panel].expert_only || categories[last_active_panel].simple_order < 0)) {
+			gui_show_panel("play");
+		}
+		ImGui::Dummy(ImVec2(0, 4.0f));
+
 		ensure_sidebar_icons_loaded();
 
  		const ImGuiStyle& s = ImGui::GetStyle();
@@ -2276,12 +2335,12 @@ void run_gui()
 		struct SidebarGroup { int first_index; const char* label; const char* key; };
 		static const SidebarGroup sidebar_groups[] = {
 			{ 0,  "General",    "General" },
-			{ 4,  "Hardware",   "Hardware" },
-			{ 9,  "Storage",    "Storage" },
-			{ 11, "Expansion",  "Expansion" },
-			{ 14, "Output",     "Output" },
-			{ 17, "Input / IO", "InputIO" },
-			{ 20, "Utility",    "Utility" },
+			{ 5,  "Hardware",   "Hardware" },
+			{ 10, "Storage",    "Storage" },
+			{ 12, "Expansion",  "Expansion" },
+			{ 15, "Output",     "Output" },
+			{ 18, "Input / IO", "InputIO" },
+			{ 21, "Utility",    "Utility" },
 		};
 		constexpr int num_groups = sizeof(sidebar_groups) / sizeof(sidebar_groups[0]);
 		int next_group = 0;
@@ -2327,105 +2386,73 @@ void run_gui()
 			nav_collapse_loaded = true;
 		}
 
+		int total_panels = 0;
+		while (categories[total_panels].category != nullptr) total_panels++;
+
+		auto group_of = [&](int idx) -> int {
+			int gg = 0;
+			for (int k = 1; k < num_groups; ++k) {
+				if (idx >= sidebar_groups[k].first_index) gg = k; else break;
+			}
+			return gg;
+		};
+		auto panel_matches_filter = [&](int idx) -> bool {
+			return !has_filter || icontains(categories[idx].category, sidebar_filter);
+		};
+		auto panel_visible_for_nav = [&](int idx) -> bool {
+			if (idx < 0 || idx >= total_panels)
+				return false;
+			if (!panel_matches_filter(idx))
+				return false;
+			if (!expert_mode)
+				return !categories[idx].expert_only && categories[idx].simple_order >= 0;
+			if (has_filter)
+				return true;
+			const int gg = group_of(idx);
+			if (gg == 0)
+				return true;
+			const int group_end = (gg + 1 < num_groups) ? sidebar_groups[gg + 1].first_index : total_panels;
+			const bool active_in_group = last_active_panel >= sidebar_groups[gg].first_index &&
+				last_active_panel < group_end;
+			return !section_collapsed[gg] || active_in_group;
+		};
+		auto build_visible_indices = [&]() {
+			std::vector<int> indices;
+			for (int i = 0; i < total_panels; ++i) {
+				if (!panel_visible_for_nav(i))
+					continue;
+				indices.push_back(i);
+			}
+			if (!expert_mode) {
+				std::stable_sort(indices.begin(), indices.end(), [](const int a, const int b) {
+					return categories[a].simple_order < categories[b].simple_order;
+				});
+			}
+			return indices;
+		};
+
 		// Keyboard navigation (when filter box is not focused)
 		if (!ImGui::GetIO().WantTextInput) {
-			int total_panels_nav = 0;
-			while (categories[total_panels_nav].category != nullptr) total_panels_nav++;
-
-			auto group_of = [&](int idx) -> int {
-				int gg = 0;
-				for (int k = 1; k < num_groups; ++k) {
-					if (idx >= sidebar_groups[k].first_index) gg = k; else break;
-				}
-				return gg;
-			};
-			auto nav_hidden = [&](int idx) -> bool {
-				if (has_filter) return !icontains(categories[idx].category, sidebar_filter);
-				const int gg = group_of(idx);
-				if (gg == 0) return false;        // General always visible
-				return section_collapsed[gg];     // collapsed sections are skipped
-			};
-
-			if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
-				int next = last_active_panel - 1;
-				while (next >= 0 && nav_hidden(next)) --next;
-				if (next >= 0) last_active_panel = next;
+			const std::vector<int> visible_indices = build_visible_indices();
+			const auto current = std::find(visible_indices.begin(), visible_indices.end(), last_active_panel);
+			if (ImGui::IsKeyPressed(ImGuiKey_UpArrow) && !visible_indices.empty()) {
+				if (current == visible_indices.end())
+					last_active_panel = visible_indices.front();
+				else if (current != visible_indices.begin())
+					last_active_panel = *std::prev(current);
 			}
-			if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
-				int next = last_active_panel + 1;
-				while (next < total_panels_nav && nav_hidden(next)) ++next;
-				if (next < total_panels_nav) last_active_panel = next;
+			if (ImGui::IsKeyPressed(ImGuiKey_DownArrow) && !visible_indices.empty()) {
+				if (current == visible_indices.end())
+					last_active_panel = visible_indices.front();
+				else {
+					const auto next = std::next(current);
+					if (next != visible_indices.end())
+						last_active_panel = *next;
+				}
 			}
 		}
 
-		int total_panels = 0;
-		while (categories[total_panels].category != nullptr) total_panels++;
-		bool any_rendered = false;
-		bool prev_group_collapsed = false;
-		for (int i = 0; categories[i].category != nullptr; ++i) {
-			if (has_filter && !icontains(categories[i].category, sidebar_filter))
-				continue;
-
-			if (next_group < num_groups && i >= sidebar_groups[next_group].first_index) {
-				const int g = next_group;
-				const int g_end = (g + 1 < num_groups) ? sidebar_groups[g + 1].first_index : total_panels;
-				bool group_collapsed = false;
-				if (group_has_visible(g)) {
-					// Separate groups only after an expanded one; consecutive
-					// collapsed headers stack tightly (just the ItemSpacing gap).
-					if (any_rendered && !prev_group_collapsed) {
-						ImGui::Dummy(ImVec2(0, 4.0f));
-					}
-					const bool collapsible = (g != 0); // General is always visible
-					// The active panel's section auto-expands so its highlight is never hidden.
-					const bool active_in = (last_active_panel >= sidebar_groups[g].first_index &&
-						last_active_panel < g_end);
-					group_collapsed = collapsible && section_collapsed[g] && !has_filter && !active_in;
-					ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-					label_col.w *= 0.7f;
-					std::string upper_label;
-					for (const char* c = sidebar_groups[g].label; *c; ++c)
-						upper_label += static_cast<char>(toupper(static_cast<unsigned char>(*c)));
-					if (collapsible) {
-						const char* chevron = group_collapsed ? ICON_FA_CHEVRON_RIGHT : ICON_FA_CHEVRON_DOWN;
-						// "###secN" keeps the widget ID stable while the chevron glyph changes.
-						std::string header = std::string(chevron) + "  " + upper_label + "###sec" + std::to_string(g);
-						ImVec4 hover_col = lighten(col_act, 0.05f); hover_col.w = 0.25f;
-						ImGui::PushStyleColor(ImGuiCol_Text, label_col);
-						ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
-						ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hover_col);
-						ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0, 0, 0, 0));
-						ImGui::SetWindowFontScale(0.85f);
-						if (ImGui::Selectable(header.c_str(), false)) {
-							section_collapsed[g] = !section_collapsed[g];
-							set_nav_section_collapsed(sidebar_groups[g].key, section_collapsed[g]);
-						}
-						ImGui::SetWindowFontScale(1.0f);
-						ImGui::PopStyleColor(4);
-					} else {
-						ImGui::PushStyleColor(ImGuiCol_Text, label_col);
-						ImGui::SetCursorPosX(ImGui::GetCursorPosX() + s.FramePadding.x + 2.0f);
-						ImGui::SetWindowFontScale(0.85f);
-						ImGui::TextUnformatted(upper_label.c_str());
-						ImGui::SetWindowFontScale(1.0f);
-						ImGui::PopStyleColor();
-					}
-					if (!group_collapsed)
-						ImGui::Dummy(ImVec2(0, 2.0f));
-				}
-				next_group++;
-				while (next_group < num_groups && sidebar_groups[next_group].first_index <= i)
-					next_group++;
-				prev_group_collapsed = group_collapsed;
-				if (group_collapsed) {
-					// Header drawn; skip this group's rows. Park i at the group's last
-					// index so the for-loop's ++i lands on the next group's first index.
-					any_rendered = true;
-					i = g_end - 1;
-					continue;
-				}
-			}
-			any_rendered = true;
+		auto render_sidebar_row = [&](const int i) {
 			ImGui::Indent(6.0f);
 			const bool selected = (last_active_panel == i);
 			ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
@@ -2504,6 +2531,80 @@ void run_gui()
 				// No icon at all
 				float text_y = pos.y + (row_total_h - text_h) * 0.5f;
 				dl->AddText(ImVec2(pos.x + pad_x, text_y), ImGui::GetColorU32(ImGuiCol_Text), categories[i].category);
+			}
+		};
+
+		if (!expert_mode) {
+			for (const int i : build_visible_indices())
+				render_sidebar_row(i);
+		} else {
+			bool any_rendered = false;
+			bool prev_group_collapsed = false;
+			for (int i = 0; categories[i].category != nullptr; ++i) {
+				if (!panel_matches_filter(i))
+					continue;
+
+				if (next_group < num_groups && i >= sidebar_groups[next_group].first_index) {
+					const int g = next_group;
+					const int g_end = (g + 1 < num_groups) ? sidebar_groups[g + 1].first_index : total_panels;
+					bool group_collapsed = false;
+					if (group_has_visible(g)) {
+						// Separate groups only after an expanded one; consecutive
+						// collapsed headers stack tightly (just the ItemSpacing gap).
+						if (any_rendered && !prev_group_collapsed) {
+							ImGui::Dummy(ImVec2(0, 4.0f));
+						}
+						const bool collapsible = (g != 0); // General is always visible
+						// The active panel's section auto-expands so its highlight is never hidden.
+						const bool active_in = (last_active_panel >= sidebar_groups[g].first_index &&
+							last_active_panel < g_end);
+						group_collapsed = collapsible && section_collapsed[g] && !has_filter && !active_in;
+						ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+						label_col.w *= 0.7f;
+						std::string upper_label;
+						for (const char* c = sidebar_groups[g].label; *c; ++c)
+							upper_label += static_cast<char>(toupper(static_cast<unsigned char>(*c)));
+						if (collapsible) {
+							const char* chevron = group_collapsed ? ICON_FA_CHEVRON_RIGHT : ICON_FA_CHEVRON_DOWN;
+							// "###secN" keeps the widget ID stable while the chevron glyph changes.
+							std::string header = std::string(chevron) + "  " + upper_label + "###sec" + std::to_string(g);
+							ImVec4 hover_col = lighten(col_act, 0.05f); hover_col.w = 0.25f;
+							ImGui::PushStyleColor(ImGuiCol_Text, label_col);
+							ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+							ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hover_col);
+							ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0, 0, 0, 0));
+							ImGui::SetWindowFontScale(0.85f);
+							if (ImGui::Selectable(header.c_str(), false)) {
+								section_collapsed[g] = !section_collapsed[g];
+								set_nav_section_collapsed(sidebar_groups[g].key, section_collapsed[g]);
+							}
+							ImGui::SetWindowFontScale(1.0f);
+							ImGui::PopStyleColor(4);
+						} else {
+							ImGui::PushStyleColor(ImGuiCol_Text, label_col);
+							ImGui::SetCursorPosX(ImGui::GetCursorPosX() + s.FramePadding.x + 2.0f);
+							ImGui::SetWindowFontScale(0.85f);
+							ImGui::TextUnformatted(upper_label.c_str());
+							ImGui::SetWindowFontScale(1.0f);
+							ImGui::PopStyleColor();
+						}
+						if (!group_collapsed)
+							ImGui::Dummy(ImVec2(0, 2.0f));
+					}
+					next_group++;
+					while (next_group < num_groups && sidebar_groups[next_group].first_index <= i)
+						next_group++;
+					prev_group_collapsed = group_collapsed;
+					if (group_collapsed) {
+						// Header drawn; skip this group's rows. Park i at the group's last
+						// index so the for-loop's ++i lands on the next group's first index.
+						any_rendered = true;
+						i = g_end - 1;
+						continue;
+					}
+				}
+				any_rendered = true;
+				render_sidebar_row(i);
 			}
 		}
 		ImGui::Unindent(4.0f);
@@ -2626,8 +2727,7 @@ void run_gui()
 			}
 		} else {
 			if (AmigaButton(ICON_FA_PLAY " Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
-				uae_reset(0, 1);
-				gui_running = false;
+				gui_start_from_current_config();
 			}
 		}
 		ImGui::PopStyleColor(3);

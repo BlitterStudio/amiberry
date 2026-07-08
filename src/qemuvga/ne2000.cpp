@@ -1211,7 +1211,8 @@ static void gotfunc(void *devv, const uae_u8 *databuf, int len)
 	receive_buffer_write++;
 	receive_buffer_write &= (MAX_RECEIVE_BUFFER_INDEX - 1);
 	uae_sem_post(&ne2000_sem);
-}	
+	device_add_main_thread_callback(ne2000_receive_check);
+}
 
 static void ne2000_hsync_handler(struct pci_board_state *pcibs)
 {

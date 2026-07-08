@@ -200,12 +200,29 @@ void render_panel_whdload()
     ImGui::Text("Slaves:");
     ImGui::SameLine();
     
+    std::vector<std::string> slave_display_names;
+    slave_display_names.reserve(whdload_prefs.slaves.size());
+    for(const auto& s : whdload_prefs.slaves) {
+        if (s.has_sub_path && !s.sub_path.empty())
+            slave_display_names.push_back(s.sub_path + "/" + s.filename);
+        else
+            slave_display_names.push_back(s.filename);
+    }
+
     std::vector<const char*> slave_names;
-    for(const auto& s : whdload_prefs.slaves) slave_names.push_back(s.filename.c_str());
+    for(const auto& s : slave_display_names) slave_names.push_back(s.c_str());
+
+    const auto same_slave = [](const whdload_slave& lhs, const whdload_slave& rhs) {
+        if (lhs.filename != rhs.filename)
+            return false;
+        if (lhs.has_sub_path || rhs.has_sub_path)
+            return lhs.has_sub_path == rhs.has_sub_path && lhs.sub_path == rhs.sub_path;
+        return true;
+    };
     
     int current_slave_idx = -1;
     for(size_t i=0; i<whdload_prefs.slaves.size(); ++i) {
-        if(whdload_prefs.slaves[i].filename == whdload_prefs.selected_slave.filename) {
+        if(same_slave(whdload_prefs.slaves[i], whdload_prefs.selected_slave)) {
             current_slave_idx = (int)i;
             break;
         }

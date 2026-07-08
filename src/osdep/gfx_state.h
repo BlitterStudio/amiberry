@@ -16,9 +16,12 @@
 // Forward declarations
 struct MultiDisplay;
 
+constexpr int ADAPTIVE_SWAP_INTERVAL = -1;
+constexpr int INVALID_SWAP_INTERVAL = -2;
+
 // VSync and vblank state
 struct VSyncState {
-	int current_interval = -1;
+	int current_interval = INVALID_SWAP_INTERVAL;
 	float cached_refresh_rate = 0.0f;
 	bool gl_initialized = false;
 	volatile int waitvblankthread_mode = 0;

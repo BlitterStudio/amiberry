@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro_shared.h"
+#include "libretro_crop_helpers.h"
 #ifdef LIBRETRO
 #include "sdl_compat.h"
 #endif
@@ -2219,15 +2220,6 @@ static void libretro_reset_submitted_crop()
 	libretro_pending_crop_frames = 0;
 }
 
-static bool libretro_crop_expands_to_include_current(const libretro_crop& current, const libretro_crop& next)
-{
-	return next.x <= current.x
-		&& next.y <= current.y
-		&& next.x + next.w >= current.x + current.w
-		&& next.y + next.h >= current.y + current.h
-		&& !libretro_crop_equals(current, next);
-}
-
 static libretro_crop libretro_stabilize_auto_crop(const SDL_Surface* surface, const libretro_crop& crop)
 {
 	if (!crop.active) {
@@ -2255,8 +2247,19 @@ static libretro_crop libretro_stabilize_auto_crop(const SDL_Surface* surface, co
 		libretro_pending_crop_frames++;
 	}
 
-	const int required_frames = libretro_crop_expands_to_include_current(libretro_submitted_crop, crop)
-		? 12 : 60;
+	const LibretroCropRect current_rect = {
+		libretro_submitted_crop.x,
+		libretro_submitted_crop.y,
+		libretro_submitted_crop.w,
+		libretro_submitted_crop.h
+	};
+	const LibretroCropRect next_rect = {
+		crop.x,
+		crop.y,
+		crop.w,
+		crop.h
+	};
+	const int required_frames = libretro_crop_stable_frames_required(current_rect, next_rect);
 	if (libretro_pending_crop_frames >= required_frames) {
 		libretro_submitted_crop = crop;
 		libretro_pending_crop_valid = false;
@@ -2311,6 +2314,30 @@ static uint32_t libretro_crop_rgb_mask(const SDL_Surface* surface)
 	return details->Rmask | details->Gmask | details->Bmask;
 }
 
+static bool libretro_crop_surface_buffer(const SDL_Surface* surface, LibretroCropPixelBuffer& buffer)
+{
+	if (!surface || !surface->pixels || surface->w <= 0 || surface->h <= 0)
+		return false;
+
+	const int bytes_per_pixel = SDL_BYTESPERPIXEL(surface->format);
+	if (bytes_per_pixel != 4)
+		return false;
+
+	const uint32_t rgb_mask = libretro_crop_rgb_mask(surface);
+	if (rgb_mask == 0)
+		return false;
+
+	buffer = {
+		static_cast<const uint8_t*>(surface->pixels),
+		surface->w,
+		surface->h,
+		surface->pitch,
+		bytes_per_pixel,
+		rgb_mask
+	};
+	return true;
+}
+
 static int libretro_crop_minimum_trim_height()
 {
 	return currprefs.gfx_vresolution > VRES_NONDOUBLE ? 360 : 180;
@@ -2322,6 +2349,60 @@ static void libretro_update_crop_aspect(libretro_crop& crop)
 	auto_crop_display_dimensions(crop.w, crop.h, currprefs.gfx_resolution,
 		currprefs.gfx_vresolution, vblank_hz > 55.0f, width, height);
 	crop.aspect = height > 0 ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+}
+
+static bool libretro_visible_content_bounds(const SDL_Surface* surface, LibretroCropRect& bounds)
+{
+	LibretroCropPixelBuffer buffer = {};
+	if (!libretro_crop_surface_buffer(surface, buffer))
+		return false;
+
+	const uint32_t border_color = libretro_crop_read_pixel(surface, 0, 0);
+	if ((border_color & buffer.rgb_mask) != 0)
+		return false;
+
+	return libretro_crop_find_visible_content_bounds(buffer, border_color, bounds);
+}
+
+static void libretro_expand_crop_to_visible_content(const SDL_Surface* surface, libretro_crop& crop)
+{
+	if (!surface || !crop.active)
+		return;
+
+	LibretroCropPixelBuffer buffer = {};
+	if (!libretro_crop_surface_buffer(surface, buffer))
+		return;
+
+	const uint32_t border_color = libretro_crop_read_pixel(surface, 0, 0);
+	if ((border_color & buffer.rgb_mask) != 0)
+		return;
+
+	LibretroCropRect rect = { crop.x, crop.y, crop.w, crop.h };
+	if (libretro_crop_expand_to_visible_content(buffer, border_color, 16, rect)) {
+		crop.x = rect.x;
+		crop.y = rect.y;
+		crop.w = rect.w;
+		crop.h = rect.h;
+		libretro_update_crop_aspect(crop);
+	}
+}
+
+static void libretro_fit_fixed_crop_to_visible_content(const SDL_Surface* surface, libretro_crop& crop)
+{
+	if (!surface || !crop.active)
+		return;
+
+	LibretroCropRect content = {};
+	if (!libretro_visible_content_bounds(surface, content))
+		return;
+
+	LibretroCropRect rect = { crop.x, crop.y, crop.w, crop.h };
+	if (libretro_crop_fit_rect_to_visible_content(surface->w, surface->h, content, rect)) {
+		crop.x = rect.x;
+		crop.y = rect.y;
+		crop.w = rect.w;
+		crop.h = rect.h;
+	}
 }
 
 static void libretro_expand_crop_to_minimum_frame(const SDL_Surface* surface, libretro_crop& crop)
@@ -2437,8 +2518,10 @@ static bool libretro_fixed_crop_from_surface(const SDL_Surface* surface,
 	crop.w = target_w;
 	crop.h = target_h;
 	crop.active = crop.w > 0 && crop.h > 0;
-	if (crop.active)
+	if (crop.active) {
+		libretro_fit_fixed_crop_to_visible_content(surface, crop);
 		libretro_update_crop_aspect(crop);
+	}
 	return crop.active;
 }
 
@@ -2682,6 +2765,7 @@ libretro_crop libretro_compute_crop(void)
 		auto_crop_image();
 		if (libretro_crop_from_renderer(surface, crop)) {
 			libretro_trim_black_crop_edges(surface, crop);
+			libretro_expand_crop_to_visible_content(surface, crop);
 			libretro_expand_crop_to_minimum_frame(surface, crop);
 			crop = libretro_stabilize_auto_crop(surface, crop);
 			if (!libretro_crop_used_renderer) {
@@ -2734,6 +2818,7 @@ libretro_crop libretro_compute_crop(void)
 	crop.aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 	crop.active = true;
 	libretro_trim_black_crop_edges(surface, crop);
+	libretro_expand_crop_to_visible_content(surface, crop);
 	libretro_expand_crop_to_minimum_frame(surface, crop);
 	crop = libretro_stabilize_auto_crop(surface, crop);
 	return libretro_cache_crop(crop);

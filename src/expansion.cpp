@@ -6233,7 +6233,7 @@ const struct expansionromtype expansionroms[] = {
 		// bridgeboard: no autoconfig, no BIOS ROM file (the x86 BIOS is loaded
 		// from the floppy .dsg into Amiga chip RAM by the 68k driver).
 		_T("atonceplus"), _T("ATonce Plus"), _T("Vortex"),
-		NULL, atonce_init, NULL, NULL, ROMTYPE_ATONCE | ROMTYPE_NONE, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, atonce_init, NULL, NULL, ROMTYPE_ATONCE | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_X86_BRIDGE,
 		0, 0, 0, false, NULL,
