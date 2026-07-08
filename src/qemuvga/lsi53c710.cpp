@@ -266,6 +266,12 @@ typedef struct {
 	uint8_t sstat2;
 	uint8_t dwt;
 	uint8_t sbcl;
+	uint8_t sodl;
+	/* SCSI FIFO: 8 entries, 8 data bits plus generated parity in bit 8.
+	 * SODL writes push it (with CTEST4.SFWR), CTEST3 reads pop it, the
+	 * count shows in SSTAT2's high nibble. */
+	uint16_t scsi_fifo[8];
+	int scsi_fifo_count;
 	uint8_t script_active;
 } LSIState710;
 
@@ -310,7 +316,9 @@ static void lsi_soft_reset(LSIState710 *s)
     s->scntl1 = 0;
     s->sstat0 = 0;
     s->sstat1 = 0;
-	s->sstat2 = 0;
+    s->sstat2 = 0;
+    s->sodl = 0;
+    s->scsi_fifo_count = 0;
     s->scid = 0x80;
     s->sxfer = 0;
     s->socl = 0;
@@ -1701,7 +1709,8 @@ static uint8_t lsi_reg_readb2(LSIState710 *s, int offset)
     case 0x0e: /* SSTAT1 */
         return s->sstat1;
     case 0x0f: /* SSTAT2 */
-        return s->sstat2;
+        /* High nibble is the SCSI FIFO byte count. */
+        return (s->sstat2 & 0x0f) | (s->scsi_fifo_count << 4);
     CASE_GET_REG32(dsa, 0x10)
 	case 0x14: /* CTEST0 */
         return s->ctest0;
@@ -1715,6 +1724,19 @@ static uint8_t lsi_reg_readb2(LSIState710 *s, int offset)
         }
         return tmp;
 	case 0x17: /* CTEST3 */
+		/* Reading CTEST3 pops the SCSI FIFO; the popped byte's parity
+		 * lands in CTEST2.SFP (bit 4). */
+		if (s->scsi_fifo_count > 0) {
+			uint16_t entry = s->scsi_fifo[0];
+			for (int i = 1; i < s->scsi_fifo_count; i++)
+				s->scsi_fifo[i - 1] = s->scsi_fifo[i];
+			s->scsi_fifo_count--;
+			if (entry & 0x100)
+				s->ctest2 |= 0x10;
+			else
+				s->ctest2 &= ~0x10;
+			return entry & 0xff;
+		}
 		return s->ctest3;
 	case 0x18: /* CTEST4 */
 		return s->ctest4;
@@ -1820,6 +1842,18 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
         break;
     case 0x05: /* SXFER */
         s->sxfer = val;
+        break;
+    case 0x06: /* SODL */
+        s->sodl = val;
+        /* CTEST4.SFWR (bit 3) routes SODL writes into the SCSI FIFO,
+         * tagging each byte with generated parity (odd, or even under
+         * SCNTL1.AESP). The count reads back in SSTAT2's high nibble. */
+        if ((s->ctest4 & 0x08) && s->scsi_fifo_count < 8) {
+            uint16_t par = __builtin_popcount(val) & 1;
+            if (!(s->scntl1 & LSI_SCNTL1_AESP))
+                par ^= 1;
+            s->scsi_fifo[s->scsi_fifo_count++] = (par << 8) | val;
+        }
         break;
 	case 0x0b: /* SBCL */
 		lsi_set_phase (s, val & PHASE_MASK);
