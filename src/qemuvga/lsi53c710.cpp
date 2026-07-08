@@ -1842,7 +1842,17 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
         s->ctest4 = val;
         break;
 	case 0x19: /* CTEST5 */
-        s->ctest5 = val;
+        /* ADCK/BBCK are self-clearing test strobes: ADCK clocks the DMA
+         * address incrementor (DNAD += bus width), BBCK clocks the DMA byte
+         * counter decrementor (DBC -= bus width). Both bits read back clear.
+         * The A4091 register diagnostic (ncr7xx) relies on this. */
+        if (val & LSI_CTEST5_ADCK) {
+            s->dnad += 4;
+        }
+        if (val & LSI_CTEST5_BBCK) {
+            s->dbc = (s->dbc - 4) & 0xffffff;
+        }
+        s->ctest5 = val & ~(LSI_CTEST5_ADCK | LSI_CTEST5_BBCK);
         break;
 	case 0x1a: /* CTEST6 */
         s->ctest6 = val;
@@ -1873,7 +1883,7 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
 	case 0x23: /* LCRC */
 		s->lcrc = 0;
 	break;
- 
+
     CASE_SET_REG24(dbc, 0x24)
     CASE_SET_REG32(dnad, 0x28)
     case 0x2c: /* DSP[0:7] */
