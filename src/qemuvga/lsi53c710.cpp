@@ -1913,6 +1913,10 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
         break;
 	case 0x22: /* CTEST8 */
 		s->ctest8 = val;
+		if (val & 0x04) {
+			/* CLF: clear the DMA and SCSI FIFOs */
+			s->scsi_fifo_count = 0;
+		}
 	break;
 	case 0x23: /* LCRC */
 		s->lcrc = 0;
