@@ -1858,9 +1858,9 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
         break;
     case 0x01: /* SCNTL1 */
         s->scntl1 = val;
-        if (val & LSI_SCNTL1_ADB) {
-            BADF("Immediate Arbritration not implemented\n");
-        }
+        /* SCNTL1.ADB (Assert Data Bus) drives the SODL/SOCL latches onto the
+           bus; in loopback (CTEST4.SLBE) they feed back into SBDL/SBCL, which
+           the read handlers realize. Just latch the bit here. */
         if (val & LSI_SCNTL1_RST) {
             if (!(s->sstat0 & LSI_SSTAT0_RST)) {
 //                qbus_reset_all(&s->bus.qbus);
