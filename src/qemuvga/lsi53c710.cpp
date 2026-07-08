@@ -1885,6 +1885,9 @@ static void lsi_reg_writeb(LSIState710 *s, int offset, uint8_t val)
 	break;
 
     CASE_SET_REG24(dbc, 0x24)
+    case 0x27: /* DCMD */
+        s->dcmd = val;
+        break;
     CASE_SET_REG32(dnad, 0x28)
     case 0x2c: /* DSP[0:7] */
         s->dsp &= 0xffffff00;
