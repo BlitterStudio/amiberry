@@ -1833,7 +1833,7 @@ void ImGui::TableReconcileColumns(ImGuiTable* table)
             ImGuiTableReconcileColumnData& reconcile_data = reconcile_requests[dst_idx];
             ImGuiTableColumn& dst_column = dst_columns[reconcile_data.ColumnNewIdx];
             IM_ASSERT(src_column.IsNeedReconcileSrc && dst_column.IsNeedReconcileDst);
-            dst_column.IsNeedReconcileSrc = dst_column.IsNeedReconcileDst = false;
+            src_column.IsNeedReconcileSrc = dst_column.IsNeedReconcileDst = false;
             reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)src_columns.index_from_ptr(&src_column);
             reconcile_data.ColumnOldData = src_column;
         }
@@ -3395,7 +3395,7 @@ void ImGui::TableHeader(const char* label)
         if ((table->RowFlags & ImGuiTableRowFlags_Headers) == 0)
             TableSetBgColor(ImGuiTableBgTarget_CellBg, GetColorU32(ImGuiCol_TableHeaderBg), table->CurrentColumn);
     }
-    RenderNavCursor(bb, id, ImGuiNavRenderCursorFlags_Compact | ImGuiNavRenderCursorFlags_NoRounding);
+    RenderNavCursor(bb, id, ImGuiNavRenderCursorFlags_Compact, 0.0f);
     if (held)
         table->HeldHeaderColumn = (ImGuiTableColumnIdx)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
@@ -3875,8 +3875,15 @@ static size_t TableSettingsCalcChunkSize(int columns_count)
 ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
-    //ImGuiTableSettings* old_settings = TableSettingsFindByID(id); // Comment out sanity check to avoid unnecessary lookups.
-    //IM_ASSERT(old_settings == NULL || old_settings->ColumnsCountMax < columns_count);
+    if (ImGuiTableSettings* settings = TableSettingsFindByID(id))
+    {
+        if (settings->ColumnsCountMax >= columns_count)
+        {
+            TableSettingsInit(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
+            return settings;
+        }
+        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
+    }
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(TableSettingsCalcChunkSize(columns_count));
     TableSettingsInit(settings, id, columns_count, columns_count);
     return settings;
@@ -3933,6 +3940,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
     settings->ColumnsCount = (ImGuiTableColumnIdx)table->ColumnsCount;
+    settings->LastUsedDate = g.SessionDate;
 
     // Serialize ImGuiTable/ImGuiTableColumn into ImGuiTableSettings/ImGuiTableColumnSettings
     IM_ASSERT(settings->ID == table->ID);
@@ -4001,6 +4009,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
+    settings->LastUsedDate = g.SessionDate;
     // TableUpdateLayout() will then call TableLoadSettingsForColumns() to apply the data.
 }
 
@@ -4124,6 +4133,24 @@ static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandle
     g.SettingsTables.clear();
 }
 
+static void TableSettingsHandler_Cleanup(ImGuiContext* ctx, ImGuiSettingsHandler*, ImGuiSettingsCleanupArgs* args)
+{
+    ImGuiContext& g = *ctx;
+    for (int i = 0; i != g.Tables.GetMapSize(); i++)
+        if (ImGuiTable* table = g.Tables.TryGetMapData(i))
+            table->SettingsOffset = -1;
+    for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
+    {
+        const bool is_valid = settings->LastUsedDate.IsValid();
+        if (args->_DiscardOlderThanDate != 0 && settings->LastUsedDate.Unpack() < args->_DiscardOlderThanDate)
+            settings->ID = 0;
+        else if (args->DiscardWhenMissingDate && !is_valid)
+            settings->ID = 0;
+        else if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && !is_valid))
+            settings->LastUsedDate = g.SessionDate;
+    }
+}
+
 // Apply to existing windows (if any)
 static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {
@@ -4142,16 +4169,6 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
     int columns_count = 0;
     if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
         return NULL;
-
-    if (ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(id))
-    {
-        if (settings->ColumnsCountMax >= columns_count)
-        {
-            TableSettingsInit(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
-            return settings;
-        }
-        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
-    }
     return ImGui::TableSettingsCreate(id, columns_count);
 }
 
@@ -4163,6 +4180,7 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
     int column_n = 0, r = 0, n = 0;
 
     if (sscanf(line, "RefScale=%f", &f) == 1) { settings->RefScale = f; return; }
+    if (sscanf(line, "LastUsed=%d", &n) == 1) { settings->LastUsedDate = n; return; }
 
     if (sscanf(line, "Column %d%n", &column_n, &r) == 1)
     {
@@ -4218,6 +4236,9 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
             if (column->ID != 0)                        { buf->appendf(" ID=0x%08X", column->ID); }
             buf->append("\n");
         }
+        if (g.IO.ConfigIniSettingsSaveLastUsedDate)
+            if (int last_used_date = settings->LastUsedDate.Unpack())
+                buf->appendf("LastUsed=%08d\n", last_used_date);
         buf->append("\n");
     }
 }
@@ -4228,6 +4249,7 @@ void ImGui::TableSettingsAddSettingsHandler()
     ini_handler.TypeName = "Table";
     ini_handler.TypeHash = ImHashStr("Table");
     ini_handler.ClearAllFn = TableSettingsHandler_ClearAll;
+    ini_handler.CleanupFn  = TableSettingsHandler_Cleanup;
     ini_handler.ReadOpenFn = TableSettingsHandler_ReadOpen;
     ini_handler.ReadLineFn = TableSettingsHandler_ReadLine;
     ini_handler.ApplyAllFn = TableSettingsHandler_ApplyAll;
