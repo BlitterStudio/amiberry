@@ -59,6 +59,7 @@
 #ifdef AMIBERRY
 #include "amiberry_cursor.h"
 #include "amiberry_gfx.h"
+#include "amiberry_input_helpers.h"
 #include "gfx_colors.h"
 #include "gfx_window.h"
 #include "display_modes.h"
@@ -199,6 +200,25 @@ static int wincursor_shown;
 static uaecptr boardinfo, ABI_interrupt;
 static int interrupt_enabled;
 float p96vblank;
+
+#ifdef AMIBERRY
+static void clear_host_cursor_hotspot_compensation()
+{
+	input_mousehack_set_host_cursor_uses_hotspot(false, 0, 0);
+}
+
+static void destroy_p96_host_cursor(bool restore_normal_cursor)
+{
+	if (p96_cursor) {
+		if (restore_normal_cursor && SDL_GetCursor() == p96_cursor) {
+			SDL_SetCursor(normalcursor);
+		}
+		SDL_DestroyCursor(p96_cursor);
+		p96_cursor = nullptr;
+	}
+	clear_host_cursor_hotspot_compensation();
+}
+#endif
 
 static int overlay_src_width_in, overlay_src_height_in;
 static int overlay_src_height, overlay_src_width;
@@ -986,10 +1006,7 @@ static void setupcursor()
 		update_cursor_overlay_surface();
 		
 		// Ensure any native SDL cursor is hidden/freed so it doesn't conflict
-		if (p96_cursor) {
-			SDL_DestroyCursor(p96_cursor);
-			p96_cursor = nullptr;
-		}
+		destroy_p96_host_cursor(false);
 
 		setupcursor_needed = 0;
 		P96TRACE_SPR((_T("cursorsurface3d updated (overlay)\n")));
@@ -1042,10 +1059,7 @@ static void disablemouse ()
 	if (!hwsprite)
 		return;
 #ifdef AMIBERRY
-	if (p96_cursor) {
-		SDL_DestroyCursor(p96_cursor);
-		p96_cursor = nullptr;
-	}
+	destroy_p96_host_cursor(false);
 #else
 	D3D_setcursor(0, 0, 0, 0, 0, 0, 0, false, true);
 #endif
@@ -2181,6 +2195,11 @@ static void putwinmousepixel(HDC andDC, HDC xorDC, int x, int y, int c, uae_u32 
 static int tmp_sprite_w, tmp_sprite_h;
 static uae_u8 tmp_sprite_data[CURSORMAXWIDTH * CURSORMAXHEIGHT];
 static uae_u32 tmp_sprite_colors[4];
+#ifdef AMIBERRY
+static int tmp_sprite_hotspot_x, tmp_sprite_hotspot_y;
+static int tmp_sprite_residual_x, tmp_sprite_residual_y;
+static int tmp_sprite_chipset = -1;
+#endif
 
 extern uaecptr sprite_0;
 extern int sprite_0_width, sprite_0_height, sprite_0_doubled;
@@ -2199,8 +2218,11 @@ static int createwindowscursor(int monid, int set, int chipset)
 	uae_u8 *image = nullptr;
 	uae_u8 tmp_sprite[CURSORMAXWIDTH * CURSORMAXHEIGHT];
 	int datasize;
+	int hotspot_x = 0, hotspot_y = 0;
+	int residual_x = 0, residual_y = 0;
 
 	wincursor_shown = 0;
+	clear_host_cursor_hotspot_compensation();
 
 	if (isfullscreen() > 0 || !magic_mouse_host_only_enabled()) {
 		goto exit;
@@ -2260,11 +2282,20 @@ static int createwindowscursor(int monid, int set, int chipset)
 		image = cursordata;
 	}
 
+	if (chipset) {
+		input_mousehack_cursor_hotspot(w, h, &hotspot_x, &hotspot_y, &residual_x, &residual_y);
+	}
+
 	datasize = h * ((w + 15) / 16) * 16;
 
 	if (p96_cursor) {
-		if (w == tmp_sprite_w && h == tmp_sprite_h && !memcmp(tmp_sprite_data, image, datasize) && !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4)) {
+		if (w == tmp_sprite_w && h == tmp_sprite_h && hotspot_x == tmp_sprite_hotspot_x &&
+			hotspot_y == tmp_sprite_hotspot_y && chipset == tmp_sprite_chipset &&
+			!memcmp(tmp_sprite_data, image, datasize) && !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4)) {
 			if (SDL_GetCursor() == p96_cursor) {
+				tmp_sprite_residual_x = residual_x;
+				tmp_sprite_residual_y = residual_y;
+				input_mousehack_set_host_cursor_uses_hotspot(chipset != 0, residual_x, residual_y);
 				wincursor_shown = 1;
 				return 1;
 			}
@@ -2276,6 +2307,9 @@ static int createwindowscursor(int monid, int set, int chipset)
 	write_log(_T("p96_cursor: %dx%d\n"), w, h);
 
 	tmp_sprite_w = tmp_sprite_h = 0;
+	tmp_sprite_hotspot_x = tmp_sprite_hotspot_y = 0;
+	tmp_sprite_residual_x = tmp_sprite_residual_y = 0;
+	tmp_sprite_chipset = -1;
 
 	cursor_surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
 	if (!cursor_surface)
@@ -2296,9 +2330,14 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 end:
 	if (isdata) {
-		p96_cursor = SDL_CreateColorCursor(cursor_surface, 0, 0);
+		p96_cursor = SDL_CreateColorCursor(cursor_surface, hotspot_x, hotspot_y);
 		tmp_sprite_w = w;
 		tmp_sprite_h = h;
+		tmp_sprite_hotspot_x = hotspot_x;
+		tmp_sprite_hotspot_y = hotspot_y;
+		tmp_sprite_residual_x = residual_x;
+		tmp_sprite_residual_y = residual_y;
+		tmp_sprite_chipset = chipset;
 		memcpy(tmp_sprite_data, image, datasize);
 		memcpy(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
 	}
@@ -2311,6 +2350,7 @@ end:
 
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
+		input_mousehack_set_host_cursor_uses_hotspot(chipset != 0, residual_x, residual_y);
 		wincursor_shown = 1;
 	}
 
@@ -2326,13 +2366,7 @@ end:
 	return ret;
 
 exit:
-	if (p96_cursor) {
-		if (SDL_GetCursor() == p96_cursor) {
-			SDL_SetCursor(normalcursor);
-		}
-		SDL_DestroyCursor(p96_cursor);
-		p96_cursor = nullptr;
-	}
+	destroy_p96_host_cursor(true);
 
 	return ret;
 #else
@@ -2518,6 +2552,8 @@ int picasso_setwincursor(int monid)
 #ifdef AMIBERRY
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
+		input_mousehack_set_host_cursor_uses_hotspot(tmp_sprite_chipset != 0,
+			tmp_sprite_residual_x, tmp_sprite_residual_y);
 		return 1;
 	} else if (!ad->picasso_on) {
 		if (createwindowscursor(monid, 0, 1))

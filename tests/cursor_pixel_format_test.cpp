@@ -19,6 +19,15 @@ static void expect_eq(uae_u32 actual, uae_u32 expected, const char *message)
 	}
 }
 
+static void expect_int_eq(int actual, int expected, const char *message)
+{
+	if (actual != expected) {
+		std::cerr << message << ": expected " << expected
+			<< ", got " << actual << '\n';
+		failures++;
+	}
+}
+
 static void expect_true(bool condition, const char *message)
 {
 	if (!condition) {
@@ -105,6 +114,44 @@ static void test_native_axis_clamp_uses_native_extent()
 	expect_true(out_of_bounds, "negative native pixel must be reported out of bounds");
 }
 
+static void test_mousehack_hotspot_matches_pointer_offset()
+{
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	amiberry_input_mousehack_cursor_hotspot(-1, -2, 16, 16, &hotspot_x, &hotspot_y);
+	expect_eq(hotspot_x, 0, "default x pointer offset must keep top-left hotspot");
+	expect_eq(hotspot_y, 0, "default y pointer offset must keep top-left hotspot");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(-1, 16, 1), 0,
+		"default x pointer offset must not leave residual compensation");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(-2, 16, 2), 0,
+		"default y pointer offset must not leave residual compensation");
+
+	amiberry_input_mousehack_cursor_hotspot(-26, -32, 51, 61, &hotspot_x, &hotspot_y);
+	expect_eq(hotspot_x, 25, "centered cross cursor x offset must become centered host hotspot");
+	expect_eq(hotspot_y, 30, "centered cross cursor y offset must become centered host hotspot");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(-26, 51, 1), 0,
+		"centered cross cursor x offset must be fully represented by host hotspot");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(-32, 61, 2), 0,
+		"centered cross cursor y offset must be fully represented by host hotspot");
+
+	amiberry_input_mousehack_cursor_hotspot(4, 4, 16, 16, &hotspot_x, &hotspot_y);
+	expect_eq(hotspot_x, 0, "positive x pointer offset must clamp hotspot to left edge");
+	expect_eq(hotspot_y, 0, "positive y pointer offset must clamp hotspot to top edge");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(4, 16, 1), 5,
+		"positive x pointer offset must leave residual compensation after hotspot clamping");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(4, 16, 2), 6,
+		"positive y pointer offset must leave residual compensation after hotspot clamping");
+
+	amiberry_input_mousehack_cursor_hotspot(-80, -80, 16, 16, &hotspot_x, &hotspot_y);
+	expect_eq(hotspot_x, 15, "oversized x pointer offset must clamp hotspot to right edge");
+	expect_eq(hotspot_y, 15, "oversized y pointer offset must clamp hotspot to bottom edge");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(-80, 16, 1), -64,
+		"oversized x pointer offset must leave negative residual compensation after hotspot clamping");
+	expect_int_eq(amiberry_input_mousehack_hotspot_residual_axis(-80, 16, 2), -63,
+		"oversized y pointer offset must leave negative residual compensation after hotspot clamping");
+}
+
 int main()
 {
 	test_rgb12_expands_to_rgb24();
@@ -113,5 +160,6 @@ int main()
 	test_host_only_forces_separate_rtg_sprite();
 	test_rtg_cursor_keeps_softsprite_fallback_disabled();
 	test_native_axis_clamp_uses_native_extent();
+	test_mousehack_hotspot_matches_pointer_offset();
 	return failures == 0 ? 0 : 1;
 }
