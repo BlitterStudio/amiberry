@@ -556,6 +556,11 @@ void render_panel_display() {
         EndGroupBox("Centering");
 
         BeginGroupBox("Aspect ratio");
+        bool correct_aspect = changed_prefs.gfx_correct_aspect != 0;
+        if (AmigaCheckbox("Correct aspect ratio", &correct_aspect)) {
+            changed_prefs.gfx_correct_aspect = correct_aspect ? 1 : 0;
+        }
+        ShowHelpMarker("Apply Amiga display aspect correction to native display modes.");
         AmigaCheckbox("Auto integer scaling", &changed_prefs.gfx_keep_aspect);
         ShowHelpMarker("Automatically select integer scaling factor based on resolution, line mode and doublescan settings to maintain correct aspect ratio");
         ImGui::Spacing();
