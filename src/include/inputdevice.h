@@ -245,6 +245,7 @@ extern void input_mousehack_mouseoffset (uaecptr pointerprefs);
 extern void input_mousehack_cursor_hotspot(int cursor_width, int cursor_height, int* hotspot_x, int* hotspot_y,
 	int* residual_x, int* residual_y);
 extern bool input_mousehack_get_last_abs_position(int* x, int* y);
+extern void input_mousehack_invalidate_last_abs_position();
 extern void input_mousehack_set_host_cursor_uses_hotspot(bool enabled, int residual_x, int residual_y);
 extern int mousehack_alive (void);
 extern void mousehack_wakeup(void);

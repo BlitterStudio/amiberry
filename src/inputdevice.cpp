@@ -2686,6 +2686,11 @@ bool input_mousehack_get_last_abs_position(int* x, int* y)
 	return true;
 }
 
+void input_mousehack_invalidate_last_abs_position()
+{
+	mousehack_last_abs_valid = false;
+}
+
 static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 {
 	extern int mouse_monid;
