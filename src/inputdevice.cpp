@@ -2454,6 +2454,8 @@ static int dimensioninfo_width, dimensioninfo_height, dimensioninfo_dbl;
 static int vp_xoffset, vp_yoffset, mouseoffset_x, mouseoffset_y;
 static bool mousehack_host_cursor_uses_hotspot;
 static int mousehack_host_cursor_residual_x, mousehack_host_cursor_residual_y;
+static int mousehack_last_abs_x, mousehack_last_abs_y;
+static bool mousehack_last_abs_valid;
 static int tablet_maxx, tablet_maxy, tablet_maxz;
 static int tablet_resx, tablet_resy;
 static int tablet_maxax, tablet_maxay, tablet_maxaz;
@@ -2581,6 +2583,8 @@ static void mousehack_reset (void)
 	mouseoffset_x = mouseoffset_y = 0;
 	mousehack_host_cursor_uses_hotspot = false;
 	mousehack_host_cursor_residual_x = mousehack_host_cursor_residual_y = 0;
+	mousehack_last_abs_x = mousehack_last_abs_y = 0;
+	mousehack_last_abs_valid = false;
 	dimensioninfo_dbl = 0;
 	mousehack_alive_cnt = 0;
 	vp_xoffset = vp_yoffset = 0;
@@ -2666,6 +2670,25 @@ void input_mousehack_set_host_cursor_uses_hotspot(bool enabled, int residual_x, 
 	mousehack_host_cursor_uses_hotspot = enabled;
 	mousehack_host_cursor_residual_x = enabled ? residual_x : 0;
 	mousehack_host_cursor_residual_y = enabled ? residual_y : 0;
+}
+
+bool input_mousehack_get_last_abs_position(int* x, int* y)
+{
+	if (!mousehack_last_abs_valid) {
+		return false;
+	}
+	if (x) {
+		*x = mousehack_last_abs_x;
+	}
+	if (y) {
+		*y = mousehack_last_abs_y;
+	}
+	return true;
+}
+
+void input_mousehack_invalidate_last_abs_position()
+{
+	mousehack_last_abs_valid = false;
 }
 
 static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
@@ -3013,7 +3036,7 @@ void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay
 	inputdevice_update_tablet_params();
 }
 
-static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits)
+static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_valid)
 {
 	if (mousehack_host_cursor_uses_hotspot) {
 		x -= mousehack_host_cursor_residual_x;
@@ -3024,6 +3047,10 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits)
 	}
 
 	mousehack_enable ();
+	// Keep the Amiga coordinate actually delivered after host-hotspot compensation.
+	mousehack_last_abs_x = x;
+	mousehack_last_abs_y = y;
+	mousehack_last_abs_valid = position_valid && mousehack_address;
 	if (mousehack_address) {
 		uae_u8 tmp1[4], tmp2[4];
 		uae_u8 *p = mousehack_address;
@@ -3294,8 +3321,8 @@ static void mousehack_helper (uae_u32 buttonmask)
 		return;
 	}
 
-	get_mouse_position(&x, &y, lastmx, lastmy);
-	inputdevice_mh_abs(x, y, buttonmask);
+	const bool position_valid = get_mouse_position(&x, &y, lastmx, lastmy);
+	inputdevice_mh_abs(x, y, buttonmask, position_valid);
 }
 
 static int mouseedge_x, mouseedge_y, mouseedge_time;

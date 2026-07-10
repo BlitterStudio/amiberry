@@ -1277,6 +1277,8 @@ void gfx_set_picasso_state(const int monid, const int on)
 
 	if (mon->screen_is_picasso == on)
 		return;
+	// Absolute coordinates from the previous display mode use a different coordinate space.
+	input_mousehack_invalidate_last_abs_position();
 	mon->screen_is_picasso = on;
 #ifdef RETROPLATFORM
 	rp_rtg_switch();
