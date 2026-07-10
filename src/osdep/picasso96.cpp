@@ -2232,6 +2232,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	int datasize;
 	int hotspot_x = 0, hotspot_y = 0;
 	int residual_x = 0, residual_y = 0;
+	bool cursor_cache_matches = false;
 
 	wincursor_shown = 0;
 
@@ -2293,10 +2294,16 @@ static int createwindowscursor(int monid, int set, int chipset)
 		image = cursordata;
 	}
 
+	datasize = h * ((w + 15) / 16) * 16;
+	cursor_cache_matches = p96_cursor
+		&& w == tmp_sprite_w && h == tmp_sprite_h && chipset == tmp_sprite_chipset
+		&& !memcmp(tmp_sprite_data, image, datasize)
+		&& !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
+
 	if (chipset) {
 		input_mousehack_cursor_hotspot(w, h, &hotspot_x, &hotspot_y, &residual_x, &residual_y);
 
-		if (native_cursor_tracker_width != w || native_cursor_tracker_height != h) {
+		if (native_cursor_tracker_width != w || native_cursor_tracker_height != h || !cursor_cache_matches) {
 			amiberry_input_cursor_hotspot_tracker_reset(&native_cursor_hotspot_tracker);
 			native_cursor_tracker_width = w;
 			native_cursor_tracker_height = h;
@@ -2323,19 +2330,13 @@ static int createwindowscursor(int monid, int set, int chipset)
 		reset_native_cursor_hotspot_tracker();
 	}
 
-	datasize = h * ((w + 15) / 16) * 16;
-
-	if (p96_cursor) {
-		if (w == tmp_sprite_w && h == tmp_sprite_h && hotspot_x == tmp_sprite_hotspot_x &&
-			hotspot_y == tmp_sprite_hotspot_y && chipset == tmp_sprite_chipset &&
-			!memcmp(tmp_sprite_data, image, datasize) && !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4)) {
-			if (SDL_GetCursor() == p96_cursor) {
-				tmp_sprite_residual_x = residual_x;
-				tmp_sprite_residual_y = residual_y;
-				input_mousehack_set_host_cursor_uses_hotspot(chipset != 0, residual_x, residual_y);
-				wincursor_shown = 1;
-				return 1;
-			}
+	if (cursor_cache_matches && hotspot_x == tmp_sprite_hotspot_x && hotspot_y == tmp_sprite_hotspot_y) {
+		if (SDL_GetCursor() == p96_cursor) {
+			tmp_sprite_residual_x = residual_x;
+			tmp_sprite_residual_y = residual_y;
+			input_mousehack_set_host_cursor_uses_hotspot(chipset != 0, residual_x, residual_y);
+			wincursor_shown = 1;
+			return 1;
 		}
 	}
 
