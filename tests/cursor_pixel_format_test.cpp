@@ -152,6 +152,68 @@ static void test_mousehack_hotspot_matches_pointer_offset()
 		"oversized y pointer offset must leave negative residual compensation after hotspot clamping");
 }
 
+static void test_native_sprite_position_decoding()
+{
+	expect_int_eq(amiberry_input_native_sprite_x(0x1234, 0x0000, false), 0xd0,
+		"native sprite x must decode the horizontal position byte");
+	expect_int_eq(amiberry_input_native_sprite_x(0x1234, 0x0001, false), 0xd2,
+		"native sprite x must include the low control bit");
+	expect_int_eq(amiberry_input_native_sprite_x(0x1234, 0x0011, true), 0xd3,
+		"ECS/AGA sprite x must include the extended low bit");
+
+	expect_int_eq(amiberry_input_native_sprite_y(0x1200, 0x0000, false), 0x24,
+		"native sprite y must decode the vertical position byte");
+	expect_int_eq(amiberry_input_native_sprite_y(0x1200, 0x0004, false), 0x224,
+		"native sprite y must include the first high control bit");
+	expect_int_eq(amiberry_input_native_sprite_y(0x1200, 0x0044, true), 0x624,
+		"ECS sprite y must include the extended high bit");
+}
+
+static void test_native_cursor_hotspot_learning_requires_stationary_samples()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"first hotspot sample must not be trusted immediately");
+	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"matching pointer and sprite movement must not count as stationary");
+	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"second stationary sample must still wait for confirmation");
+	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"third stationary sample must learn the hotspot");
+	expect_int_eq(hotspot_x, 25, "learned cross cursor hotspot x must use the live sprite displacement");
+	expect_int_eq(hotspot_y, 30, "learned cross cursor hotspot y must use the live sprite displacement");
+}
+
+static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			200, 160, 199, 158, 16, 16, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 1, "tracker must learn a valid arrow hotspot x");
+	expect_int_eq(hotspot_y, 2, "tracker must learn a valid arrow hotspot y");
+
+	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		200, 160, 80, 40, 16, 16, 3, &hotspot_x, &hotspot_y),
+		"an unrelated sprite position must retain the last learned hotspot");
+	expect_int_eq(hotspot_x, 1, "invalid candidate must not replace learned hotspot x");
+	expect_int_eq(hotspot_y, 2, "invalid candidate must not replace learned hotspot y");
+
+	amiberry_input_cursor_hotspot_tracker_reset(&tracker);
+	expect_true(!tracker.learned, "reset must discard a hotspot learned for old cursor dimensions");
+}
+
 int main()
 {
 	test_rgb12_expands_to_rgb24();
@@ -161,5 +223,8 @@ int main()
 	test_rtg_cursor_keeps_softsprite_fallback_disabled();
 	test_native_axis_clamp_uses_native_extent();
 	test_mousehack_hotspot_matches_pointer_offset();
+	test_native_sprite_position_decoding();
+	test_native_cursor_hotspot_learning_requires_stationary_samples();
+	test_native_cursor_hotspot_learning_keeps_last_valid_result();
 	return failures == 0 ? 0 : 1;
 }

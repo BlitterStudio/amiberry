@@ -31,6 +31,7 @@
 #include "xwin.h"
 #include "inputdevice.h"
 #include "amiberry_cursor.h"
+#include "amiberry_input_helpers.h"
 #ifdef SERIAL_PORT
 #include "serial.h"
 #endif
@@ -692,7 +693,7 @@ struct sprite {
 
 static struct sprite spr[MAX_SPRITES];
 uaecptr sprite_0;
-int sprite_0_width, sprite_0_height, sprite_0_doubled;
+int sprite_0_width, sprite_0_height, sprite_0_doubled, sprite_0_x, sprite_0_y;
 uae_u32 sprite_0_colors[4];
 uae_u32 magic_sprite_mask = 0xffffffff;
 
@@ -4403,6 +4404,8 @@ static void cursorsprite(struct sprite *s)
 		return;
 	}
 	sprite_0 = s->pt;
+	sprite_0_x = amiberry_input_native_sprite_x(s->pos, s->ctl, aga_mode || ecs_denise);
+	sprite_0_y = amiberry_input_native_sprite_y(s->pos, s->ctl, ecs_agnus);
 	sprite_0_height = s->vstop - s->vstart;
 	sprite_0_colors[0] = 0;
 	sprite_0_doubled = 0;
