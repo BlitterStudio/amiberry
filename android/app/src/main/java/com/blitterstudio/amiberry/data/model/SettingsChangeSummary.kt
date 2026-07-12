@@ -30,6 +30,7 @@ object SettingsChangeSummary {
 		addIfChanged("Joy port 1", before.joyport1, after.joyport1)
 		addIfChanged("On-screen joystick", yesNo(before.onScreenJoystick), yesNo(after.onScreenJoystick))
 		addIfChanged("On-screen keyboard", yesNo(before.onScreenKeyboard), yesNo(after.onScreenKeyboard))
+		addIfChanged("On-screen keyboard numpad", yesNo(before.onScreenKeyboardNumpad), yesNo(after.onScreenKeyboardNumpad))
 	}
 
 	private fun MutableList<SettingsChange>.addIfChanged(label: String, before: String, after: String) {

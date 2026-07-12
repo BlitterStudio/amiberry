@@ -35,7 +35,7 @@ object ConfigParser {
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
 		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution",
 		"joyport0", "joyport1",
-		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "input.default_osk",
+		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_numpad", "input.default_osk",
 		"amiberry.android_joyport1",
 		"use_gui", "config_description", "config_hardware_path"
 	)
@@ -163,7 +163,8 @@ object ConfigParser {
 				}
 			},
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
-			onScreenKeyboard = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
+			onScreenKeyboard = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true),
+			onScreenKeyboardNumpad = kv["amiberry.vkbd_numpad"].toBool(false)
 		)
 	}
 

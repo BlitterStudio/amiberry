@@ -1106,6 +1106,7 @@ struct uae_prefs {
 
 #ifdef AMIBERRY
 	bool vkbd_enabled;
+	bool vkbd_numpad;
 	bool vkbd_hires;
 	bool vkbd_exit;
 	char vkbd_language[256];

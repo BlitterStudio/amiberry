@@ -1642,10 +1642,8 @@ void OpenGLRenderer::render_vkbd(int monid)
 {
 	if (vkbd_allowed(monid) && imgui_osk_should_render())
 	{
-		int dw, dh;
-		get_drawable_size(AMonitors[monid].amiga_window, &dw, &dh);
 		imgui_overlay_begin_frame();
-		imgui_osk_render(dw, dh);
+		imgui_osk_render();
 		imgui_overlay_end_frame();
 	}
 }

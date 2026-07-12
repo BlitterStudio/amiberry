@@ -35,7 +35,8 @@ class AppPreferences private constructor(context: Context) {
 			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, DEFAULT_JOYPORT0) ?: DEFAULT_JOYPORT0,
 			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, DEFAULT_JOYPORT1) ?: DEFAULT_JOYPORT1,
 			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
-			onScreenKeyboard = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD)
+			onScreenKeyboard = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD),
+			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false)
 		)
 
 	fun applyRememberedAndroidControls(settings: EmulatorSettings, explicitKeys: Set<String>): EmulatorSettings =
@@ -51,6 +52,7 @@ class AppPreferences private constructor(context: Context) {
 			putString(KEY_LAST_JOYPORT1, settings.joyport1)
 			putBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, settings.onScreenJoystick)
 			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, settings.onScreenKeyboard)
+			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, settings.onScreenKeyboardNumpad)
 		}
 	}
 
@@ -119,6 +121,7 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_LAST_JOYPORT1 = "last_joyport1"
 		private const val KEY_LAST_ON_SCREEN_JOYSTICK = "last_on_screen_joystick"
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD = "last_on_screen_keyboard"
+		private const val KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD = "last_on_screen_keyboard_numpad"
 		private const val KEY_RECENT_LAUNCHES = "recent_launches"
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5

@@ -336,11 +336,8 @@ void SDLRenderer::render_vkbd(int monid)
 	{
 		AmigaMonitor* mon = &AMonitors[monid];
 		if (!mon->amiga_renderer) return;
-		int dw = 0, dh = 0;
-		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &dw, &dh);
-		if (dw <= 0 || dh <= 0) return;
 		imgui_overlay_begin_frame();
-		imgui_osk_render(dw, dh);
+		imgui_osk_render();
 		imgui_overlay_end_frame();
 	}
 }

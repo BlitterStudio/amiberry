@@ -109,6 +109,7 @@ object ConfigGenerator {
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("amiberry.vkbd_numpad=${settings.onScreenKeyboardNumpad.toCfg()}")
 		sb.appendLine("input.default_osk=${settings.onScreenKeyboard.toCfg()}")
 
 		// Skip GUI when launched from Android native UI
@@ -129,6 +130,7 @@ object ConfigGenerator {
 		sb.appendLine("amiberry.android_joyport1=${settings.joyport1}")
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("amiberry.vkbd_numpad=${settings.onScreenKeyboardNumpad.toCfg()}")
 		sb.appendLine("input.default_osk=${settings.onScreenKeyboard.toCfg()}")
 		sb.appendLine("use_gui=no")
 

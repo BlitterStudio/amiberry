@@ -256,6 +256,14 @@ class ConfigParserTest {
 	}
 
 	@Test
+	fun `parse input reads optional keyboard numpad`() {
+		val result = ConfigParser.parse(writeConfig("amiberry.vkbd_numpad=true"))
+
+		assertTrue(result.settings.onScreenKeyboardNumpad)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
 	fun `parse input infers onscreen_joy when no android key`() {
 		val file = writeConfig("""
 			joyport0=mouse
@@ -482,6 +490,7 @@ class ConfigParserTest {
 		explicitFile.writeText("""
 			amiberry.onscreen_joystick=false
 			amiberry.vkbd_enabled=false
+			amiberry.vkbd_numpad=true
 		""".trimIndent())
 		val absentFile = tempDir.newFile("absent_android_controls.uae")
 		absentFile.writeText("cpu_model=68000")
@@ -490,8 +499,10 @@ class ConfigParserTest {
 
 		assertTrue("amiberry.onscreen_joystick" in explicit.explicitKeys)
 		assertTrue("amiberry.vkbd_enabled" in explicit.explicitKeys)
+		assertTrue("amiberry.vkbd_numpad" in explicit.explicitKeys)
 		assertFalse("amiberry.onscreen_joystick" in absent.explicitKeys)
 		assertFalse("amiberry.vkbd_enabled" in absent.explicitKeys)
+		assertFalse("amiberry.vkbd_numpad" in absent.explicitKeys)
 	}
 
 	// --- Whitespace handling ---

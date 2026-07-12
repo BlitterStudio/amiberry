@@ -1707,7 +1707,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	if (vkbd_allowed(slot.monid) && imgui_osk_should_render() && imgui_overlay_is_vulkan())
 	{
 		imgui_overlay_begin_frame();
-		imgui_osk_render(drawable_w, drawable_h);
+		imgui_osk_render();
 		imgui_overlay_end_frame(); // calls ImGui::Render() but skips RenderDrawData for Vulkan
 		ImDrawData* draw_data = imgui_overlay_get_draw_data();
 		if (draw_data)

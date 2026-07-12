@@ -15,7 +15,8 @@ class AndroidLaunchConfigTest {
 			joyport0 = "joy0",
 			joyport1 = "joy1",
 			onScreenJoystick = false,
-			onScreenKeyboard = false
+			onScreenKeyboard = false,
+			onScreenKeyboardNumpad = true
 		)
 
 		val snapshot = AndroidLaunchConfig.buildQuickStartSettingsSnapshot(
@@ -36,6 +37,7 @@ class AndroidLaunchConfigTest {
 		assertEquals("joy1", snapshot.joyport1)
 		assertEquals(false, snapshot.onScreenJoystick)
 		assertEquals(false, snapshot.onScreenKeyboard)
+		assertEquals(true, snapshot.onScreenKeyboardNumpad)
 	}
 
 	@Test

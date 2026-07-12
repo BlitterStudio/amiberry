@@ -3263,13 +3263,10 @@ static void process_event(const SDL_Event& event)
 			bool consumed = false;
 
 			// Let ImGui on-screen keyboard consume the event first when visible.
-			// OSK geometry is in drawable-pixel space, so convert touch coords
-			// using pixel size (not window size) for HiDPI correctness.
+			// OSK geometry uses ImGui's logical window coordinate space.
 			if (imgui_osk_should_render() && mon->amiga_window) {
-				int pw = 0, ph = 0;
-				SDL_GetWindowSizeInPixels(mon->amiga_window, &pw, &ph);
-				float sx = event.tfinger.x * pw;
-				float sy = event.tfinger.y * ph;
+				float sx = event.tfinger.x * ww;
+				float sy = event.tfinger.y * wh;
 				int fid = static_cast<int>(event.tfinger.fingerID);
 				if (event.type == SDL_EVENT_FINGER_DOWN)
 					consumed = imgui_osk_handle_finger_down(sx, sy, fid);
@@ -3318,12 +3315,10 @@ static void process_event(const SDL_Event& event)
 			if (mon->amiga_window)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
 			bool consumed = false;
-			// Let ImGui on-screen keyboard consume motion first (drawable-pixel space)
+			// Let ImGui on-screen keyboard consume motion first (logical window space)
 			if (imgui_osk_should_render() && mon->amiga_window) {
-				int pw = 0, ph = 0;
-				SDL_GetWindowSizeInPixels(mon->amiga_window, &pw, &ph);
-				float sx = event.tfinger.x * pw;
-				float sy = event.tfinger.y * ph;
+				float sx = event.tfinger.x * ww;
+				float sy = event.tfinger.y * wh;
 				int fid = static_cast<int>(event.tfinger.fingerID);
 				consumed = imgui_osk_handle_finger_motion(sx, sy, fid);
 				if (!consumed && imgui_osk_hit_test(sx, sy))
@@ -4934,6 +4929,7 @@ void target_default_options(uae_prefs* p, const int type)
 
 	// On-screen keyboard default options
 	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
+	p->vkbd_numpad = false;
 
 #ifdef __ANDROID__
 	// Touch-only Android: enable on-screen controls by default. If a physical
@@ -5117,6 +5113,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 
 	cfgfile_target_dwrite_bool(f, _T("onscreen_joystick"), p->onscreen_joystick);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
+	cfgfile_target_dwrite_bool(f, _T("vkbd_numpad"), p->vkbd_numpad);
 	cfgfile_target_dwrite(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
 	cfgfile_target_dwrite_str(f, _T("vkbd_language"), p->vkbd_language);
 	cfgfile_target_dwrite_str(f, _T("vkbd_toggle"), p->vkbd_toggle);
@@ -5276,6 +5273,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		return 1;
 
 	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
+		|| cfgfile_yesno(option, value, _T("vkbd_numpad"), &p->vkbd_numpad)
 		|| cfgfile_yesno(option, value, _T("vkbd_hires"), &p->vkbd_hires)
 		|| cfgfile_yesno(option, value, _T("vkbd_exit"), &p->vkbd_exit)
 		|| cfgfile_intval(option, value, _T("vkbd_transparency"), &p->vkbd_transparency, 1)

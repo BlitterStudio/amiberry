@@ -17,7 +17,8 @@ class AndroidControlSettingsTest {
 				joyport0 = "joy0",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
-				onScreenKeyboard = false
+				onScreenKeyboard = false,
+				onScreenKeyboardNumpad = true
 			)
 		)
 
@@ -25,6 +26,7 @@ class AndroidControlSettingsTest {
 		assertEquals("joy1", settings.joyport1)
 		assertFalse(settings.onScreenJoystick)
 		assertFalse(settings.onScreenKeyboard)
+		assertTrue(settings.onScreenKeyboardNumpad)
 	}
 
 	@Test
@@ -34,13 +36,15 @@ class AndroidControlSettingsTest {
 				joyport0 = "mouse",
 				joyport1 = "onscreen_joy",
 				onScreenJoystick = true,
-				onScreenKeyboard = true
+				onScreenKeyboard = true,
+				onScreenKeyboardNumpad = true
 			),
 			explicitKeys = setOf(
 				"joyport0",
 				"amiberry.android_joyport1",
 				"amiberry.onscreen_joystick",
-				"amiberry.vkbd_enabled"
+				"amiberry.vkbd_enabled",
+				"amiberry.vkbd_numpad"
 			),
 			fallback = EmulatorSettings(
 				joyport0 = "joy0",
@@ -54,5 +58,6 @@ class AndroidControlSettingsTest {
 		assertEquals("onscreen_joy", settings.joyport1)
 		assertTrue(settings.onScreenJoystick)
 		assertTrue(settings.onScreenKeyboard)
+		assertTrue(settings.onScreenKeyboardNumpad)
 	}
 }

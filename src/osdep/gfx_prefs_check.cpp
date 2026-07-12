@@ -657,11 +657,13 @@ int check_prefs_changed_gfx()
 #ifdef AMIBERRY
 	// On-screen keyboard
 	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
+		currprefs.vkbd_numpad != changed_prefs.vkbd_numpad ||
 		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
 		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
 		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
 	{
 		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
+		currprefs.vkbd_numpad = changed_prefs.vkbd_numpad;
 		currprefs.vkbd_transparency = changed_prefs.vkbd_transparency;
 		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);
 		_tcscpy(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle);
@@ -673,6 +675,7 @@ int check_prefs_changed_gfx()
 				: 0.85f;
 			imgui_osk_set_transparency(alpha);
 			imgui_osk_set_language(currprefs.vkbd_language);
+			imgui_osk_set_numpad(currprefs.vkbd_numpad);
 			vkbd_key = get_hotkey_from_config(string(currprefs.vkbd_toggle));
 			vkbd_button = SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle);
 			imgui_osk_init();

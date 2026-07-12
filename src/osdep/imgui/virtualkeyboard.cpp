@@ -177,6 +177,11 @@ void render_panel_virtual_keyboard()
 
 	ImGui::BeginDisabled(!changed_prefs.vkbd_enabled);
 
+	AmigaCheckbox("Include numeric keypad", &changed_prefs.vkbd_numpad);
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Include the Amiga numeric keypad; keys will be smaller to fit the full keyboard");
+	}
+
 	// Transparency slider
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Transparency:");

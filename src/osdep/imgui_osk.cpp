@@ -29,6 +29,7 @@ enum OskKeyType {
 	KEY_AMIGA_R,
 	KEY_RETURN,
 	KEY_ARROW,
+	KEY_NUMPAD,
 };
 
 // ============================================================
@@ -46,7 +47,8 @@ struct OskKeyDef {
 // A500 US keyboard layout
 // ============================================================
 // Layout uses a coordinate system where one standard key = 1.0 units wide.
-// Row heights are 1.0 units. The keyboard is ~17 units wide (main + cursor keys).
+// Row heights are 1.0 units. The compact keyboard is 17 units wide; the
+// optional full layout is 20 units wide with the numeric keypad.
 
 // Row Y positions
 static constexpr float ROW_FUNC  = 0.0f;
@@ -61,6 +63,9 @@ static constexpr float FUNC_H = 0.7f; // function key height (shorter)
 
 // Arrow cluster X offset (right of main keys)
 static constexpr float AR_X = 14.0f;
+
+// Numpad X offset (right of the arrow cluster)
+static constexpr float NP_X = 16.0f;
 
 static const OskKeyDef s_keys_us[] = {
 	// ---- Row 0: Function keys ----
@@ -113,20 +118,20 @@ static const OskKeyDef s_keys_us[] = {
 	{13.5f, ROW_QWERT, 2.0f, KEY_H * 2.0f + 0.1f, AK_RET, "Ret", nullptr, KEY_RETURN},
 
 	// ---- Row 3: Home row (indented to fit under QWERTY, Return fills the gap) ----
-	{0.0f,  ROW_HOME, 1.75f, KEY_H, AK_CTRL,      "Ctrl",  nullptr, KEY_MODIFIER},
-	{1.75f, ROW_HOME, 1.0f,  KEY_H, AK_CAPSLOCK,  "Caps",  nullptr, KEY_MODIFIER},
-	{2.75f, ROW_HOME, 1.0f,  KEY_H, AK_A,         "A",     nullptr, KEY_NORMAL},
-	{3.75f, ROW_HOME, 1.0f,  KEY_H, AK_S,         "S",     nullptr, KEY_NORMAL},
-	{4.75f, ROW_HOME, 1.0f,  KEY_H, AK_D,         "D",     nullptr, KEY_NORMAL},
-	{5.75f, ROW_HOME, 1.0f,  KEY_H, AK_F,         "F",     nullptr, KEY_NORMAL},
-	{6.75f, ROW_HOME, 1.0f,  KEY_H, AK_G,         "G",     nullptr, KEY_NORMAL},
-	{7.75f, ROW_HOME, 1.0f,  KEY_H, AK_H,         "H",     nullptr, KEY_NORMAL},
-	{8.75f, ROW_HOME, 1.0f,  KEY_H, AK_J,         "J",     nullptr, KEY_NORMAL},
-	{9.75f, ROW_HOME, 1.0f,  KEY_H, AK_K,         "K",     nullptr, KEY_NORMAL},
-	{10.75f,ROW_HOME, 1.0f,  KEY_H, AK_L,         "L",     nullptr, KEY_NORMAL},
-	{11.75f,ROW_HOME, 0.75f, KEY_H, AK_SEMICOLON, ";",     ":",  KEY_NORMAL},
-	{12.5f, ROW_HOME, 0.5f,  KEY_H, AK_QUOTE,     "'",     "\"", KEY_NORMAL},
-	{13.0f, ROW_HOME, 0.5f,  KEY_H, AK_NUMBERSIGN,"#",     "~",  KEY_NORMAL},
+	{0.0f,  ROW_HOME, 1.25f, KEY_H, AK_CTRL,      "Ctrl",  nullptr, KEY_MODIFIER},
+	{1.25f, ROW_HOME, 1.0f,  KEY_H, AK_CAPSLOCK,  "Caps",  nullptr, KEY_MODIFIER},
+	{2.25f, ROW_HOME, 1.0f,  KEY_H, AK_A,         "A",     nullptr, KEY_NORMAL},
+	{3.25f, ROW_HOME, 1.0f,  KEY_H, AK_S,         "S",     nullptr, KEY_NORMAL},
+	{4.25f, ROW_HOME, 1.0f,  KEY_H, AK_D,         "D",     nullptr, KEY_NORMAL},
+	{5.25f, ROW_HOME, 1.0f,  KEY_H, AK_F,         "F",     nullptr, KEY_NORMAL},
+	{6.25f, ROW_HOME, 1.0f,  KEY_H, AK_G,         "G",     nullptr, KEY_NORMAL},
+	{7.25f, ROW_HOME, 1.0f,  KEY_H, AK_H,         "H",     nullptr, KEY_NORMAL},
+	{8.25f, ROW_HOME, 1.0f,  KEY_H, AK_J,         "J",     nullptr, KEY_NORMAL},
+	{9.25f, ROW_HOME, 1.0f,  KEY_H, AK_K,         "K",     nullptr, KEY_NORMAL},
+	{10.25f,ROW_HOME, 1.0f,  KEY_H, AK_L,         "L",     nullptr, KEY_NORMAL},
+	{11.25f,ROW_HOME, 0.75f, KEY_H, AK_SEMICOLON, ";",     ":",  KEY_NORMAL},
+	{12.0f, ROW_HOME, 0.75f, KEY_H, AK_QUOTE,     "'",     "\"", KEY_NORMAL},
+	{12.75f,ROW_HOME, 0.75f, KEY_H, AK_NUMBERSIGN,"#",     "~",  KEY_NORMAL},
 	// Return spans from row 2 at x=13.5. No overlap.
 
 	// ---- Row 4: Shift row ----
@@ -156,9 +161,41 @@ static const OskKeyDef s_keys_us[] = {
 	{AR_X,       ROW_SPACE, 1.0f, KEY_H, AK_LF, "<", nullptr, KEY_ARROW},
 	{AR_X + 1.0f,ROW_SPACE, 1.0f, KEY_H, AK_DN, "v", nullptr, KEY_ARROW},
 	{AR_X + 2.0f,ROW_SPACE, 1.0f, KEY_H, AK_RT, ">", nullptr, KEY_ARROW},
+
+	// ---- Optional numpad ----
+	// Row 0: ( ) / *
+	{NP_X,       ROW_FUNC, 1.0f, FUNC_H, AK_NPLPAREN, "(", nullptr, KEY_NUMPAD},
+	{NP_X + 1.0f,ROW_FUNC, 1.0f, FUNC_H, AK_NPRPAREN, ")", nullptr, KEY_NUMPAD},
+	{NP_X + 2.0f,ROW_FUNC, 1.0f, FUNC_H, AK_NPDIV,    "/", nullptr, KEY_NUMPAD},
+	{NP_X + 3.0f,ROW_FUNC, 1.0f, FUNC_H, AK_NPMUL,    "*", nullptr, KEY_NUMPAD},
+
+	// Row 1: 7 8 9 -
+	{NP_X,       ROW_NUM, 1.0f, KEY_H, AK_NP7,  "7", nullptr, KEY_NUMPAD},
+	{NP_X + 1.0f,ROW_NUM, 1.0f, KEY_H, AK_NP8,  "8", nullptr, KEY_NUMPAD},
+	{NP_X + 2.0f,ROW_NUM, 1.0f, KEY_H, AK_NP9,  "9", nullptr, KEY_NUMPAD},
+	{NP_X + 3.0f,ROW_NUM, 1.0f, KEY_H, AK_NPSUB,"-", nullptr, KEY_NUMPAD},
+
+	// Row 2: 4 5 6 +
+	{NP_X,       ROW_QWERT, 1.0f, KEY_H, AK_NP4,  "4", nullptr, KEY_NUMPAD},
+	{NP_X + 1.0f,ROW_QWERT, 1.0f, KEY_H, AK_NP5,  "5", nullptr, KEY_NUMPAD},
+	{NP_X + 2.0f,ROW_QWERT, 1.0f, KEY_H, AK_NP6,  "6", nullptr, KEY_NUMPAD},
+	{NP_X + 3.0f,ROW_QWERT, 1.0f, KEY_H, AK_NPADD,"+", nullptr, KEY_NUMPAD},
+
+	// Row 3: 1 2 3 Enter (spans two rows)
+	{NP_X,       ROW_HOME, 1.0f, KEY_H, AK_NP1, "1", nullptr, KEY_NUMPAD},
+	{NP_X + 1.0f,ROW_HOME, 1.0f, KEY_H, AK_NP2, "2", nullptr, KEY_NUMPAD},
+	{NP_X + 2.0f,ROW_HOME, 1.0f, KEY_H, AK_NP3, "3", nullptr, KEY_NUMPAD},
+	{NP_X + 3.0f,ROW_HOME, 1.0f, KEY_H * 2.0f + 0.1f, AK_ENT, "Ent", nullptr, KEY_NUMPAD},
+
+	// Row 4: 0 (wide) .
+	{NP_X,       ROW_SHIFT, 2.0f, KEY_H, AK_NP0,   "0", nullptr, KEY_NUMPAD},
+	{NP_X + 2.0f,ROW_SHIFT, 1.0f, KEY_H, AK_NPDEL, ".", nullptr, KEY_NUMPAD},
 };
 
-static const int NUM_KEYS = sizeof(s_keys_us) / sizeof(s_keys_us[0]);
+static constexpr int NUM_MAIN_KEYS = 78;
+static constexpr int NUM_NUMPAD_KEYS = 18;
+static constexpr int NUM_KEYS = sizeof(s_keys_us) / sizeof(s_keys_us[0]);
+static_assert(NUM_MAIN_KEYS + NUM_NUMPAD_KEYS == NUM_KEYS, "Unexpected on-screen keyboard layout size");
 
 // ============================================================
 // Language-specific label overrides
@@ -271,6 +308,7 @@ static ImU32 col_amiga_r;
 static ImU32 col_focus_border;
 static ImU32 col_key_shadow;
 static ImU32 col_key_arrow;
+static ImU32 col_key_numpad;
 static ImU32 col_key_space;
 static ImU32 col_key_return;
 
@@ -291,6 +329,7 @@ static void init_colors()
 	col_focus_border   = IM_COL32(255, 210, 60, 255);    // yellow focus highlight
 	col_key_shadow     = IM_COL32(0, 0, 0, 110);         // stronger drop shadow
 	col_key_arrow      = IM_COL32(188, 174, 150, 255);   // arrow keys
+	col_key_numpad     = IM_COL32(206, 192, 168, 255);   // slightly cooler beige
 	col_key_space      = IM_COL32(236, 224, 200, 255);   // space bar (lighter)
 	col_key_return     = IM_COL32(206, 192, 168, 255);   // return key
 }
@@ -306,6 +345,7 @@ static Uint64 s_anim_start_time = 0;
 static constexpr float ANIM_DURATION_MS = 300.0f; // slide animation duration
 
 static float s_transparency = 0.85f; // configurable alpha
+static bool s_numpad_enabled = false;
 
 static int s_focused_key = -1; // currently focused key (for D-pad navigation)
 static std::set<int> s_sticky_keys; // set of AK_* codes for active sticky modifiers
@@ -331,13 +371,24 @@ static float s_kb_x = 0, s_kb_y = 0, s_kb_w = 0, s_kb_h = 0;
 static float s_unit_w = 0, s_unit_h = 0;
 
 // Total layout dimensions in units
-static constexpr float LAYOUT_W = 17.0f; // total width in key units
+static constexpr float COMPACT_LAYOUT_W = 17.0f;
+static constexpr float FULL_LAYOUT_W = 20.0f;
 static constexpr float LAYOUT_H = 6.1f;  // total height in key units
 #ifdef __ANDROID__
 static constexpr float KB_HEIGHT_FRAC = 0.55f; // larger keys for finger taps on phones
 #else
 static constexpr float KB_HEIGHT_FRAC = 0.42f; // keyboard occupies 42% of screen height
 #endif
+
+static int active_key_count()
+{
+	return s_numpad_enabled ? NUM_KEYS : NUM_MAIN_KEYS;
+}
+
+static float active_layout_width()
+{
+	return s_numpad_enabled ? FULL_LAYOUT_W : COMPACT_LAYOUT_W;
+}
 
 static void reset_navigation_state()
 {
@@ -374,7 +425,7 @@ static void compute_geometry(int dw, int dh)
 	float usable_w = s_kb_w - pad * 2.0f;
 	float usable_h = s_kb_h - pad * 2.0f;
 
-	s_unit_w = usable_w / LAYOUT_W;
+	s_unit_w = usable_w / active_layout_width();
 	s_unit_h = usable_h / LAYOUT_H;
 
 	// Position: bottom of screen
@@ -413,6 +464,7 @@ static ImU32 get_key_color(const OskKeyDef& key)
 	case KEY_AMIGA_R:   return col_key_modifier;
 	case KEY_RETURN:    return col_key_return;
 	case KEY_ARROW:     return col_key_arrow;
+	case KEY_NUMPAD:    return col_key_numpad;
 	default:            return col_key_normal;
 	}
 }
@@ -566,6 +618,8 @@ static void draw_key(ImDrawList* dl, const OskKeyDef& key, int key_index,
 // Public API
 // ============================================================
 
+static void release_pressed_keys();
+
 void imgui_osk_init()
 {
 	if (s_initialized)
@@ -641,12 +695,28 @@ void imgui_osk_set_language(const char* lang)
 		s_active_overrides = nullptr; // unknown = US fallback
 }
 
-void imgui_osk_render(int dw, int dh)
+void imgui_osk_set_numpad(const bool enabled)
+{
+	if (s_numpad_enabled == enabled)
+		return;
+
+	// Release anything held before changing the active index range.
+	release_pressed_keys();
+	s_numpad_enabled = enabled;
+	s_viewport_w = 0; // force geometry recomputation for the new layout width
+	if (s_focused_key >= active_key_count())
+		s_focused_key = 0;
+}
+
+void imgui_osk_render()
 {
 	if (!s_initialized || !imgui_overlay_is_initialized())
 		return;
 
-	compute_geometry(dw, dh);
+	const ImVec2 display_size = ImGui::GetIO().DisplaySize;
+	if (display_size.x <= 0.0f || display_size.y <= 0.0f)
+		return;
+	compute_geometry(static_cast<int>(display_size.x), static_cast<int>(display_size.y));
 
 	// Update animation
 	float anim_offset = 0.0f;
@@ -709,7 +779,7 @@ void imgui_osk_render(int dw, int dh)
 		border_light, 1.5f);
 
 	// Draw all keys
-	for (int i = 0; i < NUM_KEYS; i++) {
+	for (int i = 0; i < active_key_count(); i++) {
 		float kx, ky, kw, kh;
 		key_to_screen(s_keys_us[i], anim_offset, &kx, &ky, &kw, &kh);
 		draw_key(dl, s_keys_us[i], i, kx, ky, kw, kh, alpha, font, font_small);
@@ -732,7 +802,7 @@ static int find_key_at(float screen_x, float screen_y)
 			anim_offset = s_kb_h * s_anim_progress;
 	}
 
-	for (int i = 0; i < NUM_KEYS; i++) {
+	for (int i = 0; i < active_key_count(); i++) {
 		float kx, ky, kw, kh;
 		key_to_screen(s_keys_us[i], anim_offset, &kx, &ky, &kw, &kh);
 		if (screen_x >= kx && screen_x <= kx + kw &&
@@ -800,7 +870,7 @@ static void release_pressed_keys()
 {
 	std::set<int> pressed_keys = s_pressed_keys;
 	for (int key_idx : pressed_keys) {
-		if (key_idx >= 0 && key_idx < NUM_KEYS)
+		if (key_idx >= 0 && key_idx < active_key_count())
 			release_key(s_keys_us[key_idx].ak_code);
 	}
 	s_finger_keys.clear();
@@ -844,7 +914,7 @@ bool imgui_osk_handle_finger_up(float screen_x, float screen_y, int finger_id)
 	s_finger_keys.erase(it);
 	s_pressed_keys.erase(key_idx);
 
-	if (key_idx >= 0 && key_idx < NUM_KEYS) {
+	if (key_idx >= 0 && key_idx < active_key_count()) {
 		release_key(s_keys_us[key_idx].ak_code);
 	}
 	return true;
@@ -861,11 +931,11 @@ bool imgui_osk_handle_finger_motion(float screen_x, float screen_y, int finger_i
 
 	if (new_idx != old_idx) {
 		// Finger moved to a different key
-		if (old_idx >= 0 && old_idx < NUM_KEYS) {
+		if (old_idx >= 0 && old_idx < active_key_count()) {
 			s_pressed_keys.erase(old_idx);
 			release_key(s_keys_us[old_idx].ak_code);
 		}
-		if (new_idx >= 0 && new_idx < NUM_KEYS) {
+		if (new_idx >= 0 && new_idx < active_key_count()) {
 			s_finger_keys[finger_id] = new_idx;
 			s_pressed_keys.insert(new_idx);
 			press_key(s_keys_us[new_idx].ak_code);
@@ -887,7 +957,7 @@ bool imgui_osk_handle_finger_motion(float screen_x, float screen_y, int finger_i
 //   horizontally closest key in that row.
 static int find_nearest_key(int from_idx, int direction)
 {
-	if (from_idx < 0 || from_idx >= NUM_KEYS)
+	if (from_idx < 0 || from_idx >= active_key_count())
 		return 0;
 
 	const OskKeyDef& from = s_keys_us[from_idx];
@@ -904,7 +974,7 @@ static int find_nearest_key(int from_idx, int direction)
 		int best = -1;
 		float best_dx = 999999.0f;
 
-		for (int i = 0; i < NUM_KEYS; i++) {
+		for (int i = 0; i < active_key_count(); i++) {
 			if (i == from_idx) continue;
 			const OskKeyDef& to = s_keys_us[i];
 			float to_cx = to.x + to.w * 0.5f;
@@ -929,7 +999,7 @@ static int find_nearest_key(int from_idx, int direction)
 
 		// If nothing found on same row, try any row (fallback)
 		if (best < 0) {
-			for (int i = 0; i < NUM_KEYS; i++) {
+			for (int i = 0; i < active_key_count(); i++) {
 				if (i == from_idx) continue;
 				const OskKeyDef& to = s_keys_us[i];
 				float to_cx = to.x + to.w * 0.5f;
@@ -949,7 +1019,7 @@ static int find_nearest_key(int from_idx, int direction)
 	// Vertical (UP/DOWN): two-phase — find nearest row, then closest key in it
 	// Phase 1: find the nearest row center Y in the pressed direction
 	float nearest_row_dy = 999999.0f;
-	for (int i = 0; i < NUM_KEYS; i++) {
+	for (int i = 0; i < active_key_count(); i++) {
 		if (i == from_idx) continue;
 		const OskKeyDef& to = s_keys_us[i];
 		float to_cy = to.y + to.h * 0.5f;
@@ -970,7 +1040,7 @@ static int find_nearest_key(int from_idx, int direction)
 	int best = -1;
 	float best_dx = 999999.0f;
 
-	for (int i = 0; i < NUM_KEYS; i++) {
+	for (int i = 0; i < active_key_count(); i++) {
 		if (i == from_idx) continue;
 		const OskKeyDef& to = s_keys_us[i];
 		float to_cx = to.x + to.w * 0.5f;
@@ -1047,7 +1117,7 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 	}
 
 	// Button press/release
-	if (s_focused_key >= 0 && s_focused_key < NUM_KEYS) {
+	if (s_focused_key >= 0 && s_focused_key < active_key_count()) {
 		int ak = s_keys_us[s_focused_key].ak_code;
 
 		if (rising & OSK_BUTTON) {
