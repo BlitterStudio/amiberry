@@ -738,10 +738,23 @@ void set_last_active_config(const char* filename)
 	remove_file_extension(last_active_config);
 }
 
+static bool is_physical_media_device(const char* filename)
+{
+	if (strncmp(filename, "/dev/", 5) == 0)
+		return true;
+
+	const char drive_letter = filename[0];
+	return ((drive_letter >= 'A' && drive_letter <= 'Z') || (drive_letter >= 'a' && drive_letter <= 'z'))
+		&& filename[1] == ':'
+		&& (filename[2] == '\\' || filename[2] == '/')
+		&& (filename[3] == '\0' || filename[3] == ',');
+}
+
 void set_last_active_config_from_media(const char* filename)
 {
-	// Media names are save-as defaults; they must not replace an explicitly loaded configuration.
-	if (filename && filename[0] && !last_loaded_config[0])
+	// Media names are save-as defaults; they must not replace an explicitly loaded configuration
+	// or use a physical device path as a configuration name.
+	if (filename && filename[0] && !last_loaded_config[0] && !is_physical_media_device(filename))
 		set_last_active_config(filename);
 }
 
@@ -6036,13 +6049,10 @@ std::string extract_path(const std::string& filename)
 
 void remove_file_extension(char* filename)
 {
-	auto* p = filename + strlen(filename) - 1;
-	while (p >= filename && *p != '.')
-	{
-		*p = '\0';
-		--p;
-	}
-	*p = '\0';
+	if (!filename)
+		return;
+	if (auto* const extension = strrchr(filename, '.'))
+		*extension = '\0';
 }
 
 std::string remove_file_extension(const std::string& filename)
