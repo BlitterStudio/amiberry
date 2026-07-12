@@ -6031,11 +6031,22 @@ int check_configfile(const char* file)
 
 void extract_filename(const char* str, char* buffer)
 {
-	const auto* p = str + strlen(str) - 1;
-	while (*p != '/' && p >= str)
-		p--;
-	p++;
-	strncpy(buffer, p, MAX_DPATH - 1);
+	if (!buffer)
+		return;
+	if (!str)
+	{
+		buffer[0] = '\0';
+		return;
+	}
+
+	const char* filename = str;
+	for (const char* p = str; *p; ++p)
+	{
+		if (*p == '/' || *p == '\\')
+			filename = p + 1;
+	}
+	strncpy(buffer, filename, MAX_DPATH - 1);
+	buffer[MAX_DPATH - 1] = '\0';
 }
 
 std::string extract_filename(const std::string& path)
