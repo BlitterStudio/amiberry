@@ -742,8 +742,17 @@ void set_last_active_config(const char* filename)
 
 static bool is_physical_media_device(const char* filename)
 {
+#ifndef _WIN32
 	if (strncmp(filename, "/dev/", 5) == 0)
-		return true;
+	{
+		std::string device_path(filename);
+		if (const auto options = device_path.find(','); options != std::string::npos)
+			device_path.resize(options);
+
+		struct stat st{};
+		return stat(device_path.c_str(), &st) == 0 && (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode));
+	}
+#endif
 
 	const char drive_letter = filename[0];
 	return ((drive_letter >= 'A' && drive_letter <= 'Z') || (drive_letter >= 'a' && drive_letter <= 'z'))
