@@ -27,8 +27,8 @@ bool imgui_osk_is_active();
 bool imgui_osk_should_render();
 
 // Render the keyboard. Called between imgui_overlay_begin_frame/end_frame.
-// dw, dh = drawable (viewport) dimensions in pixels.
-void imgui_osk_render(int dw, int dh);
+// Geometry uses ImGui's logical display coordinates for HiDPI correctness.
+void imgui_osk_render();
 
 // Process joystick/D-pad input for keyboard navigation.
 // state: bitmask of VKBD_UP/DOWN/LEFT/RIGHT/BUTTON
@@ -48,6 +48,7 @@ bool imgui_osk_hit_test(float screen_x, float screen_y);
 // Configuration
 void imgui_osk_set_transparency(float alpha); // 0.0 = fully transparent, 1.0 = opaque
 void imgui_osk_set_language(const char* lang); // "US", "UK", "DE", "FR"
+void imgui_osk_set_numpad(bool enabled);
 
 // Direct gamepad control (called from SDL event handler).
 // x/y: direction (-1,0,1). button: bit index. buttonstate: 0/1.

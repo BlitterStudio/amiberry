@@ -155,13 +155,14 @@ fun InputTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		// On-screen controls (only shown on devices with a touchscreen)
-		if (hasTouchScreen) {
-			OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-				Column(modifier = Modifier.padding(16.dp)) {
-					Text(stringResource(R.string.settings_input_on_screen_controls_title), style = MaterialTheme.typography.titleMedium)
-					Spacer(modifier = Modifier.height(8.dp))
+		// The keyboard can be driven by a game controller, so keep its settings
+		// available on non-touch devices as well.
+		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+			Column(modifier = Modifier.padding(16.dp)) {
+				Text(stringResource(R.string.settings_input_on_screen_controls_title), style = MaterialTheme.typography.titleMedium)
+				Spacer(modifier = Modifier.height(8.dp))
 
+				if (hasTouchScreen) {
 					SwitchRow(
 						label = stringResource(R.string.settings_input_on_screen_joystick),
 						checked = settings.onScreenJoystick,
@@ -169,15 +170,25 @@ fun InputTab(viewModel: SettingsViewModel) {
 							viewModel.updateSettings { s -> InputSettingsActions.setOnScreenJoystick(s, isEnabled) }
 						}
 					)
-
-					SwitchRow(
-						label = stringResource(R.string.settings_input_on_screen_keyboard_button),
-						checked = settings.onScreenKeyboard,
-						onCheckedChange = {
-							viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
-						}
-					)
 				}
+
+				SwitchRow(
+					label = stringResource(R.string.settings_input_on_screen_keyboard_button),
+					checked = settings.onScreenKeyboard,
+					onCheckedChange = {
+						viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
+					}
+				)
+
+				SwitchRow(
+					label = stringResource(R.string.settings_input_on_screen_keyboard_numpad),
+					checked = settings.onScreenKeyboardNumpad,
+					enabled = settings.onScreenKeyboard,
+					supportingText = stringResource(R.string.settings_input_on_screen_keyboard_numpad_summary),
+					onCheckedChange = {
+						viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
+					}
+				)
 			}
 		}
 	}

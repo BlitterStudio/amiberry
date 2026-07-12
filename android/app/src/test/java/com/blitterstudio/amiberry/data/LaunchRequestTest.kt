@@ -139,6 +139,7 @@ class LaunchRequestTest {
 				"-s", "joyport0=mouse",
 				"-s", "amiberry.onscreen_joystick=true",
 				"-s", "amiberry.vkbd_enabled=false",
+				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=false",
 				"-G"
 			),
@@ -156,7 +157,8 @@ class LaunchRequestTest {
 				joyport0 = "mouse",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
-				onScreenKeyboard = true
+				onScreenKeyboard = true,
+				onScreenKeyboardNumpad = true
 			),
 			skipGui = true
 		).toArgs()
@@ -169,6 +171,7 @@ class LaunchRequestTest {
 				"-s", "joyport1=joy1",
 				"-s", "amiberry.onscreen_joystick=false",
 				"-s", "amiberry.vkbd_enabled=true",
+				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
 				"-G"
 			),

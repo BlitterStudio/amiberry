@@ -867,6 +867,7 @@ static const char* help_text_virtual_keyboard =
 	"\"On-screen Joystick\": shows a virtual D-pad and fire buttons for touchscreen control.\n"
 	"\n"
 	"\"On-screen Keyboard enabled\": enables the Amiga-style on-screen keyboard overlay.\n"
+	"\"Include numeric keypad\": adds the Amiga keypad and reduces key size so the full keyboard fits.\n"
 	" The keyboard can be operated via touch or controller D-pad navigation.\n"
 	" It works in both native (ECS/AGA) and RTG screen modes.\n"
 	"\n"

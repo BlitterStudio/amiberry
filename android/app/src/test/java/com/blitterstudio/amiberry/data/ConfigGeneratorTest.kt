@@ -171,7 +171,8 @@ class ConfigGeneratorTest {
 			EmulatorSettings(
 				joyport1 = "onscreen_joy",
 				onScreenJoystick = true,
-				onScreenKeyboard = true
+				onScreenKeyboard = true,
+				onScreenKeyboardNumpad = true
 			)
 		)
 		val lines = output.lines()
@@ -180,6 +181,7 @@ class ConfigGeneratorTest {
 		assertContainsLine(lines, "amiberry.android_joyport1=onscreen_joy")
 		assertContainsLine(lines, "amiberry.onscreen_joystick=true")
 		assertContainsLine(lines, "amiberry.vkbd_enabled=true")
+		assertContainsLine(lines, "amiberry.vkbd_numpad=true")
 		assertContainsLine(lines, "input.default_osk=true")
 	}
 
@@ -198,6 +200,7 @@ class ConfigGeneratorTest {
 		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
 		assertContainsLine(lines, "amiberry.onscreen_joystick=false")
 		assertContainsLine(lines, "amiberry.vkbd_enabled=false")
+		assertContainsLine(lines, "amiberry.vkbd_numpad=false")
 		assertContainsLine(lines, "input.default_osk=false")
 	}
 
@@ -218,6 +221,7 @@ class ConfigGeneratorTest {
 		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
 		assertContainsLine(lines, "amiberry.onscreen_joystick=false")
 		assertContainsLine(lines, "amiberry.vkbd_enabled=false")
+		assertContainsLine(lines, "amiberry.vkbd_numpad=false")
 		assertContainsLine(lines, "input.default_osk=false")
 		assertContainsLine(lines, "use_gui=no")
 		assertNotContains(output, "cpu_model=")
@@ -360,7 +364,8 @@ class ConfigGeneratorTest {
 			joyport0 = "mouse",
 			joyport1 = "joy0",
 			onScreenJoystick = false,
-			onScreenKeyboard = true
+			onScreenKeyboard = true,
+			onScreenKeyboardNumpad = true
 		)
 
 		val configText = ConfigGenerator.generate(original)
@@ -396,6 +401,7 @@ class ConfigGeneratorTest {
 		assertEquals(original.joyport1, result.joyport1)
 		assertEquals(original.onScreenJoystick, result.onScreenJoystick)
 		assertEquals(original.onScreenKeyboard, result.onScreenKeyboard)
+		assertEquals(original.onScreenKeyboardNumpad, result.onScreenKeyboardNumpad)
 	}
 
 	@Test

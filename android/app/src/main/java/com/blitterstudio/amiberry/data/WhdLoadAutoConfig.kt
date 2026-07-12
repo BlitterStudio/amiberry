@@ -78,7 +78,8 @@ object WhdLoadAutoConfig {
 			joyport0 = currentSettings.joyport0,
 			joyport1 = currentSettings.joyport1,
 			onScreenJoystick = currentSettings.onScreenJoystick,
-			onScreenKeyboard = currentSettings.onScreenKeyboard
+			onScreenKeyboard = currentSettings.onScreenKeyboard,
+			onScreenKeyboardNumpad = currentSettings.onScreenKeyboardNumpad
 		)
 
 		settings = applyHardware(settings, hardware, a600Available, useAgaCpuProfile = isAga || isCd32)

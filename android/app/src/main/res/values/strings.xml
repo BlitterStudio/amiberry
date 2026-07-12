@@ -297,6 +297,8 @@
     <string name="settings_input_on_screen_controls_title">On-Screen Controls</string>
     <string name="settings_input_on_screen_joystick">On-Screen Joystick</string>
     <string name="settings_input_on_screen_keyboard_button">On-Screen Keyboard Button</string>
+    <string name="settings_input_on_screen_keyboard_numpad">Include Numeric Keypad</string>
+    <string name="settings_input_on_screen_keyboard_numpad_summary">Fits the full Amiga keyboard on screen using smaller keys.</string>
     <string name="settings_input_device_mouse">Mouse</string>
     <string name="settings_input_device_joystick_0">Joystick 0</string>
     <string name="settings_input_device_joystick_1">Joystick 1</string>

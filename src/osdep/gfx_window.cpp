@@ -1356,6 +1356,7 @@ bool doInit(AmigaMonitor* mon)
 			? static_cast<float>(currprefs.vkbd_transparency) / 100.0f
 			: 0.85f);
 	imgui_osk_set_language(currprefs.vkbd_language);
+	imgui_osk_set_numpad(currprefs.vkbd_numpad);
 
 	// Initialize on-screen joystick if enabled
 	if (currprefs.onscreen_joystick)

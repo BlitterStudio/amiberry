@@ -1602,6 +1602,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 #ifdef __ANDROID__
 	const bool android_onscreen_joystick = prefs->onscreen_joystick;
 	const bool android_vkbd_enabled = prefs->vkbd_enabled;
+	const bool android_vkbd_numpad = prefs->vkbd_numpad;
 	const bool android_input_default_osk = prefs->input_default_onscreen_keyboard;
 #endif
 
@@ -1826,6 +1827,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	// Preserve the launcher's explicit choice across the WHDLoad hardware preset.
 	prefs->onscreen_joystick = android_onscreen_joystick;
 	prefs->vkbd_enabled = android_vkbd_enabled;
+	prefs->vkbd_numpad = android_vkbd_numpad;
 	prefs->input_default_onscreen_keyboard = android_input_default_osk;
 #endif
 

@@ -123,7 +123,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			joyport0 = previousSettings.joyport0,
 			joyport1 = previousSettings.joyport1,
 			onScreenJoystick = previousSettings.onScreenJoystick,
-			onScreenKeyboard = previousSettings.onScreenKeyboard
+			onScreenKeyboard = previousSettings.onScreenKeyboard,
+			onScreenKeyboardNumpad = previousSettings.onScreenKeyboardNumpad
 		)
 		applyConstrainedSettings(newSettings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)

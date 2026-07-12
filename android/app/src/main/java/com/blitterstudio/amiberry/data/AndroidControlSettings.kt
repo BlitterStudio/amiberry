@@ -26,6 +26,11 @@ object AndroidControlSettings {
 				settings.onScreenKeyboard
 			} else {
 				fallback.onScreenKeyboard
+			},
+			onScreenKeyboardNumpad = if ("amiberry.vkbd_numpad" in keys) {
+				settings.onScreenKeyboardNumpad
+			} else {
+				fallback.onScreenKeyboardNumpad
 			}
 		)
 	}
