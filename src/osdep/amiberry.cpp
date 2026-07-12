@@ -662,6 +662,7 @@ static bool legacy_cleanup_prompt_enabled = false;
 
 char last_loaded_config[MAX_DPATH] = {};
 char last_active_config[MAX_DPATH] = {};
+static bool last_loaded_config_is_automatic_default = false;
 
 int max_uae_width;
 int max_uae_height;
@@ -726,10 +727,11 @@ static std::string get_bootstrap_destination_label(const legacy_migration_state_
 	return {};
 }
 
-void set_last_loaded_config(const char* filename)
+void set_last_loaded_config(const char* filename, const bool automatic_default)
 {
 	extract_filename(filename, last_loaded_config);
 	remove_file_extension(last_loaded_config);
+	last_loaded_config_is_automatic_default = automatic_default;
 }
 
 void set_last_active_config(const char* filename)
@@ -754,7 +756,8 @@ void set_last_active_config_from_media(const char* filename)
 {
 	// Media names are save-as defaults; they must not replace an explicitly loaded configuration
 	// or use a physical device path as a configuration name.
-	if (filename && filename[0] && !last_loaded_config[0] && !is_physical_media_device(filename))
+	const bool explicit_config_loaded = last_loaded_config[0] && !last_loaded_config_is_automatic_default;
+	if (filename && filename[0] && !explicit_config_loaded && !is_physical_media_device(filename))
 		set_last_active_config(filename);
 }
 
@@ -5985,7 +5988,7 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		if (strlen(p->floppyslots[i].df) > 0)
 			add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 	}
-	set_last_loaded_config(filename);
+	set_last_loaded_config(filename, isdefault != 0);
 	set_last_active_config(filename);
 	return result;
 }
