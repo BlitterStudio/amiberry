@@ -1,6 +1,6 @@
 ---
 name: winuae-amiberry-merge
-description: Use when merging or analyzing upstream WinUAE changes for Amiberry's SDL3/CMake codebase across Linux, macOS, Android, Windows, FreeBSD, Haiku, and iOS work-in-progress targets. Covers porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, adapting platform-specific code, preserving upstream-sync safety for local Amiberry divergences, handling `#ifdef AMIBERRY` splits, and verifying feature parity.
+description: Use when merging or analyzing upstream WinUAE changes for Amiberry's SDL3/CMake codebase across Linux, macOS, Android, Windows, FreeBSD, Haiku, iOS work-in-progress, and the headless libretro core. Covers porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, adapting platform-specific code, preserving upstream-sync safety for local Amiberry divergences, handling `#ifdef AMIBERRY` splits, and verifying feature parity.
 ---
 
 # WinUAE to Amiberry Merge Assistant
@@ -20,7 +20,7 @@ WinUAE is the upstream Windows-based Amiga emulator. Amiberry is a cross-platfor
 - **Threading:** WinUAE uses Win32 threads; Amiberry uses SDL3 threading primitives where possible
 - **GUI:** WinUAE uses Win32 dialogs; Amiberry uses Dear ImGui (in `src/osdep/imgui/`)
 - **Build:** WinUAE uses Visual Studio; Amiberry uses CMake (+ Gradle for Android)
-- **Platforms:** Amiberry targets Linux, macOS, Android, Windows, FreeBSD, Haiku, and iOS work-in-progress targets using SDL3
+- **Platforms:** Amiberry targets Linux, macOS, Android, Windows, FreeBSD, Haiku, and iOS work-in-progress targets using SDL3, plus a headless libretro core with platform stubs
 - **CI/CD:** GitHub Actions builds all platforms on each commit
 
 ## Merge Workflow
@@ -153,6 +153,14 @@ After applying changes:
 - Check that GUI changes match WinUAE behavior
 - Confirm no Windows-specific code leaked through
 - Test with different configurations if relevant
+- If shared headers, function signatures, or `src/osdep/` call sites changed, update matching replacements in `libretro/libretro_gui_stubs.cpp` or `libretro/libretro_stubs.cpp`.
+- Run a clean standalone libretro build because its Makefile does not track header dependencies:
+  ```bash
+  make -C libretro clean
+  make -C libretro platform=unix ARCH="$(uname -m)" -j"$(nproc)"       # Linux
+  make -C libretro platform=osx ARCH="$(uname -m)" -j"$(sysctl -n hw.logicalcpu)"  # macOS
+  ```
+- Keep libretro headless: stub host-only GUI behavior instead of adding host GUI sources to its Makefile.
 
 ## GUI Synchronization Guide
 

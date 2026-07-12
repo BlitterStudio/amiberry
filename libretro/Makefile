@@ -48,6 +48,13 @@ ifeq ($(ARCH),)
    ARCH = $(shell uname -m)
 endif
 
+# Clang leaves ASan runtime references unresolved in shared libraries so the
+# frontend executable can provide the runtime. Keep strict symbol checking for
+# normal builds, but do not make sanitizer builds reject those references.
+ifneq ($(SANITIZE), 1)
+   NO_UNDEFINED := -Wl,--no-undefined
+endif
+
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
@@ -57,9 +64,9 @@ ifeq ($(platform), unix)
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    ifeq ($(DEBUG), 1)
-   SHARED := -shared -Wl,-Bsymbolic-functions
+   SHARED := -shared $(NO_UNDEFINED) -Wl,-Bsymbolic-functions
    else
-   SHARED := -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
+   SHARED := -shared $(NO_UNDEFINED) -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
    endif
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
