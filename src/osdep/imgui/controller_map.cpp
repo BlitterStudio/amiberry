@@ -841,7 +841,8 @@ void ControllerMap_RenderModal()
 	// Use auto-sizing for height to ensure everything fits regardless of title bar or font size.
 	ImGui::SetNextWindowSize(ImVec2(scaled_screen_w, 0.0f), ImGuiCond_Always);
 	if (ImGui::BeginPopupModal(kControllerMapTitle, nullptr,
-		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs))
 	{
 		const char* info_line1 = "Press the buttons on your controller when indicated.";
 		const char* info_line2 = "Backspace/Back goes to previous, Space skips, ESC cancels.";
