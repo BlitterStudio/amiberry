@@ -540,6 +540,7 @@ static void RenderCDSection()
                 changed_prefs.cdslots[0].inuse = true;
                 changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
                 AddToMruCdList(path);
+                set_last_active_config_from_media(path.c_str());
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
             ImGui::PopID();
@@ -586,6 +587,7 @@ static void RenderCDSection()
              changed_prefs.cdslots[0].inuse = true;
              changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
              AddToMruCdList(result_path);
+             set_last_active_config_from_media(result_path.c_str());
         }
     }
 
@@ -1392,8 +1394,10 @@ static void ShowEditCDDriveModal()
                 au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path_buf);
                 changed_prefs.cdslots[0].inuse = true;
                 changed_prefs.cdslots[0].type = IsCdDevicePath(path_buf) ? SCSI_UNIT_IOCTL : SCSI_UNIT_DEFAULT;
-                if (!IsCdDevicePath(path_buf))
+                if (!IsCdDevicePath(path_buf)) {
                     AddToMruCdList(path_buf);
+                    set_last_active_config_from_media(path_buf);
+                }
             }
 
             new_cddrive(edit_entry_index);

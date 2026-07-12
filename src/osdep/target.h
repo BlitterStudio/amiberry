@@ -230,6 +230,7 @@ extern void extract_path(const char* str, char* buffer);
 extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
+extern void set_last_active_config_from_media(const char* filename);
 extern void ReadConfigFileList();
 extern void configurations_panel_reset();
 extern void read_rom_list(bool);

@@ -738,6 +738,13 @@ void set_last_active_config(const char* filename)
 	remove_file_extension(last_active_config);
 }
 
+void set_last_active_config_from_media(const char* filename)
+{
+	// Media names are save-as defaults; they must not replace an explicitly loaded configuration.
+	if (filename && filename[0] && !last_loaded_config[0])
+		set_last_active_config(filename);
+}
+
 int getdpiformonitor(SDL_DisplayID displayID)
 {
 	float scale = SDL_GetDisplayContentScale(displayID);
@@ -3143,6 +3150,7 @@ static void handle_drop_file_event(const SDL_Event& event)
 	{
 		// Insert floppy image
 		disk_insert(0, dropped_file);
+		set_last_active_config_from_media(dropped_file);
 	}
 	else if (strcasecmp(ext.c_str(), ".lha") == 0)
 	{
@@ -10202,6 +10210,7 @@ void target_getdate(int* y, int* m, int* d)
 void target_addtorecent(const TCHAR* name, int t)
 {
 	add_file_to_mru_list(lstMRUDiskList, std::string(name));
+	set_last_active_config_from_media(name);
 }
 
 void target_reset()

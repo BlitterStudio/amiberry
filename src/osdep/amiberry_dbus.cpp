@@ -277,6 +277,7 @@ static void HandleInsertFloppy(DBusMessage* msg)
 		{
 			_tcsncpy(changed_prefs.floppyslots[drivenum].df, diskpathstr, MAX_DPATH);
 			changed_prefs.floppyslots[drivenum].df[MAX_DPATH - 1] = 0;
+			set_last_active_config_from_media(diskpathstr);
 			set_config_changed();
 		}
 		else
@@ -311,6 +312,7 @@ static void HandleInsertCD(DBusMessage* msg)
 		_tcsncpy(changed_prefs.cdslots[0].name, diskpathstr, MAX_DPATH);
 		changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
 		changed_prefs.cdslots[0].inuse = true;
+		set_last_active_config_from_media(diskpathstr);
 
 		std::cout << "CD Type: " << changed_prefs.cdslots[0].type << "\n";
 		set_config_changed();

@@ -125,8 +125,6 @@ void render_panel_whdload()
              whdload_prefs.whdload_filename = result_path;
              add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
              whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-             if (!last_loaded_config[0])
-                 set_last_active_config(whdload_prefs.whdload_filename.c_str());
         }
     }
 
@@ -167,8 +165,6 @@ void render_panel_whdload()
         if (current_whd_idx >= 0 && current_whd_idx < (int)whd_paths.size()) {
              whdload_prefs.whdload_filename = whd_paths[current_whd_idx];
              whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-             if (!last_loaded_config[0])
-                 set_last_active_config(whdload_prefs.whdload_filename.c_str());
         }
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());

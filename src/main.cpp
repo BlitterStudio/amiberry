@@ -1177,6 +1177,7 @@ std::string get_filename_extension(const TCHAR* filename)
 }
 
 extern void set_last_active_config(const char* filename);
+extern void set_last_active_config_from_media(const char* filename);
 
 static bool cmdline_started;
 
@@ -1372,6 +1373,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				if (_tcsrchr(txt2, ',') == nullptr)
 					_tcscat(txt2, _T(",image"));
 				cfgfile_parse_option(&currprefs, _T("cdimage0"), txt2, 0);
+				set_last_active_config_from_media(txt);
 				xfree(txt2);
 				xfree(txt);
 			}
@@ -1398,7 +1400,6 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
 				whdload_prefs.whdload_filename = std::string(txt);
 				whdload_auto_prefs(&currprefs, txt);
-				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".uss") == 0)
 			{
@@ -1425,7 +1426,6 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				write_log("CDTV/CD32... %s\n", txt);
 				add_file_to_mru_list(lstMRUCDList, std::string(txt));
 				cd_auto_prefs(&currprefs, txt);
-				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".adf") == 0
 				|| _tcscmp(txt2.c_str(), ".adz") == 0
@@ -1468,7 +1468,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
 					disk_insert(0, txt);
-					set_last_active_config(txt);
+					set_last_active_config_from_media(txt);
 					currprefs.start_gui = false;
 				}
 			}

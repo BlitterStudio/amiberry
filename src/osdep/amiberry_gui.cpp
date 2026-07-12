@@ -647,6 +647,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 				strncpy(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH);
 				disk_insert(shortcut, tmp.c_str());
 				add_file_to_mru_list(lstMRUDiskList, tmp);
+				set_last_active_config_from_media(tmp.c_str());
 			}
 		}
 	}
@@ -720,6 +721,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 				changed_prefs.cdslots[0].inuse = true;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 				add_file_to_mru_list(lstMRUCDList, tmp);
+				set_last_active_config_from_media(tmp.c_str());
 			}
 		}
 	}
