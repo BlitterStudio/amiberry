@@ -2074,12 +2074,12 @@ void run_gui()
 	// Main loop
 	while (gui_running) {
 		while (SDL_PollEvent(&gui_event)) {
-			// Make sure ImGui sees all events
-			ImGui_ImplSDL3_ProcessEvent(&gui_event);
-
 			if (ControllerMap_HandleEvent(gui_event)) {
 				continue;
 			}
+
+			// Make sure ImGui sees all unconsumed events
+			ImGui_ImplSDL3_ProcessEvent(&gui_event);
 
 			if (gui_event.type == SDL_EVENT_QUIT)	{
 				uae_quit();
