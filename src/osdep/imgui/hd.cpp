@@ -156,12 +156,18 @@ static int cached_get_filesys_unitconfig(struct uae_prefs *p, int row, struct mo
 
 static bool IsCdDevicePath(const char* path)
 {
-    return path && std::strncmp(path, "/dev/", 5) == 0;
+	if (!path)
+		return false;
+	if (std::strncmp(path, "/dev/", 5) == 0)
+		return true;
+
+	const auto cd_drives = get_cd_drives();
+	return std::find(cd_drives.begin(), cd_drives.end(), path) != cd_drives.end();
 }
 
 static bool IsCdDevicePath(const std::string& path)
 {
-    return path.rfind("/dev/", 0) == 0;
+	return IsCdDevicePath(path.c_str());
 }
 
 static bool ValidatePhysicalDriveSelection(const uaedev_config_info& ci, std::string& error, bool* out_readonly = nullptr)
