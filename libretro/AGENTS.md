@@ -45,6 +45,7 @@ libretro/
 | Graphics output | `src/osdep/libretro/gfx_platform_internal.h` | `video_cb()` callback |
 | Core options | `core-options.h` | RetroArch UI settings |
 | Platform stubs | `src/osdep/libretro/` | Complete replacement of host platform |
+| Host GUI API stubs | `libretro_gui_stubs.cpp` | No-op replacements for GUI, overlay, OSK, and touch APIs used by shared `src/osdep/` code |
 
 ## CONVENTIONS
 
@@ -53,9 +54,25 @@ libretro/
 - Platform files live in `src/osdep/libretro/`, NOT in `libretro/`
 - Fake 1920x1080 display enumerated for resolution selection
 - `libretro-common/` is shared upstream code — minimize modifications
+- The standalone Makefile does not track header dependencies; use a clean build after changing shared declarations
+- Linux links with `--no-undefined` so missing headless stubs fail consistently across platforms
+
+## BUILD
+
+```bash
+# Linux
+make -C libretro clean
+make -C libretro platform=unix ARCH="$(uname -m)" -j"$(nproc)"
+
+# macOS
+make -C libretro clean
+make -C libretro platform=osx ARCH="$(uname -m)" -j"$(sysctl -n hw.logicalcpu)"
+```
 
 ## ANTI-PATTERNS
 
 - **DO NOT** enable JIT in x86_64 libretro builds
 - **DO NOT** add GUI elements — libretro is headless, use core options instead
+- **DO NOT** change a shared host API without updating its libretro stub signature and adding stubs for new functions
+- **DO NOT** add host GUI implementation files to resolve missing symbols — extend the headless stub layer
 - Unit tests in `libretro-common/test/` exist but are **NOT executed in CI**

@@ -57,9 +57,9 @@ ifeq ($(platform), unix)
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    ifeq ($(DEBUG), 1)
-   SHARED := -shared -Wl,-Bsymbolic-functions
+   SHARED := -shared -Wl,--no-undefined -Wl,-Bsymbolic-functions
    else
-   SHARED := -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
+   SHARED := -shared -Wl,--no-undefined -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
    endif
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
