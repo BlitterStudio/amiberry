@@ -177,7 +177,7 @@ Before editing, decide whether the bug is in a shared subsystem or only one rend
 - Libretro is headless and does not link host GUI implementations. It compiles shared `src/osdep/` callers against replacements such as `libretro/libretro_gui_stubs.cpp` and `libretro/libretro_stubs.cpp`.
 - Whenever a shared declaration gains a function or changes its signature, search the libretro stubs for the old contract and update them in the same change.
 - Do not solve missing symbols by adding host GUI sources to the libretro build; provide a no-op or headless implementation instead.
-- Run a clean standalone libretro build. Do not accept a permissive Linux shared-library link as proof that all symbols resolve; keep `-Wl,--no-undefined` enabled.
+- Run a clean standalone libretro build. Do not accept a permissive Linux shared-library link as proof that all symbols resolve; keep `-Wl,--no-undefined` enabled for normal builds. `SANITIZE=1` must omit it because Clang ASan shared libraries intentionally defer runtime symbols to the frontend.
 
 ### Phase 5: Report
 

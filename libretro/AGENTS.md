@@ -55,7 +55,7 @@ libretro/
 - Fake 1920x1080 display enumerated for resolution selection
 - `libretro-common/` is shared upstream code — minimize modifications
 - The standalone Makefile does not track header dependencies; use a clean build after changing shared declarations
-- Linux links with `--no-undefined` so missing headless stubs fail consistently across platforms
+- Normal Linux builds link with `--no-undefined` so missing headless stubs fail consistently across platforms; `SANITIZE=1` omits it because Clang ASan shared libraries intentionally defer runtime symbols to the frontend
 
 ## BUILD
 
