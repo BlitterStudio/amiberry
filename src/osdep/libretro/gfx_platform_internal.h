@@ -8,6 +8,8 @@
 #include "gfx_window.h"
 #include "gfx_colors.h"
 #include "display_modes.h"
+#include "gui.h"
+#include "statusline.h"
 #ifdef PICASSO96
 #include "picasso96.h"
 #endif
@@ -41,9 +43,77 @@ static inline bool gfx_platform_skip_renderframe(int monid, int mode, int immedi
 	return true;
 }
 
+static inline void libretro_render_statusline(SDL_Surface* surface)
+{
+	if (!surface || !surface->pixels)
+		return;
+
+	const int monid = 0;
+	const struct amigadisplay* ad = &adisplays[monid];
+
+	const bool show =
+		((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on);
+
+	static uae_u32 rc[256], gc[256], bc[256], a[256];
+	static bool color_tables_initialized = false;
+	if (!color_tables_initialized) {
+		for (int i = 0; i < 256; i++) {
+			rc[i] = static_cast<uae_u32>(i) << 16;
+			gc[i] = static_cast<uae_u32>(i) << 8;
+			bc[i] = static_cast<uae_u32>(i) << 0;
+			a[i] = static_cast<uae_u32>(i) << 24;
+		}
+		color_tables_initialized = true;
+	}
+
+	int vis_w = AMonitors[monid].currentmode.current_width;
+	int vis_h = AMonitors[monid].currentmode.current_height;
+	if (vis_w <= 0 || vis_w > surface->w)
+		vis_w = surface->w;
+	if (vis_h <= 0 || vis_h > surface->h)
+		vis_h = surface->h;
+
+	statusline_set_multiplier(monid, vis_w, vis_h);
+	const int m = statusline_get_multiplier(monid) / 100;
+	const int led_height = show ? TD_TOTAL_HEIGHT * m : 0;
+
+	const TCHAR* msg = show ? statusline_fetch() : NULL;
+	const int msg_m = m < 2 ? 2 : m;
+	const int msg_height = msg ? (LDP_CHAR_HEIGHT + 4) * msg_m : 0;
+
+	const int total_height = led_height + msg_height;
+
+	static int prev_total_height;
+	if (has_statusline_updated() || total_height != prev_total_height)
+		notice_screen_contents_lost(monid);
+	prev_total_height = total_height;
+
+	if (!show)
+		return;
+	int y0 = vis_h - total_height;
+	if (y0 < 0)
+		y0 = 0;
+
+	uae_u8* pixels = static_cast<uae_u8*>(surface->pixels);
+	const int pitch = surface->pitch;
+
+	if (msg && msg_height > 0 && y0 + msg_height <= surface->h) {
+		statusline_render(monid, pixels + y0 * pitch, pitch, vis_w, msg_height, rc, gc, bc, a);
+	}
+
+	for (int y = 0; y < led_height; y++) {
+		const int dy = y0 + msg_height + y;
+		if (dy < 0 || dy >= surface->h)
+			continue;
+		draw_status_line_single(monid, pixels + dy * pitch, y, vis_w, rc, gc, bc, a);
+	}
+}
+
 static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 {
 	if (surface) {
+		libretro_render_statusline(const_cast<SDL_Surface*>(surface));
 		if (video_cb) {
 			const uae_u8* pixels = static_cast<const uae_u8*>(surface->pixels);
 			int w = surface->w;
