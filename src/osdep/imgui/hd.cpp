@@ -536,6 +536,7 @@ static void RenderCDSection()
             ImGui::PopID();
         }
 
+        std::string selected_mru_path;
         for (const auto& path : lstMRUCDList) {
             if (path.empty()) continue;
             ImGui::PushID(id_counter++);
@@ -545,11 +546,15 @@ static void RenderCDSection()
                 au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path.c_str());
                 changed_prefs.cdslots[0].inuse = true;
                 changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-                AddToMruCdList(path);
-                set_last_active_config_from_media(path.c_str());
+                selected_mru_path = path;
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
             ImGui::PopID();
+        }
+
+        if (!selected_mru_path.empty()) {
+            AddToMruCdList(selected_mru_path);
+            set_last_active_config_from_media(selected_mru_path.c_str());
         }
 
         if (!current_in_list && cd_name && *cd_name) {
