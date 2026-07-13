@@ -232,6 +232,7 @@ static void RenderDriveSlot(const int i)
                  changed_prefs.floppyslots[i].df[MAX_DPATH - 1] = '\0';
                  disk_insert(i, changed_prefs.floppyslots[i].df);
                  DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
+                 set_last_active_config_from_media(changed_prefs.floppyslots[i].df);
                  invalidate_wp_cache(i);
             }
 
@@ -542,11 +543,13 @@ void render_panel_floppy()
                          disk_insert(drive_idx, changed_prefs.floppyslots[drive_idx].df);
                          DISK_history_add(changed_prefs.floppyslots[drive_idx].df, -1, HISTORY_FLOPPY, 0);
                          add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[0]));
+                         set_last_active_config_from_media(changed_prefs.floppyslots[drive_idx].df);
                      } else {
                          strncpy(changed_prefs.floppyslots[drive_idx].df, result_path.c_str(), MAX_DPATH - 1);
                          changed_prefs.floppyslots[drive_idx].df[MAX_DPATH - 1] = '\0';
                          disk_insert(drive_idx, result_path.c_str());
                          DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
+                         set_last_active_config_from_media(result_path.c_str());
                      }
                      invalidate_wp_cache(drive_idx);
                 }

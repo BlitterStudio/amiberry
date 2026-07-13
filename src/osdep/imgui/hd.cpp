@@ -156,12 +156,18 @@ static int cached_get_filesys_unitconfig(struct uae_prefs *p, int row, struct mo
 
 static bool IsCdDevicePath(const char* path)
 {
-    return path && std::strncmp(path, "/dev/", 5) == 0;
+	if (!path)
+		return false;
+	if (std::strncmp(path, "/dev/", 5) == 0)
+		return true;
+
+	const auto cd_drives = get_cd_drives();
+	return std::find(cd_drives.begin(), cd_drives.end(), path) != cd_drives.end();
 }
 
 static bool IsCdDevicePath(const std::string& path)
 {
-    return path.rfind("/dev/", 0) == 0;
+	return IsCdDevicePath(path.c_str());
 }
 
 static bool ValidatePhysicalDriveSelection(const uaedev_config_info& ci, std::string& error, bool* out_readonly = nullptr)
@@ -530,6 +536,7 @@ static void RenderCDSection()
             ImGui::PopID();
         }
 
+        std::string selected_mru_path;
         for (const auto& path : lstMRUCDList) {
             if (path.empty()) continue;
             ImGui::PushID(id_counter++);
@@ -539,10 +546,15 @@ static void RenderCDSection()
                 au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path.c_str());
                 changed_prefs.cdslots[0].inuse = true;
                 changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-                AddToMruCdList(path);
+                selected_mru_path = path;
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
             ImGui::PopID();
+        }
+
+        if (!selected_mru_path.empty()) {
+            AddToMruCdList(selected_mru_path);
+            set_last_active_config_from_media(selected_mru_path.c_str());
         }
 
         if (!current_in_list && cd_name && *cd_name) {
@@ -586,6 +598,7 @@ static void RenderCDSection()
              changed_prefs.cdslots[0].inuse = true;
              changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
              AddToMruCdList(result_path);
+             set_last_active_config_from_media(result_path.c_str());
         }
     }
 
@@ -1392,8 +1405,10 @@ static void ShowEditCDDriveModal()
                 au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path_buf);
                 changed_prefs.cdslots[0].inuse = true;
                 changed_prefs.cdslots[0].type = IsCdDevicePath(path_buf) ? SCSI_UNIT_IOCTL : SCSI_UNIT_DEFAULT;
-                if (!IsCdDevicePath(path_buf))
+                if (!IsCdDevicePath(path_buf)) {
                     AddToMruCdList(path_buf);
+                    set_last_active_config_from_media(path_buf);
+                }
             }
 
             new_cddrive(edit_entry_index);

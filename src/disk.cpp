@@ -3368,6 +3368,9 @@ void disk_insert (int num, const TCHAR *name, bool forcedwriteprotect)
 {
 	set_config_changed ();
 	target_addtorecent (name, 0);
+#ifdef AMIBERRY
+	set_last_active_config_from_media(name);
+#endif
 	disk_insert_2 (num, name, 0, forcedwriteprotect);
 }
 
@@ -3375,6 +3378,9 @@ void disk_insert (int num, const TCHAR *name)
 {
 	set_config_changed ();
 	target_addtorecent (name, 0);
+#ifdef AMIBERRY
+	set_last_active_config_from_media(name);
+#endif
 	disk_insert_2 (num, name, 0, false);
 }
 void disk_insert_force (int num, const TCHAR *name, bool forcedwriteprotect)

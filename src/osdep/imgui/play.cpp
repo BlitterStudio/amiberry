@@ -520,7 +520,7 @@ bool apply_floppy_content()
 			changed_prefs.dfxlist[0]);
 		disk_insert(0, changed_prefs.floppyslots[0].df);
 		add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[0]));
-		set_last_active_config(changed_prefs.dfxlist[0]);
+		set_last_active_config_from_media(changed_prefs.dfxlist[0]);
 		mark_content_applied();
 		return true;
 	}
@@ -529,7 +529,7 @@ bool apply_floppy_content()
 		selected_content.original_path);
 	disk_insert(0, changed_prefs.floppyslots[0].df);
 	add_file_to_mru_list(lstMRUDiskList, selected_content.original_path);
-	set_last_active_config(selected_content.original_path.c_str());
+	set_last_active_config_from_media(selected_content.original_path.c_str());
 	mark_content_applied();
 	return true;
 }
@@ -542,7 +542,6 @@ bool apply_whdload_content()
 	add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 	whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str(), manual_quickstart_override);
 	apply_display_defaults_to_changed_prefs();
-	set_last_active_config(whdload_prefs.whdload_filename.c_str());
 	mark_content_applied();
 	return true;
 }
@@ -554,7 +553,7 @@ bool apply_hardfile_content()
 	if (!attach_selected_hardfile())
 		return false;
 
-	set_last_active_config(selected_content.original_path.c_str());
+	set_last_active_config_from_media(selected_content.original_path.c_str());
 	mark_content_applied();
 	return true;
 }
@@ -564,6 +563,7 @@ void mount_selected_cd_image(const char* path)
 	copy_path_to_buffer(changed_prefs.cdslots[0].name, sizeof changed_prefs.cdslots[0].name, path);
 	changed_prefs.cdslots[0].inuse = true;
 	changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+	set_last_active_config_from_media(path);
 }
 
 bool apply_cd_content()
@@ -579,7 +579,6 @@ bool apply_cd_content()
 		cd_auto_prefs(&changed_prefs, path);
 	apply_display_defaults_to_changed_prefs();
 	add_file_to_mru_list(lstMRUCDList, selected_content.original_path);
-	set_last_active_config(selected_content.original_path.c_str());
 	mark_content_applied();
 	return true;
 }

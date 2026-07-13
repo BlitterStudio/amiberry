@@ -199,9 +199,9 @@ static void clear_play_content_if_quickstart_source() {
 }
 
 void render_panel_quickstart() {
-    // Check if we need to apply Quickstart defaults on first show
+    // Apply defaults on first show only when no configuration or media setup is active.
     static bool initial_sync_done = false;
-    if (!initial_sync_done && !emulating && !last_loaded_config[0]) {
+    if (!initial_sync_done && !emulating && !last_loaded_config[0] && !last_active_config[0]) {
         Quickstart_ApplyDefaults();
         initial_sync_done = true;
     }
@@ -526,8 +526,7 @@ void render_panel_quickstart() {
                             DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
                             disk_insert(i, changed_prefs.floppyslots[i].df);
                             qs_invalidate_wp_cache(i);
-                            if (!last_loaded_config[0])
-                                set_last_active_config(element.c_str());
+                            set_last_active_config_from_media(element.c_str());
                         }
                     }
                 }
@@ -646,8 +645,7 @@ void render_panel_quickstart() {
                                 DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
                                 changed_prefs.cdslots[0].inuse = true;
                                 changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-                                if (!last_loaded_config[0])
-                                    set_last_active_config(element.c_str());
+                                set_last_active_config_from_media(element.c_str());
                             }
                         }
                     }
@@ -717,7 +715,6 @@ void render_panel_quickstart() {
                         add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
                     }
                     whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-                    set_last_active_config(whdload_prefs.whdload_filename.c_str());
                 }
             }
             if (is_selected) {
@@ -764,16 +761,14 @@ void render_panel_quickstart() {
                         disk_insert(i, changed_prefs.floppyslots[i].df);
                         add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[0]));
                         qs_invalidate_wp_cache(i);
-                        if (!last_loaded_config[0])
-                            set_last_active_config(changed_prefs.dfxlist[0]);
+                        set_last_active_config_from_media(changed_prefs.dfxlist[0]);
                     } else if (std::strncmp(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH) != 0) {
                         std::strncpy(changed_prefs.floppyslots[i].df, filePath.c_str(), MAX_DPATH - 1);
                         changed_prefs.floppyslots[i].df[MAX_DPATH - 1] = '\0';
                         disk_insert(i, filePath.c_str());
                         add_file_to_mru_list(lstMRUDiskList, filePath);
                         qs_invalidate_wp_cache(i);
-                        if (!last_loaded_config[0])
-                            set_last_active_config(filePath.c_str());
+                        set_last_active_config_from_media(filePath.c_str());
                     }
                 }
             } else if (qs_pending_cd) {
@@ -783,8 +778,7 @@ void render_panel_quickstart() {
                         changed_prefs.cdslots[0].inuse = true;
                         changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
                         add_file_to_mru_list(lstMRUCDList, filePath);
-                        if (!last_loaded_config[0])
-                            set_last_active_config(filePath.c_str());
+                        set_last_active_config_from_media(filePath.c_str());
                     }
                 }
             } else if (qs_pending_whd) {
@@ -792,7 +786,6 @@ void render_panel_quickstart() {
                     whdload_prefs.whdload_filename = filePath;
                     add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
                     whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-                    set_last_active_config(whdload_prefs.whdload_filename.c_str());
                 }
             }
 

@@ -662,6 +662,7 @@ static bool legacy_cleanup_prompt_enabled = false;
 
 char last_loaded_config[MAX_DPATH] = {};
 char last_active_config[MAX_DPATH] = {};
+static bool last_loaded_config_is_automatic_default = false;
 
 int max_uae_width;
 int max_uae_height;
@@ -726,16 +727,47 @@ static std::string get_bootstrap_destination_label(const legacy_migration_state_
 	return {};
 }
 
-void set_last_loaded_config(const char* filename)
+void set_last_loaded_config(const char* filename, const bool automatic_default)
 {
 	extract_filename(filename, last_loaded_config);
 	remove_file_extension(last_loaded_config);
+	last_loaded_config_is_automatic_default = automatic_default;
 }
 
 void set_last_active_config(const char* filename)
 {
 	extract_filename(filename, last_active_config);
 	remove_file_extension(last_active_config);
+}
+
+static bool is_physical_media_device(const char* filename)
+{
+#ifndef _WIN32
+	if (strncmp(filename, "/dev/", 5) == 0)
+	{
+		std::string device_path(filename);
+		if (const auto options = device_path.find(','); options != std::string::npos)
+			device_path.resize(options);
+
+		struct stat st{};
+		return stat(device_path.c_str(), &st) == 0 && (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode));
+	}
+#endif
+
+	const char drive_letter = filename[0];
+	return ((drive_letter >= 'A' && drive_letter <= 'Z') || (drive_letter >= 'a' && drive_letter <= 'z'))
+		&& filename[1] == ':'
+		&& (filename[2] == '\\' || filename[2] == '/')
+		&& (filename[3] == '\0' || filename[3] == ',');
+}
+
+void set_last_active_config_from_media(const char* filename)
+{
+	// Media names are save-as defaults; they must not replace an explicitly loaded configuration
+	// or use a physical device path as a configuration name.
+	const bool explicit_config_loaded = last_loaded_config[0] && !last_loaded_config_is_automatic_default;
+	if (filename && filename[0] && !explicit_config_loaded && !is_physical_media_device(filename))
+		set_last_active_config(filename);
 }
 
 int getdpiformonitor(SDL_DisplayID displayID)
@@ -3143,6 +3175,7 @@ static void handle_drop_file_event(const SDL_Event& event)
 	{
 		// Insert floppy image
 		disk_insert(0, dropped_file);
+		set_last_active_config_from_media(dropped_file);
 	}
 	else if (strcasecmp(ext.c_str(), ".lha") == 0)
 	{
@@ -5964,7 +5997,7 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		if (strlen(p->floppyslots[i].df) > 0)
 			add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 	}
-	set_last_loaded_config(filename);
+	set_last_loaded_config(filename, isdefault != 0);
 	set_last_active_config(filename);
 	return result;
 }
@@ -5998,11 +6031,22 @@ int check_configfile(const char* file)
 
 void extract_filename(const char* str, char* buffer)
 {
-	const auto* p = str + strlen(str) - 1;
-	while (*p != '/' && p >= str)
-		p--;
-	p++;
-	strncpy(buffer, p, MAX_DPATH - 1);
+	if (!buffer)
+		return;
+	if (!str)
+	{
+		buffer[0] = '\0';
+		return;
+	}
+
+	const char* filename = str;
+	for (const char* p = str; *p; ++p)
+	{
+		if (*p == '/' || *p == '\\')
+			filename = p + 1;
+	}
+	strncpy(buffer, filename, MAX_DPATH - 1);
+	buffer[MAX_DPATH - 1] = '\0';
 }
 
 std::string extract_filename(const std::string& path)
@@ -6028,13 +6072,10 @@ std::string extract_path(const std::string& filename)
 
 void remove_file_extension(char* filename)
 {
-	auto* p = filename + strlen(filename) - 1;
-	while (p >= filename && *p != '.')
-	{
-		*p = '\0';
-		--p;
-	}
-	*p = '\0';
+	if (!filename)
+		return;
+	if (auto* const extension = strrchr(filename, '.'))
+		*extension = '\0';
 }
 
 std::string remove_file_extension(const std::string& filename)

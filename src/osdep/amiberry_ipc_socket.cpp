@@ -263,6 +263,7 @@ static std::string HandleInsertFloppy(const std::vector<std::string>& args)
 
 	_tcsncpy(changed_prefs.floppyslots[drivenum].df, args[0].c_str(), MAX_DPATH);
 	changed_prefs.floppyslots[drivenum].df[MAX_DPATH - 1] = 0;
+	set_last_active_config_from_media(args[0].c_str());
 	set_config_changed();
 
 	return make_response(true);
@@ -278,6 +279,7 @@ static std::string HandleInsertCD(const std::vector<std::string>& args)
 	_tcsncpy(changed_prefs.cdslots[0].name, args[0].c_str(), MAX_DPATH);
 	changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
 	changed_prefs.cdslots[0].inuse = true;
+	set_last_active_config_from_media(args[0].c_str());
 	set_config_changed();
 
 	return make_response(true);

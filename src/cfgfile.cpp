@@ -8089,24 +8089,28 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 		cmdpath (p->floppyslots[0].df, arg, 255);
 #ifdef AMIBERRY
 		target_addtorecent(arg, 0);
+		set_last_active_config_from_media(arg);
 #endif
 		break;
 	case '1':
 		cmdpath (p->floppyslots[1].df, arg, 255);
 #ifdef AMIBERRY
 		target_addtorecent(arg, 0);
+		set_last_active_config_from_media(arg);
 #endif
 		break;
 	case '2':
 		cmdpath (p->floppyslots[2].df, arg, 255);
 #ifdef AMIBERRY
 		target_addtorecent(arg, 0);
+		set_last_active_config_from_media(arg);
 #endif
 		break;
 	case '3':
 		cmdpath (p->floppyslots[3].df, arg, 255);
 #ifdef AMIBERRY
 		target_addtorecent(arg, 0);
+		set_last_active_config_from_media(arg);
 #endif
 		break;
 
