@@ -199,9 +199,9 @@ static void clear_play_content_if_quickstart_source() {
 }
 
 void render_panel_quickstart() {
-    // Check if we need to apply Quickstart defaults on first show
+    // Apply defaults on first show only when no configuration or media setup is active.
     static bool initial_sync_done = false;
-    if (!initial_sync_done && !emulating && !last_loaded_config[0]) {
+    if (!initial_sync_done && !emulating && !last_loaded_config[0] && !last_active_config[0]) {
         Quickstart_ApplyDefaults();
         initial_sync_done = true;
     }
