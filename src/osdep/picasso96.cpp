@@ -180,7 +180,7 @@ uae_u32 p96_rgbx16[65536];
 uae_u32 p96rc[256], p96gc[256], p96bc[256];
 
 static int newcursor_x, newcursor_y;
-static int cursorwidth, cursorheight, cursorok;
+static int cursorwidth, cursorheight, cursorxoffset, cursoryoffset, cursorok;
 static uae_u8 *cursordata;
 static uae_u32 cursorrgb[4], cursorrgbn[4];
 static int cursordeactivate, setupcursor_needed;
@@ -202,15 +202,25 @@ static int interrupt_enabled;
 float p96vblank;
 
 #ifdef AMIBERRY
-static amiberry_input_cursor_hotspot_tracker native_cursor_hotspot_tracker;
-static int native_cursor_tracker_width = -1;
-static int native_cursor_tracker_height = -1;
+static amiberry_input_cursor_hotspot_tracker_cache native_cursor_hotspot_tracker_cache;
+static amiberry_input_cursor_hotspot_tracker p96_cursor_hotspot_tracker;
+static int p96_cursor_tracker_width = -1;
+static int p96_cursor_tracker_height = -1;
+static int p96_cursor_tracker_xoffset = -1;
+static int p96_cursor_tracker_yoffset = -1;
 
 static void reset_native_cursor_hotspot_tracker()
 {
-	amiberry_input_cursor_hotspot_tracker_reset(&native_cursor_hotspot_tracker);
-	native_cursor_tracker_width = -1;
-	native_cursor_tracker_height = -1;
+	amiberry_input_cursor_hotspot_tracker_cache_reset(&native_cursor_hotspot_tracker_cache);
+}
+
+static void reset_p96_cursor_hotspot_tracker()
+{
+	amiberry_input_cursor_hotspot_tracker_reset(&p96_cursor_hotspot_tracker);
+	p96_cursor_tracker_width = -1;
+	p96_cursor_tracker_height = -1;
+	p96_cursor_tracker_xoffset = -1;
+	p96_cursor_tracker_yoffset = -1;
 }
 
 static void clear_host_cursor_hotspot_compensation()
@@ -218,10 +228,11 @@ static void clear_host_cursor_hotspot_compensation()
 	input_mousehack_set_host_cursor_uses_hotspot(false, 0, 0);
 }
 
-static void destroy_p96_host_cursor(bool restore_normal_cursor)
+static void destroy_p96_host_cursor()
 {
 	if (p96_cursor) {
-		if (restore_normal_cursor && SDL_GetCursor() == p96_cursor) {
+		// SDL cursors must not be destroyed while they are still current.
+		if (SDL_GetCursor() == p96_cursor) {
 			SDL_SetCursor(normalcursor);
 		}
 		SDL_DestroyCursor(p96_cursor);
@@ -229,6 +240,7 @@ static void destroy_p96_host_cursor(bool restore_normal_cursor)
 	}
 	clear_host_cursor_hotspot_compensation();
 	reset_native_cursor_hotspot_tracker();
+	reset_p96_cursor_hotspot_tracker();
 }
 #endif
 
@@ -1018,7 +1030,7 @@ static void setupcursor()
 		update_cursor_overlay_surface();
 		
 		// Ensure any native SDL cursor is hidden/freed so it doesn't conflict
-		destroy_p96_host_cursor(false);
+		destroy_p96_host_cursor();
 
 		setupcursor_needed = 0;
 		P96TRACE_SPR((_T("cursorsurface3d updated (overlay)\n")));
@@ -1071,7 +1083,7 @@ static void disablemouse ()
 	if (!hwsprite)
 		return;
 #ifdef AMIBERRY
-	destroy_p96_host_cursor(false);
+	destroy_p96_host_cursor();
 #else
 	D3D_setcursor(0, 0, 0, 0, 0, 0, 0, false, true);
 #endif
@@ -1615,15 +1627,18 @@ static int p96hsync;
 
 void picasso_handle_vsync()
 {
-	struct AmigaMonitor *mon = &AMonitors[currprefs.rtgboards[0].monitor_id];
-	const struct amigadisplay *ad = &adisplays[currprefs.rtgboards[0].monitor_id];
-	const bool uaegfx_active = is_uaegfx_active();
-
-	if (uaegfx_active) {
-		if (!ad->picasso_on) {
-			createwindowscursor(mon->monitor_id, 0, 1);
-		}
+	const int monid = currprefs.rtgboards[0].monitor_id;
+#ifdef AMIBERRY
+	if (monid < 0 || monid >= MAX_AMIGAMONITORS) {
+		return;
 	}
+	if (mouse_monid == monid && adisplays[monid].picasso_on) {
+		// P96 does not consistently expose cursor offsets, so sample the live
+		// pointer-to-sprite displacement while the RTG display is active.
+		createwindowscursor(monid, 0, 0);
+	}
+#endif
+	struct AmigaMonitor *mon = &AMonitors[monid];
 	int vsync = isvsync_rtg();
 	if (vsync < 0) {
 		p96hsync = 0;
@@ -1631,6 +1646,18 @@ void picasso_handle_vsync()
 	} else if (currprefs.rtgvblankrate == 0) {
 		picasso_handle_vsync2(mon);
 	}
+}
+
+void picasso_update_native_cursor(const int monid)
+{
+#ifdef AMIBERRY
+	if (monid < 0 || monid >= MAX_AMIGAMONITORS || mouse_monid != monid
+		|| adisplays[monid].picasso_on) {
+		return;
+	}
+	// Native cursor sampling must run even when no RTG board is configured.
+	createwindowscursor(monid, 0, 1);
+#endif
 }
 
 static void picasso_handle_hsync()
@@ -2232,15 +2259,25 @@ static int createwindowscursor(int monid, int set, int chipset)
 	int datasize;
 	int hotspot_x = 0, hotspot_y = 0;
 	int residual_x = 0, residual_y = 0;
+	int pointer_x = 0, pointer_y = 0;
+	const bool pointer_valid = input_mousehack_get_last_abs_position(&pointer_x, &pointer_y);
 	bool cursor_cache_matches = false;
+	int densest_column = 0;
+	int densest_column_pixels = 0;
+	int densest_row = 0;
+	int densest_row_pixels = 0;
+	int column_pixels[CURSORMAXWIDTH] = {};
 
 	wincursor_shown = 0;
 
-	if (isfullscreen() > 0 || !magic_mouse_host_only_enabled()) {
+	if (!amiberry_cursor_host_only_enabled(currprefs.input_tablet,
+		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY,
+		isfullscreen() <= 0)) {
 		goto exit;
 	}
 
 	if (chipset) {
+		reset_p96_cursor_hotspot_tracker();
 		w = sprite_0_width;
 		h = sprite_0_height;
 		uaecptr src = sprite_0;
@@ -2292,9 +2329,33 @@ static int createwindowscursor(int monid, int set, int chipset)
 		h = cursorheight;
 		ct = cursorrgb;
 		image = cursordata;
+		if (!image || w <= 0 || h <= 0 || w > CURSORMAXWIDTH || h > CURSORMAXHEIGHT) {
+			goto exit;
+		}
 	}
 
-	datasize = h * ((w + 15) / 16) * 16;
+	// Both native and P96 cursor images are tightly packed after decoding.
+	datasize = w * h;
+	for (int y = 0; y < h; y++) {
+		int row_pixels = 0;
+		for (int x = 0; x < w; x++) {
+			if (image[y * w + x] == 0) {
+				continue;
+			}
+			row_pixels++;
+			column_pixels[x]++;
+		}
+		if (row_pixels > densest_row_pixels) {
+			densest_row_pixels = row_pixels;
+			densest_row = y;
+		}
+	}
+	for (int x = 0; x < w; x++) {
+		if (column_pixels[x] > densest_column_pixels) {
+			densest_column_pixels = column_pixels[x];
+			densest_column = x;
+		}
+	}
 	cursor_cache_matches = p96_cursor
 		&& w == tmp_sprite_w && h == tmp_sprite_h && chipset == tmp_sprite_chipset
 		&& !memcmp(tmp_sprite_data, image, datasize)
@@ -2302,39 +2363,58 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	if (chipset) {
 		input_mousehack_cursor_hotspot(w, h, &hotspot_x, &hotspot_y, &residual_x, &residual_y);
+		const uae_u64 cursor_signature = amiberry_input_cursor_bitmap_signature(
+			image, datasize, ct, 4);
 
-		if (native_cursor_tracker_width != w || native_cursor_tracker_height != h || !cursor_cache_matches) {
-			amiberry_input_cursor_hotspot_tracker_reset(&native_cursor_hotspot_tracker);
-			native_cursor_tracker_width = w;
-			native_cursor_tracker_height = h;
-		}
+		auto* hotspot_tracker = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&native_cursor_hotspot_tracker_cache, w, h, cursor_signature);
 
-		int pointer_x = 0;
-		int pointer_y = 0;
-		const bool position_valid = input_mousehack_get_last_abs_position(&pointer_x, &pointer_y);
-		const bool was_learned = native_cursor_hotspot_tracker.learned;
-		const int previous_hotspot_x = native_cursor_hotspot_tracker.hotspot_x;
-		const int previous_hotspot_y = native_cursor_hotspot_tracker.hotspot_y;
-		// Delivered mousehack coordinates and sprite DMA coordinates share the same Amiga space.
-		if (amiberry_input_cursor_hotspot_tracker_sample(&native_cursor_hotspot_tracker,
-			position_valid, pointer_x, pointer_y, sprite_0_x, sprite_0_y, w, h, 3,
-			&hotspot_x, &hotspot_y)) {
+		// Native pointer and sprite positions both use hires coordinate units.
+		// Decoded low-res cursor pixels use those same units on both axes.
+		if (amiberry_input_cursor_hotspot_tracker_sample(hotspot_tracker,
+			pointer_valid, pointer_x, pointer_y, sprite_0_x, sprite_0_y,
+			w, h, 3, &hotspot_x, &hotspot_y)) {
+			// The pointer-to-sprite delta contains small native positioning biases.
+			// If it lands at a decoded row/column crossing, prefer the bitmap's
+			// actual intersection so crosshair cursors use their visual center.
+			amiberry_input_cursor_snap_hotspot_to_dense_crossing(hotspot_x, hotspot_y,
+				densest_column, densest_row, 3, &hotspot_x, &hotspot_y);
 			residual_x = 0;
 			residual_y = 0;
-			if (!was_learned || hotspot_x != previous_hotspot_x || hotspot_y != previous_hotspot_y) {
-				write_log(_T("Native host cursor hotspot learned: %dx%d hotspot=%d,%d pointer=%d,%d sprite=%d,%d\n"),
-					w, h, hotspot_x, hotspot_y, pointer_x, pointer_y, sprite_0_x, sprite_0_y);
-			}
 		}
 	} else {
 		reset_native_cursor_hotspot_tracker();
+		hotspot_x = amiberry_cursor_hotspot_from_offset(cursorxoffset, w);
+		hotspot_y = amiberry_cursor_hotspot_from_offset(cursoryoffset, h);
+
+		// A same-sized P96 cursor can use a different bitmap or declared hotspot.
+		// Discard the previous cursor's learned displacement before it can
+		// override the new cursor's BoardInfo offsets.
+		if (!cursor_cache_matches
+			|| p96_cursor_tracker_width != w || p96_cursor_tracker_height != h
+			|| p96_cursor_tracker_xoffset != cursorxoffset
+			|| p96_cursor_tracker_yoffset != cursoryoffset) {
+			amiberry_input_cursor_hotspot_tracker_reset(&p96_cursor_hotspot_tracker);
+			p96_cursor_tracker_width = w;
+			p96_cursor_tracker_height = h;
+			p96_cursor_tracker_xoffset = cursorxoffset;
+			p96_cursor_tracker_yoffset = cursoryoffset;
+		}
+
+		if (amiberry_input_cursor_hotspot_tracker_sample(&p96_cursor_hotspot_tracker,
+			pointer_valid, pointer_x, pointer_y,
+			newcursor_x, newcursor_y, w, h, 3, &hotspot_x, &hotspot_y)) {
+			residual_x = 0;
+			residual_y = 0;
+		}
 	}
 
 	if (cursor_cache_matches && hotspot_x == tmp_sprite_hotspot_x && hotspot_y == tmp_sprite_hotspot_y) {
 		if (SDL_GetCursor() == p96_cursor) {
+			SDL_ShowCursor();
 			tmp_sprite_residual_x = residual_x;
 			tmp_sprite_residual_y = residual_y;
-			input_mousehack_set_host_cursor_uses_hotspot(chipset != 0, residual_x, residual_y);
+			input_mousehack_set_host_cursor_uses_hotspot(true, residual_x, residual_y);
 			wincursor_shown = 1;
 			return 1;
 		}
@@ -2388,7 +2468,8 @@ end:
 
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
-		input_mousehack_set_host_cursor_uses_hotspot(chipset != 0, residual_x, residual_y);
+		SDL_ShowCursor();
+		input_mousehack_set_host_cursor_uses_hotspot(true, residual_x, residual_y);
 		wincursor_shown = 1;
 	} else {
 		clear_host_cursor_hotspot_compensation();
@@ -2406,7 +2487,7 @@ end:
 	return ret;
 
 exit:
-	destroy_p96_host_cursor(true);
+	destroy_p96_host_cursor();
 
 	return ret;
 #else
@@ -2592,7 +2673,8 @@ int picasso_setwincursor(int monid)
 #ifdef AMIBERRY
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
-		input_mousehack_set_host_cursor_uses_hotspot(tmp_sprite_chipset != 0,
+		SDL_ShowCursor();
+		input_mousehack_set_host_cursor_uses_hotspot(true,
 			tmp_sprite_residual_x, tmp_sprite_residual_y);
 		return 1;
 	} else if (!ad->picasso_on) {
@@ -2627,6 +2709,10 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	bpp = 4;
 	w = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseWidth);
 	h = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseHeight);
+	// P96 declares these BoardInfo fields as UBYTE. Some versions leave them
+	// zero, in which case the live pointer-to-sprite tracker supplies the hotspot.
+	cursorxoffset = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseXOffset);
+	cursoryoffset = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseYOffset);
 	flags = trap_get_long(ctx, bi + PSSO_BoardInfo_Flags);
 	hiressprite = 1;
 	doubledsprite = 0;

@@ -4413,9 +4413,11 @@ static void cursorsprite(struct sprite *s)
 	if (sprres == 0) {
 		sprite_0_doubled = 1;
 	}
-	if (spr[0].dblscan) {
-		sprite_0_height /= 2;
-	}
+	// SPRxPOS bit 7 only enables alternate-line sprite DMA when FMODE.SSCAN2
+	// is active. Without that gate it is also an ordinary vertical position
+	// bit, and halving here squashes the host cursor as it crosses line 128.
+	sprite_0_height = amiberry_input_native_cursor_height(sprite_0_height,
+		spr[0].dblscan, (fmode & 0x8000) != 0);
 	if (aga_mode) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
 		sprite_0_colors[1] = agnus_colors.color_regs_aga[sbasecol + 1] & 0xffffff;
@@ -4898,6 +4900,7 @@ static void vsync_handler_render(void)
 #endif
 
 #ifdef PICASSO96
+	picasso_update_native_cursor(0);
 	if (isvsync_rtg() >= 0) {
 		rtg_vsync();
 	}

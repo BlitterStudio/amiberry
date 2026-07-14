@@ -2456,6 +2456,8 @@ static bool mousehack_host_cursor_uses_hotspot;
 static int mousehack_host_cursor_residual_x, mousehack_host_cursor_residual_y;
 static int mousehack_last_abs_x, mousehack_last_abs_y;
 static bool mousehack_last_abs_valid;
+static int mousehack_native_origin_x, mousehack_native_origin_y;
+static bool mousehack_position_is_native;
 static int tablet_maxx, tablet_maxy, tablet_maxz;
 static int tablet_resx, tablet_resy;
 static int tablet_maxax, tablet_maxay, tablet_maxaz;
@@ -2585,6 +2587,8 @@ static void mousehack_reset (void)
 	mousehack_host_cursor_residual_x = mousehack_host_cursor_residual_y = 0;
 	mousehack_last_abs_x = mousehack_last_abs_y = 0;
 	mousehack_last_abs_valid = false;
+	mousehack_native_origin_x = mousehack_native_origin_y = 0;
+	mousehack_position_is_native = false;
 	dimensioninfo_dbl = 0;
 	mousehack_alive_cnt = 0;
 	vp_xoffset = vp_yoffset = 0;
@@ -2709,6 +2713,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 
 #ifdef PICASSO96
 	if (ad->picasso_on) {
+		mousehack_position_is_native = false;
 		x -= state->XOffset;
 		y -= state->YOffset;
 		x = (int)(x * fmx);
@@ -2719,6 +2724,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 #endif
 	{
 		if (vidinfo->outbuffer == NULL) {
+			mousehack_position_is_native = false;
 			*xp = 0;
 			*yp = 0;
 			return false;
@@ -2727,20 +2733,36 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		y = (int)(y * fmy);
 		x -= (int)(fdx * 1.0) - 0;
 		y -= (int)(fdy * 1.0) - 2;
+		int origin_x = 0;
+		int origin_y = 0;
+		getgfxsourceorigin(monid, &origin_x, &origin_y);
+		// The source crop is the native screen origin. Destination centering is
+		// already part of fdx/fdy and must not move that origin (notably when a
+		// PAL laced image is letterboxed). Match the existing vertical input bias.
+		origin_y += 2;
 		bool axis_ob = false;
 		x = amiberry_input_clamp_native_axis(x, vidinfo->outbuffer->outwidth, &axis_ob);
 		ob |= axis_ob;
 		y = amiberry_input_clamp_native_axis(y, vidinfo->outbuffer->outheight, &axis_ob);
 		ob |= axis_ob;
+		origin_x = amiberry_input_clamp_native_axis(origin_x, vidinfo->outbuffer->outwidth, nullptr);
+		origin_y = amiberry_input_clamp_native_axis(origin_y, vidinfo->outbuffer->outheight, nullptr);
 		if (currprefs.gfx_resolution == RES_LORES) {
 			x *= 2;
+			origin_x *= 2;
 		} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
 			x /= 2;
+			origin_x /= 2;
 		}
 		x = coord_native_to_amiga_x(x);
+		origin_x = coord_native_to_amiga_x(origin_x);
 		if (y >= 0) {
 			y = coord_native_to_amiga_y(y) * 2;
 		}
+		origin_y = coord_native_to_amiga_y(origin_y) * 2;
+		mousehack_native_origin_x = origin_x;
+		mousehack_native_origin_y = origin_y;
+		mousehack_position_is_native = true;
 	}
 	*xp = x;
 	*yp = y;
@@ -3045,9 +3067,29 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 		x -= mouseoffset_x + 1;
 		y -= mouseoffset_y + 2;
 	}
+	int screen_offset_x = 0;
+	int screen_offset_y = 0;
+	const uaecptr intuition_base = get_intuitionbase();
+	const bool screen_offset_valid = intuition_base && intuition_base != 0xffffffff;
+	if (screen_offset_valid) {
+		// IntuitionBase embeds ViewLord immediately after its 34-byte Library.
+		// Offset 34 is ViewLord.ViewPort; DxOffset and DyOffset are later fields
+		// in the embedded View, matching the existing filesys.asm mousehack path.
+		const uaecptr viewlord = intuition_base + 34;
+		screen_offset_x = static_cast<uae_s16>(get_word(viewlord + 14)) * 2;
+		screen_offset_y = static_cast<uae_s16>(get_word(viewlord + 12)) * 2;
+	}
+	if (mousehack_host_cursor_uses_hotspot && mousehack_position_is_native && screen_offset_valid) {
+		x += amiberry_input_native_mousehack_origin_compensation(
+			screen_offset_x, mousehack_native_origin_x);
+		y += amiberry_input_native_mousehack_origin_compensation(
+			screen_offset_y, mousehack_native_origin_y);
+	}
 
 	mousehack_enable ();
-	// Keep the Amiga coordinate actually delivered after host-hotspot compensation.
+	// Keep the coordinate delivered after native screen-origin and host-hotspot
+	// compensation. The guest positions its native sprite from this coordinate,
+	// so their delta is the cursor hotspot.
 	mousehack_last_abs_x = x;
 	mousehack_last_abs_y = y;
 	mousehack_last_abs_valid = position_valid && mousehack_address;

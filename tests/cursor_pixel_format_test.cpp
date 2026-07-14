@@ -2,8 +2,10 @@
 #include <cstring>
 #include <iostream>
 
+typedef std::uint8_t uae_u8;
 typedef std::uint16_t uae_u16;
 typedef std::uint32_t uae_u32;
+typedef std::uint64_t uae_u64;
 
 #include "amiberry_cursor.h"
 #include "amiberry_input_helpers.h"
@@ -69,6 +71,18 @@ static void test_rgba32_cursor_pixels_use_raw_rgb_order()
 		"pure red must not become blue in RGBA32 cursor memory");
 	expect_true(blue_bytes[0] == 0x00 && blue_bytes[1] == 0x00 && blue_bytes[2] == 0xff && blue_bytes[3] == 0xff,
 		"pure blue must not become red in RGBA32 cursor memory");
+}
+
+static void test_rtg_cursor_hotspot_uses_pointer_offset()
+{
+	expect_int_eq(amiberry_cursor_hotspot_from_offset(25, 51), 25,
+		"centered P96 cursor x offset must become the SDL hotspot");
+	expect_int_eq(amiberry_cursor_hotspot_from_offset(30, 61), 30,
+		"centered P96 cursor y offset must become the SDL hotspot");
+	expect_int_eq(amiberry_cursor_hotspot_from_offset(-4, 16), 0,
+		"negative P96 cursor offset must clamp to the first pixel");
+	expect_int_eq(amiberry_cursor_hotspot_from_offset(80, 16), 15,
+		"oversized P96 cursor offset must clamp to the last pixel");
 }
 
 static void test_host_only_forces_separate_rtg_sprite()
@@ -169,7 +183,37 @@ static void test_native_sprite_position_decoding()
 		"ECS sprite y must include the extended high bit");
 }
 
-static void test_native_cursor_hotspot_learning_requires_stationary_samples()
+static void test_native_cursor_height_requires_sscan2()
+{
+	expect_int_eq(amiberry_input_native_cursor_height(27, false, false), 27,
+		"normal native cursor height must remain unchanged");
+	expect_int_eq(amiberry_input_native_cursor_height(27, true, false), 27,
+		"vertical position bit 7 must not squash the cursor when SSCAN2 is disabled");
+	expect_int_eq(amiberry_input_native_cursor_height(27, true, true), 13,
+		"active SSCAN2 must halve the extracted cursor data height");
+}
+
+static void test_native_mousehack_compensates_cropped_screen_origin()
+{
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(258, 204), 54,
+		"native mousehack must compensate the cropped horizontal screen origin");
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(88, 90), -2,
+		"native mousehack must compensate the cropped vertical screen origin");
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(128, 128), 0,
+		"matching native and guest origins must not move the pointer");
+}
+
+static void test_native_mousehack_normalizes_interlace_field_origin()
+{
+	expect_int_eq(amiberry_input_native_interlace_origin(38, true, false, 2), 38,
+		"short interlace field must retain the native source origin");
+	expect_int_eq(amiberry_input_native_interlace_origin(40, true, true, 2), 38,
+		"long interlace field must normalize to the short-field source origin");
+	expect_int_eq(amiberry_input_native_interlace_origin(40, false, true, 2), 40,
+		"non-interlaced display must ignore the field flag");
+}
+
+static void test_native_cursor_hotspot_learning_accepts_moving_samples()
 {
 	amiberry_input_cursor_hotspot_tracker tracker;
 	int hotspot_x = -1;
@@ -180,15 +224,108 @@ static void test_native_cursor_hotspot_learning_requires_stationary_samples()
 		"first hotspot sample must not be trusted immediately");
 	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
 		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y),
-		"matching pointer and sprite movement must not count as stationary");
-	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
-		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y),
-		"second stationary sample must still wait for confirmation");
+		"second matching hotspot sample must still wait for confirmation");
 	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
-		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y),
-		"third stationary sample must learn the hotspot");
+		308, 228, 283, 198, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"matching pointer and sprite movement must allow the hotspot to be learned");
 	expect_int_eq(hotspot_x, 25, "learned cross cursor hotspot x must use the live sprite displacement");
 	expect_int_eq(hotspot_y, 30, "learned cross cursor hotspot y must use the live sprite displacement");
+}
+
+static void test_native_cursor_hotspot_uses_hires_y_units()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			400 + i * 2, 300 + i * 2, 384 + i * 2, 286 + i * 2,
+			32, 54, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 16,
+		"doubled native cursor x hotspot must stay in hires pixel units");
+	expect_int_eq(hotspot_y, 14,
+		"doubled native cursor y hotspot must stay in hires pixel units");
+}
+
+static void test_native_cursor_hotspot_cache_keeps_interleaved_sizes()
+{
+	amiberry_input_cursor_hotspot_tracker_cache cache;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+	const uae_u64 tall_signature = 0x12345678;
+	const uae_u64 short_signature = 0x87654321;
+
+	for (int i = 0; i < 3; i++) {
+		auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&cache, 32, 54, tall_signature);
+		amiberry_input_cursor_hotspot_tracker_sample(tall, true,
+			400 + i * 2, 300 + i * 2, 384 + i * 2, 286 + i * 2,
+			32, 54, 3, &hotspot_x, &hotspot_y);
+
+		auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&cache, 32, 26, short_signature);
+		amiberry_input_cursor_hotspot_tracker_sample(short_cursor, true,
+			500 + i * 2, 200 + i * 2, 484 + i * 2, 188 + i * 2,
+			32, 26, 3, &hotspot_x, &hotspot_y);
+	}
+
+	auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 54, tall_signature);
+	auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 26, short_signature);
+	expect_true(tall->learned, "interleaved tall cursor must retain its hotspot samples");
+	expect_int_eq(tall->hotspot_x, 16, "interleaved tall cursor hotspot x must be retained");
+	expect_int_eq(tall->hotspot_y, 14, "interleaved tall cursor hotspot y must be retained");
+	expect_true(short_cursor->learned, "interleaved short cursor must retain its hotspot samples");
+	expect_int_eq(short_cursor->hotspot_x, 16, "interleaved short cursor hotspot x must be retained");
+	expect_int_eq(short_cursor->hotspot_y, 12, "interleaved short cursor hotspot y must be retained");
+}
+
+static void test_native_cursor_hotspot_cache_separates_same_size_bitmaps()
+{
+	amiberry_input_cursor_hotspot_tracker_cache cache;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+	const uae_u64 arrow_signature = 0x11111111;
+	const uae_u64 crosshair_signature = 0x22222222;
+
+	for (int i = 0; i < 3; i++) {
+		auto* arrow = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&cache, 32, 32, arrow_signature);
+		amiberry_input_cursor_hotspot_tracker_sample(arrow, true,
+			200 + i, 160 + i, 199 + i, 158 + i,
+			32, 32, 3, &hotspot_x, &hotspot_y);
+	}
+
+	auto* crosshair = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 32, crosshair_signature);
+	expect_true(!crosshair->learned,
+		"same-sized cursor bitmap must not inherit a previously learned hotspot");
+
+	auto* arrow = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 32, arrow_signature);
+	expect_true(arrow->learned, "original same-sized bitmap must retain its own hotspot");
+	expect_int_eq(arrow->hotspot_x, 1, "original same-sized bitmap hotspot x must be retained");
+	expect_int_eq(arrow->hotspot_y, 2, "original same-sized bitmap hotspot y must be retained");
+}
+
+static void test_native_cursor_bitmap_signature_includes_pixels_and_colors()
+{
+	const uae_u8 arrow[] = { 0, 1, 1, 0 };
+	const uae_u8 crosshair[] = { 1, 0, 0, 1 };
+	const uae_u32 colors[] = { 0, 0xffffff, 0x555555, 0xaaaaaa };
+	const uae_u32 changed_colors[] = { 0, 0xff0000, 0x555555, 0xaaaaaa };
+
+	const uae_u64 arrow_signature = amiberry_input_cursor_bitmap_signature(
+		arrow, sizeof arrow, colors, 4);
+	expect_true(arrow_signature != amiberry_input_cursor_bitmap_signature(
+		crosshair, sizeof crosshair, colors, 4),
+		"same-sized cursor bitmaps must have distinct cache signatures");
+	expect_true(arrow_signature != amiberry_input_cursor_bitmap_signature(
+		arrow, sizeof arrow, changed_colors, 4),
+		"cursor color changes must have distinct cache signatures");
 }
 
 static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
@@ -214,17 +351,45 @@ static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
 	expect_true(!tracker.learned, "reset must discard a hotspot learned for old cursor dimensions");
 }
 
+static void test_native_crosshair_hotspot_snaps_to_bitmap_intersection()
+{
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+	expect_true(amiberry_input_cursor_snap_hotspot_to_dense_crossing(
+		17, 14, 14, 14, 3, &hotspot_x, &hotspot_y),
+		"native hotspot near a dense crossing must snap to the visual intersection");
+	expect_int_eq(hotspot_x, 14, "crosshair hotspot x must use the decoded intersection");
+	expect_int_eq(hotspot_y, 14, "crosshair hotspot y must use the decoded intersection");
+
+	hotspot_x = 1;
+	hotspot_y = 0;
+	expect_true(!amiberry_input_cursor_snap_hotspot_to_dense_crossing(
+		1, 0, 8, 8, 3, &hotspot_x, &hotspot_y),
+		"arrow hotspot far from a dense crossing must not be changed");
+	expect_int_eq(hotspot_x, 1, "unrelated arrow hotspot x must remain unchanged");
+	expect_int_eq(hotspot_y, 0, "unrelated arrow hotspot y must remain unchanged");
+}
+
 int main()
 {
 	test_rgb12_expands_to_rgb24();
 	test_rgba32_cursor_pixels_are_opaque();
 	test_rgba32_cursor_pixels_use_raw_rgb_order();
+	test_rtg_cursor_hotspot_uses_pointer_offset();
 	test_host_only_forces_separate_rtg_sprite();
 	test_rtg_cursor_keeps_softsprite_fallback_disabled();
 	test_native_axis_clamp_uses_native_extent();
 	test_mousehack_hotspot_matches_pointer_offset();
 	test_native_sprite_position_decoding();
-	test_native_cursor_hotspot_learning_requires_stationary_samples();
+	test_native_cursor_height_requires_sscan2();
+	test_native_mousehack_compensates_cropped_screen_origin();
+	test_native_mousehack_normalizes_interlace_field_origin();
+	test_native_cursor_hotspot_learning_accepts_moving_samples();
+	test_native_cursor_hotspot_uses_hires_y_units();
+	test_native_cursor_hotspot_cache_keeps_interleaved_sizes();
+	test_native_cursor_hotspot_cache_separates_same_size_bitmaps();
+	test_native_cursor_bitmap_signature_includes_pixels_and_colors();
 	test_native_cursor_hotspot_learning_keeps_last_valid_result();
+	test_native_crosshair_hotspot_snaps_to_bitmap_intersection();
 	return failures == 0 ? 0 : 1;
 }

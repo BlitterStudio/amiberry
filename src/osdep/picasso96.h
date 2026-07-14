@@ -652,6 +652,7 @@ extern struct picasso96_state_struct picasso96_state[MAX_AMIGAMONITORS];
 extern void picasso_enablescreen(int monid, int on);
 extern void picasso_refresh(int monid);
 extern void init_hz_p96(int monid);
+extern void picasso_update_native_cursor(int monid);
 extern void picasso_handle_vsync();
 extern void picasso_trigger_vblank();
 extern bool picasso_is_active(int monid);

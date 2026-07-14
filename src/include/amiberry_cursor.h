@@ -25,6 +25,21 @@ static inline std::uint32_t amiberry_cursor_rgba32_from_rgb24(std::uint32_t rgb)
 #endif
 }
 
+static inline int amiberry_cursor_hotspot_from_offset(int hotspot_offset, int extent)
+{
+	if (extent <= 0) {
+		return 0;
+	}
+
+	if (hotspot_offset < 0) {
+		return 0;
+	}
+	if (hotspot_offset >= extent) {
+		return extent - 1;
+	}
+	return hotspot_offset;
+}
+
 static inline bool amiberry_cursor_host_only_enabled(int input_tablet,
 	int input_magic_mouse_cursor, int host_only_cursor_value, bool host_cursor_available)
 {
