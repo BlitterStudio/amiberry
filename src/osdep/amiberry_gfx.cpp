@@ -706,6 +706,26 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	*myp = 1.0f / my;
 }
 
+void getgfxsourceorigin(const int monid, int* xp, int* yp)
+{
+	*xp = 0;
+	*yp = 0;
+#ifdef AMIBERRY
+	const amigadisplay* ad = &adisplays[monid];
+	if (currprefs.gfx_auto_crop && !ad->picasso_on) {
+		int width = 0;
+		int height = 0;
+		int real_height = 0;
+		int hres = currprefs.gfx_resolution;
+		int vres = currprefs.gfx_vresolution;
+		// Mousehack needs the native display origin before auto-crop policy
+		// expansion. The final renderer crop may include extra guard area,
+		// which is presentation padding rather than part of the Amiga screen.
+		get_custom_limits(&width, &height, xp, yp, &real_height, &hres, &vres);
+	}
+#endif
+}
+
 
 bool render_screen(const int monid, const int mode, const bool immediate)
 {

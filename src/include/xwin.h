@@ -77,6 +77,7 @@ extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
 
 void getgfxoffset(int monid, float *dxp, float *dyp, float *mxp, float *myp);
+void getgfxsourceorigin(int monid, int *xp, int *yp);
 float target_getcurrentvblankrate(int monid);
 
 extern int debuggable(void);
