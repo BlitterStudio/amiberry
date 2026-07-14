@@ -206,6 +206,8 @@ static amiberry_input_cursor_hotspot_tracker_cache native_cursor_hotspot_tracker
 static amiberry_input_cursor_hotspot_tracker p96_cursor_hotspot_tracker;
 static int p96_cursor_tracker_width = -1;
 static int p96_cursor_tracker_height = -1;
+static int p96_cursor_tracker_xoffset = -1;
+static int p96_cursor_tracker_yoffset = -1;
 
 static void reset_native_cursor_hotspot_tracker()
 {
@@ -217,6 +219,8 @@ static void reset_p96_cursor_hotspot_tracker()
 	amiberry_input_cursor_hotspot_tracker_reset(&p96_cursor_hotspot_tracker);
 	p96_cursor_tracker_width = -1;
 	p96_cursor_tracker_height = -1;
+	p96_cursor_tracker_xoffset = -1;
+	p96_cursor_tracker_yoffset = -1;
 }
 
 static void clear_host_cursor_hotspot_compensation()
@@ -2381,10 +2385,18 @@ static int createwindowscursor(int monid, int set, int chipset)
 		hotspot_x = amiberry_cursor_hotspot_from_offset(cursorxoffset, w);
 		hotspot_y = amiberry_cursor_hotspot_from_offset(cursoryoffset, h);
 
-		if (p96_cursor_tracker_width != w || p96_cursor_tracker_height != h) {
+		// A same-sized P96 cursor can use a different bitmap or declared hotspot.
+		// Discard the previous cursor's learned displacement before it can
+		// override the new cursor's BoardInfo offsets.
+		if (!cursor_cache_matches
+			|| p96_cursor_tracker_width != w || p96_cursor_tracker_height != h
+			|| p96_cursor_tracker_xoffset != cursorxoffset
+			|| p96_cursor_tracker_yoffset != cursoryoffset) {
 			amiberry_input_cursor_hotspot_tracker_reset(&p96_cursor_hotspot_tracker);
 			p96_cursor_tracker_width = w;
 			p96_cursor_tracker_height = h;
+			p96_cursor_tracker_xoffset = cursorxoffset;
+			p96_cursor_tracker_yoffset = cursoryoffset;
 		}
 
 		if (amiberry_input_cursor_hotspot_tracker_sample(&p96_cursor_hotspot_tracker,
