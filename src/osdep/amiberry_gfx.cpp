@@ -61,6 +61,7 @@
 #include "gfx_prefs_check.h"
 #include "display_modes.h"
 #include "renderer_factory.h"
+#include "amiberry_input_helpers.h"
 
 #ifdef USE_OPENGL
 #include "gl_platform.h"
@@ -120,6 +121,10 @@ constexpr int auto_crop_guard_top_base_tolerance = 8;
 constexpr int auto_crop_wide_aspect_w = 21;
 constexpr int auto_crop_wide_aspect_h = 9;
 constexpr int auto_crop_shrink_stable_frames = 6;
+
+static int auto_crop_source_origin_x;
+static int auto_crop_source_origin_y;
+static bool auto_crop_source_origin_valid;
 
 static int auto_crop_rect_right(const SDL_Rect& rect)
 {
@@ -712,16 +717,13 @@ void getgfxsourceorigin(const int monid, int* xp, int* yp)
 	*yp = 0;
 #ifdef AMIBERRY
 	const amigadisplay* ad = &adisplays[monid];
-	if (currprefs.gfx_auto_crop && !ad->picasso_on) {
-		int width = 0;
-		int height = 0;
-		int real_height = 0;
-		int hres = currprefs.gfx_resolution;
-		int vres = currprefs.gfx_vresolution;
+	if (monid == 0 && currprefs.gfx_auto_crop && !ad->picasso_on
+		&& auto_crop_source_origin_valid) {
 		// Mousehack needs the native display origin before auto-crop policy
 		// expansion. The final renderer crop may include extra guard area,
 		// which is presentation padding rather than part of the Amiga screen.
-		get_custom_limits(&width, &height, xp, yp, &real_height, &hres, &vres);
+		*xp = auto_crop_source_origin_x;
+		*yp = auto_crop_source_origin_y;
 	}
 #endif
 }
@@ -1966,6 +1968,13 @@ void auto_crop_image()
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+		// Cache the raw source origin at render cadence. Input must not call
+		// get_custom_limits(), which advances its interlace sampling state.
+		auto_crop_source_origin_x = cx;
+		auto_crop_source_origin_y = amiberry_input_native_interlace_origin(cy,
+			interlace_seen > 0, lof_display,
+			1 << std::clamp(vres, 0, VRES_MAX));
+		auto_crop_source_origin_valid = cw > 0 && ch > 0;
 
 		// Detect NTSC from actual display timing — more reliable than
 		// currprefs.ntscmode which may not reflect the chipset state

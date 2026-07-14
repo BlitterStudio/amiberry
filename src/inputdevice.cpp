@@ -2736,12 +2736,6 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		int origin_x = 0;
 		int origin_y = 0;
 		getgfxsourceorigin(monid, &origin_x, &origin_y);
-		// Interlaced long fields report the raw source top one field line lower.
-		// Normalize it before conversion or a stationary absolute Y coordinate
-		// alternates by two Amiga lines on every field.
-		origin_y = amiberry_input_native_interlace_origin(origin_y,
-			interlace_seen > 0, lof_display,
-			1 << std::clamp(currprefs.gfx_vresolution, 0, VRES_MAX));
 		// The source crop is the native screen origin. Destination centering is
 		// already part of fdx/fdy and must not move that origin (notably when a
 		// PAL laced image is letterboxed). Match the existing vertical input bias.
@@ -3078,8 +3072,12 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 	const uaecptr intuition_base = get_intuitionbase();
 	const bool screen_offset_valid = intuition_base && intuition_base != 0xffffffff;
 	if (screen_offset_valid) {
-		screen_offset_x = static_cast<uae_s16>(get_word(intuition_base + 34 + 14)) * 2;
-		screen_offset_y = static_cast<uae_s16>(get_word(intuition_base + 34 + 12)) * 2;
+		// IntuitionBase embeds ViewLord immediately after its 34-byte Library.
+		// Offset 34 is ViewLord.ViewPort; DxOffset and DyOffset are later fields
+		// in the embedded View, matching the existing filesys.asm mousehack path.
+		const uaecptr viewlord = intuition_base + 34;
+		screen_offset_x = static_cast<uae_s16>(get_word(viewlord + 14)) * 2;
+		screen_offset_y = static_cast<uae_s16>(get_word(viewlord + 12)) * 2;
 	}
 	if (mousehack_host_cursor_uses_hotspot && mousehack_position_is_native && screen_offset_valid) {
 		x += amiberry_input_native_mousehack_origin_compensation(
