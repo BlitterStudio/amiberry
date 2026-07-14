@@ -208,4 +208,32 @@ class AndroidRuntimeControlsArchitectureTest {
 			activity.contains("mMotionListener = new SDLGenericMotionListener_API29();")
 		)
 	}
+
+	@Test
+	fun `Android SDL Java shim includes SDL 3_4_12 reliability fixes`() {
+		val hidDeviceUsb = File("src/main/java/org/libsdl/app/HIDDeviceUSB.java").readText()
+		val surface = File("src/main/java/org/libsdl/app/SDLSurface.java").readText()
+		val sensorManager = File("src/main/java/org/libsdl/app/SDLSensorManager.java").readText()
+
+		assertTrue(
+			"USB serial lookup should tolerate every exception handled by SDL 3.4.12.",
+			hidDeviceUsb.contains("catch (Exception exception)")
+		)
+		assertFalse(
+			"USB serial lookup should not remain limited to SecurityException.",
+			hidDeviceUsb.contains("catch (SecurityException exception)")
+		)
+		assertTrue(
+			"SDLSurface should route sensor registration through SDL's synchronized retry wrapper.",
+			surface.contains("SDLSensorManager.registerListener(mSensorManager, this,") &&
+				surface.contains("SDLSensorManager.unregisterListener(mSensorManager, this,")
+		)
+		assertTrue(
+			"The SDL sensor wrapper should retry both registration paths after ConcurrentModificationException.",
+			sensorManager.contains("static final int RETRY_COUNT = 3;") &&
+				Regex("""catch \(java\.util\.ConcurrentModificationException e\)""")
+					.findAll(sensorManager)
+					.count() == 2
+		)
+	}
 }
