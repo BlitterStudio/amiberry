@@ -3,13 +3,21 @@
 #include <string>
 #include <vector>
 
+enum class macos_bookmarks_migration_result
+{
+	no_change,
+	migrated,
+	failed,
+};
+
 #ifdef MACOS_APP_STORE
 
 // Initialize the bookmark system. Call once at startup after
 // settings_dir is resolved but before accessing user-selected paths.
 // Loads stored bookmarks from disk, optionally migrating from a legacy
 // bookmark store, and starts security-scoped access.
-void macos_bookmarks_init(const std::string& settings_dir, const std::vector<std::string>& legacy_bookmarks_dirs);
+macos_bookmarks_migration_result macos_bookmarks_init(
+	const std::string& settings_dir, const std::vector<std::string>& legacy_bookmarks_dirs);
 
 // Shut down: releases all security-scoped resource access.
 // Call at application exit.
@@ -34,7 +42,11 @@ void macos_bookmark_remove(const std::string& path);
 
 // No-op stubs for non-App-Store builds.
 // Callers don't need #ifdef guards.
-inline void macos_bookmarks_init(const std::string&, const std::vector<std::string>&) {}
+inline macos_bookmarks_migration_result macos_bookmarks_init(
+	const std::string&, const std::vector<std::string>&)
+{
+	return macos_bookmarks_migration_result::no_change;
+}
 inline void macos_bookmarks_shutdown() {}
 inline bool macos_bookmark_store(const std::string&) { return true; }
 inline bool macos_bookmark_is_accessible(const std::string&) { return true; }

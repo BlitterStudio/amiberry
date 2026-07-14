@@ -46,10 +46,10 @@ static NSString* get_bookmarks_plist_path(const std::string& directory_path)
 }
 
 // Save bookmark data to disk
-static void save_bookmarks_plist()
+static bool save_bookmarks_plist()
 {
 	if (!s_bookmarks_path || !s_bookmark_data)
-		return;
+		return false;
 
 	NSError* error = nil;
 	NSData* plistData = [NSPropertyListSerialization dataWithPropertyList:s_bookmark_data
@@ -61,7 +61,7 @@ static void save_bookmarks_plist()
 	{
 		write_log("Security bookmarks: failed to serialize plist: %s\n",
 			[[error localizedDescription] UTF8String]);
-		return;
+		return false;
 	}
 
 	if (![plistData writeToFile:s_bookmarks_path options:NSDataWritingAtomic error:&error])
@@ -69,7 +69,9 @@ static void save_bookmarks_plist()
 		write_log("Security bookmarks: failed to write %s: %s\n",
 			[s_bookmarks_path UTF8String],
 			[[error localizedDescription] UTF8String]);
+		return false;
 	}
+	return true;
 }
 
 // Load bookmark data from disk
@@ -181,10 +183,12 @@ static std::string normalize_to_directory(const std::string& path)
 	return result;
 }
 
-void macos_bookmarks_init(const std::string& settings_dir, const std::vector<std::string>& legacy_bookmarks_dirs)
+macos_bookmarks_migration_result macos_bookmarks_init(
+	const std::string& settings_dir, const std::vector<std::string>& legacy_bookmarks_dirs)
 {
 	@autoreleasepool
 	{
+		auto migration_result = macos_bookmarks_migration_result::no_change;
 		std::lock_guard<std::mutex> lock(s_mutex);
 
 		[s_bookmarks_path release];
@@ -204,15 +208,20 @@ void macos_bookmarks_init(const std::string& settings_dir, const std::vector<std
 				{
 					continue;
 				}
+				if (![[NSFileManager defaultManager] fileExistsAtPath:legacy_bookmarks_path])
+					continue;
 
 				if (load_bookmarks_plist_from_path(legacy_bookmarks_path))
 				{
 					write_log("Security bookmarks: migrating legacy store from %s to %s\n",
 						[legacy_bookmarks_path UTF8String],
 						[s_bookmarks_path UTF8String]);
-					save_bookmarks_plist();
+					migration_result = save_bookmarks_plist()
+						? macos_bookmarks_migration_result::migrated
+						: macos_bookmarks_migration_result::failed;
 					break;
 				}
+				migration_result = macos_bookmarks_migration_result::failed;
 			}
 		}
 
@@ -231,6 +240,7 @@ void macos_bookmarks_init(const std::string& settings_dir, const std::vector<std
 
 		write_log("Security bookmarks: initialized (%d resolved, %d failed, %d total)\n",
 			resolved, failed, (int)[keys count]);
+		return migration_result;
 	}
 }
 
