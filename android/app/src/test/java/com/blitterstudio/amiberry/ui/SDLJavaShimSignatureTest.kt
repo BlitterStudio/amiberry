@@ -9,6 +9,7 @@ import org.libsdl.app.SDLAudioManager
 import org.libsdl.app.SDLActivity
 import org.libsdl.app.SDLControllerManager
 import org.libsdl.app.SDLInputConnection
+import java.io.File
 
 class SDLJavaShimSignatureTest {
 	@Test
@@ -19,10 +20,15 @@ class SDLJavaShimSignatureTest {
 	}
 
 	@Test
-	fun sdlActivityVersionMatchesVendoredSdl() {
-		assertEquals(3, SDLActivity::class.java.getPrivateInt("SDL_MAJOR_VERSION"))
-		assertEquals(4, SDLActivity::class.java.getPrivateInt("SDL_MINOR_VERSION"))
-		assertEquals(10, SDLActivity::class.java.getPrivateInt("SDL_MICRO_VERSION"))
+	fun sdlActivityVersionMatchesFetchedSdl() {
+		val dependencies = File("../../cmake/Dependencies.cmake").readText()
+		val version = Regex(
+			"""FetchContent_Declare\(\s*sdl3\b[\s\S]*?GIT_TAG\s+release-(\d+)\.(\d+)\.(\d+)"""
+		).find(dependencies) ?: error("Could not find the SDL3 release tag in cmake/Dependencies.cmake")
+
+		assertEquals(version.groupValues[1].toInt(), SDLActivity::class.java.getPrivateInt("SDL_MAJOR_VERSION"))
+		assertEquals(version.groupValues[2].toInt(), SDLActivity::class.java.getPrivateInt("SDL_MINOR_VERSION"))
+		assertEquals(version.groupValues[3].toInt(), SDLActivity::class.java.getPrivateInt("SDL_MICRO_VERSION"))
 	}
 
 	@Test

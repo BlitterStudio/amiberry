@@ -1,6 +1,6 @@
 ---
 name: troubleshoot-amiberry
-description: Use when investigating, reproducing, or fixing Amiberry bugs, especially renderer or input regressions, RTG/Picasso96 pixel-format or presentation bugs, HiDPI or SDL3 logical-presentation bugs, Vulkan capability or swapchain failures, libretro headless stub or link regressions, MHI/audio playback regressions, threaded device shutdown hangs, OS4 filesystem packet fallback issues, PPC/QEMU runtime performance regressions, crash regressions, or behavior regressions. Follow an edit-build-run-test-fix cycle, using Amiberry MCP runtime-control tools when they are configured and falling back to normal process, log, screenshot, and debugger tools otherwise.
+description: Use when investigating, reproducing, or fixing Amiberry bugs, especially renderer or input regressions, RTG/Picasso96 pixel-format or presentation bugs, HiDPI or SDL3 logical-presentation bugs, Android SDL Java/JNI version mismatches, Vulkan capability or swapchain failures, libretro headless stub or link regressions, MHI/audio playback regressions, threaded device shutdown hangs, OS4 filesystem packet fallback issues, PPC/QEMU runtime performance regressions, crash regressions, or behavior regressions. Follow an edit-build-run-test-fix cycle, using Amiberry MCP runtime-control tools when they are configured and falling back to normal process, log, screenshot, and debugger tools otherwise.
 ---
 
 # Amiberry Autonomous Troubleshooting
@@ -95,6 +95,7 @@ Read one of these references when the bug matches its trigger. Do not load all r
 | [references/threaded-device-shutdown.md](references/threaded-device-shutdown.md) | Shutdown hangs, joinable worker threads, PCAP/uaenet teardown, or PCem Voodoo FIFO/render thread bugs |
 | [references/os4-filesystem-packets.md](references/os4-filesystem-packets.md) | OS4 filesystem packet compatibility, `filesys.cpp`, `ACTION_EXAMINEDATA*`, or unknown DOS packet fallback bugs |
 | [references/ppc-qemu-runtime.md](references/ppc-qemu-runtime.md) | QEMU-UAE PPC runtime behavior, plugin JIT flush, spinlock, execute-loop, or PPC slowdown bugs |
+| [references/android-sdl-shim.md](references/android-sdl-shim.md) | Android SDL updates, C/Java version mismatch, JNI shim drift, or changes under `org/libsdl/app` |
 
 ### Phase 2: Reproduce
 
