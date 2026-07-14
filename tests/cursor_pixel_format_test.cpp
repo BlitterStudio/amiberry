@@ -2,8 +2,10 @@
 #include <cstring>
 #include <iostream>
 
+typedef std::uint8_t uae_u8;
 typedef std::uint16_t uae_u16;
 typedef std::uint32_t uae_u32;
+typedef std::uint64_t uae_u64;
 
 #include "amiberry_cursor.h"
 #include "amiberry_input_helpers.h"
@@ -252,27 +254,78 @@ static void test_native_cursor_hotspot_cache_keeps_interleaved_sizes()
 	amiberry_input_cursor_hotspot_tracker_cache cache;
 	int hotspot_x = -1;
 	int hotspot_y = -1;
+	const uae_u64 tall_signature = 0x12345678;
+	const uae_u64 short_signature = 0x87654321;
 
 	for (int i = 0; i < 3; i++) {
-		auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(&cache, 32, 54);
+		auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&cache, 32, 54, tall_signature);
 		amiberry_input_cursor_hotspot_tracker_sample(tall, true,
 			400 + i * 2, 300 + i * 2, 384 + i * 2, 286 + i * 2,
 			32, 54, 3, &hotspot_x, &hotspot_y);
 
-		auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(&cache, 32, 26);
+		auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&cache, 32, 26, short_signature);
 		amiberry_input_cursor_hotspot_tracker_sample(short_cursor, true,
 			500 + i * 2, 200 + i * 2, 484 + i * 2, 188 + i * 2,
 			32, 26, 3, &hotspot_x, &hotspot_y);
 	}
 
-	auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(&cache, 32, 54);
-	auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(&cache, 32, 26);
+	auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 54, tall_signature);
+	auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 26, short_signature);
 	expect_true(tall->learned, "interleaved tall cursor must retain its hotspot samples");
 	expect_int_eq(tall->hotspot_x, 16, "interleaved tall cursor hotspot x must be retained");
 	expect_int_eq(tall->hotspot_y, 14, "interleaved tall cursor hotspot y must be retained");
 	expect_true(short_cursor->learned, "interleaved short cursor must retain its hotspot samples");
 	expect_int_eq(short_cursor->hotspot_x, 16, "interleaved short cursor hotspot x must be retained");
 	expect_int_eq(short_cursor->hotspot_y, 12, "interleaved short cursor hotspot y must be retained");
+}
+
+static void test_native_cursor_hotspot_cache_separates_same_size_bitmaps()
+{
+	amiberry_input_cursor_hotspot_tracker_cache cache;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+	const uae_u64 arrow_signature = 0x11111111;
+	const uae_u64 crosshair_signature = 0x22222222;
+
+	for (int i = 0; i < 3; i++) {
+		auto* arrow = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&cache, 32, 32, arrow_signature);
+		amiberry_input_cursor_hotspot_tracker_sample(arrow, true,
+			200 + i, 160 + i, 199 + i, 158 + i,
+			32, 32, 3, &hotspot_x, &hotspot_y);
+	}
+
+	auto* crosshair = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 32, crosshair_signature);
+	expect_true(!crosshair->learned,
+		"same-sized cursor bitmap must not inherit a previously learned hotspot");
+
+	auto* arrow = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+		&cache, 32, 32, arrow_signature);
+	expect_true(arrow->learned, "original same-sized bitmap must retain its own hotspot");
+	expect_int_eq(arrow->hotspot_x, 1, "original same-sized bitmap hotspot x must be retained");
+	expect_int_eq(arrow->hotspot_y, 2, "original same-sized bitmap hotspot y must be retained");
+}
+
+static void test_native_cursor_bitmap_signature_includes_pixels_and_colors()
+{
+	const uae_u8 arrow[] = { 0, 1, 1, 0 };
+	const uae_u8 crosshair[] = { 1, 0, 0, 1 };
+	const uae_u32 colors[] = { 0, 0xffffff, 0x555555, 0xaaaaaa };
+	const uae_u32 changed_colors[] = { 0, 0xff0000, 0x555555, 0xaaaaaa };
+
+	const uae_u64 arrow_signature = amiberry_input_cursor_bitmap_signature(
+		arrow, sizeof arrow, colors, 4);
+	expect_true(arrow_signature != amiberry_input_cursor_bitmap_signature(
+		crosshair, sizeof crosshair, colors, 4),
+		"same-sized cursor bitmaps must have distinct cache signatures");
+	expect_true(arrow_signature != amiberry_input_cursor_bitmap_signature(
+		arrow, sizeof arrow, changed_colors, 4),
+		"cursor color changes must have distinct cache signatures");
 }
 
 static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
@@ -334,6 +387,8 @@ int main()
 	test_native_cursor_hotspot_learning_accepts_moving_samples();
 	test_native_cursor_hotspot_uses_hires_y_units();
 	test_native_cursor_hotspot_cache_keeps_interleaved_sizes();
+	test_native_cursor_hotspot_cache_separates_same_size_bitmaps();
+	test_native_cursor_bitmap_signature_includes_pixels_and_colors();
 	test_native_cursor_hotspot_learning_keeps_last_valid_result();
 	test_native_crosshair_hotspot_snaps_to_bitmap_intersection();
 	return failures == 0 ? 0 : 1;

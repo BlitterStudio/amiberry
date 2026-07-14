@@ -125,6 +125,7 @@ struct amiberry_input_cursor_hotspot_tracker_cache_entry
 	bool valid = false;
 	int cursor_width = 0;
 	int cursor_height = 0;
+	uae_u64 cursor_signature = 0;
 	unsigned int last_used = 0;
 	amiberry_input_cursor_hotspot_tracker tracker;
 };
@@ -152,9 +153,27 @@ static inline void amiberry_input_cursor_hotspot_tracker_cache_reset(
 	}
 }
 
+static inline uae_u64 amiberry_input_cursor_bitmap_signature(
+	const uae_u8* image, int image_size, const uae_u32* colors, int color_count)
+{
+	uae_u64 signature = 14695981039346656037ULL;
+	for (int i = 0; image && i < image_size; i++) {
+		signature ^= image[i];
+		signature *= 1099511628211ULL;
+	}
+	for (int i = 0; colors && i < color_count; i++) {
+		for (int shift = 0; shift < 32; shift += 8) {
+			signature ^= (colors[i] >> shift) & 0xff;
+			signature *= 1099511628211ULL;
+		}
+	}
+	return signature;
+}
+
 static inline amiberry_input_cursor_hotspot_tracker*
 amiberry_input_cursor_hotspot_tracker_cache_acquire(
-	amiberry_input_cursor_hotspot_tracker_cache* cache, int cursor_width, int cursor_height)
+	amiberry_input_cursor_hotspot_tracker_cache* cache, int cursor_width, int cursor_height,
+	uae_u64 cursor_signature)
 {
 	if (!cache || cursor_width <= 0 || cursor_height <= 0) {
 		return nullptr;
@@ -164,7 +183,8 @@ amiberry_input_cursor_hotspot_tracker_cache_acquire(
 	amiberry_input_cursor_hotspot_tracker_cache_entry* available = nullptr;
 	amiberry_input_cursor_hotspot_tracker_cache_entry* oldest = &cache->entries[0];
 	for (auto& entry : cache->entries) {
-		if (entry.valid && entry.cursor_width == cursor_width && entry.cursor_height == cursor_height) {
+		if (entry.valid && entry.cursor_width == cursor_width && entry.cursor_height == cursor_height
+			&& entry.cursor_signature == cursor_signature) {
 			entry.last_used = cache->use_sequence;
 			return &entry.tracker;
 		}
@@ -181,6 +201,7 @@ amiberry_input_cursor_hotspot_tracker_cache_acquire(
 	entry->valid = true;
 	entry->cursor_width = cursor_width;
 	entry->cursor_height = cursor_height;
+	entry->cursor_signature = cursor_signature;
 	entry->last_used = cache->use_sequence;
 	return &entry->tracker;
 }

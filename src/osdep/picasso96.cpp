@@ -2363,9 +2363,11 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	if (chipset) {
 		input_mousehack_cursor_hotspot(w, h, &hotspot_x, &hotspot_y, &residual_x, &residual_y);
+		const uae_u64 cursor_signature = amiberry_input_cursor_bitmap_signature(
+			image, datasize, ct, 4);
 
 		auto* hotspot_tracker = amiberry_input_cursor_hotspot_tracker_cache_acquire(
-			&native_cursor_hotspot_tracker_cache, w, h);
+			&native_cursor_hotspot_tracker_cache, w, h, cursor_signature);
 
 		// Native pointer and sprite positions both use hires coordinate units.
 		// Decoded low-res cursor pixels use those same units on both axes.
