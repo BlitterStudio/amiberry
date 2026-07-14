@@ -4087,6 +4087,7 @@ static void reset_core_runtime_state()
 	last_geometry_aspect = -1.0f;
 	libretro_reset_crop_policy();
 	libretro_audio_reset();
+	libretro_options_dirty = true;
 }
 
 static void apply_minimum_audio_latency()
