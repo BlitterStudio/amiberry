@@ -51,6 +51,7 @@ static int bootlogmode;
 
 FILE* debugfile = nullptr;
 int console_logging = 0;
+// Process-local because console availability depends on how Amiberry was launched.
 static int debugger_type = -1;
 BOOL debuggerinitializing = false;
 extern bool lof_store;
@@ -319,9 +320,7 @@ static void openconsole ()
 {
 #if defined(AMIBERRY_MACOS) || (!defined(__ANDROID__) && !defined(AMIBERRY_IOS))
 	if (debugger_type < 0) {
-		regqueryint(NULL, _T("DebuggerType"), &debugger_type);
-		if (debugger_type <= 0)
-			debugger_type = console_debugger_available() ? 1 : 2;
+		debugger_type = console_debugger_available() ? 1 : 2;
 	}
 	if (debugger_type == 1 && !console_debugger_available()) {
 		debugger_type = 2;
@@ -362,9 +361,7 @@ static void openconsole ()
 		if (consoleopen > 0 || debuggerinitializing)
 			return;
 		if (debugger_type < 0) {
-			regqueryint (NULL, _T("DebuggerType"), &debugger_type);
-			if (debugger_type <= 0)
-				debugger_type = 1;
+			debugger_type = 1;
 			openconsole();
 			return;
 		}
@@ -401,7 +398,6 @@ void debugger_change (int mode)
 #endif
 	if (debugger_type != 1 && debugger_type != 2)
 		debugger_type = 2;
-	regsetint (NULL, _T("DebuggerType"), debugger_type);
 	openconsole ();
 }
 
