@@ -57,6 +57,41 @@ void gui_handle_events(void)
 {
 }
 
+static void gui_flicker_led2(int led, int unitnum, int status)
+{
+	static int resetcounter[LED_MAX];
+	uae_s8* p;
+	(void)unitnum;
+
+	if (led == LED_HD)
+		p = &gui_data.hd;
+	else if (led == LED_CD)
+		p = &gui_data.cd;
+	else if (led == LED_MD)
+		p = &gui_data.md;
+	else if (led == LED_NET)
+		p = &gui_data.net;
+	else
+		return;
+
+	const uae_s8 old = *p;
+	if (status < 0) {
+		return;
+	}
+	if (status == 0 && old < 0) {
+		*p = 0;
+		resetcounter[led] = 0;
+		return;
+	}
+	if (status == 0) {
+		resetcounter[led]--;
+		if (resetcounter[led] > 0)
+			return;
+	}
+	*p = static_cast<uae_s8>(status);
+	resetcounter[led] = 15;
+}
+
 void gui_filename(int num, const TCHAR* name)
 {
 	(void)num;
@@ -65,11 +100,11 @@ void gui_filename(int num, const TCHAR* name)
 
 void gui_fps(int fps, int lines, bool lace, int idle, int color)
 {
-	(void)fps;
-	(void)lines;
-	(void)lace;
-	(void)idle;
-	(void)color;
+	gui_data.fps = fps;
+	gui_data.lines = lines;
+	gui_data.lace = lace;
+	gui_data.idle = idle;
+	gui_data.fps_color = color;
 }
 
 void gui_changesettings(void)
@@ -86,9 +121,17 @@ void gui_unlock(void)
 
 void gui_flicker_led(int led, int unit, int status)
 {
-	(void)led;
-	(void)unit;
-	(void)status;
+	if (led < 0) {
+		gui_flicker_led2(LED_HD, 0, 0);
+		gui_flicker_led2(LED_CD, 0, 0);
+		if (gui_data.net >= 0)
+			gui_flicker_led2(LED_NET, 0, 0);
+		if (gui_data.md >= 0)
+			gui_flicker_led2(LED_MD, 0, 0);
+	}
+	else {
+		gui_flicker_led2(led, unit, status);
+	}
 }
 
 void gui_disk_image_change(int unit, const TCHAR* name, bool writeprotected)

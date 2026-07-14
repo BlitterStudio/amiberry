@@ -51,6 +51,7 @@ extern "C" {
 #include "gui.h"
 #include "amiberry_gfx.h"
 #include "irenderer.h"
+#include "statusline.h"
 #include "zfile.h"
 #include "target.h"
 #include "custom.h"
@@ -679,6 +680,8 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_stereo_separation", "Stereo Separation; 0|1|2|3|4|5|6|7|8|9|10" },
 	{ "amiberry_floppy_speed", "Floppy Speed; 0|100|200|400|800" },
 	{ "amiberry_video_standard", "Video Standard; auto|pal|ntsc" },
+	{ "amiberry_statusline", "On-Screen Status Line; disabled|enabled" },
+	{ "amiberry_statusline_size", "On-Screen Status Line Size; 1x|2x|3x|4x" },
 	{ "amiberry_port0_device", "Port 1 Device; mouse|joystick" },
 	{ "amiberry_port1_device", "Port 2 Device; joystick|mouse" },
 	{ "amiberry_swap_ports", "Swap Ports; disabled|enabled" },
@@ -1045,6 +1048,36 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ NULL, NULL }
 		},
 		"disabled"
+	},
+	{
+		"amiberry_statusline",
+		"On-Screen Status Line",
+		"Status Line",
+		"Show an on-screen status line at the bottom with power/floppy/HD/CD activity LEDs and disk insert/eject messages, like the standalone Amiberry.",
+		NULL,
+		"video",
+		{
+			{ "disabled", "Disabled" },
+			{ "enabled", "Enabled" },
+			{ NULL, NULL }
+		},
+		"disabled"
+	},
+	{
+		"amiberry_statusline_size",
+		"On-Screen Status Line Size",
+		"Status Line Size",
+		"Scale factor for the on-screen status line. Use a larger value for high-resolution output.",
+		NULL,
+		"video",
+		{
+			{ "1x", "1x" },
+			{ "2x", "2x" },
+			{ "3x", "3x" },
+			{ "4x", "4x" },
+			{ NULL, NULL }
+		},
+		"1x"
 	},
 #ifdef WITH_MIDI
 	{
@@ -3301,6 +3334,21 @@ static bool parse_joyport_order(const char* value, int out[2])
 	return true;
 }
 
+static void apply_libretro_statusline_options(void)
+{
+	const bool enabled = option_enabled(get_option_value("amiberry_statusline"));
+	const int size = option_to_int(get_option_value("amiberry_statusline_size"), 1);
+	const int mult = std::min(std::max(size, 1), 4) * 100;
+
+	const int leds = enabled ? (STATUSLINE_CHIPSET | STATUSLINE_RTG) : 0;
+	currprefs.leds_on_screen = leds;
+	changed_prefs.leds_on_screen = leds;
+	for (int i = 0; i < 2; i++) {
+		currprefs.leds_on_screen_multiplier[i] = mult;
+		changed_prefs.leds_on_screen_multiplier[i] = mult;
+	}
+}
+
 static void apply_libretro_input_options(void)
 {
 	unsigned desired_port_device[2] = { libretro_port_device[0], libretro_port_device[1] };
@@ -4039,6 +4087,7 @@ static void reset_core_runtime_state()
 	last_geometry_aspect = -1.0f;
 	libretro_reset_crop_policy();
 	libretro_audio_reset();
+	libretro_options_dirty = true;
 }
 
 static void apply_minimum_audio_latency()
@@ -4408,6 +4457,7 @@ void retro_run(void)
 	}
 	if (libretro_options_dirty) {
 		apply_libretro_input_options();
+		apply_libretro_statusline_options();
 #ifdef WITH_MIDI
 		apply_libretro_midi_options();
 #endif

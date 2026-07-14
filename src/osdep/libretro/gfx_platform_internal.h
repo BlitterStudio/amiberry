@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstring>
 #include <string>
+#include <vector>
 
 #include "libretro_shared.h"
 #include "custom.h"
@@ -8,6 +10,8 @@
 #include "gfx_window.h"
 #include "gfx_colors.h"
 #include "display_modes.h"
+#include "gui.h"
+#include "statusline.h"
 #ifdef PICASSO96
 #include "picasso96.h"
 #endif
@@ -41,6 +45,63 @@ static inline bool gfx_platform_skip_renderframe(int monid, int mode, int immedi
 	return true;
 }
 
+// Composites the statusline into a private buffer so the emulator surface is
+// never mutated: crop scanning must not see statusline pixels as content.
+static inline const uae_u8* libretro_render_statusline(const uae_u8* src, int w, int h, int pitch)
+{
+	const int monid = 0;
+	const struct amigadisplay* ad = &adisplays[monid];
+
+	const bool show =
+		((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on);
+	if (!show || !src || w <= 0 || h <= 0)
+		return src;
+
+	static uae_u32 rc[256], gc[256], bc[256], a[256];
+	static bool color_tables_initialized = false;
+	if (!color_tables_initialized) {
+		for (int i = 0; i < 256; i++) {
+			rc[i] = static_cast<uae_u32>(i) << 16;
+			gc[i] = static_cast<uae_u32>(i) << 8;
+			bc[i] = static_cast<uae_u32>(i) << 0;
+			a[i] = static_cast<uae_u32>(i) << 24;
+		}
+		color_tables_initialized = true;
+	}
+
+	statusline_set_multiplier(monid, w, h);
+	const int m = statusline_get_multiplier(monid) / 100;
+	const int led_height = TD_TOTAL_HEIGHT * m;
+
+	const TCHAR* msg = statusline_fetch();
+	const int msg_m = m < 2 ? 2 : m;
+	const int msg_height = msg ? (LDP_CHAR_HEIGHT + 4) * msg_m : 0;
+
+	static std::vector<uae_u8> composited;
+	composited.resize(static_cast<size_t>(h) * pitch);
+	uae_u8* pixels = composited.data();
+	const int row_bytes = w * 4;
+	for (int y = 0; y < h; y++)
+		memcpy(pixels + static_cast<size_t>(y) * pitch, src + static_cast<size_t>(y) * pitch, row_bytes);
+
+	int y0 = h - (led_height + msg_height);
+	if (y0 < 0)
+		y0 = 0;
+
+	if (msg && msg_height > 0 && y0 + msg_height <= h) {
+		statusline_render(monid, pixels + y0 * pitch, pitch, w, msg_height, rc, gc, bc, a);
+	}
+
+	for (int y = 0; y < led_height; y++) {
+		const int dy = y0 + msg_height + y;
+		if (dy >= h)
+			break;
+		draw_status_line_single(monid, pixels + dy * pitch, y, w, rc, gc, bc, a);
+	}
+	return pixels;
+}
+
 static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 {
 	if (surface) {
@@ -59,6 +120,7 @@ static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 				w = crop.w;
 				h = crop.h;
 			}
+			pixels = libretro_render_statusline(pixels, w, h, surface->pitch);
 			video_cb(pixels, w, h, surface->pitch);
 		} else {
 			static bool warned = false;
