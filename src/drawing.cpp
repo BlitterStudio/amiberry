@@ -2544,6 +2544,12 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 #ifdef USE_VULKAN
 	return false;
 #else
+	// KMSDRM is forced to full-window mode and cannot switch the host refresh
+	// to follow chipset changes. It also cannot reliably disable swap blocking.
+	// Keep emulation on software timing instead of changing pacing paths when
+	// the Amiga and console refresh rates happen to match.
+	if (kmsdrm_detected)
+		return false;
 	if (vblank_hz <= 0.0f)
 		return false;
 	const uint32_t hz_x1000 = hw_vsync_cached_monitor_hz_x1000.load(std::memory_order_relaxed);
