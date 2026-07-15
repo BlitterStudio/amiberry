@@ -602,36 +602,25 @@ int macos_debugger_console_get(char* out, const int maxlen)
 		return -1;
 	}
 
-	if ([NSThread isMainThread]) {
-		for (;;) {
-			int len = 0;
-			if (try_dequeue_line(out, maxlen, &len)) {
-				return len;
-			}
-			if (debugger_console_should_exit_wait()) {
-				return -1;
-			}
+	for (;;) {
+		int len = 0;
+		if (try_dequeue_line(out, maxlen, &len)) {
+			return len;
+		}
+		if (debugger_poll_external_control()) {
+			return -2;
+		}
+		if (debugger_console_should_exit_wait()) {
+			return -1;
+		}
+
+		if ([NSThread isMainThread]) {
 			pump_debugger_window_events();
+		} else {
+			std::unique_lock<std::mutex> lock(debugger_console_mutex);
+			debugger_console_cv.wait_for(lock, std::chrono::milliseconds(50));
 		}
 	}
-
-	std::unique_lock<std::mutex> lock(debugger_console_mutex);
-	while (debugger_console_lines.empty() && !debugger_console_closed && debugger_active) {
-		debugger_console_cv.wait_for(lock, std::chrono::milliseconds(50));
-	}
-
-	if (debugger_console_lines.empty()) {
-		return -1;
-	}
-
-	std::string line = std::move(debugger_console_lines.front());
-	debugger_console_lines.pop_front();
-	lock.unlock();
-
-	const int len = std::min(maxlen - 1, static_cast<int>(line.size()));
-	std::memcpy(out, line.c_str(), len);
-	out[len] = 0;
-	return len;
 }
 
 #endif

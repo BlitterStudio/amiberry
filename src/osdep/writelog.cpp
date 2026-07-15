@@ -6,6 +6,7 @@
  * Copyright 2001 Bernd Schmidt
  */
 #include <cstdarg>
+#include <cerrno>
 #include <cstdio>
 #include <iostream>
 #include <clocale>
@@ -775,6 +776,51 @@ int console_get (TCHAR *out, int maxlen)
 		return debugger_window_get(out, maxlen);
 #endif
 	set_console_input_mode(1);
+#ifdef AMIBERRY
+	if (debugger_external_control_available()) {
+		while (debugger_active) {
+			if (debugger_poll_external_control())
+				return -2;
+
+#ifdef _WIN32
+			const HANDLE stdinput = GetStdHandle(STD_INPUT_HANDLE);
+			const DWORD wait_result = stdinput == INVALID_HANDLE_VALUE
+				? WAIT_FAILED : WaitForSingleObject(stdinput, 50);
+			if (wait_result != WAIT_OBJECT_0) {
+				Sleep(10);
+				continue;
+			}
+#else
+			struct pollfd pfd{};
+			pfd.fd = STDIN_FILENO;
+			pfd.events = POLLIN;
+			int result;
+			do {
+				result = poll(&pfd, 1, 50);
+			} while (result < 0 && errno == EINTR);
+			if (result <= 0 || !(pfd.revents & POLLIN)) {
+				if (result > 0 && (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)))
+					SDL_Delay(10);
+				continue;
+			}
+#endif
+
+			TCHAR *res = fgets(out, maxlen, stdin);
+			if (res == nullptr) {
+				clearerr(stdin);
+				SDL_Delay(10);
+				continue;
+			}
+			int len = strlen(out);
+			while (len > 0 && (out[len - 1] == '\r' || out[len - 1] == '\n')) {
+				out[len - 1] = 0;
+				len--;
+			}
+			return len;
+		}
+		return -1;
+	}
+#endif
 	TCHAR *res = fgets(out, maxlen, stdin);
 	if (res == nullptr) {
 		return -1;

@@ -32,6 +32,7 @@
 #include <cstring>
 #include <map>
 #include <algorithm>
+#include <mutex>
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -52,6 +53,7 @@ static int server_socket = -1;
 static std::string socket_path;
 static bool ipc_active = false;
 static bool ipc_quit_requested = false;
+static std::mutex ipc_handle_mutex;
 
 // Command handler type
 typedef std::function<std::string(const std::vector<std::string>&)> CommandHandler;
@@ -1932,6 +1934,7 @@ static std::string HandleDebugStatus(const std::vector<std::string>& args)
 
 	std::vector<std::string> responses;
 	responses.push_back("active=" + std::to_string(debugger_active ? 1 : 0));
+	responses.push_back("stopped=" + std::to_string(debugger_is_stopped() ? 1 : 0));
 	responses.push_back("debugging=" + std::to_string(debugging ? 1 : 0));
 	responses.push_back("exception_debugging=" + std::to_string(exception_debugging ? 1 : 0));
 
@@ -1942,24 +1945,43 @@ static std::string HandleDebugStep(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received DEBUG_STEP" << std::endl;
 
-	if (!debugger_active) {
-		return make_response(false, {"Debugger not active - use DEBUG_ACTIVATE first"});
+	int count = 1;
+	if (!args.empty()) {
+		try {
+			count = std::stoi(args[0]);
+		} catch (...) {
+			return make_response(false, {"Invalid instruction count"});
+		}
+	}
+	if (count < 1 || count > 10000) {
+		return make_response(false, {"Instruction count must be 1-10000"});
+	}
+	if (!debugger_request_step(count)) {
+		return make_response(false, {"Debugger is not stopped"});
 	}
 
-	// Single step mode - execute one instruction
-	set_special(SPCFLAG_BRK);
-	return make_response(true, {"Single step executed"});
+	return make_response(true, {"Stepping " + std::to_string(count) + " instruction(s)"});
+}
+
+static std::string HandleDebugStepOver(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received DEBUG_STEP_OVER" << std::endl;
+
+	if (!debugger_request_step_over()) {
+		return make_response(false, {"Debugger is not stopped"});
+	}
+
+	return make_response(true, {"Stepping over current instruction"});
 }
 
 static std::string HandleDebugContinue(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received DEBUG_CONTINUE" << std::endl;
 
-	if (!debugger_active) {
-		return make_response(false, {"Debugger not active"});
+	if (!debugger_request_continue()) {
+		return make_response(false, {"Debugger is not stopped"});
 	}
 
-	deactivate_debugger();
 	return make_response(true, {"Execution continued"});
 }
 #endif
@@ -2079,8 +2101,11 @@ static std::string HandleDisassemble(const std::vector<std::string>& args)
 	// Use the disassembler
 	for (int i = 0; i < lines; i++) {
 		TCHAR buf[256];
-		addr = m68k_disasm_2(buf, sizeof(buf) / sizeof(TCHAR), addr, nullptr, 0xffffffff, nullptr, 1, nullptr, nullptr, 0, 1);
+		uaecptr next_addr = addr;
+		m68k_disasm_2(buf, sizeof(buf) / sizeof(TCHAR), addr, nullptr, 0, &next_addr, 1,
+			nullptr, nullptr, 0xffffffff, 0);
 		responses.emplace_back(buf);
+		addr = next_addr;
 	}
 #else
 	// Simple fallback - just show hex bytes
@@ -2140,9 +2165,15 @@ static std::string HandleSetBreakpoint(const std::vector<std::string>& args)
 
 	// Set the breakpoint
 	bpnodes[slot].value1 = addr;
+	bpnodes[slot].value2 = 0;
+	bpnodes[slot].mask = 0xffffffff;
 	bpnodes[slot].type = BREAKPOINT_REG_PC;
 	bpnodes[slot].oper = BREAKPOINT_CMP_EQUAL;
+	bpnodes[slot].opersigned = false;
+	bpnodes[slot].cnt = 0;
+	bpnodes[slot].chain = -1;
 	bpnodes[slot].enabled = 1;
+	debugger_breakpoints_changed();
 
 	char buf[64];
 	snprintf(buf, sizeof(buf), "Breakpoint set at %08X in slot %d", addr, slot);
@@ -2153,28 +2184,38 @@ static std::string HandleClearBreakpoint(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received CLEAR_BREAKPOINT" << std::endl;
 
-	if (args.empty()) {
+	std::string selector = args.empty() ? "ALL" : args[0];
+	std::transform(selector.begin(), selector.end(), selector.begin(), ::toupper);
+	if (selector == "ALL") {
 		// Clear all breakpoints
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
 			bpnodes[i].enabled = 0;
 		}
+		debugger_breakpoints_changed();
 		return make_response(true, {"All breakpoints cleared"});
 	}
 
-	int slot;
+	uaecptr addr;
 	try {
-		slot = std::stoi(args[0]);
-		if (slot < 0 || slot >= BREAKPOINT_TOTAL) {
-			return make_response(false, {"Slot must be 0-" + std::to_string(BREAKPOINT_TOTAL - 1)});
-		}
+		addr = std::stoul(args[0], nullptr, 16);
 	} catch (...) {
-		return make_response(false, {"Invalid slot number"});
+		return make_response(false, {"Invalid address: " + args[0]});
 	}
 
-	bpnodes[slot].enabled = 0;
+	int cleared = 0;
+	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+		if (bpnodes[i].enabled && bpnodes[i].type == BREAKPOINT_REG_PC && bpnodes[i].value1 == addr) {
+			bpnodes[i].enabled = 0;
+			cleared++;
+		}
+	}
+	if (cleared == 0) {
+		return make_response(false, {"No breakpoint at address " + args[0]});
+	}
+	debugger_breakpoints_changed();
 
 	char buf[64];
-	snprintf(buf, sizeof(buf), "Breakpoint %d cleared", slot);
+	snprintf(buf, sizeof(buf), "%d breakpoint(s) cleared at %08X", cleared, addr);
 	return make_response(true, {buf});
 }
 
@@ -2507,7 +2548,7 @@ static void InitHandlers()
 	command_handlers[CMD_DEBUG_DEACTIVATE] = HandleDebugDeactivate;
 	command_handlers[CMD_DEBUG_STATUS] = HandleDebugStatus;
 	command_handlers[CMD_DEBUG_STEP] = HandleDebugStep;
-	command_handlers[CMD_DEBUG_STEP_OVER] = HandleDebugStep;  // Same handler, step over logic handled internally
+	command_handlers[CMD_DEBUG_STEP_OVER] = HandleDebugStepOver;
 	command_handlers[CMD_DEBUG_CONTINUE] = HandleDebugContinue;
 	command_handlers[CMD_GET_CPU_REGS] = HandleGetCPURegs;
 	command_handlers[CMD_GET_CUSTOM_REGS] = HandleGetCustomRegs;
@@ -2817,6 +2858,9 @@ void Amiberry::IPC::IPCCleanUp()
 
 void Amiberry::IPC::IPCHandle()
 {
+	std::unique_lock<std::mutex> lock(ipc_handle_mutex, std::try_to_lock);
+	if (!lock.owns_lock()) return;
+
 	if (server_socket < 0) return;
 
 	// Check for incoming connections (non-blocking)
