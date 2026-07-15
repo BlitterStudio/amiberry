@@ -612,6 +612,14 @@ struct legacy_migration_state_summary
 	bool config_failed{};
 	bool state_migrated{};
 	bool state_failed{};
+	bool configurations_migrated{};
+	bool configurations_failed{};
+	bool configurations_conflicts{};
+	bool bookmarks_migrated{};
+	bool bookmarks_failed{};
+	bool directory_case_migrated{};
+	bool directory_case_failed{};
+	bool directory_case_conflicts{};
 	bool visuals_migrated{};
 	bool visuals_failed{};
 	bool visuals_conflicts{};
@@ -619,12 +627,14 @@ struct legacy_migration_state_summary
 
 	bool any_migrated() const
 	{
-		return config_migrated || state_migrated || visuals_migrated;
+		return config_migrated || state_migrated || configurations_migrated
+			|| bookmarks_migrated || directory_case_migrated || visuals_migrated;
 	}
 
 	bool any_failures() const
 	{
-		return config_failed || state_failed || visuals_failed || visuals_conflicts;
+		return config_failed || state_failed || configurations_failed || configurations_conflicts || bookmarks_failed
+			|| directory_case_failed || directory_case_conflicts || visuals_failed || visuals_conflicts;
 	}
 
 	bool any_bootstrap_files_migrated() const
@@ -700,18 +710,36 @@ static std::string describe_bootstrap_migration_subjects(const bool config, cons
 
 static std::string describe_layout_migration_subjects(const legacy_migration_state_summary& state)
 {
-	const auto bootstrap_subjects =
-		describe_bootstrap_migration_subjects(state.config_migrated || state.config_failed,
-			state.state_migrated || state.state_failed);
-	const bool include_visuals = state.visuals_migrated || state.visuals_failed || state.visuals_conflicts;
-
-	if (!bootstrap_subjects.empty() && include_visuals)
-		return bootstrap_subjects + " and compatible visual assets";
+	std::vector<std::string> subjects;
+	const auto bootstrap_subjects = describe_bootstrap_migration_subjects(
+		state.config_migrated || state.config_failed,
+		state.state_migrated || state.state_failed);
 	if (!bootstrap_subjects.empty())
-		return bootstrap_subjects;
-	if (include_visuals)
-		return "compatible visual assets";
-	return "legacy files";
+		subjects.emplace_back(bootstrap_subjects);
+	if (state.configurations_migrated || state.configurations_failed || state.configurations_conflicts)
+		subjects.emplace_back("saved configurations");
+	if (state.bookmarks_migrated || state.bookmarks_failed)
+		subjects.emplace_back("security bookmarks");
+	if (state.directory_case_migrated || state.directory_case_failed || state.directory_case_conflicts)
+		subjects.emplace_back("content folder names");
+	if (state.visuals_migrated || state.visuals_failed || state.visuals_conflicts)
+		subjects.emplace_back("compatible visual assets");
+
+	if (subjects.empty())
+		return "legacy files";
+	if (subjects.size() == 1)
+		return subjects.front();
+	if (subjects.size() == 2)
+		return subjects[0] + " and " + subjects[1];
+
+	std::string description;
+	for (std::size_t i = 0; i < subjects.size(); ++i)
+	{
+		if (i > 0)
+			description += i + 1 == subjects.size() ? ", and " : ", ";
+		description += subjects[i];
+	}
+	return description;
 }
 
 static std::string get_bootstrap_destination_label(const legacy_migration_state_summary& state)
@@ -7762,7 +7790,163 @@ static std::string get_existing_settings_file_for_resolution(const bool portable
 	return {};
 }
 
-static bool copy_file_if_missing(const std::string& source_file, const std::string& destination_file, bool& failed)
+static std::filesystem::path get_unique_destination_path(const std::string& destination_root,
+	const std::filesystem::path& source_path)
+{
+	std::filesystem::path candidate = std::filesystem::path(destination_root) / source_path.filename();
+	std::error_code ec;
+	if (!std::filesystem::exists(candidate, ec) && !ec)
+		return candidate;
+
+	const auto stem = source_path.stem().string();
+	const auto extension = source_path.extension().string();
+	for (int suffix = 1; suffix < 1000; ++suffix)
+	{
+		std::filesystem::path unique_name;
+		if (source_path.has_extension())
+			unique_name = stem + " (" + std::to_string(suffix) + ")" + extension;
+		else
+			unique_name = source_path.filename().string() + " (" + std::to_string(suffix) + ")";
+
+		candidate = std::filesystem::path(destination_root) / unique_name;
+		ec.clear();
+		if (!std::filesystem::exists(candidate, ec) && !ec)
+			return candidate;
+	}
+
+	return std::filesystem::path(destination_root) / (source_path.filename().string() + ".migrated");
+}
+
+static bool move_path_with_fallback(const std::string& source_path,
+	const std::string& destination_path, std::string& error_message)
+{
+	ensure_parent_directory_exists(destination_path);
+
+	std::error_code ec;
+	std::filesystem::rename(source_path, destination_path, ec);
+	if (!ec)
+		return true;
+
+	error_message = ec.message();
+	ec.clear();
+	const bool source_is_directory = std::filesystem::is_directory(source_path, ec);
+	if (ec)
+	{
+		error_message += "; failed to inspect source: " + ec.message();
+		return false;
+	}
+
+	ec.clear();
+	if (source_is_directory)
+	{
+		std::filesystem::copy(source_path, destination_path, std::filesystem::copy_options::recursive, ec);
+		if (ec)
+		{
+			error_message += "; fallback copy failed: " + ec.message();
+			return false;
+		}
+		std::filesystem::remove_all(source_path, ec);
+	}
+	else
+	{
+		std::filesystem::copy_file(source_path, destination_path, std::filesystem::copy_options::none, ec);
+		if (ec)
+		{
+			error_message += "; fallback copy failed: " + ec.message();
+			return false;
+		}
+		std::filesystem::remove(source_path, ec);
+	}
+
+	if (ec)
+	{
+		error_message += "; fallback source removal failed: " + ec.message();
+		return false;
+	}
+	return true;
+}
+
+static std::string get_legacy_migration_backup_root()
+{
+	return join_path(settings_dir, "Legacy Migration Backups");
+}
+
+// A successful migration must retire its source. Otherwise files deleted from the
+// canonical layout can be copied back from the legacy location on the next startup.
+static bool archive_legacy_path(const std::string& source_path, const char* migration_label)
+{
+	if (source_path.empty())
+		return true;
+	std::error_code ec;
+	if (!std::filesystem::exists(source_path, ec))
+	{
+		if (ec)
+		{
+			write_log("%s migration: failed to inspect %s: %s\n",
+				migration_label, source_path.c_str(), ec.message().c_str());
+			return false;
+		}
+		return true;
+	}
+
+	const auto backup_root = get_legacy_migration_backup_root();
+	if (backup_root.empty())
+	{
+		write_log("%s migration: cannot archive %s because the settings directory is unavailable\n",
+			migration_label, source_path.c_str());
+		return false;
+	}
+
+	ensure_directory_exists(backup_root);
+	const auto destination_path = get_unique_destination_path(backup_root, std::filesystem::path(source_path));
+	std::string error_message;
+	if (!move_path_with_fallback(source_path, destination_path.string(), error_message))
+	{
+		write_log("%s migration: failed to archive %s as %s: %s\n",
+			migration_label, source_path.c_str(), destination_path.string().c_str(), error_message.c_str());
+		return false;
+	}
+
+	write_log("%s migration: archived %s as %s\n",
+		migration_label, source_path.c_str(), destination_path.string().c_str());
+	return true;
+}
+
+static void finalize_legacy_bookmarks_migration(
+	const std::vector<std::string>& candidate_directories,
+	const macos_bookmarks_migration_result result)
+{
+	if (result == macos_bookmarks_migration_result::migrated)
+		legacy_migration_state.bookmarks_migrated = true;
+	if (result == macos_bookmarks_migration_result::failed)
+	{
+		legacy_migration_state.bookmarks_failed = true;
+		return;
+	}
+	if (result != macos_bookmarks_migration_result::migrated)
+		return;
+
+	const auto current_bookmarks_file = join_path(settings_dir, "bookmarks.plist");
+	if (!my_existsfile2(current_bookmarks_file.c_str()))
+		return;
+
+	for (const auto& candidate_directory : candidate_directories)
+	{
+		const auto legacy_bookmarks_file = join_path(candidate_directory, "bookmarks.plist");
+		if (!my_existsfile2(legacy_bookmarks_file.c_str())
+			|| path_strings_match(legacy_bookmarks_file, current_bookmarks_file))
+		{
+			continue;
+		}
+		if (!archive_legacy_path(legacy_bookmarks_file, "Security bookmarks"))
+			legacy_migration_state.bookmarks_failed = true;
+		else
+			legacy_migration_state.bookmarks_migrated = true;
+	}
+}
+
+static bool copy_file_if_missing(const std::string& source_file, const std::string& destination_file,
+	bool& failed, const char* migration_label)
 {
 	failed = false;
 	if (source_file.empty() || destination_file.empty())
@@ -7780,26 +7964,27 @@ static bool copy_file_if_missing(const std::string& source_file, const std::stri
 	std::filesystem::copy_file(source_file, destination_file, std::filesystem::copy_options::none, ec);
 	if (ec)
 	{
-		write_log("Settings migration: failed to copy %s to %s: %s\n",
-			source_file.c_str(), destination_file.c_str(), ec.message().c_str());
+		write_log("%s migration: failed to copy %s to %s: %s\n",
+			migration_label, source_file.c_str(), destination_file.c_str(), ec.message().c_str());
 		failed = true;
 		return false;
 	}
 
-	write_log("Settings migration: imported %s from %s\n",
-		destination_file.c_str(), source_file.c_str());
+	write_log("%s migration: imported %s from %s\n",
+		migration_label, destination_file.c_str(), source_file.c_str());
 	return true;
 }
 
 static bool import_legacy_settings_file_if_needed(const std::vector<std::string>& candidate_directories,
-	const char* filename, bool& failed)
+	const char* filename, const bool retire_sources, bool& failed)
 {
 	const auto destination_file = join_path(settings_dir, filename);
-	if (destination_file.empty() || my_existsfile2(destination_file.c_str()))
-	{
-		failed = false;
+	failed = false;
+	if (destination_file.empty())
 		return false;
-	}
+
+	bool destination_exists = my_existsfile2(destination_file.c_str());
+	bool migrated = false;
 
 	for (const auto& candidate_directory : candidate_directories)
 	{
@@ -7807,14 +7992,51 @@ static bool import_legacy_settings_file_if_needed(const std::vector<std::string>
 			continue;
 
 		const auto source_file = join_path(candidate_directory, filename);
-		if (copy_file_if_missing(source_file, destination_file, failed))
-			return true;
-		if (failed)
-			return false;
+		if (!my_existsfile2(source_file.c_str()) || path_strings_match(source_file, destination_file))
+			continue;
+
+		if (!destination_exists)
+		{
+			if (retire_sources)
+			{
+				std::string error_message;
+				if (!move_path_with_fallback(source_file, destination_file, error_message))
+				{
+					write_log("Settings migration: failed to move %s to %s: %s\n",
+						source_file.c_str(), destination_file.c_str(), error_message.c_str());
+					failed = true;
+					return migrated;
+				}
+				write_log("Settings migration: moved %s to %s\n",
+					source_file.c_str(), destination_file.c_str());
+			}
+			else
+			{
+				bool copy_failed = false;
+				if (!copy_file_if_missing(source_file, destination_file, copy_failed, "Settings"))
+				{
+					failed = copy_failed;
+					return migrated;
+				}
+			}
+
+			destination_exists = true;
+			migrated = true;
+			if (!retire_sources)
+				return true;
+			continue;
+		}
+
+		if (retire_sources && !archive_legacy_path(source_file, "Settings"))
+		{
+			failed = true;
+			return migrated;
+		}
+		if (retire_sources)
+			migrated = true;
 	}
 
-	failed = false;
-	return false;
+	return migrated;
 }
 
 #ifdef LIBRETRO
@@ -7857,24 +8079,31 @@ static std::vector<std::string> get_libretro_pre_relocation_candidate_directorie
 
 static void migrate_legacy_settings_files(const bool portable_mode)
 {
-	auto candidate_directories = get_legacy_settings_candidate_directories(portable_mode);
+	const auto candidate_directories = get_legacy_settings_candidate_directories(portable_mode);
+	bool conf_migration_failed = false;
+	bool ini_migration_failed = false;
+	bool conf_migrated = import_legacy_settings_file_if_needed(
+		candidate_directories, "amiberry.conf", true, conf_migration_failed);
+	bool ini_migrated = import_legacy_settings_file_if_needed(
+		candidate_directories, "amiberry.ini", true, ini_migration_failed);
 #ifdef LIBRETRO
-	// Append libretro-specific pre-relocation candidates so the standalone
-	// settings_dir is consulted only for migration, not for cleanup or resolution.
-	for (auto& dir : get_libretro_pre_relocation_candidate_directories())
-		append_settings_candidate(candidate_directories, dir);
+	// Import, but never retire, standalone settings when the libretro core relocates
+	// its private settings directory into the frontend-provided save directory.
+	const auto libretro_candidates = get_libretro_pre_relocation_candidate_directories();
+	if (!conf_migration_failed && !my_existsfile2(amiberry_conf_file.c_str()))
+		conf_migrated = import_legacy_settings_file_if_needed(
+			libretro_candidates, "amiberry.conf", false, conf_migration_failed) || conf_migrated;
+	if (!ini_migration_failed && !my_existsfile2(amiberry_ini_file.c_str()))
+		ini_migrated = import_legacy_settings_file_if_needed(
+			libretro_candidates, "amiberry.ini", false, ini_migration_failed) || ini_migrated;
 #endif
-	bool conf_copy_failed = false;
-	bool ini_copy_failed = false;
-	const bool conf_copied = import_legacy_settings_file_if_needed(candidate_directories, "amiberry.conf", conf_copy_failed);
-	const bool ini_copied = import_legacy_settings_file_if_needed(candidate_directories, "amiberry.ini", ini_copy_failed);
-	if (conf_copied)
+	if (conf_migrated)
 		legacy_migration_state.config_migrated = true;
-	if (conf_copy_failed)
+	if (conf_migration_failed)
 		legacy_migration_state.config_failed = true;
-	if (ini_copied)
+	if (ini_migrated)
 		legacy_migration_state.state_migrated = true;
-	if (ini_copy_failed)
+	if (ini_migration_failed)
 		legacy_migration_state.state_failed = true;
 }
 
@@ -7897,11 +8126,47 @@ static void append_visual_asset_candidate(std::vector<visual_asset_path_set>& ca
 	candidates.emplace_back(candidate);
 }
 
+using legacy_migration_skip_predicate = bool (*)(const std::filesystem::path& relative_path);
+
+static bool files_have_equal_contents(const std::filesystem::path& lhs, const std::filesystem::path& rhs)
+{
+	std::error_code ec;
+	const auto lhs_size = std::filesystem::file_size(lhs, ec);
+	if (ec)
+		return false;
+	const auto rhs_size = std::filesystem::file_size(rhs, ec);
+	if (ec || lhs_size != rhs_size)
+		return false;
+
+	std::ifstream lhs_stream(lhs, std::ios::binary);
+	std::ifstream rhs_stream(rhs, std::ios::binary);
+	if (!lhs_stream || !rhs_stream)
+		return false;
+
+	char lhs_buffer[8192];
+	char rhs_buffer[8192];
+	do
+	{
+		lhs_stream.read(lhs_buffer, sizeof lhs_buffer);
+		rhs_stream.read(rhs_buffer, sizeof rhs_buffer);
+		const auto lhs_count = lhs_stream.gcount();
+		const auto rhs_count = rhs_stream.gcount();
+		if (lhs_count != rhs_count || std::memcmp(lhs_buffer, rhs_buffer, static_cast<std::size_t>(lhs_count)) != 0)
+			return false;
+	}
+	while (lhs_stream || rhs_stream);
+
+	return lhs_stream.eof() && rhs_stream.eof();
+}
+
 static bool merge_directory_contents_if_needed(const std::string& source_dir, const std::string& destination_dir,
-	bool& failed, bool& conflicts, const char* migration_label)
+	bool& failed, bool& conflicts, const char* migration_label,
+	const legacy_migration_skip_predicate should_skip = nullptr, bool* skipped_any = nullptr)
 {
 	failed = false;
 	conflicts = false;
+	if (skipped_any != nullptr)
+		*skipped_any = false;
 	if (source_dir.empty() || destination_dir.empty())
 		return false;
 	if (!my_existsdir(source_dir.c_str()))
@@ -7913,8 +8178,7 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 
 	bool copied_any = false;
 	std::error_code ec;
-	std::filesystem::recursive_directory_iterator iterator(source_dir,
-		std::filesystem::directory_options::skip_permission_denied, ec);
+	std::filesystem::recursive_directory_iterator iterator(source_dir, std::filesystem::directory_options::none, ec);
 	if (ec)
 	{
 		write_log("%s migration: failed to scan %s: %s\n",
@@ -7943,8 +8207,24 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 			return copied_any;
 		}
 
+		if (should_skip != nullptr && should_skip(relative_path))
+		{
+			if (skipped_any != nullptr)
+				*skipped_any = true;
+			continue;
+		}
+
 		const auto destination_path = std::filesystem::path(destination_dir) / relative_path;
-		if (iterator->is_directory())
+		std::error_code entry_ec;
+		const bool is_directory = iterator->is_directory(entry_ec);
+		if (entry_ec)
+		{
+			write_log("%s migration: failed to inspect %s: %s\n",
+				migration_label, iterator->path().string().c_str(), entry_ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+		if (is_directory)
 		{
 			std::filesystem::create_directories(destination_path, ec);
 			if (ec)
@@ -7957,7 +8237,15 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 			continue;
 		}
 
-		if (!iterator->is_regular_file())
+		const bool is_regular_file = iterator->is_regular_file(entry_ec);
+		if (entry_ec)
+		{
+			write_log("%s migration: failed to inspect %s: %s\n",
+				migration_label, iterator->path().string().c_str(), entry_ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+		if (!is_regular_file)
 			continue;
 
 		std::filesystem::create_directories(destination_path.parent_path(), ec);
@@ -7969,8 +8257,23 @@ static bool merge_directory_contents_if_needed(const std::string& source_dir, co
 			return copied_any;
 		}
 
-		if (std::filesystem::exists(destination_path))
+		ec.clear();
+		const bool destination_exists = std::filesystem::exists(destination_path, ec);
+		if (ec)
 		{
+			write_log("%s migration: failed to inspect %s: %s\n",
+				migration_label, destination_path.string().c_str(), ec.message().c_str());
+			failed = true;
+			return copied_any;
+		}
+		if (destination_exists)
+		{
+			if (files_have_equal_contents(iterator->path(), destination_path))
+			{
+				write_log("%s migration: identical file already exists at %s\n",
+					migration_label, destination_path.string().c_str());
+				continue;
+			}
 			conflicts = true;
 			write_log("%s migration: keeping existing %s, skipping %s\n",
 				migration_label, destination_path.string().c_str(), iterator->path().string().c_str());
@@ -8005,8 +8308,53 @@ static bool is_legacy_bootstrap_settings_file(const std::filesystem::path& relat
 	return filename == "amiberry.conf" || filename == "amiberry.ini";
 }
 
-static bool merge_legacy_configuration_directory_if_needed(const std::string& source_dir,
-	const std::string& destination_dir, bool& failed, bool& conflicts)
+static bool legacy_directory_contains_skipped_files(const std::string& source_dir,
+	const legacy_migration_skip_predicate should_skip, bool& failed, const char* migration_label)
+{
+	failed = false;
+	if (should_skip == nullptr)
+		return false;
+
+	std::error_code ec;
+	std::filesystem::recursive_directory_iterator iterator(source_dir, std::filesystem::directory_options::none, ec);
+	if (ec)
+	{
+		write_log("%s migration: failed to scan %s: %s\n",
+			migration_label, source_dir.c_str(), ec.message().c_str());
+		failed = true;
+		return false;
+	}
+
+	const std::filesystem::recursive_directory_iterator end;
+	for (; iterator != end; iterator.increment(ec))
+	{
+		if (ec)
+		{
+			write_log("%s migration: failed while reading %s: %s\n",
+				migration_label, source_dir.c_str(), ec.message().c_str());
+			failed = true;
+			return false;
+		}
+
+		const auto relative_path = std::filesystem::relative(iterator->path(), source_dir, ec);
+		if (ec)
+		{
+			write_log("%s migration: failed to relativize %s against %s: %s\n",
+				migration_label, iterator->path().string().c_str(), source_dir.c_str(), ec.message().c_str());
+			failed = true;
+			return false;
+		}
+
+		if (should_skip(relative_path))
+			return true;
+	}
+
+	return false;
+}
+
+static bool migrate_legacy_directory_if_needed(const std::string& source_dir,
+	const std::string& destination_dir, bool& failed, bool& conflicts, const char* migration_label,
+	const legacy_migration_skip_predicate should_skip = nullptr)
 {
 	failed = false;
 	conflicts = false;
@@ -8017,90 +8365,58 @@ static bool merge_legacy_configuration_directory_if_needed(const std::string& so
 	if (path_strings_match(source_dir, destination_dir))
 		return false;
 
-	ensure_directory_exists(destination_dir);
-
-	bool copied_any = false;
 	std::error_code ec;
-	std::filesystem::recursive_directory_iterator iterator(source_dir,
-		std::filesystem::directory_options::skip_permission_denied, ec);
+	const bool destination_exists = std::filesystem::exists(destination_dir, ec);
 	if (ec)
 	{
-		write_log("Configuration migration: failed to scan %s: %s\n", source_dir.c_str(), ec.message().c_str());
+		write_log("%s migration: failed to inspect %s: %s\n",
+			migration_label, destination_dir.c_str(), ec.message().c_str());
 		failed = true;
 		return false;
 	}
 
-	const std::filesystem::recursive_directory_iterator end;
-	for (; iterator != end; iterator.increment(ec))
+	bool skipped_files_found = legacy_directory_contains_skipped_files(
+		source_dir, should_skip, failed, migration_label);
+	if (failed)
+		return false;
+
+	if (!destination_exists && !skipped_files_found)
 	{
-		if (ec)
+		ensure_parent_directory_exists(destination_dir);
+		std::filesystem::rename(source_dir, destination_dir, ec);
+		if (!ec)
 		{
-			write_log("Configuration migration: failed while reading %s: %s\n", source_dir.c_str(), ec.message().c_str());
-			failed = true;
-			return copied_any;
+			write_log("%s migration: renamed %s to %s\n",
+				migration_label, source_dir.c_str(), destination_dir.c_str());
+			return true;
 		}
 
-		const auto relative_path = std::filesystem::relative(iterator->path(), source_dir, ec);
-		if (ec)
-		{
-			write_log("Configuration migration: failed to relativize %s against %s: %s\n",
-				iterator->path().string().c_str(), source_dir.c_str(), ec.message().c_str());
-			failed = true;
-			return copied_any;
-		}
-
-		if (is_legacy_bootstrap_settings_file(relative_path))
-			continue;
-
-		const auto destination_path = std::filesystem::path(destination_dir) / relative_path;
-		if (iterator->is_directory())
-		{
-			std::filesystem::create_directories(destination_path, ec);
-			if (ec)
-			{
-				write_log("Configuration migration: failed to create %s: %s\n",
-					destination_path.string().c_str(), ec.message().c_str());
-				failed = true;
-				return copied_any;
-			}
-			continue;
-		}
-
-		if (!iterator->is_regular_file())
-			continue;
-
-		std::filesystem::create_directories(destination_path.parent_path(), ec);
-		if (ec)
-		{
-			write_log("Configuration migration: failed to create %s: %s\n",
-				destination_path.parent_path().string().c_str(), ec.message().c_str());
-			failed = true;
-			return copied_any;
-		}
-
-		if (std::filesystem::exists(destination_path))
-		{
-			conflicts = true;
-			write_log("Configuration migration: keeping existing %s, skipping %s\n",
-				destination_path.string().c_str(), iterator->path().string().c_str());
-			continue;
-		}
-
-		std::filesystem::copy_file(iterator->path(), destination_path, std::filesystem::copy_options::none, ec);
-		if (ec)
-		{
-			write_log("Configuration migration: failed to copy %s to %s: %s\n",
-				iterator->path().string().c_str(), destination_path.string().c_str(), ec.message().c_str());
-			failed = true;
-			return copied_any;
-		}
-
-		write_log("Configuration migration: imported %s from %s\n",
-			destination_path.string().c_str(), iterator->path().string().c_str());
-		copied_any = true;
+		write_log("%s migration: failed to rename %s to %s: %s; falling back to a merge\n",
+			migration_label, source_dir.c_str(), destination_dir.c_str(), ec.message().c_str());
+		ec.clear();
 	}
 
-	return copied_any;
+	bool skipped_during_merge = false;
+	const bool copied_any = merge_directory_contents_if_needed(source_dir, destination_dir,
+		failed, conflicts, migration_label, should_skip, &skipped_during_merge);
+	if (failed)
+		return copied_any;
+
+	skipped_files_found = skipped_files_found || skipped_during_merge;
+	if (skipped_files_found)
+	{
+		write_log("%s migration: leaving %s in place because it still contains files owned by another migration\n",
+			migration_label, source_dir.c_str());
+		failed = true;
+		return copied_any;
+	}
+
+	if (!archive_legacy_path(source_dir, migration_label))
+	{
+		failed = true;
+		return copied_any;
+	}
+	return true;
 }
 
 static void migrate_legacy_configuration_directories(const bool portable_mode)
@@ -8129,13 +8445,14 @@ static void migrate_legacy_configuration_directories(const bool portable_mode)
 		if (my_existsdir(candidate.c_str()))
 			source_exists = true;
 
-		bool copy_failed = false;
-		bool copy_conflicts = false;
-		if (merge_legacy_configuration_directory_if_needed(candidate, baseline_config_path, copy_failed, copy_conflicts))
+		bool migration_failed = false;
+		bool migration_conflicts = false;
+		if (migrate_legacy_directory_if_needed(candidate, baseline_config_path,
+			migration_failed, migration_conflicts, "Configuration", is_legacy_bootstrap_settings_file))
 			migrated_any = true;
-		if (copy_failed)
+		if (migration_failed)
 			failed = true;
-		if (copy_conflicts)
+		if (migration_conflicts)
 			conflicts = true;
 	}
 
@@ -8144,11 +8461,17 @@ static void migrate_legacy_configuration_directories(const bool portable_mode)
 		config_path = baseline_config_path;
 		legacy_migration_state.settings_rewrite_needed = true;
 	}
+	if (migrated_any)
+		legacy_migration_state.configurations_migrated = true;
+	if (failed)
+		legacy_migration_state.configurations_failed = true;
+	if (conflicts)
+		legacy_migration_state.configurations_conflicts = true;
 
 	if (failed)
 		write_log("Configuration migration: completed with errors (see log above)\n");
 	else if (migrated_any)
-		write_log("Configuration migration: imported legacy files into %s\n", baseline_config_path.c_str());
+		write_log("Configuration migration: moved legacy files into %s\n", baseline_config_path.c_str());
 	else if (conflicts || source_exists)
 		write_log("Configuration migration: legacy directory already reconciled with %s\n", baseline_config_path.c_str());
 }
@@ -8183,14 +8506,15 @@ static void migrate_legacy_visual_asset_directories()
 
 		for (const auto& legacy_paths : legacy_candidates)
 		{
-			bool copy_failed = false;
-			bool copy_conflicts = false;
+			bool directory_failed = false;
+			bool directory_conflicts = false;
 			const auto source_dir = get_visual_asset_path_for_descriptor(legacy_paths, descriptor);
-			if (merge_directory_contents_if_needed(source_dir, current_path, copy_failed, copy_conflicts, "Visuals"))
+			if (migrate_legacy_directory_if_needed(
+				source_dir, current_path, directory_failed, directory_conflicts, "Visuals"))
 				migrated_any = true;
-			if (copy_failed)
+			if (directory_failed)
 				migration_failed = true;
-			if (copy_conflicts)
+			if (directory_conflicts)
 				migration_conflicts = true;
 		}
 	};
@@ -8265,11 +8589,50 @@ enum class path_case_migration_result
 	failed,
 };
 
+static bool reconcile_case_variant_with_target(const std::filesystem::path& source,
+	const std::filesystem::path& target, bool& conflicts)
+{
+	std::error_code type_ec;
+	const bool source_is_directory = std::filesystem::is_directory(source, type_ec);
+	if (type_ec)
+	{
+		write_log("Directory case migration: failed to inspect %s: %s\n",
+			source.string().c_str(), type_ec.message().c_str());
+		return false;
+	}
+	const bool target_is_directory = std::filesystem::is_directory(target, type_ec);
+	if (type_ec)
+	{
+		write_log("Directory case migration: failed to inspect %s: %s\n",
+			target.string().c_str(), type_ec.message().c_str());
+		return false;
+	}
+
+	if (source_is_directory && target_is_directory)
+	{
+		bool directory_failed = false;
+		bool directory_conflicts = false;
+		const bool migrated = migrate_legacy_directory_if_needed(source.string(), target.string(),
+			directory_failed, directory_conflicts, "Directory case");
+		if (directory_conflicts)
+			conflicts = true;
+		return migrated && !directory_failed;
+	}
+
+	if (source_is_directory != target_is_directory || !files_have_equal_contents(source, target))
+	{
+		conflicts = true;
+		write_log("Directory case migration: keeping existing %s, archiving conflicting %s\n",
+			target.string().c_str(), source.string().c_str());
+	}
+	return archive_legacy_path(source.string(), "Directory case");
+}
+
 // Legacy content layouts used a mix of lowercase and partially capitalized names.
 // Rename case-only variants to the current canonical names so existing installs and
 // cross-platform content packs resolve to the same paths on case-sensitive filesystems.
 static path_case_migration_result migrate_path_case_if_needed(const std::string& target_path,
-	bool& migrated_any, bool& failed)
+	bool& migrated_any, bool& failed, bool& conflicts)
 {
 	if (target_path.empty())
 		return path_case_migration_result::no_change;
@@ -8338,28 +8701,21 @@ static path_case_migration_result migrate_path_case_if_needed(const std::string&
 
 	if (exact_match_exists)
 	{
-		std::error_code type_ec;
-		if (std::filesystem::is_directory(matched_source, type_ec)
-			&& !type_ec
-			&& std::filesystem::is_directory(target, type_ec)
-			&& !type_ec)
+		bool reconciled_any = false;
+		for (const auto& source : all_matches)
 		{
-			bool copy_failed = false;
-			bool copy_conflicts = false;
-			if (merge_directory_contents_if_needed(matched_source.string(), target.string(),
-				copy_failed, copy_conflicts, "Directory case"))
-			{
-				migrated_any = true;
-				return path_case_migration_result::migrated;
-			}
-			if (copy_failed)
+			if (!reconcile_case_variant_with_target(source, target, conflicts))
 			{
 				failed = true;
 				return path_case_migration_result::failed;
 			}
+			reconciled_any = true;
 		}
-		write_log("Directory case migration: canonical path %s already exists; leaving %s in place\n",
-			target.string().c_str(), matched_source.string().c_str());
+		if (reconciled_any)
+		{
+			migrated_any = true;
+			return path_case_migration_result::migrated;
+		}
 		return path_case_migration_result::no_change;
 	}
 
@@ -8370,7 +8726,7 @@ static path_case_migration_result migrate_path_case_if_needed(const std::string&
 			if (i > 0) others += ", ";
 			others += all_matches[i].filename().string();
 		}
-		write_log("Directory case migration: multiple case-variant matches for %s in %s [%s]; renaming %s and leaving the rest in place — please reconcile manually\n",
+		write_log("Directory case migration: multiple case-variant matches for %s in %s [%s]; using %s as the canonical source and reconciling the rest\n",
 			basename.c_str(), parent.string().c_str(), others.c_str(),
 			matched_source.filename().string().c_str());
 	}
@@ -8387,6 +8743,17 @@ static path_case_migration_result migrate_path_case_if_needed(const std::string&
 	write_log("Directory case migration: renamed %s -> %s\n",
 		matched_source.string().c_str(), target.string().c_str());
 	migrated_any = true;
+
+	for (const auto& source : all_matches)
+	{
+		if (source == matched_source)
+			continue;
+		if (!reconcile_case_variant_with_target(source, target, conflicts))
+		{
+			failed = true;
+			return path_case_migration_result::failed;
+		}
+	}
 	return path_case_migration_result::migrated;
 }
 
@@ -8397,6 +8764,7 @@ static void migrate_legacy_lowercase_content_directories()
 
 	bool migrated_any = false;
 	bool failed = false;
+	bool conflicts = false;
 
 	const auto migrate_if_default = [&](std::string& current_path,
 		const std::string& baseline_path)
@@ -8405,7 +8773,7 @@ static void migrate_legacy_lowercase_content_directories()
 			return;
 		if (!path_strings_match_case_insensitive(current_path, baseline_path))
 			return;
-		const auto migration_result = migrate_path_case_if_needed(baseline_path, migrated_any, failed);
+		const auto migration_result = migrate_path_case_if_needed(baseline_path, migrated_any, failed, conflicts);
 		if (migration_result != path_case_migration_result::failed)
 		{
 			if (!path_strings_match(current_path, baseline_path))
@@ -8424,7 +8792,7 @@ static void migrate_legacy_lowercase_content_directories()
 			themes = themes.parent_path();
 		const auto visuals_dir = themes.parent_path();
 		if (!visuals_dir.empty())
-			migrate_path_case_if_needed(visuals_dir.string(), migrated_any, failed);
+			migrate_path_case_if_needed(visuals_dir.string(), migrated_any, failed, conflicts);
 	}
 
 	migrate_if_default(current.config_path,       baseline.config_path);
@@ -8450,8 +8818,17 @@ static void migrate_legacy_lowercase_content_directories()
 
 	apply_base_content_path_set(current);
 
+	if (migrated_any)
+		legacy_migration_state.directory_case_migrated = true;
+	if (failed)
+		legacy_migration_state.directory_case_failed = true;
+	if (conflicts)
+		legacy_migration_state.directory_case_conflicts = true;
+
 	if (failed)
 		write_log("Directory case migration: completed with errors (see log above)\n");
+	else if (conflicts)
+		write_log("Directory case migration: completed with conflicts preserved in the migration backup\n");
 	else if (migrated_any)
 		write_log("Directory case migration: completed (legacy names renamed to canonical names)\n");
 }
@@ -8827,7 +9204,14 @@ static bool is_uae_configuration_file(const std::filesystem::path& path)
 	return extension == ".uae";
 }
 
-static bool migrate_legacy_configuration_file_paths(
+enum class configuration_file_path_migration_result
+{
+	no_change,
+	migrated,
+	failed,
+};
+
+static configuration_file_path_migration_result migrate_legacy_configuration_file_paths(
 	const std::filesystem::path& config_file,
 	const std::vector<legacy_configuration_path_rewrite_pair>& path_pairs)
 {
@@ -8836,7 +9220,7 @@ static bool migrate_legacy_configuration_file_paths(
 	{
 		write_log("Configuration file path migration: failed to read %s\n",
 			config_file.string().c_str());
-		return false;
+		return configuration_file_path_migration_result::failed;
 	}
 
 	std::vector<legacy_configuration_text_rewrite_rule> rules;
@@ -8846,26 +9230,27 @@ static bool migrate_legacy_configuration_file_paths(
 
 	auto migrated_text = original_text;
 	if (!rewrite_legacy_configuration_path_text(migrated_text, rules))
-		return false;
+		return configuration_file_path_migration_result::no_change;
 
 	if (!backup_configuration_file_for_path_migration(config_file))
-		return false;
+		return configuration_file_path_migration_result::failed;
 
 	if (!my_save_file_atomic(config_file.string().c_str(), migrated_text.data(), migrated_text.size()))
 	{
 		write_log("Configuration file path migration: failed to save %s\n",
 			config_file.string().c_str());
-		return false;
+		return configuration_file_path_migration_result::failed;
 	}
 
 	write_log("Configuration file path migration: rewrote legacy paths in %s\n",
 		config_file.string().c_str());
-	return true;
+	return configuration_file_path_migration_result::migrated;
 }
 
 static int migrate_legacy_configuration_file_paths_in_directory(const std::string& configuration_directory,
-	const std::vector<legacy_configuration_path_rewrite_pair>& path_pairs)
+	const std::vector<legacy_configuration_path_rewrite_pair>& path_pairs, bool& failed)
 {
+	failed = false;
 	if (configuration_directory.empty() || path_pairs.empty())
 		return 0;
 	if (!my_existsdir(configuration_directory.c_str()))
@@ -8874,11 +9259,12 @@ static int migrate_legacy_configuration_file_paths_in_directory(const std::strin
 	int migrated_files = 0;
 	std::error_code ec;
 	std::filesystem::recursive_directory_iterator iterator(configuration_directory,
-		std::filesystem::directory_options::skip_permission_denied, ec);
+		std::filesystem::directory_options::none, ec);
 	if (ec)
 	{
 		write_log("Configuration file path migration: failed to scan %s: %s\n",
 			configuration_directory.c_str(), ec.message().c_str());
+		failed = true;
 		return 0;
 	}
 
@@ -8889,6 +9275,7 @@ static int migrate_legacy_configuration_file_paths_in_directory(const std::strin
 		{
 			write_log("Configuration file path migration: failed while reading %s: %s\n",
 				configuration_directory.c_str(), ec.message().c_str());
+			failed = true;
 			return migrated_files;
 		}
 
@@ -8896,8 +9283,11 @@ static int migrate_legacy_configuration_file_paths_in_directory(const std::strin
 		if (!iterator->is_regular_file(entry_ec) || entry_ec || !is_uae_configuration_file(iterator->path()))
 			continue;
 
-		if (migrate_legacy_configuration_file_paths(iterator->path(), path_pairs))
+		const auto result = migrate_legacy_configuration_file_paths(iterator->path(), path_pairs);
+		if (result == configuration_file_path_migration_result::migrated)
 			++migrated_files;
+		else if (result == configuration_file_path_migration_result::failed)
+			failed = true;
 	}
 
 	if (migrated_files > 0)
@@ -8911,7 +9301,12 @@ static int migrate_legacy_configuration_file_paths_in_directory(const std::strin
 static void migrate_legacy_configuration_file_paths()
 {
 	const auto path_pairs = build_legacy_configuration_path_rewrite_pairs(get_current_base_content_path_set());
-	migrate_legacy_configuration_file_paths_in_directory(config_path, path_pairs);
+	bool failed = false;
+	const int migrated_files = migrate_legacy_configuration_file_paths_in_directory(config_path, path_pairs, failed);
+	if (migrated_files > 0)
+		legacy_migration_state.configurations_migrated = true;
+	if (failed)
+		legacy_migration_state.configurations_failed = true;
 }
 
 static bool write_selftest_text_file(const std::filesystem::path& path, const std::string& text)
@@ -8981,7 +9376,9 @@ static int run_path_migration_selftest_cli()
 	}
 
 	const auto path_pairs = build_legacy_configuration_path_rewrite_pairs(paths);
-	const int migrated = migrate_legacy_configuration_file_paths_in_directory(paths.config_path, path_pairs);
+	bool path_rewrite_failed = false;
+	const int migrated = migrate_legacy_configuration_file_paths_in_directory(
+		paths.config_path, path_pairs, path_rewrite_failed);
 
 	std::string migrated_default;
 	std::string migrated_protected;
@@ -8989,7 +9386,134 @@ static int run_path_migration_selftest_cli()
 		&& read_selftest_text_file(protected_config, migrated_protected);
 	const auto backup_file = default_config.string() + ".amiberry-case-migration.bak";
 
+	const auto original_settings_dir = settings_dir;
+	settings_dir = (root / "Settings").string();
+	ensure_directory_exists(settings_dir);
+
+	const auto legacy_settings_dir = root / "legacy-settings";
+	const bool settings_fixture_written = write_selftest_text_file(
+		legacy_settings_dir / "amiberry.conf", "default_gui_theme=1\n")
+		&& write_selftest_text_file(legacy_settings_dir / "amiberry.ini", "Version=old\n");
+	const std::vector<std::string> settings_candidates{legacy_settings_dir.string()};
+	bool settings_file_failed = false;
+	bool state_file_failed = false;
+	const bool settings_file_migrated = settings_fixture_written
+		&& import_legacy_settings_file_if_needed(
+			settings_candidates, "amiberry.conf", true, settings_file_failed);
+	const bool state_file_migrated = settings_fixture_written
+		&& import_legacy_settings_file_if_needed(
+			settings_candidates, "amiberry.ini", true, state_file_failed);
+	const bool settings_test_ok = settings_fixture_written
+		&& settings_file_migrated
+		&& state_file_migrated
+		&& !settings_file_failed
+		&& !state_file_failed
+		&& !std::filesystem::exists(legacy_settings_dir / "amiberry.conf")
+		&& !std::filesystem::exists(legacy_settings_dir / "amiberry.ini")
+		&& std::filesystem::exists(std::filesystem::path(settings_dir) / "amiberry.conf")
+		&& std::filesystem::exists(std::filesystem::path(settings_dir) / "amiberry.ini");
+
+	const auto legacy_source = root / "legacy-conf";
+	const auto canonical_destination = root / "rename-test-configurations";
+	const auto legacy_config = legacy_source / "deleted.uae";
+	const auto canonical_config = canonical_destination / "deleted.uae";
+	const bool rename_fixture_written = write_selftest_text_file(
+		legacy_config, "config_description=Deleted\n");
+	bool rename_failed = false;
+	bool rename_conflicts = false;
+	const bool rename_completed = rename_fixture_written
+		&& migrate_legacy_directory_if_needed(legacy_source.string(), canonical_destination.string(),
+			rename_failed, rename_conflicts, "Selftest configuration");
+	ec.clear();
+	const bool canonical_config_removed = rename_completed
+		&& std::filesystem::remove(canonical_config, ec) && !ec;
+	bool rename_rerun_failed = false;
+	bool rename_rerun_conflicts = false;
+	const bool rename_rerun_completed = migrate_legacy_directory_if_needed(
+		legacy_source.string(), canonical_destination.string(),
+		rename_rerun_failed, rename_rerun_conflicts, "Selftest configuration");
+	const bool rename_test_ok = rename_fixture_written
+		&& rename_completed
+		&& !rename_failed
+		&& !rename_conflicts
+		&& canonical_config_removed
+		&& !rename_rerun_completed
+		&& !rename_rerun_failed
+		&& !rename_rerun_conflicts
+		&& !std::filesystem::exists(legacy_source)
+		&& !std::filesystem::exists(canonical_config);
+
+	const auto split_source = root / "split-conf";
+	const auto split_destination = root / "split-configurations";
+	const bool split_fixture_written = write_selftest_text_file(
+		split_source / "unique.uae", "config_description=Unique\n")
+		&& write_selftest_text_file(split_source / "identical.uae", "config_description=Same\n")
+		&& write_selftest_text_file(split_destination / "identical.uae", "config_description=Same\n")
+		&& write_selftest_text_file(split_source / "conflict.uae", "config_description=Legacy\n")
+		&& write_selftest_text_file(split_destination / "conflict.uae", "config_description=Current\n");
+	bool split_failed = false;
+	bool split_conflicts = false;
+	const bool split_completed = split_fixture_written
+		&& migrate_legacy_directory_if_needed(split_source.string(), split_destination.string(),
+			split_failed, split_conflicts, "Selftest split configuration");
+	std::string current_conflict_text;
+	std::string archived_conflict_text;
+	const auto split_archive = std::filesystem::path(get_legacy_migration_backup_root()) / "split-conf";
+	const bool split_read_ok = read_selftest_text_file(split_destination / "conflict.uae", current_conflict_text)
+		&& read_selftest_text_file(split_archive / "conflict.uae", archived_conflict_text);
+	ec.clear();
+	const bool split_unique_removed = split_completed
+		&& std::filesystem::remove(split_destination / "unique.uae", ec) && !ec;
+	bool split_rerun_failed = false;
+	bool split_rerun_conflicts = false;
+	const bool split_rerun_completed = migrate_legacy_directory_if_needed(
+		split_source.string(), split_destination.string(),
+		split_rerun_failed, split_rerun_conflicts, "Selftest split configuration");
+	const bool split_test_ok = split_fixture_written
+		&& split_completed
+		&& !split_failed
+		&& split_conflicts
+		&& split_read_ok
+		&& current_conflict_text == "config_description=Current\n"
+		&& archived_conflict_text == "config_description=Legacy\n"
+		&& split_unique_removed
+		&& !split_rerun_completed
+		&& !split_rerun_failed
+		&& !split_rerun_conflicts
+		&& !std::filesystem::exists(split_source)
+		&& !std::filesystem::exists(split_destination / "unique.uae")
+		&& std::filesystem::exists(split_destination / "identical.uae");
+
+	const auto case_variant_source = root / "case-variant-source";
+	const auto case_variant_target = root / "case-variant-target";
+	const bool case_variant_fixture_written = write_selftest_text_file(
+		case_variant_source / "kick.rom", "legacy-rom\n")
+		&& write_selftest_text_file(case_variant_target / "kick.rom", "canonical-rom\n");
+	bool case_variant_conflicts = false;
+	const bool case_variant_reconciled = case_variant_fixture_written
+		&& reconcile_case_variant_with_target(
+			case_variant_source, case_variant_target, case_variant_conflicts);
+	std::string current_case_variant_text;
+	std::string archived_case_variant_text;
+	const auto case_variant_archive = std::filesystem::path(get_legacy_migration_backup_root())
+		/ case_variant_source.filename();
+	const bool case_variant_read_ok = read_selftest_text_file(
+		case_variant_target / "kick.rom", current_case_variant_text)
+		&& read_selftest_text_file(case_variant_archive / "kick.rom", archived_case_variant_text);
+	legacy_migration_state_summary case_variant_state;
+	case_variant_state.directory_case_conflicts = case_variant_conflicts;
+	const bool case_variant_test_ok = case_variant_fixture_written
+		&& case_variant_reconciled
+		&& case_variant_conflicts
+		&& case_variant_state.any_failures()
+		&& case_variant_read_ok
+		&& current_case_variant_text == "canonical-rom\n"
+		&& archived_case_variant_text == "legacy-rom\n"
+		&& !std::filesystem::exists(case_variant_source);
+	settings_dir = original_settings_dir;
+
 	const bool ok = read_ok
+		&& !path_rewrite_failed
 		&& migrated == 1
 		&& migrated_default.find(paths.rom_path + "/kick.rom") != std::string::npos
 		&& migrated_default.find(paths.harddrive_path + "/system.hdf") != std::string::npos
@@ -8998,13 +9522,20 @@ static int run_path_migration_selftest_cli()
 		&& migrated_default.find(legacy_rom + "/kick.rom") == std::string::npos
 		&& migrated_default.find(legacy_harddrives + "/system.hdf") == std::string::npos
 		&& migrated_protected == protected_text
-		&& std::filesystem::exists(backup_file);
+		&& std::filesystem::exists(backup_file)
+		&& settings_test_ok
+		&& rename_test_ok
+		&& split_test_ok
+		&& case_variant_test_ok;
 
 	if (!ok)
 	{
 		fprintf(stderr, "path migration selftest: failed\n");
-		fprintf(stderr, "migrated=%d read_ok=%d root=%s\n",
-			migrated, read_ok ? 1 : 0, root.string().c_str());
+		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d settings_ok=%d rename_ok=%d split_ok=%d case_ok=%d root=%s\n",
+			migrated, read_ok ? 1 : 0, path_rewrite_failed ? 1 : 0,
+			settings_test_ok ? 1 : 0, rename_test_ok ? 1 : 0, split_test_ok ? 1 : 0,
+			case_variant_test_ok ? 1 : 0,
+			root.string().c_str());
 		return 1;
 	}
 
@@ -9126,56 +9657,6 @@ static std::string get_legacy_cleanup_destination_root()
 	return join_path(settings_dir, "Legacy Cleanup");
 }
 
-static std::filesystem::path get_unique_cleanup_destination(const std::string& destination_root,
-	const std::filesystem::path& source_path)
-{
-	std::filesystem::path candidate = std::filesystem::path(destination_root) / source_path.filename();
-	if (!std::filesystem::exists(candidate))
-		return candidate;
-
-	const auto stem = source_path.stem().string();
-	const auto extension = source_path.extension().string();
-	for (int suffix = 1; suffix < 1000; ++suffix)
-	{
-		std::filesystem::path unique_name;
-		if (source_path.has_extension())
-			unique_name = stem + " (" + std::to_string(suffix) + ")" + extension;
-		else
-			unique_name = source_path.filename().string() + " (" + std::to_string(suffix) + ")";
-
-		candidate = std::filesystem::path(destination_root) / unique_name;
-		if (!std::filesystem::exists(candidate))
-			return candidate;
-	}
-
-	return std::filesystem::path(destination_root) / (source_path.filename().string() + ".migrated");
-}
-
-static bool move_path_to_cleanup_destination(const std::string& source_path, const std::string& destination_path)
-{
-	std::error_code ec;
-	std::filesystem::rename(source_path, destination_path, ec);
-	if (!ec)
-		return true;
-
-	ec.clear();
-	if (my_existsdir(source_path.c_str()))
-	{
-		std::filesystem::copy(source_path, destination_path,
-			std::filesystem::copy_options::recursive, ec);
-		if (ec)
-			return false;
-		std::filesystem::remove_all(source_path, ec);
-		return !ec;
-	}
-
-	std::filesystem::copy_file(source_path, destination_path, std::filesystem::copy_options::none, ec);
-	if (ec)
-		return false;
-	std::filesystem::remove(source_path, ec);
-	return !ec;
-}
-
 static void refresh_legacy_cleanup_items()
 {
 	legacy_cleanup_items.clear();
@@ -9252,13 +9733,14 @@ bool cleanup_legacy_items(std::vector<std::string>& failed_items)
 			continue;
 		}
 
-		const auto destination_path = get_unique_cleanup_destination(destination_root,
+		const auto destination_path = get_unique_destination_path(destination_root,
 			std::filesystem::path(item.path));
-		if (!move_path_to_cleanup_destination(item.path, destination_path.string()))
+		std::string error_message;
+		if (!move_path_with_fallback(item.path, destination_path.string(), error_message))
 		{
 			failed_items.emplace_back(item.label + ": " + item.path);
-			write_log("Legacy cleanup: failed to move %s to %s\n",
-				item.path.c_str(), destination_path.string().c_str());
+			write_log("Legacy cleanup: failed to move %s to %s: %s\n",
+				item.path.c_str(), destination_path.string().c_str(), error_message.c_str());
 		}
 		else
 		{
@@ -9315,6 +9797,7 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 	startup_migration_notice_pending = false;
 
 	const auto settings_root = settings_dir.empty() ? get_settings_directory(g_portable_mode) : settings_dir;
+	const auto backup_root = get_legacy_migration_backup_root();
 	const auto visuals_root = get_current_visual_assets_root_path();
 	const auto subject_description = describe_layout_migration_subjects(legacy_migration_state);
 	const auto bootstrap_destination_label = get_bootstrap_destination_label(legacy_migration_state);
@@ -9332,12 +9815,18 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 		{
 			message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
 		}
-		message += "Existing files were left in place whenever possible.\nPlease check the log file for details.";
+		if (legacy_migration_state.configurations_conflicts || legacy_migration_state.directory_case_conflicts
+			|| legacy_migration_state.visuals_conflicts)
+		{
+			message += "Conflicting legacy files were preserved under:\n\n  " + backup_root
+				+ "\n\n(or left in their original location if they could not be archived).\n\n";
+		}
+		message += "Files that could not be moved were left in place.\nPlease check the log file for details.";
 		return true;
 	}
 
 	title = "Amiberry Migration";
-	message = "Amiberry imported your " + subject_description + " into the new layout.\n\n";
+	message = "Amiberry migrated your " + subject_description + " into the new layout.\n\n";
 
 	if (!bootstrap_destination_label.empty())
 		message += bootstrap_destination_label + settings_root + "\n\n";
@@ -10553,7 +11042,9 @@ int amiberry_main(int argc, char* argv[])
 	migrate_legacy_visual_asset_directories();
 	migrate_legacy_lowercase_content_directories();
 	migrate_legacy_configuration_file_paths();
-	macos_bookmarks_init(settings_dir, get_legacy_bookmark_candidate_directories(portable_mode));
+	const auto legacy_bookmark_directories = get_legacy_bookmark_candidate_directories(portable_mode);
+	const auto bookmarks_migration_result = macos_bookmarks_init(settings_dir, legacy_bookmark_directories);
+	finalize_legacy_bookmarks_migration(legacy_bookmark_directories, bookmarks_migration_result);
 	create_missing_amiberry_folders();
 	int whdboot_download_exit_code = 0;
 	if (download_whdboot)
