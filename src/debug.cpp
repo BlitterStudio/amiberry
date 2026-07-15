@@ -13,6 +13,9 @@
 
 #include <ctype.h>
 #include <signal.h>
+#ifdef AMIBERRY
+#include <atomic>
+#endif
 
 #include "options.h"
 #include "uae.h"
@@ -54,6 +57,9 @@
 #include "ini.h"
 #include "readcpu.h"
 #include "keybuf.h"
+#if defined(AMIBERRY) && defined(USE_IPC_SOCKET)
+#include "amiberry_ipc.h"
+#endif
 #ifdef WITH_SOFTFLOAT
 #include "softfloat/softfloat.h"
 #endif
@@ -86,6 +92,10 @@ static int last_hpos1, last_hpos2;
 static int last_vpos1, last_vpos2;
 static int last_frame = -1;
 static evt_t last_cycles1, last_cycles2;
+#ifdef AMIBERRY
+static std::atomic<bool> debugger_stopped{false};
+static std::atomic<bool> debugger_external_control_pending{false};
+#endif
 
 static uaecptr processptr;
 static uae_char *processname;
@@ -94,6 +104,36 @@ static uaecptr debug_copper_pc;
 
 extern int audio_channel_mask;
 extern int inputdevice_logging;
+
+#ifdef AMIBERRY
+bool debugger_is_stopped(void)
+{
+	return debugger_stopped.load(std::memory_order_acquire);
+}
+
+bool debugger_external_control_available(void)
+{
+#ifdef USE_IPC_SOCKET
+	return Amiberry::IPC::IPCIsActive();
+#else
+	return false;
+#endif
+}
+
+bool debugger_poll_external_control(void)
+{
+	if (debugger_external_control_pending.load(std::memory_order_acquire))
+		return true;
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCHandle();
+#endif
+	if (quit_program) {
+		debugger_stopped.store(false, std::memory_order_release);
+		return true;
+	}
+	return debugger_external_control_pending.load(std::memory_order_acquire);
+}
+#endif
 
 static void debug_cycles(int mode)
 {
@@ -105,6 +145,9 @@ static void debug_cycles(int mode)
 
 void deactivate_debugger (void)
 {
+#ifdef AMIBERRY
+	debugger_stopped.store(false, std::memory_order_release);
+#endif
 	inside_debugger = 0;
 	debugger_active = 0;
 	debugging = 0;
@@ -122,12 +165,19 @@ void activate_debugger (void)
 {
 	disasm_init();
 
-	if (!is_interactive_console() || isfullscreen() > 0) {
+	const bool local_debugger_available = is_interactive_console() && isfullscreen() <= 0;
+#ifdef AMIBERRY
+	const bool remote_debugger_available = debugger_external_control_available();
+#else
+	const bool remote_debugger_available = false;
+#endif
+	if (!local_debugger_available && !remote_debugger_available) {
 		return;
 	}
 
 	debugger_load_libraries();
-	open_console();
+	if (local_debugger_available)
+		open_console();
 
 	debugger_used = 1;
 	inside_debugger = 1;
@@ -164,6 +214,30 @@ static void debug_continue(void)
 {
 	set_special(SPCFLAG_BRK);
 }
+
+#ifdef AMIBERRY
+void debugger_breakpoints_changed(void)
+{
+	bool enabled = false;
+	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+		if (bpnodes[i].enabled) {
+			enabled = true;
+			break;
+		}
+	}
+
+	if (enabled) {
+		if (!debugger_is_stopped() && trace_mode == 0) {
+			trace_mode = TRACE_CHECKONLY;
+			debugging = -1;
+			set_special(SPCFLAG_BRK);
+		}
+	} else if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY) {
+		trace_mode = 0;
+		debugging = 0;
+	}
+}
+#endif
 
 bool debug_enforcer(void)
 {
@@ -6253,6 +6327,52 @@ static struct regstruct trace_prev_regs;
 #endif
 static uaecptr nextpc;
 
+#ifdef AMIBERRY
+bool debugger_request_step(const int count)
+{
+	if (!debugger_is_stopped() || count < 1 || count > 10000)
+		return false;
+
+	no_trace_exceptions = 0;
+	debug_cycles(2);
+	trace_param[0] = count;
+	trace_param[1] = 0;
+	trace_mode = TRACE_SKIP_INS;
+	exception_debugging = 1;
+	debugger_stopped.store(false, std::memory_order_relaxed);
+	debugger_external_control_pending.store(true, std::memory_order_release);
+	return true;
+}
+
+bool debugger_request_step_over(void)
+{
+	if (!debugger_is_stopped())
+		return false;
+
+	TCHAR disassembly[256];
+	uaecptr next_address = M68K_GETPC;
+	m68k_disasm_2(disassembly, sizeof(disassembly) / sizeof(TCHAR), next_address, nullptr, 0, &next_address, 1,
+		nullptr, nullptr, 0xffffffff, 0);
+	trace_mode = TRACE_MATCH_PC;
+	trace_param[0] = next_address;
+	exception_debugging = 1;
+	debug_cycles(2);
+	debugger_stopped.store(false, std::memory_order_relaxed);
+	debugger_external_control_pending.store(true, std::memory_order_release);
+	return true;
+}
+
+bool debugger_request_continue(void)
+{
+	if (!debugger_is_stopped())
+		return false;
+
+	deactivate_debugger();
+	debugger_external_control_pending.store(true, std::memory_order_release);
+	return true;
+}
+#endif
+
 static void check_breakpoint_extra(TCHAR **c, struct breakpoint_node *bpn)
 {
 	bpn->cnt = 0;
@@ -8059,29 +8179,46 @@ static TCHAR input[MAX_LINEWIDTH];
 static void debug_1 (void)
 {
 	draw_denise_line_queue_flush();
-	open_console();
+	if (is_interactive_console() && isfullscreen() <= 0)
+		open_console();
 	custom_dumpstate(0);
 	m68k_dumpstate(&nextpc, debug_pc);
 	debug_pc = 0xffffffff;
 	nxdis = nextpc; nxmem = 0;
 	debugger_active = 1;
+#ifdef AMIBERRY
+	debugger_external_control_pending.store(false, std::memory_order_relaxed);
+	debugger_stopped.store(true, std::memory_order_release);
+#endif
 
 	for (;;) {
 		int v;
 
-		if (!debugger_active)
+		if (!debugger_active) {
+#ifdef AMIBERRY
+			debugger_stopped.store(false, std::memory_order_release);
+#endif
 			return;
+		}
 		update_debug_info ();
 		console_out (_T(">"));
 		console_flush ();
 		debug_linecounter = 0;
 		v = console_get (input, MAX_LINEWIDTH);
-		if (v < 0)
+		if (v < 0) {
+#ifdef AMIBERRY
+			debugger_stopped.store(false, std::memory_order_release);
+#endif
 			return;
+		}
 		if (v == 0)
 			continue;
-		if (debug_line (input))
+		if (debug_line (input)) {
+#ifdef AMIBERRY
+			debugger_stopped.store(false, std::memory_order_release);
+#endif
 			return;
+		}
 	}
 }
 

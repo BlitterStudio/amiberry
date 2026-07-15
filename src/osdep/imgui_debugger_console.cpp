@@ -591,6 +591,9 @@ int imgui_debugger_console_get(char* out, const int maxlen)
 		if (try_dequeue_line(out, maxlen, &len)) {
 			return len;
 		}
+		if (debugger_poll_external_control()) {
+			return -2;
+		}
 		if (should_exit_wait()) {
 			return -1;
 		}
