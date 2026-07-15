@@ -3610,7 +3610,9 @@ static const addrbank gvp_bank = {
 static uae_u32 mbdmac_reg_address (uae_u32 addr)
 {
 	// The SDMAC register file is mirrored at +0x100.
-	return addr & 0xfeff;
+	addr &= 0xffff;
+	addr &= ~0x100u;
+	return addr;
 }
 
 static void mbdmac_write_word (struct wd_state *wd, uae_u32 addr, uae_u32 val)
