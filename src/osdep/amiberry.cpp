@@ -619,6 +619,7 @@ struct legacy_migration_state_summary
 	bool bookmarks_failed{};
 	bool directory_case_migrated{};
 	bool directory_case_failed{};
+	bool directory_case_conflicts{};
 	bool visuals_migrated{};
 	bool visuals_failed{};
 	bool visuals_conflicts{};
@@ -633,7 +634,7 @@ struct legacy_migration_state_summary
 	bool any_failures() const
 	{
 		return config_failed || state_failed || configurations_failed || configurations_conflicts || bookmarks_failed
-			|| directory_case_failed || visuals_failed || visuals_conflicts;
+			|| directory_case_failed || directory_case_conflicts || visuals_failed || visuals_conflicts;
 	}
 
 	bool any_bootstrap_files_migrated() const
@@ -719,7 +720,7 @@ static std::string describe_layout_migration_subjects(const legacy_migration_sta
 		subjects.emplace_back("saved configurations");
 	if (state.bookmarks_migrated || state.bookmarks_failed)
 		subjects.emplace_back("security bookmarks");
-	if (state.directory_case_migrated || state.directory_case_failed)
+	if (state.directory_case_migrated || state.directory_case_failed || state.directory_case_conflicts)
 		subjects.emplace_back("content folder names");
 	if (state.visuals_migrated || state.visuals_failed || state.visuals_conflicts)
 		subjects.emplace_back("compatible visual assets");
@@ -8586,11 +8587,50 @@ enum class path_case_migration_result
 	failed,
 };
 
+static bool reconcile_case_variant_with_target(const std::filesystem::path& source,
+	const std::filesystem::path& target, bool& conflicts)
+{
+	std::error_code type_ec;
+	const bool source_is_directory = std::filesystem::is_directory(source, type_ec);
+	if (type_ec)
+	{
+		write_log("Directory case migration: failed to inspect %s: %s\n",
+			source.string().c_str(), type_ec.message().c_str());
+		return false;
+	}
+	const bool target_is_directory = std::filesystem::is_directory(target, type_ec);
+	if (type_ec)
+	{
+		write_log("Directory case migration: failed to inspect %s: %s\n",
+			target.string().c_str(), type_ec.message().c_str());
+		return false;
+	}
+
+	if (source_is_directory && target_is_directory)
+	{
+		bool directory_failed = false;
+		bool directory_conflicts = false;
+		const bool migrated = migrate_legacy_directory_if_needed(source.string(), target.string(),
+			directory_failed, directory_conflicts, "Directory case");
+		if (directory_conflicts)
+			conflicts = true;
+		return migrated && !directory_failed;
+	}
+
+	if (source_is_directory != target_is_directory || !files_have_equal_contents(source, target))
+	{
+		conflicts = true;
+		write_log("Directory case migration: keeping existing %s, archiving conflicting %s\n",
+			target.string().c_str(), source.string().c_str());
+	}
+	return archive_legacy_path(source.string(), "Directory case");
+}
+
 // Legacy content layouts used a mix of lowercase and partially capitalized names.
 // Rename case-only variants to the current canonical names so existing installs and
 // cross-platform content packs resolve to the same paths on case-sensitive filesystems.
 static path_case_migration_result migrate_path_case_if_needed(const std::string& target_path,
-	bool& migrated_any, bool& failed)
+	bool& migrated_any, bool& failed, bool& conflicts)
 {
 	if (target_path.empty())
 		return path_case_migration_result::no_change;
@@ -8657,42 +8697,12 @@ static path_case_migration_result migrate_path_case_if_needed(const std::string&
 	if (matched_source.empty())
 		return path_case_migration_result::no_change;
 
-	const auto reconcile_variant_with_target = [&](const std::filesystem::path& source) -> bool
-	{
-		std::error_code type_ec;
-		const bool source_is_directory = std::filesystem::is_directory(source, type_ec);
-		if (type_ec)
-		{
-			write_log("Directory case migration: failed to inspect %s: %s\n",
-				source.string().c_str(), type_ec.message().c_str());
-			return false;
-		}
-		const bool target_is_directory = std::filesystem::is_directory(target, type_ec);
-		if (type_ec)
-		{
-			write_log("Directory case migration: failed to inspect %s: %s\n",
-				target.string().c_str(), type_ec.message().c_str());
-			return false;
-		}
-
-		if (source_is_directory && target_is_directory)
-		{
-			bool directory_failed = false;
-			bool directory_conflicts = false;
-			const bool migrated = migrate_legacy_directory_if_needed(source.string(), target.string(),
-				directory_failed, directory_conflicts, "Directory case");
-			return migrated && !directory_failed;
-		}
-
-		return archive_legacy_path(source.string(), "Directory case");
-	};
-
 	if (exact_match_exists)
 	{
 		bool reconciled_any = false;
 		for (const auto& source : all_matches)
 		{
-			if (!reconcile_variant_with_target(source))
+			if (!reconcile_case_variant_with_target(source, target, conflicts))
 			{
 				failed = true;
 				return path_case_migration_result::failed;
@@ -8736,7 +8746,7 @@ static path_case_migration_result migrate_path_case_if_needed(const std::string&
 	{
 		if (source == matched_source)
 			continue;
-		if (!reconcile_variant_with_target(source))
+		if (!reconcile_case_variant_with_target(source, target, conflicts))
 		{
 			failed = true;
 			return path_case_migration_result::failed;
@@ -8752,6 +8762,7 @@ static void migrate_legacy_lowercase_content_directories()
 
 	bool migrated_any = false;
 	bool failed = false;
+	bool conflicts = false;
 
 	const auto migrate_if_default = [&](std::string& current_path,
 		const std::string& baseline_path)
@@ -8760,7 +8771,7 @@ static void migrate_legacy_lowercase_content_directories()
 			return;
 		if (!path_strings_match_case_insensitive(current_path, baseline_path))
 			return;
-		const auto migration_result = migrate_path_case_if_needed(baseline_path, migrated_any, failed);
+		const auto migration_result = migrate_path_case_if_needed(baseline_path, migrated_any, failed, conflicts);
 		if (migration_result != path_case_migration_result::failed)
 		{
 			if (!path_strings_match(current_path, baseline_path))
@@ -8779,7 +8790,7 @@ static void migrate_legacy_lowercase_content_directories()
 			themes = themes.parent_path();
 		const auto visuals_dir = themes.parent_path();
 		if (!visuals_dir.empty())
-			migrate_path_case_if_needed(visuals_dir.string(), migrated_any, failed);
+			migrate_path_case_if_needed(visuals_dir.string(), migrated_any, failed, conflicts);
 	}
 
 	migrate_if_default(current.config_path,       baseline.config_path);
@@ -8809,9 +8820,13 @@ static void migrate_legacy_lowercase_content_directories()
 		legacy_migration_state.directory_case_migrated = true;
 	if (failed)
 		legacy_migration_state.directory_case_failed = true;
+	if (conflicts)
+		legacy_migration_state.directory_case_conflicts = true;
 
 	if (failed)
 		write_log("Directory case migration: completed with errors (see log above)\n");
+	else if (conflicts)
+		write_log("Directory case migration: completed with conflicts preserved in the migration backup\n");
 	else if (migrated_any)
 		write_log("Directory case migration: completed (legacy names renamed to canonical names)\n");
 }
@@ -9466,6 +9481,33 @@ static int run_path_migration_selftest_cli()
 		&& !std::filesystem::exists(split_source)
 		&& !std::filesystem::exists(split_destination / "unique.uae")
 		&& std::filesystem::exists(split_destination / "identical.uae");
+
+	const auto case_variant_source = root / "case-variant-source";
+	const auto case_variant_target = root / "case-variant-target";
+	const bool case_variant_fixture_written = write_selftest_text_file(
+		case_variant_source / "kick.rom", "legacy-rom\n")
+		&& write_selftest_text_file(case_variant_target / "kick.rom", "canonical-rom\n");
+	bool case_variant_conflicts = false;
+	const bool case_variant_reconciled = case_variant_fixture_written
+		&& reconcile_case_variant_with_target(
+			case_variant_source, case_variant_target, case_variant_conflicts);
+	std::string current_case_variant_text;
+	std::string archived_case_variant_text;
+	const auto case_variant_archive = std::filesystem::path(get_legacy_migration_backup_root())
+		/ case_variant_source.filename();
+	const bool case_variant_read_ok = read_selftest_text_file(
+		case_variant_target / "kick.rom", current_case_variant_text)
+		&& read_selftest_text_file(case_variant_archive / "kick.rom", archived_case_variant_text);
+	legacy_migration_state_summary case_variant_state;
+	case_variant_state.directory_case_conflicts = case_variant_conflicts;
+	const bool case_variant_test_ok = case_variant_fixture_written
+		&& case_variant_reconciled
+		&& case_variant_conflicts
+		&& case_variant_state.any_failures()
+		&& case_variant_read_ok
+		&& current_case_variant_text == "canonical-rom\n"
+		&& archived_case_variant_text == "legacy-rom\n"
+		&& !std::filesystem::exists(case_variant_source);
 	settings_dir = original_settings_dir;
 
 	const bool ok = read_ok
@@ -9481,14 +9523,16 @@ static int run_path_migration_selftest_cli()
 		&& std::filesystem::exists(backup_file)
 		&& settings_test_ok
 		&& rename_test_ok
-		&& split_test_ok;
+		&& split_test_ok
+		&& case_variant_test_ok;
 
 	if (!ok)
 	{
 		fprintf(stderr, "path migration selftest: failed\n");
-		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d settings_ok=%d rename_ok=%d split_ok=%d root=%s\n",
+		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d settings_ok=%d rename_ok=%d split_ok=%d case_ok=%d root=%s\n",
 			migrated, read_ok ? 1 : 0, path_rewrite_failed ? 1 : 0,
 			settings_test_ok ? 1 : 0, rename_test_ok ? 1 : 0, split_test_ok ? 1 : 0,
+			case_variant_test_ok ? 1 : 0,
 			root.string().c_str());
 		return 1;
 	}
@@ -9769,7 +9813,8 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 		{
 			message += "Visual asset folders now default to:\n\n  " + visuals_root + "\n\n";
 		}
-		if (legacy_migration_state.configurations_conflicts || legacy_migration_state.visuals_conflicts)
+		if (legacy_migration_state.configurations_conflicts || legacy_migration_state.directory_case_conflicts
+			|| legacy_migration_state.visuals_conflicts)
 		{
 			message += "Conflicting legacy files were preserved under:\n\n  " + backup_root
 				+ "\n\n(or left in their original location if they could not be archived).\n\n";
