@@ -388,6 +388,16 @@ void OpenGLRenderer::update_vsync(int monid)
 		}
 	}
 
+	// KMSDRM cannot reliably provide unsynchronised swaps. Its legacy path
+	// maps interval 0 to asynchronous DRM page flips, while atomic paths may
+	// remain vblank-paced regardless. Avoid the async path: a pending flip can
+	// otherwise leave SDL_GL_SwapWindow() waiting indefinitely across the
+	// shared-window GUI handoff. Keep software emulation pacing unchanged by
+	// normalising only the presentation interval here.
+	if (interval == 0 && is_kmsdrm_video_driver()) {
+		interval = 1;
+	}
+
 	if (m_vsync.current_interval != interval) {
 		const int requested_interval = interval;
 		if (interval == ADAPTIVE_SWAP_INTERVAL) {
