@@ -74,21 +74,19 @@ static bool save_bookmarks_plist()
 	return true;
 }
 
-// Load bookmark data from disk
-static bool load_bookmarks_plist_from_path(NSString* bookmarks_path)
+// Read bookmark data from disk. The caller owns the returned dictionary.
+static NSMutableDictionary<NSString*, NSData*>* read_bookmarks_plist_from_path(NSString* bookmarks_path)
 {
-	release_bookmark_data();
-
 	if (!bookmarks_path)
-		return false;
+		return nil;
 	if (![[NSFileManager defaultManager] fileExistsAtPath:bookmarks_path])
-		return false;
+		return nil;
 
 	NSData* plistData = [NSData dataWithContentsOfFile:bookmarks_path];
 	if (!plistData)
 	{
 		write_log("Security bookmarks: failed to read %s\n", [bookmarks_path UTF8String]);
-		return false;
+		return nil;
 	}
 
 	NSError* error = nil;
@@ -102,11 +100,10 @@ static bool load_bookmarks_plist_from_path(NSString* bookmarks_path)
 		write_log("Security bookmarks: failed to parse %s: %s\n",
 			[bookmarks_path UTF8String],
 			error ? [[error localizedDescription] UTF8String] : "not a dictionary");
-		return false;
+		return nil;
 	}
 
-	s_bookmark_data = [(NSMutableDictionary<NSString*, NSData*>*)plist retain];
-	return true;
+	return [(NSMutableDictionary<NSString*, NSData*>*)plist retain];
 }
 
 static void ensure_bookmark_data_initialized()
@@ -197,35 +194,55 @@ macos_bookmarks_migration_result macos_bookmarks_init(
 		release_active_urls();
 		s_active_urls = [[NSMutableDictionary alloc] init];
 
-		const bool loaded_current_store = load_bookmarks_plist_from_path(s_bookmarks_path);
-		if (!loaded_current_store)
-		{
-			for (const auto& legacy_bookmarks_dir : legacy_bookmarks_dirs)
-			{
-				const auto legacy_bookmarks_path = get_bookmarks_plist_path(legacy_bookmarks_dir);
-				if (legacy_bookmarks_path == nil
-					|| [legacy_bookmarks_path isEqualToString:s_bookmarks_path])
-				{
-					continue;
-				}
-				if (![[NSFileManager defaultManager] fileExistsAtPath:legacy_bookmarks_path])
-					continue;
+		release_bookmark_data();
+		s_bookmark_data = read_bookmarks_plist_from_path(s_bookmarks_path);
+		const bool loaded_current_store = s_bookmark_data != nil;
+		ensure_bookmark_data_initialized();
 
-				if (load_bookmarks_plist_from_path(legacy_bookmarks_path))
-				{
-					write_log("Security bookmarks: migrating legacy store from %s to %s\n",
-						[legacy_bookmarks_path UTF8String],
-						[s_bookmarks_path UTF8String]);
-					migration_result = save_bookmarks_plist()
-						? macos_bookmarks_migration_result::migrated
-						: macos_bookmarks_migration_result::failed;
-					break;
-				}
-				migration_result = macos_bookmarks_migration_result::failed;
+		bool legacy_store_found = false;
+		bool legacy_store_failed = false;
+		NSUInteger imported_bookmarks = 0;
+		for (const auto& legacy_bookmarks_dir : legacy_bookmarks_dirs)
+		{
+			const auto legacy_bookmarks_path = get_bookmarks_plist_path(legacy_bookmarks_dir);
+			if (legacy_bookmarks_path == nil
+				|| [legacy_bookmarks_path isEqualToString:s_bookmarks_path])
+			{
+				continue;
 			}
+			if (![[NSFileManager defaultManager] fileExistsAtPath:legacy_bookmarks_path])
+				continue;
+
+			auto* legacy_bookmark_data = read_bookmarks_plist_from_path(legacy_bookmarks_path);
+			if (!legacy_bookmark_data)
+			{
+				legacy_store_failed = true;
+				continue;
+			}
+
+			legacy_store_found = true;
+			NSUInteger imported_from_store = 0;
+			for (NSString* key in legacy_bookmark_data)
+			{
+				if (s_bookmark_data[key] != nil)
+					continue;
+				s_bookmark_data[key] = legacy_bookmark_data[key];
+				++imported_from_store;
+			}
+			imported_bookmarks += imported_from_store;
+			write_log("Security bookmarks: reconciled legacy store %s (%lu imported)\n",
+				[legacy_bookmarks_path UTF8String], static_cast<unsigned long>(imported_from_store));
+			[legacy_bookmark_data release];
 		}
 
-		ensure_bookmark_data_initialized();
+		bool store_saved = true;
+		if (legacy_store_found && (!loaded_current_store || imported_bookmarks > 0))
+			store_saved = save_bookmarks_plist();
+
+		if (legacy_store_failed || !store_saved)
+			migration_result = macos_bookmarks_migration_result::failed;
+		else if (legacy_store_found)
+			migration_result = macos_bookmarks_migration_result::migrated;
 
 		int resolved = 0;
 		int failed = 0;

@@ -7923,6 +7923,8 @@ static void finalize_legacy_bookmarks_migration(
 		legacy_migration_state.bookmarks_failed = true;
 		return;
 	}
+	if (result != macos_bookmarks_migration_result::migrated)
+		return;
 
 	const auto current_bookmarks_file = join_path(settings_dir, "bookmarks.plist");
 	if (!my_existsfile2(current_bookmarks_file.c_str()))

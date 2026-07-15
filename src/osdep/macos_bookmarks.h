@@ -6,6 +6,8 @@
 enum class macos_bookmarks_migration_result
 {
 	no_change,
+	// Every discovered legacy store was reconciled with the active store and
+	// persisted when necessary, so callers may safely retire the legacy files.
 	migrated,
 	failed,
 };
