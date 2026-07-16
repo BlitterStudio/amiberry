@@ -3607,20 +3607,12 @@ static const addrbank gvp_bank = {
 
 /* SUPERDMAC (A3000 mainboard built-in) */
 
-static uae_u32 mbdmac_reg_address (uae_u32 addr)
-{
-	// The SDMAC register file is mirrored at +0x100.
-	addr &= 0xffff;
-	addr &= ~0x100u;
-	return addr;
-}
-
 static void mbdmac_write_word (struct wd_state *wd, uae_u32 addr, uae_u32 val)
 {
 #if A3000_DEBUG_IO > 1
 	write_log (_T("DMAC_WWRITE %08X=%04X PC=%08X\n"), addr, val & 0xffff, M68K_GETPC);
 #endif
-	addr = mbdmac_reg_address(addr) & 0xfffe;
+	addr &= is_dsp_installed ? 0xfe : 0x7e;
 	switch (addr)
 	{
 	case 0x02:
@@ -3691,7 +3683,7 @@ static void mbdmac_write_byte (struct wd_state *wd, uae_u32 addr, uae_u32 val)
 #if A3000_DEBUG_IO > 1
 	write_log (_T("DMAC_BWRITE %08X=%02X PC=%08X\n"), addr, val & 0xff, M68K_GETPC);
 #endif
-	addr = mbdmac_reg_address(addr);
+	addr &= is_dsp_installed ? 0xff : 0x7f;
 	switch (addr)
 	{
 
@@ -3726,7 +3718,7 @@ static uae_u32 mbdmac_read_word (struct wd_state *wd, uae_u32 addr)
 #endif
 	uae_u32 v = 0xffffffff;
 
-	addr = mbdmac_reg_address(addr) & 0xfffe;
+	addr &= is_dsp_installed ? 0xfe : 0x7e;
 	switch (addr)
 	{
 	case 0x02:
@@ -3809,7 +3801,7 @@ static uae_u32 mbdmac_read_byte (struct wd_state *wd, uae_u32 addr)
 #endif
 	uae_u32 v = 0xffffffff;
 
-	addr = mbdmac_reg_address(addr);
+	addr &= is_dsp_installed ? 0xff : 0x7f;
 	switch (addr)
 	{
 	case 0x41:
@@ -3851,37 +3843,63 @@ static void REGPARAM3 mbdmac_bput (uaecptr, uae_u32) REGPARAM;
 static uae_u32 REGPARAM2 mbdmac_lget (uaecptr addr)
 {
 	uae_u32 v;
-	v =  mbdmac_read_word (wd_a3000, addr + 0) << 16;
-	v |= mbdmac_read_word (wd_a3000, addr + 2) << 0;
+	if (addr & 0xc000) { // >= 0xdd4000
+		v = dummy_get(addr, sz_long, false, 0);
+	} else {
+		v =  mbdmac_read_word (wd_a3000, addr + 0) << 16;
+		v |= mbdmac_read_word (wd_a3000, addr + 2) << 0;
+	}
 	return v;
 }
 static uae_u32 REGPARAM2 mbdmac_wget (uaecptr addr)
 {
 	uae_u32 v;
-	v =  mbdmac_read_word (wd_a3000, addr);
+	if (addr & 0xc000) {
+		v = dummy_get(addr, sz_word, false, 0);
+	} else {
+		v =  mbdmac_read_word (wd_a3000, addr);
+	}
 	return v;
 }
 static uae_u32 REGPARAM2 mbdmac_bget (uaecptr addr)
 {
-	return mbdmac_read_byte (wd_a3000, addr);
+	uae_u32 v;
+	if (addr & 0xc000) {
+		v = dummy_get(addr, sz_byte, false, 0);
+	} else {
+		v = mbdmac_read_byte (wd_a3000, addr);
+	}
+	return v;
 }
 static void REGPARAM2 mbdmac_lput (uaecptr addr, uae_u32 l)
 {
-	if (mbdmac_reg_address(addr) == 0x40) {
-		// long write to 0x40 = write byte to SASR
-		mbdmac_write_byte (wd_a3000, 0x41, l);
+	if (addr & 0xc000) {
+		dummy_put(addr, sz_long, l);
 	} else {
-		mbdmac_write_word (wd_a3000, addr + 0, l >> 16);
-		mbdmac_write_word (wd_a3000, addr + 2, l >> 0);
+		if ((addr & 0xffff) == 0x40) {
+			// long write to 0x40 = write byte to SASR
+			mbdmac_write_byte (wd_a3000, 0x41, l);
+		} else {
+			mbdmac_write_word (wd_a3000, addr + 0, l >> 16);
+			mbdmac_write_word (wd_a3000, addr + 2, l >> 0);
+		}
 	}
 }
 static void REGPARAM2 mbdmac_wput (uaecptr addr, uae_u32 w)
 {
-	mbdmac_write_word (wd_a3000, addr + 0, w);
+	if (addr & 0xc000) {
+		dummy_put(addr, sz_word, w);
+	} else {
+		mbdmac_write_word (wd_a3000, addr + 0, w);
+	}
 }
 static void REGPARAM2 mbdmac_bput (uaecptr addr, uae_u32 b)
 {
-	mbdmac_write_byte (wd_a3000, addr, b);
+	if (addr & 0xc000) {
+		dummy_put(addr, sz_byte, b);
+	} else {
+		mbdmac_write_byte (wd_a3000, addr, b);
+	}
 }
 
 static addrbank mbdmac_a3000_bank = {
