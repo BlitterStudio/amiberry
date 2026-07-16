@@ -2457,6 +2457,7 @@ static int mousehack_host_cursor_residual_x, mousehack_host_cursor_residual_y;
 static int mousehack_last_abs_x, mousehack_last_abs_y;
 static bool mousehack_last_abs_valid;
 static int mousehack_native_origin_x, mousehack_native_origin_y;
+static bool mousehack_native_source_origin_valid;
 static bool mousehack_position_is_native;
 static int tablet_maxx, tablet_maxy, tablet_maxz;
 static int tablet_resx, tablet_resy;
@@ -2588,6 +2589,7 @@ static void mousehack_reset (void)
 	mousehack_last_abs_x = mousehack_last_abs_y = 0;
 	mousehack_last_abs_valid = false;
 	mousehack_native_origin_x = mousehack_native_origin_y = 0;
+	mousehack_native_source_origin_valid = false;
 	mousehack_position_is_native = false;
 	dimensioninfo_dbl = 0;
 	mousehack_alive_cnt = 0;
@@ -2713,6 +2715,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 
 #ifdef PICASSO96
 	if (ad->picasso_on) {
+		mousehack_native_source_origin_valid = false;
 		mousehack_position_is_native = false;
 		x -= state->XOffset;
 		y -= state->YOffset;
@@ -2724,6 +2727,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 #endif
 	{
 		if (vidinfo->outbuffer == NULL) {
+			mousehack_native_source_origin_valid = false;
 			mousehack_position_is_native = false;
 			*xp = 0;
 			*yp = 0;
@@ -2735,7 +2739,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		y -= (int)(fdy * 1.0) - 2;
 		int origin_x = 0;
 		int origin_y = 0;
-		getgfxsourceorigin(monid, &origin_x, &origin_y);
+		const bool source_origin_valid = getgfxsourceorigin(monid, &origin_x, &origin_y);
 		// The source crop is the native screen origin. Destination centering is
 		// already part of fdx/fdy and must not move that origin (notably when a
 		// PAL laced image is letterboxed). Match the existing vertical input bias.
@@ -2762,6 +2766,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		origin_y = coord_native_to_amiga_y(origin_y) * 2;
 		mousehack_native_origin_x = origin_x;
 		mousehack_native_origin_y = origin_y;
+		mousehack_native_source_origin_valid = source_origin_valid;
 		mousehack_position_is_native = true;
 	}
 	*xp = x;
@@ -3079,11 +3084,15 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 		screen_offset_x = static_cast<uae_s16>(get_word(viewlord + 14)) * 2;
 		screen_offset_y = static_cast<uae_s16>(get_word(viewlord + 12)) * 2;
 	}
-	if (mousehack_host_cursor_uses_hotspot && mousehack_position_is_native && screen_offset_valid) {
-		x += amiberry_input_native_mousehack_origin_compensation(
-			screen_offset_x, mousehack_native_origin_x);
-		y += amiberry_input_native_mousehack_origin_compensation(
-			screen_offset_y, mousehack_native_origin_y);
+	if (mousehack_host_cursor_uses_hotspot && mousehack_position_is_native) {
+		if (screen_offset_valid) {
+			x += amiberry_input_native_mousehack_origin_compensation(
+				mousehack_native_source_origin_valid, screen_offset_x, mousehack_native_origin_x);
+			y += amiberry_input_native_mousehack_origin_compensation(
+				mousehack_native_source_origin_valid, screen_offset_y, mousehack_native_origin_y);
+		}
+		x += amiberry_input_native_mousehack_uncropped_lowres_x_compensation(
+			mousehack_native_source_origin_valid, detected_screen_resolution == RES_LORES);
 	}
 
 	mousehack_enable ();

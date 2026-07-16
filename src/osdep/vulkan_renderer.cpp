@@ -16,6 +16,7 @@
 #include "uae.h"
 #include "xwin.h"
 #include "amiberry_gfx.h"
+#include "amiberry_gfx_geometry.h"
 #include "gfx_platform_internal.h"
 
 #include <algorithm>
@@ -1035,6 +1036,8 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.texture_width = surface->w;
 	slot.texture_height = surface->h;
 	slot.crop = crop_rect;
+	slot.crop_display_width = crop_display_w;
+	slot.crop_display_height = crop_display_h;
 	slot.crt_active = m_crt_shader_active;
 	slot.crt_time = m_crt_time;
 	m_crt_time += 1.0f / 50.0f; // Advance CRT time on emu thread (not render thread)
@@ -1480,8 +1483,11 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			? (slot.scalepicasso == RTG_MODE_INTEGER_SCALE)
 			: slot.integer_scaling;
 
-		const int src_w = slot.texture_width;
-		const int src_h = slot.texture_height;
+		const bool is_cropped = (slot.crop.x != 0 || slot.crop.y != 0
+			|| slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height)
+			&& slot.crop.w > 0 && slot.crop.h > 0;
+		const int src_w = is_cropped ? slot.crop.w : slot.texture_width;
+		const int src_h = is_cropped ? slot.crop.h : slot.texture_height;
 
 		if (render_area_x != 0 || render_area_y != 0 ||
 			render_area_w != drawable_w || render_area_h != drawable_h) {
@@ -1506,20 +1512,21 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			if (destH <= 0) destH = 1;
 
 			if (use_integer && src_w > 0 && src_h > 0) {
-				int display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
+				const int display_w = is_cropped && slot.crop_display_width > 0
+					? slot.crop_display_width : src_w;
+				const int display_h = is_cropped && slot.crop_display_height > 0
+					? slot.crop_display_height
+					: std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
 				if (slot.screen_is_picasso) {
 					const float scale = calculate_rtg_integer_scale(render_area_w, render_area_h,
-						src_w, display_h, slot.rtg_integer_scale_limit);
-					destW = std::max(1, static_cast<int>(static_cast<float>(src_w) * scale + 0.5f));
+						display_w, display_h, slot.rtg_integer_scale_limit);
+					destW = std::max(1, static_cast<int>(static_cast<float>(display_w) * scale + 0.5f));
 					destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
 				} else {
-					int h_scale = destH / display_h;
-					if (h_scale < 1) h_scale = 1;
-					int w_scale = render_area_w / src_w;
-					if (w_scale > h_scale) w_scale = h_scale;
-					if (w_scale < 1) w_scale = 1;
-					destW = src_w * w_scale;
-					destH = display_h * h_scale;
+					const int scale = amiberry_gfx_native_integer_scale(
+						render_area_w, render_area_h, display_w, display_h);
+					destW = display_w * scale;
+					destH = display_h * scale;
 				}
 			}
 

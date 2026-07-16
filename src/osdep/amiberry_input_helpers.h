@@ -93,9 +93,18 @@ static inline int amiberry_input_native_cursor_height(int sprite_height,
 }
 
 static inline int amiberry_input_native_mousehack_origin_compensation(
-	int guest_screen_offset, int transformed_native_origin)
+	bool source_origin_valid, int guest_screen_offset, int transformed_native_origin)
 {
-	return guest_screen_offset - transformed_native_origin;
+	return source_origin_valid ? guest_screen_offset - transformed_native_origin : 0;
+}
+
+static inline int amiberry_input_native_mousehack_uncropped_lowres_x_compensation(
+	bool source_origin_valid, bool low_resolution)
+{
+	// Native LowRes mousehack coordinates use hires units. Without Auto Crop,
+	// the input conversion retains one LowRes pixel of horizontal bias, so move
+	// the delivered position left by two hires units.
+	return !source_origin_valid && low_resolution ? -2 : 0;
 }
 
 static inline int amiberry_input_native_interlace_origin(
@@ -168,6 +177,22 @@ static inline uae_u64 amiberry_input_cursor_bitmap_signature(
 		}
 	}
 	return signature;
+}
+
+static inline uae_u64 amiberry_input_cursor_hotspot_signature(
+	uae_u64 cursor_signature, int hotspot_x, int hotspot_y)
+{
+	const uae_u32 offsets[] = {
+		static_cast<uae_u32>(hotspot_x),
+		static_cast<uae_u32>(hotspot_y)
+	};
+	for (const uae_u32 offset : offsets) {
+		for (int shift = 0; shift < 32; shift += 8) {
+			cursor_signature ^= (offset >> shift) & 0xff;
+			cursor_signature *= 1099511628211ULL;
+		}
+	}
+	return cursor_signature;
 }
 
 static inline amiberry_input_cursor_hotspot_tracker*
@@ -250,6 +275,14 @@ static inline bool amiberry_input_cursor_hotspot_tracker_sample(
 		}
 	}
 	return tracker->learned;
+}
+
+static inline bool amiberry_input_cursor_hotspot_should_defer_swap(
+	bool cursor_update_needed, bool compatible_previous_cursor,
+	const amiberry_input_cursor_hotspot_tracker* tracker)
+{
+	return cursor_update_needed && compatible_previous_cursor && tracker
+		&& tracker->have_sample && !tracker->learned;
 }
 
 static inline bool amiberry_input_cursor_snap_hotspot_to_dense_crossing(

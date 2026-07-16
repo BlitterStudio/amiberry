@@ -62,6 +62,7 @@
 #include "display_modes.h"
 #include "renderer_factory.h"
 #include "amiberry_input_helpers.h"
+#include "amiberry_gfx_geometry.h"
 
 #ifdef USE_OPENGL
 #include "gl_platform.h"
@@ -711,7 +712,7 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	*myp = 1.0f / my;
 }
 
-void getgfxsourceorigin(const int monid, int* xp, int* yp)
+bool getgfxsourceorigin(const int monid, int* xp, int* yp)
 {
 	*xp = 0;
 	*yp = 0;
@@ -724,8 +725,10 @@ void getgfxsourceorigin(const int monid, int* xp, int* yp)
 		// which is presentation padding rather than part of the Amiga screen.
 		*xp = auto_crop_source_origin_x;
 		*yp = auto_crop_source_origin_y;
+		return true;
 	}
 #endif
+	return false;
 }
 
 
@@ -2026,17 +2029,18 @@ void auto_crop_image()
 		cw = crop_rect.w;
 		ch = crop_rect.h;
 
+		int source_width, source_height;
+		auto_crop_display_dimensions(cw, ch, hres, vres, false, source_width, source_height);
 		int width, height;
-		auto_crop_display_dimensions(cw, ch, hres, vres, is_ntsc, width, height);
-
-		if (currprefs.gfx_correct_aspect == 0)
-		{
-			width = sdl_mode.w;
-			height = sdl_mode.h;
-		}
+		amiberry_gfx_auto_crop_presentation_dimensions(
+			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
+			currprefs.scaling_method == 2, sdl_mode.w, sdl_mode.h, width, height);
 		// SDL software path needs logical size update
-		if (mon->amiga_renderer)
-			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+		if (mon->amiga_renderer) {
+			const auto presentation = currprefs.scaling_method == 2
+				? SDL_LOGICAL_PRESENTATION_INTEGER_SCALE : SDL_LOGICAL_PRESENTATION_LETTERBOX;
+			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, width, height, presentation);
+		}
 
 		IRenderer* renderer = get_renderer(0);
 		auto& rq = renderer->render_quad;

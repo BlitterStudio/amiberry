@@ -19,6 +19,7 @@
 
 #include "opengl_renderer.h"
 #include "amiberry_gfx.h"
+#include "amiberry_gfx_geometry.h"
 #include "gfx_window.h"
 #include "drawing.h"
 #include "fsdb_host.h"
@@ -588,40 +589,40 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 					display_w, display_h, filter_prefs.gf[GF_RTG].gfx_filter_integerscalelimit);
 				destW = std::max(1, static_cast<int>(static_cast<float>(display_w) * scale + 0.5f));
 				destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
+			} else if (!currprefs.gfx_correct_aspect) {
+				// Integer scaling without aspect correction uses the normalized
+				// crop geometry, not the desktop-sized stretch target.
+				const int scale = amiberry_gfx_native_integer_scale(
+					renderAreaW, renderAreaH, display_w, display_h);
+				destW = display_w * scale;
+				destH = display_h * scale;
 			} else {
 				// Vertical integer scale, constrained by the aspect-corrected destH
 				int h_scale = destH / display_h;
 				if (h_scale < 1) h_scale = 1;
 
+				// Per-axis scaling: widen toward 4:3 when content is narrower,
+				// but never narrow content that's already wider than 4:3.
+				// At 2160p this gives exact 4:3 (9x horiz, 8x vert = 2880x2160).
+				float target_aspect = std::max(desired_aspect, 4.0f / 3.0f);
+				float ideal_w = display_h * h_scale * target_aspect;
+				int w_lo = std::max(1, static_cast<int>(ideal_w / src_w));
+				int w_hi = w_lo + 1;
+
+				// Pick the candidate closest to target aspect; prefer narrower on tie
+				float aspect_lo = static_cast<float>(src_w * w_lo) / (display_h * h_scale);
+				float aspect_hi = static_cast<float>(src_w * w_hi) / (display_h * h_scale);
+
 				int w_scale;
-				if (currprefs.gfx_correct_aspect) {
-					// Per-axis scaling: widen toward 4:3 when content is narrower,
-					// but never narrow content that's already wider than 4:3.
-					// At 2160p this gives exact 4:3 (9x horiz, 8x vert = 2880x2160).
-					float target_aspect = std::max(desired_aspect, 4.0f / 3.0f);
-					float ideal_w = display_h * h_scale * target_aspect;
-					int w_lo = std::max(1, static_cast<int>(ideal_w / src_w));
-					int w_hi = w_lo + 1;
-
-					// Pick the candidate closest to target aspect; prefer narrower on tie
-					float aspect_lo = static_cast<float>(src_w * w_lo) / (display_h * h_scale);
-					float aspect_hi = static_cast<float>(src_w * w_hi) / (display_h * h_scale);
-
-					if (src_w * w_hi <= renderAreaW &&
-						fabsf(aspect_hi - target_aspect) < fabsf(aspect_lo - target_aspect)) {
-						w_scale = w_hi;
-					} else {
-						w_scale = w_lo;
-					}
-
-					// Clamp to render area
-					while (src_w * w_scale > renderAreaW && w_scale > 1) w_scale--;
+				if (src_w * w_hi <= renderAreaW &&
+					fabsf(aspect_hi - target_aspect) < fabsf(aspect_lo - target_aspect)) {
+					w_scale = w_hi;
 				} else {
-					// Uniform scaling (no aspect correction)
-					w_scale = renderAreaW / display_w;
-					if (w_scale > h_scale) w_scale = h_scale;
+					w_scale = w_lo;
 				}
-				if (w_scale < 1) w_scale = 1;
+
+				// Clamp to render area
+				while (src_w * w_scale > renderAreaW && w_scale > 1) w_scale--;
 
 				destW = src_w * w_scale;
 				destH = display_h * h_scale;

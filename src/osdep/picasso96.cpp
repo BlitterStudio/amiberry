@@ -203,11 +203,7 @@ float p96vblank;
 
 #ifdef AMIBERRY
 static amiberry_input_cursor_hotspot_tracker_cache native_cursor_hotspot_tracker_cache;
-static amiberry_input_cursor_hotspot_tracker p96_cursor_hotspot_tracker;
-static int p96_cursor_tracker_width = -1;
-static int p96_cursor_tracker_height = -1;
-static int p96_cursor_tracker_xoffset = -1;
-static int p96_cursor_tracker_yoffset = -1;
+static amiberry_input_cursor_hotspot_tracker_cache p96_cursor_hotspot_tracker_cache;
 
 static void reset_native_cursor_hotspot_tracker()
 {
@@ -216,11 +212,7 @@ static void reset_native_cursor_hotspot_tracker()
 
 static void reset_p96_cursor_hotspot_tracker()
 {
-	amiberry_input_cursor_hotspot_tracker_reset(&p96_cursor_hotspot_tracker);
-	p96_cursor_tracker_width = -1;
-	p96_cursor_tracker_height = -1;
-	p96_cursor_tracker_xoffset = -1;
-	p96_cursor_tracker_yoffset = -1;
+	amiberry_input_cursor_hotspot_tracker_cache_reset(&p96_cursor_hotspot_tracker_cache);
 }
 
 static void clear_host_cursor_hotspot_compensation()
@@ -2262,6 +2254,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	int pointer_x = 0, pointer_y = 0;
 	const bool pointer_valid = input_mousehack_get_last_abs_position(&pointer_x, &pointer_y);
 	bool cursor_cache_matches = false;
+	uae_u64 cursor_signature = 0;
 	int densest_column = 0;
 	int densest_column_pixels = 0;
 	int densest_row = 0;
@@ -2336,6 +2329,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	// Both native and P96 cursor images are tightly packed after decoding.
 	datasize = w * h;
+	cursor_signature = amiberry_input_cursor_bitmap_signature(image, datasize, ct, 4);
 	for (int y = 0; y < h; y++) {
 		int row_pixels = 0;
 		for (int x = 0; x < w; x++) {
@@ -2363,8 +2357,6 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	if (chipset) {
 		input_mousehack_cursor_hotspot(w, h, &hotspot_x, &hotspot_y, &residual_x, &residual_y);
-		const uae_u64 cursor_signature = amiberry_input_cursor_bitmap_signature(
-			image, datasize, ct, 4);
 
 		auto* hotspot_tracker = amiberry_input_cursor_hotspot_tracker_cache_acquire(
 			&native_cursor_hotspot_tracker_cache, w, h, cursor_signature);
@@ -2387,25 +2379,30 @@ static int createwindowscursor(int monid, int set, int chipset)
 		hotspot_x = amiberry_cursor_hotspot_from_offset(cursorxoffset, w);
 		hotspot_y = amiberry_cursor_hotspot_from_offset(cursoryoffset, h);
 
-		// A same-sized P96 cursor can use a different bitmap or declared hotspot.
-		// Discard the previous cursor's learned displacement before it can
-		// override the new cursor's BoardInfo offsets.
-		if (!cursor_cache_matches
-			|| p96_cursor_tracker_width != w || p96_cursor_tracker_height != h
-			|| p96_cursor_tracker_xoffset != cursorxoffset
-			|| p96_cursor_tracker_yoffset != cursoryoffset) {
-			amiberry_input_cursor_hotspot_tracker_reset(&p96_cursor_hotspot_tracker);
-			p96_cursor_tracker_width = w;
-			p96_cursor_tracker_height = h;
-			p96_cursor_tracker_xoffset = cursorxoffset;
-			p96_cursor_tracker_yoffset = cursoryoffset;
-		}
+		// Track pending shapes independently from the SDL cursor that is still
+		// displayed. Bitmap, colors, and declared offsets all identify a P96 cursor.
+		const uae_u64 hotspot_signature = amiberry_input_cursor_hotspot_signature(
+			cursor_signature, cursorxoffset, cursoryoffset);
+		auto* hotspot_tracker = amiberry_input_cursor_hotspot_tracker_cache_acquire(
+			&p96_cursor_hotspot_tracker_cache, w, h, hotspot_signature);
 
-		if (amiberry_input_cursor_hotspot_tracker_sample(&p96_cursor_hotspot_tracker,
+		if (amiberry_input_cursor_hotspot_tracker_sample(hotspot_tracker,
 			pointer_valid, pointer_x, pointer_y,
 			newcursor_x, newcursor_y, w, h, 3, &hotspot_x, &hotspot_y)) {
 			residual_x = 0;
 			residual_y = 0;
+		}
+
+		const bool cursor_update_needed = !cursor_cache_matches
+			|| hotspot_x != tmp_sprite_hotspot_x || hotspot_y != tmp_sprite_hotspot_y;
+		if (amiberry_input_cursor_hotspot_should_defer_swap(cursor_update_needed,
+			old_cursor && tmp_sprite_chipset == 0, hotspot_tracker)) {
+			SDL_SetCursor(old_cursor);
+			SDL_ShowCursor();
+			input_mousehack_set_host_cursor_uses_hotspot(true,
+				tmp_sprite_residual_x, tmp_sprite_residual_y);
+			wincursor_shown = 1;
+			return 1;
 		}
 	}
 

@@ -195,12 +195,21 @@ static void test_native_cursor_height_requires_sscan2()
 
 static void test_native_mousehack_compensates_cropped_screen_origin()
 {
-	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(258, 204), 54,
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(true, 258, 204), 54,
 		"native mousehack must compensate the cropped horizontal screen origin");
-	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(88, 90), -2,
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(true, 88, 90), -2,
 		"native mousehack must compensate the cropped vertical screen origin");
-	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(128, 128), 0,
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(true, 128, 128), 0,
 		"matching native and guest origins must not move the pointer");
+	expect_int_eq(amiberry_input_native_mousehack_origin_compensation(false, 258, 0), 0,
+		"uncropped native input must not apply guest screen offset compensation");
+
+	expect_int_eq(amiberry_input_native_mousehack_uncropped_lowres_x_compensation(false, true), -2,
+		"uncropped LowRes input must move left by one LowRes pixel in hires coordinate units");
+	expect_int_eq(amiberry_input_native_mousehack_uncropped_lowres_x_compensation(true, true), 0,
+		"Auto Crop must retain its source-origin-based LowRes alignment");
+	expect_int_eq(amiberry_input_native_mousehack_uncropped_lowres_x_compensation(false, false), 0,
+		"uncropped higher-resolution input must not receive the LowRes correction");
 }
 
 static void test_native_mousehack_normalizes_interlace_field_origin()
@@ -326,6 +335,9 @@ static void test_native_cursor_bitmap_signature_includes_pixels_and_colors()
 	expect_true(arrow_signature != amiberry_input_cursor_bitmap_signature(
 		arrow, sizeof arrow, changed_colors, 4),
 		"cursor color changes must have distinct cache signatures");
+	expect_true(amiberry_input_cursor_hotspot_signature(arrow_signature, 0, 0)
+		!= amiberry_input_cursor_hotspot_signature(arrow_signature, 1, 0),
+		"same P96 bitmap with a different declared hotspot must have a distinct cache signature");
 }
 
 static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
@@ -349,6 +361,36 @@ static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
 
 	amiberry_input_cursor_hotspot_tracker_reset(&tracker);
 	expect_true(!tracker.learned, "reset must discard a hotspot learned for old cursor dimensions");
+}
+
+static void test_p96_cursor_swap_waits_for_stable_hotspot()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
+	expect_true(amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
+		"changed P96 cursor must keep the previous cursor while its hotspot is pending");
+
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		304, 224, 279, 194, 51, 61, 3, &hotspot_x, &hotspot_y);
+	expect_true(amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
+		"second P96 hotspot sample must still defer the cursor swap");
+
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		308, 228, 283, 198, 51, 61, 3, &hotspot_x, &hotspot_y);
+	expect_true(!amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
+		"learned P96 hotspot must allow the new cursor to replace the previous cursor");
+	expect_true(!amiberry_input_cursor_hotspot_should_defer_swap(true, false, &tracker),
+		"initial P96 cursor must not wait for a previous cursor that does not exist");
+
+	amiberry_input_cursor_hotspot_tracker_reset(&tracker);
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		300, 220, 100, 40, 51, 61, 3, &hotspot_x, &hotspot_y);
+	expect_true(!amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
+		"invalid P96 displacement must not leave the previous cursor stuck indefinitely");
 }
 
 static void test_native_crosshair_hotspot_snaps_to_bitmap_intersection()
@@ -390,6 +432,7 @@ int main()
 	test_native_cursor_hotspot_cache_separates_same_size_bitmaps();
 	test_native_cursor_bitmap_signature_includes_pixels_and_colors();
 	test_native_cursor_hotspot_learning_keeps_last_valid_result();
+	test_p96_cursor_swap_waits_for_stable_hotspot();
 	test_native_crosshair_hotspot_snaps_to_bitmap_intersection();
 	return failures == 0 ? 0 : 1;
 }
