@@ -40,6 +40,7 @@ constexpr std::uint64_t maximum_extracted_size = 16ULL * 1024 * 1024 * 1024;
 constexpr unsigned long maximum_archive_entries = 10000;
 constexpr std::size_t maximum_entry_name = 4096;
 constexpr std::size_t extraction_buffer_size = 128 * 1024;
+constexpr int invalid_system_rom = -2;
 
 std::string loaded_path;
 std::string last_error;
@@ -164,12 +165,28 @@ bool parse_integer(const std::string& value, int& result)
 int system_rom_code(const std::string& value)
 {
 	const auto normalized = lowercase(value);
+	if (normalized.empty())
+		return -1;
+	if (normalized == "1.0" || normalized == "1.0.0" || normalized == "kickstart 1.0")
+		return 100;
+	if (normalized == "1.1" || normalized == "1.1.0" || normalized == "kickstart 1.1")
+		return 110;
+	if (normalized == "1.2" || normalized == "1.2.0" || normalized == "kickstart 1.2")
+		return 120;
 	if (normalized == "1.3" || normalized == "1.3.0" || normalized == "kickstart 1.3")
 		return 130;
+	if (normalized == "2.04" || normalized == "kickstart 2.04")
+		return 204;
+	if (normalized == "2.05" || normalized == "kickstart 2.05")
+		return 205;
+	if (normalized == "3.0" || normalized == "3.0.0" || normalized == "kickstart 3.0")
+		return 300;
 	if (normalized == "3.1" || normalized == "3.1.0" || normalized == "kickstart 3.1")
 		return 310;
+	if (normalized == "310-cd32" || normalized == "3.1-cd32" || normalized == "kickstart 3.1 cd32")
+		return RP9_SYSTEM_ROM_310_CD32;
 	int result = -1;
-	return parse_integer(normalized, result) ? result : -1;
+	return parse_integer(normalized, result) ? result : invalid_system_rom;
 }
 
 std::string deployment_id(const char* manifest, const std::size_t size)
@@ -248,48 +265,59 @@ bool set_default_system(uae_prefs* prefs, const rp9::Manifest& manifest)
 	inputdevice_joyport_config_store(prefs, _T("mouse"), 0, -1, -1, 0);
 	inputdevice_joyport_config_store(prefs, _T("joy0"), 1, -1, -1, 0);
 	const auto& system = manifest.system;
-	auto rom = system_rom_code(manifest.system_rom);
+	const auto normalized_rom = lowercase(manifest.system_rom);
+	const bool has_explicit_rom = !normalized_rom.empty();
 	if (manifest.video == "ntsc" || manifest.video == "a-ntsc")
 		prefs->ntscmode = true;
 	else if (manifest.video == "pal" || manifest.video == "a-pal")
 		prefs->ntscmode = false;
-	// A system-only configuration means the model's canonical configuration.
-	// The AMIBERRY wrappers historically use -1 to select KS 1.2 for these two
-	// models, whereas the canonical A500/A2000 profile uses KS 1.3.
-	if (rom < 0 && (system == "a-500" || system == "a500"
-		|| system == "a-2000" || system == "a2000"))
-		rom = 130;
+	if (system == "a-aros") {
+		if (has_explicit_rom && normalized_rom != "aros-latest") {
+			set_error("Unsupported RP9 system ROM '" + manifest.system_rom + "' for " + system);
+			return false;
+		}
+		bip_a4000(prefs, -1);
+		copy_path(prefs->romfile, MAX_DPATH, ":AROS");
+		return true;
+	}
+	const auto rom = system_rom_code(manifest.system_rom);
+	if (rom == invalid_system_rom) {
+		set_error("Unsupported RP9 system ROM: " + manifest.system_rom);
+		return false;
+	}
+	int configured = 0;
 
 	if (system == "a-1000" || system == "a1000")
-		bip_a1000(prefs, rom);
+		configured = bip_a1000(prefs, rom);
 	else if (system == "a-500" || system == "a500")
-		bip_a500(prefs, rom);
+		configured = bip_a500(prefs, rom);
 	else if (system == "a-500plus" || system == "a-500+" || system == "a500plus")
-		bip_a500plus(prefs, rom);
+		configured = bip_a500plus(prefs, rom);
 	else if (system == "a-600" || system == "a600")
-		bip_a600(prefs, rom);
+		configured = bip_a600(prefs, rom);
 	else if (system == "a-1200" || system == "a1200")
-		bip_a1200(prefs, rom);
+		configured = bip_a1200(prefs, rom);
 	else if (system == "a-2000" || system == "a2000")
-		bip_a2000(prefs, rom);
+		configured = bip_a2000(prefs, rom);
 	else if (system == "a-3000" || system == "a3000")
-		bip_a3000(prefs, rom);
+		configured = bip_a3000(prefs, rom);
 	else if (system == "a-4000" || system == "a4000" || system == "a-4xxx")
-		bip_a4000(prefs, rom);
+		configured = bip_a4000(prefs, rom);
 	else if (system == "a-walker")
 		// Walker used AGA, IDE and a 68030; A1200 is Amiberry's closest
 		// canonical base before the manifest's CPU and RAM overrides are applied.
-		bip_a1200(prefs, rom);
-	else if (system == "a-aros") {
-		bip_a4000(prefs, rom);
-		copy_path(prefs->romfile, MAX_DPATH, ":AROS");
-	}
+		configured = bip_a1200(prefs, rom);
 	else if (system == "cdtv" || system == "a-cdtv")
-		bip_cdtv(prefs, rom);
+		configured = bip_cdtv(prefs, rom);
 	else if (system == "cd32" || system == "a-cd32")
-		bip_cd32(prefs, rom);
+		configured = bip_cd32(prefs, rom);
 	else {
 		set_error("Unsupported RP9 system: " + system);
+		return false;
+	}
+	if (has_explicit_rom && !configured) {
+		set_error("Required RP9 system ROM '" + manifest.system_rom
+			+ "' is unavailable or incompatible with " + system);
 		return false;
 	}
 	return true;

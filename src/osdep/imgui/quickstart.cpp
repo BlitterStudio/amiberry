@@ -248,6 +248,9 @@ void render_panel_quickstart() {
     ImGui::Indent(4.0f);
 
     BeginGroupBox("Emulated Hardware");
+    const bool rp9_active = !rp9_get_loaded_path().empty();
+    if (rp9_active)
+        ImGui::BeginDisabled();
     if (ImGui::BeginTable("QuickstartModelTable", 2, ImGuiTableFlags_SizingStretchProp,
                           ImVec2(ImGui::GetContentRegionAvail().x - 15.0f, 0.0f))) {
         ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.33f);
@@ -358,6 +361,10 @@ void render_panel_quickstart() {
 
         ImGui::EndTable();
     }
+    if (rp9_active)
+        ImGui::EndDisabled();
+    if (rp9_active)
+        ImGui::TextDisabled("Eject the RP9 package to change its hardware configuration.");
     EndGroupBox("Emulated Hardware");
 
     ImGui::Spacing();

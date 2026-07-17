@@ -1174,6 +1174,9 @@ extern void copy_prefs(const struct uae_prefs* src, struct uae_prefs* dst);
 extern void copy_inputdevice_prefs(const struct uae_prefs *src, struct uae_prefs *dst);
 
 #ifdef AMIBERRY
+// Distinguish the CD32-specific 3.1 image from the generic 310 RP9 code.
+constexpr int RP9_SYSTEM_ROM_310_CD32 = 31032;
+
 extern int bip_a500(struct uae_prefs* p, int rom);
 extern int bip_a500plus(struct uae_prefs* p, int rom);
 extern int bip_a600(struct uae_prefs* p, int rom);

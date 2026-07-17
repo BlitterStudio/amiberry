@@ -6032,8 +6032,6 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		rp9_clear_loaded_path();
 	if (type > 0)
 		return result;
-	if (result)
-		extract_filename(filename, last_loaded_config);
 
 	for (auto i = 0; i < p->nr_floppies; ++i)
 	{
@@ -6045,7 +6043,12 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 	}
 	if (p->cdslots[0].inuse && p->cdslots[0].name[0])
 		add_file_to_mru_list(lstMRUCDList, p->cdslots[0].name);
-	set_last_loaded_config(filename, isdefault != 0);
+	if (is_rp9) {
+		last_loaded_config[0] = 0;
+		last_loaded_config_is_automatic_default = false;
+	} else {
+		set_last_loaded_config(filename, isdefault != 0);
+	}
 	set_last_active_config(filename);
 	return result;
 }
