@@ -286,35 +286,49 @@ bool set_default_system(uae_prefs* prefs, const rp9::Manifest& manifest)
 		return false;
 	}
 	int configured = 0;
+	auto rp9_model = rp9_system_model::a500;
 
-	if (system == "a-1000" || system == "a1000")
+	if (system == "a-1000" || system == "a1000") {
 		configured = bip_a1000(prefs, rom);
-	else if (system == "a-500" || system == "a500")
-		configured = bip_a500(prefs, rom);
-	else if (system == "a-500plus" || system == "a-500+" || system == "a500plus")
+		rp9_model = rp9_system_model::a1000;
+	} else if (system == "a-500" || system == "a500") {
+		configured = bip_a500(prefs, rom < 0 ? 130 : rom);
+		rp9_model = rp9_system_model::a500;
+	} else if (system == "a-500plus" || system == "a-500+" || system == "a500plus") {
 		configured = bip_a500plus(prefs, rom);
-	else if (system == "a-600" || system == "a600")
+		rp9_model = rp9_system_model::a500plus;
+	} else if (system == "a-600" || system == "a600") {
 		configured = bip_a600(prefs, rom);
-	else if (system == "a-1200" || system == "a1200")
+		rp9_model = rp9_system_model::a600;
+	} else if (system == "a-1200" || system == "a1200") {
 		configured = bip_a1200(prefs, rom);
-	else if (system == "a-2000" || system == "a2000")
-		configured = bip_a2000(prefs, rom);
-	else if (system == "a-3000" || system == "a3000")
+		rp9_model = rp9_system_model::a1200;
+	} else if (system == "a-2000" || system == "a2000") {
+		configured = bip_a2000(prefs, rom < 0 ? 130 : rom);
+		rp9_model = rp9_system_model::a2000;
+	} else if (system == "a-3000" || system == "a3000") {
 		configured = bip_a3000(prefs, rom);
-	else if (system == "a-4000" || system == "a4000" || system == "a-4xxx")
+		rp9_model = rp9_system_model::a3000;
+	} else if (system == "a-4000" || system == "a4000" || system == "a-4xxx") {
 		configured = bip_a4000(prefs, rom);
-	else if (system == "a-walker")
+		rp9_model = rp9_system_model::a4000;
+	} else if (system == "a-walker") {
 		// Walker used AGA, IDE and a 68030; A1200 is Amiberry's closest
 		// canonical base before the manifest's CPU and RAM overrides are applied.
 		configured = bip_a1200(prefs, rom);
-	else if (system == "cdtv" || system == "a-cdtv")
+		rp9_model = rp9_system_model::a1200;
+	} else if (system == "cdtv" || system == "a-cdtv") {
 		configured = bip_cdtv(prefs, rom);
-	else if (system == "cd32" || system == "a-cd32")
+		rp9_model = rp9_system_model::cdtv;
+	} else if (system == "cd32" || system == "a-cd32") {
 		configured = bip_cd32(prefs, rom);
-	else {
+		rp9_model = rp9_system_model::cd32;
+	} else {
 		set_error("Unsupported RP9 system: " + system);
 		return false;
 	}
+	if (has_explicit_rom)
+		configured = configure_rp9_system_rom(prefs, rp9_model, rom);
 	if (has_explicit_rom && !configured) {
 		set_error("Required RP9 system ROM '" + manifest.system_rom
 			+ "' is unavailable or incompatible with " + system);
@@ -1122,6 +1136,8 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 	reset_inputdevice_config(prefs, true);
 	copy_prefs(candidate.get(), prefs);
 	reset_inputdevice_config(candidate.get(), false);
+	savestate_state = 0;
+	savestate_fname[0] = 0;
 	rp9_clear_loaded_path();
 	if (!snapshot_path.empty()) {
 		copy_path(savestate_fname, MAX_DPATH, snapshot_path);

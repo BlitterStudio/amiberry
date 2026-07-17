@@ -1177,6 +1177,21 @@ extern void copy_inputdevice_prefs(const struct uae_prefs *src, struct uae_prefs
 // Distinguish the CD32-specific 3.1 image from the generic 310 RP9 code.
 constexpr int RP9_SYSTEM_ROM_310_CD32 = 31032;
 
+enum class rp9_system_model
+{
+	a1000,
+	a500,
+	a500plus,
+	a600,
+	a1200,
+	a2000,
+	a3000,
+	a4000,
+	cdtv,
+	cd32
+};
+
+extern int configure_rp9_system_rom(struct uae_prefs* p, rp9_system_model model, int rom);
 extern int bip_a500(struct uae_prefs* p, int rom);
 extern int bip_a500plus(struct uae_prefs* p, int rom);
 extern int bip_a600(struct uae_prefs* p, int rom);
