@@ -91,11 +91,81 @@ int system_rom_code(const std::string& value)
 	return parse_integer(normalized, result) ? result : -1;
 }
 
+std::string deployment_id(const char* manifest, const std::size_t size)
+{
+	// Keep deployments stable if an RP9 is moved while separating packages that
+	// happen to use the same embedded media names. The manifest is small and is
+	// the package's stable identity for this purpose.
+	std::uint64_t hash = 14695981039346656037ULL;
+	for (std::size_t index = 0; index < size; ++index) {
+		hash ^= static_cast<unsigned char>(manifest[index]);
+		hash *= 1099511628211ULL;
+	}
+	std::array<char, 16> buffer {};
+	const auto [end, error] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), hash, 16);
+	if (error != std::errc {})
+		return "package";
+	return std::string(16 - static_cast<std::size_t>(end - buffer.data()), '0')
+		+ std::string(buffer.data(), end);
+}
+
+bool deployed_media_path(const rp9::Media& media, const std::string& package_id,
+	std::filesystem::path& destination, std::string& normalized)
+{
+	if (!rp9::normalize_package_path(media.path, normalized))
+		return false;
+	const char* media_directory = nullptr;
+	switch (media.type) {
+	case rp9::MediaType::Floppy:
+		media_directory = "adf";
+		break;
+	case rp9::MediaType::HardDrive:
+		media_directory = "hdf";
+		break;
+	case rp9::MediaType::Cd:
+		media_directory = "cd";
+		break;
+	case rp9::MediaType::Tape:
+		media_directory = "tape";
+		break;
+	case rp9::MediaType::Snapshot:
+		media_directory = "snapshot";
+		break;
+	default:
+		return false;
+	}
+	destination = std::filesystem::path(get_rp9_path()) / "Shared" / media_directory
+		/ package_id / std::filesystem::path(normalized);
+	return true;
+}
+
+std::unordered_map<std::string, std::filesystem::path> find_existing_deployments(const rp9::Manifest& manifest,
+	const std::string& package_id)
+{
+	std::unordered_map<std::string, std::filesystem::path> result;
+	for (const auto& media : manifest.media) {
+		if (!media.deploy && lowercase(media.root) != "deploy")
+			continue;
+		std::filesystem::path destination;
+		std::string normalized;
+		if (!deployed_media_path(media, package_id, destination, normalized))
+			continue;
+		std::error_code error;
+		if (std::filesystem::is_regular_file(destination, error) && !error)
+			result.emplace(lowercase(normalized), destination);
+	}
+	return result;
+}
+
 bool set_default_system(uae_prefs* prefs, const rp9::Manifest& manifest)
 {
 	default_prefs(prefs, true, 0);
 	const auto& system = manifest.system;
 	auto rom = system_rom_code(manifest.system_rom);
+	if (manifest.video == "ntsc" || manifest.video == "a-ntsc")
+		prefs->ntscmode = true;
+	else if (manifest.video == "pal" || manifest.video == "a-pal")
+		prefs->ntscmode = false;
 	// A system-only configuration means the model's canonical configuration.
 	// The AMIBERRY wrappers historically use -1 to select KS 1.2 for these two
 	// models, whereas the canonical A500/A2000 profile uses KS 1.3.
@@ -198,7 +268,8 @@ std::filesystem::path create_extraction_directory()
 }
 
 bool extract_archive(unzFile archive, const std::filesystem::path& directory,
-	std::unordered_map<std::string, std::filesystem::path>& files)
+	std::unordered_map<std::string, std::filesystem::path>& files,
+	const std::unordered_map<std::string, std::filesystem::path>& skipped_files)
 {
 	unz_global_info global {};
 	if (unzGetGlobalInfo(archive, &global) != UNZ_OK || global.number_entry > maximum_archive_entries) {
@@ -250,68 +321,72 @@ bool extract_archive(unzFile archive, const std::filesystem::path& directory,
 		if (is_directory) {
 			std::filesystem::create_directories(destination, error);
 		} else if (lowercase(normalized) != manifest_name) {
-			if (total_size > maximum_extracted_size - info.uncompressed_size) {
-				set_error("RP9 package exceeds the 16 GiB extraction safety limit");
-				return false;
-			}
-			total_size += info.uncompressed_size;
-			if (std::filesystem::exists(destination, error)) {
-				set_error("RP9 archive contains paths that collide on this filesystem: " + entry_name);
-				return false;
-			}
-			if (error) {
-				set_error("Could not validate an RP9 extraction path: " + error.message());
-				return false;
-			}
-			std::filesystem::create_directories(destination.parent_path(), error);
-			if (error) {
-				set_error("Could not create an RP9 extraction directory: " + error.message());
-				return false;
-			}
-			auto output = uae_fopen(destination.string().c_str(), _T("wbe"));
-			if (!output) {
-				set_error("Could not extract RP9 entry: " + normalized);
-				return false;
-			}
-			if (unzOpenCurrentFile(archive) != UNZ_OK) {
-				fclose(output);
-				set_error("Could not open compressed RP9 entry: " + normalized);
-				return false;
-			}
-			std::uint64_t written = 0;
-			for (;;) {
-				const auto bytes = unzReadCurrentFile(archive, buffer.data(), static_cast<unsigned int>(buffer.size()));
-				if (bytes < 0) {
-					unzCloseCurrentFile(archive);
-					fclose(output);
-					set_error("Error while extracting RP9 entry: " + normalized);
+			if (skipped_files.find(path_key) != skipped_files.end()) {
+				write_log(_T("RP9: skipping embedded copy of deployed media: %s\n"), normalized.c_str());
+			} else {
+				if (total_size > maximum_extracted_size - info.uncompressed_size) {
+					set_error("RP9 package exceeds the 16 GiB extraction safety limit");
 					return false;
 				}
-				if (bytes == 0)
-					break;
-				if (written > info.uncompressed_size
-					|| static_cast<std::uint64_t>(bytes) > info.uncompressed_size - written) {
-					unzCloseCurrentFile(archive);
-					fclose(output);
-					set_error("RP9 entry expands beyond its declared size: " + normalized);
+				total_size += info.uncompressed_size;
+				if (std::filesystem::exists(destination, error)) {
+					set_error("RP9 archive contains paths that collide on this filesystem: " + entry_name);
 					return false;
 				}
-				if (fwrite(buffer.data(), 1, static_cast<std::size_t>(bytes), output)
-					!= static_cast<std::size_t>(bytes)) {
-					unzCloseCurrentFile(archive);
-					fclose(output);
-					set_error("Could not write RP9 entry: " + normalized);
+				if (error) {
+					set_error("Could not validate an RP9 extraction path: " + error.message());
 					return false;
 				}
-				written += static_cast<std::uint64_t>(bytes);
+				std::filesystem::create_directories(destination.parent_path(), error);
+				if (error) {
+					set_error("Could not create an RP9 extraction directory: " + error.message());
+					return false;
+				}
+				auto output = uae_fopen(destination.string().c_str(), _T("wbe"));
+				if (!output) {
+					set_error("Could not extract RP9 entry: " + normalized);
+					return false;
+				}
+				if (unzOpenCurrentFile(archive) != UNZ_OK) {
+					fclose(output);
+					set_error("Could not open compressed RP9 entry: " + normalized);
+					return false;
+				}
+				std::uint64_t written = 0;
+				for (;;) {
+					const auto bytes = unzReadCurrentFile(archive, buffer.data(), static_cast<unsigned int>(buffer.size()));
+					if (bytes < 0) {
+						unzCloseCurrentFile(archive);
+						fclose(output);
+						set_error("Error while extracting RP9 entry: " + normalized);
+						return false;
+					}
+					if (bytes == 0)
+						break;
+					if (written > info.uncompressed_size
+						|| static_cast<std::uint64_t>(bytes) > info.uncompressed_size - written) {
+						unzCloseCurrentFile(archive);
+						fclose(output);
+						set_error("RP9 entry expands beyond its declared size: " + normalized);
+						return false;
+					}
+					if (fwrite(buffer.data(), 1, static_cast<std::size_t>(bytes), output)
+						!= static_cast<std::size_t>(bytes)) {
+						unzCloseCurrentFile(archive);
+						fclose(output);
+						set_error("Could not write RP9 entry: " + normalized);
+						return false;
+					}
+					written += static_cast<std::uint64_t>(bytes);
+				}
+				const auto output_close_result = fclose(output);
+				if (unzCloseCurrentFile(archive) != UNZ_OK || output_close_result != 0
+					|| written != info.uncompressed_size) {
+					set_error("RP9 entry failed its integrity check: " + normalized);
+					return false;
+				}
+				files.emplace(lowercase(normalized), destination);
 			}
-			const auto output_close_result = fclose(output);
-			if (unzCloseCurrentFile(archive) != UNZ_OK || output_close_result != 0
-				|| written != info.uncompressed_size) {
-				set_error("RP9 entry failed its integrity check: " + normalized);
-				return false;
-			}
-			files.emplace(lowercase(normalized), destination);
 		}
 		if (error) {
 			set_error("Could not create an RP9 extraction path: " + error.message());
@@ -326,11 +401,66 @@ bool extract_archive(unzFile archive, const std::filesystem::path& directory,
 }
 
 std::filesystem::path resolve_media_path(const rp9::Media& media,
-	const std::unordered_map<std::string, std::filesystem::path>& files)
+	const std::unordered_map<std::string, std::filesystem::path>& files,
+	const std::string& deployment_id)
 {
 	std::string normalized;
 	const auto root = lowercase(media.root);
-	if (root.empty() || root == "embedded" || root == "deploy") {
+	if (media.deploy || root == "deploy") {
+		std::filesystem::path destination;
+		if (!deployed_media_path(media, deployment_id, destination, normalized))
+			return {};
+		std::error_code error;
+		if (std::filesystem::exists(destination, error)) {
+			if (!error && std::filesystem::is_regular_file(destination, error) && !error) {
+				write_log(_T("RP9: reusing deployed media: %s\n"), destination.string().c_str());
+				return destination;
+			}
+			set_error("RP9 deployed-media destination is not a regular file: " + destination.string());
+			return {};
+		}
+		if (error) {
+			set_error("Could not inspect RP9 deployed-media destination: " + error.message());
+			return {};
+		}
+		const auto found = files.find(lowercase(normalized));
+		if (found == files.end())
+			return {};
+
+		std::filesystem::create_directories(destination.parent_path(), error);
+		if (error) {
+			set_error("Could not create the RP9 deployed-media directory: " + error.message());
+			return {};
+		}
+
+		auto temporary = destination;
+		temporary += ".tmp-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
+			+ "-" + std::to_string(directory_sequence.fetch_add(1));
+		std::filesystem::copy_file(found->second, temporary, std::filesystem::copy_options::none, error);
+		if (error) {
+			std::error_code cleanup_error;
+			std::filesystem::remove(temporary, cleanup_error);
+			set_error("Could not deploy RP9 media: " + error.message());
+			return {};
+		}
+		std::filesystem::rename(temporary, destination, error);
+		if (error) {
+			// A second process may have completed the same deployment first.
+			std::error_code destination_error;
+			if (std::filesystem::is_regular_file(destination, destination_error) && !destination_error) {
+				std::filesystem::remove(temporary, destination_error);
+				write_log(_T("RP9: reusing concurrently deployed media: %s\n"), destination.string().c_str());
+				return destination;
+			}
+			std::error_code cleanup_error;
+			std::filesystem::remove(temporary, cleanup_error);
+			set_error("Could not finish deploying RP9 media: " + error.message());
+			return {};
+		}
+		write_log(_T("RP9: deployed media to: %s\n"), destination.string().c_str());
+		return destination;
+	}
+	if (root.empty() || root == "embedded") {
 		if (!rp9::normalize_package_path(media.path, normalized))
 			return {};
 		const auto found = files.find(lowercase(normalized));
@@ -678,20 +808,24 @@ bool is_rdb_hardfile(const std::filesystem::path& path)
 }
 
 bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
-	const std::unordered_map<std::string, std::filesystem::path>& files)
+	const std::unordered_map<std::string, std::filesystem::path>& files,
+	const std::string& deployment_id)
 {
-	int floppy_count = 0;
 	int device_number = 0;
-	std::array<bool, 4> floppy_drive_assigned {};
 	bool cd_attached = false;
 	bool snapshot_attached = false;
 	if (!apply_boot(prefs, manifest, device_number))
 		return false;
+	const bool boot_floppy_attached = manifest.has_boot && manifest.boot.type == "adf";
+	int floppy_count = boot_floppy_attached ? 1 : 0;
+	std::array<bool, 4> floppy_drive_assigned {};
+	floppy_drive_assigned[0] = boot_floppy_attached;
 
 	for (const auto& media : manifest.media) {
-		const auto path = resolve_media_path(media, files);
+		const auto path = resolve_media_path(media, files, deployment_id);
 		if (path.empty()) {
-			set_error("RP9 media was not found or uses an unsupported root: " + media.path);
+			if (last_error.empty())
+				set_error("RP9 media was not found or uses an unsupported root: " + media.path);
 			return false;
 		}
 		const auto path_string = path.string();
@@ -801,18 +935,24 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 	std::string manifest_error;
 	bool result = read_manifest(archive, manifest_data)
 		&& rp9::parse_manifest(manifest_data.data(), manifest_data.size() - 1, manifest, manifest_error);
+	const auto package_deployment_id = result
+		? deployment_id(manifest_data.data(), manifest_data.size() - 1)
+		: std::string {};
+	const auto existing_deployments = result
+		? find_existing_deployments(manifest, package_deployment_id)
+		: std::unordered_map<std::string, std::filesystem::path> {};
 	if (!result && last_error.empty())
 		set_error(manifest_error);
 
 	std::filesystem::path extraction_directory;
-	std::unordered_map<std::string, std::filesystem::path> extracted_files;
+	auto extracted_files = existing_deployments;
 	if (result) {
 		extraction_directory = create_extraction_directory();
 		if (extraction_directory.empty()) {
 			set_error("Could not create the RP9 temporary directory");
 			result = false;
 		} else {
-			result = extract_archive(archive, extraction_directory, extracted_files);
+			result = extract_archive(archive, extraction_directory, extracted_files, existing_deployments);
 		}
 	}
 	unzClose(archive);
@@ -826,7 +966,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 		result = apply_peripherals(prefs, manifest);
 		if (result) {
 			apply_video_and_clip(prefs, manifest);
-			result = apply_media(prefs, manifest, extracted_files);
+			result = apply_media(prefs, manifest, extracted_files, package_deployment_id);
 		}
 		if (prefs->m68k_speed >= 0)
 			prefs->cachesize = 0;
