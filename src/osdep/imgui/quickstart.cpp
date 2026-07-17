@@ -199,6 +199,13 @@ static void clear_play_content_if_quickstart_source() {
         play_clear_content_selection();
 }
 
+static void reset_rp9_to_quickstart_defaults() {
+    rp9_clear_loaded_path();
+    default_prefs(&changed_prefs, true, 0);
+    Quickstart_ApplyDefaults();
+    rp9_cleanup_unused();
+}
+
 void render_panel_quickstart() {
     // Apply defaults on first show only when no configuration or media setup is active.
     static bool initial_sync_done = false;
@@ -744,7 +751,8 @@ void render_panel_quickstart() {
     ImGui::SameLine();
     if (AmigaButton(ICON_FA_EJECT "##QSRP9", ImVec2(SMALL_BUTTON_WIDTH, 0))) {
         play_clear_content_selection();
-        rp9_clear_loaded_path();
+        if (!rp9_get_loaded_path().empty())
+            reset_rp9_to_quickstart_defaults();
     }
 
     ImGui::SameLine();
@@ -765,8 +773,10 @@ void render_panel_quickstart() {
 
     ImGui::Spacing();
     if (AmigaButton(ICON_FA_CHECK " Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
-        rp9_clear_loaded_path();
-        apply_quickstart_defaults_from_quickstart();
+        if (!rp9_get_loaded_path().empty())
+            reset_rp9_to_quickstart_defaults();
+        else
+            apply_quickstart_defaults_from_quickstart();
     }
 
     {

@@ -46,6 +46,86 @@ bool loaded_has_clip;
 std::vector<std::filesystem::path> temporary_directories;
 std::atomic<unsigned long long> directory_sequence { 0 };
 
+bool directory_contains_path(const std::filesystem::path& directory, const TCHAR* value)
+{
+	if (!value || !value[0])
+		return false;
+	const auto normalized_directory = directory.lexically_normal();
+	const auto normalized_path = std::filesystem::path(value).lexically_normal();
+	auto directory_component = normalized_directory.begin();
+	auto path_component = normalized_path.begin();
+	while (directory_component != normalized_directory.end() && path_component != normalized_path.end()) {
+		if (*directory_component != *path_component)
+			return false;
+		++directory_component;
+		++path_component;
+	}
+	return directory_component == normalized_directory.end();
+}
+
+bool prefs_reference_directory(const uae_prefs* prefs, const std::filesystem::path& directory)
+{
+	if (!prefs)
+		return false;
+	for (const auto& slot : prefs->floppyslots) {
+		if (directory_contains_path(directory, slot.df))
+			return true;
+	}
+	for (const auto& path : prefs->dfxlist) {
+		if (directory_contains_path(directory, path))
+			return true;
+	}
+	for (const auto& slot : prefs->cdslots) {
+		if (slot.inuse && directory_contains_path(directory, slot.name))
+			return true;
+	}
+	const auto mount_count = std::clamp(prefs->mountitems, 0, MOUNT_CONFIG_SIZE);
+	for (int index = 0; index < mount_count; ++index) {
+		if (directory_contains_path(directory, prefs->mountconfig[index].ci.rootdir))
+			return true;
+	}
+	return false;
+}
+
+bool pending_snapshot_references_directory(const std::filesystem::path& directory)
+{
+	return savestate_state != 0 && directory_contains_path(directory, savestate_fname);
+}
+
+void cleanup_unused_temporary_directories(const uae_prefs* additional_prefs = nullptr)
+{
+	for (auto directory = temporary_directories.begin(); directory != temporary_directories.end();) {
+		if (prefs_reference_directory(&currprefs, *directory)
+			|| prefs_reference_directory(&changed_prefs, *directory)
+			|| (additional_prefs != &currprefs && additional_prefs != &changed_prefs
+				&& prefs_reference_directory(additional_prefs, *directory))
+			|| pending_snapshot_references_directory(*directory)) {
+			++directory;
+			continue;
+		}
+
+		std::error_code error;
+		std::filesystem::remove_all(*directory, error);
+		if (error) {
+			write_log(_T("RP9: could not remove unused temporary directory '%s': %s\n"),
+				directory->string().c_str(), error.message().c_str());
+			++directory;
+		} else {
+			write_log(_T("RP9: removed unused temporary directory: %s\n"), directory->string().c_str());
+			directory = temporary_directories.erase(directory);
+		}
+	}
+}
+
+bool pending_snapshot_uses_temporary_directory()
+{
+	if (savestate_state != STATE_DORESTORE)
+		return false;
+	return std::any_of(temporary_directories.begin(), temporary_directories.end(), [](const auto& directory) {
+		return directory_contains_path(directory, savestate_fname);
+	});
+}
+
 std::string lowercase(std::string value)
 {
 	std::transform(value.begin(), value.end(), value.begin(), [](const unsigned char ch) {
@@ -821,7 +901,20 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 	std::array<bool, 4> floppy_drive_assigned {};
 	floppy_drive_assigned[0] = boot_floppy_attached;
 
-	for (const auto& media : manifest.media) {
+	std::vector<const rp9::Media*> ordered_media;
+	ordered_media.reserve(manifest.media.size());
+	for (const auto& media : manifest.media)
+		ordered_media.emplace_back(&media);
+	// Priority 1 is the first attachment/insertion preference. Preserve XML
+	// order when priorities are equal or omitted.
+	std::stable_sort(ordered_media.begin(), ordered_media.end(), [](const auto* left, const auto* right) {
+		if (left->has_priority != right->has_priority)
+			return left->has_priority;
+		return left->has_priority && left->priority < right->priority;
+	});
+
+	for (const auto* media_entry : ordered_media) {
+		const auto& media = *media_entry;
 		const auto path = resolve_media_path(media, files, deployment_id);
 		if (path.empty()) {
 			if (last_error.empty())
@@ -908,11 +1001,15 @@ void rp9_cleanup()
 	rp9_init();
 }
 
+void rp9_cleanup_unused()
+{
+	cleanup_unused_temporary_directories();
+}
+
 bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 {
 	last_error.clear();
-	loaded_path.clear();
-	loaded_has_clip = false;
+	rp9_clear_loaded_path();
 	if (!prefs || !filename || !filename[0]) {
 		set_error("No RP9 package was specified");
 		return false;
@@ -983,6 +1080,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 	for (const auto& warning : manifest.warnings)
 		write_log(_T("RP9: %s\n"), warning.c_str());
 	temporary_directories.emplace_back(std::move(extraction_directory));
+	cleanup_unused_temporary_directories(prefs);
 	whdload_prefs.whdload_filename.clear();
 	loaded_path = filename;
 	loaded_has_clip = manifest.has_clip;
@@ -1010,6 +1108,10 @@ bool rp9_loaded_has_clip()
 
 void rp9_clear_loaded_path()
 {
+	if (pending_snapshot_uses_temporary_directory()) {
+		savestate_state = 0;
+		savestate_fname[0] = 0;
+	}
 	loaded_path.clear();
 	loaded_has_clip = false;
 }

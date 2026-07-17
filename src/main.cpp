@@ -1662,6 +1662,7 @@ static int real_main2 (int argc, TCHAR **argv)
 			return 1;
 		}
 	}
+	rp9_cleanup_unused();
 
 #ifndef LIBRETRO
 	if (amiberry_options.update_check && get_update_method() != UpdateMethod::DISABLED) {
