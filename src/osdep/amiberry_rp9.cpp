@@ -596,10 +596,11 @@ std::filesystem::path resolve_media_path(const rp9::Media& media,
 		return found == files.end() ? std::filesystem::path {} : found->second;
 	}
 
-	std::filesystem::path path(media.path);
 	std::error_code error;
-	if (root == "absolute" || root == "external")
-		return path.is_absolute() && std::filesystem::exists(path, error) ? path : std::filesystem::path {};
+	if (root == "absolute" || root == "external") {
+		set_error("RP9 media uses a disallowed external host path: " + media.path);
+		return {};
+	}
 	if (root == "data" || root == "shared") {
 		const auto base = std::filesystem::path(get_rp9_path());
 		std::filesystem::path relative_path;
@@ -938,7 +939,8 @@ bool is_rdb_hardfile(const std::filesystem::path& path)
 
 bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 	const std::unordered_map<std::string, std::filesystem::path>& files,
-	const std::string& deployment_id, std::string& snapshot_path)
+	const std::string& deployment_id, std::string& snapshot_path,
+	std::vector<std::string>& cd_paths)
 {
 	int device_number = 0;
 	bool cd_attached = false;
@@ -998,13 +1000,12 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 			}
 			break;
 		case rp9::MediaType::Cd:
+			cd_paths.emplace_back(path_string);
 			if (!cd_attached) {
 				copy_path(prefs->cdslots[0].name, MAX_DPATH, path_string);
 				prefs->cdslots[0].inuse = true;
 				prefs->cdslots[0].type = SCSI_UNIT_DEFAULT;
 				cd_attached = true;
-			} else {
-				write_log(_T("RP9: additional CD available in extracted package: %s\n"), path_string.c_str());
 			}
 			break;
 		case rp9::MediaType::Tape: {
@@ -1028,6 +1029,20 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 		}
 	}
 	return true;
+}
+
+void publish_cd_swap_list(const std::vector<std::string>& cd_paths)
+{
+	// Keep every package disc available in the existing CD selector. Remove
+	// duplicates first, then insert in reverse so priority 1 remains first.
+	for (const auto& path : cd_paths) {
+		lstMRUCDList.erase(std::remove(lstMRUCDList.begin(), lstMRUCDList.end(), path), lstMRUCDList.end());
+	}
+	for (auto path = cd_paths.rbegin(); path != cd_paths.rend(); ++path)
+		add_file_to_mru_list(lstMRUCDList, *path);
+	for (std::size_t index = 0; index < cd_paths.size(); ++index) {
+		write_log(_T("RP9: CD swap entry %u: %s\n"), static_cast<unsigned>(index + 1), cd_paths[index].c_str());
+	}
 }
 }
 
@@ -1104,6 +1119,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 
 	std::unique_ptr<uae_prefs> candidate;
 	std::string snapshot_path;
+	std::vector<std::string> cd_paths;
 	if (result) {
 		candidate = std::make_unique<uae_prefs>();
 		result = set_default_system(candidate.get(), manifest);
@@ -1114,7 +1130,8 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 		result = apply_peripherals(candidate.get(), manifest);
 		if (result) {
 			apply_video_and_clip(candidate.get(), manifest);
-			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id, snapshot_path);
+			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id, snapshot_path,
+				cd_paths);
 		}
 		if (candidate->m68k_speed >= 0)
 			candidate->cachesize = 0;
@@ -1148,6 +1165,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 		write_log(_T("RP9: %s\n"), warning.c_str());
 	temporary_directories.emplace_back(std::move(extraction_directory));
 	cleanup_unused_temporary_directories(prefs);
+	publish_cd_swap_list(cd_paths);
 	whdload_prefs.write_cache = false;
 	whdload_prefs.whdload_filename.clear();
 	loaded_path = filename;
