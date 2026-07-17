@@ -43,4 +43,10 @@
         </magic>
         <glob pattern="*.uss"/>
     </mime-type>
+    <mime-type type="application/vnd.cloanto.rp9">
+        <comment>RetroPlatform package</comment>
+        <generic-icon name="input-gaming"/>
+        <sub-class-of type="application/zip"/>
+        <glob pattern="*.rp9" weight="80"/>
+    </mime-type>
 </mime-info>

@@ -700,6 +700,12 @@ fun QuickStartScreen(
 														EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
 													}
 												}
+												"rp9" -> {
+													val rp9Path = entry.optString("path")
+													scope.launchGuarded(launchGuard) {
+														EmulatorLauncher.launchRp9(context, rp9Path)
+													}
+												}
 												"quickstart" -> {
 													val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") } ?: AmigaModel.A500
 													if (model in availableModels) {

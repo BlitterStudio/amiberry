@@ -1,4 +1,5 @@
 #include "sysdeps.h"
+#include "amiberry_rp9.h"
 #include "blkdev.h"
 #include "imgui.h"
 #include "options.h"
@@ -230,6 +231,7 @@ void render_panel_quickstart() {
     static int qs_pending_floppy_drive = -1;
     static bool qs_pending_cd = false;
     static bool qs_pending_whd = false;
+    static bool qs_pending_rp9 = false;
 
     bool df1_visible = true;
     bool cd_visible = false;
@@ -732,6 +734,28 @@ void render_panel_quickstart() {
 
     ImGui::Spacing();
 
+    BeginGroupBox("RP9 package:");
+    if (AmigaButton(ICON_FA_FOLDER_OPEN " Select file##QSRP9", ImVec2(BUTTON_WIDTH * 1.33f, 0))) {
+        const std::string initial_path = rp9_get_loaded_path().empty() ? get_rp9_path() : rp9_get_loaded_path();
+        OpenFileDialogKey("QUICKSTART", "Select RP9 package", ".rp9,.*", initial_path);
+        qs_pending_rp9 = true;
+    }
+
+    ImGui::SameLine();
+    if (AmigaButton(ICON_FA_EJECT "##QSRP9", ImVec2(SMALL_BUTTON_WIDTH, 0))) {
+        play_clear_content_selection();
+        rp9_clear_loaded_path();
+    }
+
+    ImGui::SameLine();
+    if (rp9_get_loaded_path().empty())
+        ImGui::TextUnformatted("<empty>");
+    else
+        ImGui::TextWrapped("%s", rp9_get_loaded_path().c_str());
+    EndGroupBox("RP9 package:");
+
+    ImGui::Spacing();
+
     BeginGroupBox("Mode");
     bool qs_mode = amiberry_options.quickstart_start;
     if (AmigaCheckbox("Start in Quickstart mode", &qs_mode))
@@ -741,6 +765,7 @@ void render_panel_quickstart() {
 
     ImGui::Spacing();
     if (AmigaButton(ICON_FA_CHECK " Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+        rp9_clear_loaded_path();
         apply_quickstart_defaults_from_quickstart();
     }
 
@@ -787,11 +812,31 @@ void render_panel_quickstart() {
                     add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
                     whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
                 }
+            } else if (qs_pending_rp9) {
+                if (!filePath.empty()) {
+                    whdload_prefs.whdload_filename.clear();
+                    if (rp9_parse_file(&changed_prefs, filePath.c_str())) {
+                        for (int drive = 0; drive < changed_prefs.nr_floppies && drive < 4; ++drive) {
+                            if (changed_prefs.floppyslots[drive].df[0]) {
+                                disk_insert(drive, changed_prefs.floppyslots[drive].df);
+                                add_file_to_mru_list(lstMRUDiskList, changed_prefs.floppyslots[drive].df);
+                            }
+                        }
+                        if (changed_prefs.cdslots[0].inuse && changed_prefs.cdslots[0].name[0])
+                            add_file_to_mru_list(lstMRUCDList, changed_prefs.cdslots[0].name);
+                        set_last_active_config(filePath.c_str());
+                    } else {
+                        ShowMessageBox("Load RP9", rp9_get_last_error().c_str());
+                    }
+                }
             }
+            if (!qs_pending_rp9 && !filePath.empty())
+                rp9_clear_loaded_path();
 
             qs_pending_floppy_drive = -1;
             qs_pending_cd = false;
             qs_pending_whd = false;
+            qs_pending_rp9 = false;
         }
     }
     ImGui::Unindent(5.0f);

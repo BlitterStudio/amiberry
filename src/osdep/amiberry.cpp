@@ -61,6 +61,7 @@
 
 #include "amiberry_input.h"
 #include "amiberry_adpf.h"
+#include "amiberry_rp9.h"
 #include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
@@ -3193,9 +3194,9 @@ static void handle_drop_file_event(const SDL_Event& event)
 	const char* dropped_file = event.drop.data;
 	const auto ext = get_filename_extension(dropped_file);
 
-	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	if (strcasecmp(ext.c_str(), ".uae") == 0 || strcasecmp(ext.c_str(), ".rp9") == 0)
 	{
-		// Load configuration file
+		// Load configuration or self-contained RP9 package
 		uae_restart(&currprefs, 1, dropped_file);
 		gui_running = false;
 	}
@@ -5985,6 +5986,14 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 {
 	int type2;
 	auto result = 0;
+	auto extension = std::filesystem::path(filename).extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(), [](const unsigned char ch) {
+		return static_cast<char>(std::tolower(ch));
+	});
+	// An RP9 manifest describes the complete machine. Partial host/hardware loading
+	// would produce a configuration that does not match the package requirements.
+	if (extension == ".rp9")
+		type = CONFIG_TYPE_DEFAULT;
 
 	if (isdefault) {
 		path_statefile[0] = 0;
@@ -6001,17 +6010,23 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		write_log(_T("config reset\n"));
 	}
 
-	const char* ptr = strstr(const_cast<char*>(filename), ".uae");
-	if (ptr)
+	if (extension == ".uae")
 	{
 		write_log(_T("target_cfgfile_load: loading file %s\n"), filename);
 		result = cfgfile_load(p, filename, &type2, 0, isdefault ? 0 : 1);
+	}
+	else if (extension == ".rp9")
+	{
+		write_log(_T("target_cfgfile_load: loading RP9 package %s\n"), filename);
+		result = rp9_parse_file(p, filename) ? 1 : 0;
 	}
 	if (!result)
 	{
 		write_log(_T("target_cfgfile_load: loading file %s failed\n"), filename);
 		return result;
 	}
+	if (extension != ".rp9")
+		rp9_clear_loaded_path();
 	if (type > 0)
 		return result;
 	if (result)
@@ -6025,6 +6040,8 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		if (strlen(p->floppyslots[i].df) > 0)
 			add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 	}
+	if (p->cdslots[0].inuse && p->cdslots[0].name[0])
+		add_file_to_mru_list(lstMRUCDList, p->cdslots[0].name);
 	set_last_loaded_config(filename, isdefault != 0);
 	set_last_active_config(filename);
 	return result;
@@ -11101,6 +11118,7 @@ int amiberry_main(int argc, char* argv[])
 	}
 
 	logging_init();
+	rp9_init();
 #if defined (CPU_arm) && !defined (_WIN32)
 	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_segv;
@@ -11260,6 +11278,7 @@ int amiberry_main(int argc, char* argv[])
 
 	romlist_clear();
 	free_keyring();
+	rp9_cleanup();
 
 	logging_cleanup();
 

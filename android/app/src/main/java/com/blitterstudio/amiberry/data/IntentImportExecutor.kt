@@ -34,12 +34,15 @@ object IntentImportExecutor {
 			val lhaPath: String,
 			val configPath: String
 		) : Launch
+
+		data class Rp9(val path: String) : Launch
 	}
 
 	suspend fun importAndPrepare(context: Context, uri: Uri): PreparedImport {
 		val rawName = FileManager.getDisplayName(context, uri) ?: uri.lastPathSegment
 		return when (val import = IntentImport.classify(rawName)) {
 			is IntentImport.Classification.Config -> importConfig(context, uri, import.safeName)
+			is IntentImport.Classification.Rp9 -> importRp9(context, uri, import.safeName)
 			is IntentImport.Classification.Media -> importMedia(context, uri, import)
 			is IntentImport.Classification.Unsupported -> {
 				Log.w(TAG, "Ignoring unsupported file from intent: ${import.safeName}")
@@ -104,6 +107,24 @@ object IntentImportExecutor {
 			)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import config from intent", e)
+			PreparedImport(ImportFeedback.importFailed(safeName))
+		}
+	}
+
+	private fun importRp9(context: Context, uri: Uri, safeName: String): PreparedImport {
+		val baseDir = context.getExternalFilesDir(null)
+			?: return PreparedImport(ImportFeedback.importFailed(safeName))
+		val rp9Dir = File(baseDir, StoragePaths.RP9)
+		if (!rp9Dir.exists() && !rp9Dir.mkdirs())
+			return PreparedImport(ImportFeedback.importFailed(safeName))
+		val targetFile = FileManager.uniqueImportTarget(rp9Dir, safeName)
+		return try {
+			val inputStream = context.contentResolver.openInputStream(uri)
+				?: return PreparedImport(ImportFeedback.importFailed(safeName))
+			inputStream.use { input -> targetFile.outputStream().use { output -> input.copyTo(output) } }
+			PreparedImport(ImportFeedback.fileImported(targetFile.name), Launch.Rp9(targetFile.absolutePath))
+		} catch (e: Exception) {
+			Log.e(TAG, "Failed to import RP9 package", e)
 			PreparedImport(ImportFeedback.importFailed(safeName))
 		}
 	}

@@ -93,6 +93,15 @@ class LaunchRequestTest {
 	}
 
 	@Test
+	fun `rp9 request uses manifest autoload and skip gui`() {
+		val path = "/tmp/game.rp9"
+		assertArrayEquals(
+			arrayOf("--rescan-roms", "--autoload", path, "-G"),
+			LaunchRequest.Rp9(path).toArgs()
+		)
+	}
+
+	@Test
 	fun `whdload request can include control config before autoload`() {
 		val lhaPath = "/tmp/game.lha"
 		val configPath = "/tmp/android-controls.uae"

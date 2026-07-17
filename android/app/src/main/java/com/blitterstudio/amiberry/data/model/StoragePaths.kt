@@ -5,6 +5,7 @@ object StoragePaths {
 	const val CONTROLLERS = "Controllers"
 	const val WHDBOOT = "WHDBoot"
 	const val WHDLOAD_ARCHIVES = "LHA"
+	const val RP9 = "RP9"
 	const val FLOPPIES = "Floppies"
 	const val HARD_DRIVES = "HardDrives"
 	const val CDROMS = "CDROMs"
@@ -27,6 +28,7 @@ object StoragePaths {
 		HARD_DRIVES,
 		CDROMS,
 		WHDLOAD_ARCHIVES,
+		RP9,
 		CONFIGURATIONS
 	)
 

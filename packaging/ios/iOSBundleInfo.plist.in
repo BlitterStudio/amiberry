@@ -75,6 +75,22 @@
 				<key>LSHandlerRank</key>
 				<string>Owner</string>
 			</dict>
+			<dict>
+				<key>CFBundleTypeName</key>
+				<string>RetroPlatform Package</string>
+				<key>CFBundleTypeExtensions</key>
+				<array>
+					<string>rp9</string>
+				</array>
+				<key>CFBundleTypeMIMETypes</key>
+				<array>
+					<string>application/vnd.cloanto.rp9</string>
+				</array>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>LSHandlerRank</key>
+				<string>Owner</string>
+			</dict>
 		</array>
 		<key>UIFileSharingEnabled</key>
 		<true/>

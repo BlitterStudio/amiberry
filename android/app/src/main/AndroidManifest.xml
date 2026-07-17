@@ -75,6 +75,7 @@
                 <data android:pathPattern=".*\\.lzx" />
                 <data android:pathPattern=".*\\.lzh" />
                 <data android:pathPattern=".*\\.uae" />
+                <data android:pathPattern=".*\\.rp9" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -82,6 +83,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/vnd.cloanto.rp9" />
             </intent-filter>
         </activity>
 

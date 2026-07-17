@@ -352,6 +352,8 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_uaenet.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_hardfile.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_whdbooter.cpp \
+                $(AMIBERRY_DIR)/src/osdep/amiberry_rp9.cpp \
+                $(AMIBERRY_DIR)/src/osdep/rp9_manifest.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_filesys.cpp \
                 $(AMIBERRY_DIR)/src/osdep/cda_play.cpp \
                 $(AMIBERRY_DIR)/src/osdep/charset.cpp \

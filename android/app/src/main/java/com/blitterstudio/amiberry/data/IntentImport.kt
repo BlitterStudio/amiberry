@@ -8,6 +8,7 @@ object IntentImport {
 		val safeName: String
 
 		data class Config(override val safeName: String) : Classification
+		data class Rp9(override val safeName: String) : Classification
 		data class Media(override val safeName: String, val category: FileCategory) : Classification
 		data class Unsupported(override val safeName: String, val extension: String) : Classification
 	}
@@ -17,6 +18,9 @@ object IntentImport {
 		val extension = safeName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
 		if (extension == "uae") {
 			return Classification.Config(safeName)
+		}
+		if (extension == "rp9") {
+			return Classification.Rp9(safeName)
 		}
 
 		val category = FileCategory.fromExtension(extension)

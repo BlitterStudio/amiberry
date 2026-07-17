@@ -160,7 +160,7 @@ static void input_log_file_write(const char* fmt, ...);
 static std::string system_dir;
 static std::string save_dir;
 static std::string content_dir;
-static std::string whdload_temp_path;
+static std::string content_temp_path;
 static std::string cached_model;
 static std::string cached_kickstart_override;
 static std::string cached_cpu_model;
@@ -3778,16 +3778,23 @@ static void core_entry(void)
 	if (game_path[0])
 		game_ext = path_extension_lower(game_path);
 	const bool is_whdload = (game_ext == "lha" || game_ext == "lzh");
+	const bool is_rp9 = game_ext == "rp9";
 	const bool is_cd = content_is_cd || is_cd_extension(game_ext);
 	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
+	std::string deferred_rp9_kickstart;
 
-	auto push_s_option = [&safe_strdup](const std::string& value) {
+	std::vector<std::string> deferred_rp9_options;
+	auto push_s_option = [&safe_strdup, &deferred_rp9_options, is_rp9](const std::string& value) {
+		if (is_rp9) {
+			deferred_rp9_options.emplace_back(value);
+			return;
+		}
 		safe_strdup("-s");
 		safe_strdup(value.c_str());
 	};
 
 	const char* model = cached_model.empty() ? nullptr : cached_model.c_str();
-	if (model)
+	if (model && !is_rp9)
 	{
 		// Map libretro preset names to --model args that main.cpp recognizes.
 		// main.cpp only handles: A500, A500P, A600, A1000, A2000, A3000, A1200, A4000, CD32, CDTV
@@ -3834,12 +3841,12 @@ static void core_entry(void)
 	}
 
 	const char* cpu_model = cached_cpu_model.empty() ? nullptr : cached_cpu_model.c_str();
-	if (cpu_model && strcmp(cpu_model, "auto") != 0) {
+	if (!is_rp9 && cpu_model && strcmp(cpu_model, "auto") != 0) {
 		push_s_option(std::string("cpu_model=") + cpu_model);
 	}
 
 	const char* chipset = cached_chipset_value();
-	if (chipset && strcmp(chipset, "auto") != 0) {
+	if (!is_rp9 && chipset && strcmp(chipset, "auto") != 0) {
 		push_s_option(std::string("chipset=") + chipset);
 	}
 
@@ -3860,11 +3867,11 @@ static void core_entry(void)
 		push_s_option("sound_stereo_separation=" + cached_stereo_sep);
 	}
 
-	if (!cached_floppy_speed.empty() && cached_floppy_speed != "100") {
+	if (!is_rp9 && !cached_floppy_speed.empty() && cached_floppy_speed != "100") {
 		push_s_option("floppy_speed=" + cached_floppy_speed);
 	}
 
-	if (!cached_video_standard.empty() && cached_video_standard != "auto") {
+	if (!is_rp9 && !cached_video_standard.empty() && cached_video_standard != "auto") {
 		if (cached_video_standard == "ntsc")
 			push_s_option("ntsc=true");
 		else if (cached_video_standard == "pal")
@@ -3901,7 +3908,8 @@ static void core_entry(void)
 	}
 #endif
 
-	safe_strdup("-G"); // No GUI
+	if (!is_rp9)
+		safe_strdup("-G"); // RP9 must receive this after its complete manifest config.
 
 	std::string rom_path_value;
 	if (!system_dir.empty() || !save_dir.empty()) {
@@ -3932,13 +3940,17 @@ static void core_entry(void)
 		if (user_kick_override) {
 			have_kick = resolve_kickstart_override_value(cached_kickstart_override.c_str(), kick_path, sizeof(kick_path)) ||
 				find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path));
-		} else if (!is_whdload) {
+		} else if (!is_whdload && !is_rp9) {
 			have_kick = find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path));
 		}
 
 		if (have_kick) {
-			safe_strdup("-r");
-			safe_strdup(kick_path);
+			if (is_rp9)
+				deferred_rp9_kickstart = kick_path;
+			else {
+				safe_strdup("-r");
+				safe_strdup(kick_path);
+			}
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
 			libretro_debug_log("kickstart override: %s\n", kick_path);
@@ -3961,21 +3973,17 @@ static void core_entry(void)
 		const std::string saveimage_path = "saveimage_dir=" + save_dir;
 		const std::string savestate_path = "savestate_dir=" + save_dir;
 		const std::string statefile_path = "statefile_path=" + save_dir;
-		safe_strdup("-s");
-		safe_strdup(cfg_path.c_str());
-		safe_strdup("-s");
-		safe_strdup(saveimage_path.c_str());
-		safe_strdup("-s");
-		safe_strdup(savestate_path.c_str());
-		safe_strdup("-s");
-		safe_strdup(statefile_path.c_str());
+		push_s_option(cfg_path);
+		push_s_option(saveimage_path);
+		push_s_option(savestate_path);
+		push_s_option(statefile_path);
 	}
 
 	if (game_path[0])
 	{
-		if (is_whdload) {
+		if (is_whdload || is_rp9) {
 			if (log_cb)
-				log_cb(RETRO_LOG_INFO, "WHDLoad autoload: %s\n", game_path);
+				log_cb(RETRO_LOG_INFO, "%s autoload: %s\n", is_rp9 ? "RP9" : "WHDLoad", game_path);
 			safe_strdup("--autoload");
 			safe_strdup(game_path);
 		} else if (is_cd) {
@@ -4003,6 +4011,17 @@ static void core_entry(void)
 		} else {
 			safe_strdup(game_path);
 		}
+	}
+	if (is_rp9) {
+		if (!deferred_rp9_kickstart.empty()) {
+			safe_strdup("-r");
+			safe_strdup(deferred_rp9_kickstart.c_str());
+		}
+		for (const auto& option : deferred_rp9_options) {
+			safe_strdup("-s");
+			safe_strdup(option.c_str());
+		}
+		safe_strdup("-G");
 	}
 	argv.push_back(nullptr);
 
@@ -4537,39 +4556,45 @@ bool retro_load_game(const struct retro_game_info *info)
 
 	const std::string ext = info_ext && info_ext->ext ? info_ext->ext : path_extension_lower(path);
 	const bool is_whdload = (ext == "lha" || ext == "lzh");
-	libretro_debug_log("retro_load_game: path='%s' ext='%s' is_whdload=%d\n",
-		path.c_str(), ext.c_str(), is_whdload ? 1 : 0);
+	const bool is_rp9 = ext == "rp9";
+	libretro_debug_log("retro_load_game: path='%s' ext='%s' is_whdload=%d is_rp9=%d\n",
+		path.c_str(), ext.c_str(), is_whdload ? 1 : 0, is_rp9 ? 1 : 0);
 
-	if (is_whdload) {
+	if (is_whdload || is_rp9) {
+		const char* content_label = is_rp9 ? "RP9" : "WHDLoad";
+		const char* temp_prefix = is_rp9 ? "rp9_" : "whdload_";
 		if (log_cb) {
-			log_cb(RETRO_LOG_INFO, "WHDLoad content detected: path='%s' ext='%s'\n",
-				path.c_str(), ext.c_str());
+			log_cb(RETRO_LOG_INFO, "%s content detected: path='%s' ext='%s'\n",
+				content_label, path.c_str(), ext.c_str());
 			if (info_ext)
-				log_cb(RETRO_LOG_INFO, "WHDLoad info_ext: full_path='%s' archive_path='%s' archive_file='%s' file_in_archive=%d size=%zu\n",
+				log_cb(RETRO_LOG_INFO, "%s info_ext: full_path='%s' archive_path='%s' archive_file='%s' file_in_archive=%d size=%zu\n",
+					content_label,
 					info_ext->full_path ? info_ext->full_path : "",
 					info_ext->archive_path ? info_ext->archive_path : "",
 					info_ext->archive_file ? info_ext->archive_file : "",
 					info_ext->file_in_archive ? 1 : 0,
 					info_ext->size);
 		}
-		setup_whdload_paths();
+		if (is_whdload)
+			setup_whdload_paths();
 
-		std::string whd_path = path;
+		std::string package_path = path;
 		bool extracted = false;
 
 		if (info_ext && info_ext->data && info_ext->size > 0 &&
 			(info_ext->file_in_archive || !info_ext->full_path || !*info_ext->full_path)) {
-			const std::string base = info_ext->name ? info_ext->name : "whdload";
+			const std::string base = info_ext->name ? info_ext->name : (is_rp9 ? "rp9" : "whdload");
 			const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
 			std::string safe_name = sanitize_filename(base);
 			if (safe_name.length() > 200) safe_name.resize(200);
-			const std::string out_file = "whdload_" + safe_name + "." + (info_ext->ext ? info_ext->ext : "lha");
+			const std::string out_file = std::string(temp_prefix) + safe_name + "." +
+				(info_ext->ext ? info_ext->ext : (is_rp9 ? "rp9" : "lha"));
 			const std::string out_path = path_join(out_dir, out_file);
 			if (vfs_write_file(out_path.c_str(), info_ext->data, info_ext->size)) {
-				whd_path = out_path;
+				package_path = out_path;
 				extracted = true;
 			} else if (log_cb) {
-				log_cb(RETRO_LOG_WARN, "Failed to write WHDLoad data to %s\n", out_path.c_str());
+				log_cb(RETRO_LOG_WARN, "Failed to write %s data to %s\n", content_label, out_path.c_str());
 			}
 		} else if (info_ext && info_ext->file_in_archive && info_ext->archive_path && info_ext->archive_file) {
 			std::string vfs_path = std::string(info_ext->archive_path) + "#" + info_ext->archive_file;
@@ -4579,55 +4604,55 @@ bool retro_load_game(const struct retro_game_info *info)
 				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
 				std::string safe_name = sanitize_filename(base);
 				if (safe_name.length() > 200) safe_name.resize(200);
-				const std::string out_file = "whdload_" + safe_name + "." + ext;
+				const std::string out_file = std::string(temp_prefix) + safe_name + "." + ext;
 				const std::string out_path = path_join(out_dir, out_file);
 				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
-					whd_path = out_path;
+					package_path = out_path;
 					extracted = true;
 				} else if (log_cb) {
-					log_cb(RETRO_LOG_WARN, "Failed to write WHDLoad file to %s\n", out_path.c_str());
+					log_cb(RETRO_LOG_WARN, "Failed to write %s file to %s\n", content_label, out_path.c_str());
 				}
 			}
 		}
 
 		if (!extracted)
-			whd_path = canonicalize_existing_host_path(whd_path);
+			package_path = canonicalize_existing_host_path(package_path);
 
-		if (!extracted && (has_non_ascii(whd_path) || !file_readable(whd_path.c_str()))) {
+		if (!extracted && (has_non_ascii(package_path) || !file_readable(package_path.c_str()))) {
 			std::vector<uint8_t> data;
-			if (vfs_read_all(whd_path.c_str(), data)) {
-				const std::string base = path_basename(whd_path);
+			if (vfs_read_all(package_path.c_str(), data)) {
+				const std::string base = path_basename(package_path);
 				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
 				std::string safe_name = sanitize_filename(base);
 				if (safe_name.length() > 200) safe_name.resize(200);
-				const std::string out_file = "whdload_" + safe_name;
+				const std::string out_file = std::string(temp_prefix) + safe_name;
 				const std::string out_path = path_join(out_dir, out_file);
 				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
-					whd_path = out_path;
+					package_path = out_path;
 					extracted = true;
 				} else if (log_cb) {
-					log_cb(RETRO_LOG_WARN, "Failed to write WHDLoad temp file to %s\n", out_path.c_str());
+					log_cb(RETRO_LOG_WARN, "Failed to write %s temp file to %s\n", content_label, out_path.c_str());
 				}
 			} else if (log_cb) {
-				log_cb(RETRO_LOG_WARN, "Failed to read WHDLoad path via VFS: %s\n", whd_path.c_str());
+				log_cb(RETRO_LOG_WARN, "Failed to read %s path via VFS: %s\n", content_label, package_path.c_str());
 			}
 		}
 
-		if (!whd_path.empty()) {
-			whdload_temp_path = extracted ? whd_path : std::string();
-			libretro_debug_log("WHDLoad using path: %s (extracted=%d)\n", whd_path.c_str(), extracted ? 1 : 0);
+		if (!package_path.empty()) {
+			content_temp_path = extracted ? package_path : std::string();
+			libretro_debug_log("%s using path: %s (extracted=%d)\n", content_label, package_path.c_str(), extracted ? 1 : 0);
 			disk_images.clear();
 			disk_index = 0;
 			disk_ejected = false;
 			last_disk_index = 0;
 			last_disk_ejected = false;
 			DiskImage image;
-			image.path = whd_path;
+			image.path = package_path;
 			disk_images.push_back(image);
-			strncpy(game_path, whd_path.c_str(), sizeof(game_path) - 1);
+			strncpy(game_path, package_path.c_str(), sizeof(game_path) - 1);
 			game_path[sizeof(game_path) - 1] = '\0';
 			if (log_cb)
-				log_cb(RETRO_LOG_INFO, "WHDLoad using path: %s\n", game_path);
+				log_cb(RETRO_LOG_INFO, "%s using path: %s\n", content_label, game_path);
 			return true;
 		}
 	}
@@ -4724,12 +4749,12 @@ void retro_unload_game(void)
 	delete_core_fiber();
 	reset_core_runtime_state();
 	cheat_entries.clear();
-	if (!whdload_temp_path.empty()) {
+	if (!content_temp_path.empty()) {
 		if (vfs_available && vfs_iface.remove)
-			vfs_iface.remove(whdload_temp_path.c_str());
+			vfs_iface.remove(content_temp_path.c_str());
 		else
-			remove(whdload_temp_path.c_str());
-		whdload_temp_path.clear();
+			remove(content_temp_path.c_str());
+		content_temp_path.clear();
 	}
 }
 

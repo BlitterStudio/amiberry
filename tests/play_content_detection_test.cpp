@@ -35,6 +35,16 @@ static void test_configurations_keep_existing_model()
 		".uae must keep the existing model");
 }
 
+static void test_rp9_uses_manifest_machine()
+{
+	const auto detection = play_detect_content("Game.RP9", false);
+
+	expect_eq(detection.type, PlayContentType::Rp9, ".RP9 must be detected as an RP9 package");
+	expect_eq(detection.suggested_model, PlaySuggestedModel::KeepExisting,
+		"RP9 must use the machine described by its manifest");
+	expect_eq(detection.follow_up, PlayFollowUp::None, "RP9 must not ask for an archive type");
+}
+
 static void test_floppy_extensions_suggest_a500()
 {
 	const auto adf = play_detect_content("Disk.ADF", false);
@@ -173,6 +183,7 @@ static void test_directories_are_whdload_candidates()
 int main()
 {
 	test_configurations_keep_existing_model();
+	test_rp9_uses_manifest_machine();
 	test_floppy_extensions_suggest_a500();
 	test_compressed_floppy_extensions_suggest_a500();
 	test_aga_floppy_names_suggest_a1200();

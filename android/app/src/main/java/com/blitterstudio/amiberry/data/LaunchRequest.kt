@@ -79,6 +79,11 @@ sealed interface LaunchRequest {
 		}
 	}
 
+	data class Rp9(val path: String) : LaunchRequest {
+		override fun toArgs(): Array<String> =
+			arrayOf("--rescan-roms", "--autoload", path, "-G")
+	}
+
 	data class AndroidControlOverrides(
 		val joyport0: String,
 		val joyport1: String,

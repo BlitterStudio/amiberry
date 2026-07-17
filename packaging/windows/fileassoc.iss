@@ -3,6 +3,7 @@ ChangesAssociations=yes
 
 [Tasks]
 Name: "fileassoc"; Description: "File associations:"; GroupDescription: "Associate Amiga file types with Amiberry:"; Flags: unchecked
+Name: "fileassoc\rp9"; Description: ".rp9 - RetroPlatform Package"; Flags: unchecked
 Name: "fileassoc\uae"; Description: ".uae - Amiberry Configuration"; Flags: unchecked
 Name: "fileassoc\adf"; Description: ".adf - Amiga Disk Image"; Flags: unchecked
 Name: "fileassoc\ipf"; Description: ".ipf - IPF Disk Image"; Flags: unchecked
@@ -15,6 +16,13 @@ Name: "fileassoc\chd"; Description: ".chd - MAME Compressed Disk Image"; Flags: 
 Name: "fileassoc\iso"; Description: ".iso - CD Image"; Flags: unchecked
 
 [Registry]
+; .rp9 - RetroPlatform Package
+Root: HKA; Subkey: "Software\Classes\.rp9"; ValueType: string; ValueName: "Content Type"; ValueData: "application/vnd.cloanto.rp9"; Flags: uninsdeletevalue; Tasks: fileassoc\rp9
+Root: HKA; Subkey: "Software\Classes\.rp9\OpenWithProgids"; ValueType: string; ValueName: "Amiberry.rp9"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc\rp9
+Root: HKA; Subkey: "Software\Classes\Amiberry.rp9"; ValueType: string; ValueName: ""; ValueData: "RetroPlatform Package"; Flags: uninsdeletekey; Tasks: fileassoc\rp9
+Root: HKA; Subkey: "Software\Classes\Amiberry.rp9\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\Amiberry.exe,0"; Tasks: fileassoc\rp9
+Root: HKA; Subkey: "Software\Classes\Amiberry.rp9\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Amiberry.exe"" ""%1"""; Tasks: fileassoc\rp9
+
 ; .uae - Amiberry Configuration
 Root: HKA; Subkey: "Software\Classes\.uae\OpenWithProgids"; ValueType: string; ValueName: "Amiberry.uae"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc\uae
 Root: HKA; Subkey: "Software\Classes\Amiberry.uae"; ValueType: string; ValueName: ""; ValueData: "Amiberry Configuration"; Flags: uninsdeletekey; Tasks: fileassoc\uae

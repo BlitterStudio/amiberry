@@ -9,6 +9,7 @@
 
 #include "file_dialog.h"
 #include "filesys.h"
+#include "amiberry_rp9.h"
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "custom.h"
@@ -93,6 +94,8 @@ const char* suggested_profile_text(const PlayContentType type, const PlaySuggest
 {
 	if (type == PlayContentType::Configuration)
 		return "Configuration file settings";
+	if (type == PlayContentType::Rp9)
+		return "Machine and media settings from the RP9 manifest";
 	if (type == PlayContentType::WhdLoad)
 		return "WHDLoad autoload; the database/slave can adjust the exact machine";
 	if (model == PlaySuggestedModel::A1200Expanded)
@@ -402,6 +405,8 @@ std::string current_attachment_path_for_type(const PlayContentType type)
 		return changed_prefs.floppyslots[0].df;
 	case PlayContentType::WhdLoad:
 		return whdload_prefs.whdload_filename;
+	case PlayContentType::Rp9:
+		return rp9_get_loaded_path();
 	case PlayContentType::Cd:
 		return changed_prefs.cdslots[0].inuse ? changed_prefs.cdslots[0].name : "";
 	case PlayContentType::Hardfile:
@@ -508,6 +513,42 @@ bool apply_configuration_content()
 	return true;
 }
 
+bool apply_rp9_content()
+{
+	if (!rp9_parse_file(&changed_prefs, selected_content.original_path.c_str())) {
+		ShowMessageBox("Load RP9", rp9_get_last_error().c_str());
+		return false;
+	}
+
+	const bool has_clip = rp9_loaded_has_clip();
+	const bool manual_crop = changed_prefs.gfx_manual_crop;
+	const int crop_width = changed_prefs.gfx_manual_crop_width;
+	const int crop_height = changed_prefs.gfx_manual_crop_height;
+	const int crop_x = changed_prefs.gfx_horizontal_offset;
+	const int crop_y = changed_prefs.gfx_vertical_offset;
+	apply_display_defaults_to_changed_prefs();
+	if (has_clip) {
+		changed_prefs.gfx_auto_crop = false;
+		changed_prefs.gfx_manual_crop = manual_crop;
+		changed_prefs.gfx_manual_crop_width = crop_width;
+		changed_prefs.gfx_manual_crop_height = crop_height;
+		changed_prefs.gfx_horizontal_offset = crop_x;
+		changed_prefs.gfx_vertical_offset = crop_y;
+	}
+
+	for (int drive = 0; drive < changed_prefs.nr_floppies && drive < 4; ++drive) {
+		if (changed_prefs.floppyslots[drive].df[0]) {
+			disk_insert(drive, changed_prefs.floppyslots[drive].df);
+			add_file_to_mru_list(lstMRUDiskList, changed_prefs.floppyslots[drive].df);
+		}
+	}
+	if (changed_prefs.cdslots[0].inuse && changed_prefs.cdslots[0].name[0])
+		add_file_to_mru_list(lstMRUCDList, changed_prefs.cdslots[0].name);
+	set_last_active_config(selected_content.original_path.c_str());
+	mark_content_applied();
+	return true;
+}
+
 bool apply_floppy_content()
 {
 	apply_quickstart_model_unless_overridden(suggested_model_for_action(PlayContentType::Floppy));
@@ -585,9 +626,13 @@ bool apply_cd_content()
 
 bool apply_selected_content(const PlayContentType type)
 {
+	if (type != PlayContentType::Rp9)
+		rp9_clear_loaded_path();
 	switch (type) {
 	case PlayContentType::Configuration:
 		return apply_configuration_content();
+	case PlayContentType::Rp9:
+		return apply_rp9_content();
 	case PlayContentType::Floppy:
 		return apply_floppy_content();
 	case PlayContentType::WhdLoad:
@@ -768,7 +813,7 @@ void render_content_picker()
 {
 	if (AmigaButton(ICON_FA_FOLDER_OPEN " Choose content...", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
 		OpenFileDialogKey("PLAY_CONTENT", "Choose Amiga content",
-			"Amiga Content (*.uae,*.adf,*.adz,*.dms,*.fdi,*.scp,*.wrp,*.dsq,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg,*.hdf,*.hdz,*.hda,*.vhd,*.img,*.gz,*.xz){.uae,.adf,.adz,.dms,.fdi,.scp,.wrp,.dsq,.ipf,.zip,.7z,.lha,.lzh,.lzx,.cue,.bin,.iso,.ccd,.mds,.chd,.nrg,.hdf,.hdz,.hda,.vhd,.img,.gz,.xz},All Files (*){.*}",
+			"Amiga Content (*.uae,*.rp9,*.adf,*.adz,*.dms,*.fdi,*.scp,*.wrp,*.dsq,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.cue,*.bin,*.iso,*.ccd,*.mds,*.chd,*.nrg,*.hdf,*.hdz,*.hda,*.vhd,*.img,*.gz,*.xz){.uae,.rp9,.adf,.adz,.dms,.fdi,.scp,.wrp,.dsq,.ipf,.zip,.7z,.lha,.lzh,.lzx,.cue,.bin,.iso,.ccd,.mds,.chd,.nrg,.hdf,.hdz,.hda,.vhd,.img,.gz,.xz},All Files (*){.*}",
 			get_floppy_path());
 	}
 	if (AmigaButton(ICON_FA_FOLDER_OPEN " Choose folder...", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
@@ -818,10 +863,12 @@ void render_content_picker()
 					play_prepare_selected_content_for_start();
 				ImGui::SameLine();
 			}
-			if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
-				mark_selected_content_pending();
-				begin_quickstart_override_tracking();
-				gui_show_panel("quickstart", true);
+			if (action_type != PlayContentType::Rp9) {
+				if (AmigaButton(ICON_FA_ROCKET " Change model...", ImVec2(BUTTON_WIDTH * 1.8f, BUTTON_HEIGHT))) {
+					mark_selected_content_pending();
+					begin_quickstart_override_tracking();
+					gui_show_panel("quickstart", true);
+				}
 			}
 			if (action_type == PlayContentType::Hardfile) {
 				ImGui::SameLine();
