@@ -10,6 +10,7 @@
 #include <cctype>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -239,7 +240,13 @@ std::unordered_map<std::string, std::filesystem::path> find_existing_deployments
 
 bool set_default_system(uae_prefs* prefs, const rp9::Manifest& manifest)
 {
-	default_prefs(prefs, true, 0);
+	// Build RP9 preferences without clearing the live input-device store. The
+	// caller commits that global reset only after the complete package succeeds.
+	const auto whdload_write_cache = whdload_prefs.write_cache;
+	default_prefs(prefs, false, 0);
+	whdload_prefs.write_cache = whdload_write_cache;
+	inputdevice_joyport_config_store(prefs, _T("mouse"), 0, -1, -1, 0);
+	inputdevice_joyport_config_store(prefs, _T("joy0"), 1, -1, -1, 0);
 	const auto& system = manifest.system;
 	auto rom = system_rom_code(manifest.system_rom);
 	if (manifest.video == "ntsc" || manifest.video == "a-ntsc")
@@ -889,7 +896,7 @@ bool is_rdb_hardfile(const std::filesystem::path& path)
 
 bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 	const std::unordered_map<std::string, std::filesystem::path>& files,
-	const std::string& deployment_id)
+	const std::string& deployment_id, std::string& snapshot_path)
 {
 	int device_number = 0;
 	bool cd_attached = false;
@@ -972,8 +979,7 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 		}
 		case rp9::MediaType::Snapshot:
 			if (!snapshot_attached) {
-				copy_path(savestate_fname, MAX_DPATH, path_string);
-				savestate_state = STATE_DORESTORE;
+				snapshot_path = path_string;
 				snapshot_attached = true;
 			}
 			break;
@@ -1009,7 +1015,6 @@ void rp9_cleanup_unused()
 bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 {
 	last_error.clear();
-	rp9_clear_loaded_path();
 	if (!prefs || !filename || !filename[0]) {
 		set_error("No RP9 package was specified");
 		return false;
@@ -1055,18 +1060,22 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 	unzClose(archive);
 	zfile_fclose(file);
 
-	if (result)
-		result = set_default_system(prefs, manifest);
+	std::unique_ptr<uae_prefs> candidate;
+	std::string snapshot_path;
 	if (result) {
-		apply_compatibility(prefs, manifest);
-		apply_ram(prefs, manifest);
-		result = apply_peripherals(prefs, manifest);
+		candidate = std::make_unique<uae_prefs>();
+		result = set_default_system(candidate.get(), manifest);
+	}
+	if (result) {
+		apply_compatibility(candidate.get(), manifest);
+		apply_ram(candidate.get(), manifest);
+		result = apply_peripherals(candidate.get(), manifest);
 		if (result) {
-			apply_video_and_clip(prefs, manifest);
-			result = apply_media(prefs, manifest, extracted_files, package_deployment_id);
+			apply_video_and_clip(candidate.get(), manifest);
+			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id, snapshot_path);
 		}
-		if (prefs->m68k_speed >= 0)
-			prefs->cachesize = 0;
+		if (candidate->m68k_speed >= 0)
+			candidate->cachesize = 0;
 	}
 
 	if (!result) {
@@ -1074,13 +1083,28 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 			std::error_code error;
 			std::filesystem::remove_all(extraction_directory, error);
 		}
+		if (candidate)
+			reset_inputdevice_config(candidate.get(), false);
 		return false;
+	}
+
+	// Publish the complete configuration and package-owned global state only
+	// after every manifest requirement and media attachment has succeeded.
+	discard_prefs(prefs, 0);
+	reset_inputdevice_config(prefs, true);
+	copy_prefs(candidate.get(), prefs);
+	reset_inputdevice_config(candidate.get(), false);
+	rp9_clear_loaded_path();
+	if (!snapshot_path.empty()) {
+		copy_path(savestate_fname, MAX_DPATH, snapshot_path);
+		savestate_state = STATE_DORESTORE;
 	}
 
 	for (const auto& warning : manifest.warnings)
 		write_log(_T("RP9: %s\n"), warning.c_str());
 	temporary_directories.emplace_back(std::move(extraction_directory));
 	cleanup_unused_temporary_directories(prefs);
+	whdload_prefs.write_cache = false;
 	whdload_prefs.whdload_filename.clear();
 	loaded_path = filename;
 	loaded_has_clip = manifest.has_clip;

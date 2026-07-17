@@ -5990,22 +5990,23 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 	std::transform(extension.begin(), extension.end(), extension.begin(), [](const unsigned char ch) {
 		return static_cast<char>(std::tolower(ch));
 	});
+	const bool is_rp9 = extension == ".rp9";
 	// An RP9 manifest describes the complete machine. Partial host/hardware loading
 	// would produce a configuration that does not match the package requirements.
-	if (extension == ".rp9")
+	if (is_rp9)
 		type = CONFIG_TYPE_DEFAULT;
 
-	if (isdefault) {
+	if (isdefault && !is_rp9) {
 		path_statefile[0] = 0;
 	}
 
 	type = std::max(type, 0);
 
-	if (type == 0 || type == 1) {
+	if (!is_rp9 && (type == 0 || type == 1)) {
 		discard_prefs(p, 0);
 	}
 	type2 = type;
-	if (type == 0 || type == 3) {
+	if (!is_rp9 && (type == 0 || type == 3)) {
 		default_prefs(p, true, type);
 		write_log(_T("config reset\n"));
 	}
@@ -6025,6 +6026,8 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		write_log(_T("target_cfgfile_load: loading file %s failed\n"), filename);
 		return result;
 	}
+	if (is_rp9 && isdefault)
+		path_statefile[0] = 0;
 	if (extension != ".rp9")
 		rp9_clear_loaded_path();
 	if (type > 0)

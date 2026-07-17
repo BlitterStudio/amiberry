@@ -824,7 +824,6 @@ void render_panel_quickstart() {
                 }
             } else if (qs_pending_rp9) {
                 if (!filePath.empty()) {
-                    whdload_prefs.whdload_filename.clear();
                     if (rp9_parse_file(&changed_prefs, filePath.c_str())) {
                         for (int drive = 0; drive < changed_prefs.nr_floppies && drive < 4; ++drive) {
                             if (changed_prefs.floppyslots[drive].df[0]) {
