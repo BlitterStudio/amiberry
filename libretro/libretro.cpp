@@ -24,9 +24,11 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <climits>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifdef __cplusplus
@@ -35,6 +37,7 @@ extern "C" {
 #include "retro_dirent.h"
 #include "streams/file_stream.h"
 #include "file/file_path.h"
+#include "vfs/vfs_implementation.h"
 #ifdef __cplusplus
 }
 #endif
@@ -161,6 +164,7 @@ static std::string system_dir;
 static std::string save_dir;
 static std::string content_dir;
 static std::string content_temp_path;
+static std::string content_temp_directory;
 static std::string cached_model;
 static std::string cached_kickstart_override;
 static std::string cached_cpu_model;
@@ -1316,6 +1320,58 @@ static bool vfs_write_file(const char* path, const void* data, size_t size)
 	const size_t written = fwrite(data, 1, size, f);
 	fclose(f);
 	return written == size;
+}
+
+// sysdeps remaps mkdir for Amiga host calls, but it also rewrites the VFS member name.
+// No direct mkdir calls occur below this point, so expose the interface token again.
+#ifdef mkdir
+#undef mkdir
+#endif
+static int vfs_mkdir_exclusive(const char* path)
+{
+	if (vfs_available && vfs_iface.mkdir)
+		return vfs_iface.mkdir(path);
+	return retro_vfs_mkdir_impl(path);
+}
+
+static void remove_content_temp_artifacts(const std::string& file_path, const std::string& directory)
+{
+	if (!file_path.empty())
+		filestream_delete(file_path.c_str());
+	if (!directory.empty())
+		filestream_delete(directory.c_str());
+}
+
+static bool stage_content_file(const std::string& parent_directory, const std::string& filename,
+	const void* data, size_t size, std::string& staged_path, std::string& staged_directory)
+{
+	static std::atomic<uint64_t> sequence{0};
+	const auto timestamp = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
+	const auto serial = sequence.fetch_add(1, std::memory_order_relaxed);
+
+	for (unsigned attempt = 0; attempt < 128; ++attempt) {
+		char directory_name[80];
+		snprintf(directory_name, sizeof(directory_name), ".amiberry-content-%llx-%llx-%x",
+			static_cast<unsigned long long>(timestamp), static_cast<unsigned long long>(serial), attempt);
+		const std::string candidate_directory = path_join(parent_directory, directory_name);
+		const int mkdir_result = vfs_mkdir_exclusive(candidate_directory.c_str());
+		if (mkdir_result == -2)
+			continue;
+		if (mkdir_result != 0)
+			return false;
+
+		const std::string candidate_path = path_join(candidate_directory, sanitize_filename(filename));
+		if (vfs_write_file(candidate_path.c_str(), data, size)) {
+			staged_path = candidate_path;
+			staged_directory = candidate_directory;
+			return true;
+		}
+
+		remove_content_temp_artifacts(candidate_path, candidate_directory);
+		return false;
+	}
+
+	return false;
 }
 
 static bool vfs_read_all(const char* path, std::vector<uint8_t>& out)
@@ -4579,6 +4635,7 @@ bool retro_load_game(const struct retro_game_info *info)
 			setup_whdload_paths();
 
 		std::string package_path = path;
+		std::string package_temp_directory;
 		bool extracted = false;
 
 		if (info_ext && info_ext->data && info_ext->size > 0 &&
@@ -4589,12 +4646,13 @@ bool retro_load_game(const struct retro_game_info *info)
 			if (safe_name.length() > 200) safe_name.resize(200);
 			const std::string out_file = std::string(temp_prefix) + safe_name + "." +
 				(info_ext->ext ? info_ext->ext : (is_rp9 ? "rp9" : "lha"));
-			const std::string out_path = path_join(out_dir, out_file);
-			if (vfs_write_file(out_path.c_str(), info_ext->data, info_ext->size)) {
-				package_path = out_path;
+			std::string out_path;
+			if (stage_content_file(out_dir, out_file, info_ext->data, info_ext->size,
+				out_path, package_temp_directory)) {
+				package_path = std::move(out_path);
 				extracted = true;
 			} else if (log_cb) {
-				log_cb(RETRO_LOG_WARN, "Failed to write %s data to %s\n", content_label, out_path.c_str());
+				log_cb(RETRO_LOG_WARN, "Failed to stage %s data in %s\n", content_label, out_dir.c_str());
 			}
 		} else if (info_ext && info_ext->file_in_archive && info_ext->archive_path && info_ext->archive_file) {
 			std::string vfs_path = std::string(info_ext->archive_path) + "#" + info_ext->archive_file;
@@ -4605,12 +4663,13 @@ bool retro_load_game(const struct retro_game_info *info)
 				std::string safe_name = sanitize_filename(base);
 				if (safe_name.length() > 200) safe_name.resize(200);
 				const std::string out_file = std::string(temp_prefix) + safe_name + "." + ext;
-				const std::string out_path = path_join(out_dir, out_file);
-				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
-					package_path = out_path;
+				std::string out_path;
+				if (stage_content_file(out_dir, out_file, data.data(), data.size(),
+					out_path, package_temp_directory)) {
+					package_path = std::move(out_path);
 					extracted = true;
 				} else if (log_cb) {
-					log_cb(RETRO_LOG_WARN, "Failed to write %s file to %s\n", content_label, out_path.c_str());
+					log_cb(RETRO_LOG_WARN, "Failed to stage %s file in %s\n", content_label, out_dir.c_str());
 				}
 			}
 		}
@@ -4626,12 +4685,13 @@ bool retro_load_game(const struct retro_game_info *info)
 				std::string safe_name = sanitize_filename(base);
 				if (safe_name.length() > 200) safe_name.resize(200);
 				const std::string out_file = std::string(temp_prefix) + safe_name;
-				const std::string out_path = path_join(out_dir, out_file);
-				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
-					package_path = out_path;
+				std::string out_path;
+				if (stage_content_file(out_dir, out_file, data.data(), data.size(),
+					out_path, package_temp_directory)) {
+					package_path = std::move(out_path);
 					extracted = true;
 				} else if (log_cb) {
-					log_cb(RETRO_LOG_WARN, "Failed to write %s temp file to %s\n", content_label, out_path.c_str());
+					log_cb(RETRO_LOG_WARN, "Failed to stage %s temp file in %s\n", content_label, out_dir.c_str());
 				}
 			} else if (log_cb) {
 				log_cb(RETRO_LOG_WARN, "Failed to read %s path via VFS: %s\n", content_label, package_path.c_str());
@@ -4640,6 +4700,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
 		if (!package_path.empty()) {
 			content_temp_path = extracted ? package_path : std::string();
+			content_temp_directory = extracted ? package_temp_directory : std::string();
 			libretro_debug_log("%s using path: %s (extracted=%d)\n", content_label, package_path.c_str(), extracted ? 1 : 0);
 			disk_images.clear();
 			disk_index = 0;
@@ -4749,13 +4810,9 @@ void retro_unload_game(void)
 	delete_core_fiber();
 	reset_core_runtime_state();
 	cheat_entries.clear();
-	if (!content_temp_path.empty()) {
-		if (vfs_available && vfs_iface.remove)
-			vfs_iface.remove(content_temp_path.c_str());
-		else
-			remove(content_temp_path.c_str());
-		content_temp_path.clear();
-	}
+	remove_content_temp_artifacts(content_temp_path, content_temp_directory);
+	content_temp_path.clear();
+	content_temp_directory.clear();
 }
 
 unsigned retro_get_region(void)
