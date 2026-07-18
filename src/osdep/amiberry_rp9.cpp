@@ -668,6 +668,18 @@ void apply_compatibility(uae_prefs* prefs, const rp9::Manifest& manifest)
 	}
 }
 
+#ifdef JIT
+bool manifest_requests_jit(const rp9::Manifest& manifest)
+{
+	if (std::find(manifest.compatibility.begin(), manifest.compatibility.end(), "jit")
+		!= manifest.compatibility.end())
+		return true;
+	return std::any_of(manifest.peripherals.begin(), manifest.peripherals.end(), [](const auto& peripheral) {
+		return peripheral.name == "jit";
+	});
+}
+#endif
+
 void apply_ram(uae_prefs* prefs, const rp9::Manifest& manifest)
 {
 	for (const auto& ram : manifest.ram) {
@@ -1133,7 +1145,19 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id, snapshot_path,
 				cd_paths);
 		}
-		if (candidate->m68k_speed >= 0)
+#ifdef JIT
+		const bool jit_requested = manifest_requests_jit(manifest);
+		if (jit_requested) {
+			// An explicit JIT requirement takes precedence over cycle-exact
+			// defaults inherited from the selected canonical machine profile.
+			candidate->cpu_cycle_exact = false;
+			candidate->cpu_memory_cycle_exact = false;
+			candidate->blitter_cycle_exact = false;
+		}
+#else
+		constexpr bool jit_requested = false;
+#endif
+		if (candidate->m68k_speed >= 0 && !jit_requested)
 			candidate->cachesize = 0;
 	}
 
