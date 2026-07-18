@@ -10006,6 +10006,7 @@ static void ensure_amiberry_user_directories()
 	ensure_directory_exists_if_missing(harddrive_path);
 	ensure_directory_exists_if_missing(cdrom_path);
 	ensure_directory_exists_if_missing(rom_path);
+	ensure_directory_exists_if_missing(rp9_path);
 	ensure_directory_exists_if_missing(saveimage_dir);
 	ensure_directory_exists_if_missing(savestate_dir);
 	ensure_directory_exists_if_missing(ripper_path);
