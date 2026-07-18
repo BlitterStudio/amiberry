@@ -1030,47 +1030,51 @@ static void zz_handle_dma(zz9000_state *data, int operation)
 	const uae_u16 user0 = zz_gd_u16(data, 32);
 	const uae_u16 user1 = zz_gd_u16(data, 34);
 	const uae_u16 user3 = zz_gd_u16(data, 38);
-	const uae_u32 destination_pitch_words = zz_gd_u16(data, 40);
-	const uae_u32 source_pitch_words = zz_gd_u16(data, 42);
+	const uae_u32 destination_pitch = zz_gd_u16(data, 40);
+	const uae_u32 source_pitch = zz_gd_u16(data, 42);
+
+	// The driver uses longword pitches for normal framebuffer operations, matching
+	// the firmware's set_fb() contract. Template/pattern framebuffer pitches and
+	// planar/YUV source pitches are the exceptions: those are already in bytes.
 
 	switch (operation) {
 		case ZZ_OP_DRAWLINE:
-			zz_draw_line(data, destination, destination_pitch_words * 4,
+			zz_draw_line(data, destination, destination_pitch * 4,
 				x0, y0, x1, y1, user0, static_cast<int16_t>(user3), user1,
 				zz_gd_u8(data, 50), color_mode, draw_mode, foreground, background, mask);
 			break;
 		case ZZ_OP_FILLRECT:
-			zz_fill_rect(data, destination, destination_pitch_words * 4,
+			zz_fill_rect(data, destination, destination_pitch * 4,
 				x0, y0, x1, y1, color_mode, foreground, mask);
 			break;
 		case ZZ_OP_COPYRECT:
-			zz_copy_rect(data, destination, destination_pitch_words * 4, x2, y2,
-				destination, destination_pitch_words * 4, x0, y0, x1, y1,
+			zz_copy_rect(data, destination, destination_pitch * 4, x2, y2,
+				destination, destination_pitch * 4, x0, y0, x1, y1,
 				color_mode, mask, ZZ_MINTERM_SRC);
 			break;
 		case ZZ_OP_COPYRECT_NOMASK:
-			zz_copy_rect(data, source, source_pitch_words * 4, x2, y2,
-				destination, destination_pitch_words * 4, x0, y0, x1, y1,
+			zz_copy_rect(data, source, source_pitch * 4, x2, y2,
+				destination, destination_pitch * 4, x0, y0, x1, y1,
 				color_mode, 0xff, minterm);
 			break;
 		case ZZ_OP_RECT_TEMPLATE:
 		case ZZ_OP_RECT_PATTERN:
 			zz_template_rect(data, source,
-				operation == ZZ_OP_RECT_PATTERN ? 2 : source_pitch_words, destination,
-				destination_pitch_words * 4, x0, y0, x1, y1, x2, y2,
+				operation == ZZ_OP_RECT_PATTERN ? 2 : source_pitch, destination,
+				destination_pitch, x0, y0, x1, y1, x2, y2,
 				operation == ZZ_OP_RECT_PATTERN ? user0 : 0, color_mode,
 				draw_mode, foreground, background, mask,
 				operation == ZZ_OP_RECT_PATTERN);
 			break;
 		case ZZ_OP_P2C:
 		case ZZ_OP_P2D:
-			zz_planar_rect(data, operation == ZZ_OP_P2D, source, source_pitch_words,
-				destination, destination_pitch_words * 4, x0, x1, y1, x2, y2,
+			zz_planar_rect(data, operation == ZZ_OP_P2D, source, source_pitch,
+				destination, destination_pitch * 4, x0, x1, y1, x2, y2,
 				user1, static_cast<uae_u8>(user0), mask, minterm, color_mode,
 				foreground);
 			break;
 		case ZZ_OP_INVERTRECT:
-			zz_invert_rect(data, destination, destination_pitch_words * 4,
+			zz_invert_rect(data, destination, destination_pitch * 4,
 				x0, y0, x1, y1, color_mode, mask);
 			break;
 		case ZZ_OP_PAN:
@@ -1116,8 +1120,8 @@ static void zz_handle_dma(zz9000_state *data, int operation)
 			data->modified = true;
 			break;
 		case ZZ_OP_WRITE_YUV:
-			zz_yuv_rect(data, source, source_pitch_words, destination,
-				destination_pitch_words * 4, x0, x1, y1, x2, y2,
+			zz_yuv_rect(data, source, source_pitch, destination,
+				destination_pitch * 4, x0, x1, y1, x2, y2,
 				zz_gd_u8(data, 52), color_mode);
 			break;
 		case ZZ_OP_VIDEO_OVERLAY:
