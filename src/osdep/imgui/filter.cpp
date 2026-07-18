@@ -106,12 +106,13 @@ static void scan_shaders()
 
 				if (!is_glsl && !is_glslp) continue;
 
+				fs::path rel = fs::relative(entry.path(), base_path);
+
 				// For .glsl files, only include those at the top level
 				// (subdirectory .glsl files are shader components, not standalone)
-				if (is_glsl && entry.path().parent_path() != base_path) continue;
+				if (is_glsl && !rel.parent_path().empty()) continue;
 
 				// Store path relative to shaders base dir
-				fs::path rel = fs::relative(entry.path(), base_path);
 				std::string rel_str = rel.generic_string(); // use forward slashes
 				shader_names.push_back(rel_str);
 			}
