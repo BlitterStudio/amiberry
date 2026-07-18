@@ -782,10 +782,10 @@ static void zz_yuv_rect(zz9000_state *data, uae_u32 source, uae_u32 source_pitch
 }
 
 static void zz_acc_copy_bytes(zz9000_state *data, uae_u32 source, uae_u32 source_pitch,
-	uae_u32 destination, uae_u32 destination_pitch, int destination_x, int destination_y,
+	uae_u32 destination, uae_u32 destination_pitch, int destination_x_bytes, int destination_y,
 	int width_bytes, int height, int draw_mode, uae_u8 mask_color)
 {
-	if (width_bytes <= 0 || height <= 0 || destination_x < 0 || destination_y < 0)
+	if (width_bytes <= 0 || height <= 0 || destination_x_bytes < 0 || destination_y < 0)
 		return;
 	const uae_u64 temporary_size64 = static_cast<uae_u64>(width_bytes) * height;
 	if (temporary_size64 > 0x10000000)
@@ -804,7 +804,7 @@ static void zz_acc_copy_bytes(zz9000_state *data, uae_u32 source, uae_u32 source
 	}
 	for (int row = 0; row < height; ++row) {
 		uae_u8 *destination_row = zz_memory_ptr(data, destination +
-			static_cast<uae_u32>(destination_y + row) * destination_pitch + destination_x,
+			static_cast<uae_u32>(destination_y + row) * destination_pitch + destination_x_bytes,
 			static_cast<uae_u32>(width_bytes));
 		if (!destination_row)
 			continue;
@@ -1178,7 +1178,7 @@ static void zz_handle_acc(zz9000_state *data, int operation)
 				}
 			} else {
 				zz_acc_copy_bytes(data, source, zz_gd_u16(data, 42), destination,
-					zz_gd_u16(data, 40), destination_x, destination_y,
+					zz_gd_u16(data, 40), destination_x * destination_bpp, destination_y,
 					width * source_bpp, height, zz_gd_u8(data, 50), zz_gd_u8(data, 59));
 			}
 			break;
