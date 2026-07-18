@@ -1641,6 +1641,10 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 	mode->mode = rgb_format;
 	mode->hlinedbl = 1;
 	mode->vlinedbl = 1;
+	const auto &state = picasso96_state[data->monitor_id];
+	if (data->mode_changed && (state.Width != data->width ||
+		state.Height != data->height || state.RGBFormat != rgb_format))
+		return true;
 
 	uae_u8 *surface = gfx_lock_picasso(data->monitor_id, false);
 	if (!surface)
