@@ -1323,10 +1323,13 @@ static bool vfs_write_file(const char* path, const void* data, size_t size)
 	return written == size;
 }
 
-// sysdeps remaps mkdir for Amiga host calls, but it also rewrites the VFS member name.
-// No direct mkdir calls occur below this point, so expose the interface token again.
+// sysdeps remaps mkdir/rmdir for Amiga host calls, but it also rewrites VFS member names.
+// Host content staging below needs the real directory operations.
 #ifdef mkdir
 #undef mkdir
+#endif
+#ifdef rmdir
+#undef rmdir
 #endif
 static int vfs_mkdir_exclusive(const char* path)
 {
@@ -1335,12 +1338,24 @@ static int vfs_mkdir_exclusive(const char* path)
 	return retro_vfs_mkdir_impl(path);
 }
 
+static int remove_empty_content_directory(const std::string& directory)
+{
+#ifdef _WIN32
+	const int result = _rmdir(directory.c_str());
+#else
+	const int result = ::rmdir(directory.c_str());
+#endif
+	// The fallback handles UTF-8 Windows paths and virtual paths such as SAF
+	// without delegating directory removal to the frontend's file-only callback.
+	return result == 0 ? 0 : retro_vfs_file_remove_impl(directory.c_str());
+}
+
 static void remove_content_temp_artifacts(const std::string& file_path, const std::string& directory)
 {
 	if (!file_path.empty())
 		filestream_delete(file_path.c_str());
 	if (!directory.empty())
-		filestream_delete(directory.c_str());
+		remove_empty_content_directory(directory);
 }
 
 static bool stage_content_file(const std::string& parent_directory, const std::string& filename,

@@ -46,6 +46,7 @@ constexpr int invalid_system_rom = -2;
 
 std::string loaded_path;
 std::string last_error;
+std::string loaded_snapshot_path;
 bool loaded_has_clip;
 std::vector<std::filesystem::path> temporary_directories;
 std::vector<std::string> loaded_cd_paths;
@@ -130,13 +131,11 @@ void cleanup_unused_temporary_directories(const uae_prefs* additional_prefs = nu
 	}
 }
 
-bool pending_snapshot_uses_temporary_directory()
+bool pending_snapshot_belongs_to_loaded_rp9()
 {
-	if (savestate_state != STATE_DORESTORE)
-		return false;
-	return std::any_of(temporary_directories.begin(), temporary_directories.end(), [](const auto& directory) {
-		return directory_contains_path(directory, savestate_fname);
-	});
+	return !loaded_snapshot_path.empty()
+		&& savestate_state == STATE_DORESTORE
+		&& loaded_snapshot_path == savestate_fname;
 }
 
 std::string lowercase(std::string value)
@@ -1273,6 +1272,7 @@ void rp9_init()
 {
 	loaded_path.clear();
 	last_error.clear();
+	loaded_snapshot_path.clear();
 	loaded_has_clip = false;
 	loaded_cd_paths.clear();
 }
@@ -1461,6 +1461,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 	if (!snapshot_path.empty()) {
 		copy_path(savestate_fname, MAX_DPATH, snapshot_path);
 		savestate_state = STATE_DORESTORE;
+		loaded_snapshot_path = savestate_fname;
 	}
 
 	for (const auto& warning : manifest.warnings)
@@ -1497,10 +1498,11 @@ bool rp9_loaded_has_clip()
 
 void rp9_clear_loaded_path()
 {
-	if (pending_snapshot_uses_temporary_directory()) {
+	if (pending_snapshot_belongs_to_loaded_rp9()) {
 		savestate_state = 0;
 		savestate_fname[0] = 0;
 	}
+	loaded_snapshot_path.clear();
 	loaded_path.clear();
 	loaded_has_clip = false;
 	loaded_cd_paths.clear();
