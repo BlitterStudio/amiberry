@@ -48,6 +48,7 @@ std::string loaded_path;
 std::string last_error;
 bool loaded_has_clip;
 std::vector<std::filesystem::path> temporary_directories;
+std::vector<std::string> loaded_cd_paths;
 std::atomic<unsigned long long> directory_sequence { 0 };
 
 bool directory_contains_path(const std::filesystem::path& directory, const TCHAR* value)
@@ -96,6 +97,13 @@ bool pending_snapshot_references_directory(const std::filesystem::path& director
 	return savestate_state != 0 && directory_contains_path(directory, savestate_fname);
 }
 
+bool loaded_cd_paths_reference_directory(const std::filesystem::path& directory)
+{
+	return std::any_of(loaded_cd_paths.begin(), loaded_cd_paths.end(), [&directory](const auto& path) {
+		return directory_contains_path(directory, path.c_str());
+	});
+}
+
 void cleanup_unused_temporary_directories(const uae_prefs* additional_prefs = nullptr)
 {
 	for (auto directory = temporary_directories.begin(); directory != temporary_directories.end();) {
@@ -103,7 +111,8 @@ void cleanup_unused_temporary_directories(const uae_prefs* additional_prefs = nu
 			|| prefs_reference_directory(&changed_prefs, *directory)
 			|| (additional_prefs != &currprefs && additional_prefs != &changed_prefs
 				&& prefs_reference_directory(additional_prefs, *directory))
-			|| pending_snapshot_references_directory(*directory)) {
+			|| pending_snapshot_references_directory(*directory)
+			|| loaded_cd_paths_reference_directory(*directory)) {
 			++directory;
 			continue;
 		}
@@ -1217,6 +1226,7 @@ void rp9_init()
 	loaded_path.clear();
 	last_error.clear();
 	loaded_has_clip = false;
+	loaded_cd_paths.clear();
 }
 
 void rp9_cleanup()
@@ -1407,6 +1417,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 
 	for (const auto& warning : manifest.warnings)
 		write_log(_T("RP9: %s\n"), warning.c_str());
+	loaded_cd_paths = cd_paths;
 	temporary_directories.emplace_back(std::move(extraction_directory));
 	cleanup_unused_temporary_directories(prefs);
 	publish_cd_swap_list(cd_paths);
@@ -1444,4 +1455,5 @@ void rp9_clear_loaded_path()
 	}
 	loaded_path.clear();
 	loaded_has_clip = false;
+	loaded_cd_paths.clear();
 }
