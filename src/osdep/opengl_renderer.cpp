@@ -277,6 +277,7 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 			shader_name = "none";
 		} else {
 			write_log("Shader preset loaded successfully (%d passes)\n", m_shader.preset->get_pass_count());
+			restore_shader_parameters(shader_name);
 			return true;
 		}
 	}
@@ -290,6 +291,7 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 			shader_name = "none";
 		} else {
 			write_log("External shader loaded successfully\n");
+			restore_shader_parameters(shader_name);
 			return true;
 		}
 	}
@@ -913,6 +915,10 @@ void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int mo
 
 void OpenGLRenderer::destroy_shaders()
 {
+	// Shared-window GUI entry must release the GL shader objects, but the
+	// parameter editor still needs their CPU-side metadata and current values.
+	cache_shader_parameters();
+
 	// Clear tracked name so next alloc_texture call will recreate
 	m_shader.loaded_name.clear();
 
@@ -1008,13 +1014,37 @@ bool OpenGLRenderer::has_valid_shader() const
 
 bool OpenGLRenderer::has_shader_parameters() const
 {
-	if (m_shader.preset && m_shader.preset->is_valid() &&
-		!m_shader.preset->get_all_parameters().empty())
-		return true;
-	if (m_shader.external && m_shader.external->is_valid() &&
-		!m_shader.external->get_parameters().empty())
-		return true;
-	return false;
+	const auto* params = shader_parameters();
+	return params && !params->empty();
+}
+
+void OpenGLRenderer::cache_shader_parameters()
+{
+	const std::vector<ShaderParameter>* params = nullptr;
+	if (m_shader.preset && m_shader.preset->is_valid()) {
+		params = &m_shader.preset->get_all_parameters();
+	} else if (m_shader.external && m_shader.external->is_valid()) {
+		params = &m_shader.external->get_parameters();
+	}
+
+	if (params) {
+		m_shader.parameter_cache_name = m_shader.loaded_name;
+		m_shader.parameter_cache = *params;
+	}
+}
+
+void OpenGLRenderer::restore_shader_parameters(const char* shader_name)
+{
+	if (!shader_name || m_shader.parameter_cache_name != shader_name)
+		return;
+
+	for (const auto& param : m_shader.parameter_cache) {
+		if (m_shader.preset) {
+			m_shader.preset->set_parameter(param.name, param.current_value);
+		} else if (m_shader.external) {
+			m_shader.external->set_parameter(param.name, param.current_value);
+		}
+	}
 }
 
 // --- Bezel overlay ---
@@ -1684,6 +1714,52 @@ ShaderState& OpenGLRenderer::shader_state()
 const ShaderState& OpenGLRenderer::shader_state() const
 {
 	return m_shader;
+}
+
+std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters()
+{
+	return const_cast<std::vector<ShaderParameter>*>(
+		static_cast<const OpenGLRenderer*>(this)->shader_parameters());
+}
+
+const std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters() const
+{
+	const char* selected_name = get_selected_shader_name(&AMonitors[0]);
+	if (m_shader.loaded_name == selected_name) {
+		if (m_shader.preset && m_shader.preset->is_valid())
+			return &m_shader.preset->get_all_parameters();
+		if (m_shader.external && m_shader.external->is_valid())
+			return &m_shader.external->get_parameters();
+	}
+
+	if (m_shader.parameter_cache_name == selected_name)
+		return &m_shader.parameter_cache;
+
+	return nullptr;
+}
+
+bool OpenGLRenderer::set_shader_parameter(const std::string& name, float value)
+{
+	bool updated = false;
+	const char* selected_name = get_selected_shader_name(&AMonitors[0]);
+	if (m_shader.loaded_name == selected_name) {
+		if (m_shader.preset && m_shader.preset->is_valid())
+			updated = m_shader.preset->set_parameter(name, value) || updated;
+		else if (m_shader.external && m_shader.external->is_valid())
+			updated = m_shader.external->set_parameter(name, value) || updated;
+	}
+
+	if (m_shader.parameter_cache_name == selected_name) {
+		for (auto& param : m_shader.parameter_cache) {
+			if (param.name == name) {
+				param.current_value = std::max(param.min_value, std::min(param.max_value, value));
+				updated = true;
+				break;
+			}
+		}
+	}
+
+	return updated;
 }
 
 GLOverlayState& OpenGLRenderer::overlay_state()

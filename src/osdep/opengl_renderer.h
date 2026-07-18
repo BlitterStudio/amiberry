@@ -14,12 +14,13 @@
 
 #include "irenderer.h"
 #include "gl_platform.h"
+#include "external_shader.h"
 #include <SDL3/SDL.h>
 #include <string>
+#include <vector>
 
 // Forward declarations
 struct crtemu_t;
-class ExternalShader;
 class ShaderPreset;
 
 // Shader lifecycle and caching state (owned by OpenGLRenderer)
@@ -29,6 +30,8 @@ struct ShaderState {
 	ShaderPreset* preset = nullptr;
 	std::string external_name;
 	std::string loaded_name;      // cache key to avoid recreation
+	std::string parameter_cache_name;
+	std::vector<ShaderParameter> parameter_cache;
 	GLenum texture_filter_mode = GL_LINEAR;
 	bool bezel_enabled = false;
 };
@@ -128,6 +131,9 @@ public:
 	// Access shader state for filter.cpp parameter editing
 	ShaderState& shader_state();
 	const ShaderState& shader_state() const;
+	std::vector<ShaderParameter>* shader_parameters();
+	const std::vector<ShaderParameter>* shader_parameters() const;
+	bool set_shader_parameter(const std::string& name, float value);
 
 	// Access overlay state for overlay rendering functions
 	GLOverlayState& overlay_state();
@@ -149,6 +155,8 @@ private:
 	// Private helpers for overlay rendering
 	bool init_osd_shader();
 	bool load_bezel_texture(const char* bezel_name);
+	void cache_shader_parameters();
+	void restore_shader_parameters(const char* shader_name);
 
 	// Private helper for external shader rendering
 	void render_external_shader(ExternalShader* shader, int monid,

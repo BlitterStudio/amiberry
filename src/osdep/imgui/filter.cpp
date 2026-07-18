@@ -168,16 +168,8 @@ static void render_shader_parameters_popup()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
 	if (ImGui::Begin("Shader Parameters", &show_shader_params_popup)) {
-		std::vector<ShaderParameter>* params = nullptr;
-
-		auto* gl_renderer = g_renderer ? dynamic_cast<OpenGLRenderer*>(g_renderer.get()) : nullptr;
-		ShaderState* shader = gl_renderer ? &gl_renderer->shader_state() : nullptr;
-
-		if (shader && shader->preset && shader->preset->is_valid()) {
-			params = &shader->preset->get_all_parameters();
-		} else if (shader && shader->external && shader->external->is_valid()) {
-			params = const_cast<std::vector<ShaderParameter>*>(&shader->external->get_parameters());
-		}
+		auto* gl_renderer = get_opengl_renderer();
+		auto* params = gl_renderer ? gl_renderer->shader_parameters() : nullptr;
 
 		if (params && !params->empty()) {
 			ImGui::Text("Adjust shader parameters:");
@@ -193,12 +185,7 @@ static void render_shader_parameters_popup()
 				ImGui::SetNextItemWidth(-1);
 				if (ImGui::SliderFloat("##val", &param.current_value,
 					param.min_value, param.max_value, "%.3f")) {
-					// Apply the parameter change
-					if (shader && shader->preset) {
-						shader->preset->set_parameter(param.name, param.current_value);
-					} else if (shader && shader->external) {
-						shader->external->set_parameter(param.name, param.current_value);
-					}
+					gl_renderer->set_shader_parameter(param.name, param.current_value);
 				}
 				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 				ImGui::PopID();
@@ -209,11 +196,7 @@ static void render_shader_parameters_popup()
 			if (AmigaButton(ICON_FA_ARROW_ROTATE_LEFT " Reset to Defaults")) {
 				for (auto& param : *params) {
 					param.current_value = param.default_value;
-					if (shader && shader->preset) {
-						shader->preset->set_parameter(param.name, param.default_value);
-					} else if (shader && shader->external) {
-						shader->external->set_parameter(param.name, param.default_value);
-					}
+					gl_renderer->set_shader_parameter(param.name, param.default_value);
 				}
 			}
 		} else {
