@@ -741,8 +741,29 @@ std::filesystem::path resolve_media_path(const rp9::Media& media,
 
 	std::error_code error;
 	if (root == "absolute" || root == "external") {
-		set_error("RP9 media uses a disallowed external host path: " + media.path);
-		return {};
+		const std::filesystem::path path(media.path);
+		if (!path.is_absolute()) {
+			set_error("RP9 external media path is not absolute on this host: " + media.path);
+			return {};
+		}
+
+		const auto status = std::filesystem::status(path, error);
+		if (error) {
+			set_error("Could not inspect RP9 external media path '" + media.path + "': " + error.message());
+			return {};
+		}
+		if (!std::filesystem::exists(status)) {
+			set_error("RP9 external media was not found: " + media.path);
+			return {};
+		}
+		if (!std::filesystem::is_regular_file(status) && !std::filesystem::is_directory(status)) {
+			set_error("RP9 external media is not a regular file or directory: " + media.path);
+			return {};
+		}
+
+		const auto resolved = path.lexically_normal();
+		write_log(_T("RP9: resolved external media: %s\n"), resolved.string().c_str());
+		return resolved;
 	}
 	if (root == "data" || root == "shared") {
 		const auto base = std::filesystem::path(get_rp9_path());

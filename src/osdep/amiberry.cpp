@@ -5982,6 +5982,29 @@ void set_floppy_sounds_path(const std::string& newpath)
 	macos_bookmark_store(newpath);
 }
 
+static void register_rp9_rom_sources_from_prefs(const uae_prefs* prefs)
+{
+	if (!prefs)
+		return;
+
+	for (const auto& path : prefs->path_rom.path) {
+		if (!path[0])
+			continue;
+		const auto registered = rp9_register_rom_directory(path);
+		if (registered > 0) {
+			write_log(_T("RP9: registered %d ROM(s) from configured ROM path '%s'\n"), registered, path);
+		}
+	}
+
+	for (const auto* path : { prefs->romfile, prefs->romextfile, prefs->romextfile2 }) {
+		if (!path[0] || path[0] == ':')
+			continue;
+		if (!rp9_register_rom_override(path)) {
+			write_log(_T("RP9: configured ROM override could not be registered: %s\n"), path);
+		}
+	}
+}
+
 int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int isdefault)
 {
 	int type2;
@@ -6019,6 +6042,9 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 	else if (extension == ".rp9")
 	{
 		write_log(_T("target_cfgfile_load: loading RP9 package %s\n"), filename);
+		// A preceding config or -s option may have supplied ROM sources that the
+		// RP9 machine builder needs before it replaces the current preferences.
+		register_rp9_rom_sources_from_prefs(p);
 		result = rp9_parse_file(p, filename) ? 1 : 0;
 	}
 	if (!result)
