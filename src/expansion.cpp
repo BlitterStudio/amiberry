@@ -3844,14 +3844,20 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 		struct rtgboardconfig *rbc = &p->rtgboards[i];
 		if (rbc->rtgmem_size && rbc->rtgmem_type >= GFXBOARD_HARDWARE && gfxboard_get_configtype(rbc) == 3) {
 			cards_set[cardno].flags = 4 | CARD_FLAG_CAN_Z3 | (i << 16);
-			cards_set[cardno].name = _T("Z3RTG");
-			cards_set[cardno].zorro = 3;
-			cards_set[cardno++].initnum = gfxboard_init_memory;
-			if (gfxboard_is_registers(rbc)) {
-				cards_set[cardno].flags = 1 | (i << 16) | CARD_FLAG_CHILD;
+			if (gfxboard_get_func(rbc)) {
+				cards_set[cardno].name = _T("Z3RTG");
 				cards_set[cardno].zorro = 3;
-				cards_set[cardno].name = _T("Gfxboard Registers");
-				cards_set[cardno++].initnum = gfxboard_init_registers;
+				cards_set[cardno++].initnum = gfxboard_init_board;
+			} else {
+				cards_set[cardno].name = _T("Z3RTG");
+				cards_set[cardno].zorro = 3;
+				cards_set[cardno++].initnum = gfxboard_init_memory;
+				if (gfxboard_is_registers(rbc)) {
+					cards_set[cardno].flags = 1 | (i << 16) | CARD_FLAG_CHILD;
+					cards_set[cardno].zorro = 3;
+					cards_set[cardno].name = _T("Gfxboard Registers");
+					cards_set[cardno++].initnum = gfxboard_init_registers;
+				}
 			}
 		}
 	}

@@ -6592,17 +6592,15 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		if (cfgfile_string(option, value, tmp, tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 			rbc->rtgmem_type = 0;
 			rbc->rtg_index = i;
-			int j = 0;
-			for (;;) {
-				const TCHAR *t = gfxboard_get_configname(j);
-				if (!t) {
+			for (int j = 0;; j++) {
+				const int id = gfxboard_get_id_from_index(j);
+				if (id < 0)
 					break;
-				}
+				const TCHAR *t = gfxboard_get_configname(id);
 				if (!_tcsicmp(t, tmpbuf)) {
-					rbc->rtgmem_type = j;
+					rbc->rtgmem_type = id;
 					break;
 				}
-				j++;
 			}
 			return 1;
 		}

@@ -55,6 +55,7 @@ set(SOURCE_FILES
         src/softfloat/softfloat_decimal.cpp
         src/softfloat/softfloat_fpsp.cpp
         src/framebufferboards.cpp
+        src/zz9000.cpp
         src/fsdb.cpp
         src/fsusage.cpp
         src/gayle.cpp
