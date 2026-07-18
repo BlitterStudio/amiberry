@@ -49,6 +49,7 @@ std::string last_error;
 std::string loaded_snapshot_path;
 bool loaded_has_clip;
 std::vector<std::filesystem::path> temporary_directories;
+std::vector<std::string> loaded_floppy_paths;
 std::vector<std::string> loaded_cd_paths;
 std::atomic<unsigned long long> directory_sequence { 0 };
 
@@ -105,6 +106,13 @@ bool loaded_cd_paths_reference_directory(const std::filesystem::path& directory)
 	});
 }
 
+bool loaded_floppy_paths_reference_directory(const std::filesystem::path& directory)
+{
+	return std::any_of(loaded_floppy_paths.begin(), loaded_floppy_paths.end(), [&directory](const auto& path) {
+		return directory_contains_path(directory, path.c_str());
+	});
+}
+
 void cleanup_unused_temporary_directories(const uae_prefs* additional_prefs = nullptr)
 {
 	for (auto directory = temporary_directories.begin(); directory != temporary_directories.end();) {
@@ -113,6 +121,7 @@ void cleanup_unused_temporary_directories(const uae_prefs* additional_prefs = nu
 			|| (additional_prefs != &currprefs && additional_prefs != &changed_prefs
 				&& prefs_reference_directory(additional_prefs, *directory))
 			|| pending_snapshot_references_directory(*directory)
+			|| loaded_floppy_paths_reference_directory(*directory)
 			|| loaded_cd_paths_reference_directory(*directory)) {
 			++directory;
 			continue;
@@ -1157,6 +1166,7 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 	const std::unordered_map<std::string, std::filesystem::path>& files,
 	const std::string& deployment_id, const std::filesystem::path& extraction_directory,
 	std::string& snapshot_path,
+	std::vector<std::string>& floppy_paths,
 	std::vector<std::string>& cd_paths)
 {
 	int device_number = 0;
@@ -1192,6 +1202,7 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 		const auto path_string = path.string();
 		switch (media.type) {
 		case rp9::MediaType::Floppy:
+			floppy_paths.emplace_back(path_string);
 			if (floppy_count < MAX_SPARE_DRIVES) {
 				copy_path(prefs->dfxlist[floppy_count], MAX_DPATH, path_string);
 				// RP9 priorities are one-based insertion preferences (priority 1
@@ -1274,6 +1285,7 @@ void rp9_init()
 	last_error.clear();
 	loaded_snapshot_path.clear();
 	loaded_has_clip = false;
+	loaded_floppy_paths.clear();
 	loaded_cd_paths.clear();
 }
 
@@ -1409,6 +1421,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 
 	std::unique_ptr<uae_prefs> candidate;
 	std::string snapshot_path;
+	std::vector<std::string> floppy_paths;
 	std::vector<std::string> cd_paths;
 	if (result) {
 		candidate = std::make_unique<uae_prefs>();
@@ -1421,7 +1434,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 		if (result) {
 			apply_video_and_clip(candidate.get(), manifest);
 			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id,
-				extraction_directory, snapshot_path, cd_paths);
+				extraction_directory, snapshot_path, floppy_paths, cd_paths);
 		}
 #ifdef JIT
 		const bool jit_requested = manifest_requests_jit(manifest);
@@ -1466,6 +1479,7 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 
 	for (const auto& warning : manifest.warnings)
 		write_log(_T("RP9: %s\n"), warning.c_str());
+	loaded_floppy_paths = floppy_paths;
 	loaded_cd_paths = cd_paths;
 	temporary_directories.emplace_back(std::move(extraction_directory));
 	cleanup_unused_temporary_directories(prefs);
@@ -1491,6 +1505,16 @@ const std::string& rp9_get_last_error()
 	return last_error;
 }
 
+const std::vector<std::string>& rp9_get_loaded_floppy_paths()
+{
+	return loaded_floppy_paths;
+}
+
+const std::vector<std::string>& rp9_get_loaded_cd_paths()
+{
+	return loaded_cd_paths;
+}
+
 bool rp9_loaded_has_clip()
 {
 	return loaded_has_clip;
@@ -1505,5 +1529,6 @@ void rp9_clear_loaded_path()
 	loaded_snapshot_path.clear();
 	loaded_path.clear();
 	loaded_has_clip = false;
+	loaded_floppy_paths.clear();
 	loaded_cd_paths.clear();
 }

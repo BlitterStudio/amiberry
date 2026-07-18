@@ -26,6 +26,7 @@
 #include <atomic>
 #include <chrono>
 #include <climits>
+#include <iterator>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -1978,6 +1979,43 @@ static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
 }
 
 static bool libretro_get_image_label(unsigned index, char* s, size_t len);
+
+static void sync_rp9_disk_control_media()
+{
+	const auto& floppy_paths = rp9_get_loaded_floppy_paths();
+	const auto& cd_paths = rp9_get_loaded_cd_paths();
+	const bool use_cd_paths = !cd_paths.empty()
+		&& (floppy_paths.empty() || currprefs.cs_cd32cd || currprefs.cs_cdtvcd);
+	const auto& media_paths = use_cd_paths ? cd_paths : floppy_paths;
+	const TCHAR* inserted_path = use_cd_paths
+		? currprefs.cdslots[0].name
+		: currprefs.floppyslots[0].df;
+
+	std::lock_guard<std::mutex> lock(disk_mutex);
+	disk_images.clear();
+	for (const auto& path : media_paths)
+		disk_images.push_back({ path, {} });
+
+	content_is_cd = use_cd_paths;
+	disk_index = 0;
+	disk_ejected = disk_images.empty() || !inserted_path[0];
+	if (!disk_ejected) {
+		const auto inserted = std::find_if(disk_images.begin(), disk_images.end(), [inserted_path](const auto& image) {
+			return image.path == inserted_path;
+		});
+		if (inserted != disk_images.end())
+			disk_index = static_cast<unsigned>(std::distance(disk_images.begin(), inserted));
+		else
+			disk_ejected = true;
+	}
+	last_disk_index = disk_index;
+	last_disk_ejected = disk_ejected;
+
+	if (log_cb) {
+		log_cb(RETRO_LOG_INFO, "RP9 disk control: exposed %zu %s image(s)\n",
+			disk_images.size(), use_cd_paths ? "CD" : "floppy");
+	}
+}
 
 static void show_message(const char* text, unsigned duration_ms = 2000,
 	enum retro_log_level level = RETRO_LOG_INFO)
@@ -4587,6 +4625,8 @@ void retro_run(void)
 		}
 		if (core_shutdown_complete)
 			return;
+		if (path_extension_lower(game_path) == "rp9")
+			sync_rp9_disk_control_media();
 		core_started = true;
 		update_memory_map();
 		return;
@@ -4773,9 +4813,11 @@ bool retro_load_game(const struct retro_game_info *info)
 			disk_ejected = false;
 			last_disk_index = 0;
 			last_disk_ejected = false;
-			DiskImage image;
-			image.path = package_path;
-			disk_images.push_back(image);
+			if (!is_rp9) {
+				DiskImage image;
+				image.path = package_path;
+				disk_images.push_back(image);
+			}
 			strncpy(game_path, package_path.c_str(), sizeof(game_path) - 1);
 			game_path[sizeof(game_path) - 1] = '\0';
 			if (log_cb)
