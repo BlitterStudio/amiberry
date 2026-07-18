@@ -1395,6 +1395,16 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			const auto ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
 			if (ret == -1)
 				usage();
+#ifdef AMIBERRY
+			// RP9 validates explicit ROM requirements while --autoload is parsed.
+			// Register a preceding -r path so an override outside scanned ROM roots
+			// can satisfy that validation.
+			if (ret && argv[i][1] == 'r' && currprefs.romfile[0]
+				&& !rp9_register_rom_override(currprefs.romfile)) {
+				write_log(_T("Kickstart override could not be registered for RP9 validation: %s\n"),
+					currprefs.romfile);
+			}
+#endif
 			if (ret && extra_arg)
 				i++;
 		} else if (!loaded) {

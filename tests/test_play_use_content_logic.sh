@@ -68,6 +68,27 @@ if ! grep -F -q 'selected_content_still_attached()' "$source_file"; then
 	exit 1
 fi
 
+if ! awk '
+	/void mark_content_applied\(\)/ { in_mark = 1 }
+	in_mark && /applied_content_type != PlayContentType::Rp9/ { guarded = 1 }
+	in_mark && guarded && /rp9_clear_loaded_path\(\);/ { found = 1; exit }
+	in_mark && /^}/ { exit }
+	END { exit found ? 0 : 1 }
+' "$source_file"; then
+	echo "Successful non-RP9 Play applies must clear stale RP9 reload state" >&2
+	exit 1
+fi
+
+if awk '
+	/bool apply_selected_content\(/ { in_apply = 1 }
+	in_apply && /rp9_clear_loaded_path\(\);/ { found = 1 }
+	in_apply && /^}/ { exit }
+	END { exit found ? 0 : 1 }
+' "$source_file"; then
+	echo "Play must not clear RP9 reload state before replacement content applies successfully" >&2
+	exit 1
+fi
+
 if grep -F -q 'play_mark_selected_content_pending();' "$quickstart_source_file"; then
 	echo "Quickstart defaults must not globally mark Play content pending" >&2
 	exit 1

@@ -27,6 +27,7 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "options.h"
+#include "rommgr.h"
 #include "rp9_manifest.h"
 #include "savestate.h"
 #include "target.h"
@@ -1184,6 +1185,32 @@ void rp9_cleanup()
 void rp9_cleanup_unused()
 {
 	cleanup_unused_temporary_directories();
+}
+
+bool rp9_register_rom_override(const char* filename)
+{
+	if (!filename || !filename[0])
+		return false;
+	if (getromdatabypath(filename))
+		return true;
+
+	// Cloanto-encrypted ROMs need the sibling key before their identity can be
+	// checked. This is harmless for plain ROMs and mirrors normal ROM scanning.
+	const auto key_path = std::filesystem::path(filename).parent_path() / "rom.key";
+	std::error_code error;
+	if (std::filesystem::is_regular_file(key_path, error) && !error)
+		addkeyfile(key_path.string().c_str());
+
+	auto* file = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
+	if (!file)
+		return false;
+	auto* const rom = scan_single_rom_file(file);
+	zfile_fclose(file);
+	if (!rom)
+		return false;
+
+	romlist_add(filename, rom);
+	return true;
 }
 
 bool rp9_parse_file(uae_prefs* prefs, const char* filename)

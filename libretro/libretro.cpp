@@ -4046,9 +4046,13 @@ static void core_entry(void)
 		}
 
 		if (have_kick) {
-			if (is_rp9)
+			if (is_rp9) {
+				// The first occurrence registers the ROM before RP9 manifest
+				// validation. Reapply it after autoload because RP9 rebuilds prefs.
+				safe_strdup("-r");
+				safe_strdup(kick_path);
 				deferred_rp9_kickstart = kick_path;
-			else {
+			} else {
 				safe_strdup("-r");
 				safe_strdup(kick_path);
 			}

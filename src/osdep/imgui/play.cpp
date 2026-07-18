@@ -433,6 +433,8 @@ PlayContentType selected_action_type()
 void mark_content_applied()
 {
 	applied_content_type = selected_action_type();
+	if (applied_content_type != PlayContentType::Rp9)
+		rp9_clear_loaded_path();
 	applied_content_attachment_path = current_attachment_path_for_type(applied_content_type);
 	applied_config_summary = describe_current_config();
 	selected_content_applied = true;
@@ -626,8 +628,6 @@ bool apply_cd_content()
 
 bool apply_selected_content(const PlayContentType type)
 {
-	if (type != PlayContentType::Rp9)
-		rp9_clear_loaded_path();
 	switch (type) {
 	case PlayContentType::Configuration:
 		return apply_configuration_content();
