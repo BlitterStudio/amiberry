@@ -38,6 +38,7 @@ namespace
 constexpr const char* manifest_name = "rp9-manifest.xml";
 constexpr std::uint64_t maximum_manifest_size = 4 * 1024 * 1024;
 constexpr std::uint64_t maximum_extracted_size = 16ULL * 1024 * 1024 * 1024;
+constexpr std::uintmax_t maximum_scanned_rom_size = 10000000;
 constexpr unsigned long maximum_archive_entries = 10000;
 constexpr std::size_t maximum_entry_name = 4096;
 constexpr std::size_t extraction_buffer_size = 128 * 1024;
@@ -902,6 +903,7 @@ bool apply_peripherals(uae_prefs* prefs, const rp9::Manifest& manifest)
 			return false;
 #endif
 		} else if (peripheral.name == "rtg" && peripheral.type == "picasso-iv") {
+			prefs->address_space_24 = false;
 			prefs->rtgboards[0].rtgmem_type = GFXBOARD_ID_PICASSO4_Z3;
 			prefs->rtgboards[0].rtgmem_size = static_cast<uae_u32>(std::min<std::uint64_t>(
 				peripheral.has_memory ? peripheral.memory : 4 * 1024 * 1024, UINT32_MAX));
@@ -1257,6 +1259,44 @@ bool rp9_register_rom_override(const char* filename)
 
 	romlist_add(filename, rom);
 	return true;
+}
+
+int rp9_register_rom_directory(const char* directory)
+{
+	if (!directory || !directory[0])
+		return 0;
+
+	std::error_code error;
+	const std::filesystem::path root(directory);
+	if (!std::filesystem::is_directory(root, error) || error)
+		return 0;
+
+	std::vector<std::filesystem::path> candidates;
+	for (std::filesystem::directory_iterator entry(root,
+		std::filesystem::directory_options::skip_permission_denied, error), end;
+		entry != end; entry.increment(error)) {
+		if (error)
+			break;
+		if (!entry->is_regular_file(error) || error) {
+			error.clear();
+			continue;
+		}
+		const auto size = entry->file_size(error);
+		if (error || size >= maximum_scanned_rom_size) {
+			error.clear();
+			continue;
+		}
+		if (_tcsicmp(entry->path().filename().string().c_str(), _T("rom.key")) != 0)
+			candidates.push_back(entry->path());
+	}
+
+	std::sort(candidates.begin(), candidates.end());
+	int registered = 0;
+	for (const auto& candidate : candidates) {
+		if (rp9_register_rom_override(candidate.string().c_str()))
+			++registered;
+	}
+	return registered;
 }
 
 bool rp9_parse_file(uae_prefs* prefs, const char* filename)

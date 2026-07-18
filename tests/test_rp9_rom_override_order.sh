@@ -10,15 +10,25 @@ if ! grep -F -q 'rp9_register_rom_override(path)' "$main_source"; then
 	exit 1
 fi
 
-prescan_line=$(grep -n -F 'register_cmdline_rom_overrides(argc, argv);' "$main_source" | head -1 | cut -d: -f1)
+if ! grep -F -q 'rp9_register_rom_directory(path)' "$main_source"; then
+	echo "Command-line ROM directories must be registered for RP9 validation" >&2
+	exit 1
+fi
+
+prescan_line=$(grep -n -F 'register_cmdline_rp9_rom_sources(argc, argv);' "$main_source" | head -1 | cut -d: -f1)
 host_autoload_line=$(grep -n -F '_T("--autoload")' "$main_source" | head -1 | cut -d: -f1)
 if [ -z "$prescan_line" ] || [ -z "$host_autoload_line" ] || [ "$prescan_line" -ge "$host_autoload_line" ]; then
-	echo "All host -r overrides must be registered before RP9 autoload validation" >&2
+	echo "All host ROM sources must be registered before RP9 autoload validation" >&2
 	exit 1
 fi
 
 if ! grep -F -q 'romlist_add(filename, rom);' "$rp9_source"; then
 	echo "RP9 ROM overrides must be published to the detected ROM list" >&2
+	exit 1
+fi
+
+if ! grep -F -q 'push_s_option(rom_path);' "$libretro_source"; then
+	echo "Libretro must publish its detected ROM directory to the RP9 pre-scan" >&2
 	exit 1
 fi
 

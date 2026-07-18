@@ -14,3 +14,15 @@ if ! awk '
 	echo "RP9 Z3 RAM must enable 32-bit addressing before assigning memory" >&2
 	exit 1
 fi
+
+if ! awk '
+	/bool apply_peripherals\(/ { in_peripherals = 1 }
+	in_peripherals && /peripheral.name == "rtg" && peripheral.type == "picasso-iv"/ { in_picasso = 1 }
+	in_peripherals && in_picasso && /address_space_24 = false;/ { addressing = 1 }
+	in_peripherals && in_picasso && /rtgmem_type = GFXBOARD_ID_PICASSO4_Z3/ { board = 1; exit }
+	in_peripherals && /^}/ { exit }
+	END { exit addressing && board ? 0 : 1 }
+' "$source_file"; then
+	echo "RP9 Picasso IV must enable 32-bit addressing before selecting its Z3 board" >&2
+	exit 1
+fi

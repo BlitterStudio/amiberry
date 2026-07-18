@@ -1167,24 +1167,47 @@ static TCHAR *parsetextpath (const TCHAR *s)
 }
 
 #ifdef AMIBERRY
-static void register_cmdline_rom_overrides(const int argc, TCHAR** argv)
+static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 {
 	for (auto index = 1; index < argc; ++index) {
-		if (argv[index][0] != '-' || argv[index][1] != 'r')
+		if (argv[index][0] != '-')
 			continue;
 
-		const TCHAR* argument = argv[index] + 2;
-		if (!argument[0]) {
-			if (index + 1 >= argc)
-				continue;
-			argument = argv[++index];
+		if (argv[index][1] == 'r') {
+			const TCHAR* argument = argv[index] + 2;
+			if (!argument[0]) {
+				if (index + 1 >= argc)
+					continue;
+				argument = argv[++index];
+			}
+
+			auto* const path = parsetextpath(argument);
+			if (path[0] && !rp9_register_rom_override(path)) {
+				write_log(_T("Kickstart override could not be registered for RP9 validation: %s\n"), path);
+			}
+			xfree(path);
+			continue;
 		}
 
-		auto* const path = parsetextpath(argument);
-		if (path[0] && !rp9_register_rom_override(path)) {
-			write_log(_T("Kickstart override could not be registered for RP9 validation: %s\n"), path);
+		if (argv[index][1] == 's') {
+			const TCHAR* argument = argv[index] + 2;
+			if (!argument[0]) {
+				if (index + 1 >= argc)
+					continue;
+				argument = argv[++index];
+			}
+			constexpr auto rom_path_prefix = _T("rom_path=");
+			constexpr auto rom_path_prefix_length = 9;
+			if (_tcsnicmp(argument, rom_path_prefix, rom_path_prefix_length) != 0)
+				continue;
+
+			auto* const path = parsetextpath(argument + rom_path_prefix_length);
+			const auto registered = rp9_register_rom_directory(path);
+			if (registered > 0) {
+				write_log(_T("RP9: registered %d ROM(s) from command-line ROM path '%s'\n"), registered, path);
+			}
+			xfree(path);
 		}
-		xfree(path);
 	}
 }
 #endif
@@ -1224,8 +1247,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 
 #ifdef AMIBERRY
 	// RP9 validates required ROMs as soon as --autoload is parsed, so publish
-	// every explicit override before processing options in their requested order.
-	register_cmdline_rom_overrides(argc, argv);
+	// every explicit override and ROM path before processing options in order.
+	register_cmdline_rp9_rom_sources(argc, argv);
 #endif
 
 	for (auto i = 1; i < argc; i++) {

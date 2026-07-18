@@ -8,6 +8,7 @@ void rp9_init();
 void rp9_cleanup();
 void rp9_cleanup_unused();
 bool rp9_register_rom_override(const char* filename);
+int rp9_register_rom_directory(const char* directory);
 bool rp9_parse_file(struct uae_prefs* prefs, const char* filename);
 const std::string& rp9_get_loaded_path();
 const std::string& rp9_get_last_error();
