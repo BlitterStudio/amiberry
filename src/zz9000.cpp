@@ -894,6 +894,19 @@ static bool zz_surface_free(zz9000_state *data, uae_u32 offset)
 	return false;
 }
 
+static void zz_refresh_host_palette(zz9000_state *data)
+{
+	auto &state = picasso96_state[data->monitor_id];
+	picasso_palette(state.CLUT, picasso_vidinfo[data->monitor_id].clut);
+}
+
+static void zz_activate_palette(zz9000_state *data, const MyCLUTEntry *palette)
+{
+	memcpy(picasso96_state[data->monitor_id].CLUT, palette,
+		sizeof data->primary_palette);
+	zz_refresh_host_palette(data);
+}
+
 static void zz_update_palette(zz9000_state *data, int index, int red, int green, int blue,
 	bool secondary = false)
 {
@@ -903,8 +916,10 @@ static void zz_update_palette(zz9000_state *data, int index, int red, int green,
 	entry.Green = static_cast<uae_u8>(green);
 	entry.Blue = static_cast<uae_u8>(blue);
 	entry.Pad = 0;
-	if (!secondary)
+	if (!secondary) {
 		picasso96_state[data->monitor_id].CLUT[index] = entry;
+		zz_refresh_host_palette(data);
+	}
 	data->modified = true;
 }
 
@@ -1665,8 +1680,7 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 				const int source_y = split ? y - data->split_position : y;
 				if (split && data->secondary_palette_feature && !secondary_palette_active &&
 					data->color_mode == ZZ_COLOR_CLUT) {
-					memcpy(picasso96_state[data->monitor_id].CLUT, data->secondary_palette,
-						sizeof data->secondary_palette);
+					zz_activate_palette(data, data->secondary_palette);
 					secondary_palette_active = true;
 				}
 				const uae_u8 *source = zz_memory_ptr(data, source_base + source_y * source_pitch,
@@ -1682,8 +1696,7 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 				fb_copyrow(data->monitor_id, line, surface, 0, 0, data->width, bpp, y);
 			}
 			if (secondary_palette_active)
-				memcpy(picasso96_state[data->monitor_id].CLUT, data->primary_palette,
-					sizeof data->primary_palette);
+				zz_activate_palette(data, data->primary_palette);
 			xfree(line);
 			data->modified = false;
 			data->mode_changed = false;
