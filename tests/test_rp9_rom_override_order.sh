@@ -10,6 +10,17 @@ if ! grep -F -q 'rp9_register_rom_override(path)' "$main_source"; then
 	exit 1
 fi
 
+if ! grep -F -q "argv[index][1] == 'r' || argv[index][1] == 'K'" "$main_source"; then
+	echo "Command-line -K overrides must be registered for RP9 validation" >&2
+	exit 1
+fi
+
+if ! grep -F -q '_T("kickstart_rom_file=")' "$main_source" ||
+	! grep -F -q '_T("kickstart_ext_rom_file=")' "$main_source"; then
+	echo "Command-line Kickstart configuration overrides must be registered for RP9 validation" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'rp9_register_rom_directory(path)' "$main_source"; then
 	echo "Command-line ROM directories must be registered for RP9 validation" >&2
 	exit 1

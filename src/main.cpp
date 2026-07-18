@@ -1173,7 +1173,8 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 		if (argv[index][0] != '-')
 			continue;
 
-		if (argv[index][1] == 'r') {
+		if (argv[index][1] == 'r' || argv[index][1] == 'K') {
+			const auto extended = argv[index][1] == 'K';
 			const TCHAR* argument = argv[index] + 2;
 			if (!argument[0]) {
 				if (index + 1 >= argc)
@@ -1183,7 +1184,8 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 
 			auto* const path = parsetextpath(argument);
 			if (path[0] && !rp9_register_rom_override(path)) {
-				write_log(_T("Kickstart override could not be registered for RP9 validation: %s\n"), path);
+				write_log(_T("%sKickstart override could not be registered for RP9 validation: %s\n"),
+					extended ? _T("Extended ") : _T(""), path);
 			}
 			xfree(path);
 			continue;
@@ -1198,13 +1200,32 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 			}
 			constexpr auto rom_path_prefix = _T("rom_path=");
 			constexpr auto rom_path_prefix_length = 9;
-			if (_tcsnicmp(argument, rom_path_prefix, rom_path_prefix_length) != 0)
-				continue;
+			constexpr auto rom_file_prefix = _T("kickstart_rom_file=");
+			constexpr auto rom_file_prefix_length = 19;
+			constexpr auto rom_ext_file_prefix = _T("kickstart_ext_rom_file=");
+			constexpr auto rom_ext_file_prefix_length = 23;
 
-			auto* const path = parsetextpath(argument + rom_path_prefix_length);
-			const auto registered = rp9_register_rom_directory(path);
-			if (registered > 0) {
-				write_log(_T("RP9: registered %d ROM(s) from command-line ROM path '%s'\n"), registered, path);
+			const TCHAR* path_argument = nullptr;
+			bool directory = false;
+			if (_tcsnicmp(argument, rom_path_prefix, rom_path_prefix_length) == 0) {
+				path_argument = argument + rom_path_prefix_length;
+				directory = true;
+			} else if (_tcsnicmp(argument, rom_file_prefix, rom_file_prefix_length) == 0) {
+				path_argument = argument + rom_file_prefix_length;
+			} else if (_tcsnicmp(argument, rom_ext_file_prefix, rom_ext_file_prefix_length) == 0) {
+				path_argument = argument + rom_ext_file_prefix_length;
+			} else {
+				continue;
+			}
+
+			auto* const path = parsetextpath(path_argument);
+			if (directory) {
+				const auto registered = rp9_register_rom_directory(path);
+				if (registered > 0) {
+					write_log(_T("RP9: registered %d ROM(s) from command-line ROM path '%s'\n"), registered, path);
+				}
+			} else if (path[0] && !rp9_register_rom_override(path)) {
+				write_log(_T("Kickstart configuration override could not be registered for RP9 validation: %s\n"), path);
 			}
 			xfree(path);
 		}
