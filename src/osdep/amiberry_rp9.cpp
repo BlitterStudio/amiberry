@@ -831,8 +831,10 @@ void apply_ram(uae_prefs* prefs, const rp9::Manifest& manifest)
 			prefs->chipmem.size = static_cast<uae_u32>(std::min<std::uint64_t>(ram.size, UINT32_MAX));
 		else if (ram.type == "fast")
 			prefs->fastmem[0].size = static_cast<uae_u32>(std::min<std::uint64_t>(ram.size, UINT32_MAX));
-		else if (ram.type == "z3")
+		else if (ram.type == "z3") {
+			prefs->address_space_24 = false;
 			prefs->z3fastmem[0].size = static_cast<uae_u32>(std::min<std::uint64_t>(ram.size, UINT32_MAX));
+		}
 		else if (ram.type == "slow" || ram.type == "bogo")
 			prefs->bogomem.size = static_cast<uae_u32>(std::min<std::uint64_t>(ram.size, UINT32_MAX));
 		else

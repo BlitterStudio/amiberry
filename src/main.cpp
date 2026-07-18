@@ -1166,6 +1166,29 @@ static TCHAR *parsetextpath (const TCHAR *s)
 	return s3;
 }
 
+#ifdef AMIBERRY
+static void register_cmdline_rom_overrides(const int argc, TCHAR** argv)
+{
+	for (auto index = 1; index < argc; ++index) {
+		if (argv[index][0] != '-' || argv[index][1] != 'r')
+			continue;
+
+		const TCHAR* argument = argv[index] + 2;
+		if (!argument[0]) {
+			if (index + 1 >= argc)
+				continue;
+			argument = argv[++index];
+		}
+
+		auto* const path = parsetextpath(argument);
+		if (path[0] && !rp9_register_rom_override(path)) {
+			write_log(_T("Kickstart override could not be registered for RP9 validation: %s\n"), path);
+		}
+		xfree(path);
+	}
+}
+#endif
+
 std::string get_filename_extension(const TCHAR* filename)
 {
 	const std::string fName(filename);
@@ -1198,6 +1221,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 	if (cmdline_started)
 		return;
 	cmdline_started = true;
+
+#ifdef AMIBERRY
+	// RP9 validates required ROMs as soon as --autoload is parsed, so publish
+	// every explicit override before processing options in their requested order.
+	register_cmdline_rom_overrides(argc, argv);
+#endif
 
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cli="), 5) == 0 || _tcsncmp(argv[i], _T("--cli="), 6) == 0) {
@@ -1395,16 +1424,6 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			const auto ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
 			if (ret == -1)
 				usage();
-#ifdef AMIBERRY
-			// RP9 validates explicit ROM requirements while --autoload is parsed.
-			// Register a preceding -r path so an override outside scanned ROM roots
-			// can satisfy that validation.
-			if (ret && argv[i][1] == 'r' && currprefs.romfile[0]
-				&& !rp9_register_rom_override(currprefs.romfile)) {
-				write_log(_T("Kickstart override could not be registered for RP9 validation: %s\n"),
-					currprefs.romfile);
-			}
-#endif
 			if (ret && extra_arg)
 				i++;
 		} else if (!loaded) {

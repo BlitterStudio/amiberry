@@ -5,8 +5,15 @@ main_source="src/main.cpp"
 libretro_source="libretro/libretro.cpp"
 rp9_source="src/osdep/amiberry_rp9.cpp"
 
-if ! grep -F -q 'rp9_register_rom_override(currprefs.romfile)' "$main_source"; then
-	echo "A command-line -r override must be registered for RP9 validation" >&2
+if ! grep -F -q 'rp9_register_rom_override(path)' "$main_source"; then
+	echo "Command-line -r overrides must be registered for RP9 validation" >&2
+	exit 1
+fi
+
+prescan_line=$(grep -n -F 'register_cmdline_rom_overrides(argc, argv);' "$main_source" | head -1 | cut -d: -f1)
+host_autoload_line=$(grep -n -F '_T("--autoload")' "$main_source" | head -1 | cut -d: -f1)
+if [ -z "$prescan_line" ] || [ -z "$host_autoload_line" ] || [ "$prescan_line" -ge "$host_autoload_line" ]; then
+	echo "All host -r overrides must be registered before RP9 autoload validation" >&2
 	exit 1
 fi
 
