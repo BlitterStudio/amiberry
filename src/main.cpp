@@ -1200,6 +1200,8 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 			}
 			constexpr auto rom_path_prefix = _T("rom_path=");
 			constexpr auto rom_path_prefix_length = 9;
+			constexpr auto qualified_rom_path_prefix = TARGET_NAME _T(".rom_path=");
+			constexpr auto qualified_rom_path_prefix_length = sizeof(TARGET_NAME _T(".rom_path=")) / sizeof(TCHAR) - 1;
 			constexpr auto rom_file_prefix = _T("kickstart_rom_file=");
 			constexpr auto rom_file_prefix_length = 19;
 			constexpr auto rom_ext_file_prefix = _T("kickstart_ext_rom_file=");
@@ -1209,6 +1211,9 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 			bool directory = false;
 			if (_tcsnicmp(argument, rom_path_prefix, rom_path_prefix_length) == 0) {
 				path_argument = argument + rom_path_prefix_length;
+				directory = true;
+			} else if (_tcsnicmp(argument, qualified_rom_path_prefix, qualified_rom_path_prefix_length) == 0) {
+				path_argument = argument + qualified_rom_path_prefix_length;
 				directory = true;
 			} else if (_tcsnicmp(argument, rom_file_prefix, rom_file_prefix_length) == 0) {
 				path_argument = argument + rom_file_prefix_length;

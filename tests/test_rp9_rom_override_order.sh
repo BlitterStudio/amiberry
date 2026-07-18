@@ -27,6 +27,13 @@ if ! grep -F -q 'rp9_register_rom_directory(path)' "$main_source"; then
 	exit 1
 fi
 
+if ! grep -F -q 'TARGET_NAME _T(".rom_path=")' "$main_source" ||
+	! grep -F -q '_tcsnicmp(argument, qualified_rom_path_prefix, qualified_rom_path_prefix_length)' "$main_source" ||
+	! grep -F -q 'path_argument = argument + qualified_rom_path_prefix_length;' "$main_source"; then
+	echo "Section-qualified command-line ROM paths must be registered for RP9 validation" >&2
+	exit 1
+fi
+
 prescan_line=$(grep -n -F 'register_cmdline_rp9_rom_sources(argc, argv);' "$main_source" | head -1 | cut -d: -f1)
 host_autoload_line=$(grep -n -F '_T("--autoload")' "$main_source" | head -1 | cut -d: -f1)
 if [ -z "$prescan_line" ] || [ -z "$host_autoload_line" ] || [ "$prescan_line" -ge "$host_autoload_line" ]; then
