@@ -41,9 +41,10 @@ object IntentImportExecutor {
 		) : Launch
 	}
 
-	suspend fun importAndPrepare(context: Context, uri: Uri): PreparedImport {
+	suspend fun importAndPrepare(context: Context, uri: Uri, intentMimeType: String? = null): PreparedImport {
 		val rawName = FileManager.getDisplayName(context, uri) ?: uri.lastPathSegment
-		return when (val import = IntentImport.classify(rawName)) {
+		val mimeType = intentMimeType ?: context.contentResolver.getType(uri)
+		return when (val import = IntentImport.classify(rawName, mimeType)) {
 			is IntentImport.Classification.Config -> importConfig(context, uri, import.safeName)
 			is IntentImport.Classification.Rp9 -> importRp9(context, uri, import.safeName)
 			is IntentImport.Classification.Media -> importMedia(context, uri, import)

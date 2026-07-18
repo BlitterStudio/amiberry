@@ -790,6 +790,8 @@ void render_panel_quickstart() {
         std::string filePath;
         if (ConsumeFileDialogResultKey("QUICKSTART", filePath)) {
             play_clear_content_selection();
+            if (!qs_pending_rp9 && !filePath.empty() && !rp9_get_loaded_path().empty())
+                reset_rp9_to_quickstart_defaults();
             if (qs_pending_floppy_drive >= 0 && qs_pending_floppy_drive < 2) {
                 int i = qs_pending_floppy_drive;
                 if (!filePath.empty()) {
@@ -846,9 +848,6 @@ void render_panel_quickstart() {
                     }
                 }
             }
-            if (!qs_pending_rp9 && !filePath.empty())
-                rp9_clear_loaded_path();
-
             qs_pending_floppy_drive = -1;
             qs_pending_cd = false;
             qs_pending_whd = false;
