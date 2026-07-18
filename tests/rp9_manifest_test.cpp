@@ -99,6 +99,19 @@ void test_real_world_22_manifest_shape()
 	expect(manifest.compatibility.size() == 2, "real-world compatibility hints must be preserved");
 }
 
+void test_only_system_rom_is_selected()
+{
+	constexpr auto xml = R"xml(<rp9><requirements><host>RetroPlatform</host><playerversion>3.0.0.0</playerversion></requirements>
+  <application><configuration><system>cd32</system>
+    <rom type="system">310-cd32</rom><rom type="extended">CD32 Extended ROM</rom><rom>untyped</rom>
+  </configuration></application></rp9>)xml";
+	rp9::Manifest manifest;
+	std::string error;
+	expect(parse(xml, manifest, error), "multiple typed ROM entries must be accepted");
+	expect(manifest.system_rom == "310-cd32",
+		"only type=system ROM entries may select the required Kickstart");
+}
+
 void test_real_world_30_harddrive_attributes()
 {
 	constexpr auto xml = R"xml(<rp9 xmlns="http://www.retroplatform.com">
@@ -226,6 +239,7 @@ int main(const int argc, char** argv)
 	test_current_namespaced_manifest();
 	test_prefixed_namespace();
 	test_real_world_22_manifest_shape();
+	test_only_system_rom_is_selected();
 	test_real_world_30_harddrive_attributes();
 	test_empty_shared_root_media();
 	test_medialess_package();

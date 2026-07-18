@@ -737,6 +737,44 @@ std::filesystem::path resolve_media_path(const rp9::Media& media,
 	return {};
 }
 
+std::filesystem::path prepare_undoable_hardfile(const rp9::Media& media,
+	const std::filesystem::path& source, const std::filesystem::path& extraction_directory,
+	const int device_number)
+{
+	// Embedded hardfiles already live in the disposable extraction directory.
+	// Read-only media cannot accumulate changes, so neither case needs a copy.
+	if (!media.undo || media.readonly
+		|| directory_contains_path(extraction_directory, source.string().c_str()))
+		return source;
+
+	std::error_code error;
+	if (!std::filesystem::is_regular_file(source, error) || error) {
+		set_error("RP9 undo is only supported for hardfile images: " + media.path);
+		return {};
+	}
+
+	const auto undo_directory = extraction_directory / "undo";
+	std::filesystem::create_directories(undo_directory, error);
+	if (error) {
+		set_error("Could not create the RP9 hardfile undo directory: " + error.message());
+		return {};
+	}
+
+	auto filename = source.filename().string();
+	if (filename.empty())
+		filename = "disk.hdf";
+	const auto destination = undo_directory
+		/ ("harddrive-" + std::to_string(device_number) + "-" + filename);
+	std::filesystem::copy_file(source, destination, std::filesystem::copy_options::none, error);
+	if (error) {
+		set_error("Could not create the RP9 hardfile undo copy: " + error.message());
+		return {};
+	}
+
+	write_log(_T("RP9: using temporary undo copy for hardfile: %s\n"), destination.string().c_str());
+	return destination;
+}
+
 void apply_compatibility(uae_prefs* prefs, const rp9::Manifest& manifest)
 {
 	for (const auto& value : manifest.compatibility) {
@@ -1057,7 +1095,8 @@ bool is_rdb_hardfile(const std::filesystem::path& path)
 
 bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 	const std::unordered_map<std::string, std::filesystem::path>& files,
-	const std::string& deployment_id, std::string& snapshot_path,
+	const std::string& deployment_id, const std::filesystem::path& extraction_directory,
+	std::string& snapshot_path,
 	std::vector<std::string>& cd_paths)
 {
 	int device_number = 0;
@@ -1111,12 +1150,17 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 				++floppy_count;
 			}
 			break;
-		case rp9::MediaType::HardDrive:
-			if (!add_harddrive(prefs, path, media.volume_name, media.readonly, 0, device_number)) {
+		case rp9::MediaType::HardDrive: {
+			const auto hardfile_path = prepare_undoable_hardfile(media, path, extraction_directory,
+				device_number);
+			if (hardfile_path.empty())
+				return false;
+			if (!add_harddrive(prefs, hardfile_path, media.volume_name, media.readonly, 0, device_number)) {
 				set_error("Could not attach RP9 hard drive: " + media.path);
 				return false;
 			}
 			break;
+		}
 		case rp9::MediaType::Cd:
 			cd_paths.emplace_back(path_string);
 			if (!cd_attached) {
@@ -1276,8 +1320,8 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 		result = apply_peripherals(candidate.get(), manifest);
 		if (result) {
 			apply_video_and_clip(candidate.get(), manifest);
-			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id, snapshot_path,
-				cd_paths);
+			result = apply_media(candidate.get(), manifest, extracted_files, package_deployment_id,
+				extraction_directory, snapshot_path, cd_paths);
 		}
 #ifdef JIT
 		const bool jit_requested = manifest_requests_jit(manifest);

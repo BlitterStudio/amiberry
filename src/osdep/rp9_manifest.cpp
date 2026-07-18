@@ -161,7 +161,8 @@ bool parse_configuration(const tinyxml2::XMLElement* configuration, Manifest& ma
 		} else if (name == "video") {
 			manifest.video = lowercase(text(element));
 		} else if (name == "rom") {
-			manifest.system_rom = text(element);
+			if (lowercase(attribute(element, "type")) == "system")
+				manifest.system_rom = text(element);
 		} else if (name == "ram") {
 			Ram ram;
 			ram.type = lowercase(attribute(element, "type"));
