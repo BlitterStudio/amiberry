@@ -102,6 +102,35 @@ class LaunchRequestTest {
 	}
 
 	@Test
+	fun `rp9 request applies Android controls after manifest autoload`() {
+		val path = "/tmp/game.rp9"
+		val args = LaunchRequest.Rp9(
+			path = path,
+			controlOverrides = LaunchRequest.AndroidControlOverrides(
+				joyport0 = "mouse",
+				joyport1 = "onscreen_joy",
+				onScreenJoystick = true,
+				onScreenKeyboard = true,
+				onScreenKeyboardNumpad = true
+			)
+		).toArgs()
+
+		assertArrayEquals(
+			arrayOf(
+				"--rescan-roms",
+				"--autoload", path,
+				"-s", "joyport0=mouse",
+				"-s", "amiberry.onscreen_joystick=true",
+				"-s", "amiberry.vkbd_enabled=true",
+				"-s", "amiberry.vkbd_numpad=true",
+				"-s", "input.default_osk=true",
+				"-G"
+			),
+			args
+		)
+	}
+
+	@Test
 	fun `whdload request can include control config before autoload`() {
 		val lhaPath = "/tmp/game.lha"
 		val configPath = "/tmp/android-controls.uae"
@@ -206,6 +235,7 @@ class LaunchRequestTest {
 		assertTrue(LaunchRequest.SavedConfig("/tmp/saved.uae").trackSession)
 		assertTrue(LaunchRequest.SettingsConfig(AmigaModel.A1200, "/tmp/current.uae").trackSession)
 		assertTrue(LaunchRequest.WhdLoad("/tmp/game.lha", configPath = "/tmp/controls.uae").trackSession)
+		assertTrue(LaunchRequest.Rp9("/tmp/game.rp9").trackSession)
 
 		assertFalse(LaunchRequest.AdvancedGui(configPath = "/tmp/edit.uae").trackSession)
 	}
@@ -217,6 +247,7 @@ class LaunchRequestTest {
 			LaunchRequest.SavedConfig("/tmp/saved.uae"),
 			LaunchRequest.SettingsConfig(AmigaModel.A1200, "/tmp/current.uae"),
 			LaunchRequest.WhdLoad("/tmp/game.lha", configPath = "/tmp/controls.uae"),
+			LaunchRequest.Rp9("/tmp/game.rp9"),
 			LaunchRequest.AdvancedGui(configPath = "/tmp/edit.uae")
 		)
 

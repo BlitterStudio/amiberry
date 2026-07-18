@@ -189,22 +189,127 @@ int system_rom_code(const std::string& value)
 	return parse_integer(normalized, result) ? result : invalid_system_rom;
 }
 
-std::string deployment_id(const char* manifest, const std::size_t size)
+struct ArchiveMediaFingerprint
 {
-	// Keep deployments stable if an RP9 is moved while separating packages that
-	// happen to use the same embedded media names. The manifest is small and is
-	// the package's stable identity for this purpose.
+	std::uint64_t size;
+	std::uint32_t crc;
+};
+
+void update_deployment_hash(std::uint64_t& hash, const unsigned char value)
+{
+	hash ^= value;
+	hash *= 1099511628211ULL;
+}
+
+void update_deployment_hash(std::uint64_t& hash, const std::uint64_t value)
+{
+	for (unsigned int shift = 0; shift < 64; shift += 8)
+		update_deployment_hash(hash, static_cast<unsigned char>(value >> shift));
+}
+
+bool deployment_id(unzFile archive, const char* manifest, const std::size_t size,
+	const rp9::Manifest& parsed_manifest, std::string& result)
+{
 	std::uint64_t hash = 14695981039346656037ULL;
-	for (std::size_t index = 0; index < size; ++index) {
-		hash ^= static_cast<unsigned char>(manifest[index]);
-		hash *= 1099511628211ULL;
+	for (std::size_t index = 0; index < size; ++index)
+		update_deployment_hash(hash, static_cast<unsigned char>(manifest[index]));
+
+	std::unordered_set<std::string> deployed_paths;
+	for (const auto& media : parsed_manifest.media) {
+		if (!media.deploy && lowercase(media.root) != "deploy")
+			continue;
+		std::string normalized;
+		if (!rp9::normalize_package_path(media.path, normalized)) {
+			set_error("Unsafe deployed-media path in RP9 manifest: " + media.path);
+			return false;
+		}
+		deployed_paths.emplace(lowercase(normalized));
+	}
+
+	std::unordered_map<std::string, ArchiveMediaFingerprint> fingerprints;
+	if (!deployed_paths.empty()) {
+		unz_global_info global {};
+		if (unzGetGlobalInfo(archive, &global) != UNZ_OK || global.number_entry > maximum_archive_entries) {
+			set_error("RP9 archive has an invalid or excessive number of entries");
+			return false;
+		}
+		if (unzGoToFirstFile(archive) != UNZ_OK) {
+			set_error("RP9 archive contains no readable entries");
+			return false;
+		}
+
+		for (unsigned long index = 0; index < global.number_entry; ++index) {
+			unz_file_info info {};
+			if (unzGetCurrentFileInfo(archive, &info, nullptr, 0, nullptr, 0, nullptr, 0) != UNZ_OK
+				|| info.size_filename == 0 || info.size_filename > maximum_entry_name) {
+				set_error("RP9 archive contains an invalid entry");
+				return false;
+			}
+			std::vector<char> name(static_cast<std::size_t>(info.size_filename) + 1);
+			if (unzGetCurrentFileInfo(archive, &info, name.data(), static_cast<unsigned long>(name.size()),
+				nullptr, 0, nullptr, 0) != UNZ_OK) {
+				set_error("Could not read an RP9 archive entry name");
+				return false;
+			}
+			const std::string entry_name(name.data(), static_cast<std::size_t>(info.size_filename));
+			if (entry_name.find('\0') != std::string::npos) {
+				set_error("RP9 archive contains an entry name with an embedded null byte");
+				return false;
+			}
+
+			std::string normalized;
+			if (!rp9::normalize_package_path(entry_name, normalized)) {
+				set_error("Unsafe path in RP9 archive: " + entry_name);
+				return false;
+			}
+			auto path_key = lowercase(normalized);
+			if (!path_key.empty() && path_key.back() == '/')
+				path_key.pop_back();
+			const bool is_directory = entry_name.back() == '/' || entry_name.back() == '\\';
+			if (!is_directory && deployed_paths.find(path_key) != deployed_paths.end()) {
+				if (!fingerprints.emplace(path_key, ArchiveMediaFingerprint {
+					static_cast<std::uint64_t>(info.uncompressed_size), static_cast<std::uint32_t>(info.crc)
+				}).second) {
+					set_error("RP9 archive contains a duplicate deployed-media path: " + entry_name);
+					return false;
+				}
+			}
+			if (index + 1 < global.number_entry && unzGoToNextFile(archive) != UNZ_OK) {
+				set_error("RP9 archive ended before all entries were read");
+				return false;
+			}
+		}
+	}
+
+	// ZIP CRC and size describe the uncompressed source media, so the identity
+	// remains stable after moves, repacking, and guest writes to the deployed
+	// copy while changing when a package supplies different persistent media.
+	for (const auto& media : parsed_manifest.media) {
+		if (!media.deploy && lowercase(media.root) != "deploy")
+			continue;
+		std::string normalized;
+		if (!rp9::normalize_package_path(media.path, normalized))
+			return false;
+		const auto path_key = lowercase(normalized);
+		update_deployment_hash(hash, static_cast<std::uint64_t>(path_key.size()));
+		for (const auto value : path_key)
+			update_deployment_hash(hash, static_cast<unsigned char>(value));
+		const auto fingerprint = fingerprints.find(path_key);
+		update_deployment_hash(hash, static_cast<unsigned char>(fingerprint != fingerprints.end()));
+		if (fingerprint != fingerprints.end()) {
+			update_deployment_hash(hash, fingerprint->second.size);
+			update_deployment_hash(hash, static_cast<std::uint64_t>(fingerprint->second.crc));
+		}
 	}
 	std::array<char, 16> buffer {};
 	const auto [end, error] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), hash, 16);
-	if (error != std::errc {})
-		return "package";
-	return std::string(16 - static_cast<std::size_t>(end - buffer.data()), '0')
+	if (error != std::errc {}) {
+		set_error("Could not create the RP9 deployment identity");
+		return false;
+	}
+	result = std::string(16 - static_cast<std::size_t>(end - buffer.data()), '0')
 		+ std::string(buffer.data(), end);
+	return true;
 }
 
 bool deployed_media_path(const rp9::Media& media, const std::string& package_id,
@@ -1106,9 +1211,11 @@ bool rp9_parse_file(uae_prefs* prefs, const char* filename)
 	std::string manifest_error;
 	bool result = read_manifest(archive, manifest_data)
 		&& rp9::parse_manifest(manifest_data.data(), manifest_data.size() - 1, manifest, manifest_error);
-	const auto package_deployment_id = result
-		? deployment_id(manifest_data.data(), manifest_data.size() - 1)
-		: std::string {};
+	std::string package_deployment_id;
+	if (result) {
+		result = deployment_id(archive, manifest_data.data(), manifest_data.size() - 1, manifest,
+			package_deployment_id);
+	}
 	const auto existing_deployments = result
 		? find_existing_deployments(manifest, package_deployment_id)
 		: std::unordered_map<std::string, std::filesystem::path> {};

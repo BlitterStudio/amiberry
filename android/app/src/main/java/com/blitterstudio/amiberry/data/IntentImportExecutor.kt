@@ -35,7 +35,10 @@ object IntentImportExecutor {
 			val configPath: String
 		) : Launch
 
-		data class Rp9(val path: String) : Launch
+		data class Rp9(
+			val path: String,
+			val controlSettings: EmulatorSettings
+		) : Launch
 	}
 
 	suspend fun importAndPrepare(context: Context, uri: Uri): PreparedImport {
@@ -122,7 +125,13 @@ object IntentImportExecutor {
 			val inputStream = context.contentResolver.openInputStream(uri)
 				?: return PreparedImport(ImportFeedback.importFailed(safeName))
 			inputStream.use { input -> targetFile.outputStream().use { output -> input.copyTo(output) } }
-			PreparedImport(ImportFeedback.fileImported(targetFile.name), Launch.Rp9(targetFile.absolutePath))
+			PreparedImport(
+				ImportFeedback.fileImported(targetFile.name),
+				Launch.Rp9(
+					path = targetFile.absolutePath,
+					controlSettings = AndroidLaunchConfig.loadLastSessionSettings(context)
+				)
+			)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import RP9 package", e)
 			PreparedImport(ImportFeedback.importFailed(safeName))

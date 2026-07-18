@@ -702,8 +702,9 @@ fun QuickStartScreen(
 												}
 												"rp9" -> {
 													val rp9Path = entry.optString("path")
+													val controlSettings = settingsViewModel.settings
 													scope.launchGuarded(launchGuard) {
-														EmulatorLauncher.launchRp9(context, rp9Path)
+														EmulatorLauncher.launchRp9(context, rp9Path, controlSettings)
 													}
 												}
 												"quickstart" -> {

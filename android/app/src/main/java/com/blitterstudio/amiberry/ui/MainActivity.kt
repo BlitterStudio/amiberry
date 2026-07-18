@@ -154,7 +154,11 @@ class MainActivity : ComponentActivity() {
 				launch.lhaPath,
 				launch.configPath
 			)
-			is IntentImportExecutor.Launch.Rp9 -> EmulatorLauncher.launchRp9(this, launch.path)
+			is IntentImportExecutor.Launch.Rp9 -> EmulatorLauncher.launchRp9(
+				this,
+				launch.path,
+				launch.controlSettings
+			)
 			null -> Unit
 		}
 	}

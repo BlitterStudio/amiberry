@@ -87,8 +87,14 @@ object EmulatorLauncher {
 		})
 	}
 
-	fun launchRp9(context: Context, path: String) {
-		launchRequest(context, LaunchRequest.Rp9(path))
+	fun launchRp9(context: Context, path: String, controlSettings: EmulatorSettings? = null) {
+		launchRequest(
+			context,
+			LaunchRequest.Rp9(
+				path = path,
+				controlOverrides = controlSettings?.let { LaunchRequest.AndroidControlOverrides.fromSettings(it) }
+			)
+		)
 		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
 			put("type", "rp9")
 			put("path", path)
