@@ -53,6 +53,7 @@ extern "C" {
 #include "blkdev.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
+#include "amiberry_rp9.h"
 #include "irenderer.h"
 #include "statusline.h"
 #include "zfile.h"
@@ -2279,6 +2280,13 @@ static libretro_crop_mode get_libretro_crop_mode()
 	return libretro_crop_mode::auto_crop;
 }
 
+static bool libretro_preserves_rp9_manifest_crop()
+{
+	return libretro_should_preserve_rp9_clip(
+		get_libretro_crop_mode() == libretro_crop_mode::auto_crop,
+		rp9_loaded_has_clip());
+}
+
 static bool libretro_crop_equals(const libretro_crop& a, const libretro_crop& b)
 {
 	return a.active == b.active
@@ -2438,6 +2446,30 @@ static void libretro_update_crop_aspect(libretro_crop& crop)
 	auto_crop_display_dimensions(crop.w, crop.h, currprefs.gfx_resolution,
 		currprefs.gfx_vresolution, vblank_hz > 55.0f, width, height);
 	crop.aspect = height > 0 ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
+}
+
+static bool libretro_crop_from_manual_prefs(const SDL_Surface* surface, libretro_crop& crop)
+{
+	if (!surface || !currprefs.gfx_manual_crop)
+		return false;
+
+	LibretroCropRect rect = {
+		currprefs.gfx_horizontal_offset,
+		currprefs.gfx_vertical_offset,
+		currprefs.gfx_manual_crop_width > 0 ? currprefs.gfx_manual_crop_width : surface->w,
+		currprefs.gfx_manual_crop_height > 0 ? currprefs.gfx_manual_crop_height : surface->h
+	};
+	libretro_crop_clamp_rect(surface->w, surface->h, rect);
+	if (!libretro_crop_rect_valid(rect))
+		return false;
+
+	crop.x = rect.x;
+	crop.y = rect.y;
+	crop.w = rect.w;
+	crop.h = rect.h;
+	crop.active = true;
+	libretro_update_crop_aspect(crop);
+	return true;
 }
 
 static bool libretro_visible_content_bounds(const SDL_Surface* surface, LibretroCropRect& bounds)
@@ -2723,6 +2755,8 @@ static void libretro_enable_core_auto_crop()
 {
 	if (get_libretro_crop_mode() != libretro_crop_mode::auto_crop)
 		return;
+	if (libretro_preserves_rp9_manifest_crop())
+		return;
 
 	const bool changed = !currprefs.gfx_auto_crop
 		|| !changed_prefs.gfx_auto_crop
@@ -2762,15 +2796,20 @@ static void libretro_enable_core_auto_crop()
 
 static void libretro_disable_core_auto_crop()
 {
+	const bool preserve_rp9_clip = rp9_loaded_has_clip();
 	const bool changed = currprefs.gfx_auto_crop
 		|| changed_prefs.gfx_auto_crop
-		|| currprefs.gfx_manual_crop
-		|| changed_prefs.gfx_manual_crop;
+		|| (!preserve_rp9_clip && (currprefs.gfx_manual_crop
+			|| changed_prefs.gfx_manual_crop));
 
 	currprefs.gfx_auto_crop = false;
 	changed_prefs.gfx_auto_crop = false;
-	currprefs.gfx_manual_crop = false;
-	changed_prefs.gfx_manual_crop = false;
+	// Disabled and fixed libretro modes ignore the native crop rectangle, but
+	// retain an RP9 manifest clip so switching back to Automatic can restore it.
+	if (!preserve_rp9_clip) {
+		currprefs.gfx_manual_crop = false;
+		changed_prefs.gfx_manual_crop = false;
+	}
 	force_auto_crop = false;
 
 	if (changed) {
@@ -2842,6 +2881,11 @@ libretro_crop libretro_compute_crop(void)
 		libretro_disable_core_auto_crop();
 		if (libretro_fixed_crop_from_surface(surface, crop_mode, crop))
 			return libretro_cache_crop(crop);
+		return libretro_cache_crop(crop);
+	}
+	if (libretro_preserves_rp9_manifest_crop()) {
+		libretro_reset_submitted_crop();
+		libretro_crop_from_manual_prefs(surface, crop);
 		return libretro_cache_crop(crop);
 	}
 
@@ -3934,7 +3978,8 @@ static void core_entry(void)
 			push_s_option("ntsc=false");
 	}
 
-	if (get_libretro_crop_mode() == libretro_crop_mode::auto_crop) {
+	const bool automatic_crop = get_libretro_crop_mode() == libretro_crop_mode::auto_crop;
+	if (libretro_should_queue_auto_crop_options(automatic_crop, is_rp9)) {
 		push_s_option("gfx_auto_crop=true");
 		push_s_option("gfx_manual_crop=false");
 		push_s_option("gfx_horizontal_offset=0");
