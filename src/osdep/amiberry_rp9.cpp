@@ -512,6 +512,27 @@ std::filesystem::path create_extraction_directory()
 	return {};
 }
 
+bool register_extracted_path(std::unordered_map<std::string, std::filesystem::path>& files,
+	const std::string& package_path, const std::filesystem::path& host_path)
+{
+	const auto [existing, inserted] = files.emplace(lowercase(package_path), host_path);
+	if (inserted || existing->second.lexically_normal() == host_path.lexically_normal())
+		return true;
+	set_error("RP9 archive contains colliding paths: " + package_path);
+	return false;
+}
+
+bool register_extracted_directories(std::unordered_map<std::string, std::filesystem::path>& files,
+	const std::filesystem::path& root, std::filesystem::path relative_directory)
+{
+	while (!relative_directory.empty()) {
+		if (!register_extracted_path(files, relative_directory.generic_string(), root / relative_directory))
+			return false;
+		relative_directory = relative_directory.parent_path();
+	}
+	return true;
+}
+
 bool extract_archive(unzFile archive, const std::filesystem::path& directory,
 	std::unordered_map<std::string, std::filesystem::path>& files,
 	const std::unordered_map<std::string, std::filesystem::path>& skipped_files)
@@ -548,24 +569,34 @@ bool extract_archive(unzFile archive, const std::filesystem::path& directory,
 			return false;
 		}
 
+		const bool is_directory = entry_name.back() == '/' || entry_name.back() == '\\';
 		std::string normalized;
 		if (!rp9::normalize_package_path(entry_name, normalized)) {
 			set_error("Unsafe path in RP9 archive: " + entry_name);
 			return false;
 		}
+		if (is_directory && normalized.back() == '/')
+			normalized.pop_back();
 		auto path_key = lowercase(normalized);
-		if (!path_key.empty() && path_key.back() == '/')
-			path_key.pop_back();
 		if (!seen_paths.emplace(path_key).second) {
 			set_error("RP9 archive contains a duplicate path: " + entry_name);
 			return false;
 		}
-		const bool is_directory = entry_name.back() == '/' || entry_name.back() == '\\';
 		const auto destination = directory / std::filesystem::path(normalized);
 		std::error_code error;
 		if (is_directory) {
 			std::filesystem::create_directories(destination, error);
+			if (!error && !register_extracted_directories(files, directory, std::filesystem::path(normalized)))
+				return false;
 		} else if (lowercase(normalized) != manifest_name) {
+			std::filesystem::create_directories(destination.parent_path(), error);
+			if (error) {
+				set_error("Could not create an RP9 extraction directory: " + error.message());
+				return false;
+			}
+			if (!register_extracted_directories(files, directory,
+				std::filesystem::path(normalized).parent_path()))
+				return false;
 			if (skipped_files.find(path_key) != skipped_files.end()) {
 				write_log(_T("RP9: skipping embedded copy of deployed media: %s\n"), normalized.c_str());
 			} else {
@@ -580,11 +611,6 @@ bool extract_archive(unzFile archive, const std::filesystem::path& directory,
 				}
 				if (error) {
 					set_error("Could not validate an RP9 extraction path: " + error.message());
-					return false;
-				}
-				std::filesystem::create_directories(destination.parent_path(), error);
-				if (error) {
-					set_error("Could not create an RP9 extraction directory: " + error.message());
 					return false;
 				}
 				auto output = uae_fopen(destination.string().c_str(), _T("wbe"));
@@ -630,7 +656,8 @@ bool extract_archive(unzFile archive, const std::filesystem::path& directory,
 					set_error("RP9 entry failed its integrity check: " + normalized);
 					return false;
 				}
-				files.emplace(lowercase(normalized), destination);
+				if (!register_extracted_path(files, normalized, destination))
+					return false;
 			}
 		}
 		if (error) {
