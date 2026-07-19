@@ -52,4 +52,57 @@ static inline float amiberry_gfx_fullscreen_framebuffer_aspect(
 	return content_aspect * framebuffer_aspect / desktop_aspect;
 }
 
+static inline void amiberry_gfx_correct_aspect_integer_dimensions(
+	const int render_width, const int render_height, const int source_width,
+	const int display_height, const float target_aspect,
+	int& dest_width, int& dest_height)
+{
+	if (render_width <= 0 || render_height <= 0 || source_width <= 0
+		|| display_height <= 0 || target_aspect <= 0.0f) {
+		dest_width = 1;
+		dest_height = 1;
+		return;
+	}
+
+	// Start with a bounded aspect-correct fit. If even 1x integer scaling does
+	// not fit, retain this fractional fallback instead of clipping the viewport.
+	dest_width = render_width;
+	dest_height = static_cast<int>(render_width / target_aspect);
+	if (dest_height > render_height) {
+		dest_height = render_height;
+		dest_width = static_cast<int>(render_height * target_aspect);
+	}
+	if (dest_width < 1) dest_width = 1;
+	if (dest_height < 1) dest_height = 1;
+
+	const int vertical_scale = dest_height / display_height;
+	if (vertical_scale < 1 || source_width > render_width) {
+		return;
+	}
+
+	const float ideal_width = display_height * vertical_scale * target_aspect;
+	int lower_scale = static_cast<int>(ideal_width / source_width);
+	if (lower_scale < 1) lower_scale = 1;
+	const int upper_scale = lower_scale + 1;
+	const float lower_aspect = static_cast<float>(source_width * lower_scale)
+		/ (display_height * vertical_scale);
+	const float upper_aspect = static_cast<float>(source_width * upper_scale)
+		/ (display_height * vertical_scale);
+	const float lower_delta = lower_aspect > target_aspect
+		? lower_aspect - target_aspect : target_aspect - lower_aspect;
+	const float upper_delta = upper_aspect > target_aspect
+		? upper_aspect - target_aspect : target_aspect - upper_aspect;
+
+	int horizontal_scale = lower_scale;
+	if (source_width * upper_scale <= render_width && upper_delta < lower_delta) {
+		horizontal_scale = upper_scale;
+	}
+	while (source_width * horizontal_scale > render_width && horizontal_scale > 1) {
+		horizontal_scale--;
+	}
+
+	dest_width = source_width * horizontal_scale;
+	dest_height = display_height * vertical_scale;
+}
+
 #endif // AMIBERRY_GFX_GEOMETRY_H

@@ -610,35 +610,9 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 				destW = display_w * scale;
 				destH = display_h * scale;
 			} else {
-				// Vertical integer scale, constrained by the aspect-corrected destH
-				int h_scale = destH / display_h;
-				if (h_scale < 1) h_scale = 1;
-
-				// Per-axis scaling: widen toward 4:3 when content is narrower,
-				// but never narrow content that's already wider than 4:3.
-				// At 2160p this gives exact 4:3 (9x horiz, 8x vert = 2880x2160).
-				float target_aspect = integer_target_aspect;
-				float ideal_w = display_h * h_scale * target_aspect;
-				int w_lo = std::max(1, static_cast<int>(ideal_w / src_w));
-				int w_hi = w_lo + 1;
-
-				// Pick the candidate closest to target aspect; prefer narrower on tie
-				float aspect_lo = static_cast<float>(src_w * w_lo) / (display_h * h_scale);
-				float aspect_hi = static_cast<float>(src_w * w_hi) / (display_h * h_scale);
-
-				int w_scale;
-				if (src_w * w_hi <= renderAreaW &&
-					fabsf(aspect_hi - target_aspect) < fabsf(aspect_lo - target_aspect)) {
-					w_scale = w_hi;
-				} else {
-					w_scale = w_lo;
-				}
-
-				// Clamp to render area
-				while (src_w * w_scale > renderAreaW && w_scale > 1) w_scale--;
-
-				destW = src_w * w_scale;
-				destH = display_h * h_scale;
+				amiberry_gfx_correct_aspect_integer_dimensions(
+					renderAreaW, renderAreaH, src_w, display_h,
+					integer_target_aspect, destW, destH);
 			}
 		}
 

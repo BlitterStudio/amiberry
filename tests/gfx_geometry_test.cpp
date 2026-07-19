@@ -77,11 +77,38 @@ static void test_exclusive_fullscreen_compensates_for_display_mode_stretch()
 		"invalid fullscreen dimensions must leave the requested aspect unchanged");
 }
 
+static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
+{
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_correct_aspect_integer_dimensions(
+		800, 600, 640, 640, 1.0f, width, height);
+	expect_int_eq(width, 600,
+		"compensated 640-wide content must fit within an 800x600 fullscreen mode");
+	expect_int_eq(height, 600,
+		"compensated 640-tall presentation must not be clipped by a 600-line mode");
+
+	amiberry_gfx_correct_aspect_integer_dimensions(
+		800, 600, 720, 720, 1.0f, width, height);
+	expect_int_eq(width, 600,
+		"compensated 720-wide content must use the bounded aspect fit");
+	expect_int_eq(height, 600,
+		"compensated 720-tall presentation must use the bounded aspect fit");
+
+	amiberry_gfx_correct_aspect_integer_dimensions(
+		3840, 2160, 320, 270, 4.0f / 3.0f, width, height);
+	expect_int_eq(width, 2880,
+		"integer scaling must retain the closest bounded horizontal scale");
+	expect_int_eq(height, 2160,
+		"integer scaling must retain the largest bounded vertical scale");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
 	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
+	test_corrected_integer_scaling_stays_within_fullscreen_mode();
 	return failures == 0 ? 0 : 1;
 }
