@@ -1349,7 +1349,7 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 		case ZZ_REG_FILLTEMPLATE: {
 			const bool pattern = (value & 0x8000) != 0;
 			zz_template_rect(data, data->source_offset, pattern ? 2 : data->source_pitch,
-				data->destination_offset, data->destination_pitch * 4, data->x[0], data->y[0],
+				data->destination_offset, data->destination_pitch, data->x[0], data->y[0],
 				data->x[1], data->y[1], data->x[2], data->y[2],
 				pattern ? value & 0xff : 0, data->blit_color_mode, data->blit_high,
 				data->foreground, data->background,
