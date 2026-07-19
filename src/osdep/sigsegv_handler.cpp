@@ -789,13 +789,32 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 			const uae_u32 imm12 = (opcode >> 10) & 0xfff;
 			bool reg_indexed = false;
 			bool unsigned_imm = false;
+			bool unscaled_imm = false;
 
 			unsigned int masked_op = opcode & 0xffe00c00;
 			switch (masked_op) {
+			case 0x38000000: // STURB_wXi
+				transfer_size = SIZE_BYTE;
+				transfer_type = TYPE_STORE;
+				unscaled_imm = true;
+				break;
+
 			case 0x38200800: // STRB_wXx
 				transfer_size = SIZE_BYTE;
 				transfer_type = TYPE_STORE;
 				reg_indexed = true;
+				break;
+
+			case 0x38400000: // LDURB_wXi
+				transfer_size = SIZE_BYTE;
+				transfer_type = TYPE_LOAD;
+				unscaled_imm = true;
+				break;
+
+			case 0x78000000: // STURH_wXi
+				transfer_size = SIZE_WORD;
+				transfer_type = TYPE_STORE;
+				unscaled_imm = true;
 				break;
 
 			case 0x78200800: // STRH_wXx
@@ -804,10 +823,28 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				reg_indexed = true;
 				break;
 
+			case 0x78400000: // LDURH_wXi
+				transfer_size = SIZE_WORD;
+				transfer_type = TYPE_LOAD;
+				unscaled_imm = true;
+				break;
+
+			case 0xb8000000: // STUR_wXi
+				transfer_size = SIZE_INT;
+				transfer_type = TYPE_STORE;
+				unscaled_imm = true;
+				break;
+
 			case 0xb8200800: // STR_wXx
 				transfer_size = SIZE_INT;
 				transfer_type = TYPE_STORE;
 				reg_indexed = true;
+				break;
+
+			case 0xb8400000: // LDUR_wXi
+				transfer_size = SIZE_INT;
+				transfer_type = TYPE_LOAD;
+				unscaled_imm = true;
 				break;
 
 			case 0x38600800: // LDRB_wXx
@@ -908,6 +945,11 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 					}
 				} else if (unsigned_imm) {
 					offset = static_cast<uae_u64>(imm12) << scale_bits;
+				} else if (unscaled_imm) {
+					const uae_u32 imm9 = (opcode >> 12) & 0x1ff;
+					const auto signed_imm9 = static_cast<uae_s64>(imm9 & 0x100
+						? static_cast<int>(imm9) - 0x200 : static_cast<int>(imm9));
+					offset = static_cast<uae_u64>(signed_imm9);
 				}
 			}
 			const uae_u64 eff_addr = rn_val + offset;
@@ -917,7 +959,8 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				static_cast<unsigned long long>(reinterpret_cast<uintptr>(natmem_offset)),
 				fault_m68k_pc, regs.opcode, rd, rn,
 				static_cast<unsigned long long>(rn_val), rm, static_cast<unsigned long long>(rm_x),
-				option, sbit, imm12, reg_indexed ? "reg" : (unsigned_imm ? "imm" : "unknown"),
+				option, sbit, imm12, reg_indexed ? "reg" :
+					(unsigned_imm ? "imm" : (unscaled_imm ? "unscaled" : "unknown")),
 				static_cast<unsigned long long>(eff_addr));
 			output_log(_T("JIT: regs.pc=%08x A7=%08x A6=%08x D0=%08x D1=%08x pc_p=%p pc_oldp=%p spcflags=%08x special_mem=%02x\n"),
 				regs.pc, m68k_areg(regs, 7), m68k_areg(regs, 6), m68k_dreg(regs, 0), m68k_dreg(regs, 1),
