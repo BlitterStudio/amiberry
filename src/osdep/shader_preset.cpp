@@ -969,7 +969,7 @@ void ShaderPreset::bind_pass_uniforms(int pass_index, int input_w, int input_h,
 
 void ShaderPreset::render(const unsigned char* pixels, int width, int height, int pitch,
 	int viewport_x, int viewport_y, int viewport_w, int viewport_h,
-	int frame_count)
+	int frame_count, const GLuint target_framebuffer)
 {
 	if (!valid_ || passes_.empty()) return;
 	if (!pixels) return;
@@ -1071,7 +1071,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 
 		// Bind render target
 		if (is_last) {
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 			glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 			glDisable(GL_FRAMEBUFFER_SRGB);
 		} else {

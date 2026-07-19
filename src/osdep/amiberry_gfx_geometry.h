@@ -107,4 +107,23 @@ static inline void amiberry_gfx_correct_aspect_integer_dimensions(
 	dest_height = display_height * vertical_scale;
 }
 
+static inline void amiberry_gfx_shader_render_dimensions(
+	const int dest_width, const int dest_height,
+	const int source_width, const int source_height,
+	int& render_width, int& render_height)
+{
+	render_width = dest_width;
+	render_height = dest_height;
+	if (dest_width <= 0 || dest_height <= 0 || source_width <= 0 || source_height <= 0
+		|| (dest_width >= source_width && dest_height >= source_height)) {
+		return;
+	}
+
+	const float width_scale = static_cast<float>(source_width) / dest_width;
+	const float height_scale = static_cast<float>(source_height) / dest_height;
+	const float scale = width_scale > height_scale ? width_scale : height_scale;
+	render_width = static_cast<int>(dest_width * scale);
+	render_height = static_cast<int>(dest_height * scale);
+}
+
 #endif // AMIBERRY_GFX_GEOMETRY_H

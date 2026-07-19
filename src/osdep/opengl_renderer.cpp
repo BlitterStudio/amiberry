@@ -440,6 +440,101 @@ bool OpenGLRenderer::render_frame(int monid, int mode, int immediate)
 	return surface != nullptr;
 }
 
+bool OpenGLRenderer::ensure_shader_resolve_target(const int width, const int height)
+{
+	if (width <= 0 || height <= 0)
+		return false;
+	if (m_shader.resolve_framebuffer != 0 && m_shader.resolve_texture != 0
+		&& m_shader.resolve_width == width && m_shader.resolve_height == height) {
+		return true;
+	}
+
+	destroy_shader_resolve_target();
+
+	glGenTextures(1, &m_shader.resolve_texture);
+	glBindTexture(GL_TEXTURE_2D, m_shader.resolve_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+	glGenFramebuffers(1, &m_shader.resolve_framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_shader.resolve_framebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, m_shader.resolve_texture, 0);
+	const bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if (!complete) {
+		write_log("Shader resolve framebuffer is incomplete\n");
+		destroy_shader_resolve_target();
+		return false;
+	}
+
+	m_shader.resolve_width = width;
+	m_shader.resolve_height = height;
+	return true;
+}
+
+void OpenGLRenderer::destroy_shader_resolve_target()
+{
+	if (m_shader.resolve_framebuffer != 0) {
+		glDeleteFramebuffers(1, &m_shader.resolve_framebuffer);
+		m_shader.resolve_framebuffer = 0;
+	}
+	if (m_shader.resolve_texture != 0) {
+		glDeleteTextures(1, &m_shader.resolve_texture);
+		m_shader.resolve_texture = 0;
+	}
+	m_shader.resolve_width = 0;
+	m_shader.resolve_height = 0;
+}
+
+void OpenGLRenderer::render_shader_resolve(
+	const int x, const int y, const int width, const int height)
+{
+	if (m_shader.resolve_texture == 0 || width <= 0 || height <= 0)
+		return;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	if (!init_osd_shader())
+		return;
+
+	// FBO textures already use GL's bottom-left origin, so this quad does not
+	// apply the Y-flip used for top-down SDL surfaces and overlay images.
+	static const GLfloat vertices[] = {
+		-1.0f, -1.0f, 0.0f, 0.0f,
+		 1.0f, -1.0f, 1.0f, 0.0f,
+		 1.0f,  1.0f, 1.0f, 1.0f,
+		-1.0f,  1.0f, 0.0f, 1.0f,
+	};
+
+	glViewport(x, y, width, height);
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glUseProgram(m_overlay.osd_program);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_shader.resolve_texture);
+	if (m_overlay.osd_tex_loc != -1) glUniform1i(m_overlay.osd_tex_loc, 0);
+
+	glBindVertexArray(m_overlay.osd_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, m_overlay.osd_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	glEnableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), nullptr);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glDisableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+}
+
 void OpenGLRenderer::present_frame(int monid, int mode)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
@@ -645,21 +740,43 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	render_quad.w = destW;
 	render_quad.h = destH;
 
+	// Some CRT shaders require an output at least as large as their input. Render
+	// them at that safe size, then resolve back to the aspect-correct destination
+	// instead of letting the oversized viewport be clipped by the framebuffer.
+	int shader_viewport_w = destW;
+	int shader_viewport_h = destH;
+	amiberry_gfx_shader_render_dimensions(
+		destW, destH, src_w, src_h, shader_viewport_w, shader_viewport_h);
+	const bool custom_shader_active = (m_shader.preset && m_shader.preset->is_valid())
+		|| (m_shader.external && m_shader.external->is_valid());
+	bool use_shader_resolve = custom_shader_active
+		&& (shader_viewport_w != destW || shader_viewport_h != destH);
+	if (use_shader_resolve
+		&& !ensure_shader_resolve_target(shader_viewport_w, shader_viewport_h)) {
+		// Preserve final presentation geometry if the intermediate target cannot
+		// be allocated, even though shaders that require >= 1x may degrade.
+		shader_viewport_w = destW;
+		shader_viewport_h = destH;
+		use_shader_resolve = false;
+	}
+	const int shader_viewport_x = use_shader_resolve
+		? 0 : renderAreaX + (renderAreaW - shader_viewport_w) / 2;
+	const int shader_viewport_y = use_shader_resolve
+		? 0 : glAreaY + (renderAreaH - shader_viewport_h) / 2;
+	const GLuint shader_framebuffer = use_shader_resolve
+		? m_shader.resolve_framebuffer : 0;
+	if (use_shader_resolve) {
+		glBindFramebuffer(GL_FRAMEBUFFER, shader_framebuffer);
+		glViewport(0, 0, shader_viewport_w, shader_viewport_h);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
 	// Handle shader preset rendering (multi-pass .glslp)
 	if (m_shader.preset && m_shader.preset->is_valid()) {
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
-
-		int viewport_w = destW;
-		int viewport_h = destH;
-		if (src_w > 0 && src_h > 0 && (viewport_w < src_w || viewport_h < src_h)) {
-			float s = std::max(static_cast<float>(src_w) / viewport_w, static_cast<float>(src_h) / viewport_h);
-			viewport_w = static_cast<int>(viewport_w * s);
-			viewport_h = static_cast<int>(viewport_h * s);
-		}
-		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
-		int viewport_y = glAreaY + (renderAreaH - viewport_h) / 2;
 
 		static int preset_frame_count = 0;
 
@@ -667,11 +784,13 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			m_shader.preset->render(crop_ptr, crop_w, crop_h, surface->pitch,
-				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
+				shader_viewport_x, shader_viewport_y, shader_viewport_w, shader_viewport_h,
+				preset_frame_count++, shader_framebuffer);
 		} else if (surface) {
 			m_shader.preset->render(static_cast<const unsigned char*>(surface->pixels),
 				surface->w, surface->h, surface->pitch,
-				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
+				shader_viewport_x, shader_viewport_y, shader_viewport_w, shader_viewport_h,
+				preset_frame_count++, shader_framebuffer);
 		}
 
 	}
@@ -682,28 +801,23 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		int viewport_w = destW;
-		int viewport_h = destH;
-		if (src_w > 0 && src_h > 0 && (viewport_w < src_w || viewport_h < src_h)) {
-			float s = std::max(static_cast<float>(src_w) / viewport_w, static_cast<float>(src_h) / viewport_h);
-			viewport_w = static_cast<int>(viewport_w * s);
-			viewport_h = static_cast<int>(viewport_h * s);
-		}
-		int viewport_x = renderAreaX + (renderAreaW - viewport_w) / 2;
-		int viewport_y = glAreaY + (renderAreaH - viewport_h) / 2;
-
 		// Set viewport for shader rendering
-		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
+		glViewport(shader_viewport_x, shader_viewport_y,
+			shader_viewport_w, shader_viewport_h);
 
 		if (is_cropped && surface) {
 			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			render_external_shader(m_shader.external, monid, crop_ptr,
-				crop_w, crop_h, surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
+				crop_w, crop_h, surface->pitch,
+				shader_viewport_x, shader_viewport_y, shader_viewport_w, shader_viewport_h,
+				shader_framebuffer);
 		} else if (surface) {
 			render_external_shader(m_shader.external, monid,
 				static_cast<const uae_u8*>(surface->pixels),
-				surface->w, surface->h, surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
+				surface->w, surface->h, surface->pitch,
+				shader_viewport_x, shader_viewport_y, shader_viewport_w, shader_viewport_h,
+				shader_framebuffer);
 		}
 
 	} else if (m_shader.crtemu) {
@@ -729,7 +843,11 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		} else if (surface) {
 			crtemu_present(m_shader.crtemu, time * 1000, (CRTEMU_U32 const*)surface->pixels,
 			surface->w, surface->h, surface->pitch, 0xffffffff, 0x000000, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
-        }
+		}
+	}
+
+	if (use_shader_resolve) {
+		render_shader_resolve(destX, glDestY, destW, destH);
 	}
 
 	render_software_cursor(monid, destX, glDestY, destW, destH);
@@ -761,7 +879,8 @@ static const float k_external_shader_quad[] = {
 
 void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int monid,
 	const uae_u8* pixels, int width, int height, int pitch,
-	int viewport_x, int viewport_y, int viewport_width, int viewport_height)
+	int viewport_x, int viewport_y, int viewport_width, int viewport_height,
+	const GLuint target_framebuffer)
 {
 	if (!shader || !shader->is_valid() || !pixels) {
 		return;
@@ -852,7 +971,7 @@ void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int mo
 	}
 
 	// --- Per-frame fast path -----------------------------------------------
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 	glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -922,6 +1041,10 @@ void OpenGLRenderer::destroy_shaders()
 		m_shader.external = nullptr;
 		m_shader.preset = nullptr;
 		m_shader.bezel_enabled = false;
+		m_shader.resolve_framebuffer = 0;
+		m_shader.resolve_texture = 0;
+		m_shader.resolve_width = 0;
+		m_shader.resolve_height = 0;
 		m_vsync.gl_initialized = false;
 		return;
 	}
@@ -941,6 +1064,7 @@ void OpenGLRenderer::destroy_shaders()
 		destroy_shader_preset(m_shader.preset);
 		m_shader.preset = nullptr;
 	}
+	destroy_shader_resolve_target();
 	m_shader.bezel_enabled = false;
 	if (m_overlay.osd_program != 0 && glIsProgram(m_overlay.osd_program))
 	{

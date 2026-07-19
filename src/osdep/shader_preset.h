@@ -82,7 +82,7 @@ public:
 	// Render the full multi-pass pipeline
 	void render(const unsigned char* pixels, int width, int height, int pitch,
 		int viewport_x, int viewport_y, int viewport_w, int viewport_h,
-		int frame_count);
+		int frame_count, GLuint target_framebuffer = 0);
 
 	// Get all parameters from all passes (for GUI)
 	std::vector<ShaderParameter>& get_all_parameters() { return all_parameters_; }

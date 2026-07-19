@@ -110,6 +110,25 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 		"integer scaling must retain the largest bounded vertical scale");
 }
 
+static void test_shader_render_size_resolves_to_compensated_viewport()
+{
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_shader_render_dimensions(
+		600, 600, 640, 480, width, height);
+	expect_int_eq(width, 640,
+		"shader rendering must retain at least the source width");
+	expect_int_eq(height, 640,
+		"shader rendering must preserve the compensated viewport aspect");
+
+	amiberry_gfx_shader_render_dimensions(
+		1440, 1080, 640, 480, width, height);
+	expect_int_eq(width, 1440,
+		"shader rendering must keep a sufficiently large destination width");
+	expect_int_eq(height, 1080,
+		"shader rendering must keep a sufficiently large destination height");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
@@ -117,5 +136,6 @@ int main()
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
 	test_corrected_integer_scaling_stays_within_fullscreen_mode();
+	test_shader_render_size_resolves_to_compensated_viewport();
 	return failures == 0 ? 0 : 1;
 }

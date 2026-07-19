@@ -41,6 +41,10 @@ struct ShaderState {
 	ShaderParameterCache rtg_parameter_cache;
 	GLenum texture_filter_mode = GL_LINEAR;
 	bool bezel_enabled = false;
+	GLuint resolve_framebuffer = 0;
+	GLuint resolve_texture = 0;
+	int resolve_width = 0;
+	int resolve_height = 0;
 };
 
 // OpenGL overlay resources: OSD, bezel, software cursor (owned by OpenGLRenderer)
@@ -167,11 +171,15 @@ private:
 	void cache_shader_parameter_template();
 	void cache_shader_parameters();
 	void restore_shader_parameters(const char* shader_name, bool rtg);
+	bool ensure_shader_resolve_target(int width, int height);
+	void destroy_shader_resolve_target();
+	void render_shader_resolve(int x, int y, int width, int height);
 
 	// Private helper for external shader rendering
 	void render_external_shader(ExternalShader* shader, int monid,
 		const uae_u8* pixels, int width, int height, int pitch,
-		int viewport_x, int viewport_y, int viewport_width, int viewport_height);
+		int viewport_x, int viewport_y, int viewport_width, int viewport_height,
+		GLuint target_framebuffer);
 };
 
 // Helper to get the OpenGL renderer from the global g_renderer.
