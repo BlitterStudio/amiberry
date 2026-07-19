@@ -13,16 +13,17 @@ class RecentLaunchesTest {
 		val quickstart = quickstart(model = "A500", df0 = "/media/disk.adf")
 		val staleConfig = entry("config", path = "/configs/missing.uae")
 		val whdload = entry("whdload", path = "/whdload/Lotus.lha")
+		val rp9 = entry("rp9", path = "/rp9/Asteroids.rp9")
 		val unsupportedModel = quickstart(model = "CD32", cd = "/cds/game.cue")
 		val unknownType = JSONObject().put("type", "mystery")
 
 		val available = RecentLaunches.available(
-			entries = listOf(quickstart, staleConfig, whdload, unsupportedModel, unknownType),
+			entries = listOf(quickstart, staleConfig, whdload, rp9, unsupportedModel, unknownType),
 			availableModels = setOf(AmigaModel.A500),
-			fileExists = { it in setOf("/media/disk.adf", "/whdload/Lotus.lha", "/cds/game.cue") }
+			fileExists = { it in setOf("/media/disk.adf", "/whdload/Lotus.lha", "/rp9/Asteroids.rp9", "/cds/game.cue") }
 		)
 
-		assertEquals(listOf(quickstart, whdload), available)
+		assertEquals(listOf(quickstart, whdload, rp9), available)
 	}
 
 	@Test
@@ -61,6 +62,7 @@ class RecentLaunchesTest {
 		)
 		assertEquals("Workbench", RecentLaunches.label(entry("config", path = "/configs/Workbench.uae")))
 		assertEquals("Lotus", RecentLaunches.label(entry("whdload", path = "/whdload/Lotus.lha")))
+		assertEquals("Asteroids", RecentLaunches.label(entry("rp9", path = "/rp9/Asteroids.Rp9")))
 		assertEquals("?", RecentLaunches.label(JSONObject().put("type", "mystery")))
 	}
 
@@ -71,6 +73,7 @@ class RecentLaunchesTest {
 		)
 		val config = RecentLaunches.details(entry("config", path = "/configs/Workbench.uae"))
 		val whdload = RecentLaunches.details(entry("whdload", path = "/whdload/Lotus.lha"))
+		val rp9 = RecentLaunches.details(entry("rp9", path = "/rp9/Asteroids.rp9"))
 
 		assertEquals("Workbench.adf", quickstart.title)
 		assertEquals("Quick Start", quickstart.typeLabel)
@@ -79,6 +82,8 @@ class RecentLaunchesTest {
 		assertEquals("/configs/Workbench.uae", config.detail)
 		assertEquals("WHDLoad", whdload.typeLabel)
 		assertEquals("/whdload/Lotus.lha", whdload.detail)
+		assertEquals("RP9", rp9.typeLabel)
+		assertEquals("/rp9/Asteroids.rp9", rp9.detail)
 	}
 
 	@Test

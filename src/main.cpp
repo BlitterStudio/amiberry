@@ -77,6 +77,7 @@
 #ifndef LIBRETRO
 #include "amiberry_update.h"
 #endif
+#include "amiberry_rp9.h"
 
 
 // Special version string so that AmigaOS can detect it
@@ -1009,7 +1010,7 @@ void usage()
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
 	std::cout << "                            Available options are: A1000, A500, A500P, A600, A2000, A3000, A1200, A4000, CD32 and CDTV.\n" <<
 		'\n';
-	std::cout << " --autoload <file>          Load an .lha WHDLoad game or a CD32 CD image, using the WHDBooter." << '\n';
+	std::cout << " --autoload <file>          Load an RP9 package, an .lha WHDLoad game, or a CD image." << '\n';
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation." << '\n';
 	std::cout << " --statefile <file>         Load a save state file." << '\n';
 	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." <<
@@ -1018,7 +1019,7 @@ void usage()
 		'\n';
 	std::cout << "\nAdditional options:" << '\n';
 	std::cout << "amiberry <file>             Auto-detect the type of file and use the default action for it." << '\n';
-	std::cout << "                            Supported file types are: .uae config, .lha WHDLoad, CD images and disk images." << '\n';
+	std::cout << "                            Supported file types are: .uae configs, .rp9 packages, .lha WHDLoad, CD and disk images." << '\n';
 	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << '\n';
 	std::cout << " -1 <disk.adf>              " << '\n';
 	std::cout << " -2 <disk.adf>              " << '\n';
@@ -1165,6 +1166,78 @@ static TCHAR *parsetextpath (const TCHAR *s)
 	return s3;
 }
 
+#ifdef AMIBERRY
+static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
+{
+	for (auto index = 1; index < argc; ++index) {
+		if (argv[index][0] != '-')
+			continue;
+
+		if (argv[index][1] == 'r' || argv[index][1] == 'K') {
+			const auto extended = argv[index][1] == 'K';
+			const TCHAR* argument = argv[index] + 2;
+			if (!argument[0]) {
+				if (index + 1 >= argc)
+					continue;
+				argument = argv[++index];
+			}
+
+			auto* const path = parsetextpath(argument);
+			if (path[0] && !rp9_register_rom_override(path)) {
+				write_log(_T("%sKickstart override could not be registered for RP9 validation: %s\n"),
+					extended ? _T("Extended ") : _T(""), path);
+			}
+			xfree(path);
+			continue;
+		}
+
+		if (argv[index][1] == 's') {
+			const TCHAR* argument = argv[index] + 2;
+			if (!argument[0]) {
+				if (index + 1 >= argc)
+					continue;
+				argument = argv[++index];
+			}
+			constexpr auto rom_path_prefix = _T("rom_path=");
+			constexpr auto rom_path_prefix_length = 9;
+			constexpr auto qualified_rom_path_prefix = TARGET_NAME _T(".rom_path=");
+			constexpr auto qualified_rom_path_prefix_length = sizeof(TARGET_NAME _T(".rom_path=")) / sizeof(TCHAR) - 1;
+			constexpr auto rom_file_prefix = _T("kickstart_rom_file=");
+			constexpr auto rom_file_prefix_length = 19;
+			constexpr auto rom_ext_file_prefix = _T("kickstart_ext_rom_file=");
+			constexpr auto rom_ext_file_prefix_length = 23;
+
+			const TCHAR* path_argument = nullptr;
+			bool directory = false;
+			if (_tcsnicmp(argument, rom_path_prefix, rom_path_prefix_length) == 0) {
+				path_argument = argument + rom_path_prefix_length;
+				directory = true;
+			} else if (_tcsnicmp(argument, qualified_rom_path_prefix, qualified_rom_path_prefix_length) == 0) {
+				path_argument = argument + qualified_rom_path_prefix_length;
+				directory = true;
+			} else if (_tcsnicmp(argument, rom_file_prefix, rom_file_prefix_length) == 0) {
+				path_argument = argument + rom_file_prefix_length;
+			} else if (_tcsnicmp(argument, rom_ext_file_prefix, rom_ext_file_prefix_length) == 0) {
+				path_argument = argument + rom_ext_file_prefix_length;
+			} else {
+				continue;
+			}
+
+			auto* const path = parsetextpath(path_argument);
+			if (directory) {
+				const auto registered = rp9_register_rom_directory(path);
+				if (registered > 0) {
+					write_log(_T("RP9: registered %d ROM(s) from command-line ROM path '%s'\n"), registered, path);
+				}
+			} else if (path[0] && !rp9_register_rom_override(path)) {
+				write_log(_T("Kickstart configuration override could not be registered for RP9 validation: %s\n"), path);
+			}
+			xfree(path);
+		}
+	}
+}
+#endif
+
 std::string get_filename_extension(const TCHAR* filename)
 {
 	const std::string fName(filename);
@@ -1197,6 +1270,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 	if (cmdline_started)
 		return;
 	cmdline_started = true;
+
+#ifdef AMIBERRY
+	// RP9 validates required ROMs as soon as --autoload is parsed, so publish
+	// every explicit override and ROM path before processing options in order.
+	register_cmdline_rp9_rom_sources(argc, argv);
+#endif
 
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cli="), 5) == 0 || _tcsncmp(argv[i], _T("--cli="), 6) == 0) {
@@ -1320,7 +1399,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 			loaded = true;
 		}
-		// Auto-load .cue / .lha  
+		// Auto-load RP9, WHDLoad or CD content.
 		else if (_tcscmp(argv[i], _T("--autoload")) == 0)
 		{
 			if (i + 1 == argc)
@@ -1329,25 +1408,31 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			{
 				auto* const txt = parsetextpath(argv[++i]);
 				const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
-				if (_tcscmp(txt2.c_str(), ".lha") == 0)
+				if (_tcsicmp(txt2.c_str(), ".rp9") == 0)
+				{
+					write_log("RP9... %s\n", txt);
+					if (target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0))
+						config_loaded = true;
+				}
+				else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
 				{
 					write_log("WHDLoad... %s\n", txt);
 					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
 					whdload_prefs.whdload_filename = std::string(txt);
 					whdload_auto_prefs(&currprefs, txt);
-					xfree(txt);
 				}
-				else if (_tcscmp(txt2.c_str(), ".cue") == 0
-					|| _tcscmp(txt2.c_str(), ".iso") == 0
-					|| _tcscmp(txt2.c_str(), ".chd") == 0)
+				else if (_tcsicmp(txt2.c_str(), ".cue") == 0
+					|| _tcsicmp(txt2.c_str(), ".iso") == 0
+					|| _tcsicmp(txt2.c_str(), ".chd") == 0)
 				{
 					write_log("CDTV/CD32... %s\n", txt);
 					add_file_to_mru_list(lstMRUCDList, std::string(txt));
 					cd_auto_prefs(&currprefs, txt);
-					xfree(txt);
 				}
 				else
 					write_log("Unknown extension for autoload... %s\n", txt);
+				xfree(txt);
+				loaded = true;
 			}
 		}
 		else if (_tcscmp(argv[i], _T("--log")) == 0)
@@ -1394,7 +1479,15 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			auto* const txt = parsetextpath(argv[i]);
 			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 #ifdef AMIBERRY
-			if (_tcscmp(txt2.c_str(), ".lha") == 0)
+			if (_tcsicmp(txt2.c_str(), ".rp9") == 0)
+			{
+				write_log("RP9... %s\n", txt);
+				if (target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0)) {
+					config_loaded = true;
+					currprefs.start_gui = false;
+				}
+			}
+			else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
 			{
 				write_log("WHDLoad... %s\n", txt);
 				add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
@@ -1647,6 +1740,7 @@ static int real_main2 (int argc, TCHAR **argv)
 			return 1;
 		}
 	}
+	rp9_cleanup_unused();
 
 #ifndef LIBRETRO
 	if (amiberry_options.update_check && get_update_method() != UpdateMethod::DISABLED) {

@@ -40,6 +40,7 @@
 #include "tinyxml2.h"
 #include "file_dialog.h"
 #include "macos_window.h"
+#include "amiberry_rp9.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -1898,9 +1899,9 @@ static void handle_drop_file_event(const SDL_Event& event)
 	const char* dropped_file = event.drop.data;
 	const auto ext = get_filename_extension(dropped_file);
 
-	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	if (strcasecmp(ext.c_str(), ".uae") == 0 || strcasecmp(ext.c_str(), ".rp9") == 0)
 	{
-		// Load configuration file
+		// Load configuration or self-contained RP9 package
 		uae_restart(&currprefs, -1, dropped_file);
 		gui_running = false;
 	}
@@ -2694,13 +2695,17 @@ void run_gui()
 		ImGui::SameLine();
 		if (AmigaButton(ICON_FA_ARROWS_ROTATE " Reload", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			char tmp[MAX_DPATH] = {0};
-			get_configuration_path(tmp, sizeof tmp);
-			if (strlen(last_loaded_config) > 0) {
-				strncat(tmp, last_loaded_config, MAX_DPATH - 1);
-				strncat(tmp, ".uae", MAX_DPATH - 10);
+			if (!rp9_get_loaded_path().empty()) {
+				strncpy(tmp, rp9_get_loaded_path().c_str(), MAX_DPATH - 1);
 			} else {
-				strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
-				strncat(tmp, ".uae", MAX_DPATH - 10);
+				get_configuration_path(tmp, sizeof tmp);
+				if (strlen(last_loaded_config) > 0) {
+					strncat(tmp, last_loaded_config, MAX_DPATH - 1);
+					strncat(tmp, ".uae", MAX_DPATH - 10);
+				} else {
+					strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
+					strncat(tmp, ".uae", MAX_DPATH - 10);
+				}
 			}
 			uae_restart(&changed_prefs, -1, tmp);
 			gui_running = false;

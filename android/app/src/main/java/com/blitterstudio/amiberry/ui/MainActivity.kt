@@ -93,21 +93,25 @@ class MainActivity : ComponentActivity() {
 		// Clear the action so it isn't re-processed on config change
 		intent.action = null
 
+		pendingFileMimeType = intent.type
 		pendingFileUri = uri
 	}
 
-	/** URI from an incoming ACTION_VIEW intent, processed after asset extraction. */
+	/** URI and MIME type from an incoming ACTION_VIEW intent, processed after asset extraction. */
 	var pendingFileUri by mutableStateOf<Uri?>(null)
+		private set
+	var pendingFileMimeType by mutableStateOf<String?>(null)
 		private set
 
 	fun clearPendingFileUri() {
 		pendingFileUri = null
+		pendingFileMimeType = null
 	}
 
 	/**
 	 * Import a file from a content/file URI and launch emulation with it.
 	 */
-	fun importAndLaunch(uri: Uri) {
+	fun importAndLaunch(uri: Uri, mimeType: String? = null) {
 		if (!importLaunchGuard.begin()) {
 			Log.d(TAG, "Ignoring incoming file intent while another import launch is in progress")
 			return
@@ -115,7 +119,7 @@ class MainActivity : ComponentActivity() {
 		lifecycleScope.launch(Dispatchers.IO) {
 			try {
 				val preparedImport = try {
-					IntentImportExecutor.importAndPrepare(this@MainActivity, uri)
+					IntentImportExecutor.importAndPrepare(this@MainActivity, uri, mimeType)
 				} catch (e: Exception) {
 					Log.e(TAG, "Failed to handle incoming file intent", e)
 					ImportFeedback.importFailed(uri.lastPathSegment ?: "file").let { feedback ->
@@ -153,6 +157,11 @@ class MainActivity : ComponentActivity() {
 				this,
 				launch.lhaPath,
 				launch.configPath
+			)
+			is IntentImportExecutor.Launch.Rp9 -> EmulatorLauncher.launchRp9(
+				this,
+				launch.path,
+				launch.controlSettings
 			)
 			null -> Unit
 		}

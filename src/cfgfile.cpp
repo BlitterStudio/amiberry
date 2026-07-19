@@ -10640,6 +10640,125 @@ void error_log (const TCHAR *format, ...)
 }
 
 #ifdef AMIBERRY
+static int configure_rp9_early_system_rom(struct uae_prefs* p, const int rom)
+{
+	int roms[4];
+
+	// An RP9 configuration ROM is a requirement. Alternatives below are only
+	// regional or hardware variants of that exact Kickstart release.
+	switch (rom)
+	{
+	case 100:
+		roms[0] = 1;
+		roms[1] = -1;
+		break;
+	case 110:
+		roms[0] = p->ntscmode ? 2 : 3;
+		roms[1] = p->ntscmode ? 3 : 2;
+		roms[2] = -1;
+		break;
+	case 120:
+		roms[0] = 5;
+		roms[1] = 4;
+		roms[2] = -1;
+		break;
+	case 130:
+		roms[0] = 6;
+		roms[1] = -1;
+		break;
+	case 204:
+		roms[0] = 7;
+		roms[1] = -1;
+		break;
+	case 205:
+		roms[0] = 10;
+		roms[1] = 9;
+		roms[2] = 8;
+		roms[3] = -1;
+		break;
+	case 310:
+		roms[0] = 14;
+		roms[1] = -1;
+		break;
+	default:
+		return 0;
+	}
+	return configure_rom(p, roms, 0);
+}
+
+int configure_rp9_system_rom(struct uae_prefs* p, const rp9_system_model model, const int rom)
+{
+	int roms[4];
+	switch (model)
+	{
+	case rp9_system_model::a1000:
+		if (rom != 100 && rom != 110 && rom != 120 && rom != 130)
+			return 0;
+		return configure_rp9_early_system_rom(p, rom);
+	case rp9_system_model::a500:
+	case rp9_system_model::a2000:
+		if (rom != 100 && rom != 110 && rom != 120 && rom != 130 && rom != 310)
+			return 0;
+		return configure_rp9_early_system_rom(p, rom);
+	case rp9_system_model::a500plus:
+		if (rom != 120 && rom != 130 && rom != 204 && rom != 310)
+			return 0;
+		return configure_rp9_early_system_rom(p, rom);
+	case rp9_system_model::a600:
+		if (rom != 120 && rom != 130 && rom != 204 && rom != 205 && rom != 310)
+			return 0;
+		return configure_rp9_early_system_rom(p, rom);
+	case rp9_system_model::a1200:
+		if (rom == 300)
+			roms[0] = 11;
+		else if (rom == 310)
+			roms[0] = 15;
+		else
+			return 0;
+		roms[1] = -1;
+		return configure_rom(p, roms, 0);
+	case rp9_system_model::a3000:
+		if (rom == 130)
+			roms[0] = 32;
+		else if (rom == 204)
+			roms[0] = 71;
+		else if (rom == 310)
+			roms[0] = 61;
+		else
+			return 0;
+		roms[1] = -1;
+		return configure_rom(p, roms, 0);
+	case rp9_system_model::a4000:
+		if (rom == 300) {
+			roms[0] = 12;
+			roms[1] = -1;
+		} else if (rom == 310) {
+			roms[0] = 16;
+			roms[1] = 31;
+			roms[2] = 13;
+			roms[3] = -1;
+		} else {
+			return 0;
+		}
+		return configure_rom(p, roms, 0);
+	case rp9_system_model::cdtv:
+		if (rom != 120 && rom != 130 && rom != 310)
+			return 0;
+		if (!configure_rp9_early_system_rom(p, rom))
+			return 0;
+		roms[0] = 20;
+		roms[1] = 21;
+		roms[2] = 22;
+		roms[3] = -1;
+		return configure_rom(p, roms, 0);
+	case rp9_system_model::cd32:
+		if (rom != 310 && rom != RP9_SYSTEM_ROM_310_CD32)
+			return 0;
+		return bip_cd32(p, 0, 0, 0);
+	}
+	return 0;
+}
+
 int bip_a4000(struct uae_prefs* p, int rom)
 {
 	return bip_a4000(p, 0, 0, 0);
@@ -10676,7 +10795,7 @@ int bip_a500plus(struct uae_prefs* p, int rom)
 {
 	int roms[4];
 
-	int v = bip_a500p(p, 0, 0, 0);
+	bip_a500p(p, 0, 0, 0);
 	if (rom == 130)
 	{
 		roms[0] = 6;
@@ -10694,26 +10813,49 @@ int bip_a500plus(struct uae_prefs* p, int rom)
 	return configure_rom(p, roms, 0);
 }
 
-int bip_a500(struct uae_prefs* p, int rom)
+static int configure_a500_a2000_rom(struct uae_prefs* p, int rom)
 {
 	int roms[4];
 
-	int v = bip_a500(p, 0, 0, 0);
-	if (rom == 130)
+	// General model selection keeps compatible fallbacks for users who do not
+	// have the preferred ROM. RP9 requirements use the strict helper above.
+	switch (rom)
 	{
+	case 100:
+		roms[0] = 1;
+		roms[1] = 3;
+		roms[2] = 2;
+		break;
+	case 110:
+		roms[0] = p->ntscmode ? 2 : 3;
+		roms[1] = p->ntscmode ? 3 : 2;
+		roms[2] = 1;
+		break;
+	case 130:
 		roms[0] = 6;
 		roms[1] = 5;
 		roms[2] = 4;
-		roms[3] = -1;
-	}
-	else
-	{
+		break;
+	case 310:
+		roms[0] = 14;
+		roms[1] = 6;
+		roms[2] = 5;
+		break;
+	case 120:
+	default:
 		roms[0] = 5;
 		roms[1] = 4;
 		roms[2] = 3;
-		roms[3] = -1;
+		break;
 	}
+	roms[3] = -1;
 	return configure_rom(p, roms, 0);
+}
+
+int bip_a500(struct uae_prefs* p, int rom)
+{
+	bip_a500(p, 0, 0, 0);
+	return configure_a500_a2000_rom(p, rom);
 }
 
 int bip_a600(struct uae_prefs* p, int rom)
@@ -10728,22 +10870,6 @@ int bip_a1000(struct uae_prefs* p, int rom)
 
 int bip_a2000(struct uae_prefs* p, int rom)
 {
-	int roms[4];
-
-	if (rom == 130)
-	{
-		roms[0] = 6;
-		roms[1] = 5;
-		roms[2] = 4;
-		roms[3] = -1;
-	}
-	else
-	{
-		roms[0] = 5;
-		roms[1] = 4;
-		roms[2] = 3;
-		roms[3] = -1;
-	}
 	p->cs_compatible = CP_A2000;
 	built_in_chipset_prefs(p);
 	p->chipmem.size = 0x00080000;
@@ -10752,7 +10878,7 @@ int bip_a2000(struct uae_prefs* p, int rom)
 	p->cpu_compatible = false;
 	p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
-	return configure_rom(p, roms, 0);
+	return configure_a500_a2000_rom(p, rom);
 }
 
 int bip_a3000(struct uae_prefs* p, int rom)

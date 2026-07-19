@@ -13,4 +13,4 @@ Terminal=false
 Categories=Game;Emulator;
 Keywords=Amiga;Emulator;Retro;Commodore;A500;A1200;A4000;WHDLoad;
 PrefersNonDefaultGPU=true
-MimeType=application/x-SPS-virtual-media-image;application/x-DMS-compressed-disk-image;application/x-amiga-disk-image;application/x-cue;application/x-WHDLoad-game-archive;application/x-UAE-savestate-file;
+MimeType=application/x-SPS-virtual-media-image;application/x-DMS-compressed-disk-image;application/x-amiga-disk-image;application/x-cue;application/x-WHDLoad-game-archive;application/x-UAE-savestate-file;application/vnd.cloanto.rp9;

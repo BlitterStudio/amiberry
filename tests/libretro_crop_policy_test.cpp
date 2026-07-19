@@ -110,12 +110,30 @@ static void test_libretro_stabilizer_uses_short_mode_change_delays()
 		"Shrinking crops should not wait a full second");
 }
 
+static void test_rp9_manifest_clip_owns_automatic_crop()
+{
+	expect_true(!libretro_should_queue_auto_crop_options(true, true),
+		"RP9 automatic crop options must wait until after the manifest is parsed");
+	expect_true(libretro_should_queue_auto_crop_options(true, false),
+		"Non-RP9 content must keep automatic crop startup options");
+	expect_true(!libretro_should_queue_auto_crop_options(false, true),
+		"Disabled or fixed crop modes must not queue automatic crop options");
+
+	expect_true(libretro_should_preserve_rp9_clip(true, true),
+		"Automatic crop must preserve an RP9 manifest clip");
+	expect_true(!libretro_should_preserve_rp9_clip(true, false),
+		"RP9 packages without a clip must use normal automatic crop");
+	expect_true(!libretro_should_preserve_rp9_clip(false, true),
+		"Explicit disabled or fixed crop modes must override an RP9 clip");
+}
+
 int main()
 {
 	test_expands_to_visible_pixels_below_crop();
 	test_ignores_isolated_outside_pixels();
 	test_fixed_crop_shifts_to_keep_content_visible();
 	test_libretro_stabilizer_uses_short_mode_change_delays();
+	test_rp9_manifest_clip_owns_automatic_crop();
 
 	return failures == 0 ? 0 : 1;
 }

@@ -669,6 +669,16 @@ static int create_windows(struct AmigaMonitor* mon)
 			md = md2;
 	}
 	mon->md = md;
+	mon->desktop_width = 0;
+	mon->desktop_height = 0;
+	if (md && md->display_id) {
+		const SDL_DisplayMode* desktop_mode = SDL_GetDesktopDisplayMode(md->display_id);
+		if (desktop_mode) {
+			mon->desktop_width = desktop_mode->w;
+			mon->desktop_height = desktop_mode->h;
+			sdl_mode = *desktop_mode;
+		}
+	}
 
 	if (mon->amiga_window) {
 		SDL_Rect r;
@@ -977,14 +987,6 @@ static int create_windows(struct AmigaMonitor* mon)
 		}
 	}
 
-    // Cache current display mode for scaling heuristics
-    {
-        SDL_DisplayID disp_id = SDL_GetDisplayForWindow(mon->amiga_window);
-        const SDL_DisplayMode* dm = disp_id ? SDL_GetDesktopDisplayMode(disp_id) : nullptr;
-        if (dm) {
-            sdl_mode = *dm;
-        }
-    }
 	updatewinrect(mon, true);
 	GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
 	if (fullscreen || fullwindow)

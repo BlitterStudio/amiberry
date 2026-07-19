@@ -19,6 +19,11 @@
     <url type="donation">https://ko-fi.com/midwan</url>
     <url type="vcs-browser">https://github.com/BlitterStudio/amiberry</url>
 
+    <provides>
+        <binary>amiberry</binary>
+        <mediatype>application/vnd.cloanto.rp9</mediatype>
+    </provides>
+
     <branding>
         <color type="primary" scheme_preference="light">#3584e4</color>
         <color type="primary" scheme_preference="dark">#1a5fb4</color>

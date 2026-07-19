@@ -65,6 +65,7 @@ object LaunchDiagnostics {
 		is LaunchRequest.SavedConfig -> "SavedConfig"
 		is LaunchRequest.SettingsConfig -> "SettingsConfig"
 		is LaunchRequest.WhdLoad -> "WhdLoad"
+		is LaunchRequest.Rp9 -> "Rp9"
 	}
 
 	private fun LaunchRequest.configPathOrNull(): String? = when (this) {
@@ -73,6 +74,7 @@ object LaunchDiagnostics {
 		is LaunchRequest.SavedConfig -> configPath
 		is LaunchRequest.SettingsConfig -> configPath
 		is LaunchRequest.WhdLoad -> configPath
+		is LaunchRequest.Rp9 -> null
 	}
 
 	private fun String.toJsonString(): String = buildString {
