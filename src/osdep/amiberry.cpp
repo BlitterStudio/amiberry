@@ -17,6 +17,7 @@
 #include <cstdint>
 #endif
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <cctype>
@@ -6413,6 +6414,13 @@ bool save_amiberry_settings_with_result()
 
 	// Shader to use for RTG modes (if any)
 	write_string_option("shader_rtg", amiberry_options.shader_rtg);
+	for (const auto& parameter : amiberry_options.shader_parameters)
+	{
+		_sntprintf(buffer, MAX_DPATH, "shader_parameter=%s|%s|%s|%.9g\n",
+			parameter.rtg ? "rtg" : "native", parameter.shader.c_str(),
+			parameter.name.c_str(), parameter.value);
+		fputs(buffer, f);
+	}
 
 	// Show CRT bezel frame overlay
 	write_bool_option("use_bezel", amiberry_options.use_bezel);
@@ -6511,6 +6519,56 @@ static void trim_wsa(char* s)
 	auto len = strlen(s);
 	while (len > 0 && strcspn(s + len - 1, "\t \r\n") == 0)
 		s[--len] = '\0';
+}
+
+static bool parse_shader_parameter_setting(const char* value)
+{
+	const std::string serialized(value);
+	const auto target_end = serialized.find('|');
+	const auto shader_end = target_end == std::string::npos
+		? std::string::npos
+		: serialized.find('|', target_end + 1);
+	const auto name_end = shader_end == std::string::npos
+		? std::string::npos
+		: serialized.find('|', shader_end + 1);
+	if (target_end == std::string::npos || target_end == 0
+		|| shader_end == std::string::npos || shader_end == target_end + 1
+		|| name_end == std::string::npos || name_end == shader_end + 1
+		|| name_end + 1 >= serialized.size())
+	{
+		return false;
+	}
+
+	const auto target = serialized.substr(0, target_end);
+	if (target != "native" && target != "rtg")
+		return false;
+
+	const bool rtg = target == "rtg";
+	const auto shader = serialized.substr(target_end + 1, shader_end - target_end - 1);
+	const auto name = serialized.substr(shader_end + 1, name_end - shader_end - 1);
+	const auto value_string = serialized.substr(name_end + 1);
+	try
+	{
+		size_t consumed = 0;
+		const float parameter_value = std::stof(value_string, &consumed);
+		if (consumed != value_string.size() || !std::isfinite(parameter_value))
+			return false;
+
+		auto& parameters = amiberry_options.shader_parameters;
+		const auto existing = std::find_if(parameters.begin(), parameters.end(),
+			[&](const amiberry_shader_parameter& parameter) {
+				return parameter.rtg == rtg && parameter.shader == shader && parameter.name == name;
+			});
+		if (existing != parameters.end())
+			existing->value = parameter_value;
+		else
+			parameters.push_back({rtg, shader, name, parameter_value});
+		return true;
+	}
+	catch (const std::exception&)
+	{
+		return false;
+	}
 }
 
 static bool parse_base_content_path_line(const char* path, char* linea, std::string& value_out)
@@ -6743,6 +6801,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
+		if (_tcscmp(option, _T("shader_parameter")) == 0)
+			ret |= parse_shader_parameter_setting(value) ? 1 : 0;
 		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
 		ret |= cfgfile_yesno(option, value, "use_custom_bezel", &amiberry_options.use_custom_bezel);
 		ret |= cfgfile_string(option, value, "custom_bezel", amiberry_options.custom_bezel, sizeof amiberry_options.custom_bezel);
