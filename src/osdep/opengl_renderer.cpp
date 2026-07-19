@@ -35,6 +35,7 @@
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
 #include "gui/gui_handling.h"
+#include <algorithm>
 #include <cmath>
 #include <SDL3_image/SDL_image.h>
 
