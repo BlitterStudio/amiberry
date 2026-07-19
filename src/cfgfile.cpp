@@ -2573,8 +2573,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_strarr(f, _T("gfx_lores_mode"), loresmode, p->gfx_lores_mode);
 	cfgfile_write_bool (f, _T("gfx_flickerfixer"), p->gfx_scandoubler);
 	cfgfile_write_strarr(f, _T("gfx_linemode"), linemode, p->gfx_vresolution > 0 ? p->gfx_iscanlines * 4 + p->gfx_pscanlines + 1 : 0);
-	cfgfile_write_strarr(f, _T("gfx_fullscreen_amiga"), fullmodes, p->gfx_apmode[0].gfx_fullscreen);
-	cfgfile_write_strarr(f, _T("gfx_fullscreen_picasso"), fullmodes, p->gfx_apmode[1].gfx_fullscreen);
+	cfgfile_write_strarr(f, _T("gfx_fullscreen_amiga"), fullmodes,
+		amiberry_normalize_gfx_fullscreen_mode(p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen));
+	cfgfile_write_strarr(f, _T("gfx_fullscreen_picasso"), fullmodes,
+		amiberry_normalize_gfx_fullscreen_mode(p->gfx_apmode[APMODE_RTG].gfx_fullscreen));
 	cfgfile_write_strarr(f, _T("gfx_center_horizontal"), centermode1, p->gfx_xcenter);
 	cfgfile_write_strarr(f, _T("gfx_center_vertical"), centermode1, p->gfx_ycenter);
 	cfgfile_write_bool(f, _T("gfx_keep_aspect"), p->gfx_keep_aspect);
@@ -3994,6 +3996,18 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 #endif
+	if (cfgfile_strval(option, value, _T("gfx_fullscreen_amiga"),
+		&p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen, fullmodes, 0)) {
+		p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+			p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen);
+		return 1;
+	}
+	if (cfgfile_strval(option, value, _T("gfx_fullscreen_picasso"),
+		&p->gfx_apmode[APMODE_RTG].gfx_fullscreen, fullmodes, 0)) {
+		p->gfx_apmode[APMODE_RTG].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+			p->gfx_apmode[APMODE_RTG].gfx_fullscreen);
+		return 1;
+	}
 
 	if (cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode1, 1)
 		|| cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode2, 0)
@@ -4006,8 +4020,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_strval (option, value, _T("gfx_resolution"), &p->gfx_resolution, lorestype1, 0)
 		|| cfgfile_strval (option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
 		|| cfgfile_strval (option, value, _T("gfx_lores_mode"), &p->gfx_lores_mode, loresmode, 0)
-		|| cfgfile_strval (option, value, _T("gfx_fullscreen_amiga"), &p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen, fullmodes, 0)
-		|| cfgfile_strval (option, value, _T("gfx_fullscreen_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_fullscreen, fullmodes, 0)
 		|| cfgfile_strval (option, value, _T("gfx_center_horizontal"), &p->gfx_xcenter, centermode1, 1)
 		|| cfgfile_strval (option, value, _T("gfx_center_vertical"), &p->gfx_ycenter, centermode1, 1)
 		|| cfgfile_strval (option, value, _T("gfx_center_horizontal"), &p->gfx_xcenter, centermode2, 0)
@@ -7857,8 +7869,10 @@ static void parse_gfx_specs (struct uae_prefs *p, const TCHAR *spec)
 	p->gfx_pscanlines = _tcschr (x2, 'D') != nullptr;
 	if (p->gfx_pscanlines)
 		p->gfx_vresolution = VRES_DOUBLE;
-	p->gfx_apmode[0].gfx_fullscreen = _tcschr (x2, 'a') != nullptr;
-	p->gfx_apmode[1].gfx_fullscreen = _tcschr (x2, 'p') != nullptr;
+	p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen = _tcschr(x2, 'a') != nullptr
+		? GFX_FULLWINDOW : GFX_WINDOW;
+	p->gfx_apmode[APMODE_RTG].gfx_fullscreen = _tcschr(x2, 'p') != nullptr
+		? GFX_FULLWINDOW : GFX_WINDOW;
 
 	free (x0);
 	return;

@@ -122,8 +122,6 @@ void initialize_display_defaults()
 
 	switch (changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen) {
 	case GFX_FULLSCREEN:
-		display_defaults.screen_mode = PlayScreenMode::Fullscreen;
-		break;
 	case GFX_FULLWINDOW:
 		display_defaults.screen_mode = PlayScreenMode::FullWindow;
 		break;
@@ -766,7 +764,7 @@ void render_display_defaults()
 {
 	initialize_display_defaults();
 
-	static const char* screen_items[] = { "Windowed", "Full-window", "Fullscreen" };
+	static const char* screen_items[] = { "Windowed", "Full-window" };
 	static const char* scaling_items[] = { "Auto", "Integer", "Smooth" };
 	static const char* shader_items[] = { "None", "CRT", "1084", "Custom" };
 

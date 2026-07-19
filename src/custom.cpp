@@ -4431,7 +4431,7 @@ static void cursorsprite(struct sprite *s)
 	sprite_0_width = sprite_width;
 	if (amiberry_cursor_host_only_enabled(currprefs.input_tablet,
 		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY,
-		isfullscreen() <= 0) && mousehack_alive()) {
+		isfullscreen() == 0) && mousehack_alive()) {
 		magic_sprite_mask &= ~SPRITE_RENDER_MASK(0);
 	} else {
 		magic_sprite_mask |= SPRITE_RENDER_MASK(0);

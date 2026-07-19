@@ -293,7 +293,8 @@ static uaecptr oldscr = 0;
 #ifdef AMIBERRY
 static bool magic_mouse_host_only_enabled()
 {
-	const bool host_cursor_available = currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen != GFX_FULLSCREEN;
+	const bool host_cursor_available = amiberry_normalize_gfx_fullscreen_mode(
+		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen) == GFX_WINDOW;
 	return amiberry_cursor_host_only_enabled(currprefs.input_tablet,
 		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY,
 		host_cursor_available);
@@ -2265,7 +2266,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	if (!amiberry_cursor_host_only_enabled(currprefs.input_tablet,
 		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY,
-		isfullscreen() <= 0)) {
+		isfullscreen() == 0)) {
 		goto exit;
 	}
 
@@ -2504,7 +2505,7 @@ exit:
 
 	wincursor_shown = 0;
 
-	if (isfullscreen() > 0 || currprefs.input_tablet == 0 || !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+	if (isfullscreen() != 0 || currprefs.input_tablet == 0 || !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
 		goto exit;
 	}
 	if (currprefs.input_magic_mouse_cursor != MAGICMOUSE_HOST_ONLY) {

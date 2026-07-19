@@ -78,7 +78,7 @@ void render_panel_display() {
     if (kmsdrm) {
         ImGui::TextDisabled("KMSDRM uses the active console display mode");
         ImGui::SameLine();
-        ShowHelpMarker("Host resolution and refresh rate are controlled by the console configuration. Amiberry uses console fullscreen with software emulation pacing and vblank-paced presentation.");
+        ShowHelpMarker("Host resolution and refresh rate are controlled by the console configuration. Amiberry uses console Full-window mode with software emulation pacing and vblank-paced presentation.");
         ImGui::Spacing();
     }
 
@@ -112,17 +112,23 @@ void render_panel_display() {
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Native:");
     ImGui::SameLine(BUTTON_WIDTH);
-    const char *screenmode_items[] = {"Windowed", "Fullscreen", "Full-window"};
+    changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+        changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen);
+    changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+        changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen);
+    const char *screenmode_items[] = {"Windowed", "Full-window"};
+    const int screenmode_values[] = {GFX_WINDOW, GFX_FULLWINDOW};
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
     if (kmsdrm) ImGui::BeginDisabled();
-    const char *native_mode_label = kmsdrm ? "Console fullscreen" : screenmode_items[changed_prefs.gfx_apmode[0].gfx_fullscreen];
+    const char *native_mode_label = kmsdrm || changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW
+        ? "Full-window" : "Windowed";
     if (ImGui::BeginCombo("##NativeMode", native_mode_label)) {
         for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
-            const bool is_selected = (changed_prefs.gfx_apmode[0].gfx_fullscreen == n);
+            const bool is_selected = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == screenmode_values[n];
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable(screenmode_items[n], is_selected)) {
-                changed_prefs.gfx_apmode[0].gfx_fullscreen = n;
+                changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = screenmode_values[n];
             }
             if (is_selected) {
                 ImGui::PopStyleColor();
@@ -134,8 +140,8 @@ void render_panel_display() {
     if (kmsdrm) ImGui::EndDisabled();
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ShowHelpMarker(kmsdrm
-        ? "KMSDRM always uses the active console display in fullscreen mode"
-        : "Native chipset screen mode: Windowed, Fullscreen or Full-window (borderless fullscreen)");
+        ? "KMSDRM always uses the active console display in Full-window mode"
+        : "Native chipset screen mode: Windowed or Full-window (borderless desktop mode)");
 
     ImGui::SameLine();
 
@@ -204,14 +210,15 @@ void render_panel_display() {
     ImGui::SameLine(BUTTON_WIDTH);
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
     if (kmsdrm) ImGui::BeginDisabled();
-    const char *rtg_mode_label = kmsdrm ? "Console fullscreen" : screenmode_items[changed_prefs.gfx_apmode[1].gfx_fullscreen];
+    const char *rtg_mode_label = kmsdrm || changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen == GFX_FULLWINDOW
+        ? "Full-window" : "Windowed";
     if (ImGui::BeginCombo("##RTGMode", rtg_mode_label)) {
         for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
-            const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_fullscreen == n);
+            const bool is_selected = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen == screenmode_values[n];
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable(screenmode_items[n], is_selected)) {
-                changed_prefs.gfx_apmode[1].gfx_fullscreen = n;
+                changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = screenmode_values[n];
             }
             if (is_selected) {
                 ImGui::PopStyleColor();
@@ -223,7 +230,7 @@ void render_panel_display() {
     if (kmsdrm) ImGui::EndDisabled();
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ShowHelpMarker(kmsdrm
-        ? "KMSDRM always uses the active console display in fullscreen mode"
+        ? "KMSDRM always uses the active console display in Full-window mode"
         : "RTG (Picasso96) screen mode when using graphics card emulation");
 
     ImGui::SameLine();

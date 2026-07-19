@@ -1,10 +1,11 @@
 #pragma once
 
+#include "amiberry_gfx_mode.h"
+
 enum class PlayScreenMode
 {
 	Windowed,
-	FullWindow,
-	Fullscreen
+	FullWindow
 };
 
 enum class PlayScalingMode

@@ -448,7 +448,7 @@ static void HandleSetConfig(DBusMessage* msg)
 		// Display options
 		else if (strcmp(optname, "gfx_fullscreen") == 0) {
 			bool fullscreen = (strcmp(optval, "true") == 0 || strcmp(optval, "1") == 0);
-			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
+			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLWINDOW : GFX_WINDOW;
 			set_config_changed();
 		}
 		// Sound options

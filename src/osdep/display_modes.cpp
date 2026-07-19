@@ -74,7 +74,9 @@ int isfullscreen_2(const struct uae_prefs* p)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
-	return p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLSCREEN ? 1 : p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLWINDOW ? -1 : 0;
+	const int mode = amiberry_normalize_gfx_fullscreen_mode(
+		p->gfx_apmode[idx].gfx_fullscreen);
+	return mode == GFX_FULLWINDOW ? -1 : 0;
 }
 int isfullscreen()
 {

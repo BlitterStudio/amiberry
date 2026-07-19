@@ -403,7 +403,7 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 		// Display options
 		else if (optname == "gfx_fullscreen") {
 			bool fullscreen = (optval == "true" || optval == "1");
-			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
+			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLWINDOW : GFX_WINDOW;
 			set_config_changed();
 		}
 		// Sound options
@@ -992,7 +992,7 @@ static std::string HandleSetDisplayMode(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received SET_DISPLAY_MODE" << std::endl;
 	if (args.empty()) {
-		return make_response(false, {"Usage: SET_DISPLAY_MODE <mode> (0=window, 1=fullscreen, 2=fullwindow)"});
+		return make_response(false, {"Usage: SET_DISPLAY_MODE <mode> (0=window, 1=legacy fullscreen alias, 2=fullwindow)"});
 	}
 
 	int mode;
@@ -1003,10 +1003,10 @@ static std::string HandleSetDisplayMode(const std::vector<std::string>& args)
 	}
 
 	if (mode < 0 || mode > 2) {
-		return make_response(false, {"Mode must be 0-2 (0=window, 1=fullscreen, 2=fullwindow)"});
+		return make_response(false, {"Mode must be 0-2 (0=window, 1=legacy fullscreen alias, 2=fullwindow)"});
 	}
 
-	changed_prefs.gfx_apmode[0].gfx_fullscreen = mode;
+	changed_prefs.gfx_apmode[0].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(mode);
 	set_config_changed();
 
 	return make_response(true);
@@ -1015,7 +1015,8 @@ static std::string HandleSetDisplayMode(const std::vector<std::string>& args)
 static std::string HandleGetDisplayMode(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received GET_DISPLAY_MODE" << std::endl;
-	const int mode = currprefs.gfx_apmode[0].gfx_fullscreen;
+	const int mode = amiberry_normalize_gfx_fullscreen_mode(
+		currprefs.gfx_apmode[0].gfx_fullscreen);
 	const char* mode_names[] = {"window", "fullscreen", "fullwindow"};
 	std::string mode_name = (mode >= 0 && mode <= 2) ? mode_names[mode] : "unknown";
 
