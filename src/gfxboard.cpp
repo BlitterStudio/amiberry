@@ -440,6 +440,20 @@ static const struct gfxboard boards[] =
 		0, 0, NULL, &mystique_220_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 #endif
+	{
+		GFXBOARD_ID_ZZ9000_Z2,
+		_T("ZZ9000 [Zorro II]"), _T("MNT Research"), _T("ZZ9000_Z2"),
+		0x6d6e, 3, 0, 0,
+		0x00000000, 0x00400000, 0x00400000, 0x00400000, 0, 2, 6, false, true,
+		0, 0xc7, &zz9000_func
+	},
+	{
+		GFXBOARD_ID_ZZ9000_Z3,
+		_T("ZZ9000 [Zorro III]"), _T("MNT Research"), _T("ZZ9000_Z3"),
+		0x6d6e, 4, 0, 0,
+		0x00000000, 0x08000000, 0x08000000, 0x08000000, 0, 3, 6, false, true,
+		0, 0x83, &zz9000_func, {}, 0x20
+	},
 #if 0
 	{
 		GFXBOARD_ID_GD5446_PCI,
@@ -1322,9 +1336,15 @@ static void REGPARAM2 gtb_bput(uaecptr addr, uae_u32 b)
 	struct rtggfxboard *gb = &rtggfxboards[gfx_temp_bank_idx];
 	b &= 0xff;
 	addr &= 0xffff;
-	if (addr == 0x48) {
+	const uaecptr configure_address = gb->board->configtype == 3 ? 0x44 : 0x48;
+	if (addr == configure_address) {
 		gfx_temp_bank_idx++;
-		map_banks_z2(gb->gfxmem_bank, expamem_board_pointer >> 16, expamem_board_size >> 16);
+		if (gb->board->configtype == 3)
+			map_banks_z3(gb->gfxmem_bank, expamem_board_pointer >> 16,
+				expamem_board_size >> 16);
+		else
+			map_banks_z2(gb->gfxmem_bank, expamem_board_pointer >> 16,
+				expamem_board_size >> 16);
 		gb->func->configured(gb->userdata, expamem_board_pointer);
 		expamem_next(gb->gfxmem_bank, NULL);
 		return;

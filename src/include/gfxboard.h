@@ -48,6 +48,7 @@ bool gfxboard_isgfxboardscreen(int monid);
 extern struct gfxboard_func a2410_func;
 extern struct gfxboard_func harlequin_func;
 extern struct gfxboard_func rainbowii_func;
+extern struct gfxboard_func zz9000_func;
 
 extern void vga_io_put(int board, int portnum, uae_u8 v);
 extern uae_u8 vga_io_get(int board, int portnum);
@@ -110,6 +111,8 @@ void gfxboard_intreq(void *p, int act, bool safe);
 #define GFXBOARD_ID_MATROX_MYSTIQUE220_PCI 40
 #define GFXBOARD_ID_GD5446_PCI 41
 #define GFXBOARD_ID_VOODOO5_PCI 42
+#define GFXBOARD_ID_ZZ9000_Z2 43
+#define GFXBOARD_ID_ZZ9000_Z3 44
 
 #define GFXBOARD_BUSTYPE_Z 0
 #define GFXBOARD_BUSTYPE_PCI 1
