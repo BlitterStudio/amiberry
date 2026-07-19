@@ -25,12 +25,19 @@ static inline std::uint32_t amiberry_cursor_rgba32_from_rgb24(std::uint32_t rgb)
 #endif
 }
 
-static inline int amiberry_cursor_hotspot_from_offset(int hotspot_offset, int extent)
+static inline int amiberry_cursor_hotspot_from_p96_offset(std::uint8_t raw_pointer_offset, int extent)
 {
 	if (extent <= 0) {
 		return 0;
 	}
 
+	// P96 stores this displacement in an unsigned BoardInfo byte, but applies
+	// it as a signed BYTE when positioning the sprite. SDL instead expects the
+	// hotspot's positive offset from the cursor bitmap's top-left corner.
+	const int pointer_offset = raw_pointer_offset & 0x80
+		? static_cast<int>(raw_pointer_offset) - 0x100
+		: static_cast<int>(raw_pointer_offset);
+	const int hotspot_offset = -pointer_offset;
 	if (hotspot_offset < 0) {
 		return 0;
 	}

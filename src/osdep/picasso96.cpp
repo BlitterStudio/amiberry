@@ -2376,8 +2376,8 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 	} else {
 		reset_native_cursor_hotspot_tracker();
-		hotspot_x = amiberry_cursor_hotspot_from_offset(cursorxoffset, w);
-		hotspot_y = amiberry_cursor_hotspot_from_offset(cursoryoffset, h);
+		hotspot_x = amiberry_cursor_hotspot_from_p96_offset(cursorxoffset, w);
+		hotspot_y = amiberry_cursor_hotspot_from_p96_offset(cursoryoffset, h);
 
 		// Track pending shapes independently from the SDL cursor that is still
 		// displayed. Bitmap, colors, and declared offsets all identify a P96 cursor.
@@ -2706,8 +2706,9 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	bpp = 4;
 	w = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseWidth);
 	h = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseHeight);
-	// P96 declares these BoardInfo fields as UBYTE. Some versions leave them
-	// zero, in which case the live pointer-to-sprite tracker supplies the hotspot.
+	// P96 stores these fields as UBYTE but interprets them as signed BYTE
+	// displacements. Keep the raw byte here; hotspot conversion sign-extends it.
+	// Some versions leave them zero, in which case the live tracker can refine it.
 	cursorxoffset = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseXOffset);
 	cursoryoffset = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseYOffset);
 	flags = trap_get_long(ctx, bi + PSSO_BoardInfo_Flags);

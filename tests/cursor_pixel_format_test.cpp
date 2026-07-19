@@ -75,14 +75,31 @@ static void test_rgba32_cursor_pixels_use_raw_rgb_order()
 
 static void test_rtg_cursor_hotspot_uses_pointer_offset()
 {
-	expect_int_eq(amiberry_cursor_hotspot_from_offset(25, 51), 25,
-		"centered P96 cursor x offset must become the SDL hotspot");
-	expect_int_eq(amiberry_cursor_hotspot_from_offset(30, 61), 30,
-		"centered P96 cursor y offset must become the SDL hotspot");
-	expect_int_eq(amiberry_cursor_hotspot_from_offset(-4, 16), 0,
-		"negative P96 cursor offset must clamp to the first pixel");
-	expect_int_eq(amiberry_cursor_hotspot_from_offset(80, 16), 15,
-		"oversized P96 cursor offset must clamp to the last pixel");
+	expect_int_eq(amiberry_cursor_hotspot_from_p96_offset(0xe7, 51), 25,
+		"signed -25 P96 x displacement must become hotspot 25");
+	expect_int_eq(amiberry_cursor_hotspot_from_p96_offset(0xe2, 61), 30,
+		"signed -30 P96 y displacement must become hotspot 30");
+	expect_int_eq(amiberry_cursor_hotspot_from_p96_offset(0xff, 32), 1,
+		"signed -1 P96 displacement must not clamp to the far cursor edge");
+	expect_int_eq(amiberry_cursor_hotspot_from_p96_offset(0, 16), 0,
+		"zero P96 displacement must keep a top-left hotspot");
+	expect_int_eq(amiberry_cursor_hotspot_from_p96_offset(4, 16), 0,
+		"positive P96 displacement must clamp to the first pixel");
+	expect_int_eq(amiberry_cursor_hotspot_from_p96_offset(0x80, 16), 15,
+		"oversized negative P96 displacement must clamp to the last pixel");
+
+	int hotspot_x = amiberry_cursor_hotspot_from_p96_offset(0xe7, 51);
+	int hotspot_y = amiberry_cursor_hotspot_from_p96_offset(0xe2, 61);
+	amiberry_input_cursor_hotspot_tracker tracker;
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			300 + i * 4, 220 + i * 4, 275 + i * 4, 190 + i * 4,
+			51, 61, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 25,
+		"learned P96 x hotspot must not correct an already decoded offset later");
+	expect_int_eq(hotspot_y, 30,
+		"learned P96 y hotspot must not correct an already decoded offset later");
 }
 
 static void test_host_only_forces_separate_rtg_sprite()
