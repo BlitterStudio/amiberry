@@ -1342,24 +1342,41 @@ int rp9_register_rom_directory(const char* directory)
 		return 0;
 
 	std::vector<std::filesystem::path> candidates;
-	for (std::filesystem::directory_iterator entry(root,
-		std::filesystem::directory_options::skip_permission_denied, error), end;
+	std::vector<std::filesystem::path> key_files;
+	constexpr auto options = std::filesystem::directory_options::skip_permission_denied;
+	for (std::filesystem::recursive_directory_iterator entry(root, options, error), end;
 		entry != end; entry.increment(error)) {
 		if (error)
 			break;
-		if (!entry->is_regular_file(error) || error) {
-			error.clear();
+
+		std::error_code type_error;
+		if (entry->is_directory(type_error)) {
+			const auto name = entry->path().filename().string();
+			if (!name.empty() && name.front() == '.')
+				entry.disable_recursion_pending();
 			continue;
 		}
-		const auto size = entry->file_size(error);
-		if (error || size >= maximum_scanned_rom_size) {
-			error.clear();
+		if (type_error || !entry->is_regular_file(type_error) || type_error)
 			continue;
-		}
-		if (_tcsicmp(entry->path().filename().string().c_str(), _T("rom.key")) != 0)
+
+		std::error_code size_error;
+		const auto size = entry->file_size(size_error);
+		if (size_error || size >= maximum_scanned_rom_size)
+			continue;
+
+		if (_tcsicmp(entry->path().filename().string().c_str(), _T("rom.key")) == 0)
+			key_files.push_back(entry->path());
+		else
 			candidates.push_back(entry->path());
 	}
+	if (error) {
+		write_log(_T("RP9: stopped scanning ROM directory '%s': %s\n"),
+			root.string().c_str(), error.message().c_str());
+	}
 
+	std::sort(key_files.begin(), key_files.end());
+	for (const auto& key_file : key_files)
+		addkeyfile(key_file.string().c_str());
 	std::sort(candidates.begin(), candidates.end());
 	int registered = 0;
 	for (const auto& candidate : candidates) {
