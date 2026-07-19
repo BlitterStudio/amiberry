@@ -1379,6 +1379,14 @@ struct amiberry_gui_theme
 	amiberry_gui_color foreground_color;
 };
 
+struct amiberry_shader_parameter
+{
+	bool rtg = false;
+	std::string shader;
+	std::string name;
+	float value = 0.0f;
+};
+
 struct amiberry_options
 {
 	bool quickstart_start = true;
@@ -1444,6 +1452,7 @@ struct amiberry_options
 	char gui_theme[128] = "Default.theme";
 	char shader[128] = "none";
 	char shader_rtg[128] = "none";
+	std::vector<amiberry_shader_parameter> shader_parameters;
 	bool use_bezel = false;
 	bool use_custom_bezel = false;
 	char custom_bezel[256] = "none";

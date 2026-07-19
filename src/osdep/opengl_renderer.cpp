@@ -35,6 +35,7 @@
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
 #include "gui/gui_handling.h"
+#include <algorithm>
 #include <cmath>
 #include <SDL3_image/SDL_image.h>
 
@@ -247,17 +248,21 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 
 	auto mon = &AMonitors[monid];
 	const char* shader_name = get_selected_shader_name(mon);
+	const bool shader_for_rtg = mon->screen_is_picasso;
 
-	// Skip shader recreation if already loaded with the same name.
-	// This preserves runtime parameter changes made by the user.
+	// Parameterized shaders may have different Native and RTG values, so they
+	// must be recreated when the display target changes even if the name matches.
 	bool shader_exists = (m_shader.crtemu != nullptr || m_shader.external != nullptr || m_shader.preset != nullptr);
-	if (shader_exists && m_shader.loaded_name == shader_name) {
+	const bool parameterized_shader = m_shader.external != nullptr || m_shader.preset != nullptr;
+	if (shader_exists && m_shader.loaded_name == shader_name
+		&& (!parameterized_shader || m_shader.loaded_for_rtg == shader_for_rtg)) {
 		return true;
 	}
 
 	// Clean up existing shaders (name changed or no shader loaded yet)
 	destroy_shaders();
 	m_shader.loaded_name = shader_name;
+	m_shader.loaded_for_rtg = shader_for_rtg;
 
 	// Force full render on next frame after shader switch
 	mon->full_render_needed = true;
@@ -277,7 +282,8 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 			shader_name = "none";
 		} else {
 			write_log("Shader preset loaded successfully (%d passes)\n", m_shader.preset->get_pass_count());
-			restore_shader_parameters(shader_name);
+			cache_shader_parameter_template();
+			restore_shader_parameters(shader_name, shader_for_rtg);
 			return true;
 		}
 	}
@@ -291,7 +297,8 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 			shader_name = "none";
 		} else {
 			write_log("External shader loaded successfully\n");
-			restore_shader_parameters(shader_name);
+			cache_shader_parameter_template();
+			restore_shader_parameters(shader_name, shader_for_rtg);
 			return true;
 		}
 	}
@@ -999,8 +1006,23 @@ bool OpenGLRenderer::has_valid_shader() const
 
 bool OpenGLRenderer::has_shader_parameters() const
 {
-	const auto* params = shader_parameters();
-	return params && !params->empty();
+	const bool rtg = AMonitors[0].screen_is_picasso;
+	return has_shader_parameters(get_selected_shader_name(&AMonitors[0]), rtg);
+}
+
+void OpenGLRenderer::cache_shader_parameter_template()
+{
+	const std::vector<ShaderParameter>* params = nullptr;
+	if (m_shader.preset && m_shader.preset->is_valid()) {
+		params = &m_shader.preset->get_all_parameters();
+	} else if (m_shader.external && m_shader.external->is_valid()) {
+		params = &m_shader.external->get_parameters();
+	}
+
+	if (params) {
+		m_shader.parameter_template.shader_name = m_shader.loaded_name;
+		m_shader.parameter_template.parameters = *params;
+	}
 }
 
 void OpenGLRenderer::cache_shader_parameters()
@@ -1013,22 +1035,36 @@ void OpenGLRenderer::cache_shader_parameters()
 	}
 
 	if (params) {
-		m_shader.parameter_cache_name = m_shader.loaded_name;
-		m_shader.parameter_cache = *params;
+		auto& cache = m_shader.loaded_for_rtg
+			? m_shader.rtg_parameter_cache
+			: m_shader.native_parameter_cache;
+		cache.shader_name = m_shader.loaded_name;
+		cache.parameters = *params;
 	}
 }
 
-void OpenGLRenderer::restore_shader_parameters(const char* shader_name)
+void OpenGLRenderer::restore_shader_parameters(const char* shader_name, const bool rtg)
 {
-	if (!shader_name || m_shader.parameter_cache_name != shader_name)
+	if (!shader_name)
 		return;
 
-	for (const auto& param : m_shader.parameter_cache) {
+	auto apply_parameter = [&](const std::string& name, const float value) {
 		if (m_shader.preset) {
-			m_shader.preset->set_parameter(param.name, param.current_value);
+			m_shader.preset->set_parameter(name, value);
 		} else if (m_shader.external) {
-			m_shader.external->set_parameter(param.name, param.current_value);
+			m_shader.external->set_parameter(name, value);
 		}
+	};
+
+	for (const auto& parameter : amiberry_options.shader_parameters) {
+		if (parameter.rtg == rtg && parameter.shader == shader_name)
+			apply_parameter(parameter.name, parameter.value);
+	}
+
+	const auto& cache = rtg ? m_shader.rtg_parameter_cache : m_shader.native_parameter_cache;
+	if (cache.shader_name == shader_name) {
+		for (const auto& parameter : cache.parameters)
+			apply_parameter(parameter.name, parameter.current_value);
 	}
 }
 
@@ -1701,41 +1737,82 @@ const ShaderState& OpenGLRenderer::shader_state() const
 	return m_shader;
 }
 
-std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters()
+std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters(const char* shader_name, const bool rtg)
 {
-	return const_cast<std::vector<ShaderParameter>*>(
-		static_cast<const OpenGLRenderer*>(this)->shader_parameters());
+	auto* params = const_cast<std::vector<ShaderParameter>*>(
+		static_cast<const OpenGLRenderer*>(this)->shader_parameters(shader_name, rtg));
+	if (params || !shader_name)
+		return params;
+
+	// The same shader can be configured independently for Native and RTG modes.
+	// Start with the values supplied by the shader/preset before target overrides.
+	const std::vector<ShaderParameter>* source = nullptr;
+	bool use_template_values = false;
+	if (m_shader.parameter_template.shader_name == shader_name) {
+		source = &m_shader.parameter_template.parameters;
+		use_template_values = true;
+	} else {
+		source = static_cast<const OpenGLRenderer*>(this)->shader_parameters(shader_name, !rtg);
+	}
+	if (!source)
+		return nullptr;
+
+	auto& cache = rtg ? m_shader.rtg_parameter_cache : m_shader.native_parameter_cache;
+	cache.shader_name = shader_name;
+	cache.parameters = *source;
+	for (auto& parameter : cache.parameters) {
+		if (!use_template_values)
+			parameter.current_value = parameter.default_value;
+		for (const auto& saved : amiberry_options.shader_parameters) {
+			if (saved.rtg == rtg && saved.shader == shader_name && saved.name == parameter.name) {
+				parameter.current_value = std::max(parameter.min_value,
+					std::min(parameter.max_value, saved.value));
+				break;
+			}
+		}
+	}
+	return &cache.parameters;
 }
 
-const std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters() const
+const std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters(const char* shader_name, const bool rtg) const
 {
-	const char* selected_name = get_selected_shader_name(&AMonitors[0]);
-	if (m_shader.loaded_name == selected_name) {
+	if (!shader_name)
+		return nullptr;
+
+	if (m_shader.loaded_name == shader_name && m_shader.loaded_for_rtg == rtg) {
 		if (m_shader.preset && m_shader.preset->is_valid())
 			return &m_shader.preset->get_all_parameters();
 		if (m_shader.external && m_shader.external->is_valid())
 			return &m_shader.external->get_parameters();
 	}
 
-	if (m_shader.parameter_cache_name == selected_name)
-		return &m_shader.parameter_cache;
+	const auto& cache = rtg ? m_shader.rtg_parameter_cache : m_shader.native_parameter_cache;
+	if (cache.shader_name == shader_name)
+		return &cache.parameters;
 
 	return nullptr;
 }
 
-bool OpenGLRenderer::set_shader_parameter(const std::string& name, float value)
+bool OpenGLRenderer::has_shader_parameters(const char* shader_name, const bool rtg) const
+{
+	const auto* params = shader_parameters(shader_name, rtg);
+	return params && !params->empty();
+}
+
+bool OpenGLRenderer::set_shader_parameter(const char* shader_name, const bool rtg,
+	const std::string& name, const float value)
 {
 	bool updated = false;
-	const char* selected_name = get_selected_shader_name(&AMonitors[0]);
-	if (m_shader.loaded_name == selected_name) {
+	if (shader_name && m_shader.loaded_name == shader_name && m_shader.loaded_for_rtg == rtg) {
 		if (m_shader.preset && m_shader.preset->is_valid())
 			updated = m_shader.preset->set_parameter(name, value) || updated;
 		else if (m_shader.external && m_shader.external->is_valid())
 			updated = m_shader.external->set_parameter(name, value) || updated;
 	}
 
-	if (m_shader.parameter_cache_name == selected_name) {
-		for (auto& param : m_shader.parameter_cache) {
+	auto& cache = rtg ? m_shader.rtg_parameter_cache : m_shader.native_parameter_cache;
+	if (shader_name && cache.shader_name == shader_name) {
+		for (auto& param : cache.parameters) {
 			if (param.name == name) {
 				param.current_value = std::max(param.min_value, std::min(param.max_value, value));
 				updated = true;
@@ -1745,6 +1822,24 @@ bool OpenGLRenderer::set_shader_parameter(const std::string& name, float value)
 	}
 
 	return updated;
+}
+
+void OpenGLRenderer::save_shader_parameters(const char* shader_name, const bool rtg)
+{
+	const auto* params = shader_parameters(shader_name, rtg);
+	if (!params || !shader_name)
+		return;
+
+	auto& saved = amiberry_options.shader_parameters;
+	saved.erase(std::remove_if(saved.begin(), saved.end(),
+		[&](const amiberry_shader_parameter& parameter) {
+			return parameter.rtg == rtg && parameter.shader == shader_name;
+		}), saved.end());
+
+	for (const auto& parameter : *params) {
+		if (parameter.current_value != parameter.default_value)
+			saved.push_back({rtg, shader_name, parameter.name, parameter.current_value});
+	}
 }
 
 GLOverlayState& OpenGLRenderer::overlay_state()
