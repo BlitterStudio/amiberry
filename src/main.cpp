@@ -440,6 +440,13 @@ void fixup_cpu (struct uae_prefs *p)
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
 {
+#ifdef AMIBERRY
+	p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+		p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen);
+	p->gfx_apmode[APMODE_RTG].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+		p->gfx_apmode[APMODE_RTG].gfx_fullscreen);
+#endif
+
 	const int saved_cs_ide = p->cs_ide;
 	const int saved_cs_mbdmac = p->cs_mbdmac;
 	built_in_chipset_prefs(p);

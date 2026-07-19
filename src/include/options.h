@@ -263,9 +263,7 @@ enum { CP_GENERIC = 1, CP_CDTV, CP_CDTVCR, CP_CD32, CP_A500, CP_A500P, CP_A600,
 #define IDE_A600A1200 1
 #define IDE_A4000 2
 
-#define GFX_WINDOW 0
-#define GFX_FULLSCREEN 1
-#define GFX_FULLWINDOW 2
+#include "amiberry_gfx_mode.h"
 
 #define AUTOSCALE_NONE 0
 #define AUTOSCALE_STATIC_AUTO 1

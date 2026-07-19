@@ -1757,6 +1757,10 @@ void updatewinfsmode(const int monid, struct uae_prefs* p)
 	struct MultiDisplay* md;
 	struct amigadisplay* ad = &adisplays[monid];
 
+	p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+		p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen);
+	p->gfx_apmode[APMODE_RTG].gfx_fullscreen = amiberry_normalize_gfx_fullscreen_mode(
+		p->gfx_apmode[APMODE_RTG].gfx_fullscreen);
 	fixup_prefs_dimensions(p);
 	int fs = isfullscreen_2(p);
 	if (fs != 0) {
@@ -1900,53 +1904,14 @@ void toggle_fullscreen(const int monid, const int mode)
 {
 	const amigadisplay* ad = &adisplays[monid];
 	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen : &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
-	int* wfw = &wasfs[ad->picasso_on ? 1 : 0];
-	auto v = *p;
-	//static int prevmode = -1;
+	auto v = amiberry_normalize_gfx_fullscreen_mode(*p);
 
-	if (mode < 0) {
-		// fullwindow->window->fullwindow.
-		// fullscreen->window->fullscreen.
-		// window->fullscreen->window.
-		if (v == GFX_FULLWINDOW) {
-			//prevmode = v;
-			*wfw = -1;
-			v = GFX_WINDOW;
-		} else if (v == GFX_WINDOW) {
-			if (*wfw >= 0) {
-				v = GFX_FULLSCREEN;
-			} else {
-				v = GFX_FULLWINDOW;
-			}
-		} else if (v == GFX_FULLSCREEN) {
-			//prevmode = v;
-			*wfw = 1;
-			v = GFX_WINDOW;
-		}
-	} else if (mode == 0) {
-		//prevmode = v;
-		// fullscreen <> window
-		if (v == GFX_FULLSCREEN)
-			v = GFX_WINDOW;
-		else
-			v = GFX_FULLSCREEN;
-	} else if (mode == 1) {
-		//prevmode = v;
-		// fullscreen <> fullwindow
-		if (v == GFX_FULLSCREEN)
-			v = GFX_FULLWINDOW;
-		else
-			v = GFX_FULLSCREEN;
-	} else if (mode == 2) {
-		//prevmode = v;
-		// window <> fullwindow
-		if (v == GFX_FULLWINDOW)
-			v = GFX_WINDOW;
-		else
-			v = GFX_FULLWINDOW;
-	} else if (mode == 10) {
+	// All legacy fullscreen toggle actions now select desktop Full-window.
+	// Keep their input-event IDs working so existing mappings remain valid.
+	if (mode == 10)
 		v = GFX_WINDOW;
-	}
+	else
+		v = v == GFX_FULLWINDOW ? GFX_WINDOW : GFX_FULLWINDOW;
 	*p = v;
 	devices_unsafeperiod();
 	updatewinfsmode(monid, &changed_prefs);

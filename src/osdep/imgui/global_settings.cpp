@@ -258,7 +258,6 @@ void render_panel_global_settings()
 	};
 	static const ComboOption fullscreen_options[] = {
 		{0, "Windowed"},
-		{1, "Fullscreen"},
 		{2, "Full-window"},
 	};
 	static const ComboOption enabled_options[] = {
@@ -316,9 +315,9 @@ void render_panel_global_settings()
 		render_string_row("Action Replay key", amiberry_options.default_ar_key,
 			sizeof amiberry_options.default_ar_key,
 			"Default keyboard shortcut for activating Action Replay/HRTmon.");
-		render_string_row("Fullscreen toggle key", amiberry_options.default_fullscreen_toggle_key,
+		render_string_row("Full-window toggle key", amiberry_options.default_fullscreen_toggle_key,
 			sizeof amiberry_options.default_fullscreen_toggle_key,
-			"Default keyboard shortcut for toggling fullscreen mode.");
+			"Default keyboard shortcut for toggling Windowed and Full-window modes.");
 		render_bool_row("RetroArch quit", &amiberry_options.default_retroarch_quit,
 			"Enable RetroArch-style quit button mapping by default when a mapping exists.");
 		render_bool_row("RetroArch menu", &amiberry_options.default_retroarch_menu,
@@ -369,7 +368,9 @@ void render_panel_global_settings()
 			"Default native display window width.", 1, 1, 16384);
 		render_int_row("Default height", &amiberry_options.default_height,
 			"Default native display window height.", 1, 1, 16384);
-		render_combo_row("Fullscreen mode", &amiberry_options.default_fullscreen_mode,
+		amiberry_options.default_fullscreen_mode = amiberry_normalize_gfx_fullscreen_mode(
+			amiberry_options.default_fullscreen_mode);
+		render_combo_row("Screen mode", &amiberry_options.default_fullscreen_mode,
 			fullscreen_options, IM_ARRAYSIZE(fullscreen_options),
 			"Default native and RTG screen mode.");
 	});

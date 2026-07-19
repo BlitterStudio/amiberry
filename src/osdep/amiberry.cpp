@@ -996,7 +996,7 @@ static void setcursor(AmigaMonitor* mon, int oldx, int oldy)
 	mon->windowmouse_max_w = std::max(mon->windowmouse_max_w, 10);
 	mon->windowmouse_max_h = std::max(mon->windowmouse_max_h, 10);
 
-	if ((currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0 && mousehack_alive() && isfullscreen() <= 0) {
+	if ((currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0 && mousehack_alive() && isfullscreen() == 0) {
 		mon->mouseposx = mon->mouseposy = 0;
 		return;
 	}
@@ -1049,10 +1049,10 @@ static bool resumepaused_internal(const int priority, const bool restorecapture)
 	if (pausemouseactive)
 	{
 		pausemouseactive = 0;
-		// In Amiberry, we'll do this for Full Window and Fullscreen both.
-		// Otherwise, KMSDRM did not get the focus after resuming from the GUI
+		// This is a programmatic restore, so bypass the click-to-capture
+		// cursor check. KMSDRM also relies on this after resuming from the GUI.
 		if (restorecapture)
-			setmouseactive(mon->monitor_id, isfullscreen() != 0 ? 1 : -1);
+			setmouseactive(mon->monitor_id, -1);
 	}
 	pause_emulation = 0;
 	setsystime();
@@ -1404,7 +1404,7 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 
 	mon->mouseposx = mon->mouseposy = 0;
 
-	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+	if (isfullscreen() == 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
 		if (currprefs.input_tablet > 0) {
 			if (mousehack_alive()) {
 				releasecapture(mon);
@@ -1531,7 +1531,9 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 	getcapslock();
 	wait_keyrelease();
 	if (!user_released_capture && (currprefs.capture_always || (isfullscreen() != 0 && !currprefs.start_uncaptured))) {
-		setmouseactive(mon->monitor_id, 1);
+		// Programmatic capture must bypass the cursor-identity gate used for
+		// click-to-capture, especially after a Full-window focus transition.
+		setmouseactive(mon->monitor_id, -1);
 	}
 	clipboard_active(1, 1);
 }
@@ -1652,7 +1654,7 @@ void setmouseactivexy(const int monid, int x, int y, const int dir)
 	const AmigaMonitor* mon = &AMonitors[monid];
 	constexpr int diff = 8;
 
-	if (isfullscreen() > 0)
+	if (isfullscreen() != 0)
 		return;
 	x += mon->amigawin_rect.x;
 	y += mon->amigawin_rect.y;
@@ -1696,7 +1698,8 @@ int isfocus()
 			return 2;
 		return 0;
 	}
-	if (currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+	if (isfullscreen() == 0 && currprefs.input_tablet >= TABLET_MOUSEHACK
+		&& (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
 		if (mouseinside)
 			return 2;
 		if (focus)
@@ -2221,7 +2224,7 @@ static void handle_resized_event(AmigaMonitor* mon, int width, int height)
 static void handle_enter_event(AmigaMonitor* mon)
 {
 	mouseinside = true;
-	if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+	if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() == 0)
 	{
 		if (mousehack_alive())
 			setcursorshape(0);
@@ -2823,14 +2826,15 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 			return;
 	}
 
-	if (button == SDL_BUTTON_LEFT && !mouseactive && (!mousehack_alive() || currprefs.input_tablet != TABLET_MOUSEHACK ||
-		(currprefs.input_tablet == TABLET_MOUSEHACK && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))))
+	if (button == SDL_BUTTON_LEFT && !mouseactive && (isfullscreen() != 0 || !mousehack_alive()
+		|| currprefs.input_tablet != TABLET_MOUSEHACK
+		|| (currprefs.input_tablet == TABLET_MOUSEHACK && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))))
 	{
 		if (!state)
 			return;
 		mouseinside = true;
 		if (!pause_emulation || currprefs.active_nocapture_pause) {
-			setmouseactive(mon->monitor_id, (clicks == 1 || isfullscreen() > 0) ? 2 : 1);
+			setmouseactive(mon->monitor_id, (clicks == 1 || isfullscreen() != 0) ? 2 : 1);
 			if (mouseactive) {
 				suppress_capture_click_release = true;
 				suppress_capture_click_mouse_id = event.button.which;
@@ -2901,7 +2905,7 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		return;
 #endif
 
-	if (mouseinside && recapture && isfullscreen() <= 0) {
+	if (mouseinside && recapture && isfullscreen() == 0) {
 		enablecapture(mon->monitor_id);
 		return;
 	}
@@ -4871,13 +4875,13 @@ void target_default_options(uae_prefs* p, const int type)
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
 
-	// GFX_WINDOW = 0
-	// GFX_FULLSCREEN = 1
-	// GFX_FULLWINDOW = 2
+	// Mode 1 is the legacy exclusive-fullscreen value and is migrated to
+	// desktop Full-window mode (2).
 	if (amiberry_options.default_fullscreen_mode >= 0 && amiberry_options.default_fullscreen_mode <= 2)
 	{
-		p->gfx_apmode[0].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
-		p->gfx_apmode[1].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
+		const int mode = amiberry_normalize_gfx_fullscreen_mode(amiberry_options.default_fullscreen_mode);
+		p->gfx_apmode[0].gfx_fullscreen = mode;
+		p->gfx_apmode[1].gfx_fullscreen = mode;
 	}
 	else
 	{
@@ -6320,7 +6324,8 @@ bool save_amiberry_settings_with_result()
 	write_int_option("default_height", amiberry_options.default_height);
 
 	// Full screen mode (0, 1, 2)
-	write_int_option("default_fullscreen_mode", amiberry_options.default_fullscreen_mode);
+	write_int_option("default_fullscreen_mode",
+		amiberry_normalize_gfx_fullscreen_mode(amiberry_options.default_fullscreen_mode));
 	
 	// Default Stereo Separation
 	write_int_option("default_stereo_separation", amiberry_options.default_stereo_separation);
@@ -6764,6 +6769,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
 		ret |= cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
 		ret |= cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
+		amiberry_options.default_fullscreen_mode = amiberry_normalize_gfx_fullscreen_mode(
+			amiberry_options.default_fullscreen_mode);
 		ret |= cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 		ret |= cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
 		ret |= cfgfile_intval(option, value, "default_sound_frequency", &amiberry_options.default_sound_frequency, 1);

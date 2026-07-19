@@ -98,7 +98,7 @@ static MiscListItem misc_items[] = {
 	 &changed_prefs.illegal_mem, nullptr, 0, 0, MISC_NORMAL},
 
 	{"Blank unused displays",
-	 "Blank secondary displays when running fullscreen",
+	 "Blank secondary displays when running in Full-window mode",
 	 &changed_prefs.blankmonitors, nullptr, 0, 0, MISC_NORMAL},
 
 	{"Start mouse uncaptured",
@@ -464,8 +464,8 @@ void render_panel_misc()
 		ShowHelpMarker("Keyboard shortcut to quit the emulator");
 		HotkeyRow("Action Replay:", changed_prefs.action_replay);
 		ShowHelpMarker("Keyboard shortcut to activate Action Replay cartridge");
-		HotkeyRow("FullScreen:", changed_prefs.fullscreen_toggle);
-		ShowHelpMarker("Keyboard shortcut to toggle fullscreen mode");
+		HotkeyRow("Full-window:", changed_prefs.fullscreen_toggle);
+		ShowHelpMarker("Keyboard shortcut to toggle Windowed and Full-window modes");
 		HotkeyRow("Minimize:", changed_prefs.minimize);
 		ShowHelpMarker("Keyboard shortcut to minimize the emulator window");
 		HotkeyRow("Left Amiga:", changed_prefs.left_amiga);

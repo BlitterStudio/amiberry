@@ -51,18 +51,18 @@ static void test_windowed_auto_none_defaults()
 	expect_eq(prefs.gfx_auto_crop, false, "Auto scaling must not enable AutoCrop");
 }
 
-static void test_smooth_scaling_defaults()
+static void test_fullwindow_smooth_scaling_defaults()
 {
 	const PlayDisplayDefaults defaults{
-		PlayScreenMode::Fullscreen,
+		PlayScreenMode::FullWindow,
 		PlayScalingMode::Smooth,
 		PlayShaderChoice::Monitor1084
 	};
 
 	const auto prefs = play_apply_display_defaults(defaults);
 
-	expect_eq(prefs.native_fullscreen, 1, "Fullscreen must set native fullscreen to 1");
-	expect_eq(prefs.rtg_fullscreen, 1, "Fullscreen must set RTG fullscreen to 1");
+	expect_eq(prefs.native_fullscreen, 2, "Full-window must set native fullscreen to 2");
+	expect_eq(prefs.rtg_fullscreen, 2, "Full-window must set RTG fullscreen to 2");
 	expect_eq(prefs.scaling_method, 1, "Smooth scaling must set scaling method to 1");
 	expect_eq(prefs.gfx_autoresolution, 0, "Smooth scaling must disable autoresolution");
 	expect_eq(prefs.shader_choice, static_cast<int>(PlayShaderChoice::Monitor1084),
@@ -113,7 +113,7 @@ int main()
 {
 	test_fullwindow_integer_crt_defaults();
 	test_windowed_auto_none_defaults();
-	test_smooth_scaling_defaults();
+	test_fullwindow_smooth_scaling_defaults();
 	test_autocrop_default_is_preserved();
 	test_custom_shader_is_preserved();
 	test_no_dependency_state_helpers_stay_false();

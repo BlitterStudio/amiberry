@@ -9,14 +9,12 @@ static int screen_mode_to_fullscreen(const PlayScreenMode mode)
 {
 	switch (mode) {
 	case PlayScreenMode::Windowed:
-		return 0;
-	case PlayScreenMode::Fullscreen:
-		return 1;
+		return GFX_WINDOW;
 	case PlayScreenMode::FullWindow:
-		return 2;
+		return GFX_FULLWINDOW;
 	}
 
-	return 0;
+	return GFX_WINDOW;
 }
 
 static int shader_choice_to_prefs(const PlayShaderChoice choice)
