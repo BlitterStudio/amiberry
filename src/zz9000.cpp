@@ -1248,6 +1248,8 @@ static void zz_set_mode(zz9000_state *data, uae_u16 value)
 	data->width = scale_mode & 1 ? width / 2 : width;
 	data->height = scale_mode & 2 ? height / 2 : height;
 	data->display_blank = false;
+	// ZZ9000OS preserves the virtual framebuffer stride across SetGC calls.
+	// SetPanning owns subsequent updates; only provide an initial fallback here.
 	if (!data->pan_width)
 		data->pan_width = data->width;
 	data->mode_changed = true;
