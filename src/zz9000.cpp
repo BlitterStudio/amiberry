@@ -577,13 +577,15 @@ static void zz_copy_rect(zz9000_state *data,
 
 static void zz_template_rect(zz9000_state *data, uae_u32 source, uae_u32 source_pitch,
 	uae_u32 destination, uae_u32 destination_pitch, int x, int y, int width, int height,
-	int source_x, int source_y, int loop_rows, int color_mode, int draw_mode,
+	int source_x, int pattern_y, int loop_rows, int color_mode, int draw_mode,
 	uae_u32 foreground, uae_u32 background, uae_u8 mask, bool pattern)
 {
 	if (width <= 0 || height <= 0 || !source_pitch || (pattern && !loop_rows))
 		return;
 	for (int row = 0; row < height; ++row) {
-		const int source_row = pattern ? (row + source_y) % loop_rows : row;
+		// Picasso96 templates have no Y offset. This field is only valid for
+		// patterns and can contain stale pattern state during a template blit.
+		const int source_row = pattern ? (row + pattern_y) % loop_rows : row;
 		for (int column = 0; column < width; ++column) {
 			const int bit_x = pattern ? (source_x + column) & 15 : source_x + column;
 			const uae_u32 byte_offset = source + source_row * source_pitch + bit_x / 8;
