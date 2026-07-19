@@ -17,7 +17,7 @@ class MainActivityImportLaunchGuardArchitectureTest {
 		)
 		assertTrue(
 			"importAndLaunch should reject a second incoming file launch while one is already being prepared.",
-			Regex("""fun importAndLaunch\(uri: Uri\) \{[\s\S]*if \(!importLaunchGuard\.begin\(\)\) \{[\s\S]*return""")
+			Regex("""fun importAndLaunch\(uri: Uri, mimeType: String\? = null\) \{[\s\S]*if \(!importLaunchGuard\.begin\(\)\) \{[\s\S]*return""")
 				.containsMatchIn(mainActivity)
 		)
 		assertTrue(
@@ -48,8 +48,17 @@ class MainActivityImportLaunchGuardArchitectureTest {
 		)
 		assertTrue(
 			"AmiberryApp should include importLaunchInProgress in pending import effect keys.",
-			Regex("""LaunchedEffect\(pendingUri, assetsReady, crashDetected, assetExtractionFailed, importLaunchInProgress\)""")
+			Regex("""LaunchedEffect\(pendingUri, pendingMimeType, assetsReady, crashDetected, assetExtractionFailed, importLaunchInProgress\)""")
 				.containsMatchIn(app)
+		)
+		assertTrue(
+			"MainActivity should preserve the MIME type that routed the ACTION_VIEW intent.",
+			mainActivity.contains("pendingFileMimeType = intent.type")
+		)
+		assertTrue(
+			"Pending imports should pass the original MIME type to classification.",
+			app.contains("mainActivity.importAndLaunch(uri, pendingMimeType)") &&
+				mainActivity.contains("IntentImportExecutor.importAndPrepare(this@MainActivity, uri, mimeType)")
 		)
 		assertTrue(
 			"PendingImportState should block processing while a direct import launch is already active.",

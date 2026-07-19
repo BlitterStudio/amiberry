@@ -61,6 +61,7 @@
 
 #include "amiberry_input.h"
 #include "amiberry_adpf.h"
+#include "amiberry_rp9.h"
 #include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
@@ -3193,9 +3194,9 @@ static void handle_drop_file_event(const SDL_Event& event)
 	const char* dropped_file = event.drop.data;
 	const auto ext = get_filename_extension(dropped_file);
 
-	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	if (strcasecmp(ext.c_str(), ".uae") == 0 || strcasecmp(ext.c_str(), ".rp9") == 0)
 	{
-		// Load configuration file
+		// Load configuration or self-contained RP9 package
 		uae_restart(&currprefs, 1, dropped_file);
 		gui_running = false;
 	}
@@ -5981,41 +5982,82 @@ void set_floppy_sounds_path(const std::string& newpath)
 	macos_bookmark_store(newpath);
 }
 
+static void register_rp9_rom_sources_from_prefs(const uae_prefs* prefs)
+{
+	if (!prefs)
+		return;
+
+	for (const auto& path : prefs->path_rom.path) {
+		if (!path[0])
+			continue;
+		const auto registered = rp9_register_rom_directory(path);
+		if (registered > 0) {
+			write_log(_T("RP9: registered %d ROM(s) from configured ROM path '%s'\n"), registered, path);
+		}
+	}
+
+	for (const auto* path : { prefs->romfile, prefs->romextfile, prefs->romextfile2 }) {
+		if (!path[0] || path[0] == ':')
+			continue;
+		if (!rp9_register_rom_override(path)) {
+			write_log(_T("RP9: configured ROM override could not be registered: %s\n"), path);
+		}
+	}
+}
+
 int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int isdefault)
 {
 	int type2;
 	auto result = 0;
+	auto extension = std::filesystem::path(filename).extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(), [](const unsigned char ch) {
+		return static_cast<char>(std::tolower(ch));
+	});
+	const bool is_rp9 = extension == ".rp9";
+	// An RP9 manifest describes the complete machine. Partial host/hardware loading
+	// would produce a configuration that does not match the package requirements.
+	if (is_rp9)
+		type = CONFIG_TYPE_DEFAULT;
 
-	if (isdefault) {
+	if (isdefault && !is_rp9) {
 		path_statefile[0] = 0;
 	}
 
 	type = std::max(type, 0);
 
-	if (type == 0 || type == 1) {
+	if (!is_rp9 && (type == 0 || type == 1)) {
 		discard_prefs(p, 0);
 	}
 	type2 = type;
-	if (type == 0 || type == 3) {
+	if (!is_rp9 && (type == 0 || type == 3)) {
 		default_prefs(p, true, type);
 		write_log(_T("config reset\n"));
 	}
 
-	const char* ptr = strstr(const_cast<char*>(filename), ".uae");
-	if (ptr)
+	if (extension == ".uae")
 	{
 		write_log(_T("target_cfgfile_load: loading file %s\n"), filename);
 		result = cfgfile_load(p, filename, &type2, 0, isdefault ? 0 : 1);
+	}
+	else if (extension == ".rp9")
+	{
+		write_log(_T("target_cfgfile_load: loading RP9 package %s\n"), filename);
+		// A preceding config or -s option may have supplied ROM sources that the
+		// RP9 machine builder needs before it replaces the current preferences.
+		register_rp9_rom_sources_from_prefs(p);
+		result = rp9_parse_file(p, filename) ? 1 : 0;
 	}
 	if (!result)
 	{
 		write_log(_T("target_cfgfile_load: loading file %s failed\n"), filename);
 		return result;
 	}
+	if (is_rp9 && isdefault)
+		path_statefile[0] = 0;
+	if (extension != ".rp9")
+		rp9_clear_loaded_path();
 	if (type > 0)
 		return result;
-	if (result)
-		extract_filename(filename, last_loaded_config);
 
 	for (auto i = 0; i < p->nr_floppies; ++i)
 	{
@@ -6025,7 +6067,14 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 		if (strlen(p->floppyslots[i].df) > 0)
 			add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 	}
-	set_last_loaded_config(filename, isdefault != 0);
+	if (p->cdslots[0].inuse && p->cdslots[0].name[0])
+		add_file_to_mru_list(lstMRUCDList, p->cdslots[0].name);
+	if (is_rp9) {
+		last_loaded_config[0] = 0;
+		last_loaded_config_is_automatic_default = false;
+	} else {
+		set_last_loaded_config(filename, isdefault != 0);
+	}
 	set_last_active_config(filename);
 	return result;
 }
@@ -9983,6 +10032,7 @@ static void ensure_amiberry_user_directories()
 	ensure_directory_exists_if_missing(harddrive_path);
 	ensure_directory_exists_if_missing(cdrom_path);
 	ensure_directory_exists_if_missing(rom_path);
+	ensure_directory_exists_if_missing(rp9_path);
 	ensure_directory_exists_if_missing(saveimage_dir);
 	ensure_directory_exists_if_missing(savestate_dir);
 	ensure_directory_exists_if_missing(ripper_path);
@@ -11101,6 +11151,7 @@ int amiberry_main(int argc, char* argv[])
 	}
 
 	logging_init();
+	rp9_init();
 #if defined (CPU_arm) && !defined (_WIN32)
 	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_segv;
@@ -11260,6 +11311,7 @@ int amiberry_main(int argc, char* argv[])
 
 	romlist_clear();
 	free_keyring();
+	rp9_cleanup();
 
 	logging_cleanup();
 

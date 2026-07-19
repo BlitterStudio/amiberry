@@ -15,6 +15,19 @@ class IntentImportTest {
 	}
 
 	@Test
+	fun `classify detects RP9 packages case insensitively`() {
+		assertEquals(IntentImport.Classification.Rp9("Game.RP9"), IntentImport.classify("Game.RP9"))
+	}
+
+	@Test
+	fun `classify detects RP9 MIME imports with opaque names`() {
+		assertEquals(
+			IntentImport.Classification.Rp9("opaque-document.rp9"),
+			IntentImport.classify("opaque-document", "Application/Vnd.Cloanto.Rp9; charset=binary")
+		)
+	}
+
+	@Test
 	fun `classify detects media categories case insensitively`() {
 		assertEquals(
 			IntentImport.Classification.Media("Lotus.ADF", FileCategory.FLOPPIES),

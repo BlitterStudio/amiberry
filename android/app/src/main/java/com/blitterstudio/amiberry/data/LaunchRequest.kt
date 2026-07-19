@@ -79,6 +79,19 @@ sealed interface LaunchRequest {
 		}
 	}
 
+	data class Rp9(
+		val path: String,
+		val controlOverrides: AndroidControlOverrides? = null
+	) : LaunchRequest {
+		override fun toArgs(): Array<String> {
+			val args = mutableListOf("--rescan-roms", "--autoload", path)
+			// RP9 rebuilds machine preferences, so Android-only controls must follow autoload.
+			controlOverrides?.let { args.addAll(it.toArgs()) }
+			args.add("-G")
+			return args.toTypedArray()
+		}
+	}
+
 	data class AndroidControlOverrides(
 		val joyport0: String,
 		val joyport1: String,

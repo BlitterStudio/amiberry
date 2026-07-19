@@ -24,6 +24,20 @@ struct LibretroCropPixelBuffer {
 constexpr int libretro_crop_expand_stable_frames = 6;
 constexpr int libretro_crop_settle_stable_frames = 18;
 
+inline bool libretro_should_queue_auto_crop_options(const bool automatic_crop,
+	const bool is_rp9)
+{
+	// RP9 must be parsed before deciding whether its manifest clip or the
+	// libretro automatic crop policy owns the output rectangle.
+	return automatic_crop && !is_rp9;
+}
+
+inline bool libretro_should_preserve_rp9_clip(const bool automatic_crop,
+	const bool rp9_has_clip)
+{
+	return automatic_crop && rp9_has_clip;
+}
+
 inline int libretro_crop_rect_right(const LibretroCropRect& rect)
 {
 	return rect.x + rect.w;

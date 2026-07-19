@@ -6,6 +6,7 @@
 enum class PlayContentType
 {
 	Configuration,
+	Rp9,
 	WhdLoad,
 	Floppy,
 	Cd,

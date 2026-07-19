@@ -51,7 +51,7 @@ object RecentLaunches {
 		fileExists: (String) -> Boolean = { File(it).exists() }
 	): Boolean {
 		return when (entry.optString("type")) {
-			"config", "whdload" -> {
+			"config", "whdload", "rp9" -> {
 				val path = entry.optString("path")
 				path.isNotBlank() && fileExists(path)
 			}
@@ -71,7 +71,7 @@ object RecentLaunches {
 		fileExists: (String) -> Boolean
 	): Boolean {
 		return when (entry.optString("type")) {
-			"config", "whdload" -> {
+			"config", "whdload", "rp9" -> {
 				val path = entry.optString("path")
 				path.isNotBlank() && fileExists(path)
 			}
@@ -102,6 +102,8 @@ object RecentLaunches {
 				.removeSuffix(".lzx")
 				.removeSuffix(".lzh")
 				.ifEmpty { "WHDLoad" }
+			"rp9" -> stripSuffixCaseInsensitive(fileName(entry.optString("path")), ".rp9")
+				.ifEmpty { "RP9" }
 			else -> "?"
 		}
 	}
@@ -117,6 +119,11 @@ object RecentLaunches {
 			"whdload" -> Details(
 				title = label(entry),
 				typeLabel = "WHDLoad",
+				detail = entry.optString("path")
+			)
+			"rp9" -> Details(
+				title = label(entry),
+				typeLabel = "RP9",
 				detail = entry.optString("path")
 			)
 			else -> Details(
@@ -152,6 +159,9 @@ object RecentLaunches {
 
 	private fun fileName(path: String): String =
 		path.substringAfterLast('/').substringAfterLast('\\')
+
+	private fun stripSuffixCaseInsensitive(value: String, suffix: String): String =
+		if (value.endsWith(suffix, ignoreCase = true)) value.dropLast(suffix.length) else value
 
 	private val MEDIA_KEYS = listOf("df0", "df1", "cd")
 }

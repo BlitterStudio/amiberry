@@ -91,6 +91,10 @@ PlayContentDetection play_detect_content(const std::string& path, bool is_direct
 		detection.type = PlayContentType::Configuration;
 		return detection;
 	}
+	if (extension == ".rp9") {
+		detection.type = PlayContentType::Rp9;
+		return detection;
+	}
 
 	if (is_one_of(extension, { ".adf", ".adz", ".ipf", ".dms", ".fdi", ".scp", ".wrp", ".dsq", ".gz", ".xz" })) {
 		detection.type = PlayContentType::Floppy;
@@ -170,6 +174,8 @@ const char* play_content_type_name(const PlayContentType type)
 	switch (type) {
 		case PlayContentType::Configuration:
 			return "Configuration";
+		case PlayContentType::Rp9:
+			return "RP9 package";
 		case PlayContentType::WhdLoad:
 			return "WHDLoad";
 		case PlayContentType::Floppy:

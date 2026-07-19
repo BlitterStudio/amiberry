@@ -252,6 +252,8 @@ set(SOURCE_FILES
         src/osdep/amiberry_update.cpp
         src/osdep/amiberry_uaenet.cpp
         src/osdep/amiberry_whdbooter.cpp
+        src/osdep/amiberry_rp9.cpp
+        src/osdep/rp9_manifest.cpp
         src/osdep/blkdev_ioctl.cpp
         src/osdep/ioport.cpp
         src/osdep/sigsegv_handler.cpp

@@ -130,9 +130,10 @@ fun AmiberryApp() {
 
 	// Handle pending file from ACTION_VIEW intent
 	val pendingUri = activity?.pendingFileUri
+	val pendingMimeType = activity?.pendingFileMimeType
 	val assetsReady = activity?.isReady == true
 	val importLaunchInProgress = activity?.importLaunchInProgress == true
-	LaunchedEffect(pendingUri, assetsReady, crashDetected, assetExtractionFailed, importLaunchInProgress) {
+	LaunchedEffect(pendingUri, pendingMimeType, assetsReady, crashDetected, assetExtractionFailed, importLaunchInProgress) {
 		val mainActivity = activity ?: return@LaunchedEffect
 		val uri = pendingUri ?: return@LaunchedEffect
 		if (PendingImportState.shouldProcess(
@@ -144,7 +145,7 @@ fun AmiberryApp() {
 			)
 		) {
 			mainActivity.clearPendingFileUri()
-			mainActivity.importAndLaunch(uri)
+			mainActivity.importAndLaunch(uri, pendingMimeType)
 		}
 	}
 
