@@ -96,6 +96,13 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 		"compensated 720-tall presentation must use the bounded aspect fit");
 
 	amiberry_gfx_correct_aspect_integer_dimensions(
+		800, 600, 640, 480, 1.0f, width, height);
+	expect_int_eq(width, 600,
+		"a compensated target narrower than 1x must retain the bounded width");
+	expect_int_eq(height, 600,
+		"a compensated target narrower than 1x must retain the target aspect");
+
+	amiberry_gfx_correct_aspect_integer_dimensions(
 		3840, 2160, 320, 270, 4.0f / 3.0f, width, height);
 	expect_int_eq(width, 2880,
 		"integer scaling must retain the closest bounded horizontal scale");

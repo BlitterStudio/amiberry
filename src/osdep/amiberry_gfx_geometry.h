@@ -81,8 +81,10 @@ static inline void amiberry_gfx_correct_aspect_integer_dimensions(
 	}
 
 	const float ideal_width = display_height * vertical_scale * target_aspect;
-	int lower_scale = static_cast<int>(ideal_width / source_width);
-	if (lower_scale < 1) lower_scale = 1;
+	const int lower_scale = static_cast<int>(ideal_width / source_width);
+	if (lower_scale < 1) {
+		return;
+	}
 	const int upper_scale = lower_scale + 1;
 	const float lower_aspect = static_cast<float>(source_width * lower_scale)
 		/ (display_height * vertical_scale);
