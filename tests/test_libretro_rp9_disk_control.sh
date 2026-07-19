@@ -21,6 +21,17 @@ if ! grep -F -q 'floppy_paths.emplace_back(path_string);' "$rp9_source" ||
 fi
 
 if ! awk '
+	/bool apply_media\(/ { in_media = 1 }
+	in_media && /apply_boot\(prefs, manifest, device_number\)/ { boot_applied = 1 }
+	in_media && boot_applied && /floppy_paths\.emplace_back\(prefs->floppyslots\[0\]\.df\)/ { boot_published = 1 }
+	in_media && /std::vector<const rp9::Media\*> ordered_media/ { exit }
+	END { exit boot_applied && boot_published ? 0 : 1 }
+' "$rp9_source"; then
+	echo "RP9 must publish an attached boot ADF before manifest floppies" >&2
+	exit 1
+fi
+
+if ! awk '
 	/static void sync_rp9_disk_control_media\(\)/ { in_sync = 1 }
 	in_sync && /rp9_get_loaded_floppy_paths\(\)/ { floppies = 1 }
 	in_sync && /rp9_get_loaded_cd_paths\(\)/ { cds = 1 }

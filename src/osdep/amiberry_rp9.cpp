@@ -1175,6 +1175,8 @@ bool apply_media(uae_prefs* prefs, const rp9::Manifest& manifest,
 	if (!apply_boot(prefs, manifest, device_number))
 		return false;
 	const bool boot_floppy_attached = manifest.has_boot && manifest.boot.type == "adf";
+	if (boot_floppy_attached)
+		floppy_paths.emplace_back(prefs->floppyslots[0].df);
 	int floppy_count = boot_floppy_attached ? 1 : 0;
 	std::array<bool, 4> floppy_drive_assigned {};
 	floppy_drive_assigned[0] = boot_floppy_attached;
