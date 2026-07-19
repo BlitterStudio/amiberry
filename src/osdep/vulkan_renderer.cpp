@@ -1049,6 +1049,10 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.scalepicasso = mon->scalepicasso;
 	slot.screen_is_picasso = mon->screen_is_picasso;
 	slot.rtg_integer_scale_limit = filter_prefs.gf[GF_RTG].gfx_filter_integerscalelimit;
+	slot.correct_native_aspect = !mon->screen_is_picasso && currprefs.gfx_correct_aspect;
+	slot.exclusive_fullscreen = isfullscreen() > 0;
+	slot.desktop_width = mon->desktop_width;
+	slot.desktop_height = mon->desktop_height;
 	if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
 		slot.desired_aspect = crop_aspect;
 	} else {
@@ -1477,6 +1481,15 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	if (drawable_w > 0 && drawable_h > 0 && slot.texture_width > 0 && slot.texture_height > 0) {
 		float desired_aspect = slot.desired_aspect;
 		if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
+		float integer_target_aspect = std::max(desired_aspect, 4.0f / 3.0f);
+#if defined(__linux__) && !defined(__ANDROID__)
+		if (slot.correct_native_aspect && slot.exclusive_fullscreen) {
+			desired_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(desired_aspect,
+				drawable_w, drawable_h, slot.desktop_width, slot.desktop_height);
+			integer_target_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(integer_target_aspect,
+				drawable_w, drawable_h, slot.desktop_width, slot.desktop_height);
+		}
+#endif
 
 		bool use_center = slot.screen_is_picasso && slot.scalepicasso == RTG_MODE_CENTER;
 		bool use_integer = slot.screen_is_picasso
@@ -1522,11 +1535,15 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 						display_w, display_h, slot.rtg_integer_scale_limit);
 					destW = std::max(1, static_cast<int>(static_cast<float>(display_w) * scale + 0.5f));
 					destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
-				} else {
+				} else if (!slot.correct_native_aspect) {
 					const int scale = amiberry_gfx_native_integer_scale(
 						render_area_w, render_area_h, display_w, display_h);
 					destW = display_w * scale;
 					destH = display_h * scale;
+				} else {
+					amiberry_gfx_correct_aspect_integer_dimensions(
+						render_area_w, render_area_h, src_w, display_h,
+						integer_target_aspect, destW, destH);
 				}
 			}
 
