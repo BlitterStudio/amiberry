@@ -2035,11 +2035,28 @@ void auto_crop_image()
 		amiberry_gfx_auto_crop_presentation_dimensions(
 			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
 			currprefs.scaling_method == 2, sdl_mode.w, sdl_mode.h, width, height);
+		int presentation_width = width;
+		int presentation_height = height;
 		// SDL software path needs logical size update
 		if (mon->amiga_renderer) {
+#if defined(__linux__) && !defined(__ANDROID__)
+			if (currprefs.gfx_correct_aspect && isfullscreen() > 0) {
+				int output_width = 0;
+				int output_height = 0;
+				SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &output_width, &output_height);
+				const float desired_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(
+					height > 0 ? static_cast<float>(width) / height : 0.0f,
+					output_width, output_height, mon->desktop_width, mon->desktop_height);
+				if (desired_aspect > 0.0f && presentation_height > 0) {
+					presentation_width = std::max(1,
+						static_cast<int>(presentation_height * desired_aspect + 0.5f));
+				}
+			}
+#endif
 			const auto presentation = currprefs.scaling_method == 2
 				? SDL_LOGICAL_PRESENTATION_INTEGER_SCALE : SDL_LOGICAL_PRESENTATION_LETTERBOX;
-			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, width, height, presentation);
+			SDL_SetRenderLogicalPresentation(mon->amiga_renderer,
+				presentation_width, presentation_height, presentation);
 		}
 
 		IRenderer* renderer = get_renderer(0);
@@ -2050,7 +2067,7 @@ void auto_crop_image()
 		renderer->crop_display_h = height;
 		write_log(_T("auto_crop: raw=%dx%d+%d+%d final=%dx%d+%d+%d hres=%d vres=%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
 			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
-		rq = { dx, dy, width, height };
+		rq = { dx, dy, presentation_width, presentation_height };
 		cr = crop_rect;
 
 		// ImGui OSK does not need position updates from texture

@@ -35,4 +35,21 @@ static inline int amiberry_gfx_native_integer_scale(
 		: 1;
 }
 
+static inline float amiberry_gfx_fullscreen_framebuffer_aspect(
+	const float content_aspect, const int framebuffer_width, const int framebuffer_height,
+	const int desktop_width, const int desktop_height)
+{
+	if (content_aspect <= 0.0f || framebuffer_width <= 0 || framebuffer_height <= 0
+		|| desktop_width <= 0 || desktop_height <= 0) {
+		return content_aspect;
+	}
+
+	// Exclusive modes can be stretched to the desktop's physical output area.
+	// Pre-compensate in framebuffer coordinates so the stretched result retains
+	// the requested content aspect on the display.
+	const float framebuffer_aspect = static_cast<float>(framebuffer_width) / framebuffer_height;
+	const float desktop_aspect = static_cast<float>(desktop_width) / desktop_height;
+	return content_aspect * framebuffer_aspect / desktop_aspect;
+}
+
 #endif // AMIBERRY_GFX_GEOMETRY_H

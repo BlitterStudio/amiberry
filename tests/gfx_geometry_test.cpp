@@ -12,6 +12,14 @@ static void expect_int_eq(const int actual, const int expected, const char* mess
 	}
 }
 
+static void expect_float_near(const float actual, const float expected, const float tolerance, const char* message)
+{
+	if (actual < expected - tolerance || actual > expected + tolerance) {
+		std::cerr << message << ": expected " << expected << ", got " << actual << '\n';
+		failures++;
+	}
+}
+
 static void test_ntsc_integer_scaling_without_aspect_uses_crop_geometry()
 {
 	int width = 0;
@@ -50,10 +58,30 @@ static void test_integer_scaling_never_fractionally_downscales()
 		"integer scaling must retain a 1x source when the render area is smaller");
 }
 
+static void test_exclusive_fullscreen_compensates_for_display_mode_stretch()
+{
+	expect_float_near(amiberry_gfx_fullscreen_framebuffer_aspect(
+		4.0f / 3.0f, 800, 600, 1920, 1080), 1.0f, 0.0001f,
+		"4:3 content in a stretched 800x600 mode must use a square framebuffer viewport");
+
+	expect_float_near(amiberry_gfx_fullscreen_framebuffer_aspect(
+		4.0f / 3.0f, 1280, 720, 1920, 1080), 4.0f / 3.0f, 0.0001f,
+		"a fullscreen mode matching the desktop aspect must not change the content aspect");
+
+	expect_float_near(amiberry_gfx_fullscreen_framebuffer_aspect(
+		1.25f, 800, 600, 1920, 1080), 0.9375f, 0.0001f,
+		"cropped content aspect must receive the same fullscreen stretch compensation");
+
+	expect_float_near(amiberry_gfx_fullscreen_framebuffer_aspect(
+		4.0f / 3.0f, 0, 600, 1920, 1080), 4.0f / 3.0f, 0.0001f,
+		"invalid fullscreen dimensions must leave the requested aspect unchanged");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
 	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
 	test_integer_scaling_never_fractionally_downscales();
+	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
 	return failures == 0 ? 0 : 1;
 }

@@ -119,6 +119,8 @@ struct AmigaMonitor {
 	bool ratio_sizing;
 	bool render_ok, wait_render;
 	int dpi;
+	int desktop_width = 0;
+	int desktop_height = 0;
 
 	int in_sizemove;
 	bool focus_transitioning;

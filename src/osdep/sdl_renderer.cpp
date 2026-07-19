@@ -18,6 +18,7 @@
 
 #include "sdl_renderer.h"
 #include "amiberry_gfx.h"
+#include "amiberry_gfx_geometry.h"
 #include "display_modes.h"
 #include "gfx_platform_internal.h"
 #include "imgui_overlay.h"
@@ -156,9 +157,6 @@ static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int 
 void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
-	if (mon->amiga_renderer)
-		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
-
 	if (currprefs.headless) return;
 
 	SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAREST;
@@ -175,15 +173,34 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	default: scale_mode = SDL_SCALEMODE_LINEAR; break;
 	}
 
+	int logical_width = w;
+	int logical_height = h;
+#if defined(__linux__) && !defined(__ANDROID__)
+	if (mon->amiga_renderer && !mon->screen_is_picasso && currprefs.gfx_correct_aspect
+		&& isfullscreen() > 0) {
+		int output_width = 0;
+		int output_height = 0;
+		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &output_width, &output_height);
+		float desired_aspect = ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && crop_aspect > 0.0f)
+			? crop_aspect : calculate_desired_aspect(mon);
+		desired_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(desired_aspect,
+			output_width, output_height, mon->desktop_width, mon->desktop_height);
+		if (desired_aspect > 0.0f && logical_height > 0) {
+			logical_width = std::max(1, static_cast<int>(logical_height * desired_aspect + 0.5f));
+			render_quad = { 0, 0, logical_width, logical_height };
+		}
+	}
+#endif
+
 	// SDL3: scale mode is per-texture, set on the amiga texture
 	if (m_amiga_texture)
 		SDL_SetTextureScaleMode(m_amiga_texture, scale_mode);
 
 	// SDL3: integer scaling via logical presentation mode
 	if (integer_scale)
-		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, w, h, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 	else
-		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }
 
 // --- OSD texture synchronization ---
