@@ -556,6 +556,7 @@ void render_panel_paths()
 		RenderPathRow("Floppies:", "FloppiesPath", get_floppy_path(), [](const std::string& p) { set_floppy_path(p); });
 		RenderPathRow("CD-ROMs:", "CDROMPath", get_cdrom_path(), [](const std::string& p) { set_cdrom_path(p); });
 		RenderPathRow("Hard drives:", "HDDPath", get_harddrive_path(), [](const std::string& p) { set_harddrive_path(p); });
+		RenderPathRow("RP9 packages:", "RP9Path", get_rp9_path(), [](const std::string& p) { set_rp9_path(p); });
 		RenderPathRow("Screenshots:", "ScreenshotsPath", get_screenshot_path(), [](const std::string& p) { set_screenshot_path(p); });
 
 		get_savestate_path(tmp, MAX_DPATH);

@@ -24,6 +24,7 @@ static bool s_themes_initialized = false;
 static char s_save_as_name[128] = "";
 static bool s_open_save_as_popup = false;
 static bool s_font_changed = false;
+static bool s_theme_modified = false;
 
 // Font input buffer (sized for absolute paths)
 static char s_font_name_buf[512] = "";
@@ -121,6 +122,7 @@ static void load_selected_theme()
 	strncpy(s_font_name_buf, gui_theme.font_name.c_str(), sizeof(s_font_name_buf) - 1);
 	s_font_name_buf[sizeof(s_font_name_buf) - 1] = '\0';
 	s_font_changed = false;
+	s_theme_modified = false;
 }
 
 struct FontEntry {
@@ -243,6 +245,7 @@ void render_panel_themes()
 		strncpy(s_font_name_buf, gui_theme.font_name.c_str(), sizeof(s_font_name_buf) - 1);
 		s_font_name_buf[sizeof(s_font_name_buf) - 1] = '\0';
 		s_font_changed = false;
+		s_theme_modified = false;
 		strncpy(s_synced_theme, amiberry_options.gui_theme, sizeof(s_synced_theme) - 1); s_synced_theme[sizeof(s_synced_theme) - 1] = '\0';
 		s_themes_initialized = true;
 	}
@@ -264,6 +267,7 @@ void render_panel_themes()
 		strncpy(s_font_name_buf, gui_theme.font_name.c_str(), sizeof(s_font_name_buf) - 1);
 		s_font_name_buf[sizeof(s_font_name_buf) - 1] = '\0';
 		s_font_changed = false;
+		s_theme_modified = false;
 	}
 
 	ImGui::Indent(4.0f);
@@ -316,6 +320,7 @@ void render_panel_themes()
 	{
 		gui_theme.font_name = s_font_name_buf;
 		s_font_changed = true;
+		s_theme_modified = true;
 	}
 	ImGui::SameLine();
 	if (AmigaButton("...##FontBrowse", ImVec2(browse_btn_w, 0)))
@@ -336,6 +341,7 @@ void render_panel_themes()
 				s_font_name_buf[sizeof(s_font_name_buf) - 1] = '\0';
 				gui_theme.font_name = font_result;
 				s_font_changed = true;
+				s_theme_modified = true;
 			}
 		}
 	}
@@ -353,7 +359,10 @@ void render_panel_themes()
 		if (AmigaButton("+##FontInc") && gui_theme.font_size < 32)
 			gui_theme.font_size++;
 		if (gui_theme.font_size != old_size)
+		{
 			rebuild_gui_fonts();
+			s_theme_modified = true;
+		}
 	}
 
 	if (s_font_changed)
@@ -439,6 +448,7 @@ void render_panel_themes()
 					s_font_name_buf[sizeof(s_font_name_buf) - 1] = '\0';
 					gui_theme.font_name = fe.full_path;
 					s_font_changed = true;
+					s_theme_modified = true;
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", fe.full_path.c_str());
@@ -522,7 +532,10 @@ void render_panel_themes()
 	}
 
 	if (color_changed)
+	{
 		apply_imgui_theme();
+		s_theme_modified = true;
+	}
 
 	EndGroupBox("Colors");
 
@@ -535,19 +548,36 @@ void render_panel_themes()
 
 	if (AmigaButton(ICON_FA_CHECK " Use", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
-		strncpy(amiberry_options.gui_theme, current_theme.c_str(),
-			sizeof(amiberry_options.gui_theme) - 1);
-		amiberry_options.gui_theme[sizeof(amiberry_options.gui_theme) - 1] = '\0';
-		strncpy(s_synced_theme, amiberry_options.gui_theme, sizeof(s_synced_theme) - 1); s_synced_theme[sizeof(s_synced_theme) - 1] = '\0';
-		save_amiberry_settings();
+		if (s_theme_modified && is_protected)
+		{
+			ShowMessageBox("Save Theme",
+				"Default.theme and Dark.theme are built-in presets and cannot be overwritten.\n\nUse Save as... to keep these changes.");
+		}
+		else if (!s_theme_modified || save_theme(current_theme))
+		{
+			s_theme_modified = false;
+			strncpy(amiberry_options.gui_theme, current_theme.c_str(),
+				sizeof(amiberry_options.gui_theme) - 1);
+			amiberry_options.gui_theme[sizeof(amiberry_options.gui_theme) - 1] = '\0';
+			strncpy(s_synced_theme, amiberry_options.gui_theme, sizeof(s_synced_theme) - 1); s_synced_theme[sizeof(s_synced_theme) - 1] = '\0';
+			if (!save_amiberry_settings_with_result())
+				ShowMessageBox("Save Theme", "Failed to save the active theme setting.\n\nCheck file permissions in the settings directory.");
+		}
+		else
+		{
+			ShowMessageBox("Save Theme", "Failed to save the theme file.\n\nCheck file permissions in the Themes directory.");
+		}
 	}
-	ShowHelpMarker("Apply the current theme as the active theme");
+	ShowHelpMarker("Make this the active theme and persist edited custom-theme colors and font settings.");
 
 	ImGui::SameLine();
 	if (is_protected) ImGui::BeginDisabled();
 	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
-		save_theme(current_theme);
+		if (save_theme(current_theme))
+			s_theme_modified = false;
+		else
+			ShowMessageBox("Save Theme", "Failed to save the theme file.\n\nCheck file permissions in the Themes directory.");
 	}
 	if (is_protected) ImGui::EndDisabled();
 	ShowHelpMarker("Overwrite the current custom theme file");
@@ -597,20 +627,22 @@ void render_panel_themes()
 		if (name_invalid) ImGui::BeginDisabled();
 		if (AmigaButton(ICON_FA_FLOPPY_DISK " Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
-			save_theme(save_filename);
-
-			// Only persist if the file was actually written
-			const std::string saved_path = get_themes_path() + save_filename;
-			if (std::filesystem::exists(saved_path))
+			if (save_theme(save_filename))
 			{
+				s_theme_modified = false;
 				strncpy(amiberry_options.gui_theme, save_filename.c_str(),
 					sizeof(amiberry_options.gui_theme) - 1);
 				amiberry_options.gui_theme[sizeof(amiberry_options.gui_theme) - 1] = '\0';
 				strncpy(s_synced_theme, amiberry_options.gui_theme, sizeof(s_synced_theme) - 1); s_synced_theme[sizeof(s_synced_theme) - 1] = '\0';
-				save_amiberry_settings();
+				if (!save_amiberry_settings_with_result())
+					ShowMessageBox("Save Theme", "The theme file was saved, but the active theme setting was not.\n\nCheck file permissions in the settings directory.");
 
 				scan_theme_files();
 				select_theme_by_name(save_filename);
+			}
+			else
+			{
+				ShowMessageBox("Save Theme", "Failed to save the theme file.\n\nCheck file permissions in the Themes directory.");
 			}
 
 			ImGui::CloseCurrentPopup();

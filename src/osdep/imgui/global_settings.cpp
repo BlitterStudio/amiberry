@@ -12,6 +12,7 @@
 #include "registry.h"
 #include "target.h"
 #include "gui/gui_handling.h"
+#include "shader_catalog.h"
 
 namespace {
 
@@ -105,6 +106,33 @@ static bool render_string_combo_row(const char* label, char* value, const size_t
 				strncpy(value, options[i].value, value_size - 1);
 				value[value_size - 1] = '\0';
 				current_index = i;
+				changed = true;
+			}
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	finish_setting_row(help);
+	return changed;
+}
+
+static bool render_shader_combo_row(const char* label, char* value, const size_t value_size,
+	const char* help)
+{
+	next_setting_row(label);
+	const auto& shader_names = get_available_shader_names();
+	const char* preview = value[0] ? value : "none";
+
+	bool changed = false;
+	ImGui::SetNextItemWidth(-1.0f);
+	if (ImGui::BeginCombo("##value", preview)) {
+		for (const auto& shader_name : shader_names) {
+			const bool selected = strcmp(shader_name.c_str(), value) == 0;
+			if (ImGui::Selectable(shader_name.c_str(), selected)) {
+				strncpy(value, shader_name.c_str(), value_size - 1);
+				value[value_size - 1] = '\0';
 				changed = true;
 			}
 			if (selected)
@@ -424,10 +452,10 @@ void render_panel_global_settings()
 		render_string_row("GUI theme", amiberry_options.gui_theme,
 			sizeof amiberry_options.gui_theme,
 			"Theme file loaded by the ImGui interface.");
-		render_string_row("Native shader", amiberry_options.shader,
+		render_shader_combo_row("Native shader", amiberry_options.shader,
 			sizeof amiberry_options.shader,
 			"Default shader preset for native chipset modes. Use none to disable.");
-		render_string_row("RTG shader", amiberry_options.shader_rtg,
+		render_shader_combo_row("RTG shader", amiberry_options.shader_rtg,
 			sizeof amiberry_options.shader_rtg,
 			"Default shader preset for RTG modes. Use none to disable.");
 		render_bool_row("Use bezel", &amiberry_options.use_bezel,

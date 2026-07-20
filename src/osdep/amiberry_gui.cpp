@@ -1941,7 +1941,7 @@ std::string get_system_fonts_path()
 	return path;
 }
 
-void save_theme(const std::string& theme_filename)
+bool save_theme(const std::string& theme_filename)
 {
 	std::string filename = get_themes_path();
 	filename.append(theme_filename);
@@ -1970,7 +1970,9 @@ void save_theme(const std::string& theme_filename)
 		write_color("background_color", gui_theme.background_color);
 		write_color("foreground_color", gui_theme.foreground_color);
 		file_output.close();
+		return !file_output.fail();
 	}
+	return false;
 }
 
 void load_theme(const std::string& theme_filename)

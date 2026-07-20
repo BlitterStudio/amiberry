@@ -368,6 +368,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/rom.cpp
 		src/osdep/imgui/rtg.cpp
 		src/osdep/imgui/savestates.cpp
+		src/osdep/imgui/shader_catalog.cpp
 		src/osdep/imgui/sound.cpp
 		src/osdep/imgui/themes.cpp
 		src/osdep/imgui/virtualkeyboard.cpp
