@@ -400,10 +400,13 @@ static void test_native_cursor_hotspot_learning_stays_stable_at_edges()
 
 	for (int i = 0; i < 3; i++) {
 		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
-			300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
+			300 + i * 2, 220 + i * 2, 275 + i * 2, 190 + i * 2,
+			51, 61, 3, &hotspot_x, &hotspot_y);
 	}
 	expect_int_eq(hotspot_x, 25, "tracker must learn the centered x hotspot");
 	expect_int_eq(hotspot_y, 30, "tracker must learn the centered y hotspot");
+	expect_true(tracker.confirmed_x && tracker.confirmed_y,
+		"coordinated interior movement must confirm both hotspot axes");
 
 	// A slowly crossed screen edge can leave the guest sprite clamped for
 	// several samples while the host pointer continues moving. This is not a
@@ -416,6 +419,36 @@ static void test_native_cursor_hotspot_learning_stays_stable_at_edges()
 		"edge-clamped samples must not replace a learned x hotspot");
 	expect_int_eq(hotspot_y, 30,
 		"edge-clamped samples must not replace a learned y hotspot");
+}
+
+static void test_native_cursor_hotspot_learning_recovers_from_initial_edge()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	// The cursor first appears at the top edge and only moves horizontally.
+	// Its x displacement is reliable, but its clamped y displacement is not.
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			300 + i * 2, 220, 275 + i * 2, 220,
+			51, 61, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 25, "edge-learned x hotspot must be available provisionally");
+	expect_int_eq(hotspot_y, 0, "edge-learned y hotspot must be available provisionally");
+	expect_true(tracker.confirmed_x, "horizontal edge movement must confirm the x hotspot");
+	expect_true(!tracker.confirmed_y, "horizontal edge movement must not confirm the clamped y hotspot");
+
+	// Coordinated vertical movement in the interior supplies reliable samples
+	// for the axis that was previously clamped.
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			304, 224 + i * 2, 279, 194 + i * 2,
+			51, 61, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 25, "interior movement must retain the learned x hotspot");
+	expect_int_eq(hotspot_y, 30, "interior movement must recover an edge-learned y hotspot");
+	expect_true(tracker.confirmed_y, "vertical interior movement must confirm the recovered y hotspot");
 }
 
 static void test_p96_cursor_swap_waits_for_stable_hotspot()
@@ -489,6 +522,7 @@ int main()
 	test_native_cursor_bitmap_signature_includes_pixels_and_colors();
 	test_native_cursor_hotspot_learning_keeps_last_valid_result();
 	test_native_cursor_hotspot_learning_stays_stable_at_edges();
+	test_native_cursor_hotspot_learning_recovers_from_initial_edge();
 	test_p96_cursor_swap_waits_for_stable_hotspot();
 	test_native_crosshair_hotspot_snaps_to_bitmap_intersection();
 	return failures == 0 ? 0 : 1;
