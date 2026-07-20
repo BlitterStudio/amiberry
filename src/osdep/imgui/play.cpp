@@ -794,6 +794,8 @@ void render_display_defaults()
 		display_defaults.shader = static_cast<PlayShaderChoice>(shader);
 		apply_display_defaults_to_changed_prefs();
 	}
+	ShowHelpMarker("This Play choice is applied after content auto-configuration, including WHDLoad. "
+		"Custom preserves the native and RTG shader names selected in Display or Global Settings.");
 
 	ImGui::Spacing();
 	if (AmigaButton("Apply now", ImVec2(BUTTON_WIDTH * 1.2f, BUTTON_HEIGHT)))

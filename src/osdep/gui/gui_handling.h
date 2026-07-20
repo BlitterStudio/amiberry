@@ -528,7 +528,7 @@ extern void clear_whdload_prefs();
 extern void create_startup_sequence();
 
 extern std::vector<int> parse_color_string(const std::string& input);
-extern void save_theme(const std::string& theme_filename);
+extern bool save_theme(const std::string& theme_filename);
 extern void load_theme(const std::string& theme_filename);
 extern void load_default_theme();
 extern void load_default_dark_theme();

@@ -430,9 +430,10 @@ void load_default_dark_theme()
 {
 }
 
-void save_theme(const std::string& theme_filename)
+bool save_theme(const std::string& theme_filename)
 {
 	(void)theme_filename;
+	return false;
 }
 
 struct libretro_rom_scan_candidate

@@ -5,6 +5,7 @@
 #include "gui/gui_handling.h"
 #include "amiberry_gfx.h"
 #include "target.h"
+#include "shader_catalog.h"
 #include <algorithm>
 #include <filesystem>
 #include <vector>
@@ -16,9 +17,6 @@
 #include "shader_preset.h"
 #include "opengl_renderer.h"
 #endif
-
-// Built-in shader names
-static const char* builtin_shaders[] = { "none", "tv", "pc", "lite", "1084" };
 
 // Bezel list storage
 static std::vector<std::string> bezel_names;
@@ -70,77 +68,14 @@ static int find_bezel_index(const char* bezel_name)
 	return 0; // Default to "none"
 }
 
-// Shader list storage
-static std::vector<std::string> shader_names;
-static std::vector<const char*> shader_items;
-static bool shaders_initialized = false;
-
-// Scan for available shaders (built-in + .glsl + .glslp files)
-static void scan_shaders()
-{
-	shader_names.clear();
-	shader_items.clear();
-
-	// Add built-in shaders first
-	for (auto & builtin_shader : builtin_shaders) {
-		shader_names.emplace_back(builtin_shader);
-	}
-
-	// Scan shaders directory for shader files:
-	// - .glsl files: top-level only (user's custom single-pass shaders)
-	// - .glslp presets: recursively (e.g. crt/crt-aperture.glslp)
-	std::string shaders_dir = get_shaders_path();
-	if (!shaders_dir.empty()) {
-		namespace fs = std::filesystem;
-		fs::path base_path(shaders_dir);
-		try {
-			for (const auto& entry : fs::recursive_directory_iterator(base_path,
-				fs::directory_options::skip_permission_denied)) {
-				if (!entry.is_regular_file()) continue;
-
-				std::string filename = entry.path().filename().string();
-				bool is_glslp = filename.size() > 6 &&
-					filename.substr(filename.size() - 6) == ".glslp";
-				bool is_glsl = !is_glslp && filename.size() > 5 &&
-					filename.substr(filename.size() - 5) == ".glsl";
-
-				if (!is_glsl && !is_glslp) continue;
-
-				fs::path rel = fs::relative(entry.path(), base_path);
-
-				// For .glsl files, only include those at the top level
-				// (subdirectory .glsl files are shader components, not standalone)
-				if (is_glsl && !rel.parent_path().empty()) continue;
-
-				// Store path relative to shaders base dir
-				std::string rel_str = rel.generic_string(); // use forward slashes
-				shader_names.push_back(rel_str);
-			}
-		} catch (...) {
-			// Directory doesn't exist or can't be read - ignore
-		}
-	}
-
-	// Sort external shaders alphabetically (after built-in shaders)
-	std::sort(shader_names.begin() + 5, shader_names.end());
-
-	// Build const char* array for ImGui
-	for (const auto& name : shader_names) {
-		shader_items.push_back(name.c_str());
-	}
-
-	shaders_initialized = true;
-}
-
-// Find index of shader name in list
-static int find_shader_index(const char* shader_name)
+static int find_shader_index(const std::vector<std::string>& shader_names, const char* shader_name)
 {
 	for (size_t i = 0; i < shader_names.size(); i++) {
 		if (shader_names[i] == shader_name) {
 			return static_cast<int>(i);
 		}
 	}
-	return 0;  // Default to "none"
+	return -1;
 }
 
 static bool show_shader_params_popup = false;
@@ -248,10 +183,7 @@ void render_panel_filter()
 	ImGui::Indent(4.0f);
 	const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-	// Initialize shader list on first call
-	if (!shaders_initialized) {
-		scan_shaders();
-	}
+	const auto& shader_names = get_available_shader_names();
 
 	BeginGroupBox("Crop and Offset");
 	if (changed_prefs.gfx_manual_crop) ImGui::BeginDisabled();
@@ -320,13 +252,15 @@ void render_panel_filter()
 	// Native Shader Selection
 	BeginGroupBox("Native Display Shader");
 	{
-		int native_idx = find_shader_index(changed_prefs.shader);
+		const int native_idx = find_shader_index(shader_names, changed_prefs.shader);
+		const char* native_preview = native_idx >= 0
+			? shader_names[native_idx].c_str() : changed_prefs.shader;
 		const float native_label_w = ImGui::CalcTextSize("Shader for native Amiga modes").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - native_label_w - spacing * 3);
-		if (ImGui::BeginCombo("##NativeShader", shader_items[native_idx])) {
-			for (int i = 0; i < static_cast<int>(shader_items.size()); i++) {
+		if (ImGui::BeginCombo("##NativeShader", native_preview)) {
+			for (int i = 0; i < static_cast<int>(shader_names.size()); i++) {
 				bool is_selected = (i == native_idx);
-				if (ImGui::Selectable(shader_items[i], is_selected)) {
+				if (ImGui::Selectable(shader_names[i].c_str(), is_selected)) {
 					strncpy(changed_prefs.shader, shader_names[i].c_str(),
 							sizeof(changed_prefs.shader) - 1);
 					changed_prefs.shader[sizeof(changed_prefs.shader) - 1] = '\0';
@@ -355,13 +289,15 @@ void render_panel_filter()
 	// RTG Shader Selection
 	BeginGroupBox("RTG Display Shader");
 	{
-		int rtg_idx = find_shader_index(changed_prefs.shader_rtg);
+		const int rtg_idx = find_shader_index(shader_names, changed_prefs.shader_rtg);
+		const char* rtg_preview = rtg_idx >= 0
+			? shader_names[rtg_idx].c_str() : changed_prefs.shader_rtg;
 		const float rtg_label_w = ImGui::CalcTextSize("Shader for RTG/Picasso modes").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - rtg_label_w - spacing * 3);
-		if (ImGui::BeginCombo("##RTGShader", shader_items[rtg_idx])) {
-			for (int i = 0; i < static_cast<int>(shader_items.size()); i++) {
+		if (ImGui::BeginCombo("##RTGShader", rtg_preview)) {
+			for (int i = 0; i < static_cast<int>(shader_names.size()); i++) {
 				bool is_selected = (i == rtg_idx);
-				if (ImGui::Selectable(shader_items[i], is_selected)) {
+				if (ImGui::Selectable(shader_names[i].c_str(), is_selected)) {
 					strncpy(changed_prefs.shader_rtg, shader_names[i].c_str(),
 							sizeof(changed_prefs.shader_rtg) - 1);
 					changed_prefs.shader_rtg[sizeof(changed_prefs.shader_rtg) - 1] = '\0';
@@ -445,7 +381,7 @@ void render_panel_filter()
 
 	// Rescan button
 	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Shaders & Bezels", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
-		shaders_initialized = false;  // Force rescan on next frame
+		invalidate_shader_catalog();
 		bezels_initialized = false;
 	}
 	ImGui::SameLine();
