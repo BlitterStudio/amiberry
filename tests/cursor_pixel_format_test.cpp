@@ -102,6 +102,18 @@ static void test_rtg_cursor_hotspot_uses_pointer_offset()
 		"learned P96 y hotspot must not correct an already decoded offset later");
 }
 
+static void test_rtg_declared_hotspot_disables_live_tracking()
+{
+	expect_true(!amiberry_cursor_p96_hotspot_needs_tracking(0xff, 0xfe),
+		"declared arrow hotspot must not be revised after the cursor is rendered");
+	expect_true(!amiberry_cursor_p96_hotspot_needs_tracking(0xe7, 0xe2),
+		"declared centered hotspot must not be revised after the cursor is rendered");
+	expect_true(!amiberry_cursor_p96_hotspot_needs_tracking(0, 0xfe),
+		"a declared hotspot on either axis must make the BoardInfo pair authoritative");
+	expect_true(amiberry_cursor_p96_hotspot_needs_tracking(0, 0),
+		"missing P96 offsets must retain live hotspot tracking as a fallback");
+}
+
 static void test_host_only_forces_separate_rtg_sprite()
 {
 	const int host_only = 2;
@@ -435,6 +447,7 @@ int main()
 	test_rgba32_cursor_pixels_are_opaque();
 	test_rgba32_cursor_pixels_use_raw_rgb_order();
 	test_rtg_cursor_hotspot_uses_pointer_offset();
+	test_rtg_declared_hotspot_disables_live_tracking();
 	test_host_only_forces_separate_rtg_sprite();
 	test_rtg_cursor_keeps_softsprite_fallback_disabled();
 	test_native_axis_clamp_uses_native_extent();

@@ -47,6 +47,14 @@ static inline int amiberry_cursor_hotspot_from_p96_offset(std::uint8_t raw_point
 	return hotspot_offset;
 }
 
+static inline bool amiberry_cursor_p96_hotspot_needs_tracking(
+	std::uint8_t raw_x_offset, std::uint8_t raw_y_offset)
+{
+	// A non-zero BoardInfo displacement is authoritative. Live position
+	// sampling is only a fallback for P96 versions that omit both offsets.
+	return raw_x_offset == 0 && raw_y_offset == 0;
+}
+
 static inline bool amiberry_cursor_host_only_enabled(int input_tablet,
 	int input_magic_mouse_cursor, int host_only_cursor_value, bool host_cursor_available)
 {
