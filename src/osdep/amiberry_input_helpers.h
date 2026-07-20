@@ -240,6 +240,17 @@ static inline bool amiberry_input_cursor_hotspot_tracker_sample(
 	if (!tracker) {
 		return false;
 	}
+	if (tracker->learned) {
+		// The hotspot belongs to the cursor bitmap, not its current screen
+		// position. Edge-clamped sprite coordinates must not relearn it.
+		if (hotspot_x) {
+			*hotspot_x = tracker->hotspot_x;
+		}
+		if (hotspot_y) {
+			*hotspot_y = tracker->hotspot_y;
+		}
+		return true;
+	}
 
 	const int candidate_x = pointer_x - sprite_x;
 	const int candidate_y = pointer_y - sprite_y;

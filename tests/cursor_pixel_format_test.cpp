@@ -392,6 +392,32 @@ static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
 	expect_true(!tracker.learned, "reset must discard a hotspot learned for old cursor dimensions");
 }
 
+static void test_native_cursor_hotspot_learning_stays_stable_at_edges()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 25, "tracker must learn the centered x hotspot");
+	expect_int_eq(hotspot_y, 30, "tracker must learn the centered y hotspot");
+
+	// A slowly crossed screen edge can leave the guest sprite clamped for
+	// several samples while the host pointer continues moving. This is not a
+	// new hotspot for the same cursor bitmap.
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+			300, 220, 275, 220, 51, 61, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_int_eq(hotspot_x, 25,
+		"edge-clamped samples must not replace a learned x hotspot");
+	expect_int_eq(hotspot_y, 30,
+		"edge-clamped samples must not replace a learned y hotspot");
+}
+
 static void test_p96_cursor_swap_waits_for_stable_hotspot()
 {
 	amiberry_input_cursor_hotspot_tracker tracker;
@@ -462,6 +488,7 @@ int main()
 	test_native_cursor_hotspot_cache_separates_same_size_bitmaps();
 	test_native_cursor_bitmap_signature_includes_pixels_and_colors();
 	test_native_cursor_hotspot_learning_keeps_last_valid_result();
+	test_native_cursor_hotspot_learning_stays_stable_at_edges();
 	test_p96_cursor_swap_waits_for_stable_hotspot();
 	test_native_crosshair_hotspot_snaps_to_bitmap_intersection();
 	return failures == 0 ? 0 : 1;
