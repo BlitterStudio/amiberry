@@ -120,6 +120,14 @@ struct amiberry_input_cursor_hotspot_tracker
 {
 	bool have_sample = false;
 	bool learned = false;
+	bool confirmed_x = false;
+	bool confirmed_y = false;
+	bool candidate_x_moved = false;
+	bool candidate_y_moved = false;
+	int last_pointer_x = 0;
+	int last_pointer_y = 0;
+	int last_sprite_x = 0;
+	int last_sprite_y = 0;
 	int candidate_x = 0;
 	int candidate_y = 0;
 	int stable_samples = 0;
@@ -240,6 +248,17 @@ static inline bool amiberry_input_cursor_hotspot_tracker_sample(
 	if (!tracker) {
 		return false;
 	}
+	if (tracker->confirmed_x && tracker->confirmed_y) {
+		// The hotspot belongs to the cursor bitmap, not its current screen
+		// position. Edge-clamped sprite coordinates must not relearn it.
+		if (hotspot_x) {
+			*hotspot_x = tracker->hotspot_x;
+		}
+		if (hotspot_y) {
+			*hotspot_y = tracker->hotspot_y;
+		}
+		return true;
+	}
 
 	const int candidate_x = pointer_x - sprite_x;
 	const int candidate_y = pointer_y - sprite_y;
@@ -250,20 +269,47 @@ static inline bool amiberry_input_cursor_hotspot_tracker_sample(
 	if (candidate_valid) {
 		const bool stable = tracker->have_sample
 			&& candidate_x == tracker->candidate_x && candidate_y == tracker->candidate_y;
+		const bool moved_x = stable
+			&& pointer_x != tracker->last_pointer_x && sprite_x != tracker->last_sprite_x;
+		const bool moved_y = stable
+			&& pointer_y != tracker->last_pointer_y && sprite_y != tracker->last_sprite_y;
 
 		tracker->stable_samples = stable ? tracker->stable_samples + 1 : 1;
+		tracker->candidate_x_moved = stable
+			? tracker->candidate_x_moved || moved_x : false;
+		tracker->candidate_y_moved = stable
+			? tracker->candidate_y_moved || moved_y : false;
 		tracker->have_sample = true;
+		tracker->last_pointer_x = pointer_x;
+		tracker->last_pointer_y = pointer_y;
+		tracker->last_sprite_x = sprite_x;
+		tracker->last_sprite_y = sprite_y;
 		tracker->candidate_x = candidate_x;
 		tracker->candidate_y = candidate_y;
 
 		if (tracker->stable_samples >= required_stable_samples) {
-			tracker->learned = true;
-			tracker->hotspot_x = candidate_x;
-			tracker->hotspot_y = candidate_y;
+			if (!tracker->learned) {
+				tracker->learned = true;
+				tracker->hotspot_x = candidate_x;
+				tracker->hotspot_y = candidate_y;
+			}
+			// Stationary samples provide a provisional hotspot, but only
+			// coordinated movement can replace and confirm an axis. A clamped
+			// sprite cannot follow pointer movement along that axis.
+			if (!tracker->confirmed_x && tracker->candidate_x_moved) {
+				tracker->hotspot_x = candidate_x;
+				tracker->confirmed_x = true;
+			}
+			if (!tracker->confirmed_y && tracker->candidate_y_moved) {
+				tracker->hotspot_y = candidate_y;
+				tracker->confirmed_y = true;
+			}
 		}
 	} else {
 		tracker->have_sample = false;
 		tracker->stable_samples = 0;
+		tracker->candidate_x_moved = false;
+		tracker->candidate_y_moved = false;
 	}
 
 	if (tracker->learned) {
