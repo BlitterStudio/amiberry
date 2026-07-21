@@ -60,15 +60,15 @@ int check_prefs_changed_gfx()
 	int c = 0;
 	bool monitors[MAX_AMIGAMONITORS]{};
 
-	if (!config_changed && !display_change_requested)
-		return 0;
-
 	const bool native_code_changed = currprefs.native_code != changed_prefs.native_code;
 	if (native_code_changed) {
 		if (currprefs.native_code && !changed_prefs.native_code)
 			uaelib_host_cleanup();
 		currprefs.native_code = changed_prefs.native_code;
 	}
+
+	if (!config_changed && !display_change_requested && !native_code_changed)
+		return 0;
 
 	c |= config_changed_flags;
 	config_changed_flags = 0;
