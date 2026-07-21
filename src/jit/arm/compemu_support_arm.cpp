@@ -3679,6 +3679,13 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 uae_u32 opcode = DO_GET_OPCODE(pc_hist[i].location);
                 needed_flags = (liveflags[i + 1] & prop[opcode].set_flags);
                 special_mem = pc_hist[i].specmem;
+#if defined(CPU_AARCH64)
+                /* Runtime data addresses can enter an indirect bank even when
+                 * instruction history has no special-memory marker. Keep native
+                 * multi-access operations on bounded per-access helpers. */
+                if (unsafe_compile_fallbacks)
+                    special_mem |= S_READ | S_WRITE | S_N_ADDR;
+#endif
                 if (!needed_flags && currprefs.compnf) {
 #ifdef NOFLAGS_SUPPORT_GENCOMP
                     cputbl = nfcpufunctbl;
