@@ -433,6 +433,30 @@ static const uae_u32 HOST_SHELL_STATUS_RUNNING = 1;
 static const uae_u32 HOST_SHELL_STATUS_EXITED = 0x80000000;
 static const uae_u32 HOST_SHELL_IO_MAX = 4096;
 
+static constexpr bool uaelib_host_trap_requires_native_code(uae_u32 trap)
+{
+	return trap >= 88 && trap <= 95 && trap != 93;
+}
+
+static constexpr uae_u32 uaelib_host_trap_denied_result(uae_u32 trap)
+{
+	return trap == 91 || trap == 92 ? static_cast<uae_u32>(-1) : 0;
+}
+
+static_assert(uaelib_host_trap_requires_native_code(88));
+static_assert(uaelib_host_trap_requires_native_code(89));
+static_assert(uaelib_host_trap_requires_native_code(90));
+static_assert(uaelib_host_trap_requires_native_code(91));
+static_assert(uaelib_host_trap_requires_native_code(92));
+static_assert(!uaelib_host_trap_requires_native_code(93));
+static_assert(uaelib_host_trap_requires_native_code(94));
+static_assert(uaelib_host_trap_requires_native_code(95));
+static_assert(!uaelib_host_trap_requires_native_code(96));
+static_assert(uaelib_host_trap_denied_result(90) == 0);
+static_assert(uaelib_host_trap_denied_result(91) == static_cast<uae_u32>(-1));
+static_assert(uaelib_host_trap_denied_result(92) == static_cast<uae_u32>(-1));
+static_assert(uaelib_host_trap_denied_result(94) == HOST_SHELL_STATUS_INVALID);
+
 #if !defined(_WIN32)
 static int host_shell_exit_code(int status)
 {
@@ -866,6 +890,12 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 #endif
 }
 
+void uaelib_host_cleanup()
+{
+	while (!shell_sessions.empty())
+		uaelib_host_close(nullptr, shell_sessions.begin()->first);
+}
+
 // Host platform ids reported by trap 96; 0 (unknown trap on older
 // builds) means the guest should assume a POSIX host.
 static uae_u32 uaelib_host_get_platform(void)
@@ -882,15 +912,11 @@ static uae_u32 uaelib_host_get_platform(void)
 static uae_u32 uaelib_host_status(TrapContext* ctx, uae_u32 handle)
 {
 	(void)ctx;
-#if defined(_WIN32)
-	return HOST_SHELL_STATUS_INVALID;
-#else
 	if (shell_sessions.find(handle) == shell_sessions.end())
 		return HOST_SHELL_STATUS_INVALID;
 
 	ShellSession& session = shell_sessions[handle];
 	return host_shell_update_status(session);
-#endif
 }
 
 static std::string quote_path(const char* path) {
@@ -1033,6 +1059,11 @@ static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr 
 static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3, uae_u32 ARG4, uae_u32 ARG5)
 {
 	write_log("%ld\n",ARG0);
+
+#ifdef AMIBERRY
+	if (!currprefs.native_code && uaelib_host_trap_requires_native_code(ARG0))
+		return uaelib_host_trap_denied_result(ARG0);
+#endif
 	
 	switch (ARG0) {
 		case 0: return emulib_GetVersion();
@@ -1090,17 +1121,20 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		}
 #ifdef AMIBERRY
 		case 88:
-		if (currprefs.native_code)
 			return emulib_execute_on_host(ctx, ARG1);
-		return 0;
-		case 89: return uaelib_host_view(ctx, ARG1);
-		
-		case 90: return uaelib_host_open(ctx, ARG1);
-		case 91: return uaelib_host_read(ctx, ARG1, ARG2, ARG3);
-		case 92: return uaelib_host_write(ctx, ARG1, ARG2, ARG3);
+		case 89:
+			return uaelib_host_view(ctx, ARG1);
+		case 90:
+			return uaelib_host_open(ctx, ARG1);
+		case 91:
+			return uaelib_host_read(ctx, ARG1, ARG2, ARG3);
+		case 92:
+			return uaelib_host_write(ctx, ARG1, ARG2, ARG3);
 		case 93: return uaelib_host_close(ctx, ARG1);
-		case 94: return uaelib_host_status(ctx, ARG1);
-		case 95: return uaelib_host_open_pipe(ctx, ARG1);
+		case 94:
+			return uaelib_host_status(ctx, ARG1);
+		case 95:
+			return uaelib_host_open_pipe(ctx, ARG1);
 		case 96: return uaelib_host_get_platform();
 
 		case 100:

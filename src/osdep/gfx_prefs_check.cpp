@@ -569,6 +569,8 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_pause = changed_prefs.minimized_pause;
 		currprefs.minimized_input = changed_prefs.minimized_input;
 		currprefs.capture_always = changed_prefs.capture_always;
+		if (currprefs.native_code && !changed_prefs.native_code)
+			uaelib_host_cleanup();
 		currprefs.native_code = changed_prefs.native_code;
 		currprefs.alt_tab_release = changed_prefs.alt_tab_release;
 		currprefs.ctrl_alt_release = changed_prefs.ctrl_alt_release;
