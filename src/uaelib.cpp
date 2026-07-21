@@ -432,6 +432,11 @@ static const uae_u32 HOST_SHELL_STATUS_INVALID = 0;
 static const uae_u32 HOST_SHELL_STATUS_RUNNING = 1;
 static const uae_u32 HOST_SHELL_STATUS_EXITED = 0x80000000;
 static const uae_u32 HOST_SHELL_IO_MAX = 4096;
+#if !defined(_WIN32)
+static const int HOST_SHELL_WAIT_INTERVAL_MS = 10;
+static const int HOST_SHELL_TERM_TIMEOUT_MS = 1000;
+static const int HOST_SHELL_KILL_TIMEOUT_MS = 1000;
+#endif
 
 static constexpr bool uaelib_host_trap_requires_native_code(uae_u32 trap)
 {
@@ -520,6 +525,34 @@ static uae_u32 host_shell_update_status(ShellSession& session)
 	return HOST_SHELL_STATUS_INVALID;
 #endif
 }
+
+#if !defined(_WIN32)
+static bool host_shell_wait_for_exit(ShellSession& session, int timeout_ms)
+{
+	for (int elapsed = 0; elapsed < timeout_ms; elapsed += HOST_SHELL_WAIT_INTERVAL_MS) {
+		if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) != 0)
+			return true;
+		sleep_millis(HOST_SHELL_WAIT_INTERVAL_MS);
+	}
+	return (host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) != 0;
+}
+
+static void host_shell_terminate(ShellSession& session)
+{
+	if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) != 0)
+		return;
+
+	if (kill(session.pid, SIGTERM) < 0 && errno != ESRCH)
+		write_log("Failed to terminate host shell process %d: %s\n", session.pid, strerror(errno));
+	if (host_shell_wait_for_exit(session, HOST_SHELL_TERM_TIMEOUT_MS))
+		return;
+
+	if (kill(session.pid, SIGKILL) < 0 && errno != ESRCH)
+		write_log("Failed to kill host shell process %d: %s\n", session.pid, strerror(errno));
+	if (!host_shell_wait_for_exit(session, HOST_SHELL_KILL_TIMEOUT_MS))
+		write_log("Timed out waiting for host shell process %d to exit\n", session.pid);
+}
+#endif
 
 static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 {
@@ -880,10 +913,7 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 		close(session.outfd);
 		session.outfd = -1;
 	}
-	if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) == 0) {
-		kill(session.pid, SIGTERM);
-		waitpid(session.pid, NULL, 0);
-	}
+	host_shell_terminate(session);
 
 	shell_sessions.erase(handle);
 	return 1;
