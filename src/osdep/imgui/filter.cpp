@@ -60,6 +60,13 @@ static void scan_bezels()
 	bezels_initialized = true;
 }
 
+const std::vector<std::string>& get_available_bezel_names()
+{
+	if (!bezels_initialized)
+		scan_bezels();
+	return bezel_names;
+}
+
 static int find_bezel_index(const char* bezel_name)
 {
 	for (size_t i = 0; i < bezel_names.size(); i++) {

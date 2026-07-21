@@ -15,6 +15,26 @@ extern std::vector<const char*> qs_models;
 extern std::vector<const char*> qs_configs;
 extern ImTextureID about_logo_texture;
 
+// Shared catalogs used by panels that expose the same choices.
+const std::vector<std::string>& get_sound_device_names();
+const std::vector<std::string>& get_available_theme_names();
+const std::vector<std::string>& get_available_bezel_names();
+
+inline constexpr int SOUND_BUFFER_SIZES[] = {
+	1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536
+};
+
+inline int get_sound_buffer_size_index(const int size)
+{
+	if (size < SOUND_BUFFER_SIZES[0])
+		return 0;
+
+	int index = 0;
+	while (index + 1 < IM_ARRAYSIZE(SOUND_BUFFER_SIZES) && SOUND_BUFFER_SIZES[index] < size)
+		++index;
+	return index + 1;
+}
+
 // Texture helpers that abstract SDL_Texture (SDLRenderer2) vs GLuint (OpenGL3)
 struct SDL_Surface;
 ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h);

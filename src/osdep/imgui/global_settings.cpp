@@ -145,6 +145,86 @@ static bool render_shader_combo_row(const char* label, char* value, const size_t
 	return changed;
 }
 
+static bool render_catalog_combo_row(const char* label, char* value, const size_t value_size,
+	const std::vector<std::string>& options, const char* help)
+{
+	next_setting_row(label);
+	const char* preview = value[0] ? value : (options.empty() ? "none" : options.front().c_str());
+
+	bool changed = false;
+	ImGui::SetNextItemWidth(-1.0f);
+	if (ImGui::BeginCombo("##value", preview)) {
+		for (const auto& option : options) {
+			const bool selected = stricmp(option.c_str(), value) == 0;
+			if (ImGui::Selectable(option.c_str(), selected)) {
+				strncpy(value, option.c_str(), value_size - 1);
+				value[value_size - 1] = '\0';
+				changed = true;
+			}
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	finish_setting_row(help);
+	return changed;
+}
+
+static bool render_sound_device_row(const char* label, int* value, const char* help)
+{
+	next_setting_row(label);
+	const auto& device_names = get_sound_device_names();
+	const char* preview = "System default";
+	if (*value > 0 && *value < static_cast<int>(device_names.size()))
+		preview = device_names[*value].c_str();
+	else if (*value > 0)
+		preview = "Unknown device";
+
+	bool changed = false;
+	ImGui::SetNextItemWidth(-1.0f);
+	if (ImGui::BeginCombo("##value", preview)) {
+		if (ImGui::Selectable("System default", *value == 0)) {
+			*value = 0;
+			changed = true;
+		}
+		if (*value == 0)
+			ImGui::SetItemDefaultFocus();
+
+		// Index zero is represented by the system-default choice in amiberry.conf.
+		for (int i = 1; i < static_cast<int>(device_names.size()); ++i) {
+			const bool selected = *value == i;
+			if (ImGui::Selectable(device_names[i].c_str(), selected)) {
+				*value = i;
+				changed = true;
+			}
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	finish_setting_row(help);
+	return changed;
+}
+
+static bool render_sound_buffer_row(const char* label, int* value, const char* help)
+{
+	next_setting_row(label);
+	int buffer_index = get_sound_buffer_size_index(*value);
+	const float value_width = BUTTON_WIDTH * 1.6f;
+	ImGui::SetNextItemWidth(std::max(BUTTON_WIDTH, ImGui::GetContentRegionAvail().x - value_width));
+	const bool changed = ImGui::SliderInt("##value", &buffer_index, 0,
+		IM_ARRAYSIZE(SOUND_BUFFER_SIZES), "");
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+	if (changed)
+		*value = buffer_index == 0 ? 0 : SOUND_BUFFER_SIZES[buffer_index - 1];
+	ImGui::SameLine();
+	ImGui::TextUnformatted(buffer_index == 0 ? "Min" : std::to_string(*value).c_str());
+	finish_setting_row(help);
+	return changed;
+}
+
 static bool render_combo_row(const char* label, int* value, const ComboOption* options,
 	const int option_count, const char* help)
 {
@@ -303,6 +383,26 @@ void render_panel_global_settings()
 		{3, "Low compatibility"},
 		{4, "Low compatibility (JIT)"},
 	};
+	static const ComboOption stereo_separation_options[] = {
+		{10, "100%"},
+		{9, "90%"},
+		{8, "80%"},
+		{7, "70%"},
+		{6, "60%"},
+		{5, "50%"},
+		{4, "40%"},
+		{3, "30%"},
+		{2, "20%"},
+		{1, "10%"},
+		{0, "0%"},
+	};
+	static const ComboOption sound_frequency_options[] = {
+		{11025, "11025"},
+		{22050, "22050"},
+		{32000, "32000"},
+		{44100, "44100"},
+		{48000, "48000"},
+	};
 	static const StringComboOption vkbd_language_options[] = {
 		{"US", "US"},
 		{"UK", "UK"},
@@ -404,14 +504,16 @@ void render_panel_global_settings()
 	});
 
 	render_group("Sound defaults", "GlobalSoundDefaults", [&]() {
-		render_int_row("Stereo separation", &amiberry_options.default_stereo_separation,
-			"Default stereo separation, from 0 to 10.", 1, 0, 10);
-		render_int_row("Sound frequency", &amiberry_options.default_sound_frequency,
-			"Default audio output frequency. Values above 48000 are ignored by startup defaults.", 1000, 1, 192000);
-		render_int_row("Sound buffer", &amiberry_options.default_sound_buffer,
-			"Default sound buffer size in bytes.", 256, 1, 65536);
-		render_int_row("Sound card", &amiberry_options.default_soundcard,
-			"Default sound device index. 0 means the system default device.", 1, 0, INT_MAX);
+		render_combo_row("Stereo separation", &amiberry_options.default_stereo_separation,
+			stereo_separation_options, IM_ARRAYSIZE(stereo_separation_options),
+			"Default stereo separation between the left and right channels.");
+		render_combo_row("Sound frequency", &amiberry_options.default_sound_frequency,
+			sound_frequency_options, IM_ARRAYSIZE(sound_frequency_options),
+			"Default audio output sample rate in Hz.");
+		render_sound_buffer_row("Sound buffer", &amiberry_options.default_sound_buffer,
+			"Default emulator audio buffer size. Smaller values reduce latency but may cause glitches on slower systems.");
+		render_sound_device_row("Audio device", &amiberry_options.default_soundcard,
+			"Default sound output device. Index zero uses the operating system default.");
 	});
 
 	render_group("WHDLoad defaults", "GlobalWHDLoadDefaults", [&]() {
@@ -449,8 +551,8 @@ void render_panel_global_settings()
 	});
 
 	render_group("Visual defaults", "GlobalVisualDefaults", [&]() {
-		render_string_row("GUI theme", amiberry_options.gui_theme,
-			sizeof amiberry_options.gui_theme,
+		render_catalog_combo_row("GUI theme", amiberry_options.gui_theme,
+			sizeof amiberry_options.gui_theme, get_available_theme_names(),
 			"Theme file loaded by the ImGui interface.");
 		render_shader_combo_row("Native shader", amiberry_options.shader,
 			sizeof amiberry_options.shader,
@@ -458,13 +560,25 @@ void render_panel_global_settings()
 		render_shader_combo_row("RTG shader", amiberry_options.shader_rtg,
 			sizeof amiberry_options.shader_rtg,
 			"Default shader preset for RTG modes. Use none to disable.");
-		render_bool_row("Use bezel", &amiberry_options.use_bezel,
-			"Show the default CRT bezel overlay.");
-		render_bool_row("Use custom bezel", &amiberry_options.use_custom_bezel,
-			"Use the custom bezel path below instead of the default bezel.");
-		render_string_row("Custom bezel", amiberry_options.custom_bezel,
-			sizeof amiberry_options.custom_bezel,
-			"Custom bezel image path or none.");
+		const bool custom_bezel_active = amiberry_options.use_custom_bezel
+			&& stricmp(amiberry_options.custom_bezel, "none") != 0;
+		if (custom_bezel_active)
+			amiberry_options.use_bezel = false;
+		ImGui::BeginDisabled(custom_bezel_active);
+		if (render_bool_row("Use bezel", &amiberry_options.use_bezel,
+			"Show the built-in CRT bezel overlay.") && amiberry_options.use_bezel)
+			amiberry_options.use_custom_bezel = false;
+		ImGui::EndDisabled();
+
+		ImGui::BeginDisabled(amiberry_options.use_bezel);
+		if (render_catalog_combo_row("Custom bezel", amiberry_options.custom_bezel,
+			sizeof amiberry_options.custom_bezel, get_available_bezel_names(),
+			"Select a custom bezel overlay from the Bezels directory, or none to disable it.")) {
+			amiberry_options.use_custom_bezel = stricmp(amiberry_options.custom_bezel, "none") != 0;
+			if (amiberry_options.use_custom_bezel)
+				amiberry_options.use_bezel = false;
+		}
+		ImGui::EndDisabled();
 	});
 
 	render_group("Paths and logging", "GlobalPathsLogging", [&]() {
