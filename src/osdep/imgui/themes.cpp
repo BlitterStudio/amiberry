@@ -75,6 +75,13 @@ static void scan_theme_files()
 	}
 }
 
+const std::vector<std::string>& get_available_theme_names()
+{
+	if (s_theme_files.empty())
+		scan_theme_files();
+	return s_theme_files;
+}
+
 static void select_theme_by_name(const std::string& name)
 {
 	for (int i = 0; i < static_cast<int>(s_theme_files.size()); i++)

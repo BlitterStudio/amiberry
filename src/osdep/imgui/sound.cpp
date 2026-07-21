@@ -15,42 +15,42 @@ static std::vector<const char *> sound_device_items;
 static int selected_floppy_drive = 0;
 static int master_volume = 100;
 static int selected_volume_type = 0; // 0=Paula, 1=CD, 2=AHI, 3=MIDI
-static constexpr int sndbufsizes[] = {1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1};
 
-static int getsoundbufsizeindex(int size) {
-    int idx;
-    if (size < sndbufsizes[0])
-        return 0;
-    for (idx = 0; sndbufsizes[idx] < size && sndbufsizes[idx + 1] >= 0; idx++);
-    return idx + 1;
+const std::vector<std::string>& get_sound_device_names()
+{
+	if (!sound_device_names.empty())
+		return sound_device_names;
+
+	const int numdevs = enumerate_sound_devices();
+	for (int i = 0; i < numdevs; ++i) {
+		char tmp[256];
+		const int type = sound_devices[i]->type;
+		snprintf(tmp, sizeof tmp, "%s: %s",
+			type == SOUND_DEVICE_SDL2
+				? "SDL"
+				: (type == SOUND_DEVICE_DS
+					? "DSOUND"
+					: (type == SOUND_DEVICE_AL
+						? "OpenAL"
+						: (type == SOUND_DEVICE_PA
+							? "PortAudio"
+							: (type == SOUND_DEVICE_WASAPI ? "WASAPI" : "WASAPI EX")))),
+			sound_devices[i]->name);
+		sound_device_names.emplace_back(tmp);
+	}
+	if (sound_device_names.empty())
+		sound_device_names.emplace_back("None");
+	for (const auto& name : sound_device_names)
+		sound_device_items.push_back(name.c_str());
+	return sound_device_names;
 }
 
 void render_panel_sound() {
     // Global padding for the whole panel
     ImGui::Indent(4.0f);
 
-    // Initialize Audio Devices
-    if (sound_device_names.empty()) {
-        int numdevs = enumerate_sound_devices();
-        for (int i = 0; i < numdevs; ++i) {
-            char tmp[256];
-            int type = sound_devices[i]->type;
-            snprintf(tmp, sizeof(tmp), "%s: %s",
-                     type == SOUND_DEVICE_SDL2
-                         ? "SDL"
-                         : (type == SOUND_DEVICE_DS
-                                ? "DSOUND"
-                                : (type == SOUND_DEVICE_AL
-                                       ? "OpenAL"
-                                       : (type == SOUND_DEVICE_PA
-                                              ? "PortAudio"
-                                              : (type == SOUND_DEVICE_WASAPI ? "WASAPI" : "WASAPI EX")))),
-                     sound_devices[i]->name);
-            sound_device_names.push_back(tmp);
-        }
-        if (sound_device_names.empty()) sound_device_names.push_back("None");
-        for (const auto &name: sound_device_names) sound_device_items.push_back(name.c_str());
-    }
+	// Initialize Audio Devices
+	get_sound_device_names();
 
     // ---------------------------------------------------------
     // Audio Device
@@ -521,11 +521,11 @@ void render_panel_sound() {
         // --- Buffer Size ---
         BeginGroupBox("Sound Buffer Size");
 
-        int buf_idx = getsoundbufsizeindex(changed_prefs.sound_maxbsiz);
+        int buf_idx = get_sound_buffer_size_index(changed_prefs.sound_maxbsiz);
         ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-        if (ImGui::SliderInt("##BufSize", &buf_idx, 0, 10, "")) {
+        if (ImGui::SliderInt("##BufSize", &buf_idx, 0, IM_ARRAYSIZE(SOUND_BUFFER_SIZES), "")) {
             if (buf_idx == 0) changed_prefs.sound_maxbsiz = 0;
-            else changed_prefs.sound_maxbsiz = sndbufsizes[buf_idx - 1];
+            else changed_prefs.sound_maxbsiz = SOUND_BUFFER_SIZES[buf_idx - 1];
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         if (buf_idx == 0) {

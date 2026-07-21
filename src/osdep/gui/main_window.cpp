@@ -2749,14 +2749,26 @@ void run_gui()
 		}
 
 		if (show_message_box) {
-            // Center the dialog on appearing; use viewport-relative sizes for proper scaling on all platforms
-            const float vw = vp->Size.x;
-            const float vh = vp->Size.y;
-            const float desired_w = vw * 0.56f;
-            ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
-            ImGui::SetNextWindowSize(ImVec2(desired_w, 0.0f), ImGuiCond_Appearing);
-            // Lock width to desired_w; allow height to grow up to 85% viewport
-            ImGui::SetNextWindowSizeConstraints(ImVec2(desired_w, 0.0f), ImVec2(desired_w, vh * 0.85f));
+			// Size short notices to their content while keeping long help and error text scrollable.
+			const float vw = vp->Size.x;
+			const float vh = vp->Size.y;
+			const auto& style = ImGui::GetStyle();
+			const float max_dialog_w = vw * 0.56f;
+			const float min_dialog_w = std::min(BUTTON_WIDTH * 2.75f, max_dialog_w);
+			const float title_w = ImGui::CalcTextSize(message_box_title).x
+				+ ImGui::GetFrameHeight() * 2.0f + style.WindowPadding.x * 2.0f;
+			const float message_w = ImGui::CalcTextSize(message_box_message.c_str()).x
+				+ style.WindowPadding.x * 2.0f + style.ScrollbarSize;
+			const float desired_w = std::clamp(std::max(title_w, message_w), min_dialog_w, max_dialog_w);
+			const float wrap_w = std::max(1.0f, desired_w - style.WindowPadding.x * 2.0f
+				- style.ScrollbarSize);
+			const float message_h = ImGui::CalcTextSize(message_box_message.c_str(), nullptr, false, wrap_w).y;
+			const float max_child_h = vh * 0.65f;
+			const float child_h = std::min(std::max(message_h + style.FramePadding.y * 2.0f,
+				ImGui::GetTextLineHeightWithSpacing()), max_child_h);
+			ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(desired_w, 0.0f), ImGuiCond_Appearing);
+			ImGui::SetNextWindowSizeConstraints(ImVec2(desired_w, 0.0f), ImVec2(desired_w, vh * 0.85f));
 
             // Open the popup once on the rising edge. Calling OpenPopup() every frame
             // made the dialog impossible to dismiss whenever a caller kept re-requesting
@@ -2769,9 +2781,8 @@ void run_gui()
 
             if (ImGui::BeginPopupModal(message_box_title, &message_box_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
             {
-                // Scrollable message area; height scales with viewport
-                const float max_child_h = vh * 0.65f;
-                ImGui::BeginChild("MessageScroll", ImVec2(0, max_child_h), true, ImGuiWindowFlags_HorizontalScrollbar);
+				// Scroll only when wrapped content reaches the viewport-relative height cap.
+				ImGui::BeginChild("MessageScroll", ImVec2(0, child_h), true);
                 ImGui::TextWrapped("%s", message_box_message.c_str());
                 ImGui::EndChild();
 
