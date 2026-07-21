@@ -1931,7 +1931,9 @@ void auto_crop_image()
 		static bool last_is_ntsc = false;
 		static SDL_Surface* last_surface = nullptr;
 		static int last_surface_w = 0, last_surface_h = 0;
+#ifdef LIBRETRO
 		static AutoCropState crop_state;
+#endif
 		int cw, ch, cx, cy, crealh = 0;
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
@@ -1951,6 +1953,10 @@ void auto_crop_image()
 		SDL_Surface* surface = get_amiga_surface(0);
 		const int surface_w = surface ? surface->w : 0;
 		const int surface_h = surface ? surface->h : 0;
+		bool crop_is_stable = true;
+#ifdef LIBRETRO
+		crop_is_stable = crop_state.shrink_frames == 0;
+#endif
 
 		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop
 			&& last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy
@@ -1959,7 +1965,7 @@ void auto_crop_image()
 			&& last_surface == surface
 			&& last_surface_w == surface_w
 			&& last_surface_h == surface_h
-			&& crop_state.shrink_frames == 0)
+			&& crop_is_stable)
 		{
 			return;
 		}
@@ -1968,12 +1974,14 @@ void auto_crop_image()
 		const int raw_ch = ch;
 		const int raw_cx = cx;
 		const int raw_cy = cy;
+#ifdef LIBRETRO
 		const bool reset_policy = force_auto_crop || last_autocrop != currprefs.gfx_auto_crop
 			|| last_hres != hres || last_vres != vres
 			|| last_is_ntsc != is_ntsc
 			|| last_surface != surface
 			|| last_surface_w != surface_w
 			|| last_surface_h != surface_h;
+#endif
 
 		last_cw = cw;
 		last_ch = ch;
@@ -1988,7 +1996,15 @@ void auto_crop_image()
 		force_auto_crop = false;
 
 		SDL_Rect crop_rect = { cx, cy, cw, ch };
+#ifdef LIBRETRO
 		apply_auto_crop_policy(surface, crop_rect, hres, vres, is_ntsc, crop_state, reset_policy);
+#else
+		// Native Auto Crop follows the detected display limits exactly. The
+		// conservative minimum-frame and edge guards in apply_auto_crop_policy()
+		// are retained only for libretro's changing frontend geometry; applying
+		// them here keeps valid black borders in standalone output.
+		clamp_auto_crop_rect(surface, crop_rect);
+#endif
 		cx = crop_rect.x;
 		cy = crop_rect.y;
 		cw = crop_rect.w;
