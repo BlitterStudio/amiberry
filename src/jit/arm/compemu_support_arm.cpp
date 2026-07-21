@@ -195,6 +195,18 @@ static inline bool jit_use_compile_fallbacks(void)
 {
     return jit_n_addr_bank_unsafe;
 }
+
+static inline bool jit_opcode_needs_compile_fallback(uae_u32 opcode)
+{
+    switch (table68k[opcode].mnemo) {
+        case i_MVMEL:
+        case i_MVMLE:
+        case i_MOVE16:
+            return true;
+        default:
+            return false;
+    }
+}
 #endif
 
 //#if DEBUG
@@ -3682,8 +3694,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #if defined(CPU_AARCH64)
                 /* Runtime data addresses can enter an indirect bank even when
                  * instruction history has no special-memory marker. Keep native
-                 * multi-access operations on bounded per-access helpers. */
-                if (unsafe_compile_fallbacks)
+                 * multi-access operations on bounded per-access helpers without
+                 * disabling unrelated opcode compilers such as the FPU JIT. */
+                if (unsafe_compile_fallbacks && jit_opcode_needs_compile_fallback(opcode))
                     special_mem |= S_READ | S_WRITE | S_N_ADDR;
 #endif
                 if (!needed_flags && currprefs.compnf) {
