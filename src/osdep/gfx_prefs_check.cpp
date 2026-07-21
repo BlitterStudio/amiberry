@@ -63,6 +63,13 @@ int check_prefs_changed_gfx()
 	if (!config_changed && !display_change_requested)
 		return 0;
 
+	const bool native_code_changed = currprefs.native_code != changed_prefs.native_code;
+	if (native_code_changed) {
+		if (currprefs.native_code && !changed_prefs.native_code)
+			uaelib_host_cleanup();
+		currprefs.native_code = changed_prefs.native_code;
+	}
+
 	c |= config_changed_flags;
 	config_changed_flags = 0;
 
@@ -535,7 +542,7 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_pause != changed_prefs.minimized_pause ||
 		currprefs.minimized_input != changed_prefs.minimized_input ||
 		currprefs.capture_always != changed_prefs.capture_always ||
-		currprefs.native_code != changed_prefs.native_code ||
+		native_code_changed ||
 		currprefs.alt_tab_release != changed_prefs.alt_tab_release ||
 		currprefs.ctrl_alt_release != changed_prefs.ctrl_alt_release ||
 		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
@@ -569,9 +576,6 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_pause = changed_prefs.minimized_pause;
 		currprefs.minimized_input = changed_prefs.minimized_input;
 		currprefs.capture_always = changed_prefs.capture_always;
-		if (currprefs.native_code && !changed_prefs.native_code)
-			uaelib_host_cleanup();
-		currprefs.native_code = changed_prefs.native_code;
 		currprefs.alt_tab_release = changed_prefs.alt_tab_release;
 		currprefs.ctrl_alt_release = changed_prefs.ctrl_alt_release;
 		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
