@@ -426,10 +426,10 @@ static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr)
 {
 	zz9000_state *data = zz_find_board(addr);
 	if (!data)
-		return nullptr;
+		return default_xlate(addr);
 	const uae_u32 offset = addr - data->configured;
 	if (offset < ZZ9000_MEMORY_BASE || offset >= data->card_size)
-		return nullptr;
+		return default_xlate(addr);
 	/* Callers using a translated pointer bypass the byte/word/long bank
 	 * handlers, so conservatively flag VRAM as changed for display refresh. */
 	data->modified = true;
