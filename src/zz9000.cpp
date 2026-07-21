@@ -236,13 +236,18 @@ static uae_u32 REGPARAM2 zz9000_bget(uaecptr addr);
 static void REGPARAM2 zz9000_lput(uaecptr addr, uae_u32 value);
 static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value);
 static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value);
+static int REGPARAM2 zz9000_check(uaecptr addr, uae_u32 size);
+static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr);
 
 static addrbank zz9000_bank = {
 	zz9000_lget, zz9000_wget, zz9000_bget,
 	zz9000_lput, zz9000_wput, zz9000_bput,
-	default_xlate, default_check, nullptr, nullptr, _T("ZZ9000"),
+	zz9000_xlate, zz9000_check, nullptr, nullptr, _T("ZZ9000"),
 	zz9000_lget, zz9000_wget,
-	ABFLAG_IO, S_READ, S_WRITE
+	/* ZZ9000 VRAM lives in the board's private allocation, not at its
+	 * natmem address. Force JIT accesses through the bank translation and
+	 * helpers instead of replaying faulting direct accesses. */
+	ABFLAG_IO, S_READ | S_N_ADDR, S_WRITE | S_N_ADDR
 };
 
 static inline uae_u16 zz_bswap16(uae_u16 value)
@@ -405,6 +410,30 @@ static zz9000_state *zz_find_board(uaecptr addr)
 			return data;
 	}
 	return nullptr;
+}
+
+static int REGPARAM2 zz9000_check(uaecptr addr, uae_u32 size)
+{
+	zz9000_state *data = zz_find_board(addr);
+	if (!data)
+		return 0;
+	const uae_u32 offset = addr - data->configured;
+	return offset >= ZZ9000_MEMORY_BASE && offset < data->card_size &&
+		size <= data->card_size - offset;
+}
+
+static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr)
+{
+	zz9000_state *data = zz_find_board(addr);
+	if (!data)
+		return default_xlate(addr);
+	const uae_u32 offset = addr - data->configured;
+	if (offset < ZZ9000_MEMORY_BASE || offset >= data->card_size)
+		return default_xlate(addr);
+	/* Callers using a translated pointer bypass the byte/word/long bank
+	 * handlers, so conservatively flag VRAM as changed for display refresh. */
+	data->modified = true;
+	return data->memory + offset;
 }
 
 static uae_u32 zz_apply_minterm(uae_u32 source, uae_u32 destination, int minterm)
