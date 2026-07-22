@@ -395,6 +395,15 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
+                         inputting a value with the keyboard doesn't write intermediate values to backing variable. (#9476)
+                         - Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
+                         - After:  DragFloat() with user typing "123" --> write back 123 when validated/unfocused.
+                         You can enable the flag back for a given scope if needed by specific widget/behavior.
+ - 2026/07/20 (1.92.9) - ImDrawData: marked ImDrawData::CmdListsCount as obsolete (technically was obsoleted in 1.89.8).
+                         - Before: draw_data->CmdListsCount
+                         - After:  draw_data->CmdLists.Size
+ - 2026/07/08 (1.92.9) - Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload` which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
  - 2026/07/06 (1.92.9) - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
  - 2026/06/02 (1.92.9) - TreeNode: commented out legacy name ImGuiTreeNodeFlags_SpanTextWidth which was obsoleted in 1.90.7 (May 2024). Use ImGuiTreeNodeFlags_SpanLabelWidth instead.
  - 2026/05/07 (1.92.8) - DrawList: swapped the last two arguments of AddRect(), AddPolyline(), PathStroke().
@@ -730,7 +739,9 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                            - ImDrawCornerFlags_XXX          -> use ImDrawFlags_RoundCornersXXX flags. Read 1.82 Changelog for details + grep commented names in sources.
                        - commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for AddRect()/AddRectFilled()/PathRect()/AddImageRounded() -> use ImDrawFlags_RoundCornersXXX flags. Read 1.82 Changelog for details
  - 2023/08/25 (1.89.9) - clipper: Renamed IncludeRangeByIndices() (also called ForceDisplayRangeByIndices() before 1.89.6) to IncludeItemsByIndex(). Kept inline redirection function. Sorry!
- - 2023/07/12 (1.89.8) - ImDrawData: CmdLists now owned, changed from ImDrawList** to ImVector<ImDrawList*>. Majority of users shouldn't be affected, but you cannot compare to NULL nor reassign manually anymore. Instead use AddDrawList(). (#6406, #4879, #1878)
+ - 2023/07/12 (1.89.8) - ImDrawData: CmdLists now owned, changed from ImDrawList** to ImVector<ImDrawList*>. Majority of users shouldn't be affected, but you cannot compare to NULL nor reassign manually anymore. (#6406, #4879, #1878)
+                            - use `draw_data->CmdLists.Size` instead of `draw_list->CmdListsCount`.
+                            - use `draw_data->AddDrawList()` to add to a ImDrawData.
  - 2023/06/28 (1.89.7) - overlapping items: obsoleted 'SetItemAllowOverlap()' (called after item) in favor of calling 'SetNextItemAllowOverlap()' (called before item). 'SetItemAllowOverlap()' didn't and couldn't work reliably since 1.89 (2022-11-15).
  - 2023/06/28 (1.89.7) - overlapping items: renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap', 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'. Kept redirecting enums (will obsolete).
  - 2023/06/28 (1.89.7) - overlapping items: IsItemHovered() now by default return false when querying an item using AllowOverlap mode which is being overlapped. Use ImGuiHoveredFlags_AllowWhenOverlappedByItem to revert to old behavior.
@@ -4249,6 +4260,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     HoveredIdIsDisabled = false;
     HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
     ItemUnclipByLog = false;
+    AnyIdHasBeenEditedThisFrame = false;
     ActiveId = 0;
     ActiveIdIsAlive = 0;
     ActiveIdTimer = 0.0f;
@@ -4832,6 +4844,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
 
+    //IM_ASSERT(g.LastItemData.ID == id); // Failing cases include: "widgets_inputtext_scrolling", "widgets_inputtext_multiline_status", "widgets_selectable_input" = case of e.g TempInputText() overlayed manually with different ID (#2718)
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_EditedInternal;
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_NoMarkEdited)
         return;
@@ -4840,16 +4853,15 @@ void ImGui::MarkItemEdited(ImGuiID id)
     if (g.ActiveId == id || g.ActiveId == 0)
     {
         // FIXME: Can't we fully rely on LastItemData yet?
-        g.ActiveIdHasBeenEditedThisFrame = true;
-        g.ActiveIdHasBeenEditedBefore = true;
-        if (g.DeactivatedItemData.ID == id)
-            g.DeactivatedItemData.HasBeenEditedBefore = true;
+        g.AnyIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedBefore = true;
     }
+    if (g.DeactivatedItemData.ID == id)
+        g.DeactivatedItemData.HasBeenEditedBefore = true;
 
     // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
     // FIXME: This assert is getting a bit meaningless over time. It helped detect some unusual use cases but eventually it is becoming an unnecessary restriction.
-    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
+    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.DeactivatedItemData.ID == id || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
 }
 
 bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)
@@ -5671,6 +5683,7 @@ void ImGui::NewFrame()
     g.LastActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = 0;
+    g.AnyIdHasBeenEditedThisFrame = false;
     g.ActiveIdHasBeenEditedThisFrame = false;
     g.ActiveIdIsJustActivated = false;
     if (g.TempInputId != 0 && g.ActiveId != g.TempInputId)
@@ -5685,6 +5698,8 @@ void ImGui::NewFrame()
     if (g.DeactivatedItemData.ElapseFrame < g.FrameCount)
         g.DeactivatedItemData.ID = 0;
     g.DeactivatedItemData.IsAlive = false;
+    if (g.InputTextDeactivatedState.ElapseFrame < g.FrameCount)
+        g.InputTextDeactivatedState.ID = 0;
 
     // Record when we have been stationary as this state is preserved while over same item.
     // FIXME: The way this is expressed means user cannot alter HoverStationaryDelay during the frame to use varying values.
@@ -5939,7 +5954,7 @@ static void FlattenDrawDataIntoSingleLayer(ImDrawDataBuilder* builder)
 
 static void InitViewportDrawData(ImGuiViewportP* viewport)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiContext& g = *GImGui;
     ImDrawData* draw_data = &viewport->DrawDataP;
 
     viewport->DrawDataBuilder.Layers[0] = &draw_data->CmdLists;
@@ -5948,13 +5963,16 @@ static void InitViewportDrawData(ImGuiViewportP* viewport)
     viewport->DrawDataBuilder.Layers[1]->resize(0);
 
     draw_data->Valid = true;
-    draw_data->CmdListsCount = 0;
+    draw_data->FrameCount = g.FrameCount;
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = viewport->Size;
-    draw_data->FramebufferScale = io.DisplayFramebufferScale;
+    draw_data->FramebufferScale = g.IO.DisplayFramebufferScale;
     draw_data->OwnerViewport = viewport;
-    draw_data->Textures = &ImGui::GetPlatformIO().Textures;
+    draw_data->Textures = &g.PlatformIO.Textures;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    draw_data->CmdListsCount = 0;
+#endif
 }
 
 // Push a clipping rectangle for both ImGui logic (hit-testing etc.) and low-level ImDrawList rendering.
@@ -6222,7 +6240,6 @@ void ImGui::Render()
 
         // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
         ImDrawData* draw_data = &viewport->DrawDataP;
-        IM_ASSERT(draw_data->CmdLists.Size == draw_data->CmdListsCount);
         for (ImDrawList* draw_list : draw_data->CmdLists)
             draw_list->_PopUnusedDrawCmd();
 
@@ -6353,6 +6370,7 @@ bool ImGui::IsItemDeactivated()
     return g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount;
 }
 
+// Since 1.92.9: consider using NoLiveEdit flags if all you need to that values are not written bo backing variable while typing.
 bool ImGui::IsItemDeactivatedAfterEdit()
 {
     ImGuiContext& g = *GImGui;
@@ -6431,7 +6449,7 @@ bool ImGui::IsItemEdited()
 void ImGui::SetNextItemAllowOverlap()
 {
     ImGuiContext& g = *GImGui;
-    g.NextItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap;
+    g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_AllowOverlap;
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -6709,12 +6727,34 @@ ImGuiWindow* ImGui::FindWindowByName(const char* name)
 
 static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settings)
 {
-    window->Pos = ImTrunc(ImVec2(settings->Pos.x, settings->Pos.y));
-    if (settings->Size.x > 0 && settings->Size.y > 0)
-        window->Size = window->SizeFull = ImTrunc(ImVec2(settings->Size.x, settings->Size.y));
-    window->Collapsed = settings->Collapsed;
+    if (settings != NULL)
+    {
+        window->Pos = ImTrunc(ImVec2(settings->Pos.x, settings->Pos.y));
+        if (settings->Size.x > 0 && settings->Size.y > 0)
+        {
+            window->Size = window->SizeFull = ImTrunc(ImVec2(settings->Size.x, settings->Size.y));
+            window->AutoFitFramesX = window->AutoFitFramesY = 0;
+        }
+        window->Collapsed = settings->Collapsed;
+        SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
+    }
+
+    window->DC.CursorStartPos = window->DC.CursorMaxPos = window->DC.IdealMaxPos = window->Pos; // So first call to CalcWindowContentSizes() doesn't return crazy values
+    if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+    {
+        window->AutoFitFramesX = window->AutoFitFramesY = 2;
+        window->AutoFitOnlyGrows = false;
+    }
+    else
+    {
+        window->AutoFitFramesX = (window->Size.x <= 0.0f) ? 2 : 0;
+        window->AutoFitFramesY = (window->Size.y <= 0.0f) ? 2 : 0;
+        window->AutoFitOnlyGrows = (window->AutoFitFramesX > 0) || (window->AutoFitFramesY > 0);
+    }
 }
 
+// Note that 'settings' may be NULL.
+// Sets _Once, _Appearing, _FirstUseEver. _FirstUseEver will be cleared again if there are settings.
 static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settings)
 {
     // Initial window state with e.g. default/arbitrary window position
@@ -6724,28 +6764,9 @@ static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* s
     window->Pos = main_viewport->Pos + ImVec2(60, 60);
     window->Size = window->SizeFull = ImVec2(0, 0);
     window->SetWindowPosAllowFlags = window->SetWindowSizeAllowFlags = window->SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
-
+    ApplyWindowSettings(window, settings);
     if (settings != NULL)
-    {
         settings->LastUsedDate = g.SessionDate;
-        SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
-        ApplyWindowSettings(window, settings);
-    }
-    window->DC.CursorStartPos = window->DC.CursorMaxPos = window->DC.IdealMaxPos = window->Pos; // So first call to CalcWindowContentSizes() doesn't return crazy values
-
-    if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
-    {
-        window->AutoFitFramesX = window->AutoFitFramesY = 2;
-        window->AutoFitOnlyGrows = false;
-    }
-    else
-    {
-        if (window->Size.x <= 0.0f)
-            window->AutoFitFramesX = 2;
-        if (window->Size.y <= 0.0f)
-            window->AutoFitFramesY = 2;
-        window->AutoFitOnlyGrows = (window->AutoFitFramesX > 0) || (window->AutoFitFramesY > 0);
-    }
 }
 
 static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
@@ -11438,7 +11459,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     g.LastItemData.ID = id;
     g.LastItemData.Rect = bb;
     g.LastItemData.NavRect = nav_bb_arg ? *nav_bb_arg : bb;
-    g.LastItemData.ItemFlags = g.CurrentItemFlags | g.NextItemData.ItemFlags | extra_flags;
+    g.LastItemData.ItemFlags = g.CurrentItemFlags | g.NextItemData.ItemFlagsSet | extra_flags;
     g.LastItemData.StatusFlags = ImGuiItemStatusFlags_None;
     // Note: we don't copy 'g.NextItemData.SelectionUserData' to an hypothetical g.LastItemData.SelectionUserData: since the former is not cleared.
 
@@ -11472,7 +11493,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 
     // Lightweight clear of SetNextItemXXX data.
     g.NextItemData.HasFlags = ImGuiNextItemDataFlags_None;
-    g.NextItemData.ItemFlags = ImGuiItemFlags_None;
+    g.NextItemData.ItemFlagsSet = ImGuiItemFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
@@ -11511,7 +11532,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
                 *p_highlight = g.FrameCount;
             *p_alive = g.FrameCount;
             if (*p_highlight >= g.FrameCount - 1)
-                window->DrawList->AddRect(bb.Min - ImVec2(1, 1), bb.Max + ImVec2(1, 1), IM_COL32(255, 0, 0, 255), 0.0f, ImDrawFlags_None, 2.0f);
+                window->DrawList->AddRect(bb.Min - ImVec2(1, 1), bb.Max + ImVec2(1, 1), IM_COL32(255, 0, 0, 255), 0.0f, 2.0f);
         }
 #endif
     }
@@ -11882,7 +11903,7 @@ void ImGui::BeginGroup()
     group_data.BackupActiveIdIsAlive = g.ActiveIdIsAlive;
     group_data.BackupHoveredIdIsAlive = g.HoveredId != 0;
     group_data.BackupIsSameLine = window->DC.IsSameLine;
-    group_data.BackupActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame;
+    group_data.BackupAnyIdHasBeenEditedThisFrame = g.AnyIdHasBeenEditedThisFrame;
     group_data.BackupDeactivatedIdIsAlive = g.DeactivatedItemData.IsAlive;
     group_data.EmitItem = true;
 
@@ -11947,7 +11968,7 @@ void ImGui::EndGroup()
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
 
     // Forward Edited flag
-    if (g.ActiveIdHasBeenEditedThisFrame && !group_data.BackupActiveIdHasBeenEditedThisFrame)
+    if (g.AnyIdHasBeenEditedThisFrame && !group_data.BackupAnyIdHasBeenEditedThisFrame)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 
     // Forward Deactivated flag
@@ -15808,7 +15829,10 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     // Call post-read handlers
     ImGuiSettingsCleanupArgs cleanup_args;
     if (g.IO.ConfigIniSettingsAutoDiscardMonths > 0)
+    {
         cleanup_args.DiscardOlderThanMonths = g.IO.ConfigIniSettingsAutoDiscardMonths;
+        CleanupIniSettings(&cleanup_args);
+    }
     for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
         if (handler.ApplyAllFn != NULL)
             handler.ApplyAllFn(&g, &handler);
