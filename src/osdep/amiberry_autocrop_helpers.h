@@ -161,15 +161,18 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	if (state.border_samples.empty()) {
 		return false;
 	}
-	// A single uniform edge may be real overscan content. Without a second
-	// side to corroborate it, use the cleared surface background instead.
-	if (sampled_sides < 2) {
+	const auto use_surface_background = [&]() {
 		if (!amiberry_auto_crop_detect_surface_background_color(
 			buffer, crop, state.border_rgb)) {
 			return false;
 		}
 		state.border_valid = true;
 		return true;
+	};
+	// A single uniform edge may be real overscan content. Without a second
+	// side to corroborate it, use the cleared surface background instead.
+	if (sampled_sides < 2) {
+		return use_surface_background();
 	}
 	std::sort(state.border_samples.begin(), state.border_samples.end());
 	uint32_t most_common = state.border_samples.front();
@@ -188,10 +191,10 @@ static inline bool amiberry_auto_crop_detect_border_color(
 		run_start = i;
 	}
 
-	// If the immediate perimeter is not predominantly one color, it may
-	// contain real display output rather than a removable border.
+	// A mixed perimeter may contain real display output. Use the cleared
+	// surface background so the component scan can preserve that content.
 	if (most_common_count * 4 < state.border_samples.size() * 3) {
-		return false;
+		return use_surface_background();
 	}
 	state.border_rgb = most_common;
 	state.border_valid = true;

@@ -230,6 +230,30 @@ static void test_one_sided_uniform_content_is_not_border()
 	expect_eq(crop.h, 21, "Crop should expand through the adjacent content row");
 }
 
+static void test_ambiguous_perimeter_preserves_content()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t content_color = 0x0000ff00u;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int x = 4; x < 36; x++) {
+		pixels[20 * width + x] = content_color;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 4, 0, 32, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "Content on an ambiguous perimeter must remain visible");
+	expect_true(state.border_valid, "Ambiguous perimeter should use surface background");
+	expect_eq(state.border_rgb, 0u, "Ambiguous content must not become the border color");
+	expect_eq(crop.x, 4, "Lower content must keep the crop x origin");
+	expect_eq(crop.y, 0, "Top-aligned crop must keep its y origin");
+	expect_eq(crop.w, 32, "Lower content must keep the crop width");
+	expect_eq(crop.h, 21, "Crop should expand through ambiguous lower content");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -257,6 +281,7 @@ int main()
 	test_preserves_content_reaching_surface_edge();
 	test_chooses_background_outside_origin_anchored_crop();
 	test_one_sided_uniform_content_is_not_border();
+	test_ambiguous_perimeter_preserves_content();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }
