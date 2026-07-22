@@ -20,6 +20,17 @@ const std::vector<std::string>& get_sound_device_names();
 const std::vector<std::string>& get_available_theme_names();
 const std::vector<std::string>& get_available_bezel_names();
 
+struct InputDeviceOption
+{
+	std::string label;
+	std::string config_value;
+	int id;
+};
+
+const std::vector<InputDeviceOption>& get_input_device_options();
+bool InputDeviceCombo(const char* id, int current_index, const char* fallback_preview,
+	int* selected_index);
+
 inline constexpr int SOUND_BUFFER_SIZES[] = {
 	1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536
 };
@@ -84,7 +95,10 @@ void render_panel_custom();
 void render_panel_diskswapper();
 void render_panel_misc();
 void render_panel_global_settings();
-// Returns true while the Misc panel's hotkey-capture modal is open.
+// Shared hotkey picker used by panels that edit host keyboard shortcuts.
+bool HotkeyPicker(const char* id, char* config_value, size_t config_value_size);
+void HotkeyCapture_RenderPopup();
+// Returns true while the hotkey-capture modal is open.
 // Used by the GUI main loop to suppress its own keyboard shortcuts while
 // the user is picking a key combination.
 bool HotkeyCapture_IsActive();

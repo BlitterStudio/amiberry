@@ -23,80 +23,128 @@
 #define MOUSEUNTRAP_MAGIC 2
 #endif
 
-static std::vector<std::string> input_device_names;
-static std::vector<const char *> input_device_items;
-static std::vector<int> input_device_ids;
+static std::vector<InputDeviceOption> input_device_options;
 
-static void poll_input_devices() {
-    input_device_names.clear();
-    input_device_items.clear();
-    input_device_ids.clear();
-
-    // Static Items
-    auto add = [](const char *name, int id) {
-        input_device_names.emplace_back(name);
-        input_device_ids.push_back(id);
-    };
-
-    add("<none>", JPORT_NONE);
-    add("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)", JSEM_KBDLAYOUT);
-    add("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)", JSEM_KBDLAYOUT + 1);
-    add("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)", JSEM_KBDLAYOUT + 2);
-    add("Keyboard Layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)", JSEM_KBDLAYOUT + 8);
-    add("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)", JSEM_KBDLAYOUT + 3);
-
-    for (int j = 0; j < 4; j++) {
-        char buf[64];
-        snprintf(buf, sizeof(buf), "Retroarch KBD as Joystick Player%d", j + 1);
-        add(buf, JSEM_KBDLAYOUT + j + 4);
-    }
-
-    // Joysticks — add type prefix so users can identify device types
-    int num_joys = inputdevice_get_device_total(IDTYPE_JOYSTICK);
-    for (int j = 0; j < num_joys; j++) {
-        const char* name = inputdevice_get_device_name(IDTYPE_JOYSTICK, j);
-        std::string label;
-        if (j < MAX_INPUT_DEVICES && di_joystick[j].is_controller)
-            label = std::string("[Gamepad] ") + (name ? name : "?");
-        else
-            label = std::string("[Joystick] ") + (name ? name : "?");
-        input_device_names.push_back(label);
-        input_device_ids.push_back(JSEM_JOYS + j);
-    }
-
-    // Mice — always prefixed with [Mouse] for parity with [Joystick] /
-    // [Gamepad] entries. In single-mouse mode there is exactly one entry
-    // ("[Mouse] System mouse"); in multi-mouse mode one entry per physical
-    // device.
-    int num_mice = inputdevice_get_device_total(IDTYPE_MOUSE);
-    for (int j = 0; j < num_mice; j++) {
-        const char* name = inputdevice_get_device_name(IDTYPE_MOUSE, j);
-        std::string label = std::string("[Mouse] ") + (name && name[0] ? name : "?");
-        input_device_names.push_back(label);
-        input_device_ids.push_back(JSEM_MICE + j);
-    }
-
-    // Disambiguate duplicate device names by appending instance numbers
-    std::unordered_map<std::string, int> name_counts;
-    for (const auto &name : input_device_names) {
-        name_counts[name]++;
-    }
-    std::unordered_map<std::string, int> name_seen;
-    for (auto &name : input_device_names) {
-        if (name_counts[name] > 1) {
-            int instance = ++name_seen[name];
-            name = name + " (" + std::to_string(instance) + ")";
-        }
-    }
-
-    for (const auto &name: input_device_names) input_device_items.push_back(name.c_str());
+static std::string get_input_device_config_value(const int id)
+{
+	if (id == JPORT_NONE)
+		return "none";
+	if (id < JSEM_CUSTOM)
+		return "kbd" + std::to_string(id - JSEM_KBDLAYOUT + 1);
+	if (id < JSEM_MICE)
+		return "joy" + std::to_string(id - JSEM_JOYS);
+	if (id == JSEM_MICE)
+		return "mouse";
+	return "mouse" + std::to_string(id - JSEM_MICE);
 }
 
-static int get_device_index(int id) {
-    for (size_t i = 0; i < input_device_ids.size(); ++i) {
-        if (input_device_ids[i] == id) return (int) i;
-    }
-    return 0; // Default to <none>
+static void poll_input_devices()
+{
+	input_device_options.clear();
+
+	// Static items
+	auto add = [](const char* name, const int id) {
+		input_device_options.push_back({name, get_input_device_config_value(id), id});
+	};
+
+	add("<none>", JPORT_NONE);
+	add("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)", JSEM_KBDLAYOUT);
+	add("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)", JSEM_KBDLAYOUT + 1);
+	add("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)", JSEM_KBDLAYOUT + 2);
+	add("Keyboard Layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)", JSEM_KBDLAYOUT + 8);
+	add("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)", JSEM_KBDLAYOUT + 3);
+
+	for (int j = 0; j < 4; ++j) {
+		char buf[64];
+		snprintf(buf, sizeof buf, "Retroarch KBD as Joystick Player%d", j + 1);
+		add(buf, JSEM_KBDLAYOUT + j + 4);
+	}
+
+	// Joysticks — add type prefix so users can identify device types
+	const int num_joys = inputdevice_get_device_total(IDTYPE_JOYSTICK);
+	for (int j = 0; j < num_joys; ++j) {
+		const char* name = inputdevice_get_device_name(IDTYPE_JOYSTICK, j);
+		std::string label;
+		if (j < MAX_INPUT_DEVICES && di_joystick[j].is_controller)
+			label = std::string("[Gamepad] ") + (name ? name : "?");
+		else
+			label = std::string("[Joystick] ") + (name ? name : "?");
+		add(label.c_str(), JSEM_JOYS + j);
+	}
+
+	// Mice — always prefixed with [Mouse] for parity with [Joystick] /
+	// [Gamepad] entries. In single-mouse mode there is exactly one entry
+	// ("[Mouse] System mouse"); in multi-mouse mode one entry per physical
+	// device.
+	const int num_mice = inputdevice_get_device_total(IDTYPE_MOUSE);
+	for (int j = 0; j < num_mice; ++j) {
+		const char* name = inputdevice_get_device_name(IDTYPE_MOUSE, j);
+		const std::string label = std::string("[Mouse] ") + (name && name[0] ? name : "?");
+		add(label.c_str(), JSEM_MICE + j);
+	}
+
+	// Disambiguate duplicate device names by appending instance numbers
+	std::unordered_map<std::string, int> name_counts;
+	for (const auto& option : input_device_options) {
+		name_counts[option.label]++;
+	}
+	std::unordered_map<std::string, int> name_seen;
+	for (auto& option : input_device_options) {
+		if (name_counts[option.label] > 1) {
+			const int instance = ++name_seen[option.label];
+			option.label += " (" + std::to_string(instance) + ")";
+		}
+	}
+}
+
+static int get_device_index(const int id)
+{
+	for (size_t i = 0; i < input_device_options.size(); ++i) {
+		if (input_device_options[i].id == id)
+			return static_cast<int>(i);
+	}
+	return 0; // Default to <none>
+}
+
+const std::vector<InputDeviceOption>& get_input_device_options()
+{
+	if (input_device_options.empty() || joystick_refresh_needed) {
+		joystick_refresh_needed = false;
+		poll_input_devices();
+	}
+	return input_device_options;
+}
+
+bool InputDeviceCombo(const char* id, const int current_index, const char* fallback_preview,
+	int* selected_index)
+{
+	const auto& options = get_input_device_options();
+	const bool current_valid = current_index >= 0 && current_index < static_cast<int>(options.size());
+	const char* preview = current_valid
+		? options[current_index].label.c_str()
+		: (fallback_preview ? fallback_preview : "<none>");
+
+	bool changed = false;
+	if (ImGui::BeginCombo(id, preview)) {
+		for (int n = 0; n < static_cast<int>(options.size()); ++n) {
+			const bool is_selected = current_index == n;
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			ImGui::PushID(n);
+			if (ImGui::Selectable(options[n].label.c_str(), is_selected)) {
+				*selected_index = n;
+				changed = true;
+			}
+			ImGui::PopID();
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+	return changed;
 }
 
 void render_panel_input() {
@@ -106,10 +154,7 @@ void render_panel_input() {
         save_mapping_to_file(mapping);
     }
 
-	if (input_device_names.empty() || joystick_refresh_needed) {
-		joystick_refresh_needed = false;
-		poll_input_devices();
-	}
+	get_input_device_options();
 
     ImGui::Indent(4.0f);
 
@@ -131,27 +176,12 @@ void render_panel_input() {
 
             int dev_idx = get_device_index(changed_prefs.jports[port_idx].id);
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-            if (ImGui::BeginCombo(std::string("##Dev").append(std::to_string(port_idx)).c_str(),
-                                  input_device_items[dev_idx])) {
-                for (int n = 0; n < static_cast<int>(input_device_items.size()); n++) {
-                    const bool is_selected = (dev_idx == n);
-                    if (is_selected)
-                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                    ImGui::PushID(n);
-                    if (ImGui::Selectable(input_device_items[n], is_selected)) {
-                        dev_idx = n;
-                        changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
-                        inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
-                    }
-                    ImGui::PopID();
-                    if (is_selected) {
-                        ImGui::PopStyleColor();
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-                ImGui::EndCombo();
-            }
-            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+			int selected_idx = dev_idx;
+			const std::string combo_id = "##Dev" + std::to_string(port_idx);
+			if (InputDeviceCombo(combo_id.c_str(), dev_idx, nullptr, &selected_idx)) {
+				changed_prefs.jports[port_idx].id = input_device_options[selected_idx].id;
+				inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
+			}
             ShowHelpMarker("Select the input device to use for this Amiga port. Port 0 is typically for mouse, Port 1 for joystick");
 
             float avail_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;
@@ -315,26 +345,10 @@ void render_panel_input() {
 
             int dev_idx = get_device_index(changed_prefs.jports[port_idx].id);
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-            if (ImGui::BeginCombo(std::string("##ParDev").append(std::to_string(port_idx)).c_str(),
-                                  input_device_items[dev_idx])) {
-                for (int n = 0; n < static_cast<int>(input_device_items.size()); n++) {
-                    const bool is_selected = (dev_idx == n);
-                    if (is_selected)
-                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                    ImGui::PushID(n);
-                    if (ImGui::Selectable(input_device_items[n], is_selected)) {
-                        dev_idx = n;
-                        changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
-                    }
-                    ImGui::PopID();
-                    if (is_selected) {
-                        ImGui::PopStyleColor();
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-                ImGui::EndCombo();
-            }
-            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+			int selected_idx = dev_idx;
+			const std::string combo_id = "##ParDev" + std::to_string(port_idx);
+			if (InputDeviceCombo(combo_id.c_str(), dev_idx, nullptr, &selected_idx))
+				changed_prefs.jports[port_idx].id = input_device_options[selected_idx].id;
 
             // Row 2: Autofire | Remap
             float avail_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;

@@ -193,6 +193,7 @@ static MiscListItem misc_items[] = {
 static constexpr int misc_items_count = IM_ARRAYSIZE(misc_items);
 
 static char* target_hotkey_string = nullptr;
+static size_t target_hotkey_string_size = 0;
 static bool  open_hotkey_popup = false;
 static bool  hotkey_capture_active = false;
 
@@ -204,7 +205,52 @@ bool HotkeyCapture_IsActive()
 	return hotkey_capture_active;
 }
 
-static void ShowHotkeyPopup()
+static void set_captured_hotkey(const char* value)
+{
+	if (!target_hotkey_string || target_hotkey_string_size == 0)
+		return;
+	strncpy(target_hotkey_string, value, target_hotkey_string_size - 1);
+	target_hotkey_string[target_hotkey_string_size - 1] = '\0';
+}
+
+bool HotkeyPicker(const char* id, char* config_value, const size_t config_value_size)
+{
+	bool changed = false;
+	ImGui::PushID(id);
+	if (ImGui::BeginTable("##HotkeyPicker", 2, ImGuiTableFlags_SizingStretchProp))
+	{
+		ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+		ImGui::TableSetupColumn("Btns", ImGuiTableColumnFlags_WidthFixed,
+			SMALL_BUTTON_WIDTH * 2 + ImGui::GetStyle().ItemSpacing.x);
+
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		ImGui::SetNextItemWidth(-FLT_MIN);
+		ImGui::BeginDisabled();
+		ImGui::InputText("##Display", config_value, config_value_size, ImGuiInputTextFlags_ReadOnly);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+		ImGui::EndDisabled();
+
+		ImGui::TableNextColumn();
+		if (AmigaButton("...")) {
+			target_hotkey_string = config_value;
+			target_hotkey_string_size = config_value_size;
+			open_hotkey_popup = true;
+		}
+		ImGui::SameLine();
+		if (AmigaButton(ICON_FA_XMARK "##clear") && config_value[0]) {
+			config_value[0] = '\0';
+			changed = true;
+		}
+
+		ImGui::EndTable();
+	}
+	ImGui::PopID();
+	return changed;
+}
+
+void HotkeyCapture_RenderPopup()
 {
 	// Per-capture state used to distinguish "modifier-only" bindings (where the
 	// user presses and releases a single qualifier with nothing else) from the
@@ -292,7 +338,7 @@ static void ShowHotkeyPopup()
 					if      (ImGui::IsKeyDown(ImGuiKey_LeftSuper))  full_key += "LGUI+";
 					else if (ImGui::IsKeyDown(ImGuiKey_RightSuper)) full_key += "RGUI+";
 					full_key += key_name;
-					strncpy(target_hotkey_string, full_key.c_str(), 255);
+					set_captured_hotkey(full_key.c_str());
 					ImGui::CloseCurrentPopup();
 					emitted = true;
 				}
@@ -310,7 +356,7 @@ static void ShowHotkeyPopup()
 						if (SDL_GetGamepadButton(gp, static_cast<SDL_GamepadButton>(b))) {
 							const char* name = SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(b));
 							if (name && target_hotkey_string) {
-								strncpy(target_hotkey_string, name, 255);
+								set_captured_hotkey(name);
 								non_mod_pressed_session = true;
 								ImGui::CloseCurrentPopup();
 								emitted = true;
@@ -330,7 +376,7 @@ static void ShowHotkeyPopup()
 			for (const auto& m : mods) {
 				if (ImGui::IsKeyReleased(m.key)) {
 					if (target_hotkey_string) {
-						strncpy(target_hotkey_string, m.name, 255);
+						set_captured_hotkey(m.name);
 						ImGui::CloseCurrentPopup();
 					}
 					break;
@@ -429,32 +475,7 @@ void render_panel_misc()
 		auto HotkeyRow = [&](const char* label, char* config_val) {
 			ImGui::PushID(label);
 			ImGui::Text("%s", label);
-
-			if (ImGui::BeginTable("##HotkeyRow", 2, ImGuiTableFlags_SizingStretchProp))
-			{
-				ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-				ImGui::TableSetupColumn("Btns",  ImGuiTableColumnFlags_WidthFixed, SMALL_BUTTON_WIDTH * 2 + ImGui::GetStyle().ItemSpacing.x);
-
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-
-				ImGui::SetNextItemWidth(-FLT_MIN);
-				ImGui::BeginDisabled();
-				ImGui::InputText("##Display", config_val, 256, ImGuiInputTextFlags_ReadOnly);
-				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-				ImGui::EndDisabled();
-
-				ImGui::TableNextColumn();
-				if (AmigaButton("...")) {
-					target_hotkey_string = config_val;
-					open_hotkey_popup = true;
-				}
-				ImGui::SameLine();
-				if (AmigaButton(ICON_FA_XMARK "##clear"))
-					config_val[0] = '\0';
-
-				ImGui::EndTable();
-			}
+			HotkeyPicker("##picker", config_val, 256);
 			ImGui::PopID();
 		};
 
@@ -521,5 +542,5 @@ void render_panel_misc()
 		ImGui::EndTable();
 	}
 
-	ShowHotkeyPopup();
+	HotkeyCapture_RenderPopup();
 }
