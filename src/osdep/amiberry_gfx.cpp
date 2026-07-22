@@ -122,6 +122,18 @@ constexpr int auto_crop_guard_top_base_tolerance = 8;
 constexpr int auto_crop_wide_aspect_w = 21;
 constexpr int auto_crop_wide_aspect_h = 9;
 constexpr int auto_crop_shrink_stable_frames = 6;
+constexpr int auto_crop_min_outside_pixels = 16;
+
+struct AutoCropVisibleState {
+	const SDL_Surface* surface = nullptr;
+	int surface_w = 0;
+	int surface_h = 0;
+	SDL_Rect source_rect{};
+	SDL_Rect visible_rect{};
+	int hres = 0;
+	int vres = 0;
+	bool valid = false;
+};
 
 static int auto_crop_source_origin_x;
 static int auto_crop_source_origin_y;
@@ -202,6 +214,119 @@ static void clamp_auto_crop_rect(const SDL_Surface* surface, SDL_Rect& rect)
 	if (auto_crop_rect_bottom(rect) > surface->h) {
 		rect.h = surface->h - rect.y;
 	}
+}
+
+static uint32_t auto_crop_read_pixel(const SDL_Surface* surface, const int x,
+	const int y, const int bytes_per_pixel)
+{
+	uint32_t pixel = 0;
+	const auto* pixels = static_cast<const uint8_t*>(surface->pixels);
+	std::memcpy(&pixel, pixels + y * surface->pitch + x * bytes_per_pixel,
+		bytes_per_pixel);
+	return pixel;
+}
+
+static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
+	SDL_Rect& rect)
+{
+	if (!surface || !surface->pixels || surface->w <= 0 || surface->h <= 0) {
+		return;
+	}
+
+	clamp_auto_crop_rect(surface, rect);
+	if (rect.w <= 0 || rect.h <= 0) {
+		return;
+	}
+
+	const int bytes_per_pixel = SDL_BYTESPERPIXEL(surface->format);
+	if (bytes_per_pixel <= 0 || bytes_per_pixel > static_cast<int>(sizeof(uint32_t))) {
+		return;
+	}
+	const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(surface->format);
+	if (!details) {
+		return;
+	}
+	const uint32_t rgb_mask = details->Rmask | details->Gmask | details->Bmask;
+	if (!rgb_mask) {
+		return;
+	}
+
+	const uint32_t border_rgb = auto_crop_read_pixel(surface, 0, 0,
+		bytes_per_pixel) & rgb_mask;
+	// A non-black border may be intentional game output. In that case the
+	// hardware display limits remain the safer crop source.
+	if (border_rgb != 0) {
+		return;
+	}
+
+	int outside_pixels = 0;
+	int min_x = rect.x;
+	int min_y = rect.y;
+	int max_x = auto_crop_rect_right(rect) - 1;
+	int max_y = auto_crop_rect_bottom(rect) - 1;
+	for (int y = 0; y < surface->h; y++) {
+		for (int x = 0; x < surface->w; x++) {
+			if (x >= rect.x && x < auto_crop_rect_right(rect)
+				&& y >= rect.y && y < auto_crop_rect_bottom(rect)) {
+				continue;
+			}
+			if ((auto_crop_read_pixel(surface, x, y, bytes_per_pixel) & rgb_mask)
+				== border_rgb) {
+				continue;
+			}
+
+			outside_pixels++;
+			min_x = std::min(min_x, x);
+			min_y = std::min(min_y, y);
+			max_x = std::max(max_x, x);
+			max_y = std::max(max_y, y);
+		}
+	}
+
+	if (outside_pixels < auto_crop_min_outside_pixels) {
+		return;
+	}
+
+	rect = { min_x, min_y, max_x - min_x + 1, max_y - min_y + 1 };
+	clamp_auto_crop_rect(surface, rect);
+}
+
+static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
+	const SDL_Rect& source_rect, SDL_Rect& visible_rect, const int hres,
+	const int vres, AutoCropVisibleState& state, const bool reset)
+{
+	if (!surface || surface->w <= 0 || surface->h <= 0
+		|| source_rect.w <= 0 || source_rect.h <= 0
+		|| visible_rect.w <= 0 || visible_rect.h <= 0) {
+		state = {};
+		return;
+	}
+
+	const bool source_changed = state.surface != surface
+		|| state.surface_w != surface->w
+		|| state.surface_h != surface->h
+		|| !auto_crop_rect_equals(state.source_rect, source_rect)
+		|| state.hres != hres
+		|| state.vres != vres;
+	if (reset || source_changed || !state.valid) {
+		state = {};
+		state.surface = surface;
+		state.surface_w = surface->w;
+		state.surface_h = surface->h;
+		state.source_rect = source_rect;
+		state.visible_rect = visible_rect;
+		state.hres = hres;
+		state.vres = vres;
+		state.valid = true;
+		return;
+	}
+
+	// Pixel content beyond DIW/bitplane limits may be intermittent (sprites,
+	// raster effects, or blank frames between screens). Once observed, retain
+	// those bounds until the hardware source geometry actually changes.
+	visible_rect = auto_crop_rect_union(visible_rect, state.visible_rect);
+	clamp_auto_crop_rect(surface, visible_rect);
+	state.visible_rect = visible_rect;
 }
 
 static int auto_crop_minimum_width(const int hres)
@@ -1933,11 +2058,17 @@ void auto_crop_image()
 		static int last_surface_w = 0, last_surface_h = 0;
 #ifdef LIBRETRO
 		static AutoCropState crop_state;
+#else
+		static AutoCropVisibleState visible_state;
 #endif
 		int cw, ch, cx, cy, crealh = 0;
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+		const int raw_cw = cw;
+		const int raw_ch = ch;
+		const int raw_cx = cx;
+		const int raw_cy = cy;
 		// Cache the raw source origin at render cadence. Input must not call
 		// get_custom_limits(), which advances its interlace sampling state.
 		auto_crop_source_origin_x = cx;
@@ -1953,6 +2084,22 @@ void auto_crop_image()
 		SDL_Surface* surface = get_amiga_surface(0);
 		const int surface_w = surface ? surface->w : 0;
 		const int surface_h = surface ? surface->h : 0;
+		SDL_Rect crop_rect = { cx, cy, cw, ch };
+#ifndef LIBRETRO
+		clamp_auto_crop_rect(surface, crop_rect);
+		const SDL_Rect source_crop_rect = crop_rect;
+		// DIW/bitplane limits can exclude visible sprites or raster content.
+		// Preserve real pixels outside those limits without restoring the
+		// conservative minimum frame that keeps intentional black borders.
+		expand_auto_crop_rect_to_visible_content(surface, crop_rect);
+		preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
+			hres, vres, visible_state,
+			force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
+		cx = crop_rect.x;
+		cy = crop_rect.y;
+		cw = crop_rect.w;
+		ch = crop_rect.h;
+#endif
 		bool crop_is_stable = true;
 #ifdef LIBRETRO
 		crop_is_stable = crop_state.shrink_frames == 0;
@@ -1970,10 +2117,6 @@ void auto_crop_image()
 			return;
 		}
 
-		const int raw_cw = cw;
-		const int raw_ch = ch;
-		const int raw_cx = cx;
-		const int raw_cy = cy;
 #ifdef LIBRETRO
 		const bool reset_policy = force_auto_crop || last_autocrop != currprefs.gfx_auto_crop
 			|| last_hres != hres || last_vres != vres
@@ -1995,15 +2138,10 @@ void auto_crop_image()
 		last_surface_h = surface_h;
 		force_auto_crop = false;
 
-		SDL_Rect crop_rect = { cx, cy, cw, ch };
 #ifdef LIBRETRO
 		apply_auto_crop_policy(surface, crop_rect, hres, vres, is_ntsc, crop_state, reset_policy);
 #else
-		// Native Auto Crop follows the detected display limits exactly. The
-		// conservative minimum-frame and edge guards in apply_auto_crop_policy()
-		// are retained only for libretro's changing frontend geometry; applying
-		// them here keeps valid black borders in standalone output.
-		clamp_auto_crop_rect(surface, crop_rect);
+		// The native crop was clamped and checked for visible content above.
 #endif
 		cx = crop_rect.x;
 		cy = crop_rect.y;
