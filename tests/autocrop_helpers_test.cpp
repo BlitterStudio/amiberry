@@ -281,6 +281,37 @@ static void test_mixed_perimeter_keeps_non_black_border()
 	expect_eq(crop.h, 21, "Crop should include content without including gray border");
 }
 
+static void test_two_sided_color_is_not_perimeter_majority()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t horizontal_color = 0x0000ff00u;
+	constexpr uint32_t left_color = 0x00ff0000u;
+	constexpr uint32_t right_color = 0x000000ffu;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int x = 8; x < 32; x++) {
+		pixels[7 * width + x] = horizontal_color;
+		pixels[28 * width + x] = horizontal_color;
+	}
+	for (int y = 8; y < 28; y++) {
+		pixels[y * width + 7] = left_color;
+		pixels[y * width + 32] = right_color;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "A two-of-four side color must remain visible content");
+	expect_true(state.border_valid, "Split perimeter should use surface background");
+	expect_eq(state.border_rgb, 0u, "A perimeter plurality must not become border color");
+	expect_eq(crop.x, 7, "Visible left edge should expand the crop left");
+	expect_eq(crop.y, 7, "Visible top edge should expand the crop upward");
+	expect_eq(crop.w, 26, "Visible side edges should expand the crop width");
+	expect_eq(crop.h, 22, "Visible horizontal edges should expand the crop height");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -310,6 +341,7 @@ int main()
 	test_one_sided_uniform_content_is_not_border();
 	test_ambiguous_perimeter_preserves_content();
 	test_mixed_perimeter_keeps_non_black_border();
+	test_two_sided_color_is_not_perimeter_majority();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }

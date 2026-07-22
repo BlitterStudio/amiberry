@@ -212,7 +212,6 @@ static inline bool amiberry_auto_crop_detect_border_color(
 
 	uint32_t most_common = 0;
 	int most_common_sides = 0;
-	bool tied = false;
 	for (int i = 0; i < side_color_count; i++) {
 		int matches = 0;
 		for (int j = 0; j < side_color_count; j++) {
@@ -221,15 +220,13 @@ static inline bool amiberry_auto_crop_detect_border_color(
 		if (matches > most_common_sides) {
 			most_common = side_rgb[i];
 			most_common_sides = matches;
-			tied = false;
-		} else if (matches == most_common_sides && side_rgb[i] != most_common) {
-			tied = true;
 		}
 	}
 
 	// Give each side one vote so a long content edge cannot outweigh a
-	// consistent border on multiple shorter edges.
-	if (most_common_sides < 2 || tied) {
+	// consistent border on multiple shorter edges. Require a strict majority
+	// of all sampled sides before hiding pixels of the selected color.
+	if (most_common_sides * 2 <= sampled_sides) {
 		return use_surface_background();
 	}
 	state.border_rgb = most_common;
