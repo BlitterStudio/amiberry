@@ -117,6 +117,30 @@ static inline bool amiberry_auto_crop_detect_surface_background_color(
 	return true;
 }
 
+static inline bool amiberry_auto_crop_find_dominant_color(
+	std::vector<uint32_t>& samples, uint32_t& dominant_rgb)
+{
+	if (samples.empty()) {
+		return false;
+	}
+	std::sort(samples.begin(), samples.end());
+	dominant_rgb = samples.front();
+	size_t dominant_count = 1;
+	size_t run_start = 0;
+	for (size_t i = 1; i <= samples.size(); i++) {
+		if (i < samples.size() && samples[i] == samples[run_start]) {
+			continue;
+		}
+		const size_t run_count = i - run_start;
+		if (run_count > dominant_count) {
+			dominant_rgb = samples[run_start];
+			dominant_count = run_count;
+		}
+		run_start = i;
+	}
+	return dominant_count * 4 >= samples.size() * 3;
+}
+
 static inline bool amiberry_auto_crop_detect_border_color(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
 	AmiberryAutoCropScanState& state)
@@ -127,38 +151,49 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	const int bottom = amiberry_auto_crop_rect_bottom(crop);
 	const int horizontal_step = std::max(1, crop.w / 64);
 	const int vertical_step = std::max(1, crop.h / 64);
+	uint32_t side_rgb[4];
 	int sampled_sides = 0;
+	int side_color_count = 0;
 	const auto add_sample = [&](const int x, const int y) {
 		state.border_samples.push_back(
 			amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
 	};
+	const auto finish_side = [&]() {
+		uint32_t dominant_rgb;
+		sampled_sides++;
+		if (amiberry_auto_crop_find_dominant_color(
+			state.border_samples, dominant_rgb)) {
+			side_rgb[side_color_count++] = dominant_rgb;
+		}
+		state.border_samples.clear();
+	};
 
 	if (crop.y > 0) {
-		sampled_sides++;
 		for (int x = crop.x; x < right; x += horizontal_step) {
 			add_sample(x, crop.y - 1);
 		}
+		finish_side();
 	}
 	if (bottom < buffer.height) {
-		sampled_sides++;
 		for (int x = crop.x; x < right; x += horizontal_step) {
 			add_sample(x, bottom);
 		}
+		finish_side();
 	}
 	if (crop.x > 0) {
-		sampled_sides++;
 		for (int y = crop.y; y < bottom; y += vertical_step) {
 			add_sample(crop.x - 1, y);
 		}
+		finish_side();
 	}
 	if (right < buffer.width) {
-		sampled_sides++;
 		for (int y = crop.y; y < bottom; y += vertical_step) {
 			add_sample(right, y);
 		}
+		finish_side();
 	}
 
-	if (state.border_samples.empty()) {
+	if (sampled_sides == 0) {
 		return false;
 	}
 	const auto use_surface_background = [&]() {
@@ -174,26 +209,27 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	if (sampled_sides < 2) {
 		return use_surface_background();
 	}
-	std::sort(state.border_samples.begin(), state.border_samples.end());
-	uint32_t most_common = state.border_samples.front();
-	size_t most_common_count = 1;
-	size_t run_start = 0;
-	for (size_t i = 1; i <= state.border_samples.size(); i++) {
-		if (i < state.border_samples.size()
-			&& state.border_samples[i] == state.border_samples[run_start]) {
-			continue;
+
+	uint32_t most_common = 0;
+	int most_common_sides = 0;
+	bool tied = false;
+	for (int i = 0; i < side_color_count; i++) {
+		int matches = 0;
+		for (int j = 0; j < side_color_count; j++) {
+			matches += side_rgb[i] == side_rgb[j];
 		}
-		const size_t run_count = i - run_start;
-		if (run_count > most_common_count) {
-			most_common = state.border_samples[run_start];
-			most_common_count = run_count;
+		if (matches > most_common_sides) {
+			most_common = side_rgb[i];
+			most_common_sides = matches;
+			tied = false;
+		} else if (matches == most_common_sides && side_rgb[i] != most_common) {
+			tied = true;
 		}
-		run_start = i;
 	}
 
-	// A mixed perimeter may contain real display output. Use the cleared
-	// surface background so the component scan can preserve that content.
-	if (most_common_count * 4 < state.border_samples.size() * 3) {
+	// Give each side one vote so a long content edge cannot outweigh a
+	// consistent border on multiple shorter edges.
+	if (most_common_sides < 2 || tied) {
 		return use_surface_background();
 	}
 	state.border_rgb = most_common;

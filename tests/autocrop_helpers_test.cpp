@@ -254,6 +254,33 @@ static void test_ambiguous_perimeter_preserves_content()
 	expect_eq(crop.h, 21, "Crop should expand through ambiguous lower content");
 }
 
+static void test_mixed_perimeter_keeps_non_black_border()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00aaaaaau;
+	constexpr uint32_t content_color = 0x0000ff00u;
+	std::vector<uint32_t> pixels(width * height, 0);
+	add_colored_border(pixels, width, height, border_color);
+	for (int x = 8; x < 32; x++) {
+		pixels[28 * width + x] = content_color;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "Content on one side should expand a non-black border crop");
+	expect_true(state.border_valid, "Other sides should confirm the non-black border");
+	expect_eq(state.border_rgb, border_color,
+		"One content side must not replace the non-black border color");
+	expect_eq(crop.x, 8, "Mixed perimeter content must keep the crop x origin");
+	expect_eq(crop.y, 8, "Mixed perimeter content must keep the crop y origin");
+	expect_eq(crop.w, 24, "Mixed perimeter content must keep the crop width");
+	expect_eq(crop.h, 21, "Crop should include content without including gray border");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -282,6 +309,7 @@ int main()
 	test_chooses_background_outside_origin_anchored_crop();
 	test_one_sided_uniform_content_is_not_border();
 	test_ambiguous_perimeter_preserves_content();
+	test_mixed_perimeter_keeps_non_black_border();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }
