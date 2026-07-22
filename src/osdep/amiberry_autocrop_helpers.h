@@ -76,12 +76,67 @@ static inline uint32_t amiberry_auto_crop_read_pixel(
 	return pixel;
 }
 
-static inline bool amiberry_auto_crop_pixel_is_visible(
-	const AmiberryAutoCropPixelBuffer& buffer, const int x, const int y,
+static inline void amiberry_auto_crop_get_outside_regions(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
+	AmiberryAutoCropRect (&regions)[4])
+{
+	const int right = amiberry_auto_crop_rect_right(crop);
+	const int bottom = amiberry_auto_crop_rect_bottom(crop);
+	regions[0] = { 0, 0, buffer.width, crop.y };
+	regions[1] = { 0, crop.y, crop.x, crop.h };
+	regions[2] = { right, crop.y, buffer.width - right, crop.h };
+	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
+}
+
+static inline size_t amiberry_auto_crop_count_visible_pixels(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
 	const uint32_t border_rgb)
 {
-	return (amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)
-		!= border_rgb;
+	AmiberryAutoCropRect regions[4];
+	amiberry_auto_crop_get_outside_regions(buffer, crop, regions);
+	size_t visible_pixels = 0;
+	for (const auto& region : regions) {
+		const int region_bottom = amiberry_auto_crop_rect_bottom(region);
+		if (buffer.bytes_per_pixel == static_cast<int>(sizeof(uint32_t))) { // Vectorized SDL path.
+			for (int y = region.y; y < region_bottom; y++) {
+				const uint8_t* pixel = buffer.pixels + y * buffer.pitch
+					+ region.x * sizeof(uint32_t);
+				for (int x = 0; x < region.w; x++, pixel += sizeof(uint32_t)) {
+					uint32_t value;
+					std::memcpy(&value, pixel, sizeof(value));
+					visible_pixels += (value & buffer.rgb_mask) != border_rgb;
+				}
+			}
+		} else {
+			for (int y = region.y; y < region_bottom; y++) {
+				for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x++) {
+					visible_pixels += (amiberry_auto_crop_read_pixel(buffer, x, y)
+						& buffer.rgb_mask) != border_rgb;
+				}
+			}
+		}
+	}
+	return visible_pixels;
+}
+
+static inline size_t amiberry_auto_crop_find_dominant_color(
+	const uint32_t* colors, const size_t color_count, uint32_t& dominant_rgb)
+{
+	if (color_count == 0) {
+		return 0;
+	}
+	size_t dominant_count = 0;
+	for (size_t i = 0; i < color_count; i++) {
+		size_t matches = 0;
+		for (size_t j = 0; j < color_count; j++) {
+			matches += colors[i] == colors[j];
+		}
+		if (matches > dominant_count) {
+			dominant_rgb = colors[i];
+			dominant_count = matches;
+		}
+	}
+	return dominant_count;
 }
 
 static inline bool amiberry_auto_crop_detect_surface_background_color(
@@ -98,51 +153,13 @@ static inline bool amiberry_auto_crop_detect_surface_background_color(
 				buffer, corner_x[i], corner_y[i]) & buffer.rgb_mask;
 		}
 	}
-	if (corner_count == 0) {
-		return false;
-	}
-
-	background_rgb = corner_rgb[0];
-	int background_count = 0;
-	for (int i = 0; i < corner_count; i++) {
-		int matches = 0;
-		for (int j = 0; j < corner_count; j++) {
-			matches += corner_rgb[i] == corner_rgb[j];
-		}
-		if (matches > background_count) {
-			background_rgb = corner_rgb[i];
-			background_count = matches;
-		}
-	}
-	return true;
-}
-
-static inline bool amiberry_auto_crop_find_dominant_color(
-	std::vector<uint32_t>& samples, uint32_t& dominant_rgb)
-{
-	if (samples.empty()) {
-		return false;
-	}
-	std::sort(samples.begin(), samples.end());
-	dominant_rgb = samples.front();
-	size_t dominant_count = 1;
-	size_t run_start = 0;
-	for (size_t i = 1; i <= samples.size(); i++) {
-		if (i < samples.size() && samples[i] == samples[run_start]) {
-			continue;
-		}
-		const size_t run_count = i - run_start;
-		if (run_count > dominant_count) {
-			dominant_rgb = samples[run_start];
-			dominant_count = run_count;
-		}
-		run_start = i;
-	}
-	return dominant_count * 4 >= samples.size() * 3;
+	return amiberry_auto_crop_find_dominant_color(
+		corner_rgb, corner_count, background_rgb) > 0;
 }
 
 static inline bool amiberry_auto_crop_detect_border_color(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
+	const uint32_t background_rgb, const bool background_valid,
 	AmiberryAutoCropScanState& state)
 {
 	state.border_samples.clear();
@@ -154,135 +171,141 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	uint32_t side_rgb[4];
 	int sampled_sides = 0;
 	int side_color_count = 0;
-	const auto add_sample = [&](const int x, const int y) {
-		state.border_samples.push_back(
-			amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
-	};
-	const auto finish_side = [&]() {
+	const auto sample_side = [&](const int x, const int y, const int dx, const int dy,
+		const int length, const int step) {
+		for (int offset = 0; offset < length; offset += step) {
+			state.border_samples.push_back(amiberry_auto_crop_read_pixel(
+				buffer, x + dx * offset, y + dy * offset) & buffer.rgb_mask);
+		}
 		uint32_t dominant_rgb;
 		sampled_sides++;
-		if (amiberry_auto_crop_find_dominant_color(
-			state.border_samples, dominant_rgb)) {
+		const size_t dominant_count = amiberry_auto_crop_find_dominant_color(
+			state.border_samples.data(), state.border_samples.size(), dominant_rgb);
+		if (dominant_count * 4 >= state.border_samples.size() * 3) {
 			side_rgb[side_color_count++] = dominant_rgb;
 		}
 		state.border_samples.clear();
 	};
 
 	if (crop.y > 0) {
-		for (int x = crop.x; x < right; x += horizontal_step) {
-			add_sample(x, crop.y - 1);
-		}
-		finish_side();
+		sample_side(crop.x, crop.y - 1, 1, 0, crop.w, horizontal_step);
 	}
 	if (bottom < buffer.height) {
-		for (int x = crop.x; x < right; x += horizontal_step) {
-			add_sample(x, bottom);
-		}
-		finish_side();
+		sample_side(crop.x, bottom, 1, 0, crop.w, horizontal_step);
 	}
 	if (crop.x > 0) {
-		for (int y = crop.y; y < bottom; y += vertical_step) {
-			add_sample(crop.x - 1, y);
-		}
-		finish_side();
+		sample_side(crop.x - 1, crop.y, 0, 1, crop.h, vertical_step);
 	}
 	if (right < buffer.width) {
-		for (int y = crop.y; y < bottom; y += vertical_step) {
-			add_sample(right, y);
-		}
-		finish_side();
+		sample_side(right, crop.y, 0, 1, crop.h, vertical_step);
 	}
 
-	if (sampled_sides == 0) {
-		return false;
-	}
-	const auto use_surface_background = [&]() {
-		if (!amiberry_auto_crop_detect_surface_background_color(
-			buffer, crop, state.border_rgb)) {
-			return false;
-		}
-		state.border_valid = true;
-		return true;
-	};
-	// A single uniform edge may be real overscan content. Without a second
-	// side to corroborate it, use the cleared surface background instead.
-	if (sampled_sides < 2) {
-		return use_surface_background();
-	}
-
-	uint32_t most_common = 0;
-	int most_common_sides = 0;
-	for (int i = 0; i < side_color_count; i++) {
-		int matches = 0;
-		for (int j = 0; j < side_color_count; j++) {
-			matches += side_rgb[i] == side_rgb[j];
-		}
-		if (matches > most_common_sides) {
-			most_common = side_rgb[i];
-			most_common_sides = matches;
+	if (sampled_sides >= 2) {
+		uint32_t most_common;
+		const size_t most_common_sides = amiberry_auto_crop_find_dominant_color(
+			side_rgb, side_color_count, most_common);
+		// Give each side one vote and require 75% confidence before hiding it.
+		if (most_common_sides * 4 >= static_cast<size_t>(sampled_sides) * 3) {
+			state.border_rgb = most_common;
+			state.border_valid = true;
+			return true;
 		}
 	}
-
-	// Give each side one vote so a long content edge cannot outweigh a
-	// consistent border on multiple shorter edges. Require at least 75% of
-	// all sampled sides before hiding pixels of the selected color.
-	if (most_common_sides * 4 < sampled_sides * 3) {
-		return use_surface_background();
-	}
-	state.border_rgb = most_common;
-	state.border_valid = true;
-	return true;
+	// One or ambiguous sides may be content; fall back to the cleared surface.
+	state.border_rgb = background_rgb;
+	state.border_valid = background_valid;
+	return background_valid;
 }
 
-static inline void amiberry_auto_crop_exclude_surface_background(
+template<bool MatchColor>
+static inline size_t amiberry_auto_crop_flood_region(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
-	const uint32_t border_rgb, AmiberryAutoCropScanState& state)
+	const int start_x, const int start_y, AmiberryAutoCropScanState& state,
+	const uint32_t rgb, AmiberryAutoCropRect* bounds)
 {
-	// Pixels outside the emulated raster are cleared to an outside corner color.
-	// Exclude only edge-connected regions of that exact color so real content
-	// in another color can still extend all the way to a surface edge.
-	uint32_t background_rgb;
-	if (!amiberry_auto_crop_detect_surface_background_color(
-		buffer, crop, background_rgb) || background_rgb == border_rgb) {
-		return;
+	if (amiberry_auto_crop_rect_contains(crop, start_x, start_y)) {
+		return 0;
 	}
-
-	const auto add_background_pixel = [&](const int x, const int y) {
-		if (amiberry_auto_crop_rect_contains(crop, x, y)) {
-			return;
+	const int start_index = start_y * buffer.width + start_x;
+	if (state.visited[start_index]) {
+		return 0;
+	}
+	const bool start_matches = ((amiberry_auto_crop_read_pixel(
+		buffer, start_x, start_y) & buffer.rgb_mask) == rgb) == MatchColor;
+	if (!start_matches) {
+		if constexpr (!MatchColor) {
+			state.visited[start_index] = 1;
 		}
-		const int index = y * buffer.width + x;
-		if (state.visited[index]
-			|| (amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)
-				!= background_rgb) {
-			return;
-		}
-		state.visited[index] = 1;
-		state.pending.push_back(index);
-	};
-
-	for (int x = 0; x < buffer.width; x++) {
-		add_background_pixel(x, 0);
-		add_background_pixel(x, buffer.height - 1);
+		return 0;
 	}
-	for (int y = 1; y < buffer.height - 1; y++) {
-		add_background_pixel(0, y);
-		add_background_pixel(buffer.width - 1, y);
+	state.visited[start_index] = 1;
+	state.pending.push_back(start_index);
+	size_t pixels = 0;
+	if constexpr (!MatchColor) {
+		*bounds = { start_x, start_y, start_x, start_y };
 	}
-
 	while (!state.pending.empty()) {
 		const int index = state.pending.back();
 		state.pending.pop_back();
 		const int pixel_x = index % buffer.width;
 		const int pixel_y = index / buffer.width;
+		pixels++;
+		if constexpr (!MatchColor) {
+			bounds->x = std::min(bounds->x, pixel_x);
+			bounds->y = std::min(bounds->y, pixel_y);
+			bounds->w = std::max(bounds->w, pixel_x);
+			bounds->h = std::max(bounds->h, pixel_y);
+		}
 		for (int neighbor_y = std::max(0, pixel_y - 1);
 			neighbor_y <= std::min(buffer.height - 1, pixel_y + 1); neighbor_y++) {
 			for (int neighbor_x = std::max(0, pixel_x - 1);
 				neighbor_x <= std::min(buffer.width - 1, pixel_x + 1); neighbor_x++) {
-				add_background_pixel(neighbor_x, neighbor_y);
+				if (amiberry_auto_crop_rect_contains(crop, neighbor_x, neighbor_y)) {
+					continue;
+				}
+				const int neighbor_index = neighbor_y * buffer.width + neighbor_x;
+				if (state.visited[neighbor_index]) {
+					continue;
+				}
+				const bool matches = ((amiberry_auto_crop_read_pixel(
+					buffer, neighbor_x, neighbor_y) & buffer.rgb_mask) == rgb) == MatchColor;
+				if (matches) {
+					state.visited[neighbor_index] = 1;
+					state.pending.push_back(neighbor_index);
+				} else if constexpr (!MatchColor) {
+					state.visited[neighbor_index] = 1;
+				}
 			}
 		}
 	}
+	if constexpr (!MatchColor) {
+		bounds->w -= bounds->x - 1;
+		bounds->h -= bounds->y - 1;
+	}
+	return pixels;
+}
+
+static inline size_t amiberry_auto_crop_exclude_surface_background(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
+	const uint32_t background_rgb, AmiberryAutoCropScanState& state)
+{
+	// Exclude only edge-connected regions of the cleared surface color so
+	// enclosed pixels of the same color can still be real Amiga content.
+	size_t excluded_pixels = 0;
+	const auto exclude_from = [&](const int x, const int y) {
+		excluded_pixels += amiberry_auto_crop_flood_region<true>(
+			buffer, crop, x, y, state, background_rgb, nullptr);
+	};
+
+	for (int x = 0; x < buffer.width; x++) {
+		exclude_from(x, 0);
+		exclude_from(x, buffer.height - 1);
+	}
+	for (int y = 1; y < buffer.height - 1; y++) {
+		exclude_from(0, y);
+		exclude_from(buffer.width - 1, y);
+	}
+	return excluded_pixels;
 }
 
 static inline bool amiberry_auto_crop_expand_to_visible_content(
@@ -298,83 +321,60 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 		return false;
 	}
 
-	if (!amiberry_auto_crop_detect_border_color(buffer, crop, state)) {
+	uint32_t background_rgb = 0;
+	const bool background_valid = amiberry_auto_crop_detect_surface_background_color(
+		buffer, crop, background_rgb);
+	if (!amiberry_auto_crop_detect_border_color(
+		buffer, crop, background_rgb, background_valid, state)) {
 		return false;
 	}
 	const uint32_t border_rgb = state.border_rgb;
-
+	const size_t required_pixels = static_cast<size_t>(std::max(1, min_outside_pixels));
+	// Count first so border-only frames bypass flood-fill and scratch-buffer clearing.
+	const size_t visible_pixels = amiberry_auto_crop_count_visible_pixels(
+		buffer, crop, border_rgb);
+	if (visible_pixels < required_pixels) {
+		return false;
+	}
 	const size_t pixel_count = static_cast<size_t>(buffer.width) * buffer.height;
 	state.visited.assign(pixel_count, 0);
 	state.pending.clear();
-	amiberry_auto_crop_exclude_surface_background(buffer, crop, border_rgb, state);
-	const int required_pixels = std::max(1, min_outside_pixels);
+	size_t excluded_pixels = 0;
+	if (background_valid && background_rgb != border_rgb) {
+		excluded_pixels = amiberry_auto_crop_exclude_surface_background(
+			buffer, crop, background_rgb, state);
+	}
+	if (visible_pixels < excluded_pixels + required_pixels) {
+		return false;
+	}
 	AmiberryAutoCropRect expanded = crop;
 	bool changed = false;
 
-	for (int y = 0; y < buffer.height; y++) {
-		for (int x = 0; x < buffer.width; x++) {
-			if (amiberry_auto_crop_rect_contains(crop, x, y)) {
-				continue;
-			}
-
-			const int start_index = y * buffer.width + x;
-			if (state.visited[start_index]) {
-				continue;
-			}
-			state.visited[start_index] = 1;
-			if (!amiberry_auto_crop_pixel_is_visible(buffer, x, y, border_rgb)) {
-				continue;
-			}
-
-			state.pending.push_back(start_index);
-			int component_pixels = 0;
-			int component_min_x = x;
-			int component_min_y = y;
-			int component_max_x = x;
-			int component_max_y = y;
-			while (!state.pending.empty()) {
-				const int index = state.pending.back();
-				state.pending.pop_back();
-				const int pixel_x = index % buffer.width;
-				const int pixel_y = index / buffer.width;
-				component_pixels++;
-				component_min_x = std::min(component_min_x, pixel_x);
-				component_min_y = std::min(component_min_y, pixel_y);
-				component_max_x = std::max(component_max_x, pixel_x);
-				component_max_y = std::max(component_max_y, pixel_y);
-
-				for (int neighbor_y = std::max(0, pixel_y - 1);
-					neighbor_y <= std::min(buffer.height - 1, pixel_y + 1); neighbor_y++) {
-					for (int neighbor_x = std::max(0, pixel_x - 1);
-						neighbor_x <= std::min(buffer.width - 1, pixel_x + 1); neighbor_x++) {
-						if (amiberry_auto_crop_rect_contains(crop, neighbor_x, neighbor_y)) {
-							continue;
-						}
-						const int neighbor_index = neighbor_y * buffer.width + neighbor_x;
-						if (state.visited[neighbor_index]) {
-							continue;
-						}
-						state.visited[neighbor_index] = 1;
-						if (amiberry_auto_crop_pixel_is_visible(
-							buffer, neighbor_x, neighbor_y, border_rgb)) {
-							state.pending.push_back(neighbor_index);
-						}
-					}
+	AmiberryAutoCropRect regions[4];
+	amiberry_auto_crop_get_outside_regions(buffer, crop, regions);
+	for (const auto& region : regions) {
+		for (int y = region.y; y < amiberry_auto_crop_rect_bottom(region); y++) {
+			for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x++) {
+				const int start_index = y * buffer.width + x;
+				if (state.visited[start_index]) {
+					continue;
 				}
+				AmiberryAutoCropRect component;
+				const size_t component_pixels = amiberry_auto_crop_flood_region<false>(
+					buffer, crop, x, y, state, border_rgb, &component);
+				if (component_pixels < required_pixels) {
+					continue;
+				}
+				const int right = std::max(amiberry_auto_crop_rect_right(expanded),
+					amiberry_auto_crop_rect_right(component));
+				const int bottom = std::max(amiberry_auto_crop_rect_bottom(expanded),
+					amiberry_auto_crop_rect_bottom(component));
+				expanded.x = std::min(expanded.x, component.x);
+				expanded.y = std::min(expanded.y, component.y);
+				expanded.w = right - expanded.x;
+				expanded.h = bottom - expanded.y;
+				changed = true;
 			}
-
-			if (component_pixels < required_pixels) {
-				continue;
-			}
-			const int right = std::max(amiberry_auto_crop_rect_right(expanded),
-				component_max_x + 1);
-			const int bottom = std::max(amiberry_auto_crop_rect_bottom(expanded),
-				component_max_y + 1);
-			expanded.x = std::min(expanded.x, component_min_x);
-			expanded.y = std::min(expanded.y, component_min_y);
-			expanded.w = right - expanded.x;
-			expanded.h = bottom - expanded.y;
-			changed = true;
 		}
 	}
 

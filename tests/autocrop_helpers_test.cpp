@@ -135,6 +135,35 @@ static void test_keeps_crop_inside_non_black_border()
 	expect_eq(crop.h, 20, "Outer black surface edge must not increase crop height");
 }
 
+static void test_uniform_border_avoids_component_scan()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00aaaaaau;
+	std::vector<uint32_t> pixels(width * height, border_color);
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(!changed, "A uniform border must not expand the crop");
+	expect_true(state.visited.empty(), "A uniform border should bypass component scanning");
+	expect_true(state.border_valid, "A uniform non-black border should be detected");
+	expect_eq(state.border_rgb, border_color, "Uniform border color should be preserved");
+
+	std::vector<uint16_t> pixels_16(width * height, 0xaaaau);
+	const AmiberryAutoCropPixelBuffer buffer_16 {
+		reinterpret_cast<const uint8_t*>(pixels_16.data()), width, height,
+		width * static_cast<int>(sizeof(uint16_t)), static_cast<int>(sizeof(uint16_t)), 0xffffu
+	};
+	state = {};
+	crop = { 8, 8, 24, 20 };
+	expect_true(!amiberry_auto_crop_expand_to_visible_content(buffer_16, 16, crop, state),
+		"A 16-bit uniform border must not expand the crop");
+	expect_true(state.visited.empty(), "A 16-bit uniform border should use the fast path");
+}
+
 static void test_expands_past_non_black_border_for_real_content()
 {
 	constexpr int width = 40;
@@ -360,6 +389,7 @@ int main()
 	test_ignores_distant_speck_when_content_expands();
 	test_ignores_scattered_outside_pixels();
 	test_keeps_crop_inside_non_black_border();
+	test_uniform_border_avoids_component_scan();
 	test_expands_past_non_black_border_for_real_content();
 	test_preserves_content_reaching_surface_edge();
 	test_chooses_background_outside_origin_anchored_crop();
