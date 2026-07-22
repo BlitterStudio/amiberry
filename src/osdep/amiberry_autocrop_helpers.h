@@ -150,6 +150,57 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	return true;
 }
 
+static inline void amiberry_auto_crop_exclude_surface_background(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
+	const uint32_t border_rgb, AmiberryAutoCropScanState& state)
+{
+	// Pixels outside the emulated raster are cleared to the corner color.
+	// Exclude only edge-connected regions of that exact color so real content
+	// in another color can still extend all the way to a surface edge.
+	const uint32_t background_rgb = amiberry_auto_crop_read_pixel(buffer, 0, 0)
+		& buffer.rgb_mask;
+	if (background_rgb == border_rgb) {
+		return;
+	}
+
+	const auto add_background_pixel = [&](const int x, const int y) {
+		if (amiberry_auto_crop_rect_contains(crop, x, y)) {
+			return;
+		}
+		const int index = y * buffer.width + x;
+		if (state.visited[index]
+			|| (amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)
+				!= background_rgb) {
+			return;
+		}
+		state.visited[index] = 1;
+		state.pending.push_back(index);
+	};
+
+	for (int x = 0; x < buffer.width; x++) {
+		add_background_pixel(x, 0);
+		add_background_pixel(x, buffer.height - 1);
+	}
+	for (int y = 1; y < buffer.height - 1; y++) {
+		add_background_pixel(0, y);
+		add_background_pixel(buffer.width - 1, y);
+	}
+
+	while (!state.pending.empty()) {
+		const int index = state.pending.back();
+		state.pending.pop_back();
+		const int pixel_x = index % buffer.width;
+		const int pixel_y = index / buffer.width;
+		for (int neighbor_y = std::max(0, pixel_y - 1);
+			neighbor_y <= std::min(buffer.height - 1, pixel_y + 1); neighbor_y++) {
+			for (int neighbor_x = std::max(0, pixel_x - 1);
+				neighbor_x <= std::min(buffer.width - 1, pixel_x + 1); neighbor_x++) {
+				add_background_pixel(neighbor_x, neighbor_y);
+			}
+		}
+	}
+}
+
 static inline bool amiberry_auto_crop_expand_to_visible_content(
 	const AmiberryAutoCropPixelBuffer& buffer, const int min_outside_pixels,
 	AmiberryAutoCropRect& crop, AmiberryAutoCropScanState& state)
@@ -171,6 +222,7 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 	const size_t pixel_count = static_cast<size_t>(buffer.width) * buffer.height;
 	state.visited.assign(pixel_count, 0);
 	state.pending.clear();
+	amiberry_auto_crop_exclude_surface_background(buffer, crop, border_rgb, state);
 	const int required_pixels = std::max(1, min_outside_pixels);
 	AmiberryAutoCropRect expanded = crop;
 	bool changed = false;
@@ -196,7 +248,6 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 			int component_min_y = y;
 			int component_max_x = x;
 			int component_max_y = y;
-			bool component_touches_surface_edge = false;
 			while (!state.pending.empty()) {
 				const int index = state.pending.back();
 				state.pending.pop_back();
@@ -207,8 +258,6 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 				component_min_y = std::min(component_min_y, pixel_y);
 				component_max_x = std::max(component_max_x, pixel_x);
 				component_max_y = std::max(component_max_y, pixel_y);
-				component_touches_surface_edge |= pixel_x == 0 || pixel_y == 0
-					|| pixel_x == buffer.width - 1 || pixel_y == buffer.height - 1;
 
 				for (int neighbor_y = std::max(0, pixel_y - 1);
 					neighbor_y <= std::min(buffer.height - 1, pixel_y + 1); neighbor_y++) {
@@ -230,7 +279,7 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 				}
 			}
 
-			if (component_pixels < required_pixels || component_touches_surface_edge) {
+			if (component_pixels < required_pixels) {
 				continue;
 			}
 			const int right = std::max(amiberry_auto_crop_rect_right(expanded),

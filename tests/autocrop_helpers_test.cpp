@@ -160,6 +160,31 @@ static void test_expands_past_non_black_border_for_real_content()
 	expect_eq(crop.h, 24, "Crop should expand to the connected content bottom");
 }
 
+static void test_preserves_content_reaching_surface_edge()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00aaaaaau;
+	std::vector<uint32_t> pixels(width * height, 0);
+	add_colored_border(pixels, width, height, border_color);
+	for (int y = 30; y < height; y++) {
+		for (int x = 12; x < 28; x++) {
+			pixels[y * width + x] = 0x0000ff00u;
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "Content reaching the surface edge should expand the crop");
+	expect_eq(crop.x, 8, "Edge-reaching bottom content should keep the crop x origin");
+	expect_eq(crop.y, 8, "Edge-reaching bottom content should keep the crop y origin");
+	expect_eq(crop.w, 24, "Edge-reaching bottom content should keep the crop width");
+	expect_eq(crop.h, 32, "Crop should include content through the surface bottom");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -184,6 +209,7 @@ int main()
 	test_ignores_scattered_outside_pixels();
 	test_keeps_crop_inside_non_black_border();
 	test_expands_past_non_black_border_for_real_content();
+	test_preserves_content_reaching_surface_edge();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }
