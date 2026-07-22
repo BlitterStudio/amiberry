@@ -133,6 +133,8 @@ struct AutoCropVisibleState {
 	SDL_Rect visible_rect{};
 	int hres = 0;
 	int vres = 0;
+	uint32_t border_rgb = 0;
+	bool border_valid = false;
 	bool valid = false;
 };
 
@@ -254,7 +256,8 @@ static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
 
 static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	const SDL_Rect& source_rect, SDL_Rect& visible_rect, const int hres,
-	const int vres, AutoCropVisibleState& state, const bool reset)
+	const int vres, const uint32_t border_rgb, const bool border_valid,
+	AutoCropVisibleState& state, const bool reset)
 {
 	if (!surface || surface->w <= 0 || surface->h <= 0
 		|| source_rect.w <= 0 || source_rect.h <= 0
@@ -268,7 +271,9 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		|| state.surface_h != surface->h
 		|| !auto_crop_rect_equals(state.source_rect, source_rect)
 		|| state.hres != hres
-		|| state.vres != vres;
+		|| state.vres != vres
+		|| amiberry_auto_crop_border_state_changed(state.border_rgb, state.border_valid,
+			border_rgb, border_valid);
 	if (reset || source_changed || !state.valid) {
 		state = {};
 		state.surface = surface;
@@ -278,16 +283,22 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		state.visible_rect = visible_rect;
 		state.hres = hres;
 		state.vres = vres;
+		state.border_rgb = border_rgb;
+		state.border_valid = border_valid;
 		state.valid = true;
 		return;
 	}
 
 	// Pixel content beyond DIW/bitplane limits may be intermittent (sprites,
 	// raster effects, or blank frames between screens). Once observed, retain
-	// those bounds until the hardware source geometry actually changes.
+	// those bounds until the hardware geometry or border color changes.
 	visible_rect = auto_crop_rect_union(visible_rect, state.visible_rect);
 	clamp_auto_crop_rect(surface, visible_rect);
 	state.visible_rect = visible_rect;
+	if (border_valid) {
+		state.border_rgb = border_rgb;
+		state.border_valid = true;
+	}
 }
 
 static int auto_crop_minimum_width(const int hres)
@@ -2055,7 +2066,7 @@ void auto_crop_image()
 		// conservative minimum frame that keeps intentional black borders.
 		expand_auto_crop_rect_to_visible_content(surface, crop_rect, scan_state);
 		preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
-			hres, vres, visible_state,
+			hres, vres, scan_state.border_rgb, scan_state.border_valid, visible_state,
 			force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
 		cx = crop_rect.x;
 		cy = crop_rect.y;
