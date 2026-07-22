@@ -4,8 +4,6 @@ static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u
 {
 	uae_u8 *src2 = src;
 	uae_u8 *dst2 = dst;
-	uae_u32 *src2_32 = (uae_u32*)src;
-	uae_u32 *dst2_32 = (uae_u32*)dst;
 	unsigned int y, x, ww, xxd;
 	w *= BLT_SIZE;
 	ww = w / 4;
@@ -65,8 +63,6 @@ static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u
 {
 	uae_u8 *src2 = src;
 	uae_u8 *dst2 = dst;
-	uae_u32 *src2_32 = (uae_u32*)src;
-	uae_u32 *dst2_32 = (uae_u32*)dst;
 	unsigned int y, x, ww, xxd;
 
 	if (w < 8 * BLT_MULT) {
@@ -297,5 +293,4 @@ static void NOINLINE BLT_NAME_MASK(unsigned int w, unsigned int h, uae_u8 *src, 
 #undef BLT_NAME_MASK
 #undef BLT_FUNC
 #undef BLT_FUNC_MASK
-
 
