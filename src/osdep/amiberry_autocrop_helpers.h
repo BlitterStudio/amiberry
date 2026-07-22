@@ -84,6 +84,39 @@ static inline bool amiberry_auto_crop_pixel_is_visible(
 		!= border_rgb;
 }
 
+static inline bool amiberry_auto_crop_detect_surface_background_color(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
+	uint32_t& background_rgb)
+{
+	const int corner_x[] = { 0, buffer.width - 1, 0, buffer.width - 1 };
+	const int corner_y[] = { 0, 0, buffer.height - 1, buffer.height - 1 };
+	uint32_t corner_rgb[4];
+	int corner_count = 0;
+	for (int i = 0; i < 4; i++) {
+		if (!amiberry_auto_crop_rect_contains(crop, corner_x[i], corner_y[i])) {
+			corner_rgb[corner_count++] = amiberry_auto_crop_read_pixel(
+				buffer, corner_x[i], corner_y[i]) & buffer.rgb_mask;
+		}
+	}
+	if (corner_count == 0) {
+		return false;
+	}
+
+	background_rgb = corner_rgb[0];
+	int background_count = 0;
+	for (int i = 0; i < corner_count; i++) {
+		int matches = 0;
+		for (int j = 0; j < corner_count; j++) {
+			matches += corner_rgb[i] == corner_rgb[j];
+		}
+		if (matches > background_count) {
+			background_rgb = corner_rgb[i];
+			background_count = matches;
+		}
+	}
+	return true;
+}
+
 static inline bool amiberry_auto_crop_detect_border_color(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
 	AmiberryAutoCropScanState& state)
@@ -94,27 +127,32 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	const int bottom = amiberry_auto_crop_rect_bottom(crop);
 	const int horizontal_step = std::max(1, crop.w / 64);
 	const int vertical_step = std::max(1, crop.h / 64);
+	int sampled_sides = 0;
 	const auto add_sample = [&](const int x, const int y) {
 		state.border_samples.push_back(
 			amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
 	};
 
 	if (crop.y > 0) {
+		sampled_sides++;
 		for (int x = crop.x; x < right; x += horizontal_step) {
 			add_sample(x, crop.y - 1);
 		}
 	}
 	if (bottom < buffer.height) {
+		sampled_sides++;
 		for (int x = crop.x; x < right; x += horizontal_step) {
 			add_sample(x, bottom);
 		}
 	}
 	if (crop.x > 0) {
+		sampled_sides++;
 		for (int y = crop.y; y < bottom; y += vertical_step) {
 			add_sample(crop.x - 1, y);
 		}
 	}
 	if (right < buffer.width) {
+		sampled_sides++;
 		for (int y = crop.y; y < bottom; y += vertical_step) {
 			add_sample(right, y);
 		}
@@ -122,6 +160,16 @@ static inline bool amiberry_auto_crop_detect_border_color(
 
 	if (state.border_samples.empty()) {
 		return false;
+	}
+	// A single uniform edge may be real overscan content. Without a second
+	// side to corroborate it, use the cleared surface background instead.
+	if (sampled_sides < 2) {
+		if (!amiberry_auto_crop_detect_surface_background_color(
+			buffer, crop, state.border_rgb)) {
+			return false;
+		}
+		state.border_valid = true;
+		return true;
 	}
 	std::sort(state.border_samples.begin(), state.border_samples.end());
 	uint32_t most_common = state.border_samples.front();
@@ -157,33 +205,9 @@ static inline void amiberry_auto_crop_exclude_surface_background(
 	// Pixels outside the emulated raster are cleared to an outside corner color.
 	// Exclude only edge-connected regions of that exact color so real content
 	// in another color can still extend all the way to a surface edge.
-	const int corner_x[] = { 0, buffer.width - 1, 0, buffer.width - 1 };
-	const int corner_y[] = { 0, 0, buffer.height - 1, buffer.height - 1 };
-	uint32_t corner_rgb[4];
-	int corner_count = 0;
-	for (int i = 0; i < 4; i++) {
-		if (!amiberry_auto_crop_rect_contains(crop, corner_x[i], corner_y[i])) {
-			corner_rgb[corner_count++] = amiberry_auto_crop_read_pixel(
-				buffer, corner_x[i], corner_y[i]) & buffer.rgb_mask;
-		}
-	}
-	if (corner_count == 0) {
-		return;
-	}
-
-	uint32_t background_rgb = corner_rgb[0];
-	int background_count = 0;
-	for (int i = 0; i < corner_count; i++) {
-		int matches = 0;
-		for (int j = 0; j < corner_count; j++) {
-			matches += corner_rgb[i] == corner_rgb[j];
-		}
-		if (matches > background_count) {
-			background_rgb = corner_rgb[i];
-			background_count = matches;
-		}
-	}
-	if (background_rgb == border_rgb) {
+	uint32_t background_rgb;
+	if (!amiberry_auto_crop_detect_surface_background_color(
+		buffer, crop, background_rgb) || background_rgb == border_rgb) {
 		return;
 	}
 

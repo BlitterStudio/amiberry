@@ -206,6 +206,30 @@ static void test_chooses_background_outside_origin_anchored_crop()
 	expect_eq(crop.h, 20, "Cleared bottom edge must not increase crop height");
 }
 
+static void test_one_sided_uniform_content_is_not_border()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t content_color = 0x0000ff00u;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int x = 0; x < width; x++) {
+		pixels[20 * width + x] = content_color;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 0, 0, width, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "Uniform content on the only outside edge must remain visible");
+	expect_true(state.border_valid, "Outside corners should provide a fallback background");
+	expect_eq(state.border_rgb, 0u, "One-sided content must not become the border color");
+	expect_eq(crop.x, 0, "Full-width content must keep the crop x origin");
+	expect_eq(crop.y, 0, "Content below the crop must keep its y origin");
+	expect_eq(crop.w, width, "Full-width content must keep the crop width");
+	expect_eq(crop.h, 21, "Crop should expand through the adjacent content row");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -232,6 +256,7 @@ int main()
 	test_expands_past_non_black_border_for_real_content();
 	test_preserves_content_reaching_surface_edge();
 	test_chooses_background_outside_origin_anchored_crop();
+	test_one_sided_uniform_content_is_not_border();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }
