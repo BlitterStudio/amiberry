@@ -223,7 +223,7 @@ static void write_drga_dat_spr_wide(uae_u16 rga, uaecptr pt, uae_u64 v)
 	r->line = rga_denise_cycle_line;
 };
 
-static void write_drga_dat_bpl16(uae_u16 rga, uaecptr pt, uae_u16 v, int plane)
+static void write_drga_dat_bpl16(uae_u16 rga, uaecptr pt, uae_u16 v)
 {
 	struct denise_rga *r = &rga_denise[rga_denise_cycle];
 	r->rga = rga;
@@ -232,16 +232,7 @@ static void write_drga_dat_bpl16(uae_u16 rga, uaecptr pt, uae_u16 v, int plane)
 	r->flags = 0;
 	r->line = rga_denise_cycle_line;
 };
-static void write_drga_dat_bpl32(uae_u16 rga, uaecptr pt, uae_u32 v, int plane)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->v = v;
-	r->pt = pt;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-};
-static void write_drga_dat_bpl64(uae_u16 rga, uaecptr pt, uae_u64 v, int plane)
+static void write_drga_dat_bpl64(uae_u16 rga, uaecptr pt, uae_u64 v)
 {
 	struct denise_rga *r = &rga_denise[rga_denise_cycle];
 	r->rga = rga;
@@ -4241,11 +4232,11 @@ static int get_reg_chip(int reg)
 		return 1 | 2;
 	} else if (reg >= 0x140 && reg < 0x140 + 8 * 8) {
 		if (reg & 4) {
-			return 2 + 4;
+			return 2 | 0x20; // SPRxDATx
 		}
-		return 1 | 2;
+		return 1 | 2; // SPRxPOS/SPRxCTL
 	} else if (reg >= 0x110 && reg < 0x110 + 8 * 2) {
-		return 2;
+		return 2 | 0x10;
 	} else if (reg == 0x02c) {
 		if (currprefs.cpu_memory_cycle_exact) {
 			return 1 | 2;
@@ -4259,6 +4250,44 @@ static int get_reg_chip(int reg)
 		return 2;
 	}
 	return 1;
+}
+
+static void custom_wput_dma64(int reg, uaecptr pt, uae_u32 value, int c)
+{
+	uae_u16 noise = regs.chipset_latch_rw;
+	if (c & 0x10) {
+		// BPL
+		if (fetchmode_fmode_bpl == 0) {
+			uae_u64 v = ((uae_u64)value << 48) | ((uae_u64)0 << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_bpl64(reg, pt, v);
+		} else if (fetchmode_fmode_bpl == 1) {
+			uae_u64 v = ((uae_u64)value << 48) | ((uae_u64)value << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_bpl64(reg, pt, v);
+		} else if (fetchmode_fmode_bpl == 2) {
+			uae_u64 v = ((uae_u64)noise << 48) | ((uae_u64)value << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_bpl64(reg, pt, v);
+		} else if (fetchmode_fmode_bpl == 3) {
+			uae_u64 v = ((uae_u64)noise << 48) | ((uae_u64)value << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_bpl64(reg, pt, v);
+		}
+	} else if (c & 0x20) {
+		// SPR
+		if (fetchmode_fmode_spr == 0) {
+			uae_u64 v = ((uae_u64)value << 48) | ((uae_u64)0 << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_spr_wide(reg, pt, v);
+		} else if (fetchmode_fmode_spr == 1) {
+			uae_u64 v = ((uae_u64)value << 48) | ((uae_u64)value << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_spr_wide(reg, pt, v);
+		} else if (fetchmode_fmode_spr == 2) {
+			uae_u64 v = ((uae_u64)noise << 48) | ((uae_u64)value << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_spr_wide(reg, pt, v);
+		} else if (fetchmode_fmode_spr == 3) {
+			uae_u64 v = ((uae_u64)noise << 48) | ((uae_u64)value << 32) | ((uae_u64)value << 16) | (uae_u64)value;
+			write_drga_dat_spr_wide(reg, pt, v);
+		}
+	} else {
+		write_drga(reg, pt, value);
+	}
 }
 
 static void custom_wput_pipelined(uaecptr pt, uae_u16 v)
@@ -4276,14 +4305,14 @@ static void custom_wput_copper(uaecptr pt, uaecptr addr, uae_u32 value, int noge
 	int reg = addr & 0x1fe;
 	int c = get_reg_chip(reg);
 	if (c & 1) {
-		//custom_wput_pipelined(addr, value);
 		custom_wput_1(addr, value, 1 | 0x8000);
 	}
 	if (c & 2) {
-		if (c & 4) {
-			value <<= 16;
+		if (aga_mode) {
+			custom_wput_dma64(reg, pt, value, c);
+		} else {
+			write_drga(reg, pt, value);
 		}
-		write_drga(reg, pt, value);
 	}
 	copper_access = 0;
 }
@@ -7624,9 +7653,6 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 	}
 	if (!(noget & 0x8000) && (c & 2)) {
 		uae_u32 v = value;
-		if (c & 4) {
-			v <<= 16;
-		}
 		if (!currprefs.cpu_memory_cycle_exact || custom_fastmode > 0) {
 			// fast CPU RGA pipeline, allow multiple register writes per CCK
 			if (!denise_update_reg_queued(addr, v, rga_denise_cycle_line)) {
@@ -7634,7 +7660,12 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 				denise_update_reg_queue(addr, value, rga_denise_cycle_line);
 			}
 		} else {
-			write_drga(addr, 0, v);
+			int reg = addr & 0x1fe;
+			if (aga_mode) {
+				custom_wput_dma64(reg, NULL, v, c);
+			} else {
+				write_drga(reg, NULL, v);
+			}
 		}
 	}
 	return ret;
@@ -11807,12 +11838,20 @@ static void handle_rga_out(void)
 				debug_getpeekdma_chipram(*r->p, MW_MASK_SPR_0 + num, r->reg);
 			}
 #endif
-			if (fetchmode_fmode_spr == 0) {
+			if (!aga_mode) {
+				uae_u16 dat = fetch16(r);
+				sdat = dat;
+				if (!dmastate) {
+					write_drga_dat_spr(r->reg, pt, sdat);
+				} else {
+					write_drga_dat_spr(r->reg, pt, dat);
+				}
+			} else if (fetchmode_fmode_spr == 0) {
 				uae_u16 dat = fetch16(r);
 				if (!dmastate) {
 					write_drga_dat_spr(r->reg, pt, dat);
 				} else {
-					write_drga_dat_spr(r->reg, pt, dat << 16);
+					write_drga_dat_spr_wide(r->reg, pt, ((uae_u64)dat << 48) | ((uae_u64)dat << 16));
 				}
 				sdat = dat;
 			} else if (fetchmode_fmode_spr < 3) {
@@ -11821,7 +11860,7 @@ static void handle_rga_out(void)
 				if (!dmastate) {
 					write_drga_dat_spr(r->reg, pt, sdat);
 				} else {
-					write_drga_dat_spr(r->reg, pt, dat);
+					write_drga_dat_spr_wide(r->reg, pt, ((uae_u64)dat << 32) | (uae_u64)dat);
 				}
 			} else {
 				uae_u64 dat = fetch64(r);
@@ -11872,20 +11911,20 @@ static void handle_rga_out(void)
 #endif
 			if (!aga_mode) {
 				uae_u32 dat = fetch16(r);
-				write_drga_dat_bpl16(r->reg, pt, dat, num);
+				write_drga_dat_bpl16(r->reg, pt, dat);
 				regs.chipset_latch_rw = (uae_u16)dat;
 			} else {
 				if (fetchmode_fmode_bpl == 0) {
 					uae_u32 dat = fetch16(r);
-					write_drga_dat_bpl16(r->reg, pt, dat, num);
+					write_drga_dat_bpl64(r->reg, pt, ((uae_u64)dat << 48) | ((uae_u64)dat << 16));
 					regs.chipset_latch_rw = (uae_u16)dat;
 				} else if (fetchmode_fmode_bpl < 3) {
 					uae_u32 dat = fetch32_bpl(r);
-					write_drga_dat_bpl32(r->reg, pt, dat, num);
+					write_drga_dat_bpl64(r->reg, pt, ((uae_u64)dat << 32) | (uae_u64)dat);
 					regs.chipset_latch_rw = (uae_u16)dat;
 				} else {
 					uae_u64 dat64 = fetch64(r);
-					write_drga_dat_bpl64(r->reg, pt, dat64, num);
+					write_drga_dat_bpl64(r->reg, pt, dat64);
 					regs.chipset_latch_rw = (uae_u16)dat64;
 				}
 			}

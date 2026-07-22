@@ -148,6 +148,222 @@ STATIC_INLINE void shiftbpl8o(void)
 	bplxdat3[5] <<= 1;
 	bplxdat3[7] <<= 1;
 }
+STATIC_INLINE void shiftbpl1_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+}
+STATIC_INLINE void shiftbpl1e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+}
+STATIC_INLINE void shiftbpl1o_32(void)
+{
+}
+STATIC_INLINE void shiftbpl2_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+}
+STATIC_INLINE void shiftbpl2e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+}
+STATIC_INLINE void shiftbpl2o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+}
+STATIC_INLINE void shiftbpl3_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+}
+STATIC_INLINE void shiftbpl3e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+}
+STATIC_INLINE void shiftbpl3o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+}
+STATIC_INLINE void shiftbpl4_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+}
+STATIC_INLINE void shiftbpl4e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+}
+STATIC_INLINE void shiftbpl4o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+}
+STATIC_INLINE void shiftbpl5_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+}
+STATIC_INLINE void shiftbpl5e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+}
+STATIC_INLINE void shiftbpl5o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+}
+STATIC_INLINE void shiftbpl6_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+	bplxdat3_64[5] &= ~0x80000000LL;
+	bplxdat3_64[5] <<= 1;
+}
+STATIC_INLINE void shiftbpl6e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+}
+STATIC_INLINE void shiftbpl6o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[5] &= ~0x80000000LL;
+	bplxdat3_64[5] <<= 1;
+}
+STATIC_INLINE void shiftbpl7_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+	bplxdat3_64[5] &= ~0x80000000LL;
+	bplxdat3_64[5] <<= 1;
+	bplxdat3_64[6] &= ~0x80000000LL;
+	bplxdat3_64[6] <<= 1;
+}
+STATIC_INLINE void shiftbpl7e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+	bplxdat3_64[6] &= ~0x80000000LL;
+	bplxdat3_64[6] <<= 1;
+}
+STATIC_INLINE void shiftbpl7o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[5] &= ~0x80000000LL;
+	bplxdat3_64[5] <<= 1;
+}
+STATIC_INLINE void shiftbpl8_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+	bplxdat3_64[5] &= ~0x80000000LL;
+	bplxdat3_64[5] <<= 1;
+	bplxdat3_64[6] &= ~0x80000000LL;
+	bplxdat3_64[6] <<= 1;
+	bplxdat3_64[7] &= ~0x80000000LL;
+	bplxdat3_64[7] <<= 1;
+}
+STATIC_INLINE void shiftbpl8e_32(void)
+{
+	bplxdat3_64[0] &= ~0x80000000LL;
+	bplxdat3_64[0] <<= 1;
+	bplxdat3_64[2] &= ~0x80000000LL;
+	bplxdat3_64[2] <<= 1;
+	bplxdat3_64[4] &= ~0x80000000LL;
+	bplxdat3_64[4] <<= 1;
+	bplxdat3_64[6] &= ~0x80000000LL;
+	bplxdat3_64[6] <<= 1;
+}
+STATIC_INLINE void shiftbpl8o_32(void)
+{
+	bplxdat3_64[1] &= ~0x80000000LL;
+	bplxdat3_64[1] <<= 1;
+	bplxdat3_64[3] &= ~0x80000000LL;
+	bplxdat3_64[3] <<= 1;
+	bplxdat3_64[5] &= ~0x80000000LL;
+	bplxdat3_64[5] <<= 1;
+	bplxdat3_64[7] &= ~0x80000000LL;
+	bplxdat3_64[7] <<= 1;
+}
 STATIC_INLINE void shiftbpl1_64(void)
 {
 	bplxdat3_64[0] <<= 1;
@@ -366,82 +582,6 @@ STATIC_INLINE uae_u8 getbpl8(void)
 	v |= ((bplxdat3[5] >> 15) & 1) << 5;
 	v |= ((bplxdat3[6] >> 15) & 1) << 6;
 	v |= ((bplxdat3[7] >> 15) & 1) << 7;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl1_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl2_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl3_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	v |= ((bplxdat3[2] >> 31) & 1) << 2;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl4_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	v |= ((bplxdat3[2] >> 31) & 1) << 2;
-	v |= ((bplxdat3[3] >> 31) & 1) << 3;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl5_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	v |= ((bplxdat3[2] >> 31) & 1) << 2;
-	v |= ((bplxdat3[3] >> 31) & 1) << 3;
-	v |= ((bplxdat3[4] >> 31) & 1) << 4;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl6_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	v |= ((bplxdat3[2] >> 31) & 1) << 2;
-	v |= ((bplxdat3[3] >> 31) & 1) << 3;
-	v |= ((bplxdat3[4] >> 31) & 1) << 4;
-	v |= ((bplxdat3[5] >> 31) & 1) << 5;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl7_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	v |= ((bplxdat3[2] >> 31) & 1) << 2;
-	v |= ((bplxdat3[3] >> 31) & 1) << 3;
-	v |= ((bplxdat3[4] >> 31) & 1) << 4;
-	v |= ((bplxdat3[5] >> 31) & 1) << 5;
-	v |= ((bplxdat3[6] >> 31) & 1) << 6;
-	return v;
-}
-STATIC_INLINE uae_u8 getbpl8_32(void)
-{
-	uae_u8 v = 0;
-	v |= ((bplxdat3[0] >> 31) & 1) << 0;
-	v |= ((bplxdat3[1] >> 31) & 1) << 1;
-	v |= ((bplxdat3[2] >> 31) & 1) << 2;
-	v |= ((bplxdat3[3] >> 31) & 1) << 3;
-	v |= ((bplxdat3[4] >> 31) & 1) << 4;
-	v |= ((bplxdat3[5] >> 31) & 1) << 5;
-	v |= ((bplxdat3[6] >> 31) & 1) << 6;
-	v |= ((bplxdat3[7] >> 31) & 1) << 7;
 	return v;
 }
 STATIC_INLINE uae_u8 getbpl1_64(void)
