@@ -185,6 +185,27 @@ static void test_preserves_content_reaching_surface_edge()
 	expect_eq(crop.h, 32, "Crop should include content through the surface bottom");
 }
 
+static void test_chooses_background_outside_origin_anchored_crop()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00aaaaaau;
+	std::vector<uint32_t> pixels(width * height, 0);
+	add_colored_border(pixels, width, height, border_color);
+	pixels[0] = 0x00ff0000u;
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 0, 0, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(!changed, "An in-crop origin pixel must not become the surface background");
+	expect_eq(crop.x, 0, "Origin-anchored crop must keep its x origin");
+	expect_eq(crop.y, 0, "Origin-anchored crop must keep its y origin");
+	expect_eq(crop.w, 24, "Cleared right edge must not widen an origin-anchored crop");
+	expect_eq(crop.h, 20, "Cleared bottom edge must not increase crop height");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -210,6 +231,7 @@ int main()
 	test_keeps_crop_inside_non_black_border();
 	test_expands_past_non_black_border_for_real_content();
 	test_preserves_content_reaching_surface_edge();
+	test_chooses_background_outside_origin_anchored_crop();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }

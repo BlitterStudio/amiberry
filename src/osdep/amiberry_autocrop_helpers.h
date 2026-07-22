@@ -154,11 +154,35 @@ static inline void amiberry_auto_crop_exclude_surface_background(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
 	const uint32_t border_rgb, AmiberryAutoCropScanState& state)
 {
-	// Pixels outside the emulated raster are cleared to the corner color.
+	// Pixels outside the emulated raster are cleared to an outside corner color.
 	// Exclude only edge-connected regions of that exact color so real content
 	// in another color can still extend all the way to a surface edge.
-	const uint32_t background_rgb = amiberry_auto_crop_read_pixel(buffer, 0, 0)
-		& buffer.rgb_mask;
+	const int corner_x[] = { 0, buffer.width - 1, 0, buffer.width - 1 };
+	const int corner_y[] = { 0, 0, buffer.height - 1, buffer.height - 1 };
+	uint32_t corner_rgb[4];
+	int corner_count = 0;
+	for (int i = 0; i < 4; i++) {
+		if (!amiberry_auto_crop_rect_contains(crop, corner_x[i], corner_y[i])) {
+			corner_rgb[corner_count++] = amiberry_auto_crop_read_pixel(
+				buffer, corner_x[i], corner_y[i]) & buffer.rgb_mask;
+		}
+	}
+	if (corner_count == 0) {
+		return;
+	}
+
+	uint32_t background_rgb = corner_rgb[0];
+	int background_count = 0;
+	for (int i = 0; i < corner_count; i++) {
+		int matches = 0;
+		for (int j = 0; j < corner_count; j++) {
+			matches += corner_rgb[i] == corner_rgb[j];
+		}
+		if (matches > background_count) {
+			background_rgb = corner_rgb[i];
+			background_count = matches;
+		}
+	}
 	if (background_rgb == border_rgb) {
 		return;
 	}
