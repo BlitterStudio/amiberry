@@ -115,6 +115,7 @@ void filesys_addexternals (void);
 #ifdef AMIBERRY
 extern std::vector<std::string> get_cd_drives();
 extern int add_filesys_unit(struct uaedev_config_info* ci, bool custom);
+extern void uaelib_host_cleanup();
 #endif
 
 #endif /* UAE_UAE_H */

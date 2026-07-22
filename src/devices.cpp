@@ -238,6 +238,9 @@ void devices_reset_ext(int hardreset)
 void devices_reset(int hardreset)
 {
 	memset(device_reset_done, 0, sizeof(device_reset_done));
+#ifdef AMIBERRY
+	uaelib_host_cleanup();
+#endif
 	// must be first
 	init_eventtab();
 	init_shm();
@@ -385,6 +388,9 @@ void devices_update_sync(float svpos, float syncadjust)
 
 void virtualdevice_free(void)
 {
+#ifdef AMIBERRY
+	uaelib_host_cleanup();
+#endif
 #ifdef WITH_PPC
 	// must be first
 	uae_ppc_free();
