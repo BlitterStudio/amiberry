@@ -593,6 +593,36 @@ void detect_no_wm()
 	write_log("x11 without window manager detected (driver=%s) — using shared-window mode for GUI (set AMIBERRY_NO_WM=0 to disable)\n", driver);
 }
 
+bool get_kmsdrm_drawable_size(SDL_Window* window, int* width, int* height)
+{
+	if (!kmsdrm_detected)
+		return false;
+
+	int window_width = 0;
+	int window_height = 0;
+	SDL_GetWindowSize(window, &window_width, &window_height);
+
+	// SDL's KMSDRM pixel size can include a display scale that must not be
+	// applied to the direct-to-display output. Check once per window so the
+	// diagnostic does not add another SDL query to every rendered frame.
+	static SDL_Window* checked_window = nullptr;
+	if (checked_window != window) {
+		int pixel_width = 0;
+		int pixel_height = 0;
+		SDL_GetWindowSizeInPixels(window, &pixel_width, &pixel_height);
+		if ((pixel_width != 0 && pixel_width != window_width) ||
+			(pixel_height != 0 && pixel_height != window_height)) {
+			write_log("KMSDRM: using window size as drawable size (window=%dx%d pixels=%dx%d)\n",
+				window_width, window_height, pixel_width, pixel_height);
+		}
+		checked_window = window;
+	}
+
+	*width = window_width;
+	*height = window_height;
+	return true;
+}
+
 SDL_PixelFormat pixel_format = SDL_PIXELFORMAT_ABGR8888;
 
 static frame_time_t last_synctime;

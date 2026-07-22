@@ -42,6 +42,22 @@ static const std::vector<const char*> device_extensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
+static void copy_pitched_rows(void* destination, const void* source,
+	size_t source_pitch, size_t row_bytes, int height)
+{
+	if (source_pitch == row_bytes) {
+		std::memcpy(destination, source, row_bytes * static_cast<size_t>(height));
+		return;
+	}
+
+	auto* destination_bytes = static_cast<uint8_t*>(destination);
+	const auto* source_bytes = static_cast<const uint8_t*>(source);
+	for (int y = 0; y < height; ++y) {
+		std::memcpy(destination_bytes + static_cast<size_t>(y) * row_bytes,
+			source_bytes + static_cast<size_t>(y) * source_pitch, row_bytes);
+	}
+}
+
 static const uae_prefs& get_active_filter_prefs()
 {
 	return gui_running ? changed_prefs : currprefs;
@@ -516,12 +532,6 @@ bool VulkanRenderer::has_context() const
 	return m_context_valid;
 }
 
-static bool is_kmsdrm_video_driver()
-{
-	const char* driver = SDL_GetCurrentVideoDriver();
-	return driver != nullptr && SDL_strcasecmp(driver, "KMSDRM") == 0;
-}
-
 // ============================================================================
 // Window creation support
 // ============================================================================
@@ -529,7 +539,7 @@ static bool is_kmsdrm_video_driver()
 SDL_WindowFlags VulkanRenderer::get_window_flags() const
 {
 	SDL_WindowFlags flags = SDL_WINDOW_VULKAN;
-	if (!is_kmsdrm_video_driver())
+	if (!kmsdrm_detected)
 		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	return flags;
 }
@@ -1014,14 +1024,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 		slot.zerocopy = false;
 		slot.zerocopy_ptr = nullptr;
 
-		const auto* src_bytes = static_cast<const uae_u8*>(surface->pixels);
-		auto* dst_bytes = static_cast<uae_u8*>(slot.staging_mapped);
-		for (int y = 0; y < surface->h; ++y) {
-			std::memcpy(
-				dst_bytes + static_cast<size_t>(y) * dst_pitch,
-				src_bytes + static_cast<size_t>(y) * src_pitch,
-				dst_pitch);
-		}
+		copy_pitched_rows(slot.staging_mapped, surface->pixels, src_pitch, dst_pitch, surface->h);
 
 		const VkResult flush_result = vmaFlushAllocation(m_allocator, slot.staging_allocation, 0, upload_size);
 		if (flush_result != VK_SUCCESS) {
@@ -1060,15 +1063,21 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	}
 
 	// --- Upload overlay textures on the emu thread (thread-safe surface access) ---
-	// Lock the overlay mutex to prevent the render thread from reading overlay
-	// textures (via record_overlay_copy/draw) while we modify them here.
-	std::lock_guard<std::mutex> overlay_lock(m_overlay_mutex);
+	const bool bezel_active = filter_prefs.use_custom_bezel && filter_prefs.custom_bezel[0] != '\0'
+		&& strcmp(filter_prefs.custom_bezel, "none") != 0;
+	const bool cursor_active = ad->picasso_on && p96_uses_software_cursor();
+	const bool osj_active = on_screen_joystick_is_enabled() && !imgui_osk_should_render();
+	std::unique_lock<std::mutex> overlay_lock(m_overlay_mutex, std::defer_lock);
+	const auto lock_overlays = [&]() {
+		if (!overlay_lock.owns_lock())
+			overlay_lock.lock();
+	};
 
 	// Bezel overlay (load from file if changed)
 	slot.draw_bezel = false;
-	if (filter_prefs.use_custom_bezel && filter_prefs.custom_bezel[0] != '\0'
-		&& strcmp(filter_prefs.custom_bezel, "none") != 0) {
+	if (bezel_active) {
 		if (m_loaded_bezel_name != filter_prefs.custom_bezel) {
+			lock_overlays();
 			cleanup_overlay_texture(m_bezel_tex);
 			m_loaded_bezel_name.clear();
 			std::string full_path = get_bezels_path() + filter_prefs.custom_bezel;
@@ -1112,12 +1121,14 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 
 	// Software cursor (RTG)
 	slot.draw_cursor = false;
-	if (ad->picasso_on && p96_uses_software_cursor()) {
+	if (cursor_active) {
 		SDL_Surface* cs = p96_get_cursor_overlay_surface();
-		if (cs) {
+		const bool cursor_changed = p96_cursor_needs_update();
+		if (cs && (cursor_changed || m_cursor_tex.descriptor_set == VK_NULL_HANDLE)) {
+			lock_overlays();
 			upload_overlay_texture(m_cursor_tex, cs);
-			slot.draw_cursor = true;
 		}
+		slot.draw_cursor = cs && m_cursor_tex.descriptor_set != VK_NULL_HANDLE;
 		p96_get_cursor_position(&slot.cursor_x, &slot.cursor_y);
 		p96_get_cursor_dimensions(&slot.cursor_w, &slot.cursor_h);
 	}
@@ -1128,12 +1139,22 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.draw_osj = false;
 	{
 		OsjRenderInfo osj_info{};
-		if (on_screen_joystick_is_enabled() && !imgui_osk_should_render() && on_screen_joystick_get_render_info(osj_info)) {
-			upload_overlay_texture(m_osj_base_tex, osj_info.base.surface);
-			upload_overlay_texture(m_osj_knob_tex, osj_info.knob.surface);
-			upload_overlay_texture(m_osj_btn1_tex, osj_info.btn1.surface);
-			upload_overlay_texture(m_osj_btn2_tex, osj_info.btn2.surface);
-			if (osj_info.btnkb.surface)
+		if (osj_active && on_screen_joystick_get_render_info(osj_info)) {
+			if (m_osj_base_tex.descriptor_set == VK_NULL_HANDLE ||
+				m_osj_knob_tex.descriptor_set == VK_NULL_HANDLE ||
+				m_osj_btn1_tex.descriptor_set == VK_NULL_HANDLE ||
+				m_osj_btn2_tex.descriptor_set == VK_NULL_HANDLE ||
+				(osj_info.btnkb.surface && m_osj_btnkb_tex.descriptor_set == VK_NULL_HANDLE))
+				lock_overlays();
+			if (m_osj_base_tex.descriptor_set == VK_NULL_HANDLE)
+				upload_overlay_texture(m_osj_base_tex, osj_info.base.surface);
+			if (m_osj_knob_tex.descriptor_set == VK_NULL_HANDLE)
+				upload_overlay_texture(m_osj_knob_tex, osj_info.knob.surface);
+			if (m_osj_btn1_tex.descriptor_set == VK_NULL_HANDLE)
+				upload_overlay_texture(m_osj_btn1_tex, osj_info.btn1.surface);
+			if (m_osj_btn2_tex.descriptor_set == VK_NULL_HANDLE)
+				upload_overlay_texture(m_osj_btn2_tex, osj_info.btn2.surface);
+			if (osj_info.btnkb.surface && m_osj_btnkb_tex.descriptor_set == VK_NULL_HANDLE)
 				upload_overlay_texture(m_osj_btnkb_tex, osj_info.btnkb.surface);
 			slot.osj_screen_w = osj_info.screen_w;
 			slot.osj_screen_h = osj_info.screen_h;
@@ -1142,7 +1163,10 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 			slot.osj_btn1_rect = osj_info.btn1.rect;
 			slot.osj_btn2_rect = osj_info.btn2.rect;
 			slot.osj_btnkb_rect = osj_info.btnkb.rect;
-			slot.draw_osj = true;
+			slot.draw_osj = m_osj_base_tex.descriptor_set != VK_NULL_HANDLE &&
+				m_osj_knob_tex.descriptor_set != VK_NULL_HANDLE &&
+				m_osj_btn1_tex.descriptor_set != VK_NULL_HANDLE &&
+				m_osj_btn2_tex.descriptor_set != VK_NULL_HANDLE;
 		}
 	}
 
@@ -1338,14 +1362,8 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	if (slot.zerocopy && slot.zerocopy_ptr != nullptr) {
 		const size_t dst_pitch = static_cast<size_t>(slot.texture_width) * 4;
 		const size_t upload_size = dst_pitch * static_cast<size_t>(slot.texture_height);
-		const auto* src_bytes = static_cast<const uae_u8*>(slot.zerocopy_ptr);
-		auto* dst_bytes = static_cast<uae_u8*>(slot.staging_mapped);
-		for (int y = 0; y < slot.texture_height; ++y) {
-			std::memcpy(
-				dst_bytes + static_cast<size_t>(y) * dst_pitch,
-				src_bytes + static_cast<size_t>(y) * slot.zerocopy_pitch,
-				dst_pitch);
-		}
+		copy_pitched_rows(slot.staging_mapped, slot.zerocopy_ptr,
+			slot.zerocopy_pitch, dst_pitch, slot.texture_height);
 		vmaFlushAllocation(m_allocator, slot.staging_allocation, 0, upload_size);
 	}
 
@@ -1402,17 +1420,19 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	// Overlay uploads happen on the emu thread in render_frame(). Here we record
 	// staging→image copies and draw commands. Lock the overlay mutex to prevent
 	// the emu thread from modifying overlay textures while we read them.
-	bool draw_bezel, draw_cursor, draw_osj;
-	{
+	bool draw_bezel = slot.draw_bezel;
+	bool draw_cursor = slot.draw_cursor;
+	bool draw_osj = slot.draw_osj;
+	if (draw_bezel || draw_cursor || draw_osj) {
 		std::lock_guard<std::mutex> overlay_lock(m_overlay_mutex);
 
-		draw_bezel = slot.draw_bezel && m_bezel_tex.descriptor_set != VK_NULL_HANDLE && m_bezel_tex_w > 0;
+		draw_bezel = draw_bezel && m_bezel_tex.descriptor_set != VK_NULL_HANDLE && m_bezel_tex_w > 0;
 		if (draw_bezel) record_overlay_copy(command_buffer, m_bezel_tex);
 
-		draw_cursor = slot.draw_cursor && m_cursor_tex.descriptor_set != VK_NULL_HANDLE;
+		draw_cursor = draw_cursor && m_cursor_tex.descriptor_set != VK_NULL_HANDLE;
 		if (draw_cursor) record_overlay_copy(command_buffer, m_cursor_tex);
 
-		draw_osj = slot.draw_osj && m_osj_base_tex.descriptor_set != VK_NULL_HANDLE;
+		draw_osj = draw_osj && m_osj_base_tex.descriptor_set != VK_NULL_HANDLE;
 		if (draw_osj) {
 			record_overlay_copy(command_buffer, m_osj_base_tex);
 			record_overlay_copy(command_buffer, m_osj_knob_tex);
@@ -1421,7 +1441,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			if (m_osj_btnkb_tex.descriptor_set != VK_NULL_HANDLE)
 				record_overlay_copy(command_buffer, m_osj_btnkb_tex);
 		}
-	} // overlay_lock released — staging copies are recorded, GPU resources safe
+	}
 
 	VkClearValue clear_value{};
 	clear_value.color.float32[0] = 0.0f;
@@ -1846,23 +1866,8 @@ void VulkanRenderer::get_gfx_offset(int monid, float src_w, float src_h,
 
 void VulkanRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)
 {
-	if (is_kmsdrm_video_driver()) {
-		int win_w = 0, win_h = 0;
-		int pix_w = 0, pix_h = 0;
-		SDL_GetWindowSize(w, &win_w, &win_h);
-		SDL_GetWindowSizeInPixels(w, &pix_w, &pix_h);
-		if ((pix_w != 0 && pix_w != win_w) || (pix_h != 0 && pix_h != win_h)) {
-			static bool logged_kmsdrm_drawable_mismatch = false;
-			if (!logged_kmsdrm_drawable_mismatch) {
-				write_log("KMSDRM: using window size as drawable size (window=%dx%d pixels=%dx%d)\n",
-					win_w, win_h, pix_w, pix_h);
-				logged_kmsdrm_drawable_mismatch = true;
-			}
-		}
-		*width = win_w;
-		*height = win_h;
+	if (get_kmsdrm_drawable_size(w, width, height))
 		return;
-	}
 	SDL_GetWindowSizeInPixels(w, width, height);
 }
 
@@ -3820,30 +3825,28 @@ bool VulkanRenderer::upload_overlay_texture(OverlayTexture& tex, SDL_Surface* su
 		transition_image_to_shader_read(tex.image);
 		tex.width = src->w;
 		tex.height = src->h;
+
+		if (tex.descriptor_set != VK_NULL_HANDLE) {
+			VkDescriptorImageInfo image_descriptor{};
+			image_descriptor.sampler = tex.sampler;
+			image_descriptor.imageView = tex.view;
+			image_descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			VkWriteDescriptorSet write{};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.dstSet = tex.descriptor_set;
+			write.dstBinding = 0;
+			write.descriptorCount = 1;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			write.pImageInfo = &image_descriptor;
+			vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
+		}
 	}
 
 	// Copy pixels to staging
-	const auto* src_bytes = static_cast<const uint8_t*>(src->pixels);
-	auto* dst_bytes = static_cast<uint8_t*>(tex.staging_mapped);
 	const size_t dst_pitch = static_cast<size_t>(src->w) * 4;
-	for (int y = 0; y < src->h; y++) {
-		memcpy(dst_bytes + y * dst_pitch, src_bytes + y * src->pitch, dst_pitch);
-	}
+	copy_pitched_rows(tex.staging_mapped, src->pixels,
+		static_cast<size_t>(src->pitch), dst_pitch, src->h);
 	vmaFlushAllocation(m_allocator, tex.staging_allocation, 0, tex.staging_size);
-
-	// Update descriptor set
-	VkDescriptorImageInfo img_desc{};
-	img_desc.sampler = tex.sampler;
-	img_desc.imageView = tex.view;
-	img_desc.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	VkWriteDescriptorSet write{};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstSet = tex.descriptor_set;
-	write.dstBinding = 0;
-	write.descriptorCount = 1;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write.pImageInfo = &img_desc;
-	vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
 
 	tex.dirty = true;
 	if (rgba) SDL_DestroySurface(rgba);
@@ -4193,38 +4196,33 @@ void VulkanRenderer::sync_osd_texture(int monid, int led_width, int led_height)
 		// Transition image to shader read
 		transition_image_to_shader_read(m_osd_image);
 
+		if (m_osd_descriptor_set != VK_NULL_HANDLE) {
+			VkDescriptorImageInfo image_descriptor{};
+			image_descriptor.sampler = m_osd_sampler;
+			image_descriptor.imageView = m_osd_image_view;
+			image_descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			VkWriteDescriptorSet write{};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.dstSet = m_osd_descriptor_set;
+			write.dstBinding = 0;
+			write.descriptorCount = 1;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			write.pImageInfo = &image_descriptor;
+			vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
+		}
+
 		m_osd_width = led_width;
 		m_osd_height = led_height;
 		write_log("VulkanRenderer: OSD texture created (%dx%d)\n", led_width, led_height);
 	}
 
 	// Upload statusline pixels to staging buffer
-	const auto* src = static_cast<const uint8_t*>(mon->statusline_surface->pixels);
-	auto* dst = static_cast<uint8_t*>(m_osd_staging_mapped);
 	const size_t dst_pitch = static_cast<size_t>(led_width) * 4;
 	const size_t src_pitch = static_cast<size_t>(mon->statusline_surface->pitch);
-	for (int y = 0; y < led_height; y++) {
-		memcpy(dst + y * dst_pitch, src + y * src_pitch, dst_pitch);
-	}
+	copy_pitched_rows(m_osd_staging_mapped, mon->statusline_surface->pixels,
+		src_pitch, dst_pitch, led_height);
 	vmaFlushAllocation(m_allocator, m_osd_staging_allocation, 0, m_osd_staging_size);
-
-	// Update descriptor set
-	if (m_osd_descriptor_set != VK_NULL_HANDLE) {
-		VkDescriptorImageInfo image_descriptor{};
-		image_descriptor.sampler = m_osd_sampler;
-		image_descriptor.imageView = m_osd_image_view;
-		image_descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		VkWriteDescriptorSet write{};
-		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.dstSet = m_osd_descriptor_set;
-		write.dstBinding = 0;
-		write.descriptorCount = 1;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write.pImageInfo = &image_descriptor;
-
-		vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
-	}
 
 	m_osd_uploaded = true;
 }

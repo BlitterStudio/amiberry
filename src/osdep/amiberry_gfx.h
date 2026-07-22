@@ -235,3 +235,4 @@ extern bool no_wm_detected;
 // can retry. Override via AMIBERRY_NO_WM env var ("1"/"0") on non-KMSDRM
 // platforms; KMSDRM is never overridable.
 void detect_no_wm();
+bool get_kmsdrm_drawable_size(SDL_Window* window, int* width, int* height);
