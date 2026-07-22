@@ -85,6 +85,44 @@ static bool render_string_row(const char* label, char* value, const size_t value
 	return changed;
 }
 
+static bool render_hotkey_row(const char* label, char* value, const size_t value_size, const char* help)
+{
+	next_setting_row(label);
+	const bool changed = HotkeyPicker("##value", value, value_size);
+	finish_setting_row(help);
+	return changed;
+}
+
+static bool render_input_device_row(const char* label, char* value, const size_t value_size,
+	const char* help)
+{
+	next_setting_row(label);
+	const auto& options = get_input_device_options();
+	int current_index = -1;
+	for (int i = 0; i < static_cast<int>(options.size()); ++i) {
+		if ((!value[0] && options[i].id == JPORT_NONE)
+			|| stricmp(options[i].config_value.c_str(), value) == 0) {
+			current_index = i;
+			break;
+		}
+	}
+
+	const char* preview = value[0] ? value : "<none>";
+	if (current_index >= 0)
+		preview = options[current_index].label.c_str();
+
+	ImGui::SetNextItemWidth(-1.0f);
+	int selected_index = current_index;
+	const bool changed = InputDeviceCombo("##value", current_index, preview, &selected_index);
+	if (changed) {
+		const char* config_value = options[selected_index].config_value.c_str();
+		strncpy(value, config_value, value_size - 1);
+		value[value_size - 1] = '\0';
+	}
+	finish_setting_row(help);
+	return changed;
+}
+
 static bool render_string_combo_row(const char* label, char* value, const size_t value_size,
 	const StringComboOption* options, const int option_count, const char* help)
 {
@@ -432,18 +470,21 @@ void render_panel_global_settings()
 		render_bool_row("Keyboard joystick stops keypresses",
 			&amiberry_options.input_keyboard_as_joystick_stop_keypresses,
 			"Stop keyboard-as-joystick mappings from also generating normal Amiga key presses.");
-		render_int_row("Joystick deadzone", &amiberry_options.default_joystick_deadzone,
-			"Default joystick and joystick-mouse deadzone percentage.", 1, 0, 100);
-		render_string_row("Open GUI key", amiberry_options.default_open_gui_key,
+		next_setting_row("Joystick deadzone");
+		ImGui::SetNextItemWidth(-1.0f);
+		ImGui::SliderInt("##value", &amiberry_options.default_joystick_deadzone, 0, 100, "%d%%");
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		finish_setting_row("Default joystick and joystick-mouse deadzone percentage.");
+		render_hotkey_row("Open GUI key", amiberry_options.default_open_gui_key,
 			sizeof amiberry_options.default_open_gui_key,
 			"Default keyboard shortcut for opening the GUI.");
-		render_string_row("Quit key", amiberry_options.default_quit_key,
+		render_hotkey_row("Quit key", amiberry_options.default_quit_key,
 			sizeof amiberry_options.default_quit_key,
 			"Default keyboard shortcut for quitting Amiberry.");
-		render_string_row("Action Replay key", amiberry_options.default_ar_key,
+		render_hotkey_row("Action Replay key", amiberry_options.default_ar_key,
 			sizeof amiberry_options.default_ar_key,
 			"Default keyboard shortcut for activating Action Replay/HRTmon.");
-		render_string_row("Full-window toggle key", amiberry_options.default_fullscreen_toggle_key,
+		render_hotkey_row("Full-window toggle key", amiberry_options.default_fullscreen_toggle_key,
 			sizeof amiberry_options.default_fullscreen_toggle_key,
 			"Default keyboard shortcut for toggling Windowed and Full-window modes.");
 		render_bool_row("RetroArch quit", &amiberry_options.default_retroarch_quit,
@@ -452,22 +493,22 @@ void render_panel_global_settings()
 			"Enable RetroArch-style menu button mapping by default when a mapping exists.");
 		render_bool_row("RetroArch reset", &amiberry_options.default_retroarch_reset,
 			"Enable RetroArch-style reset button mapping by default when a mapping exists.");
-		render_string_row("Controller 1", amiberry_options.default_controller1,
+		render_input_device_row("Controller 1", amiberry_options.default_controller1,
 			sizeof amiberry_options.default_controller1,
-			"Default controller mapping for port 1, such as joy1.");
-		render_string_row("Controller 2", amiberry_options.default_controller2,
+			"Default controller mapping for port 1.");
+		render_input_device_row("Controller 2", amiberry_options.default_controller2,
 			sizeof amiberry_options.default_controller2,
-			"Default controller mapping for port 2, such as joy2.");
-		render_string_row("Controller 3", amiberry_options.default_controller3,
+			"Default controller mapping for port 2.");
+		render_input_device_row("Controller 3", amiberry_options.default_controller3,
 			sizeof amiberry_options.default_controller3,
 			"Default controller mapping for port 3.");
-		render_string_row("Controller 4", amiberry_options.default_controller4,
+		render_input_device_row("Controller 4", amiberry_options.default_controller4,
 			sizeof amiberry_options.default_controller4,
 			"Default controller mapping for port 4.");
-		render_string_row("Mouse 1", amiberry_options.default_mouse1,
+		render_input_device_row("Mouse 1", amiberry_options.default_mouse1,
 			sizeof amiberry_options.default_mouse1,
 			"Default mouse mapping for mouse port 1.");
-		render_string_row("Mouse 2", amiberry_options.default_mouse2,
+		render_input_device_row("Mouse 2", amiberry_options.default_mouse2,
 			sizeof amiberry_options.default_mouse2,
 			"Default mouse mapping for mouse port 2.");
 	});
@@ -693,4 +734,6 @@ void render_panel_global_settings()
 			"Swap host End and Page Up before they reach the Amiga. Saved in amiberry.ini."))
 			key_swap_end_pgup = swap_end_pageup ? 1 : 0;
 	});
+
+	HotkeyCapture_RenderPopup();
 }
