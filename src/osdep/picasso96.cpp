@@ -103,6 +103,8 @@ static int picasso96_PCT = PCT_Unknown;
 int mman_GetWriteWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize, PVOID *lpAddresses, PULONG_PTR lpdwCount, PULONG lpdwGranularity);
 void mman_ResetWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize);
 #else
+static constexpr int DIRTY_PAGE_SHIFT = 12;
+static constexpr int DIRTY_PAGE_SIZE = 1 << DIRTY_PAGE_SHIFT;
 static bool* dirty_page_map[MAX_RTG_BOARDS];
 static int dirty_page_map_size[MAX_RTG_BOARDS];
 static int min_dirty_page_index[MAX_RTG_BOARDS];
@@ -492,19 +494,17 @@ static int gwwbufsize[MAX_RTG_BOARDS], gwwpagesize[MAX_RTG_BOARDS], gwwpagemask[
 extern uae_u8 *natmem_offset;
 
 #if !defined(_WIN32) || defined(AMIBERRY)
-static void mark_dirty(int index, uae_u8* addr, int size)
+static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 {
 	if (index < 0 || !dirty_page_map[index])
 		return;
 
 	const uae_u8* base = gfxmem_banks[index]->baseaddr;
-	const int page_size = gwwpagesize[index];
-
 	const int start_offset = addr - base;
 	const int end_offset = start_offset + size - 1;
 
-	int start_page = start_offset / page_size;
-	int end_page = end_offset / page_size;
+	int start_page = start_offset >> DIRTY_PAGE_SHIFT;
+	int end_page = end_offset >> DIRTY_PAGE_SHIFT;
 
 	if (start_page < 0) start_page = 0;
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
@@ -512,8 +512,11 @@ static void mark_dirty(int index, uae_u8* addr, int size)
 	if (start_page < min_dirty_page_index[index]) min_dirty_page_index[index] = start_page;
 	if (end_page > max_dirty_page_index[index]) max_dirty_page_index[index] = end_page;
 
-	for (int i = start_page; i <= end_page; ++i) {
-		dirty_page_map[index][i] = true;
+	if (start_page <= end_page) {
+		dirty_page_map[index][start_page] = true;
+		for (int i = start_page + 1; i <= end_page; ++i) {
+			dirty_page_map[index][i] = true;
+		}
 	}
 }
 #endif
@@ -3090,10 +3093,9 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
 #else
-	constexpr int page_size = 4096;
 	xfree (gwwbuf[index]);
 
-	gwwpagesize[index] = page_size;
+	gwwpagesize[index] = DIRTY_PAGE_SIZE;
 	gwwbufsize[index] = gfxmemsize / gwwpagesize[index] + 1;
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
@@ -3146,8 +3148,7 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	int end = max_dirty_page_index[index];
 
 	if (start > end) {
-		// Should not happen if dirty_page_map[index] is checked, but safe guard
-		return -1; 
+		return 0;
 	}
 
 	// Reset bounds immediately for next frame accumulation
@@ -3200,15 +3201,13 @@ bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 		return true; // Assume dirty if not tracking
 
 	const uae_u8* base = gfxmem_banks[index]->baseaddr;
-	const int page_size = gwwpagesize[index];
-
 	const uae_u8* host_addr = gfxmem_banks[index]->xlateaddr(addr);
 
 	const int start_offset = host_addr - base;
 	const int end_offset = start_offset + size - 1;
 
-	int start_page = start_offset / page_size;
-	int end_page = end_offset / page_size;
+	int start_page = start_offset >> DIRTY_PAGE_SHIFT;
+	int end_page = end_offset >> DIRTY_PAGE_SHIFT;
 
 	if (start_page < 0) start_page = 0;
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
@@ -4222,10 +4221,6 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
 		if (!validatecoords(ctx, &ri, RGBFmt, &X, &Y, &Width, &Height))
 			return 1;
-#ifdef AMIBERRY
-		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, Height * ri.BytesPerRow);
-#endif
-
 		P96TRACE((_T("FillRect(%d, %d, %d, %d) Pen 0x%x BPP %d BPR %d Mask 0x%02x\n"),
 			X, Y, Width, Height, Pen, Bpp, ri.BytesPerRow, Mask));
 
@@ -6123,9 +6118,6 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (vidinfo->full_refresh < 0 || overlay_updated) {
 				gwwcnt = regionsize / gwwpagesize[index] + 1;
 				vidinfo->full_refresh = 1;
-
-				for (int i = 0; i < gwwcnt; i++)
-					gwwbuf[index][i] = src_start[split] + i * gwwpagesize[index];
 			} else {
 #if defined(_WIN32) && !defined(AMIBERRY)
 				ULONG ps;

@@ -10,9 +10,6 @@ void uae_time_init(void);
 void uae_time_calibrate(void);
 uae_time_t uae_time(void);
 
-void uae_time_use_mode(int mode);
-uae_s64 read_system_time(void);
-
 #if defined(_WIN32) && !defined(__GNUC__)
 void uae_time_use_rdtsc(bool enable);
 uae_s64 read_processor_time_rdtsc(void);
@@ -38,8 +35,6 @@ static inline uae_s64 read_processor_time_rdtsc(void)
 #endif
 
 typedef uae_time_t frame_time_t;
-
-extern int64_t g_uae_epoch;
 
 /* Returns elapsed time in nanoseconds since start of emulator. */
 static inline frame_time_t read_processor_time(void)
