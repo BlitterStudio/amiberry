@@ -45,6 +45,16 @@ static void add_lower_content(std::vector<uint32_t>& pixels, const int width)
 	}
 }
 
+static void add_colored_border(std::vector<uint32_t>& pixels, const int width,
+	const int height, const uint32_t color)
+{
+	for (int y = 2; y < height - 2; y++) {
+		for (int x = 2; x < width - 2; x++) {
+			pixels[y * width + x] = color;
+		}
+	}
+}
+
 static void test_expands_to_connected_visible_content()
 {
 	constexpr int width = 40;
@@ -103,10 +113,59 @@ static void test_ignores_scattered_outside_pixels()
 	expect_eq(crop.h, 12, "Scattered pixels must not change crop height");
 }
 
+static void test_keeps_crop_inside_non_black_border()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00aaaaaau;
+	std::vector<uint32_t> pixels(width * height, 0);
+	add_colored_border(pixels, width, height, border_color);
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(!changed, "A non-black border must not expand the hardware crop");
+	expect_true(state.border_valid, "A consistent non-black border should be detected");
+	expect_eq(state.border_rgb, border_color, "Detected border color should match the perimeter");
+	expect_eq(crop.x, 8, "Outer black surface edge must not move the crop left");
+	expect_eq(crop.y, 8, "Outer black surface edge must not move the crop top");
+	expect_eq(crop.w, 24, "Outer black surface edge must not widen the crop");
+	expect_eq(crop.h, 20, "Outer black surface edge must not increase crop height");
+}
+
+static void test_expands_past_non_black_border_for_real_content()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00aaaaaau;
+	std::vector<uint32_t> pixels(width * height, 0);
+	add_colored_border(pixels, width, height, border_color);
+	for (int y = 30; y < 32; y++) {
+		for (int x = 12; x < 28; x++) {
+			pixels[y * width + x] = 0x0000ff00u;
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "Connected content should expand through a non-black border");
+	expect_eq(crop.x, 8, "Bottom-only content should keep the crop x origin");
+	expect_eq(crop.y, 8, "Bottom-only content should keep the crop y origin");
+	expect_eq(crop.w, 24, "Bottom-only content should keep the crop width");
+	expect_eq(crop.h, 24, "Crop should expand to the connected content bottom");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
 	test_ignores_distant_speck_when_content_expands();
 	test_ignores_scattered_outside_pixels();
+	test_keeps_crop_inside_non_black_border();
+	test_expands_past_non_black_border_for_real_content();
 	return failures == 0 ? 0 : 1;
 }

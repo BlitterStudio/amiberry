@@ -25,6 +25,9 @@ struct AmiberryAutoCropPixelBuffer {
 struct AmiberryAutoCropScanState {
 	std::vector<uint8_t> visited;
 	std::vector<int> pending;
+	std::vector<uint32_t> border_samples;
+	uint32_t border_rgb = 0;
+	bool border_valid = false;
 };
 
 static inline int amiberry_auto_crop_rect_right(const AmiberryAutoCropRect& rect)
@@ -73,10 +76,77 @@ static inline bool amiberry_auto_crop_pixel_is_visible(
 		!= border_rgb;
 }
 
+static inline bool amiberry_auto_crop_detect_border_color(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
+	AmiberryAutoCropScanState& state)
+{
+	state.border_samples.clear();
+	state.border_valid = false;
+	const int right = amiberry_auto_crop_rect_right(crop);
+	const int bottom = amiberry_auto_crop_rect_bottom(crop);
+	const int horizontal_step = std::max(1, crop.w / 64);
+	const int vertical_step = std::max(1, crop.h / 64);
+	const auto add_sample = [&](const int x, const int y) {
+		state.border_samples.push_back(
+			amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
+	};
+
+	if (crop.y > 0) {
+		for (int x = crop.x; x < right; x += horizontal_step) {
+			add_sample(x, crop.y - 1);
+		}
+	}
+	if (bottom < buffer.height) {
+		for (int x = crop.x; x < right; x += horizontal_step) {
+			add_sample(x, bottom);
+		}
+	}
+	if (crop.x > 0) {
+		for (int y = crop.y; y < bottom; y += vertical_step) {
+			add_sample(crop.x - 1, y);
+		}
+	}
+	if (right < buffer.width) {
+		for (int y = crop.y; y < bottom; y += vertical_step) {
+			add_sample(right, y);
+		}
+	}
+
+	if (state.border_samples.empty()) {
+		return false;
+	}
+	std::sort(state.border_samples.begin(), state.border_samples.end());
+	uint32_t most_common = state.border_samples.front();
+	size_t most_common_count = 1;
+	size_t run_start = 0;
+	for (size_t i = 1; i <= state.border_samples.size(); i++) {
+		if (i < state.border_samples.size()
+			&& state.border_samples[i] == state.border_samples[run_start]) {
+			continue;
+		}
+		const size_t run_count = i - run_start;
+		if (run_count > most_common_count) {
+			most_common = state.border_samples[run_start];
+			most_common_count = run_count;
+		}
+		run_start = i;
+	}
+
+	// If the immediate perimeter is not predominantly one color, it may
+	// contain real display output rather than a removable border.
+	if (most_common_count * 4 < state.border_samples.size() * 3) {
+		return false;
+	}
+	state.border_rgb = most_common;
+	state.border_valid = true;
+	return true;
+}
+
 static inline bool amiberry_auto_crop_expand_to_visible_content(
 	const AmiberryAutoCropPixelBuffer& buffer, const int min_outside_pixels,
 	AmiberryAutoCropRect& crop, AmiberryAutoCropScanState& state)
 {
+	state.border_valid = false;
 	if (!amiberry_auto_crop_buffer_valid(buffer)
 		|| crop.w <= 0 || crop.h <= 0
 		|| crop.x < 0 || crop.y < 0
@@ -85,11 +155,10 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 		return false;
 	}
 
-	const uint32_t border_rgb = amiberry_auto_crop_read_pixel(buffer, 0, 0)
-		& buffer.rgb_mask;
-	if (border_rgb != 0) {
+	if (!amiberry_auto_crop_detect_border_color(buffer, crop, state)) {
 		return false;
 	}
+	const uint32_t border_rgb = state.border_rgb;
 
 	const size_t pixel_count = static_cast<size_t>(buffer.width) * buffer.height;
 	state.visited.assign(pixel_count, 0);
@@ -119,6 +188,7 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 			int component_min_y = y;
 			int component_max_x = x;
 			int component_max_y = y;
+			bool component_touches_surface_edge = false;
 			while (!state.pending.empty()) {
 				const int index = state.pending.back();
 				state.pending.pop_back();
@@ -129,6 +199,8 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 				component_min_y = std::min(component_min_y, pixel_y);
 				component_max_x = std::max(component_max_x, pixel_x);
 				component_max_y = std::max(component_max_y, pixel_y);
+				component_touches_surface_edge |= pixel_x == 0 || pixel_y == 0
+					|| pixel_x == buffer.width - 1 || pixel_y == buffer.height - 1;
 
 				for (int neighbor_y = std::max(0, pixel_y - 1);
 					neighbor_y <= std::min(buffer.height - 1, pixel_y + 1); neighbor_y++) {
@@ -150,7 +222,7 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 				}
 			}
 
-			if (component_pixels < required_pixels) {
+			if (component_pixels < required_pixels || component_touches_surface_edge) {
 				continue;
 			}
 			const int right = std::max(amiberry_auto_crop_rect_right(expanded),
