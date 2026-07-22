@@ -160,6 +160,23 @@ static void test_expands_past_non_black_border_for_real_content()
 	expect_eq(crop.h, 24, "Crop should expand to the connected content bottom");
 }
 
+static void test_border_state_changes_reset_preserved_crop()
+{
+	constexpr uint32_t first_color = 0x00112233u;
+	constexpr uint32_t second_color = 0x00445566u;
+
+	expect_true(amiberry_auto_crop_border_state_changed(first_color, true,
+		first_color, false), "Losing a valid border must reset preserved crop bounds");
+	expect_true(amiberry_auto_crop_border_state_changed(first_color, false,
+		first_color, true), "Detecting a valid border must reset preserved crop bounds");
+	expect_true(amiberry_auto_crop_border_state_changed(first_color, true,
+		second_color, true), "Changing border color must reset preserved crop bounds");
+	expect_true(!amiberry_auto_crop_border_state_changed(first_color, true,
+		first_color, true), "An unchanged valid border must preserve crop bounds");
+	expect_true(!amiberry_auto_crop_border_state_changed(first_color, false,
+		second_color, false), "Ambiguous border samples must ignore stale colors");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -167,5 +184,6 @@ int main()
 	test_ignores_scattered_outside_pixels();
 	test_keeps_crop_inside_non_black_border();
 	test_expands_past_non_black_border_for_real_content();
+	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }

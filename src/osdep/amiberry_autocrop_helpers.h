@@ -30,6 +30,14 @@ struct AmiberryAutoCropScanState {
 	bool border_valid = false;
 };
 
+static inline bool amiberry_auto_crop_border_state_changed(
+	const uint32_t previous_rgb, const bool previous_valid,
+	const uint32_t current_rgb, const bool current_valid)
+{
+	return previous_valid != current_valid
+		|| (current_valid && previous_rgb != current_rgb);
+}
+
 static inline int amiberry_auto_crop_rect_right(const AmiberryAutoCropRect& rect)
 {
 	return rect.x + rect.w;

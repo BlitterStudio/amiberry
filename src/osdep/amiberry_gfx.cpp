@@ -272,7 +272,8 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		|| !auto_crop_rect_equals(state.source_rect, source_rect)
 		|| state.hres != hres
 		|| state.vres != vres
-		|| (border_valid && (!state.border_valid || state.border_rgb != border_rgb));
+		|| amiberry_auto_crop_border_state_changed(state.border_rgb, state.border_valid,
+			border_rgb, border_valid);
 	if (reset || source_changed || !state.valid) {
 		state = {};
 		state.surface = surface;
