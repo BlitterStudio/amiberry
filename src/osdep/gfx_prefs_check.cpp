@@ -67,7 +67,7 @@ int check_prefs_changed_gfx()
 		currprefs.native_code = changed_prefs.native_code;
 	}
 
-	if (!config_changed && !display_change_requested && !native_code_changed)
+	if (!config_changed && !display_change_requested)
 		return 0;
 
 	c |= config_changed_flags;
