@@ -115,9 +115,7 @@ static bool render_input_device_row(const char* label, char* value, const size_t
 	int selected_index = current_index;
 	const bool changed = InputDeviceCombo("##value", current_index, preview, &selected_index);
 	if (changed) {
-		const char* config_value = options[selected_index].id == JPORT_NONE
-			? ""
-			: options[selected_index].config_value.c_str();
+		const char* config_value = options[selected_index].config_value.c_str();
 		strncpy(value, config_value, value_size - 1);
 		value[value_size - 1] = '\0';
 	}
