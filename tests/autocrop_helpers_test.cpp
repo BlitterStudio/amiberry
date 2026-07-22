@@ -312,6 +312,31 @@ static void test_two_sided_color_is_not_perimeter_majority()
 	expect_eq(crop.h, 22, "Visible horizontal edges should expand the crop height");
 }
 
+static void test_two_of_three_sides_is_not_border_confidence()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t content_color = 0x0000ff00u;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int x = 0; x < 24; x++) {
+		pixels[7 * width + x] = content_color;
+		pixels[28 * width + x] = content_color;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 0, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "A two-of-three side color must remain visible content");
+	expect_true(state.border_valid, "Low-confidence perimeter should use surface background");
+	expect_eq(state.border_rgb, 0u, "Two-of-three agreement must not become border color");
+	expect_eq(crop.x, 0, "Left-aligned crop must keep its x origin");
+	expect_eq(crop.y, 7, "Visible top edge should expand the crop upward");
+	expect_eq(crop.w, 24, "Horizontal content must keep the crop width");
+	expect_eq(crop.h, 22, "Visible top and bottom edges should expand crop height");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
@@ -342,6 +367,7 @@ int main()
 	test_ambiguous_perimeter_preserves_content();
 	test_mixed_perimeter_keeps_non_black_border();
 	test_two_sided_color_is_not_perimeter_majority();
+	test_two_of_three_sides_is_not_border_confidence();
 	test_border_state_changes_reset_preserved_crop();
 	return failures == 0 ? 0 : 1;
 }

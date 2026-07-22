@@ -224,9 +224,9 @@ static inline bool amiberry_auto_crop_detect_border_color(
 	}
 
 	// Give each side one vote so a long content edge cannot outweigh a
-	// consistent border on multiple shorter edges. Require a strict majority
-	// of all sampled sides before hiding pixels of the selected color.
-	if (most_common_sides * 2 <= sampled_sides) {
+	// consistent border on multiple shorter edges. Require at least 75% of
+	// all sampled sides before hiding pixels of the selected color.
+	if (most_common_sides * 4 < sampled_sides * 3) {
 		return use_surface_background();
 	}
 	state.border_rgb = most_common;
