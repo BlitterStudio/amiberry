@@ -62,6 +62,7 @@
 #include "display_modes.h"
 #include "renderer_factory.h"
 #include "amiberry_input_helpers.h"
+#include "amiberry_autocrop_helpers.h"
 #include "amiberry_gfx_geometry.h"
 
 #ifdef USE_OPENGL
@@ -216,18 +217,8 @@ static void clamp_auto_crop_rect(const SDL_Surface* surface, SDL_Rect& rect)
 	}
 }
 
-static uint32_t auto_crop_read_pixel(const SDL_Surface* surface, const int x,
-	const int y, const int bytes_per_pixel)
-{
-	uint32_t pixel = 0;
-	const auto* pixels = static_cast<const uint8_t*>(surface->pixels);
-	std::memcpy(&pixel, pixels + y * surface->pitch + x * bytes_per_pixel,
-		bytes_per_pixel);
-	return pixel;
-}
-
 static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
-	SDL_Rect& rect)
+	SDL_Rect& rect, AmiberryAutoCropScanState& scan_state)
 {
 	if (!surface || !surface->pixels || surface->w <= 0 || surface->h <= 0) {
 		return;
@@ -246,49 +237,19 @@ static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
 	if (!details) {
 		return;
 	}
-	const uint32_t rgb_mask = details->Rmask | details->Gmask | details->Bmask;
-	if (!rgb_mask) {
-		return;
+	AmiberryAutoCropPixelBuffer buffer = {
+		static_cast<const uint8_t*>(surface->pixels),
+		surface->w,
+		surface->h,
+		surface->pitch,
+		bytes_per_pixel,
+		details->Rmask | details->Gmask | details->Bmask
+	};
+	AmiberryAutoCropRect visible_rect = { rect.x, rect.y, rect.w, rect.h };
+	if (amiberry_auto_crop_expand_to_visible_content(buffer,
+		auto_crop_min_outside_pixels, visible_rect, scan_state)) {
+		rect = { visible_rect.x, visible_rect.y, visible_rect.w, visible_rect.h };
 	}
-
-	const uint32_t border_rgb = auto_crop_read_pixel(surface, 0, 0,
-		bytes_per_pixel) & rgb_mask;
-	// A non-black border may be intentional game output. In that case the
-	// hardware display limits remain the safer crop source.
-	if (border_rgb != 0) {
-		return;
-	}
-
-	int outside_pixels = 0;
-	int min_x = rect.x;
-	int min_y = rect.y;
-	int max_x = auto_crop_rect_right(rect) - 1;
-	int max_y = auto_crop_rect_bottom(rect) - 1;
-	for (int y = 0; y < surface->h; y++) {
-		for (int x = 0; x < surface->w; x++) {
-			if (x >= rect.x && x < auto_crop_rect_right(rect)
-				&& y >= rect.y && y < auto_crop_rect_bottom(rect)) {
-				continue;
-			}
-			if ((auto_crop_read_pixel(surface, x, y, bytes_per_pixel) & rgb_mask)
-				== border_rgb) {
-				continue;
-			}
-
-			outside_pixels++;
-			min_x = std::min(min_x, x);
-			min_y = std::min(min_y, y);
-			max_x = std::max(max_x, x);
-			max_y = std::max(max_y, y);
-		}
-	}
-
-	if (outside_pixels < auto_crop_min_outside_pixels) {
-		return;
-	}
-
-	rect = { min_x, min_y, max_x - min_x + 1, max_y - min_y + 1 };
-	clamp_auto_crop_rect(surface, rect);
 }
 
 static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
@@ -2060,6 +2021,7 @@ void auto_crop_image()
 		static AutoCropState crop_state;
 #else
 		static AutoCropVisibleState visible_state;
+		static AmiberryAutoCropScanState scan_state;
 #endif
 		int cw, ch, cx, cy, crealh = 0;
 		int hres = currprefs.gfx_resolution;
@@ -2091,7 +2053,7 @@ void auto_crop_image()
 		// DIW/bitplane limits can exclude visible sprites or raster content.
 		// Preserve real pixels outside those limits without restoring the
 		// conservative minimum frame that keeps intentional black borders.
-		expand_auto_crop_rect_to_visible_content(surface, crop_rect);
+		expand_auto_crop_rect_to_visible_content(surface, crop_rect, scan_state);
 		preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
 			hres, vres, visible_state,
 			force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
