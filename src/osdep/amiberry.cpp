@@ -2869,7 +2869,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 
 }
 
-static void handle_finger_motion_event(const SDL_Event& event)
+static void handle_finger_motion_event(const SDL_Event& event, int window_width, int window_height)
 {
 #ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
@@ -2879,17 +2879,13 @@ static void handle_finger_motion_event(const SDL_Event& event)
 	{
 		// Use relative movement for better control (Laptop touchpad style)
 		// Scale normalized coords (0..1) to window pixels
-		int w = 0, h = 0;
-		const AmigaMonitor* mon = &AMonitors[mouse_monid];
-		if (mon->amiga_window) {
-			SDL_GetWindowSize(mon->amiga_window, &w, &h);
-		} else {
-			// Fallback if window not ready, though unlikely if getting events
-			w = 640; h = 480;
+		if (window_width <= 0 || window_height <= 0) {
+			window_width = 640;
+			window_height = 480;
 		}
 
-		int relX = (int)(event.tfinger.dx * w);
-		int relY = (int)(event.tfinger.dy * h);
+		int relX = (int)(event.tfinger.dx * window_width);
+		int relY = (int)(event.tfinger.dy * window_height);
 
 		setmousestate(0, 0, relX, 0); // 0 = relative
 		setmousestate(0, 1, relY, 0);
@@ -3397,7 +3393,7 @@ static void process_event(const SDL_Event& event)
 			handle_android_two_finger_swipe(event);
 #endif
 			if (!consumed)
-				handle_finger_motion_event(event);
+				handle_finger_motion_event(event, ww, wh);
 			break;
 		}
 
@@ -3478,9 +3474,9 @@ int handle_msgpump(bool vblank)
 	{
 		got_event = 1;
 		process_event(event);
-		if (currprefs.clipboard_sharing)
-			update_clipboard();
 	}
+	if (got_event && currprefs.clipboard_sharing)
+		update_clipboard();
 	return got_event;
 }
 
