@@ -89,6 +89,7 @@ static bool show_shader_params_popup = false;
 #ifdef USE_OPENGL
 static bool shader_params_popup_rtg = false;
 static std::string shader_params_popup_name;
+static std::vector<ShaderParameter> shader_params_popup_parameters;
 #endif
 
 static void save_filter_defaults()
@@ -110,8 +111,29 @@ void ShaderParameters_Open(const char* shader_name, const bool rtg)
 {
 	shader_params_popup_name = shader_name ? shader_name : "none";
 	shader_params_popup_rtg = rtg;
-	if (auto* gl_renderer = get_opengl_renderer())
+	shader_params_popup_parameters.clear();
+
+	bool parameters_available = false;
+	if (auto* gl_renderer = get_opengl_renderer()) {
 		gl_renderer->ensure_shader_parameters(shader_params_popup_name.c_str(), rtg);
+		parameters_available = gl_renderer->shader_parameters(
+			shader_params_popup_name.c_str(), rtg) != nullptr;
+	}
+
+	if (!parameters_available
+		&& load_shader_parameter_metadata(
+			shader_params_popup_name.c_str(), shader_params_popup_parameters)) {
+		for (auto& parameter : shader_params_popup_parameters) {
+			for (const auto& saved : amiberry_options.shader_parameters) {
+				if (saved.rtg == rtg && saved.shader == shader_params_popup_name
+					&& saved.name == parameter.name) {
+					parameter.current_value = std::max(parameter.min_value,
+						std::min(parameter.max_value, saved.value));
+					break;
+				}
+			}
+		}
+	}
 	show_shader_params_popup = true;
 }
 #endif
@@ -130,6 +152,8 @@ void ShaderParameters_RenderPopup()
 		auto* params = gl_renderer
 			? gl_renderer->shader_parameters(shader_params_popup_name.c_str(), shader_params_popup_rtg)
 			: nullptr;
+		if (!params)
+			params = &shader_params_popup_parameters;
 
 		if (params && !params->empty()) {
 			ImGui::Text("Shader: %s", shader_params_popup_name.c_str());
@@ -139,15 +163,33 @@ void ShaderParameters_RenderPopup()
 				ImVec2(BUTTON_WIDTH * 2.25f, BUTTON_HEIGHT))) {
 				for (auto& param : *params) {
 					param.current_value = param.default_value;
-					gl_renderer->set_shader_parameter(shader_params_popup_name.c_str(),
-						shader_params_popup_rtg, param.name, param.default_value);
+					if (gl_renderer) {
+						gl_renderer->set_shader_parameter(shader_params_popup_name.c_str(),
+							shader_params_popup_rtg, param.name, param.default_value);
+					}
 				}
 			}
 			ShowHelpMarker("Restore the values declared by this shader.");
 			ImGui::SameLine();
 			if (AmigaButton(ICON_FA_FLOPPY_DISK " Save Parameters",
 				ImVec2(BUTTON_WIDTH * 1.75f, BUTTON_HEIGHT))) {
-				gl_renderer->save_shader_parameters(shader_params_popup_name.c_str(), shader_params_popup_rtg);
+				if (gl_renderer) {
+					gl_renderer->save_shader_parameters(
+						shader_params_popup_name.c_str(), shader_params_popup_rtg);
+				} else {
+					auto& saved = amiberry_options.shader_parameters;
+					saved.erase(std::remove_if(saved.begin(), saved.end(),
+						[](const amiberry_shader_parameter& parameter) {
+							return parameter.rtg == shader_params_popup_rtg
+								&& parameter.shader == shader_params_popup_name;
+						}), saved.end());
+					for (const auto& parameter : *params) {
+						if (parameter.current_value != parameter.default_value) {
+							saved.push_back({shader_params_popup_rtg, shader_params_popup_name,
+								parameter.name, parameter.current_value});
+						}
+					}
+				}
 				save_amiberry_settings();
 			}
 			ShowHelpMarker(shader_params_popup_rtg
@@ -168,8 +210,10 @@ void ShaderParameters_RenderPopup()
 				ImGui::SetNextItemWidth(-1);
 				if (ImGui::SliderFloat("##val", &param.current_value,
 					param.min_value, param.max_value, "%.3f")) {
-					gl_renderer->set_shader_parameter(shader_params_popup_name.c_str(),
-						shader_params_popup_rtg, param.name, param.current_value);
+					if (gl_renderer) {
+						gl_renderer->set_shader_parameter(shader_params_popup_name.c_str(),
+							shader_params_popup_rtg, param.name, param.current_value);
+					}
 				}
 				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 				ImGui::PopID();

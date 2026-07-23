@@ -44,6 +44,10 @@ public:
 	
 	// Get shader parameters
 	const std::vector<ShaderParameter>& get_parameters() const { return parameters_; }
+
+	// Read only #pragma parameter metadata. This does not require a GL context.
+	static bool load_parameter_metadata_from_file(const char* filepath,
+		std::vector<ShaderParameter>& parameters, std::string* error_message = nullptr);
 	
 	// Set parameter value (stores value only, does not issue GL calls)
 	bool set_parameter(const std::string& name, float value);
@@ -85,7 +89,8 @@ private:
 	bool parse_shader_file(const std::string& source);
 	std::string extract_vertex_shader(const std::string& source);
 	std::string extract_fragment_shader(const std::string& source);
-	void parse_pragma_parameters(const std::string& source);
+	static void parse_pragma_parameters(const std::string& source,
+		std::vector<ShaderParameter>& parameters);
 	
 	// Cleanup
 	void cleanup();
@@ -117,5 +122,7 @@ private:
 // Global shader management functions
 ExternalShader* create_external_shader(const char* shader_name);
 void destroy_external_shader(ExternalShader* shader);
+bool load_shader_parameter_metadata(const char* shader_name,
+	std::vector<ShaderParameter>& parameters, std::string* error_message = nullptr);
 
 #endif // EXTERNAL_SHADER_H

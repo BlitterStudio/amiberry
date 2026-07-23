@@ -76,6 +76,10 @@ public:
 	// Load preset from .glslp file
 	bool load_from_file(const char* preset_path);
 
+	// Read parameter metadata from all preset passes without creating GL resources.
+	static bool load_parameter_metadata_from_file(const char* preset_path,
+		std::vector<ShaderParameter>& parameters, std::string* error_message = nullptr);
+
 	// Check if loaded and valid
 	bool is_valid() const { return valid_; }
 

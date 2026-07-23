@@ -1907,19 +1907,8 @@ bool OpenGLRenderer::ensure_shader_parameters(const char* shader_name, const boo
 		return true;
 
 	std::vector<ShaderParameter> parameters;
-	if (is_shader_preset(shader_name)) {
-		auto* preset = create_shader_preset(shader_name);
-		if (!preset)
-			return false;
-		parameters = preset->get_all_parameters();
-		destroy_shader_preset(preset);
-	} else if (is_external_shader(shader_name)) {
-		auto* shader = create_external_shader(shader_name);
-		if (!shader)
-			return false;
-		parameters = shader->get_parameters();
-		destroy_external_shader(shader);
-	}
+	if (!load_shader_parameter_metadata(shader_name, parameters))
+		return false;
 
 	auto& cache = rtg ? m_shader.rtg_parameter_cache : m_shader.native_parameter_cache;
 	cache.shader_name = shader_name;
