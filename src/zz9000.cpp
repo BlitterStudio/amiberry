@@ -15,6 +15,9 @@
 #include "memory.h"
 #include "picasso96.h"
 #include "gfxboard.h"
+#ifdef AMIBERRY
+#include "amiberry_cursor.h"
+#endif
 #include "xwin.h"
 
 #include <algorithm>
@@ -1693,6 +1696,19 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 	mode->mode = rgb_format;
 	mode->hlinedbl = 1;
 	mode->vlinedbl = 1;
+#ifdef AMIBERRY
+	const bool host_only_cursor = picasso_uses_host_cursor(data->monitor_id);
+	if (host_only_cursor && data->sprite_visible) {
+		picasso_update_external_host_cursor(data->monitor_id, data->sprite_pixels, 32,
+			data->sprite_width, data->sprite_height, data->sprite_colors,
+			amiberry_cursor_hotspot_from_zz9000_offset(
+				data->sprite_x_offset, data->sprite_width),
+			amiberry_cursor_hotspot_from_zz9000_offset(
+				data->sprite_y_offset, data->sprite_height));
+	} else {
+		picasso_clear_external_host_cursor();
+	}
+#endif
 	const auto &state = picasso96_state[data->monitor_id];
 	if (data->mode_changed && (state.Width != data->width ||
 		state.Height != data->height || state.RGBFormat != rgb_format))
@@ -1724,7 +1740,13 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 					memcpy(line, source, line_size);
 				if (!data->display_blank) {
 					zz_composite_overlay_row(data, line, y);
+#ifdef AMIBERRY
+					if (!host_only_cursor) {
+						zz_composite_sprite_row(data, line, y);
+					}
+#else
 					zz_composite_sprite_row(data, line, y);
+#endif
 				}
 				fb_copyrow(data->monitor_id, line, surface, 0, 0, data->width, bpp, y);
 			}
@@ -1749,6 +1771,9 @@ static bool zz9000_toggle(void *userdata, int mode)
 			return false;
 		data->enabled = false;
 		data->visible = false;
+#ifdef AMIBERRY
+		picasso_clear_external_host_cursor();
+#endif
 		return true;
 	}
 	if (data->enabled)
@@ -1780,6 +1805,9 @@ static void zz9000_hsync(void *userdata)
 static void zz9000_reset(void *userdata)
 {
 	auto *data = static_cast<zz9000_state *>(userdata);
+#ifdef AMIBERRY
+	picasso_clear_external_host_cursor();
+#endif
 	data->surface_count = 0;
 	memset(&data->overlay, 0, sizeof data->overlay);
 	data->overlay_feature = false;
@@ -1795,6 +1823,9 @@ static void zz9000_free(void *userdata)
 	auto *data = static_cast<zz9000_state *>(userdata);
 	if (!data)
 		return;
+#ifdef AMIBERRY
+	picasso_clear_external_host_cursor();
+#endif
 	if (data->devnum >= 0 && data->devnum < MAX_RTG_BOARDS)
 		zz9000_boards[data->devnum] = nullptr;
 	xfree(data->memory);

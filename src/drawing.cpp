@@ -4486,11 +4486,16 @@ static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
 
 static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 {
-	uae_u8 c = vs >> 16;
-	uae_u16 v = (uae_u16)vs;
 	if (currprefs.collision_level) {
 		denise_collide_sprites(apixel, vs);
 	}
+#ifdef AMIBERRY
+	// Host Only keeps chipset sprite 0 available for collision and cursor
+	// extraction, but removes it from the rendered Denise output.
+	vs &= magic_sprite_mask;
+#endif
+	uae_u8 c = vs >> 16;
+	uae_u16 v = (uae_u16)vs;
 	int *shift_lookup = bpldualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
 	int maskshift, plfmask;
 	maskshift = shift_lookup[apixel];

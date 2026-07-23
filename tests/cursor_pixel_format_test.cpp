@@ -102,6 +102,20 @@ static void test_rtg_cursor_hotspot_uses_pointer_offset()
 		"learned P96 y hotspot must not correct an already decoded offset later");
 }
 
+static void test_zz9000_cursor_hotspot_uses_pointer_offset()
+{
+	expect_int_eq(amiberry_cursor_hotspot_from_zz9000_offset(1, 16), 0,
+		"ZZ9000 arrow displacement must produce a top-left hotspot");
+	expect_int_eq(amiberry_cursor_hotspot_from_zz9000_offset(26, 51), 25,
+		"ZZ9000 centered x displacement must produce the visual hotspot");
+	expect_int_eq(amiberry_cursor_hotspot_from_zz9000_offset(31, 61), 30,
+		"ZZ9000 centered y displacement must produce the visual hotspot");
+	expect_int_eq(amiberry_cursor_hotspot_from_zz9000_offset(0, 16), 0,
+		"missing ZZ9000 displacement must clamp to the first pixel");
+	expect_int_eq(amiberry_cursor_hotspot_from_zz9000_offset(80, 16), 15,
+		"oversized ZZ9000 displacement must clamp to the last pixel");
+}
+
 static void test_rtg_declared_hotspot_disables_live_tracking()
 {
 	expect_true(!amiberry_cursor_p96_hotspot_needs_tracking(0xff, 0xfe),
@@ -506,6 +520,7 @@ int main()
 	test_rgba32_cursor_pixels_are_opaque();
 	test_rgba32_cursor_pixels_use_raw_rgb_order();
 	test_rtg_cursor_hotspot_uses_pointer_offset();
+	test_zz9000_cursor_hotspot_uses_pointer_offset();
 	test_rtg_declared_hotspot_disables_live_tracking();
 	test_host_only_forces_separate_rtg_sprite();
 	test_rtg_cursor_keeps_softsprite_fallback_disabled();
