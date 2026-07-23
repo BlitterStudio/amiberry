@@ -2248,6 +2248,7 @@ static uae_u32 tmp_sprite_colors[4];
 static int tmp_sprite_hotspot_x, tmp_sprite_hotspot_y;
 static int tmp_sprite_residual_x, tmp_sprite_residual_y;
 static int tmp_sprite_chipset = -1;
+static int tmp_sprite_monid = -1;
 #endif
 
 extern uaecptr sprite_0;
@@ -2369,7 +2370,8 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 	}
 	cursor_cache_matches = p96_cursor
-		&& w == tmp_sprite_w && h == tmp_sprite_h && chipset == tmp_sprite_chipset
+		&& w == tmp_sprite_w && h == tmp_sprite_h
+		&& chipset == tmp_sprite_chipset && monid == tmp_sprite_monid
 		&& !memcmp(tmp_sprite_data, image, datasize)
 		&& !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
 
@@ -2445,6 +2447,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	tmp_sprite_hotspot_x = tmp_sprite_hotspot_y = 0;
 	tmp_sprite_residual_x = tmp_sprite_residual_y = 0;
 	tmp_sprite_chipset = -1;
+	tmp_sprite_monid = -1;
 
 	cursor_surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
 	if (!cursor_surface)
@@ -2473,6 +2476,7 @@ end:
 		tmp_sprite_residual_x = residual_x;
 		tmp_sprite_residual_y = residual_y;
 		tmp_sprite_chipset = chipset;
+		tmp_sprite_monid = monid;
 		memcpy(tmp_sprite_data, image, datasize);
 		memcpy(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
 	}
@@ -2692,13 +2696,14 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 	if (!picasso_uses_host_cursor(monid) || !image || !colors
 		|| width <= 0 || height <= 0 || image_pitch < width
 		|| width > CURSORMAXWIDTH || height > CURSORMAXHEIGHT) {
-		picasso_clear_external_host_cursor();
+		picasso_clear_external_host_cursor(monid);
 		return;
 	}
 
 	hotspot_x = std::clamp(hotspot_x, 0, width - 1);
 	hotspot_y = std::clamp(hotspot_y, 0, height - 1);
 	bool same_image = p96_cursor && tmp_sprite_chipset == 2
+		&& tmp_sprite_monid == monid
 		&& tmp_sprite_w == width && tmp_sprite_h == height
 		&& tmp_sprite_hotspot_x == hotspot_x && tmp_sprite_hotspot_y == hotspot_y
 		&& !memcmp(tmp_sprite_colors, colors, sizeof(uae_u32) * 4);
@@ -2734,7 +2739,7 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 		: nullptr;
 	SDL_DestroySurface(cursor_surface);
 	if (!new_cursor) {
-		picasso_clear_external_host_cursor();
+		picasso_clear_external_host_cursor(monid);
 		return;
 	}
 
@@ -2747,6 +2752,7 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 	tmp_sprite_residual_x = 0;
 	tmp_sprite_residual_y = 0;
 	tmp_sprite_chipset = 2;
+	tmp_sprite_monid = monid;
 	for (int y = 0; y < height; ++y) {
 		memcpy(tmp_sprite_data + y * width, image + y * image_pitch, width);
 	}
@@ -2761,9 +2767,9 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 	}
 }
 
-void picasso_clear_external_host_cursor()
+void picasso_clear_external_host_cursor(const int monid)
 {
-	if (tmp_sprite_chipset == 2) {
+	if (tmp_sprite_chipset == 2 && tmp_sprite_monid == monid) {
 		destroy_p96_host_cursor();
 		tmp_sprite_w = 0;
 		tmp_sprite_h = 0;
@@ -2772,6 +2778,7 @@ void picasso_clear_external_host_cursor()
 		tmp_sprite_residual_x = 0;
 		tmp_sprite_residual_y = 0;
 		tmp_sprite_chipset = -1;
+		tmp_sprite_monid = -1;
 	}
 }
 #endif

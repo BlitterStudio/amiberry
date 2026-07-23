@@ -1706,7 +1706,7 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 			amiberry_cursor_hotspot_from_zz9000_offset(
 				data->sprite_y_offset, data->sprite_height));
 	} else {
-		picasso_clear_external_host_cursor();
+		picasso_clear_external_host_cursor(data->monitor_id);
 	}
 #endif
 	const auto &state = picasso96_state[data->monitor_id];
@@ -1772,7 +1772,7 @@ static bool zz9000_toggle(void *userdata, int mode)
 		data->enabled = false;
 		data->visible = false;
 #ifdef AMIBERRY
-		picasso_clear_external_host_cursor();
+		picasso_clear_external_host_cursor(data->monitor_id);
 #endif
 		return true;
 	}
@@ -1806,7 +1806,7 @@ static void zz9000_reset(void *userdata)
 {
 	auto *data = static_cast<zz9000_state *>(userdata);
 #ifdef AMIBERRY
-	picasso_clear_external_host_cursor();
+	picasso_clear_external_host_cursor(data->monitor_id);
 #endif
 	data->surface_count = 0;
 	memset(&data->overlay, 0, sizeof data->overlay);
@@ -1824,7 +1824,7 @@ static void zz9000_free(void *userdata)
 	if (!data)
 		return;
 #ifdef AMIBERRY
-	picasso_clear_external_host_cursor();
+	picasso_clear_external_host_cursor(data->monitor_id);
 #endif
 	if (data->devnum >= 0 && data->devnum < MAX_RTG_BOARDS)
 		zz9000_boards[data->devnum] = nullptr;
