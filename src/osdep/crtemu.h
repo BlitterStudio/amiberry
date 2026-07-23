@@ -118,6 +118,7 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
     #define CRTEMU_GL_COLOR_ATTACHMENT0 0x8ce0
     #define CRTEMU_GL_TEXTURE_WRAP_S 0x2802
     #define CRTEMU_GL_TEXTURE_WRAP_T 0x2803
+    #define CRTEMU_GL_CLAMP_TO_EDGE 0x812F
     #define CRTEMU_GL_CLAMP_TO_BORDER 0x812D
     #define CRTEMU_GL_TEXTURE_BORDER_COLOR 0x1004
 
@@ -178,6 +179,7 @@ typedef GLbitfield CRTEMU_GLbitfield;
 #define CRTEMU_GL_COLOR_ATTACHMENT0 GL_COLOR_ATTACHMENT0
 #define CRTEMU_GL_TEXTURE_WRAP_S GL_TEXTURE_WRAP_S
 #define CRTEMU_GL_TEXTURE_WRAP_T GL_TEXTURE_WRAP_T
+#define CRTEMU_GL_CLAMP_TO_EDGE GL_CLAMP_TO_EDGE
 #ifndef CRTEMU_WEBGL
     #if defined(GL_CLAMP_TO_BORDER) && !defined(__ANDROID__)
         #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER
@@ -2133,27 +2135,27 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 		crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
 	}
 
-#ifdef CRTEMU_WEBGL
-	// Avoid WebGL error "TEXTURE_2D at unit 0 is incomplete: Non-power-of-two textures must have a wrap mode of CLAMP_TO_EDGE."
+	// Full-screen passes sample all the way to the texture edges. Clamp them so
+	// linear filtering cannot blend the opposite edges of an auto-cropped frame.
+	// This is also required for non-power-of-two WebGL textures.
         crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
         crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
         crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
         crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
         crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
         crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-#endif
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+        crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
 
     if (crtemu->BindVertexArray) crtemu->BindVertexArray(0);
 

@@ -5436,8 +5436,8 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 #endif
 	case AKS_AUTO_CROP_IMAGE:
-		currprefs.gfx_auto_crop = !currprefs.gfx_auto_crop;
-		check_prefs_changed_gfx();
+		changed_prefs.gfx_auto_crop = !changed_prefs.gfx_auto_crop;
+		set_config_changed();
 		break;
 	case AKS_OSK:
 		if (vkbd_allowed(0))

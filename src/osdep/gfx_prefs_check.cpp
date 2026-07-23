@@ -59,6 +59,7 @@ int check_prefs_changed_gfx()
 {
 	int c = 0;
 	bool monitors[MAX_AMIGAMONITORS]{};
+	const bool auto_crop_enabled = !currprefs.gfx_auto_crop && changed_prefs.gfx_auto_crop;
 
 	const bool native_code_changed = currprefs.native_code != changed_prefs.native_code;
 	if (native_code_changed) {
@@ -314,6 +315,9 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_manual_crop_height = changed_prefs.gfx_manual_crop_height;
 		currprefs.gfx_auto_crop = changed_prefs.gfx_auto_crop;
 		currprefs.gfx_manual_crop = changed_prefs.gfx_manual_crop;
+
+		if (auto_crop_enabled)
+			force_auto_crop = true;
 
 		if (currprefs.gfx_auto_crop)
 		{
