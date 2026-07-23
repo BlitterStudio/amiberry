@@ -110,6 +110,8 @@ void ShaderParameters_Open(const char* shader_name, const bool rtg)
 {
 	shader_params_popup_name = shader_name ? shader_name : "none";
 	shader_params_popup_rtg = rtg;
+	if (auto* gl_renderer = get_opengl_renderer())
+		gl_renderer->ensure_shader_parameters(shader_params_popup_name.c_str(), rtg);
 	show_shader_params_popup = true;
 }
 #endif

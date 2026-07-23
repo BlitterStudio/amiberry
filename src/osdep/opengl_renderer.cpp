@@ -37,6 +37,7 @@
 #include "gui/gui_handling.h"
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <SDL3_image/SDL_image.h>
 
 #ifndef GL_BGRA
@@ -1894,6 +1895,45 @@ const std::vector<ShaderParameter>* OpenGLRenderer::shader_parameters(const char
 		return &cache.parameters;
 
 	return nullptr;
+}
+
+bool OpenGLRenderer::ensure_shader_parameters(const char* shader_name, const bool rtg)
+{
+	if (!shader_name)
+		return false;
+
+	// Reuse active, target-cached, template, or opposite-target metadata first.
+	if (shader_parameters(shader_name, rtg))
+		return true;
+
+	std::vector<ShaderParameter> parameters;
+	if (is_shader_preset(shader_name)) {
+		auto* preset = create_shader_preset(shader_name);
+		if (!preset)
+			return false;
+		parameters = preset->get_all_parameters();
+		destroy_shader_preset(preset);
+	} else if (is_external_shader(shader_name)) {
+		auto* shader = create_external_shader(shader_name);
+		if (!shader)
+			return false;
+		parameters = shader->get_parameters();
+		destroy_external_shader(shader);
+	}
+
+	auto& cache = rtg ? m_shader.rtg_parameter_cache : m_shader.native_parameter_cache;
+	cache.shader_name = shader_name;
+	cache.parameters = std::move(parameters);
+	for (auto& parameter : cache.parameters) {
+		for (const auto& saved : amiberry_options.shader_parameters) {
+			if (saved.rtg == rtg && saved.shader == shader_name && saved.name == parameter.name) {
+				parameter.current_value = std::max(parameter.min_value,
+					std::min(parameter.max_value, saved.value));
+				break;
+			}
+		}
+	}
+	return true;
 }
 
 bool OpenGLRenderer::has_shader_parameters(const char* shader_name, const bool rtg) const
