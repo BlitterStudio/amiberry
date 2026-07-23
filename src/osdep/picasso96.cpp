@@ -305,6 +305,7 @@ static bool magic_mouse_host_only_enabled()
 bool picasso_uses_host_cursor(const int monid)
 {
 	return monid >= 0 && monid < MAX_AMIGAMONITORS
+		&& adisplays[monid].picasso_on
 		&& mouse_monid == monid && magic_mouse_host_only_enabled();
 }
 
