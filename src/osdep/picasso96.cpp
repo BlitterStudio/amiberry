@@ -302,6 +302,13 @@ static bool magic_mouse_host_only_enabled()
 		host_cursor_available);
 }
 
+bool picasso_uses_host_cursor(const int monid)
+{
+	return monid >= 0 && monid < MAX_AMIGAMONITORS
+		&& adisplays[monid].picasso_on
+		&& mouse_monid == monid && magic_mouse_host_only_enabled();
+}
+
 static bool p96_needs_separate_cursor_sprite()
 {
 	return amiberry_cursor_rtg_needs_separate_sprite(currprefs.rtg_hardwaresprite, magic_mouse_host_only_enabled());
@@ -1628,10 +1635,17 @@ void picasso_handle_vsync()
 	if (monid < 0 || monid >= MAX_AMIGAMONITORS) {
 		return;
 	}
-	if (mouse_monid == monid && adisplays[monid].picasso_on) {
+	const int rtg_type = currprefs.rtgboards[0].rtgmem_type;
+	const bool external_cursor_board = rtg_type == GFXBOARD_ID_ZZ9000_Z2
+		|| rtg_type == GFXBOARD_ID_ZZ9000_Z3;
+	if (!external_cursor_board && mouse_monid == monid && adisplays[monid].picasso_on) {
 		// P96 does not consistently expose cursor offsets, so sample the live
 		// pointer-to-sprite displacement while the RTG display is active.
 		createwindowscursor(monid, 0, 0);
+	} else if (external_cursor_board && !magic_mouse_host_only_enabled()) {
+		// ZZ9000 owns the Host Only cursor while its RTG display is active.
+		// Drop any cursor retained from the preceding native display otherwise.
+		destroy_p96_host_cursor();
 	}
 #endif
 	struct AmigaMonitor *mon = &AMonitors[monid];
@@ -2234,6 +2248,7 @@ static uae_u32 tmp_sprite_colors[4];
 static int tmp_sprite_hotspot_x, tmp_sprite_hotspot_y;
 static int tmp_sprite_residual_x, tmp_sprite_residual_y;
 static int tmp_sprite_chipset = -1;
+static int tmp_sprite_monid = -1;
 #endif
 
 extern uaecptr sprite_0;
@@ -2355,7 +2370,8 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 	}
 	cursor_cache_matches = p96_cursor
-		&& w == tmp_sprite_w && h == tmp_sprite_h && chipset == tmp_sprite_chipset
+		&& w == tmp_sprite_w && h == tmp_sprite_h
+		&& chipset == tmp_sprite_chipset && monid == tmp_sprite_monid
 		&& !memcmp(tmp_sprite_data, image, datasize)
 		&& !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
 
@@ -2431,6 +2447,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	tmp_sprite_hotspot_x = tmp_sprite_hotspot_y = 0;
 	tmp_sprite_residual_x = tmp_sprite_residual_y = 0;
 	tmp_sprite_chipset = -1;
+	tmp_sprite_monid = -1;
 
 	cursor_surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
 	if (!cursor_surface)
@@ -2459,6 +2476,7 @@ end:
 		tmp_sprite_residual_x = residual_x;
 		tmp_sprite_residual_y = residual_y;
 		tmp_sprite_chipset = chipset;
+		tmp_sprite_monid = monid;
 		memcpy(tmp_sprite_data, image, datasize);
 		memcpy(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
 	}
@@ -2669,6 +2687,101 @@ exit:
 	return ret;
 #endif
 }
+
+#ifdef AMIBERRY
+void picasso_update_external_host_cursor(const int monid, const uae_u8* image, const int image_pitch,
+	const int width, const int height, const uae_u32* colors,
+	int hotspot_x, int hotspot_y)
+{
+	if (!picasso_uses_host_cursor(monid) || !image || !colors
+		|| width <= 0 || height <= 0 || image_pitch < width
+		|| width > CURSORMAXWIDTH || height > CURSORMAXHEIGHT) {
+		picasso_clear_external_host_cursor(monid);
+		return;
+	}
+
+	hotspot_x = std::clamp(hotspot_x, 0, width - 1);
+	hotspot_y = std::clamp(hotspot_y, 0, height - 1);
+	bool same_image = p96_cursor && tmp_sprite_chipset == 2
+		&& tmp_sprite_monid == monid
+		&& tmp_sprite_w == width && tmp_sprite_h == height
+		&& tmp_sprite_hotspot_x == hotspot_x && tmp_sprite_hotspot_y == hotspot_y
+		&& !memcmp(tmp_sprite_colors, colors, sizeof(uae_u32) * 4);
+	for (int y = 0; same_image && y < height; ++y) {
+		same_image = !memcmp(tmp_sprite_data + y * width, image + y * image_pitch, width);
+	}
+	if (same_image) {
+		if (SDL_GetCursor() != p96_cursor) {
+			SDL_SetCursor(p96_cursor);
+		}
+		SDL_ShowCursor();
+		input_mousehack_set_host_cursor_uses_hotspot(true, 0, 0);
+		wincursor_shown = 1;
+		return;
+	}
+
+	SDL_Surface* cursor_surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA32);
+	if (!cursor_surface) {
+		return;
+	}
+
+	bool has_visible_pixel = false;
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			const int color = image[y * image_pitch + x];
+			putmousepixel(cursor_surface, x, y, color, colors);
+			has_visible_pixel |= color != 0;
+		}
+	}
+
+	SDL_Cursor* new_cursor = has_visible_pixel
+		? SDL_CreateColorCursor(cursor_surface, hotspot_x, hotspot_y)
+		: nullptr;
+	SDL_DestroySurface(cursor_surface);
+	if (!new_cursor) {
+		picasso_clear_external_host_cursor(monid);
+		return;
+	}
+
+	SDL_Cursor* old_cursor = p96_cursor;
+	p96_cursor = new_cursor;
+	tmp_sprite_w = width;
+	tmp_sprite_h = height;
+	tmp_sprite_hotspot_x = hotspot_x;
+	tmp_sprite_hotspot_y = hotspot_y;
+	tmp_sprite_residual_x = 0;
+	tmp_sprite_residual_y = 0;
+	tmp_sprite_chipset = 2;
+	tmp_sprite_monid = monid;
+	for (int y = 0; y < height; ++y) {
+		memcpy(tmp_sprite_data + y * width, image + y * image_pitch, width);
+	}
+	memcpy(tmp_sprite_colors, colors, sizeof(uae_u32) * 4);
+
+	SDL_SetCursor(p96_cursor);
+	SDL_ShowCursor();
+	input_mousehack_set_host_cursor_uses_hotspot(true, 0, 0);
+	wincursor_shown = 1;
+	if (old_cursor) {
+		SDL_DestroyCursor(old_cursor);
+	}
+}
+
+void picasso_clear_external_host_cursor(const int monid)
+{
+	if (tmp_sprite_chipset == 2 && tmp_sprite_monid == monid) {
+		destroy_p96_host_cursor();
+		tmp_sprite_w = 0;
+		tmp_sprite_h = 0;
+		tmp_sprite_hotspot_x = 0;
+		tmp_sprite_hotspot_y = 0;
+		tmp_sprite_residual_x = 0;
+		tmp_sprite_residual_y = 0;
+		tmp_sprite_chipset = -1;
+		tmp_sprite_monid = -1;
+	}
+}
+#endif
 
 int picasso_setwincursor(int monid)
 {

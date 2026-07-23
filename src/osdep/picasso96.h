@@ -709,6 +709,12 @@ void p96_get_cursor_dimensions(int *w, int *h);
 SDL_Surface* p96_get_cursor_overlay_surface();
 bool p96_cursor_needs_update();
 void p96_cleanup_cursor_overlay();
+#ifdef AMIBERRY
+bool picasso_uses_host_cursor(int monid);
+void picasso_update_external_host_cursor(int monid, const uae_u8* image, int image_pitch,
+	int width, int height, const uae_u32* colors, int hotspot_x, int hotspot_y);
+void picasso_clear_external_host_cursor(int monid);
+#endif
 
 #define LIB_SIZE 34
 #define CARD_FLAGS LIB_SIZE

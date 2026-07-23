@@ -47,6 +47,23 @@ static inline int amiberry_cursor_hotspot_from_p96_offset(std::uint8_t raw_point
 	return hotspot_offset;
 }
 
+static inline int amiberry_cursor_hotspot_from_zz9000_offset(int pointer_offset, int extent)
+{
+	if (extent <= 0) {
+		return 0;
+	}
+
+	// ZZ9000 stores the pointer-to-sprite displacement as hotspot + 1.
+	const int hotspot_offset = pointer_offset - 1;
+	if (hotspot_offset < 0) {
+		return 0;
+	}
+	if (hotspot_offset >= extent) {
+		return extent - 1;
+	}
+	return hotspot_offset;
+}
+
 static inline bool amiberry_cursor_p96_hotspot_needs_tracking(
 	std::uint8_t raw_x_offset, std::uint8_t raw_y_offset)
 {
