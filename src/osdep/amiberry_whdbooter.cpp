@@ -1500,11 +1500,12 @@ void create_startup_sequence()
 	// SPLASH
 	if (!whdload_prefs.show_splash)
 	{
-		whd_bootscript << " SPLASHDELAY=0";
+		// Slaves with configurable options still show the startup window unless both delays are zero.
+		whd_bootscript << " SPLASHDELAY=0 CONFIGDELAY=0";
 	}
 
 	// CONFIGDELAY
-	if (whdload_prefs.config_delay != 0)
+	if (whdload_prefs.show_splash && whdload_prefs.config_delay != 0)
 	{
 		whd_bootscript << " CONFIGDELAY=" << whdload_prefs.config_delay;
 	}

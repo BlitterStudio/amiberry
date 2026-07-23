@@ -144,6 +144,7 @@ public:
 	const ShaderState& shader_state() const;
 	std::vector<ShaderParameter>* shader_parameters(const char* shader_name, bool rtg);
 	const std::vector<ShaderParameter>* shader_parameters(const char* shader_name, bool rtg) const;
+	bool ensure_shader_parameters(const char* shader_name, bool rtg);
 	bool has_shader_parameters(const char* shader_name, bool rtg) const;
 	bool set_shader_parameter(const char* shader_name, bool rtg, const std::string& name, float value);
 	void save_shader_parameters(const char* shader_name, bool rtg);
