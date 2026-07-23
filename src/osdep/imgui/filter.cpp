@@ -106,7 +106,7 @@ static void save_filter_defaults()
 }
 
 #ifdef USE_OPENGL
-static void open_shader_parameters_popup(const char* shader_name, const bool rtg)
+void ShaderParameters_Open(const char* shader_name, const bool rtg)
 {
 	shader_params_popup_name = shader_name ? shader_name : "none";
 	shader_params_popup_rtg = rtg;
@@ -114,7 +114,7 @@ static void open_shader_parameters_popup(const char* shader_name, const bool rtg
 }
 #endif
 
-static void render_shader_parameters_popup()
+void ShaderParameters_RenderPopup()
 {
 	if (!show_shader_params_popup) return;
 
@@ -284,7 +284,7 @@ void render_panel_filter()
 #ifdef USE_OPENGL
 		if (AmigaButton(ICON_FA_SLIDERS " Shader Parameters...##NativeShaderParameters",
 			ImVec2(BUTTON_WIDTH * 1.75f, BUTTON_HEIGHT))) {
-			open_shader_parameters_popup(changed_prefs.shader, false);
+			ShaderParameters_Open(changed_prefs.shader, false);
 		}
 		ShowHelpMarker("Edit parameters for the native display shader.");
 #endif
@@ -321,7 +321,7 @@ void render_panel_filter()
 #ifdef USE_OPENGL
 		if (AmigaButton(ICON_FA_SLIDERS " Shader Parameters...##RTGShaderParameters",
 			ImVec2(BUTTON_WIDTH * 1.75f, BUTTON_HEIGHT))) {
-			open_shader_parameters_popup(changed_prefs.shader_rtg, true);
+			ShaderParameters_Open(changed_prefs.shader_rtg, true);
 		}
 		ShowHelpMarker("Edit parameters for the RTG display shader.");
 #endif
@@ -400,5 +400,5 @@ void render_panel_filter()
 	ShowHelpMarker("Save the shader selections and bezel settings as application defaults.");
 
 	// Render the shader parameters popup if open
-	render_shader_parameters_popup();
+	ShaderParameters_RenderPopup();
 }

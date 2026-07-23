@@ -157,14 +157,20 @@ static bool render_string_combo_row(const char* label, char* value, const size_t
 }
 
 static bool render_shader_combo_row(const char* label, char* value, const size_t value_size,
-	const char* help)
+	const bool rtg, const char* help)
 {
 	next_setting_row(label);
 	const auto& shader_names = get_available_shader_names();
 	const char* preview = value[0] ? value : "none";
 
 	bool changed = false;
+#ifdef USE_OPENGL
+	const float parameters_button_width = BUTTON_WIDTH * 1.75f;
+	ImGui::SetNextItemWidth(std::max(BUTTON_WIDTH,
+		ImGui::GetContentRegionAvail().x - parameters_button_width - ImGui::GetStyle().ItemSpacing.x));
+#else
 	ImGui::SetNextItemWidth(-1.0f);
+#endif
 	if (ImGui::BeginCombo("##value", preview)) {
 		for (const auto& shader_name : shader_names) {
 			const bool selected = strcmp(shader_name.c_str(), value) == 0;
@@ -179,6 +185,13 @@ static bool render_shader_combo_row(const char* label, char* value, const size_t
 		ImGui::EndCombo();
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+#ifdef USE_OPENGL
+	ImGui::SameLine();
+	if (AmigaButton(ICON_FA_SLIDERS " Shader Parameters...",
+		ImVec2(parameters_button_width, BUTTON_HEIGHT))) {
+		ShaderParameters_Open(value, rtg);
+	}
+#endif
 	finish_setting_row(help);
 	return changed;
 }
@@ -596,10 +609,10 @@ void render_panel_global_settings()
 			sizeof amiberry_options.gui_theme, get_available_theme_names(),
 			"Theme file loaded by the ImGui interface.");
 		render_shader_combo_row("Native shader", amiberry_options.shader,
-			sizeof amiberry_options.shader,
+			sizeof amiberry_options.shader, false,
 			"Default shader preset for native chipset modes. Use none to disable.");
 		render_shader_combo_row("RTG shader", amiberry_options.shader_rtg,
-			sizeof amiberry_options.shader_rtg,
+			sizeof amiberry_options.shader_rtg, true,
 			"Default shader preset for RTG modes. Use none to disable.");
 		const bool custom_bezel_active = amiberry_options.use_custom_bezel
 			&& stricmp(amiberry_options.custom_bezel, "none") != 0;
@@ -736,4 +749,5 @@ void render_panel_global_settings()
 	});
 
 	HotkeyCapture_RenderPopup();
+	ShaderParameters_RenderPopup();
 }
