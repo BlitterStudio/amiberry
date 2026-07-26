@@ -2965,7 +2965,7 @@ void m68k_do_rte_mmu030 (uaecptr a7)
 
 		uae_u32 mmu030_fmovem_store_0 = 0;
 		uae_u32 mmu030_fmovem_store_1 = 0;
-		if (mmu030_state[1] & MMU030_STATEFLAG1_FMOVEM) {
+		if (mmu030_state_1 & MMU030_STATEFLAG1_FMOVEM) {
 			mmu030_fmovem_store_0 = get_long_mmu030(a7 + 0x5c - (7 + 1) * 4);
 			mmu030_fmovem_store_1 = get_long_mmu030(a7 + 0x5c - (8 + 1) * 4);
 		}
@@ -3049,7 +3049,12 @@ void m68k_do_rte_mmu030 (uaecptr a7)
 		exception3_read_prefetch(0x4E73, pc);
 		return;
 	}
+
+	// Restore PC and current opcode to retried instruction
 	m68k_setpci(pc);
+	if (mmu030_opcode != -1) {
+		regs.opcode = regs.irc = mmu030_opcode;
+	}
 
 	if ((ssw & MMU030_SSW_DF) && (ssw & MMU030_SSW_RM)) {
 
@@ -3414,7 +3419,7 @@ void m68k_do_rte_mmu030c (uaecptr a7)
 
 		uae_u32 mmu030_fmovem_store_0 = 0;
 		uae_u32 mmu030_fmovem_store_1 = 0;
-		if (mmu030_state[1] & MMU030_STATEFLAG1_FMOVEM) {
+		if (mmu030_state_1 & MMU030_STATEFLAG1_FMOVEM) {
 			mmu030_fmovem_store_0 = get_long_mmu030c(a7 + 0x5c - (7 + 1) * 4);
 			mmu030_fmovem_store_1 = get_long_mmu030c(a7 + 0x5c - (8 + 1) * 4);
 		}
@@ -3428,6 +3433,7 @@ void m68k_do_rte_mmu030c (uaecptr a7)
 
 		regs.wb2_status = v >> 8;
 		regs.wb3_status = mmu030_state_2 >> 8;
+		mmu030_state_2 &= 0x00ff;
 		mmu030fixupmod(regs.wb2_status, 1, -1);
 		mmu030fixupmod(regs.wb3_status, 1, -1);
 
@@ -3515,7 +3521,12 @@ void m68k_do_rte_mmu030c (uaecptr a7)
 		exception3_read_prefetch(0x4E73, pc);
 		return;
 	}
+	
+	// Restore PC and current opcode to retried instruction
 	m68k_setpci (pc);
+	if (mmu030_opcode != -1) {
+		regs.opcode = regs.irc = mmu030_opcode;
+	}
 
 	if (!(ssw & (MMU030_SSW_DF << 1))) {
 		// software fixed?
