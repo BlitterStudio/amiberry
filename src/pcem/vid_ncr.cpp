@@ -617,19 +617,22 @@ static bool blitter_proc(ncr_t *ncr)
     if (ncr->blt_stage == 1) {
 
         uint8_t srcdata = ncr->blt_srcdata;
+        bool bitset = false;
         ncr->blt_dstdata = blitter_read(ncr, ncr->blt_dst, ncr->blt_bppoffset);
         ncr->blt_patdata = blitter_read(ncr, ncr->blt_pat, ncr->blt_patx_cnt);
         if (ncr->blt_color_expand) {
             int8_t offset = ncr->blt_expand_bit;
             if (srcdata & (1 << offset)) {
                 srcdata = ncr->blt_c0 >> (ncr->blt_bpp_cnt * 8);
-            } else if (ncr->blt_transparent) {
-                srcdata = ncr->blt_dstdata;
+                bitset = true;
             } else {
                 srcdata = ncr->blt_c1 >> (ncr->blt_bpp_cnt * 8);
             }
         }
         uint8_t out = blitter_rop(ncr->blt_rop, srcdata, ncr->blt_patdata, ncr->blt_dstdata);
+        if (ncr->blt_color_expand && ncr->blt_transparent && !bitset) {
+            out = ncr->blt_dstdata;
+        }
         blitter_write(ncr, ncr->blt_dst, out);
 
         ncr->blt_patx_cnt++;
