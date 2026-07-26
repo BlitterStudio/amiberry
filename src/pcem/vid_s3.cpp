@@ -1909,6 +1909,10 @@ void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat
                 frgd_mix = (s3->accel.frgd_mix >> 5) & 3;
                 bkgd_mix = (s3->accel.bkgd_mix >> 5) & 3;
 
+                /*
+                 * PCem/86Box omit DST-BASE for line draws, but the S3
+                 * graphics engine applies it to all destination accesses.
+                 */
                 if (s3->accel.cmd & 8) /*Radial*/
                 {
                         while (count-- && s3->accel.sy >= 0)
@@ -1928,11 +1932,11 @@ void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat
                                             (compare_mode == 3 && src_dat == compare) ||
                                              compare_mode < 2)
                                         {
-                                                READ_DST((s3->accel.cy * s3->width) + s3->accel.cx, dest_dat);
+                                                READ_DST(dstbase + (s3->accel.cy * s3->width) + s3->accel.cx, dest_dat);
 
                                                 MIX
 
-                                                WRITE((s3->accel.cy * s3->width) + s3->accel.cx);
+                                                WRITE(dstbase + (s3->accel.cy * s3->width) + s3->accel.cx);
                                         }
                                 }
 
@@ -1978,7 +1982,7 @@ void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat
                                             (compare_mode == 3 && src_dat == compare) ||
                                              compare_mode < 2)
                                         {
-                                                READ_DST((s3->accel.cy * s3->width) + s3->accel.cx, dest_dat);
+                                                READ_DST(dstbase + (s3->accel.cy * s3->width) + s3->accel.cx, dest_dat);
 
 //                                        pclog("Line : %04i, %04i (%06X) - %02X (%02X %04X %05X) %02X (%02X %02X)  ", s3->accel.cx, s3->accel.cy, s3->accel.dest + s3->accel.cx, src_dat, vram[s3->accel.src + s3->accel.cx], mix_dat & mix_mask, s3->accel.src + s3->accel.cx, dest_dat, s3->accel.frgd_color, s3->accel.bkgd_color);
                                         
@@ -1986,7 +1990,7 @@ void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat
 
 //                                        pclog("%02X\n", dest_dat);
 
-                                                WRITE((s3->accel.cy * s3->width) + s3->accel.cx);
+                                                WRITE(dstbase + (s3->accel.cy * s3->width) + s3->accel.cx);
                                         }
                                 }
 
@@ -2000,7 +2004,8 @@ void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat
                                 if (!s3->accel.sy)
                                         break;
 
-                                if (s3->accel.err_term >= s3->accel.maj_axis_pcnt)
+                                /* ERR_TERM is signed; take the diagonal step when it crosses zero. */
+                                if (s3->accel.err_term >= 0)
                                 {
                                         s3->accel.err_term += s3->accel.destx_distp;
                                         /*Step minor axis*/
