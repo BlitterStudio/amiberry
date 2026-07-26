@@ -154,44 +154,101 @@ int statusline_get_multiplier(int monid)
 	return statusline_mult[idx];
 }
 
+const uae_s8 defaultosdledpos[LED_MAX] = {
+	LED_SND,
+	LED_CPU,
+	LED_FPS,
+	LED_LINES,
+	LED_CAPS,
+	LED_POWER,
+	LED_HD,
+	LED_CD,
+	LED_DF0,
+	LED_DF1,
+	LED_DF2,
+	LED_DF3,
+	LED_MD,
+	LED_NET
+};
+
+bool statusline_led_visible(int led)
+{
+	if (led == LED_SND && !gui_data.sndbuf_avail) {
+		return false;
+	}
+	if (led == LED_MD && gui_data.md < 0) {
+		return false;
+	}
+	if (led == LED_HD && gui_data.hd < 0) {
+		return false;
+	}
+	if (led == LED_CD && gui_data.cd < 0) {
+		return false;
+	}
+	if (led == LED_NET && gui_data.net < 0) {
+		return false;
+	}
+	return true;
+}
+
 void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
 	struct amigadisplay *ad = &adisplays[monid];
-	int x_start, j, led, border;
+	int x_start, j, led, border, pos;
 	uae_u32 c1, c2, cb;
 	int mult = td_custom ? 1 : statusline_mult[ad->picasso_on ? 1 : 0] / 100;
+	int num_leds = LED_MAX;
+	const uae_s8 *ledposptr;
+	uae_s8 ledposconf[LED_MAX];
 
-	if (!mult)
+	if (!mult) {
 		mult = 1;
+	}
 
 	y /= mult;
 
-	c1 = ledcolor (0x00ffffff, rc, gc, bc, alpha);
-	c2 = ledcolor (0x00111111, rc, gc, bc, alpha);
+	num_leds = 0;
+	ledposptr = ledposconf;
+	pos = 0;
+	memset(ledposconf, -1, sizeof(ledposconf));
+	for (int i = 0; i < sizeof(defaultosdledpos); i++) {
+		led = defaultosdledpos[i];
+		if (!statusline_led_visible(led)) {
+			continue;
+		}
+		if (currprefs.leds_on_screen_mask[ad->picasso_on ? 1 : 0] & (1 << led)) {
+			ledposconf[led] = num_leds;
+			num_leds++;
+		}
+	}
 
-	if (td_numbers_pos & TD_RIGHT)
-		x_start = totalwidth - (td_numbers_padx + VISIBLE_LEDS * td_width) * mult;
-	else
+	c1 = ledcolor(0x00ffffff, rc, gc, bc, alpha);
+	c2 = ledcolor(0x00111111, rc, gc, bc, alpha);
+
+	if (td_numbers_pos & TD_RIGHT) {
+		x_start = totalwidth - (td_numbers_padx + num_leds * td_width) * mult;
+	} else {
 		x_start = td_numbers_padx * mult;
+	}
 
 	for (led = 0; led < LED_MAX; led++) {
-		int pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
+		int num1 = -1, num2 = -1, num3 = -1, num4 = -1;
 		int x, c, on = 0, am = 2;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
 		int half = 0, extraborder = 0;
 
 		cb = ledcolor(TD_BORDER, rc, gc, bc, alpha);
-
-		if (!(currprefs.leds_on_screen_mask[ad->picasso_on ? 1 : 0] & (1 << led)))
-			continue;
-
 		pen_rgb = c1;
+		pos = ledposconf[led];
+		if (pos < 0) {
+			continue;
+		}
+
 		if (led >= LED_DF0 && led <= LED_DF3) {
 			int pled = led - LED_DF0;
 			struct floppyslot *fs = &currprefs.floppyslots[pled];
 			struct gui_info_drive *gid = &gui_data.drives[pled];
 			int track = gid->drive_track;
-			pos = 8 + pled;
 			on_rgb = 0x00cc00;
 			if (!gid->drive_disabled) {
 				num1 = -1;
@@ -213,43 +270,34 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			off_rgb = rgbmuldiv(on_rgb, 2, 4);
 			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
 		} else if (led == LED_CAPS) {
-			pos = 4;
 			on_rgb = 0xcc9900;
 			on = gui_data.capslock;
 			off_rgb = (on_rgb & 0xfefefe) >> 1;
 		} else if (led == LED_POWER) {
-			pos = 3;
 			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
 			on = 1;
 			off_rgb = 0x330000;
 		} else if (led == LED_CD) {
-			pos = 6;
-			if (gui_data.cd >= 0) {
-				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
-				if (on & LED_CD_AUDIO) {
-					on_rgb = 0x009900;
-				} else if (on == LED_CD_ACTIVE) {
-					on_rgb = 0x000099;
-				} else {
-					on = 0;
-				}
-				off_rgb = 0x000033;
-				num1 = -1;
-				num2 = 10;
-				num3 = 12;
+			on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
+			if (on & LED_CD_AUDIO) {
+				on_rgb = 0x009900;
+			} else if (on == LED_CD_ACTIVE) {
+				on_rgb = 0x000099;
+			} else {
+				on = 0;
 			}
+			off_rgb = 0x000033;
+			num1 = -1;
+			num2 = 10;
+			num3 = 12;
 		} else if (led == LED_HD) {
-			pos = 5;
-			if (gui_data.hd >= 0) {
-				on = gui_data.hd;
-				on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
-				off_rgb = 0x000033;
-				num1 = -1;
-				num2 = 11;
-				num3 = 12;
-			}
+			on = gui_data.hd;
+			on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
+			off_rgb = 0x000033;
+			num1 = -1;
+			num2 = 11;
+			num3 = 12;
 		} else if (led == LED_FPS) {
-			pos = 2;
 			if (pause_emulation) {
 				num1 = -1;
 				num2 = -1;
@@ -289,7 +337,6 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			}
 		} else if (led == LED_CPU) {
 			int idle = (gui_data.idle + 5) / 10;
-			pos = 1;
 			on_rgb = 0xcc0000;
 			off_rgb = 0x111111;
 			if (gui_data.cpu_halted || gui_data.cpu_stopped) {
@@ -321,10 +368,9 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 				}
 				am = 3;
 			}
-		} else if (led == LED_SND && gui_data.sndbuf_avail) {
+		} else if (led == LED_SND) {
 			int snd = abs(gui_data.sndbuf + 5) / 10;
 			snd = std::min(snd, 99);
-			pos = 0;
 			on = gui_data.sndbuf_status;
 			if (on < 3) {
 				num1 = gui_data.sndbuf < 0 ? 15 : 14;
@@ -341,38 +387,42 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			off_rgb = 0x111111;
 			am = 3;
 		} else if (led == LED_MD) {
-			// DF3 reused as internal non-volatile ram led (cd32/cdtv)
-			if (gui_data.drives[3].drive_disabled && gui_data.md >= 0) {
-				pos = 8 + 3;
-				if (gui_data.md >= 0) {
-					on = gui_data.md;
-					on_rgb = on == 2 ? 0xcc0000 : 0x00cc00;
-					off_rgb = 0x003300;
-				}
-				num1 = -1;
-				num2 = 17;
-				num3 = 19;
-			} else {
-				continue;
-			}
+			on = gui_data.md;
+			on_rgb = on == 2 ? 0xcc0000 : 0x00cc00;
+			off_rgb = 0x003300;
+			num1 = -1;
+			num2 = 17;
+			num3 = 19;
 		} else if (led == LED_NET) {
-			pos = 7;
-			if (gui_data.net >= 0) {
-				on = gui_data.net;
-				on_rgb = 0;
-				if (on & 1)
-					on_rgb |= 0x00cc00;
-				if (on & 2)
-					on_rgb |= 0xcc0000;
-				off_rgb = 0x111111;
-				num1 = -1;
-				num2 = -1;
-				num3 = 17;
-				am = 1;
+			on = gui_data.net;
+			on_rgb = 0;
+			if (on & 1)
+				on_rgb |= 0x00cc00;
+			if (on & 2)
+				on_rgb |= 0xcc0000;
+			off_rgb = 0x111111;
+			num1 = -1;
+			num2 = -1;
+			num3 = 17;
+			am = 1;
+		} else if (led == LED_LINES) {
+			int lines = gui_data.lines;
+			if (lines > 999) {
+				lines = 999;
 			}
+			on_rgb = 0x111111;
+			off_rgb = 0x111111;
+			num1 = lines / 100;
+			num2 = (lines - num1 * 100) / 10;
+			num3 = lines % 10;
+			num1 %= 10;
+			num2 %= 10;
+			if (!num1 && !num2) {
+				num2 = -2;
+			}
+			am = 3;
 #ifdef AMIBERRY // Board Temperature, if available
 		} else if (led == LED_TEMP) {
-			pos = 12;
 			int temp = gui_data.temperature;
 			on = 1;
 			off_rgb = 0x000000;

@@ -1033,8 +1033,10 @@ static void gui_flicker_led2(int led, int unitnum, int status)
 void gui_flicker_led(int led, int unitnum, int status)
 {
 	if (led < 0) {
-		gui_flicker_led2(LED_HD, 0, 0);
-		gui_flicker_led2(LED_CD, 0, 0);
+		if (gui_data.hd >= 0)
+			gui_flicker_led2(LED_HD, 0, 0);
+		if (gui_data.cd >= 0)
+			gui_flicker_led2(LED_CD, 0, 0);
 		if (gui_data.net >= 0)
 			gui_flicker_led2(LED_NET, 0, 0);
 		if (gui_data.md >= 0)

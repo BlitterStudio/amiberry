@@ -90,7 +90,7 @@ struct gui_info
 #endif
 };
 #define NUM_LEDS (LED_MAX)
-#define VISIBLE_LEDS (LED_MAX - 1)
+#define VISIBLE_LEDS (LED_MAX)
 
 extern struct gui_info gui_data;
 
