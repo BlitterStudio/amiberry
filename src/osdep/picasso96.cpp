@@ -4899,7 +4899,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 								case 3:
 									{
 										const auto addr = reinterpret_cast<uae_u32*>(uae_mem2 + bits * 3);
-										do_put_mem_long(addr, do_get_mem_long(addr) ^ 0xffffff);
+										*addr ^= rgbmask;
 									}
 									break;
 								case 4:
