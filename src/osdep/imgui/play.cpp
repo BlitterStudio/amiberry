@@ -9,6 +9,7 @@
 
 #include "file_dialog.h"
 #include "filesys.h"
+#include "amiberry_gfx.h"
 #include "amiberry_rp9.h"
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
@@ -768,11 +769,21 @@ void render_display_defaults()
 	static const char* scaling_items[] = { "Auto", "Integer", "Smooth" };
 	static const char* shader_items[] = { "None", "CRT", "1084", "Custom" };
 
+	if (kmsdrm_detected)
+		display_defaults.screen_mode = PlayScreenMode::FullWindow;
+
 	int screen_mode = static_cast<int>(display_defaults.screen_mode);
+	if (kmsdrm_detected)
+		ImGui::BeginDisabled();
 	if (render_combo("Screen mode:", &screen_mode, screen_items, IM_ARRAYSIZE(screen_items))) {
 		display_defaults.screen_mode = static_cast<PlayScreenMode>(screen_mode);
 		apply_display_defaults_to_changed_prefs();
 	}
+	if (kmsdrm_detected)
+		ImGui::EndDisabled();
+	ShowHelpMarker(kmsdrm_detected
+		? "KMSDRM always uses the active console display in Full-window mode."
+		: "Run the emulation in a desktop window or a borderless Full-window.");
 
 	int scaling = static_cast<int>(display_defaults.scaling);
 	if (render_combo("Scaling:", &scaling, scaling_items, IM_ARRAYSIZE(scaling_items))) {
