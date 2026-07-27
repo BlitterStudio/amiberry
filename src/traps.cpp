@@ -965,7 +965,7 @@ void reset_traps(void)
 			hardware_trap_state[i] = 1;
 			write_comm_pipe_pvoid(&trap_thread_pipe[i], NULL, 1);
 			while (hardware_trap_state[i] > 0) {
-				for (int j = 0; j < RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE; j++) {
+				for (int j = 0; j < TRAP_THREADS; j++) {
 					uae_sem_post(&hardware_trap_event[j]);
 					uae_sem_post(&hardware_trap_event2[j]);
 				}
@@ -974,7 +974,7 @@ void reset_traps(void)
 			hardware_trap_kill[i] = htk;
 		}
 	}
-	for (int j = 0; j < RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE; j++) {
+	for (int j = 0; j < TRAP_THREADS; j++) {
 		uae_sem_unpost(&hardware_trap_event[j]);
 		uae_sem_unpost(&hardware_trap_event2[j]);
 	}
