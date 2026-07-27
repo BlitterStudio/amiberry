@@ -406,7 +406,10 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-    ShowHelpMarker("Automatically switch resolution based on Amiga display mode. Percentage values control sensitivity threshold");
+    ShowHelpMarker("Automatically adjust Amiberry's internal render resolution and line mode to match the Amiga screen. "
+        "This does not change the host display resolution or refresh rate. Always On follows the highest resolution "
+        "present in each frame. Percentage values require the dominant resolution to cover at least that share of "
+        "the frame; lower percentages switch more readily.");
 
     ImGui::Spacing();
 
