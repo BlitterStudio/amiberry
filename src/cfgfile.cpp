@@ -7483,6 +7483,10 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 	if (! fh)
 		return 0;
 #endif
+#ifdef AMIBERRY
+	if (real && (askedtype == 0 || (askedtype & CONFIG_TYPE_HOST)))
+		amiberry_clear_port_joystick_custom_mappings();
+#endif
 
 	while (cfg_fgets (linea, sizeof (linea), fh) != nullptr) {
 		trimwsa (linea);

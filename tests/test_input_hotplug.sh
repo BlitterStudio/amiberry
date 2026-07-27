@@ -95,8 +95,36 @@ if """if (!amiberry_get_port_joystick_custom_mapping(
 	fail("Configuration saves must use a preserved mapping for an unplugged controller")
 if "di_joystick[joy_index]" in cfgfile:
 	fail("Configuration saves must not dereference a stale or compacted joystick slot")
-if "if (found)\n\t\t\tamiberry_clear_port_joystick_custom_mapping(i);" not in devicechange:
-	fail("A successfully rematched port must discard its temporary mapping snapshot")
+apply_mapping = devicechange.find("amiberry_apply_port_joystick_custom_mapping(")
+clear_mapping = devicechange.find("amiberry_clear_port_joystick_custom_mapping(i);")
+validate_port = devicechange.find("inputdevice_validate_jports(prefs, i, fixedports);")
+if not (0 <= apply_mapping < validate_port < clear_mapping):
+	fail("A rematched controller must receive its deferred mapping before the rematch is finalized and the snapshot is cleared")
+if """controller_mapping mapping{};
+			amiberry_get_port_joystick_custom_mapping(
+				i, jp->idc.name, jp->idc.configname, mapping);""" not in amiberry_input:
+	fail("Custom mapping loads must start from the durable per-port representation")
+if "amiberry_set_port_joystick_custom_mapping(" not in amiberry_input:
+	fail("Custom mapping loads must persist without requiring a live SDL device")
+custom_loader = region_between(
+	amiberry_input,
+	"bool load_custom_options(",
+	"static void close_joystick()",
+)
+if "di_joystick[" in custom_loader:
+	fail("Custom mapping loads must not write into an unenumerated SDL device slot")
+if "copy_custom_mapping(preserved.mapping, did.mapping);" not in amiberry_input:
+	fail("Deferred custom mappings must be applied when the configured controller returns")
+cfgload = region_between(
+	cfgfile,
+	"static int cfgfile_load_2",
+	"int cfgfile_load (",
+)
+open_failure = cfgload.find("if (! fh)")
+clear_deferred = cfgload.find("amiberry_clear_port_joystick_custom_mappings();")
+parse_config = cfgload.find("while (cfg_fgets")
+if not (0 <= open_failure < clear_deferred < parse_config):
+	fail("A successfully opened host configuration must discard stale deferred mappings before parsing")
 if """if (!changed) {
 		if (acc)
 			inputdevice_acquire (TRUE);

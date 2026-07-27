@@ -8599,12 +8599,23 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 			
 		}
 #ifdef AMIBERRY
-		if (found)
-			amiberry_clear_port_joystick_custom_mapping(i);
+		if (found) {
+			const int joystick_index = jsem_isjoy(i, prefs);
+			if (joystick_index >= 0) {
+				amiberry_apply_port_joystick_custom_mapping(
+					i,
+					idev[IDTYPE_JOYSTICK].get_friendlyname(joystick_index),
+					idev[IDTYPE_JOYSTICK].get_uniquename(joystick_index));
+			}
+		}
 #endif
 		fixedports[i] = found;
 		prefs->jports[i].autofire = jportaf[i];
 		inputdevice_validate_jports(prefs, i, fixedports);
+#ifdef AMIBERRY
+		if (found)
+			amiberry_clear_port_joystick_custom_mapping(i);
+#endif
 		if (unplugged_ports & (1U << i)) {
 			_tcsncpy(prefs->jports[i].idc.name, jports_name[i], MAX_JPORT_NAME - 1);
 			_tcsncpy(prefs->jports[i].idc.configname, jports_configname[i], MAX_JPORT_CONFIG - 1);

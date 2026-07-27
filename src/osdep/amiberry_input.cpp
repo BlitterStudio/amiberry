@@ -134,6 +134,15 @@ void copy_custom_mapping_from_cache(const cached_joystick_custom_mapping& source
 	destination.amiberry_custom_axis_none = source.axes;
 	destination.amiberry_custom_axis_hotkey = source.hotkey_axes;
 }
+
+void copy_custom_mapping(const controller_mapping& source,
+	controller_mapping& destination)
+{
+	destination.amiberry_custom_none = source.amiberry_custom_none;
+	destination.amiberry_custom_hotkey = source.amiberry_custom_hotkey;
+	destination.amiberry_custom_axis_none = source.amiberry_custom_axis_none;
+	destination.amiberry_custom_axis_hotkey = source.amiberry_custom_axis_hotkey;
+}
 }
 
 void amiberry_preserve_port_joystick_custom_mapping(const int portnum,
@@ -171,6 +180,11 @@ void amiberry_clear_port_joystick_custom_mapping(const int portnum)
 		preserved_port_joystick_custom_mappings[portnum] = {};
 }
 
+void amiberry_clear_port_joystick_custom_mappings()
+{
+	preserved_port_joystick_custom_mappings = {};
+}
+
 bool amiberry_get_port_joystick_custom_mapping(const int portnum,
 	const TCHAR* name, const TCHAR* configname, controller_mapping& mapping)
 {
@@ -192,6 +206,64 @@ bool amiberry_get_port_joystick_custom_mapping(const int portnum,
 		return false;
 
 	mapping = did.mapping;
+	return true;
+}
+
+void amiberry_set_port_joystick_custom_mapping(const int portnum,
+	const TCHAR* name, const TCHAR* configname, const controller_mapping& mapping)
+{
+	if (portnum < 0 || portnum >= MAX_JPORTS || !name || !configname)
+		return;
+
+	const int joystick_index = amiberry_get_joystick_index(configname);
+	if (joystick_index < 0)
+		return;
+
+	auto& preserved = preserved_port_joystick_custom_mappings[portnum];
+	if (!preserved.valid || !matches_joystick_config(preserved.idc, name, configname)) {
+		preserved = {};
+		_tcsncpy(preserved.idc.name, name, MAX_JPORT_NAME - 1);
+		_tcsncpy(preserved.idc.configname, configname, MAX_JPORT_CONFIG - 1);
+		preserved.idc.name[MAX_JPORT_NAME - 1] = 0;
+		preserved.idc.configname[MAX_JPORT_CONFIG - 1] = 0;
+	}
+	copy_custom_mapping(mapping, preserved.mapping);
+	preserved.valid = true;
+
+	if (joystick_index >= num_joystick)
+		return;
+
+	auto& did = di_joystick[joystick_index];
+	if (name[0] && did.name != name)
+		return;
+	copy_custom_mapping(mapping, did.mapping);
+}
+
+bool amiberry_apply_port_joystick_custom_mapping(const int portnum,
+	const TCHAR* name, const TCHAR* configname)
+{
+	if (portnum < 0 || portnum >= MAX_JPORTS || !name || !configname)
+		return false;
+
+	const auto& preserved = preserved_port_joystick_custom_mappings[portnum];
+	if (!preserved.valid)
+		return false;
+	if (preserved.idc.name[0]) {
+		if (_tcscmp(preserved.idc.name, name))
+			return false;
+	} else if (_tcscmp(preserved.idc.configname, configname)) {
+		return false;
+	}
+
+	const int joystick_index = amiberry_get_joystick_index(configname);
+	if (joystick_index < 0 || joystick_index >= num_joystick)
+		return false;
+
+	auto& did = di_joystick[joystick_index];
+	if (name[0] && did.name != name)
+		return false;
+
+	copy_custom_mapping(preserved.mapping, did.mapping);
 	return true;
 }
 
@@ -1652,7 +1724,9 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 			if (joy_index == -1)
 				continue;
 
-			didata* did = &di_joystick[joy_index];
+			controller_mapping mapping{};
+			amiberry_get_port_joystick_custom_mapping(
+				i, jp->idc.name, jp->idc.configname, mapping);
 
 			for (int m = 0; m < 2; ++m)
 			{
@@ -1662,11 +1736,14 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(n));
 					if (buffer == option)
 					{
-						const auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
+						const int event_index = find_inputevent(value);
+						const auto b = event_index > -1 ? remap_event_list[event_index] : 0;
 						if (m == 0)
-							did->mapping.amiberry_custom_none[n] = b;
+							mapping.amiberry_custom_none[n] = b;
 						else
-							did->mapping.amiberry_custom_hotkey[n] = b;
+							mapping.amiberry_custom_hotkey[n] = b;
+						amiberry_set_port_joystick_custom_mapping(
+							i, jp->idc.name, jp->idc.configname, mapping);
 						return true;
 					}
 				}
@@ -1676,11 +1753,14 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(n));
 					if (buffer == option)
 					{
-						const auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
+						const int event_index = find_inputevent(value);
+						const auto b = event_index > -1 ? remap_event_list[event_index] : 0;
 						if (m == 0)
-							did->mapping.amiberry_custom_axis_none[n] = b;
+							mapping.amiberry_custom_axis_none[n] = b;
 						else
-							did->mapping.amiberry_custom_axis_hotkey[n] = b;
+							mapping.amiberry_custom_axis_hotkey[n] = b;
+						amiberry_set_port_joystick_custom_mapping(
+							i, jp->idc.name, jp->idc.configname, mapping);
 						return true;
 					}
 				}
