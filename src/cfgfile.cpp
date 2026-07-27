@@ -2077,21 +2077,6 @@ static void cfgfile_writeramboard(struct uae_prefs *prefs, struct zfile *f, cons
 	}
 }
 
-#ifdef AMIBERRY
-static int cfgfile_get_joystick_index(const struct jport* jp)
-{
-	const TCHAR* digits = jp->idc.configname + 3;
-	if (_tcsncmp(jp->idc.configname, _T("JOY"), 3) != 0 || !digits[0])
-		return -1;
-
-	TCHAR* endptr;
-	const long index = _tcstol(digits, &endptr, 10);
-	if (endptr == digits || endptr[0] || index < 0 || index >= MAX_INPUT_DEVICES)
-		return -1;
-	return static_cast<int>(index);
-}
-#endif
-
 void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 {
 	struct strlist *sl;
@@ -2352,7 +2337,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		int v = jp->id;
 		TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH];
 #ifdef AMIBERRY
-		const int configured_joystick = cfgfile_get_joystick_index(jp);
+		const int configured_joystick = amiberry_get_joystick_index(jp->idc.configname);
 		if (configured_joystick >= 0) {
 			_sntprintf(tmp2, sizeof tmp2, _T("joy%d"), configured_joystick);
 		} else
@@ -2407,7 +2392,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		std::string mode;
 		std::string buffer;
 
-		const int joy_index = cfgfile_get_joystick_index(jp);
+		const int joy_index = amiberry_get_joystick_index(jp->idc.configname);
 		if (joy_index == -1)
 			continue;
 

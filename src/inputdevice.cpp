@@ -8582,6 +8582,9 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 			if (!inputdevice_joyport_config (prefs, jports_name[i], jports_configname[i], i, jportsmode[i], jportssubmode[i], 1, true)) {
 				found = inputdevice_joyport_config (prefs, jports_name[i], NULL, i, jportsmode[i], jportssubmode[i], 1, true) != 0;
 			}
+			if (found) {
+				unplugged_ports &= ~(1U << i);
+			}
 			if (!found) {
 				inputdevice_joyport_config(prefs, _T("joydefault"), NULL, i, jportsmode[i], jportssubmode[i], 0, true);
 			}

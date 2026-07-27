@@ -1547,6 +1547,22 @@ static int init_joystick()
 	return 1;
 }
 
+int amiberry_get_joystick_index(const TCHAR* configname)
+{
+	if (!configname || _tcsncmp(configname, _T("JOY"), 3) != 0)
+		return -1;
+
+	const TCHAR* digits = configname + 3;
+	if (!digits[0])
+		return -1;
+
+	TCHAR* endptr;
+	const long index = _tcstol(digits, &endptr, 10);
+	if (endptr == digits || endptr[0] || index < 0 || index >= MAX_INPUT_DEVICES)
+		return -1;
+	return static_cast<int>(index);
+}
+
 bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value)
 {
 	// Only do this loop if the option starts with "joyport"
@@ -1558,13 +1574,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 		{
 			const jport *jp = &p->jports[i];
 
-			// Check if configname contains JOY0, JOY1, JOY2, or JOY3
-			int joy_index = -1;
-			if (jp->idc.configname[0] && strncmp(jp->idc.configname, "JOY", 3) == 0 &&
-				jp->idc.configname[4] == '\0' &&
-				jp->idc.configname[3] >= '0' && jp->idc.configname[3] <= '3') {
-				joy_index = jp->idc.configname[3] - '0';
-				}
+			const int joy_index = amiberry_get_joystick_index(jp->idc.configname);
 			if (joy_index == -1)
 				continue;
 

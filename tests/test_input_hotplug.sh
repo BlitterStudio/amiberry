@@ -27,6 +27,7 @@ from pathlib import Path
 import sys
 
 amiberry = Path("src/osdep/amiberry.cpp").read_text()
+amiberry_input = Path("src/osdep/amiberry_input.cpp").read_text()
 cfgfile = Path("src/cfgfile.cpp").read_text()
 inputdevice = Path("src/inputdevice.cpp").read_text()
 
@@ -73,14 +74,21 @@ if "jportscustom[portnum] = -1;" not in devicechange:
 	fail("A reinserted device must clear the custom marker for its port, not its device index")
 if "unplugged_ports |= inputdevice_store_unplugged_port" not in devicechange:
 	fail("Removed controller bindings must be tracked by port")
+if """if (found) {
+				unplugged_ports &= ~(1U << i);
+			}
+			if (!found) {""" not in devicechange:
+	fail("A controller rematched after SDL index compaction must keep its validated identity")
 if """if (unplugged_ports & (1U << i)) {
 			_tcsncpy(prefs->jports[i].idc.name, jports_name[i], MAX_JPORT_NAME - 1);
 			_tcsncpy(prefs->jports[i].idc.configname, jports_configname[i], MAX_JPORT_CONFIG - 1);""" not in devicechange:
 	fail("Pending preferences must retain the configured device identity while it is unplugged")
-if """const int configured_joystick = cfgfile_get_joystick_index(jp);
+if """const int configured_joystick = amiberry_get_joystick_index(jp->idc.configname);
 		if (configured_joystick >= 0) {
 			_sntprintf(tmp2, sizeof tmp2, _T("joy%d"), configured_joystick);""" not in cfgfile:
 	fail("Configuration saves must prefer the retained joystick identity over a transient fallback")
+if "const int joy_index = amiberry_get_joystick_index(jp->idc.configname);" not in amiberry_input:
+	fail("Custom mapping loads must use the same bounded joystick index parser as saves")
 if """if (!changed) {
 		if (acc)
 			inputdevice_acquire (TRUE);
