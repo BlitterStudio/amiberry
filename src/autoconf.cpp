@@ -34,8 +34,8 @@ uaecptr EXPANSION_bootcode, EXPANSION_nullfunc;
 /* ROM tag area memory access */
 
 uaecptr rtarea_base = RTAREA_DEFAULT;
-uae_sem_t hardware_trap_event[RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE];
-uae_sem_t hardware_trap_event2[RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE];
+uae_sem_t hardware_trap_event[RTAREA_TRAP_DATA_NUM + RTAREA_TRAP_DATA_SEND_NUM];
+uae_sem_t hardware_trap_event2[RTAREA_TRAP_DATA_NUM + RTAREA_TRAP_DATA_SEND_NUM];
 
 static uaecptr rt_trampoline_ptr, trap_entry;
 static bool rtarea_write_enabled;
@@ -645,7 +645,7 @@ void rtarea_init(void)
 	trap_entry = filesys_get_entry(10);
 	write_log(_T("TRAP_ENTRY = %08x\n"), trap_entry);
 
-	for (int i = 0; i < RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE; i++) {
+	for (int i = 0; i < RTAREA_TRAP_DATA_NUM + RTAREA_TRAP_DATA_SEND_NUM; i++) {
 		uae_sem_init(&hardware_trap_event[i], 0, 0);
 		uae_sem_init(&hardware_trap_event2[i], 0, 0);
 	}
