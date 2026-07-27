@@ -8477,6 +8477,9 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 		}
 	}
 
+#ifdef AMIBERRY
+	amiberry_cache_joystick_custom_mappings();
+#endif
 	inputdevice_unacquire();
 	idev[IDTYPE_JOYSTICK].close();
 	idev[IDTYPE_MOUSE].close();
@@ -8484,6 +8487,9 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 	idev[IDTYPE_JOYSTICK].init();
 	idev[IDTYPE_MOUSE].init();
 	idev[IDTYPE_KEYBOARD].init();
+#ifdef AMIBERRY
+	amiberry_restore_joystick_custom_mappings();
+#endif
 	for (int i = 0; i < MAX_INPUT_DEVICES; i++) {
 		for (int j = 0; j < IDTYPE_MAX; j++) {
 			gp_swappeddevices[i][j] = -1;
@@ -8537,7 +8543,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 				int portnum = inputdevice_get_unplugged_device(&idc, &sjp);
 				if (portnum >= 0) {
 					write_log(_T("Inserting to port %d\n"), portnum);
-					jportscustom[i] = -1;
+					jportscustom[portnum] = -1;
 					xfree(jports_name[portnum]);
 					xfree(jports_configname[portnum]);
 					jports_name[portnum] = my_strdup(idc.name);
@@ -8589,8 +8595,11 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 
 	write_log(_T("Input remapping done. Changed=%d.\n"), changed);
 
-	if (!changed)
+	if (!changed) {
+		if (acc)
+			inputdevice_acquire (TRUE);
 		return false;
+	}
 
 	if (prefs == &changed_prefs)
 		inputdevice_copyconfig (&changed_prefs, &currprefs);

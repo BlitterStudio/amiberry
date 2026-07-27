@@ -1,5 +1,6 @@
 #pragma once
 #include "options.h"
+#include "amiberry_input_identity.h"
 #include <SDL3/SDL.h>
 
 #ifdef AMIBERRY
@@ -54,6 +55,8 @@ struct didata {
 	std::string joystick_name{};
 
 	std::string guid{};
+	std::string serial{};
+	std::string path{};
 	bool is_controller{};
 	SDL_Gamepad* controller{};
 	SDL_Joystick* joystick{};
@@ -137,6 +140,11 @@ extern void save_controller_mapping_to_file(const controller_mapping& input, con
 extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);
 
 extern bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value);
+
+// Preserve per-configuration mappings while SDL devices are closed and
+// reopened during hotplug re-enumeration.
+extern void amiberry_cache_joystick_custom_mappings();
+extern void amiberry_restore_joystick_custom_mappings();
 
 // Multi-mouse support: SDL_MouseID to UAE device index mapping
 extern int get_mouse_index_from_sdl_id(SDL_MouseID which);

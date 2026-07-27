@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <cctype>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -55,6 +56,118 @@ static int joystick_inited, retroarch_inited;
 static int osj_device_index = -1;
 constexpr auto analog_upper_bound = 32767;
 constexpr auto analog_lower_bound = -analog_upper_bound;
+
+namespace
+{
+struct cached_joystick_custom_mapping
+{
+	amiberry_joystick_identity identity;
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> buttons;
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> hotkey_buttons;
+	std::array<int, SDL_GAMEPAD_AXIS_COUNT> axes;
+	std::array<int, SDL_GAMEPAD_AXIS_COUNT> hotkey_axes;
+	uae_u64 last_seen{};
+};
+
+std::array<cached_joystick_custom_mapping, MAX_INPUT_DEVICES> cached_joystick_custom_mappings;
+int cached_joystick_custom_mapping_count;
+uae_u64 cached_joystick_custom_mapping_generation;
+
+amiberry_joystick_identity get_joystick_identity(const didata& did)
+{
+	return {
+		did.guid,
+		did.serial,
+		did.path,
+		did.name,
+		did.is_controller
+	};
+}
+
+int find_cached_joystick_mapping(const amiberry_joystick_identity& identity,
+	const std::array<bool, MAX_INPUT_DEVICES>& used)
+{
+	int best_index = -1;
+	int best_score = -1;
+	for (int i = 0; i < cached_joystick_custom_mapping_count; ++i) {
+		if (used[i])
+			continue;
+		const int score = amiberry_joystick_identity_score(
+			cached_joystick_custom_mappings[i].identity, identity);
+		if (score > best_score) {
+			best_index = i;
+			best_score = score;
+		}
+	}
+	return best_index;
+}
+
+void copy_custom_mapping_to_cache(const controller_mapping& source,
+	cached_joystick_custom_mapping& destination)
+{
+	destination.buttons = source.amiberry_custom_none;
+	destination.hotkey_buttons = source.amiberry_custom_hotkey;
+	destination.axes = source.amiberry_custom_axis_none;
+	destination.hotkey_axes = source.amiberry_custom_axis_hotkey;
+}
+
+void copy_custom_mapping_from_cache(const cached_joystick_custom_mapping& source,
+	controller_mapping& destination)
+{
+	destination.amiberry_custom_none = source.buttons;
+	destination.amiberry_custom_hotkey = source.hotkey_buttons;
+	destination.amiberry_custom_axis_none = source.axes;
+	destination.amiberry_custom_axis_hotkey = source.hotkey_axes;
+}
+}
+
+void amiberry_cache_joystick_custom_mappings()
+{
+	std::array<bool, MAX_INPUT_DEVICES> used{};
+	for (int i = 0; i < num_joystick; ++i) {
+		const auto identity = get_joystick_identity(di_joystick[i]);
+		int cache_index = find_cached_joystick_mapping(identity, used);
+		if (cache_index < 0) {
+			if (cached_joystick_custom_mapping_count < MAX_INPUT_DEVICES) {
+				cache_index = cached_joystick_custom_mapping_count++;
+			} else {
+				uae_u64 oldest_generation = std::numeric_limits<uae_u64>::max();
+				for (int candidate = 0; candidate < cached_joystick_custom_mapping_count; ++candidate) {
+					if (!used[candidate] &&
+						cached_joystick_custom_mappings[candidate].last_seen < oldest_generation) {
+						cache_index = candidate;
+						oldest_generation = cached_joystick_custom_mappings[candidate].last_seen;
+					}
+				}
+			}
+		}
+		if (cache_index < 0)
+			continue;
+
+		auto& cached = cached_joystick_custom_mappings[cache_index];
+		cached.identity = identity;
+		copy_custom_mapping_to_cache(di_joystick[i].mapping, cached);
+		cached.last_seen = ++cached_joystick_custom_mapping_generation;
+		used[cache_index] = true;
+	}
+}
+
+void amiberry_restore_joystick_custom_mappings()
+{
+	std::array<bool, MAX_INPUT_DEVICES> used{};
+	for (int i = 0; i < num_joystick; ++i) {
+		const int cache_index = find_cached_joystick_mapping(
+			get_joystick_identity(di_joystick[i]), used);
+		if (cache_index < 0)
+			continue;
+
+		copy_custom_mapping_from_cache(cached_joystick_custom_mappings[cache_index],
+			di_joystick[i].mapping);
+		cached_joystick_custom_mappings[cache_index].last_seen =
+			++cached_joystick_custom_mapping_generation;
+		used[cache_index] = true;
+	}
+}
 
 static int isrealbutton(const struct didata* did, const int num)
 {
@@ -1219,6 +1332,10 @@ void open_as_game_controller(struct didata* did, const int i)
 	did->joystick_id = SDL_GetJoystickID(did->joystick);
 	SDL_GUIDToString(SDL_GetJoystickGUID(did->joystick), guid_str, 33);
 	did->guid = std::string(guid_str);
+	if (const char* serial = SDL_GetJoystickSerial(did->joystick))
+		did->serial = serial;
+	if (const char* path = SDL_GetJoystickPath(did->joystick))
+		did->path = path;
 
 	if (SDL_GetGamepadNameForID(i) != nullptr)
 		did->controller_name.assign(SDL_GetGamepadNameForID(i));
@@ -1249,6 +1366,10 @@ void open_as_joystick(struct didata* did, const int i)
 	did->joystick_id = SDL_GetJoystickID(did->joystick);
 	SDL_GUIDToString(SDL_GetJoystickGUID(did->joystick), guid_str, 33);
 	did->guid = std::string(guid_str);
+	if (const char* serial = SDL_GetJoystickSerial(did->joystick))
+		did->serial = serial;
+	if (const char* path = SDL_GetJoystickPath(did->joystick))
+		did->path = path;
 
 	if (SDL_GetJoystickNameForID(i) != nullptr)
 		did->joystick_name.assign(SDL_GetJoystickNameForID(i));
