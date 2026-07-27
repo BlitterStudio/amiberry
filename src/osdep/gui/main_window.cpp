@@ -2560,8 +2560,7 @@ void run_gui()
 						const bool active_in = (last_active_panel >= sidebar_groups[g].first_index &&
 							last_active_panel < g_end);
 						group_collapsed = collapsible && section_collapsed[g] && !has_filter && !active_in;
-						ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-						label_col.w *= 0.7f;
+						const ImVec4 label_col = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 						std::string upper_label;
 						for (const char* c = sidebar_groups[g].label; *c; ++c)
 							upper_label += static_cast<char>(toupper(static_cast<unsigned char>(*c)));
