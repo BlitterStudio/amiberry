@@ -116,6 +116,11 @@ static void set_port_input_device(const int port_idx, const int selected_idx)
 	amiberry_clear_port_joystick_custom_mapping(port_idx);
 	inputdevice_forget_unplugged_device(port_idx);
 	inputdevice_validate_jports(&changed_prefs, port_idx, nullptr);
+	const auto& selected_port = changed_prefs.jports[port_idx];
+	if (selected_port.id >= JSEM_JOYS && selected_port.id < JSEM_MICE) {
+		amiberry_preserve_port_joystick_custom_mapping(
+			port_idx, selected_port.idc.name, selected_port.idc.configname);
+	}
 }
 
 const std::vector<InputDeviceOption>& get_input_device_options()
