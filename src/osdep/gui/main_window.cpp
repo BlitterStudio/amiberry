@@ -1046,19 +1046,16 @@ bool BeginGroupBox(const char* name, bool collapsible, bool default_open)
 		bool open = storage->GetBool(id, default_open);
 		const char* arrow = open ? ICON_FA_CHEVRON_DOWN : ICON_FA_CHEVRON_RIGHT;
 		std::string toggle_label = std::string(arrow) + " " + name;
-		if (ImGui::Selectable(toggle_label.c_str(), false, 0, ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
+		// Selectable treats zero width as the remaining window width, which lets
+		// a group header's hover highlight spill across sibling columns.
+		const float toggle_width = ImGui::CalcTextSize(toggle_label.c_str()).x
+			+ ImGui::GetStyle().FramePadding.x * 2.0f;
+		if (ImGui::Selectable(toggle_label.c_str(), false, 0,
+			ImVec2(toggle_width, ImGui::GetTextLineHeightWithSpacing()))) {
 			open = !open;
 			storage->SetBool(id, open);
 		}
 		if (!open) {
-			// When collapsed the header Selectable is the group's only/last item.
-			// A Selectable sizes its render/click rect to the full available width
-			// (WorkRect.Max.x), and ImGui::EndGroup() folds the last item's rect
-			// into the group's bounding box. That full-width rect would otherwise
-			// leak into the enclosing layout and push a side-by-side column off
-			// screen (issue #2118). Submit a zero-size item so the collapsed group
-			// reports a sane width based on the header label only.
-			ImGui::Dummy(ImVec2(0.0f, 0.0f));
 			g_groupbox_collapsed = true;
 			return false;
 		}

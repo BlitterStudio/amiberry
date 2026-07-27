@@ -275,9 +275,9 @@ void render_panel_display() {
     ImGui::Spacing();
 
     // Checkboxes
-    if (ImGui::BeginTable("ChkTable", 2, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    if (ImGui::BeginTable("ChkTable", 2, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -412,10 +412,10 @@ void render_panel_display() {
 
     // Refresh Slider + PAL/NTSC
     // WinUAE: Label "Refresh:" -> Slider -> Dropdown "PAL"
-    if (ImGui::BeginTable("RefreshRowTable", 3, ImGuiTableFlags_None)) {
+    if (ImGui::BeginTable("RefreshRowTable", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 0.7f);
-        ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-        ImGui::TableSetupColumn("combo", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        ImGui::TableSetupColumn("combo", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
