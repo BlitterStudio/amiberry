@@ -152,6 +152,9 @@ extern bool amiberry_get_port_joystick_custom_mapping(int portnum,
 	const TCHAR* name, const TCHAR* configname, controller_mapping& mapping);
 extern void amiberry_set_port_joystick_custom_mapping(int portnum,
 	const TCHAR* name, const TCHAR* configname, const controller_mapping& mapping);
+// Returns true when the port has a physical identity constraint. In that case,
+// joystick_index is the unique matching live device, or -1 if none is safe.
+extern bool amiberry_resolve_port_joystick(int portnum, int& joystick_index);
 extern bool amiberry_apply_port_joystick_custom_mapping(int portnum,
 	const TCHAR* name, const TCHAR* configname);
 extern void amiberry_cache_joystick_custom_mappings();

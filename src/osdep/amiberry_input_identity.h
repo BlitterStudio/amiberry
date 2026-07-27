@@ -11,6 +11,16 @@ struct amiberry_joystick_identity
 	bool is_controller{};
 };
 
+inline bool amiberry_joystick_identity_equal(const amiberry_joystick_identity& first,
+	const amiberry_joystick_identity& second)
+{
+	return first.guid == second.guid &&
+		first.serial == second.serial &&
+		first.path == second.path &&
+		first.name == second.name &&
+		first.is_controller == second.is_controller;
+}
+
 // SDL instance IDs change whenever a controller reconnects. Prefer physical
 // identity data when the backend exposes it, with GUID/name as a deterministic
 // fallback for devices that do not report a serial number or stable path.

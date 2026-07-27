@@ -76,11 +76,19 @@ if "jportscustom[portnum] = -1;" not in devicechange:
 	fail("A reinserted device must clear the custom marker for its port, not its device index")
 if "unplugged_ports |= inputdevice_store_unplugged_port" not in devicechange:
 	fail("Removed controller bindings must be tracked by port")
+if "uae_u32 unplugged_ports = inputdevice_get_unplugged_ports();" not in devicechange:
+	fail("Ports already awaiting reconnection must survive later hotplug passes")
 if """if (found) {
+				if (unplugged_ports & (1U << i))
+					inputdevice_forget_unplugged_device(i);
 				unplugged_ports &= ~(1U << i);
-			}
-			if (!found) {""" not in devicechange:
+			}""" not in devicechange:
 	fail("A controller rematched after SDL index compaction must keep its validated identity")
+if "identity_bound = amiberry_resolve_port_joystick(i, resolved_joystick);" not in devicechange:
+	fail("Port rematching must resolve identity-bound controllers before friendly-name fallback")
+if """if (identity_bound) {
+					inputdevice_store_unplugged_binding(""" not in devicechange:
+	fail("An identity-bound controller with no safe match must remain pending")
 if """if (unplugged_ports & (1U << i)) {
 			_tcsncpy(prefs->jports[i].idc.name, jports_name[i], MAX_JPORT_NAME - 1);
 			_tcsncpy(prefs->jports[i].idc.configname, jports_configname[i], MAX_JPORT_CONFIG - 1);""" not in devicechange:
@@ -130,6 +138,22 @@ if """controller_mapping mapping{};
 	fail("Custom mapping loads must start from the durable per-port representation")
 if "amiberry_set_port_joystick_custom_mapping(" not in amiberry_input:
 	fail("Custom mapping loads must persist without requiring a live SDL device")
+if """struct preserved_port_joystick_custom_mapping
+{
+	struct inputdevconfig idc;
+	amiberry_joystick_identity identity;""" not in amiberry_input:
+	fail("Deferred custom mappings must retain their physical controller identity")
+if "preserved.identity = get_joystick_identity(did);" not in amiberry_input:
+	fail("Live per-port mapping snapshots must capture physical controller identity")
+if "return ambiguous ? -1 : best_index;" not in amiberry_input:
+	fail("Indistinguishable controller identities must not be assigned arbitrarily")
+apply_custom_mapping = region_between(
+	amiberry_input,
+	"bool amiberry_apply_port_joystick_custom_mapping(",
+	"void amiberry_cache_joystick_custom_mappings()",
+)
+if "amiberry_resolve_port_joystick(portnum, resolved_joystick)" not in apply_custom_mapping:
+	fail("Deferred mappings must be applied only to the resolved physical controller")
 custom_loader = region_between(
 	amiberry_input,
 	"bool load_custom_options(",
