@@ -2265,13 +2265,20 @@ static void update_device_info(int unitnum)
 	di->target = 0;
 	di->lun = 0;
 	di->media_inserted = 0;
+	di->cylinders = 0;
+	di->trackspercylinder = 0;
+	di->sectorspertrack = 0;
 	di->bytespersector = 2048;
 	strncpy(di->mediapath, ciw->drvletter, sizeof(ciw->drvletter) - 1);
 	if (fetch_geometry(ciw, unitnum, di)) { // || ioctl_command_toc (unitnum))
 		di->media_inserted = 1;
 	}
 	if (ciw->changed || di->media_inserted) {
-		ioctl_command_toc2(unitnum, &di->toc, true);
+		if (ioctl_command_toc2(unitnum, &di->toc, true)) {
+			di->cylinders = 1;
+			di->trackspercylinder = 1;
+			di->sectorspertrack = di->toc.lastaddress;
+		}
 		ciw->changed = false;
 	}
 	di->removable = ciw->type == DRIVE_CDROM ? 1 : 0;
