@@ -628,7 +628,7 @@ static void zz_template_rect(zz9000_state *data, uae_u32 source, uae_u32 source_
 			if (draw_mode & 4)
 				set = !set;
 			const int base_mode = draw_mode & 3;
-			if (base_mode == 2) {
+			if (base_mode & COMP) {
 				if (set) {
 					uae_u8 *pixel;
 					if (zz_pixel_address(data, destination, destination_pitch,
