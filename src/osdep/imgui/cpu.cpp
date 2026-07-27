@@ -608,7 +608,8 @@ void render_panel_cpu() {
         ImGui::Spacing();
         
         // Use table for better organization
-        if (ImGui::BeginTable("JITTable", 2, ImGuiTableFlags_None)) {
+        if (ImGui::BeginTable("JITTable", 2, ImGuiTableFlags_None,
+            ImVec2(right_group_min_width, 0.0f))) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
 

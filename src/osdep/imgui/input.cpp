@@ -4,6 +4,7 @@
 #include "inputdevice.h"
 #include "amiberry_input.h"
 #include "imgui_panels.h"
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -504,7 +505,9 @@ void render_panel_input() {
 
     if (BeginGroupBox("Mouse extra settings", true, false)) {
 
-    if (ImGui::BeginTable("MouseExtrasTable", 2, ImGuiTableFlags_None)) {
+    const float mouse_extras_width = std::min(BUTTON_WIDTH * 6.0f, ImGui::GetContentRegionAvail().x);
+    if (ImGui::BeginTable("MouseExtrasTable", 2, ImGuiTableFlags_None,
+        ImVec2(mouse_extras_width, 0.0f))) {
         // Row 1
         ImGui::TableNextRow();
 

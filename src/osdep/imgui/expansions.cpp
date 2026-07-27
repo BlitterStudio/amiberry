@@ -1065,7 +1065,7 @@ void render_panel_expansions() {
     EndGroupBox("Accelerator Board Settings");
 
     BeginGroupBox("Miscellaneous Expansions");
-    if (ImGui::BeginTable("MiscTable", 2, ImGuiTableFlags_None)) {
+    if (ImGui::BeginTable("MiscTable", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
