@@ -1248,6 +1248,16 @@ const char* SDL_GetJoystickNameForIndex(int device_index)
 	(void)device_index;
 	return "Stub Joystick";
 }
+const char* SDL_GetJoystickPath(SDL_Joystick* joystick)
+{
+	(void)joystick;
+	return nullptr;
+}
+const char* SDL_GetJoystickSerial(SDL_Joystick* joystick)
+{
+	(void)joystick;
+	return nullptr;
+}
 SDL_JoystickID SDL_GetJoystickID(SDL_Joystick* joystick)
 {
 	return joystick ? joystick->index : -1;

@@ -2121,7 +2121,7 @@ void run_gui()
 			else if (gui_event.type == SDL_EVENT_JOYSTICK_ADDED
 				|| gui_event.type == SDL_EVENT_JOYSTICK_REMOVED) {
 				handle_joy_device_event(gui_event.jdevice.which,
-					gui_event.type == SDL_EVENT_JOYSTICK_REMOVED, &changed_prefs);
+					gui_event.type == SDL_EVENT_JOYSTICK_REMOVED);
 			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_MOVED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {

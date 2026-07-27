@@ -2386,17 +2386,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		std::string mode;
 		std::string buffer;
 
-		// Check if configname contains JOY0, JOY1, JOY2, or JOY3
-		int joy_index = -1;
-		if (jp->idc.configname[0] && strncmp(jp->idc.configname, "JOY", 3) == 0 &&
-			jp->idc.configname[4] == '\0' &&
-			jp->idc.configname[3] >= '0' && jp->idc.configname[3] <= '3') {
-			joy_index = jp->idc.configname[3] - '0';
-			}
-		if (joy_index == -1)
+		controller_mapping mapping{};
+		if (!amiberry_get_port_joystick_custom_mapping(
+			i, jp->idc.name, jp->idc.configname, mapping))
 			continue;
-
-		didata* did = &di_joystick[joy_index];
 
 		for (int m = 0; m < 2; ++m)
 		{
@@ -2404,7 +2397,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			for (int n = 0; n < SDL_GAMEPAD_BUTTON_COUNT; ++n) // loop through all buttons
 			{
 				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(n));
-				const auto b = m == 0 ? did->mapping.amiberry_custom_none[n] : did->mapping.amiberry_custom_hotkey[n];
+				const auto b = m == 0 ? mapping.amiberry_custom_none[n] : mapping.amiberry_custom_hotkey[n];
 
 				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
@@ -2413,7 +2406,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			for (int n = 0; n < SDL_GAMEPAD_AXIS_COUNT; ++n)
 			{
 				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(n));
-				const auto b = m == 0 ? did->mapping.amiberry_custom_axis_none[n] : did->mapping.amiberry_custom_axis_hotkey[n];
+				const auto b = m == 0 ? mapping.amiberry_custom_axis_none[n] : mapping.amiberry_custom_axis_hotkey[n];
 
 				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
@@ -7483,6 +7476,10 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 #ifndef	SINGLEFILE
 	if (! fh)
 		return 0;
+#endif
+#ifdef AMIBERRY
+	if (real && (askedtype == 0 || (askedtype & CONFIG_TYPE_HOST)))
+		amiberry_clear_port_joystick_custom_mappings();
 #endif
 
 	while (cfg_fgets (linea, sizeof (linea), fh) != nullptr) {

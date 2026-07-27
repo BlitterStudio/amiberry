@@ -1,5 +1,6 @@
 #pragma once
 #include "options.h"
+#include "amiberry_input_identity.h"
 #include <SDL3/SDL.h>
 
 #ifdef AMIBERRY
@@ -54,6 +55,8 @@ struct didata {
 	std::string joystick_name{};
 
 	std::string guid{};
+	std::string serial{};
+	std::string path{};
 	bool is_controller{};
 	SDL_Gamepad* controller{};
 	SDL_Joystick* joystick{};
@@ -136,7 +139,26 @@ extern void read_controller_axis(int id, int axis, int value);
 extern void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename);
 extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);
 
+extern int amiberry_get_joystick_index(const TCHAR* configname);
 extern bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value);
+
+// Keep per-port custom mappings independent of SDL device lifetime, including
+// configurations loaded while their controller is disconnected.
+extern void amiberry_preserve_port_joystick_custom_mapping(int portnum,
+	const TCHAR* name, const TCHAR* configname);
+extern void amiberry_clear_port_joystick_custom_mapping(int portnum);
+extern void amiberry_clear_port_joystick_custom_mappings();
+extern bool amiberry_get_port_joystick_custom_mapping(int portnum,
+	const TCHAR* name, const TCHAR* configname, controller_mapping& mapping);
+extern void amiberry_set_port_joystick_custom_mapping(int portnum,
+	const TCHAR* name, const TCHAR* configname, const controller_mapping& mapping);
+// Returns true when the port has a physical identity constraint. In that case,
+// joystick_index is the unique matching live device, or -1 if none is safe.
+extern bool amiberry_resolve_port_joystick(int portnum, int& joystick_index);
+extern bool amiberry_apply_port_joystick_custom_mapping(int portnum,
+	const TCHAR* name, const TCHAR* configname);
+extern void amiberry_cache_joystick_custom_mappings();
+extern void amiberry_restore_joystick_custom_mappings();
 
 // Multi-mouse support: SDL_MouseID to UAE device index mapping
 extern int get_mouse_index_from_sdl_id(SDL_MouseID which);
