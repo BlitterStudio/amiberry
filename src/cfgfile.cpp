@@ -2336,12 +2336,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		struct jport *jp = &p->jports[i];
 		int v = jp->id;
 		TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH];
-#ifdef AMIBERRY
-		const int configured_joystick = amiberry_get_joystick_index(jp->idc.configname);
-		if (configured_joystick >= 0) {
-			_sntprintf(tmp2, sizeof tmp2, _T("joy%d"), configured_joystick);
-		} else
-#endif
 		if (v == JPORT_NONE) {
 			_tcscpy (tmp2, _T("none"));
 		} else if (v < JSEM_CUSTOM) {

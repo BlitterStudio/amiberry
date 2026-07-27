@@ -106,6 +106,17 @@ static int get_device_index(const int id)
 	return 0; // Default to <none>
 }
 
+static void set_port_input_device(const int port_idx, const int selected_idx)
+{
+	if (selected_idx < 0 || selected_idx >= static_cast<int>(input_device_options.size()))
+		return;
+
+	changed_prefs.jports[port_idx].id = input_device_options[selected_idx].id;
+	amiberry_clear_port_joystick_custom_mapping(port_idx);
+	inputdevice_forget_unplugged_device(port_idx);
+	inputdevice_validate_jports(&changed_prefs, port_idx, nullptr);
+}
+
 const std::vector<InputDeviceOption>& get_input_device_options()
 {
 	if (input_device_options.empty() || joystick_refresh_needed) {
@@ -178,10 +189,8 @@ void render_panel_input() {
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 			int selected_idx = dev_idx;
 			const std::string combo_id = "##Dev" + std::to_string(port_idx);
-			if (InputDeviceCombo(combo_id.c_str(), dev_idx, nullptr, &selected_idx)) {
-				changed_prefs.jports[port_idx].id = input_device_options[selected_idx].id;
-				inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
-			}
+			if (InputDeviceCombo(combo_id.c_str(), dev_idx, nullptr, &selected_idx))
+				set_port_input_device(port_idx, selected_idx);
             ShowHelpMarker("Select the input device to use for this Amiga port. Port 0 is typically for mouse, Port 1 for joystick");
 
             float avail_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;
@@ -348,7 +357,7 @@ void render_panel_input() {
 			int selected_idx = dev_idx;
 			const std::string combo_id = "##ParDev" + std::to_string(port_idx);
 			if (InputDeviceCombo(combo_id.c_str(), dev_idx, nullptr, &selected_idx))
-				changed_prefs.jports[port_idx].id = input_device_options[selected_idx].id;
+				set_port_input_device(port_idx, selected_idx);
 
             // Row 2: Autofire | Remap
             float avail_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;

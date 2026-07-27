@@ -10361,8 +10361,6 @@ static bool fixjport(struct jport *port, int add, bool always)
 {
 	bool wasinvalid = false;
 	int vv = port->id;
-	if (vv == JPORT_NONE)
-		return wasinvalid;
 	if (vv >= JSEM_JOYS && vv < JSEM_MICE) {
 		vv -= JSEM_JOYS;
 		vv += add;

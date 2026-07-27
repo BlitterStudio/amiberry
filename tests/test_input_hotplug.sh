@@ -30,6 +30,7 @@ amiberry = Path("src/osdep/amiberry.cpp").read_text()
 amiberry_input = Path("src/osdep/amiberry_input.cpp").read_text()
 cfgfile = Path("src/cfgfile.cpp").read_text()
 inputdevice = Path("src/inputdevice.cpp").read_text()
+input_panel = Path("src/osdep/imgui/input.cpp").read_text()
 
 
 def fail(message: str) -> None:
@@ -84,10 +85,33 @@ if """if (unplugged_ports & (1U << i)) {
 			_tcsncpy(prefs->jports[i].idc.name, jports_name[i], MAX_JPORT_NAME - 1);
 			_tcsncpy(prefs->jports[i].idc.configname, jports_configname[i], MAX_JPORT_CONFIG - 1);""" not in devicechange:
 	fail("Pending preferences must retain the configured device identity while it is unplugged")
-if """const int configured_joystick = amiberry_get_joystick_index(jp->idc.configname);
-		if (configured_joystick >= 0) {
-			_sntprintf(tmp2, sizeof tmp2, _T("joy%d"), configured_joystick);""" not in cfgfile:
-	fail("Configuration saves must prefer the retained joystick identity over a transient fallback")
+save_ports = region_between(
+	cfgfile,
+	"for (i = 0; i < MAX_JPORTS; i++) {",
+	"for (i = 0; i < MAX_JPORTS_CUSTOM; i++) {",
+)
+if "configured_joystick" in save_ports:
+	fail("Saved joyport values must follow the active port selection, not stale identity metadata")
+fixjport = region_between(
+	inputdevice,
+	"static bool fixjport(",
+	"static void inputdevice_get_previous_joy",
+)
+if "if (vv == JPORT_NONE)" in fixjport:
+	fail("Explicitly selecting None must clear the previous device identity")
+port_selection = region_between(
+	input_panel,
+	"static void set_port_input_device(",
+	"const std::vector<InputDeviceOption>& get_input_device_options()",
+)
+if "amiberry_clear_port_joystick_custom_mapping(port_idx);" not in port_selection:
+	fail("Explicit port changes must discard the old controller mapping snapshot")
+if "inputdevice_forget_unplugged_device(port_idx);" not in port_selection:
+	fail("Explicit port changes must cancel pending reconnection of the old controller")
+if "inputdevice_validate_jports(&changed_prefs, port_idx, nullptr);" not in port_selection:
+	fail("Explicit port changes must refresh or clear saved device identity metadata")
+if input_panel.count("set_port_input_device(port_idx, selected_idx);") != 2:
+	fail("Primary and parallel port selectors must share the identity-safe update path")
 if "const int joy_index = amiberry_get_joystick_index(jp->idc.configname);" not in amiberry_input:
 	fail("Custom mapping loads must use the same bounded joystick index parser as saves")
 if """if (!amiberry_get_port_joystick_custom_mapping(
