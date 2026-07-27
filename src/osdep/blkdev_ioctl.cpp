@@ -2171,12 +2171,11 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 
 	// Read the leadout entry to get lastaddress
 	tocentry.cdte_track = CDROM_LEADOUT;
-	tocentry.cdte_format = CDROM_MSF;
+	tocentry.cdte_format = CDROM_LBA;
 	if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
 		return 0;
 	}
-	th->lastaddress = msf2lsn((tocentry.cdte_addr.msf.minute << 16) | (tocentry.cdte_addr.msf.second << 8) |
-		(tocentry.cdte_addr.msf.frame << 0));
+	th->lastaddress = tocentry.cdte_addr.lba;
 
 	t->adr = 1;
 	t->point = 0xa0;
@@ -2186,14 +2185,13 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	th->first_track_offset = 1;
 	for (i = th->first_track; i <= th->last_track; i++) {
 		tocentry.cdte_track = i;
-		tocentry.cdte_format = CDROM_MSF;
+		tocentry.cdte_format = CDROM_LBA;
 		if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
 			return 0;
 		}
 		t->adr = tocentry.cdte_adr;
 		t->control = tocentry.cdte_ctrl;
-		t->paddress = msf2lsn((tocentry.cdte_addr.msf.minute << 16) | (tocentry.cdte_addr.msf.second << 8) |
-			(tocentry.cdte_addr.msf.frame << 0));
+		t->paddress = tocentry.cdte_addr.lba;
 		t->point = t->track = i;
 		t++;
 	}
