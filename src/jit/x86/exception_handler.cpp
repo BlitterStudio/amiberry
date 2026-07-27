@@ -989,11 +989,10 @@ static void sigsegv_handler(int signum, siginfo_t *info, void *context)
 			(void *)address, i);
 	}
 
-	/* abort() is async-signal-safe; exit() runs atexit handlers that are
-	 * not safe to call from a signal context and can produce confusing
-	 * secondary crashes (e.g. __cxa_finalize_ranges aborting during
-	 * teardown). */
-	abort();
+	/* Call libc abort() directly. sysdeps.h redefines abort() to log and
+	 * call SDL_Quit(), neither of which is safe from a signal handler and
+	 * can produce recursive secondary crashes. */
+	(abort)();
 }
 
 #endif
