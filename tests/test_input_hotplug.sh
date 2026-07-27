@@ -112,12 +112,18 @@ port_selection = region_between(
 	"static void set_port_input_device(",
 	"const std::vector<InputDeviceOption>& get_input_device_options()",
 )
-if "amiberry_clear_port_joystick_custom_mapping(port_idx);" not in port_selection:
+clear_selected = port_selection.find("amiberry_clear_port_joystick_custom_mapping(port_idx);")
+forget_selected = port_selection.find("inputdevice_forget_unplugged_device(port_idx);")
+validate_selected = port_selection.find("inputdevice_validate_jports(&changed_prefs, port_idx, nullptr);")
+preserve_selected = port_selection.find("amiberry_preserve_port_joystick_custom_mapping(")
+if clear_selected < 0:
 	fail("Explicit port changes must discard the old controller mapping snapshot")
-if "inputdevice_forget_unplugged_device(port_idx);" not in port_selection:
+if forget_selected < 0:
 	fail("Explicit port changes must cancel pending reconnection of the old controller")
-if "inputdevice_validate_jports(&changed_prefs, port_idx, nullptr);" not in port_selection:
+if validate_selected < 0:
 	fail("Explicit port changes must refresh or clear saved device identity metadata")
+if not (clear_selected < forget_selected < validate_selected < preserve_selected):
+	fail("An explicit joystick choice must replace the old reconnect target with its validated physical identity")
 if input_panel.count("set_port_input_device(port_idx, selected_idx);") != 2:
 	fail("Primary and parallel port selectors must share the identity-safe update path")
 if "const int joy_index = amiberry_get_joystick_index(jp->idc.configname);" not in amiberry_input:
