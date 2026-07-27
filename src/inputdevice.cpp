@@ -8482,6 +8482,10 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 	}
 
 #ifdef AMIBERRY
+	for (int i = 0; i < MAX_JPORTS; ++i) {
+		amiberry_preserve_port_joystick_custom_mapping(
+			i, jports_name[i], jports_configname[i]);
+	}
 	amiberry_cache_joystick_custom_mappings();
 #endif
 	inputdevice_unacquire();
@@ -8594,6 +8598,10 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 			found = inputdevice_joyport_config (prefs, tmp, NULL, i, jportsmode[i], jportssubmode[i], 0, true) != 0;
 			
 		}
+#ifdef AMIBERRY
+		if (found)
+			amiberry_clear_port_joystick_custom_mapping(i);
+#endif
 		fixedports[i] = found;
 		prefs->jports[i].autofire = jportaf[i];
 		inputdevice_validate_jports(prefs, i, fixedports);

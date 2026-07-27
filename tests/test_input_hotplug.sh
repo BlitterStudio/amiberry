@@ -64,11 +64,12 @@ devicechange = region_between(
 	"#ifdef AMIBERRY\n// Re-enumerate mouse devices",
 )
 cache = devicechange.find("amiberry_cache_joystick_custom_mappings();")
+preserve = devicechange.find("amiberry_preserve_port_joystick_custom_mapping(")
 close = devicechange.find("idev[IDTYPE_JOYSTICK].close();")
 init = devicechange.find("idev[IDTYPE_JOYSTICK].init();")
 restore = devicechange.find("amiberry_restore_joystick_custom_mappings();")
 rematch = devicechange.find("matchdevices_all(prefs);")
-if not (0 <= cache < close < init < restore < rematch):
+if not (0 <= preserve < cache < close < init < restore < rematch):
 	fail("Custom mappings must bracket SDL joystick re-enumeration before port rematching")
 if "jportscustom[portnum] = -1;" not in devicechange:
 	fail("A reinserted device must clear the custom marker for its port, not its device index")
@@ -89,6 +90,13 @@ if """const int configured_joystick = amiberry_get_joystick_index(jp->idc.config
 	fail("Configuration saves must prefer the retained joystick identity over a transient fallback")
 if "const int joy_index = amiberry_get_joystick_index(jp->idc.configname);" not in amiberry_input:
 	fail("Custom mapping loads must use the same bounded joystick index parser as saves")
+if """if (!amiberry_get_port_joystick_custom_mapping(
+			i, jp->idc.name, jp->idc.configname, mapping))""" not in cfgfile:
+	fail("Configuration saves must use a preserved mapping for an unplugged controller")
+if "di_joystick[joy_index]" in cfgfile:
+	fail("Configuration saves must not dereference a stale or compacted joystick slot")
+if "if (found)\n\t\t\tamiberry_clear_port_joystick_custom_mapping(i);" not in devicechange:
+	fail("A successfully rematched port must discard its temporary mapping snapshot")
 if """if (!changed) {
 		if (acc)
 			inputdevice_acquire (TRUE);

@@ -144,6 +144,11 @@ extern bool load_custom_options(uae_prefs* p, const std::string& option, const T
 
 // Preserve per-configuration mappings while SDL devices are closed and
 // reopened during hotplug re-enumeration.
+extern void amiberry_preserve_port_joystick_custom_mapping(int portnum,
+	const TCHAR* name, const TCHAR* configname);
+extern void amiberry_clear_port_joystick_custom_mapping(int portnum);
+extern bool amiberry_get_port_joystick_custom_mapping(int portnum,
+	const TCHAR* name, const TCHAR* configname, controller_mapping& mapping);
 extern void amiberry_cache_joystick_custom_mappings();
 extern void amiberry_restore_joystick_custom_mappings();
 
