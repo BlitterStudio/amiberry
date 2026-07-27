@@ -169,6 +169,7 @@ void amiberry_preserve_port_joystick_custom_mapping(const int portnum,
 		return;
 
 	if (preserved.valid && matches_joystick_config(preserved.idc, name, configname)) {
+		preserved.mapping = did.mapping;
 		if (!preserved.has_identity) {
 			preserved.identity = get_joystick_identity(did);
 			preserved.has_identity = true;

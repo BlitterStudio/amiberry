@@ -44,6 +44,14 @@ static int get_mapped_event_index(int event_id)
 	return 0;
 }
 
+static void commit_custom_mapping_change(const int portnum, const didata* did)
+{
+	const auto& port = changed_prefs.jports[portnum];
+	amiberry_set_port_joystick_custom_mapping(
+		portnum, port.idc.name, port.idc.configname, did->mapping);
+	inputdevice_updateconfig(nullptr, &changed_prefs);
+}
+
 void render_panel_custom()
 {
 	ImGui::Indent(4.0f);
@@ -118,7 +126,7 @@ void render_panel_custom()
 	ImGui::SameLine();
 	if (AmigaButton("X")) {
 		did->mapping.hotkey_button = SDL_GAMEPAD_BUTTON_INVALID;
-		inputdevice_updateconfig(nullptr, &changed_prefs);
+		commit_custom_mapping_change(SelectedPort, did);
 	}
 	if (did->mapping.is_retroarch) ImGui::EndDisabled();
 	
@@ -136,7 +144,7 @@ void render_panel_custom()
 			for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i) {
 				if (SDL_GetGamepadButton(did->controller, static_cast<SDL_GamepadButton>(i))) {
 					did->mapping.hotkey_button = i;
-					inputdevice_updateconfig(nullptr, &changed_prefs);
+					commit_custom_mapping_change(SelectedPort, did);
 					ImGui::CloseCurrentPopup();
 					break;
 				}
@@ -146,7 +154,7 @@ void render_panel_custom()
 			for (int i = 0; i < num_buttons; ++i) {
 				if (SDL_GetJoystickButton(did->joystick, i)) {
 					did->mapping.hotkey_button = i;
-					inputdevice_updateconfig(nullptr, &changed_prefs);
+					commit_custom_mapping_change(SelectedPort, did);
 					ImGui::CloseCurrentPopup();
 					break;
 				}
@@ -244,7 +252,7 @@ void render_panel_custom()
 			else if (VectorCombo("##btn", &idx, custom_event_items)) {
 				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
 				*store_ptr = new_evt;
-				inputdevice_updateconfig(nullptr, &changed_prefs);
+				commit_custom_mapping_change(SelectedPort, did);
 			}
 
 			if (!is_mapped || in_use) ImGui::EndDisabled();
@@ -269,7 +277,7 @@ void render_panel_custom()
 			if (VectorCombo("##axis", &idx, custom_event_items)) {
 				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
 				*store_ptr = new_evt;
-				inputdevice_updateconfig(nullptr, &changed_prefs);
+				commit_custom_mapping_change(SelectedPort, did);
 			}
 			if (!is_mapped) ImGui::EndDisabled();
 			ImGui::PopID();
@@ -307,7 +315,7 @@ void render_panel_custom()
 			else if (VectorCombo("##btn", &idx, custom_event_items)) {
 				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
 				*store_ptr = new_evt;
-				inputdevice_updateconfig(nullptr, &changed_prefs);
+				commit_custom_mapping_change(SelectedPort, did);
 			}
 
 			if (!is_mapped || in_use) ImGui::EndDisabled();
@@ -332,7 +340,7 @@ void render_panel_custom()
 			if (VectorCombo("##axis", &idx, custom_event_items)) {
 				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
 				*store_ptr = new_evt;
-				inputdevice_updateconfig(nullptr, &changed_prefs);
+				commit_custom_mapping_change(SelectedPort, did);
 			}
 			if (!is_mapped) ImGui::EndDisabled();
 			ImGui::PopID();

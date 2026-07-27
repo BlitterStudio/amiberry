@@ -31,6 +31,7 @@ amiberry_input = Path("src/osdep/amiberry_input.cpp").read_text()
 cfgfile = Path("src/cfgfile.cpp").read_text()
 inputdevice = Path("src/inputdevice.cpp").read_text()
 input_panel = Path("src/osdep/imgui/input.cpp").read_text()
+custom_panel = Path("src/osdep/imgui/custom.cpp").read_text()
 
 
 def fail(message: str) -> None:
@@ -126,6 +127,25 @@ if not (clear_selected < forget_selected < validate_selected < preserve_selected
 	fail("An explicit joystick choice must replace the old reconnect target with its validated physical identity")
 if input_panel.count("set_port_input_device(port_idx, selected_idx);") != 2:
 	fail("Primary and parallel port selectors must share the identity-safe update path")
+mapping_commit = region_between(
+	custom_panel,
+	"static void commit_custom_mapping_change(",
+	"void render_panel_custom()",
+)
+snapshot_update = mapping_commit.find("amiberry_set_port_joystick_custom_mapping(")
+runtime_update = mapping_commit.find("inputdevice_updateconfig(nullptr, &changed_prefs);")
+if not (0 <= snapshot_update < runtime_update):
+	fail("Custom mapping edits must update the per-port snapshot before rebuilding live input")
+if custom_panel.count("commit_custom_mapping_change(SelectedPort, did);") != 7:
+	fail("Every Custom-panel mapping mutation must refresh the selected port snapshot")
+preserve_mapping = region_between(
+	amiberry_input,
+	"void amiberry_preserve_port_joystick_custom_mapping(",
+	"void amiberry_clear_port_joystick_custom_mapping(",
+)
+if """if (preserved.valid && matches_joystick_config(preserved.idc, name, configname)) {
+		preserved.mapping = did.mapping;""" not in preserve_mapping:
+	fail("Hotplug preservation must refresh an existing snapshot from the live mapping")
 if "const int joy_index = amiberry_get_joystick_index(jp->idc.configname);" not in amiberry_input:
 	fail("Custom mapping loads must use the same bounded joystick index parser as saves")
 if """if (!amiberry_get_port_joystick_custom_mapping(
