@@ -1008,6 +1008,8 @@ void SDL_CloseJoystick(SDL_Joystick* joystick);
 const char* SDL_GetJoystickName(SDL_Joystick* joystick);
 const char* SDL_GetJoystickNameForID(SDL_JoystickID joystick_id);
 const char* SDL_GetJoystickNameForIndex(int device_index);
+const char* SDL_GetJoystickPath(SDL_Joystick* joystick);
+const char* SDL_GetJoystickSerial(SDL_Joystick* joystick);
 SDL_JoystickID SDL_GetJoystickID(SDL_Joystick* joystick);
 SDL_JoystickGUID SDL_GetJoystickGUID(SDL_Joystick* joystick);
 void SDL_GetJoystickGUIDString(SDL_JoystickGUID guid, char* pszGUID, int cbGUID);

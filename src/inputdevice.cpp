@@ -723,9 +723,10 @@ static void inputdevice_store_used_device(struct jport *jps, int portnum, bool d
 	}
 }
 
-static void inputdevice_store_unplugged_port(struct uae_prefs *p, struct inputdevconfig *idc)
+static uae_u32 inputdevice_store_unplugged_port(struct uae_prefs *p, struct inputdevconfig *idc)
 {
 	struct jport jpt = { 0 };
+	uae_u32 ports = 0;
 	_tcscpy(jpt.idc.configname, idc->configname);
 	_tcscpy(jpt.idc.name, idc->name);
 	jpt.id = JPORT_UNPLUGGED;
@@ -737,8 +738,10 @@ static void inputdevice_store_unplugged_port(struct uae_prefs *p, struct inputde
 			jpt.submode = jp->submode;
 			jpt.autofire = jp->autofire;
 			inputdevice_store_used_device(&jpt, i, false);
+			ports |= 1U << i;
 		}
 	}
+	return ports;
 }
 
 static bool isemptykey(int keyboard, int scancode)
@@ -8431,6 +8434,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 	int jportssubmode[MAX_JPORTS];
 	int jportid[MAX_JPORTS], jportaf[MAX_JPORTS];
 	bool changed = false;
+	uae_u32 unplugged_ports = 0;
 
 	for (i = 0; i < MAX_JPORTS; i++) {
 		jportskb[i] = -1;
@@ -8528,7 +8532,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 		for (int i = 0; i < MAX_INPUT_DEVICES; i++) {
 			if (devcfg[i][j].name[0]) {
 				write_log(_T("REMOVED: %d/%d %s (%s)\n"), j, i, devcfg[i][j].name, devcfg[i][j].configname);
-				inputdevice_store_unplugged_port(prefs, &devcfg[i][j]);
+				unplugged_ports |= inputdevice_store_unplugged_port(prefs, &devcfg[i][j]);
 				changed = true;
 			}
 		}
@@ -8543,6 +8547,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 				int portnum = inputdevice_get_unplugged_device(&idc, &sjp);
 				if (portnum >= 0) {
 					write_log(_T("Inserting to port %d\n"), portnum);
+					unplugged_ports &= ~(1U << portnum);
 					jportscustom[portnum] = -1;
 					xfree(jports_name[portnum]);
 					xfree(jports_configname[portnum]);
@@ -8588,9 +8593,15 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 		}
 		fixedports[i] = found;
 		prefs->jports[i].autofire = jportaf[i];
+		inputdevice_validate_jports(prefs, i, fixedports);
+		if (unplugged_ports & (1U << i)) {
+			_tcsncpy(prefs->jports[i].idc.name, jports_name[i], MAX_JPORT_NAME - 1);
+			_tcsncpy(prefs->jports[i].idc.configname, jports_configname[i], MAX_JPORT_CONFIG - 1);
+			prefs->jports[i].idc.name[MAX_JPORT_NAME - 1] = 0;
+			prefs->jports[i].idc.configname[MAX_JPORT_CONFIG - 1] = 0;
+		}
 		xfree (jports_name[i]);
 		xfree (jports_configname[i]);
-		inputdevice_validate_jports(prefs, i, fixedports);
 	}
 
 	write_log(_T("Input remapping done. Changed=%d.\n"), changed);
