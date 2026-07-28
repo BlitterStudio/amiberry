@@ -150,20 +150,35 @@ if ! awk '
 	exit 1
 fi
 
-if awk '
+if ! awk '
 	/static bool amiberry_hw_vsync_pacing_ok\(void\)/ { in_pacing_policy = 1 }
-	in_pacing_policy && /if \(kmsdrm_detected\)/ { kmsdrm_branch = 1 }
-	kmsdrm_branch && /return false;/ { exit 0 }
+	in_pacing_policy && /#ifndef USE_OPENGL/ { in_sdl_only_policy = 1 }
+	in_sdl_only_policy && /if \(kmsdrm_detected\)/ {
+		kmsdrm_sdl_only = 1
+		next
+	}
+	kmsdrm_sdl_only && /return false;/ {
+		sdl_software_pacing = 1
+		next
+	}
+	in_sdl_only_policy && /#endif/ { exit sdl_software_pacing ? 0 : 1 }
 	in_pacing_policy && /^}/ { exit 1 }
 	END { if (!in_pacing_policy) exit 1 }
 ' "$drawing_file"; then
-	echo "Matched-refresh KMSDRM must not be excluded from hardware pacing" >&2
+	echo "SDL-only KMSDRM builds must stay on software pacing" >&2
 	exit 1
 fi
 
 if ! awk '
 	/int isvsync_chipset\(void\)/ { in_chipset_policy = 1 }
+	in_chipset_policy && /#if defined\(AMIBERRY\) && !defined\(LIBRETRO\) && defined\(USE_OPENGL\) && !defined\(USE_VULKAN\)/ {
+		in_blocking_gl_policy = 1
+		gl_guard_seen = 1
+		next
+	}
 	in_chipset_policy && /if \(kmsdrm_detected && amiberry_hw_vsync_pacing_ok\(\)\)/ {
+		if (!in_blocking_gl_policy)
+			exit 1
 		kmsdrm_match = 1
 		next
 	}
@@ -171,13 +186,20 @@ if ! awk '
 		kmsdrm_hardware_pacing = 1
 		next
 	}
+	in_blocking_gl_policy && /#endif/ {
+		if (!kmsdrm_hardware_pacing)
+			exit 1
+		in_blocking_gl_policy = 0
+		gl_guard_closed = 1
+		next
+	}
 	in_chipset_policy && /if \(currprefs.gfx_apmode\[0\]\.gfx_vsync <= 0\)/ {
-		exit kmsdrm_hardware_pacing ? 0 : 1
+		exit gl_guard_seen && gl_guard_closed ? 0 : 1
 	}
 	in_chipset_policy && /^}/ { exit 1 }
 	END { if (!in_chipset_policy) exit 1 }
 ' "$drawing_file"; then
-	echo "Matched-refresh KMSDRM must select hardware pacing before the user VSync early return" >&2
+	echo "Matched-refresh KMSDRM hardware pacing must be limited to OpenGL/GLES before the user VSync early return" >&2
 	exit 1
 fi
 
