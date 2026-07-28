@@ -129,13 +129,28 @@ if ! awk '
 			exit 1
 		in_kmsdrm_policy = 1
 	}
-	in_kmsdrm_policy && /SDL_SetHintWithPriority\(SDL_HINT_VIDEO_DOUBLE_BUFFER, "1", SDL_HINT_OVERRIDE\)/ {
-		double_buffer_forced = 1
+	in_kmsdrm_policy && /^[[:space:]]*if \(SDL_GetVersion\(\) < SDL_VERSIONNUM\(3, 4, 0\)\) \{/ {
+		in_sdl32_policy = 1
+		next
 	}
-	in_init && /return true;/ { exit double_buffer_forced ? 0 : 1 }
+	in_sdl32_policy && /using SDL 3.2.x default triple-buffered presentation/ {
+		sdl32_default_triple_buffer = 1
+		next
+	}
+	in_sdl32_policy && /^[[:space:]]*} else if \(SDL_SetHintWithPriority\(SDL_HINT_VIDEO_DOUBLE_BUFFER, "1", SDL_HINT_OVERRIDE\)\) \{/ {
+		if (!sdl32_default_triple_buffer)
+			exit 1
+		sdl34_double_buffer_hint = 1
+		in_sdl32_policy = 0
+		next
+	}
+	in_kmsdrm_policy && /SDL_SetHintWithPriority\(SDL_HINT_VIDEO_DOUBLE_BUFFER/ { exit 1 }
+	in_init && /return true;/ {
+		exit sdl32_default_triple_buffer && sdl34_double_buffer_hint ? 0 : 1
+	}
 	END { if (!in_init) exit 1 }
 ' "$platform_init_file"; then
-	echo "KMSDRM must force double-buffered presentation so submitted page flips drain before handoff" >&2
+	echo "KMSDRM must keep SDL 3.2.x on the default triple-buffered path and enable the double-buffer hint only for SDL 3.4+" >&2
 	exit 1
 fi
 
@@ -150,9 +165,21 @@ if ! awk '
 	}
 	END { if (!in_update_vsync) exit 1 }
 ' "$opengl_renderer_file"; then
-	echo "KMSDRM must use interval 0 for SDL 3.2.x and retain interval 1 for SDL 3.4+" >&2
+	echo "OpenGL KMSDRM must use interval 0 for SDL 3.2.x and interval 1 for SDL 3.4+" >&2
 	exit 1
 fi
+
+for lifecycle_function in prepare_gui_sharing restore_emulation_context; do
+	if ! awk -v function_name="$lifecycle_function" '
+		$0 ~ "OpenGLRenderer::" function_name "\\(" { in_lifecycle = 1; function_seen = 1 }
+		in_lifecycle && /(glFinish|SDL_SyncWindow|SDL_GL_SwapWindow|drmHandleEvent|SDL_Delay)/ { exit 1 }
+		in_lifecycle && /^}/ { exit 0 }
+		END { if (!function_seen) exit 1 }
+	' "$opengl_renderer_file"; then
+		echo "OpenGL $lifecycle_function must not add a guessed or competing presentation-completion barrier" >&2
+		exit 1
+	fi
+done
 
 if ! grep -F -q 'static std::atomic<bool> hw_vsync_cached_presentation_blocking{false};' "$drawing_file" ||
 	! grep -F -q 'hw_vsync_cached_presentation_blocking.store(blocking, std::memory_order_relaxed);' "$drawing_file" ||
@@ -282,7 +309,7 @@ for lifecycle_function in init_context destroy_context; do
 	fi
 done
 
-if ! grep -F -q 'Legacy KMSDRM uses software timing with drained presentation' "$display_panel_file" ||
+if ! grep -F -q 'Legacy KMSDRM uses software timing' "$display_panel_file" ||
 	! grep -F -q 'blocking presentation is used for pacing only when console and emulated refresh match' "$display_panel_file" ||
 	! grep -F -q 'VSync controls, refresh switching, and Adaptive/VRR modes are not available' "$display_panel_file"; then
 	echo "KMSDRM help must describe legacy software pacing, matched-refresh hardware pacing, and unavailable controls" >&2
