@@ -142,13 +142,15 @@ fi
 if ! awk '
 	/void OpenGLRenderer::update_vsync\(int monid\)/ { in_update_vsync = 1 }
 	in_update_vsync && /if \(kmsdrm_detected\) \{/ { in_kmsdrm_policy = 1 }
-	in_kmsdrm_policy && /interval = 1;/ { interval_one = 1 }
+	in_kmsdrm_policy && /interval = SDL_GetVersion\(\) < SDL_VERSIONNUM\(3, 4, 0\) \? 0 : 1;/ {
+		versioned_interval = 1
+	}
 	in_kmsdrm_policy && /^	}/ {
-		exit interval_one ? 0 : 1
+		exit versioned_interval ? 0 : 1
 	}
 	END { if (!in_update_vsync) exit 1 }
 ' "$opengl_renderer_file"; then
-	echo "KMSDRM must continue to force OpenGL swap interval 1" >&2
+	echo "KMSDRM must use interval 0 for SDL 3.2.x and retain interval 1 for SDL 3.4+" >&2
 	exit 1
 fi
 
@@ -202,25 +204,6 @@ if ! awk '
 	END { if (!in_update_vsync) exit 1 }
 ' "$opengl_renderer_file"; then
 	echo "OpenGL pacing capability must be false for failure/nonblocking/adaptive requests and true only after a positive interval succeeds" >&2
-	exit 1
-fi
-
-if ! awk '
-	/static bool amiberry_hw_vsync_pacing_ok\(void\)/ { in_pacing_policy = 1 }
-	in_pacing_policy && /#ifndef USE_OPENGL/ { in_sdl_only_policy = 1 }
-	in_sdl_only_policy && /if \(kmsdrm_detected\)/ {
-		kmsdrm_sdl_only = 1
-		next
-	}
-	kmsdrm_sdl_only && /return false;/ {
-		sdl_software_pacing = 1
-		next
-	}
-	in_sdl_only_policy && /#endif/ { exit sdl_software_pacing ? 0 : 1 }
-	in_pacing_policy && /^}/ { exit 1 }
-	END { if (!in_pacing_policy) exit 1 }
-' "$drawing_file"; then
-	echo "SDL-only KMSDRM builds must stay on software pacing" >&2
 	exit 1
 fi
 
@@ -299,10 +282,10 @@ for lifecycle_function in init_context destroy_context; do
 	fi
 done
 
-if ! grep -F -q 'Blocking OpenGL/GLES with matching console and emulated refresh uses hardware/vblank pacing' "$display_panel_file" ||
-	! grep -F -q 'otherwise KMSDRM uses software timing' "$display_panel_file" ||
+if ! grep -F -q 'Legacy KMSDRM uses software timing with drained presentation' "$display_panel_file" ||
+	! grep -F -q 'blocking presentation is used for pacing only when console and emulated refresh match' "$display_panel_file" ||
 	! grep -F -q 'VSync controls, refresh switching, and Adaptive/VRR modes are not available' "$display_panel_file"; then
-	echo "KMSDRM help must describe matched-refresh hardware pacing, software fallback, and unavailable controls" >&2
+	echo "KMSDRM help must describe legacy software pacing, matched-refresh hardware pacing, and unavailable controls" >&2
 	exit 1
 fi
 

@@ -199,7 +199,7 @@ void render_panel_display() {
     if (kmsdrm) ImGui::EndDisabled();
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ShowHelpMarker(kmsdrm
-        ? "Blocking OpenGL/GLES with matching console and emulated refresh uses hardware/vblank pacing; otherwise KMSDRM uses software timing. VSync controls, refresh switching, and Adaptive/VRR modes are not available"
+        ? "Legacy KMSDRM uses software timing with drained presentation; blocking presentation is used for pacing only when console and emulated refresh match. VSync controls, refresh switching, and Adaptive/VRR modes are not available"
         : "VSync mode: Standard waits for vertical blank, 50/60Hz enforces refresh rate, Adaptive uses VRR (FreeSync/G-SYNC) with late-swap tearing fallback");
 
     ImGui::Spacing();
@@ -268,7 +268,7 @@ void render_panel_display() {
     if (kmsdrm) ImGui::EndDisabled();
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ShowHelpMarker(kmsdrm
-        ? "KMSDRM uses software emulation timing and vblank-paced presentation"
+        ? "KMSDRM presentation timing depends on the SDL driver path; RTG remains software-paced"
         : "VSync mode for RTG display");
     if (!rtg_enabled) ImGui::EndDisabled();
 

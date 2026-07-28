@@ -398,14 +398,14 @@ void OpenGLRenderer::update_vsync(int monid)
 		}
 	}
 
-	// KMSDRM only accepts intervals 0 and 1, cannot reliably provide
-	// unsynchronised swaps, and has no Adaptive/VRR presentation mode. Its
-	// legacy path maps interval 0 to asynchronous DRM page flips, while atomic
-	// paths may remain vblank-paced regardless. Avoid the async path: a pending
-	// flip can otherwise leave SDL_GL_SwapWindow() waiting indefinitely across
-	// the shared-window GUI handoff. Emulation pacing is handled separately.
+	// KMSDRM has no Adaptive/VRR presentation mode. SDL 3.2.x maps interval 0
+	// to an asynchronous DRM page flip; combined with the double-buffer hint,
+	// SDL immediately drains that flip without waiting for vblank. SDL 3.4+
+	// changed its double-buffer path to a blocking atomic commit, so retain
+	// interval 1 there and let matched-refresh hardware pacing account for it.
+	// Mismatched-refresh atomic presentation needs a separate scheduler.
 	if (kmsdrm_detected) {
-		interval = 1;
+		interval = SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) ? 0 : 1;
 	}
 
 	if (m_vsync.current_interval != interval) {

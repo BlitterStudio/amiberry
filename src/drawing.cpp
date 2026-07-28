@@ -2550,12 +2550,6 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 #ifdef USE_VULKAN
 	return false;
 #else
-#ifndef USE_OPENGL
-	// SDL_RenderPresent() does not guarantee blocking presentation. Keep
-	// KMSDRM SDL-renderer builds on software timing even at matched refresh.
-	if (kmsdrm_detected)
-		return false;
-#endif
 	if (!hw_vsync_cached_presentation_blocking.load(std::memory_order_relaxed))
 		return false;
 	if (vblank_hz <= 0.0f)
@@ -2580,10 +2574,9 @@ int isvsync_chipset(void)
 	if (ad->picasso_on)
 		return 0;
 #if defined(AMIBERRY) && !defined(LIBRETRO) && defined(USE_OPENGL) && !defined(USE_VULKAN)
-	// KMSDRM OpenGL/GLES always uses swap interval 1 and double-buffered
-	// presentation, so a matched console refresh provides hardware pacing even
-	// when VSync is disabled in the emulation settings. This exception must stay
-	// on the blocking OpenGL path; SDL_RenderPresent() has no such guarantee.
+	// KMSDRM OpenGL/GLES publishes blocking presentation only on the SDL 3.4+
+	// interval-1 path. A matching console refresh can therefore provide
+	// hardware pacing even when VSync is disabled in the emulation settings.
 	if (kmsdrm_detected && amiberry_hw_vsync_pacing_ok())
 		return 1;
 #endif
