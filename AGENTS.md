@@ -179,6 +179,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build
 
 ## NOTES
 
+- **Durable knowledge**: Check `CONCEPTS.md` for project vocabulary and `docs/solutions/` for prior issue resolutions before investigating related areas.
 - **No automated tests** — manual testing with Amiga software is the methodology
 - **CI** builds 15+ platform variants (see `.github/workflows/c-cpp.yml`)
 - **macOS user data** moved to `~/Documents/Amiberry` (startup migration from `~/Library/Application Support/Amiberry`)

@@ -163,3 +163,4 @@ docs/superpowers
 .sisyphus/
 .omg
 .claude/settings.local.json
+.compound-engineering/*.local.yaml
