@@ -121,6 +121,7 @@ static int draw_line_next_line, draw_line_wclks;
 static uae_u32 rga_denise_cycle_line = 1;
 static struct pipeline_reg preg;
 static struct pipeline_func pfunc[MAX_PIPELINE_REG];
+static int pfunc_active_count;
 static uae_u16 prev_strobe;
 static bool vb_fast;
 static uae_u32 custom_state_flags;
@@ -164,6 +165,7 @@ static void pipelined_custom_write(evfunc2 func, uae_u16 v, uae_u16 cck)
 			p->func = func;
 			p->v = v;
 			p->cck = cck;
+			pfunc_active_count++;
 			return;
 		}
 	}
@@ -171,6 +173,9 @@ static void pipelined_custom_write(evfunc2 func, uae_u16 v, uae_u16 cck)
 }
 static void handle_pipelined_custom_write(bool now)
 {
+	if (!pfunc_active_count) {
+		return;
+	}
 	for (int i = 0 ; i < MAX_PIPELINE_REG; i++) {
 		struct pipeline_func *p = &pfunc[i];
 		if (p->func) {
@@ -178,6 +183,7 @@ static void handle_pipelined_custom_write(bool now)
 			if (!p->cck || now) {
 				auto f = p->func;
 				p->func = NULL;
+				pfunc_active_count--;
 				f(p->v);
 			}
 		}
@@ -6661,6 +6667,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		struct pipeline_func *p = &pfunc[i];
 		memset(p, 0, sizeof(struct pipeline_func));
 	}
+	pfunc_active_count = 0;
 	rga_denise_cycle = 0;
 	rga_denise_cycle_start = 0;
 	rga_denise_cycle_count_end = 0;
