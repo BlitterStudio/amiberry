@@ -102,6 +102,7 @@ static void resolve_gl_pixel_format(uint32_t sdl_pixel_format, GLenum& fmt, GLen
 bool OpenGLRenderer::init_context(SDL_Window* window)
 {
 	write_log("DEBUG: Initializing OpenGL Context...\n");
+	amiberry_hw_vsync_pacing_set_blocking(false);
 
 	m_gl_context = SDL_GL_CreateContext(window);
 	if (!m_gl_context) {
@@ -153,6 +154,7 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 
 void OpenGLRenderer::destroy_context()
 {
+	amiberry_hw_vsync_pacing_set_blocking(false);
 	if (m_gl_context != nullptr)
 	{
 		SDL_GL_DestroyContext(m_gl_context);
@@ -361,7 +363,10 @@ void OpenGLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 
 void OpenGLRenderer::update_vsync(int monid)
 {
-	if (!AMonitors[monid].amiga_window) return;
+	if (!AMonitors[monid].amiga_window) {
+		amiberry_hw_vsync_pacing_set_blocking(false);
+		return;
+	}
 
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
@@ -405,6 +410,10 @@ void OpenGLRenderer::update_vsync(int monid)
 
 	if (m_vsync.current_interval != interval) {
 		const int requested_interval = interval;
+		// Do not retain a stale blocking capability while changing the active
+		// presentation policy. Publish true only after a positive interval is
+		// applied successfully.
+		amiberry_hw_vsync_pacing_set_blocking(false);
 		if (interval == ADAPTIVE_SWAP_INTERVAL) {
 			if (!SDL_GL_SetSwapInterval(ADAPTIVE_SWAP_INTERVAL)) {
 				const std::string adaptive_error = SDL_GetError();
@@ -419,6 +428,7 @@ void OpenGLRenderer::update_vsync(int monid)
 				write_log("OpenGL VSync: Adaptive VSync enabled\n");
 			}
 		} else if (SDL_GL_SetSwapInterval(interval)) {
+			amiberry_hw_vsync_pacing_set_blocking(interval > 0);
 			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
 		} else {
 			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
@@ -1285,6 +1295,7 @@ void OpenGLRenderer::restore_emulation_context(SDL_Window* window)
 		SDL_GL_MakeCurrent(window, m_gl_context);
 		reset_state();
 		m_vsync.current_interval = INVALID_SWAP_INTERVAL;
+		amiberry_hw_vsync_pacing_set_blocking(false);
 	}
 }
 

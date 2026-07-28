@@ -6,6 +6,8 @@ platform_init_file="src/osdep/amiberry_platform_internal_host.h"
 gfx_window_file="src/osdep/gfx_window.cpp"
 opengl_renderer_file="src/osdep/opengl_renderer.cpp"
 drawing_file="src/drawing.cpp"
+xwin_file="src/include/xwin.h"
+display_panel_file="src/osdep/imgui/display.cpp"
 gui_lifecycle_file="src/osdep/amiberry_gui.cpp"
 handoff_guard='if (gui_running || !kmsdrm_detected) {'
 
@@ -150,6 +152,59 @@ if ! awk '
 	exit 1
 fi
 
+if ! grep -F -q 'static std::atomic<bool> hw_vsync_cached_presentation_blocking{false};' "$drawing_file" ||
+	! grep -F -q 'hw_vsync_cached_presentation_blocking.store(blocking, std::memory_order_relaxed);' "$drawing_file" ||
+	! grep -F -q 'extern void amiberry_hw_vsync_pacing_set_blocking(bool blocking);' "$xwin_file" ||
+	! grep -F -q 'void amiberry_hw_vsync_pacing_set_blocking(const bool) {}' "$drawing_file"; then
+	echo "Hardware pacing must expose an atomic blocking-presentation capability with a Libretro stub" >&2
+	exit 1
+fi
+
+if ! awk '
+	/static bool amiberry_hw_vsync_pacing_ok\(void\)/ { in_pacing_policy = 1 }
+	in_pacing_policy && /if \(!hw_vsync_cached_presentation_blocking.load\(std::memory_order_relaxed\)\)/ {
+		blocking_gate = 1
+		next
+	}
+	blocking_gate && /return false;/ { exit 0 }
+	in_pacing_policy && /^}/ { exit 1 }
+	END { if (!in_pacing_policy) exit 1 }
+' "$drawing_file"; then
+	echo "Hardware pacing must require the cached blocking-presentation capability" >&2
+	exit 1
+fi
+
+if ! awk '
+	/void OpenGLRenderer::update_vsync\(int monid\)/ { in_update_vsync = 1 }
+	in_update_vsync && /if \(m_vsync.current_interval != interval\) \{/ { changing_interval = 1 }
+	changing_interval && /amiberry_hw_vsync_pacing_set_blocking\(false\);/ {
+		cleared_before_attempt = 1
+		next
+	}
+	changing_interval && /if \(interval == ADAPTIVE_SWAP_INTERVAL\)/ {
+		if (!cleared_before_attempt)
+			exit 1
+		adaptive_request = 1
+		next
+	}
+	changing_interval && /else if \(SDL_GL_SetSwapInterval\(interval\)\)/ {
+		nonadaptive_success = 1
+		next
+	}
+	nonadaptive_success && /amiberry_hw_vsync_pacing_set_blocking\(interval > 0\);/ {
+		positive_success_published = 1
+		next
+	}
+	in_update_vsync && /m_vsync.current_interval = requested_interval;/ {
+		exit cleared_before_attempt && adaptive_request && positive_success_published ? 0 : 1
+	}
+	in_update_vsync && /^}/ { exit 1 }
+	END { if (!in_update_vsync) exit 1 }
+' "$opengl_renderer_file"; then
+	echo "OpenGL pacing capability must be false for failure/nonblocking/adaptive requests and true only after a positive interval succeeds" >&2
+	exit 1
+fi
+
 if ! awk '
 	/static bool amiberry_hw_vsync_pacing_ok\(void\)/ { in_pacing_policy = 1 }
 	in_pacing_policy && /#ifndef USE_OPENGL/ { in_sdl_only_policy = 1 }
@@ -224,10 +279,30 @@ if ! awk '
 	/void OpenGLRenderer::restore_emulation_context\(SDL_Window\* window\)/ { in_restore = 1 }
 	in_restore && /SDL_GL_MakeCurrent\(window, m_gl_context\);/ { context_current = 1 }
 	in_restore && /m_vsync.current_interval = INVALID_SWAP_INTERVAL;/ { interval_invalidated = 1 }
-	in_restore && /^}/ { exit context_current && interval_invalidated ? 0 : 1 }
+	in_restore && /amiberry_hw_vsync_pacing_set_blocking\(false\);/ { blocking_cleared = 1 }
+	in_restore && /^}/ { exit context_current && interval_invalidated && blocking_cleared ? 0 : 1 }
 	END { if (!in_restore) exit 1 }
 ' "$opengl_renderer_file"; then
-	echo "OpenGL context restoration must continue to make the emulation context current and refresh its swap interval" >&2
+	echo "OpenGL context restoration must make the context current and invalidate both swap interval and blocking capability" >&2
+	exit 1
+fi
+
+for lifecycle_function in init_context destroy_context; do
+	if ! awk -v function_name="$lifecycle_function" '
+		$0 ~ "OpenGLRenderer::" function_name "\\(" { in_lifecycle = 1 }
+		in_lifecycle && /amiberry_hw_vsync_pacing_set_blocking\(false\);/ { exit 0 }
+		in_lifecycle && /^}/ { exit 1 }
+		END { if (!in_lifecycle) exit 1 }
+	' "$opengl_renderer_file"; then
+		echo "OpenGL $lifecycle_function must clear the blocking-presentation capability" >&2
+		exit 1
+	fi
+done
+
+if ! grep -F -q 'Blocking OpenGL/GLES with matching console and emulated refresh uses hardware/vblank pacing' "$display_panel_file" ||
+	! grep -F -q 'otherwise KMSDRM uses software timing' "$display_panel_file" ||
+	! grep -F -q 'VSync controls, refresh switching, and Adaptive/VRR modes are not available' "$display_panel_file"; then
+	echo "KMSDRM help must describe matched-refresh hardware pacing, software fallback, and unavailable controls" >&2
 	exit 1
 fi
 

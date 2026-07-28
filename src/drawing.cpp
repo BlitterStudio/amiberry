@@ -2503,6 +2503,15 @@ void drawing_init(void)
 // of std::atomic<float>, with enough precision for a ~1 Hz match tolerance.
 static std::atomic<uint32_t> hw_vsync_cached_monitor_hz_x1000{0};
 
+// Published by the active renderer only after it has successfully configured
+// a presentation mode that blocks for vblank.
+static std::atomic<bool> hw_vsync_cached_presentation_blocking{false};
+
+void amiberry_hw_vsync_pacing_set_blocking(const bool blocking)
+{
+	hw_vsync_cached_presentation_blocking.store(blocking, std::memory_order_relaxed);
+}
+
 // Invoked on the SDL main thread in response to display / window events
 // (window migrated to another display, display mode changed) and once at
 // graphics_init() time. Re-probes SDL and caches the active display's
@@ -2534,8 +2543,8 @@ void amiberry_hw_vsync_pacing_invalidate(void)
 // vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
 //
 // This runs on the emulator thread (via isvsync_chipset() → framewait()).
-// It does NOT call any SDL video APIs: it only reads the cached monitor Hz
-// published by amiberry_hw_vsync_pacing_invalidate() on the main thread.
+// It does NOT call any SDL video APIs: it only reads the cached monitor Hz and
+// blocking-presentation capability published by the presentation thread.
 static bool amiberry_hw_vsync_pacing_ok(void)
 {
 #ifdef USE_VULKAN
@@ -2547,6 +2556,8 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 	if (kmsdrm_detected)
 		return false;
 #endif
+	if (!hw_vsync_cached_presentation_blocking.load(std::memory_order_relaxed))
+		return false;
 	if (vblank_hz <= 0.0f)
 		return false;
 	const uint32_t hz_x1000 = hw_vsync_cached_monitor_hz_x1000.load(std::memory_order_relaxed);
@@ -2560,6 +2571,7 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 // Libretro stub: declaration is visible via xwin.h's AMIBERRY block, so
 // provide an empty body here so callers link without the full pacing logic.
 void amiberry_hw_vsync_pacing_invalidate(void) {}
+void amiberry_hw_vsync_pacing_set_blocking(const bool) {}
 #endif
 
 int isvsync_chipset(void)
