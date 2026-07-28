@@ -59,6 +59,10 @@ extern float amiberry_get_refreshrate_for_display_id(uint32_t display_id);
 // Forces the hardware VSync pacing cache to re-probe on the next call. Called
 // from the SDL event loop on display mode / window-display changes.
 extern void amiberry_hw_vsync_pacing_invalidate(void);
+
+// Publishes whether the active renderer has successfully configured blocking
+// presentation. Called on the presentation thread and read by frame pacing.
+extern void amiberry_hw_vsync_pacing_set_blocking(bool blocking);
 #endif
 
 extern void flush_line(struct vidbuffer*, int);

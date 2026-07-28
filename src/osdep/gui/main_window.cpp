@@ -2973,36 +2973,38 @@ void run_gui()
 
 		// Rendering
 		ImGui::Render();
+		if (gui_running || !kmsdrm_detected) {
 #ifdef USE_VULKAN
-		if (gui_use_vulkan) {
-			auto* vk = get_vulkan_renderer();
-			if (vk) {
-				vk->render_gui_frame(ImGui::GetDrawData());
-			}
-		} else
+			if (gui_use_vulkan) {
+				auto* vk = get_vulkan_renderer();
+				if (vk) {
+					vk->render_gui_frame(ImGui::GetDrawData());
+				}
+			} else
 #endif
 #ifdef USE_OPENGL
-		if (gui_use_opengl) {
-			const ImGuiIO& gl_io = ImGui::GetIO();
-			glViewport(0, 0,
-				(int)(gl_io.DisplaySize.x * gl_io.DisplayFramebufferScale.x),
-				(int)(gl_io.DisplaySize.y * gl_io.DisplayFramebufferScale.y));
-			glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-			glClear(GL_COLOR_BUFFER_BIT);
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-			SDL_GL_SwapWindow(mon->gui_window);
-		} else
+			if (gui_use_opengl) {
+				const ImGuiIO& gl_io = ImGui::GetIO();
+				glViewport(0, 0,
+					(int)(gl_io.DisplaySize.x * gl_io.DisplayFramebufferScale.x),
+					(int)(gl_io.DisplaySize.y * gl_io.DisplayFramebufferScale.y));
+				glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+				glClear(GL_COLOR_BUFFER_BIT);
+				ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+				SDL_GL_SwapWindow(mon->gui_window);
+			} else
 #endif
-		{
-			const ImGuiIO& render_io = ImGui::GetIO();
-			const float render_scale_x = kmsdrm_detected ? 1.0f : render_io.DisplayFramebufferScale.x;
-			const float render_scale_y = kmsdrm_detected ? 1.0f : render_io.DisplayFramebufferScale.y;
-			SDL_SetRenderScale(mon->gui_renderer, render_scale_x, render_scale_y);
-			SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
-							   static_cast<uint8_t>(0.60f * 255), static_cast<uint8_t>(1.00f * 255));
-			SDL_RenderClear(mon->gui_renderer);
-			ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
-			SDL_RenderPresent(mon->gui_renderer);
+			{
+				const ImGuiIO& render_io = ImGui::GetIO();
+				const float render_scale_x = kmsdrm_detected ? 1.0f : render_io.DisplayFramebufferScale.x;
+				const float render_scale_y = kmsdrm_detected ? 1.0f : render_io.DisplayFramebufferScale.y;
+				SDL_SetRenderScale(mon->gui_renderer, render_scale_x, render_scale_y);
+				SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<uint8_t>(0.45f * 255), static_cast<uint8_t>(0.55f * 255),
+								   static_cast<uint8_t>(0.60f * 255), static_cast<uint8_t>(1.00f * 255));
+				SDL_RenderClear(mon->gui_renderer);
+				ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
+				SDL_RenderPresent(mon->gui_renderer);
+			}
 		}
 	}
 
