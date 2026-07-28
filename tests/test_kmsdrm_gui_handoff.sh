@@ -119,8 +119,21 @@ if [ "$(dispatch_eligible 0 0)" -ne 1 ]; then
 	exit 1
 fi
 
-if grep -E -q 'SDL_(SetHint|SetHintWithPriority)\([^;]*SDL_HINT_VIDEO_DOUBLE_BUFFER' "$platform_init_file"; then
-	echo "Amiberry must not force SDL_HINT_VIDEO_DOUBLE_BUFFER" >&2
+if ! awk '
+	/static inline bool osdep_platform_init_sdl\(\)/ { in_init = 1 }
+	in_init && /SDL_GetCurrentVideoDriver\(\)/ { driver_queried = 1 }
+	in_init && /SDL_strcasecmp\(video_driver, "kmsdrm"\) == 0/ {
+		if (!driver_queried)
+			exit 1
+		in_kmsdrm_policy = 1
+	}
+	in_kmsdrm_policy && /SDL_SetHintWithPriority\(SDL_HINT_VIDEO_DOUBLE_BUFFER, "1", SDL_HINT_OVERRIDE\)/ {
+		double_buffer_forced = 1
+	}
+	in_init && /return true;/ { exit double_buffer_forced ? 0 : 1 }
+	END { if (!in_init) exit 1 }
+' "$platform_init_file"; then
+	echo "KMSDRM must force double-buffered presentation so submitted page flips drain before handoff" >&2
 	exit 1
 fi
 
@@ -137,17 +150,34 @@ if ! awk '
 	exit 1
 fi
 
-if ! awk '
+if awk '
 	/static bool amiberry_hw_vsync_pacing_ok\(void\)/ { in_pacing_policy = 1 }
-	in_pacing_policy && /if \(kmsdrm_detected\)/ {
-		kmsdrm_policy = 1
-		next
-	}
-	kmsdrm_policy && /return false;/ { exit 0 }
+	in_pacing_policy && /if \(kmsdrm_detected\)/ { kmsdrm_branch = 1 }
+	kmsdrm_branch && /return false;/ { exit 0 }
 	in_pacing_policy && /^}/ { exit 1 }
 	END { if (!in_pacing_policy) exit 1 }
 ' "$drawing_file"; then
-	echo "KMSDRM must continue to use software emulation pacing" >&2
+	echo "Matched-refresh KMSDRM must not be excluded from hardware pacing" >&2
+	exit 1
+fi
+
+if ! awk '
+	/int isvsync_chipset\(void\)/ { in_chipset_policy = 1 }
+	in_chipset_policy && /if \(kmsdrm_detected && amiberry_hw_vsync_pacing_ok\(\)\)/ {
+		kmsdrm_match = 1
+		next
+	}
+	kmsdrm_match && /return 1;/ {
+		kmsdrm_hardware_pacing = 1
+		next
+	}
+	in_chipset_policy && /if \(currprefs.gfx_apmode\[0\]\.gfx_vsync <= 0\)/ {
+		exit kmsdrm_hardware_pacing ? 0 : 1
+	}
+	in_chipset_policy && /^}/ { exit 1 }
+	END { if (!in_chipset_policy) exit 1 }
+' "$drawing_file"; then
+	echo "Matched-refresh KMSDRM must select hardware pacing before the user VSync early return" >&2
 	exit 1
 fi
 

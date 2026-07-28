@@ -30,6 +30,18 @@ static inline bool osdep_platform_init_sdl()
 		return false;
 	}
 
+	// KMSDRM's default triple-buffer path returns from SDL_GL_SwapWindow()
+	// with a DRM page flip still pending. The GUI and emulation share the same
+	// window/context, so keep presentation fully drained across that handoff.
+	// KMSDRM reads this hint when the first window is created, after video init.
+	const char* video_driver = SDL_GetCurrentVideoDriver();
+	if (video_driver && SDL_strcasecmp(video_driver, "kmsdrm") == 0) {
+		if (SDL_SetHintWithPriority(SDL_HINT_VIDEO_DOUBLE_BUFFER, "1", SDL_HINT_OVERRIDE))
+			write_log("KMSDRM: enabled double-buffered presentation for safe GUI transitions\n");
+		else
+			write_log("KMSDRM: failed to enable double-buffered presentation: %s\n", SDL_GetError());
+	}
+
 	// Enable native IME for international text input
 	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "1");
 
