@@ -2,7 +2,6 @@
 set -euo pipefail
 
 source_file="src/osdep/gui/main_window.cpp"
-platform_init_file="src/osdep/amiberry_platform_internal_host.h"
 gfx_window_file="src/osdep/gfx_window.cpp"
 opengl_renderer_file="src/osdep/opengl_renderer.cpp"
 drawing_file="src/drawing.cpp"
@@ -122,37 +121,26 @@ if [ "$(dispatch_eligible 0 0)" -ne 1 ]; then
 fi
 
 if ! awk '
-	/static inline bool osdep_platform_init_sdl\(\)/ { in_init = 1 }
-	in_init && /SDL_GetCurrentVideoDriver\(\)/ { driver_queried = 1 }
-	in_init && /SDL_strcasecmp\(video_driver, "kmsdrm"\) == 0/ {
-		if (!driver_queried)
-			exit 1
-		in_kmsdrm_policy = 1
-	}
-	in_kmsdrm_policy && /SDL_SetHintWithPriority\(SDL_HINT_VIDEO_DOUBLE_BUFFER, "1", SDL_HINT_OVERRIDE\)/ {
-		double_buffer_forced = 1
-	}
-	in_init && /return true;/ { exit double_buffer_forced ? 0 : 1 }
-	END { if (!in_init) exit 1 }
-' "$platform_init_file"; then
-	echo "KMSDRM must force double-buffered presentation so submitted page flips drain before handoff" >&2
+	/void OpenGLRenderer::update_vsync\(int monid\)/ { in_update_vsync = 1 }
+	in_update_vsync && /if \(kmsdrm_detected\) \{/ { exit 0 }
+	in_update_vsync && /^}/ { exit 1 }
+	END { if (!in_update_vsync) exit 1 }
+' "$opengl_renderer_file"; then
+	echo "OpenGL VSync must retain an explicit KMSDRM presentation policy" >&2
 	exit 1
 fi
 
-if ! awk '
-	/void OpenGLRenderer::update_vsync\(int monid\)/ { in_update_vsync = 1 }
-	in_update_vsync && /if \(kmsdrm_detected\) \{/ { in_kmsdrm_policy = 1 }
-	in_kmsdrm_policy && /interval = SDL_GetVersion\(\) < SDL_VERSIONNUM\(3, 4, 0\) \? 0 : 1;/ {
-		versioned_interval = 1
-	}
-	in_kmsdrm_policy && /^	}/ {
-		exit versioned_interval ? 0 : 1
-	}
-	END { if (!in_update_vsync) exit 1 }
-' "$opengl_renderer_file"; then
-	echo "KMSDRM must use interval 0 for SDL 3.2.x and retain interval 1 for SDL 3.4+" >&2
-	exit 1
-fi
+for lifecycle_function in prepare_gui_sharing restore_emulation_context; do
+	if ! awk -v function_name="$lifecycle_function" '
+		$0 ~ "OpenGLRenderer::" function_name "\\(" { in_lifecycle = 1; function_seen = 1 }
+		in_lifecycle && /(glFinish|SDL_SyncWindow|SDL_GL_SwapWindow|drmHandleEvent|SDL_Delay)/ { exit 1 }
+		in_lifecycle && /^}/ { exit 0 }
+		END { if (!function_seen) exit 1 }
+	' "$opengl_renderer_file"; then
+		echo "OpenGL $lifecycle_function must not add a guessed or competing presentation-completion barrier" >&2
+		exit 1
+	fi
+done
 
 if ! grep -F -q 'static std::atomic<bool> hw_vsync_cached_presentation_blocking{false};' "$drawing_file" ||
 	! grep -F -q 'hw_vsync_cached_presentation_blocking.store(blocking, std::memory_order_relaxed);' "$drawing_file" ||
@@ -282,7 +270,7 @@ for lifecycle_function in init_context destroy_context; do
 	fi
 done
 
-if ! grep -F -q 'Legacy KMSDRM uses software timing with drained presentation' "$display_panel_file" ||
+if ! grep -F -q 'Legacy KMSDRM uses software timing' "$display_panel_file" ||
 	! grep -F -q 'blocking presentation is used for pacing only when console and emulated refresh match' "$display_panel_file" ||
 	! grep -F -q 'VSync controls, refresh switching, and Adaptive/VRR modes are not available' "$display_panel_file"; then
 	echo "KMSDRM help must describe legacy software pacing, matched-refresh hardware pacing, and unavailable controls" >&2
