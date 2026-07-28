@@ -399,10 +399,10 @@ void OpenGLRenderer::update_vsync(int monid)
 	}
 
 	// KMSDRM has no Adaptive/VRR presentation mode. SDL 3.2.x maps interval 0
-	// to an asynchronous DRM page flip; combined with the double-buffer hint,
-	// SDL immediately drains that flip without waiting for vblank. SDL 3.4+
-	// changed its double-buffer path to a blocking atomic commit, so retain
-	// interval 1 there and let matched-refresh hardware pacing account for it.
+	// to an asynchronous DRM page flip and retains its default triple-buffered
+	// path, with software timing pacing the emulator. SDL 3.4+ retains the
+	// double-buffered blocking atomic path, so use interval 1 there and let
+	// matched-refresh hardware pacing account for it.
 	// Mismatched-refresh atomic presentation needs a separate scheduler.
 	if (kmsdrm_detected) {
 		interval = SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) ? 0 : 1;
