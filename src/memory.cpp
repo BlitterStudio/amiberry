@@ -1878,22 +1878,45 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 #ifndef AMIBERRY
 extern unsigned char arosrom[];
 extern unsigned int arosrom_len;
+#else
+static std::string find_kickstart_replacement_directory()
+{
+	const auto find_replacement = [](const TCHAR* directory) {
+		if (directory == nullptr || directory[0] == '\0')
+			return std::string();
+
+		std::string candidate(directory);
+		fix_trailing(candidate);
+		if (zfile_exists((candidate + "aros-ext.bin").c_str())
+			&& zfile_exists((candidate + "aros-rom.bin").c_str()))
+			return candidate;
+		return std::string();
+	};
+
+	for (const auto& directory : currprefs.path_rom.path) {
+		if (auto candidate = find_replacement(directory); !candidate.empty())
+			return candidate;
+	}
+
+	const auto default_rom_path = get_rom_path();
+	return find_replacement(default_rom_path.c_str());
+}
 #endif
 extern int seriallog;
 static bool load_kickstart_replacement(void)
 {
 #ifdef AMIBERRY
 	int arosrom_len;
-	char path[MAX_DPATH];
-	get_rom_path(path, MAX_DPATH);
-	strcat(path, "aros-ext.bin");
-	auto* arosrom = zfile_load_file(path, &arosrom_len);
-	if (arosrom == nullptr)
-	{
-		gui_message("Could not find the 'aros-ext.bin' file in the ROMs directory!");
+	const auto aros_directory = find_kickstart_replacement_directory();
+	if (aros_directory.empty()) {
+		gui_message("Could not find the 'aros-ext.bin' and 'aros-rom.bin' files in the configured ROM directories!");
 		return false;
 	}
-	struct zfile* f = zfile_fopen_data(path, arosrom_len, arosrom);
+	auto path = aros_directory + "aros-ext.bin";
+	auto* arosrom = zfile_load_file(path.c_str(), &arosrom_len);
+	if (arosrom == nullptr)
+		return false;
+	struct zfile* f = zfile_fopen_data(path.c_str(), arosrom_len, arosrom);
 	if (!f)
 	{
 		xfree(arosrom);
@@ -1918,15 +1941,11 @@ static bool load_kickstart_replacement(void)
 #ifdef AMIBERRY
 	zfile_fclose(f);
 	xfree(arosrom);
-	get_rom_path(path, MAX_DPATH);
-	strcat(path, "aros-rom.bin");
-	arosrom = zfile_load_file(path, &arosrom_len);
+	path = aros_directory + "aros-rom.bin";
+	arosrom = zfile_load_file(path.c_str(), &arosrom_len);
 	if (arosrom == nullptr)
-	{
-		gui_message("Could not find the 'aros-rom.bin' file in the ROMs directory!");
 		return false;
-	}
-	f = zfile_fopen_data(path, arosrom_len, arosrom);
+	f = zfile_fopen_data(path.c_str(), arosrom_len, arosrom);
 	if (!f)
 	{
 		xfree(arosrom);

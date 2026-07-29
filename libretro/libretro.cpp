@@ -4083,10 +4083,23 @@ static void core_entry(void)
 		}
 		if (rom_path_value.empty())
 			rom_path_value = !system_dir.empty() ? system_dir : save_dir;
-		const std::string rom_path = "rom_path=" + rom_path_value;
-		// RP9 defers this preference until after autoload, but main's RP9 source
-		// pre-scan registers ROMs from the directory before manifest validation.
-		push_s_option(rom_path);
+
+		const auto push_rom_path = [&](const std::string& path) {
+			if (path.empty())
+				return;
+			const std::string rom_path = "amiberry.rom_path=" + path;
+			// RP9 defers this preference until after autoload, but main's RP9 source
+			// pre-scan registers ROMs from the directory before manifest validation.
+			push_s_option(rom_path);
+		};
+
+		// Libretro reserves system_dir for BIOS/firmware. Keep it in the ROM
+		// multipath even when a legacy Kickstarts directory was detected elsewhere,
+		// so replacement ROMs stored at the standard frontend location remain visible.
+		const std::string primary_rom_path = !system_dir.empty() ? system_dir : save_dir;
+		push_rom_path(primary_rom_path);
+		if (rom_path_value != primary_rom_path)
+			push_rom_path(rom_path_value);
 	}
 
 	{
