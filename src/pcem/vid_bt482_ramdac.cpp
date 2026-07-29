@@ -229,7 +229,7 @@ bt482_hwcursor_draw(svga_t *svga, int displine)
             comb = (b0 | (b1 << 1));
 
             y_pos = displine;
-            x_pos = offset + svga->x_add + 32;
+            x_pos = offset + svga->x_add;
             p     = (uint32_t*)(buffer32->line[y_pos]);
 
             if (offset >= svga->dac_hwcursor_latch.x) {

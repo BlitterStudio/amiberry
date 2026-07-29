@@ -1210,7 +1210,7 @@ void gd5429_recalctimings(svga_t *svga)
                                 case 0x5:
                                 if (gd5429->type >= CL_TYPE_GD5434 && (svga->seqregs[7] & 8))
                                 {
-                                        svga->render = svga_render_32bpp_highres;
+                                        svga->render = svga->swaprb ? svga_render_32bpp_highres_swaprb : svga_render_32bpp_highres;
                                         svga->bpp = 32;
                                         svga->rowoffset *= 2;
                                 }

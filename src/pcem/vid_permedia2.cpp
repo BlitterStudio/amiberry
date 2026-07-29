@@ -159,7 +159,6 @@ typedef struct permedia2_t
         bool gp_asforcebackgroundcolor;
         uint8_t gp_asxoffset, gp_asyoffset;
 
-        bool gp_bitmaskena;
         bool gp_bitmaskrelative;
         int gp_bitmaskoffset;
         bool gp_bitmaskpacking;
@@ -867,12 +866,13 @@ static bool do_bitmask_check(permedia2_t *permedia2)
 {
     if (permedia2->gp_bitmaskoffset > 31) {
         permedia2->gp_bitmaskoffset = 0;
-        if (permedia2->gp_synconbitmask) {
+        if (permedia2->gp_synconbitmask && !permedia2->gp_reusebitmask) {
             permedia2->gp_waitbitmask = true;
             return false;
         }
     }
-    int offset = permedia2->gp_bitmaskoffset;
+    int extraoffset = (permedia2->gp_regs[REG_RASTERIZERMODE >> 3] >> 10) & 31;
+    int offset = (permedia2->gp_bitmaskoffset + extraoffset) & 31;
     if (permedia2->gp_mirrorbitmask) {
         offset = 31 - offset;
     }
@@ -896,7 +896,7 @@ static bool next_bitmask(permedia2_t *permedia2)
 {
     if (permedia2->gp_bitmaskpacking && permedia2->gp_bitmaskoffset > 0) {
         permedia2->gp_bitmaskoffset = 0;
-        if (permedia2->gp_synconbitmask) {
+        if (permedia2->gp_synconbitmask && !permedia2->gp_reusebitmask) {
             permedia2->gp_waitbitmask = true;
             return false;
         }
@@ -925,7 +925,7 @@ static void do_blit_rect(permedia2_t *permedia2)
                     if (permedia2->gp_asena) {
                         do_stipple(permedia2, x, y, &c, &pxmode);
                     }
-                    if (permedia2->gp_bitmaskena) {
+                    if (permedia2->gp_synconbitmask) {
                         if (!do_bitmask_check(permedia2)) {
                             return;
                         }
@@ -949,7 +949,7 @@ static void do_blit_rect(permedia2_t *permedia2)
             permedia2->gp_x2 += permedia2->gp_dxsub;
             permedia2->gp_x = permedia2->gp_incx > 0 ? permedia2->gp_x1 : permedia2->gp_x2 - FRACT_ONE;
             permedia2->gp_y += permedia2->gp_dy;
-            if (permedia2->gp_bitmaskena) {
+            if (permedia2->gp_synconbitmask) {
                 if (!next_bitmask(permedia2)) {
                     return;
                 }
@@ -972,7 +972,7 @@ static void do_blit_rect(permedia2_t *permedia2)
                     if (permedia2->gp_asena) {
                         do_stipple(permedia2, x, y, &c, &pxmode);
                     }
-                    if (permedia2->gp_bitmaskena) {
+                    if (permedia2->gp_synconbitmask) {
                         if (!do_bitmask_check(permedia2)) {
                             return;
                         }
@@ -1014,7 +1014,7 @@ static void do_blit_rect(permedia2_t *permedia2)
             permedia2->gp_x2 += permedia2->gp_dxsub;
             permedia2->gp_x = permedia2->gp_incx > 0 ? permedia2->gp_x1 : permedia2->gp_x2 - FRACT_ONE;
             permedia2->gp_y += permedia2->gp_dy;
-            if (permedia2->gp_bitmaskena) {
+            if (permedia2->gp_synconbitmask) {
                 if (!next_bitmask(permedia2)) {
                     return;
                 }
@@ -1032,6 +1032,21 @@ static void do_blit_line(permedia2_t *permedia2)
     if (permedia2->gp_waitbitmask) {
         return;
     }
+
+#if 0
+    pclog("LINE: %04dx%04d - %04dx%04d %03d %03x ASE=%d BME=%d FBG=%d %08x:%02d:%02d (XS %d - %d YS %d - %d)\n",
+        FTOINT(permedia2->gp_x1),
+        FTOINT(permedia2->gp_y1),
+        FTOINT(permedia2->gp_x1 + permedia2->gp_len * permedia2->gp_dx),
+        FTOINT(permedia2->gp_y1 + permedia2->gp_len * permedia2->gp_dy),
+        permedia2->gp_len,
+        permedia2->gp_rop ? permedia2->gp_ropena : 0xfff,
+        permedia2->gp_asena, permedia2->gp_synconbitmask, permedia2->gp_bmforcebackgroundcolor,
+        permedia2->gp_bitmaskpattern, permedia2->gp_bitmaskoffset, (permedia2->gp_regs[REG_RASTERIZERMODE >> 3] >> 10) & 31,
+        permedia2->gp_scissor_min_x, permedia2->gp_scissor_max_x,
+		permedia2->gp_scissor_min_y, permedia2->gp_scissor_max_y);
+#endif
+
     while (permedia2->gp_len) {
         int x = FTOINT(permedia2->gp_x1);
         int y = FTOINT(permedia2->gp_y1);
@@ -1045,8 +1060,7 @@ static void do_blit_line(permedia2_t *permedia2)
             if (permedia2->gp_asena) {
                 do_stipple(permedia2, x, y, &c, &pxmode);
             }
-            // is this allowed in line mode?
-            if (permedia2->gp_bitmaskena) {
+            if (permedia2->gp_synconbitmask) {
                 if (!do_bitmask_check(permedia2)) {
                     return;
                 }
@@ -1109,7 +1123,7 @@ static void permedia2_blit(permedia2_t *permedia2)
     permedia2->gp_reusebitmask = (cmd >> 17) & 1;
 
 #if BLIT_LOG
-    pclog("Permedia2 render %08x as=%d ff=%d type=%d te=%d fe=%d\n",
+    pclog("Permedia2 render %08x as=%d ff=%d type=%d tex=%d fog=%d\n",
         cmd, permedia2->gp_astipple, permedia2->gp_fastfill,
         permedia2->gp_type, permedia2->gp_texena, permedia2->gp_fogena);
 #endif
@@ -1149,7 +1163,7 @@ static void permedia2_blit(permedia2_t *permedia2)
 
     uint32_t rasterizer = permedia2->gp_regs[REG_RASTERIZERMODE >> 3];
     permedia2->gp_bitmaskrelative = (rasterizer >> 19) & 1;
-    permedia2->gp_bitmaskoffset = (rasterizer >> 10) & 31;
+    permedia2->gp_bitmaskoffset = 0;
     permedia2->gp_bitmaskpacking = (rasterizer >> 9) & 1;
     permedia2->gp_bmforcebackgroundcolor = (rasterizer >> 6) & 1;
     permedia2->gp_mirrorbitmask = (rasterizer >> 0) & 1;
@@ -1157,11 +1171,10 @@ static void permedia2_blit(permedia2_t *permedia2)
     if ((rasterizer >> 1) & 1) {
         permedia2->gp_bitmaskpattern ^= 0xffffffff;
     }
-    permedia2->gp_waitbitmask = permedia2->gp_synconbitmask;
+    permedia2->gp_waitbitmask = permedia2->gp_synconbitmask && !permedia2->gp_reusebitmask;
     permedia2->gp_bitmaskpatterncnt = 0;
-    permedia2->gp_bitmaskena = permedia2->gp_synconbitmask || permedia2->gp_reusebitmask;
 #if BLIT_LOG
-    if (permedia2->gp_bitmaskena) {
+    if (permedia2->gp_synconbitmask) {
         pclog("Bitmaskpattern: REL=%d OFF=%d PACK=%d FBG=%d MIRROR=%d\n",
             permedia2->gp_bitmaskrelative, permedia2->gp_bitmaskoffset, permedia2->gp_bitmaskpacking,
             permedia2->gp_bmforcebackgroundcolor, permedia2->gp_mirrorbitmask);
@@ -1399,8 +1412,6 @@ static void permedia2_mmio_write_l(uint32_t addr, uint32_t val, void *p)
             if (permedia2->gp_waitbitmask) {
                 permedia2->gp_waitbitmask = false;
                 do_blit(permedia2);
-            } else {
-                pclog("REG_BITMASKPATTERN when not waiting!?\n");
             }
         } else if (reg == REG_CONTINUENEWLINE) {
             uint32_t rasterizer = permedia2->gp_regs[REG_RASTERIZERMODE >> 3];
@@ -1409,25 +1420,43 @@ static void permedia2_mmio_write_l(uint32_t addr, uint32_t val, void *p)
             switch ((rasterizer >> 2) & 3)
             {
                 case 1:
-                permedia2->gp_x &= 0xffff0000;
-                permedia2->gp_y &= 0xffff0000;
+                permedia2->gp_x1 &= 0xffff0000;
+                permedia2->gp_y1 &= 0xffff0000;
+                permedia2->gp_x2 &= 0xffff0000;
                 break;
                 case 2:
-                permedia2->gp_x &= 0xffff0000;
-                permedia2->gp_y &= 0xffff0000;
-                permedia2->gp_x |= 0x00008000;
-                permedia2->gp_y |= 0x00008000;
+                permedia2->gp_x1 &= 0xffff0000;
+                permedia2->gp_y1 &= 0xffff0000;
+                permedia2->gp_x2 &= 0xffff0000;
+                permedia2->gp_x1 |= 0x00008000;
+                permedia2->gp_y1 |= 0x00008000;
+                permedia2->gp_x2 |= 0x00008000;
                 break;
                 case 3:
-                permedia2->gp_x &= 0xffff0000;
-                permedia2->gp_y &= 0xffff0000;
-                permedia2->gp_x |= 0x00007fff;
-                permedia2->gp_y |= 0x00007fff;
+                permedia2->gp_x1 &= 0xffff0000;
+                permedia2->gp_y1 &= 0xffff0000;
+                permedia2->gp_x2 &= 0xffff0000;
+                permedia2->gp_x1 |= 0x00007fff;
+                permedia2->gp_y1 |= 0x00007fff;
+                permedia2->gp_x2 |= 0x00007fff;
+                break;
+            }
+            switch ((rasterizer >> 4) & 3)
+            {
+                case 1:
+				permedia2->gp_x1 += 0x00008000;
+				permedia2->gp_y1 += 0x00008000;
+                permedia2->gp_x2 += 0x00008000;
+                break;
+                case 2:
+                permedia2->gp_x1 += 0x00007fff;
+                permedia2->gp_y1 += 0x00007fff;
+                permedia2->gp_x2 += 0x00007fff;
                 break;
             }
             do_blit(permedia2);
         } else if (reg == REG_CONTINUENEWSUB) {
-            pclog("unimplemented\n");
+            pclog("REG_CONTINUENEWSUB unimplemented\n");
         } else if (reg == REG_SYNC) {
             permedia2->gp_outfifodata = tag;
             permedia2->gp_outfifocnt = 1;
