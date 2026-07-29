@@ -29,6 +29,39 @@ if(AMIBERRY_GNU_LIKE_COMPILER AND NOT WIN32)
 endif()
 set(AMIBERRY_LINK_OPTIONS "")
 
+if(WITH_PGO_GENERATE OR WITH_PGO_USE)
+    if(WITH_PGO_GENERATE AND WITH_PGO_USE)
+        message(FATAL_ERROR "WITH_PGO_GENERATE and WITH_PGO_USE are mutually exclusive")
+    endif()
+    if(WITH_LTO)
+        message(FATAL_ERROR "PGO and WITH_LTO are mutually exclusive")
+    endif()
+    if(NOT PGO_PROFILE_DIR)
+        message(FATAL_ERROR "PGO_PROFILE_DIR must be set when PGO is enabled")
+    endif()
+    if(CMAKE_CONFIGURATION_TYPES OR NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+        message(FATAL_ERROR "PGO requires a single-config Release build")
+    endif()
+    if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU" OR NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(FATAL_ERROR "PGO requires GNU C and C++ compilers")
+    endif()
+
+    if(WITH_PGO_GENERATE)
+        list(APPEND AMIBERRY_COMPILE_OPTIONS
+            "-fprofile-generate=${PGO_PROFILE_DIR}"
+            "-fprofile-update=atomic"
+        )
+        list(APPEND AMIBERRY_LINK_OPTIONS "-fprofile-generate=${PGO_PROFILE_DIR}")
+    else()
+        list(APPEND AMIBERRY_COMPILE_OPTIONS
+            "-fprofile-use=${PGO_PROFILE_DIR}"
+            "-Werror=missing-profile"
+            "-Werror=coverage-mismatch"
+        )
+        list(APPEND AMIBERRY_LINK_OPTIONS "-fprofile-use=${PGO_PROFILE_DIR}")
+    endif()
+endif()
+
 # Tune default Linux aarch64 builds for the slowest supported board
 # (Raspberry Pi 4 / Cortex-A72). -mtune only affects instruction scheduling;
 # the ISA baseline stays generic armv8-a. Leave WITH_OPTIMIZE builds alone so
