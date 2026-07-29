@@ -3937,6 +3937,7 @@ static void core_entry(void)
 	std::string deferred_rp9_kickstart;
 
 	std::vector<std::string> deferred_rp9_options;
+	std::vector<std::string> deferred_whdload_rom_paths;
 	auto push_s_option = [&safe_strdup, &deferred_rp9_options, is_rp9](const std::string& value) {
 		if (is_rp9) {
 			deferred_rp9_options.emplace_back(value);
@@ -4083,10 +4084,27 @@ static void core_entry(void)
 		}
 		if (rom_path_value.empty())
 			rom_path_value = !system_dir.empty() ? system_dir : save_dir;
-		const std::string rom_path = "rom_path=" + rom_path_value;
-		// RP9 defers this preference until after autoload, but main's RP9 source
-		// pre-scan registers ROMs from the directory before manifest validation.
-		push_s_option(rom_path);
+
+		const auto push_rom_path = [&](const std::string& path) {
+			if (path.empty())
+				return;
+			const std::string rom_path = "amiberry.rom_path=" + path;
+			// RP9 defers this preference until after autoload, but main's RP9 source
+			// pre-scan registers ROMs from the directory before manifest validation.
+			push_s_option(rom_path);
+			// WHDLoad can rebuild preferences from a per-game config or hardware
+			// preset, so reapply ROM directories after autoload as well.
+			if (is_whdload)
+				deferred_whdload_rom_paths.emplace_back(rom_path);
+		};
+
+		// Libretro reserves system_dir for BIOS/firmware. Keep it in the ROM
+		// multipath even when a legacy Kickstarts directory was detected elsewhere,
+		// so replacement ROMs stored at the standard frontend location remain visible.
+		const std::string primary_rom_path = !system_dir.empty() ? system_dir : save_dir;
+		push_rom_path(primary_rom_path);
+		if (rom_path_value != primary_rom_path)
+			push_rom_path(rom_path_value);
 	}
 
 	{
@@ -4170,6 +4188,12 @@ static void core_entry(void)
 			}
 		} else {
 			safe_strdup(game_path);
+		}
+	}
+	if (is_whdload) {
+		for (const auto& option : deferred_whdload_rom_paths) {
+			safe_strdup("-s");
+			safe_strdup(option.c_str());
 		}
 	}
 	if (is_rp9) {
