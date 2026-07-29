@@ -3937,6 +3937,7 @@ static void core_entry(void)
 	std::string deferred_rp9_kickstart;
 
 	std::vector<std::string> deferred_rp9_options;
+	std::vector<std::string> deferred_whdload_rom_paths;
 	auto push_s_option = [&safe_strdup, &deferred_rp9_options, is_rp9](const std::string& value) {
 		if (is_rp9) {
 			deferred_rp9_options.emplace_back(value);
@@ -4091,6 +4092,10 @@ static void core_entry(void)
 			// RP9 defers this preference until after autoload, but main's RP9 source
 			// pre-scan registers ROMs from the directory before manifest validation.
 			push_s_option(rom_path);
+			// WHDLoad can rebuild preferences from a per-game config or hardware
+			// preset, so reapply ROM directories after autoload as well.
+			if (is_whdload)
+				deferred_whdload_rom_paths.emplace_back(rom_path);
 		};
 
 		// Libretro reserves system_dir for BIOS/firmware. Keep it in the ROM
@@ -4183,6 +4188,12 @@ static void core_entry(void)
 			}
 		} else {
 			safe_strdup(game_path);
+		}
+	}
+	if (is_whdload) {
+		for (const auto& option : deferred_whdload_rom_paths) {
+			safe_strdup("-s");
+			safe_strdup(option.c_str());
 		}
 	}
 	if (is_rp9) {
