@@ -7,6 +7,7 @@
 # Core definitions
 .core-defs:
   variables:
+    GIT_SUBMODULE_STRATEGY: recursive
     MAKEFILE_PATH: libretro
     CORENAME: amiberry
     platform: unix
