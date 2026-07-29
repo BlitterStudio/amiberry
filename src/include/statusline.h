@@ -10,6 +10,8 @@
 #define TD_DEFAULT_LED_WIDTH 24
 #define TD_DEFAULT_LED_HEIGHT 4
 
+#define TD_MAX_CHARS 3
+
 #define TD_RIGHT 1
 #define TD_BOTTOM 2
 
