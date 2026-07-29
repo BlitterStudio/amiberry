@@ -136,6 +136,7 @@ static uae_u32 scandoubled_bpl_ptr[MAX_SCANDOUBLED_LINES + 1][2][MAX_PLANES];
 static int scandoubled_bpl_ptr_active[MAX_SCANDOUBLED_LINES + 1][2];
 
 static evt_t blitter_dma_change_cycle, copper_dma_change_cycle, sprite_dma_change_cycle_on, sprite_dma_change_cycle_off;
+static bool copper_dma_change_cycle_pending;
 
 static void empty_pipeline(void)
 {
@@ -2861,8 +2862,11 @@ static bool is_blitter_dma(void)
 static bool is_copper_dma(bool checksame)
 {
 	bool dma = dmaen(DMA_COPPER);
-	if (checksame && get_cycles() <= copper_dma_change_cycle) {
-		return dma == false;
+	if (checksame && copper_dma_change_cycle_pending) {
+		if (get_cycles() <= copper_dma_change_cycle) {
+			return dma == false;
+		}
+		copper_dma_change_cycle_pending = false;
 	}
 	return dma;
 }
@@ -3015,6 +3019,7 @@ static void DMACON(int hpos, uae_u16 v)
 	}
 	if (newcop && !oldcop) {
 		if (safecpu()) {
+			copper_dma_change_cycle_pending = true;
 			if (copper_access) {
 				copper_dma_change_cycle = get_cycles();
 			} else {
@@ -3024,6 +3029,7 @@ static void DMACON(int hpos, uae_u16 v)
 		copper_enabled_thisline = 1;
 	} else if (!newcop && oldcop) {
 		if (safecpu()) {
+			copper_dma_change_cycle_pending = true;
 			if (copper_access) {
 				copper_dma_change_cycle = get_cycles();
 			} else {
@@ -6677,6 +6683,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 
 	vsync_startline = 3;
 	copper_dma_change_cycle = 0;
+	copper_dma_change_cycle_pending = true;
 	blitter_dma_change_cycle = 0;
 	sprite_dma_change_cycle_on = 0;
 
@@ -9177,11 +9184,10 @@ static struct rgabuf *alloc_copper_cycle_dummy(void)
 
 static void generate_copper(void)
 {
-	bool bus_allocated = !check_rga_free_slot_in();
 	bool dma = is_copper_dma(true);
-	bool enable = !bus_allocated && dma;
-	bool ena_odd = (agnus_hpos & 1) == COPPER_CYCLE_POLARITY && enable;
-	bool act_even = (agnus_hpos & 1) != COPPER_CYCLE_POLARITY && dma;
+	bool odd_cycle = (agnus_hpos & 1) == COPPER_CYCLE_POLARITY;
+	bool ena_odd = odd_cycle && dma && check_rga_free_slot_in();
+	bool act_even = !odd_cycle && dma;
 	bool idle = !cop_state.irload1 && !cop_state.irload2 && !cop_state.start;
 	struct rgabuf *rga = NULL;
 
@@ -9277,7 +9283,7 @@ static void generate_copper(void)
 	// causing it to do DMA from address 0.
 	// I assume it happens because there is very short even->odd transition in
 	// horizontal counter bit 0 before new even value is loaded.
-	if (enable && !(agnus_hpos & 1) && !(agnus_hpos_prev & 1)) {
+	if (!odd_cycle && !(agnus_hpos_prev & 1) && dma && check_rga_free_slot_in()) {
 		if (!rga) {
 			if (cop_state.irload1 == 1 || cop_state.start == 1 ||
 				(cop_state.irload2 == 1 && cop_state.validmove && !cop_state.irload1)) {
