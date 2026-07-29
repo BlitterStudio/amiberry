@@ -136,6 +136,7 @@ static uae_u32 scandoubled_bpl_ptr[MAX_SCANDOUBLED_LINES + 1][2][MAX_PLANES];
 static int scandoubled_bpl_ptr_active[MAX_SCANDOUBLED_LINES + 1][2];
 
 static evt_t blitter_dma_change_cycle, copper_dma_change_cycle, sprite_dma_change_cycle_on, sprite_dma_change_cycle_off;
+static bool copper_dma_change_cycle_pending;
 
 static void empty_pipeline(void)
 {
@@ -2861,8 +2862,11 @@ static bool is_blitter_dma(void)
 static bool is_copper_dma(bool checksame)
 {
 	bool dma = dmaen(DMA_COPPER);
-	if (checksame && get_cycles() <= copper_dma_change_cycle) {
-		return dma == false;
+	if (checksame && copper_dma_change_cycle_pending) {
+		if (get_cycles() <= copper_dma_change_cycle) {
+			return dma == false;
+		}
+		copper_dma_change_cycle_pending = false;
 	}
 	return dma;
 }
@@ -3015,6 +3019,7 @@ static void DMACON(int hpos, uae_u16 v)
 	}
 	if (newcop && !oldcop) {
 		if (safecpu()) {
+			copper_dma_change_cycle_pending = true;
 			if (copper_access) {
 				copper_dma_change_cycle = get_cycles();
 			} else {
@@ -3024,6 +3029,7 @@ static void DMACON(int hpos, uae_u16 v)
 		copper_enabled_thisline = 1;
 	} else if (!newcop && oldcop) {
 		if (safecpu()) {
+			copper_dma_change_cycle_pending = true;
 			if (copper_access) {
 				copper_dma_change_cycle = get_cycles();
 			} else {
@@ -6677,6 +6683,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 
 	vsync_startline = 3;
 	copper_dma_change_cycle = 0;
+	copper_dma_change_cycle_pending = true;
 	blitter_dma_change_cycle = 0;
 	sprite_dma_change_cycle_on = 0;
 
