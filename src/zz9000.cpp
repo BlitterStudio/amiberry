@@ -612,7 +612,12 @@ static void zz_template_rect(zz9000_state *data, uae_u32 source, uae_u32 source_
 	int source_x, int pattern_y, int loop_rows, int color_mode, int draw_mode,
 	uae_u32 foreground, uae_u32 background, uae_u8 mask, bool pattern)
 {
-	if (width <= 0 || height <= 0 || !source_pitch || (pattern && !loop_rows))
+	// A zero source pitch is legal for a template: BytesPerRow is the offset
+	// from one template line to the next, not a size, so 0 means the single
+	// line repeats down the whole rectangle. source_row * source_pitch below
+	// degenerates to row 0 on its own. Patterns still need loop_rows, which
+	// the modulo divides by.
+	if (width <= 0 || height <= 0 || (pattern && !loop_rows))
 		return;
 	for (int row = 0; row < height; ++row) {
 		// Picasso96 templates have no Y offset. This field is only valid for
