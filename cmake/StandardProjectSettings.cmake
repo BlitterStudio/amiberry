@@ -49,12 +49,14 @@ if(WITH_PGO_GENERATE OR WITH_PGO_USE)
     if(WITH_PGO_GENERATE)
         list(APPEND AMIBERRY_COMPILE_OPTIONS
             "-fprofile-generate=${PGO_PROFILE_DIR}"
+            "-fprofile-prefix-path=${CMAKE_BINARY_DIR}"
             "-fprofile-update=atomic"
         )
         list(APPEND AMIBERRY_LINK_OPTIONS "-fprofile-generate=${PGO_PROFILE_DIR}")
     else()
         list(APPEND AMIBERRY_COMPILE_OPTIONS
             "-fprofile-use=${PGO_PROFILE_DIR}"
+            "-fprofile-prefix-path=${CMAKE_BINARY_DIR}"
             "-Werror=missing-profile"
             "-Werror=coverage-mismatch"
         )
