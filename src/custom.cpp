@@ -7673,9 +7673,9 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 		} else {
 			int reg = addr & 0x1fe;
 			if (aga_mode) {
-				custom_wput_dma64(reg, NULL, v, c);
+				custom_wput_dma64(reg, static_cast<uaecptr>(NULL), v, c);
 			} else {
-				write_drga(reg, NULL, v);
+				write_drga(reg, static_cast<uaecptr>(NULL), v);
 			}
 		}
 	}
