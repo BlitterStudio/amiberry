@@ -52,6 +52,21 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
 	fun importFiles(uris: List<Uri>, category: FileCategory) {
 		if (uris.isEmpty()) return
+		startImport(category) { app ->
+			uris.map { uri -> FileManager.importFileWithResult(app, uri, category) }
+		}
+	}
+
+	fun importFolder(treeUri: Uri, category: FileCategory) {
+		startImport(category) { app ->
+			FileManager.importFolderWithResults(app, treeUri, category)
+		}
+	}
+
+	private fun startImport(
+		category: FileCategory,
+		importer: (Application) -> List<FileManager.ImportResult>
+	) {
 		if (_isImporting.value) {
 			return
 		}
@@ -59,22 +74,11 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 		viewModelScope.launch(Dispatchers.IO) {
 			try {
 				val app = getApplication<Application>()
-				var successCount = 0
-				val totalCount = uris.size
-				var firstResult: FileManager.ImportResult? = null
-				val results = mutableListOf<FileManager.ImportResult>()
+				val results = importer(app)
+				val successCount = results.count { it is FileManager.ImportResult.Imported }
 
-				for (uri in uris) {
-					val result = FileManager.importFileWithResult(app, uri, category)
-					results += result
-					if (firstResult == null) firstResult = result
-					if (result is FileManager.ImportResult.Imported) {
-						successCount++
-					}
-				}
-
-				_importResult.value = if (totalCount == 1) {
-					val message = ImportFeedback.fromImportResult(firstResult ?: FileManager.ImportResult.Failed("file"))
+				_importResult.value = if (results.size == 1) {
+					val message = ImportFeedback.fromImportResult(results.first())
 					app.getString(message.stringRes, message.argument)
 				} else {
 					val message = ImportBatchFeedback.messageFor(results)
