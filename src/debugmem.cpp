@@ -1559,6 +1559,11 @@ static uae_u8 *loadhunkfile(uae_u8 *file, int filelen, uae_u32 seglist, int segm
 		totalsize += hunklens[i];
 	}
 	uae_u32 relocate_base = getrombase(totalsize);
+	if (!relocate_base) {
+		write_log("too large ROM\n");
+		return 0;
+	}
+	out = xcalloc(uae_u8, totalsize);
 	int outsize = 0;
 	int hunkindex = -1;
 	for (;;) {
@@ -1567,11 +1572,6 @@ static uae_u8 *loadhunkfile(uae_u8 *file, int filelen, uae_u32 seglist, int segm
 			uae_u32 hunklen = gl(p + 4) * 4;
 			p += 8;
 			hunkindex++;
-			if (!out)
-				out = xcalloc(uae_u8, outsize + hunklens[hunkindex]);
-			else
-				out = xrealloc(uae_u8, out, outsize + hunklens[hunkindex]);
-			memset(out + outsize, 0, hunklens[hunkindex]);
 			if (hunktype != 0x3eb) {
 				memcpy(out + outsize, p, hunklen);
 				p += hunklen;
@@ -1598,14 +1598,20 @@ static uae_u8 *loadhunkfile(uae_u8 *file, int filelen, uae_u32 seglist, int segm
 						return 0;
 					}
 					uaecptr hunkptr = hunkoffsets[relochunk] + relocate_base;
-					uae_u8 *currenthunk = out + hunkoffsets[relochunk];
+					uae_u8 *currenthunk = out + hunkoffsets[hunkindex];
 					for (int j = 0; j < reloccnt; j++) {
 						uae_u32 reloc = shortrel ? gw(p) : gl(p);
 						p += reladd;
 						if (reloc >= outsize - 3) {
+							xfree(hunkoffsets);
+							xfree(hunklens);
+							xfree(out);
 							return 0;
 						}
-						put_long_host(currenthunk + reloc, get_long_host(currenthunk + reloc) + hunkptr);
+						uae_u8 *dstaddr = currenthunk + reloc;
+						uae_u32 val = get_long_host(dstaddr);
+						val += hunkptr;
+						put_long_host(dstaddr, val);
 					}
 				}
 				if ((p - po) & 2) {
