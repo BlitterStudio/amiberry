@@ -6,27 +6,10 @@
 #include "imgui_panels.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cstring>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#ifdef _WIN32
-static const char* strcasestr(const char* haystack, const char* needle)
-{
-	if (!needle[0]) return haystack;
-	for (; *haystack; ++haystack) {
-		const char* h = haystack;
-		const char* n = needle;
-		while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
-			++h; ++n;
-		}
-		if (!*n) return haystack;
-	}
-	return nullptr;
-}
-#endif
 
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
@@ -78,6 +61,39 @@ static void trim_category(char* value)
 	value[length] = '\0';
 }
 
+static bool rebuild_config_groups(std::vector<ConfigGroup>& groups)
+{
+	groups.clear();
+	if (!amiberry_options.read_config_descriptions)
+		return false;
+
+	bool has_category = false;
+	for (const auto* config : ConfigFilesList)
+	{
+		if (config->Category[0])
+		{
+			has_category = true;
+			break;
+		}
+	}
+	if (!has_category)
+		return false;
+
+	std::unordered_map<std::string, size_t> group_indices;
+	for (int i = 0; i < static_cast<int>(ConfigFilesList.size()); ++i)
+	{
+		const char* group_name = ConfigFilesList[i]->Category;
+		if (!group_name[0] || strcmp(group_name, "Ungrouped") == 0)
+			group_name = "Ungrouped";
+
+		const auto [group_index, inserted] = group_indices.emplace(group_name, groups.size());
+		if (inserted)
+			groups.push_back({group_name, {}});
+		groups[group_index->second].entries.push_back(i);
+	}
+	return true;
+}
+
 void configurations_panel_reset()
 {
 	s_configs_initialized = false;
@@ -93,6 +109,8 @@ void render_panel_configurations()
 	static char last_seen_config[MAX_DPATH] = "";
 	static bool last_read_config_descriptions = amiberry_options.read_config_descriptions;
 	static bool reveal_selected_group = false;
+	static bool grouped_view = false;
+	static std::vector<ConfigGroup> groups;
 
 	const auto select_config = [&](const int index)
 	{
@@ -134,6 +152,7 @@ void render_panel_configurations()
 			snprintf(previously_selected_path, sizeof(previously_selected_path), "%s", ConfigFilesList[selected]->FullPath);
 
 		ReadConfigFileList();
+		grouped_view = rebuild_config_groups(groups);
 		s_configs_initialized = true;
 		bool found = false;
 		if (previously_selected_path[0])
@@ -235,69 +254,43 @@ void render_panel_configurations()
 			ImGui::PopStyleColor(3);
 	};
 
-	bool grouped_view = false;
-	if (amiberry_options.read_config_descriptions)
-	{
-		for (const auto* config : ConfigFilesList)
-		{
-			if (config->Category[0])
-			{
-				grouped_view = true;
-				break;
-			}
-		}
-	}
-
 	if (!grouped_view)
 	{
 		for (int i = 0; i < static_cast<int>(ConfigFilesList.size()); ++i)
 		{
-			if (search_text[0] != '\0' && strcasestr(ConfigFilesList[i]->Name, search_text) == nullptr)
+			if (search_text[0] != '\0' && SDL_strcasestr(ConfigFilesList[i]->Name, search_text) == nullptr)
 				continue;
 			render_config_entry(i);
 		}
 	}
 	else
 	{
-		std::vector<ConfigGroup> groups;
-		std::unordered_map<std::string, size_t> group_indices;
-		for (int i = 0; i < static_cast<int>(ConfigFilesList.size()); ++i)
-		{
-			const char* group_name = ConfigFilesList[i]->Category;
-			if (!group_name[0] || strcmp(group_name, "Ungrouped") == 0)
-				group_name = "Ungrouped";
-
-			const auto [group_index, inserted] = group_indices.emplace(group_name, groups.size());
-			if (inserted)
-			{
-				groups.push_back({group_name, {}});
-			}
-			groups[group_index->second].entries.push_back(i);
-		}
-
 		for (const auto& group : groups)
 		{
 			const bool category_matches =
-				search_text[0] != '\0' && strcasestr(group.name.c_str(), search_text) != nullptr;
+				search_text[0] != '\0' && SDL_strcasestr(group.name.c_str(), search_text) != nullptr;
 			bool has_visible_entry = search_text[0] == '\0' || category_matches;
 			bool contains_selection = false;
 			if (!has_visible_entry)
 			{
 				for (const int index : group.entries)
 				{
-					if (strcasestr(ConfigFilesList[index]->Name, search_text) != nullptr)
+					if (SDL_strcasestr(ConfigFilesList[index]->Name, search_text) != nullptr)
 					{
 						has_visible_entry = true;
 						break;
 					}
 				}
 			}
-			for (const int index : group.entries)
+			if (reveal_selected_group)
 			{
-				if (index == selected)
+				for (const int index : group.entries)
 				{
-					contains_selection = true;
-					break;
+					if (index == selected)
+					{
+						contains_selection = true;
+						break;
+					}
 				}
 			}
 			if (!has_visible_entry)
@@ -314,7 +307,7 @@ void render_panel_configurations()
 				for (const int index : group.entries)
 				{
 					if (search_text[0] != '\0' && !category_matches &&
-						strcasestr(ConfigFilesList[index]->Name, search_text) == nullptr)
+						SDL_strcasestr(ConfigFilesList[index]->Name, search_text) == nullptr)
 						continue;
 					render_config_entry(index);
 				}
@@ -402,6 +395,7 @@ void render_panel_configurations()
 			snprintf(last_seen_config, MAX_DPATH, "%s", last_active_config);
 			gui_config_mark_clean();
 			ReadConfigFileList();
+			grouped_view = rebuild_config_groups(groups);
 			select_config_by_path(filename);
 		}
 		else
@@ -437,6 +431,7 @@ void render_panel_configurations()
 				{
 					write_log("Config save as: SUCCESS '%s'\n", save_as_path.c_str());
 					ReadConfigFileList();
+					grouped_view = rebuild_config_groups(groups);
 					char saved_name[MAX_DPATH];
 					extract_filename(save_as_path.c_str(), saved_name);
 					remove_file_extension(saved_name);
@@ -470,6 +465,7 @@ void render_panel_configurations()
 		{
 			remove(ConfigFilesList[selected]->FullPath);
 			ReadConfigFileList();
+			grouped_view = rebuild_config_groups(groups);
 			selected = -1;
 			name[0] = '\0';
 			desc[0] = '\0';
