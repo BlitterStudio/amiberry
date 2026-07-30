@@ -27,6 +27,7 @@ extern int jit_n_addr_bank_unsafe;
 bool init_shm (void);
 void free_shm (void);
 bool preinit_shm (void);
+extern bool rom_write_enabled;
 extern bool canbang;
 extern bool jit_direct_compatible_memory;
 extern uaecptr highest_ram;

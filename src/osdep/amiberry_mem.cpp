@@ -1135,8 +1135,12 @@ void protect_roms(bool protect)
 {
 	if (protect) {
 		// protect only if JIT enabled, always allow unprotect
-		if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
+		if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
 			return;
+		}
+		if (currprefs.rom_readwrite || rom_write_enabled) {
+			return;
+		}
 	}
 	for (auto & shmid : shmids) {
 		struct uae_shmid_ds *shm = &shmid;
