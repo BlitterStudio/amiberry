@@ -43,6 +43,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	var adjustmentNotices by mutableStateOf<List<SettingsAdjustmentNotice>>(emptyList())
 		private set
 
+	var selectedIntentPreset by mutableStateOf<SettingsIntentPreset?>(null)
+		private set
+
 	var currentUnknownLines by mutableStateOf<List<String>>(emptyList())
 		private set
 
@@ -115,6 +118,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	}
 
 	fun applyModel(model: AmigaModel) {
+		selectedIntentPreset = null
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, availableRoms.value)
 		val previousSettings = settings
 		val newSettings = EmulatorSettings.fromModel(model).copy(
@@ -132,6 +136,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	}
 
 	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String, path: String) {
+		selectedIntentPreset = null
 		applyConstrainedSettings(
 			appPreferences.applyRememberedAndroidControls(parsed.settings, parsed.explicitKeys),
 			publishNotices = true
@@ -208,6 +213,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	/** Revert in-memory edits back to the last saved/loaded values of the open config. */
 	fun discardChanges() {
+		selectedIntentPreset = null
 		settings = baselineSettings
 		currentUnknownLines = baselineUnknownLines
 		clearAdjustmentNotices()
@@ -245,6 +251,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			SettingsIntentPresets.apply(settings, preset),
 			publishNotices = true
 		)
+		selectedIntentPreset = preset.takeIf { SettingsIntentPresets.matches(settings, it) }
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
@@ -265,6 +272,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 				)
 			} ?: return@launch
 
+			selectedIntentPreset = null
 			applyConstrainedSettings(detectedSettings, publishNotices = true)
 			appPreferences.saveAndroidControls(settings)
 			saveLastSession()
@@ -296,6 +304,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	private fun applyConstrainedSettings(requested: EmulatorSettings, publishNotices: Boolean) {
 		val constrained = applyConstraints(requested)
 		settings = constrained
+		selectedIntentPreset = selectedIntentPreset?.takeIf {
+			SettingsIntentPresets.matches(constrained, it)
+		}
 		if (publishNotices) {
 			adjustmentNotices = SettingsAdjustmentNotices.fromAdjustment(requested, constrained)
 		}
