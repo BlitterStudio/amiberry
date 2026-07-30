@@ -351,6 +351,7 @@ typedef struct {
 	char Name[MAX_DPATH];
 	char FullPath[MAX_DPATH];
 	char Description[MAX_DPATH];
+	char Category[256];
 	int BuiltInID;
 } ConfigFileInfo;
 
