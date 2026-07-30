@@ -382,6 +382,12 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 			write_log (_T("not for me3\n"));
 		return;
 	}
+	// dst = multicast and src = me? our own frame, reflected by the host link.
+	if ((dstmac[0] & 0x01) && memcmp (srcmac, realmac, sizeof realmac) == 0) {
+		if (log_a2065 > 1)
+			write_log (_T("not for me4\n"));
+		return;
+	}
 
 	if (log_a2065 > 1) {
 		if (!memcmp(dstmac, realmac, sizeof realmac)) {

@@ -447,7 +447,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 	pdev->unit = unit;
 	pdev->flags = flags;
 	pdev->inuse = 1;
-	pdev->td = td[unit];
+	pdev->td = td ? td[unit] : NULL;
 	pdev->promiscuous = (flags & SANA2OPF_PROM) ? 1 : 0;
 
 	if (pdev->td == NULL || pdev->td->active == 0)
@@ -943,8 +943,8 @@ static void uaenet_gotdata (void *devv, const uae_u8 *d, int len)
 			write_log(_T("<- invalid packet size %d\n"), len);
 		return;
 	}
-	/* drop if dst == broadcast and src == me */
-	if (isbroadcast (d) && !memcmp (d + 6, dev->td->mac, ADDR_SIZE))
+	/* drop if src == me, the host link reflects our own frames back at us */
+	if (!memcmp (d + 6, dev->td->mac, ADDR_SIZE))
 		return;
 	/* drop if not promiscuous and dst != broadcast and dst != me */
 	if (!dev->promiscuous && !isbroadcast (d) && memcmp (d, dev->td->mac, ADDR_SIZE))

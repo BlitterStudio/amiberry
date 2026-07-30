@@ -293,12 +293,28 @@ static int ne2000_can_receive(NetClientState *nc)
 
 #define MIN_BUF_SIZE 60
 
+// dp8390 keeps the station address in a register set, the plain NE2000 in the
+// PROM window at the start of the packet buffer, one byte per word.
+static bool ne2000_isownaddress(NE2000State *s, const uint8_t *addr)
+{
+	if (s->dp8390)
+		return !memcmp(s->c.macaddr.a, addr, 6);
+	for (int i = 0; i < 6; i++) {
+		if (s->mem[i * 2] != addr[i])
+			return false;
+	}
+	return true;
+}
+
 static bool ne2000_canreceive(NetClientState *nc, const uint8_t *buf)
 {
 	NE2000State *s = qemu_get_nic_opaque(nc);
 	unsigned int mcast_idx;
 	static const uint8_t broadcast_macaddr[6] =
 	{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+	/* a frame we sent ourselves, reflected back by the host link */
+	if (ne2000_isownaddress(s, buf + 6))
+		return false;
 	/* XXX: check this */
 	if (s->rxcr & 0x10) {
 		/* promiscuous: receive all */
@@ -314,21 +330,7 @@ static bool ne2000_canreceive(NetClientState *nc, const uint8_t *buf)
 			mcast_idx = compute_mcast_idx(buf);
 			if (!(s->mult[mcast_idx >> 3] & (1 << (mcast_idx & 7))))
 				return false;
-		} else if (s->dp8390 &&
-			s->c.macaddr.a[0] == buf[0] &&
-			s->c.macaddr.a[1] == buf[1] &&
-			s->c.macaddr.a[2] == buf[2] &&
-			s->c.macaddr.a[3] == buf[3] &&
-			s->c.macaddr.a[4] == buf[4] &&
-			s->c.macaddr.a[5] == buf[5]) {
-			/* match */
-		} else if (!s->dp8390 &&
-			s->mem[0] == buf[0] &&
-			s->mem[2] == buf[1] &&
-			s->mem[4] == buf[2] &&
-			s->mem[6] == buf[3] &&
-			s->mem[8] == buf[4] &&
-			s->mem[10] == buf[5]) {
+		} else if (ne2000_isownaddress(s, buf)) {
 			/* match */
 		} else {
 			return false;
@@ -1154,6 +1156,7 @@ type_init(ne2000_register_types)
 #endif
 
 #define MAX_PACKET_SIZE 1600
+#define MIN_PACKET_SIZE 14
 #define MAX_RECEIVE_BUFFER_INDEX 256
 static int receive_buffer_index;
 static uae_u8 *receive_buffer;
@@ -1194,10 +1197,14 @@ static void gotfunc(void *devv, const uae_u8 *databuf, int len)
 #ifdef DEBUG_NE2000
 	write_log("NE2000: %d byte received (%d %d)\n", len, receive_buffer_read, receive_buffer_write);
 #endif
+	// host can hand us anything, including coalesced frames much larger
+	// than the wire MTU. Check the size before looking at the header.
+	if (len < MIN_PACKET_SIZE || len > MAX_PACKET_SIZE)
+		return;
+	if (!receive_buffer)
+		return;
 	// immediately check if we don't need this packet. for better performance.
 	if (!ne2000_canreceive(&ncs, databuf))
-		return;
-	if (len > MAX_PACKET_SIZE) 
 		return;
 	uae_sem_wait(&ne2000_sem);
 	int nextwrite = (receive_buffer_write + 1) & (MAX_RECEIVE_BUFFER_INDEX - 1);
