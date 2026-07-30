@@ -32,6 +32,14 @@ class SDLJavaShimSignatureTest {
 	}
 
 	@Test
+	fun androidApkBuildVerifiesSdlJavaShimVersion() {
+		val buildScript = File("build.gradle").readText()
+
+		assertEquals(true, buildScript.contains("verifySdlJavaShimVersion"))
+		assertEquals(true, buildScript.contains("preBuild.dependsOn copyAssets, verifySdlJavaShimVersion"))
+	}
+
+	@Test
 	fun registeredNativeMethodsMatchSdlRegistrationTables() {
 		assertNativeMethods(
 			SDLActivity::class.java,
