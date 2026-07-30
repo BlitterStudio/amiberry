@@ -135,7 +135,10 @@ void render_panel_configurations()
 	const auto select_config_by_path = [&](const char* path)
 	{
 		const int index = find_config_by_path(path);
-		select_config(index);
+		if (index >= 0)
+			select_config(index);
+		else
+			selected = -1;
 		reveal_selected_group = index >= 0;
 	};
 
