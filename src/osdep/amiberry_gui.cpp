@@ -611,7 +611,7 @@ void ReadConfigFileList()
 		{
 			auto p = cfgfile_open(tmp->FullPath, nullptr);
 			if (p) {
-				cfgfile_get_description(p, nullptr, tmp->Description, nullptr, nullptr, nullptr, nullptr, nullptr);
+				cfgfile_get_description(p, nullptr, tmp->Description, tmp->Category, nullptr, nullptr, nullptr, nullptr);
 				cfgfile_close(p);
 			}
 		}
