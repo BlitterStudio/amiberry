@@ -4,6 +4,7 @@ SPS DECODER LIBRARY
 
 HISTORY
 
+2026-07-23 - Fix for imgeUnsupported error when locking an image 
 2026-05-28 - Major rework in C++17 using standard types <cstdint> to help
              integrating the library better with modern codebases
            - Single codebase for all supported platforms (Windows, macOS, Linux) 
