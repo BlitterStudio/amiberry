@@ -51,7 +51,7 @@
 
 bool canbang;
 uaecptr highest_ram;
-static bool rom_write_enabled;
+bool rom_write_enabled;
 #ifdef JIT
 /* Set by each memory handler that does not simply access real memory. */
 int special_mem, special_mem_default;
@@ -1183,16 +1183,10 @@ static void REGPARAM2 kickmem_lput (uaecptr addr, uae_u32 b)
 		record_rom_access(kickmem_bank.start + addr, b, 4, true);
 	}
 #endif
-	if (currprefs.rom_readwrite && rom_write_enabled) {
+	if (currprefs.rom_readwrite || rom_write_enabled) {
 		addr &= kickmem_bank.mask;
 		m = (uae_u32*)(kickmem_bank.baseaddr + addr);
 		do_put_mem_long (m, b);
-#if 0
-		if (addr == ROM_SIZE_512-4) {
-			rom_write_enabled = false;
-			write_log (_T("ROM write disabled\n"));
-		}
-#endif
 	} else if (a1000_kickstart_mode) {
 		if (addr >= 0x1000000 - ROM_SIZE_256) {
 			addr = get_a1000_addr(addr);
@@ -1215,7 +1209,7 @@ static void REGPARAM2 kickmem_wput (uaecptr addr, uae_u32 b)
 		record_rom_access(kickmem_bank.start + addr, b, 2, true);
 	}
 #endif
-	if (currprefs.rom_readwrite && rom_write_enabled) {
+	if (currprefs.rom_readwrite || rom_write_enabled) {
 		addr &= kickmem_bank.mask;
 		m = (uae_u16 *)(kickmem_bank.baseaddr + addr);
 		do_put_mem_word (m, b);
@@ -1240,7 +1234,7 @@ static void REGPARAM2 kickmem_bput (uaecptr addr, uae_u32 b)
 		record_rom_access(kickmem_bank.start + addr, b, 1, true);
 	}
 #endif
-	if (currprefs.rom_readwrite && rom_write_enabled) {
+	if (currprefs.rom_readwrite || rom_write_enabled) {
 		addr &= kickmem_bank.mask;
 		kickmem_bank.baseaddr[addr] = b;
 	} else if (a1000_kickstart_mode) {
@@ -1299,22 +1293,38 @@ MEMORY_LGET(extendedkickmem);
 MEMORY_CHECK(extendedkickmem);
 MEMORY_XLATE(extendedkickmem);
 
-static void REGPARAM2 extendedkickmem_lput (uaecptr addr, uae_u32 b)
+static void REGPARAM2 extendedkickmem_lput(uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem lput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem_bank.mask;
+		uae_u32 *m = (uae_u32*)(extendedkickmem_bank.baseaddr + addr);
+		do_put_mem_long(m, b);
+	} else {
+		if (currprefs.illegal_mem)
+			write_log(_T("Illegal extendedkickmem lput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
-static void REGPARAM2 extendedkickmem_wput (uaecptr addr, uae_u32 b)
+static void REGPARAM2 extendedkickmem_wput(uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem wput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem_bank.mask;
+		uae_u16 *m = (uae_u16*)(extendedkickmem_bank.baseaddr + addr);
+		do_put_mem_word(m, b);
+	} else {
+		if (currprefs.illegal_mem)
+			write_log(_T("Illegal extendedkickmem wput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
-static void REGPARAM2 extendedkickmem_bput (uaecptr addr, uae_u32 b)
+static void REGPARAM2 extendedkickmem_bput(uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem lput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem_bank.mask;
+		extendedkickmem_bank.baseaddr[addr] = b;
+	} else {
+		if (currprefs.illegal_mem)
+			write_log(_T("Illegal extendedkickmem bput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
-
 
 static void REGPARAM3 extendedkickmem2a_lput(uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 extendedkickmem2a_wput(uaecptr, uae_u32) REGPARAM;
@@ -1337,36 +1347,69 @@ MEMORY_XLATE(extendedkickmem2b);
 
 static void REGPARAM2 extendedkickmem2a_lput (uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem2a lput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem2a_bank.mask;
+		uae_u32 *m = (uae_u32*)(extendedkickmem2a_bank.baseaddr + addr);
+		do_put_mem_long(m, b);
+	} else {
+		if (currprefs.illegal_mem)
+			write_log (_T("Illegal extendedkickmem2a lput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
 static void REGPARAM2 extendedkickmem2a_wput (uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem2a wput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem2a_bank.mask;
+		uae_u16 *m = (uae_u16*)(extendedkickmem2a_bank.baseaddr + addr);
+		do_put_mem_word(m, b);
+	} else {
+		if (currprefs.illegal_mem)
+			write_log (_T("Illegal extendedkickmem2a wput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
 static void REGPARAM2 extendedkickmem2a_bput (uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem2a lput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem2a_bank.mask;
+		extendedkickmem2a_bank.baseaddr[addr] = b;
+	} else {
+		if (currprefs.illegal_mem)
+			write_log (_T("Illegal extendedkickmem2a bput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
 
 static void REGPARAM2 extendedkickmem2b_lput(uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log(_T("Illegal extendedkickmem2b lput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem2b_bank.mask;
+		uae_u32 *m = (uae_u32*)(extendedkickmem2b_bank.baseaddr + addr);
+		do_put_mem_long(m, b);
+	} else {
+		if (currprefs.illegal_mem)
+			write_log(_T("Illegal extendedkickmem2b lput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
 static void REGPARAM2 extendedkickmem2b_wput(uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log(_T("Illegal extendedkickmem2b wput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem2b_bank.mask;
+		uae_u16 *m = (uae_u16*)(extendedkickmem2b_bank.baseaddr + addr);
+		do_put_mem_word(m, b);
+	} else {
+		if (currprefs.illegal_mem)
+			write_log(_T("Illegal extendedkickmem2b wput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
 static void REGPARAM2 extendedkickmem2b_bput(uaecptr addr, uae_u32 b)
 {
-	if (currprefs.illegal_mem)
-		write_log(_T("Illegal extendedkickmem2b lput at %08x\n"), addr);
+	if (currprefs.rom_readwrite || rom_write_enabled) {
+		addr &= extendedkickmem2b_bank.mask;
+		extendedkickmem2b_bank.baseaddr[addr] = b;
+	} else {
+		if (currprefs.illegal_mem)
+			write_log(_T("Illegal extendedkickmem2b bput at %08x PC=%08x\n"), addr, M68K_GETPC);
+	}
 }
-
 
 /* Default memory access functions */
 
@@ -2110,6 +2153,8 @@ static const uae_u8 romend[20] = {
 static int load_kickstart (void)
 {
 	TCHAR tmprom[MAX_DPATH];
+
+	rom_write_enabled = false;
 	cloanto_rom = 0;
 	if (!_tcscmp(currprefs.romfile, _T(":AROS"))) {
 		return load_kickstart_replacement();
@@ -2139,6 +2184,8 @@ static int load_kickstart (void)
 				int size = zfile_size32(zf);
 				zfile_fclose(f);
 				f = zf;
+				// Executable loaded ROMs are always read-write
+				rom_write_enabled = true;
 				if (size > ROM_SIZE_512) {
 					maxsize = zfile_size32(zf);
 					singlebigrom = true;
@@ -2175,7 +2222,7 @@ static int load_kickstart (void)
 				}
 				if (filesize >= ROM_SIZE_512 * 2) {
 					struct romdata *rd = getromdatabyzfile(f);
-					// CD32 with swapper upper and lower 512k?
+					// CD32 with swapped upper and lower 512k?
 					if (rd && (rd->type & ROMTYPE_KICKCD32) && rd->size == ROM_SIZE_512) {
 						kspos = 0;
 						extpos = ROM_SIZE_512;
@@ -3183,7 +3230,6 @@ void memory_reset (void)
 
 	highest_ram = 0;
 	need_hardreset = false;
-	rom_write_enabled = true;
 #ifdef JIT
 	/* Start in direct n_addr mode; map_banks() will flip this if a bank
 	 * explicitly requires S_N_ADDR indirection. */
