@@ -140,6 +140,7 @@ struct vidbuffer
 extern bool isnativevidbuf(int monid);
 extern int max_uae_width, max_uae_height;
 extern bool gfx_hdr;
+extern float p96vblank;
 
 struct vidbuf_description
 {

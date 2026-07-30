@@ -69,6 +69,7 @@ static const char *numbers_default = { /* ugly  0123456789CHD%+-PNKV */
 	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----+++++++++++++  ++++  "
 //   x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x  
 };
+static const char *numbers_mapping = "0123456789CHD%+-PNKV";
 
 static const char *statusline_numbers = numbers_default;
 
@@ -167,6 +168,9 @@ const uae_s8 defaultosdledpos[LED_MAX] = {
 	LED_DF1,
 	LED_DF2,
 	LED_DF3,
+#ifdef AMIBERRY
+	LED_TEMP,
+#endif
 	LED_MD,
 	LED_NET
 };
@@ -232,8 +236,8 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 	}
 
 	for (led = 0; led < LED_MAX; led++) {
-		int num1 = -1, num2 = -1, num3 = -1, num4 = -1;
-		int x, c, on = 0, am = 2;
+		char text[TD_MAX_CHARS + 1] = { 0 };
+		int x, c, on = 0;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
 		int half = 0, extraborder = 0;
 
@@ -251,9 +255,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			int track = gid->drive_track;
 			on_rgb = 0x00cc00;
 			if (!gid->drive_disabled) {
-				num1 = -1;
-				num2 = track / 10;
-				num3 = track % 10;
+				sprintf(text, "%02d", track);
 				on = gid->drive_motor;
 				if (gid->drive_writing) {
 					on_rgb = 0xcc0000;
@@ -287,51 +289,40 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 				on = 0;
 			}
 			off_rgb = 0x000033;
-			num1 = -1;
-			num2 = 10;
-			num3 = 12;
+			strcpy(text, "CD");
 		} else if (led == LED_HD) {
 			on = gui_data.hd;
 			on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
 			off_rgb = 0x000033;
-			num1 = -1;
-			num2 = 11;
-			num3 = 12;
+			strcpy(text, "HD");
 		} else if (led == LED_FPS) {
 			if (pause_emulation) {
-				num1 = -1;
-				num2 = -1;
-				num3 = 16;
+				strcpy(text, "P");
 				on_rgb = 0xcccccc;
 				off_rgb = 0x111111;
-				am = 2;
 			} else {
 				int fps = (gui_data.fps + 5) / 10;
 				on_rgb = 0x111111;
 				off_rgb = gui_data.fps_color == 1 ? 0xcccc00 : (gui_data.fps_color == 2 ? 0x0000cc : 0x111111);
-				am = 3;
 				if (gui_data.fps_color >= 2) {
-					num1 = -1;
-					num2 = 15;
-					num3 = 15;
-					am = 2;
+					if (ad->picasso_on) {
+						fps = (int)(p96vblank + 0.5f);
+					} else {
+						fps = -1;
+					}
+				}
+				if (fps < 0) {
+					strcpy(text, "--");
 				} else {
 					if (fps > 999) {
-						fps += 50;
-						fps /= 10;
-						fps = std::min(fps, 999);
-						num1 = fps / 100;
-						num1 %= 10;
-						num2 = 18;
-						num3 = (fps - num1 * 100) / 10;
+						if (fps > 9999) {
+							fps = 9999;
+						}
+						sprintf(text, "%dK", fps / 1000);
+					} else if (fps >= 100) {
+						sprintf(text, "%3d", fps);
 					} else {
-						num1 = fps / 100;
-						num2 = (fps - num1 * 100) / 10;
-						num3 = fps % 10;
-						num1 %= 10;
-						num2 %= 10;
-						if (num1 == 0)
-							am = 2;
+						sprintf(text, "%2d", fps);
 					}
 				}
 			}
@@ -344,38 +335,29 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 				if (gui_data.cpu_halted < 0) {
 					on = 1;
 					on_rgb = 0x111111;
-					num1 = 16; // PPC
-					num2 = 16;
-					num3 = 10;
-					am = 3;
+					strcpy(text, "PPC");
 				} else if (gui_data.cpu_halted > 0) {
 					on = 1;
 					on_rgb = 0xcccc00;
-					num1 = gui_data.cpu_halted >= 10 ? 11 : -1;
-					num2 = gui_data.cpu_halted >= 10 ? (gui_data.cpu_halted / 10) % 10 : 11;
-					num3 = gui_data.cpu_halted % 10;
-					am = 2;
+					sprintf(text, "H%d", gui_data.cpu_halted);
 				}
+			} else if (idle >= 100) {
+				if (idle >= 1000) {
+					idle = 999;
+				}
+				sprintf(text, "%3d", idle);
+			} else if (idle >= 0) {
+				sprintf(text, "%2d%%", idle);
 			} else {
-				num1 = idle / 100;
-				num2 = (idle - num1 * 100) / 10;
-				num3 = idle % 10;
-				num1 %= 10;
-				num2 %= 10;
-				num4 = num1 == 0 ? 13 : -1;
-				if (!num1 && !num2) {
-					num2 = -2;
-				}
-				am = 3;
+				strcpy(text, "--");
 			}
 		} else if (led == LED_SND) {
 			int snd = abs(gui_data.sndbuf + 5) / 10;
-			snd = std::min(snd, 99);
+			if (snd > 99)
+				snd = 99;
 			on = gui_data.sndbuf_status;
 			if (on < 3) {
-				num1 = gui_data.sndbuf < 0 ? 15 : 14;
-				num2 = snd / 10;
-				num3 = snd % 10;
+				sprintf(text, "%2d", snd);
 			}
 			on_rgb = 0x111111;
 			if (on < 0)
@@ -385,14 +367,11 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			else if (on == 1)
 				on_rgb = 0x0000cc; // "normal" overflow
 			off_rgb = 0x111111;
-			am = 3;
 		} else if (led == LED_MD) {
 			on = gui_data.md;
 			on_rgb = on == 2 ? 0xcc0000 : 0x00cc00;
 			off_rgb = 0x003300;
-			num1 = -1;
-			num2 = 17;
-			num3 = 19;
+			strcpy(text, "NV");
 		} else if (led == LED_NET) {
 			on = gui_data.net;
 			on_rgb = 0;
@@ -401,37 +380,38 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			if (on & 2)
 				on_rgb |= 0xcc0000;
 			off_rgb = 0x111111;
-			num1 = -1;
-			num2 = -1;
-			num3 = 17;
-			am = 1;
+			strcpy(text, "N");
 		} else if (led == LED_LINES) {
-			int lines = gui_data.lines;
-			if (lines > 999) {
-				lines = 999;
+			if (gui_data.fps_color < 2) {
+				int lines = gui_data.lines;
+				if (lines > 999) {
+					if (lines > 9999) {
+						lines = 9999;
+					}
+					sprintf(text, "%dK", lines / 1000);
+				} else if (lines > 0) {
+					sprintf(text, "%3d", lines);
+				} else {
+					strcpy(text, "--");
+				}
+			} else {
+				strcpy(text, "--");
 			}
 			on_rgb = 0x111111;
 			off_rgb = 0x111111;
-			num1 = lines / 100;
-			num2 = (lines - num1 * 100) / 10;
-			num3 = lines % 10;
-			num1 %= 10;
-			num2 %= 10;
-			if (!num1 && !num2) {
-				num2 = -2;
-			}
-			am = 3;
 #ifdef AMIBERRY // Board Temperature, if available
 		} else if (led == LED_TEMP) {
 			int temp = gui_data.temperature;
+			if (temp > 999)
+				temp = 999;
+			else if (temp < -99)
+				temp = -99;
 			on = 1;
 			off_rgb = 0x000000;
 			int range = 0xf0 / (100 - 20);
 			int v = range * abs(temp - 20);
 			on_rgb = v << 16;
-			num1 = -1;
-			num2 = temp / 10;
-			num3 = temp % 10;
+			sprintf(text, "%02d", temp);
 #endif
 		} else {
 			continue;
@@ -472,22 +452,16 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 		}
 
 		if (y >= td_numbers_pady && y - td_numbers_pady < td_numbers_height) {
-			if (num3 >= 0) {
-				x += (td_led_width - am * td_numbers_width) * mult / 2;
-				if (num1 > 0) {
-					write_tdnumber(buf, x, y - td_numbers_pady, num1, pen_rgb, c2, mult);
-					x += td_numbers_width * mult;
+			int xd = (TD_MAX_CHARS - strlen(text)) * td_numbers_width * mult / 2 + TD_DEFAULT_PADX;
+			for (int i = 0; i < strlen(text); i++) {
+				char ch = text[i];
+				for (int j = 0; j < strlen(numbers_mapping); j++) {
+					if (ch == numbers_mapping[j]) {
+						write_tdnumber(buf, x + xd, y - td_numbers_pady, j, pen_rgb, c2, mult);
+						break;
+					}
 				}
-				if (num2 >= 0) {
-					write_tdnumber(buf, x, y - td_numbers_pady, num2, pen_rgb, c2, mult);
-					x += td_numbers_width * mult;
-				} else if (num2 < -1) {
-					x += td_numbers_width * mult;
-				}
-				write_tdnumber(buf, x, y - td_numbers_pady, num3, pen_rgb, c2, mult);
 				x += td_numbers_width * mult;
-				if (num4 > 0)
-					write_tdnumber(buf, x, y - td_numbers_pady, num4, pen_rgb, c2, mult);
 			}
 		}
 	}

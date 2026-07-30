@@ -4725,7 +4725,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 								case 3:
 									{
 										auto *addr = reinterpret_cast<uae_u32*>(uae_mem2 + bits * 3);
-										do_put_mem_long (addr, do_get_mem_long (addr) ^ 0x00ffffff);
+										*addr ^= rgbmask;
 									}
 									break;
 								case 4:
@@ -5336,6 +5336,7 @@ static void PlanarToDirect(TrapContext *ctx, const struct RenderInfo *ri, const 
 			}
 			v &= depthmask;
 			const uae_u8 vi = (v ^ mask) & depthmask;
+			v &= mask;
 
 			uae_u32 inval = 0;
 			if (minterm != BLIT_FALSE && minterm != BLIT_TRUE && minterm != BLIT_NOTSRC && minterm != BLIT_SRC) {

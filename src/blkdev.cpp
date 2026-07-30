@@ -585,6 +585,7 @@ int device_func_init (int flags)
 {
 	blkdev_fix_prefs (&currprefs);
 	install_driver (flags);
+	gui_flicker_led(LED_CD, 0, 0);
 	dev_init = true;
 	return 1;
 }

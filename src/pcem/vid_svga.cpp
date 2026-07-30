@@ -179,6 +179,8 @@ void svga_out(uint16_t addr, uint8_t val, void *p)
                             svga->pallook[index] = makecol32(svga->vgapal[index].r, svga->vgapal[index].g, svga->vgapal[index].b);
                         else
                             svga->pallook[index] = makecol32(video_6to8[svga->vgapal[index].r & 0x3f], video_6to8[svga->vgapal[index].g & 0x3f], video_6to8[svga->vgapal[index].b & 0x3f]);
+                        if (svga->swaprb)
+                            svga->pallook[index] = ((svga->pallook[index] >> 16) & 0xff) | ((svga->pallook[index] & 0xff) << 16) | (svga->pallook[index] & 0x00ff00);
                         svga->dac_pos = 0;
                         svga->dac_addr = (svga->dac_addr + 1) & 0xff;
                         break;

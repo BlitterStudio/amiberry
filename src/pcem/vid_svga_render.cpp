@@ -1147,7 +1147,7 @@ void svga_render_32bpp_highres_swaprb(svga_t *svga)
                         for (x = 0; x <= svga->hdisp; x++)
                         {
                                 uint32_t dat = *(uint32_t *)(&svga->vram[(svga->ma + shift + (x << 2)) & svga->vram_display_mask]);
-                                dat = uae_bswap_64(dat);
+                                dat = ((dat & 0xff0000) >> 16) | ((dat & 0x0000ff) << 16) | ((dat & 0x00ff00));
                                 *p++ = dat & 0xffffff;
                         }
                         svga->ma += x * 4;
@@ -1158,7 +1158,7 @@ void svga_render_32bpp_highres_swaprb(svga_t *svga)
                         {
                                 uint32_t addr = svga->remap_func(svga, svga->ma + shift);
                                 uint32_t dat = *(uint32_t *)(&svga->vram[addr & svga->vram_display_mask]);
-                                dat = uae_bswap_64(dat);
+                                dat = ((dat & 0xff0000) >> 16) | ((dat & 0x0000ff) << 16) | ((dat & 0x00ff00));
                                 *p++ = dat & 0xffffff;
                                 svga->ma += 4;
                         }
