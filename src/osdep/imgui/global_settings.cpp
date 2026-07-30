@@ -464,8 +464,9 @@ void render_panel_global_settings()
 	render_group("Startup and GUI", "GlobalStartupGui", [&]() {
 		render_bool_row("Quickstart on startup", &amiberry_options.quickstart_start,
 			"Open the Quickstart panel by default when the GUI starts without a loaded configuration.");
-		render_bool_row("Read config descriptions", &amiberry_options.read_config_descriptions,
-			"Read descriptions from configuration files while building the Configurations panel list.");
+		render_bool_row("Read config metadata", &amiberry_options.read_config_descriptions,
+			"Read descriptions and categories while building the Configurations list. "
+			"This enables richer display and grouping, but opens each .uae file and can be slower for large libraries.");
 		render_bool_row("GUI joystick control", &amiberry_options.gui_joystick_control,
 			"Allow joystick/gamepad navigation in the GUI.");
 		render_bool_row("Disable shutdown button", &amiberry_options.disable_shutdown_button,
