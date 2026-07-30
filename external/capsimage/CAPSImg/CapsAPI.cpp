@@ -72,8 +72,9 @@ int32_t __cdecl CAPSLockImage(int32_t id, const char *name)
 	if (id < 0 || (unsigned)id >= img.size() || !img[id])
 		return imgeOutOfRange;
 
+	// Unlock after AddImage is unsupported
 	int res = img[id]->Unlock();
-	if (res != imgeOk)
+	if (res != imgeOk && res != imgeUnsupported)
 		return res;
 
 	auto pf = std::make_unique<CDiskFile>();
@@ -89,8 +90,9 @@ int32_t __cdecl CAPSLockImageMemory(int32_t id, const uint8_t *buffer, uint32_t 
 	if (id < 0 || (unsigned)id >= img.size() || !img[id])
 		return imgeOutOfRange;
 
+	// Unlock after AddImage is unsupported
 	int res = img[id]->Unlock();
-	if (res != imgeOk)
+	if (res != imgeOk && res != imgeUnsupported)
 		return res;
 
 	auto pf = std::make_unique<CMemoryFile>();
