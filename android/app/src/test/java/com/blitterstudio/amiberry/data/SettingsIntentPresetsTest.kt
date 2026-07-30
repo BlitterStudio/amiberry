@@ -11,6 +11,22 @@ import org.junit.Test
 class SettingsIntentPresetsTest {
 
 	@Test
+	fun `preset match remains true until one of its settings changes`() {
+		val settings = SettingsIntentPresets.apply(
+			EmulatorSettings(),
+			SettingsIntentPreset.Balanced
+		)
+
+		assertTrue(SettingsIntentPresets.matches(settings, SettingsIntentPreset.Balanced))
+		assertFalse(
+			SettingsIntentPresets.matches(
+				settings.copy(cpuSpeed = "max"),
+				SettingsIntentPreset.Balanced
+			)
+		)
+	}
+
+	@Test
 	fun `pixel perfect preset enables integer scaling pair`() {
 		val settings = SettingsIntentPresets.apply(
 			EmulatorSettings(scalingMethod = -1, gfxAutoresolution = 0),

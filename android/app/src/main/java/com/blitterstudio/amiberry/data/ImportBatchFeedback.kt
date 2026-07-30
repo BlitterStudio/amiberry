@@ -17,6 +17,7 @@ object ImportBatchFeedback {
 		val total = results.size
 
 		return when {
+			total == 0 -> Message(R.string.msg_import_folder_no_supported_files, emptyList())
 			imported == total -> Message(R.string.msg_imported_multiple, listOf(imported, total))
 			imported == 0 -> Message(R.string.msg_imported_none, listOf(unsupported, failed))
 			else -> Message(R.string.msg_imported_multiple_with_failures, listOf(imported, total, unsupported, failed))

@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.data
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -9,6 +10,7 @@ import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import java.io.File
 import java.io.IOException
+import java.util.ArrayDeque
 import java.util.zip.CRC32
 
 object FileManager {
@@ -41,6 +43,27 @@ object FileManager {
 		data class Failed(override val safeName: String) : ImportResult
 	}
 
+	internal data class DocumentTreeChild(
+		val documentId: String,
+		val mimeType: String,
+		val displayName: String?
+	)
+
+	internal data class DocumentTreeDocument(
+		val documentId: String,
+		val displayName: String?
+	)
+
+	internal data class DocumentTreeFailure(
+		val documentId: String,
+		val cause: Exception?
+	)
+
+	internal data class DocumentTreeTraversal(
+		val documents: List<DocumentTreeDocument>,
+		val failures: List<DocumentTreeFailure>
+	)
+
 	fun getAppStoragePath(context: Context): String {
 		return context.getExternalFilesDir(null)?.absolutePath ?: ""
 	}
@@ -62,11 +85,48 @@ object FileManager {
 	}
 
 	fun importFileWithResult(context: Context, uri: Uri, category: FileCategory): ImportResult {
-		val candidate = importCandidateForCategory(getFileName(context, uri), category)
+		return importFileWithResult(context, uri, category, getFileName(context, uri))
+	}
+
+	private fun importFileWithResult(
+		context: Context,
+		uri: Uri,
+		category: FileCategory,
+		displayName: String?
+	): ImportResult {
+		val candidate = importCandidateForCategory(displayName, category)
 		return when (candidate) {
 			is ImportCandidate.Importable -> copyImportFile(context, uri, category, candidate.safeName)
 			is ImportCandidate.Unsupported -> ImportResult.Unsupported(candidate.safeName, candidate.extension)
 		}
+	}
+
+	/**
+	 * Import every supported file below a Storage Access Framework directory tree.
+	 * Subdirectories are traversed so users can select a ROM collection root once.
+	 */
+	fun importFolderWithResults(
+		context: Context,
+		treeUri: Uri,
+		category: FileCategory
+	): List<ImportResult> {
+		val traversal = documentsInTree(context, treeUri)
+		val results = traversal.documents.mapTo(mutableListOf()) { document ->
+			val uri = try {
+				DocumentsContract.buildDocumentUriUsingTree(treeUri, document.documentId)
+			} catch (e: IllegalArgumentException) {
+				Log.w(TAG, "Failed to build document URI: ${document.documentId}", e)
+				return@mapTo ImportResult.Failed(
+					safeImportFileName(document.displayName ?: document.documentId)
+				)
+			}
+			val displayName = document.displayName
+				?.takeIf { it.isNotBlank() }
+				?: document.documentId.substringAfterLast('/').substringAfterLast(':')
+			importFileWithResult(context, uri, category, displayName)
+		}
+		results += traversal.failures.map { ImportResult.Failed(FOLDER_IMPORT_FAILURE_NAME) }
+		return results
 	}
 
 	private fun copyImportFile(
@@ -244,7 +304,13 @@ object FileManager {
 
 	private fun getFileName(context: Context, uri: Uri): String? {
 		// Try ContentResolver query first (works for most SAF URIs)
-		context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+		context.contentResolver.query(
+			uri,
+			arrayOf(OpenableColumns.DISPLAY_NAME),
+			null,
+			null,
+			null
+		)?.use { cursor ->
 			val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
 			if (nameIndex >= 0 && cursor.moveToFirst()) {
 				val name = cursor.getString(nameIndex)
@@ -253,6 +319,108 @@ object FileManager {
 		}
 		// Fallback: extract from URI path
 		return uri.lastPathSegment?.substringAfterLast('/')
+	}
+
+	private fun documentsInTree(context: Context, treeUri: Uri): DocumentTreeTraversal {
+		val resolver = context.contentResolver
+
+		val rootDocumentId = try {
+			DocumentsContract.getTreeDocumentId(treeUri)
+		} catch (e: IllegalArgumentException) {
+			Log.e(TAG, "Invalid document tree URI: $treeUri", e)
+			return DocumentTreeTraversal(
+				documents = emptyList(),
+				failures = listOf(DocumentTreeFailure(FOLDER_IMPORT_FAILURE_NAME, e))
+			)
+		}
+
+		val traversal = traverseDocumentTree(rootDocumentId) { documentId ->
+			val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+			val cursor = resolver.query(
+				childrenUri,
+				arrayOf(
+					DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+					DocumentsContract.Document.COLUMN_MIME_TYPE,
+					DocumentsContract.Document.COLUMN_DISPLAY_NAME
+				),
+				null,
+				null,
+				null
+			) ?: return@traverseDocumentTree null
+
+			cursor.use {
+				val idColumn = it.getColumnIndexOrThrow(
+					DocumentsContract.Document.COLUMN_DOCUMENT_ID
+				)
+				val mimeTypeColumn = it.getColumnIndexOrThrow(
+					DocumentsContract.Document.COLUMN_MIME_TYPE
+				)
+				val displayNameColumn = it.getColumnIndex(
+					DocumentsContract.Document.COLUMN_DISPLAY_NAME
+				)
+				buildList {
+					while (it.moveToNext()) {
+						add(
+							DocumentTreeChild(
+								documentId = it.getString(idColumn),
+								mimeType = it.getString(mimeTypeColumn),
+								displayName = if (displayNameColumn >= 0) {
+									it.getString(displayNameColumn)
+								} else {
+									null
+								}
+							)
+						)
+					}
+				}
+			}
+		}
+
+		traversal.failures.forEach { failure ->
+			if (failure.cause == null) {
+				Log.w(TAG, "Document provider returned no cursor for directory: ${failure.documentId}")
+			} else {
+				Log.w(TAG, "Failed to list document tree directory: ${failure.documentId}", failure.cause)
+			}
+		}
+		return traversal
+	}
+
+	internal fun traverseDocumentTree(
+		rootDocumentId: String,
+		queryChildren: (String) -> List<DocumentTreeChild>?
+	): DocumentTreeTraversal {
+		val pendingDirectories = ArrayDeque<String>()
+		val visitedDirectories = mutableSetOf<String>()
+		val documents = mutableListOf<DocumentTreeDocument>()
+		val failures = mutableListOf<DocumentTreeFailure>()
+		pendingDirectories.add(rootDocumentId)
+
+		while (pendingDirectories.isNotEmpty()) {
+			val documentId = pendingDirectories.removeFirst()
+			if (!visitedDirectories.add(documentId)) continue
+
+			val children = try {
+				queryChildren(documentId)
+			} catch (e: Exception) {
+				failures += DocumentTreeFailure(documentId, e)
+				continue
+			}
+			if (children == null) {
+				failures += DocumentTreeFailure(documentId, null)
+				continue
+			}
+
+			children.forEach { child ->
+				if (child.mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
+					pendingDirectories.add(child.documentId)
+				} else {
+					documents += DocumentTreeDocument(child.documentId, child.displayName)
+				}
+			}
+		}
+
+		return DocumentTreeTraversal(documents, failures)
 	}
 
 	private fun calculateCrc32(file: File): Long? {
@@ -274,6 +442,7 @@ object FileManager {
 	}
 
 	private val SAFE_FILENAME_CHARS = setOf(' ', '.', '_', '-', '(', ')', '+')
+	private const val FOLDER_IMPORT_FAILURE_NAME = "folder"
 
 	private fun importTargetName(baseName: String, extension: String, counter: Int): String =
 		if (extension.isBlank()) "${baseName}_$counter" else "${baseName}_$counter.$extension"

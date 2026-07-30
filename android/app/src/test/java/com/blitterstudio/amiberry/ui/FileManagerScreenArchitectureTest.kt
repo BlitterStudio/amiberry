@@ -26,6 +26,22 @@ class FileManagerScreenArchitectureTest {
 	}
 
 	@Test
+	fun `ROM import offers both file and recursive folder pickers`() {
+		val screen = source()
+
+		assertTrue(
+			"ROM users should be able to select a directory tree once.",
+			screen.contains("ActivityResultContracts.OpenDocumentTree()")
+		)
+		assertTrue(
+			"The selected ROM tree should be imported through the view model.",
+			screen.contains("viewModel.importFolder(uri, FileCategory.ROMS)")
+		)
+		assertTrue(screen.contains("R.string.action_import_rom_files"))
+		assertTrue(screen.contains("R.string.action_import_rom_folder"))
+	}
+
+	@Test
 	fun `file manager does not mutate search state during composition`() {
 		val screen = source()
 

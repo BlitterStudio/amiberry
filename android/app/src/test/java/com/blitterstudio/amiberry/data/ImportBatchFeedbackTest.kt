@@ -7,6 +7,14 @@ import org.junit.Test
 class ImportBatchFeedbackTest {
 
 	@Test
+	fun `empty folder reports that no supported files were found`() {
+		val message = ImportBatchFeedback.messageFor(emptyList())
+
+		assertEquals(R.string.msg_import_folder_no_supported_files, message.stringRes)
+		assertEquals(emptyList<Int>(), message.args)
+	}
+
+	@Test
 	fun `all imported batch uses existing imported multiple message`() {
 		val message = ImportBatchFeedback.messageFor(
 			listOf(

@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -92,6 +94,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
 	var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+	var showRomImportMenu by remember { mutableStateOf(false) }
 
 	val tabs = listOf(
 		TabInfo(FileCategory.ROMS, stringResource(R.string.file_manager_tab_roms), Icons.Default.Memory),
@@ -145,6 +148,20 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			viewModel.importFiles(uris, currentCategory)
 		}
 	}
+	val romFolderPickerLauncher = rememberLauncherForActivityResult(
+		contract = ActivityResultContracts.OpenDocumentTree()
+	) { uri ->
+		if (uri != null && !showProgress) {
+			viewModel.importFolder(uri, FileCategory.ROMS)
+		}
+	}
+	val openImportPicker = {
+		if (currentCategory == FileCategory.ROMS) {
+			showRomImportMenu = true
+		} else {
+			filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
+		}
+	}
 
 	LaunchedEffect(importResult) {
 		importResult?.let { msg ->
@@ -172,32 +189,55 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			)
 		},
 		floatingActionButton = {
-			ExtendedFloatingActionButton(
-				onClick = {
-					if (showProgress) {
-						return@ExtendedFloatingActionButton
-					}
-					filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
-				},
-				modifier = Modifier.semantics { if (showProgress) disabled() },
-				icon = {
-					if (isImporting) {
-						CircularProgressIndicator(
-							modifier = Modifier.size(18.dp),
-							strokeWidth = 2.dp
+			Box {
+				ExtendedFloatingActionButton(
+					onClick = {
+						if (showProgress) {
+							return@ExtendedFloatingActionButton
+						}
+						openImportPicker()
+					},
+					modifier = Modifier.semantics { if (showProgress) disabled() },
+					icon = {
+						if (isImporting) {
+							CircularProgressIndicator(
+								modifier = Modifier.size(18.dp),
+								strokeWidth = 2.dp
+							)
+						} else {
+							Icon(Icons.Default.Add, contentDescription = null)
+						}
+					},
+					text = {
+						Text(
+							stringResource(
+								if (isImporting) R.string.action_importing else R.string.action_import
+							)
 						)
-					} else {
-						Icon(Icons.Default.Add, contentDescription = null)
 					}
-				},
-				text = {
-					Text(
-						stringResource(
-							if (isImporting) R.string.action_importing else R.string.action_import
-						)
+				)
+				DropdownMenu(
+					expanded = showRomImportMenu,
+					onDismissRequest = { showRomImportMenu = false }
+				) {
+					DropdownMenuItem(
+						text = { Text(stringResource(R.string.action_import_rom_files)) },
+						leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+						onClick = {
+							showRomImportMenu = false
+							filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+						}
+					)
+					DropdownMenuItem(
+						text = { Text(stringResource(R.string.action_import_rom_folder)) },
+						leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
+						onClick = {
+							showRomImportMenu = false
+							romFolderPickerLauncher.launch(null)
+						}
 					)
 				}
-			)
+			}
 		}
 	) { innerPadding ->
 		Column(
@@ -351,7 +391,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 								if (searchHasNoResults) {
 									searchQuery = ""
 								} else {
-									filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
+									openImportPicker()
 								}
 							},
 							enabled = searchHasNoResults || !showProgress

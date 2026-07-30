@@ -268,4 +268,38 @@ tasks.register('copyAssets', Copy) {
     }
 }
 
-preBuild.dependsOn copyAssets
+def verifySdlJavaShimVersion = tasks.register('verifySdlJavaShimVersion') {
+    group = 'verification'
+    description = 'Verifies that the checked-in SDL Java shim matches the native SDL release pin'
+
+    def dependenciesFile = rootProject.file('../cmake/Dependencies.cmake')
+    def sdlActivityFile = file('src/main/java/org/libsdl/app/SDLActivity.java')
+    inputs.files(dependenciesFile, sdlActivityFile)
+
+    doLast {
+        def dependencies = dependenciesFile.getText('UTF-8')
+        def nativeVersionMatcher = dependencies =~ /(?s)FetchContent_Declare\(\s*sdl3\b.*?GIT_TAG\s+release-(\d+)\.(\d+)\.(\d+)/
+        if (!nativeVersionMatcher.find()) {
+            throw new GradleException("Could not parse the native SDL release pin from ${dependenciesFile}")
+        }
+        def expectedVersion = (1..3).collect { nativeVersionMatcher.group(it).toInteger() }
+
+        def sdlActivity = sdlActivityFile.getText('UTF-8')
+        def javaVersion = ['MAJOR', 'MINOR', 'MICRO'].collect { component ->
+            def matcher = sdlActivity =~ /SDL_${component}_VERSION\s*=\s*(\d+)\s*;/
+            if (!matcher.find()) {
+                throw new GradleException("Could not parse SDL_${component}_VERSION from ${sdlActivityFile}")
+            }
+            matcher.group(1).toInteger()
+        }
+
+        if (javaVersion != expectedVersion) {
+            throw new GradleException(
+                    "SDL Java shim ${javaVersion.join('.')} does not match native SDL ${expectedVersion.join('.')}. " +
+                            'Port the matching android-project Java sources before building the APK.'
+            )
+        }
+    }
+}
+
+preBuild.dependsOn copyAssets, verifySdlJavaShimVersion

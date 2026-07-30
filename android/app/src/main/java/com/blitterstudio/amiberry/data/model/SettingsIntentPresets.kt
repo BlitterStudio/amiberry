@@ -52,4 +52,7 @@ object SettingsIntentPresets {
 			)
 		}
 	}
+
+	fun matches(settings: EmulatorSettings, preset: SettingsIntentPreset): Boolean =
+		apply(settings, preset) == settings
 }

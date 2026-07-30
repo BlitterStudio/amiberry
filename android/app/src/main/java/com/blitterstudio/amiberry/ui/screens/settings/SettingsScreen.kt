@@ -308,6 +308,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 			}
 
 			SettingsPresetSelector(
+				selectedPreset = viewModel.selectedIntentPreset,
 				onPresetSelected = { preset -> viewModel.applyIntentPreset(preset) }
 			)
 
@@ -452,6 +453,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsPresetSelector(
+	selectedPreset: SettingsIntentPreset?,
 	onPresetSelected: (SettingsIntentPreset) -> Unit
 ) {
 	var expanded by remember { mutableStateOf(false) }
@@ -467,7 +469,8 @@ private fun SettingsPresetSelector(
 				onExpandedChange = { expanded = it }
 			) {
 				OutlinedTextField(
-					value = stringResource(R.string.settings_preset_select),
+					value = selectedPreset?.let { stringResource(it.titleRes()) }
+						?: stringResource(R.string.settings_preset_select),
 					onValueChange = {},
 					readOnly = true,
 					label = { Text(stringResource(R.string.settings_presets_title)) },
