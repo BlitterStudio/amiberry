@@ -38,6 +38,14 @@ class IntentImportTest {
 			IntentImport.classify("Kick31.ROM")
 		)
 		assertEquals(
+			IntentImport.Classification.Media("Kick13.A500", FileCategory.ROMS),
+			IntentImport.classify("Kick13.A500")
+		)
+		assertEquals(
+			IntentImport.Classification.Media("CDTV.CdTv", FileCategory.ROMS),
+			IntentImport.classify("CDTV.CdTv")
+		)
+		assertEquals(
 			IntentImport.Classification.Media("Game.CHD", FileCategory.CD_IMAGES),
 			IntentImport.classify("Game.CHD")
 		)
@@ -52,6 +60,14 @@ class IntentImportTest {
 		assertEquals(
 			IntentImport.Classification.Unsupported("imported_file", ""),
 			IntentImport.classify("..")
+		)
+		assertEquals(
+			IntentImport.Classification.Unsupported("kickstart.roz", "roz"),
+			IntentImport.classify("kickstart.roz")
+		)
+		assertEquals(
+			IntentImport.Classification.Unsupported("kickstart.U1", "u1"),
+			IntentImport.classify("kickstart.U1")
 		)
 	}
 

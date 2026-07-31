@@ -9,7 +9,7 @@ class ModelRomAvailabilityTest {
 
 	@Test
 	fun `available models only includes models with matching ROM profiles`() {
-		val roms = listOf(rom("kick13.rom", 0xc4f0f55fL))
+		val roms = listOf(rom("kick13.A500", 0xc4f0f55fL))
 
 		val models = ModelRomAvailability.availableModels(roms)
 
@@ -68,7 +68,7 @@ class ModelRomAvailabilityTest {
 	private fun rom(name: String, crc32: Long, path: String = "/roms/$name") = AmigaFile(
 		path = path,
 		name = name,
-		extension = "rom",
+		extension = name.substringAfterLast('.', missingDelimiterValue = "").lowercase(),
 		size = 512 * 1024,
 		lastModified = 0,
 		category = FileCategory.ROMS,
