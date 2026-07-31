@@ -22,7 +22,7 @@ enum class FileCategory(
 	val displayName: String,
 	val extensions: Set<String>
 ) {
-	ROMS(StoragePaths.ROMS, "ROMs", setOf("rom", "bin")),
+	ROMS(StoragePaths.ROMS, "ROMs", setOf("rom", "bin", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32")),
 	FLOPPIES(StoragePaths.FLOPPIES, "Floppies", setOf("adf", "adz", "dms", "ipf", "zip", "gz")),
 	HARD_DRIVES(StoragePaths.HARD_DRIVES, "Hard Drives", setOf("hdf", "hdi", "vhd")),
 	CD_IMAGES(StoragePaths.CDROMS, "CD Images", setOf("iso", "cue", "chd", "nrg", "mds")),

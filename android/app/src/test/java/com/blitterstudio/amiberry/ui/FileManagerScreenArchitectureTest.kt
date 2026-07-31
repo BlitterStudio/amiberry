@@ -1,6 +1,8 @@
 package com.blitterstudio.amiberry.ui
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -30,6 +32,10 @@ class FileManagerScreenArchitectureTest {
 		val screen = source()
 
 		assertTrue(
+			"File Manager ROM import should preserve batch selection.",
+			screen.contains("ActivityResultContracts.OpenMultipleDocuments()")
+		)
+		assertTrue(
 			"ROM users should be able to select a directory tree once.",
 			screen.contains("ActivityResultContracts.OpenDocumentTree()")
 		)
@@ -37,8 +43,31 @@ class FileManagerScreenArchitectureTest {
 			"The selected ROM tree should be imported through the view model.",
 			screen.contains("viewModel.importFolder(uri, FileCategory.ROMS)")
 		)
-		assertTrue(screen.contains("R.string.action_import_rom_files"))
+		assertTrue(screen.contains("R.string.action_import_roms"))
+		assertFalse(
+			"File Manager should not reference the replaced ROM-file import label.",
+			screen.contains("R.string.action_import_rom_files")
+		)
 		assertTrue(screen.contains("R.string.action_import_rom_folder"))
+	}
+
+	@Test
+	fun `ROM import wording distinguishes batch and singular actions`() {
+		assertEquals("Import ROMs", stringResourceValue("action_import_roms"))
+		assertEquals("Import ROM", stringResourceValue("action_import_rom"))
+		assertNull(stringResourceValue("action_import_rom_files"))
+	}
+
+	@Test
+	fun `file list keeps its final row clear of the floating import action`() {
+		val screen = source()
+
+		assertTrue(
+			"LazyColumn content should retain 16dp horizontal, 8dp top, and 120dp bottom scroll clearance.",
+			Regex(
+				"""LazyColumn\(\s*contentPadding = PaddingValues\(\s*start = 16\.dp,\s*top = 8\.dp,\s*end = 16\.dp,\s*bottom = 120\.dp\s*\)"""
+			).containsMatchIn(screen)
+		)
 	}
 
 	@Test
@@ -60,6 +89,17 @@ class FileManagerScreenArchitectureTest {
 	fun `file manager disables delete actions while scan or import is in progress`() {
 		val screen = source()
 
+		assertTrue(
+			"Each file row should retain its own delete callback.",
+			screen.contains("onDelete = { viewModel.deleteFile(file) }")
+		)
+		assertTrue(
+			"Delete should continue to require local confirmation state.",
+			screen.contains("var showDeleteDialog by remember { mutableStateOf(false) }") &&
+				screen.contains("if (showDeleteDialog)") &&
+				screen.contains("AlertDialog(") &&
+				screen.contains("onDelete()")
+		)
 		assertTrue(
 			"File list rows should receive the same busy state used by refresh/import controls.",
 			screen.contains("deleteEnabled = !showProgress")
@@ -103,4 +143,12 @@ class FileManagerScreenArchitectureTest {
 
 	private fun source(): String =
 		File("src/main/java/com/blitterstudio/amiberry/ui/screens/FileManagerScreen.kt").readText()
+
+	private fun stringResourceValue(name: String): String? {
+		val strings = File("src/main/res/values/strings.xml").readText()
+		return Regex("""<string name="$name">([^<]*)</string>""")
+			.find(strings)
+			?.groupValues
+			?.get(1)
+	}
 }

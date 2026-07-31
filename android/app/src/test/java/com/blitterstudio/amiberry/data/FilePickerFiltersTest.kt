@@ -7,9 +7,9 @@ import org.junit.Test
 class FilePickerFiltersTest {
 
 	@Test
-	fun `rom picker prefers binary document types`() {
+	fun `rom picker shows all document types for extension validation`() {
 		assertArrayEquals(
-			arrayOf("application/octet-stream", "application/x-binary"),
+			arrayOf("*/*"),
 			FilePickerFilters.mimeTypesFor(FileCategory.ROMS)
 		)
 	}
@@ -27,6 +27,14 @@ class FilePickerFiltersTest {
 		assertArrayEquals(
 			arrayOf(".lha", ".lzx", ".lzh"),
 			FilePickerFilters.extensionLabelsFor(FileCategory.WHDLOAD_GAMES)
+		)
+	}
+
+	@Test
+	fun `ROM labels include every supported extension`() {
+		assertArrayEquals(
+			arrayOf(".rom", ".bin", ".a500", ".a600", ".a1200", ".a3000", ".a4000", ".cdtv", ".cd32"),
+			FilePickerFilters.extensionLabelsFor(FileCategory.ROMS)
 		)
 	}
 }
