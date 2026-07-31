@@ -1803,14 +1803,13 @@ void DisplayDiskInfo(int num)
 	struct diskinfo di {};
 	char tmp1[MAX_DPATH];
 	std::vector<std::string> infotext;
-	char title[MAX_DPATH];
 	char nameonly[MAX_DPATH];
 	char linebuffer[512];
 
 	DISK_examine_image(&changed_prefs, num, &di, true, nullptr, 0);
 	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, nullptr, nullptr, nullptr);
 	extract_filename(tmp1, nameonly);
-	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
+	const std::string title = std::string("Info for ") + nameonly;
 
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk readable: %s", di.unreadable ? _T("No") : _T("Yes"));
 	infotext.emplace_back(linebuffer);
@@ -1853,7 +1852,7 @@ void DisplayDiskInfo(int num)
 		linebuffer[w * 3 + 1 + w] = 0;
 		infotext.emplace_back(linebuffer);
 	}
-	ShowDiskInfo(title, infotext);
+	ShowDiskInfo(title.c_str(), infotext);
 }
 
 void save_mapping_to_file(const std::string& mapping)

@@ -207,26 +207,26 @@ static void atonce_rebuild_map(struct atonce_s *xb)
 		int mm_a = xb->mm_a, mm_b = xb->mm_b, mm_c = xb->mm_c, mm_d = xb->mm_d;
 
 		// CLB AF
-		int af_x = (!a19 & a17) | (!a16 & a17) | (a18 & a17) | (a19 & !a16 & a18);
+		int af_x = ((!a19) & a17) | ((!a16) & a17) | (a18 & a17) | (a19 & (!a16) & a18);
 		// CLB FC (memory cycle: mio=1)
 		int za16 = a16;
 		// CLB BF
-		int za17 = (af_x & a17) | (af_x & !ext) | (a17 & ext);
+		int za17 = (af_x & a17) | (af_x & (!ext)) | (a17 & ext);
 		// CLB BG
-		int za18 = (!a19 & a18) | (ext & a18) | (a19 & !a17 & !ext & !a18);
+		int za18 = ((!a19) & a18) | (ext & a18) | (a19 & (!a17) & (!ext) & (!a18));
 		// CLB AH (G)
 		int za19 = (a19 & ext) | (ext & mm_a);
 		// CLB CI
-		int ci_x = (a20g & !a21) | (mm_d & !a21) | (!a20g & !mm_d & a21);
-		int za20 = (!a20g & !mm_d & ext) | (a20g & mm_d & ext);
+		int ci_x = (a20g & (!a21)) | (mm_d & (!a21)) | ((!a20g) & (!mm_d) & a21);
+		int za20 = ((!a20g) & (!mm_d) & ext) | (a20g & mm_d & ext);
 		// CLB CJ
-		int cj_x = (a22 & !mm_d) | (a22 & !a21) | (!a22 & mm_d & a21) | (!a22 & a21 & a20g);
+		int cj_x = (a22 & (!mm_d)) | (a22 & (!a21)) | ((!a22) & mm_d & a21) | ((!a22) & a21 & a20g);
 		// CLB BH (G)
 		int za21 = ext & ci_x & mm_b;
 		// CLB DH (G)
 		int za23 = mm_c & ext;
 		// CLB BJ
-		int za22 = za23 | (!za23 & cj_x & ext & mm_b);
+		int za22 = za23 | ((!za23) & cj_x & ext & mm_b);
 
 		xb->bank_amiga[bank] =
 			((za23 << 7) | (za22 << 6) | (za21 << 5) | (za20 << 4) |
