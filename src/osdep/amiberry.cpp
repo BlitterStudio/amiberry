@@ -3434,7 +3434,7 @@ static void process_event(const SDL_Event& event)
 				}
 			}
 #ifdef __ANDROID__
-			if (!consumed)
+			if (!consumed || event.type == SDL_EVENT_FINGER_UP)
 				handle_android_two_finger_swipe(event);
 #endif
 			if (!consumed)

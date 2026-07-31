@@ -235,7 +235,7 @@ class AndroidRuntimeControlsArchitectureTest {
 	}
 
 	@Test
-	fun `only unconsumed paired touch fingers participate in Android GUI swipe`() {
+	fun `only unconsumed paired touch fingers start Android GUI swipes and releases retire them`() {
 		val amiberryCpp = File("../../src/osdep/amiberry.cpp").readText()
 		val swipeTracker = Regex(
 			"""struct AndroidSwipeFinger[\s\S]*?#endif"""
@@ -260,11 +260,14 @@ class AndroidRuntimeControlsArchitectureTest {
 				swipeTracker.contains("finger_ids[slot] = 0")
 		)
 		assertTrue(
-			"Down/up and motion events may reach the GUI swipe tracker only when overlays did not consume them.",
+			"Overlay-consumed downs must stay excluded, while every up can retire a previously tracked swipe finger.",
+			Regex("""if \(!consumed \|\| event\.type == SDL_EVENT_FINGER_UP\)\s*handle_android_two_finger_swipe\(event\);""")
+				.containsMatchIn(fingerEvents)
+		)
+		assertTrue(
+			"Overlay-consumed motion must not participate in the GUI swipe gesture.",
 			Regex("""if \(!consumed\)\s*handle_android_two_finger_swipe\(event\);""")
-				.containsMatchIn(fingerEvents) &&
-				Regex("""if \(!consumed\)\s*handle_android_two_finger_swipe\(event\);""")
-					.containsMatchIn(fingerMotion)
+				.containsMatchIn(fingerMotion)
 		)
 		assertTrue(
 			"Two ordinary unconsumed fingers must retain the existing downward-swipe GUI action.",
