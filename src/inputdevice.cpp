@@ -4527,6 +4527,10 @@ void inputdevice_hsync_strobe(void)
 void inputdevice_hsync(bool forceread)
 {
 
+#ifdef AMIBERRY_MACOS
+	flush_macos_synthetic_mouse_releases();
+#endif
+
 #ifdef CATWEASEL
 	catweasel_hsync ();
 #endif
