@@ -37,9 +37,10 @@ static inline AmiberryGfxRect amiberry_gfx_final_presentation_rect(
 	int width = presentation_width > 0 ? presentation_width : 1;
 	int height = presentation_height > 0 ? presentation_height : 1;
 
-	if (use_bounded_fallback && available_area.w > 0 && available_area.h > 0
-		&& fallback_aspect > 0.0f
-		&& (width > available_area.w || height > available_area.h)) {
+	if (use_bounded_fallback
+		&& (width > available_area.w || height > available_area.h)
+		&& available_area.w > 0 && available_area.h > 0
+		&& fallback_aspect > 0.0f) {
 		amiberry_gfx_aspect_fit_dimensions(
 			available_area.w, available_area.h, fallback_aspect, width, height);
 	}
