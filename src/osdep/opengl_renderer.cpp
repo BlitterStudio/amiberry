@@ -633,12 +633,14 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	// that all shader paths use instead of the full drawable.
 	int renderAreaX = 0, renderAreaY = 0;
 	int renderAreaW = drawableWidth, renderAreaH = drawableHeight;
+	bool has_bounded_bezel_area = false;
 
 	if (filter_prefs.use_custom_bezel && m_overlay.bezel_texture != 0 && m_overlay.bezel_hole_w > 0.0f && m_overlay.bezel_hole_h > 0.0f) {
 		renderAreaX = bezelDisplayX + static_cast<int>(m_overlay.bezel_hole_x * bezelDisplayW);
 		renderAreaY = bezelDisplayY + static_cast<int>(m_overlay.bezel_hole_y * bezelDisplayH);
 		renderAreaW = static_cast<int>(m_overlay.bezel_hole_w * bezelDisplayW);
 		renderAreaH = static_cast<int>(m_overlay.bezel_hole_h * bezelDisplayH);
+		has_bounded_bezel_area = true;
 	}
 
 	// Compute source dimensions early (needed for integer scaling)
@@ -668,30 +670,14 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	bool use_center = mon->screen_is_picasso
 		&& mon->scalepicasso == RTG_MODE_CENTER;
 
-	int destW, destH, destX, destY;
+	int destW, destH;
 
-	if (renderAreaX != 0 || renderAreaY != 0 ||
-		renderAreaW != drawableWidth || renderAreaH != drawableHeight) {
-		destW = renderAreaW;
-		destH = renderAreaH;
-		destX = renderAreaX;
-		destY = renderAreaY;
-	} else if (use_center && src_w > 0 && src_h > 0) {
+	if (use_center && src_w > 0 && src_h > 0) {
 		destW = src_w;
 		destH = src_h;
-		destX = (renderAreaW - destW) / 2;
-		destY = (renderAreaH - destH) / 2;
 	} else {
-		destW = renderAreaW;
-		destH = static_cast<int>(renderAreaW / desired_aspect);
-
-		if (destH > renderAreaH) {
-			destH = renderAreaH;
-			destW = static_cast<int>(renderAreaH * desired_aspect);
-		}
-
-		if (destW <= 0) destW = 1;
-		if (destH <= 0) destH = 1;
+		amiberry_gfx_aspect_fit_dimensions(
+			renderAreaW, renderAreaH, desired_aspect, destW, destH);
 
 		if (use_integer_scaling && src_w > 0 && src_h > 0) {
 			// Use the aspect-corrected dimensions from auto_crop_image()
@@ -724,51 +710,59 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			}
 		}
 
-		destX = (renderAreaW - destW) / 2;
-		destY = (renderAreaH - destH) / 2;
 	}
 
-	// Flip Y for GL viewport: OpenGL has y=0 at bottom, bezel hole Y is y=0 at top
-	int glDestY = drawableHeight - destY - destH;
-	int glAreaY = drawableHeight - renderAreaY - renderAreaH;
+	const AmiberryGfxRect available_area{
+		renderAreaX, renderAreaY, renderAreaW, renderAreaH
+	};
+	const float bounded_fallback_aspect = use_integer_scaling
+		&& !mon->screen_is_picasso && currprefs.gfx_correct_aspect
+		? integer_target_aspect : desired_aspect;
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		available_area, destW, destH, bounded_fallback_aspect,
+		has_bounded_bezel_area && use_integer_scaling && !use_center);
 
-	// Only clear if letterboxing is active (frame doesn't cover entire window)
-	if (destW < drawableWidth || destH < drawableHeight) {
+	// Flip Y for GL viewport: OpenGL has y=0 at bottom, bezel hole Y is y=0 at top
+	const int glDestY = drawableHeight - final_rect.y - final_rect.h;
+
+	// Clear whenever the presentation leaves any part of the drawable uncovered.
+	const AmiberryGfxRect drawable_area{0, 0, drawableWidth, drawableHeight};
+	if (!amiberry_gfx_rect_covers_area(final_rect, drawable_area)) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
-	glViewport(destX, glDestY, destW, destH);
+	glViewport(final_rect.x, glDestY, final_rect.w, final_rect.h);
 
 	// Update render_quad to reflect the actual drawn area
-	render_quad.x = destX;
-	render_quad.y = destY;
-	render_quad.w = destW;
-	render_quad.h = destH;
+	render_quad.x = final_rect.x;
+	render_quad.y = final_rect.y;
+	render_quad.w = final_rect.w;
+	render_quad.h = final_rect.h;
 
 	// Some CRT shaders require an output at least as large as their input. Render
 	// them at that safe size, then resolve back to the aspect-correct destination
 	// instead of letting the oversized viewport be clipped by the framebuffer.
-	int shader_viewport_w = destW;
-	int shader_viewport_h = destH;
+	int shader_viewport_w = final_rect.w;
+	int shader_viewport_h = final_rect.h;
 	amiberry_gfx_shader_render_dimensions(
-		destW, destH, src_w, src_h, shader_viewport_w, shader_viewport_h);
+		final_rect.w, final_rect.h, src_w, src_h, shader_viewport_w, shader_viewport_h);
 	const bool custom_shader_active = (m_shader.preset && m_shader.preset->is_valid())
 		|| (m_shader.external && m_shader.external->is_valid());
 	bool use_shader_resolve = custom_shader_active
-		&& (shader_viewport_w != destW || shader_viewport_h != destH);
+		&& (shader_viewport_w != final_rect.w || shader_viewport_h != final_rect.h);
 	if (use_shader_resolve
 		&& !ensure_shader_resolve_target(shader_viewport_w, shader_viewport_h)) {
 		// Preserve final presentation geometry if the intermediate target cannot
 		// be allocated, even though shaders that require >= 1x may degrade.
-		shader_viewport_w = destW;
-		shader_viewport_h = destH;
+		shader_viewport_w = final_rect.w;
+		shader_viewport_h = final_rect.h;
 		use_shader_resolve = false;
 	}
 	const int shader_viewport_x = use_shader_resolve
-		? 0 : renderAreaX + (renderAreaW - shader_viewport_w) / 2;
+		? 0 : final_rect.x;
 	const int shader_viewport_y = use_shader_resolve
-		? 0 : glAreaY + (renderAreaH - shader_viewport_h) / 2;
+		? 0 : glDestY;
 	const GLuint shader_framebuffer = use_shader_resolve
 		? m_shader.resolve_framebuffer : 0;
 	if (use_shader_resolve) {
@@ -833,13 +827,10 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		// When a custom bezel defines the viewport, skip crtemu's internal 4:3 letterboxing
-		m_shader.crtemu->skip_aspect_correction = (renderAreaW != drawableWidth || renderAreaH != drawableHeight);
+		// Presentation geometry is already final. CRTEMU may change pixels, but it
+		// must fill this viewport without applying another aspect correction.
+		m_shader.crtemu->skip_aspect_correction = true;
 		m_shader.crtemu->desired_aspect = desired_aspect;
-
-		if (m_shader.crtemu->type != CRTEMU_TYPE_NONE) {
-			glViewport(renderAreaX, glAreaY, renderAreaW, renderAreaH);
-		}
 
 		if (is_cropped && surface) {
 			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
@@ -853,13 +844,13 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	}
 
 	if (use_shader_resolve) {
-		render_shader_resolve(destX, glDestY, destW, destH);
+		render_shader_resolve(final_rect.x, glDestY, final_rect.w, final_rect.h);
 	}
 
-	render_software_cursor(monid, destX, glDestY, destW, destH);
+	render_software_cursor(monid, final_rect.x, glDestY, final_rect.w, final_rect.h);
 	int glBezelY = drawableHeight - bezelDisplayY - bezelDisplayH;
 	render_bezel(bezelDisplayX, glBezelY, bezelDisplayW, bezelDisplayH);
-	render_osd(monid, destX, glDestY, destW, destH);
+	render_osd(monid, final_rect.x, glDestY, final_rect.w, final_rect.h);
 
 	render_vkbd(monid);
 	render_onscreen_joystick(monid);

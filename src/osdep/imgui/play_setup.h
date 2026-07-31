@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "amiberry_gfx_mode.h"
 
 enum class PlayScreenMode
@@ -15,19 +17,11 @@ enum class PlayScalingMode
 	Smooth
 };
 
-enum class PlayShaderChoice
-{
-	None,
-	Crt,
-	Monitor1084,
-	Custom
-};
-
 struct PlayDisplayDefaults
 {
 	PlayScreenMode screen_mode = PlayScreenMode::Windowed;
 	PlayScalingMode scaling = PlayScalingMode::Auto;
-	PlayShaderChoice shader = PlayShaderChoice::None;
+	std::string shader = "none";
 	bool auto_crop = false;
 };
 
@@ -37,8 +31,7 @@ struct PlayDisplayPrefs
 	int rtg_fullscreen = 0;
 	int scaling_method = -1;
 	int gfx_autoresolution = 0;
-	int shader_choice = static_cast<int>(PlayShaderChoice::None);
-	bool preserve_shader = false;
+	std::string shader = "none";
 	bool gfx_auto_crop = false;
 };
 
