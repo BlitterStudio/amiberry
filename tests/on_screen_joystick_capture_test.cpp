@@ -121,6 +121,23 @@ static void test_identity_uses_touch_and_finger_pair()
 		"mismatched terminal event must preserve both live owners");
 }
 
+static void test_zero_finger_id_can_capture_and_release()
+{
+	Registry registry;
+	const TouchKey primary_finger{45, 0};
+
+	expect(registry.acquire(primary_finger, Control::dpad) == AcquireResult::captured,
+		"Android primary finger ID zero must be allowed to capture a control");
+	const auto* capture = registry.lookup(primary_finger);
+	expect(capture && capture->state == State::captured
+		&& capture->control == Control::dpad,
+		"zero-valued finger ID must remain addressable while captured");
+	const auto released = registry.release(primary_finger);
+	expect(released && released->state == State::captured
+		&& released->control == Control::dpad,
+		"zero-valued finger ID must release its captured control");
+}
+
 static void test_stale_audit_is_scoped_to_matching_touch_device()
 {
 	Registry registry;
@@ -206,6 +223,7 @@ int main()
 	test_contender_cannot_steal_or_inherit();
 	test_contender_terminal_preserves_live_owner();
 	test_identity_uses_touch_and_finger_pair();
+	test_zero_finger_id_can_capture_and_release();
 	test_stale_audit_is_scoped_to_matching_touch_device();
 	test_stale_audit_does_not_promote_contender();
 	test_stale_audit_discards_only_absent_contender();

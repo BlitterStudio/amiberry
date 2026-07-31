@@ -139,7 +139,7 @@ public:
 private:
 	static bool valid(TouchKey key)
 	{
-		return key.touch_id != 0 && key.finger_id != 0;
+		return key.touch_id != 0;
 	}
 
 	std::vector<Capture> captures_;
