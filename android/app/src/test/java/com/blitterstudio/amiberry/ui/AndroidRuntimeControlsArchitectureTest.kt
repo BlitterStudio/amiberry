@@ -104,6 +104,49 @@ class AndroidRuntimeControlsArchitectureTest {
 	}
 
 	@Test
+	fun `captured D-pad motion has no distance release and shutdown neutralizes first`() {
+		val joystick = File("../../src/osdep/on_screen_joystick.cpp").readText()
+		val motionSignature =
+			"bool on_screen_joystick_handle_finger_motion(const SDL_Event& event"
+		val motionHandler = joystick.indexOf(motionSignature).let { start ->
+			if (start >= 0) joystick.substring(start) else ""
+		}
+		val quitHandler = Regex(
+			"""void on_screen_joystick_quit\(\)[\s\S]*?bool on_screen_joystick_is_enabled\(\)"""
+		).find(joystick)?.value.orEmpty()
+		val releaseAllHandler = Regex(
+			"""void on_screen_joystick_release_all\(\)[\s\S]*?void on_screen_joystick_set_enabled"""
+		).find(joystick)?.value.orEmpty()
+
+		assertTrue(
+			"Captured D-pad motion should continue updating direction at every distance.",
+			motionHandler.contains("update_dpad_from_position(px, py)")
+		)
+		assertFalse(
+			"The former distance-release threshold must be removed.",
+			joystick.contains("DPAD_RELEASE_RADIUS")
+		)
+		assertFalse(
+			"Motion must not neutralize or remove a captured owner.",
+			motionHandler.contains("release_dpad()") ||
+				motionHandler.contains("capture_registry.release(")
+		)
+		assertTrue(
+			"Shutdown must delegate to the neutralization authority before texture teardown.",
+			quitHandler.indexOf("on_screen_joystick_release_all()") in
+				0 until quitHandler.indexOf("SDL_DestroyTexture")
+		)
+		assertTrue(
+			"Global neutralization must clear direction, buttons, keyboard, knob, and capture state.",
+			releaseAllHandler.contains("joy_up = joy_down = joy_left = joy_right = false") &&
+				releaseAllHandler.contains("joy_fire1 = joy_fire2 = false") &&
+				releaseAllHandler.contains("joy_kb_pressed = false") &&
+				releaseAllHandler.contains("knob_active = false") &&
+				releaseAllHandler.contains("capture_registry.clear()")
+		)
+	}
+
+	@Test
 	fun `OSK hit testing includes the animated keyboard rectangle`() {
 		val osk = File("../../src/osdep/imgui_osk.cpp").readText()
 		val hitTest = Regex("""bool imgui_osk_hit_test\(float screen_x, float screen_y\)\R\{[\s\S]*?\R\}""")

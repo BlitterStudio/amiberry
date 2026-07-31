@@ -33,6 +33,7 @@ static inline SDL_FRect rect_to_frect(const SDL_Rect* r)
 }
 
 #include "on_screen_joystick.h"
+#include "on_screen_joystick_capture.h"
 #include "on_screen_joystick_layout.h"
 #include "sysdeps.h"
 #include "inputdevice.h"
@@ -54,11 +55,6 @@ static constexpr uint8_t ALPHA_NORMAL = 160;
 static constexpr uint8_t ALPHA_PRESSED = 220;
 // Dead zone in the center of the joystick (fraction of radius)
 static constexpr float DPAD_DEADZONE = 0.15f;
-// Auto-release threshold: if the finger moves beyond this multiple of the
-// hit radius from the D-pad center, the joystick is released to center.
-// This prevents the joystick from getting stuck when a finger slides far
-// away and then back (where motion events can be lost or IDs can change).
-static constexpr float DPAD_RELEASE_RADIUS = 2.5f;
 // Knob size as fraction of the base plate diameter
 static constexpr float KNOB_SIZE_FRACTION = 0.40f;
 // Maximum travel distance of knob center from base center (fraction of base radius)
@@ -149,13 +145,13 @@ static float knob_offset_y = 0.0f;
 static bool knob_active = false;
 
 // Multi-touch tracking
-enum ControlType { CTL_NONE, CTL_DPAD, CTL_BUTTON1, CTL_BUTTON2, CTL_KEYBOARD };
-
-struct FingerTrack {
-	SDL_FingerID id;
-	ControlType control;
-};
-static std::vector<FingerTrack> active_fingers;
+using ControlType = osj_capture::Control;
+static constexpr ControlType CTL_NONE = ControlType::none;
+static constexpr ControlType CTL_DPAD = ControlType::dpad;
+static constexpr ControlType CTL_BUTTON1 = ControlType::button1;
+static constexpr ControlType CTL_BUTTON2 = ControlType::button2;
+static constexpr ControlType CTL_KEYBOARD = ControlType::keyboard;
+static osj_capture::Registry capture_registry;
 
 static osj_layout::Rect to_layout_rect(const SDL_Rect& rect)
 {
@@ -767,6 +763,15 @@ static void release_button(ControlType ctl)
 	inject_buttons();
 }
 
+static void release_control(ControlType ctl)
+{
+	if (ctl == CTL_DPAD) {
+		release_dpad();
+	} else if (ctl == CTL_BUTTON1 || ctl == CTL_BUTTON2 || ctl == CTL_KEYBOARD) {
+		release_button(ctl);
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Knob position helper for rendering
 // ---------------------------------------------------------------------------
@@ -791,43 +796,15 @@ static SDL_Rect compute_knob_rect()
 }
 
 // ---------------------------------------------------------------------------
-// Finger tracking helpers
+// Capture tracking helpers
 // ---------------------------------------------------------------------------
 
-static FingerTrack* find_finger(SDL_FingerID id)
+static osj_capture::TouchKey event_touch_key(const SDL_Event& event)
 {
-	for (auto& f : active_fingers) {
-		if (f.id == id) return &f;
-	}
-	return nullptr;
-}
-
-static void remove_finger(SDL_FingerID id)
-{
-	active_fingers.erase(
-		std::remove_if(active_fingers.begin(), active_fingers.end(),
-			[id](const FingerTrack& f) { return f.id == id; }),
-		active_fingers.end());
-}
-
-// Release any existing finger that is tracking the given control.
-// Used to clean up orphaned state before assigning a new finger.
-static void release_existing_control(ControlType ctl)
-{
-	for (auto it = active_fingers.begin(); it != active_fingers.end(); ) {
-		if (it->control == ctl) {
-			it = active_fingers.erase(it);
-		} else {
-			++it;
-		}
-	}
-	if (ctl == CTL_DPAD) {
-		release_dpad();
-	} else if (ctl == CTL_BUTTON1 || ctl == CTL_BUTTON2) {
-		release_button(ctl);
-	} else if (ctl == CTL_KEYBOARD) {
-		joy_kb_pressed = false;
-	}
+	return {
+		static_cast<osj_capture::TouchId>(event.tfinger.touchID),
+		static_cast<osj_capture::FingerId>(event.tfinger.fingerID)
+	};
 }
 
 static ControlType hit_test(int px, int py)
@@ -922,7 +899,7 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	knob_offset_x = 0.0f;
 	knob_offset_y = 0.0f;
 	knob_active = false;
-	active_fingers.clear();
+	capture_registry.clear();
 	layout_snapshot = {};
 
 	osj_initialized = true;
@@ -930,15 +907,8 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 
 void on_screen_joystick_quit()
 {
-	// Release any held inputs
-	if (joy_up || joy_down || joy_left || joy_right) {
-		joy_up = joy_down = joy_left = joy_right = false;
-		inject_directions();
-	}
-	if (joy_fire1 || joy_fire2) {
-		joy_fire1 = joy_fire2 = false;
-		inject_buttons();
-	}
+	// Neutralize input and ownership before tearing down any resources.
+	on_screen_joystick_release_all();
 
 	if (stick_base_tex) { SDL_DestroyTexture(stick_base_tex); stick_base_tex = nullptr; }
 	if (knob_tex) { SDL_DestroyTexture(knob_tex); knob_tex = nullptr; }
@@ -960,7 +930,7 @@ void on_screen_joystick_quit()
 	cleanup_osj_gl();
 #endif
 
-	active_fingers.clear();
+	capture_registry.clear();
 	layout_snapshot = {};
 	osj_initialized = false;
 }
@@ -984,7 +954,7 @@ void on_screen_joystick_release_all()
 	knob_active = false;
 	inject_directions();
 	inject_buttons();
-	active_fingers.clear();
+	capture_registry.clear();
 }
 
 void on_screen_joystick_set_enabled(bool enabled)
@@ -1265,39 +1235,23 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_
 {
 	if (!osj_enabled || !osj_initialized || !layout_snapshot.valid) return false;
 
-	// Stale-finger audit: if any tracked finger no longer exists in SDL's
-	// active touch list, release it.  This catches silently dropped touches
-	// (palm rejection, focus loss, etc.) that would otherwise leave the
-	// dpad or buttons stuck.
-	if (!active_fingers.empty()) {
-		SDL_TouchID touch_id = event.tfinger.touchID;
+	// Audit only identities owned by this touch device. Captured owners proven
+	// absent release their controls; absent contenders are discarded silently.
+	if (!capture_registry.empty()) {
+		const SDL_TouchID touch_id = event.tfinger.touchID;
 		int num_fingers = 0;
 		SDL_Finger** fingers = SDL_GetTouchFingers(touch_id, &num_fingers);
 		if (fingers) {
-			// Build a quick check of which IDs SDL still knows about
-			for (auto it = active_fingers.begin(); it != active_fingers.end(); ) {
-				bool still_alive = false;
-				for (int i = 0; i < num_fingers; i++) {
-					if (fingers[i]->id == it->id) {
-						still_alive = true;
-						break;
-					}
-				}
-				if (!still_alive) {
-					ControlType stale_ctl = it->control;
-					it = active_fingers.erase(it);
-					if (stale_ctl == CTL_DPAD) {
-						release_dpad();
-					} else if (stale_ctl == CTL_BUTTON1 || stale_ctl == CTL_BUTTON2) {
-						release_button(stale_ctl);
-					} else if (stale_ctl == CTL_KEYBOARD) {
-						joy_kb_pressed = false;
-					}
-				} else {
-					++it;
-				}
-			}
+			std::vector<osj_capture::FingerId> active_ids;
+			active_ids.reserve(num_fingers);
+			for (int i = 0; i < num_fingers; i++)
+				active_ids.push_back(static_cast<osj_capture::FingerId>(fingers[i]->id));
 			SDL_free(fingers);
+
+			const auto stale_controls = capture_registry.release_stale_captures(
+				static_cast<osj_capture::TouchId>(touch_id), active_ids);
+			for (const auto control : stale_controls)
+				release_control(control);
 		}
 	}
 
@@ -1306,21 +1260,14 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_
 	const int px = position.x;
 	const int py = position.y;
 
-	ControlType ctl = hit_test(px, py);
+	const ControlType ctl = hit_test(px, py);
 	if (ctl == CTL_NONE) return false;
 
-	// If a finger is already tracking this control (orphaned from a missed
-	// finger-up), release it first to avoid stuck state.
-	bool already_tracked = std::any_of(active_fingers.begin(), active_fingers.end(),
-		[ctl](const FingerTrack& f) { return f.control == ctl; });
-	if (already_tracked) {
-		release_existing_control(ctl);
-	}
-
-	FingerTrack ft;
-	ft.id = event.tfinger.fingerID;
-	ft.control = ctl;
-	active_fingers.push_back(ft);
+	const auto acquired = capture_registry.acquire(event_touch_key(event), ctl);
+	if (acquired == osj_capture::AcquireResult::invalid)
+		return false;
+	if (acquired != osj_capture::AcquireResult::captured)
+		return true;
 
 	switch (ctl) {
 	case CTL_DPAD:
@@ -1350,23 +1297,11 @@ bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int /*window_w*
 {
 	if (!osj_enabled || !osj_initialized) return false;
 
-	FingerTrack* ft = find_finger(event.tfinger.fingerID);
-	if (!ft) return false;
-
-	ControlType ctl = ft->control;
-	remove_finger(event.tfinger.fingerID);
-
-	switch (ctl) {
-	case CTL_DPAD:
-		release_dpad();
-		break;
-	case CTL_BUTTON1:
-	case CTL_BUTTON2:
-		release_button(ctl);
-		break;
-	default:
-		break;
-	}
+	const auto released = capture_registry.release(event_touch_key(event));
+	if (!released)
+		return false;
+	if (released->state == osj_capture::State::captured)
+		release_control(released->control);
 
 	return true;
 }
@@ -1375,29 +1310,14 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int /*windo
 {
 	if (!osj_enabled || !osj_initialized || !layout_snapshot.valid) return false;
 
-	FingerTrack* ft = find_finger(event.tfinger.fingerID);
-	if (!ft) return false;
+	const auto* capture = capture_registry.lookup(event_touch_key(event));
+	if (!capture) return false;
 
-	if (ft->control == CTL_DPAD) {
+	if (capture->state == osj_capture::State::captured && capture->control == CTL_DPAD) {
 		const auto position = layout_snapshot.normalized_touch_to_layout.apply(
 			event.tfinger.x, event.tfinger.y);
 		const int px = position.x;
 		const int py = position.y;
-
-		// If the finger has moved far beyond the D-pad area, auto-release
-		// to prevent stuck directions when the finger slides away and back
-		// (which can cause missed events or finger ID changes on some devices).
-		int dx = px - layout_snapshot.joystick.acquisition.cx;
-		int dy = py - layout_snapshot.joystick.acquisition.cy;
-		float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
-		float release_dist = layout_snapshot.joystick.acquisition.radius * DPAD_RELEASE_RADIUS;
-
-		if (dist > release_dist) {
-			release_dpad();
-			remove_finger(event.tfinger.fingerID);
-			return true;
-		}
-
 		update_dpad_from_position(px, py);
 	}
 
