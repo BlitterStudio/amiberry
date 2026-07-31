@@ -52,6 +52,14 @@ static inline AmiberryGfxRect amiberry_gfx_final_presentation_rect(
 	};
 }
 
+static inline bool amiberry_gfx_rect_covers_area(
+	const AmiberryGfxRect& rect, const AmiberryGfxRect& area)
+{
+	return rect.x <= area.x && rect.y <= area.y
+		&& rect.x + rect.w >= area.x + area.w
+		&& rect.y + rect.h >= area.y + area.h;
+}
+
 static inline void amiberry_gfx_auto_crop_presentation_dimensions(
 	int source_width, int source_height, bool is_ntsc, bool correct_aspect,
 	bool integer_scaling, int output_width, int output_height,

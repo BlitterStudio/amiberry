@@ -190,6 +190,27 @@ static void test_bezel_bounded_integer_scaling_falls_back_below_one_x()
 		"sub-1x integer scaling must use a centered fractional aspect fit inside the bezel hole");
 }
 
+static void test_oversized_centered_presentation_covers_drawable()
+{
+	const AmiberryGfxRect drawable_area{0, 0, 1920, 1080};
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		drawable_area, 2000, 1200, 5.0f / 3.0f, false);
+
+	expect_int_eq(amiberry_gfx_rect_covers_area(final_rect, drawable_area), 1,
+		"an oversized presentation centered on the drawable must cover every edge");
+}
+
+static void test_oversized_offset_presentation_leaves_drawable_uncovered()
+{
+	const AmiberryGfxRect drawable_area{0, 0, 1920, 1080};
+	const AmiberryGfxRect offset_bezel_area{250, 120, 640, 480};
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		offset_bezel_area, 2000, 1200, 5.0f / 3.0f, false);
+
+	expect_int_eq(amiberry_gfx_rect_covers_area(final_rect, drawable_area), 0,
+		"an oversized presentation shifted by its bezel hole must clear uncovered drawable edges");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
@@ -202,5 +223,7 @@ int main()
 	test_bezel_area_centers_integer_scaled_presentation();
 	test_rtg_center_remains_source_sized_inside_bezel_area();
 	test_bezel_bounded_integer_scaling_falls_back_below_one_x();
+	test_oversized_centered_presentation_covers_drawable();
+	test_oversized_offset_presentation_leaves_drawable_uncovered();
 	return failures == 0 ? 0 : 1;
 }

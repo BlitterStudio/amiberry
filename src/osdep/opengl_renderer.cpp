@@ -725,8 +725,9 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	// Flip Y for GL viewport: OpenGL has y=0 at bottom, bezel hole Y is y=0 at top
 	const int glDestY = drawableHeight - final_rect.y - final_rect.h;
 
-	// Only clear if letterboxing is active (frame doesn't cover entire window)
-	if (final_rect.w < drawableWidth || final_rect.h < drawableHeight) {
+	// Clear whenever the presentation leaves any part of the drawable uncovered.
+	const AmiberryGfxRect drawable_area{0, 0, drawableWidth, drawableHeight};
+	if (!amiberry_gfx_rect_covers_area(final_rect, drawable_area)) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
