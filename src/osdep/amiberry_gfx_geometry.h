@@ -1,6 +1,57 @@
 #ifndef AMIBERRY_GFX_GEOMETRY_H
 #define AMIBERRY_GFX_GEOMETRY_H
 
+struct AmiberryGfxRect
+{
+	int x;
+	int y;
+	int w;
+	int h;
+};
+
+static inline void amiberry_gfx_aspect_fit_dimensions(
+	const int available_width, const int available_height,
+	const float target_aspect, int& width, int& height)
+{
+	if (available_width <= 0 || available_height <= 0 || target_aspect <= 0.0f) {
+		width = 1;
+		height = 1;
+		return;
+	}
+
+	width = available_width;
+	height = static_cast<int>(available_width / target_aspect);
+	if (height > available_height) {
+		height = available_height;
+		width = static_cast<int>(available_height * target_aspect);
+	}
+	if (width < 1) width = 1;
+	if (height < 1) height = 1;
+}
+
+static inline AmiberryGfxRect amiberry_gfx_final_presentation_rect(
+	const AmiberryGfxRect& available_area, const int presentation_width,
+	const int presentation_height, const float fallback_aspect,
+	const bool use_bounded_fallback)
+{
+	int width = presentation_width > 0 ? presentation_width : 1;
+	int height = presentation_height > 0 ? presentation_height : 1;
+
+	if (use_bounded_fallback && available_area.w > 0 && available_area.h > 0
+		&& fallback_aspect > 0.0f
+		&& (width > available_area.w || height > available_area.h)) {
+		amiberry_gfx_aspect_fit_dimensions(
+			available_area.w, available_area.h, fallback_aspect, width, height);
+	}
+
+	return {
+		available_area.x + (available_area.w - width) / 2,
+		available_area.y + (available_area.h - height) / 2,
+		width,
+		height
+	};
+}
+
 static inline void amiberry_gfx_auto_crop_presentation_dimensions(
 	int source_width, int source_height, bool is_ntsc, bool correct_aspect,
 	bool integer_scaling, int output_width, int output_height,
@@ -66,14 +117,8 @@ static inline void amiberry_gfx_correct_aspect_integer_dimensions(
 
 	// Start with a bounded aspect-correct fit. If even 1x integer scaling does
 	// not fit, retain this fractional fallback instead of clipping the viewport.
-	dest_width = render_width;
-	dest_height = static_cast<int>(render_width / target_aspect);
-	if (dest_height > render_height) {
-		dest_height = render_height;
-		dest_width = static_cast<int>(render_height * target_aspect);
-	}
-	if (dest_width < 1) dest_width = 1;
-	if (dest_height < 1) dest_height = 1;
+	amiberry_gfx_aspect_fit_dimensions(
+		render_width, render_height, target_aspect, dest_width, dest_height);
 
 	const int vertical_scale = dest_height / display_height;
 	if (vertical_scale < 1 || source_width > render_width) {
