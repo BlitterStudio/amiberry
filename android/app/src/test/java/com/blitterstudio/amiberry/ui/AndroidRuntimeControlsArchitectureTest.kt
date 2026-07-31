@@ -104,6 +104,185 @@ class AndroidRuntimeControlsArchitectureTest {
 	}
 
 	@Test
+	fun `captured D-pad motion has no distance release and shutdown neutralizes first`() {
+		val joystick = File("../../src/osdep/on_screen_joystick.cpp").readText()
+		val motionSignature =
+			"bool on_screen_joystick_handle_finger_motion(const SDL_Event& event"
+		val motionHandler = joystick.indexOf(motionSignature).let { start ->
+			if (start >= 0) joystick.substring(start) else ""
+		}
+		val quitHandler = Regex(
+			"""void on_screen_joystick_quit\(\)[\s\S]*?bool on_screen_joystick_is_enabled\(\)"""
+		).find(joystick)?.value.orEmpty()
+		val releaseAllHandler = Regex(
+			"""void on_screen_joystick_release_all\(\)[\s\S]*?void on_screen_joystick_set_enabled"""
+		).find(joystick)?.value.orEmpty()
+
+		assertTrue(
+			"Captured D-pad motion should continue updating direction at every distance.",
+			motionHandler.contains("update_dpad_from_position(px, py)")
+		)
+		assertFalse(
+			"The former distance-release threshold must be removed.",
+			joystick.contains("DPAD_RELEASE_RADIUS")
+		)
+		assertFalse(
+			"Motion must not neutralize or remove a captured owner.",
+			motionHandler.contains("release_dpad()") ||
+				motionHandler.contains("capture_registry.release(")
+		)
+		assertTrue(
+			"Shutdown must delegate to the neutralization authority before texture teardown.",
+			quitHandler.indexOf("on_screen_joystick_release_all()") in
+				0 until quitHandler.indexOf("SDL_DestroyTexture")
+		)
+		assertTrue(
+			"Global neutralization must clear direction, buttons, keyboard, knob, and capture state.",
+			releaseAllHandler.contains("joy_up = joy_down = joy_left = joy_right = false") &&
+				releaseAllHandler.contains("joy_fire1 = joy_fire2 = false") &&
+				releaseAllHandler.contains("joy_kb_pressed = false") &&
+				releaseAllHandler.contains("knob_active = false") &&
+				releaseAllHandler.contains("capture_registry.clear()")
+		)
+	}
+
+	@Test
+	fun `touch cancellation and lifecycle seams use main-thread global neutralization`() {
+		val amiberryCpp = File("../../src/osdep/amiberry.cpp").readText()
+		val osk = File("../../src/osdep/imgui_osk.cpp").readText()
+		val sdlCompat = File("../../libretro/sdl_compat.h").readText()
+		val libretroStubs = File("../../libretro/libretro_gui_stubs.cpp").readText()
+		val eventFilter = Regex(
+			"""static bool SDLCALL android_touch_event_filter[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val globalNeutralizer = Regex(
+			"""static void neutralize_touch_controls\(\)[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val inactiveHandler = Regex(
+			"""static void amiberry_inactive[\s\S]*?void minimizewindow"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val closeHandler = Regex(
+			"""static void handle_close_event\(\)[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val quitHandler = Regex(
+			"""static void handle_quit_event\(\)[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val processEvent = Regex(
+			"""static void process_event\(const SDL_Event& event\)[\s\S]*?void update_clipboard"""
+		).find(amiberryCpp)?.value.orEmpty()
+
+		assertTrue(
+			"The Android SDL event filter should only publish an atomic pending-neutralization request.",
+			eventFilter.contains("android_touch_neutralization_pending.store(true") &&
+				!eventFilter.contains("on_screen_joystick_release_all()") &&
+				!eventFilter.contains("neutralize_touch_controls()")
+		)
+		assertTrue(
+			"The event filter must be installed for Android lifecycle delivery.",
+			amiberryCpp.contains("SDL_SetEventFilter(android_touch_event_filter, nullptr)")
+		)
+		assertTrue(
+			"Main-thread event processing must drain pending neutralization before dispatching resumed or input events.",
+			processEvent.indexOf("drain_pending_touch_neutralization()") in
+				0 until processEvent.indexOf("switch (event.type)")
+		)
+		assertTrue(
+			"The global authority must release every overlay owner and reset both Android swipe slots.",
+			globalNeutralizer.contains("on_screen_joystick_release_all()") &&
+				globalNeutralizer.contains("reset_android_two_finger_swipe()")
+		)
+		assertTrue(
+			"Finger cancellation must neutralize globally before ordinary per-finger routing.",
+			processEvent.indexOf("case SDL_EVENT_FINGER_CANCELED:") in
+				0 until processEvent.indexOf("case SDL_EVENT_FINGER_DOWN:") &&
+				Regex("""case SDL_EVENT_FINGER_CANCELED:\s*neutralize_touch_controls\(\);\s*break;""")
+					.containsMatchIn(processEvent)
+		)
+		assertTrue(
+			"Focus loss and minimization must neutralize before input unacquire.",
+			inactiveHandler.indexOf("neutralize_touch_controls()") in
+				0 until inactiveHandler.indexOf("inputdevice_unacquire")
+		)
+		assertTrue(
+			"Background must neutralize before pausing, and foreground before resuming.",
+			Regex("""case SDL_EVENT_DID_ENTER_BACKGROUND:\s*neutralize_touch_controls\(\);\s*pause_sound\(\);""")
+				.containsMatchIn(processEvent) &&
+				Regex("""case SDL_EVENT_DID_ENTER_FOREGROUND:\s*neutralize_touch_controls\(\);\s*pause_emulation = 0;\s*resume_sound\(\);""")
+					.containsMatchIn(processEvent)
+		)
+		assertTrue(
+			"Quit, close, and termination must neutralize before teardown.",
+			closeHandler.indexOf("neutralize_touch_controls()") in
+				0 until closeHandler.indexOf("inputdevice_unacquire") &&
+				quitHandler.indexOf("neutralize_touch_controls()") in
+					0 until quitHandler.indexOf("uae_quit()") &&
+				processEvent.contains("case SDL_EVENT_TERMINATING:")
+		)
+		assertTrue(
+			"Opening the OSK must preserve its existing joystick-release takeover path.",
+			Regex("""void imgui_osk_toggle\(\)[\s\S]*on_screen_joystick_release_all\(\)[\s\S]*reset_navigation_state\(\)""")
+				.containsMatchIn(osk)
+		)
+		assertTrue(
+			"Libretro SDL compatibility must mirror canceled and terminating events.",
+			sdlCompat.contains("SDL_EVENT_FINGER_CANCELED") &&
+				sdlCompat.contains("SDL_EVENT_TERMINATING")
+		)
+		assertTrue(
+			"The headless libretro layer must provide the global release API.",
+			libretroStubs.contains("void on_screen_joystick_release_all() {}")
+		)
+	}
+
+	@Test
+	fun `only unconsumed paired touch fingers start Android GUI swipes and releases retire them`() {
+		val amiberryCpp = File("../../src/osdep/amiberry.cpp").readText()
+		val swipeTracker = Regex(
+			"""struct AndroidSwipeFinger[\s\S]*?#endif"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val fingerEvents = Regex(
+			"""case SDL_EVENT_FINGER_DOWN:[\s\S]*?case SDL_EVENT_MOUSE_BUTTON_DOWN:"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val fingerMotion = Regex(
+			"""case SDL_EVENT_FINGER_MOTION:[\s\S]*?case SDL_EVENT_MOUSE_MOTION:"""
+		).find(amiberryCpp)?.value.orEmpty()
+		assertTrue(
+			"Swipe slots must use explicit occupancy and paired touch/finger identifiers.",
+			swipeTracker.contains("bool occupied") &&
+				swipeTracker.contains("SDL_TouchID touch_id") &&
+				swipeTracker.contains("SDL_FingerID finger_id") &&
+				swipeTracker.contains("slot.touch_id == touch_id") &&
+				swipeTracker.contains("slot.finger_id == finger_id")
+		)
+		assertFalse(
+			"Swipe occupancy must not use a zero identifier sentinel.",
+			swipeTracker.contains("finger_ids[0] == 0") ||
+				swipeTracker.contains("finger_ids[slot] = 0")
+		)
+		assertTrue(
+			"Overlay-consumed downs must stay excluded, while every up can retire a previously tracked swipe finger.",
+			Regex("""if \(!consumed \|\| event\.type == SDL_EVENT_FINGER_UP\)\s*handle_android_two_finger_swipe\(event\);""")
+				.containsMatchIn(fingerEvents)
+		)
+		assertTrue(
+			"Overlay-consumed motion must not participate in the GUI swipe gesture.",
+			Regex("""if \(!consumed\)\s*handle_android_two_finger_swipe\(event\);""")
+				.containsMatchIn(fingerMotion)
+		)
+		assertTrue(
+			"Two ordinary unconsumed fingers must retain the existing downward-swipe GUI action.",
+			swipeTracker.contains("android_swipe_finger_count() != 2") &&
+				swipeTracker.contains("inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr)")
+		)
+		assertTrue(
+			"Global swipe reset must clear both occupied slots and the triggered state.",
+			swipeTracker.contains("static void reset_android_two_finger_swipe()") &&
+				swipeTracker.contains("slot = {}") &&
+				swipeTracker.contains("android_swipe_triggered = false")
+		)
+	}
+
+	@Test
 	fun `OSK hit testing includes the animated keyboard rectangle`() {
 		val osk = File("../../src/osdep/imgui_osk.cpp").readText()
 		val hitTest = Regex("""bool imgui_osk_hit_test\(float screen_x, float screen_y\)\R\{[\s\S]*?\R\}""")

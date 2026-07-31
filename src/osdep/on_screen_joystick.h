@@ -16,15 +16,16 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer);
 
 #ifdef USE_OPENGL
 // Render the on-screen joystick controls using OpenGL.
-// drawable_w/h = GL drawable size, game_rect = the Amiga display rect within it.
+// drawable_w/h = GL drawable size; safe_rect and game_rect use drawable pixels.
 // Call from show_screen() before SwapWindow.
-void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect& game_rect);
+void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
+	const SDL_Rect& safe_rect, const SDL_Rect& game_rect);
 #endif
 
 // Touch event handlers. Return true if the event was consumed by the on-screen controls.
-bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w, int window_h);
-bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int window_w, int window_h);
-bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_w, int window_h);
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event);
+bool on_screen_joystick_handle_finger_up(const SDL_Event& event);
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event);
 
 // Query / set enabled state
 bool on_screen_joystick_is_enabled();
@@ -39,6 +40,8 @@ bool on_screen_joystick_keyboard_tapped();
 
 // Update the control layout when screen geometry changes.
 // game_rect is the destination rectangle of the Amiga screen on the display.
+void on_screen_joystick_update_layout(int screen_w, int screen_h,
+	const SDL_Rect& safe_rect, const SDL_Rect& game_rect);
 void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect);
 
 // Accessor for Vulkan/generic overlay rendering
@@ -54,7 +57,6 @@ struct OsjRenderInfo {
 	OsjOverlayElement btn2;     // fire button 2
 	OsjOverlayElement btnkb;    // keyboard button
 	int screen_w, screen_h;
-	bool valid;
 };
 bool on_screen_joystick_get_render_info(OsjRenderInfo& info);
 

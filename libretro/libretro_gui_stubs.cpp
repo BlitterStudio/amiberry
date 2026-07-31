@@ -79,26 +79,33 @@ void on_screen_joystick_init(SDL_Renderer* renderer) { (void)renderer; }
 void on_screen_joystick_quit() {}
 void on_screen_joystick_redraw(SDL_Renderer* renderer) { (void)renderer; }
 #ifdef USE_OPENGL
-void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect& game_rect)
+void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
+	const SDL_Rect& safe_rect, const SDL_Rect& game_rect)
 {
-	(void)drawable_w; (void)drawable_h; (void)game_rect;
+	(void)drawable_w; (void)drawable_h; (void)safe_rect; (void)game_rect;
 }
 #endif
-bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event)
 {
-	(void)event; (void)window_w; (void)window_h; return false;
+	(void)event; return false;
 }
-bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_up(const SDL_Event& event)
 {
-	(void)event; (void)window_w; (void)window_h; return false;
+	(void)event; return false;
 }
-bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event)
 {
-	(void)event; (void)window_w; (void)window_h; return false;
+	(void)event; return false;
 }
 bool on_screen_joystick_is_enabled() { return false; }
 void on_screen_joystick_set_enabled(bool enabled) { (void)enabled; }
+void on_screen_joystick_release_all() {}
 bool on_screen_joystick_keyboard_tapped() { return false; }
+void on_screen_joystick_update_layout(int screen_w, int screen_h,
+	const SDL_Rect& safe_rect, const SDL_Rect& game_rect)
+{
+	(void)screen_w; (void)screen_h; (void)safe_rect; (void)game_rect;
+}
 void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect)
 {
 	(void)screen_w; (void)screen_h; (void)game_rect;
