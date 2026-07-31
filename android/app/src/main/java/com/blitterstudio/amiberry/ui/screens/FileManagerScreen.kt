@@ -221,7 +221,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					onDismissRequest = { showRomImportMenu = false }
 				) {
 					DropdownMenuItem(
-						text = { Text(stringResource(R.string.action_import_rom_files)) },
+						text = { Text(stringResource(R.string.action_import_roms)) },
 						leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
 						onClick = {
 							showRomImportMenu = false
@@ -414,7 +414,12 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			} else {
 				LazyColumn(
-					contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+					contentPadding = PaddingValues(
+						start = 16.dp,
+						top = 8.dp,
+						end = 16.dp,
+						bottom = 120.dp
+					),
 					verticalArrangement = Arrangement.spacedBy(6.dp)
 				) {
 					items(files, key = { it.path }) { file ->
