@@ -23,9 +23,9 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
 #endif
 
 // Touch event handlers. Return true if the event was consumed by the on-screen controls.
-bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w, int window_h);
-bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int window_w, int window_h);
-bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_w, int window_h);
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event);
+bool on_screen_joystick_handle_finger_up(const SDL_Event& event);
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event);
 
 // Query / set enabled state
 bool on_screen_joystick_is_enabled();
@@ -57,7 +57,6 @@ struct OsjRenderInfo {
 	OsjOverlayElement btn2;     // fire button 2
 	OsjOverlayElement btnkb;    // keyboard button
 	int screen_w, screen_h;
-	bool valid;
 };
 bool on_screen_joystick_get_render_info(OsjRenderInfo& info);
 

@@ -246,13 +246,6 @@ class AndroidRuntimeControlsArchitectureTest {
 		val fingerMotion = Regex(
 			"""case SDL_EVENT_FINGER_MOTION:[\s\S]*?case SDL_EVENT_MOUSE_MOTION:"""
 		).find(amiberryCpp)?.value.orEmpty()
-		val firstTouch = Pair(101L, 7L)
-		val secondTouch = Pair(202L, 7L)
-
-		assertFalse(
-			"Identical valid finger IDs on different valid touch devices are distinct swipe owners.",
-			firstTouch == secondTouch
-		)
 		assertTrue(
 			"Swipe slots must use explicit occupancy and paired touch/finger identifiers.",
 			swipeTracker.contains("bool occupied") &&

@@ -85,17 +85,17 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
 	(void)drawable_w; (void)drawable_h; (void)safe_rect; (void)game_rect;
 }
 #endif
-bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event)
 {
-	(void)event; (void)window_w; (void)window_h; return false;
+	(void)event; return false;
 }
-bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_up(const SDL_Event& event)
 {
-	(void)event; (void)window_w; (void)window_h; return false;
+	(void)event; return false;
 }
-bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event)
 {
-	(void)event; (void)window_w; (void)window_h; return false;
+	(void)event; return false;
 }
 bool on_screen_joystick_is_enabled() { return false; }
 void on_screen_joystick_set_enabled(bool enabled) { (void)enabled; }

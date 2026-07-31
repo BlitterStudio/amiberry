@@ -165,7 +165,8 @@ static void drain_pending_touch_neutralization()
 {
 #ifdef __ANDROID__
 	// process_event() is the SDL event/main-thread boundary for input injection.
-	if (android_touch_neutralization_pending.exchange(false, std::memory_order_acq_rel))
+	if (android_touch_neutralization_pending.load(std::memory_order_acquire)
+		&& android_touch_neutralization_pending.exchange(false, std::memory_order_acq_rel))
 		neutralize_touch_controls();
 #endif
 }
@@ -3421,9 +3422,9 @@ static void process_event(const SDL_Event& event)
 			// Then let on-screen joystick try
 			if (!consumed && !imgui_osk_should_render() && on_screen_joystick_is_enabled() && ww > 0 && wh > 0) {
 				if (event.type == SDL_EVENT_FINGER_DOWN)
-					consumed = on_screen_joystick_handle_finger_down(event, ww, wh);
+					consumed = on_screen_joystick_handle_finger_down(event);
 				else
-					consumed = on_screen_joystick_handle_finger_up(event, ww, wh);
+					consumed = on_screen_joystick_handle_finger_up(event);
 			}
 			// Check if the on-screen keyboard button was tapped
 			if (on_screen_joystick_keyboard_tapped()) {
@@ -3470,7 +3471,7 @@ static void process_event(const SDL_Event& event)
 					consumed = true;
 			}
 			if (!consumed && !imgui_osk_should_render() && on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
-				consumed = on_screen_joystick_handle_finger_motion(event, ww, wh);
+				consumed = on_screen_joystick_handle_finger_motion(event);
 #ifdef __ANDROID__
 			if (!consumed)
 				handle_android_two_finger_swipe(event);

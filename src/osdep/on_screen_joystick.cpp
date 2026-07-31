@@ -146,11 +146,6 @@ static bool knob_active = false;
 
 // Multi-touch tracking
 using ControlType = osj_capture::Control;
-static constexpr ControlType CTL_NONE = ControlType::none;
-static constexpr ControlType CTL_DPAD = ControlType::dpad;
-static constexpr ControlType CTL_BUTTON1 = ControlType::button1;
-static constexpr ControlType CTL_BUTTON2 = ControlType::button2;
-static constexpr ControlType CTL_KEYBOARD = ControlType::keyboard;
 static osj_capture::Registry capture_registry;
 
 static osj_layout::Rect to_layout_rect(const SDL_Rect& rect)
@@ -752,11 +747,11 @@ static void release_dpad()
 
 static void release_button(ControlType ctl)
 {
-	if (ctl == CTL_BUTTON1) {
+	if (ctl == ControlType::button1) {
 		joy_fire1 = false;
-	} else if (ctl == CTL_BUTTON2) {
+	} else if (ctl == ControlType::button2) {
 		joy_fire2 = false;
-	} else if (ctl == CTL_KEYBOARD) {
+	} else if (ctl == ControlType::keyboard) {
 		joy_kb_pressed = false;
 		return;  // No Amiga input to inject
 	}
@@ -765,9 +760,10 @@ static void release_button(ControlType ctl)
 
 static void release_control(ControlType ctl)
 {
-	if (ctl == CTL_DPAD) {
+	if (ctl == ControlType::dpad) {
 		release_dpad();
-	} else if (ctl == CTL_BUTTON1 || ctl == CTL_BUTTON2 || ctl == CTL_KEYBOARD) {
+	} else if (ctl == ControlType::button1 || ctl == ControlType::button2
+		|| ctl == ControlType::keyboard) {
 		release_button(ctl);
 	}
 }
@@ -810,29 +806,21 @@ static osj_capture::TouchKey event_touch_key(const SDL_Event& event)
 static ControlType hit_test(int px, int py)
 {
 	if (!layout_snapshot.valid)
-		return CTL_NONE;
+		return ControlType::none;
 	const auto in_circle = [px, py](const osj_layout::Circle& circle) {
 		const long long dx = static_cast<long long>(px) - circle.cx;
 		const long long dy = static_cast<long long>(py) - circle.cy;
 		return dx * dx + dy * dy <= static_cast<long long>(circle.radius) * circle.radius;
 	};
-	{
-		if (in_circle(layout_snapshot.joystick.acquisition))
-			return CTL_DPAD;
-	}
-	{
-		if (in_circle(layout_snapshot.fire1.acquisition))
-			return CTL_BUTTON1;
-	}
-	{
-		if (in_circle(layout_snapshot.fire2.acquisition))
-			return CTL_BUTTON2;
-	}
-	{
-		if (in_circle(layout_snapshot.keyboard.acquisition))
-			return CTL_KEYBOARD;
-	}
-	return CTL_NONE;
+	if (in_circle(layout_snapshot.joystick.acquisition))
+		return ControlType::dpad;
+	if (in_circle(layout_snapshot.fire1.acquisition))
+		return ControlType::button1;
+	if (in_circle(layout_snapshot.fire2.acquisition))
+		return ControlType::button2;
+	if (in_circle(layout_snapshot.keyboard.acquisition))
+		return ControlType::keyboard;
+	return ControlType::none;
 }
 
 #ifdef USE_OPENGL
@@ -922,15 +910,10 @@ void on_screen_joystick_quit()
 	if (btn2_surface) { SDL_DestroySurface(btn2_surface); btn2_surface = nullptr; }
 	if (btnkb_surface) { SDL_DestroySurface(btnkb_surface); btnkb_surface = nullptr; }
 
-	knob_offset_x = 0.0f;
-	knob_offset_y = 0.0f;
-	knob_active = false;
-
 #ifdef USE_OPENGL
 	cleanup_osj_gl();
 #endif
 
-	capture_registry.clear();
 	layout_snapshot = {};
 	osj_initialized = false;
 }
@@ -1020,8 +1003,7 @@ bool on_screen_joystick_get_render_info(OsjRenderInfo& info)
 	info.btnkb = {btnkb_surface, to_sdl_rect(layout_snapshot.keyboard.visual), ALPHA_NORMAL / 255.0f};
 	info.screen_w = layout_snapshot.output_bounds.w;
 	info.screen_h = layout_snapshot.output_bounds.h;
-	info.valid = layout_snapshot.valid;
-	return info.valid;
+	return true;
 }
 
 void on_screen_joystick_redraw(SDL_Renderer* renderer)
@@ -1231,7 +1213,7 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
 // Touch event handlers
 // ---------------------------------------------------------------------------
 
-bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_w*/, int /*window_h*/)
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event)
 {
 	if (!osj_enabled || !osj_initialized || !layout_snapshot.valid) return false;
 
@@ -1261,7 +1243,7 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_
 	const int py = position.y;
 
 	const ControlType ctl = hit_test(px, py);
-	if (ctl == CTL_NONE) return false;
+	if (ctl == ControlType::none) return false;
 
 	const auto acquired = capture_registry.acquire(event_touch_key(event), ctl);
 	if (acquired == osj_capture::AcquireResult::invalid)
@@ -1270,19 +1252,19 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_
 		return true;
 
 	switch (ctl) {
-	case CTL_DPAD:
+	case ControlType::dpad:
 		knob_active = true;
 		update_dpad_from_position(px, py);
 		break;
-	case CTL_BUTTON1:
+	case ControlType::button1:
 		joy_fire1 = true;
 		inject_buttons();
 		break;
-	case CTL_BUTTON2:
+	case ControlType::button2:
 		joy_fire2 = true;
 		inject_buttons();
 		break;
-	case CTL_KEYBOARD:
+	case ControlType::keyboard:
 		joy_kb_pressed = true;
 		kb_tapped = true;
 		break;
@@ -1293,7 +1275,7 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_
 	return true;
 }
 
-bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int /*window_w*/, int /*window_h*/)
+bool on_screen_joystick_handle_finger_up(const SDL_Event& event)
 {
 	if (!osj_enabled || !osj_initialized) return false;
 
@@ -1306,14 +1288,15 @@ bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int /*window_w*
 	return true;
 }
 
-bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int /*window_w*/, int /*window_h*/)
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event)
 {
 	if (!osj_enabled || !osj_initialized || !layout_snapshot.valid) return false;
 
 	const auto* capture = capture_registry.lookup(event_touch_key(event));
 	if (!capture) return false;
 
-	if (capture->state == osj_capture::State::captured && capture->control == CTL_DPAD) {
+	if (capture->state == osj_capture::State::captured
+		&& capture->control == ControlType::dpad) {
 		const auto position = layout_snapshot.normalized_touch_to_layout.apply(
 			event.tfinger.x, event.tfinger.y);
 		const int px = position.x;
