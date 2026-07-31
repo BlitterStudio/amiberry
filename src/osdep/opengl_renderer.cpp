@@ -34,6 +34,7 @@
 #include "imgui_overlay.h"
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
+#include "on_screen_joystick_layout.h"
 #include "gui/gui_handling.h"
 #include <algorithm>
 #include <cmath>
@@ -1830,8 +1831,22 @@ void OpenGLRenderer::render_onscreen_joystick(int monid)
 	if (on_screen_joystick_is_enabled() && !imgui_osk_should_render())
 	{
 		int dw, dh;
-		get_drawable_size(AMonitors[monid].amiga_window, &dw, &dh);
-		on_screen_joystick_redraw_gl(dw, dh, render_quad);
+		SDL_Window* window = AMonitors[monid].amiga_window;
+		get_drawable_size(window, &dw, &dh);
+		SDL_Rect drawable_safe{0, 0, dw, dh};
+#ifdef __ANDROID__
+		int window_w = 0;
+		int window_h = 0;
+		SDL_Rect window_safe{};
+		SDL_GetWindowSize(window, &window_w, &window_h);
+		if (window_w > 0 && window_h > 0 && SDL_GetWindowSafeArea(window, &window_safe)) {
+			const auto scaled_safe = osj_layout::scale_rect_between_spaces(
+				{window_safe.x, window_safe.y, window_safe.w, window_safe.h},
+				{0, 0, window_w, window_h}, {0, 0, dw, dh});
+			drawable_safe = {scaled_safe.x, scaled_safe.y, scaled_safe.w, scaled_safe.h};
+		}
+#endif
+		on_screen_joystick_redraw_gl(dw, dh, drawable_safe, render_quad);
 	}
 }
 

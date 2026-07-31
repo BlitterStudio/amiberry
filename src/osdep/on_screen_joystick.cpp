@@ -33,6 +33,7 @@ static inline SDL_FRect rect_to_frect(const SDL_Rect* r)
 }
 
 #include "on_screen_joystick.h"
+#include "on_screen_joystick_layout.h"
 #include "sysdeps.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
@@ -44,14 +45,6 @@ static inline SDL_FRect rect_to_frect(const SDL_Rect* r)
 // Configuration constants
 // ---------------------------------------------------------------------------
 
-// Joystick base size as fraction of the shorter screen dimension
-static constexpr float DPAD_SIZE_FRACTION = 0.38f;
-// Button size as fraction of the shorter screen dimension
-static constexpr float BUTTON_SIZE_FRACTION = 0.22f;
-// Vertical spacing between the two buttons as fraction of shorter dimension
-static constexpr float BUTTON_GAP_FRACTION = 0.05f;
-// Margin from screen edge as fraction of shorter dimension
-static constexpr float EDGE_MARGIN_FRACTION = 0.02f;
 // Texture resolution for procedurally-generated graphics
 static constexpr int STICK_BASE_TEX_SIZE = 256;
 static constexpr int STICK_KNOB_TEX_SIZE = 128;
@@ -70,9 +63,6 @@ static constexpr float DPAD_RELEASE_RADIUS = 2.5f;
 static constexpr float KNOB_SIZE_FRACTION = 0.40f;
 // Maximum travel distance of knob center from base center (fraction of base radius)
 static constexpr float KNOB_MAX_TRAVEL = 0.55f;
-// Diagonal offset for button 2 relative to button 1 (fraction of button size)
-static constexpr float BTN2_DIAG_X_OFFSET = 0.30f;
-static constexpr float BTN2_DIAG_Y_OFFSET = 0.50f;
 
 // ---------------------------------------------------------------------------
 // Retro color palette
@@ -106,9 +96,6 @@ static constexpr Color BTN2_HIGHLIGHT = {100, 130, 255, 255 };
 static constexpr Color BTNKB_OUTER     = { 20, 130,  40, 255 };
 static constexpr Color BTNKB_INNER     = { 50, 180,  70, 255 };
 static constexpr Color BTNKB_HIGHLIGHT = {100, 230, 130, 255 };
-// Keyboard button size as fraction of shorter dimension (smaller than fire buttons)
-static constexpr float KB_BUTTON_SIZE_FRACTION = 0.14f;
-
 // ---------------------------------------------------------------------------
 // Internal state
 // ---------------------------------------------------------------------------
@@ -140,17 +127,10 @@ static GLuint gl_btnkb_tex = 0;
 static bool   osj_gl_initialized = false;
 #endif
 
-// Layout rectangles on screen
-static SDL_Rect dpad_rect = {};
-static SDL_Rect btn1_rect = {};
-static SDL_Rect btn2_rect = {};
-static SDL_Rect btnkb_rect = {};
-
-// Center and radius for hit-testing (in screen coords)
-static int dpad_cx = 0, dpad_cy = 0, dpad_hit_radius = 0;
-static int btn1_cx = 0, btn1_cy = 0, btn1_hit_radius = 0;
-static int btn2_cx = 0, btn2_cy = 0, btn2_hit_radius = 0;
-static int btnkb_cx = 0, btnkb_cy = 0, btnkb_hit_radius = 0;
+// Last valid layout is replaced atomically as a complete value. Rendering,
+// hit testing, and normalized-touch conversion all consume this snapshot.
+static osj_layout::LayoutSnapshot layout_snapshot;
+static std::uint64_t next_layout_generation = 1;
 
 // Joystick state
 static bool joy_up = false, joy_down = false, joy_left = false, joy_right = false;
@@ -177,10 +157,45 @@ struct FingerTrack {
 };
 static std::vector<FingerTrack> active_fingers;
 
-// Current screen dimensions (cached from last layout update)
-static int screen_w = 0, screen_h = 0;
-// Cached game rect for change detection
-static SDL_Rect cached_game_rect = {};
+static osj_layout::Rect to_layout_rect(const SDL_Rect& rect)
+{
+	return {rect.x, rect.y, rect.w, rect.h};
+}
+
+static SDL_Rect to_sdl_rect(const osj_layout::Rect& rect)
+{
+	return {rect.x, rect.y, rect.w, rect.h};
+}
+
+static bool same_touch_transform(const osj_layout::NormalizedTouchTransform& lhs,
+	const osj_layout::NormalizedTouchTransform& rhs)
+{
+	return lhs.offset_x == rhs.offset_x && lhs.offset_y == rhs.offset_y
+		&& lhs.scale_x == rhs.scale_x && lhs.scale_y == rhs.scale_y;
+}
+
+static void publish_layout(const osj_layout::Rect& output_bounds,
+	const osj_layout::Rect& safe_rect, const osj_layout::Rect& game_rect,
+	const osj_layout::NormalizedTouchTransform& normalized_touch_to_layout)
+{
+	auto candidate = osj_layout::calculate_layout(output_bounds, safe_rect, game_rect,
+		next_layout_generation, normalized_touch_to_layout);
+	if (!candidate.valid)
+		return;
+	if (layout_snapshot.valid
+		&& candidate.output_bounds == layout_snapshot.output_bounds
+		&& candidate.safe_rect == layout_snapshot.safe_rect
+		&& candidate.game_rect == layout_snapshot.game_rect
+		&& same_touch_transform(candidate.normalized_touch_to_layout,
+			layout_snapshot.normalized_touch_to_layout)) {
+		return;
+	}
+
+	// knob_offset_x/y are normalized to visible-base travel, so retaining them
+	// reprojects an active knob into the replacement geometry without input.
+	layout_snapshot = candidate;
+	next_layout_generation++;
+}
 
 // ---------------------------------------------------------------------------
 // Helper: draw a filled circle on an SDL_Surface
@@ -682,10 +697,14 @@ static void inject_buttons()
 
 static void update_dpad_from_position(int touch_x, int touch_y)
 {
-	int dx = touch_x - dpad_cx;
-	int dy = touch_y - dpad_cy;
+	if (!layout_snapshot.valid)
+		return;
+	const auto& joystick = layout_snapshot.joystick;
+	const int dx = touch_x - joystick.acquisition.cx;
+	const int dy = touch_y - joystick.acquisition.cy;
 	float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
-	float max_travel = dpad_hit_radius * KNOB_MAX_TRAVEL;
+	const float visual_radius = joystick.visual.w * 0.5f;
+	float max_travel = visual_radius * KNOB_MAX_TRAVEL;
 
 	// Update knob visual position (clamped to max travel radius)
 	if (dist > max_travel) {
@@ -701,7 +720,7 @@ static void update_dpad_from_position(int touch_x, int touch_y)
 	}
 
 	// Deadzone for digital direction output
-	float deadzone_px = dpad_hit_radius * DPAD_DEADZONE;
+	float deadzone_px = visual_radius * DPAD_DEADZONE;
 	if (dist < deadzone_px) {
 		joy_up = joy_down = joy_left = joy_right = false;
 		inject_directions();
@@ -754,11 +773,14 @@ static void release_button(ControlType ctl)
 
 static SDL_Rect compute_knob_rect()
 {
-	int knob_size = static_cast<int>(dpad_rect.w * KNOB_SIZE_FRACTION);
-	float max_travel_px = dpad_hit_radius * KNOB_MAX_TRAVEL;
+	if (!layout_snapshot.valid)
+		return {};
+	const auto& joystick = layout_snapshot.joystick;
+	int knob_size = static_cast<int>(joystick.visual.w * KNOB_SIZE_FRACTION);
+	float max_travel_px = joystick.visual.w * 0.5f * KNOB_MAX_TRAVEL;
 
-	int knob_cx = dpad_cx + static_cast<int>(knob_offset_x * max_travel_px);
-	int knob_cy = dpad_cy + static_cast<int>(knob_offset_y * max_travel_px);
+	int knob_cx = joystick.acquisition.cx + static_cast<int>(knob_offset_x * max_travel_px);
+	int knob_cy = joystick.acquisition.cy + static_cast<int>(knob_offset_y * max_travel_px);
 
 	SDL_Rect r;
 	r.x = knob_cx - knob_size / 2;
@@ -810,28 +832,27 @@ static void release_existing_control(ControlType ctl)
 
 static ControlType hit_test(int px, int py)
 {
+	if (!layout_snapshot.valid)
+		return CTL_NONE;
+	const auto in_circle = [px, py](const osj_layout::Circle& circle) {
+		const long long dx = static_cast<long long>(px) - circle.cx;
+		const long long dy = static_cast<long long>(py) - circle.cy;
+		return dx * dx + dy * dy <= static_cast<long long>(circle.radius) * circle.radius;
+	};
 	{
-		int dx = px - dpad_cx;
-		int dy = py - dpad_cy;
-		if (dx * dx + dy * dy <= dpad_hit_radius * dpad_hit_radius)
+		if (in_circle(layout_snapshot.joystick.acquisition))
 			return CTL_DPAD;
 	}
 	{
-		int dx = px - btn1_cx;
-		int dy = py - btn1_cy;
-		if (dx * dx + dy * dy <= btn1_hit_radius * btn1_hit_radius)
+		if (in_circle(layout_snapshot.fire1.acquisition))
 			return CTL_BUTTON1;
 	}
 	{
-		int dx = px - btn2_cx;
-		int dy = py - btn2_cy;
-		if (dx * dx + dy * dy <= btn2_hit_radius * btn2_hit_radius)
+		if (in_circle(layout_snapshot.fire2.acquisition))
 			return CTL_BUTTON2;
 	}
 	{
-		int dx = px - btnkb_cx;
-		int dy = py - btnkb_cy;
-		if (dx * dx + dy * dy <= btnkb_hit_radius * btnkb_hit_radius)
+		if (in_circle(layout_snapshot.keyboard.acquisition))
 			return CTL_KEYBOARD;
 	}
 	return CTL_NONE;
@@ -902,6 +923,7 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	knob_offset_y = 0.0f;
 	knob_active = false;
 	active_fingers.clear();
+	layout_snapshot = {};
 
 	osj_initialized = true;
 }
@@ -939,6 +961,7 @@ void on_screen_joystick_quit()
 #endif
 
 	active_fingers.clear();
+	layout_snapshot = {};
 	osj_initialized = false;
 }
 
@@ -1000,89 +1023,17 @@ bool on_screen_joystick_keyboard_tapped()
 	return false;
 }
 
+void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& safe_rect,
+	const SDL_Rect& game_rect)
+{
+	const osj_layout::Rect output_bounds{0, 0, sw, sh};
+	publish_layout(output_bounds, to_layout_rect(safe_rect), to_layout_rect(game_rect),
+		{0.0f, 0.0f, static_cast<float>(sw), static_cast<float>(sh)});
+}
+
 void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 {
-	screen_w = sw;
-	screen_h = sh;
-
-	int shorter = std::min(sw, sh);
-
-	int dpad_size = static_cast<int>(shorter * DPAD_SIZE_FRACTION);
-	int margin = static_cast<int>(shorter * EDGE_MARGIN_FRACTION);
-
-	// Place joystick base on the left side, vertically centered
-	int left_space = game_rect.x;
-	if (left_space > dpad_size + margin * 2) {
-		dpad_rect.x = (left_space - dpad_size) / 2;
-	} else {
-		dpad_rect.x = margin;
-	}
-	dpad_rect.y = (sh - dpad_size) / 2;
-	dpad_rect.w = dpad_size;
-	dpad_rect.h = dpad_size;
-
-	dpad_cx = dpad_rect.x + dpad_size / 2;
-	dpad_cy = dpad_rect.y + dpad_size / 2;
-	dpad_hit_radius = dpad_size / 2;
-
-	// Button dimensions
-	int btn_size = static_cast<int>(shorter * BUTTON_SIZE_FRACTION);
-	int btn_gap = static_cast<int>(shorter * BUTTON_GAP_FRACTION);
-
-	// Place buttons on the right side with diagonal offset
-	int right_start = game_rect.x + game_rect.w;
-	int right_space = sw - right_start;
-
-	// Calculate diagonal offset
-	int diag_x = static_cast<int>(btn_size * BTN2_DIAG_X_OFFSET);
-	int diag_y = static_cast<int>(btn_size * BTN2_DIAG_Y_OFFSET);
-
-	// Total width needed for diagonal layout
-	int total_btn_w = btn_size + diag_x;
-	int btn_x;
-	if (right_space > total_btn_w + margin * 2) {
-		btn_x = right_start + (right_space - total_btn_w) / 2;
-	} else {
-		btn_x = sw - total_btn_w - margin;
-	}
-
-	int total_btn_height = btn_size + diag_y + btn_gap;
-	int btn_y_start = (sh - total_btn_height) / 2;
-
-	// Button 1 (upper-left of the pair)
-	btn1_rect.x = btn_x;
-	btn1_rect.y = btn_y_start;
-	btn1_rect.w = btn_size;
-	btn1_rect.h = btn_size;
-
-	// Button 2 (lower-right, diagonal offset)
-	btn2_rect.x = btn_x + diag_x;
-	btn2_rect.y = btn_y_start + diag_y + btn_gap;
-	btn2_rect.w = btn_size;
-	btn2_rect.h = btn_size;
-
-	btn1_cx = btn1_rect.x + btn_size / 2;
-	btn1_cy = btn1_rect.y + btn_size / 2;
-	btn1_hit_radius = btn_size / 2 + btn_size / 8;
-
-	btn2_cx = btn2_rect.x + btn_size / 2;
-	btn2_cy = btn2_rect.y + btn_size / 2;
-	btn2_hit_radius = btn_size / 2 + btn_size / 8;
-
-	// Keyboard button: smaller, placed below the button pair
-	int kb_size = static_cast<int>(shorter * KB_BUTTON_SIZE_FRACTION);
-	// Center KB button horizontally between the two fire buttons
-	int kb_x = (btn1_rect.x + btn2_rect.x + btn_size) / 2 - kb_size / 2;
-	int kb_y = btn2_rect.y + btn_size + btn_gap;
-
-	btnkb_rect.x = kb_x;
-	btnkb_rect.y = kb_y;
-	btnkb_rect.w = kb_size;
-	btnkb_rect.h = kb_size;
-
-	btnkb_cx = btnkb_rect.x + kb_size / 2;
-	btnkb_cy = btnkb_rect.y + kb_size / 2;
-	btnkb_hit_radius = kb_size / 2 + kb_size / 8;
+	on_screen_joystick_update_layout(sw, sh, {0, 0, sw, sh}, game_rect);
 }
 
 bool on_screen_joystick_get_render_info(OsjRenderInfo& info)
@@ -1090,15 +1041,16 @@ bool on_screen_joystick_get_render_info(OsjRenderInfo& info)
 	info = {};
 	if (!osj_enabled || !osj_initialized) return false;
 	if (!stick_base_surface || !knob_surface || !btn1_surface || !btn2_surface) return false;
+	if (!layout_snapshot.valid) return false;
 
-	info.base = {stick_base_surface, dpad_rect, knob_active ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.base = {stick_base_surface, to_sdl_rect(layout_snapshot.joystick.visual), knob_active ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
 	info.knob = {knob_surface, compute_knob_rect(), knob_active ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
-	info.btn1 = {btn1_surface, btn1_rect, joy_fire1 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
-	info.btn2 = {btn2_surface, btn2_rect, joy_fire2 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
-	info.btnkb = {btnkb_surface, btnkb_rect, ALPHA_NORMAL / 255.0f};
-	info.screen_w = screen_w;
-	info.screen_h = screen_h;
-	info.valid = (screen_w > 0 && screen_h > 0);
+	info.btn1 = {btn1_surface, to_sdl_rect(layout_snapshot.fire1.visual), joy_fire1 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.btn2 = {btn2_surface, to_sdl_rect(layout_snapshot.fire2.visual), joy_fire2 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f)};
+	info.btnkb = {btnkb_surface, to_sdl_rect(layout_snapshot.keyboard.visual), ALPHA_NORMAL / 255.0f};
+	info.screen_w = layout_snapshot.output_bounds.w;
+	info.screen_h = layout_snapshot.output_bounds.h;
+	info.valid = layout_snapshot.valid;
 	return info.valid;
 }
 
@@ -1107,21 +1059,42 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 	if (!osj_enabled || !osj_initialized) return;
 	if (!stick_base_tex || !knob_tex || !btn1_tex || !btn2_tex) return;
 
-	// Auto-recalculate layout when screen geometry changes
-	{
-		int sw = 0, sh = 0;
+	// SDL overlays use the renderer's active logical-presentation space.
+	int sw = 0;
+	int sh = 0;
+	SDL_GetRenderLogicalPresentation(renderer, &sw, &sh, nullptr);
+	if (sw <= 0 || sh <= 0)
 		SDL_GetCurrentRenderOutputSize(renderer, &sw, &sh);
-		const auto& rq = g_renderer->render_quad;
-		if (sw > 0 && sh > 0 && rq.w > 0 && rq.h > 0) {
-			if (sw != screen_w || sh != screen_h ||
-				rq.x != cached_game_rect.x || rq.y != cached_game_rect.y ||
-				rq.w != cached_game_rect.w || rq.h != cached_game_rect.h)
-			{
-				on_screen_joystick_update_layout(sw, sh, rq);
-				cached_game_rect = rq;
-			}
+	SDL_Rect safe_rect{};
+	if (!SDL_GetRenderSafeArea(renderer, &safe_rect))
+		safe_rect = {};
+	osj_layout::NormalizedTouchTransform touch_transform{
+		0.0f, 0.0f, static_cast<float>(sw), static_cast<float>(sh)
+	};
+	if (SDL_Window* window = SDL_GetRenderWindow(renderer)) {
+		int window_w = 0;
+		int window_h = 0;
+		SDL_GetWindowSize(window, &window_w, &window_h);
+		float x0 = 0.0f;
+		float y0 = 0.0f;
+		float x1 = 0.0f;
+		float y1 = 0.0f;
+		if (window_w > 0 && window_h > 0
+			&& SDL_RenderCoordinatesFromWindow(renderer, 0.0f, 0.0f, &x0, &y0)
+			&& SDL_RenderCoordinatesFromWindow(renderer, static_cast<float>(window_w),
+				static_cast<float>(window_h), &x1, &y1)) {
+			touch_transform = {x0, y0, x1 - x0, y1 - y0};
 		}
 	}
+	const osj_layout::Rect output_bounds{0, 0, sw, sh};
+	publish_layout(output_bounds, to_layout_rect(safe_rect),
+		to_layout_rect(g_renderer->render_quad), touch_transform);
+	if (!layout_snapshot.valid)
+		return;
+	const SDL_Rect dpad_rect = to_sdl_rect(layout_snapshot.joystick.visual);
+	const SDL_Rect btn1_rect = to_sdl_rect(layout_snapshot.fire1.visual);
+	const SDL_Rect btn2_rect = to_sdl_rect(layout_snapshot.fire2.visual);
+	const SDL_Rect btnkb_rect = to_sdl_rect(layout_snapshot.keyboard.visual);
 
 	// Joystick base plate
 	{
@@ -1192,21 +1165,19 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 }
 
 #ifdef USE_OPENGL
-void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect& game_rect)
+void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
+	const SDL_Rect& safe_rect, const SDL_Rect& game_rect)
 {
 	if (!osj_enabled || !osj_initialized) return;
 	if (!stick_base_surface || !knob_surface || !btn1_surface || !btn2_surface) return;
 
-	// Update layout if geometry changed
-	if (drawable_w > 0 && drawable_h > 0 && game_rect.w > 0 && game_rect.h > 0) {
-		if (drawable_w != screen_w || drawable_h != screen_h ||
-			game_rect.x != cached_game_rect.x || game_rect.y != cached_game_rect.y ||
-			game_rect.w != cached_game_rect.w || game_rect.h != cached_game_rect.h)
-		{
-			on_screen_joystick_update_layout(drawable_w, drawable_h, game_rect);
-			cached_game_rect = game_rect;
-		}
-	}
+	on_screen_joystick_update_layout(drawable_w, drawable_h, safe_rect, game_rect);
+	if (!layout_snapshot.valid)
+		return;
+	const SDL_Rect dpad_rect = to_sdl_rect(layout_snapshot.joystick.visual);
+	const SDL_Rect btn1_rect = to_sdl_rect(layout_snapshot.fire1.visual);
+	const SDL_Rect btn2_rect = to_sdl_rect(layout_snapshot.fire2.visual);
+	const SDL_Rect btnkb_rect = to_sdl_rect(layout_snapshot.keyboard.visual);
 
 	// Lazy-init GL resources
 	if (!osj_init_gl_shader()) return;
@@ -1290,9 +1261,9 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect
 // Touch event handlers
 // ---------------------------------------------------------------------------
 
-bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int /*window_w*/, int /*window_h*/)
 {
-	if (!osj_enabled || !osj_initialized) return false;
+	if (!osj_enabled || !osj_initialized || !layout_snapshot.valid) return false;
 
 	// Stale-finger audit: if any tracked finger no longer exists in SDL's
 	// active touch list, release it.  This catches silently dropped touches
@@ -1330,8 +1301,10 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w,
 		}
 	}
 
-	int px = static_cast<int>(event.tfinger.x * window_w);
-	int py = static_cast<int>(event.tfinger.y * window_h);
+	const auto position = layout_snapshot.normalized_touch_to_layout.apply(
+		event.tfinger.x, event.tfinger.y);
+	const int px = position.x;
+	const int py = position.y;
 
 	ControlType ctl = hit_test(px, py);
 	if (ctl == CTL_NONE) return false;
@@ -1398,24 +1371,26 @@ bool on_screen_joystick_handle_finger_up(const SDL_Event& event, int /*window_w*
 	return true;
 }
 
-bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_w, int window_h)
+bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int /*window_w*/, int /*window_h*/)
 {
-	if (!osj_enabled || !osj_initialized) return false;
+	if (!osj_enabled || !osj_initialized || !layout_snapshot.valid) return false;
 
 	FingerTrack* ft = find_finger(event.tfinger.fingerID);
 	if (!ft) return false;
 
 	if (ft->control == CTL_DPAD) {
-		int px = static_cast<int>(event.tfinger.x * window_w);
-		int py = static_cast<int>(event.tfinger.y * window_h);
+		const auto position = layout_snapshot.normalized_touch_to_layout.apply(
+			event.tfinger.x, event.tfinger.y);
+		const int px = position.x;
+		const int py = position.y;
 
 		// If the finger has moved far beyond the D-pad area, auto-release
 		// to prevent stuck directions when the finger slides away and back
 		// (which can cause missed events or finger ID changes on some devices).
-		int dx = px - dpad_cx;
-		int dy = py - dpad_cy;
+		int dx = px - layout_snapshot.joystick.acquisition.cx;
+		int dy = py - layout_snapshot.joystick.acquisition.cy;
 		float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
-		float release_dist = dpad_hit_radius * DPAD_RELEASE_RADIUS;
+		float release_dist = layout_snapshot.joystick.acquisition.radius * DPAD_RELEASE_RADIUS;
 
 		if (dist > release_dist) {
 			release_dpad();
