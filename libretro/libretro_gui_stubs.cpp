@@ -101,6 +101,11 @@ bool on_screen_joystick_is_enabled() { return false; }
 void on_screen_joystick_set_enabled(bool enabled) { (void)enabled; }
 void on_screen_joystick_release_all() {}
 bool on_screen_joystick_keyboard_tapped() { return false; }
+void on_screen_joystick_update_layout(int screen_w, int screen_h,
+	const SDL_Rect& safe_rect, const SDL_Rect& game_rect)
+{
+	(void)screen_w; (void)screen_h; (void)safe_rect; (void)game_rect;
+}
 void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect)
 {
 	(void)screen_w; (void)screen_h; (void)game_rect;

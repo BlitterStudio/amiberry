@@ -1106,6 +1106,12 @@ bool SDL_PollEvent(SDL_Event* event)
 	(void)event;
 	return false;
 }
+bool SDL_SetEventFilter(SDL_EventFilter filter, void* userdata)
+{
+	(void)filter;
+	(void)userdata;
+	return true;
+}
 void SDL_PumpEvents(void) {}
 int SDL_PeepEvents(SDL_Event* events, int numevents, int action, Uint32 minType, Uint32 maxType)
 {

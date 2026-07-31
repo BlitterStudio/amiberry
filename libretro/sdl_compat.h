@@ -538,6 +538,8 @@ typedef union SDL_Event {
 	SDL_DropEvent drop;
 } SDL_Event;
 
+typedef bool (SDLCALL *SDL_EventFilter)(void* userdata, SDL_Event* event);
+
 #define cbutton gbutton
 #define caxis gaxis
 
@@ -984,6 +986,7 @@ void SDL_GL_ResetAttributes(void);
 
 bool SDL_PushEvent(SDL_Event* event);
 bool SDL_PollEvent(SDL_Event* event);
+bool SDL_SetEventFilter(SDL_EventFilter filter, void* userdata);
 void SDL_PumpEvents(void);
 int SDL_PeepEvents(SDL_Event* events, int numevents, int action, Uint32 minType, Uint32 maxType);
 
