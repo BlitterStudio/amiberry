@@ -219,9 +219,12 @@ static int isromext(const std::string& path, bool deepscan)
 		return 0;
 	const std::string ext = path.substr(ext_pos + 1);
 
-	static const std::vector<std::string> extensions = { "rom", "ROM", "roz", "ROZ", "bin", "BIN",  "a500", "A500", "a600", "A600", "a1200", "A1200", "a3000", "A3000", "a4000", "A4000", "cdtv", "CDTV", "cd32", "CD32" };
-	if (std::find(extensions.begin(), extensions.end(), ext) != extensions.end())
-		return 1;
+	static const std::vector<std::string> extensions = { "rom", "bin", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32", "roz" };
+	for (const auto& extension : extensions)
+	{
+		if (strcasecmp(ext.c_str(), extension.c_str()) == 0)
+			return 1;
+	}
 
 	if (ext.size() >= 2 && std::toupper(ext[0]) == 'U' && std::isdigit(ext[1]))
 		return 1;
