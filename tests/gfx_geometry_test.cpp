@@ -190,6 +190,24 @@ static void test_bezel_bounded_integer_scaling_falls_back_below_one_x()
 		"sub-1x integer scaling must use a centered fractional aspect fit inside the bezel hole");
 }
 
+static void test_invalid_bounded_fallback_inputs_keep_presentation_size()
+{
+	AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		{10, 20, 0, 180}, 640, 400, 640.0f / 400.0f, true);
+	expect_rect_eq(final_rect, -310, -90, 640, 400,
+		"a zero-width fallback area must not resize the presentation");
+
+	final_rect = amiberry_gfx_final_presentation_rect(
+		{10, 20, 300, -10}, 640, 400, 640.0f / 400.0f, true);
+	expect_rect_eq(final_rect, -160, -185, 640, 400,
+		"a negative-height fallback area must not resize the presentation");
+
+	final_rect = amiberry_gfx_final_presentation_rect(
+		{10, 20, 300, 180}, 640, 400, 0.0f, true);
+	expect_rect_eq(final_rect, -160, -90, 640, 400,
+		"an invalid fallback aspect must not resize the presentation");
+}
+
 static void test_oversized_centered_presentation_covers_drawable()
 {
 	const AmiberryGfxRect drawable_area{0, 0, 1920, 1080};
@@ -223,6 +241,7 @@ int main()
 	test_bezel_area_centers_integer_scaled_presentation();
 	test_rtg_center_remains_source_sized_inside_bezel_area();
 	test_bezel_bounded_integer_scaling_falls_back_below_one_x();
+	test_invalid_bounded_fallback_inputs_keep_presentation_size();
 	test_oversized_centered_presentation_covers_drawable();
 	test_oversized_offset_presentation_leaves_drawable_uncovered();
 	return failures == 0 ? 0 : 1;
