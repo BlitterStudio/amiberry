@@ -11,6 +11,16 @@ void render_panel_display() {
     ImGui::Indent(4.0f);
 
     const bool kmsdrm = kmsdrm_detected;
+#ifdef __ANDROID__
+    constexpr bool fullscreen_only = true;
+#else
+    const bool fullscreen_only = kmsdrm;
+#endif
+
+    if (fullscreen_only) {
+        changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
+        changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+    }
 
     // Logic Check: RTG Enabled
     // WinUAE: ((!address_space_24 || configtype==2) && size) || type >= HARDWARE
@@ -83,7 +93,7 @@ void render_panel_display() {
     }
 
     // Windowed & Buffering
-    if (kmsdrm) ImGui::BeginDisabled();
+    if (fullscreen_only) ImGui::BeginDisabled();
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Windowed:");
     ImGui::SameLine(BUTTON_WIDTH);
@@ -105,7 +115,7 @@ void render_panel_display() {
     AmigaCheckbox("Borderless", &changed_prefs.borderless);
     ShowHelpMarker("Remove window decorations (title bar and borders) while in windowed mode");
     if (!is_windowed) ImGui::EndDisabled();
-    if (kmsdrm) ImGui::EndDisabled();
+    if (fullscreen_only) ImGui::EndDisabled();
 
     ImGui::Spacing();
 
@@ -119,8 +129,8 @@ void render_panel_display() {
     const char *screenmode_items[] = {"Windowed", "Full-window"};
     const int screenmode_values[] = {GFX_WINDOW, GFX_FULLWINDOW};
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
-    if (kmsdrm) ImGui::BeginDisabled();
-    const char *native_mode_label = kmsdrm || changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW
+    if (fullscreen_only) ImGui::BeginDisabled();
+    const char *native_mode_label = fullscreen_only || changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW
         ? "Full-window" : "Windowed";
     if (ImGui::BeginCombo("##NativeMode", native_mode_label)) {
         for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
@@ -137,10 +147,12 @@ void render_panel_display() {
         }
         ImGui::EndCombo();
     }
-    if (kmsdrm) ImGui::EndDisabled();
+    if (fullscreen_only) ImGui::EndDisabled();
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-    ShowHelpMarker(kmsdrm
-        ? "KMSDRM always uses the active console display in Full-window mode"
+    ShowHelpMarker(fullscreen_only
+        ? (kmsdrm
+            ? "KMSDRM always uses the active console display in Full-window mode"
+            : "Android always uses the device display in Full-window mode")
         : "Native chipset screen mode: Windowed or Full-window (borderless desktop mode)");
 
     ImGui::SameLine();
@@ -209,8 +221,8 @@ void render_panel_display() {
     ImGui::Text("RTG:");
     ImGui::SameLine(BUTTON_WIDTH);
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
-    if (kmsdrm) ImGui::BeginDisabled();
-    const char *rtg_mode_label = kmsdrm || changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen == GFX_FULLWINDOW
+    if (fullscreen_only) ImGui::BeginDisabled();
+    const char *rtg_mode_label = fullscreen_only || changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen == GFX_FULLWINDOW
         ? "Full-window" : "Windowed";
     if (ImGui::BeginCombo("##RTGMode", rtg_mode_label)) {
         for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
@@ -227,10 +239,12 @@ void render_panel_display() {
         }
         ImGui::EndCombo();
     }
-    if (kmsdrm) ImGui::EndDisabled();
+    if (fullscreen_only) ImGui::EndDisabled();
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-    ShowHelpMarker(kmsdrm
-        ? "KMSDRM always uses the active console display in Full-window mode"
+    ShowHelpMarker(fullscreen_only
+        ? (kmsdrm
+            ? "KMSDRM always uses the active console display in Full-window mode"
+            : "Android always uses the device display in Full-window mode")
         : "RTG (Picasso96) screen mode when using graphics card emulation");
 
     ImGui::SameLine();

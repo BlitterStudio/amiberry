@@ -753,21 +753,31 @@ void render_display_defaults()
 	static const char* screen_items[] = { "Windowed", "Full-window" };
 	static const char* scaling_items[] = { "Auto", "Integer", "Smooth" };
 	const auto& shader_items = get_available_shader_names();
+#ifdef __ANDROID__
+	constexpr bool fullscreen_only = true;
+#else
+	const bool fullscreen_only = kmsdrm_detected;
+#endif
 
-	if (kmsdrm_detected)
+	if (fullscreen_only) {
 		display_defaults.screen_mode = PlayScreenMode::FullWindow;
+		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
+		changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	}
 
 	int screen_mode = static_cast<int>(display_defaults.screen_mode);
-	if (kmsdrm_detected)
+	if (fullscreen_only)
 		ImGui::BeginDisabled();
 	if (render_combo("Screen mode:", &screen_mode, screen_items, IM_ARRAYSIZE(screen_items))) {
 		display_defaults.screen_mode = static_cast<PlayScreenMode>(screen_mode);
 		apply_display_defaults_to_changed_prefs();
 	}
-	if (kmsdrm_detected)
+	if (fullscreen_only)
 		ImGui::EndDisabled();
-	ShowHelpMarker(kmsdrm_detected
-		? "KMSDRM always uses the active console display in Full-window mode."
+	ShowHelpMarker(fullscreen_only
+		? (kmsdrm_detected
+			? "KMSDRM always uses the active console display in Full-window mode."
+			: "Android always uses the device display in Full-window mode.")
 		: "Run the emulation in a desktop window or a borderless Full-window.");
 
 	int scaling = static_cast<int>(display_defaults.scaling);
