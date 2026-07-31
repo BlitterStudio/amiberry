@@ -7829,7 +7829,9 @@ static std::vector<std::string> get_legacy_settings_candidate_directories(const 
 	if (user_home_dir != nullptr && user_home_dir[0] != '\0')
 		append_settings_candidate(candidates, std::string(user_home_dir) + "\\Amiberry\\Configurations");
 #elif defined(__ANDROID__)
-	append_settings_candidate(candidates, get_home_directory(false));
+	const auto legacy_content_root = get_home_directory(false);
+	append_settings_candidate(candidates, legacy_content_root);
+	append_settings_candidate(candidates, join_path(legacy_content_root, "conf"));
 #else
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
@@ -7855,6 +7857,8 @@ static std::vector<std::string> get_legacy_configuration_candidate_directories(c
 
 #if defined(_WIN32)
 	append_settings_candidate(candidates, get_windows_executable_directory() + "\\conf");
+#elif defined(__ANDROID__)
+	append_settings_candidate(candidates, join_path(get_home_directory(false), "conf"));
 #elif !defined(__ANDROID__) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS)
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 	if (env_home_dir != nullptr && env_home_dir[0] != '\0' && my_existsdir(env_home_dir))
@@ -8536,8 +8540,9 @@ static void migrate_legacy_configuration_directories(const bool portable_mode)
 	if (baseline_config_path.empty())
 		return;
 
+	const auto legacy_candidates = get_legacy_configuration_candidate_directories(portable_mode);
 	bool config_path_is_legacy_default = path_strings_match(config_path, baseline_config_path);
-	for (const auto& candidate : get_legacy_configuration_candidate_directories(portable_mode))
+	for (const auto& candidate : legacy_candidates)
 	{
 		if (path_strings_match(config_path, candidate))
 			config_path_is_legacy_default = true;
@@ -8549,7 +8554,7 @@ static void migrate_legacy_configuration_directories(const bool portable_mode)
 	bool conflicts = false;
 	bool migrated_any = false;
 	bool source_exists = false;
-	for (const auto& candidate : get_legacy_configuration_candidate_directories(portable_mode))
+	for (const auto& candidate : legacy_candidates)
 	{
 		if (candidate.empty() || path_strings_match(candidate, baseline_config_path))
 			continue;
@@ -8643,54 +8648,103 @@ static void migrate_legacy_visual_asset_directories()
 		legacy_migration_state.visuals_conflicts = true;
 }
 
-static bool rename_path_to_canonical_case(const std::filesystem::path& source,
-	const std::filesystem::path& target, std::string& error_message)
+static bool path_entry_exists_with_exact_name(const std::string& path);
+
+static bool rollback_canonical_case_rename(const std::filesystem::path& source,
+	const std::filesystem::path& target, const std::filesystem::path& temporary,
+	std::string& error_message)
 {
-	std::error_code ec;
-	std::filesystem::rename(source, target, ec);
-	if (!ec)
+	if (path_entry_exists_with_exact_name(source.string()))
 		return true;
 
-	error_message = ec.message();
+	std::error_code ec;
+	if (!path_entry_exists_with_exact_name(temporary.string()))
+	{
+		if (!path_entry_exists_with_exact_name(target.string()))
+		{
+			error_message += "; rollback could not locate the renamed path";
+			return false;
+		}
+		std::filesystem::rename(target, temporary, ec);
+		if (ec)
+		{
+			error_message += "; rollback could not recover renamed path: " + ec.message();
+			return false;
+		}
+	}
 
+	std::filesystem::rename(temporary, source, ec);
+	if (ec)
+	{
+		error_message += "; rollback failed: " + ec.message();
+		std::error_code restore_ec;
+		std::filesystem::rename(temporary, target, restore_ec);
+		if (restore_ec)
+			error_message += "; failed to restore post-rename path: " + restore_ec.message();
+		return false;
+	}
+	if (!path_entry_exists_with_exact_name(source.string()))
+	{
+		error_message += "; rollback reported success but did not restore the original name";
+		return false;
+	}
+	return true;
+}
+
+using exact_path_name_verifier = bool (*)(const std::string&);
+
+static bool rename_path_to_canonical_case_impl(const std::filesystem::path& source,
+	const std::filesystem::path& target, std::string& error_message,
+	const exact_path_name_verifier verify_exact_name)
+{
 	const auto parent = target.parent_path();
 	const auto filename = target.filename().string();
 	for (int suffix = 0; suffix < 1000; ++suffix)
 	{
 		std::filesystem::path temporary = parent / (filename + ".amiberry-case-migration-" + std::to_string(suffix));
-		ec.clear();
-		if (std::filesystem::exists(temporary, ec))
+		std::error_code ec;
+		const bool temporary_exists = std::filesystem::exists(temporary, ec);
+		if (ec)
+		{
+			error_message = "failed to inspect temporary path: " + ec.message();
+			return false;
+		}
+		if (temporary_exists)
 			continue;
 
-		ec.clear();
 		std::filesystem::rename(source, temporary, ec);
 		if (ec)
 		{
-			error_message += "; temporary rename failed: ";
-			error_message += ec.message();
+			error_message = "temporary rename failed: " + ec.message();
 			return false;
 		}
 
 		ec.clear();
 		std::filesystem::rename(temporary, target, ec);
 		if (!ec)
-			return true;
-
-		error_message += "; final rename failed: ";
-		error_message += ec.message();
-
-		std::error_code rollback_ec;
-		std::filesystem::rename(temporary, source, rollback_ec);
-		if (rollback_ec)
 		{
-			error_message += "; rollback failed: ";
-			error_message += rollback_ec.message();
+			if (verify_exact_name(target.string()))
+				return true;
+			error_message = "final rename reported success but did not create the canonical name";
+			if (rollback_canonical_case_rename(source, target, temporary, error_message))
+				error_message += "; rolled back to the original name";
+			return false;
 		}
+
+		error_message = "final rename failed: " + ec.message();
+		rollback_canonical_case_rename(source, target, temporary, error_message);
 		return false;
 	}
 
-	error_message += "; no temporary migration name available";
+	error_message = "no temporary migration name available";
 	return false;
+}
+
+static bool rename_path_to_canonical_case(const std::filesystem::path& source,
+	const std::filesystem::path& target, std::string& error_message)
+{
+	return rename_path_to_canonical_case_impl(source, target, error_message,
+		path_entry_exists_with_exact_name);
 }
 
 enum class path_case_migration_result
@@ -9486,6 +9540,56 @@ static int run_path_migration_selftest_cli()
 		return 1;
 	}
 
+	const auto case_only_source = root / "case-only" / "roms";
+	const auto case_only_target = root / "case-only" / "ROMs";
+	const bool case_only_fixture_written = write_selftest_text_file(
+		case_only_source / "kick.rom", "kickstart\n");
+	bool case_only_migrated = false;
+	bool case_only_failed = false;
+	bool case_only_conflicts = false;
+	const auto case_only_result = case_only_fixture_written
+		? migrate_path_case_if_needed(case_only_target.string(),
+			case_only_migrated, case_only_failed, case_only_conflicts)
+		: path_case_migration_result::failed;
+
+	bool case_only_rerun_migrated = false;
+	bool case_only_rerun_failed = false;
+	bool case_only_rerun_conflicts = false;
+	const auto case_only_rerun_result = migrate_path_case_if_needed(case_only_target.string(),
+		case_only_rerun_migrated, case_only_rerun_failed, case_only_rerun_conflicts);
+	const bool case_only_test_ok = case_only_fixture_written
+		&& case_only_result == path_case_migration_result::migrated
+		&& case_only_migrated
+		&& !case_only_failed
+		&& !case_only_conflicts
+		&& path_entry_exists_with_exact_name(case_only_target.string())
+		&& !path_entry_exists_with_exact_name(case_only_source.string())
+		&& std::filesystem::exists(case_only_target / "kick.rom")
+		&& case_only_rerun_result == path_case_migration_result::no_change
+		&& !case_only_rerun_migrated
+		&& !case_only_rerun_failed
+		&& !case_only_rerun_conflicts;
+
+	const auto verification_rollback_source = root / "verification-rollback" / "roms";
+	const auto verification_rollback_target = root / "verification-rollback" / "ROMs";
+	const auto verification_rollback_temporary =
+		root / "verification-rollback" / "ROMs.amiberry-case-migration-0";
+	const bool verification_rollback_fixture_written = write_selftest_text_file(
+		verification_rollback_source / "kick.rom", "kickstart\n");
+	std::string verification_rollback_error;
+	const bool verification_rollback_result = verification_rollback_fixture_written
+		&& rename_path_to_canonical_case_impl(
+			verification_rollback_source, verification_rollback_target,
+			verification_rollback_error,
+			[](const std::string&) { return false; });
+	const bool verification_rollback_test_ok = verification_rollback_fixture_written
+		&& !verification_rollback_result
+		&& path_entry_exists_with_exact_name(verification_rollback_source.string())
+		&& !path_entry_exists_with_exact_name(verification_rollback_target.string())
+		&& !path_entry_exists_with_exact_name(verification_rollback_temporary.string())
+		&& std::filesystem::exists(verification_rollback_source / "kick.rom")
+		&& verification_rollback_error.find("rolled back to the original name") != std::string::npos;
+
 	const auto path_pairs = build_legacy_configuration_path_rewrite_pairs(paths);
 	bool path_rewrite_failed = false;
 	const int migrated = migrate_legacy_configuration_file_paths_in_directory(
@@ -9634,6 +9738,8 @@ static int run_path_migration_selftest_cli()
 		&& migrated_default.find(legacy_harddrives + "/system.hdf") == std::string::npos
 		&& migrated_protected == protected_text
 		&& std::filesystem::exists(backup_file)
+		&& case_only_test_ok
+		&& verification_rollback_test_ok
 		&& settings_test_ok
 		&& rename_test_ok
 		&& split_test_ok
@@ -9642,8 +9748,10 @@ static int run_path_migration_selftest_cli()
 	if (!ok)
 	{
 		fprintf(stderr, "path migration selftest: failed\n");
-		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d settings_ok=%d rename_ok=%d split_ok=%d case_ok=%d root=%s\n",
+		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d case_only_ok=%d rollback_ok=%d settings_ok=%d rename_ok=%d split_ok=%d case_ok=%d root=%s\n",
 			migrated, read_ok ? 1 : 0, path_rewrite_failed ? 1 : 0,
+			case_only_test_ok ? 1 : 0,
+			verification_rollback_test_ok ? 1 : 0,
 			settings_test_ok ? 1 : 0, rename_test_ok ? 1 : 0, split_test_ok ? 1 : 0,
 			case_variant_test_ok ? 1 : 0,
 			root.string().c_str());
