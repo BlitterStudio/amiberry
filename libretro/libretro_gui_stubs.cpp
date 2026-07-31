@@ -99,6 +99,7 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_
 }
 bool on_screen_joystick_is_enabled() { return false; }
 void on_screen_joystick_set_enabled(bool enabled) { (void)enabled; }
+void on_screen_joystick_release_all() {}
 bool on_screen_joystick_keyboard_tapped() { return false; }
 void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect)
 {

@@ -16,6 +16,7 @@
 #include <cerrno>
 #include <cstdint>
 #endif
+#include <atomic>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -122,6 +123,52 @@ struct gpiod_line* lineYellow; // Yellow LED
 
 extern int run_jit_selftest_cli(void);
 extern int console_logging;
+
+#ifdef __ANDROID__
+static void reset_android_two_finger_swipe();
+static std::atomic<bool> android_touch_neutralization_pending{false};
+
+static bool SDLCALL android_touch_event_filter(void*, SDL_Event* event)
+{
+	// Android lifecycle delivery may occur away from the SDL event thread.
+	// Publish a request here; emulated input is neutralized by process_event().
+	switch (event->type) {
+	case SDL_EVENT_TERMINATING:
+	case SDL_EVENT_QUIT:
+	case SDL_EVENT_WILL_ENTER_BACKGROUND:
+	case SDL_EVENT_DID_ENTER_BACKGROUND:
+	case SDL_EVENT_WILL_ENTER_FOREGROUND:
+	case SDL_EVENT_DID_ENTER_FOREGROUND:
+	case SDL_EVENT_WINDOW_FOCUS_LOST:
+	case SDL_EVENT_WINDOW_MINIMIZED:
+	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+	case SDL_EVENT_FINGER_CANCELED:
+		android_touch_neutralization_pending.store(true, std::memory_order_release);
+		break;
+	default:
+		break;
+	}
+	return true;
+}
+#endif
+
+static void neutralize_touch_controls()
+{
+	// Idempotently end every captured joystick gesture and GUI swipe candidate.
+	on_screen_joystick_release_all();
+#ifdef __ANDROID__
+	reset_android_two_finger_swipe();
+#endif
+}
+
+static void drain_pending_touch_neutralization()
+{
+#ifdef __ANDROID__
+	// process_event() is the SDL event/main-thread boundary for input injection.
+	if (android_touch_neutralization_pending.exchange(false, std::memory_order_acq_rel))
+		neutralize_touch_controls();
+#endif
+}
 
 static SDL_ThreadID mainthreadid;
 static int logging_started;
@@ -1540,6 +1587,7 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 
 static void amiberry_inactive(const AmigaMonitor* mon, const int is_minimized)
 {
+	neutralize_touch_controls();
 	focus = 0;
 	recapture = 0;
 	wait_keyrelease();
@@ -2261,6 +2309,7 @@ static void handle_focus_lost_event(AmigaMonitor* mon)
 
 static void handle_close_event()
 {
+	neutralize_touch_controls();
 	wait_keyrelease();
 	inputdevice_unacquire();
 	uae_quit();
@@ -2338,6 +2387,7 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 
 static void handle_quit_event()
 {
+	neutralize_touch_controls();
 	uae_quit();
 }
 
@@ -2712,58 +2762,80 @@ static int pen_in_proximity;
 #endif
 
 #ifdef __ANDROID__
-static int android_active_fingers = 0;
-static float android_finger_start_y[2] = { -1.0f, -1.0f };
-static float android_finger_y[2] = { -1.0f, -1.0f };
-static SDL_FingerID android_finger_ids[2] = {};
+struct AndroidSwipeFinger {
+	bool occupied = false;
+	SDL_TouchID touch_id = 0;
+	SDL_FingerID finger_id = 0;
+	float start_y = -1.0f;
+	float y = -1.0f;
+};
+
+static AndroidSwipeFinger android_swipe_fingers[2];
 static bool android_swipe_triggered = false;
 
-static int android_find_finger_slot(SDL_FingerID id)
+static int android_find_finger_slot(SDL_TouchID touch_id, SDL_FingerID finger_id)
 {
-	for (int i = 0; i < 2; i++)
-		if (android_finger_ids[i] == id)
+	for (int i = 0; i < 2; i++) {
+		const auto& slot = android_swipe_fingers[i];
+		if (slot.occupied && slot.touch_id == touch_id && slot.finger_id == finger_id)
 			return i;
+	}
 	return -1;
+}
+
+static int android_swipe_finger_count()
+{
+	int count = 0;
+	for (const auto& slot : android_swipe_fingers) {
+		if (slot.occupied)
+			count++;
+	}
+	return count;
+}
+
+static void reset_android_two_finger_swipe()
+{
+	for (auto& slot : android_swipe_fingers)
+		slot = {};
+	android_swipe_triggered = false;
 }
 
 static void handle_android_two_finger_swipe(const SDL_Event& event)
 {
 	if (event.type == SDL_EVENT_FINGER_DOWN) {
-		if (android_active_fingers < 2) {
-			int slot = (android_finger_ids[0] == 0) ? 0 : 1;
-			android_finger_ids[slot] = event.tfinger.fingerID;
-			android_finger_start_y[slot] = event.tfinger.y;
-			android_finger_y[slot] = event.tfinger.y;
+		if (android_find_finger_slot(event.tfinger.touchID, event.tfinger.fingerID) >= 0)
+			return;
+		for (auto& slot : android_swipe_fingers) {
+			if (!slot.occupied) {
+				slot.occupied = true;
+				slot.touch_id = event.tfinger.touchID;
+				slot.finger_id = event.tfinger.fingerID;
+				slot.start_y = event.tfinger.y;
+				slot.y = event.tfinger.y;
+				android_swipe_triggered = false;
+				break;
+			}
 		}
-		android_active_fingers++;
-		android_swipe_triggered = false;
 	} else if (event.type == SDL_EVENT_FINGER_UP) {
-		int slot = android_find_finger_slot(event.tfinger.fingerID);
-		if (slot >= 0) {
-			android_finger_ids[slot] = 0;
-			android_finger_start_y[slot] = -1.0f;
-			android_finger_y[slot] = -1.0f;
-		}
-		android_active_fingers--;
-		if (android_active_fingers <= 0) {
-			android_active_fingers = 0;
-			android_finger_ids[0] = android_finger_ids[1] = 0;
-			android_finger_start_y[0] = android_finger_start_y[1] = -1.0f;
-			android_finger_y[0] = android_finger_y[1] = -1.0f;
-			android_swipe_triggered = false;
-		}
+		const int slot = android_find_finger_slot(
+			event.tfinger.touchID, event.tfinger.fingerID);
+		if (slot >= 0)
+			android_swipe_fingers[slot] = {};
+		if (android_swipe_finger_count() == 0)
+			reset_android_two_finger_swipe();
 	} else if (event.type == SDL_EVENT_FINGER_MOTION) {
-		if (android_swipe_triggered || android_active_fingers != 2)
+		if (android_swipe_triggered || android_swipe_finger_count() != 2)
 			return;
 
-		int slot = android_find_finger_slot(event.tfinger.fingerID);
+		const int slot = android_find_finger_slot(
+			event.tfinger.touchID, event.tfinger.fingerID);
 		if (slot < 0)
 			return;
 
-		android_finger_y[slot] = event.tfinger.y;
+		android_swipe_fingers[slot].y = event.tfinger.y;
 
-		if (android_finger_y[0] - android_finger_start_y[0] >= 0.15f &&
-			android_finger_y[1] - android_finger_start_y[1] >= 0.15f) {
+		if (android_swipe_fingers[0].y - android_swipe_fingers[0].start_y >= 0.15f &&
+			android_swipe_fingers[1].y - android_swipe_fingers[1].start_y >= 0.15f) {
 			android_swipe_triggered = true;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 		}
@@ -3236,6 +3308,7 @@ static AmigaMonitor* monitor_from_window_id(SDL_WindowID window_id)
 
 static void process_event(const SDL_Event& event)
 {
+	drain_pending_touch_neutralization();
 	AmigaMonitor* mon = &AMonitors[0];
 
 	if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST) {
@@ -3250,18 +3323,21 @@ static void process_event(const SDL_Event& event)
 		// Handle other types of events
 		switch (event.type)
 		{
+		case SDL_EVENT_TERMINATING:
 		case SDL_EVENT_QUIT:
 			handle_quit_event();
 			break;
 
 		case SDL_EVENT_WILL_ENTER_BACKGROUND:
 		case SDL_EVENT_DID_ENTER_BACKGROUND:
+			neutralize_touch_controls();
 			pause_sound();
 			pause_emulation = 1;
 			break;
 
 		case SDL_EVENT_WILL_ENTER_FOREGROUND:
 		case SDL_EVENT_DID_ENTER_FOREGROUND:
+			neutralize_touch_controls();
 			pause_emulation = 0;
 			resume_sound();
 			break;
@@ -3314,6 +3390,10 @@ static void process_event(const SDL_Event& event)
 			handle_key_event(event);
 			break;
 
+		case SDL_EVENT_FINGER_CANCELED:
+			neutralize_touch_controls();
+			break;
+
 		case SDL_EVENT_FINGER_DOWN:
 		case SDL_EVENT_FINGER_UP:
 		{
@@ -3347,11 +3427,14 @@ static void process_event(const SDL_Event& event)
 			}
 			// Check if the on-screen keyboard button was tapped
 			if (on_screen_joystick_keyboard_tapped()) {
-				if (vkbd_allowed(0))
+				if (vkbd_allowed(0)) {
+					neutralize_touch_controls();
 					imgui_osk_toggle();
+				}
 			}
 #ifdef __ANDROID__
-			handle_android_two_finger_swipe(event);
+			if (!consumed)
+				handle_android_two_finger_swipe(event);
 #endif
 			if (!consumed)
 				handle_finger_event(event);
@@ -3389,7 +3472,8 @@ static void process_event(const SDL_Event& event)
 			if (!consumed && !imgui_osk_should_render() && on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
 				consumed = on_screen_joystick_handle_finger_motion(event, ww, wh);
 #ifdef __ANDROID__
-			handle_android_two_finger_swipe(event);
+			if (!consumed)
+				handle_android_two_finger_swipe(event);
 #endif
 			if (!consumed)
 				handle_finger_motion_event(event, ww, wh);
@@ -11132,6 +11216,7 @@ int amiberry_main(int argc, char* argv[])
 	if (!SDL_Init(0)) {
 		write_log("SDL_Init(0) failed: %s\n", SDL_GetError());
 	}
+	SDL_SetEventFilter(android_touch_event_filter, nullptr);
 #endif
 	settings_dir.clear();
 	amiberry_conf_file.clear();
