@@ -471,15 +471,25 @@ class AndroidRuntimeControlsArchitectureTest {
 		val eventFilter = Regex(
 			"""static bool SDLCALL android_touch_event_filter[\s\S]*?\R\}"""
 		).find(amiberryCpp)?.value.orEmpty()
+		val guiSwipeFilter = Regex(
+			"""static bool amiberry_android_filter_gui_swipe_event[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
 		val publisher = Regex(
 			"""static void amiberry_android_publish_gui_swipe_filter[\s\S]*?\R\}"""
 		).find(amiberryCpp)?.value.orEmpty()
+		val retirement = Regex(
+			"""static void amiberry_android_retire_gui_swipe_filter_contact[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val processEvent = amiberryCpp
+			.substringAfter("static void process_event(const SDL_Event& event)", "")
+			.substringBefore("int handle_msgpump(bool vblank)", "")
 
 		assertTrue(
-			"A winning GUI swipe should publish both composite contact identities to atomic filter state.",
+			"A winning GUI swipe should publish both composite contact identities before atomically activating their mask.",
 			publisher.contains("touch_id.store") &&
 				publisher.contains("finger_id.store") &&
-				publisher.contains("android_gui_swipe_filter_active.store(true")
+				publisher.indexOf("finger_id.store") in
+					0 until publisher.indexOf("android_gui_swipe_filter_active_mask.store")
 		)
 		assertTrue(
 			"The SDL filter should drop only SDL_TOUCH_MOUSEID mouse events while exact GUI-swipe contacts remain active.",
@@ -487,6 +497,19 @@ class AndroidRuntimeControlsArchitectureTest {
 				eventFilter.contains("return false") &&
 				amiberryCpp.contains("event->button.which == SDL_TOUCH_MOUSEID") &&
 				amiberryCpp.contains("event->motion.which == SDL_TOUCH_MOUSEID")
+		)
+		assertTrue(
+			"Both filter-time and already-queued main-thread terminals should use the same exact-contact retirement path.",
+			eventFilter.contains("amiberry_android_filter_gui_swipe_event(event)") &&
+				guiSwipeFilter.contains("amiberry_android_retire_gui_swipe_filter_contact(*event)") &&
+				processEvent.contains("amiberry_android_retire_gui_swipe_filter_contact(event)")
+		)
+		assertTrue(
+			"Exact contact retirement should only clear matching active bits so mouse suppression ends after both contacts retire.",
+			retirement.contains("touch_id.load") &&
+				retirement.contains("finger_id.load") &&
+				retirement.contains("android_gui_swipe_filter_active_mask.fetch_and") &&
+				amiberryCpp.contains("android_gui_swipe_filter_active_mask.load(std::memory_order_acquire) == 0")
 		)
 		assertFalse(
 			"The SDL event filter must not inject guest input.",

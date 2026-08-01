@@ -144,12 +144,13 @@ static std::atomic<bool> android_touch_neutralization_pending{false};
 struct AndroidGuiSwipeFilterContact {
 	std::atomic<android_touch_mouse::TouchId> touch_id{0};
 	std::atomic<android_touch_mouse::FingerId> finger_id{0};
-	std::atomic<bool> active{false};
 };
 
 static std::array<AndroidGuiSwipeFilterContact, 2>
 	android_gui_swipe_filter_contacts;
-static std::atomic<bool> android_gui_swipe_filter_active{false};
+static constexpr std::uint32_t ANDROID_GUI_SWIPE_FILTER_ALL_CONTACTS =
+	(1u << android_gui_swipe_filter_contacts.size()) - 1u;
+static std::atomic<std::uint32_t> android_gui_swipe_filter_active_mask{0};
 
 static void neutralize_touch_controls(void);
 static bool amiberry_android_touch_identity_eligible(SDL_TouchID touch_id);
@@ -158,9 +159,7 @@ static android_touch_mouse::TouchKey amiberry_android_touch_key(const SDL_Event&
 
 static void amiberry_android_clear_gui_swipe_filter()
 {
-	android_gui_swipe_filter_active.store(false, std::memory_order_release);
-	for (auto& contact : android_gui_swipe_filter_contacts)
-		contact.active.store(false, std::memory_order_release);
+	android_gui_swipe_filter_active_mask.store(0, std::memory_order_release);
 }
 
 static void amiberry_android_publish_gui_swipe_filter(
@@ -173,14 +172,37 @@ static void amiberry_android_publish_gui_swipe_filter(
 		auto& contact = android_gui_swipe_filter_contacts[i];
 		contact.touch_id.store(keys[i].touch_id, std::memory_order_relaxed);
 		contact.finger_id.store(keys[i].finger_id, std::memory_order_relaxed);
-		contact.active.store(true, std::memory_order_release);
 	}
-	android_gui_swipe_filter_active.store(true, std::memory_order_release);
+	android_gui_swipe_filter_active_mask.store(
+		ANDROID_GUI_SWIPE_FILTER_ALL_CONTACTS, std::memory_order_release);
+}
+
+static void amiberry_android_retire_gui_swipe_filter_contact(const SDL_Event& event)
+{
+	if (event.type != SDL_EVENT_FINGER_UP
+		&& event.type != SDL_EVENT_FINGER_CANCELED)
+		return;
+	const auto key = amiberry_android_touch_key(event);
+	const auto active_mask = android_gui_swipe_filter_active_mask.load(
+		std::memory_order_acquire);
+	std::uint32_t retire_mask = 0;
+	for (std::size_t i = 0; i < android_gui_swipe_filter_contacts.size(); ++i) {
+		const std::uint32_t contact_mask = 1u << i;
+		if ((active_mask & contact_mask) == 0)
+			continue;
+		const auto& contact = android_gui_swipe_filter_contacts[i];
+		if (contact.touch_id.load(std::memory_order_relaxed) == key.touch_id
+			&& contact.finger_id.load(std::memory_order_relaxed) == key.finger_id)
+			retire_mask |= contact_mask;
+	}
+	if (retire_mask != 0)
+		android_gui_swipe_filter_active_mask.fetch_and(
+			~retire_mask, std::memory_order_acq_rel);
 }
 
 static bool amiberry_android_filter_gui_swipe_event(const SDL_Event* event)
 {
-	if (!android_gui_swipe_filter_active.load(std::memory_order_acquire))
+	if (android_gui_swipe_filter_active_mask.load(std::memory_order_acquire) == 0)
 		return false;
 	if ((event->type == SDL_EVENT_MOUSE_BUTTON_DOWN
 		|| event->type == SDL_EVENT_MOUSE_BUTTON_UP)
@@ -189,22 +211,7 @@ static bool amiberry_android_filter_gui_swipe_event(const SDL_Event* event)
 	if (event->type == SDL_EVENT_MOUSE_MOTION
 		&& event->motion.which == SDL_TOUCH_MOUSEID)
 		return true;
-	if (event->type != SDL_EVENT_FINGER_UP
-		&& event->type != SDL_EVENT_FINGER_CANCELED)
-		return false;
-
-	bool any_active = false;
-	for (auto& contact : android_gui_swipe_filter_contacts) {
-		if (contact.active.load(std::memory_order_acquire)
-			&& contact.touch_id.load(std::memory_order_relaxed)
-				== static_cast<android_touch_mouse::TouchId>(event->tfinger.touchID)
-			&& contact.finger_id.load(std::memory_order_relaxed)
-				== static_cast<android_touch_mouse::FingerId>(event->tfinger.fingerID))
-			contact.active.store(false, std::memory_order_release);
-		if (contact.active.load(std::memory_order_acquire))
-			any_active = true;
-	}
-	android_gui_swipe_filter_active.store(any_active, std::memory_order_release);
+	amiberry_android_retire_gui_swipe_filter_contact(*event);
 	return false;
 }
 
@@ -3647,6 +3654,9 @@ static AmigaMonitor* monitor_from_window_id(SDL_WindowID window_id)
 static void process_event(const SDL_Event& event)
 {
 	drain_pending_touch_neutralization();
+#ifdef __ANDROID__
+	amiberry_android_retire_gui_swipe_filter_contact(event);
+#endif
 	AmigaMonitor* mon = &AMonitors[0];
 
 	if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST) {
