@@ -578,6 +578,46 @@ static void test_nonowning_added_contact_terminates_before_overlay_capture()
 		"a surviving trackpad contact must remain inert after overlay takeover");
 }
 
+static void test_nonowning_added_contact_drains_pending_pairs()
+{
+	const TouchKey primary{251, 951};
+	const TouchKey secondary{251, 952};
+	const TouchKey overlay_contact{251, 953};
+
+	Recognizer pending;
+	begin_pair(pending, primary, secondary);
+	expect_no_actions(pending.handle(motion(primary, 20, 1.0, 0.0,
+		1.0, 0.0)), "pending pair movement inside slop must remain buffered");
+	expect_no_actions(pending.terminate_for_nonowning_contact(overlay_contact),
+		"an overlay candidate must drain a pending pair without a button action");
+	expect(pending.state() == State::drain_until_all_up
+		&& pending.tracked_contacts() == 2 && !pending.owns(overlay_contact)
+		&& !pending.has_recent_tap(),
+		"the pending pair must remain inert and the overlay contact nonowning");
+	expect_no_actions(pending.tick(ns(410)),
+		"a drained pending pair must not activate right at its hold deadline");
+	expect_no_actions(pending.handle(motion(primary, 420, 20.0, 0.0,
+		10.0, 0.0)), "a drained pending pair must not flush buffered movement");
+
+	PumpCoordinator swipe;
+	swipe.handle(down(primary, 0, 0.0, 0.0, 0.10));
+	swipe.handle(down(secondary, 10, 0.0, 0.0, 0.10));
+	expect_no_actions(swipe.handle(motion(primary, 20, 8.001, 0.0,
+		4.0, 0.0, 0.10)), "pair movement outside slop must enter swipe-only arbitration");
+	expect(swipe.state() == State::swipe_only,
+		"the coordinator must expose swipe-only arbitration before overlay takeover");
+	expect_no_actions(swipe.terminate_for_nonowning_contact(overlay_contact),
+		"an overlay candidate must drain swipe-only arbitration without a button action");
+	expect(swipe.state() == State::drain_until_all_up
+		&& swipe.tracked_contacts() == 2 && !swipe.owns(overlay_contact),
+		"the swipe-only pair must remain inert and the overlay contact nonowning");
+	expect_no_actions(swipe.handle(motion(secondary, 30, 0.0, 20.0,
+		0.0, 12.0, 0.30)),
+		"a drained swipe-only pair must not open the GUI after overlay takeover");
+	expect_no_actions(swipe.tick(ns(410)),
+		"a drained swipe-only pair must not activate right at the hold deadline");
+}
+
 int main()
 {
 	test_identity_and_reordered_events();
@@ -597,5 +637,6 @@ int main()
 	test_pump_coordinator_click_and_deadline_ordering();
 	test_pump_coordinator_neutralizes_pending_click();
 	test_nonowning_added_contact_terminates_before_overlay_capture();
+	test_nonowning_added_contact_drains_pending_pairs();
 	return failures == 0 ? 0 : 1;
 }

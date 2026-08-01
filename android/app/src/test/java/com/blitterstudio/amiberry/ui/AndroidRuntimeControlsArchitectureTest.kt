@@ -198,7 +198,7 @@ class AndroidRuntimeControlsArchitectureTest {
 		assertTrue(
 			"The global authority must release every overlay owner and the unified Android touch gesture.",
 			globalNeutralizer.contains("on_screen_joystick_release_all()") &&
-				globalNeutralizer.contains("android_touch_mouse_neutralize()")
+				globalNeutralizer.contains("amiberry_android_touch_mouse_neutralize()")
 		)
 		assertTrue(
 			"Finger cancellation must neutralize globally before ordinary per-finger routing.",
@@ -258,7 +258,7 @@ class AndroidRuntimeControlsArchitectureTest {
 			"""case SDL_EVENT_MOUSE_MOTION:[\s\S]*?case SDL_EVENT_MOUSE_WHEEL:"""
 		).find(amiberryCpp)?.value.orEmpty()
 		val resolver = Regex(
-			"""static int android_resolve_touch_mouse_index\(\)[\s\S]*?\R\}"""
+			"""static int amiberry_android_resolve_touch_mouse_index\(\)[\s\S]*?\R\}"""
 		).find(amiberryCpp)?.value.orEmpty()
 		assertTrue(
 			"Android native input should use the tested pure touch-mouse arbiter.",
@@ -283,21 +283,21 @@ class AndroidRuntimeControlsArchitectureTest {
 		)
 		assertTrue(
 			"Trackpad-owned continuation should route before overlay hit testing.",
-			fingerEvents.indexOf("android_touch_mouse_owns(event)") in
+			fingerEvents.indexOf("amiberry_android_touch_mouse_owns(event)") in
 				0 until fingerEvents.indexOf("imgui_osk_should_render()") &&
-				fingerMotion.indexOf("android_touch_mouse_owns(event)") in
+				fingerMotion.indexOf("amiberry_android_touch_mouse_owns(event)") in
 					0 until fingerMotion.indexOf("imgui_osk_should_render()")
 		)
 		assertTrue(
 			"An added same-device contact should terminate a held drag before an overlay may acquire it.",
-			fingerEvents.indexOf("android_touch_mouse_prepare_added_contact(event)") in
+			fingerEvents.indexOf("amiberry_android_touch_mouse_prepare_added_contact(event)") in
 				0 until fingerEvents.indexOf("imgui_osk_should_render()")
 		)
 		assertTrue(
 			"Touch-synthesized mouse events must be suppressed across eligible active emulation before finger ownership exists.",
-			mouseButtons.contains("android_touch_mouse_route_eligible()") &&
+			mouseButtons.contains("amiberry_android_touch_mouse_route_eligible()") &&
 				mouseButtons.contains("event.button.which == SDL_TOUCH_MOUSEID") &&
-				mouseMotion.contains("android_touch_mouse_route_eligible()") &&
+				mouseMotion.contains("amiberry_android_touch_mouse_route_eligible()") &&
 				mouseMotion.contains("event.motion.which == SDL_TOUCH_MOUSEID")
 		)
 		assertTrue(
@@ -319,16 +319,64 @@ class AndroidRuntimeControlsArchitectureTest {
 	}
 
 	@Test
+	fun `owned and drained Android touch terminals survive device deregistration`() {
+		val amiberryCpp = File("../../src/osdep/amiberry.cpp").readText()
+		val directEligibility = Regex(
+			"""static bool amiberry_android_direct_touch_eligible\(SDL_TouchID touch_id\)\s*\{[\s\S]*?\R\}"""
+		).find(amiberryCpp)?.value.orEmpty()
+		val drainedTouch = amiberryCpp
+			.substringAfter("static bool amiberry_android_handle_drained_touch", "")
+			.substringBefore("static bool amiberry_android_touch_mouse_route_eligible", "")
+		val ownership = amiberryCpp
+			.substringAfter("static bool amiberry_android_touch_mouse_owns", "")
+			.substringBefore("static void amiberry_android_touch_mouse_prepare_added_contact", "")
+		val prepareAddedContact = amiberryCpp
+			.substringAfter("static void amiberry_android_touch_mouse_prepare_added_contact", "")
+			.substringBefore("static bool amiberry_android_route_touch_mouse", "")
+		val routeTouch = amiberryCpp
+			.substringAfter("static bool amiberry_android_route_touch_mouse", "")
+			.substringBefore("static void amiberry_android_touch_mouse_begin_pump", "")
+
+		assertTrue(
+			"A newly acquired contact must still come from a registered direct touch device.",
+			directEligibility.contains("SDL_GetTouchDeviceType(touch_id) == SDL_TOUCH_DEVICE_DIRECT") &&
+				prepareAddedContact.contains("amiberry_android_direct_touch_eligible") &&
+				routeTouch.contains("!owned && !amiberry_android_direct_touch_eligible")
+		)
+		assertTrue(
+			"An exact owned key must route without rechecking live touch-device registration.",
+			ownership.contains("amiberry_android_touch_identity_eligible") &&
+				ownership.contains("android_touch_mouse_coordinator.owns") &&
+				!ownership.contains("amiberry_android_direct_touch_eligible") &&
+				routeTouch.contains("const bool owned = android_touch_mouse_coordinator.owns(key)")
+		)
+		assertTrue(
+			"An exact externally drained key must retire before direct-device eligibility is considered for a new down.",
+			drainedTouch.contains("const auto found = std::find") &&
+				drainedTouch.contains("if (found != android_touch_mouse_drain.end())") &&
+				drainedTouch.indexOf("return true;") in
+					0 until drainedTouch.indexOf("amiberry_android_direct_touch_eligible")
+		)
+		assertTrue(
+			"Owned and drained continuation must continue rejecting SDL synthetic mouse and pen identities.",
+			amiberryCpp.contains("touch_id != SDL_MOUSE_TOUCHID") &&
+				amiberryCpp.contains("touch_id != SDL_PEN_TOUCHID") &&
+				ownership.contains("amiberry_android_touch_identity_eligible") &&
+				drainedTouch.contains("amiberry_android_touch_identity_eligible")
+		)
+	}
+
+	@Test
 	fun `Android touch mouse pump preserves click and deadline ordering`() {
 		val amiberryCpp = File("../../src/osdep/amiberry.cpp").readText()
 		val pump = Regex(
 			"""int handle_msgpump\(bool vblank\)[\s\S]*?bool handle_events\(\)"""
 		).find(amiberryCpp)?.value.orEmpty()
 		val entryDrain = pump.indexOf("drain_pending_touch_neutralization()")
-		val retireClick = pump.indexOf("android_touch_mouse_begin_pump()")
+		val retireClick = pump.indexOf("amiberry_android_touch_mouse_begin_pump()")
 		val pollEvents = pump.indexOf("while (SDL_PollEvent(&event))")
 		val secondDrain = pump.indexOf("drain_pending_touch_neutralization()", entryDrain + 1)
-		val deadlineTick = pump.indexOf("android_touch_mouse_tick()")
+		val deadlineTick = pump.indexOf("amiberry_android_touch_mouse_tick()")
 
 		assertTrue(
 			"The main pump should drain, retire the prior click, process queued events, drain again, then tick nanosecond deadlines.",
@@ -341,7 +389,7 @@ class AndroidRuntimeControlsArchitectureTest {
 		)
 		assertTrue(
 			"Android left and right guest writes should pass through source composition.",
-			amiberryCpp.contains("android_set_composed_mouse_button") &&
+			amiberryCpp.contains("amiberry_android_set_composed_mouse_button") &&
 				amiberryCpp.contains("ButtonSource::physical") &&
 				amiberryCpp.contains("ButtonSource::pen") &&
 				amiberryCpp.contains("ButtonSource::gesture")
@@ -355,7 +403,7 @@ class AndroidRuntimeControlsArchitectureTest {
 			"""int handle_msgpump\(bool vblank\)[\s\S]*?bool handle_events\(\)"""
 		).find(amiberryCpp)?.value.orEmpty()
 		val overlayTransitions = Regex(
-			"""static void android_check_touch_overlay_transitions\(\)[\s\S]*?\R\}"""
+			"""static void amiberry_android_check_touch_overlay_transitions\(\)[\s\S]*?\R\}"""
 		).find(amiberryCpp)?.value.orEmpty()
 		val penHandler = amiberryCpp
 			.substringAfter("static void handle_pen_event(const SDL_Event& event)", "")
@@ -372,7 +420,7 @@ class AndroidRuntimeControlsArchitectureTest {
 			overlayTransitions.contains("imgui_osk_should_render()") &&
 				overlayTransitions.contains("on_screen_joystick_is_enabled()") &&
 				overlayTransitions.contains("neutralize_touch_controls()") &&
-				pump.contains("android_check_touch_overlay_transitions()")
+				pump.contains("amiberry_android_check_touch_overlay_transitions()")
 		)
 		assertTrue(
 			"Pen proximity-in must neutralize touch before blocking acquisition, and proximity-out must require a fresh down.",
@@ -385,8 +433,8 @@ class AndroidRuntimeControlsArchitectureTest {
 		)
 		assertTrue(
 			"Input unacquire should neutralize the gesture and clear every composed Android mouse-button source.",
-			unacquire.contains("android_touch_mouse_neutralize()") &&
-				unacquire.contains("android_clear_all_mouse_button_sources()")
+			unacquire.contains("amiberry_android_touch_mouse_neutralize()") &&
+				unacquire.contains("amiberry_android_clear_all_mouse_button_sources()")
 		)
 	}
 
@@ -413,7 +461,7 @@ class AndroidRuntimeControlsArchitectureTest {
 			"Removal should resolve the exact index before mutating input mappings and clear only that composed index.",
 			removalCase.indexOf("get_tracked_mouse_index_from_sdl_id") in
 				0 until removalCase.indexOf("handle_sdl_mouse_removed") &&
-				removalCase.contains("android_handle_removed_mouse_index")
+				removalCase.contains("amiberry_android_handle_removed_mouse_index")
 		)
 	}
 
@@ -424,7 +472,7 @@ class AndroidRuntimeControlsArchitectureTest {
 			"""static bool SDLCALL android_touch_event_filter[\s\S]*?\R\}"""
 		).find(amiberryCpp)?.value.orEmpty()
 		val publisher = Regex(
-			"""static void android_publish_gui_swipe_filter[\s\S]*?\R\}"""
+			"""static void amiberry_android_publish_gui_swipe_filter[\s\S]*?\R\}"""
 		).find(amiberryCpp)?.value.orEmpty()
 
 		assertTrue(
@@ -435,7 +483,7 @@ class AndroidRuntimeControlsArchitectureTest {
 		)
 		assertTrue(
 			"The SDL filter should drop only SDL_TOUCH_MOUSEID mouse events while exact GUI-swipe contacts remain active.",
-			eventFilter.contains("android_filter_gui_swipe_event(event)") &&
+			eventFilter.contains("amiberry_android_filter_gui_swipe_event(event)") &&
 				eventFilter.contains("return false") &&
 				amiberryCpp.contains("event->button.which == SDL_TOUCH_MOUSEID") &&
 				amiberryCpp.contains("event->motion.which == SDL_TOUCH_MOUSEID")

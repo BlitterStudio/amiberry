@@ -150,7 +150,8 @@ public:
 			actions.push_back(button_action(ActionType::button_up, MouseButton::left));
 		else if (state_ == State::right_drag)
 			actions.push_back(button_action(ActionType::button_up, MouseButton::right));
-		else
+		else if (state_ != State::two_finger_pending
+			&& state_ != State::swipe_only)
 			return {};
 		state_ = State::drain_until_all_up;
 		recent_tap_.reset();

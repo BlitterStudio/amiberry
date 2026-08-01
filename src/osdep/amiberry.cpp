@@ -152,20 +152,21 @@ static std::array<AndroidGuiSwipeFilterContact, 2>
 static std::atomic<bool> android_gui_swipe_filter_active{false};
 
 static void neutralize_touch_controls(void);
-static bool android_direct_touch_eligible(SDL_TouchID touch_id);
-static android_touch_mouse::TouchKey android_touch_key(const SDL_Event& event);
+static bool amiberry_android_touch_identity_eligible(SDL_TouchID touch_id);
+static bool amiberry_android_direct_touch_eligible(SDL_TouchID touch_id);
+static android_touch_mouse::TouchKey amiberry_android_touch_key(const SDL_Event& event);
 
-static void android_clear_gui_swipe_filter()
+static void amiberry_android_clear_gui_swipe_filter()
 {
 	android_gui_swipe_filter_active.store(false, std::memory_order_release);
 	for (auto& contact : android_gui_swipe_filter_contacts)
 		contact.active.store(false, std::memory_order_release);
 }
 
-static void android_publish_gui_swipe_filter(
+static void amiberry_android_publish_gui_swipe_filter(
 	const std::vector<android_touch_mouse::TouchKey>& keys)
 {
-	android_clear_gui_swipe_filter();
+	amiberry_android_clear_gui_swipe_filter();
 	if (keys.size() < android_gui_swipe_filter_contacts.size())
 		return;
 	for (std::size_t i = 0; i < android_gui_swipe_filter_contacts.size(); ++i) {
@@ -177,7 +178,7 @@ static void android_publish_gui_swipe_filter(
 	android_gui_swipe_filter_active.store(true, std::memory_order_release);
 }
 
-static bool android_filter_gui_swipe_event(const SDL_Event* event)
+static bool amiberry_android_filter_gui_swipe_event(const SDL_Event* event)
 {
 	if (!android_gui_swipe_filter_active.load(std::memory_order_acquire))
 		return false;
@@ -207,12 +208,12 @@ static bool android_filter_gui_swipe_event(const SDL_Event* event)
 	return false;
 }
 
-static void android_clear_touch_drain()
+static void amiberry_android_clear_touch_drain()
 {
 	android_touch_mouse_drain.clear();
 }
 
-static void android_seed_touch_drain()
+static void amiberry_android_seed_touch_drain()
 {
 	if (android_touch_mouse_coordinator.state()
 		== android_touch_mouse::State::gui_consumed)
@@ -223,46 +224,54 @@ static void android_seed_touch_drain()
 	android_touch_mouse_drain = keys;
 }
 
-static bool android_handle_drained_touch(const SDL_Event& event)
+static bool amiberry_android_handle_drained_touch(const SDL_Event& event)
 {
 	if (android_touch_mouse_drain.empty()
-		|| !android_direct_touch_eligible(event.tfinger.touchID))
+		|| !amiberry_android_touch_identity_eligible(event.tfinger.touchID))
 		return false;
-	const auto key = android_touch_key(event);
+	const auto key = amiberry_android_touch_key(event);
 	if (key.touch_id != android_touch_mouse_drain.front().touch_id)
 		return false;
 	const auto found = std::find(android_touch_mouse_drain.begin(),
 		android_touch_mouse_drain.end(), key);
-	if (event.type == SDL_EVENT_FINGER_DOWN
-		&& found == android_touch_mouse_drain.end()) {
-		android_touch_mouse_drain.push_back(key);
-	} else if ((event.type == SDL_EVENT_FINGER_UP
-		|| event.type == SDL_EVENT_FINGER_CANCELED)
-		&& found != android_touch_mouse_drain.end()) {
-		android_touch_mouse_drain.erase(found);
+	if (found != android_touch_mouse_drain.end()) {
+		if (event.type == SDL_EVENT_FINGER_UP
+			|| event.type == SDL_EVENT_FINGER_CANCELED)
+			android_touch_mouse_drain.erase(found);
+		return true;
 	}
-	return true;
+	if (event.type == SDL_EVENT_FINGER_DOWN
+		&& amiberry_android_direct_touch_eligible(event.tfinger.touchID)) {
+		android_touch_mouse_drain.push_back(key);
+		return true;
+	}
+	return false;
 }
 
-static bool android_touch_mouse_route_eligible()
+static bool amiberry_android_touch_mouse_route_eligible()
 {
 	return !gui_running && isfocus() != 0;
 }
 
-static bool android_direct_touch_eligible(SDL_TouchID touch_id)
+static bool amiberry_android_touch_identity_eligible(SDL_TouchID touch_id)
 {
 	return touch_id != SDL_MOUSE_TOUCHID
-		&& touch_id != SDL_PEN_TOUCHID
+		&& touch_id != SDL_PEN_TOUCHID;
+}
+
+static bool amiberry_android_direct_touch_eligible(SDL_TouchID touch_id)
+{
+	return amiberry_android_touch_identity_eligible(touch_id)
 		&& SDL_GetTouchDeviceType(touch_id) == SDL_TOUCH_DEVICE_DIRECT;
 }
 
-static android_touch_mouse::TouchKey android_touch_key(const SDL_Event& event)
+static android_touch_mouse::TouchKey amiberry_android_touch_key(const SDL_Event& event)
 {
 	return {static_cast<android_touch_mouse::TouchId>(event.tfinger.touchID),
 		static_cast<android_touch_mouse::FingerId>(event.tfinger.fingerID)};
 }
 
-static int android_resolve_touch_mouse_index()
+static int amiberry_android_resolve_touch_mouse_index()
 {
 	for (int port = 0; port < MAX_JPORTS; ++port) {
 		const int mouse_index = jsem_ismouse(port, &currprefs);
@@ -272,7 +281,7 @@ static int android_resolve_touch_mouse_index()
 	return -1;
 }
 
-static void android_set_composed_mouse_button(int mouse_index,
+static void amiberry_android_set_composed_mouse_button(int mouse_index,
 	android_touch_mouse::ButtonSource source,
 	android_touch_mouse::MouseButton button, bool pressed)
 {
@@ -287,7 +296,7 @@ static void android_set_composed_mouse_button(int mouse_index,
 	setmousebuttonstate(mouse_index, button_index, transition->pressed ? 1 : 0);
 }
 
-static void android_apply_button_transitions(int mouse_index,
+static void amiberry_android_apply_button_transitions(int mouse_index,
 	const std::vector<android_touch_mouse::ButtonTransition>& transitions)
 {
 	for (const auto& transition : transitions) {
@@ -298,28 +307,28 @@ static void android_apply_button_transitions(int mouse_index,
 	}
 }
 
-static void android_clear_mouse_button_sources(int mouse_index)
+static void amiberry_android_clear_mouse_button_sources(int mouse_index)
 {
 	if (mouse_index < 0 || mouse_index >= MAX_INPUT_DEVICES)
 		return;
-	android_apply_button_transitions(mouse_index,
+	amiberry_android_apply_button_transitions(mouse_index,
 		android_mouse_button_sources[mouse_index].clear_all());
 }
 
-static void android_clear_all_mouse_button_sources()
+static void amiberry_android_clear_all_mouse_button_sources()
 {
 	for (int mouse_index = 0; mouse_index < MAX_INPUT_DEVICES; ++mouse_index)
-		android_clear_mouse_button_sources(mouse_index);
+		amiberry_android_clear_mouse_button_sources(mouse_index);
 }
 
-static void android_apply_touch_mouse_actions(
+static void amiberry_android_apply_touch_mouse_actions(
 	const std::vector<android_touch_mouse::Action>& actions, int mouse_index)
 {
 	using android_touch_mouse::ActionType;
 	using android_touch_mouse::ButtonSource;
 	for (const auto& action : actions) {
 		if (action.type == ActionType::open_gui) {
-			android_publish_gui_swipe_filter(
+			amiberry_android_publish_gui_swipe_filter(
 				android_touch_mouse_coordinator.tracked_keys());
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			continue;
@@ -333,7 +342,7 @@ static void android_apply_touch_mouse_actions(
 			break;
 		case ActionType::button_down:
 		case ActionType::button_up:
-			android_set_composed_mouse_button(mouse_index, ButtonSource::gesture,
+			amiberry_android_set_composed_mouse_button(mouse_index, ButtonSource::gesture,
 				action.button, action.type == ActionType::button_down);
 			break;
 		case ActionType::click_pulse:
@@ -343,7 +352,7 @@ static void android_apply_touch_mouse_actions(
 	}
 }
 
-static void android_snapshot_touch_geometry(const SDL_Event& event)
+static void amiberry_android_snapshot_touch_geometry(const SDL_Event& event)
 {
 	SDL_Window* window = SDL_GetWindowFromID(event.tfinger.windowID);
 	if (!window)
@@ -360,7 +369,7 @@ static void android_snapshot_touch_geometry(const SDL_Event& event)
 	android_touch_mouse_display_scale = scale > 0.0f ? scale : 1.0;
 }
 
-static android_touch_mouse::TouchFact android_touch_fact(const SDL_Event& event)
+static android_touch_mouse::TouchFact amiberry_android_touch_fact(const SDL_Event& event)
 {
 	using android_touch_mouse::ContactPhase;
 	ContactPhase phase = ContactPhase::motion;
@@ -373,36 +382,36 @@ static android_touch_mouse::TouchFact android_touch_fact(const SDL_Event& event)
 	const double width = android_touch_mouse_window_width;
 	const double height = android_touch_mouse_window_height;
 	const double scale = android_touch_mouse_display_scale;
-	return {android_touch_key(event), phase, event.tfinger.timestamp,
+	return {amiberry_android_touch_key(event), phase, event.tfinger.timestamp,
 		event.tfinger.x * width / scale, event.tfinger.y * height / scale,
 		event.tfinger.dx * width, event.tfinger.dy * height,
 		event.tfinger.y};
 }
 
-static bool android_touch_mouse_mapping_changed()
+static bool amiberry_android_touch_mouse_mapping_changed()
 {
 	return android_touch_mouse_coordinator.tracked_contacts() > 0
-		&& android_resolve_touch_mouse_index() != android_touch_mouse_index;
+		&& amiberry_android_resolve_touch_mouse_index() != android_touch_mouse_index;
 }
 
-static void android_touch_mouse_neutralize()
+static void amiberry_android_touch_mouse_neutralize()
 {
-	android_seed_touch_drain();
-	android_apply_touch_mouse_actions(
+	amiberry_android_seed_touch_drain();
+	amiberry_android_apply_touch_mouse_actions(
 		android_touch_mouse_coordinator.neutralize(), android_touch_mouse_index);
 	android_touch_mouse_index = -1;
 }
 
-static void android_handle_removed_mouse_index(int mouse_index)
+static void amiberry_android_handle_removed_mouse_index(int mouse_index)
 {
 	if (mouse_index < 0)
 		return;
 	if (android_touch_mouse_index == mouse_index)
-		android_touch_mouse_neutralize();
-	android_clear_mouse_button_sources(mouse_index);
+		amiberry_android_touch_mouse_neutralize();
+	amiberry_android_clear_mouse_button_sources(mouse_index);
 }
 
-static void android_check_touch_overlay_transitions()
+static void amiberry_android_check_touch_overlay_transitions()
 {
 	const bool osk_rendering = imgui_osk_should_render();
 	const bool joystick_enabled = on_screen_joystick_is_enabled();
@@ -413,69 +422,73 @@ static void android_check_touch_overlay_transitions()
 	android_last_joystick_enabled = joystick_enabled;
 }
 
-static bool android_touch_mouse_owns(const SDL_Event& event)
+static bool amiberry_android_touch_mouse_owns(const SDL_Event& event)
 {
-	return android_direct_touch_eligible(event.tfinger.touchID)
-		&& android_touch_mouse_coordinator.owns(android_touch_key(event));
+	return amiberry_android_touch_identity_eligible(event.tfinger.touchID)
+		&& android_touch_mouse_coordinator.owns(amiberry_android_touch_key(event));
 }
 
-static void android_touch_mouse_prepare_added_contact(const SDL_Event& event)
+static void amiberry_android_touch_mouse_prepare_added_contact(const SDL_Event& event)
 {
 	if (event.type != SDL_EVENT_FINGER_DOWN
-		|| !android_direct_touch_eligible(event.tfinger.touchID))
+		|| !amiberry_android_direct_touch_eligible(event.tfinger.touchID))
 		return;
-	android_apply_touch_mouse_actions(
+	amiberry_android_apply_touch_mouse_actions(
 		android_touch_mouse_coordinator.terminate_for_nonowning_contact(
-			android_touch_key(event)), android_touch_mouse_index);
+			amiberry_android_touch_key(event)), android_touch_mouse_index);
 }
 
-static bool android_route_touch_mouse(const SDL_Event& event)
+static bool amiberry_android_route_touch_mouse(const SDL_Event& event)
 {
-	if (!android_touch_mouse_route_eligible()
+	if (!amiberry_android_touch_mouse_route_eligible()
 		|| android_pen_blocks_touch
-		|| !android_direct_touch_eligible(event.tfinger.touchID))
+		|| !amiberry_android_touch_identity_eligible(event.tfinger.touchID))
 		return false;
-	if (android_touch_mouse_mapping_changed()) {
-		android_touch_mouse_neutralize();
+	const auto key = amiberry_android_touch_key(event);
+	const bool owned = android_touch_mouse_coordinator.owns(key);
+	if (!owned && !amiberry_android_direct_touch_eligible(event.tfinger.touchID))
+		return false;
+	if (amiberry_android_touch_mouse_mapping_changed()) {
+		amiberry_android_touch_mouse_neutralize();
 		return true;
 	}
 	if (event.type == SDL_EVENT_FINGER_DOWN
 		&& android_touch_mouse_coordinator.tracked_contacts() == 0) {
-		android_snapshot_touch_geometry(event);
-		android_touch_mouse_index = android_resolve_touch_mouse_index();
+		amiberry_android_snapshot_touch_geometry(event);
+		android_touch_mouse_index = amiberry_android_resolve_touch_mouse_index();
 	}
-	android_apply_touch_mouse_actions(
-		android_touch_mouse_coordinator.handle(android_touch_fact(event)),
+	amiberry_android_apply_touch_mouse_actions(
+		android_touch_mouse_coordinator.handle(amiberry_android_touch_fact(event)),
 		android_touch_mouse_index);
 	if (android_touch_mouse_index < 0)
 		android_touch_mouse_coordinator.forget_recent_tap();
 	return true;
 }
 
-static void android_touch_mouse_begin_pump()
+static void amiberry_android_touch_mouse_begin_pump()
 {
-	android_apply_touch_mouse_actions(android_touch_mouse_coordinator.begin_pump(),
+	amiberry_android_apply_touch_mouse_actions(android_touch_mouse_coordinator.begin_pump(),
 		android_touch_mouse_index);
 }
 
-static void android_touch_mouse_tick()
+static void amiberry_android_touch_mouse_tick()
 {
 	if (android_touch_mouse_coordinator.tracked_contacts() == 0)
 		return;
-	if (android_touch_mouse_mapping_changed()) {
-		android_touch_mouse_neutralize();
+	if (amiberry_android_touch_mouse_mapping_changed()) {
+		amiberry_android_touch_mouse_neutralize();
 		return;
 	}
 	if (android_touch_mouse_index < 0)
 		return;
-	android_apply_touch_mouse_actions(
+	amiberry_android_apply_touch_mouse_actions(
 		android_touch_mouse_coordinator.tick(SDL_GetTicksNS()),
 		android_touch_mouse_index);
 }
 
 static bool SDLCALL android_touch_event_filter(void*, SDL_Event* event)
 {
-	if (android_filter_gui_swipe_event(event))
+	if (amiberry_android_filter_gui_swipe_event(event))
 		return false;
 	// Android lifecycle delivery may occur away from the SDL event thread.
 	// Publish a request here; emulated input is neutralized by process_event().
@@ -489,7 +502,7 @@ static bool SDLCALL android_touch_event_filter(void*, SDL_Event* event)
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 	case SDL_EVENT_WINDOW_MINIMIZED:
 	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-		android_clear_gui_swipe_filter();
+		amiberry_android_clear_gui_swipe_filter();
 		android_touch_neutralization_pending.store(true, std::memory_order_release);
 		break;
 	case SDL_EVENT_FINGER_CANCELED:
@@ -506,7 +519,7 @@ static void neutralize_touch_controls()
 {
 	on_screen_joystick_release_all();
 #ifdef __ANDROID__
-	android_touch_mouse_neutralize();
+	amiberry_android_touch_mouse_neutralize();
 #endif
 }
 
@@ -1746,8 +1759,8 @@ static bool accepts_uncaptured_guest_input()
 void target_inputdevice_unacquire(const bool full)
 {
 #ifdef __ANDROID__
-	android_touch_mouse_neutralize();
-	android_clear_all_mouse_button_sources();
+	amiberry_android_touch_mouse_neutralize();
+	amiberry_android_clear_all_mouse_button_sources();
 #endif
 	close_tablet(tablet);
 	tablet = NULL;
@@ -2535,7 +2548,7 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 static void handle_focus_gained_event(AmigaMonitor* mon)
 {
 #ifdef __ANDROID__
-	android_clear_touch_drain();
+	amiberry_android_clear_touch_drain();
 #endif
 	amiberry_active(mon, minimized);
 	unsetminimized(mon->monitor_id);
@@ -3195,7 +3208,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 		{
 		case SDL_BUTTON_LEFT:
 #ifdef __ANDROID__
-			android_set_composed_mouse_button(midx,
+			amiberry_android_set_composed_mouse_button(midx,
 				android_touch_mouse::ButtonSource::physical,
 				android_touch_mouse::MouseButton::left, state);
 #else
@@ -3204,7 +3217,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 			break;
 		case SDL_BUTTON_RIGHT:
 #ifdef __ANDROID__
-			android_set_composed_mouse_button(midx,
+			amiberry_android_set_composed_mouse_button(midx,
 				android_touch_mouse::ButtonSource::physical,
 				android_touch_mouse::MouseButton::right, state);
 #else
@@ -3462,7 +3475,7 @@ static void handle_pen_event(const SDL_Event& event)
 		pen_pressure = 0;
 #ifdef __ANDROID__
 		android_pen_blocks_touch = false;
-		android_clear_touch_drain();
+		amiberry_android_clear_touch_drain();
 #endif
 		if (tablet_real)
 			send_tablet_proximity(0);
@@ -3476,7 +3489,7 @@ static void handle_pen_event(const SDL_Event& event)
 		} else {
 			pen_position_via_mouse(mon, event.ptouch.x, event.ptouch.y);
 #ifdef __ANDROID__
-			android_set_composed_mouse_button(0,
+			amiberry_android_set_composed_mouse_button(0,
 				android_touch_mouse::ButtonSource::pen,
 				android_touch_mouse::MouseButton::left, true);
 #else
@@ -3493,7 +3506,7 @@ static void handle_pen_event(const SDL_Event& event)
 		} else {
 			pen_position_via_mouse(mon, event.ptouch.x, event.ptouch.y);
 #ifdef __ANDROID__
-			android_set_composed_mouse_button(0,
+			amiberry_android_set_composed_mouse_button(0,
 				android_touch_mouse::ButtonSource::pen,
 				android_touch_mouse::MouseButton::left, false);
 #else
@@ -3543,7 +3556,7 @@ static void handle_pen_event(const SDL_Event& event)
 				setmousebuttonstate(0, 2, 1);
 			else if (btn == 2) {
 #ifdef __ANDROID__
-				android_set_composed_mouse_button(0,
+				amiberry_android_set_composed_mouse_button(0,
 					android_touch_mouse::ButtonSource::pen,
 					android_touch_mouse::MouseButton::right, true);
 #else
@@ -3567,7 +3580,7 @@ static void handle_pen_event(const SDL_Event& event)
 				setmousebuttonstate(0, 2, 0);
 			else if (btn == 2) {
 #ifdef __ANDROID__
-				android_set_composed_mouse_button(0,
+				amiberry_android_set_composed_mouse_button(0,
 					android_touch_mouse::ButtonSource::pen,
 					android_touch_mouse::MouseButton::right, false);
 #else
@@ -3664,7 +3677,7 @@ static void process_event(const SDL_Event& event)
 		case SDL_EVENT_DID_ENTER_FOREGROUND:
 			neutralize_touch_controls();
 #ifdef __ANDROID__
-			android_clear_touch_drain();
+			amiberry_android_clear_touch_drain();
 #endif
 			pause_emulation = 0;
 			resume_sound();
@@ -3721,7 +3734,7 @@ static void process_event(const SDL_Event& event)
 		case SDL_EVENT_FINGER_CANCELED:
 			neutralize_touch_controls();
 #ifdef __ANDROID__
-			android_clear_touch_drain();
+			amiberry_android_clear_touch_drain();
 #endif
 			break;
 
@@ -3734,13 +3747,13 @@ static void process_event(const SDL_Event& event)
 			if (mon->amiga_window)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
 #ifdef __ANDROID__
-			if (android_handle_drained_touch(event))
+			if (amiberry_android_handle_drained_touch(event))
 				break;
-			if (android_touch_mouse_owns(event)) {
-				android_route_touch_mouse(event);
+			if (amiberry_android_touch_mouse_owns(event)) {
+				amiberry_android_route_touch_mouse(event);
 				break;
 			}
-			android_touch_mouse_prepare_added_contact(event);
+			amiberry_android_touch_mouse_prepare_added_contact(event);
 #endif
 			bool consumed = false;
 
@@ -3774,7 +3787,7 @@ static void process_event(const SDL_Event& event)
 			}
 			if (!consumed) {
 #ifdef __ANDROID__
-				android_route_touch_mouse(event);
+				amiberry_android_route_touch_mouse(event);
 #else
 				handle_finger_event(event);
 #endif
@@ -3785,7 +3798,7 @@ static void process_event(const SDL_Event& event)
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 		case SDL_EVENT_MOUSE_BUTTON_UP:
 #ifdef __ANDROID__
-			if (android_touch_mouse_route_eligible()
+			if (amiberry_android_touch_mouse_route_eligible()
 				&& event.button.which == SDL_TOUCH_MOUSEID)
 				break;
 #endif
@@ -3806,10 +3819,10 @@ static void process_event(const SDL_Event& event)
 			if (mon->amiga_window)
 				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
 #ifdef __ANDROID__
-			if (android_handle_drained_touch(event))
+			if (amiberry_android_handle_drained_touch(event))
 				break;
-			if (android_touch_mouse_owns(event)) {
-				android_route_touch_mouse(event);
+			if (amiberry_android_touch_mouse_owns(event)) {
+				amiberry_android_route_touch_mouse(event);
 				break;
 			}
 #endif
@@ -3827,7 +3840,7 @@ static void process_event(const SDL_Event& event)
 				consumed = on_screen_joystick_handle_finger_motion(event);
 			if (!consumed) {
 #ifdef __ANDROID__
-				android_route_touch_mouse(event);
+				amiberry_android_route_touch_mouse(event);
 #else
 				handle_finger_motion_event(event, ww, wh);
 #endif
@@ -3837,7 +3850,7 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_EVENT_MOUSE_MOTION:
 #ifdef __ANDROID__
-			if (android_touch_mouse_route_eligible()
+			if (amiberry_android_touch_mouse_route_eligible()
 				&& event.motion.which == SDL_TOUCH_MOUSEID)
 				break;
 #endif
@@ -3860,7 +3873,7 @@ static void process_event(const SDL_Event& event)
 			break;
 		case SDL_EVENT_MOUSE_REMOVED:
 #ifdef __ANDROID__
-			android_handle_removed_mouse_index(
+			amiberry_android_handle_removed_mouse_index(
 				get_tracked_mouse_index_from_sdl_id(event.mdevice.which));
 #endif
 			handle_sdl_mouse_removed(event.mdevice.which);
@@ -3915,8 +3928,8 @@ int handle_msgpump(bool vblank)
 		return 0;
 	drain_pending_touch_neutralization();
 #ifdef __ANDROID__
-	android_check_touch_overlay_transitions();
-	android_touch_mouse_begin_pump();
+	amiberry_android_check_touch_overlay_transitions();
+	amiberry_android_touch_mouse_begin_pump();
 #endif
 	lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
 	auto got_event = 0;
@@ -3929,7 +3942,7 @@ int handle_msgpump(bool vblank)
 	}
 	drain_pending_touch_neutralization();
 #ifdef __ANDROID__
-	android_touch_mouse_tick();
+	amiberry_android_touch_mouse_tick();
 #endif
 	if (got_event && currprefs.clipboard_sharing)
 		update_clipboard();
