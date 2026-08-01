@@ -290,6 +290,85 @@ class ShaderCatalogTest {
 	}
 
 	@Test
+	fun scanResolverUsesLegacyExternalDefaultUntilCanonicalMigrationRuns() {
+		val externalRoot = tempDir.newFolder("legacy-scan-external")
+		val legacyRoot = File(externalRoot, "Configurations/Shaders")
+		assertTrue(legacyRoot.mkdirs())
+
+		assertEquals(
+			legacyRoot,
+			ShaderCatalog.resolveScanRoot(null, externalRoot)
+		)
+	}
+
+	@Test
+	fun scanResolverPrefersExistingCanonicalRootOverLegacyCandidate() {
+		val externalRoot = tempDir.newFolder("canonical-scan-external")
+		val legacyRoot = File(externalRoot, "Configurations/Shaders")
+		val canonicalRoot = File(externalRoot, "Visuals/Shaders")
+		assertTrue(legacyRoot.mkdirs())
+		assertTrue(canonicalRoot.mkdirs())
+
+		assertEquals(
+			canonicalRoot,
+			ShaderCatalog.resolveScanRoot(null, externalRoot)
+		)
+	}
+
+	@Test
+	fun scanResolverUsesConfiguredBaseLegacyCandidateBeforeMigration() {
+		val externalRoot = tempDir.newFolder("base-scan-external")
+		val contentRoot = tempDir.newFolder("base-scan-content")
+		val legacyRoot = File(contentRoot, "Configurations/Shaders")
+		assertTrue(legacyRoot.mkdirs())
+		val settings = tempDir.newFile("base-scan.conf")
+		settings.writeText("base_content_path=${contentRoot.path}")
+
+		assertEquals(
+			legacyRoot,
+			ShaderCatalog.resolveScanRoot(settings, externalRoot)
+		)
+	}
+
+	@Test
+	fun scanResolverUsesInferredLegacyCandidateBeforeMigration() {
+		val externalRoot = tempDir.newFolder("inferred-scan-external")
+		val contentRoot = tempDir.newFolder("inferred-scan-content")
+		val legacyRoot = File(contentRoot, "Configurations/Shaders")
+		assertTrue(legacyRoot.mkdirs())
+		val settings = tempDir.newFile("inferred-scan.conf")
+		settings.writeText("""
+			config_path=${File(contentRoot, "Configurations").path}
+			rom_path=${File(contentRoot, "ROMs").path}
+			floppy_path=${File(contentRoot, "Floppies").path}
+			shaders_path=${legacyRoot.path}
+		""".trimIndent())
+
+		assertEquals(
+			legacyRoot,
+			ShaderCatalog.resolveScanRoot(settings, externalRoot)
+		)
+	}
+
+	@Test
+	fun scanResolverDoesNotReplaceExplicitCustomOrEmptyShaderPaths() {
+		val externalRoot = tempDir.newFolder("authoritative-scan-external")
+		val legacyRoot = File(externalRoot, "Configurations/Shaders")
+		assertTrue(legacyRoot.mkdirs())
+		val customRoot = File(tempDir.root, "missing-custom-shaders")
+		val customSettings = tempDir.newFile("custom-scan.conf")
+		customSettings.writeText("shaders_path=${customRoot.path}")
+		val emptySettings = tempDir.newFile("empty-scan.conf")
+		emptySettings.writeText("shaders_path=")
+
+		assertEquals(
+			customRoot,
+			ShaderCatalog.resolveScanRoot(customSettings, externalRoot)
+		)
+		assertNull(ShaderCatalog.resolveScanRoot(emptySettings, externalRoot))
+	}
+
+	@Test
 	fun kotlinCatalogContractIsPinnedToNativeSource() {
 		val nativeSource = File("../../src/osdep/imgui/shader_catalog.cpp").readText()
 		val nativeBuiltIns = Regex(

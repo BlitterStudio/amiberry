@@ -17,6 +17,32 @@ class WhdLoadAutoConfigTest {
 	val tempDir = TemporaryFolder()
 
 	@Test
+	fun `legacy per-game config without shader preserves current selection`() {
+		val config = tempDir.newFile("legacy.uae")
+		config.writeText("cpu_model=68020")
+
+		val settings = WhdLoadAutoConfig.settingsFromPerGameConfig(
+			parsed = ConfigParser.parse(config),
+			currentSettings = EmulatorSettings(shader = "presets/custom.glslp")
+		)
+
+		assertEquals("presets/custom.glslp", settings.shader)
+	}
+
+	@Test
+	fun `per-game config with explicit shader overrides current selection`() {
+		val config = tempDir.newFile("explicit-shader.uae")
+		config.writeText("amiberry.shader=tv")
+
+		val settings = WhdLoadAutoConfig.settingsFromPerGameConfig(
+			parsed = ConfigParser.parse(config),
+			currentSettings = EmulatorSettings(shader = "presets/custom.glslp")
+		)
+
+		assertEquals("tv", settings.shader)
+	}
+
+	@Test
 	fun `AGA WHDLoad database match updates Kotlin settings to A1200 hardware`() {
 		val lha = tempDir.newFile("Atome_v1.1_Skarla_AGA.lha")
 		lha.writeText("fixture")

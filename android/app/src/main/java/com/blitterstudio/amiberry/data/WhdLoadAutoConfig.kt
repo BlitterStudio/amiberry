@@ -24,11 +24,7 @@ object WhdLoadAutoConfig {
 		val configFile = File(File(externalDir, StoragePaths.CONFIGURATIONS), "${lhaFile.nameWithoutExtension}.uae")
 		if (configFile.exists()) {
 			val parsed = ConfigParser.parse(configFile)
-			return AndroidControlSettings.withFallback(
-				settings = parsed.settings,
-				explicitKeys = parsed.explicitKeys,
-				fallback = currentSettings
-			)
+			return settingsFromPerGameConfig(parsed, currentSettings)
 		}
 
 		val databaseFile = File(externalDir, "${StoragePaths.WHDBOOT}/game-data/whdload_db.json")
@@ -42,6 +38,22 @@ object WhdLoadAutoConfig {
 			)
 		} catch (_: Exception) {
 			null
+		}
+	}
+
+	internal fun settingsFromPerGameConfig(
+		parsed: ConfigParser.ParsedConfig,
+		currentSettings: EmulatorSettings
+	): EmulatorSettings {
+		val settings = AndroidControlSettings.withFallback(
+			settings = parsed.settings,
+			explicitKeys = parsed.explicitKeys,
+			fallback = currentSettings
+		)
+		return if ("amiberry.shader" in parsed.explicitKeys) {
+			settings
+		} else {
+			settings.copy(shader = currentSettings.shader)
 		}
 	}
 

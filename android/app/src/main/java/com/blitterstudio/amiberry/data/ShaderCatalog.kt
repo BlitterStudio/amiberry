@@ -66,19 +66,45 @@ object ShaderCatalog {
 	 * An explicit, empty shaders_path deliberately resolves to null: native treats that
 	 * as a built-ins-only catalog instead of falling back to another content location.
 	 */
-	fun resolveRoot(globalSettingsFile: File?, externalFilesDir: File?): File? {
+	fun resolveRoot(globalSettingsFile: File?, externalFilesDir: File?): File? =
+		resolveRoots(globalSettingsFile, externalFilesDir).configuredRoot
+
+	/**
+	 * Resolve the directory that is available for the Kotlin catalog to scan.
+	 *
+	 * Native migrates legacy visual assets into the canonical root when SDL starts. Until
+	 * then, scan one existing legacy directory if the canonical destination is unavailable.
+	 * Explicit empty and custom shader paths remain authoritative.
+	 */
+	fun resolveScanRoot(globalSettingsFile: File?, externalFilesDir: File?): File? {
+		val roots = resolveRoots(globalSettingsFile, externalFilesDir)
+		val configuredRoot = roots.configuredRoot ?: return null
+		if (safeIsDirectory(configuredRoot)) return configuredRoot
+
+		val canonicalRoot = roots.canonicalRoot ?: return configuredRoot
+		if (!pathsMatch(configuredRoot.path, canonicalRoot.path)) return configuredRoot
+
+		return roots.legacyScanRoots.firstOrNull(::safeIsDirectory) ?: configuredRoot
+	}
+
+	private fun resolveRoots(
+		globalSettingsFile: File?,
+		externalFilesDir: File?
+	): ResolvedRoots {
 		val paths = readGlobalPaths(globalSettingsFile)
 		val inferredBasePath = inferSerializedBaseContentPath(paths.managedPaths)
 		val defaultRoot = externalFilesDir?.let(::canonicalShadersRoot)
-		var resolvedRoot = when {
+		val usesInferredBasePath = !paths.hasBaseContentPath &&
+			inferredBasePath.isNotEmpty() &&
+			paths.managedPaths.any { it.matchesLegacyVisualPath(inferredBasePath) }
+		val canonicalRoot = when {
 			paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
 				canonicalShadersRoot(paths.baseContentPath)
-			!paths.hasBaseContentPath &&
-				inferredBasePath.isNotEmpty() &&
-				paths.managedPaths.any { it.matchesLegacyVisualPath(inferredBasePath) } ->
+			usesInferredBasePath ->
 				canonicalShadersRoot(inferredBasePath)
 			else -> defaultRoot
 		}
+		var resolvedRoot = canonicalRoot
 
 		val serializedBasePathToSkip = inferredBasePath.takeIf {
 			paths.hasBaseContentPath &&
@@ -106,7 +132,15 @@ object ShaderCatalog {
 			resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
 		}
 
-		return resolvedRoot
+		val legacyScanRoots = buildList {
+			externalFilesDir?.let { add(legacyShadersRoot(it)) }
+			when {
+				paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
+					add(legacyShadersRoot(File(paths.baseContentPath)))
+				usesInferredBasePath -> add(legacyShadersRoot(File(inferredBasePath)))
+			}
+		}
+		return ResolvedRoots(resolvedRoot, canonicalRoot, legacyScanRoots)
 	}
 
 	/** Return built-ins followed by sorted, deduplicated external shader names. */
@@ -167,6 +201,9 @@ object ShaderCatalog {
 		File(File(base, StoragePaths.VISUALS), StoragePaths.SHADERS)
 
 	private fun canonicalShadersRoot(base: String): File = canonicalShadersRoot(File(base))
+
+	private fun legacyShadersRoot(base: File): File =
+		File(File(base, StoragePaths.CONFIGURATIONS), StoragePaths.SHADERS)
 
 	private fun ManagedPath.matchesLegacyVisualPath(baseContentPath: String): Boolean =
 		matchesLegacyVisualPath(File(baseContentPath, StoragePaths.CONFIGURATIONS))
@@ -290,6 +327,12 @@ object ShaderCatalog {
 		var baseContentPath: String = "",
 		var hasBaseContentPath: Boolean = false,
 		val managedPaths: MutableList<ManagedPath> = mutableListOf()
+	)
+
+	private data class ResolvedRoots(
+		val configuredRoot: File?,
+		val canonicalRoot: File?,
+		val legacyScanRoots: List<File>
 	)
 
 	private data class ManagedPath(val key: String, val value: String)
