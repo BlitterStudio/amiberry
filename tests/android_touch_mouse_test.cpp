@@ -96,6 +96,10 @@ static void test_identity_and_reordered_events()
 	expect(recognizer.owns(second_same_device)
 		&& recognizer.state() == State::two_finger_pending,
 		"same-device pairing must not depend on ordinal finger IDs");
+	const auto tracked_keys = recognizer.tracked_keys();
+	expect(tracked_keys.size() == 2 && tracked_keys[0] == first
+		&& tracked_keys[1] == second_same_device,
+		"captured composite identities must be observable in acquisition order");
 	expect_no_actions(recognizer.handle(up({37, 999}, 21)),
 		"a mismatched terminal ID must not release tracked contacts");
 	expect(recognizer.tracked_contacts() == 2,

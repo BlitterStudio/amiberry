@@ -1219,6 +1219,18 @@ int get_mouse_index_from_sdl_id(SDL_MouseID which)
 }
 
 #ifndef LIBRETRO
+int get_tracked_mouse_index_from_sdl_id(SDL_MouseID which)
+{
+	if (!currprefs.input_multi_mouse || which == 0
+		|| which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID)
+		return -1;
+	for (int i = 0; i < num_mouse; ++i) {
+		if (mouse_id_map[i] == which)
+			return i;
+	}
+	return -1;
+}
+
 void handle_sdl_mouse_added(SDL_MouseID which)
 {
 	// In single-mouse mode the hotplug event is irrelevant: the newly added

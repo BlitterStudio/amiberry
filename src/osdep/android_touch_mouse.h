@@ -195,6 +195,15 @@ public:
 		return contacts_.size();
 	}
 
+	std::vector<TouchKey> tracked_keys() const
+	{
+		std::vector<TouchKey> keys;
+		keys.reserve(contacts_.size());
+		for (const auto& contact : contacts_)
+			keys.push_back(contact.key);
+		return keys;
+	}
+
 	bool has_recent_tap() const
 	{
 		return recent_tap_.has_value();
@@ -688,6 +697,11 @@ public:
 	std::size_t tracked_contacts() const
 	{
 		return recognizer_.tracked_contacts();
+	}
+
+	std::vector<TouchKey> tracked_keys() const
+	{
+		return recognizer_.tracked_keys();
 	}
 
 private:

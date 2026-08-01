@@ -163,6 +163,7 @@ extern void amiberry_restore_joystick_custom_mappings();
 // Multi-mouse support: SDL_MouseID to UAE device index mapping
 extern int get_mouse_index_from_sdl_id(SDL_MouseID which);
 #ifndef LIBRETRO
+extern int get_tracked_mouse_index_from_sdl_id(SDL_MouseID which);
 extern void handle_sdl_mouse_added(SDL_MouseID which);
 extern void handle_sdl_mouse_removed(SDL_MouseID which);
 #endif
