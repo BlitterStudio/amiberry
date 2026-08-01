@@ -147,8 +147,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 
 				var shaderExpanded by remember { mutableStateOf(false) }
 				val shaderUnavailable =
-					viewModel.isShaderCatalogLoaded &&
-						!viewModel.isShaderCatalogLoading &&
+					viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
 						settings.shader !in viewModel.shaderCatalogEntries
 				val unavailableLabel = stringResource(R.string.settings_display_shader_unavailable)
 				val shaderDisplayValue = if (shaderUnavailable) {
@@ -194,7 +193,9 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 							DropdownMenuItem(
 								text = { Text(shader) },
 								onClick = {
-									viewModel.updateSettings { s -> s.copy(shader = shader) }
+									if (shader != settings.shader) {
+										viewModel.updateSettings { s -> s.copy(shader = shader) }
+									}
 									shaderExpanded = false
 								}
 							)

@@ -33,6 +33,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+	enum class ShaderCatalogStatus {
+		NOT_LOADED,
+		LOADING,
+		LOADED
+	}
 
 	private val repository = FileRepository.getInstance(application)
 	private val configRepository = ConfigRepository.getInstance(application)
@@ -44,10 +49,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	var shaderCatalogEntries by mutableStateOf(ShaderCatalog.BUILT_INS)
 		private set
 
-	var isShaderCatalogLoading by mutableStateOf(false)
-		private set
-
-	var isShaderCatalogLoaded by mutableStateOf(false)
+	var shaderCatalogStatus by mutableStateOf(ShaderCatalogStatus.NOT_LOADED)
 		private set
 
 	private var shaderCatalogRefreshGeneration = 0
@@ -101,8 +103,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	fun refreshShaderCatalog() {
 		val refreshGeneration = ++shaderCatalogRefreshGeneration
-		isShaderCatalogLoading = true
-		isShaderCatalogLoaded = false
+		shaderCatalogStatus = ShaderCatalogStatus.LOADING
 
 		viewModelScope.launch {
 			val catalogEntries = withContext(Dispatchers.IO) {
@@ -116,8 +117,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 			if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch
 			shaderCatalogEntries = catalogEntries
-			isShaderCatalogLoading = false
-			isShaderCatalogLoaded = true
+			shaderCatalogStatus = ShaderCatalogStatus.LOADED
 		}
 	}
 

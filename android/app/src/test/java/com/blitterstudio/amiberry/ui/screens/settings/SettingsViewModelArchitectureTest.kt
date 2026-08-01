@@ -55,15 +55,18 @@ class SettingsViewModelArchitectureTest {
 				"var shaderCatalogEntries by mutableStateOf(ShaderCatalog.BUILT_INS)"
 			)
 		)
-		assertTrue(source.contains("var isShaderCatalogLoading by mutableStateOf(false)"))
-		assertTrue(source.contains("var isShaderCatalogLoaded by mutableStateOf(false)"))
+		assertTrue(source.contains("enum class ShaderCatalogStatus"))
+		assertTrue(
+			source.contains(
+				"var shaderCatalogStatus by mutableStateOf(ShaderCatalogStatus.NOT_LOADED)"
+			)
+		)
 	}
 
 	@Test
 	fun `shader catalog refresh resolves and scans away from the main thread`() {
 		assertTrue(source.contains("fun refreshShaderCatalog()"))
-		assertTrue(source.contains("isShaderCatalogLoading = true"))
-		assertTrue(source.contains("isShaderCatalogLoaded = false"))
+		assertTrue(source.contains("shaderCatalogStatus = ShaderCatalogStatus.LOADING"))
 		assertTrue(
 			Regex(
 				"""withContext\(Dispatchers\.IO\)\s*\{[\s\S]*ShaderCatalog\.resolveRoot\([\s\S]*ShaderCatalog\.scan\("""
@@ -86,8 +89,9 @@ class SettingsViewModelArchitectureTest {
 			"if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch"
 		)
 		assertTrue(source.indexOf("shaderCatalogEntries = catalogEntries") > staleResultGuard)
-		assertTrue(source.indexOf("isShaderCatalogLoading = false") > staleResultGuard)
-		assertTrue(source.indexOf("isShaderCatalogLoaded = true") > staleResultGuard)
+		assertTrue(
+			source.indexOf("shaderCatalogStatus = ShaderCatalogStatus.LOADED") > staleResultGuard
+		)
 	}
 
 	@Test

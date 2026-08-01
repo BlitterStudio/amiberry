@@ -39,6 +39,7 @@ class DisplayShaderSelectorArchitectureTest {
 
 	@Test
 	fun `shader selector updates only the configured shader`() {
+		assertTrue(source.contains("if (shader != settings.shader)"))
 		assertTrue(
 			source.contains(
 				"viewModel.updateSettings { s -> s.copy(shader = shader) }"
@@ -50,7 +51,7 @@ class DisplayShaderSelectorArchitectureTest {
 	fun `marks unavailable selections only after loading completes`() {
 		assertTrue(
 			Regex(
-				"""val shaderUnavailable =\s*viewModel\.isShaderCatalogLoaded\s*&&\s*!viewModel\.isShaderCatalogLoading\s*&&[\s\S]*settings\.shader !in viewModel\.shaderCatalogEntries"""
+				"""val shaderUnavailable =\s*viewModel\.shaderCatalogStatus == SettingsViewModel\.ShaderCatalogStatus\.LOADED\s*&&[\s\S]*settings\.shader !in viewModel\.shaderCatalogEntries"""
 			).containsMatchIn(source)
 		)
 		assertTrue(source.contains("R.string.settings_display_shader_unavailable_value"))
