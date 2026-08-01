@@ -33,7 +33,7 @@ object ConfigParser {
 		"sound_output", "sound_frequency", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
-		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution",
+		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
 		"joyport0", "joyport1",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_numpad", "input.default_osk",
 		"amiberry.android_joyport1",
@@ -150,6 +150,7 @@ object ConfigParser {
 			autoCrop = (kv["amiberry.gfx_auto_crop"] ?: kv["gfx_auto_crop"]).toBool(false),
 			scalingMethod = (kv["amiberry.scaling_method"] ?: kv["scaling_method"])?.toIntOrNull() ?: -1,
 			gfxAutoresolution = kv["gfx_autoresolution"]?.toIntOrNull() ?: 0,
+			shader = kv["amiberry.shader"]?.ifEmpty { "none" } ?: "none",
 
 			joyport0 = kv["joyport0"] ?: "mouse",
 			// Round-trip: prefer the explicit Android joyport1 key if present,

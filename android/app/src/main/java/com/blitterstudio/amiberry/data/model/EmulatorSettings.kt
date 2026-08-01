@@ -62,6 +62,7 @@ data class EmulatorSettings(
 	val autoCrop: Boolean = false,
 	val scalingMethod: Int = -1,        // -1 Auto, 0 Nearest, 1 Linear, 2 Integer
 	val gfxAutoresolution: Int = 0,     // 0 Disabled, 1 Always On, 10/33/66 = % (raw native value)
+	val shader: String = "none",
 
 	// Input
 	val joyport0: String = "mouse",

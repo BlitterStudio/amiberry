@@ -26,6 +26,7 @@ object SettingsChangeSummary {
 		addIfChanged("CD", fileName(before.cdImage), fileName(after.cdImage))
 		addIfChanged("Scaling", scaling(before.scalingMethod), scaling(after.scalingMethod))
 		addIfChanged("Resolution autoswitch", autoresolution(before.gfxAutoresolution), autoresolution(after.gfxAutoresolution))
+		addIfChanged("Native shader", before.shader, after.shader)
 		addIfChanged("Joy port 0", before.joyport0, after.joyport0)
 		addIfChanged("Joy port 1", before.joyport1, after.joyport1)
 		addIfChanged("On-screen joystick", yesNo(before.onScreenJoystick), yesNo(after.onScreenJoystick))
