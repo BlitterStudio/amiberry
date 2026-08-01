@@ -61,7 +61,13 @@ static inline bool amiberry_auto_crop_rect_within_horizontal_tolerance(
 
 	return std::abs(previous.x - current.x) <= tolerance
 		&& std::abs(amiberry_auto_crop_rect_right(previous)
-			- amiberry_auto_crop_rect_right(current)) <= tolerance;
+			- amiberry_auto_crop_rect_right(current)) <= tolerance
+		&& ((previous.x <= current.x
+				&& amiberry_auto_crop_rect_right(previous)
+					>= amiberry_auto_crop_rect_right(current))
+			|| (current.x <= previous.x
+				&& amiberry_auto_crop_rect_right(current)
+					>= amiberry_auto_crop_rect_right(previous)));
 }
 
 static inline bool amiberry_auto_crop_rect_contains(const AmiberryAutoCropRect& rect,

@@ -396,6 +396,21 @@ static void test_horizontal_edge_jitter_tolerance()
 	expect_true(amiberry_auto_crop_rect_within_horizontal_tolerance(
 		stable, { 38, 24, 322, 200 }, 2),
 		"A two-pixel right sprite extension should keep the stable crop");
+	expect_true(amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 37, 24, 322, 200 }, 2),
+		"A two-sided sprite expansion should keep the stable crop");
+	expect_true(amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 39, 24, 318, 200 }, 2),
+		"A two-sided sprite contraction should keep the stable crop");
+	expect_true(!amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 37, 24, 320, 200 }, 2),
+		"A one-pixel left crop translation must update the crop");
+	expect_true(!amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 39, 24, 320, 200 }, 2),
+		"A one-pixel right crop translation must update the crop");
+	expect_true(!amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 36, 24, 321, 200 }, 2),
+		"Mixed same-direction edge movement must update the crop");
 	expect_true(!amiberry_auto_crop_rect_within_horizontal_tolerance(
 		stable, { 35, 24, 323, 200 }, 2),
 		"A larger horizontal expansion must update the crop");
