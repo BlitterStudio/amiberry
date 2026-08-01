@@ -50,6 +50,7 @@ class WhdLoadAutoConfigTest {
 		File(configDir, "Lotus.uae").writeText("amiberry.shader=presets/game.glslp")
 
 		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
 			externalFilesDir = externalDir,
 			lhaFile = File("/games/Lotus.lha"),
 			currentShader = "presets/current.glslp"
@@ -65,6 +66,7 @@ class WhdLoadAutoConfigTest {
 		File(configDir, "Lotus.uae").writeText("amiberry.shader=")
 
 		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
 			externalFilesDir = externalDir,
 			lhaFile = File("/games/Lotus.lha"),
 			currentShader = "presets/current.glslp"
@@ -80,16 +82,19 @@ class WhdLoadAutoConfigTest {
 		File(configDir, "Lotus.uae").writeText("cpu_model=68020")
 
 		val fromConfigWithoutShader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
 			externalFilesDir = externalDir,
 			lhaFile = File("/games/Lotus.lha"),
 			currentShader = "presets/current.glslp"
 		)
 		val withoutConfig = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
 			externalFilesDir = externalDir,
 			lhaFile = File("/games/Another.lha"),
 			currentShader = "presets/current.glslp"
 		)
 		val withoutExternalDirectory = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
 			externalFilesDir = null,
 			lhaFile = File("/games/Lotus.lha"),
 			currentShader = "presets/current.glslp"
@@ -98,6 +103,25 @@ class WhdLoadAutoConfigTest {
 		assertEquals("presets/current.glslp", fromConfigWithoutShader)
 		assertEquals("presets/current.glslp", withoutConfig)
 		assertEquals("presets/current.glslp", withoutExternalDirectory)
+	}
+
+	@Test
+	fun `launch shader uses configured WHDLoad configuration directory`() {
+		val externalDir = tempDir.newFolder("configured-external")
+		val customConfigDir = tempDir.newFolder("configured-root")
+		val settingsFile = tempDir.newFile("configured-amiberry.conf").also {
+			it.writeText("config_path=${customConfigDir.path}")
+		}
+		File(customConfigDir, "Lotus.uae").writeText("amiberry.shader=presets/game.glslp")
+
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = settingsFile,
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("presets/game.glslp", shader)
 	}
 
 	@Test

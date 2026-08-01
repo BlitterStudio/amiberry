@@ -64,6 +64,37 @@ object ShaderCatalog {
 	fun resolveGlobalShader(globalSettingsFile: File?): String =
 		readGlobalSettings(globalSettingsFile).shader.ifEmpty { "none" }
 
+	/** Resolve the configuration directory used by native after loading amiberry.conf. */
+	fun resolveConfigurationRoot(globalSettingsFile: File?, externalFilesDir: File?): File? {
+		val paths = readGlobalSettings(globalSettingsFile)
+		val inferredBasePath = inferSerializedBaseContentPath(paths.managedPaths)
+		var resolvedRoot = when {
+			paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
+				File(paths.baseContentPath, StoragePaths.CONFIGURATIONS)
+			else -> externalFilesDir?.let { File(it, StoragePaths.CONFIGURATIONS) }
+		}
+
+		val serializedBasePathToSkip = inferredBasePath.takeIf {
+			paths.hasBaseContentPath &&
+				paths.baseContentPath.isNotEmpty() &&
+				it.isNotEmpty() &&
+				!pathsMatch(it, paths.baseContentPath)
+		}
+		for (line in paths.managedPaths) {
+			if (line.key != "config_path") continue
+			if (serializedBasePathToSkip != null &&
+				pathsMatch(
+					line.value,
+					File(serializedBasePathToSkip, StoragePaths.CONFIGURATIONS).path
+				)
+			) {
+				continue
+			}
+			resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
+		}
+		return resolvedRoot
+	}
+
 	/**
 	 * Resolve the shader root used by native Android.
 	 *

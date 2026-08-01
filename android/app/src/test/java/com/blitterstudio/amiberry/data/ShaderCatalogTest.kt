@@ -156,6 +156,116 @@ class ShaderCatalogTest {
 	}
 
 	@Test
+	fun configurationResolverUsesExternalDefaultWithoutSettings() {
+		val externalRoot = tempDir.newFolder("configuration-default")
+
+		assertEquals(
+			File(externalRoot, "Configurations"),
+			ShaderCatalog.resolveConfigurationRoot(null, externalRoot)
+		)
+	}
+
+	@Test
+	fun configurationResolverUsesNonEmptyBaseContentPath() {
+		val externalRoot = tempDir.newFolder("configuration-base-external")
+		val contentRoot = tempDir.newFolder("configuration-base-content")
+		val settings = tempDir.newFile("configuration-base.conf").also {
+			it.writeText("base_content_path=${contentRoot.path}")
+		}
+
+		assertEquals(
+			File(contentRoot, "Configurations"),
+			ShaderCatalog.resolveConfigurationRoot(settings, externalRoot)
+		)
+	}
+
+	@Test
+	fun configurationResolverUsesLastExplicitOverrideOverBase() {
+		val externalRoot = tempDir.newFolder("configuration-override-external")
+		val contentRoot = tempDir.newFolder("configuration-override-content")
+		val firstOverride = tempDir.newFolder("configuration-first-override")
+		val lastOverride = tempDir.newFolder("configuration-last-override")
+		val settings = tempDir.newFile("configuration-override.conf").also {
+			it.writeText("""
+				config_path=${firstOverride.path}
+				base_content_path=${contentRoot.path}
+				config_path=${lastOverride.path}
+			""".trimIndent())
+		}
+
+		assertEquals(
+			lastOverride,
+			ShaderCatalog.resolveConfigurationRoot(settings, externalRoot)
+		)
+	}
+
+	@Test
+	fun configurationResolverSkipsSerializedOverrideFromSupersededBase() {
+		val externalRoot = tempDir.newFolder("configuration-stale-external")
+		val activeRoot = tempDir.newFolder("configuration-active")
+		val serializedRoot = tempDir.newFolder("configuration-serialized")
+		val settings = tempDir.newFile("configuration-stale.conf").also {
+			it.writeText("""
+				base_content_path=${activeRoot.path}
+				config_path=${File(serializedRoot, "Configurations").path}
+				rom_path=${File(serializedRoot, "ROMs").path}
+				floppy_path=${File(serializedRoot, "Floppies").path}
+			""".trimIndent())
+		}
+
+		assertEquals(
+			File(activeRoot, "Configurations"),
+			ShaderCatalog.resolveConfigurationRoot(settings, externalRoot)
+		)
+	}
+
+	@Test
+	fun configurationResolverPreservesCustomOverrideAfterSkippedSerializedPath() {
+		val externalRoot = tempDir.newFolder("configuration-custom-external")
+		val activeRoot = tempDir.newFolder("configuration-custom-active")
+		val serializedRoot = tempDir.newFolder("configuration-custom-serialized")
+		val customRoot = tempDir.newFolder("configuration-custom-override")
+		val settings = tempDir.newFile("configuration-custom.conf").also {
+			it.writeText("""
+				base_content_path=${activeRoot.path}
+				config_path=${File(serializedRoot, "Configurations").path}
+				rom_path=${File(serializedRoot, "ROMs").path}
+				floppy_path=${File(serializedRoot, "Floppies").path}
+				config_path=${customRoot.path}
+			""".trimIndent())
+		}
+
+		assertEquals(
+			customRoot,
+			ShaderCatalog.resolveConfigurationRoot(settings, externalRoot)
+		)
+	}
+
+	@Test
+	fun configurationResolverHandlesEmptyAndUnavailablePathsSafely() {
+		val externalRoot = tempDir.newFolder("configuration-empty-external")
+		val emptyBase = tempDir.newFile("configuration-empty-base.conf").also {
+			it.writeText("base_content_path=")
+		}
+		val emptyOverride = tempDir.newFile("configuration-empty-override.conf").also {
+			it.writeText("config_path=")
+		}
+
+		assertEquals(
+			File(externalRoot, "Configurations"),
+			ShaderCatalog.resolveConfigurationRoot(emptyBase, externalRoot)
+		)
+		assertNull(ShaderCatalog.resolveConfigurationRoot(emptyOverride, externalRoot))
+		assertNull(ShaderCatalog.resolveConfigurationRoot(null, null))
+		assertNull(
+			ShaderCatalog.resolveConfigurationRoot(
+				File(tempDir.root, "missing-amiberry.conf"),
+				null
+			)
+		)
+	}
+
+	@Test
 	fun resolverPrefersExplicitShaderPathAndUsesLastValue() {
 		val settings = tempDir.newFile("amiberry.conf")
 		settings.writeText("""

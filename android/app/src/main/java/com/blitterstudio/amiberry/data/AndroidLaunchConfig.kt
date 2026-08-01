@@ -73,8 +73,10 @@ object AndroidLaunchConfig {
 		lhaPath: String,
 		currentSettings: EmulatorSettings
 	): PreparedWhdLoad {
+		val externalFilesDir = context.getExternalFilesDir(null)
 		val shader = WhdLoadAutoConfig.resolveLaunchShader(
-			externalFilesDir = context.getExternalFilesDir(null),
+			globalSettingsFile = ShaderCatalog.findSettingsFile(context.filesDir, externalFilesDir),
+			externalFilesDir = externalFilesDir,
 			lhaFile = File(lhaPath),
 			currentShader = currentSettings.shader
 		)

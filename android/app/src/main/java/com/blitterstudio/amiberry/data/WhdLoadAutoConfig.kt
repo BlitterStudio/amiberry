@@ -20,13 +20,15 @@ object WhdLoadAutoConfig {
 		currentSettings: EmulatorSettings
 	): EmulatorSettings? {
 		val lhaFile = File(whdLoadFile.path)
-		val externalDir = context.getExternalFilesDir(null) ?: return null
-		val configFile = File(File(externalDir, StoragePaths.CONFIGURATIONS), "${lhaFile.nameWithoutExtension}.uae")
-		if (configFile.exists()) {
+		val externalDir = context.getExternalFilesDir(null)
+		val globalSettingsFile = ShaderCatalog.findSettingsFile(context.filesDir, externalDir)
+		val configFile = resolvePerGameConfigFile(globalSettingsFile, externalDir, lhaFile)
+		if (configFile?.isFile == true) {
 			val parsed = ConfigParser.parse(configFile)
 			return settingsFromPerGameConfig(parsed, currentSettings)
 		}
 
+		if (externalDir == null) return null
 		val databaseFile = File(externalDir, "${StoragePaths.WHDBOOT}/game-data/whdload_db.json")
 		if (!databaseFile.exists()) return null
 		return try {
@@ -54,17 +56,23 @@ object WhdLoadAutoConfig {
 	}
 
 	internal fun resolveLaunchShader(
+		globalSettingsFile: File?,
 		externalFilesDir: File?,
 		lhaFile: File,
 		currentShader: String
 	): String {
-		if (externalFilesDir == null) return currentShader
-		val configFile = File(
-			File(externalFilesDir, StoragePaths.CONFIGURATIONS),
-			"${lhaFile.nameWithoutExtension}.uae"
-		)
+		val configFile = resolvePerGameConfigFile(globalSettingsFile, externalFilesDir, lhaFile)
+			?: return currentShader
 		if (!configFile.isFile) return currentShader
 		return resolveParsedLaunchShader(ConfigParser.parse(configFile), currentShader)
+	}
+
+	internal fun resolvePerGameConfigFile(
+		globalSettingsFile: File?,
+		externalFilesDir: File?,
+		lhaFile: File
+	): File? = ShaderCatalog.resolveConfigurationRoot(globalSettingsFile, externalFilesDir)?.let {
+		File(it, "${lhaFile.nameWithoutExtension}.uae")
 	}
 
 	private fun resolveParsedLaunchShader(
