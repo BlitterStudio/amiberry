@@ -200,6 +200,19 @@ if ! awk '
 	exit 1
 fi
 
+if ! awk '
+	/void render_display_defaults\(\)/ { in_render = 1 }
+	in_render && /if \(fullscreen_only\)/ { in_fullscreen_only = 1 }
+	in_fullscreen_only && /display_defaults\.screen_mode = PlayScreenMode::FullWindow;/ { default_mode = 1 }
+	in_fullscreen_only && /changed_prefs\.gfx_apmode\[APMODE_NATIVE\]\.gfx_fullscreen = GFX_FULLWINDOW;/ { native_mode = 1 }
+	in_fullscreen_only && /changed_prefs\.gfx_apmode\[APMODE_RTG\]\.gfx_fullscreen = GFX_FULLWINDOW;/ { rtg_mode = 1 }
+	in_fullscreen_only && /int screen_mode/ { exit default_mode && native_mode && rtg_mode ? 0 : 1 }
+	END { exit default_mode && native_mode && rtg_mode ? 0 : 1 }
+' "$source_file"; then
+	echo "Fullscreen-only Play mode must force Native and RTG pending preferences" >&2
+	exit 1
+fi
+
 if ! grep -F -q 'const bool manual_quickstart_override = quickstart_override_changed();' "$source_file"; then
 	echo "CD Play content must detect manual Quickstart overrides before CD autoload" >&2
 	exit 1

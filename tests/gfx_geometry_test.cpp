@@ -129,6 +129,106 @@ static void test_shader_render_size_resolves_to_compensated_viewport()
 		"shader rendering must keep a sufficiently large destination height");
 }
 
+static void expect_rect_eq(const AmiberryGfxRect& actual,
+	const int x, const int y, const int w, const int h, const char* message)
+{
+	expect_int_eq(actual.x, x, message);
+	expect_int_eq(actual.y, y, message);
+	expect_int_eq(actual.w, w, message);
+	expect_int_eq(actual.h, h, message);
+}
+
+static void test_full_drawable_presentation_geometry_is_unchanged()
+{
+	const AmiberryGfxRect available_area{0, 0, 1920, 1080};
+	int aspect_width = 0;
+	int aspect_height = 0;
+	amiberry_gfx_aspect_fit_dimensions(
+		available_area.w, available_area.h, 4.0f / 3.0f,
+		aspect_width, aspect_height);
+	const AmiberryGfxRect aspect_fit = amiberry_gfx_final_presentation_rect(
+		available_area, aspect_width, aspect_height, 4.0f / 3.0f, false);
+	expect_rect_eq(aspect_fit, 240, 0, 1440, 1080,
+		"full-drawable aspect fit must remain centered");
+
+	const int scale = amiberry_gfx_native_integer_scale(1920, 1080, 640, 400);
+	const AmiberryGfxRect integer_scaled = amiberry_gfx_final_presentation_rect(
+		available_area, 640 * scale, 400 * scale, 640.0f / 400.0f, false);
+	expect_rect_eq(integer_scaled, 320, 140, 1280, 800,
+		"full-drawable integer scaling must retain its whole-number size");
+}
+
+static void test_bezel_area_centers_integer_scaled_presentation()
+{
+	const AmiberryGfxRect available_area{100, 50, 1000, 700};
+	const int scale = amiberry_gfx_native_integer_scale(
+		available_area.w, available_area.h, 320, 240);
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		available_area, 320 * scale, 240 * scale, 4.0f / 3.0f, true);
+
+	expect_rect_eq(final_rect, 280, 160, 640, 480,
+		"integer-scaled presentation must be centered within the bezel hole origin");
+}
+
+static void test_rtg_center_remains_source_sized_inside_bezel_area()
+{
+	const AmiberryGfxRect available_area{250, 120, 640, 480};
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		available_area, 800, 600, 4.0f / 3.0f, false);
+
+	expect_rect_eq(final_rect, 170, 60, 800, 600,
+		"RTG Center must remain source-sized even when it exceeds the bezel hole");
+}
+
+static void test_bezel_bounded_integer_scaling_falls_back_below_one_x()
+{
+	const AmiberryGfxRect available_area{100, 50, 300, 180};
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		available_area, 640, 400, 640.0f / 400.0f, true);
+
+	expect_rect_eq(final_rect, 106, 50, 288, 180,
+		"sub-1x integer scaling must use a centered fractional aspect fit inside the bezel hole");
+}
+
+static void test_invalid_bounded_fallback_inputs_keep_presentation_size()
+{
+	AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		{10, 20, 0, 180}, 640, 400, 640.0f / 400.0f, true);
+	expect_rect_eq(final_rect, -310, -90, 640, 400,
+		"a zero-width fallback area must not resize the presentation");
+
+	final_rect = amiberry_gfx_final_presentation_rect(
+		{10, 20, 300, -10}, 640, 400, 640.0f / 400.0f, true);
+	expect_rect_eq(final_rect, -160, -185, 640, 400,
+		"a negative-height fallback area must not resize the presentation");
+
+	final_rect = amiberry_gfx_final_presentation_rect(
+		{10, 20, 300, 180}, 640, 400, 0.0f, true);
+	expect_rect_eq(final_rect, -160, -90, 640, 400,
+		"an invalid fallback aspect must not resize the presentation");
+}
+
+static void test_oversized_centered_presentation_covers_drawable()
+{
+	const AmiberryGfxRect drawable_area{0, 0, 1920, 1080};
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		drawable_area, 2000, 1200, 5.0f / 3.0f, false);
+
+	expect_int_eq(amiberry_gfx_rect_covers_area(final_rect, drawable_area), 1,
+		"an oversized presentation centered on the drawable must cover every edge");
+}
+
+static void test_oversized_offset_presentation_leaves_drawable_uncovered()
+{
+	const AmiberryGfxRect drawable_area{0, 0, 1920, 1080};
+	const AmiberryGfxRect offset_bezel_area{250, 120, 640, 480};
+	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+		offset_bezel_area, 2000, 1200, 5.0f / 3.0f, false);
+
+	expect_int_eq(amiberry_gfx_rect_covers_area(final_rect, drawable_area), 0,
+		"an oversized presentation shifted by its bezel hole must clear uncovered drawable edges");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
@@ -137,5 +237,12 @@ int main()
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
 	test_corrected_integer_scaling_stays_within_fullscreen_mode();
 	test_shader_render_size_resolves_to_compensated_viewport();
+	test_full_drawable_presentation_geometry_is_unchanged();
+	test_bezel_area_centers_integer_scaled_presentation();
+	test_rtg_center_remains_source_sized_inside_bezel_area();
+	test_bezel_bounded_integer_scaling_falls_back_below_one_x();
+	test_invalid_bounded_fallback_inputs_keep_presentation_size();
+	test_oversized_centered_presentation_covers_drawable();
+	test_oversized_offset_presentation_leaves_drawable_uncovered();
 	return failures == 0 ? 0 : 1;
 }

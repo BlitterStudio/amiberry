@@ -19,6 +19,7 @@
 #include "play_content_detection.h"
 #include "play_setup.h"
 #include "rommgr.h"
+#include "shader_catalog.h"
 #include "target.h"
 
 namespace {
@@ -36,22 +37,6 @@ int quickstart_override_model = 0;
 int quickstart_override_conf = 0;
 int quickstart_override_compa = 0;
 std::string applied_config_summary;
-
-const char* shader_choice_name(const PlayShaderChoice choice)
-{
-	switch (choice) {
-	case PlayShaderChoice::None:
-		return "none";
-	case PlayShaderChoice::Crt:
-		return "tv";
-	case PlayShaderChoice::Monitor1084:
-		return "1084";
-	case PlayShaderChoice::Custom:
-		return nullptr;
-	}
-
-	return "none";
-}
 
 const char* follow_up_text(const PlayFollowUp follow_up)
 {
@@ -143,21 +128,8 @@ void initialize_display_defaults()
 		break;
 	}
 
-	const auto is_custom_shader = [](const char* shader) {
-		return shader[0] != '\0' &&
-			strcmp(shader, "none") != 0 &&
-			strcmp(shader, "tv") != 0 &&
-			strcmp(shader, "1084") != 0;
-	};
-
-	if (is_custom_shader(changed_prefs.shader) || is_custom_shader(changed_prefs.shader_rtg))
-		display_defaults.shader = PlayShaderChoice::Custom;
-	else if (strcmp(changed_prefs.shader, "1084") == 0)
-		display_defaults.shader = PlayShaderChoice::Monitor1084;
-	else if (strcmp(changed_prefs.shader, "tv") == 0)
-		display_defaults.shader = PlayShaderChoice::Crt;
-	else
-		display_defaults.shader = PlayShaderChoice::None;
+	const char* native_shader = changed_prefs.shader[0] ? changed_prefs.shader : "none";
+	display_defaults.shader = native_shader;
 
 	display_defaults.auto_crop = changed_prefs.gfx_auto_crop;
 	display_defaults_initialized = true;
@@ -185,11 +157,7 @@ void apply_display_defaults_to_changed_prefs()
 	if (changed_prefs.gfx_auto_crop)
 		changed_prefs.gfx_manual_crop = false;
 
-	if (!prefs.preserve_shader) {
-		const char* shader = shader_choice_name(display_defaults.shader);
-		copy_shader_name(changed_prefs.shader, sizeof changed_prefs.shader, shader);
-		copy_shader_name(changed_prefs.shader_rtg, sizeof changed_prefs.shader_rtg, shader);
-	}
+	copy_shader_name(changed_prefs.shader, sizeof changed_prefs.shader, prefs.shader.c_str());
 }
 
 void save_display_defaults()
@@ -201,14 +169,7 @@ void save_display_defaults()
 	amiberry_options.default_gfx_autoresolution = prefs.gfx_autoresolution;
 	amiberry_options.default_auto_crop = prefs.gfx_auto_crop;
 
-	if (prefs.preserve_shader) {
-		copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, changed_prefs.shader);
-		copy_shader_name(amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg, changed_prefs.shader_rtg);
-	} else {
-		const char* shader = shader_choice_name(display_defaults.shader);
-		copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, shader);
-		copy_shader_name(amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg, shader);
-	}
+	copy_shader_name(amiberry_options.shader, sizeof amiberry_options.shader, prefs.shader.c_str());
 
 	save_amiberry_settings();
 }
@@ -761,28 +722,62 @@ bool render_combo(const char* label, int* value, const char* const* items, const
 	return changed;
 }
 
+bool render_shader_combo(std::string& value, const std::vector<std::string>& items)
+{
+	bool changed = false;
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted("Shader:");
+	ImGui::SameLine(BUTTON_WIDTH * 1.5f);
+	ImGui::SetNextItemWidth(BUTTON_WIDTH * 1.5f);
+	if (ImGui::BeginCombo("##Shader:", value.c_str())) {
+		for (const auto& item : items) {
+			const bool selected = value == item;
+			if (ImGui::Selectable(item.c_str(), selected)) {
+				value = item;
+				changed = true;
+			}
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	ImGui::Spacing();
+	return changed;
+}
+
 void render_display_defaults()
 {
 	initialize_display_defaults();
 
 	static const char* screen_items[] = { "Windowed", "Full-window" };
 	static const char* scaling_items[] = { "Auto", "Integer", "Smooth" };
-	static const char* shader_items[] = { "None", "CRT", "1084", "Custom" };
+	const auto& shader_items = get_available_shader_names();
+#ifdef __ANDROID__
+	constexpr bool fullscreen_only = true;
+#else
+	const bool fullscreen_only = kmsdrm_detected;
+#endif
 
-	if (kmsdrm_detected)
+	if (fullscreen_only) {
 		display_defaults.screen_mode = PlayScreenMode::FullWindow;
+		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
+		changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	}
 
 	int screen_mode = static_cast<int>(display_defaults.screen_mode);
-	if (kmsdrm_detected)
+	if (fullscreen_only)
 		ImGui::BeginDisabled();
 	if (render_combo("Screen mode:", &screen_mode, screen_items, IM_ARRAYSIZE(screen_items))) {
 		display_defaults.screen_mode = static_cast<PlayScreenMode>(screen_mode);
 		apply_display_defaults_to_changed_prefs();
 	}
-	if (kmsdrm_detected)
+	if (fullscreen_only)
 		ImGui::EndDisabled();
-	ShowHelpMarker(kmsdrm_detected
-		? "KMSDRM always uses the active console display in Full-window mode."
+	ShowHelpMarker(fullscreen_only
+		? (kmsdrm_detected
+			? "KMSDRM always uses the active console display in Full-window mode."
+			: "Android always uses the device display in Full-window mode.")
 		: "Run the emulation in a desktop window or a borderless Full-window.");
 
 	int scaling = static_cast<int>(display_defaults.scaling);
@@ -800,13 +795,11 @@ void render_display_defaults()
 		apply_display_defaults_to_changed_prefs();
 	ShowHelpMarker("Automatically crop black borders from the display.");
 
-	int shader = static_cast<int>(display_defaults.shader);
-	if (render_combo("Shader:", &shader, shader_items, IM_ARRAYSIZE(shader_items))) {
-		display_defaults.shader = static_cast<PlayShaderChoice>(shader);
+	if (render_shader_combo(display_defaults.shader, shader_items)) {
 		apply_display_defaults_to_changed_prefs();
 	}
-	ShowHelpMarker("This Play choice is applied after content auto-configuration, including WHDLoad. "
-		"Custom preserves the native and RTG shader names selected in Display or Global Settings.");
+	ShowHelpMarker("Uses the same shader list as Filter's Native Display Shader. This Play choice is "
+		"applied after content auto-configuration, including WHDLoad. The RTG shader is unchanged.");
 
 	ImGui::Spacing();
 	if (AmigaButton("Apply now", ImVec2(BUTTON_WIDTH * 1.2f, BUTTON_HEIGHT)))
