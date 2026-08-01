@@ -9,7 +9,7 @@ import org.junit.Test
 class IntentImportExecutorTest {
 
 	@Test
-	fun `mediaLaunchFor launches WHDLoad with control config and shader override`() {
+	fun `mediaLaunchFor carries centrally prepared WHDLoad values`() {
 		assertEquals(
 			IntentImportExecutor.Launch.WhdLoad(
 				lhaPath = "/games/Lotus.lha",

@@ -351,9 +351,9 @@ fun QuickStartScreen(
 								val whdloadPath = selectedWhdloadGame?.path ?: return@ExtendedFloatingActionButton
 								val controlSettings = settingsViewModel.settings
 								scope.launchGuarded(launchGuard) {
-									val configFile = try {
+									val prepared = try {
 										withContext(Dispatchers.IO) {
-											AndroidLaunchConfig.writeControlConfig(context, controlSettings)
+											AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
 										}
 									} catch (_: Exception) {
 										snackbarHostState.showSnackbar(configWriteFailedMessage)
@@ -362,8 +362,8 @@ fun QuickStartScreen(
 									EmulatorLauncher.launchWhdload(
 										context = context,
 										lhaPath = whdloadPath,
-										configPath = configFile.absolutePath,
-										shaderOverride = controlSettings.shader
+										configPath = prepared.configFile.absolutePath,
+										shaderOverride = prepared.shaderOverride
 									)
 								}
 							}
@@ -694,9 +694,9 @@ fun QuickStartScreen(
 													val whdloadPath = entry.optString("path")
 													val controlSettings = settingsViewModel.settings
 													scope.launchGuarded(launchGuard) {
-														val configFile = try {
+														val prepared = try {
 															withContext(Dispatchers.IO) {
-																AndroidLaunchConfig.writeControlConfig(context, controlSettings)
+																AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
 															}
 														} catch (_: Exception) {
 															snackbarHostState.showSnackbar(configWriteFailedMessage)
@@ -705,8 +705,8 @@ fun QuickStartScreen(
 														EmulatorLauncher.launchWhdload(
 															context = context,
 															lhaPath = whdloadPath,
-															configPath = configFile.absolutePath,
-															shaderOverride = controlSettings.shader
+															configPath = prepared.configFile.absolutePath,
+															shaderOverride = prepared.shaderOverride
 														)
 													}
 												}

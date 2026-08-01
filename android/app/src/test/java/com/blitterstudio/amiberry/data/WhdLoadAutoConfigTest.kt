@@ -4,6 +4,7 @@ import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -40,6 +41,63 @@ class WhdLoadAutoConfigTest {
 		)
 
 		assertEquals("tv", settings.shader)
+	}
+
+	@Test
+	fun `launch shader uses explicit per-game selection`() {
+		val externalDir = tempDir.newFolder("external")
+		val configDir = File(externalDir, "Configurations").apply { mkdirs() }
+		File(configDir, "Lotus.uae").writeText("amiberry.shader=presets/game.glslp")
+
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("presets/game.glslp", shader)
+	}
+
+	@Test
+	fun `launch shader normalizes explicit empty per-game selection`() {
+		val externalDir = tempDir.newFolder("empty-shader")
+		val configDir = File(externalDir, "Configurations").apply { mkdirs() }
+		File(configDir, "Lotus.uae").writeText("amiberry.shader=")
+
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("none", shader)
+	}
+
+	@Test
+	fun `launch shader falls back when per-game selection is absent`() {
+		val externalDir = tempDir.newFolder("fallback")
+		val configDir = File(externalDir, "Configurations").apply { mkdirs() }
+		File(configDir, "Lotus.uae").writeText("cpu_model=68020")
+
+		val fromConfigWithoutShader = WhdLoadAutoConfig.resolveLaunchShader(
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+		val withoutConfig = WhdLoadAutoConfig.resolveLaunchShader(
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Another.lha"),
+			currentShader = "presets/current.glslp"
+		)
+		val withoutExternalDirectory = WhdLoadAutoConfig.resolveLaunchShader(
+			externalFilesDir = null,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("presets/current.glslp", fromConfigWithoutShader)
+		assertEquals("presets/current.glslp", withoutConfig)
+		assertEquals("presets/current.glslp", withoutExternalDirectory)
 	}
 
 	@Test

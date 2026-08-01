@@ -168,8 +168,16 @@ object IntentImportExecutor {
 			FileRepository.getInstance(context).rescanCategory(category)
 			val feedback = ImportFeedback.fileImported(importedName)
 			val currentSettings = AndroidLaunchConfig.loadLastSessionSettings(context)
-			val configPath = when (category) {
-				FileCategory.WHDLOAD_GAMES -> AndroidLaunchConfig.writeControlConfig(context, currentSettings).absolutePath
+			val launch = when (category) {
+				FileCategory.WHDLOAD_GAMES -> {
+					val prepared = AndroidLaunchConfig.prepareWhdLoad(context, importedPath, currentSettings)
+					mediaLaunchFor(
+						category = category,
+						importedPath = importedPath,
+						configPath = prepared.configFile.absolutePath,
+						shaderOverride = prepared.shaderOverride
+					)
+				}
 				FileCategory.FLOPPIES -> writeIntentQuickStartConfig(
 					context = context,
 					model = AmigaModel.A500,
@@ -177,7 +185,7 @@ object IntentImportExecutor {
 					floppy0 = importedPath,
 					floppy1 = "",
 					cdImage = ""
-				)
+				).let { mediaLaunchFor(category, importedPath, it) }
 				FileCategory.CD_IMAGES -> writeIntentQuickStartConfig(
 					context = context,
 					model = AmigaModel.CD32,
@@ -185,20 +193,13 @@ object IntentImportExecutor {
 					floppy0 = "",
 					floppy1 = "",
 					cdImage = importedPath
-				)
+				).let { mediaLaunchFor(category, importedPath, it) }
 				FileCategory.ROMS,
 				FileCategory.HARD_DRIVES -> null
 			}
 			PreparedImport(
 				feedback = feedback,
-				launch = configPath?.let {
-					mediaLaunchFor(
-						category = category,
-						importedPath = importedPath,
-						configPath = it,
-						shaderOverride = currentSettings.shader
-					)
-				}
+				launch = launch
 			)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to prepare imported media from intent", e)

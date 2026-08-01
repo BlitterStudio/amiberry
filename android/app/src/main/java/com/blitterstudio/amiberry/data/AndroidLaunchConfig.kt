@@ -12,6 +12,11 @@ object AndroidLaunchConfig {
 	const val INTENT_QUICKSTART_CONFIG = ".intent_quickstart_settings.uae"
 	const val CONTROL_CONFIG = ".android_controls.uae"
 
+	data class PreparedWhdLoad(
+		val configFile: File,
+		val shaderOverride: String
+	)
+
 	fun loadLastSessionSettings(context: Context): EmulatorSettings {
 		return try {
 			val sessionFile = ConfigGenerator.configFile(context, LAST_SESSION_FILE)
@@ -53,11 +58,27 @@ object AndroidLaunchConfig {
 		)
 	}
 
-	fun writeControlConfig(
+	private fun writeControlConfig(
 		context: Context,
 		settings: EmulatorSettings,
 		filename: String = CONTROL_CONFIG
 	): File = ConfigGenerator.writeControlConfig(context, settings, filename)
+
+	fun prepareWhdLoad(
+		context: Context,
+		lhaPath: String,
+		currentSettings: EmulatorSettings
+	): PreparedWhdLoad {
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			externalFilesDir = context.getExternalFilesDir(null),
+			lhaFile = File(lhaPath),
+			currentShader = currentSettings.shader
+		)
+		return PreparedWhdLoad(
+			configFile = writeControlConfig(context, currentSettings.copy(shader = shader)),
+			shaderOverride = shader
+		)
+	}
 
 	fun writeQuickStartConfig(
 		context: Context,

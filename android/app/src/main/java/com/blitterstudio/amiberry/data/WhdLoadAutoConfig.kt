@@ -50,11 +50,30 @@ object WhdLoadAutoConfig {
 			explicitKeys = parsed.explicitKeys,
 			fallback = currentSettings
 		)
-		return if ("amiberry.shader" in parsed.explicitKeys) {
-			settings
-		} else {
-			settings.copy(shader = currentSettings.shader)
-		}
+		return settings.copy(shader = resolveParsedLaunchShader(parsed, currentSettings.shader))
+	}
+
+	internal fun resolveLaunchShader(
+		externalFilesDir: File?,
+		lhaFile: File,
+		currentShader: String
+	): String {
+		if (externalFilesDir == null) return currentShader
+		val configFile = File(
+			File(externalFilesDir, StoragePaths.CONFIGURATIONS),
+			"${lhaFile.nameWithoutExtension}.uae"
+		)
+		if (!configFile.isFile) return currentShader
+		return resolveParsedLaunchShader(ConfigParser.parse(configFile), currentShader)
+	}
+
+	private fun resolveParsedLaunchShader(
+		parsed: ConfigParser.ParsedConfig,
+		currentShader: String
+	): String = if ("amiberry.shader" in parsed.explicitKeys) {
+		parsed.settings.shader
+	} else {
+		currentShader
 	}
 
 	fun settingsFromDatabaseJson(
