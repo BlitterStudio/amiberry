@@ -513,6 +513,67 @@ static void test_button_source_composition()
 		"clearing the remaining source must emit the aggregate release");
 }
 
+static void test_pump_coordinator_click_and_deadline_ordering()
+{
+	const TouchKey primary{221, 921};
+	const TouchKey secondary{221, 922};
+	PumpCoordinator coordinator;
+
+	expect_no_actions(coordinator.begin_pump(),
+		"the first pump must not retire a click");
+	expect_no_actions(coordinator.handle(down(primary, 0)),
+		"tap down must remain pending in the coordinator");
+	expect_single_action(coordinator.handle(up(primary, 20)),
+		ActionType::button_down, MouseButton::left,
+		"a click pulse must become an observable left down");
+	expect_single_action(coordinator.begin_pump(),
+		ActionType::button_up, MouseButton::left,
+		"the click release must wait until the next pump boundary");
+
+	coordinator.handle(down(primary, 100, 0.0, 0.0, 0.10));
+	coordinator.handle(down(secondary, 110, 0.0, 0.0, 0.10));
+	expect_no_actions(coordinator.handle(up(primary, 509)),
+		"a queued terminal event must retire the pair without a button");
+	expect_no_actions(coordinator.tick(ns(510)),
+		"a later deadline tick must not activate a retired right hold");
+}
+
+static void test_pump_coordinator_neutralizes_pending_click()
+{
+	const TouchKey key{231, 931};
+	PumpCoordinator coordinator;
+	coordinator.handle(down(key, 0));
+	coordinator.handle(up(key, 20));
+	expect_single_action(coordinator.neutralize(), ActionType::button_up,
+		MouseButton::left,
+		"neutralization must release a click that is waiting for the next pump");
+	expect_no_actions(coordinator.begin_pump(),
+		"a neutralized click must not release twice on the next pump");
+}
+
+static void test_nonowning_added_contact_terminates_before_overlay_capture()
+{
+	const TouchKey primary{241, 941};
+	const TouchKey overlay_contact{241, 942};
+	PumpCoordinator coordinator;
+	coordinator.handle(down(primary, 0));
+	coordinator.handle(up(primary, 20));
+	coordinator.begin_pump();
+	coordinator.handle(down(primary, 100));
+	coordinator.tick(ns(500));
+
+	expect_single_action(
+		coordinator.terminate_for_nonowning_contact(overlay_contact),
+		ActionType::button_up, MouseButton::left,
+		"an overlay candidate must release an active left drag first");
+	expect(coordinator.state() == State::drain_until_all_up
+		&& coordinator.owns(primary) && !coordinator.owns(overlay_contact),
+		"the added overlay contact must remain nonowning while trackpad survivors drain");
+	expect_no_actions(coordinator.handle(motion(primary, 510, 20.0, 0.0,
+		10.0, 0.0)),
+		"a surviving trackpad contact must remain inert after overlay takeover");
+}
+
 int main()
 {
 	test_identity_and_reordered_events();
@@ -529,5 +590,8 @@ int main()
 	test_cancellation_matrix();
 	test_mapping_loss_uses_same_neutralization_contract();
 	test_button_source_composition();
+	test_pump_coordinator_click_and_deadline_ordering();
+	test_pump_coordinator_neutralizes_pending_click();
+	test_nonowning_added_contact_terminates_before_overlay_capture();
 	return failures == 0 ? 0 : 1;
 }

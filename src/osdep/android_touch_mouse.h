@@ -157,6 +157,29 @@ public:
 		return neutralize();
 	}
 
+	std::vector<Action> terminate_for_nonowning_contact(TouchKey key)
+	{
+		if (!active_touch_id_ || key.touch_id != *active_touch_id_
+			|| owns(key))
+			return {};
+		std::vector<Action> actions;
+		if (state_ == State::left_drag)
+			actions.push_back(button_action(ActionType::button_up, MouseButton::left));
+		else if (state_ == State::right_drag)
+			actions.push_back(button_action(ActionType::button_up, MouseButton::right));
+		else
+			return {};
+		state_ = State::drain_until_all_up;
+		recent_tap_.reset();
+		clear_motion_accumulators();
+		return actions;
+	}
+
+	void forget_recent_tap()
+	{
+		recent_tap_.reset();
+	}
+
 	State state() const
 	{
 		return state_;
@@ -601,6 +624,100 @@ private:
 	}
 
 	std::array<std::array<bool, button_count>, source_count> sources_{};
+};
+
+class PumpCoordinator {
+public:
+	explicit PumpCoordinator(GestureProfile profile = {})
+		: recognizer_(profile)
+	{
+	}
+
+	std::vector<Action> begin_pump()
+	{
+		if (!click_release_pending_)
+			return {};
+		click_release_pending_ = false;
+		return {{ActionType::button_up, MouseButton::left, 0, 0}};
+	}
+
+	std::vector<Action> handle(const TouchFact& fact)
+	{
+		return expand(recognizer_.handle(fact));
+	}
+
+	std::vector<Action> tick(Timestamp now_ns)
+	{
+		return expand(recognizer_.tick(now_ns));
+	}
+
+	std::vector<Action> neutralize()
+	{
+		auto actions = recognizer_.neutralize();
+		const bool releases_left = std::any_of(actions.begin(), actions.end(),
+			[](const Action& action) {
+				return action.type == ActionType::button_up
+					&& action.button == MouseButton::left;
+			});
+		if (click_release_pending_ && !releases_left)
+			actions.push_back({ActionType::button_up, MouseButton::left, 0, 0});
+		click_release_pending_ = false;
+		return actions;
+	}
+
+	std::vector<Action> terminate_for_nonowning_contact(TouchKey key)
+	{
+		return expand(recognizer_.terminate_for_nonowning_contact(key));
+	}
+
+	void forget_recent_tap()
+	{
+		recognizer_.forget_recent_tap();
+	}
+
+	State state() const
+	{
+		return recognizer_.state();
+	}
+
+	bool owns(TouchKey key) const
+	{
+		return recognizer_.owns(key);
+	}
+
+	std::size_t tracked_contacts() const
+	{
+		return recognizer_.tracked_contacts();
+	}
+
+private:
+	std::vector<Action> expand(const std::vector<Action>& source_actions)
+	{
+		std::vector<Action> actions;
+		for (const auto& action : source_actions) {
+			if (action.type == ActionType::click_pulse) {
+				if (!click_release_pending_)
+					actions.push_back({ActionType::button_down,
+						MouseButton::left, 0, 0});
+				click_release_pending_ = true;
+				continue;
+			}
+			if (action.type == ActionType::button_down
+				&& action.button == MouseButton::left
+				&& click_release_pending_) {
+				click_release_pending_ = false;
+				continue;
+			}
+			if (action.type == ActionType::button_up
+				&& action.button == MouseButton::left)
+				click_release_pending_ = false;
+			actions.push_back(action);
+		}
+		return actions;
+	}
+
+	Recognizer recognizer_;
+	bool click_release_pending_ = false;
 };
 
 } // namespace android_touch_mouse
