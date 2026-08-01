@@ -67,14 +67,18 @@ sealed interface LaunchRequest {
 
 	data class WhdLoad(
 		val lhaPath: String,
-		val configPath: String? = null
+		val configPath: String? = null,
+		val shaderOverride: String? = null
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> {
 			val args = mutableListOf("--rescan-roms")
 			configPath?.takeIf { it.isNotBlank() }?.let {
 				args.addAll(listOf("--config", it))
 			}
-			args.addAll(listOf("--autoload", lhaPath, "-G"))
+			args.addAll(listOf("--autoload", lhaPath))
+			// WHDLoad per-game configs can reset preferences, so reapply the shader after autoload.
+			shaderOverride?.let { args.addAll(listOf("-s", "amiberry.shader=$it")) }
+			args.add("-G")
 			return args.toTypedArray()
 		}
 	}

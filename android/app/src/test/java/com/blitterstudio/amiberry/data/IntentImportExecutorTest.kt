@@ -9,16 +9,18 @@ import org.junit.Test
 class IntentImportExecutorTest {
 
 	@Test
-	fun `mediaLaunchFor launches WHDLoad with control config`() {
+	fun `mediaLaunchFor launches WHDLoad with control config and shader override`() {
 		assertEquals(
 			IntentImportExecutor.Launch.WhdLoad(
 				lhaPath = "/games/Lotus.lha",
-				configPath = "/configs/controls.uae"
+				configPath = "/configs/controls.uae",
+				shaderOverride = "presets/custom.glslp"
 			),
 			IntentImportExecutor.mediaLaunchFor(
 				category = FileCategory.WHDLOAD_GAMES,
 				importedPath = "/games/Lotus.lha",
-				configPath = "/configs/controls.uae"
+				configPath = "/configs/controls.uae",
+				shaderOverride = "presets/custom.glslp"
 			)
 		)
 	}

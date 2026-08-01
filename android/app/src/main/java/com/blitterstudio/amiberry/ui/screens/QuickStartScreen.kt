@@ -359,7 +359,12 @@ fun QuickStartScreen(
 										snackbarHostState.showSnackbar(configWriteFailedMessage)
 										return@launchGuarded
 									}
-									EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
+									EmulatorLauncher.launchWhdload(
+										context = context,
+										lhaPath = whdloadPath,
+										configPath = configFile.absolutePath,
+										shaderOverride = controlSettings.shader
+									)
 								}
 							}
 							QuickStartLaunchMode.DISK,
@@ -697,7 +702,12 @@ fun QuickStartScreen(
 															snackbarHostState.showSnackbar(configWriteFailedMessage)
 															return@launchGuarded
 														}
-														EmulatorLauncher.launchWhdload(context, whdloadPath, configFile.absolutePath)
+														EmulatorLauncher.launchWhdload(
+															context = context,
+															lhaPath = whdloadPath,
+															configPath = configFile.absolutePath,
+															shaderOverride = controlSettings.shader
+														)
 													}
 												}
 												"rp9" -> {

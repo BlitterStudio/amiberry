@@ -32,7 +32,8 @@ object IntentImportExecutor {
 
 		data class WhdLoad(
 			val lhaPath: String,
-			val configPath: String
+			val configPath: String,
+			val shaderOverride: String? = null
 		) : Launch
 
 		data class Rp9(
@@ -58,12 +59,14 @@ object IntentImportExecutor {
 	internal fun mediaLaunchFor(
 		category: FileCategory,
 		importedPath: String,
-		configPath: String
+		configPath: String,
+		shaderOverride: String? = null
 	): Launch? =
 		when (category) {
 			FileCategory.WHDLOAD_GAMES -> Launch.WhdLoad(
 				lhaPath = importedPath,
-				configPath = configPath
+				configPath = configPath,
+				shaderOverride = shaderOverride
 			)
 			FileCategory.FLOPPIES -> Launch.QuickStart(
 				model = AmigaModel.A500,
@@ -188,7 +191,14 @@ object IntentImportExecutor {
 			}
 			PreparedImport(
 				feedback = feedback,
-				launch = configPath?.let { mediaLaunchFor(category, importedPath, it) }
+				launch = configPath?.let {
+					mediaLaunchFor(
+						category = category,
+						importedPath = importedPath,
+						configPath = it,
+						shaderOverride = currentSettings.shader
+					)
+				}
 			)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to prepare imported media from intent", e)

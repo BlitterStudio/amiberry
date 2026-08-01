@@ -146,6 +146,29 @@ class LaunchRequestTest {
 	}
 
 	@Test
+	fun `whdload request reapplies shader after autoload`() {
+		val lhaPath = "/tmp/game.lha"
+		val configPath = "/tmp/android-controls.uae"
+
+		val args = LaunchRequest.WhdLoad(
+			lhaPath = lhaPath,
+			configPath = configPath,
+			shaderOverride = "presets/custom.glslp"
+		).toArgs()
+
+		assertArrayEquals(
+			arrayOf(
+				"--rescan-roms",
+				"--config", configPath,
+				"--autoload", lhaPath,
+				"-s", "amiberry.shader=presets/custom.glslp",
+				"-G"
+			),
+			args
+		)
+	}
+
+	@Test
 	fun `saved config request with skip gui true adds skip gui flag`() {
 		val configPath = "/tmp/saved.uae"
 
