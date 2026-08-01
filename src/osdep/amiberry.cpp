@@ -458,7 +458,7 @@ static void android_touch_mouse_begin_pump()
 		android_touch_mouse_index);
 }
 
-static void android_touch_mouse_tick(android_touch_mouse::Timestamp now_ns)
+static void android_touch_mouse_tick()
 {
 	if (android_touch_mouse_coordinator.tracked_contacts() == 0)
 		return;
@@ -468,7 +468,8 @@ static void android_touch_mouse_tick(android_touch_mouse::Timestamp now_ns)
 	}
 	if (android_touch_mouse_index < 0)
 		return;
-	android_apply_touch_mouse_actions(android_touch_mouse_coordinator.tick(now_ns),
+	android_apply_touch_mouse_actions(
+		android_touch_mouse_coordinator.tick(SDL_GetTicksNS()),
 		android_touch_mouse_index);
 }
 
@@ -503,7 +504,6 @@ static bool SDLCALL android_touch_event_filter(void*, SDL_Event* event)
 
 static void neutralize_touch_controls()
 {
-	// Idempotently end every captured overlay and free-area touch gesture.
 	on_screen_joystick_release_all();
 #ifdef __ANDROID__
 	android_touch_mouse_neutralize();
@@ -514,8 +514,8 @@ static void drain_pending_touch_neutralization()
 {
 #ifdef __ANDROID__
 	// process_event() is the SDL event/main-thread boundary for input injection.
-	if (android_touch_neutralization_pending.load(std::memory_order_acquire)
-		&& android_touch_neutralization_pending.exchange(false, std::memory_order_acq_rel))
+	if (android_touch_neutralization_pending.exchange(false,
+		std::memory_order_acq_rel))
 		neutralize_touch_controls();
 #endif
 }
@@ -3929,7 +3929,7 @@ int handle_msgpump(bool vblank)
 	}
 	drain_pending_touch_neutralization();
 #ifdef __ANDROID__
-	android_touch_mouse_tick(SDL_GetTicksNS());
+	android_touch_mouse_tick();
 #endif
 	if (got_event && currprefs.clipboard_sharing)
 		update_clipboard();

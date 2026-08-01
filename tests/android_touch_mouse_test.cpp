@@ -453,14 +453,14 @@ static void test_cancellation_matrix()
 	expect_cancelled(drain, false, MouseButton::none, "drain");
 }
 
-static void test_mapping_loss_uses_same_neutralization_contract()
+static void test_mapping_loss_uses_neutralization_contract()
 {
 	Recognizer recognizer;
 	const TouchKey primary{211, 911};
 	const TouchKey secondary{211, 912};
 	begin_pair(recognizer, primary, secondary);
 	recognizer.tick(ns(410));
-	expect_single_action(recognizer.mapping_lost(), ActionType::button_up,
+	expect_single_action(recognizer.neutralize(), ActionType::button_up,
 		MouseButton::right, "mapping loss must release a held right button");
 	expect(recognizer.state() == State::idle && !recognizer.has_recent_tap(),
 		"mapping loss must clear the pure gesture state");
@@ -592,7 +592,7 @@ int main()
 	test_right_drag_terminal_and_drain();
 	test_third_contact_terminates_right_drag();
 	test_cancellation_matrix();
-	test_mapping_loss_uses_same_neutralization_contract();
+	test_mapping_loss_uses_neutralization_contract();
 	test_button_source_composition();
 	test_pump_coordinator_click_and_deadline_ordering();
 	test_pump_coordinator_neutralizes_pending_click();

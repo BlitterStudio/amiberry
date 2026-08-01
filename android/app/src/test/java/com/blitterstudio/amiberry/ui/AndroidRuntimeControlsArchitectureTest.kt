@@ -328,12 +328,16 @@ class AndroidRuntimeControlsArchitectureTest {
 		val retireClick = pump.indexOf("android_touch_mouse_begin_pump()")
 		val pollEvents = pump.indexOf("while (SDL_PollEvent(&event))")
 		val secondDrain = pump.indexOf("drain_pending_touch_neutralization()", entryDrain + 1)
-		val deadlineTick = pump.indexOf("android_touch_mouse_tick(SDL_GetTicksNS())")
+		val deadlineTick = pump.indexOf("android_touch_mouse_tick()")
 
 		assertTrue(
 			"The main pump should drain, retire the prior click, process queued events, drain again, then tick nanosecond deadlines.",
 			entryDrain >= 0 && retireClick > entryDrain && pollEvents > retireClick &&
 				secondDrain > pollEvents && deadlineTick > secondDrain
+		)
+		assertTrue(
+			"The active-only touch tick should acquire its deadline from SDL's nanosecond clock.",
+			amiberryCpp.contains("android_touch_mouse_coordinator.tick(SDL_GetTicksNS())")
 		)
 		assertTrue(
 			"Android left and right guest writes should pass through source composition.",

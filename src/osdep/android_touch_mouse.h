@@ -8,26 +8,14 @@
 #include <optional>
 #include <vector>
 
+#include "on_screen_joystick_capture.h"
+
 namespace android_touch_mouse {
 
-using TouchId = std::uint64_t;
-using FingerId = std::uint64_t;
+using TouchId = osj_capture::TouchId;
+using FingerId = osj_capture::FingerId;
 using Timestamp = std::uint64_t;
-
-struct TouchKey {
-	TouchId touch_id = 0;
-	FingerId finger_id = 0;
-};
-
-inline bool operator==(const TouchKey& lhs, const TouchKey& rhs)
-{
-	return lhs.touch_id == rhs.touch_id && lhs.finger_id == rhs.finger_id;
-}
-
-inline bool operator!=(const TouchKey& lhs, const TouchKey& rhs)
-{
-	return !(lhs == rhs);
-}
+using TouchKey = osj_capture::TouchKey;
 
 enum class ContactPhase {
 	down,
@@ -152,11 +140,6 @@ public:
 		return neutralize();
 	}
 
-	std::vector<Action> mapping_lost()
-	{
-		return neutralize();
-	}
-
 	std::vector<Action> terminate_for_nonowning_contact(TouchKey key)
 	{
 		if (!active_touch_id_ || key.touch_id != *active_touch_id_
@@ -276,13 +259,15 @@ private:
 			contact.origin_x, contact.origin_y) > slop_squared;
 	}
 
-	void update_contact(Contact& contact, const TouchFact& fact)
+	bool update_contact(Contact& contact, const TouchFact& fact)
 	{
 		contact.current_x = fact.gesture_x_dp;
 		contact.current_y = fact.gesture_y_dp;
 		contact.current_normalized_y = fact.normalized_y;
-		if (outside_slop(contact))
+		const bool moved_outside_slop = outside_slop(contact);
+		if (moved_outside_slop)
 			contact.tap_eligible = false;
+		return moved_outside_slop;
 	}
 
 	void reset_pair_origins()
@@ -366,7 +351,7 @@ private:
 		if (contact == contacts_.end())
 			return {};
 		const bool primary = contact == contacts_.begin();
-		update_contact(*contact, fact);
+		const bool moved_outside_slop = update_contact(*contact, fact);
 
 		if (state_ == State::one_finger)
 			return emit_relative(fact.relative_x, fact.relative_y);
@@ -374,7 +359,7 @@ private:
 		if (state_ == State::second_tap) {
 			buffered_x_ += fact.relative_x;
 			buffered_y_ += fact.relative_y;
-			if (outside_slop(*contact))
+			if (moved_outside_slop)
 				return activate_drag(MouseButton::left, State::left_drag);
 			return {};
 		}
@@ -390,7 +375,7 @@ private:
 			}
 			if (gui_swipe_complete())
 				return consume_gui_swipe();
-			if (pair_outside_slop()) {
+			if (moved_outside_slop) {
 				state_ = State::swipe_only;
 				clear_motion_accumulators();
 			}
@@ -447,12 +432,6 @@ private:
 			state_ = State::drain_until_all_up;
 		}
 		return actions;
-	}
-
-	bool pair_outside_slop() const
-	{
-		return contacts_.size() >= 2
-			&& (outside_slop(contacts_[0]) || outside_slop(contacts_[1]));
 	}
 
 	bool gui_swipe_complete() const
@@ -582,12 +561,10 @@ public:
 	{
 		std::vector<ButtonTransition> transitions;
 		for (std::size_t index = 0; index < button_count; ++index) {
-			const bool was_pressed = aggregate(index);
-			for (auto& source : sources_)
-				source[index] = false;
-			if (was_pressed)
+			if (aggregate(index))
 				transitions.push_back({button_for_index(index), false});
 		}
+		sources_ = {};
 		return transitions;
 	}
 
@@ -595,12 +572,6 @@ public:
 	{
 		const auto index = button_index(button);
 		return index && aggregate(*index);
-	}
-
-	bool source_pressed(ButtonSource source, MouseButton button) const
-	{
-		const auto index = button_index(button);
-		return index && sources_[source_index(source)][*index];
 	}
 
 private:
@@ -705,14 +676,15 @@ public:
 	}
 
 private:
-	std::vector<Action> expand(const std::vector<Action>& source_actions)
+	std::vector<Action> expand(std::vector<Action> actions)
 	{
-		std::vector<Action> actions;
-		for (const auto& action : source_actions) {
+		std::size_t output = 0;
+		for (std::size_t input = 0; input < actions.size(); ++input) {
+			const Action action = actions[input];
 			if (action.type == ActionType::click_pulse) {
 				if (!click_release_pending_)
-					actions.push_back({ActionType::button_down,
-						MouseButton::left, 0, 0});
+					actions[output++] = {ActionType::button_down,
+						MouseButton::left, 0, 0};
 				click_release_pending_ = true;
 				continue;
 			}
@@ -725,8 +697,9 @@ private:
 			if (action.type == ActionType::button_up
 				&& action.button == MouseButton::left)
 				click_release_pending_ = false;
-			actions.push_back(action);
+			actions[output++] = action;
 		}
+		actions.resize(output);
 		return actions;
 	}
 
