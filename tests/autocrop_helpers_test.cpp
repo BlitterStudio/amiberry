@@ -113,6 +113,26 @@ static void test_ignores_scattered_outside_pixels()
 	expect_eq(crop.h, 12, "Scattered pixels must not change crop height");
 }
 
+static void test_expands_to_visible_sprite_edge_content()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int y = 10; y < 18; y++) {
+		pixels[y * width + 6] = 0x00ffffffu;
+		pixels[y * width + 7] = 0x00ffffffu;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 20, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed, "A visible sprite strip outside DIW should expand the crop");
+	expect_eq(crop.x, 6, "The crop should include the sprite's left edge");
+	expect_eq(crop.w, 22, "The crop should preserve its right edge after sprite expansion");
+}
+
 static void test_keeps_crop_inside_non_black_border()
 {
 	constexpr int width = 40;
@@ -419,11 +439,35 @@ static void test_horizontal_edge_jitter_tolerance()
 		"A vertical crop change must not be treated as horizontal jitter");
 }
 
+static void test_horizontal_edge_jitter_requires_unchanged_source_geometry()
+{
+	const AmiberryAutoCropRect source{ 38, 24, 320, 200 };
+	const AmiberryAutoCropRect stable{ 38, 24, 320, 200 };
+	const AmiberryAutoCropRect expanded{ 36, 24, 322, 200 };
+
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, source, stable, expanded, 2),
+		"An unchanged source with a nested visible expansion should preserve the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 37, 24, 320, 200 }, stable, expanded, 2),
+		"A source x change must reset horizontal jitter stabilization");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 38, 23, 320, 200 }, stable, expanded, 2),
+		"A source y change must reset horizontal jitter stabilization");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 38, 24, 321, 200 }, stable, expanded, 2),
+		"A source width change must reset horizontal jitter stabilization");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 38, 24, 320, 201 }, stable, expanded, 2),
+		"A source height change must reset horizontal jitter stabilization");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
 	test_ignores_distant_speck_when_content_expands();
 	test_ignores_scattered_outside_pixels();
+	test_expands_to_visible_sprite_edge_content();
 	test_keeps_crop_inside_non_black_border();
 	test_uniform_border_avoids_component_scan();
 	test_expands_past_non_black_border_for_real_content();
@@ -436,5 +480,6 @@ int main()
 	test_two_of_three_sides_is_not_border_confidence();
 	test_border_state_changes_reset_preserved_crop();
 	test_horizontal_edge_jitter_tolerance();
+	test_horizontal_edge_jitter_requires_unchanged_source_geometry();
 	return failures == 0 ? 0 : 1;
 }

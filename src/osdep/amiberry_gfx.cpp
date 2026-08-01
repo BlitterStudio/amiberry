@@ -275,6 +275,13 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	const bool border_changed = amiberry_auto_crop_border_state_changed(
 		state.border_rgb, state.border_valid, border_rgb, border_valid);
 	if (!reset && state.valid && !presentation_changed && !border_changed) {
+		const AmiberryAutoCropRect previous_source = {
+			state.source_rect.x, state.source_rect.y,
+			state.source_rect.w, state.source_rect.h
+		};
+		const AmiberryAutoCropRect current_source = {
+			source_rect.x, source_rect.y, source_rect.w, source_rect.h
+		};
 		const AmiberryAutoCropRect previous_rect = {
 			state.visible_rect.x, state.visible_rect.y,
 			state.visible_rect.w, state.visible_rect.h
@@ -284,13 +291,13 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		};
 		const int tolerance = auto_crop_horizontal_jitter_tolerance
 			<< std::clamp(hres, RES_LORES, RES_SUPERHIRES);
-		if (amiberry_auto_crop_rect_within_horizontal_tolerance(
-			previous_rect, current_rect, tolerance)) {
-			// Hardware sprites can extend the detected DIW by a pixel or two as
-			// they reach a screen edge. Keep the previous final crop so pointer
-			// motion does not pan or resize the presentation.
+		if (amiberry_auto_crop_should_preserve_horizontal_jitter(
+			previous_source, current_source, previous_rect, current_rect,
+			tolerance)) {
+			// Hardware sprites can extend visible pixels a pixel or two beyond
+			// DIW as they reach a screen edge. Keep the previous final crop so
+			// pointer motion does not pan or resize the presentation.
 			visible_rect = state.visible_rect;
-			state.source_rect = source_rect;
 			return;
 		}
 	}

@@ -70,6 +70,20 @@ static inline bool amiberry_auto_crop_rect_within_horizontal_tolerance(
 					>= amiberry_auto_crop_rect_right(previous)));
 }
 
+static inline bool amiberry_auto_crop_should_preserve_horizontal_jitter(
+	const AmiberryAutoCropRect& previous_source,
+	const AmiberryAutoCropRect& current_source,
+	const AmiberryAutoCropRect& previous_visible,
+	const AmiberryAutoCropRect& current_visible, const int tolerance)
+{
+	return previous_source.x == current_source.x
+		&& previous_source.y == current_source.y
+		&& previous_source.w == current_source.w
+		&& previous_source.h == current_source.h
+		&& amiberry_auto_crop_rect_within_horizontal_tolerance(
+			previous_visible, current_visible, tolerance);
+}
+
 static inline bool amiberry_auto_crop_rect_contains(const AmiberryAutoCropRect& rect,
 	const int x, const int y)
 {

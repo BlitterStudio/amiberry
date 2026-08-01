@@ -4573,6 +4573,13 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 static void autoscale_sprites(void)
 {
 #if AUTOSCALE_SPRITES
+#if defined(AMIBERRY) && !defined(LIBRETRO)
+	// Native AutoCrop scans rendered pixels outside DIW itself. Keep sprites out
+	// of source geometry so real DIW changes remain distinguishable.
+	if (currprefs.gfx_auto_crop) {
+		return;
+	}
+#endif
 	if (diwfirstword_total > internal_pixel_cnt && internal_pixel_cnt > (48 << RES_MAX)) {
 		diwfirstword_total = internal_pixel_cnt;
 	}
