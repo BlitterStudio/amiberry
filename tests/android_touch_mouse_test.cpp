@@ -555,6 +555,30 @@ static void test_pump_coordinator_neutralizes_pending_click()
 		"a neutralized click must not release twice on the next pump");
 }
 
+static void test_pump_coordinator_preserves_queued_click_pulses()
+{
+	const TouchKey key{236, 936};
+	PumpCoordinator coordinator;
+	coordinator.handle(down(key, 0));
+	expect_single_action(coordinator.handle(up(key, 20)),
+		ActionType::button_down, MouseButton::left,
+		"the first queued tap must press left immediately");
+	coordinator.handle(down(key, 100));
+	expect_no_actions(coordinator.handle(up(key, 120)),
+		"the second queued tap must wait behind the active click pulse");
+
+	const auto next_pulse = coordinator.begin_pump();
+	expect(next_pulse.size() == 2
+		&& is_action(next_pulse[0], ActionType::button_up, MouseButton::left)
+		&& is_action(next_pulse[1], ActionType::button_down, MouseButton::left),
+		"a pump boundary must release the first tap before pressing the second");
+	expect_single_action(coordinator.begin_pump(),
+		ActionType::button_up, MouseButton::left,
+		"the following pump boundary must release the second tap");
+	expect_no_actions(coordinator.begin_pump(),
+		"all queued tap pulses must be retired after their final release");
+}
+
 static void test_nonowning_added_contact_terminates_before_overlay_capture()
 {
 	const TouchKey primary{241, 941};
@@ -636,6 +660,7 @@ int main()
 	test_button_source_composition();
 	test_pump_coordinator_click_and_deadline_ordering();
 	test_pump_coordinator_neutralizes_pending_click();
+	test_pump_coordinator_preserves_queued_click_pulses();
 	test_nonowning_added_contact_terminates_before_overlay_capture();
 	test_nonowning_added_contact_drains_pending_pairs();
 	return failures == 0 ? 0 : 1;
