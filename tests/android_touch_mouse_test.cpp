@@ -579,6 +579,95 @@ static void test_pump_coordinator_preserves_queued_click_pulses()
 		"all queued tap pulses must be retired after their final release");
 }
 
+static void test_pump_coordinator_releases_clicks_before_unrelated_motion()
+{
+	const TouchKey key{237, 937};
+	PumpCoordinator coordinator;
+	coordinator.handle(down(key, 0));
+	expect_single_action(coordinator.handle(up(key, 20)),
+		ActionType::button_down, MouseButton::left,
+		"the completed tap must press left before the unrelated contact");
+	expect_single_action(coordinator.handle(down(key, 321)),
+		ActionType::button_up, MouseButton::left,
+		"an unrelated contact in the same pump must release the queued click");
+	expect(coordinator.state() == State::one_finger,
+		"a contact outside the double-tap interval must remain an ordinary gesture");
+
+	const auto movement = coordinator.handle(motion(key, 330, 8.001, 0.0,
+		3.0, 0.0));
+	expect(movement.size() == 1
+		&& movement.front().type == ActionType::relative_delta
+		&& movement.front().delta_x == 3 && movement.front().delta_y == 0,
+		"unrelated motion must follow the queued click release without becoming a drag");
+	expect(coordinator.state() == State::one_finger,
+		"unrelated motion must not leak a false left-drag state");
+	expect_no_actions(coordinator.begin_pump(),
+		"the unrelated contact must leave no click release for the next pump");
+	expect_no_actions(coordinator.handle(up(key, 340, 8.001, 0.0)),
+		"the moved unrelated contact must finish without another click");
+
+	PumpCoordinator drag;
+	drag.handle(down(key, 0));
+	drag.handle(up(key, 20));
+	expect_no_actions(drag.handle(down(key, 100)),
+		"a qualifying second tap must retain the pending left press");
+	const auto drag_motion = drag.handle(motion(key, 110, 8.001, 0.0,
+		2.0, 0.0));
+	expect(drag_motion.size() == 1
+		&& drag_motion.front().type == ActionType::relative_delta
+		&& drag_motion.front().delta_x == 2
+		&& drag.state() == State::left_drag,
+		"a qualifying second tap must take over the pending press without a transition");
+	expect_single_action(drag.handle(up(key, 120, 8.001, 0.0)),
+		ActionType::button_up, MouseButton::left,
+		"the seamless second-tap drag must release left when it finishes");
+	expect_no_actions(drag.begin_pump(),
+		"a second-tap drag takeover must consume the pending click release");
+
+	PumpCoordinator queued;
+	queued.handle(down(key, 0));
+	queued.handle(up(key, 20));
+	queued.handle(down(key, 100));
+	queued.handle(up(key, 120));
+	const auto releases = queued.handle(down(key, 421));
+	expect(releases.size() == 3
+		&& is_action(releases[0], ActionType::button_up, MouseButton::left)
+		&& is_action(releases[1], ActionType::button_down, MouseButton::left)
+		&& is_action(releases[2], ActionType::button_up, MouseButton::left),
+		"an unrelated contact must preserve every queued tap in release/down order");
+	expect_no_actions(queued.begin_pump(),
+		"draining multiple queued taps must leave no delayed release");
+}
+
+static void test_pump_coordinator_releases_click_before_pair_takeover()
+{
+	const TouchKey primary{238, 938};
+	const TouchKey secondary{238, 939};
+	PumpCoordinator coordinator;
+	coordinator.handle(down(primary, 0, 0.0, 0.0, 0.10));
+	coordinator.handle(up(primary, 20, 0.0, 0.0, 0.10));
+	expect_no_actions(coordinator.handle(down(primary, 100,
+		0.0, 0.0, 0.10)),
+		"a qualifying second tap must retain the pending left press");
+	expect(coordinator.state() == State::second_tap,
+		"the qualifying contact must retain second-tap intent by itself");
+	expect_single_action(coordinator.handle(down(secondary, 110,
+		0.0, 0.0, 0.10)), ActionType::button_up, MouseButton::left,
+		"pair takeover must release the pending left click immediately");
+	expect(coordinator.state() == State::two_finger_pending,
+		"the accepted second finger must begin normal pair arbitration");
+	expect_no_actions(coordinator.begin_pump(),
+		"pair takeover must leave no pending click release for the next pump");
+	expect_no_actions(coordinator.tick(ns(509)),
+		"the pair must remain pending before its ordinary hold deadline");
+	expect_single_action(coordinator.tick(ns(510)),
+		ActionType::button_down, MouseButton::right,
+		"the pair must still activate an ordinary right drag at its deadline");
+	expect_single_action(coordinator.handle(up(primary, 520,
+		0.0, 0.0, 0.10)), ActionType::button_up, MouseButton::right,
+		"the normal pair drag must release right on its first terminal event");
+}
+
 static void test_nonowning_added_contact_terminates_before_overlay_capture()
 {
 	const TouchKey primary{241, 941};
@@ -661,6 +750,8 @@ int main()
 	test_pump_coordinator_click_and_deadline_ordering();
 	test_pump_coordinator_neutralizes_pending_click();
 	test_pump_coordinator_preserves_queued_click_pulses();
+	test_pump_coordinator_releases_clicks_before_unrelated_motion();
+	test_pump_coordinator_releases_click_before_pair_takeover();
 	test_nonowning_added_contact_terminates_before_overlay_capture();
 	test_nonowning_added_contact_drains_pending_pairs();
 	return failures == 0 ? 0 : 1;

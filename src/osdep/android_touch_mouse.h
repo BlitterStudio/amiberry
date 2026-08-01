@@ -628,7 +628,22 @@ public:
 
 	std::vector<Action> handle(const TouchFact& fact)
 	{
-		return expand(recognizer_.handle(fact));
+		const State previous_state = recognizer_.state();
+		auto actions = expand(recognizer_.handle(fact));
+		const State current_state = recognizer_.state();
+		const bool starts_unrelated_gesture =
+			(previous_state == State::idle
+				&& current_state == State::one_finger)
+			|| (previous_state == State::second_tap
+				&& current_state == State::two_finger_pending);
+		if (fact.phase != ContactPhase::down
+			|| !starts_unrelated_gesture
+			|| pending_click_pulses_ == 0)
+			return actions;
+
+		auto releases = drain_pending_click_pulses();
+		releases.insert(releases.end(), actions.begin(), actions.end());
+		return releases;
 	}
 
 	std::vector<Action> tick(Timestamp now_ns)
@@ -681,6 +696,19 @@ public:
 	}
 
 private:
+	std::vector<Action> drain_pending_click_pulses()
+	{
+		std::vector<Action> actions;
+		while (pending_click_pulses_ != 0) {
+			actions.push_back({ActionType::button_up, MouseButton::left, 0, 0});
+			--pending_click_pulses_;
+			if (pending_click_pulses_ != 0)
+				actions.push_back({ActionType::button_down,
+					MouseButton::left, 0, 0});
+		}
+		return actions;
+	}
+
 	std::vector<Action> expand(std::vector<Action> actions)
 	{
 		std::size_t output = 0;
