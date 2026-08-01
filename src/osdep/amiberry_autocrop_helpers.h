@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 
@@ -46,6 +47,21 @@ static inline int amiberry_auto_crop_rect_right(const AmiberryAutoCropRect& rect
 static inline int amiberry_auto_crop_rect_bottom(const AmiberryAutoCropRect& rect)
 {
 	return rect.y + rect.h;
+}
+
+static inline bool amiberry_auto_crop_rect_within_horizontal_tolerance(
+	const AmiberryAutoCropRect& previous, const AmiberryAutoCropRect& current,
+	const int tolerance)
+{
+	if (tolerance < 0 || previous.w <= 0 || previous.h <= 0
+		|| current.w <= 0 || current.h <= 0
+		|| previous.y != current.y || previous.h != current.h) {
+		return false;
+	}
+
+	return std::abs(previous.x - current.x) <= tolerance
+		&& std::abs(amiberry_auto_crop_rect_right(previous)
+			- amiberry_auto_crop_rect_right(current)) <= tolerance;
 }
 
 static inline bool amiberry_auto_crop_rect_contains(const AmiberryAutoCropRect& rect,

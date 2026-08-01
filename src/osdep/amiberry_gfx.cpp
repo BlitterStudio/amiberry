@@ -124,6 +124,7 @@ constexpr int auto_crop_wide_aspect_w = 21;
 constexpr int auto_crop_wide_aspect_h = 9;
 constexpr int auto_crop_shrink_stable_frames = 6;
 constexpr int auto_crop_min_outside_pixels = 16;
+constexpr int auto_crop_horizontal_jitter_tolerance = 2;
 
 struct AutoCropVisibleState {
 	const SDL_Surface* surface = nullptr;
@@ -266,14 +267,37 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		return;
 	}
 
-	const bool source_changed = state.surface != surface
+	const bool presentation_changed = state.surface != surface
 		|| state.surface_w != surface->w
 		|| state.surface_h != surface->h
-		|| !auto_crop_rect_equals(state.source_rect, source_rect)
 		|| state.hres != hres
-		|| state.vres != vres
-		|| amiberry_auto_crop_border_state_changed(state.border_rgb, state.border_valid,
-			border_rgb, border_valid);
+		|| state.vres != vres;
+	const bool border_changed = amiberry_auto_crop_border_state_changed(
+		state.border_rgb, state.border_valid, border_rgb, border_valid);
+	if (!reset && state.valid && !presentation_changed && !border_changed) {
+		const AmiberryAutoCropRect previous_rect = {
+			state.visible_rect.x, state.visible_rect.y,
+			state.visible_rect.w, state.visible_rect.h
+		};
+		const AmiberryAutoCropRect current_rect = {
+			visible_rect.x, visible_rect.y, visible_rect.w, visible_rect.h
+		};
+		const int tolerance = auto_crop_horizontal_jitter_tolerance
+			<< std::clamp(hres, RES_LORES, RES_SUPERHIRES);
+		if (amiberry_auto_crop_rect_within_horizontal_tolerance(
+			previous_rect, current_rect, tolerance)) {
+			// Hardware sprites can extend the detected DIW by a pixel or two as
+			// they reach a screen edge. Keep the previous final crop so pointer
+			// motion does not pan or resize the presentation.
+			visible_rect = state.visible_rect;
+			state.source_rect = source_rect;
+			return;
+		}
+	}
+
+	const bool source_changed = presentation_changed
+		|| !auto_crop_rect_equals(state.source_rect, source_rect)
+		|| border_changed;
 	if (reset || source_changed || !state.valid) {
 		state = {};
 		state.surface = surface;

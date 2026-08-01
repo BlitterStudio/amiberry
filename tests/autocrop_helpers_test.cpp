@@ -383,6 +383,27 @@ static void test_border_state_changes_reset_preserved_crop()
 		second_color, false), "Ambiguous border samples must ignore stale colors");
 }
 
+static void test_horizontal_edge_jitter_tolerance()
+{
+	const AmiberryAutoCropRect stable{ 38, 24, 320, 200 };
+
+	expect_true(amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 37, 24, 321, 200 }, 2),
+		"A one-pixel left sprite extension should keep the stable crop");
+	expect_true(amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 36, 24, 322, 200 }, 2),
+		"A two-pixel left sprite extension should keep the stable crop");
+	expect_true(amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 38, 24, 322, 200 }, 2),
+		"A two-pixel right sprite extension should keep the stable crop");
+	expect_true(!amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 35, 24, 323, 200 }, 2),
+		"A larger horizontal expansion must update the crop");
+	expect_true(!amiberry_auto_crop_rect_within_horizontal_tolerance(
+		stable, { 38, 23, 320, 201 }, 2),
+		"A vertical crop change must not be treated as horizontal jitter");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -399,5 +420,6 @@ int main()
 	test_two_sided_color_is_not_perimeter_majority();
 	test_two_of_three_sides_is_not_border_confidence();
 	test_border_state_changes_reset_preserved_crop();
+	test_horizontal_edge_jitter_tolerance();
 	return failures == 0 ? 0 : 1;
 }
