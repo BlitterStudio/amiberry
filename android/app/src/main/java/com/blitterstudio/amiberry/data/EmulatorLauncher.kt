@@ -92,6 +92,7 @@ object EmulatorLauncher {
 			context,
 			LaunchRequest.Rp9(
 				path = path,
+				shaderOverride = controlSettings?.shader,
 				controlOverrides = controlSettings?.let { LaunchRequest.AndroidControlOverrides.fromSettings(it) }
 			)
 		)

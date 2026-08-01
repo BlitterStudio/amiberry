@@ -81,11 +81,13 @@ sealed interface LaunchRequest {
 
 	data class Rp9(
 		val path: String,
+		val shaderOverride: String? = null,
 		val controlOverrides: AndroidControlOverrides? = null
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> {
 			val args = mutableListOf("--rescan-roms", "--autoload", path)
-			// RP9 rebuilds machine preferences, so Android-only controls must follow autoload.
+			// RP9 rebuilds machine preferences, so Android-only overrides must follow autoload.
+			shaderOverride?.let { args.addAll(listOf("-s", "amiberry.shader=$it")) }
 			controlOverrides?.let { args.addAll(it.toArgs()) }
 			args.add("-G")
 			return args.toTypedArray()

@@ -102,10 +102,11 @@ class LaunchRequestTest {
 	}
 
 	@Test
-	fun `rp9 request applies Android controls after manifest autoload`() {
+	fun `rp9 request applies shader and Android controls after manifest autoload`() {
 		val path = "/tmp/game.rp9"
 		val args = LaunchRequest.Rp9(
 			path = path,
+			shaderOverride = "presets/custom.glslp",
 			controlOverrides = LaunchRequest.AndroidControlOverrides(
 				joyport0 = "mouse",
 				joyport1 = "onscreen_joy",
@@ -119,6 +120,7 @@ class LaunchRequestTest {
 			arrayOf(
 				"--rescan-roms",
 				"--autoload", path,
+				"-s", "amiberry.shader=presets/custom.glslp",
 				"-s", "joyport0=mouse",
 				"-s", "amiberry.onscreen_joystick=true",
 				"-s", "amiberry.vkbd_enabled=true",
