@@ -35,7 +35,11 @@ class ConfigRepository(private val context: Context) {
 	}
 
 	fun loadConfig(path: String): ConfigParser.ParsedConfig {
-		return ConfigParser.parse(File(path))
+		val globalSettingsFile = ShaderCatalog.findSettingsFile(
+			context.filesDir,
+			context.getExternalFilesDir(null)
+		)
+		return ConfigSettingsResolver.parse(File(path), globalSettingsFile)
 	}
 
 	fun saveConfig(settings: EmulatorSettings, name: String, unknownLines: List<String> = emptyList(), description: String = ""): File? {

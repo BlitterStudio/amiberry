@@ -154,9 +154,10 @@ class MainActivity : ComponentActivity() {
 				configPath = launch.configPath
 			)
 			is IntentImportExecutor.Launch.WhdLoad -> EmulatorLauncher.launchWhdload(
-				this,
-				launch.lhaPath,
-				launch.configPath
+				context = this,
+				lhaPath = launch.lhaPath,
+				configPath = launch.configPath,
+				shaderOverride = launch.shaderOverride
 			)
 			is IntentImportExecutor.Launch.Rp9 -> EmulatorLauncher.launchRp9(
 				this,

@@ -155,6 +155,17 @@ class ConfigRepositoryTest {
 		assertTrue(source.contains("ConfigFiles.userConfigFile(confDir, path)"))
 	}
 
+	@Test
+	fun `loadConfig applies native shader fallback before returning Kotlin settings`() {
+		val source = File("src/main/java/com/blitterstudio/amiberry/data/ConfigRepository.kt").readText()
+		val loadMethod = source
+			.substringAfter("fun loadConfig(path: String)")
+			.substringBefore("fun saveConfig(")
+
+		assertTrue(loadMethod.contains("ShaderCatalog.findSettingsFile("))
+		assertTrue(loadMethod.contains("ConfigSettingsResolver.parse(File(path), globalSettingsFile)"))
+	}
+
 	/**
 	 * Mirror of ConfigRepository.isValidConfigName for testing without Context.
 	 */

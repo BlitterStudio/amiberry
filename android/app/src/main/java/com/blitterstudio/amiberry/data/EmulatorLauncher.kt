@@ -78,8 +78,17 @@ object EmulatorLauncher {
 	 * Launch a WHDLoad game via the --autoload mechanism.
 	 * The emulator auto-configures based on its XML database match.
 	 */
-	fun launchWhdload(context: Context, lhaPath: String, configPath: String? = null) {
-		val request = LaunchRequest.WhdLoad(lhaPath = lhaPath, configPath = configPath)
+	fun launchWhdload(
+		context: Context,
+		lhaPath: String,
+		configPath: String? = null,
+		shaderOverride: String? = null
+	) {
+		val request = LaunchRequest.WhdLoad(
+			lhaPath = lhaPath,
+			configPath = configPath,
+			shaderOverride = shaderOverride
+		)
 		launchRequest(context, request)
 		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {
 			put("type", "whdload")
@@ -92,6 +101,7 @@ object EmulatorLauncher {
 			context,
 			LaunchRequest.Rp9(
 				path = path,
+				shaderOverride = controlSettings?.shader,
 				controlOverrides = controlSettings?.let { LaunchRequest.AndroidControlOverrides.fromSettings(it) }
 			)
 		)

@@ -67,25 +67,31 @@ sealed interface LaunchRequest {
 
 	data class WhdLoad(
 		val lhaPath: String,
-		val configPath: String? = null
+		val configPath: String? = null,
+		val shaderOverride: String? = null
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> {
 			val args = mutableListOf("--rescan-roms")
 			configPath?.takeIf { it.isNotBlank() }?.let {
 				args.addAll(listOf("--config", it))
 			}
-			args.addAll(listOf("--autoload", lhaPath, "-G"))
+			args.addAll(listOf("--autoload", lhaPath))
+			// WHDLoad per-game configs can reset preferences, so reapply the shader after autoload.
+			shaderOverride?.let { args.addAll(listOf("-s", "amiberry.shader=$it")) }
+			args.add("-G")
 			return args.toTypedArray()
 		}
 	}
 
 	data class Rp9(
 		val path: String,
+		val shaderOverride: String? = null,
 		val controlOverrides: AndroidControlOverrides? = null
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> {
 			val args = mutableListOf("--rescan-roms", "--autoload", path)
-			// RP9 rebuilds machine preferences, so Android-only controls must follow autoload.
+			// RP9 rebuilds machine preferences, so Android-only overrides must follow autoload.
+			shaderOverride?.let { args.addAll(listOf("-s", "amiberry.shader=$it")) }
 			controlOverrides?.let { args.addAll(it.toArgs()) }
 			args.add("-G")
 			return args.toTypedArray()

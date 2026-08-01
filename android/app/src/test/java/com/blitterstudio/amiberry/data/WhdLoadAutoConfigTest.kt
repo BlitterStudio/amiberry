@@ -4,6 +4,7 @@ import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,6 +16,113 @@ class WhdLoadAutoConfigTest {
 
 	@get:Rule
 	val tempDir = TemporaryFolder()
+
+	@Test
+	fun `legacy per-game config without shader preserves current selection`() {
+		val config = tempDir.newFile("legacy.uae")
+		config.writeText("cpu_model=68020")
+
+		val settings = WhdLoadAutoConfig.settingsFromPerGameConfig(
+			parsed = ConfigParser.parse(config),
+			currentSettings = EmulatorSettings(shader = "presets/custom.glslp")
+		)
+
+		assertEquals("presets/custom.glslp", settings.shader)
+	}
+
+	@Test
+	fun `per-game config with explicit shader overrides current selection`() {
+		val config = tempDir.newFile("explicit-shader.uae")
+		config.writeText("amiberry.shader=tv")
+
+		val settings = WhdLoadAutoConfig.settingsFromPerGameConfig(
+			parsed = ConfigParser.parse(config),
+			currentSettings = EmulatorSettings(shader = "presets/custom.glslp")
+		)
+
+		assertEquals("tv", settings.shader)
+	}
+
+	@Test
+	fun `launch shader uses explicit per-game selection`() {
+		val externalDir = tempDir.newFolder("external")
+		val configDir = File(externalDir, "Configurations").apply { mkdirs() }
+		File(configDir, "Lotus.uae").writeText("amiberry.shader=presets/game.glslp")
+
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("presets/game.glslp", shader)
+	}
+
+	@Test
+	fun `launch shader normalizes explicit empty per-game selection`() {
+		val externalDir = tempDir.newFolder("empty-shader")
+		val configDir = File(externalDir, "Configurations").apply { mkdirs() }
+		File(configDir, "Lotus.uae").writeText("amiberry.shader=")
+
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("none", shader)
+	}
+
+	@Test
+	fun `launch shader falls back when per-game selection is absent`() {
+		val externalDir = tempDir.newFolder("fallback")
+		val configDir = File(externalDir, "Configurations").apply { mkdirs() }
+		File(configDir, "Lotus.uae").writeText("cpu_model=68020")
+
+		val fromConfigWithoutShader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+		val withoutConfig = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Another.lha"),
+			currentShader = "presets/current.glslp"
+		)
+		val withoutExternalDirectory = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = null,
+			externalFilesDir = null,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("presets/current.glslp", fromConfigWithoutShader)
+		assertEquals("presets/current.glslp", withoutConfig)
+		assertEquals("presets/current.glslp", withoutExternalDirectory)
+	}
+
+	@Test
+	fun `launch shader uses configured WHDLoad configuration directory`() {
+		val externalDir = tempDir.newFolder("configured-external")
+		val customConfigDir = tempDir.newFolder("configured-root")
+		val settingsFile = tempDir.newFile("configured-amiberry.conf").also {
+			it.writeText("config_path=${customConfigDir.path}")
+		}
+		File(customConfigDir, "Lotus.uae").writeText("amiberry.shader=presets/game.glslp")
+
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = settingsFile,
+			externalFilesDir = externalDir,
+			lhaFile = File("/games/Lotus.lha"),
+			currentShader = "presets/current.glslp"
+		)
+
+		assertEquals("presets/game.glslp", shader)
+	}
 
 	@Test
 	fun `AGA WHDLoad database match updates Kotlin settings to A1200 hardware`() {
@@ -41,7 +149,12 @@ class WhdLoadAutoConfigTest {
 				""".trimIndent(),
 				lhaFile = lha,
 				availableRoms = listOf(rom("kick31-a1200.rom", 0x6c9b07d2L)),
-				currentSettings = EmulatorSettings(joyport0 = "mouse", joyport1 = "joy1", onScreenJoystick = false)
+				currentSettings = EmulatorSettings(
+					shader = "presets/custom.glslp",
+					joyport0 = "mouse",
+					joyport1 = "joy1",
+					onScreenJoystick = false
+				)
 			)
 		)
 
@@ -50,6 +163,7 @@ class WhdLoadAutoConfigTest {
 		assertEquals("aga", detected.chipset)
 		assertEquals(8, detected.fastRam)
 		assertEquals("/roms/kick31-a1200.rom", detected.romFile)
+		assertEquals("presets/custom.glslp", detected.shader)
 		assertEquals("mouse", detected.joyport0)
 		assertEquals("joy1", detected.joyport1)
 		assertFalse(detected.onScreenJoystick)

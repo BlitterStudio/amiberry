@@ -38,4 +38,17 @@ class SettingsChangeSummaryTest {
 
 		assertTrue(SettingsChangeSummary.diff(settings, settings).isEmpty())
 	}
+
+	@Test
+	fun `settings change summary reports native shader`() {
+		val before = EmulatorSettings(shader = "none")
+		val after = before.copy(shader = "presets/custom.glslp")
+
+		val changes = SettingsChangeSummary.diff(before, after)
+
+		assertEquals(1, changes.size)
+		assertEquals("Native shader", changes.single().label)
+		assertEquals("none", changes.single().before)
+		assertEquals("presets/custom.glslp", changes.single().after)
+	}
 }
