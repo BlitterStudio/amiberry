@@ -16,6 +16,8 @@ object ShaderCatalog {
 
 	private const val GLSL_SUFFIX = ".glsl"
 	private const val GLSLP_SUFFIX = ".glslp"
+	private const val SETTINGS_FILE_NAME = "amiberry.conf"
+	private const val LEGACY_SETTINGS_DIRECTORY = "conf"
 
 	private val managedPathSuffixes = mapOf(
 		"config_path" to StoragePaths.CONFIGURATIONS,
@@ -45,6 +47,18 @@ object ShaderCatalog {
 		"shaders_path" to StoragePaths.SHADERS,
 		"bezels_path" to StoragePaths.BEZELS
 	)
+
+	/** Select the settings file native Android would use before legacy migration runs. */
+	fun findSettingsFile(internalFilesDir: File, externalFilesDir: File?): File? {
+		val candidates = buildList {
+			add(File(internalFilesDir, SETTINGS_FILE_NAME))
+			externalFilesDir?.let { externalRoot ->
+				add(File(externalRoot, SETTINGS_FILE_NAME))
+				add(File(File(externalRoot, LEGACY_SETTINGS_DIRECTORY), SETTINGS_FILE_NAME))
+			}
+		}
+		return candidates.firstOrNull(::safeIsFile)
+	}
 
 	/**
 	 * Resolve the shader root used by native Android.
@@ -223,6 +237,13 @@ object ShaderCatalog {
 	private fun safeIsDirectory(file: File): Boolean =
 		try {
 			file.isDirectory
+		} catch (_: Exception) {
+			false
+		}
+
+	private fun safeIsFile(file: File): Boolean =
+		try {
+			file.isFile
 		} catch (_: Exception) {
 			false
 		}

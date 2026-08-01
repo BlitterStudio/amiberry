@@ -108,9 +108,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		viewModelScope.launch {
 			val catalogEntries = withContext(Dispatchers.IO) {
 				val application = getApplication<Application>()
+				val externalFilesDir = application.getExternalFilesDir(null)
+				val settingsFile = ShaderCatalog.findSettingsFile(
+					application.filesDir,
+					externalFilesDir
+				)
 				val root = ShaderCatalog.resolveRoot(
-					File(application.filesDir, "amiberry.conf"),
-					application.getExternalFilesDir(null)
+					settingsFile,
+					externalFilesDir
 				)
 				ShaderCatalog.scan(root)
 			}

@@ -44,6 +44,7 @@ object AndroidLaunchConfig {
 			floppy1 = floppy1,
 			floppy1Type = if (floppy1.isBlank()) -1 else 0,
 			cdImage = cdImage,
+			shader = currentSettings.shader,
 			joyport0 = currentSettings.joyport0,
 			joyport1 = currentSettings.joyport1,
 			onScreenJoystick = currentSettings.onScreenJoystick,

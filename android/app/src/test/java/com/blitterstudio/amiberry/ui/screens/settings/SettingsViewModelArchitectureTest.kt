@@ -72,7 +72,11 @@ class SettingsViewModelArchitectureTest {
 				"""withContext\(Dispatchers\.IO\)\s*\{[\s\S]*ShaderCatalog\.resolveRoot\([\s\S]*ShaderCatalog\.scan\("""
 			).containsMatchIn(source)
 		)
-		assertTrue(source.contains("File(application.filesDir, \"amiberry.conf\")"))
+		val settingsResolution = source.indexOf("ShaderCatalog.findSettingsFile(")
+		val shaderResolution = source.indexOf("ShaderCatalog.resolveRoot(")
+		assertTrue(settingsResolution >= 0)
+		assertTrue(shaderResolution > settingsResolution)
+		assertTrue(source.contains("application.filesDir"))
 		assertTrue(source.contains("application.getExternalFilesDir(null)"))
 	}
 

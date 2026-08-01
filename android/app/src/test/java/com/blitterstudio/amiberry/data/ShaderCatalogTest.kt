@@ -104,6 +104,45 @@ class ShaderCatalogTest {
 	}
 
 	@Test
+	fun settingsFileResolverUsesNativeAndroidPrecedence() {
+		val internalRoot = tempDir.newFolder("internal")
+		val externalRoot = tempDir.newFolder("external")
+		val legacyConfRoot = File(externalRoot, "conf").also { assertTrue(it.mkdir()) }
+		val internalSettings = File(internalRoot, "amiberry.conf").also { it.writeText("internal") }
+		val externalSettings = File(externalRoot, "amiberry.conf").also { it.writeText("external") }
+		val legacyConfSettings = File(legacyConfRoot, "amiberry.conf").also { it.writeText("legacy") }
+
+		assertEquals(
+			internalSettings,
+			ShaderCatalog.findSettingsFile(internalRoot, externalRoot)
+		)
+		assertTrue(internalSettings.delete())
+		assertEquals(
+			externalSettings,
+			ShaderCatalog.findSettingsFile(internalRoot, externalRoot)
+		)
+		assertTrue(externalSettings.delete())
+		assertEquals(
+			legacyConfSettings,
+			ShaderCatalog.findSettingsFile(internalRoot, externalRoot)
+		)
+	}
+
+	@Test
+	fun settingsFileResolverIgnoresNonFilesAndMissingExternalStorage() {
+		val internalRoot = tempDir.newFolder("internal-non-file")
+		val externalRoot = tempDir.newFolder("external-fallback")
+		val externalSettings = File(externalRoot, "amiberry.conf").also { it.writeText("external") }
+		assertTrue(File(internalRoot, "amiberry.conf").mkdir())
+
+		assertEquals(
+			externalSettings,
+			ShaderCatalog.findSettingsFile(internalRoot, externalRoot)
+		)
+		assertNull(ShaderCatalog.findSettingsFile(internalRoot, null))
+	}
+
+	@Test
 	fun resolverPrefersExplicitShaderPathAndUsesLastValue() {
 		val settings = tempDir.newFile("amiberry.conf")
 		settings.writeText("""
