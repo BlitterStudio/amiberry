@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.FileRepository
-import java.io.File
+import com.blitterstudio.amiberry.data.ShaderCatalog
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
@@ -26,6 +26,7 @@ import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.WhdLoadAutoConfig
 import com.blitterstudio.amiberry.ui.hasTouchScreen
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -39,6 +40,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	var settings by mutableStateOf(EmulatorSettings())
 		private set
+
+	var shaderCatalogEntries by mutableStateOf(ShaderCatalog.BUILT_INS)
+		private set
+
+	var isShaderCatalogLoading by mutableStateOf(false)
+		private set
+
+	var isShaderCatalogLoaded by mutableStateOf(false)
+		private set
+
+	private var shaderCatalogRefreshGeneration = 0
 
 	var adjustmentNotices by mutableStateOf<List<SettingsAdjustmentNotice>>(emptyList())
 		private set
@@ -84,6 +96,28 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		viewModelScope.launch {
 			repository.rescan()
 			autoSelectDefaultRomIfNeeded(availableRoms.value)
+		}
+	}
+
+	fun refreshShaderCatalog() {
+		val refreshGeneration = ++shaderCatalogRefreshGeneration
+		isShaderCatalogLoading = true
+		isShaderCatalogLoaded = false
+
+		viewModelScope.launch {
+			val catalogEntries = withContext(Dispatchers.IO) {
+				val application = getApplication<Application>()
+				val root = ShaderCatalog.resolveRoot(
+					File(application.filesDir, "amiberry.conf"),
+					application.getExternalFilesDir(null)
+				)
+				ShaderCatalog.scan(root)
+			}
+
+			if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch
+			shaderCatalogEntries = catalogEntries
+			isShaderCatalogLoading = false
+			isShaderCatalogLoaded = true
 		}
 	}
 
