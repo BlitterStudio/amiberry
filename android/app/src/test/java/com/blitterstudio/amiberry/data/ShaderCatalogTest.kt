@@ -116,6 +116,85 @@ class ShaderCatalogTest {
 	}
 
 	@Test
+	fun resolverSkipsLegacyDefaultShaderPathLikeNativeBootstrap() {
+		val settings = tempDir.newFile("legacy-default.conf")
+		val legacyRoot = File(
+			File(tempDir.root, "Configurations"),
+			"Shaders"
+		)
+		settings.writeText("shaders_path=${legacyRoot.path}")
+
+		assertEquals(
+			File(tempDir.root, "Visuals/Shaders"),
+			ShaderCatalog.resolveRoot(settings, tempDir.root)
+		)
+	}
+
+	@Test
+	fun resolverSkipsLegacyBaseContentShaderPathLikeNativeBootstrap() {
+		val settings = tempDir.newFile("legacy-base.conf")
+		val contentRoot = File(tempDir.root, "content")
+		settings.writeText("""
+			base_content_path=${contentRoot.path}
+			shaders_path=${File(contentRoot, "Configurations/Shaders").path}
+		""".trimIndent())
+
+		assertEquals(
+			File(contentRoot, "Visuals/Shaders"),
+			ShaderCatalog.resolveRoot(settings, tempDir.root)
+		)
+	}
+
+	@Test
+	fun resolverMigratesLegacyVisualPathFromInferredContentRoot() {
+		val settings = tempDir.newFile("legacy-inferred.conf")
+		val inferredRoot = File(tempDir.root, "inferred")
+		settings.writeText("""
+			config_path=${File(inferredRoot, "Configurations").path}
+			rom_path=${File(inferredRoot, "ROMs").path}
+			floppy_path=${File(inferredRoot, "Floppies").path}
+			shaders_path=${File(inferredRoot, "Configurations/Shaders").path}
+		""".trimIndent())
+
+		assertEquals(
+			File(inferredRoot, "Visuals/Shaders"),
+			ShaderCatalog.resolveRoot(settings, tempDir.root)
+		)
+	}
+
+	@Test
+	fun resolverSkipsSerializedShaderPathFromSupersededContentRoot() {
+		val settings = tempDir.newFile("superseded-base.conf")
+		val activeRoot = File(tempDir.root, "active")
+		val serializedRoot = File(tempDir.root, "serialized")
+		settings.writeText("""
+			base_content_path=${activeRoot.path}
+			config_path=${File(serializedRoot, "Configurations").path}
+			rom_path=${File(serializedRoot, "ROMs").path}
+			floppy_path=${File(serializedRoot, "Floppies").path}
+			shaders_path=${File(serializedRoot, "Visuals/Shaders").path}
+		""".trimIndent())
+
+		assertEquals(
+			File(activeRoot, "Visuals/Shaders"),
+			ShaderCatalog.resolveRoot(settings, tempDir.root)
+		)
+	}
+
+	@Test
+	fun resolverKeepsEarlierCustomOverrideWhenLaterLegacyLineIsSkipped() {
+		val settings = tempDir.newFile("custom-then-legacy.conf")
+		val customRoot = File(tempDir.root, "custom-shaders")
+		val legacyRoot = File(tempDir.root, "Configurations/Shaders")
+		settings.writeText("""
+			shaders_path=${customRoot.path}
+			shaders_path=${legacyRoot.path}
+		""".trimIndent())
+
+		assertEquals(customRoot, ShaderCatalog.resolveRoot(settings, tempDir.root))
+	}
+
+	@Test
 	fun resolverDerivesShaderPathFromLastNonEmptyBaseContentPath() {
 		val settings = tempDir.newFile("base.conf")
 		settings.writeText("""
@@ -190,6 +269,18 @@ class ShaderCatalogTest {
 		assertTrue(nativeSource.contains("relative_path.generic_string()"))
 		assertTrue(nativeSource.contains("std::sort(shader_names.begin() + std::size(builtin_shaders)"))
 		assertTrue(nativeSource.contains("std::unique(shader_names.begin(), shader_names.end())"))
+	}
+
+	@Test
+	fun kotlinResolverContractIsPinnedToNativeBootstrapSource() {
+		val nativeSource = File("../../src/osdep/amiberry.cpp").readText()
+
+		assertTrue(nativeSource.contains("infer_serialized_base_content_path(managed_path_lines)"))
+		assertTrue(nativeSource.contains("get_legacy_default_visual_asset_paths(g_portable_mode)"))
+		assertTrue(nativeSource.contains("get_legacy_base_content_path_set(configured_base_path)"))
+		assertTrue(nativeSource.contains("get_legacy_base_content_path_set(inferred_serialized_base_path)"))
+		assertTrue(nativeSource.contains("managed_path_line_matches_visual_paths"))
+		assertTrue(nativeSource.contains("skip_legacy_visual_line"))
 	}
 
 	private fun shaderFile(directory: File, name: String): File =
