@@ -163,6 +163,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		val newSettings = EmulatorSettings.fromModel(model).copy(
 			romFile = selectedRoms.kick?.path.orEmpty(),
 			romExtFile = selectedRoms.ext?.path.orEmpty(),
+			shader = previousSettings.shader,
 			joyport0 = previousSettings.joyport0,
 			joyport1 = previousSettings.joyport1,
 			onScreenJoystick = previousSettings.onScreenJoystick,

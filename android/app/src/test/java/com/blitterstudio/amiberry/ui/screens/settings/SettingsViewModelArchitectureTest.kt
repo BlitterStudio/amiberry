@@ -64,6 +64,15 @@ class SettingsViewModelArchitectureTest {
 	}
 
 	@Test
+	fun `applying a model preserves the selected native shader`() {
+		val applyModelMethod = source
+			.substringAfter("fun applyModel(model: AmigaModel)")
+			.substringBefore("fun loadConfig(")
+
+		assertTrue(applyModelMethod.contains("shader = previousSettings.shader"))
+	}
+
+	@Test
 	fun `shader catalog refresh resolves and scans away from the main thread`() {
 		assertTrue(source.contains("fun refreshShaderCatalog()"))
 		assertTrue(source.contains("shaderCatalogStatus = ShaderCatalogStatus.LOADING"))

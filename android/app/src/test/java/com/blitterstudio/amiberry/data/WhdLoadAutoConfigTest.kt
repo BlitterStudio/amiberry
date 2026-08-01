@@ -41,7 +41,12 @@ class WhdLoadAutoConfigTest {
 				""".trimIndent(),
 				lhaFile = lha,
 				availableRoms = listOf(rom("kick31-a1200.rom", 0x6c9b07d2L)),
-				currentSettings = EmulatorSettings(joyport0 = "mouse", joyport1 = "joy1", onScreenJoystick = false)
+				currentSettings = EmulatorSettings(
+					shader = "presets/custom.glslp",
+					joyport0 = "mouse",
+					joyport1 = "joy1",
+					onScreenJoystick = false
+				)
 			)
 		)
 
@@ -50,6 +55,7 @@ class WhdLoadAutoConfigTest {
 		assertEquals("aga", detected.chipset)
 		assertEquals(8, detected.fastRam)
 		assertEquals("/roms/kick31-a1200.rom", detected.romFile)
+		assertEquals("presets/custom.glslp", detected.shader)
 		assertEquals("mouse", detected.joyport0)
 		assertEquals("joy1", detected.joyport1)
 		assertFalse(detected.onScreenJoystick)

@@ -75,6 +75,7 @@ object WhdLoadAutoConfig {
 			floppy0Type = -1,
 			floppy1 = "",
 			floppy1Type = -1,
+			shader = currentSettings.shader,
 			joyport0 = currentSettings.joyport0,
 			joyport1 = currentSettings.joyport1,
 			onScreenJoystick = currentSettings.onScreenJoystick,

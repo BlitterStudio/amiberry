@@ -208,6 +208,7 @@ class ConfigGeneratorTest {
 	fun `generate control config writes Android controls without hardware settings`() {
 		val output = ConfigGenerator.generateControlConfig(
 			EmulatorSettings(
+				shader = "presets/custom.glslp",
 				joyport0 = "mouse",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
@@ -216,6 +217,9 @@ class ConfigGeneratorTest {
 		)
 		val lines = output.lines()
 
+		assertEquals(1, lines.count { it == "amiberry.shader=presets/custom.glslp" })
+		assertFalse(lines.any { it.startsWith("shader=") })
+		assertFalse(lines.any { it.startsWith("shader_rtg=") || it.startsWith("amiberry.shader_rtg=") })
 		assertContainsLine(lines, "joyport0=mouse")
 		assertContainsLine(lines, "joyport1=joy1")
 		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
