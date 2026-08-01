@@ -60,6 +60,10 @@ object ShaderCatalog {
 		return candidates.firstOrNull(::safeIsFile)
 	}
 
+	/** Read the native-display shader default from amiberry.conf. */
+	fun resolveGlobalShader(globalSettingsFile: File?): String =
+		readGlobalSettings(globalSettingsFile).shader.ifEmpty { "none" }
+
 	/**
 	 * Resolve the shader root used by native Android.
 	 *
@@ -91,7 +95,7 @@ object ShaderCatalog {
 		globalSettingsFile: File?,
 		externalFilesDir: File?
 	): ResolvedRoots {
-		val paths = readGlobalPaths(globalSettingsFile)
+		val paths = readGlobalSettings(globalSettingsFile)
 		val inferredBasePath = inferSerializedBaseContentPath(paths.managedPaths)
 		val defaultRoot = externalFilesDir?.let(::canonicalShadersRoot)
 		val usesInferredBasePath = !paths.hasBaseContentPath &&
@@ -296,9 +300,9 @@ object ShaderCatalog {
 			}
 		}
 
-	private fun readGlobalPaths(file: File?): GlobalPaths {
-		val paths = GlobalPaths()
-		if (file == null) return paths
+	private fun readGlobalSettings(file: File?): GlobalSettings {
+		val settings = GlobalSettings()
+		if (file == null) return settings
 
 		try {
 			file.forEachLine { rawLine ->
@@ -310,22 +314,26 @@ object ShaderCatalog {
 				val key = line.substring(0, separator).trim()
 				val value = line.substring(separator + 1).trim()
 				if (key == "base_content_path") {
-					paths.hasBaseContentPath = true
-					paths.baseContentPath = value
+					settings.hasBaseContentPath = true
+					settings.baseContentPath = value
 				}
 				if (key in managedPathSuffixes) {
-					paths.managedPaths.add(ManagedPath(key, value))
+					settings.managedPaths.add(ManagedPath(key, value))
+				}
+				if (key == "shader") {
+					settings.shader = value
 				}
 			}
 		} catch (_: Exception) {
 			// Missing, unreadable, or partially readable settings are non-fatal.
 		}
-		return paths
+		return settings
 	}
 
-	private data class GlobalPaths(
+	private data class GlobalSettings(
 		var baseContentPath: String = "",
 		var hasBaseContentPath: Boolean = false,
+		var shader: String = "none",
 		val managedPaths: MutableList<ManagedPath> = mutableListOf()
 	)
 

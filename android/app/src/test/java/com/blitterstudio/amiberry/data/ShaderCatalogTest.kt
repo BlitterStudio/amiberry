@@ -143,6 +143,19 @@ class ShaderCatalogTest {
 	}
 
 	@Test
+	fun globalShaderResolverUsesLastNativeValueAndNormalizesEmpty() {
+		val configured = tempDir.newFile("shader.conf").also {
+			it.writeText("shader=tv\nshader = presets/custom.glslp")
+		}
+		val empty = tempDir.newFile("empty-shader-setting.conf").also {
+			it.writeText("shader=")
+		}
+
+		assertEquals("presets/custom.glslp", ShaderCatalog.resolveGlobalShader(configured))
+		assertEquals("none", ShaderCatalog.resolveGlobalShader(empty))
+	}
+
+	@Test
 	fun resolverPrefersExplicitShaderPathAndUsesLastValue() {
 		val settings = tempDir.newFile("amiberry.conf")
 		settings.writeText("""

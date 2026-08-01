@@ -19,14 +19,18 @@ object AndroidLaunchConfig {
 
 	fun loadLastSessionSettings(context: Context): EmulatorSettings {
 		return try {
+			val globalSettingsFile = ShaderCatalog.findSettingsFile(
+				context.filesDir,
+				context.getExternalFilesDir(null)
+			)
 			val sessionFile = ConfigGenerator.configFile(context, LAST_SESSION_FILE)
 			val legacySessionFile = ConfigGenerator.legacyExternalConfigFile(context, LAST_SESSION_FILE)
 			val readableSessionFile = when {
 				sessionFile.exists() -> sessionFile
 				legacySessionFile.exists() -> legacySessionFile
-				else -> return EmulatorSettings()
+				else -> return ConfigSettingsResolver.defaults(globalSettingsFile)
 			}
-			ConfigParser.parse(readableSessionFile).settings
+			ConfigSettingsResolver.parse(readableSessionFile, globalSettingsFile).settings
 		} catch (_: Exception) {
 			EmulatorSettings()
 		}

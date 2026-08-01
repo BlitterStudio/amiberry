@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigGenerator
+import com.blitterstudio.amiberry.data.ConfigSettingsResolver
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ShaderCatalog
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -128,15 +129,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	private fun restoreLastSession(): Boolean {
 		val context = getApplication<Application>()
+		val globalSettingsFile = ShaderCatalog.findSettingsFile(
+			context.filesDir,
+			context.getExternalFilesDir(null)
+		)
 		val sessionFile = ConfigGenerator.configFile(context, LAST_SESSION_FILE)
 		val legacySessionFile = ConfigGenerator.legacyExternalConfigFile(context, LAST_SESSION_FILE)
 		val readableSessionFile = when {
 			sessionFile.exists() -> sessionFile
 			legacySessionFile.exists() -> legacySessionFile
-			else -> return false
+			else -> {
+				settings = ConfigSettingsResolver.defaults(globalSettingsFile)
+				return false
+			}
 		}
 		try {
-			val parsed = ConfigParser.parse(readableSessionFile)
+			val parsed = ConfigSettingsResolver.parse(readableSessionFile, globalSettingsFile)
 			settings = appPreferences.applyRememberedAndroidControls(parsed.settings, parsed.explicitKeys)
 			currentUnknownLines = parsed.unknownLines
 			return true
