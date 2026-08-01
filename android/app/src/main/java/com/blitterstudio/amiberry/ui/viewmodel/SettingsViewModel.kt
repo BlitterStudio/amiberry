@@ -114,11 +114,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 					application.filesDir,
 					externalFilesDir
 				)
-				val root = ShaderCatalog.resolveScanRoot(
+				val roots = ShaderCatalog.resolveScanRoots(
 					settingsFile,
 					externalFilesDir
 				)
-				ShaderCatalog.scan(root)
+				ShaderCatalog.scan(roots)
 			}
 
 			if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch

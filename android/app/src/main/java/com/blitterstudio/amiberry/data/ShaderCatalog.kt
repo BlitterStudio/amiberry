@@ -105,21 +105,24 @@ object ShaderCatalog {
 		resolveRoots(globalSettingsFile, externalFilesDir).configuredRoot
 
 	/**
-	 * Resolve the directory that is available for the Kotlin catalog to scan.
+	 * Resolve the directories that are available for the Kotlin catalog to scan.
 	 *
-	 * Native migrates legacy visual assets into the canonical root when SDL starts. Until
-	 * then, scan one existing legacy directory if the canonical destination is unavailable.
-	 * Explicit empty and custom shader paths remain authoritative.
+	 * Native merges every applicable legacy visual directory into the canonical root when
+	 * SDL starts. Until then, scan the canonical directory and every existing legacy source
+	 * so Kotlin exposes the same eventual catalog. Explicit empty and custom shader paths
+	 * remain authoritative.
 	 */
-	fun resolveScanRoot(globalSettingsFile: File?, externalFilesDir: File?): File? {
+	fun resolveScanRoots(globalSettingsFile: File?, externalFilesDir: File?): List<File> {
 		val roots = resolveRoots(globalSettingsFile, externalFilesDir)
-		val configuredRoot = roots.configuredRoot ?: return null
-		if (safeIsDirectory(configuredRoot)) return configuredRoot
+		val configuredRoot = roots.configuredRoot ?: return emptyList()
 
-		val canonicalRoot = roots.canonicalRoot ?: return configuredRoot
-		if (!pathsMatch(configuredRoot.path, canonicalRoot.path)) return configuredRoot
+		val canonicalRoot = roots.canonicalRoot ?: return listOf(configuredRoot)
+		if (!pathsMatch(configuredRoot.path, canonicalRoot.path)) return listOf(configuredRoot)
 
-		return roots.legacyScanRoots.firstOrNull(::safeIsDirectory) ?: configuredRoot
+		val availableRoots = (listOf(configuredRoot) + roots.legacyScanRoots)
+			.distinctBy { normalizePathForCompare(it.path) }
+			.filter(::safeIsDirectory)
+		return availableRoots.ifEmpty { listOf(configuredRoot) }
 	}
 
 	private fun resolveRoots(
@@ -182,11 +185,19 @@ object ShaderCatalog {
 	fun scan(root: File?): List<String> =
 		scan(root) { directory -> directory.listFiles()?.toList() }
 
+	/** Return one catalog merged from all applicable shader roots. */
+	fun scan(roots: List<File>): List<String> =
+		scan(roots) { directory -> directory.listFiles()?.toList() }
+
 	internal fun scan(
 		root: File?,
 		listChildren: (File) -> List<File>?
+	): List<String> = scan(listOfNotNull(root), listChildren)
+
+	internal fun scan(
+		roots: List<File>,
+		listChildren: (File) -> List<File>?
 	): List<String> {
-		if (root == null || !safeIsDirectory(root)) return BUILT_INS
 
 		val external = linkedSetOf<String>()
 		val visitedDirectories = mutableSetOf<String>()
@@ -225,7 +236,9 @@ object ShaderCatalog {
 			}
 		}
 
-		visit(root, "")
+		for (root in roots) {
+			if (safeIsDirectory(root)) visit(root, "")
+		}
 		return BUILT_INS + external.sorted()
 	}
 

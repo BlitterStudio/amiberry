@@ -419,38 +419,49 @@ class ShaderCatalogTest {
 		assertTrue(legacyRoot.mkdirs())
 
 		assertEquals(
-			legacyRoot,
-			ShaderCatalog.resolveScanRoot(null, externalRoot)
+			listOf(legacyRoot),
+			ShaderCatalog.resolveScanRoots(null, externalRoot)
 		)
 	}
 
 	@Test
-	fun scanResolverPrefersExistingCanonicalRootOverLegacyCandidate() {
+	fun scanResolverMergesExistingCanonicalAndLegacyRoots() {
 		val externalRoot = tempDir.newFolder("canonical-scan-external")
 		val legacyRoot = File(externalRoot, "Configurations/Shaders")
 		val canonicalRoot = File(externalRoot, "Visuals/Shaders")
 		assertTrue(legacyRoot.mkdirs())
 		assertTrue(canonicalRoot.mkdirs())
+		shaderFile(canonicalRoot, "canonical-only.glslp")
+		shaderFile(canonicalRoot, "shared.glslp")
+		shaderFile(legacyRoot, "legacy-only.glslp")
+		shaderFile(legacyRoot, "shared.glslp")
+		val roots = ShaderCatalog.resolveScanRoots(null, externalRoot)
 
-		assertEquals(
-			canonicalRoot,
-			ShaderCatalog.resolveScanRoot(null, externalRoot)
-		)
+		assertEquals(listOf(canonicalRoot, legacyRoot), roots)
+		val catalog = ShaderCatalog.scan(roots)
+		assertTrue("canonical-only.glslp" in catalog)
+		assertTrue("legacy-only.glslp" in catalog)
+		assertEquals(1, catalog.count { it == "shared.glslp" })
 	}
 
 	@Test
-	fun scanResolverUsesConfiguredBaseLegacyCandidateBeforeMigration() {
+	fun scanResolverMergesEveryApplicableLegacyRootBeforeMigration() {
 		val externalRoot = tempDir.newFolder("base-scan-external")
 		val contentRoot = tempDir.newFolder("base-scan-content")
-		val legacyRoot = File(contentRoot, "Configurations/Shaders")
-		assertTrue(legacyRoot.mkdirs())
+		val defaultLegacyRoot = File(externalRoot, "Configurations/Shaders")
+		val activeLegacyRoot = File(contentRoot, "Configurations/Shaders")
+		assertTrue(defaultLegacyRoot.mkdirs())
+		assertTrue(activeLegacyRoot.mkdirs())
+		shaderFile(defaultLegacyRoot, "default-only.glslp")
+		shaderFile(activeLegacyRoot, "active-only.glslp")
 		val settings = tempDir.newFile("base-scan.conf")
 		settings.writeText("base_content_path=${contentRoot.path}")
+		val roots = ShaderCatalog.resolveScanRoots(settings, externalRoot)
 
-		assertEquals(
-			legacyRoot,
-			ShaderCatalog.resolveScanRoot(settings, externalRoot)
-		)
+		assertEquals(listOf(defaultLegacyRoot, activeLegacyRoot), roots)
+		val catalog = ShaderCatalog.scan(roots)
+		assertTrue("default-only.glslp" in catalog)
+		assertTrue("active-only.glslp" in catalog)
 	}
 
 	@Test
@@ -468,8 +479,8 @@ class ShaderCatalogTest {
 		""".trimIndent())
 
 		assertEquals(
-			legacyRoot,
-			ShaderCatalog.resolveScanRoot(settings, externalRoot)
+			listOf(legacyRoot),
+			ShaderCatalog.resolveScanRoots(settings, externalRoot)
 		)
 	}
 
@@ -485,10 +496,10 @@ class ShaderCatalogTest {
 		emptySettings.writeText("shaders_path=")
 
 		assertEquals(
-			customRoot,
-			ShaderCatalog.resolveScanRoot(customSettings, externalRoot)
+			listOf(customRoot),
+			ShaderCatalog.resolveScanRoots(customSettings, externalRoot)
 		)
-		assertNull(ShaderCatalog.resolveScanRoot(emptySettings, externalRoot))
+		assertTrue(ShaderCatalog.resolveScanRoots(emptySettings, externalRoot).isEmpty())
 	}
 
 	@Test

@@ -78,11 +78,11 @@ class SettingsViewModelArchitectureTest {
 		assertTrue(source.contains("shaderCatalogStatus = ShaderCatalogStatus.LOADING"))
 		assertTrue(
 			Regex(
-				"""withContext\(Dispatchers\.IO\)\s*\{[\s\S]*ShaderCatalog\.resolveScanRoot\([\s\S]*ShaderCatalog\.scan\("""
+				"""withContext\(Dispatchers\.IO\)\s*\{[\s\S]*ShaderCatalog\.resolveScanRoots\([\s\S]*ShaderCatalog\.scan\("""
 			).containsMatchIn(source)
 		)
 		val settingsResolution = source.indexOf("ShaderCatalog.findSettingsFile(")
-		val shaderResolution = source.indexOf("ShaderCatalog.resolveScanRoot(")
+		val shaderResolution = source.indexOf("ShaderCatalog.resolveScanRoots(")
 		assertTrue(settingsResolution >= 0)
 		assertTrue(shaderResolution > settingsResolution)
 		assertTrue(source.contains("application.filesDir"))
