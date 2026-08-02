@@ -1943,6 +1943,7 @@ int filesys_eject(int nr)
 
 static uae_u32 heartbeat;
 static int heartbeat_count_cont;
+static bool clock_sync_pending;
 
 bool filesys_heartbeat(void)
 {
@@ -1957,7 +1958,14 @@ void setsystime (void)
 	if (!exter_added) {
 		return;
 	}
-	uae_ClockSync();
+	/*
+	 * Clock sync is handled by the UAE external interrupt server. Wait for
+	 * the heartbeat to advance before raising its level-2 PORTS interrupt:
+	 * WHDLoad and similar software can temporarily replace the OS interrupt
+	 * handlers and cannot safely service UAE's external interrupt then.
+	 */
+	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
+	clock_sync_pending = true;
 }
 
 static uae_u32 REGPARAM2 debugger_helper(TrapContext *ctx)
@@ -7499,6 +7507,7 @@ static void filesys_reset2 (void)
 void filesys_reset (void)
 {
 	exter_added = false;
+	clock_sync_pending = false;
 	if (isrestore ())
 		return;
 	load_injected_icons();
@@ -9453,6 +9462,11 @@ void filesys_vsync (void)
 	}
 	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
 	heartbeat_count_cont = 10;
+	if (clock_sync_pending) {
+		clock_sync_pending = false;
+		if (currprefs.tod_hack)
+			uae_ClockSync();
+	}
 	cia_heartbeat ();
 
 	for (u = units; u; u = u->next) {
@@ -9553,6 +9567,7 @@ void filesys_install (void)
 	org (rtarea_base + RTAREA_HEARTBEAT);
 	dl (0);
 	heartbeat = 0;
+	clock_sync_pending = false;
 
 	org (rtarea_base + 0xFF18);
 	calltrap (deftrap2 (filesys_dev_bootfilesys, 0, _T("filesys_dev_bootfilesys")));
