@@ -674,20 +674,42 @@ static int gclow, gcloh, gclox, gcloy, gclorealh;
 static int stored_left_start, stored_top_start, stored_width, stored_height;
 
 #ifdef AMIBERRY
-static constexpr int AUTOSCALE_SPRITE_LEFT_UNSET = 30000;
-static constexpr int AUTOSCALE_SPRITE_RIGHT_UNSET = 0;
-static int autoscale_sprite_firstword_total = AUTOSCALE_SPRITE_LEFT_UNSET;
-static int autoscale_sprite_lastword_total = AUTOSCALE_SPRITE_RIGHT_UNSET;
+static bool autoscale_sprite_left_edge;
+static bool autoscale_sprite_right_edge;
+#endif
 
+static void update_diwfirstword_total(const int firstword)
+{
+#ifdef AMIBERRY
+	if (firstword <= diwfirstword_total) {
+		autoscale_sprite_left_edge = false;
+	}
+#endif
+	if (firstword < diwfirstword_total) {
+		diwfirstword_total = firstword;
+	}
+}
+
+static void update_diwlastword_total(const int lastword)
+{
+#ifdef AMIBERRY
+	if (lastword >= diwlastword_total) {
+		autoscale_sprite_right_edge = false;
+	}
+#endif
+	if (lastword > diwlastword_total) {
+		diwlastword_total = lastword;
+	}
+}
+
+#ifdef AMIBERRY
 int get_autoscale_sprite_horizontal_edges(void)
 {
 	int edges = 0;
-	if (autoscale_sprite_firstword_total != AUTOSCALE_SPRITE_LEFT_UNSET
-		&& autoscale_sprite_firstword_total == diwfirstword_total) {
+	if (autoscale_sprite_left_edge) {
 		edges |= AUTOSCALE_SPRITE_EDGE_LEFT;
 	}
-	if (autoscale_sprite_lastword_total != AUTOSCALE_SPRITE_RIGHT_UNSET
-		&& autoscale_sprite_lastword_total == diwlastword_total) {
+	if (autoscale_sprite_right_edge) {
 		edges |= AUTOSCALE_SPRITE_EDGE_RIGHT;
 	}
 	return edges;
@@ -695,8 +717,8 @@ int get_autoscale_sprite_horizontal_edges(void)
 
 void reset_autoscale_sprite_horizontal_edges(void)
 {
-	autoscale_sprite_firstword_total = AUTOSCALE_SPRITE_LEFT_UNSET;
-	autoscale_sprite_lastword_total = AUTOSCALE_SPRITE_RIGHT_UNSET;
+	autoscale_sprite_left_edge = false;
+	autoscale_sprite_right_edge = false;
 }
 #endif
 
@@ -4603,13 +4625,13 @@ static void autoscale_sprites(void)
 	if (diwfirstword_total > internal_pixel_cnt && internal_pixel_cnt > (48 << RES_MAX)) {
 		diwfirstword_total = internal_pixel_cnt;
 #ifdef AMIBERRY
-		autoscale_sprite_firstword_total = internal_pixel_cnt;
+		autoscale_sprite_left_edge = true;
 #endif
 	}
 	if (diwlastword_total < internal_pixel_cnt && internal_pixel_cnt < (448 << RES_MAX)) {
 		diwlastword_total = internal_pixel_cnt;
 #ifdef AMIBERRY
-		autoscale_sprite_lastword_total = internal_pixel_cnt;
+		autoscale_sprite_right_edge = true;
 #endif
 	}
 	if (this_line->linear_vpos < plffirstline_total) {
@@ -4827,7 +4849,7 @@ static void do_hbstrt(int cnt)
 		hstart_new();
 		// hstop was not matched?
 		if (!diwlastword_total && bpl1dat_trigger_offset >= 0) {
-			diwlastword_total = internal_pixel_cnt;
+			update_diwlastword_total(internal_pixel_cnt);
 		}
 	}
 #ifdef DEBUGGER
@@ -4938,8 +4960,8 @@ static void do_hstrt_aga(int cnt)
 	}
 	denise_hdiw = true;
 	hstrt_offset = internal_pixel_cnt;
-	if (internal_pixel_cnt < diwfirstword_total && bpl1dat_trigger_offset >= 0) {
-		diwfirstword_total = internal_pixel_cnt;
+	if (bpl1dat_trigger_offset >= 0) {
+		update_diwfirstword_total(internal_pixel_cnt);
 	}
 #ifdef DEBUGGER
 	if (debug_dma) {
@@ -4953,8 +4975,8 @@ static void do_hstop_aga(int cnt)
 	sprites_hidden2 |= sprite_hidden_mask;
 	sprites_hidden = sprites_hidden2;
 	denise_hdiw = false;
-	if (internal_pixel_cnt > diwlastword_total && bpl1dat_trigger_offset >= 0) {
-		diwlastword_total = internal_pixel_cnt;
+	if (bpl1dat_trigger_offset >= 0) {
+		update_diwlastword_total(internal_pixel_cnt);
 	}
 #ifdef DEBUGGER
 	if (debug_dma) {
@@ -4976,8 +4998,8 @@ static void do_hstrt_ecs(int cnt)
 	}
 	hstrt_offset = internal_pixel_cnt;
 	denise_hdiw = true;
-	if (internal_pixel_cnt < diwfirstword_total && bpl1dat_trigger_offset >= 0) {
-		diwfirstword_total = internal_pixel_cnt;
+	if (bpl1dat_trigger_offset >= 0) {
+		update_diwfirstword_total(internal_pixel_cnt);
 	}
 #ifdef DEBUGGER
 	if (debug_dma) {
@@ -4996,8 +5018,8 @@ static void do_hstop_ecs(int cnt)
 		sprites_hidden2 |= sprite_hidden_mask;
 		sprites_hidden = sprites_hidden2;
 	}
-	if (internal_pixel_cnt > diwlastword_total && bpl1dat_trigger_offset >= 0) {
-		diwlastword_total = internal_pixel_cnt;
+	if (bpl1dat_trigger_offset >= 0) {
+		update_diwlastword_total(internal_pixel_cnt);
 	}
 #ifdef DEBUGGER
 	if (debug_dma) {
@@ -7987,11 +8009,9 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 		memset(gbuf, 0, total);
 	}
 
-	if (ls->hstop_offset > diwlastword_total && ls->bpl1dat_trigger_offset >= 0) {
-		diwlastword_total = ls->hstop_offset;
-	}
-	if (ls->hstrt_offset < diwfirstword_total && ls->bpl1dat_trigger_offset >= 0) {
-		diwfirstword_total = ls->hstrt_offset;
+	if (ls->bpl1dat_trigger_offset >= 0) {
+		update_diwlastword_total(ls->hstop_offset);
+		update_diwfirstword_total(ls->hstrt_offset);
 	}
 
 #else

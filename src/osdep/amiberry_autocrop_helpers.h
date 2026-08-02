@@ -78,20 +78,23 @@ static inline bool amiberry_auto_crop_should_preserve_horizontal_jitter(
 	const bool current_source_left_is_sprite,
 	const bool current_source_right_is_sprite, const int tolerance)
 {
-	const bool source_unchanged = previous_source.x == current_source.x
-		&& previous_source.y == current_source.y
-		&& previous_source.w == current_source.w
-		&& previous_source.h == current_source.h;
-	const bool left_changed = previous_source.x != current_source.x;
-	const bool right_changed = amiberry_auto_crop_rect_right(previous_source)
+	const bool source_left_changed = previous_source.x != current_source.x;
+	const bool source_right_changed = amiberry_auto_crop_rect_right(previous_source)
 		!= amiberry_auto_crop_rect_right(current_source);
-	const bool source_sprite_jitter =
-		amiberry_auto_crop_rect_within_horizontal_tolerance(
-			previous_source, current_source, tolerance)
-		&& (!left_changed || current_source_left_is_sprite)
-		&& (!right_changed || current_source_right_is_sprite);
+	const bool visible_left_changed = previous_visible.x != current_visible.x;
+	const bool visible_right_changed = amiberry_auto_crop_rect_right(previous_visible)
+		!= amiberry_auto_crop_rect_right(current_visible);
 
-	return (source_unchanged || source_sprite_jitter)
+	return (source_left_changed || source_right_changed)
+		&& (!source_left_changed || current_source_left_is_sprite)
+		&& (!source_right_changed || current_source_right_is_sprite)
+		&& (!visible_left_changed || (current_source_left_is_sprite
+			&& current_visible.x == current_source.x))
+		&& (!visible_right_changed || (current_source_right_is_sprite
+			&& amiberry_auto_crop_rect_right(current_visible)
+				== amiberry_auto_crop_rect_right(current_source)))
+		&& amiberry_auto_crop_rect_within_horizontal_tolerance(
+			previous_source, current_source, tolerance)
 		&& amiberry_auto_crop_rect_within_horizontal_tolerance(
 			previous_visible, current_visible, tolerance);
 }
