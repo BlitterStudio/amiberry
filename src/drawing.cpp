@@ -4574,11 +4574,9 @@ static void autoscale_sprites(void)
 {
 #if AUTOSCALE_SPRITES
 #if defined(AMIBERRY) && !defined(LIBRETRO)
-	// Native AutoCrop scans rendered pixels outside DIW itself. Keep sprites out
-	// of source geometry so real DIW changes remain distinguishable.
-	if (currprefs.gfx_auto_crop) {
-		return;
-	}
+	// Native AutoCrop scans rendered pixels outside DIW itself, so suppress only
+	// horizontal sprite expansion and retain vertical sprite bounds.
+	if (!currprefs.gfx_auto_crop) {
 #endif
 	if (diwfirstword_total > internal_pixel_cnt && internal_pixel_cnt > (48 << RES_MAX)) {
 		diwfirstword_total = internal_pixel_cnt;
@@ -4586,6 +4584,9 @@ static void autoscale_sprites(void)
 	if (diwlastword_total < internal_pixel_cnt && internal_pixel_cnt < (448 << RES_MAX)) {
 		diwlastword_total = internal_pixel_cnt;
 	}
+#if defined(AMIBERRY) && !defined(LIBRETRO)
+	}
+#endif
 	if (this_line->linear_vpos < plffirstline_total) {
 		plffirstline_total = this_line->linear_vpos;
 	}
