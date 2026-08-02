@@ -439,27 +439,61 @@ static void test_horizontal_edge_jitter_tolerance()
 		"A vertical crop change must not be treated as horizontal jitter");
 }
 
-static void test_horizontal_edge_jitter_requires_unchanged_source_geometry()
+static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 {
 	const AmiberryAutoCropRect source{ 38, 24, 320, 200 };
 	const AmiberryAutoCropRect stable{ 38, 24, 320, 200 };
 	const AmiberryAutoCropRect expanded{ 36, 24, 322, 200 };
 
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, source, stable, expanded, 2),
+		source, source, stable, expanded, false, false, 2),
 		"An unchanged source with a nested visible expansion should preserve the crop");
+
+	const AmiberryAutoCropRect left_expanded_source{ 37, 24, 321, 200 };
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, left_expanded_source, stable, expanded, true, false, 2),
+		"An attributed left source extension should preserve the crop");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 37, 24, 320, 200 }, stable, expanded, 2),
-		"A source x change must reset horizontal jitter stabilization");
+		source, left_expanded_source, stable, expanded, false, false, 2),
+		"An unattributed left source extension must reset stabilization");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 38, 23, 320, 200 }, stable, expanded, 2),
-		"A source y change must reset horizontal jitter stabilization");
+		source, left_expanded_source, stable, expanded, false, true, 2),
+		"Right attribution must not cover a left source extension");
+
+	const AmiberryAutoCropRect right_expanded_source{ 38, 24, 322, 200 };
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, right_expanded_source, stable, expanded, false, true, 2),
+		"An attributed right source extension should preserve the crop");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 38, 24, 321, 200 }, stable, expanded, 2),
-		"A source width change must reset horizontal jitter stabilization");
+		source, right_expanded_source, stable, expanded, false, false, 2),
+		"An unattributed right source extension must reset stabilization");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 38, 24, 320, 201 }, stable, expanded, 2),
-		"A source height change must reset horizontal jitter stabilization");
+		source, right_expanded_source, stable, expanded, true, false, 2),
+		"Left attribution must not cover a right source extension");
+
+	const AmiberryAutoCropRect both_expanded_source{ 37, 24, 323, 200 };
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, both_expanded_source, stable, expanded, true, true, 2),
+		"Two-sided source extensions should preserve the crop when both are attributed");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, both_expanded_source, stable, expanded, true, false, 2),
+		"Two-sided source extensions require right attribution");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, both_expanded_source, stable, expanded, false, true, 2),
+		"Two-sided source extensions require left attribution");
+
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 37, 24, 320, 200 }, stable, expanded, true, true, 2),
+		"A source translation must reset stabilization despite sprite attribution");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 38, 23, 320, 200 }, stable, expanded, true, true, 2),
+		"A source y change must reset stabilization despite sprite attribution");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 38, 24, 320, 201 }, stable, expanded, true, true, 2),
+		"A source height change must reset stabilization despite sprite attribution");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 35, 24, 323, 200 }, stable, expanded, true, false, 2),
+		"A source change beyond tolerance must reset stabilization");
 }
 
 int main()
@@ -480,6 +514,6 @@ int main()
 	test_two_of_three_sides_is_not_border_confidence();
 	test_border_state_changes_reset_preserved_crop();
 	test_horizontal_edge_jitter_tolerance();
-	test_horizontal_edge_jitter_requires_unchanged_source_geometry();
+	test_horizontal_edge_jitter_requires_sprite_source_attribution();
 	return failures == 0 ? 0 : 1;
 }

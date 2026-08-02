@@ -673,6 +673,33 @@ extern bool lof_display;
 static int gclow, gcloh, gclox, gcloy, gclorealh;
 static int stored_left_start, stored_top_start, stored_width, stored_height;
 
+#ifdef AMIBERRY
+static constexpr int AUTOSCALE_SPRITE_LEFT_UNSET = 30000;
+static constexpr int AUTOSCALE_SPRITE_RIGHT_UNSET = 0;
+static int autoscale_sprite_firstword_total = AUTOSCALE_SPRITE_LEFT_UNSET;
+static int autoscale_sprite_lastword_total = AUTOSCALE_SPRITE_RIGHT_UNSET;
+
+int get_autoscale_sprite_horizontal_edges(void)
+{
+	int edges = 0;
+	if (autoscale_sprite_firstword_total != AUTOSCALE_SPRITE_LEFT_UNSET
+		&& autoscale_sprite_firstword_total == diwfirstword_total) {
+		edges |= AUTOSCALE_SPRITE_EDGE_LEFT;
+	}
+	if (autoscale_sprite_lastword_total != AUTOSCALE_SPRITE_RIGHT_UNSET
+		&& autoscale_sprite_lastword_total == diwlastword_total) {
+		edges |= AUTOSCALE_SPRITE_EDGE_RIGHT;
+	}
+	return edges;
+}
+
+void reset_autoscale_sprite_horizontal_edges(void)
+{
+	autoscale_sprite_firstword_total = AUTOSCALE_SPRITE_LEFT_UNSET;
+	autoscale_sprite_lastword_total = AUTOSCALE_SPRITE_RIGHT_UNSET;
+}
+#endif
+
 void get_custom_topedge (int *xp, int *yp, bool max)
 {
 	if (isnativevidbuf(0) && !max) {
@@ -4573,20 +4600,18 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 static void autoscale_sprites(void)
 {
 #if AUTOSCALE_SPRITES
-#if defined(AMIBERRY) && !defined(LIBRETRO)
-	// Native AutoCrop scans rendered pixels outside DIW itself, so suppress only
-	// horizontal sprite expansion and retain vertical sprite bounds.
-	if (!currprefs.gfx_auto_crop) {
-#endif
 	if (diwfirstword_total > internal_pixel_cnt && internal_pixel_cnt > (48 << RES_MAX)) {
 		diwfirstword_total = internal_pixel_cnt;
+#ifdef AMIBERRY
+		autoscale_sprite_firstword_total = internal_pixel_cnt;
+#endif
 	}
 	if (diwlastword_total < internal_pixel_cnt && internal_pixel_cnt < (448 << RES_MAX)) {
 		diwlastword_total = internal_pixel_cnt;
-	}
-#if defined(AMIBERRY) && !defined(LIBRETRO)
-	}
+#ifdef AMIBERRY
+		autoscale_sprite_lastword_total = internal_pixel_cnt;
 #endif
+	}
 	if (this_line->linear_vpos < plffirstline_total) {
 		plffirstline_total = this_line->linear_vpos;
 	}

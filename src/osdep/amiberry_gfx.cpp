@@ -258,6 +258,7 @@ static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
 static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	const SDL_Rect& source_rect, SDL_Rect& visible_rect, const int hres,
 	const int vres, const uint32_t border_rgb, const bool border_valid,
+	const bool source_left_is_sprite, const bool source_right_is_sprite,
 	AutoCropVisibleState& state, const bool reset)
 {
 	if (!surface || surface->w <= 0 || surface->h <= 0
@@ -293,7 +294,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			<< std::clamp(hres, RES_LORES, RES_SUPERHIRES);
 		if (amiberry_auto_crop_should_preserve_horizontal_jitter(
 			previous_source, current_source, previous_rect, current_rect,
-			tolerance)) {
+			source_left_is_sprite, source_right_is_sprite, tolerance)) {
 			// Hardware sprites can extend visible pixels a pixel or two beyond
 			// DIW as they reach a screen edge. Keep the previous final crop so
 			// pointer motion does not pan or resize the presentation.
@@ -2120,6 +2121,7 @@ void auto_crop_image()
 		const int surface_h = surface ? surface->h : 0;
 		SDL_Rect crop_rect = { cx, cy, cw, ch };
 #ifndef LIBRETRO
+		const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
 		clamp_auto_crop_rect(surface, crop_rect);
 		const SDL_Rect source_crop_rect = crop_rect;
 		// DIW/bitplane limits can exclude visible sprites or raster content.
@@ -2127,7 +2129,9 @@ void auto_crop_image()
 		// conservative minimum frame that keeps intentional black borders.
 		expand_auto_crop_rect_to_visible_content(surface, crop_rect, scan_state);
 		preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
-			hres, vres, scan_state.border_rgb, scan_state.border_valid, visible_state,
+			hres, vres, scan_state.border_rgb, scan_state.border_valid,
+			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
+			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, visible_state,
 			force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
 		cx = crop_rect.x;
 		cy = crop_rect.y;
