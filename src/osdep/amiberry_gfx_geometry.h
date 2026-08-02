@@ -81,6 +81,35 @@ static inline void amiberry_gfx_auto_crop_presentation_dimensions(
 	}
 }
 
+static inline int amiberry_gfx_content_grid_dimension(
+	const int rendered_dimension, const int rendered_resolution,
+	const int content_resolution)
+{
+	if (rendered_dimension <= 0 || rendered_resolution <= content_resolution) {
+		return rendered_dimension;
+	}
+
+	const int resolution_delta = rendered_resolution - content_resolution;
+	if (resolution_delta >= 30) {
+		return 1;
+	}
+	const int pixel_repeat = 1 << resolution_delta;
+	return rendered_dimension / pixel_repeat
+		+ (rendered_dimension % pixel_repeat != 0 ? 1 : 0);
+}
+
+static inline void amiberry_gfx_native_content_dimensions(
+	const int rendered_width, const int rendered_height,
+	const int rendered_hres, const int rendered_vres,
+	const int content_hres, const int content_vres,
+	int& content_width, int& content_height)
+{
+	content_width = amiberry_gfx_content_grid_dimension(
+		rendered_width, rendered_hres, content_hres);
+	content_height = amiberry_gfx_content_grid_dimension(
+		rendered_height, rendered_vres, content_vres);
+}
+
 static inline int amiberry_gfx_native_integer_scale(
 	int render_width, int render_height, int display_width, int display_height)
 {

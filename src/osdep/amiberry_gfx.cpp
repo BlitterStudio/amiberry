@@ -2101,6 +2101,7 @@ void auto_crop_image()
 	{
 		static int last_cw = 0, last_ch = 0, last_cx = 0, last_cy = 0;
 		static int last_hres = 0, last_vres = 0;
+		static int last_content_hres = 0, last_content_vres = 0;
 		static bool last_is_ntsc = false;
 		static SDL_Surface* last_surface = nullptr;
 		static int last_surface_w = 0, last_surface_h = 0;
@@ -2114,6 +2115,10 @@ void auto_crop_image()
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+		const int content_hres = std::clamp(detected_screen_resolution,
+			RES_LORES, std::min(hres, RES_SUPERHIRES));
+		const int content_vres = interlace_seen > 0
+			? std::min(vres, VRES_DOUBLE) : VRES_NONDOUBLE;
 		const int raw_cw = cw;
 		const int raw_ch = ch;
 		const int raw_cx = cx;
@@ -2171,6 +2176,7 @@ void auto_crop_image()
 		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop
 			&& last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy
 			&& last_hres == hres && last_vres == vres
+			&& last_content_hres == content_hres && last_content_vres == content_vres
 			&& last_is_ntsc == is_ntsc
 			&& last_surface == surface
 			&& last_surface_w == surface_w
@@ -2195,6 +2201,8 @@ void auto_crop_image()
 		last_cy = cy;
 		last_hres = hres;
 		last_vres = vres;
+		last_content_hres = content_hres;
+		last_content_vres = content_vres;
 		last_is_ntsc = is_ntsc;
 		last_surface = surface;
 		last_surface_w = surface_w;
@@ -2211,8 +2219,15 @@ void auto_crop_image()
 		cw = crop_rect.w;
 		ch = crop_rect.h;
 
+		// Integer scaling follows the native Amiga content grid, not any pixel
+		// repetition introduced by the configured render resolution.
+		int content_width, content_height;
+		amiberry_gfx_native_content_dimensions(
+			cw, ch, hres, vres, content_hres, content_vres,
+			content_width, content_height);
 		int source_width, source_height;
-		auto_crop_display_dimensions(cw, ch, hres, vres, false, source_width, source_height);
+		auto_crop_display_dimensions(content_width, content_height,
+			content_hres, content_vres, false, source_width, source_height);
 		int width, height;
 		amiberry_gfx_auto_crop_presentation_dimensions(
 			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
@@ -2280,9 +2295,10 @@ void auto_crop_image()
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		renderer->crop_display_w = integer_width;
 		renderer->crop_display_h = integer_height;
-		write_log(_T("auto_crop: raw=%dx%d+%d+%d final=%dx%d+%d+%d hres=%d vres=%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
-			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz,
-			width, height, renderer->crop_aspect);
+		write_log(_T("auto_crop: raw=%dx%d+%d+%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres,
+			content_hres, content_vres, content_width, content_height,
+			is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
 		rq = { dx, dy, presentation_width, presentation_height };
 		cr = crop_rect;
 

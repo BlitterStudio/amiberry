@@ -117,6 +117,50 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 		"integer scaling must retain the largest bounded vertical scale");
 }
 
+static void test_native_content_grid_ignores_configured_pixel_repetition()
+{
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_native_content_dimensions(
+		640, 512, 1, 1, 0, 0, width, height);
+	expect_int_eq(width, 320,
+		"low-res content must use its 320-pixel grid inside a hires surface");
+	expect_int_eq(height, 256,
+		"non-interlaced content must use its 256-line grid inside a doubled surface");
+
+	amiberry_gfx_native_content_dimensions(
+		641, 513, 1, 1, 0, 0, width, height);
+	expect_int_eq(width, 321,
+		"odd crop widths must round up so edge content remains represented");
+	expect_int_eq(height, 257,
+		"odd crop heights must round up so edge content remains represented");
+
+	amiberry_gfx_native_content_dimensions(
+		640, 512, 1, 1, 1, 0, width, height);
+	expect_int_eq(width, 640,
+		"hires content must retain its horizontal source grid");
+	expect_int_eq(height, 256,
+		"non-interlaced hires content must still remove configured line doubling");
+}
+
+static void test_native_content_grid_uses_the_largest_integer_fit()
+{
+	int content_width = 0;
+	int content_height = 0;
+	amiberry_gfx_native_content_dimensions(
+		640, 400, 1, 1, 0, 0, content_width, content_height);
+
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_native_integer_dimensions(
+		5120, 1440, content_width, content_width, content_height,
+		true, 8.0f / 5.0f, width, height);
+	expect_int_eq(width, 2240,
+		"low-res content must scale from the native grid without resolution autoswitch");
+	expect_int_eq(height, 1400,
+		"native-grid scaling must use the largest whole vertical multiple");
+}
+
 static void test_auto_scaling_uses_integer_only_for_a_lossless_fit()
 {
 	int width = 0;
@@ -270,6 +314,8 @@ int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
 	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
+	test_native_content_grid_ignores_configured_pixel_repetition();
+	test_native_content_grid_uses_the_largest_integer_fit();
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
 	test_corrected_integer_scaling_stays_within_fullscreen_mode();

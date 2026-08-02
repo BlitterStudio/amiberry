@@ -164,6 +164,7 @@ private:
 		SDL_Rect crop{};
 		int crop_display_width = 0;
 		int crop_display_height = 0;
+		bool native_auto_crop = false;
 		bool integer_scaling = false;
 		bool auto_scaling = false;
 		bool picasso_on = false;

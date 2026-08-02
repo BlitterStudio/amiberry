@@ -665,13 +665,15 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	const int src_w = (is_cropped) ? crop_w : (surface ? surface->w : 0);
 	const int src_h = (is_cropped) ? crop_h : (surface ? surface->h : 0);
+	const bool native_auto_crop = !mon->screen_is_picasso && currprefs.gfx_auto_crop;
 	int display_w = src_w;
 	int display_h = src_w > 0
 		? std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f)) : 0;
-	if (is_cropped && crop_display_w > 0 && crop_display_h > 0) {
+	if (native_auto_crop && crop_display_w > 0 && crop_display_h > 0) {
 		display_w = crop_display_w;
 		display_h = crop_display_h;
 	}
+	const int integer_source_w = native_auto_crop ? display_w : src_w;
 
 	bool use_integer_scaling = mon->screen_is_picasso
 		? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
@@ -693,7 +695,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 		if (auto_native_scaling && src_w > 0 && src_h > 0) {
 			use_integer_scaling = amiberry_gfx_auto_integer_dimensions(
-				renderAreaW, renderAreaH, src_w, display_w, display_h,
+				renderAreaW, renderAreaH, integer_source_w, display_w, display_h,
 				currprefs.gfx_correct_aspect != 0, desired_aspect,
 				integer_target_aspect, destW, destH);
 		} else if (use_integer_scaling && src_w > 0 && src_h > 0) {
@@ -704,7 +706,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 				destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
 			} else {
 				amiberry_gfx_native_integer_dimensions(
-					renderAreaW, renderAreaH, src_w, display_w, display_h,
+					renderAreaW, renderAreaH, integer_source_w, display_w, display_h,
 					currprefs.gfx_correct_aspect != 0, integer_target_aspect,
 					destW, destH);
 			}

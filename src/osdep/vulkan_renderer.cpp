@@ -1041,6 +1041,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.crop = crop_rect;
 	slot.crop_display_width = crop_display_w;
 	slot.crop_display_height = crop_display_h;
+	slot.native_auto_crop = !ad->picasso_on && currprefs.gfx_auto_crop;
 	slot.crt_active = m_crt_shader_active;
 	slot.crt_time = m_crt_time;
 	m_crt_time += 1.0f / 50.0f; // Advance CRT time on emu thread (not render thread)
@@ -1523,11 +1524,12 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			&& slot.crop.w > 0 && slot.crop.h > 0;
 		const int src_w = is_cropped ? slot.crop.w : slot.texture_width;
 		const int src_h = is_cropped ? slot.crop.h : slot.texture_height;
-		const int display_w = is_cropped && slot.crop_display_width > 0
+		const int display_w = slot.native_auto_crop && slot.crop_display_width > 0
 			? slot.crop_display_width : src_w;
-		const int display_h = is_cropped && slot.crop_display_height > 0
+		const int display_h = slot.native_auto_crop && slot.crop_display_height > 0
 			? slot.crop_display_height
 			: std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
+		const int integer_source_w = slot.native_auto_crop ? display_w : src_w;
 
 		if (render_area_x != 0 || render_area_y != 0 ||
 			render_area_w != drawable_w || render_area_h != drawable_h) {
@@ -1553,7 +1555,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 
 			if (auto_native_scaling && src_w > 0 && src_h > 0) {
 				use_integer = amiberry_gfx_auto_integer_dimensions(
-					render_area_w, render_area_h, src_w, display_w, display_h,
+					render_area_w, render_area_h, integer_source_w, display_w, display_h,
 					slot.correct_native_aspect, desired_aspect,
 					integer_target_aspect, destW, destH);
 			} else if (use_integer && src_w > 0 && src_h > 0) {
@@ -1564,7 +1566,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 					destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
 				} else {
 					amiberry_gfx_native_integer_dimensions(
-						render_area_w, render_area_h, src_w, display_w, display_h,
+						render_area_w, render_area_h, integer_source_w, display_w, display_h,
 						slot.correct_native_aspect, integer_target_aspect,
 						destW, destH);
 				}
