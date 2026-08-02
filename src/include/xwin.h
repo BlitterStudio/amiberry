@@ -30,6 +30,9 @@ extern void graphics_leave(void);
 extern void graphics_reset(bool);
 extern bool handle_events(void);
 extern int handle_msgpump(bool);
+#ifdef AMIBERRY_MACOS
+extern void flush_macos_synthetic_mouse_releases();
+#endif
 extern void setup_brkhandler(void);
 extern int isfullscreen(void);
 extern void toggle_fullscreen(int monid, int);
