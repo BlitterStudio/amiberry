@@ -113,6 +113,53 @@ static void test_ignores_scattered_outside_pixels()
 	expect_eq(crop.h, 12, "Scattered pixels must not change crop height");
 }
 
+static void test_preserves_diagonally_connected_content()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int i = 0; i < 16; i++) {
+		pixels[(22 + i) * width + (1 + i)] = 0x00ffffffu;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 20, 8, 10, 12 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed,
+		"Eight-neighbor scanning must keep diagonal content in one component");
+	expect_eq(crop.x, 1, "Diagonal content should expand the crop left edge");
+	expect_eq(crop.y, 8, "Diagonal content should retain the crop top edge");
+	expect_eq(crop.w, 29, "Diagonal content should retain the crop right edge");
+	expect_eq(crop.h, 30, "Diagonal content should expand the crop bottom edge");
+}
+
+static void test_crop_separates_outside_components()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int y = 12; y < 17; y++) {
+		for (int x = 12; x < 15; x++) {
+			pixels[y * width + x] = 0x00ffffffu;
+		}
+		for (int x = 25; x < 28; x++) {
+			pixels[y * width + x] = 0x00ffffffu;
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 15, 10, 10, 10 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(!changed,
+		"The crop must not connect two individually sub-threshold components");
+	expect_eq(crop.x, 15, "Separated components must not move the crop left edge");
+	expect_eq(crop.w, 10, "Separated components must not widen the crop");
+}
+
 static void test_expands_to_visible_sprite_edge_content()
 {
 	constexpr int width = 40;
@@ -692,6 +739,8 @@ int main()
 	test_expands_to_connected_visible_content();
 	test_ignores_distant_speck_when_content_expands();
 	test_ignores_scattered_outside_pixels();
+	test_preserves_diagonally_connected_content();
+	test_crop_separates_outside_components();
 	test_expands_to_visible_sprite_edge_content();
 	test_keeps_crop_inside_non_black_border();
 	test_uniform_border_avoids_component_scan();
