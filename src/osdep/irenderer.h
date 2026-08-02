@@ -47,6 +47,7 @@ public:
 	virtual void set_scaling(int monid, const uae_prefs* p, int w, int h) = 0;
 	virtual void set_auto_crop_presentation(int monid, int scaling_method,
 		bool auto_integer_scaling, int width, int height) {}
+	virtual void refresh_scaling_after_resize(int monid) {}
 
 	// --- VSync ---
 	virtual void update_vsync(int monid) = 0;

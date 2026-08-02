@@ -146,6 +146,8 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.headless) return;
+	m_scaling_width = w;
+	m_scaling_height = h;
 
 	SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAREST;
 	bool integer_scale = false;
@@ -224,6 +226,21 @@ void SDLRenderer::set_auto_crop_presentation(const int monid, const int scaling_
 	SDL_SetRenderLogicalPresentation(mon->amiga_renderer, width, height,
 		integer_scaling ? SDL_LOGICAL_PRESENTATION_INTEGER_SCALE
 			: SDL_LOGICAL_PRESENTATION_LETTERBOX);
+}
+
+void SDLRenderer::refresh_scaling_after_resize(const int monid)
+{
+	AmigaMonitor* mon = &AMonitors[monid];
+	if (currprefs.scaling_method != -1 || mon->screen_is_picasso)
+		return;
+
+	if (currprefs.gfx_auto_crop) {
+		force_auto_crop = true;
+		return;
+	}
+
+	if (m_scaling_width > 0 && m_scaling_height > 0)
+		set_scaling(monid, &currprefs, m_scaling_width, m_scaling_height);
 }
 
 // --- OSD texture synchronization ---

@@ -34,6 +34,7 @@ public:
 	void set_scaling(int monid, const uae_prefs* p, int w, int h) override;
 	void set_auto_crop_presentation(int monid, int scaling_method,
 		bool auto_integer_scaling, int width, int height) override;
+	void refresh_scaling_after_resize(int monid) override;
 
 	// VSync
 	void update_vsync(int monid) override;
@@ -73,6 +74,8 @@ private:
 	SDL_Texture* m_amiga_texture = nullptr;
 	SDL_Texture* m_cursor_overlay_texture = nullptr;
 	SDL_PixelFormat m_texture_format = SDL_PIXELFORMAT_UNKNOWN;
+	int m_scaling_width = 0;
+	int m_scaling_height = 0;
 };
 
 SDLRenderer* get_sdl_renderer();
