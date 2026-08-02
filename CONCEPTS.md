@@ -25,3 +25,9 @@ The transparent screen region inside a custom bezel that can replace the full dr
 An on-screen joystick gesture that owns directional input from an initial touch inside its acquisition area until finger-up, platform cancellation, application focus loss, or control shutdown.
 
 Moving the held finger outside the visible joystick base continues to update direction and does not release or recenter the gesture.
+
+### Captured trackpad gesture
+
+An Android free-area touch gesture that owns the exact SDL touch and finger identities accepted after the on-screen keyboard and joystick decline the initial contact.
+
+The gesture keeps that ownership when its fingers cross overlay geometry. Cancellation, lifecycle neutralization, an invalidated mouse mapping, or a terminal paired-finger condition releases its owned buttons and prevents surviving contacts from being reassigned until all tracked contacts lift.

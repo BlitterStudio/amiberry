@@ -12,16 +12,25 @@ object AndroidLaunchConfig {
 	const val INTENT_QUICKSTART_CONFIG = ".intent_quickstart_settings.uae"
 	const val CONTROL_CONFIG = ".android_controls.uae"
 
+	data class PreparedWhdLoad(
+		val configFile: File,
+		val shaderOverride: String
+	)
+
 	fun loadLastSessionSettings(context: Context): EmulatorSettings {
 		return try {
+			val globalSettingsFile = ShaderCatalog.findSettingsFile(
+				context.filesDir,
+				context.getExternalFilesDir(null)
+			)
 			val sessionFile = ConfigGenerator.configFile(context, LAST_SESSION_FILE)
 			val legacySessionFile = ConfigGenerator.legacyExternalConfigFile(context, LAST_SESSION_FILE)
 			val readableSessionFile = when {
 				sessionFile.exists() -> sessionFile
 				legacySessionFile.exists() -> legacySessionFile
-				else -> return EmulatorSettings()
+				else -> return ConfigSettingsResolver.defaults(globalSettingsFile)
 			}
-			ConfigParser.parse(readableSessionFile).settings
+			ConfigSettingsResolver.parse(readableSessionFile, globalSettingsFile).settings
 		} catch (_: Exception) {
 			EmulatorSettings()
 		}
@@ -44,6 +53,7 @@ object AndroidLaunchConfig {
 			floppy1 = floppy1,
 			floppy1Type = if (floppy1.isBlank()) -1 else 0,
 			cdImage = cdImage,
+			shader = currentSettings.shader,
 			joyport0 = currentSettings.joyport0,
 			joyport1 = currentSettings.joyport1,
 			onScreenJoystick = currentSettings.onScreenJoystick,
@@ -52,11 +62,29 @@ object AndroidLaunchConfig {
 		)
 	}
 
-	fun writeControlConfig(
+	private fun writeControlConfig(
 		context: Context,
 		settings: EmulatorSettings,
 		filename: String = CONTROL_CONFIG
 	): File = ConfigGenerator.writeControlConfig(context, settings, filename)
+
+	fun prepareWhdLoad(
+		context: Context,
+		lhaPath: String,
+		currentSettings: EmulatorSettings
+	): PreparedWhdLoad {
+		val externalFilesDir = context.getExternalFilesDir(null)
+		val shader = WhdLoadAutoConfig.resolveLaunchShader(
+			globalSettingsFile = ShaderCatalog.findSettingsFile(context.filesDir, externalFilesDir),
+			externalFilesDir = externalFilesDir,
+			lhaFile = File(lhaPath),
+			currentShader = currentSettings.shader
+		)
+		return PreparedWhdLoad(
+			configFile = writeControlConfig(context, currentSettings.copy(shader = shader)),
+			shaderOverride = shader
+		)
+	}
 
 	fun writeQuickStartConfig(
 		context: Context,

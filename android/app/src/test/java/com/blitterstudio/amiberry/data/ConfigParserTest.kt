@@ -213,6 +213,35 @@ class ConfigParserTest {
 		assertTrue(result.settings.autoCrop)
 	}
 
+	@Test
+	fun `parse canonical native shader without consuming non-native shader keys`() {
+		val bareShaderLine = "  shader = legacy.glsl  "
+		val rtgShaderLine = "shader_rtg=rtg.glsl"
+		val file = writeConfig("""
+			amiberry.shader=presets/custom.glslp
+			$bareShaderLine
+			$rtgShaderLine
+		""".trimIndent())
+
+		val result = ConfigParser.parse(file)
+
+		assertEquals("presets/custom.glslp", result.settings.shader)
+		assertEquals(listOf(bareShaderLine, rtgShaderLine), result.unknownLines)
+		assertTrue("amiberry.shader" in result.explicitKeys)
+	}
+
+	@Test
+	fun `parse native shader normalizes empty and absent values to none`() {
+		val empty = ConfigParser.parse(writeConfig("amiberry.shader="))
+		val absentFile = tempDir.newFile("shader_absent.uae")
+		absentFile.writeText("cpu_model=68000")
+		val absent = ConfigParser.parse(absentFile)
+
+		assertEquals("none", empty.settings.shader)
+		assertEquals("none", absent.settings.shader)
+		assertTrue(empty.unknownLines.isEmpty())
+	}
+
 	// --- Input settings ---
 
 	@Test

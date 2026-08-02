@@ -20,17 +20,15 @@ object WhdLoadAutoConfig {
 		currentSettings: EmulatorSettings
 	): EmulatorSettings? {
 		val lhaFile = File(whdLoadFile.path)
-		val externalDir = context.getExternalFilesDir(null) ?: return null
-		val configFile = File(File(externalDir, StoragePaths.CONFIGURATIONS), "${lhaFile.nameWithoutExtension}.uae")
-		if (configFile.exists()) {
+		val externalDir = context.getExternalFilesDir(null)
+		val globalSettingsFile = ShaderCatalog.findSettingsFile(context.filesDir, externalDir)
+		val configFile = resolvePerGameConfigFile(globalSettingsFile, externalDir, lhaFile)
+		if (configFile?.isFile == true) {
 			val parsed = ConfigParser.parse(configFile)
-			return AndroidControlSettings.withFallback(
-				settings = parsed.settings,
-				explicitKeys = parsed.explicitKeys,
-				fallback = currentSettings
-			)
+			return settingsFromPerGameConfig(parsed, currentSettings)
 		}
 
+		if (externalDir == null) return null
 		val databaseFile = File(externalDir, "${StoragePaths.WHDBOOT}/game-data/whdload_db.json")
 		if (!databaseFile.exists()) return null
 		return try {
@@ -43,6 +41,47 @@ object WhdLoadAutoConfig {
 		} catch (_: Exception) {
 			null
 		}
+	}
+
+	internal fun settingsFromPerGameConfig(
+		parsed: ConfigParser.ParsedConfig,
+		currentSettings: EmulatorSettings
+	): EmulatorSettings {
+		val settings = AndroidControlSettings.withFallback(
+			settings = parsed.settings,
+			explicitKeys = parsed.explicitKeys,
+			fallback = currentSettings
+		)
+		return settings.copy(shader = resolveParsedLaunchShader(parsed, currentSettings.shader))
+	}
+
+	internal fun resolveLaunchShader(
+		globalSettingsFile: File?,
+		externalFilesDir: File?,
+		lhaFile: File,
+		currentShader: String
+	): String {
+		val configFile = resolvePerGameConfigFile(globalSettingsFile, externalFilesDir, lhaFile)
+			?: return currentShader
+		if (!configFile.isFile) return currentShader
+		return resolveParsedLaunchShader(ConfigParser.parse(configFile), currentShader)
+	}
+
+	internal fun resolvePerGameConfigFile(
+		globalSettingsFile: File?,
+		externalFilesDir: File?,
+		lhaFile: File
+	): File? = ShaderCatalog.resolveConfigurationRoot(globalSettingsFile, externalFilesDir)?.let {
+		File(it, "${lhaFile.nameWithoutExtension}.uae")
+	}
+
+	private fun resolveParsedLaunchShader(
+		parsed: ConfigParser.ParsedConfig,
+		currentShader: String
+	): String = if ("amiberry.shader" in parsed.explicitKeys) {
+		parsed.settings.shader
+	} else {
+		currentShader
 	}
 
 	fun settingsFromDatabaseJson(
@@ -75,6 +114,7 @@ object WhdLoadAutoConfig {
 			floppy0Type = -1,
 			floppy1 = "",
 			floppy1Type = -1,
+			shader = currentSettings.shader,
 			joyport0 = currentSettings.joyport0,
 			joyport1 = currentSettings.joyport1,
 			onScreenJoystick = currentSettings.onScreenJoystick,

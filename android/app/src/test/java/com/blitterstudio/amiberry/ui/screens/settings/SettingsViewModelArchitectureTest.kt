@@ -47,4 +47,74 @@ class SettingsViewModelArchitectureTest {
 		assertTrue(source.contains("configRepository.overwriteConfigAtPath("))
 		assertTrue(Regex("""fun loadConfig\([\s\S]*name: String,\s*path: String""").containsMatchIn(source))
 	}
+
+	@Test
+	fun `shader catalog starts with built ins and explicit loading state`() {
+		assertTrue(
+			source.contains(
+				"var shaderCatalogEntries by mutableStateOf(ShaderCatalog.BUILT_INS)"
+			)
+		)
+		assertTrue(source.contains("enum class ShaderCatalogStatus"))
+		assertTrue(
+			source.contains(
+				"var shaderCatalogStatus by mutableStateOf(ShaderCatalogStatus.NOT_LOADED)"
+			)
+		)
+	}
+
+	@Test
+	fun `applying a model preserves the selected native shader`() {
+		val applyModelMethod = source
+			.substringAfter("fun applyModel(model: AmigaModel)")
+			.substringBefore("fun loadConfig(")
+
+		assertTrue(applyModelMethod.contains("shader = previousSettings.shader"))
+	}
+
+	@Test
+	fun `shader catalog refresh resolves and scans away from the main thread`() {
+		assertTrue(source.contains("fun refreshShaderCatalog()"))
+		assertTrue(source.contains("shaderCatalogStatus = ShaderCatalogStatus.LOADING"))
+		assertTrue(
+			Regex(
+				"""withContext\(Dispatchers\.IO\)\s*\{[\s\S]*ShaderCatalog\.resolveScanRoots\([\s\S]*ShaderCatalog\.scan\("""
+			).containsMatchIn(source)
+		)
+		val settingsResolution = source.indexOf("ShaderCatalog.findSettingsFile(")
+		val shaderResolution = source.indexOf("ShaderCatalog.resolveScanRoots(")
+		assertTrue(settingsResolution >= 0)
+		assertTrue(shaderResolution > settingsResolution)
+		assertTrue(source.contains("application.filesDir"))
+		assertTrue(source.contains("application.getExternalFilesDir(null)"))
+	}
+
+	@Test
+	fun `only the latest shader catalog refresh publishes its result`() {
+		assertTrue(source.contains("private var shaderCatalogRefreshGeneration = 0"))
+		assertTrue(source.contains("val refreshGeneration = ++shaderCatalogRefreshGeneration"))
+		assertTrue(
+			source.contains(
+				"if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch"
+			)
+		)
+		val staleResultGuard = source.indexOf(
+			"if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch"
+		)
+		assertTrue(source.indexOf("shaderCatalogEntries = catalogEntries") > staleResultGuard)
+		assertTrue(
+			source.indexOf("shaderCatalogStatus = ShaderCatalogStatus.LOADED") > staleResultGuard
+		)
+	}
+
+	@Test
+	fun `shader catalog refresh does not rewrite configured settings`() {
+		val refreshMethod = Regex(
+			"""fun refreshShaderCatalog\(\)\s*\{([\s\S]*?)\n\t\}"""
+		).find(source)?.groupValues?.get(1).orEmpty()
+
+		assertTrue(refreshMethod.isNotEmpty())
+		assertTrue(!refreshMethod.contains("settings ="))
+		assertTrue(!refreshMethod.contains("copy(shader"))
+	}
 }

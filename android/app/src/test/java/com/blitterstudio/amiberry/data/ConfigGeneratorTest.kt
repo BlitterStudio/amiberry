@@ -208,6 +208,7 @@ class ConfigGeneratorTest {
 	fun `generate control config writes Android controls without hardware settings`() {
 		val output = ConfigGenerator.generateControlConfig(
 			EmulatorSettings(
+				shader = "presets/custom.glslp",
 				joyport0 = "mouse",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
@@ -216,6 +217,9 @@ class ConfigGeneratorTest {
 		)
 		val lines = output.lines()
 
+		assertEquals(1, lines.count { it == "amiberry.shader=presets/custom.glslp" })
+		assertFalse(lines.any { it.startsWith("shader=") })
+		assertFalse(lines.any { it.startsWith("shader_rtg=") || it.startsWith("amiberry.shader_rtg=") })
 		assertContainsLine(lines, "joyport0=mouse")
 		assertContainsLine(lines, "joyport1=joy1")
 		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
@@ -313,6 +317,17 @@ class ConfigGeneratorTest {
 		assertTrue(lines.any { it.startsWith("amiberry.gfx_auto_crop=") })
 		assertFalse(lines.any { it.startsWith("gfx_correct_aspect=") })
 		assertFalse(lines.any { it.startsWith("gfx_auto_crop=") })
+	}
+
+	@Test
+	fun `generate emits only the canonical native shader key`() {
+		val lines = ConfigGenerator.generate(
+			EmulatorSettings(shader = "presets/custom.glslp")
+		).lines()
+
+		assertEquals(1, lines.count { it == "amiberry.shader=presets/custom.glslp" })
+		assertFalse(lines.any { it.startsWith("shader=") })
+		assertFalse(lines.any { it.startsWith("shader_rtg=") || it.startsWith("amiberry.shader_rtg=") })
 	}
 
 	// --- Full A4000 config ---
@@ -413,6 +428,18 @@ class ConfigGeneratorTest {
 		val parsed = ConfigParser.parse(file)
 
 		assertEquals("onscreen_joy", parsed.settings.joyport1)
+	}
+
+	@Test
+	fun `round-trip preserves unavailable custom native shader path`() {
+		val original = EmulatorSettings(shader = "missing/deep/custom.glslp")
+		val file = tempDir.newFile("roundtrip_shader.uae")
+		file.writeText(ConfigGenerator.generate(original))
+
+		val parsed = ConfigParser.parse(file)
+
+		assertEquals(original.shader, parsed.settings.shader)
+		assertTrue(parsed.unknownLines.none { it.trimStart().startsWith("amiberry.shader=") })
 	}
 
 	// --- Hard drive round-trip ---

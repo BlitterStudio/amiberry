@@ -19,6 +19,8 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -35,6 +40,20 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 @Composable
 fun DisplayTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
+	val lifecycleOwner = LocalLifecycleOwner.current
+
+	LaunchedEffect(viewModel) {
+		viewModel.refreshShaderCatalog()
+	}
+	DisposableEffect(lifecycleOwner, viewModel) {
+		val observer = LifecycleEventObserver { _, event ->
+			if (event == Lifecycle.Event.ON_RESUME) {
+				viewModel.refreshShaderCatalog()
+			}
+		}
+		lifecycleOwner.lifecycle.addObserver(observer)
+		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+	}
 
 	val resolutionPresets = listOf(
 		Triple(640, 256, stringResource(R.string.settings_display_resolution_pal_low)),
@@ -105,24 +124,91 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 					}
 				)
 
-			SwitchRow(
-				label = stringResource(R.string.settings_display_auto_crop),
-				checked = settings.autoCrop,
-				onCheckedChange = {
-					viewModel.updateSettings { s -> s.copy(autoCrop = it) }
-				}
-			)
-			SwitchRow(
-				label = stringResource(R.string.settings_display_integer_scaling),
-				checked = settings.scalingMethod == 2 && settings.gfxAutoresolution == 1,
-				onCheckedChange = { on ->
-					viewModel.updateSettings { s ->
-						if (on) s.copy(scalingMethod = 2, gfxAutoresolution = 1)
-						else s.copy(scalingMethod = -1, gfxAutoresolution = 0)
+				SwitchRow(
+					label = stringResource(R.string.settings_display_auto_crop),
+					checked = settings.autoCrop,
+					onCheckedChange = {
+						viewModel.updateSettings { s -> s.copy(autoCrop = it) }
 					}
-				},
-				supportingText = stringResource(R.string.settings_display_integer_scaling_desc)
-			)
+				)
+				SwitchRow(
+					label = stringResource(R.string.settings_display_integer_scaling),
+					checked = settings.scalingMethod == 2 && settings.gfxAutoresolution == 1,
+					onCheckedChange = { on ->
+						viewModel.updateSettings { s ->
+							if (on) s.copy(scalingMethod = 2, gfxAutoresolution = 1)
+							else s.copy(scalingMethod = -1, gfxAutoresolution = 0)
+						}
+					},
+					supportingText = stringResource(R.string.settings_display_integer_scaling_desc)
+				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				var shaderExpanded by remember { mutableStateOf(false) }
+				val shaderUnavailable =
+					viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
+						settings.shader !in viewModel.shaderCatalogEntries
+				val unavailableLabel = stringResource(R.string.settings_display_shader_unavailable)
+				val shaderDisplayValue = if (shaderUnavailable) {
+					stringResource(
+						R.string.settings_display_shader_unavailable_value,
+						settings.shader,
+						unavailableLabel
+					)
+				} else {
+					settings.shader
+				}
+				val shaderSupportingText = stringResource(
+					if (shaderUnavailable) {
+						R.string.settings_display_shader_unavailable_help
+					} else {
+						R.string.settings_display_shader_help
+					}
+				)
+
+				ExposedDropdownMenuBox(
+					expanded = shaderExpanded,
+					onExpandedChange = { shaderExpanded = it }
+				) {
+					OutlinedTextField(
+						value = shaderDisplayValue,
+						onValueChange = {},
+						readOnly = true,
+						label = { Text(stringResource(R.string.settings_display_shader_label)) },
+						supportingText = { Text(shaderSupportingText) },
+						isError = shaderUnavailable,
+						trailingIcon = {
+							ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
+						},
+						modifier = Modifier
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+							.fillMaxWidth()
+					)
+					ExposedDropdownMenu(
+						expanded = shaderExpanded,
+						onDismissRequest = { shaderExpanded = false }
+					) {
+						viewModel.shaderCatalogEntries.forEach { shader ->
+							DropdownMenuItem(
+								text = { Text(shader) },
+								onClick = {
+									if (shader != settings.shader) {
+										viewModel.updateSettings { s -> s.copy(shader = shader) }
+									}
+									shaderExpanded = false
+								}
+							)
+						}
+						if (shaderUnavailable) {
+							DropdownMenuItem(
+								text = { Text(shaderDisplayValue) },
+								onClick = {},
+								enabled = false
+							)
+						}
+					}
+				}
 			}
 		}
 

@@ -57,6 +57,21 @@ class AndroidLaunchConfigTest {
 		assertEquals("/import/game.iso", snapshot.cdImage)
 	}
 
+	@Test
+	fun `quick start snapshot preserves current native shader`() {
+		val snapshot = AndroidLaunchConfig.buildQuickStartSettingsSnapshot(
+			model = AmigaModel.A500,
+			roms = emptyList(),
+			currentSettings = EmulatorSettings.fromModel(AmigaModel.A1200)
+				.copy(shader = "crt/aperture.glslp"),
+			floppy0 = "",
+			floppy1 = "",
+			cdImage = ""
+		)
+
+		assertEquals("crt/aperture.glslp", snapshot.shader)
+	}
+
 	private fun rom(name: String, crc32: Long, path: String = "/roms/$name") = AmigaFile(
 		path = path,
 		name = name,
