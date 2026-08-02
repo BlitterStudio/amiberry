@@ -485,76 +485,91 @@ static inline size_t amiberry_auto_crop_flood_region(
 	if (state.visited[start_index]) {
 		return 0;
 	}
-	const bool start_matches = ((amiberry_auto_crop_read_pixel(
-		buffer, start_x, start_y) & buffer.rgb_mask) == rgb) == MatchColor;
-	if (!start_matches) {
-		if constexpr (!MatchColor) {
-			state.visited[start_index] = 1;
+	const auto pixel_matches = [&](const int x, const int y) {
+		const int index = y * buffer.width + x;
+		const bool matches = ((amiberry_auto_crop_read_pixel(
+			buffer, x, y) & buffer.rgb_mask) == rgb) == MatchColor;
+		if (!matches) {
+			if constexpr (!MatchColor) {
+				state.visited[index] = 1;
+			}
+			return false;
 		}
+		return true;
+	};
+	if (!pixel_matches(start_x, start_y)) {
 		return 0;
 	}
-	state.visited[start_index] = 1;
+
 	state.pending.push_back(start_index);
 	size_t pixels = 0;
 	if constexpr (!MatchColor) {
 		*bounds = { start_x, start_y, start_x, start_y };
 	}
-	const auto visit_neighbor = [&](const int neighbor_x, const int neighbor_y) {
-		if (amiberry_auto_crop_rect_contains(crop, neighbor_x, neighbor_y)) {
-			return;
-		}
-		const int neighbor_index = neighbor_y * buffer.width + neighbor_x;
-		if (state.visited[neighbor_index]) {
-			return;
-		}
-		const bool matches = ((amiberry_auto_crop_read_pixel(
-			buffer, neighbor_x, neighbor_y) & buffer.rgb_mask) == rgb) == MatchColor;
-		if (matches) {
-			state.visited[neighbor_index] = 1;
-			state.pending.push_back(neighbor_index);
-		} else if constexpr (!MatchColor) {
-			state.visited[neighbor_index] = 1;
+	const auto queue_adjacent_runs = [&](const int y, const int left, const int right) {
+		bool run_queued = false;
+		for (int x = std::max(0, left - 1);
+			x <= std::min(buffer.width - 1, right + 1); x++) {
+			if (amiberry_auto_crop_rect_contains(crop, x, y)) {
+				run_queued = false;
+				continue;
+			}
+			const int index = y * buffer.width + x;
+			if (state.visited[index]) {
+				run_queued = false;
+				continue;
+			}
+			if (!pixel_matches(x, y)) {
+				run_queued = false;
+				continue;
+			}
+			if (!run_queued) {
+				state.pending.push_back(index);
+				run_queued = true;
+			}
 		}
 	};
 	while (!state.pending.empty()) {
 		const int index = state.pending.back();
 		state.pending.pop_back();
+		if (state.visited[index]) {
+			continue;
+		}
 		const int pixel_x = index % buffer.width;
 		const int pixel_y = index / buffer.width;
-		pixels++;
+		int left = pixel_x;
+		while (left > 0
+			&& !amiberry_auto_crop_rect_contains(crop, left - 1, pixel_y)) {
+			const int candidate = index - (pixel_x - left) - 1;
+			if (state.visited[candidate] || !pixel_matches(left - 1, pixel_y)) {
+				break;
+			}
+			left--;
+		}
+		int right = pixel_x;
+		while (right + 1 < buffer.width
+			&& !amiberry_auto_crop_rect_contains(crop, right + 1, pixel_y)) {
+			const int candidate = index + (right - pixel_x) + 1;
+			if (state.visited[candidate] || !pixel_matches(right + 1, pixel_y)) {
+				break;
+			}
+			right++;
+		}
+		const int row_start = pixel_y * buffer.width;
+		std::fill(state.visited.begin() + row_start + left,
+			state.visited.begin() + row_start + right + 1, 1);
+		pixels += static_cast<size_t>(right - left + 1);
 		if constexpr (!MatchColor) {
-			bounds->x = std::min(bounds->x, pixel_x);
+			bounds->x = std::min(bounds->x, left);
 			bounds->y = std::min(bounds->y, pixel_y);
-			bounds->w = std::max(bounds->w, pixel_x);
+			bounds->w = std::max(bounds->w, right);
 			bounds->h = std::max(bounds->h, pixel_y);
 		}
-		const bool has_left = pixel_x > 0;
-		const bool has_right = pixel_x + 1 < buffer.width;
-		const bool has_above = pixel_y > 0;
-		const bool has_below = pixel_y + 1 < buffer.height;
-		if (has_above) {
-			if (has_left) {
-				visit_neighbor(pixel_x - 1, pixel_y - 1);
-			}
-			visit_neighbor(pixel_x, pixel_y - 1);
-			if (has_right) {
-				visit_neighbor(pixel_x + 1, pixel_y - 1);
-			}
+		if (pixel_y > 0) {
+			queue_adjacent_runs(pixel_y - 1, left, right);
 		}
-		if (has_left) {
-			visit_neighbor(pixel_x - 1, pixel_y);
-		}
-		if (has_right) {
-			visit_neighbor(pixel_x + 1, pixel_y);
-		}
-		if (has_below) {
-			if (has_left) {
-				visit_neighbor(pixel_x - 1, pixel_y + 1);
-			}
-			visit_neighbor(pixel_x, pixel_y + 1);
-			if (has_right) {
-				visit_neighbor(pixel_x + 1, pixel_y + 1);
-			}
+		if (pixel_y + 1 < buffer.height) {
+			queue_adjacent_runs(pixel_y + 1, left, right);
 		}
 	}
 	if constexpr (!MatchColor) {
