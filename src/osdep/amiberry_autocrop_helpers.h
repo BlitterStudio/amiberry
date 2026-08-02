@@ -499,6 +499,23 @@ static inline size_t amiberry_auto_crop_flood_region(
 	if constexpr (!MatchColor) {
 		*bounds = { start_x, start_y, start_x, start_y };
 	}
+	const auto visit_neighbor = [&](const int neighbor_x, const int neighbor_y) {
+		if (amiberry_auto_crop_rect_contains(crop, neighbor_x, neighbor_y)) {
+			return;
+		}
+		const int neighbor_index = neighbor_y * buffer.width + neighbor_x;
+		if (state.visited[neighbor_index]) {
+			return;
+		}
+		const bool matches = ((amiberry_auto_crop_read_pixel(
+			buffer, neighbor_x, neighbor_y) & buffer.rgb_mask) == rgb) == MatchColor;
+		if (matches) {
+			state.visited[neighbor_index] = 1;
+			state.pending.push_back(neighbor_index);
+		} else if constexpr (!MatchColor) {
+			state.visited[neighbor_index] = 1;
+		}
+	};
 	while (!state.pending.empty()) {
 		const int index = state.pending.back();
 		state.pending.pop_back();
@@ -511,25 +528,32 @@ static inline size_t amiberry_auto_crop_flood_region(
 			bounds->w = std::max(bounds->w, pixel_x);
 			bounds->h = std::max(bounds->h, pixel_y);
 		}
-		for (int neighbor_y = std::max(0, pixel_y - 1);
-			neighbor_y <= std::min(buffer.height - 1, pixel_y + 1); neighbor_y++) {
-			for (int neighbor_x = std::max(0, pixel_x - 1);
-				neighbor_x <= std::min(buffer.width - 1, pixel_x + 1); neighbor_x++) {
-				if (amiberry_auto_crop_rect_contains(crop, neighbor_x, neighbor_y)) {
-					continue;
-				}
-				const int neighbor_index = neighbor_y * buffer.width + neighbor_x;
-				if (state.visited[neighbor_index]) {
-					continue;
-				}
-				const bool matches = ((amiberry_auto_crop_read_pixel(
-					buffer, neighbor_x, neighbor_y) & buffer.rgb_mask) == rgb) == MatchColor;
-				if (matches) {
-					state.visited[neighbor_index] = 1;
-					state.pending.push_back(neighbor_index);
-				} else if constexpr (!MatchColor) {
-					state.visited[neighbor_index] = 1;
-				}
+		const bool has_left = pixel_x > 0;
+		const bool has_right = pixel_x + 1 < buffer.width;
+		const bool has_above = pixel_y > 0;
+		const bool has_below = pixel_y + 1 < buffer.height;
+		if (has_above) {
+			if (has_left) {
+				visit_neighbor(pixel_x - 1, pixel_y - 1);
+			}
+			visit_neighbor(pixel_x, pixel_y - 1);
+			if (has_right) {
+				visit_neighbor(pixel_x + 1, pixel_y - 1);
+			}
+		}
+		if (has_left) {
+			visit_neighbor(pixel_x - 1, pixel_y);
+		}
+		if (has_right) {
+			visit_neighbor(pixel_x + 1, pixel_y);
+		}
+		if (has_below) {
+			if (has_left) {
+				visit_neighbor(pixel_x - 1, pixel_y + 1);
+			}
+			visit_neighbor(pixel_x, pixel_y + 1);
+			if (has_right) {
+				visit_neighbor(pixel_x + 1, pixel_y + 1);
 			}
 		}
 	}
