@@ -444,61 +444,107 @@ static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 	const AmiberryAutoCropRect source{ 38, 24, 320, 200 };
 	const AmiberryAutoCropRect stable{ 38, 24, 320, 200 };
 	const AmiberryAutoCropRect left_expanded{ 37, 24, 321, 200 };
-
-	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, source, stable, left_expanded, false, false, 2),
-		"An unchanged source must not hide a visible content expansion");
-	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, source, stable, left_expanded, true, false, 2),
-		"Sprite attribution must not hide a visible change when the source is unchanged");
-
 	const AmiberryAutoCropRect left_expanded_source{ 37, 24, 321, 200 };
+	const AmiberryAutoCropRect right_expanded_source{ 38, 24, 322, 200 };
+
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, source, stable, left_expanded,
+		true, false, false, false, 2),
+		"Previous sprite attribution must not hide a change when the source is unchanged");
+
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, left_expanded_source, stable, left_expanded, true, false, 2),
+		source, left_expanded_source, stable, left_expanded,
+		false, false, true, false, 2),
 		"An attributed left source extension should preserve the crop");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, left_expanded_source, stable, left_expanded, false, false, 2),
+		source, left_expanded_source, stable, left_expanded,
+		true, false, false, false, 2),
 		"An unattributed left source extension must reset stabilization");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, left_expanded_source, stable, left_expanded, false, true, 2),
+		source, left_expanded_source, stable, left_expanded,
+		false, false, false, true, 2),
 		"Right attribution must not cover a left source extension");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, left_expanded_source, stable, { 36, 24, 322, 200 }, true, false, 2),
+		source, left_expanded_source, stable, { 36, 24, 322, 200 },
+		false, false, true, false, 2),
 		"A pixel-scan extension beyond an attributed left source edge must update the crop");
 
-	const AmiberryAutoCropRect right_expanded_source{ 38, 24, 322, 200 };
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, right_expanded_source, stable, right_expanded_source, false, true, 2),
+		source, right_expanded_source, stable, right_expanded_source,
+		false, false, false, true, 2),
 		"An attributed right source extension should preserve the crop");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, right_expanded_source, stable, right_expanded_source, false, false, 2),
+		source, right_expanded_source, stable, right_expanded_source,
+		false, true, false, false, 2),
 		"An unattributed right source extension must reset stabilization");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, right_expanded_source, stable, right_expanded_source, true, false, 2),
+		source, right_expanded_source, stable, right_expanded_source,
+		false, false, true, false, 2),
 		"Left attribution must not cover a right source extension");
 
 	const AmiberryAutoCropRect both_expanded_source{ 37, 24, 323, 200 };
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, both_expanded_source, stable, both_expanded_source, true, true, 2),
+		source, both_expanded_source, stable, both_expanded_source,
+		false, false, true, true, 2),
 		"Two-sided source extensions should preserve the crop when both are attributed");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, both_expanded_source, stable, both_expanded_source, true, false, 2),
+		source, both_expanded_source, stable, both_expanded_source,
+		false, false, true, false, 2),
 		"Two-sided source extensions require right attribution");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, both_expanded_source, stable, both_expanded_source, false, true, 2),
+		source, both_expanded_source, stable, both_expanded_source,
+		false, false, false, true, 2),
 		"Two-sided source extensions require left attribution");
 
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		left_expanded_source, source, left_expanded, stable,
+		true, false, false, false, 2),
+		"A left source contraction should use the previous sprite attribution");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 37, 24, 320, 200 }, stable, left_expanded, true, true, 2),
+		left_expanded_source, source, left_expanded, stable,
+		false, false, false, false, 2),
+		"A left source contraction without previous attribution must update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		left_expanded_source, source, left_expanded, stable,
+		false, false, true, false, 2),
+		"Current attribution must not cover a left source contraction");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		left_expanded_source, source, left_expanded, stable,
+		false, true, false, false, 2),
+		"Previous right attribution must not cover a left source contraction");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		left_expanded_source, source, { 36, 24, 322, 200 }, stable,
+		true, false, false, false, 2),
+		"A scan-controlled previous left edge must not hide a source contraction");
+
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		right_expanded_source, source, right_expanded_source, stable,
+		false, true, false, false, 2),
+		"A right source contraction should use the previous sprite attribution");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		right_expanded_source, source, right_expanded_source, stable,
+		false, false, false, false, 2),
+		"A right source contraction without previous attribution must update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		right_expanded_source, source, right_expanded_source, stable,
+		true, false, false, false, 2),
+		"Previous left attribution must not cover a right source contraction");
+
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		source, { 37, 24, 320, 200 }, stable, left_expanded,
+		true, true, true, true, 2),
 		"A source translation must reset stabilization despite sprite attribution");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 38, 23, 320, 200 }, stable, left_expanded, true, true, 2),
+		source, { 38, 23, 320, 200 }, stable, left_expanded,
+		true, true, true, true, 2),
 		"A source y change must reset stabilization despite sprite attribution");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 38, 24, 320, 201 }, stable, left_expanded, true, true, 2),
+		source, { 38, 24, 320, 201 }, stable, left_expanded,
+		true, true, true, true, 2),
 		"A source height change must reset stabilization despite sprite attribution");
 	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
-		source, { 35, 24, 323, 200 }, stable, { 35, 24, 323, 200 }, true, false, 2),
+		source, { 35, 24, 323, 200 }, stable, { 35, 24, 323, 200 },
+		false, false, true, false, 2),
 		"A source change beyond tolerance must reset stabilization");
 }
 

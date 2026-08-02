@@ -136,6 +136,8 @@ struct AutoCropVisibleState {
 	int vres = 0;
 	uint32_t border_rgb = 0;
 	bool border_valid = false;
+	bool source_left_is_sprite = false;
+	bool source_right_is_sprite = false;
 	bool valid = false;
 };
 
@@ -294,9 +296,10 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			<< std::clamp(hres, RES_LORES, RES_SUPERHIRES);
 		if (amiberry_auto_crop_should_preserve_horizontal_jitter(
 			previous_source, current_source, previous_rect, current_rect,
+			state.source_left_is_sprite, state.source_right_is_sprite,
 			source_left_is_sprite, source_right_is_sprite, tolerance)) {
-			// Hardware sprites can extend visible pixels a pixel or two beyond
-			// DIW as they reach a screen edge. Keep the previous final crop so
+			// Hardware sprites can move a crop edge by a pixel or two as they
+			// reach or leave a screen edge. Keep the previous final crop so
 			// pointer motion does not pan or resize the presentation.
 			visible_rect = state.visible_rect;
 			return;
@@ -317,6 +320,8 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		state.vres = vres;
 		state.border_rgb = border_rgb;
 		state.border_valid = border_valid;
+		state.source_left_is_sprite = source_left_is_sprite;
+		state.source_right_is_sprite = source_right_is_sprite;
 		state.valid = true;
 		return;
 	}
@@ -327,6 +332,8 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	visible_rect = auto_crop_rect_union(visible_rect, state.visible_rect);
 	clamp_auto_crop_rect(surface, visible_rect);
 	state.visible_rect = visible_rect;
+	state.source_left_is_sprite = source_left_is_sprite;
+	state.source_right_is_sprite = source_right_is_sprite;
 	if (border_valid) {
 		state.border_rgb = border_rgb;
 		state.border_valid = true;
