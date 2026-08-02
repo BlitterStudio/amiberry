@@ -548,6 +548,61 @@ static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 		"A source change beyond tolerance must reset stabilization");
 }
 
+static void test_sprite_zero_scan_jitter_requires_exact_edge_evidence()
+{
+	const AmiberryAutoCropRect source{ 38, 24, 320, 200 };
+	const AmiberryAutoCropRect stable{ 38, 24, 320, 200 };
+	const AmiberryAutoCropHorizontalEvidence no_evidence{ 0, 0, false, false };
+	const AmiberryAutoCropHorizontalEvidence left_evidence{ 37, 0, true, false };
+	const AmiberryAutoCropHorizontalEvidence right_evidence{ 0, 359, false, true };
+
+	expect_true(amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 37, 24, 321, 200 },
+		no_evidence, left_evidence, 2),
+		"A scan-only left expansion should use current sprite-0 evidence");
+	expect_true(amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, { 37, 24, 321, 200 }, stable,
+		left_evidence, no_evidence, 2),
+		"A scan-only left contraction should use previous sprite-0 evidence");
+	expect_true(amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 38, 24, 321, 200 },
+		no_evidence, right_evidence, 2),
+		"A scan-only right expansion should use current sprite-0 evidence");
+	expect_true(amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, { 38, 24, 321, 200 }, stable,
+		right_evidence, no_evidence, 2),
+		"A scan-only right contraction should use previous sprite-0 evidence");
+
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 37, 24, 321, 200 },
+		no_evidence, no_evidence, 2),
+		"Arbitrary scan-only content must not be classified as sprite jitter");
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 36, 24, 322, 200 },
+		no_evidence, left_evidence, 2),
+		"Scan content beyond the sprite-0 edge must update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 37, 24, 322, 200 },
+		no_evidence, left_evidence, 2),
+		"Every changed scan edge must have matching sprite-0 evidence");
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 37, 23, 321, 201 },
+		no_evidence, left_evidence, 2),
+		"A vertical scan change must update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 37, 24, 320, 200 },
+		no_evidence, left_evidence, 2),
+		"A scan translation must update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, { 37, 24, 321, 200 }, stable, { 37, 24, 321, 200 },
+		no_evidence, left_evidence, 2),
+		"A source geometry change must not use the scan-only path");
+	expect_true(!amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+		source, source, stable, { 37, 24, 321, 200 },
+		no_evidence, { 38, 0, true, false }, 2),
+		"Sprite-0 evidence inside the source must not hide scan content");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -567,5 +622,6 @@ int main()
 	test_border_state_changes_reset_preserved_crop();
 	test_horizontal_edge_jitter_tolerance();
 	test_horizontal_edge_jitter_requires_sprite_source_attribution();
+	test_sprite_zero_scan_jitter_requires_exact_edge_evidence();
 	return failures == 0 ? 0 : 1;
 }

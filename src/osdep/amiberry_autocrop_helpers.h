@@ -14,6 +14,13 @@ struct AmiberryAutoCropRect {
 	int h;
 };
 
+struct AmiberryAutoCropHorizontalEvidence {
+	int left;
+	int right;
+	bool left_valid;
+	bool right_valid;
+};
+
 struct AmiberryAutoCropPixelBuffer {
 	const uint8_t* pixels;
 	int width;
@@ -127,6 +134,57 @@ static inline bool amiberry_auto_crop_should_preserve_horizontal_jitter(
 		if (!source_right_changed || source_expands != visible_expands
 			|| (source_expands && current_visible_right != current_source_right)
 			|| (!source_expands && previous_visible_right != previous_source_right)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static inline bool amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+	const AmiberryAutoCropRect& previous_source,
+	const AmiberryAutoCropRect& current_source,
+	const AmiberryAutoCropRect& previous_visible,
+	const AmiberryAutoCropRect& current_visible,
+	const AmiberryAutoCropHorizontalEvidence& previous_sprite_zero,
+	const AmiberryAutoCropHorizontalEvidence& current_sprite_zero,
+	const int tolerance)
+{
+	if (previous_source.x != current_source.x
+		|| previous_source.y != current_source.y
+		|| previous_source.w != current_source.w
+		|| previous_source.h != current_source.h
+		|| !amiberry_auto_crop_rect_within_horizontal_tolerance(
+			previous_visible, current_visible, tolerance)) {
+		return false;
+	}
+
+	const int source_right = amiberry_auto_crop_rect_right(current_source);
+	const int previous_visible_right = amiberry_auto_crop_rect_right(previous_visible);
+	const int current_visible_right = amiberry_auto_crop_rect_right(current_visible);
+	const bool left_changed = previous_visible.x != current_visible.x;
+	const bool right_changed = previous_visible_right != current_visible_right;
+	if (!left_changed && !right_changed) {
+		return false;
+	}
+
+	if (left_changed) {
+		const bool expands = current_visible.x < previous_visible.x;
+		const AmiberryAutoCropHorizontalEvidence& evidence = expands
+			? current_sprite_zero : previous_sprite_zero;
+		const int visible_left = expands ? current_visible.x : previous_visible.x;
+		if (!evidence.left_valid || evidence.left >= current_source.x
+			|| evidence.left != visible_left) {
+			return false;
+		}
+	}
+	if (right_changed) {
+		const bool expands = current_visible_right > previous_visible_right;
+		const AmiberryAutoCropHorizontalEvidence& evidence = expands
+			? current_sprite_zero : previous_sprite_zero;
+		const int visible_right = expands ? current_visible_right : previous_visible_right;
+		if (!evidence.right_valid || evidence.right <= source_right
+			|| evidence.right != visible_right) {
 			return false;
 		}
 	}

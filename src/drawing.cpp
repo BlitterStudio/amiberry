@@ -676,6 +676,8 @@ static int stored_left_start, stored_top_start, stored_width, stored_height;
 #ifdef AMIBERRY
 static bool autoscale_sprite_left_edge;
 static bool autoscale_sprite_right_edge;
+static int autoscale_sprite_zero_firstword = 30000;
+static int autoscale_sprite_zero_lastword;
 #endif
 
 static void update_diwfirstword_total(const int firstword)
@@ -715,10 +717,63 @@ int get_autoscale_sprite_horizontal_edges(void)
 	return edges;
 }
 
+static void get_autoscale_horizontal_limits(const int firstword, const int lastword,
+	int* left, int* right)
+{
+	const int skip = denise_hdelay << (RES_MAX + 1);
+	int diwfirst = firstword + skip;
+	int diwlast = lastword + skip;
+	if (!firstword || !lastword) {
+		diwfirst = ddffirstword_total << (RES_MAX + 1);
+		diwlast = ddflastword_total << (RES_MAX + 1);
+	}
+
+	if (doublescan <= 0 && !programmedmode
+		&& currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME) {
+		const int min = 92 << RES_MAX;
+		const int max = 460 << RES_MAX;
+		diwfirst = std::max(diwfirst, min);
+		diwlast = std::min(diwlast, max);
+	}
+
+	int x = diwfirst - (hdisplay_left_border << (RES_MAX + 1)) + (1 << RES_MAX);
+	const int width = (diwlast - diwfirst) >> hresolution_inv;
+	x >>= hresolution_inv;
+	x = std::max(x, 0);
+	*left = x;
+	*right = x + width;
+}
+
+int get_autoscale_sprite_zero_horizontal_edges(int* left, int* right)
+{
+	if (!left || !right) {
+		return 0;
+	}
+
+	int source_left;
+	int source_right;
+	get_autoscale_horizontal_limits(diwfirstword_total, diwlastword_total,
+		&source_left, &source_right);
+	get_autoscale_horizontal_limits(
+		std::min(diwfirstword_total, autoscale_sprite_zero_firstword),
+		std::max(diwlastword_total, autoscale_sprite_zero_lastword), left, right);
+
+	int edges = 0;
+	if (*left < source_left) {
+		edges |= AUTOSCALE_SPRITE_EDGE_LEFT;
+	}
+	if (*right > source_right) {
+		edges |= AUTOSCALE_SPRITE_EDGE_RIGHT;
+	}
+	return edges;
+}
+
 void reset_autoscale_sprite_horizontal_edges(void)
 {
 	autoscale_sprite_left_edge = false;
 	autoscale_sprite_right_edge = false;
+	autoscale_sprite_zero_firstword = 30000;
+	autoscale_sprite_zero_lastword = 0;
 }
 #endif
 
@@ -4643,6 +4698,23 @@ static void autoscale_sprites(void)
 #endif
 }
 
+#ifdef AMIBERRY
+static void track_autoscale_sprite_zero(void)
+{
+#if AUTOSCALE_SPRITES
+	// Sprite 0 remains excluded from autoscale_sprites(), but native AutoCrop
+	// needs its would-be edge to distinguish pointer motion from raster content.
+	if (internal_pixel_cnt > (48 << RES_MAX)
+		&& internal_pixel_cnt < (448 << RES_MAX)) {
+		autoscale_sprite_zero_firstword = std::min(
+			autoscale_sprite_zero_firstword, internal_pixel_cnt);
+		autoscale_sprite_zero_lastword = std::max(
+			autoscale_sprite_zero_lastword, internal_pixel_cnt);
+	}
+#endif
+}
+#endif
+
 static void get_shres_spr_pix(uae_u32 sv0, uae_u32 sv1, uae_u32 *dpix0, uae_u32 *dpix1)
 {
 	uae_u16 v;
@@ -4695,6 +4767,9 @@ static uae_u32 denise_render_sprites_aga(int add)
 	uae_u32 v = 0;
 	uae_u32 d = 0;
 	bool asp = false;
+#ifdef AMIBERRY
+	bool sprite_zero_autoscale = false;
+#endif
 	int sidx = 0;
 	while (dprspts[sidx]) {
 		struct denise_spr *sp = dprspts[sidx];
@@ -4714,6 +4789,12 @@ static uae_u32 denise_render_sprites_aga(int add)
 				d |= 1 << num;
 			} else if (num > 0) {
 				asp = true;
+#ifdef AMIBERRY
+			} else {
+				const uae_u32 render_mask = magic_sprite_mask & debug_sprite_mask & 3;
+				sprite_zero_autoscale = ((render_mask & 1) && sp->dataas64)
+					|| ((render_mask & 2) && sp->databs64);
+#endif
 			}
 			sp->pix = ((sp->dataas64 >> 63) & 1) << 0;
 			sp->pix |= ((sp->databs64 >> 63) & 1) << 1;
@@ -4735,6 +4816,11 @@ static uae_u32 denise_render_sprites_aga(int add)
 		// only sprites 1-7
 		autoscale_sprites();
 	}
+#ifdef AMIBERRY
+	if (sprite_zero_autoscale && !denise_blank_active && !sprites_hidden) {
+		track_autoscale_sprite_zero();
+	}
+#endif
 	return v;
 }
 

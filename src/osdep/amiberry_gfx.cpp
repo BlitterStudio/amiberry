@@ -138,6 +138,7 @@ struct AutoCropVisibleState {
 	bool border_valid = false;
 	bool source_left_is_sprite = false;
 	bool source_right_is_sprite = false;
+	AmiberryAutoCropHorizontalEvidence sprite_zero{};
 	bool valid = false;
 };
 
@@ -261,6 +262,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	const SDL_Rect& source_rect, SDL_Rect& visible_rect, const int hres,
 	const int vres, const uint32_t border_rgb, const bool border_valid,
 	const bool source_left_is_sprite, const bool source_right_is_sprite,
+	const AmiberryAutoCropHorizontalEvidence& sprite_zero,
 	AutoCropVisibleState& state, const bool reset)
 {
 	if (!surface || surface->w <= 0 || surface->h <= 0
@@ -297,7 +299,10 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		if (amiberry_auto_crop_should_preserve_horizontal_jitter(
 			previous_source, current_source, previous_rect, current_rect,
 			state.source_left_is_sprite, state.source_right_is_sprite,
-			source_left_is_sprite, source_right_is_sprite, tolerance)) {
+			source_left_is_sprite, source_right_is_sprite, tolerance)
+			|| amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
+				previous_source, current_source, previous_rect, current_rect,
+				state.sprite_zero, sprite_zero, tolerance)) {
 			// Hardware sprites can move a crop edge by a pixel or two as they
 			// reach or leave a screen edge. Keep the previous final crop so
 			// pointer motion does not pan or resize the presentation.
@@ -322,6 +327,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		state.border_valid = border_valid;
 		state.source_left_is_sprite = source_left_is_sprite;
 		state.source_right_is_sprite = source_right_is_sprite;
+		state.sprite_zero = sprite_zero;
 		state.valid = true;
 		return;
 	}
@@ -334,6 +340,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	state.visible_rect = visible_rect;
 	state.source_left_is_sprite = source_left_is_sprite;
 	state.source_right_is_sprite = source_right_is_sprite;
+	state.sprite_zero = sprite_zero;
 	if (border_valid) {
 		state.border_rgb = border_rgb;
 		state.border_valid = true;
@@ -2129,6 +2136,16 @@ void auto_crop_image()
 		SDL_Rect crop_rect = { cx, cy, cw, ch };
 #ifndef LIBRETRO
 		const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
+		int sprite_zero_left = 0;
+		int sprite_zero_right = 0;
+		const int sprite_zero_edges = get_autoscale_sprite_zero_horizontal_edges(
+			&sprite_zero_left, &sprite_zero_right);
+		const AmiberryAutoCropHorizontalEvidence sprite_zero = {
+			sprite_zero_left,
+			sprite_zero_right,
+			(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
+			(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0
+		};
 		clamp_auto_crop_rect(surface, crop_rect);
 		const SDL_Rect source_crop_rect = crop_rect;
 		// DIW/bitplane limits can exclude visible sprites or raster content.
@@ -2138,7 +2155,8 @@ void auto_crop_image()
 		preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
 			hres, vres, scan_state.border_rgb, scan_state.border_valid,
 			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
-			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, visible_state,
+			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
+			visible_state,
 			force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
 		cx = crop_rect.x;
 		cy = crop_rect.y;

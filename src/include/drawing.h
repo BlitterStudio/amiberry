@@ -137,6 +137,7 @@ enum
 	AUTOSCALE_SPRITE_EDGE_RIGHT = 2
 };
 extern int get_autoscale_sprite_horizontal_edges(void);
+extern int get_autoscale_sprite_zero_horizontal_edges(int* left, int* right);
 extern void reset_autoscale_sprite_horizontal_edges(void);
 #endif
 
