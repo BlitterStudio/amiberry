@@ -116,6 +116,9 @@ extern bool frame_drawn(int monid);
 extern void redraw_frame(void);
 extern void full_redraw_all(void);
 extern int get_custom_limits(int *pw, int *ph, int *pdx, int *pdy, int *prealh, int *hres, int *vres);
+#ifdef AMIBERRY
+extern bool custom_limits_are_provisional(void);
+#endif
 extern void store_custom_limits(int w, int h, int dx, int dy);
 extern void set_custom_limits(int w, int h, int dx, int dy, bool blank);
 extern void check_custom_limits(void);

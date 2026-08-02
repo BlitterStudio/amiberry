@@ -82,6 +82,13 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 	int width = 0;
 	int height = 0;
 	amiberry_gfx_correct_aspect_integer_dimensions(
+		5120, 1440, 640, 480, 4.0f / 3.0f, width, height);
+	expect_int_eq(width, 1920,
+		"normalized 640x480 hires crop must retain its full 4:3 integer width");
+	expect_int_eq(height, 1440,
+		"normalized 640x480 hires crop must fill a 1440-line integer target");
+
+	amiberry_gfx_correct_aspect_integer_dimensions(
 		800, 600, 640, 640, 1.0f, width, height);
 	expect_int_eq(width, 600,
 		"compensated 640-wide content must fit within an 800x600 fullscreen mode");
@@ -108,6 +115,146 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 		"integer scaling must retain the closest bounded horizontal scale");
 	expect_int_eq(height, 2160,
 		"integer scaling must retain the largest bounded vertical scale");
+}
+
+static void test_native_content_grid_ignores_configured_pixel_repetition()
+{
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_native_content_dimensions(
+		640, 512, 1, 1, 0, 0, width, height);
+	expect_int_eq(width, 320,
+		"low-res content must use its 320-pixel grid inside a hires surface");
+	expect_int_eq(height, 256,
+		"non-interlaced content must use its 256-line grid inside a doubled surface");
+
+	amiberry_gfx_native_content_dimensions(
+		641, 513, 1, 1, 0, 0, width, height);
+	expect_int_eq(width, 321,
+		"odd crop widths must round up so edge content remains represented");
+	expect_int_eq(height, 257,
+		"odd crop heights must round up so edge content remains represented");
+
+	amiberry_gfx_native_content_dimensions(
+		640, 512, 1, 1, 1, 0, width, height);
+	expect_int_eq(width, 640,
+		"hires content must retain its horizontal source grid");
+	expect_int_eq(height, 256,
+		"non-interlaced hires content must still remove configured line doubling");
+}
+
+static void test_crop_rect_maps_across_autoswitch_resolutions()
+{
+	const AmiberryGfxRect hires_crop{ 76, 34, 640, 414 };
+	const AmiberryGfxRect lores_crop = amiberry_gfx_scale_crop_rect(
+		hires_crop, 1, 1, 0, 0);
+	expect_int_eq(lores_crop.x, 38,
+		"Autoswitch should map the crop's left edge to the lower-resolution surface");
+	expect_int_eq(lores_crop.y, 17,
+		"Autoswitch should map the crop's top edge to the lower-resolution surface");
+	expect_int_eq(lores_crop.w, 320,
+		"Autoswitch should retain the crop width in native content units");
+	expect_int_eq(lores_crop.h, 207,
+		"Autoswitch should retain the crop height in native content units");
+
+	const AmiberryGfxRect restored = amiberry_gfx_scale_crop_rect(
+		lores_crop, 0, 0, 1, 1);
+	expect_int_eq(restored.x, hires_crop.x,
+		"Mapping an aligned crop back to hires should restore its left edge");
+	expect_int_eq(restored.y, hires_crop.y,
+		"Mapping an aligned crop back to doubled lines should restore its top edge");
+	expect_int_eq(restored.w, hires_crop.w,
+		"Mapping an aligned crop back to hires should restore its width");
+	expect_int_eq(restored.h, hires_crop.h,
+		"Mapping an aligned crop back to doubled lines should restore its height");
+
+	const AmiberryGfxRect odd_crop{ 73, 48, 643, 400 };
+	const AmiberryGfxRect odd_lores = amiberry_gfx_scale_crop_rect(
+		odd_crop, 1, 1, 0, 0);
+	expect_int_eq(odd_lores.x, 36,
+		"Downscaling should floor an odd crop origin");
+	expect_int_eq(odd_lores.w, 322,
+		"Downscaling should round up the far edge so no content is lost");
+}
+
+static void test_provisional_crop_preserves_last_real_geometry()
+{
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(true, true, true), true,
+		"A no-bitplane fallback must retain the last real crop during autoswitch");
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(false, false, true), true,
+		"An invalid crop must retain the last real geometry");
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(true, false, true), false,
+		"A real current crop must replace the cache");
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(true, true, false), false,
+		"Startup without a real crop must keep using the provisional fallback");
+
+	const AmiberryGfxRect cached_hires_crop{76, 17, 640, 200};
+	const AmiberryGfxRect retained_lores_crop = amiberry_gfx_scale_crop_rect(
+		cached_hires_crop, 1, 0, 0, 0);
+	expect_int_eq(retained_lores_crop.w, 320,
+		"The cached game crop must map to its 320-pixel low-resolution grid");
+	expect_int_eq(retained_lores_crop.h, 200,
+		"The cached game crop must retain its 200 active lines");
+
+	int display_width = 0;
+	int display_height = 0;
+	amiberry_gfx_auto_crop_presentation_dimensions(
+		retained_lores_crop.w, retained_lores_crop.h, true, true, true,
+		5120, 1440, display_width, display_height);
+	int scaled_width = 0;
+	int scaled_height = 0;
+	expect_int_eq(amiberry_gfx_auto_integer_dimensions(
+		5120, 1440, display_width, display_width, display_height, false,
+		4.0f / 3.0f, 4.0f / 3.0f, scaled_width, scaled_height), true,
+		"The retained 320x200 NTSC crop must select integer scaling immediately");
+}
+
+static void test_native_content_grid_uses_the_largest_integer_fit()
+{
+	int content_width = 0;
+	int content_height = 0;
+	amiberry_gfx_native_content_dimensions(
+		640, 400, 1, 1, 0, 0, content_width, content_height);
+
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_native_integer_dimensions(
+		5120, 1440, content_width, content_width, content_height,
+		true, 8.0f / 5.0f, width, height);
+	expect_int_eq(width, 2240,
+		"low-res content must scale from the native grid without resolution autoswitch");
+	expect_int_eq(height, 1400,
+		"native-grid scaling must use the largest whole vertical multiple");
+}
+
+static void test_auto_scaling_uses_integer_only_for_a_lossless_fit()
+{
+	int width = 0;
+	int height = 0;
+	bool use_integer = amiberry_gfx_auto_integer_dimensions(
+		5120, 1440, 640, 640, 480, true,
+		4.0f / 3.0f, 4.0f / 3.0f, width, height);
+	expect_int_eq(use_integer, true,
+		"auto scaling must use integer scaling for an exact 3x native fit");
+	expect_int_eq(width, 1920,
+		"auto integer scaling must retain the full lossless width");
+	expect_int_eq(height, 1440,
+		"auto integer scaling must retain the full lossless height");
+	use_integer = amiberry_gfx_auto_integer_dimensions(
+		5120, 1440, 640, 640, 480, false,
+		4.0f / 3.0f, 4.0f / 3.0f, width, height);
+	expect_int_eq(use_integer, true,
+		"SDL logical presentation must recognize the same exact 3x fit");
+
+	use_integer = amiberry_gfx_auto_integer_dimensions(
+		1920, 1080, 640, 640, 480, true,
+		4.0f / 3.0f, 4.0f / 3.0f, width, height);
+	expect_int_eq(use_integer, false,
+		"auto scaling must keep best fit when integer scaling would shrink the image");
+	expect_int_eq(width, 1440,
+		"fractional auto scaling must fill the available 4:3 width");
+	expect_int_eq(height, 1080,
+		"fractional auto scaling must fill the available height");
 }
 
 static void test_shader_render_size_resolves_to_compensated_viewport()
@@ -233,9 +380,14 @@ int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
 	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
+	test_native_content_grid_ignores_configured_pixel_repetition();
+	test_crop_rect_maps_across_autoswitch_resolutions();
+	test_provisional_crop_preserves_last_real_geometry();
+	test_native_content_grid_uses_the_largest_integer_fit();
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
 	test_corrected_integer_scaling_stays_within_fullscreen_mode();
+	test_auto_scaling_uses_integer_only_for_a_lossless_fit();
 	test_shader_render_size_resolves_to_compensated_viewport();
 	test_full_drawable_presentation_geometry_is_unchanged();
 	test_bezel_area_centers_integer_scaled_presentation();

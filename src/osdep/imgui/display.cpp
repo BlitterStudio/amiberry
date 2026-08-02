@@ -588,9 +588,9 @@ void render_panel_display() {
     // Right Column
     // ---------------------------------------------------------
     if (ImGui::BeginTable("BottomGrid", 3, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-        ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("column1", ImGuiTableColumnFlags_WidthStretch, 1.12f);
+        ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthStretch, 0.88f);
+        ImGui::TableSetupColumn("column3", ImGuiTableColumnFlags_WidthStretch, 1.06f);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -608,74 +608,119 @@ void render_panel_display() {
         ImGui::Spacing();
         EndGroupBox("Centering");
 
-        BeginGroupBox("Aspect ratio");
+        BeginGroupBox("Aspect and scaling");
         bool correct_aspect = changed_prefs.gfx_correct_aspect != 0;
         if (AmigaCheckbox("Correct aspect ratio", &correct_aspect)) {
             changed_prefs.gfx_correct_aspect = correct_aspect ? 1 : 0;
         }
         ShowHelpMarker("Apply Amiga display aspect correction to native display modes.");
-        AmigaCheckbox("Auto integer scaling", &changed_prefs.gfx_keep_aspect);
-        ShowHelpMarker("Automatically select integer scaling factor based on resolution, line mode and doublescan settings to maintain correct aspect ratio");
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Scaling method:");
+        ImGui::SameLine();
+        const char* scaling_items[] = {"Auto", "Nearest", "Linear", "Integer"};
+        int scaling_idx = changed_prefs.scaling_method + 1;
+        if (scaling_idx < 0) scaling_idx = 0;
+        if (scaling_idx > 3) scaling_idx = 3;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::BeginCombo("##ScalingMethod", scaling_items[scaling_idx])) {
+            for (int n = 0; n < IM_ARRAYSIZE(scaling_items); n++) {
+                const bool is_selected = scaling_idx == n;
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(scaling_items[n], is_selected)) {
+                    scaling_idx = n;
+                    changed_prefs.scaling_method = scaling_idx - 1;
+                }
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("How the display is scaled to fit the window.\nAuto: uses pixel-perfect integer scaling when it fills the same area as best fit, otherwise smooth scaling.\nNearest: sharp pixels, Linear: smooth, Integer: always pixel-perfect.");
         ImGui::Spacing();
-        EndGroupBox("Aspect ratio");
+        EndGroupBox("Aspect and scaling");
 
         ImGui::TableNextColumn();
 
         // Line Mode Group
+        constexpr float line_mode_group_indent = 16.0f;
+        ImGui::Indent(line_mode_group_indent);
         BeginGroupBox("Line Mode");
         if (!linemode_enabled) ImGui::BeginDisabled();
-        if (AmigaRadioButton("Single", changed_prefs.gfx_vresolution == 0 && changed_prefs.gfx_pscanlines == 0)) {
-            changed_prefs.gfx_vresolution = 0;
+        // Keep the underlying preference tuple canonical so one radio group can
+        // never describe two modes, including after loading older configurations.
+        if (changed_prefs.gfx_vresolution == 0) {
             changed_prefs.gfx_pscanlines = 0;
             changed_prefs.gfx_iscanlines = 0;
+        } else {
+            changed_prefs.gfx_vresolution = 1;
+            if (changed_prefs.gfx_pscanlines < 0 || changed_prefs.gfx_pscanlines > 3)
+                changed_prefs.gfx_pscanlines = 0;
+            if (changed_prefs.gfx_iscanlines < 0 || changed_prefs.gfx_iscanlines > 2)
+                changed_prefs.gfx_iscanlines = 0;
         }
+        int selected_line_mode = 0;
+        if (changed_prefs.gfx_vresolution != 0) {
+            selected_line_mode = changed_prefs.gfx_pscanlines >= 0
+                && changed_prefs.gfx_pscanlines <= 3
+                ? changed_prefs.gfx_pscanlines + 1 : 1;
+        }
+        int requested_line_mode = selected_line_mode;
+        if (AmigaRadioButton("Single", selected_line_mode == 0)) requested_line_mode = 0;
         ShowHelpMarker("Single scan: display one line per scanline (200 lines for NTSC, 256 for PAL)");
-        if (AmigaRadioButton("Double", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 0)) {
-            changed_prefs.gfx_vresolution = 1;
-            changed_prefs.gfx_pscanlines = 0;
-        }
+        if (AmigaRadioButton("Double", selected_line_mode == 1)) requested_line_mode = 1;
         ShowHelpMarker("Line doubling: display each line twice for better visibility (400/512 lines)");
-        if (AmigaRadioButton("Scanlines", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 1)) {
-            changed_prefs.gfx_vresolution = 1;
-            changed_prefs.gfx_pscanlines = 1;
-        }
+        if (AmigaRadioButton("Scanlines", selected_line_mode == 2)) requested_line_mode = 2;
         ShowHelpMarker("Simulate scanlines with black lines between display lines for CRT effect");
-        if (AmigaRadioButton("Double, fields", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 2)) {
-            changed_prefs.gfx_vresolution = 1;
-            changed_prefs.gfx_pscanlines = 2;
-        }
+        if (AmigaRadioButton("Double, fields", selected_line_mode == 3)) requested_line_mode = 3;
         ShowHelpMarker("Interlaced field rendering: alternates between even and odd lines");
-        if (AmigaRadioButton("Double, fields+", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 3)) {
-            changed_prefs.gfx_vresolution = 1;
-            changed_prefs.gfx_pscanlines = 3;
-        }
+        if (AmigaRadioButton("Double, fields+", selected_line_mode == 4)) requested_line_mode = 4;
         ShowHelpMarker("Enhanced interlaced field rendering with improved blending");
         if (!linemode_enabled) ImGui::EndDisabled();
+        if (requested_line_mode != selected_line_mode) {
+            changed_prefs.gfx_vresolution = requested_line_mode == 0
+                ? 0 : 1;
+            changed_prefs.gfx_pscanlines = requested_line_mode == 0
+                ? 0 : requested_line_mode - 1;
+            if (requested_line_mode == 0)
+                changed_prefs.gfx_iscanlines = 0;
+        }
         ImGui::Spacing();
         EndGroupBox("Line Mode");
+        ImGui::Unindent(line_mode_group_indent);
 
         ImGui::TableNextColumn();
 
         // Interlaced Line Mode Group
         BeginGroupBox("Interlaced line mode");
-        bool is_double = changed_prefs.gfx_vresolution > 0;
-        if (!linemode_enabled || is_double) ImGui::BeginDisabled();
-        if (AmigaRadioButton("Single##I", !is_double)) {
-            changed_prefs.gfx_iscanlines = 0;
+        const bool is_double = changed_prefs.gfx_vresolution != 0;
+        int selected_interlaced_mode = 0;
+        if (is_double) {
+            selected_interlaced_mode = changed_prefs.gfx_iscanlines >= 0
+                && changed_prefs.gfx_iscanlines <= 2
+                ? changed_prefs.gfx_iscanlines + 1 : 1;
         }
+        int requested_interlaced_mode = selected_interlaced_mode;
+        if (!linemode_enabled || is_double) ImGui::BeginDisabled();
+        if (AmigaRadioButton("Single##I", selected_interlaced_mode == 0)) requested_interlaced_mode = 0;
         ShowHelpMarker("Single line mode for interlaced screens (available only in single line mode)");
         if (!linemode_enabled || is_double) ImGui::EndDisabled();
 
         if (!linemode_enabled || !is_double) ImGui::BeginDisabled();
-        if (AmigaRadioButton("Double, frames##I", is_double && changed_prefs.gfx_iscanlines == 0)) {
-            changed_prefs.gfx_iscanlines = 0;
-        }
+        if (AmigaRadioButton("Double, frames##I", selected_interlaced_mode == 1)) requested_interlaced_mode = 1;
         ShowHelpMarker("Double frames mode for interlaced screens (available only in double line mode)");
-        AmigaRadioButton("Double, fields##I", &changed_prefs.gfx_iscanlines, 1);
+        if (AmigaRadioButton("Double, fields##I", selected_interlaced_mode == 2)) requested_interlaced_mode = 2;
         ShowHelpMarker("Interlaced field rendering: alternates between even and odd lines");
-        AmigaRadioButton("Double, fields+##I", &changed_prefs.gfx_iscanlines, 2);
+        if (AmigaRadioButton("Double, fields+##I", selected_interlaced_mode == 3)) requested_interlaced_mode = 3;
         ShowHelpMarker("Enhanced interlaced field rendering with improved blending");
         if (!linemode_enabled || !is_double) ImGui::EndDisabled();
+        if (requested_interlaced_mode != selected_interlaced_mode) {
+            changed_prefs.gfx_iscanlines = requested_interlaced_mode == 0
+                ? 0 : requested_interlaced_mode - 1;
+        }
         ImGui::Spacing();
         EndGroupBox("Interlaced line mode");
 

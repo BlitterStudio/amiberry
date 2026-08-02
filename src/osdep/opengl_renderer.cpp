@@ -317,45 +317,48 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 	return m_shader.crtemu != nullptr || m_shader.external != nullptr || m_shader.preset != nullptr;
 }
 
-// Helper to decide between Linear (smooth) and Nearest Neighbor (pixelated) scaling
-static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int height)
-{
-	return mode->w % width == 0 && mode->h % height == 0;
-}
-
-void OpenGLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
+void OpenGLRenderer::set_scaling(int /*monid*/, const uae_prefs* p, int /*w*/, int /*h*/)
 {
 	if (currprefs.headless) return;
 
-	auto scale_quality = "nearest";
+	GLenum texture_filter = GL_NEAREST;
 	m_integer_scaling = false;
 
 	switch (p->scaling_method) {
 	case -1: // Auto
-		if (!ar_is_exact(&sdl_mode, w, h))
-			scale_quality = "linear";
+		texture_filter = GL_LINEAR;
 		break;
-	case 0: scale_quality = "nearest"; break;
-	case 1: scale_quality = "linear"; break;
-	case 2: scale_quality = "nearest"; m_integer_scaling = true; break;
-	default: scale_quality = "linear"; break;
+	case 0: texture_filter = GL_NEAREST; break;
+	case 1: texture_filter = GL_LINEAR; break;
+	case 2: texture_filter = GL_NEAREST; m_integer_scaling = true; break;
+	default: texture_filter = GL_LINEAR; break;
 	}
+	update_texture_filter(texture_filter);
+}
 
-	m_shader.texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
+void OpenGLRenderer::update_texture_filter(const GLenum texture_filter)
+{
+	const bool no_shader_active = m_shader.crtemu != nullptr
+		&& m_shader.crtemu->type == CRTEMU_TYPE_NONE
+		&& m_shader.external == nullptr
+		&& m_shader.preset == nullptr;
+	if (m_shader.texture_filter_mode == texture_filter
+		&& (!no_shader_active
+			|| m_shader.crtemu->texture_filter == static_cast<CRTEMU_GLint>(texture_filter)))
+		return;
+	m_shader.texture_filter_mode = texture_filter;
 
 	// Only apply filter mode when no shader is active (NONE mode without external shader).
 	// When a shader is active, it controls its own texture sampling.
-	bool no_shader_active = (m_shader.crtemu != nullptr
-		&& m_shader.crtemu->type == CRTEMU_TYPE_NONE
-		&& m_shader.external == nullptr
-		&& m_shader.preset == nullptr);
 	if (no_shader_active) {
 		if (m_shader.crtemu->backbuffer != 0 && glIsTexture(m_shader.crtemu->backbuffer)) {
-			m_shader.crtemu->texture_filter = m_shader.texture_filter_mode;
+			m_shader.crtemu->texture_filter = texture_filter;
 			glBindTexture(GL_TEXTURE_2D, m_shader.crtemu->backbuffer);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_shader.texture_filter_mode);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_shader.texture_filter_mode);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, texture_filter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, texture_filter);
 			glBindTexture(GL_TEXTURE_2D, 0);
+		} else {
+			m_shader.crtemu->texture_filter = texture_filter;
 		}
 	}
 }
@@ -662,10 +665,21 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	const int src_w = (is_cropped) ? crop_w : (surface ? surface->w : 0);
 	const int src_h = (is_cropped) ? crop_h : (surface ? surface->h : 0);
+	const bool native_auto_crop = !mon->screen_is_picasso && currprefs.gfx_auto_crop;
+	int display_w = src_w;
+	int display_h = src_w > 0
+		? std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f)) : 0;
+	if (native_auto_crop && crop_display_w > 0 && crop_display_h > 0) {
+		display_w = crop_display_w;
+		display_h = crop_display_h;
+	}
+	const int integer_source_w = native_auto_crop ? display_w : src_w;
 
 	bool use_integer_scaling = mon->screen_is_picasso
 		? (mon->scalepicasso == RTG_MODE_INTEGER_SCALE)
 		: m_integer_scaling;
+	const bool auto_native_scaling = !mon->screen_is_picasso
+		&& currprefs.scaling_method == -1;
 
 	bool use_center = mon->screen_is_picasso
 		&& mon->scalepicasso == RTG_MODE_CENTER;
@@ -679,37 +693,28 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		amiberry_gfx_aspect_fit_dimensions(
 			renderAreaW, renderAreaH, desired_aspect, destW, destH);
 
-		if (use_integer_scaling && src_w > 0 && src_h > 0) {
-			// Use the aspect-corrected dimensions from auto_crop_image()
-			// (stored in crop_display_w/h to avoid the render_quad overwrite issue).
-			int display_w, display_h;
-			if (is_cropped && crop_display_w > 0 && crop_display_h > 0) {
-				display_w = crop_display_w;
-				display_h = crop_display_h;
-			} else {
-				display_w = src_w;
-				display_h = std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
-			}
-
+		if (auto_native_scaling && src_w > 0 && src_h > 0) {
+			use_integer_scaling = amiberry_gfx_auto_integer_dimensions(
+				renderAreaW, renderAreaH, integer_source_w, display_w, display_h,
+				currprefs.gfx_correct_aspect != 0, desired_aspect,
+				integer_target_aspect, destW, destH);
+		} else if (use_integer_scaling && src_w > 0 && src_h > 0) {
 			if (mon->screen_is_picasso) {
 				const float scale = calculate_rtg_integer_scale(renderAreaW, renderAreaH,
 					display_w, display_h, filter_prefs.gf[GF_RTG].gfx_filter_integerscalelimit);
 				destW = std::max(1, static_cast<int>(static_cast<float>(display_w) * scale + 0.5f));
 				destH = std::max(1, static_cast<int>(static_cast<float>(display_h) * scale + 0.5f));
-			} else if (!currprefs.gfx_correct_aspect) {
-				// Integer scaling without aspect correction uses the normalized
-				// crop geometry, not the desktop-sized stretch target.
-				const int scale = amiberry_gfx_native_integer_scale(
-					renderAreaW, renderAreaH, display_w, display_h);
-				destW = display_w * scale;
-				destH = display_h * scale;
 			} else {
-				amiberry_gfx_correct_aspect_integer_dimensions(
-					renderAreaW, renderAreaH, src_w, display_h,
-					integer_target_aspect, destW, destH);
+				amiberry_gfx_native_integer_dimensions(
+					renderAreaW, renderAreaH, integer_source_w, display_w, display_h,
+					currprefs.gfx_correct_aspect != 0, integer_target_aspect,
+					destW, destH);
 			}
 		}
 
+	}
+	if (auto_native_scaling) {
+		update_texture_filter(use_integer_scaling ? GL_NEAREST : GL_LINEAR);
 	}
 
 	const AmiberryGfxRect available_area{

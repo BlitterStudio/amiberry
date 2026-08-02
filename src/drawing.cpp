@@ -1024,6 +1024,13 @@ void store_custom_limits(int w, int h, int x, int y)
 #endif
 }
 
+#ifdef AMIBERRY
+bool custom_limits_are_provisional(void)
+{
+	return plffirstline_total >= 30000;
+}
+#endif
+
 int get_custom_limits(int *pw, int *ph, int *pdx, int *pdy, int *prealh, int *hres, int *vres)
 {
 	static int interlace_count;

@@ -113,6 +113,53 @@ static void test_ignores_scattered_outside_pixels()
 	expect_eq(crop.h, 12, "Scattered pixels must not change crop height");
 }
 
+static void test_preserves_diagonally_connected_content()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int i = 0; i < 16; i++) {
+		pixels[(22 + i) * width + (1 + i)] = 0x00ffffffu;
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 20, 8, 10, 12 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(changed,
+		"Eight-neighbor scanning must keep diagonal content in one component");
+	expect_eq(crop.x, 1, "Diagonal content should expand the crop left edge");
+	expect_eq(crop.y, 8, "Diagonal content should retain the crop top edge");
+	expect_eq(crop.w, 29, "Diagonal content should retain the crop right edge");
+	expect_eq(crop.h, 30, "Diagonal content should expand the crop bottom edge");
+}
+
+static void test_crop_separates_outside_components()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int y = 12; y < 17; y++) {
+		for (int x = 12; x < 15; x++) {
+			pixels[y * width + x] = 0x00ffffffu;
+		}
+		for (int x = 25; x < 28; x++) {
+			pixels[y * width + x] = 0x00ffffffu;
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 15, 10, 10, 10 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, crop, state);
+
+	expect_true(!changed,
+		"The crop must not connect two individually sub-threshold components");
+	expect_eq(crop.x, 15, "Separated components must not move the crop left edge");
+	expect_eq(crop.w, 10, "Separated components must not widen the crop");
+}
+
 static void test_expands_to_visible_sprite_edge_content()
 {
 	constexpr int width = 40;
@@ -464,10 +511,10 @@ static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 		source, left_expanded_source, stable, left_expanded,
 		false, false, false, true, 2),
 		"Right attribution must not cover a left source extension");
-	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		source, left_expanded_source, stable, { 36, 24, 322, 200 },
 		false, false, true, false, 2),
-		"A pixel-scan extension beyond an attributed left source edge must update the crop");
+		"A small scan fringe on an attributed sprite edge should preserve the crop");
 
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		source, right_expanded_source, stable, right_expanded_source,
@@ -512,10 +559,10 @@ static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 		left_expanded_source, source, left_expanded, stable,
 		false, true, false, false, 2),
 		"Previous right attribution must not cover a left source contraction");
-	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		left_expanded_source, source, { 36, 24, 322, 200 }, stable,
 		true, false, false, false, 2),
-		"A scan-controlled previous left edge must not hide a source contraction");
+		"A sprite edge contraction should also absorb its previous scan fringe");
 
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		right_expanded_source, source, right_expanded_source, stable,
@@ -603,11 +650,122 @@ static void test_sprite_zero_scan_jitter_requires_exact_edge_evidence()
 		"Sprite-0 evidence inside the source must not hide scan content");
 }
 
+static void test_sprite_jitter_preserves_large_nested_source_changes()
+{
+	const AmiberryAutoCropRect narrow_source{ 107, 48, 609, 400 };
+	const AmiberryAutoCropRect wide_source{ 73, 48, 643, 400 };
+	const AmiberryAutoCropRect stable{ 76, 48, 640, 400 };
+	const AmiberryAutoCropRect edge_extended{ 72, 48, 644, 400 };
+
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		narrow_source, wide_source, stable, edge_extended,
+		false, false, true, false, 4),
+		"A large attributed sprite-source expansion plus scan fringe must keep the stable crop");
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		wide_source, narrow_source, edge_extended, stable,
+		true, false, false, false, 4),
+		"The matching sprite-source contraction must restore no crop movement");
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
+		{ 76, 48, 609, 400 }, { 76, 48, 643, 400 },
+		stable, { 76, 48, 644, 400 },
+		false, false, false, true, 4),
+		"The equivalent attributed right-edge expansion must keep the stable crop");
+
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		narrow_source, { 73, 48, 609, 400 }, stable, edge_extended,
+		false, false, true, true, 4),
+		"A translated source must not be classified as nested sprite jitter");
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+		narrow_source, wide_source, stable, { 71, 48, 645, 400 },
+		false, false, true, false, 4),
+		"A final crop change beyond tolerance must still update presentation");
+}
+
+static void test_vertical_transition_replaces_displaced_border_without_resizing()
+{
+	constexpr int width = 20;
+	constexpr int height = 20;
+	std::vector<uint32_t> pixels(width * height, 0);
+	const AmiberryAutoCropRect previous{ 4, 4, 12, 8 };
+	for (int y = 6; y < 14; y++) {
+		for (int x = previous.x; x < previous.x + previous.w; x++) {
+			pixels[y * width + x] = 0x0000ff00u;
+		}
+	}
+
+	AmiberryAutoCropRect expanded{ 4, 4, 12, 10 };
+	expect_true(amiberry_auto_crop_stabilize_vertical_transition(
+		make_buffer(pixels, width, height), 16, previous, expanded, 0, 2),
+		"New bottom content should replace a border strip without resizing");
+	expect_eq(expanded.y, 6,
+		"The stable crop should move down to follow the new content");
+	expect_eq(expanded.h, 8,
+		"Replacing displaced border must preserve the crop height");
+
+	AmiberryAutoCropRect raw_union{ 4, 4, 12, 10 };
+	expect_true(amiberry_auto_crop_stabilize_vertical_transition(
+		make_buffer(pixels, width, height), 16, expanded, raw_union, 0, 2),
+		"A repeated raw union should ignore the revealed border above the stable crop");
+	expect_eq(raw_union.y, 6,
+		"Repeated scan frames should retain the translated origin");
+	expect_eq(raw_union.h, 8,
+		"Repeated scan frames should retain the stable height");
+}
+
+static void test_vertical_transition_keeps_genuine_two_edge_content()
+{
+	constexpr int width = 20;
+	constexpr int height = 20;
+	std::vector<uint32_t> pixels(width * height, 0);
+	const AmiberryAutoCropRect previous{ 4, 4, 12, 8 };
+	AmiberryAutoCropRect expanded{ 4, 4, 12, 10 };
+	for (int y = expanded.y; y < expanded.y + expanded.h; y++) {
+		for (int x = expanded.x; x < expanded.x + expanded.w; x++) {
+			pixels[y * width + x] = 0x0000ff00u;
+		}
+	}
+
+	expect_true(!amiberry_auto_crop_stabilize_vertical_transition(
+		make_buffer(pixels, width, height), 16, previous, expanded, 0, 2),
+		"Visible pixels at both old and new edges must allow a real crop expansion");
+	expect_eq(expanded.y, 4,
+		"A genuine expansion should retain its original top edge");
+	expect_eq(expanded.h, 10,
+		"A genuine expansion should retain its larger height");
+}
+
+static void test_repeated_vertical_translation_does_not_form_a_union()
+{
+	const AmiberryAutoCropRect source{ 76, 34, 640, 400 };
+	const AmiberryAutoCropRect translated{ 76, 48, 640, 400 };
+
+	expect_true(amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, source, 16),
+		"The unchanged hardware source must not undo an established crop translation");
+	expect_true(amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, { 76, 34, 640, 414 }, 16),
+		"The union of source and translated crop must retain the translated size");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, { 76, 33, 640, 416 }, 16),
+		"Content beyond both known positions must still expand the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, { 76, 51, 640, 400 }, source, 16),
+		"A translation beyond tolerance must not suppress a crop change");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, { 76, 48, 640, 400 }, { 75, 34, 641, 414 }, 16),
+		"A simultaneous horizontal expansion must still update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, { 76, 35, 640, 399 }, 16),
+		"A candidate that no longer covers the source must not reuse stale geometry");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
 	test_ignores_distant_speck_when_content_expands();
 	test_ignores_scattered_outside_pixels();
+	test_preserves_diagonally_connected_content();
+	test_crop_separates_outside_components();
 	test_expands_to_visible_sprite_edge_content();
 	test_keeps_crop_inside_non_black_border();
 	test_uniform_border_avoids_component_scan();
@@ -623,5 +781,9 @@ int main()
 	test_horizontal_edge_jitter_tolerance();
 	test_horizontal_edge_jitter_requires_sprite_source_attribution();
 	test_sprite_zero_scan_jitter_requires_exact_edge_evidence();
+	test_sprite_jitter_preserves_large_nested_source_changes();
+	test_vertical_transition_replaces_displaced_border_without_resizing();
+	test_vertical_transition_keeps_genuine_two_edge_content();
+	test_repeated_vertical_translation_does_not_form_a_union();
 	return failures == 0 ? 0 : 1;
 }
