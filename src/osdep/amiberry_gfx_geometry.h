@@ -110,6 +110,41 @@ static inline void amiberry_gfx_native_content_dimensions(
 		rendered_height, rendered_vres, content_vres);
 }
 
+static inline int amiberry_gfx_scale_crop_edge(const int value,
+	const int source_resolution, const int target_resolution,
+	const bool round_up)
+{
+	if (value <= 0 || source_resolution == target_resolution) {
+		return value;
+	}
+
+	if (target_resolution > source_resolution) {
+		const int resolution_delta = target_resolution - source_resolution;
+		return value << resolution_delta;
+	}
+
+	const int resolution_delta = source_resolution - target_resolution;
+	const int divisor = 1 << resolution_delta;
+	return value / divisor + (round_up && value % divisor != 0 ? 1 : 0);
+}
+
+static inline AmiberryGfxRect amiberry_gfx_scale_crop_rect(
+	const AmiberryGfxRect& rect, const int source_hres, const int source_vres,
+	const int target_hres, const int target_vres)
+{
+	const int right = rect.x + rect.w;
+	const int bottom = rect.y + rect.h;
+	const int x = amiberry_gfx_scale_crop_edge(
+		rect.x, source_hres, target_hres, false);
+	const int y = amiberry_gfx_scale_crop_edge(
+		rect.y, source_vres, target_vres, false);
+	const int scaled_right = amiberry_gfx_scale_crop_edge(
+		right, source_hres, target_hres, true);
+	const int scaled_bottom = amiberry_gfx_scale_crop_edge(
+		bottom, source_vres, target_vres, true);
+	return { x, y, scaled_right - x, scaled_bottom - y };
+}
+
 static inline int amiberry_gfx_native_integer_scale(
 	int render_width, int render_height, int display_width, int display_height)
 {

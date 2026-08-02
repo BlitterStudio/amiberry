@@ -300,11 +300,6 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			previous_source, current_source, previous_rect, current_rect,
 			state.source_left_is_sprite, state.source_right_is_sprite,
 			source_left_is_sprite, source_right_is_sprite, tolerance)
-			|| amiberry_auto_crop_should_preserve_combined_sprite_jitter(
-				previous_source, current_source, previous_rect, current_rect,
-				state.source_left_is_sprite, state.source_right_is_sprite,
-				source_left_is_sprite, source_right_is_sprite,
-				state.sprite_zero, sprite_zero, tolerance)
 			|| amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
 				previous_source, current_source, previous_rect, current_rect,
 				state.sprite_zero, sprite_zero, tolerance)) {
@@ -2115,11 +2110,15 @@ void auto_crop_image()
 #else
 		static AutoCropVisibleState visible_state;
 		static AmiberryAutoCropScanState scan_state;
+		static SDL_Rect last_valid_crop;
+		static int last_valid_crop_hres = 0, last_valid_crop_vres = 0;
+		static bool last_valid_crop_available = false;
 #endif
 		int cw, ch, cx, cy, crealh = 0;
 		int hres = currprefs.gfx_resolution;
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
+		const bool raw_crop_valid = cw > 0 && ch > 0;
 		const int content_hres = std::clamp(detected_screen_resolution,
 			RES_LORES, std::min(hres, RES_SUPERHIRES));
 		const int content_vres = interlace_seen > 0
@@ -2145,33 +2144,51 @@ void auto_crop_image()
 		const int surface_h = surface ? surface->h : 0;
 		SDL_Rect crop_rect = { cx, cy, cw, ch };
 #ifndef LIBRETRO
-		const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
-		int sprite_zero_left = 0;
-		int sprite_zero_right = 0;
-		const int sprite_zero_edges = get_autoscale_sprite_zero_horizontal_edges(
-			&sprite_zero_left, &sprite_zero_right);
-		const AmiberryAutoCropHorizontalEvidence sprite_zero = {
-			sprite_zero_left,
-			sprite_zero_right,
-			(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
-			(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0
-		};
-		clamp_auto_crop_rect(surface, crop_rect);
-		const SDL_Rect source_crop_rect = crop_rect;
-		// DIW/bitplane limits can exclude visible sprites or raster content.
-		// Preserve real pixels outside those limits without restoring the
-		// conservative minimum frame that keeps intentional black borders.
-		expand_auto_crop_rect_to_visible_content(surface, crop_rect, scan_state);
-		preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
-			hres, vres, scan_state.border_rgb, scan_state.border_valid,
-			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
-			(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
-			visible_state,
-			force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
+		if (!last_autocrop) {
+			last_valid_crop_available = false;
+		}
+		if (!raw_crop_valid && last_valid_crop_available) {
+			const AmiberryGfxRect mapped = amiberry_gfx_scale_crop_rect(
+				{ last_valid_crop.x, last_valid_crop.y,
+					last_valid_crop.w, last_valid_crop.h },
+				last_valid_crop_hres, last_valid_crop_vres, hres, vres);
+			crop_rect = { mapped.x, mapped.y, mapped.w, mapped.h };
+			clamp_auto_crop_rect(surface, crop_rect);
+		} else {
+			const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
+			int sprite_zero_left = 0;
+			int sprite_zero_right = 0;
+			const int sprite_zero_edges = get_autoscale_sprite_zero_horizontal_edges(
+				&sprite_zero_left, &sprite_zero_right);
+			const AmiberryAutoCropHorizontalEvidence sprite_zero = {
+				sprite_zero_left,
+				sprite_zero_right,
+				(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
+				(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0
+			};
+			clamp_auto_crop_rect(surface, crop_rect);
+			const SDL_Rect source_crop_rect = crop_rect;
+			// DIW/bitplane limits can exclude visible sprites or raster content.
+			// Preserve real pixels outside those limits without restoring the
+			// conservative minimum frame that keeps intentional black borders.
+			expand_auto_crop_rect_to_visible_content(surface, crop_rect, scan_state);
+			preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
+				hres, vres, scan_state.border_rgb, scan_state.border_valid,
+				(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
+				(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
+				visible_state,
+				force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
+		}
 		cx = crop_rect.x;
 		cy = crop_rect.y;
 		cw = crop_rect.w;
 		ch = crop_rect.h;
+		if (raw_crop_valid && cw > 0 && ch > 0) {
+			last_valid_crop = crop_rect;
+			last_valid_crop_hres = hres;
+			last_valid_crop_vres = vres;
+			last_valid_crop_available = true;
+		}
 #endif
 		bool crop_is_stable = true;
 #ifdef LIBRETRO
@@ -2300,8 +2317,8 @@ void auto_crop_image()
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		renderer->crop_display_w = integer_width;
 		renderer->crop_display_h = integer_height;
-		write_log(_T("auto_crop: raw=%dx%d+%d+%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
-			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres,
+		write_log(_T("auto_crop: raw=%dx%d+%d+%d valid=%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+			raw_cw, raw_ch, raw_cx, raw_cy, raw_crop_valid, cw, ch, cx, cy, hres, vres,
 			content_hres, content_vres, content_width, content_height,
 			is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
 		rq = { dx, dy, presentation_width, presentation_height };

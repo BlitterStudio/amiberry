@@ -143,6 +143,40 @@ static void test_native_content_grid_ignores_configured_pixel_repetition()
 		"non-interlaced hires content must still remove configured line doubling");
 }
 
+static void test_crop_rect_maps_across_autoswitch_resolutions()
+{
+	const AmiberryGfxRect hires_crop{ 76, 34, 640, 414 };
+	const AmiberryGfxRect lores_crop = amiberry_gfx_scale_crop_rect(
+		hires_crop, 1, 1, 0, 0);
+	expect_int_eq(lores_crop.x, 38,
+		"Autoswitch should map the crop's left edge to the lower-resolution surface");
+	expect_int_eq(lores_crop.y, 17,
+		"Autoswitch should map the crop's top edge to the lower-resolution surface");
+	expect_int_eq(lores_crop.w, 320,
+		"Autoswitch should retain the crop width in native content units");
+	expect_int_eq(lores_crop.h, 207,
+		"Autoswitch should retain the crop height in native content units");
+
+	const AmiberryGfxRect restored = amiberry_gfx_scale_crop_rect(
+		lores_crop, 0, 0, 1, 1);
+	expect_int_eq(restored.x, hires_crop.x,
+		"Mapping an aligned crop back to hires should restore its left edge");
+	expect_int_eq(restored.y, hires_crop.y,
+		"Mapping an aligned crop back to doubled lines should restore its top edge");
+	expect_int_eq(restored.w, hires_crop.w,
+		"Mapping an aligned crop back to hires should restore its width");
+	expect_int_eq(restored.h, hires_crop.h,
+		"Mapping an aligned crop back to doubled lines should restore its height");
+
+	const AmiberryGfxRect odd_crop{ 73, 48, 643, 400 };
+	const AmiberryGfxRect odd_lores = amiberry_gfx_scale_crop_rect(
+		odd_crop, 1, 1, 0, 0);
+	expect_int_eq(odd_lores.x, 36,
+		"Downscaling should floor an odd crop origin");
+	expect_int_eq(odd_lores.w, 322,
+		"Downscaling should round up the far edge so no content is lost");
+}
+
 static void test_native_content_grid_uses_the_largest_integer_fit()
 {
 	int content_width = 0;
@@ -315,6 +349,7 @@ int main()
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
 	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
 	test_native_content_grid_ignores_configured_pixel_repetition();
+	test_crop_rect_maps_across_autoswitch_resolutions();
 	test_native_content_grid_uses_the_largest_integer_fit();
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();

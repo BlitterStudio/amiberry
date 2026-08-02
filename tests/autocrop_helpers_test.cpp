@@ -464,10 +464,10 @@ static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 		source, left_expanded_source, stable, left_expanded,
 		false, false, false, true, 2),
 		"Right attribution must not cover a left source extension");
-	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		source, left_expanded_source, stable, { 36, 24, 322, 200 },
 		false, false, true, false, 2),
-		"A pixel-scan extension beyond an attributed left source edge must update the crop");
+		"A small scan fringe on an attributed sprite edge should preserve the crop");
 
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		source, right_expanded_source, stable, right_expanded_source,
@@ -512,10 +512,10 @@ static void test_horizontal_edge_jitter_requires_sprite_source_attribution()
 		left_expanded_source, source, left_expanded, stable,
 		false, true, false, false, 2),
 		"Previous right attribution must not cover a left source contraction");
-	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		left_expanded_source, source, { 36, 24, 322, 200 }, stable,
 		true, false, false, false, 2),
-		"A scan-controlled previous left edge must not hide a source contraction");
+		"A sprite edge contraction should also absorb its previous scan fringe");
 
 	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		right_expanded_source, source, right_expanded_source, stable,
@@ -603,41 +603,34 @@ static void test_sprite_zero_scan_jitter_requires_exact_edge_evidence()
 		"Sprite-0 evidence inside the source must not hide scan content");
 }
 
-static void test_combined_sprite_jitter_preserves_large_nested_source_changes()
+static void test_sprite_jitter_preserves_large_nested_source_changes()
 {
 	const AmiberryAutoCropRect narrow_source{ 107, 48, 609, 400 };
 	const AmiberryAutoCropRect wide_source{ 73, 48, 643, 400 };
 	const AmiberryAutoCropRect stable{ 76, 48, 640, 400 };
 	const AmiberryAutoCropRect edge_extended{ 72, 48, 644, 400 };
-	const AmiberryAutoCropHorizontalEvidence no_evidence{ 0, 0, false, false };
-	const AmiberryAutoCropHorizontalEvidence left_scan{ 72, 0, true, false };
-	const AmiberryAutoCropHorizontalEvidence right_scan{ 0, 720, false, true };
 
-	expect_true(amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		narrow_source, wide_source, stable, edge_extended,
-		false, false, true, false, no_evidence, left_scan, 4),
-		"A large attributed sprite-source expansion plus exact scan edge must keep the stable crop");
-	expect_true(amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+		false, false, true, false, 4),
+		"A large attributed sprite-source expansion plus scan fringe must keep the stable crop");
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		wide_source, narrow_source, edge_extended, stable,
-		true, false, false, false, left_scan, no_evidence, 4),
+		true, false, false, false, 4),
 		"The matching sprite-source contraction must restore no crop movement");
-	expect_true(amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+	expect_true(amiberry_auto_crop_should_preserve_horizontal_jitter(
 		{ 76, 48, 609, 400 }, { 76, 48, 643, 400 },
 		stable, { 76, 48, 644, 400 },
-		false, false, false, true, no_evidence, right_scan, 4),
+		false, false, false, true, 4),
 		"The equivalent attributed right-edge expansion must keep the stable crop");
 
-	expect_true(!amiberry_auto_crop_should_preserve_combined_sprite_jitter(
-		narrow_source, wide_source, stable, edge_extended,
-		false, false, true, false, no_evidence, no_evidence, 4),
-		"An unexplained scan edge must not be hidden by source attribution alone");
-	expect_true(!amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
 		narrow_source, { 73, 48, 609, 400 }, stable, edge_extended,
-		false, false, true, true, no_evidence, left_scan, 4),
+		false, false, true, true, 4),
 		"A translated source must not be classified as nested sprite jitter");
-	expect_true(!amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+	expect_true(!amiberry_auto_crop_should_preserve_horizontal_jitter(
 		narrow_source, wide_source, stable, { 71, 48, 645, 400 },
-		false, false, true, false, no_evidence, left_scan, 4),
+		false, false, true, false, 4),
 		"A final crop change beyond tolerance must still update presentation");
 }
 
@@ -661,6 +654,6 @@ int main()
 	test_horizontal_edge_jitter_tolerance();
 	test_horizontal_edge_jitter_requires_sprite_source_attribution();
 	test_sprite_zero_scan_jitter_requires_exact_edge_evidence();
-	test_combined_sprite_jitter_preserves_large_nested_source_changes();
+	test_sprite_jitter_preserves_large_nested_source_changes();
 	return failures == 0 ? 0 : 1;
 }
