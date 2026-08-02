@@ -5490,6 +5490,10 @@ static void reset_autoscale(void)
 	ddffirstword_total_old = ddffirstword_total;
 	ddflastword_total_old = ddflastword_total;
 
+#ifdef AMIBERRY
+	reset_autoscale_sprite_horizontal_edges();
+#endif
+
 	//write_log("%4d %4d %4d %4d %4d %4d\n", diwfirstword_total, diwlastword_total, ddffirstword_total, ddflastword_total, plffirstline_total, plflastline_total);
 
 	first_planes_vpos = 0;

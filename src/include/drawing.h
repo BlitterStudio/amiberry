@@ -130,6 +130,17 @@ extern int get_vertical_visible_height(bool);
 extern void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvbstrt);
 extern void notice_resolution_seen(int res, bool lace);
 
+#ifdef AMIBERRY
+enum
+{
+	AUTOSCALE_SPRITE_EDGE_LEFT = 1,
+	AUTOSCALE_SPRITE_EDGE_RIGHT = 2
+};
+extern int get_autoscale_sprite_horizontal_edges(void);
+extern int get_autoscale_sprite_zero_horizontal_edges(int* left, int* right);
+extern void reset_autoscale_sprite_horizontal_edges(void);
+#endif
+
 /* Finally, stuff that shouldn't really be shared.  */
 
 #define IHF_SCROLLLOCK 0
