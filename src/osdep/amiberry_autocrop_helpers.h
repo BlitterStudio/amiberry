@@ -614,6 +614,11 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 				if (state.visited[start_index]) {
 					continue;
 				}
+				if ((amiberry_auto_crop_read_pixel(buffer, x, y)
+					& buffer.rgb_mask) == border_rgb) {
+					state.visited[start_index] = 1;
+					continue;
+				}
 				AmiberryAutoCropRect component;
 				const size_t component_pixels = amiberry_auto_crop_flood_region<false>(
 					buffer, crop, x, y, state, border_rgb, &component);
