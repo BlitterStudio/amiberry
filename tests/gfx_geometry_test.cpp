@@ -82,6 +82,13 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 	int width = 0;
 	int height = 0;
 	amiberry_gfx_correct_aspect_integer_dimensions(
+		5120, 1440, 640, 480, 4.0f / 3.0f, width, height);
+	expect_int_eq(width, 1920,
+		"normalized 640x480 hires crop must retain its full 4:3 integer width");
+	expect_int_eq(height, 1440,
+		"normalized 640x480 hires crop must fill a 1440-line integer target");
+
+	amiberry_gfx_correct_aspect_integer_dimensions(
 		800, 600, 640, 640, 1.0f, width, height);
 	expect_int_eq(width, 600,
 		"compensated 640-wide content must fit within an 800x600 fullscreen mode");
@@ -108,6 +115,36 @@ static void test_corrected_integer_scaling_stays_within_fullscreen_mode()
 		"integer scaling must retain the closest bounded horizontal scale");
 	expect_int_eq(height, 2160,
 		"integer scaling must retain the largest bounded vertical scale");
+}
+
+static void test_auto_scaling_uses_integer_only_for_a_lossless_fit()
+{
+	int width = 0;
+	int height = 0;
+	bool use_integer = amiberry_gfx_auto_integer_dimensions(
+		5120, 1440, 640, 640, 480, true,
+		4.0f / 3.0f, 4.0f / 3.0f, width, height);
+	expect_int_eq(use_integer, true,
+		"auto scaling must use integer scaling for an exact 3x native fit");
+	expect_int_eq(width, 1920,
+		"auto integer scaling must retain the full lossless width");
+	expect_int_eq(height, 1440,
+		"auto integer scaling must retain the full lossless height");
+	use_integer = amiberry_gfx_auto_integer_dimensions(
+		5120, 1440, 640, 640, 480, false,
+		4.0f / 3.0f, 4.0f / 3.0f, width, height);
+	expect_int_eq(use_integer, true,
+		"SDL logical presentation must recognize the same exact 3x fit");
+
+	use_integer = amiberry_gfx_auto_integer_dimensions(
+		1920, 1080, 640, 640, 480, true,
+		4.0f / 3.0f, 4.0f / 3.0f, width, height);
+	expect_int_eq(use_integer, false,
+		"auto scaling must keep best fit when integer scaling would shrink the image");
+	expect_int_eq(width, 1440,
+		"fractional auto scaling must fill the available 4:3 width");
+	expect_int_eq(height, 1080,
+		"fractional auto scaling must fill the available height");
 }
 
 static void test_shader_render_size_resolves_to_compensated_viewport()
@@ -236,6 +273,7 @@ int main()
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();
 	test_corrected_integer_scaling_stays_within_fullscreen_mode();
+	test_auto_scaling_uses_integer_only_for_a_lossless_fit();
 	test_shader_render_size_resolves_to_compensated_viewport();
 	test_full_drawable_presentation_geometry_is_unchanged();
 	test_bezel_area_centers_integer_scaled_presentation();

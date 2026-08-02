@@ -45,6 +45,8 @@ public:
 	// --- Texture / shader allocation ---
 	virtual bool alloc_texture(int monid, int w, int h) = 0;
 	virtual void set_scaling(int monid, const uae_prefs* p, int w, int h) = 0;
+	virtual void set_auto_crop_presentation(int monid, int scaling_method,
+		bool auto_integer_scaling, int width, int height) {}
 
 	// --- VSync ---
 	virtual void update_vsync(int monid) = 0;

@@ -161,6 +161,61 @@ static inline void amiberry_gfx_correct_aspect_integer_dimensions(
 	dest_height = display_height * vertical_scale;
 }
 
+static inline void amiberry_gfx_native_integer_dimensions(
+	const int render_width, const int render_height, const int source_width,
+	const int display_width, const int display_height, const bool correct_aspect,
+	const float target_aspect, int& dest_width, int& dest_height)
+{
+	if (correct_aspect) {
+		amiberry_gfx_correct_aspect_integer_dimensions(
+			render_width, render_height, source_width, display_height,
+			target_aspect, dest_width, dest_height);
+		return;
+	}
+
+	const int scale = amiberry_gfx_native_integer_scale(
+		render_width, render_height, display_width, display_height);
+	dest_width = display_width * scale;
+	dest_height = display_height * scale;
+}
+
+static inline bool amiberry_gfx_auto_integer_dimensions(
+	const int render_width, const int render_height, const int source_width,
+	const int display_width, const int display_height, const bool correct_aspect,
+	const float fit_aspect, const float integer_target_aspect,
+	int& dest_width, int& dest_height)
+{
+	amiberry_gfx_aspect_fit_dimensions(
+		render_width, render_height, fit_aspect, dest_width, dest_height);
+
+	int integer_width = 0;
+	int integer_height = 0;
+	amiberry_gfx_native_integer_dimensions(
+		render_width, render_height, source_width, display_width, display_height,
+		correct_aspect, integer_target_aspect, integer_width, integer_height);
+
+	const int horizontal_unit = correct_aspect ? source_width : display_width;
+	const bool valid_integer_fit = horizontal_unit > 0 && display_height > 0
+		&& integer_width > 0 && integer_height > 0
+		&& integer_width <= render_width && integer_height <= render_height
+		&& integer_width % horizontal_unit == 0
+		&& integer_height % display_height == 0;
+	const int width_delta = integer_width > dest_width
+		? integer_width - dest_width : dest_width - integer_width;
+	const int height_delta = integer_height > dest_height
+		? integer_height - dest_height : dest_height - integer_height;
+
+	// Auto adopts integer scaling only when it produces the same largest
+	// aspect-fit rectangle. The one-pixel tolerance absorbs float truncation.
+	if (!valid_integer_fit || width_delta > 1 || height_delta > 1) {
+		return false;
+	}
+
+	dest_width = integer_width;
+	dest_height = integer_height;
+	return true;
+}
+
 static inline void amiberry_gfx_shader_render_dimensions(
 	const int dest_width, const int dest_height,
 	const int source_width, const int source_height,

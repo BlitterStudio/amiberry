@@ -258,34 +258,6 @@ void render_panel_filter()
 		ImGui::SliderInt("##H", &changed_prefs.gfx_manual_crop_height, 0, 600);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 	}
-	// Scaling Method
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Scaling method:");
-	ImGui::SameLine();
-	const char *scaling_items[] = {"Auto", "Nearest", "Linear", "Integer"};
-	int scaling_idx = changed_prefs.scaling_method + 1; // -1 -> 0, 0 -> 1, etc.
-	if (scaling_idx < 0) scaling_idx = 0;
-	if (scaling_idx > 3) scaling_idx = 3;
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
-	if (ImGui::BeginCombo("##ScalingMethod", scaling_items[scaling_idx])) {
-		for (int n = 0; n < IM_ARRAYSIZE(scaling_items); n++) {
-			const bool is_selected = (scaling_idx == n);
-			if (is_selected)
-				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-			if (ImGui::Selectable(scaling_items[n], is_selected)) {
-				scaling_idx = n;
-				changed_prefs.scaling_method = scaling_idx - 1;
-			}
-			if (is_selected) {
-				ImGui::PopStyleColor();
-				ImGui::SetItemDefaultFocus();
-			}
-		}
-		ImGui::EndCombo();
-	}
-	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-	ShowHelpMarker("How the display is scaled to fit the window.\nAuto: best fit, Nearest: sharp pixels, Linear: smooth, Integer: pixel-perfect.");
-	ImGui::Spacing();
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("H. Offset:");
 	ImGui::SameLine();

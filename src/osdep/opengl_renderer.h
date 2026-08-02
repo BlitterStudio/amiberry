@@ -175,6 +175,7 @@ private:
 	bool ensure_shader_resolve_target(int width, int height);
 	void destroy_shader_resolve_target();
 	void render_shader_resolve(int x, int y, int width, int height);
+	void update_texture_filter(GLenum texture_filter);
 
 	// Private helper for external shader rendering
 	void render_external_shader(ExternalShader* shader, int monid,

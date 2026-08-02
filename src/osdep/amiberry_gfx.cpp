@@ -2217,15 +2217,25 @@ void auto_crop_image()
 		amiberry_gfx_auto_crop_presentation_dimensions(
 			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
 			currprefs.scaling_method == 2, sdl_mode.w, sdl_mode.h, width, height);
+		int integer_width, integer_height;
+		amiberry_gfx_auto_crop_presentation_dimensions(
+			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
+			true, sdl_mode.w, sdl_mode.h, integer_width, integer_height);
 		int presentation_width = width;
 		int presentation_height = height;
+		int integer_presentation_width = integer_width;
+		int integer_presentation_height = integer_height;
+		int output_width = sdl_mode.w;
+		int output_height = sdl_mode.h;
 		// SDL software path needs logical size update
 		if (mon->amiga_renderer) {
+			SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &output_width, &output_height);
+			if (output_width <= 0 || output_height <= 0) {
+				output_width = sdl_mode.w;
+				output_height = sdl_mode.h;
+			}
 #if defined(__linux__) && !defined(__ANDROID__)
 			if (currprefs.gfx_correct_aspect && isfullscreen() > 0) {
-				int output_width = 0;
-				int output_height = 0;
-				SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &output_width, &output_height);
 				const float desired_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(
 					height > 0 ? static_cast<float>(width) / height : 0.0f,
 					output_width, output_height, mon->desktop_width, mon->desktop_height);
@@ -2233,22 +2243,46 @@ void auto_crop_image()
 					presentation_width = std::max(1,
 						static_cast<int>(presentation_height * desired_aspect + 0.5f));
 				}
+				const float integer_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(
+					integer_height > 0 ? static_cast<float>(integer_width) / integer_height : 0.0f,
+					output_width, output_height, mon->desktop_width, mon->desktop_height);
+				if (integer_aspect > 0.0f && integer_presentation_height > 0) {
+					integer_presentation_width = std::max(1,
+						static_cast<int>(integer_presentation_height * integer_aspect + 0.5f));
+				}
 			}
 #endif
-			const auto presentation = currprefs.scaling_method == 2
-				? SDL_LOGICAL_PRESENTATION_INTEGER_SCALE : SDL_LOGICAL_PRESENTATION_LETTERBOX;
-			SDL_SetRenderLogicalPresentation(mon->amiga_renderer,
-				presentation_width, presentation_height, presentation);
 		}
 
 		IRenderer* renderer = get_renderer(0);
+		bool auto_integer_scaling = false;
+		if (currprefs.scaling_method == -1 && integer_presentation_width > 0
+			&& integer_presentation_height > 0) {
+			const float presentation_aspect = presentation_height > 0
+				? static_cast<float>(presentation_width) / presentation_height : 0.0f;
+			int auto_width = 0;
+			int auto_height = 0;
+			auto_integer_scaling = amiberry_gfx_auto_integer_dimensions(
+				output_width, output_height, integer_presentation_width,
+				integer_presentation_width, integer_presentation_height, false,
+				presentation_aspect, presentation_aspect, auto_width, auto_height);
+			if (auto_integer_scaling) {
+				presentation_width = integer_presentation_width;
+				presentation_height = integer_presentation_height;
+			}
+		}
+		if (mon->amiga_renderer) {
+			renderer->set_auto_crop_presentation(0, currprefs.scaling_method,
+				auto_integer_scaling, presentation_width, presentation_height);
+		}
 		auto& rq = renderer->render_quad;
 		auto& cr = renderer->crop_rect;
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
-		renderer->crop_display_w = width;
-		renderer->crop_display_h = height;
+		renderer->crop_display_w = integer_width;
+		renderer->crop_display_h = integer_height;
 		write_log(_T("auto_crop: raw=%dx%d+%d+%d final=%dx%d+%d+%d hres=%d vres=%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
-			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
+			raw_cw, raw_ch, raw_cx, raw_cy, cw, ch, cx, cy, hres, vres, is_ntsc, vblank_hz,
+			width, height, renderer->crop_aspect);
 		rq = { dx, dy, presentation_width, presentation_height };
 		cr = crop_rect;
 

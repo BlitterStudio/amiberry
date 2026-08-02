@@ -165,6 +165,7 @@ private:
 		int crop_display_width = 0;
 		int crop_display_height = 0;
 		bool integer_scaling = false;
+		bool auto_scaling = false;
 		bool picasso_on = false;
 		bool screen_is_picasso = false;
 		int scalepicasso = 0;
