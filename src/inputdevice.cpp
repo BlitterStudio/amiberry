@@ -6083,6 +6083,11 @@ static void inputdevice_checkconfig (void)
 		currprefs.input_device_match_mask != changed_prefs.input_device_match_mask ||
 		currprefs.input_mouse_speed != changed_prefs.input_mouse_speed ||
 		currprefs.input_tablet != changed_prefs.input_tablet) {
+			const bool refresh_tablet_session = input_acquired
+				&& currprefs.input_tablet != changed_prefs.input_tablet
+				&& (currprefs.input_tablet == TABLET_REAL || changed_prefs.input_tablet == TABLET_REAL);
+			if (refresh_tablet_session)
+				inputdevice_unacquire();
 
 			currprefs.input_selected_setting = changed_prefs.input_selected_setting;
 			currprefs.input_joymouse_multiplier = changed_prefs.input_joymouse_multiplier;
@@ -6097,6 +6102,8 @@ static void inputdevice_checkconfig (void)
 			currprefs.input_tablet = changed_prefs.input_tablet;
 
 			inputdevice_updateconfig (&changed_prefs, &currprefs);
+			if (refresh_tablet_session)
+				inputdevice_acquire(TRUE);
 	}
 	if (currprefs.dongle != changed_prefs.dongle) {
 		currprefs.dongle = changed_prefs.dongle;

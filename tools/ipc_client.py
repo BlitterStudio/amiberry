@@ -149,6 +149,9 @@ def print_help():
 === Input ===
   SEND_KEY <keycode> <state>- Send key (state: 0=release, 1=press)
   SEND_MOUSE <dx> <dy> <btn>- Send mouse input (btn: bit0=L, bit1=R, bit2=M)
+  SEND_MOUSE_ABS <x> <y> <btn>
+                            - Send absolute window coordinates and buttons
+                              (requires tablet_mode mousehack or real)
   SET_MOUSE_SPEED <10-200>  - Set mouse sensitivity
   GET_MOUSE_SPEED           - Get current mouse speed
   TOGGLE_MOUSE_GRAB         - Toggle mouse capture
@@ -210,6 +213,8 @@ Config options for GET_CONFIG/SET_CONFIG:
   gfx_width, gfx_height, gfx_fullscreen
   sound_output, sound_stereo, sound_volume
   joyport0, joyport1, description, turbo_emulation
+  tablet_mode (off|mousehack|real)
+  mouse_untrap (off|middle|magic|both)
 
 Type 'help' for this message, 'exit' or 'q' to quit the client.
 Note: Use 'QUIT' to quit Amiberry (the emulator).

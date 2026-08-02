@@ -369,6 +369,40 @@ static std::string HandleGetConfig(const std::vector<std::string>& args)
 	else if (optname == "description") {
 		value = changed_prefs.description;
 	}
+	// Input options
+	else if (optname == "tablet_mode") {
+		switch (changed_prefs.input_tablet) {
+		case TABLET_OFF:
+			value = "off";
+			break;
+		case TABLET_MOUSEHACK:
+			value = "mousehack";
+			break;
+		case TABLET_REAL:
+			value = "real";
+			break;
+		default:
+			return make_response(false, {"Invalid tablet_mode state"});
+		}
+	}
+	else if (optname == "mouse_untrap") {
+		switch (changed_prefs.input_mouse_untrap) {
+		case MOUSEUNTRAP_NONE:
+			value = "off";
+			break;
+		case MOUSEUNTRAP_MIDDLEBUTTON:
+			value = "middle";
+			break;
+		case MOUSEUNTRAP_MAGIC:
+			value = "magic";
+			break;
+		case MOUSEUNTRAP_BOTH:
+			value = "both";
+			break;
+		default:
+			return make_response(false, {"Invalid mouse_untrap state"});
+		}
+	}
 	else {
 		return make_response(false, {"Unknown option: " + optname});
 	}
@@ -421,6 +455,39 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 		else if (optname == "ntsc") {
 			changed_prefs.ntscmode = (optval == "true" || optval == "1");
 			set_config_changed();
+		}
+		// Input options
+		else if (optname == "tablet_mode") {
+			int tablet_mode;
+			if (optval == "off")
+				tablet_mode = TABLET_OFF;
+			else if (optval == "mousehack")
+				tablet_mode = TABLET_MOUSEHACK;
+			else if (optval == "real")
+				tablet_mode = TABLET_REAL;
+			else
+				return make_response(false, {"Invalid tablet_mode value (use off, mousehack, or real)"});
+			if (changed_prefs.input_tablet != tablet_mode) {
+				changed_prefs.input_tablet = tablet_mode;
+				set_config_changed();
+			}
+		}
+		else if (optname == "mouse_untrap") {
+			int mouse_untrap;
+			if (optval == "off")
+				mouse_untrap = MOUSEUNTRAP_NONE;
+			else if (optval == "middle")
+				mouse_untrap = MOUSEUNTRAP_MIDDLEBUTTON;
+			else if (optval == "magic")
+				mouse_untrap = MOUSEUNTRAP_MAGIC;
+			else if (optval == "both")
+				mouse_untrap = MOUSEUNTRAP_BOTH;
+			else
+				return make_response(false, {"Invalid mouse_untrap value (use off, middle, magic, or both)"});
+			if (changed_prefs.input_mouse_untrap != mouse_untrap) {
+				changed_prefs.input_mouse_untrap = mouse_untrap;
+				set_config_changed();
+			}
 		}
 		else {
 			return make_response(false, {"Unknown option: " + optname});
@@ -768,6 +835,37 @@ static std::string HandleSendMouse(const std::vector<std::string>& args)
 	setmousebuttonstate(0, 0, (buttons & 1) ? 1 : 0);  // Left button
 	setmousebuttonstate(0, 1, (buttons & 2) ? 1 : 0);  // Right button
 	setmousebuttonstate(0, 2, (buttons & 4) ? 1 : 0);  // Middle button
+
+	return make_response(true);
+}
+
+static std::string HandleSendMouseAbs(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SEND_MOUSE_ABS" << std::endl;
+	if (args.size() < 3) {
+		return make_response(false, {"Usage: SEND_MOUSE_ABS <x> <y> <buttons>"});
+	}
+
+	int x, y, buttons;
+	try {
+		x = std::stoi(args[0]);
+		y = std::stoi(args[1]);
+		buttons = std::stoi(args[2]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid mouse parameters"});
+	}
+
+	// Coordinates are raw Amiberry window coordinates. The shared host mouse
+	// path applies SDL logical presentation or OpenGL HiDPI scaling exactly once.
+	if (!amiberry_send_mouse_abs(x, y)) {
+		return make_response(false,
+			{"Absolute mouse input rejected (check coordinates, focus, and active tablet_mode)"});
+	}
+
+	// Send button states (bit 0 = left, bit 1 = right, bit 2 = middle)
+	setmousebuttonstate(0, 0, (buttons & 1) ? 1 : 0);
+	setmousebuttonstate(0, 1, (buttons & 2) ? 1 : 0);
+	setmousebuttonstate(0, 2, (buttons & 4) ? 1 : 0);
 
 	return make_response(true);
 }
@@ -2431,6 +2529,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("FRAME_ADVANCE [n], SET_MOUSE_SPEED <10-200>, GET_MOUSE_SPEED");
 	commands.emplace_back("TOGGLE_MOUSE_GRAB");
 	commands.emplace_back("SEND_KEY <code> <state>, SEND_MOUSE <dx> <dy> <buttons>");
+	commands.emplace_back("SEND_MOUSE_ABS <x> <y> <buttons> (requires tablet_mode mousehack or real)");
 	commands.emplace_back("READ_MEM <addr> <width>, WRITE_MEM <addr> <width> <val>");
 	commands.emplace_back("SET_AUTOCROP <0|1>, GET_AUTOCROP");
 	commands.emplace_back("INSERT_WHDLOAD <path>, EJECT_WHDLOAD, GET_WHDLOAD");
@@ -2487,6 +2586,7 @@ static void InitHandlers()
 	command_handlers[CMD_FRAME_ADVANCE] = HandleFrameAdvance;
 	command_handlers[CMD_SET_MOUSE_SPEED] = HandleSetMouseSpeed;
 	command_handlers[CMD_SEND_MOUSE] = HandleSendMouse;
+	command_handlers[CMD_SEND_MOUSE_ABS] = HandleSendMouseAbs;
 	command_handlers[CMD_PING] = HandlePing;
 	command_handlers[CMD_HELP] = HandleHelp;
 

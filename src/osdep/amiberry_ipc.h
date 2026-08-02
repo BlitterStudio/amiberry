@@ -56,6 +56,7 @@ constexpr char const* CMD_LIST_CONFIGS = "LIST_CONFIGS";
 constexpr char const* CMD_FRAME_ADVANCE = "FRAME_ADVANCE";
 constexpr char const* CMD_SET_MOUSE_SPEED = "SET_MOUSE_SPEED";
 constexpr char const* CMD_SEND_MOUSE = "SEND_MOUSE";
+constexpr char const* CMD_SEND_MOUSE_ABS = "SEND_MOUSE_ABS";
 constexpr char const* CMD_PING = "PING";
 constexpr char const* CMD_HELP = "HELP";
 

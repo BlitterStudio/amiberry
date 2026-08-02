@@ -3420,21 +3420,22 @@ static void handle_finger_motion_event(const SDL_Event& event, int window_width,
 }
 #endif
 
-static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
+static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
 	monitor_off = 0;
 
 #ifndef LIBRETRO
 	if (pen_in_proximity && currprefs.input_tablet > 0)
-		return;
+		return false;
 #endif
 
 	if (mouseinside && recapture && isfullscreen() == 0) {
 		enablecapture(mon->monitor_id);
-		return;
+		return false;
 	}
 
-	if ((!mouseactive && !accepts_uncaptured_guest_input()) || isfocus() <= 0) return;
+	if ((!mouseactive && !accepts_uncaptured_guest_input()) || isfocus() <= 0)
+		return false;
 
 	const int midx = get_mouse_index_from_sdl_id(event.motion.which);
 
@@ -3479,7 +3480,51 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		setmousestate(midx, 1, yrel, 0);
 	}
 
+	return true;
 }
+
+#ifdef USE_IPC_SOCKET
+bool amiberry_send_mouse_abs(const int x, const int y)
+{
+	if (currprefs.input_tablet < TABLET_MOUSEHACK)
+		return false;
+
+	int monid = 0;
+	if (mouseactive > 0 && mouseactive <= MAX_AMIGAMONITORS)
+		monid = mouseactive - 1;
+	else if (focus > 0 && focus <= MAX_AMIGAMONITORS)
+		monid = focus - 1;
+	else if (mouse_monid >= 0 && mouse_monid < MAX_AMIGAMONITORS)
+		monid = mouse_monid;
+
+	if (!AMonitors[monid].active) {
+		if (!AMonitors[0].active)
+			return false;
+		monid = 0;
+	}
+
+	auto* mon = &AMonitors[monid];
+	if (!mon->amiga_window)
+		return false;
+
+	int window_width = 0;
+	int window_height = 0;
+	SDL_GetWindowSize(mon->amiga_window, &window_width, &window_height);
+	if (window_width <= 0 || window_height <= 0
+		|| x < 0 || x >= window_width || y < 0 || y >= window_height)
+		return false;
+
+	mouse_monid = mon->monitor_id;
+
+	SDL_Event event{};
+	event.type = SDL_EVENT_MOUSE_MOTION;
+	event.motion.windowID = SDL_GetWindowID(mon->amiga_window);
+	event.motion.which = 0;
+	event.motion.x = static_cast<float>(x);
+	event.motion.y = static_cast<float>(y);
+	return handle_mouse_motion_event(event, mon);
+}
+#endif
 
 static int get_mouse_wheel_ticks(const SDL_MouseWheelEvent& wheel, const int midx, const int axis)
 {
