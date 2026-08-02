@@ -45,6 +45,9 @@ public:
 	// --- Texture / shader allocation ---
 	virtual bool alloc_texture(int monid, int w, int h) = 0;
 	virtual void set_scaling(int monid, const uae_prefs* p, int w, int h) = 0;
+	virtual void set_auto_crop_presentation(int monid, int scaling_method,
+		bool auto_integer_scaling, int width, int height) {}
+	virtual void refresh_scaling_after_resize(int monid) {}
 
 	// --- VSync ---
 	virtual void update_vsync(int monid) = 0;
@@ -106,8 +109,8 @@ public:
 	SDL_Rect render_quad{};
 	SDL_Rect crop_rect{};
 	float crop_aspect{};  // set by auto_crop_image(); 0 = not yet computed
-	int crop_display_w{};  // Logical display width from auto_crop_image()
-	int crop_display_h{};  // Logical display height from auto_crop_image()
+	int crop_display_w{};  // Native content-grid display width from auto_crop_image()
+	int crop_display_h{};  // Native content-grid display height from auto_crop_image()
 
 protected:
 	VSyncState m_vsync;

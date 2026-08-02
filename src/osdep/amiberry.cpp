@@ -2645,6 +2645,8 @@ static void handle_resized_event(AmigaMonitor* mon, int width, int height)
 	write_log("Window resized to: %dx%d\n", width, height);
 	setsizemove(mon, mon->amiga_window);
 	update_hidpi_scale(mon);
+	if (IRenderer* renderer = get_renderer(mon->monitor_id))
+		renderer->refresh_scaling_after_resize(mon->monitor_id);
 }
 
 static void handle_enter_event(AmigaMonitor* mon)

@@ -116,6 +116,9 @@ extern bool frame_drawn(int monid);
 extern void redraw_frame(void);
 extern void full_redraw_all(void);
 extern int get_custom_limits(int *pw, int *ph, int *pdx, int *pdy, int *prealh, int *hres, int *vres);
+#ifdef AMIBERRY
+extern bool custom_limits_are_provisional(void);
+#endif
 extern void store_custom_limits(int w, int h, int dx, int dy);
 extern void set_custom_limits(int w, int h, int dx, int dy, bool blank);
 extern void check_custom_limits(void);
@@ -129,6 +132,17 @@ extern void check_prefs_picasso(void);
 extern int get_vertical_visible_height(bool);
 extern void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvbstrt);
 extern void notice_resolution_seen(int res, bool lace);
+
+#ifdef AMIBERRY
+enum
+{
+	AUTOSCALE_SPRITE_EDGE_LEFT = 1,
+	AUTOSCALE_SPRITE_EDGE_RIGHT = 2
+};
+extern int get_autoscale_sprite_horizontal_edges(void);
+extern int get_autoscale_sprite_zero_horizontal_edges(int* left, int* right);
+extern void reset_autoscale_sprite_horizontal_edges(void);
+#endif
 
 /* Finally, stuff that shouldn't really be shared.  */
 
