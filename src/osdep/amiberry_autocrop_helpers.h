@@ -159,6 +159,35 @@ static inline bool amiberry_auto_crop_should_preserve_horizontal_jitter(
 	return true;
 }
 
+static inline bool amiberry_auto_crop_should_preserve_vertical_translation(
+	const AmiberryAutoCropRect& source,
+	const AmiberryAutoCropRect& previous_visible,
+	const AmiberryAutoCropRect& current_visible, const int tolerance)
+{
+	if (tolerance < 0
+		|| source.w <= 0 || source.h <= 0
+		|| previous_visible.w <= 0 || previous_visible.h <= 0
+		|| current_visible.w <= 0 || current_visible.h <= 0
+		|| source.x != previous_visible.x
+		|| source.w != previous_visible.w
+		|| source.h != previous_visible.h
+		|| source.y == previous_visible.y
+		|| std::abs(source.y - previous_visible.y) > tolerance
+		|| current_visible.x != source.x
+		|| current_visible.w != source.w) {
+		return false;
+	}
+
+	const int union_top = std::min(source.y, previous_visible.y);
+	const int union_bottom = std::max(amiberry_auto_crop_rect_bottom(source),
+		amiberry_auto_crop_rect_bottom(previous_visible));
+	return current_visible.y <= source.y
+		&& amiberry_auto_crop_rect_bottom(current_visible)
+			>= amiberry_auto_crop_rect_bottom(source)
+		&& current_visible.y >= union_top
+		&& amiberry_auto_crop_rect_bottom(current_visible) <= union_bottom;
+}
+
 static inline bool amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
 	const AmiberryAutoCropRect& previous_source,
 	const AmiberryAutoCropRect& current_source,

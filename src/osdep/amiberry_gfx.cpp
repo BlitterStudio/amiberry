@@ -308,6 +308,13 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		const int vertical_tolerance = auto_crop_guard_top_base_tolerance
 			<< std::clamp(vres, VRES_NONDOUBLE, VRES_DOUBLE);
 		AmiberryAutoCropPixelBuffer buffer;
+		if (amiberry_auto_crop_should_preserve_vertical_translation(
+			current_source, previous_rect, current_rect, vertical_tolerance)) {
+			// A prior frame established a same-size vertical translation. Do not
+			// union it back with the unchanged source on the following frame.
+			visible_rect = state.visible_rect;
+			return;
+		}
 		if (auto_crop_rect_equals(state.source_rect, source_rect)
 			&& border_valid && get_auto_crop_pixel_buffer(surface, buffer)
 			&& amiberry_auto_crop_stabilize_vertical_transition(
@@ -2144,6 +2151,7 @@ void auto_crop_image()
 		int vres = currprefs.gfx_vresolution;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh, &hres, &vres);
 		const bool raw_crop_valid = cw > 0 && ch > 0;
+		const bool raw_crop_provisional = custom_limits_are_provisional();
 		const int content_hres = std::clamp(detected_screen_resolution,
 			RES_LORES, std::min(hres, RES_SUPERHIRES));
 		const int content_vres = interlace_seen > 0
@@ -2172,7 +2180,10 @@ void auto_crop_image()
 		if (!last_autocrop) {
 			last_valid_crop_available = false;
 		}
-		if (!raw_crop_valid && last_valid_crop_available) {
+		// Graphics resets briefly make get_custom_limits() expose its generic
+		// no-bitplane fallback. Keep the last real crop instead of presenting it.
+		if (amiberry_gfx_should_use_cached_crop(raw_crop_valid,
+			raw_crop_provisional, last_valid_crop_available)) {
 			const AmiberryGfxRect mapped = amiberry_gfx_scale_crop_rect(
 				{ last_valid_crop.x, last_valid_crop.y,
 					last_valid_crop.w, last_valid_crop.h },
@@ -2208,7 +2219,7 @@ void auto_crop_image()
 		cy = crop_rect.y;
 		cw = crop_rect.w;
 		ch = crop_rect.h;
-		if (raw_crop_valid && cw > 0 && ch > 0) {
+		if (raw_crop_valid && !raw_crop_provisional && cw > 0 && ch > 0) {
 			last_valid_crop = crop_rect;
 			last_valid_crop_hres = hres;
 			last_valid_crop_vres = vres;
@@ -2342,8 +2353,9 @@ void auto_crop_image()
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		renderer->crop_display_w = integer_width;
 		renderer->crop_display_h = integer_height;
-		write_log(_T("auto_crop: raw=%dx%d+%d+%d valid=%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
-			raw_cw, raw_ch, raw_cx, raw_cy, raw_crop_valid, cw, ch, cx, cy, hres, vres,
+		write_log(_T("auto_crop: raw=%dx%d+%d+%d valid=%d provisional=%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+			raw_cw, raw_ch, raw_cx, raw_cy, raw_crop_valid, raw_crop_provisional,
+			cw, ch, cx, cy, hres, vres,
 			content_hres, content_vres, content_width, content_height,
 			is_ntsc, vblank_hz, width, height, renderer->crop_aspect);
 		rq = { dx, dy, presentation_width, presentation_height };

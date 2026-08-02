@@ -177,6 +177,38 @@ static void test_crop_rect_maps_across_autoswitch_resolutions()
 		"Downscaling should round up the far edge so no content is lost");
 }
 
+static void test_provisional_crop_preserves_last_real_geometry()
+{
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(true, true, true), true,
+		"A no-bitplane fallback must retain the last real crop during autoswitch");
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(false, false, true), true,
+		"An invalid crop must retain the last real geometry");
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(true, false, true), false,
+		"A real current crop must replace the cache");
+	expect_int_eq(amiberry_gfx_should_use_cached_crop(true, true, false), false,
+		"Startup without a real crop must keep using the provisional fallback");
+
+	const AmiberryGfxRect cached_hires_crop{76, 17, 640, 200};
+	const AmiberryGfxRect retained_lores_crop = amiberry_gfx_scale_crop_rect(
+		cached_hires_crop, 1, 0, 0, 0);
+	expect_int_eq(retained_lores_crop.w, 320,
+		"The cached game crop must map to its 320-pixel low-resolution grid");
+	expect_int_eq(retained_lores_crop.h, 200,
+		"The cached game crop must retain its 200 active lines");
+
+	int display_width = 0;
+	int display_height = 0;
+	amiberry_gfx_auto_crop_presentation_dimensions(
+		retained_lores_crop.w, retained_lores_crop.h, true, true, true,
+		5120, 1440, display_width, display_height);
+	int scaled_width = 0;
+	int scaled_height = 0;
+	expect_int_eq(amiberry_gfx_auto_integer_dimensions(
+		5120, 1440, display_width, display_width, display_height, false,
+		4.0f / 3.0f, 4.0f / 3.0f, scaled_width, scaled_height), true,
+		"The retained 320x200 NTSC crop must select integer scaling immediately");
+}
+
 static void test_native_content_grid_uses_the_largest_integer_fit()
 {
 	int content_width = 0;
@@ -350,6 +382,7 @@ int main()
 	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
 	test_native_content_grid_ignores_configured_pixel_repetition();
 	test_crop_rect_maps_across_autoswitch_resolutions();
+	test_provisional_crop_preserves_last_real_geometry();
 	test_native_content_grid_uses_the_largest_integer_fit();
 	test_integer_scaling_never_fractionally_downscales();
 	test_exclusive_fullscreen_compensates_for_display_mode_stretch();

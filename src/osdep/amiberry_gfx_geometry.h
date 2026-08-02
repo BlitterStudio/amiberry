@@ -145,6 +145,13 @@ static inline AmiberryGfxRect amiberry_gfx_scale_crop_rect(
 	return { x, y, scaled_right - x, scaled_bottom - y };
 }
 
+static inline bool amiberry_gfx_should_use_cached_crop(
+	const bool raw_crop_valid, const bool raw_crop_provisional,
+	const bool cached_crop_available)
+{
+	return cached_crop_available && (!raw_crop_valid || raw_crop_provisional);
+}
+
 static inline int amiberry_gfx_native_integer_scale(
 	int render_width, int render_height, int display_width, int display_height)
 {

@@ -734,6 +734,31 @@ static void test_vertical_transition_keeps_genuine_two_edge_content()
 		"A genuine expansion should retain its larger height");
 }
 
+static void test_repeated_vertical_translation_does_not_form_a_union()
+{
+	const AmiberryAutoCropRect source{ 76, 34, 640, 400 };
+	const AmiberryAutoCropRect translated{ 76, 48, 640, 400 };
+
+	expect_true(amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, source, 16),
+		"The unchanged hardware source must not undo an established crop translation");
+	expect_true(amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, { 76, 34, 640, 414 }, 16),
+		"The union of source and translated crop must retain the translated size");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, { 76, 33, 640, 416 }, 16),
+		"Content beyond both known positions must still expand the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, { 76, 51, 640, 400 }, source, 16),
+		"A translation beyond tolerance must not suppress a crop change");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, { 76, 48, 640, 400 }, { 75, 34, 641, 414 }, 16),
+		"A simultaneous horizontal expansion must still update the crop");
+	expect_true(!amiberry_auto_crop_should_preserve_vertical_translation(
+		source, translated, { 76, 35, 640, 399 }, 16),
+		"A candidate that no longer covers the source must not reuse stale geometry");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -759,5 +784,6 @@ int main()
 	test_sprite_jitter_preserves_large_nested_source_changes();
 	test_vertical_transition_replaces_displaced_border_without_resizing();
 	test_vertical_transition_keeps_genuine_two_edge_content();
+	test_repeated_vertical_translation_does_not_form_a_union();
 	return failures == 0 ? 0 : 1;
 }
