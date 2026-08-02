@@ -141,6 +141,113 @@ static inline bool amiberry_auto_crop_should_preserve_horizontal_jitter(
 	return true;
 }
 
+static inline bool amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+	const AmiberryAutoCropRect& previous_source,
+	const AmiberryAutoCropRect& current_source,
+	const AmiberryAutoCropRect& previous_visible,
+	const AmiberryAutoCropRect& current_visible,
+	const bool previous_source_left_is_sprite,
+	const bool previous_source_right_is_sprite,
+	const bool current_source_left_is_sprite,
+	const bool current_source_right_is_sprite,
+	const AmiberryAutoCropHorizontalEvidence& previous_sprite_zero,
+	const AmiberryAutoCropHorizontalEvidence& current_sprite_zero,
+	const int tolerance)
+{
+	if (previous_source.w <= 0 || previous_source.h <= 0
+		|| current_source.w <= 0 || current_source.h <= 0
+		|| previous_source.y != current_source.y
+		|| previous_source.h != current_source.h
+		|| !amiberry_auto_crop_rect_within_horizontal_tolerance(
+			previous_visible, current_visible, tolerance)) {
+		return false;
+	}
+
+	const int previous_source_right = amiberry_auto_crop_rect_right(previous_source);
+	const int current_source_right = amiberry_auto_crop_rect_right(current_source);
+	const bool previous_contains_current = previous_source.x <= current_source.x
+		&& previous_source_right >= current_source_right;
+	const bool current_contains_previous = current_source.x <= previous_source.x
+		&& current_source_right >= previous_source_right;
+	if (!previous_contains_current && !current_contains_previous) {
+		return false;
+	}
+
+	const bool source_left_changed = previous_source.x != current_source.x;
+	const bool source_right_changed = previous_source_right != current_source_right;
+	if (!source_left_changed && !source_right_changed) {
+		return false;
+	}
+
+	if (source_left_changed) {
+		const bool expands = current_source.x < previous_source.x;
+		if ((expands && !current_source_left_is_sprite)
+			|| (!expands && !previous_source_left_is_sprite)) {
+			return false;
+		}
+	}
+	if (source_right_changed) {
+		const bool expands = current_source_right > previous_source_right;
+		if ((expands && !current_source_right_is_sprite)
+			|| (!expands && !previous_source_right_is_sprite)) {
+			return false;
+		}
+	}
+
+	const int previous_visible_right = amiberry_auto_crop_rect_right(previous_visible);
+	const int current_visible_right = amiberry_auto_crop_rect_right(current_visible);
+	if (previous_visible.x != current_visible.x) {
+		const bool visible_expands = current_visible.x < previous_visible.x;
+		bool source_matches = false;
+		if (source_left_changed) {
+			const bool source_expands = current_source.x < previous_source.x;
+			if (source_expands != visible_expands) {
+				return false;
+			}
+			source_matches = source_expands
+				? current_visible.x == current_source.x
+				: previous_visible.x == previous_source.x;
+		}
+		const AmiberryAutoCropHorizontalEvidence& evidence = visible_expands
+			? current_sprite_zero : previous_sprite_zero;
+		const AmiberryAutoCropRect& source = visible_expands
+			? current_source : previous_source;
+		const int visible_left = visible_expands
+			? current_visible.x : previous_visible.x;
+		const bool scan_matches = evidence.left_valid
+			&& evidence.left < source.x && evidence.left == visible_left;
+		if (!source_matches && !scan_matches) {
+			return false;
+		}
+	}
+	if (previous_visible_right != current_visible_right) {
+		const bool visible_expands = current_visible_right > previous_visible_right;
+		bool source_matches = false;
+		if (source_right_changed) {
+			const bool source_expands = current_source_right > previous_source_right;
+			if (source_expands != visible_expands) {
+				return false;
+			}
+			source_matches = source_expands
+				? current_visible_right == current_source_right
+				: previous_visible_right == previous_source_right;
+		}
+		const AmiberryAutoCropHorizontalEvidence& evidence = visible_expands
+			? current_sprite_zero : previous_sprite_zero;
+		const int source_right = visible_expands
+			? current_source_right : previous_source_right;
+		const int visible_right = visible_expands
+			? current_visible_right : previous_visible_right;
+		const bool scan_matches = evidence.right_valid
+			&& evidence.right > source_right && evidence.right == visible_right;
+		if (!source_matches && !scan_matches) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 static inline bool amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
 	const AmiberryAutoCropRect& previous_source,
 	const AmiberryAutoCropRect& current_source,

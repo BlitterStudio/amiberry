@@ -300,6 +300,11 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			previous_source, current_source, previous_rect, current_rect,
 			state.source_left_is_sprite, state.source_right_is_sprite,
 			source_left_is_sprite, source_right_is_sprite, tolerance)
+			|| amiberry_auto_crop_should_preserve_combined_sprite_jitter(
+				previous_source, current_source, previous_rect, current_rect,
+				state.source_left_is_sprite, state.source_right_is_sprite,
+				source_left_is_sprite, source_right_is_sprite,
+				state.sprite_zero, sprite_zero, tolerance)
 			|| amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
 				previous_source, current_source, previous_rect, current_rect,
 				state.sprite_zero, sprite_zero, tolerance)) {
