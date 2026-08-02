@@ -223,27 +223,21 @@ static void clamp_auto_crop_rect(const SDL_Surface* surface, SDL_Rect& rect)
 	}
 }
 
-static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
-	SDL_Rect& rect, AmiberryAutoCropScanState& scan_state)
+static bool get_auto_crop_pixel_buffer(const SDL_Surface* surface,
+	AmiberryAutoCropPixelBuffer& buffer)
 {
 	if (!surface || !surface->pixels || surface->w <= 0 || surface->h <= 0) {
-		return;
+		return false;
 	}
-
-	clamp_auto_crop_rect(surface, rect);
-	if (rect.w <= 0 || rect.h <= 0) {
-		return;
-	}
-
 	const int bytes_per_pixel = SDL_BYTESPERPIXEL(surface->format);
 	if (bytes_per_pixel <= 0 || bytes_per_pixel > static_cast<int>(sizeof(uint32_t))) {
-		return;
+		return false;
 	}
 	const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(surface->format);
 	if (!details) {
-		return;
+		return false;
 	}
-	AmiberryAutoCropPixelBuffer buffer = {
+	buffer = {
 		static_cast<const uint8_t*>(surface->pixels),
 		surface->w,
 		surface->h,
@@ -251,6 +245,21 @@ static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
 		bytes_per_pixel,
 		details->Rmask | details->Gmask | details->Bmask
 	};
+	return true;
+}
+
+static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
+	SDL_Rect& rect, AmiberryAutoCropScanState& scan_state)
+{
+	clamp_auto_crop_rect(surface, rect);
+	if (rect.w <= 0 || rect.h <= 0) {
+		return;
+	}
+
+	AmiberryAutoCropPixelBuffer buffer;
+	if (!get_auto_crop_pixel_buffer(surface, buffer)) {
+		return;
+	}
 	AmiberryAutoCropRect visible_rect = { rect.x, rect.y, rect.w, rect.h };
 	if (amiberry_auto_crop_expand_to_visible_content(buffer,
 		auto_crop_min_outside_pixels, visible_rect, scan_state)) {
@@ -291,18 +300,34 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			state.visible_rect.x, state.visible_rect.y,
 			state.visible_rect.w, state.visible_rect.h
 		};
-		const AmiberryAutoCropRect current_rect = {
+		AmiberryAutoCropRect current_rect = {
 			visible_rect.x, visible_rect.y, visible_rect.w, visible_rect.h
 		};
-		const int tolerance = auto_crop_horizontal_jitter_tolerance
+		const int horizontal_tolerance = auto_crop_horizontal_jitter_tolerance
 			<< std::clamp(hres, RES_LORES, RES_SUPERHIRES);
+		const int vertical_tolerance = auto_crop_guard_top_base_tolerance
+			<< std::clamp(vres, VRES_NONDOUBLE, VRES_DOUBLE);
+		AmiberryAutoCropPixelBuffer buffer;
+		if (auto_crop_rect_equals(state.source_rect, source_rect)
+			&& border_valid && get_auto_crop_pixel_buffer(surface, buffer)
+			&& amiberry_auto_crop_stabilize_vertical_transition(
+				buffer, auto_crop_min_outside_pixels, previous_rect, current_rect,
+				border_rgb, vertical_tolerance)) {
+			visible_rect = { current_rect.x, current_rect.y,
+				current_rect.w, current_rect.h };
+			state.visible_rect = visible_rect;
+			state.source_left_is_sprite = source_left_is_sprite;
+			state.source_right_is_sprite = source_right_is_sprite;
+			state.sprite_zero = sprite_zero;
+			return;
+		}
 		if (amiberry_auto_crop_should_preserve_horizontal_jitter(
 			previous_source, current_source, previous_rect, current_rect,
 			state.source_left_is_sprite, state.source_right_is_sprite,
-			source_left_is_sprite, source_right_is_sprite, tolerance)
+			source_left_is_sprite, source_right_is_sprite, horizontal_tolerance)
 			|| amiberry_auto_crop_should_preserve_sprite_zero_scan_jitter(
 				previous_source, current_source, previous_rect, current_rect,
-				state.sprite_zero, sprite_zero, tolerance)) {
+				state.sprite_zero, sprite_zero, horizontal_tolerance)) {
 			// Hardware sprites can move a crop edge by a pixel or two as they
 			// reach or leave a screen edge. Keep the previous final crop so
 			// pointer motion does not pan or resize the presentation.

@@ -250,6 +250,40 @@ static inline void amiberry_auto_crop_get_outside_regions(
 	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
 }
 
+static inline size_t amiberry_auto_crop_count_region_visible_pixels(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& region,
+	const uint32_t border_rgb)
+{
+	if (!amiberry_auto_crop_buffer_valid(buffer)
+		|| region.x < 0 || region.y < 0 || region.w <= 0 || region.h <= 0
+		|| amiberry_auto_crop_rect_right(region) > buffer.width
+		|| amiberry_auto_crop_rect_bottom(region) > buffer.height) {
+		return 0;
+	}
+
+	size_t visible_pixels = 0;
+	const int region_bottom = amiberry_auto_crop_rect_bottom(region);
+	if (buffer.bytes_per_pixel == static_cast<int>(sizeof(uint32_t))) { // Vectorized SDL path.
+		for (int y = region.y; y < region_bottom; y++) {
+			const uint8_t* pixel = buffer.pixels + y * buffer.pitch
+				+ region.x * sizeof(uint32_t);
+			for (int x = 0; x < region.w; x++, pixel += sizeof(uint32_t)) {
+				uint32_t value;
+				std::memcpy(&value, pixel, sizeof(value));
+				visible_pixels += (value & buffer.rgb_mask) != border_rgb;
+			}
+		}
+	} else {
+		for (int y = region.y; y < region_bottom; y++) {
+			for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x++) {
+				visible_pixels += (amiberry_auto_crop_read_pixel(buffer, x, y)
+					& buffer.rgb_mask) != border_rgb;
+			}
+		}
+	}
+	return visible_pixels;
+}
+
 static inline size_t amiberry_auto_crop_count_visible_pixels(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& crop,
 	const uint32_t border_rgb)
@@ -258,27 +292,86 @@ static inline size_t amiberry_auto_crop_count_visible_pixels(
 	amiberry_auto_crop_get_outside_regions(buffer, crop, regions);
 	size_t visible_pixels = 0;
 	for (const auto& region : regions) {
-		const int region_bottom = amiberry_auto_crop_rect_bottom(region);
-		if (buffer.bytes_per_pixel == static_cast<int>(sizeof(uint32_t))) { // Vectorized SDL path.
-			for (int y = region.y; y < region_bottom; y++) {
-				const uint8_t* pixel = buffer.pixels + y * buffer.pitch
-					+ region.x * sizeof(uint32_t);
-				for (int x = 0; x < region.w; x++, pixel += sizeof(uint32_t)) {
-					uint32_t value;
-					std::memcpy(&value, pixel, sizeof(value));
-					visible_pixels += (value & buffer.rgb_mask) != border_rgb;
-				}
-			}
-		} else {
-			for (int y = region.y; y < region_bottom; y++) {
-				for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x++) {
-					visible_pixels += (amiberry_auto_crop_read_pixel(buffer, x, y)
-						& buffer.rgb_mask) != border_rgb;
-				}
-			}
-		}
+		visible_pixels += amiberry_auto_crop_count_region_visible_pixels(
+			buffer, region, border_rgb);
 	}
 	return visible_pixels;
+}
+
+static inline bool amiberry_auto_crop_stabilize_vertical_transition(
+	const AmiberryAutoCropPixelBuffer& buffer, const int min_visible_pixels,
+	const AmiberryAutoCropRect& previous, AmiberryAutoCropRect& current,
+	const uint32_t border_rgb, const int tolerance)
+{
+	if (!amiberry_auto_crop_buffer_valid(buffer)
+		|| tolerance < 0
+		|| previous.x < 0 || previous.y < 0
+		|| previous.w <= 0 || previous.h <= 0
+		|| current.x < 0 || current.y < 0
+		|| current.w <= 0 || current.h <= 0
+		|| amiberry_auto_crop_rect_right(previous) > buffer.width
+		|| amiberry_auto_crop_rect_bottom(previous) > buffer.height
+		|| amiberry_auto_crop_rect_right(current) > buffer.width
+		|| amiberry_auto_crop_rect_bottom(current) > buffer.height
+		|| current.x != previous.x || current.w != previous.w
+		|| current.y > previous.y
+		|| amiberry_auto_crop_rect_bottom(current)
+			< amiberry_auto_crop_rect_bottom(previous)) {
+		return false;
+	}
+
+	const int top_growth = previous.y - current.y;
+	const int bottom_growth = amiberry_auto_crop_rect_bottom(current)
+		- amiberry_auto_crop_rect_bottom(previous);
+	if ((top_growth == 0) == (bottom_growth == 0)
+		|| top_growth + bottom_growth > tolerance) {
+		return false;
+	}
+
+	const auto strip_is_border = [&](const AmiberryAutoCropRect& strip) {
+		const size_t area = static_cast<size_t>(strip.w) * strip.h;
+		const size_t required = std::min(area,
+			static_cast<size_t>(std::max(1, min_visible_pixels)));
+		return amiberry_auto_crop_count_region_visible_pixels(
+			buffer, strip, border_rgb) < required;
+	};
+
+	if (bottom_growth > 0) {
+		const AmiberryAutoCropRect revealed = {
+			previous.x, amiberry_auto_crop_rect_bottom(previous),
+			previous.w, bottom_growth
+		};
+		if (strip_is_border(revealed)) {
+			current = previous;
+			return true;
+		}
+		const AmiberryAutoCropRect displaced = {
+			previous.x, previous.y, previous.w, bottom_growth
+		};
+		if (strip_is_border(displaced)) {
+			current = { previous.x, previous.y + bottom_growth,
+				previous.w, previous.h };
+			return true;
+		}
+		return false;
+	}
+
+	const AmiberryAutoCropRect revealed = {
+		current.x, current.y, current.w, top_growth
+	};
+	if (strip_is_border(revealed)) {
+		current = previous;
+		return true;
+	}
+	const AmiberryAutoCropRect displaced = {
+		previous.x, amiberry_auto_crop_rect_bottom(previous) - top_growth,
+		previous.w, top_growth
+	};
+	if (strip_is_border(displaced)) {
+		current = { current.x, current.y, previous.w, previous.h };
+		return true;
+	}
+	return false;
 }
 
 static inline size_t amiberry_auto_crop_find_dominant_color(

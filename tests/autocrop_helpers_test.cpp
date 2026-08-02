@@ -634,6 +634,59 @@ static void test_sprite_jitter_preserves_large_nested_source_changes()
 		"A final crop change beyond tolerance must still update presentation");
 }
 
+static void test_vertical_transition_replaces_displaced_border_without_resizing()
+{
+	constexpr int width = 20;
+	constexpr int height = 20;
+	std::vector<uint32_t> pixels(width * height, 0);
+	const AmiberryAutoCropRect previous{ 4, 4, 12, 8 };
+	for (int y = 6; y < 14; y++) {
+		for (int x = previous.x; x < previous.x + previous.w; x++) {
+			pixels[y * width + x] = 0x0000ff00u;
+		}
+	}
+
+	AmiberryAutoCropRect expanded{ 4, 4, 12, 10 };
+	expect_true(amiberry_auto_crop_stabilize_vertical_transition(
+		make_buffer(pixels, width, height), 16, previous, expanded, 0, 2),
+		"New bottom content should replace a border strip without resizing");
+	expect_eq(expanded.y, 6,
+		"The stable crop should move down to follow the new content");
+	expect_eq(expanded.h, 8,
+		"Replacing displaced border must preserve the crop height");
+
+	AmiberryAutoCropRect raw_union{ 4, 4, 12, 10 };
+	expect_true(amiberry_auto_crop_stabilize_vertical_transition(
+		make_buffer(pixels, width, height), 16, expanded, raw_union, 0, 2),
+		"A repeated raw union should ignore the revealed border above the stable crop");
+	expect_eq(raw_union.y, 6,
+		"Repeated scan frames should retain the translated origin");
+	expect_eq(raw_union.h, 8,
+		"Repeated scan frames should retain the stable height");
+}
+
+static void test_vertical_transition_keeps_genuine_two_edge_content()
+{
+	constexpr int width = 20;
+	constexpr int height = 20;
+	std::vector<uint32_t> pixels(width * height, 0);
+	const AmiberryAutoCropRect previous{ 4, 4, 12, 8 };
+	AmiberryAutoCropRect expanded{ 4, 4, 12, 10 };
+	for (int y = expanded.y; y < expanded.y + expanded.h; y++) {
+		for (int x = expanded.x; x < expanded.x + expanded.w; x++) {
+			pixels[y * width + x] = 0x0000ff00u;
+		}
+	}
+
+	expect_true(!amiberry_auto_crop_stabilize_vertical_transition(
+		make_buffer(pixels, width, height), 16, previous, expanded, 0, 2),
+		"Visible pixels at both old and new edges must allow a real crop expansion");
+	expect_eq(expanded.y, 4,
+		"A genuine expansion should retain its original top edge");
+	expect_eq(expanded.h, 10,
+		"A genuine expansion should retain its larger height");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -655,5 +708,7 @@ int main()
 	test_horizontal_edge_jitter_requires_sprite_source_attribution();
 	test_sprite_zero_scan_jitter_requires_exact_edge_evidence();
 	test_sprite_jitter_preserves_large_nested_source_changes();
+	test_vertical_transition_replaces_displaced_border_without_resizing();
+	test_vertical_transition_keeps_genuine_two_edge_content();
 	return failures == 0 ? 0 : 1;
 }
