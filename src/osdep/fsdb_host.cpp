@@ -31,6 +31,7 @@
 #include "fsdb.h"
 #include "zfile.h"
 #include "fsdb_host.h"
+#include "amiberry_filesys_permissions.h"
 #include "uae.h"
 
 enum
@@ -807,25 +808,13 @@ int fsdb_set_file_attrs(a_inode* aino)
             return host_errno_to_dos_errno(err);
         }
 
-        // Calculate new mode based on Amiga flags
-        // Note: In Amiga, protection bits are inverted (set = denied)
-        const uae_u32 mask = aino->amigaos_mode;
-        int mode = statbuf.st_mode;
-
-        // Update user permissions
-        mode = (mask & A_FIBF_READ) ? (mode & ~S_IRUSR) : (mode | S_IRUSR);
-        mode = (mask & A_FIBF_WRITE) ? (mode & ~S_IWUSR) : (mode | S_IWUSR);
-        mode = (mask & A_FIBF_EXECUTE) ? (mode & ~S_IXUSR) : (mode | S_IXUSR);
-
-        // Add group/other read permissions if user can read
-        if (mode & S_IRUSR) {
-            mode |= (S_IRGRP | S_IROTH);
-        }
-
-        // Add group/other execute permissions if user can execute
-        if (mode & S_IXUSR) {
-            mode |= (S_IXGRP | S_IXOTH);
-        }
+		// Amiga protection bits are inverted: set means access is denied.
+		const uae_u32 mask = aino->amigaos_mode;
+		const mode_t mode = amiberry_filesys_apply_protection_bits(
+			statbuf.st_mode,
+			(mask & A_FIBF_READ) != 0,
+			(mask & A_FIBF_WRITE) != 0,
+			(mask & A_FIBF_EXECUTE) != 0);
 
 		// Apply new permissions
 		if (chmod(path_utf8.c_str(), mode) != 0) {
