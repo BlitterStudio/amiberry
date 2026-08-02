@@ -2880,12 +2880,13 @@ static void handle_finger_event(const SDL_Event& event)
     }
 }
 
-#ifdef AMIBERRY_MACOS
+#if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 struct MacosSyntheticMouseButton
 {
 	bool synthetic = false;
 	bool release_pending = false;
 	bool press_pending = false;
+	bool release_requested = false;
 	int queued_presses = 0;
 	Uint64 transition_at = 0;
 };
@@ -2908,8 +2909,10 @@ void flush_macos_synthetic_mouse_releases()
 			if (pending.press_pending && now >= pending.transition_at) {
 				setmousebuttonstate(mouse, button, 1);
 				pending.press_pending = false;
-				pending.release_pending = true;
-				pending.transition_at = now + MACOS_SYNTHETIC_MOUSE_TRANSITION_NS;
+				if (pending.release_requested) {
+					pending.release_pending = true;
+					pending.transition_at = now + MACOS_SYNTHETIC_MOUSE_TRANSITION_NS;
+				}
 			}
 			else if (pending.release_pending && now >= pending.transition_at) {
 				setmousebuttonstate(mouse, button, 0);
@@ -2917,6 +2920,7 @@ void flush_macos_synthetic_mouse_releases()
 				if (pending.queued_presses > 0) {
 					--pending.queued_presses;
 					pending.press_pending = true;
+					pending.release_requested = true;
 					pending.transition_at = now + MACOS_SYNTHETIC_MOUSE_TRANSITION_NS;
 				}
 				else {
@@ -2957,6 +2961,7 @@ static void set_macos_mouse_button_state(const int mouse, const int button,
 	else if (pending.synthetic) {
 		if (clicks > 1 && pending.queued_presses == 0)
 			pending.queued_presses = clicks - 1;
+		pending.release_requested = true;
 		// Synthetic macOS clicks commonly deliver down and up in one SDL event
 		// drain. Keep the button asserted long enough for the guest to sample it.
 		if (!pending.release_pending && !pending.press_pending) {
@@ -2974,7 +2979,7 @@ static void set_macos_mouse_button_state(const int mouse, const int button,
 static void set_host_mouse_button_state(const int mouse, const int button,
 	const bool down, const bool position_was_uncached, const int clicks)
 {
-#ifdef AMIBERRY_MACOS
+#if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	set_macos_mouse_button_state(mouse, button, down, position_was_uncached, clicks);
 #else
 	(void)position_was_uncached;
@@ -2996,7 +3001,7 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 	const int midx = get_mouse_index_from_sdl_id(event.button.which);
 	bool position_was_uncached = false;
 
-#ifdef AMIBERRY_MACOS
+#if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	// macOS automation can post a button event at a new location without a
 	// preceding motion event. SDL then exposes its stale cached coordinates,
 	// while the native NSEvent still contains the actual click position.
@@ -3689,7 +3694,7 @@ int handle_msgpump(bool vblank)
 	 * every frame, so skipping it on any other thread is safe. */
 	if (!is_mainthread())
 		return 0;
-#ifdef AMIBERRY_MACOS
+#if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	flush_macos_synthetic_mouse_releases();
 #endif
 	lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
@@ -3711,7 +3716,7 @@ bool handle_events()
 	const AmigaMonitor* mon = &AMonitors[0];
 	static auto was_paused = 0;
 
-#ifdef AMIBERRY_MACOS
+#if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	if (is_mainthread())
 		flush_macos_synthetic_mouse_releases();
 #endif
