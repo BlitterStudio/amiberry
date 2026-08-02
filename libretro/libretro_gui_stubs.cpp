@@ -1,10 +1,16 @@
 #include <string>
 #include <vector>
 
+#include "sysdeps.h"
 #include "sdl_compat.h"
 #include "imgui_overlay.h"
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
+#include "xwin.h"
+
+#ifdef AMIBERRY_MACOS
+void flush_macos_synthetic_mouse_releases() {}
+#endif
 
 // serial_ports is declared in parser.h and defined in amiberry_gui.cpp (standalone).
 // The libretro build doesn't include amiberry_gui.cpp, so provide the definition here.
