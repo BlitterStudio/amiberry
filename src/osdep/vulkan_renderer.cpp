@@ -881,9 +881,10 @@ bool VulkanRenderer::alloc_texture(int monid, int w, int h)
 	return true;
 }
 
-void VulkanRenderer::set_scaling(int /*monid*/, const uae_prefs* p, int /*w*/, int /*h*/)
+void VulkanRenderer::set_scaling(const int monid, const uae_prefs* p, int /*w*/, int /*h*/)
 {
 	if (!p) return;
+	amiberry_gui_geometry_invalidate(monid);
 
 	m_integer_scaling = false;
 	m_linear_filter = false;

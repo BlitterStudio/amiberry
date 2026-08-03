@@ -10187,6 +10187,13 @@ void setmousebuttonstate (int mouse, int button, int state)
 		mousehack_helper (mice2[mouse].buttonmask);
 }
 
+uae_u32 getmousebuttonstate (int mouse)
+{
+	if (mouse < 0 || mouse >= MAX_INPUT_DEVICES)
+		return 0;
+	return mice2[mouse].buttonmask;
+}
+
 /* same for joystick axis (analog or digital)
 * (0 = center, -max = full left/top, max = full right/bottom)
 */

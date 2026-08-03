@@ -317,9 +317,10 @@ bool OpenGLRenderer::alloc_texture(int monid, int w, int h)
 	return m_shader.crtemu != nullptr || m_shader.external != nullptr || m_shader.preset != nullptr;
 }
 
-void OpenGLRenderer::set_scaling(int /*monid*/, const uae_prefs* p, int /*w*/, int /*h*/)
+void OpenGLRenderer::set_scaling(const int monid, const uae_prefs* p, int /*w*/, int /*h*/)
 {
 	if (currprefs.headless) return;
+	amiberry_gui_geometry_invalidate(monid);
 
 	GLenum texture_filter = GL_NEAREST;
 	m_integer_scaling = false;
@@ -744,6 +745,12 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	render_quad.y = final_rect.y;
 	render_quad.w = final_rect.w;
 	render_quad.h = final_rect.h;
+	const AmiberryGfxRect source_rect{
+		is_cropped ? crop_x : 0, is_cropped ? crop_y : 0, src_w, src_h
+	};
+	amiberry_gui_geometry_publish(monid, source_rect, final_rect,
+		AmiberryGuiViewportSpace::DrawablePixels,
+		drawableWidth, drawableHeight, "opengl");
 
 	// Some CRT shaders require an output at least as large as their input. Render
 	// them at that safe size, then resolve back to the aspect-correct destination

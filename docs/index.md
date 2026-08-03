@@ -205,6 +205,10 @@ Guides, tutorials, and references to help you get the most out of Amiberry.
     <span class="resource-icon">RTG</span>
     ZZ9000 Emulation
   </a>
+  <a href="/ipc" class="resource-link">
+    <span class="resource-icon">IPC</span>
+    IPC Controller Interface
+  </a>
   <a href="https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting" class="resource-link">
     <span class="resource-icon">🔍</span>
     Troubleshooting

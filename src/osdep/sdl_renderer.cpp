@@ -146,6 +146,7 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.headless) return;
+	amiberry_gui_geometry_invalidate(monid);
 	m_scaling_width = w;
 	m_scaling_height = h;
 
@@ -216,6 +217,7 @@ void SDLRenderer::set_auto_crop_presentation(const int monid, const int scaling_
 	const bool auto_integer_scaling, const int width, const int height)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
+	amiberry_gui_geometry_invalidate(monid);
 	const bool integer_scaling = scaling_method == 2
 		|| (scaling_method == -1 && auto_integer_scaling);
 	const SDL_ScaleMode scale_mode = scaling_method == 0 || integer_scaling
@@ -332,6 +334,17 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, surface->w, surface->h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
             }
         }
+
+		const AmiberryGfxRect source{
+			static_cast<int>(f_crop.x), static_cast<int>(f_crop.y),
+			static_cast<int>(f_crop.w), static_cast<int>(f_crop.h)
+		};
+		const AmiberryGfxRect viewport{
+			static_cast<int>(f_quad.x), static_cast<int>(f_quad.y),
+			static_cast<int>(f_quad.w), static_cast<int>(f_quad.h)
+		};
+		amiberry_gui_geometry_publish(monid, source, viewport,
+			AmiberryGuiViewportSpace::SdlRendererLogical, 0, 0, "sdl");
 
         SDL_RenderTextureRotated(mon->amiga_renderer, m_amiga_texture, &f_crop, &f_quad, 0, nullptr, SDL_FLIP_NONE);
 
