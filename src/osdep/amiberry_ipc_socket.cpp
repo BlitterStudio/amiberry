@@ -185,6 +185,29 @@ static std::vector<std::string> gui_input_config_fields(
 	};
 }
 
+static std::string guarded_input_response(
+	const bool applied, const char* reason,
+	const AmiberryGuiGeometrySnapshot& geometry, const int active_monitor,
+	const AmiberryGuiInputConfigSnapshot& input, const int button_mask,
+	const AmiberryGuiGuardedInputRequest* request = nullptr)
+{
+	const AmiberryGuiGuardedInputResponse response{
+		applied,
+		reason,
+		geometry.runtime_id,
+		geometry.geometry_revision,
+		amiberry_gui_guarded_response_monitor_id(
+			active_monitor, geometry.monitor_id),
+		input.input_config_revision,
+		button_mask & AMIBERRY_GUI_SUPPORTED_BUTTON_MASK,
+		applied && request != nullptr,
+		request != nullptr ? request->x : 0,
+		request != nullptr ? request->y : 0
+	};
+	return make_response(
+		applied, amiberry_gui_guarded_response_fields(response));
+}
+
 // Command handlers - reusing logic from DBus implementation
 static std::string HandleQuit(const std::vector<std::string>& args)
 {
@@ -1066,9 +1089,13 @@ static std::string HandleSendMouseAbsGuarded(
 	const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received SEND_MOUSE_ABS_GUARDED" << std::endl;
+	const int active_monitor = amiberry_get_active_input_monitor();
+	const auto geometry = amiberry_gui_geometry_snapshot();
+	const auto input = gui_input_config_snapshot();
+	const auto current_button_mask = static_cast<int>(getmousebuttonstate(0));
 	if (args.size() != 7) {
-		return make_response(false,
-			{"schema_version=1", "reason=malformed_request"});
+		return guarded_input_response(false, "malformed_request",
+			geometry, active_monitor, input, current_button_mask);
 	}
 
 	AmiberryGuiGuardedInputRequest request;
@@ -1078,17 +1105,15 @@ static std::string HandleSendMouseAbsGuarded(
 		|| !amiberry_gui_parse_u64(args[4], request.geometry_revision)
 		|| !amiberry_gui_parse_int(args[5], request.monitor_id)
 		|| !amiberry_gui_parse_u64(args[6], request.input_config_revision)) {
-		return make_response(false,
-			{"schema_version=1", "reason=malformed_request"});
+		return guarded_input_response(false, "malformed_request",
+			geometry, active_monitor, input, current_button_mask);
 	}
 	request.runtime_id = args[3];
 	if (request.runtime_id.empty()) {
-		return make_response(false,
-			{"schema_version=1", "reason=malformed_request"});
+		return guarded_input_response(false, "malformed_request",
+			geometry, active_monitor, input, current_button_mask);
 	}
 
-	const int active_monitor = amiberry_get_active_input_monitor();
-	const auto input = gui_input_config_snapshot();
 	const AmiberryGuiGuardedInputEnvironment environment{
 		gui_input_focus_ready(),
 		currprefs.input_tablet >= TABLET_MOUSEHACK,
@@ -1105,24 +1130,10 @@ static std::string HandleSendMouseAbsGuarded(
 				AMIBERRY_GUI_SUPPORTED_BUTTON_MASK);
 			return true;
 		});
-	std::vector<std::string> fields{
-		"schema_version=1",
-		"applied=" + std::string(bool_field(result.applied)),
-		"reason=" + std::string(amiberry_gui_guard_reason_name(result.reason)),
-		"runtime_id=" + result.geometry.runtime_id,
-		"geometry_revision="
-			+ std::to_string(result.geometry.geometry_revision),
-		"monitor_id=" + std::to_string(result.geometry.monitor_id),
-		"input_config_revision="
-			+ std::to_string(input.input_config_revision),
-		"button_mask=" + std::to_string(getmousebuttonstate(0)
-			& AMIBERRY_GUI_SUPPORTED_BUTTON_MASK)
-	};
-	if (result.applied) {
-		fields.emplace_back("x=" + std::to_string(request.x));
-		fields.emplace_back("y=" + std::to_string(request.y));
-	}
-	return make_response(result.applied, fields);
+	return guarded_input_response(result.applied,
+		amiberry_gui_guard_reason_name(result.reason), result.geometry,
+		active_monitor, input, static_cast<int>(getmousebuttonstate(0)),
+		&request);
 }
 
 static std::string HandleReleaseMouseButtons(

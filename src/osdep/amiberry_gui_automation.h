@@ -7,6 +7,7 @@
 #include <mutex>
 #include <string>
 #include <system_error>
+#include <vector>
 
 #include "amiberry_gui_geometry.h"
 
@@ -107,6 +108,49 @@ struct AmiberryGuiGuardedInputResult
 	AmiberryGuiGeometrySnapshot geometry;
 	int button_mask = 0;
 };
+
+struct AmiberryGuiGuardedInputResponse
+{
+	bool applied = false;
+	std::string reason;
+	std::string runtime_id;
+	std::uint64_t geometry_revision = 0;
+	int monitor_id = 0;
+	std::uint64_t input_config_revision = 0;
+	int button_mask = 0;
+	bool include_coordinates = false;
+	int x = 0;
+	int y = 0;
+};
+
+static inline int amiberry_gui_guarded_response_monitor_id(
+	const int active_monitor_id, const int geometry_monitor_id)
+{
+	if (active_monitor_id >= 0)
+		return active_monitor_id;
+	return geometry_monitor_id >= 0 ? geometry_monitor_id : 0;
+}
+
+static inline std::vector<std::string> amiberry_gui_guarded_response_fields(
+	const AmiberryGuiGuardedInputResponse& response)
+{
+	std::vector<std::string> fields{
+		"schema_version=1",
+		"applied=" + std::string(response.applied ? "true" : "false"),
+		"reason=" + response.reason,
+		"runtime_id=" + response.runtime_id,
+		"geometry_revision=" + std::to_string(response.geometry_revision),
+		"monitor_id=" + std::to_string(response.monitor_id),
+		"input_config_revision="
+			+ std::to_string(response.input_config_revision),
+		"button_mask=" + std::to_string(response.button_mask)
+	};
+	if (response.include_coordinates) {
+		fields.emplace_back("x=" + std::to_string(response.x));
+		fields.emplace_back("y=" + std::to_string(response.y));
+	}
+	return fields;
+}
 
 template<typename Mutation>
 static AmiberryGuiGuardedInputResult amiberry_gui_guarded_input(

@@ -305,6 +305,42 @@ static void test_guarded_input_is_atomic_and_rejects_stale_state()
 		"coordinate-free cleanup must release a press after geometry changes");
 }
 
+static void test_guarded_input_response_has_fixed_fields()
+{
+	const AmiberryGuiGuardedInputResponse rejected{
+		false, "malformed_request", "runtime-a", 42, 1, 7, 0
+	};
+	const std::vector<std::string> rejected_fields =
+		amiberry_gui_guarded_response_fields(rejected);
+	const std::vector<std::string> expected_rejected{
+		"schema_version=1", "applied=false", "reason=malformed_request",
+		"runtime_id=runtime-a", "geometry_revision=42", "monitor_id=1",
+		"input_config_revision=7", "button_mask=0"
+	};
+	expect_true(rejected_fields == expected_rejected,
+		"guarded rejection metadata must use the complete fixed v1 field set");
+
+	const AmiberryGuiGuardedInputResponse applied{
+		true, "none", "runtime-a", 42, 1, 7, 5, true, 100, 200
+	};
+	const std::vector<std::string> applied_fields =
+		amiberry_gui_guarded_response_fields(applied);
+	const std::vector<std::string> expected_applied{
+		"schema_version=1", "applied=true", "reason=none",
+		"runtime_id=runtime-a", "geometry_revision=42", "monitor_id=1",
+		"input_config_revision=7", "button_mask=5", "x=100", "y=200"
+	};
+	expect_true(applied_fields == expected_applied,
+		"guarded success metadata must append the applied coordinates");
+
+	expect_int_eq(amiberry_gui_guarded_response_monitor_id(2, 1), 2,
+		"guarded replies must report the current active monitor");
+	expect_int_eq(amiberry_gui_guarded_response_monitor_id(-1, 1), 1,
+		"guarded replies may fall back to current geometry without a monitor");
+	expect_int_eq(amiberry_gui_guarded_response_monitor_id(-1, -1), 0,
+		"guarded replies must keep monitor_id valid when no monitor exists");
+}
+
 static void test_release_is_unconditional_and_idempotent()
 {
 	int buttons = 7;
@@ -389,6 +425,7 @@ int main()
 	test_actionable_response_has_fixed_fields();
 	test_saved_png_dimensions_are_read_from_ihdr();
 	test_guarded_input_is_atomic_and_rejects_stale_state();
+	test_guarded_input_response_has_fixed_fields();
 	test_release_is_unconditional_and_idempotent();
 	test_input_config_revision_and_compare_exchange();
 	test_checked_protocol_integer_parsing();
