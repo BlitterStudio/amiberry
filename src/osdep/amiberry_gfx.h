@@ -199,6 +199,7 @@ void amiberry_gui_geometry_publish(int monid, const AmiberryGfxRect& source,
 void amiberry_gui_geometry_invalidate(int monid = -1);
 void amiberry_gui_geometry_set_active_monitor(int monid);
 AmiberryGuiGeometrySnapshot amiberry_gui_geometry_snapshot();
+bool amiberry_actionable_screenshot_supported(int monid);
 bool amiberry_capture_actionable_screenshot(int monid, const std::string& path,
 	AmiberryGuiGeometrySnapshot& snapshot);
 AmiberryGuiGuardedInputResult amiberry_gui_guarded_input_apply(

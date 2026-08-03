@@ -2511,9 +2511,18 @@ static bool saved_png_dimensions(const std::string& path, int& width, int& heigh
 		&& amiberry_gui_png_dimensions(header, sizeof header, width, height);
 }
 
+bool amiberry_actionable_screenshot_supported(const int monid)
+{
+	IRenderer* renderer = get_renderer(monid);
+	return renderer && renderer->supports_actionable_screenshot();
+}
+
 bool amiberry_capture_actionable_screenshot(const int monid,
 	const std::string& path, AmiberryGuiGeometrySnapshot& snapshot)
 {
+	if (!amiberry_actionable_screenshot_supported(monid))
+		return false;
+
 	if (current_screenshot != nullptr) {
 		SDL_DestroySurface(current_screenshot);
 		current_screenshot = nullptr;

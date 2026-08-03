@@ -47,6 +47,8 @@ public:
 	// Texture / shader allocation (Phase 2: stubs)
 	bool alloc_texture(int monid, int w, int h) override;
 	void set_scaling(int monid, const uae_prefs* p, int w, int h) override;
+	// The render thread does not yet expose geometry for the captured FrameSlot.
+	bool supports_actionable_screenshot() const override { return false; }
 
 	// VSync
 	void update_vsync(int monid) override;

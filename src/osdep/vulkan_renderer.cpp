@@ -1500,9 +1500,6 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 
 	int destX = render_area_x, destY = render_area_y;
 	int destW = render_area_w, destH = render_area_h;
-	const bool is_cropped = (slot.crop.x != 0 || slot.crop.y != 0
-		|| slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height)
-		&& slot.crop.w > 0 && slot.crop.h > 0;
 
 	if (drawable_w > 0 && drawable_h > 0 && slot.texture_width > 0 && slot.texture_height > 0) {
 		float desired_aspect = slot.desired_aspect;
@@ -1523,6 +1520,9 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			: slot.integer_scaling;
 		const bool auto_native_scaling = !slot.screen_is_picasso && slot.auto_scaling;
 
+		const bool is_cropped = (slot.crop.x != 0 || slot.crop.y != 0
+			|| slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height)
+			&& slot.crop.w > 0 && slot.crop.h > 0;
 		const int src_w = is_cropped ? slot.crop.w : slot.texture_width;
 		const int src_h = is_cropped ? slot.crop.h : slot.texture_height;
 		const int display_w = slot.native_auto_crop && slot.crop_display_width > 0
@@ -1585,34 +1585,12 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	render_quad.y = destY;
 	render_quad.w = destW;
 	render_quad.h = destH;
-	int source_x = 0;
-	int source_y = 0;
-	int source_width = slot.texture_width;
-	int source_height = slot.texture_height;
-	if (is_cropped) {
-		source_x = std::max(0, slot.crop.x);
-		source_y = std::max(0, slot.crop.y);
-		source_width = std::min(slot.crop.w, slot.texture_width - source_x);
-		source_height = std::min(slot.crop.h, slot.texture_height - source_y);
-		if (source_width <= 0 || source_height <= 0) {
-			source_x = 0;
-			source_y = 0;
-			source_width = slot.texture_width;
-			source_height = slot.texture_height;
-		}
-	}
-	const AmiberryGfxRect bounded_viewport = amiberry_gui_clamp_viewport(
-		{destX, destY, destW, destH}, drawable_w, drawable_h);
-	amiberry_gui_geometry_publish(slot.monid,
-		{source_x, source_y, source_width, source_height},
-		bounded_viewport, AmiberryGuiViewportSpace::DrawablePixels,
-		drawable_w, drawable_h, "vulkan");
 
 	VkRect2D draw_scissor{};
-	draw_scissor.offset.x = bounded_viewport.x;
-	draw_scissor.offset.y = bounded_viewport.y;
-	draw_scissor.extent.width = static_cast<uint32_t>(bounded_viewport.w);
-	draw_scissor.extent.height = static_cast<uint32_t>(bounded_viewport.h);
+	draw_scissor.offset.x = std::clamp(destX, 0, drawable_w);
+	draw_scissor.offset.y = std::clamp(destY, 0, drawable_h);
+	draw_scissor.extent.width = static_cast<uint32_t>(std::clamp(destW, 0, drawable_w - draw_scissor.offset.x));
+	draw_scissor.extent.height = static_cast<uint32_t>(std::clamp(destH, 0, drawable_h - draw_scissor.offset.y));
 
 	VkViewport viewport{};
 	viewport.x = static_cast<float>(draw_scissor.offset.x);

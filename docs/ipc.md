@@ -88,6 +88,13 @@ Without `ACTIONABLE`, `SCREENSHOT <path>` remains the legacy screenshot
 operation and returns only the path. It has no runtime, revision, or geometry
 guard and must not be used as a relative-coordinate fallback for automation.
 
+Actionable capture is currently supported by the SDL and OpenGL renderers.
+The Vulkan renderer rejects `SCREENSHOT <path> ACTIONABLE` because its
+threaded presentation path cannot yet pair captured surface pixels with the
+geometry of the same presented frame. Legacy `SCREENSHOT <path>` remains
+available with Vulkan, but it does not make the image safe for coordinate
+automation.
+
 ### `GET_GUI_AUTOMATION_STATE`
 
 Takes no arguments. A successful schema-version-1 response contains:

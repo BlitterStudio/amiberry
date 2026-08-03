@@ -48,6 +48,8 @@ public:
 	virtual void set_auto_crop_presentation(int monid, int scaling_method,
 		bool auto_integer_scaling, int width, int height) {}
 	virtual void refresh_scaling_after_resize(int monid) {}
+	// Whether captured surface pixels can be paired with presented geometry.
+	virtual bool supports_actionable_screenshot() const { return true; }
 
 	// --- VSync ---
 	virtual void update_vsync(int monid) = 0;

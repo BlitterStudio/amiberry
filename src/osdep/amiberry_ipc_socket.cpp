@@ -268,6 +268,12 @@ static std::string HandleScreenshot(const std::vector<std::string>& args)
 		if (monid < 0) {
 			return make_response(false, {"No active input monitor"});
 		}
+		if (!amiberry_actionable_screenshot_supported(monid)) {
+			return make_response(false, {
+				"reason=unsupported_renderer",
+				"Actionable screenshots are not supported by the active renderer"
+			});
+		}
 		AmiberryGuiGeometrySnapshot snapshot;
 		if (!amiberry_capture_actionable_screenshot(monid, args[0], snapshot)) {
 			return make_response(false,
