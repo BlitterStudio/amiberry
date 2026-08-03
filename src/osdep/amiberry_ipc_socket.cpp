@@ -2819,7 +2819,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("SEND_KEY <code> <state>, SEND_MOUSE <dx> <dy> <buttons>");
 	commands.emplace_back("SEND_MOUSE_ABS <x> <y> <buttons> (requires tablet_mode mousehack or real)");
 	commands.emplace_back("--- GUI automation controller commands (prefer MCP/HTTP) ---");
-	commands.emplace_back("SCREENSHOT <path> ACTIONABLE");
+	commands.emplace_back("SCREENSHOT <path> ACTIONABLE (SDL/OpenGL; unavailable on Vulkan)");
 	commands.emplace_back("GET_GUI_AUTOMATION_STATE");
 	commands.emplace_back("SET_GUI_AUTOMATION_CONFIG <expected_tablet_mode> <expected_mouse_untrap> <expected_input_config_revision> <tablet_mode> <mouse_untrap>");
 	commands.emplace_back("SEND_MOUSE_ABS_GUARDED <x> <y> <button_mask> <runtime_id> <geometry_revision> <monitor_id> <input_config_revision>");
