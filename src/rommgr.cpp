@@ -2671,6 +2671,23 @@ struct boardromconfig *get_device_rom(struct uae_prefs *p, int romtype, int devn
 	return NULL;
 }
 
+const struct cpuboardsubtype *get_cpuboard_rom(struct uae_prefs *p, int romtype)
+{
+	if (!p->cpuboard_type) {
+		return NULL;
+	}
+	for (int i = 0; cpuboards[i].name; i++) {
+		const struct cpuboardsubtype *sub = cpuboards[i].subtypes;
+		while (sub && sub->name) {
+			if ((sub->romtype & ROMTYPE_MASK) == romtype) {
+				return sub;
+			}
+			sub++;
+		}
+	}
+	return NULL;
+}
+
 struct romconfig *get_device_romconfig(struct uae_prefs *p, int romtype, int devnum)
 {
 	int idx;

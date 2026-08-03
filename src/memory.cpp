@@ -1592,7 +1592,7 @@ addrbank extendedkickmem2a_bank = {
 addrbank extendedkickmem2b_bank = {
 	extendedkickmem2b_lget, extendedkickmem2b_wget, extendedkickmem2b_bget,
 	extendedkickmem2b_lput, extendedkickmem2b_wput, extendedkickmem2b_bput,
-	extendedkickmem2b_xlate, extendedkickmem2b_check, NULL, _T("rom_b0"), _T("Extended 3nd Kickstart ROM"),
+	extendedkickmem2b_xlate, extendedkickmem2b_check, NULL, _T("rom_b0"), _T("Extended 3rd Kickstart ROM"),
 	extendedkickmem2b_lget, extendedkickmem2b_wget,
 	ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, S_WRITE
 };

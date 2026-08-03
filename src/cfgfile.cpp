@@ -7073,9 +7073,31 @@ void cfgfile_compatibility_romtype(struct uae_prefs *p)
 		0 };
 	static const int restricted_x86[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, ROMTYPE_ATONCE, 0 };
 	static const int restricted_pci[] = { ROMTYPE_GREX, ROMTYPE_MEDIATOR, ROMTYPE_PROMETHEUS, ROMTYPE_PROMETHEUSFS, 0 };
+
+	// Add G-REX if CSMK3/CSPPC/BPPC and CyberVisionPPC/BlizzardVisionPPC without any PCI bridges is configured.
+	// (Real hardware has special slot for CVPPC/BVPPC but it is functionally single PCI slot G-REX)
+	if (get_cpuboard_rom(p, ROMTYPE_CB_CSMK3) || get_cpuboard_rom(p, ROMTYPE_CB_CSPPC) || get_cpuboard_rom(p, ROMTYPE_CB_BLIZPPC)) {
+		for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+			struct rtgboardconfig *rbc = &p->rtgboards[i];
+			if (rbc->rtgmem_size && rbc->rtgmem_type == GFXBOARD_ID_PERMEDIA2_PCI) {
+				bool pcifound = false;
+				for (int i = 0; restricted_pci[i]; i++) {
+					if (get_device_romconfig(p, restricted_pci[i], 0)) {
+						pcifound = true;
+					}
+				}
+				if (!pcifound) {
+					addbcromtype(p, ROMTYPE_GREX, true, NULL, 0);
+				}
+				break;
+			}
+		}
+	}
+
 	romtype_restricted(p, restricted_net);
 	romtype_restricted(p, restricted_x86);
 	romtype_restricted(p, restricted_pci);
+
 }
 
 static int getconfigstoreline (const TCHAR *option, TCHAR *value);

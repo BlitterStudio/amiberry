@@ -1758,6 +1758,7 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
+	draw_denise_line_queue_flush();
 	set_drawbuffer();
 	struct vidbuffer *vb = vidinfo->inbuffer;
 
@@ -1871,6 +1872,8 @@ static void init_beamcon0(void)
 	int isntsc, islace;
 	int hpos = current_hpos();
 	int oldmaxhpos = maxhpos;
+
+	draw_denise_line_queue_flush();
 
 	beamcon0 = new_beamcon0;
 

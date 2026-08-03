@@ -323,6 +323,7 @@ void clear_device_rom(struct uae_prefs *p, int romtype, int devnum, bool deleteD
 struct boardromconfig *get_boardromconfig(struct uae_prefs *p, int romtype, int *index);
 bool is_board_enabled(struct uae_prefs *p, int romtype, int devnum);
 void board_prefs_changed(int romtype, int devnum);
+const struct cpuboardsubtype *get_cpuboard_rom(struct uae_prefs *p, int romtype);
 
 #define LOADROM_FILL 1
 #define LOADROM_EVENONLY 2

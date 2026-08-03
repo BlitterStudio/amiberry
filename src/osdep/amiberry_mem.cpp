@@ -834,6 +834,12 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 		got = true;
 		readonly = true;
 		maprom = true;
+    }
+	else if (!_tcscmp(ab->label, _T("rom_b0"))) {
+		start = 0xb00000;
+		got = true;
+		readonly = true;
+		maprom = true;
 	}
 	else if (!_tcscmp(ab->label, _T("rom_e0")))
 	{

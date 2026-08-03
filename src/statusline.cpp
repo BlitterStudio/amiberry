@@ -513,8 +513,15 @@ void statusline_add_message(int statustype, const TCHAR *format, ...)
 	va_list parms;
 	TCHAR buffer[256];
 
-	if (isguiactive())
-		return;
+	if (isguiactive()) {
+		switch (statustype)
+		{
+			case STATUSTYPE_DISPLAY:
+			break;
+			default:
+			return;
+		}
+	}
 
 	va_start(parms, format);
 	buffer[0] = ' ';
