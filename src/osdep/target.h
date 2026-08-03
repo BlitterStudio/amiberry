@@ -88,6 +88,7 @@ extern void activationtoggle(int monid, bool inactiveonly);
 extern bool create_screenshot();
 extern int save_thumb(const std::string& path);
 extern int amiberry_get_active_input_monitor();
+extern int amiberry_resolve_active_input_monitor();
 
 extern amiberry_hotkey get_hotkey_from_config(const std::string& config_option);
 extern amiberry_hotkey enter_gui_key;

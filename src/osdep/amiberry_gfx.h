@@ -5,7 +5,7 @@
 #include "uae/types.h"
 #include <vector>
 
-#include "amiberry_gui_geometry.h"
+#include "amiberry_gui_automation.h"
 
 class IRenderer;
 
@@ -201,6 +201,10 @@ void amiberry_gui_geometry_set_active_monitor(int monid);
 AmiberryGuiGeometrySnapshot amiberry_gui_geometry_snapshot();
 bool amiberry_capture_actionable_screenshot(int monid, const std::string& path,
 	AmiberryGuiGeometrySnapshot& snapshot);
+AmiberryGuiGuardedInputResult amiberry_gui_guarded_input_apply(
+	const AmiberryGuiGuardedInputRequest& request,
+	const AmiberryGuiGuardedInputEnvironment& environment,
+	const AmiberryGuiInputMutation& mutation);
 
 extern SDL_DisplayMode sdl_mode;
 extern const char* sdl_video_driver;

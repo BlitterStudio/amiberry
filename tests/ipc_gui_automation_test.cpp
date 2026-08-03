@@ -4,6 +4,7 @@
 #include <thread>
 #include <vector>
 
+#include "amiberry_gui_automation.h"
 #include "amiberry_gui_geometry.h"
 
 static int failures;
@@ -209,6 +210,174 @@ static void test_saved_png_dimensions_are_read_from_ihdr()
 		"invalid or truncated PNG metadata must reject actionable success");
 }
 
+static void test_guarded_input_is_atomic_and_rejects_stale_state()
+{
+	AmiberryGuiGeometryState state("runtime-a");
+	state.publish(make_snapshot(1));
+	const auto current = state.snapshot();
+	AmiberryGuiGuardedInputRequest request{
+		100, 200, 5, "runtime-a", current.geometry_revision, 1, 7
+	};
+	AmiberryGuiGuardedInputEnvironment environment{true, true, 1, 7};
+	int mutations = 0;
+	int applied_mask = -1;
+	auto apply = [&](const int monitor_id, const int x, const int y,
+		const int button_mask) {
+		expect_int_eq(monitor_id, 1, "guard must retain the expected monitor");
+		expect_int_eq(x, 100, "guard must retain x");
+		expect_int_eq(y, 200, "guard must retain y");
+		applied_mask = button_mask;
+		++mutations;
+		return true;
+	};
+
+	const auto applied = amiberry_gui_guarded_input(state, request, environment, apply);
+	expect_true(applied.applied, "matching guarded input must apply");
+	expect_int_eq(applied_mask, 5, "guard must assign the complete button mask");
+
+	auto expect_rejection = [&](const AmiberryGuiGuardedInputRequest& rejected,
+		const AmiberryGuiGuardRejectReason reason) {
+		const int before = mutations;
+		const auto result = amiberry_gui_guarded_input(
+			state, rejected, environment, apply);
+		expect_true(!result.applied, "mismatched guarded input must reject");
+		expect_true(result.reason == reason, "guard must return a stable reason");
+		expect_int_eq(mutations, before, "rejection must not mutate input");
+	};
+
+	auto rejected = request;
+	rejected.runtime_id = "runtime-b";
+	expect_rejection(rejected, AmiberryGuiGuardRejectReason::runtime_mismatch);
+	rejected = request;
+	++rejected.geometry_revision;
+	expect_rejection(rejected, AmiberryGuiGuardRejectReason::geometry_revision_mismatch);
+	rejected = request;
+	rejected.monitor_id = 0;
+	expect_rejection(rejected, AmiberryGuiGuardRejectReason::monitor_mismatch);
+	auto wrong_active_monitor = environment;
+	wrong_active_monitor.active_monitor_id = 0;
+	expect_true(amiberry_gui_guarded_input(
+		state, request, wrong_active_monitor, apply).reason
+		== AmiberryGuiGuardRejectReason::monitor_mismatch,
+		"an active-monitor change must reject the captured monitor");
+	rejected = request;
+	rejected.input_config_revision = 8;
+	expect_rejection(rejected, AmiberryGuiGuardRejectReason::input_config_revision_mismatch);
+	rejected = request;
+	rejected.x = current.window_width;
+	expect_rejection(rejected, AmiberryGuiGuardRejectReason::coordinate_out_of_bounds);
+	rejected = request;
+	rejected.button_mask = 8;
+	expect_rejection(rejected, AmiberryGuiGuardRejectReason::unsupported_button_mask);
+
+	auto unready = environment;
+	unready.focus_ready = false;
+	expect_true(amiberry_gui_guarded_input(state, request, unready, apply).reason
+		== AmiberryGuiGuardRejectReason::focus_not_ready,
+		"lost focus must reject before mutation");
+	unready = environment;
+	unready.settings_compatible = false;
+	expect_true(amiberry_gui_guarded_input(state, request, unready, apply).reason
+		== AmiberryGuiGuardRejectReason::settings_incompatible,
+		"incompatible effective settings must reject before mutation");
+
+	for (int mask = 0; mask <= AMIBERRY_GUI_SUPPORTED_BUTTON_MASK; ++mask) {
+		request.button_mask = mask;
+		expect_true(amiberry_gui_guarded_input(state, request, environment, apply).applied,
+			"every supported complete button mask must apply");
+		expect_int_eq(applied_mask, mask, "complete mask assignment must include releases");
+	}
+
+	request.button_mask = 1;
+	expect_true(amiberry_gui_guarded_input(state, request, environment, apply).applied,
+		"guarded press must apply before geometry becomes stale");
+	auto changed = make_snapshot(1);
+	changed.viewport.x++;
+	state.publish(changed);
+	request.button_mask = 0;
+	expect_true(!amiberry_gui_guarded_input(state, request, environment, apply).applied,
+		"stale guarded release must reject without changing the pressed mask");
+	expect_int_eq(applied_mask, 1, "stale guarded release must leave input unchanged");
+	amiberry_gui_release_mouse_buttons([&](const int button) {
+		applied_mask &= ~(1 << button);
+	});
+	expect_int_eq(applied_mask, 0,
+		"coordinate-free cleanup must release a press after geometry changes");
+}
+
+static void test_release_is_unconditional_and_idempotent()
+{
+	int buttons = 7;
+	auto release = [&](const int button) { buttons &= ~(1 << button); };
+	expect_int_eq(amiberry_gui_release_mouse_buttons(release), 0,
+		"release must report an effective zero mask");
+	expect_int_eq(buttons, 0, "release must clear left, right, and middle");
+	expect_int_eq(amiberry_gui_release_mouse_buttons(release), 0,
+		"repeated release must remain successful");
+	expect_int_eq(buttons, 0, "repeated release must remain neutral");
+}
+
+static void test_input_config_revision_and_compare_exchange()
+{
+	AmiberryGuiInputConfigState state;
+	auto snapshot = state.observe(0, 0, 0, 0);
+	expect_true(snapshot.input_config_revision > 0,
+		"first input snapshot must have a usable revision");
+	const auto original_revision = snapshot.input_config_revision;
+
+	snapshot = state.observe(1, 2, 0, 0);
+	expect_true(snapshot.input_config_revision > original_revision,
+		"pending input changes must advance the revision");
+	expect_true(snapshot.pending_tablet_mode != snapshot.effective_tablet_mode,
+		"pending/effective divergence must remain visible");
+
+	int pending_tablet = 1;
+	int pending_untrap = 2;
+	auto mutate = [&](const int tablet, const int untrap) {
+		pending_tablet = tablet;
+		pending_untrap = untrap;
+	};
+	const AmiberryGuiPendingInputConfig expected{1, 2};
+	const AmiberryGuiInputConfigValues current{{1, 2}, {0, 0}};
+	const AmiberryGuiPendingInputConfig desired{2, 3};
+	const auto applied = state.compare_exchange(
+		snapshot.input_config_revision, expected, current, desired, mutate);
+	expect_true(applied.applied, "matching compare-and-set must apply");
+	expect_int_eq(pending_tablet, 2, "CAS must set the requested tablet mode");
+	expect_int_eq(pending_untrap, 3, "CAS must set the requested untrap mode");
+
+	const auto conflict = state.compare_exchange(snapshot.input_config_revision,
+		expected, {{2, 3}, {0, 0}}, {0, 0}, mutate);
+	expect_true(!conflict.applied, "stale compare-and-set must reject");
+	expect_true(conflict.reason == AmiberryGuiConfigRejectReason::input_config_conflict,
+		"CAS conflict must have a stable reason");
+	expect_int_eq(pending_tablet, 2, "conflicting restore must preserve external state");
+
+	const auto current_revision = applied.snapshot.input_config_revision;
+	const auto external_change = state.compare_exchange(current_revision,
+		{2, 3}, {{0, 3}, {0, 0}}, {1, 1}, mutate);
+	expect_true(!external_change.applied,
+		"live pending values must participate in the ownership check");
+}
+
+static void test_checked_protocol_integer_parsing()
+{
+	int signed_value = 0;
+	std::uint64_t unsigned_value = 0;
+	expect_true(amiberry_gui_parse_int("-42", signed_value) && signed_value == -42,
+		"checked signed parser must accept canonical integers");
+	expect_true(!amiberry_gui_parse_int("2147483648", signed_value),
+		"signed overflow must reject");
+	expect_true(!amiberry_gui_parse_int("12x", signed_value),
+		"malformed signed fields must reject");
+	expect_true(amiberry_gui_parse_u64("18446744073709551615", unsigned_value),
+		"checked revision parser must accept uint64 max");
+	expect_true(!amiberry_gui_parse_u64("18446744073709551616", unsigned_value),
+		"revision overflow must reject");
+	expect_true(!amiberry_gui_button_mask_supported(8),
+		"unsupported button bits must reject");
+}
+
 int main()
 {
 	test_drawable_geometry_converts_to_logical_once();
@@ -219,5 +388,9 @@ int main()
 	test_snapshot_reads_never_mix_generations();
 	test_actionable_response_has_fixed_fields();
 	test_saved_png_dimensions_are_read_from_ihdr();
+	test_guarded_input_is_atomic_and_rejects_stale_state();
+	test_release_is_unconditional_and_idempotent();
+	test_input_config_revision_and_compare_exchange();
+	test_checked_protocol_integer_parsing();
 	return failures == 0 ? 0 : 1;
 }

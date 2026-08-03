@@ -3487,7 +3487,7 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	return true;
 }
 
-int amiberry_get_active_input_monitor()
+int amiberry_resolve_active_input_monitor()
 {
 	int monid = 0;
 	if (mouseactive > 0 && mouseactive <= MAX_AMIGAMONITORS)
@@ -3502,18 +3502,26 @@ int amiberry_get_active_input_monitor()
 			return -1;
 		monid = 0;
 	}
-	amiberry_gui_geometry_set_active_monitor(monid);
+	return monid;
+}
+
+int amiberry_get_active_input_monitor()
+{
+	const int monid = amiberry_resolve_active_input_monitor();
+	if (monid >= 0)
+		amiberry_gui_geometry_set_active_monitor(monid);
 	return monid;
 }
 
 #ifdef USE_IPC_SOCKET
-bool amiberry_send_mouse_abs(const int x, const int y)
+bool amiberry_send_mouse_abs_to_monitor(
+	const int monid, const int x, const int y)
 {
 	if (currprefs.input_tablet < TABLET_MOUSEHACK)
 		return false;
 
-	const int monid = amiberry_get_active_input_monitor();
-	if (monid < 0)
+	if (monid < 0 || monid >= MAX_AMIGAMONITORS
+		|| !AMonitors[monid].active)
 		return false;
 
 	auto* mon = &AMonitors[monid];
@@ -3536,6 +3544,12 @@ bool amiberry_send_mouse_abs(const int x, const int y)
 	event.motion.x = static_cast<float>(x);
 	event.motion.y = static_cast<float>(y);
 	return handle_mouse_motion_event(event, mon);
+}
+
+bool amiberry_send_mouse_abs(const int x, const int y)
+{
+	const int monid = amiberry_get_active_input_monitor();
+	return monid >= 0 && amiberry_send_mouse_abs_to_monitor(monid, x, y);
 }
 #endif
 

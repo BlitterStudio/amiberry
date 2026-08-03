@@ -259,6 +259,7 @@ extern void setmousebuttonstateall (int mouse, uae_u32 buttonbits, uae_u32 butto
 extern void setjoybuttonstateall (int joy, uae_u32 buttonbits, uae_u32 buttonmask);
 extern void setjoybuttonstate (int joy, int button, int state);
 extern void setmousebuttonstate (int mouse, int button, int state);
+extern uae_u32 getmousebuttonstate (int mouse);
 extern void setjoystickstate (int joy, int axle, int state, int max);
 extern int getjoystickstate (int mouse);
 void setmousestate (int mouse, int axis, int data, int isabs);

@@ -119,10 +119,11 @@ public:
 	void publish(AmiberryGuiGeometrySnapshot candidate)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-		const bool changed = !snapshot_.valid
-			|| !amiberry_gui_mapping_equal(snapshot_, candidate);
-		if (changed)
-			++revision_;
+		if (snapshot_.valid
+			&& amiberry_gui_mapping_equal(snapshot_, candidate)) {
+			return;
+		}
+		++revision_;
 		active_monitor_ = candidate.monitor_id;
 		candidate.runtime_id = runtime_id_;
 		candidate.capture_nonce.clear();
@@ -166,6 +167,13 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		return snapshot_;
+	}
+
+	template<typename Callback>
+	auto with_synchronized_snapshot(Callback&& callback)
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		return callback(static_cast<const AmiberryGuiGeometrySnapshot&>(snapshot_));
 	}
 
 private:

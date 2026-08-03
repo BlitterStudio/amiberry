@@ -2402,7 +2402,7 @@ void amiberry_gui_geometry_publish(const int monid,
 {
 	if (monid < 0 || monid >= MAX_AMIGAMONITORS || !renderer_name)
 		return;
-	if (amiberry_get_active_input_monitor() != monid)
+	if (amiberry_resolve_active_input_monitor() != monid)
 		return;
 	const auto* mon = &AMonitors[monid];
 	const SDL_Surface* surface = get_amiga_surface(monid);
@@ -2488,6 +2488,15 @@ void amiberry_gui_geometry_set_active_monitor(const int monid)
 AmiberryGuiGeometrySnapshot amiberry_gui_geometry_snapshot()
 {
 	return gui_geometry_state.snapshot();
+}
+
+AmiberryGuiGuardedInputResult amiberry_gui_guarded_input_apply(
+	const AmiberryGuiGuardedInputRequest& request,
+	const AmiberryGuiGuardedInputEnvironment& environment,
+	const AmiberryGuiInputMutation& mutation)
+{
+	return amiberry_gui_guarded_input(
+		gui_geometry_state, request, environment, mutation);
 }
 
 static bool saved_png_dimensions(const std::string& path, int& width, int& height)

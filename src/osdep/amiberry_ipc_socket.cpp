@@ -55,6 +55,7 @@ static std::string socket_path;
 static bool ipc_active = false;
 static bool ipc_quit_requested = false;
 static std::mutex ipc_handle_mutex;
+static AmiberryGuiInputConfigState gui_input_config_state;
 
 // Command handler type
 typedef std::function<std::string(const std::vector<std::string>&)> CommandHandler;
@@ -93,6 +94,95 @@ static std::string make_response(bool success, const std::vector<std::string>& d
 	}
 	response += '\n';
 	return response;
+}
+
+static const char* bool_field(const bool value)
+{
+	return value ? "true" : "false";
+}
+
+static const char* tablet_mode_name(const int value)
+{
+	switch (value) {
+	case TABLET_OFF: return "off";
+	case TABLET_MOUSEHACK: return "mousehack";
+	case TABLET_REAL: return "real";
+	default: return "unknown";
+	}
+}
+
+static bool parse_tablet_mode(const std::string& value, int& result)
+{
+	if (value == "off")
+		result = TABLET_OFF;
+	else if (value == "mousehack")
+		result = TABLET_MOUSEHACK;
+	else if (value == "real")
+		result = TABLET_REAL;
+	else
+		return false;
+	return true;
+}
+
+static const char* mouse_untrap_name(const int value)
+{
+	switch (value) {
+	case MOUSEUNTRAP_NONE: return "off";
+	case MOUSEUNTRAP_MIDDLEBUTTON: return "middle";
+	case MOUSEUNTRAP_MAGIC: return "magic";
+	case MOUSEUNTRAP_BOTH: return "both";
+	default: return "unknown";
+	}
+}
+
+static bool parse_mouse_untrap(const std::string& value, int& result)
+{
+	if (value == "off")
+		result = MOUSEUNTRAP_NONE;
+	else if (value == "middle")
+		result = MOUSEUNTRAP_MIDDLEBUTTON;
+	else if (value == "magic")
+		result = MOUSEUNTRAP_MAGIC;
+	else if (value == "both")
+		result = MOUSEUNTRAP_BOTH;
+	else
+		return false;
+	return true;
+}
+
+static AmiberryGuiInputConfigSnapshot gui_input_config_snapshot()
+{
+	return gui_input_config_state.observe(
+		changed_prefs.input_tablet, changed_prefs.input_mouse_untrap,
+		currprefs.input_tablet, currprefs.input_mouse_untrap);
+}
+
+static bool gui_input_focus_ready()
+{
+	const bool uncaptured_ready = currprefs.input_tablet >= TABLET_MOUSEHACK
+		&& (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)
+		&& mousehack_alive();
+	return isfocus() > 0 && (ismouseactive() || uncaptured_ready);
+}
+
+static std::vector<std::string> gui_input_config_fields(
+	const AmiberryGuiInputConfigSnapshot& input)
+{
+	return {
+		"pending_tablet_mode=" + std::string(tablet_mode_name(
+			input.pending_tablet_mode)),
+		"effective_tablet_mode=" + std::string(tablet_mode_name(
+			input.effective_tablet_mode)),
+		"pending_mouse_untrap=" + std::string(mouse_untrap_name(
+			input.pending_mouse_untrap)),
+		"effective_mouse_untrap=" + std::string(mouse_untrap_name(
+			input.effective_mouse_untrap)),
+		"pending_effective_diverged=" + std::string(bool_field(
+			input.pending_tablet_mode != input.effective_tablet_mode
+			|| input.pending_mouse_untrap != input.effective_mouse_untrap)),
+		"input_config_revision="
+			+ std::to_string(input.input_config_revision)
+	};
 }
 
 // Command handlers - reusing logic from DBus implementation
@@ -885,6 +975,170 @@ static std::string HandleSendMouseAbs(const std::vector<std::string>& args)
 	setmousebuttonstate(0, 2, (buttons & 4) ? 1 : 0);
 
 	return make_response(true);
+}
+
+static std::string HandleGetGuiAutomationState(
+	const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received GET_GUI_AUTOMATION_STATE" << std::endl;
+	if (!args.empty())
+		return make_response(false, {"Usage: GET_GUI_AUTOMATION_STATE"});
+
+	const int active_monitor = amiberry_get_active_input_monitor();
+	const auto geometry = amiberry_gui_geometry_snapshot();
+	const auto input = gui_input_config_snapshot();
+	const bool geometry_matches_active = geometry.valid
+		&& geometry.monitor_id == active_monitor;
+	std::vector<std::string> fields{
+		"schema_version=1",
+		"runtime_id=" + geometry.runtime_id,
+		"geometry_revision=" + std::to_string(geometry.geometry_revision),
+		"monitor_id=" + std::to_string(active_monitor),
+		"geometry_valid=" + std::string(bool_field(geometry_matches_active)),
+	};
+	const auto input_fields = gui_input_config_fields(input);
+	fields.insert(fields.end(), input_fields.begin(), input_fields.end());
+	fields.emplace_back("focus_ready="
+		+ std::string(bool_field(gui_input_focus_ready())));
+	fields.emplace_back("supported_button_mask="
+		+ std::to_string(AMIBERRY_GUI_SUPPORTED_BUTTON_MASK));
+	fields.emplace_back("button_mask=" + std::to_string(
+		getmousebuttonstate(0) & AMIBERRY_GUI_SUPPORTED_BUTTON_MASK));
+	return make_response(true, fields);
+}
+
+static std::string HandleSetGuiAutomationConfig(
+	const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SET_GUI_AUTOMATION_CONFIG" << std::endl;
+	if (args.size() != 5) {
+		return make_response(false, {
+			"schema_version=1", "reason=malformed_request",
+			"usage=SET_GUI_AUTOMATION_CONFIG <expected_tablet_mode> "
+				"<expected_mouse_untrap> <expected_input_config_revision> "
+				"<tablet_mode> <mouse_untrap>"
+		});
+	}
+
+	int expected_tablet = 0;
+	int expected_untrap = 0;
+	int new_tablet = 0;
+	int new_untrap = 0;
+	std::uint64_t expected_revision = 0;
+	if (!parse_tablet_mode(args[0], expected_tablet)
+		|| !parse_mouse_untrap(args[1], expected_untrap)
+		|| !amiberry_gui_parse_u64(args[2], expected_revision)
+		|| !parse_tablet_mode(args[3], new_tablet)
+		|| !parse_mouse_untrap(args[4], new_untrap)) {
+		return make_response(false,
+			{"schema_version=1", "reason=malformed_request"});
+	}
+
+	// IPC and GUI preference mutations run on the main event thread. Feed the
+	// live pending values into the locked CAS so changes made by an earlier event
+	// are synchronized before ownership is checked.
+	const AmiberryGuiPendingInputConfig expected{
+		expected_tablet, expected_untrap
+	};
+	const AmiberryGuiInputConfigValues current{
+		{changed_prefs.input_tablet, changed_prefs.input_mouse_untrap},
+		{currprefs.input_tablet, currprefs.input_mouse_untrap}
+	};
+	const AmiberryGuiPendingInputConfig desired{new_tablet, new_untrap};
+	const auto result = gui_input_config_state.compare_exchange(
+		expected_revision, expected, current, desired,
+		[](const int tablet_mode, const int mouse_untrap) {
+			const bool changed = changed_prefs.input_tablet != tablet_mode
+				|| changed_prefs.input_mouse_untrap != mouse_untrap;
+			changed_prefs.input_tablet = tablet_mode;
+			changed_prefs.input_mouse_untrap = mouse_untrap;
+			if (changed)
+				set_config_changed();
+		});
+	auto fields = gui_input_config_fields(result.snapshot);
+	fields.insert(fields.begin(), result.applied
+		? "reason=none" : "reason=input_config_conflict");
+	fields.insert(fields.begin(), "schema_version=1");
+	return make_response(result.applied, fields);
+}
+
+static std::string HandleSendMouseAbsGuarded(
+	const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SEND_MOUSE_ABS_GUARDED" << std::endl;
+	if (args.size() != 7) {
+		return make_response(false,
+			{"schema_version=1", "reason=malformed_request"});
+	}
+
+	AmiberryGuiGuardedInputRequest request;
+	if (!amiberry_gui_parse_int(args[0], request.x)
+		|| !amiberry_gui_parse_int(args[1], request.y)
+		|| !amiberry_gui_parse_int(args[2], request.button_mask)
+		|| !amiberry_gui_parse_u64(args[4], request.geometry_revision)
+		|| !amiberry_gui_parse_int(args[5], request.monitor_id)
+		|| !amiberry_gui_parse_u64(args[6], request.input_config_revision)) {
+		return make_response(false,
+			{"schema_version=1", "reason=malformed_request"});
+	}
+	request.runtime_id = args[3];
+	if (request.runtime_id.empty()) {
+		return make_response(false,
+			{"schema_version=1", "reason=malformed_request"});
+	}
+
+	const int active_monitor = amiberry_get_active_input_monitor();
+	const auto input = gui_input_config_snapshot();
+	const AmiberryGuiGuardedInputEnvironment environment{
+		gui_input_focus_ready(),
+		currprefs.input_tablet >= TABLET_MOUSEHACK,
+		active_monitor,
+		input.input_config_revision
+	};
+	const auto result = amiberry_gui_guarded_input_apply(
+		request, environment,
+		[](const int monitor_id, const int x, const int y,
+			const int button_mask) {
+			if (!amiberry_send_mouse_abs_to_monitor(monitor_id, x, y))
+				return false;
+			setmousebuttonstateall(0, button_mask,
+				AMIBERRY_GUI_SUPPORTED_BUTTON_MASK);
+			return true;
+		});
+	std::vector<std::string> fields{
+		"schema_version=1",
+		"applied=" + std::string(bool_field(result.applied)),
+		"reason=" + std::string(amiberry_gui_guard_reason_name(result.reason)),
+		"runtime_id=" + result.geometry.runtime_id,
+		"geometry_revision="
+			+ std::to_string(result.geometry.geometry_revision),
+		"monitor_id=" + std::to_string(result.geometry.monitor_id),
+		"input_config_revision="
+			+ std::to_string(input.input_config_revision),
+		"button_mask=" + std::to_string(getmousebuttonstate(0)
+			& AMIBERRY_GUI_SUPPORTED_BUTTON_MASK)
+	};
+	if (result.applied) {
+		fields.emplace_back("x=" + std::to_string(request.x));
+		fields.emplace_back("y=" + std::to_string(request.y));
+	}
+	return make_response(result.applied, fields);
+}
+
+static std::string HandleReleaseMouseButtons(
+	const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received RELEASE_MOUSE_BUTTONS" << std::endl;
+	if (!args.empty())
+		return make_response(false, {"Usage: RELEASE_MOUSE_BUTTONS"});
+	amiberry_gui_release_mouse_buttons(
+		[](const int button) { setmousebuttonstate(0, button, 0); });
+	const int button_mask = static_cast<int>(getmousebuttonstate(0))
+		& AMIBERRY_GUI_SUPPORTED_BUTTON_MASK;
+	return make_response(button_mask == 0, {
+		"schema_version=1",
+		"button_mask=" + std::to_string(button_mask)
+	});
 }
 
 static std::string HandlePing(const std::vector<std::string>& args)
@@ -2547,6 +2801,10 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("TOGGLE_MOUSE_GRAB");
 	commands.emplace_back("SEND_KEY <code> <state>, SEND_MOUSE <dx> <dy> <buttons>");
 	commands.emplace_back("SEND_MOUSE_ABS <x> <y> <buttons> (requires tablet_mode mousehack or real)");
+	commands.emplace_back("GET_GUI_AUTOMATION_STATE");
+	commands.emplace_back("SET_GUI_AUTOMATION_CONFIG <expected_tablet_mode> <expected_mouse_untrap> <expected_revision> <tablet_mode> <mouse_untrap>");
+	commands.emplace_back("SEND_MOUSE_ABS_GUARDED <x> <y> <buttons> <runtime_id> <geometry_revision> <monitor_id> <input_config_revision>");
+	commands.emplace_back("RELEASE_MOUSE_BUTTONS");
 	commands.emplace_back("READ_MEM <addr> <width>, WRITE_MEM <addr> <width> <val>");
 	commands.emplace_back("SET_AUTOCROP <0|1>, GET_AUTOCROP");
 	commands.emplace_back("INSERT_WHDLOAD <path>, EJECT_WHDLOAD, GET_WHDLOAD");
@@ -2604,6 +2862,10 @@ static void InitHandlers()
 	command_handlers[CMD_SET_MOUSE_SPEED] = HandleSetMouseSpeed;
 	command_handlers[CMD_SEND_MOUSE] = HandleSendMouse;
 	command_handlers[CMD_SEND_MOUSE_ABS] = HandleSendMouseAbs;
+	command_handlers[CMD_GET_GUI_AUTOMATION_STATE] = HandleGetGuiAutomationState;
+	command_handlers[CMD_SET_GUI_AUTOMATION_CONFIG] = HandleSetGuiAutomationConfig;
+	command_handlers[CMD_SEND_MOUSE_ABS_GUARDED] = HandleSendMouseAbsGuarded;
+	command_handlers[CMD_RELEASE_MOUSE_BUTTONS] = HandleReleaseMouseButtons;
 	command_handlers[CMD_PING] = HandlePing;
 	command_handlers[CMD_HELP] = HandleHelp;
 
