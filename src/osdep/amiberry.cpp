@@ -7091,8 +7091,8 @@ bool save_amiberry_settings_with_result()
 	// Disable Shutdown button in GUI
 	write_bool_option("disable_shutdown_button", amiberry_options.disable_shutdown_button);
 
-	// Allow Display settings to be used from the WHDLoad XML (override amiberry.conf defaults)
-	write_bool_option("allow_display_settings_from_xml", amiberry_options.allow_display_settings_from_xml);
+	// Allow Display settings to be used from the WHDLoad JSON booter database (override amiberry.conf defaults)
+	write_bool_option("allow_display_settings_from_json", amiberry_options.allow_display_settings_from_json);
 
 	// Default Sound Card (0=default, first one available in the system)
 	write_int_option("default_soundcard", amiberry_options.default_soundcard);
@@ -7493,7 +7493,9 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_whd_quit_on_exit", &amiberry_options.default_whd_quit_on_exit);
 		ret |= cfgfile_yesno(option, value, "use_jst_instead_of_whd", &amiberry_options.use_jst_instead_of_whd);
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
-		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
+		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_json", &amiberry_options.allow_display_settings_from_json);
+		// Legacy key from when the WHDLoad booter database was XML-based. Accept old amiberry.conf files, but do not re-save under this name.
+		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_json);
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
 		ret |= cfgfile_yesno(option, value, "default_onscreen_joystick", &amiberry_options.default_onscreen_joystick);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);

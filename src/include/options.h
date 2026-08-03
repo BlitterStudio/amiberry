@@ -1435,7 +1435,7 @@ struct amiberry_options
 	bool default_whd_quit_on_exit = false;
 	bool use_jst_instead_of_whd = false;
 	bool disable_shutdown_button = true;
-	bool allow_display_settings_from_xml = true;
+	bool allow_display_settings_from_json = true;
 	int default_soundcard = 0;
 #ifdef __ANDROID__
 	bool default_onscreen_joystick = true;

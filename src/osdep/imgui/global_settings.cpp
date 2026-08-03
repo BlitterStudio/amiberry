@@ -584,8 +584,8 @@ void render_panel_global_settings()
 			"Quit Amiberry when the WHDLoad title exits.");
 		render_bool_row("Use JST instead of WHDLoad", &amiberry_options.use_jst_instead_of_whd,
 			"Use JST instead of WHDLoad for auto-booted titles.");
-		render_bool_row("Allow display settings from XML", &amiberry_options.allow_display_settings_from_xml,
-			"Allow WHDLoad XML display settings to override global display defaults.");
+		render_bool_row("JSON display overrides", &amiberry_options.allow_display_settings_from_json,
+			"Allow the WHDLoad JSON booter database to override global display defaults.");
 	});
 
 	render_group("Touch and on-screen controls", "GlobalTouchDefaults", [&]() {

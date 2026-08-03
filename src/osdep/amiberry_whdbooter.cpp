@@ -842,7 +842,7 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	}
 
 	// Screen settings, only if allowed to override the defaults from amiberry.conf
-	if (amiberry_options.allow_display_settings_from_xml)
+	if (amiberry_options.allow_display_settings_from_json)
 	{
 		set_gfx_settings(prefs, game_detail);
 	}
