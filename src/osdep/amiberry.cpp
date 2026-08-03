@@ -2628,6 +2628,8 @@ static void update_hidpi_scale(AmigaMonitor* mon)
 	if (renderer && mon->amiga_window) {
 		int win_w, win_h, draw_w, draw_h;
 		SDL_GetWindowSize(mon->amiga_window, &win_w, &win_h);
+		mon->logical_window_width = win_w;
+		mon->logical_window_height = win_h;
 		renderer->get_drawable_size(mon->amiga_window, &draw_w, &draw_h);
 		if (win_w > 0 && draw_w > 0 && win_w != draw_w) {
 			mon->hidpi_scale_x = (float)draw_w / (float)win_w;
@@ -2643,6 +2645,7 @@ static void update_hidpi_scale(AmigaMonitor* mon)
 static void handle_resized_event(AmigaMonitor* mon, int width, int height)
 {
 	write_log("Window resized to: %dx%d\n", width, height);
+	amiberry_gui_geometry_invalidate(mon->monitor_id);
 	setsizemove(mon, mon->amiga_window);
 	update_hidpi_scale(mon);
 	if (IRenderer* renderer = get_renderer(mon->monitor_id))
@@ -2716,6 +2719,7 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 		// Window migrated to a different display — force the hw VSync pacing
 		// decision to re-probe against the new display's refresh rate.
 		amiberry_hw_vsync_pacing_invalidate();
+		amiberry_gui_geometry_invalidate(mon->monitor_id);
 		break;
 #endif
 	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
@@ -3483,12 +3487,8 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	return true;
 }
 
-#ifdef USE_IPC_SOCKET
-bool amiberry_send_mouse_abs(const int x, const int y)
+int amiberry_get_active_input_monitor()
 {
-	if (currprefs.input_tablet < TABLET_MOUSEHACK)
-		return false;
-
 	int monid = 0;
 	if (mouseactive > 0 && mouseactive <= MAX_AMIGAMONITORS)
 		monid = mouseactive - 1;
@@ -3499,9 +3499,22 @@ bool amiberry_send_mouse_abs(const int x, const int y)
 
 	if (!AMonitors[monid].active) {
 		if (!AMonitors[0].active)
-			return false;
+			return -1;
 		monid = 0;
 	}
+	amiberry_gui_geometry_set_active_monitor(monid);
+	return monid;
+}
+
+#ifdef USE_IPC_SOCKET
+bool amiberry_send_mouse_abs(const int x, const int y)
+{
+	if (currprefs.input_tablet < TABLET_MOUSEHACK)
+		return false;
+
+	const int monid = amiberry_get_active_input_monitor();
+	if (monid < 0)
+		return false;
 
 	auto* mon = &AMonitors[monid];
 	if (!mon->amiga_window)

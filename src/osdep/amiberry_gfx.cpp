@@ -8,6 +8,8 @@
 */
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #ifndef _WIN32
@@ -16,6 +18,7 @@
 #include <cstdio>
 #include <cmath>
 #include <iostream>
+#include <random>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -64,6 +67,7 @@
 #include "amiberry_input_helpers.h"
 #include "amiberry_autocrop_helpers.h"
 #include "amiberry_gfx_geometry.h"
+#include "amiberry_gui_geometry.h"
 
 #ifdef USE_OPENGL
 #include "gl_platform.h"
@@ -711,6 +715,16 @@ static SDL_Surface* current_screenshot = nullptr;
 std::string screenshot_filename;
 FILE* screenshot_file = nullptr;
 int delay_savestate_frame = 0;
+
+static std::string make_gui_runtime_id()
+{
+	const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+	const auto random = std::random_device{}();
+	return std::to_string(now) + "-" + std::to_string(random);
+}
+
+static AmiberryGuiGeometryState gui_geometry_state(make_gui_runtime_id());
+static std::atomic<std::uint64_t> gui_capture_sequence{0};
 #endif
 
 struct MultiDisplay Displays[MAX_DISPLAYS + 1];
@@ -1507,6 +1521,7 @@ void gfx_set_picasso_state(const int monid, const int on)
 
 	if (mon->screen_is_picasso == on)
 		return;
+	amiberry_gui_geometry_invalidate(monid);
 	// Absolute coordinates from the previous display mode use a different coordinate space.
 	input_mousehack_invalidate_last_abs_position();
 	mon->screen_is_picasso = on;
@@ -1682,6 +1697,7 @@ int graphics_setup()
 
 void graphics_leave()
 {
+	amiberry_gui_geometry_invalidate();
 	for (int i = 0; i < MAX_AMIGAMONITORS; i++)
 	{
 		close_windows(&AMonitors[i], true);
@@ -2376,6 +2392,169 @@ unsigned long target_lastsynctime()
 static int save_png(const SDL_Surface* surface, const std::string& path)
 {
 	return gfx_platform_save_png(surface, path);
+}
+
+void amiberry_gui_geometry_publish(const int monid,
+	const AmiberryGfxRect& source, const AmiberryGfxRect& viewport,
+	const AmiberryGuiViewportSpace viewport_space,
+	const int drawable_width, const int drawable_height,
+	const char* renderer_name)
+{
+	if (monid < 0 || monid >= MAX_AMIGAMONITORS || !renderer_name)
+		return;
+	if (amiberry_get_active_input_monitor() != monid)
+		return;
+	const auto* mon = &AMonitors[monid];
+	const SDL_Surface* surface = get_amiga_surface(monid);
+	if (!surface || !mon->amiga_window)
+		return;
+
+	int window_width = mon->logical_window_width;
+	int window_height = mon->logical_window_height;
+	if (window_width <= 0 || window_height <= 0) {
+		SDL_GetWindowSize(mon->amiga_window, &window_width, &window_height);
+	}
+	if (window_width <= 0 || window_height <= 0)
+		return;
+
+	const int source_left = std::clamp(source.x, 0, surface->w);
+	const int source_top = std::clamp(source.y, 0, surface->h);
+	const int source_right = std::clamp(source.x + source.w, source_left, surface->w);
+	const int source_bottom = std::clamp(source.y + source.h, source_top, surface->h);
+	const AmiberryGfxRect clipped_source{
+		source_left, source_top, source_right - source_left, source_bottom - source_top
+	};
+	if (clipped_source.w <= 0 || clipped_source.h <= 0
+		|| viewport.w <= 0 || viewport.h <= 0)
+		return;
+
+	AmiberryGfxRect logical_viewport{};
+	if (viewport_space == AmiberryGuiViewportSpace::SdlRendererLogical) {
+		if (!mon->amiga_renderer)
+			return;
+		float left = 0.0f;
+		float top = 0.0f;
+		float right = 0.0f;
+		float bottom = 0.0f;
+		if (!SDL_RenderCoordinatesToWindow(mon->amiga_renderer,
+			static_cast<float>(viewport.x), static_cast<float>(viewport.y),
+			&left, &top)
+			|| !SDL_RenderCoordinatesToWindow(mon->amiga_renderer,
+				static_cast<float>(viewport.x + viewport.w),
+				static_cast<float>(viewport.y + viewport.h), &right, &bottom)) {
+			return;
+		}
+		const int logical_left = static_cast<int>(std::lround(left));
+		const int logical_top = static_cast<int>(std::lround(top));
+		const int logical_right = static_cast<int>(std::lround(right));
+		const int logical_bottom = static_cast<int>(std::lround(bottom));
+		logical_viewport = {
+			logical_left, logical_top,
+			logical_right - logical_left, logical_bottom - logical_top
+		};
+	} else {
+		logical_viewport = amiberry_gui_drawable_to_logical_rect(
+			viewport, drawable_width, drawable_height,
+			window_width, window_height);
+	}
+	if (logical_viewport.w <= 0 || logical_viewport.h <= 0)
+		return;
+
+	AmiberryGuiGeometrySnapshot snapshot;
+	snapshot.monitor_id = monid;
+	snapshot.display_id = amiberry_get_active_display_id(monid);
+	snapshot.display_mode = mon->screen_is_picasso ? "rtg" : "native";
+	snapshot.renderer = renderer_name;
+	snapshot.image_width = surface->w;
+	snapshot.image_height = surface->h;
+	snapshot.source = clipped_source;
+	snapshot.viewport = logical_viewport;
+	snapshot.window_width = window_width;
+	snapshot.window_height = window_height;
+	snapshot.valid = true;
+	gui_geometry_state.publish(std::move(snapshot));
+}
+
+void amiberry_gui_geometry_invalidate(const int monid)
+{
+	gui_geometry_state.invalidate(monid);
+}
+
+void amiberry_gui_geometry_set_active_monitor(const int monid)
+{
+	gui_geometry_state.set_active_monitor(monid);
+}
+
+AmiberryGuiGeometrySnapshot amiberry_gui_geometry_snapshot()
+{
+	return gui_geometry_state.snapshot();
+}
+
+static bool saved_png_dimensions(const std::string& path, int& width, int& height)
+{
+	unsigned char header[24]{};
+	FILE* file = fopen(path.c_str(), "rb");
+	if (!file)
+		return false;
+	const size_t bytes_read = fread(header, 1, sizeof header, file);
+	fclose(file);
+	return bytes_read == sizeof header
+		&& amiberry_gui_png_dimensions(header, sizeof header, width, height);
+}
+
+bool amiberry_capture_actionable_screenshot(const int monid,
+	const std::string& path, AmiberryGuiGeometrySnapshot& snapshot)
+{
+	if (current_screenshot != nullptr) {
+		SDL_DestroySurface(current_screenshot);
+		current_screenshot = nullptr;
+	}
+
+	for (int attempt = 0; attempt < 3; ++attempt) {
+		const auto before = amiberry_gui_geometry_snapshot();
+		SDL_Surface* surface = get_amiga_surface(monid);
+		if (!before.valid || before.monitor_id != monid || !surface
+			|| before.image_width != surface->w
+			|| before.image_height != surface->h) {
+			return false;
+		}
+
+		SDL_Surface* duplicate = SDL_DuplicateSurface(surface);
+		if (!duplicate)
+			return false;
+		const auto after = amiberry_gui_geometry_snapshot();
+		if (after.valid && after.runtime_id == before.runtime_id
+			&& after.geometry_revision == before.geometry_revision
+			&& after.monitor_id == before.monitor_id
+			&& duplicate->w == before.image_width
+			&& duplicate->h == before.image_height) {
+			current_screenshot = duplicate;
+			snapshot = before;
+			break;
+		}
+		SDL_DestroySurface(duplicate);
+	}
+	if (!current_screenshot)
+		return false;
+
+	const int saved = save_png(current_screenshot, path);
+	SDL_DestroySurface(current_screenshot);
+	current_screenshot = nullptr;
+	if (!saved)
+		return false;
+
+	int saved_width = 0;
+	int saved_height = 0;
+	if (!saved_png_dimensions(path, saved_width, saved_height)
+		|| saved_width != snapshot.image_width
+		|| saved_height != snapshot.image_height) {
+		std::remove(path.c_str());
+		return false;
+	}
+
+	snapshot.capture_nonce = snapshot.runtime_id + "-"
+		+ std::to_string(++gui_capture_sequence);
+	return true;
 }
 
 bool create_screenshot()

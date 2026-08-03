@@ -5,6 +5,8 @@
 #include "uae/types.h"
 #include <vector>
 
+#include "amiberry_gui_geometry.h"
+
 class IRenderer;
 
 #define MAX_DISPLAYS 10
@@ -148,6 +150,8 @@ struct AmigaMonitor {
 	float hidpi_scale_x = 1.0f;
 	float hidpi_scale_y = 1.0f;
 	bool hidpi_needs_scaling = false;
+	int logical_window_width = 0;
+	int logical_window_height = 0;
 };
 extern struct AmigaMonitor* amon;
 extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
@@ -180,6 +184,23 @@ inline SDL_Surface* get_amiga_surface(int monid = 0)
 		return AMonitors[monid].amiga_surface;
 	return amiga_surface;
 }
+
+enum class AmiberryGuiViewportSpace
+{
+	SdlRendererLogical,
+	DrawablePixels
+};
+
+// Publish the exact source rectangle and presented viewport used by a renderer.
+// Drawable-pixel viewports are converted to SDL logical window coordinates once.
+void amiberry_gui_geometry_publish(int monid, const AmiberryGfxRect& source,
+	const AmiberryGfxRect& viewport, AmiberryGuiViewportSpace viewport_space,
+	int drawable_width, int drawable_height, const char* renderer_name);
+void amiberry_gui_geometry_invalidate(int monid = -1);
+void amiberry_gui_geometry_set_active_monitor(int monid);
+AmiberryGuiGeometrySnapshot amiberry_gui_geometry_snapshot();
+bool amiberry_capture_actionable_screenshot(int monid, const std::string& path,
+	AmiberryGuiGeometrySnapshot& snapshot);
 
 extern SDL_DisplayMode sdl_mode;
 extern const char* sdl_video_driver;

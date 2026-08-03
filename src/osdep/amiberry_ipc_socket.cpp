@@ -7,6 +7,7 @@
 
 #include "amiberry_ipc.h"
 #include "sysdeps.h"
+#include "amiberry_gfx.h"
 #include "options.h"
 #include "target.h"
 #include "uae.h"
@@ -145,6 +146,22 @@ static std::string HandleScreenshot(const std::vector<std::string>& args)
 	std::cout << "IPC: Received SCREENSHOT" << std::endl;
 	if (args.empty()) {
 		return make_response(false, {"Missing filename"});
+	}
+	if (args.size() > 1) {
+		if (args.size() != 2 || args[1] != "ACTIONABLE") {
+			return make_response(false, {"Usage: SCREENSHOT <path> [ACTIONABLE]"});
+		}
+		const int monid = amiberry_get_active_input_monitor();
+		if (monid < 0) {
+			return make_response(false, {"No active input monitor"});
+		}
+		AmiberryGuiGeometrySnapshot snapshot;
+		if (!amiberry_capture_actionable_screenshot(monid, args[0], snapshot)) {
+			return make_response(false,
+				{"Failed to capture coherent actionable screenshot"});
+		}
+		return make_response(true,
+			amiberry_gui_actionable_fields(args[0], snapshot));
 	}
 
 	if (!create_screenshot()) {
@@ -2499,7 +2516,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	std::vector<std::string> commands;
 	commands.emplace_back("Available commands:");
 	commands.emplace_back("QUIT, PAUSE, RESUME, RESET [HARD|SOFT]");
-	commands.emplace_back("SCREENSHOT <path>, SAVESTATE <state> <cfg>, LOADSTATE <state>");
+	commands.emplace_back("SCREENSHOT <path> [ACTIONABLE], SAVESTATE <state> <cfg>, LOADSTATE <state>");
 	commands.emplace_back("QUICKSAVE [slot], QUICKLOAD [slot] (slots 0-9)");
 	commands.emplace_back("INSERTFLOPPY <path> <drive>, EJECT_FLOPPY <drive>, LIST_FLOPPIES");
 	commands.emplace_back("SET_FLOPPY_SPEED <speed>, GET_FLOPPY_SPEED");
