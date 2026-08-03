@@ -2770,7 +2770,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	std::vector<std::string> commands;
 	commands.emplace_back("Available commands:");
 	commands.emplace_back("QUIT, PAUSE, RESUME, RESET [HARD|SOFT]");
-	commands.emplace_back("SCREENSHOT <path> [ACTIONABLE], SAVESTATE <state> <cfg>, LOADSTATE <state>");
+	commands.emplace_back("SCREENSHOT <path>, SAVESTATE <state> <cfg>, LOADSTATE <state>");
 	commands.emplace_back("QUICKSAVE [slot], QUICKLOAD [slot] (slots 0-9)");
 	commands.emplace_back("INSERTFLOPPY <path> <drive>, EJECT_FLOPPY <drive>, LIST_FLOPPIES");
 	commands.emplace_back("SET_FLOPPY_SPEED <speed>, GET_FLOPPY_SPEED");
@@ -2801,9 +2801,11 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("TOGGLE_MOUSE_GRAB");
 	commands.emplace_back("SEND_KEY <code> <state>, SEND_MOUSE <dx> <dy> <buttons>");
 	commands.emplace_back("SEND_MOUSE_ABS <x> <y> <buttons> (requires tablet_mode mousehack or real)");
+	commands.emplace_back("--- GUI automation controller commands (prefer MCP/HTTP) ---");
+	commands.emplace_back("SCREENSHOT <path> ACTIONABLE");
 	commands.emplace_back("GET_GUI_AUTOMATION_STATE");
-	commands.emplace_back("SET_GUI_AUTOMATION_CONFIG <expected_tablet_mode> <expected_mouse_untrap> <expected_revision> <tablet_mode> <mouse_untrap>");
-	commands.emplace_back("SEND_MOUSE_ABS_GUARDED <x> <y> <buttons> <runtime_id> <geometry_revision> <monitor_id> <input_config_revision>");
+	commands.emplace_back("SET_GUI_AUTOMATION_CONFIG <expected_tablet_mode> <expected_mouse_untrap> <expected_input_config_revision> <tablet_mode> <mouse_untrap>");
+	commands.emplace_back("SEND_MOUSE_ABS_GUARDED <x> <y> <button_mask> <runtime_id> <geometry_revision> <monitor_id> <input_config_revision>");
 	commands.emplace_back("RELEASE_MOUSE_BUTTONS");
 	commands.emplace_back("READ_MEM <addr> <width>, WRITE_MEM <addr> <width> <val>");
 	commands.emplace_back("SET_AUTOCROP <0|1>, GET_AUTOCROP");
