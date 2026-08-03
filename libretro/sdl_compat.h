@@ -901,6 +901,7 @@ int SDL_SetCurrentThreadPriority(SDL_ThreadPriority pri);
 
 SDL_Surface* SDL_CreateSurface(int w, int h, SDL_PixelFormat format);
 SDL_Surface* SDL_CreateSurfaceFrom(int w, int h, SDL_PixelFormat format, void* pixels, int pitch);
+SDL_Surface* SDL_DuplicateSurface(SDL_Surface* surface);
 void SDL_DestroySurface(SDL_Surface* s);
 const SDL_PixelFormatDetails* SDL_GetPixelFormatDetails(SDL_PixelFormat format);
 bool SDL_BlitSurface(SDL_Surface* src, const SDL_Rect* sr, SDL_Surface* dst, const SDL_Rect* dr);
@@ -924,6 +925,7 @@ bool SDL_RenderSetScale(SDL_Renderer* renderer, float scaleX, float scaleY);
 bool SDL_SetRenderScale(SDL_Renderer* renderer, float scaleX, float scaleY);
 void SDL_RenderGetLogicalSize(SDL_Renderer* renderer, int* w, int* h);
 bool SDL_GetCurrentRenderOutputSize(SDL_Renderer* renderer, int* w, int* h);
+bool SDL_RenderCoordinatesToWindow(SDL_Renderer* renderer, float x, float y, float* window_x, float* window_y);
 bool SDL_RenderPresent(SDL_Renderer* renderer);
 bool SDL_RenderClear(SDL_Renderer* renderer);
 void SDL_DestroyRenderer(SDL_Renderer* renderer);

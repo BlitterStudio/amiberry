@@ -658,6 +658,23 @@ SDL_Surface* SDL_CreateSurfaceFrom(int w, int h, SDL_PixelFormat format, void* p
 	return s;
 }
 
+SDL_Surface* SDL_DuplicateSurface(SDL_Surface* surface)
+{
+	if (!surface) {
+		return nullptr;
+	}
+	SDL_Surface* dst = SDL_CreateSurface(surface->w, surface->h, surface->format);
+	if (!dst) {
+		return nullptr;
+	}
+	if (surface->pixels && dst->pixels) {
+		const size_t src_bytes = (size_t)surface->pitch * (size_t)surface->h;
+		const size_t dst_bytes = (size_t)dst->pitch * (size_t)dst->h;
+		memcpy(dst->pixels, surface->pixels, src_bytes < dst_bytes ? src_bytes : dst_bytes);
+	}
+	return dst;
+}
+
 void SDL_DestroySurface(SDL_Surface* s)
 {
 	if (!s) return;
@@ -826,6 +843,21 @@ bool SDL_GetCurrentRenderOutputSize(SDL_Renderer* renderer, int* w, int* h)
 {
 	if (w) *w = renderer && renderer->window ? renderer->window->w : 1920;
 	if (h) *h = renderer && renderer->window ? renderer->window->h : 1080;
+	return true;
+}
+bool SDL_RenderCoordinatesToWindow(SDL_Renderer* renderer, float x, float y, float* window_x, float* window_y)
+{
+	if (!renderer) {
+		return false;
+	}
+	const int win_w = renderer->window ? renderer->window->w : 0;
+	const int win_h = renderer->window ? renderer->window->h : 0;
+	const int log_w = renderer->logical_w > 0 ? renderer->logical_w : win_w;
+	const int log_h = renderer->logical_h > 0 ? renderer->logical_h : win_h;
+	const float scale_x = (log_w > 0 && win_w > 0) ? (float)win_w / (float)log_w : 1.0f;
+	const float scale_y = (log_h > 0 && win_h > 0) ? (float)win_h / (float)log_h : 1.0f;
+	if (window_x) *window_x = x * scale_x;
+	if (window_y) *window_y = y * scale_y;
 	return true;
 }
 bool SDL_RenderPresent(SDL_Renderer* renderer)
