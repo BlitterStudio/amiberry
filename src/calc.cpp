@@ -36,6 +36,12 @@
 static double parsedvaluesd[MAX_VALUES];
 static TCHAR *parsedvaluess[MAX_VALUES];
 
+template <typename T, std::size_t N>
+constexpr std::size_t countof(T const (&) [N]) noexcept
+{
+    return N;
+}
+
 // operators
 // precedence   operators       associativity
 // 1            !               right to left
@@ -488,7 +494,8 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
     unsigned int sl = 0, rn = 0;
 	struct calcstack *sc, *sc2;
 	double val = 0;
-    TCHAR vals[MAX_DPATH];
+    TCHAR vals[MAX_DPATH+1]; // include trailing terminator
+
     int i;
 	bool ok = false;
 
@@ -560,7 +567,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                                         sl--;sl--;sl--;
                                         if (isstackstring(sc2)) {
                                             TCHAR *c = stacktostring(sc2);
-                                            _tcscpy(vals, c);
+                                            uae_tcslcpy(vals, c, countof(vals));
                                             xfree(c);
                                         }
                                         val = stacktoval(sc2);
@@ -585,7 +592,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
 				if (outval)
 					*outval = val;
                 if (outstring) {
-                    if (vals[0] && _tcslen(vals) >= maxlen) {
+                    if (vals[0] && countof(vals) > maxlen && _tcslen(vals) >= maxlen) {
                         vals[maxlen] = 0;
                     }
                     _tcscpy(outstring, vals[0] ? vals : _T(""));
