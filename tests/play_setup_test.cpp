@@ -17,7 +17,7 @@ static void test_fullwindow_integer_crt_defaults()
 {
 	const PlayDisplayDefaults defaults{
 		PlayScreenMode::FullWindow,
-		PlayScalingMode::Integer,
+		2,
 		"tv"
 	};
 
@@ -36,7 +36,7 @@ static void test_windowed_auto_none_defaults()
 {
 	const PlayDisplayDefaults defaults{
 		PlayScreenMode::Windowed,
-		PlayScalingMode::Auto,
+		-1,
 		"none"
 	};
 
@@ -51,11 +51,11 @@ static void test_windowed_auto_none_defaults()
 	expect_eq(prefs.gfx_auto_crop, false, "Auto scaling must not enable AutoCrop");
 }
 
-static void test_fullwindow_smooth_scaling_defaults()
+static void test_fullwindow_linear_scaling_defaults()
 {
 	const PlayDisplayDefaults defaults{
 		PlayScreenMode::FullWindow,
-		PlayScalingMode::Smooth,
+		1,
 		"1084"
 	};
 
@@ -63,18 +63,48 @@ static void test_fullwindow_smooth_scaling_defaults()
 
 	expect_eq(prefs.native_fullscreen, 2, "Full-window must set native fullscreen to 2");
 	expect_eq(prefs.rtg_fullscreen, 2, "Full-window must set RTG fullscreen to 2");
-	expect_eq(prefs.scaling_method, 1, "Smooth scaling must set scaling method to 1");
-	expect_eq(prefs.gfx_autoresolution, 0, "Smooth scaling must disable autoresolution");
+	expect_eq(prefs.scaling_method, 1, "Linear scaling must set scaling method to 1");
+	expect_eq(prefs.gfx_autoresolution, 0, "Linear scaling must disable autoresolution");
 	expect_eq(prefs.shader, std::string("1084"),
 		"1084 shader choice must be preserved");
-	expect_eq(prefs.gfx_auto_crop, false, "Smooth scaling must not enable AutoCrop");
+	expect_eq(prefs.gfx_auto_crop, false, "Linear scaling must not enable AutoCrop");
+}
+
+// Play offers the same scaling methods as the Display panel, so every
+// scaling_method value must pass through unchanged.
+static void test_nearest_scaling_passes_through()
+{
+	const PlayDisplayDefaults defaults{
+		PlayScreenMode::Windowed,
+		0,
+		"none"
+	};
+
+	const auto prefs = play_apply_display_defaults(defaults);
+
+	expect_eq(prefs.scaling_method, 0, "Nearest scaling must set scaling method to 0");
+	expect_eq(prefs.gfx_autoresolution, 0, "Nearest scaling must disable autoresolution");
+}
+
+static void test_stretch_scaling_passes_through()
+{
+	const PlayDisplayDefaults defaults{
+		PlayScreenMode::FullWindow,
+		3,
+		"none"
+	};
+
+	const auto prefs = play_apply_display_defaults(defaults);
+
+	expect_eq(prefs.scaling_method, 3, "Stretch scaling must set scaling method to 3");
+	expect_eq(prefs.gfx_autoresolution, 0, "Stretch scaling must disable autoresolution");
 }
 
 static void test_autocrop_default_is_preserved()
 {
 	PlayDisplayDefaults defaults{
 		PlayScreenMode::FullWindow,
-		PlayScalingMode::Integer,
+		2,
 		"none"
 	};
 	defaults.auto_crop = true;
@@ -88,7 +118,7 @@ static void test_catalog_shader_name_is_preserved()
 {
 	const PlayDisplayDefaults defaults{
 		PlayScreenMode::Windowed,
-		PlayScalingMode::Auto,
+		-1,
 		"crt/crt-royale.glslp"
 	};
 
@@ -113,7 +143,9 @@ int main()
 {
 	test_fullwindow_integer_crt_defaults();
 	test_windowed_auto_none_defaults();
-	test_fullwindow_smooth_scaling_defaults();
+	test_fullwindow_linear_scaling_defaults();
+	test_nearest_scaling_passes_through();
+	test_stretch_scaling_passes_through();
 	test_autocrop_default_is_preserved();
 	test_catalog_shader_name_is_preserved();
 	test_no_dependency_state_helpers_stay_false();

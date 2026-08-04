@@ -2001,7 +2001,7 @@ static std::string HandleSetScaling(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received SET_SCALING" << std::endl;
 	if (args.empty()) {
-		return make_response(false, {"Usage: SET_SCALING <method> (-1=auto, 0=nearest, 1=linear, 2=integer)"});
+		return make_response(false, {"Usage: SET_SCALING <method> (-1=auto, 0=nearest, 1=linear, 2=integer, 3=stretch)"});
 	}
 
 	int method;
@@ -2015,22 +2015,23 @@ static std::string HandleSetScaling(const std::vector<std::string>& args)
 		else if (str == "nearest") method = 0;
 		else if (str == "linear") method = 1;
 		else if (str == "integer") method = 2;
+		else if (str == "stretch") method = 3;
 		else {
 			return make_response(false, {"Invalid scaling method: " + args[0]});
 		}
 	}
 
-	if (method < -1 || method > 2) {
-		return make_response(false, {"Scaling method must be -1..2 (-1=auto, 0=nearest, 1=linear, 2=integer)"});
+	if (method < -1 || method > 3) {
+		return make_response(false, {"Scaling method must be -1..3 (-1=auto, 0=nearest, 1=linear, 2=integer, 3=stretch)"});
 	}
 
 	// Set scaling method
 	changed_prefs.scaling_method = method;
 	set_config_changed();
 
-	const char* method_names[] = {"auto", "nearest", "linear", "integer"};
-	const int method_index = method + 1; // -1..2 -> 0..3
-	const char* method_name = (method_index >= 0 && method_index <= 3) ? method_names[method_index] : "unknown";
+	const char* method_names[] = {"auto", "nearest", "linear", "integer", "stretch"};
+	const int method_index = method + 1; // -1..3 -> 0..4
+	const char* method_name = (method_index >= 0 && method_index <= 4) ? method_names[method_index] : "unknown";
 	return make_response(true, {std::to_string(method), method_name});
 }
 
@@ -2040,9 +2041,9 @@ static std::string HandleGetScaling(const std::vector<std::string>& args)
 	std::vector<std::string> responses;
 
 	int method = currprefs.scaling_method;
-	const char* method_names[] = {"auto", "nearest", "linear", "integer"};
-	const int method_index = method + 1; // -1..2 -> 0..3
-	std::string method_name = (method_index >= 0 && method_index <= 3) ? method_names[method_index] : "unknown";
+	const char* method_names[] = {"auto", "nearest", "linear", "integer", "stretch"};
+	const int method_index = method + 1; // -1..3 -> 0..4
+	std::string method_name = (method_index >= 0 && method_index <= 4) ? method_names[method_index] : "unknown";
 
 	responses.push_back("method=" + std::to_string(method));
 	responses.push_back("method_name=" + method_name);

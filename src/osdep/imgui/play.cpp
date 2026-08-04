@@ -116,17 +116,10 @@ void initialize_display_defaults()
 		break;
 	}
 
-	switch (changed_prefs.scaling_method) {
-	case 2:
-		display_defaults.scaling = PlayScalingMode::Integer;
-		break;
-	case 1:
-		display_defaults.scaling = PlayScalingMode::Smooth;
-		break;
-	default:
-		display_defaults.scaling = PlayScalingMode::Auto;
-		break;
-	}
+	// Normalise through the shared table so a value this build does not know
+	// about falls back to Auto instead of being shown as a blank choice.
+	display_defaults.scaling_method =
+		scaling_method_options[scaling_method_to_index(changed_prefs.scaling_method)].value;
 
 	const char* native_shader = changed_prefs.shader[0] ? changed_prefs.shader : "none";
 	display_defaults.shader = native_shader;
@@ -751,7 +744,6 @@ void render_display_defaults()
 	initialize_display_defaults();
 
 	static const char* screen_items[] = { "Windowed", "Full-window" };
-	static const char* scaling_items[] = { "Auto", "Integer", "Smooth" };
 	const auto& shader_items = get_available_shader_names();
 #ifdef __ANDROID__
 	constexpr bool fullscreen_only = true;
@@ -780,12 +772,19 @@ void render_display_defaults()
 			: "Android always uses the device display in Full-window mode.")
 		: "Run the emulation in a desktop window or a borderless Full-window.");
 
-	int scaling = static_cast<int>(display_defaults.scaling);
-	if (render_combo("Scaling:", &scaling, scaling_items, IM_ARRAYSIZE(scaling_items))) {
-		display_defaults.scaling = static_cast<PlayScalingMode>(scaling);
+	// Same choices as the Display panel, from the one shared table.
+	std::vector<const char*> scaling_items;
+	scaling_items.reserve(scaling_method_option_count);
+	for (int i = 0; i < scaling_method_option_count; i++)
+		scaling_items.push_back(scaling_method_options[i].label);
+
+	int scaling = scaling_method_to_index(display_defaults.scaling_method);
+	if (render_combo("Scaling:", &scaling, scaling_items.data(),
+			static_cast<int>(scaling_items.size()))) {
+		display_defaults.scaling_method = scaling_method_options[scaling].value;
 		apply_display_defaults_to_changed_prefs();
 	}
-	if (display_defaults.scaling == PlayScalingMode::Integer)
+	if (display_defaults.scaling_method == 2)
 		ImGui::TextWrapped("Integer scaling works best with Resolution Autoswitch set to Always On. This flow enables that automatically.");
 
 	ImGui::AlignTextToFramePadding();

@@ -153,6 +153,7 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	SDL_ScaleMode scale_mode = SDL_SCALEMODE_NEAREST;
 	bool integer_scale = false;
 	bool auto_scale = false;
+	bool stretch_to_fill = false;
 
 	switch (p->scaling_method) {
 	case -1: // Auto
@@ -162,6 +163,11 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	case 0: scale_mode = SDL_SCALEMODE_NEAREST; break;
 	case 1: scale_mode = SDL_SCALEMODE_LINEAR; break;
 	case 2: scale_mode = SDL_SCALEMODE_NEAREST; integer_scale = true; break;
+	// Stretch applies to native modes only; RTG has its own scaling modes.
+	case 3:
+		scale_mode = SDL_SCALEMODE_LINEAR;
+		stretch_to_fill = !mon->screen_is_picasso;
+		break;
 	default: scale_mode = SDL_SCALEMODE_LINEAR; break;
 	}
 
@@ -209,6 +215,8 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 	// SDL3: integer scaling via logical presentation mode
 	if (integer_scale)
 		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+	else if (stretch_to_fill)
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_STRETCH);
 	else
 		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, logical_width, logical_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }
@@ -220,6 +228,7 @@ void SDLRenderer::set_auto_crop_presentation(const int monid, const int scaling_
 	amiberry_gui_geometry_invalidate(monid);
 	const bool integer_scaling = scaling_method == 2
 		|| (scaling_method == -1 && auto_integer_scaling);
+	const bool stretch_to_fill = scaling_method == 3;
 	const SDL_ScaleMode scale_mode = scaling_method == 0 || integer_scaling
 		? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR;
 
@@ -227,7 +236,8 @@ void SDLRenderer::set_auto_crop_presentation(const int monid, const int scaling_
 		SDL_SetTextureScaleMode(m_amiga_texture, scale_mode);
 	SDL_SetRenderLogicalPresentation(mon->amiga_renderer, width, height,
 		integer_scaling ? SDL_LOGICAL_PRESENTATION_INTEGER_SCALE
-			: SDL_LOGICAL_PRESENTATION_LETTERBOX);
+			: stretch_to_fill ? SDL_LOGICAL_PRESENTATION_STRETCH
+				: SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }
 
 void SDLRenderer::refresh_scaling_after_resize(const int monid)

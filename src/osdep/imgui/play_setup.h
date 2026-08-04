@@ -10,17 +10,13 @@ enum class PlayScreenMode
 	FullWindow
 };
 
-enum class PlayScalingMode
-{
-	Auto,
-	Integer,
-	Smooth
-};
-
+// Scaling is stored as uae_prefs::scaling_method (-1=auto, 0=nearest, 1=linear,
+// 2=integer, 3=stretch) so Play offers the same choices as the Display panel
+// rather than a parallel list of its own.
 struct PlayDisplayDefaults
 {
 	PlayScreenMode screen_mode = PlayScreenMode::Windowed;
-	PlayScalingMode scaling = PlayScalingMode::Auto;
+	int scaling_method = -1;
 	std::string shader = "none";
 	bool auto_crop = false;
 };

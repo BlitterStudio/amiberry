@@ -20,6 +20,22 @@ const std::vector<std::string>& get_sound_device_names();
 const std::vector<std::string>& get_available_theme_names();
 const std::vector<std::string>& get_available_bezel_names();
 
+struct ComboOption
+{
+	int value;
+	const char* label;
+};
+
+// Canonical native scaling methods, keyed by uae_prefs::scaling_method. The
+// Display, Play and Global Settings pickers all render this one list so they
+// cannot drift apart.
+extern const ComboOption scaling_method_options[];
+extern const int scaling_method_option_count;
+
+// Index of scaling_method within scaling_method_options, or 0 (Auto) if the
+// value is not one this build knows about.
+int scaling_method_to_index(int scaling_method);
+
 struct InputDeviceOption
 {
 	std::string label;

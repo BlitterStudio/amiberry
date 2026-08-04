@@ -23,20 +23,10 @@ void play_apply_display_defaults(const PlayDisplayDefaults& defaults, PlayDispla
 	prefs.native_fullscreen = fullscreen;
 	prefs.rtg_fullscreen = fullscreen;
 
-	switch (defaults.scaling) {
-	case PlayScalingMode::Auto:
-		prefs.scaling_method = -1;
-		prefs.gfx_autoresolution = 0;
-		break;
-	case PlayScalingMode::Smooth:
-		prefs.scaling_method = 1;
-		prefs.gfx_autoresolution = 0;
-		break;
-	case PlayScalingMode::Integer:
-		prefs.scaling_method = 2;
-		prefs.gfx_autoresolution = 1;
-		break;
-	}
+	prefs.scaling_method = defaults.scaling_method;
+	// Integer scaling only lands on exact multiples when the resolution follows
+	// the mode, so this flow turns autoswitch on for it and leaves it off otherwise.
+	prefs.gfx_autoresolution = defaults.scaling_method == 2 ? 1 : 0;
 
 	prefs.shader = defaults.shader.empty() ? "none" : defaults.shader;
 	prefs.gfx_auto_crop = defaults.auto_crop;

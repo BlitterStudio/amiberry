@@ -324,6 +324,7 @@ void OpenGLRenderer::set_scaling(const int monid, const uae_prefs* p, int /*w*/,
 
 	GLenum texture_filter = GL_NEAREST;
 	m_integer_scaling = false;
+	m_stretch_to_fill = false;
 
 	switch (p->scaling_method) {
 	case -1: // Auto
@@ -332,6 +333,7 @@ void OpenGLRenderer::set_scaling(const int monid, const uae_prefs* p, int /*w*/,
 	case 0: texture_filter = GL_NEAREST; break;
 	case 1: texture_filter = GL_LINEAR; break;
 	case 2: texture_filter = GL_NEAREST; m_integer_scaling = true; break;
+	case 3: texture_filter = GL_LINEAR; m_stretch_to_fill = true; break;
 	default: texture_filter = GL_LINEAR; break;
 	}
 	update_texture_filter(texture_filter);
@@ -685,11 +687,17 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	bool use_center = mon->screen_is_picasso
 		&& mon->scalepicasso == RTG_MODE_CENTER;
 
+	// Stretch applies to native modes only; RTG has its own scaling modes.
+	const bool stretch_to_fill = !mon->screen_is_picasso && m_stretch_to_fill;
+
 	int destW, destH;
 
 	if (use_center && src_w > 0 && src_h > 0) {
 		destW = src_w;
 		destH = src_h;
+	} else if (stretch_to_fill) {
+		destW = renderAreaW;
+		destH = renderAreaH;
 	} else {
 		amiberry_gfx_aspect_fit_dimensions(
 			renderAreaW, renderAreaH, desired_aspect, destW, destH);

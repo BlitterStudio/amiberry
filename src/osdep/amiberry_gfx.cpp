@@ -1756,10 +1756,14 @@ static void configure_render_rects(const int monid, const int w, const int h, co
 			(currprefs.gfx_manual_crop_height > 0) ? currprefs.gfx_manual_crop_height : h
 		};
 		int crop_scaled_w, crop_scaled_h;
-		compute_scaled_dimensions(cr.w, cr.h, false, crop_scaled_w, crop_scaled_h);
-		if (currprefs.gfx_correct_aspect == 0) {
-			crop_scaled_w = sdl_mode.w;
-			crop_scaled_h = sdl_mode.h;
+		if (currprefs.gfx_correct_aspect) {
+			compute_scaled_dimensions(cr.w, cr.h, false, crop_scaled_w, crop_scaled_h);
+		} else {
+			// Uncorrected means the crop's own pixel aspect, matching
+			// calculate_desired_aspect(). Filling the window is Stretch's job,
+			// and sdl_mode is the display mode, which is wrong in a window anyway.
+			crop_scaled_w = cr.w;
+			crop_scaled_h = cr.h;
 		}
 		renderer->crop_aspect = (crop_scaled_h > 0)
 			? static_cast<float>(crop_scaled_w) / static_cast<float>(crop_scaled_h) : 0.0f;
@@ -2305,11 +2309,11 @@ void auto_crop_image()
 		int width, height;
 		amiberry_gfx_auto_crop_presentation_dimensions(
 			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
-			currprefs.scaling_method == 2, sdl_mode.w, sdl_mode.h, width, height);
-		int integer_width, integer_height;
-		amiberry_gfx_auto_crop_presentation_dimensions(
-			source_width, source_height, is_ntsc, currprefs.gfx_correct_aspect != 0,
-			true, sdl_mode.w, sdl_mode.h, integer_width, integer_height);
+			width, height);
+		// The presentation size no longer depends on the scaling method, so the
+		// integer-scaling candidate is the same rectangle.
+		const int integer_width = width;
+		const int integer_height = height;
 		int presentation_width = width;
 		int presentation_height = height;
 		int integer_presentation_width = integer_width;

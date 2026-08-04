@@ -63,21 +63,16 @@ static inline bool amiberry_gfx_rect_covers_area(
 
 static inline void amiberry_gfx_auto_crop_presentation_dimensions(
 	int source_width, int source_height, bool is_ntsc, bool correct_aspect,
-	bool integer_scaling, int output_width, int output_height,
 	int& display_width, int& display_height)
 {
 	display_width = source_width;
 	display_height = source_height;
 
-	if (correct_aspect) {
-		if (is_ntsc) {
-			display_height = display_height * 6 / 5;
-		}
-	} else if (!integer_scaling) {
-		// Non-integer scaling historically fills the selected output when
-		// aspect correction is disabled.
-		display_width = output_width;
-		display_height = output_height;
+	// Aspect correction is the only adjustment made here. With it off the crop
+	// keeps its own pixel aspect: filling the output is the Stretch scaling
+	// method's job, not a side effect of unticking aspect correction.
+	if (correct_aspect && is_ntsc) {
+		display_height = display_height * 6 / 5;
 	}
 }
 

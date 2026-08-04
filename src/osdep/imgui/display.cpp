@@ -7,6 +7,23 @@
 #include "gui/gui_handling.h"
 #include "gfxboard.h"
 
+const ComboOption scaling_method_options[] = {
+    {-1, "Auto"},
+    {0, "Nearest"},
+    {1, "Linear"},
+    {2, "Integer"},
+    {3, "Stretch"},
+};
+const int scaling_method_option_count = IM_ARRAYSIZE(scaling_method_options);
+
+int scaling_method_to_index(const int scaling_method) {
+    for (int i = 0; i < scaling_method_option_count; i++) {
+        if (scaling_method_options[i].value == scaling_method)
+            return i;
+    }
+    return 0; // Auto
+}
+
 void render_panel_display() {
     ImGui::Indent(4.0f);
 
@@ -609,27 +626,29 @@ void render_panel_display() {
         EndGroupBox("Centering");
 
         BeginGroupBox("Aspect and scaling");
+        // Stretch fills the window by definition, so aspect correction cannot apply.
+        const bool stretch_selected = changed_prefs.scaling_method == 3;
+        if (stretch_selected) ImGui::BeginDisabled();
         bool correct_aspect = changed_prefs.gfx_correct_aspect != 0;
         if (AmigaCheckbox("Correct aspect ratio", &correct_aspect)) {
             changed_prefs.gfx_correct_aspect = correct_aspect ? 1 : 0;
         }
-        ShowHelpMarker("Apply Amiga display aspect correction to native display modes.");
+        if (stretch_selected) ImGui::EndDisabled();
+        ShowHelpMarker(stretch_selected
+            ? "Not available with the Stretch scaling method, which always fills the window."
+            : "Apply Amiga display aspect correction to native display modes.");
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Scaling method:");
         ImGui::SameLine();
-        const char* scaling_items[] = {"Auto", "Nearest", "Linear", "Integer"};
-        int scaling_idx = changed_prefs.scaling_method + 1;
-        if (scaling_idx < 0) scaling_idx = 0;
-        if (scaling_idx > 3) scaling_idx = 3;
+        const int scaling_idx = scaling_method_to_index(changed_prefs.scaling_method);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::BeginCombo("##ScalingMethod", scaling_items[scaling_idx])) {
-            for (int n = 0; n < IM_ARRAYSIZE(scaling_items); n++) {
+        if (ImGui::BeginCombo("##ScalingMethod", scaling_method_options[scaling_idx].label)) {
+            for (int n = 0; n < scaling_method_option_count; n++) {
                 const bool is_selected = scaling_idx == n;
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(scaling_items[n], is_selected)) {
-                    scaling_idx = n;
-                    changed_prefs.scaling_method = scaling_idx - 1;
+                if (ImGui::Selectable(scaling_method_options[n].label, is_selected)) {
+                    changed_prefs.scaling_method = scaling_method_options[n].value;
                 }
                 if (is_selected) {
                     ImGui::PopStyleColor();
@@ -639,7 +658,7 @@ void render_panel_display() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-        ShowHelpMarker("How the display is scaled to fit the window.\nAuto: uses pixel-perfect integer scaling when it fills the same area as best fit, otherwise smooth scaling.\nNearest: sharp pixels, Linear: smooth, Integer: always pixel-perfect.");
+        ShowHelpMarker("How the display is scaled to fit the window.\nAuto: uses pixel-perfect integer scaling when it fills the same area as best fit, otherwise smooth scaling.\nNearest: sharp pixels, Linear: smooth, Integer: always pixel-perfect.\nStretch: fills the whole window, ignoring the aspect ratio.");
         ImGui::Spacing();
         EndGroupBox("Aspect and scaling");
 

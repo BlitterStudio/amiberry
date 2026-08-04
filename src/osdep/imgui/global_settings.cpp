@@ -16,11 +16,7 @@
 
 namespace {
 
-struct ComboOption
-{
-	int value;
-	const char* label;
-};
+// ComboOption comes from imgui_panels.h, shared with the scaling method list.
 
 struct StringComboOption
 {
@@ -409,12 +405,6 @@ void render_panel_global_settings()
 		{1, "Double"},
 		{2, "Scanlines"},
 	};
-	static const ComboOption scaling_options[] = {
-		{-1, "Auto"},
-		{0, "Nearest"},
-		{1, "Linear"},
-		{2, "Integer"},
-	};
 	static const ComboOption fullscreen_options[] = {
 		{0, "Windowed"},
 		{2, "Full-window"},
@@ -536,7 +526,7 @@ void render_panel_global_settings()
 		render_bool_row("Vertical centering", &amiberry_options.default_vertical_centering,
 			"Center the native display vertically by default.");
 		render_combo_row("Scaling method", &amiberry_options.default_scaling_method,
-			scaling_options, IM_ARRAYSIZE(scaling_options),
+			scaling_method_options, scaling_method_option_count,
 			"Default image scaling method.");
 		render_combo_row("Auto resolution", &amiberry_options.default_gfx_autoresolution,
 			enabled_options, IM_ARRAYSIZE(enabled_options),

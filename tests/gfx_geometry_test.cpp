@@ -24,8 +24,7 @@ static void test_ntsc_integer_scaling_without_aspect_uses_crop_geometry()
 {
 	int width = 0;
 	int height = 0;
-	amiberry_gfx_auto_crop_presentation_dimensions(
-		640, 400, true, false, true, 1728, 1117, width, height);
+	amiberry_gfx_auto_crop_presentation_dimensions(640, 400, true, false, width, height);
 
 	expect_int_eq(width, 640,
 		"uncorrected NTSC integer scaling must keep the normalized crop width");
@@ -35,21 +34,29 @@ static void test_ntsc_integer_scaling_without_aspect_uses_crop_geometry()
 		"uncorrected NTSC crop must scale uniformly to the largest whole-number fit");
 }
 
-static void test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct()
+static void test_ntsc_aspect_correction_applies_only_when_requested()
 {
 	int width = 0;
 	int height = 0;
-	amiberry_gfx_auto_crop_presentation_dimensions(
-		640, 400, true, true, true, 1728, 1117, width, height);
+	amiberry_gfx_auto_crop_presentation_dimensions(640, 400, true, true, width, height);
 	expect_int_eq(width, 640, "corrected NTSC crop width must stay normalized");
 	expect_int_eq(height, 480, "corrected NTSC crop height must apply 6:5 correction");
 
-	amiberry_gfx_auto_crop_presentation_dimensions(
-		640, 400, true, false, false, 1728, 1117, width, height);
-	expect_int_eq(width, 1728,
-		"uncorrected non-integer scaling must preserve the historical output-width stretch");
-	expect_int_eq(height, 1117,
-		"uncorrected non-integer scaling must preserve the historical output-height stretch");
+	amiberry_gfx_auto_crop_presentation_dimensions(640, 400, false, true, width, height);
+	expect_int_eq(width, 640, "corrected PAL crop width must stay normalized");
+	expect_int_eq(height, 400, "corrected PAL crop must not apply the NTSC 6:5 correction");
+}
+
+// Turning aspect correction off keeps the crop's own pixel aspect. It must not
+// stretch the crop to the output: filling the window is the Stretch scaling
+// method's job, and having both do it made the checkbox mean two things.
+static void test_uncorrected_crop_keeps_its_own_aspect()
+{
+	int width = 0;
+	int height = 0;
+	amiberry_gfx_auto_crop_presentation_dimensions(640, 400, true, false, width, height);
+	expect_int_eq(width, 640, "uncorrected non-integer scaling must not stretch to the output width");
+	expect_int_eq(height, 400, "uncorrected non-integer scaling must not stretch to the output height");
 }
 
 static void test_integer_scaling_never_fractionally_downscales()
@@ -199,8 +206,8 @@ static void test_provisional_crop_preserves_last_real_geometry()
 	int display_width = 0;
 	int display_height = 0;
 	amiberry_gfx_auto_crop_presentation_dimensions(
-		retained_lores_crop.w, retained_lores_crop.h, true, true, true,
-		5120, 1440, display_width, display_height);
+		retained_lores_crop.w, retained_lores_crop.h, true, true,
+		display_width, display_height);
 	int scaled_width = 0;
 	int scaled_height = 0;
 	expect_int_eq(amiberry_gfx_auto_integer_dimensions(
@@ -379,7 +386,8 @@ static void test_oversized_offset_presentation_leaves_drawable_uncovered()
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
-	test_ntsc_aspect_correction_and_legacy_stretch_remain_distinct();
+	test_ntsc_aspect_correction_applies_only_when_requested();
+	test_uncorrected_crop_keeps_its_own_aspect();
 	test_native_content_grid_ignores_configured_pixel_repetition();
 	test_crop_rect_maps_across_autoswitch_resolutions();
 	test_provisional_crop_preserves_last_real_geometry();

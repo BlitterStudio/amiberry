@@ -5594,8 +5594,8 @@ void target_default_options(uae_prefs* p, const int type)
 	p->scaling_method = -1; 
 	if (amiberry_options.default_scaling_method != -1)
 	{
-		// only valid values are -1 (Auto), 0 (Nearest), 1 (Linear), 2 (Integer)
-		if (amiberry_options.default_scaling_method >= 0 && amiberry_options.default_scaling_method <= 2)
+		// only valid values are -1 (Auto), 0 (Nearest), 1 (Linear), 2 (Integer), 3 (Stretch)
+		if (amiberry_options.default_scaling_method >= 0 && amiberry_options.default_scaling_method <= 3)
 			p->scaling_method = amiberry_options.default_scaling_method;
 	}
 

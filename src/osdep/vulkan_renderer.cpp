@@ -888,6 +888,7 @@ void VulkanRenderer::set_scaling(const int monid, const uae_prefs* p, int /*w*/,
 
 	m_integer_scaling = false;
 	m_linear_filter = false;
+	m_stretch_to_fill = false;
 
 	switch (p->scaling_method) {
 	case -1: // Auto
@@ -901,17 +902,17 @@ void VulkanRenderer::set_scaling(const int monid, const uae_prefs* p, int /*w*/,
 	case 2: // Integer
 		m_integer_scaling = true;
 		break;
+	case 3: // Stretch
+		m_linear_filter = true;
+		m_stretch_to_fill = true;
+		break;
 	default:
 		m_linear_filter = true;
 		break;
 	}
 
-	// Update the texture sampler filter mode
-	if (m_upload_texture_sampler != VK_NULL_HANDLE) {
-		VkFilter desired = m_linear_filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-		// Recreate sampler if filter changed (Vulkan samplers are immutable)
-		// For now, we'll handle this in the sampler creation
-	}
+	// The filter is applied by binding the matching descriptor set per frame in
+	// record_and_submit(); both samplers already exist.
 }
 
 // ============================================================================
@@ -1048,6 +1049,8 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	m_crt_time += 1.0f / 50.0f; // Advance CRT time on emu thread (not render thread)
 	slot.integer_scaling = m_integer_scaling;
 	slot.auto_scaling = currprefs.scaling_method == -1;
+	slot.stretch_to_fill = m_stretch_to_fill;
+	slot.linear_filter = m_linear_filter;
 	slot.picasso_on = ad->picasso_on;
 
 	const AmigaMonitor* mon = &AMonitors[monid];
@@ -1249,6 +1252,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 		m_graphics_pipeline_layout == VK_NULL_HANDLE ||
 		m_render_pass == VK_NULL_HANDLE ||
 		m_texture_descriptor_set == VK_NULL_HANDLE ||
+		m_texture_descriptor_set_linear == VK_NULL_HANDLE ||
 		slot.staging_buffer == VK_NULL_HANDLE ||
 		m_upload_texture_image == VK_NULL_HANDLE ||
 		m_swapchain_framebuffers.empty() ||
@@ -1500,6 +1504,7 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 
 	int destX = render_area_x, destY = render_area_y;
 	int destW = render_area_w, destH = render_area_h;
+	bool use_linear_filter = slot.linear_filter;
 
 	if (drawable_w > 0 && drawable_h > 0 && slot.texture_width > 0 && slot.texture_height > 0) {
 		float desired_aspect = slot.desired_aspect;
@@ -1519,6 +1524,8 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			? (slot.scalepicasso == RTG_MODE_INTEGER_SCALE)
 			: slot.integer_scaling;
 		const bool auto_native_scaling = !slot.screen_is_picasso && slot.auto_scaling;
+		// Stretch applies to native modes only; RTG has its own scaling modes.
+		const bool stretch_to_fill = !slot.screen_is_picasso && slot.stretch_to_fill;
 
 		const bool is_cropped = (slot.crop.x != 0 || slot.crop.y != 0
 			|| slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height)
@@ -1532,27 +1539,22 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 			: std::max(1, static_cast<int>(static_cast<float>(src_w) / desired_aspect + 0.5f));
 		const int integer_source_w = slot.native_auto_crop ? display_w : src_w;
 
-		if (render_area_x != 0 || render_area_y != 0 ||
-			render_area_w != drawable_w || render_area_h != drawable_h) {
-			destW = render_area_w;
-			destH = render_area_h;
-			destX = render_area_x;
-			destY = render_area_y;
-		} else if (use_center && src_w > 0 && src_h > 0) {
+		// A bezel narrows the render area to its screen hole. The output is fitted
+		// and centred inside that area exactly as it is inside the full drawable,
+		// so aspect correction and integer scaling still apply.
+		const bool has_bounded_area = render_area_x != 0 || render_area_y != 0
+			|| render_area_w != drawable_w || render_area_h != drawable_h;
+
+		if (use_center && src_w > 0 && src_h > 0) {
 			destW = src_w;
 			destH = src_h;
-			destX = (render_area_w - destW) / 2;
-			destY = (render_area_h - destH) / 2;
+		} else if (stretch_to_fill) {
+			destW = render_area_w;
+			destH = render_area_h;
 		} else {
 			// Fit to window preserving aspect ratio
-			destW = render_area_w;
-			destH = static_cast<int>(render_area_w / desired_aspect);
-			if (destH > render_area_h) {
-				destH = render_area_h;
-				destW = static_cast<int>(render_area_h * desired_aspect);
-			}
-			if (destW <= 0) destW = 1;
-			if (destH <= 0) destH = 1;
+			amiberry_gfx_aspect_fit_dimensions(
+				render_area_w, render_area_h, desired_aspect, destW, destH);
 
 			if (auto_native_scaling && src_w > 0 && src_h > 0) {
 				use_integer = amiberry_gfx_auto_integer_dimensions(
@@ -1572,10 +1574,27 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 						destW, destH);
 				}
 			}
-
-			destX = render_area_x + (render_area_w - destW) / 2;
-			destY = render_area_y + (render_area_h - destH) / 2;
 		}
+
+		// Auto only counts as integer scaling once the fit above confirms it, so
+		// the sampler decision has to follow that result rather than the pref.
+		if (auto_native_scaling) {
+			use_linear_filter = !use_integer;
+		}
+
+		const AmiberryGfxRect available_area{
+			render_area_x, render_area_y, render_area_w, render_area_h
+		};
+		const float bounded_fallback_aspect = use_integer && slot.correct_native_aspect
+			? integer_target_aspect : desired_aspect;
+		const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+			available_area, destW, destH, bounded_fallback_aspect,
+			has_bounded_area && use_integer && !use_center);
+
+		destX = final_rect.x;
+		destY = final_rect.y;
+		destW = final_rect.w;
+		destH = final_rect.h;
 	}
 
 	// Update render_quad so input coordinate translation works correctly.
@@ -1603,13 +1622,15 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 	vkCmdSetScissor(command_buffer, 0, 1, &draw_scissor);
 
+	const VkDescriptorSet texture_descriptor_set = use_linear_filter
+		? m_texture_descriptor_set_linear : m_texture_descriptor_set;
 	vkCmdBindDescriptorSets(
 		command_buffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		m_graphics_pipeline_layout,
 		0,
 		1,
-		&m_texture_descriptor_set,
+		&texture_descriptor_set,
 		0,
 		nullptr);
 
@@ -2917,34 +2938,47 @@ void VulkanRenderer::cleanup_swapchain_draw_resources()
 
 bool VulkanRenderer::create_texture_sampler()
 {
-	if (m_upload_texture_sampler != VK_NULL_HANDLE)
+	if (m_upload_texture_sampler != VK_NULL_HANDLE
+		&& m_upload_texture_sampler_linear != VK_NULL_HANDLE)
 		return true;
 
-	VkSamplerCreateInfo sampler_info{};
-	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	sampler_info.magFilter = VK_FILTER_NEAREST;
-	sampler_info.minFilter = VK_FILTER_NEAREST;
-	sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	sampler_info.anisotropyEnable = VK_FALSE;
-	sampler_info.maxAnisotropy = 1.0f;
-	sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	sampler_info.unnormalizedCoordinates = VK_FALSE;
-	sampler_info.compareEnable = VK_FALSE;
-	sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-	sampler_info.mipLodBias = 0.0f;
-	sampler_info.minLod = 0.0f;
-	sampler_info.maxLod = 0.0f;
+	const auto create_one = [this](const VkFilter filter, VkSampler& out) {
+		if (out != VK_NULL_HANDLE)
+			return true;
 
-	const VkResult result = vkCreateSampler(m_device, &sampler_info, nullptr, &m_upload_texture_sampler);
-	if (result != VK_SUCCESS) {
-		write_log("VulkanRenderer: vkCreateSampler failed (VkResult=%d)\n", result);
+		VkSamplerCreateInfo sampler_info{};
+		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		sampler_info.magFilter = filter;
+		sampler_info.minFilter = filter;
+		sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		sampler_info.anisotropyEnable = VK_FALSE;
+		sampler_info.maxAnisotropy = 1.0f;
+		sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		sampler_info.unnormalizedCoordinates = VK_FALSE;
+		sampler_info.compareEnable = VK_FALSE;
+		sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		sampler_info.mipLodBias = 0.0f;
+		sampler_info.minLod = 0.0f;
+		sampler_info.maxLod = 0.0f;
+
+		const VkResult result = vkCreateSampler(m_device, &sampler_info, nullptr, &out);
+		if (result != VK_SUCCESS) {
+			write_log("VulkanRenderer: vkCreateSampler failed (VkResult=%d)\n", result);
+			return false;
+		}
+		return true;
+	};
+
+	if (!create_one(VK_FILTER_NEAREST, m_upload_texture_sampler)
+		|| !create_one(VK_FILTER_LINEAR, m_upload_texture_sampler_linear)) {
+		cleanup_texture_sampler();
 		return false;
 	}
 
-	write_log("VulkanRenderer: texture sampler created (nearest/clamp)\n");
+	write_log("VulkanRenderer: texture samplers created (nearest + linear, clamp)\n");
 	return true;
 }
 
@@ -2954,13 +2988,18 @@ void VulkanRenderer::cleanup_texture_sampler()
 		vkDestroySampler(m_device, m_upload_texture_sampler, nullptr);
 		m_upload_texture_sampler = VK_NULL_HANDLE;
 	}
+	if (m_upload_texture_sampler_linear != VK_NULL_HANDLE) {
+		vkDestroySampler(m_device, m_upload_texture_sampler_linear, nullptr);
+		m_upload_texture_sampler_linear = VK_NULL_HANDLE;
+	}
 }
 
 bool VulkanRenderer::create_texture_descriptor_resources()
 {
 	if (m_texture_descriptor_set_layout != VK_NULL_HANDLE &&
 		m_texture_descriptor_pool != VK_NULL_HANDLE &&
-		m_texture_descriptor_set != VK_NULL_HANDLE) {
+		m_texture_descriptor_set != VK_NULL_HANDLE &&
+		m_texture_descriptor_set_linear != VK_NULL_HANDLE) {
 		return true;
 	}
 
@@ -2985,7 +3024,7 @@ bool VulkanRenderer::create_texture_descriptor_resources()
 
 	VkDescriptorPoolSize pool_size{};
 	pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_size.descriptorCount = 16; // main + OSD + bezel + cursor + vkbd + joystick(5) + headroom
+	pool_size.descriptorCount = 16; // main(nearest+linear) + OSD + bezel + cursor + vkbd + joystick(5) + headroom
 
 	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -3001,18 +3040,28 @@ bool VulkanRenderer::create_texture_descriptor_resources()
 		return false;
 	}
 
+	// One set per filter: the sampler is baked into the descriptor, so the filter
+	// is switched by binding a different set rather than rewriting this one.
+	const VkDescriptorSetLayout set_layouts[2] = {
+		m_texture_descriptor_set_layout, m_texture_descriptor_set_layout
+	};
+	VkDescriptorSet sets[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE };
+
 	VkDescriptorSetAllocateInfo allocate_info{};
 	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocate_info.descriptorPool = m_texture_descriptor_pool;
-	allocate_info.descriptorSetCount = 1;
-	allocate_info.pSetLayouts = &m_texture_descriptor_set_layout;
+	allocate_info.descriptorSetCount = 2;
+	allocate_info.pSetLayouts = set_layouts;
 
-	result = vkAllocateDescriptorSets(m_device, &allocate_info, &m_texture_descriptor_set);
+	result = vkAllocateDescriptorSets(m_device, &allocate_info, sets);
 	if (result != VK_SUCCESS) {
 		write_log("VulkanRenderer: vkAllocateDescriptorSets failed (VkResult=%d)\n", result);
 		cleanup_texture_descriptor_resources();
 		return false;
 	}
+
+	m_texture_descriptor_set = sets[0];
+	m_texture_descriptor_set_linear = sets[1];
 
 	return true;
 }
@@ -3020,6 +3069,7 @@ bool VulkanRenderer::create_texture_descriptor_resources()
 void VulkanRenderer::cleanup_texture_descriptor_resources()
 {
 	m_texture_descriptor_set = VK_NULL_HANDLE;
+	m_texture_descriptor_set_linear = VK_NULL_HANDLE;
 
 	if (m_texture_descriptor_pool != VK_NULL_HANDLE) {
 		vkDestroyDescriptorPool(m_device, m_texture_descriptor_pool, nullptr);
@@ -3035,28 +3085,35 @@ void VulkanRenderer::cleanup_texture_descriptor_resources()
 bool VulkanRenderer::update_texture_descriptor_set()
 {
 	if (m_texture_descriptor_set == VK_NULL_HANDLE ||
+		m_texture_descriptor_set_linear == VK_NULL_HANDLE ||
 		m_upload_texture_sampler == VK_NULL_HANDLE ||
+		m_upload_texture_sampler_linear == VK_NULL_HANDLE ||
 		m_upload_texture_view == VK_NULL_HANDLE) {
 		write_log("VulkanRenderer: update_texture_descriptor_set called before descriptor/image resources are ready\n");
 		return false;
 	}
 
-	VkDescriptorImageInfo image_info{};
-	image_info.sampler = m_upload_texture_sampler;
-	image_info.imageView = m_upload_texture_view;
-	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	VkDescriptorImageInfo image_info[2]{};
+	image_info[0].sampler = m_upload_texture_sampler;
+	image_info[0].imageView = m_upload_texture_view;
+	image_info[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image_info[1].sampler = m_upload_texture_sampler_linear;
+	image_info[1].imageView = m_upload_texture_view;
+	image_info[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	VkWriteDescriptorSet write{};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstSet = m_texture_descriptor_set;
-	write.dstBinding = 0;
-	write.dstArrayElement = 0;
-	write.descriptorCount = 1;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write.pImageInfo = &image_info;
+	VkWriteDescriptorSet writes[2]{};
+	for (int i = 0; i < 2; i++) {
+		writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[i].dstSet = i == 0 ? m_texture_descriptor_set : m_texture_descriptor_set_linear;
+		writes[i].dstBinding = 0;
+		writes[i].dstArrayElement = 0;
+		writes[i].descriptorCount = 1;
+		writes[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writes[i].pImageInfo = &image_info[i];
+	}
 
-	vkUpdateDescriptorSets(m_device, 1, &write, 0, nullptr);
-	write_log("VulkanRenderer: descriptor set updated for upload texture\n");
+	vkUpdateDescriptorSets(m_device, 2, writes, 0, nullptr);
+	write_log("VulkanRenderer: descriptor sets updated for upload texture (nearest + linear)\n");
 	return true;
 }
 
