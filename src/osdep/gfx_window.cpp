@@ -711,6 +711,19 @@ static int create_windows(struct AmigaMonitor* mon)
 		} else if (md && md->display_id) {
 			SDL_Rect db;
 			SDL_GetDisplayBounds(md->display_id, &db);
+			// Leaving desktop fullscreen: the current position is the fullscreen
+			// origin, so restore the stored windowed position instead.
+			if (SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_FULLSCREEN) {
+				int stored_x = 1, stored_y = 0;
+				regqueryint(nullptr, _T("MainPosX"), &stored_x);
+				regqueryint(nullptr, _T("MainPosY"), &stored_y);
+				if (currprefs.borderless) {
+					stored_x = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.x;
+					stored_y = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.y;
+				}
+				nx = std::max(stored_x, 0);
+				ny = std::max(stored_y, 0);
+			}
 			bool on_target = (nx >= db.x && nx < db.x + db.w
 				&& ny >= db.y && ny < db.y + db.h);
 			if (!on_target) {
@@ -747,6 +760,16 @@ static int create_windows(struct AmigaMonitor* mon)
 					needs_resize = true;
 					write_log(_T("fullwindow: forcing mode switch from exclusive to desktop fullscreen\n"));
 				}
+			}
+		} else {
+			// Leaving desktop fullscreen through the resize-in-place path: SDL
+			// defers size/position changes on fullscreen windows, so without an
+			// explicit exit the window would silently stay fullscreen.
+			SDL_WindowFlags wflags = SDL_GetWindowFlags(mon->amiga_window);
+			if (wflags & SDL_WINDOW_FULLSCREEN) {
+				SDL_SetWindowFullscreen(mon->amiga_window, false);
+				SDL_SyncWindow(mon->amiga_window);
+				needs_resize = true;
 			}
 		}
 

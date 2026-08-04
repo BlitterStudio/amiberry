@@ -886,6 +886,14 @@ void render_content_picker()
 
 } // namespace
 
+void play_sync_screen_mode_cache(const int fullscreen)
+{
+	initialize_display_defaults();
+	display_defaults.screen_mode = fullscreen == GFX_FULLWINDOW
+		? PlayScreenMode::FullWindow
+		: PlayScreenMode::Windowed;
+}
+
 void render_panel_play()
 {
 	ImGui::Indent(4.0f);

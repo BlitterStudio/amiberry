@@ -6,6 +6,7 @@
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
 #include "gfxboard.h"
+#include "play_setup.h"
 
 const ComboOption scaling_method_options[] = {
     {-1, "Auto"},
@@ -156,6 +157,7 @@ void render_panel_display() {
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable(screenmode_items[n], is_selected)) {
                 changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = screenmode_values[n];
+                play_sync_screen_mode_cache(screenmode_values[n]);
             }
             if (is_selected) {
                 ImGui::PopStyleColor();

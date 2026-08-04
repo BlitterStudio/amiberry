@@ -34,6 +34,10 @@ struct PlayDisplayPrefs
 PlayDisplayPrefs play_apply_display_defaults(const PlayDisplayDefaults& defaults);
 void play_apply_display_defaults(const PlayDisplayDefaults& defaults, PlayDisplayPrefs& prefs);
 
+// Keep the Play panel's cached screen mode in sync when the Display panel
+// changes it, so resuming later does not re-apply a stale value.
+void play_sync_screen_mode_cache(int fullscreen);
+
 bool play_expert_settings_enabled();
 void play_set_expert_settings_enabled(bool enabled);
 bool play_setup_dismissed();

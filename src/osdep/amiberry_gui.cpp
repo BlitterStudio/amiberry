@@ -788,6 +788,23 @@ static void gui_to_prefs(void)
 
 	fixup_prefs(&changed_prefs, true);
 	updatewinfsmode(0, &changed_prefs);
+
+#ifdef AMIBERRY
+	// Screen-mode changes must survive the async config-check round trip: if
+	// anything re-syncs changed_prefs from currprefs before the check runs
+	// (e.g. a GUI re-entry via prefs_to_gui), the pending switch would be
+	// silently dropped. Apply the mode to currprefs now and force a display
+	// change so the window is recreated either way.
+	if (changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen != currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen ||
+		changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen != currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen) {
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen;
+		currprefs.gfx_monitor[0].gfx_size_win = changed_prefs.gfx_monitor[0].gfx_size_win;
+		currprefs.gfx_monitor[0].gfx_size_fs = changed_prefs.gfx_monitor[0].gfx_size_fs;
+		updatewinfsmode(0, &currprefs);
+		gfx_DisplayChangeRequested(2);
+	}
+#endif
 }
 
 static void after_leave_gui()
