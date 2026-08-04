@@ -169,10 +169,6 @@ static void update_gui_window_title(SDL_Window* window)
 	}
 }
 
-#ifdef _WIN32
-static int saved_emu_x = 0, saved_emu_y = 0, saved_emu_w = 0, saved_emu_h = 0;
-static SDL_WindowFlags saved_emu_flags = 0;
-#endif
 #ifdef USE_OPENGL
 static bool gui_use_opengl = false;
 #endif
@@ -1282,7 +1278,7 @@ void amiberry_gui_init()
 	const bool gui_starting_on_kmsdrm =
 		(sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0);
 
-	// Initialize gui_window_rect size early so all paths (Windows shared-window,
+	// Initialize gui_window_rect size early so all paths (separate-window,
 	// KMSDRM, new-window creation) use the correct dimensions.
 	if (!gui_window_size_initialized) {
 		const float gui_scale = DPIHandler::get_layout_scale();
@@ -1311,38 +1307,6 @@ void amiberry_gui_init()
 		mon->gui_renderer = mon->amiga_renderer;
 #endif
 
-#ifdef _WIN32
-	// On Windows, reuse the emulation window to avoid dual D3D11/OpenGL context
-	// conflicts that cause crashes. This mirrors the Android/KMSDRM pattern.
-	if (mon->amiga_window && !mon->gui_window)
-		mon->gui_window = mon->amiga_window;
-	if (mon->gui_window == mon->amiga_window) {
-		SDL_GetWindowPosition(mon->gui_window, &saved_emu_x, &saved_emu_y);
-		SDL_GetWindowSize(mon->gui_window, &saved_emu_w, &saved_emu_h);
-		saved_emu_flags = SDL_GetWindowFlags(mon->gui_window);
-		// Exit fullscreen for GUI if needed
-		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
-			SDL_SetWindowFullscreen(mon->gui_window, false);
-		// Use saved position if available, otherwise center
-		int gui_pos_x = 0, gui_pos_y = 0;
-		if (regqueryint(nullptr, _T("GUIPosX"), &gui_pos_x) && regqueryint(nullptr, _T("GUIPosY"), &gui_pos_y)) {
-			gui_window_rect.x = gui_pos_x;
-			gui_window_rect.y = gui_pos_y;
-			const int target_display = find_display_for_rect(gui_window_rect);
-			SDL_Rect usable = get_display_usable_bounds(target_display);
-			clamp_rect_to_bounds(gui_window_rect, usable, true);
-			SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
-			SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
-		} else {
-			SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
-			SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-		}
-		SDL_SetWindowTitle(mon->gui_window, "Amiberry GUI");
-		SDL_SetWindowResizable(mon->gui_window, true);
-		SDL_SetWindowMouseGrab(mon->gui_window, false);
-	}
-#endif
-
 #ifdef USE_VULKAN
 	gui_use_vulkan = (get_vulkan_renderer() != nullptr && g_renderer->has_context()
 		&& mon->gui_window == mon->amiga_window);
@@ -1367,18 +1331,16 @@ void amiberry_gui_init()
 	}
 
 #ifdef USE_OPENGL
-	// When the GUI shares the emulator's window and the emulator is driven by
-	// the OpenGL renderer, route ImGui through the existing GL context instead
-	// of creating a second SDL_Renderer on top of it. Two renderers presenting
-	// to the same surface (especially on KMSDRM / Pi V3D) leave the GUI frame
-	// un-presented after a few F12 cycles — see issue #1974. The Windows path
-	// already did this; we now do it on any platform where the window is shared.
-	gui_use_opengl = (mon->gui_window != nullptr
-		&& mon->gui_window == mon->amiga_window
-		&& g_renderer && g_renderer->has_context()
+	// Determine whether the emulation renderer is OpenGL.  When it is, we
+	// route ImGui through the existing GL context instead of creating a
+	// separate SDL_Renderer (which would default to D3D11 on Windows and
+	// crash when a GL context is already alive — see commit e07be3897).
+	// This applies to BOTH the shared-window path (KMSDRM/no-WM/Android)
+	// and the separate-window path (Windows/Linux/macOS with a WM).
+	const bool emu_has_opengl = (g_renderer && g_renderer->has_context()
 		&& dynamic_cast<OpenGLRenderer*>(g_renderer.get()) != nullptr);
-	if (gui_use_opengl)
-		g_renderer->prepare_gui_sharing(mon);
+	// gui_use_opengl is finalised after the window is created/assigned
+	// below — we need the GL context on the GUI window before ImGui init.
 #endif
 	{
 		const SDL_DisplayMode* dm = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
@@ -1436,6 +1398,14 @@ void amiberry_gui_init()
 			mode |= SDL_WINDOW_ALWAYS_ON_TOP;
 		if (currprefs.start_minimized)
 			mode |= SDL_WINDOW_HIDDEN;
+		// When the emulation renderer is OpenGL, the GUI window must also
+		// request an OpenGL context so we can make the existing GL context
+		// current on it.  Without this flag SDL would create a D3D11-based
+		// surface on Windows, which crashes when a GL context is alive.
+#ifdef USE_OPENGL
+		if (emu_has_opengl)
+			mode |= SDL_WINDOW_OPENGL;
+#endif
 		// Request native-resolution framebuffer on HiDPI displays.
 		// Android: NOT needed — display scaling is handled entirely via layout_scale.
 		// No-WM: HiDPI scaling needs a compositor to be meaningful.
@@ -1551,7 +1521,29 @@ void amiberry_gui_init()
 		}
 	}
 
-{
+#ifdef USE_OPENGL
+	// Finalise gui_use_opengl: route ImGui through the existing GL context
+	// whenever the emulation renderer is OpenGL — regardless of whether the
+	// GUI window is shared (KMSDRM/no-WM/Android) or separate (Windows/
+	// Linux/macOS with a WM).  For separate windows, make the existing GL
+	// context current on the GUI window; emulation is paused so there's no
+	// conflict.  For shared windows, prepare_gui_sharing destroys shaders.
+	gui_use_opengl = emu_has_opengl && mon->gui_window != nullptr;
+	if (gui_use_opengl) {
+		if (mon->gui_window != mon->amiga_window) {
+			// Separate window: move the GL context to the GUI window.
+			auto* gl_renderer = get_opengl_renderer();
+			if (gl_renderer && gl_renderer->has_context()) {
+				SDL_GL_MakeCurrent(mon->gui_window, gl_renderer->get_gl_context());
+			}
+		} else {
+			// Shared window: destroy emulation shaders (ImGui reuses context).
+			g_renderer->prepare_gui_sharing(mon);
+		}
+	}
+#endif
+
+	{
 		bool skip_sdl_renderer = false;
 #ifdef USE_OPENGL
 		if (gui_use_opengl) skip_sdl_renderer = true;
@@ -1808,13 +1800,6 @@ void amiberry_gui_halt()
 	{
 #if defined(__ANDROID__)
 		// Don't destroy the renderer on Android, as we reuse it
-#elif defined(_WIN32)
-		if (mon->gui_renderer == mon->amiga_renderer) {
-			mon->gui_renderer = nullptr;  // Shared — don't destroy
-		} else {
-			SDL_DestroyRenderer(mon->gui_renderer);  // OpenGL path — separate renderer
-			mon->gui_renderer = nullptr;
-		}
 #else
 		if (mon->gui_renderer == SDL_GetRenderer(mon->amiga_window)) {
 			mon->gui_renderer = nullptr;
@@ -1843,40 +1828,18 @@ void amiberry_gui_halt()
 		}
 #if defined(__ANDROID__)
 		// Don't destroy the window on Android, as we reuse it
-#elif defined(_WIN32)
-		if (mon->gui_window == mon->amiga_window) {
-			mon->gui_window = nullptr;  // Shared — don't destroy
-		} else {
-			SDL_DestroyWindow(mon->gui_window);
-			mon->gui_window = nullptr;
-		}
 #else
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 #endif
 	}
 
-#ifdef _WIN32
-	// Restore emulation window state
-	if (mon->amiga_window && saved_emu_w > 0) {
-		{
-			char emu_title[256];
-			if (last_active_config[0])
-				snprintf(emu_title, sizeof(emu_title), "Amiberry - [%s]", last_active_config);
-			else
-				snprintf(emu_title, sizeof(emu_title), "Amiberry");
-			SDL_SetWindowTitle(mon->amiga_window, emu_title);
-		}
-		SDL_SetWindowSize(mon->amiga_window, saved_emu_w, saved_emu_h);
-		SDL_SetWindowPosition(mon->amiga_window, saved_emu_x, saved_emu_y);
-		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
-			SDL_SetWindowFullscreen(mon->amiga_window, true);
-		saved_emu_w = saved_emu_h = 0;
-	}
-#endif
 #ifdef USE_OPENGL
-	// Restore the emulation GL context even after a separate SDL-renderer GUI.
-	// Some backends can leave presentation state such as swap interval changed.
+	// Restore the emulation GL context — the GUI may have moved it to the
+	// separate GUI window.  This makes it current on the emu window again
+	// and forces a full GL state reset for emulation.  For the shared-window
+	// path (KMSDRM/no-WM), shaders were destroyed in prepare_gui_sharing()
+	// and are recreated here via restore_emulation_context → reset_state.
 	if (auto* gl_renderer = get_opengl_renderer();
 		gl_renderer && mon->amiga_window && gl_renderer->has_context()) {
 		gl_renderer->restore_emulation_context(mon->amiga_window);

@@ -131,13 +131,6 @@ void close_hwnds(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
 	{
 #if defined(__ANDROID__)
 		// Reuse existing window
-#elif defined(_WIN32)
-		if (mon->gui_window == mon->amiga_window) {
-			// GUI is sharing this window — don't destroy
-		} else {
-			SDL_DestroyWindow(mon->amiga_window);
-			mon->amiga_window = nullptr;
-		}
 #else
 		SDL_DestroyWindow(mon->amiga_window);
 		mon->amiga_window = nullptr;
