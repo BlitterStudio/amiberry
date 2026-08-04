@@ -402,7 +402,7 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			static_cast<float>(sly - (mon->statusline_surface->h - led_h)),
 			static_cast<float>(mon->statusline_surface->w), static_cast<float>(mon->statusline_surface->h) };
 		int lw = 0, lh = 0;
-		SDL_ScaleMode lmode = SDL_SCALEMODE_NEAREST;
+		SDL_LogicalPresentation lmode = SDL_LOGICAL_PRESENTATION_DISABLED;
 		SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, &lmode);
 		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
 		SDL_RenderTexture(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
