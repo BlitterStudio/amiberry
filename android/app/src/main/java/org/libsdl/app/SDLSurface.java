@@ -12,16 +12,16 @@ import android.os.Build;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
-import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.PointerIcon;
+import android.view.ScaleGestureDetector;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
-
 
 /**
     SDLSurface. This is what we draw on, so we need to know when it's created
@@ -30,7 +30,8 @@ import android.view.WindowManager;
     Because of this, that's where we set up the SDL thread
 */
 public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
-    View.OnApplyWindowInsetsListener, View.OnKeyListener, View.OnTouchListener, SensorEventListener  {
+    View.OnApplyWindowInsetsListener, View.OnKeyListener, View.OnTouchListener,
+    SensorEventListener, ScaleGestureDetector.OnScaleGestureListener {
 
     // Sensors
     protected SensorManager mSensorManager;
@@ -40,8 +41,18 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     protected float mWidth, mHeight;
 
     // Is SurfaceView ready for rendering
-    public boolean mIsSurfaceReady;
+    protected boolean mIsSurfaceReady;
 
+    // Is on-screen keyboard visible
+    protected boolean mKeyboardVisible;
+
+    // Pinch events
+    private final ScaleGestureDetector scaleGestureDetector;
+
+    // Amiberry-local: physical mouse buttons are driven from ACTION_BUTTON_PRESS/RELEASE, with the
+    // touch lifecycle (ACTION_DOWN/UP) kept only as a fallback for devices that never send explicit
+    // button transitions. Without this, ChromeOS delivers a lifecycle ACTION_UP during a long press
+    // and the button is released underneath the user. Re-apply when syncing the SDL Java shim.
     private static int sMouseButtonTransitionState;
     private boolean mMouseLifecycleButtonActive;
 
@@ -66,9 +77,11 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     }
 
     // Startup
-    public SDLSurface(Context context) {
+    protected SDLSurface(Context context) {
         super(context);
         getHolder().addCallback(this);
+
+        scaleGestureDetector = new ScaleGestureDetector(context, this);
 
         setFocusable(true);
         setFocusableInTouchMode(true);
@@ -89,11 +102,11 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         mIsSurfaceReady = false;
     }
 
-    public void handlePause() {
+    protected void handlePause() {
         enableSensor(Sensor.TYPE_ACCELEROMETER, false);
     }
 
-    public void handleResume() {
+    protected void handleResume() {
         setFocusable(true);
         setFocusableInTouchMode(true);
         requestFocus();
@@ -103,7 +116,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         enableSensor(Sensor.TYPE_ACCELEROMETER, true);
     }
 
-    public Surface getNativeSurface() {
+    protected Surface getNativeSurface() {
         return getHolder().getSurface();
     }
 
@@ -124,6 +137,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         SDLActivity.handleNativeState();
 
         mIsSurfaceReady = false;
+        mKeyboardVisible = false;
         SDLActivity.onNativeSurfaceDestroyed();
     }
 
@@ -144,14 +158,12 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         float density = 1.0f;
         try
         {
-            if (Build.VERSION.SDK_INT >= 17 /* Android 4.2 (JELLY_BEAN_MR1) */) {
-                DisplayMetrics realMetrics = new DisplayMetrics();
-                mDisplay.getRealMetrics( realMetrics );
-                nDeviceWidth = realMetrics.widthPixels;
-                nDeviceHeight = realMetrics.heightPixels;
-                // Use densityDpi instead of density to more closely match what the UI scale is
-                density = (float)realMetrics.densityDpi / 160.0f;
-            }
+            DisplayMetrics realMetrics = new DisplayMetrics();
+            mDisplay.getRealMetrics( realMetrics );
+            nDeviceWidth = realMetrics.widthPixels;
+            nDeviceHeight = realMetrics.heightPixels;
+            // Use densityDpi instead of density to more closely match what the UI scale is
+            density = (float)realMetrics.densityDpi / 160.0f;
         } catch(Exception ignored) {
         }
 
@@ -225,6 +237,18 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                                                WindowInsets.Type.displayCutout());
 
             SDLActivity.onNativeInsetsChanged(combined.left, combined.right, combined.top, combined.bottom);
+
+            if (insets.isVisible(WindowInsets.Type.ime())) {
+                if (!mKeyboardVisible) {
+                    mKeyboardVisible = true;
+                    SDLActivity.onNativeScreenKeyboardShown();
+                }
+            } else {
+                if (mKeyboardVisible) {
+                    mKeyboardVisible = false;
+                    SDLActivity.onNativeScreenKeyboardHidden();
+                }
+            }
         }
 
         // Pass these to any child views in case they need them
@@ -357,11 +381,13 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                 break;
         } while (++i < pointerCount);
 
+        scaleGestureDetector.onTouchEvent(event);
+
         return true;
     }
 
     // Sensor events
-    public void enableSensor(int sensortype, boolean enabled) {
+    protected void enableSensor(int sensortype, boolean enabled) {
         // TODO: This uses getDefaultSensor - what if we have >1 accels?
         if (enabled) {
             SDLSensorManager.registerListener(mSensorManager, this,
@@ -424,47 +450,39 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         }
     }
 
+    // Prevent android internal NullPointerException (https://github.com/libsdl-org/SDL/issues/13306)
+    @Override
+    public PointerIcon onResolvePointerIcon(MotionEvent event, int pointerIndex) {
+        try {
+            return super.onResolvePointerIcon(event, pointerIndex);
+        } catch (NullPointerException e) {
+            return null;
+        }
+    }
+
     // Captured pointer events for API 26.
+    @Override
     public boolean onCapturedPointerEvent(MotionEvent event)
     {
-        int action = event.getActionMasked();
-        int pointerCount = event.getPointerCount();
-
-        for (int i = 0; i < pointerCount; i++) {
-            float x, y;
-            switch (action) {
-                case MotionEvent.ACTION_SCROLL:
-                    x = event.getAxisValue(MotionEvent.AXIS_HSCROLL, i);
-                    y = event.getAxisValue(MotionEvent.AXIS_VSCROLL, i);
-                    SDLActivity.onNativeMouse(0, action, x, y, false);
-                    return true;
-
-                case MotionEvent.ACTION_HOVER_MOVE:
-                case MotionEvent.ACTION_MOVE:
-                    x = event.getX(i);
-                    y = event.getY(i);
-                    SDLActivity.onNativeMouse(0, action, x, y, true);
-                    return true;
-
-                case MotionEvent.ACTION_BUTTON_PRESS:
-                case MotionEvent.ACTION_BUTTON_RELEASE:
-
-                    // Change our action value to what SDL's code expects.
-                    if (action == MotionEvent.ACTION_BUTTON_PRESS) {
-                        action = MotionEvent.ACTION_DOWN;
-                    } else { /* MotionEvent.ACTION_BUTTON_RELEASE */
-                        action = MotionEvent.ACTION_UP;
-                    }
-
-                    x = event.getX(i);
-                    y = event.getY(i);
-                    int button = event.getButtonState();
-
-                    SDLActivity.onNativeMouse(button, action, x, y, true);
-                    return true;
-            }
-        }      
-
-        return false;
+        return SDLActivity.getMotionListener().onGenericMotion(this, event);
     }
+
+    @Override
+    public boolean onScale(ScaleGestureDetector detector) {
+        float scale = detector.getScaleFactor();
+        SDLActivity.onNativePinchUpdate(scale);
+        return true;
+    }
+
+    @Override
+    public boolean onScaleBegin(ScaleGestureDetector detector) {
+        SDLActivity.onNativePinchStart();
+        return true;
+    }
+
+    @Override
+    public void onScaleEnd(ScaleGestureDetector detector) {
+        SDLActivity.onNativePinchEnd();
+    }
+
 }

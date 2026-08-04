@@ -714,6 +714,9 @@ class SDLGenericMotionListener_API14 implements View.OnGenericMotionListener {
                         consumed = true;
                         break;
 
+                    // Amiberry-local: forward explicit mouse button transitions here so the touch
+                    // lifecycle fallback in SDLSurface.onTouch() stays suppressed. Re-apply when
+                    // syncing the SDL Java shim.
                     case MotionEvent.ACTION_BUTTON_PRESS:
                         x = getEventX(event, i);
                         y = getEventY(event, i);
