@@ -118,7 +118,16 @@ void update_leds(const int monid)
 	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
-	int led_width = ad->picasso_on ? (amiga_surface ? amiga_surface->w : mon->currentmode.native_width) : 640;
+	// WinUAE parity: the status line surface spans the full output width and
+	// the LED content is right-aligned inside it (TD_RIGHT), so it appears at
+	// the right edge of the screen at native size.
+	int led_width = 0;
+	if (ad->picasso_on) {
+		led_width = amiga_surface ? amiga_surface->w : mon->currentmode.native_width;
+	} else if (mon->amiga_window) {
+		int win_h = 0;
+		SDL_GetWindowSizeInPixels(mon->amiga_window, &led_width, &win_h);
+	}
 	if (led_width <= 0)
 		led_width = 640;
 

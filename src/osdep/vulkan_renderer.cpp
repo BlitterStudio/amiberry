@@ -33,6 +33,7 @@
 #include "imgui_osk.h"
 #include <imgui_impl_vulkan.h>
 #include "on_screen_joystick.h"
+#include "statusline.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -1062,7 +1063,7 @@ bool VulkanRenderer::render_frame(int monid, int /*mode*/, int /*immediate*/)
 	slot.exclusive_fullscreen = isfullscreen() > 0;
 	slot.desktop_width = mon->desktop_width;
 	slot.desktop_height = mon->desktop_height;
-	if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
+	if (!mon->screen_is_picasso && crop_aspect > 0.0f) {
 		slot.desired_aspect = crop_aspect;
 	} else {
 		slot.desired_aspect = calculate_desired_aspect(mon);
@@ -1698,25 +1699,29 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 			m_graphics_pipeline_layout, 0, 1, &m_osd_descriptor_set, 0, nullptr);
 
-		// Position OSD at the bottom of the render area, stretched to full width
+		// WinUAE parity: the status line is an unscaled overlay positioned in
+		// output pixels, not part of the scaled Amiga image.
 		const float osd_w = static_cast<float>(m_osd_width);
 		const float osd_h = static_cast<float>(m_osd_height);
-		const float area_w = static_cast<float>(draw_scissor.extent.width);
-		const float area_h = static_cast<float>(draw_scissor.extent.height);
+		int slx = 0, sly = 0;
+		statusline_getpos(slot.monid, &slx, &sly, drawable_w, drawable_h);
 
-		// Scale height to match width scaling (preserve LED aspect ratio)
-		const float scale_x = area_w / osd_w;
-		const float scaled_h = osd_h * scale_x;
+		// statusline_getpos positions the LED bar (TD_TOTAL_HEIGHT * mult),
+		// but the surface also carries a message area above it. Anchor the
+		// LED bar at the returned position and let the message extend up.
+		const int led_h = TD_TOTAL_HEIGHT * (statusline_get_multiplier(slot.monid) / 100);
 
 		VkViewport osd_viewport{};
-		osd_viewport.x = static_cast<float>(draw_scissor.offset.x);
-		osd_viewport.y = static_cast<float>(draw_scissor.offset.y) + area_h - scaled_h;
-		osd_viewport.width = area_w;
-		osd_viewport.height = scaled_h;
+		osd_viewport.x = static_cast<float>(slx);
+		osd_viewport.y = static_cast<float>(sly - (static_cast<int>(osd_h) - led_h));
+		osd_viewport.width = osd_w;
+		osd_viewport.height = osd_h;
 		osd_viewport.minDepth = 0.0f;
 		osd_viewport.maxDepth = 1.0f;
 
-		VkRect2D osd_scissor = draw_scissor;
+		VkRect2D osd_scissor{};
+		osd_scissor.offset = { 0, 0 };
+		osd_scissor.extent = { static_cast<uint32_t>(drawable_w), static_cast<uint32_t>(drawable_h) };
 		vkCmdSetViewport(command_buffer, 0, 1, &osd_viewport);
 		vkCmdSetScissor(command_buffer, 0, 1, &osd_scissor);
 

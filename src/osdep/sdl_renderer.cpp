@@ -179,7 +179,7 @@ void SDLRenderer::set_scaling(int monid, const uae_prefs* p, int w, int h)
 		int output_width = 0;
 		int output_height = 0;
 		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &output_width, &output_height);
-		float desired_aspect = ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && crop_aspect > 0.0f)
+		float desired_aspect = (crop_aspect > 0.0f)
 			? crop_aspect : calculate_desired_aspect(mon);
 		desired_aspect = amiberry_gfx_fullscreen_framebuffer_aspect(desired_aspect,
 			output_width, output_height, mon->desktop_width, mon->desktop_height);
@@ -388,15 +388,25 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
 		{
-			int slx, sly, dst_w, dst_h;
-			SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &dst_w, &dst_h, nullptr);
-			if (dst_w == 0 || dst_h == 0) {
-				SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
-			}
-			statusline_getpos(monid, &slx, &sly, dst_w, dst_h);
-			SDL_FRect dst_osd = { static_cast<float>(slx), static_cast<float>(sly),
-				static_cast<float>(mon->statusline_surface->w), static_cast<float>(mon->statusline_surface->h) };
-			SDL_RenderTexture(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
+		// WinUAE parity: the status line is an unscaled overlay positioned in
+		// output pixels. Temporarily bypass the logical presentation transform
+		// used for the scaled Amiga image.
+		int slx, sly, out_w, out_h;
+		SDL_GetCurrentRenderOutputSize(mon->amiga_renderer, &out_w, &out_h);
+		statusline_getpos(monid, &slx, &sly, out_w, out_h);
+		// statusline_getpos positions the LED bar (TD_TOTAL_HEIGHT * mult),
+		// but the surface also carries a message area above it. Anchor the
+		// LED bar at the returned position and let the message extend up.
+		const int led_h = TD_TOTAL_HEIGHT * (statusline_get_multiplier(monid) / 100);
+		SDL_FRect dst_osd = { static_cast<float>(slx),
+			static_cast<float>(sly - (mon->statusline_surface->h - led_h)),
+			static_cast<float>(mon->statusline_surface->w), static_cast<float>(mon->statusline_surface->h) };
+		int lw = 0, lh = 0;
+		SDL_ScaleMode lmode = SDL_SCALEMODE_NEAREST;
+		SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, &lmode);
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+		SDL_RenderTexture(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
+		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, lw, lh, lmode);
 		}
 
 		render_vkbd(monid);

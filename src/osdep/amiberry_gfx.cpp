@@ -1771,6 +1771,33 @@ static void configure_render_rects(const int monid, const int w, const int h, co
 	else if (!currprefs.gfx_auto_crop) {
 		rq = { dx, dy, scaled_w, scaled_h };
 		cr = { dx, dy, w, h };
+		renderer->crop_aspect = 0.0f;
+		// WinUAE parity (od-win32/win32_scaler.cpp, AUTOSCALE_STATIC_NOMINAL):
+		// in full-window mode scale from the nominal visible area instead of
+		// the full overscan frame, presented at 4:3.
+		if (isfullscreen() < 0 && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA) {
+			const int hs = currprefs.gfx_resolution;
+			const int vs = currprefs.gfx_vresolution;
+			int cx = 28 << hs;
+			int cy = 10 << vs;
+			int cw = w - (40 << hs);
+			int ch = h - (20 << vs);
+			if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
+				cx -= 4 << hs;
+				cy -= 2 << vs;
+				cw += 8 << hs;
+				ch += 4 << vs;
+			} else if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
+				cx -= 7 << hs;
+				cy -= 10 << vs;
+				cw += 14 << hs;
+				ch += 20 << vs;
+			}
+			if (cx >= 0 && cy >= 0 && cw > 0 && ch > 0 && cx + cw <= w && cy + ch <= h) {
+				cr = { cx, cy, cw, ch };
+				renderer->crop_aspect = 4.0f / 3.0f;
+			}
+		}
 	}
 }
 
@@ -2006,8 +2033,19 @@ void updatewinfsmode(const int monid, struct uae_prefs* p)
 
 #ifdef AMIBERRY
 	const AmigaMonitor* mon = &AMonitors[monid];
-	if (!mon->screen_is_picasso)
+	if (!mon->screen_is_picasso) {
 		force_auto_crop = true;
+		// Mode switches (windowed <-> full-window) do not change the buffer
+		// size, so target_graphics_buffer_update() would keep stale rects.
+		if (mon->screen_is_initialized && get_renderer(monid)) {
+			SDL_Surface* surf = get_amiga_surface(monid);
+			if (surf && surf->w > 0 && surf->h > 0) {
+				int sw = 0, sh = 0;
+				compute_scaled_dimensions(surf->w, surf->h, false, sw, sh);
+				configure_render_rects(monid, surf->w, surf->h, sw, sh, false);
+			}
+		}
+	}
 #endif
 }
 

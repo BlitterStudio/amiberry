@@ -581,7 +581,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	// in crop_aspect, accounting for resolution mode and NTSC correction.
 	// Use it instead of the fixed 4:3 that only applies to the full uncropped frame.
 	float desired_aspect;
-	if ((currprefs.gfx_auto_crop || currprefs.gfx_manual_crop) && !mon->screen_is_picasso && crop_aspect > 0.0f) {
+	if (!mon->screen_is_picasso && crop_aspect > 0.0f) {
 		desired_aspect = crop_aspect;
 	} else {
 		desired_aspect = calculate_desired_aspect(mon);
@@ -870,7 +870,27 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	render_software_cursor(monid, final_rect.x, glDestY, final_rect.w, final_rect.h);
 	int glBezelY = drawableHeight - bezelDisplayY - bezelDisplayH;
 	render_bezel(bezelDisplayX, glBezelY, bezelDisplayW, bezelDisplayH);
-	render_osd(monid, final_rect.x, glDestY, final_rect.w, final_rect.h);
+	{
+		// WinUAE parity: the status line is an unscaled overlay positioned in
+		// output pixels, not part of the scaled Amiga image.
+		int osd_x = final_rect.x;
+		int osd_y = glDestY;
+		int osd_w = final_rect.w;
+		int osd_h = final_rect.h;
+		if (mon->statusline_surface) {
+			int slx = 0, sly = 0;
+			statusline_getpos(monid, &slx, &sly, drawableWidth, drawableHeight);
+			osd_w = mon->statusline_surface->w;
+			osd_h = mon->statusline_surface->h;
+			osd_x = slx;
+			// statusline_getpos positions the LED bar (TD_TOTAL_HEIGHT * mult),
+			// but the surface also carries a message area above it. Anchor the
+			// LED bar at the returned position and let the message extend up.
+			const int led_h = TD_TOTAL_HEIGHT * (statusline_get_multiplier(monid) / 100);
+			osd_y = drawableHeight - sly - led_h;
+		}
+		render_osd(monid, osd_x, osd_y, osd_w, osd_h);
+	}
 
 	render_vkbd(monid);
 	render_onscreen_joystick(monid);
