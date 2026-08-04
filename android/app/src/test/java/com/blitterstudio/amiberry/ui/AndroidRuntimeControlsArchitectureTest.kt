@@ -625,13 +625,13 @@ class AndroidRuntimeControlsArchitectureTest {
 	}
 
 	@Test
-	fun `Android SDL Java shim includes SDL 3_4_12 reliability fixes`() {
+	fun `Android SDL Java shim includes SDL 3_4_14 reliability fixes`() {
 		val hidDeviceUsb = File("src/main/java/org/libsdl/app/HIDDeviceUSB.java").readText()
 		val surface = File("src/main/java/org/libsdl/app/SDLSurface.java").readText()
 		val sensorManager = File("src/main/java/org/libsdl/app/SDLSensorManager.java").readText()
 
 		assertTrue(
-			"USB serial lookup should tolerate every exception handled by SDL 3.4.12.",
+			"USB serial lookup should tolerate every exception handled by SDL 3.4.14.",
 			hidDeviceUsb.contains("catch (Exception exception)")
 		)
 		assertFalse(
