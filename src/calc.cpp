@@ -499,7 +499,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
     int i;
 	bool ok = false;
 
-    vals[0] = 0;
+    vals[0] = _T('\0');
 	// While there are input tokens left
     while(strpos < strend)  {
 
@@ -593,7 +593,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
 					*outval = val;
                 if (outstring) {
                     if (vals[0] && countof(vals) > maxlen && _tcslen(vals) >= maxlen) {
-                        vals[maxlen] = 0;
+                        vals[maxlen] = _T('\0');
                     }
                     _tcscpy(outstring, vals[0] ? vals : _T(""));
                 }
