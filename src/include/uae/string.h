@@ -123,7 +123,7 @@
 #define uaetcslen SDL_strlen
 #endif
 
-static size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
+static size_t uae_tcslcpy(TCHAR *dst, const TCHAR *src, size_t size)
 {
 	if (size == 0) {
 		return 0;
