@@ -368,7 +368,11 @@ void render_panel_display() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-        ShowHelpMarker("Emulated Amiga horizontal resolution: LowRes (320px), HighRes (640px), or SuperHighRes (1280px). This does not change the host display mode. Disabled when resolution autoswitch is enabled");
+        ShowHelpMarker("Sets the internal rendering pipeline's pixel mapping relative to the Amiga's video output.\n"
+            "LoRes \xE2\x80\x94 every rendered pixel equals 1 Amiga lores pixel (fastest; hires content is rendered at half resolution).\n"
+            "HiRes \xE2\x80\x94 lores pixels are rendered as 2 hires pixels, hires pixels map 1:1 (full quality; recommended).\n"
+            "SuperHiRes \xE2\x80\x94 rarely needed; used mainly for doubled-scanned AGA modes.\n"
+            "This does not change the host display mode. Disabled when resolution autoswitch is enabled.");
         if (!resolution_enabled) ImGui::EndDisabled();
 
         ImGui::TableNextColumn();
@@ -439,10 +443,11 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-    ShowHelpMarker("Automatically adjust Amiberry's internal render resolution and line mode to match the Amiga screen. "
-        "This does not change the host display resolution or refresh rate. Always On follows the highest resolution "
-        "present in each frame. Percentage values require the dominant resolution to cover at least that share of "
-        "the frame; lower percentages switch more readily.");
+    ShowHelpMarker("Automatically match the internal render resolution to the Amiga's current screen mode each frame.\n"
+                "Always On \xE2\x80\x94 immediately follow whichever resolution appears in the frame.\n"
+                "Percentage thresholds (10%/33%/66%) \xE2\x80\x94 only switch when the dominant resolution covers at least that share of the frame; lower values switch more readily.\n"
+                "Caveats: mode switches take 1 frame (brief visual glitch), AGA can have \xE2\x80\x9Chires\xE2\x80\x9D pixels even in lores mode,\n"
+                "screenshots capture whichever resolution was active, and shader effects may behave differently between resolutions.");
 
     ImGui::Spacing();
 
