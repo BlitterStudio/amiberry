@@ -151,6 +151,8 @@
     <string name="action_import_rom">Import ROM</string>
     <string name="action_import_roms">Import ROMs</string>
     <string name="action_import_rom_folder">Import ROM folder</string>
+    <string name="action_import_files">Import files</string>
+    <string name="action_import_folder">Import folder</string>
     <string name="file_manager_import_category">Import %1$s</string>
     <string name="configurations_empty_cta">Create Initial Configuration</string>
     <string name="quick_start_amiga_model">Amiga Model</string>

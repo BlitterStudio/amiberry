@@ -28,32 +28,33 @@ class FileManagerScreenArchitectureTest {
 	}
 
 	@Test
-	fun `ROM import offers both file and recursive folder pickers`() {
+	fun `import offers both file and recursive folder pickers for all categories`() {
 		val screen = source()
 
 		assertTrue(
-			"File Manager ROM import should preserve batch selection.",
+			"File Manager import should preserve batch selection.",
 			screen.contains("ActivityResultContracts.OpenMultipleDocuments()")
 		)
 		assertTrue(
-			"ROM users should be able to select a directory tree once.",
+			"Users should be able to select a directory tree for any category.",
 			screen.contains("ActivityResultContracts.OpenDocumentTree()")
 		)
 		assertTrue(
-			"The selected ROM tree should be imported through the view model.",
-			screen.contains("viewModel.importFolder(uri, FileCategory.ROMS)")
+			"The selected folder should be imported through the view model for the current category.",
+			screen.contains("viewModel.importFolder(uri, currentCategory)")
 		)
-		assertTrue(screen.contains("R.string.action_import_roms"))
+		assertTrue(screen.contains("R.string.action_import_files"))
 		assertFalse(
 			"File Manager should not reference the replaced ROM-file import label.",
 			screen.contains("R.string.action_import_rom_files")
 		)
-		assertTrue(screen.contains("R.string.action_import_rom_folder"))
+		assertTrue(screen.contains("R.string.action_import_folder"))
 	}
 
 	@Test
-	fun `ROM import wording distinguishes batch and singular actions`() {
-		assertEquals("Import ROMs", stringResourceValue("action_import_roms"))
+	fun `import wording is generic across categories`() {
+		assertEquals("Import files", stringResourceValue("action_import_files"))
+		assertEquals("Import folder", stringResourceValue("action_import_folder"))
 		assertEquals("Import ROM", stringResourceValue("action_import_rom"))
 		assertNull(stringResourceValue("action_import_rom_files"))
 	}
@@ -63,10 +64,32 @@ class FileManagerScreenArchitectureTest {
 		val screen = source()
 
 		assertTrue(
-			"LazyColumn content should retain 16dp horizontal, 8dp top, and 120dp bottom scroll clearance.",
+			"LazyColumn should use weight(1f) to fill remaining vertical space.",
+			Regex("""LazyColumn\(\s*modifier = Modifier\.weight\(1f\)""").containsMatchIn(screen)
+		)
+		assertTrue(
+			"LazyColumn content should retain 16dp horizontal, 4dp top, and 80dp bottom scroll clearance.",
 			Regex(
-				"""LazyColumn\(\s*contentPadding = PaddingValues\(\s*start = 16\.dp,\s*top = 8\.dp,\s*end = 16\.dp,\s*bottom = 120\.dp\s*\)"""
+				"""contentPadding = PaddingValues\(\s*start = 16\.dp,\s*top = 4\.dp,\s*end = 16\.dp,\s*bottom = 80\.dp\s*\)"""
 			).containsMatchIn(screen)
+		)
+	}
+
+	@Test
+	fun `storage path is shown in top bar subtitle not a separate card`() {
+		val screen = source()
+
+		assertTrue(
+			"TopAppBar should show the storage path as a subtitle.",
+			screen.contains("viewModel.getStoragePath()")
+		)
+		assertFalse(
+			"The storage path OutlinedCard should be removed from the body.",
+			Regex("""OutlinedCard\([^{]*\{[^{]*getStoragePath""").containsMatchIn(screen)
+		)
+		assertTrue(
+			"A copy-path action should remain accessible from the top bar.",
+			screen.contains("clipboardLabelPath") && screen.contains("Icons.Default.ContentCopy")
 		)
 	}
 

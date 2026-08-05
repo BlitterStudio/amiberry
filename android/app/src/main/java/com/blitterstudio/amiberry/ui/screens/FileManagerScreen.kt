@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Refresh
@@ -42,7 +41,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryScrollableTabRow
@@ -64,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +72,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
@@ -94,7 +93,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
 	var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-	var showRomImportMenu by remember { mutableStateOf(false) }
+	var showImportMenu by remember { mutableStateOf(false) }
 
 	val tabs = listOf(
 		TabInfo(FileCategory.ROMS, stringResource(R.string.file_manager_tab_roms), Icons.Default.Memory),
@@ -148,19 +147,15 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			viewModel.importFiles(uris, currentCategory)
 		}
 	}
-	val romFolderPickerLauncher = rememberLauncherForActivityResult(
+	val folderPickerLauncher = rememberLauncherForActivityResult(
 		contract = ActivityResultContracts.OpenDocumentTree()
 	) { uri ->
 		if (uri != null && !showProgress) {
-			viewModel.importFolder(uri, FileCategory.ROMS)
+			viewModel.importFolder(uri, currentCategory)
 		}
 	}
 	val openImportPicker = {
-		if (currentCategory == FileCategory.ROMS) {
-			showRomImportMenu = true
-		} else {
-			filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
-		}
+		showImportMenu = true
 	}
 
 	LaunchedEffect(importResult) {
@@ -174,8 +169,31 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
 			TopAppBar(
-				title = { Text(stringResource(R.string.file_manager_title)) },
+				title = {
+					Column {
+						Text(stringResource(R.string.file_manager_title))
+						Text(
+							text = viewModel.getStoragePath(),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant,
+							maxLines = 1,
+							overflow = TextOverflow.Ellipsis
+						)
+					}
+				},
 				actions = {
+					IconButton(
+						onClick = {
+							val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+							clipboard.setPrimaryClip(ClipData.newPlainText(clipboardLabelPath, viewModel.getStoragePath()))
+							scope.launch { snackbarHostState.showSnackbar(pathCopiedMessage) }
+						}
+					) {
+						Icon(
+							Icons.Default.ContentCopy,
+							contentDescription = stringResource(R.string.file_manager_copy_path)
+						)
+					}
 					IconButton(
 						onClick = { viewModel.rescan() },
 						enabled = !showProgress
@@ -217,23 +235,23 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					}
 				)
 				DropdownMenu(
-					expanded = showRomImportMenu,
-					onDismissRequest = { showRomImportMenu = false }
+					expanded = showImportMenu,
+					onDismissRequest = { showImportMenu = false }
 				) {
 					DropdownMenuItem(
-						text = { Text(stringResource(R.string.action_import_roms)) },
+						text = { Text(stringResource(R.string.action_import_files)) },
 						leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
 						onClick = {
-							showRomImportMenu = false
-							filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+							showImportMenu = false
+							filePickerLauncher.launch(FilePickerFilters.mimeTypesFor(currentCategory))
 						}
 					)
 					DropdownMenuItem(
-						text = { Text(stringResource(R.string.action_import_rom_folder)) },
+						text = { Text(stringResource(R.string.action_import_folder)) },
 						leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
 						onClick = {
-							showRomImportMenu = false
-							romFolderPickerLauncher.launch(null)
+							showImportMenu = false
+							folderPickerLauncher.launch(null)
 						}
 					)
 				}
@@ -246,61 +264,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				.padding(innerPadding)
 		) {
 			StoragePermissionBanner(
-				modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+				modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
 				onMessage = { message ->
 					scope.launch { snackbarHostState.showSnackbar(actionMessage(message)) }
 				}
 			)
-
-			OutlinedCard(
-				modifier = Modifier
-					.fillMaxWidth()
-					.padding(horizontal = 16.dp, vertical = 8.dp)
-			) {
-				Row(
-					modifier = Modifier
-						.fillMaxWidth()
-						.padding(horizontal = 12.dp, vertical = 8.dp),
-					verticalAlignment = Alignment.CenterVertically,
-					horizontalArrangement = Arrangement.SpaceBetween
-				) {
-					Column(modifier = Modifier.weight(1f)) {
-						Row(verticalAlignment = Alignment.CenterVertically) {
-							Icon(
-								Icons.Default.FolderOpen,
-								contentDescription = null,
-								modifier = Modifier.size(16.dp)
-							)
-							Spacer(modifier = Modifier.width(6.dp))
-							Text(
-								stringResource(R.string.file_manager_app_storage),
-								style = MaterialTheme.typography.labelMedium
-							)
-						}
-						Text(
-							text = viewModel.getStoragePath(),
-							style = MaterialTheme.typography.bodySmall,
-							fontFamily = FontFamily.Monospace,
-							color = MaterialTheme.colorScheme.onSurfaceVariant,
-							maxLines = 1
-						)
-					}
-
-					IconButton(
-						onClick = {
-							val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-							clipboard.setPrimaryClip(ClipData.newPlainText(clipboardLabelPath, viewModel.getStoragePath()))
-							scope.launch { snackbarHostState.showSnackbar(pathCopiedMessage) }
-						}
-					) {
-						Icon(
-							Icons.Default.ContentCopy,
-							contentDescription = stringResource(R.string.file_manager_copy_path),
-							modifier = Modifier.size(18.dp)
-						)
-					}
-				}
-			}
 
 			SecondaryScrollableTabRow(
 				selectedTabIndex = selectedTab,
@@ -324,7 +292,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					onValueChange = { searchQuery = it },
 					modifier = Modifier
 						.fillMaxWidth()
-						.padding(horizontal = 16.dp, vertical = 4.dp),
+						.padding(horizontal = 16.dp, vertical = 2.dp),
 					placeholder = { Text(stringResource(R.string.search_placeholder)) },
 					leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
 					trailingIcon = {
@@ -354,7 +322,8 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				val searchHasNoResults = effectiveSearchQuery.isNotBlank() && allFiles.isNotEmpty()
 				Box(
 					modifier = Modifier
-						.fillMaxSize()
+						.weight(1f)
+						.fillMaxWidth()
 						.padding(32.dp),
 					contentAlignment = Alignment.Center
 				) {
@@ -414,13 +383,14 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			} else {
 				LazyColumn(
+					modifier = Modifier.weight(1f),
 					contentPadding = PaddingValues(
 						start = 16.dp,
-						top = 8.dp,
+						top = 4.dp,
 						end = 16.dp,
-						bottom = 120.dp
+						bottom = 80.dp
 					),
-					verticalArrangement = Arrangement.spacedBy(6.dp)
+					verticalArrangement = Arrangement.spacedBy(4.dp)
 				) {
 					items(files, key = { it.path }) { file ->
 						FileItem(
@@ -443,7 +413,7 @@ private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Un
 		Row(
 			modifier = Modifier
 				.fillMaxWidth()
-				.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
+				.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
 			verticalAlignment = Alignment.CenterVertically
 		) {
 			val icon = when (file.category) {
@@ -456,7 +426,7 @@ private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Un
 			Icon(
 				icon,
 				contentDescription = null,
-				modifier = Modifier.size(28.dp),
+				modifier = Modifier.size(24.dp),
 				tint = MaterialTheme.colorScheme.primary
 			)
 			Spacer(modifier = Modifier.width(12.dp))
