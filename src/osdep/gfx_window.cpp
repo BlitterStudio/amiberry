@@ -468,6 +468,14 @@ void close_windows(struct AmigaMonitor* mon, const bool force_destroy_fullwindow
 		reset_sound();
 
 #ifdef AMIBERRY
+	// Reset drawbuffer state that may point into the surface pixel buffer
+	// before destroying the surface (see doInit for the full explanation).
+	avidinfo->drawbuffer.bufmem = nullptr;
+	avidinfo->drawbuffer.width_allocated = 0;
+	avidinfo->drawbuffer.height_allocated = 0;
+	avidinfo->drawbuffer.rowbytes = 0;
+	avidinfo->drawbuffer.locked = false;
+
 	if (mon->monitor_id == 0) {
 		SDL_DestroySurface(amiga_surface);
 		amiga_surface = nullptr;
@@ -1251,6 +1259,22 @@ bool doInit(AmigaMonitor* mon)
 	{
 		if (surface_ref)
 		{
+			// The drawbuffer's vram_buffer mode stores bufmem/width_allocated/
+			// height_allocated/rowbytes as direct references into the surface's
+			// pixel buffer (set by lockscr).  Reset those fields before freeing
+			// the surface so no stale pointers or dimensions survive the
+			// reallocation.  Without this, a subsequent flush_clear_screen or
+			// unlockscr dirty-rect calculation can use the old (larger)
+			// dimensions against the new (smaller) surface, overflowing the
+			// pixel buffer and corrupting heap metadata — the
+			// "free(): invalid next size" crash when switching between RTG
+			// (e.g. ZZ9000) and native PAL modes (issue #2266).
+			avidinfo->drawbuffer.bufmem = nullptr;
+			avidinfo->drawbuffer.width_allocated = 0;
+			avidinfo->drawbuffer.height_allocated = 0;
+			avidinfo->drawbuffer.rowbytes = 0;
+			avidinfo->drawbuffer.locked = false;
+
 			SDL_DestroySurface(surface_ref);
 			surface_ref = nullptr;
 		}

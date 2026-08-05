@@ -5572,6 +5572,23 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 		return;
 	}
 
+	// Guard against writing past the destination buffer.  vidinfo->maxwidth
+	// and maxheight are set by gfx_lock_picasso2 from the current surface
+	// dimensions.  If the RTG board's internal mode (state->Width/Height)
+	// is larger than the surface — e.g. during a mode switch where the
+	// surface hasn't been recreated yet — clamp the write to the surface
+	// bounds to prevent heap corruption (issue #2266).
+	if (vidinfo->maxwidth > 0 && dx + width > vidinfo->maxwidth) {
+		width = vidinfo->maxwidth - dx;
+		if (width <= 0) {
+			return;
+		}
+		endx = x + width;
+	}
+	if (vidinfo->maxheight > 0 && dy >= vidinfo->maxheight) {
+		return;
+	}
+
 	uae_u8 *src2 = src + y * srcbytesperrow;
 	uae_u8 *dst2 = dst + dy * dstbytesperrow;
 
