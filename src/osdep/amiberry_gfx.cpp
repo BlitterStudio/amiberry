@@ -1188,12 +1188,23 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 			if (surface && clamped_y_end >= surface->h) {
 				clamped_y_end = surface->h - 1;
 			}
-			
+
+			// Clamp width to the current surface width as well.  width_allocated
+			// is set by lockscr from the surface that was current at lock time; if
+			// the surface has since been recreated (e.g. RTG→native switch in
+			// doInit), width_allocated may still reflect the old, larger surface.
+			// An unclamped dirty_rect.w feeds SDL_UpdateTexture / glTexSubImage2D
+			// which read past the end of the new surface's pixel buffer.
+			int clamped_w = vb->width_allocated;
+			if (surface && clamped_w > surface->w) {
+				clamped_w = surface->w;
+			}
+
 			if (clamped_y_end >= y_start) {
 				SDL_Rect dirty_rect;
 				dirty_rect.x = 0;
 				dirty_rect.y = y_start;
-				dirty_rect.w = vb->width_allocated;
+				dirty_rect.w = clamped_w;
 				dirty_rect.h = clamped_y_end - y_start + 1;
 
 				add_dirty_rect(mon, dirty_rect);
