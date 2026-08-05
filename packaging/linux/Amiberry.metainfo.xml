@@ -67,7 +67,12 @@
         </screenshot>
     </screenshots>
     <releases>
-        <release version="8.2.2" date="2026-06-19">
+            <release version="8.3.0" date="2026-08-05">
+                <description>
+                    <p>Feature release: ZZ9000 RTG emulation, RP9 package support, a new Global Settings panel, configuration category grouping, and separate GUI window on Windows. Extensive host-only cursor fixes (hotspot, jumps, alignment across native/P96 modes), autocrop improvements (non-black border detection, live refresh, libretro crop overscan), and Android UI/UX polish (touch tap-to-click reliability, Files panel layout, native shader selection, touch trackpad mouse controls, ADPF adaptive CPU tuning, config save-as UX). Performance improvements on RPi4 (KMSDRM throughput, Copper overhead, PGO), renderer/machdep/P96 hot paths, and PPC QEMU flush tuning. KMSDRM display timing and GUI resume fixes, SCSI/SDMAC/53C710 emulation fixes, networking fixes (Ariadne II/X-Surf/Ethernet/serial), libretro audio and ROM lookup fixes, 68030 MMU JIT fixes, and SDL updated to 3.4.12. Merged latest WinUAE updates, added CI for libretro buildbot, and Capsimg 5.2 support.</p>
+                </description>
+            </release>
+            <release version="8.2.2" date="2026-06-19">
             <description>
                 <p>Stable bugfix release: fixed libretro audio starvation and MHI playback backpressure, improved RTG/P96 presentation and dirty tracking, corrected raw CD reads and OS4 examinedata fallback, reduced PPC QEMU JIT flush slowdowns, and improved shutdown, KMSDRM mouse capture, bounded string/config saves, and derivative-distro packaging.</p>
             </description>

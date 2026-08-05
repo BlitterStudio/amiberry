@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.2.2
+Version:        8.3.0
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -88,6 +88,18 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Wed Aug 05 2026 Dimitris Panokostas <midwan@gmail.com> - 8.3.0-1
+- Feature release v8.3.0
+- Added ZZ9000 RTG emulation, RP9 package support, Global Settings panel, and configuration category grouping
+- Separate GUI window on Windows; host-only cursor hotspot, jumps, and alignment fixes
+- Autocrop improvements: non-black border detection, live refresh, libretro crop overscan
+- Android: touch tap-to-click, Files panel layout, native shader selection, touch trackpad mouse, ADPF adaptive CPU tuning, config save-as UX
+- Performance: RPi4 KMSDRM/Copper/PGO, renderer/machdep/P96 hot paths, PPC QEMU flush tuning
+- KMSDRM display timing and GUI resume fixes; SCSI/SDMAC/53C710 emulation fixes
+- Networking: Ariadne II, X-Surf, Ethernet receive, and serial RBF fixes
+- Libretro audio starvation, ROM lookup, and build fixes; SDL updated to 3.4.12
+- Merged latest WinUAE updates; added libretro buildbot CI; Capsimg 5.2 support
+
 * Fri Jun 19 2026 Dimitris Panokostas <midwan@gmail.com> - 8.2.2-1
 - Stable v8.2.2 bugfix release
 - Fixed libretro/MHI audio starvation and playback backpressure, raw CD reads, and OS4 examinedata fallback
