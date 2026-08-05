@@ -624,8 +624,8 @@ void render_panel_ram() {
                         bool is_selected = (memoryboards[i].manufacturer == rb->manufacturer &&
                                           memoryboards[i].product == rb->product);
                         // WinUAE format: "Manufacturer Name"
-                        snprintf(board_label, sizeof(board_label), "%s %s",
-                                 memoryboards[i].man, memoryboards[i].name);
+                        snprintf(board_label, sizeof(board_label), "%s %s##ram%d",
+                                 memoryboards[i].man, memoryboards[i].name, i);
                         if (ImGui::Selectable(board_label, is_selected)) {
                             // WinUAE sync: Handle autoconfig vs manual boards
                             if (memoryboards[i].manufacturer != 0xffff) {

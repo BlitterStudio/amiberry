@@ -277,9 +277,11 @@ static void RenderDrawBridge()
             bool is_selected = (changed_prefs.drawbridge_driver == i);
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            ImGui::PushID(i);
             if (ImGui::Selectable(driver_list[i].name, is_selected)) {
                  changed_prefs.drawbridge_driver = i;
             }
+            ImGui::PopID();
             if (is_selected) {
                 ImGui::PopStyleColor();
                 ImGui::SetItemDefaultFocus();

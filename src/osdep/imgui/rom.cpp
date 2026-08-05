@@ -80,10 +80,12 @@ static bool RomCombo(const char* label, char* current_path, int max_len, std::ve
 				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
 			}
 
+			ImGui::PushID(entry.path.c_str());
 			if (ImGui::Selectable(entry.name.c_str(), is_selected)) {
 				strncpy(current_path, entry.path.c_str(), max_len);
 				value_changed = true;
 			}
+			ImGui::PopID();
 
 			if (is_selected)
 			{

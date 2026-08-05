@@ -21,11 +21,13 @@ static bool VectorCombo(const char* label, int* current_item, const std::vector<
 		for (int n = 0; n < items.size(); n++)
 		{
 			const bool is_selected = (*current_item == n);
+			ImGui::PushID(n);
 			if (ImGui::Selectable(items[n].c_str(), is_selected))
 			{
 				*current_item = n;
 				changed = true;
 			}
+			ImGui::PopID();
 			if (is_selected)
 				ImGui::SetItemDefaultFocus();
 		}
