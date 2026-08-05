@@ -60,7 +60,7 @@ static inline void amiberry_input_mousehack_cursor_hotspot(int pointer_x_offset,
 		*hotspot_x = amiberry_input_mousehack_hotspot_axis(pointer_x_offset, cursor_width, 1);
 	}
 	if (hotspot_y) {
-		*hotspot_y = amiberry_input_mousehack_hotspot_axis(pointer_y_offset, cursor_height, 2);
+		*hotspot_y = amiberry_input_mousehack_hotspot_axis(pointer_y_offset, cursor_height, 0);
 	}
 }
 

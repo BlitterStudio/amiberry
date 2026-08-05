@@ -5545,7 +5545,9 @@ static void hsync_handler_pre(bool onvsync)
 		/* reset light pen latch */
 		if (agnus_vb_active_end_line) {
 			lightpen_triggered = 0;
+			#ifndef AMIBERRY
 			sprite_0 = 0;
+			#endif
 		}
 
 		if (!lightpen_triggered && (bplcon0 & 8)) {

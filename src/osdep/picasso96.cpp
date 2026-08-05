@@ -233,8 +233,6 @@ static void destroy_p96_host_cursor()
 		p96_cursor = nullptr;
 	}
 	clear_host_cursor_hotspot_compensation();
-	reset_native_cursor_hotspot_tracker();
-	reset_p96_cursor_hotspot_tracker();
 }
 #endif
 
@@ -2300,7 +2298,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 		int hiressprite = sprite_0_width / 16;
 		int ds = h * ((w + 15) / 16) * 4;
-		if (!sprite_0 || !mousehack_alive() || w > CURSORMAXWIDTH || h > CURSORMAXHEIGHT || !valid_address(src, ds)) {
+		if (!sprite_0 || w > CURSORMAXWIDTH || h > CURSORMAXHEIGHT || !valid_address(src, ds)) {
 			goto exit;
 		}
 		int yy = 0;

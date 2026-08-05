@@ -2792,14 +2792,14 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		x = (int)(x * fmx);
 		y = (int)(y * fmy);
 		x -= (int)(fdx * 1.0) - 0;
-		y -= (int)(fdy * 1.0) - 2;
+		#ifdef AMIBERRY
+			y -= (int)(fdy * 1.0);
+		#else
+			y -= (int)(fdy * 1.0) - 2;
+		#endif
 		int origin_x = 0;
 		int origin_y = 0;
 		const bool source_origin_valid = getgfxsourceorigin(monid, &origin_x, &origin_y);
-		// The source crop is the native screen origin. Destination centering is
-		// already part of fdx/fdy and must not move that origin (notably when a
-		// PAL laced image is letterboxed). Match the existing vertical input bias.
-		origin_y += 2;
 		bool axis_ob = false;
 		x = amiberry_input_clamp_native_axis(x, vidinfo->outbuffer->outwidth, &axis_ob);
 		ob |= axis_ob;
@@ -3121,12 +3121,13 @@ void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay
 
 static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_valid)
 {
+#ifdef AMIBERRY
 	if (mousehack_host_cursor_uses_hotspot) {
-		x -= mousehack_host_cursor_residual_x;
-		y -= mousehack_host_cursor_residual_y;
+		x -= mousehack_host_cursor_residual_x + mouseoffset_x + 1;
+		y -= mousehack_host_cursor_residual_y + mouseoffset_y;
 	} else {
 		x -= mouseoffset_x + 1;
-		y -= mouseoffset_y + 2;
+		y -= mouseoffset_y;
 	}
 	int screen_offset_x = 0;
 	int screen_offset_y = 0;
@@ -3140,7 +3141,7 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 		screen_offset_x = static_cast<uae_s16>(get_word(viewlord + 14)) * 2;
 		screen_offset_y = static_cast<uae_s16>(get_word(viewlord + 12)) * 2;
 	}
-	if (mousehack_host_cursor_uses_hotspot && mousehack_position_is_native) {
+	if (mousehack_position_is_native) {
 		if (screen_offset_valid) {
 			x += amiberry_input_native_mousehack_origin_compensation(
 				mousehack_native_source_origin_valid, screen_offset_x, mousehack_native_origin_x);
@@ -3150,6 +3151,10 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 		x += amiberry_input_native_mousehack_uncropped_lowres_x_compensation(
 			mousehack_native_source_origin_valid, detected_screen_resolution == RES_LORES);
 	}
+#else
+	x -= mouseoffset_x + 1;
+	y -= mouseoffset_y + 2;
+#endif
 
 	mousehack_enable ();
 	// Keep the coordinate delivered after native screen-origin and host-hotspot
