@@ -400,8 +400,8 @@ void render_panel_rtg() {
                 ? Displays[current_display - 1].monitorname : "Primary")) {
                 for (int i = 0; i < display_count; i++) {
                     char label[256];
-                    snprintf(label, sizeof(label), "%s%s", Displays[i].monitorname,
-                        Displays[i].primary ? " (Primary)" : "");
+                    snprintf(label, sizeof(label), "%s%s##disp%d", Displays[i].monitorname,
+                        Displays[i].primary ? " (Primary)" : "", i);
                     bool is_selected = (current_display == i + 1);
                     if (ImGui::Selectable(label, is_selected)) {
                         changed_prefs.gfx_apmode[APMODE_RTG].gfx_display = i + 1;
