@@ -523,21 +523,24 @@ static void test_pump_coordinator_click_and_deadline_ordering()
 	const TouchKey secondary{221, 922};
 	PumpCoordinator coordinator;
 
-	expect_no_actions(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(0)),
 		"the first pump must not retire a click");
 	expect_no_actions(coordinator.handle(down(primary, 0)),
 		"tap down must remain pending in the coordinator");
 	expect_single_action(coordinator.handle(up(primary, 20)),
 		ActionType::button_down, MouseButton::left,
 		"a click pulse must become an observable left down");
-	expect_single_action(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(30)),
+		"the click release must wait for the hold duration");
+	expect_single_action(coordinator.begin_pump(ns(61)),
 		ActionType::button_up, MouseButton::left,
-		"the click release must wait until the next pump boundary");
+		"the click release must fire after the hold duration elapses");
 
 	coordinator.handle(down(primary, 100, 0.0, 0.0, 0.10));
 	coordinator.handle(down(secondary, 110, 0.0, 0.0, 0.10));
-	expect_no_actions(coordinator.handle(up(primary, 509)),
-		"a queued terminal event must retire the pair without a button");
+	expect_single_action(coordinator.handle(up(primary, 509)),
+		ActionType::button_down, MouseButton::right,
+		"a two-finger tap under 400 ms must emit a right click");
 	expect_no_actions(coordinator.tick(ns(510)),
 		"a later deadline tick must not activate a retired right hold");
 }
@@ -551,7 +554,7 @@ static void test_pump_coordinator_neutralizes_pending_click()
 	expect_single_action(coordinator.neutralize(), ActionType::button_up,
 		MouseButton::left,
 		"neutralization must release a click that is waiting for the next pump");
-	expect_no_actions(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(100)),
 		"a neutralized click must not release twice on the next pump");
 }
 
@@ -567,15 +570,17 @@ static void test_pump_coordinator_preserves_queued_click_pulses()
 	expect_no_actions(coordinator.handle(up(key, 120)),
 		"the second queued tap must wait behind the active click pulse");
 
-	const auto next_pulse = coordinator.begin_pump();
+	const auto next_pulse = coordinator.begin_pump(ns(161));
 	expect(next_pulse.size() == 2
 		&& is_action(next_pulse[0], ActionType::button_up, MouseButton::left)
 		&& is_action(next_pulse[1], ActionType::button_down, MouseButton::left),
 		"a pump boundary must release the first tap before pressing the second");
-	expect_single_action(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(180)),
+		"the second tap must wait for its own hold duration");
+	expect_single_action(coordinator.begin_pump(ns(261)),
 		ActionType::button_up, MouseButton::left,
 		"the following pump boundary must release the second tap");
-	expect_no_actions(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(300)),
 		"all queued tap pulses must be retired after their final release");
 }
 
@@ -601,7 +606,7 @@ static void test_pump_coordinator_releases_clicks_before_unrelated_motion()
 		"unrelated motion must follow the queued click release without becoming a drag");
 	expect(coordinator.state() == State::one_finger,
 		"unrelated motion must not leak a false left-drag state");
-	expect_no_actions(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(400)),
 		"the unrelated contact must leave no click release for the next pump");
 	expect_no_actions(coordinator.handle(up(key, 340, 8.001, 0.0)),
 		"the moved unrelated contact must finish without another click");
@@ -621,7 +626,7 @@ static void test_pump_coordinator_releases_clicks_before_unrelated_motion()
 	expect_single_action(drag.handle(up(key, 120, 8.001, 0.0)),
 		ActionType::button_up, MouseButton::left,
 		"the seamless second-tap drag must release left when it finishes");
-	expect_no_actions(drag.begin_pump(),
+	expect_no_actions(drag.begin_pump(ns(200)),
 		"a second-tap drag takeover must consume the pending click release");
 
 	PumpCoordinator queued;
@@ -635,7 +640,7 @@ static void test_pump_coordinator_releases_clicks_before_unrelated_motion()
 		&& is_action(releases[1], ActionType::button_down, MouseButton::left)
 		&& is_action(releases[2], ActionType::button_up, MouseButton::left),
 		"an unrelated contact must preserve every queued tap in release/down order");
-	expect_no_actions(queued.begin_pump(),
+	expect_no_actions(queued.begin_pump(ns(500)),
 		"draining multiple queued taps must leave no delayed release");
 }
 
@@ -656,7 +661,7 @@ static void test_pump_coordinator_releases_click_before_pair_takeover()
 		"pair takeover must release the pending left click immediately");
 	expect(coordinator.state() == State::two_finger_pending,
 		"the accepted second finger must begin normal pair arbitration");
-	expect_no_actions(coordinator.begin_pump(),
+	expect_no_actions(coordinator.begin_pump(ns(200)),
 		"pair takeover must leave no pending click release for the next pump");
 	expect_no_actions(coordinator.tick(ns(509)),
 		"the pair must remain pending before its ordinary hold deadline");
@@ -675,7 +680,7 @@ static void test_nonowning_added_contact_terminates_before_overlay_capture()
 	PumpCoordinator coordinator;
 	coordinator.handle(down(primary, 0));
 	coordinator.handle(up(primary, 20));
-	coordinator.begin_pump();
+	coordinator.begin_pump(ns(61));
 	coordinator.handle(down(primary, 100));
 	coordinator.tick(ns(500));
 
@@ -731,6 +736,71 @@ static void test_nonowning_added_contact_drains_pending_pairs()
 		"a drained swipe-only pair must not activate right at the hold deadline");
 }
 
+static void test_two_finger_tap_emits_right_click()
+{
+	const TouchKey primary{252, 953};
+	const TouchKey secondary{252, 954};
+
+	Recognizer quick_tap;
+	begin_pair(quick_tap, primary, secondary, 10);
+	expect_single_action(quick_tap.handle(up(primary, 50, 0.0, 0.0, 0.10)),
+		ActionType::click_pulse, MouseButton::right,
+		"a quick two-finger tap must emit a right click pulse");
+	expect(quick_tap.state() == State::drain_until_all_up,
+		"the surviving contact after a two-finger tap must drain");
+	expect_no_actions(quick_tap.handle(up(secondary, 60, 0.0, 0.0, 0.10)),
+		"the second finger of a two-finger tap must emit no further action");
+	expect(quick_tap.state() == State::idle,
+		"a completed two-finger tap must return to idle");
+
+	Recognizer boundary_tap;
+	begin_pair(boundary_tap, primary, secondary, 10);
+	expect_single_action(boundary_tap.handle(up(primary, 409, 0.0, 0.0, 0.10)),
+		ActionType::click_pulse, MouseButton::right,
+		"a two-finger tap at 399 ms must still register as a right click");
+	expect(boundary_tap.state() == State::drain_until_all_up,
+		"a boundary two-finger tap survivor must drain");
+	boundary_tap.handle(up(secondary, 410, 0.0, 0.0, 0.10));
+
+	Recognizer too_slow;
+	begin_pair(too_slow, primary, secondary, 10);
+	expect_no_actions(too_slow.handle(up(primary, 411, 0.0, 0.0, 0.10)),
+		"a two-finger lift at 401 ms must not emit a right click");
+	expect(too_slow.state() == State::drain_until_all_up,
+		"a slow two-finger lift must drain without a click");
+	too_slow.handle(up(secondary, 420, 0.0, 0.0, 0.10));
+
+	Recognizer moved_pair;
+	begin_pair(moved_pair, primary, secondary, 10);
+	moved_pair.handle(motion(primary, 20, 8.001, 0.0, 0.0, 0.0, 0.10));
+	expect(moved_pair.state() == State::swipe_only,
+		"movement outside slop must disqualify the pair from a tap");
+	expect_no_actions(moved_pair.handle(up(primary, 50, 8.001, 0.0, 0.10)),
+		"a pair that moved outside slop must not emit a right click on lift");
+}
+
+static void test_pump_coordinator_two_finger_tap_right_click()
+{
+	const TouchKey primary{253, 955};
+	const TouchKey secondary{253, 956};
+	PumpCoordinator coordinator;
+
+	expect_no_actions(coordinator.handle(down(primary, 0, 0.0, 0.0, 0.10)),
+		"primary down must remain pending");
+	expect_no_actions(coordinator.handle(down(secondary, 10,
+		0.0, 0.0, 0.10)), "secondary down must begin two-finger arbitration");
+	expect_single_action(coordinator.handle(up(primary, 50, 0.0, 0.0, 0.10)),
+		ActionType::button_down, MouseButton::right,
+		"a two-finger tap must press right immediately");
+	expect_no_actions(coordinator.begin_pump(ns(60)),
+		"the right click release must wait for the hold duration");
+	expect_single_action(coordinator.begin_pump(ns(91)),
+		ActionType::button_up, MouseButton::right,
+		"the right click release must fire after the hold duration elapses");
+	expect_no_actions(coordinator.begin_pump(ns(100)),
+		"the right click must not release twice");
+}
+
 int main()
 {
 	test_identity_and_reordered_events();
@@ -754,5 +824,7 @@ int main()
 	test_pump_coordinator_releases_click_before_pair_takeover();
 	test_nonowning_added_contact_terminates_before_overlay_capture();
 	test_nonowning_added_contact_drains_pending_pairs();
+	test_two_finger_tap_emits_right_click();
+	test_pump_coordinator_two_finger_tap_right_click();
 	return failures == 0 ? 0 : 1;
 }

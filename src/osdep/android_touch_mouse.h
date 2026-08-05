@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <optional>
 #include <vector>
 
@@ -72,6 +73,7 @@ struct GestureProfile {
 	Timestamp hold_time_ns = 400000000ULL;
 	Timestamp double_tap_min_ns = 40000000ULL;
 	Timestamp double_tap_max_ns = 300000000ULL;
+	Timestamp click_hold_ns = 40000000ULL;
 	double movement_slop_dp = 8.0;
 	double double_tap_distance_dp = 100.0;
 	double gui_swipe_fraction = 0.15;
@@ -419,6 +421,23 @@ private:
 			return actions;
 		}
 
+		if (state_ == State::two_finger_pending) {
+			const bool tap = contact->tap_eligible
+				&& elapsed(fact.timestamp_ns, pair_started_at_)
+					< profile_.hold_time_ns;
+			if (tap)
+				actions.push_back(button_action(ActionType::click_pulse,
+					MouseButton::right));
+			contacts_.erase(contact);
+			recent_tap_.reset();
+			clear_motion_accumulators();
+			if (contacts_.empty())
+				finish_active_gesture();
+			else
+				state_ = State::drain_until_all_up;
+			return actions;
+		}
+
 		if (state_ == State::left_drag)
 			actions.push_back(button_action(ActionType::button_up, MouseButton::left));
 		else if (state_ == State::right_drag)
@@ -611,25 +630,33 @@ class PumpCoordinator {
 public:
 	explicit PumpCoordinator(GestureProfile profile = {})
 		: recognizer_(profile)
+		, profile_(profile)
 	{
 	}
 
-	std::vector<Action> begin_pump()
+	std::vector<Action> begin_pump(Timestamp now_ns)
 	{
-		if (pending_click_pulses_ == 0)
+		if (pending_pulses_.empty())
 			return {};
+		if (now_ns < pending_pulses_.front().release_at_ns)
+			return {};
+		const MouseButton button = pending_pulses_.front().button;
 		std::vector<Action> actions{
-			{ActionType::button_up, MouseButton::left, 0, 0}};
-		--pending_click_pulses_;
-		if (pending_click_pulses_ != 0)
-			actions.push_back({ActionType::button_down, MouseButton::left, 0, 0});
+			{ActionType::button_up, button, 0, 0}};
+		pending_pulses_.pop_front();
+		if (!pending_pulses_.empty()) {
+			pending_pulses_.front().release_at_ns = now_ns
+				+ profile_.click_hold_ns;
+			actions.push_back({ActionType::button_down,
+				pending_pulses_.front().button, 0, 0});
+		}
 		return actions;
 	}
 
 	std::vector<Action> handle(const TouchFact& fact)
 	{
 		const State previous_state = recognizer_.state();
-		auto actions = expand(recognizer_.handle(fact));
+		auto actions = expand(recognizer_.handle(fact), fact.timestamp_ns);
 		const State current_state = recognizer_.state();
 		const bool starts_unrelated_gesture =
 			(previous_state == State::idle
@@ -638,36 +665,38 @@ public:
 				&& current_state == State::two_finger_pending);
 		if (fact.phase != ContactPhase::down
 			|| !starts_unrelated_gesture
-			|| pending_click_pulses_ == 0)
+			|| pending_pulses_.empty())
 			return actions;
 
-		auto releases = drain_pending_click_pulses();
+		auto releases = drain_pending_pulses();
 		releases.insert(releases.end(), actions.begin(), actions.end());
 		return releases;
 	}
 
 	std::vector<Action> tick(Timestamp now_ns)
 	{
-		return expand(recognizer_.tick(now_ns));
+		return expand(recognizer_.tick(now_ns), now_ns);
 	}
 
 	std::vector<Action> neutralize()
 	{
 		auto actions = recognizer_.neutralize();
-		const bool releases_left = std::any_of(actions.begin(), actions.end(),
-			[](const Action& action) {
-				return action.type == ActionType::button_up
-					&& action.button == MouseButton::left;
-			});
-		if (pending_click_pulses_ != 0 && !releases_left)
-			actions.push_back({ActionType::button_up, MouseButton::left, 0, 0});
-		pending_click_pulses_ = 0;
+		for (const auto& pulse : pending_pulses_) {
+			const bool releases_this = std::any_of(actions.begin(),
+				actions.end(), [pulse](const Action& action) {
+					return action.type == ActionType::button_up
+						&& action.button == pulse.button;
+				});
+			if (!releases_this)
+				actions.push_back({ActionType::button_up, pulse.button, 0, 0});
+		}
+		pending_pulses_.clear();
 		return actions;
 	}
 
 	std::vector<Action> terminate_for_nonowning_contact(TouchKey key)
 	{
-		return expand(recognizer_.terminate_for_nonowning_contact(key));
+		return expand(recognizer_.terminate_for_nonowning_contact(key), 0);
 	}
 
 	void forget_recent_tap()
@@ -696,40 +725,49 @@ public:
 	}
 
 private:
-	std::vector<Action> drain_pending_click_pulses()
+	struct PendingPulse {
+		MouseButton button = MouseButton::none;
+		Timestamp release_at_ns = 0;
+	};
+
+	std::vector<Action> drain_pending_pulses()
 	{
 		std::vector<Action> actions;
-		while (pending_click_pulses_ != 0) {
-			actions.push_back({ActionType::button_up, MouseButton::left, 0, 0});
-			--pending_click_pulses_;
-			if (pending_click_pulses_ != 0)
+		while (!pending_pulses_.empty()) {
+			actions.push_back({ActionType::button_up,
+				pending_pulses_.front().button, 0, 0});
+			pending_pulses_.pop_front();
+			if (!pending_pulses_.empty())
 				actions.push_back({ActionType::button_down,
-					MouseButton::left, 0, 0});
+					pending_pulses_.front().button, 0, 0});
 		}
 		return actions;
 	}
 
-	std::vector<Action> expand(std::vector<Action> actions)
+	std::vector<Action> expand(std::vector<Action> actions,
+		Timestamp now_ns)
 	{
 		std::size_t output = 0;
 		for (std::size_t input = 0; input < actions.size(); ++input) {
 			const Action action = actions[input];
 			if (action.type == ActionType::click_pulse) {
-				if (pending_click_pulses_ == 0)
+				if (pending_pulses_.empty())
 					actions[output++] = {ActionType::button_down,
-						MouseButton::left, 0, 0};
-				++pending_click_pulses_;
+						action.button, 0, 0};
+				pending_pulses_.push_back({action.button,
+					now_ns + profile_.click_hold_ns});
 				continue;
 			}
 			if (action.type == ActionType::button_down
-				&& action.button == MouseButton::left
-				&& pending_click_pulses_ != 0) {
-				pending_click_pulses_ = 0;
+				&& !pending_pulses_.empty()
+				&& pending_pulses_.front().button == action.button) {
+				pending_pulses_.clear();
 				continue;
 			}
 			if (action.type == ActionType::button_up
-				&& action.button == MouseButton::left)
-				pending_click_pulses_ = 0;
+				&& !pending_pulses_.empty()
+				&& pending_pulses_.front().button == action.button)
+				pending_pulses_.clear();
 			actions[output++] = action;
 		}
 		actions.resize(output);
@@ -737,7 +775,8 @@ private:
 	}
 
 	Recognizer recognizer_;
-	std::size_t pending_click_pulses_ = 0;
+	GestureProfile profile_;
+	std::deque<PendingPulse> pending_pulses_;
 };
 
 } // namespace android_touch_mouse

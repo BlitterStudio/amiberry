@@ -475,7 +475,8 @@ static bool amiberry_android_route_touch_mouse(const SDL_Event& event)
 
 static void amiberry_android_touch_mouse_begin_pump()
 {
-	amiberry_android_apply_touch_mouse_actions(android_touch_mouse_coordinator.begin_pump(),
+	amiberry_android_apply_touch_mouse_actions(
+		android_touch_mouse_coordinator.begin_pump(SDL_GetTicksNS()),
 		android_touch_mouse_index);
 }
 
