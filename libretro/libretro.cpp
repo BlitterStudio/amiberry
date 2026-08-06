@@ -2333,6 +2333,25 @@ static libretro_crop_mode get_libretro_crop_mode()
 	return libretro_crop_mode::auto_crop;
 }
 
+static bool libretro_hdf_has_rdb(const char* path)
+{
+	if (!path || !*path)
+		return false;
+	FILE* f = fopen(path, "rb");
+	if (!f)
+		return false;
+	bool found = false;
+	unsigned char block[512];
+	for (int i = 0; i < 64 && !found; i++) {
+		if (fread(block, 1, sizeof block, f) != sizeof block)
+			break;
+		if (memcmp(block, "RDSK", 4) == 0)
+			found = true;
+	}
+	fclose(f);
+	return found;
+}
+
 static bool libretro_preserves_rp9_manifest_crop()
 {
 	return libretro_should_preserve_rp9_clip(
@@ -4178,7 +4197,10 @@ static void core_entry(void)
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "HDF image: %s\n", game_path);
 			// Format: hardfile2=rw,DEVNAME:PATH,sectors,surfaces,reserved,blocksize,bootpri
-			push_s_option(std::string("hardfile2=rw,DH0:") + std::string(game_path) + ",0,0,0,512,0");
+			const char* hdf_geometry = libretro_hdf_has_rdb(game_path)
+				? ",0,0,0,512,0"
+				: ",32,1,2,512,0";
+			push_s_option(std::string("hardfile2=rw,DH0:") + std::string(game_path) + hdf_geometry);
 			if (!save_dir.empty()) {
 				const std::string saves_path = save_dir + "/WHDSaves";
 				ensure_host_directory(saves_path);
