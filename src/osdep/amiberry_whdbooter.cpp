@@ -342,6 +342,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	// These are all the kickstart rom files found in skick346.lha
 	//   http://aminet.net/package/util/boot/skick346
 
+	make_rom_symlink("kick31034.A1000", 2, prefs);
 	make_rom_symlink("kick33180.A500", 5, prefs);
 	make_rom_symlink("kick34005.A500", 6, prefs);
 	make_rom_symlink("kick37175.A500", 7, prefs);

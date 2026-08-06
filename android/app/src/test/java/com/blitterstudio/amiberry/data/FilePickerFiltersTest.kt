@@ -33,7 +33,7 @@ class FilePickerFiltersTest {
 	@Test
 	fun `ROM labels include every supported extension`() {
 		assertArrayEquals(
-			arrayOf(".rom", ".bin", ".a500", ".a600", ".a1200", ".a3000", ".a4000", ".cdtv", ".cd32"),
+			arrayOf(".rom", ".bin", ".a1000", ".a500", ".a600", ".a1200", ".a3000", ".a4000", ".cdtv", ".cd32"),
 			FilePickerFilters.extensionLabelsFor(FileCategory.ROMS)
 		)
 	}

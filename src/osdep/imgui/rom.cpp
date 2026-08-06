@@ -120,7 +120,7 @@ void render_panel_rom()
 	if (AmigaButton("...##MainRomFileButton"))
 	{
 		current_pick_type = RomPickType::Main;
-		OpenFileDialogKey("ROM", "Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+		OpenFileDialogKey("ROM", "Select Main ROM", ".rom,.bin,.a1000,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
 	// Extended ROM
@@ -133,7 +133,7 @@ void render_panel_rom()
 	if (AmigaButton("...##ExtRomFileButton"))
 	{
 		current_pick_type = RomPickType::Extended;
-		OpenFileDialogKey("ROM", "Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+		OpenFileDialogKey("ROM", "Select Extended ROM", ".rom,.bin,.a1000,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
     bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
@@ -197,7 +197,7 @@ void render_panel_rom()
 	ImGui::SameLine();
     if (AmigaButton("...##CustomRomFileButton")) {
     	current_pick_type = RomPickType::Custom;
-	    OpenFileDialogKey("ROM", "Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
+	    OpenFileDialogKey("ROM", "Select Custom ROM", ".rom,.bin,.a1000,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
     }
 	ImGui::Spacing();
 	EndGroupBox("Advanced Custom ROM Settings");
@@ -211,7 +211,7 @@ void render_panel_rom()
 	ImGui::SameLine();
 	if (AmigaButton("...##CartRomFileButton")) {
 		current_pick_type = RomPickType::Cartridge;
-		OpenFileDialogKey("ROM", "Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+		OpenFileDialogKey("ROM", "Select Cartridge ROM", ".rom,.bin,.a1000,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
 	ImGui::Text("Flash RAM or A2286/A2386SX BIOS CMOS RAM file:");
