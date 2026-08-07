@@ -73,7 +73,7 @@ static AmiberryAutoCropRect scan_frame(AutoCropScenario& scenario)
 {
 	AmiberryAutoCropRect crop = scenario.source;
 	amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(scenario), 16, crop, scenario.state);
+		make_buffer(scenario), 16, false, crop, scenario.state);
 	return crop;
 }
 
@@ -111,7 +111,8 @@ static bool reference_outputs_match()
 	const AmiberryAutoCropRect previous{ 40, 17, 640, 200 };
 	AmiberryAutoCropRect current{ 40, 17, 640, 207 };
 	if (!amiberry_auto_crop_stabilize_vertical_transition(
-		make_buffer(transition), 16, previous, current, 0, 8)
+		make_buffer(transition), 16, previous, current,
+		amiberry_auto_crop_single_border(0), 8)
 		|| !rect_equals(current, { 40, 24, 640, 200 })) {
 		return false;
 	}

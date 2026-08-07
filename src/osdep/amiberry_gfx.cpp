@@ -138,8 +138,7 @@ struct AutoCropVisibleState {
 	SDL_Rect visible_rect{};
 	int hres = 0;
 	int vres = 0;
-	uint32_t border_rgb = 0;
-	bool border_valid = false;
+	AmiberryAutoCropBorderColors border{};
 	bool source_left_is_sprite = false;
 	bool source_right_is_sprite = false;
 	AmiberryAutoCropHorizontalEvidence sprite_zero{};
@@ -253,7 +252,7 @@ static bool get_auto_crop_pixel_buffer(const SDL_Surface* surface,
 }
 
 static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
-	SDL_Rect& rect, AmiberryAutoCropScanState& scan_state)
+	SDL_Rect& rect, const bool interlaced, AmiberryAutoCropScanState& scan_state)
 {
 	clamp_auto_crop_rect(surface, rect);
 	if (rect.w <= 0 || rect.h <= 0) {
@@ -266,14 +265,14 @@ static void expand_auto_crop_rect_to_visible_content(const SDL_Surface* surface,
 	}
 	AmiberryAutoCropRect visible_rect = { rect.x, rect.y, rect.w, rect.h };
 	if (amiberry_auto_crop_expand_to_visible_content(buffer,
-		auto_crop_min_outside_pixels, visible_rect, scan_state)) {
+		auto_crop_min_outside_pixels, interlaced, visible_rect, scan_state)) {
 		rect = { visible_rect.x, visible_rect.y, visible_rect.w, visible_rect.h };
 	}
 }
 
 static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	const SDL_Rect& source_rect, SDL_Rect& visible_rect, const int hres,
-	const int vres, const uint32_t border_rgb, const bool border_valid,
+	const int vres, const AmiberryAutoCropBorderColors& border,
 	const bool source_left_is_sprite, const bool source_right_is_sprite,
 	const AmiberryAutoCropHorizontalEvidence& sprite_zero,
 	AutoCropVisibleState& state, const bool reset)
@@ -291,7 +290,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		|| state.hres != hres
 		|| state.vres != vres;
 	const bool border_changed = amiberry_auto_crop_border_state_changed(
-		state.border_rgb, state.border_valid, border_rgb, border_valid);
+		state.border, border);
 	if (!reset && state.valid && !presentation_changed && !border_changed) {
 		const AmiberryAutoCropRect previous_source = {
 			state.source_rect.x, state.source_rect.y,
@@ -320,10 +319,10 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			return;
 		}
 		if (auto_crop_rect_equals(state.source_rect, source_rect)
-			&& border_valid && get_auto_crop_pixel_buffer(surface, buffer)
+			&& border.count > 0 && get_auto_crop_pixel_buffer(surface, buffer)
 			&& amiberry_auto_crop_stabilize_vertical_transition(
 				buffer, auto_crop_min_outside_pixels, previous_rect, current_rect,
-				border_rgb, vertical_tolerance)) {
+				border, vertical_tolerance)) {
 			visible_rect = { current_rect.x, current_rect.y,
 				current_rect.w, current_rect.h };
 			state.visible_rect = visible_rect;
@@ -359,8 +358,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		state.visible_rect = visible_rect;
 		state.hres = hres;
 		state.vres = vres;
-		state.border_rgb = border_rgb;
-		state.border_valid = border_valid;
+		state.border = border;
 		state.source_left_is_sprite = source_left_is_sprite;
 		state.source_right_is_sprite = source_right_is_sprite;
 		state.sprite_zero = sprite_zero;
@@ -377,9 +375,8 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	state.source_left_is_sprite = source_left_is_sprite;
 	state.source_right_is_sprite = source_right_is_sprite;
 	state.sprite_zero = sprite_zero;
-	if (border_valid) {
-		state.border_rgb = border_rgb;
-		state.border_valid = true;
+	if (border.count > 0) {
+		state.border = border;
 	}
 }
 
@@ -2276,9 +2273,12 @@ void auto_crop_image()
 			// DIW/bitplane limits can exclude visible sprites or raster content.
 			// Preserve real pixels outside those limits without restoring the
 			// conservative minimum frame that keeps intentional black borders.
-			expand_auto_crop_rect_to_visible_content(surface, crop_rect, scan_state);
+			// Only a line-doubled interlaced buffer weaves two fields together.
+			const bool interlaced = interlace_seen > 0 && vres > VRES_NONDOUBLE;
+			expand_auto_crop_rect_to_visible_content(surface, crop_rect, interlaced,
+				scan_state);
 			preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
-				hres, vres, scan_state.border_rgb, scan_state.border_valid,
+				hres, vres, scan_state.border,
 				(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
 				(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
 				visible_state,

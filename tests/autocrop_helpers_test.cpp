@@ -65,7 +65,7 @@ static void test_expands_to_connected_visible_content()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 6, 8, 20, 12 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Crop should expand to connected content below it");
 	expect_eq(crop.x, 6, "Crop x should stay anchored");
@@ -85,7 +85,7 @@ static void test_ignores_distant_speck_when_content_expands()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 6, 8, 20, 12 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Connected lower content should still expand the crop");
 	expect_eq(crop.x, 6, "A distant speck must not move the crop left edge");
@@ -106,7 +106,7 @@ static void test_ignores_scattered_outside_pixels()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 6, 8, 20, 12 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(!changed, "Scattered outside pixels must not expand the crop");
 	expect_eq(crop.w, 20, "Scattered pixels must not change crop width");
@@ -125,7 +125,7 @@ static void test_preserves_diagonally_connected_content()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 20, 8, 10, 12 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed,
 		"Eight-neighbor scanning must keep diagonal content in one component");
@@ -152,7 +152,7 @@ static void test_crop_separates_outside_components()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 15, 10, 10, 10 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(!changed,
 		"The crop must not connect two individually sub-threshold components");
@@ -173,7 +173,7 @@ static void test_expands_to_visible_sprite_edge_content()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 20, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "A visible sprite strip outside DIW should expand the crop");
 	expect_eq(crop.x, 6, "The crop should include the sprite's left edge");
@@ -191,11 +191,11 @@ static void test_keeps_crop_inside_non_black_border()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(!changed, "A non-black border must not expand the hardware crop");
-	expect_true(state.border_valid, "A consistent non-black border should be detected");
-	expect_eq(state.border_rgb, border_color, "Detected border color should match the perimeter");
+	expect_true(state.border.count > 0, "A consistent non-black border should be detected");
+	expect_eq(state.border.rgb[0], border_color, "Detected border color should match the perimeter");
 	expect_eq(crop.x, 8, "Outer black surface edge must not move the crop left");
 	expect_eq(crop.y, 8, "Outer black surface edge must not move the crop top");
 	expect_eq(crop.w, 24, "Outer black surface edge must not widen the crop");
@@ -212,12 +212,12 @@ static void test_uniform_border_avoids_component_scan()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(!changed, "A uniform border must not expand the crop");
 	expect_true(state.visited.empty(), "A uniform border should bypass component scanning");
-	expect_true(state.border_valid, "A uniform non-black border should be detected");
-	expect_eq(state.border_rgb, border_color, "Uniform border color should be preserved");
+	expect_true(state.border.count > 0, "A uniform non-black border should be detected");
+	expect_eq(state.border.rgb[0], border_color, "Uniform border color should be preserved");
 
 	std::vector<uint16_t> pixels_16(width * height, 0xaaaau);
 	const AmiberryAutoCropPixelBuffer buffer_16 {
@@ -226,7 +226,7 @@ static void test_uniform_border_avoids_component_scan()
 	};
 	state = {};
 	crop = { 8, 8, 24, 20 };
-	expect_true(!amiberry_auto_crop_expand_to_visible_content(buffer_16, 16, crop, state),
+	expect_true(!amiberry_auto_crop_expand_to_visible_content(buffer_16, 16, false, crop, state),
 		"A 16-bit uniform border must not expand the crop");
 	expect_true(state.visited.empty(), "A 16-bit uniform border should use the fast path");
 }
@@ -247,7 +247,7 @@ static void test_expands_past_non_black_border_for_real_content()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Connected content should expand through a non-black border");
 	expect_eq(crop.x, 8, "Bottom-only content should keep the crop x origin");
@@ -272,7 +272,7 @@ static void test_preserves_content_reaching_surface_edge()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Content reaching the surface edge should expand the crop");
 	expect_eq(crop.x, 8, "Edge-reaching bottom content should keep the crop x origin");
@@ -293,7 +293,7 @@ static void test_chooses_background_outside_origin_anchored_crop()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 0, 0, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(!changed, "An in-crop origin pixel must not become the surface background");
 	expect_eq(crop.x, 0, "Origin-anchored crop must keep its x origin");
@@ -315,11 +315,11 @@ static void test_one_sided_uniform_content_is_not_border()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 0, 0, width, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Uniform content on the only outside edge must remain visible");
-	expect_true(state.border_valid, "Outside corners should provide a fallback background");
-	expect_eq(state.border_rgb, 0u, "One-sided content must not become the border color");
+	expect_true(state.border.count > 0, "Outside corners should provide a fallback background");
+	expect_eq(state.border.rgb[0], 0u, "One-sided content must not become the border color");
 	expect_eq(crop.x, 0, "Full-width content must keep the crop x origin");
 	expect_eq(crop.y, 0, "Content below the crop must keep its y origin");
 	expect_eq(crop.w, width, "Full-width content must keep the crop width");
@@ -339,11 +339,11 @@ static void test_ambiguous_perimeter_preserves_content()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 4, 0, 32, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Content on an ambiguous perimeter must remain visible");
-	expect_true(state.border_valid, "Ambiguous perimeter should use surface background");
-	expect_eq(state.border_rgb, 0u, "Ambiguous content must not become the border color");
+	expect_true(state.border.count > 0, "Ambiguous perimeter should use surface background");
+	expect_eq(state.border.rgb[0], 0u, "Ambiguous content must not become the border color");
 	expect_eq(crop.x, 4, "Lower content must keep the crop x origin");
 	expect_eq(crop.y, 0, "Top-aligned crop must keep its y origin");
 	expect_eq(crop.w, 32, "Lower content must keep the crop width");
@@ -365,11 +365,11 @@ static void test_mixed_perimeter_keeps_non_black_border()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "Content on one side should expand a non-black border crop");
-	expect_true(state.border_valid, "Other sides should confirm the non-black border");
-	expect_eq(state.border_rgb, border_color,
+	expect_true(state.border.count > 0, "Other sides should confirm the non-black border");
+	expect_eq(state.border.rgb[0], border_color,
 		"One content side must not replace the non-black border color");
 	expect_eq(crop.x, 8, "Mixed perimeter content must keep the crop x origin");
 	expect_eq(crop.y, 8, "Mixed perimeter content must keep the crop y origin");
@@ -397,11 +397,11 @@ static void test_two_sided_color_is_not_perimeter_majority()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "A two-of-four side color must remain visible content");
-	expect_true(state.border_valid, "Split perimeter should use surface background");
-	expect_eq(state.border_rgb, 0u, "A perimeter plurality must not become border color");
+	expect_true(state.border.count > 0, "Split perimeter should use surface background");
+	expect_eq(state.border.rgb[0], 0u, "A perimeter plurality must not become border color");
 	expect_eq(crop.x, 7, "Visible left edge should expand the crop left");
 	expect_eq(crop.y, 7, "Visible top edge should expand the crop upward");
 	expect_eq(crop.w, 26, "Visible side edges should expand the crop width");
@@ -422,32 +422,140 @@ static void test_two_of_three_sides_is_not_border_confidence()
 	AmiberryAutoCropScanState state;
 	AmiberryAutoCropRect crop{ 0, 8, 24, 20 };
 	const bool changed = amiberry_auto_crop_expand_to_visible_content(
-		make_buffer(pixels, width, height), 16, crop, state);
+		make_buffer(pixels, width, height), 16, false, crop, state);
 
 	expect_true(changed, "A two-of-three side color must remain visible content");
-	expect_true(state.border_valid, "Low-confidence perimeter should use surface background");
-	expect_eq(state.border_rgb, 0u, "Two-of-three agreement must not become border color");
+	expect_true(state.border.count > 0, "Low-confidence perimeter should use surface background");
+	expect_eq(state.border.rgb[0], 0u, "Two-of-three agreement must not become border color");
 	expect_eq(crop.x, 0, "Left-aligned crop must keep its x origin");
 	expect_eq(crop.y, 7, "Visible top edge should expand the crop upward");
 	expect_eq(crop.w, 24, "Horizontal content must keep the crop width");
 	expect_eq(crop.h, 22, "Visible top and bottom edges should expand crop height");
 }
 
+static void test_interlaced_border_weave_is_not_content()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t previous_field = 0x00100810u;
+	constexpr uint32_t current_field = 0x00100c14u;
+	std::vector<uint32_t> pixels(width * height, 0);
+	// An interlaced display only redraws every other scanline per field, so a
+	// change of the Amiga border color leaves two generations of it woven into
+	// alternate rows. Both are border, not visible content.
+	for (int y = 2; y < height - 2; y++) {
+		for (int x = 2; x < width - 2; x++) {
+			pixels[y * width + x] = (y & 1) ? current_field : previous_field;
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, true, crop, state);
+
+	expect_true(!changed, "An interlaced border weave must not expand the crop");
+	expect_eq(state.border.count, 2, "Both woven generations must count as border");
+	expect_eq(crop.x, 8, "A woven border must keep the crop x origin");
+	expect_eq(crop.y, 8, "A woven border must keep the crop y origin");
+	expect_eq(crop.w, 24, "A woven border must keep the crop width");
+	expect_eq(crop.h, 20, "A woven border must keep the crop height");
+
+	AmiberryAutoCropScanState progressive;
+	AmiberryAutoCropRect progressive_crop{ 8, 8, 24, 20 };
+	expect_true(amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, false, progressive_crop, progressive),
+		"A progressive scan must still treat alternating rows as content");
+}
+
+static void test_settled_perimeter_carries_the_previous_field_border()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t previous_field = 0x00100810u;
+	constexpr uint32_t current_field = 0x00100c14u;
+	const AmiberryAutoCropRect crop{ 8, 12, 24, 20 };
+	// The rows next to the crop settle on the current border a field before the
+	// overscan further out does, so the weave is invisible to perimeter samples.
+	std::vector<uint32_t> pixels(width * height, 0);
+	for (int y = 2; y < height - 2; y++) {
+		for (int x = 2; x < width - 2; x++) {
+			pixels[y * width + x] = y >= crop.y - 4 && y < crop.y + crop.h + 4
+				? current_field
+				: ((y & 1) ? current_field : previous_field);
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	state.previous_border = amiberry_auto_crop_single_border(previous_field);
+	AmiberryAutoCropRect carried = crop;
+	expect_true(!amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, true, carried, state),
+		"The previous field's border must not expand an interlaced crop");
+	expect_eq(carried.y, crop.y, "A carried border must keep the crop y origin");
+	expect_eq(carried.h, crop.h, "A carried border must keep the crop height");
+
+	AmiberryAutoCropScanState unrelated;
+	unrelated.previous_border = amiberry_auto_crop_single_border(0x00ff0000u);
+	AmiberryAutoCropRect expanded = crop;
+	expect_true(amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, true, expanded, unrelated),
+		"An unrelated stale border must not hide the woven overscan");
+}
+
+static void test_edge_content_run_is_not_an_interlaced_border()
+{
+	constexpr int width = 40;
+	constexpr int height = 40;
+	constexpr uint32_t border_color = 0x00100810u;
+	constexpr uint32_t content_color = 0x0000ff00u;
+	std::vector<uint32_t> pixels(width * height, 0);
+	add_colored_border(pixels, width, height, border_color);
+	// Content hugging one edge covers a contiguous run of scanlines instead of
+	// alternating ones, so it must not be mistaken for the other field.
+	for (int y = 12; y < 24; y++) {
+		for (int x = 6; x < 8; x++) {
+			pixels[y * width + x] = content_color;
+		}
+	}
+
+	AmiberryAutoCropScanState state;
+	AmiberryAutoCropRect crop{ 8, 8, 24, 20 };
+	const bool changed = amiberry_auto_crop_expand_to_visible_content(
+		make_buffer(pixels, width, height), 16, false, crop, state);
+
+	expect_true(changed, "Contiguous edge content must still expand the crop");
+	expect_eq(crop.x, 6, "Visible left edge content should expand the crop left");
+	expect_eq(crop.y, 8, "Left edge content must keep the crop y origin");
+	expect_eq(crop.w, 26, "Visible left edge content should widen the crop");
+	expect_eq(crop.h, 20, "Left edge content must keep the crop height");
+}
+
 static void test_border_state_changes_reset_preserved_crop()
 {
 	constexpr uint32_t first_color = 0x00112233u;
 	constexpr uint32_t second_color = 0x00445566u;
+	const AmiberryAutoCropBorderColors none{};
+	const AmiberryAutoCropBorderColors first =
+		amiberry_auto_crop_single_border(first_color);
+	const AmiberryAutoCropBorderColors second =
+		amiberry_auto_crop_single_border(second_color);
+	const AmiberryAutoCropBorderColors woven{ { first_color, second_color }, 2 };
 
-	expect_true(amiberry_auto_crop_border_state_changed(first_color, true,
-		first_color, false), "Losing a valid border must reset preserved crop bounds");
-	expect_true(amiberry_auto_crop_border_state_changed(first_color, false,
-		first_color, true), "Detecting a valid border must reset preserved crop bounds");
-	expect_true(amiberry_auto_crop_border_state_changed(first_color, true,
-		second_color, true), "Changing border color must reset preserved crop bounds");
-	expect_true(!amiberry_auto_crop_border_state_changed(first_color, true,
-		first_color, true), "An unchanged valid border must preserve crop bounds");
-	expect_true(!amiberry_auto_crop_border_state_changed(first_color, false,
-		second_color, false), "Ambiguous border samples must ignore stale colors");
+	expect_true(amiberry_auto_crop_border_state_changed(first, none),
+		"Losing a valid border must reset preserved crop bounds");
+	expect_true(amiberry_auto_crop_border_state_changed(none, first),
+		"Detecting a valid border must reset preserved crop bounds");
+	expect_true(amiberry_auto_crop_border_state_changed(first, second),
+		"Changing border color must reset preserved crop bounds");
+	expect_true(amiberry_auto_crop_border_state_changed(first, woven),
+		"Gaining a woven second border color must reset preserved crop bounds");
+	expect_true(!amiberry_auto_crop_border_state_changed(first, first),
+		"An unchanged valid border must preserve crop bounds");
+	expect_true(!amiberry_auto_crop_border_state_changed(woven, woven),
+		"An unchanged woven border must preserve crop bounds");
+	expect_true(!amiberry_auto_crop_border_state_changed(none, none),
+		"Ambiguous border samples must ignore stale colors");
 }
 
 static void test_horizontal_edge_jitter_tolerance()
@@ -695,7 +803,7 @@ static void test_vertical_transition_replaces_displaced_border_without_resizing(
 
 	AmiberryAutoCropRect expanded{ 4, 4, 12, 10 };
 	expect_true(amiberry_auto_crop_stabilize_vertical_transition(
-		make_buffer(pixels, width, height), 16, previous, expanded, 0, 2),
+		make_buffer(pixels, width, height), 16, previous, expanded, amiberry_auto_crop_single_border(0), 2),
 		"New bottom content should replace a border strip without resizing");
 	expect_eq(expanded.y, 6,
 		"The stable crop should move down to follow the new content");
@@ -704,7 +812,7 @@ static void test_vertical_transition_replaces_displaced_border_without_resizing(
 
 	AmiberryAutoCropRect raw_union{ 4, 4, 12, 10 };
 	expect_true(amiberry_auto_crop_stabilize_vertical_transition(
-		make_buffer(pixels, width, height), 16, expanded, raw_union, 0, 2),
+		make_buffer(pixels, width, height), 16, expanded, raw_union, amiberry_auto_crop_single_border(0), 2),
 		"A repeated raw union should ignore the revealed border above the stable crop");
 	expect_eq(raw_union.y, 6,
 		"Repeated scan frames should retain the translated origin");
@@ -726,7 +834,7 @@ static void test_vertical_transition_keeps_genuine_two_edge_content()
 	}
 
 	expect_true(!amiberry_auto_crop_stabilize_vertical_transition(
-		make_buffer(pixels, width, height), 16, previous, expanded, 0, 2),
+		make_buffer(pixels, width, height), 16, previous, expanded, amiberry_auto_crop_single_border(0), 2),
 		"Visible pixels at both old and new edges must allow a real crop expansion");
 	expect_eq(expanded.y, 4,
 		"A genuine expansion should retain its original top edge");
@@ -777,6 +885,9 @@ int main()
 	test_mixed_perimeter_keeps_non_black_border();
 	test_two_sided_color_is_not_perimeter_majority();
 	test_two_of_three_sides_is_not_border_confidence();
+	test_interlaced_border_weave_is_not_content();
+	test_settled_perimeter_carries_the_previous_field_border();
+	test_edge_content_run_is_not_an_interlaced_border();
 	test_border_state_changes_reset_preserved_crop();
 	test_horizontal_edge_jitter_tolerance();
 	test_horizontal_edge_jitter_requires_sprite_source_attribution();
