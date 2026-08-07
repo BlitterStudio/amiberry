@@ -41,6 +41,7 @@
 #include "file_dialog.h"
 #include "macos_window.h"
 #include "amiberry_rp9.h"
+#include "amiberry_gui_pacing.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -2000,6 +2001,26 @@ static void set_nav_section_collapsed(const char* key, bool collapsed)
 	regsetint(nullptr, name, collapsed ? 1 : 0);
 }
 
+// Refresh rate of the display the GUI window sits on, or 0 when the host does
+// not report one. Re-probed once a second so moving the window to another
+// monitor is picked up without asking SDL on every frame.
+static float gui_display_refresh_rate(SDL_Window* window)
+{
+	static uint64_t probed_at_ms = 0;
+	static float refresh_hz = 0.0f;
+
+	const uint64_t now_ms = SDL_GetTicks();
+	if (refresh_hz <= 0.0f || now_ms - probed_at_ms >= 1000) {
+		const SDL_DisplayMode* dm = window
+			? SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window))
+			: nullptr;
+		refresh_hz = dm ? dm->refresh_rate : 0.0f;
+		probed_at_ms = now_ms;
+	}
+
+	return refresh_hz;
+}
+
 void run_gui()
 {
 	gui_running = true;
@@ -2034,6 +2055,7 @@ void run_gui()
 
 	// Main loop
 	while (gui_running) {
+		const uint64_t frame_start = SDL_GetPerformanceCounter();
 		while (SDL_PollEvent(&gui_event)) {
 			if (ControllerMap_HandleEvent(gui_event)) {
 				continue;
@@ -2968,6 +2990,19 @@ void run_gui()
 				ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
 				SDL_RenderPresent(mon->gui_renderer);
 			}
+		}
+
+		// Presentation is not a reliable throttle for this loop - see
+		// amiberry_gui_pacing.h - so cap the GUI's frame rate ourselves.
+		// Whatever presentation already blocked for counts towards the
+		// budget, so this costs nothing when VSync is doing the pacing.
+		if (gui_running) {
+			const float elapsed_ms = static_cast<float>(SDL_GetPerformanceCounter() - frame_start)
+				* 1000.0f / static_cast<float>(SDL_GetPerformanceFrequency());
+			const uint32_t delay_ms = amiberry_gui_frame_delay_ms(elapsed_ms,
+				gui_display_refresh_rate(mon->gui_window));
+			if (delay_ms > 0)
+				SDL_Delay(delay_ms);
 		}
 	}
 
