@@ -159,11 +159,3 @@ android/local.properties
 
 # Local planning / scratch notes (not for the repo)
 notes/
-docs/superpowers
-.sisyphus/
-.omg
-.claude/settings.local.json
-.compound-engineering/*.local.yaml
-docs/plans
-.omo
-.hermes
