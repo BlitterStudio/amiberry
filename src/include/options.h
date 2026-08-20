@@ -1393,15 +1393,7 @@ struct amiberry_options
 	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
 	int default_line_mode = 1;
-#ifdef __ANDROID__
-	// Captured-mouse desktop feel on ChromeOS: 115 mirrors the ChromeOS
-	// fork's 1.15 tuning. The core applies input_mouse_speed on the captured
-	// relative path, so this preference alone carries the speed —
-	// there is no boundary multiplier in handle_mouse_motion_event.
-	int input_default_mouse_speed = 115;
-#else
 	int input_default_mouse_speed = 100;
-#endif
 
 	// GUI scale as a percentage of the automatic DPI-aware layout scale
 	// (100 = stock behavior). Android defaults smaller so large Chromebook
