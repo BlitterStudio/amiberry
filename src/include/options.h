@@ -1393,7 +1393,15 @@ struct amiberry_options
 	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
 	int default_line_mode = 1;
+#ifdef __ANDROID__
+	// Captured-mouse desktop feel on ChromeOS: 115 mirrors the ChromeOS
+	// fork's 1.15 tuning. The core applies input_mouse_speed on the captured
+	// relative path (KTD2), so this preference alone carries the speed —
+	// there is no boundary multiplier in handle_mouse_motion_event.
+	int input_default_mouse_speed = 115;
+#else
 	int input_default_mouse_speed = 100;
+#endif
 	bool input_keyboard_as_joystick_stop_keypresses = false;
 	char default_open_gui_key[128] = "F12";
 	char default_quit_key[128]{};

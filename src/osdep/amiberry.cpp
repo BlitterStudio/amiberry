@@ -80,6 +80,7 @@
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
 #include "amiberry_mouse_capture.h"
+#include "amiberry_mouse_delta.h"
 #include "imgui_osk.h"
 #ifdef __ANDROID__
 #include "android_touch_mouse.h"
@@ -143,6 +144,11 @@ static bool android_last_joystick_enabled = false;
 static bool android_pen_blocks_touch = false;
 static std::atomic<bool> android_touch_neutralization_pending{false};
 
+// Sub-pixel relative mouse accumulation (amiberry_mouse_delta.h): one
+// residual per mouse for the captured absolute-hover path (#2285 / KTD1).
+static std::array<amiberry_mouse_delta_accumulator, MAX_INPUT_DEVICES>
+	android_mouse_deltas;
+
 struct AndroidGuiSwipeFilterContact {
 	std::atomic<android_touch_mouse::TouchId> touch_id{0};
 	std::atomic<android_touch_mouse::FingerId> finger_id{0};
@@ -162,6 +168,20 @@ static android_touch_mouse::TouchKey amiberry_android_touch_key(const SDL_Event&
 static void amiberry_android_clear_gui_swipe_filter()
 {
 	android_gui_swipe_filter_active_mask.store(0, std::memory_order_release);
+}
+
+static void amiberry_android_reset_mouse_deltas()
+{
+	for (auto& delta : android_mouse_deltas)
+		delta.reset();
+}
+
+static amiberry_mouse_delta_accumulator& amiberry_android_mouse_delta(
+	const int mouse_index)
+{
+	if (mouse_index < 0 || mouse_index >= MAX_INPUT_DEVICES)
+		return android_mouse_deltas[0];
+	return android_mouse_deltas[mouse_index];
 }
 
 static void amiberry_android_publish_gui_swipe_filter(
@@ -1605,6 +1625,11 @@ static bool consume_pending_mouse_capture(const int monid, int* active)
 #ifndef LIBRETRO
 static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 {
+#ifdef __ANDROID__
+	// A new capture session must not inherit a stale sub-pixel residual
+	// from the previous one (KTD1).
+	amiberry_android_reset_mouse_deltas();
+#endif
 	const bool mouse_grab_ok = SDL_SetWindowMouseGrab(mon->amiga_window, true);
 	if (!mouse_grab_ok) {
 		write_log("SDL_SetWindowMouseGrab(true) failed on monitor %d: %s\n", mon->monitor_id, SDL_GetError());
@@ -1656,6 +1681,11 @@ static bool apply_mouse_capture_grabs(AmigaMonitor*) { return true; }
 
 void releasecapture(const AmigaMonitor* mon)
 {
+#ifdef __ANDROID__
+	// Capture teardown (focus loss, GUI open, user release) ends the
+	// session: drop any pending sub-pixel residual (KTD1).
+	amiberry_android_reset_mouse_deltas();
+#endif
 	if (mon && mon->amiga_window) {
 		SDL_SetWindowMouseGrab(mon->amiga_window, false);
 		SDL_SetWindowKeyboardGrab(mon->amiga_window, false);
@@ -3438,20 +3468,39 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 	const int midx = get_mouse_index_from_sdl_id(event.motion.which);
 
+#ifdef __ANDROID__
+	// SDL3 mouse motion is floating point, and the captured absolute-hover
+	// path (#2285 / KTD1) can deliver fractional deltas below one pixel per
+	// event. Keep the floats here so the accumulator in the relative
+	// dispatch below can carry the un-emitted fraction forward instead of
+	// truncating every event to zero.
+	float x = event.motion.x;
+	float y = event.motion.y;
+	float xrel = event.motion.xrel;
+	float yrel = event.motion.yrel;
+#else
 	int32_t x = event.motion.x;
 	int32_t y = event.motion.y;
 	int32_t xrel = event.motion.xrel;
 	int32_t yrel = event.motion.yrel;
+#endif
 
 	// HiDPI / Retina: scale from screen coordinates (points) to drawable pixels.
 	// Only needed for OpenGL path — SDL_RenderCoordinatesFromWindow handles this
 	// internally when the SDL renderer is active.
 	// Scale factors cached per-monitor in update_hidpi_scale(), updated on window resize.
 	if (!mon->amiga_renderer && mon->hidpi_needs_scaling) {
+#ifdef __ANDROID__
+		x *= mon->hidpi_scale_x;
+		xrel *= mon->hidpi_scale_x;
+		y *= mon->hidpi_scale_y;
+		yrel *= mon->hidpi_scale_y;
+#else
 		x = (int32_t)(x * mon->hidpi_scale_x);
 		xrel = (int32_t)(xrel * mon->hidpi_scale_x);
 		y = (int32_t)(y * mon->hidpi_scale_y);
 		yrel = (int32_t)(yrel * mon->hidpi_scale_y);
+#endif
 	}
 
 #ifndef LIBRETRO
@@ -3460,23 +3509,48 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 		float rx, ry, rx0, ry0;
 		if (SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, (float)x, (float)y, &rx, &ry)) {
 			SDL_RenderCoordinatesFromWindow(mon->amiga_renderer, (float)(x - xrel), (float)(y - yrel), &rx0, &ry0);
+#ifdef __ANDROID__
+			xrel = rx - rx0;
+			yrel = ry - ry0;
+			x = rx;
+			y = ry;
+#else
 			xrel = (int32_t)(rx - rx0);
 			yrel = (int32_t)(ry - ry0);
 			x = (int32_t)rx;
 			y = (int32_t)ry;
+#endif
 		}
 	}
 #endif
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
+#ifdef __ANDROID__
+		// Absolute/tablet dispatch carries positions, not deltas; drop any
+		// pending relative residual so a mode switch back stays clean.
+		amiberry_android_mouse_delta(midx).reset();
+		setmousestate(midx, 0, static_cast<int32_t>(x), 1);
+		setmousestate(midx, 1, static_cast<int32_t>(y), 1);
+#else
 		setmousestate(midx, 0, x, 1);
 		setmousestate(midx, 1, y, 1);
+#endif
 	}
 	else
 	{
+#ifdef __ANDROID__
+		// Accumulate the fractional deltas and emit whole guest steps; the
+		// core applies input_mouse_speed on this relative path (KTD2), so
+		// no speed scaling happens here.
+		const amiberry_mouse_delta whole =
+			amiberry_android_mouse_delta(midx).feed(xrel, yrel);
+		setmousestate(midx, 0, whole.dx, 0);
+		setmousestate(midx, 1, whole.dy, 0);
+#else
 		setmousestate(midx, 0, xrel, 0);
 		setmousestate(midx, 1, yrel, 0);
+#endif
 	}
 
 	return true;
