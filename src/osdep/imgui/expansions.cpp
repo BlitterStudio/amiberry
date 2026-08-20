@@ -13,6 +13,7 @@
 #include "cpuboard.h"
 #include "rommgr.h"
 #include "uae.h"
+#include "expansion_display_name.h"
 
 // Categories for Expansion Boards (Matches WinUAE scsiromselectedmask)
 static const char *ExpansionCategories[] = {
@@ -61,10 +62,7 @@ static bool is_accelerator_subtype_available(int type, int subtype)
     (void)subtype;
     return true;
 #else
-    struct uae_prefs candidate = changed_prefs;
-    candidate.cpuboard_type = type;
-    candidate.cpuboard_subtype = subtype;
-    return !cpuboard_is_ppc_accelerator(&candidate);
+    return !cpuboard_is_ppc_accelerator_subtype(type, subtype);
 #endif
 }
 
@@ -261,7 +259,10 @@ static void RefreshExpansionList() {
 
     std::sort(displayed_rom_indices.begin(), displayed_rom_indices.end(),
         [](int a, int b) {
-            return _tcsicmp(expansionroms[a].friendlyname, expansionroms[b].friendlyname) < 0;
+            const struct expansionromtype *ea = &expansionroms[a];
+            const struct expansionromtype *eb = &expansionroms[b];
+            return _tcsicmp(expansion_display_name(ea->friendlyname, ea->friendlymanufacturer),
+                expansion_display_name(eb->friendlyname, eb->friendlymanufacturer)) < 0;
         });
 
     bool current_valid = false;
@@ -374,9 +375,11 @@ void render_panel_expansions() {
             break;
         }
     }
-    const char *preview_val = (current_combo_idx >= 0)
-                                  ? expansionroms[displayed_rom_indices[current_combo_idx]].friendlyname
-                                  : "Select Board...";
+    const char *preview_val = "Select Board...";
+    if (current_combo_idx >= 0) {
+        const struct expansionromtype *ert = &expansionroms[displayed_rom_indices[current_combo_idx]];
+        preview_val = expansion_display_name(ert->friendlyname, ert->friendlymanufacturer);
+    }
 
     float avail_w = ImGui::GetContentRegionAvail().x;
     float enable_w = BUTTON_WIDTH * 1.5f;
@@ -394,11 +397,13 @@ void render_panel_expansions() {
             for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
                 if (is_board_enabled(&changed_prefs, expansionroms[global_idx].romtype, j)) cnt++;
             }
-            std::string name_label = expansionroms[global_idx].friendlyname;
-            if (expansionroms[global_idx].friendlymanufacturer
-                && _tcsicmp(expansionroms[global_idx].friendlymanufacturer, expansionroms[global_idx].friendlyname) != 0) {
+            const struct expansionromtype *ert = &expansionroms[global_idx];
+            const char *display_name = expansion_display_name(ert->friendlyname, ert->friendlymanufacturer);
+            std::string name_label = display_name;
+            if (ert->friendlymanufacturer
+                && _tcsicmp(ert->friendlymanufacturer, display_name) != 0) {
                 name_label += " (";
-                name_label += expansionroms[global_idx].friendlymanufacturer;
+                name_label += ert->friendlymanufacturer;
                 name_label += ")";
             }
             if (cnt > 0) name_label = (cnt > 1 ? "[" + std::to_string(cnt) + "] " : "* ") + name_label;

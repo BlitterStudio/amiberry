@@ -291,9 +291,18 @@ static bool is_blizzardppc(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
 }
+// Same classification as is_ppc() but takes the board type/subtype directly
+// (the ISCPUBOARDP macro form needs a uae_prefs), so callers such as the
+// Expansions panel can filter accelerator subtypes without copying a whole
+// uae_prefs onto the stack.
+bool cpuboard_is_ppc_accelerator_subtype(int type, int subtype)
+{
+	return (cpuboards[type].id == BOARD_BLIZZARD && subtype == BOARD_BLIZZARD_SUB_PPC) ||
+		(cpuboards[type].id == BOARD_CYBERSTORM && subtype == BOARD_CYBERSTORM_SUB_PPC);
+}
 static bool is_ppc(struct uae_prefs *p)
 {
-	return ISCPUBOARDP(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC) || ISCPUBOARDP(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
+	return cpuboard_is_ppc_accelerator_subtype(p->cpuboard_type, p->cpuboard_subtype);
 }
 bool cpuboard_is_ppc_accelerator(struct uae_prefs *p)
 {

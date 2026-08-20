@@ -52,6 +52,7 @@
 #include "uae/ppc.h"
 #endif
 #include "autoconf.h"
+#include "expansion_display_name.h"
 #ifdef WITH_SPECIALMONITORS
 #include "specialmonitors.h"
 #endif
@@ -3160,7 +3161,7 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 			if (cd->rc && !label[0] && cd->rc->back) {
 				const struct expansionromtype *ert = get_device_expansion_rom(cd->rc->back->device_type);
 				if (ert) {
-					_tcscpy(label, ert->friendlyname);
+					_tcscpy(label, expansion_display_name(ert->friendlyname, ert->friendlymanufacturer));
 				}
 			}
 			if (!label[0]) {
@@ -4326,7 +4327,7 @@ void restore_expansion_finish(void)
 		ec->aci.rc = rc;
 		//write_log(_T("%d %08x %08x %08x %08x %s\n"), i, ec->base, ec->size, ec->flags, _T(""), ec->name);
 		if (rc && ec->ert) {
-			_tcscpy(ec->aci.name, ec->ert->friendlyname);
+			_tcscpy(ec->aci.name, expansion_display_name(ec->ert->friendlyname, ec->ert->friendlymanufacturer));
 			if (ec->ert->init) {
 				if (ec->ert->init(&ec->aci)) {
 					if (ec->aci.addrbank) {
