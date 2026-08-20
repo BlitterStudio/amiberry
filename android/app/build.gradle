@@ -117,7 +117,13 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags = ["-std=c++17"]
-                arguments = ["-DANDROID_STL=c++_shared"]
+                arguments = [
+                        "-DANDROID_STL=c++_shared",
+                        // Short-path bootstrap for Windows hosts: fires at the end of
+                        // project() in the top-level CMakeLists.txt, before
+                        // cmake/Dependencies.cmake runs FetchContent.
+                        "-DCMAKE_PROJECT_amiberry_INCLUDE=" + file('../cmake/android-fetchcontent-paths.cmake')
+                ]
             }
         }
 
