@@ -63,6 +63,9 @@
 #include "gfx_colors.h"
 #include "gfx_window.h"
 #include "display_modes.h"
+#ifdef __ANDROID__
+#include "android_rtg_modes.h"
+#endif
 #endif
 #include "threaddep/thread.h"
 #include "memory.h"
@@ -3462,6 +3465,48 @@ static int addresolutions(void)
 			i++;
 		}
 	}
+#ifdef __ANDROID__
+	// Amiberry-local Android virtual RTG modes: Android/ChromeOS can
+	// expose only a small host-mode set, but Picasso96 is a virtual
+	// framebuffer and does not need its Workbench modes limited to it. Append
+	// the common missing resolutions from the Android-gated table before the
+	// dedup/sort; desktop mode lists are untouched by this block.
+	{
+		struct android_rtg_candidate template_mode = {};
+		if (cnt > 0) {
+			template_mode.depth = newmodes[0].depth;
+			template_mode.refresh = newmodes[0].refresh[0];
+		}
+		struct android_rtg_candidate candidates[android_virtual_rtg_mode_count];
+		const int budget = android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt);
+		const int added = android_rtg_build_modes(template_mode,
+			static_cast<long long>(gfxmem_bank.allocated_size) - 256,
+			budget, candidates);
+		for (int k = 0; k < added; k++) {
+			if (android_rtg_mode_fits_existing(candidates[k].width, candidates[k].height,
+				newmodes, cnt))
+				continue;
+			struct PicassoResolution* pr = &newmodes[cnt];
+			if (cnt > 0)
+				memcpy(pr, &newmodes[0], sizeof(struct PicassoResolution));
+			else
+				memset(pr, 0, sizeof(struct PicassoResolution));
+			pr->inuse = true;
+			pr->rawmode = false;
+			pr->lace = false;
+			pr->res.width = candidates[k].width;
+			pr->res.height = candidates[k].height;
+			pr->depth = candidates[k].depth;
+			pr->refresh[0] = candidates[k].refresh;
+			pr->refreshtype[0] = 0;
+			pr->refresh[1] = 0;
+			_sntprintf(pr->name, sizeof pr->name, _T("%s"), candidates[k].name);
+			size += PSSO_LibResolution_sizeof;
+			size += PSSO_ModeInfo_sizeof * depths;
+			cnt++;
+		}
+	}
+#endif
 	qsort(newmodes, cnt, sizeof (struct PicassoResolution), resolution_compare);
 
 

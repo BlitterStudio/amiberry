@@ -1484,6 +1484,62 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return event.isPrintingKey() || event.getKeyCode() == KeyEvent.KEYCODE_SPACE;
     }
 
+    // Amiberry-local: ChromeOS input filters for the key-event path. A light touchpad tap
+    // can surface as a synthetic ENTER-like KeyEvent that must never reach the emulated
+    // Amiga keyboard, and hardware scan codes are physical key positions, so QWERTZ-style
+    // layouts need the physical-position keycode fed to SDL with layout mapping left to the
+    // AmigaOS keymap. The filters are static pure functions of primitive ints because the
+    // android.jar test stubs cannot behaviorally simulate KeyEvent objects.
+    // Re-apply when syncing the SDL Java shim.
+
+    // Linux/evdev physical key positions: 21 is the QWERTY Y slot, 44 the QWERTY Z slot.
+    private static final int EVDEV_KEY_Y_POSITION = 21;
+    private static final int EVDEV_KEY_Z_POSITION = 44;
+
+    private static boolean hasInputSource(int sources, int wanted) {
+        return (sources & wanted) == wanted;
+    }
+
+    /**
+     * Detects the ENTER-like synthetic confirm ChromeOS injects for a light touchpad tap.
+     *
+     * Suppressed only when the event comes from a touchpad or mouse-relative source, or when
+     * it carries no physical scan code and the device is not keyboard-primary. A combo
+     * keyboard+touchpad accessory (keyboard-primary, real scan codes, plain SOURCE_MOUSE)
+     * therefore keeps its real Enter keys. KEYCODE_DPAD_CENTER is excluded entirely: TV
+     * remotes send it as real navigation and it must never be swallowed.
+     */
+    public static boolean isSyntheticTouchpadConfirm(int keyCode, int scanCode, int sources, boolean deviceIsKeyboardPrimary) {
+        if (keyCode != KeyEvent.KEYCODE_ENTER && keyCode != KeyEvent.KEYCODE_NUMPAD_ENTER) {
+            return false;
+        }
+        if (hasInputSource(sources, InputDevice.SOURCE_TOUCHPAD)
+                || hasInputSource(sources, InputDevice.SOURCE_MOUSE_RELATIVE)) {
+            return true;
+        }
+        return scanCode == 0 && !deviceIsKeyboardPrimary;
+    }
+
+    /**
+     * Maps evdev physical key positions to their QWERTY Android keycodes so SDL receives the
+     * physical position regardless of the host keyboard layout (e.g. QWERTZ); the AmigaOS
+     * keymap performs the actual layout mapping. Non-keyboard sources and joystick devices
+     * pass through unchanged, as does every position without an entry here.
+     */
+    public static int normalizePhysicalKeyboardKeyCode(int keyCode, int scanCode, int sources, boolean isJoystickDevice) {
+        if (isJoystickDevice || !hasInputSource(sources, InputDevice.SOURCE_KEYBOARD)) {
+            return keyCode;
+        }
+        switch (scanCode) {
+            case EVDEV_KEY_Y_POSITION:
+                return KeyEvent.KEYCODE_Y;
+            case EVDEV_KEY_Z_POSITION:
+                return KeyEvent.KEYCODE_Z;
+            default:
+                return keyCode;
+        }
+    }
+
     public static boolean handleKeyEvent(View v, int keyCode, KeyEvent event, InputConnection ic) {
         int deviceId = event.getDeviceId();
         int source = event.getSource();
@@ -1508,7 +1564,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         // Furthermore, it's possible a game controller has SOURCE_KEYBOARD and
         // SOURCE_JOYSTICK, while its key events arrive from the keyboard source
         // So, retrieve the device itself and check all of its sources
-        if (SDLControllerManager.isDeviceSDLJoystick(deviceId)) {
+        final boolean isSDLJoystick = SDLControllerManager.isDeviceSDLJoystick(deviceId);
+        if (isSDLJoystick) {
             // Note that we process events with specific key codes here
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
                 if (SDLControllerManager.onNativePadDown(deviceId, keyCode, event.getScanCode())) {
@@ -1538,6 +1595,29 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 }
             }
         }
+
+        // Amiberry-local: swallow synthetic touchpad-tap confirm events before the key
+        // dispatch, then normalize physical key positions. Real Enter keys from
+        // keyboard-primary devices — including combo keyboard+touchpad accessories —
+        // pass through untouched. Re-apply when syncing the SDL Java shim.
+        int combinedSources = source;
+        InputDevice keyEventDevice = event.getDevice();
+        if (keyEventDevice != null) {
+            combinedSources |= keyEventDevice.getSources();
+        }
+        boolean keyboardPrimaryDevice = hasInputSource(combinedSources, InputDevice.SOURCE_KEYBOARD);
+        if (isSyntheticTouchpadConfirm(keyCode, event.getScanCode(), combinedSources, keyboardPrimaryDevice)) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                Log.i(TAG, "suppressed synthetic touchpad confirm: keyCode=" + keyCode
+                        + ", scanCode=" + event.getScanCode()
+                        + ", source=0x" + Integer.toHexString(combinedSources)
+                        + ", deviceId=" + deviceId);
+            }
+            return true;
+        }
+
+        keyCode = normalizePhysicalKeyboardKeyCode(keyCode, event.getScanCode(), combinedSources,
+                isSDLJoystick);
 
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             onNativeKeyDown(keyCode);

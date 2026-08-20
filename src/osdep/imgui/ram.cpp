@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "autoconf.h" // Required for memoryboards and expansion_get_autoconfig_info
 #include "rommgr.h"
+#include "expansion_display_name.h"
 #include "custom.h" // Required for CSMASK_ECS_AGNUS
 
 // WinUAE sync: fix_values_memorydlg()
@@ -211,7 +212,8 @@ static void get_ramboard_name(int idx, char *buf, size_t bufsize, bool include_s
         struct autoconfig_info *aci = expansion_get_autoconfig_info(&changed_prefs, ROMTYPE_RAMZ2, board_num);
         if (aci && aci->ert) {
             size_t len = strlen(buf);
-            snprintf(buf + len, bufsize - len, " (%s)", aci->ert->friendlyname);
+            snprintf(buf + len, bufsize - len, " (%s)",
+                expansion_display_name(aci->ert->friendlyname, aci->ert->friendlymanufacturer));
         }
         return;
     } else if (idx >= ADVANCED_RAM_Z3_BASE && idx < ADVANCED_RAM_CPUSLOT) {
@@ -225,7 +227,8 @@ static void get_ramboard_name(int idx, char *buf, size_t bufsize, bool include_s
         struct autoconfig_info *aci = expansion_get_autoconfig_info(&changed_prefs, ROMTYPE_RAMZ3, board_num);
         if (aci && aci->ert) {
             size_t len = strlen(buf);
-            snprintf(buf + len, bufsize - len, " (%s)", aci->ert->friendlyname);
+            snprintf(buf + len, bufsize - len, " (%s)",
+                expansion_display_name(aci->ert->friendlyname, aci->ert->friendlymanufacturer));
         }
         return;
     } else if (idx == ADVANCED_RAM_CPUSLOT) {
