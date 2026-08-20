@@ -41,6 +41,16 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Amiberry.Splash">
+
+            <!-- ChromeOS / desktop: start as a landscape tablet-size freeform window.
+                 Inert on phone-standard launches, which keeps phone behavior unchanged. -->
+            <meta-data
+                android:name="WindowManagerPreference:FreeformWindowSize"
+                android:value="tablet" />
+            <meta-data
+                android:name="WindowManagerPreference:FreeformWindowOrientation"
+                android:value="landscape" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -105,7 +115,13 @@
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:enableOnBackInvokedCallback="true"
             android:exported="false">
-            <meta-data android:name="SDL_MAIN_LIBRARY_NAMES" android:value="amiberry" />
+            <meta-data
+                android:name="WindowManagerPreference:FreeformWindowSize"
+                android:value="tablet" />
+            <meta-data
+                android:name="WindowManagerPreference:FreeformWindowOrientation"
+                android:value="landscape" />
+             <meta-data android:name="SDL_MAIN_LIBRARY_NAMES" android:value="amiberry" />
         </activity>
     </application>
 
