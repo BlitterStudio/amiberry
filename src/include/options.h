@@ -1402,6 +1402,15 @@ struct amiberry_options
 #else
 	int input_default_mouse_speed = 100;
 #endif
+
+	// GUI scale as a percentage of the automatic DPI-aware layout scale
+	// (100 = stock behavior). Android defaults smaller so large Chromebook
+	// panels render the GUI near the ChromeOS fork's tuned size.
+#ifdef __ANDROID__
+	float gui_layout_scale_percent = 70.0f;
+#else
+	float gui_layout_scale_percent = 100.0f;
+#endif
 	bool input_keyboard_as_joystick_stop_keypresses = false;
 	char default_open_gui_key[128] = "F12";
 	char default_quit_key[128]{};

@@ -534,6 +534,7 @@ extern void load_default_theme();
 extern void load_default_dark_theme();
 extern void apply_imgui_theme();
 extern void rebuild_gui_fonts();
+extern void invalidate_gui_window_size_init();
 
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);

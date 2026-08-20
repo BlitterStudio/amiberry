@@ -12,6 +12,7 @@
 #include "registry.h"
 #include "target.h"
 #include "gui/gui_handling.h"
+#include "gui_layout_scale.h"
 #include "shader_catalog.h"
 
 namespace {
@@ -68,6 +69,23 @@ static bool render_int_row(const char* label, int* value, const char* help,
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (changed)
 		*value = std::clamp(*value, min_value, max_value);
+	finish_setting_row(help);
+	return changed;
+}
+
+// GUI-scale row: the option is a float percent, but the row edits an integer
+// percent (render_int_row-style spinner) clamped to the range from
+// gui_layout_scale.h — the minimum doubles as the lockout guarantee, so the
+// settings UI can never be scaled below readable.
+static bool render_gui_scale_row(const char* label, float* value, const char* help)
+{
+	next_setting_row(label);
+	int percent = static_cast<int>(clamp_gui_layout_scale_percent(*value));
+	ImGui::SetNextItemWidth(-1.0f);
+	const bool changed = ImGui::InputInt("##value", &percent, 1, 10);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	if (changed)
+		*value = clamp_gui_layout_scale_percent(static_cast<float>(percent));
 	finish_setting_row(help);
 	return changed;
 }
@@ -372,6 +390,15 @@ static void save_global_settings()
 	const bool conf_ok = save_amiberry_settings_with_result();
 	regclosetree(nullptr);
 
+	// A saved GUI-scale preference applies on the next GUI open: invalidate
+	// the one-shot window-size initialization so it recomputes from the new
+	// scale (a manually resized window keeps its persisted GUISizeW/H —
+	// the restore runs after the scale-based default — while fonts and
+	// metrics follow the preference when the GUI re-initializes). Called
+	// unconditionally: recomputing with an unchanged preference is
+	// idempotent.
+	invalidate_gui_window_size_init();
+
 	if (conf_ok && ini_ok) {
 		ShowMessageBox("Global Settings", "Global settings saved.");
 	} else if (!conf_ok && !ini_ok) {
@@ -546,6 +573,8 @@ void render_panel_global_settings()
 		render_combo_row("Screen mode", &amiberry_options.default_fullscreen_mode,
 			fullscreen_options, IM_ARRAYSIZE(fullscreen_options),
 			"Default native and RTG screen mode.");
+		render_gui_scale_row("GUI scale", &amiberry_options.gui_layout_scale_percent,
+			"Size of the GUI as a percentage of automatic DPI scaling. 100 is the default.");
 	});
 
 	render_group("Sound defaults", "GlobalSoundDefaults", [&]() {

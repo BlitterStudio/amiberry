@@ -779,6 +779,18 @@ SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
 
 static bool gui_window_size_initialized = false;
 
+// Called after global settings persist (notably a changed gui_layout_scale
+// preference): drop the one-shot window-size initialization so the next
+// amiberry_gui_init() recomputes the default size from the current scale.
+// A window the user resized keeps its size — the one-shot init restores the
+// persisted GUISizeW/H after the scale-based default — while the per-open
+// metric and font rebuild follows the preference automatically. Recomputing
+// with an unchanged preference is idempotent.
+void invalidate_gui_window_size_init()
+{
+	gui_window_size_initialized = false;
+}
+
 /* Flag for changes in rtarea:
   Bit 0: any HD in config?
   Bit 1: force because add/remove HD was clicked or new config loaded

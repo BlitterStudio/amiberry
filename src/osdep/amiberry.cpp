@@ -7045,6 +7045,9 @@ bool save_amiberry_settings_with_result()
 	// Default mouse input speed
 	write_int_option("input_default_mouse_speed", amiberry_options.input_default_mouse_speed);
 
+	// GUI scale as a percentage of automatic DPI scaling (100 = stock)
+	write_float_option("gui_layout_scale", amiberry_options.gui_layout_scale_percent);
+
 	// When using Keyboard as Joystick, stop any double keypresses
 	write_bool_option("input_keyboard_as_joystick_stop_keypresses", amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 	
@@ -7515,6 +7518,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
+		ret |= cfgfile_floatval(option, value, "gui_layout_scale", &amiberry_options.gui_layout_scale_percent);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);

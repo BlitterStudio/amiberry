@@ -2,6 +2,9 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "sysdeps.h"
+#include "options.h"
+#include "gui_layout_scale.h"
 #include "dpi_handler.hpp"
 
 namespace
@@ -87,23 +90,30 @@ float DPIHandler::get_scale()
 }
 
 float DPIHandler::get_layout_scale() {
+	// User-adjustable GUI scale: applied here so every consumer (font,
+	// window size, widget metrics, drag threshold) follows it with no
+	// per-caller edits. Percent 100 is an exact pass-through, so the
+	// non-Android default is bit-identical to stock behavior.
+	const float percent = amiberry_options.gui_layout_scale_percent;
 #ifdef __ANDROID__
-    SDL_Rect bounds;
-    if (SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &bounds)) {
-        // Use the larger dimension to ensure consistent scaling regardless of orientation
-        // This way portrait and landscape start with the same scale factor
-        int max_dim = std::max(bounds.w, bounds.h);
-        float scaling_factor = static_cast<float>(max_dim) / 800.0f;
-        return (scaling_factor < 1.0f) ? 1.0f : scaling_factor;
-    }
-    return 1.0f;
+	SDL_Rect bounds;
+	if (SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &bounds)) {
+		// Use the larger dimension to ensure consistent scaling regardless of orientation
+		// This way portrait and landscape start with the same scale factor
+		int max_dim = std::max(bounds.w, bounds.h);
+		float scaling_factor = static_cast<float>(max_dim) / 800.0f;
+		if (scaling_factor < 1.0f)
+			scaling_factor = 1.0f;
+		return effective_layout_scale(scaling_factor, percent);
+	}
+	return effective_layout_scale(1.0f, percent);
 #elif defined(__linux__) || defined(_WIN32)
-    float scale = read_scale_from_content_scale();
-    if (scale <= 0.0f)
-        scale = read_scale_from_display_mode();
-    return std::max(scale, 1.0f);
+	float scale = read_scale_from_content_scale();
+	if (scale <= 0.0f)
+		scale = read_scale_from_display_mode();
+	return effective_layout_scale(std::max(scale, 1.0f), percent);
 #else
-    return 1.0f;
+	return effective_layout_scale(1.0f, percent);
 #endif
 }
 
