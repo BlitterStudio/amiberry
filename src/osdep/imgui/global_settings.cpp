@@ -74,19 +74,17 @@ static bool render_int_row(const char* label, int* value, const char* help,
 }
 
 // GUI-scale row: the option is a float percent, but the row edits an integer
-// percent (render_int_row-style spinner) clamped to the range from
-// gui_layout_scale.h — the minimum doubles as the lockout guarantee, so the
-// settings UI can never be scaled below readable.
+// percent spinner clamped to the range from gui_layout_scale.h — the minimum
+// doubles as the lockout guarantee, so the settings UI can never be scaled
+// below readable.
 static bool render_gui_scale_row(const char* label, float* value, const char* help)
 {
-	next_setting_row(label);
 	int percent = static_cast<int>(clamp_gui_layout_scale_percent(*value));
-	ImGui::SetNextItemWidth(-1.0f);
-	const bool changed = ImGui::InputInt("##value", &percent, 1, 10);
-	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	const bool changed = render_int_row(label, &percent, help, 1,
+		static_cast<int>(gui_layout_scale_min_percent),
+		static_cast<int>(gui_layout_scale_max_percent));
 	if (changed)
 		*value = clamp_gui_layout_scale_percent(static_cast<float>(percent));
-	finish_setting_row(help);
 	return changed;
 }
 
@@ -390,13 +388,8 @@ static void save_global_settings()
 	const bool conf_ok = save_amiberry_settings_with_result();
 	regclosetree(nullptr);
 
-	// A saved GUI-scale preference applies on the next GUI open: invalidate
-	// the one-shot window-size initialization so it recomputes from the new
-	// scale (a manually resized window keeps its persisted GUISizeW/H —
-	// the restore runs after the scale-based default — while fonts and
-	// metrics follow the preference when the GUI re-initializes). Called
-	// unconditionally: recomputing with an unchanged preference is
-	// idempotent.
+	// A saved GUI-scale preference applies on the next GUI open; see
+	// invalidate_gui_window_size_init().
 	invalidate_gui_window_size_init();
 
 	if (conf_ok && ini_ok) {

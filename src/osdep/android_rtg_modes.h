@@ -14,6 +14,8 @@
 // in addresolutions().
 
 #include <cstddef>
+#include <cstdio>
+#include <iterator>
 
 // Depth in bytes per pixel stamped on virtual modes when the host exposed no
 // mode to clone one from (32-bit, the usual RTG desktop depth).
@@ -50,8 +52,7 @@ inline constexpr int android_virtual_rtg_modes[][2] = {
 	{ 2560, 1440 }
 };
 
-inline constexpr std::size_t android_virtual_rtg_mode_count =
-	sizeof(android_virtual_rtg_modes) / sizeof(android_virtual_rtg_modes[0]);
+inline constexpr std::size_t android_virtual_rtg_mode_count = std::size(android_virtual_rtg_modes);
 
 // Standalone candidate mirroring the struct PicassoResolution fields the
 // virtual-mode synthesis touches. Keeping this POD local is what lets the
@@ -63,38 +64,6 @@ struct android_rtg_candidate {
 	int refresh; // Hz
 	char name[25];
 };
-
-// Append the decimal digits of value at dst[pos]; returns the new position.
-// Never writes past N - 1 so the caller can terminate the string.
-template <std::size_t N>
-inline std::size_t android_rtg_append_uint(char (&dst)[N], std::size_t pos, unsigned int value)
-{
-	char digits[10];
-	int n = 0;
-	do {
-		digits[n++] = static_cast<char>('0' + value % 10);
-		value /= 10;
-	} while (value != 0);
-	while (n > 0 && pos + 1 < N)
-		dst[pos++] = digits[--n];
-	return pos;
-}
-
-// Format "<w>x<h> ANDROID" into name. The longest table entry ("2560x1440
-// ANDROID", 17 chars) fits name[25] comfortably; the bounded writers keep any
-// input safe regardless.
-template <std::size_t N>
-inline void android_rtg_make_name(char (&name)[N], const unsigned int w, const unsigned int h)
-{
-	std::size_t pos = 0;
-	pos = android_rtg_append_uint(name, pos, w);
-	if (pos + 1 < N)
-		name[pos++] = 'x';
-	pos = android_rtg_append_uint(name, pos, h);
-	for (const char* s = android_rtg_name_suffix; *s != '\0' && pos + 1 < N; s++)
-		name[pos++] = *s;
-	name[pos] = '\0';
-}
 
 // Build the filtered virtual-mode candidate list from the table.
 //
@@ -131,7 +100,8 @@ inline int android_rtg_build_modes(const android_rtg_candidate& template_mode,
 		out[count].height = static_cast<unsigned int>(h);
 		out[count].depth = depth;
 		out[count].refresh = refresh;
-		android_rtg_make_name(out[count].name, out[count].width, out[count].height);
+		std::snprintf(out[count].name, sizeof out[count].name, "%ux%u%s",
+			out[count].width, out[count].height, android_rtg_name_suffix);
 		count++;
 	}
 	return count;

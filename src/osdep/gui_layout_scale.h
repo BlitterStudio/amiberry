@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 // Pure computation for the user-adjustable GUI-scale preference, shared by
 // DPIHandler::get_layout_scale() (the single choke point every GUI font,
 // window-size, widget and drag-threshold consumer reads) and the "GUI scale"
@@ -18,11 +20,7 @@ inline constexpr float gui_layout_scale_max_percent = 200.0f;
 // Clamp a user-entered percentage into the allowed range.
 inline float clamp_gui_layout_scale_percent(const float percent)
 {
-	if (percent < gui_layout_scale_min_percent)
-		return gui_layout_scale_min_percent;
-	if (percent > gui_layout_scale_max_percent)
-		return gui_layout_scale_max_percent;
-	return percent;
+	return std::clamp(percent, gui_layout_scale_min_percent, gui_layout_scale_max_percent);
 }
 
 // Effective layout scale: the stock DPI-aware scale multiplied by the clamped

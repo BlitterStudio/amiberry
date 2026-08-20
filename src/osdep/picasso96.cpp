@@ -3466,7 +3466,7 @@ static int addresolutions(void)
 		}
 	}
 #ifdef __ANDROID__
-	// Amiberry-local Android virtual RTG modes (KTD6): Android/ChromeOS can
+	// Amiberry-local Android virtual RTG modes: Android/ChromeOS can
 	// expose only a small host-mode set, but Picasso96 is a virtual
 	// framebuffer and does not need its Workbench modes limited to it. Append
 	// the common missing resolutions from the Android-gated table before the
@@ -3474,8 +3474,6 @@ static int addresolutions(void)
 	{
 		struct android_rtg_candidate template_mode = {};
 		if (cnt > 0) {
-			template_mode.width = newmodes[0].res.width;
-			template_mode.height = newmodes[0].res.height;
 			template_mode.depth = newmodes[0].depth;
 			template_mode.refresh = newmodes[0].refresh[0];
 		}

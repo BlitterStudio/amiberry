@@ -3,7 +3,7 @@
 #include <cmath>
 
 // Sub-pixel relative mouse motion accumulator for the Android/ChromeOS
-// captured-mouse path (KTD1: capture keeps the window absolute per #2285, so
+// captured-mouse path (capture keeps the window absolute per #2285, so
 // SDL computes hover-position deltas). SDL3 delivers those deltas as floats,
 // and a slow physical mouse can move less than one pixel per event. Feeding
 // them straight into the int parameters of setmousestate truncates every

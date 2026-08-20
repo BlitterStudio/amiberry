@@ -145,7 +145,7 @@ static bool android_pen_blocks_touch = false;
 static std::atomic<bool> android_touch_neutralization_pending{false};
 
 // Sub-pixel relative mouse accumulation (amiberry_mouse_delta.h): one
-// residual per mouse for the captured absolute-hover path (#2285 / KTD1).
+// residual per mouse for the captured absolute-hover path (#2285).
 static std::array<amiberry_mouse_delta_accumulator, MAX_INPUT_DEVICES>
 	android_mouse_deltas;
 
@@ -172,8 +172,7 @@ static void amiberry_android_clear_gui_swipe_filter()
 
 static void amiberry_android_reset_mouse_deltas()
 {
-	for (auto& delta : android_mouse_deltas)
-		delta.reset();
+	android_mouse_deltas.fill({});
 }
 
 static amiberry_mouse_delta_accumulator& amiberry_android_mouse_delta(
@@ -1627,7 +1626,7 @@ static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 {
 #ifdef __ANDROID__
 	// A new capture session must not inherit a stale sub-pixel residual
-	// from the previous one (KTD1).
+	// from the previous one.
 	amiberry_android_reset_mouse_deltas();
 #endif
 	const bool mouse_grab_ok = SDL_SetWindowMouseGrab(mon->amiga_window, true);
@@ -1683,7 +1682,7 @@ void releasecapture(const AmigaMonitor* mon)
 {
 #ifdef __ANDROID__
 	// Capture teardown (focus loss, GUI open, user release) ends the
-	// session: drop any pending sub-pixel residual (KTD1).
+	// session: drop any pending sub-pixel residual.
 	amiberry_android_reset_mouse_deltas();
 #endif
 	if (mon && mon->amiga_window) {
@@ -3470,7 +3469,7 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 #ifdef __ANDROID__
 	// SDL3 mouse motion is floating point, and the captured absolute-hover
-	// path (#2285 / KTD1) can deliver fractional deltas below one pixel per
+	// path (#2285) can deliver fractional deltas below one pixel per
 	// event. Keep the floats here so the accumulator in the relative
 	// dispatch below can carry the un-emitted fraction forward instead of
 	// truncating every event to zero.
@@ -3541,7 +3540,7 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	{
 #ifdef __ANDROID__
 		// Accumulate the fractional deltas and emit whole guest steps; the
-		// core applies input_mouse_speed on this relative path (KTD2), so
+		// core applies input_mouse_speed on this relative path, so
 		// no speed scaling happens here.
 		const amiberry_mouse_delta whole =
 			amiberry_android_mouse_delta(midx).feed(xrel, yrel);
