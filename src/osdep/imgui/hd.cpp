@@ -9,6 +9,7 @@
 #include "filesys.h"
 #include "zfile.h"
 #include "autoconf.h"
+#include "expansion_display_name.h"
 #include "blkdev.h"
 #include "rommgr.h"
 #include "uae.h"
@@ -346,16 +347,11 @@ static void RenderMountedDrives(float reserved_below)
             if (ctype >= HD_CONTROLLER_TYPE_IDE_FIRST && ctype <= HD_CONTROLLER_TYPE_IDE_LAST) {
                 const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
                 if (ert) {
-                    char* friendly = ua(ert->friendlyname);
-                    if (friendly) {
-                        if (ci->controller_type_unit == 0)
-                            snprintf(devname_str, sizeof(devname_str), "%s:%d", friendly, ci->controller_unit);
-                        else
-                            snprintf(devname_str, sizeof(devname_str), "%s:%d/%d", friendly, ci->controller_unit, ci->controller_type_unit + 1);
-                        xfree(friendly);
-                    } else {
-                         strcpy(devname_str, "Unknown");
-                    }
+                    const char* friendly = expansion_display_name(ert->friendlyname, ert->friendlymanufacturer);
+                    if (ci->controller_type_unit == 0)
+                        snprintf(devname_str, sizeof(devname_str), "%s:%d", friendly, ci->controller_unit);
+                    else
+                        snprintf(devname_str, sizeof(devname_str), "%s:%d/%d", friendly, ci->controller_unit, ci->controller_type_unit + 1);
                 } else {
                     const char* idedevs[] = { "IDE:%d", "A600/A1200/A4000:%d" };
                     int idx = ctype - HD_CONTROLLER_TYPE_IDE_FIRST;
@@ -379,16 +375,11 @@ static void RenderMountedDrives(float reserved_below)
                 if (ert_name) xfree(ert_name);
 
                 if (ert) {
-                    char* friendly = ua(ert->friendlyname);
-                    if (friendly) {
-                        if (ci->controller_type_unit == 0)
-                            snprintf(devname_str, sizeof(devname_str), "%s:%s", friendly, sid);
-                        else
-                            snprintf(devname_str, sizeof(devname_str), "%s:%s/%d", friendly, sid, ci->controller_type_unit + 1);
-                        xfree(friendly);
-                    } else {
-                        strcpy(devname_str, "Unknown");
-                    }
+                    const char* friendly = expansion_display_name(ert->friendlyname, ert->friendlymanufacturer);
+                    if (ci->controller_type_unit == 0)
+                        snprintf(devname_str, sizeof(devname_str), "%s:%s", friendly, sid);
+                    else
+                        snprintf(devname_str, sizeof(devname_str), "%s:%s/%d", friendly, sid, ci->controller_type_unit + 1);
                 } else {
                      const char* scsidevs[] = { "SCSI:%s", "A3000:%s", "A4000T:%s", "CDTV:%s" };
                      int idx = ctype - HD_CONTROLLER_TYPE_SCSI_FIRST;

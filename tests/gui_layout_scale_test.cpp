@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -44,6 +45,15 @@ int main()
 			"100% must pass the stock scale through unchanged");
 	}
 
+	// Non-finite input — a hand-edited "nan" in amiberry.conf reaches the
+	// option as NaN (cfgfile_floatval stores the raw _tcstod result) — must
+	// fall back to the stock 100% default. std::clamp alone passes NaN
+	// through, which would poison every GUI font/window metric.
+	for (const float stock : stock_scales) {
+		expect_bits_eq(effective_layout_scale(stock, std::nanf("")),
+			stock * 1.0f, "NaN percent must behave exactly like 100%");
+	}
+
 	// Android large-panel default: a 1600px panel yields stock 2.0
 	// (max(1600, x) / 800), and 70% of it is exactly stock * 0.7f.
 	expect_eq(effective_layout_scale(2.0f, 70.0f), 2.0f * 0.7f,
@@ -77,6 +87,9 @@ int main()
 	expect_eq(clamp_gui_layout_scale_percent(200.0f), 200.0f, "clamp(200) must stay 200");
 	expect_eq(clamp_gui_layout_scale_percent(100.0f), 100.0f, "clamp(100) must stay 100");
 	expect_eq(clamp_gui_layout_scale_percent(70.0f), 70.0f, "clamp(70) must stay 70");
+	expect_eq(clamp_gui_layout_scale_percent(std::nanf("")), 100.0f, "clamp(NaN) must fall back to 100");
+	expect_eq(clamp_gui_layout_scale_percent(INFINITY), 100.0f, "clamp(+inf) must fall back to 100");
+	expect_eq(clamp_gui_layout_scale_percent(-INFINITY), 100.0f, "clamp(-inf) must fall back to 100");
 
 	// The published bounds back the settings row's spinner limits; the
 	// minimum doubles as the lockout guarantee (the smallest allowed scale

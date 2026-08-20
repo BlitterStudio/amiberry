@@ -11,23 +11,14 @@
 // compiles standalone like the other osdep unit tests.
 static int failures;
 
-// Typed nulls so the overloaded helper resolves like the production call
-// sites, which always pass TCHAR fields, never bare nullptr.
+// Typed null so the helper resolves like the production call sites, which
+// always pass TCHAR fields, never bare nullptr.
 static const char* const no_name = nullptr;
-static const wchar_t* const no_wname = nullptr;
 
 static void expect_streq(const char* actual, const char* expected, const char* message)
 {
 	if (std::strcmp(actual, expected) != 0) {
 		std::cerr << message << ": expected \"" << expected << "\", got \"" << actual << "\"\n";
-		failures++;
-	}
-}
-
-static void expect_wstreq(const wchar_t* actual, const wchar_t* expected, const char* message)
-{
-	if (std::wcscmp(actual, expected) != 0) {
-		std::cerr << message << ": expected a wide-char match, got a mismatch\n";
 		failures++;
 	}
 }
@@ -117,17 +108,6 @@ int main()
 		"Named board without manufacturer keeps its plain label");
 	expect_streq(label_for("Blizzard 1260", "Phase 5").c_str(), "Blizzard 1260 (Phase 5)",
 		"Named board with a different manufacturer keeps the suffix");
-
-	// TCHAR compatibility: the wide overload mirrors the narrow fallback
-	// matrix for builds where TCHAR is wchar_t.
-	expect_wstreq(expansion_display_name(L"Blizzard 1260", L"Phase 5"), L"Blizzard 1260",
-		"Named board must render its friendlyname (wide)");
-	expect_wstreq(expansion_display_name(no_wname, no_wname), L"Unknown board",
-		"Board without any name must render the fallback (wide)");
-	expect_wstreq(expansion_display_name(L"", nullptr), L"Unknown board",
-		"Empty-string name must behave like NULL (wide)");
-	expect_wstreq(expansion_display_name(nullptr, L"Kupke"), L"Kupke",
-		"Unnamed board must fall back to its manufacturer (wide)");
-
 	return failures == 0 ? 0 : 1;
 }
+

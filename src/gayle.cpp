@@ -31,6 +31,7 @@
 #endif
 #include "debug.h"
 #include "autoconf.h"
+#include "expansion_display_name.h"
 #include "rommgr.h"
 #include "devices.h"
 #ifdef WITH_DSP
@@ -2028,7 +2029,7 @@ static int pcmcia_eject2(struct uae_prefs *p)
 		if (brc->device_type) {
 			const struct expansionromtype *ert = get_device_expansion_rom(brc->device_type);
 			if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA) && brc->roms[0].inserted) {
-				write_log(_T("PCMCIA: '%s' removed\n"), ert->friendlyname);
+				write_log(_T("PCMCIA: '%s' removed\n"), expansion_display_name(ert->friendlyname, ert->friendlymanufacturer));
 				brc->roms[0].inserted = false;
 				brc_changed->roms[0].inserted = false;
 				brc_cur->roms[0].inserted = false;
@@ -2101,7 +2102,7 @@ static void pcmcia_card_check(int changecheck, int insertdev)
 			const struct expansionromtype *ert = get_device_expansion_rom(brc->device_type);
 			if (ert && ert->deviceflags & EXPANSIONTYPE_PCMCIA) {
 				if ((changecheck && brc->roms[0].inserted != brc_prev->roms[0].inserted) || (!changecheck && brc->roms[0].inserted)) {
-					write_log(_T("PCMCIA: '%s' inserted=%d\n"), ert->friendlyname, brc->roms[0].inserted);
+					write_log(_T("PCMCIA: '%s' inserted=%d\n"), expansion_display_name(ert->friendlyname, ert->friendlymanufacturer), brc->roms[0].inserted);
 					if (!brc->roms[0].inserted) {
 						// eject card
 						freepcmcia(0);

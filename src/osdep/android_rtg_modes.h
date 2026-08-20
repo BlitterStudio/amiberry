@@ -13,6 +13,7 @@
 // are converted to struct PicassoResolution entries at the single call site
 // in addresolutions().
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdio>
 #include <iterator>
@@ -105,4 +106,35 @@ inline int android_rtg_build_modes(const android_rtg_candidate& template_mode,
 		count++;
 	}
 	return count;
+}
+
+// --- Call-site decision helpers (addresolutions(), picasso96.cpp) ---
+//
+// The two decisions the call site makes around the builder — how many slots
+// remain, and whether a candidate duplicates a host mode already collected —
+// live here as pure helpers so the tested code is the shipped code.
+
+// Remaining virtual-mode slots: the raw array capacity minus one reserved
+// headroom slot and the host modes already collected. Clamped at zero so an
+// overfull host list cannot turn the budget negative.
+inline int android_rtg_remaining_mode_budget(const int max_modes, const int existing_count)
+{
+	return std::max(0, max_modes - 1 - existing_count);
+}
+
+// True when (width, height) is already carried by one of the existing host
+// modes, i.e. emitting the candidate would duplicate a resolution the host
+// list already provides. Templated on the mode entry type (struct
+// PicassoResolution at the call site) to keep this header free of SDL/uae
+// includes while comparing through the same .res.width/.res.height members
+// the call site reads.
+template <typename Mode>
+inline bool android_rtg_mode_fits_existing(const unsigned int width, const unsigned int height,
+	const Mode* existing, const int existing_count)
+{
+	for (int i = 0; i < existing_count; i++) {
+		if (existing[i].res.width == width && existing[i].res.height == height)
+			return true;
+	}
+	return false;
 }

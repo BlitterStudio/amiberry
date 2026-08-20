@@ -157,5 +157,9 @@ android/app/src/main/assets/roms
 android/app/src/main/assets/whdboot
 android/local.properties
 
+# Relocated FetchContent dependency cache (android/cmake/android-fetchcontent-paths.cmake,
+# non-Windows hosts and drive-less paths keep it inside the source tree)
+.fc/
+
 # Local planning / scratch notes (not for the repo)
 notes/

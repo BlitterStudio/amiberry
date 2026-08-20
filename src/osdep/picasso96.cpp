@@ -3478,20 +3478,13 @@ static int addresolutions(void)
 			template_mode.refresh = newmodes[0].refresh[0];
 		}
 		struct android_rtg_candidate candidates[android_virtual_rtg_mode_count];
-		const int budget = std::max(0, MAX_PICASSO_MODES - 1 - cnt);
+		const int budget = android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt);
 		const int added = android_rtg_build_modes(template_mode,
 			static_cast<long long>(gfxmem_bank.allocated_size) - 256,
 			budget, candidates);
 		for (int k = 0; k < added; k++) {
-			bool duplicate = false;
-			for (int m = 0; m < cnt; m++) {
-				if (newmodes[m].res.width == candidates[k].width
-					&& newmodes[m].res.height == candidates[k].height) {
-					duplicate = true;
-					break;
-				}
-			}
-			if (duplicate)
+			if (android_rtg_mode_fits_existing(candidates[k].width, candidates[k].height,
+				newmodes, cnt))
 				continue;
 			struct PicassoResolution* pr = &newmodes[cnt];
 			if (cnt > 0)

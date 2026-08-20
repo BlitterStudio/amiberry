@@ -67,6 +67,7 @@
 #include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
+#include "gui_layout_scale.h"
 #include "fsdb.h"
 #include "scsidev.h"
 #ifdef FLOPPYBRIDGE
@@ -7517,7 +7518,14 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
-		ret |= cfgfile_floatval(option, value, "gui_layout_scale", &amiberry_options.gui_layout_scale_percent);
+		// Sanitize at the parse boundary: cfgfile_floatval stores the raw
+		// _tcstod result, so a hand-edited "nan" would otherwise reach (and be
+		// re-persisted from) the option verbatim. Seeding the local with the
+		// current value keeps the option untouched on non-matching lines; the
+		// clamp maps non-finite input to the stock 100%.
+		float parsed_gui_layout_scale = amiberry_options.gui_layout_scale_percent;
+		ret |= cfgfile_floatval(option, value, "gui_layout_scale", &parsed_gui_layout_scale);
+		amiberry_options.gui_layout_scale_percent = clamp_gui_layout_scale_percent(parsed_gui_layout_scale);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);

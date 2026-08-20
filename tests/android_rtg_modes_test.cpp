@@ -47,6 +47,32 @@ static bool contains_resolution(const android_rtg_candidate* modes, const int co
 	return false;
 }
 
+// Mirrors the .res.width/.res.height access shape of struct PicassoResolution
+// (amiberry_gfx.h) at the addresolutions() call site, without pulling its SDL
+// includes into this standalone test.
+struct host_mode {
+	struct {
+		unsigned int width;
+		unsigned int height;
+	} res;
+};
+
+// Mirrors the addresolutions() emission loop (picasso96.cpp): a table
+// candidate is emitted only when no existing host mode already carries its
+// resolution, so an overlapping mode stays a single emission — the host's.
+static int emit_non_existing(const android_rtg_candidate* candidates, const int count,
+	const host_mode* existing, const int existing_count, android_rtg_candidate* emitted)
+{
+	int n = 0;
+	for (int k = 0; k < count; k++) {
+		if (android_rtg_mode_fits_existing(candidates[k].width, candidates[k].height,
+			existing, existing_count))
+			continue;
+		emitted[n++] = candidates[k];
+	}
+	return n;
+}
+
 int main()
 {
 	android_rtg_candidate out[android_virtual_rtg_mode_count];
@@ -126,6 +152,69 @@ int main()
 	n = android_rtg_build_modes(host_template, 0,
 		static_cast<int>(android_virtual_rtg_mode_count), out);
 	expect_eq(n, 0, "zero VRAM must exclude every table entry");
+
+	// --- Dedup vs existing host modes (lifted from the call site) ---
+
+	// Overlap: the host already exposes 1920x1080 (plus two more table
+	// resolutions), so the table's copies of those three are emitted zero
+	// times — each stays a single emission, the host's own entry.
+	host_mode host_list[] = {
+		{ { 1920, 1080 } },
+		{ { 1600, 900 } },
+		{ { 1280, 720 } }
+	};
+	expect_true(android_rtg_mode_fits_existing(1920, 1080, host_list, 3),
+		"a resolution the host already has must fit the existing list");
+	expect_true(!android_rtg_mode_fits_existing(1920, 1079, host_list, 3),
+		"a differing height must not fit the existing list");
+	expect_true(!android_rtg_mode_fits_existing(1919, 1080, host_list, 3),
+		"a differing width must not fit the existing list");
+	expect_true(!android_rtg_mode_fits_existing(640, 512, host_list, 0),
+		"an empty host list must fit nothing");
+	n = android_rtg_build_modes(host_template, plenty_vram,
+		static_cast<int>(android_virtual_rtg_mode_count), out);
+	android_rtg_candidate emitted[android_virtual_rtg_mode_count];
+	int emitted_n = emit_non_existing(out, n, host_list, 3, emitted);
+	expect_eq(emitted_n, n - 3,
+		"each overlapping host mode must suppress exactly its table twin");
+	expect_true(!contains_resolution(emitted, emitted_n, 1920, 1080),
+		"table's 1920x1080 must be emitted zero times when the host already has it");
+	expect_true(!contains_resolution(emitted, emitted_n, 1600, 900),
+		"table's 1600x900 must be emitted zero times when the host already has it");
+	expect_true(!contains_resolution(emitted, emitted_n, 1280, 720),
+		"table's 1280x720 must be emitted zero times when the host already has it");
+	expect_true(contains_resolution(emitted, emitted_n, 640, 512),
+		"non-overlapping table entries must pass through");
+	expect_true(contains_resolution(emitted, emitted_n, 2560, 1440),
+		"the largest non-overlapping entry must pass through");
+
+	// Non-overlap: host modes absent from the table suppress nothing.
+	host_mode odd_host_list[] = {
+		{ { 3840, 2160 } },
+		{ { 720, 480 } }
+	};
+	emitted_n = emit_non_existing(out, n, odd_host_list, 2, emitted);
+	expect_eq(emitted_n, n, "non-overlapping host modes must not suppress any table entry");
+
+	// --- Remaining-slot budget (lifted from the call site) ---
+
+	// max(0, MAX_PICASSO_MODES - 1 - cnt) with MAX_PICASSO_MODES = 300.
+	expect_eq(android_rtg_remaining_mode_budget(300, 0), 299,
+		"empty host list leaves capacity minus the reserved headroom slot");
+	expect_eq(android_rtg_remaining_mode_budget(300, 100), 199,
+		"a partly filled list spends its slots one-for-one");
+	expect_eq(android_rtg_remaining_mode_budget(300, 299), 0,
+		"boundary: filling all but the headroom slot yields exactly zero");
+	expect_eq(android_rtg_remaining_mode_budget(300, 300), 0,
+		"a negative remainder must clamp to zero");
+	expect_eq(android_rtg_remaining_mode_budget(300, 400), 0,
+		"a far negative remainder must clamp to zero");
+
+	// Wiring: the boundary budget feeds android_rtg_build_modes unchanged —
+	// the "host modes already filled the array" path at the call site.
+	n = android_rtg_build_modes(host_template, plenty_vram,
+		android_rtg_remaining_mode_budget(300, 299), out);
+	expect_eq(n, 0, "zero remaining budget must produce no candidates");
 
 	if (failures == 0)
 		std::cout << "android_rtg_modes: all checks passed\n";

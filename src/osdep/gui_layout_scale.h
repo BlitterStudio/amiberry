@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 
 // Pure computation for the user-adjustable GUI-scale preference, shared by
 // DPIHandler::get_layout_scale() (the single choke point every GUI font,
@@ -17,9 +18,15 @@
 inline constexpr float gui_layout_scale_min_percent = 50.0f;
 inline constexpr float gui_layout_scale_max_percent = 200.0f;
 
-// Clamp a user-entered percentage into the allowed range.
+// Clamp a user-entered percentage into the allowed range. Non-finite input
+// (NaN or infinity, e.g. a hand-edited "nan" in amiberry.conf) falls back to
+// the stock 100% default: std::clamp alone passes NaN through (every
+// comparison involving NaN is false), which would poison every GUI metric
+// downstream of get_layout_scale().
 inline float clamp_gui_layout_scale_percent(const float percent)
 {
+	if (!std::isfinite(percent))
+		return 100.0f;
 	return std::clamp(percent, gui_layout_scale_min_percent, gui_layout_scale_max_percent);
 }
 
