@@ -79,6 +79,7 @@
 #include "gui_handling_platform.h"
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
+#include "amiberry_mouse_capture.h"
 #include "imgui_osk.h"
 #ifdef __ANDROID__
 #include "android_touch_mouse.h"
@@ -1618,8 +1619,14 @@ static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 	// SDL hides the cursor when Relative mode is enabled.
 	// This means that the RTG hardware sprite will no longer be shown,
 	// unless it's configured to use Virtual Mouse (absolute movement).
+	constexpr bool capture_platform_is_android =
+#ifdef __ANDROID__
+		true;
+#else
+		false;
+#endif
 	bool relative_ok = true;
-	if (!currprefs.input_tablet) {
+	if (amiberry_capture_uses_relative_mouse_mode(capture_platform_is_android, currprefs.input_tablet)) {
 		relative_ok = SDL_SetWindowRelativeMouseMode(mon->amiga_window, true);
 		if (!relative_ok) {
 			write_log("SDL_SetWindowRelativeMouseMode(true) failed on monitor %d: %s\n",
