@@ -249,6 +249,7 @@ extern void input_mousehack_invalidate_last_abs_position();
 extern void input_mousehack_set_host_cursor_uses_hotspot(bool enabled, int residual_x, int residual_y);
 extern int mousehack_alive (void);
 extern void mousehack_wakeup(void);
+extern bool mousehack_pending(void);
 extern void mousehack_write(int reg, uae_u16 val);
 extern void setmouseactive(int monid, int);
 extern bool ismouseactive(void);

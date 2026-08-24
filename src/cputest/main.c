@@ -96,6 +96,8 @@ static int check_undefined_sr;
 static short is_fpu_adjust;
 static short fpu_adjust_exp;
 struct fpureg fpu_adjust;
+static short disablecaches;
+
 static uae_u32 cpustatearraystore[16];
 static uae_u32 cpustatearraynew[] = {
 	0x00000005, // SFC
@@ -523,11 +525,11 @@ static void start_test(void)
 	}
 	if (cpu_lvl >= 4) {
 		// 68040/060 CACR (IE=1)
-		cpustatearraynew[2] = 0x00008000;
+		cpustatearraynew[2] = disablecaches ? 0x00000000 : 0x00008000;
 	} else {
 		// 68020/30 CACR (CI=1,IE=1)
-		cpustatearraynew[2] = 0x0009;
-		if (cpu_lvl == 3) {
+		cpustatearraynew[2] = disablecaches ? 0x0000 : 0x0009;
+		if (cpu_lvl == 3 && !disablecaches) {
 			// 68030 CACR CD=1
 			cpustatearraynew[2] |= 0x0800;
 		}
@@ -3973,6 +3975,7 @@ int main(int argc, char *argv[])
 		printf("-nofpiar = ignore FPIAR.\n");
 		printf("-cycles [range adjust] = check cycle counts.\n");
 		printf("-cyclecnt <address>. Use custom hardware cycle counter.\n");
+		printf("-nocache = disable caches during test execution.\n");
 #ifdef AMIGA
 		printf("-uae = running in UAE, automatic bus error enable/disable.\n");
 #endif
@@ -4050,6 +4053,8 @@ int main(int argc, char *argv[])
 			askifmissing = 1;
 		} else if (!_stricmp(s, "-next")) {
 			nextall = 1;
+		} else if (!_stricmp(s, "-nocache")) {
+			disablecaches = 1;
 		} else if (!_stricmp(s, "-exit")) {
 			if (next) {
 				exitcnt2 = atoi(next);

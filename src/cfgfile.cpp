@@ -4988,8 +4988,9 @@ static void decode_rom_ident (TCHAR *romfile, int maxlen, const TCHAR *ident, in
 	struct romlist **rl;
 	TCHAR *romtxt;
 
-	if (!ident[0])
+	if (!ident[0] || ident[0] == ':') {
 		return;
+	}
 	romtxt = xmalloc (TCHAR, 10000);
 	romtxt[0] = 0;
 	for (round = 0; round < 2; round++) {

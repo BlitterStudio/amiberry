@@ -2660,6 +2660,11 @@ static void mousehack_reset (void)
 	mousehack_enabled = false;
 }
 
+bool mousehack_pending(void)
+{
+	return mousehack_address != 0;
+}
+
 static bool mousehack_enable (void)
 {
 	int mode;
@@ -2844,7 +2849,7 @@ void mousehack_wakeup(void)
 int input_mousehack_status(TrapContext *ctx, int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset)
 {
 	if (mode == 4) {
-		return mousehack_enable () ? 1 : 0;
+		return 1; // allow pending mousehack task, mousehack can be enabled and disabled on the fly.
 	} else if (mode == 5) {
 		mousehack_address = (trap_get_dreg(ctx, 0) & 0xffff) + rtarea_bank.baseaddr;
 		mousehack_enable ();
@@ -2854,7 +2859,7 @@ int input_mousehack_status(TrapContext *ctx, int mode, uaecptr diminfo, uaecptr 
 			uae_u8 v = get_byte_host(mousehack_address + MH_E);
 			v |= 0x40;
 			put_byte_host(mousehack_address + MH_E, v);
-			write_log (_T("Tablet driver running (%p,%02x)\n"), mousehack_address, v);
+			write_log(_T("Virtual mouse driver running (%p,%02x)\n"), mousehack_address, v);
 		}
 	} else if (mode == 1) {
 		int x1 = -1, y1 = -1, x2 = -1, y2 = -1;
@@ -3429,6 +3434,7 @@ static void mousehack_helper (uae_u32 buttonmask)
 	if (quit_program) {
 		return;
 	}
+
 	if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
 		return;
 	}
@@ -3747,6 +3753,7 @@ static void mouseupdate (int pct, bool vsync)
 	}
 
 	for (int i = 0; i < 2; i++) {
+
 		if (lightpen_delta[i][0]) {
 			lightpen_x[i] += lightpen_delta[i][0];
 			if (!lightpen_deltanoreset[i][0])
@@ -6104,7 +6111,26 @@ static void inputdevice_checkconfig (void)
 			currprefs.input_autoswitch = changed_prefs.input_autoswitch;
 			currprefs.input_autoswitchleftright = changed_prefs.input_autoswitchleftright;
 			currprefs.input_device_match_mask = changed_prefs.input_device_match_mask;
-			currprefs.input_tablet = changed_prefs.input_tablet;
+
+			if (currprefs.input_tablet != changed_prefs.input_tablet) {
+				currprefs.input_tablet = changed_prefs.input_tablet;
+				if (mousehack_address) {
+					// Sync Amiga side mousehack task status.
+					uae_u8 status = get_byte_host(mousehack_address + MH_E);
+					bool act = currprefs.input_tablet != 0;
+					if (status & 0x40) {
+						if (act != ((status & 0x80) != 0)) {
+							uae_u8 newstatus = status & ~0x80;
+							if (act) {
+								newstatus |= 0x80;
+							}
+							if (status != newstatus) {
+								put_byte_host(mousehack_address + MH_E, newstatus);
+							}
+						}
+					}
+				}
+			}
 
 			inputdevice_updateconfig (&changed_prefs, &currprefs);
 			if (refresh_tablet_session)

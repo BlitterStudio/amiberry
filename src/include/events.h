@@ -75,7 +75,7 @@ enum {
 };
 
 enum {
-	ev2_blitter, ev2_misc,
+	ev2_misc,
 	ev2_max = 16
 };
 

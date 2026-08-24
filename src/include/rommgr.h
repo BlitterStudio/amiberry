@@ -1,7 +1,7 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
-#define MAX_ROMMGR_ROMS 344
+#define MAX_ROMMGR_ROMS 350
 
 extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 
@@ -67,6 +67,8 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_NORDIC		0x00080004
 #define ROMTYPE_XPOWER		0x00080005
 #define ROMTYPE_SUPERIV		0x00080006
+#define ROMTYPE_DEMON1		0x00080007
+#define ROMTYPE_DEMON2		0x00080008
 
 #define ROMTYPE_SCSI		0x00100000
 #define ROMTYPE_A2091		0x00100001
@@ -234,7 +236,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 
 #define ROMTYPE_ALL_KICK (ROMTYPE_KICK | ROMTYPE_KICKCD32 | ROMTYPE_CD32)
 #define ROMTYPE_ALL_EXT (ROMTYPE_EXTCD32 | ROMTYPE_EXTCDTV | ROMTYPE_ARCADIABIOS)
-#define ROMTYPE_ALL_CART (ROMTYPE_AR | ROMTYPE_HRTMON | ROMTYPE_NORDIC | ROMTYPE_XPOWER | ROMTYPE_CD32CART | ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)
+#define ROMTYPE_ALL_CART (ROMTYPE_FREEZER | ROMTYPE_CD32CART | ROMTYPE_ARCADIAGAME | ROMTYPE_ALG | ROMTYPE_SUB_MASK)
 
 struct romheader {
 	const TCHAR *name;
@@ -282,6 +284,8 @@ extern void getromname (const struct romdata*, TCHAR*);
 extern struct romdata *getromdatabyname (const TCHAR*);
 extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
 extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);
+extern struct romdata **getromdatalistbyids(const int *ids);
+extern struct romdata *getrombyident(const TCHAR *ident);
 extern void romwarning(const int *ids);
 extern void romwarning(int romtype);
 extern struct romlist *getromlistbyromdata (const struct romdata *rd);

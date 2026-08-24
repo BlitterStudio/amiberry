@@ -1490,9 +1490,16 @@ bool gfxboard_set(int monid, bool rtg)
 
 int gfxboard_monitor_visible(struct rtgboardconfig *rbc)
 {
-	int monid = rbc->monitor_id;
-	if (rtg_visible[monid] >= 0) {
-		return monid;
+	if (rbc->rtgmem_type < GFXBOARD_HARDWARE) {
+		struct amigadisplay *ad = &adisplays[rbc->monitor_id];
+		if (ad->picasso_on) {
+			return rbc->monitor_id;
+		}
+	} else {
+		int monid = rbc->monitor_id;
+		if (rtg_visible[monid] >= 0) {
+			return monid;
+		}
 	}
 	return -1;
 }

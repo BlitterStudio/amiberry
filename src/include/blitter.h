@@ -40,11 +40,11 @@ struct bltinfo {
 extern struct bltinfo blt_info;
 
 extern bool blitter_delayed_update;
+extern bool blitter_cycle_exact;
 
 extern void maybe_blit(int);
 extern void reset_blit(int);
 extern int blitnasty(void);
-extern void blitter_handler(uae_u32);
 extern void build_blitfilltable(void);
 extern void do_blitter(int, uaecptr);
 extern void decide_blitter(int hpos);

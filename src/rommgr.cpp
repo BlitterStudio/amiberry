@@ -107,7 +107,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 342
+#define NEXT_ROM_ID 344
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -342,9 +342,9 @@ static struct romdata roms[] = {
 	ALTROMPN(64, 1, 1, 2 * 524288, ROMTYPE_CD32 | ROMTYPE_KICKCD32 | ROMTYPE_EXTCD32, _T("391640-03"), 0xa4fbc94a, 0x816ce6c5,0x07787585,0x0c7d4345,0x2230a9ba,0x3a2902db )
 
 	{ _T("CD32 Full Motion Video Cartridge ROM"), 3, 1, 40, 30, _T("CD32FMV\0"), 262144, 23, 1, 0, ROMTYPE_CD32CART, 0, 0, NULL,
-	0xc35c37bf, 0x03ca81c7,0xa7b259cf,0x64bc9582,0x863eca0f,0x6529f435, NULL, NULL, 3 },
+	0xc35c37bf, 0x03ca81c7,0xa7b259cf,0x64bc9582,0x863eca0f,0x6529f435, _T("CD32FMV"), NULL, 3 },
 	{ _T("CD32 Full Motion Video Cartridge ROM"), 3, 1, 40, 22, _T("CD32FMV\0"), 262144, 74, 1, 0, ROMTYPE_CD32CART, 0, 0, _T("391777-01"),
-	0xf11158eb, 0x94e469a7,0x6030dcb2,0x99ebc752,0x0aaeef9d,0xb54284cf, NULL, NULL, 3 },
+	0xf11158eb, 0x94e469a7,0x6030dcb2,0x99ebc752,0x0aaeef9d,0xb54284cf, _T("CD32FMV"), NULL, 3},
 
 	{ _T("CDTV extended ROM v1.0"), 1, 0, 1, 0, _T("CDTV\0"), 262144, 20, 0, 0, ROMTYPE_EXTCDTV, 0, 0, NULL,
 	0x42baa124, 0x7BA40FFA,0x17E500ED,0x9FED041F,0x3424BD81,0xD9C907BE },
@@ -375,68 +375,72 @@ static struct romdata roms[] = {
 	ALTROMPN(24, 2, 2, 4096, ROMTYPE_ODD  | ROMTYPE_8BIT, _T("252180-01"), 0x8e5b9a37,0xd10f1564,0xb99f5ffe,0x108fa042,0x362e877f,0x569de2c3)
 
 	{ _T("The Diagnostic 2.0 (Logica)"), 2, 0, 2, 0, _T("LOGICA\0"), 524288, 72, 0, 0, ROMTYPE_KICK | ROMTYPE_SPECIALKICK, 0, 0, NULL,
-	0x8484f426, 0xba10d161,0x66b2e2d6,0x177c979c,0x99edf846,0x2b21651e, NULL, NULL, 5 },
+	0x8484f426, 0xba10d161,0x66b2e2d6,0x177c979c,0x99edf846,0x2b21651e, _T("Logica"), NULL, 5 },
 
 	{ _T("Freezer: Action Replay Mk I v1.00"), 1, 0, 1, 0, _T("AR\0"), 65536, 52, 0, 0, ROMTYPE_AR, 0, 1, NULL,
-	0x2d921771, 0x1EAD9DDA,0x2DAD2914,0x6441F5EF,0x72183750,0x22E01248, NULL, NULL, 1 },
+	0x2d921771, 0x1EAD9DDA,0x2DAD2914,0x6441F5EF,0x72183750,0x22E01248, _T("AR1"), NULL, 1},
 	ALTROM(52, 1, 1, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, 0x82d6eb87, 0x7c9bac11,0x28666017,0xeee6f019,0x63fb3890,0x7fbea355)
 	ALTROM(52, 1, 2, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, 0x40ae490c, 0x81d8e432,0x01b73fd9,0x2e204ebd,0x68af8602,0xb62ce397)
 	{ _T("Freezer: Action Replay Mk I v1.50"), 1, 50, 1, 50, _T("AR\0"), 65536, 25, 0, 0, ROMTYPE_AR, 0, 1, NULL,
-	0xf82c4258, 0x843B433B,0x2C56640E,0x045D5FDC,0x854DC6B1,0xA4964E7C, NULL, NULL, 1 },
+	0xf82c4258, 0x843B433B,0x2C56640E,0x045D5FDC,0x854DC6B1,0xA4964E7C, _T("AR1"), NULL, 1 },
 	ALTROM(25, 1, 1, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, 0x7fbd6de2, 0xb5f71a5c,0x09d65ecc,0xa8a3bc93,0x93558461,0xca190228)
 	ALTROM(25, 1, 2, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, 0x43018069, 0xad8ff242,0xb2cbf125,0x1fc53a73,0x581cf57a,0xb69cee00)
 	{ _T("Freezer: Action Replay Mk II v2.05"), 2, 5, 2, 5, _T("AR\0"), 131072, 26, 0, 0, ROMTYPE_AR2, 0, 1, NULL,
-	0x1287301f, 0xF6601DE8,0x888F0050,0x72BF562B,0x9F533BBC,0xAF1B0074, NULL, NULL, 1 },
+	0x1287301f, 0xF6601DE8,0x888F0050,0x72BF562B,0x9F533BBC,0xAF1B0074, _T("AR2"), NULL, 1 },
 	{ _T("Freezer: Action Replay Mk II v2.12"), 2, 12, 2, 12, _T("AR\0"), 131072, 27, 0, 0, ROMTYPE_AR2, 0, 1, NULL,
-	0x804d0361, 0x3194A07A,0x0A82D8B5,0xF2B6AEFA,0x3CA581D6,0x8BA8762B, NULL, NULL, 1 },
+	0x804d0361, 0x3194A07A,0x0A82D8B5,0xF2B6AEFA,0x3CA581D6,0x8BA8762B, _T("AR2"), NULL, 1 },
 	{ _T("Freezer: Action Replay Mk II v2.14"), 2, 14, 2, 14, _T("AR\0"), 131072, 28, 0, 0, ROMTYPE_AR2, 0, 1, NULL,
-	0x49650e4f, 0x255D6DF6,0x3A4EAB0A,0x838EB1A1,0x6A267B09,0x59DFF634, NULL, NULL, 1 },
+	0x49650e4f, 0x255D6DF6,0x3A4EAB0A,0x838EB1A1,0x6A267B09,0x59DFF634, _T("AR2"), NULL, 1 },
 	{ _T("Freezer: Action Replay Mk III v3.09"), 3, 9, 3, 9, _T("AR\0"), 262144, 29, 0, 0, ROMTYPE_AR2, 0, 1, NULL,
-	0x0ed9b5aa, 0x0FF3170A,0xBBF0CA64,0xC9DD93D6,0xEC0C7A01,0xB5436824, NULL, NULL, 1 },
+	0x0ed9b5aa, 0x0FF3170A,0xBBF0CA64,0xC9DD93D6,0xEC0C7A01,0xB5436824, _T("AR3"), NULL, 1 },
 	ALTROM(29, 1, 1, 131072, ROMTYPE_EVEN | ROMTYPE_8BIT, 0x2b84519f, 0x7841873b,0xf009d834,0x1dfa2794,0xb3751bac,0xf86adcc8)
 	ALTROM(29, 1, 2, 131072, ROMTYPE_ODD  | ROMTYPE_8BIT, 0x1d35bd56, 0x6464be16,0x26b51949,0x9e76e4e3,0x409e8016,0x515d48b6)
 	{ _T("Freezer: Action Replay Mk III v3.17"), 3, 17, 3, 17, _T("AR\0"), 262144, 30, 0, 0, ROMTYPE_AR2, 0, 1, NULL,
-	0xc8a16406, 0x5D4987C2,0xE3FFEA8B,0x1B02E314,0x30EF190F,0x2DB76542, NULL, NULL, 1 },
+	0xc8a16406, 0x5D4987C2,0xE3FFEA8B,0x1B02E314,0x30EF190F,0x2DB76542, _T("AR3"), NULL, 1 },
 	ALTROM(30, 1, 1, 131072, ROMTYPE_EVEN | ROMTYPE_8BIT, 0x5fb69a10, 0x2ce641d1,0xe2e25476,0x9be7d1ba,0x41aace07,0x9cb04e27)
 	ALTROM(30, 1, 2, 131072, ROMTYPE_ODD  | ROMTYPE_8BIT, 0xf767d072, 0xa7431d22,0xbfdb746a,0x8bb6073c,0x9edf7a2b,0x65c6d307)
 	{ _T("Freezer: Action Replay 1200"), 0, 0, 0, 0, _T("AR\0"), 262144, 47, 0, 0, ROMTYPE_AR, 0, 1, NULL,
-	0x8d760101, 0x0F6AB834,0x2810094A,0xC0642F62,0xBA42F78B,0xC0B07E6A, NULL, NULL, 1 },
+	0x8d760101, 0x0F6AB834,0x2810094A,0xC0642F62,0xBA42F78B,0xC0B07E6A, NULL, _T("AR1200"), 1 },
 
 	{ _T("Freezer: Action Cartridge Super IV Professional"), 0, 0, 0, 0, _T("SUPERIV\0"), 0, 62, 0, 0, ROMTYPE_SUPERIV, 0, 1, NULL,
 	0xffffffff, 0, 0, 0, 0, 0, _T("SuperIV"), NULL, 2 },
 	{ _T("Freezer: Action Cart. Super IV Pro (+ROM v4.3)"), 4, 3, 4, 3, _T("SUPERIV\0"), 170368, 60, 0, 0, ROMTYPE_SUPERIV, 0, 1, NULL,
-	0xe668a0be, 0x633A6E65,0xA93580B8,0xDDB0BE9C,0x9A64D4A1,0x7D4B4801, NULL, NULL, 2 },
+	0xe668a0be, 0x633A6E65,0xA93580B8,0xDDB0BE9C,0x9A64D4A1,0x7D4B4801, _T("SuperIV"), NULL, 2 },
 	{ _T("Freezer: X-Power Professional 500 v1.2"), 1, 2, 1, 2, _T("XPOWER\0"), 131072, 65, 0, 0, ROMTYPE_XPOWER, 0, 1, NULL,
-	0x9e70c231, 0xa2977a1c,0x41a8ca7d,0x4af4a168,0x726da542,0x179d5963, NULL, NULL, 2 },
+	0x9e70c231, 0xa2977a1c,0x41a8ca7d,0x4af4a168,0x726da542,0x179d5963, _T("XPower"), NULL, 2 },
 	ALTROM(65, 1, 1, 65536, ROMTYPE_EVEN|ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0xf98742e4,0xe8e683ba,0xd8b38d1f,0x79f3ad83,0xa9e67c6f,0xa91dc96c)
 	ALTROM(65, 1, 2, 65536, ROMTYPE_ODD |ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0xdfb9984b,0x8d6bdd49,0x469ec8e2,0x0143fbb3,0x72e92500,0x99f07910)
 	{ _T("Freezer: X-Power Professional 500 v1.3"), 1, 3, 1, 3, _T("XPOWER\0"), 131072, 68, 0, 0, ROMTYPE_XPOWER, 0, 1, NULL,
-	0x31e057f0, 0x84650266,0x465d1859,0x7fd71dee,0x00775930,0xb7e450ee, NULL, NULL, 2 },
+	0x31e057f0, 0x84650266,0x465d1859,0x7fd71dee,0x00775930,0xb7e450ee, _T("XPower"), NULL, 2 },
 	ALTROM(68, 1, 1, 65536, ROMTYPE_EVEN|ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0x0b2ce0c7,0x45ad5456,0x89192404,0x956f47ce,0xf66a5274,0x57ace33b)
 	ALTROM(68, 1, 2, 65536, ROMTYPE_ODD |ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0x34580c35,0x8ad42566,0x7364f238,0x978f4381,0x08f8d5ec,0x470e72ea)
 	{ _T("Freezer: Nordic Power v1.5"), 1, 5, 1, 5, _T("NPOWER\0"), 65536, 69, 0, 0, ROMTYPE_NORDIC, 0, 1, NULL,
-	0x83b4b21c, 0xc56ced25,0x506a5aab,0x3fa13813,0x4fc9e5ae,0x0f9d3709, NULL, NULL, 2 },
+	0x83b4b21c, 0xc56ced25,0x506a5aab,0x3fa13813,0x4fc9e5ae,0x0f9d3709, _T("NPower"), NULL, 2 },
 	ALTROM(69, 1, 1, 32768, ROMTYPE_EVEN|ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0xdd207174,0xae67652d,0x64f5db20,0x0f4b2110,0xee59567f,0xfbd90a1b)
 	ALTROM(69, 1, 2, 32768, ROMTYPE_ODD |ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0x8f93d85d,0x73c62d21,0x40c0c092,0x6315b702,0xdd5d0f05,0x3dad7fab)
 	{ _T("Freezer: Nordic Power v2.0"), 2, 0, 2, 0, _T("NPOWER\0"), 65536, 67, 0, 0, ROMTYPE_NORDIC, 0, 1, NULL,
-	0xa4db2906, 0x0aec68f7,0x25470c89,0x6b699ff4,0x6623dec5,0xc777466e, NULL, NULL, 2 },
+	0xa4db2906, 0x0aec68f7,0x25470c89,0x6b699ff4,0x6623dec5,0xc777466e, _T("NPower"), NULL, 2 },
 	ALTROM(67, 1, 1, 32768, ROMTYPE_EVEN|ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0xb21be46c,0x50dc607c,0xce976bbd,0x3841eaf0,0x591ddc7e,0xa1939ad2)
 	ALTROM(67, 1, 2, 32768, ROMTYPE_ODD |ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0x96057aed,0xdd9209e2,0x1d5edfc1,0xcdb52abe,0x93de0f35,0xc43da696)
 	{ _T("Freezer: Nordic Power v3.0"), 3, 0, 3, 0, _T("NPOWER\0"), 65536, 70, 0, 0, ROMTYPE_NORDIC, 0, 1, NULL,
-	0x72850aef, 0x59c91d1f,0xa8f118f9,0x0bdba05a,0x9ae788d7,0x7a6cc7c9, NULL, NULL, 2 },
+	0x72850aef, 0x59c91d1f,0xa8f118f9,0x0bdba05a,0x9ae788d7,0x7a6cc7c9, _T("NPower"), NULL, 2 },
 	ALTROM(70, 1, 1, 32768, ROMTYPE_EVEN|ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0xf3330e1f,0x3a597db2,0xb7d11b6c,0xb8e13496,0xc215f223,0x88c4ca3c)
 	ALTROM(70, 1, 2, 32768, ROMTYPE_ODD |ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0xee58e0f9,0x4148f4cb,0xb42cec33,0x8ca144de,0xd4f54118,0xe0f185dd)
 	{ _T("Freezer: Nordic Power v3.2"), 3, 2, 3, 2, _T("NPOWER\0"), 65536, 115, 0, 0, ROMTYPE_NORDIC, 0, 1, NULL,
-	0x46158b6e, 0xd8c3f5af,0x5f109c61,0x5f6acb38,0x68fe6c06,0x580041b5, NULL, NULL, 2 },
+	0x46158b6e, 0xd8c3f5af,0x5f109c61,0x5f6acb38,0x68fe6c06,0x580041b5, _T("NPower"), NULL, 2 },
 	ALTROM(115, 1, 1, 32768, ROMTYPE_EVEN|ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0x4bfc71de,0x51914de0,0xdc0f055a,0x29ca188d,0xa7f61914,0xfdecbd07)
 	ALTROM(115, 1, 2, 32768, ROMTYPE_ODD |ROMTYPE_SCRAMBLED|ROMTYPE_8BIT, 0x923ec443,0x9f1e5334,0xaa620745,0xf4d0c50e,0x8736543b,0x6d4366c5)
 	{ _T("Freezer: Pro Access v2.17"), 2, 17, 2, 17, _T("PROACCESS\0"), 65536, 116, 0, 0, ROMTYPE_AR, 0, 1, NULL,
-	0xc4c265cd, 0x6a5c0d99,0x69a624dc,0x1b437aec,0x5dbcd4c7,0x2ce9064a, NULL, NULL, 2 },
+	0xc4c265cd, 0x6a5c0d99,0x69a624dc,0x1b437aec,0x5dbcd4c7,0x2ce9064a, _T("ProAccess"), NULL, 2 },
 	ALTROM(116, 1, 1, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, 0x1909f7e9, 0x5abe9b9d,0xaae328c8,0x134e2b62,0x7b33b698,0xe342afc2)
 	ALTROM(116, 1, 2, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, 0xa3927c72, 0x7adc9352,0x2d112ae9,0x23b9a70d,0x951b1e7a,0xba800ea6)
 
 	{ _T("Freezer: HRTMon v2.37 (built-in)"), 0, 0, 0, 0, _T("HRTMON\0"), 0, 63, 0, 0, ROMTYPE_HRTMON, 0, 1, NULL,
 	0xffffffff, 0, 0, 0, 0, 0, _T("HRTMon"), NULL, 2 },
+	{ _T("Freezer: DeMoN v1"), 0, 0, 0, 0, _T("DEMONV1\0"), 262144, 342, 0, 0, ROMTYPE_DEMON1, 0, 1, NULL,
+	0xffffffff, 0, 0, 0, 0, 0, _T("DeMoNv1"), NULL, 2 },
+	{ _T("Freezer: DeMoN v2"), 0, 0, 0, 0, _T("DEMONV2\0"), 262144, 343, 0, 0, ROMTYPE_DEMON2, 0, 1, NULL,
+	0xffffffff, 0, 0, 0, 0, 0, _T("DeMoNv2"), NULL, 2 },
 
 	{ _T("A2090A"), 0, 0, 0, 0, _T("A2090A\0"), 16384, 122, 0, 0, ROMTYPE_A2090, 0, 0, NULL,
 	0x73fe45a7, 0x77ce9091,0x4be5a3bf,0x6f26b343,0x062b5bd8,0xc63c3754 },
@@ -1205,6 +1209,16 @@ static void romlist_cleanup(void)
 #endif
 }
 
+struct romdata *getrombyident(const TCHAR *ident)
+{
+	for (int i = 0; roms[i].name; i++) {
+		if (roms[i].configname && !_tcscmp(roms[i].configname, ident)) {
+			return &roms[i];
+		}
+	}
+	return NULL;
+}
+
 struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all)
 {
 	int i, j, ok, out, max;
@@ -1870,6 +1884,36 @@ struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname)
 	return NULL;
 }
 
+struct romdata **getromdatalistbyids(const int *ids)
+{
+	struct romdata **rlout = xcalloc(struct romdata*, MAX_ROMMGR_ROMS + 1);
+	if (rlout) {
+		int out = 0;
+		for (int i = 0; ids[i] >= 0; i++) {
+			int type2 = ids[i];
+			for (int j = 0; roms[j].name; j++) {
+				int type1 = roms[j].type;
+				if (roms[j].group == 0) {
+					if (((type1 & ROMTYPE_GROUP_MASK) & (type2 & ROMTYPE_GROUP_MASK)) && ((type1 & ROMTYPE_SUB_MASK) == (type2 & ROMTYPE_SUB_MASK) || !(type2 & ROMTYPE_SUB_MASK))) {
+						bool match = false;
+						for (int k = 0; k < out; k++) {
+							if (!_tcsicmp(roms[j].name, rlout[k]->name)) {
+								match = true;
+								break;
+							}
+						}
+						if (!match) {
+							rlout[out++] = &roms[j];
+						}
+					}
+				}
+			}
+
+		}
+	}
+	return rlout;
+}
+
 struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
 {
 	struct romdata *rd;
@@ -2515,8 +2559,10 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 			_tcscpy(brc->roms[0].romfile, p->cartfile);
 	}
 	if ((rd->type & ROMTYPE_ARCADIAGAME) ||
-		rd->type == ROMTYPE_HRTMON || rd->type == ROMTYPE_XPOWER || rd->type ==  ROMTYPE_NORDIC || rd->type == ROMTYPE_AR || rd->type == ROMTYPE_SUPERIV)
+		rd->type == ROMTYPE_HRTMON || rd->type == ROMTYPE_XPOWER || rd->type ==  ROMTYPE_NORDIC || rd->type == ROMTYPE_AR ||
+		rd->type == ROMTYPE_SUPERIV || rd->type == ROMTYPE_DEMON1 || rd->type == ROMTYPE_DEMON2) {
 		_tcscpy (p->cartfile, path);
+	}
 	if (rd->type & ROMTYPE_CPUBOARD)
 		set_device_rom(p, path, ROMTYPE_CPUBOARD, 0);
 

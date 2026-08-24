@@ -76,7 +76,8 @@ extern uae_u8 agnus_hpos;
 #define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 3
 
 /* we must not change ce-mode while blitter is running.. */
-static int blitter_cycle_exact, immediate_blits;
+bool blitter_cycle_exact;
+static int immediate_blits;
 static int blt_statefile_type;
 
 static uae_u16 bltcon0_next, bltcon1_next;
@@ -132,6 +133,8 @@ static uae_u32 debug_bltpc;
 static int debug_bltcop;
 static uae_u16 debug_bltsizev, debug_bltsizeh;
 static uae_u16 debug_bltadat, debug_bltbdat, debug_bltcdat;
+
+static void blitter_handler(uae_u32 data);
 
 #define BLITTER_MAX_PIPELINED_CYCLES 4
 
@@ -436,7 +439,7 @@ static void blitter_end(void)
 {
 	blt_info.blit_main = 0;
 	blt_info.blit_queued = 0;
-	event2_remevent(ev2_blitter);
+	event2_newevent_x_remove(blitter_handler);
 	unset_special(SPCFLAG_BLTNASTY);
 #if BLITTER_DEBUG
 	if (log_blitter & 1) {
@@ -995,12 +998,12 @@ static int makebliteventtime(int delay)
 	return delay;
 }
 
-void blitter_handler(uae_u32 data)
+static void blitter_handler(uae_u32 data)
 {
 	static int blitter_stuck;
 
 	if (!dmaen (DMA_BLITTER)) {
-		event2_newevent (ev2_blitter, 10, 0);
+		event2_newevent_xx(-1, 10, 0, blitter_handler);
 		blitter_stuck++;
 		if (blitter_stuck < 20000 || !immediate_blits)
 			return; /* gotta come back later. */
@@ -1013,7 +1016,7 @@ void blitter_handler(uae_u32 data)
 	}
 	blitter_stuck = 0;
 	if (blit_slowdown > 0 && !immediate_blits) {
-		event2_newevent (ev2_blitter, makebliteventtime(blit_slowdown), 0);
+		event2_newevent_xx(-1, makebliteventtime(blit_slowdown), 0, blitter_handler);
 		blit_slowdown = -1;
 		return;
 	}
@@ -2148,7 +2151,7 @@ void do_blitter(int copper, uaecptr pc)
 	}
 	
 	blit_cyclecounter = cycles * blit_cyclecount;
-	event2_newevent (ev2_blitter, makebliteventtime(blit_cyclecounter), 0);
+	event2_newevent_xx(-1, makebliteventtime(blit_cyclecounter), 0, blitter_handler);
 }
 
 void blitter_check_start (void)
@@ -2434,10 +2437,10 @@ uae_u8 *restore_blitter_new(uae_u8 *src)
 	uae_u8 state, tmp;
 
 	blt_statefile_type = 1;
-	blitter_cycle_exact = restore_u8();
-	if (blitter_cycle_exact & 2) {
+	tmp = restore_u8();
+	if (tmp & 2) {
 		blt_statefile_type = 2;
-		blitter_cycle_exact = 1;
+		blitter_cycle_exact = true;
 	}
 
 	state = restore_u8();

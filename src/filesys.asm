@@ -2647,6 +2647,7 @@ MH_END = (MH_DATAPTR+4)
 
 MH_MOUSEHACK = 0
 MH_TABLET = 1
+MH_INIT = 6
 MH_ACTIVE = 7
 
 TAG_USER   equ $80000000
@@ -3115,11 +3116,13 @@ buttonstoqual:
 	rts
 
 mousehackint:
+	move.l MH_DATAPTR(a1),a0
+	btst #MH_ACTIVE,MH_E(a0)
+	beq.s .l3
 	tst.l MH_IO(a1)
 	beq.s .l1
 	tst.l MH_TM(a1)
 	beq.s .l1
-	move.l MH_DATAPTR(a1),a0
 	move.w MH_CNT(a0),d0
 	cmp.w MH_FOO+MH_FOO_CNT(a1),d0
 	beq.s .l2

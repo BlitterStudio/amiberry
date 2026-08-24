@@ -138,6 +138,8 @@ static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
 static void draw_denise_line(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
 	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls);
 
+static void matchsprites2(int cnt);
+static void matchsprites2_aga(int cnt);
 static void sprwrite(int reg, uae_u16 v);
 static void sprwrite_64(int reg, uae_u64 v);
 // 0 = SPRxPOS/CTL, 1 = SPRxDATx
@@ -2951,6 +2953,21 @@ static void sprwrite_64(int reg, uae_u64 v)
 	}
 }
 
+/*
+ SPRxDATA and SPRxDATB is moved to shift register when SPRxPOS matches.
+
+ When copper writes to SPRxDATx exactly when SPRxPOS matches:
+ - If sprite low x bit (SPRCTL bit 0) is not set, shift register copy
+   is done first (previously loaded SPRxDATx value is shown) and then
+   new SPRxDATx gets stored for future use.
+ - If sprite low x bit is set, new SPRxDATx is stored, then SPRxPOS
+   matches and value written to SPRxDATx is visible.
+
+ - Writing to SPRxPOS when SPRxPOS matches: shift register
+   copy is always done first, then new SPRxPOS value is stored
+   for future use.
+*/
+
 static void sprwrite(int reg, uae_u16 v)
 {
 	int num = reg / 8;
@@ -4365,6 +4382,68 @@ static void flush_fast_rga(uae_u32 linecnt)
 	}
 }
 
+static void do_aga_unaligned0(void)
+{
+	if (aga_delayed_color_idx >= 0) {
+		update_color(aga_delayed_color_idx, aga_delayed_color_val, aga_delayed_color_con2, aga_delayed_color_con3);
+		aga_delayed_color_idx = -1;
+	}
+	bplmode = bplmode_new;
+#if 0
+	if (bplcon0_res_unalign) {
+		expand_bplcon0_unaligned();
+	}
+#endif
+}
+
+static void do_aga_unaligned1(int cnt)
+{
+	bplcon4_denise_xor_val = bplcon4_denise_xor_val2;
+	sbasecol[0] = sbasecol2[0];
+	sbasecol[1] = sbasecol2[1];
+
+	if (bpl1dat_unalign) {
+		bpl1dat_enable_bpls();
+		bpl1dat_unalign = false;
+	}
+
+	if (spr_unalign_reg[1]) {
+		int sreg = spr_unalign_reg[1] - 0x140;
+		sprwrite_64(sreg, spr_unalign_val64[1]);
+		spr_unalign_reg[1] = 0;
+	}
+	if (spr_unalign_reg[0]) {
+		int sreg = spr_unalign_reg[0] - 0x140;
+		if (cnt >= 0) {
+			matchsprites2_aga(cnt);
+		}
+		sprwrite(sreg, spr_unalign_val[0]);
+		spr_unalign_reg[0] = 0;
+	}
+
+	if (delayed_fmode != fmode_denise) {
+		expand_fmode(delayed_fmode);
+	}
+}
+
+static void do_ecs_unaligned(void)
+{
+	// DIWHIGH has extra 0.5 CCK delay
+	if (denise_diwhigh2 >= 0) {
+		denise_diwhigh = denise_diwhigh2;
+		denise_diwhigh2 = -1;
+		diwhigh_written = true;
+		calchdiw();
+	}
+}
+static void do_ecs_unaligned1(void)
+{
+	if (bpl1dat_unalign) {
+		bpl1dat_enable_bpls();
+		bpl1dat_unalign = false;
+	}
+}
+
 static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
 {
 	// makes sure fast queue is flushed first
@@ -4379,23 +4458,17 @@ static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
 	expand_drga_early(&dr);
 	expand_drga(&dr);
 	// handle all queued writes immediately
-	reswitch_unalign = 0;
 	update_bplcon1();
-	if (denise_diwhigh2 >= 0) {
-		denise_diwhigh = denise_diwhigh2;
-		denise_diwhigh2 = -1;
-		diwhigh_written = true;
-		calchdiw();
+	if (aga_mode) {
+		do_aga_unaligned0();
+		do_aga_unaligned1(-1);
+	} else {
+		do_ecs_unaligned1();
+		do_ecs_unaligned();
 	}
-	if (aga_delayed_color_idx >= 0) {
-		update_color(aga_delayed_color_idx, aga_delayed_color_val, aga_delayed_color_con2, aga_delayed_color_con3);
-		aga_delayed_color_idx = -1;
-	}
-	bplmode = bplmode_new;
-	sbasecol[0] = sbasecol2[0];
-	sbasecol[1] = sbasecol2[1];
 	aga_unalign0 = 0;
 	aga_unalign1 = 0;
+	reswitch_unalign = 0;
 	check_lts_request();
 }
 
@@ -4613,6 +4686,8 @@ static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
 
 static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 {
+	uae_u8 c = vs >> 16;
+	uae_u16 v = (uae_u16)vs;
 	if (currprefs.collision_level) {
 		denise_collide_sprites(apixel, vs);
 	}
@@ -4621,8 +4696,6 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 	// extraction, but removes it from the rendered Denise output.
 	vs &= magic_sprite_mask;
 #endif
-	uae_u8 c = vs >> 16;
-	uae_u16 v = (uae_u16)vs;
 	int *shift_lookup = bpldualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
 	int maskshift, plfmask;
 	maskshift = shift_lookup[apixel];
@@ -5281,8 +5354,6 @@ static void burst_disable(void)
 
 static void lts_unaligned_ecs(int, int, int);
 static void lts_unaligned_aga(int, int, int);
-static void matchsprites2(int cnt);
-static void matchsprites2_aga(int cnt);
 
 static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
 {
@@ -5548,6 +5619,7 @@ void denise_restore_registers(void)
 	expand_bplcon3(s_bplcon3);
 	expand_bplcon4_spr(s_bplcon4);
 	expand_bplcon4_bm(s_bplcon4);
+	delayed_fmode = s_fmode;
 	expand_fmode(s_fmode);
 }
 
@@ -5814,16 +5886,12 @@ static uint32_t decode_denise_specials_debug(uint32_t v, int inc)
 static void flush_null(void)
 {
 	if (aga_mode) {
-		if (aga_delayed_color_idx >= 0) {
-			update_color(aga_delayed_color_idx, aga_delayed_color_val, aga_delayed_color_con2, aga_delayed_color_con3);
-			aga_delayed_color_idx = -1;
-		}
-		sbasecol[0] = sbasecol2[0];
-		sbasecol[1] = sbasecol2[1];
-		bplcon4_denise_xor_val = bplcon4_denise_xor_val2;
+		do_aga_unaligned0();
+		do_aga_unaligned1(-1);
+	} else {
+		do_ecs_unaligned1();
+		do_ecs_unaligned();
 	}
-
-	bplmode = bplmode_new;
 }
 
 static void lts_null(void)
@@ -6708,46 +6776,11 @@ static void lts_unaligned_aga(int cnt, int cnt_next, int h)
 	for (int i = 0; i < (1 << RES_MAX); i += xadd, ipix += xadd) {
 
 		if (i == 2 || !hresolution) {
-
 			if (!h) {
-				if (aga_delayed_color_idx >= 0) {
-					update_color(aga_delayed_color_idx, aga_delayed_color_val, aga_delayed_color_con2, aga_delayed_color_con3);
-					aga_delayed_color_idx = -1;
-				}
-				bplmode = bplmode_new;
-#if 0
-				if (bplcon0_res_unalign) {
-					expand_bplcon0_unaligned();
-				}
-#endif
-
-			} else if (h) {
-				bplcon4_denise_xor_val = bplcon4_denise_xor_val2;
-				sbasecol[0] = sbasecol2[0];
-				sbasecol[1] = sbasecol2[1];
-
-				if (bpl1dat_unalign) {
-					bpl1dat_enable_bpls();
-					bpl1dat_unalign = false;
-				}
-
-				if (spr_unalign_reg[1]) {
-					int sreg = spr_unalign_reg[1] - 0x140;
-					sprwrite_64(sreg, spr_unalign_val64[1]);
-					spr_unalign_reg[1] = 0;
-				}
-				if (spr_unalign_reg[0]) {
-					int sreg = spr_unalign_reg[0] - 0x140;
-					matchsprites2_aga(cnt);
-					sprwrite(sreg, spr_unalign_val[0]);
-					spr_unalign_reg[0] = 0;
-				}
-
-				if (delayed_fmode != fmode_denise) {
-					expand_fmode(delayed_fmode);
-				}
+				do_aga_unaligned0();
+			} else {
+				do_aga_unaligned1(cnt);
 			}
-
 		}
 
 		if (cnt == denise_hstrt) {
@@ -6998,22 +7031,10 @@ static void lts_unaligned_ecs(int cnt, int cnt_next, int h)
 	for (int i = 0; i < (1 << RES_SUPERHIRES); i++, ipix++) {
 
 		if (i == 2) {
-
 			if (h) {
-				if (bpl1dat_unalign) {
-					bpl1dat_enable_bpls();
-					bpl1dat_unalign = false;
-				}
+				do_ecs_unaligned1();
 			}
-
-			// DIWHIGH has extra 0.5 CCK delay
-			if (denise_diwhigh2 >= 0) {
-				denise_diwhigh = denise_diwhigh2;
-				denise_diwhigh2 = -1;
-				diwhigh_written = true;
-				calchdiw();
-			}
-
+			do_ecs_unaligned();
 		}
 
 		// bitplanes

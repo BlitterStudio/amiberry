@@ -639,7 +639,7 @@ void *flash_new(uae_u8 *rom, int flashsize, int allocsize, uae_u8 mfgcode, uae_u
 		fd->rom = rom;
 		fd->flags = flags;
 		fd->devicecode = devcode;
-		fd->pagesize = mfgcode == 0xbf ? 128 : 64;
+		fd->pagesize = mfgcode == 0xbf  || mfgcode == 0x1f ? 128 : 64;
 		fd->mfgcode = mfgcode;
 		fd->sectorsize = devcode == 0x20 ? 16384 : 65536;
 		fd->lastwriteoffset = 0;
@@ -656,16 +656,17 @@ void flash_free(void *fdv)
 	if (!fd)
 		return;
 	if (fd->zf && fd->modified) {
-		if (fd->flags & FLASHROM_EVERY_OTHER_BYTE) {
-			zfile_fseek(fd->zf, (fd->flags & FLASHROM_EVERY_OTHER_BYTE_ODD) ? 1 : 0, SEEK_SET);
+		if (fd->flags & (FLASHROM_EVERY_OTHER_BYTE | FLASHROM_EVERY_OTHER_BYTE_ODD)) {
+			int odd = (fd->flags & FLASHROM_EVERY_OTHER_BYTE_ODD) ? 1 : 0;
+			zfile_fseek(fd->zf, odd, SEEK_SET);
 			int last = fd->lastwriteoffset + 1;
 			last += 511;
 			last &= ~511;
 			if (last > fd->allocsize) {
 				last = fd->allocsize;
 			}
-			for (int i = 0; i < last; i++) {
-				zfile_fwrite(&fd->rom[i * 2], 1, 1, fd->zf);
+			for (int i = 0; i < last / 2; i++) {
+				zfile_fwrite(&fd->rom[i * 2 + odd], 1, 1, fd->zf);
 				zfile_fseek(fd->zf, 1, SEEK_CUR);
 			}
 		} else if (fd->flags & FLASHROM_SKIP_EVERY_OTHER_BYTE) {
@@ -745,11 +746,13 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 {
 	struct flashrom_data *fd = (struct flashrom_data*)fdv;
 	int other_byte_mult = 1;
+	int odd = 0;
 
 	if (!fd)
 		return false;
 
-	if (fd->flags & (FLASHROM_SKIP_EVERY_OTHER_BYTE | FLASHROM_EVERY_OTHER_BYTE)) {
+	if (fd->flags & (FLASHROM_SKIP_EVERY_OTHER_BYTE | FLASHROM_EVERY_OTHER_BYTE | FLASHROM_EVERY_OTHER_BYTE_ODD)) {
+		odd = (fd->flags & FLASHROM_EVERY_OTHER_BYTE_ODD) ? 1 : 0;
 		addr >>= 1;
 		other_byte_mult = 2;
 	}
@@ -757,6 +760,8 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 	if (addr * other_byte_mult >= fd->allocsize) {
 		return false;
 	}
+	
+	int addr_masked = (addr & 0x7fff);
 
 	int oldstate = fd->state;
 	bool det = false;
@@ -768,8 +773,7 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 	addr &= fd->mask;
 
 	if (fd->state == 7 || fd->state == 8) {
-		int a = addr * other_byte_mult;
-		writeflash(fd, a, v);
+		writeflash(fd, addr, v);
 		return true;
 	}
 
@@ -779,29 +783,29 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 	}
 
 	// unlock
-	if (addr == 0x5555 && fd->state <= 2 && v == 0xaa) {
+	if (addr_masked == 0x5555 && fd->state <= 2 && v == 0xaa) {
 		fd->state = 1;
 		det = true;
 	}
-	if (addr == 0x2aaa && fd->state == 1 && v == 0x55) {
+	if (addr_masked == 0x2aaa && fd->state == 1 && v == 0x55) {
 		fd->state = 2;
 		det = true;
 	}
 
 	// software id exit and reset first byte
-	if (addr == 0x5555 && fd->state == 3 && v == 0xaa) {
+	if (addr_masked == 0x5555 && fd->state == 3 && v == 0xaa) {
 		fd->state = 1;
 		det = true;
 	}
 
 	// autoselect
-	if (addr == 0x5555 && fd->state == 2 && v == 0x90) {
+	if (addr_masked == 0x5555 && fd->state == 2 && v == 0x90) {
 		fd->state = 3;
 		det = true;
 	}
 
 	// data protect enable
-	if (addr == 0x5555 && fd->state == 2 && v == 0xa0) {
+	if (addr_masked == 0x5555 && fd->state == 2 && v == 0xa0) {
 		fd->state = 7;
 		det = true;
 		fd->writeprot = -1;
@@ -809,28 +813,28 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 	}
 
 	// data protect disable
-	if (addr == 0x5555 && fd->state == 6 && v == 0x20) {
+	if (addr_masked == 0x5555 && fd->state == 6 && v == 0x20) {
 		fd->state = 0;
 		fd->writeprot = 0;
 		return false;
 	}
 
 	// chip/sector erase/protect disable
-	if (addr == 0x5555 && fd->state == 2 && v == 0x80) {
+	if (addr_masked == 0x5555 && fd->state == 2 && v == 0x80) {
 		fd->state = 4;
 		det = true;
 	}
-	if (addr == 0x5555 && fd->state == 4 && v == 0xaa) {
+	if (addr_masked == 0x5555 && fd->state == 4 && v == 0xaa) {
 		fd->state = 5;
 		det = true;
 	}
-	if (addr == 0x2aaa && fd->state == 5 && v == 0x55) {
+	if (addr_masked == 0x2aaa && fd->state == 5 && v == 0x55) {
 		fd->state = 6;
 		det = true;
 	}
-	if (addr == 0x5555 && fd->state == 6 && v == 0x10) {
+	if (addr_masked == 0x5555 && fd->state == 6 && v == 0x10) {
 		for (int i = 0; i < fd->allocsize; i++)  {
-			int a = i * other_byte_mult;
+			int a = i * other_byte_mult + odd;
 			if (fd->rom[a] != 0xff) {
 				fd->rom[a] = 0xff;
 				setmodified(fd, a);
@@ -846,7 +850,7 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 		int saddr = addr & ~(fd->sectorsize - 1);
 		if (saddr < fd->allocsize) {
 			for (int i = 0; i < fd->sectorsize; i++) {
-				int a = (saddr + i) * other_byte_mult;
+				int a = (saddr + i) * other_byte_mult + odd;
 				if (fd->rom[a] != 0xff) {
 					fd->rom[a] = 0xff;
 					setmodified(fd, a);
@@ -866,8 +870,7 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 	}
 
 	if (!det && (fd->flags & FLASHROM_PARALLEL_EEPROM)) {
-		int a = addr * other_byte_mult;
-		writeflash(fd, a, v);
+		writeflash(fd, addr, v);
 		return true;
 	}
 	return false;
@@ -878,6 +881,7 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 	struct flashrom_data *fd = (struct flashrom_data*)fdv;
 	uae_u8 v = 0xff;
 	int other_byte_mult = 1;
+	int odd = 0;
 #if FLASH_LOG > 1
 	uaecptr oaddr = addr;
 #endif
@@ -885,7 +889,8 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 	if (!fd)
 		return 0;
 
-	if (fd->flags & (FLASHROM_EVERY_OTHER_BYTE | FLASHROM_SKIP_EVERY_OTHER_BYTE)) {
+	if (fd->flags & (FLASHROM_EVERY_OTHER_BYTE | FLASHROM_SKIP_EVERY_OTHER_BYTE | FLASHROM_EVERY_OTHER_BYTE_ODD)) {
+		odd = (fd->flags & FLASHROM_EVERY_OTHER_BYTE_ODD) ? 1 : 0;
 		addr >>= 1;
 		other_byte_mult = 2;
 	}
@@ -900,7 +905,7 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 	if ((fd->flags & FLASHROM_PARALLEL_EEPROM) && fd->pagemodified) {
 		fd->pagemodified = false;
 		for (int i = 0; i < fd->pagesize; i++) {
-			int offset = fd->lastpagewrite + i;
+			int offset = (fd->lastpagewrite + i) * other_byte_mult + odd;
 			if (fd->mpage[i]) {
 				if (fd->rom[offset] != fd->page[i]) {
 					fd->rom[offset] = fd->page[i];
@@ -929,7 +934,7 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 			fd->state = 0;
 		v |= 0x08;
 	} else if (fd->state > 7) {
-		v = (fd->rom[addr * other_byte_mult] & 0x80) ^ 0x80;
+		v = (fd->rom[addr * other_byte_mult + odd] & 0x80) ^ 0x80;
 		if (fd->state & 1)
 			v ^= 0x40;
 		fd->state++;
@@ -938,7 +943,7 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 		}
 	} else {
 		fd->state = 0;
-		v = fd->rom[addr * other_byte_mult];
+		v = fd->rom[addr * other_byte_mult + odd];
 	}
 #if FLASH_LOG > 1
 	write_log(_T("flash read %08x = %02X (%d) PC=%08x\n"), oaddr, v, fd->state, m68k_getpc());

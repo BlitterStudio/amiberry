@@ -357,50 +357,93 @@ void do_cycles_slow(int cycles_to_add)
 	cycles_to_add_remain += remain;
 }
 
-static int event2idx;
+static int event2max;
 static int event2cnt;
+static int event2total;
 static int event2restart;
+static int firstvent2idx;
+static int event2next;
+
+static void events_schedule_misc(void)
+{
+	evt_t ct = get_cycles();
+	evt_t mintime = EVT_MAX;
+
+	firstvent2idx = -1;
+	event2total = 0;
+	for (int i = 0; i < event2max; i++) {
+		ev2 *e = &eventtab2[i];
+		if (e->active) {
+			event2total++;
+			evt_t eventtime = e->evtime - ct;
+			if (eventtime < mintime) {
+				mintime = eventtime;
+				firstvent2idx = i;
+			}
+		}
+	}
+	if (firstvent2idx >= 0) {
+		ev *e = &eventtab[ev_misc];
+		e->active = true;
+		e->oldcycles = ct;
+		e->evtime = ct + mintime;
+	}
+}
 
 void MISC_handler(void)
 {
-	evt_t mintime;
 	evt_t ct = get_cycles();
 
+	if (firstvent2idx >= 0 && eventtab2[firstvent2idx].active && eventtab2[firstvent2idx].evtime == ct) {
+		for(;;) {
+			int idx = firstvent2idx;
+			firstvent2idx = -1;
+			eventtab2[idx].active = false;
+			event2next = idx;
+			eventtab2[idx].handler(eventtab2[idx].data);
+			ev *e = &eventtab[ev_misc];
+			e->active = false;
+			// if this event is active again, new events were added. Handle it normally.
+			if (!eventtab2[idx].active) {
+				// if more than 1 event was active, reschedule.
+				if (event2total > 1) {
+					events_schedule_misc();
+					// more than 1 event with same evtime
+					if (firstvent2idx >= 0 && eventtab2[firstvent2idx].active && eventtab2[firstvent2idx].evtime == ct) {
+						continue;
+					}
+				}
+				return;
+			}
+			break;
+		}
+	}
+
+	evt_t mintime;
+	int eidx = 0;
+	int total = 0;
+	firstvent2idx = -1;
 	if (event2cnt) {
 		event2restart++;
 	}
 	eventtab[ev_misc].active = 0;
 	mintime = EVT_MAX;
-	int idx2 = event2idx;
-	for (int i = 0; i < ev2_max; i++) {
-		int idx = (idx2 + i) & (ev2_max - 1);
-		ev2 *e = &eventtab2[idx];
-		if (e->active) {
-			if (e->evtime == ct) {
-				e->active = false;
-				event2cnt++;
-				e->handler(e->data);
-				event2cnt--;
-				if (event2restart > 0) {
-					event2restart--;
-					mintime = EVT_MAX;
-					i = 0;
-				}
-			} else {
-				evt_t eventtime = e->evtime - ct;
-				if (eventtime < mintime) {
-					mintime = eventtime;
-				}
+	for (int i = 0; i < event2max; i++) {
+		ev2 *e = &eventtab2[i];
+		if (e->evtime == ct) {
+			e->active = false;
+			event2cnt++;
+			e->handler(e->data);
+			event2cnt--;
+			if (event2restart > 0) {
+				event2restart--;
+				mintime = EVT_MAX;
+				i = 0;
 			}
 		}
 	}
-	if (mintime < EVT_MAX) {
-		ev *e = &eventtab[ev_misc];
-		e->active = true;
-		e->oldcycles = ct;
-		e->evtime = ct + mintime;
-		events_schedule();
-	}
+
+	events_schedule_misc();
 }
 
 void event2_newevent_xx_ce(evt_t t, uae_u32 data, evfunc2 func)
@@ -414,12 +457,12 @@ void event2_newevent_xx_ce(evt_t t, uae_u32 data, evfunc2 func)
 
 void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func)
 {
+	evt_t ct = get_cycles();
 	evt_t et;
-	static int next = ev2_misc;
 
-	et = t + get_cycles();
+	et = t + ct;
 	if (no < 0) {
-		no = next;
+		no = event2next;
 		for (;;) {
 			if (!eventtab2[no].active) {
 				break;
@@ -427,24 +470,29 @@ void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func)
 			if (eventtab2[no].evtime == et && eventtab2[no].handler == func && eventtab2[no].data == data)
 				break;
 			no++;
-			if (no == ev2_max) {
+			if (no == event2max) {
 				no = ev2_misc;
 			}
-			if (no == next) {
+			if (no == event2next) {
 				// we may have multiple interrupts queued, merge if possible
-				for (int i = 0; i < ev2_max; i++) {
+				for (int i = 0; i < event2max; i++) {
 					auto ev2 = &eventtab2[i];
 					if (ev2->active && ev2->handler == func && ev2->evtime == et && func == event_doint_delay_do_ext) {
 						ev2->data |= data;
 						return;
 					}
 				}
+				if (event2max < ev2_max) {
+					no = event2max;
+					event2max *= 2;
+					continue;
+				}
 				write_log(_T("out of event2's!\n"));
 				// execute most recent event immediately
 				evt_t mintime = EVT_MAX;
 				int minevent = -1;
 				evt_t ct = get_cycles();
-				for (int i = 0; i < ev2_max; i++) {
+				for (int i = 0; i < event2max; i++) {
 					if (eventtab2[i].active) {
 						evt_t eventtime = eventtab2[i].evtime - ct;
 						if (eventtime < mintime) {
@@ -455,25 +503,26 @@ void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func)
 				}
 				if (minevent >= 0) {
 					eventtab2[minevent].active = false;
+					eventtab2[minevent].evtime = EVT_MAX;
 					eventtab2[minevent].handler(eventtab2[minevent].data);
 				}
 				continue;
 			}
 		}
-		next = no;
+		event2next = no;
 	}
 	ev2 *e = &eventtab2[no];
 	e->active = true;
 	e->evtime = et;
 	e->handler = func;
 	e->data = data;
-	event2idx = addrdiff(e, eventtab2) + 1;
-	MISC_handler();
+	events_schedule_misc();
+	events_schedule();
 }
 
 void event2_newevent_x_replace_exists(evt_t t, uae_u32 data, evfunc2 func)
 {
-	for (int i = 0; i < ev2_max; i++) {
+	for (int i = 0; i < event2max; i++) {
 		if (eventtab2[i].active && eventtab2[i].handler == func) {
 			eventtab2[i].active = false;
 			if (t <= 0) {
@@ -488,7 +537,7 @@ void event2_newevent_x_replace_exists(evt_t t, uae_u32 data, evfunc2 func)
 
 void event2_newevent_x_remove(evfunc2 func)
 {
-	for (int i = 0; i < ev2_max; i++) {
+	for (int i = 0; i < event2max; i++) {
 		if (eventtab2[i].active && eventtab2[i].handler == func) {
 			eventtab2[i].active = false;
 		}
@@ -497,7 +546,7 @@ void event2_newevent_x_remove(evfunc2 func)
 
 bool event2_newevent_x_exists(evfunc2 func)
 {
-	for (int i = 0; i < ev2_max; i++) {
+	for (int i = 0; i < event2max; i++) {
 		if (eventtab2[i].active && eventtab2[i].handler == func) {
 			return true;
 		}
@@ -538,7 +587,10 @@ void clear_events(void)
 		eventtab[i].active = 0;
 		eventtab[i].oldcycles = get_cycles();
 	}
+	event2max = 2;
 	for (int i = 0; i < ev2_max; i++) {
 		eventtab2[i].active = 0;
 	}
+	event2next = 0;
+	firstvent2idx = -1;
 }

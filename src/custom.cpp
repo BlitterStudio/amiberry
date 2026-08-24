@@ -110,8 +110,6 @@ uae_u8 agnus_hpos;
 int agnus_hpos_prev, agnus_hpos_next, agnus_vpos_next;
 static int agnus_pos_change;
 static uae_u32 dmal_shifter;
-static uae_u16 pipelined_write_addr;
-static uae_u16 pipelined_write_value;
 static struct rgabuf rga_pipe[RGA_SLOT_TOTAL + 1];
 struct denise_rga rga_denise[DENISE_RGA_SLOT_TOTAL];
 static struct linestate *current_line_state;
@@ -119,7 +117,6 @@ static struct linestate lines[MAX_SCANDOUBLED_LINES + 1][2];
 static int rga_denise_cycle, rga_denise_cycle_start, rga_denise_cycle_count_start, rga_denise_cycle_count_end;
 static int draw_line_next_line, draw_line_wclks;
 static uae_u32 rga_denise_cycle_line = 1;
-static struct pipeline_reg preg;
 static struct pipeline_func pfunc[MAX_PIPELINE_REG];
 static int pfunc_active_count;
 static uae_u16 prev_strobe;
@@ -138,22 +135,6 @@ static int scandoubled_bpl_ptr_active[MAX_SCANDOUBLED_LINES + 1][2];
 static evt_t blitter_dma_change_cycle, copper_dma_change_cycle, sprite_dma_change_cycle_on, sprite_dma_change_cycle_off;
 static bool copper_dma_change_cycle_pending;
 
-static void empty_pipeline(void)
-{
-	if (preg.p) {
-		*preg.p = preg.v;
-		preg.p = NULL;
-	}
-}
-static void push_pipeline(uae_u16 *p, uae_u16 v)
-{
-	if (preg.p) {
-		// cpu or fast copper can cause this
-		empty_pipeline();
-	}
-	preg.p = p;
-	preg.v = v;
-}
 static void pipelined_custom_write(evfunc2 func, uae_u16 v, uae_u16 cck)
 {
 	if (!cck || isrestore()) {
@@ -1944,6 +1925,7 @@ static void init_beamcon0(void)
 
 	maxvpos_nom = maxvpos;
 	maxvpos_display = vsync_lines;
+	int hsync_ccks2 = custom_fastmode ? maxhpos : hsync_ccks;
 
 	int hbs = -1, hbe = -1, hblen = 0, total = 0;
 	if (currprefs.cs_hvcsync < HVSYNC_SYNCPOS && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME) {
@@ -1966,7 +1948,7 @@ static void init_beamcon0(void)
 	}
 	display_hstart_cyclewait_start = hbe / 2;
 	display_hstart_cyclewait_end = -hbs / 2;
-	maxhpos_display = hsync_ccks * 2 - hblen;
+	maxhpos_display = hsync_ccks2 * 2 - hblen;
 
 	if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
 		// one pixel row missing from right border if OCS
@@ -1980,7 +1962,7 @@ static void init_beamcon0(void)
 			maxvpos_display--;
 		}
 	} else if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-		maxhpos_display = hsync_ccks * 2;
+		maxhpos_display = hsync_ccks2 * 2;
 		display_hstart_cyclewait_start = 0;
 		display_hstart_cyclewait_end = 0;
 	}
@@ -1992,7 +1974,7 @@ static void init_beamcon0(void)
 		display_hstart_cyclewait_end = 0;
 	}
 
-	denisehtotal = hsync_ccks;
+	denisehtotal = hsync_ccks2;
 	denisehtotal <<= CCK_SHRES_SHIFT;
 	// ECS Denise has 1 extra lores pixel in right border
 	if (ecs_denise) {
@@ -2040,10 +2022,10 @@ static void init_beamcon0(void)
 
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
 		float half = (beamcon0 & BEAMCON0_PAL) ? 0: ((beamcon0 & BEAMCON0_LOLDIS) ? 0 : 0.5f);
-		vblank_hz_nom = vblank_hz = clk / (vsync_lines * (hsync_ccks + half));
+		vblank_hz_nom = vblank_hz = clk / (vsync_lines * (hsync_ccks2 + half));
 		vblank_hz_shf = vblank_hz;
-		vblank_hz_lof = clk / ((vsync_lines + 1.0f) * (hsync_ccks + half));
-		vblank_hz_lace = clk / ((vsync_lines + 0.5f) * (hsync_ccks + half));
+		vblank_hz_lof = clk / ((vsync_lines + 1.0f) * (hsync_ccks2 + half));
+		vblank_hz_lace = clk / ((vsync_lines + 0.5f) * (hsync_ccks2 + half));
 
 		maxvpos_nom = maxvpos;
 		maxvpos_display = vsync_lines;
@@ -2332,7 +2314,7 @@ static void setsyncstopped(void)
 static void checksyncstopped(uae_u16 con0)
 {
 	if (issyncstopped(con0)) {
-		if (!currprefs.cpu_memory_cycle_exact) {
+		if (!currprefs.cpu_memory_cycle_exact || currprefs.m68k_speed < 0) {
 			setsyncstopped();
 		}
 	} else if (syncs_stopped) {
@@ -4009,66 +3991,6 @@ static void SPRxPOS(uae_u16 v, int num)
 	sprstartstop(s);
 }
 
-
-// Undocumented AGA feature: if sprite is 64 pixel wide, SPRxDATx is written and next
-// cycle is DMA fetch: sprite's first 32 pixels get replaced with bitplane data.
-#if 0
-static void sprite_get_bpl_data(int hpos, struct sprite *s, uae_u16 *dat)
-{
-	int nr = get_bitplane_dma_rel(hpos, 1);
-	uae_u32 v = (uae_u32)((fmode & 3) ? fetched_aga[nr] : fetched_aga_spr[nr]);
-	dat[0] = v >> 16;
-	dat[1] = (uae_u16)v;
-}
-#endif
-
-/*
- SPRxDATA and SPRxDATB is moved to shift register when SPRxPOS matches.
-
- When copper writes to SPRxDATx exactly when SPRxPOS matches:
- - If sprite low x bit (SPRCTL bit 0) is not set, shift register copy
-   is done first (previously loaded SPRxDATx value is shown) and then
-   new SPRxDATx gets stored for future use.
- - If sprite low x bit is set, new SPRxDATx is stored, then SPRxPOS
-   matches and value written to SPRxDATx is visible.
-
- - Writing to SPRxPOS when SPRxPOS matches: shift register
-   copy is always done first, then new SPRxPOS value is stored
-   for future use. (SPRxCTL not tested)
-*/
-
-#if 0
-static void SPRxDATA(uae_u16 v, int num)
-{
-	struct sprite *s = &spr[num];
-	SPRxDATA_1(v, num);
-	// if 32 (16-bit double CAS only) or 64 pixel wide sprite and SPRxDATx write:
-	// - first 16 pixel part: previous chipset bus data
-	// - following 16 pixel parts: written data
-	if (fmode & 8) {
-		if ((fmode & 4) && get_bitplane_dma_rel(hpos, -1)) {
-			sprite_get_bpl_data(hpos, s, &s->data[0]);
-		} else {
-			s->data[0] = last_custom_value;
-		}
-	}
-}
-
-static void SPRxDATB(uae_u16 v, int num)
-{
-	struct sprite *s = &spr[num];
-	SPRxDATB_1(v, num);
-	// See above
-	if (fmode & 8) {
-		if ((fmode & 4) && get_bitplane_dma_rel(hpos, -1)) {
-			sprite_get_bpl_data(hpos, s, &s->datb[0]);
-		} else {
-			s->datb[0] = last_custom_value;
-		}
-	}
-}
-#endif
-
 static void SPRxPTH(uae_u16 v, int num)
 {
 	spr[num].pt &= 0xffff;
@@ -4300,12 +4222,6 @@ static void custom_wput_dma64(int reg, uaecptr pt, uae_u32 value, int c)
 	}
 }
 
-static void custom_wput_pipelined(uaecptr pt, uae_u16 v)
-{
-	pipelined_write_addr = pt;
-	pipelined_write_value = v;
-}
-
 static void custom_wput_copper(uaecptr pt, uaecptr addr, uae_u32 value, int noget)
 {
 #ifdef DEBUGGER
@@ -4454,11 +4370,9 @@ static void cursorsprite(struct sprite *s)
 	if (sprres == 0) {
 		sprite_0_doubled = 1;
 	}
-	// SPRxPOS bit 7 only enables alternate-line sprite DMA when FMODE.SSCAN2
-	// is active. Without that gate it is also an ordinary vertical position
-	// bit, and halving here squashes the host cursor as it crosses line 128.
-	sprite_0_height = amiberry_input_native_cursor_height(sprite_0_height,
-		spr[0].dblscan, (fmode & 0x8000) != 0);
+	if (spr[0].dblscan) {
+		sprite_0_height /= 2;
+	}
 	if (aga_mode) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
 		sprite_0_colors[1] = agnus_colors.color_regs_aga[sbasecol + 1] & 0xffffff;
@@ -5545,9 +5459,9 @@ static void hsync_handler_pre(bool onvsync)
 		/* reset light pen latch */
 		if (agnus_vb_active_end_line) {
 			lightpen_triggered = 0;
-			#ifndef AMIBERRY
+#ifndef AMIBERRY
 			sprite_0 = 0;
-			#endif
+#endif
 		}
 
 		if (!lightpen_triggered && (bplcon0 & 8)) {
@@ -6643,8 +6557,6 @@ void init_eventtab(void)
 	eventtab[ev_misc].handler = MISC_handler;
 	eventtab[ev_audio].handler = audio_evhandler2;
 
-	eventtab2[ev2_blitter].handler = blitter_handler;
-
 	events_schedule();
 }
 
@@ -6684,7 +6596,6 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		struct denise_rga *r = &rga_denise[i];
 		memset(r, 0, sizeof(struct denise_rga));
 	}
-	preg.p = NULL;
 	for (int i = 0 ; i < MAX_PIPELINE_REG; i++) {
 		struct pipeline_func *p = &pfunc[i];
 		memset(p, 0, sizeof(struct pipeline_func));
@@ -6703,7 +6614,6 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	blitter_dma_change_cycle = 0;
 	sprite_dma_change_cycle_on = 0;
 
-	pipelined_write_addr = 0x1fe;
 	prev_strobe = 0x3c;
 	dmal_next = false;
 	syncs_stopped = false;
@@ -9500,18 +9410,6 @@ static void decide_bpl(int hpos)
 		// ECS/AGA
 		bool dma = dmacon_bpl;
 
-#if 0
-		// BPRUN latched: off
-		if (bprun == 3) {
-			if (ddf_stopping == 1) {
-				// If bpl sequencer counter was all ones (last cycle of block): ddf passed jumps to last step.
-				if (islastbplseq()) {
-					ddf_stopping = 2;
-				}
-			}
-			bprun = 0;
-		}
-#endif
 		// Hard start limit
 		if (hpos == 0x18) {
 			ddf_limit_in = false;
@@ -9586,30 +9484,6 @@ static void decide_bpl(int hpos)
 			hwi_old = hwi;
 		}
 
-#if 0
-		if (bprun == 2) {
-			bprun = 3;
-			// If DDF has passed, jumps to last step.
-			// (For example Scoopex Crash landing crack intro)
-			if (ddf_stopping == 1) {
-				ddf_stopping = 2;
-			} else if (ddf_stopping == 0) {
-				// If DDF has not passed, set it as passed.
-				ddf_stopping = 1;
-#ifdef DEBUGGER
-				if (debug_dma) {
-					record_dma_event_agnus(AGNUS_EVENT_BPRUN2, true);
-				}
-#endif
-			}
-#ifdef DEBUGGER
-			if (debug_dma) {
-				record_dma_event_agnus(AGNUS_EVENT_BPRUN, false);
-			}
-#endif
-		}
-#endif
-#if 1
 		if (bprun == 3) {
 			bprun = 0;
 		}
@@ -9626,7 +9500,6 @@ static void decide_bpl(int hpos)
 			}
 #endif
 		}
-#endif
 
 	} else {
 
@@ -10152,10 +10025,16 @@ static void check_vsyncs_fast(void)
 		}
 	}
 	if (beamcon0_has_hsync) {
-		count_hsyncs(hsstrt, hsstop);
+		if (hsstrt <= maxhpos && hsstop <= maxhpos) {
+			agnus_hsync_start = get_cck_cycles() + hsstrt;
+			count_hsyncs(hsstrt, hsstop);
+		}
 	} else {
+		agnus_hsync_start = get_cck_cycles() + 0x18;
 		count_hsyncs(18, 35);
 	}
+	agnus_hsstrt_cck = get_cck_cycles();
+	hsync_ccks = maxhpos;
 	if (programmed_register_accessed_v && programmed_register_accessed_h) {
 		if (hcenter < maxhpos) {
 			if (lof_store && vpos == vsstrt) {
@@ -10832,15 +10711,6 @@ static void decide_hsync(void)
 	}
 }
 
-static void handle_pipelined_write(void)
-{
-	if (pipelined_write_addr == 0x1fe) {
-		return;
-	}
-	custom_wput_1(pipelined_write_addr, pipelined_write_value, 1 | 0x8000);
-	pipelined_write_addr = 0x1fe;
-}
-
 #if 0
 static bool can_fast_copper(void)
 {
@@ -11406,7 +11276,11 @@ static void check_hsyncs_hardwired(void)
 		agnus_hsstrt_cck = get_cck_cycles();
 		check_vidsyncs();
 		if (!beamcon0_has_hsync) {
-			hsync_ccks = get_cck_cycles_diff(agnus_hsync_start);
+			int c = get_cck_cycles_diff(agnus_hsync_start);
+			// value may be temporarily negative when switching between modes.
+			if (c > 0) {
+				hsync_ccks = c;
+			}
 			vsync_linecnt++;
 			agnus_hsync_start = get_cck_cycles();
 			display_hstart_cyclewait_started = true;
@@ -11634,7 +11508,11 @@ static void check_hsyncs_programmed(void)
 #endif
 		}
 		if (beamcon0_has_hsync) {
-			hsync_ccks = get_cck_cycles_diff(agnus_hsync_start);
+			int c = get_cck_cycles_diff(agnus_hsync_start);
+			// value may be temporarily negative when switching between modes.
+			if (c > 0) {
+				hsync_ccks = c;
+			}
 			vsync_linecnt++;
 			agnus_hsync_start = get_cck_cycles();
 			display_hstart_cyclewait_started = true;
@@ -12134,7 +12012,6 @@ static void do_cck(bool docycles)
 	}
 
 	decide_hsync();
-	empty_pipeline();
 
 	inc_cck();
 	if (docycles) {
@@ -12143,7 +12020,6 @@ static void do_cck(bool docycles)
 
 	dmacon_bpl = (dmacon & DMA_BITPLANE) && (dmacon & 0x200);
 
-	handle_pipelined_write();
 	handle_pipelined_custom_write(false);
 
 	shift_rga();
@@ -12174,7 +12050,6 @@ static void sync_equalline_handler(void)
 
 	eventtab[ev_sync].active = 0;
 
-	handle_pipelined_write();
 	handle_pipelined_custom_write(false);
 
 	int rdc_offset = REFRESH_FIRST_HPOS - hpos_delta;

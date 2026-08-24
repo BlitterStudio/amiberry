@@ -215,6 +215,7 @@
 #include "savestate.h"
 #include "crc32.h"
 #include "gfxboard.h"
+#include "flashrom.h"
 
 static const TCHAR *cart_memnames[] = { NULL, _T("hrtmon"), _T("arhrtmon"), _T("superiv") };
 
@@ -504,6 +505,8 @@ static int ar_rom_location;
 static uae_u8 artemp[4]; /* Space to store the 'real' level 7 interrupt */
 static uae_u8 armode_read, armode_write;
 
+static struct zfile *arrom_zfile;
+static void *arrom_flash[2];
 static uae_u32 arrom_start, arrom_size, arrom_mask;
 static uae_u32 arram_start, arram_size, arram_mask;
 
@@ -526,7 +529,7 @@ int is_ar_pc_in_ram (void)
 
 
 /* flag writing == 1 for writing memory, 0 for reading from memory. */
-STATIC_INLINE int ar3a (uaecptr addr, uae_u8 b, int writing)
+static int ar3a (uaecptr addr, uae_u8 b, int writing)
 {
 	/*	if (addr < 8) //|| writing ) */
 	/*	{ */
@@ -795,21 +798,23 @@ static uae_u8 *REGPARAM2 arram_xlate (uaecptr addr)
 	return armemory_ram + addr;
 }
 
-static uae_u32 REGPARAM2 arrom_lget (uaecptr addr)
-{
-	if (ar_hidden)
-		return ar_null(4);
-	addr -= arrom_start;
-	addr &= arrom_mask;
-	return (ar3a (addr, 0, 0) << 24) | (ar3a (addr + 1, 0, 0) << 16) | (ar3a (addr + 2, 0, 0) << 8) | ar3a (addr + 3, 0, 0);
-}
 
 static uae_u32 REGPARAM2 arrom_wget (uaecptr addr)
 {
 	if (ar_hidden)
 		return ar_null(2);
+	uae_u16 v = 0;
 	addr -= arrom_start;
 	addr &= arrom_mask;
+	if (arrom_flash[0]) {
+		v = flash_read(arrom_flash[0], addr) << 8;
+	}
+	if (arrom_flash[1]) {
+		v |= flash_read(arrom_flash[1], addr + 1) << 0;
+	}
+	if (addr >= 2 && (arrom_flash[0] || arrom_flash[1])) {
+		return v;
+	}
 	return (ar3a (addr, 0, 0) << 8) | ar3a (addr + 1, 0, 0);
 }
 
@@ -817,21 +822,28 @@ static uae_u32 REGPARAM2 arrom_bget (uaecptr addr)
 {
 	if (ar_hidden)
 		return ar_null(1);
+	uae_u8 v = 0;
 	addr -= arrom_start;
 	addr &= arrom_mask;
-	return ar3a (addr, 0, 0);
+	if (addr >= 2 && arrom_flash[addr & 1]) {
+		 v = flash_read(arrom_flash[addr & 1], addr);
+		 return v;
+	}
+	v = ar3a (addr, 0, 0);
+	return v;
 }
 
-static void REGPARAM2 arrom_lput (uaecptr addr, uae_u32 l)
+static uae_u32 REGPARAM2 arrom_lget(uaecptr addr)
 {
 	if (ar_hidden)
-		return;
+		return ar_null(4);
 	addr -= arrom_start;
 	addr &= arrom_mask;
-	ar3a (addr + 0,(uae_u8)(l >> 24), 1);
-	ar3a (addr + 1,(uae_u8)(l >> 16), 1);
-	ar3a (addr + 2,(uae_u8)(l >> 8), 1);
-	ar3a (addr + 3,(uae_u8)(l >> 0), 1);
+	uae_u32 v = arrom_wget(addr) << 16;
+	if (addr + 2 < arrom_size) {
+		v |= arrom_wget(addr + 2);
+	}
+	return v;
 }
 
 static void REGPARAM2 arrom_wput (uaecptr addr, uae_u32 w)
@@ -840,6 +852,14 @@ static void REGPARAM2 arrom_wput (uaecptr addr, uae_u32 w)
 		return;
 	addr -= arrom_start;
 	addr &= arrom_mask;
+	if (addr >= 2) {
+		if (arrom_flash[0]) {
+			flash_write(arrom_flash[0], addr, w >> 8);
+		}
+		if (arrom_flash[1]) {
+			flash_write(arrom_flash[1], addr + 1, w >> 0);
+		}
+	}
 	ar3a (addr + 0,(uae_u8)(w >> 8), 1);
 	ar3a (addr + 1,(uae_u8)(w >> 0), 1);
 }
@@ -850,7 +870,24 @@ static void REGPARAM2 arrom_bput (uaecptr addr, uae_u32 b)
 		return;
 	addr -= arrom_start;
 	addr &= arrom_mask;
+	if (addr >= 2) {
+		if (arrom_flash[addr & 1]) {
+			flash_write(arrom_flash[addr & 1], addr, b);
+		}
+	}
 	ar3a (addr, b, 1);
+}
+
+static void REGPARAM2 arrom_lput(uaecptr addr, uae_u32 l)
+{
+	if (ar_hidden)
+		return;
+	addr -= arrom_start;
+	addr &= arrom_mask;
+	arrom_wput(addr, l >> 16);
+	if (addr + 2 < arrom_size) {
+		arrom_wput(addr + 2, l >> 0);
+	}
 }
 
 static int REGPARAM2 arrom_check (uaecptr addr, uae_u32 size)
@@ -1513,11 +1550,10 @@ int action_replay_unload (int in_memory_reset)
 	return 1;
 }
 
-static int superiv_init (struct romdata *rd, struct zfile *f)
+static int superiv_init (struct romdata *rd, struct zfile *f, int flags)
 {
 	uae_u32 chip = currprefs.chipmem.size - 0x10000;
 	int subtype = rd->id;
-	int flags = rd->type & ROMTYPE_MASK;
 	const TCHAR *memname1, *memname2, *memname3;
 
 	memname1 = memname2 = memname3 = NULL;
@@ -1630,9 +1666,7 @@ static int superiv_init (struct romdata *rd, struct zfile *f)
 
 int action_replay_load (void)
 {
-	struct zfile *f;
 	uae_u8 header[8];
-	struct romdata *rd;
 
 	armodel = 0;
 	action_replay_flag = ACTION_REPLAY_INACTIVE;
@@ -1650,25 +1684,40 @@ int action_replay_load (void)
 	write_log (_T("Entered action_replay_load ()\n"));
 #endif
 
-	rd = getromdatabypath (currprefs.cartfile);
-	if (rd) {
-		if (rd->id == 62)
-			return superiv_init (rd, NULL);
-		if (rd->type & ROMTYPE_CD32CART)
-			return 0;
+	struct romdata *rd = getromdatabypath(currprefs.cartfile);
+	TCHAR *ident = currprefs.cartident;
+	if (ident[0] == ':') {
+		ident++;
+	} else {
+		ident = _T("");
 	}
-	f = read_rom_name(currprefs.cartfile, false);
+	if (rd && rd->id == 62) {
+		return superiv_init(rd, NULL, rd->type);
+	}
+	if (rd && (rd->type & ROMTYPE_CD32CART)) {
+		return 0;
+	}
+	struct zfile *f = read_rom_name(currprefs.cartfile, false);
 	if (!f) {
 		write_log (_T("failed to load '%s' cartridge ROM\n"), currprefs.cartfile);
 		return 0;
 	}
 	rd = getromdatabyzfile(f);
 	if (!rd) {
-		write_log (_T("Unknown cartridge ROM '%s'\n"), currprefs.cartfile);
+		if (!_tcscmp(ident, _T("SuperIV"))) {
+			return superiv_init(rd, f, ROMTYPE_SUPERIV);
+		}
+		if (!_tcscmp(ident, _T("XPower"))) {
+			return superiv_init(rd, f, ROMTYPE_XPOWER);
+		}
+		if (!_tcscmp(ident, _T("NPower"))) {
+			return superiv_init(rd, f, ROMTYPE_NORDIC);
+		}
+		write_log (_T("Unknown cartridge ROM '%s', assuming Action Replay I/II/III\n"), currprefs.cartfile);
 	} else {
 		int type = rd->type & ROMTYPE_MASK;
 		if (type == ROMTYPE_SUPERIV || rd->type == ROMTYPE_NORDIC || rd->type == ROMTYPE_XPOWER) {
-			return superiv_init (rd, f);
+			return superiv_init(rd, f, rd->type);
 		}
 	}
 	zfile_fseek(f, 0, SEEK_END);
@@ -1681,14 +1730,14 @@ int action_replay_load (void)
 		return 0;
 	}
 	if (ar_rom_file_size != 65536 && ar_rom_file_size != 131072 && ar_rom_file_size != 262144) {
-		write_log (_T("rom size must be 64KB (AR1), 128KB (AR2) or 256KB (AR3)\n"));
+		write_log (_T("rom size must be 64KB (AR1), 128KB (AR2) or 256KB (AR3/DeMoN)\n"));
 		zfile_fclose(f);
 		return 0;
 	}
 	action_replay_flag = ACTION_REPLAY_INACTIVE;
 	armemory_rom = xmalloc (uae_u8, ar_rom_file_size);
 	zfile_fread (armemory_rom, 1, ar_rom_file_size, f);
-	zfile_fclose (f);
+
 	if (ar_rom_file_size == 65536) {
 		// AR1 and Pro Access
 		armodel = 1;
@@ -1704,9 +1753,33 @@ int action_replay_load (void)
 		arram_start = 0x440000;
 		arram_size = 0x10000;
 	}
+
+	if (!_tcscmp(ident, _T("DeMoNv1")) || !_tcscmp(ident, _T("DeMoNv2"))) {
+		zfile_fclose(f);
+		f = NULL;
+		arrom_zfile = read_rom_name(currprefs.cartfile, true);
+		if (!arrom_zfile) {
+			arrom_zfile = read_rom_name(currprefs.cartfile, false);
+			if (!arrom_zfile) {
+				return 0;
+			}
+		}
+		arram_size = 0xb80000 - 0xa80000;
+		arrom_flash[0] = flash_new(armemory_rom, 131072, 262144, 0x1f, 0xd5, arrom_zfile, FLASHROM_PARALLEL_EEPROM | FLASHROM_DATA_PROTECT | FLASHROM_EVERY_OTHER_BYTE);
+		arrom_flash[1] = flash_new(armemory_rom, 131072, 262144, 0x1f, 0xd5, arrom_zfile, FLASHROM_PARALLEL_EEPROM | FLASHROM_DATA_PROTECT | FLASHROM_EVERY_OTHER_BYTE_ODD);
+		if (!_tcscmp(ident, _T("DeMoNv2"))) {
+			arrom_start = 0xa80000;
+			arram_start = 0xa80000 + 0x40000;
+		}
+	}
+	zfile_fclose(f);
+	f = NULL;
+
+
 	arram_mask = arram_size - 1;
 	arrom_mask = arrom_size - 1;
 	armemory_ram = xcalloc (uae_u8, arram_size);
+
 	write_log (_T("Action Replay %d installed at %08X, size %08X\n"), armodel, arrom_start, arrom_size);
 	action_replay_version();
 	return armodel;
@@ -1735,7 +1808,12 @@ void action_replay_cleanup()
 	mapped_free (&hrtmem_bank);
 	mapped_free (&hrtmem2_bank);
 	mapped_free (&hrtmem3_bank);
-
+	flash_free(arrom_flash[0]);
+	flash_free(arrom_flash[1]);
+	arrom_flash[0] = NULL;
+	arrom_flash[1] = NULL;
+	zfile_fclose(arrom_zfile);
+	arrom_zfile = NULL;
 	armemory_rom = 0;
 	armemory_ram = 0;
 	hrtmemory = 0;
@@ -2231,18 +2309,16 @@ static uae_u16 wswap (uae_u16 v,int b15,int b14,int b13,int b12, int b11, int b1
 // middle (even)
 static void descramble1 (uae_u8 *buf, int size)
 {
-	int i;
-
-	for (i = 0; i < size; i++)
+	for (int i = 0; i < size; i++) {
 		buf[i] = bswap (buf[i], 4, 1, 5, 3, 0, 7, 6, 2);
+	}
 }
 static void descramble1a (uae_u8 *buf, int size)
 {
-	int i;
 	uae_u8 tbuf[NPSIZE];
 
 	memcpy (tbuf, buf, size);
-	for (i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
 		int a = (i ^ AXOR) & (size - 1);
 		buf[i] = tbuf[wswap (a, 15, 9, 10, 4, 6, 5, 3, 8, 14, 13, 0, 12, 11, 2, 1, 7)];
 	}
@@ -2250,18 +2326,16 @@ static void descramble1a (uae_u8 *buf, int size)
 // corner (odd)
 static void descramble2 (uae_u8 *buf, int size)
 {
-	int i;
-
-	for (i = 0; i < size; i++)
+	for (int i = 0; i < size; i++) {
 		buf[i] = bswap (buf[i], 5, 4, 3, 2, 1, 0, 7, 6);
+	}
 }
 static void descramble2a (uae_u8 *buf, int size)
 {
-	int i;
 	uae_u8 tbuf[NPSIZE];
 
 	memcpy (tbuf, buf, size);
-	for (i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
 		int a = (i ^ AXOR) & (size - 1);
 		buf[i] = tbuf[wswap (a, 15, 2, 4, 0, 1, 10, 11, 8, 13, 14, 12, 9, 7, 5, 6, 3)];
 	}
