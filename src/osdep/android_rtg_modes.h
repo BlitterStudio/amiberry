@@ -31,7 +31,13 @@ inline constexpr char android_rtg_name_suffix[] = " ANDROID";
 
 // The Android virtual RTG mode table: common landscape resolutions, ascending.
 inline constexpr int android_virtual_rtg_modes[][2] = {
+	{ 320, 200 },
+	{ 320, 256 },
+	{ 640, 400 },
+	{ 640, 480 },
 	{ 640, 512 },
+	{ 720, 400 },
+	{ 800, 480 },
 	{ 800, 600 },
 	{ 1024, 600 },
 	{ 1024, 768 },

@@ -78,9 +78,9 @@ int main()
 	android_rtg_candidate out[android_virtual_rtg_mode_count];
 
 	// Table bounds intact: the fork's landscape table, exactly as ported.
-	expect_eq(android_virtual_rtg_mode_count, 20, "table must carry the fork's 20 entries");
-	expect_eq(android_virtual_rtg_modes[0][0], 640, "first table width");
-	expect_eq(android_virtual_rtg_modes[0][1], 512, "first table height");
+	expect_eq(android_virtual_rtg_mode_count, 26, "table must carry the fork's 20 entries plus the LowRes and sub-VGA additions");
+	expect_eq(android_virtual_rtg_modes[0][0], 320, "first table width");
+	expect_eq(android_virtual_rtg_modes[0][1], 200, "first table height");
 	expect_eq(android_virtual_rtg_modes[android_virtual_rtg_mode_count - 1][0], 2560,
 		"last table width");
 	expect_eq(android_virtual_rtg_modes[android_virtual_rtg_mode_count - 1][1], 1440,
@@ -116,8 +116,14 @@ int main()
 	const android_rtg_candidate zero_template = {};
 	n = android_rtg_build_modes(zero_template, 1024LL * 768,
 		static_cast<int>(android_virtual_rtg_mode_count), out);
-	expect_eq(n, 4, "budget of 786432 pixels admits exactly the four smaller modes");
+	expect_eq(n, 10, "budget of 786432 pixels admits exactly the ten smaller modes");
+	expect_true(contains_resolution(out, n, 320, 200), "320x200 must fit 786432");
+	expect_true(contains_resolution(out, n, 320, 256), "320x256 must fit 786432");
+	expect_true(contains_resolution(out, n, 640, 400), "640x400 must fit 786432");
+	expect_true(contains_resolution(out, n, 640, 480), "640x480 must fit 786432");
 	expect_true(contains_resolution(out, n, 640, 512), "640x512 must fit 786432");
+	expect_true(contains_resolution(out, n, 720, 400), "720x400 must fit 786432");
+	expect_true(contains_resolution(out, n, 800, 480), "800x480 must fit 786432");
 	expect_true(contains_resolution(out, n, 800, 600), "800x600 must fit 786432");
 	expect_true(contains_resolution(out, n, 1024, 600), "1024x600 must fit 786432");
 	expect_true(contains_resolution(out, n, 1024, 768), "1024x768 must fit its exact budget");
@@ -141,8 +147,8 @@ int main()
 	// taking the table in order.
 	n = android_rtg_build_modes(host_template, plenty_vram, 3, out);
 	expect_eq(n, 3, "cap of 3 must produce exactly 3 entries");
-	expect_eq(out[0].width, 640, "capped list keeps the first table entry");
-	expect_eq(out[2].height, 600, "capped list keeps the third table entry");
+	expect_eq(out[0].width, 320, "capped list keeps the first table entry");
+	expect_eq(out[2].height, 400, "capped list keeps the third table entry");
 
 	// A zero budget (host modes already filled the array) yields nothing.
 	n = android_rtg_build_modes(host_template, plenty_vram, 0, out);
