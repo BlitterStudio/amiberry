@@ -8282,6 +8282,10 @@ uae_u8 *restore_custom_extra(uae_u8 *src)
 	currprefs.cs_agnussize = changed_prefs.cs_agnussize = RBB;
 	currprefs.cs_denisemodel = changed_prefs.cs_denisemodel = RBB;
 
+	if (v & 4) {
+		currprefs.floppy_speed = changed_prefs.floppy_speed = RL & 0xffff;
+	}
+
 	// workaround for old savestates that had A1000 chipset extra with AGA mode configured.
 	if (currprefs.cs_agnusmodel == AGNUSMODEL_A1000 && aga_mode && currprefs.cs_compatible == CP_A1000) {
 		currprefs.cs_agnusmodel = changed_prefs.cs_agnusmodel = AGNUSMODEL_AGA;
@@ -8300,7 +8304,7 @@ uae_u8 *save_custom_extra(size_t *len, uae_u8 *dstptr)
 	else
 		dstbak = dst = xmalloc(uae_u8, 1000);
 
-	SL((currprefs.cs_compatible << 24) | (get_mem_bank_real(0) != &chipmem_bank ? 2 : 0) | 1);
+	SL((currprefs.cs_compatible << 24) | (get_mem_bank_real(0) != &chipmem_bank ? 2 : 0) | 1 | 4);
 	SB(currprefs.genlock ? 1 : 0);
 	SB(currprefs.cs_rtc);
 	SL(currprefs.cs_rtc_adjust);
@@ -8353,6 +8357,8 @@ uae_u8 *save_custom_extra(size_t *len, uae_u8 *dstptr)
 	SB(currprefs.cs_agnusmodel);
 	SB(currprefs.cs_agnussize);
 	SB(currprefs.cs_denisemodel);
+
+	SL(currprefs.floppy_speed);
 
 	*len = dst - dstbak;
 	return dstbak;

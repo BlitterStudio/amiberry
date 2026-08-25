@@ -1074,7 +1074,7 @@ static void do_trace(void)
 
 void REGPARAM2 MakeSR(void)
 {
-	regs.sr = ((regs.t1 << 15) | (regs.t0 << 14)
+	regs.sr = (uae_u16)((regs.t1 << 15) | (regs.t0 << 14)
 		| (regs.s << 13) | (regs.m << 12) | (regs.intmask << 8)
 		| (GET_XFLG() << 4) | (GET_NFLG() << 3)
 		| (GET_ZFLG() << 2) | (GET_VFLG() << 1)
@@ -1748,30 +1748,28 @@ void getcc(int cc, uae_u8 *ccrorp, uae_u8 *ccrandp)
 
 int cctrue(int cc)
 {
-	uae_u32 cznv = regflags.cznv;
-
 	switch (cc) {
-	case 0:  return 1;											/*					T  */
-	case 1:  return 0;											/*					F  */
-	case 2:  return (cznv & (FLAGVAL_C | FLAGVAL_Z)) == 0;		/* !CFLG && !ZFLG	HI */
-	case 3:  return (cznv & (FLAGVAL_C | FLAGVAL_Z)) != 0;		/*  CFLG || ZFLG	LS */
-	case 4:  return (cznv & FLAGVAL_C) == 0;					/* !CFLG			CC */
-	case 5:  return (cznv & FLAGVAL_C) != 0;					/*  CFLG			CS */
-	case 6:  return (cznv & FLAGVAL_Z) == 0;					/* !ZFLG			NE */
-	case 7:  return (cznv & FLAGVAL_Z) != 0;					/*  ZFLG			EQ */
-	case 8:  return (cznv & FLAGVAL_V) == 0;					/* !VFLG			VC */
-	case 9:  return (cznv & FLAGVAL_V) != 0;					/*  VFLG			VS */
-	case 10: return (cznv & FLAGVAL_N) == 0;					/* !NFLG			PL */
-	case 11: return (cznv & FLAGVAL_N) != 0;					/*  NFLG			MI */
+	case 0:  return 1;													/*					T  */
+	case 1:  return 0;													/*					F  */
+	case 2:  return (regflags.cznv & (FLAGVAL_C | FLAGVAL_Z)) == 0;		/* !CFLG && !ZFLG	HI */
+	case 3:  return (regflags.cznv & (FLAGVAL_C | FLAGVAL_Z)) != 0;		/*  CFLG || ZFLG	LS */
+	case 4:  return (regflags.cznv & FLAGVAL_C) == 0;					/* !CFLG			CC */
+	case 5:  return (regflags.cznv & FLAGVAL_C) != 0;					/*  CFLG			CS */
+	case 6:  return (regflags.cznv & FLAGVAL_Z) == 0;					/* !ZFLG			NE */
+	case 7:  return (regflags.cznv & FLAGVAL_Z) != 0;					/*  ZFLG			EQ */
+	case 8:  return (regflags.cznv & FLAGVAL_V) == 0;					/* !VFLG			VC */
+	case 9:  return (regflags.cznv & FLAGVAL_V) != 0;					/*  VFLG			VS */
+	case 10: return (regflags.cznv & FLAGVAL_N) == 0;					/* !NFLG			PL */
+	case 11: return (regflags.cznv & FLAGVAL_N) != 0;					/*  NFLG			MI */
 
-	case 12: /*  NFLG == VFLG		GE */
-		return ((cznv >> FLAGBIT_N) & 1) == ((cznv >> FLAGBIT_V) & 1);
-	case 13: /*  NFLG != VFLG		LT */
-		return ((cznv >> FLAGBIT_N) & 1) != ((cznv >> FLAGBIT_V) & 1);
+	case 12: /* NFLG == VFLG		GE */
+		return ((regflags.cznv >> FLAGBIT_N) & 1) == ((regflags.cznv >> FLAGBIT_V) & 1);
+	case 13: /* NFLG != VFLG		LT */
+		return ((regflags.cznv >> FLAGBIT_N) & 1) != ((regflags.cznv >> FLAGBIT_V) & 1);
 	case 14: /* !GET_ZFLG && (GET_NFLG == GET_VFLG);  GT */
-		return !(cznv & FLAGVAL_Z) && (((cznv >> FLAGBIT_N) & 1) == ((cznv >> FLAGBIT_V) & 1));
+		return !(regflags.cznv & FLAGVAL_Z) && (((regflags.cznv >> FLAGBIT_N) & 1) == ((regflags.cznv >> FLAGBIT_V) & 1));
 	case 15: /* GET_ZFLG || (GET_NFLG != GET_VFLG);   LE */
-		return (cznv & FLAGVAL_Z) || (((cznv >> FLAGBIT_N) & 1) != ((cznv >> FLAGBIT_V) & 1));
+		return (regflags.cznv & FLAGVAL_Z) || (((regflags.cznv >> FLAGBIT_N) & 1) != ((regflags.cznv >> FLAGBIT_V) & 1));
 	}
 	return 0;
 }
@@ -2674,7 +2672,7 @@ static bool load_file(const TCHAR *path, const TCHAR *file, uae_u8 *p, int size,
 	} else {
 		fseek(f, offset, SEEK_SET);
 	}
-	int lsize = fread(p, 1, size, f);
+	size_t lsize = fread(p, 1, size, f);
 	if (lsize != size) {
 		wprintf(_T("Couldn't read file '%s'\n"), fname);
 		exit(0);
@@ -3009,13 +3007,20 @@ static int create_ea_random(uae_u16 *opcodep, uaecptr pc, int mode, int reg, str
 		*eap = cur_regs.regs[reg + 8];
 		break;
 	case Apdi:
+	{
+		int size;
 		*regused = reg + 8;
 		if (fpuopsize < 0) {
-			*eap = cur_regs.regs[reg + 8] - (1 << dp->size);
+			size = 1 << dp->size;
 		} else {
-			*eap = cur_regs.regs[reg + 8] - bytesizes[fpuopsize];
+			size = bytesizes[fpuopsize];
 		}
+		if (reg == 7 && size == 1) {
+			size = 2;
+		}
+		*eap = cur_regs.regs[reg + 8] - size;
 		break;
+	}
 	case Ad16:
 	{
 		uae_u16 v;
@@ -3088,7 +3093,7 @@ static int create_ea_random(uae_u16 *opcodep, uaecptr pc, int mode, int reg, str
 		}
 		if (currprefs.cpu_model < 68020 || (v & 0x100) == 0) {
 			// brief format extension
-			uae_u32 add = 0;
+			uae_s32 add = 0;
 			int maxcnt = 1000;
 			for (;;) {
 				int ereg;
@@ -3115,16 +3120,13 @@ static int create_ea_random(uae_u16 *opcodep, uaecptr pc, int mode, int reg, str
 				}
 				*regused = ereg;
 				add = cur_regs.regs[ereg];
+				if (!(v & 0x0800)) {
+					add = (uae_s32)(uae_s16)add;
+				}
 				if (currprefs.cpu_model >= 68020) {
 					add <<= (v >> 9) & 3; // SCALE
 				}
-				if (v & 0x0800) {
-					// L
-					addr += add;
-				} else {
-					// W
-					addr += (uae_s16)add;
-				}
+				addr += add;
 				addr += (uae_s8)(v & 0xff); // DISPLACEMENT
 				if (fpuopsize >= 0) {
 					if (check_valid_addr(addr, bytesizes[fpuopsize], 2))
@@ -3535,7 +3537,8 @@ static int create_ea_exact(uae_u16 *opcodep, uaecptr pc, int mode, int reg, stru
 	}
 	case Apdi:
 	{
-		if (cur_regs.regs[reg + 8] == target + (1 << dp->size)) {
+		int size = reg == 7 && dp->size == 0 ? 2 : (1 << dp->size);
+		if (cur_regs.regs[reg + 8] == target + size) {
 			*eap = target;
 			*regused = reg + 8;
 			return  0;
@@ -4756,7 +4759,7 @@ static uae_u8 *save_exception(uae_u8 *p, struct instr *dp)
 		p = op;
 		*p++ = 0xff;
 	} else {
-		int datalen = (p - op) - 1;
+		int datalen = addrdiff(p, op) - 1;
 		last_exception_len = exception_stack_frame_size;
 		last_exception_extra = test_exception_extra;
 		*op = (uae_u8)datalen;
@@ -4885,7 +4888,7 @@ static void test_mnemo(const TCHAR *path, const TCHAR *mnemo, const TCHAR *ovrfi
 	}
 
 	mn = lookup->mnemo;
-	xorshiftstate = lookup - lookuptab;
+	xorshiftstate = addrdiff(lookup, lookuptab);
 	TCHAR mns[200];
 	_tcscpy(mns, lookup->name);
 	if (fpuopcode >= 0) {
@@ -4913,7 +4916,7 @@ static void test_mnemo(const TCHAR *path, const TCHAR *mnemo, const TCHAR *ovrfi
 	}
 	xorshiftstate ^= rnd_seed;
 
-	int pathlen = _tcslen(path);
+	size_t pathlen = _tcslen(path);
 	_stprintf(dir, _T("%s%s"), path, mns);
 	if (fpuopcode < 0) {
 		if (size < 3) {
@@ -6829,10 +6832,9 @@ static void test_mnemo_text(const TCHAR *path, const TCHAR *mode)
 
 static void my_trim(TCHAR *s)
 {
-	int len;
 	while (_tcslen(s) > 0 && _tcscspn(s, _T("\t \r\n")) == 0)
 		memmove(s, s + 1, (_tcslen(s + 1) + 1) * sizeof(TCHAR));
-	len = _tcslen(s);
+	size_t len = _tcslen(s);
 	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		s[--len] = '\0';
 }

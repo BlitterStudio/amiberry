@@ -149,7 +149,8 @@ bool is_savestate_incompatible(void)
 /* functions for reading/writing bytes, shorts and longs in big-endian
 * format independent of host machine's endianness */
 
-static uae_u8 *storepos;
+static uae_u8 *chunk_start, *storepos;
+static unsigned int chunk_totallen;
 void save_store_pos_func(uae_u8 **dstp)
 {
 	storepos = *dstp;
@@ -287,6 +288,10 @@ TCHAR *restore_string_func (uae_u8 **dstp)
 	s = utf8u (to);
 	xfree (to);
 	return s;
+}
+bool restore_data_valid_func(uae_u8 **dstp)
+{
+	return *dstp < chunk_start + chunk_totallen;
 }
 
 static bool state_path_exists(const TCHAR *path, int type)
@@ -894,6 +899,8 @@ void restore_state (const TCHAR *filename)
 		name[0] = 0;
 		chunk = end = restore_chunk (f, name, &len, &totallen, &filepos);
 		write_log (_T("Chunk '%s' size %u (%u)\n"), name, len, totallen);
+		chunk_totallen = totallen;
+		chunk_start = chunk;
 		if (!_tcscmp (name, _T("END "))) {
 			if (end_found)
 				break;

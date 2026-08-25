@@ -35,6 +35,8 @@ extern uae_u32 restore_u32_func(uae_u8 **);
 extern uae_u16 restore_u16_func(uae_u8 **);
 extern uae_u8 restore_u8_func(uae_u8 **);
 
+extern bool restore_data_valid_func(uae_u8 **);
+
 extern void save_string_func(uae_u8 **, const TCHAR*);
 extern TCHAR *restore_string_func(uae_u8 **);
 
@@ -63,6 +65,8 @@ extern TCHAR *restore_path_full_func(uae_u8 **);
 #define restore_u16() restore_u16_func(&src)
 #define restore_u8() restore_u8_func(&src)
 #define restore_s8() ((uae_s8)restore_u8_func(&src))
+
+#define restore_data_valid() restore_data_valid_func(&src)
 
 #define save_string(x) save_string_func(&dst, (x))
 #define restore_string() restore_string_func(&src)
