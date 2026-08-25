@@ -56,6 +56,10 @@ struct ShaderPass {
 	std::unique_ptr<ExternalShader> shader;
 	GLuint fbo = 0;
 	GLuint output_texture = 0;
+	// Internal format actually allocated for output_texture (may differ from
+	// the requested float/sRGB format after the FBO-completeness fallback in
+	// create_pass_fbo).
+	GLenum output_internal_format = GL_RGBA;
 	int output_width = 0;
 	int output_height = 0;
 };

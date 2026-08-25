@@ -209,6 +209,9 @@ AmiberryGuiGuardedInputResult amiberry_gui_guarded_input_apply(
 
 extern SDL_DisplayMode sdl_mode;
 extern const char* sdl_video_driver;
+// True when GL context creation failed at runtime and the SDL software
+// renderer took over (see gfx_window.cpp doInit). Diagnostics surface it.
+extern bool gl_renderer_demoted;
 extern SDL_Cursor* normalcursor;
 
 extern void sortdisplays();

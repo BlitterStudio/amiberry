@@ -853,9 +853,13 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	btn2_surface = create_button_surface(BTN2_OUTER, BTN2_INNER, BTN2_HIGHLIGHT);
 	btnkb_surface = create_kb_button_surface();
 
-#ifndef USE_OPENGL
-	// Create SDL textures from surfaces (only when using SDL renderer)
+#if defined(USE_OPENGL)
+	// GL builds pass a null renderer (OpenGLRenderer owns no SDL_Renderer);
+	// a non-null renderer means we are on the SDL path — either a no-GL
+	// build or a USE_OPENGL build that demoted to SDLRenderer at runtime —
+	// so create the SDL textures whenever one is available.
 	if (renderer) {
+#endif
 		if (stick_base_surface) {
 			stick_base_tex = SDL_CreateTextureFromSurface(renderer, stick_base_surface);
 			if (stick_base_tex) SDL_SetTextureBlendMode(stick_base_tex, SDL_BLENDMODE_BLEND);
@@ -876,6 +880,7 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 			btnkb_tex = SDL_CreateTextureFromSurface(renderer, btnkb_surface);
 			if (btnkb_tex) SDL_SetTextureBlendMode(btnkb_tex, SDL_BLENDMODE_BLEND);
 		}
+#if defined(USE_OPENGL)
 	}
 #endif
 

@@ -145,34 +145,58 @@ bool gl_platform_init()
 }
 #endif // __ANDROID__
 
-const GlShaderPreambles& get_gl_shader_preambles()
+const GlCapabilities& get_gl_capabilities()
 {
-	static GlShaderPreambles cached = {};
-	static bool initialized = false;
+	// Cache per GL context, not per process: a context change (per-monitor
+	// ladder results can mix desktop GL and the GLES fallback tier, demotion
+	// cycles recreate contexts) can change the API class, so re-probe when
+	// the current context differs from the one this snapshot came from.
+	static GlCapabilities cached = {};
+	static SDL_GLContext cached_context = nullptr;
 
-	if (initialized)
+	const SDL_GLContext current_context = SDL_GL_GetCurrentContext();
+	if (current_context != nullptr && current_context == cached_context)
 		return cached;
 
 	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
-	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
-	int major = 0, minor = 0;
-	if (gl_ver_str) {
-		const char* v = gl_ver_str;
-		while (*v && (*v < '0' || *v > '9')) v++;
-		if (*v) {
-			major = atoi(v);
-			while (*v && *v != '.') v++;
-			if (*v == '.') {
-				v++;
-				minor = atoi(v);
-			}
-		}
+	if (gl_ver_str == nullptr) {
+		// No current context (or a broken driver): return a zeroed snapshot
+		// WITHOUT latching, so a later call with a live context re-probes.
+		static const GlCapabilities empty = {};
+		return empty;
 	}
+	cached = classify_gl_capabilities(
+		gl_ver_str,
+		(const char*)glGetString(GL_EXTENSIONS));
+	cached_context = current_context;
 
-	if (is_gles && major >= 3) {
+	write_log("GL capabilities: %s %d.%d (clamp_to_border=%d framebuffer_srgb=%d rgba16f_renderable=%d)\n",
+		cached.is_gles ? "GLES" : "GL",
+		cached.major, cached.minor,
+		cached.clamp_to_border ? 1 : 0,
+		cached.framebuffer_srgb ? 1 : 0,
+		cached.rgba16f_renderable ? 1 : 0);
+
+	return cached;
+}
+
+const GlShaderPreambles& get_gl_shader_preambles()
+{
+	// Same per-context key as get_gl_capabilities(): a context change can
+	// switch the GLSL profile, so the preambles follow the live context.
+	static GlShaderPreambles cached = {};
+	static SDL_GLContext cached_context = nullptr;
+
+	const SDL_GLContext current_context = SDL_GL_GetCurrentContext();
+	if (current_context != nullptr && current_context == cached_context)
+		return cached;
+
+	const GlCapabilities& caps = get_gl_capabilities();
+
+	if (caps.is_gles && caps.major >= 3) {
 		cached.vs = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
 		cached.fs = "#version 300 es\nprecision mediump float;\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
-	} else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
+	} else if (!caps.is_gles && (caps.major > 3 || (caps.major == 3 && caps.minor >= 2))) {
 		cached.vs = "#version 330 core\n#define attribute in\n#define varying out\n";
 		cached.fs = "#version 330 core\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
 	} else {
@@ -180,7 +204,7 @@ const GlShaderPreambles& get_gl_shader_preambles()
 		cached.fs = "#version 120\n";
 	}
 
-	initialized = true;
+	cached_context = current_context;
 	return cached;
 }
 

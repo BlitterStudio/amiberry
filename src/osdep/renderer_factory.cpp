@@ -11,9 +11,13 @@
 #include "vulkan_renderer.h"
 #elif defined(USE_OPENGL)
 #include "opengl_renderer.h"
-#else
-#include "sdl_renderer.h"
 #endif
+#include "sdl_renderer.h"
+
+std::unique_ptr<IRenderer> create_sdl_renderer()
+{
+	return std::make_unique<SDLRenderer>();
+}
 
 std::unique_ptr<IRenderer> create_renderer()
 {
@@ -22,6 +26,6 @@ std::unique_ptr<IRenderer> create_renderer()
 #elif defined(USE_OPENGL)
 	return std::make_unique<OpenGLRenderer>();
 #else
-	return std::make_unique<SDLRenderer>();
+	return create_sdl_renderer();
 #endif
 }

@@ -140,9 +140,15 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 		return false;
 	}
 
+	const char* gl_vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 	const char* sl_ver   = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+	m_gl_info.vendor = gl_vendor ? gl_vendor : "";
+	m_gl_info.renderer = renderer ? renderer : "";
+	m_gl_info.version = version ? version : "";
+	m_gl_info.glsl_version = sl_ver ? sl_ver : "";
+	m_gl_info.valid = (renderer != nullptr && version != nullptr);
 	write_log(_T("OpenGL Renderer: %hs\n"), renderer ? renderer : "unknown");
 	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
 	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");

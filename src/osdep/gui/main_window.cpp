@@ -1734,8 +1734,11 @@ void amiberry_gui_init()
 		ImGui_ImplSDL3_InitForOpenGL(mon->gui_window, ctx);
 		// Pass nullptr so the backend auto-picks "#version 300 es" when
 		// IMGUI_IMPL_OPENGL_ES3 is defined (Pi/GLES build) and "#version 130"
-		// on desktop GL.
-		ImGui_ImplOpenGL3_Init(nullptr);
+		// on desktop GL. A desktop build whose GL context fell back to the
+		// runtime GLES tier (ladder modes 4/5) also needs the ES version
+		// string — the desktop default does not compile on a GLES context.
+		ImGui_ImplOpenGL3_Init(
+			get_gl_capabilities().is_gles ? "#version 300 es" : nullptr);
 	} else
 #endif
 	{
