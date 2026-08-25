@@ -9,8 +9,9 @@
 
 #include "sysdeps.h"
 
-#ifndef USE_OPENGL
-
+// SDL software renderer backend. Compiled in every configuration (it only
+// depends on SDL3 + irenderer.h): primary renderer in no-GL builds and the
+// runtime GL-to-SDL demotion target in USE_OPENGL builds (gfx_window.cpp).
 #include "options.h"
 #include "xwin.h"
 #include "picasso96.h"
@@ -402,7 +403,7 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
 			static_cast<float>(sly - (mon->statusline_surface->h - led_h)),
 			static_cast<float>(mon->statusline_surface->w), static_cast<float>(mon->statusline_surface->h) };
 		int lw = 0, lh = 0;
-		SDL_LogicalPresentation lmode = SDL_LOGICAL_PRESENTATION_DISABLED;
+		SDL_RendererLogicalPresentation lmode = SDL_LOGICAL_PRESENTATION_DISABLED;
 		SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, &lmode);
 		SDL_SetRenderLogicalPresentation(mon->amiga_renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
 		SDL_RenderTexture(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
@@ -528,4 +529,3 @@ void SDLRenderer::close_hwnds_cleanup(AmigaMonitor* mon)
 }
 
 #endif // AMIBERRY
-#endif // !USE_OPENGL

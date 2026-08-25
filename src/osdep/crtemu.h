@@ -238,7 +238,7 @@ struct crtemu_t {
 	unsigned int last_present_format;
 	unsigned int last_present_type;
 	CRTEMU_GLint texture_filter; // GL_NEAREST or GL_LINEAR for NONE mode
-	bool is_mobile_gpu; // True for GLES/VideoCore - enables mobile optimizations
+	bool is_mobile_gpu; // True on low-power GPUs (per the GL_RENDERER allowlist or force_mobile) - selects simplified shader variants
 
 	CRTEMU_GLint loc_blur_blur;
 	CRTEMU_GLint loc_blur_texture;
@@ -348,6 +348,8 @@ struct crtemu_t {
 #endif
 
 
+#include "crt_gpu_allowlist.h"
+
 static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const* vs_source_in, char const* fs_source_in ) {
 #ifdef CRTEMU_REPORT_SHADER_ERRORS
 	char error_message[ 1024 ];
@@ -357,11 +359,6 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
     const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
     bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") || strstr(gl_ver_str, "OpenGL ES-CM"));
 
-    // Detect mobile GPU (GLES indicates mobile/embedded GPU like VideoCore on RPI)
-    // This enables performance optimizations like mediump precision and reduced blur
-    if (is_gles && !crtemu->is_mobile_gpu) {
-        crtemu->is_mobile_gpu = true;
-    }
 
     // Check for Core Profile (Desktop GL >= 3.2 usually implied by Core)
     // We can also check specific version numbers if needed.
@@ -1837,10 +1834,21 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 	crtemu->last_present_height = 0;
 	crtemu->texture_filter = CRTEMU_GL_LINEAR; // Default to linear filtering for NONE mode
 
-	// Detect mobile GPU (GLES) BEFORE shader compilation so mobile variants are selected
-	// force_mobile allows UI override for testing or when auto-detection fails
+	// Detect low-power GPU BEFORE shader compilation so the simplified
+	// variants are selected. force_mobile allows a UI override for testing
+	// or when auto-detection fails. ES contexts use the GL_RENDERER
+	// capability allowlist so capable hardware (RPi5, modern Adreno /
+	// Mali-G / Apple) gets the full-quality shaders.
 	const char* gl_ver = (const char*)glGetString(GL_VERSION);
-	crtemu->is_mobile_gpu = force_mobile || (gl_ver && strstr(gl_ver, "OpenGL ES") != nullptr);
+	const bool is_gles_context = gl_ver && strstr(gl_ver, "OpenGL ES") != nullptr;
+	if (force_mobile) {
+		crtemu->is_mobile_gpu = true;
+	} else if (is_gles_context) {
+		const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
+		crtemu->is_mobile_gpu = !crt_gpu_supports_full_crt(gl_renderer);
+	} else {
+		crtemu->is_mobile_gpu = false;
+	}
 
 #ifndef CRTEMU_SDL
 

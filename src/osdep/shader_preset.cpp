@@ -20,6 +20,24 @@
 
 extern SDL_PixelFormat pixel_format;
 
+namespace {
+
+// Enable/disable sRGB write conversion for the current framebuffer. No-op on
+// GLES, where conversion is automatic for sRGB-format attachments and the
+// GL_FRAMEBUFFER_SRGB toggle does not exist (it is force-defined in
+// gl_platform.h only so the code compiles there).
+void set_framebuffer_srgb_enabled(bool enabled)
+{
+	if (get_gl_capabilities().framebuffer_srgb) {
+		if (enabled)
+			glEnable(GL_FRAMEBUFFER_SRGB);
+		else
+			glDisable(GL_FRAMEBUFFER_SRGB);
+	}
+}
+
+}
+
 ShaderPreset::ShaderPreset() = default;
 
 ShaderPreset::~ShaderPreset()
@@ -129,7 +147,11 @@ GLenum ShaderPreset::wrap_mode_to_gl(WrapMode mode)
 {
 	switch (mode) {
 	case WrapMode::Repeat: return GL_REPEAT;
-	case WrapMode::ClampToBorder: return GL_CLAMP_TO_EDGE; // GL_CLAMP_TO_BORDER may not be available on GLES
+	// GL_CLAMP_TO_BORDER needs the border-color wrap to be exposed by the
+	// context (desktop >= 3.2, ES >= 3.2, or the border-clamp extension);
+	// otherwise fall back to edge clamping.
+	case WrapMode::ClampToBorder: return get_gl_capabilities().clamp_to_border
+		? GL_CLAMP_TO_BORDER : GL_CLAMP_TO_EDGE;
 	case WrapMode::MirroredRepeat: return GL_MIRRORED_REPEAT;
 	default: return GL_CLAMP_TO_EDGE;
 	}
@@ -645,47 +667,96 @@ bool ShaderPreset::create_pass_fbo(int pass_index, int input_w, int input_h,
 		pass.output_texture = 0;
 	}
 
-	// Create output texture
-	glGenTextures(1, &pass.output_texture);
-	glBindTexture(GL_TEXTURE_2D, pass.output_texture);
-
-	// Choose internal format
-	GLenum internal_format = GL_RGBA;
-	if (pass.config.float_framebuffer)
-		internal_format = GL_RGBA16F;
-	else if (pass.config.srgb_framebuffer)
-		internal_format = GL_SRGB8_ALPHA8;
-
-	glTexImage2D(GL_TEXTURE_2D, 0, internal_format, out_w, out_h, 0,
-		GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
-	// Filtering
-	GLenum filter = pass.config.filter_linear ? GL_LINEAR : GL_NEAREST;
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-
-	// Wrap mode
-	GLenum wrap = wrap_mode_to_gl(pass.config.wrap_mode);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
-
-	// Create FBO
-	glGenFramebuffers(1, &pass.fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, pass.fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, pass.output_texture, 0);
-
-	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status != GL_FRAMEBUFFER_COMPLETE) {
-		error_message_ = "FBO incomplete for pass " + std::to_string(pass_index)
-			+ " (status: " + std::to_string(status) + ", size: "
-			+ std::to_string(out_w) + "x" + std::to_string(out_h) + ")";
-		write_log("%s\n", error_message_.c_str());
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		return false;
+	// Internal-format candidates: the requested format first, then a plain
+	// RGBA8 fallback so a preset still loads when the driver rejects float or
+	// sRGB renderability (checked via glCheckFramebufferStatus rather than
+	// trusting extension strings alone). Float formats require GL_HALF_FLOAT
+	// as the upload type; GL_RGBA/GL_UNSIGNED_BYTE with GL_RGBA16F is invalid
+	// per spec and fails on strict drivers.
+	const GlCapabilities& caps = get_gl_capabilities();
+	GLenum formats[2] = { GL_RGBA, GL_RGBA };
+	int format_count = 1;
+	if (pass.config.float_framebuffer) {
+		if (caps.rgba16f_renderable) {
+			formats[0] = GL_RGBA16F;
+			formats[1] = GL_RGBA;
+			format_count = 2;
+		}
+	} else if (pass.config.srgb_framebuffer) {
+		formats[0] = GL_SRGB8_ALPHA8;
+		formats[1] = GL_RGBA;
+		format_count = 2;
 	}
 
+	// Create output texture
+	glGenTextures(1, &pass.output_texture);
+
+	// Create FBO (reused across format attempts)
+	glGenFramebuffers(1, &pass.fbo);
+
+	bool fbo_complete = false;
+	GLenum chosen_format = GL_RGBA;
+	// Filter/wrap are persistent texture-object state (not reset by
+	// glTexImage2D), so they are set once after a complete format is chosen.
+	for (int attempt = 0; attempt < format_count && !fbo_complete; attempt++) {
+		glBindTexture(GL_TEXTURE_2D, pass.output_texture);
+		const GLenum type = (formats[attempt] == GL_RGBA16F) ? GL_HALF_FLOAT : GL_UNSIGNED_BYTE;
+		glTexImage2D(GL_TEXTURE_2D, 0, formats[attempt], out_w, out_h, 0,
+			GL_RGBA, type, nullptr);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, pass.fbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_2D, pass.output_texture, 0);
+
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status == GL_FRAMEBUFFER_COMPLETE) {
+			fbo_complete = true;
+			chosen_format = formats[attempt];
+			if (attempt > 0) {
+				write_log("Shader preset pass %d: requested format 0x%04X incomplete, "
+					"downgraded to fallback 0x%04X\n",
+					pass_index, static_cast<unsigned>(formats[0]),
+					static_cast<unsigned>(chosen_format));
+			}
+		} else if (attempt + 1 < format_count) {
+			write_log("Shader preset pass %d: FBO incomplete for format 0x%04X "
+				"(status 0x%04X), retrying with fallback format\n",
+				pass_index, static_cast<unsigned>(formats[attempt]),
+				static_cast<unsigned>(status));
+		} else {
+			error_message_ = "FBO incomplete for pass " + std::to_string(pass_index)
+				+ " (status: " + std::to_string(status) + ", size: "
+				+ std::to_string(out_w) + "x" + std::to_string(out_h) + ")";
+			write_log("%s\n", error_message_.c_str());
+		}
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	if (!fbo_complete) {
+		// Delete the failed objects and reset the cached state so the
+		// same-size early-return above can never validate an incomplete
+		// FBO on a later call (succeed at size A -> fail at B -> request A).
+		if (pass.fbo != 0) {
+			glDeleteFramebuffers(1, &pass.fbo);
+			pass.fbo = 0;
+		}
+		if (pass.output_texture != 0) {
+			if (glIsTexture(pass.output_texture))
+				glDeleteTextures(1, &pass.output_texture);
+			pass.output_texture = 0;
+		}
+		pass.output_width = 0;
+		pass.output_height = 0;
+		pass.output_internal_format = GL_RGBA;
+		return false;
+	}
+	glBindTexture(GL_TEXTURE_2D, pass.output_texture);
+	const GLenum filter = pass.config.filter_linear ? GL_LINEAR : GL_NEAREST;
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+	const GLenum wrap = wrap_mode_to_gl(pass.config.wrap_mode);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
+	pass.output_internal_format = chosen_format;
 	pass.output_width = out_w;
 	pass.output_height = out_h;
 	return true;
@@ -868,7 +939,7 @@ bool ShaderPreset::run_flip_pass(int width, int height)
 	glViewport(0, 0, width, height);
 	// Flip pass never uses sRGB framebuffer encoding — the frame is already
 	// in its target color space.
-	glDisable(GL_FRAMEBUFFER_SRGB);
+	set_framebuffer_srgb_enabled(false);
 
 	glUseProgram(flip_program_);
 	glActiveTexture(GL_TEXTURE0);
@@ -1166,18 +1237,17 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 		if (is_last) {
 			glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 			glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
-			glDisable(GL_FRAMEBUFFER_SRGB);
+			set_framebuffer_srgb_enabled(false);
 		} else {
 			glBindFramebuffer(GL_FRAMEBUFFER, pass.fbo);
 			glViewport(0, 0, output_w, output_h);
 			// Enable sRGB encoding when writing to sRGB framebuffers.
 			// This ensures proper linear-to-sRGB conversion on write,
 			// matching the sRGB-to-linear decode that happens on read.
-			if (pass.config.srgb_framebuffer) {
-				glEnable(GL_FRAMEBUFFER_SRGB);
-			} else {
-				glDisable(GL_FRAMEBUFFER_SRGB);
-			}
+			// The actual (possibly downgraded) format decides, not the
+			// preset request. GLES converts automatically; the helper is a
+			// no-op there.
+			set_framebuffer_srgb_enabled(pass.output_internal_format == GL_SRGB8_ALPHA8);
 			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
@@ -1210,7 +1280,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 	}
 
 	// Cleanup
-	glDisable(GL_FRAMEBUFFER_SRGB);
+	set_framebuffer_srgb_enabled(false);
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

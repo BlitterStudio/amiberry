@@ -145,6 +145,36 @@ bool gl_platform_init()
 }
 #endif // __ANDROID__
 
+const GlCapabilities& get_gl_capabilities()
+{
+	static GlCapabilities cached = {};
+	static bool initialized = false;
+
+	if (initialized)
+		return cached;
+
+	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
+	if (gl_ver_str == nullptr) {
+		// No current context (or a broken driver): return a zeroed snapshot
+		// WITHOUT latching, so a later call with a live context re-probes.
+		static const GlCapabilities empty = {};
+		return empty;
+	}
+	cached = classify_gl_capabilities(
+		gl_ver_str,
+		(const char*)glGetString(GL_EXTENSIONS));
+
+	write_log("GL capabilities: %s %d.%d (clamp_to_border=%d framebuffer_srgb=%d rgba16f_renderable=%d)\n",
+		cached.is_gles ? "GLES" : "GL",
+		cached.major, cached.minor,
+		cached.clamp_to_border ? 1 : 0,
+		cached.framebuffer_srgb ? 1 : 0,
+		cached.rgba16f_renderable ? 1 : 0);
+
+	initialized = true;
+	return cached;
+}
+
 const GlShaderPreambles& get_gl_shader_preambles()
 {
 	static GlShaderPreambles cached = {};
@@ -153,26 +183,12 @@ const GlShaderPreambles& get_gl_shader_preambles()
 	if (initialized)
 		return cached;
 
-	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
-	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
-	int major = 0, minor = 0;
-	if (gl_ver_str) {
-		const char* v = gl_ver_str;
-		while (*v && (*v < '0' || *v > '9')) v++;
-		if (*v) {
-			major = atoi(v);
-			while (*v && *v != '.') v++;
-			if (*v == '.') {
-				v++;
-				minor = atoi(v);
-			}
-		}
-	}
+	const GlCapabilities& caps = get_gl_capabilities();
 
-	if (is_gles && major >= 3) {
+	if (caps.is_gles && caps.major >= 3) {
 		cached.vs = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
 		cached.fs = "#version 300 es\nprecision mediump float;\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
-	} else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
+	} else if (!caps.is_gles && (caps.major > 3 || (caps.major == 3 && caps.minor >= 2))) {
 		cached.vs = "#version 330 core\n#define attribute in\n#define varying out\n";
 		cached.fs = "#version 330 core\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
 	} else {

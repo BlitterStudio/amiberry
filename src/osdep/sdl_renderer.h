@@ -8,8 +8,9 @@
  * Copyright 2026 Dimitris Panokostas
  */
 
-#ifndef USE_OPENGL
-
+// SDL software renderer backend. Compiled in every configuration (it only
+// depends on SDL3 + irenderer.h): primary renderer in no-GL builds and the
+// runtime GL-to-SDL demotion target in USE_OPENGL builds (gfx_window.cpp).
 #include "irenderer.h"
 #include <SDL3/SDL.h>
 
@@ -79,5 +80,3 @@ private:
 };
 
 SDLRenderer* get_sdl_renderer();
-
-#endif // !USE_OPENGL
