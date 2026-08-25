@@ -147,10 +147,15 @@ bool gl_platform_init()
 
 const GlCapabilities& get_gl_capabilities()
 {
+	// Cache per GL context, not per process: a context change (per-monitor
+	// ladder results can mix desktop GL and the GLES fallback tier, demotion
+	// cycles recreate contexts) can change the API class, so re-probe when
+	// the current context differs from the one this snapshot came from.
 	static GlCapabilities cached = {};
-	static bool initialized = false;
+	static SDL_GLContext cached_context = nullptr;
 
-	if (initialized)
+	const SDL_GLContext current_context = SDL_GL_GetCurrentContext();
+	if (current_context != nullptr && current_context == cached_context)
 		return cached;
 
 	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
@@ -163,6 +168,7 @@ const GlCapabilities& get_gl_capabilities()
 	cached = classify_gl_capabilities(
 		gl_ver_str,
 		(const char*)glGetString(GL_EXTENSIONS));
+	cached_context = current_context;
 
 	write_log("GL capabilities: %s %d.%d (clamp_to_border=%d framebuffer_srgb=%d rgba16f_renderable=%d)\n",
 		cached.is_gles ? "GLES" : "GL",
@@ -171,16 +177,18 @@ const GlCapabilities& get_gl_capabilities()
 		cached.framebuffer_srgb ? 1 : 0,
 		cached.rgba16f_renderable ? 1 : 0);
 
-	initialized = true;
 	return cached;
 }
 
 const GlShaderPreambles& get_gl_shader_preambles()
 {
+	// Same per-context key as get_gl_capabilities(): a context change can
+	// switch the GLSL profile, so the preambles follow the live context.
 	static GlShaderPreambles cached = {};
-	static bool initialized = false;
+	static SDL_GLContext cached_context = nullptr;
 
-	if (initialized)
+	const SDL_GLContext current_context = SDL_GL_GetCurrentContext();
+	if (current_context != nullptr && current_context == cached_context)
 		return cached;
 
 	const GlCapabilities& caps = get_gl_capabilities();
@@ -196,7 +204,7 @@ const GlShaderPreambles& get_gl_shader_preambles()
 		cached.fs = "#version 120\n";
 	}
 
-	initialized = true;
+	cached_context = current_context;
 	return cached;
 }
 
