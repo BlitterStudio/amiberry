@@ -23,10 +23,22 @@
 struct crtemu_t;
 class ShaderPreset;
 
+// GL runtime identity captured at context creation. Cached as strings so
+// diagnostics (About panel, support reports) can show them without a
+// current GL context.
+struct GLRuntimeInfo {
+	std::string vendor;      // GL_VENDOR
+	std::string renderer;    // GL_RENDERER
+	std::string version;     // GL_VERSION
+	std::string glsl_version; // GL_SHADING_LANGUAGE_VERSION
+	bool valid = false;
+};
+
 struct ShaderParameterCache {
 	std::string shader_name;
 	std::vector<ShaderParameter> parameters;
 };
+
 
 // Shader lifecycle and caching state (owned by OpenGLRenderer)
 struct ShaderState {
@@ -139,6 +151,12 @@ public:
 	// Access the GL context for ImGui GUI integration
 	SDL_GLContext get_gl_context() const;
 
+	// GL runtime info captured at context creation (GL_RENDERER /
+	// GL_VERSION / GL_SHADING_LANGUAGE_VERSION). Cached as strings so the
+	// About panel and diagnostics can show them without a current GL
+	// context. vendor is GL_VENDOR.
+	const GLRuntimeInfo& get_gl_runtime_info() const { return m_gl_info; }
+
 	// Access shader state for filter.cpp parameter editing
 	ShaderState& shader_state();
 	const ShaderState& shader_state() const;
@@ -159,6 +177,9 @@ private:
 	GLOverlayState m_overlay;
 	bool m_integer_scaling = false; // Integer scaling for native Amiga modes (scaling_method == 2)
 	bool m_stretch_to_fill = false; // Fill the render area, ignoring aspect (scaling_method == 3)
+
+	// GL identity captured at context creation (About panel / diagnostics)
+	GLRuntimeInfo m_gl_info;
 
 	// Cached GL pixel format info (resolved once from pixel_format, reused per frame)
 	struct GLFormatInfo {

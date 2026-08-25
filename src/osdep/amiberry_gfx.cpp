@@ -585,6 +585,7 @@ void apply_auto_crop_policy(const SDL_Surface* surface, SDL_Rect& rect,
 
 static int dx = 0, dy = 0;
 const char* sdl_video_driver;
+bool gl_renderer_demoted = false;
 bool kmsdrm_detected = false;
 bool no_wm_detected = false;
 

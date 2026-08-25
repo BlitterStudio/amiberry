@@ -1213,6 +1213,7 @@ bool doInit(AmigaMonitor* mon)
 					 * its window-reuse early return, never calling
 					 * create_platform_renderer — leaving the demoted
 					 * SDLRenderer without an SDL_Renderer (black screen). */
+					gl_renderer_demoted = true;
 					close_windows(mon, true);
 					if (mon->monitor_id > 0) {
 						mon->renderer = create_sdl_renderer();
