@@ -3435,6 +3435,14 @@ static void mousehack_helper (uae_u32 buttonmask)
 		return;
 	}
 
+	// The virtual mouse driver must actually be in use. The guest driver task
+	// is installed unconditionally since "support virtual mouse driver on the
+	// fly change" (it no longer gates on this trap returning 0), so feeding it
+	// events with magic mouse alone would move the guest pointer to the stale
+	// lastmx/lastmy (0,0 after startup) on every button event.
+	if (currprefs.input_tablet == TABLET_OFF) {
+		return;
+	}
 	if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
 		return;
 	}
