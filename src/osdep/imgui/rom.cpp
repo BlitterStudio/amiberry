@@ -207,9 +207,13 @@ void render_panel_rom()
 	EndGroupBox("Advanced Custom ROM Settings");
 
 	BeginGroupBox("Miscellaneous");
+	static bool custom_cart_enabled = false;
+	static char custom_cart_derived_from[MAX_DPATH] = "";
+	static bool custom_cart_local_edit = false;
 	ImGui::Text("Cartridge ROM File:");
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
-	RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list, changed_prefs.cartident, sizeof(changed_prefs.cartident));
+	if (RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list, changed_prefs.cartident, sizeof(changed_prefs.cartident)))
+		custom_cart_local_edit = true;
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
 	ImGui::SameLine();
@@ -218,24 +222,28 @@ void render_panel_rom()
 		OpenFileDialogKey("ROM", "Select Cartridge ROM", ".rom,.bin,.a1000,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
-	static bool custom_cart_enabled = false;
-	static bool custom_cart_init = false;
-	if (!custom_cart_init) {
-		custom_cart_init = true;
-		bool known_cart = false;
-		for (const auto& entry : cart_rom_list) {
-			if (entry.path == changed_prefs.cartfile) {
-				known_cart = true;
-				break;
+	if (strcmp(custom_cart_derived_from, changed_prefs.cartfile) != 0) {
+		snprintf(custom_cart_derived_from, sizeof(custom_cart_derived_from), "%s", changed_prefs.cartfile);
+		if (!custom_cart_local_edit) {
+			// The cartridge path changed outside this panel (config load, GUI
+			// reopen): re-derive custom mode from the new value.
+			bool known_cart = false;
+			for (const auto& entry : cart_rom_list) {
+				if (entry.path == changed_prefs.cartfile) {
+					known_cart = true;
+					break;
+				}
 			}
+			custom_cart_enabled = changed_prefs.cartfile[0] != 0 && !known_cart;
 		}
-		custom_cart_enabled = changed_prefs.cartfile[0] != 0 && !known_cart;
 	}
+	custom_cart_local_edit = false;
 	AmigaCheckbox("Custom Cartridge ROM", &custom_cart_enabled);
 	ShowHelpMarker("Use an arbitrary cartridge ROM file. For custom dumps, set the identifier (e.g. :DeMoNv1) so the core can recognize it.");
 	if (custom_cart_enabled) {
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
-		AmigaInputText("##CartFileCustom", changed_prefs.cartfile, MAX_DPATH);
+		if (AmigaInputText("##CartFileCustom", changed_prefs.cartfile, MAX_DPATH))
+			custom_cart_local_edit = true;
 		ImGui::SameLine();
 		if (AmigaButton("...##CartFileCustomButton")) {
 			current_pick_type = RomPickType::Cartridge;
@@ -310,10 +318,23 @@ void render_panel_rom()
 			case RomPickType::Extended:
 				strncpy(changed_prefs.romextfile, file_dialog_result.c_str(), MAX_DPATH);
 				break;
-			case RomPickType::Cartridge:
+			case RomPickType::Cartridge: {
 				strncpy(changed_prefs.cartfile, file_dialog_result.c_str(), MAX_DPATH);
 				custom_cart_enabled = true;
+				custom_cart_local_edit = true;
+				// Re-sync the identifier with the newly picked file: a scanned
+				// dump carries its romdata configname, anything else gets a clean
+				// slate so a stale ident can't mis-type an unrecognized ROM.
+				std::string cartident;
+				for (const auto& entry : cart_rom_list) {
+					if (entry.path == file_dialog_result) {
+						cartident = entry.ident;
+						break;
+					}
+				}
+				snprintf(changed_prefs.cartident, sizeof(changed_prefs.cartident), "%s", cartident.c_str());
 				break;
+			}
 			case RomPickType::Flash:
 				strncpy(changed_prefs.flashfile, file_dialog_result.c_str(), MAX_DPATH);
 				break;
