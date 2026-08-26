@@ -2012,7 +2012,9 @@ static bool load_kickstart_replacement(void)
 		currprefs.z3fastmem[0].size == 0 &&
 		currprefs.mbresmem_high.size == 0 &&
 		currprefs.mbresmem_low.size == 0 &&
-		currprefs.cpuboardmem1.size == 0) {
+		currprefs.cpuboardmem1.size == 0 &&
+		extendedkickmem2a_bank.allocated_size == 0 &&
+		extendedkickmem2b_bank.allocated_size == 0) {
 
 		changed_prefs.custom_memory_addrs[0] = currprefs.custom_memory_addrs[0] = 0xa80000;
 		changed_prefs.custom_memory_sizes[0] = currprefs.custom_memory_sizes[0] = 512 * 1024;
@@ -2190,13 +2192,13 @@ static int load_kickstart (void)
 					maxsize = zfile_size32(zf);
 					singlebigrom = true;
 					extendedkickmem2a_bank.reserved_size = 524288;
-					extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
 					extendedkickmem2a_bank.start = size > 2 * ROM_SIZE_512 ? 0xa00000 : 0xa80000;
 					mapped_malloc(&extendedkickmem2a_bank);
+					extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
 					extendedkickmem2b_bank.reserved_size = 524288;
-					extendedkickmem2b_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
 					extendedkickmem2b_bank.start = extendedkickmem2a_bank.start + 524288;
 					mapped_malloc(&extendedkickmem2b_bank);
+					extendedkickmem2b_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
 					read_kickstart(f, extendedkickmem2a_bank.baseaddr, 524288, 0, 1);
 					read_kickstart(f, extendedkickmem2b_bank.baseaddr, 524288, 0, 1);
 					memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);

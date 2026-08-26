@@ -1685,7 +1685,7 @@ int action_replay_load (void)
 #endif
 
 	struct romdata *rd = getromdatabypath(currprefs.cartfile);
-	TCHAR *ident = currprefs.cartident;
+	const TCHAR *ident = currprefs.cartident;
 	if (ident[0] == ':') {
 		ident++;
 	} else {
