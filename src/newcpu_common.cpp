@@ -1077,6 +1077,18 @@ void setchkundefinedflags(uae_s32 src, uae_s32 dst, int size)
 
 // This is the complex one.
 // Someone else can attempt to simplify this..
+
+/* The 68020/030 CHK2/CMP2 N/V probes below test the sign of a subtraction
+ * that can overflow. As signed int that is undefined behavior: gcc/clang
+ * optimize the overflow-only comparisons away (observed with gcc -O2;
+ * breaks CPUTESTER CHK2.* on GCC-built hosts), while MSVC keeps the
+ * two's-complement wrap that the real-hardware-derived tables expect.
+ * Emulate the wrap explicitly so every compiler produces the same flags. */
+static uae_u32 chk2_sub_wrap(uae_s32 a, uae_s32 b)
+{
+	return (uae_u32)a - (uae_u32)b;
+}
+
 void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 {
 	if (currprefs.cpu_model == 68060) {
@@ -1100,7 +1112,7 @@ void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 		if (val >= 0 && val < upper) {
 			SET_NFLG(1);
 		}
-		if (val >= 0 && lower - val >= 0) {
+		if (val >= 0 && (chk2_sub_wrap(lower, val) & 0x80000000u) == 0) {
 			SET_VFLG(1);
 			SET_NFLG(0);
 			if (val > upper) {
@@ -1114,7 +1126,7 @@ void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 		if (val > upper) {
 			SET_NFLG(1);
 		}
-		if (val > lower && upper - val >= 0) {
+		if (val > lower && (chk2_sub_wrap(upper, val) & 0x80000000u) == 0) {
 			SET_VFLG(1);
 			SET_NFLG(0);
 		}
@@ -1122,10 +1134,10 @@ void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 		if (val > upper && val < lower) {
 			SET_NFLG(1);
 		}
-		if (val < 0 && lower - val < 0) {
+		if (val < 0 && (chk2_sub_wrap(lower, val) & 0x80000000u) != 0) {
 			SET_VFLG(1);
 		}
-		if (val < 0 && lower - val >= 0) {
+		if (val < 0 && (chk2_sub_wrap(lower, val) & 0x80000000u) == 0) {
 			SET_NFLG(1);
 		}
 	} else if (lower >= 0 && upper >= 0 && lower <= upper) {
@@ -1135,7 +1147,7 @@ void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 		if (val > upper) {
 			SET_NFLG(1);
 		}
-		if (val < 0 && upper - val < 0) {
+		if (val < 0 && (chk2_sub_wrap(upper, val) & 0x80000000u) != 0) {
 			SET_VFLG(1);
 			SET_NFLG(1);
 		}
@@ -1146,7 +1158,7 @@ void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 		if (val > upper && val < lower) {
 			SET_NFLG(1);
 		}
-		if (val >= 0 && val - lower < 0) {
+		if (val >= 0 && (chk2_sub_wrap(val, lower) & 0x80000000u) != 0) {
 			SET_NFLG(0);
 			SET_VFLG(1);
 		}
@@ -1157,7 +1169,7 @@ void setchk2undefinedflags(uae_s32 lower, uae_s32 upper, uae_s32 val, int size)
 		if (val < 0 && val > upper) {
 			SET_NFLG(1);
 		}
-		if (val >= 0 && val - lower < 0) {
+		if (val >= 0 && (chk2_sub_wrap(val, lower) & 0x80000000u) != 0) {
 			SET_NFLG(1);
 			SET_VFLG(1);
 		}
