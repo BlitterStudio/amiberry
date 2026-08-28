@@ -3328,6 +3328,9 @@ static void update_ecs_features(void)
 	update_hblank();
 	update_bordercolor();
 	exthblanken = exthblankon_aga || exthblankon_ecs;
+	if (!exthblanken) {
+		extblank = false;
+	}
 }
 
 static void update_fmode(void)
@@ -4244,20 +4247,24 @@ static void expand_drga(struct denise_rga *rd)
 			} else {
 				if (!agnus_lol && (!denise_lol_shift_prev || denise_lol_shift_enable)) {
 					int add = 1 << hresolution;
-					buf1 += add;
-					buf2 += add;
-					buf_d += add;
-					if (gbuf) {
-						gbuf += add;
+					if (buf1) {
+						buf1 += add;
+						buf2 += add;
+						buf_d += add;
+						if (gbuf) {
+							gbuf += add;
+						}
 					}
 					denise_lol_shift_prev = add;
 					denise_lol_shift_enable = true;
 				} else if (agnus_lol && denise_lol_shift_prev > 0) {
-					buf1 -= denise_lol_shift_prev;
-					buf2 -= denise_lol_shift_prev;
-					buf_d -= denise_lol_shift_prev;
-					if (gbuf) {
-						gbuf -= denise_lol_shift_prev;
+					if (buf1) {
+						buf1 -= denise_lol_shift_prev;
+						buf2 -= denise_lol_shift_prev;
+						buf_d -= denise_lol_shift_prev;
+						if (gbuf) {
+							gbuf -= denise_lol_shift_prev;
+						}
 					}
 					denise_lol_shift_prev = 0;
 					denise_lol_shift_enable = true;
@@ -6421,11 +6428,11 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 		// detect horizontal blanking
 		if (!denise_vblank_active) {
 			int ipc = internal_pixel_cnt + (denise_strlong_seen ? lol * 8 : 0);
-			linear_denise_frame_hbstrt = hbstrt_offset + (denise_strlong_seen ? lol * 8 : 0);
+			linear_denise_frame_hbstrt = hbstrt_offset + (hbstrt_offset >= 0 ? (denise_strlong_seen ? lol * 8 : 0) : 0);
 			linear_denise_frame_hbstop = hbstop_offset;
 			//write_log("%d %d\n", linear_denise_frame_hbstrt, linear_denise_frame_hbstop);
 
-			if (linear_denise_frame_hbstrt == linear_denise_frame_hbstrt_tmp && linear_denise_frame_hbstop == linear_denise_frame_hbstop_tmp) {
+			if (linear_denise_frame_hbstrt == linear_denise_frame_hbstrt_tmp && linear_denise_frame_hbstop == linear_denise_frame_hbstop_tmp && linear_denise_frame_hbstrt >= 0 && linear_denise_frame_hbstop >= 0) {
 				denise_hbstrt_relative_cnt++;
 				if (denise_hbstrt_relative_cnt > maxvpos_display / 2) {
 					int ss = linear_denise_frame_hbstrt_sel;
@@ -6920,7 +6927,7 @@ static void lts_unaligned_aga(int cnt, int cnt_next, int h)
 						t = decode_denise_specials_debug(t, cnt);
 					}
 #endif
-					* buf1++ = t;
+					*buf1++ = t;
 					*buf2++ = t;
 					if (gbuf) {
 						*gbuf++ = dtgbuf[h ^ lol][ipix];
