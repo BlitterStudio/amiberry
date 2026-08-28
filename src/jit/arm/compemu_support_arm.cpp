@@ -3498,6 +3498,65 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
 }
 #define DO_GET_OPCODE(a) (get_opcode_cft_map((uae_u16)*(a)))
 
+#if defined(CPU_AARCH64)
+/* Which fl_trap opcodes force whole-block interpretation.
+ *
+ * Structural/supervisor trap opcodes (illegal sentinels, RTE/STOP, SR and
+ * system control moves, MMU/cache control, TRAPcc) only appear in cold
+ * exception/supervisor/tester code; interpreting those blocks is cheap and
+ * keeps mixed interpreted/compiled flag and PC state maximally safe. The CPU
+ * tester drives exactly this shape: every test block ends in an ILLEGAL
+ * sentinel, so the suite stays interpreted like 8.3.0.
+ *
+ * Arithmetic trap opcodes that are hot in user code (integer division, CHK)
+ * do NOT demote: the block compiles at full JIT speed and the opcode itself
+ * runs through the per-opcode fallback, which syncs the 68k PC before the
+ * interpreter handler call. */
+static bool jit_trap_demote_opcode(uae_u32 op)
+{
+    switch (table68k[get_opcode_cft_map(op)].mnemo) {
+    case i_ILLG:
+    case i_RTE:
+    case i_STOP:
+    case i_RESET:
+    case i_MOVEC2:
+    case i_MOVE2C:
+    case i_MOVES:
+    case i_MV2SR:
+    case i_MVSR2:
+    case i_MVR2USP:
+    case i_MVUSP2R:
+    case i_ANDSR:
+    case i_ORSR:
+    case i_EORSR:
+    case i_TRAPcc:
+    case i_FTRAPcc:
+    case i_TRAPV:
+    case i_BKPT:
+    case i_LPSTOP:
+    case i_MMUOP030:
+    case i_PFLUSHN:
+    case i_PFLUSH:
+    case i_PFLUSHAN:
+    case i_PFLUSHA:
+    case i_PLPAR:
+    case i_PLPAW:
+    case i_PTESTR:
+    case i_PTESTW:
+    case i_CINVL:
+    case i_CINVP:
+    case i_CINVA:
+    case i_CPUSHL:
+    case i_CPUSHP:
+    case i_CPUSHA:
+        return true;
+    default:
+        /* i_DIVU, i_DIVS, i_DIVL, i_CHK, i_CHK2 and friends stay compiled */
+        return false;
+    }
+}
+#endif
+
 void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 {
     if (cache_enabled && compiled_code && currprefs.cpu_model >= 68020) {
@@ -3515,6 +3574,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bool trace_in_rom = isinrom((uintptr)pc_hist[0].location) != 0;
 #if defined(CPU_AARCH64)
         bool ram_trap_block = false;
+        bool ram_trap_any = false;
 #endif
         uintptr max_pcp = (uintptr)pc_hist[blocklen - 1].location;
         uintptr min_pcp = max_pcp;
@@ -3611,8 +3671,11 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
             trace_in_rom = trace_in_rom && isinrom((uintptr)currpcp);
 #if defined(CPU_AARCH64)
-            if ((prop[op].cflow & fl_trap) && !isinrom((uintptr)currpcp))
-                ram_trap_block = true;
+            if ((prop[op].cflow & fl_trap) && !isinrom((uintptr)currpcp)) {
+                ram_trap_any = true;
+                if (jit_trap_demote_opcode(op))
+                    ram_trap_block = true;
+            }
 #endif
             if (follow_const_jumps && is_const_jump(op)) {
                 checksum_info* csi = alloc_checksum_info();
@@ -3644,10 +3707,19 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bi->needed_flags = liveflags[0];
 
 #if defined(CPU_AARCH64)
-        if (ram_trap_block) {
-            /* RAM test code can rewrite branch targets around fallback/trap opcodes
-             * before active compiled blocks are invalidated. Interpret these blocks
-             * so exception frames use the current instruction PC. */
+        if (ram_trap_block || (currprefs.cputester && ram_trap_any)) {
+            /* RAM test code can rewrite branch targets around fallback/trap
+             * opcodes before active compiled blocks are invalidated; and
+             * mixing interpreted trap/fallback opcodes with compiled flag
+             * readers inside one block can expose stale lazy-flag state.
+             * Interpret blocks carrying structural/supervisor trap opcodes
+             * (and, under the CPU tester, every trap-bearing block) so
+             * exception frames and flag capture use current state.
+             *
+             * Blocks whose only trap opcodes are hot user-mode arithmetic
+             * ones (DIVU/DIVS/DIVL, CHK) stay compiled: the opcode runs via
+             * the per-opcode fallback, which syncs the 68k PC before the
+             * interpreter handler call (#2299). */
             optlev = 0;
             bi->optlevel = optlev;
             bi->count = -1;
