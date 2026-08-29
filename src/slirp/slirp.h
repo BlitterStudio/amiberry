@@ -44,7 +44,7 @@ typedef unsigned long ioctlsockopt_t;
 #endif
 
 #include <winsock2.h>
-#include <Ws2tcpip.h>
+#include <ws2tcpip.h>
 #include <sys/timeb.h>
 #include <iphlpapi.h>
 

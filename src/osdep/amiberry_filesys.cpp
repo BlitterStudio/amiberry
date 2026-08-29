@@ -672,7 +672,7 @@ std::string prefix_with_data_path(const std::string& filename)
 	return t - mktime(&gt);
 }
 
-[[nodiscard]] static long get_mtime_usec(const struct stat& st) noexcept
+[[nodiscard]] static long get_mtime_usec(const STAT& st) noexcept
 {
 #ifdef _WIN32
 	return 0;
@@ -706,7 +706,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		}
 
 		// Get detailed file information
-		struct stat st {};
+		STAT st {};
 		if (stat(output.c_str(), &st) == -1) {
 			write_log("my_stat: stat failed for %s: %s\n",
 				output.c_str(), strerror(errno));
@@ -830,7 +830,7 @@ bool my_existslink(const char* name)
 		return false;
 	}
 
-	struct stat st{};
+	STAT st{};
 	if (lstat(name, &st) != 0) {
 		write_log("my_existslink: lstat on file %s failed: %s\n", name, strerror(errno));
 		return false;
@@ -849,7 +849,7 @@ bool my_existsfiledir(const char *name)
 {
 	if (!name) return false;
 	const auto output = iso_8859_1_to_utf8(std::string(name));
-	struct stat st;
+	STAT st;
 	if (stat(output.c_str(), &st) == 0)
 		return true;
 
@@ -880,7 +880,7 @@ uae_s64 my_fsize(struct my_openfile_s* mos)
 		return -1;
 	}
 
-	struct stat st{};
+	STAT st{};
 	if (fstat(mos->fd, &st) != 0) {
 		write_log("my_fsize: fstat on file %s failed: %s\n", mos->path, strerror(errno));
 		return -1;
@@ -896,7 +896,7 @@ int my_getvolumeinfo(const char* root)
 		return -1;
 	}
 
-	struct stat st{};
+	STAT st{};
 	if (lstat(root, &st) != 0) {
 		write_log("my_getvolumeinfo: lstat on file %s failed: %s\n", root, strerror(errno));
 		return -1;
@@ -918,7 +918,7 @@ bool fs_path_exists(const std::string& s)
 	}
 
 	const auto output = iso_8859_1_to_utf8(s);
-	struct stat buffer{};
+	STAT buffer{};
 	return stat(output.c_str(), &buffer) == 0;
 }
 
@@ -2319,7 +2319,7 @@ std::string my_get_sha1_of_file(const char* filepath)
         }
 
         // Get file size
-        struct stat sb;
+        STAT sb;
         if (fstat(file.fd, &sb) < 0) {
             write_log("my_get_sha1_of_file: fstat on file '%s' failed: %s\n",
                      filepath, strerror(errno));

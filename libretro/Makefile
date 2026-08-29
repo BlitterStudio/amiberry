@@ -208,7 +208,8 @@ NLOHMANN_JSON_HEADER := $(NLOHMANN_JSON_DIR)/json.hpp
 INCFLAGS += -I$(LIBRETRO_DIR)/deps
 
 ifeq ($(platform), unix)
-LDFLAGS += -ldl -lm -pthread
+# forkpty() (uaelib's host shell) lives in libutil on glibc/BSD systems.
+LDFLAGS += -ldl -lm -pthread -lutil
 endif
 
 ifeq ($(platform), osx)
@@ -216,6 +217,10 @@ LDFLAGS += -lm -lpthread
 endif
 
 ifeq ($(platform), win)
+# Target Windows 7 or newer: bsdsocket_host.cpp reads IP_ADAPTER_ADDRESSES
+# fields (Ipv4Enabled, Ipv4Metric) that the MinGW headers only expose from
+# Vista on, and default to the XP layout otherwise.
+FLAGS += -D_WIN32_WINNT=0x0601
 # llvm-mingw / MSYS2 CLANG64: clang's mingw driver does not auto-link
 # libwinpthread the way GCC's does, so pthread/sem symbols (used by the
 # SDL stubs in libretro/sdl_stub.o etc.) come up undefined at link time.

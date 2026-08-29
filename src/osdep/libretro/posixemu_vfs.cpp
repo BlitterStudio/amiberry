@@ -250,7 +250,14 @@ extern "C" int posixemu_stat(const TCHAR* path, STAT* st)
 	char* fs_path = to_fs_path(path);
 	if (!fs_path)
 		return -1;
+#ifdef _WIN32
+	/* STAT is MinGW's struct _stat64 (sysdeps.h picks it up before our own
+	   stat() macro shadows the <sys/stat.h> one), so call the matching
+	   native entry point rather than plain stat(). */
+	const int ret = ::_stat64(fs_path, st);
+#else
 	const int ret = ::stat(fs_path, st);
+#endif
 	free(fs_path);
 	return ret;
 }

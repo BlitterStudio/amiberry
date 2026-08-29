@@ -637,7 +637,7 @@ static int libretro_scan_rom_file(const std::string& path, UAEREG* fkey, const b
 static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bool deepscan, const int level)
 {
 	struct dirent* entry;
-	struct stat statbuf {};
+	STAT statbuf {};
 	int ret = 0;
 	std::vector<std::string> files;
 	std::vector<std::string> dirs;
