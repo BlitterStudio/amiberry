@@ -357,6 +357,34 @@ static inline bool amiberry_auto_crop_edge_band_has_content(
 	return false;
 }
 
+// Sparse counterpart for content DISCONNECTED from the crop: expansion
+// unions every non-border component in the outside regions, not only ones
+// adjacent to the rect's edge. Sample those regions on a coarse grid (every
+// 4th pixel) so a disconnected component large enough to expand the crop is
+// normally hit within a frame; anything thinner than the stride falls back
+// to the periodic interval scan.
+static inline bool amiberry_auto_crop_outside_regions_have_content(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
+	const AmiberryAutoCropBorderColors& border)
+{
+	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count <= 0) {
+		return true;
+	}
+	AmiberryAutoCropRect regions[4];
+	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
+	for (const auto& region : regions) {
+		for (int y = region.y; y < amiberry_auto_crop_rect_bottom(region); y += 4) {
+			for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x += 4) {
+				if (!amiberry_auto_crop_border_matches(border,
+					amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 // Woven is a template parameter so the far more common single-color border
 // keeps one comparison per pixel in this scan's hottest loop.
 template<bool Woven>

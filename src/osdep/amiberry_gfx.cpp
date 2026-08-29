@@ -2272,10 +2272,12 @@ void auto_crop_image()
 			// a duty cycle: immediately when the base or source buffer changes,
 			// and every auto_crop_scan_interval-th frame otherwise. Between
 			// scans the last scan's rect is reused, eliminating the per-frame
-			// pixel walk. A cheap 1-frame trigger covers content that appears
-			// between interval scans: the rect can only grow by content
-			// crossing the band just outside its edge, so a non-border pixel
-			// there forces an immediate scan.
+			// pixel walk. Two cheap per-frame triggers cover content that
+			// appears between interval scans: a one-pixel band just outside
+			// the rect's edge for adjacent content, and a coarse grid over the
+			// outside regions for components disconnected from the crop
+			// (expansion unions every non-border component out there, not
+			// only edge-connected ones).
 			static SDL_Rect last_scan_rect = { 0, 0, 0, 0 };
 			static SDL_Rect last_scan_base = { 0, 0, 0, 0 };
 			static int last_scan_hres = -1, last_scan_vres = -1;
@@ -2296,6 +2298,10 @@ void auto_crop_image()
 				AmiberryAutoCropPixelBuffer band_buffer;
 				if (get_auto_crop_pixel_buffer(surface, band_buffer)
 					&& !amiberry_auto_crop_edge_band_has_content(band_buffer,
+						{ last_scan_rect.x, last_scan_rect.y,
+							last_scan_rect.w, last_scan_rect.h },
+						scan_state.border)
+					&& !amiberry_auto_crop_outside_regions_have_content(band_buffer,
 						{ last_scan_rect.x, last_scan_rect.y,
 							last_scan_rect.w, last_scan_rect.h },
 						scan_state.border)) {
