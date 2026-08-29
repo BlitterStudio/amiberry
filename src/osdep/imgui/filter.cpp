@@ -284,12 +284,16 @@ void render_panel_filter()
 
 
 		// Offsets position the manual crop window and are only consumed on
-		// the manual-crop render path, so keep them hidden otherwise.
+		// the manual-crop render path, so keep them hidden otherwise. Bounds
+		// follow the surface: a WHDLoad-centered origin can legitimately sit
+		// well past the old fixed 80 at higher resolutions.
+		const int max_off_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
+		const int max_off_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("H. Offset:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
-		ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -80, 80);
+		ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -max_off_w, max_off_w);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
@@ -300,16 +304,16 @@ void render_panel_filter()
 		ImGui::Text("V. Offset:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
-		ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -80, 80);
+		ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -max_off_h, max_off_h);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
 		ImGui::InputInt("##VOffsetInput", &changed_prefs.gfx_vertical_offset, 0);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		changed_prefs.gfx_horizontal_offset = std::clamp(
-			changed_prefs.gfx_horizontal_offset, -80, 80);
+			changed_prefs.gfx_horizontal_offset, -max_off_w, max_off_w);
 		changed_prefs.gfx_vertical_offset = std::clamp(
-			changed_prefs.gfx_vertical_offset, -80, 80);
+			changed_prefs.gfx_vertical_offset, -max_off_h, max_off_h);
 	}
 	ImGui::Spacing();
 	EndGroupBox("Crop and Offset");

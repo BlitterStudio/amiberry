@@ -624,13 +624,15 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			set_config_changed();
 		}
 		else if (optname == "gfx_horizontal_offset") {
+			const long max_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
 			changed_prefs.gfx_horizontal_offset = static_cast<int>(
-				std::clamp(std::stol(optval), -4096L, 4096L));
+				std::clamp(std::stol(optval), -max_w, max_w));
 			set_config_changed();
 		}
 		else if (optname == "gfx_vertical_offset") {
+			const long max_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
 			changed_prefs.gfx_vertical_offset = static_cast<int>(
-				std::clamp(std::stol(optval), -4096L, 4096L));
+				std::clamp(std::stol(optval), -max_h, max_h));
 			set_config_changed();
 		}
 		else if (optname == "gfx_overscanmode") {
