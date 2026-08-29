@@ -44,6 +44,14 @@ internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List
 	add("kbd9")
 }
 
+/**
+ * The analog mouse map feeds the Amiga mouse on port 0, so it needs a physical
+ * controller on port 1 and the system mouse kept on port 0. Port 0 can hold
+ * either a controller or the mouse, never both — so the map is port-1 only.
+ */
+internal fun portSupportsMouseMap(portIndex: Int, deviceId: String, port0Device: String): Boolean =
+	portIndex == 1 && (deviceId == "joy0" || deviceId == "joy1") && port0Device == "mouse"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputTab(viewModel: SettingsViewModel) {
@@ -151,6 +159,19 @@ fun InputTab(viewModel: SettingsViewModel) {
 							)
 						}
 					}
+				}
+
+				if (portSupportsMouseMap(1, settings.joyport1, settings.joyport0)) {
+					SwitchRow(
+						label = stringResource(R.string.settings_input_analog_mouse_map),
+						checked = settings.joyport1MouseMap,
+						supportingText = stringResource(R.string.settings_input_analog_mouse_map_summary),
+						onCheckedChange = { isEnabled ->
+							viewModel.updateSettings { s ->
+								InputSettingsActions.setPortMouseMap(s, 1, isEnabled)
+							}
+						}
+					)
 				}
 			}
 		}

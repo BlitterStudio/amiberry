@@ -69,7 +69,9 @@ data class EmulatorSettings(
 	val joyport1: String = "onscreen_joy",
 	val onScreenJoystick: Boolean = true,
 	val onScreenKeyboard: Boolean = true,
-	val onScreenKeyboardNumpad: Boolean = false
+	val onScreenKeyboardNumpad: Boolean = false,
+	val joyport0MouseMap: Boolean = false,  // left analog stick + shoulders act as the Amiga mouse
+	val joyport1MouseMap: Boolean = false
 ) {
 	companion object {
 		/** Create settings from an AmigaModel with sensible defaults. */

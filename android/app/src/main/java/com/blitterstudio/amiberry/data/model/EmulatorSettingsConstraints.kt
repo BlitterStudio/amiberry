@@ -104,6 +104,17 @@ object EmulatorSettingsConstraints {
 			result = result.copy(joyport1 = normalizedJoyport1, onScreenJoystick = false)
 		}
 
+		// The analog mouse map feeds the Amiga mouse on port 0 (setmousestate
+		// on an unassigned mouse is a no-op), so it only works with a
+		// controller on port 1 and the system mouse kept on port 0. Port 0
+		// can hold either a controller or the mouse, never both.
+		if (result.joyport0MouseMap) {
+			result = result.copy(joyport0MouseMap = false)
+		}
+		if (result.joyport1MouseMap && !(result.joyport1 in JOYSTICK_DEVICES && result.joyport0 == "mouse")) {
+			result = result.copy(joyport1MouseMap = false)
+		}
+
 		return result
 	}
 
@@ -155,6 +166,7 @@ object EmulatorSettingsConstraints {
 	private const val FLOPPY_TYPE_DISABLED = -1
 	private const val FLOPPY_TYPE_DD = 0
 	private const val FLOPPY_TYPE_HD = 1
+	private val JOYSTICK_DEVICES = setOf("joy0", "joy1")
 	private val ANDROID_PORT_INPUT_DEVICES = setOf(
 		"none",
 		"mouse",

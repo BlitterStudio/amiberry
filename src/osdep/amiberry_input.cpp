@@ -2008,6 +2008,27 @@ void ensure_onscreen_joystick_registered()
 	write_log("On-Screen Joystick registered as JOY%d\n", osj_device_index);
 }
 
+// Joyport (0..3) the given joystick device is currently assigned to, or -1.
+// The analog mouse map is configured per joyport, but axis events arrive
+// carrying the di_joystick[] device index — these must not be conflated
+// (e.g. default Android: port 0 = mouse, port 1 = joy0/device 0).
+static int assigned_joyport(const int device_index)
+{
+	for (int port = 0; port < MAX_JPORTS; port++) {
+		if (jsem_isjoy(port, &currprefs) == device_index)
+			return port;
+	}
+	return -1;
+}
+
+// Mouse device index that receives the emulated Amiga mouse (port 0) input
+// while an analog stick is mapped to mouse movement.
+static int mousemap_mouse_device()
+{
+	const int mouse = jsem_ismouse(0, &currprefs);
+	return mouse >= 0 ? mouse : 0;
+}
+
 static bool invert_axis(int axis, const didata* did)
 {
 	switch (axis)
@@ -2069,11 +2090,14 @@ void read_controller_axis(const int id, const int axis, const int value)
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
-		// If analog mouse mapping is used, the Left stick acts as a mouse
-		if (axis <= SDL_GAMEPAD_AXIS_LEFTY && currprefs.jports[id].mousemap > 0)
+		// If analog mouse mapping is used, the Left stick acts as a mouse.
+		// The mousemap flag lives on the joyport this controller is assigned
+		// to, which is not necessarily the same number as the device index.
+		const int port = assigned_joyport(id);
+		if (axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0)
 		{
 			if (value > joystick_dead_zone || value < -joystick_dead_zone)
-				setmousestate(id, axis, value / 10000, 0);
+				setmousestate(mousemap_mouse_device(), axis, value / 10000, 0);
 		}
 		else
 		{
@@ -2134,11 +2158,14 @@ void read_joystick_axis(const int id, const int axis, int value)
 		{
 			if (did->mapping.axis[did_axis] == axis)
 			{
-				// If analog mouse mapping is used, the Left stick acts as a mouse
-				if (did_axis <= SDL_GAMEPAD_AXIS_LEFTY && currprefs.jports[id].mousemap > 0)
+				// If analog mouse mapping is used, the Left stick acts as a mouse.
+				// The mousemap flag lives on the joyport this controller is
+				// assigned to, not the device index.
+				const int port = assigned_joyport(id);
+				if (did_axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0)
 				{
 					if (value > joystick_dead_zone || value < -joystick_dead_zone)
-						setmousestate(id, did_axis, value / 1000, 0);
+						setmousestate(mousemap_mouse_device(), did_axis, value / 1000, 0);
 				}
 				else
 				{
