@@ -608,11 +608,11 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			set_config_changed();
 		}
 		else if (optname == "gfx_manual_crop_width") {
-			changed_prefs.gfx_manual_crop_width = std::max(0, std::stol(optval));
+			changed_prefs.gfx_manual_crop_width = static_cast<int>(std::max(0L, std::stol(optval)));
 			set_config_changed();
 		}
 		else if (optname == "gfx_manual_crop_height") {
-			changed_prefs.gfx_manual_crop_height = std::max(0, std::stol(optval));
+			changed_prefs.gfx_manual_crop_height = static_cast<int>(std::max(0L, std::stol(optval)));
 			set_config_changed();
 		}
 		else if (optname == "gfx_horizontal_offset") {
