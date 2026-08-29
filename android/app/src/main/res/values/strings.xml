@@ -309,6 +309,8 @@
     <string name="settings_input_on_screen_keyboard_button">On-Screen Keyboard Button</string>
     <string name="settings_input_on_screen_keyboard_numpad">Include Numeric Keypad</string>
     <string name="settings_input_on_screen_keyboard_numpad_summary">Fits the full Amiga keyboard on screen using smaller keys.</string>
+    <string name="settings_input_analog_mouse_map">Left Analog Stick as Mouse</string>
+    <string name="settings_input_analog_mouse_map_summary">Left stick moves the mouse pointer; L/R shoulder buttons act as the left/right mouse buttons. Other controls stay as the port joystick.</string>
     <string name="settings_input_device_mouse">Mouse</string>
     <string name="settings_input_device_joystick_0">Joystick 0</string>
     <string name="settings_input_device_joystick_1">Joystick 1</string>

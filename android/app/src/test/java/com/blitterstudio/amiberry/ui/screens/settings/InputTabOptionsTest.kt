@@ -32,4 +32,17 @@ class InputTabOptionsTest {
 
 		assertFalse(options.contains("onscreen_joy"))
 	}
+
+	@Test
+	fun `mouse map is offered only for port 1 controllers with the mouse on port 0`() {
+		assertTrue(portSupportsMouseMap(portIndex = 1, deviceId = "joy0", port0Device = "mouse"))
+		assertTrue(portSupportsMouseMap(portIndex = 1, deviceId = "joy1", port0Device = "mouse"))
+		// Port 0 can hold a controller or the mouse, never both — the map
+		// feeds the port-0 mouse, so it is never offered on port 0
+		assertFalse(portSupportsMouseMap(portIndex = 0, deviceId = "joy0", port0Device = "mouse"))
+		// Without the system mouse on port 0 there is no pointer to drive
+		assertFalse(portSupportsMouseMap(portIndex = 1, deviceId = "joy0", port0Device = "joy1"))
+		assertFalse(portSupportsMouseMap(portIndex = 1, deviceId = "onscreen_joy", port0Device = "mouse"))
+		assertFalse(portSupportsMouseMap(portIndex = 1, deviceId = "none", port0Device = "mouse"))
+	}
 }

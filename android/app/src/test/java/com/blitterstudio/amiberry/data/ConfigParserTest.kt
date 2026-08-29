@@ -264,6 +264,21 @@ class ConfigParserTest {
 	}
 
 	@Test
+	fun `parse input reads analog mouse map keys`() {
+		val file = writeConfig("""
+			joyport0=mouse
+			joyport1=joy0
+			joyport1mousemap=1
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertFalse(result.settings.joyport0MouseMap)
+		assertTrue(result.settings.joyport1MouseMap)
+		assertTrue("joyport1mousemap" in result.explicitKeys)
+		assertTrue(result.unknownLines.none { it.trimStart().startsWith("joyport1mousemap=") })
+	}
+
+	@Test
 	fun `parse input uses native vkbd key before default osk`() {
 		val file = writeConfig("""
 			amiberry.vkbd_enabled=true

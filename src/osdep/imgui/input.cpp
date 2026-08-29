@@ -268,11 +268,14 @@ void render_panel_input() {
             ImGui::SetNextItemWidth(item_w);
 
             ImGui::BeginDisabled(changed_prefs.jports[port_idx].mode == 0);
+            // mousemap can also be toggled to 2/3 by hotkeys; treat any
+            // nonzero value as "LStick" so the combo never indexes past the array
+            const int mouse_map_value = changed_prefs.jports[port_idx].mousemap > 0 ? 1 : 0;
             const char *mouse_map_names[] = {"None", "LStick"};
             if (ImGui::BeginCombo(std::string("##MouseMap").append(std::to_string(port_idx)).c_str(),
-                                  mouse_map_names[changed_prefs.jports[port_idx].mousemap])) {
+                                  mouse_map_names[mouse_map_value])) {
                 for (int n = 0; n < IM_ARRAYSIZE(mouse_map_names); n++) {
-                    const bool is_selected = (changed_prefs.jports[port_idx].mousemap == n);
+                    const bool is_selected = (mouse_map_value == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                     if (ImGui::Selectable(mouse_map_names[n], is_selected)) {

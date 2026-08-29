@@ -19,4 +19,11 @@ object InputSettingsActions {
 		} else {
 			settings.copy(onScreenJoystick = false)
 		}
+
+	fun setPortMouseMap(settings: EmulatorSettings, port: Int, isEnabled: Boolean): EmulatorSettings =
+		when (port) {
+			0 -> settings.copy(joyport0MouseMap = isEnabled)
+			1 -> settings.copy(joyport1MouseMap = isEnabled)
+			else -> settings
+		}
 }

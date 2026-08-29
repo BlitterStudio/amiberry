@@ -40,4 +40,29 @@ class InputSettingsActionsTest {
 		assertEquals("joy1", settings.joyport1)
 		assertFalse(settings.onScreenJoystick)
 	}
+
+	@Test
+	fun `enabling the mouse map targets the selected port only`() {
+		val settings = InputSettingsActions.setPortMouseMap(
+			settings = EmulatorSettings(joyport0 = "mouse", joyport1 = "joy0"),
+			port = 1,
+			isEnabled = true
+		)
+
+		assertFalse(settings.joyport0MouseMap)
+		assertTrue(settings.joyport1MouseMap)
+	}
+
+	@Test
+	fun `disabling the mouse map keeps the port device untouched`() {
+		val settings = InputSettingsActions.setPortMouseMap(
+			settings = EmulatorSettings(joyport0 = "joy0", joyport1 = "joy1", joyport0MouseMap = true),
+			port = 0,
+			isEnabled = false
+		)
+
+		assertFalse(settings.joyport0MouseMap)
+		assertEquals("joy0", settings.joyport0)
+		assertEquals("joy1", settings.joyport1)
+	}
 }
