@@ -104,6 +104,15 @@ object EmulatorSettingsConstraints {
 			result = result.copy(joyport1 = normalizedJoyport1, onScreenJoystick = false)
 		}
 
+		// The analog mouse map needs a physical controller on the port;
+		// clear stale flags when the port holds some other device
+		if (result.joyport0MouseMap && result.joyport0 !in JOYSTICK_DEVICES) {
+			result = result.copy(joyport0MouseMap = false)
+		}
+		if (result.joyport1MouseMap && result.joyport1 !in JOYSTICK_DEVICES) {
+			result = result.copy(joyport1MouseMap = false)
+		}
+
 		return result
 	}
 
@@ -155,6 +164,7 @@ object EmulatorSettingsConstraints {
 	private const val FLOPPY_TYPE_DISABLED = -1
 	private const val FLOPPY_TYPE_DD = 0
 	private const val FLOPPY_TYPE_HD = 1
+	private val JOYSTICK_DEVICES = setOf("joy0", "joy1")
 	private val ANDROID_PORT_INPUT_DEVICES = setOf(
 		"none",
 		"mouse",

@@ -44,6 +44,10 @@ internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List
 	add("kbd9")
 }
 
+/** The analog mouse map needs a physical controller on the port. */
+internal fun portSupportsMouseMap(deviceId: String): Boolean =
+	deviceId == "joy0" || deviceId == "joy1"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputTab(viewModel: SettingsViewModel) {
@@ -114,6 +118,19 @@ fun InputTab(viewModel: SettingsViewModel) {
 					}
 				}
 
+				if (portSupportsMouseMap(settings.joyport0)) {
+					SwitchRow(
+						label = stringResource(R.string.settings_input_analog_mouse_map),
+						checked = settings.joyport0MouseMap,
+						supportingText = stringResource(R.string.settings_input_analog_mouse_map_summary),
+						onCheckedChange = { isEnabled ->
+							viewModel.updateSettings { s ->
+								InputSettingsActions.setPortMouseMap(s, 0, isEnabled)
+							}
+						}
+					)
+				}
+
 				Spacer(modifier = Modifier.height(8.dp))
 
 				// Port 1
@@ -151,6 +168,19 @@ fun InputTab(viewModel: SettingsViewModel) {
 							)
 						}
 					}
+				}
+
+				if (portSupportsMouseMap(settings.joyport1)) {
+					SwitchRow(
+						label = stringResource(R.string.settings_input_analog_mouse_map),
+						checked = settings.joyport1MouseMap,
+						supportingText = stringResource(R.string.settings_input_analog_mouse_map_summary),
+						onCheckedChange = { isEnabled ->
+							viewModel.updateSettings { s ->
+								InputSettingsActions.setPortMouseMap(s, 1, isEnabled)
+							}
+						}
+					)
 				}
 			}
 		}

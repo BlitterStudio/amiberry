@@ -103,7 +103,9 @@ sealed interface LaunchRequest {
 		val joyport1: String,
 		val onScreenJoystick: Boolean,
 		val onScreenKeyboard: Boolean,
-		val onScreenKeyboardNumpad: Boolean = false
+		val onScreenKeyboardNumpad: Boolean = false,
+		val joyport0MouseMap: Boolean = false,
+		val joyport1MouseMap: Boolean = false
 	) {
 		fun toArgs(): List<String> {
 			val args = mutableListOf("-s", "joyport0=$joyport0")
@@ -119,6 +121,14 @@ sealed interface LaunchRequest {
 					"-s", "input.default_osk=${onScreenKeyboard.toCfg()}"
 				)
 			)
+			if (joyport0MouseMap) {
+				args.add("-s")
+				args.add("joyport0mousemap=1")
+			}
+			if (joyport1MouseMap) {
+				args.add("-s")
+				args.add("joyport1mousemap=1")
+			}
 
 			return args
 		}
@@ -130,7 +140,9 @@ sealed interface LaunchRequest {
 					joyport1 = settings.joyport1,
 					onScreenJoystick = settings.onScreenJoystick,
 					onScreenKeyboard = settings.onScreenKeyboard,
-					onScreenKeyboardNumpad = settings.onScreenKeyboardNumpad
+					onScreenKeyboardNumpad = settings.onScreenKeyboardNumpad,
+					joyport0MouseMap = settings.joyport0MouseMap,
+					joyport1MouseMap = settings.joyport1MouseMap
 				)
 		}
 	}

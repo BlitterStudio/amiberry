@@ -32,4 +32,13 @@ class InputTabOptionsTest {
 
 		assertFalse(options.contains("onscreen_joy"))
 	}
+
+	@Test
+	fun `mouse map is offered only for physical joystick devices`() {
+		assertTrue(portSupportsMouseMap("joy0"))
+		assertTrue(portSupportsMouseMap("joy1"))
+		assertFalse(portSupportsMouseMap("mouse"))
+		assertFalse(portSupportsMouseMap("onscreen_joy"))
+		assertFalse(portSupportsMouseMap("none"))
+	}
 }

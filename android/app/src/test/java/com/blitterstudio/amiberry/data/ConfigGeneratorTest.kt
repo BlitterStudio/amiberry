@@ -166,6 +166,28 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `generate writes mouse map lines only when enabled`() {
+		val enabled = ConfigGenerator.generate(
+			EmulatorSettings(joyport0 = "joy0", joyport1 = "joy1", joyport0MouseMap = true, joyport1MouseMap = true)
+		)
+		assertContainsLine(enabled.lines(), "joyport0mousemap=1")
+		assertContainsLine(enabled.lines(), "joyport1mousemap=1")
+
+		val disabled = ConfigGenerator.generate(EmulatorSettings(joyport0 = "mouse", joyport1 = "joy0"))
+		assertFalse(disabled.lines().any { it.startsWith("joyport0mousemap=") || it.startsWith("joyport1mousemap=") })
+	}
+
+	@Test
+	fun `control config includes enabled mouse map lines`() {
+		val output = ConfigGenerator.generateControlConfig(
+			EmulatorSettings(joyport0 = "mouse", joyport1 = "joy0", joyport1MouseMap = true)
+		)
+
+		assertContainsLine(output.lines(), "joyport1mousemap=1")
+		assertFalse(output.lines().any { it.startsWith("joyport0mousemap=") })
+	}
+
+	@Test
 	fun `generate writes enabled on-screen control contract`() {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(
@@ -380,7 +402,8 @@ class ConfigGeneratorTest {
 			joyport1 = "joy0",
 			onScreenJoystick = false,
 			onScreenKeyboard = true,
-			onScreenKeyboardNumpad = true
+			onScreenKeyboardNumpad = true,
+			joyport1MouseMap = true
 		)
 
 		val configText = ConfigGenerator.generate(original)
@@ -415,8 +438,9 @@ class ConfigGeneratorTest {
 		assertEquals(original.joyport0, result.joyport0)
 		assertEquals(original.joyport1, result.joyport1)
 		assertEquals(original.onScreenJoystick, result.onScreenJoystick)
-		assertEquals(original.onScreenKeyboard, result.onScreenKeyboard)
 		assertEquals(original.onScreenKeyboardNumpad, result.onScreenKeyboardNumpad)
+		assertFalse(result.joyport0MouseMap)
+		assertTrue(result.joyport1MouseMap)
 	}
 
 	@Test

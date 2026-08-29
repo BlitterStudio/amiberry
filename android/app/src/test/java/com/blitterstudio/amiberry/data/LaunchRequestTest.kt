@@ -243,6 +243,39 @@ class LaunchRequestTest {
 	}
 
 	@Test
+	fun `saved config request applies enabled mouse map overrides`() {
+		val configPath = "/tmp/saved.uae"
+
+		val args = LaunchRequest.SavedConfig(
+			configPath = configPath,
+			controlOverrides = LaunchRequest.AndroidControlOverrides(
+				joyport0 = "mouse",
+				joyport1 = "joy0",
+				onScreenJoystick = false,
+				onScreenKeyboard = true,
+				joyport1MouseMap = true
+			),
+			skipGui = true
+		).toArgs()
+
+		assertArrayEquals(
+			arrayOf(
+				"--rescan-roms",
+				"--config", configPath,
+				"-s", "joyport0=mouse",
+				"-s", "joyport1=joy0",
+				"-s", "amiberry.onscreen_joystick=false",
+				"-s", "amiberry.vkbd_enabled=true",
+				"-s", "amiberry.vkbd_numpad=false",
+				"-s", "input.default_osk=true",
+				"-s", "joyport1mousemap=1",
+				"-G"
+			),
+			args
+		)
+	}
+
+	@Test
 	fun `saved config request with skip gui false omits skip gui flag`() {
 		val configPath = "/tmp/saved.uae"
 

@@ -131,6 +131,50 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
+	fun `constraints keep mouse map on ports with a joystick device`() {
+		val constrained = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(
+				joyport0 = "mouse",
+				joyport1 = "joy0",
+				onScreenJoystick = false,
+				joyport1MouseMap = true
+			),
+			hasTouchScreen = true
+		)
+
+		assertTrue(constrained.joyport1MouseMap)
+	}
+
+	@Test
+	fun `constraints clear mouse map when the port has no joystick device`() {
+		val constrained = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(
+				joyport0 = "mouse",
+				joyport1 = "joy0",
+				onScreenJoystick = false,
+				joyport0MouseMap = true,
+				joyport1MouseMap = true
+			),
+			hasTouchScreen = true
+		)
+
+		assertFalse(constrained.joyport0MouseMap)
+		assertTrue(constrained.joyport1MouseMap)
+
+		val withoutJoystick = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(
+				joyport0 = "mouse",
+				joyport1 = "onscreen_joy",
+				joyport1MouseMap = true,
+				onScreenJoystick = true
+			),
+			hasTouchScreen = true
+		)
+
+		assertFalse(withoutJoystick.joyport1MouseMap)
+	}
+
+	@Test
 	fun `constraints disable on-screen joystick without touchscreen`() {
 		val constrained = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(

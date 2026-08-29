@@ -60,4 +60,26 @@ class AndroidControlSettingsTest {
 		assertTrue(settings.onScreenKeyboard)
 		assertTrue(settings.onScreenKeyboardNumpad)
 	}
+
+	@Test
+	fun `mouse map falls back when a config has no explicit mouse map keys`() {
+		val settings = AndroidControlSettings.withFallback(
+			settings = EmulatorSettings(),
+			explicitKeys = setOf("joyport0", "joyport1"),
+			fallback = EmulatorSettings(joyport1MouseMap = true)
+		)
+
+		assertTrue(settings.joyport1MouseMap)
+	}
+
+	@Test
+	fun `explicit mouse map keys from a config override the fallback`() {
+		val settings = AndroidControlSettings.withFallback(
+			settings = EmulatorSettings(joyport1MouseMap = false),
+			explicitKeys = setOf("joyport1mousemap"),
+			fallback = EmulatorSettings(joyport1MouseMap = true)
+		)
+
+		assertFalse(settings.joyport1MouseMap)
+	}
 }
