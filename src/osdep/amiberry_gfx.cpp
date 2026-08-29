@@ -2272,7 +2272,10 @@ void auto_crop_image()
 			// a duty cycle: immediately when the base or source buffer changes,
 			// and every auto_crop_scan_interval-th frame otherwise. Between
 			// scans the last scan's rect is reused, eliminating the per-frame
-			// pixel walk.
+			// pixel walk. A cheap 1-frame trigger covers content that appears
+			// between interval scans: the rect can only grow by content
+			// crossing the band just outside its edge, so a non-border pixel
+			// there forces an immediate scan.
 			static SDL_Rect last_scan_rect = { 0, 0, 0, 0 };
 			static SDL_Rect last_scan_base = { 0, 0, 0, 0 };
 			static int last_scan_hres = -1, last_scan_vres = -1;
@@ -2285,14 +2288,24 @@ void auto_crop_image()
 				&& last_scan_hres == hres && last_scan_vres == vres
 				&& last_scan_base.x == cx && last_scan_base.y == cy
 				&& last_scan_base.w == cw && last_scan_base.h == ch;
-			const bool scan_due = !scan_context_matches
+			bool scan_due = !scan_context_matches
 				|| force_auto_crop
 				|| last_autocrop != currprefs.gfx_auto_crop
 				|| (scan_frame % auto_crop_scan_interval) == 0;
 			if (!scan_due && last_scan_rect.w > 0 && last_scan_rect.h > 0) {
-				crop_rect = last_scan_rect;
-				clamp_auto_crop_rect(surface, crop_rect);
-			} else {
+				AmiberryAutoCropPixelBuffer band_buffer;
+				if (get_auto_crop_pixel_buffer(surface, band_buffer)
+					&& !amiberry_auto_crop_edge_band_has_content(band_buffer,
+						{ last_scan_rect.x, last_scan_rect.y,
+							last_scan_rect.w, last_scan_rect.h },
+						scan_state.border)) {
+					crop_rect = last_scan_rect;
+					clamp_auto_crop_rect(surface, crop_rect);
+				} else {
+					scan_due = true;
+				}
+			}
+			if (scan_due) {
 				const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
 				int sprite_zero_left = 0;
 				int sprite_zero_right = 0;

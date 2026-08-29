@@ -624,12 +624,12 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			set_config_changed();
 		}
 		else if (optname == "gfx_overscanmode") {
-			changed_prefs.gfx_overscanmode = std::stol(optval);
-			set_config_changed();
-		}
-		// Sound options
-		else if (optname == "sound_output") {
-			changed_prefs.produce_sound = std::stol(optval);
+			const int mode = std::stol(optval);
+			// Keep in sync with the overscan_items table in the Display panel.
+			if (mode < 0 || mode > 8) {
+				return make_response(false, {"Invalid gfx_overscanmode (use 0-8)"});
+			}
+			changed_prefs.gfx_overscanmode = mode;
 			set_config_changed();
 		} else if (optname == "sound_stereo") {
 			changed_prefs.sound_stereo = std::stol(optval);

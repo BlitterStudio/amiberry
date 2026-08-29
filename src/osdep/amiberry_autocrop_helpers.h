@@ -310,6 +310,53 @@ static inline void amiberry_auto_crop_get_outside_regions(
 	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
 }
 
+// True when the one-pixel band just outside the rect holds a pixel that is
+// not a known border color. Crop expansion flood-fills outward from the
+// rect's edges, so content can only enlarge the rect by crossing this band;
+// a non-border pixel there means an immediate rescan is due. Sampled every
+// 2nd pixel so the per-frame cost stays a few hundred reads.
+static inline bool amiberry_auto_crop_edge_band_has_content(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
+	const AmiberryAutoCropBorderColors& border)
+{
+	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count <= 0) {
+		return true;
+	}
+	const int right = amiberry_auto_crop_rect_right(rect);
+	const int bottom = amiberry_auto_crop_rect_bottom(rect);
+	auto sample_row = [&](const int y, const int x0, const int x1) {
+		for (int x = x0; x < x1; x += 2) {
+			if (!amiberry_auto_crop_border_matches(border,
+				amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
+				return true;
+			}
+		}
+		return false;
+	};
+	auto sample_col = [&](const int x, const int y0, const int y1) {
+		for (int y = y0; y < y1; y += 2) {
+			if (!amiberry_auto_crop_border_matches(border,
+				amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
+				return true;
+			}
+		}
+		return false;
+	};
+	if (rect.y > 0 && sample_row(rect.y - 1, rect.x, right)) {
+		return true;
+	}
+	if (bottom < buffer.height && sample_row(bottom, rect.x, right)) {
+		return true;
+	}
+	if (rect.x > 0 && sample_col(rect.x - 1, rect.y, bottom)) {
+		return true;
+	}
+	if (right < buffer.width && sample_col(right, rect.y, bottom)) {
+		return true;
+	}
+	return false;
+}
+
 // Woven is a template parameter so the far more common single-color border
 // keeps one comparison per pixel in this scan's hottest loop.
 template<bool Woven>
