@@ -1,5 +1,6 @@
 #include "imgui.h"
 #include "sysdeps.h"
+#include "amiga_constants.h"
 #include "imgui_panels.h"
 #include "options.h"
 #include "gui/gui_handling.h"
@@ -251,11 +252,15 @@ void render_panel_filter()
 	ShowHelpMarker("Manually set the visible display area size and position.");
 	if (auto_crop_on) ImGui::EndDisabled();
 	if (manual_crop_on) {
+		// Full-frame bounds at the active render resolution; a fixed 800/600
+		// would silently truncate a valid superhires crop just by rendering.
+		const int max_crop_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
+		const int max_crop_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Width:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::SliderInt("##WCropSlider", &changed_prefs.gfx_manual_crop_width, 0, 800);
+		ImGui::SliderInt("##WCropSlider", &changed_prefs.gfx_manual_crop_width, 0, max_crop_w);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
@@ -266,16 +271,17 @@ void render_panel_filter()
 		ImGui::Text("Height:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::SliderInt("##HCropSlider", &changed_prefs.gfx_manual_crop_height, 0, 600);
+		ImGui::SliderInt("##HCropSlider", &changed_prefs.gfx_manual_crop_height, 0, max_crop_h);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
 		ImGui::InputInt("##HCropInput", &changed_prefs.gfx_manual_crop_height, 0);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		changed_prefs.gfx_manual_crop_width = std::clamp(
-			changed_prefs.gfx_manual_crop_width, 0, 800);
+			changed_prefs.gfx_manual_crop_width, 0, max_crop_w);
 		changed_prefs.gfx_manual_crop_height = std::clamp(
-			changed_prefs.gfx_manual_crop_height, 0, 600);
+			changed_prefs.gfx_manual_crop_height, 0, max_crop_h);
+
 
 		// Offsets position the manual crop window and are only consumed on
 		// the manual-crop render path, so keep them hidden otherwise.

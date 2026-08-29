@@ -60,6 +60,12 @@ struct AmiberryAutoCropScanState {
 	// The last perimeter-detected border, kept so an interlaced scan can still
 	// recognize the generation the other field was drawn with.
 	AmiberryAutoCropBorderColors previous_border{};
+	// The cleared surface color beyond the Amiga border, detected by the last
+	// scan. Between scans the cheap edge/outside triggers must treat it as
+	// non-content, or a colored border over a cleared black edge re-triggers
+	// a full scan every frame.
+	uint32_t surface_background = 0;
+	bool surface_background_valid = false;
 };
 
 static inline bool amiberry_auto_crop_border_state_changed(
@@ -311,22 +317,28 @@ static inline void amiberry_auto_crop_get_outside_regions(
 }
 
 // True when the one-pixel band just outside the rect holds a pixel that is
-// not a known border color. Crop expansion flood-fills outward from the
-// rect's edges, so content can only enlarge the rect by crossing this band;
-// a non-border pixel there means an immediate rescan is due. Sampled every
-// 2nd pixel so the per-frame cost stays a few hundred reads.
+// not a known border color or the cleared surface background. Crop expansion
+// flood-fills outward from the rect's edges, so adjacent content can only
+// enlarge the rect by crossing this band; a content pixel there means an
+// immediate rescan is due. Sampled every 2nd pixel so the per-frame cost
+// stays a few hundred reads.
 static inline bool amiberry_auto_crop_edge_band_has_content(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
-	const AmiberryAutoCropBorderColors& border)
+	const AmiberryAutoCropBorderColors& border,
+	const uint32_t background_rgb, const bool background_valid)
 {
 	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count <= 0) {
 		return true;
 	}
+	const auto is_non_content = [&](const uint32_t rgb) {
+		return amiberry_auto_crop_border_matches(border, rgb)
+			|| (background_valid && rgb == background_rgb);
+	};
 	const int right = amiberry_auto_crop_rect_right(rect);
 	const int bottom = amiberry_auto_crop_rect_bottom(rect);
 	auto sample_row = [&](const int y, const int x0, const int x1) {
 		for (int x = x0; x < x1; x += 2) {
-			if (!amiberry_auto_crop_border_matches(border,
+			if (!is_non_content(
 				amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
 				return true;
 			}
@@ -335,7 +347,7 @@ static inline bool amiberry_auto_crop_edge_band_has_content(
 	};
 	auto sample_col = [&](const int x, const int y0, const int y1) {
 		for (int y = y0; y < y1; y += 2) {
-			if (!amiberry_auto_crop_border_matches(border,
+			if (!is_non_content(
 				amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
 				return true;
 			}
@@ -357,25 +369,24 @@ static inline bool amiberry_auto_crop_edge_band_has_content(
 	return false;
 }
 
-// Sparse counterpart for content DISCONNECTED from the crop: expansion
-// unions every non-border component in the outside regions, not only ones
-// adjacent to the rect's edge. Sample those regions on a coarse grid (every
-// 4th pixel) so a disconnected component large enough to expand the crop is
-// normally hit within a frame; anything thinner than the stride falls back
-// to the periodic interval scan.
 static inline bool amiberry_auto_crop_outside_regions_have_content(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
-	const AmiberryAutoCropBorderColors& border)
+	const AmiberryAutoCropBorderColors& border,
+	const uint32_t background_rgb, const bool background_valid)
 {
 	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count <= 0) {
 		return true;
 	}
+	const auto is_non_content = [&](const uint32_t rgb) {
+		return amiberry_auto_crop_border_matches(border, rgb)
+			|| (background_valid && rgb == background_rgb);
+	};
 	AmiberryAutoCropRect regions[4];
 	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
 	for (const auto& region : regions) {
 		for (int y = region.y; y < amiberry_auto_crop_rect_bottom(region); y += 4) {
 			for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x += 4) {
-				if (!amiberry_auto_crop_border_matches(border,
+				if (!is_non_content(
 					amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
 					return true;
 				}
@@ -834,8 +845,14 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 	}
 
 	uint32_t background_rgb = 0;
+	state.surface_background = 0;
+	state.surface_background_valid = false;
 	const bool background_valid = amiberry_auto_crop_detect_surface_background_color(
 		buffer, crop, background_rgb);
+	// Remember the cleared surface color so the between-scan triggers treat
+	// it as non-content instead of re-triggering a full scan every frame.
+	state.surface_background = background_rgb;
+	state.surface_background_valid = background_valid;
 	if (!amiberry_auto_crop_detect_border_color(
 		buffer, crop, background_rgb, background_valid, interlaced, state)) {
 		return false;

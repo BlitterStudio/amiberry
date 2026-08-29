@@ -2300,11 +2300,15 @@ void auto_crop_image()
 					&& !amiberry_auto_crop_edge_band_has_content(band_buffer,
 						{ last_scan_rect.x, last_scan_rect.y,
 							last_scan_rect.w, last_scan_rect.h },
-						scan_state.border)
+						scan_state.border,
+						scan_state.surface_background,
+						scan_state.surface_background_valid)
 					&& !amiberry_auto_crop_outside_regions_have_content(band_buffer,
 						{ last_scan_rect.x, last_scan_rect.y,
 							last_scan_rect.w, last_scan_rect.h },
-						scan_state.border)) {
+						scan_state.border,
+						scan_state.surface_background,
+						scan_state.surface_background_valid)) {
 					crop_rect = last_scan_rect;
 					clamp_auto_crop_rect(surface, crop_rect);
 				} else {
