@@ -331,17 +331,21 @@ static inline bool amiberry_auto_crop_outside_regions_changed(
 	if (!amiberry_auto_crop_buffer_valid(buffer)) {
 		return true;
 	}
-	std::vector<uint32_t> observed;
+	// Compare and update in place: the stable path performs no allocation
+	// and no writes, and a differing sample only rewrites its own slot.
+	size_t index = 0;
 	bool changed = false;
 	const bool first_observation = signature.empty();
 	auto visit = [&](const uint32_t rgb) {
-		observed.push_back(rgb);
-		if (!first_observation) {
-			const size_t index = observed.size() - 1;
-			if (index >= signature.size() || signature[index] != rgb) {
+		if (index < signature.size()) {
+			if (signature[index] != rgb) {
 				changed = true;
+				signature[index] = rgb;
 			}
+		} else {
+			signature.push_back(rgb);
 		}
+		index++;
 	};
 	AmiberryAutoCropRect regions[4];
 	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
@@ -359,10 +363,11 @@ static inline bool amiberry_auto_crop_outside_regions_changed(
 			}
 		}
 	}
-	if (!first_observation && observed.size() != signature.size()) {
+	if (signature.size() != index) {
+		// The sampled area itself changed (surface or rect geometry).
+		signature.resize(index);
 		changed = true;
 	}
-	signature = std::move(observed);
 	return changed && !first_observation;
 }
 

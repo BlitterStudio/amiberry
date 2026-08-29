@@ -20,6 +20,7 @@
 #include "filesys.h"
 #include "gui.h"
 #include "custom.h"
+#include "amiga_constants.h"
 #include "gui/gui_handling.h"
 #include "newcpu.h"
 #include "blitter.h"
@@ -608,15 +609,18 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			set_config_changed();
 		}
 		else if (optname == "gfx_manual_crop_width") {
-			// Clamp on the parsed long before narrowing; a huge value would
-			// otherwise wrap through int to something arbitrary.
+			// Clamp on the parsed long before narrowing and to the same
+			// native bounds the Filter panel uses, so a headless client
+			// cannot set a crop larger than the surface.
+			const long max_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
 			changed_prefs.gfx_manual_crop_width = static_cast<int>(
-				std::clamp(std::stol(optval), 0L, 4096L));
+				std::clamp(std::stol(optval), 0L, max_w));
 			set_config_changed();
 		}
 		else if (optname == "gfx_manual_crop_height") {
+			const long max_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
 			changed_prefs.gfx_manual_crop_height = static_cast<int>(
-				std::clamp(std::stol(optval), 0L, 4096L));
+				std::clamp(std::stol(optval), 0L, max_h));
 			set_config_changed();
 		}
 		else if (optname == "gfx_horizontal_offset") {
