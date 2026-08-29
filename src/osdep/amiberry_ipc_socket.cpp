@@ -488,6 +488,20 @@ static std::string HandleGetConfig(const std::vector<std::string>& args)
 		value = std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height);
 	} else if (optname == "gfx_fullscreen") {
 		value = changed_prefs.gfx_apmode[0].gfx_fullscreen ? "true" : "false";
+	} else if (optname == "gfx_auto_crop") {
+		value = changed_prefs.gfx_auto_crop ? "true" : "false";
+	} else if (optname == "gfx_manual_crop") {
+		value = changed_prefs.gfx_manual_crop ? "true" : "false";
+	} else if (optname == "gfx_manual_crop_width") {
+		value = std::to_string(changed_prefs.gfx_manual_crop_width);
+	} else if (optname == "gfx_manual_crop_height") {
+		value = std::to_string(changed_prefs.gfx_manual_crop_height);
+	} else if (optname == "gfx_horizontal_offset") {
+		value = std::to_string(changed_prefs.gfx_horizontal_offset);
+	} else if (optname == "gfx_vertical_offset") {
+		value = std::to_string(changed_prefs.gfx_vertical_offset);
+	} else if (optname == "gfx_overscanmode") {
+		value = std::to_string(changed_prefs.gfx_overscanmode);
 	}
 	// Sound options
 	else if (optname == "sound_output") {
@@ -574,6 +588,43 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 		else if (optname == "gfx_fullscreen") {
 			bool fullscreen = (optval == "true" || optval == "1");
 			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLWINDOW : GFX_WINDOW;
+			set_config_changed();
+		}
+		// Crop options — enabling one mode disables the other
+		else if (optname == "gfx_auto_crop") {
+			const bool enable = (optval == "true" || optval == "1");
+			changed_prefs.gfx_auto_crop = enable;
+			if (enable) {
+				changed_prefs.gfx_manual_crop = false;
+			}
+			set_config_changed();
+		}
+		else if (optname == "gfx_manual_crop") {
+			const bool enable = (optval == "true" || optval == "1");
+			changed_prefs.gfx_manual_crop = enable;
+			if (enable) {
+				changed_prefs.gfx_auto_crop = false;
+			}
+			set_config_changed();
+		}
+		else if (optname == "gfx_manual_crop_width") {
+			changed_prefs.gfx_manual_crop_width = std::max(0, std::stol(optval));
+			set_config_changed();
+		}
+		else if (optname == "gfx_manual_crop_height") {
+			changed_prefs.gfx_manual_crop_height = std::max(0, std::stol(optval));
+			set_config_changed();
+		}
+		else if (optname == "gfx_horizontal_offset") {
+			changed_prefs.gfx_horizontal_offset = std::stol(optval);
+			set_config_changed();
+		}
+		else if (optname == "gfx_vertical_offset") {
+			changed_prefs.gfx_vertical_offset = std::stol(optval);
+			set_config_changed();
+		}
+		else if (optname == "gfx_overscanmode") {
+			changed_prefs.gfx_overscanmode = std::stol(optval);
 			set_config_changed();
 		}
 		// Sound options
