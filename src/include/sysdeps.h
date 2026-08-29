@@ -147,6 +147,20 @@ using namespace std;
 #ifndef STAT
 typedef struct stat STAT;
 #endif
+#if defined(LIBRETRO)
+/* Capture the CRT stat() before the function-like stat() macro below
+   shadows it, so posixemu_stat()'s native fallback can call the real
+   one (a plain ::stat() there would expand to posixemu_stat itself).
+   The buffer stays spelled STAT, which matches whatever struct stat
+   the toolchain's headers use: mingw-w64 up to v10 with
+   _FILE_OFFSET_BITS=64 maps stat to _stat64 (STAT becomes
+   struct _stat64), while newer mingw-w64 (MSYS2 CLANG64, llvm-mingw)
+   declares stat() taking a distinct struct stat. */
+static inline int uae_native_stat(const char* name, STAT* st)
+{
+	return stat(name, st);
+}
+#endif
 #endif
 
 #if TIME_WITH_SYS_TIME
