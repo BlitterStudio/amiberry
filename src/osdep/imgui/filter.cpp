@@ -239,38 +239,72 @@ void render_panel_filter()
 	const auto& shader_names = get_available_shader_names();
 
 	BeginGroupBox("Crop and Offset");
-	if (changed_prefs.gfx_manual_crop) ImGui::BeginDisabled();
+	const bool auto_crop_on = changed_prefs.gfx_auto_crop;
+	const bool manual_crop_on = changed_prefs.gfx_manual_crop;
+	if (manual_crop_on) ImGui::BeginDisabled();
 	AmigaCheckbox("Auto Crop", &changed_prefs.gfx_auto_crop);
-	ShowHelpMarker("Automatically crop black borders from the display.");
-	if (changed_prefs.gfx_manual_crop) ImGui::EndDisabled();
+	ShowHelpMarker("Automatically crop borders by scanning frame content.");
+	if (manual_crop_on) ImGui::EndDisabled();
 	ImGui::SameLine();
-	if (changed_prefs.gfx_auto_crop) ImGui::BeginDisabled();
+	if (auto_crop_on) ImGui::BeginDisabled();
 	AmigaCheckbox("Manual Crop", &changed_prefs.gfx_manual_crop);
-	ShowHelpMarker("Manually set the visible display area size.");
-	if (changed_prefs.gfx_auto_crop) ImGui::EndDisabled();
-	if (changed_prefs.gfx_manual_crop) {
+	ShowHelpMarker("Manually set the visible display area size and position.");
+	if (auto_crop_on) ImGui::EndDisabled();
+	if (manual_crop_on) {
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Width:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::SliderInt("##W", &changed_prefs.gfx_manual_crop_width, 0, 800);
+		ImGui::SliderInt("##WCropSlider", &changed_prefs.gfx_manual_crop_width, 0, 800);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::SliderInt("##H", &changed_prefs.gfx_manual_crop_height, 0, 600);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
+		ImGui::InputInt("##WCropInput", &changed_prefs.gfx_manual_crop_width, 0);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-	}
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("H. Offset:");
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
-	ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -80, 80);
-	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Height:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
+		ImGui::SliderInt("##HCropSlider", &changed_prefs.gfx_manual_crop_height, 0, 600);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
+		ImGui::InputInt("##HCropInput", &changed_prefs.gfx_manual_crop_height, 0);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		changed_prefs.gfx_manual_crop_width = std::clamp(
+			changed_prefs.gfx_manual_crop_width, 0, 800);
+		changed_prefs.gfx_manual_crop_height = std::clamp(
+			changed_prefs.gfx_manual_crop_height, 0, 600);
 
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("V. Offset:");
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
-	ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -80, 80);
-	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		// Offsets position the manual crop window and are only consumed on
+		// the manual-crop render path, so keep them hidden otherwise.
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("H. Offset:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
+		ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -80, 80);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
+		ImGui::InputInt("##HOffsetInput", &changed_prefs.gfx_horizontal_offset, 0);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("V. Offset:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
+		ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -80, 80);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
+		ImGui::InputInt("##VOffsetInput", &changed_prefs.gfx_vertical_offset, 0);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		changed_prefs.gfx_horizontal_offset = std::clamp(
+			changed_prefs.gfx_horizontal_offset, -80, 80);
+		changed_prefs.gfx_vertical_offset = std::clamp(
+			changed_prefs.gfx_vertical_offset, -80, 80);
+	}
 	ImGui::Spacing();
 	EndGroupBox("Crop and Offset");
 
