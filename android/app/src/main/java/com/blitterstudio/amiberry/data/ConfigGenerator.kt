@@ -106,13 +106,10 @@ object ConfigGenerator {
 		}
 		// Persist the Android UI's joyport1 choice for reliable round-trip parsing
 		sb.appendLine("amiberry.android_joyport1=${settings.joyport1}")
-		// Analog stick mouse map (mirrors cfgfile.cpp: only written when enabled)
-		if (settings.joyport0MouseMap) {
-			sb.appendLine("joyport0mousemap=1")
-		}
-		if (settings.joyport1MouseMap) {
-			sb.appendLine("joyport1mousemap=1")
-		}
+		// Analog stick mouse map — always explicit so the disabled state
+		// round-trips and is not overridden by remembered-control fallback
+		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
+		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
@@ -137,13 +134,10 @@ object ConfigGenerator {
 			sb.appendLine("joyport1=${settings.joyport1}")
 		}
 		sb.appendLine("amiberry.android_joyport1=${settings.joyport1}")
-		// Analog stick mouse map (mirrors cfgfile.cpp: only written when enabled)
-		if (settings.joyport0MouseMap) {
-			sb.appendLine("joyport0mousemap=1")
-		}
-		if (settings.joyport1MouseMap) {
-			sb.appendLine("joyport1mousemap=1")
-		}
+		// Analog stick mouse map — always explicit so the disabled state
+		// round-trips and is not overridden by remembered-control fallback
+		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
+		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboard.toCfg()}")
 		sb.appendLine("amiberry.vkbd_numpad=${settings.onScreenKeyboardNumpad.toCfg()}")

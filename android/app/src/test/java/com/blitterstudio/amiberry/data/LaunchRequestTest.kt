@@ -126,6 +126,8 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
+				"-s", "joyport0mousemap=0",
+				"-s", "joyport1mousemap=0",
 				"-G"
 			),
 			args
@@ -204,6 +206,8 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=false",
 				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=false",
+				"-s", "joyport0mousemap=0",
+				"-s", "joyport1mousemap=0",
 				"-G"
 			),
 			args
@@ -236,6 +240,8 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
+				"-s", "joyport0mousemap=0",
+				"-s", "joyport1mousemap=0",
 				"-G"
 			),
 			args
@@ -268,6 +274,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=true",
+				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=1",
 				"-G"
 			),

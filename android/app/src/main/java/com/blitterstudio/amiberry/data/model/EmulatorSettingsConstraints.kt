@@ -104,12 +104,14 @@ object EmulatorSettingsConstraints {
 			result = result.copy(joyport1 = normalizedJoyport1, onScreenJoystick = false)
 		}
 
-		// The analog mouse map needs a physical controller on the port;
-		// clear stale flags when the port holds some other device
-		if (result.joyport0MouseMap && result.joyport0 !in JOYSTICK_DEVICES) {
+		// The analog mouse map feeds the Amiga mouse on port 0 (setmousestate
+		// on an unassigned mouse is a no-op), so it only works with a
+		// controller on port 1 and the system mouse kept on port 0. Port 0
+		// can hold either a controller or the mouse, never both.
+		if (result.joyport0MouseMap) {
 			result = result.copy(joyport0MouseMap = false)
 		}
-		if (result.joyport1MouseMap && result.joyport1 !in JOYSTICK_DEVICES) {
+		if (result.joyport1MouseMap && !(result.joyport1 in JOYSTICK_DEVICES && result.joyport0 == "mouse")) {
 			result = result.copy(joyport1MouseMap = false)
 		}
 

@@ -166,7 +166,7 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `generate writes mouse map lines only when enabled`() {
+	fun `generate writes mouse map state explicitly for both ports`() {
 		val enabled = ConfigGenerator.generate(
 			EmulatorSettings(joyport0 = "joy0", joyport1 = "joy1", joyport0MouseMap = true, joyport1MouseMap = true)
 		)
@@ -174,17 +174,18 @@ class ConfigGeneratorTest {
 		assertContainsLine(enabled.lines(), "joyport1mousemap=1")
 
 		val disabled = ConfigGenerator.generate(EmulatorSettings(joyport0 = "mouse", joyport1 = "joy0"))
-		assertFalse(disabled.lines().any { it.startsWith("joyport0mousemap=") || it.startsWith("joyport1mousemap=") })
+		assertContainsLine(disabled.lines(), "joyport0mousemap=0")
+		assertContainsLine(disabled.lines(), "joyport1mousemap=0")
 	}
 
 	@Test
-	fun `control config includes enabled mouse map lines`() {
+	fun `control config writes mouse map state explicitly`() {
 		val output = ConfigGenerator.generateControlConfig(
 			EmulatorSettings(joyport0 = "mouse", joyport1 = "joy0", joyport1MouseMap = true)
 		)
 
+		assertContainsLine(output.lines(), "joyport0mousemap=0")
 		assertContainsLine(output.lines(), "joyport1mousemap=1")
-		assertFalse(output.lines().any { it.startsWith("joyport0mousemap=") })
 	}
 
 	@Test

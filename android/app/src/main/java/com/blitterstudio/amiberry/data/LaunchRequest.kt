@@ -121,14 +121,12 @@ sealed interface LaunchRequest {
 					"-s", "input.default_osk=${onScreenKeyboard.toCfg()}"
 				)
 			)
-			if (joyport0MouseMap) {
-				args.add("-s")
-				args.add("joyport0mousemap=1")
-			}
-			if (joyport1MouseMap) {
-				args.add("-s")
-				args.add("joyport1mousemap=1")
-			}
+			// Mouse map overrides are always explicit (0 or 1) so a backing
+			// config's enabled value cannot survive a disabled switch
+			args.add("-s")
+			args.add("joyport0mousemap=${if (joyport0MouseMap) "1" else "0"}")
+			args.add("-s")
+			args.add("joyport1mousemap=${if (joyport1MouseMap) "1" else "0"}")
 
 			return args
 		}
