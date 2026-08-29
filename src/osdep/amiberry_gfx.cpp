@@ -2272,23 +2272,21 @@ void auto_crop_image()
 			// a duty cycle: immediately when the base or source buffer changes,
 			// and every auto_crop_scan_interval-th frame otherwise. Between
 			// scans the last scan's rect is reused, eliminating the per-frame
-			// pixel walk. A per-frame two-pass sample of the outside regions
+			// pixel walk. The outside regions are sampled on a two-pass grid
 			// (every row at every 4th column, every column at every 4th row)
-			// triggers an immediate scan for any outside component the
-			// expansion could accept; a trigger scan that leaves the rect
-			// unchanged parks triggers for one interval so stable
-			// sub-threshold specks cannot force a scan every frame.
+			// and compared against a color-agnostic signature from the last
+			// observation; any sampled change triggers an immediate scan.
+			// Because the comparison carries no color semantics, stable
+			// sub-threshold specks the last scan rejected keep matching the
+			// signature and stay silent, and newly appearing content of any
+			// color — including enclosed background-colored components —
+			// triggers within one frame.
 			static SDL_Rect last_scan_rect = { 0, 0, 0, 0 };
 			static SDL_Rect last_scan_base = { 0, 0, 0, 0 };
 			static int last_scan_hres = -1, last_scan_vres = -1;
 			static SDL_Surface* last_scan_surface = nullptr;
 			static int last_scan_surface_w = 0, last_scan_surface_h = 0;
 			static unsigned scan_frame = 0;
-			// A trigger scan that leaves the rect unchanged (stable specks the
-			// expansion deliberately ignores) parks trigger-based rescans for
-			// one interval, so sub-threshold content degrades the cadence to
-			// the interval at worst instead of a scan every frame.
-			static int trigger_cooldown = 0;
 			scan_frame++;
 			const bool scan_context_matches = last_scan_surface == surface
 				&& last_scan_surface_w == surface_w && last_scan_surface_h == surface_h
@@ -2299,20 +2297,13 @@ void auto_crop_image()
 				|| force_auto_crop
 				|| last_autocrop != currprefs.gfx_auto_crop
 				|| (scan_frame % auto_crop_scan_interval) == 0;
-			const bool duty_cycle_scan = scan_due;
-			if (trigger_cooldown > 0) {
-				trigger_cooldown--;
-			}
-			if (!scan_due && trigger_cooldown == 0
-				&& last_scan_rect.w > 0 && last_scan_rect.h > 0) {
+			if (!scan_due && last_scan_rect.w > 0 && last_scan_rect.h > 0) {
 				AmiberryAutoCropPixelBuffer outside_buffer;
 				if (get_auto_crop_pixel_buffer(surface, outside_buffer)
-					&& !amiberry_auto_crop_outside_regions_have_content(outside_buffer,
+					&& !amiberry_auto_crop_outside_regions_changed(outside_buffer,
 						{ last_scan_rect.x, last_scan_rect.y,
 							last_scan_rect.w, last_scan_rect.h },
-						scan_state.border,
-						scan_state.surface_background,
-						scan_state.surface_background_valid)) {
+						scan_state.outside_signature)) {
 					crop_rect = last_scan_rect;
 					clamp_auto_crop_rect(surface, crop_rect);
 				} else {
@@ -2346,14 +2337,6 @@ void auto_crop_image()
 					(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
 					visible_state,
 					force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
-				const bool rect_unchanged = crop_rect.x == last_scan_rect.x
-					&& crop_rect.y == last_scan_rect.y
-					&& crop_rect.w == last_scan_rect.w
-					&& crop_rect.h == last_scan_rect.h;
-				if (!duty_cycle_scan) {
-					trigger_cooldown = rect_unchanged
-						? auto_crop_scan_interval : 0;
-				}
 				last_scan_rect = crop_rect;
 				last_scan_base = { cx, cy, cw, ch };
 				last_scan_hres = hres;

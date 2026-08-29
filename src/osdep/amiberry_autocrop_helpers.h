@@ -60,12 +60,9 @@ struct AmiberryAutoCropScanState {
 	// The last perimeter-detected border, kept so an interlaced scan can still
 	// recognize the generation the other field was drawn with.
 	AmiberryAutoCropBorderColors previous_border{};
-	// The cleared surface color beyond the Amiga border, detected by the last
-	// scan. Between scans the cheap edge/outside triggers must treat it as
-	// non-content, or a colored border over a cleared black edge re-triggers
-	// a full scan every frame.
-	uint32_t surface_background = 0;
-	bool surface_background_valid = false;
+	// Sampled colors of the outside regions at the last observation; the
+	// between-scan trigger fires only when a sampled pixel changed.
+	std::vector<uint32_t> outside_signature;
 };
 
 static inline bool amiberry_auto_crop_border_state_changed(
@@ -316,25 +313,35 @@ static inline void amiberry_auto_crop_get_outside_regions(
 	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
 }
 
-// True when the outside regions hold a pixel that is neither a known border
-// color nor the cleared surface background. Sampled in two passes over the
-// outside regions: every row reads every 4th column, and every column reads
-// every 4th row. A component of at least 16 pixels is either >= 4 wide (the
-// row pass reads one of any 4 consecutive columns) or narrower and therefore
-// >= 6 tall (the column pass reads all of its columns, one row in every 4),
-// so anything the expansion could accept is detected within one frame at
-// roughly half the outside area in reads.
-static inline bool amiberry_auto_crop_outside_regions_have_content(
+// Detects whether the outside regions changed since the last observation by
+// comparing a color-agnostic signature sampled on the two-pass grid (every
+// row reads every 4th column, every column reads every 4th row; any
+// component of at least 16 pixels is hit — it is either >= 4 wide, so the
+// row pass reads one of any 4 consecutive columns, or narrower and therefore
+// >= 6 tall, so the column pass reads all of its columns). The comparison
+// carries no color semantics: any sampled pixel that differs from the last
+// observation is exactly the condition under which the expansion's outcome
+// could differ, while stable sub-threshold specks the last scan already
+// rejected keep matching the signature and stay silent. The signature is
+// refreshed on every call, so the triggering frame re-baselines itself.
+static inline bool amiberry_auto_crop_outside_regions_changed(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
-	const AmiberryAutoCropBorderColors& border,
-	const uint32_t background_rgb, const bool background_valid)
+	std::vector<uint32_t>& signature)
 {
-	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count <= 0) {
+	if (!amiberry_auto_crop_buffer_valid(buffer)) {
 		return true;
 	}
-	const auto is_non_content = [&](const uint32_t rgb) {
-		return amiberry_auto_crop_border_matches(border, rgb)
-			|| (background_valid && rgb == background_rgb);
+	std::vector<uint32_t> observed;
+	bool changed = false;
+	const bool first_observation = signature.empty();
+	auto visit = [&](const uint32_t rgb) {
+		observed.push_back(rgb);
+		if (!first_observation) {
+			const size_t index = observed.size() - 1;
+			if (index >= signature.size() || signature[index] != rgb) {
+				changed = true;
+			}
+		}
 	};
 	AmiberryAutoCropRect regions[4];
 	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
@@ -343,22 +350,20 @@ static inline bool amiberry_auto_crop_outside_regions_have_content(
 		const int bottom = amiberry_auto_crop_rect_bottom(region);
 		for (int y = region.y; y < bottom; y++) {
 			for (int x = region.x; x < right; x += 4) {
-				if (!is_non_content(
-					amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
-					return true;
-				}
+				visit(amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
 			}
 		}
 		for (int x = region.x; x < right; x++) {
 			for (int y = region.y; y < bottom; y += 4) {
-				if (!is_non_content(
-					amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
-					return true;
-				}
+				visit(amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
 			}
 		}
 	}
-	return false;
+	if (!first_observation && observed.size() != signature.size()) {
+		changed = true;
+	}
+	signature = std::move(observed);
+	return changed && !first_observation;
 }
 
 // Woven is a template parameter so the far more common single-color border
@@ -810,14 +815,8 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 	}
 
 	uint32_t background_rgb = 0;
-	state.surface_background = 0;
-	state.surface_background_valid = false;
 	const bool background_valid = amiberry_auto_crop_detect_surface_background_color(
 		buffer, crop, background_rgb);
-	// Remember the cleared surface color so the between-scan triggers treat
-	// it as non-content instead of re-triggering a full scan every frame.
-	state.surface_background = background_rgb;
-	state.surface_background_valid = background_valid;
 	if (!amiberry_auto_crop_detect_border_color(
 		buffer, crop, background_rgb, background_valid, interlaced, state)) {
 		return false;
