@@ -316,59 +316,14 @@ static inline void amiberry_auto_crop_get_outside_regions(
 	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
 }
 
-// True when the one-pixel band just outside the rect holds a pixel that is
-// not a known border color or the cleared surface background. Crop expansion
-// flood-fills outward from the rect's edges, so adjacent content can only
-// enlarge the rect by crossing this band; a content pixel there means an
-// immediate rescan is due. Sampled every 2nd pixel so the per-frame cost
-// stays a few hundred reads.
-static inline bool amiberry_auto_crop_edge_band_has_content(
-	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
-	const AmiberryAutoCropBorderColors& border,
-	const uint32_t background_rgb, const bool background_valid)
-{
-	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count <= 0) {
-		return true;
-	}
-	const auto is_non_content = [&](const uint32_t rgb) {
-		return amiberry_auto_crop_border_matches(border, rgb)
-			|| (background_valid && rgb == background_rgb);
-	};
-	const int right = amiberry_auto_crop_rect_right(rect);
-	const int bottom = amiberry_auto_crop_rect_bottom(rect);
-	auto sample_row = [&](const int y, const int x0, const int x1) {
-		for (int x = x0; x < x1; x += 2) {
-			if (!is_non_content(
-				amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
-				return true;
-			}
-		}
-		return false;
-	};
-	auto sample_col = [&](const int x, const int y0, const int y1) {
-		for (int y = y0; y < y1; y += 2) {
-			if (!is_non_content(
-				amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
-				return true;
-			}
-		}
-		return false;
-	};
-	if (rect.y > 0 && sample_row(rect.y - 1, rect.x, right)) {
-		return true;
-	}
-	if (bottom < buffer.height && sample_row(bottom, rect.x, right)) {
-		return true;
-	}
-	if (rect.x > 0 && sample_col(rect.x - 1, rect.y, bottom)) {
-		return true;
-	}
-	if (right < buffer.width && sample_col(right, rect.y, bottom)) {
-		return true;
-	}
-	return false;
-}
-
+// True when the outside regions hold a pixel that is neither a known border
+// color nor the cleared surface background. Sampled in two passes over the
+// outside regions: every row reads every 4th column, and every column reads
+// every 4th row. A component of at least 16 pixels is either >= 4 wide (the
+// row pass reads one of any 4 consecutive columns) or narrower and therefore
+// >= 6 tall (the column pass reads all of its columns, one row in every 4),
+// so anything the expansion could accept is detected within one frame at
+// roughly half the outside area in reads.
 static inline bool amiberry_auto_crop_outside_regions_have_content(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
 	const AmiberryAutoCropBorderColors& border,
@@ -384,8 +339,18 @@ static inline bool amiberry_auto_crop_outside_regions_have_content(
 	AmiberryAutoCropRect regions[4];
 	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
 	for (const auto& region : regions) {
-		for (int y = region.y; y < amiberry_auto_crop_rect_bottom(region); y += 4) {
-			for (int x = region.x; x < amiberry_auto_crop_rect_right(region); x += 4) {
+		const int right = amiberry_auto_crop_rect_right(region);
+		const int bottom = amiberry_auto_crop_rect_bottom(region);
+		for (int y = region.y; y < bottom; y++) {
+			for (int x = region.x; x < right; x += 4) {
+				if (!is_non_content(
+					amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
+					return true;
+				}
+			}
+		}
+		for (int x = region.x; x < right; x++) {
+			for (int y = region.y; y < bottom; y += 4) {
 				if (!is_non_content(
 					amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask)) {
 					return true;

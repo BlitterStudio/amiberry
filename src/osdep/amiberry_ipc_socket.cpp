@@ -608,29 +608,38 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			set_config_changed();
 		}
 		else if (optname == "gfx_manual_crop_width") {
-			changed_prefs.gfx_manual_crop_width = static_cast<int>(std::max(0L, std::stol(optval)));
+			// Clamp on the parsed long before narrowing; a huge value would
+			// otherwise wrap through int to something arbitrary.
+			changed_prefs.gfx_manual_crop_width = static_cast<int>(
+				std::clamp(std::stol(optval), 0L, 4096L));
 			set_config_changed();
 		}
 		else if (optname == "gfx_manual_crop_height") {
-			changed_prefs.gfx_manual_crop_height = static_cast<int>(std::max(0L, std::stol(optval)));
+			changed_prefs.gfx_manual_crop_height = static_cast<int>(
+				std::clamp(std::stol(optval), 0L, 4096L));
 			set_config_changed();
 		}
 		else if (optname == "gfx_horizontal_offset") {
-			changed_prefs.gfx_horizontal_offset = std::stol(optval);
+			changed_prefs.gfx_horizontal_offset = static_cast<int>(
+				std::clamp(std::stol(optval), -4096L, 4096L));
 			set_config_changed();
 		}
 		else if (optname == "gfx_vertical_offset") {
-			changed_prefs.gfx_vertical_offset = std::stol(optval);
+			changed_prefs.gfx_vertical_offset = static_cast<int>(
+				std::clamp(std::stol(optval), -4096L, 4096L));
 			set_config_changed();
 		}
 		else if (optname == "gfx_overscanmode") {
-			const int mode = std::stol(optval);
+			// Validate on the parsed long before narrowing; on LP64 an
+			// out-of-range value would otherwise wrap into a valid mode.
+			const long mode = std::stol(optval);
 			// Keep in sync with the overscan_items table in the Display panel.
 			if (mode < 0 || mode > 8) {
 				return make_response(false, {"Invalid gfx_overscanmode (use 0-8)"});
 			}
-			changed_prefs.gfx_overscanmode = mode;
+			changed_prefs.gfx_overscanmode = static_cast<int>(mode);
 			set_config_changed();
+		}
 		} else if (optname == "sound_output") {
 			changed_prefs.produce_sound = std::stol(optval);
 			set_config_changed();
