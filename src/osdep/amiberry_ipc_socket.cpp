@@ -639,7 +639,6 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			}
 			changed_prefs.gfx_overscanmode = static_cast<int>(mode);
 			set_config_changed();
-		}
 		} else if (optname == "sound_output") {
 			changed_prefs.produce_sound = std::stol(optval);
 			set_config_changed();
