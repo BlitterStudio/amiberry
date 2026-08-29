@@ -38,6 +38,15 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/osx-arm64.yml'
 
+  # macOS 64-bit (Intel)
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/osx-x64.yml'
+
+  ################################## CELLPHONES ##############################
+  # Android
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/android-make.yml'
+
 # Stages for building
 stages:
   - build-prepare
@@ -81,3 +90,30 @@ libretro-build-osx-arm64:
     - .core-defs
   variables:
     ARCH: arm64
+
+# macOS 64-bit (Intel)
+libretro-build-osx-x64:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs
+  variables:
+    ARCH: x86_64
+    # The template defaults to 10.9, which predates <filesystem> in libc++.
+    MACOSX_DEPLOYMENT_TARGET: "10.15"
+
+################################## CELLPHONES ################################
+# Android ARMv8a
+#
+# No armeabi-v7a job: the 32-bit ARM JIT does not compile in this
+# configuration (compemu_arm.h wants N_REGS, which nothing defines here), and
+# fsdb_host.cpp narrows a 64-bit timestamp into a 32-bit time_t.
+libretro-build-android-arm64-v8a:
+  extends:
+    - .libretro-android-make-arm64-v8a
+    - .core-defs
+
+# Android x86_64
+libretro-build-android-x86_64:
+  extends:
+    - .libretro-android-make-x86_64
+    - .core-defs

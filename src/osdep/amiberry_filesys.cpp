@@ -129,7 +129,10 @@ static inline int utimes(const char* path, const struct timeval tv[2])
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-#ifdef __ANDROID__
+/* bionic only grew iconv() in API 28, so the SDL build borrows SDL's. The
+   libretro core targets API 28 and uses the C library one (included above),
+   and its SDL shim has no iconv to offer. */
+#if defined(__ANDROID__) && !defined(LIBRETRO)
 #include <SDL3/SDL.h>
 #define iconv_t SDL_iconv_t
 #define iconv_open SDL_iconv_open
@@ -334,7 +337,9 @@ static bool has_logged_iconv_fail = false;
         char* dst_ptr = buf.data();
         size_t dst_size = buf.size();
 
-#if defined(__ANDROID__) || (defined(_WIN32) && !defined(LIBRETRO))
+/* SDL's iconv() (used on Android and Windows outside the libretro core)
+   takes a const source pointer; the C library one does not. */
+#if !defined(LIBRETRO) && (defined(__ANDROID__) || defined(_WIN32))
         size_t res = iconv(iconv_handle, (const char**)&src_ptr, &src_size, &dst_ptr, &dst_size);
 #else
         size_t res = iconv(iconv_handle, &src_ptr, &src_size, &dst_ptr, &dst_size);

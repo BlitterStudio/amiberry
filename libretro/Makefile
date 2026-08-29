@@ -68,6 +68,40 @@ ifeq ($(platform), unix)
    else
    SHARED := -shared $(NO_UNDEFINED) -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
    endif
+else ifneq (,$(findstring android,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro_android.so
+   fpic := -fPIC
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
+   SHARED := -shared $(NO_UNDEFINED) -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
+   # bionic grew forkpty() (uaelib's host shell) in API 23 and iconv() in
+   # API 28, so the core targets API 28 — Android 9 and newer.
+   ANDROID_API ?= 28
+   ANDROID_NDK_LLVM ?= $(ANDROID_NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64
+   ifeq ($(platform), android-arm64)
+      ANDROID_TRIPLE := aarch64-linux-android
+      ARCH := aarch64
+   else ifeq ($(platform), android-arm)
+      ANDROID_TRIPLE := armv7a-linux-androideabi
+      ARCH := arm
+      FLAGS += -mfpu=neon -mfloat-abi=softfp
+   else ifneq (,$(filter $(platform),android-x86_64 android-x64))
+      ANDROID_TRIPLE := x86_64-linux-android
+      ARCH := x86_64
+   else ifeq ($(platform), android-x86)
+      ANDROID_TRIPLE := i686-linux-android
+      ARCH := x86
+   else
+      $(error unknown Android platform '$(platform)')
+   endif
+   CC = $(ANDROID_NDK_LLVM)/bin/$(ANDROID_TRIPLE)$(ANDROID_API)-clang
+   CXX = $(ANDROID_NDK_LLVM)/bin/$(ANDROID_TRIPLE)$(ANDROID_API)-clang++
+   AR = $(ANDROID_NDK_LLVM)/bin/llvm-ar
+   RANLIB = $(ANDROID_NDK_LLVM)/bin/llvm-ranlib
+   STRIP = $(ANDROID_NDK_LLVM)/bin/llvm-strip
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
    fpic := -fPIC
@@ -210,6 +244,11 @@ INCFLAGS += -I$(LIBRETRO_DIR)/deps
 ifeq ($(platform), unix)
 # forkpty() (uaelib's host shell) lives in libutil on glibc/BSD systems.
 LDFLAGS += -ldl -lm -pthread -lutil
+endif
+
+ifneq (,$(findstring android,$(platform)))
+# bionic keeps pthread and forkpty in libc; only the log sink is separate.
+LDFLAGS += -ldl -lm -llog
 endif
 
 ifeq ($(platform), osx)
