@@ -32,7 +32,7 @@
 #ifdef USING_MFC
 #include <afxwin.h>
 #else
-#include <Windows.h>
+#include <windows.h>
 #endif
 #else
 #include <termios.h>

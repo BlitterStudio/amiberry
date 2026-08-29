@@ -253,6 +253,17 @@ typedef int SDL_TimerID;
 typedef Sint64 SDL_TouchID;
 typedef Sint64 SDL_FingerID;
 
+/* Synthetic touch IDs SDL reports for mouse- and pen-generated touches. */
+#define SDL_MOUSE_TOUCHID ((SDL_TouchID)-1)
+#define SDL_PEN_TOUCHID ((SDL_TouchID)-2)
+
+typedef enum SDL_TouchDeviceType {
+	SDL_TOUCH_DEVICE_INVALID = -1,
+	SDL_TOUCH_DEVICE_DIRECT,
+	SDL_TOUCH_DEVICE_INDIRECT_ABSOLUTE,
+	SDL_TOUCH_DEVICE_INDIRECT_RELATIVE
+} SDL_TouchDeviceType;
+
 typedef enum SDL_Scancode {
 	SDL_SCANCODE_UNKNOWN = 0,
 	SDL_SCANCODE_A = 4,
@@ -371,7 +382,8 @@ typedef enum SDL_Scancode {
 	SDL_SCANCODE_AUDIOSTOP = 258,
 	SDL_SCANCODE_AUDIOPLAY = 259,
 	SDL_SCANCODE_AUDIOPREV = 260,
-	SDL_SCANCODE_AUDIONEXT = 261
+	SDL_SCANCODE_AUDIONEXT = 261,
+	SDL_SCANCODE_AC_BACK = 270
 } SDL_Scancode;
 
 #define SDL_SCANCODE_MEDIA_STOP SDL_SCANCODE_AUDIOSTOP
@@ -852,11 +864,16 @@ void SDL_free(void* p);
 Uint64 SDL_GetPerformanceCounter(void);
 Uint64 SDL_GetPerformanceFrequency(void);
 Uint64 SDL_GetTicks(void);
+Uint64 SDL_GetTicksNS(void);
 void SDL_Delay(Uint32 ms);
 
 int SDL_GetVersion(void);
 const char* SDL_GetPlatform(void);
 const char* SDL_GetBasePath(void);
+char* SDL_GetPrefPath(const char* org, const char* app);
+const char* SDL_GetAndroidExternalStoragePath(void);
+SDL_TouchDeviceType SDL_GetTouchDeviceType(SDL_TouchID touchID);
+bool SDL_HasJoystick(void);
 const char* SDL_GetCurrentVideoDriver(void);
 int SDL_GetNumVideoDisplays(void);
 SDL_DisplayID* SDL_GetDisplays(int* count);

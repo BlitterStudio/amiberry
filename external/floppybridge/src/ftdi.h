@@ -29,7 +29,7 @@
 #ifdef FTDI_D2XX_AVAILABLE
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 namespace FTDI {

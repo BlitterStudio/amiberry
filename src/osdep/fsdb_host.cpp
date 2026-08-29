@@ -738,7 +738,7 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 		const auto path_utf8 = iso_8859_1_to_utf8(std::string_view(aino->nname));
 
 		// Get file information
-		struct stat statbuf {};
+		STAT statbuf {};
 		if (stat(path_utf8.c_str(), &statbuf) == -1) {
 			const int error = errno;
 			write_log(_T("fsdb_fill_file_attrs: stat failed for '%s': %s\n"),
@@ -800,7 +800,7 @@ int fsdb_set_file_attrs(a_inode* aino)
         const auto path_utf8 = iso_8859_1_to_utf8(std::string_view(aino->nname));
 
         // Get file attributes
-        struct stat statbuf {};
+        STAT statbuf {};
         if (stat(path_utf8.c_str(), &statbuf) == -1) {
             const int err = errno;
             write_log(_T("fsdb_set_file_attrs: stat failed for '%s': %s\n"),
@@ -966,7 +966,7 @@ a_inode* custom_fsdb_lookup_aino_aname(a_inode* base, const TCHAR* aname)
 	find_nname_case(base->nname, &encoded);
 	TCHAR* full_nname = build_nname(base->nname, encoded);
 	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
-	struct stat statbuf {};
+	STAT statbuf {};
 	if (stat(full_nname_utf8.c_str(), &statbuf) != 0) {
 		free(encoded);
 		xfree(full_nname);
@@ -1020,7 +1020,7 @@ a_inode* custom_fsdb_lookup_aino_nname(a_inode* base, const TCHAR* nname)
 
 	TCHAR* full_nname = build_nname(base->nname, nname);
 	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
-	struct stat statbuf {};
+	STAT statbuf {};
 	if (stat(full_nname_utf8.c_str(), &statbuf) != 0) {
 		xfree(full_nname);
 		return nullptr;

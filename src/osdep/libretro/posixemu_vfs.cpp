@@ -250,7 +250,10 @@ extern "C" int posixemu_stat(const TCHAR* path, STAT* st)
 	char* fs_path = to_fs_path(path);
 	if (!fs_path)
 		return -1;
-	const int ret = ::stat(fs_path, st);
+	/* Call the real stat() through the helper sysdeps.h captured before
+	   its stat() macro shadowed the CRT one. The buffer type matches the
+	   toolchain's own struct stat on every target, so no _stat64 here. */
+	const int ret = uae_native_stat(fs_path, st);
 	free(fs_path);
 	return ret;
 }

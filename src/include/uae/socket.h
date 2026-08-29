@@ -3,7 +3,7 @@
 
 #include "uae/types.h"
 #ifdef _WIN32
-#include "Winsock2.h"
+#include "winsock2.h"
 #endif
 
 #ifdef _WIN32

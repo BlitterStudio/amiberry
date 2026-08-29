@@ -282,6 +282,21 @@ void SDL_Delay(Uint32 ms) { usleep((useconds_t)ms * 1000); }
 int SDL_GetVersion(void) { return (3 << 16); }
 const char* SDL_GetPlatform(void) { return "libretro"; }
 const char* SDL_GetBasePath(void) { return NULL; }
+Uint64 SDL_GetTicksNS(void)
+{
+	const Uint64 freq = SDL_GetPerformanceFrequency();
+	const Uint64 counter = SDL_GetPerformanceCounter();
+	if (freq == 1000000000ull || freq == 0)
+		return counter;
+	/* Split the division so a long uptime cannot overflow the scaling. */
+	return (counter / freq) * 1000000000ull + ((counter % freq) * 1000000000ull) / freq;
+}
+/* The frontend owns the paths and the input devices, so the Android helpers
+   report "nothing here" and the callers fall back to their generic paths. */
+char* SDL_GetPrefPath(const char* org, const char* app) { (void)org; (void)app; return NULL; }
+const char* SDL_GetAndroidExternalStoragePath(void) { return NULL; }
+SDL_TouchDeviceType SDL_GetTouchDeviceType(SDL_TouchID touchID) { (void)touchID; return SDL_TOUCH_DEVICE_INVALID; }
+bool SDL_HasJoystick(void) { return false; }
 const char* SDL_GetCurrentVideoDriver(void) { return "libretro"; }
 int SDL_GetNumVideoDisplays(void) { return 1; }
 SDL_DisplayID* SDL_GetDisplays(int* count)

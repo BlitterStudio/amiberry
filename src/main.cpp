@@ -1674,9 +1674,12 @@ static void leave_program ()
 
 long get_file_size(const std::string& filename)
 {
-	struct stat stat_buf{};
-	const auto rc = stat(filename.c_str(), &stat_buf);
-	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
+	// Not stat(): sysdeps.h redefines it as posixemu_stat(), whose STAT
+	// argument is not `struct stat` on every target (it is _stat64 under
+	// MinGW), so the plain POSIX spelling does not compile everywhere.
+	std::error_code ec;
+	const auto size = std::filesystem::file_size(filename, ec);
+	return ec ? -1 : static_cast<long>(size);
 }
 
 // In case of error, print the error code and close the application

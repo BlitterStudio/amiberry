@@ -1739,7 +1739,7 @@ static bool dir_exists(const std::string& path)
 {
 	if (path.empty())
 		return false;
-	struct stat st {};
+	STAT st {};
 	return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
 }
 
