@@ -20,6 +20,7 @@
 #include "filesys.h"
 #include "gui.h"
 #include "custom.h"
+#include "amiga_constants.h"
 #include "gui/gui_handling.h"
 #include "newcpu.h"
 #include "blitter.h"
@@ -488,6 +489,20 @@ static std::string HandleGetConfig(const std::vector<std::string>& args)
 		value = std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height);
 	} else if (optname == "gfx_fullscreen") {
 		value = changed_prefs.gfx_apmode[0].gfx_fullscreen ? "true" : "false";
+	} else if (optname == "gfx_auto_crop") {
+		value = changed_prefs.gfx_auto_crop ? "true" : "false";
+	} else if (optname == "gfx_manual_crop") {
+		value = changed_prefs.gfx_manual_crop ? "true" : "false";
+	} else if (optname == "gfx_manual_crop_width") {
+		value = std::to_string(changed_prefs.gfx_manual_crop_width);
+	} else if (optname == "gfx_manual_crop_height") {
+		value = std::to_string(changed_prefs.gfx_manual_crop_height);
+	} else if (optname == "gfx_horizontal_offset") {
+		value = std::to_string(changed_prefs.gfx_horizontal_offset);
+	} else if (optname == "gfx_vertical_offset") {
+		value = std::to_string(changed_prefs.gfx_vertical_offset);
+	} else if (optname == "gfx_overscanmode") {
+		value = std::to_string(changed_prefs.gfx_overscanmode);
 	}
 	// Sound options
 	else if (optname == "sound_output") {
@@ -576,8 +591,61 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLWINDOW : GFX_WINDOW;
 			set_config_changed();
 		}
-		// Sound options
-		else if (optname == "sound_output") {
+		// Crop options — enabling one mode disables the other
+		else if (optname == "gfx_auto_crop") {
+			const bool enable = (optval == "true" || optval == "1");
+			changed_prefs.gfx_auto_crop = enable;
+			if (enable) {
+				changed_prefs.gfx_manual_crop = false;
+			}
+			set_config_changed();
+		}
+		else if (optname == "gfx_manual_crop") {
+			const bool enable = (optval == "true" || optval == "1");
+			changed_prefs.gfx_manual_crop = enable;
+			if (enable) {
+				changed_prefs.gfx_auto_crop = false;
+			}
+			set_config_changed();
+		}
+		else if (optname == "gfx_manual_crop_width") {
+			// Clamp on the parsed long before narrowing and to the same
+			// native bounds the Filter panel uses, so a headless client
+			// cannot set a crop larger than the surface.
+			const long max_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
+			changed_prefs.gfx_manual_crop_width = static_cast<int>(
+				std::clamp(std::stol(optval), 0L, max_w));
+			set_config_changed();
+		}
+		else if (optname == "gfx_manual_crop_height") {
+			const long max_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
+			changed_prefs.gfx_manual_crop_height = static_cast<int>(
+				std::clamp(std::stol(optval), 0L, max_h));
+			set_config_changed();
+		}
+		else if (optname == "gfx_horizontal_offset") {
+			const long max_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
+			changed_prefs.gfx_horizontal_offset = static_cast<int>(
+				std::clamp(std::stol(optval), -max_w, max_w));
+			set_config_changed();
+		}
+		else if (optname == "gfx_vertical_offset") {
+			const long max_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
+			changed_prefs.gfx_vertical_offset = static_cast<int>(
+				std::clamp(std::stol(optval), -max_h, max_h));
+			set_config_changed();
+		}
+		else if (optname == "gfx_overscanmode") {
+			// Validate on the parsed long before narrowing; on LP64 an
+			// out-of-range value would otherwise wrap into a valid mode.
+			const long mode = std::stol(optval);
+			// Keep in sync with the overscan_items table in the Display panel.
+			if (mode < 0 || mode > 8) {
+				return make_response(false, {"Invalid gfx_overscanmode (use 0-8)"});
+			}
+			changed_prefs.gfx_overscanmode = static_cast<int>(mode);
+			set_config_changed();
+		} else if (optname == "sound_output") {
 			changed_prefs.produce_sound = std::stol(optval);
 			set_config_changed();
 		} else if (optname == "sound_stereo") {
