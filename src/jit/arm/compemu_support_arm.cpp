@@ -60,6 +60,7 @@
 #include "newcpu.h"
 #include "comptbl_arm.h"
 #include "compemu_arm.h"
+#include "jit/jit_trap_policy.h"
 #include <SDL3/SDL.h>
 
 /* ARM64 JIT is PIE-compatible: it uses register-indirect addressing
@@ -3499,63 +3500,13 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
 #define DO_GET_OPCODE(a) (get_opcode_cft_map((uae_u16)*(a)))
 
 #if defined(CPU_AARCH64)
-/* Which fl_trap opcodes force whole-block interpretation.
- *
- * Structural trap opcodes (illegal sentinels, RTE/STOP, system control
- * moves, MMU/cache control, TRAPcc) only appear in cold exception/supervisor/
- * tester code; interpreting those blocks is cheap and keeps mixed
- * interpreted/compiled flag and PC state maximally safe. The CPU tester
- * drives exactly this shape: every test block ends in an ILLEGAL sentinel,
- * so those blocks stay interpreted like 8.3.0.
- *
- * SR/USP moves do NOT demote: on AmigaOS all tasks run in supervisor mode,
- * so MV2SR/MVSR2/ANDSR/ORSR/EORSR are the implementation of exec's
- * Forbid()/Permit()/Disable()/Enable() and are hot wherever the OS (or a
- * RAM-resident OS like PiMIGA, or an inlined Disable() around a timing
- * loop) executes from RAM (#2315: demoting them cost 28% of SysInfo
- * integer throughput). The immediate forms compile natively (jff_*); the
- * register forms run through the per-opcode fallback, which syncs the 68k
- * PC before the interpreter handler call, like the arithmetic traps below.
- *
- * Arithmetic trap opcodes that are hot in user code (integer division, CHK)
- * do NOT demote: the block compiles at full JIT speed and the opcode itself
- * runs through the per-opcode fallback, which syncs the 68k PC before the
- * interpreter handler call. */
+/* Which fl_trap opcodes force whole-block interpretation. The policy itself
+ * lives in src/jit/jit_trap_policy.h, where tests/jit_trap_policy_test.cpp can
+ * assert it without building the emulator; that header documents why each
+ * group demotes or does not. */
 static bool jit_trap_demote_opcode(uae_u32 op)
 {
-    switch (table68k[get_opcode_cft_map(op)].mnemo) {
-    case i_ILLG:
-    case i_RTE:
-    case i_STOP:
-    case i_RESET:
-    case i_MOVEC2:
-    case i_MOVE2C:
-    case i_MOVES:
-    case i_TRAPcc:
-    case i_FTRAPcc:
-    case i_TRAPV:
-    case i_BKPT:
-    case i_LPSTOP:
-    case i_MMUOP030:
-    case i_PFLUSHN:
-    case i_PFLUSH:
-    case i_PFLUSHAN:
-    case i_PFLUSHA:
-    case i_PLPAR:
-    case i_PLPAW:
-    case i_PTESTR:
-    case i_PTESTW:
-    case i_CINVL:
-    case i_CINVP:
-    case i_CINVA:
-    case i_CPUSHL:
-    case i_CPUSHP:
-    case i_CPUSHA:
-        return true;
-    default:
-        /* i_DIVU, i_DIVS, i_DIVL, i_CHK, i_CHK2 and friends stay compiled */
-        return false;
-    }
+    return jit_trap_demote_mnemo(table68k[get_opcode_cft_map(op)].mnemo);
 }
 #endif
 
