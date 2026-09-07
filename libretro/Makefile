@@ -753,6 +753,18 @@ $(LIBRETRO_INFO): $(LIBRETRO_DIR)/libretro.cpp $(AMIBERRY_DIR)/CMakeLists.txt
 %.o: %.c
 	$(CC) $(INCFLAGS) $(FLAGS) -std=gnu99 -c -o $@ $<
 
+ifeq ($(platform), win)
+# On Windows, GCC/Clang select libco's amd64.c raw stack-switching backend for
+# x86_64. Those stacks are not registered in the TEB, so SEH-based C++
+# exception unwinding (used by mingw GCC for throws, including the routine
+# caught throws inside the vendored MAME CHD code) cannot dispatch on the
+# emulation cothread stack and kills the process. Undefine __amd64__ for this
+# TU so libco falls through to fiber.c, which uses the Win32 Fiber API
+# (CreateFiber switches TEB stack bounds; exceptions unwind correctly).
+$(LIBCO_DIR)/libco.o: $(LIBCO_DIR)/libco.c
+	$(CC) $(INCFLAGS) $(FLAGS) -U__amd64__ -std=gnu99 -c -o $@ $<
+endif
+
 clean:
 	rm -f $(OBJECTS) $(TARGET) $(LIBRETRO_INFO)
 
