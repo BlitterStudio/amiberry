@@ -2964,8 +2964,13 @@ static void handle_joy_button_event(const SDL_Event& event)
 		}
 		// Same direct access for the on-screen keyboard toggle on the joystick
 		// path — SDL may not open a device as a gamepad, in which case the
-		// controller handler above never sees these buttons.
-		if (button == did->mapping.vkbd_button && state)
+		// controller handler above never sees these buttons. event.jbutton.button
+		// is a raw physical index: resolve the configured logical button through
+		// the device map before comparing.
+		if (state
+			&& did->mapping.vkbd_button >= 0
+			&& did->mapping.vkbd_button < SDL_GAMEPAD_BUTTON_COUNT
+			&& did->mapping.button[did->mapping.vkbd_button] == button)
 		{
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;
@@ -11686,7 +11691,17 @@ static void load_amiberry_settings_from_file(const std::string& settings_file)
 			amiberry_options.default_vkbd_toggle_migrated = true;
 		}
 #endif
- 	}
+	}
+#ifdef __ANDROID__
+	else
+	{
+		// No settings file exists: there is no legacy "guide" to migrate, and
+		// the first save would persist default_vkbd_toggle_migrated=no — which
+		// would let a deliberately chosen Guide value saved later be treated as
+		// stale legacy. Mark the migration complete now.
+		amiberry_options.default_vkbd_toggle_migrated = true;
+	}
+#endif
 }
 
 

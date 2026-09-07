@@ -25,6 +25,7 @@
 #include "imgui_overlay.h"
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
+#include "amiberry_input.h"
 
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -697,6 +698,19 @@ int check_prefs_changed_gfx()
 			vkbd_key = {};
 			vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
 			imgui_osk_shutdown();
+		}
+
+		// Keep the per-device toggle in sync with the global state: the plain-
+		// joystick event path consumes the press before normal dispatch, so a
+		// stale per-device value would swallow input while the keyboard is off.
+		for (int port = 0; port < 2; port++)
+		{
+			const auto host_joy_id = currprefs.jports[port].id - JSEM_JOYS;
+			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
+			{
+				didata* did = &di_joystick[host_joy_id];
+				did->mapping.vkbd_button = vkbd_button;
+			}
 		}
 	}
 
