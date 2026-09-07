@@ -28,6 +28,15 @@
 #include <IOKit/IOKitLib.h>
 #include <IOKit/storage/IOMedia.h>
 #include "macos_authopen.h"
+
+// kIOMainPortDefault arrived in the macOS 12 SDK; before that the same port is
+// called kIOMasterPortDefault, and it is still what an older SDK declares - the
+// libretro buildbot's Intel Mac builds against the 10.15 one. The deployment
+// target matters as well as the SDK: kIOMainPortDefault is marked available
+// from 12.0, so a newer SDK aimed at an older system would link it weakly.
+#if !defined(MAC_OS_VERSION_12_0) || (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_VERSION_12_0)
+#define kIOMainPortDefault kIOMasterPortDefault
+#endif
 #endif
 
 struct hardfilehandle

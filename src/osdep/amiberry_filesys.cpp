@@ -20,6 +20,7 @@
 #endif
 #include <algorithm>
 #include <list>
+#include <memory>
 #include <dirent.h>
 #if !defined(_WIN32) || defined(LIBRETRO)
 #include <iconv.h>

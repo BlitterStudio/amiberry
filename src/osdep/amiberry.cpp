@@ -31,6 +31,8 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 
 #include "sysdeps.h"
 #include "options.h"
