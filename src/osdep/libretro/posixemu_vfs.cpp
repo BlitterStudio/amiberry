@@ -212,9 +212,19 @@ extern "C" off_t posixemu_seek(int fd, off_t offset, int whence)
 	retro_vfs_file_handle* handle = vfs_get_fd(fd);
 	if (handle) {
 		const struct retro_vfs_interface* vfs = libretro_get_vfs_interface();
-		if (vfs && vfs->seek) {
-			const int64_t ret = vfs->seek(handle, offset, vfs_whence(whence));
-			return ret < 0 ? static_cast<off_t>(-1) : static_cast<off_t>(ret);
+		if (vfs && vfs->seek && vfs->tell) {
+			/* The libretro VFS seek callback returns a status (0 on success),
+			 * not the resulting position, so query it via tell(). */
+			if (vfs->seek(handle, offset, vfs_whence(whence)) < 0) {
+				errno = ESPIPE;
+				return static_cast<off_t>(-1);
+			}
+			const int64_t position = vfs->tell(handle);
+			if (position < 0) {
+				errno = ESPIPE;
+				return static_cast<off_t>(-1);
+			}
+			return static_cast<off_t>(position);
 		}
 		errno = ESPIPE;
 		return static_cast<off_t>(-1);
