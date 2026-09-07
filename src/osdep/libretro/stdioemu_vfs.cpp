@@ -115,7 +115,7 @@ static int vfs_cookie_seek(void* c, off64_t* offset, int whence)
 {
 	auto* cookie = static_cast<VfsCookie*>(c);
 	const struct retro_vfs_interface* vfs = libretro_get_vfs_interface();
-	if (!vfs || !vfs->seek || !cookie || !cookie->handle)
+	if (!vfs || !vfs->seek || !vfs->tell || !cookie || !cookie->handle)
 		return -1;
 
 	int vfs_whence = RETRO_VFS_SEEK_POSITION_START;
@@ -132,12 +132,18 @@ static int vfs_cookie_seek(void* c, off64_t* offset, int whence)
 	default:
 		break;
 	}
-	const int64_t ret = vfs->seek(cookie->handle, *offset, vfs_whence);
-	if (ret < 0) {
+	/* The libretro VFS seek callback returns a status (0 on success),
+	 * not the resulting position, so query it via tell(). */
+	if (vfs->seek(cookie->handle, *offset, vfs_whence) < 0) {
 		errno = ESPIPE;
 		return -1;
 	}
-	*offset = ret;
+	const int64_t position = vfs->tell(cookie->handle);
+	if (position < 0) {
+		errno = ESPIPE;
+		return -1;
+	}
+	*offset = position;
 	return 0;
 }
 
