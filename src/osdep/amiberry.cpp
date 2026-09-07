@@ -776,11 +776,16 @@ static void set_key_configs(const uae_prefs* p)
 	if (enter_gui_key.scancode == 0)
 		enter_gui_key.scancode = SDL_SCANCODE_F12;
 
+	vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
+	vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
+
 	enter_gui_button = SDL_GetGamepadButtonFromString(p->open_gui);
 #ifdef __ANDROID__
 	// Android: default Start button as pause/GUI toggle for hardware controllers
-	// (no F12 key available, and software back button isn't accessible from gamepads)
-	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID)
+	// (no F12 key available, and software back button isn't accessible from gamepads).
+	// An explicitly selected Start keyboard toggle wins over that fallback; Guide
+	// and Back remain available as menu triggers.
+	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID && vkbd_button != SDL_GAMEPAD_BUTTON_START)
 		enter_gui_button = SDL_GAMEPAD_BUTTON_START;
 #endif
 	if (enter_gui_button != SDL_GAMEPAD_BUTTON_INVALID)
@@ -811,9 +816,7 @@ static void set_key_configs(const uae_prefs* p)
 
 	debugger_key = get_hotkey_from_config(p->debugger_trigger);
 
-	vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
 
-	vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
 	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (int port = 0; port < 2; port++)
@@ -7585,7 +7588,17 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
 		ret |= cfgfile_string(option, value, "default_vkbd_language", amiberry_options.default_vkbd_language, sizeof amiberry_options.default_vkbd_language);
 		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
-		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
+		if (cfgfile_string(option, value, _T("default_vkbd_toggle"), amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle))
+		{
+#ifdef __ANDROID__
+			// Guide is the Android menu trigger (see handle_controller_button_event),
+			// so a persisted "guide" is always the stale pre-change default, never a
+			// working keyboard toggle — migrate it to the Android default.
+			if (_tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
+				_tcscpy(amiberry_options.default_vkbd_toggle, _T("leftstick"));
+#endif
+			ret = 1;
+		}
 		// Legacy bitmap vkbd defaults. Accept old amiberry.conf files, but do not apply or re-save these.
 		bool legacy_vkbd_bool;
 		char legacy_vkbd_string[128];
