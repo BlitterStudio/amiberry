@@ -25,6 +25,20 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `generate omits vkbd toggle when unset`() {
+		val output = ConfigGenerator.generate(EmulatorSettings(onScreenKeyboard = true))
+		assertFalse(output.contains("vkbd_toggle"))
+	}
+
+	@Test
+	fun `generate writes vkbd toggle when set`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "rightstick")
+		)
+		assertContains(output, "vkbd_toggle=rightstick")
+	}
+
+	@Test
 	fun `generate includes CPU settings`() {
 		val output = ConfigGenerator.generate(EmulatorSettings(cpuModel = 68020))
 		assertContains(output, "cpu_model=68020")

@@ -135,6 +135,32 @@ class LaunchRequestTest {
 	}
 
 	@Test
+	fun `android control overrides include vkbd toggle when set`() {
+		val args = LaunchRequest.AndroidControlOverrides(
+			joyport0 = "mouse",
+			joyport1 = "joy0",
+			onScreenJoystick = false,
+			onScreenKeyboard = true,
+			onScreenKeyboardToggle = "rightstick"
+		).toArgs()
+
+		assertTrue(args.contains("-s"))
+		assertTrue(args.contains("vkbd_toggle=rightstick"))
+	}
+
+	@Test
+	fun `android control overrides omit vkbd toggle when default`() {
+		val args = LaunchRequest.AndroidControlOverrides(
+			joyport0 = "mouse",
+			joyport1 = "joy0",
+			onScreenJoystick = false,
+			onScreenKeyboard = true
+		).toArgs()
+
+		assertFalse(args.any { it.startsWith("vkbd_toggle") })
+	}
+
+	@Test
 	fun `whdload request can include control config before autoload`() {
 		val lhaPath = "/tmp/game.lha"
 		val configPath = "/tmp/android-controls.uae"

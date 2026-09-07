@@ -2840,8 +2840,10 @@ static void handle_controller_button_event(const SDL_Event& event)
 	const auto which = event.gbutton.which;
 
 #ifdef __ANDROID__
-	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga software)
-	if (button == SDL_GAMEPAD_BUTTON_GUIDE) {
+	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga
+	// software). An explicitly configured vkbd_toggle=guide wins over the menu
+	// shortcut, so the on-screen keyboard can be mapped to it if desired.
+	if (button == SDL_GAMEPAD_BUTTON_GUIDE && vkbd_button != SDL_GAMEPAD_BUTTON_GUIDE) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 		return;
 	}

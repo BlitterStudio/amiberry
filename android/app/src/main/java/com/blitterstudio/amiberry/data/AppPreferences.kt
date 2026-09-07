@@ -37,6 +37,7 @@ class AppPreferences private constructor(context: Context) {
 			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
 			onScreenKeyboard = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD),
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
+			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, "") ?: "",
 			joyport0MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, false),
 			joyport1MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, false)
 		)
@@ -55,6 +56,7 @@ class AppPreferences private constructor(context: Context) {
 			putBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, settings.onScreenJoystick)
 			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, settings.onScreenKeyboard)
 			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, settings.onScreenKeyboardNumpad)
+			putString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, settings.onScreenKeyboardToggle)
 			putBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, settings.joyport0MouseMap)
 			putBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, settings.joyport1MouseMap)
 		}
@@ -126,6 +128,7 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_LAST_ON_SCREEN_JOYSTICK = "last_on_screen_joystick"
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD = "last_on_screen_keyboard"
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD = "last_on_screen_keyboard_numpad"
+		private const val KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE = "last_on_screen_keyboard_toggle"
 		private const val KEY_LAST_JOYPORT0_MOUSEMAP = "last_joyport0_mousemap"
 		private const val KEY_LAST_JOYPORT1_MOUSEMAP = "last_joyport1_mousemap"
 		private const val KEY_RECENT_LAUNCHES = "recent_launches"

@@ -1453,9 +1453,16 @@ struct amiberry_options
 	bool default_onscreen_joystick = false;
 	bool default_vkbd_enabled = false;
 #endif
-	char default_vkbd_language[128] = "US";
-	int default_vkbd_transparency;
-	char default_vkbd_toggle[128] = "guide";
+char default_vkbd_language[128] = "US";
+int default_vkbd_transparency;
+#ifdef __ANDROID__
+// Guide is intercepted as the menu trigger on Android (see
+// handle_controller_button_event), so the on-screen keyboard toggle
+// needs a different default button there.
+char default_vkbd_toggle[128] = "leftstick";
+#else
+char default_vkbd_toggle[128] = "guide";
+#endif
 	char gui_theme[128] = "Default.theme";
 	char shader[128] = "none";
 	char shader_rtg[128] = "none";
