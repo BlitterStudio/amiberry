@@ -776,8 +776,20 @@ static void set_key_configs(const uae_prefs* p)
 	if (enter_gui_key.scancode == 0)
 		enter_gui_key.scancode = SDL_SCANCODE_F12;
 
-	vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
-	vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
+	// Install the OSK toggle button only while the on-screen keyboard is
+	// enabled: with it disabled, intercepting the button would swallow input
+	// games could use (AKS_OSK does nothing in that state). Enabling the
+	// keyboard later reinstalls it (gfx_prefs_check).
+	if (p->vkbd_enabled)
+	{
+		vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
+		vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
+	}
+	else
+	{
+		vkbd_key = {};
+		vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
+	}
 
 	enter_gui_button = SDL_GetGamepadButtonFromString(p->open_gui);
 #ifdef __ANDROID__
@@ -7589,23 +7601,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
 		ret |= cfgfile_string(option, value, "default_vkbd_language", amiberry_options.default_vkbd_language, sizeof amiberry_options.default_vkbd_language);
 		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
-		if (cfgfile_string(option, value, _T("default_vkbd_toggle"), amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle))
-		{
-#ifdef __ANDROID__
-			// One-time legacy migration: Guide is the Android menu trigger (see
-			// handle_controller_button_event), so a persisted "guide" from a previous
-			// version is the stale default, never a working keyboard toggle. Later
-			// "guide" values are deliberate choices (the toggle can now win over the
-			// menu shortcut) and must survive reloads, hence the migration flag.
-			if (!amiberry_options.default_vkbd_toggle_migrated
-				&& _tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
-			{
-				_tcscpy(amiberry_options.default_vkbd_toggle, _T("leftstick"));
-				amiberry_options.default_vkbd_toggle_migrated = true;
-			}
-#endif
-			ret = 1;
-		}
+		ret |= cfgfile_string(option, value, _T("default_vkbd_toggle"), amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_toggle_migrated", &amiberry_options.default_vkbd_toggle_migrated);
 		// Legacy bitmap vkbd defaults. Accept old amiberry.conf files, but do not apply or re-save these.
 		bool legacy_vkbd_bool;
@@ -11666,8 +11662,23 @@ static void load_amiberry_settings_from_file(const std::string& settings_file)
 
 			parse_amiberry_settings_line(settings_file.c_str(), line_copy);
 		}
-	}
+
+#ifdef __ANDROID__
+		// One-time legacy migration, applied only after the whole file has been
+		// parsed so the migrated flag (serialized after the toggle) is already
+		// loaded: Guide is the Android menu trigger, so a persisted "guide" from
+		// a previous version is the stale default, never a working keyboard
+		// toggle. Later "guide" values are deliberate choices and survive.
+		if (!amiberry_options.default_vkbd_toggle_migrated
+			&& _tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
+		{
+			_tcscpy(amiberry_options.default_vkbd_toggle, _T("leftstick"));
+			amiberry_options.default_vkbd_toggle_migrated = true;
+		}
+#endif
+ 	}
 }
+
 
 void load_amiberry_settings()
 {
