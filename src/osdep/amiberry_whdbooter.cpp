@@ -1605,6 +1605,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	const bool android_vkbd_enabled = prefs->vkbd_enabled;
 	const bool android_vkbd_numpad = prefs->vkbd_numpad;
 	const bool android_input_default_osk = prefs->input_default_onscreen_keyboard;
+	TCHAR android_vkbd_toggle[256];
+	_tcscpy(android_vkbd_toggle, prefs->vkbd_toggle);
 #endif
 
 	set_last_active_config_from_media(filepath);
@@ -1828,9 +1830,9 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	// --autoload. built_in_prefs() reapplies target defaults, including the
 	// Android fallback that disables touch controls when SDL reports a joystick.
 	// Preserve the launcher's explicit choice across the WHDLoad hardware preset.
-	prefs->onscreen_joystick = android_onscreen_joystick;
-	prefs->vkbd_enabled = android_vkbd_enabled;
 	prefs->vkbd_numpad = android_vkbd_numpad;
+	_tcscpy(prefs->vkbd_toggle, android_vkbd_toggle);
+	prefs->vkbd_enabled = android_vkbd_enabled;
 	prefs->input_default_onscreen_keyboard = android_input_default_osk;
 #endif
 
