@@ -54,7 +54,7 @@ internal fun portSupportsMouseMap(portIndex: Int, deviceId: String, port0Device:
 
 /** SDL gamepad button names accepted by vkbd_toggle. null = emulator default; "" = disabled. */
 internal val oskToggleButtonOptions = listOf<Pair<String?, String>>(
-	null to "Default (Left stick)",
+	null to "Default (emulator setting)",
 	"leftstick" to "Left stick (L3)",
 	"rightstick" to "Right stick (R3)",
 	"back" to "Back / Select",

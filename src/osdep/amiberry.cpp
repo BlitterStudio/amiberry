@@ -2962,6 +2962,14 @@ static void handle_joy_button_event(const SDL_Event& event)
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
+		// Same direct access for the on-screen keyboard toggle on the joystick
+		// path — SDL may not open a device as a gamepad, in which case the
+		// controller handler above never sees these buttons.
+		if (button == did->mapping.vkbd_button && state)
+		{
+			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+			break;
+		}
 #endif
 
 		// Update per-device hotkey state in event order (not polled)
