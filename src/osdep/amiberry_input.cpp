@@ -1733,6 +1733,13 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 		}
 	}
 
+	// set_key_configs() is not re-run on device hot-plug or re-enumeration:
+	// reapply the global on-screen keyboard toggle so a freshly rebuilt plain-
+	// joystick mapping keeps it effective (the joystick event path consumes the
+	// press before normal dispatch).
+	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
+		did->mapping.vkbd_button = vkbd_button;
+
 	if (did->mapping.hotkey_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (auto& k : did->mapping.button)

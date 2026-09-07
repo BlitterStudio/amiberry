@@ -11692,16 +11692,6 @@ static void load_amiberry_settings_from_file(const std::string& settings_file)
 		}
 #endif
 	}
-#ifdef __ANDROID__
-	else
-	{
-		// No settings file exists: there is no legacy "guide" to migrate, and
-		// the first save would persist default_vkbd_toggle_migrated=no — which
-		// would let a deliberately chosen Guide value saved later be treated as
-		// stale legacy. Mark the migration complete now.
-		amiberry_options.default_vkbd_toggle_migrated = true;
-	}
-#endif
 }
 
 
@@ -12105,6 +12095,15 @@ int amiberry_main(int argc, char* argv[])
 		// cpu_compatible case and only risks breaking timing-sensitive titles.)
 		amiberry_options.default_gfx_autoresolution = 1;
 	}
+
+#ifdef __ANDROID__
+	// First run with no amiberry.conf: nothing legacy to migrate. Marking now
+	// prevents the first save from persisting default_vkbd_toggle_migrated=no,
+	// which would let a deliberately chosen Guide value be treated as stale
+	// legacy on the next launch.
+	if (!config_found)
+		amiberry_options.default_vkbd_toggle_migrated = true;
+#endif
 	if (force_perf_log)
 		amiberry_options.perf_log = true;
 	quickstart_compa = amiberry_options.default_quickstart_compatibility;
