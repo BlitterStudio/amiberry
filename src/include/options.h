@@ -1463,6 +1463,7 @@ char default_vkbd_toggle[128] = "leftstick";
 #else
 char default_vkbd_toggle[128] = "guide";
 #endif
+	bool default_vkbd_toggle_migrated = false;
 	char gui_theme[128] = "Default.theme";
 	char shader[128] = "none";
 	char shader_rtg[128] = "none";

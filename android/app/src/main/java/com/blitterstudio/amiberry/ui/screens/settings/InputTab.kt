@@ -52,9 +52,9 @@ internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List
 internal fun portSupportsMouseMap(portIndex: Int, deviceId: String, port0Device: String): Boolean =
 	portIndex == 1 && (deviceId == "joy0" || deviceId == "joy1") && port0Device == "mouse"
 
-/** SDL gamepad button names accepted by vkbd_toggle; empty = emulator default. */
-internal val oskToggleButtonOptions = listOf(
-	"" to "Default (Left stick)",
+/** SDL gamepad button names accepted by vkbd_toggle. null = emulator default; "" = disabled. */
+internal val oskToggleButtonOptions = listOf<Pair<String?, String>>(
+	null to "Default (Left stick)",
 	"leftstick" to "Left stick (L3)",
 	"rightstick" to "Right stick (R3)",
 	"back" to "Back / Select",
@@ -63,7 +63,7 @@ internal val oskToggleButtonOptions = listOf(
 	"leftshoulder" to "L1",
 	"rightshoulder" to "R1",
 	"misc1" to "Misc 1",
-	"none" to "None (disabled)"
+	"" to "None (disabled)"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -235,7 +235,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 
 				var toggleExpanded by remember { mutableStateOf(false) }
 				val toggleLabel = oskToggleButtonOptions.firstOrNull { it.first == settings.onScreenKeyboardToggle }?.second
-					?: settings.onScreenKeyboardToggle
+					?: settings.onScreenKeyboardToggle.orEmpty()
 				ExposedDropdownMenuBox(
 					expanded = toggleExpanded,
 					onExpandedChange = { toggleExpanded = it }

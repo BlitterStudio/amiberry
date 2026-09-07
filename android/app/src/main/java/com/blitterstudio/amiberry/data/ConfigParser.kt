@@ -167,7 +167,7 @@ object ConfigParser {
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
 			onScreenKeyboard = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true),
 			onScreenKeyboardNumpad = kv["amiberry.vkbd_numpad"].toBool(false),
-			onScreenKeyboardToggle = kv["vkbd_toggle"] ?: "",
+			onScreenKeyboardToggle = kv["vkbd_toggle"],
 			joyport0MouseMap = (kv["joyport0mousemap"]?.toIntOrNull() ?: 0) > 0,
 			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0
 		)

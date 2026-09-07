@@ -104,7 +104,7 @@ sealed interface LaunchRequest {
 		val onScreenJoystick: Boolean,
 		val onScreenKeyboard: Boolean,
 		val onScreenKeyboardNumpad: Boolean = false,
-		val onScreenKeyboardToggle: String = "",
+		val onScreenKeyboardToggle: String? = null,
 		val joyport0MouseMap: Boolean = false,
 		val joyport1MouseMap: Boolean = false
 	) {
@@ -122,11 +122,11 @@ sealed interface LaunchRequest {
 					"-s", "input.default_osk=${onScreenKeyboard.toCfg()}"
 				)
 			)
-			// Empty toggle means "emulator default"; leave it unset so the
-			// native default button applies.
-			if (onScreenKeyboardToggle.isNotBlank()) {
-				args.addAll(listOf("-s", "vkbd_toggle=$onScreenKeyboardToggle"))
-			}
+		// null = "emulator default"; leave it unset so the native default
+		// button applies. "" (explicitly disabled) and button names round-trip.
+		onScreenKeyboardToggle?.let {
+			args.addAll(listOf("-s", "vkbd_toggle=$it"))
+		}
 			// Mouse map overrides are always explicit (0 or 1) so a backing
 			// config's enabled value cannot survive a disabled switch
 			args.add("-s")

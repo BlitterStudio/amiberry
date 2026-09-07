@@ -39,6 +39,14 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `generate writes explicitly empty vkbd toggle as disabled`() {
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "")
+		)
+		assertContains(output, "vkbd_toggle=")
+	}
+
+	@Test
 	fun `generate includes CPU settings`() {
 		val output = ConfigGenerator.generate(EmulatorSettings(cpuModel = 68020))
 		assertContains(output, "cpu_model=68020")

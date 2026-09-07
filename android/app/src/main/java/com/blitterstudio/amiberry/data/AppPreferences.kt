@@ -37,7 +37,7 @@ class AppPreferences private constructor(context: Context) {
 			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
 			onScreenKeyboard = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD),
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
-			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, "") ?: "",
+			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, null),
 			joyport0MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, false),
 			joyport1MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, false)
 		)

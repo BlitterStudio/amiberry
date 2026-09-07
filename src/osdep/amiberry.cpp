@@ -7190,6 +7190,7 @@ bool save_amiberry_settings_with_result()
 
 	// Default controller button for toggling the On-screen Keyboard
 	write_string_option("default_vkbd_toggle", amiberry_options.default_vkbd_toggle);
+	write_bool_option("default_vkbd_toggle_migrated", amiberry_options.default_vkbd_toggle_migrated);
 
 	// GUI Theme
 	write_string_option("gui_theme", amiberry_options.gui_theme);
@@ -7591,14 +7592,21 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		if (cfgfile_string(option, value, _T("default_vkbd_toggle"), amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle))
 		{
 #ifdef __ANDROID__
-			// Guide is the Android menu trigger (see handle_controller_button_event),
-			// so a persisted "guide" is always the stale pre-change default, never a
-			// working keyboard toggle — migrate it to the Android default.
-			if (_tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
+			// One-time legacy migration: Guide is the Android menu trigger (see
+			// handle_controller_button_event), so a persisted "guide" from a previous
+			// version is the stale default, never a working keyboard toggle. Later
+			// "guide" values are deliberate choices (the toggle can now win over the
+			// menu shortcut) and must survive reloads, hence the migration flag.
+			if (!amiberry_options.default_vkbd_toggle_migrated
+				&& _tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
+			{
 				_tcscpy(amiberry_options.default_vkbd_toggle, _T("leftstick"));
+				amiberry_options.default_vkbd_toggle_migrated = true;
+			}
 #endif
 			ret = 1;
 		}
+		ret |= cfgfile_yesno(option, value, "default_vkbd_toggle_migrated", &amiberry_options.default_vkbd_toggle_migrated);
 		// Legacy bitmap vkbd defaults. Accept old amiberry.conf files, but do not apply or re-save these.
 		bool legacy_vkbd_bool;
 		char legacy_vkbd_string[128];
