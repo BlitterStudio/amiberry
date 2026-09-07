@@ -35,7 +35,7 @@ class ConfigGeneratorTest {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "rightstick")
 		)
-		assertContains(output, "vkbd_toggle=rightstick")
+		assertContains(output, "amiberry.vkbd_toggle=rightstick")
 	}
 
 	@Test
@@ -43,7 +43,7 @@ class ConfigGeneratorTest {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "")
 		)
-		assertContains(output, "vkbd_toggle=")
+		assertContains(output, "amiberry.vkbd_toggle=")
 	}
 
 	@Test

@@ -32,7 +32,7 @@ object AndroidControlSettings {
 			} else {
 				fallback.onScreenKeyboardNumpad
 			},
-			onScreenKeyboardToggle = if ("vkbd_toggle" in keys) {
+			onScreenKeyboardToggle = if ("amiberry.vkbd_toggle" in keys) {
 				settings.onScreenKeyboardToggle
 			} else {
 				fallback.onScreenKeyboardToggle

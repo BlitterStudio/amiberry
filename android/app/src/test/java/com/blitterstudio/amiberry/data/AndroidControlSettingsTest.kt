@@ -87,13 +87,13 @@ class AndroidControlSettingsTest {
 	fun `explicit vkbd toggle overrides fallback and absent key uses fallback`() {
 		val explicit = AndroidControlSettings.withFallback(
 			settings = EmulatorSettings(onScreenKeyboardToggle = "rightstick"),
-			explicitKeys = setOf("vkbd_toggle"),
+			explicitKeys = setOf("amiberry.vkbd_toggle"),
 			fallback = EmulatorSettings(onScreenKeyboardToggle = "leftstick")
 		)
 		assertEquals("rightstick", explicit.onScreenKeyboardToggle)
 
 		val fallback = AndroidControlSettings.withFallback(
-			settings = EmulatorSettings(onScreenKeyboardToggle = ""),
+			settings = EmulatorSettings(onScreenKeyboardToggle = null),
 			explicitKeys = setOf("amiberry.vkbd_enabled"),
 			fallback = EmulatorSettings(onScreenKeyboardToggle = "leftstick")
 		)

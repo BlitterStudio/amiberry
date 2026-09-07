@@ -123,9 +123,11 @@ sealed interface LaunchRequest {
 				)
 			)
 		// null = "emulator default"; leave it unset so the native default
-		// button applies. "" (explicitly disabled) and button names round-trip.
+		// button applies. "" (explicitly disabled) and button names round-trip
+		// via the target-prefixed key (cfgfile only routes amiberry.* to the
+		// Amiberry option parser).
 		onScreenKeyboardToggle?.let {
-			args.addAll(listOf("-s", "vkbd_toggle=$it"))
+			args.addAll(listOf("-s", "amiberry.vkbd_toggle=$it"))
 		}
 			// Mouse map overrides are always explicit (0 or 1) so a backing
 			// config's enabled value cannot survive a disabled switch

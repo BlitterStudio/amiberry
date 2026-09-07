@@ -145,7 +145,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertTrue(args.contains("-s"))
-		assertTrue(args.contains("vkbd_toggle=rightstick"))
+		assertTrue(args.contains("amiberry.vkbd_toggle=rightstick"))
 	}
 
 	@Test

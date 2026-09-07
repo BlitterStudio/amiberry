@@ -11668,11 +11668,13 @@ static void load_amiberry_settings_from_file(const std::string& settings_file)
 		// parsed so the migrated flag (serialized after the toggle) is already
 		// loaded: Guide is the Android menu trigger, so a persisted "guide" from
 		// a previous version is the stale default, never a working keyboard
-		// toggle. Later "guide" values are deliberate choices and survive.
-		if (!amiberry_options.default_vkbd_toggle_migrated
-			&& _tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
+		// toggle. The flag is set after inspecting an unmarked file regardless
+		// of conversion, so a Guide value chosen deliberately afterwards is
+		// preserved on later launches.
+		if (!amiberry_options.default_vkbd_toggle_migrated)
 		{
-			_tcscpy(amiberry_options.default_vkbd_toggle, _T("leftstick"));
+			if (_tcscmp(amiberry_options.default_vkbd_toggle, _T("guide")) == 0)
+				_tcscpy(amiberry_options.default_vkbd_toggle, _T("leftstick"));
 			amiberry_options.default_vkbd_toggle_migrated = true;
 		}
 #endif
