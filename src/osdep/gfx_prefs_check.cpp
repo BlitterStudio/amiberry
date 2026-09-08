@@ -709,8 +709,13 @@ int check_prefs_changed_gfx()
 			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
 			{
 				didata* did = &di_joystick[host_joy_id];
-				if (did->mapping.is_retroarch && vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
-					continue; // keep the RetroArch raw toggle for the hotkey-combo path
+				if (did->mapping.is_retroarch)
+					// RetroArch keeps its raw toggle mapping regardless of the
+					// global enable/disable state — destroying it on disable
+					// would be permanent (the re-enable path skips the device).
+					// Event consumption is already gated on the global toggle
+					// being configured.
+					continue;
 				// Store the raw physical index (translated through the device
 				// map): the hotkey-combo path compares it with the raw event.
 				// Keep the pre-mask value stored by setup_mapping() when hotkey

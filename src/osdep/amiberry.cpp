@@ -2963,6 +2963,9 @@ static void handle_controller_button_event(const SDL_Event& event)
 	else if (screenshot_key.button && button == screenshot_key.button) {
 		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, state, nullptr);
 	}
+	else if (debugger_key.button && button == debugger_key.button) {
+		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, state, nullptr);
+	}
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 			didata* did = &di_joystick[id];
@@ -2999,13 +3002,16 @@ static void handle_joy_button_event(const SDL_Event& event)
 		// never sees these buttons. Compare against the per-device raw index
 		// stored at mapping time — captured before the hotkey masking loop can
 		// invalidate the logical-map entry for the same physical button — and
-		// only consume the press while the global toggle is active. Checked
-		// before the menu branch so an explicitly selected toggle (e.g. Start)
-		// wins over a menu mapping on the same physical button, matching the
-		// controller path.
+		// Non-RetroArch devices store the raw of the configured global toggle
+		// at mapping time (before hotkey masking); RetroArch devices keep
+		// their own raw osk button there, so translate the global through
+		// the device map for them instead.
+		const int configured_raw = did->mapping.is_retroarch
+			? did->mapping.button[vkbd_button]
+			: did->mapping.vkbd_button;
 		if (state
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
-			&& did->mapping.vkbd_button == button)
+			&& configured_raw == button)
 		{
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;
