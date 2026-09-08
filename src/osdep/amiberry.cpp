@@ -840,7 +840,10 @@ static void set_key_configs(const uae_prefs* p)
 			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
 			{
 				didata* did = &di_joystick[host_joy_id];
-				did->mapping.vkbd_button = vkbd_button;
+				// Store the raw physical index (translated through the device
+				// map): the plain-joystick hotkey-combo path compares this field
+				// directly with the raw event button.
+				did->mapping.vkbd_button = did->mapping.button[vkbd_button];
 			}
 		}
 	}

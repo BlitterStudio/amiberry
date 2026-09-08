@@ -1740,7 +1740,9 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 	// toggle index from map_from_retroarch() — the hotkey-combo path compares
 	// it directly with the raw event button.
 	if (!did->mapping.is_retroarch && vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
-		did->mapping.vkbd_button = vkbd_button;
+		// Store the raw physical index: the hotkey-combo path compares this
+		// field directly with the raw event button.
+		did->mapping.vkbd_button = did->mapping.button[vkbd_button];
 
 	if (did->mapping.hotkey_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{

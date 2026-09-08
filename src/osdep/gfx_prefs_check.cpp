@@ -711,7 +711,11 @@ int check_prefs_changed_gfx()
 				didata* did = &di_joystick[host_joy_id];
 				if (did->mapping.is_retroarch && vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
 					continue; // keep the RetroArch raw toggle for the hotkey-combo path
-				did->mapping.vkbd_button = vkbd_button;
+				// Store the raw physical index (translated through the device
+				// map): the hotkey-combo path compares it with the raw event.
+				did->mapping.vkbd_button = vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
+					? did->mapping.button[vkbd_button]
+					: SDL_GAMEPAD_BUTTON_INVALID;
 			}
 		}
 
