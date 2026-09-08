@@ -811,7 +811,7 @@ static void set_key_configs(const uae_prefs* p)
 				// The plain-joystick handler compares menu_button directly with
 				// the raw event index: translate the logical button through the
 				// device map before storing.
-				did->mapping.menu_button = did->mapping.button[enter_gui_button];
+				did->mapping.menu_button = did->mapping.button_unmasked[enter_gui_button];
 			}
 		}
 	}
@@ -845,7 +845,7 @@ static void set_key_configs(const uae_prefs* p)
 				// directly with the raw event button.
 				// Prefer the live translation; keep the pre-mask value stored
 				// by setup_mapping() when hotkey masking invalidated the entry.
-				const int raw_toggle = did->mapping.button[vkbd_button];
+				const int raw_toggle = did->mapping.button_unmasked[vkbd_button];
 				if (raw_toggle != SDL_GAMEPAD_BUTTON_INVALID)
 					did->mapping.vkbd_button = raw_toggle;
 			}

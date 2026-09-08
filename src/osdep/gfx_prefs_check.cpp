@@ -721,7 +721,7 @@ int check_prefs_changed_gfx()
 				// Keep the pre-mask value stored by setup_mapping() when hotkey
 				// masking invalidated the live map entry.
 				const int raw_toggle = vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
-					? did->mapping.button[vkbd_button]
+					? did->mapping.button_unmasked[vkbd_button]
 					: SDL_GAMEPAD_BUTTON_INVALID;
 				if (raw_toggle != SDL_GAMEPAD_BUTTON_INVALID || vkbd_button == SDL_GAMEPAD_BUTTON_INVALID)
 					did->mapping.vkbd_button = raw_toggle;
@@ -745,7 +745,7 @@ int check_prefs_changed_gfx()
 			{
 				didata* did = &di_joystick[host_joy_id];
 				did->mapping.menu_button = enter_gui_button != SDL_GAMEPAD_BUTTON_INVALID
-					? did->mapping.button[enter_gui_button]
+					? did->mapping.button_unmasked[enter_gui_button]
 					: SDL_GAMEPAD_BUTTON_INVALID;
 			}
 		}
