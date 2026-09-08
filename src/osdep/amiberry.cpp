@@ -4088,6 +4088,13 @@ static void process_event(const SDL_Event& event)
 			// a disconnect while deflected cannot leak into a later session
 			// (or into a controller that reuses the id).
 			osk_stick_dir.erase(event.jdevice.which);
+			if (imgui_osk_is_active()) {
+				// Neutralize whatever the departing controller had latched in
+				// the OSK state: a held direction would keep repeating (and a
+				// held key stay pressed) with no device left to release it.
+				osk_control(0, 0, 0, 0); // clear directions
+				osk_control(0, 0, 1, 0); // release the button
+			}
 			handle_joy_device_event(event.jdevice.which, true);
 			break;
 
@@ -6207,7 +6214,13 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, _T("vkbd_language"), p->vkbd_language, sizeof p->vkbd_language)
 		|| cfgfile_string(option, value, _T("vkbd_style"), p->vkbd_style, sizeof p->vkbd_style)
 		|| cfgfile_string(option, value, _T("vkbd_toggle"), p->vkbd_toggle, sizeof p->vkbd_toggle))
+	{
+		// "default" resolves to the live emulator default, letting a launcher
+		// override reset a value explicitly set in a backing configuration.
+		if (_tcscmp(p->vkbd_toggle, _T("default")) == 0)
+			_tcscpy(p->vkbd_toggle, amiberry_options.default_vkbd_toggle);
 		return 1;
+	}
 
 	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		TCHAR* p = _tcschr(tmpbuf, ',');

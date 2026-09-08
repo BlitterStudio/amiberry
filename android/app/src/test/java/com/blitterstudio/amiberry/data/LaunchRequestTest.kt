@@ -126,6 +126,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
 				"-G"
@@ -157,7 +158,7 @@ class LaunchRequestTest {
 			onScreenKeyboard = true
 		).toArgs()
 
-		assertFalse(args.any { it.startsWith("vkbd_toggle") })
+		assertTrue(args.contains("amiberry.vkbd_toggle=default"))
 	}
 
 	@Test
@@ -232,6 +233,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=false",
 				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=false",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
 				"-G"
@@ -266,6 +268,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
 				"-G"
@@ -300,6 +303,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=true",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=1",
 				"-G"

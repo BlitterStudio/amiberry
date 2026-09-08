@@ -1165,6 +1165,19 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 			release_key(ak);
 			*keycode = ak;
 			*pressed = 0;
+
+			// A direction pressed while the key was held had its rising edge
+			// frozen (see button_held above): replay it now — one step, then
+			// arm repeat — instead of requiring a release-and-repress.
+			if (dir_state) {
+				if (dir_state & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
+				if (dir_state & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
+				if (dir_state & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
+				if (dir_state & OSK_RIGHT) s_focused_key = find_nearest_key(s_focused_key, OSK_RIGHT);
+				s_repeat_dir = dir_state;
+				s_repeat_start_time = now;
+				s_repeat_last_time = now;
+			}
 			return true;
 		}
 	}
