@@ -3132,19 +3132,22 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 			if (record && pressed && value < 0) dir |= OSK_STICK_UP;
 			if (record && pressed && value > 0) dir |= OSK_STICK_DOWN;
 		}
-		// While the keyboard is active, the stick drives its navigation — same
-		// as the D-pad — so gamepad-only setups (Android TV, couch play) can
-		// move the key focus without a touch screen. osk_control() replaces
-		// every accumulated direction bit: send the combination across all
-		// caches, so a direction held on a D-pad (or another controller)
-		// survives this stick update.
-		if (imgui_osk_is_active()) {
+		// While the keyboard is active and owns this axis (not suspended),
+		// the stick drives its navigation — same as the D-pad — so gamepad-only
+		// setups (Android TV, couch play) can move the key focus without a
+		// touch screen. osk_control() replaces every accumulated direction bit:
+		// send the combination across all caches, so a direction held on a
+		// D-pad (or another controller) survives this stick update. A suspended
+		// axis (deflected before the keyboard opened) flows on to normal
+		// dispatch instead, so UAE receives the releases of deflections it owns
+		// rather than keeping a stale axis state after the keyboard closes.
+		if (imgui_osk_is_active() && !(dir & suspend)) {
 			int dx = 0, dy = 0;
 			osk_merged_direction(dx, dy);
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass the stick to UAE input while navigating
 		}
-		// Not active: the event flows on to normal dispatch.
+		// Suspended or keyboard inactive: the event flows on to normal dispatch.
 	}
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)

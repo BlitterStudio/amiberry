@@ -348,6 +348,10 @@ static float s_transparency = 0.85f; // configurable alpha
 static bool s_numpad_enabled = false;
 
 static int s_focused_key = -1; // currently focused key (for D-pad navigation)
+
+// Directions whose rising edges were suppressed while a key was held; only
+// these are replayed on the key's release.
+static int s_suppressed_dirs = 0;
 static std::set<int> s_sticky_keys; // set of AK_* codes for active sticky modifiers
 static std::map<int, int> s_finger_keys; // finger_id -> key index mapping
 static std::set<int> s_pressed_keys; // set of key indices currently pressed (touch)
@@ -1141,13 +1145,19 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 		s_repeat_last_time = now;
 		moved = true;
 	}
+	else if (button_held && (rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT))) {
+		// Remember suppressed rising edges: only these are replayed on the key
+		// release — directions held since before the press merely resume repeat.
+		s_suppressed_dirs |= rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT);
+	}
 
 	// Key repeat while direction held
 	osk_repeat_tick(dir_state, button_held);
 
-	// Direction released: reset repeat
+	// Direction released: reset repeat and drop its replay candidacy
 	if (!dir_state) {
 		s_repeat_dir = 0;
+		s_suppressed_dirs = 0;
 	}
 
 	// Button press/release
@@ -1168,14 +1178,16 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 			*keycode = ak;
 			*pressed = 0;
 
-			// A direction pressed while the key was held had its rising edge
-			// frozen (see button_held above): replay it now — one step, then
-			// arm repeat — instead of requiring a release-and-repress.
+			// Directions whose rising edges were suppressed while the key was
+			// held are replayed now — one step, then armed repeat; directions
+			// held since before the press merely resume repeat without moving.
 			if (dir_state) {
-				if (dir_state & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
-				if (dir_state & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
-				if (dir_state & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
-				if (dir_state & OSK_RIGHT) s_focused_key = find_nearest_key(s_focused_key, OSK_RIGHT);
+				const int replay = s_suppressed_dirs & dir_state;
+				if (replay & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
+				if (replay & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
+				if (replay & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
+				if (replay & OSK_RIGHT) s_focused_key = find_nearest_key(s_focused_key, OSK_RIGHT);
+				s_suppressed_dirs &= ~dir_state;
 				s_repeat_dir = dir_state;
 				s_repeat_start_time = now;
 				s_repeat_last_time = now;
