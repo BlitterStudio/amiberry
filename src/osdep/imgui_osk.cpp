@@ -1080,6 +1080,11 @@ static int find_nearest_key(int from_idx, int direction)
 // analog axis or D-pad produces no further events until its value changes.
 static void osk_repeat_tick(const int dir_state)
 {
+	// Suppress directional repeat while a key is held: moving the focus under
+	// a pressed key would make the eventual release free the newly focused
+	// key instead of the one that was pressed, leaving it stuck.
+	if (s_prev_joy_state & OSK_BUTTON)
+		return;
 	if (!dir_state || dir_state != s_repeat_dir)
 		return;
 	const Uint64 now = SDL_GetTicks();
