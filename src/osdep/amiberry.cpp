@@ -2856,6 +2856,9 @@ void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 
 enum { OSK_DPAD_UP = 1, OSK_DPAD_DOWN = 2, OSK_DPAD_LEFT = 4, OSK_DPAD_RIGHT = 8 };
 extern std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
+// Combined OSK navigation direction across every controller's D-pad and
+// left-stick cache (defined next to the caches).
+static void osk_merged_direction(int& dx, int& dy);
 // Joystick ID of the controller currently holding the OSK "press key" button.
 static SDL_JoystickID osk_south_owner = 0;
 
@@ -2919,13 +2922,12 @@ static void handle_controller_button_event(const SDL_Event& event)
 		if (!imgui_osk_is_active())
 			return;
 
-		const int dir = osk_dpad_dir[which];
 		if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+			// osk_control() replaces every accumulated direction bit: send the
+			// combination across all caches, so a direction held on the stick
+			// (or another controller) survives this D-pad update.
 			int dx = 0, dy = 0;
-			if (dir & OSK_DPAD_LEFT)  dx = -1;
-			else if (dir & OSK_DPAD_RIGHT) dx = 1;
-			if (dir & OSK_DPAD_UP)    dy = -1;
-			else if (dir & OSK_DPAD_DOWN)  dy = 1;
+			osk_merged_direction(dx, dy);
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass to UAE input system
 		}
@@ -3038,6 +3040,30 @@ std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
 enum { OSK_STICK_LEFT = 1, OSK_STICK_RIGHT = 2, OSK_STICK_UP = 4, OSK_STICK_DOWN = 8 };
 static std::unordered_map<SDL_JoystickID, int> osk_stick_dir;
 
+// Combined OSK navigation direction across every controller's D-pad and
+// left-stick cache. osk_control() replaces all accumulated direction bits,
+// so each dispatch must reflect the union — otherwise a direction held on
+// another input surface would be dropped by an unrelated update.
+static void osk_merged_direction(int& dx, int& dy)
+{
+	dx = 0;
+	dy = 0;
+	for (const auto& entry : osk_dpad_dir)
+	{
+		if (entry.second & OSK_DPAD_LEFT)  dx = -1;
+		else if (entry.second & OSK_DPAD_RIGHT) dx = 1;
+		if (entry.second & OSK_DPAD_UP)    dy = -1;
+		else if (entry.second & OSK_DPAD_DOWN)  dy = 1;
+	}
+	for (const auto& entry : osk_stick_dir)
+	{
+		if (entry.second & OSK_STICK_LEFT)  dx = -1;
+		else if (entry.second & OSK_STICK_RIGHT) dx = 1;
+		if (entry.second & OSK_STICK_UP)    dy = -1;
+		else if (entry.second & OSK_STICK_DOWN)  dy = 1;
+	}
+}
+
 static void handle_controller_axis_motion_event(const SDL_Event& event)
 {
 	const auto axis = event.gaxis.axis;
@@ -3063,13 +3089,13 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		}
 		// While the keyboard is active, the stick drives its navigation — same
 		// as the D-pad — so gamepad-only setups (Android TV, couch play) can
-		// move the key focus without a touch screen.
+		// move the key focus without a touch screen. osk_control() replaces
+		// every accumulated direction bit: send the combination across all
+		// caches, so a direction held on a D-pad (or another controller)
+		// survives this stick update.
 		if (imgui_osk_is_active()) {
 			int dx = 0, dy = 0;
-			if (dir & OSK_STICK_LEFT)  dx = -1;
-			else if (dir & OSK_STICK_RIGHT) dx = 1;
-			if (dir & OSK_STICK_UP)    dy = -1;
-			else if (dir & OSK_STICK_DOWN)  dy = 1;
+			osk_merged_direction(dx, dy);
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass the stick to UAE input while navigating
 		}
@@ -4085,16 +4111,6 @@ static void process_event(const SDL_Event& event)
 			handle_clipboard_update_event();
 			break;
 
-#ifndef LIBRETRO
-		case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
-			// Display refresh-mode changed (user switched Hz in OS display
-			// settings, or HDMI re-linked at a new mode). Force the hw VSync
-			// pacing decision to re-probe without waiting for the window to
-			// move or the Amiga target refresh to change.
-			amiberry_hw_vsync_pacing_invalidate();
-			break;
-#endif
-
 		case SDL_EVENT_JOYSTICK_REMOVED:
 			// Drop the departing device's cached OSK directions so they cannot
 			// leak into a later session (or a controller that reuses the id).
@@ -4106,20 +4122,7 @@ static void process_event(const SDL_Event& event)
 				// controller may still hold it, and a stable held input
 				// produces no new event to re-establish it.
 				int dx = 0, dy = 0;
-				for (const auto& entry : osk_dpad_dir)
-				{
-					if (entry.second & OSK_DPAD_LEFT)  dx = -1;
-					else if (entry.second & OSK_DPAD_RIGHT) dx = 1;
-					if (entry.second & OSK_DPAD_UP)    dy = -1;
-					else if (entry.second & OSK_DPAD_DOWN)  dy = 1;
-				}
-				for (const auto& entry : osk_stick_dir)
-				{
-					if (entry.second & OSK_STICK_LEFT)  dx = -1;
-					else if (entry.second & OSK_STICK_RIGHT) dx = 1;
-					if (entry.second & OSK_STICK_UP)    dy = -1;
-					else if (entry.second & OSK_STICK_DOWN)  dy = 1;
-				}
+				osk_merged_direction(dx, dy);
 				osk_control(dx, dy, 0, 0);
 				// Release the held key only when its owner is departing.
 				if (osk_south_owner == event.jdevice.which)
