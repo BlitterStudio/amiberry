@@ -2859,30 +2859,25 @@ extern std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
 // Combined OSK navigation direction across every controller's D-pad and
 // left-stick cache (defined next to the caches).
 static void osk_merged_direction(int& dx, int& dy);
+// Baseline all per-controller OSK input state (defined next to the caches).
+void osk_clear_controller_holds();
 // Per-controller "press key" (South) hold state: the OSK tracks a single
 // press, so overlapping holds must be merged before forwarding.
 static std::unordered_map<SDL_JoystickID, bool> osk_south_held;
-
-void osk_clear_controller_holds()
-{
-	osk_south_held.clear();
-}
 
 static void handle_controller_button_event(const SDL_Event& event)
 {
 	const auto button = event.gbutton.button;
 	const auto state = event.gbutton.down;
 	const auto which = event.gbutton.which;
-
-	// D-pad direction cache for OSK navigation, keyed by SDL_JoystickID and
-	// updated on every event — including while the keyboard is closed or
-	// animating — so a release never leaves a stale direction behind and two
-	// controllers cannot leak state into each other.
 	if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
 		auto& dir = osk_dpad_dir[which];
 		const int bit = 1 << (button - SDL_GAMEPAD_BUTTON_DPAD_UP);
-		if (state) dir |= bit;
-		else       dir &= ~bit;
+		// Directions only register while the keyboard is active, so a hold
+		// from before it opened cannot surface as a phantom rising edge;
+		// releases always clear, keeping the cache fresh while closed.
+		if (state && imgui_osk_is_active()) dir |= bit;
+		else if (!state) dir &= ~bit;
 	}
 	// Record "press key" (South) holds that begin while the keyboard is
 	// active; always record releases, including while closed or animating,
@@ -3081,6 +3076,13 @@ static void osk_merged_direction(int& dx, int& dy)
 	}
 }
 
+void osk_clear_controller_holds()
+{
+	osk_south_held.clear();
+	osk_dpad_dir.clear();
+	osk_stick_dir.clear();
+}
+
 static void handle_controller_axis_motion_event(const SDL_Event& event)
 {
 	const auto axis = event.gaxis.axis;
@@ -3094,15 +3096,20 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		auto& dir = osk_stick_dir[event.gaxis.which];
 		const int threshold = SDL_JOYSTICK_AXIS_MAX * 2 / 5;
 		const bool pressed = abs(value) > threshold;
+		// Directions only register while the keyboard is active, so a
+		// deflection held from before it opened cannot surface as a phantom
+		// rising edge; clearing always applies (the mask runs first), keeping
+		// the cache fresh while closed.
+		const bool record = imgui_osk_is_active();
 		if (axis == SDL_GAMEPAD_AXIS_LEFTX) {
 			dir &= ~(OSK_STICK_LEFT | OSK_STICK_RIGHT);
-			if (pressed && value < 0) dir |= OSK_STICK_LEFT;
-			if (pressed && value > 0) dir |= OSK_STICK_RIGHT;
+			if (record && pressed && value < 0) dir |= OSK_STICK_LEFT;
+			if (record && pressed && value > 0) dir |= OSK_STICK_RIGHT;
 		}
 		else {
 			dir &= ~(OSK_STICK_UP | OSK_STICK_DOWN);
-			if (pressed && value < 0) dir |= OSK_STICK_UP;
-			if (pressed && value > 0) dir |= OSK_STICK_DOWN;
+			if (record && pressed && value < 0) dir |= OSK_STICK_UP;
+			if (record && pressed && value > 0) dir |= OSK_STICK_DOWN;
 		}
 		// While the keyboard is active, the stick drives its navigation — same
 		// as the D-pad — so gamepad-only setups (Android TV, couch play) can

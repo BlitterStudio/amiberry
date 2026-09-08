@@ -648,6 +648,7 @@ void imgui_osk_shutdown()
 	s_finger_keys.clear();
 	s_pressed_keys.clear();
 	osk_control(0, 0, 0, 0); // drop accumulated input-layer joystick state
+	osk_clear_controller_holds(); // and the per-controller hold state
 }
 
 void imgui_osk_toggle()
