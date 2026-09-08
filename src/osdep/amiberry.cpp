@@ -2964,16 +2964,15 @@ static void handle_joy_button_event(const SDL_Event& event)
 		// Direct on-screen keyboard toggle for the joystick path — SDL may not
 		// open a device as a gamepad, in which case the controller handler above
 		// never sees these buttons. event.jbutton.button is a raw physical
-		// index: resolve the configured logical button through the device map
+		// index: translate the global logical toggle through the device map
 		// before comparing, and only consume the press while the global toggle
-		// is active (keyboard enabled, toggle configured). Checked before the
-		// menu branch so an explicitly selected toggle (e.g. Start) wins over a
-		// menu mapping on the same physical button, matching the controller path.
+		// is active. Checked before the menu branch so an explicitly selected
+		// toggle (e.g. Start) wins over a menu mapping on the same physical
+		// button, matching the controller path. RetroArch devices keep their
+		// raw per-device vkbd_button for the hotkey-combo path below.
 		if (state
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
-			&& did->mapping.vkbd_button >= 0
-			&& did->mapping.vkbd_button < SDL_GAMEPAD_BUTTON_COUNT
-			&& did->mapping.button[did->mapping.vkbd_button] == button)
+			&& did->mapping.button[vkbd_button] == button)
 		{
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;
