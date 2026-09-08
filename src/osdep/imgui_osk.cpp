@@ -398,6 +398,7 @@ static void reset_navigation_state()
 {
 	s_prev_joy_state = 0;
 	s_repeat_dir = 0;
+	s_suppressed_dirs = 0;
 	s_repeat_start_time = 0;
 	s_repeat_last_time = 0;
 }

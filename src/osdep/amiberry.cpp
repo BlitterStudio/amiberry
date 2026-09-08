@@ -3114,6 +3114,10 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		// the first intermediate axis event after opening (still beyond the
 		// threshold) would register a phantom rising edge.
 		const int suspend = (axis == SDL_GAMEPAD_AXIS_LEFTX) ? OSK_STICK_SUSPEND_X : OSK_STICK_SUSPEND_Y;
+		// Capture suspension before the latch update: the neutral event that
+		// clears the latch is itself a release UAE must see when it owned the
+		// deflection, so it must still take the fall-through path below.
+		const bool was_suspended = (dir & suspend) != 0;
 		if (!pressed)
 			dir &= ~suspend;
 		else if (!active)
@@ -3121,7 +3125,7 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		// Directions only register while the keyboard is active and the axis
 		// is not suspended; clearing always applies (the mask runs first),
 		// keeping the cache fresh while closed.
-		const bool record = active && !(dir & suspend);
+		const bool record = active && !was_suspended;
 		if (axis == SDL_GAMEPAD_AXIS_LEFTX) {
 			dir &= ~(OSK_STICK_LEFT | OSK_STICK_RIGHT);
 			if (record && pressed && value < 0) dir |= OSK_STICK_LEFT;
@@ -3141,7 +3145,7 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		// axis (deflected before the keyboard opened) flows on to normal
 		// dispatch instead, so UAE receives the releases of deflections it owns
 		// rather than keeping a stale axis state after the keyboard closes.
-		if (imgui_osk_is_active() && !(dir & suspend)) {
+		if (imgui_osk_is_active() && !was_suspended) {
 			int dx = 0, dy = 0;
 			osk_merged_direction(dx, dy);
 			osk_control(dx, dy, 0, 0);
