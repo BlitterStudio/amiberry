@@ -2862,15 +2862,24 @@ static void handle_controller_button_event(const SDL_Event& event)
 
 #ifdef __ANDROID__
 	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga
-	// software). An explicitly configured vkbd_toggle=guide wins over the menu
-	// shortcut, so the on-screen keyboard can be mapped to it if desired.
+	// software). The explicitly configured OSK toggle below wins over it, so
+	// vkbd_toggle=guide can map the keyboard to it if desired.
 	if (button == SDL_GAMEPAD_BUTTON_GUIDE && vkbd_button != SDL_GAMEPAD_BUTTON_GUIDE) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 		return;
 	}
 #endif
 
-	if (button == enter_gui_button) {
+	// The explicitly configured OSK toggle takes precedence over every other
+	// mapping on the same button — including an explicit open_gui mapping —
+	// matching the plain-joystick path.
+	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID && button == vkbd_button) {
+		// AKS_OSK toggles unconditionally, so queue it on button-down only;
+		// forwarding the release would immediately close what the press opened.
+		if (state)
+			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+	}
+	else if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 	}
 	else if (quit_key.button && button == quit_key.button) {
@@ -2884,12 +2893,6 @@ static void handle_controller_button_event(const SDL_Event& event)
 	}
 	else if (minimize_key.button && button == minimize_key.button) {
 		minimizewindow(0);
-	}
-	else if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID && button == vkbd_button) {
-		// AKS_OSK toggles unconditionally, so queue it on button-down only;
-		// forwarding the release would immediately close what the press opened.
-		if (state)
-			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 	}
 	else if (imgui_osk_should_render()) {
 		// When OSK is visible or animating, intercept D-pad and face buttons at the SDL level

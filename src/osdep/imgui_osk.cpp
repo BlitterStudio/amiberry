@@ -709,7 +709,7 @@ void imgui_osk_set_numpad(const bool enabled)
 		s_focused_key = 0;
 }
 
-static void osk_repeat_tick(const int dir_state);
+static void osk_repeat_tick(const int dir_state, const bool suppress);
 
 void imgui_osk_render()
 {
@@ -719,11 +719,12 @@ void imgui_osk_render()
 	const ImVec2 display_size = ImGui::GetIO().DisplaySize;
 	if (display_size.x <= 0.0f || display_size.y <= 0.0f)
 		return;
-	compute_geometry(static_cast<int>(display_size.x), static_cast<int>(display_size.y));
 	// Drive key repeat while a direction is held: a stable analog axis or
 	// D-pad generates no further events, so the repeat timers must be polled.
+	// Paused while a key is held (s_prev_joy_state holds the latest state).
 	if (s_visible)
-		osk_repeat_tick(s_prev_joy_state & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT));
+		osk_repeat_tick(s_prev_joy_state & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT),
+			(s_prev_joy_state & OSK_BUTTON) != 0);
 
 	// Update animation
 	float anim_offset = 0.0f;
@@ -1078,12 +1079,12 @@ static int find_nearest_key(int from_idx, int direction)
 // Advance key repeat while a direction is held. Called both from
 // imgui_osk_process() on state changes and per render frame, because a held
 // analog axis or D-pad produces no further events until its value changes.
-static void osk_repeat_tick(const int dir_state)
+static void osk_repeat_tick(const int dir_state, const bool suppress)
 {
-	// Suppress directional repeat while a key is held: moving the focus under
-	// a pressed key would make the eventual release free the newly focused
-	// key instead of the one that was pressed, leaving it stuck.
-	if (s_prev_joy_state & OSK_BUTTON)
+	// Suppress directional repeat while a key is held (or is being released):
+	// moving the focus under a pressed key would make the eventual release
+	// free the newly focused key instead of the one that was pressed.
+	if (suppress)
 		return;
 	if (!dir_state || dir_state != s_repeat_dir)
 		return;
@@ -1119,10 +1120,14 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 
 	int dir_state = state & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT);
 	Uint64 now = SDL_GetTicks();
+	// Navigation is frozen while a key is held or being released this call:
+	// the release frees s_focused_key, which must not have moved since the
+	// corresponding press.
+	const bool button_held = (state & OSK_BUTTON) || (prev & OSK_BUTTON);
 
 	// Navigation on rising edge
 	bool moved = false;
-	if (rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT)) {
+	if (!button_held && (rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT))) {
 		if (rising & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
 		if (rising & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
 		if (rising & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
@@ -1134,7 +1139,7 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 	}
 
 	// Key repeat while direction held
-	osk_repeat_tick(dir_state);
+	osk_repeat_tick(dir_state, button_held);
 
 	// Direction released: reset repeat
 	if (!dir_state) {
