@@ -2854,11 +2854,25 @@ void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 	}
 }
 
+enum { OSK_DPAD_UP = 1, OSK_DPAD_DOWN = 2, OSK_DPAD_LEFT = 4, OSK_DPAD_RIGHT = 8 };
+extern std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
+
 static void handle_controller_button_event(const SDL_Event& event)
 {
 	const auto button = event.gbutton.button;
 	const auto state = event.gbutton.down;
 	const auto which = event.gbutton.which;
+
+	// D-pad direction cache for OSK navigation, keyed by SDL_JoystickID and
+	// updated on every event — including while the keyboard is closed or
+	// animating — so a release never leaves a stale direction behind and two
+	// controllers cannot leak state into each other.
+	if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+		auto& dir = osk_dpad_dir[which];
+		const int bit = 1 << (button - SDL_GAMEPAD_BUTTON_DPAD_UP);
+		if (state) dir |= bit;
+		else       dir &= ~bit;
+	}
 
 #ifdef __ANDROID__
 	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga
@@ -2897,25 +2911,19 @@ static void handle_controller_button_event(const SDL_Event& event)
 	else if (imgui_osk_should_render()) {
 		// When OSK is visible or animating, intercept D-pad and face buttons at the SDL level
 		// before they reach UAE's input system. This ensures immediate response.
-		// Track per-button state so releasing one direction doesn't lose the other.
+		// The per-controller D-pad cache (osk_dpad_dir) is updated on every
+		// event at the top of this function, so a release during the closing
+		// animation never leaves a stale direction for the next open.
 		if (!imgui_osk_is_active())
 			return;
 
-		static bool dpad_up = false, dpad_down = false, dpad_left = false, dpad_right = false;
-		bool is_dir = true;
-		switch (button) {
-		case SDL_GAMEPAD_BUTTON_DPAD_UP:    dpad_up    = state; break;
-		case SDL_GAMEPAD_BUTTON_DPAD_DOWN:  dpad_down  = state; break;
-		case SDL_GAMEPAD_BUTTON_DPAD_LEFT:  dpad_left  = state; break;
-		case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: dpad_right = state; break;
-		default: is_dir = false; break;
-		}
-		if (is_dir) {
+		const int dir = osk_dpad_dir[which];
+		if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
 			int dx = 0, dy = 0;
-			if (dpad_left)  dx = -1;
-			else if (dpad_right) dx = 1;
-			if (dpad_up)    dy = -1;
-			else if (dpad_down)  dy = 1;
+			if (dir & OSK_DPAD_LEFT)  dx = -1;
+			else if (dir & OSK_DPAD_RIGHT) dx = 1;
+			if (dir & OSK_DPAD_UP)    dy = -1;
+			else if (dir & OSK_DPAD_DOWN)  dy = 1;
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass to UAE input system
 		}
@@ -3012,11 +3020,14 @@ static void handle_joy_button_event(const SDL_Event& event)
 		}
 
 		read_joystick_button_single(id, button, state);
+
 		break;
 	}
-
 }
 
+// osk_dpad_dir lives here (declared above handle_controller_button_event);
+// cleared on device removal alongside osk_stick_dir (see process_event).
+std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
 // Left-stick direction cache for on-screen keyboard navigation, keyed by
 // SDL_JoystickID so concurrent or replaced controllers cannot leak state
 // into each other. Cleared on device removal (see process_event).
@@ -4083,11 +4094,13 @@ static void process_event(const SDL_Event& event)
 		case SDL_EVENT_JOYSTICK_ADDED:
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
+
 		case SDL_EVENT_JOYSTICK_REMOVED:
-			// Drop any cached OSK stick direction for the departing device so
+			// Drop any cached OSK directions for the departing device so
 			// a disconnect while deflected cannot leak into a later session
 			// (or into a controller that reuses the id).
 			osk_stick_dir.erase(event.jdevice.which);
+			osk_dpad_dir.erase(event.jdevice.which);
 			if (imgui_osk_is_active()) {
 				// Neutralize whatever the departing controller had latched in
 				// the OSK state: a held direction would keep repeating (and a
