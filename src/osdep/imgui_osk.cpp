@@ -708,6 +708,8 @@ void imgui_osk_set_numpad(const bool enabled)
 		s_focused_key = 0;
 }
 
+static void osk_repeat_tick(const int dir_state);
+
 void imgui_osk_render()
 {
 	if (!s_initialized || !imgui_overlay_is_initialized())
@@ -717,6 +719,10 @@ void imgui_osk_render()
 	if (display_size.x <= 0.0f || display_size.y <= 0.0f)
 		return;
 	compute_geometry(static_cast<int>(display_size.x), static_cast<int>(display_size.y));
+	// Drive key repeat while a direction is held: a stable analog axis or
+	// D-pad generates no further events, so the repeat timers must be polled.
+	if (s_visible)
+		osk_repeat_tick(s_prev_joy_state & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT));
 
 	// Update animation
 	float anim_offset = 0.0f;
@@ -1064,6 +1070,27 @@ static int find_nearest_key(int from_idx, int direction)
 	return (best >= 0) ? best : from_idx;
 }
 
+// Advance key repeat while a direction is held. Called both from
+// imgui_osk_process() on state changes and per render frame, because a held
+// analog axis or D-pad produces no further events until its value changes.
+static void osk_repeat_tick(const int dir_state)
+{
+	if (!dir_state || dir_state != s_repeat_dir)
+		return;
+	const Uint64 now = SDL_GetTicks();
+	const Uint64 held = now - s_repeat_start_time;
+	if (held < REPEAT_DELAY_MS)
+		return;
+	const Uint64 since_last = now - s_repeat_last_time;
+	if (since_last >= REPEAT_RATE_MS) {
+		if (dir_state & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
+		if (dir_state & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
+		if (dir_state & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
+		if (dir_state & OSK_RIGHT) s_focused_key = find_nearest_key(s_focused_key, OSK_RIGHT);
+		s_repeat_last_time = now;
+	}
+}
+
 bool imgui_osk_process(int state, int* keycode, int* pressed)
 {
 	if (!s_visible || !s_initialized)
@@ -1097,19 +1124,7 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 	}
 
 	// Key repeat while direction held
-	if (!moved && dir_state && dir_state == s_repeat_dir) {
-		Uint64 held = now - s_repeat_start_time;
-		if (held >= REPEAT_DELAY_MS) {
-			Uint64 since_last = now - s_repeat_last_time;
-			if (since_last >= REPEAT_RATE_MS) {
-				if (dir_state & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
-				if (dir_state & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
-				if (dir_state & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
-				if (dir_state & OSK_RIGHT) s_focused_key = find_nearest_key(s_focused_key, OSK_RIGHT);
-				s_repeat_last_time = now;
-			}
-		}
-	}
+	osk_repeat_tick(dir_state);
 
 	// Direction released: reset repeat
 	if (!dir_state) {

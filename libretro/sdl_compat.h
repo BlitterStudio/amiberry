@@ -599,6 +599,8 @@ typedef enum SDL_GamepadAxis {
 	SDL_GAMEPAD_AXIS_COUNT
 } SDL_GamepadAxis;
 
+#define SDL_JOYSTICK_AXIS_MAX 32767
+
 typedef SDL_GamepadAxis SDL_GameControllerAxis;
 
 typedef enum SDL_GamepadBindingType {

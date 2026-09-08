@@ -3014,12 +3014,12 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 	const auto axis = event.gaxis.axis;
 	const auto value = event.gaxis.value;
 
-	// While the on-screen keyboard is active, the left analog stick drives its
-	// navigation — same as the D-pad — so gamepad-only setups (Android TV,
-	// couch play) can move the key focus without a touch screen.
-	if (imgui_osk_is_active()
-		&& (axis == SDL_GAMEPAD_AXIS_LEFTX || axis == SDL_GAMEPAD_AXIS_LEFTY)) {
-		static bool ls_left = false, ls_right = false, ls_up = false, ls_down = false;
+	// Track the left-stick direction state on every axis event — including
+	// while the keyboard is closed — so a neutral event after closing always
+	// refreshes the cache instead of leaving a stale direction that would
+	// surface as a phantom diagonal on the next open.
+	static bool ls_left = false, ls_right = false, ls_up = false, ls_down = false;
+	if (axis == SDL_GAMEPAD_AXIS_LEFTX || axis == SDL_GAMEPAD_AXIS_LEFTY) {
 		const int threshold = SDL_JOYSTICK_AXIS_MAX * 2 / 5;
 		const bool pressed = abs(value) > threshold;
 		if (axis == SDL_GAMEPAD_AXIS_LEFTX) {
@@ -3030,13 +3030,18 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 			ls_up = pressed && value < 0;
 			ls_down = pressed && value > 0;
 		}
-		int dx = 0, dy = 0;
-		if (ls_left)  dx = -1;
-		else if (ls_right) dx = 1;
-		if (ls_up)    dy = -1;
-		else if (ls_down)  dy = 1;
-		osk_control(dx, dy, 0, 0);
-		return; // consume — don't pass the stick to UAE input while navigating
+		// While the keyboard is active, the stick drives its navigation — same
+		// as the D-pad — so gamepad-only setups (Android TV, couch play) can
+		// move the key focus without a touch screen.
+		if (imgui_osk_is_active()) {
+			int dx = 0, dy = 0;
+			if (ls_left)  dx = -1;
+			else if (ls_right) dx = 1;
+			if (ls_up)    dy = -1;
+			else if (ls_down)  dy = 1;
+			osk_control(dx, dy, 0, 0);
+			return; // consume — don't pass the stick to UAE input while navigating
+		}
 	}
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
