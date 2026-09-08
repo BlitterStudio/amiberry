@@ -3043,13 +3043,13 @@ static void handle_joy_button_event(const SDL_Event& event)
 	}
 }
 
-// osk_dpad_dir lives here (declared above handle_controller_button_event);
+enum { OSK_STICK_LEFT = 1, OSK_STICK_RIGHT = 2, OSK_STICK_UP = 4, OSK_STICK_DOWN = 8,
+	OSK_STICK_SUSPEND_X = 16, OSK_STICK_SUSPEND_Y = 32 };
 // cleared on device removal alongside osk_stick_dir (see process_event).
 std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
 // Left-stick direction cache for on-screen keyboard navigation, keyed by
 // SDL_JoystickID so concurrent or replaced controllers cannot leak state
 // into each other. Cleared on device removal (see process_event).
-enum { OSK_STICK_LEFT = 1, OSK_STICK_RIGHT = 2, OSK_STICK_UP = 4, OSK_STICK_DOWN = 8 };
 static std::unordered_map<SDL_JoystickID, int> osk_stick_dir;
 
 // Combined OSK navigation direction across every controller's D-pad and
@@ -3096,11 +3096,20 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 		auto& dir = osk_stick_dir[event.gaxis.which];
 		const int threshold = SDL_JOYSTICK_AXIS_MAX * 2 / 5;
 		const bool pressed = abs(value) > threshold;
-		// Directions only register while the keyboard is active, so a
-		// deflection held from before it opened cannot surface as a phantom
-		// rising edge; clearing always applies (the mask runs first), keeping
-		// the cache fresh while closed.
-		const bool record = imgui_osk_is_active();
+		const bool active = imgui_osk_is_active();
+		// A deflection that exists while the keyboard is closed suspends that
+		// axis until it crosses back through the dead zone: without the latch,
+		// the first intermediate axis event after opening (still beyond the
+		// threshold) would register a phantom rising edge.
+		const int suspend = (axis == SDL_GAMEPAD_AXIS_LEFTX) ? OSK_STICK_SUSPEND_X : OSK_STICK_SUSPEND_Y;
+		if (!pressed)
+			dir &= ~suspend;
+		else if (!active)
+			dir |= suspend;
+		// Directions only register while the keyboard is active and the axis
+		// is not suspended; clearing always applies (the mask runs first),
+		// keeping the cache fresh while closed.
+		const bool record = active && !(dir & suspend);
 		if (axis == SDL_GAMEPAD_AXIS_LEFTX) {
 			dir &= ~(OSK_STICK_LEFT | OSK_STICK_RIGHT);
 			if (record && pressed && value < 0) dir |= OSK_STICK_LEFT;
