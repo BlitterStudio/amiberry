@@ -2880,7 +2880,10 @@ static void handle_controller_button_event(const SDL_Event& event)
 		minimizewindow(0);
 	}
 	else if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID && button == vkbd_button) {
-		inputdevice_add_inputcode(AKS_OSK, state, nullptr);
+		// AKS_OSK toggles unconditionally, so queue it on button-down only;
+		// forwarding the release would immediately close what the press opened.
+		if (state)
+			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 	}
 	else if (imgui_osk_should_render()) {
 		// When OSK is visible or animating, intercept D-pad and face buttons at the SDL level
@@ -2955,20 +2958,14 @@ static void handle_joy_button_event(const SDL_Event& event)
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
 #ifdef __ANDROID__
-		// On Android, allow menu button without hotkey — devices may have no
-		// accessible hotkey modifier (e.g. built-in gamepad on handhelds).
-		if (button == did->mapping.menu_button && state)
-		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
-		}
-		// Same direct access for the on-screen keyboard toggle on the joystick
-		// path — SDL may not open a device as a gamepad, in which case the
-		// controller handler above never sees these buttons. event.jbutton.button
-		// is a raw physical index: resolve the configured logical button through
-		// the device map before comparing, and only consume the press while the
-		// global toggle is active (keyboard enabled, toggle configured) so a
-		// device-file mapping cannot swallow input when it is not.
+		// Direct on-screen keyboard toggle for the joystick path — SDL may not
+		// open a device as a gamepad, in which case the controller handler above
+		// never sees these buttons. event.jbutton.button is a raw physical
+		// index: resolve the configured logical button through the device map
+		// before comparing, and only consume the press while the global toggle
+		// is active (keyboard enabled, toggle configured). Checked before the
+		// menu branch so an explicitly selected toggle (e.g. Start) wins over a
+		// menu mapping on the same physical button, matching the controller path.
 		if (state
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
 			&& did->mapping.vkbd_button >= 0
@@ -2976,6 +2973,13 @@ static void handle_joy_button_event(const SDL_Event& event)
 			&& did->mapping.button[did->mapping.vkbd_button] == button)
 		{
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+			break;
+		}
+		// On Android, allow menu button without hotkey — devices may have no
+		// accessible hotkey modifier (e.g. built-in gamepad on handhelds).
+		if (button == did->mapping.menu_button && state)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
 #endif
