@@ -2856,6 +2856,8 @@ void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 
 enum { OSK_DPAD_UP = 1, OSK_DPAD_DOWN = 2, OSK_DPAD_LEFT = 4, OSK_DPAD_RIGHT = 8 };
 extern std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
+// Joystick ID of the controller currently holding the OSK "press key" button.
+static SDL_JoystickID osk_south_owner = 0;
 
 static void handle_controller_button_event(const SDL_Event& event)
 {
@@ -2927,8 +2929,10 @@ static void handle_controller_button_event(const SDL_Event& event)
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass to UAE input system
 		}
-		// Fire button (A/South) = press key
+		// Fire button (A/South) = press key. Track which controller owns the
+		// press so a disconnect can release it only when its owner departs.
 		if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
+			osk_south_owner = state ? which : 0;
 			osk_control(0, 0, 1, state);
 			return;
 		}
@@ -4091,22 +4095,38 @@ static void process_event(const SDL_Event& event)
 			break;
 #endif
 
-		case SDL_EVENT_JOYSTICK_ADDED:
-			handle_joy_device_event(event.jdevice.which, false);
-			break;
-
 		case SDL_EVENT_JOYSTICK_REMOVED:
-			// Drop any cached OSK directions for the departing device so
-			// a disconnect while deflected cannot leak into a later session
-			// (or into a controller that reuses the id).
+			// Drop the departing device's cached OSK directions so they cannot
+			// leak into a later session (or a controller that reuses the id).
 			osk_stick_dir.erase(event.jdevice.which);
 			osk_dpad_dir.erase(event.jdevice.which);
 			if (imgui_osk_is_active()) {
-				// Neutralize whatever the departing controller had latched in
-				// the OSK state: a held direction would keep repeating (and a
-				// held key stay pressed) with no device left to release it.
-				osk_control(0, 0, 0, 0); // clear directions
-				osk_control(0, 0, 1, 0); // release the button
+				// Recompute the accumulated direction from the remaining
+				// controllers' caches instead of clearing it: another
+				// controller may still hold it, and a stable held input
+				// produces no new event to re-establish it.
+				int dx = 0, dy = 0;
+				for (const auto& entry : osk_dpad_dir)
+				{
+					if (entry.second & OSK_DPAD_LEFT)  dx = -1;
+					else if (entry.second & OSK_DPAD_RIGHT) dx = 1;
+					if (entry.second & OSK_DPAD_UP)    dy = -1;
+					else if (entry.second & OSK_DPAD_DOWN)  dy = 1;
+				}
+				for (const auto& entry : osk_stick_dir)
+				{
+					if (entry.second & OSK_STICK_LEFT)  dx = -1;
+					else if (entry.second & OSK_STICK_RIGHT) dx = 1;
+					if (entry.second & OSK_STICK_UP)    dy = -1;
+					else if (entry.second & OSK_STICK_DOWN)  dy = 1;
+				}
+				osk_control(dx, dy, 0, 0);
+				// Release the held key only when its owner is departing.
+				if (osk_south_owner == event.jdevice.which)
+				{
+					osk_control(0, 0, 1, 0);
+					osk_south_owner = 0;
+				}
 			}
 			handle_joy_device_event(event.jdevice.which, true);
 			break;
