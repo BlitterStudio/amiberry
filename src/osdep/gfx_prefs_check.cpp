@@ -712,6 +712,26 @@ int check_prefs_changed_gfx()
 				did->mapping.vkbd_button = vkbd_button;
 			}
 		}
+
+#ifdef __ANDROID__
+		// Recompute the Start menu fallback against the new toggle: an
+		// explicitly selected Start keyboard toggle must win over the fallback
+		// for the rest of the session, not only after a restart. Keep the
+		// per-device menu mapping in sync for the joystick event path.
+		enter_gui_button = SDL_GetGamepadButtonFromString(currprefs.open_gui);
+		if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID
+			&& vkbd_button != SDL_GAMEPAD_BUTTON_START)
+			enter_gui_button = SDL_GAMEPAD_BUTTON_START;
+		for (int port = 0; port < 2; port++)
+		{
+			const auto host_joy_id = currprefs.jports[port].id - JSEM_JOYS;
+			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
+			{
+				didata* did = &di_joystick[host_joy_id];
+				did->mapping.menu_button = enter_gui_button;
+			}
+		}
+#endif
 	}
 
 	// On-screen joystick

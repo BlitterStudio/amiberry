@@ -3009,39 +3009,48 @@ static void handle_joy_button_event(const SDL_Event& event)
 
 }
 
+// Left-stick direction cache for on-screen keyboard navigation, keyed by
+// SDL_JoystickID so concurrent or replaced controllers cannot leak state
+// into each other. Cleared on device removal (see process_event).
+enum { OSK_STICK_LEFT = 1, OSK_STICK_RIGHT = 2, OSK_STICK_UP = 4, OSK_STICK_DOWN = 8 };
+static std::unordered_map<SDL_JoystickID, int> osk_stick_dir;
+
 static void handle_controller_axis_motion_event(const SDL_Event& event)
 {
 	const auto axis = event.gaxis.axis;
 	const auto value = event.gaxis.value;
 
-	// Track the left-stick direction state on every axis event — including
-	// while the keyboard is closed — so a neutral event after closing always
-	// refreshes the cache instead of leaving a stale direction that would
-	// surface as a phantom diagonal on the next open.
-	static bool ls_left = false, ls_right = false, ls_up = false, ls_down = false;
+	// Left-stick direction cache for OSK navigation, keyed by SDL_JoystickID
+	// so two controllers cannot leak state into each other, updated on every
+	// axis event (including while the keyboard is closed) so a neutral event
+	// always refreshes it. Cleared when the device is removed.
 	if (axis == SDL_GAMEPAD_AXIS_LEFTX || axis == SDL_GAMEPAD_AXIS_LEFTY) {
+		auto& dir = osk_stick_dir[event.gaxis.which];
 		const int threshold = SDL_JOYSTICK_AXIS_MAX * 2 / 5;
 		const bool pressed = abs(value) > threshold;
 		if (axis == SDL_GAMEPAD_AXIS_LEFTX) {
-			ls_left = pressed && value < 0;
-			ls_right = pressed && value > 0;
+			dir &= ~(OSK_STICK_LEFT | OSK_STICK_RIGHT);
+			if (pressed && value < 0) dir |= OSK_STICK_LEFT;
+			if (pressed && value > 0) dir |= OSK_STICK_RIGHT;
 		}
 		else {
-			ls_up = pressed && value < 0;
-			ls_down = pressed && value > 0;
+			dir &= ~(OSK_STICK_UP | OSK_STICK_DOWN);
+			if (pressed && value < 0) dir |= OSK_STICK_UP;
+			if (pressed && value > 0) dir |= OSK_STICK_DOWN;
 		}
 		// While the keyboard is active, the stick drives its navigation — same
 		// as the D-pad — so gamepad-only setups (Android TV, couch play) can
 		// move the key focus without a touch screen.
 		if (imgui_osk_is_active()) {
 			int dx = 0, dy = 0;
-			if (ls_left)  dx = -1;
-			else if (ls_right) dx = 1;
-			if (ls_up)    dy = -1;
-			else if (ls_down)  dy = 1;
+			if (dir & OSK_STICK_LEFT)  dx = -1;
+			else if (dir & OSK_STICK_RIGHT) dx = 1;
+			if (dir & OSK_STICK_UP)    dy = -1;
+			else if (dir & OSK_STICK_DOWN)  dy = 1;
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass the stick to UAE input while navigating
 		}
+		// Not active: the event flows on to normal dispatch.
 	}
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
@@ -4067,6 +4076,10 @@ static void process_event(const SDL_Event& event)
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
 		case SDL_EVENT_JOYSTICK_REMOVED:
+			// Drop any cached OSK stick direction for the departing device so
+			// a disconnect while deflected cannot leak into a later session
+			// (or into a controller that reuses the id).
+			osk_stick_dir.erase(event.jdevice.which);
 			handle_joy_device_event(event.jdevice.which, true);
 			break;
 
