@@ -901,6 +901,7 @@ void imgui_osk_hide()
 	// only clears it when invoked while the keyboard is inactive, and callers
 	// may stop calling it the moment s_visible goes false.
 	osk_control(0, 0, 0, 0);
+	osk_clear_controller_holds(); // per-controller holds do not cross sessions
 }
 
 bool imgui_osk_handle_finger_down(float screen_x, float screen_y, int finger_id)

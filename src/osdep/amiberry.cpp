@@ -2863,6 +2863,11 @@ static void osk_merged_direction(int& dx, int& dy);
 // press, so overlapping holds must be merged before forwarding.
 static std::unordered_map<SDL_JoystickID, bool> osk_south_held;
 
+void osk_clear_controller_holds()
+{
+	osk_south_held.clear();
+}
+
 static void handle_controller_button_event(const SDL_Event& event)
 {
 	const auto button = event.gbutton.button;
@@ -2885,6 +2890,7 @@ static void handle_controller_button_event(const SDL_Event& event)
 	// gameplay hold into the keyboard's state after it opens.
 	if (button == SDL_GAMEPAD_BUTTON_SOUTH)
 		osk_south_held[which] = state && imgui_osk_is_active();
+
 
 
 #ifdef __ANDROID__

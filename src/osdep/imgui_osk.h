@@ -54,4 +54,8 @@ void imgui_osk_set_numpad(bool enabled);
 // x/y: direction (-1,0,1). button: bit index. buttonstate: 0/1.
 void osk_control(int x, int y, int button, int buttonstate);
 
+// Drop per-controller "press key" hold state (defined in the SDL event layer).
+// Called when the keyboard hides so holds cannot cross sessions.
+void osk_clear_controller_holds();
+
 #endif // IMGUI_OSK_H
