@@ -2859,8 +2859,9 @@ extern std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
 // Combined OSK navigation direction across every controller's D-pad and
 // left-stick cache (defined next to the caches).
 static void osk_merged_direction(int& dx, int& dy);
-// Joystick ID of the controller currently holding the OSK "press key" button.
-static SDL_JoystickID osk_south_owner = 0;
+// Per-controller "press key" (South) hold state: the OSK tracks a single
+// press, so overlapping holds must be merged before forwarding.
+static std::unordered_map<SDL_JoystickID, bool> osk_south_held;
 
 static void handle_controller_button_event(const SDL_Event& event)
 {
@@ -2931,11 +2932,15 @@ static void handle_controller_button_event(const SDL_Event& event)
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass to UAE input system
 		}
-		// Fire button (A/South) = press key. Track which controller owns the
-		// press so a disconnect can release it only when its owner departs.
+		// Fire button (A/South) = press key. The OSK tracks a single press:
+		// record this controller's hold and forward the merged state, so an
+		// overlapping release on another pad cannot drop a still-held key.
 		if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
-			osk_south_owner = state ? which : 0;
-			osk_control(0, 0, 1, state);
+			osk_south_held[which] = state;
+			bool any_held = false;
+			for (const auto& entry : osk_south_held)
+				any_held = any_held || entry.second;
+			osk_control(0, 0, 1, any_held ? 1 : 0);
 			return;
 		}
 		// B/East = close keyboard
@@ -4111,11 +4116,26 @@ static void process_event(const SDL_Event& event)
 			handle_clipboard_update_event();
 			break;
 
+#ifndef LIBRETRO
+		case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
+			// Display refresh-mode changed (user switched Hz in OS display
+			// settings, or HDMI re-linked at a new mode). Force the hw VSync
+			// pacing decision to re-probe without waiting for the window to
+			// move or the Amiga target refresh to change.
+			amiberry_hw_vsync_pacing_invalidate();
+			break;
+#endif
+
+		case SDL_EVENT_JOYSTICK_ADDED:
+			handle_joy_device_event(event.jdevice.which, false);
+			break;
+
 		case SDL_EVENT_JOYSTICK_REMOVED:
 			// Drop the departing device's cached OSK directions so they cannot
 			// leak into a later session (or a controller that reuses the id).
 			osk_stick_dir.erase(event.jdevice.which);
 			osk_dpad_dir.erase(event.jdevice.which);
+			osk_south_held.erase(event.jdevice.which);
 			if (imgui_osk_is_active()) {
 				// Recompute the accumulated direction from the remaining
 				// controllers' caches instead of clearing it: another
@@ -4124,12 +4144,12 @@ static void process_event(const SDL_Event& event)
 				int dx = 0, dy = 0;
 				osk_merged_direction(dx, dy);
 				osk_control(dx, dy, 0, 0);
-				// Release the held key only when its owner is departing.
-				if (osk_south_owner == event.jdevice.which)
-				{
-					osk_control(0, 0, 1, 0);
-					osk_south_owner = 0;
-				}
+				// Forward the merged key-hold state: only release when no
+				// remaining controller is still holding the button.
+				bool any_held = false;
+				for (const auto& entry : osk_south_held)
+					any_held = any_held || entry.second;
+				osk_control(0, 0, 1, any_held ? 1 : 0);
 			}
 			handle_joy_device_event(event.jdevice.which, true);
 			break;
