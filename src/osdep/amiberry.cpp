@@ -843,7 +843,11 @@ static void set_key_configs(const uae_prefs* p)
 				// Store the raw physical index (translated through the device
 				// map): the plain-joystick hotkey-combo path compares this field
 				// directly with the raw event button.
-				did->mapping.vkbd_button = did->mapping.button[vkbd_button];
+				// Prefer the live translation; keep the pre-mask value stored
+				// by setup_mapping() when hotkey masking invalidated the entry.
+				const int raw_toggle = did->mapping.button[vkbd_button];
+				if (raw_toggle != SDL_GAMEPAD_BUTTON_INVALID)
+					did->mapping.vkbd_button = raw_toggle;
 			}
 		}
 	}
@@ -2959,9 +2963,6 @@ static void handle_controller_button_event(const SDL_Event& event)
 	else if (screenshot_key.button && button == screenshot_key.button) {
 		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, state, nullptr);
 	}
-	else if (debugger_key.button && button == debugger_key.button) {
-		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, state, nullptr);
-	}
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 			didata* did = &di_joystick[id];
@@ -2995,16 +2996,16 @@ static void handle_joy_button_event(const SDL_Event& event)
 #ifdef __ANDROID__
 		// Direct on-screen keyboard toggle for the joystick path — SDL may not
 		// open a device as a gamepad, in which case the controller handler above
-		// never sees these buttons. event.jbutton.button is a raw physical
-		// index: translate the global logical toggle through the device map
-		// before comparing, and only consume the press while the global toggle
-		// is active. Checked before the menu branch so an explicitly selected
-		// toggle (e.g. Start) wins over a menu mapping on the same physical
-		// button, matching the controller path. RetroArch devices keep their
-		// raw per-device vkbd_button for the hotkey-combo path below.
+		// never sees these buttons. Compare against the per-device raw index
+		// stored at mapping time — captured before the hotkey masking loop can
+		// invalidate the logical-map entry for the same physical button — and
+		// only consume the press while the global toggle is active. Checked
+		// before the menu branch so an explicitly selected toggle (e.g. Start)
+		// wins over a menu mapping on the same physical button, matching the
+		// controller path.
 		if (state
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
-			&& did->mapping.button[vkbd_button] == button)
+			&& did->mapping.vkbd_button == button)
 		{
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;
@@ -3075,14 +3076,24 @@ static void osk_merged_direction(int& dx, int& dy)
 		else if (entry.second & OSK_STICK_DOWN)  dy = 1;
 	}
 }
-
 void osk_clear_controller_holds()
 {
 	osk_south_held.clear();
 	osk_dpad_dir.clear();
-	osk_stick_dir.clear();
+	// Directions do not cross sessions, but suspension latches must: an axis
+	// deflected when the keyboard closed is converted to a suspended axis so
+	// its first post-open event cannot register a phantom rising edge, and
+	// pre-existing latches survive until the axis crosses neutral.
+	for (auto& entry : osk_stick_dir)
+	{
+		int keep = entry.second & (OSK_STICK_SUSPEND_X | OSK_STICK_SUSPEND_Y);
+		if (entry.second & (OSK_STICK_LEFT | OSK_STICK_RIGHT))
+			keep |= OSK_STICK_SUSPEND_X;
+		if (entry.second & (OSK_STICK_UP | OSK_STICK_DOWN))
+			keep |= OSK_STICK_SUSPEND_Y;
+		entry.second = keep;
+	}
 }
-
 static void handle_controller_axis_motion_event(const SDL_Event& event)
 {
 	const auto axis = event.gaxis.axis;

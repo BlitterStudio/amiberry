@@ -713,9 +713,13 @@ int check_prefs_changed_gfx()
 					continue; // keep the RetroArch raw toggle for the hotkey-combo path
 				// Store the raw physical index (translated through the device
 				// map): the hotkey-combo path compares it with the raw event.
-				did->mapping.vkbd_button = vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
+				// Keep the pre-mask value stored by setup_mapping() when hotkey
+				// masking invalidated the live map entry.
+				const int raw_toggle = vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
 					? did->mapping.button[vkbd_button]
 					: SDL_GAMEPAD_BUTTON_INVALID;
+				if (raw_toggle != SDL_GAMEPAD_BUTTON_INVALID || vkbd_button == SDL_GAMEPAD_BUTTON_INVALID)
+					did->mapping.vkbd_button = raw_toggle;
 			}
 		}
 
