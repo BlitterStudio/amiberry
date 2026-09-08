@@ -647,6 +647,7 @@ void imgui_osk_shutdown()
 	s_sticky_keys.clear();
 	s_finger_keys.clear();
 	s_pressed_keys.clear();
+	osk_control(0, 0, 0, 0); // drop accumulated input-layer joystick state
 }
 
 void imgui_osk_toggle()
@@ -893,6 +894,10 @@ void imgui_osk_hide()
 	s_animating = true;
 	s_anim_start_time = SDL_GetTicks();
 	reset_navigation_state();
+	// Drop any accumulated joystick state from the input layer: osk_control()
+	// only clears it when invoked while the keyboard is inactive, and callers
+	// may stop calling it the moment s_visible goes false.
+	osk_control(0, 0, 0, 0);
 }
 
 bool imgui_osk_handle_finger_down(float screen_x, float screen_y, int finger_id)
