@@ -2999,19 +2999,14 @@ static void handle_joy_button_event(const SDL_Event& event)
 #ifdef __ANDROID__
 		// Direct on-screen keyboard toggle for the joystick path — SDL may not
 		// open a device as a gamepad, in which case the controller handler above
-		// never sees these buttons. Compare against the per-device raw index
-		// stored at mapping time — captured before the hotkey masking loop can
-		// invalidate the logical-map entry for the same physical button — and
-		// Non-RetroArch devices store the raw of the configured global toggle
-		// at mapping time (before hotkey masking); RetroArch devices keep
-		// their own raw osk button there, so translate the global through
-		// the device map for them instead.
-		const int configured_raw = did->mapping.is_retroarch
-			? did->mapping.button[vkbd_button]
-			: did->mapping.vkbd_button;
+		// never sees these buttons. Resolve the configured global toggle
+		// through the pristine (pre-mask) button map, after validating it —
+		// the masked map cannot be used because the hotkey masking loop
+		// invalidates entries sharing the hotkey's raw button, and RetroArch
+		// devices additionally keep their own osk button in the stored field.
 		if (state
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
-			&& configured_raw == button)
+			&& did->mapping.button_unmasked[vkbd_button] == button)
 		{
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 			break;

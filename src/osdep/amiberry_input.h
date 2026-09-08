@@ -20,8 +20,10 @@ enum
 
 struct controller_mapping {
 	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> button;
+	// Pristine copy of button[], captured before the hotkey masking loop
+	// invalidates entries; used to resolve configured buttons to raw indices.
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> button_unmasked;
 	std::array<int, SDL_GAMEPAD_AXIS_COUNT> axis;
-
 	bool lstick_axis_y_invert{};
 	bool lstick_axis_x_invert{};
 

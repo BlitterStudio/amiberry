@@ -1744,6 +1744,10 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 		// field directly with the raw event button.
 		did->mapping.vkbd_button = did->mapping.button[vkbd_button];
 
+	// Pristine copy for resolving configured buttons after the hotkey mask
+	// below invalidates shared entries.
+	did->mapping.button_unmasked = did->mapping.button;
+
 	if (did->mapping.hotkey_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
 		for (auto& k : did->mapping.button)
