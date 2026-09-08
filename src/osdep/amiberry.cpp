@@ -2879,6 +2879,12 @@ static void handle_controller_button_event(const SDL_Event& event)
 		if (state) dir |= bit;
 		else       dir &= ~bit;
 	}
+	// Record this controller's "press key" (South) hold on every event —
+	// including while the keyboard is closed or animating — so a release
+	// can never leave a stale entry that blocks later merged-state updates.
+	if (button == SDL_GAMEPAD_BUTTON_SOUTH)
+		osk_south_held[which] = state;
+
 
 #ifdef __ANDROID__
 	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga
@@ -2932,11 +2938,10 @@ static void handle_controller_button_event(const SDL_Event& event)
 			osk_control(dx, dy, 0, 0);
 			return; // consume — don't pass to UAE input system
 		}
-		// Fire button (A/South) = press key. The OSK tracks a single press:
-		// record this controller's hold and forward the merged state, so an
-		// overlapping release on another pad cannot drop a still-held key.
+		// Fire button (A/South) = press key. The hold map was updated at the
+		// top of this function; forward the merged state so an overlapping
+		// release on another pad cannot drop a still-held key.
 		if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
-			osk_south_held[which] = state;
 			bool any_held = false;
 			for (const auto& entry : osk_south_held)
 				any_held = any_held || entry.second;
