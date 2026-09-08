@@ -2879,11 +2879,12 @@ static void handle_controller_button_event(const SDL_Event& event)
 		if (state) dir |= bit;
 		else       dir &= ~bit;
 	}
-	// Record this controller's "press key" (South) hold on every event —
-	// including while the keyboard is closed or animating — so a release
-	// can never leave a stale entry that blocks later merged-state updates.
+	// Record "press key" (South) holds that begin while the keyboard is
+	// active; always record releases, including while closed or animating,
+	// so a stale entry can neither block merged-state updates nor leak a
+	// gameplay hold into the keyboard's state after it opens.
 	if (button == SDL_GAMEPAD_BUTTON_SOUTH)
-		osk_south_held[which] = state;
+		osk_south_held[which] = state && imgui_osk_is_active();
 
 
 #ifdef __ANDROID__
