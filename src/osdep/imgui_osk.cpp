@@ -719,6 +719,8 @@ void imgui_osk_render()
 	const ImVec2 display_size = ImGui::GetIO().DisplaySize;
 	if (display_size.x <= 0.0f || display_size.y <= 0.0f)
 		return;
+	compute_geometry(static_cast<int>(display_size.x), static_cast<int>(display_size.y));
+
 	// Drive key repeat while a direction is held: a stable analog axis or
 	// D-pad generates no further events, so the repeat timers must be polled.
 	// Paused while a key is held (s_prev_joy_state holds the latest state).
