@@ -709,6 +709,8 @@ int check_prefs_changed_gfx()
 			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
 			{
 				didata* did = &di_joystick[host_joy_id];
+				if (did->mapping.is_retroarch && vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
+					continue; // keep the RetroArch raw toggle for the hotkey-combo path
 				did->mapping.vkbd_button = vkbd_button;
 			}
 		}
@@ -716,8 +718,9 @@ int check_prefs_changed_gfx()
 #ifdef __ANDROID__
 		// Recompute the Start menu fallback against the new toggle: an
 		// explicitly selected Start keyboard toggle must win over the fallback
-		// for the rest of the session, not only after a restart. Keep the
-		// per-device menu mapping in sync for the joystick event path.
+		// for the rest of the session, not only after a restart. Store the
+		// per-device menu mapping translated to the raw button index — the
+		// plain-joystick handler compares it directly with the raw event.
 		enter_gui_button = SDL_GetGamepadButtonFromString(currprefs.open_gui);
 		if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_START)
@@ -728,7 +731,9 @@ int check_prefs_changed_gfx()
 			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
 			{
 				didata* did = &di_joystick[host_joy_id];
-				did->mapping.menu_button = enter_gui_button;
+				did->mapping.menu_button = enter_gui_button != SDL_GAMEPAD_BUTTON_INVALID
+					? did->mapping.button[enter_gui_button]
+					: SDL_GAMEPAD_BUTTON_INVALID;
 			}
 		}
 #endif

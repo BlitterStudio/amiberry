@@ -1736,8 +1736,10 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 	// set_key_configs() is not re-run on device hot-plug or re-enumeration:
 	// reapply the global on-screen keyboard toggle so a freshly rebuilt plain-
 	// joystick mapping keeps it effective (the joystick event path consumes the
-	// press before normal dispatch).
-	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
+	// press before normal dispatch). RetroArch-mapped devices keep their raw
+	// toggle index from map_from_retroarch() — the hotkey-combo path compares
+	// it directly with the raw event button.
+	if (!did->mapping.is_retroarch && vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
 		did->mapping.vkbd_button = vkbd_button;
 
 	if (did->mapping.hotkey_button != SDL_GAMEPAD_BUTTON_INVALID)

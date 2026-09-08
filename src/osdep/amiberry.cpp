@@ -808,7 +808,10 @@ static void set_key_configs(const uae_prefs* p)
 			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
 			{
 				didata* did = &di_joystick[host_joy_id];
-				did->mapping.menu_button = enter_gui_button;
+				// The plain-joystick handler compares menu_button directly with
+				// the raw event index: translate the logical button through the
+				// device map before storing.
+				did->mapping.menu_button = did->mapping.button[enter_gui_button];
 			}
 		}
 	}
