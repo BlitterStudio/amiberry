@@ -142,7 +142,32 @@ static void hat(int id, int value) {
 }
 static int pending(int code) { int count = 0; for (const auto& e : inputcode_pending) count += e.code == code; return count; }
 
+static void test_center_drift(bool raw, bool reacquire) {
+    reset_fixture();
+    const int physical_axis = raw ? 3 : SDL_GAMEPAD_AXIS_LEFTX;
+    if (raw) {
+        di_joystick[0].mapping.is_retroarch = true;
+        di_joystick[0].mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] = physical_axis;
+        di_joystick[0].mapping.axis[SDL_GAMEPAD_AXIS_RIGHTY] = 0;
+    }
+    if (reacquire) {
+        if (raw) sticks[0].axes[physical_axis] = -400;
+        else pads[0].axes[physical_axis] = -400;
+        osk_clear_controller_holds();
+    } else {
+        axis(0, physical_axis, -400, raw);
+    }
+    active = true;
+    axis(0, physical_axis, 24000, raw);
+    assert(observed_osk & OSK_RIGHT);
+    assert(joydir[0] == 0);
+}
+
 int main() {
+    for (bool raw : {false, true})
+        for (bool reacquire : {false, true})
+            test_center_drift(raw, reacquire);
+
     reset_fixture();
     button(0, SDL_GAMEPAD_BUTTON_EAST, true);
     button(0, SDL_GAMEPAD_BUTTON_DPAD_LEFT, true);
@@ -173,11 +198,23 @@ int main() {
         reset_fixture(); mouse_mode = true;
         axis(0, SDL_GAMEPAD_AXIS_LEFTX, initial);
         assert(mouse_delta[0][0] != 0 && mouse_deltanoreset[0][0]);
+        osk_clear_controller_holds();
         active = true;
         if (initial == 32000) axis(0, SDL_GAMEPAD_AXIS_LEFTX, 12000);
         axis(0, SDL_GAMEPAD_AXIS_LEFTX, 0);
         assert(mouse_delta[0][0] == 0 && !mouse_deltanoreset[0][0]);
     }
+
+    reset_fixture(); mouse_mode = true;
+    currprefs.input_joymouse_deadzone = 1;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 1200);
+    assert(mouse_delta[0][0] != 0);
+    osk_clear_controller_holds();
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert(observed_osk == 0 && mouse_delta[0][0] != 0);
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 0);
+    assert(mouse_delta[0][0] == 0 && !mouse_deltanoreset[0][0]);
 
     reset_fixture(); active = true;
     axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);

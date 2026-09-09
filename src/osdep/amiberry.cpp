@@ -2832,6 +2832,16 @@ static void osk_publish_controller_state()
 	osk_control(0, 0, 1, (state & OSK_BUTTON) != 0, OskInputSource::Gamepad);
 }
 
+static bool osk_axis_has_gameplay_input(const int value)
+{
+	// Center drift is neutral, but input below the OSK's 40% threshold can
+	// still drive a guest joystick or mouse. Preserve the most sensitive
+	// supported reader, including custom deadzones.
+	const int percent = std::min(currprefs.input_joystick_deadzone, currprefs.input_joymouse_deadzone);
+	const int deadzone = std::min(joystick_dead_zone, percent * SDL_JOYSTICK_AXIS_MAX / 100);
+	return value != 0 && abs(value) >= deadzone;
+}
+
 void osk_clear_controller_holds()
 {
 	osk_controllers.clear();
@@ -2851,7 +2861,7 @@ void osk_clear_controller_holds()
 			} else {
 				value = SDL_GetGamepadAxis(did.controller, static_cast<SDL_GamepadAxis>(axis));
 			}
-			state.gameplay_axis[axis] = value != 0;
+			state.gameplay_axis[axis] = osk_axis_has_gameplay_input(value);
 		}
 		if (did.mapping.is_retroarch) {
 			for (int hat = 0; hat < SDL_GetNumJoystickHats(did.joystick); ++hat) {
@@ -3058,9 +3068,7 @@ static bool handle_osk_axis(const SDL_JoystickID which, const int axis, int& val
 		// reach gameplay until the keyboard has left the screen.
 		if (imgui_osk_should_render())
 			value = 0;
-		// Any value forwarded to gameplay may matter to a custom mapping.
-		// Navigation's 40% deadzone is not the guest mouse/joystick deadzone.
-		state.gameplay_axis[axis] = value != 0;
+		state.gameplay_axis[axis] = osk_axis_has_gameplay_input(value);
 		return false;
 	}
 	const bool pressed = abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5;
