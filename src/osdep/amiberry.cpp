@@ -3223,8 +3223,12 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 			const int suspend = (did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] == axis)
 				? OSK_STICK_SUSPEND_X : OSK_STICK_SUSPEND_Y;
 			const bool was_suspended = (dir & suspend) != 0;
-			const bool pressed = abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5;
-			if (imgui_osk_is_active() && pressed && !was_suspended)
+			// Suppress through the whole gesture, including the relax phase:
+			// intermediate values below the OSK threshold but above a gameplay
+			// dead zone would otherwise move the emulated stick or mouse. Only
+			// near-neutral values (≈5%) pass, mirroring a clean release.
+			const bool active_value = abs(value) > SDL_JOYSTICK_AXIS_MAX / 20;
+			if (imgui_osk_is_active() && !was_suspended && active_value)
 				break; // consumed by the OSK's gamepad-side handling
 		}
 
