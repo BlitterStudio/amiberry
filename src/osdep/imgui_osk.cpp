@@ -1184,11 +1184,14 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 			// held since before the press merely resume repeat without moving.
 			if (dir_state) {
 				const int replay = s_suppressed_dirs & dir_state;
+				// Replay once, then clear entirely: a direction released mid-hold
+				// leaves its bit behind otherwise, and any future suppression
+				// needs a fresh rising edge during a new hold.
+				s_suppressed_dirs = 0;
 				if (replay & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
 				if (replay & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
 				if (replay & OSK_LEFT)  s_focused_key = find_nearest_key(s_focused_key, OSK_LEFT);
 				if (replay & OSK_RIGHT) s_focused_key = find_nearest_key(s_focused_key, OSK_RIGHT);
-				s_suppressed_dirs &= ~dir_state;
 				s_repeat_dir = dir_state;
 				s_repeat_start_time = now;
 				s_repeat_last_time = now;
