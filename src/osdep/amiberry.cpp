@@ -2953,8 +2953,13 @@ static void handle_controller_button_event(const SDL_Event& event)
 		// The per-controller D-pad cache (osk_dpad_dir) is updated on every
 		// event at the top of this function, so a release during the closing
 		// animation never leaves a stale direction for the next open.
-		if (!imgui_osk_is_active())
+		if (!imgui_osk_is_active()) {
+			// Closing (or opening) animation: gameplay-owned releases must
+			// still reach UAE — their press predates the keyboard entirely.
+			if (release_unowned)
+				dispatch_controller_button(which, button, state);
 			return;
+		}
 
 		if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
 			// osk_control() replaces every accumulated direction bit: send the
