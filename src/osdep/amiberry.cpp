@@ -2961,9 +2961,12 @@ static void handle_controller_button_event(const SDL_Event& event)
 		// event at the top of this function, so a release during the closing
 		// animation never leaves a stale direction for the next open.
 		if (!imgui_osk_is_active()) {
-			// Closing (or opening) animation: gameplay-owned releases must
-			// still reach UAE — their press predates the keyboard entirely.
-			if (release_unowned)
+			// Closing (or opening) animation: the keyboard session owns
+			// nothing in this window, so forward every release — a press the
+			// keyboard never asserted produces a harmless no-op, while a
+			// gameplay-held button (any button, not only D-pad/South) gets
+			// cleared in UAE.
+			if (!state)
 				dispatch_controller_button(which, button, state);
 			return;
 		}
@@ -3271,6 +3274,10 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 
 }
 
+// Previous raw hat value per RetroArch controller hat, for detecting which
+// directions a transition releases (see handle_joy_hat_motion_event).
+static std::unordered_map<Uint64, int> osk_prev_hat;
+
 static void handle_joy_hat_motion_event(const SDL_Event& event)
 {
 	const auto hat = event.jhat.hat;
@@ -3279,22 +3286,43 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
-		const didata* did = &di_joystick[id];
+		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
-		// A RetroArch-mapped controller with a hat D-pad also delivers the raw
-		// hat copy; SDL synthesizes the gamepad D-pad events from it, and the
-		// OSK consumes those while active. Suppress the copy while the OSK
-		// session owns a D-pad direction on this controller; centered values
-		// are releases and always flow, and a non-centered transition flows
-		// when the session owns nothing — read_joystick_hat() needs the full
-		// transition to clear a gameplay-held direction.
-		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()
-			&& value != SDL_HAT_CENTERED) {
-			const auto session_dirs = osk_dpad_dir.find(which);
-			const bool osk_owns_any = session_dirs != osk_dpad_dir.end() && session_dirs->second != 0;
-			if (osk_owns_any)
-				break; // consumed by the OSK's gamepad-side handling
+		if (did->mapping.is_retroarch && did->is_controller) {
+			// Track the previous raw hat value so a transition's released
+			// directions can be identified; suppression below depends on it.
+			const Uint64 hat_key = (static_cast<Uint64>(which) << 8) | (hat & 0xff);
+			const int prev_hat = osk_prev_hat.count(hat_key) ? osk_prev_hat[hat_key] : SDL_HAT_CENTERED;
+			osk_prev_hat[hat_key] = value;
+
+			// The OSK consumes the gamepad-side D-pad events synthesized from
+			// this hat; suppress the raw copy for the same gesture — but only
+			// when every direction this transition releases is OSK-owned. A
+			// gameplay-held direction mixed into the transition must reach
+			// read_joystick_hat(), or UAE keeps it asserted (RetroArch devices
+			// are skipped by dispatch_controller_button()). Centered values
+			// are pure releases and always flow.
+			if (imgui_osk_is_active() && value != SDL_HAT_CENTERED) {
+				const auto session_dirs = osk_dpad_dir.find(which);
+				const int session_bits = session_dirs != osk_dpad_dir.end() ? session_dirs->second : 0;
+				auto direction_owned = [&](const int hat_bit) {
+					switch (hat_bit) {
+					case SDL_HAT_UP:    return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_UP    - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
+					case SDL_HAT_DOWN:  return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_DOWN  - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
+					case SDL_HAT_LEFT:  return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_LEFT  - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
+					case SDL_HAT_RIGHT: return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_RIGHT - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
+					default:            return true;
+					}
+				};
+				const int released = prev_hat & ~value;
+				bool releases_gameplay = false;
+				for (int bit = 1; bit <= 8; bit <<= 1)
+					if ((released & bit) && !direction_owned(bit))
+						releases_gameplay = true;
+				if (!releases_gameplay)
+					break; // fully OSK-owned transition: consumed by the gamepad side
+			}
 		}
 		read_joystick_hat(id, hat, value);
 		break;
