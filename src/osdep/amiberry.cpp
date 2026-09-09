@@ -2969,14 +2969,14 @@ static bool handle_gamepad_button(const SDL_JoystickID which, const int button, 
 	else if (minimize_key.button && button == minimize_key.button) {
 		minimizewindow(0);
 	}
-	else if (imgui_osk_should_render()) {
-		return handle_osk_button(which, button, down);
-	}
 	else if (screenshot_key.button && button == screenshot_key.button) {
 		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, down, nullptr);
 	}
 	else if (debugger_key.button && button == debugger_key.button) {
 		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, down, nullptr);
+	}
+	else if (imgui_osk_should_render()) {
+		return handle_osk_button(which, button, down);
 	}
 	else {
 		return false;
@@ -3114,8 +3114,14 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 			|| did.mapping.is_retroarch || !did.is_controller)
 			continue;
 		int value = event.gaxis.value;
-		if (!handle_osk_axis(id, event.gaxis.axis, value))
+		const bool invert = event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX ? did.mapping.lstick_axis_x_invert
+			: event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY && did.mapping.lstick_axis_y_invert;
+		int normalized = invert ? -value : value;
+		if (!handle_osk_axis(id, event.gaxis.axis, normalized)) {
+			if (normalized == 0)
+				value = 0;
 			read_controller_axis(id, event.gaxis.axis, value);
+		}
 		return;
 	}
 }

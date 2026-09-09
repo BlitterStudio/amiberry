@@ -283,6 +283,27 @@ int main() {
     assert(joydir[0] == 0);
     hat(0, SDL_HAT_UP);
     assert(joydir[0] == DIR_UP);
+    reset_fixture();
+    debugger_key.button = SDL_GAMEPAD_BUTTON_RIGHT_STICK;
+    active = true;
+    button(0, SDL_GAMEPAD_BUTTON_RIGHT_STICK, true); // Global hotkeys outrank the open keyboard.
+    assert(pending(AKS_ENTERDEBUGGER) == 1);
+    debugger_key.button = 0;
+
+    reset_fixture();
+    di_joystick[0].mapping.lstick_axis_x_invert = true;
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert((observed_osk & OSK_LEFT) && !(observed_osk & OSK_RIGHT));
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 0);
+    assert(observed_osk == 0);
+    active = false; animating = false;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert(joydir[0] & DIR_LEFT); // Gameplay inversion is applied by its own reader.
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 0);
+    assert(joydir[0] == 0);
+    di_joystick[0].mapping.lstick_axis_x_invert = false;
+
 
     for (bool raw : {false, true})
         for (bool reacquire : {false, true})
