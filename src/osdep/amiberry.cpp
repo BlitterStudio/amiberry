@@ -2808,9 +2808,10 @@ static void handle_clipboard_update_event()
 }
 
 struct OskControllerState {
+	enum AxisOwner { Neutral, Gameplay, Osk };
 	int buttons = 0;
 	int stick = 0;
-	bool gameplay_axis[2] = {};
+	AxisOwner axis_owner[2] = {};
 };
 
 struct OskHatState {
@@ -2832,12 +2833,20 @@ static void osk_publish_controller_state()
 	osk_control(0, 0, 1, (state & OSK_BUTTON) != 0, OskInputSource::Gamepad);
 }
 
+static bool osk_axis_is_held(const int id, const int axis, const int value)
+{
+	return abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5
+		|| controller_axis_has_gameplay_input(id, axis, value);
+}
+
 void osk_clear_controller_holds()
 {
-	osk_controllers.clear();
-	osk_hats.clear();
-	// The GUI has its own event loop. Poll on handoff rather than retaining
-	// suspension flags whose neutral/release events that loop may have consumed.
+	for (auto& entry : osk_controllers) {
+		entry.second.buttons = 0;
+		entry.second.stick = 0;
+	}
+	// Clear session navigation, not gesture ownership. Polling can observe a
+	// release consumed by the GUI, but cannot give a held OSK gesture to UAE.
 	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
 		auto& did = di_joystick[id];
 		if (did.name.empty() || !did.is_controller)
@@ -2852,13 +2861,19 @@ void osk_clear_controller_holds()
 			} else {
 				value = SDL_GetGamepadAxis(did.controller, static_cast<SDL_GamepadAxis>(axis));
 			}
-			state.gameplay_axis[axis] = controller_axis_has_gameplay_input(id, axis, value);
+			if (state.axis_owner[axis] != OskControllerState::Osk
+				|| !osk_axis_is_held(id, axis, value)) {
+				state.axis_owner[axis] = controller_axis_has_gameplay_input(id, axis, value)
+					? OskControllerState::Gameplay : OskControllerState::Neutral;
+			}
 		}
 		if (did.mapping.is_retroarch) {
 			for (int hat = 0; hat < SDL_GetNumJoystickHats(did.joystick); ++hat) {
 				const int value = SDL_GetJoystickHat(did.joystick, hat);
 				const Uint64 key = (static_cast<Uint64>(did.joystick_id) << 8) | hat;
-				osk_hats[key] = {value, value};
+				auto& state = osk_hats[key];
+				state.gameplay = value & ~(state.physical & ~state.gameplay);
+				state.physical = value;
 			}
 		}
 		did.hotkey_held = false;
@@ -3055,24 +3070,32 @@ static bool handle_osk_axis(const int id, const int axis, int& value)
 	const int mask = axis == SDL_GAMEPAD_AXIS_LEFTX ? OSK_LEFT | OSK_RIGHT : OSK_UP | OSK_DOWN;
 	state.stick &= ~mask;
 	if (!imgui_osk_is_active()) {
+		if (state.axis_owner[axis] == OskControllerState::Osk) {
+			if (!osk_axis_is_held(id, axis, value))
+				state.axis_owner[axis] = OskControllerState::Neutral;
+			return true;
+		}
 		// Closing animation still owns navigation. Only neutralization may
 		// reach gameplay until the keyboard has left the screen.
 		if (imgui_osk_should_render())
 			value = 0;
-		state.gameplay_axis[axis] = controller_axis_has_gameplay_input(id, axis, value);
+		state.axis_owner[axis] = controller_axis_has_gameplay_input(id, axis, value)
+			? OskControllerState::Gameplay : OskControllerState::Neutral;
 		return false;
 	}
 	const bool pressed = abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5;
-	if (state.gameplay_axis[axis]) {
+	if (state.axis_owner[axis] == OskControllerState::Gameplay) {
 		if (!pressed) {
 			// Explicitly neutralize the mapped consumer before handing the
 			// axis to the OSK; forwarding a small nonzero value can keep a
 			// mouse-mode controller moving indefinitely.
 			value = 0;
-			state.gameplay_axis[axis] = false;
+			state.axis_owner[axis] = OskControllerState::Neutral;
 		}
 		return false;
 	}
+	state.axis_owner[axis] = osk_axis_is_held(id, axis, value)
+		? OskControllerState::Osk : OskControllerState::Neutral;
 	if (pressed) {
 		if (axis == SDL_GAMEPAD_AXIS_LEFTX)
 			state.stick |= value < 0 ? OSK_LEFT : OSK_RIGHT;
@@ -3136,6 +3159,7 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 			const Uint64 key = (static_cast<Uint64>(did.joystick_id) << 8) | event.jhat.hat;
 			auto& hat = osk_hats[key];
 			const int changed = hat.physical ^ value;
+			const int osk_owned = hat.physical & ~hat.gameplay;
 			hat.physical = value;
 			constexpr int bits[] = {SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT};
 			for (int b = 0; b < 4; ++b) {
@@ -3146,6 +3170,8 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 			// A diagonal snapshot must never assert an OSK-owned direction.
 			if (imgui_osk_should_render())
 				value &= hat.gameplay;
+			else
+				value &= ~osk_owned;
 			hat.gameplay = value;
 		}
 		read_joystick_hat(id, event.jhat.hat, value);

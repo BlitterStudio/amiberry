@@ -119,6 +119,8 @@ void handle_input_event(int event, int state, int max, int) {
 
 static void reset_fixture() {
     currprefs = Prefs{};
+    osk_controllers.clear();
+    osk_hats.clear();
     joysticks = joystick_settings;
     vkbd_button = SDL_GAMEPAD_BUTTON_LEFT_STICK;
     enter_gui_button = SDL_GAMEPAD_BUTTON_START;
@@ -215,7 +217,73 @@ static void test_center_drift(bool raw, bool reacquire) {
     assert(joydir[0] == 0);
 }
 
+static void test_osk_axis_handoff(bool raw, bool mouse, bool closed_event) {
+    reset_fixture();
+    if (mouse) map_mouse(0);
+    const int physical_axis = raw ? 3 : SDL_GAMEPAD_AXIS_LEFTX;
+    if (raw) {
+        di_joystick[0].mapping.is_retroarch = true;
+        di_joystick[0].mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] = physical_axis;
+        di_joystick[0].mapping.axis[SDL_GAMEPAD_AXIS_RIGHTY] = 0;
+    }
+    active = true;
+    axis(0, physical_axis, 24000, raw);
+    assert(observed_osk & OSK_RIGHT);
+    imgui_osk_hide();
+    if (closed_event) {
+        animating = false;
+        axis(0, physical_axis, 28000, raw);
+        assert(joydir[0] == 0 && mouse_delta[0][0] == 0);
+    }
+    osk_clear_controller_holds(); // Focus reacquisition with the same held gesture.
+    active = true; animating = false;
+    axis(0, physical_axis, 30000, raw);
+    assert((observed_osk & OSK_RIGHT) && joydir[0] == 0 && mouse_delta[0][0] == 0);
+
+    imgui_osk_hide();
+    animating = false;
+    axis(0, physical_axis, 0, raw);
+    axis(0, physical_axis, 24000, raw);
+    if (mouse) assert(mouse_delta[0][0] != 0);
+    else assert(joydir[0] & DIR_RIGHT);
+}
+
 int main() {
+    for (bool raw : {false, true})
+        for (bool mouse : {false, true})
+            for (bool closed_event : {false, true})
+                test_osk_axis_handoff(raw, mouse, closed_event);
+
+    reset_fixture();
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert(joydir[0] & DIR_RIGHT);
+    active = true;
+    imgui_osk_hide();
+    osk_clear_controller_holds();
+    active = true; animating = false;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 30000);
+    assert(observed_osk == 0 && (joydir[0] & DIR_RIGHT));
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 0);
+    assert(joydir[0] == 0);
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert((observed_osk & OSK_RIGHT) && joydir[0] == 0);
+
+    reset_fixture(); di_joystick[0].mapping.is_retroarch = true;
+    active = true;
+    hat(0, SDL_HAT_UP);
+    imgui_osk_hide();
+    osk_clear_controller_holds();
+    active = true; animating = false;
+    hat(0, SDL_HAT_UP | SDL_HAT_RIGHT);
+    assert((observed_osk & OSK_RIGHT) && joydir[0] == 0);
+    imgui_osk_hide(); animating = false;
+    hat(0, SDL_HAT_UP | SDL_HAT_LEFT);
+    assert(joydir[0] == DIR_LEFT); // Only the new, unowned direction reaches UAE.
+    hat(0, SDL_HAT_CENTERED);
+    assert(joydir[0] == 0);
+    hat(0, SDL_HAT_UP);
+    assert(joydir[0] == DIR_UP);
+
     for (bool raw : {false, true})
         for (bool reacquire : {false, true})
             test_center_drift(raw, reacquire);
@@ -380,7 +448,7 @@ int main() {
     button(0, SDL_GAMEPAD_BUTTON_SOUTH, true);
     axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
     imgui_osk_hide(); // Same session-ending operation used before GUI handoff.
-    pads[0].axes[0] = 0; // GUI consumes the physical neutral event.
+    pads[0].axes[0] = 400; // GUI consumes neutral; centered hardware still reports drift.
     osk_clear_controller_holds(); // Reacquisition polls current physical state.
     active = true; animating = false;
     button(1, SDL_GAMEPAD_BUTTON_SOUTH, true);

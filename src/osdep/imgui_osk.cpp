@@ -658,7 +658,7 @@ void imgui_osk_shutdown()
 	s_sticky_keys.clear();
 	reset_navigation_state();
 	osk_control(0, 0, 0, 0, OskInputSource::Gamepad); // drop accumulated input-layer joystick state
-	osk_clear_controller_holds(); // and the per-controller hold state
+	osk_clear_controller_holds(); // clear navigation while retaining held gesture ownership
 }
 
 void imgui_osk_toggle()
@@ -903,7 +903,7 @@ void imgui_osk_hide()
 	// only clears it when invoked while the keyboard is inactive, and callers
 	// may stop calling it the moment s_visible goes false.
 	osk_control(0, 0, 0, 0, OskInputSource::Gamepad);
-	osk_clear_controller_holds(); // per-controller holds do not cross sessions
+	osk_clear_controller_holds(); // clear navigation while retaining held gesture ownership
 }
 
 bool imgui_osk_handle_finger_down(float screen_x, float screen_y, int finger_id)

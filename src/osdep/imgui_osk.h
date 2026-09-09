@@ -72,8 +72,7 @@ enum class OskInputSource {
 // (cleared when the keyboard is inactive).
 void osk_control(int x, int y, int button, int buttonstate, OskInputSource source);
 
-// Drop per-controller "press key" hold state (defined in the SDL event layer).
-// Called when the keyboard hides so holds cannot cross sessions.
+// Clear session navigation and reconcile held gesture ownership with physical state.
 void osk_clear_controller_holds();
 
 #endif // IMGUI_OSK_H
