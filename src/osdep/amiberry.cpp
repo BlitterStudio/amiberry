@@ -3319,13 +3319,13 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 					default:            return true;
 					}
 				};
-				auto owned_hat_bit = [&](const int logical_bit) {
+				auto owned_hat_bit = [&](const int logical_bit) -> int {
 					switch (logical_bit) {
 					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_UP    - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_UP;
 					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_DOWN  - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_DOWN;
 					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_LEFT  - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_LEFT;
 					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_RIGHT - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_RIGHT;
-					default: return 0u;
+					default: return 0;
 					}
 				};
 				int owned_hat_bits = 0;
