@@ -3207,8 +3207,26 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
-		const didata* did = &di_joystick[id];
+		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
+
+		// A RetroArch-mapped controller also delivers a raw joystick copy of
+		// left-stick motion. While the on-screen keyboard is active and owns
+		// the stick (deflection began while it was open), suppress that copy —
+		// the gamepad event path drives the OSK navigation. Neutral events and
+		// gameplay-owned (suspended) deflections still flow through so UAE
+		// sees their releases.
+		if (did->mapping.is_retroarch && did->is_controller
+			&& (did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] == axis
+				|| did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTY] == axis)) {
+			auto& dir = osk_stick_dir[which];
+			const int suspend = (did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] == axis)
+				? OSK_STICK_SUSPEND_X : OSK_STICK_SUSPEND_Y;
+			const bool was_suspended = (dir & suspend) != 0;
+			const bool pressed = abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5;
+			if (imgui_osk_is_active() && pressed && !was_suspended)
+				break; // consumed by the OSK's gamepad-side handling
+		}
 
 		read_joystick_axis(id, axis, value);
 		break;
