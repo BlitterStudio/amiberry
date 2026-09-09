@@ -2869,26 +2869,47 @@ void osk_clear_controller_holds();
 // press, so overlapping holds must be merged before forwarding.
 static std::unordered_map<SDL_JoystickID, bool> osk_south_held;
 
+// Forward a gamepad button event to the emulated device layer (the loop that
+// the hotkey chain's final else performs).
+static void dispatch_controller_button(const SDL_JoystickID which, const Uint8 button, const bool state)
+{
+	for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
+		didata* did = &di_joystick[id];
+		if (did->name.empty() || did->joystick_id != which || did->mapping.is_retroarch || !did->is_controller) continue;
+		read_controller_button(id, button, state);
+		break;
+	}
+}
+
 static void handle_controller_button_event(const SDL_Event& event)
 {
 	const auto button = event.gbutton.button;
 	const auto state = event.gbutton.down;
 	const auto which = event.gbutton.which;
+	// True when this event releases a control whose press predates the
+	// keyboard session (gameplay-owned): the OSK must not consume it, or the
+	// emulated button stays latched after the keyboard closes.
+	bool release_unowned = false;
 	if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
 		auto& dir = osk_dpad_dir[which];
 		const int bit = 1 << (button - SDL_GAMEPAD_BUTTON_DPAD_UP);
+		const bool was_registered = (dir & bit) != 0;
 		// Directions only register while the keyboard is active, so a hold
 		// from before it opened cannot surface as a phantom rising edge;
 		// releases always clear, keeping the cache fresh while closed.
 		if (state && imgui_osk_is_active()) dir |= bit;
 		else if (!state) dir &= ~bit;
+		release_unowned = !state && !was_registered;
 	}
 	// Record "press key" (South) holds that begin while the keyboard is
 	// active; always record releases, including while closed or animating,
 	// so a stale entry can neither block merged-state updates nor leak a
 	// gameplay hold into the keyboard's state after it opens.
-	if (button == SDL_GAMEPAD_BUTTON_SOUTH)
+	if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
+		const bool was_held = osk_south_held.count(which) != 0 && osk_south_held[which];
 		osk_south_held[which] = state && imgui_osk_is_active();
+		release_unowned = !state && !was_held;
+	}
 
 
 
@@ -2942,7 +2963,12 @@ static void handle_controller_button_event(const SDL_Event& event)
 			int dx = 0, dy = 0;
 			osk_merged_direction(dx, dy);
 			osk_control(dx, dy, 0, 0);
-			return; // consume — don't pass to UAE input system
+			if (!release_unowned)
+				return; // consume — don't pass to UAE input system
+			// A release whose press predates the keyboard session falls
+			// through so UAE clears the emulated direction.
+			dispatch_controller_button(which, button, state);
+			return;
 		}
 		// Fire button (A/South) = press key. The hold map was updated at the
 		// top of this function; forward the merged state so an overlapping
@@ -2952,6 +2978,9 @@ static void handle_controller_button_event(const SDL_Event& event)
 			for (const auto& entry : osk_south_held)
 				any_held = any_held || entry.second;
 			osk_control(0, 0, 1, any_held ? 1 : 0);
+			if (!release_unowned)
+				return;
+			dispatch_controller_button(which, button, state);
 			return;
 		}
 		// B/East = close keyboard
