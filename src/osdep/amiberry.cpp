@@ -3030,6 +3030,23 @@ static void handle_joy_button_event(const SDL_Event& event)
 		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
+		// A RetroArch-mapped controller also delivers raw joystick copies of
+		// its D-pad and face buttons. While the on-screen keyboard is active,
+		// suppress the copies of buttons the keyboard consumes on the gamepad
+		// side (D-pad directions and South): the gamepad path drives OSK
+		// navigation and forwards gameplay-owned releases itself. Other
+		// buttons keep flowing so hotkeys and mappings stay intact.
+		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()) {
+			const int raw_dpad_up = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_UP];
+			const int raw_dpad_down = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_DOWN];
+			const int raw_dpad_left = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_LEFT];
+			const int raw_dpad_right = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_RIGHT];
+			const int raw_south = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_SOUTH];
+			if (button == raw_dpad_up || button == raw_dpad_down
+				|| button == raw_dpad_left || button == raw_dpad_right
+				|| button == raw_south)
+				break; // consumed by the OSK's gamepad-side handling
+		}
 #ifdef __ANDROID__
 		// Direct on-screen keyboard toggle for the joystick path — SDL may not
 		// open a device as a gamepad, in which case the controller handler above
@@ -3249,6 +3266,12 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 		const didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
+		// A RetroArch-mapped controller with a hat D-pad also delivers the raw
+		// hat copy; SDL synthesizes the gamepad D-pad events from it, and the
+		// OSK consumes those while active. Suppress the raw copy for the same
+		// gesture so the emulated joystick does not move during navigation.
+		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active())
+			break;
 		read_joystick_hat(id, hat, value);
 		break;
 	}
