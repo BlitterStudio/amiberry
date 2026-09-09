@@ -2993,6 +2993,12 @@ static void handle_controller_button_event(const SDL_Event& event)
 			imgui_osk_toggle();
 			return;
 		}
+		// Any other button: the keyboard does not consume it. Forward
+		// releases to UAE — a gameplay-held fire button, shoulder or face
+		// button must not stay latched until the keyboard closes. Presses are
+		// still captured here so the keyboard session owns the surface.
+		if (!state)
+			dispatch_controller_button(which, button, state);
 	}
 	else if (screenshot_key.button && button == screenshot_key.button) {
 		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, state, nullptr);
@@ -3034,9 +3040,12 @@ static void handle_joy_button_event(const SDL_Event& event)
 		// its D-pad and face buttons. While the on-screen keyboard is active,
 		// suppress the copies of buttons the keyboard consumes on the gamepad
 		// side (D-pad directions and South): the gamepad path drives OSK
-		// navigation and forwards gameplay-owned releases itself. Other
-		// buttons keep flowing so hotkeys and mappings stay intact.
-		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()) {
+		// navigation and forwards gameplay-owned releases itself. Releases of
+		// gameplay-held buttons must flow — dispatch_controller_button()
+		// skips RetroArch devices, so this raw copy is the only path that
+		// clears them in UAE.
+		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()
+			&& state) {
 			const int raw_dpad_up = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_UP];
 			const int raw_dpad_down = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_DOWN];
 			const int raw_dpad_left = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_LEFT];
@@ -3269,8 +3278,11 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 		// A RetroArch-mapped controller with a hat D-pad also delivers the raw
 		// hat copy; SDL synthesizes the gamepad D-pad events from it, and the
 		// OSK consumes those while active. Suppress the raw copy for the same
-		// gesture so the emulated joystick does not move during navigation.
-		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active())
+		// gesture so the emulated joystick does not move during navigation;
+		// centered values are releases and flow so gameplay-held directions
+		// clear in UAE.
+		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()
+			&& value != SDL_HAT_CENTERED)
 			break;
 		read_joystick_hat(id, hat, value);
 		break;
