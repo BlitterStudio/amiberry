@@ -2064,6 +2064,17 @@ static bool invert_axis(int axis, const didata* did)
 	}
 }
 
+bool controller_axis_has_gameplay_input(const int id, const int axis, const int value)
+{
+	const auto& did = di_joystick[id];
+	const int port = assigned_joyport(id);
+	if (axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0) {
+		const int divisor = did.is_controller && !did.mapping.is_retroarch ? 10000 : 1000;
+		return abs(value) > joystick_dead_zone && value / divisor != 0;
+	}
+	return inputdevice_is_joystick_axis_active(id, axis, value, analog_upper_bound);
+}
+
 void set_axis_state(const int id, const int axis, int value, const bool invert)
 {
 	if (invert)

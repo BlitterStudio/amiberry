@@ -262,6 +262,8 @@ extern void setjoybuttonstate (int joy, int button, int state);
 extern void setmousebuttonstate (int mouse, int button, int state);
 extern uae_u32 getmousebuttonstate (int mouse);
 extern void setjoystickstate (int joy, int axle, int state, int max);
+// Whether an axis sample survives the enabled device's actual mapped consumers.
+extern bool inputdevice_is_joystick_axis_active(int joy, int axis, int state, int max);
 extern int getjoystickstate (int mouse);
 void setmousestate (int mouse, int axis, int data, int isabs);
 extern int getmousestate (int mouse);

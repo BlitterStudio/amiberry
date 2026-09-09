@@ -137,6 +137,8 @@ extern void ensure_onscreen_joystick_registered();
 
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
+// Uses logical axes, matching read_controller_axis and normalized RetroArch axes.
+extern bool controller_axis_has_gameplay_input(int id, int axis, int value);
 
 // Preserve RetroArch's own raw shortcuts; other devices use the global hotkeys
 // in the index space consumed by their SDL event path.

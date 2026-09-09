@@ -2832,23 +2832,14 @@ static void osk_publish_controller_state()
 	osk_control(0, 0, 1, (state & OSK_BUTTON) != 0, OskInputSource::Gamepad);
 }
 
-static bool osk_axis_has_gameplay_input(const int value)
-{
-	// Center drift is neutral, but input below the OSK's 40% threshold can
-	// still drive a guest joystick or mouse. Preserve the most sensitive
-	// supported reader, including custom deadzones.
-	const int percent = std::min(currprefs.input_joystick_deadzone, currprefs.input_joymouse_deadzone);
-	const int deadzone = std::min(joystick_dead_zone, percent * SDL_JOYSTICK_AXIS_MAX / 100);
-	return value != 0 && abs(value) >= deadzone;
-}
-
 void osk_clear_controller_holds()
 {
 	osk_controllers.clear();
 	osk_hats.clear();
 	// The GUI has its own event loop. Poll on handoff rather than retaining
 	// suspension flags whose neutral/release events that loop may have consumed.
-	for (auto& did : di_joystick) {
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+		auto& did = di_joystick[id];
 		if (did.name.empty() || !did.is_controller)
 			continue;
 		auto& state = osk_controllers[did.joystick_id];
@@ -2861,7 +2852,7 @@ void osk_clear_controller_holds()
 			} else {
 				value = SDL_GetGamepadAxis(did.controller, static_cast<SDL_GamepadAxis>(axis));
 			}
-			state.gameplay_axis[axis] = osk_axis_has_gameplay_input(value);
+			state.gameplay_axis[axis] = controller_axis_has_gameplay_input(id, axis, value);
 		}
 		if (did.mapping.is_retroarch) {
 			for (int hat = 0; hat < SDL_GetNumJoystickHats(did.joystick); ++hat) {
@@ -3056,11 +3047,11 @@ static void handle_joy_button_event(const SDL_Event& event)
 	}
 }
 
-static bool handle_osk_axis(const SDL_JoystickID which, const int axis, int& value)
+static bool handle_osk_axis(const int id, const int axis, int& value)
 {
 	if (axis != SDL_GAMEPAD_AXIS_LEFTX && axis != SDL_GAMEPAD_AXIS_LEFTY)
 		return false;
-	auto& state = osk_controllers[which];
+	auto& state = osk_controllers[di_joystick[id].joystick_id];
 	const int mask = axis == SDL_GAMEPAD_AXIS_LEFTX ? OSK_LEFT | OSK_RIGHT : OSK_UP | OSK_DOWN;
 	state.stick &= ~mask;
 	if (!imgui_osk_is_active()) {
@@ -3068,7 +3059,7 @@ static bool handle_osk_axis(const SDL_JoystickID which, const int axis, int& val
 		// reach gameplay until the keyboard has left the screen.
 		if (imgui_osk_should_render())
 			value = 0;
-		state.gameplay_axis[axis] = osk_axis_has_gameplay_input(value);
+		state.gameplay_axis[axis] = controller_axis_has_gameplay_input(id, axis, value);
 		return false;
 	}
 	const bool pressed = abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5;
@@ -3100,7 +3091,7 @@ static void handle_controller_axis_motion_event(const SDL_Event& event)
 			|| did.mapping.is_retroarch || !did.is_controller)
 			continue;
 		int value = event.gaxis.value;
-		if (!handle_osk_axis(did.joystick_id, event.gaxis.axis, value))
+		if (!handle_osk_axis(id, event.gaxis.axis, value))
 			read_controller_axis(id, event.gaxis.axis, value);
 		return;
 	}
@@ -3121,7 +3112,7 @@ static void handle_joy_axis_motion_event(const SDL_Event& event)
 				const bool invert = axis == SDL_GAMEPAD_AXIS_LEFTX ? did.mapping.lstick_axis_x_invert
 					: axis == SDL_GAMEPAD_AXIS_LEFTY && did.mapping.lstick_axis_y_invert;
 				int normalized = invert ? -value : value;
-				if (handle_osk_axis(did.joystick_id, axis, normalized))
+				if (handle_osk_axis(id, axis, normalized))
 					return;
 				if (normalized == 0)
 					value = 0;

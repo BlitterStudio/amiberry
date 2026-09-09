@@ -10244,6 +10244,40 @@ uae_u32 getmousebuttonstate (int mouse)
 /* same for joystick axis (analog or digital)
 * (0 = center, -max = full left/top, max = full right/bottom)
 */
+bool inputdevice_is_joystick_axis_active(int joy, int axis, int state, int max)
+{
+	if (!joysticks)
+		return false;
+	const auto& id = joysticks[joy];
+	if (!id.enabled || input_play || testmode || state == 0)
+		return false;
+	// setjoystickstate applies this filter before dispatching any binding.
+	const int deadzone = currprefs.input_joymouse_deadzone * max / 100;
+	const int magnitude = abs(state);
+	if (magnitude < deadzone)
+		return false;
+	for (int sub = 0; sub < MAX_INPUT_SUB_EVENT; ++sub) {
+		const int event = id.eventid[ID_AXIS_OFFSET + axis][sub];
+		if (event <= 0)
+			continue;
+		const auto& ie = events[event];
+		const bool joyport = ie.unit >= 1 && ie.unit <= 4;
+		if (joyport && ie.type == 0) {
+			// Digital joystick axes have a second, independently configured filter.
+			if (magnitude >= currprefs.input_joystick_deadzone * max / 100)
+				return true;
+		} else if ((joyport && (ie.type & (8 | 128)))
+			|| ((ie.unit == 5 || ie.unit == 6) && ie.type == 0)) {
+			// Mouse, paddle and lightpen axes include the boundary in neutral.
+			if (magnitude > deadzone)
+				return true;
+		} else {
+			return true;
+		}
+	}
+	return false;
+}
+
 void setjoystickstate (int joy, int axis, int state, int max)
 {
 	struct uae_input_device *id = &joysticks[joy];

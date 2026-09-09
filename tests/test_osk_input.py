@@ -29,9 +29,11 @@ def main():
     mouse = between(core, "\t\t\t/* real mouse / analog stick mouse emulation */", "\n\t\t\tmax = 32;")
     production = between(core, "// Generic joystick mappings", "static int isdevice")
     production += "\nvoid core_button(int joy, int data, int state) { Event e{4, data}; auto ie = &e;\n" + button + "\n}\n"
-    production += "\nvoid core_direction(int joy, int data, int state) { int max=32767; bool allowoppositestick=false; Event e{16, data}; auto ie=&e;\n" + direction + "\n}\n"
+    production += "\nvoid core_direction(int joy, int data, int state, int max, bool analog) { bool allowoppositestick=false; Event e{analog ? 0 : 16, data}; auto ie=&e;\n" + direction + "\n}\n"
     production += "\nvoid core_mouse(int joy, int data, int state, int max) { Event e{8, data}; auto ie=&e;\n" + mouse + "\n}\n"
     production += between(core, "void inputdevice_add_inputcode (", "static bool keyboardresetkeys")
+    production += between(core, "bool inputdevice_is_joystick_axis_active(", "void setjoystickstate (")
+    production += between(core, "void setjoystickstate (", "int getjoystickstate (")
     production += between(mapping, "int find_in_array(", "void fill_default_controller(")
     production += between(mapping, "void sync_controller_shortcuts(", "void setup_mapping(")
     production += between(mapping, "static bool invert_axis(", "static void read_joystick()")

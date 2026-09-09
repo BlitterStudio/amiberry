@@ -1,4 +1,5 @@
 // Platform/device fixtures surround production routing included by test_osk_input.py.
+#define AMIBERRY
 #include <array>
 #include <cassert>
 #include <cstdio>
@@ -33,7 +34,25 @@ struct Prefs {
     struct { int mousemap = 0; } jports[4];
 } currprefs, changed_prefs;
 struct Hotkey { int button = 0; } quit_key, action_replay_key, fullscreen_key, minimize_key, screenshot_key, debugger_key;
-struct Event { int type, data; };
+struct Event { int type, data, unit = 1; };
+constexpr int MAX_INPUT_SUB_EVENT = 8, ID_AXIS_OFFSET = 64;
+using uae_u64 = unsigned long long;
+constexpr uae_u64 ID_FLAG_INVERT = 1, ID_FLAG_AUTOFIRE = 2;
+constexpr int HANDLE_IE_FLAG_AUTOFIRE = 1, HANDLE_IE_FLAG_CANSTOPPLAYBACK = 2;
+constexpr int IDTYPE_JOYSTICK = 0, IDEV_WIDGET_AXIS = 0;
+struct uae_input_device {
+    bool enabled = true;
+    int eventid[ID_AXIS_OFFSET + 6][MAX_INPUT_SUB_EVENT]{};
+    uae_u64 flags[ID_AXIS_OFFSET + 6][MAX_INPUT_SUB_EVENT]{};
+} joystick_settings[MAX_INPUT_DEVICES];
+uae_input_device* joysticks = joystick_settings;
+struct uae_input_device2 {
+    int states[6][MAX_INPUT_SUB_EVENT + 1]{};
+} joysticks2[MAX_INPUT_DEVICES];
+Event events[1 + MAX_INPUT_DEVICES * 4]{};
+bool testmode = false;
+void inputdevice_testrecord(int, int, int, int, int, int) {}
+void inprec_realtime() {}
 didata di_joystick[MAX_INPUT_DEVICES];
 SDL_Gamepad pads[MAX_INPUT_DEVICES];
 SDL_Joystick sticks[MAX_INPUT_DEVICES];
@@ -42,7 +61,7 @@ int joystick_dead_zone = 8000, axisold[MAX_INPUT_DEVICES][256]{};
 int joybutton[4]{}, joydir[4]{}, oleft[4]{}, oright[4]{}, otop[4]{}, obot[4]{};
 int horizclear[4]{}, vertclear[4]{}, relativecount[4][2]{}, mouse_deltanoreset[4][2]{}, mouse_delta[4][2]{};
 int input_record = 0, input_play = 0, bouncy = 0, bouncy_cycles = 0;
-bool active = false, animating = false, mouse_mode = false, joystick_refresh_needed = false;
+bool active = false, animating = false, joystick_refresh_needed = false;
 int observed_osk = 0;
 enum { AKS_ENTERGUI = 1, AKS_OSK, AKS_FREEZEBUTTON, AKS_TOGGLEWINDOWFULLWINDOW, AKS_SCREENSHOT_FILE, AKS_ENTERDEBUGGER };
 using TCHAR = char;
@@ -67,7 +86,8 @@ void uae_quit() {} void minimizewindow(int) {} void joymousecounter(int) {}
 int get_cycles() { return 0; }
 int assigned_joyport(int id) { return id; }
 int mousemap_mouse_device() { return 0; }
-void setmousestate(int, int, int, int) {}
+int mapped_mouse_delta = 0;
+void setmousestate(int, int, int value, int) { mapped_mouse_delta += value; }
 void write_log(const char*, ...) {}
 bool inputdevice_devicechange(Prefs*) { return true; }
 Sint16 SDL_GetGamepadAxis(SDL_Gamepad* pad, SDL_GamepadAxis axis) { return pad->axes[axis]; }
@@ -75,7 +95,7 @@ Sint16 SDL_GetJoystickAxis(SDL_Joystick* stick, int axis) { return stick->axes[a
 int SDL_GetNumJoystickHats(SDL_Joystick*) { return 2; }
 Uint8 SDL_GetJoystickHat(SDL_Joystick* stick, int hat) { return stick->hats[hat]; }
 void core_button(int, int, int);
-void core_direction(int, int, int);
+void core_direction(int, int, int, int = 32767, bool = false);
 void core_mouse(int, int, int, int);
 void inputdevice_add_inputcode(int, int, const char*);
 void setjoybuttonstate(int id, int button, int state) {
@@ -89,22 +109,21 @@ void setjoybuttonstate(int id, int button, int state) {
     else if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT) core_direction(id, DIR_LEFT, state);
     else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) core_direction(id, DIR_RIGHT, state);
 }
-void setjoystickstate(int id, int axis, int state, int max) {
-    if (mouse_mode && axis <= 1) core_mouse(id, axis, state, max);
-    else if (axis <= 1) {
-        const int negative = axis ? DIR_UP : DIR_LEFT;
-        const int positive = axis ? DIR_DOWN : DIR_RIGHT;
-        core_direction(id, negative, state < -max / 3);
-        core_direction(id, positive, state > max / 3);
-    }
+void handle_input_event(int event, int state, int max, int) {
+    if (!event) return;
+    const auto& binding = events[event];
+    if (binding.type & 8) core_mouse(binding.unit - 1, binding.data, state, max);
+    else core_direction(binding.unit - 1, binding.data, state, max, true);
 }
 #include "osk_native_under_test.inc"
 
 static void reset_fixture() {
     currprefs = Prefs{};
+    joysticks = joystick_settings;
     vkbd_button = SDL_GAMEPAD_BUTTON_LEFT_STICK;
     enter_gui_button = SDL_GAMEPAD_BUTTON_START;
-    active = animating = mouse_mode = false;
+    active = animating = false;
+    mapped_mouse_delta = 0;
     observed_osk = 0;
     memset(joybutton, 0, sizeof joybutton); memset(joydir, 0, sizeof joydir);
     memset(oleft, 0, sizeof oleft); memset(oright, 0, sizeof oright);
@@ -113,6 +132,15 @@ static void reset_fixture() {
     memset(mouse_delta, 0, sizeof mouse_delta); memset(mouse_deltanoreset, 0, sizeof mouse_deltanoreset);
     for (auto& event : inputcode_pending) event = Pending{};
     for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+        joysticks[id] = uae_input_device{};
+        joysticks2[id] = uae_input_device2{};
+        const int first = 1 + id * 4;
+        events[first] = {0, DIR_LEFT | DIR_RIGHT, id + 1};
+        events[first + 1] = {0, DIR_UP | DIR_DOWN, id + 1};
+        events[first + 2] = {8, 0, id + 1};
+        events[first + 3] = {8, 1, id + 1};
+        joysticks[id].eventid[ID_AXIS_OFFSET][0] = first;
+        joysticks[id].eventid[ID_AXIS_OFFSET + 1][0] = first + 1;
         pads[id] = SDL_Gamepad{}; sticks[id] = SDL_Joystick{};
         auto& did = di_joystick[id]; did = didata{};
         did.name = did.guid = "fixture"; did.joystick_id = id + 1;
@@ -124,6 +152,10 @@ static void reset_fixture() {
     }
     osk_control(0, 0, 0, 0, OskInputSource::Gamepad);
     osk_clear_controller_holds();
+}
+static void map_mouse(int id) {
+    joysticks[id].eventid[ID_AXIS_OFFSET][0] = 3 + id * 4;
+    joysticks[id].eventid[ID_AXIS_OFFSET + 1][0] = 4 + id * 4;
 }
 static void button(int id, int button, bool down, bool raw = false) {
     SDL_Event event{};
@@ -142,8 +174,27 @@ static void hat(int id, int value) {
 }
 static int pending(int code) { int count = 0; for (const auto& e : inputcode_pending) count += e.code == code; return count; }
 
+static void test_mousemap_ownership(bool raw) {
+    reset_fixture();
+    currprefs.jports[0].mousemap = 1;
+    currprefs.input_joystick_deadzone = currprefs.input_joymouse_deadzone = 50;
+    di_joystick[0].mapping.is_retroarch = raw;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 9000, raw);
+    assert(mapped_mouse_delta == (raw ? 9 : 0));
+    osk_clear_controller_holds();
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000, raw);
+    if (raw) {
+        assert(observed_osk == 0 && mapped_mouse_delta == 33);
+    } else {
+        assert((observed_osk & OSK_RIGHT) && mapped_mouse_delta == 0);
+    }
+}
+
 static void test_center_drift(bool raw, bool reacquire) {
     reset_fixture();
+    currprefs.input_joystick_deadzone = 50;
+    currprefs.input_joymouse_deadzone = 1;
     const int physical_axis = raw ? 3 : SDL_GAMEPAD_AXIS_LEFTX;
     if (raw) {
         di_joystick[0].mapping.is_retroarch = true;
@@ -151,11 +202,12 @@ static void test_center_drift(bool raw, bool reacquire) {
         di_joystick[0].mapping.axis[SDL_GAMEPAD_AXIS_RIGHTY] = 0;
     }
     if (reacquire) {
-        if (raw) sticks[0].axes[physical_axis] = -400;
-        else pads[0].axes[physical_axis] = -400;
+        if (raw) sticks[0].axes[physical_axis] = -14000;
+        else pads[0].axes[physical_axis] = -14000;
         osk_clear_controller_holds();
     } else {
-        axis(0, physical_axis, -400, raw);
+        axis(0, physical_axis, -14000, raw);
+        assert(joydir[0] == 0);
     }
     active = true;
     axis(0, physical_axis, 24000, raw);
@@ -167,6 +219,52 @@ int main() {
     for (bool raw : {false, true})
         for (bool reacquire : {false, true})
             test_center_drift(raw, reacquire);
+
+    test_mousemap_ownership(false);
+    test_mousemap_ownership(true);
+
+    // An unused digital-joystick deadzone must not reserve a mouse-mapped axis.
+    reset_fixture(); map_mouse(0);
+    currprefs.input_joystick_deadzone = 1;
+    currprefs.input_joymouse_deadzone = 50;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 16383); // Mouse boundary is still neutral.
+    assert(mouse_delta[0][0] == 0);
+    osk_clear_controller_holds();
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert((observed_osk & OSK_RIGHT) && mouse_delta[0][0] == 0);
+
+    // A secondary custom mouse binding still owns input ignored by the first binding.
+    reset_fixture();
+    currprefs.input_joystick_deadzone = 50;
+    currprefs.input_joymouse_deadzone = 1;
+    joysticks[0].eventid[ID_AXIS_OFFSET][1] = 3;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 1200);
+    assert(joydir[0] == 0 && mouse_delta[0][0] != 0);
+    osk_clear_controller_holds();
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    assert(observed_osk == 0 && mouse_delta[0][0] != 0);
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 0);
+    assert(joydir[0] == 0 && mouse_delta[0][0] == 0);
+
+    reset_fixture();
+    joysticks[0].eventid[ID_AXIS_OFFSET][0] = 0;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);
+    osk_clear_controller_holds();
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 30000);
+    assert((observed_osk & OSK_RIGHT) && joydir[0] == 0);
+
+    // Focus can be acquired before UAE input mappings have been initialized.
+    reset_fixture();
+    joysticks = nullptr;
+    pads[0].axes[SDL_GAMEPAD_AXIS_LEFTX] = 24000;
+    osk_clear_controller_holds();
+    joysticks = joystick_settings;
+    active = true;
+    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 30000);
+    assert((observed_osk & OSK_RIGHT) && joydir[0] == 0);
 
     reset_fixture();
     button(0, SDL_GAMEPAD_BUTTON_EAST, true);
@@ -195,7 +293,7 @@ int main() {
     assert(!(observed_osk & OSK_BUTTON));
 
     for (int initial : {12000, 32000}) {
-        reset_fixture(); mouse_mode = true;
+        reset_fixture(); map_mouse(0);
         axis(0, SDL_GAMEPAD_AXIS_LEFTX, initial);
         assert(mouse_delta[0][0] != 0 && mouse_deltanoreset[0][0]);
         osk_clear_controller_holds();
@@ -205,7 +303,7 @@ int main() {
         assert(mouse_delta[0][0] == 0 && !mouse_deltanoreset[0][0]);
     }
 
-    reset_fixture(); mouse_mode = true;
+    reset_fixture(); map_mouse(0);
     currprefs.input_joymouse_deadzone = 1;
     axis(0, SDL_GAMEPAD_AXIS_LEFTX, 1200);
     assert(mouse_delta[0][0] != 0);
