@@ -326,8 +326,9 @@ def main():
 	)
 	require(
 		"static bool libretro_is_kickstart_scan_name" in stub_text
+		and '_T("kick"), _T("cd32"), _T("cdtv"), _T("amiga-os-"), _T("amiga-ext-")' in stub_text
 		and 'libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SYSTEM_DIR"), true)' in libretro_scan_roms,
-		"the shared libretro system directory must only be probed for kick* / rom.key, never for unrelated BIOS-pack firmware",
+		"the shared libretro system directory must only be probed for recognized kickstart/CD32/Cloanto firmware names, never for unrelated BIOS-pack firmware",
 		failures,
 	)
 	require(

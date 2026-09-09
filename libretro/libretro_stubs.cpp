@@ -581,14 +581,26 @@ static bool libretro_is_rom_key_file(const std::string& path)
 }
 
 // Kickstart images ship under many naming schemes (kick34005.A500, kick.rom,
-// kick40060.CD32.ext, plain "kick"), so shared-directory candidates are
-// filtered by the kick* basename instead of by extension. rom.key is handled
-// separately by libretro_is_rom_key_file().
+// kick40060.CD32.ext, plain "kick"), and Amiberry itself probes the frontend
+// system directory for Cloanto-style names (find_kickstart_in_system_dir /
+// find_ext_rom_in_system_dir in libretro.cpp: cd32.rom, cdtv.rom,
+// amiga-os-*.rom, amiga-ext-*.rom, "CD32 Extended.ROM"). Shared-directory
+// candidates are filtered by these recognized name prefixes instead of by
+// extension, so RP9/WHDLoad checksum lookups still find that firmware. rom.key
+// is handled separately by libretro_is_rom_key_file().
 static bool libretro_is_kickstart_scan_name(const std::string& path)
 {
 	const auto name_pos = path.find_last_of("/\\");
 	const std::string name = name_pos == std::string::npos ? path : path.substr(name_pos + 1);
-	return name.size() >= 4 && _tcsnicmp(name.c_str(), _T("kick"), 4) == 0;
+	static const TCHAR* const prefixes[] = {
+		_T("kick"), _T("cd32"), _T("cdtv"), _T("amiga-os-"), _T("amiga-ext-")
+	};
+	for (const auto* prefix : prefixes) {
+		const size_t len = _tcslen(prefix);
+		if (name.size() >= len && _tcsnicmp(name.c_str(), prefix, len) == 0)
+			return true;
+	}
+	return false;
 }
 
 static bool libretro_is_rom_ext(const std::string& path, const bool deepscan)
