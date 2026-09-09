@@ -82,6 +82,7 @@ struct didata {
 	std::array<uae_s16, MAX_MAPPINGS> buttonaxistype;
 
 	bool hotkey_held{}; // per-device hotkey state, updated in event order
+	Uint32 remapped_press_mask{}; // logical buttons whose press used the hotkey remap offset
 };
 
 //Analog joystick dead zone

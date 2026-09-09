@@ -14,16 +14,17 @@ constexpr int MAX_INPUT_DEVICES = 4, REMAP_BUTTONS = 32, analog_upper_bound = 32
 constexpr int DIR_LEFT = 1, DIR_RIGHT = 2, DIR_UP = 4, DIR_DOWN = 8;
 constexpr int IE_CDTV = 256, IE_INVERT = 512, JOYMOUSE_CDTV = 10, CYCLE_UNIT = 1;
 #include "osk_mapping_under_test.inc"
-
-struct SDL_Gamepad { Sint16 axes[6]{}; };
-struct SDL_Joystick { Sint16 axes[6]{}; Uint8 hats[2]{}; };
+struct SDL_Gamepad { Sint16 axes[6]{}; bool buttons[32]{}; };
+struct SDL_Joystick { Sint16 axes[6]{}; Uint8 hats[2]{}; bool buttons[32]{}; };
 struct didata {
     std::string name, guid;
     SDL_JoystickID joystick_id = 0;
-    bool is_controller = true, hotkey_held = false;
+    bool is_controller = true;
     int axles = 6, buttons = SDL_GAMEPAD_BUTTON_COUNT;
     SDL_Gamepad* controller = nullptr;
     SDL_Joystick* joystick = nullptr;
+    bool hotkey_held = false;
+    Uint32 remapped_press_mask = 0;
     controller_mapping mapping{};
 };
 struct Prefs {
@@ -70,6 +71,10 @@ struct Pending { int code = 0, state = 0; char* s = nullptr; } inputcode_pending
 
 bool isfocus() { return true; }
 bool vkbd_allowed(int) { return currprefs.vkbd_enabled; }
+Sint16 SDL_GetGamepadAxis(SDL_Gamepad* pad, SDL_GamepadAxis axis) { return pad->axes[axis]; }
+Uint8 SDL_GetGamepadButton(SDL_Gamepad* pad, SDL_GamepadButton button) { return pad->buttons[button]; }
+Sint16 SDL_GetJoystickAxis(SDL_Joystick* stick, int axis) { return stick->axes[axis]; }
+Uint8 SDL_GetJoystickButton(SDL_Joystick* stick, int button) { return stick->buttons[button]; }
 bool imgui_osk_is_active() { return active; }
 bool imgui_osk_should_render() { return active || animating; }
 bool imgui_osk_process(int state, int* key, int* pressed) {
@@ -90,24 +95,26 @@ int mapped_mouse_delta = 0;
 void setmousestate(int, int, int value, int) { mapped_mouse_delta += value; }
 void write_log(const char*, ...) {}
 bool inputdevice_devicechange(Prefs*) { return true; }
-Sint16 SDL_GetGamepadAxis(SDL_Gamepad* pad, SDL_GamepadAxis axis) { return pad->axes[axis]; }
-Sint16 SDL_GetJoystickAxis(SDL_Joystick* stick, int axis) { return stick->axes[axis]; }
 int SDL_GetNumJoystickHats(SDL_Joystick*) { return 2; }
 Uint8 SDL_GetJoystickHat(SDL_Joystick* stick, int hat) { return stick->hats[hat]; }
 void core_button(int, int, int);
 void core_direction(int, int, int, int = 32767, bool = false);
 void core_mouse(int, int, int, int);
 void inputdevice_add_inputcode(int, int, const char*);
+int remap_button_state = -1, plain_button_state = -1;
 void setjoybuttonstate(int id, int button, int state) {
-    const int extra = SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT * 2;
-    if (button == extra + 1) inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
-    else if (button == extra + 4) inputdevice_add_inputcode(AKS_OSK, state, nullptr);
-    else if (button == SDL_GAMEPAD_BUTTON_SOUTH) core_button(id, 0, state);
-    else if (button == SDL_GAMEPAD_BUTTON_EAST) core_button(id, 1, state);
-    else if (button == SDL_GAMEPAD_BUTTON_DPAD_UP) core_direction(id, DIR_UP, state);
-    else if (button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) core_direction(id, DIR_DOWN, state);
-    else if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT) core_direction(id, DIR_LEFT, state);
-    else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) core_direction(id, DIR_RIGHT, state);
+    if (button == SDL_GAMEPAD_BUTTON_SOUTH + REMAP_BUTTONS) remap_button_state = state;
+    else if (button == SDL_GAMEPAD_BUTTON_SOUTH) { plain_button_state = state; core_button(id, 0, state); }
+    else {
+        const int extra = SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT * 2;
+        if (button == extra + 1) inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
+        else if (button == extra + 4) inputdevice_add_inputcode(AKS_OSK, state, nullptr);
+        else if (button == SDL_GAMEPAD_BUTTON_EAST) core_button(id, 1, state);
+        else if (button == SDL_GAMEPAD_BUTTON_DPAD_UP) core_direction(id, DIR_UP, state);
+        else if (button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) core_direction(id, DIR_DOWN, state);
+        else if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT) core_direction(id, DIR_LEFT, state);
+        else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) core_direction(id, DIR_RIGHT, state);
+    }
 }
 void handle_input_event(int event, int state, int max, int) {
     if (!event) return;
@@ -126,6 +133,7 @@ static void reset_fixture() {
     enter_gui_button = SDL_GAMEPAD_BUTTON_START;
     active = animating = false;
     mapped_mouse_delta = 0;
+    remap_button_state = plain_button_state = -1;
     observed_osk = 0;
     memset(joybutton, 0, sizeof joybutton); memset(joydir, 0, sizeof joydir);
     memset(oleft, 0, sizeof oleft); memset(oright, 0, sizeof oright);
@@ -247,12 +255,36 @@ static void test_osk_axis_handoff(bool raw, bool mouse, bool closed_event) {
     if (mouse) assert(mouse_delta[0][0] != 0);
     else assert(joydir[0] & DIR_RIGHT);
 }
+static void test_hotkey_remap_handoff(const bool orphan) {
+    reset_fixture();
+    di_joystick[0].mapping.hotkey_button = SDL_GAMEPAD_BUTTON_BACK;
+    button(0, SDL_GAMEPAD_BUTTON_BACK, true); // modifier pressed in event order
+    pads[0].buttons[SDL_GAMEPAD_BUTTON_BACK] = true; // and still physically held
+    button(0, SDL_GAMEPAD_BUTTON_SOUTH, true); // dispatched at SOUTH + REMAP_BUTTONS
+    assert(remap_button_state == 1 && plain_button_state == -1);
+    osk_clear_controller_holds(); // handoff while both are still held
+    if (orphan) {
+        pads[0].buttons[SDL_GAMEPAD_BUTTON_BACK] = false; // release consumed elsewhere
+        osk_clear_controller_holds(); // reacquisition finds the modifier gone
+        assert(remap_button_state == 0); // orphaned remapped press neutralized
+    }
+    button(0, SDL_GAMEPAD_BUTTON_SOUTH, false);
+    assert(remap_button_state == 0);
+    button(0, SDL_GAMEPAD_BUTTON_SOUTH, true);
+    if (orphan)
+        assert(plain_button_state == 1 && remap_button_state == 0); // unremapped now
+    else
+        assert(remap_button_state == 1 && plain_button_state == -1); // still remapped
+}
 
 int main() {
     for (bool raw : {false, true})
         for (bool mouse : {false, true})
             for (bool closed_event : {false, true})
                 test_osk_axis_handoff(raw, mouse, closed_event);
+
+    for (bool orphan : {false, true})
+        test_hotkey_remap_handoff(orphan);
 
     reset_fixture();
     axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000);

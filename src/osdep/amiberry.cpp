@@ -2876,7 +2876,24 @@ void osk_clear_controller_holds()
 				state.physical = value;
 			}
 		}
-		did.hotkey_held = false;
+		// Reconcile the modifier with the physical stick instead of dropping
+		// it: a remapped press must meet its release at the same offset.
+		bool held = false;
+		if (did.mapping.hotkey_button >= 0) {
+			held = did.mapping.is_retroarch
+				? (did.joystick && SDL_GetJoystickButton(did.joystick, did.mapping.hotkey_button))
+				: (did.controller && SDL_GetGamepadButton(did.controller, static_cast<SDL_GamepadButton>(did.mapping.hotkey_button)));
+		}
+		did.hotkey_held = held;
+		if (!held && did.remapped_press_mask) {
+			// The modifier is gone — its release may have been consumed by
+			// another event loop — so pending remapped releases would miss
+			// their offset. Neutralize those presses explicitly.
+			for (int button = 0; button < SDL_GAMEPAD_BUTTON_COUNT; ++button)
+				if (did.remapped_press_mask & (1u << button))
+					setjoybuttonstate(id, button + REMAP_BUTTONS, 0);
+			did.remapped_press_mask = 0;
+		}
 	}
 }
 

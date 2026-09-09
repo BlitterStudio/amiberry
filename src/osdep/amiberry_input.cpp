@@ -2108,6 +2108,10 @@ void read_controller_button(const int id, const int button, const int state)
 		else if (button == did->mapping.reset_button)
 			setjoybuttonstate(id, retroarch_offset + 3, state);
 
+		if (held_offset) {
+			auto& mask = di_joystick[id].remapped_press_mask;
+			mask = state ? mask | (1u << button) : mask & ~(1u << button);
+		}
 		setjoybuttonstate(id, button + held_offset, state);
 	}
 }
@@ -2167,6 +2171,10 @@ void read_joystick_button_single(const int id, const int button, const int state
 		{
 			if (did->mapping.button[did_button] == button)
 			{
+				if (held_offset) {
+					auto& mask = di_joystick[id].remapped_press_mask;
+					mask = state ? mask | (1u << did_button) : mask & ~(1u << did_button);
+				}
 				setjoybuttonstate(id, did_button + held_offset, state);
 				break;
 			}
