@@ -2876,6 +2876,13 @@ static void dispatch_controller_button(const SDL_JoystickID which, const Uint8 b
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || did->mapping.is_retroarch || !did->is_controller) continue;
+		// Mirror the hotkey-state update of the normal dispatch path: a
+		// forwarded release of the hotkey button must clear hotkey_held, or
+		// the next hotkey+button combination misfires.
+		if (button == did->mapping.hotkey_button) {
+			did->hotkey_held = state;
+			break;
+		}
 		read_controller_button(id, button, state);
 		break;
 	}
@@ -3277,13 +3284,18 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 
 		// A RetroArch-mapped controller with a hat D-pad also delivers the raw
 		// hat copy; SDL synthesizes the gamepad D-pad events from it, and the
-		// OSK consumes those while active. Suppress the raw copy for the same
-		// gesture so the emulated joystick does not move during navigation;
-		// centered values are releases and flow so gameplay-held directions
-		// clear in UAE.
+		// OSK consumes those while active. Suppress the copy while the OSK
+		// session owns a D-pad direction on this controller; centered values
+		// are releases and always flow, and a non-centered transition flows
+		// when the session owns nothing — read_joystick_hat() needs the full
+		// transition to clear a gameplay-held direction.
 		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()
-			&& value != SDL_HAT_CENTERED)
-			break;
+			&& value != SDL_HAT_CENTERED) {
+			const auto session_dirs = osk_dpad_dir.find(which);
+			const bool osk_owns_any = session_dirs != osk_dpad_dir.end() && session_dirs->second != 0;
+			if (osk_owns_any)
+				break; // consumed by the OSK's gamepad-side handling
+		}
 		read_joystick_hat(id, hat, value);
 		break;
 	}

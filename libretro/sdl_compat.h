@@ -706,6 +706,7 @@ enum {
 #define SDL_BUTTON_X1 4
 #define SDL_BUTTON_X2 5
 
+#define SDL_HAT_CENTERED 0x00
 #define SDL_HAT_UP 0x01
 #define SDL_HAT_RIGHT 0x02
 #define SDL_HAT_DOWN 0x04
