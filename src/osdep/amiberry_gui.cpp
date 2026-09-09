@@ -220,7 +220,7 @@ static int isromext(const std::string& path, bool deepscan)
 		return 0;
 	const std::string ext = path.substr(ext_pos + 1);
 
-	static const std::vector<std::string> extensions = { "rom", "bin", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32", "roz" };
+	static const std::vector<std::string> extensions = { "rom", "bin", "a1000", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32", "roz" };
 	for (const auto& extension : extensions)
 	{
 		if (strcasecmp(ext.c_str(), extension.c_str()) == 0)

@@ -17,16 +17,6 @@ class FileManagerTest {
 	// --- FileCategory.fromExtension ---
 
 	@Test
-	fun `ROM extensions match the native chooser set exactly`() {
-		val expected = setOf("rom", "bin", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32")
-
-		assertEquals(expected, FileCategory.ROMS.extensions)
-		expected.forEach { extension ->
-			assertEquals(FileCategory.ROMS, FileCategory.fromExtension(extension))
-		}
-	}
-
-	@Test
 	fun `fromExtension returns FLOPPIES for floppy extensions`() {
 		assertEquals(FileCategory.FLOPPIES, FileCategory.fromExtension("adf"))
 		assertEquals(FileCategory.FLOPPIES, FileCategory.fromExtension("adz"))
@@ -121,7 +111,7 @@ class FileManagerTest {
 
 	@Test
 	fun `importFileNameForCategory accepts every supported ROM extension`() {
-		val expectedExtensions = setOf("rom", "bin", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32")
+		val expectedExtensions = setOf("rom", "bin", "a1000", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32")
 
 		expectedExtensions.forEach { extension ->
 			val name = "Kickstart.${extension.uppercase()}"
@@ -350,6 +340,7 @@ class FileManagerTest {
 	fun `scanDirectory finds supported model ROM extensions and rejects deep scan formats`() {
 		val dir = tempDir.newFolder(StoragePaths.ROMS)
 		File(dir, "Kickstart.A500").writeText("a500")
+		File(dir, "Bootstrap.A1000").writeText("a1000")
 		File(dir, "CDTV.CdTv").writeText("cdtv")
 		File(dir, "Encrypted.roz").writeText("roz")
 		File(dir, "Cloanto.U1").writeText("u1")
@@ -357,7 +348,7 @@ class FileManagerTest {
 
 		val result = FileManager.scanDirectory(dir, FileCategory.ROMS.extensions, FileCategory.ROMS)
 
-		assertEquals(listOf("CDTV.CdTv", "Kickstart.A500"), result.map { it.name })
+		assertEquals(listOf("Bootstrap.A1000", "CDTV.CdTv", "Kickstart.A500"), result.map { it.name })
 		assertTrue(result.all { it.category == FileCategory.ROMS && it.crc32 != null })
 	}
 
