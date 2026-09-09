@@ -1151,6 +1151,15 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 		// release — directions held since before the press merely resume repeat.
 		s_suppressed_dirs |= rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT);
 	}
+	// Partial release: the held-direction mask changed while a direction is
+	// still held (e.g. Right+Down -> Down released). Re-arm repeat for the
+	// remaining mask, or the tick's equality guard would stall it until every
+	// direction is re-pressed.
+	if (dir_state && dir_state != s_repeat_dir) {
+		s_repeat_dir = dir_state;
+		s_repeat_start_time = now;
+		s_repeat_last_time = now;
+	}
 
 	// Key repeat while direction held
 	osk_repeat_tick(dir_state, button_held);
