@@ -3289,6 +3289,7 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 		didata* did = &di_joystick[id];
 		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
+		int forward_value = value;
 		if (did->mapping.is_retroarch && did->is_controller) {
 			// Track the previous raw hat value so a transition's released
 			// directions can be identified; suppression below depends on it.
@@ -3302,7 +3303,10 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 			// gameplay-held direction mixed into the transition must reach
 			// read_joystick_hat(), or UAE keeps it asserted (RetroArch devices
 			// are skipped by dispatch_controller_button()). Centered values
-			// are pure releases and always flow.
+			// are pure releases and always flow. When a mixed transition is
+			// forwarded, OSK-owned directions are masked out of the value so
+			// the forwarded composite clears the gameplay direction without
+			// asserting the keyboard's direction in the emulated joystick.
 			if (imgui_osk_is_active() && value != SDL_HAT_CENTERED) {
 				const auto session_dirs = osk_dpad_dir.find(which);
 				const int session_bits = session_dirs != osk_dpad_dir.end() ? session_dirs->second : 0;
@@ -3315,6 +3319,19 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 					default:            return true;
 					}
 				};
+				auto owned_hat_bit = [&](const int logical_bit) {
+					switch (logical_bit) {
+					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_UP    - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_UP;
+					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_DOWN  - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_DOWN;
+					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_LEFT  - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_LEFT;
+					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_RIGHT - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_RIGHT;
+					default: return 0u;
+					}
+				};
+				int owned_hat_bits = 0;
+				for (int lb = 1; lb < 16; lb <<= 1)
+					if (session_bits & lb)
+						owned_hat_bits |= owned_hat_bit(lb);
 				const int released = prev_hat & ~value;
 				bool releases_gameplay = false;
 				for (int bit = 1; bit <= 8; bit <<= 1)
@@ -3322,9 +3339,10 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 						releases_gameplay = true;
 				if (!releases_gameplay)
 					break; // fully OSK-owned transition: consumed by the gamepad side
+				forward_value = value & ~owned_hat_bits;
 			}
 		}
-		read_joystick_hat(id, hat, value);
+		read_joystick_hat(id, hat, forward_value);
 		break;
 	}
 }
