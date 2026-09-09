@@ -272,6 +272,17 @@ extern bool inputdevice_devicechange (struct uae_prefs *prefs);
 extern void inputdevice_mouse_reinit(struct uae_prefs *prefs);
 #endif
 
+// SDL gamepad routing has already decided which events belong to the OSK.
+// Keep forwarded gameplay events out of the core's generic joystick capture.
+class inputdevice_osk_passthrough {
+	bool previous;
+public:
+	explicit inputdevice_osk_passthrough(bool enabled = true);
+	~inputdevice_osk_passthrough();
+	inputdevice_osk_passthrough(const inputdevice_osk_passthrough&) = delete;
+	inputdevice_osk_passthrough& operator=(const inputdevice_osk_passthrough&) = delete;
+};
+
 #define INTERNALEVENT_CPURESET 0
 #define INTERNALEVENT_KBRESET 1
 #define INTERNALEVENT_TOUCHLIGHTPEN 2

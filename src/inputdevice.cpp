@@ -213,40 +213,48 @@ static int draco_keybord_repeat_cnt, draco_keybord_repeat_code;
 
 // OSK_* constants defined in imgui_osk.h
 
-// Accumulated OSK joystick state — directions and button are set/cleared
-// independently by different callers, so we track them across calls.
-static int osk_accumulated_state = 0;
+// Generic joystick mappings and directly routed gamepads contribute separately:
+// a gamepad release/removal must not clear a plain joystick's held OSK key.
+static int osk_joystick_state = 0;
+static int osk_gamepad_state = 0;
+static thread_local bool osk_passthrough = false;
 
-void osk_control(int x, int y, int button, int buttonstate)
+inputdevice_osk_passthrough::inputdevice_osk_passthrough(bool enabled)
+	: previous(osk_passthrough)
+{
+	osk_passthrough = previous || enabled;
+}
+
+inputdevice_osk_passthrough::~inputdevice_osk_passthrough()
+{
+	osk_passthrough = previous;
+}
+
+void osk_control(int x, int y, int button, int buttonstate, OskInputSource source)
 {
 	if (!imgui_osk_is_active()) {
-		osk_accumulated_state = 0;
+		osk_joystick_state = osk_gamepad_state = 0;
 		return;
 	}
-	if (vkbd_allowed(0))
-	{
-		// Update accumulated direction state: always refresh direction bits
-		if (!button) {
-			// Direction event: replace all direction bits
-			osk_accumulated_state &= ~(OSK_LEFT | OSK_RIGHT | OSK_UP | OSK_DOWN);
-			if (x < 0) osk_accumulated_state |= OSK_LEFT;
-			if (x > 0) osk_accumulated_state |= OSK_RIGHT;
-			if (y < 0) osk_accumulated_state |= OSK_UP;
-			if (y > 0) osk_accumulated_state |= OSK_DOWN;
-		} else {
-			// Button event: update button bit
-			if (buttonstate)
-				osk_accumulated_state |= OSK_BUTTON;
-			else
-				osk_accumulated_state &= ~OSK_BUTTON;
-		}
+	if (!vkbd_allowed(0))
+		return;
 
-		int code;
-		int pressed;
-		// imgui_osk_process handles inputdevice_do_keyboard internally
-		// via press_key/release_key — don't call it again here
-		imgui_osk_process(osk_accumulated_state, &code, &pressed);
+	int& state = source == OskInputSource::Gamepad ? osk_gamepad_state : osk_joystick_state;
+	if (!button) {
+		state &= ~(OSK_LEFT | OSK_RIGHT | OSK_UP | OSK_DOWN);
+		if (x < 0) state |= OSK_LEFT;
+		if (x > 0) state |= OSK_RIGHT;
+		if (y < 0) state |= OSK_UP;
+		if (y > 0) state |= OSK_DOWN;
+	} else if (buttonstate) {
+		state |= OSK_BUTTON;
+	} else {
+		state &= ~OSK_BUTTON;
 	}
+
+	int code, pressed;
+	// The OSK emits keyboard events itself; do not emit them a second time.
+	imgui_osk_process(osk_joystick_state | osk_gamepad_state, &code, &pressed);
 }
 
 static int isdevice (struct uae_input_device *id)
@@ -5760,8 +5768,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	case 4: /* ->Parallel port joystick adapter port #2 */
 		joy = ie->unit - 1;
 		if (ie->type & 4) {
-			if (vkbd_allowed(0) && imgui_osk_is_active()) {
-				osk_control(0, 0, 1 << ie->data, state);
+			if (!osk_passthrough && vkbd_allowed(0) && imgui_osk_is_active()) {
+				osk_control(0, 0, 1 << ie->data, state, OskInputSource::EmulatedJoystick);
 			}
 			else {
 				int old = joybutton[joy] & (1 << ie->data);
@@ -6011,13 +6019,13 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 			mouse_deltanoreset[joy][0] = 1;
 			mouse_deltanoreset[joy][1] = 1;
-			if (vkbd_allowed(0) && imgui_osk_is_active()) {
+			if (!osk_passthrough && vkbd_allowed(0) && imgui_osk_is_active()) {
 				int dx = 0, dy = 0;
 				if (left) dx = -1;
 				else if (right) dx = 1;
 				if (top) dy = -1;
 				else if (bot) dy = 1;
-				osk_control(dx, dy, 0, 0);
+				osk_control(dx, dy, 0, 0, OskInputSource::EmulatedJoystick);
 			}
 			else {
 				joydir[joy] = 0;

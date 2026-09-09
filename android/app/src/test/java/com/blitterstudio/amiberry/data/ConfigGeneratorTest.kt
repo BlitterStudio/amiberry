@@ -25,12 +25,6 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `generate omits vkbd toggle when unset`() {
-		val output = ConfigGenerator.generate(EmulatorSettings(onScreenKeyboard = true))
-		assertFalse(output.contains("vkbd_toggle"))
-	}
-
-	@Test
 	fun `generate writes vkbd toggle when set`() {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "rightstick")
@@ -39,11 +33,42 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `generate writes explicitly empty vkbd toggle as disabled`() {
-		val output = ConfigGenerator.generate(
-			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "")
+	fun `generated explicitly empty vkbd toggle parses back as disabled`() {
+		val file = tempDir.newFile("disabled-toggle.uae")
+		file.writeText(
+			ConfigGenerator.generate(
+				EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "")
+			)
 		)
-		assertContains(output, "amiberry.vkbd_toggle=")
+
+		assertEquals("", ConfigParser.parse(file).settings.onScreenKeyboardToggle)
+	}
+
+	@Test
+	fun `saved default toggle survives remembered fallback on reload`() {
+		val file = tempDir.newFile("default-toggle.uae")
+		val settings = EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = null)
+		for (generated in listOf(ConfigGenerator.generate(settings), ConfigGenerator.generateControlConfig(settings))) {
+			file.writeText(generated)
+			val parsed = ConfigParser.parse(file)
+			val reloaded = AndroidControlSettings.withFallback(
+				settings = parsed.settings,
+				explicitKeys = parsed.explicitKeys,
+				fallback = EmulatorSettings(onScreenKeyboardToggle = "rightstick")
+			)
+			assertNull(reloaded.onScreenKeyboardToggle)
+		}
+
+		// A legacy config written before the key existed must keep falling back
+		// to the remembered toggle.
+		file.writeText("amiberry.vkbd_enabled=true")
+		val legacyParsed = ConfigParser.parse(file)
+		val legacy = AndroidControlSettings.withFallback(
+			settings = legacyParsed.settings,
+			explicitKeys = legacyParsed.explicitKeys,
+			fallback = EmulatorSettings(onScreenKeyboardToggle = "rightstick")
+		)
+		assertEquals("rightstick", legacy.onScreenKeyboardToggle)
 	}
 
 	@Test

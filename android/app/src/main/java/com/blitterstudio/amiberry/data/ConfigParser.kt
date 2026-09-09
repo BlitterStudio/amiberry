@@ -167,7 +167,11 @@ object ConfigParser {
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
 			onScreenKeyboard = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true),
 			onScreenKeyboardNumpad = kv["amiberry.vkbd_numpad"].toBool(false),
-			onScreenKeyboardToggle = kv["amiberry.vkbd_toggle"],
+			// "default" is the explicit reset sentinel (see ConfigGenerator): parse it
+			// back to the emulator default (null) while the key stays explicit, so the
+			// remembered-control fallback cannot override a saved Default choice.
+			// "" (explicitly disabled) and button names round-trip unchanged.
+			onScreenKeyboardToggle = kv["amiberry.vkbd_toggle"]?.takeIf { it != "default" },
 			joyport0MouseMap = (kv["joyport0mousemap"]?.toIntOrNull() ?: 0) > 0,
 			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0
 		)

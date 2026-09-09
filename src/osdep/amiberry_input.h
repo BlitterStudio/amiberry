@@ -138,6 +138,10 @@ extern void ensure_onscreen_joystick_registered();
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
 
+// Preserve RetroArch's own raw shortcuts; other devices use the global hotkeys
+// in the index space consumed by their SDL event path.
+extern void sync_controller_shortcuts(didata* did);
+
 extern void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename);
 extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);
 

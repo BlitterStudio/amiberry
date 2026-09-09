@@ -649,10 +649,15 @@ void imgui_osk_shutdown()
 	s_initialized = false;
 	s_visible = false;
 	s_animating = false;
+	// Release every guest key the keyboard still owns before dropping the
+	// ownership sets: a key held down (or a sticky modifier left engaged,
+	// Caps Lock included) must not stay asserted in the guest after shutdown.
+	release_pressed_keys();
+	for (int mod : s_sticky_keys)
+		inputdevice_do_keyboard(mod, 0);
 	s_sticky_keys.clear();
-	s_finger_keys.clear();
-	s_pressed_keys.clear();
-	osk_control(0, 0, 0, 0); // drop accumulated input-layer joystick state
+	reset_navigation_state();
+	osk_control(0, 0, 0, 0, OskInputSource::Gamepad); // drop accumulated input-layer joystick state
 	osk_clear_controller_holds(); // and the per-controller hold state
 }
 
@@ -715,8 +720,6 @@ void imgui_osk_set_numpad(const bool enabled)
 		s_focused_key = 0;
 }
 
-static void osk_repeat_tick(const int dir_state, const bool suppress);
-
 void imgui_osk_render()
 {
 	if (!s_initialized || !imgui_overlay_is_initialized())
@@ -726,13 +729,6 @@ void imgui_osk_render()
 	if (display_size.x <= 0.0f || display_size.y <= 0.0f)
 		return;
 	compute_geometry(static_cast<int>(display_size.x), static_cast<int>(display_size.y));
-
-	// Drive key repeat while a direction is held: a stable analog axis or
-	// D-pad generates no further events, so the repeat timers must be polled.
-	// Paused while a key is held (s_prev_joy_state holds the latest state).
-	if (s_visible)
-		osk_repeat_tick(s_prev_joy_state & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT),
-			(s_prev_joy_state & OSK_BUTTON) != 0);
 
 	// Update animation
 	float anim_offset = 0.0f;
@@ -906,7 +902,7 @@ void imgui_osk_hide()
 	// Drop any accumulated joystick state from the input layer: osk_control()
 	// only clears it when invoked while the keyboard is inactive, and callers
 	// may stop calling it the moment s_visible goes false.
-	osk_control(0, 0, 0, 0);
+	osk_control(0, 0, 0, 0, OskInputSource::Gamepad);
 	osk_clear_controller_holds(); // per-controller holds do not cross sessions
 }
 
@@ -1085,9 +1081,10 @@ static int find_nearest_key(int from_idx, int direction)
 	return (best >= 0) ? best : from_idx;
 }
 
-// Advance key repeat while a direction is held. Called both from
-// imgui_osk_process() on state changes and per render frame, because a held
-// analog axis or D-pad produces no further events until its value changes.
+// Advance key repeat while a direction is held. Called from
+// imgui_osk_process() on state changes and from imgui_osk_update() on the
+// input thread, because a held analog axis or D-pad produces no further
+// events until its value changes.
 static void osk_repeat_tick(const int dir_state, const bool suppress)
 {
 	// Suppress directional repeat while a key is held (or is being released):
@@ -1110,6 +1107,23 @@ static void osk_repeat_tick(const int dir_state, const bool suppress)
 		s_repeat_last_time = now;
 	}
 }
+
+void imgui_osk_update()
+{
+	if (!s_initialized || !s_visible)
+		return;
+
+	// Drive key repeat while a direction is held: a stable analog axis or
+	// D-pad generates no further events, so the repeat timers must be polled
+	// here — on the input thread that owns imgui_osk_process(), never from
+	// rendering. The render thread must stay read-only with respect to
+	// focus/repeat state: advancing s_focused_key concurrently with a South
+	// release would free the newly focused key instead of the pressed one.
+	// Paused while a key is held (s_prev_joy_state holds the latest state).
+	osk_repeat_tick(s_prev_joy_state & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT),
+		(s_prev_joy_state & OSK_BUTTON) != 0);
+}
+
 
 bool imgui_osk_process(int state, int* keycode, int* pressed)
 {
@@ -1135,7 +1149,6 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 	const bool button_held = (state & OSK_BUTTON) || (prev & OSK_BUTTON);
 
 	// Navigation on rising edge
-	bool moved = false;
 	if (!button_held && (rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT))) {
 		if (rising & OSK_UP)    s_focused_key = find_nearest_key(s_focused_key, OSK_UP);
 		if (rising & OSK_DOWN)  s_focused_key = find_nearest_key(s_focused_key, OSK_DOWN);
@@ -1144,7 +1157,6 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 		s_repeat_dir = dir_state;
 		s_repeat_start_time = now;
 		s_repeat_last_time = now;
-		moved = true;
 	}
 	else if (button_held && (rising & (OSK_UP | OSK_DOWN | OSK_LEFT | OSK_RIGHT))) {
 		// Remember suppressed rising edges: only these are replayed on the key

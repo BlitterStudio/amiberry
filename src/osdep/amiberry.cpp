@@ -800,21 +800,6 @@ static void set_key_configs(const uae_prefs* p)
 	if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID && vkbd_button != SDL_GAMEPAD_BUTTON_START)
 		enter_gui_button = SDL_GAMEPAD_BUTTON_START;
 #endif
-	if (enter_gui_button != SDL_GAMEPAD_BUTTON_INVALID)
-	{
-		for (int port = 0; port < 2; port++)
-		{
-			const auto host_joy_id = p->jports[port].id - JSEM_JOYS;
-			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
-			{
-				didata* did = &di_joystick[host_joy_id];
-				// The plain-joystick handler compares menu_button directly with
-				// the raw event index: translate the logical button through the
-				// device map before storing.
-				did->mapping.menu_button = did->mapping.button_unmasked[enter_gui_button];
-			}
-		}
-	}
 	
 	quit_key = get_hotkey_from_config(p->quit_amiberry);
 
@@ -831,26 +816,8 @@ static void set_key_configs(const uae_prefs* p)
 
 	debugger_key = get_hotkey_from_config(p->debugger_trigger);
 
-
-	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID)
-	{
-		for (int port = 0; port < 2; port++)
-		{
-			const auto host_joy_id = p->jports[port].id - JSEM_JOYS;
-			if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
-			{
-				didata* did = &di_joystick[host_joy_id];
-				// Store the raw physical index (translated through the device
-				// map): the plain-joystick hotkey-combo path compares this field
-				// directly with the raw event button.
-				// Prefer the live translation; keep the pre-mask value stored
-				// by setup_mapping() when hotkey masking invalidated the entry.
-				const int raw_toggle = did->mapping.button_unmasked[vkbd_button];
-				if (raw_toggle != SDL_GAMEPAD_BUTTON_INVALID)
-					did->mapping.vkbd_button = raw_toggle;
-			}
-		}
-	}
+	for (auto& did : di_joystick)
+		sync_controller_shortcuts(&did);
 }
 
 #ifndef _WIN32
@@ -1818,6 +1785,9 @@ static bool accepts_uncaptured_guest_input()
 
 void target_inputdevice_unacquire(const bool full)
 {
+	// Releases consumed by the GUI/background event loop cannot update OSK
+	// ownership. End the session before transferring input away from emulation.
+	imgui_osk_hide();
 #ifdef __ANDROID__
 	amiberry_android_touch_mouse_neutralize();
 	amiberry_android_clear_all_mouse_button_sources();
@@ -1833,6 +1803,7 @@ void target_inputdevice_acquire()
 	const AmigaMonitor* mon = &AMonitors[0];
 	target_inputdevice_unacquire(false);
 	tablet = open_tablet(mon->amiga_window);
+	osk_clear_controller_holds();
 }
 
 static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause)
@@ -2836,514 +2807,350 @@ static void handle_clipboard_update_event()
 	}
 }
 
+struct OskControllerState {
+	int buttons = 0;
+	int stick = 0;
+	bool gameplay_axis[2] = {};
+};
+
+struct OskHatState {
+	int physical = SDL_HAT_CENTERED;
+	int gameplay = SDL_HAT_CENTERED;
+};
+
+static std::unordered_map<SDL_JoystickID, OskControllerState> osk_controllers;
+static std::unordered_map<Uint64, OskHatState> osk_hats;
+
+static void osk_publish_controller_state()
+{
+	int state = 0;
+	for (const auto& entry : osk_controllers)
+		state |= entry.second.buttons | entry.second.stick;
+	const int dx = (state & OSK_LEFT) ? -1 : (state & OSK_RIGHT) ? 1 : 0;
+	const int dy = (state & OSK_UP) ? -1 : (state & OSK_DOWN) ? 1 : 0;
+	osk_control(dx, dy, 0, 0, OskInputSource::Gamepad);
+	osk_control(0, 0, 1, (state & OSK_BUTTON) != 0, OskInputSource::Gamepad);
+}
+
+void osk_clear_controller_holds()
+{
+	osk_controllers.clear();
+	osk_hats.clear();
+	// The GUI has its own event loop. Poll on handoff rather than retaining
+	// suspension flags whose neutral/release events that loop may have consumed.
+	for (auto& did : di_joystick) {
+		if (did.name.empty() || !did.is_controller)
+			continue;
+		auto& state = osk_controllers[did.joystick_id];
+		for (int axis = SDL_GAMEPAD_AXIS_LEFTX; axis <= SDL_GAMEPAD_AXIS_LEFTY; ++axis) {
+			int value = 0;
+			if (did.mapping.is_retroarch) {
+				const int raw = did.mapping.axis[axis];
+				if (raw >= 0 && raw < did.axles)
+					value = SDL_GetJoystickAxis(did.joystick, raw);
+			} else {
+				value = SDL_GetGamepadAxis(did.controller, static_cast<SDL_GamepadAxis>(axis));
+			}
+			state.gameplay_axis[axis] = value != 0;
+		}
+		if (did.mapping.is_retroarch) {
+			for (int hat = 0; hat < SDL_GetNumJoystickHats(did.joystick); ++hat) {
+				const int value = SDL_GetJoystickHat(did.joystick, hat);
+				const Uint64 key = (static_cast<Uint64>(did.joystick_id) << 8) | hat;
+				osk_hats[key] = {value, value};
+			}
+		}
+		did.hotkey_held = false;
+	}
+}
+
 void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 {
+	if (removed) {
+		osk_controllers.erase(which);
+		for (auto it = osk_hats.begin(); it != osk_hats.end();) {
+			if ((it->first >> 8) == which)
+				it = osk_hats.erase(it);
+			else
+				++it;
+		}
+		if (imgui_osk_is_active())
+			osk_publish_controller_state();
+	}
 	bool known_device = false;
-	for (int id = 0; id < MAX_INPUT_DEVICES; ++id)
-	{
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
 		const didata* did = &di_joystick[id];
-		if (!did->guid.empty() && did->joystick_id == which)
-		{
+		if (!did->guid.empty() && did->joystick_id == which) {
 			known_device = true;
 			break;
 		}
 	}
-	if (!known_device || removed)
-	{
+	if (!known_device || removed) {
 		write_log("SDL Gamepad/Joystick added or removed, re-enumerating input devices...\n");
 		if (inputdevice_devicechange(&changed_prefs))
-		{
 			joystick_refresh_needed = true;
-		}
 	}
 }
 
-enum { OSK_DPAD_UP = 1, OSK_DPAD_DOWN = 2, OSK_DPAD_LEFT = 4, OSK_DPAD_RIGHT = 8 };
-extern std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
-// Combined OSK navigation direction across every controller's D-pad and
-// left-stick cache (defined next to the caches).
-static void osk_merged_direction(int& dx, int& dy);
-// Baseline all per-controller OSK input state (defined next to the caches).
-void osk_clear_controller_holds();
-// Per-controller "press key" (South) hold state: the OSK tracks a single
-// press, so overlapping holds must be merged before forwarding.
-static std::unordered_map<SDL_JoystickID, bool> osk_south_held;
-
-// Forward a gamepad button event to the emulated device layer (the loop that
-// the hotkey chain's final else performs).
-static void dispatch_controller_button(const SDL_JoystickID which, const Uint8 button, const bool state)
+// Return true only for OSK-owned input. A release of a gameplay-held control
+// continues to the device reader, whose passthrough scope prevents recapture.
+static bool handle_osk_button(const SDL_JoystickID which, const int button, const bool down)
 {
-	for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
-		didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || did->mapping.is_retroarch || !did->is_controller) continue;
-		// Mirror the hotkey-state update of the normal dispatch path: a
-		// forwarded release of the hotkey button must clear hotkey_held, or
-		// the next hotkey+button combination misfires.
-		if (button == did->mapping.hotkey_button) {
-			did->hotkey_held = state;
-			break;
-		}
-		read_controller_button(id, button, state);
-		break;
+	if (!imgui_osk_should_render())
+		return false;
+	if (!imgui_osk_is_active())
+		return down;
+
+	int bit = 0;
+	switch (button) {
+	case SDL_GAMEPAD_BUTTON_DPAD_UP: bit = OSK_UP; break;
+	case SDL_GAMEPAD_BUTTON_DPAD_DOWN: bit = OSK_DOWN; break;
+	case SDL_GAMEPAD_BUTTON_DPAD_LEFT: bit = OSK_LEFT; break;
+	case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: bit = OSK_RIGHT; break;
+	case SDL_GAMEPAD_BUTTON_SOUTH: bit = OSK_BUTTON; break;
+	default: break;
 	}
+	if (bit) {
+		auto& state = osk_controllers[which];
+		const bool owned = (state.buttons & bit) != 0;
+		if (down)
+			state.buttons |= bit;
+		else
+			state.buttons &= ~bit;
+		osk_publish_controller_state();
+		return down || owned;
+	}
+	if (button == SDL_GAMEPAD_BUTTON_EAST && down)
+		imgui_osk_hide();
+	return down;
 }
 
-static void handle_controller_button_event(const SDL_Event& event)
+static bool handle_gamepad_button(const SDL_JoystickID which, const int button, const bool down)
 {
-	const auto button = event.gbutton.button;
-	const auto state = event.gbutton.down;
-	const auto which = event.gbutton.which;
-	// True when this event releases a control whose press predates the
-	// keyboard session (gameplay-owned): the OSK must not consume it, or the
-	// emulated button stays latched after the keyboard closes.
-	bool release_unowned = false;
-	if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-		auto& dir = osk_dpad_dir[which];
-		const int bit = 1 << (button - SDL_GAMEPAD_BUTTON_DPAD_UP);
-		const bool was_registered = (dir & bit) != 0;
-		// Directions only register while the keyboard is active, so a hold
-		// from before it opened cannot surface as a phantom rising edge;
-		// releases always clear, keeping the cache fresh while closed.
-		if (state && imgui_osk_is_active()) dir |= bit;
-		else if (!state) dir &= ~bit;
-		release_unowned = !state && !was_registered;
-	}
-	// Record "press key" (South) holds that begin while the keyboard is
-	// active; always record releases, including while closed or animating,
-	// so a stale entry can neither block merged-state updates nor leak a
-	// gameplay hold into the keyboard's state after it opens.
-	if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
-		const bool was_held = osk_south_held.count(which) != 0 && osk_south_held[which];
-		osk_south_held[which] = state && imgui_osk_is_active();
-		release_unowned = !state && !was_held;
-	}
-
-
-
-#ifdef __ANDROID__
-	// Guide button: reliable menu trigger on Android gamepads (not used by Amiga
-	// software). The explicitly configured OSK toggle below wins over it, so
-	// vkbd_toggle=guide can map the keyboard to it if desired.
-	if (button == SDL_GAMEPAD_BUTTON_GUIDE && vkbd_button != SDL_GAMEPAD_BUTTON_GUIDE) {
-		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
-		return;
-	}
-#endif
-
-	// The explicitly configured OSK toggle takes precedence over every other
-	// mapping on the same button — including an explicit open_gui mapping —
-	// matching the plain-joystick path.
+	// Explicit OSK binding wins over menu/other shortcuts. AKS_OSK toggles on
+	// either state, so consume both edges but enqueue only the press.
 	if (vkbd_button != SDL_GAMEPAD_BUTTON_INVALID && button == vkbd_button) {
-		// AKS_OSK toggles unconditionally, so queue it on button-down only;
-		// forwarding the release would immediately close what the press opened.
-		if (state)
+		if (down)
 			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 	}
+#ifdef __ANDROID__
+	else if (button == SDL_GAMEPAD_BUTTON_GUIDE) {
+		inputdevice_add_inputcode(AKS_ENTERGUI, down, nullptr);
+	}
+#endif
 	else if (button == enter_gui_button) {
-		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
+		inputdevice_add_inputcode(AKS_ENTERGUI, down, nullptr);
 	}
 	else if (quit_key.button && button == quit_key.button) {
 		uae_quit();
 	}
 	else if (action_replay_key.button && button == action_replay_key.button) {
-		inputdevice_add_inputcode(AKS_FREEZEBUTTON, state, nullptr);
+		inputdevice_add_inputcode(AKS_FREEZEBUTTON, down, nullptr);
 	}
 	else if (fullscreen_key.button && button == fullscreen_key.button) {
-		inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, state, nullptr);
+		inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, down, nullptr);
 	}
 	else if (minimize_key.button && button == minimize_key.button) {
 		minimizewindow(0);
 	}
 	else if (imgui_osk_should_render()) {
-		// When OSK is visible or animating, intercept D-pad and face buttons at the SDL level
-		// before they reach UAE's input system. This ensures immediate response.
-		// The per-controller D-pad cache (osk_dpad_dir) is updated on every
-		// event at the top of this function, so a release during the closing
-		// animation never leaves a stale direction for the next open.
-		if (!imgui_osk_is_active()) {
-			// Closing (or opening) animation: the keyboard session owns
-			// nothing in this window, so forward every release — a press the
-			// keyboard never asserted produces a harmless no-op, while a
-			// gameplay-held button (any button, not only D-pad/South) gets
-			// cleared in UAE.
-			if (!state)
-				dispatch_controller_button(which, button, state);
-			return;
-		}
-
-		if (button >= SDL_GAMEPAD_BUTTON_DPAD_UP && button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-			// osk_control() replaces every accumulated direction bit: send the
-			// combination across all caches, so a direction held on the stick
-			// (or another controller) survives this D-pad update.
-			int dx = 0, dy = 0;
-			osk_merged_direction(dx, dy);
-			osk_control(dx, dy, 0, 0);
-			if (!release_unowned)
-				return; // consume — don't pass to UAE input system
-			// A release whose press predates the keyboard session falls
-			// through so UAE clears the emulated direction.
-			dispatch_controller_button(which, button, state);
-			return;
-		}
-		// Fire button (A/South) = press key. The hold map was updated at the
-		// top of this function; forward the merged state so an overlapping
-		// release on another pad cannot drop a still-held key.
-		if (button == SDL_GAMEPAD_BUTTON_SOUTH) {
-			bool any_held = false;
-			for (const auto& entry : osk_south_held)
-				any_held = any_held || entry.second;
-			osk_control(0, 0, 1, any_held ? 1 : 0);
-			if (!release_unowned)
-				return;
-			dispatch_controller_button(which, button, state);
-			return;
-		}
-		// B/East = close keyboard
-		if (button == SDL_GAMEPAD_BUTTON_EAST && state) {
-			imgui_osk_toggle();
-			return;
-		}
-		// Any other button: the keyboard does not consume it. Forward
-		// releases to UAE — a gameplay-held fire button, shoulder or face
-		// button must not stay latched until the keyboard closes. Presses are
-		// still captured here so the keyboard session owns the surface.
-		if (!state)
-			dispatch_controller_button(which, button, state);
+		return handle_osk_button(which, button, down);
 	}
 	else if (screenshot_key.button && button == screenshot_key.button) {
-		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, state, nullptr);
+		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, down, nullptr);
 	}
 	else if (debugger_key.button && button == debugger_key.button) {
-		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, state, nullptr);
+		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, down, nullptr);
 	}
 	else {
-		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
-			didata* did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != which || did->mapping.is_retroarch || !did->is_controller) continue;
-
-			// Update per-device hotkey state in event order
-			if (button == did->mapping.hotkey_button)
-			{
-				did->hotkey_held = state;
-				break;
-			}
-
-			read_controller_button(id, button, state);
-			break;
-		}
+		return false;
 	}
+	return true;
+}
 
+static void handle_controller_button_event(const SDL_Event& event)
+{
+	const auto button = event.gbutton.button;
+	const auto down = event.gbutton.down;
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+		auto& did = di_joystick[id];
+		if (did.name.empty() || did.joystick_id != event.gbutton.which || !did.is_controller)
+			continue;
+		// RetroArch's logical mapping need not match SDL's. Its raw event path
+		// is the sole owner of both OSK navigation and gameplay dispatch.
+		if (did.mapping.is_retroarch)
+			return;
+		if (handle_gamepad_button(did.joystick_id, button, down))
+			return;
+		if (button == did.mapping.hotkey_button)
+			did.hotkey_held = down;
+		else
+			read_controller_button(id, button, down);
+		return;
+	}
 }
 
 static void handle_joy_button_event(const SDL_Event& event)
 {
 	const auto button = event.jbutton.button;
-	const auto state = event.jbutton.down;
-	const auto which = event.jbutton.which;
+	const auto down = event.jbutton.down;
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+		auto& did = di_joystick[id];
+		if (did.name.empty() || did.joystick_id != event.jbutton.which
+			|| (!did.mapping.is_retroarch && did.is_controller))
+			continue;
 
-	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-	{
-		didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
-
-		// A RetroArch-mapped controller also delivers raw joystick copies of
-		// its D-pad and face buttons. While the on-screen keyboard is active,
-		// suppress the copies of buttons the keyboard consumes on the gamepad
-		// side (D-pad directions and South): the gamepad path drives OSK
-		// navigation and forwards gameplay-owned releases itself. Releases of
-		// gameplay-held buttons must flow — dispatch_controller_button()
-		// skips RetroArch devices, so this raw copy is the only path that
-		// clears them in UAE.
-		if (did->mapping.is_retroarch && did->is_controller && imgui_osk_is_active()
-			&& state) {
-			const int raw_dpad_up = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_UP];
-			const int raw_dpad_down = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_DOWN];
-			const int raw_dpad_left = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_LEFT];
-			const int raw_dpad_right = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_DPAD_RIGHT];
-			const int raw_south = did->mapping.button_unmasked[SDL_GAMEPAD_BUTTON_SOUTH];
-			if (button == raw_dpad_up || button == raw_dpad_down
-				|| button == raw_dpad_left || button == raw_dpad_right
-				|| button == raw_south)
-				break; // consumed by the OSK's gamepad-side handling
+		const bool configured_toggle = vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
+			&& did.mapping.button_unmasked[vkbd_button] == button;
+#ifdef __ANDROID__
+		const bool direct_toggle = configured_toggle;
+#else
+		const bool direct_toggle = configured_toggle && did.is_controller;
+#endif
+		if (direct_toggle) {
+			if (down)
+				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+			return;
+		}
+		// Raw shortcuts are independent of the global-derived mapping.
+		// Do not destroy RetroArch's saved binding on disable, but do gate use.
+		if (button == did.mapping.vkbd_button && currprefs.vkbd_enabled
+			&& currprefs.vkbd_toggle[0]
+			&& (did.hotkey_held || did.mapping.hotkey_button == SDL_GAMEPAD_BUTTON_INVALID)) {
+			if (down)
+				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+			return;
 		}
 #ifdef __ANDROID__
-		// Direct on-screen keyboard toggle for the joystick path — SDL may not
-		// open a device as a gamepad, in which case the controller handler above
-		// never sees these buttons. Resolve the configured global toggle
-		// through the pristine (pre-mask) button map, after validating it —
-		// the masked map cannot be used because the hotkey masking loop
-		// invalidates entries sharing the hotkey's raw button, and RetroArch
-		// devices additionally keep their own osk button in the stored field.
-		if (state
-			&& vkbd_button != SDL_GAMEPAD_BUTTON_INVALID
-			&& did->mapping.button_unmasked[vkbd_button] == button)
-		{
-			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
-			break;
-		}
-		// On Android, allow menu button without hotkey — devices may have no
-		// accessible hotkey modifier (e.g. built-in gamepad on handhelds).
-		if (button == did->mapping.menu_button && state)
-		{
+		if (button == did.mapping.menu_button && down) {
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
+			return;
 		}
 #endif
-
-		// Update per-device hotkey state in event order (not polled)
-		if (button == did->mapping.hotkey_button)
-		{
-			did->hotkey_held = state;
-			break;
+		if (button == did.mapping.hotkey_button) {
+			did.hotkey_held = down;
+			return;
 		}
-		if (button == did->mapping.menu_button && did->hotkey_held && state)
-		{
-			did->hotkey_held = false;
+		if (button == did.mapping.menu_button && did.hotkey_held && down) {
+			did.hotkey_held = false;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
+			return;
 		}
-		if (button == did->mapping.vkbd_button && did->hotkey_held && state)
-		{
-			did->hotkey_held = false;
-			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
-			break;
+		if (did.is_controller) {
+			const int logical = find_in_array(did.mapping.button_unmasked.data(), SDL_GAMEPAD_BUTTON_COUNT, button);
+			if (handle_gamepad_button(did.joystick_id, logical, down))
+				return;
 		}
-
-		read_joystick_button_single(id, button, state);
-
-		break;
+		read_joystick_button_single(id, button, down);
+		return;
 	}
 }
 
-enum { OSK_STICK_LEFT = 1, OSK_STICK_RIGHT = 2, OSK_STICK_UP = 4, OSK_STICK_DOWN = 8,
-	OSK_STICK_SUSPEND_X = 16, OSK_STICK_SUSPEND_Y = 32 };
-// cleared on device removal alongside osk_stick_dir (see process_event).
-std::unordered_map<SDL_JoystickID, int> osk_dpad_dir;
-// Left-stick direction cache for on-screen keyboard navigation, keyed by
-// SDL_JoystickID so concurrent or replaced controllers cannot leak state
-// into each other. Cleared on device removal (see process_event).
-static std::unordered_map<SDL_JoystickID, int> osk_stick_dir;
-
-// Combined OSK navigation direction across every controller's D-pad and
-// left-stick cache. osk_control() replaces all accumulated direction bits,
-// so each dispatch must reflect the union — otherwise a direction held on
-// another input surface would be dropped by an unrelated update.
-static void osk_merged_direction(int& dx, int& dy)
+static bool handle_osk_axis(const SDL_JoystickID which, const int axis, int& value)
 {
-	dx = 0;
-	dy = 0;
-	for (const auto& entry : osk_dpad_dir)
-	{
-		if (entry.second & OSK_DPAD_LEFT)  dx = -1;
-		else if (entry.second & OSK_DPAD_RIGHT) dx = 1;
-		if (entry.second & OSK_DPAD_UP)    dy = -1;
-		else if (entry.second & OSK_DPAD_DOWN)  dy = 1;
+	if (axis != SDL_GAMEPAD_AXIS_LEFTX && axis != SDL_GAMEPAD_AXIS_LEFTY)
+		return false;
+	auto& state = osk_controllers[which];
+	const int mask = axis == SDL_GAMEPAD_AXIS_LEFTX ? OSK_LEFT | OSK_RIGHT : OSK_UP | OSK_DOWN;
+	state.stick &= ~mask;
+	if (!imgui_osk_is_active()) {
+		// Closing animation still owns navigation. Only neutralization may
+		// reach gameplay until the keyboard has left the screen.
+		if (imgui_osk_should_render())
+			value = 0;
+		// Any value forwarded to gameplay may matter to a custom mapping.
+		// Navigation's 40% deadzone is not the guest mouse/joystick deadzone.
+		state.gameplay_axis[axis] = value != 0;
+		return false;
 	}
-	for (const auto& entry : osk_stick_dir)
-	{
-		if (entry.second & OSK_STICK_LEFT)  dx = -1;
-		else if (entry.second & OSK_STICK_RIGHT) dx = 1;
-		if (entry.second & OSK_STICK_UP)    dy = -1;
-		else if (entry.second & OSK_STICK_DOWN)  dy = 1;
+	const bool pressed = abs(value) > SDL_JOYSTICK_AXIS_MAX * 2 / 5;
+	if (state.gameplay_axis[axis]) {
+		if (!pressed) {
+			// Explicitly neutralize the mapped consumer before handing the
+			// axis to the OSK; forwarding a small nonzero value can keep a
+			// mouse-mode controller moving indefinitely.
+			value = 0;
+			state.gameplay_axis[axis] = false;
+		}
+		return false;
 	}
+	if (pressed) {
+		if (axis == SDL_GAMEPAD_AXIS_LEFTX)
+			state.stick |= value < 0 ? OSK_LEFT : OSK_RIGHT;
+		else
+			state.stick |= value < 0 ? OSK_UP : OSK_DOWN;
+	}
+	osk_publish_controller_state();
+	return true;
 }
-void osk_clear_controller_holds()
-{
-	osk_south_held.clear();
-	osk_dpad_dir.clear();
-	// Directions do not cross sessions, but suspension latches must: an axis
-	// deflected when the keyboard closed is converted to a suspended axis so
-	// its first post-open event cannot register a phantom rising edge, and
-	// pre-existing latches survive until the axis crosses neutral.
-	for (auto& entry : osk_stick_dir)
-	{
-		int keep = entry.second & (OSK_STICK_SUSPEND_X | OSK_STICK_SUSPEND_Y);
-		if (entry.second & (OSK_STICK_LEFT | OSK_STICK_RIGHT))
-			keep |= OSK_STICK_SUSPEND_X;
-		if (entry.second & (OSK_STICK_UP | OSK_STICK_DOWN))
-			keep |= OSK_STICK_SUSPEND_Y;
-		entry.second = keep;
-	}
-}
+
 static void handle_controller_axis_motion_event(const SDL_Event& event)
 {
-	const auto axis = event.gaxis.axis;
-	const auto value = event.gaxis.value;
-
-	// Left-stick direction cache for OSK navigation, keyed by SDL_JoystickID
-	// so two controllers cannot leak state into each other, updated on every
-	// axis event (including while the keyboard is closed) so a neutral event
-	// always refreshes it. Cleared when the device is removed.
-	if (axis == SDL_GAMEPAD_AXIS_LEFTX || axis == SDL_GAMEPAD_AXIS_LEFTY) {
-		auto& dir = osk_stick_dir[event.gaxis.which];
-		const int threshold = SDL_JOYSTICK_AXIS_MAX * 2 / 5;
-		const bool pressed = abs(value) > threshold;
-		const bool active = imgui_osk_is_active();
-		// A deflection that exists while the keyboard is closed suspends that
-		// axis until it crosses back through the dead zone: without the latch,
-		// the first intermediate axis event after opening (still beyond the
-		// threshold) would register a phantom rising edge.
-		const int suspend = (axis == SDL_GAMEPAD_AXIS_LEFTX) ? OSK_STICK_SUSPEND_X : OSK_STICK_SUSPEND_Y;
-		// Capture suspension before the latch update: the neutral event that
-		// clears the latch is itself a release UAE must see when it owned the
-		// deflection, so it must still take the fall-through path below.
-		const bool was_suspended = (dir & suspend) != 0;
-		if (!pressed)
-			dir &= ~suspend;
-		else if (!active)
-			dir |= suspend;
-		// Directions only register while the keyboard is active and the axis
-		// is not suspended; clearing always applies (the mask runs first),
-		// keeping the cache fresh while closed.
-		const bool record = active && !was_suspended;
-		if (axis == SDL_GAMEPAD_AXIS_LEFTX) {
-			dir &= ~(OSK_STICK_LEFT | OSK_STICK_RIGHT);
-			if (record && pressed && value < 0) dir |= OSK_STICK_LEFT;
-			if (record && pressed && value > 0) dir |= OSK_STICK_RIGHT;
-		}
-		else {
-			dir &= ~(OSK_STICK_UP | OSK_STICK_DOWN);
-			if (record && pressed && value < 0) dir |= OSK_STICK_UP;
-			if (record && pressed && value > 0) dir |= OSK_STICK_DOWN;
-		}
-		// While the keyboard is active and owns this axis (not suspended),
-		// the stick drives its navigation — same as the D-pad — so gamepad-only
-		// setups (Android TV, couch play) can move the key focus without a
-		// touch screen. osk_control() replaces every accumulated direction bit:
-		// send the combination across all caches, so a direction held on a
-		// D-pad (or another controller) survives this stick update. A suspended
-		// axis (deflected before the keyboard opened) flows on to normal
-		// dispatch instead, so UAE receives the releases of deflections it owns
-		// rather than keeping a stale axis state after the keyboard closes.
-		if (imgui_osk_is_active() && !was_suspended) {
-			int dx = 0, dy = 0;
-			osk_merged_direction(dx, dy);
-			osk_control(dx, dy, 0, 0);
-			return; // consume — don't pass the stick to UAE input while navigating
-		}
-		// Suspended or keyboard inactive: the event flows on to normal dispatch.
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+		const auto& did = di_joystick[id];
+		if (did.name.empty() || did.joystick_id != event.gaxis.which
+			|| did.mapping.is_retroarch || !did.is_controller)
+			continue;
+		int value = event.gaxis.value;
+		if (!handle_osk_axis(did.joystick_id, event.gaxis.axis, value))
+			read_controller_axis(id, event.gaxis.axis, value);
+		return;
 	}
-
-	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-	{
-		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != event.gaxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
-
-		read_controller_axis(id, axis, value);
-		break;
-	}
-
 }
 
 static void handle_joy_axis_motion_event(const SDL_Event& event)
 {
-	const auto axis = event.jaxis.axis;
-	const auto value = event.jaxis.value;
-	const auto which = event.jaxis.which;
-
-	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-	{
-		didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
-
-		// A RetroArch-mapped controller also delivers a raw joystick copy of
-		// left-stick motion. While the on-screen keyboard is active and owns
-		// the stick (deflection began while it was open), suppress that copy —
-		// the gamepad event path drives the OSK navigation. Neutral events and
-		// gameplay-owned (suspended) deflections still flow through so UAE
-		// sees their releases.
-		if (did->mapping.is_retroarch && did->is_controller
-			&& (did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] == axis
-				|| did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTY] == axis)) {
-			auto& dir = osk_stick_dir[which];
-			const int suspend = (did->mapping.axis[SDL_GAMEPAD_AXIS_LEFTX] == axis)
-				? OSK_STICK_SUSPEND_X : OSK_STICK_SUSPEND_Y;
-			const bool was_suspended = (dir & suspend) != 0;
-			// Suppress through the whole gesture, including the relax phase:
-			// intermediate values below the OSK threshold but above a gameplay
-			// dead zone would otherwise move the emulated stick or mouse. Only
-			// near-neutral values (≈5%) pass, mirroring a clean release.
-			const bool active_value = abs(value) > SDL_JOYSTICK_AXIS_MAX / 20;
-			if (imgui_osk_is_active() && !was_suspended && active_value)
-				break; // consumed by the OSK's gamepad-side handling
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+		const auto& did = di_joystick[id];
+		if (did.name.empty() || did.joystick_id != event.jaxis.which
+			|| (!did.mapping.is_retroarch && did.is_controller))
+			continue;
+		int value = event.jaxis.value;
+		if (did.is_controller) {
+			for (int axis = 0; axis < SDL_GAMEPAD_AXIS_COUNT; ++axis) {
+				if (did.mapping.axis[axis] != event.jaxis.axis)
+					continue;
+				const bool invert = axis == SDL_GAMEPAD_AXIS_LEFTX ? did.mapping.lstick_axis_x_invert
+					: axis == SDL_GAMEPAD_AXIS_LEFTY && did.mapping.lstick_axis_y_invert;
+				int normalized = invert ? -value : value;
+				if (handle_osk_axis(did.joystick_id, axis, normalized))
+					return;
+				if (normalized == 0)
+					value = 0;
+				break;
+			}
 		}
-
-		read_joystick_axis(id, axis, value);
-		break;
+		read_joystick_axis(id, event.jaxis.axis, value);
+		return;
 	}
-
 }
-
-// Previous raw hat value per RetroArch controller hat, for detecting which
-// directions a transition releases (see handle_joy_hat_motion_event).
-static std::unordered_map<Uint64, int> osk_prev_hat;
 
 static void handle_joy_hat_motion_event(const SDL_Event& event)
 {
-	const auto hat = event.jhat.hat;
-	const auto value = event.jhat.value;
-	const auto which = event.jhat.which;
-
-	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-	{
-		didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || (!did->mapping.is_retroarch && did->is_controller)) continue;
-
-		int forward_value = value;
-		if (did->mapping.is_retroarch && did->is_controller) {
-			// Track the previous raw hat value so a transition's released
-			// directions can be identified; suppression below depends on it.
-			const Uint64 hat_key = (static_cast<Uint64>(which) << 8) | (hat & 0xff);
-			const int prev_hat = osk_prev_hat.count(hat_key) ? osk_prev_hat[hat_key] : SDL_HAT_CENTERED;
-			osk_prev_hat[hat_key] = value;
-
-			// The OSK consumes the gamepad-side D-pad events synthesized from
-			// this hat; suppress the raw copy for the same gesture — but only
-			// when every direction this transition releases is OSK-owned. A
-			// gameplay-held direction mixed into the transition must reach
-			// read_joystick_hat(), or UAE keeps it asserted (RetroArch devices
-			// are skipped by dispatch_controller_button()). Centered values
-			// are pure releases and always flow. When a mixed transition is
-			// forwarded, OSK-owned directions are masked out of the value so
-			// the forwarded composite clears the gameplay direction without
-			// asserting the keyboard's direction in the emulated joystick.
-			if (imgui_osk_is_active() && value != SDL_HAT_CENTERED) {
-				const auto session_dirs = osk_dpad_dir.find(which);
-				const int session_bits = session_dirs != osk_dpad_dir.end() ? session_dirs->second : 0;
-				auto direction_owned = [&](const int hat_bit) {
-					switch (hat_bit) {
-					case SDL_HAT_UP:    return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_UP    - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
-					case SDL_HAT_DOWN:  return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_DOWN  - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
-					case SDL_HAT_LEFT:  return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_LEFT  - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
-					case SDL_HAT_RIGHT: return (session_bits & (1 << (SDL_GAMEPAD_BUTTON_DPAD_RIGHT - SDL_GAMEPAD_BUTTON_DPAD_UP))) != 0;
-					default:            return true;
-					}
-				};
-				auto owned_hat_bit = [&](const int logical_bit) -> int {
-					switch (logical_bit) {
-					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_UP    - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_UP;
-					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_DOWN  - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_DOWN;
-					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_LEFT  - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_LEFT;
-					case 1 << (SDL_GAMEPAD_BUTTON_DPAD_RIGHT - SDL_GAMEPAD_BUTTON_DPAD_UP): return SDL_HAT_RIGHT;
-					default: return 0;
-					}
-				};
-				int owned_hat_bits = 0;
-				for (int lb = 1; lb < 16; lb <<= 1)
-					if (session_bits & lb)
-						owned_hat_bits |= owned_hat_bit(lb);
-				const int released = prev_hat & ~value;
-				bool releases_gameplay = false;
-				for (int bit = 1; bit <= 8; bit <<= 1)
-					if ((released & bit) && !direction_owned(bit))
-						releases_gameplay = true;
-				if (!releases_gameplay)
-					break; // fully OSK-owned transition: consumed by the gamepad side
-				forward_value = value & ~owned_hat_bits;
+	for (int id = 0; id < MAX_INPUT_DEVICES; ++id) {
+		const auto& did = di_joystick[id];
+		if (did.name.empty() || did.joystick_id != event.jhat.which
+			|| (!did.mapping.is_retroarch && did.is_controller))
+			continue;
+		int value = event.jhat.value;
+		if (did.is_controller) {
+			const Uint64 key = (static_cast<Uint64>(did.joystick_id) << 8) | event.jhat.hat;
+			auto& hat = osk_hats[key];
+			const int changed = hat.physical ^ value;
+			hat.physical = value;
+			constexpr int bits[] = {SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT};
+			for (int b = 0; b < 4; ++b) {
+				if (changed & bits[b])
+					handle_osk_button(did.joystick_id, SDL_GAMEPAD_BUTTON_DPAD_UP + b, (value & bits[b]) != 0);
 			}
+			// While captured, raw hats may only release guest-held directions.
+			// A diagonal snapshot must never assert an OSK-owned direction.
+			if (imgui_osk_should_render())
+				value &= hat.gameplay;
+			hat.gameplay = value;
 		}
-		read_joystick_hat(id, hat, forward_value);
-		break;
+		read_joystick_hat(id, event.jhat.hat, value);
+		return;
 	}
 }
 
@@ -4327,26 +4134,6 @@ static void process_event(const SDL_Event& event)
 			break;
 
 		case SDL_EVENT_JOYSTICK_REMOVED:
-			// Drop the departing device's cached OSK directions so they cannot
-			// leak into a later session (or a controller that reuses the id).
-			osk_stick_dir.erase(event.jdevice.which);
-			osk_dpad_dir.erase(event.jdevice.which);
-			osk_south_held.erase(event.jdevice.which);
-			if (imgui_osk_is_active()) {
-				// Recompute the accumulated direction from the remaining
-				// controllers' caches instead of clearing it: another
-				// controller may still hold it, and a stable held input
-				// produces no new event to re-establish it.
-				int dx = 0, dy = 0;
-				osk_merged_direction(dx, dy);
-				osk_control(dx, dy, 0, 0);
-				// Forward the merged key-hold state: only release when no
-				// remaining controller is still holding the button.
-				bool any_held = false;
-				for (const auto& entry : osk_south_held)
-					any_held = any_held || entry.second;
-				osk_control(0, 0, 1, any_held ? 1 : 0);
-			}
 			handle_joy_device_event(event.jdevice.which, true);
 			break;
 
@@ -4589,6 +4376,7 @@ int handle_msgpump(bool vblank)
 		got_event = 1;
 		process_event(event);
 	}
+	imgui_osk_update();
 	drain_pending_touch_neutralization();
 #ifdef __ANDROID__
 	amiberry_android_touch_mouse_tick();
@@ -4633,6 +4421,7 @@ bool handle_events()
 			{
 				process_event(event);
 			}
+			imgui_osk_update();
 		}
 
 		// Keyboard, mouse and joystick read events are handled in process_event in Amiberry

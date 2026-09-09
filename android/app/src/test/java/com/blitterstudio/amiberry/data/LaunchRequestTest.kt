@@ -145,12 +145,11 @@ class LaunchRequestTest {
 			onScreenKeyboardToggle = "rightstick"
 		).toArgs()
 
-		assertTrue(args.contains("-s"))
 		assertTrue(args.contains("amiberry.vkbd_toggle=rightstick"))
 	}
 
 	@Test
-	fun `android control overrides omit vkbd toggle when default`() {
+	fun `android control overrides emit default reset sentinel when toggle unset`() {
 		val args = LaunchRequest.AndroidControlOverrides(
 			joyport0 = "mouse",
 			joyport1 = "joy0",

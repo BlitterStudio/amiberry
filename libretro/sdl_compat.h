@@ -1046,6 +1046,7 @@ int SDL_GetNumJoystickBalls(SDL_Joystick* joystick);
 int SDL_GetNumJoystickButtons(SDL_Joystick* joystick);
 int SDL_GetNumJoystickHats(SDL_Joystick* joystick);
 Sint16 SDL_GetJoystickAxis(SDL_Joystick* joystick, int axis);
+Uint8 SDL_GetJoystickHat(SDL_Joystick* joystick, int hat);
 Uint8 SDL_GetJoystickButton(SDL_Joystick* joystick, int button);
 int SDL_GetJoysticks(int** joysticks);
 int SDL_NumJoysticks(void);
