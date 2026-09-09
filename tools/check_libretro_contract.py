@@ -126,7 +126,7 @@ def main():
 	dump_xlate = extract_body(debug_text, "static uae_u8 *dump_xlate (uae_u32 addr)")
 	dump_xlate_range = extract_body(debug_text, "static uae_u8 *dump_xlate_range (uae_u32 addr, uae_u32 size)")
 	memory_map_dump_3 = extract_body(debug_text, "static void memory_map_dump_3(UaeMemoryMap *map, int log)")
-	whdload_auto_prefs = extract_body(whdbooter_text, "void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)")
+	whdload_auto_prefs = extract_body(whdbooter_text, "void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool preserve_quickstart_hardware)")
 
 	require(
 		"RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY" not in set_environment,
@@ -319,9 +319,16 @@ def main():
 	require(
 		"static bool libretro_is_rom_key_file" in stub_text
 		and "if (libretro_is_rom_key_file(path)) {\n\t\taddkeyfile(path);\n\t\treturn 0;\n\t}" in stub_text
-		and "if (!libretro_is_rom_key_file(path) && !libretro_is_rom_ext(path, deepscan))" in stub_text
-		and "for (const auto& file : files) {\n\t\tif (libretro_is_rom_key_file(file))\n\t\t\tlibretro_scan_rom_file(file, fkey, deepscan);\n\t}" in stub_text,
+		and "if (!libretro_is_rom_key_file(path)) {" in stub_text
+		and "for (const auto& file : files) {\n\t\tif (libretro_is_rom_key_file(file))\n\t\t\tlibretro_scan_rom_file(file, fkey, deepscan, kickstart_only);\n\t}" in stub_text,
 		"libretro ROM scanning must let rom.key through and register keys before encrypted ROM candidates",
+		failures,
+	)
+	require(
+		"static bool libretro_is_kickstart_scan_name" in stub_text
+		and '_T("kick"), _T("cd32"), _T("cdtv"), _T("amiga-os-"), _T("amiga-ext-")' in stub_text
+		and 'libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SYSTEM_DIR"), true)' in libretro_scan_roms,
+		"the shared libretro system directory must only be probed for recognized kickstart/CD32/Cloanto firmware names, never for unrelated BIOS-pack firmware",
 		failures,
 	)
 	require(

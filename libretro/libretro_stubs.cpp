@@ -440,12 +440,17 @@ struct libretro_rom_scan_candidate
 {
 	std::string path;
 	bool deepscan;
+	// Shared libretro frontends expose one system directory holding BIOS packs
+	// for many cores. Candidates flagged kickstart_only must not open unrelated
+	// firmware: only rom.key and files named kick* are probed (issue #2325).
+	bool kickstart_only;
 };
 
 struct libretro_rom_scan_data
 {
 	UAEREG* fkey;
 	int got;
+	bool kickstart_only;
 };
 
 static std::string libretro_path_join(const std::string& dir, const std::string& file)
@@ -461,7 +466,7 @@ static std::string libretro_path_join(const std::string& dir, const std::string&
 }
 
 static void libretro_append_scan_candidate(std::vector<libretro_rom_scan_candidate>& candidates,
-	const std::string& path, const bool deepscan)
+	const std::string& path, const bool deepscan, const bool kickstart_only)
 {
 	if (path.empty())
 		return;
@@ -478,26 +483,31 @@ static void libretro_append_scan_candidate(std::vector<libretro_rom_scan_candida
 	for (auto& candidate : candidates) {
 		if (_tcsicmp(candidate.path.c_str(), resolved) == 0) {
 			candidate.deepscan = candidate.deepscan || deepscan;
+			candidate.kickstart_only = candidate.kickstart_only || kickstart_only;
 			return;
 		}
 	}
 
-	candidates.push_back({ resolved, deepscan });
+	candidates.push_back({ resolved, deepscan, kickstart_only });
 }
 
+// root_kickstart_only flags the frontend-provided root itself as shared with
+// other cores: its top level is probed non-recursively for kick* / rom.key only.
+// Amiberry-convention subdirectories below it stay unrestricted because they
+// only exist when someone deliberately placed Amiga ROMs there.
 static void libretro_append_scan_root(std::vector<libretro_rom_scan_candidate>& candidates,
-	const char* root)
+	const char* root, const bool root_kickstart_only)
 {
 	if (!root || !*root)
 		return;
 
 	const std::string root_path = root;
-	libretro_append_scan_candidate(candidates, root_path, false);
-	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "roms"), true);
-	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "Kickstarts"), true);
-	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "save-data/Kickstarts"), true);
-	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "whdboot/save-data/Kickstarts"), true);
-	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "amiberry/whdboot/save-data/Kickstarts"), true);
+	libretro_append_scan_candidate(candidates, root_path, false, root_kickstart_only);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "roms"), true, false);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "Kickstarts"), true, false);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "save-data/Kickstarts"), true, false);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "whdboot/save-data/Kickstarts"), true, false);
+	libretro_append_scan_candidate(candidates, libretro_path_join(root_path, "amiberry/whdboot/save-data/Kickstarts"), true, false);
 }
 
 static int libretro_rom_ext_priority(const TCHAR* path, const int size)
@@ -570,6 +580,29 @@ static bool libretro_is_rom_key_file(const std::string& path)
 	return _tcsicmp(name.c_str(), _T("rom.key")) == 0;
 }
 
+// Kickstart images ship under many naming schemes (kick34005.A500, kick.rom,
+// kick40060.CD32.ext, plain "kick"), and Amiberry itself probes the frontend
+// system directory for Cloanto-style names (find_kickstart_in_system_dir /
+// find_ext_rom_in_system_dir in libretro.cpp: cd32.rom, cdtv.rom,
+// amiga-os-*.rom, amiga-ext-*.rom, "CD32 Extended.ROM"). Shared-directory
+// candidates are filtered by these recognized name prefixes instead of by
+// extension, so RP9/WHDLoad checksum lookups still find that firmware. rom.key
+// is handled separately by libretro_is_rom_key_file().
+static bool libretro_is_kickstart_scan_name(const std::string& path)
+{
+	const auto name_pos = path.find_last_of("/\\");
+	const std::string name = name_pos == std::string::npos ? path : path.substr(name_pos + 1);
+	static const TCHAR* const prefixes[] = {
+		_T("kick"), _T("cd32"), _T("cdtv"), _T("amiga-os-"), _T("amiga-ext-")
+	};
+	for (const auto* prefix : prefixes) {
+		const size_t len = _tcslen(prefix);
+		if (name.size() >= len && _tcsnicmp(name.c_str(), prefix, len) == 0)
+			return true;
+	}
+	return false;
+}
+
 static bool libretro_is_rom_ext(const std::string& path, const bool deepscan)
 {
 	if (path.empty())
@@ -611,8 +644,12 @@ static int libretro_scan_rom_entry(struct zfile* f, void* user)
 		return 0;
 	}
 
-	if (!libretro_is_rom_ext(path, true))
+	if (rsd->kickstart_only) {
+		if (!libretro_is_kickstart_scan_name(path))
+			return 0;
+	} else if (!libretro_is_rom_ext(path, true)) {
 		return 0;
+	}
 
 	struct romdata* rd = scan_single_rom_file(f);
 	if (rd) {
@@ -624,17 +661,24 @@ static int libretro_scan_rom_entry(struct zfile* f, void* user)
 	return 0;
 }
 
-static int libretro_scan_rom_file(const std::string& path, UAEREG* fkey, const bool deepscan)
+static int libretro_scan_rom_file(const std::string& path, UAEREG* fkey, const bool deepscan, const bool kickstart_only)
 {
-	if (!libretro_is_rom_key_file(path) && !libretro_is_rom_ext(path, deepscan))
-		return 0;
+	if (!libretro_is_rom_key_file(path)) {
+		if (kickstart_only) {
+			if (!libretro_is_kickstart_scan_name(path))
+				return 0;
+		} else if (!libretro_is_rom_ext(path, deepscan)) {
+			return 0;
+		}
+	}
 
-	libretro_rom_scan_data rsd = { fkey, 0 };
+	libretro_rom_scan_data rsd = { fkey, 0, kickstart_only };
 	zfile_zopen(path, libretro_scan_rom_entry, &rsd);
 	return rsd.got;
 }
 
-static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bool deepscan, const int level)
+static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bool deepscan,
+	const bool kickstart_only, const int level)
 {
 	struct dirent* entry;
 	STAT statbuf {};
@@ -642,7 +686,8 @@ static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bo
 	std::vector<std::string> files;
 	std::vector<std::string> dirs;
 
-	write_log(_T("libretro ROM scan directory '%s'\n"), path.c_str());
+	write_log(_T("libretro ROM scan directory '%s'%s\n"), path.c_str(),
+		kickstart_only ? _T(" (kickstart names only)") : _T(""));
 
 	DIR* dp = opendir(path.c_str());
 	if (dp == nullptr)
@@ -669,14 +714,14 @@ static int libretro_scan_rom_dir(UAEREG* fkey, const std::string& path, const bo
 
 	for (const auto& file : files) {
 		if (libretro_is_rom_key_file(file))
-			libretro_scan_rom_file(file, fkey, deepscan);
+			libretro_scan_rom_file(file, fkey, deepscan, kickstart_only);
 	}
 	for (const auto& file : files) {
-		if (!libretro_is_rom_key_file(file) && libretro_scan_rom_file(file, fkey, deepscan))
+		if (!libretro_is_rom_key_file(file) && libretro_scan_rom_file(file, fkey, deepscan, kickstart_only))
 			ret = 1;
 	}
 	for (const auto& dir : dirs) {
-		if (libretro_scan_rom_dir(fkey, dir, deepscan, level + 1))
+		if (libretro_scan_rom_dir(fkey, dir, deepscan, kickstart_only, level + 1))
 			ret = 1;
 	}
 	return ret;
@@ -700,17 +745,19 @@ int scan_roms(int show)
 
 	std::vector<libretro_rom_scan_candidate> candidates;
 	const std::string rom_path = get_rom_path();
-	libretro_append_scan_candidate(candidates, rom_path, false);
-	libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SYSTEM_DIR"));
-	libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SAVE_DIR"));
-	libretro_append_scan_root(candidates, getenv("AMIBERRY_WHDBOOT_ASSETS_DIR"));
-	libretro_append_scan_root(candidates, getenv("AMIBERRY_WHDBOOT_PATH"));
-	libretro_append_scan_root(candidates, getenv("WHDBOOT_SAVE_DATA"));
-	libretro_append_scan_candidate(candidates, changed_prefs.path_rom.path[0], false);
+	libretro_append_scan_candidate(candidates, rom_path, false, false);
+	// The frontend system directory is shared with every other core's BIOS
+	// packs: probe its top level for kick* / rom.key only, never recursively.
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SYSTEM_DIR"), true);
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_LIBRETRO_SAVE_DIR"), false);
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_WHDBOOT_ASSETS_DIR"), false);
+	libretro_append_scan_root(candidates, getenv("AMIBERRY_WHDBOOT_PATH"), false);
+	libretro_append_scan_root(candidates, getenv("WHDBOOT_SAVE_DATA"), false);
+	libretro_append_scan_candidate(candidates, changed_prefs.path_rom.path[0], false, false);
 
 	int cnt = 0;
 	for (const auto& candidate : candidates) {
-		if (libretro_scan_rom_dir(fkey, candidate.path, candidate.deepscan, 0))
+		if (libretro_scan_rom_dir(fkey, candidate.path, candidate.deepscan, candidate.kickstart_only, 0))
 			cnt++;
 	}
 
