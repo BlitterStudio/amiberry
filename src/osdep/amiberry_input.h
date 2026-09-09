@@ -20,8 +20,10 @@ enum
 
 struct controller_mapping {
 	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> button;
+	// Pristine copy of button[], captured before the hotkey masking loop
+	// invalidates entries; used to resolve configured buttons to raw indices.
+	std::array<int, SDL_GAMEPAD_BUTTON_COUNT> button_unmasked;
 	std::array<int, SDL_GAMEPAD_AXIS_COUNT> axis;
-
 	bool lstick_axis_y_invert{};
 	bool lstick_axis_x_invert{};
 
@@ -80,6 +82,7 @@ struct didata {
 	std::array<uae_s16, MAX_MAPPINGS> buttonaxistype;
 
 	bool hotkey_held{}; // per-device hotkey state, updated in event order
+	Uint32 remapped_press_mask{}; // logical buttons whose press used the hotkey remap offset
 };
 
 //Analog joystick dead zone
@@ -135,6 +138,12 @@ extern void ensure_onscreen_joystick_registered();
 
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
+// Uses logical axes, matching read_controller_axis and normalized RetroArch axes.
+extern bool controller_axis_has_gameplay_input(int id, int axis, int value);
+
+// Preserve RetroArch's own raw shortcuts; other devices use the global hotkeys
+// in the index space consumed by their SDL event path.
+extern void sync_controller_shortcuts(didata* did);
 
 extern void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename);
 extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);

@@ -104,6 +104,7 @@ sealed interface LaunchRequest {
 		val onScreenJoystick: Boolean,
 		val onScreenKeyboard: Boolean,
 		val onScreenKeyboardNumpad: Boolean = false,
+		val onScreenKeyboardToggle: String? = null,
 		val joyport0MouseMap: Boolean = false,
 		val joyport1MouseMap: Boolean = false
 	) {
@@ -121,6 +122,14 @@ sealed interface LaunchRequest {
 					"-s", "input.default_osk=${onScreenKeyboard.toCfg()}"
 				)
 			)
+		// null = "emulator default": emit the explicit reset sentinel so a
+		// vkbd_toggle set in a backing config cannot survive the selection.
+		// "" (explicitly disabled) and button names round-trip via the
+		// target-prefixed key (cfgfile only routes amiberry.* to the
+		// Amiberry option parser).
+		args.addAll(listOf(
+			"-s", "amiberry.vkbd_toggle=${onScreenKeyboardToggle ?: "default"}"
+		))
 			// Mouse map overrides are always explicit (0 or 1) so a backing
 			// config's enabled value cannot survive a disabled switch
 			args.add("-s")
@@ -139,6 +148,7 @@ sealed interface LaunchRequest {
 					onScreenJoystick = settings.onScreenJoystick,
 					onScreenKeyboard = settings.onScreenKeyboard,
 					onScreenKeyboardNumpad = settings.onScreenKeyboardNumpad,
+					onScreenKeyboardToggle = settings.onScreenKeyboardToggle,
 					joyport0MouseMap = settings.joyport0MouseMap,
 					joyport1MouseMap = settings.joyport1MouseMap
 				)

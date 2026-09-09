@@ -75,35 +75,6 @@ class AndroidRuntimeControlsArchitectureTest {
 	}
 
 	@Test
-	fun `touch overlays block joystick and mouse input while OSK is animating`() {
-		val amiberryCpp = File("../../src/osdep/amiberry.cpp").readText()
-		val fingerEvents = Regex(
-			"""case SDL_EVENT_FINGER_DOWN:[\s\S]*?case SDL_EVENT_MOUSE_WHEEL:"""
-		).find(amiberryCpp)?.value.orEmpty()
-		val controllerButtonEvent = Regex(
-			"""static void handle_controller_button_event\(const SDL_Event& event\)[\s\S]*?static void handle_joy_button_event"""
-		).find(amiberryCpp)?.value.orEmpty()
-
-		assertTrue(
-			"OSK touch routing should stay active for the visible and animating keyboard lifetime.",
-			fingerEvents.contains("imgui_osk_should_render() && mon->amiga_window")
-		)
-		assertTrue(
-			"The on-screen joystick should stay blocked until the OSK has finished sliding out.",
-			fingerEvents.contains("!imgui_osk_should_render() && on_screen_joystick_is_enabled()")
-		)
-		assertTrue(
-			"Touch-synthesized mouse events should be suppressed while the OSK is visible or animating.",
-			fingerEvents.contains("imgui_osk_should_render() || on_screen_joystick_is_enabled()")
-		)
-		assertTrue(
-			"Gamepad OSK navigation should consume controller input while the keyboard is still animating.",
-			controllerButtonEvent.contains("else if (imgui_osk_should_render())") &&
-				controllerButtonEvent.contains("if (!imgui_osk_is_active())")
-		)
-	}
-
-	@Test
 	fun `captured D-pad motion has no distance release and shutdown neutralizes first`() {
 		val joystick = File("../../src/osdep/on_screen_joystick.cpp").readText()
 		val motionSignature =

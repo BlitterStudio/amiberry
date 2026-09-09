@@ -1668,6 +1668,19 @@ void fix_didata(struct didata* did)
 	fixthings(did);
 }
 
+void sync_controller_shortcuts(didata* did)
+{
+	if (did->mapping.is_retroarch)
+		return;
+	const auto button_index = [did](int logical) {
+		if (logical == SDL_GAMEPAD_BUTTON_INVALID || did->is_controller)
+			return logical;
+		return did->mapping.button_unmasked[logical];
+	};
+	did->mapping.menu_button = button_index(enter_gui_button);
+	did->mapping.vkbd_button = button_index(vkbd_button);
+}
+
 void setup_mapping(didata* did, const std::string& controllers, const int id)
 {
 	std::string retroarch_config_file;
@@ -1732,6 +1745,11 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 			fill_default_controller(did->mapping);
 		}
 	}
+
+	// Pristine copy for resolving configured buttons after the hotkey mask
+	// below invalidates shared entries.
+	did->mapping.button_unmasked = did->mapping.button;
+	sync_controller_shortcuts(did);
 
 	if (did->mapping.hotkey_button != SDL_GAMEPAD_BUTTON_INVALID)
 	{
@@ -2046,6 +2064,17 @@ static bool invert_axis(int axis, const didata* did)
 	}
 }
 
+bool controller_axis_has_gameplay_input(const int id, const int axis, const int value)
+{
+	const auto& did = di_joystick[id];
+	const int port = assigned_joyport(id);
+	if (axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0) {
+		const int divisor = did.is_controller && !did.mapping.is_retroarch ? 10000 : 1000;
+		return abs(value) > joystick_dead_zone && value / divisor != 0;
+	}
+	return inputdevice_is_joystick_axis_active(id, axis, value, analog_upper_bound);
+}
+
 void set_axis_state(const int id, const int axis, int value, const bool invert)
 {
 	if (invert)
@@ -2062,6 +2091,7 @@ void set_axis_state(const int id, const int axis, int value, const bool invert)
 void read_controller_button(const int id, const int button, const int state)
 {
 	const didata* did = &di_joystick[id];
+	const inputdevice_osk_passthrough passthrough;
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
@@ -2077,9 +2107,11 @@ void read_controller_button(const int id, const int button, const int state)
 			setjoybuttonstate(id, retroarch_offset + 2, state);
 		else if (button == did->mapping.reset_button)
 			setjoybuttonstate(id, retroarch_offset + 3, state);
-		else if (button == did->mapping.vkbd_button)
-			setjoybuttonstate(id, retroarch_offset + 4, state);
 
+		if (held_offset) {
+			auto& mask = di_joystick[id].remapped_press_mask;
+			mask = state ? mask | (1u << button) : mask & ~(1u << button);
+		}
 		setjoybuttonstate(id, button + held_offset, state);
 	}
 }
@@ -2087,6 +2119,7 @@ void read_controller_button(const int id, const int button, const int state)
 void read_controller_axis(const int id, const int axis, const int value)
 {
 	const didata* did = &di_joystick[id];
+	const inputdevice_osk_passthrough passthrough;
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
@@ -2109,6 +2142,7 @@ void read_controller_axis(const int id, const int axis, const int value)
 void read_joystick_button_single(const int id, const int button, const int state)
 {
 	const didata* did = &di_joystick[id];
+	const inputdevice_osk_passthrough passthrough(did->is_controller);
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
@@ -2127,8 +2161,6 @@ void read_joystick_button_single(const int id, const int button, const int state
 				setjoybuttonstate(id, retroarch_offset + 2, state);
 			else if (button == did->mapping.reset_button)
 				setjoybuttonstate(id, retroarch_offset + 3, state);
-			else if (button == did->mapping.vkbd_button)
-				setjoybuttonstate(id, retroarch_offset + 4, state);
 		}
 
 		// Find which logical button this physical button maps to and dispatch directly
@@ -2139,6 +2171,10 @@ void read_joystick_button_single(const int id, const int button, const int state
 		{
 			if (did->mapping.button[did_button] == button)
 			{
+				if (held_offset) {
+					auto& mask = di_joystick[id].remapped_press_mask;
+					mask = state ? mask | (1u << did_button) : mask & ~(1u << did_button);
+				}
 				setjoybuttonstate(id, did_button + held_offset, state);
 				break;
 			}
@@ -2149,6 +2185,7 @@ void read_joystick_button_single(const int id, const int button, const int state
 void read_joystick_axis(const int id, const int axis, int value)
 {
 	const didata* did = &di_joystick[id];
+	const inputdevice_osk_passthrough passthrough(did->is_controller);
 
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
@@ -2179,6 +2216,7 @@ void read_joystick_axis(const int id, const int axis, int value)
 
 void read_joystick_hat(const int id, int hat, const int value)
 {
+	const inputdevice_osk_passthrough passthrough(di_joystick[id].is_controller);
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
 		for (int button = SDL_GAMEPAD_BUTTON_DPAD_UP; button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT; button++)

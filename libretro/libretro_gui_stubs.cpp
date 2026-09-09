@@ -62,9 +62,11 @@ bool imgui_overlay_is_vulkan() { return false; }
 void imgui_osk_init() {}
 void imgui_osk_shutdown() {}
 void imgui_osk_toggle() {}
+void imgui_osk_hide() {}
 bool imgui_osk_is_active() { return false; }
 bool imgui_osk_should_render() { return false; }
 void imgui_osk_render() {}
+void imgui_osk_update() {}
 bool imgui_osk_process(int state, int* keycode, int* pressed)
 {
 	(void)state;

@@ -25,6 +25,7 @@
 #include "imgui_overlay.h"
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
+#include "amiberry_input.h"
 
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -698,6 +699,16 @@ int check_prefs_changed_gfx()
 			vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
 			imgui_osk_shutdown();
 		}
+
+#ifdef __ANDROID__
+		// Start remains a menu fallback unless explicitly bound to the OSK.
+		enter_gui_button = SDL_GetGamepadButtonFromString(currprefs.open_gui);
+		if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID
+			&& vkbd_button != SDL_GAMEPAD_BUTTON_START)
+			enter_gui_button = SDL_GAMEPAD_BUTTON_START;
+#endif
+		for (auto& did : di_joystick)
+			sync_controller_shortcuts(&did);
 	}
 
 	// On-screen joystick

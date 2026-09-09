@@ -1358,6 +1358,12 @@ Sint16 SDL_GetJoystickAxis(SDL_Joystick* joystick, int axis)
 	(void)axis;
 	return 0;
 }
+Uint8 SDL_GetJoystickHat(SDL_Joystick* joystick, int hat)
+{
+	(void)joystick;
+	(void)hat;
+	return SDL_HAT_CENTERED;
+}
 Uint8 SDL_GetJoystickButton(SDL_Joystick* joystick, int button)
 {
 	(void)joystick;

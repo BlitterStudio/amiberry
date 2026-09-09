@@ -82,4 +82,21 @@ class AndroidControlSettingsTest {
 
 		assertFalse(settings.joyport1MouseMap)
 	}
+
+	@Test
+	fun `explicit vkbd toggle overrides fallback and absent key uses fallback`() {
+		val explicit = AndroidControlSettings.withFallback(
+			settings = EmulatorSettings(onScreenKeyboardToggle = "rightstick"),
+			explicitKeys = setOf("amiberry.vkbd_toggle"),
+			fallback = EmulatorSettings(onScreenKeyboardToggle = "leftstick")
+		)
+		assertEquals("rightstick", explicit.onScreenKeyboardToggle)
+
+		val fallback = AndroidControlSettings.withFallback(
+			settings = EmulatorSettings(onScreenKeyboardToggle = null),
+			explicitKeys = setOf("amiberry.vkbd_enabled"),
+			fallback = EmulatorSettings(onScreenKeyboardToggle = "leftstick")
+		)
+		assertEquals("leftstick", fallback.onScreenKeyboardToggle)
+	}
 }

@@ -599,6 +599,8 @@ typedef enum SDL_GamepadAxis {
 	SDL_GAMEPAD_AXIS_COUNT
 } SDL_GamepadAxis;
 
+#define SDL_JOYSTICK_AXIS_MAX 32767
+
 typedef SDL_GamepadAxis SDL_GameControllerAxis;
 
 typedef enum SDL_GamepadBindingType {
@@ -704,6 +706,7 @@ enum {
 #define SDL_BUTTON_X1 4
 #define SDL_BUTTON_X2 5
 
+#define SDL_HAT_CENTERED 0x00
 #define SDL_HAT_UP 0x01
 #define SDL_HAT_RIGHT 0x02
 #define SDL_HAT_DOWN 0x04
@@ -1043,6 +1046,7 @@ int SDL_GetNumJoystickBalls(SDL_Joystick* joystick);
 int SDL_GetNumJoystickButtons(SDL_Joystick* joystick);
 int SDL_GetNumJoystickHats(SDL_Joystick* joystick);
 Sint16 SDL_GetJoystickAxis(SDL_Joystick* joystick, int axis);
+Uint8 SDL_GetJoystickHat(SDL_Joystick* joystick, int hat);
 Uint8 SDL_GetJoystickButton(SDL_Joystick* joystick, int button);
 int SDL_GetJoysticks(int** joysticks);
 int SDL_NumJoysticks(void);

@@ -32,6 +32,7 @@ object SettingsChangeSummary {
 		addIfChanged("On-screen joystick", yesNo(before.onScreenJoystick), yesNo(after.onScreenJoystick))
 		addIfChanged("On-screen keyboard", yesNo(before.onScreenKeyboard), yesNo(after.onScreenKeyboard))
 		addIfChanged("On-screen keyboard numpad", yesNo(before.onScreenKeyboardNumpad), yesNo(after.onScreenKeyboardNumpad))
+		addIfChanged("On-screen keyboard toggle", before.onScreenKeyboardToggle ?: "Default", after.onScreenKeyboardToggle ?: "Default")
 		addIfChanged("Port 0 analog mouse map", yesNo(before.joyport0MouseMap), yesNo(after.joyport0MouseMap))
 		addIfChanged("Port 1 analog mouse map", yesNo(before.joyport1MouseMap), yesNo(after.joyport1MouseMap))
 	}

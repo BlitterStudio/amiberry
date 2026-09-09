@@ -28,7 +28,15 @@ bool imgui_osk_should_render();
 
 // Render the keyboard. Called between imgui_overlay_begin_frame/end_frame.
 // Geometry uses ImGui's logical display coordinates for HiDPI correctness.
+// Rendering is read-only with respect to navigation state: it never advances
+// key focus or repeat — that is imgui_osk_update()'s job.
 void imgui_osk_render();
+
+// Advance held-direction key repeat. Call once per frame on the main/input
+// thread, after pumping input events and alongside rendering: a stable
+// analog axis or D-pad produces no further events, so the repeat timers must
+// be polled there. Never call this from the render thread.
+void imgui_osk_update();
 
 // Process joystick/D-pad input for keyboard navigation.
 // state: bitmask of VKBD_UP/DOWN/LEFT/RIGHT/BUTTON
@@ -50,8 +58,21 @@ void imgui_osk_set_transparency(float alpha); // 0.0 = fully transparent, 1.0 = 
 void imgui_osk_set_language(const char* lang); // "US", "UK", "DE", "FR"
 void imgui_osk_set_numpad(bool enabled);
 
-// Direct gamepad control (called from SDL event handler).
+// Which input surface an osk_control() update originates from. The input
+// layer accumulates one state per source so the generic/core emulated
+// joystick path and direct SDL gamepad events stay independently tracked.
+enum class OskInputSource {
+	EmulatedJoystick, // generic joystick events from the core input path
+	Gamepad           // direct SDL gamepad events (D-pad, sticks, South)
+};
+
+// Direct gamepad control (called from the SDL event handler).
 // x/y: direction (-1,0,1). button: bit index. buttonstate: 0/1.
-void osk_control(int x, int y, int button, int buttonstate);
+// source: which input surface's accumulated state this update applies to
+// (cleared when the keyboard is inactive).
+void osk_control(int x, int y, int button, int buttonstate, OskInputSource source);
+
+// Clear session navigation and reconcile held gesture ownership with physical state.
+void osk_clear_controller_holds();
 
 #endif // IMGUI_OSK_H

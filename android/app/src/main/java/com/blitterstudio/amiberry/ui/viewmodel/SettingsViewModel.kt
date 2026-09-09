@@ -177,6 +177,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			onScreenJoystick = previousSettings.onScreenJoystick,
 			onScreenKeyboard = previousSettings.onScreenKeyboard,
 			onScreenKeyboardNumpad = previousSettings.onScreenKeyboardNumpad,
+			onScreenKeyboardToggle = previousSettings.onScreenKeyboardToggle,
 			joyport0MouseMap = previousSettings.joyport0MouseMap,
 			joyport1MouseMap = previousSettings.joyport1MouseMap
 		)

@@ -1598,6 +1598,20 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	}
 }
 
+#ifdef __ANDROID__
+// True when the configuration file loaded into prefs carries an explicit option
+// line. Mirrors cfgfile's all_lines lookup: every parsed (known or unknown)
+// option of the loaded file is listed there.
+static bool loaded_config_has_option(const uae_prefs* prefs, const TCHAR* option)
+{
+	for (auto* sl = prefs->all_lines; sl != nullptr; sl = sl->next) {
+		if (sl->option != nullptr && _tcsicmp(sl->option, option) == 0)
+			return true;
+	}
+	return false;
+}
+#endif
+
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool preserve_quickstart_hardware)
 {
 #ifdef __ANDROID__
@@ -1605,6 +1619,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	const bool android_vkbd_enabled = prefs->vkbd_enabled;
 	const bool android_vkbd_numpad = prefs->vkbd_numpad;
 	const bool android_input_default_osk = prefs->input_default_onscreen_keyboard;
+	TCHAR android_vkbd_toggle[256];
+	_tcscpy(android_vkbd_toggle, prefs->vkbd_toggle);
 #endif
 
 	set_last_active_config_from_media(filepath);
@@ -1789,6 +1805,18 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	if (config_loaded)
 	{
 		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config.c_str());
+#ifdef __ANDROID__
+		// target_cfgfile_load() above reset the preferences before applying the
+		// sidecar, dropping the launcher's toggle selection. An explicit
+		// amiberry.vkbd_toggle line in the sidecar (button name, empty = disabled,
+		// or the "default" sentinel) wins; when the key is absent, restore the
+		// captured launcher value so the selected toggle still applies.
+		if (!loaded_config_has_option(prefs, _T("amiberry.vkbd_toggle")))
+		{
+			write_log("WHDBooter - Sidecar has no vkbd_toggle; restoring Android toggle '%s'\n", android_vkbd_toggle);
+			_tcscpy(prefs->vkbd_toggle, android_vkbd_toggle);
+		}
+#endif
 		return;
 	}
 
@@ -1829,6 +1857,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	// Android fallback that disables touch controls when SDL reports a joystick.
 	// Preserve the launcher's explicit choice across the WHDLoad hardware preset.
 	prefs->onscreen_joystick = android_onscreen_joystick;
+	_tcscpy(prefs->vkbd_toggle, android_vkbd_toggle);
 	prefs->vkbd_enabled = android_vkbd_enabled;
 	prefs->vkbd_numpad = android_vkbd_numpad;
 	prefs->input_default_onscreen_keyboard = android_input_default_osk;

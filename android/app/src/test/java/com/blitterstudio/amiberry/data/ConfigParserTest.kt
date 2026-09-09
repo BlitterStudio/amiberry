@@ -34,6 +34,24 @@ class ConfigParserTest {
 	}
 
 	@Test
+	fun `parse input reads vkbd toggle`() {
+		val file = writeConfig("amiberry.vkbd_toggle=rightstick")
+		val result = ConfigParser.parse(file)
+
+		assertEquals("rightstick", result.settings.onScreenKeyboardToggle)
+		assertTrue(result.unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `parse input keeps explicitly empty vkbd toggle distinct from absent`() {
+		val file = writeConfig("amiberry.vkbd_toggle=")
+		assertEquals("", ConfigParser.parse(file).settings.onScreenKeyboardToggle)
+
+		file.writeText("amiberry.vkbd_enabled=true")
+		assertNull(ConfigParser.parse(file).settings.onScreenKeyboardToggle)
+	}
+
+	@Test
 	fun `parse nonexistent file returns defaults`() {
 		val file = File(tempDir.root, "nonexistent.uae")
 		val result = ConfigParser.parse(file)

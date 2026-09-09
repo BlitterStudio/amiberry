@@ -126,12 +126,38 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
 				"-G"
 			),
 			args
 		)
+	}
+
+	@Test
+	fun `android control overrides include vkbd toggle when set`() {
+		val args = LaunchRequest.AndroidControlOverrides(
+			joyport0 = "mouse",
+			joyport1 = "joy0",
+			onScreenJoystick = false,
+			onScreenKeyboard = true,
+			onScreenKeyboardToggle = "rightstick"
+		).toArgs()
+
+		assertTrue(args.contains("amiberry.vkbd_toggle=rightstick"))
+	}
+
+	@Test
+	fun `android control overrides emit default reset sentinel when toggle unset`() {
+		val args = LaunchRequest.AndroidControlOverrides(
+			joyport0 = "mouse",
+			joyport1 = "joy0",
+			onScreenJoystick = false,
+			onScreenKeyboard = true
+		).toArgs()
+
+		assertTrue(args.contains("amiberry.vkbd_toggle=default"))
 	}
 
 	@Test
@@ -206,6 +232,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=false",
 				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=false",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
 				"-G"
@@ -240,6 +267,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=true",
 				"-s", "input.default_osk=true",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
 				"-G"
@@ -274,6 +302,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_enabled=true",
 				"-s", "amiberry.vkbd_numpad=false",
 				"-s", "input.default_osk=true",
+				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=1",
 				"-G"

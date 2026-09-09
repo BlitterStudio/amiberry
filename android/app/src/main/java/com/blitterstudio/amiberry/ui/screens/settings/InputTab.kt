@@ -52,6 +52,20 @@ internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List
 internal fun portSupportsMouseMap(portIndex: Int, deviceId: String, port0Device: String): Boolean =
 	portIndex == 1 && (deviceId == "joy0" || deviceId == "joy1") && port0Device == "mouse"
 
+/** SDL gamepad button names accepted by vkbd_toggle. null = emulator default; "" = disabled. */
+internal val oskToggleButtonOptions = listOf<Pair<String?, String>>(
+	null to "Default (emulator setting)",
+	"leftstick" to "Left stick (L3)",
+	"rightstick" to "Right stick (R3)",
+	"back" to "Back / Select",
+	"start" to "Start",
+	"guide" to "Guide",
+	"leftshoulder" to "L1",
+	"rightshoulder" to "R1",
+	"misc1" to "Misc 1",
+	"" to "None (disabled)"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputTab(viewModel: SettingsViewModel) {
@@ -210,6 +224,50 @@ fun InputTab(viewModel: SettingsViewModel) {
 						viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
 					}
 				)
+
+				if (!hasTouchScreen) {
+					Text(
+						stringResource(R.string.settings_input_on_screen_keyboard_toggle_hint),
+						style = MaterialTheme.typography.bodySmall
+					)
+					Spacer(modifier = Modifier.height(8.dp))
+				}
+
+				var toggleExpanded by remember { mutableStateOf(false) }
+				val toggleLabel = oskToggleButtonOptions.firstOrNull { it.first == settings.onScreenKeyboardToggle }?.second
+					?: settings.onScreenKeyboardToggle.orEmpty()
+				ExposedDropdownMenuBox(
+					expanded = toggleExpanded,
+					onExpandedChange = { toggleExpanded = it }
+				) {
+					OutlinedTextField(
+						value = toggleLabel,
+						onValueChange = {},
+						readOnly = true,
+						enabled = settings.onScreenKeyboard,
+						label = { Text(stringResource(R.string.settings_input_on_screen_keyboard_toggle)) },
+						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toggleExpanded) },
+						modifier = Modifier
+							.testTag("input-osk-toggle-dropdown")
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+							.fillMaxWidth()
+					)
+					ExposedDropdownMenu(
+						expanded = toggleExpanded,
+						onDismissRequest = { toggleExpanded = false }
+					) {
+						oskToggleButtonOptions.forEach { (value, label) ->
+							DropdownMenuItem(
+								text = { Text(label) },
+								modifier = Modifier.testTag("input-osk-toggle-option-$value"),
+								onClick = {
+									viewModel.updateSettings { s -> s.copy(onScreenKeyboardToggle = value) }
+									toggleExpanded = false
+								}
+							)
+						}
+					}
+				}
 			}
 		}
 	}
