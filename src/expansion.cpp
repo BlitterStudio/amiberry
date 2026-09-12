@@ -2378,9 +2378,11 @@ static void allocate_expamem (void)
 	struct rtgboardconfig *rbc = &currprefs.rtgboards[0];
 	if (gfxmem_banks[0]->reserved_size != rbc->rtgmem_size) {
 		mapped_free (gfxmem_banks[0]);
-		if (rbc->rtgmem_type < GFXBOARD_HARDWARE)
+		// Hardware boards can own VRAM outside this bank (e.g. ZZ9000/A2410).
+		if (rbc->rtgmem_type < GFXBOARD_HARDWARE) {
 			mapped_malloc_dynamic (&rbc->rtgmem_size, &changed_prefs.rtgboards[0].rtgmem_size, gfxmem_banks[0], 1, NULL);
-		memory_hardreset (1);
+			memory_hardreset (1);
+		}
 	}
 #endif
 
