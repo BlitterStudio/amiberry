@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #ifdef USE_OLDGCC
 #include <experimental/filesystem>
@@ -40,6 +41,7 @@
 #include "keybuf.h"
 #include "gui.h"
 #include "zfile.h"
+#include "rommgr.h"
 #include "autoconf.h"
 #include "native2amiga.h"
 #include "savestate.h"
@@ -1176,6 +1178,11 @@ static TCHAR *parsetextpath (const TCHAR *s)
 #ifdef AMIBERRY
 static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 {
+	struct rom_directory_scan {
+		std::string path;
+		int key_count;
+	};
+	std::vector<rom_directory_scan> registered_directories;
 	for (auto index = 1; index < argc; ++index) {
 		if (argv[index][0] != '-')
 			continue;
@@ -1232,7 +1239,21 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 
 			auto* const path = parsetextpath(path_argument);
 			if (directory) {
+				// Autoload callers may repeat these options to restore preferences.
+				// Retry if a later source added a key needed by an encrypted ROM.
+				// The keyring only grows during this pre-scan.
+				const auto previous_scan = std::find_if(registered_directories.begin(),
+					registered_directories.end(), [path](const auto& scan) { return scan.path == path; });
+				if (previous_scan != registered_directories.end()
+					&& previous_scan->key_count == get_keyring()) {
+					xfree(path);
+					continue;
+				}
 				const auto registered = rp9_register_rom_directory(path);
+				if (previous_scan != registered_directories.end())
+					previous_scan->key_count = get_keyring();
+				else
+					registered_directories.push_back({ path, get_keyring() });
 				if (registered > 0) {
 					write_log(_T("RP9: registered %d ROM(s) from command-line ROM path '%s'\n"), registered, path);
 				}
