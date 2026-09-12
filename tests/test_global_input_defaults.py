@@ -19,6 +19,8 @@ def main():
     core = (ROOT / "src/inputdevice.cpp").read_text(encoding="utf-8")
     panel = (ROOT / "src/osdep/imgui/input.cpp").read_text(encoding="utf-8")
     cfgfile = (ROOT / "src/cfgfile.cpp").read_text(encoding="utf-8")
+    options = (ROOT / "src/include/options.h").read_text(encoding="utf-8")
+    port_types = between(options, "struct inputdevconfig {", "\n#define JPORT_UNPLUGGED")
     defaults = between(native, "\tp->use_retroarch_vkbd =", "\twhdload_prefs.button_wait")
     parser = between(core, "void inputdevice_joyport_config_store(", "int inputdevice_getjoyportdevice (")
     catalog = between(panel, "static std::vector<InputDeviceOption>", "static int get_device_index(")
@@ -45,10 +47,10 @@ constexpr int JPORT_UNPLUGGED = -2;
 constexpr int JPORT_NONE = -1, JSEM_KBDLAYOUT = 0, JSEM_CUSTOM = 10;
 constexpr int JSEM_JOYS = 100, JSEM_MICE = 200, JSEM_LASTKBD = 9;
 constexpr int MAX_JPORTS = 4, MAX_JPORTS_CUSTOM = 6, MAX_INPUT_DEVICES = 8;
+constexpr int MAX_JPORT_NAME = 128, MAX_JPORT_CONFIG = 256;
 constexpr int IDTYPE_JOYSTICK = 0, IDTYPE_MOUSE = 1;
 constexpr int INPUT_MATCH_BOTH = 1, INPUT_MATCH_CONFIG_NAME_ONLY = 2, INPUT_MATCH_FRIENDLY_NAME_ONLY = 4;
-struct inputdevconfig { char name[128]{}, configname[256]{}, shortid[128]{}; };
-struct jport { int id = JPORT_NONE, mode = 0, submode = 0, autofire = 0; inputdevconfig idc; bool changed = false; };
+''' + port_types + r'''
 struct jport_custom { char custom[256]{}; };
 struct uae_prefs {
     jport jports[MAX_JPORTS];
@@ -102,7 +104,7 @@ int main() {
     assert(gamepad && joystick);
     std::cout << "Connected gamepad and joystick are selectable in the shared catalog\n";
 
-    uae_prefs p;
+    uae_prefs p{};
     apply_defaults(&p);
 #ifdef LIBRETRO
     assert(p.jports[0].id == JSEM_MICE && p.jports[1].id == JSEM_JOYS);
@@ -147,6 +149,48 @@ int main() {
     amiberry_options.default_controller1 = "kbd9";
     apply_defaults(&p);
     assert(p.jports[1].id == JSEM_KBDLAYOUT + 8);
+    // A token that fits exactly, including its terminator, remains valid.
+    const std::string longest_keyboard = "kbd"
+        + std::string(sizeof p.jports[1].idc.shortid - 5, '0') + "9";
+    amiberry_options.default_controller1 = longest_keyboard.c_str();
+    apply_defaults(&p);
+    inputdevice_fix_prefs(&p, true);
+    assert(p.jports[1].id == JSEM_KBDLAYOUT + 8);
+
+    // Manually edited global options can be longer than a port short ID.
+    // Exercise the first overflowing length and the largest option value,
+    // without truncating malformed values into a different device token.
+    joystick_count = 3;
+    amiberry_options.default_controller1 = "kbd9";
+    amiberry_options.default_mouse1 = "mouse";
+    amiberry_options.default_controller3 = "";
+    amiberry_options.default_controller4 = "";
+    const char** device_defaults[] = {
+        &amiberry_options.default_mouse1, &amiberry_options.default_controller1,
+        &amiberry_options.default_controller3, &amiberry_options.default_controller4
+    };
+    const int fallback_ids[] = { JSEM_MICE, JSEM_JOYS, JPORT_NONE, JPORT_NONE };
+    for (const size_t length : { size_t(16), size_t(127) }) {
+        const std::string oversized(length, 'x');
+        for (int port = 0; port < MAX_JPORTS; ++port) {
+            const char* saved = *device_defaults[port];
+            *device_defaults[port] = oversized.c_str();
+            uae_prefs malformed{};
+            for (auto& jp : malformed.jports) {
+                jp.nokeyboardoverride = true;
+                jp.mode = 3;
+                jp.autofire = 2;
+            }
+            apply_defaults(&malformed);
+            for (const auto& jp : malformed.jports) {
+                assert(jp.nokeyboardoverride);
+                assert(jp.mode == 3 && jp.autofire == 2);
+            }
+            inputdevice_fix_prefs(&malformed, true);
+            assert(malformed.jports[port].id == fallback_ids[port]);
+            *device_defaults[port] = saved;
+        }
+    }
 #endif
     std::cout << "Global input defaults: passed\n";
 }

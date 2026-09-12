@@ -5950,7 +5950,11 @@ void target_default_options(uae_prefs* p, const int type)
 	};
 	const char* const fallbacks[MAX_JPORTS] = { "mouse", "joy0", "none", "none" };
 	for (int port = 0; port < MAX_JPORTS; ++port) {
-		const char* value = devices[port][0] ? devices[port] : fallbacks[port];
+		const char* value = devices[port];
+		// Global option buffers are larger than the port's short ID buffer.
+		// Reject oversized values rather than truncating them into a new token.
+		if (!value[0] || strlen(value) >= sizeof p->jports[port].idc.shortid)
+			value = fallbacks[port];
 		p->jports[port].idc = {};
 		inputdevice_joyport_config_store(p, value, port, -1, -1, 0);
 		inputdevice_joyport_config(p, value, nullptr, port, -1, -1, 0, false);
