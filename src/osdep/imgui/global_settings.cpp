@@ -519,22 +519,23 @@ void render_panel_global_settings()
 			"Enable RetroArch-style reset button mapping by default when a mapping exists.");
 		render_input_device_row("Controller 1", amiberry_options.default_controller1,
 			sizeof amiberry_options.default_controller1,
-			"Default controller mapping for port 1.");
+			"Default device for Input Port 2 (joystick) in new configurations and autobooted content. "
+			"Does not change the current configuration; use the Input panel for that.");
 		render_input_device_row("Controller 2", amiberry_options.default_controller2,
 			sizeof amiberry_options.default_controller2,
-			"Default controller mapping for port 2.");
+			"Second controller, used on Input Port 1 by WHDLoad/CD32 autoboot.");
 		render_input_device_row("Controller 3", amiberry_options.default_controller3,
 			sizeof amiberry_options.default_controller3,
-			"Default controller mapping for port 3.");
+			"Default device for Input Port 3 (parallel joystick) in new configurations and WHDLoad autoboot.");
 		render_input_device_row("Controller 4", amiberry_options.default_controller4,
 			sizeof amiberry_options.default_controller4,
-			"Default controller mapping for port 4.");
+			"Default device for Input Port 4 (parallel joystick) in new configurations and WHDLoad autoboot.");
 		render_input_device_row("Mouse 1", amiberry_options.default_mouse1,
 			sizeof amiberry_options.default_mouse1,
-			"Default mouse mapping for mouse port 1.");
+			"Default device for Input Port 1 (mouse) in new configurations and mouse-controlled autobooted content.");
 		render_input_device_row("Mouse 2", amiberry_options.default_mouse2,
 			sizeof amiberry_options.default_mouse2,
-			"Default mouse mapping for mouse port 2.");
+			"Second mouse device, used on Input Port 2 for mouse-controlled WHDLoad content.");
 	});
 
 	render_group("Display defaults", "GlobalDisplayDefaults", [&]() {
