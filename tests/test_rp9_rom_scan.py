@@ -41,6 +41,9 @@ def main():
 constexpr std::uintmax_t maximum_scanned_rom_size = 10000000;
 std::vector<std::filesystem::path> scanned, keys;
 std::vector<std::string> events;
+std::vector<std::string> key_data;
+std::vector<std::filesystem::path> recognized;
+int get_keyring() { return static_cast<int>(key_data.size()); }
 void write_log(const char*, ...) {}
 char* parsetextpath(const char* value) {
     std::string path(value);
@@ -50,7 +53,15 @@ char* parsetextpath(const char* value) {
     std::memcpy(result, path.c_str(), path.size() + 1);
     return result;
 }
-void addkeyfile(const char* path) { keys.emplace_back(path); events.emplace_back("key"); }
+void addkeyfile(const char* path) {
+    keys.emplace_back(path);
+    events.emplace_back("key");
+    std::ifstream file(path);
+    std::string data;
+    std::getline(file, data);
+    if (!data.empty() && std::find(key_data.begin(), key_data.end(), data) == key_data.end())
+        key_data.push_back(data);
+}
 bool rp9_register_rom_override(const char* path) {
     // Read candidates, including rejected files: these are the expensive probes
     // that a ROM registry cache cannot prevent for unrelated BIOS-pack files.
@@ -59,7 +70,11 @@ bool rp9_register_rom_override(const char* path) {
     std::getline(file, data);
     scanned.emplace_back(path);
     events.emplace_back("rom");
-    return data == "rom";
+    const bool known = data == "rom" || (data == "encrypted"
+        && std::find(key_data.begin(), key_data.end(), "external key") != key_data.end());
+    if (known)
+        recognized.emplace_back(path);
+    return known;
 }
 '''
     checks = r'''
@@ -109,7 +124,7 @@ int main(int argc, char** argv) {
     assert(keys == std::vector<fs::path>{dedicated / "nested/ROM.KEY"});
     assert(events == (std::vector<std::string>{"key", "rom"}));
 
-    scanned.clear(); keys.clear(); events.clear();
+    scanned.clear(); keys.clear(); events.clear(); key_data.clear();
     std::vector<std::string> args = {"amiberry", "-s", "amiberry.rom_path=" + dedicated.string(),
         "--autoload", "game.lha", "-srom_path=\"" + dedicated.string() + "\"",
         "-s", "amiberry.rom_path=" + other.string()};
@@ -122,6 +137,28 @@ int main(int argc, char** argv) {
     scanned.clear();
     register_cmdline_rp9_rom_sources(static_cast<int>(raw.size()), raw.data());
     assert(scanned == expected);
+
+    // A later directory can supply the key needed by an earlier failed scan.
+    const auto encrypted_dir = root / "encrypted";
+    const auto key_dir = root / "keys";
+    fs::create_directories(encrypted_dir);
+    fs::create_directories(key_dir);
+    put(encrypted_dir / "encrypted.rom", "encrypted");
+    put(key_dir / "rom.key", "external key");
+    scanned.clear(); recognized.clear(); keys.clear(); key_data.clear();
+    args = {"amiberry", "-s", "rom_path=" + encrypted_dir.string(),
+        "-s", "rom_path=" + key_dir.string(),
+        "-s", "rom_path=" + encrypted_dir.string(),
+        "-s", "rom_path=" + encrypted_dir.string(),
+        "-s", "rom_path=" + key_dir.string(),
+        "-s", "rom_path=" + encrypted_dir.string()};
+    raw.clear();
+    for (auto& arg : args) raw.push_back(arg.data());
+    register_cmdline_rp9_rom_sources(static_cast<int>(raw.size()), raw.data());
+    assert(recognized == std::vector<fs::path>{encrypted_dir / "encrypted.rom"});
+    assert(scanned == (std::vector<fs::path>{
+        encrypted_dir / "encrypted.rom", encrypted_dir / "encrypted.rom"}));
+    assert(keys == std::vector<fs::path>{key_dir / "rom.key"});
 
     // Explicit overrides in the shared root remain eligible for registration.
     scanned.clear();
