@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -1342,6 +1343,18 @@ int rp9_register_rom_directory(const char* directory)
 	const std::filesystem::path root(directory);
 	if (!std::filesystem::is_directory(root, error) || error)
 		return 0;
+
+#ifdef LIBRETRO
+	// The normal libretro scan already registers firmware from the shared
+	// system root using its non-recursive, Amiga-name-only policy. Do not
+	// bypass that policy with RP9's unrestricted directory scan.
+	if (const auto* system_dir = std::getenv("AMIBERRY_LIBRETRO_SYSTEM_DIR");
+		system_dir && system_dir[0]) {
+		std::error_code equivalent_error;
+		if (std::filesystem::equivalent(root, system_dir, equivalent_error))
+			return 0;
+	}
+#endif
 
 	std::vector<std::filesystem::path> candidates;
 	std::vector<std::filesystem::path> key_files;

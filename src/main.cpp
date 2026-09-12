@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #ifdef USE_OLDGCC
 #include <experimental/filesystem>
@@ -1176,6 +1177,7 @@ static TCHAR *parsetextpath (const TCHAR *s)
 #ifdef AMIBERRY
 static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 {
+	std::vector<std::string> registered_directories;
 	for (auto index = 1; index < argc; ++index) {
 		if (argv[index][0] != '-')
 			continue;
@@ -1232,6 +1234,14 @@ static void register_cmdline_rp9_rom_sources(const int argc, TCHAR** argv)
 
 			auto* const path = parsetextpath(path_argument);
 			if (directory) {
+				// Autoload callers may repeat these options to restore preferences.
+				// Registration is independent of that ordering and only needs one scan.
+				if (std::find(registered_directories.begin(), registered_directories.end(), path)
+					!= registered_directories.end()) {
+					xfree(path);
+					continue;
+				}
+				registered_directories.emplace_back(path);
 				const auto registered = rp9_register_rom_directory(path);
 				if (registered > 0) {
 					write_log(_T("RP9: registered %d ROM(s) from command-line ROM path '%s'\n"), registered, path);
