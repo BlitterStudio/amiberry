@@ -5938,6 +5938,28 @@ void target_default_options(uae_prefs* p, const int type)
 	// Default IDs for ports 0 and 1: Mouse and first joystick
 	p->jports[0].id = JSEM_MICE;
 	p->jports[1].id = JSEM_JOYS;
+#ifndef LIBRETRO
+	// Global device choices are defaults for normal startup too, not just
+	// autobooted content. Keep IDs and config identities in sync so a later
+	// input fixup cannot restore an old device over the selected default.
+	const char* const devices[MAX_JPORTS] = {
+		amiberry_options.default_mouse1,
+		amiberry_options.default_controller1,
+		amiberry_options.default_controller3,
+		amiberry_options.default_controller4
+	};
+	const char* const fallbacks[MAX_JPORTS] = { "mouse", "joy0", "none", "none" };
+	for (int port = 0; port < MAX_JPORTS; ++port) {
+		const char* value = devices[port];
+		// Global option buffers are larger than the port's short ID buffer.
+		// Reject oversized values rather than truncating them into a new token.
+		if (!value[0] || strlen(value) >= sizeof p->jports[port].idc.shortid)
+			value = fallbacks[port];
+		p->jports[port].idc = {};
+		inputdevice_joyport_config_store(p, value, port, -1, -1, 0);
+		inputdevice_joyport_config(p, value, nullptr, port, -1, -1, 0, false);
+	}
+#endif
 
 	whdload_prefs.button_wait = amiberry_options.default_whd_buttonwait;
 	whdload_prefs.show_splash = amiberry_options.default_whd_showsplash;
