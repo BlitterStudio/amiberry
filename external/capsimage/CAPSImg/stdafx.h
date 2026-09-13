@@ -60,6 +60,12 @@
 #endif
 #endif
 
+#ifdef __FreeBSD__
+#define ftello64 ftello
+#define fseeko64 fseeko
+#define fopen64 fopen
+#endif
+
 #ifndef _WIN32
 
 #define __cdecl
