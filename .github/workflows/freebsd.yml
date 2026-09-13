@@ -36,6 +36,11 @@ jobs:
       matrix:
         release: ['14.5', '15.1']
         arch: [amd64, aarch64]
+    # The VM action caches its VM images through the Actions cache,
+    # which requires actions: write (same grant as the c-cpp.yml jobs).
+    permissions:
+      contents: read
+      actions: write
 
     steps:
       - name: Check out repository code
