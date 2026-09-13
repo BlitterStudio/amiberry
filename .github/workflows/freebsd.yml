@@ -1,0 +1,88 @@
+name: FreeBSD CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags:
+      - 'v*'
+      - 'preview-v*'
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/FUNDING.yml'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-freebsd:
+    name: FreeBSD ${{ matrix.release }} / ${{ matrix.arch }}
+    # The VM action runs both architectures on an x86_64 Linux host.
+    # aarch64 uses QEMU software emulation and needs a longer build timeout.
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ matrix.arch == 'aarch64' && 180 || 60 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ['14.5', '15.1']
+        arch: [amd64, aarch64]
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Build in FreeBSD
+        uses: vmactions/freebsd-vm@8b0f1a8fc0ea0def307835c258940ca358fe6480 # v1.5.6
+        with:
+          release: ${{ matrix.release }}
+          arch: ${{ matrix.arch }}
+          cpu: 4
+          mem: 8192
+          sync: rsync
+          prepare: |
+            set -eu
+            pkg install -y \
+              cmake ninja pkgconf git \
+              sdl3 sdl3_image flac mpg123 png curl nlohmann-json \
+              libsysinfo libiconv libglvnd dbus \
+              libserialport enet portmidi libmpeg2 libpcap zstd
+          run: |
+            set -eu
+            freebsd-version
+            uname -m
+            cc --version
+
+            # Exercise DBus linking on both releases and native optimization
+            # on 15.1, while keeping 14.5 on the default CPU settings.
+            cmake -S . -B build-freebsd -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/usr/local \
+              -DUSE_DBUS=ON \
+              -DWITH_OPTIMIZE=${{ matrix.release == '15.1' && 'ON' || 'OFF' }}
+            cmake --build build-freebsd --parallel 4
+
+            # Stage through the normal install rules, including CAPSImage and
+            # floppybridge. This is a CI artifact, not a standalone package.
+            DESTDIR="$PWD/stage-freebsd" cmake --install build-freebsd
+            tar -czf amiberry-freebsd.tar.gz -C stage-freebsd .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-freebsd-${{ matrix.release }}-${{ matrix.arch }}
+          path: amiberry-freebsd.tar.gz
+          if-no-files-found: error
+          retention-days: 7
