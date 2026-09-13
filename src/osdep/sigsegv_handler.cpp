@@ -1605,7 +1605,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 			output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R9]);
 			output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R10]);
 			output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_FP]);
-			output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_12]);
+			output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R12]);
 			output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_SP]);
 			output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_LR]);
 			output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_PC]);
@@ -1756,7 +1756,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 		output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R9]);
 		output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R10]);
 		output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_FP]);
-		output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_12]);
+		output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R12]);
 		output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_SP]);
 		output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_LR]);
 		output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_PC]);
