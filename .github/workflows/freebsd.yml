@@ -28,9 +28,10 @@ jobs:
   build-freebsd:
     name: FreeBSD ${{ matrix.release }} / ${{ matrix.arch }}
     # The VM action runs both architectures on an x86_64 Linux host.
-    # aarch64 uses QEMU software emulation and needs a longer build timeout.
+    # amd64 is KVM-accelerated on GitHub-hosted runners (~10 min), while
+    # aarch64 uses QEMU TCG and needs ~3.5 h for a full -O3 build.
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ matrix.arch == 'aarch64' && 180 || 60 }}
+    timeout-minutes: ${{ matrix.arch == 'aarch64' && 300 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -71,18 +72,19 @@ jobs:
             cc --version
 
             # Exercise DBus linking on both releases and native optimization
-            # on 15.1, while keeping 14.5 on the default CPU settings.
-            cmake -S . -B build-freebsd -G Ninja \
+            # on 15.1. Build and stage outside the synced workspace so the
+            # action's copyback returns only the tarball, not the build tree.
+            cmake -S . -B /tmp/build-freebsd -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/usr/local \
               -DUSE_DBUS=ON \
               -DWITH_OPTIMIZE=${{ matrix.release == '15.1' && 'ON' || 'OFF' }}
-            cmake --build build-freebsd --parallel 4
+            cmake --build /tmp/build-freebsd --parallel 4
 
             # Stage through the normal install rules, including CAPSImage and
             # floppybridge. This is a CI artifact, not a standalone package.
-            DESTDIR="$PWD/stage-freebsd" cmake --install build-freebsd
-            tar -czf amiberry-freebsd.tar.gz -C stage-freebsd .
+            DESTDIR=/tmp/stage-freebsd cmake --install /tmp/build-freebsd
+            tar -czf amiberry-freebsd.tar.gz -C /tmp/stage-freebsd .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
