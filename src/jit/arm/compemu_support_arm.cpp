@@ -60,6 +60,7 @@
 #include "newcpu.h"
 #include "comptbl_arm.h"
 #include "compemu_arm.h"
+#include "jit/jit_trap_policy.h"
 #include <SDL3/SDL.h>
 
 /* ARM64 JIT is PIE-compatible: it uses register-indirect addressing
@@ -3514,46 +3515,7 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
  * interpreter handler call. */
 static bool jit_trap_demote_opcode(uae_u32 op)
 {
-    switch (table68k[get_opcode_cft_map(op)].mnemo) {
-    case i_ILLG:
-    case i_RTE:
-    case i_STOP:
-    case i_RESET:
-    case i_MOVEC2:
-    case i_MOVE2C:
-    case i_MOVES:
-    case i_MV2SR:
-    case i_MVSR2:
-    case i_MVR2USP:
-    case i_MVUSP2R:
-    case i_ANDSR:
-    case i_ORSR:
-    case i_EORSR:
-    case i_TRAPcc:
-    case i_FTRAPcc:
-    case i_TRAPV:
-    case i_BKPT:
-    case i_LPSTOP:
-    case i_MMUOP030:
-    case i_PFLUSHN:
-    case i_PFLUSH:
-    case i_PFLUSHAN:
-    case i_PFLUSHA:
-    case i_PLPAR:
-    case i_PLPAW:
-    case i_PTESTR:
-    case i_PTESTW:
-    case i_CINVL:
-    case i_CINVP:
-    case i_CINVA:
-    case i_CPUSHL:
-    case i_CPUSHP:
-    case i_CPUSHA:
-        return true;
-    default:
-        /* i_DIVU, i_DIVS, i_DIVL, i_CHK, i_CHK2 and friends stay compiled */
-        return false;
-    }
+    return jit_trap_demote_mnemo(table68k[get_opcode_cft_map(op)].mnemo);
 }
 #endif
 
