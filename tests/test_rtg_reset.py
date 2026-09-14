@@ -151,6 +151,26 @@ int main() {
     card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z3;
     check_configuration_change(); // Type-only change, with the same VRAM size.
 
+    // These framebuffer boards also keep VRAM outside the generic bank.
+    const int framebuffer_cards[] = { GFXBOARD_ID_HARLEQUIN, GFXBOARD_ID_RAINBOWII };
+    for (const int board : framebuffer_cards) {
+        card.rtgmem_type = board;
+        card.rtgmem_size = 2 * MiB;
+        check_configuration_change(); // Also covers a type-only switch between these cards.
+        expect(graphics_bank.reserved_size == 0 && graphics_bank.baseaddr == nullptr,
+               "Framebuffer VRAM must leave the generic bank unallocated");
+        for (int i = 0; i < 3; ++i) {
+            guest_ram_marker = 0x5a;
+            reset();
+            expect(mem_hardreset == 0 && guest_ram_marker == 0x5a,
+                   "Repeated framebuffer warm resets must preserve guest RAM");
+        }
+        card.rtgmem_size = 0; // Disable and re-enable private VRAM without changing type.
+        check_configuration_change();
+        card.rtgmem_size = 2 * MiB;
+        check_configuration_change();
+    }
+
     // A2410's separate program/overlay RAM is not configurable VRAM.
     mem_hardreset = 0;
     card.rtgmem_type = GFXBOARD_ID_A2410;

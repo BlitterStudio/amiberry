@@ -2380,9 +2380,10 @@ static void allocate_expamem (void)
 		mapped_free (gfxmem_banks[0]);
 		if (rbc->rtgmem_type < GFXBOARD_HARDWARE)
 			mapped_malloc_dynamic (&rbc->rtgmem_size, &changed_prefs.rtgboards[0].rtgmem_size, gfxmem_banks[0], 1, NULL);
-		// ZZ9000 allocates private VRAM, so this bank stays empty. Its
-		// configuration changes are handled by init_shm() before memory_reset().
-		if (rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z2 && rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z3)
+		// These framebuffer boards allocate private VRAM, so this bank stays empty.
+		// Configuration changes are handled by init_shm() before memory_reset().
+		if (rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z2 && rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z3 &&
+			rbc->rtgmem_type != GFXBOARD_ID_HARLEQUIN && rbc->rtgmem_type != GFXBOARD_ID_RAINBOWII)
 			memory_hardreset (1);
 	}
 #endif
