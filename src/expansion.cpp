@@ -2378,11 +2378,13 @@ static void allocate_expamem (void)
 	struct rtgboardconfig *rbc = &currprefs.rtgboards[0];
 	if (gfxmem_banks[0]->reserved_size != rbc->rtgmem_size) {
 		mapped_free (gfxmem_banks[0]);
-		// Hardware boards can own VRAM outside this bank (e.g. ZZ9000/A2410).
-		if (rbc->rtgmem_type < GFXBOARD_HARDWARE) {
+		if (rbc->rtgmem_type < GFXBOARD_HARDWARE)
 			mapped_malloc_dynamic (&rbc->rtgmem_size, &changed_prefs.rtgboards[0].rtgmem_size, gfxmem_banks[0], 1, NULL);
+		// These framebuffer boards allocate private VRAM, so this bank stays empty.
+		// Configuration changes are handled by init_shm() before memory_reset().
+		if (rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z2 && rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z3 &&
+			rbc->rtgmem_type != GFXBOARD_ID_HARLEQUIN && rbc->rtgmem_type != GFXBOARD_ID_RAINBOWII)
 			memory_hardreset (1);
-		}
 	}
 #endif
 
