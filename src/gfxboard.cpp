@@ -163,7 +163,8 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_A2410,
 		_T("A2410 [Zorro II]"), _T("Commodore"), _T("A2410"),
 		1030, 0, 0, 0,
-		0x00000000, 0x00200000, 0x00200000, 0x10000, 0, 2, 2, false, false,
+		// 1 MiB VRAM; the additional 1 MiB program/overlay RAM is separate.
+		0x00000000, 0x00100000, 0x00100000, 0x10000, 0, 2, 2, false, false,
 		0, 0xc1, &a2410_func
 	},
 #ifdef USE_PCEM

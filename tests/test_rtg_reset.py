@@ -19,6 +19,9 @@ def main():
     memory = (ROOT / "src/memory.cpp").read_text(encoding="utf-8")
     options = (ROOT / "src/include/options.h").read_text(encoding="utf-8")
     graphics = (ROOT / "src/include/gfxboard.h").read_text(encoding="utf-8")
+    gfxboard = (ROOT / "src/gfxboard.cpp").read_text(encoding="utf-8")
+    board_struct = between(gfxboard, 'struct gfxboard\n', '#define ISP4()')
+    a2410 = between(gfxboard, 'GFXBOARD_ID_A2410,', '\n\t},')
     allocation = between(expansion, "static void allocate_expamem (void)",
                          "static uaecptr check_boot_rom (")
     reset_request = between(memory, "void memory_hardreset (int mode)",
@@ -41,6 +44,9 @@ using TCHAR = char;
 #define PICASSO96
 constexpr uaecptr Z3BASE_UAE = 0x40000000;
 ''' + board_types + board_ids + r'''
+struct gfxboard_func {} a2410_func;
+''' + board_struct + 'const gfxboard a2410_board = {' + a2410 + r'''};
+const uae_u32 a2410_min = a2410_board.vrammin, a2410_max = a2410_board.vrammax;
 struct addrbank {
     uae_u32 reserved_size = 0, allocated_size = 0, mask = 0, start = 0;
     uae_u8* baseaddr = nullptr;
@@ -89,6 +95,7 @@ int main() {
     card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z3;
     card.rtgmem_size = 128 * MiB;
     allocate_expamem();
+    mem_hardreset = 0; // Initial configuration has been applied.
     allocate_expamem();
     expect(mem_hardreset == 0, "ZZ9000 warm reset must not schedule guest RAM destruction");
 
@@ -98,14 +105,42 @@ int main() {
     allocate_expamem();
     expect(mem_hardreset == pending_reset, "Hardware RTG must preserve an existing hard-reset request");
 
-    // A2410 exposes 1 MiB through this bank, not its configured 2 MiB total.
+    mem_hardreset = 0;
+    card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z2;
+    card.rtgmem_size = 4 * MiB;
+    allocate_expamem();
+    expect(mem_hardreset != 0, "Changing ZZ9000 configuration must request a hard reset");
+    mem_hardreset = 0;
+    allocate_expamem();
+    expect(mem_hardreset == 0, "Unchanged ZZ9000 Z2 must preserve warm reset");
+    card.rtgmem_size = 128 * MiB;
+    allocate_expamem();
+    expect(mem_hardreset != 0, "Changing only private VRAM size must request a hard reset");
+    mem_hardreset = 0;
+    card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z3;
+    allocate_expamem();
+    expect(mem_hardreset != 0, "Changing only RTG board type must request a hard reset");
+
+    // A2410's separate program/overlay RAM is not configurable VRAM.
     mem_hardreset = 0;
     card.rtgmem_type = GFXBOARD_ID_A2410;
-    card.rtgmem_size = 2 * MiB;
+    expect(a2410_min == MiB && a2410_max == MiB, "A2410 must allow exactly 1 MiB VRAM");
+    card.rtgmem_size = a2410_max;
+    currprefs.rtgboards[0] = card;
     graphics_bank.reserved_size = MiB;
     mapped_malloc(&graphics_bank);
+    graphics_bank.baseaddr[0] = 0x5a;
     allocate_expamem();
     expect(mem_hardreset == 0, "A2410 split VRAM must not turn a warm reset into a hard reset");
+    expect(graphics_bank.baseaddr && graphics_bank.baseaddr[0] == 0x5a,
+           "A2410 warm reset must preserve its VRAM allocation");
+
+    card.rtgmem_type = GFXBOARD_ID_PICASSO2;
+    card.rtgmem_size = 2 * MiB;
+    currprefs.rtgboards[0] = card;
+    mem_hardreset = 0;
+    allocate_expamem();
+    expect(mem_hardreset != 0, "Hardware VRAM allocation mismatch must request a hard reset");
 
     // A real UAE graphics resize must still invalidate the old memory layout.
     mem_hardreset = 0;
