@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise expansion allocation's destructive-reset boundary with production code."""
+"""Exercise RTG reset sequencing and allocation with production code."""
 import os
 from pathlib import Path
 import shlex
@@ -17,6 +17,7 @@ def between(source, start, end):
 def main():
     expansion = (ROOT / "src/expansion.cpp").read_text(encoding="utf-8")
     memory = (ROOT / "src/memory.cpp").read_text(encoding="utf-8")
+    host_memory = (ROOT / "src/osdep/amiberry_mem.cpp").read_text(encoding="utf-8")
     options = (ROOT / "src/include/options.h").read_text(encoding="utf-8")
     graphics = (ROOT / "src/include/gfxboard.h").read_text(encoding="utf-8")
     gfxboard = (ROOT / "src/gfxboard.cpp").read_text(encoding="utf-8")
@@ -26,6 +27,10 @@ def main():
                          "static uaecptr check_boot_rom (")
     reset_request = between(memory, "void memory_hardreset (int mode)",
                             "// do not map if it conflicts with custom banks")
+    shared_memory_init = between(host_memory, "static uae_u32 oz3fastmem_size",
+                                 "void free_shm ()")
+    reset_clear = between(memory, "\tif (mem_hardreset) {\n\t\tmemory_clear ();",
+                          "#ifdef NATMEM_OFFSET")
     board_types = between(options, "#define MAX_RTG_BOARDS", "struct expansion_params")
     board_ids = between(graphics, "#define GFXBOARD_UAE_Z2", "#define GFXBOARD_BUSTYPE_Z")
     fixture = r'''
@@ -62,8 +67,19 @@ addrbank z3fastmem_bank[MAX_RAM_BOARDS], z3chipmem_bank, graphics_bank;
 addrbank* gfxmem_banks[MAX_RTG_BOARDS] = { &graphics_bank };
 static int mem_hardreset;
 
-// Host allocation is isolated; the production reset request and entire
-// allocate_expamem routine below decide whether guest RAM must be cleared.
+// Host allocation is isolated; production init_shm (including its persistent
+// configuration tracking), reset request and allocation make reset decisions.
+int doinit_shm() { return 0; }
+void resetmem(bool) {}
+void clear_shm() {}
+uae_u8 guest_ram_marker;
+void memory_clear() {
+    mem_hardreset = 0;
+    guest_ram_marker = 0;
+}
+void memory_reset() {
+''' + reset_clear + r'''
+}
 void mapped_free(addrbank* bank) {
     std::free(bank->baseaddr);
     *bank = {};
@@ -82,7 +98,7 @@ void write_log(const TCHAR*, ...) {}
 uaecptr expansion_startaddress(uae_prefs*, uaecptr, uae_u32) {
     std::abort(); // Manual RAM mapping is outside these RTG scenarios.
 }
-''' + reset_request + allocation + r'''
+''' + reset_request + shared_memory_init + allocation + r'''
 int main() {
     constexpr uae_u32 MiB = 1024 * 1024;
     int failures = 0;
@@ -91,12 +107,33 @@ int main() {
     };
     auto& card = changed_prefs.rtgboards[0];
 
+    // devices_reset calls init_shm before memory_reset; custom reset then
+    // calls expamem_reset, which runs allocate_expamem. Keep that order and
+    // let memory_reset consume requests instead of manually clearing them.
+    auto reset = [&]() {
+        expect(init_shm(), "Shared memory initialization must succeed");
+        memory_reset();
+        allocate_expamem();
+    };
+    auto check_configuration_change = [&]() {
+        guest_ram_marker = 0x5a;
+        expect(init_shm(), "Changed RTG configuration must initialize");
+        expect(mem_hardreset != 0, "init_shm must request the configuration hard reset");
+        memory_reset();
+        expect(mem_hardreset == 0 && guest_ram_marker == 0,
+               "Configuration hard reset must clear RAM and consume the request");
+        allocate_expamem();
+        expect(mem_hardreset == 0, "Expansion allocation must not re-arm the consumed reset");
+        guest_ram_marker = 0x5a;
+        reset();
+        expect(mem_hardreset == 0 && guest_ram_marker == 0x5a,
+               "Next unchanged reset must preserve the guest RAM marker");
+    };
+
     // ZZ9000's private VRAM leaves the generic graphics bank unallocated.
     card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z3;
     card.rtgmem_size = 128 * MiB;
-    allocate_expamem();
-    mem_hardreset = 0; // Initial configuration has been applied.
-    allocate_expamem();
+    check_configuration_change();
     expect(mem_hardreset == 0, "ZZ9000 warm reset must not schedule guest RAM destruction");
 
     // A hardware card must not cancel a hard reset requested elsewhere.
@@ -105,21 +142,14 @@ int main() {
     allocate_expamem();
     expect(mem_hardreset == pending_reset, "Hardware RTG must preserve an existing hard-reset request");
 
-    mem_hardreset = 0;
+    memory_reset(); // Consume the independent request before changing cards.
     card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z2;
     card.rtgmem_size = 4 * MiB;
-    allocate_expamem();
-    expect(mem_hardreset != 0, "Changing ZZ9000 configuration must request a hard reset");
-    mem_hardreset = 0;
-    allocate_expamem();
-    expect(mem_hardreset == 0, "Unchanged ZZ9000 Z2 must preserve warm reset");
-    card.rtgmem_size = 128 * MiB;
-    allocate_expamem();
-    expect(mem_hardreset != 0, "Changing only private VRAM size must request a hard reset");
-    mem_hardreset = 0;
+    check_configuration_change();
+    card.rtgmem_size = 8 * MiB; // Size-only change, with the same private-memory card.
+    check_configuration_change();
     card.rtgmem_type = GFXBOARD_ID_ZZ9000_Z3;
-    allocate_expamem();
-    expect(mem_hardreset != 0, "Changing only RTG board type must request a hard reset");
+    check_configuration_change(); // Type-only change, with the same VRAM size.
 
     // A2410's separate program/overlay RAM is not configurable VRAM.
     mem_hardreset = 0;

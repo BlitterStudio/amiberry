@@ -2277,10 +2277,6 @@ uaecptr expansion_startaddress(struct uae_prefs *p, uaecptr addr, uae_u32 size)
 static void allocate_expamem (void)
 {
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
-		if (currprefs.rtgboards[i].rtgmem_size != changed_prefs.rtgboards[i].rtgmem_size ||
-			currprefs.rtgboards[i].rtgmem_type != changed_prefs.rtgboards[i].rtgmem_type) {
-			memory_hardreset (1);
-		}
 		memcpy(&currprefs.rtgboards[i], &changed_prefs.rtgboards[i], sizeof(struct rtgboardconfig));
 	}
 	currprefs.z3chipmem.size = changed_prefs.z3chipmem.size;
@@ -2385,7 +2381,7 @@ static void allocate_expamem (void)
 		if (rbc->rtgmem_type < GFXBOARD_HARDWARE)
 			mapped_malloc_dynamic (&rbc->rtgmem_size, &changed_prefs.rtgboards[0].rtgmem_size, gfxmem_banks[0], 1, NULL);
 		// ZZ9000 allocates private VRAM, so this bank stays empty. Its
-		// configuration changes are checked before copying preferences above.
+		// configuration changes are handled by init_shm() before memory_reset().
 		if (rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z2 && rbc->rtgmem_type != GFXBOARD_ID_ZZ9000_Z3)
 			memory_hardreset (1);
 	}
