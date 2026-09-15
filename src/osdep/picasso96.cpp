@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <atomic>
 
 #include "uae.h"
 
@@ -103,15 +104,17 @@ static int picasso96_GCT = GCT_Unknown;
 static int picasso96_PCT = PCT_Unknown;
 
 #if defined(_WIN32) && !defined(AMIBERRY)
-int mman_GetWriteWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize, PVOID *lpAddresses, PULONG_PTR lpdwCount, PULONG lpdwGranularity);
+int mman_GetWriteWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize, PVOID *lpAddresses, PULONG_PTR lpdwCount, PULONG_PTR lpdwGranularity);
 void mman_ResetWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize);
 #else
 static constexpr int DIRTY_PAGE_SHIFT = 12;
 static constexpr int DIRTY_PAGE_SIZE = 1 << DIRTY_PAGE_SHIFT;
-static bool* dirty_page_map[MAX_RTG_BOARDS];
+static std::atomic<bool>* dirty_page_map[MAX_RTG_BOARDS];
 static int dirty_page_map_size[MAX_RTG_BOARDS];
-static int min_dirty_page_index[MAX_RTG_BOARDS];
-static int max_dirty_page_index[MAX_RTG_BOARDS];
+// The bounds are atomics: mark_dirty() runs in the CPU write handlers while
+// picasso_getwritewatch() drains from the RTG render thread.
+static std::atomic<int> min_dirty_page_index[MAX_RTG_BOARDS];
+static std::atomic<int> max_dirty_page_index[MAX_RTG_BOARDS];
 #endif
 
 static void picasso_flushpixels(int index, uae_u8 *src, int offset, bool render);
@@ -517,14 +520,26 @@ static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 	if (start_page < 0) start_page = 0;
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
 
-	if (start_page < min_dirty_page_index[index]) min_dirty_page_index[index] = start_page;
-	if (end_page > max_dirty_page_index[index]) max_dirty_page_index[index] = end_page;
+	if (start_page > end_page) {
+		return;
+	}
+	dirty_page_map[index][start_page].store(true, std::memory_order_relaxed);
+	for (int i = start_page + 1; i <= end_page; ++i) {
+		dirty_page_map[index][i].store(true, std::memory_order_relaxed);
+	}
 
-	if (start_page <= end_page) {
-		dirty_page_map[index][start_page] = true;
-		for (int i = start_page + 1; i <= end_page; ++i) {
-			dirty_page_map[index][i] = true;
-		}
+	// Publish the bounds only after the bits are set. picasso_getwritewatch()
+	// resets the bounds before scanning, so publishing first would allow a
+	// drain to reset the bounds and then miss our already-set bits until some
+	// later write happens to expand the range over them. The CAS loops keep
+	// the bounds monotonic when several writers race.
+	int cur = min_dirty_page_index[index].load();
+	while (start_page < cur &&
+		!min_dirty_page_index[index].compare_exchange_weak(cur, start_page)) {
+	}
+	cur = max_dirty_page_index[index].load();
+	while (end_page > cur &&
+		!max_dirty_page_index[index].compare_exchange_weak(cur, end_page)) {
 	}
 }
 #endif
@@ -3216,12 +3231,14 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 
 	delete[] dirty_page_map[index];
 	const int pages = gwwbufsize[index];
-	dirty_page_map[index] = new bool[pages];
+	dirty_page_map[index] = new std::atomic<bool>[pages];
 	dirty_page_map_size[index] = pages;
 	// Initialize min/max to "empty" state
-	min_dirty_page_index[index] = pages;
-	max_dirty_page_index[index] = -1;
-	memset(dirty_page_map[index], 0, pages * sizeof(bool));
+	min_dirty_page_index[index].store(pages);
+	max_dirty_page_index[index].store(-1);
+	for (int i = 0; i < pages; i++) {
+		dirty_page_map[index][i].store(false, std::memory_order_relaxed);
+	}
 #endif
 }
 
@@ -3258,30 +3275,36 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	const int page_size = gwwpagesize[index];
 	int count = 0;
 
-	int start = min_dirty_page_index[index];
-	int end = max_dirty_page_index[index];
+	int start = min_dirty_page_index[index].load();
+	int end = max_dirty_page_index[index].load();
 
 	if (start > end) {
 		return 0;
 	}
 
-	// Reset bounds immediately for next frame accumulation
-	min_dirty_page_index[index] = dirty_page_map_size[index];
-	max_dirty_page_index[index] = -1;
+	// Reset bounds immediately for next frame accumulation. mark_dirty()
+	// sets the page bits before publishing the bounds, so any page marked
+	// while we are scanning is covered by a bound updated after our reset.
+	min_dirty_page_index[index].store(dirty_page_map_size[index]);
+	max_dirty_page_index[index].store(-1);
 
 	for (int i = start; i <= end; ++i) {
-		if (dirty_page_map[index][i]) {
+		if (dirty_page_map[index][i].load(std::memory_order_relaxed)) {
 			if (count < gwwbufsize[index]) {
 				gwwbuf[index][count++] = const_cast<uae_u8*>(base) + i * page_size;
 			}
-			dirty_page_map[index][i] = false; // Reset after reading
+			dirty_page_map[index][i].store(false, std::memory_order_relaxed); // Reset after reading
 		}
 	}
 
 	if (gwwbufp)
 		*gwwbufp = (uae_u8**)gwwbuf[index];
 	if (startp) {
-		*startp = const_cast<uae_u8*>(base);
+		// Match the Windows semantics: the region base is the board base
+		// plus the screen offset, not the bare board base. Returning the
+		// bare base would widen the caller's range filter to pages below
+		// the visible screen (e.g. offscreen bitmaps, the split region).
+		*startp = const_cast<uae_u8*>(base) + offset;
 	}
 	return count;
 #endif
@@ -3327,7 +3350,7 @@ bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
 
 	for (int i = start_page; i <= end_page; ++i) {
-		if (dirty_page_map[index][i]) { return true; }
+		if (dirty_page_map[index][i].load(std::memory_order_relaxed)) { return true; }
 	}
 	return false;
 #endif
@@ -6236,6 +6259,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	int maxy = -1;
 	int miny = pheight - 1;
 	int flushlines = 0, matchcount = 0;
+	int partial_gwwcnt = -1; // dirty pages drained once, reused for both split regions
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	bool overlay_updated = false;
 
@@ -6294,7 +6318,15 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 				if (mman_GetWriteWatch(src_start[split], regionsize, gwwbuf[index], &gwwcnt, &ps))
 					continue;
 #else
-				gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
+				// The emulated write-watch drains the whole dirty map, so it
+				// must only be drained on the first region; the second
+				// (split) region reuses the same page list. Draining per
+				// region would clear pages that belong to the other region
+				// and leave it stale.
+				if (split == 0) {
+					partial_gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
+				}
+				gwwcnt = partial_gwwcnt;
 #endif
 			}
 
