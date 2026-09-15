@@ -2886,6 +2886,7 @@ struct socket_event_entry {
 	bool connecting;           // True if connect() is in progress
 	bool connected;            // True if socket is connected (or connectionless/listener)
 	bool dgram;                // True if SOCK_DGRAM: no EOF semantics, readiness works unconnected
+	bool listening;            // True if stream socket is listening: only these can fire REP_ACCEPT
 	int fired_mask;            // Events that have fired and need re-enabling
 };
 
@@ -3450,8 +3451,9 @@ static int event_monitor_thread(void* data)
 						FD_SET(entry.s, &readfds);
 						// write_log("BSDSOCK: Adding socket %d to readfds (mask has REP_READ)\n", entry.sd);
 					}
-				} else {
-					// REP_ACCEPT always monitored (if in active_mask)
+				} else if (entry.listening) {
+					// REP_ACCEPT monitored only on listening stream sockets —
+					// readable datagram/connected sockets must not report accept-ready
 					FD_SET(entry.s, &readfds);
 					BSDTRACE((_T("BSDSOCK: Adding socket %d to readfds (mask has REP_ACCEPT)\n"), entry.sd));
 				}
@@ -3563,7 +3565,7 @@ static int event_monitor_thread(void* data)
 						}
 					}
 				}
-				if ((entry.eventmask & REP_ACCEPT) && !(entry.fired_mask & REP_ACCEPT)) {
+				if (entry.listening && (entry.eventmask & REP_ACCEPT) && !(entry.fired_mask & REP_ACCEPT)) {
 					events |= REP_ACCEPT;
 				}
 			}
@@ -3780,10 +3782,13 @@ static bool register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		// Determine socket type and actual connection state. `connected` stays the
 		// real getpeername() result: REP_CONNECT semantics must not fire for
 		// unconnected datagram sockets. `dgram` only relaxes the read/write
-		// readiness gates in the monitor loop.
+		// readiness gates in the monitor loop. `listening` gates REP_ACCEPT.
 		int socktype = 0;
 		socklen_t stlen = sizeof(socktype);
 		entry.dgram = (getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &stlen) == 0 && socktype == SOCK_DGRAM);
+		int acceptconn = 0;
+		socklen_t aclen = sizeof(acceptconn);
+		entry.listening = (getsockopt(s, SOL_SOCKET, SO_ACCEPTCONN, (char*)&acceptconn, &aclen) == 0 && acceptconn != 0);
 		struct sockaddr_in peer;
 		socklen_t plen = sizeof(peer);
 		entry.connected = (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
@@ -4919,9 +4924,16 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		}
 		
 		// Fix for dynAMIte and other apps that rely on implicit Writability after Connect:
+		// stream sockets only — a datagram socket has no connect-completion writability,
+		// and the forced bit would fire an unrequested REP_WRITE notification
 		if (eventflags & REP_CONNECT) {
-			eventflags |= REP_WRITE;
-			write_log("BSDSOCK: Force-enabled REP_WRITE for socket %d (requested mask 0x%x -> 0x%x)\n", sd, get_long(optval), eventflags);
+			int socktype = 0;
+			socklen_t stlen = sizeof(socktype);
+			bool is_dgram = (getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &stlen) == 0 && socktype == SOCK_DGRAM);
+			if (!is_dgram) {
+				eventflags |= REP_WRITE;
+				write_log("BSDSOCK: Force-enabled REP_WRITE for socket %d (requested mask 0x%x -> 0x%x)\n", sd, get_long(optval), eventflags);
+			}
 		}
 
 		BSDTRACE((_T("BSDSOCK: SO_EVENTMASK called for socket %d, eventflags=0x%x\n"), sd, eventflags));
