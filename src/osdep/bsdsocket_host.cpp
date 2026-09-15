@@ -2885,6 +2885,7 @@ struct socket_event_entry {
 	int eventmask;             // REP_* flags to monitor
 	bool connecting;           // True if connect() is in progress
 	bool connected;            // True if socket is connected (or connectionless/listener)
+	bool dgram;                // True if SOCK_DGRAM: no EOF semantics, readiness works unconnected
 	int fired_mask;            // Events that have fired and need re-enabling
 };
 
@@ -3537,13 +3538,20 @@ static int event_monitor_thread(void* data)
 						if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
 							events |= REP_READ;
 						}
-					} else if (peek == 1) { // EOF
-						if ((entry.eventmask & REP_CLOSE) && !(entry.fired_mask & REP_CLOSE)) {
-							events |= REP_CLOSE;
-						}
-						// EOF is also readable (read returns 0)
-						if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
-							events |= REP_READ;
+					} else if (peek == 1) { // recv() returned 0: EOF on streams, zero-length datagram on UDP
+						if (entry.dgram) {
+							// Datagram sockets have no EOF; a zero-length datagram is readable data
+							if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
+								events |= REP_READ;
+							}
+						} else {
+							if ((entry.eventmask & REP_CLOSE) && !(entry.fired_mask & REP_CLOSE)) {
+								events |= REP_CLOSE;
+							}
+							// EOF is also readable (read returns 0)
+							if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
+								events |= REP_READ;
+							}
 						}
 					}
 				}
@@ -3761,10 +3769,15 @@ static bool register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		entry.s = s;
 		entry.eventmask = eventmask;
 		entry.connecting = false;
-		// Determine actual connection state — bare sockets must not fire REP_WRITE/READ
+		// Determine socket type and actual connection state — bare stream sockets
+		// must not fire REP_WRITE/READ, but connectionless (unconnected) datagram
+		// sockets are always ready for read/write readiness polling.
+		int socktype = 0;
+		socklen_t stlen = sizeof(socktype);
+		entry.dgram = (getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &stlen) == 0 && socktype == SOCK_DGRAM);
 		struct sockaddr_in peer;
 		socklen_t plen = sizeof(peer);
-		entry.connected = (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
+		entry.connected = entry.dgram || (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
 		entry.fired_mask = 0;
 		g_event_monitor->socket_list.push_back(entry);
 		
@@ -4164,6 +4177,7 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
     long flags;
     int nonblock;
     int saved_errno = 0;
+    int interrupted = 0; /* sockabort fired: caller must see EINTR, not saved_errno */
     int socktype = 0;
     socklen_t optlen = sizeof(socktype);
     int is_raw = 0;
@@ -4265,6 +4279,7 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                     clearsockabort(sb);
                     BSDLOG("Done read\n");
                     errno = EINTR;
+                    interrupted = 1;
                     done = 1;
                 }
                 else {
@@ -4282,8 +4297,9 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
 #endif
     if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&orig_timeout, sizeof(orig_timeout));
     /* Restore errno after fcntl/setsockopt cleanup — caller (bsdlib_threadfunc) reads
-     * errno via SETERRNO immediately after we return. */
-    errno = saved_errno;
+     * errno via SETERRNO immediately after we return. An aborted blocking call must
+     * keep EINTR; restoring saved_errno here would report EAGAIN/EINPROGRESS instead. */
+    errno = interrupted ? EINTR : saved_errno;
     return foo;
 }
 
