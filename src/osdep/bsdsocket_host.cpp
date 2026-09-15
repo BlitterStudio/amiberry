@@ -3445,8 +3445,8 @@ static int event_monitor_thread(void* data)
 			// Use active_mask to respect One-Shot behavior (Wait for re-enablement via recv/accept)
 			if (active_mask & (REP_READ | REP_ACCEPT)) {
 				if (active_mask & REP_READ) {
-					// Prevent premature monitoring of READ on connecting/disconnected sockets
-					if (!entry.connecting && entry.connected) {
+					// Prevent premature monitoring of READ on connecting/disconnected stream sockets
+					if (!entry.connecting && (entry.connected || entry.dgram)) {
 						FD_SET(entry.s, &readfds);
 						// write_log("BSDSOCK: Adding socket %d to readfds (mask has REP_READ)\n", entry.sd);
 					}
@@ -3458,14 +3458,20 @@ static int event_monitor_thread(void* data)
 			}
 
 			// REP_CLOSE requires readfds to detect EOF via peek_socket
-			if ((active_mask & REP_CLOSE) && entry.connected && !entry.connecting) {
+			// (datagram sockets get readfds here too, so zero-length datagrams
+			// are reported as REP_READ rather than missed)
+			if ((active_mask & REP_CLOSE) && (entry.connected || entry.dgram) && !entry.connecting) {
 				FD_SET(entry.s, &readfds);
 			}
 
 			// REP_WRITE is treated as Level Triggered in select() but Edge Triggered/One-Shot for Amiga signals.
 			// If connected and not connecting, we monitor for write if the event is active (not fired).
 			// FIX: Also monitor if REP_CONNECT was requested, as implicit Writability expectation.
-			if ((active_mask & (REP_WRITE | REP_CONNECT)) && entry.connected && !entry.connecting) {
+			// Datagram sockets are always writable, but REP_CONNECT's implicit writability
+			// is stream-only — an unconnected datagram socket has no connect() to complete.
+			if (!entry.connecting
+				&& ((active_mask & REP_WRITE) || (!entry.dgram && (active_mask & REP_CONNECT)))
+				&& (entry.connected || entry.dgram)) {
 				FD_SET(entry.s, &writefds);
 				// logging noise reduced
 			}
@@ -3769,15 +3775,16 @@ static bool register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		entry.s = s;
 		entry.eventmask = eventmask;
 		entry.connecting = false;
-		// Determine socket type and actual connection state — bare stream sockets
-		// must not fire REP_WRITE/READ, but connectionless (unconnected) datagram
-		// sockets are always ready for read/write readiness polling.
+		// Determine socket type and actual connection state. `connected` stays the
+		// real getpeername() result: REP_CONNECT semantics must not fire for
+		// unconnected datagram sockets. `dgram` only relaxes the read/write
+		// readiness gates in the monitor loop.
 		int socktype = 0;
 		socklen_t stlen = sizeof(socktype);
 		entry.dgram = (getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &stlen) == 0 && socktype == SOCK_DGRAM);
 		struct sockaddr_in peer;
 		socklen_t plen = sizeof(peer);
-		entry.connected = entry.dgram || (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
+		entry.connected = (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
 		entry.fired_mask = 0;
 		g_event_monitor->socket_list.push_back(entry);
 		
