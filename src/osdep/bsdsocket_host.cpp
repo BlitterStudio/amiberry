@@ -3457,10 +3457,12 @@ static int event_monitor_thread(void* data)
 				}
 			}
 
-			// REP_CLOSE requires readfds to detect EOF via peek_socket
-			// (datagram sockets get readfds here too, so zero-length datagrams
-			// are reported as REP_READ rather than missed)
-			if ((active_mask & REP_CLOSE) && (entry.connected || entry.dgram) && !entry.connecting) {
+			// REP_CLOSE requires readfds to detect EOF via peek_socket.
+			// Stream sockets only: datagrams have no EOF, and a queued datagram
+			// would keep select() readable forever with no event able to fire
+			// (close-only polling would busy-spin). Datagram readfds come from
+			// the REP_READ gate above, including for zero-length datagrams.
+			if ((active_mask & REP_CLOSE) && entry.connected && !entry.dgram && !entry.connecting) {
 				FD_SET(entry.s, &readfds);
 			}
 
