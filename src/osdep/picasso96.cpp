@@ -6335,12 +6335,22 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (vidinfo->full_refresh < 0 || overlay_updated) {
 				gwwcnt = regionsize / gwwpagesize[index] + 1;
 				vidinfo->full_refresh = 1;
+				// Synthesize the page list (WinUAE parity; this fill was lost
+				// in a refactor): the copy loop below consumes gwwbuf entries,
+				// so leaving stale pointers from the last drain here would
+				// filter most or all of them out and the forced full copy
+				// would not happen.
+				for (int i = 0; i < gwwcnt; i++) {
+					gwwbuf[index][i] = src_start[split] + i * gwwpagesize[index];
+				}
+				matchcount += (int)gwwcnt;
 			} else {
 #if defined(_WIN32) && !defined(AMIBERRY)
 				ULONG ps;
 				gwwcnt = gwwbufsize[index];
 				if (mman_GetWriteWatch(src_start[split], regionsize, gwwbuf[index], &gwwcnt, &ps))
 					continue;
+				matchcount += (int)gwwcnt;
 #else
 				// The emulated write-watch drains the whole dirty map, so it
 				// must only be drained on the first region; the second
@@ -6351,28 +6361,28 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 					partial_gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
 				}
 				gwwcnt = partial_gwwcnt;
+
+				// The reused page list spans both split regions (and may
+				// contain pages outside the visible screen, e.g. offscreen
+				// bitmaps), so filter it down to this region before deciding
+				// between a full copy and partial rows. Windows' region-scoped
+				// GetWriteWatch never sees foreign pages here.
+				int region_gwwcnt = 0;
+				for (int i = 0; i < gwwcnt; i++) {
+					const uae_u8* p = static_cast<uae_u8*>(gwwbuf[index][i]);
+					if (p >= src_start[split] && p < src_end[split]) {
+						region_gwwcnt++;
+					}
+				}
+				matchcount += region_gwwcnt;
+				gwwcnt = region_gwwcnt;
 #endif
 			}
 
-			// The reused page list spans both split regions (and may contain
-			// pages outside the visible screen, e.g. offscreen bitmaps), so
-			// filter it down to this region before deciding between a full
-			// copy and partial rows. Windows' region-scoped GetWriteWatch
-			// never sees foreign pages here.
-			int region_gwwcnt = 0;
-			for (int i = 0; i < gwwcnt; i++) {
-				const uae_u8* p = static_cast<uae_u8*>(gwwbuf[index][i]);
-				if (p >= src_start[split] && p < src_end[split]) {
-					region_gwwcnt++;
-				}
-			}
-
-			matchcount += region_gwwcnt;
-
-			if (region_gwwcnt == 0) {
+			if (gwwcnt == 0) {
 				continue;
 			}
-			dofull = region_gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
+			dofull = gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
 
 			if (!dstp) {
 				dstp = gfx_lock_picasso(monid, dofull);
