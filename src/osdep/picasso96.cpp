@@ -3304,7 +3304,12 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 		// plus the screen offset, not the bare board base. Returning the
 		// bare base would widen the caller's range filter to pages below
 		// the visible screen (e.g. offscreen bitmaps, the split region).
-		*startp = const_cast<uae_u8*>(base) + offset;
+		// The returned page list is page-aligned, so round the base down
+		// too: with a panned (SetPanning) screen offset that is not
+		// page-aligned, an unaligned base would reject the page holding
+		// the top-left of the visible screen after its dirty bit was
+		// already cleared, leaving it stale.
+		*startp = const_cast<uae_u8*>(base) + (offset & ~gwwpagemask[index]);
 	}
 	return count;
 #endif
