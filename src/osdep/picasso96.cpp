@@ -111,10 +111,12 @@ static constexpr int DIRTY_PAGE_SHIFT = 12;
 static constexpr int DIRTY_PAGE_SIZE = 1 << DIRTY_PAGE_SHIFT;
 static std::atomic<bool>* dirty_page_map[MAX_RTG_BOARDS];
 static int dirty_page_map_size[MAX_RTG_BOARDS];
-// The bounds are atomics: mark_dirty() runs in the CPU write handlers while
-// picasso_getwritewatch() drains from the RTG render thread.
-static std::atomic<int> min_dirty_page_index[MAX_RTG_BOARDS];
-static std::atomic<int> max_dirty_page_index[MAX_RTG_BOARDS];
+// Dirty-page bounds packed into a single word, (min_page << 32) | (max_page + 1):
+// mark_dirty() runs in the CPU write handlers while picasso_getwritewatch()
+// drains from the RTG render thread, and a single word lets the drain claim
+// the whole range with one compare_exchange so a concurrent writer can never
+// have its freshly published range overwritten by a reset.
+static std::atomic<uae_u64> dirty_bounds[MAX_RTG_BOARDS];
 #endif
 
 static void picasso_flushpixels(int index, uae_u8 *src, int offset, bool render);
@@ -505,6 +507,26 @@ static int gwwbufsize[MAX_RTG_BOARDS], gwwpagesize[MAX_RTG_BOARDS], gwwpagemask[
 extern uae_u8 *natmem_offset;
 
 #if !defined(_WIN32) || defined(AMIBERRY)
+// Widen the published dirty range. Called from the CPU write handlers after
+// the page bits have been set.
+static void dirty_bounds_widen(int index, int start_page, int end_page)
+{
+	uae_u64 cur = dirty_bounds[index].load();
+	for (;;) {
+		const int cur_min = static_cast<int>(cur >> 32);
+		const int cur_max = static_cast<int32_t>(static_cast<uint32_t>(cur)) - 1;
+		const int new_min = start_page < cur_min ? start_page : cur_min;
+		const int new_max = end_page > cur_max ? end_page : cur_max;
+		if (new_min == cur_min && new_max == cur_max) {
+			return;
+		}
+		const uae_u64 next = (static_cast<uae_u64>(new_min) << 32) | static_cast<uae_u32>(new_max + 1);
+		if (dirty_bounds[index].compare_exchange_weak(cur, next)) {
+			return;
+		}
+	}
+}
+
 static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 {
 	if (index < 0 || !dirty_page_map[index])
@@ -528,19 +550,11 @@ static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 		dirty_page_map[index][i].store(true, std::memory_order_relaxed);
 	}
 
-	// Publish the bounds only after the bits are set. picasso_getwritewatch()
-	// resets the bounds before scanning, so publishing first would allow a
-	// drain to reset the bounds and then miss our already-set bits until some
-	// later write happens to expand the range over them. The CAS loops keep
-	// the bounds monotonic when several writers race.
-	int cur = min_dirty_page_index[index].load();
-	while (start_page < cur &&
-		!min_dirty_page_index[index].compare_exchange_weak(cur, start_page)) {
-	}
-	cur = max_dirty_page_index[index].load();
-	while (end_page > cur &&
-		!max_dirty_page_index[index].compare_exchange_weak(cur, end_page)) {
-	}
+	// Publish the widened bounds only after the bits are set. The bounds are
+	// a single word so picasso_getwritewatch() can claim the whole range with
+	// one compare_exchange; two separate words would let a drain reset one
+	// half after a writer published, losing the range until a later write.
+	dirty_bounds_widen(index, start_page, end_page);
 }
 #endif
 
@@ -3233,9 +3247,8 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	const int pages = gwwbufsize[index];
 	dirty_page_map[index] = new std::atomic<bool>[pages];
 	dirty_page_map_size[index] = pages;
-	// Initialize min/max to "empty" state
-	min_dirty_page_index[index].store(pages);
-	max_dirty_page_index[index].store(-1);
+	// Initialize the bounds to the "empty" state (min = pages, max = -1)
+	dirty_bounds[index].store(static_cast<uae_u64>(pages) << 32);
 	for (int i = 0; i < pages; i++) {
 		dirty_page_map[index][i].store(false, std::memory_order_relaxed);
 	}
@@ -3275,18 +3288,24 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	const int page_size = gwwpagesize[index];
 	int count = 0;
 
-	int start = min_dirty_page_index[index].load();
-	int end = max_dirty_page_index[index].load();
-
-	if (start > end) {
-		return 0;
+	// Claim the whole dirty range with a single compare_exchange. If a
+	// writer widened the bounds between our load and the exchange, the
+	// exchange fails and we retry against the wider range instead of
+	// resetting over the freshly published pages and losing them.
+	const uae_u64 empty = static_cast<uae_u64>(dirty_page_map_size[index]) << 32;
+	uae_u64 cur = dirty_bounds[index].load();
+	int start;
+	int end;
+	for (;;) {
+		start = static_cast<int>(cur >> 32);
+		end = static_cast<int32_t>(static_cast<uint32_t>(cur)) - 1;
+		if (start > end) {
+			return 0;
+		}
+		if (dirty_bounds[index].compare_exchange_weak(cur, empty)) {
+			break;
+		}
 	}
-
-	// Reset bounds immediately for next frame accumulation. mark_dirty()
-	// sets the page bits before publishing the bounds, so any page marked
-	// while we are scanning is covered by a bound updated after our reset.
-	min_dirty_page_index[index].store(dirty_page_map_size[index]);
-	max_dirty_page_index[index].store(-1);
 
 	for (int i = start; i <= end; ++i) {
 		if (dirty_page_map[index][i].load(std::memory_order_relaxed)) {
