@@ -2144,13 +2144,23 @@ uae_u32 host_Inet_MakeAddr(uae_u32 net, uae_u32 host)
 
 uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
 {
+	char buf[256];
+	size_t len;
+
 	if (!trap_valid_address(ctx, name, namelen))
 		return -1;
-	char buf[256];
+	if (namelen == 0)
+		return -1;
 	if (gethostname(buf, sizeof(buf)) != 0)
 		return -1;
 	buf[sizeof(buf) - 1] = '\0';
-	trap_put_string(ctx, (uae_char *)buf, name, namelen);
+	len = strlen(buf);
+	if (len >= namelen)
+		len = namelen - 1; /* caller's buffer too small: truncate */
+	buf[len] = '\0';
+	/* trap_put_string() copies through the terminating NUL and ignores its
+	 * maxlen on the direct-memory path, so use a strictly bounded copy */
+	trap_put_bytes(ctx, buf, name, (int)(len + 1));
 	return 0;
 }
 

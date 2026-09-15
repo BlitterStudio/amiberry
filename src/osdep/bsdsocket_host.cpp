@@ -2885,6 +2885,8 @@ struct socket_event_entry {
 	int eventmask;             // REP_* flags to monitor
 	bool connecting;           // True if connect() is in progress
 	bool connected;            // True if socket is connected (or connectionless/listener)
+	bool dgram;                // True if SOCK_DGRAM: no EOF semantics, readiness works unconnected
+	bool listening;            // True if stream socket is listening: only these can fire REP_ACCEPT
 	int fired_mask;            // Events that have fired and need re-enabling
 };
 
@@ -3444,27 +3446,36 @@ static int event_monitor_thread(void* data)
 			// Use active_mask to respect One-Shot behavior (Wait for re-enablement via recv/accept)
 			if (active_mask & (REP_READ | REP_ACCEPT)) {
 				if (active_mask & REP_READ) {
-					// Prevent premature monitoring of READ on connecting/disconnected sockets
-					if (!entry.connecting && entry.connected) {
+					// Prevent premature monitoring of READ on connecting/disconnected stream sockets
+					if (!entry.connecting && (entry.connected || entry.dgram)) {
 						FD_SET(entry.s, &readfds);
 						// write_log("BSDSOCK: Adding socket %d to readfds (mask has REP_READ)\n", entry.sd);
 					}
-				} else {
-					// REP_ACCEPT always monitored (if in active_mask)
+				} else if (entry.listening) {
+					// REP_ACCEPT monitored only on listening stream sockets —
+					// readable datagram/connected sockets must not report accept-ready
 					FD_SET(entry.s, &readfds);
 					BSDTRACE((_T("BSDSOCK: Adding socket %d to readfds (mask has REP_ACCEPT)\n"), entry.sd));
 				}
 			}
 
-			// REP_CLOSE requires readfds to detect EOF via peek_socket
-			if ((active_mask & REP_CLOSE) && entry.connected && !entry.connecting) {
+			// REP_CLOSE requires readfds to detect EOF via peek_socket.
+			// Stream sockets only: datagrams have no EOF, and a queued datagram
+			// would keep select() readable forever with no event able to fire
+			// (close-only polling would busy-spin). Datagram readfds come from
+			// the REP_READ gate above, including for zero-length datagrams.
+			if ((active_mask & REP_CLOSE) && entry.connected && !entry.dgram && !entry.connecting) {
 				FD_SET(entry.s, &readfds);
 			}
 
 			// REP_WRITE is treated as Level Triggered in select() but Edge Triggered/One-Shot for Amiga signals.
 			// If connected and not connecting, we monitor for write if the event is active (not fired).
 			// FIX: Also monitor if REP_CONNECT was requested, as implicit Writability expectation.
-			if ((active_mask & (REP_WRITE | REP_CONNECT)) && entry.connected && !entry.connecting) {
+			// Datagram sockets are always writable, but REP_CONNECT's implicit writability
+			// is stream-only — an unconnected datagram socket has no connect() to complete.
+			if (!entry.connecting
+				&& ((active_mask & REP_WRITE) || (!entry.dgram && (active_mask & REP_CONNECT)))
+				&& (entry.connected || entry.dgram)) {
 				FD_SET(entry.s, &writefds);
 				// logging noise reduced
 			}
@@ -3537,17 +3548,24 @@ static int event_monitor_thread(void* data)
 						if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
 							events |= REP_READ;
 						}
-					} else if (peek == 1) { // EOF
-						if ((entry.eventmask & REP_CLOSE) && !(entry.fired_mask & REP_CLOSE)) {
-							events |= REP_CLOSE;
-						}
-						// EOF is also readable (read returns 0)
-						if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
-							events |= REP_READ;
+					} else if (peek == 1) { // recv() returned 0: EOF on streams, zero-length datagram on UDP
+						if (entry.dgram) {
+							// Datagram sockets have no EOF; a zero-length datagram is readable data
+							if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
+								events |= REP_READ;
+							}
+						} else {
+							if ((entry.eventmask & REP_CLOSE) && !(entry.fired_mask & REP_CLOSE)) {
+								events |= REP_CLOSE;
+							}
+							// EOF is also readable (read returns 0)
+							if ((entry.eventmask & REP_READ) && !(entry.fired_mask & REP_READ)) {
+								events |= REP_READ;
+							}
 						}
 					}
 				}
-				if ((entry.eventmask & REP_ACCEPT) && !(entry.fired_mask & REP_ACCEPT)) {
+				if (entry.listening && (entry.eventmask & REP_ACCEPT) && !(entry.fired_mask & REP_ACCEPT)) {
 					events |= REP_ACCEPT;
 				}
 			}
@@ -3761,7 +3779,16 @@ static bool register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		entry.s = s;
 		entry.eventmask = eventmask;
 		entry.connecting = false;
-		// Determine actual connection state — bare sockets must not fire REP_WRITE/READ
+		// Determine socket type and actual connection state. `connected` stays the
+		// real getpeername() result: REP_CONNECT semantics must not fire for
+		// unconnected datagram sockets. `dgram` only relaxes the read/write
+		// readiness gates in the monitor loop. `listening` gates REP_ACCEPT.
+		int socktype = 0;
+		socklen_t stlen = sizeof(socktype);
+		entry.dgram = (getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &stlen) == 0 && socktype == SOCK_DGRAM);
+		int acceptconn = 0;
+		socklen_t aclen = sizeof(acceptconn);
+		entry.listening = (getsockopt(s, SOL_SOCKET, SO_ACCEPTCONN, (char*)&acceptconn, &aclen) == 0 && acceptconn != 0);
 		struct sockaddr_in peer;
 		socklen_t plen = sizeof(peer);
 		entry.connected = (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
@@ -3844,6 +3871,27 @@ static void set_socket_connecting(struct socketbase* sb, int sd, bool connecting
 		if (entry.sb == sb && entry.sd == sd) {
 			entry.connecting = connecting;
 			BSDTRACE((_T("BSDSOCK: Socket %d connecting state set to %d\n"), sd, connecting));
+			break;
+		}
+	}
+	// Wake up monitor to update handling
+	if (g_event_monitor->wake_pipe[1] != -1) {
+		char b = 1;
+		write_pipe(g_event_monitor->wake_pipe[1], &b, 1);
+	}
+	SDL_UnlockMutex(g_event_monitor->mutex);
+}
+
+// Set the listening state for a socket (SO_ACCEPTCONN changed via listen())
+static void set_socket_listening(struct socketbase* sb, int sd, bool listening)
+{
+	if (!g_event_monitor || !valid_amiga_socket_descriptor(sb, sd)) return;
+
+	SDL_LockMutex(g_event_monitor->mutex);
+	for (auto& entry : g_event_monitor->socket_list) {
+		if (entry.sb == sb && entry.sd == sd) {
+			entry.listening = listening;
+			BSDTRACE((_T("BSDSOCK: Socket %d listening state set to %d\n"), sd, listening));
 			break;
 		}
 	}
@@ -4164,6 +4212,7 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
     long flags;
     int nonblock;
     int saved_errno = 0;
+    int interrupted = 0; /* sockabort fired: caller must see EINTR, not saved_errno */
     int socktype = 0;
     socklen_t optlen = sizeof(socktype);
     int is_raw = 0;
@@ -4265,6 +4314,7 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                     clearsockabort(sb);
                     BSDLOG("Done read\n");
                     errno = EINTR;
+                    interrupted = 1;
                     done = 1;
                 }
                 else {
@@ -4282,8 +4332,9 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
 #endif
     if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&orig_timeout, sizeof(orig_timeout));
     /* Restore errno after fcntl/setsockopt cleanup — caller (bsdlib_threadfunc) reads
-     * errno via SETERRNO immediately after we return. */
-    errno = saved_errno;
+     * errno via SETERRNO immediately after we return. An aborted blocking call must
+     * keep EINTR; restoring saved_errno here would report EAGAIN/EINPROGRESS instead. */
+    errno = interrupted ? EINTR : saved_errno;
     return foo;
 }
 
@@ -4679,6 +4730,9 @@ uae_u32 host_listen(TrapContext *ctx, SB, uae_u32 sd, uae_u32 backlog)
 		write_log("failed (%d)\n", sb->sb_errno);
 	} else {
 		BSDLOG("OK\n");
+		/* REP_ACCEPT gating snapshots SO_ACCEPTCONN at registration; refresh the
+		 * monitor entry so event masks armed before listen() report accept-ready */
+		set_socket_listening(sb, sd, true);
 	}
 	return success;
 }
@@ -4894,9 +4948,16 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		}
 		
 		// Fix for dynAMIte and other apps that rely on implicit Writability after Connect:
+		// stream sockets only — a datagram socket has no connect-completion writability,
+		// and the forced bit would fire an unrequested REP_WRITE notification
 		if (eventflags & REP_CONNECT) {
-			eventflags |= REP_WRITE;
-			write_log("BSDSOCK: Force-enabled REP_WRITE for socket %d (requested mask 0x%x -> 0x%x)\n", sd, get_long(optval), eventflags);
+			int socktype = 0;
+			socklen_t stlen = sizeof(socktype);
+			bool is_dgram = (getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &stlen) == 0 && socktype == SOCK_DGRAM);
+			if (!is_dgram) {
+				eventflags |= REP_WRITE;
+				write_log("BSDSOCK: Force-enabled REP_WRITE for socket %d (requested mask 0x%x -> 0x%x)\n", sd, get_long(optval), eventflags);
+			}
 		}
 
 		BSDTRACE((_T("BSDSOCK: SO_EVENTMASK called for socket %d, eventflags=0x%x\n"), sd, eventflags));
