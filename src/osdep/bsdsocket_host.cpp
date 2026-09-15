@@ -3882,6 +3882,27 @@ static void set_socket_connecting(struct socketbase* sb, int sd, bool connecting
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
 
+// Set the listening state for a socket (SO_ACCEPTCONN changed via listen())
+static void set_socket_listening(struct socketbase* sb, int sd, bool listening)
+{
+	if (!g_event_monitor || !valid_amiga_socket_descriptor(sb, sd)) return;
+
+	SDL_LockMutex(g_event_monitor->mutex);
+	for (auto& entry : g_event_monitor->socket_list) {
+		if (entry.sb == sb && entry.sd == sd) {
+			entry.listening = listening;
+			BSDTRACE((_T("BSDSOCK: Socket %d listening state set to %d\n"), sd, listening));
+			break;
+		}
+	}
+	// Wake up monitor to update handling
+	if (g_event_monitor->wake_pipe[1] != -1) {
+		char b = 1;
+		write_pipe(g_event_monitor->wake_pipe[1], &b, 1);
+	}
+	SDL_UnlockMutex(g_event_monitor->mutex);
+}
+
 // Re-enable specific events for a socket (called by IO functions)
 static void socket_reenable_events(struct socketbase* sb, int sd, int events)
 {
@@ -4709,6 +4730,9 @@ uae_u32 host_listen(TrapContext *ctx, SB, uae_u32 sd, uae_u32 backlog)
 		write_log("failed (%d)\n", sb->sb_errno);
 	} else {
 		BSDLOG("OK\n");
+		/* REP_ACCEPT gating snapshots SO_ACCEPTCONN at registration; refresh the
+		 * monitor entry so event masks armed before listen() report accept-ready */
+		set_socket_listening(sb, sd, true);
 	}
 	return success;
 }
