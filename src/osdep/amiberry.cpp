@@ -12294,7 +12294,10 @@ int amiberry_main(int argc, char* argv[])
 		// alone -- --dump-config must not write scan results back.
 		bool rom_inventory_available = false;
 		if (my_existsfile2(get_ini_file_path().c_str())) {
-			reginitializeinit(&inipath);
+			// recover_by_recreate=false: a malformed ini must be left
+			// untouched -- the normal self-heal deletes and recreates it,
+			// which a diagnostic command must never do.
+			reginitializeinit(&inipath, false);
 			if (regexiststree(nullptr, _T("DetectedROMs"))) {
 				// --rescan-roms asks for a cache refresh, which writes; the
 				// dump resolves against the existing cache instead, so the

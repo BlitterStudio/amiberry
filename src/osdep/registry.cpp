@@ -467,7 +467,7 @@ void regclosetree(UAEREG* key)
     xfree(key);
 }
 
-int reginitializeinit(TCHAR** pppath)
+int reginitializeinit(TCHAR** pppath, const bool recover_by_recreate)
 {
     UAEREG* r = nullptr;
     TCHAR path[MAX_DPATH], fpath[MAX_DPATH];
@@ -531,6 +531,10 @@ int reginitializeinit(TCHAR** pppath)
     return 1;
 fail:
     regclosetree(r);
+    if (!recover_by_recreate)
+        // Diagnostic callers must not destroy a malformed ini: leave the
+        // file untouched and report the registry as unavailable.
+        goto end;
 #ifdef _WIN32
     if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES)
         DeleteFile(path);
