@@ -13,12 +13,9 @@
 set -u
 
 cd "$(dirname "$0")/.."
-
 # Known-red tests. Each entry is "test|reason". A test listed here is a
 # standing bug tracked elsewhere, not a permanent exemption: keep this empty.
-SKIPPED_TESTS=(
-	"test_cursor_pixel_format.sh|pre-existing hotspot drift since #2214; fails on master"
-)
+SKIPPED_TESTS=()
 
 # Tests that run a built emulator binary (via AMIBERRY_BIN).
 BEHAVIORAL_TESTS=(

@@ -26,6 +26,14 @@ static inline int amiberry_input_clamp_native_axis(int value, int extent, bool* 
 	}
 	return value;
 }
+// Pointer-offset bases applied before converting guest pointer offsets to
+// host cursor hotspots. X keeps the classic one-pixel sprite bias. Y uses
+// none: RTG host cursors have no chipset sprite pipeline delay, and the
+// ZZ9000 firmware positions the sprite symmetrically (_update_hw_sprite_pos
+// applies base - offset + 1 on both axes). These must stay the single source
+// shared by the hotspot and residual computations.
+static constexpr int amiberry_mousehack_pointer_bias_x = 1;
+static constexpr int amiberry_mousehack_pointer_bias_y = 0;
 
 static inline int amiberry_input_mousehack_hotspot_axis(int pointer_offset, int extent, int bias)
 {
@@ -57,10 +65,12 @@ static inline void amiberry_input_mousehack_cursor_hotspot(int pointer_x_offset,
 	int cursor_width, int cursor_height, int* hotspot_x, int* hotspot_y)
 {
 	if (hotspot_x) {
-		*hotspot_x = amiberry_input_mousehack_hotspot_axis(pointer_x_offset, cursor_width, 1);
+		*hotspot_x = amiberry_input_mousehack_hotspot_axis(pointer_x_offset, cursor_width,
+			amiberry_mousehack_pointer_bias_x);
 	}
 	if (hotspot_y) {
-		*hotspot_y = amiberry_input_mousehack_hotspot_axis(pointer_y_offset, cursor_height, 0);
+		*hotspot_y = amiberry_input_mousehack_hotspot_axis(pointer_y_offset, cursor_height,
+			amiberry_mousehack_pointer_bias_y);
 	}
 }
 
@@ -85,6 +95,7 @@ static inline int amiberry_input_native_sprite_y(uae_u16 pos, uae_u16 ctl, bool 
 	}
 	return y << 1;
 }
+
 
 static inline int amiberry_input_native_cursor_height(int sprite_height,
 	bool double_scan_position_bit, bool sscan2_enabled)
