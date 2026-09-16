@@ -14,6 +14,12 @@
 extern void real_main (int, TCHAR **);
 extern void usage (void);
 extern void print_version();
+#ifdef AMIBERRY
+extern int dump_config_and_exit (int, TCHAR **);
+// True while --dump-config resolves; gates console logging and other
+// side effects that must not run in dump mode.
+extern bool amiberry_dump_config_mode;
+#endif
 extern void sleep_micros (int ms);
 extern int sleep_millis (int ms);
 extern int sleep_millis_main(int ms);

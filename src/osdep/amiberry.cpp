@@ -575,6 +575,7 @@ int pissoff_value = 15000 * CYCLE_UNIT;
 int pissoff_nojit_value = 160 * CYCLE_UNIT;
 int multithread_enabled = 1;
 
+bool amiberry_dump_config_mode = false;
 static TCHAR* inipath = nullptr;
 extern FILE* debugfile;
 static int forceroms;
@@ -5704,7 +5705,8 @@ void target_fixup_options(uae_prefs* p)
 	}
 
 	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
-		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {
+		if (p->produce_sound && sound_devices[p->soundcard]
+			&& sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL) {
 			p->soundcard = 0;
 		}
 	}
@@ -12147,6 +12149,28 @@ static void makeverstr(TCHAR* s)
 	}
 }
 
+// Resolve and load the bootstrap settings (amiberry.conf) for the early-exit
+// dump modes without creating or migrating anything, so --dump-paths and
+// --dump-config see the same path overrides a normal start would apply.
+static void resolve_and_load_bootstrap_settings_for_dump(const bool portable_mode)
+{
+	resolved_settings_source = amiberry_conf_file_overridden_from_cli
+		? settings_resolution_source::cli_override
+		: settings_resolution_source::default_paths_only;
+	const auto settings_file_for_resolution = get_existing_settings_file_for_resolution(portable_mode);
+	if (!settings_file_for_resolution.empty())
+	{
+		resolved_settings_file = normalize_path_string(settings_file_for_resolution);
+		if (!amiberry_conf_file_overridden_from_cli)
+		{
+			resolved_settings_source = path_strings_match(settings_file_for_resolution, amiberry_conf_file)
+				? settings_resolution_source::settings_dir
+				: settings_resolution_source::legacy_settings;
+		}
+		load_amiberry_settings_from_file(settings_file_for_resolution);
+	}
+}
+
 int amiberry_main(int argc, char* argv[])
 {
 #ifdef __ANDROID__
@@ -12172,6 +12196,7 @@ int amiberry_main(int argc, char* argv[])
 	bool run_jit_selftest = false;
 	bool run_path_migration_selftest = false;
 	bool dump_paths = false;
+	bool dump_config = false;
 	bool download_whdboot = false;
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
@@ -12186,6 +12211,8 @@ int amiberry_main(int argc, char* argv[])
 			run_path_migration_selftest = true;
 		if (_tcscmp(argv[i], _T("--dump-paths")) == 0)
 			dump_paths = true;
+		if (_tcscmp(argv[i], _T("--dump-config")) == 0)
+			dump_config = true;
 		if (_tcscmp(argv[i], _T("--download-whdboot")) == 0)
 			download_whdboot = true;
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
@@ -12193,6 +12220,13 @@ int amiberry_main(int argc, char* argv[])
 		if (_tcscmp(argv[i], _T("--perf-log")) == 0)
 			force_perf_log = true;
 	}
+	// write_log() console output goes to stdout, which would interleave with
+	// the serialized configuration; --log is therefore ignored in dump mode
+	// (file logging never initializes this early anyway). Reset it here,
+	// before any code path that can log.
+	if (dump_config)
+		console_logging = 0;
+	amiberry_dump_config_mode = dump_config;
 
 	if (run_jit_selftest)
 		return run_jit_selftest_cli();
@@ -12203,19 +12237,20 @@ int amiberry_main(int argc, char* argv[])
 	struct sigaction action{};
 #endif
 	mainthreadid = uae_thread_get_id(nullptr);
+	const bool early_dump_mode = dump_paths || dump_config;
 
 
 
 #ifdef USE_DBUS
-	if (!dump_paths)
+	if (!early_dump_mode)
 		DBusSetup();
 #endif
 #ifdef USE_IPC_SOCKET
-	if (!dump_paths)
+	if (!early_dump_mode)
 		Amiberry::IPC::IPCSetup();
 #endif
 
-	suppress_runtime_path_side_effects = dump_paths;
+	suppress_runtime_path_side_effects = early_dump_mode;
 
 	// Parse the command line to possibly set amiberry_config.
 	// Do not remove used args yet.
@@ -12236,27 +12271,83 @@ int amiberry_main(int argc, char* argv[])
 	g_portable_mode = false;
 	#endif
 	const bool portable_mode = g_portable_mode;
-	resolve_bootstrap_settings_paths(portable_mode, !dump_paths);
+	resolve_bootstrap_settings_paths(portable_mode, !early_dump_mode);
 	if (dump_paths)
 	{
 		init_amiberry_dirs(portable_mode, false);
-		resolved_settings_source = amiberry_conf_file_overridden_from_cli
-			? settings_resolution_source::cli_override
-			: settings_resolution_source::default_paths_only;
-		const auto settings_file_for_resolution = get_existing_settings_file_for_resolution(portable_mode);
-		if (!settings_file_for_resolution.empty())
-		{
-			resolved_settings_file = normalize_path_string(settings_file_for_resolution);
-			if (!amiberry_conf_file_overridden_from_cli)
-			{
-				resolved_settings_source = path_strings_match(settings_file_for_resolution, amiberry_conf_file)
-					? settings_resolution_source::settings_dir
-					: settings_resolution_source::legacy_settings;
-			}
-			load_amiberry_settings_from_file(settings_file_for_resolution);
-		}
+		resolve_and_load_bootstrap_settings_for_dump(portable_mode);
 		dump_resolved_paths(false);
 		return 0;
+	}
+	if (dump_config)
+	{
+		init_amiberry_dirs(portable_mode, false);
+		resolve_and_load_bootstrap_settings_for_dump(portable_mode);
+		// Mirror the first-run slow-host default a normal start applies after
+		// this early exit point: with no amiberry.conf on a known-slow SBC,
+		// resolution autoswitch is enabled before target_default_options()
+		// copies it into currprefs, so the dump must reflect it too.
+		if (!my_existsfile2(amiberry_conf_file.c_str()) && host_detect_slow_sbc())
+			amiberry_options.default_gfx_autoresolution = 1;
+		// default_prefs() dereferences the keyboard translation table that
+		// keyboard_settrans() installs later on a normal start; it has not run
+		// yet at this early exit point.
+		keyboard_settrans();
+		// Populate the ROM inventory from the existing DetectedROMs cache in
+		// amiberry.ini, read-only: --model presets and config loading resolve
+		// Kickstart paths through configure_rom(), which needs the inventory a
+		// normal start builds in initialize_ini(). A missing cache is left
+		// alone -- --dump-config must not write scan results back.
+		bool rom_inventory_available = false;
+		if (my_existsfile2(get_ini_file_path().c_str())) {
+			// recover_by_recreate=false: a malformed ini must be left
+			// untouched -- the normal self-heal deletes and recreates it,
+			// which a diagnostic command must never do.
+			reginitializeinit(&inipath, false);
+			if (regexiststree(nullptr, _T("DetectedROMs"))) {
+				// --rescan-roms asks for a cache refresh, which writes; the
+				// dump resolves against the existing cache instead, so the
+				// inventory is loaded even when a rescan was requested.
+				const int saved_forceroms = forceroms;
+				forceroms = 0;
+				read_rom_list(false);
+				forceroms = saved_forceroms;
+				rom_inventory_available = true;
+			}
+		}
+		if (!rom_inventory_available)
+			fprintf(stderr, "; no ROM inventory: amiberry.ini has no DetectedROMs cache (first run?).\n"
+				"; ROM-dependent settings resolve unselected until a normal launch scans once.\n");
+		// fixup_prefs() resolves gfx options through the enumerated display
+		// list (getdisplay() exits when no display was ever enumerated) and
+		// sound options through the enumerated sound device list. Enumerate
+		// for real when SDL is available; otherwise the synthetic primary
+		// display below lets headless hosts and CI runners resolve offline.
+		if (osdep_platform_init_sdl()) {
+			enumeratedisplays();
+			sortdisplays();
+			enumerate_sound_devices();
+		}
+		install_headless_display_fallback();
+		// Resolving a WHDLoad autoload in dump mode must not prepare the
+		// host for a real boot: no booter temp tree, no save-data links.
+		whdload_set_host_writes_enabled(false);
+		// drawbridge_update_profiles() skips floppybridge_init() while
+		// quitting, which is the code's own lever against probing bridge
+		// hardware; use it so the dump never touches attached devices.
+		quit_program = UAE_QUIT;
+		// RP9 media marked for deployment must not be copied into the
+		// persistent Shared tree by a diagnostic dump.
+		rp9_set_host_writes_enabled(false);
+		// Remove Amiberry's -o options so the core command line parser below
+		// sees the same argv a normal start would.
+		if (!parse_amiberry_cmd_line(&argc, argv, true))
+		{
+			printf("Error in Amiberry command line option parsing.\n");
+			usage();
+			abort();
+		}
+		return dump_config_and_exit(argc, argv);
 	}
 
 	if (!amiberry_conf_file_overridden_from_cli)
@@ -12413,12 +12504,12 @@ int amiberry_main(int argc, char* argv[])
 	enumerate_sound_devices();
 	for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 		const int type = sound_devices[i]->type;
-		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
 	}
 	write_log(_T("Enumerating recording devices:\n"));
 	for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 		const int type = record_devices[i]->type;
-		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
 	}
 	write_log(_T("Enumeration done\n"));
 

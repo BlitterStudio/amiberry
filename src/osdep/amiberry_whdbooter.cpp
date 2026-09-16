@@ -1612,6 +1612,17 @@ static bool loaded_config_has_option(const uae_prefs* prefs, const TCHAR* option
 }
 #endif
 
+// Diagnostic early-exit modes (--dump-config) resolve WHDLoad preferences
+// through whdload_auto_prefs() without preparing the host for a real boot:
+// the booter temp tree, the startup-sequence and the save-data Kickstart
+// links are transient launch state, not part of the resolved configuration.
+static bool whdload_host_writes_suppressed = false;
+
+void whdload_set_host_writes_enabled(const bool enabled)
+{
+	whdload_host_writes_suppressed = !enabled;
+}
+
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool preserve_quickstart_hardware)
 {
 #ifdef __ANDROID__
@@ -1644,7 +1655,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	whdbooter_path = get_whdbootpath();
 	save_path = get_savedatapath(false);
 
-	symlink_roms(prefs);
+	if (!whdload_host_writes_suppressed)
+		symlink_roms(prefs);
 
 	// this allows A600HD to be used to slow games down
 	const auto a600_available = is_a600_available(prefs);
@@ -1661,35 +1673,38 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	const auto* filename = my_getfilepart(filepath);
 	const std::string filename_no_extension = get_game_filename(filepath);
 	whdload_prefs.filename = filename_no_extension;
-
 	// setup for tmp folder.
 	std::filesystem::path temp_base = get_whdboot_temp_path();
-	// Clean up any stale files from previous runs to ensure a fresh tmp
-	// This helps avoid stale/broken symlinks causing WHDLoad not found
-	try {
-		if (std::filesystem::exists(temp_base)) {
-			write_log("WHDBooter - Cleaning existing tmp directory %s\n", temp_base.string().c_str());
-			std::filesystem::remove_all(temp_base);
+	if (!whdload_host_writes_suppressed) {
+		// Clean up any stale files from previous runs to ensure a fresh tmp
+		// This helps avoid stale/broken symlinks causing WHDLoad not found
+		try {
+			if (std::filesystem::exists(temp_base)) {
+				write_log("WHDBooter - Cleaning existing tmp directory %s\n", temp_base.string().c_str());
+				std::filesystem::remove_all(temp_base);
+			}
+		}
+		catch (std::filesystem::filesystem_error &e) {
+			write_log("WHDBooter - Failed to clean tmp directory %s: %s\n", temp_base.string().c_str(), e.what());
+		}
+
+		try {
+			std::filesystem::create_directories(temp_base / "s");
+			std::filesystem::create_directories(temp_base / "c");
+			std::filesystem::create_directories(temp_base / "devs");
+		}
+		catch (std::filesystem::filesystem_error& e) {
+			write_log("WHDBooter - Failed to create tmp directories: %s\n", e.what());
 		}
 	}
-	catch (std::filesystem::filesystem_error &e) {
-		write_log("WHDBooter - Failed to clean tmp directory %s: %s\n", temp_base.string().c_str(), e.what());
-	}
-
-	try {
-		std::filesystem::create_directories(temp_base / "s");
-		std::filesystem::create_directories(temp_base / "c");
-		std::filesystem::create_directories(temp_base / "devs");
-	}
-	catch (std::filesystem::filesystem_error& e) {
-		write_log("WHDBooter - Failed to create tmp directories: %s\n", e.what());
-	}
 	whd_startup = (temp_base / "s" / "startup-sequence").string();
-	try {
-		std::filesystem::remove(whd_startup);
-	}
-	catch (std::filesystem::filesystem_error& e) {
-		write_log("WHDBooter - Failed to remove old startup-sequence: %s\n", e.what());
+	if (!whdload_host_writes_suppressed) {
+		try {
+			std::filesystem::remove(whd_startup);
+		}
+		catch (std::filesystem::filesystem_error& e) {
+			write_log("WHDBooter - Failed to remove old startup-sequence: %s\n", e.what());
+		}
 	}
 
 	// are we using save-data/ ?
@@ -1747,7 +1762,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 
 	if (!whdload_prefs.selected_slave.filename.empty())
 	{
-		create_startup_sequence();
+		if (!whdload_host_writes_suppressed)
+			create_startup_sequence();
 	}
 	else
 	{
@@ -1755,7 +1771,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 		write_log("WHDBooter - The game may not boot correctly\n");
 	}
 
-	if (std::filesystem::exists(whd_startup))
+	if (!whdload_host_writes_suppressed && std::filesystem::exists(whd_startup))
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{

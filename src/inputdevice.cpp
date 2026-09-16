@@ -2733,10 +2733,12 @@ void input_mousehack_cursor_hotspot(int cursor_width, int cursor_height, int* ho
 	amiberry_input_mousehack_cursor_hotspot(mouseoffset_x, mouseoffset_y, cursor_width, cursor_height,
 		hotspot_x, hotspot_y);
 	if (residual_x) {
-		*residual_x = amiberry_input_mousehack_hotspot_residual_axis(mouseoffset_x, cursor_width, 1);
+		*residual_x = amiberry_input_mousehack_hotspot_residual_axis(mouseoffset_x, cursor_width,
+			amiberry_mousehack_pointer_bias_x);
 	}
 	if (residual_y) {
-		*residual_y = amiberry_input_mousehack_hotspot_residual_axis(mouseoffset_y, cursor_height, 2);
+		*residual_y = amiberry_input_mousehack_hotspot_residual_axis(mouseoffset_y, cursor_height,
+			amiberry_mousehack_pointer_bias_y);
 	}
 }
 

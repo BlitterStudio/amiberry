@@ -8,6 +8,7 @@ struct uae_prefs;
 void rp9_init();
 void rp9_cleanup();
 void rp9_cleanup_unused();
+void rp9_set_host_writes_enabled(bool enabled);
 bool rp9_register_rom_override(const char* filename);
 int rp9_register_rom_directory(const char* directory);
 bool rp9_parse_file(struct uae_prefs* prefs, const char* filename);

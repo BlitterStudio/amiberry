@@ -51,6 +51,13 @@ std::string loaded_snapshot_path;
 bool loaded_has_clip;
 std::vector<std::filesystem::path> temporary_directories;
 std::vector<std::string> loaded_floppy_paths;
+
+// Diagnostic early-exit modes (--dump-config) resolve RP9 packages without
+// deploying media into the persistent Shared tree: the extracted temporary
+// copy is used instead and removed with the rest of the temporary state.
+bool rp9_host_writes_suppressed = false;
+
+
 std::vector<std::string> loaded_cd_paths;
 std::atomic<unsigned long long> directory_sequence { 0 };
 
@@ -707,12 +714,18 @@ std::filesystem::path resolve_media_path(const rp9::Media& media,
 		const auto found = files.find(lowercase(normalized));
 		if (found == files.end())
 			return {};
+		if (rp9_host_writes_suppressed)
+			// Diagnostic modes resolve without deploying: point at the
+			// extracted copy, which the caller's cleanup removes together
+			// with the rest of the temporary tree.
+			return found->second;
 
 		std::filesystem::create_directories(destination.parent_path(), error);
 		if (error) {
 			set_error("Could not create the RP9 deployed-media directory: " + error.message());
 			return {};
 		}
+
 
 		auto temporary = destination;
 		temporary += ".tmp-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
@@ -1290,6 +1303,11 @@ void rp9_init()
 	loaded_has_clip = false;
 	loaded_floppy_paths.clear();
 	loaded_cd_paths.clear();
+}
+
+void rp9_set_host_writes_enabled(const bool enabled)
+{
+	rp9_host_writes_suppressed = !enabled;
 }
 
 void rp9_cleanup()

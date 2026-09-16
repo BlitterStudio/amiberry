@@ -355,15 +355,15 @@ static void clearbuffer_sdl(struct sound_data *sd)
 static void clearbuffer (struct sound_data *sd)
 {
 	const auto* s = sd->data;
-	if (sd->devicetype == SOUND_DEVICE_SDL2)
+	if (sd->devicetype == SOUND_DEVICE_SDL)
 		clearbuffer_sdl(sd);
 	else
 		std::memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
-	if (s->pullbuffer && (!s->stream || sd->devicetype != SOUND_DEVICE_SDL2)) {
-		if (sd->devicetype == SOUND_DEVICE_SDL2)
+	if (s->pullbuffer && (!s->stream || sd->devicetype != SOUND_DEVICE_SDL)) {
+		if (sd->devicetype == SOUND_DEVICE_SDL)
 			SDL_LockAudioStream(s->stream);
 		std::memset(s->pullbuffer, 0, s->pullbuffermaxlen);
-		if (sd->devicetype == SOUND_DEVICE_SDL2)
+		if (sd->devicetype == SOUND_DEVICE_SDL)
 			SDL_UnlockAudioStream(s->stream);
 	}
 }
@@ -425,7 +425,7 @@ void set_volume_sound_device (struct sound_data *sd, int volume, int mute)
 		return;
 	}
 
-	if (sd->devicetype == SOUND_DEVICE_SDL2) {
+	if (sd->devicetype == SOUND_DEVICE_SDL) {
 		sd->softvolume = -1;
 		if (volume < 100 && !mute) {
 			sd->softvolume = (int)((100.0f - volume) * 32768.0f / 100.0f);
@@ -518,7 +518,7 @@ static int open_audio_sdl(struct sound_data* sd, int index)
 	const SDL_AudioDeviceID device_id = use_default_device
 		? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
 		: static_cast<SDL_AudioDeviceID>(sound_devices[index]->id);
-	sd->devicetype = SOUND_DEVICE_SDL2;
+	sd->devicetype = SOUND_DEVICE_SDL;
 	sd->sndbufsize = std::max(sd->sndbufsize, 0x80);
 	s->framesperbuffer = sd->sndbufsize;
 	s->sndbufsize = s->framesperbuffer;
@@ -791,7 +791,7 @@ bool audio_is_event_frame_possible(int)
 	const int type = sdp->devicetype;
 	if (sdp->paused || sdp->deactive || sdp->reset)
 		return false;
-	if (type == SOUND_DEVICE_SDL2)
+	if (type == SOUND_DEVICE_SDL)
 	{
 		sound_dp* s = sdp->data;
 		int bufsize = static_cast<int>(reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer));
@@ -884,7 +884,7 @@ static void channelswap6(uae_s16* sndbuffer, int len)
 
 static bool send_sound_do(struct sound_data* sd)
 {
-	if (const int type = sd->devicetype; type == SOUND_DEVICE_SDL2) {
+	if (const int type = sd->devicetype; type == SOUND_DEVICE_SDL) {
 		finish_sound_buffer_pull(sd, paula_sndbuffer);
 		return true;
 	}
@@ -1031,7 +1031,7 @@ int enumerate_sound_devices()
 			sound_devices[i] = xcalloc(struct sound_device, 1);
 			sound_devices[i]->id = static_cast<int>(playback_devices[i]);
 			sound_devices[i]->cfgname = my_strdup(devname);
-			sound_devices[i]->type = SOUND_DEVICE_SDL2;
+			sound_devices[i]->type = SOUND_DEVICE_SDL;
 			sound_devices[i]->name = my_strdup(devname);
 			sound_devices[i]->alname = my_strdup(std::to_string(i).c_str());
 		}
@@ -1049,7 +1049,7 @@ int enumerate_sound_devices()
 			record_devices[i] = xcalloc(struct sound_device, 1);
 			record_devices[i]->id = static_cast<int>(recording_devices[i]);
 			record_devices[i]->cfgname = my_strdup(devname);
-			record_devices[i]->type = SOUND_DEVICE_SDL2;
+			record_devices[i]->type = SOUND_DEVICE_SDL;
 			record_devices[i]->name = my_strdup(devname);
 			record_devices[i]->alname = my_strdup(std::to_string(i).c_str());
 		}
