@@ -660,6 +660,18 @@ jobs:
           cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
+      - name: Run test suite
+        if: matrix.name == '24.04-amd64'
+        env:
+          # The behavioral tests exercise headless early-exit modes only;
+          # the dummy drivers keep SDL initialization display-server-free.
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          LD_LIBRARY_PATH: ${{ steps.sdl.outputs.prefix }}/lib
+        run: |
+          sudo apt-get install -y ripgrep python3
+          tests/run_tests.sh build/amiberry
+
       - name: Verify QEMU-UAE plugin in DEB
         run: |
           for deb in amiberry_*.deb; do
