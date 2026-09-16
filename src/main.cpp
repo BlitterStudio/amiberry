@@ -1013,6 +1013,8 @@ void usage()
 	std::cout << " --log                      Show log output to console." << '\n';
 	std::cout << " --jit-selftest             Run JIT VM/write/execute selftest (ARM64 or x86_64) and exit." << '\n';
 	std::cout << " --dump-paths               Resolve startup paths, print them, and exit." << '\n';
+	std::cout << " --dump-config              Print the resolved configuration (defaults, config file and" << '\n';
+	std::cout << "                            command line options, after fixup_prefs) and exit." << '\n';
 	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
@@ -1651,6 +1653,70 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	fixup_prefs(&currprefs, false);
 }
+
+#ifdef AMIBERRY
+// --dump-config entry point: resolve currprefs exactly as a normal start would
+// and print the result to stdout, without starting the emulator. The sequence
+// mirrors real_main2()/parse_cmdline_and_init_file(): built-in defaults, the
+// default configuration (if present), command line overrides (-f/-s/--model/
+// ...), then fixup_prefs() -- so the dump shows what the emulator settled on,
+// including the silent corrections fixup_prefs applies.
+int dump_config_and_exit(int argc, TCHAR* argv[])
+{
+	const TCHAR* config_file = nullptr;
+	for (auto i = 1; i < argc; i++) {
+		if ((_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0)
+			&& i + 1 < argc)
+			config_file = argv[i + 1];
+	}
+
+	default_prefs(&currprefs, true, 0);
+	fixup_prefs(&currprefs, true);
+
+	parse_cmdline_2(argc, argv);
+
+	TCHAR default_config_path[MAX_DPATH] = {};
+	get_configuration_path(default_config_path, sizeof default_config_path / sizeof(TCHAR));
+	_tcscat(default_config_path, OPTIONSFILENAME);
+	_tcscat(default_config_path, _T(".uae"));
+	const bool have_default_config = my_existsfile2(default_config_path) != 0;
+	if (have_default_config) {
+		if (!target_cfgfile_load(&currprefs, default_config_path, CONFIG_TYPE_DEFAULT, 1))
+			write_log(_T("failed to load config '%s'\n"), default_config_path);
+	}
+
+	// Corrections logged against configurations that the command line is about
+	// to replace (the normalised defaults, and the default configuration when
+	// a -f config follows) are noise: only the fixes applied to the final
+	// resolution belong on stderr.
+	error_log(nullptr);
+	parse_cmdline(argc, argv);
+	fixup_prefs(&currprefs, false);
+
+	printf("; --dump-config: resolved configuration (currprefs after fixup_prefs)\n");
+	printf("; %s\n", get_version_string().c_str());
+	printf("; default configuration: %s\n",
+		have_default_config ? default_config_path : _T("(not found)"));
+	printf("; configuration file: %s\n",
+		config_file ? config_file
+		: (have_default_config ? default_config_path : _T("(built-in defaults)")));
+	fflush(stdout);
+
+	if (!cfgfile_dump_config(&currprefs, 0)) {
+		fprintf(stderr, "--dump-config: failed to serialise the resolved configuration.\n");
+		return 1;
+	}
+	fflush(stdout);
+
+	if (is_error_log()) {
+		TCHAR* const corrections = get_error_log();
+		if (corrections && corrections[0])
+			fprintf(stderr, "; corrections applied to the resolved configuration:\n%s", corrections);
+		xfree(corrections);
+	}
+	return 0;
+}
+#endif
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
 * port UAE to re-use as much of this code as possible. Functions that you

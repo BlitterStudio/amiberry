@@ -217,6 +217,7 @@ extern SDL_Cursor* normalcursor;
 extern void sortdisplays();
 extern void enumeratedisplays();
 extern void reenumeratemonitors();
+void install_headless_display_fallback();
 
 extern bool MonitorFromPoint(SDL_Point pt);
 void gfx_DisplayChangeRequested(int);

@@ -12147,6 +12147,28 @@ static void makeverstr(TCHAR* s)
 	}
 }
 
+// Resolve and load the bootstrap settings (amiberry.conf) for the early-exit
+// dump modes without creating or migrating anything, so --dump-paths and
+// --dump-config see the same path overrides a normal start would apply.
+static void resolve_and_load_bootstrap_settings_for_dump(const bool portable_mode)
+{
+	resolved_settings_source = amiberry_conf_file_overridden_from_cli
+		? settings_resolution_source::cli_override
+		: settings_resolution_source::default_paths_only;
+	const auto settings_file_for_resolution = get_existing_settings_file_for_resolution(portable_mode);
+	if (!settings_file_for_resolution.empty())
+	{
+		resolved_settings_file = normalize_path_string(settings_file_for_resolution);
+		if (!amiberry_conf_file_overridden_from_cli)
+		{
+			resolved_settings_source = path_strings_match(settings_file_for_resolution, amiberry_conf_file)
+				? settings_resolution_source::settings_dir
+				: settings_resolution_source::legacy_settings;
+		}
+		load_amiberry_settings_from_file(settings_file_for_resolution);
+	}
+}
+
 int amiberry_main(int argc, char* argv[])
 {
 #ifdef __ANDROID__
@@ -12172,6 +12194,7 @@ int amiberry_main(int argc, char* argv[])
 	bool run_jit_selftest = false;
 	bool run_path_migration_selftest = false;
 	bool dump_paths = false;
+	bool dump_config = false;
 	bool download_whdboot = false;
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
@@ -12186,6 +12209,8 @@ int amiberry_main(int argc, char* argv[])
 			run_path_migration_selftest = true;
 		if (_tcscmp(argv[i], _T("--dump-paths")) == 0)
 			dump_paths = true;
+		if (_tcscmp(argv[i], _T("--dump-config")) == 0)
+			dump_config = true;
 		if (_tcscmp(argv[i], _T("--download-whdboot")) == 0)
 			download_whdboot = true;
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
@@ -12203,19 +12228,20 @@ int amiberry_main(int argc, char* argv[])
 	struct sigaction action{};
 #endif
 	mainthreadid = uae_thread_get_id(nullptr);
+	const bool early_dump_mode = dump_paths || dump_config;
 
 
 
 #ifdef USE_DBUS
-	if (!dump_paths)
+	if (!early_dump_mode)
 		DBusSetup();
 #endif
 #ifdef USE_IPC_SOCKET
-	if (!dump_paths)
+	if (!early_dump_mode)
 		Amiberry::IPC::IPCSetup();
 #endif
 
-	suppress_runtime_path_side_effects = dump_paths;
+	suppress_runtime_path_side_effects = early_dump_mode;
 
 	// Parse the command line to possibly set amiberry_config.
 	// Do not remove used args yet.
@@ -12236,27 +12262,40 @@ int amiberry_main(int argc, char* argv[])
 	g_portable_mode = false;
 	#endif
 	const bool portable_mode = g_portable_mode;
-	resolve_bootstrap_settings_paths(portable_mode, !dump_paths);
+	resolve_bootstrap_settings_paths(portable_mode, !early_dump_mode);
 	if (dump_paths)
 	{
 		init_amiberry_dirs(portable_mode, false);
-		resolved_settings_source = amiberry_conf_file_overridden_from_cli
-			? settings_resolution_source::cli_override
-			: settings_resolution_source::default_paths_only;
-		const auto settings_file_for_resolution = get_existing_settings_file_for_resolution(portable_mode);
-		if (!settings_file_for_resolution.empty())
-		{
-			resolved_settings_file = normalize_path_string(settings_file_for_resolution);
-			if (!amiberry_conf_file_overridden_from_cli)
-			{
-				resolved_settings_source = path_strings_match(settings_file_for_resolution, amiberry_conf_file)
-					? settings_resolution_source::settings_dir
-					: settings_resolution_source::legacy_settings;
-			}
-			load_amiberry_settings_from_file(settings_file_for_resolution);
-		}
+		resolve_and_load_bootstrap_settings_for_dump(portable_mode);
 		dump_resolved_paths(false);
 		return 0;
+	}
+	if (dump_config)
+	{
+		init_amiberry_dirs(portable_mode, false);
+		resolve_and_load_bootstrap_settings_for_dump(portable_mode);
+		// default_prefs() dereferences the keyboard translation table that
+		// keyboard_settrans() installs later on a normal start; it has not run
+		// yet at this early exit point.
+		keyboard_settrans();
+		// fixup_prefs() resolves gfx options through the enumerated display
+		// list, and getdisplay() exits when no display was ever enumerated.
+		// Enumerate for real when SDL video is available; otherwise seed a
+		// synthetic primary display (headless hosts, CI runners).
+		if (osdep_platform_init_sdl()) {
+			enumeratedisplays();
+			sortdisplays();
+		}
+		install_headless_display_fallback();
+		// Remove Amiberry's -o options so the core command line parser below
+		// sees the same argv a normal start would.
+		if (!parse_amiberry_cmd_line(&argc, argv, true))
+		{
+			printf("Error in Amiberry command line option parsing.\n");
+			usage();
+			abort();
+		}
+		return dump_config_and_exit(argc, argv);
 	}
 
 	if (!amiberry_conf_file_overridden_from_cli)

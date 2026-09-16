@@ -1237,6 +1237,7 @@ extern struct uae_prefs* cfgfile_open(const TCHAR* filename, int* type);
 extern void cfgfile_close(struct uae_prefs* p);
 extern int cfgfile_load(struct uae_prefs* p, const TCHAR* filename, int* type, int ignorelink, int userconfig);
 extern int cfgfile_save(struct uae_prefs* p, const TCHAR* filename, int);
+extern int cfgfile_dump_config(struct uae_prefs* p, int type);
 extern void cfgfile_parse_line(struct uae_prefs* p, TCHAR*, int);
 extern void cfgfile_parse_lines(struct uae_prefs* p, const TCHAR*, int);
 extern int cfgfile_parse_option(struct uae_prefs* p, const TCHAR* option, TCHAR* value, int);

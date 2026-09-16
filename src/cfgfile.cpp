@@ -7716,6 +7716,45 @@ void cfgfile_backup(const TCHAR *path)
 #endif
 }
 
+// Serialise p into an in-memory zfile. Returns the open zfile owning *data_out
+// (release it with zfile_fclose when done with the buffer), nullptr on failure.
+static struct zfile* cfgfile_serialize_prefs(struct uae_prefs* p, int type, uae_u8** data_out, size_t* len_out)
+{
+	if (!type)
+		type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+
+	*data_out = nullptr;
+	*len_out = 0;
+	auto* const fh = zfile_fopen_empty(nullptr, _T("cfgfile_save_buffer"), 0);
+	if (! fh) {
+		write_log (_T("cfgfile_save: zfile_fopen_empty failed\n"));
+		return nullptr;
+	}
+	cfgfile_save_options (fh, p, type);
+	*data_out = zfile_get_data_pointer (fh, len_out);
+	if (!*data_out || *len_out == 0) {
+		write_log (_T("cfgfile_save: serialised config is empty, not saving\n"));
+		zfile_fclose (fh);
+		return nullptr;
+	}
+	return fh;
+}
+
+// --dump-config support: write the serialised form of p to stdout. Shares the
+// exact serialisation path used when saving a config file, so a dump can be
+// diffed against a saved .uae byte for byte.
+int cfgfile_dump_config(struct uae_prefs* p, int type)
+{
+	size_t buflen = 0;
+	uae_u8* bufptr = nullptr;
+	auto* const fh = cfgfile_serialize_prefs(p, type, &bufptr, &buflen);
+	if (! fh)
+		return 0;
+	const int ok = fwrite(bufptr, 1, buflen, stdout) == buflen ? 1 : 0;
+	zfile_fclose (fh);
+	return ok;
+}
+
 int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 {
 	struct zfile *fh;
@@ -7731,23 +7770,12 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	 * durably, and atomically renames it into place. On any failure the live
 	 * file is left untouched -- it is never truncated or partially written.
 	 */
-	if (!type)
-		type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
-
-	fh = zfile_fopen_empty (NULL, _T("cfgfile_save_buffer"), 0);
-	if (! fh) {
-		write_log (_T("cfgfile_save: zfile_fopen_empty failed\n"));
-		return 0;
-	}
-	cfgfile_save_options (fh, p, type);
-
 	size_t buflen = 0;
-	uae_u8 *bufptr = zfile_get_data_pointer (fh, &buflen);
-	if (!bufptr || buflen == 0) {
-		write_log (_T("cfgfile_save: serialised config is empty, not saving\n"));
-		zfile_fclose (fh);
+	uae_u8* bufptr = nullptr;
+	fh = cfgfile_serialize_prefs(p, type, &bufptr, &buflen);
+	if (! fh)
 		return 0;
-	}
+
 
 	cfgfile_backup (filename);
 	const int ok = my_save_file_atomic (filename, bufptr, buflen) ? 1 : 0;

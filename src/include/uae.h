@@ -14,6 +14,9 @@
 extern void real_main (int, TCHAR **);
 extern void usage (void);
 extern void print_version();
+#ifdef AMIBERRY
+extern int dump_config_and_exit (int, TCHAR **);
+#endif
 extern void sleep_micros (int ms);
 extern int sleep_millis (int ms);
 extern int sleep_millis_main(int ms);

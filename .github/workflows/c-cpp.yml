@@ -1178,6 +1178,45 @@ jobs:
             throw "--dump-paths should not create conf in the portable tree."
           }
 
+          # --dump-config must print the *resolved* configuration: fixup_prefs
+          # forces cpu_24bit_addressing off on 68040+, so a config requesting
+          # 24-bit addressing on a 68040 has to come back corrected.
+          $dumpConfigUae = Join-Path $verifyRoot "dump-config-test.uae"
+          Set-Content -Path $dumpConfigUae -Encoding ascii -Value @(
+            "config_description=--dump-config smoke test",
+            "cpu_type=68040",
+            "cpu_24bit_addressing=true"
+          )
+          $dumpConfigStdout = Join-Path $verifyRoot "dump-config.stdout"
+          $dumpConfigStderr = Join-Path $verifyRoot "dump-config.stderr"
+          $dumpConfigProc = Start-Process -FilePath $exePath `
+            -ArgumentList "--dump-config", "-f", "$dumpConfigUae" `
+            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
+            -RedirectStandardOutput $dumpConfigStdout -RedirectStandardError $dumpConfigStderr
+          if ($dumpConfigProc.ExitCode -ne 0) {
+            Write-Host "DUMP-CONFIG STDOUT:"; if (Test-Path $dumpConfigStdout) { Get-Content $dumpConfigStdout }
+            Write-Host "DUMP-CONFIG STDERR:"; if (Test-Path $dumpConfigStderr) { Get-Content $dumpConfigStderr }
+            throw "--dump-config failed with exit code $($dumpConfigProc.ExitCode)."
+          }
+          $dumpConfigText = Get-Content $dumpConfigStdout -Raw
+          if ($dumpConfigText -notmatch 'cpu_model=68040') {
+            throw "--dump-config did not report cpu_model=68040."
+          }
+          if ($dumpConfigText -notmatch 'cpu_24bit_addressing=false') {
+            throw "--dump-config did not report the fixup_prefs correction cpu_24bit_addressing=false."
+          }
+          $dumpConfigErrText = Get-Content $dumpConfigStderr -Raw
+          if ($dumpConfigErrText -notmatch '24-bit address space is not supported with 68040/060') {
+            throw "--dump-config did not report the fixup_prefs correction on stderr."
+          }
+          if (Test-Path (Join-Path $portableDir.FullName "Settings")) {
+            throw "--dump-config should not create Settings in the portable tree."
+          }
+          if (Test-Path (Join-Path $portableDir.FullName "Configurations")) {
+            throw "--dump-config should not create Configurations in the portable tree."
+          }
+          Write-Host "x64 (llvm-mingw) Amiberry.exe ran --dump-config successfully."
+
           # x86_64 builds include the JIT, so exercise --jit-selftest from the
           # portable layout. Mirrors the build-windows-arm64 smoke test.
           $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
@@ -1586,6 +1625,31 @@ jobs:
             throw "--dump-paths failed with exit code $($proc.ExitCode)."
           }
           Write-Host "ARM64 Amiberry.exe ran --dump-paths successfully."
+
+          # Same resolved-configuration probe as the x64 verify step; ARM64
+          # has no JIT, so only the fixup_prefs correction is asserted here.
+          $dumpConfigUae = Join-Path $verifyRoot "dump-config-test.uae"
+          Set-Content -Path $dumpConfigUae -Encoding ascii -Value @(
+            "config_description=--dump-config smoke test",
+            "cpu_type=68040",
+            "cpu_24bit_addressing=true"
+          )
+          $dumpConfigStdout = Join-Path $verifyRoot "dump-config.stdout"
+          $dumpConfigStderr = Join-Path $verifyRoot "dump-config.stderr"
+          $dumpConfigProc = Start-Process -FilePath $exePath `
+            -ArgumentList "--dump-config", "-f", "$dumpConfigUae" `
+            -WorkingDirectory $portableDir.FullName -PassThru -Wait -NoNewWindow `
+            -RedirectStandardOutput $dumpConfigStdout -RedirectStandardError $dumpConfigStderr
+          if ($dumpConfigProc.ExitCode -ne 0) {
+            Write-Host "DUMP-CONFIG STDOUT:"; if (Test-Path $dumpConfigStdout) { Get-Content $dumpConfigStdout }
+            Write-Host "DUMP-CONFIG STDERR:"; if (Test-Path $dumpConfigStderr) { Get-Content $dumpConfigStderr }
+            throw "--dump-config failed with exit code $($dumpConfigProc.ExitCode)."
+          }
+          $dumpConfigText = Get-Content $dumpConfigStdout -Raw
+          if ($dumpConfigText -notmatch 'cpu_24bit_addressing=false') {
+            throw "--dump-config did not report the fixup_prefs correction cpu_24bit_addressing=false."
+          }
+          Write-Host "ARM64 Amiberry.exe ran --dump-config successfully."
 
           $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
           $jitStderrFile = Join-Path $verifyRoot "jit-selftest.stderr"
