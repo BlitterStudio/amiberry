@@ -12315,6 +12315,13 @@ int amiberry_main(int argc, char* argv[])
 		// Resolving a WHDLoad autoload in dump mode must not prepare the
 		// host for a real boot: no booter temp tree, no save-data links.
 		whdload_set_host_writes_enabled(false);
+		// drawbridge_update_profiles() skips floppybridge_init() while
+		// quitting, which is the code's own lever against probing bridge
+		// hardware; use it so the dump never touches attached devices.
+		quit_program = UAE_QUIT;
+		// RP9 media marked for deployment must not be copied into the
+		// persistent Shared tree by a diagnostic dump.
+		rp9_set_host_writes_enabled(false);
 		// Remove Amiberry's -o options so the core command line parser below
 		// sees the same argv a normal start would.
 		if (!parse_amiberry_cmd_line(&argc, argv, true))

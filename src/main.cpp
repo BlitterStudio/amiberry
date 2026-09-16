@@ -1517,6 +1517,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				i++;
 		} else if (!loaded) {
 			auto* const txt = parsetextpath(argv[i]);
+			_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
+			cmdline_config_source[MAX_DPATH - 1] = 0;
 			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 #ifdef AMIBERRY
 			if (_tcsicmp(txt2.c_str(), ".rp9") == 0)
@@ -1536,6 +1538,9 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 			else if (_tcscmp(txt2.c_str(), ".uss") == 0)
 			{
+				// A statefile is not a configuration source; drop the
+				// positional path recorded above.
+				cmdline_config_source[0] = 0;
 				write_log("Statefile... %s\n", txt);
 				if (my_existsfile2(txt))
 				{
@@ -1586,25 +1591,30 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				}
 
 				std::string config_full_path = get_configuration_path() + filename;
-				if (my_existsfile2(config_full_path.c_str()))
-				{
-					write_log("Loading configuration file %s\n", config_full_path.c_str());
-					currprefs.mountitems = 0;
-					target_cfgfile_load(&currprefs, config_full_path.c_str(),
-						firstconfig
-						? CONFIG_TYPE_ALL
-						: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
-					currprefs.start_gui = false;
-					config_loaded = true;
-				}
-				else
-				{
-					write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
-					disk_insert(0, txt);
-					set_last_active_config_from_media(txt);
-					currprefs.start_gui = false;
-				}
+			if (my_existsfile2(config_full_path.c_str()))
+			{
+				write_log("Loading configuration file %s\n", config_full_path.c_str());
+				_tcsncpy(cmdline_config_source, config_full_path.c_str(), MAX_DPATH - 1);
+				cmdline_config_source[MAX_DPATH - 1] = 0;
+				currprefs.mountitems = 0;
+				target_cfgfile_load(&currprefs, config_full_path.c_str(),
+					firstconfig
+					? CONFIG_TYPE_ALL
+					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+				currprefs.start_gui = false;
+				config_loaded = true;
 			}
+			else
+			{
+				write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
+				// A plain disk image is not a configuration source; drop
+				// the positional path recorded above.
+				cmdline_config_source[0] = 0;
+				disk_insert(0, txt);
+				set_last_active_config_from_media(txt);
+				currprefs.start_gui = false;
+			}
+		}
 #endif
 			else
 			{
