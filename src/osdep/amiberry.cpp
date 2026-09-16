@@ -5704,7 +5704,8 @@ void target_fixup_options(uae_prefs* p)
 	}
 
 	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
-		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {
+		if (p->produce_sound && sound_devices[p->soundcard]
+			&& sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL) {
 			p->soundcard = 0;
 		}
 	}
@@ -12278,13 +12279,25 @@ int amiberry_main(int argc, char* argv[])
 		// keyboard_settrans() installs later on a normal start; it has not run
 		// yet at this early exit point.
 		keyboard_settrans();
+		// Populate the ROM inventory from the existing DetectedROMs cache in
+		// amiberry.ini, read-only: --model presets and config loading resolve
+		// Kickstart paths through configure_rom(), which needs the inventory a
+		// normal start builds in initialize_ini(). A missing cache is left
+		// alone -- --dump-config must not write scan results back.
+		if (my_existsfile2(get_ini_file_path().c_str())) {
+			reginitializeinit(&inipath);
+			if (!forceroms && regexiststree(nullptr, _T("DetectedROMs")))
+				read_rom_list(false);
+		}
 		// fixup_prefs() resolves gfx options through the enumerated display
-		// list, and getdisplay() exits when no display was ever enumerated.
-		// Enumerate for real when SDL video is available; otherwise seed a
-		// synthetic primary display (headless hosts, CI runners).
+		// list (getdisplay() exits when no display was ever enumerated) and
+		// sound options through the enumerated sound device list. Enumerate
+		// for real when SDL is available; otherwise the synthetic primary
+		// display below lets headless hosts and CI runners resolve offline.
 		if (osdep_platform_init_sdl()) {
 			enumeratedisplays();
 			sortdisplays();
+			enumerate_sound_devices();
 		}
 		install_headless_display_fallback();
 		// Remove Amiberry's -o options so the core command line parser below
@@ -12452,12 +12465,12 @@ int amiberry_main(int argc, char* argv[])
 	enumerate_sound_devices();
 	for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 		const int type = sound_devices[i]->type;
-		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
 	}
 	write_log(_T("Enumerating recording devices:\n"));
 	for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 		const int type = record_devices[i]->type;
-		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL ? _T("SDL") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
 	}
 	write_log(_T("Enumeration done\n"));
 
