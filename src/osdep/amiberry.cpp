@@ -12283,6 +12283,12 @@ int amiberry_main(int argc, char* argv[])
 	{
 		init_amiberry_dirs(portable_mode, false);
 		resolve_and_load_bootstrap_settings_for_dump(portable_mode);
+		// Mirror the first-run slow-host default a normal start applies after
+		// this early exit point: with no amiberry.conf on a known-slow SBC,
+		// resolution autoswitch is enabled before target_default_options()
+		// copies it into currprefs, so the dump must reflect it too.
+		if (!my_existsfile2(amiberry_conf_file.c_str()) && host_detect_slow_sbc())
+			amiberry_options.default_gfx_autoresolution = 1;
 		// default_prefs() dereferences the keyboard translation table that
 		// keyboard_settrans() installs later on a normal start; it has not run
 		// yet at this early exit point.
