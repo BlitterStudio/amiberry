@@ -3501,12 +3501,21 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
 #if defined(CPU_AARCH64)
 /* Which fl_trap opcodes force whole-block interpretation.
  *
- * Structural/supervisor trap opcodes (illegal sentinels, RTE/STOP, SR and
- * system control moves, MMU/cache control, TRAPcc) only appear in cold
- * exception/supervisor/tester code; interpreting those blocks is cheap and
- * keeps mixed interpreted/compiled flag and PC state maximally safe. The CPU
- * tester drives exactly this shape: every test block ends in an ILLEGAL
- * sentinel, so the suite stays interpreted like 8.3.0.
+ * Structural trap opcodes (illegal sentinels, RTE/STOP, system control
+ * moves, MMU/cache control, TRAPcc) only appear in cold exception/supervisor/
+ * tester code; interpreting those blocks is cheap and keeps mixed
+ * interpreted/compiled flag and PC state maximally safe. The CPU tester
+ * drives exactly this shape: every test block ends in an ILLEGAL sentinel,
+ * so those blocks stay interpreted like 8.3.0.
+ *
+ * SR/USP moves do NOT demote: on AmigaOS all tasks run in supervisor mode,
+ * so MV2SR/MVSR2/ANDSR/ORSR/EORSR are the implementation of exec's
+ * Forbid()/Permit()/Disable()/Enable() and are hot wherever the OS (or a
+ * RAM-resident OS like PiMIGA, or an inlined Disable() around a timing
+ * loop) executes from RAM (#2315: demoting them cost 28% of SysInfo
+ * integer throughput). The immediate forms compile natively (jff_*); the
+ * register forms run through the per-opcode fallback, which syncs the 68k
+ * PC before the interpreter handler call, like the arithmetic traps below.
  *
  * Arithmetic trap opcodes that are hot in user code (integer division, CHK)
  * do NOT demote: the block compiles at full JIT speed and the opcode itself
@@ -3522,13 +3531,6 @@ static bool jit_trap_demote_opcode(uae_u32 op)
     case i_MOVEC2:
     case i_MOVE2C:
     case i_MOVES:
-    case i_MV2SR:
-    case i_MVSR2:
-    case i_MVR2USP:
-    case i_MVUSP2R:
-    case i_ANDSR:
-    case i_ORSR:
-    case i_EORSR:
     case i_TRAPcc:
     case i_FTRAPcc:
     case i_TRAPV:
