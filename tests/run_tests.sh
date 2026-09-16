@@ -11,6 +11,8 @@
 # Requirements: bash, a C++17 compiler, grep; ripgrep and python3 for the
 # tests that use them.
 set -u
+# bash 3.2 (stock macOS) treats empty-array expansion under set -u as an
+# unbound variable; the ${arr[@]+...} idiom keeps the runner portable.
 
 cd "$(dirname "$0")/.."
 # Known-red tests. Each entry is "test|reason". A test listed here is a
@@ -35,7 +37,7 @@ failed_tests=()
 skip_reason_for()
 {
 	local wanted="$1" entry
-	for entry in "${SKIPPED_TESTS[@]}"; do
+	for entry in ${SKIPPED_TESTS[@]+"${SKIPPED_TESTS[@]}"}; do
 		if [[ "${entry%%|*}" == "$wanted" ]]; then
 			printf '%s' "${entry#*|}"
 			return
@@ -48,7 +50,7 @@ for test_path in tests/*.sh; do
 	# the binary wired up.
 	[[ "$test_name" == "run_tests.sh" ]] && continue
 	seen_in_behavioral=0
-	for behavioral in "${BEHAVIORAL_TESTS[@]}"; do
+	for behavioral in ${BEHAVIORAL_TESTS[@]+"${BEHAVIORAL_TESTS[@]}"}; do
 		[[ "$behavioral" == "$test_name" ]] && seen_in_behavioral=1
 	done
 	[[ "$seen_in_behavioral" == 1 ]] && continue
@@ -70,7 +72,7 @@ done
 if [[ -z "$binary" ]]; then
 	echo "NOTE: no amiberry binary given; behavioral tests skipped"
 else
-	for test_name in "${BEHAVIORAL_TESTS[@]}"; do
+	for test_name in ${BEHAVIORAL_TESTS[@]+"${BEHAVIORAL_TESTS[@]}"}; do
 		if AMIBERRY_BIN="$binary" bash "tests/$test_name"; then
 			echo "PASS $test_name"
 			pass=$((pass + 1))
@@ -85,6 +87,6 @@ fi
 echo "----"
 echo "passed: $pass, failed: $fail"
 if ((fail > 0)); then
-	printf 'failed: %s\n' "${failed_tests[*]}"
+	printf 'failed: %s\n' ${failed_tests[@]+"${failed_tests[@]}"}
 	exit 1
 fi

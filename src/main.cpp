@@ -1523,8 +1523,9 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
-				_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
-				cmdline_config_source[MAX_DPATH - 1] = 0;
+				// A CD image attaches media on top of the current
+				// configuration; it is not a configuration source itself.
+				cmdline_config_source[0] = 0;
 				auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 7);
 				_tcscpy(txt2, txt);
 				if (_tcsrchr(txt2, ',') == nullptr)
