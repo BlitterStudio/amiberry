@@ -12284,6 +12284,7 @@ int amiberry_main(int argc, char* argv[])
 		// Kickstart paths through configure_rom(), which needs the inventory a
 		// normal start builds in initialize_ini(). A missing cache is left
 		// alone -- --dump-config must not write scan results back.
+		bool rom_inventory_available = false;
 		if (my_existsfile2(get_ini_file_path().c_str())) {
 			reginitializeinit(&inipath);
 			if (regexiststree(nullptr, _T("DetectedROMs"))) {
@@ -12294,8 +12295,12 @@ int amiberry_main(int argc, char* argv[])
 				forceroms = 0;
 				read_rom_list(false);
 				forceroms = saved_forceroms;
+				rom_inventory_available = true;
 			}
 		}
+		if (!rom_inventory_available)
+			fprintf(stderr, "; no ROM inventory: amiberry.ini has no DetectedROMs cache (first run?).\n"
+				"; ROM-dependent settings resolve unselected until a normal launch scans once.\n");
 		// fixup_prefs() resolves gfx options through the enumerated display
 		// list (getdisplay() exits when no display was ever enumerated) and
 		// sound options through the enumerated sound device list. Enumerate

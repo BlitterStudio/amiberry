@@ -1283,6 +1283,10 @@ extern void set_last_active_config(const char* filename);
 extern void set_last_active_config_from_media(const char* filename);
 
 static bool cmdline_started;
+// Set by parse_cmdline() when a command line argument replaces the default
+// configuration source (config file, RP9 package, WHDLoad archive, CD image).
+// --dump-config reports it in the header.
+static TCHAR cmdline_config_source[MAX_DPATH];
 
 #ifdef LIBRETRO
 void reset_parse_cmdline()
@@ -1343,6 +1347,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
+				_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
+				cmdline_config_source[MAX_DPATH - 1] = 0;
 				currprefs.mountitems = 0;
 				target_cfgfile_load(&currprefs, txt,
 					firstconfig
@@ -1437,6 +1443,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
+				_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
+				cmdline_config_source[MAX_DPATH - 1] = 0;
 				const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 				if (_tcsicmp(txt2.c_str(), ".rp9") == 0)
 				{
@@ -1483,6 +1491,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
+				_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
+				cmdline_config_source[MAX_DPATH - 1] = 0;
 				auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 7);
 				_tcscpy(txt2, txt);
 				if (_tcsrchr(txt2, ',') == nullptr)
@@ -1603,6 +1613,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					const auto type = zfile_gettype(z);
 					zfile_fclose(z);
 					if (type == ZFILE_CONFIGURATION) {
+						_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
+						cmdline_config_source[MAX_DPATH - 1] = 0;
 						currprefs.mountitems = 0;
 						target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
 						config_loaded = true;
@@ -1675,13 +1687,6 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 	fflush(stdout);
 	_setmode(_fileno(stdout), _O_BINARY);
 #endif
-	const TCHAR* config_file = nullptr;
-	for (auto i = 1; i < argc; i++) {
-		if ((_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0)
-			&& i + 1 < argc)
-			config_file = argv[i + 1];
-	}
-
 	default_prefs(&currprefs, true, 0);
 	fixup_prefs(&currprefs, true);
 
@@ -1704,6 +1709,11 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 	error_log(nullptr);
 	parse_cmdline(argc, argv);
 	fixup_prefs(&currprefs, false);
+
+	// parse_cmdline() records whatever command line argument replaced the
+	// default configuration source: -f/--config, a positional config, or an
+	// autoloaded RP9/WHDLoad/CD package.
+	const TCHAR* config_file = cmdline_config_source[0] ? cmdline_config_source : nullptr;
 
 	printf("; --dump-config: resolved configuration (currprefs after fixup_prefs)\n");
 	printf("; %s\n", get_version_string().c_str());
