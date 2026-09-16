@@ -97,4 +97,13 @@ if "$bin" --dump-config "$work/bad.rp9" > "$work/rp9fail.txt" 2>/dev/null; then
 fi
 [ -s "$work/rp9fail.txt" ] && { echo "failed RP9 dump must not write stdout" >&2; exit 1; }
 
+# An --autoload media type that cannot provide preferences must fail the
+# dump rather than label defaults with its name.
+printf 'x' > "$work/media.adf"
+if "$bin" --dump-config --autoload "$work/media.adf" > "$work/afail.txt" 2>/dev/null; then
+	echo "dump with unsupported --autoload media must exit non-zero" >&2
+	exit 1
+fi
+[ -s "$work/afail.txt" ] && { echo "unsupported autoload dump must not write stdout" >&2; exit 1; }
+
 echo "dump-config behavioral test passed"

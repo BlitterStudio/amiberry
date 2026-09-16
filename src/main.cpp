@@ -1474,8 +1474,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					add_file_to_mru_list(lstMRUCDList, std::string(txt));
 					cd_auto_prefs(&currprefs, txt);
 				}
-				else
+				else {
 					write_log("Unknown extension for autoload... %s\n", txt);
+					// The requested media type cannot provide preferences;
+					// dumping defaults under its name would be misleading.
+					cmdline_config_source_failed = true;
+				}
 				xfree(txt);
 				loaded = true;
 			}
@@ -1650,6 +1654,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 						cmdline_config_source[0] = 0;
 						savestate_state = STATE_DORESTORE;
 						_tcscpy(savestate_fname, txt);
+					}
+					else {
+						// Openable media of another type (a disk image with
+						// an unexpected extension, etc.) is not a
+						// configuration source either.
+						cmdline_config_source[0] = 0;
 					}
 				}
 				else {
