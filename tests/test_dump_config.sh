@@ -75,4 +75,17 @@ fi
 [ -s "$work/fail.txt" ] && { echo "failed dump must not write stdout" >&2; exit 1; }
 check "$work/fail_err.txt" 'failed to load'
 
+# The positional form of a missing configuration must fail the same way.
+if "$bin" --dump-config "$work/missing-positional.uae" > "$work/pfail.txt" 2>/dev/null; then
+	echo "dump of a missing positional config must exit non-zero" >&2
+	exit 1
+fi
+[ -s "$work/pfail.txt" ] && { echo "failed positional dump must not write stdout" >&2; exit 1; }
+
+# --log must not corrupt the dump: console logging writes to stdout, so it is
+# disabled in dump mode; the first stdout line stays the dump header.
+"$bin" --dump-config --log -f "$work/probe.uae" > "$work/log.txt" 2>/dev/null
+head -n 1 "$work/log.txt" | grep -q '^; --dump-config: resolved configuration' \
+	|| { echo "--log corrupted the dump stream" >&2; exit 1; }
+
 echo "dump-config behavioral test passed"

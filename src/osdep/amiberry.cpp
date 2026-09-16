@@ -575,6 +575,7 @@ int pissoff_value = 15000 * CYCLE_UNIT;
 int pissoff_nojit_value = 160 * CYCLE_UNIT;
 int multithread_enabled = 1;
 
+bool amiberry_dump_config_mode = false;
 static TCHAR* inipath = nullptr;
 extern FILE* debugfile;
 static int forceroms;
@@ -12219,6 +12220,13 @@ int amiberry_main(int argc, char* argv[])
 		if (_tcscmp(argv[i], _T("--perf-log")) == 0)
 			force_perf_log = true;
 	}
+	// write_log() console output goes to stdout, which would interleave with
+	// the serialized configuration; --log is therefore ignored in dump mode
+	// (file logging never initializes this early anyway). Reset it here,
+	// before any code path that can log.
+	if (dump_config)
+		console_logging = 0;
+	amiberry_dump_config_mode = dump_config;
 
 	if (run_jit_selftest)
 		return run_jit_selftest_cli();

@@ -1480,8 +1480,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				loaded = true;
 			}
 		}
-		else if (_tcscmp(argv[i], _T("--log")) == 0)
-			console_logging = 1;
+		else if (_tcscmp(argv[i], _T("--log")) == 0) {
+			// write_log() console output goes to stdout and would interleave
+			// with the serialized configuration; --dump-config ignores --log.
+			if (!amiberry_dump_config_mode)
+				console_logging = 1;
+		}
 		else if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
 		{
 			// already handled during the early platform startup scan
@@ -1639,9 +1643,18 @@ static void parse_cmdline (int argc, TCHAR **argv)
 						config_loaded = true;
 					}
 					else if (type == ZFILE_STATEFILE) {
+						// A statefile is not a configuration source; drop
+						// the positional path recorded above.
+						cmdline_config_source[0] = 0;
 						savestate_state = STATE_DORESTORE;
 						_tcscpy(savestate_fname, txt);
 					}
+				}
+				else {
+					// The positional file cannot be opened at all: treat it
+					// like -f with a missing file rather than dumping
+					// defaults under its name.
+					cmdline_config_source_failed = true;
 				}
 			}
 			xfree(txt);
