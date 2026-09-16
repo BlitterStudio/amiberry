@@ -26,7 +26,7 @@ const std::vector<std::string>& get_sound_device_names()
 		char tmp[256];
 		const int type = sound_devices[i]->type;
 		snprintf(tmp, sizeof tmp, "%s: %s",
-			type == SOUND_DEVICE_SDL2
+			type == SOUND_DEVICE_SDL
 				? "SDL"
 				: (type == SOUND_DEVICE_DS
 					? "DSOUND"

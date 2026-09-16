@@ -84,10 +84,10 @@ static void RefreshDevices()
 		int type = record_devices[card]->type;
 		TCHAR tmp[MAX_DPATH];
 		_sntprintf(tmp, MAX_DPATH, _T("%s: %s"),
-			type == SOUND_DEVICE_SDL2 ? _T("SDL") : type == SOUND_DEVICE_DS ? _T("DSOUND") : type == SOUND_DEVICE_AL ? _T("OpenAL") : type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI"),
+			type == SOUND_DEVICE_SDL ? _T("SDL") : type == SOUND_DEVICE_DS ? _T("DSOUND") : type == SOUND_DEVICE_AL ? _T("OpenAL") : type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI"),
 			record_devices[card]->name);
 		// Filter for SDL audio devices
-		if (type == SOUND_DEVICE_SDL2) {
+		if (type == SOUND_DEVICE_SDL) {
 			char* s = ua(tmp);
 			sampler_names.emplace_back(s);
 			xfree(s);

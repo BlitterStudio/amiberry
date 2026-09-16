@@ -50,7 +50,7 @@ static inline bool sound_platform_enumerate_devices()
 		sound_devices[0] = xcalloc(struct sound_device, 1);
 		sound_devices[0]->id = 0;
 		sound_devices[0]->cfgname = my_strdup(devname);
-		sound_devices[0]->type = SOUND_DEVICE_SDL2;
+		sound_devices[0]->type = SOUND_DEVICE_SDL;
 		sound_devices[0]->name = my_strdup(devname);
 		sound_devices[0]->alname = my_strdup("0");
 		num_sound_devices = 1;
@@ -58,7 +58,7 @@ static inline bool sound_platform_enumerate_devices()
 		record_devices[0] = xcalloc(struct sound_device, 1);
 		record_devices[0]->id = 0;
 		record_devices[0]->cfgname = my_strdup(devname);
-		record_devices[0]->type = SOUND_DEVICE_SDL2;
+		record_devices[0]->type = SOUND_DEVICE_SDL;
 		record_devices[0]->name = my_strdup(devname);
 		record_devices[0]->alname = my_strdup("0");
 		num_record_devices = 1;

@@ -322,7 +322,7 @@ typedef long GUID;
 #define SOUND_DEVICE_WASAPI 4
 #define SOUND_DEVICE_WASAPI_EXCLUSIVE 5
 #define SOUND_DEVICE_XAUDIO2 6
-#define SOUND_DEVICE_SDL2 7
+#define SOUND_DEVICE_SDL 7
 
 struct sound_device
 {
