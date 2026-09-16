@@ -12286,8 +12286,15 @@ int amiberry_main(int argc, char* argv[])
 		// alone -- --dump-config must not write scan results back.
 		if (my_existsfile2(get_ini_file_path().c_str())) {
 			reginitializeinit(&inipath);
-			if (!forceroms && regexiststree(nullptr, _T("DetectedROMs")))
+			if (regexiststree(nullptr, _T("DetectedROMs"))) {
+				// --rescan-roms asks for a cache refresh, which writes; the
+				// dump resolves against the existing cache instead, so the
+				// inventory is loaded even when a rescan was requested.
+				const int saved_forceroms = forceroms;
+				forceroms = 0;
 				read_rom_list(false);
+				forceroms = saved_forceroms;
+			}
 		}
 		// fixup_prefs() resolves gfx options through the enumerated display
 		// list (getdisplay() exits when no display was ever enumerated) and

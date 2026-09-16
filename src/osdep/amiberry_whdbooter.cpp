@@ -1655,7 +1655,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	whdbooter_path = get_whdbootpath();
 	save_path = get_savedatapath(false);
 
-	symlink_roms(prefs);
+	if (!whdload_host_writes_suppressed)
+		symlink_roms(prefs);
 
 	// this allows A600HD to be used to slow games down
 	const auto a600_available = is_a600_available(prefs);
@@ -1672,8 +1673,6 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	const auto* filename = my_getfilepart(filepath);
 	const std::string filename_no_extension = get_game_filename(filepath);
 	whdload_prefs.filename = filename_no_extension;
-	if (!whdload_host_writes_suppressed)
-		symlink_roms(prefs);
 	// setup for tmp folder.
 	std::filesystem::path temp_base = get_whdboot_temp_path();
 	if (!whdload_host_writes_suppressed) {

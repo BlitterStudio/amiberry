@@ -1659,6 +1659,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 #include <io.h>
 #include <fcntl.h>
 #endif
+extern void rp9_cleanup();
 // --dump-config entry point: resolve currprefs exactly as a normal start would
 // and print the result to stdout, without starting the emulator. The sequence
 // mirrors real_main2()/parse_cmdline_and_init_file(): built-in defaults, the
@@ -1725,6 +1726,11 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 			fprintf(stderr, "; corrections applied to the resolved configuration:\n%s", corrections);
 		xfree(corrections);
 	}
+
+	// An RP9 package (--autoload, -f or positional) extracts its media into a
+	// temporary directory during resolution; a normal launch cleans that tree
+	// up later, so do the same here instead of leaving it behind.
+	rp9_cleanup();
 	return 0;
 }
 #endif
