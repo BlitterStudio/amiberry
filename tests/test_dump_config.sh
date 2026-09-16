@@ -65,4 +65,14 @@ printf 'not-really-an-archive' > "$work/game.lha"
 dir_count="$(find "$work" -type d | wc -l | tr -d ' ')"
 [ "$dir_count" -eq 1 ] || { echo "dump-config created directories during WHDLoad autoload" >&2; exit 1; }
 
+# A config file that fails to load must fail the dump: exit non-zero, no
+# stdout, and a stderr explanation -- never a defaults dump masquerading as
+# the requested configuration.
+if "$bin" --dump-config -f "$work/missing.uae" > "$work/fail.txt" 2> "$work/fail_err.txt"; then
+	echo "dump of a missing config must exit non-zero" >&2
+	exit 1
+fi
+[ -s "$work/fail.txt" ] && { echo "failed dump must not write stdout" >&2; exit 1; }
+check "$work/fail_err.txt" 'failed to load'
+
 echo "dump-config behavioral test passed"

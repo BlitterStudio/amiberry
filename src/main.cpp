@@ -1287,6 +1287,10 @@ static bool cmdline_started;
 // configuration source (config file, RP9 package, WHDLoad archive, CD image).
 // --dump-config reports it in the header.
 static TCHAR cmdline_config_source[MAX_DPATH];
+// Set when the configuration source recorded above failed to load; the dump
+// refuses to serialize anything in that case instead of presenting defaults
+// as if they were the requested configuration.
+static bool cmdline_config_source_failed;
 
 #ifdef LIBRETRO
 void reset_parse_cmdline()
@@ -1350,10 +1354,11 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
 				cmdline_config_source[MAX_DPATH - 1] = 0;
 				currprefs.mountitems = 0;
-				target_cfgfile_load(&currprefs, txt,
+				if (!target_cfgfile_load(&currprefs, txt,
 					firstconfig
 					? CONFIG_TYPE_ALL
-					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0))
+					cmdline_config_source_failed = true;
 				xfree(txt);
 				firstconfig = false;
 				config_loaded = true;
@@ -1451,6 +1456,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					write_log("RP9... %s\n", txt);
 					if (target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0))
 						config_loaded = true;
+					else
+						cmdline_config_source_failed = true;
 				}
 				else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
 				{
@@ -1597,10 +1604,11 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				_tcsncpy(cmdline_config_source, config_full_path.c_str(), MAX_DPATH - 1);
 				cmdline_config_source[MAX_DPATH - 1] = 0;
 				currprefs.mountitems = 0;
-				target_cfgfile_load(&currprefs, config_full_path.c_str(),
+				if (!target_cfgfile_load(&currprefs, config_full_path.c_str(),
 					firstconfig
 					? CONFIG_TYPE_ALL
-					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0))
+					cmdline_config_source_failed = true;
 				currprefs.start_gui = false;
 				config_loaded = true;
 			}
@@ -1626,7 +1634,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 						_tcsncpy(cmdline_config_source, txt, MAX_DPATH - 1);
 						cmdline_config_source[MAX_DPATH - 1] = 0;
 						currprefs.mountitems = 0;
-						target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
+						if (!target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0))
+							cmdline_config_source_failed = true;
 						config_loaded = true;
 					}
 					else if (type == ZFILE_STATEFILE) {
@@ -1724,6 +1733,12 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 	// default configuration source: -f/--config, a positional config, or an
 	// autoloaded RP9/WHDLoad/CD package.
 	const TCHAR* config_file = cmdline_config_source[0] ? cmdline_config_source : nullptr;
+	if (cmdline_config_source_failed) {
+		fprintf(stderr, "--dump-config: failed to load '%s'; refusing to dump, since the\n"
+			"result would show unrelated settings as if they came from that file.\n",
+			cmdline_config_source);
+		return 1;
+	}
 
 	printf("; --dump-config: resolved configuration (currprefs after fixup_prefs)\n");
 	printf("; %s\n", get_version_string().c_str());
