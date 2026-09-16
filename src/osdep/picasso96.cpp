@@ -3307,12 +3307,14 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 		}
 	}
 
+	// Clear with a single read-modify-write: a plain load/store pair could
+	// let a concurrent writer set the bit between our load and our clear,
+	// erasing its mark even though it republished the bounds covering it.
 	for (int i = start; i <= end; ++i) {
-		if (dirty_page_map[index][i].load(std::memory_order_relaxed)) {
+		if (dirty_page_map[index][i].exchange(false, std::memory_order_relaxed)) {
 			if (count < gwwbufsize[index]) {
 				gwwbuf[index][count++] = const_cast<uae_u8*>(base) + i * page_size;
 			}
-			dirty_page_map[index][i].store(false, std::memory_order_relaxed); // Reset after reading
 		}
 	}
 
