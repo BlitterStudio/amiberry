@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <atomic>
 
 #include "uae.h"
 
@@ -103,15 +104,19 @@ static int picasso96_GCT = GCT_Unknown;
 static int picasso96_PCT = PCT_Unknown;
 
 #if defined(_WIN32) && !defined(AMIBERRY)
-int mman_GetWriteWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize, PVOID *lpAddresses, PULONG_PTR lpdwCount, PULONG lpdwGranularity);
+int mman_GetWriteWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize, PVOID *lpAddresses, PULONG_PTR lpdwCount, PULONG_PTR lpdwGranularity);
 void mman_ResetWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize);
 #else
 static constexpr int DIRTY_PAGE_SHIFT = 12;
 static constexpr int DIRTY_PAGE_SIZE = 1 << DIRTY_PAGE_SHIFT;
-static bool* dirty_page_map[MAX_RTG_BOARDS];
+static std::atomic<bool>* dirty_page_map[MAX_RTG_BOARDS];
 static int dirty_page_map_size[MAX_RTG_BOARDS];
-static int min_dirty_page_index[MAX_RTG_BOARDS];
-static int max_dirty_page_index[MAX_RTG_BOARDS];
+// Dirty-page bounds packed into a single word, (min_page << 32) | (max_page + 1):
+// mark_dirty() runs in the CPU write handlers while picasso_getwritewatch()
+// drains from the RTG render thread, and a single word lets the drain claim
+// the whole range with one compare_exchange so a concurrent writer can never
+// have its freshly published range overwritten by a reset.
+static std::atomic<uae_u64> dirty_bounds[MAX_RTG_BOARDS];
 #endif
 
 static void picasso_flushpixels(int index, uae_u8 *src, int offset, bool render);
@@ -502,6 +507,26 @@ static int gwwbufsize[MAX_RTG_BOARDS], gwwpagesize[MAX_RTG_BOARDS], gwwpagemask[
 extern uae_u8 *natmem_offset;
 
 #if !defined(_WIN32) || defined(AMIBERRY)
+// Widen the published dirty range. Called from the CPU write handlers after
+// the page bits have been set.
+static void dirty_bounds_widen(int index, int start_page, int end_page)
+{
+	uae_u64 cur = dirty_bounds[index].load();
+	for (;;) {
+		const int cur_min = static_cast<int>(cur >> 32);
+		const int cur_max = static_cast<int32_t>(static_cast<uint32_t>(cur)) - 1;
+		const int new_min = start_page < cur_min ? start_page : cur_min;
+		const int new_max = end_page > cur_max ? end_page : cur_max;
+		if (new_min == cur_min && new_max == cur_max) {
+			return;
+		}
+		const uae_u64 next = (static_cast<uae_u64>(new_min) << 32) | static_cast<uae_u32>(new_max + 1);
+		if (dirty_bounds[index].compare_exchange_weak(cur, next)) {
+			return;
+		}
+	}
+}
+
 static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 {
 	if (index < 0 || !dirty_page_map[index])
@@ -517,15 +542,19 @@ static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 	if (start_page < 0) start_page = 0;
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
 
-	if (start_page < min_dirty_page_index[index]) min_dirty_page_index[index] = start_page;
-	if (end_page > max_dirty_page_index[index]) max_dirty_page_index[index] = end_page;
-
-	if (start_page <= end_page) {
-		dirty_page_map[index][start_page] = true;
-		for (int i = start_page + 1; i <= end_page; ++i) {
-			dirty_page_map[index][i] = true;
-		}
+	if (start_page > end_page) {
+		return;
 	}
+	dirty_page_map[index][start_page].store(true, std::memory_order_relaxed);
+	for (int i = start_page + 1; i <= end_page; ++i) {
+		dirty_page_map[index][i].store(true, std::memory_order_relaxed);
+	}
+
+	// Publish the widened bounds only after the bits are set. The bounds are
+	// a single word so picasso_getwritewatch() can claim the whole range with
+	// one compare_exchange; two separate words would let a drain reset one
+	// half after a writer published, losing the range until a later write.
+	dirty_bounds_widen(index, start_page, end_page);
 }
 #endif
 
@@ -3216,12 +3245,13 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 
 	delete[] dirty_page_map[index];
 	const int pages = gwwbufsize[index];
-	dirty_page_map[index] = new bool[pages];
+	dirty_page_map[index] = new std::atomic<bool>[pages];
 	dirty_page_map_size[index] = pages;
-	// Initialize min/max to "empty" state
-	min_dirty_page_index[index] = pages;
-	max_dirty_page_index[index] = -1;
-	memset(dirty_page_map[index], 0, pages * sizeof(bool));
+	// Initialize the bounds to the "empty" state (min = pages, max = -1)
+	dirty_bounds[index].store(static_cast<uae_u64>(pages) << 32);
+	for (int i = 0; i < pages; i++) {
+		dirty_page_map[index][i].store(false, std::memory_order_relaxed);
+	}
 #endif
 }
 
@@ -3258,30 +3288,49 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	const int page_size = gwwpagesize[index];
 	int count = 0;
 
-	int start = min_dirty_page_index[index];
-	int end = max_dirty_page_index[index];
-
-	if (start > end) {
-		return 0;
+	// Claim the whole dirty range with a single compare_exchange. If a
+	// writer widened the bounds between our load and the exchange, the
+	// exchange fails and we retry against the wider range instead of
+	// resetting over the freshly published pages and losing them.
+	const uae_u64 empty = static_cast<uae_u64>(dirty_page_map_size[index]) << 32;
+	uae_u64 cur = dirty_bounds[index].load();
+	int start;
+	int end;
+	for (;;) {
+		start = static_cast<int>(cur >> 32);
+		end = static_cast<int32_t>(static_cast<uint32_t>(cur)) - 1;
+		if (start > end) {
+			return 0;
+		}
+		if (dirty_bounds[index].compare_exchange_weak(cur, empty)) {
+			break;
+		}
 	}
 
-	// Reset bounds immediately for next frame accumulation
-	min_dirty_page_index[index] = dirty_page_map_size[index];
-	max_dirty_page_index[index] = -1;
-
+	// Clear with a single read-modify-write: a plain load/store pair could
+	// let a concurrent writer set the bit between our load and our clear,
+	// erasing its mark even though it republished the bounds covering it.
 	for (int i = start; i <= end; ++i) {
-		if (dirty_page_map[index][i]) {
+		if (dirty_page_map[index][i].exchange(false, std::memory_order_relaxed)) {
 			if (count < gwwbufsize[index]) {
 				gwwbuf[index][count++] = const_cast<uae_u8*>(base) + i * page_size;
 			}
-			dirty_page_map[index][i] = false; // Reset after reading
 		}
 	}
 
 	if (gwwbufp)
 		*gwwbufp = (uae_u8**)gwwbuf[index];
 	if (startp) {
-		*startp = const_cast<uae_u8*>(base);
+		// Match the Windows semantics: the region base is the board base
+		// plus the screen offset, not the bare board base. Returning the
+		// bare base would widen the caller's range filter to pages below
+		// the visible screen (e.g. offscreen bitmaps, the split region).
+		// The returned page list is page-aligned, so round the base down
+		// too: with a panned (SetPanning) screen offset that is not
+		// page-aligned, an unaligned base would reject the page holding
+		// the top-left of the visible screen after its dirty bit was
+		// already cleared, leaving it stale.
+		*startp = const_cast<uae_u8*>(base) + (offset & ~gwwpagemask[index]);
 	}
 	return count;
 #endif
@@ -3327,7 +3376,7 @@ bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
 
 	for (int i = start_page; i <= end_page; ++i) {
-		if (dirty_page_map[index][i]) { return true; }
+		if (dirty_page_map[index][i].load(std::memory_order_relaxed)) { return true; }
 	}
 	return false;
 #endif
@@ -6236,6 +6285,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	int maxy = -1;
 	int miny = pheight - 1;
 	int flushlines = 0, matchcount = 0;
+	int partial_gwwcnt = -1; // dirty pages drained once, reused for both split regions
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	bool overlay_updated = false;
 
@@ -6287,23 +6337,68 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (vidinfo->full_refresh < 0 || overlay_updated) {
 				gwwcnt = regionsize / gwwpagesize[index] + 1;
 				vidinfo->full_refresh = 1;
+				// Synthesize the page list (WinUAE parity; this fill was lost
+				// in a refactor): the copy loop below consumes gwwbuf entries,
+				// so leaving stale pointers from the last drain here would
+				// filter most or all of them out and the forced full copy
+				// would not happen.
+				for (int i = 0; i < gwwcnt; i++) {
+					gwwbuf[index][i] = src_start[split] + i * gwwpagesize[index];
+				}
+				matchcount += (int)gwwcnt;
+
+				if (gwwcnt == 0) {
+					continue;
+				}
+				dofull = gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
 			} else {
 #if defined(_WIN32) && !defined(AMIBERRY)
 				ULONG ps;
 				gwwcnt = gwwbufsize[index];
 				if (mman_GetWriteWatch(src_start[split], regionsize, gwwbuf[index], &gwwcnt, &ps))
 					continue;
+				matchcount += (int)gwwcnt;
+
+				if (gwwcnt == 0) {
+					continue;
+				}
+				dofull = gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
 #else
-				gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
+				// The emulated write-watch drains the whole dirty map, so it
+				// must only be drained on the first region; the second
+				// (split) region reuses the same page list. Draining per
+				// region would clear pages that belong to the other region
+				// and leave it stale.
+				if (split == 0) {
+					partial_gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
+				}
+				gwwcnt = partial_gwwcnt;
+
+				// The reused page list spans both split regions (and may
+				// contain pages outside the visible screen, e.g. offscreen
+				// bitmaps), so filter it down to this region when deciding
+				// between a full copy and partial rows. The copy loop below
+				// must keep iterating the FULL list: it range-checks each
+				// entry itself, and truncating the count here would hide
+				// matching pages that sit behind foreign (lower-split or
+				// offscreen) pages in the page-ordered list after their
+				// dirty bits have already been cleared.
+				int region_gwwcnt = 0;
+				for (int i = 0; i < gwwcnt; i++) {
+					const uae_u8* p = static_cast<uae_u8*>(gwwbuf[index][i]);
+					if (p >= src_start[split] && p < src_end[split]) {
+						region_gwwcnt++;
+					}
+				}
+				matchcount += region_gwwcnt;
+
+				if (region_gwwcnt == 0) {
+					continue;
+				}
+				dofull = region_gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
 #endif
 			}
 
-			matchcount += (int)gwwcnt;
-
-			if (gwwcnt == 0) {
-				continue;
-			}
-			dofull = gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
 
 			if (!dstp) {
 				dstp = gfx_lock_picasso(monid, dofull);
