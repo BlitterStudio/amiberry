@@ -1729,9 +1729,12 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 	_tcscat(default_config_path, OPTIONSFILENAME);
 	_tcscat(default_config_path, _T(".uae"));
 	const bool have_default_config = my_existsfile2(default_config_path) != 0;
+	bool default_config_load_failed = false;
 	if (have_default_config) {
-		if (!target_cfgfile_load(&currprefs, default_config_path, CONFIG_TYPE_DEFAULT, 1))
+		if (!target_cfgfile_load(&currprefs, default_config_path, CONFIG_TYPE_DEFAULT, 1)) {
 			write_log(_T("failed to load config '%s'\n"), default_config_path);
+			default_config_load_failed = true;
+		}
 	}
 
 	// Corrections logged against configurations that the command line is about
@@ -1752,6 +1755,15 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 			cmdline_config_source);
 		return 1;
 	}
+	if (default_config_load_failed && !config_file) {
+		// The default configuration is what these preferences claim to come
+		// from; with it unreadable, the dump would present unrelated settings
+		// under its name. An explicit configuration source replaces it, so a
+		// failed default only matters when nothing else was loaded.
+		fprintf(stderr, "--dump-config: failed to load the default configuration '%s';\n"
+			"refusing to dump unrelated settings under its name.\n", default_config_path);
+		return 1;
+	}
 
 	printf("; --dump-config: resolved configuration (currprefs after fixup_prefs)\n");
 	printf("; %s\n", get_version_string().c_str());
@@ -1766,7 +1778,12 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 		fprintf(stderr, "--dump-config: failed to serialise the resolved configuration.\n");
 		return 1;
 	}
-	fflush(stdout);
+	// A buffered write can still fail here (full disk, closed pipe); without
+	// this check the dump would exit successfully with truncated output.
+	if (fflush(stdout) != 0) {
+		fprintf(stderr, "--dump-config: writing the configuration to stdout failed.\n");
+		return 1;
+	}
 
 	if (is_error_log()) {
 		TCHAR* const corrections = get_error_log();
