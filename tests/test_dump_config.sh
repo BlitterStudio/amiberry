@@ -32,6 +32,15 @@ check()
 # dump that merely echoed the .uae would fail here.
 printf 'config_description=dump-config test\ncpu_type=68040\ncpu_24bit_addressing=true\n' > "$work/probe.uae"
 "$bin" --dump-config -f "$work/probe.uae" > "$work/out.txt" 2> "$work/err.txt"
+# The dump must stay byte-exact: LF line endings only. On Windows this pins
+# the binary stdout mode (text mode would translate every LF to CRLF); on
+# other platforms it passes trivially. Checked first so a regression fails
+# with this message rather than a confusing content mismatch.
+cr="$(printf '\r')"
+if grep -q "$cr" "$work/out.txt"; then
+	echo "dump emitted CRLF line endings (Windows stdout left in text mode?)" >&2
+	exit 1
+fi
 check "$work/out.txt" '^cpu_model=68040$'
 check "$work/out.txt" '^cpu_24bit_addressing=false$'
 check "$work/err.txt" '24-bit address space is not supported with 68040'
