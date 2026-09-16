@@ -1074,10 +1074,16 @@ void usage()
 	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << '\n';
 	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << '\n';
 	std::cout << "\nExample 3:" << '\n';
-	std::cout << "amiberry lha/MyGame.lha" << '\n';
 	std::cout << "This will load the WHDLoad game MyGame.lha, using the autoload mechanism." << '\n';
 	exit(0);
 }
+
+// Set by parse_cmdline()/parse_cmdline_2() when the recorded configuration
+// source failed to load, or a required option argument was absent; the dump
+// refuses to serialize in those cases instead of presenting defaults as if
+// they were the requested configuration.
+static bool cmdline_config_source_failed;
+static bool cmdline_missing_operand;
 
 static void parse_cmdline_2 (int argc, TCHAR **argv)
 {
@@ -1086,8 +1092,10 @@ static void parse_cmdline_2 (int argc, TCHAR **argv)
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
 		} else if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log (_T("Missing argument for '-cfgparam' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 				cfgfile_addcfgparam (argv[++i]);
 		}
@@ -1287,10 +1295,7 @@ static bool cmdline_started;
 // configuration source (config file, RP9 package, WHDLoad archive, CD image).
 // --dump-config reports it in the header.
 static TCHAR cmdline_config_source[MAX_DPATH];
-// Set when the configuration source recorded above failed to load; the dump
-// refuses to serialize anything in that case instead of presenting defaults
-// as if they were the requested configuration.
-static bool cmdline_config_source_failed;
+
 
 #ifdef LIBRETRO
 void reset_parse_cmdline()
@@ -1346,8 +1351,10 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				i++;
 		}
 		else if (_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0) {
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--config' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
@@ -1366,8 +1373,10 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			loaded = true;
 		}
 		else if (_tcscmp(argv[i], _T("--model")) == 0) {
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--model' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
@@ -1414,8 +1423,10 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 		}
 		else if (_tcscmp(argv[i], _T("--statefile")) == 0) {
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--statefile' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
@@ -1443,8 +1454,10 @@ static void parse_cmdline (int argc, TCHAR **argv)
 		// Auto-load RP9, WHDLoad or CD content.
 		else if (_tcscmp(argv[i], _T("--autoload")) == 0)
 		{
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--autoload' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
@@ -1496,13 +1509,17 @@ static void parse_cmdline (int argc, TCHAR **argv)
 		}
 		else if (_tcscmp(argv[i], _T("-s")) == 0)
 		{
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '-s' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 				cfgfile_parse_line(&currprefs, argv[++i], 0);
 		} else if (_tcscmp(argv[i], _T("--cdimage")) == 0) {
-			if (i + 1 == argc)
+			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--cdimage' option.\n"));
+				cmdline_missing_operand = true;
+				}
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
@@ -1779,6 +1796,13 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 		// failed default only matters when nothing else was loaded.
 		fprintf(stderr, "--dump-config: failed to load the default configuration '%s';\n"
 			"refusing to dump unrelated settings under its name.\n", default_config_path);
+		return 1;
+	}
+	if (cmdline_missing_operand) {
+		// A required option argument was absent; the dump would look like a
+		// valid defaults dump while the command line was malformed.
+		fprintf(stderr, "--dump-config: incomplete command line (an option was missing its argument);\n"
+			"refusing to dump.\n");
 		return 1;
 	}
 

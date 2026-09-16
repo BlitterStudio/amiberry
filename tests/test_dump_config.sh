@@ -106,4 +106,13 @@ if "$bin" --dump-config --autoload "$work/media.adf" > "$work/afail.txt" 2>/dev/
 fi
 [ -s "$work/afail.txt" ] && { echo "unsupported autoload dump must not write stdout" >&2; exit 1; }
 
+# A trailing option without its operand must fail the dump instead of
+# producing what looks like a valid defaults dump.
+if "$bin" --dump-config -f > "$work/operand.txt" 2> "$work/operand_err.txt"; then
+	echo "dump with a missing option operand must exit non-zero" >&2
+	exit 1
+fi
+[ -s "$work/operand.txt" ] && { echo "missing-operand dump must not write stdout" >&2; exit 1; }
+check "$work/operand_err.txt" 'incomplete command line'
+
 echo "dump-config behavioral test passed"
