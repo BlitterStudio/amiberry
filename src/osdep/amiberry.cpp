@@ -12300,6 +12300,9 @@ int amiberry_main(int argc, char* argv[])
 			enumerate_sound_devices();
 		}
 		install_headless_display_fallback();
+		// Resolving a WHDLoad autoload in dump mode must not prepare the
+		// host for a real boot: no booter temp tree, no save-data links.
+		whdload_set_host_writes_enabled(false);
 		// Remove Amiberry's -o options so the core command line parser below
 		// sees the same argv a normal start would.
 		if (!parse_amiberry_cmd_line(&argc, argv, true))

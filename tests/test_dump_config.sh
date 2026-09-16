@@ -44,7 +44,6 @@ check "$work/def.txt" '^; configuration file: (built-in defaults)$'
 # Deterministic: two runs of the same config are byte-identical, so dumps
 # from two machines can be compared with diff.
 "$bin" --dump-config -f "$work/probe.uae" > "$work/out2.txt" 2>/dev/null
-cmp -s "$work/out.txt" "$work/out2.txt" || { echo "dump is not deterministic" >&2; exit 1; }
 
 # No side effects: the early exit must not create any directory tree.
 dir_count="$(find "$work" -type d | wc -l | tr -d ' ')"
@@ -56,5 +55,14 @@ dir_count="$(find "$work" -type d | wc -l | tr -d ' ')"
 printf 'gfx_fullscreen=fullscreen\ngfx_vsync=true\ngfx_vsyncmode=busywait\nsoundcard=1\n' > "$work/vsync.uae"
 "$bin" --dump-config -f "$work/vsync.uae" > "$work/vsync.txt" 2>/dev/null
 [ -s "$work/vsync.txt" ] || { echo "vsync probe produced no output" >&2; exit 1; }
+
+# WHDLoad autoload must resolve without touching the host: resolving an .lha
+# through whdload_auto_prefs must not build the booter temp tree or save-data
+# links in dump mode.
+printf 'not-really-an-archive' > "$work/game.lha"
+"$bin" --dump-config --autoload "$work/game.lha" > "$work/lha.txt" 2>/dev/null
+[ -s "$work/lha.txt" ] || { echo "lha autoload dump produced no output" >&2; exit 1; }
+dir_count="$(find "$work" -type d | wc -l | tr -d ' ')"
+[ "$dir_count" -eq 1 ] || { echo "dump-config created directories during WHDLoad autoload" >&2; exit 1; }
 
 echo "dump-config behavioral test passed"

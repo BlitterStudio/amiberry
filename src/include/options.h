@@ -1266,6 +1266,7 @@ extern void cfgfile_get_shader_config(struct uae_prefs* p, int rtg);
 
 #ifdef AMIBERRY
 extern void whdload_auto_prefs(struct uae_prefs* prefs, const char* filepath, bool preserve_quickstart_hardware = false);
+extern void whdload_set_host_writes_enabled(bool enabled);
 extern void cd_auto_prefs(struct uae_prefs* prefs, char* filepath);
 extern void symlink_roms(struct uae_prefs* prefs);
 extern void drawbridge_update_profiles(struct uae_prefs* prefs);

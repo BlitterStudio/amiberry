@@ -1655,6 +1655,10 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 }
 
 #ifdef AMIBERRY
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 // --dump-config entry point: resolve currprefs exactly as a normal start would
 // and print the result to stdout, without starting the emulator. The sequence
 // mirrors real_main2()/parse_cmdline_and_init_file(): built-in defaults, the
@@ -1663,6 +1667,13 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 // including the silent corrections fixup_prefs applies.
 int dump_config_and_exit(int argc, TCHAR* argv[])
 {
+#ifdef _WIN32
+	// Redirected stdout stays in text mode on Windows, translating every LF
+	// in the dump to CRLF and breaking the byte-for-byte comparison with a
+	// saved .uae. Switch the stream to binary before emitting anything.
+	fflush(stdout);
+	_setmode(_fileno(stdout), _O_BINARY);
+#endif
 	const TCHAR* config_file = nullptr;
 	for (auto i = 1; i < argc; i++) {
 		if ((_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0)

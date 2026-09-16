@@ -1217,6 +1217,9 @@ jobs:
           if ($dumpConfigText -notmatch 'cpu_24bit_addressing=false') {
             throw "--dump-config did not report the fixup_prefs correction cpu_24bit_addressing=false."
           }
+          if ($dumpConfigText.Contains("`r`n")) {
+            throw "--dump-config must emit LF line endings only (Windows stdout was left in text mode)."
+          }
           $dumpConfigErrText = Get-Content $dumpConfigStderr -Raw
           if ($dumpConfigErrText -notmatch '24-bit address space is not supported with 68040/060') {
             throw "--dump-config did not report the fixup_prefs correction on stderr."
@@ -1660,6 +1663,9 @@ jobs:
           $dumpConfigText = Get-Content $dumpConfigStdout -Raw
           if ($dumpConfigText -notmatch 'cpu_24bit_addressing=false') {
             throw "--dump-config did not report the fixup_prefs correction cpu_24bit_addressing=false."
+          }
+          if ($dumpConfigText.Contains("`r`n")) {
+            throw "--dump-config must emit LF line endings only (Windows stdout was left in text mode)."
           }
           Write-Host "ARM64 Amiberry.exe ran --dump-config successfully."
 
