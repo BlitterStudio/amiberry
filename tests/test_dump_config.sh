@@ -88,4 +88,13 @@ fi
 head -n 1 "$work/log.txt" | grep -q '^; --dump-config: resolved configuration' \
 	|| { echo "--log corrupted the dump stream" >&2; exit 1; }
 
+# A corrupt positional RP9 must fail the dump the same way (rp9_parse_file
+# rejects a non-ZIP payload, so target_cfgfile_load fails).
+printf 'not-a-zip' > "$work/bad.rp9"
+if "$bin" --dump-config "$work/bad.rp9" > "$work/rp9fail.txt" 2>/dev/null; then
+	echo "dump of a corrupt positional RP9 must exit non-zero" >&2
+	exit 1
+fi
+[ -s "$work/rp9fail.txt" ] && { echo "failed RP9 dump must not write stdout" >&2; exit 1; }
+
 echo "dump-config behavioral test passed"

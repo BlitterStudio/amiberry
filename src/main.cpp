@@ -1539,6 +1539,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					config_loaded = true;
 					currprefs.start_gui = false;
 				}
+				else
+					cmdline_config_source_failed = true;
 			}
 			else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
 			{
@@ -1749,6 +1751,11 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 	// default configuration source: -f/--config, a positional config, or an
 	// autoloaded RP9/WHDLoad/CD package.
 	const TCHAR* config_file = cmdline_config_source[0] ? cmdline_config_source : nullptr;
+	// An RP9 package (--autoload, -f or positional) extracts its media into a
+	// temporary directory during resolution. The resolved preferences already
+	// carry the media paths, so remove the tree now: this covers every exit
+	// path below, not just the success path.
+	rp9_cleanup();
 	if (cmdline_config_source_failed) {
 		fprintf(stderr, "--dump-config: failed to load '%s'; refusing to dump, since the\n"
 			"result would show unrelated settings as if they came from that file.\n",
@@ -1791,11 +1798,6 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 			fprintf(stderr, "; corrections applied to the resolved configuration:\n%s", corrections);
 		xfree(corrections);
 	}
-
-	// An RP9 package (--autoload, -f or positional) extracts its media into a
-	// temporary directory during resolution; a normal launch cleans that tree
-	// up later, so do the same here instead of leaving it behind.
-	rp9_cleanup();
 	return 0;
 }
 #endif
