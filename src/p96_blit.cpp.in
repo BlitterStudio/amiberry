@@ -336,7 +336,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			for (x = 0; x < w; x++) {
 				dst_16--;
 				src_16--;
-				if (*src_16 != (uae_u16)transparentcolor) {
+				if ((*src_16 & rgbmask) != ((uae_u16)transparentcolor & rgbmask)) {
 					BLT_FUNC(src_16, dst_16);
 				}
 			}
@@ -356,7 +356,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			for (x = 0; x < w; x++) {
 				src_32--;
 				dst_32--;
-				if (*src_32 != transparentcolor) {
+				if ((*src_32 & rgbmask) != (transparentcolor & rgbmask)) {
 					BLT_FUNC(src_32, dst_32);
 				}
 			}
@@ -368,7 +368,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			uae_u16 *src_16 = (uae_u16 *)src2;
 			uae_u16 *dst_16 = (uae_u16 *)dst2;
 			for (x = 0; x < w; x++) {
-				if (*src_16 != (uae_u16)transparentcolor) {
+				if ((*src_16 & rgbmask) != ((uae_u16)transparentcolor & rgbmask)) {
 					BLT_FUNC(src_16, dst_16);
 				}
 				dst_16++;
@@ -388,7 +388,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			uae_u32 *src_32 = (uae_u32 *)src2;
 			uae_u32 *dst_32 = (uae_u32 *)dst2;
 			for (x = 0; x < w; x++) {
-				if (*src_32 != transparentcolor) {
+				if ((*src_32 & rgbmask) != (transparentcolor & rgbmask)) {
 					BLT_FUNC(src_32, dst_32);
 				}
 				src_32++;
