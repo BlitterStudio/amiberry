@@ -67,8 +67,9 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 	uae_u32 *src2_32 = (uae_u32 *)src;
 	uae_u32 *dst2_32 = (uae_u32 *)dst;
 	unsigned int y, x;
+	int span = srcpitch ? h * srcpitch : (int)(w * BLT_SIZE);
 
-	if (src2 < dst2 && src2 + h * srcpitch > dst2) {
+	if (src2 < dst2 && src2 + span > dst2) {
 		dst2 += h * dstpitch + w * BLT_SIZE;
 		src2 += h * srcpitch + w * BLT_SIZE;
 		for (y = 0; y < h; y++) {
@@ -323,8 +324,9 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 	uae_u32 *src2_32 = (uae_u32 *)src;
 	uae_u32 *dst2_32 = (uae_u32 *)dst;
 	unsigned int y, x;
+	int span = srcpitch ? h * srcpitch : (int)(w * BLT_SIZE);
 
-	if (src2 < dst2 && src2 + h * srcpitch > dst2) {
+	if (src2 < dst2 && src2 + span > dst2) {
 		dst2 += h * dstpitch + w * BLT_SIZE;
 		src2 += h * srcpitch + w * BLT_SIZE;
 		for (y = 0; y < h; y++) {
