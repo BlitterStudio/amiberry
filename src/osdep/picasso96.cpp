@@ -4708,7 +4708,10 @@ static int BlitRectHelper(TrapContext *ctx)
 	}
 	/* Do our virtual frame-buffer memory first */
 #ifdef AMIBERRY
-	mark_dirty(rtg_index, dstri->Memory + dsty * dstri->BytesPerRow + dstx * GetBytesPerPixel(RGBFmt), height * dstri->BytesPerRow);
+	{
+		const uae_u32 dirtysize = dstri->BytesPerRow ? height * dstri->BytesPerRow : width * GetBytesPerPixel(RGBFmt);
+		mark_dirty(rtg_index, dstri->Memory + dsty * dstri->BytesPerRow + dstx * GetBytesPerPixel(RGBFmt), dirtysize);
+	}
 #endif
 	if (transparent) {
 		do_blitrect_frame_buffer_transparent(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, transparentcolor, RGBFmt, opcode);
