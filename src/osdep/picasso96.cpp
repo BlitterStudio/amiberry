@@ -4767,7 +4767,7 @@ static uae_u32 REGPARAM2 picasso_BlitRectTransparent(TrapContext *ctx)
 	if (NOBLITTER_BLIT)
 		return 0;
 	P96TRACE((_T("BlitRectTransparent(%d, %d, %d, %d, %d, %d, 0x%08x, 0x%02x)\n"), srcx, srcy, dstx, dsty, width, height, color, RGBFmt));
-	result = BlitRect(ctx, renderinfo, (uaecptr)NULL, srcx, srcy, dstx, dsty, width, height, 0xff, true, color, RGBFmt, BLIT_SRC);
+	result = BlitRect(ctx, renderinfo, 0, srcx, srcy, dstx, dsty, width, height, 0xff, true, color, RGBFmt, BLIT_SRC);
 	return result;
 }
 
@@ -4801,7 +4801,7 @@ static uae_u32 REGPARAM2 picasso_BlitRect (TrapContext *ctx)
 	if (NOBLITTER_BLIT)
 		return 0;
 	P96TRACE((_T("BlitRect(%d, %d, %d, %d, %d, %d, 0x%02x, 0x%02x)\n"), srcx, srcy, dstx, dsty, width, height, Mask, RGBFmt));
-	result = BlitRect(ctx, renderinfo, (uaecptr)NULL, srcx, srcy, dstx, dsty, width, height, Mask, false, 0, RGBFmt, BLIT_SRC);
+	result = BlitRect(ctx, renderinfo, 0, srcx, srcy, dstx, dsty, width, height, Mask, false, 0, RGBFmt, BLIT_SRC);
 	return result;
 }
 
