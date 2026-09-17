@@ -1943,7 +1943,7 @@ static floatx80 fpu_random(void)
 	floatx80 v = int32_to_floatx80(rand32());
 	for (int i = 0; i < 10; i++) {
 		if (fpu_max_precision) {
-			v = floatx80_div(v, int32_to_floatx80(((uae_s32)rand8() + 1) & 7), &fpustatus);
+			v = floatx80_div(v, int32_to_floatx80((rand8() & 7) + 1), &fpustatus);
 			v.low &= 0xffe0000000000000;
 			// no negative zeros for now
 			if (v.high == 0x8000 && v.low == 0) {
