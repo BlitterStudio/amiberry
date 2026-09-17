@@ -8572,7 +8572,7 @@ uae_u8 *save_custom_slots(size_t *len, uae_u8 *dstptr)
 		save_u32(r->auddat);
 		save_u32(r->refdat);
 		save_u32(r->dskdat);
-		save_u32(0);
+		save_u32(getregfrompt(r->conflict2) + 1);
 		save_u16(r->bplmod);
 		save_u16(r->bltmod);
 		regidx = getregfrompt(r->p);
@@ -8628,7 +8628,8 @@ uae_u8 *restore_custom_slots(uae_u8 *src)
 			r->auddat = restore_u32();
 			r->refdat = restore_u32();
 			r->dskdat = restore_u32();
-			restore_u32();
+			uae_u32 v2 = restore_u32();
+			r->conflict2 = v2 ? getptfromreg((int)v2 - 1) : NULL;
 			r->bplmod = restore_u16();
 			r->bltmod = restore_u16();
 			regidx = restore_u16();
