@@ -76,17 +76,33 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			src2 -= srcpitch;
 			uae_u8 *src_8 = (uae_u8*)src2;
 			uae_u8 *dst_8 = (uae_u8*)dst2;
-			for (x = 0; x < w; x++) {
+			if (w) {
+				// src2/dst2 point one past the last pixel of the row
 				src_8 -= 3;
 				dst_8 -= 3;
-				uae_u32 src24 = src_8[0] | (src_8[1] << 8) | (src_8[2] << 16);
-				if (src24 != transparentcolor) {
-					uae_u32 dst24 = dst_8[0] | (dst_8[1] << 8) | (dst_8[2] << 16);
-					BLT_FUNC(&src24, &dst24);
-					dst_8[0] = (uae_u8)(dst24 >> 0);
-					dst_8[1] = (uae_u8)(dst24 >> 8);
-					dst_8[2] = (uae_u8)(dst24 >> 16);
+			}
+			for (x = 0; x < w; x++) {
+				if (x == 0) {
+					// last pixel of the row: byte access, long access would pass the row end
+					uae_u32 src24 = src_8[0] | (src_8[1] << 8) | (src_8[2] << 16);
+					if (src24 != transparentcolor) {
+						uae_u32 dst24 = dst_8[0] | (dst_8[1] << 8) | (dst_8[2] << 16);
+						BLT_FUNC(&src24, &dst24);
+						dst_8[0] = (uae_u8)(dst24 >> 0);
+						dst_8[1] = (uae_u8)(dst24 >> 8);
+						dst_8[2] = (uae_u8)(dst24 >> 16);
+					}
+				} else {
+					uae_u32 src24 = ((uae_u32*)src_8)[0] & 0x00ffffff;
+					if (src24 != transparentcolor) {
+						uae_u32 dst24 = ((uae_u32*)dst_8)[0];
+						uae_u32 dst24x = dst24;
+						BLT_FUNC(&src24, &dst24);
+						((uae_u32*)dst_8)[0] = (dst24x & 0xff000000) | (dst24 & 0x00ffffff);
+					}
 				}
+				src_8 -= 3;
+				dst_8 -= 3;
 			}
 		}
 	} else {
@@ -94,13 +110,24 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			uae_u8 *src_8 = (uae_u8*)src2;
 			uae_u8 *dst_8 = (uae_u8*)dst2;
 			for (x = 0; x < w; x++) {
-				uae_u32 src24 = src_8[0] | (src_8[1] << 8) | (src_8[2] << 16);
-				if (src24 != transparentcolor) {
-					uae_u32 dst24 = dst_8[0] | (dst_8[1] << 8) | (dst_8[2] << 16);
-					BLT_FUNC(&src24, &dst24);
-					dst_8[0] = (uae_u8)(dst24 >> 0);
-					dst_8[1] = (uae_u8)(dst24 >> 8);
-					dst_8[2] = (uae_u8)(dst24 >> 16);
+				if (x + 1 == w) {
+					// last pixel of the row: byte access, long access would pass the row end
+					uae_u32 src24 = src_8[0] | (src_8[1] << 8) | (src_8[2] << 16);
+					if (src24 != transparentcolor) {
+						uae_u32 dst24 = dst_8[0] | (dst_8[1] << 8) | (dst_8[2] << 16);
+						BLT_FUNC(&src24, &dst24);
+						dst_8[0] = (uae_u8)(dst24 >> 0);
+						dst_8[1] = (uae_u8)(dst24 >> 8);
+						dst_8[2] = (uae_u8)(dst24 >> 16);
+					}
+				} else {
+					uae_u32 src24 = ((uae_u32*)src_8)[0] & 0x00ffffff;
+					if (src24 != transparentcolor) {
+						uae_u32 dst24 = ((uae_u32*)dst_8)[0];
+						uae_u32 dst24x = dst24;
+						BLT_FUNC(&src24, &dst24);
+						((uae_u32*)dst_8)[0] = (dst24x & 0xff000000) | (dst24 & 0x00ffffff);
+					}
 				}
 				src_8 += 3;
 				dst_8 += 3;
