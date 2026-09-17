@@ -1884,7 +1884,7 @@ static bool fpu_precision_valid(floatx80 f)
 			return false;
 		}
 		int v = floatx80_to_int32(f, &status);
-		if (v == 0x7ffffffff || v == 0x80000000) {
+		if (v == 0x7fffffff || v == 0x80000000) {
 			return false;
 		}
 	}
