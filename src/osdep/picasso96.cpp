@@ -7848,7 +7848,7 @@ uae_u32 picasso_demux (uae_u32 arg, TrapContext *ctx)
 	const uae_u32 num = trap_get_long(ctx, trap_get_areg(ctx, 7) + 4);
 
 	if (uaegfx_base) {
-		if (num >= 16 && num <= 39) {
+		if (num >= 16 && num <= 40) {
 			write_log (_T("uaelib: obsolete Picasso96 uaelib hook called, call ignored\n"));
 			return 0;
 		}
