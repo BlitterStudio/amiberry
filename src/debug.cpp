@@ -8235,7 +8235,7 @@ static bool debug_line(TCHAR *input)
 		if (c == '"' || c == '\'') {
 			if (quoted == c) {
 				quoted = 0;
-			} else {
+			} else if (!quoted) {
 				quoted = c;
 			}
 		}
