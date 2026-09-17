@@ -2151,6 +2151,10 @@ static const uae_u8 romend[20] = {
 	0x00, 0x08, 0x00, 0x00,
 	0x00, 0x18, 0x00, 0x19, 0x00, 0x1a, 0x00, 0x1b, 0x00, 0x1c, 0x00, 0x1d, 0x00, 0x1e, 0x00, 0x1f
 };
+static bool is_builtin_aros_rom(const TCHAR *romfile)
+{
+	return !_tcscmp(romfile, _T(":AROS")) || (_tcslen(romfile) > 5 && !_tcscmp(romfile + _tcslen(romfile) - 5, _T(":AROS")));
+}
 
 static int load_kickstart (void)
 {
@@ -2158,7 +2162,7 @@ static int load_kickstart (void)
 
 	rom_write_enabled = false;
 	cloanto_rom = 0;
-	if (!_tcscmp(currprefs.romfile, _T(":AROS"))) {
+	if (is_builtin_aros_rom(currprefs.romfile)) {
 		return load_kickstart_replacement();
 	}
 	_tcscpy(tmprom, currprefs.romfile);
@@ -3377,7 +3381,7 @@ void memory_reset (void)
 	}
 	cpuboard_map();
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
-	if (currprefs.maprom && _tcscmp(currprefs.romfile, _T(":AROS"))) {
+	if (currprefs.maprom && !is_builtin_aros_rom(currprefs.romfile)) {
 		if (!cpuboard_maprom())
 			map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2a_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
 	}

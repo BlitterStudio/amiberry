@@ -143,6 +143,15 @@ static void debug_cycles(int mode)
 	last_hpos2 = current_hpos();
 }
 
+static void initialize_debugger(void)
+{
+	if (!debugger_active) {
+		disasm_init();
+		debugmem_enable();
+		debug_pc = 0xffffffff;
+	}
+}
+
 void deactivate_debugger (void)
 {
 #ifdef AMIBERRY
@@ -302,14 +311,14 @@ static const TCHAR *help[] = {
 	_T("                        x = must be same, z = must be different, s = restart.\n"),
 	_T("  W <addr> <values[.x] separated by space> Write into Amiga memory.\n"),
 	_T("  W <addr> 'string'     Write into Amiga memory.\n"),
-	_T("  Wf <addr> <endaddr-1> <bytes or string like above>, fill memory.\n"),
-	_T("  Wc <addr> <endaddr-1> <destaddr>, copy memory.\n"),
+	_T("  Wf <addr> <endaddr> <bytes or string like above>, fill memory.\n"),
+	_T("  Wc <addr> <endaddr> <destaddr>, copy memory.\n"),
 	_T("  w <num> <address> <length> <R/W/I> <F/C/L/N> [V<value>[.x]] [<channel>] (read/write/opcode) (freeze/mustchange/logonly/nobreak).\n"),
 	_T("                        Add/remove memory watchpoints.\n"),
 	_T("  wd [<0-1>]            Enable illegal access logger. 1 = enable break.\n"),
 	_T("  L <file> <addr> [<n>] Load a block of Amiga memory.\n"),
 	_T("  S <file> <addr> <n>   Save a block of Amiga memory.\n"),
-	_T("  s \"<string>\"/<values> [<addr>] [<endaddr-1>] [max results]\n"),
+	_T("  s \"<string>\"/<values> [<addr>] [<endaddr>] [max results]\n"),
 	_T("                        Search for string/bytes.\n"),
 	_T("  T or Tt               Show exec tasks and their PCs.\n"),
 	_T("  Td,Tl,Tr,Tp,Ts,TS,Ti,TO,TM,Tf Show devs, libs, resources, ports, semaphores,\n"),
@@ -5444,6 +5453,10 @@ static void writeintomem (TCHAR **c)
 		if (err) {
 			return;
 		}
+		if (eaddr <= addr) {
+			console_out_f(_T("Nothing done\n"));
+			return;
+		}
 		ignore_ws(c);
 	}
 
@@ -5539,24 +5552,16 @@ static void writeintomem (TCHAR **c)
 		}
 	}
 end:
-	if (eaddr != 0xffffffff)
+	if (eaddr != 0xffffffff) {
 		console_out_f(_T("Wrote data to %08x - %08x\n"), addrc, addr - 1);
+	}
 }
 
 static uae_u8 *dump_xlate (uae_u32 addr)
 {
-	addrbank *bank = mem_banks[addr >> 16];
-	if (!bank || !bank->check || !bank->xlateaddr || !bank->check (addr, 1))
+	if (!mem_banks[addr >> 16]->check (addr, 1))
 		return NULL;
-	return bank->xlateaddr (addr);
-}
-
-static uae_u8 *dump_xlate_range (uae_u32 addr, uae_u32 size)
-{
-	addrbank *bank = mem_banks[addr >> 16];
-	if (!bank || !bank->check || !bank->xlateaddr || !bank->check(addr, size))
-		return NULL;
-	return bank->xlateaddr(addr);
+	return mem_banks[addr >> 16]->xlateaddr (addr);
 }
 
 #if 0
@@ -5583,13 +5588,6 @@ typedef struct UaeMemoryMap {
 #endif
 
 static const TCHAR *bankmodes[] = { _T("F32"), _T("C16"), _T("C32"), _T("CIA"), _T("F16"), _T("F16X") };
-
-static const TCHAR *dump_bankmode (int mode)
-{
-	if (mode < 0 || mode >= static_cast<int>(sizeof bankmodes / sizeof bankmodes[0]))
-		return _T("?");
-	return bankmodes[mode];
-}
 
 static void memory_map_dump_3(UaeMemoryMap *map, int log)
 {
@@ -5675,16 +5673,14 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 						(a1->flags & ABFLAG_CACHE_ENABLE_INS) ? _T("I") : _T("-"),
 						(a1->flags & ABFLAG_CACHE_ENABLE_DATA) ? _T("D") : _T("-"),
 						a1->baseaddr == NULL ? ' ' : '*',
-						dump_bankmode(ce_banktype[j]),
+						bankmodes[ce_banktype[j]],
 						name);
 					tmp[0] = 0;
 					if ((a1->flags & ABFLAG_ROM) && mirrored) {
 						TCHAR *p = txt + _tcslen (txt);
 						uae_u32 crc = 0xffffffff;
-						uae_u32 crc_size = (size * 1024) / mirrored;
-						uae_u8 *crc_mem = dump_xlate_range((j << 16) | bankoffset, crc_size);
-						if (crc_mem)
-							crc = get_crc32(crc_mem, crc_size);
+						if (a1->check(((j << 16) | bankoffset), (size * 1024) / mirrored))
+						crc = get_crc32 (a1->xlateaddr((j << 16) | bankoffset), (size * 1024) / mirrored);
 						struct romdata *rd = getromdatabycrc (crc);
 						_sntprintf (p, sizeof p, _T(" (%08X)"), crc);
 					if (rd) {
@@ -6440,7 +6436,7 @@ int instruction_breakpoint(TCHAR **c)
 							}
 						}
 					} else {
-						bpn->enabled = false;
+						bpn->enabled = 0;
 						console_out_f(_T("Breakpoint %d removed.\n"), bpidx);
 					}
 				}
@@ -6483,12 +6479,54 @@ int instruction_breakpoint(TCHAR **c)
 			}
 			console_out(_T("All breakpoints removed.\n"));
 			return 0;
-		} else if (nc == 'R' && (*c)[1] == 0) {
+		} else if (nc == 'R') {
 			if (more_params(c)) {
+				next_char(c);
 				int bpnum = readint(c, NULL);
 				if (bpnum >= 0 && bpnum < BREAKPOINT_TOTAL) {
-					bpnodes[bpnum].enabled = 0;
-					console_out_f(_T("Breakpoint %d removed.\n"), bpnum);
+					if (bpnodes[bpnum].enabled) {
+						bpnodes[bpnum].enabled = 0;
+						console_out_f(_T("Breakpoint %d removed.\n"), bpnum);
+					}
+				}
+			}
+			return 0;
+		} else if (nc == 'T') {
+			if (more_params(c)) {
+				next_char(c);
+				if (_totupper(peekchar(c)) == 'A') {
+					bool isenabled = false;
+					for (i = 0; i < BREAKPOINT_TOTAL; i++) {
+						if (bpnodes[i].enabled > 0) {
+							isenabled = true;
+						}
+					}
+					for (i = 0; i < BREAKPOINT_TOTAL; i++) {
+						if (isenabled && bpnodes[i].enabled > 0) {
+							bpnodes[i].enabled = -1;
+						}
+						if (!isenabled && bpnodes[i].enabled < 0) {
+							bpnodes[i].enabled = 1;
+						}
+					}
+					if (isenabled) {
+						console_out(_T("All breakpoints disabled.\n"));
+					} else {
+						console_out(_T("All breakpoints enabled.\n"));
+					}
+					return 0;
+				} else {
+					int bpnum = readint(c, NULL);
+					if (bpnum >= 0 && bpnum < BREAKPOINT_TOTAL) {
+						if (bpnodes[bpnum].enabled) {
+							bpnodes[bpnum].enabled = bpnodes[bpnum].enabled > 0 ? -1 : 1;
+							if (bpnodes[bpnum].enabled > 0) {
+								console_out_f(_T("Breakpoint %d enabled.\n"), bpnum);
+							} else {
+								console_out_f(_T("Breakpoint %d disabled.\n"), bpnum);
+							}
+						}
+					}
 				}
 			}
 			return 0;
@@ -6511,6 +6549,9 @@ int instruction_breakpoint(TCHAR **c)
 				}
 				if (bpn->chain > 0) {
 					console_out_f(_T(" H=%d"), bpn->chain);
+				}
+				if (bpn->enabled < 0) {
+					console_out_f(_T(" (disabled)"));
 				}
 				console_out_f(_T("\n"));
 				got = 1;
@@ -6726,6 +6767,14 @@ static void searchmem (TCHAR **cc)
 			}
 		}
 	}
+	console_out_f(_T("Search bytes: "));
+	for (int i = 0; i < sslen; i++) {
+		if (i > 0) {
+			console_out_f(_T(" "));
+		}
+		console_out_f(_T("%02x"), ss[i]);
+	}
+	console_out_f(_T("\n"));
 	console_out_f(_T("Searching from %08X to %08X\n"), addr + 1, endaddr - 1);
 	nextaddr_init(addr);
 	bool out = false;
@@ -7500,7 +7549,7 @@ static void debug_backtrace(int max_frames)
 }
 #endif
 
-static bool debug_line (TCHAR *input)
+static bool debug_line_2(TCHAR *input)
 {
 	TCHAR cmd, *inptr;
 	uaecptr addr;
@@ -8174,6 +8223,42 @@ static bool debug_line (TCHAR *input)
 	return false;
 }
 
+static bool debug_line(TCHAR *input)
+{
+	TCHAR *in = my_strdup(input);
+	TCHAR *ins = in, *inp = in;
+	TCHAR quoted = 0;
+	bool ret = false;
+
+	while (*inp) {
+		TCHAR c = *inp++;
+		if (c == '"' || c == '\'') {
+			if (quoted == c) {
+				quoted = 0;
+			} else if (!quoted) {
+				quoted = c;
+			}
+		}
+		if (!quoted && c == ';') {
+			inp--;
+			*inp = 0;
+			ret = debug_line_2(ins);
+			ins = inp;
+			if (ret) {
+				break;
+			}
+			inp++;
+			ins = inp;
+		}
+	}
+	if (*ins) {
+		ret = debug_line_2(ins);
+	}
+
+	xfree(in);
+	return ret;
+}
+
 static TCHAR input[MAX_LINEWIDTH];
 
 static void debug_1 (void)
@@ -8268,7 +8353,7 @@ static bool check_breakpoint(struct breakpoint_node *bpn, uaecptr pc)
 {
 	int bpnum = -1;
 
-	if (!bpn->enabled) {
+	if (bpn->enabled <= 0) {
 		return false;
 	}
 	if (bpn->type == BREAKPOINT_REG_PC) {
@@ -8418,7 +8503,7 @@ void debug (void)
 					// if this breakpoint is chained, ignore it
 					for (j = 0; j < BREAKPOINT_TOTAL; j++) {
 						struct breakpoint_node *bpn2 = &bpnodes[j];
-						if (bpn2->enabled && bpn2->chain == i) {
+						if (bpn2->enabled > 0 && bpn2->chain == i) {
 							break;
 						}
 					}
@@ -8554,6 +8639,7 @@ void debug (void)
 	inputdevice_unacquire();
 	pause_sound ();
 	setmouseactive(0, 0);
+	target_inputdevice_unacquire(true);
 	activate_console ();
 	trace_mode = 0;
 	exception_debugging = 0;
@@ -8596,7 +8682,7 @@ void debug (void)
 	}
 	if (!trace_mode) {
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-			if (bpnodes[i].enabled)
+			if (bpnodes[i].enabled > 0)
 				trace_mode = TRACE_CHECKONLY;
 		}
 	}
@@ -8610,6 +8696,7 @@ void debug (void)
 	uae_ppc_pause(0);
 #endif
 	setmouseactive(0, wasactive ? 2 : 0);
+	target_inputdevice_acquire();
 
 	last_cycles1 = get_cycles();
 	last_vpos1 = vpos;
@@ -9008,6 +9095,7 @@ void debug_parser (const TCHAR *cmd, TCHAR *out, uae_u32 outsize)
 		out[0] = 0;
 		setconsolemode (out, outsize);
 	}
+	initialize_debugger();
 	debug_line (input);
 	setconsolemode (NULL, 0);
 	xfree (input);
