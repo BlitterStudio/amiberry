@@ -29,6 +29,7 @@ struct bltinfo {
     bool blit_interrupt;
     bool blit_interrupt_trigger;
     int blit_main, blit_pending, blit_count_done;
+    int blit_stuck;
     int blit_queued;
     evt_t finishcycle_dmacon, finishcycle_copper;
     evt_t blt_ch_cycles[4];
@@ -54,6 +55,7 @@ extern void blitter_check_start(void);
 extern void blitter_reset(void);
 extern void blitter_debugdump(void);
 extern void restore_blitter_start(void);
+extern void blitter_hsync(void);
 
 void blitter_loadbdat(uae_u16 v);
 void blitter_loadcdat(uae_u16 v);

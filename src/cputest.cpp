@@ -1883,12 +1883,23 @@ static bool fpu_precision_valid(floatx80 f)
 		if (float32_is_nan(fo)) {
 			return false;
 		}
+		int v = floatx80_to_int32(f, &status);
+		if (v == 0x7ffffffff || v == 0x80000000) {
+			return false;
+		}
 	}
 	if (fpu_max_precision) {
 		if (status.float_exception_flags & (float_flag_underflow | float_flag_overflow | float_flag_denormal | float_flag_invalid)) {
 			return false;
 		}
 		if (floatx80_is_any_nan(f)) {
+			return false;
+		}
+		// no denormals
+		if ((f.high & 0x7fff) == 0 && f.low != 0) {
+			return false;
+		}
+		if ((f.high & 0x7fff) != 0 && !(f.low & 0x8000000000000000)) {
 			return false;
 		}
 	}
@@ -1931,13 +1942,22 @@ static floatx80 fpu_random(void)
 {
 	floatx80 v = int32_to_floatx80(rand32());
 	for (int i = 0; i < 10; i++) {
-		uae_u64 n = rand32() | (((uae_u64)rand16()) << 32);
-		// don't create denormals yet
-		if (!((v.low + n) & 0x8000000000000000)) {
-			v.low |= 0x8000000000000000;
-			continue;
+		if (fpu_max_precision) {
+			v = floatx80_div(v, int32_to_floatx80(((uae_s32)rand8() + 1) & 7), &fpustatus);
+			v.low &= 0xffe0000000000000;
+			// no negative zeros for now
+			if (v.high == 0x8000 && v.low == 0) {
+				v.high = 0;
+			}
+		} else {
+			uae_u64 n = rand32() | (((uae_u64)rand16()) << 32);
+			// don't create denormals yet
+			if (!((v.low + n) & 0x8000000000000000)) {
+				v.low |= 0x8000000000000000;
+				continue;
+			}
+			v.low += n;
 		}
-		v.low += n;
 	}
 	return v;
 }
@@ -2143,7 +2163,7 @@ static void fill_memory_buffer(uae_u8 *p, int size)
 	while (p < pend) {
 		int x = (i & 3);
 		if (x == 1) {
-			floatx80 v = int32_to_floatx80(xorshift32());
+			floatx80 v = fpu_random();;
 			*p++ = v.high >> 8;
 			*p++ = v.high >> 0;
 			*p++ = 0;
@@ -2164,7 +2184,7 @@ static void fill_memory_buffer(uae_u8 *p, int size)
 				*p++ = frand8();
 			}
 		} else if (x == 2) {
-			floatx80 v = int32_to_floatx80(xorshift32());
+			floatx80 v = fpu_random();
 			float64 v2 = floatx80_to_float64(v, &fpustatus);
 			*p++ = (uae_u8)(v2 >> 56);
 			*p++ = (uae_u8)(v2 >> 48);
@@ -2175,7 +2195,7 @@ static void fill_memory_buffer(uae_u8 *p, int size)
 			*p++ = (uae_u8)(v2 >>  8);
 			*p++ = (uae_u8)(v2 >>  0);
 		} else if (x == 3) {
-			floatx80 v = int32_to_floatx80(xorshift32());
+			floatx80 v = fpu_random();
 			float32 v2 = floatx80_to_float32(v, &fpustatus);
 			*p++ = (uae_u8)(v2 >> 24);
 			*p++ = (uae_u8)(v2 >> 16);

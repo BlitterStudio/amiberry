@@ -2666,6 +2666,8 @@ static void mousehack_reset (void)
 	}
 	mousehack_address = 0;
 	mousehack_enabled = false;
+	lastmx = -1;
+	lastmy = -1;
 }
 
 bool mousehack_pending(void)
@@ -3454,6 +3456,9 @@ static void mousehack_helper (uae_u32 buttonmask)
 		return;
 	}
 	if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
+		return;
+	}
+	if (lastmx < 0 || lastmy < 0) {
 		return;
 	}
 
@@ -6239,6 +6244,8 @@ void inputdevice_reset (void)
 #ifdef WITH_DRACO
 	draco_keybord_repeat_cnt = 0;
 #endif
+	lastmx = -1;
+	lastmy = -1;
 }
 
 static int getoldport (struct uae_input_device *id)

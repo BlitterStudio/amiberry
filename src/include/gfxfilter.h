@@ -24,7 +24,7 @@ struct displayscale
 void getfilterdata(int monid, struct displayscale *ds);
 void getfilteroffset(int monid, float *dx, float *dy, float *mx, float *my);
 
-uae_u8 *getfilterbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, bool *locked);
+uae_u8 *getfilterbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, bool *locked, int *dx, int *dy);
 void freefilterbuffer(int monid, uae_u8*, bool unlock);
 
 uae_u8 *uaegfx_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette);

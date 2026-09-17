@@ -473,12 +473,12 @@ enum {
 #define PSSO_BoardInfo_GetCompatibleDACFormats		    (PSSO_ReInitMemory + 4)
 #define PSSO_BoardInfo_CoerceMode		    (PSSO_BoardInfo_GetCompatibleDACFormats + 4)
 #define PSSO_BoardInfo_Reserved3Default		    (PSSO_BoardInfo_CoerceMode + 4)
-#define PSSO_BoardInfo_Reserved4		    (PSSO_BoardInfo_Reserved3Default + 4)
-#define PSSO_BoardInfo_Reserved4Default		    (PSSO_BoardInfo_Reserved4 + 4)
-#define PSSO_BoardInfo_Reserved5		    (PSSO_BoardInfo_Reserved4Default + 4)
-#define PSSO_BoardInfo_Reserved5Default		    (PSSO_BoardInfo_Reserved5 + 4)
+#define PSSO_BoardInfo_BlitRectTransparent    (PSSO_BoardInfo_Reserved3Default + 4)
+#define PSSO_BoardInfo_BlitRectTransparentDefault    (PSSO_BoardInfo_BlitRectTransparent + 4)
+#define PSSO_BoardInfo_GetVSyncState		    (PSSO_BoardInfo_BlitRectTransparentDefault + 4)
+#define PSSO_BoardInfo_GetVBeamPos		    (PSSO_BoardInfo_GetVSyncState + 4)
 
-#define PSSO_BoardInfo_SetDPMSLevel		    (PSSO_BoardInfo_Reserved5Default + 4)
+#define PSSO_BoardInfo_SetDPMSLevel		    (PSSO_BoardInfo_GetVBeamPos + 4)
 #define PSSO_BoardInfo_ResetChip		    (PSSO_BoardInfo_SetDPMSLevel + 4)
 
 #define PSSO_BoardInfo_GetFeatureAttrs		    (PSSO_BoardInfo_ResetChip + 4)

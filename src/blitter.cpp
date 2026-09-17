@@ -980,6 +980,7 @@ static void actually_do_blit(void)
 
 static void blitter_doit(void)
 {
+	blt_info.blit_stuck = 0;
 	if (blt_info.vblitsize == 0) {
 		blitter_done_all(true);
 		return;
@@ -998,23 +999,29 @@ static int makebliteventtime(int delay)
 	return delay;
 }
 
+void blitter_hsync(void)
+{
+	/* "free" blitter in immediate mode if it has been "stuck"
+	 *  ~3 frames fixes some JIT game incompatibilities.
+	 */
+	if (blt_info.blit_stuck > 0) {
+		blt_info.blit_stuck--;
+		if (!blt_info.blit_stuck) {
+#ifdef DEBUGGER
+			debugtest(DEBUGTEST_BLITTER, _T("force-unstuck!\n"));
+#endif
+			blitter_doit();
+		}
+	}
+}
+
 static void blitter_handler(uae_u32 data)
 {
-	static int blitter_stuck;
-
-	if (!dmaen (DMA_BLITTER)) {
-		event2_newevent_xx(-1, 10, 0, blitter_handler);
-		blitter_stuck++;
-		if (blitter_stuck < 20000 || !immediate_blits)
-			return; /* gotta come back later. */
-		/* "free" blitter in immediate mode if it has been "stuck" ~3 frames
-		* fixes some JIT game incompatibilities
-		*/
-#ifdef DEBUGGER
-		debugtest (DEBUGTEST_BLITTER, _T("force-unstuck!\n"));
-#endif
+	// blitter_handler is not use in CE mode.
+	if (!dmaen(DMA_BLITTER)) {
+		blt_info.blit_stuck = immediate_blits ? 1000 : -1;
+		return;
 	}
-	blitter_stuck = 0;
 	if (blit_slowdown > 0 && !immediate_blits) {
 		event2_newevent_xx(-1, makebliteventtime(blit_slowdown), 0, blitter_handler);
 		blit_slowdown = -1;
@@ -1634,10 +1641,9 @@ void process_blitter(struct rgabuf *rga)
 
 			// copper conflict: after blitter dma transfer,
 			// copy new copper pointer to conflicting blitter address pointer.
-			if (rga->conflict) {
-				rga->p = rga->conflict;
-				*rga->p = rga->conflictaddr;
-				rga->pv = rga->conflictaddr;
+			if (rga->conflict && rga->conflict2) {
+				uaecptr addr = copper_blitter_conflict(rga);
+				*rga->conflict2 = addr;
 			}
 		} else {
 			markidlecycle();
@@ -1675,10 +1681,9 @@ void process_blitter(struct rgabuf *rga)
 
 		// copper conflict: after blitter dma transfer,
 		// copy new copper pointer to conflicting blitter address pointer OR used modulo (if any)
-		if (rga->conflict) {
-			rga->p = rga->conflict;
-			*rga->p = rga->conflictaddr | rga->bltmod;
-			rga->pv = rga->conflictaddr | rga->bltmod;
+		if (rga->conflict && rga->conflict2) {
+			uaecptr addr = copper_blitter_conflict(rga);
+			*rga->conflict2 = addr;
 		}
 
 	}
@@ -2055,6 +2060,7 @@ void do_blitter(int copper, uaecptr pc)
 	blt_info.blit_pending = 1;
 	blt_info.blit_count_done = 0;
 	blt_info.blit_queued = 0;
+	blt_info.blit_stuck = 0;
 
 	blitter_start_init();
 
@@ -2163,6 +2169,9 @@ void blitter_check_start (void)
 		if (immediate_blits) {
 			blitter_doit();
 		}
+	}
+	if (blt_info.blit_stuck < 0) {
+		blitter_doit();
 	}
 }
 
@@ -2311,6 +2320,7 @@ void blitter_reset(void)
 	blt_info.blit_pending = 0;
 	blt_info.blit_queued = 0;
 	blt_info.blit_count_done = 0;
+	blt_info.blit_stuck = 0;
 #if BLIT_TRACE == 1
 	bdp = blit_tracer;
 #endif

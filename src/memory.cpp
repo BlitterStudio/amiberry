@@ -2158,7 +2158,7 @@ static int load_kickstart (void)
 
 	rom_write_enabled = false;
 	cloanto_rom = 0;
-	if (!_tcscmp(currprefs.romfile, _T(":AROS"))) {
+	if (!_tcscmp(currprefs.romfile, _T(":AROS")) || (_tcslen(currprefs.romfile) > 5 && !_tcscmp(currprefs.romfile + _tcslen(currprefs.romfile) - 5, _T(":AROS")))) {
 		return load_kickstart_replacement();
 	}
 	_tcscpy(tmprom, currprefs.romfile);

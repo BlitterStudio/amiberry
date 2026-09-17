@@ -3877,7 +3877,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval (option, value, _T("sampler_buffer"), &p->sampler_buffer, 1)
 		|| cfgfile_intval(option, value, _T("warp_limit"), &p->turbo_emulation_limit, 1)
 		|| cfgfile_intval(option, value, _T("power_led_dim"), &p->power_led_dim, 1)
-		|| cfgfile_intval(option, value, _T("warpboot_delay"), &p->turbo_emulation_limit, 1)
+		|| cfgfile_intval(option, value, _T("warpboot_delay"), &p->turbo_boot_delay, 1)
 
 		|| cfgfile_intval(option, value, _T("gfx_frame_slices"), &p->gfx_display_sections, 1)
 		|| cfgfile_intval(option, value, _T("gfx_framerate"), &p->gfx_framerate, 1)

@@ -242,6 +242,7 @@ void custom_cpuchange(void);
 void custom_dumpstate(int);
 bool get_ras_cas(uaecptr, int*, int*);
 void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvbstrt);
+uaecptr copper_blitter_conflict(struct rgabuf *rga);
 
 #define CYCLE_PIPE_CPUFREE 0x4000
 #define CYCLE_PIPE_BLITTER 0x100
@@ -312,8 +313,7 @@ struct rgabuf {
 	uae_u32 mwmask;
 	int alloc;
 	bool write;
-	uae_u32 *conflict;
-	uaecptr conflictaddr;
+	uae_u32 *conflict, *conflict2;
 	uae_u32 bpldat, sprdat, bltdat, auddat, refdat, dskdat;
 	uae_s16 bplmod, bltmod, bltadd;
 };

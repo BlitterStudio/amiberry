@@ -3023,6 +3023,11 @@ static void Exception_mmu030 (int nr, uaecptr oldpc)
 		regs.intmask = nr - 24;
 	m68k_setpci (newpc);
 	fill_prefetch ();
+	// The exception has moved the PC and fill_prefetch() has reloaded the pipe
+	// for it. A stage B opcode captured before the exception belongs to the old
+	// instruction stream, but insretry prefers mmu030_opcode_stageb over
+	// regs.irc, so it would be dispatched at the vector's PC. Drop it.
+	mmu030_opcode_stageb = -1;
 	exception_check_trace (nr);
 }
 

@@ -1751,154 +1751,199 @@ static void picasso_handle_hsync()
 #define BLT_SIZE 4
 #define BLT_MULT 1
 #define BLT_NAME BLIT_FALSE_32
+#define BLT_NAME_TRANS BLIT_FALSE_TRANS_32
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_32
+#define BLT_NAME_TRANS BLIT_NOR_TRANS_32
 #define BLT_FUNC(s,d) *d = ~((*s) | (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_32
+#define BLT_NAME_TRANS BLIT_ONLYDST_TRANS_32
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_32
+#define BLT_NAME_TRANS BLIT_NOTSRC_TRANS_32
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_32
+#define BLT_NAME_TRANS BLIT_ONLYSRC_TRANS_32
 #define BLT_FUNC(s,d) *d = (*s) & ((~(*d)) & rgbmask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_32
+#define BLT_NAME_TRANS BLIT_NOTDST_TRANS_32
 #define BLT_FUNC(s,d) *d = (~(*d)) & rgbmask
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_32
+#define BLT_NAME_TRANS BLIT_EOR_TRANS_32
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_32
+#define BLT_NAME_TRANS BLIT_NAND_TRANS_32
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_32
+#define BLT_NAME_TRANS BLIT_AND_TRANS_32
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_32
+#define BLT_NAME_TRANS BLIT_NEOR_TRANS_32
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_32
+#define BLT_NAME_TRANS BLIT_NOTONLYSRC_TRANS_32
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_32
+#define BLT_NAME_TRANS BLIT_NOTONLYDST_TRANS_32
 #define BLT_FUNC(s,d) *d = ((~(*d)) & rgbmask) | (*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_32
+#define BLT_NAME_TRANS BLIT_OR_TRANS_32
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_32
+#define BLT_NAME_TRANS BLIT_TRUE_TRANS_32
 #ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
 #endif
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_32
+#define BLT_NAME_TRANS BLIT_SWAP_TRANS_32
 #define BLT_FUNC(s,d) { uae_u16 tmp = *d ; *d = *s; *s = tmp; }
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
 #define BLT_SIZE 3
 #define BLT_MULT 1
 #define BLT_NAME BLIT_FALSE_24
+#define BLT_NAME_TRANS BLIT_FALSE_TRANS_24
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_24
+#define BLT_NAME_TRANS BLIT_NOR_TRANS_24
 #define BLT_FUNC(s,d) *d = ~((*s) | (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_24
+#define BLT_NAME_TRANS BLIT_ONLYDST_TRANS_24
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_24
+#define BLT_NAME_TRANS BLIT_NOTSRC_TRANS_24
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_24
+#define BLT_NAME_TRANS BLIT_ONLYSRC_TRANS_24
 #define BLT_FUNC(s,d) *d = (*s) & (~(*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_24
+#define BLT_NAME_TRANS BLIT_NOTDST_TRANS_24
 #define BLT_FUNC(s,d) *d = (~(*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_24
+#define BLT_NAME_TRANS BLIT_EOR_TRANS_24
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_24
+#define BLT_NAME_TRANS BLIT_NAND_TRANS_24
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_24
+#define BLT_NAME_TRANS BLIT_AND_TRANS_24
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_24
+#define BLT_NAME_TRANS BLIT_NEOR_TRANS_24
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_24
+#define BLT_NAME_TRANS BLIT_NOTONLYSRC_TRANS_24
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_24
+#define BLT_NAME_TRANS BLIT_NOTONLYDST_TRANS_24
 #define BLT_FUNC(s,d) *d = (~(*d)) | (*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_24
+#define BLT_NAME_TRANS BLIT_OR_TRANS_24
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_24
+#define BLT_NAME_TRANS BLIT_TRUE_TRANS_24
 #define BLT_FUNC(s,d) *d = 0xffffffff
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_24
+#define BLT_NAME_TRANS BLIT_SWAP_TRANS_24
 #define BLT_FUNC(s,d) { uae_u32 tmp = *d; *d = *s; *s = tmp; }
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
 #define BLT_SIZE 2
 #define BLT_MULT 2
 #define BLT_NAME BLIT_FALSE_16
+#define BLT_NAME_TRANS BLIT_FALSE_TRANS_16
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_16
+#define BLT_NAME_TRANS BLIT_NOR_TRANS_16
 #define BLT_FUNC(s,d) *d = ~((*s) | (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_16
+#define BLT_NAME_TRANS BLIT_ONLYDST_TRANS_16
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_16
+#define BLT_NAME_TRANS BLIT_NOTSRC_TRANS_16
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_16
+#define BLT_NAME_TRANS BLIT_ONLYSRC_TRANS_16
 #define BLT_FUNC(s,d) *d = (*s) & ((~(*d)) & rgbmask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_16
+#define BLT_NAME_TRANS BLIT_NOTDST_TRANS_16
 #define BLT_FUNC(s,d) *d = ((~(*d)) & rgbmask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_16
+#define BLT_NAME_TRANS BLIT_EOR_TRANS_16
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_16
+#define BLT_NAME_TRANS BLIT_NAND_TRANS_16
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_16
+#define BLT_NAME_TRANS BLIT_AND_TRANS_16
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_16
+#define BLT_NAME_TRANS BLIT_NEOR_TRANS_16
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_16
+#define BLT_NAME_TRANS BLIT_NOTONLYSRC_TRANS_16
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_16
+#define BLT_NAME_TRANS BLIT_NOTONLYDST_TRANS_16
 #define BLT_FUNC(s,d) *d = ((~(*d)) & rgbmask) | (*s)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_16
+#define BLT_NAME_TRANS BLIT_OR_TRANS_16
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_16
+#define BLT_NAME_TRANS BLIT_TRUE_TRANS_16
 #define BLT_FUNC(s,d) *d = 0xffff
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_16
+#define BLT_NAME_TRANS BLIT_SWAP_TRANS_16
 #define BLT_FUNC(s,d) { uae_u16 tmp = *d; *d = *s; *s = tmp; }
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
@@ -1906,94 +1951,209 @@ static void picasso_handle_hsync()
 #define BLT_MULT 4
 #define BLT_NAME BLIT_FALSE_8
 #define BLT_NAME_MASK BLIT_FALSE_MASK_8
+#define BLT_NAME_TRANS BLIT_FALSE_TRANS_8
 #define BLT_FUNC(s,d) *d = 0
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((0) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_8
 #define BLT_NAME_MASK BLIT_NOR_MASK_8
+#define BLT_NAME_TRANS BLIT_NOR_TRANS_8
 #define BLT_FUNC(s,d) *d = ~((*s) | (*d))
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~((*s) | (*d))) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_8
 #define BLT_NAME_MASK BLIT_ONLYDST_MASK_8
+#define BLT_NAME_TRANS BLIT_ONLYDST_TRANS_8
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | (((*d) & ~(*s)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_8
 #define BLT_NAME_MASK BLIT_NOTSRC_MASK_8
+#define BLT_NAME_TRANS BLIT_NOTSRC_TRANS_8
 #define BLT_FUNC(s,d) *d = ~(*s)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~(*s)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_8
 #define BLT_NAME_MASK BLIT_ONLYSRC_MASK_8
+#define BLT_NAME_TRANS BLIT_ONLYSRC_TRANS_8
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | (((*s) & ~(*d)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_8
 #define BLT_NAME_MASK BLIT_NOTDST_MASK_8
+#define BLT_NAME_TRANS BLIT_NOTDST_TRANS_8
 #define BLT_FUNC(s,d) *d = ~(*d)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~(*d)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_8
 #define BLT_NAME_MASK BLIT_EOR_MASK_8
+#define BLT_NAME_TRANS BLIT_EOR_TRANS_8
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | (((*s) ^ (*d)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_8
 #define BLT_NAME_MASK BLIT_NAND_MASK_8
+#define BLT_NAME_TRANS BLIT_NAND_TRANS_8
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~((*s) & (*d))) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_8
 #define BLT_NAME_MASK BLIT_AND_MASK_8
+#define BLT_NAME_TRANS BLIT_AND_TRANS_8
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | (((*s) & (*d)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_8
 #define BLT_NAME_MASK BLIT_NEOR_MASK_8
+#define BLT_NAME_TRANS BLIT_NEOR_TRANS_8
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~((*s) ^ (*d))) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_8
 #define BLT_NAME_MASK BLIT_NOTONLYSRC_MASK_8
+#define BLT_NAME_TRANS BLIT_NOTONLYSRC_TRANS_8
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~(*s) | (*d)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SRC_8
 #define BLT_NAME_MASK BLIT_SRC_MASK_8
+#define BLT_NAME_TRANS BLIT_SRC_TRANS_8
 #define BLT_FUNC(s,d) *d = *s
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((*s) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_8
 #define BLT_NAME_MASK BLIT_NOTONLYDST_MASK_8
+#define BLT_NAME_TRANS BLIT_NOTONLYDST_TRANS_8
 #define BLT_FUNC(s,d) *d = ~(*d) | (*s)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((~(*d) | (*s)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_8
 #define BLT_NAME_MASK BLIT_OR_MASK_8
+#define BLT_NAME_TRANS BLIT_OR_TRANS_8
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | (((*s) | (*d)) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_8
 #define BLT_NAME_MASK BLIT_TRUE_MASK_8
+#define BLT_NAME_TRANS BLIT_TRUE_TRANS_8
 #define BLT_FUNC(s,d) *d = 0xff
 #define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((0xff) & mask)
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_8
 #define BLT_NAME_MASK BLIT_SWAP_MASK_8
+#define BLT_NAME_TRANS BLIT_SWAP_TRANS_8
 #define BLT_FUNC(s,d) { uae_u8 tmp = *d; *d = *s; *s = tmp; }
 #define BLT_FUNC_MASK(s,d,mask) { uae_u8 tmp = *d; *d = ((*d) & ~mask) | ((*s) & mask); *s = ((*s) & ~mask) | ((tmp) & mask); }
-#include "p96_blit.cpp.in"
+#include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
 #define PARMS width, height, src, dst, ri->BytesPerRow, dstri->BytesPerRow, rgbmask
 #define PARMSM width, height, src, dst, ri->BytesPerRow, dstri->BytesPerRow, mask
+#define PARMST width, height, src, dst, ri->BytesPerRow, dstri->BytesPerRow, transparentcolor, rgbmask
 
 /*
 * Functions to perform an action on the frame-buffer
 */
-static void do_blitrect_frame_buffer (const struct RenderInfo *ri, const struct
+static void do_blitrect_frame_buffer_transparent(struct RenderInfo *ri, struct
+	RenderInfo *dstri, uae_u32 srcx, uae_u32 srcy,
+	uae_u32 dstx, uae_u32 dsty, uae_u32 width, uae_u32 height,
+	uae_u8 mask, uae_u32 transparentcolor, uae_u32 RGBFmt, BLIT_OPCODE opcode)
+{
+	uae_u8 Bpp = GetBytesPerPixel(RGBFmt);
+	uae_u32 total_width = width * Bpp;
+	uae_u32 rgbmask = rgbfmasks[RGBFmt];
+
+	uae_u8 *src = ri->Memory + srcx * Bpp + srcy * ri->BytesPerRow;
+	uae_u8 *dst = dstri->Memory + dstx * Bpp + dsty * dstri->BytesPerRow;
+
+	P96TRACE((_T("(%dx%d)=(%dx%d)=(%dx%d)=%d\n"), srcx, srcy, dstx, dsty, width, height, opcode));
+	if (Bpp == 1) {
+
+		switch (opcode)
+		{
+			case BLIT_FALSE: BLIT_FALSE_TRANS_8(PARMST); break;
+			case BLIT_NOR: BLIT_NOR_TRANS_8(PARMST); break;
+			case BLIT_ONLYDST: BLIT_ONLYDST_TRANS_8(PARMST); break;
+			case BLIT_NOTSRC: BLIT_NOTSRC_TRANS_8(PARMST); break;
+			case BLIT_ONLYSRC: BLIT_ONLYSRC_TRANS_8(PARMST); break;
+			case BLIT_NOTDST: BLIT_NOTDST_TRANS_8(PARMST); break;
+			case BLIT_EOR: BLIT_EOR_TRANS_8(PARMST); break;
+			case BLIT_NAND: BLIT_NAND_TRANS_8(PARMST); break;
+			case BLIT_AND: BLIT_AND_TRANS_8(PARMST); break;
+			case BLIT_NEOR: BLIT_NEOR_TRANS_8(PARMST); break;
+			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_8(PARMST); break;
+			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_8(PARMST); break;
+			case BLIT_OR: BLIT_OR_TRANS_8(PARMST); break;
+			case BLIT_TRUE: BLIT_TRUE_TRANS_8(PARMST); break;
+			case BLIT_SWAP: BLIT_SWAP_TRANS_8(PARMST); break;
+		}
+
+	} else if (Bpp == 4) {
+
+		switch (opcode)
+		{
+			case BLIT_FALSE: BLIT_FALSE_TRANS_32(PARMST); break;
+			case BLIT_NOR: BLIT_NOR_TRANS_32(PARMST); break;
+			case BLIT_ONLYDST: BLIT_ONLYDST_TRANS_32(PARMST); break;
+			case BLIT_NOTSRC: BLIT_NOTSRC_TRANS_32(PARMST); break;
+			case BLIT_ONLYSRC: BLIT_ONLYSRC_TRANS_32(PARMST); break;
+			case BLIT_NOTDST: BLIT_NOTDST_TRANS_32(PARMST); break;
+			case BLIT_EOR: BLIT_EOR_TRANS_32(PARMST); break;
+			case BLIT_NAND: BLIT_NAND_TRANS_32(PARMST); break;
+			case BLIT_AND: BLIT_AND_TRANS_32(PARMST); break;
+			case BLIT_NEOR: BLIT_NEOR_TRANS_32(PARMST); break;
+			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_32(PARMST); break;
+			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_32(PARMST); break;
+			case BLIT_OR: BLIT_OR_TRANS_32(PARMST); break;
+			case BLIT_TRUE: BLIT_TRUE_TRANS_32(PARMST); break;
+		}
+
+	} else if (Bpp == 3) {
+
+		transparentcolor &= 0xffffff;
+		switch (opcode)
+		{
+			case BLIT_FALSE: BLIT_FALSE_TRANS_24(PARMST); break;
+			case BLIT_NOR: BLIT_NOR_TRANS_24(PARMST); break;
+			case BLIT_ONLYDST: BLIT_ONLYDST_TRANS_24(PARMST); break;
+			case BLIT_NOTSRC: BLIT_NOTSRC_TRANS_24(PARMST); break;
+			case BLIT_ONLYSRC: BLIT_ONLYSRC_TRANS_24(PARMST); break;
+			case BLIT_NOTDST: BLIT_NOTDST_TRANS_24(PARMST); break;
+			case BLIT_EOR: BLIT_EOR_TRANS_24(PARMST); break;
+			case BLIT_NAND: BLIT_NAND_TRANS_24(PARMST); break;
+			case BLIT_AND: BLIT_AND_TRANS_24(PARMST); break;
+			case BLIT_NEOR: BLIT_NEOR_TRANS_24(PARMST); break;
+			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_24(PARMST); break;
+			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_24(PARMST); break;
+			case BLIT_OR: BLIT_OR_TRANS_24(PARMST); break;
+			case BLIT_TRUE: BLIT_TRUE_TRANS_24(PARMST); break;
+		}
+
+	} else if (Bpp == 2) {
+
+		switch (opcode)
+		{
+			case BLIT_FALSE: BLIT_FALSE_TRANS_16(PARMST); break;
+			case BLIT_NOR: BLIT_NOR_TRANS_16(PARMST); break;
+			case BLIT_ONLYDST: BLIT_ONLYDST_TRANS_16(PARMST); break;
+			case BLIT_NOTSRC: BLIT_NOTSRC_TRANS_16(PARMST); break;
+			case BLIT_ONLYSRC: BLIT_ONLYSRC_TRANS_16(PARMST); break;
+			case BLIT_NOTDST: BLIT_NOTDST_TRANS_16(PARMST); break;
+			case BLIT_EOR: BLIT_EOR_TRANS_16(PARMST); break;
+			case BLIT_NAND: BLIT_NAND_TRANS_16(PARMST); break;
+			case BLIT_AND: BLIT_AND_TRANS_16(PARMST); break;
+			case BLIT_NEOR: BLIT_NEOR_TRANS_16(PARMST); break;
+			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_16(PARMST); break;
+			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_16(PARMST); break;
+			case BLIT_OR: BLIT_OR_TRANS_16(PARMST); break;
+			case BLIT_TRUE: BLIT_TRUE_TRANS_16(PARMST); break;
+		}
+
+	}
+}
+
+static void do_blitrect_frame_buffer (struct RenderInfo *ri, struct
 	RenderInfo *dstri, uae_u32 srcx, uae_u32 srcy,
 	uae_u32 dstx, uae_u32 dsty, uae_u32 width, uae_u32 height,
 	uae_u8 mask, uae_u32 RGBFmt, BLIT_OPCODE opcode)
@@ -2043,11 +2203,9 @@ static void do_blitrect_frame_buffer (const struct RenderInfo *ri, const struct
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memmove (dst, src, total_width);
 			} else if (dsty < srcy) {
-				// write_log("BlitRect Fallback 2: w=%d, h=%d\n", width, height);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memcpy (dst, src, total_width);
 			} else {
-				// write_log("BlitRect Fallback 3: w=%d, h=%d\n", width, height);
 				src += (height - 1) * ri->BytesPerRow;
 				dst += (height - 1) * dstri->BytesPerRow;
 				for (int i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
@@ -3175,9 +3333,9 @@ static int missmodes[] = {
 	640,  480,
 	640,  512,
 	800,  600,
-   1024,  768,
-   1280, 1024,
-   -1
+	1024,  768,
+	1280, 1024,
+	-1
 };
 
 static int AssignModeID (int w, int h, int *unkcnt)
@@ -4492,13 +4650,15 @@ struct blitdata
 	uae_u32 height;
 	uae_u8 mask;
 	uae_u8 RGBFmt;
+	uae_u32 transparentcolor;
+	bool transparent;
 	BLIT_OPCODE opcode;
 } blitrectdata;
 
 static int BlitRectHelper(TrapContext *ctx)
 {
 	struct RenderInfo *ri = blitrectdata.ri;
-	const struct RenderInfo *dstri = blitrectdata.dstri;
+	struct RenderInfo *dstri = blitrectdata.dstri;
 	const uae_u32 srcx = blitrectdata.srcx;
 	const uae_u32 srcy = blitrectdata.srcy;
 	const uae_u32 dstx = blitrectdata.dstx;
@@ -4508,6 +4668,8 @@ static int BlitRectHelper(TrapContext *ctx)
 	const uae_u8 RGBFmt = blitrectdata.RGBFmt;
 	const uae_u8 mask = blitrectdata.mask;
 	const BLIT_OPCODE opcode = blitrectdata.opcode;
+	bool transparent = blitrectdata.transparent;
+	uae_u32 transparentcolor = blitrectdata.transparentcolor;
 
 	if (!validatecoords(ctx, ri, RGBFmt, &srcx, &srcy, &width, &height))
 		return 1;
@@ -4531,13 +4693,19 @@ static int BlitRectHelper(TrapContext *ctx)
 #ifdef AMIBERRY
 	mark_dirty(rtg_index, dstri->Memory + dsty * dstri->BytesPerRow + dstx * GetBytesPerPixel(RGBFmt), height * dstri->BytesPerRow);
 #endif
-	do_blitrect_frame_buffer(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, RGBFmt, opcode);
+	if (transparent) {
+		do_blitrect_frame_buffer_transparent(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, transparentcolor, RGBFmt, opcode);
+	} else {
+		do_blitrect_frame_buffer(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, RGBFmt, opcode);
+	}
 	return 1;
 }
 
 static int BlitRect(TrapContext *ctx, uaecptr ri, uaecptr dstri,
 	uae_u32 srcx, uae_u32 srcy, uae_u32 dstx, uae_u32 dsty,
-	uae_u32 width, uae_u32 height, uae_u8 mask, uae_u8 RGBFmt, BLIT_OPCODE opcode)
+	uae_u32 width, uae_u32 height, uae_u8 mask,
+	bool transparent, uae_u32 transparentcolor,
+	uae_u8 RGBFmt, BLIT_OPCODE opcode)
 {
 	/* Set up the params */
 	CopyRenderInfoStructureA2U(ctx, ri, &blitrectdata.ri_struct);
@@ -4557,8 +4725,32 @@ static int BlitRect(TrapContext *ctx, uaecptr ri, uaecptr dstri,
 	blitrectdata.mask = mask;
 	blitrectdata.opcode = opcode;
 	blitrectdata.RGBFmt = RGBFmt;
+	blitrectdata.transparent = transparent;
+	blitrectdata.transparentcolor = transparentcolor;
 
 	return BlitRectHelper(ctx);
+}
+
+static uae_u32 REGPARAM2 picasso_BlitRectTransparent(TrapContext *ctx)
+{
+	uaecptr renderinfo = trap_get_areg(ctx, 0);
+	uaecptr srcri = trap_get_areg(ctx, 1);
+	uaecptr dstri = trap_get_areg(ctx, 2);
+	uae_u32 srcx = (uae_u16)trap_get_dreg(ctx, 0);
+	uae_u32 srcy = (uae_u16)trap_get_dreg(ctx, 1);
+	uae_u32 dstx = (uae_u16)trap_get_dreg(ctx, 2);
+	uae_u32 dsty = (uae_u16)trap_get_dreg(ctx, 3);
+	uae_u32 width = (uae_u16)trap_get_dreg(ctx, 4);
+	uae_u32 height = (uae_u16)trap_get_dreg(ctx, 5);
+	uae_u32 color = trap_get_dreg(ctx, 6);
+	uae_u8  RGBFmt = (uae_u8)trap_get_dreg(ctx, 7);
+	uae_u32 result = 0;
+
+	if (NOBLITTER_BLIT)
+		return 0;
+	P96TRACE((_T("BlitRectTransparent(%d, %d, %d, %d, %d, %d, 0x%08x, 0x%02x)\n"), srcx, srcy, dstx, dsty, width, height, color, RGBFmt));
+	result = BlitRect(ctx, renderinfo, (uaecptr)NULL, srcx, srcy, dstx, dsty, width, height, 0xff, true, color, RGBFmt, BLIT_SRC);
+	return result;
 }
 
 /***********************************************************
@@ -4590,8 +4782,8 @@ static uae_u32 REGPARAM2 picasso_BlitRect (TrapContext *ctx)
 
 	if (NOBLITTER_BLIT)
 		return 0;
-	P96TRACE((_T("BlitRect(%d, %d, %d, %d, %d, %d, 0x%02x)\n"), srcx, srcy, dstx, dsty, width, height, Mask));
-	result = BlitRect(ctx, renderinfo, 0, srcx, srcy, dstx, dsty, width, height, Mask, RGBFmt, BLIT_SRC);
+	P96TRACE((_T("BlitRect(%d, %d, %d, %d, %d, %d, 0x%02x, 0x%02x)\n"), srcx, srcy, dstx, dsty, width, height, Mask, RGBFmt));
+	result = BlitRect(ctx, renderinfo, (uaecptr)NULL, srcx, srcy, dstx, dsty, width, height, Mask, false, 0, RGBFmt, BLIT_SRC);
 	return result;
 }
 
@@ -4633,7 +4825,7 @@ static uae_u32 REGPARAM2 picasso_BlitRectNoMaskComplete (TrapContext *ctx)
 	P96TRACE((_T("BlitRectNoMaskComplete() op 0x%02x, %08x:(%4d,%4d) --> %08x:(%4d,%4d), wh(%4d,%4d)\n"),
 		OpCode, trap_get_long(ctx, srcri + PSSO_RenderInfo_Memory), srcx, srcy,
 		trap_get_long(ctx, dstri + PSSO_RenderInfo_Memory), dstx, dsty, width, height));
-	result = BlitRect(ctx, srcri, dstri, srcx, srcy, dstx, dsty, width, height, 0xFF, RGBFmt, OpCode);
+	result = BlitRect(ctx, srcri, dstri, srcx, srcy, dstx, dsty, width, height, 0xFF, false, 0, RGBFmt, OpCode);
 	return result;
 }
 
@@ -7517,7 +7709,7 @@ void uaegfx_install_code (uaecptr start)
 }
 
 #define UAEGFX_VERSION 3
-#define UAEGFX_REVISION 4
+#define UAEGFX_REVISION 5
 
 static uae_u32 REGPARAM2 gfx_open(TrapContext *ctx)
 {
@@ -7674,7 +7866,8 @@ uae_u32 picasso_demux (uae_u32 arg, TrapContext *ctx)
 	 case 36: return picasso_SetSprite (ctx);
 	 case 37: return picasso_SetSpritePosition (ctx);
 	 case 38: return picasso_SetSpriteImage (ctx);
-	 case 39: return picasso_SetSpriteColor (ctx);
+	 case 39: return picasso_SetSpriteColor(ctx);
+	 case 40: return picasso_BlitRectTransparent(ctx);
 	default: return 0;
 	}
 
