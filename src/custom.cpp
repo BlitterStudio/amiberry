@@ -322,6 +322,7 @@ static void clear_rga(struct rgabuf *r)
 	r->alloc = 0;
 	r->write = false;
 	r->conflict = NULL;
+	r->conflict2 = NULL;
 }
 static void shift_rga(void)
 {
