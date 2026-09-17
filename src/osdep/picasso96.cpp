@@ -1814,6 +1814,10 @@ static void picasso_handle_hsync()
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_32
 #define BLT_FUNC(s,d) { uae_u16 tmp = *d ; *d = *s; *s = tmp; }
 #include "../p96_blit.cpp.in"
+#define BLT_NAME BLIT_SRC_32
+#define BLT_NAME_TRANS BLIT_SRC_TRANS_32
+#define BLT_FUNC(s,d) *d = *s
+#include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
@@ -1879,6 +1883,10 @@ static void picasso_handle_hsync()
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_24
 #define BLT_FUNC(s,d) { uae_u32 tmp = *d; *d = *s; *s = tmp; }
 #include "../p96_blit.cpp.in"
+#define BLT_NAME BLIT_SRC_24
+#define BLT_NAME_TRANS BLIT_SRC_TRANS_24
+#define BLT_FUNC(s,d) *d = *s
+#include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
@@ -1943,6 +1951,10 @@ static void picasso_handle_hsync()
 #define BLT_NAME BLIT_SWAP_16
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_16
 #define BLT_FUNC(s,d) { uae_u16 tmp = *d; *d = *s; *s = tmp; }
+#include "../p96_blit.cpp.in"
+#define BLT_NAME BLIT_SRC_16
+#define BLT_NAME_TRANS BLIT_SRC_TRANS_16
+#define BLT_FUNC(s,d) *d = *s
 #include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
@@ -2063,6 +2075,7 @@ static void do_blitrect_frame_buffer_transparent(struct RenderInfo *ri, struct
 	uae_u8 Bpp = GetBytesPerPixel(RGBFmt);
 	uae_u32 total_width = width * Bpp;
 	uae_u32 rgbmask = rgbfmasks[RGBFmt];
+	endianswap(&transparentcolor, Bpp);
 
 	uae_u8 *src = ri->Memory + srcx * Bpp + srcy * ri->BytesPerRow;
 	uae_u8 *dst = dstri->Memory + dstx * Bpp + dsty * dstri->BytesPerRow;
@@ -2083,6 +2096,7 @@ static void do_blitrect_frame_buffer_transparent(struct RenderInfo *ri, struct
 			case BLIT_AND: BLIT_AND_TRANS_8(PARMST); break;
 			case BLIT_NEOR: BLIT_NEOR_TRANS_8(PARMST); break;
 			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_8(PARMST); break;
+			case BLIT_SRC: BLIT_SRC_TRANS_8(PARMST); break;
 			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_8(PARMST); break;
 			case BLIT_OR: BLIT_OR_TRANS_8(PARMST); break;
 			case BLIT_TRUE: BLIT_TRUE_TRANS_8(PARMST); break;
@@ -2104,6 +2118,7 @@ static void do_blitrect_frame_buffer_transparent(struct RenderInfo *ri, struct
 			case BLIT_AND: BLIT_AND_TRANS_32(PARMST); break;
 			case BLIT_NEOR: BLIT_NEOR_TRANS_32(PARMST); break;
 			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_32(PARMST); break;
+			case BLIT_SRC: BLIT_SRC_TRANS_32(PARMST); break;
 			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_32(PARMST); break;
 			case BLIT_OR: BLIT_OR_TRANS_32(PARMST); break;
 			case BLIT_TRUE: BLIT_TRUE_TRANS_32(PARMST); break;
@@ -2125,6 +2140,7 @@ static void do_blitrect_frame_buffer_transparent(struct RenderInfo *ri, struct
 			case BLIT_AND: BLIT_AND_TRANS_24(PARMST); break;
 			case BLIT_NEOR: BLIT_NEOR_TRANS_24(PARMST); break;
 			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_24(PARMST); break;
+			case BLIT_SRC: BLIT_SRC_TRANS_24(PARMST); break;
 			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_24(PARMST); break;
 			case BLIT_OR: BLIT_OR_TRANS_24(PARMST); break;
 			case BLIT_TRUE: BLIT_TRUE_TRANS_24(PARMST); break;
@@ -2145,6 +2161,7 @@ static void do_blitrect_frame_buffer_transparent(struct RenderInfo *ri, struct
 			case BLIT_AND: BLIT_AND_TRANS_16(PARMST); break;
 			case BLIT_NEOR: BLIT_NEOR_TRANS_16(PARMST); break;
 			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_TRANS_16(PARMST); break;
+			case BLIT_SRC: BLIT_SRC_TRANS_16(PARMST); break;
 			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_TRANS_16(PARMST); break;
 			case BLIT_OR: BLIT_OR_TRANS_16(PARMST); break;
 			case BLIT_TRUE: BLIT_TRUE_TRANS_16(PARMST); break;
