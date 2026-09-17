@@ -2170,7 +2170,7 @@ void blitter_check_start (void)
 			blitter_doit();
 		}
 	}
-	if (blt_info.blit_stuck < 0) {
+	if (blt_info.blit_stuck) {
 		blitter_doit();
 	}
 }
