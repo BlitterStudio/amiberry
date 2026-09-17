@@ -4750,9 +4750,7 @@ static int BlitRect(TrapContext *ctx, uaecptr ri, uaecptr dstri,
 
 static uae_u32 REGPARAM2 picasso_BlitRectTransparent(TrapContext *ctx)
 {
-	uaecptr renderinfo = trap_get_areg(ctx, 0);
-	uaecptr srcri = trap_get_areg(ctx, 1);
-	uaecptr dstri = trap_get_areg(ctx, 2);
+	uaecptr renderinfo = trap_get_areg(ctx, 1);
 	uae_u32 srcx = (uae_u16)trap_get_dreg(ctx, 0);
 	uae_u32 srcy = (uae_u16)trap_get_dreg(ctx, 1);
 	uae_u32 dstx = (uae_u16)trap_get_dreg(ctx, 2);
@@ -7582,6 +7580,7 @@ static void inituaegfxfuncs(TrapContext *ctx, uaecptr start, uaecptr ABI)
 	RTGCALL(PSSO_BoardInfo_BlitTemplate, PSSO_BoardInfo_BlitTemplateDefault, picasso_BlitTemplate);
 	RTGCALL(PSSO_BoardInfo_InvertRect, PSSO_BoardInfo_InvertRectDefault, picasso_InvertRect);
 	RTGCALL(PSSO_BoardInfo_BlitRectNoMaskComplete, PSSO_BoardInfo_BlitRectNoMaskCompleteDefault, picasso_BlitRectNoMaskComplete);
+	RTGCALL(PSSO_BoardInfo_BlitRectTransparent, PSSO_BoardInfo_BlitRectTransparentDefault, picasso_BlitRectTransparent);
 	RTGCALL(PSSO_BoardInfo_BlitPattern, PSSO_BoardInfo_BlitPatternDefault, picasso_BlitPattern);
 
 	RTGCALL2(PSSO_BoardInfo_SetSwitch, picasso_SetSwitch);
