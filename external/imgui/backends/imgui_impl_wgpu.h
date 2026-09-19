@@ -17,8 +17,8 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
-//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [X] Renderer: Texture updates support for dynamic font system (ImGuiBackendFlags_RendererHasTextures).
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplWGPU_GetRenderState().
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -81,6 +81,7 @@ struct ImGui_ImplWGPU_RenderState
     WGPUDevice                  Device;
     WGPURenderPassEncoder       RenderPassEncoder;
 };
+IMGUI_IMPL_API ImGui_ImplWGPU_RenderState* ImGui_ImplWGPU_GetRenderState();
 
 //-------------------------------------------------------------------------
 // Internal Helpers
@@ -95,10 +96,9 @@ bool        ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextur
 void        ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter);
 const char* ImGui_ImplWGPU_GetBackendTypeName(WGPUBackendType type);
 const char* ImGui_ImplWGPU_GetAdapterTypeName(WGPUAdapterType type);
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type);
 const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type);
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level);
 #endif
 

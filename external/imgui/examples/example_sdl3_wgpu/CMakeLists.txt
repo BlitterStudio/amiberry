@@ -29,7 +29,7 @@
 #  5. emrun build/index.html
 
 cmake_minimum_required(VERSION 3.22) # Dawn requires CMake >= 3.22
-project(imgui_example_sdl3_wgpu C CXX)
+project(example_sdl3_wgpu C CXX)
 
 set(IMGUI_EXECUTABLE example_sdl3_wgpu)
 
@@ -162,7 +162,7 @@ else() # Native/Desktop build
             endif()
             list(APPEND WGVK_PLATFORM_LIBS m dl pthread)
         endif()
-        set(LIBRARIES glfw Vulkan::Vulkan ${WGVK_PLATFORM_LIBS})
+        set(LIBRARIES Vulkan::Vulkan ${WGVK_PLATFORM_LIBS})
     endif()
 endif()
 

@@ -51,5 +51,6 @@ struct ImGui_ImplSDLRenderer2_RenderState
 {
     SDL_Renderer*       Renderer;
 };
+IMGUI_IMPL_API ImGui_ImplSDLRenderer2_RenderState* ImGui_ImplSDLRenderer2_GetRenderState();
 
 #endif // #ifndef IMGUI_DISABLE
