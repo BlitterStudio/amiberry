@@ -60,6 +60,9 @@ struct AmiberryAutoCropScanState {
 	// The last perimeter-detected border, kept so an interlaced scan can still
 	// recognize the generation the other field was drawn with.
 	AmiberryAutoCropBorderColors previous_border{};
+	// Sampled colors of the outside regions at the last observation; the
+	// between-scan trigger fires only when a sampled pixel changed.
+	std::vector<uint32_t> outside_signature;
 };
 
 static inline bool amiberry_auto_crop_border_state_changed(
@@ -308,6 +311,64 @@ static inline void amiberry_auto_crop_get_outside_regions(
 	regions[1] = { 0, crop.y, crop.x, crop.h };
 	regions[2] = { right, crop.y, buffer.width - right, crop.h };
 	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
+}
+
+// Detects whether the outside regions changed since the last observation by
+// comparing a color-agnostic signature sampled on the two-pass grid (every
+// row reads every 4th column, every column reads every 4th row; any
+// component of at least 16 pixels is hit — it is either >= 4 wide, so the
+// row pass reads one of any 4 consecutive columns, or narrower and therefore
+// >= 6 tall, so the column pass reads all of its columns). The comparison
+// carries no color semantics: any sampled pixel that differs from the last
+// observation is exactly the condition under which the expansion's outcome
+// could differ, while stable sub-threshold specks the last scan already
+// rejected keep matching the signature and stay silent. The signature is
+// refreshed on every call, so the triggering frame re-baselines itself.
+static inline bool amiberry_auto_crop_outside_regions_changed(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
+	std::vector<uint32_t>& signature)
+{
+	if (!amiberry_auto_crop_buffer_valid(buffer)) {
+		return true;
+	}
+	// Compare and update in place: the stable path performs no allocation
+	// and no writes, and a differing sample only rewrites its own slot.
+	size_t index = 0;
+	bool changed = false;
+	const bool first_observation = signature.empty();
+	auto visit = [&](const uint32_t rgb) {
+		if (index < signature.size()) {
+			if (signature[index] != rgb) {
+				changed = true;
+				signature[index] = rgb;
+			}
+		} else {
+			signature.push_back(rgb);
+		}
+		index++;
+	};
+	AmiberryAutoCropRect regions[4];
+	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
+	for (const auto& region : regions) {
+		const int right = amiberry_auto_crop_rect_right(region);
+		const int bottom = amiberry_auto_crop_rect_bottom(region);
+		for (int y = region.y; y < bottom; y++) {
+			for (int x = region.x; x < right; x += 4) {
+				visit(amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
+			}
+		}
+		for (int x = region.x; x < right; x++) {
+			for (int y = region.y; y < bottom; y += 4) {
+				visit(amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
+			}
+		}
+	}
+	if (signature.size() != index) {
+		// The sampled area itself changed (surface or rect geometry).
+		signature.resize(index);
+		changed = true;
+	}
+	return changed && !first_observation;
 }
 
 // Woven is a template parameter so the far more common single-color border

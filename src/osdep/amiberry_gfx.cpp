@@ -129,6 +129,11 @@ constexpr int auto_crop_wide_aspect_h = 9;
 constexpr int auto_crop_shrink_stable_frames = 6;
 constexpr int auto_crop_min_outside_pixels = 16;
 constexpr int auto_crop_horizontal_jitter_tolerance = 2;
+// Content-scan duty cycle for auto-crop. The DIW/DDF register window is the
+// crop base; the scan only expands beyond it for border effects, so it runs
+// when the base changes or every Nth frame. Odd so that successive periodic
+// scans on interlaced content alternate field parity.
+constexpr int auto_crop_scan_interval = 25;
 
 struct AutoCropVisibleState {
 	const SDL_Surface* surface = nullptr;
@@ -2195,6 +2200,7 @@ void auto_crop_image()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 	static bool last_autocrop;
+	static unsigned scan_count;
 
 	if (currprefs.gfx_auto_crop)
 	{
@@ -2258,32 +2264,88 @@ void auto_crop_image()
 			crop_rect = { mapped.x, mapped.y, mapped.w, mapped.h };
 			clamp_auto_crop_rect(surface, crop_rect);
 		} else {
-			const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
-			int sprite_zero_left = 0;
-			int sprite_zero_right = 0;
-			const int sprite_zero_edges = get_autoscale_sprite_zero_horizontal_edges(
-				&sprite_zero_left, &sprite_zero_right);
-			const AmiberryAutoCropHorizontalEvidence sprite_zero = {
-				sprite_zero_left,
-				sprite_zero_right,
-				(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
-				(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0
-			};
-			clamp_auto_crop_rect(surface, crop_rect);
-			const SDL_Rect source_crop_rect = crop_rect;
-			// DIW/bitplane limits can exclude visible sprites or raster content.
-			// Preserve real pixels outside those limits without restoring the
-			// conservative minimum frame that keeps intentional black borders.
-			// Only a line-doubled interlaced buffer weaves two fields together.
-			const bool interlaced = interlace_seen > 0 && vres > VRES_NONDOUBLE;
-			expand_auto_crop_rect_to_visible_content(surface, crop_rect, interlaced,
-				scan_state);
-			preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
-				hres, vres, scan_state.border,
-				(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
-				(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
-				visible_state,
-				force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
+			// The DIW/DDF register window from get_custom_limits() is the
+			// deterministic crop base; the register union already tracks sprite
+			// extents. The content scan's only remaining job is to expand beyond
+			// that base for visible pixels OUTSIDE the display window (raster or
+			// copper border effects the register union cannot see), so it runs on
+			// a duty cycle: immediately when the base or source buffer changes,
+			// and every auto_crop_scan_interval-th frame otherwise. Between
+			// scans the last scan's rect is reused, eliminating the per-frame
+			// pixel walk. The outside regions are sampled on a two-pass grid
+			// (every row at every 4th column, every column at every 4th row)
+			// and compared against a color-agnostic signature from the last
+			// observation; any sampled change triggers an immediate scan.
+			// Because the comparison carries no color semantics, stable
+			// sub-threshold specks the last scan rejected keep matching the
+			// signature and stay silent, and newly appearing content of any
+			// color — including enclosed background-colored components —
+			// triggers within one frame.
+			static SDL_Rect last_scan_rect = { 0, 0, 0, 0 };
+			static SDL_Rect last_scan_base = { 0, 0, 0, 0 };
+			static int last_scan_hres = -1, last_scan_vres = -1;
+			static SDL_Surface* last_scan_surface = nullptr;
+			static int last_scan_surface_w = 0, last_scan_surface_h = 0;
+			static unsigned scan_frame = 0;
+			scan_frame++;
+			const bool scan_context_matches = last_scan_surface == surface
+				&& last_scan_surface_w == surface_w && last_scan_surface_h == surface_h
+				&& last_scan_hres == hres && last_scan_vres == vres
+				&& last_scan_base.x == cx && last_scan_base.y == cy
+				&& last_scan_base.w == cw && last_scan_base.h == ch;
+			bool scan_due = !scan_context_matches
+				|| force_auto_crop
+				|| last_autocrop != currprefs.gfx_auto_crop
+				|| (scan_frame % auto_crop_scan_interval) == 0;
+			if (!scan_due && last_scan_rect.w > 0 && last_scan_rect.h > 0) {
+				AmiberryAutoCropPixelBuffer outside_buffer;
+				if (get_auto_crop_pixel_buffer(surface, outside_buffer)
+					&& !amiberry_auto_crop_outside_regions_changed(outside_buffer,
+						{ last_scan_rect.x, last_scan_rect.y,
+							last_scan_rect.w, last_scan_rect.h },
+						scan_state.outside_signature)) {
+					crop_rect = last_scan_rect;
+					clamp_auto_crop_rect(surface, crop_rect);
+				} else {
+					scan_due = true;
+				}
+			}
+			if (scan_due) {
+				const int sprite_horizontal_edges = get_autoscale_sprite_horizontal_edges();
+				int sprite_zero_left = 0;
+				int sprite_zero_right = 0;
+				const int sprite_zero_edges = get_autoscale_sprite_zero_horizontal_edges(
+					&sprite_zero_left, &sprite_zero_right);
+				const AmiberryAutoCropHorizontalEvidence sprite_zero = {
+					sprite_zero_left,
+					sprite_zero_right,
+					(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
+					(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0
+				};
+				clamp_auto_crop_rect(surface, crop_rect);
+				const SDL_Rect source_crop_rect = crop_rect;
+				// DIW/bitplane limits can exclude visible sprites or raster content.
+				// Preserve real pixels outside those limits without restoring the
+				// conservative minimum frame that keeps intentional black borders.
+				// Only a line-doubled interlaced buffer weaves two fields together.
+				const bool interlaced = interlace_seen > 0 && vres > VRES_NONDOUBLE;
+				expand_auto_crop_rect_to_visible_content(surface, crop_rect, interlaced,
+					scan_state);
+				preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
+					hres, vres, scan_state.border,
+					(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
+					(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
+					visible_state,
+					force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
+				last_scan_rect = crop_rect;
+				last_scan_base = { cx, cy, cw, ch };
+				last_scan_hres = hres;
+				last_scan_vres = vres;
+				last_scan_surface = surface;
+				last_scan_surface_w = surface_w;
+				last_scan_surface_h = surface_h;
+				scan_count++;
+			}
 		}
 		cx = crop_rect.x;
 		cy = crop_rect.y;
@@ -2423,7 +2485,8 @@ void auto_crop_image()
 		renderer->crop_aspect = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 0.0f;
 		renderer->crop_display_w = integer_width;
 		renderer->crop_display_h = integer_height;
-		write_log(_T("auto_crop: raw=%dx%d+%d+%d valid=%d provisional=%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+		write_log(_T("auto_crop: scans=%u raw=%dx%d+%d+%d valid=%d provisional=%d final=%dx%d+%d+%d render_res=%d/%d content_res=%d/%d content=%dx%d ntsc=%d (vblank=%.1fHz) => display %dx%d aspect=%.4f\n"),
+			scan_count,
 			raw_cw, raw_ch, raw_cx, raw_cy, raw_crop_valid, raw_crop_provisional,
 			cw, ch, cx, cy, hres, vres,
 			content_hres, content_vres, content_width, content_height,
