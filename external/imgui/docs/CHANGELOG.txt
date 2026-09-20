@@ -36,38 +36,162 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.9 WIP (In Progress)
+ VERSION 1.93.0 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
-- TreeNode: commented out legacy name `ImGuiTreeNodeFlags_SpanTextWidth` which
-  was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
-- ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in
-  of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
-- Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload`
-  which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
+- Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in
+  favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit. It is
+  easier to tweak + this allows us to easily scale error threshold on high density screens.
+  - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
+- ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
+  prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
+- Backends:
+  - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
+    obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support
+    for `ImGuiBackendFlags_RendererHasTextures`. Use the new signature! (#9487)
+
+Other Changes:
+
+- Drags, Sliders:
+  - Fixed an overflow using `ImGuiSliderFlags_Logarithmic` with S32/S64 types which
+    leads to clamped interactions. (#9526, #3361, #1823, #1316, #642) [@lailoken]
+  - Ongoing drags may be cancelled using Right-Click, Escape or Gamepad Triangle.
+    Cancelling reverts to the initial value. (#8564, #9534)
+- TreeNode:
+  - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
+    features or other features requiring stack storage. (#9509) [@lasrod]
+- TabBar:
+  - Improved scroll target when clicking a Tab that is larger than the scrolling
+    section width.
+  - Using <> scrolling buttons while the selected Tab is at either end of the
+    section mid-section but not fully visible always makes it fully visible
+    (before eventually selecting a Tab in the leading/trailing section)
+- Selectable:
+  - Fixed `ImGuiSelectableFlags_SelectOnNav` triggering during NavInit.
+- Fonts:
+  - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
+    to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
+    ProggyClean on most Apple/Retina setups by default.
+- ColorEdit:
+  - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
+    disabled color buttons have the same color as non-disabled oness. (#9511)
+  - ColorButton: fixed issues/inconsistencies with checkerboard rendering when combining
+    color alpha and global style alpha. (#9511) [@enjmiah, @ocornut]
+- Popups:
+  - Amended context menu right-click opening code to check that the right-click
+    hasn't been owned by another items. This is more correct and also necessary
+    to avoid Drags/Sliders cancelling also triggering a cancel menu. (#8564, #9534)
+- ImGuiTextFilter:
+  - Added support for space ' ' as separator, which is more standard. (#2435, #30)
+  - Added support for quoted "xxx" blocks to e.g. match words sequences. (#2435)
+  - Fixed filtering when mixing "include" and "-exclude" keyword so that an "-exclude"
+    match always filters out. (#2435) [@kudaba, @ocornut]
+  - Added `DrawWithHint()` function. (#6206, #6395, #6447)
+  - Added a "incl -excl" hint by default when the search field is empty. (#6206, #6395, #6447)
+- Style:
+  - Inverted `ImGuiCol_TitleBgXXX` colors for `StyleColorsLight()` so that the selected
+    window title bar appears brighter.
+- Misc:
+  - Added `ImGuiItemFlags_MixedValue` flag for representing mixed/indeterminate values.
+    Supported by: Checkbox(), RadioButton(), DragXXX(), SliderXXX(), InputXXX(), ColorXXX()
+    and Combo() functions.
+    The scoped flag is designed for usage by advanced property editors. (#5518, #5677, #6865)
+  - Fixed `GetBackgroundDrawList()`/`GetForegroundDrawList()` not being properly reset
+    every frame when cumulated session time is very large (e.g. a few days). [@lailoken]
+  - Added `IM_NODEBUGSTEP` helper to tag functions with `__declspec(non_user_code)` (MSVC)
+    or `[[gnu::artificial]]` (Clang/GCC) in order to provide a hint to debuggers to skip
+    trivial functions when stepping into.
+  - Tagged various trivial functions using `IM_NODEBUGSTEP`: `ImVec2()`, `ImVec4()` etc.
+    and various operators.
+  - IO: restore default clipboard/ime/shell platform handlers on ClearPlatformHandlers(), fixing
+    issues switching backends mid-session to one relying on default. (#9537, #8945, #2769) [@lstalmir]
+- DrawList:
+  - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
+    - AA Fringe is scaled accordingly.
+    - Circle and Curves tessellation error are scaled accordingly.
+  - Reworked assert in PushTexture() to allow convenience grace period of using a
+    texture that was queue for destroy during the frame. Make it safe to stick to
+    an existing texture during the frame. (#9528, #8465)
+  - Added optional `platform_io.DrawCallback_SetSamplerFromTex` standard backend-agnostic
+    draw callback for requesting to use the sampler associated already associated to a texture.
+    Currently only supported by the OpenGL2/3 and SDLRenderer3 backend. (#9378)
+- Demo:
+  - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
+  - Style Editor: fixed style/colors combo box applying style when opening Combo.
+- Backends:
+  - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+  - OpenGL2, OpenGL3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw
+    callback to request using the sampler associated already associated to a texture. (#9378)
+  - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
+    in the glTexParameter() path. (#9378)
+  - SDL2: fixed querying framebuffer scale/density when using Metal without
+    going through a SDL_Renderer. (#5592) [@lailoken]
+  - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)
+  - SDLRenderer3: expose CurrentScaleMode in ImGui_ImplSDLRenderer3_RenderState. (#9543, #9378) [@Clownacy]
+  - SDLRenderer3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw callback to request
+    using the sampler associated already associated to a texture via `SDL_SetTextureScaleMode()`. (#9378)
+    It is equivalent to setting `render_state->CurrentScaleMode = SDL_SCALEMODE_INVALID`.
+    Note: this  callback is only supported by selected rendering backends: most other graphics API
+    don't have the equivalent of `SDL_SetTextureScaleMode()` and the callback won't work with them.
+  - Vulkan: added for support for multiple Vulkan contexts with custom loaders. (#6616) [@lstalmir]
+  - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
+    when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
+  - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
+- Examples:
+  - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
+  - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
+  - SDL2+Metal: create Metal context without using a `SDL_Renderer`.
+  - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
+  - OSX+OpenGL3: added example_apple_opengl3/ (OSX/Cocoa + OpenGL 3.2 Core profile).
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.9b (Released 2026-07-31)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.9b
+
+Changes:
+
+- DragXXX, SliderXXX: fixed a regression in 1.92.9 where clicking a previously
+  Ctrl+Clicked field would flick it to text edit mode for a frame. (#9476, #701)
+- Tables:
+  - Fixed Y2 position of lower horizontal border (ImGuiTableFlags_BordersOuterH)
+    being off by one pixel when vertical ones are not also enabled. [@thedmd]
+  - Fixed X position of angled borders being off by half a pixel. [@thedmd]
+- ImDrawData: fixed a regression in 1.92.9 where legacy `ImDrawData::CmdListsCount` was always 0.
+  Prefer using `ImDrawData::CmdList.Size` anyway.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.9 (Released 2026-07-25)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.9
+
+Breaking Changes:
+
 - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now
   defaulting to being disabled: inputting a value with the keyboard doesn't write
   intermediate values to the backing variable. (#9476)
     Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
     After:  DragFloat() with user typing "123" --> write back 123 when validated/unfocused.
   You can enable the flag back for a given scope if needed by specific widget/behavior.
+  Read below for details.
+- TreeNode: commented out legacy name `ImGuiTreeNodeFlags_SpanTextWidth` which
+  was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
+- ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor
+  of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
+- Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload`
+  which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
 - ImDrawData: marked `CmdListsCount` as obsolete (technically was obsoleted in 1.89.8).
     Before: `draw_data->CmdListsCount`, After: `draw_data->CmdLists.Size`.
 
 Other Changes:
 
-- Windows:
-  - Clicking on a window's empty-space to move/focus a window checks
-    for lack of mouse button ownership. This gives an additional opportunity
-    for user code to bypass it without using a clickable item. (#9382)
-  - Clicking on a window's empty-space to move/focus a window checks
-    for lack of queued focus request. (#9382)
-  - Fixed double-click collapse toggle not owning the mouse button. If a
-    `SetNextWindowPos()` with pivot was queued in the same frame, the second
-    click could trigger another item in the same window. (#9439) [@Cleroth]
-- Added `ImGuiItemFlags_LiveEditOnInputText` and `ImGuiItemFlags_LiveEditOnInputScalar`
+- LiveEdit on/off: added `ImGuiItemFlags_LiveEditOnInputText` and `ImGuiItemFlags_LiveEditOnInputScalar`
   flags to configure the timing of applying edits of backing variables when typing
   values using a keyboard.
   (#9476, #701, #3936, #3946, #5904, #6284, #8149, #8065, #8665, #9117, #9299, #700, #1351,
@@ -106,10 +230,22 @@ Other Changes:
   - We intentionally are not adding `io.ConfigLiveEditXXX` fields to dictate the
     default value of each `ImGuiItemFlags_LiveEditXXX`, because this is not expected
     to be a user preference but a programmer/widget preferences.
-    Also, we strive to make the toolkit consistent.
+    And we strive to make the toolkit consistent.
+- Windows:
+  - Clicking on a window's empty-space to move/focus a window checks
+    for lack of mouse button ownership. This gives an additional opportunity
+    for user code to bypass it without using a clickable item. (#9382)
+  - Clicking on a window's empty-space to move/focus a window checks
+    for lack of queued focus request. (#9382)
+  - Fixed double-click collapse toggle not owning the mouse button. If a
+    `SetNextWindowPos()` with pivot was queued in the same frame, the second
+    click could trigger another item in the same window. (#9439) [@Cleroth]
+- Popups:
+  - Added bool return value to `OpenPopup()`, `OpenPopupOnItemClick()` functions
+    to notify when the popup was just opened. (#9429)
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
-    This is automatically scaled by `style.ScaleAllSizes()`.
+    It is automatically scaled by `style.ScaleAllSizes()`.
   - Reworked `io.ConfigInputTextEnterKeepActive` mode so that pressing
     Ctrl+Enter or Shift+Enter still allows to deactivate. (#9239)
 - Tables:
@@ -131,10 +267,10 @@ Other Changes:
   - Headers: fixed label being clipped early to reserve space for a sort marker
     even when no sort marker is displayed. Auto-fitting a column still accounts
     for the possible marker, so that sorting after an auto-fit doesn't clip the label.
-- Multi-Select
-  - Reworked ImGuiMultiSelectFlags_NoAutoSelect as it carried side-effects that
+- Multi-Select:
+  - Reworked `ImGuiMultiSelectFlags_NoAutoSelect` as it carried side-effects that
     were hardcoded/designed to use multi-selection on checkboxes. (#9391)
-    Specifically removed those undocumented behaviors from _NoAutoSelect:
+    Specifically removed those undocumented behaviors from `_NoAutoSelect`:
     - Clicking a selected/checked item always unselect/uncheck.
     - Shift+Click inverts targets value and copy to range.
     - Shift+Keyboard copy selection source value to range.
@@ -143,27 +279,27 @@ Other Changes:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
   - Tweak `CalcTextSize()` awkward width rounding/ceiling code to reduce floating-point
-    imprecisions altering the result by 1 even at relatively small width. (#791)
-  - Better document the fact that ImFontAtlas::Clear()/ClearFonts() functions are
+    precision issues altering the result by 1 even at relatively small width. (#791)
+  - Better document the fact that `ImFontAtlas::Clear()`/`ClearFonts()` functions are
     unlikely to be useful nowadays. Better recover to an edge case of mistakenly
-    calling ClearFonts() during rendering.
+    calling `ClearFonts()` during rendering.
   - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
-    incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
-  - Destroying an ImGui context using a ImFontAtlas checks that the later has no references.
+    incorrectly destroy it in `DestroyContext()` when ref-count gets back to zero. (#9426)
+  - Destroying an ImGui context using a `ImFontAtlas` checks that the later has no references.
 - Nav:
   - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
 - TreeNode:
   - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
 - Inputs:
-  - Added GetItemClickedCountWithSingleClickDelay() helper for easy disambiguation
+  - Added `GetItemClickedCountWithSingleClickDelay()` helper for easy disambiguation
     between single-click and double-click for actions that needs single-click to do
     something other than selection. (#8337)
     - Returns 1 on single-click but delayed by io.MouseSingleClickDelay.
-    - Returns 2 on double-click, and 2+ on subsequent repeated cicks.
-  - Added io.MouseSingleClickDelay to configure default delayed single click delay when
-    using GetItemClickedCountWithSingleClickDelay() or IsMouseReleasedWithDelay(). (#8337)
-    Note that io.MouseSingleClickDelay is always > io.MouseDoubleClickTime.
+    - Returns 2 on double-click, and 2+ on subsequent repeated clicks.
+  - Added `io.MouseSingleClickDelay` to configure default delayed single click delay when
+    using `GetItemClickedCountWithSingleClickDelay()` or `IsMouseReleasedWithDelay()`. (#8337)
+    Note that `io.MouseSingleClickDelay` is always `> io.MouseDoubleClickTime`.
 - ColorEdit:
   - Added `io.ConfigColorEditFlags` to read/modify current color edit/picker settings.
   - ColorPicker: added `ImGuiColorEditFlags_PickerNoRotate` to disable rotation of the
@@ -179,13 +315,13 @@ Other Changes:
 - Settings:
   - Windows/Tables settings entries can now record the last used date in YYYYMMDD format,
     allowing tools to run to e.g. delete entries that haven't been used in X months. (#9460)
-  - Added bool io.ConfigIniSettingsSaveLastUsedDate to disable saving that info. (#9460)
-  - Added int io.ConfigIniSettingsAutoDiscardMonths to enable a mode where unused settings
+  - Added `bool io.ConfigIniSettingsSaveLastUsedDate` to disable saving that info. (#9460)
+  - Added `int io.ConfigIniSettingsAutoDiscardMonths` to enable a mode where unused settings
     are automatically discard after xx months. (#9460)
   - Added a trimming tool under Metrics->Settings, along with a yet-unexposed function.
-  - The current system date is fed through ImGuiPlatformIO::Platform_SessionDate,
+  - The current system date is fed through `ImGuiPlatformIO::Platform_SessionDate`,
     which is automatically set by a call to time() done during context creation. (#9460)
-  - Added IMGUI_DISABLE_TIME_FUNCTIONS to disable setting platform_io.Platform_SessionDate.
+  - Added `IMGUI_DISABLE_TIME_FUNCTIONS` to disable setting platform_io.Platform_SessionDate.
     A custom backend may still set it manually. (#9460)
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
@@ -194,24 +330,24 @@ Other Changes:
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
-- Misc:
-  - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
+- Debug Tools:
+  - Added `IM_DEBUG_BREAK()` handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
   - Android:
-    - Clear mouse position on touch release (AMOTION_EVENT_ACTION_UP) to prevent
+    - Clear mouse position on touch release (`AMOTION_EVENT_ACTION_UP`) to prevent
       items from staying in hovered state. (#6627, #9474) [@Turtle-PB]
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
     - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
   - OpenGL2:
-    - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
+    - Backup and restore `GL_UNPACK_ROW_LENGTH` and `GL_UNPACK_ALIGNMENT` when updating texture
       to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
-    - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
-      dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
-    - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
+    - Expose selected render state in `ImGui_ImplOpenGL3_RenderState`, allowing to
+      dynamically select between use of `glBindSampler()` and `glTexParameter()`. (#9378)
+    - Backup and restore `GL_UNPACK_ROW_LENGTH` and `GL_UNPACK_ALIGNMENT` when updating texture
       to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
   - SDL2:
     - Restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard
@@ -1100,7 +1236,7 @@ Other Changes:
     not available. (#5924, #5562)
   - SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
   - Win32+DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
-  - Made examples's main.cpp consistent with returning 1 on error.
+  - Made examples' main.cpp consistent with returning 1 on error.
 
 
 -----------------------------------------------------------------------
