@@ -3506,7 +3506,9 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
  * group demotes or does not. */
 static bool jit_trap_demote_opcode(uae_u32 op)
 {
-    return jit_trap_demote_mnemo(table68k[get_opcode_cft_map(op)].mnemo);
+    /* op is already the true opcode (DO_GET_OPCODE mapped it once); a
+     * second get_opcode_cft_map() would index junk. See #2315. */
+    return jit_trap_demote_mnemo(table68k[op].mnemo);
 }
 #endif
 

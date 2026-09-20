@@ -62,6 +62,22 @@ if ! printf '%s\n' "$clean" | grep -q 'jit_trap_demote_mnemo('; then
 	echo "      restore the delegation; the demote policy lives in src/jit/jit_trap_policy.h" >&2
 	exit 1
 fi
+# Pin the index, not just the delegation. op arrives already mapped by
+# DO_GET_OPCODE(); mapping it again (the pre-#2342 form) classifies
+# table68k[bswap(op)] -- junk entries initialised to i_ILLG, so nearly
+# every trap opcode demotes and the narrowing in the header is dead code,
+# while every other check here stays green. Requiring the exact index
+# also catches a re-swap spelled any other way (uae_bswap_16, a macro).
+if printf '%s\n' "$clean" | grep -q 'get_opcode_cft_map'; then
+	echo "FAIL: $cpp: jit_trap_demote_opcode maps op a second time (get_opcode_cft_map)" >&2
+	echo "      op is already the true opcode; index table68k[op] directly (#2315)" >&2
+	exit 1
+fi
+if ! printf '%s\n' "$clean" | grep -q 'table68k[[]op[]]'; then
+	echo "FAIL: $cpp: jit_trap_demote_opcode does not classify table68k[op]" >&2
+	echo "      any other index misclassifies the opcode; see #2315" >&2
+	exit 1
+fi
 if printf '%s\n' "$clean" | grep -q 'i_[A-Za-z0-9]'; then
 	echo "FAIL: $cpp: jit_trap_demote_opcode carries inline opcode cases or mnemonic special-cases" >&2
 	echo "      move them into src/jit/jit_trap_policy.h so this test can assert them" >&2
