@@ -104,6 +104,7 @@ static int ffmpeg_audio_stream_index = -1;
 static AVRational ffmpeg_frame_rate = { 25, 1 };
 static uae_s64 ffmpeg_duration_frames;
 static uae_s64 ffmpeg_decoded_frame = -1;
+static uae_s64 ffmpeg_audio_discard_until_frame = -1;
 #ifdef USE_SDL3
 static SDL_AudioStream *ffmpeg_audio_stream;
 static bool ffmpeg_audio_sdl_initialized;
@@ -619,6 +620,30 @@ static uae_s64 ffmpeg_timestamp_from_frame(uae_s64 frame)
     return start_time + av_rescale_q(frame, ffmpeg_frame_time_base(), stream->time_base);
 }
 
+static bool ffmpeg_discard_audio_packet(const AVPacket *packet)
+{
+    if (ffmpeg_audio_discard_until_frame < 0 || !packet || !ffmpeg_format ||
+        ffmpeg_audio_stream_index < 0) {
+        return false;
+    }
+
+    const uae_s64 timestamp = packet->pts != AV_NOPTS_VALUE ? packet->pts : packet->dts;
+    if (timestamp == AV_NOPTS_VALUE) {
+        ffmpeg_audio_discard_until_frame = -1;
+        return false;
+    }
+
+    AVStream *stream = ffmpeg_format->streams[ffmpeg_audio_stream_index];
+    const uae_s64 start_time = stream->start_time == AV_NOPTS_VALUE ? 0 : stream->start_time;
+    if (av_compare_ts(timestamp - start_time, stream->time_base,
+        ffmpeg_audio_discard_until_frame, ffmpeg_frame_time_base()) < 0) {
+        return true;
+    }
+
+    ffmpeg_audio_discard_until_frame = -1;
+    return false;
+}
+
 static uae_s64 ffmpeg_current_frame(void)
 {
     if (video_paused > 0) {
@@ -971,6 +996,8 @@ static bool ffmpeg_seek_frame(uae_s64 frame)
     if (ffmpeg_audio_codec) {
         avcodec_flush_buffers(ffmpeg_audio_codec);
     }
+    ffmpeg_audio_discard_until_frame =
+        ffmpeg_audio_stream_index >= 0 && frame > 0 ? frame : -1;
     ffmpeg_decoded_frame = -1;
     loaded_frame = -1;
     ffmpeg_clear_audio();
@@ -1027,7 +1054,9 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
         if (ffmpeg_packet->stream_index == ffmpeg_video_stream_index) {
             got_frame = ffmpeg_decode_video_packet(ffmpeg_packet, target_frame);
         } else if (ffmpeg_packet->stream_index == ffmpeg_audio_stream_index) {
-            ffmpeg_decode_audio_packet(ffmpeg_packet);
+            if (!ffmpeg_discard_audio_packet(ffmpeg_packet)) {
+                ffmpeg_decode_audio_packet(ffmpeg_packet);
+            }
         }
         av_packet_unref(ffmpeg_packet);
         if (got_frame) {
@@ -1068,6 +1097,7 @@ static void uninit_ffmpeg_videograb(void)
     ffmpeg_audio_stream_index = -1;
     ffmpeg_duration_frames = 0;
     ffmpeg_decoded_frame = -1;
+    ffmpeg_audio_discard_until_frame = -1;
 }
 
 static bool init_ffmpeg_videograb(const TCHAR *filename)

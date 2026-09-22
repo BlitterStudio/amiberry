@@ -2304,6 +2304,27 @@ static uae_u8 noise_buffer[1024];
 static uae_u32 noise_seed, noise_add, noise_index;
 static bool genlock_error, genlock_blank;
 
+#ifdef VIDEOGRAB
+static void close_genlock_video(void)
+{
+	if (genlock_video)
+		uninitvideograb();
+	genlock_video = false;
+	genlock_video_file[0] = 0;
+}
+#endif
+
+void specialmonitor_update_genlock(void)
+{
+#ifdef VIDEOGRAB
+	const bool video_source = currprefs.genlock_image == 4 || currprefs.genlock_image == 5 || currprefs.genlock_image >= 6;
+	if (!video_source || !(currprefs.genlock || currprefs.genlock_effects)) {
+		close_genlock_video();
+		genlock_error = false;
+	}
+#endif
+}
+
 static uae_u32 quickrand(void)
 {
 	noise_seed = (noise_seed >> 1) ^ (0 - (noise_seed & 1) & 0xd0000001);
@@ -2565,8 +2586,7 @@ skip:
 	}
 #ifdef VIDEOGRAB
 	if (genlock_video && currprefs.genlock_image != 4 && currprefs.genlock_image != 5 && currprefs.genlock_image < 6) {
-		uninitvideograb();
-		genlock_video = false;
+		close_genlock_video();
 	}
 	isvideograb_status();
 #endif
@@ -3753,11 +3773,12 @@ bool emulate_specialmonitors(struct vidbuffer *src, struct vidbuffer *dst)
 
 void specialmonitor_reset(void)
 {
+#ifdef VIDEOGRAB
+	close_genlock_video();
+	genlock_error = false;
+#endif
 	if (!currprefs.monitoremu)
 		return;
-#ifdef VIDEOGRAB
-	uninitvideograb();
-#endif
 	specialmonitor_store_fmode(-1, -1, 0);
 	fc24_reset();
 }

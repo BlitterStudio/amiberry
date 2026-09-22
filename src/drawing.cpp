@@ -2262,6 +2262,7 @@ static void finish_drawing_frame(bool drawlines)
 	}
 
 	// genlock
+	specialmonitor_update_genlock();
 	if (currprefs.genlock_image && (currprefs.genlock || currprefs.genlock_effects) && !currprefs.monitoremu &&
 		vidinfo->tempbuffer.bufmem_allocated && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA) {
 		if (!denise_lock()) {
