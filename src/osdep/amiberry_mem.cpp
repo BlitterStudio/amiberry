@@ -197,6 +197,8 @@ size_t max_physmem;
 #define MAXZ3MEM64 0xF0000000
 
 static struct uae_shmid_ds shmids[MAX_SHMID];
+static size_t shm_allocsizes[MAX_SHMID];
+static void* shm_heapallocs[MAX_SHMID];
 uae_u8 *natmem_reserved, *natmem_offset;
 size_t natmem_reserved_size;
 static uae_u8 *p96mem_offset;
@@ -251,12 +253,84 @@ static uae_u32 lowmem ()
 
 static uae_u64 size64;
 
+static size_t page_round(size_t size)
+{
+	const size_t page_size = uae_vm_page_size();
+	return (size + page_size - 1) & ~(page_size - 1);
+}
+
+static size_t shmid_protect_size(int shmid)
+{
+	if (!shm_heapallocs[shmid])
+		return shmids[shmid].rosize;
+
+	const size_t protectsize = page_round(shmids[shmid].rosize);
+	return std::min(protectsize, shm_allocsizes[shmid]);
+}
+
+static void clear_shmid(int shmid)
+{
+	memset(&shmids[shmid], 0, sizeof shmids[shmid]);
+	shmids[shmid].key = -1;
+	shm_allocsizes[shmid] = 0;
+	shm_heapallocs[shmid] = nullptr;
+}
+
+static void unprotect_nondirect_shmid(int shmid)
+{
+	if (shmid < 0 || shmid >= MAX_SHMID || !shm_heapallocs[shmid])
+		return;
+
+	if (shmids[shmid].mode == PAGE_READONLY && shmids[shmid].attached && shmids[shmid].rosize) {
+		DWORD old;
+		VirtualProtect(shmids[shmid].attached, shmid_protect_size(shmid), PAGE_READWRITE, &old);
+	}
+}
+
+static bool release_nondirect_shmid(int shmid)
+{
+	if (shmid < 0 || shmid >= MAX_SHMID || !shm_heapallocs[shmid])
+		return false;
+
+	unprotect_nondirect_shmid(shmid);
+	xfree(shm_heapallocs[shmid]);
+	clear_shmid(shmid);
+	return true;
+}
+
+static int find_shmid_by_address(const void* address)
+{
+	for (int i = 0; i < MAX_SHMID; i++) {
+		if (shmids[i].key != -1 && shmids[i].attached == address)
+			return i;
+	}
+	return -1;
+}
+
+#ifndef _WIN32
+static void* alloc_page_aligned(size_t size, void** rawmem)
+{
+	const size_t page_size = uae_vm_page_size();
+	auto* raw = xcalloc(uae_u8, size);
+
+	if (!raw)
+		return nullptr;
+	if (reinterpret_cast<uintptr_t>(raw) & (page_size - 1)) {
+		xfree(raw);
+		return nullptr;
+	}
+
+	*rawmem = raw;
+	return raw;
+}
+#endif
+
 static void clear_shm ()
 {
 	shm_start = nullptr;
-	for (auto & shmid : shmids) {
-		memset (&shmid, 0, sizeof(struct uae_shmid_ds));
-		shmid.key = -1;
+	for (int i = 0; i < MAX_SHMID; i++) {
+		unprotect_nondirect_shmid(i);
+		clear_shmid(i);
 	}
 }
 
@@ -694,6 +768,8 @@ bool init_shm()
 void free_shm ()
 {
 	resetmem (true);
+	for (int i = 0; i < MAX_SHMID; i++)
+		release_nondirect_shmid(i);
 	clear_shm ();
 	for (int & i : ortgmem_type) {
 		i = -1;
@@ -708,6 +784,15 @@ void mapped_free (addrbank *ab)
 	ab->flags &= ~ABFLAG_MAPPED;
 	if (ab->baseaddr == nullptr)
 		return;
+
+	const int nondirect_shmid = find_shmid_by_address(ab->baseaddr);
+	if (release_nondirect_shmid(nondirect_shmid)) {
+		ab->baseaddr = nullptr;
+		ab->flags &= ~ABFLAG_DIRECTMAP;
+		ab->allocated_size = 0;
+		write_log(_T("mapped_free nondirect %s\n"), ab->name);
+		return;
+	}
 
 	if (ab->flags & ABFLAG_INDIRECT) {
 		while(x) {
@@ -777,11 +862,9 @@ static uae_key_t get_next_shmkey ()
 
 STATIC_INLINE uae_key_t find_shmkey (uae_key_t key)
 {
-	int result = -1;
-	if(shmids[key].key == key) {
-		result = key;
-	}
-	return result;
+	if (key >= 0 && key < MAX_SHMID && shmids[key].key == key)
+		return key;
+	return -1;
 }
 
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
@@ -1040,6 +1123,50 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	return got;
 }
 
+bool uae_mman_alloc_nodirect(addrbank* ab, uae_u32 size)
+{
+#ifdef _WIN32
+	(void)ab;
+	(void)size;
+	return false;
+#else
+	struct uae_mman_data md{};
+	if (!uae_mman_info(ab, &md) || !md.readonly)
+		return false;
+
+	const int shmid = get_next_shmkey();
+	if (shmid < 0)
+		return false;
+
+	const size_t requested = std::max<size_t>(md.size, size);
+	const size_t allocsize = page_round(requested);
+	void* rawmem = nullptr;
+	void* result = alloc_page_aligned(allocsize, &rawmem);
+	if (!result) {
+		write_log(_T("MMAN: failed to allocate %zu bytes for %s (%s)\n"),
+			allocsize, ab && ab->label ? ab->label : _T("?"),
+			ab && ab->name ? ab->name : _T("?"));
+		clear_shmid(shmid);
+		return false;
+	}
+
+	shmids[shmid].size = ab->reserved_size;
+	_tcscpy(shmids[shmid].name, ab->label ? ab->label : _T(""));
+	shmids[shmid].attached = result;
+	shmids[shmid].mode = PAGE_READONLY;
+	shmids[shmid].rosize = md.readonlysize;
+	shmids[shmid].maprom = md.maprom ? 1 : 0;
+	shmids[shmid].natmembase = nullptr;
+	shm_allocsizes[shmid] = allocsize;
+	shm_heapallocs[shmid] = rawmem;
+	ab->baseaddr = static_cast<uae_u8*>(result);
+	write_log(_T("MMAN: allocated %s %p-%p %zu (%zuk) readonly-capable\n"),
+		ab->label ? ab->label : _T("?"), result,
+		static_cast<uae_u8*>(result) + allocsize, allocsize, allocsize >> 10);
+	return true;
+#endif
+}
+
 void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md)
 {
 	void *result = reinterpret_cast<void*>(-1);
@@ -1118,9 +1245,8 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 
 void unprotect_maprom()
 {
-	bool protect = false;
-	for (auto & shmid : shmids) {
-		struct uae_shmid_ds *shm = &shmid;
+	for (int i = 0; i < MAX_SHMID; i++) {
+		struct uae_shmid_ds *shm = &shmids[i];
 		if (shm->mode != PAGE_READONLY)
 			continue;
 		if (!shm->attached || !shm->rosize)
@@ -1128,11 +1254,12 @@ void unprotect_maprom()
 		if (shm->maprom <= 0)
 			continue;
 		shm->maprom = -1;
+		const size_t protectsize = shmid_protect_size(i);
 		DWORD old;
-		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
-			write_log (_T("unprotect_maprom VP %08lX - %08lX %x (%dk) failed %d\n"),
-				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->size,
-				shm->size, shm->size >> 10, GetLastError ());
+		if (!VirtualProtect(shm->attached, protectsize, PAGE_READWRITE, &old)) {
+			write_log(_T("unprotect_maprom VP %p - %p %zx (%zuk) failed %d\n"),
+				shm->attached, static_cast<uae_u8*>(shm->attached) + protectsize,
+				protectsize, protectsize >> 10, GetLastError());
 		}
 	}
 }
@@ -1148,23 +1275,24 @@ void protect_roms(bool protect)
 			return;
 		}
 	}
-	for (auto & shmid : shmids) {
-		struct uae_shmid_ds *shm = &shmid;
+	for (int i = 0; i < MAX_SHMID; i++) {
+		struct uae_shmid_ds *shm = &shmids[i];
 		if (shm->mode != PAGE_READONLY)
 			continue;
 		if (!shm->attached || !shm->rosize)
 			continue;
 		if (shm->maprom < 0 && protect)
 			continue;
+		const size_t protectsize = shmid_protect_size(i);
 		DWORD old;
-		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
-			write_log (_T("protect_roms VP %08lX - %08lX %x (%dk) failed %d\n"),
-				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->rosize,
-				shm->rosize, shm->rosize >> 10, GetLastError ());
+		if (!VirtualProtect(shm->attached, protectsize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
+			write_log(_T("protect_roms VP %p - %p %zx (%zuk) failed %d\n"),
+				shm->attached, static_cast<uae_u8*>(shm->attached) + protectsize,
+				protectsize, protectsize >> 10, GetLastError());
 		} else {
-			write_log(_T("ROM VP %08lX - %08lX %x (%dk) %s\n"),
-				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->rosize,
-				shm->rosize, shm->rosize >> 10, protect ? _T("WPROT") : _T("UNPROT"));
+			write_log(_T("ROM VP %p - %p %zx (%zuk) %s\n"),
+				shm->attached, static_cast<uae_u8*>(shm->attached) + protectsize,
+				protectsize, protectsize >> 10, protect ? _T("WPROT") : _T("UNPROT"));
 		}
 	}
 }
@@ -1376,12 +1504,10 @@ int uae_shmctl (int shmid, int cmd, struct uae_shmid_ds *buf)
 			result = 0;
 			break;
 		case UAE_IPC_RMID:
-			VirtualFree (shmids[shmid].attached, shmids[shmid].size, MEM_DECOMMIT);
-			shmids[shmid].key = -1;
-			shmids[shmid].name[0] = '\0';
-			shmids[shmid].size = 0;
-			shmids[shmid].attached = nullptr;
-			shmids[shmid].mode = 0;
+			if (!release_nondirect_shmid(shmid)) {
+				VirtualFree (shmids[shmid].attached, shmids[shmid].size, MEM_DECOMMIT);
+				clear_shmid(shmid);
+			}
 			result = 0;
 			break;
 		default: /* Invalid command */
