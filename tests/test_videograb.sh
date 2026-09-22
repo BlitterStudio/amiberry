@@ -56,8 +56,14 @@ audio_discard = region_between(
 	"static bool ffmpeg_discard_audio_packet(",
 	"static uae_s64 ffmpeg_current_frame(",
 )
-if "av_compare_ts(timestamp - start_time" not in audio_discard:
-	fail("FFmpeg audio seek filtering must compare stream-relative timestamps")
+if "ffmpeg_timestamp_from_frame(ffmpeg_audio_discard_until_frame)" not in audio_discard:
+	fail("FFmpeg audio seek filtering must derive an absolute video-stream timestamp")
+if "av_compare_ts(timestamp, audio_stream->time_base" not in audio_discard:
+	fail("FFmpeg audio seek filtering must compare the absolute audio packet timestamp")
+if "discard_until_timestamp, video_stream->time_base" not in audio_discard:
+	fail("FFmpeg audio seek filtering must compare against the video stream timeline")
+if "timestamp - start_time" in audio_discard:
+	fail("FFmpeg audio seek filtering must not rebase packets to the audio stream start")
 
 video_decode = region_between(
 	videograb,

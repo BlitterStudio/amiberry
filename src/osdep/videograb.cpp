@@ -637,7 +637,7 @@ static uae_s64 ffmpeg_timestamp_from_frame(uae_s64 frame)
 static bool ffmpeg_discard_audio_packet(const AVPacket *packet)
 {
     if (ffmpeg_audio_discard_until_frame < 0 || !packet || !ffmpeg_format ||
-        ffmpeg_audio_stream_index < 0) {
+        ffmpeg_audio_stream_index < 0 || ffmpeg_video_stream_index < 0) {
         return false;
     }
 
@@ -647,10 +647,12 @@ static bool ffmpeg_discard_audio_packet(const AVPacket *packet)
         return false;
     }
 
-    AVStream *stream = ffmpeg_format->streams[ffmpeg_audio_stream_index];
-    const uae_s64 start_time = stream->start_time == AV_NOPTS_VALUE ? 0 : stream->start_time;
-    if (av_compare_ts(timestamp - start_time, stream->time_base,
-        ffmpeg_audio_discard_until_frame, ffmpeg_frame_time_base()) < 0) {
+    AVStream *audio_stream = ffmpeg_format->streams[ffmpeg_audio_stream_index];
+    AVStream *video_stream = ffmpeg_format->streams[ffmpeg_video_stream_index];
+    const uae_s64 discard_until_timestamp =
+        ffmpeg_timestamp_from_frame(ffmpeg_audio_discard_until_frame);
+    if (av_compare_ts(timestamp, audio_stream->time_base,
+        discard_until_timestamp, video_stream->time_base) < 0) {
         return true;
     }
 
