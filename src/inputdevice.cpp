@@ -578,6 +578,7 @@ static void copyjport (const struct uae_prefs *src, struct uae_prefs *dst, int n
 	dst->jports[num].submode = src->jports[num].submode;
 	dst->jports[num].autofire = src->jports[num].autofire;
 	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
+	dst->jports_default[num] = src->jports_default[num];
 #ifdef AMIBERRY
 	dst->jports[num].mousemap = src->jports[num].mousemap;
 #endif
@@ -8467,6 +8468,9 @@ void inputdevice_updateconfig_internal (struct uae_prefs *srcprefs, struct uae_p
 	keyboard_default = keyboard_default_table[currprefs.input_keyboard_type];
 
 	inputdevice_copyjports(srcprefs, dstprefs);
+	for (int i = 0; i < MAX_JPORTS; i++) {
+		default_keyboard_layout[i] = dstprefs->jports_default[i];
+	}
 	resetinput ();
 
 	joysticks = dstprefs->joystick_settings[dstprefs->input_selected_setting];

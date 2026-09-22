@@ -605,7 +605,8 @@ static uae_s64 ffmpeg_frame_from_pts(uae_s64 pts)
         return ffmpeg_decoded_frame + 1;
     }
     AVStream *stream = ffmpeg_format->streams[ffmpeg_video_stream_index];
-    return av_rescale_q(pts, stream->time_base, ffmpeg_frame_time_base());
+    const uae_s64 start_time = stream->start_time == AV_NOPTS_VALUE ? 0 : stream->start_time;
+    return av_rescale_q(pts - start_time, stream->time_base, ffmpeg_frame_time_base());
 }
 
 static uae_s64 ffmpeg_timestamp_from_frame(uae_s64 frame)
@@ -614,7 +615,8 @@ static uae_s64 ffmpeg_timestamp_from_frame(uae_s64 frame)
         return 0;
     }
     AVStream *stream = ffmpeg_format->streams[ffmpeg_video_stream_index];
-    return av_rescale_q(frame, ffmpeg_frame_time_base(), stream->time_base);
+    const uae_s64 start_time = stream->start_time == AV_NOPTS_VALUE ? 0 : stream->start_time;
+    return start_time + av_rescale_q(frame, ffmpeg_frame_time_base(), stream->time_base);
 }
 
 static uae_s64 ffmpeg_current_frame(void)
@@ -1322,6 +1324,13 @@ bool initvideograb(const TCHAR *filename)
             return false;
         } else {
             videograb_mode = VIDEOGRAB_AVI;
+        }
+    }
+
+    if (videograb_mode == VIDEOGRAB_FFMPEG) {
+        audio_volume = 100 - currprefs.sound_volume_genlock;
+        if (currprefs.genlock_image == 4) {
+            audio_chflags = 3;
         }
     }
 

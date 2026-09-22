@@ -311,14 +311,11 @@ static int find_shmid_by_address(const void* address)
 static void* alloc_page_aligned(size_t size, void** rawmem)
 {
 	const size_t page_size = uae_vm_page_size();
-	auto* raw = xcalloc(uae_u8, size);
+	void* raw = nullptr;
 
-	if (!raw)
+	if (posix_memalign(&raw, page_size, size) != 0)
 		return nullptr;
-	if (reinterpret_cast<uintptr_t>(raw) & (page_size - 1)) {
-		xfree(raw);
-		return nullptr;
-	}
+	memset(raw, 0, size);
 
 	*rawmem = raw;
 	return raw;

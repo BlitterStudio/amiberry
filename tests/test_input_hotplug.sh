@@ -128,6 +128,20 @@ if '_tcscmp(value, _T("none")) == 0' not in keyboard_default:
 	fail("joyportdefault must support disabling the controller-removal fallback")
 if "default_keyboard_layout[portnum] = p->jports_default[portnum];" not in keyboard_default:
 	fail("Parsed joyport defaults must update the runtime fallback state")
+copy_jport = region_between(
+	inputdevice,
+	"static void copyjport (",
+	"#define MAX_STORED_JPORTS",
+)
+if "dst->jports_default[num] = src->jports_default[num];" not in copy_jport:
+	fail("Copying active joyports must preserve their configured removal fallback")
+update_config = region_between(
+	inputdevice,
+	"void inputdevice_updateconfig_internal (",
+	"void inputdevice_updateconfig (",
+)
+if "default_keyboard_layout[i] = dstprefs->jports_default[i];" not in update_config:
+	fail("Activating preferences must replace every runtime keyboard fallback")
 port_config = region_between(
 	inputdevice,
 	"int inputdevice_joyport_config(",
