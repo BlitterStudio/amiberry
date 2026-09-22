@@ -999,6 +999,10 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
     for (;;) {
         int err = av_read_frame(ffmpeg_format, ffmpeg_packet);
         if (err == AVERROR_EOF) {
+            ffmpeg_decode_audio_packet(nullptr);
+            if (ffmpeg_decode_video_packet(nullptr, target_frame)) {
+                return true;
+            }
             if (looped) {
                 return !frame_buffer.empty();
             }
@@ -1501,6 +1505,6 @@ void isvideograb_status(void)
     if (currprefs.sound_volume_genlock != changed_prefs.sound_volume_genlock) {
         currprefs.sound_volume_genlock = changed_prefs.sound_volume_genlock;
         setvolumevideograb(100 - currprefs.sound_volume_genlock);
-        setchflagsvideograb(audio_chflags, false);
+        setchflagsvideograb(audio_chflags, audio_muted);
     }
 }

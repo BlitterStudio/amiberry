@@ -867,10 +867,16 @@ static void sony_serial_read(uae_u16 w)
 		break;
 	case 0x24: // Audio mute
 		ld_audio_mute = true;
+#ifdef VIDEOGRAB
+		setchflagsvideograb(ld_audio, ld_audio_mute);
+#endif
 		ack();
 		break;
 	case 0x25: // Audio mute off
 		ld_audio_mute = false;
+#ifdef VIDEOGRAB
+		setchflagsvideograb(ld_audio, ld_audio_mute);
+#endif
 		ack();
 		break;
 	case 0x26: // Video off
@@ -1073,7 +1079,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio |= 1;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-1 ON\n"));
@@ -1082,7 +1088,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio |= 2;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-2 ON\n"));
@@ -1091,7 +1097,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio &= ~1;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-1 OFF\n"));
@@ -1100,7 +1106,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio &= ~2;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-2 OFF\n"));
@@ -1205,7 +1211,7 @@ static void alg_vsync(void)
 #ifdef VIDEOGRAB
 		if (ld_address == 0 || getsetpositionvideograb(ld_address) > 0) {
 			ld_save_restore = false;
-			setchflagsvideograb(ld_audio, false);
+			setchflagsvideograb(ld_audio, ld_audio_mute);
 		}
 		if (ld_save_restore) {
 			return;
