@@ -244,6 +244,7 @@ public class HIDDeviceManager {
             0x0e6f, // PDP
             0x0f0d, // Hori
             0x1038, // SteelSeries
+            0x10f5, // Turtle Beach
             0x11c9, // Nacon
             0x12ab, // Unknown
             0x1430, // RedOctane

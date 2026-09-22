@@ -62,6 +62,8 @@ dch --create --package "$source_name" \
 	--distribution "$series" \
 	"$release_message"
 
+.github/scripts/prepare-launchpad-ppa-source.sh "$series"
+
 dpkg-buildpackage -S -d -us -uc
 
 shopt -s nullglob

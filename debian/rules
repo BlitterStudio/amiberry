@@ -1,12 +1,69 @@
 #!/usr/bin/make -f
 
+SDL_PREFIX := $(CURDIR)/debian/sdl-prefix
+SDL_BUILD_DIR := $(CURDIR)/debian/sdl-build
+SDL_IMAGE_BUILD_DIR := $(CURDIR)/debian/sdl-image-build
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 %:
 	dh $@ --buildsystem=cmake+ninja
 
+override_dh_auto_clean:
+	rm -rf "$(SDL_PREFIX)" "$(SDL_BUILD_DIR)" "$(SDL_IMAGE_BUILD_DIR)"
+	dh_auto_clean
+
 override_dh_auto_configure:
+ifneq ($(wildcard $(CURDIR)/debian/ppa-bundle-sdl),)
+	cmake -S debian/vendor/SDL -B "$(SDL_BUILD_DIR)" -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX="$(SDL_PREFIX)" \
+		-DCMAKE_INSTALL_LIBDIR=lib \
+		-DSDL_SHARED=ON \
+		-DSDL_STATIC=OFF \
+		-DSDL_TEST_LIBRARY=OFF \
+		-DSDL_TESTS=OFF \
+		-DSDL_INSTALL_TESTS=OFF \
+		-DSDL_EXAMPLES=OFF \
+		-DSDL_INSTALL_DOCS=OFF \
+		-DSDL_UNINSTALL=OFF
+	cmake --build "$(SDL_BUILD_DIR)" --parallel
+	cmake --install "$(SDL_BUILD_DIR)"
+	cmake -S debian/vendor/SDL_image -B "$(SDL_IMAGE_BUILD_DIR)" -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX="$(SDL_PREFIX)" \
+		-DCMAKE_INSTALL_LIBDIR=lib \
+		-DCMAKE_PREFIX_PATH="$(SDL_PREFIX)" \
+		-DBUILD_SHARED_LIBS=ON \
+		-DSDLIMAGE_SAMPLES=OFF \
+		-DSDLIMAGE_TESTS=OFF \
+		-DSDLIMAGE_INSTALL=ON \
+		-DSDLIMAGE_INSTALL_MAN=OFF
+	cmake --build "$(SDL_IMAGE_BUILD_DIR)" --parallel
+	cmake --install "$(SDL_IMAGE_BUILD_DIR)"
+	dh_auto_configure -- \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_PREFIX_PATH="$(SDL_PREFIX)" \
+		-DBUNDLE_SDL=ON
+else
 	dh_auto_configure -- \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=/usr
+endif
+
+override_dh_makeshlibs:
+ifneq ($(wildcard $(CURDIR)/debian/ppa-bundle-sdl),)
+	dh_makeshlibs -XlibSDL3.so -XlibSDL3_image.so
+else
+	dh_makeshlibs
+endif
+
+override_dh_shlibdeps:
+ifneq ($(wildcard $(CURDIR)/debian/ppa-bundle-sdl),)
+	dh_shlibdeps -l$(CURDIR)/debian/amiberry/usr/lib/$(DEB_HOST_MULTIARCH)/amiberry
+else
+	dh_shlibdeps
+endif
 
 override_dh_auto_test:
 	:

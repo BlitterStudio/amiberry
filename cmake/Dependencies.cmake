@@ -105,12 +105,12 @@ if(ANDROID)
     FetchContent_Declare(
         sdl3
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-        GIT_TAG        release-3.4.14
+        GIT_TAG        release-3.4.16
     )
     FetchContent_Declare(
         sdl3_image
         GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-        GIT_TAG        release-3.4.4
+        GIT_TAG        release-3.4.6
     )
     set(SDLIMAGE_AVIF OFF CACHE BOOL "Disable AVIF support in Android vendored SDL_image" FORCE)
     set(SDLIMAGE_PNG_LIBPNG OFF CACHE BOOL "Use SDL's PNG helpers instead of SDL_image's vendored libpng on Android" FORCE)
