@@ -630,6 +630,7 @@ jobs:
           version: 3.4.16
           version-sdl-image: 3.4.6
           pre-release: false
+          discriminator: ${{ matrix.container }}
 
       - name: Install SDL3 and SDL3_image from apt
         if: matrix.sdl_source == 'apt'
