@@ -48,6 +48,9 @@
 #include "scsi.h"
 #include "target.h"
 #include "macos_bookmarks.h"
+#ifdef USE_IMGUI
+#include "imgui/imgui_panels.h"
+#endif
 
 #ifdef AMIBERRY
 #if defined(__linux__)
@@ -731,12 +734,36 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 	}
 }
 
-bool gui_ask_disk(int drv, TCHAR *name)
+bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 {
-	_tcscpy(changed_prefs.floppyslots[drv].df, name);
-	disk_selection(drv, &changed_prefs);
-	_tcscpy(name, changed_prefs.floppyslots[drv].df);
+	if (drv < 0 || drv >= 4 || !name || name_len <= 0)
+		return false;
+
+#ifdef USE_IMGUI
+	static bool active;
+	if (active)
+		return false;
+
+	active = true;
+	FloppyRecoveryDialog_Open(drv, name);
+	gui_display(-1);
+
+	std::string selected_path;
+	const bool selected = FloppyRecoveryDialog_ConsumeResult(selected_path);
+	active = false;
+	if (!selected)
+		return false;
+
+	if (selected_path.length() >= static_cast<size_t>(name_len)) {
+		write_log(_T("Replacement disk path is too long.\n"));
+		return false;
+	}
+
+	_tcscpy(name, selected_path.c_str());
 	return true;
+#else
+	return false;
+#endif
 }
 
 static void prefs_to_gui()

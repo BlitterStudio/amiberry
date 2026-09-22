@@ -2966,6 +2966,10 @@ void run_gui()
 
 		ImGui::End();
 
+		// Runtime requests, such as replacing a missing floppy referenced by a
+		// restored state, must be rendered independently of the active panel.
+		FloppyRecoveryDialog_Render();
+
 		// Pop touch-scrolling hover suppression colors
 		if (touch_scrolling) {
 			ImGui::PopStyleColor(3);
