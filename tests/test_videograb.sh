@@ -20,6 +20,7 @@ videograb = Path("src/osdep/videograb.cpp").read_text()
 arcadia = Path("src/arcadia.cpp").read_text()
 drawing = Path("src/drawing.cpp").read_text()
 specialmonitors = Path("src/specialmonitors.cpp").read_text()
+sound = Path("src/sounddep/sound.cpp").read_text()
 
 
 def fail(message: str) -> None:
@@ -92,8 +93,40 @@ init_video = region_between(
 )
 if "audio_volume = 100 - currprefs.sound_volume_genlock;" not in init_video:
 	fail("FFmpeg playback must start at the configured genlock volume")
+if "audio_master_volume = 100 - currprefs.sound_volume_master;" not in init_video:
+	fail("FFmpeg playback must start at the configured master volume")
 if "audio_chflags = 3;" not in init_video:
 	fail("Ordinary FFmpeg video playback must enable both audio channels")
+if "ffmpeg_update_audio_gain();" not in init_video:
+	fail("FFmpeg playback must apply its initial audio gain to the SDL stream")
+
+audio_gain = region_between(
+	videograb,
+	"static float ffmpeg_audio_gain(",
+	"static void ffmpeg_update_audio_gain(",
+)
+if "audio_master_muted" not in audio_gain or "source_gain * master_gain" not in audio_gain:
+	fail("FFmpeg playback gain must combine master and genlock audio controls")
+
+audio_gain_update = region_between(
+	videograb,
+	"static void ffmpeg_update_audio_gain(",
+	"static bool fourcc_equals(",
+)
+if "SDL_SetAudioStreamGain(ffmpeg_audio_stream, ffmpeg_audio_gain())" not in audio_gain_update:
+	fail("FFmpeg gain changes must affect audio already queued in the SDL stream")
+
+set_volume = region_between(sound, "void set_volume(", "static void finish_sound_buffer_sdl_push(")
+if "setmastervolumevideograb(volume, mute != 0);" not in set_volume:
+	fail("Master volume and mute changes must update the video audio backend")
+
+video_audio_controls = region_between(
+	videograb,
+	"void setvolumevideograb(",
+	"void isvideograb_status(",
+)
+if video_audio_controls.count("ffmpeg_update_audio_gain();") != 3:
+	fail("Video, master, and channel controls must refresh the live SDL stream gain")
 
 mute_on = region_between(arcadia, "case 0x24: // Audio mute", "case 0x25: // Audio mute off")
 mute_off = region_between(arcadia, "case 0x25: // Audio mute off", "case 0x26: // Video off")

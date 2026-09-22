@@ -105,16 +105,29 @@ static AVRational ffmpeg_frame_rate = { 25, 1 };
 static uae_s64 ffmpeg_duration_frames;
 static uae_s64 ffmpeg_decoded_frame = -1;
 static uae_s64 ffmpeg_audio_discard_until_frame = -1;
+static int audio_master_volume = 100;
+static bool audio_master_muted;
 #ifdef USE_SDL3
 static SDL_AudioStream *ffmpeg_audio_stream;
 static bool ffmpeg_audio_sdl_initialized;
 #endif
 static float ffmpeg_audio_gain(void)
 {
-    if (audio_muted || !audio_chflags) {
+    if (audio_muted || audio_master_muted || !audio_chflags) {
         return 0.0f;
     }
-    return std::max(0, std::min(100, audio_volume)) / 100.0f;
+    const float source_gain = std::max(0, std::min(100, audio_volume)) / 100.0f;
+    const float master_gain = std::max(0, std::min(100, audio_master_volume)) / 100.0f;
+    return source_gain * master_gain;
+}
+
+static void ffmpeg_update_audio_gain(void)
+{
+#ifdef USE_SDL3
+    if (ffmpeg_audio_stream && !SDL_SetAudioStreamGain(ffmpeg_audio_stream, ffmpeg_audio_gain())) {
+        write_log(_T("VIDEOGRAB: SDL audio gain update failed: %s\n"), SDL_GetError());
+    }
+#endif
 }
 #endif
 
@@ -782,6 +795,7 @@ static bool ffmpeg_open_audio_output(void)
         return false;
     }
 
+    ffmpeg_update_audio_gain();
     SDL_ResumeAudioStreamDevice(ffmpeg_audio_stream);
     write_log(_T("VIDEOGRAB: FFmpeg audio initialized, %d Hz stereo\n"),
         spec.freq);
@@ -793,11 +807,6 @@ static void ffmpeg_filter_audio_channels(uae_s16 *samples, int frames)
     if (!samples || frames <= 0) {
         return;
     }
-    const float gain = ffmpeg_audio_gain();
-    if (gain <= 0.0f) {
-        std::memset(samples, 0, (size_t)frames * 2 * sizeof(uae_s16));
-        return;
-    }
     if (audio_chflags == 1) {
         for (int i = 0; i < frames; i++) {
             samples[i * 2 + 1] = 0;
@@ -805,11 +814,6 @@ static void ffmpeg_filter_audio_channels(uae_s16 *samples, int frames)
     } else if (audio_chflags == 2) {
         for (int i = 0; i < frames; i++) {
             samples[i * 2] = 0;
-        }
-    }
-    if (gain < 1.0f) {
-        for (int i = 0; i < frames * 2; i++) {
-            samples[i] = (uae_s16)((float)samples[i] * gain);
         }
     }
 }
@@ -1365,9 +1369,15 @@ bool initvideograb(const TCHAR *filename)
 
     if (videograb_mode == VIDEOGRAB_FFMPEG) {
         audio_volume = 100 - currprefs.sound_volume_genlock;
+#ifdef AMIBERRY_WITH_FFMPEG
+        audio_master_volume = 100 - currprefs.sound_volume_master;
+#endif
         if (currprefs.genlock_image == 4) {
             audio_chflags = 3;
         }
+#ifdef AMIBERRY_WITH_FFMPEG
+        ffmpeg_update_audio_gain();
+#endif
     }
 
     video_initialized = true;
@@ -1521,12 +1531,30 @@ bool getpausevideograb(void)
 void setvolumevideograb(int volume)
 {
     audio_volume = volume;
+#ifdef AMIBERRY_WITH_FFMPEG
+    ffmpeg_update_audio_gain();
+#endif
+}
+
+void setmastervolumevideograb(int volume, bool mute)
+{
+#ifdef AMIBERRY_WITH_FFMPEG
+    audio_master_volume = 100 - std::max(0, std::min(100, volume));
+    audio_master_muted = mute;
+    ffmpeg_update_audio_gain();
+#else
+    (void)volume;
+    (void)mute;
+#endif
 }
 
 void setchflagsvideograb(int chflags, bool mute)
 {
     audio_chflags = chflags;
     audio_muted = mute;
+#ifdef AMIBERRY_WITH_FFMPEG
+    ffmpeg_update_audio_gain();
+#endif
 }
 
 void isvideograb_status(void)
