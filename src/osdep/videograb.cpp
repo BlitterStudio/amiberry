@@ -105,6 +105,7 @@ static AVRational ffmpeg_frame_rate = { 25, 1 };
 static uae_s64 ffmpeg_duration_frames;
 static uae_s64 ffmpeg_decoded_frame = -1;
 static uae_s64 ffmpeg_audio_discard_until_frame = -1;
+static bool ffmpeg_packet_pending;
 static int audio_master_volume = 100;
 static bool audio_master_muted;
 #ifdef USE_SDL3
@@ -950,9 +951,16 @@ static bool ffmpeg_copy_video_frame(AVFrame *frame, uae_s64 frame_index)
     return true;
 }
 
-static bool ffmpeg_decode_video_packet(AVPacket *packet, uae_s64 target_frame)
+static bool ffmpeg_decode_video_packet(AVPacket *packet, uae_s64 target_frame,
+    bool *packet_consumed)
 {
+    if (packet_consumed) {
+        *packet_consumed = false;
+    }
     int err = avcodec_send_packet(ffmpeg_video_codec, packet);
+    if (err != AVERROR(EAGAIN) && packet_consumed) {
+        *packet_consumed = true;
+    }
     if (err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF) {
         return false;
     }
@@ -963,6 +971,9 @@ static bool ffmpeg_decode_video_packet(AVPacket *packet, uae_s64 target_frame)
             break;
         }
         if (err < 0) {
+            if (packet_consumed) {
+                *packet_consumed = true;
+            }
             return false;
         }
 
@@ -1007,6 +1018,10 @@ static bool ffmpeg_seek_frame(uae_s64 frame, bool clear_audio_output)
     if (clear_audio_output) {
         ffmpeg_clear_audio();
     }
+    if (ffmpeg_packet) {
+        av_packet_unref(ffmpeg_packet);
+    }
+    ffmpeg_packet_pending = false;
     return true;
 }
 
@@ -1030,41 +1045,50 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
 
     bool looped = false;
     for (;;) {
-        int err = av_read_frame(ffmpeg_format, ffmpeg_packet);
-        if (err == AVERROR_EOF) {
-            ffmpeg_decode_audio_packet(nullptr);
-            if (ffmpeg_decode_video_packet(nullptr, target_frame)) {
-                return true;
+        if (!ffmpeg_packet_pending) {
+            int err = av_read_frame(ffmpeg_format, ffmpeg_packet);
+            if (err == AVERROR_EOF) {
+                ffmpeg_decode_audio_packet(nullptr);
+                if (ffmpeg_decode_video_packet(nullptr, target_frame, nullptr)) {
+                    return true;
+                }
+                if (looped) {
+                    return !frame_buffer.empty();
+                }
+                looped = true;
+                if (!ffmpeg_seek_frame(0, false)) {
+                    return false;
+                }
+                current_frame = 0;
+                play_base_frame = 0;
+                play_base_time = std::chrono::steady_clock::now();
+                target_frame = 0;
+                continue;
             }
-            if (looped) {
+            if (err < 0) {
+                char error[AV_ERROR_MAX_STRING_SIZE];
+                write_log(_T("VIDEOGRAB: FFmpeg read failed: %s\n"),
+                    ffmpeg_error_text(err, error, sizeof error));
                 return !frame_buffer.empty();
             }
-            looped = true;
-            if (!ffmpeg_seek_frame(0, false)) {
-                return false;
-            }
-            current_frame = 0;
-            play_base_frame = 0;
-            play_base_time = std::chrono::steady_clock::now();
-            target_frame = 0;
-            continue;
-        }
-        if (err < 0) {
-            char error[AV_ERROR_MAX_STRING_SIZE];
-            write_log(_T("VIDEOGRAB: FFmpeg read failed: %s\n"),
-                ffmpeg_error_text(err, error, sizeof error));
-            return !frame_buffer.empty();
         }
 
         bool got_frame = false;
+        bool packet_consumed = true;
         if (ffmpeg_packet->stream_index == ffmpeg_video_stream_index) {
-            got_frame = ffmpeg_decode_video_packet(ffmpeg_packet, target_frame);
+            got_frame = ffmpeg_decode_video_packet(ffmpeg_packet, target_frame,
+                &packet_consumed);
         } else if (ffmpeg_packet->stream_index == ffmpeg_audio_stream_index) {
             if (!ffmpeg_discard_audio_packet(ffmpeg_packet)) {
                 ffmpeg_decode_audio_packet(ffmpeg_packet);
             }
         }
-        av_packet_unref(ffmpeg_packet);
+        if (packet_consumed) {
+            av_packet_unref(ffmpeg_packet);
+            ffmpeg_packet_pending = false;
+        } else {
+            ffmpeg_packet_pending = true;
+        }
         if (got_frame) {
             return true;
         }
@@ -1104,6 +1128,7 @@ static void uninit_ffmpeg_videograb(void)
     ffmpeg_duration_frames = 0;
     ffmpeg_decoded_frame = -1;
     ffmpeg_audio_discard_until_frame = -1;
+    ffmpeg_packet_pending = false;
 }
 
 static bool init_ffmpeg_videograb(const TCHAR *filename)

@@ -43,7 +43,7 @@ read_frame = region_between(
 	"static void uninit_ffmpeg_videograb(",
 )
 eof = region_between(read_frame, "if (err == AVERROR_EOF)", "if (err < 0)")
-video_drain = eof.find("ffmpeg_decode_video_packet(nullptr, target_frame)")
+video_drain = eof.find("ffmpeg_decode_video_packet(nullptr, target_frame, nullptr)")
 audio_drain = eof.find("ffmpeg_decode_audio_packet(nullptr)")
 loop_seek = eof.find("ffmpeg_seek_frame(0, false)")
 if not (0 <= audio_drain < loop_seek and 0 <= video_drain < loop_seek):
@@ -59,6 +59,23 @@ audio_discard = region_between(
 if "av_compare_ts(timestamp - start_time" not in audio_discard:
 	fail("FFmpeg audio seek filtering must compare stream-relative timestamps")
 
+video_decode = region_between(
+	videograb,
+	"static bool ffmpeg_decode_video_packet(",
+	"static bool ffmpeg_seek_frame(",
+)
+if "*packet_consumed = false;" not in video_decode:
+	fail("FFmpeg video decoding must report packets rejected with EAGAIN")
+if "err != AVERROR(EAGAIN)" not in video_decode or "*packet_consumed = true;" not in video_decode:
+	fail("FFmpeg video decoding must report when the input packet was accepted")
+if "if (!ffmpeg_packet_pending)" not in read_frame:
+	fail("FFmpeg video decoding must retry an unconsumed packet before reading another")
+packet_cleanup = region_between(read_frame, "bool packet_consumed = true;", "if (got_frame)")
+if "&packet_consumed" not in packet_cleanup or "if (packet_consumed)" not in packet_cleanup:
+	fail("FFmpeg video packets must only be released after the decoder accepts them")
+if "ffmpeg_packet_pending = true;" not in packet_cleanup:
+	fail("FFmpeg video packets rejected with EAGAIN must remain pending")
+
 seek_frame = region_between(
 	videograb,
 	"static bool ffmpeg_seek_frame(",
@@ -68,6 +85,8 @@ if "ffmpeg_audio_discard_until_frame" not in seek_frame:
 	fail("FFmpeg seeks must record the requested audio start frame")
 if "if (clear_audio_output)" not in seek_frame:
 	fail("FFmpeg loop seeks must be able to preserve drained tail audio")
+if "av_packet_unref(ffmpeg_packet);" not in seek_frame or "ffmpeg_packet_pending = false;" not in seek_frame:
+	fail("FFmpeg seeks must discard any pending pre-seek packet")
 if "ffmpeg_seek_frame(target_frame, true)" not in read_frame:
 	fail("Playback jumps must discard audio queued before the new position")
 
