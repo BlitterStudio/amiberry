@@ -2380,6 +2380,16 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				_sntprintf (tmp1, sizeof tmp1, _T("joyport%dkeyboardoverride"), i);
 				cfgfile_write_bool (f, tmp1, !jp->nokeyboardoverride);
 			}
+
+			if (p->jports_default[i]) {
+				_sntprintf(tmp1, sizeof tmp1, _T("joyportdefault%d"), i);
+				if (p->jports_default[i] > 0) {
+					_sntprintf(tmp2, sizeof tmp2, _T("kbd%d"), p->jports_default[i]);
+					cfgfile_write(f, tmp1, tmp2);
+				} else if (p->jports_default[i] < 0) {
+					cfgfile_write(f, tmp1, _T("none"));
+				}
+			}
 		}
 #ifdef AMIBERRY
 		// custom controls SAVING
@@ -4612,6 +4622,16 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	if (cfgfile_yesno (option, value, _T("joyport3keyboardoverride"), &vb)) {
 		p->jports[3].nokeyboardoverride = !vb;
 		return 1;
+	}
+	if (_tcsncmp(option, _T("joyportdefault"), 14) == 0) {
+		for (int i = 0; i < MAX_JPORTS; i++) {
+			_sntprintf(tmpbuf, sizeof tmpbuf, _T("joyportdefault%d"), i);
+			if (!_tcscmp(option, tmpbuf)) {
+				inputdevice_joyport_keyboard_default(p, value, i);
+				return 1;
+			}
+		}
+		return 0;
 	}
 
 	if (cfgfile_path(option, value, _T("trainerfile"), p->trainerfile, sizeof p->trainerfile / sizeof(TCHAR)))

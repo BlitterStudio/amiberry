@@ -45,6 +45,13 @@ check "$work/out.txt" '^cpu_model=68040$'
 check "$work/out.txt" '^cpu_24bit_addressing=false$'
 check "$work/err.txt" '24-bit address space is not supported with 68040'
 
+# Explicit controller-removal fallbacks must survive config parsing and
+# serialization. kbd3 selects keyboard layout C; none disables fallback.
+printf 'joyport0=joy0\njoyportdefault0=kbd3\njoyport1=joy1\njoyportdefault1=none\n' > "$work/joyport-default.uae"
+"$bin" --dump-config -f "$work/joyport-default.uae" > "$work/joyport-default.txt" 2>/dev/null
+check "$work/joyport-default.txt" '^joyportdefault0=kbd3$'
+check "$work/joyport-default.txt" '^joyportdefault1=none$'
+
 # Defaults-only dump: header present, exits cleanly.
 "$bin" --dump-config > "$work/def.txt" 2> "$work/def_err.txt"
 check "$work/def.txt" '^; --dump-config: resolved configuration'
