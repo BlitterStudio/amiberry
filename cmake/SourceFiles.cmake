@@ -341,6 +341,10 @@ endif()
  
 list(APPEND SOURCE_FILES ${SLIRP_SOURCES})
 
+if(USE_VIDEOGRAB)
+	list(APPEND SOURCE_FILES src/osdep/videograb.cpp)
+endif()
+
 set(IMGUI_GUI_FILES
 		src/osdep/imgui/about.cpp
 		src/osdep/imgui/chipset.cpp
