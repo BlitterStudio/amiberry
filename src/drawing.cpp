@@ -2729,7 +2729,11 @@ void amiberry_hw_vsync_pacing_set_blocking(const bool) {}
 int isvsync_chipset(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
+#ifdef AMIBERRY
 	if (ad->picasso_on)
+#else
+	if (ad->picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
+#endif
 		return 0;
 #if defined(AMIBERRY) && !defined(LIBRETRO) && defined(USE_OPENGL) && !defined(USE_VULKAN)
 	// KMSDRM OpenGL/GLES publishes blocking presentation only on the SDL 3.4+
@@ -6930,7 +6934,7 @@ static void lts_unaligned_aga(int cnt, int cnt_next, int h)
 		uae_u8 gpix = 0xff;
 		if (!denise_blank_active) {
 			// borderblank ends 1 shres pixel early
-			dpix_val = cnt == denise_brdstop && (denise_hdiw || cnt + 1 == denise_hstrt) ? denise_colors.acolors[0] : bordercolor;
+			dpix_val = cnt == denise_brdstop && denise_hdiw ? denise_colors.acolors[0] : bordercolor;
 			gpix = 0;
 			if (denise_hdiw && bpl1dat_trigger) {
 				pix = loaded_pixs[ipix];
@@ -7166,7 +7170,7 @@ static void lts_unaligned_ecs(int cnt, int cnt_next, int h)
 		uae_u8 gpix = 0xff;
 		if (!denise_blank_active) {
 			// borderblank ends 1 shres pixel early
-			dpix_val = cnt == denise_brdstop && (denise_hdiw || cnt + 1 == denise_hstrt) ? denise_colors.acolors[0] : bordercolor;
+			dpix_val = cnt == denise_brdstop && denise_hdiw ? denise_colors.acolors[0] : bordercolor;
 			gpix = 0;
 			if (denise_hdiw && bpl1dat_trigger) {
 				pix = getbpl6();
