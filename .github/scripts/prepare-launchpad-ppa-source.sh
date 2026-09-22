@@ -51,6 +51,22 @@ download_and_extract \
 	"$sdl_image_sha256" \
 	debian/vendor/SDL_image
 
+# Keep only SDL_image's Zlib-licensed implementation. The release archive also
+# contains third-party codec sources and platform bundles that this PPA build
+# neither compiles nor ships.
+rm -rf \
+	debian/vendor/SDL_image/external \
+	debian/vendor/SDL_image/VisualC \
+	debian/vendor/SDL_image/Xcode \
+	debian/vendor/SDL_image/examples \
+	debian/vendor/SDL_image/test
+rm -f \
+	debian/vendor/SDL_image/src/nanosvg.h \
+	debian/vendor/SDL_image/src/nanosvgrast.h \
+	debian/vendor/SDL_image/src/qoi.h \
+	debian/vendor/SDL_image/src/stb_image.h \
+	debian/vendor/SDL_image/src/tiny_jpeg.h
+
 python3 - <<'PY'
 from pathlib import Path
 
