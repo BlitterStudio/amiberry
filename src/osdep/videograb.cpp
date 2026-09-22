@@ -976,7 +976,7 @@ static bool ffmpeg_decode_video_packet(AVPacket *packet, uae_s64 target_frame)
     return false;
 }
 
-static bool ffmpeg_seek_frame(uae_s64 frame)
+static bool ffmpeg_seek_frame(uae_s64 frame, bool clear_audio_output)
 {
     if (!ffmpeg_format || ffmpeg_video_stream_index < 0) {
         return false;
@@ -1000,7 +1000,9 @@ static bool ffmpeg_seek_frame(uae_s64 frame)
         ffmpeg_audio_stream_index >= 0 && frame > 0 ? frame : -1;
     ffmpeg_decoded_frame = -1;
     loaded_frame = -1;
-    ffmpeg_clear_audio();
+    if (clear_audio_output) {
+        ffmpeg_clear_audio();
+    }
     return true;
 }
 
@@ -1017,7 +1019,7 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
 
     if (ffmpeg_decoded_frame < 0 || target_frame < ffmpeg_decoded_frame ||
         target_frame > ffmpeg_decoded_frame + 120) {
-        if (!ffmpeg_seek_frame(target_frame)) {
+        if (!ffmpeg_seek_frame(target_frame, true)) {
             return false;
         }
     }
@@ -1034,7 +1036,7 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
                 return !frame_buffer.empty();
             }
             looped = true;
-            if (!ffmpeg_seek_frame(0)) {
+            if (!ffmpeg_seek_frame(0, false)) {
                 return false;
             }
             current_frame = 0;
@@ -1481,7 +1483,7 @@ uae_s64 getsetpositionvideograb(uae_s64 framepos)
         current_frame = normalized_ffmpeg_frame(framepos);
         play_base_frame = current_frame;
         play_base_time = std::chrono::steady_clock::now();
-        ffmpeg_seek_frame(current_frame);
+        ffmpeg_seek_frame(current_frame, true);
         return current_frame;
     }
 #endif

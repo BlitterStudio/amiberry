@@ -44,7 +44,7 @@ read_frame = region_between(
 eof = region_between(read_frame, "if (err == AVERROR_EOF)", "if (err < 0)")
 video_drain = eof.find("ffmpeg_decode_video_packet(nullptr, target_frame)")
 audio_drain = eof.find("ffmpeg_decode_audio_packet(nullptr)")
-loop_seek = eof.find("ffmpeg_seek_frame(0)")
+loop_seek = eof.find("ffmpeg_seek_frame(0, false)")
 if not (0 <= audio_drain < loop_seek and 0 <= video_drain < loop_seek):
 	fail("FFmpeg decoders must drain delayed frames before the EOF loop seek")
 if "if (!ffmpeg_discard_audio_packet(ffmpeg_packet))" not in read_frame:
@@ -65,6 +65,10 @@ seek_frame = region_between(
 )
 if "ffmpeg_audio_discard_until_frame" not in seek_frame:
 	fail("FFmpeg seeks must record the requested audio start frame")
+if "if (clear_audio_output)" not in seek_frame:
+	fail("FFmpeg loop seeks must be able to preserve drained tail audio")
+if "ffmpeg_seek_frame(target_frame, true)" not in read_frame:
+	fail("Playback jumps must discard audio queued before the new position")
 
 frame_from_pts = region_between(
 	videograb,
