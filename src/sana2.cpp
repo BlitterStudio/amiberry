@@ -1630,11 +1630,15 @@ static int uaenet_int_handler2(TrapContext *ctx)
 
 	for (i = 0; i < MAX_TOTAL_NET_DEVICES; i++) {
 		struct s2devstruct *dev = &devst[i];
-		struct s2packet *p;
+		struct s2packet *p, **pp;
 		if (dev->online) {
-			while (dev->readqueue) {
+			pp = &dev->readqueue;
+			while (*pp) {
 				uae_u16 type;
-				p = dev->readqueue;
+				p = *pp;
+				/* reader state is per packet, now that the loop can move past one */
+				for (j = 0; j < MAX_OPEN_DEVICES; j++)
+					pdevst[j].tmp = 0;
 				type = (p->data[2 * ADDR_SIZE] << 8) | p->data[2 * ADDR_SIZE + 1];
 				ar = dev->ar;
 				while (ar) {
@@ -1660,8 +1664,8 @@ static int uaenet_int_handler2(TrapContext *ctx)
 										uae_sem_post(&pipe_sem);
 										dev->packetsreceived++;
 										pdev->tmp = 1;
-										dev->readqueue = dev->readqueue->next;
-										resetpackettimer(dev->readqueue);
+										*pp = p->next;
+										resetpackettimer(*pp);
 										freepacket(p);
 										return -1;
 									} else {
@@ -1695,8 +1699,8 @@ static int uaenet_int_handler2(TrapContext *ctx)
 								dev->packetsreceived++;
 								dev->unknowntypesreceived++;
 								pdev->tmp = 1;
-								dev->readqueue = dev->readqueue->next;
-								resetpackettimer(dev->readqueue);
+								*pp = p->next;
+								resetpackettimer(*pp);
 								freepacket(p);
 								return -1;
 							}
@@ -1706,16 +1710,15 @@ static int uaenet_int_handler2(TrapContext *ctx)
 				}
 				if (p->drop_start == 0 || p->drop_count - p->drop_start < DELAYED_DROPPED_PACKET_FRAMES) {
 					// we got packet but there was no readers, lets wait a bit before dropping it.
+					// Keep it queued, but don't let it hold up the packets behind it.
 					if (log_net && p->drop_start == 0) {
 						write_log(_T("-> %s No readers, queued for dropping\n"), dumphead(p->data, p->len));
 					}
-					while (p) {
-						if (p->drop_start == 0)
-							p->drop_start = vsync_counter;
-						p->drop_count = vsync_counter;
-						p = p->next;
-					}
-					break;
+					if (p->drop_start == 0)
+						p->drop_start = vsync_counter;
+					p->drop_count = vsync_counter;
+					pp = &p->next;
+					continue;
 				}
 				if (log_net) {
 					write_log (_T("-> %s packet dropped, CNT=%d/%d:%d\n"), dumphead(p->data, p->len), p->drop_start, p->drop_count, p->drop_count - p->drop_start);
@@ -1726,7 +1729,7 @@ static int uaenet_int_handler2(TrapContext *ctx)
 							pdevst[j].packetsdropped++;
 					}
 				}
-				dev->readqueue = dev->readqueue->next;
+				*pp = p->next;
 				freepacket(p);
 			}
 		} else {
