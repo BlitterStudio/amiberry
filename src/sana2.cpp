@@ -229,6 +229,7 @@ struct priv_s2devstruct {
 	uaecptr copyfrombuff;
 	uaecptr packetfilter;
 	uaecptr tempbuf;
+	bool txbusy;
 
 	uaecptr timerbase;
 
@@ -282,7 +283,7 @@ static void free_tempbuf(TrapContext *ctx, struct priv_s2devstruct *pdev)
 {
 	if (pdev->tempbuf) {
 		trap_call_add_areg(ctx, 1, pdev->tempbuf);
-		trap_call_add_dreg(ctx, 0, pdev->td->mtu + ETH_HEADER_SIZE + 2);
+		trap_call_add_dreg(ctx, 0, 2 * (pdev->td->mtu + ETH_HEADER_SIZE + 2));
 		trap_call_lib(ctx, trap_get_long(ctx, 4), -0xD2); /* FreeMem */
 		pdev->tempbuf = 0;
 	}
@@ -513,7 +514,8 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 				break;
 			}
 		}
-		trap_call_add_dreg(ctx, 0, dev->td->mtu + ETH_HEADER_SIZE + 2);
+		/* receive scratch followed by transmit scratch, see createwritepacket() */
+		trap_call_add_dreg(ctx, 0, 2 * (dev->td->mtu + ETH_HEADER_SIZE + 2));
 		trap_call_add_dreg(ctx, 1, 65536 + 1);
 		pdev->tempbuf = trap_call_lib(ctx, trap_get_long(ctx, 4), -0xC6); /* AllocMem */
 		if (log_net) {
@@ -980,13 +982,25 @@ static struct s2packet *createwritepacket(TrapContext *ctx, uae_u8 *request, uae
 	uae_u8 *dstaddr = request + 32 + 4 + 4 + SANA2_MAX_ADDR_BYTES;
 	uae_u16 packettype = get_long_host(request + 32 + 4);
 	struct s2packet *s2p;
+	uaecptr txbuf;
 
 	if (!pdev) {
 		if (log_net)
 			write_log(_T("-> createwritepacket() without device, REQ=%08X LEN=%d\n"), arequest, datalength);
 		return NULL;
 	}
-	if (!copyfrombuff (ctx, data, pdev->tempbuf, datalength, pdev->copyfrombuff)) {
+	/* CopyFromBuff() runs guest code, during which a received packet can be
+	 * written to the receive scratch, so transmit uses its own scratch. A write
+	 * that starts while another one is still being copied is refused. */
+	if (pdev->txbusy) {
+		if (log_net)
+			write_log(_T("-> createwritepacket() while another write is copying, REQ=%08X LEN=%d\n"), arequest, datalength);
+		return NULL;
+	}
+	txbuf = pdev->tempbuf + pdev->td->mtu + ETH_HEADER_SIZE + 2;
+	pdev->txbusy = true;
+	if (!copyfrombuff (ctx, data, txbuf, datalength, pdev->copyfrombuff)) {
+		pdev->txbusy = false;
 		if (log_net)
 			write_log(_T("-> CopyFromBuff() rejected, CMD_READ, REQ=%08X LEN=%d\n"), arequest, datalength);
 		return NULL;
@@ -994,17 +1008,18 @@ static struct s2packet *createwritepacket(TrapContext *ctx, uae_u8 *request, uae
 	s2p = xcalloc (struct s2packet, 1);
 	s2p->data = xmalloc (uae_u8, pdev->td->mtu + ETH_HEADER_SIZE + 2);
 	if (flags & SANA2IOF_RAW) {
-		trap_get_bytes(ctx, s2p->data, pdev->tempbuf, datalength);
+		trap_get_bytes(ctx, s2p->data, txbuf, datalength);
 		packettype = (s2p->data[2 * ADDR_SIZE + 0] << 8) | (s2p->data[2 * ADDR_SIZE + 1]);
 		s2p->len = datalength;
 	} else {
-		trap_get_bytes(ctx, s2p->data + ETH_HEADER_SIZE, pdev->tempbuf, datalength);
+		trap_get_bytes(ctx, s2p->data + ETH_HEADER_SIZE, txbuf, datalength);
 		memcpy(s2p->data + ADDR_SIZE, pdev->td->mac, ADDR_SIZE);
 		memcpy(s2p->data, dstaddr, ADDR_SIZE);
 		s2p->data[2 * ADDR_SIZE + 0] = packettype >> 8;
 		s2p->data[2 * ADDR_SIZE + 1] = (uae_u8)packettype;
 		s2p->len = datalength + ETH_HEADER_SIZE;
 	}
+	pdev->txbusy = false;
 	if (pdev->tracks[packettype]) {
 		pdev->packetssent++;
 		pdev->bytessent += datalength;
