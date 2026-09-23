@@ -683,17 +683,23 @@ static uae_s64 ffmpeg_guess_duration_frames(void)
     }
 
     AVStream *stream = ffmpeg_format->streams[ffmpeg_video_stream_index];
-    if (stream->nb_frames > 0) {
-        return stream->nb_frames;
-    }
     if (stream->duration != AV_NOPTS_VALUE && stream->duration > 0) {
-        return av_rescale_q(stream->duration, stream->time_base,
+        const uae_s64 frames = av_rescale_q(stream->duration, stream->time_base,
             ffmpeg_frame_time_base());
+        if (frames > 0) {
+            return frames;
+        }
     }
     if (ffmpeg_format->duration != AV_NOPTS_VALUE && ffmpeg_format->duration > 0) {
         AVRational av_time_base = { 1, AV_TIME_BASE };
-        return av_rescale_q(ffmpeg_format->duration, av_time_base,
+        const uae_s64 frames = av_rescale_q(ffmpeg_format->duration, av_time_base,
             ffmpeg_frame_time_base());
+        if (frames > 0) {
+            return frames;
+        }
+    }
+    if (stream->nb_frames > 0) {
+        return stream->nb_frames;
     }
     return 0;
 }
@@ -1058,11 +1064,16 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
         return true;
     }
 
+    const bool catch_up_without_seek = ffmpeg_decoded_frame >= 0 &&
+        target_frame > ffmpeg_decoded_frame + 1 &&
+        target_frame <= ffmpeg_decoded_frame + 120;
     if (ffmpeg_decoded_frame < 0 || target_frame < ffmpeg_decoded_frame ||
         target_frame > ffmpeg_decoded_frame + 120) {
         if (!ffmpeg_seek_frame(target_frame, true)) {
             return false;
         }
+    } else if (catch_up_without_seek && ffmpeg_audio_stream_index >= 0) {
+        ffmpeg_audio_discard_until_frame = target_frame;
     }
 
     bool looped = false;

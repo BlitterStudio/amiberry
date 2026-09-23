@@ -67,6 +67,19 @@ if "discard_until_timestamp, video_stream->time_base" not in audio_discard:
 if "timestamp - start_time" in audio_discard:
 	fail("FFmpeg audio seek filtering must not rebase packets to the audio stream start")
 
+duration_frames = region_between(
+	videograb,
+	"static uae_s64 ffmpeg_guess_duration_frames(",
+	"static bool ffmpeg_open_decoder(",
+)
+stream_duration = duration_frames.find("stream->duration")
+format_duration = duration_frames.find("ffmpeg_format->duration")
+frame_count = duration_frames.find("stream->nb_frames")
+if not (0 <= stream_duration < format_duration < frame_count):
+	fail("FFmpeg duration metadata must take precedence over decoded frame counts")
+if duration_frames.count("ffmpeg_frame_time_base()") != 2:
+	fail("FFmpeg duration metadata must use the same nominal timeline as PTS frame indices")
+
 audio_decode = region_between(
 	videograb,
 	"static void ffmpeg_decode_audio_packet(",
@@ -118,6 +131,12 @@ if "ffmpeg_cached_frame_start = -1;" not in seek_frame:
 	fail("FFmpeg seeks must invalidate cached VFR frame coverage")
 if "ffmpeg_seek_frame(target_frame, true)" not in read_frame:
 	fail("Playback jumps must discard audio queued before the new position")
+if "target_frame > ffmpeg_decoded_frame + 1" not in read_frame:
+	fail("Short forward catch-up must detect skipped nominal frames")
+if "target_frame <= ffmpeg_decoded_frame + 120" not in read_frame:
+	fail("Short forward catch-up must remain distinct from the seek path")
+if "ffmpeg_audio_discard_until_frame = target_frame;" not in read_frame:
+	fail("Short forward catch-up must discard audio older than the wall-clock target")
 
 frame_from_pts = region_between(
 	videograb,
