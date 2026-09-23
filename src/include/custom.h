@@ -98,6 +98,7 @@ extern void INTREQ(uae_u16);
 extern bool INTREQ_0(uae_u16);
 extern void INTREQ_f(uae_u16);
 extern void INTREQ_INT(int num, int delay);
+extern void INTREQ_INT_clear(int num, int delay);
 extern void rethink_uae_int(void);
 extern uae_u16 INTREQR(void);
 
@@ -328,7 +329,9 @@ bool check_rga_free_slot_in(void);
 struct rgabuf *read_rga(int slot);
 struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p);
 extern uae_u16 clxdat;
+#ifdef AMIBERRY
 extern uae_u32 magic_sprite_mask;
+#endif
 
 void custom_end_drawing(void);
 void resetfulllinestate(void);
