@@ -2533,9 +2533,10 @@ static bool do_genlock(struct vidbuffer *src, struct vidbuffer *dst, bool double
 						pausevideograb(1);
 					goto skip;
 				}
-				genlock_blank = false;
 			}
-			if (currprefs.genlock_image >= 7) {
+			if (currprefs.genlock_image == 6 || currprefs.genlock_image == 7) {
+				genlock_blank = !ld_video_enabled();
+			} else if (currprefs.genlock_image >= 8) {
 				genlock_blank = false;
 			}
 		} else {

@@ -222,6 +222,30 @@ status = videograb[videograb.index("void isvideograb_status("):]
 if "setchflagsvideograb(audio_chflags, audio_muted);" not in status:
 	fail("Genlock volume refreshes must preserve backend mute state")
 
+laserdisc_video_state = region_between(
+	arcadia,
+	"bool ld_video_enabled(void)",
+	"static void alg_vsync(",
+)
+if "return ld_video;" not in laserdisc_video_state:
+	fail("Laserdisc video output state must be exposed to the genlock renderer")
+laserdisc_render = region_between(
+	specialmonitors,
+	"} else if (currprefs.genlock_image == 4 || currprefs.genlock_image >= 6) {",
+	"skip:",
+)
+if "currprefs.genlock_image == 6 || currprefs.genlock_image == 7" not in laserdisc_render:
+	fail("ALG and Sony laserdisc sources must share protocol video-output state")
+video_output_gate = region_between(
+	laserdisc_render,
+	"if (currprefs.genlock_image == 6 || currprefs.genlock_image == 7)",
+	"else if (currprefs.genlock_image >= 8)",
+)
+if "genlock_blank = !ld_video_enabled();" not in video_output_gate:
+	fail("Laserdisc video-off commands must blank decoded video")
+if "pausevideograb" in video_output_gate:
+	fail("Laserdisc video-off commands must not pause audio playback")
+
 if '#ifdef VIDEOGRAB\n#include "videograb.h"' not in devices:
 	fail("Device pause hooks must include the video-grab interface in video-grab builds")
 device_pause = region_between(
