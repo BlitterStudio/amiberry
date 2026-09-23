@@ -2317,8 +2317,11 @@ static void close_genlock_video(void)
 void specialmonitor_update_genlock(void)
 {
 #ifdef VIDEOGRAB
-	const bool video_source = currprefs.genlock_image == 4 || currprefs.genlock_image == 5 || currprefs.genlock_image >= 6;
-	if (!video_source || !(currprefs.genlock || currprefs.genlock_effects)) {
+	const bool file_video_source = currprefs.genlock_image == 4 || currprefs.genlock_image >= 6;
+	const bool video_source = file_video_source || currprefs.genlock_image == 5;
+	const bool video_source_active = video_source &&
+		(!file_video_source || currprefs.genlock_video_file[0]);
+	if (!video_source_active || !(currprefs.genlock || currprefs.genlock_effects)) {
 		close_genlock_video();
 		genlock_error = false;
 	}

@@ -18,6 +18,7 @@ import sys
 
 videograb = Path("src/osdep/videograb.cpp").read_text()
 arcadia = Path("src/arcadia.cpp").read_text()
+devices = Path("src/devices.cpp").read_text()
 drawing = Path("src/drawing.cpp").read_text()
 specialmonitors = Path("src/specialmonitors.cpp").read_text()
 sound = Path("src/sounddep/sound.cpp").read_text()
@@ -174,6 +175,20 @@ status = videograb[videograb.index("void isvideograb_status("):]
 if "setchflagsvideograb(audio_chflags, audio_muted);" not in status:
 	fail("Genlock volume refreshes must preserve backend mute state")
 
+if '#ifdef VIDEOGRAB\n#include "videograb.h"' not in devices:
+	fail("Device pause hooks must include the video-grab interface in video-grab builds")
+device_pause = region_between(
+	devices,
+	"void devices_pause(",
+	"void devices_unsafeperiod(",
+)
+if "#ifdef AVIOUTPUT" in device_pause:
+	fail("Video-grab pause hooks must not depend on disabled AVI output support")
+if "#ifdef VIDEOGRAB\n\tpausevideograb(1);" not in device_pause:
+	fail("Pausing emulation must pause genlock video and audio playback")
+if "#ifdef VIDEOGRAB\n\tpausevideograb(0);" not in device_pause:
+	fail("Resuming emulation must resume genlock video and audio playback")
+
 genlock_update = region_between(
 	specialmonitors,
 	"void specialmonitor_update_genlock(",
@@ -183,6 +198,10 @@ if "close_genlock_video();" not in genlock_update:
 	fail("Inactive genlock must close its video or camera backend")
 if "currprefs.genlock || currprefs.genlock_effects" not in genlock_update:
 	fail("Genlock cleanup must follow both connector and effects state")
+if "file_video_source" not in genlock_update or "currprefs.genlock_video_file[0]" not in genlock_update:
+	fail("File-backed genlock sources must become inactive when their path is cleared")
+if "!file_video_source || currprefs.genlock_video_file[0]" not in genlock_update:
+	fail("Camera genlock must remain active without requiring a video file path")
 
 specialmonitor_reset = region_between(
 	specialmonitors,

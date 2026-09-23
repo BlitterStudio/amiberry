@@ -68,7 +68,7 @@
 #endif
 #include "ethernet.h"
 #include "drawing.h"
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 #include "videograb.h"
 #endif
 #ifdef AHI
@@ -559,7 +559,7 @@ void devices_pause(void)
 #ifdef RETROPLATFORM
 	rp_pause(1);
 #endif
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ethernet_pause(1);
@@ -577,7 +577,7 @@ void devices_unpause(void)
 #ifdef WITH_DSP
 	dsp_pause(0);
 #endif
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(0);
 #endif
 	ethernet_pause(0);
