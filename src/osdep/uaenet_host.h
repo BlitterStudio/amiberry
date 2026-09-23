@@ -64,15 +64,18 @@ inline int uaenet_host_mtu(const char *ifname)
 
 // Guest address for a host interface, derived as in WinUAE: the locally
 // administered unicast prefix aa:82:8a ("UAE" << 1) followed by the low three
-// bytes of the host address, or zeros if the host address is unknown.
-inline void uaenet_guest_mac(const uint8_t *host, uint8_t guest[6])
+// bytes of the host address (zeros if unknown). instance is added to those
+// bytes so that emulator instances sharing a host interface differ.
+inline void uaenet_guest_mac(const uint8_t *host, int instance, uint8_t guest[6])
 {
-	static const uint8_t prefix[3] = { 0xaa, 0x82, 0x8a };
-	memcpy(guest, prefix, 3);
-	if (host)
-		memcpy(guest + 3, host + 3, 3);
-	else
-		memset(guest + 3, 0, 3);
+	uint32_t low = host ? (uint32_t)host[3] << 16 | (uint32_t)host[4] << 8 | host[5] : 0;
+	low += (uint32_t)instance;
+	guest[0] = 0xaa;
+	guest[1] = 0x82;
+	guest[2] = 0x8a;
+	guest[3] = (uint8_t)(low >> 16);
+	guest[4] = (uint8_t)(low >> 8);
+	guest[5] = (uint8_t)low;
 }
 
 #endif

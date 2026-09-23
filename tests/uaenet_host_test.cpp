@@ -25,13 +25,20 @@ int main()
 	const uint8_t host[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
 	uint8_t guest[6];
 
-	uaenet_guest_mac(host, guest);
+	uaenet_guest_mac(host, 0, guest);
 	expect(mac_is(guest, 0xaa, 0x82, 0x8a, 0x33, 0x44, 0x55), "guest MAC is aa:82:8a plus the low host bytes");
 	expect((guest[0] & 0x01) == 0, "guest MAC is unicast");
 	expect((guest[0] & 0x02) != 0, "guest MAC is locally administered");
 
-	uaenet_guest_mac(nullptr, guest);
-	expect(mac_is(guest, 0xaa, 0x82, 0x8a, 0x00, 0x00, 0x00), "an unknown host MAC gives aa:82:8a:00:00:00");
+	uaenet_guest_mac(host, 1, guest);
+	expect(mac_is(guest, 0xaa, 0x82, 0x8a, 0x33, 0x44, 0x56), "the instance number is added to the low bytes");
+
+	const uint8_t top[6] = { 0x00, 0x11, 0x22, 0xff, 0xff, 0xff };
+	uaenet_guest_mac(top, 1, guest);
+	expect(mac_is(guest, 0xaa, 0x82, 0x8a, 0x00, 0x00, 0x00), "the offset wraps within the low three bytes");
+
+	uaenet_guest_mac(nullptr, 2, guest);
+	expect(mac_is(guest, 0xaa, 0x82, 0x8a, 0x00, 0x00, 0x02), "an unknown host MAC uses zeros plus the instance");
 
 	uint8_t mac[6];
 	expect(!uaenet_host_mac("no-such-interface0", mac), "unknown interface has no MAC");

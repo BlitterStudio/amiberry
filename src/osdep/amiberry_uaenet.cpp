@@ -29,6 +29,9 @@
 #include "sana2.h"
 #include "threaddep/thread.h"
 #include "uaenet_host.h"
+#ifdef USE_IPC_SOCKET
+#include "amiberry_ipc.h"
+#endif
 
 #define MAX_MTU 1500
 #ifndef ETH_HLEN
@@ -392,14 +395,25 @@ static void uaenet_close_driver_internal(struct uaenet_data *ud)
 
 static struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
 
+// Number of this emulator instance among those running on the host.
+static int uaenet_instance()
+{
+#ifdef USE_IPC_SOCKET
+    return Amiberry::IPC::IPCInstance();
+#else
+    return 0;
+#endif
+}
+
 // Sets a device's guest address from its host interface address (originalmac,
-// all zero if unknown). uaenet.device passes no MAC to uaenet_open() and uses
-// this one.
+// all zero if unknown), offset by the instance number so that instances
+// sharing the interface differ. uaenet.device passes no MAC to uaenet_open()
+// and uses this one.
 static void uaenet_set_guest_mac(struct netdriverdata *ndd)
 {
     static const uae_u8 unknown[6] = {};
     bool known = memcmp(ndd->originalmac, unknown, 6) != 0;
-    uaenet_guest_mac(known ? ndd->originalmac : nullptr, ndd->mac);
+    uaenet_guest_mac(known ? ndd->originalmac : nullptr, uaenet_instance(), ndd->mac);
 }
 
 #ifdef WITH_UAENET_PCAP
@@ -520,8 +534,10 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
     strncpy(ud->name, ndd->name, MAX_DPATH - 1);
     ud->name[MAX_DPATH - 1] = '\0';
 
-    // uaenet.device passes no MAC; use the enumerated address.
+    // uaenet.device passes no MAC; use the enumerated address, set again in
+    // case the device was enumerated before the instance number was known.
     if (!mac) {
+        uaenet_set_guest_mac(ndd);
         mac = ndd->mac;
         write_log(_T("UAENET: '%s' guest MAC %02X:%02X:%02X:%02X:%02X:%02X\n"), ndd->name,
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
