@@ -23,6 +23,7 @@ drawing = Path("src/drawing.cpp").read_text()
 specialmonitors = Path("src/specialmonitors.cpp").read_text()
 sound = Path("src/sounddep/sound.cpp").read_text()
 audio = Path("src/audio.cpp").read_text()
+chipset = Path("src/osdep/imgui/chipset.cpp").read_text()
 
 
 def fail(message: str) -> None:
@@ -188,6 +189,14 @@ if "SDL_SetAudioStreamGain(ffmpeg_audio_stream, ffmpeg_audio_gain())" not in aud
 set_audio = region_between(audio, "void set_audio (void)", "static void update_audio_volcnt(")
 if "setsoundoutputvideograb(currprefs.produce_sound >= 2);" not in set_audio:
 	fail("Applying sound preferences must refresh FFmpeg output enablement")
+
+genlock_selection = region_between(
+	chipset,
+	"int genlock_selection = changed_prefs.genlock_image;",
+	"ImGui::SetNextItemWidth(",
+)
+if "changed_prefs.genlock_image = 0;" not in genlock_selection:
+	fail("Unsupported genlock sources must be cleared from pending preferences")
 
 set_volume = region_between(sound, "void set_volume(", "static void finish_sound_buffer_sdl_push(")
 if "setmastervolumevideograb(volume, mute != 0);" not in set_volume:

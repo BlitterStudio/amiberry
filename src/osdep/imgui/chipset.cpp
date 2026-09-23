@@ -410,6 +410,7 @@ void render_panel_chipset() {
         int genlock_selection = changed_prefs.genlock_image;
         if (genlock_selection < 0 || genlock_selection >= IM_ARRAYSIZE(genlock_items)) {
             genlock_selection = 0;
+            changed_prefs.genlock_image = 0;
         }
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x - 3.0f);
         if (ImGui::Combo("##Genlock", &genlock_selection, genlock_items, IM_ARRAYSIZE(genlock_items))) {
