@@ -28,6 +28,7 @@
 #include "options.h"
 #include "sana2.h"
 #include "threaddep/thread.h"
+#include "uaenet_host.h"
 
 #define MAX_MTU 1500
 #ifndef ETH_HLEN
@@ -391,6 +392,16 @@ static void uaenet_close_driver_internal(struct uaenet_data *ud)
 
 static struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
 
+// Sets a device's guest address from its host interface address (originalmac,
+// all zero if unknown). uaenet.device passes no MAC to uaenet_open() and uses
+// this one.
+static void uaenet_set_guest_mac(struct netdriverdata *ndd)
+{
+    static const uae_u8 unknown[6] = {};
+    bool known = memcmp(ndd->originalmac, unknown, 6) != 0;
+    uaenet_guest_mac(known ? ndd->originalmac : nullptr, ndd->mac);
+}
+
 #ifdef WITH_UAENET_PCAP
 // Enumerate network devices
 struct netdriverdata *uaenet_enumerate(const TCHAR *name)
@@ -419,6 +430,10 @@ struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 
         nd[j].name = n2;
         nd[j].type = UAENET_PCAP;
+        int mtu = uaenet_host_mtu(d->name);
+        nd[j].mtu = (mtu > 0 && mtu < MAX_MTU) ? mtu : MAX_MTU;
+        uaenet_host_mac(d->name, nd[j].originalmac);
+        uaenet_set_guest_mac(&nd[j]);
         nd[j].active = 1;
         nd[j].driverdata = nullptr; // Initialize driverdata to nullptr
         j++;
@@ -505,8 +520,13 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
     strncpy(ud->name, ndd->name, MAX_DPATH - 1);
     ud->name[MAX_DPATH - 1] = '\0';
 
-    if (mac)
-        memcpy(ud->mac_addr, mac, 6);
+    // uaenet.device passes no MAC; use the enumerated address.
+    if (!mac) {
+        mac = ndd->mac;
+        write_log(_T("UAENET: '%s' guest MAC %02X:%02X:%02X:%02X:%02X:%02X\n"), ndd->name,
+                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    }
+    memcpy(ud->mac_addr, mac, 6);
 
     // Destroy existing semaphores before reinitializing to prevent value
     // inflation — uae_sem_init() on an existing semaphore calls SDL_SignalSemaphore()
@@ -870,6 +890,8 @@ struct netdriverdata *uaenet_tap_enumerate(const TCHAR *name)
         snprintf(mtu_path, sizeof(mtu_path), "/sys/class/net/%s/mtu", ent->d_name);
         long mtu = read_sysfs_long(mtu_path);
         tap_nd[j].mtu = (mtu > 0) ? (int)mtu : 1500;
+        uaenet_host_mac(ent->d_name, tap_nd[j].originalmac);
+        uaenet_set_guest_mac(&tap_nd[j]);
 
         tap_nd_count++;
         if (name != NULL)
