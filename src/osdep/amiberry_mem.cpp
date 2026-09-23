@@ -199,6 +199,7 @@ size_t max_physmem;
 static struct uae_shmid_ds shmids[MAX_SHMID];
 static size_t shm_allocsizes[MAX_SHMID];
 static void* shm_heapallocs[MAX_SHMID];
+static addrbank* shm_heapowners[MAX_SHMID];
 uae_u8 *natmem_reserved, *natmem_offset;
 size_t natmem_reserved_size;
 static uae_u8 *p96mem_offset;
@@ -274,6 +275,7 @@ static void clear_shmid(int shmid)
 	shmids[shmid].key = -1;
 	shm_allocsizes[shmid] = 0;
 	shm_heapallocs[shmid] = nullptr;
+	shm_heapowners[shmid] = nullptr;
 }
 
 static void unprotect_nondirect_shmid(int shmid)
@@ -293,6 +295,12 @@ static bool release_nondirect_shmid(int shmid)
 		return false;
 
 	unprotect_nondirect_shmid(shmid);
+	addrbank* owner = shm_heapowners[shmid];
+	if (owner && owner->baseaddr == shmids[shmid].attached) {
+		owner->baseaddr = nullptr;
+		owner->flags &= ~(ABFLAG_DIRECTMAP | ABFLAG_MAPPED);
+		owner->allocated_size = 0;
+	}
 	xfree(shm_heapallocs[shmid]);
 	clear_shmid(shmid);
 	return true;
@@ -326,8 +334,8 @@ static void clear_shm ()
 {
 	shm_start = nullptr;
 	for (int i = 0; i < MAX_SHMID; i++) {
-		unprotect_nondirect_shmid(i);
-		clear_shmid(i);
+		if (!release_nondirect_shmid(i))
+			clear_shmid(i);
 	}
 }
 
@@ -765,8 +773,6 @@ bool init_shm()
 void free_shm ()
 {
 	resetmem (true);
-	for (int i = 0; i < MAX_SHMID; i++)
-		release_nondirect_shmid(i);
 	clear_shm ();
 	for (int & i : ortgmem_type) {
 		i = -1;
@@ -1156,6 +1162,7 @@ bool uae_mman_alloc_nodirect(addrbank* ab, uae_u32 size)
 	shmids[shmid].natmembase = nullptr;
 	shm_allocsizes[shmid] = allocsize;
 	shm_heapallocs[shmid] = rawmem;
+	shm_heapowners[shmid] = ab;
 	ab->baseaddr = static_cast<uae_u8*>(result);
 	write_log(_T("MMAN: allocated %s %p-%p %zu (%zuk) readonly-capable\n"),
 		ab->label ? ab->label : _T("?"), result,
