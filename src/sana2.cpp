@@ -777,6 +777,18 @@ static uae_u64 addrto64 (const uae_u8 *d)
 	}
 	return addr;
 }
+/* multicast address added with S2_ADDMULTICASTADDRESS(ES)? */
+static int ismulticastregistered (struct s2devstruct *dev, const uae_u8 *d)
+{
+	uae_u64 mac64 = addrto64 (d);
+	struct mcast *mc = dev->mc;
+	while (mc) {
+		if (mac64 >= mc->start && mac64 <= mc->end)
+			return 1;
+		mc = mc->next;
+	}
+	return 0;
+}
 static uae_u64 amigaaddrto64(uae_u8 *d)
 {
 	int i;
@@ -897,15 +909,7 @@ static int handleread (TrapContext *ctx, struct priv_s2devstruct *pdev, struct s
 
 	/* drop if CMD_READ and multicast with unknown address */
 	if (cmd == CMD_READ && ismulticast(dstaddr)) {
-		uae_u64 mac64 = addrto64(dstaddr);
-		/* multicast */
-		struct mcast *mc = dev->mc;
-		while (mc) {
-			if (mac64 >= mc->start && mac64 <= mc->end)
-				break;
-			mc = mc->next;
-		}
-		if (!mc) {
+		if (!ismulticastregistered(dev, dstaddr)) {
 			if (log_net)
 				write_log(_T("-> %s multicast filter rejected, CMD_READ, REQ=%08X LEN=%d\n"), dumphead(d, len), arequest, len);
 			return 0;
@@ -946,8 +950,9 @@ static void uaenet_gotdata (void *devv, const uae_u8 *d, int len)
 	/* drop if src == me, the host link reflects our own frames back at us */
 	if (!memcmp (d + 6, dev->td->mac, ADDR_SIZE))
 		return;
-	/* drop if not promiscuous and dst != broadcast and dst != me */
-	if (!dev->promiscuous && !isbroadcast (d) && memcmp (d, dev->td->mac, ADDR_SIZE))
+	/* drop if not promiscuous and dst != broadcast/multicast and dst != me,
+	 * multicast is filtered against the registered addresses in handleread() */
+	if (!dev->promiscuous && !isbroadcast (d) && !ismulticast (d) && memcmp (d, dev->td->mac, ADDR_SIZE))
 		return;
 
 	type = (d[12] << 8) | d[13];
@@ -1636,6 +1641,12 @@ static int uaenet_int_handler2(TrapContext *ctx)
 			while (*pp) {
 				uae_u16 type;
 				p = *pp;
+				/* a multicast address nobody registered isn't received at all */
+				if (!dev->promiscuous && ismulticast(p->data) && !ismulticastregistered(dev, p->data)) {
+					*pp = p->next;
+					freepacket(p);
+					continue;
+				}
 				/* reader state is per packet, now that the loop can move past one */
 				for (j = 0; j < MAX_OPEN_DEVICES; j++)
 					pdevst[j].tmp = 0;
