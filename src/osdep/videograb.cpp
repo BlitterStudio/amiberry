@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <vector>
 
 #ifdef AMIBERRY_WITH_FFMPEG
@@ -192,7 +193,12 @@ static bool seek_file(FILE *f, long pos)
 
 static bool read_chunk_data(FILE *f, uae_u32 size, std::vector<uae_u8> *data)
 {
-    data->resize(size);
+    try {
+        data->resize(size);
+    } catch (...) {
+        data->clear();
+        return false;
+    }
     return read_exact(f, data->data(), size);
 }
 
@@ -249,9 +255,49 @@ static void parse_strf(const std::vector<uae_u8> &data, int stream_index, AviInf
         return;
     }
 
+    const uae_s64 height = signed_height < 0 ? -(uae_s64)signed_height : signed_height;
+    if (height > std::numeric_limits<int>::max()) {
+        return;
+    }
+
     info->width = width;
-    info->height = signed_height < 0 ? -signed_height : signed_height;
+    info->height = (int)height;
     info->top_down = signed_height < 0;
+}
+
+static bool avi_frame_layout(int width, int height, size_t *row_bytes,
+    size_t *padded_row_bytes, size_t *packed_size, size_t *padded_size)
+{
+    if (width <= 0 || height <= 0) {
+        return false;
+    }
+
+    const size_t max_size = std::numeric_limits<size_t>::max();
+    const size_t frame_width = (size_t)width;
+    const size_t frame_height = (size_t)height;
+    if (frame_width > (max_size - 3) / 3) {
+        return false;
+    }
+
+    const size_t row = frame_width * 3;
+    const size_t padded_row = (row + 3) & ~(size_t)3;
+    if (frame_height > max_size / padded_row) {
+        return false;
+    }
+
+    *row_bytes = row;
+    *padded_row_bytes = padded_row;
+    *packed_size = row * frame_height;
+    *padded_size = padded_row * frame_height;
+    return true;
+}
+
+static bool valid_avi_frame_payload_size(const AviInfo &info, uae_u32 size)
+{
+    size_t row_bytes, padded_row_bytes, packed_size, padded_size;
+    return avi_frame_layout(info.width, info.height, &row_bytes,
+        &padded_row_bytes, &packed_size, &padded_size) &&
+        (size_t)size >= packed_size && (size_t)size <= padded_size;
 }
 
 static void parse_idx1(const std::vector<uae_u8> &data, AviInfo *info)
@@ -337,7 +383,7 @@ static bool parse_avi_range(FILE *f, long end, int stream_index, AviInfo *info)
 }
 
 static bool indexed_chunk_data_pos(FILE *f, const AviInfo &info,
-    const AviIndexEntry &idx, long *data_pos)
+    const AviIndexEntry &idx, long file_end, long *data_pos)
 {
     const long bases[] = {
         info.movi_data_start,
@@ -346,15 +392,26 @@ static bool indexed_chunk_data_pos(FILE *f, const AviInfo &info,
     };
 
     for (long base : bases) {
-        const long chunk_pos = base + (long)idx.offset;
-        if (!seek_file(f, chunk_pos)) {
+        if (base < 0) {
+            continue;
+        }
+        const uae_u64 candidate = (uae_u64)base + idx.offset;
+        if (candidate > (uae_u64)std::numeric_limits<long>::max()) {
+            continue;
+        }
+        const long chunk_pos = (long)candidate;
+        if (file_end < 8 || chunk_pos > file_end - 8 ||
+            !seek_file(f, chunk_pos)) {
             continue;
         }
         char id[4];
         uae_u32 size;
+        const long payload_pos = chunk_pos + 8;
+        const uae_u64 remaining = (uae_u64)(file_end - payload_pos);
         if (read_chunk_header(f, id, &size) &&
-            std::memcmp(id, idx.id, 4) == 0 && size >= idx.size) {
-            *data_pos = chunk_pos + 8;
+            std::memcmp(id, idx.id, 4) == 0 && size >= idx.size &&
+            (uae_u64)size <= remaining && (uae_u64)idx.size <= remaining) {
+            *data_pos = payload_pos;
             return true;
         }
     }
@@ -363,12 +420,17 @@ static bool indexed_chunk_data_pos(FILE *f, const AviInfo &info,
 
 static void build_indexed_frames(FILE *f, AviInfo *info)
 {
+    const long end = file_size(f);
+    if (end <= 0) {
+        return;
+    }
     for (const AviIndexEntry &idx : info->index) {
-        if (!valid_video_chunk_id(*info, idx.id) || idx.size == 0) {
+        if (!valid_video_chunk_id(*info, idx.id) ||
+            !valid_avi_frame_payload_size(*info, idx.size)) {
             continue;
         }
         long data_pos;
-        if (!indexed_chunk_data_pos(f, *info, idx, &data_pos)) {
+        if (!indexed_chunk_data_pos(f, *info, idx, end, &data_pos)) {
             continue;
         }
         AviFrame frame;
@@ -409,7 +471,8 @@ static bool scan_movi_frames(FILE *f, AviInfo *info, long start, long end)
                     return false;
                 }
             }
-        } else if (valid_video_chunk_id(*info, id) && size > 0) {
+        } else if (valid_video_chunk_id(*info, id) &&
+            valid_avi_frame_payload_size(*info, size)) {
             AviFrame frame;
             std::memcpy(frame.id, id, 4);
             frame.data_pos = data_start;
@@ -518,15 +581,31 @@ static bool read_avi_frame(uae_s64 frame)
     }
 
     const AviFrame &avi_frame = avi_frames[(size_t)frame];
-    std::vector<uae_u8> data(avi_frame.size);
+    size_t row_bytes, padded_row_bytes, packed_size, padded_size;
+    const long end = file_size(avi_file);
+    if (!avi_frame_layout(video_width, video_height, &row_bytes,
+            &padded_row_bytes, &packed_size, &padded_size) ||
+        (size_t)avi_frame.size < packed_size ||
+        (size_t)avi_frame.size > padded_size ||
+        avi_frame.data_pos < 0 || avi_frame.data_pos > end ||
+        (uae_u64)avi_frame.size > (uae_u64)(end - avi_frame.data_pos)) {
+        write_log(_T("VIDEOGRAB: invalid AVI frame %lld\n"), frame);
+        return false;
+    }
+
+    std::vector<uae_u8> data;
+    try {
+        data.resize(avi_frame.size);
+    } catch (...) {
+        write_log(_T("VIDEOGRAB: can't allocate AVI frame %lld\n"), frame);
+        return false;
+    }
     if (!seek_file(avi_file, avi_frame.data_pos) ||
         !read_exact(avi_file, data.data(), data.size())) {
         write_log(_T("VIDEOGRAB: failed reading AVI frame %lld\n"), frame);
         return false;
     }
 
-    const size_t row_bytes = (size_t)video_width * 3;
-    const size_t padded_row_bytes = (row_bytes + 3) & ~(size_t)3;
     size_t source_pitch = padded_row_bytes;
     if (data.size() < source_pitch * (size_t)video_height) {
         if (data.size() < row_bytes * (size_t)video_height) {
@@ -637,14 +716,15 @@ static uae_s64 ffmpeg_timestamp_from_frame(uae_s64 frame)
     return start_time + av_rescale_q(frame, ffmpeg_frame_time_base(), stream->time_base);
 }
 
-static bool ffmpeg_discard_audio_packet(const AVPacket *packet)
+static bool ffmpeg_discard_audio_frame(const AVFrame *frame)
 {
-    if (ffmpeg_audio_discard_until_frame < 0 || !packet || !ffmpeg_format ||
+    if (ffmpeg_audio_discard_until_frame < 0 || !frame || !ffmpeg_format ||
         ffmpeg_audio_stream_index < 0 || ffmpeg_video_stream_index < 0) {
         return false;
     }
 
-    const uae_s64 timestamp = packet->pts != AV_NOPTS_VALUE ? packet->pts : packet->dts;
+    const uae_s64 timestamp = frame->best_effort_timestamp != AV_NOPTS_VALUE ?
+        frame->best_effort_timestamp : frame->pts;
     if (timestamp == AV_NOPTS_VALUE) {
         ffmpeg_audio_discard_until_frame = -1;
         return false;
@@ -916,7 +996,9 @@ static void ffmpeg_decode_audio_packet(AVPacket *packet, bool *packet_consumed)
             }
             break;
         }
-        ffmpeg_queue_audio_frame(ffmpeg_audio_frame);
+        if (!ffmpeg_discard_audio_frame(ffmpeg_audio_frame)) {
+            ffmpeg_queue_audio_frame(ffmpeg_audio_frame);
+        }
         av_frame_unref(ffmpeg_audio_frame);
     }
 }
@@ -1129,9 +1211,7 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
             got_frame = ffmpeg_decode_video_packet(ffmpeg_packet, target_frame,
                 &packet_consumed);
         } else if (ffmpeg_packet->stream_index == ffmpeg_audio_stream_index) {
-            if (!ffmpeg_discard_audio_packet(ffmpeg_packet)) {
-                ffmpeg_decode_audio_packet(ffmpeg_packet, &packet_consumed);
-            }
+            ffmpeg_decode_audio_packet(ffmpeg_packet, &packet_consumed);
         }
         if (packet_consumed) {
             av_packet_unref(ffmpeg_packet);

@@ -40,6 +40,43 @@ def region_between(text: str, start_marker: str, end_marker: str) -> str:
 	return text[start:end]
 
 
+indexed_chunk = region_between(
+	videograb,
+	"static bool indexed_chunk_data_pos(",
+	"static void build_indexed_frames(",
+)
+if "(uae_u64)size <= remaining" not in indexed_chunk or \
+		"(uae_u64)idx.size <= remaining" not in indexed_chunk:
+	fail("AVI index entries must fit their declared payloads within the file")
+
+indexed_frames = region_between(
+	videograb,
+	"static void build_indexed_frames(",
+	"static bool scan_movi_frames(",
+)
+if "valid_avi_frame_payload_size(*info, idx.size)" not in indexed_frames:
+	fail("AVI index entries must match the expected uncompressed frame size")
+
+scanned_frames = region_between(
+	videograb,
+	"static bool scan_movi_frames(",
+	"static bool parse_avi_file(",
+)
+if "valid_avi_frame_payload_size(*info, size)" not in scanned_frames:
+	fail("Scanned AVI frames must match the expected uncompressed frame size")
+
+avi_read = region_between(
+	videograb,
+	"static bool read_avi_frame(",
+	"static bool init_avi_videograb(",
+)
+if "(size_t)avi_frame.size > padded_size" not in avi_read or \
+		"(end - avi_frame.data_pos)" not in avi_read:
+	fail("AVI frame reads must validate expected size and remaining file data")
+if "try {" not in avi_read or "data.resize(avi_frame.size);" not in avi_read or \
+		"catch (...)" not in avi_read:
+	fail("AVI frame allocation failures must be handled")
+
 read_frame = region_between(
 	videograb,
 	"static bool read_ffmpeg_frame(",
@@ -51,16 +88,18 @@ audio_drain = eof.find("ffmpeg_decode_audio_packet(nullptr, nullptr)")
 loop_seek = eof.find("ffmpeg_seek_frame(0, false)")
 if not (0 <= audio_drain < loop_seek and 0 <= video_drain < loop_seek):
 	fail("FFmpeg decoders must drain delayed frames before the EOF loop seek")
-if "if (!ffmpeg_discard_audio_packet(ffmpeg_packet))" not in read_frame:
-	fail("FFmpeg seeks must discard audio packets before the requested frame")
+if "ffmpeg_discard_audio_packet" in read_frame:
+	fail("FFmpeg seek preroll packets must be sent to the decoder")
 
 audio_discard = region_between(
 	videograb,
-	"static bool ffmpeg_discard_audio_packet(",
+	"static bool ffmpeg_discard_audio_frame(",
 	"static uae_s64 ffmpeg_current_frame(",
 )
 if "ffmpeg_timestamp_from_frame(ffmpeg_audio_discard_until_frame)" not in audio_discard:
 	fail("FFmpeg audio seek filtering must derive an absolute video-stream timestamp")
+if "frame->best_effort_timestamp" not in audio_discard:
+	fail("FFmpeg audio seek filtering must use decoded-frame timestamps")
 if "av_compare_ts(timestamp, audio_stream->time_base" not in audio_discard:
 	fail("FFmpeg audio seek filtering must compare the absolute audio packet timestamp")
 if "discard_until_timestamp, video_stream->time_base" not in audio_discard:
@@ -92,6 +131,8 @@ if "err != AVERROR(EAGAIN)" not in audio_decode or "*packet_consumed = true;" no
 	fail("FFmpeg audio decoding must report when the input packet was accepted")
 if "ffmpeg_decode_audio_packet(ffmpeg_packet, &packet_consumed);" not in read_frame:
 	fail("FFmpeg audio packets rejected with EAGAIN must remain pending")
+if "if (!ffmpeg_discard_audio_frame(ffmpeg_audio_frame))" not in audio_decode:
+	fail("FFmpeg seek preroll must decode compressed input while suppressing early PCM")
 
 video_decode = region_between(
 	videograb,
