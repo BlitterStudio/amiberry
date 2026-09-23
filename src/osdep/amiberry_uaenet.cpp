@@ -12,6 +12,10 @@
 
 #if defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
 #ifdef WITH_UAENET_PCAP
+#ifdef __APPLE__
+#include <sys/ioctl.h>
+#include <net/bpf.h>
+#endif
 #include <pcap.h>
 #endif
 #ifdef WITH_UAENET_TAP
@@ -555,6 +559,21 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
             uaenet_close_driver_internal(ud);
             return 0;
         }
+
+#ifdef __APPLE__
+        // On macOS, every BPF write wakes readers sleeping on the same
+        // descriptor, and a woken read that has not timed out goes back to
+        // sleep for a full new read timeout. While the guest transmits more
+        // often than the 10 ms timeout, received packets stay buffered until
+        // transmission pauses or the buffer fills. Immediate mode returns
+        // each packet as soon as it arrives.
+        u_int immediate = 1;
+        if (ioctl(pcap_fileno(ud->handle), BIOCIMMEDIATE, &immediate) < 0) {
+            write_log(_T("UAENET: Failed to enable immediate mode: %s\n"), strerror(errno));
+            uaenet_close_driver_internal(ud);
+            return 0;
+        }
+#endif
 
         // BPF filter: accept packets destined to the Amiga's MAC, broadcast, or
         // multicast — but reject packets sourced from the Amiga's own MAC.
