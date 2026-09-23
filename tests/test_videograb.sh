@@ -22,6 +22,7 @@ devices = Path("src/devices.cpp").read_text()
 drawing = Path("src/drawing.cpp").read_text()
 specialmonitors = Path("src/specialmonitors.cpp").read_text()
 sound = Path("src/sounddep/sound.cpp").read_text()
+audio = Path("src/audio.cpp").read_text()
 
 
 def fail(message: str) -> None:
@@ -45,7 +46,7 @@ read_frame = region_between(
 )
 eof = region_between(read_frame, "if (err == AVERROR_EOF)", "if (err < 0)")
 video_drain = eof.find("ffmpeg_decode_video_packet(nullptr, target_frame, nullptr)")
-audio_drain = eof.find("ffmpeg_decode_audio_packet(nullptr)")
+audio_drain = eof.find("ffmpeg_decode_audio_packet(nullptr, nullptr)")
 loop_seek = eof.find("ffmpeg_seek_frame(0, false)")
 if not (0 <= audio_drain < loop_seek and 0 <= video_drain < loop_seek):
 	fail("FFmpeg decoders must drain delayed frames before the EOF loop seek")
@@ -65,6 +66,18 @@ if "discard_until_timestamp, video_stream->time_base" not in audio_discard:
 	fail("FFmpeg audio seek filtering must compare against the video stream timeline")
 if "timestamp - start_time" in audio_discard:
 	fail("FFmpeg audio seek filtering must not rebase packets to the audio stream start")
+
+audio_decode = region_between(
+	videograb,
+	"static void ffmpeg_decode_audio_packet(",
+	"static bool ffmpeg_copy_video_frame(",
+)
+if "*packet_consumed = false;" not in audio_decode:
+	fail("FFmpeg audio decoding must report packets rejected with EAGAIN")
+if "err != AVERROR(EAGAIN)" not in audio_decode or "*packet_consumed = true;" not in audio_decode:
+	fail("FFmpeg audio decoding must report when the input packet was accepted")
+if "ffmpeg_decode_audio_packet(ffmpeg_packet, &packet_consumed);" not in read_frame:
+	fail("FFmpeg audio packets rejected with EAGAIN must remain pending")
 
 video_decode = region_between(
 	videograb,
@@ -142,6 +155,8 @@ audio_gain = region_between(
 )
 if "audio_master_muted" not in audio_gain or "source_gain * master_gain" not in audio_gain:
 	fail("FFmpeg playback gain must combine master and genlock audio controls")
+if "!audio_output_enabled" not in audio_gain:
+	fail("FFmpeg playback gain must honor the disabled sound-output modes")
 
 audio_gain_update = region_between(
 	videograb,
@@ -150,6 +165,10 @@ audio_gain_update = region_between(
 )
 if "SDL_SetAudioStreamGain(ffmpeg_audio_stream, ffmpeg_audio_gain())" not in audio_gain_update:
 	fail("FFmpeg gain changes must affect audio already queued in the SDL stream")
+
+set_audio = region_between(audio, "void set_audio (void)", "static void update_audio_volcnt(")
+if "setsoundoutputvideograb(currprefs.produce_sound >= 2);" not in set_audio:
+	fail("Applying sound preferences must refresh FFmpeg output enablement")
 
 set_volume = region_between(sound, "void set_volume(", "static void finish_sound_buffer_sdl_push(")
 if "setmastervolumevideograb(volume, mute != 0);" not in set_volume:
@@ -160,8 +179,8 @@ video_audio_controls = region_between(
 	"void setvolumevideograb(",
 	"void isvideograb_status(",
 )
-if video_audio_controls.count("ffmpeg_update_audio_gain();") != 3:
-	fail("Video, master, and channel controls must refresh the live SDL stream gain")
+if video_audio_controls.count("ffmpeg_update_audio_gain();") != 4:
+	fail("Video, master, output-enable, and channel controls must refresh the live SDL stream gain")
 
 mute_on = region_between(arcadia, "case 0x24: // Audio mute", "case 0x25: // Audio mute off")
 mute_off = region_between(arcadia, "case 0x25: // Audio mute off", "case 0x26: // Video off")

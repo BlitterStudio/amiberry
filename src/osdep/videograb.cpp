@@ -109,13 +109,14 @@ static uae_s64 ffmpeg_audio_discard_until_frame = -1;
 static bool ffmpeg_packet_pending;
 static int audio_master_volume = 100;
 static bool audio_master_muted;
+static bool audio_output_enabled;
 #ifdef USE_SDL3
 static SDL_AudioStream *ffmpeg_audio_stream;
 static bool ffmpeg_audio_sdl_initialized;
 #endif
 static float ffmpeg_audio_gain(void)
 {
-    if (audio_muted || audio_master_muted || !audio_chflags) {
+    if (!audio_output_enabled || audio_muted || audio_master_muted || !audio_chflags) {
         return 0.0f;
     }
     const float source_gain = std::max(0, std::min(100, audio_volume)) / 100.0f;
@@ -878,12 +879,21 @@ static void ffmpeg_clear_audio(void)
 }
 #endif
 
-static void ffmpeg_decode_audio_packet(AVPacket *packet)
+static void ffmpeg_decode_audio_packet(AVPacket *packet, bool *packet_consumed)
 {
+    if (packet_consumed) {
+        *packet_consumed = false;
+    }
     if (!ffmpeg_audio_codec || !ffmpeg_audio_frame) {
+        if (packet_consumed) {
+            *packet_consumed = true;
+        }
         return;
     }
     int err = avcodec_send_packet(ffmpeg_audio_codec, packet);
+    if (packet_consumed && err != AVERROR(EAGAIN)) {
+        *packet_consumed = true;
+    }
     if (err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF) {
         return;
     }
@@ -894,6 +904,9 @@ static void ffmpeg_decode_audio_packet(AVPacket *packet)
             break;
         }
         if (err < 0) {
+            if (packet_consumed) {
+                *packet_consumed = true;
+            }
             break;
         }
         ffmpeg_queue_audio_frame(ffmpeg_audio_frame);
@@ -1057,7 +1070,7 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
         if (!ffmpeg_packet_pending) {
             int err = av_read_frame(ffmpeg_format, ffmpeg_packet);
             if (err == AVERROR_EOF) {
-                ffmpeg_decode_audio_packet(nullptr);
+                ffmpeg_decode_audio_packet(nullptr, nullptr);
                 if (ffmpeg_decode_video_packet(nullptr, target_frame, nullptr)) {
                     return true;
                 }
@@ -1089,7 +1102,7 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
                 &packet_consumed);
         } else if (ffmpeg_packet->stream_index == ffmpeg_audio_stream_index) {
             if (!ffmpeg_discard_audio_packet(ffmpeg_packet)) {
-                ffmpeg_decode_audio_packet(ffmpeg_packet);
+                ffmpeg_decode_audio_packet(ffmpeg_packet, &packet_consumed);
             }
         }
         if (packet_consumed) {
@@ -1383,6 +1396,10 @@ bool initvideograb(const TCHAR *filename)
 {
     uninitvideograb();
 
+#ifdef AMIBERRY_WITH_FFMPEG
+    audio_output_enabled = currprefs.produce_sound >= 2;
+#endif
+
     if (!filename || !filename[0]) {
         if (!init_camera_videograb()) {
             uninitvideograb();
@@ -1581,6 +1598,16 @@ void setmastervolumevideograb(int volume, bool mute)
 #else
     (void)volume;
     (void)mute;
+#endif
+}
+
+void setsoundoutputvideograb(bool enabled)
+{
+#ifdef AMIBERRY_WITH_FFMPEG
+    audio_output_enabled = enabled;
+    ffmpeg_update_audio_gain();
+#else
+    (void)enabled;
 #endif
 }
 
