@@ -95,6 +95,7 @@ static AVFormatContext *ffmpeg_format;
 static AVCodecContext *ffmpeg_video_codec;
 static AVCodecContext *ffmpeg_audio_codec;
 static AVFrame *ffmpeg_video_frame;
+static AVFrame *ffmpeg_pending_video_frame;
 static AVFrame *ffmpeg_audio_frame;
 static AVPacket *ffmpeg_packet;
 static SwsContext *ffmpeg_sws;
@@ -104,7 +105,7 @@ static int ffmpeg_audio_stream_index = -1;
 static AVRational ffmpeg_frame_rate = { 25, 1 };
 static uae_s64 ffmpeg_duration_frames;
 static uae_s64 ffmpeg_decoded_frame = -1;
-static uae_s64 ffmpeg_cached_frame_start = -1;
+static uae_s64 ffmpeg_pending_video_frame_index = -1;
 static uae_s64 ffmpeg_audio_discard_until_frame = -1;
 static bool ffmpeg_packet_pending;
 static int audio_master_volume = 100;
@@ -1001,17 +1002,20 @@ static bool ffmpeg_decode_video_packet(AVPacket *packet, uae_s64 target_frame,
 
         const uae_s64 frame_index =
             ffmpeg_frame_from_pts(ffmpeg_video_frame->best_effort_timestamp);
-        if (frame_index >= target_frame) {
-            const bool copied = ffmpeg_copy_video_frame(ffmpeg_video_frame,
-                frame_index);
-            av_frame_unref(ffmpeg_video_frame);
-            if (copied) {
-                ffmpeg_cached_frame_start = target_frame;
-            }
+        if (frame_index > target_frame && loaded_frame >= 0 &&
+            loaded_frame <= target_frame && !frame_buffer.empty()) {
+            av_frame_move_ref(ffmpeg_pending_video_frame, ffmpeg_video_frame);
+            ffmpeg_pending_video_frame_index = frame_index;
+            ffmpeg_decoded_frame = frame_index;
+            return true;
+        }
+
+        const bool copied = ffmpeg_copy_video_frame(ffmpeg_video_frame,
+            frame_index);
+        av_frame_unref(ffmpeg_video_frame);
+        if (!copied || frame_index >= target_frame) {
             return copied;
         }
-        ffmpeg_decoded_frame = frame_index;
-        av_frame_unref(ffmpeg_video_frame);
     }
     return false;
 }
@@ -1036,10 +1040,11 @@ static bool ffmpeg_seek_frame(uae_s64 frame, bool clear_audio_output)
     if (ffmpeg_audio_codec) {
         avcodec_flush_buffers(ffmpeg_audio_codec);
     }
+    av_frame_unref(ffmpeg_pending_video_frame);
+    ffmpeg_pending_video_frame_index = -1;
     ffmpeg_audio_discard_until_frame =
         ffmpeg_audio_stream_index >= 0 && frame > 0 ? frame : -1;
     ffmpeg_decoded_frame = -1;
-    ffmpeg_cached_frame_start = -1;
     loaded_frame = -1;
     if (clear_audio_output) {
         ffmpeg_clear_audio();
@@ -1058,10 +1063,22 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
     }
 
     target_frame = normalized_ffmpeg_frame(target_frame);
-    if (ffmpeg_cached_frame_start >= 0 &&
-        target_frame >= ffmpeg_cached_frame_start &&
-        target_frame <= loaded_frame && !frame_buffer.empty()) {
+    if (ffmpeg_pending_video_frame_index >= 0 && loaded_frame >= 0 &&
+        target_frame >= loaded_frame &&
+        target_frame < ffmpeg_pending_video_frame_index &&
+        !frame_buffer.empty()) {
         return true;
+    }
+    if (ffmpeg_pending_video_frame_index >= 0 &&
+        target_frame >= ffmpeg_pending_video_frame_index) {
+        const uae_s64 frame_index = ffmpeg_pending_video_frame_index;
+        const bool copied = ffmpeg_copy_video_frame(
+            ffmpeg_pending_video_frame, frame_index);
+        av_frame_unref(ffmpeg_pending_video_frame);
+        ffmpeg_pending_video_frame_index = -1;
+        if (!copied || loaded_frame == target_frame) {
+            return copied;
+        }
     }
 
     const bool catch_up_without_seek = ffmpeg_decoded_frame >= 0 &&
@@ -1144,6 +1161,9 @@ static void uninit_ffmpeg_videograb(void)
     if (ffmpeg_video_frame) {
         av_frame_free(&ffmpeg_video_frame);
     }
+    if (ffmpeg_pending_video_frame) {
+        av_frame_free(&ffmpeg_pending_video_frame);
+    }
     if (ffmpeg_audio_frame) {
         av_frame_free(&ffmpeg_audio_frame);
     }
@@ -1160,7 +1180,7 @@ static void uninit_ffmpeg_videograb(void)
     ffmpeg_audio_stream_index = -1;
     ffmpeg_duration_frames = 0;
     ffmpeg_decoded_frame = -1;
-    ffmpeg_cached_frame_start = -1;
+    ffmpeg_pending_video_frame_index = -1;
     ffmpeg_audio_discard_until_frame = -1;
     ffmpeg_packet_pending = false;
 }
@@ -1205,8 +1225,9 @@ static bool init_ffmpeg_videograb(const TCHAR *filename)
     }
 
     ffmpeg_video_frame = av_frame_alloc();
+    ffmpeg_pending_video_frame = av_frame_alloc();
     ffmpeg_packet = av_packet_alloc();
-    if (!ffmpeg_video_frame || !ffmpeg_packet) {
+    if (!ffmpeg_video_frame || !ffmpeg_pending_video_frame || !ffmpeg_packet) {
         uninit_ffmpeg_videograb();
         return false;
     }
@@ -1229,7 +1250,7 @@ static bool init_ffmpeg_videograb(const TCHAR *filename)
     video_paused = 0;
     loaded_frame = -1;
     ffmpeg_decoded_frame = -1;
-    ffmpeg_cached_frame_start = -1;
+    ffmpeg_pending_video_frame_index = -1;
 
     write_log(_T("VIDEOGRAB: FFmpeg playing '%s', %dx%d, %.3f fps%s\n"),
         filename, video_width, video_height,
