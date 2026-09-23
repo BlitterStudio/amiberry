@@ -10726,7 +10726,13 @@ void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fi
 void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum)
 {
 	if (_tcsncmp(value, _T("kbd"), 3) == 0) {
-		p->jports_default[portnum] = (JSEM_KBDLAYOUT + _tstol(value + 3) - 1) + 1;
+		TCHAR *endptr;
+		const long layout = _tcstol(value + 3, &endptr, 10);
+		if (layout > 0 && layout <= JSEM_LASTKBD && *endptr == 0) {
+			p->jports_default[portnum] = JSEM_KBDLAYOUT + (int)layout;
+		} else {
+			p->jports_default[portnum] = 0;
+		}
 	} else if (_tcscmp(value, _T("none")) == 0) {
 		p->jports_default[portnum] = -1;
 	} else {

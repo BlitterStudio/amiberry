@@ -126,6 +126,8 @@ if '_tcsncmp(value, _T("kbd"), 3) == 0' not in keyboard_default:
 	fail("joyportdefault must accept explicit keyboard layouts")
 if '_tcscmp(value, _T("none")) == 0' not in keyboard_default:
 	fail("joyportdefault must support disabling the controller-removal fallback")
+if "layout > 0 && layout <= JSEM_LASTKBD && *endptr == 0" not in keyboard_default:
+	fail("joyportdefault keyboard layouts must reject invalid numeric suffixes")
 if "default_keyboard_layout[portnum] = p->jports_default[portnum];" not in keyboard_default:
 	fail("Parsed joyport defaults must update the runtime fallback state")
 copy_jport = region_between(

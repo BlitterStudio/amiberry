@@ -54,6 +54,14 @@ check "$work/joyport-default.txt" '^joyportdefault1=none$'
 check "$work/joyport-default.txt" '^joyportdefault2=none$'
 check "$work/joyport-default.txt" '^joyportdefault3=none$'
 
+# Invalid keyboard-layout fallbacks must not escape the keyboard ID range.
+printf 'joyport0=joy0\njoyportdefault0=kbd11\n' > "$work/joyport-invalid-default.uae"
+"$bin" --dump-config -f "$work/joyport-invalid-default.uae" > "$work/joyport-invalid-default.txt" 2>/dev/null
+if grep -q '^joyportdefault0=' "$work/joyport-invalid-default.txt"; then
+	echo "invalid joyport keyboard fallback survived config parsing" >&2
+	exit 1
+fi
+
 # Defaults-only dump: header present, exits cleanly.
 "$bin" --dump-config > "$work/def.txt" 2> "$work/def_err.txt"
 check "$work/def.txt" '^; --dump-config: resolved configuration'
