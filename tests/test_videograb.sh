@@ -74,8 +74,15 @@ if "*packet_consumed = false;" not in video_decode:
 	fail("FFmpeg video decoding must report packets rejected with EAGAIN")
 if "err != AVERROR(EAGAIN)" not in video_decode or "*packet_consumed = true;" not in video_decode:
 	fail("FFmpeg video decoding must report when the input packet was accepted")
+if "ffmpeg_cached_frame_start = target_frame;" not in video_decode:
+	fail("FFmpeg video decoding must retain the nominal start covered by a later VFR frame")
 if "if (!ffmpeg_packet_pending)" not in read_frame:
 	fail("FFmpeg video decoding must retry an unconsumed packet before reading another")
+coverage_start = read_frame.find("target_frame >= ffmpeg_cached_frame_start")
+coverage_end = read_frame.find("target_frame <= loaded_frame")
+backward_seek = read_frame.find("target_frame < ffmpeg_decoded_frame")
+if not (0 <= coverage_start < coverage_end < backward_seek):
+	fail("FFmpeg must reuse a cached VFR frame across its nominal target interval before seeking")
 packet_cleanup = region_between(read_frame, "bool packet_consumed = true;", "if (got_frame)")
 if "&packet_consumed" not in packet_cleanup or "if (packet_consumed)" not in packet_cleanup:
 	fail("FFmpeg video packets must only be released after the decoder accepts them")
@@ -93,6 +100,8 @@ if "if (clear_audio_output)" not in seek_frame:
 	fail("FFmpeg loop seeks must be able to preserve drained tail audio")
 if "av_packet_unref(ffmpeg_packet);" not in seek_frame or "ffmpeg_packet_pending = false;" not in seek_frame:
 	fail("FFmpeg seeks must discard any pending pre-seek packet")
+if "ffmpeg_cached_frame_start = -1;" not in seek_frame:
+	fail("FFmpeg seeks must invalidate cached VFR frame coverage")
 if "ffmpeg_seek_frame(target_frame, true)" not in read_frame:
 	fail("Playback jumps must discard audio queued before the new position")
 

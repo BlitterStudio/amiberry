@@ -104,6 +104,7 @@ static int ffmpeg_audio_stream_index = -1;
 static AVRational ffmpeg_frame_rate = { 25, 1 };
 static uae_s64 ffmpeg_duration_frames;
 static uae_s64 ffmpeg_decoded_frame = -1;
+static uae_s64 ffmpeg_cached_frame_start = -1;
 static uae_s64 ffmpeg_audio_discard_until_frame = -1;
 static bool ffmpeg_packet_pending;
 static int audio_master_volume = 100;
@@ -985,6 +986,9 @@ static bool ffmpeg_decode_video_packet(AVPacket *packet, uae_s64 target_frame,
             const bool copied = ffmpeg_copy_video_frame(ffmpeg_video_frame,
                 frame_index);
             av_frame_unref(ffmpeg_video_frame);
+            if (copied) {
+                ffmpeg_cached_frame_start = target_frame;
+            }
             return copied;
         }
         ffmpeg_decoded_frame = frame_index;
@@ -1016,6 +1020,7 @@ static bool ffmpeg_seek_frame(uae_s64 frame, bool clear_audio_output)
     ffmpeg_audio_discard_until_frame =
         ffmpeg_audio_stream_index >= 0 && frame > 0 ? frame : -1;
     ffmpeg_decoded_frame = -1;
+    ffmpeg_cached_frame_start = -1;
     loaded_frame = -1;
     if (clear_audio_output) {
         ffmpeg_clear_audio();
@@ -1034,7 +1039,9 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
     }
 
     target_frame = normalized_ffmpeg_frame(target_frame);
-    if (loaded_frame == target_frame && !frame_buffer.empty()) {
+    if (ffmpeg_cached_frame_start >= 0 &&
+        target_frame >= ffmpeg_cached_frame_start &&
+        target_frame <= loaded_frame && !frame_buffer.empty()) {
         return true;
     }
 
@@ -1129,6 +1136,7 @@ static void uninit_ffmpeg_videograb(void)
     ffmpeg_audio_stream_index = -1;
     ffmpeg_duration_frames = 0;
     ffmpeg_decoded_frame = -1;
+    ffmpeg_cached_frame_start = -1;
     ffmpeg_audio_discard_until_frame = -1;
     ffmpeg_packet_pending = false;
 }
@@ -1197,6 +1205,7 @@ static bool init_ffmpeg_videograb(const TCHAR *filename)
     video_paused = 0;
     loaded_frame = -1;
     ffmpeg_decoded_frame = -1;
+    ffmpeg_cached_frame_start = -1;
 
     write_log(_T("VIDEOGRAB: FFmpeg playing '%s', %dx%d, %.3f fps%s\n"),
         filename, video_width, video_height,
