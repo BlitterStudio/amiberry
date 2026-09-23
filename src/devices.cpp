@@ -426,13 +426,13 @@ void virtualdevice_free(void)
 #endif
 	savestate_free();
 	memory_cleanup();
+	rtarea_free();
 	free_shm();
 	cfgfile_addcfgparam(0);
 #ifdef DRIVESOUND
 	driveclick_free();
 #endif
 	ethernet_enumerate_free();
-	rtarea_free();
 	drawing_free();
 #ifdef WITH_DRACO
 	draco_free();
