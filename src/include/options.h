@@ -1458,10 +1458,10 @@ struct amiberry_options
 #endif
 char default_vkbd_language[128] = "US";
 int default_vkbd_transparency;
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(LIBRETRO)
 // Guide is intercepted as the menu trigger on Android (see
-// handle_controller_button_event), so the on-screen keyboard toggle
-// needs a different default button there.
+// handle_controller_button_event), and the libretro joypad action space
+// has no guide button at all, so both frontends need a different default.
 char default_vkbd_toggle[128] = "leftstick";
 #else
 char default_vkbd_toggle[128] = "guide";
