@@ -152,6 +152,10 @@ void IPCHandle();
 // Check if IPC is active
 bool IPCIsActive();
 
+// Instance number of this process's socket (0 for the default path), which
+// distinguishes emulator instances running on the same host
+int IPCInstance();
+
 } // namespace Amiberry::IPC
 
 #endif // USE_IPC_SOCKET
