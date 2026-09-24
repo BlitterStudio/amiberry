@@ -3605,16 +3605,21 @@ static void apply_libretro_osk_options(void)
 	}
 
 	// Install the configured gamepad toggle (default "leftstick" in the
-	// libretro build; a loaded .uae config may override it).
+	// libretro build; a loaded .uae config may override it). The libretro
+	// poll path has no SDL event loop, so only a gamepad binding can drive
+	// the toggle here; anything that doesn't resolve to a pressable joypad
+	// button falls back to the default toggle so the OSK stays reachable:
+	// - a keyboard hotkey like "F12" doesn't resolve at all (the string
+	//   lookup only knows joypad button names), and
+	// - the standalone default "guide" is not in the frontend joypad action
+	//   space.
 	SDL_GamepadButton toggle = currprefs.vkbd_toggle[0]
 		? SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle)
 		: SDL_CONTROLLER_BUTTON_INVALID;
-	if (toggle != SDL_CONTROLLER_BUTTON_INVALID && !libretro_joypad_supports_button(toggle)) {
-		// A button the frontend joypad cannot press (the standalone default
-		// "guide" in a loaded .uae config included) would leave the keyboard
-		// hidden; fall back to the default toggle so the option keeps working.
+	if (currprefs.vkbd_toggle[0] &&
+		(toggle == SDL_CONTROLLER_BUTTON_INVALID || !libretro_joypad_supports_button(toggle))) {
 		if (log_cb)
-			log_cb(RETRO_LOG_WARN, "OSK toggle '%s' has no joypad action; using left stick\n",
+			log_cb(RETRO_LOG_WARN, "OSK toggle '%s' is not a pressable joypad button; using left stick\n",
 				currprefs.vkbd_toggle);
 		toggle = SDL_CONTROLLER_BUTTON_LEFTSTICK;
 	}
