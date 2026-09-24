@@ -52,6 +52,7 @@ using namespace Amiberry::IPC;
 // Socket state
 static int server_socket = -1;
 static std::string socket_path;
+static int socket_instance = 0;
 static bool ipc_active = false;
 static bool ipc_quit_requested = false;
 static std::mutex ipc_handle_mutex;
@@ -3200,6 +3201,7 @@ void Amiberry::IPC::IPCSetup()
 
 		if (::bind(server_socket, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
 			bound = true;
+			socket_instance = instance;
 			if (instance > 0) {
 				std::cout << "IPC: Default socket in use, using instance " << instance << std::endl;
 			}
@@ -3278,6 +3280,11 @@ void Amiberry::IPC::IPCHandle()
 			HandleClient(client_socket);
 		}
 	}
+}
+
+int Amiberry::IPC::IPCInstance()
+{
+	return ipc_active ? socket_instance : 0;
 }
 
 bool Amiberry::IPC::IPCIsActive()
