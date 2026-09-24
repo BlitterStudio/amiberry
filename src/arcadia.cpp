@@ -752,7 +752,7 @@ static uae_u8 alg_ser_buf[ALG_SER_BUF_SIZE];
 static int ser_buf_offset;
 static int ld_wait_ack, ld_wait_seek, ld_wait_seek_status;
 static int ld_audio, ld_audio_mute;
-static bool ld_video;
+static bool ld_video = true;
 static int ld_vsync;
 static int alg_hsync_delay;
 static uae_u8 ld_uidx_config[3], ld_uidx_offset, ld_uidx_offsetd;
@@ -867,10 +867,16 @@ static void sony_serial_read(uae_u16 w)
 		break;
 	case 0x24: // Audio mute
 		ld_audio_mute = true;
+#ifdef VIDEOGRAB
+		setchflagsvideograb(ld_audio, ld_audio_mute);
+#endif
 		ack();
 		break;
 	case 0x25: // Audio mute off
 		ld_audio_mute = false;
+#ifdef VIDEOGRAB
+		setchflagsvideograb(ld_audio, ld_audio_mute);
+#endif
 		ack();
 		break;
 	case 0x26: // Video off
@@ -1073,7 +1079,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio |= 1;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-1 ON\n"));
@@ -1082,7 +1088,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio |= 2;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-2 ON\n"));
@@ -1091,7 +1097,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio &= ~1;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-1 OFF\n"));
@@ -1100,7 +1106,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio &= ~2;
 #ifdef VIDEOGRAB
-	setchflagsvideograb(ld_audio, false);
+	setchflagsvideograb(ld_audio, ld_audio_mute);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-2 OFF\n"));
@@ -1198,6 +1204,11 @@ bool alg_ld_active(void)
 	return ld_mode == LD_MODE_PLAY || ld_mode == LD_MODE_STILL;
 }
 
+bool ld_video_enabled(void)
+{
+	return ld_video;
+}
+
 static void alg_vsync(void)
 {
 	ld_vsync++;
@@ -1205,7 +1216,7 @@ static void alg_vsync(void)
 #ifdef VIDEOGRAB
 		if (ld_address == 0 || getsetpositionvideograb(ld_address) > 0) {
 			ld_save_restore = false;
-			setchflagsvideograb(ld_audio, false);
+			setchflagsvideograb(ld_audio, ld_audio_mute);
 		}
 		if (ld_save_restore) {
 			return;

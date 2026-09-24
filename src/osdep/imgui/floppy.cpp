@@ -16,6 +16,9 @@ static bool drawbridge_initialized = false;
 
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
+static constexpr const char* floppy_file_filter =
+    "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img)"
+    "{.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}";
 
 static const char* drive_cable_list[] = {
 	"Drive A (IBM PC)",
@@ -52,6 +55,64 @@ enum class FloppyDialogMode {
     CreateHD
 };
 static FloppyDialogMode current_floppy_dialog_mode = FloppyDialogMode::None;
+
+enum class FloppyRecoveryDialogState {
+    Idle,
+    Requested,
+    Active,
+    Selected,
+    Cancelled
+};
+
+static FloppyRecoveryDialogState recovery_dialog_state = FloppyRecoveryDialogState::Idle;
+static int recovery_dialog_drive = 0;
+static std::string recovery_dialog_initial_path;
+static std::string recovery_dialog_result;
+
+void FloppyRecoveryDialog_Open(const int drive, const char* initial_path)
+{
+    recovery_dialog_drive = drive;
+    recovery_dialog_initial_path = initial_path ? initial_path : "";
+    recovery_dialog_result.clear();
+    recovery_dialog_state = FloppyRecoveryDialogState::Requested;
+}
+
+void FloppyRecoveryDialog_Render()
+{
+    static constexpr const char* dialog_key = "FLOPPY_RECOVERY";
+
+    if (recovery_dialog_state == FloppyRecoveryDialogState::Requested) {
+        char title[64];
+        snprintf(title, sizeof title, "Select replacement disk for DF%d:", recovery_dialog_drive);
+        OpenFileDialogKey(dialog_key, title, floppy_file_filter, recovery_dialog_initial_path);
+        recovery_dialog_state = FloppyRecoveryDialogState::Active;
+    }
+
+    if (recovery_dialog_state != FloppyRecoveryDialogState::Active)
+        return;
+
+    std::string selected_path;
+    if (ConsumeFileDialogResultKey(dialog_key, selected_path)) {
+        recovery_dialog_result = selected_path;
+        recovery_dialog_state = FloppyRecoveryDialogState::Selected;
+        gui_running = false;
+    } else if (!IsFileDialogOpenKey(dialog_key)) {
+        recovery_dialog_state = FloppyRecoveryDialogState::Cancelled;
+        gui_running = false;
+    }
+}
+
+bool FloppyRecoveryDialog_ConsumeResult(std::string& out_path)
+{
+    const bool selected = recovery_dialog_state == FloppyRecoveryDialogState::Selected;
+    if (selected)
+        out_path = recovery_dialog_result;
+
+    recovery_dialog_initial_path.clear();
+    recovery_dialog_result.clear();
+    recovery_dialog_state = FloppyRecoveryDialogState::Idle;
+    return selected;
+}
 
 // Cache write-protect state per drive to avoid re-opening (and unpacking)
 // archive files on every frame.  Note: quickstart.cpp has its own identical
@@ -202,7 +263,7 @@ static void RenderDriveSlot(const int i)
              std::string startPath = changed_prefs.floppyslots[i].df;
              if (startPath.empty() && !last_floppy_dir.empty()) startPath = last_floppy_dir;
              if (startPath.empty()) startPath = get_floppy_path(); 
-             OpenFileDialogKey("FLOPPY", "Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
+             OpenFileDialogKey("FLOPPY", "Select Disk Image", floppy_file_filter, startPath);
         }
         
         ImGui::EndDisabled();

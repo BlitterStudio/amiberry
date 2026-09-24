@@ -10228,6 +10228,7 @@ static void generate_cpu (int id, int mode)
 			opcode_next_clev[rp] = cpu_level;
 	} else if (id == 35) { // 35 = 68030 MMU + caches + CE
 		mmu_postfix = "030c";
+		xfc_postfix = "_state";
 		cpu_level = 3;
 		using_ce020 = 2;
 		using_prefetch_020 = 2;

@@ -2332,13 +2332,13 @@ void run_gui()
 
 		struct SidebarGroup { int first_index; const char* label; const char* key; };
 		static const SidebarGroup sidebar_groups[] = {
-			{ 0,  "General",    "General" },
-			{ 5,  "Hardware",   "Hardware" },
-			{ 10, "Storage",    "Storage" },
-			{ 12, "Expansion",  "Expansion" },
-			{ 15, "Output",     "Output" },
-			{ 18, "Input / IO", "InputIO" },
-			{ 21, "Utility",    "Utility" },
+		{ 0,  "General",    "General" },
+		{ 6,  "Hardware",   "Hardware" },
+		{ 11, "Storage",    "Storage" },
+		{ 13, "Expansion",  "Expansion" },
+		{ 16, "Output",     "Output" },
+		{ 19, "Input / IO", "InputIO" },
+		{ 23, "Utility",    "Utility" },
 		};
 		constexpr int num_groups = sizeof(sidebar_groups) / sizeof(sidebar_groups[0]);
 		int next_group = 0;
@@ -2965,6 +2965,10 @@ void run_gui()
         }
 
 		ImGui::End();
+
+		// Runtime requests, such as replacing a missing floppy referenced by a
+		// restored state, must be rendered independently of the active panel.
+		FloppyRecoveryDialog_Render();
 
 		// Pop touch-scrolling hover suppression colors
 		if (touch_scrolling) {
