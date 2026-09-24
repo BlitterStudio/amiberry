@@ -228,6 +228,7 @@ INCFLAGS += -I$(AMIBERRY_DIR)/external/floppybridge/src
 INCFLAGS += -I$(LIBRETRO_DIR)
 INCFLAGS += -I$(LIBCO_DIR)
 INCFLAGS += -I$(LIBRETRO_COMMON)/include
+INCFLAGS += -I$(AMIBERRY_DIR)/external/imgui
 
 ZLIB_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags zlib 2>/dev/null)
 ZLIB_LIBS ?= $(shell $(PKG_CONFIG) --libs zlib 2>/dev/null)
@@ -390,6 +391,7 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/gfx_window.cpp \
                 $(AMIBERRY_DIR)/src/osdep/gfx_colors.cpp \
                 $(AMIBERRY_DIR)/src/osdep/gfx_prefs_check.cpp \
+                $(AMIBERRY_DIR)/src/osdep/imgui_osk.cpp \
                 $(AMIBERRY_DIR)/src/osdep/display_modes.cpp \
                 $(AMIBERRY_DIR)/src/osdep/renderer_factory.cpp \
                 $(AMIBERRY_DIR)/src/osdep/sdl_renderer.cpp \

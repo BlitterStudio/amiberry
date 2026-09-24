@@ -26,11 +26,16 @@ bool imgui_osk_is_active();
 // Returns true if the keyboard should be rendered this frame.
 bool imgui_osk_should_render();
 
-// Render the keyboard. Called between imgui_overlay_begin_frame/end_frame.
-// Geometry uses ImGui's logical display coordinates for HiDPI correctness.
+// Render the keyboard. Called between imgui_overlay_begin_frame/end_frame in
+// native builds. Libretro renders into a presentation-only surface copy so
+// emulation-owned pixels are never modified.
 // Rendering is read-only with respect to navigation state: it never advances
 // key focus or repeat — that is imgui_osk_update()'s job.
 void imgui_osk_render();
+#ifdef LIBRETRO
+struct SDL_Surface;
+void imgui_osk_render(SDL_Surface* surface);
+#endif
 
 // Advance held-direction key repeat. Call once per frame on the main/input
 // thread, after pumping input events and alongside rendering: a stable
