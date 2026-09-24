@@ -124,6 +124,11 @@ static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 				memcpy(output + static_cast<size_t>(y) * surface->pitch,
 					pixels + static_cast<size_t>(y) * surface->pitch, row_bytes);
 
+			// Composite the bottom-anchored statusline before the on-screen keyboard,
+			// or it would paint over the keyboard's Alt/Amiga/space/cursor row; with
+			// the keyboard on top it stays readable while it is open.
+			if (render_statusline)
+				libretro_render_statusline(output, w, h, surface->pitch);
 			if (render_osk) {
 				SDL_Surface presentation = *surface;
 				presentation.pixels = output;
@@ -131,8 +136,6 @@ static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 				presentation.h = h;
 				imgui_osk_render(&presentation);
 			}
-			if (render_statusline)
-				libretro_render_statusline(output, w, h, surface->pitch);
 			pixels = output;
 		}
 		video_cb(pixels, w, h, surface->pitch);

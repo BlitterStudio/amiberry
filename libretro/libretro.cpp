@@ -3967,6 +3967,65 @@ static void route_libretro_joy_axis(const int joy, const int axis,
 		owner = LibretroInputOwner::neutral;
 }
 
+// The on-screen keyboard's direct driver. While the keyboard is on screen the
+// RetroPads are the keyboard's navigation surface: the D-pad / A move and
+// select, and the left stick steers. This mirrors the standalone controller
+// path (amiberry.cpp handle_osk_button / osk_publish_controller_state) by
+// driving osk_control() directly, so navigation works even when no core port
+// is mapped to an emulated joystick - the guest's port mapping is irrelevant
+// to the OSK.
+static int libretro_osk_button_bit(const int sdl_button)
+{
+	switch (sdl_button) {
+	case SDL_CONTROLLER_BUTTON_DPAD_UP:    return OSK_UP;
+	case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  return OSK_DOWN;
+	case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  return OSK_LEFT;
+	case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return OSK_RIGHT;
+	case SDL_CONTROLLER_BUTTON_A:          return OSK_BUTTON; // south: select
+	default:                               return 0;
+	}
+}
+
+static void libretro_osk_publish_state(void)
+{
+	if (!imgui_osk_should_render())
+		return;
+
+	// A direction or key held on either pad must keep navigating, so OR the
+	// OSK-relevant controls of both ports into one state.
+	int dir = 0;
+	int btn = 0;
+	for (int i = 0; i < 2; i++) {
+		const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
+		if (dev == RETRO_DEVICE_NONE)
+			continue;
+		for (const auto& mapping : joypad_map) {
+			const int bit = libretro_osk_button_bit(mapping.sdl_button);
+			if (!bit || !last_joypad[i][mapping.retro_id])
+				continue;
+			if (bit == OSK_BUTTON)
+				btn = 1;
+			else
+				dir |= bit;
+		}
+		// The left stick steers the keyboard, mirroring handle_osk_axis().
+		const int16_t lx = last_analog[i][0];
+		const int16_t ly = last_analog[i][1];
+		if (lx < -SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+			dir |= OSK_LEFT;
+		else if (lx > SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+			dir |= OSK_RIGHT;
+		if (ly < -SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+			dir |= OSK_UP;
+		else if (ly > SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+			dir |= OSK_DOWN;
+	}
+	const int dx = (dir & OSK_LEFT) ? -1 : (dir & OSK_RIGHT) ? 1 : 0;
+	const int dy = (dir & OSK_UP) ? -1 : (dir & OSK_DOWN) ? 1 : 0;
+	osk_control(dx, dy, 0, 0, OskInputSource::Gamepad);
+	osk_control(0, 0, 1, btn, OskInputSource::Gamepad);
+}
+
 static void poll_input(void)
 {
 	if (!poll_frontend_input())
@@ -4013,6 +4072,17 @@ static void poll_input(void)
 				// The native path enqueues on the press edge only.
 				if (state && !was)
 					inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+				continue;
+			}
+			// East (B) hides the keyboard while it is open, mirroring the
+			// standalone controller path; consume it so it never reaches the
+			// guest. Skipped when B itself is the configured OSK toggle.
+			if (currprefs.vkbd_enabled
+				&& mapping.sdl_button == SDL_CONTROLLER_BUTTON_B
+				&& libretro_vkbd_button != SDL_CONTROLLER_BUTTON_B
+				&& imgui_osk_is_active()) {
+				if (state && !was)
+					imgui_osk_hide();
 				continue;
 			}
 			route_libretro_joy_button(
@@ -4118,6 +4188,9 @@ static void poll_input(void)
 			last_mouse_y[i] = mouse_y;
 		}
 	}
+	// Drive the on-screen keyboard directly from the polled RetroPad state;
+	// independent of any guest port mapping.
+	libretro_osk_publish_state();
 	last_analog_enabled = analog_enabled;
 }
 
