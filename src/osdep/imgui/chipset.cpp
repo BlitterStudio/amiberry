@@ -399,14 +399,23 @@ void render_panel_chipset() {
             "Noise (built-in)",
             "Test card (built-in)",
             "Image file (png)",
+#ifdef VIDEOGRAB
             "Video file",
             "Capture device",
             "American Laser Games/Picmatic LaserDisc Player",
             "Sony LaserDisc Player",
             "Pioneer LaserDisc Player"
+#endif
         };
+        int genlock_selection = changed_prefs.genlock_image;
+        if (genlock_selection < 0 || genlock_selection >= IM_ARRAYSIZE(genlock_items)) {
+            genlock_selection = 0;
+            changed_prefs.genlock_image = 0;
+        }
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x - 3.0f);
-        ImGui::Combo("##Genlock", &changed_prefs.genlock_image, genlock_items, IM_ARRAYSIZE(genlock_items));
+        if (ImGui::Combo("##Genlock", &genlock_selection, genlock_items, IM_ARRAYSIZE(genlock_items))) {
+            changed_prefs.genlock_image = genlock_selection;
+        }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::SameLine();
 
@@ -425,7 +434,11 @@ void render_panel_chipset() {
             changed_prefs.genlock_aspect = genlock_aspect ? 1 : 0;
         }
 
-        if (changed_prefs.genlock_image == 3 || changed_prefs.genlock_image == 4 || changed_prefs.genlock_image >= 6)
+        if (changed_prefs.genlock_image == 3
+#ifdef VIDEOGRAB
+            || changed_prefs.genlock_image == 4 || changed_prefs.genlock_image >= 6
+#endif
+        )
         // Image, Video or LaserDisc
         {
             // Show File selector
@@ -436,7 +449,13 @@ void render_panel_chipset() {
             AmigaInputText("Genlock File", filename_ptr, MAX_DPATH);
             ImGui::SameLine();
             if (AmigaButton("...##GenlockFile")) {
-                const char *filter = (changed_prefs.genlock_image == 3) ? ".png,.jpg,.jpeg,.bmp" : ".avi,.mp4,.mkv";
+                const char *filter = (changed_prefs.genlock_image == 3)
+                    ? ".png,.jpg,.jpeg,.bmp"
+#ifdef AMIBERRY_WITH_FFMPEG
+                    : ".avi,.mp4,.mkv,.mov,.webm,.mpg,.mpeg,.m4v,.wmv";
+#else
+                    : ".avi";
+#endif
                 std::string title = (changed_prefs.genlock_image == 3)
                                         ? "Select Genlock Image"
                                         : "Select Genlock Video";

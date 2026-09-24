@@ -578,6 +578,7 @@ static void copyjport (const struct uae_prefs *src, struct uae_prefs *dst, int n
 	dst->jports[num].submode = src->jports[num].submode;
 	dst->jports[num].autofire = src->jports[num].autofire;
 	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
+	dst->jports_default[num] = src->jports_default[num];
 #ifdef AMIBERRY
 	dst->jports[num].mousemap = src->jports[num].mousemap;
 #endif
@@ -8467,6 +8468,9 @@ void inputdevice_updateconfig_internal (struct uae_prefs *srcprefs, struct uae_p
 	keyboard_default = keyboard_default_table[currprefs.input_keyboard_type];
 
 	inputdevice_copyjports(srcprefs, dstprefs);
+	for (int i = 0; i < MAX_JPORTS; i++) {
+		default_keyboard_layout[i] = dstprefs->jports_default[i];
+	}
 	resetinput ();
 
 	joysticks = dstprefs->joystick_settings[dstprefs->input_selected_setting];
@@ -10635,7 +10639,7 @@ static void inputdevice_get_previous_joy(struct uae_prefs *p, int portnum, bool 
 			found = inputdevice_joyport_config(p, jp->idc.name, jp->idc.configname, portnum, jp->mode, jp->submode, 1, true) != 0;
 			if (!found && jp->id == JPORT_UNPLUGGED)
 				found = inputdevice_joyport_config(p, jp->idc.name, NULL, portnum, jp->mode, jp->submode, 1, true) != 0;
-		} else if (jp->id < JSEM_JOYS && jp->id >= 0) {
+		} else if (jp->id < JSEM_JOYS && jp->id >= 0 && p->jports_default[portnum] == 0) {
 			jpx->id = jp->id;
 			found = true;
 		}
@@ -10719,9 +10723,30 @@ void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fi
 	}
 }
 
+void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum)
+{
+	if (_tcsncmp(value, _T("kbd"), 3) == 0) {
+		TCHAR *endptr;
+		const long layout = _tcstol(value + 3, &endptr, 10);
+		if (layout > 0 && layout <= JSEM_LASTKBD && *endptr == 0) {
+			p->jports_default[portnum] = JSEM_KBDLAYOUT + (int)layout;
+		} else {
+			p->jports_default[portnum] = 0;
+		}
+	} else if (_tcscmp(value, _T("none")) == 0) {
+		p->jports_default[portnum] = -1;
+	} else {
+		p->jports_default[portnum] = 0;
+	}
+	default_keyboard_layout[portnum] = p->jports_default[portnum];
+}
+
 void inputdevice_joyport_config_store(struct uae_prefs *p, const TCHAR *value, int portnum, int mode, int submode, int type)
 {
 	struct jport *jp = &p->jports[portnum];
+	if (value == NULL) {
+		return;
+	}
 	if (type == 2) {
 		_tcscpy(jp->idc.name, value);
 	} else if (type == 1) {
@@ -10875,7 +10900,10 @@ int inputdevice_joyport_config(struct uae_prefs *p, const TCHAR *value1, const T
 						p->jports[portnum].submode = submode;
 					}
 					if (start < JSEM_JOYS) {
-						default_keyboard_layout[portnum] = start + 1;
+						// only mark as default if not configured
+						if (p->jports_default[portnum] == 0) {
+							default_keyboard_layout[portnum] = start + 1;
+						}
 					}
 					if (got == 2 && candefault) {
 						inputdevice_store_used_device(&p->jports[portnum], portnum, false);

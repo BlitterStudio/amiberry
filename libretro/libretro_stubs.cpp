@@ -165,10 +165,11 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 	(void)msg;
 }
 
-bool gui_ask_disk(int drv, TCHAR* name)
+bool gui_ask_disk(int drv, TCHAR* name, int name_len)
 {
 	(void)drv;
 	(void)name;
+	(void)name_len;
 	return false;
 }
 

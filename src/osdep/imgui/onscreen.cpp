@@ -151,7 +151,7 @@ static void ShowHotkeyPopup()
 	}
 }
 
-void render_panel_virtual_keyboard()
+void render_panel_onscreen()
 {
 	ImGui::Indent(4.0f);
 

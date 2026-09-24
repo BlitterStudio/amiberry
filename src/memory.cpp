@@ -2498,7 +2498,8 @@ bool mapped_malloc (addrbank *ab)
 #endif
 			return true;
 		}
-		ab->baseaddr = xcalloc (uae_u8, ab->reserved_size + 4);
+		if (!uae_mman_alloc_nodirect(ab, ab->reserved_size + 4))
+			ab->baseaddr = xcalloc (uae_u8, ab->reserved_size + 4);
 		if (ab->baseaddr) {
 			// fill end of ram with ILLEGAL to catch direct PC falling out of RAM.
 			put_long_host(ab->baseaddr + ab->reserved_size, 0x4afc4afc);

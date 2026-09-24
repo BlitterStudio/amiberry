@@ -27,6 +27,9 @@
 #include <algorithm>
 
 #include "sounddep/sound.h"
+#ifdef VIDEOGRAB
+#include "videograb.h"
+#endif
 
 #ifdef LIBRETRO
 #include "libretro_shared.h"
@@ -441,6 +444,9 @@ void set_volume(int volume, int mute)
 {
 	set_volume_sound_device(sdp, volume, mute);
 	setvolume_ahi(volume);
+#ifdef VIDEOGRAB
+	setmastervolumevideograb(volume, mute != 0);
+#endif
 	config_changed = 1;
 }
 

@@ -1,0 +1,337 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v python3 >/dev/null 2>&1; then
+	PYTHON=python3
+elif command -v python >/dev/null 2>&1; then
+	PYTHON=python
+elif command -v py >/dev/null 2>&1; then
+	PYTHON="py -3"
+else
+	echo "python3, python, or py is required" >&2
+	exit 1
+fi
+
+$PYTHON - <<'PY'
+from pathlib import Path
+import sys
+
+videograb = Path("src/osdep/videograb.cpp").read_text()
+arcadia = Path("src/arcadia.cpp").read_text()
+devices = Path("src/devices.cpp").read_text()
+drawing = Path("src/drawing.cpp").read_text()
+specialmonitors = Path("src/specialmonitors.cpp").read_text()
+sound = Path("src/sounddep/sound.cpp").read_text()
+audio = Path("src/audio.cpp").read_text()
+chipset = Path("src/osdep/imgui/chipset.cpp").read_text()
+
+
+def fail(message: str) -> None:
+	print(message, file=sys.stderr)
+	sys.exit(1)
+
+
+def region_between(text: str, start_marker: str, end_marker: str) -> str:
+	try:
+		start = text.index(start_marker)
+		end = text.index(end_marker, start)
+	except ValueError as exc:
+		fail(f"Could not find source marker: {exc}")
+	return text[start:end]
+
+
+indexed_chunk = region_between(
+	videograb,
+	"static bool indexed_chunk_data_pos(",
+	"static void build_indexed_frames(",
+)
+if "(uae_u64)size <= remaining" not in indexed_chunk or \
+		"(uae_u64)idx.size <= remaining" not in indexed_chunk:
+	fail("AVI index entries must fit their declared payloads within the file")
+
+indexed_frames = region_between(
+	videograb,
+	"static void build_indexed_frames(",
+	"static bool scan_movi_frames(",
+)
+if "valid_avi_frame_payload_size(*info, idx.size)" not in indexed_frames:
+	fail("AVI index entries must match the expected uncompressed frame size")
+
+scanned_frames = region_between(
+	videograb,
+	"static bool scan_movi_frames(",
+	"static bool parse_avi_file(",
+)
+if "valid_avi_frame_payload_size(*info, size)" not in scanned_frames:
+	fail("Scanned AVI frames must match the expected uncompressed frame size")
+
+avi_read = region_between(
+	videograb,
+	"static bool read_avi_frame(",
+	"static bool init_avi_videograb(",
+)
+if "(size_t)avi_frame.size > padded_size" not in avi_read or \
+		"(end - avi_frame.data_pos)" not in avi_read:
+	fail("AVI frame reads must validate expected size and remaining file data")
+if "try {" not in avi_read or "data.resize(avi_frame.size);" not in avi_read or \
+		"catch (...)" not in avi_read:
+	fail("AVI frame allocation failures must be handled")
+
+read_frame = region_between(
+	videograb,
+	"static bool read_ffmpeg_frame(",
+	"static void uninit_ffmpeg_videograb(",
+)
+eof = region_between(read_frame, "if (err == AVERROR_EOF)", "if (err < 0)")
+video_drain = eof.find("ffmpeg_decode_video_packet(nullptr, target_frame, nullptr)")
+audio_drain = eof.find("ffmpeg_decode_audio_packet(nullptr, nullptr)")
+loop_seek = eof.find("ffmpeg_seek_frame(0, false)")
+if not (0 <= audio_drain < loop_seek and 0 <= video_drain < loop_seek):
+	fail("FFmpeg decoders must drain delayed frames before the EOF loop seek")
+if "ffmpeg_discard_audio_packet" in read_frame:
+	fail("FFmpeg seek preroll packets must be sent to the decoder")
+
+audio_discard = region_between(
+	videograb,
+	"static bool ffmpeg_discard_audio_frame(",
+	"static uae_s64 ffmpeg_current_frame(",
+)
+if "ffmpeg_timestamp_from_frame(ffmpeg_audio_discard_until_frame)" not in audio_discard:
+	fail("FFmpeg audio seek filtering must derive an absolute video-stream timestamp")
+if "frame->best_effort_timestamp" not in audio_discard:
+	fail("FFmpeg audio seek filtering must use decoded-frame timestamps")
+if "av_compare_ts(timestamp, audio_stream->time_base" not in audio_discard:
+	fail("FFmpeg audio seek filtering must compare the absolute audio packet timestamp")
+if "discard_until_timestamp, video_stream->time_base" not in audio_discard:
+	fail("FFmpeg audio seek filtering must compare against the video stream timeline")
+if "timestamp - start_time" in audio_discard:
+	fail("FFmpeg audio seek filtering must not rebase packets to the audio stream start")
+
+duration_frames = region_between(
+	videograb,
+	"static uae_s64 ffmpeg_guess_duration_frames(",
+	"static bool ffmpeg_open_decoder(",
+)
+stream_duration = duration_frames.find("stream->duration")
+format_duration = duration_frames.find("ffmpeg_format->duration")
+frame_count = duration_frames.find("stream->nb_frames")
+if not (0 <= stream_duration < format_duration < frame_count):
+	fail("FFmpeg duration metadata must take precedence over decoded frame counts")
+if duration_frames.count("ffmpeg_frame_time_base()") != 2:
+	fail("FFmpeg duration metadata must use the same nominal timeline as PTS frame indices")
+
+audio_decode = region_between(
+	videograb,
+	"static void ffmpeg_decode_audio_packet(",
+	"static bool ffmpeg_copy_video_frame(",
+)
+if "*packet_consumed = false;" not in audio_decode:
+	fail("FFmpeg audio decoding must report packets rejected with EAGAIN")
+if "err != AVERROR(EAGAIN)" not in audio_decode or "*packet_consumed = true;" not in audio_decode:
+	fail("FFmpeg audio decoding must report when the input packet was accepted")
+if "ffmpeg_decode_audio_packet(ffmpeg_packet, &packet_consumed);" not in read_frame:
+	fail("FFmpeg audio packets rejected with EAGAIN must remain pending")
+if "if (!ffmpeg_discard_audio_frame(ffmpeg_audio_frame))" not in audio_decode:
+	fail("FFmpeg seek preroll must decode compressed input while suppressing early PCM")
+
+video_decode = region_between(
+	videograb,
+	"static bool ffmpeg_decode_video_packet(",
+	"static bool ffmpeg_seek_frame(",
+)
+if "*packet_consumed = false;" not in video_decode:
+	fail("FFmpeg video decoding must report packets rejected with EAGAIN")
+if "err != AVERROR(EAGAIN)" not in video_decode or "*packet_consumed = true;" not in video_decode:
+	fail("FFmpeg video decoding must report when the input packet was accepted")
+if "frame_index > target_frame" not in video_decode:
+	fail("FFmpeg video decoding must identify the next frame after a VFR gap")
+if "av_frame_move_ref(ffmpeg_pending_video_frame, ffmpeg_video_frame);" not in video_decode:
+	fail("FFmpeg video decoding must retain a future VFR frame until its timestamp")
+if "if (!ffmpeg_packet_pending)" not in read_frame:
+	fail("FFmpeg video decoding must retry an unconsumed packet before reading another")
+coverage_start = read_frame.find("target_frame >= loaded_frame")
+coverage_end = read_frame.find("target_frame < ffmpeg_pending_video_frame_index")
+promotion = read_frame.find("target_frame >= ffmpeg_pending_video_frame_index")
+backward_seek = read_frame.find("target_frame < ffmpeg_decoded_frame")
+if not (0 <= coverage_start < coverage_end < promotion < backward_seek):
+	fail("FFmpeg must hold and then promote VFR frames by their timestamps before seeking")
+if "ffmpeg_copy_video_frame(\n            ffmpeg_pending_video_frame, frame_index)" not in read_frame:
+	fail("FFmpeg must promote the retained VFR frame when its timestamp is reached")
+packet_cleanup = region_between(read_frame, "bool packet_consumed = true;", "if (got_frame)")
+if "&packet_consumed" not in packet_cleanup or "if (packet_consumed)" not in packet_cleanup:
+	fail("FFmpeg video packets must only be released after the decoder accepts them")
+if "ffmpeg_packet_pending = true;" not in packet_cleanup:
+	fail("FFmpeg video packets rejected with EAGAIN must remain pending")
+
+seek_frame = region_between(
+	videograb,
+	"static bool ffmpeg_seek_frame(",
+	"static bool read_ffmpeg_frame(",
+)
+if "ffmpeg_audio_discard_until_frame" not in seek_frame:
+	fail("FFmpeg seeks must record the requested audio start frame")
+if "if (clear_audio_output)" not in seek_frame:
+	fail("FFmpeg loop seeks must be able to preserve drained tail audio")
+if "av_packet_unref(ffmpeg_packet);" not in seek_frame or "ffmpeg_packet_pending = false;" not in seek_frame:
+	fail("FFmpeg seeks must discard any pending pre-seek packet")
+if "av_frame_unref(ffmpeg_pending_video_frame);" not in seek_frame or \
+		"ffmpeg_pending_video_frame_index = -1;" not in seek_frame:
+	fail("FFmpeg seeks must discard retained VFR frames")
+if "ffmpeg_seek_frame(target_frame, true)" not in read_frame:
+	fail("Playback jumps must discard audio queued before the new position")
+if "target_frame > ffmpeg_decoded_frame + 1" not in read_frame:
+	fail("Short forward catch-up must detect skipped nominal frames")
+if "target_frame <= ffmpeg_decoded_frame + 120" not in read_frame:
+	fail("Short forward catch-up must remain distinct from the seek path")
+if "ffmpeg_audio_discard_until_frame = target_frame;" not in read_frame:
+	fail("Short forward catch-up must discard audio older than the wall-clock target")
+
+frame_from_pts = region_between(
+	videograb,
+	"static uae_s64 ffmpeg_frame_from_pts(",
+	"static uae_s64 ffmpeg_timestamp_from_frame(",
+)
+timestamp_from_frame = region_between(
+	videograb,
+	"static uae_s64 ffmpeg_timestamp_from_frame(",
+	"static uae_s64 ffmpeg_current_frame(",
+)
+if "pts - start_time" not in frame_from_pts:
+	fail("FFmpeg frame numbers must be relative to the stream start time")
+if "start_time + av_rescale_q" not in timestamp_from_frame:
+	fail("FFmpeg seeks must restore the stream start-time offset")
+
+init_video = region_between(
+	videograb,
+	"bool initvideograb(",
+	"bool getvideograb(",
+)
+if "audio_volume = 100 - currprefs.sound_volume_genlock;" not in init_video:
+	fail("FFmpeg playback must start at the configured genlock volume")
+if "audio_master_volume = 100 - currprefs.sound_volume_master;" not in init_video:
+	fail("FFmpeg playback must start at the configured master volume")
+if "audio_chflags = 3;" not in init_video:
+	fail("Ordinary FFmpeg video playback must enable both audio channels")
+if "ffmpeg_update_audio_gain();" not in init_video:
+	fail("FFmpeg playback must apply its initial audio gain to the SDL stream")
+
+audio_gain = region_between(
+	videograb,
+	"static float ffmpeg_audio_gain(",
+	"static void ffmpeg_update_audio_gain(",
+)
+if "audio_master_muted" not in audio_gain or "source_gain * master_gain" not in audio_gain:
+	fail("FFmpeg playback gain must combine master and genlock audio controls")
+if "!audio_output_enabled" not in audio_gain:
+	fail("FFmpeg playback gain must honor the disabled sound-output modes")
+
+audio_gain_update = region_between(
+	videograb,
+	"static void ffmpeg_update_audio_gain(",
+	"static bool fourcc_equals(",
+)
+if "SDL_SetAudioStreamGain(ffmpeg_audio_stream, ffmpeg_audio_gain())" not in audio_gain_update:
+	fail("FFmpeg gain changes must affect audio already queued in the SDL stream")
+
+set_audio = region_between(audio, "void set_audio (void)", "static void update_audio_volcnt(")
+if "setsoundoutputvideograb(currprefs.produce_sound >= 2);" not in set_audio:
+	fail("Applying sound preferences must refresh FFmpeg output enablement")
+
+genlock_selection = region_between(
+	chipset,
+	"int genlock_selection = changed_prefs.genlock_image;",
+	"ImGui::SetNextItemWidth(",
+)
+if "changed_prefs.genlock_image = 0;" not in genlock_selection:
+	fail("Unsupported genlock sources must be cleared from pending preferences")
+
+set_volume = region_between(sound, "void set_volume(", "static void finish_sound_buffer_sdl_push(")
+if "setmastervolumevideograb(volume, mute != 0);" not in set_volume:
+	fail("Master volume and mute changes must update the video audio backend")
+
+video_audio_controls = region_between(
+	videograb,
+	"void setvolumevideograb(",
+	"void isvideograb_status(",
+)
+if video_audio_controls.count("ffmpeg_update_audio_gain();") != 4:
+	fail("Video, master, output-enable, and channel controls must refresh the live SDL stream gain")
+
+mute_on = region_between(arcadia, "case 0x24: // Audio mute", "case 0x25: // Audio mute off")
+mute_off = region_between(arcadia, "case 0x25: // Audio mute off", "case 0x26: // Video off")
+for command in (mute_on, mute_off):
+	if "setchflagsvideograb(ld_audio, ld_audio_mute);" not in command:
+		fail("Laserdisc mute commands must update the video audio backend")
+if "setchflagsvideograb(ld_audio, false);" in arcadia:
+	fail("Laserdisc channel and restore updates must preserve mute state")
+
+status = videograb[videograb.index("void isvideograb_status("):]
+if "setchflagsvideograb(audio_chflags, audio_muted);" not in status:
+	fail("Genlock volume refreshes must preserve backend mute state")
+
+laserdisc_video_state = region_between(
+	arcadia,
+	"bool ld_video_enabled(void)",
+	"static void alg_vsync(",
+)
+if "return ld_video;" not in laserdisc_video_state:
+	fail("Laserdisc video output state must be exposed to the genlock renderer")
+laserdisc_render = region_between(
+	specialmonitors,
+	"} else if (currprefs.genlock_image == 4 || currprefs.genlock_image >= 6) {",
+	"skip:",
+)
+if "currprefs.genlock_image == 6 || currprefs.genlock_image == 7" not in laserdisc_render:
+	fail("ALG and Sony laserdisc sources must share protocol video-output state")
+video_output_gate = region_between(
+	laserdisc_render,
+	"if (currprefs.genlock_image == 6 || currprefs.genlock_image == 7)",
+	"else if (currprefs.genlock_image >= 8)",
+)
+if "genlock_blank = !ld_video_enabled();" not in video_output_gate:
+	fail("Laserdisc video-off commands must blank decoded video")
+if "pausevideograb" in video_output_gate:
+	fail("Laserdisc video-off commands must not pause audio playback")
+
+if '#ifdef VIDEOGRAB\n#include "videograb.h"' not in devices:
+	fail("Device pause hooks must include the video-grab interface in video-grab builds")
+device_pause = region_between(
+	devices,
+	"void devices_pause(",
+	"void devices_unsafeperiod(",
+)
+if "#ifdef AVIOUTPUT" in device_pause:
+	fail("Video-grab pause hooks must not depend on disabled AVI output support")
+if "#ifdef VIDEOGRAB\n\tpausevideograb(1);" not in device_pause:
+	fail("Pausing emulation must pause genlock video and audio playback")
+if "#ifdef VIDEOGRAB\n\tpausevideograb(0);" not in device_pause:
+	fail("Resuming emulation must resume genlock video and audio playback")
+
+genlock_update = region_between(
+	specialmonitors,
+	"void specialmonitor_update_genlock(",
+	"static uae_u32 quickrand(",
+)
+if "close_genlock_video();" not in genlock_update:
+	fail("Inactive genlock must close its video or camera backend")
+if "currprefs.genlock || currprefs.genlock_effects" not in genlock_update:
+	fail("Genlock cleanup must follow both connector and effects state")
+if "file_video_source" not in genlock_update or "currprefs.genlock_video_file[0]" not in genlock_update:
+	fail("File-backed genlock sources must become inactive when their path is cleared")
+if "!file_video_source || currprefs.genlock_video_file[0]" not in genlock_update:
+	fail("Camera genlock must remain active without requiring a video file path")
+
+specialmonitor_reset = region_between(
+	specialmonitors,
+	"void specialmonitor_reset(",
+	"bool specialmonitor_need_genlock(",
+)
+close_on_reset = specialmonitor_reset.find("close_genlock_video();")
+early_return = specialmonitor_reset.find("if (!currprefs.monitoremu)")
+if not (0 <= close_on_reset < early_return):
+	fail("Reset must close genlock capture even without monitor emulation")
+
+genlock_render = region_between(drawing, "// genlock", "#ifdef CD32")
+if "specialmonitor_update_genlock();" not in genlock_render:
+	fail("Rendering must update capture lifecycle even when genlock is inactive")
+PY

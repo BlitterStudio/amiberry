@@ -62,7 +62,7 @@ jobs:
             set -eu
             pkg install -y \
               cmake ninja pkgconf git \
-              sdl3 sdl3_image flac mpg123 png curl nlohmann-json \
+              sdl3 sdl3_image flac mpg123 ffmpeg png curl nlohmann-json \
               libsysinfo libiconv libglvnd dbus \
               libserialport enet portmidi libmpeg2 libpcap zstd
           run: |

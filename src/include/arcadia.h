@@ -28,6 +28,7 @@ extern int arcadia_flag, arcadia_coin[2];
 extern int alg_flag;
 extern void alg_map_banks(void);
 extern bool alg_ld_active(void);
+extern bool ld_video_enabled(void);
 
 extern int alg_get_player(uae_u16);
 extern uae_u16 alg_potgor(uae_u16);
