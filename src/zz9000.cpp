@@ -2,7 +2,7 @@
  * MNT ZZ9000 RTG emulation
  *
  * Implements the register and framebuffer ABI used by the current
- * ZZ9000.card driver and ZZ9000OS 2.7 firmware.  The optional surface
+ * ZZ9000.card driver and ZZ9000OS 2.8 firmware.  The optional surface
  * allocator and packed-YUV video overlay use the same GFXData command
  * interface as the hardware.
  *
@@ -85,6 +85,7 @@ enum zz9000_register {
 	ZZ_REG_SPLIT_POS = 0x5e,
 	ZZ_REG_SET_FEATURE = 0x60,
 	ZZ_REG_FW_VERSION = 0xc0,
+	ZZ_REG_FW_CAPABILITIES = 0xe6,
 	ZZ_REG_CONFIG_KEY = 0xe8,
 	ZZ_REG_CONFIG_PRESENT = 0xea
 };
@@ -1492,7 +1493,14 @@ static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 {
 	switch (offset) {
 		case ZZ_REG_FW_VERSION:
-			return 0x0207;
+			return 0x0208;
+		case ZZ_REG_FW_CAPABILITIES:
+			/* No 2.8-only capability bits: custom P96 modelines, Z2
+			 * aperture negotiation and the VCAP centered-1080p /
+			 * live-calibration stack are not emulated, so a 2.8
+			 * card driver stays on the legacy paths this
+			 * emulation backs. */
+			return 0;
 		case ZZ_REG_VBLANK:
 			data->vblank_read = !data->vblank_read;
 			return data->vblank_read ? 1 : 0;
