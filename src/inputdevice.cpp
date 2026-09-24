@@ -218,6 +218,13 @@ static int draco_keybord_repeat_cnt, draco_keybord_repeat_code;
 static int osk_joystick_state = 0;
 static int osk_gamepad_state = 0;
 static thread_local bool osk_passthrough = false;
+static thread_local bool osk_capture_only = false;
+// OSK-owned directional events must not share the gameplay accumulators below:
+// a gameplay release can otherwise publish an OSK-held direction to joydir.
+static int osk_oleft[MAX_JPORTS], osk_oright[MAX_JPORTS];
+static int osk_otop[MAX_JPORTS], osk_obot[MAX_JPORTS];
+static int osk_horizclear[MAX_JPORTS], osk_vertclear[MAX_JPORTS];
+static int osk_relativecount[MAX_JPORTS][2];
 
 inputdevice_osk_passthrough::inputdevice_osk_passthrough(bool enabled)
 	: previous(osk_passthrough)
@@ -234,6 +241,12 @@ void osk_control(int x, int y, int button, int buttonstate, OskInputSource sourc
 {
 	if (!imgui_osk_is_active()) {
 		osk_joystick_state = osk_gamepad_state = 0;
+		for (int joy = 0; joy < MAX_JPORTS; ++joy) {
+			osk_oleft[joy] = osk_oright[joy] = 0;
+			osk_otop[joy] = osk_obot[joy] = 0;
+			osk_horizclear[joy] = osk_vertclear[joy] = 1;
+			osk_relativecount[joy][0] = osk_relativecount[joy][1] = 0;
+		}
 		return;
 	}
 	if (!vkbd_allowed(0))
@@ -5638,6 +5651,19 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	if (ie->unit == 0 && ie->data >= AKS_FIRST) {
 		isaks = true;
 	}
+	const bool joystick_unit = ie->unit >= 1 && ie->unit <= 4;
+	const bool joystick_button = joystick_unit && (ie->type & 4);
+	const bool joystick_direction = joystick_unit
+		&& !(ie->type & (4 | 8 | 32 | 64 | 128));
+	const bool osk_joystick_input = joystick_button || joystick_direction;
+	const bool osk_capture_requested = osk_capture_only
+		&& vkbd_allowed(0) && imgui_osk_is_active();
+	const bool osk_action = isaks && ie->data == AKS_OSK;
+	if (osk_capture_requested && !osk_joystick_input && !osk_action)
+		return 1;
+	const bool osk_will_capture = !osk_passthrough
+		&& vkbd_allowed(0) && imgui_osk_is_active() && osk_joystick_input;
+
 
 #ifdef DEBUGGER
 	if (isaks) {
@@ -5674,7 +5700,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 
 	if ((inputdevice_logging & 1) || input_record || input_play)
 		write_log (_T("STATE=%05d MAX=%05d AF=%d QUAL=%06x '%s' \n"), state, max, autofire, (uae_u32)(qualifiers >> 32), ie->name);
-	if (autofire) {
+	if (autofire && !osk_will_capture && !osk_capture_requested) {
 		if (state)
 			queue_input_event (nr, NULL, state, max, currprefs.input_autofire_linecnt, 1);
 		else
@@ -5941,55 +5967,62 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 
 		} else {
 
-			int left = oleft[joy], right = oright[joy], top = otop[joy], bot = obot[joy];
+			const bool capture_osk = !osk_passthrough
+				&& vkbd_allowed(0) && imgui_osk_is_active();
+			int& stored_left = capture_osk ? osk_oleft[joy] : oleft[joy];
+			int& stored_right = capture_osk ? osk_oright[joy] : oright[joy];
+			int& stored_top = capture_osk ? osk_otop[joy] : otop[joy];
+			int& stored_bot = capture_osk ? osk_obot[joy] : obot[joy];
+			int& clear_horizontal = capture_osk ? osk_horizclear[joy] : horizclear[joy];
+			int& clear_vertical = capture_osk ? osk_vertclear[joy] : vertclear[joy];
+			int left = stored_left, right = stored_right;
+			int top = stored_top, bot = stored_bot;
 			if (ie->type & 16) {
 				/* button to axis mapping */
 				if (ie->data & DIR_LEFT) {
-					left = oleft[joy] = state ? 1 : 0;
-					if (horizclear[joy] && left) {
-						horizclear[joy] = 0;
-						right = oright[joy] = 0;
+					left = stored_left = state ? 1 : 0;
+					if (clear_horizontal && left) {
+						clear_horizontal = 0;
+						right = stored_right = 0;
 					}
 				}
 				if (ie->data & DIR_RIGHT) {
-					right = oright[joy] = state ? 1 : 0;
-					if (horizclear[joy] && right) {
-						horizclear[joy] = 0;
-						left = oleft[joy] = 0;
+					right = stored_right = state ? 1 : 0;
+					if (clear_horizontal && right) {
+						clear_horizontal = 0;
+						left = stored_left = 0;
 					}
 				}
 				if (ie->data & DIR_UP) {
-					top = otop[joy] = state ? 1 : 0;
-					if (vertclear[joy] && top) {
-						vertclear[joy] = 0;
-						bot = obot[joy] = 0;
+					top = stored_top = state ? 1 : 0;
+					if (clear_vertical && top) {
+						clear_vertical = 0;
+						bot = stored_bot = 0;
 					}
 				}
 				if (ie->data & DIR_DOWN) {
-					bot = obot[joy] = state ? 1 : 0;
-					if (vertclear[joy] && bot) {
-						vertclear[joy] = 0;
-						top = otop[joy] = 0;
+					bot = stored_bot = state ? 1 : 0;
+					if (clear_vertical && bot) {
+						clear_vertical = 0;
+						top = stored_top = 0;
 					}
 				}
 			} else {
 				/* "normal" joystick axis */
-				int deadzone = currprefs.input_joystick_deadzone * max / 100;
+				const int deadzone = currprefs.input_joystick_deadzone * max / 100;
 				int neg, pos;
 				if (max == 0) {
-					int cnt;
-					int mmax = 50, mextra = 10;
-					int unit = (ie->data & (4 | 8)) ? 1 : 0;
-					// relative events
-					relativecount[joy][unit] += state;
-					cnt = relativecount[joy][unit];
-					neg = cnt < -mmax;	
-					pos = cnt > mmax;
-					if (cnt < -(mmax + mextra))
-						cnt = -(mmax + mextra);
-					if (cnt > (mmax + mextra))
-						cnt = (mmax + mextra);
-					relativecount[joy][unit] = cnt;
+					const int mmax = 50, mextra = 10;
+					const int unit = (ie->data & (4 | 8)) ? 1 : 0;
+					int& count = capture_osk
+						? osk_relativecount[joy][unit] : relativecount[joy][unit];
+					count += state;
+					neg = count < -mmax;
+					pos = count > mmax;
+					if (count < -(mmax + mextra))
+						count = -(mmax + mextra);
+					if (count > (mmax + mextra))
+						count = mmax + mextra;
 				} else {
 					if (state < deadzone && state > -deadzone)
 						state = 0;
@@ -5997,42 +6030,39 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 					pos = state > 0 ? 1 : 0;
 				}
 				if (ie->data & DIR_LEFT) {
-					left = oleft[joy] = neg;
-					if (horizclear[joy] && left) {
-						horizclear[joy] = 0;
-						right = oright[joy] = 0;
+					left = stored_left = neg;
+					if (clear_horizontal && left) {
+						clear_horizontal = 0;
+						right = stored_right = 0;
 					}
 				}
 				if (ie->data & DIR_RIGHT) {
-					right = oright[joy] = pos;
-					if (horizclear[joy] && right) {
-						horizclear[joy] = 0;
-						left = oleft[joy] = 0;
+					right = stored_right = pos;
+					if (clear_horizontal && right) {
+						clear_horizontal = 0;
+						left = stored_left = 0;
 					}
 				}
 				if (ie->data & DIR_UP) {
-					top = otop[joy] = neg;
-					if (vertclear[joy] && top) {
-						vertclear[joy] = 0;
-						bot = obot[joy] = 0;
+					top = stored_top = neg;
+					if (clear_vertical && top) {
+						clear_vertical = 0;
+						bot = stored_bot = 0;
 					}
 				}
 				if (ie->data & DIR_DOWN) {
-					bot = obot[joy] = pos;
-					if (vertclear[joy] && bot) {
-						vertclear[joy] = 0;
-						top = otop[joy] = 0;
+					bot = stored_bot = pos;
+					if (clear_vertical && bot) {
+						clear_vertical = 0;
+						top = stored_top = 0;
 					}
 				}
 			}
 			mouse_deltanoreset[joy][0] = 1;
 			mouse_deltanoreset[joy][1] = 1;
-			if (!osk_passthrough && vkbd_allowed(0) && imgui_osk_is_active()) {
-				int dx = 0, dy = 0;
-				if (left) dx = -1;
-				else if (right) dx = 1;
-				if (top) dy = -1;
-				else if (bot) dy = 1;
+			if (capture_osk) {
+				const int dx = left ? -1 : right ? 1 : 0;
+				const int dy = top ? -1 : bot ? 1 : 0;
 				osk_control(dx, dy, 0, 0, OskInputSource::EmulatedJoystick);
 			}
 			else {
@@ -10201,6 +10231,14 @@ void setjoybuttonstate (int joy, int button, int state)
 	setbuttonstateall (&joysticks[joy], &joysticks2[joy], button, state ? 1 : 0);
 }
 
+void setjoybuttonstate_osk(const int joy, const int button, const int state)
+{
+	const bool previous = osk_capture_only;
+	osk_capture_only = true;
+	setjoybuttonstate(joy, button, state);
+	osk_capture_only = previous;
+}
+
 /* buttonmask = 1 = normal toggle button, 0 = mouse wheel turn or similar
 */
 void setjoybuttonstateall (int joy, uae_u32 buttonbits, uae_u32 buttonmask)
@@ -10246,6 +10284,21 @@ void setmousebuttonstate (int mouse, int button, int state)
 	if (obuttonmask != mice2[mouse].buttonmask)
 		mousehack_helper (mice2[mouse].buttonmask);
 }
+
+void inputdevice_discard_osk_button_state(const int joy, const int button)
+{
+	if (joy < 0 || joy >= MAX_INPUT_DEVICES || button < 0 || button >= ID_BUTTON_TOTAL)
+		return;
+	joysticks2[joy].buttonmask &= ~(1u << button);
+}
+
+void inputdevice_discard_osk_axis_state(const int joy, const int axis)
+{
+	if (joy < 0 || joy >= MAX_INPUT_DEVICES || axis < 0 || axis >= ID_AXIS_TOTAL)
+		return;
+	memset(joysticks2[joy].states[axis], 0, sizeof joysticks2[joy].states[axis]);
+}
+
 
 uae_u32 getmousebuttonstate (int mouse)
 {
@@ -10362,6 +10415,15 @@ void setjoystickstate (int joy, int axis, int state, int max)
 	}
 	id2->states[axis][MAX_INPUT_SUB_EVENT] = v1;
 }
+
+void setjoystickstate_osk(const int joy, const int axis, const int state, const int max)
+{
+	const bool previous = osk_capture_only;
+	osk_capture_only = true;
+	setjoystickstate(joy, axis, state, max);
+	osk_capture_only = previous;
+}
+
 int getjoystickstate (int joy)
 {
 	if (testmode)

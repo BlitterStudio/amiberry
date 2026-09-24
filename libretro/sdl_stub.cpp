@@ -1240,7 +1240,16 @@ Uint8 SDL_GetGamepadButton(SDL_Gamepad* gamepad, SDL_GamepadButton button)
 }
 SDL_GamepadButton SDL_GetGamepadButtonFromString(const char* str)
 {
-	(void)str;
+	if (!str)
+		return SDL_GAMEPAD_BUTTON_INVALID;
+	// Inverse of SDL_GetGamepadStringForButton(): case-insensitive forward
+	// lookup so config values like "leftstick" resolve the same as native
+	// SDL, for the libretro input paths that install configured toggles.
+	for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i) {
+		const SDL_GamepadButton button = static_cast<SDL_GamepadButton>(i);
+		if (SDL_strcasecmp(str, SDL_GetGamepadStringForButton(button)) == 0)
+			return button;
+	}
 	return SDL_GAMEPAD_BUTTON_INVALID;
 }
 Sint16 SDL_GetGamepadAxis(SDL_Gamepad* gamepad, SDL_GamepadAxis axis)
