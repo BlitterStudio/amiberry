@@ -54,6 +54,7 @@ extern "C" {
 #include "blkdev.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
+#include "imgui_osk.h"
 #include "amiberry_rp9.h"
 #include "irenderer.h"
 #include "statusline.h"
@@ -94,6 +95,13 @@ static int16_t last_joypad[2][kJoypadMax];
 static int16_t last_analog[2][4];
 static int16_t last_trigger[2][2];
 static int16_t last_mouse_buttons[2][3];
+enum class LibretroInputOwner : uint8_t {
+	neutral,
+	gameplay,
+	osk
+};
+static LibretroInputOwner joypad_owner[2][kJoypadMax];
+static LibretroInputOwner analog_owner[2][SDL_CONTROLLER_AXIS_MAX];
 static int16_t last_mouse_x[2];
 static int16_t last_mouse_y[2];
 static unsigned libretro_port_device[2] = { RETRO_DEVICE_MOUSE, RETRO_DEVICE_JOYPAD };
@@ -688,6 +696,7 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_video_standard", "Video Standard; auto|pal|ntsc" },
 	{ "amiberry_statusline", "On-Screen Status Line; disabled|enabled" },
 	{ "amiberry_statusline_size", "On-Screen Status Line Size; 1x|2x|3x|4x" },
+	{ "amiberry_on_screen_keyboard", "On-Screen Keyboard; disabled|enabled" },
 	{ "amiberry_port0_device", "Port 1 Device; mouse|joystick" },
 	{ "amiberry_port1_device", "Port 2 Device; joystick|mouse" },
 	{ "amiberry_swap_ports", "Swap Ports; disabled|enabled" },
@@ -1084,6 +1093,20 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ NULL, NULL }
 		},
 		"1x"
+	},
+	{
+		"amiberry_on_screen_keyboard",
+		"On-Screen Keyboard",
+		"On-Screen Keyboard",
+		"Show an on-screen Amiga keyboard (bottom of the screen) for typing. Toggle it with a bound gamepad button; D-pad or stick moves the focus and another button presses the key.",
+		NULL,
+		"video",
+		{
+			{ "disabled", "Disabled" },
+			{ "enabled", "Enabled" },
+			{ NULL, NULL }
+		},
+		"disabled"
 	},
 #ifdef WITH_MIDI
 	{
@@ -2923,6 +2946,15 @@ libretro_crop libretro_compute_crop(void)
 	libretro_crop crop = { 0, 0, 0, 0, 0.0f, false };
 	const libretro_crop_mode crop_mode = get_libretro_crop_mode();
 
+	// While the on-screen keyboard is visible, present the full frame: the
+	// keyboard occupies the bottom 42% of the emulated area, so content
+	// cropping must not run (it would scan keyboard pixels as content and
+	// its cached region would feed a wrong aspect into the geometry).
+	if (imgui_osk_should_render()) {
+		libretro_reset_crop_policy();
+		return libretro_cache_crop(crop);
+	}
+
 	if (crop_mode == libretro_crop_mode::disabled) {
 		libretro_reset_crop_policy();
 		return libretro_cache_crop(crop);
@@ -3521,6 +3553,28 @@ static void apply_libretro_statusline_options(void)
 	}
 }
 
+static void apply_libretro_osk_options(void)
+{
+	const bool enabled = option_enabled(get_option_value("amiberry_on_screen_keyboard"));
+	currprefs.vkbd_enabled = enabled;
+	changed_prefs.vkbd_enabled = enabled;
+	if (!enabled) {
+		// Shutdown releases pressed keys and sticky modifiers immediately. A
+		// visibility-only hide intentionally preserves sticky modifiers.
+		imgui_osk_shutdown();
+		return;
+	}
+
+	// Mirror native graphics initialization so .uae OSK presentation prefs
+	// still apply in a frontend without an ImGui context.
+	imgui_osk_init();
+	imgui_osk_set_transparency(
+		(currprefs.vkbd_transparency > 0)
+			? static_cast<float>(currprefs.vkbd_transparency) / 100.0f
+			: 0.85f);
+	imgui_osk_set_language(currprefs.vkbd_language);
+	imgui_osk_set_numpad(currprefs.vkbd_numpad);
+}
 static void apply_libretro_input_options(void)
 {
 	unsigned desired_port_device[2] = { libretro_port_device[0], libretro_port_device[1] };
@@ -3776,6 +3830,70 @@ static bool poll_frontend_input(void)
 	return true;
 }
 
+static void route_libretro_joy_button(const int joy, const int button,
+	const int state, LibretroInputOwner& owner)
+{
+	const bool osk_active = imgui_osk_is_active();
+	if (owner == LibretroInputOwner::neutral && state)
+		owner = osk_active ? LibretroInputOwner::osk : LibretroInputOwner::gameplay;
+
+	if (owner == LibretroInputOwner::gameplay) {
+		const inputdevice_osk_passthrough passthrough;
+		setjoybuttonstate(joy, button, state);
+		if (!state)
+			owner = LibretroInputOwner::neutral;
+		return;
+	}
+	if (owner == LibretroInputOwner::osk && !osk_active) {
+		// Closing the OSK clears its own accumulated state. Do not dispatch
+		// this later release into gameplay, where it could clear a different
+		// still-held control that maps to the same emulated direction/button.
+		if (!state) {
+			inputdevice_discard_osk_button_state(joy, button);
+			owner = LibretroInputOwner::neutral;
+		}
+		return;
+	}
+	if (owner == LibretroInputOwner::osk)
+		setjoybuttonstate_osk(joy, button, state);
+	else
+		setjoybuttonstate(joy, button, state);
+	if (!state)
+		owner = LibretroInputOwner::neutral;
+}
+
+static void route_libretro_joy_axis(const int joy, const int axis,
+	const int state, LibretroInputOwner& owner)
+{
+	const bool osk_active = imgui_osk_is_active();
+	const bool axis_active =
+		inputdevice_is_joystick_axis_active(joy, axis, state, 32767);
+	if (owner == LibretroInputOwner::neutral && axis_active)
+		owner = osk_active ? LibretroInputOwner::osk : LibretroInputOwner::gameplay;
+
+	if (owner == LibretroInputOwner::gameplay) {
+		const inputdevice_osk_passthrough passthrough;
+		setjoystickstate(joy, axis, state, 32767);
+		if (!axis_active)
+			owner = LibretroInputOwner::neutral;
+		return;
+	}
+	if (owner == LibretroInputOwner::osk && !osk_active) {
+		if (!axis_active) {
+			inputdevice_discard_osk_axis_state(joy, axis);
+			owner = LibretroInputOwner::neutral;
+		}
+		return;
+	}
+
+	if (owner == LibretroInputOwner::osk)
+		setjoystickstate_osk(joy, axis, state, 32767);
+	else
+		setjoystickstate(joy, axis, state, 32767);
+	if (!axis_active)
+		owner = LibretroInputOwner::neutral;
+}
+
 static void poll_input(void)
 {
 	if (!poll_frontend_input())
@@ -3828,7 +3946,8 @@ static void poll_input(void)
 				last_joypad[i][mapping.retro_id] = state;
 				log_input_button(i, mapping.name, state);
 			}
-			setjoybuttonstate(joy, mapping.sdl_button, state);
+			route_libretro_joy_button(
+				joy, mapping.sdl_button, state, joypad_owner[i][mapping.retro_id]);
 		}
 
 		const int l2 = input_bitmask_supported
@@ -3861,58 +3980,74 @@ static void poll_input(void)
 			log_input_axis(i, "lt", lt, &last_trigger[i][0]);
 			log_input_axis(i, "rt", rt, &last_trigger[i][1]);
 
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_LEFTX, lx, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_LEFTY, ly, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_RIGHTX, rx, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_RIGHTY, ry, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_TRIGGERLEFT, lt, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, rt, 32767);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
+				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
+				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTX, rx,
+				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTX]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTY, ry,
+				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTY]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_TRIGGERLEFT, lt,
+				analog_owner[i][SDL_CONTROLLER_AXIS_TRIGGERLEFT]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, rt,
+				analog_owner[i][SDL_CONTROLLER_AXIS_TRIGGERRIGHT]);
 		} else if (clear_analog) {
 			memset(last_analog[i], 0, sizeof(last_analog[i]));
 			memset(last_trigger[i], 0, sizeof(last_trigger[i]));
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_LEFTX, 0, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_LEFTY, 0, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_RIGHTX, 0, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_RIGHTY, 0, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_TRIGGERLEFT, 0, 32767);
-			setjoystickstate(joy, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0, 32767);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, 0,
+				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, 0,
+				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTX, 0,
+				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTX]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTY, 0,
+				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTY]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_TRIGGERLEFT, 0,
+				analog_owner[i][SDL_CONTROLLER_AXIS_TRIGGERLEFT]);
+			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0,
+				analog_owner[i][SDL_CONTROLLER_AXIS_TRIGGERRIGHT]);
 		}
 	}
 
-	// Mouse input — poll both ports (Amiga supports 2 mice)
-	for (int i = 0; i < 2; i++)
 	{
-		const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
-		if (dev != RETRO_DEVICE_MOUSE && dev != RETRO_DEVICE_JOYPAD)
-			continue;
+		const inputdevice_osk_passthrough passthrough;
 
-		int16_t mouse_x = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-		int16_t mouse_y = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-		if (i == 0)
-			log_mouse_motion(mouse_x, mouse_y);
-		if (mouse_x != 0 || mouse_y != 0)
+		// Mouse input — poll both ports (Amiga supports 2 mice)
+		for (int i = 0; i < 2; i++)
 		{
-			setmousestate(i, 0, mouse_x, 0);
-			setmousestate(i, 1, mouse_y, 0);
-		}
+			const unsigned dev = libretro_port_device[i] & RETRO_DEVICE_MASK;
+			if (dev != RETRO_DEVICE_MOUSE && dev != RETRO_DEVICE_JOYPAD)
+				continue;
 
-		static const int mouse_buttons[] = {
-			RETRO_DEVICE_ID_MOUSE_LEFT,
-			RETRO_DEVICE_ID_MOUSE_RIGHT,
-			RETRO_DEVICE_ID_MOUSE_MIDDLE
-		};
-		for (int b = 0; b < 3; b++)
-		{
-			const int16_t state = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, mouse_buttons[b]) & 1;
-			if (state != last_mouse_buttons[i][b]) {
-				last_mouse_buttons[i][b] = state;
-				if (i == 0)
-					log_mouse_button(b, state);
+			int16_t mouse_x = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+			int16_t mouse_y = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+			if (i == 0)
+				log_mouse_motion(mouse_x, mouse_y);
+			if (mouse_x != 0 || mouse_y != 0)
+			{
+				setmousestate(i, 0, mouse_x, 0);
+				setmousestate(i, 1, mouse_y, 0);
 			}
-			setmousebuttonstate(i, b, state);
+
+			static const int mouse_buttons[] = {
+				RETRO_DEVICE_ID_MOUSE_LEFT,
+				RETRO_DEVICE_ID_MOUSE_RIGHT,
+				RETRO_DEVICE_ID_MOUSE_MIDDLE
+			};
+			for (int b = 0; b < 3; b++)
+			{
+				const int16_t state = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, mouse_buttons[b]) & 1;
+				if (state != last_mouse_buttons[i][b]) {
+					last_mouse_buttons[i][b] = state;
+					if (i == 0)
+						log_mouse_button(b, state);
+				}
+				setmousebuttonstate(i, b, state);
+			}
+			last_mouse_x[i] = mouse_x;
+			last_mouse_y[i] = mouse_y;
 		}
-		last_mouse_x[i] = mouse_x;
-		last_mouse_y[i] = mouse_y;
 	}
 	last_analog_enabled = analog_enabled;
 }
@@ -4313,6 +4448,8 @@ static void reset_core_runtime_state()
 	libretro_reset_crop_policy();
 	libretro_audio_reset();
 	libretro_options_dirty = true;
+	memset(joypad_owner, 0, sizeof joypad_owner);
+	memset(analog_owner, 0, sizeof analog_owner);
 }
 
 static void apply_minimum_audio_latency()
@@ -4685,6 +4822,7 @@ void retro_run(void)
 	if (libretro_options_dirty) {
 		apply_libretro_input_options();
 		apply_libretro_statusline_options();
+		apply_libretro_osk_options();
 #ifdef WITH_MIDI
 		apply_libretro_midi_options();
 #endif
@@ -4736,6 +4874,11 @@ void retro_run(void)
 		midi_iface_ptr->flush();
 #endif
 	update_geometry();
+
+	// Poll on-screen keyboard key repeat (directions held on a stable D-pad
+	// or analog axis generate no further input events; repeat is driven here,
+	// once per frame, on the thread that owns imgui_osk_process()).
+	imgui_osk_update();
 }
 
 bool retro_load_game(const struct retro_game_info *info)

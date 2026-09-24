@@ -12,6 +12,7 @@
 #include "display_modes.h"
 #include "gui.h"
 #include "statusline.h"
+#include "imgui_osk.h"
 #ifdef PICASSO96
 #include "picasso96.h"
 #endif
@@ -45,18 +46,19 @@ static inline bool gfx_platform_skip_renderframe(int monid, int mode, int immedi
 	return true;
 }
 
-// Composites the statusline into a private buffer so the emulator surface is
-// never mutated: crop scanning must not see statusline pixels as content.
-static inline const uae_u8* libretro_render_statusline(const uae_u8* src, int w, int h, int pitch)
+static inline bool libretro_should_render_statusline()
 {
 	const int monid = 0;
 	const struct amigadisplay* ad = &adisplays[monid];
+	return ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on)
+		|| ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on);
+}
 
-	const bool show =
-		((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
-		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on);
-	if (!show || !src || w <= 0 || h <= 0)
-		return src;
+// Draws into a presentation-only buffer: crop scanning and emulation-owned
+// surfaces must never see overlay pixels.
+static inline void libretro_render_statusline(uae_u8* pixels, int w, int h, int pitch)
+{
+	const int monid = 0;
 
 	static uae_u32 rc[256], gc[256], bc[256], a[256];
 	static bool color_tables_initialized = false;
@@ -78,20 +80,12 @@ static inline const uae_u8* libretro_render_statusline(const uae_u8* src, int w,
 	const int msg_m = m < 2 ? 2 : m;
 	const int msg_height = msg ? (LDP_CHAR_HEIGHT + 4) * msg_m : 0;
 
-	static std::vector<uae_u8> composited;
-	composited.resize(static_cast<size_t>(h) * pitch);
-	uae_u8* pixels = composited.data();
-	const int row_bytes = w * 4;
-	for (int y = 0; y < h; y++)
-		memcpy(pixels + static_cast<size_t>(y) * pitch, src + static_cast<size_t>(y) * pitch, row_bytes);
-
 	int y0 = h - (led_height + msg_height);
 	if (y0 < 0)
 		y0 = 0;
 
-	if (msg && msg_height > 0 && y0 + msg_height <= h) {
+	if (msg && msg_height > 0 && y0 + msg_height <= h)
 		statusline_render(monid, pixels + y0 * pitch, pitch, w, msg_height, rc, gc, bc, a);
-	}
 
 	for (int y = 0; y < led_height; y++) {
 		const int dy = y0 + msg_height + y;
@@ -99,35 +93,54 @@ static inline const uae_u8* libretro_render_statusline(const uae_u8* src, int w,
 			break;
 		draw_status_line_single(monid, pixels + dy * pitch, y, w, rc, gc, bc, a);
 	}
-	return pixels;
 }
 
 static inline bool gfx_platform_present_frame(const SDL_Surface* surface)
 {
-	if (surface) {
-		if (video_cb) {
-			const uae_u8* pixels = static_cast<const uae_u8*>(surface->pixels);
-			int w = surface->w;
-			int h = surface->h;
-			libretro_crop crop = libretro_compute_crop();
-			if (crop.active
-				&& crop.x >= 0 && crop.y >= 0
-				&& crop.w > 0 && crop.h > 0
-				&& crop.x + crop.w <= surface->w
-				&& crop.y + crop.h <= surface->h) {
-				pixels += crop.y * surface->pitch
-					+ crop.x * SDL_BYTESPERPIXEL(surface->format);
-				w = crop.w;
-				h = crop.h;
+	if (surface && video_cb) {
+		const uae_u8* pixels = static_cast<const uae_u8*>(surface->pixels);
+		int w = surface->w;
+		int h = surface->h;
+		const libretro_crop crop = libretro_compute_crop();
+		if (crop.active
+			&& crop.x >= 0 && crop.y >= 0
+			&& crop.w > 0 && crop.h > 0
+			&& crop.x + crop.w <= surface->w
+			&& crop.y + crop.h <= surface->h) {
+			pixels += crop.y * surface->pitch
+				+ crop.x * SDL_BYTESPERPIXEL(surface->format);
+			w = crop.w;
+			h = crop.h;
+		}
+
+		const bool render_osk = imgui_osk_should_render();
+		const bool render_statusline = libretro_should_render_statusline();
+		if (render_osk || render_statusline) {
+			static std::vector<uae_u8> composited;
+			composited.resize(static_cast<size_t>(h) * surface->pitch);
+			uae_u8* output = composited.data();
+			const int row_bytes = w * SDL_BYTESPERPIXEL(surface->format);
+			for (int y = 0; y < h; y++)
+				memcpy(output + static_cast<size_t>(y) * surface->pitch,
+					pixels + static_cast<size_t>(y) * surface->pitch, row_bytes);
+
+			if (render_osk) {
+				SDL_Surface presentation = *surface;
+				presentation.pixels = output;
+				presentation.w = w;
+				presentation.h = h;
+				imgui_osk_render(&presentation);
 			}
-			pixels = libretro_render_statusline(pixels, w, h, surface->pitch);
-			video_cb(pixels, w, h, surface->pitch);
-		} else {
-			static bool warned = false;
-			if (!warned) {
-				write_log("libretro video_cb is null; skipping frame output.\n");
-				warned = true;
-			}
+			if (render_statusline)
+				libretro_render_statusline(output, w, h, surface->pitch);
+			pixels = output;
+		}
+		video_cb(pixels, w, h, surface->pitch);
+	} else if (surface) {
+		static bool warned = false;
+		if (!warned) {
+			write_log("libretro video_cb is null; skipping frame output.\n");
+			warned = true;
 		}
 	}
 	libretro_yield();
@@ -320,6 +333,18 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 	init_colors(mon->monitor_id);
 	display_param_init(mon);
 	target_graphics_buffer_update(mon->monitor_id, false);
+	if (currprefs.vkbd_enabled) {
+		imgui_osk_init();
+		imgui_osk_set_transparency(
+			(currprefs.vkbd_transparency > 0)
+				? static_cast<float>(currprefs.vkbd_transparency) / 100.0f
+				: 0.85f);
+		imgui_osk_set_language(currprefs.vkbd_language);
+		imgui_osk_set_numpad(currprefs.vkbd_numpad);
+	} else {
+		imgui_osk_shutdown();
+	}
+
 	return true;
 }
 
