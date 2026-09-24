@@ -3552,6 +3552,44 @@ static void apply_libretro_statusline_options(void)
 		changed_prefs.leds_on_screen_multiplier[i] = mult;
 	}
 }
+// Frontend joypad action space, shared by poll_input()'s gameplay routing
+// and apply_libretro_osk_options(): a toggle button only works if the
+// frontend can actually press it.
+struct JoypadMap {
+	unsigned retro_id;
+	int sdl_button;
+	const char* name;
+};
+static const JoypadMap joypad_map[] = {
+	{ RETRO_DEVICE_ID_JOYPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_UP, "dpad_up" },
+	{ RETRO_DEVICE_ID_JOYPAD_DOWN, SDL_CONTROLLER_BUTTON_DPAD_DOWN, "dpad_down" },
+	{ RETRO_DEVICE_ID_JOYPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_LEFT, "dpad_left" },
+	{ RETRO_DEVICE_ID_JOYPAD_RIGHT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT, "dpad_right" },
+	{ RETRO_DEVICE_ID_JOYPAD_B, SDL_CONTROLLER_BUTTON_A, "b" },
+	{ RETRO_DEVICE_ID_JOYPAD_A, SDL_CONTROLLER_BUTTON_B, "a" },
+	{ RETRO_DEVICE_ID_JOYPAD_Y, SDL_CONTROLLER_BUTTON_X, "y" },
+	{ RETRO_DEVICE_ID_JOYPAD_X, SDL_CONTROLLER_BUTTON_Y, "x" },
+	{ RETRO_DEVICE_ID_JOYPAD_SELECT, SDL_CONTROLLER_BUTTON_BACK, "select" },
+	{ RETRO_DEVICE_ID_JOYPAD_START, SDL_CONTROLLER_BUTTON_START, "start" },
+	{ RETRO_DEVICE_ID_JOYPAD_L, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, "l1" },
+	{ RETRO_DEVICE_ID_JOYPAD_R, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, "r1" },
+	{ RETRO_DEVICE_ID_JOYPAD_L3, SDL_CONTROLLER_BUTTON_LEFTSTICK, "l3" },
+	{ RETRO_DEVICE_ID_JOYPAD_R3, SDL_CONTROLLER_BUTTON_RIGHTSTICK, "r3" }
+};
+
+static bool libretro_joypad_supports_button(const SDL_GamepadButton button)
+{
+	for (const auto& mapping : joypad_map)
+		if (mapping.sdl_button == button)
+			return true;
+	return false;
+}
+
+// Explicit gamepad toggle for the on-screen keyboard, installed by
+// apply_libretro_osk_options(). The libretro poll path has no SDL event
+// loop, so the native vkbd_button checks (amiberry.cpp) never run here;
+// poll_input() consumes the matching button and enqueues AKS_OSK instead.
+static SDL_GamepadButton libretro_vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 static void apply_libretro_osk_options(void)
 {
@@ -3561,10 +3599,26 @@ static void apply_libretro_osk_options(void)
 	if (!enabled) {
 		// Shutdown releases pressed keys and sticky modifiers immediately. A
 		// visibility-only hide intentionally preserves sticky modifiers.
+		libretro_vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 		imgui_osk_shutdown();
 		return;
 	}
 
+	// Install the configured gamepad toggle (default "leftstick" in the
+	// libretro build; a loaded .uae config may override it).
+	SDL_GamepadButton toggle = currprefs.vkbd_toggle[0]
+		? SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle)
+		: SDL_CONTROLLER_BUTTON_INVALID;
+	if (toggle != SDL_CONTROLLER_BUTTON_INVALID && !libretro_joypad_supports_button(toggle)) {
+		// A button the frontend joypad cannot press (the standalone default
+		// "guide" in a loaded .uae config included) would leave the keyboard
+		// hidden; fall back to the default toggle so the option keeps working.
+		if (log_cb)
+			log_cb(RETRO_LOG_WARN, "OSK toggle '%s' has no joypad action; using left stick\n",
+				currprefs.vkbd_toggle);
+		toggle = SDL_CONTROLLER_BUTTON_LEFTSTICK;
+	}
+	libretro_vkbd_button = toggle;
 	// Mirror native graphics initialization so .uae OSK presentation prefs
 	// still apply in a frontend without an ImGui context.
 	imgui_osk_init();
@@ -3834,8 +3888,13 @@ static void route_libretro_joy_button(const int joy, const int button,
 	const int state, LibretroInputOwner& owner)
 {
 	const bool osk_active = imgui_osk_is_active();
+	const bool osk_rendering = imgui_osk_should_render();
 	if (owner == LibretroInputOwner::neutral && state)
-		owner = osk_active ? LibretroInputOwner::osk : LibretroInputOwner::gameplay;
+		// A fresh press during the closing animation stays OSK-owned (and is
+		// discarded on release), so it cannot reach the guest while the
+		// keyboard still covers the screen. Mirrors the standalone
+		// controller path.
+		owner = osk_rendering ? LibretroInputOwner::osk : LibretroInputOwner::gameplay;
 
 	if (owner == LibretroInputOwner::gameplay) {
 		const inputdevice_osk_passthrough passthrough;
@@ -3866,14 +3925,23 @@ static void route_libretro_joy_axis(const int joy, const int axis,
 	const int state, LibretroInputOwner& owner)
 {
 	const bool osk_active = imgui_osk_is_active();
+	const bool osk_rendering = imgui_osk_should_render();
 	const bool axis_active =
 		inputdevice_is_joystick_axis_active(joy, axis, state, 32767);
 	if (owner == LibretroInputOwner::neutral && axis_active)
-		owner = osk_active ? LibretroInputOwner::osk : LibretroInputOwner::gameplay;
+		// A fresh movement during the closing animation stays OSK-owned (and
+		// is discarded on release), so it cannot reach the guest while the
+		// keyboard still covers the screen. Mirrors the standalone
+		// controller path.
+		owner = osk_rendering ? LibretroInputOwner::osk : LibretroInputOwner::gameplay;
 
 	if (owner == LibretroInputOwner::gameplay) {
 		const inputdevice_osk_passthrough passthrough;
-		setjoystickstate(joy, axis, state, 32767);
+		// The closing animation still owns the screen: only neutralization
+		// may reach the guest until the keyboard has left it. Mirrors the
+		// standalone controller path.
+		setjoystickstate(joy, axis,
+			(!osk_active && osk_rendering) ? 0 : state, 32767);
 		if (!axis_active)
 			owner = LibretroInputOwner::neutral;
 		return;
@@ -3905,27 +3973,6 @@ static void poll_input(void)
 	const bool clear_analog = !analog_enabled && last_analog_enabled;
 
 	// Joystick input
-	struct JoypadMap {
-		unsigned retro_id;
-		int sdl_button;
-		const char* name;
-	};
-	static const JoypadMap joypad_map[] = {
-		{ RETRO_DEVICE_ID_JOYPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_UP, "dpad_up" },
-		{ RETRO_DEVICE_ID_JOYPAD_DOWN, SDL_CONTROLLER_BUTTON_DPAD_DOWN, "dpad_down" },
-		{ RETRO_DEVICE_ID_JOYPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_LEFT, "dpad_left" },
-		{ RETRO_DEVICE_ID_JOYPAD_RIGHT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT, "dpad_right" },
-		{ RETRO_DEVICE_ID_JOYPAD_B, SDL_CONTROLLER_BUTTON_A, "b" },
-		{ RETRO_DEVICE_ID_JOYPAD_A, SDL_CONTROLLER_BUTTON_B, "a" },
-		{ RETRO_DEVICE_ID_JOYPAD_Y, SDL_CONTROLLER_BUTTON_X, "y" },
-		{ RETRO_DEVICE_ID_JOYPAD_X, SDL_CONTROLLER_BUTTON_Y, "x" },
-		{ RETRO_DEVICE_ID_JOYPAD_SELECT, SDL_CONTROLLER_BUTTON_BACK, "select" },
-		{ RETRO_DEVICE_ID_JOYPAD_START, SDL_CONTROLLER_BUTTON_START, "start" },
-		{ RETRO_DEVICE_ID_JOYPAD_L, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, "l1" },
-		{ RETRO_DEVICE_ID_JOYPAD_R, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, "r1" },
-		{ RETRO_DEVICE_ID_JOYPAD_L3, SDL_CONTROLLER_BUTTON_LEFTSTICK, "l3" },
-		{ RETRO_DEVICE_ID_JOYPAD_R3, SDL_CONTROLLER_BUTTON_RIGHTSTICK, "r3" }
-	};
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -3942,9 +3989,26 @@ static void poll_input(void)
 			const int state = input_bitmask_supported
 				? ((joypad_mask >> mapping.retro_id) & 1)
 				: (input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, mapping.retro_id) & 1);
-			if (state != last_joypad[i][mapping.retro_id]) {
+			const int was = last_joypad[i][mapping.retro_id];
+			if (state != was) {
 				last_joypad[i][mapping.retro_id] = state;
 				log_input_button(i, mapping.name, state);
+			}
+			// Explicit OSK binding wins over the gameplay mapping: toggle on
+			// press, consume both edges. Mirrors the native controller path
+			// (amiberry.cpp handle_gamepad_button / raw mapping path).
+			if (currprefs.vkbd_enabled
+				&& libretro_vkbd_button != SDL_CONTROLLER_BUTTON_INVALID
+				&& mapping.sdl_button == libretro_vkbd_button) {
+				// Rising edge only. The input-code queue is drained every
+				// frame by inputdevice_vsync, so a level-triggered enqueue
+				// (state alone) would fire the toggle once per frame for
+				// the whole hold: 40 held frames = 40 toggles, an even
+				// count that cancels out and leaves the OSK closed.
+				// The native path enqueues on the press edge only.
+				if (state && !was)
+					inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+				continue;
 			}
 			route_libretro_joy_button(
 				joy, mapping.sdl_button, state, joypad_owner[i][mapping.retro_id]);
