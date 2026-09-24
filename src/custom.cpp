@@ -30,8 +30,10 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
+#ifdef AMIBERRY
 #include "amiberry_cursor.h"
 #include "amiberry_input_helpers.h"
+#endif
 #ifdef SERIAL_PORT
 #include "serial.h"
 #endif
@@ -673,9 +675,17 @@ struct sprite {
 
 static struct sprite spr[MAX_SPRITES];
 uaecptr sprite_0;
+#ifdef AMIBERRY
 int sprite_0_width, sprite_0_height, sprite_0_doubled, sprite_0_x, sprite_0_y;
+#else
+int sprite_0_width, sprite_0_height, sprite_0_doubled;
+#endif
 uae_u32 sprite_0_colors[4];
+#ifdef AMIBERRY
 uae_u32 magic_sprite_mask = 0xffffffff;
+#else
+static uae_u8 magic_sprite_mask = 0xff;
+#endif
 
 static int sprite_width;
 static int sprite_sprctlmask;
@@ -797,7 +807,11 @@ static bool safecpu(void)
 static void check_nocustom(void)
 {
 	struct amigadisplay* ad = &adisplays[0];
+#ifdef AMIBERRY
 	if (ad->picasso_on && currprefs.picasso96_nocustom) {
+#else
+	if (ad->picasso_on) {
+#endif
 		custom_disabled = true;
 		line_disabled |= 2;
 	} else {
@@ -1344,8 +1358,6 @@ frame_time_t vsynctimebase_orig;
 
 void compute_vsynctime(void)
 {
-	float svpos = current_linear_vpos_nom + 0.0f;
-	float shpos = current_linear_hpos_short + 0.0f;
 	float syncadjust = 1.0;
 
 	fake_vblank_hz = 0;
@@ -1378,6 +1390,18 @@ void compute_vsynctime(void)
 		vsynctimebase = (frame_time_t)(syncbase / fake_vblank_hz);
 	}
 	vsynctimebase_orig = vsynctimebase;
+
+	float shpos = current_linear_hpos_short + 0.0f;
+	if (linetoggle) {
+		shpos += 0.5f;
+	}
+	float svpos;
+	if (interlace_seen) {
+		svpos = current_linear_vpos_nom + 0.5f;
+	} else {
+		svpos = current_linear_vpos + 0.0f;
+	}
+
 	cputimebase = 0;
 	if (svpos > 0 && shpos > 0) {
 		cputimebase = syncbase / ((uae_u32)(svpos * shpos));
@@ -1386,14 +1410,6 @@ void compute_vsynctime(void)
 		cputimebase = 1;
 	}
 
-	if (linetoggle) {
-		shpos += 0.5f;
-	}
-	if (interlace_seen) {
-		svpos += 0.5f;
-	} else if (lof_display) {
-		svpos += 1.0f;
-	}
 	if (currprefs.produce_sound > 1) {
 		float clk = svpos * shpos * fake_vblank_hz;
 		write_log(_T("SNDRATE %.1f*%.1f*%.6f=%.6f\n"), svpos, shpos, fake_vblank_hz, clk);
@@ -3270,6 +3286,11 @@ void INTREQ_INT(int num, int delay)
 		event_doint_delay_do_ext(1 << num);
 	}
 }
+void INTREQ_INT_clear(int num, int delay)
+{
+	// no need for delay handling, so far only used by serial port in fast cpu modes
+	INTREQ_f(1 << num);
+}
 
 static void event_doint_delay_do_intreq(uae_u32 v)
 {
@@ -4431,11 +4452,18 @@ static void cursorsprite(struct sprite *s)
 		sprite_0_colors[2] = agnus_colors.color_regs_aga[sbasecol + 2] & 0xffffff;
 		sprite_0_colors[3] = agnus_colors.color_regs_aga[sbasecol + 3] & 0xffffff;
 	} else {
+#ifdef AMIBERRY
 		sprite_0_colors[1] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[17]);
 		sprite_0_colors[2] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[18]);
 		sprite_0_colors[3] = amiberry_cursor_rgb12_to_rgb24(agnus_colors.color_regs_ecs[19]);
+#else
+		sprite_0_colors[1] = xcolors[agnus_colors.color_regs_ecs[17] & 0xfff];
+		sprite_0_colors[2] = xcolors[agnus_colors.color_regs_ecs[18] & 0xfff];
+		sprite_0_colors[3] = xcolors[agnus_colors.color_regs_ecs[19] & 0xfff];
+#endif
 	}
 	sprite_0_width = sprite_width;
+#ifdef AMIBERRY
 	if (amiberry_cursor_host_only_enabled(currprefs.input_tablet,
 		currprefs.input_magic_mouse_cursor, MAGICMOUSE_HOST_ONLY,
 		isfullscreen() == 0) && mousehack_alive()) {
@@ -4443,6 +4471,15 @@ static void cursorsprite(struct sprite *s)
 	} else {
 		magic_sprite_mask |= SPRITE_RENDER_MASK(0);
 	}
+#else
+	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (currprefs.input_magic_mouse_cursor == MAGICMOUSE_HOST_ONLY && mousehack_alive()) {
+			magic_sprite_mask &= ~1;
+		} else {
+			magic_sprite_mask |= 1;
+		}
+	}
+#endif
 }
 
 static int calculate_linetype(int vp)
@@ -4907,7 +4944,9 @@ static void vsync_handler_render(void)
 #endif
 
 #ifdef PICASSO96
+#ifdef AMIBERRY
 	picasso_update_native_cursor(0);
+#endif
 	if (isvsync_rtg() >= 0) {
 		rtg_vsync();
 	}
@@ -9880,10 +9919,10 @@ static void handle_dmal(void)
 		for (int nr = 0; nr < 4; nr++) {
 			if (dmal_shifter & (DMAL_AUD0 << nr)) {
 				uae_u32 dmalbits = (dmal >> ((3 + nr) * 2)) & 3;
-				if (dmalbits) {
-					uaecptr *pt = audio_getpt(nr); //, (dmalbits & 1) != 0);
+				if (dmalbits & 2) {
+					uaecptr *pt = audio_getpt(nr);
 					struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_AUDIO, 0xaa + nr * 16, pt);
-					rga->auddat =  dmalbits | (((3 + nr) * 2) << 8);
+					rga->auddat = dmalbits | (((3 + nr) * 2) << 8);
 				}
 			}
 		}
@@ -11867,7 +11906,7 @@ static void handle_rga_out(void)
 				record_dma_read(r->reg, *r->p, DMARECORD_SPRITE, num);
 			}
 			if (memwatch_enabled) {
-				debug_getpeekdma_chipram(*r->p, MW_MASK_SPR_0 + num, r->reg);
+				debug_getpeekdma_chipram(*r->p, MW_MASK_SPR_0 << num, r->reg);
 			}
 #endif
 			if (!aga_mode) {
@@ -11939,7 +11978,7 @@ static void handle_rga_out(void)
 				}
 			}
 			if (memwatch_enabled) {
-				debug_getpeekdma_chipram(pt, MW_MASK_BPL_0 + num, r->reg);
+				debug_getpeekdma_chipram(pt, MW_MASK_BPL_0 << num, r->reg);
 			}
 #endif
 			if (!aga_mode) {

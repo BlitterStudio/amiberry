@@ -22,6 +22,8 @@
         <string>APPL</string>
         <key>NSHighResolutionCapable</key>
         <true/>
+        <key>NSCameraUsageDescription</key>
+        <string>Amiberry uses the camera when it is selected as a genlock capture source.</string>
         <key>CFBundleShortVersionString</key>
         <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
         <key>CFBundleVersion</key>

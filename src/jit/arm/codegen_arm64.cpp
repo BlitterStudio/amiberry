@@ -2,7 +2,7 @@
  * compiler/codegen_arm.cpp - AARCH64 code generator
  *
  * Copyright (c) 2019 TomB
- * 
+ *
  * This file is part of the UAE4ARM project.
  *
  * JIT compiler m68k -> ARMv8.0
@@ -109,7 +109,7 @@ STATIC_INLINE void SIGNED8_IMM_2_REG(W4 r, IM8 v) {
 	if (v16 & 0x8000) {
 		// Use 32-bit MOVN to keep upper 32 bits clean.
 		// MOVN_xi produces a 64-bit result with dirty upper bits for negative values
-		// (e.g., MOVN_xi for byte -1 → 0xFFFFFFFFFFFFFFFF).
+		// (e.g., MOVN_xi for byte -1 -> 0xFFFFFFFFFFFFFFFF).
 		MOVN_wi(r, (uae_u16) ~v16);
 	} else {
 		MOV_wi(r, (uae_u16) v16);
@@ -137,7 +137,7 @@ STATIC_INLINE void UNSIGNED8_REG_2_REG(W4 d, RR4 s) {
 STATIC_INLINE void SIGNED8_REG_2_REG(W4 d, RR4 s) {
 	// Use 32-bit sign extension to keep upper 32 bits clean.
 	// SXTB_xx sign-extends to 64 bits, leaving dirty upper 32 bits
-	// for negative values (e.g., SXTB_xx of 0xFF → 0xFFFFFFFFFFFFFFFF).
+	// for negative values (e.g., SXTB_xx of 0xFF -> 0xFFFFFFFFFFFFFFFF).
 	SXTB_ww(d, s);
 }
 
@@ -148,7 +148,7 @@ STATIC_INLINE void UNSIGNED16_REG_2_REG(W4 d, RR4 s) {
 STATIC_INLINE void SIGNED16_REG_2_REG(W4 d, RR4 s) {
 	// Use 32-bit sign extension to keep upper 32 bits clean.
 	// SXTH_xx sign-extends to 64 bits, leaving dirty upper 32 bits
-	// for negative values (e.g., SXTH_xx of 0xFFFF → 0xFFFFFFFFFFFFFFFF).
+	// for negative values (e.g., SXTH_xx of 0xFFFF -> 0xFFFFFFFFFFFFFFFF).
 	SXTH_ww(d, s);
 }
 
@@ -243,18 +243,38 @@ LENDFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 
 STATIC_INLINE void compemu_raw_store_pc_state_from_work1(void)
 {
-	uintptr idx = (uintptr)&regs.pc_p - (uintptr)&regs;
-	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
-	idx = (uintptr)&regs.pc_oldp - (uintptr)&regs;
-	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
+	uintptr idx;
 
 #ifdef NATMEM_OFFSET
+	uae_u32 *branchadd = NULL;
+	uae_u32 *branchdone = NULL;
+	idx = (uintptr)&regs.pc_oldp - (uintptr)&regs;
+
+	LOAD_U64(REG_WORK2, (uintptr)&canbang);
+	LDRB_wXi(REG_WORK2, REG_WORK2, 0);
+	CBZ_wi(REG_WORK2, 0);
+	branchadd = (uae_u32 *)get_target() - 1;
 	SUB_xxx(REG_WORK2, REG_WORK1, R_MEMSTART);
+	B_i(0);
+	branchdone = (uae_u32 *)get_target() - 1;
+
+	write_jmp_target(branchadd, (uintptr)get_target());
+	LDR_xXi(REG_WORK2, R_REGSTRUCT, idx);
+	SUB_xxx(REG_WORK2, REG_WORK1, REG_WORK2);
 	idx = (uintptr)&regs.pc - (uintptr)&regs;
+	LDR_wXi(REG_WORK3, R_REGSTRUCT, idx);
+	ADD_www(REG_WORK2, REG_WORK3, REG_WORK2);
+
+	write_jmp_target(branchdone, (uintptr)get_target());
 	STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 	idx = (uintptr)&regs.instruction_pc - (uintptr)&regs;
 	STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 #endif
+
+	idx = (uintptr)&regs.pc_p - (uintptr)&regs;
+	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
+	idx = (uintptr)&regs.pc_oldp - (uintptr)&regs;
+	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
 }
 
 LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
@@ -276,7 +296,7 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMPTR s))
 		LOAD_U32(REG_WORK2, (uae_u32)s);
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 	} else {
-		// Address too far from R_REGSTRUCT — use absolute address.
+		// Address too far from R_REGSTRUCT - use absolute address.
 		LOAD_U64(REG_WORK1, d);
 		LOAD_U32(REG_WORK2, (uae_u32)s);
 		STR_wXi(REG_WORK2, REG_WORK1, 0);
@@ -294,7 +314,7 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 		// globals like regflags that the linker places close by).
 		STR_wXi(s, R_REGSTRUCT, idx);
 	} else {
-		// Address too far from R_REGSTRUCT — use absolute address.
+		// Address too far from R_REGSTRUCT - use absolute address.
 		LOAD_U64(REG_WORK1, d);
 		STR_wXi(s, REG_WORK1, 0);
 	}
@@ -316,7 +336,7 @@ LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 		// Within R_REGSTRUCT unsigned-offset range.
 		LDR_wXi(d, R_REGSTRUCT, idx);
 	} else {
-		// Address too far from R_REGSTRUCT — use absolute address.
+		// Address too far from R_REGSTRUCT - use absolute address.
 		LOAD_U64(REG_WORK1, s);
 		LDR_wXi(d, REG_WORK1, 0);
 	}
