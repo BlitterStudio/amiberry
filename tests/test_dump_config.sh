@@ -45,6 +45,23 @@ check "$work/out.txt" '^cpu_model=68040$'
 check "$work/out.txt" '^cpu_24bit_addressing=false$'
 check "$work/err.txt" '24-bit address space is not supported with 68040'
 
+# Explicit controller-removal fallbacks must survive config parsing and
+# serialization. kbd3 selects keyboard layout C; none disables fallback.
+printf 'joyport0=joy0\njoyportdefault0=kbd3\njoyport1=joy1\njoyportdefault1=none\njoyport2=none\njoyportdefault2=none\njoyport3=none\njoyportdefault3=none\n' > "$work/joyport-default.uae"
+"$bin" --dump-config -f "$work/joyport-default.uae" > "$work/joyport-default.txt" 2>/dev/null
+check "$work/joyport-default.txt" '^joyportdefault0=kbd3$'
+check "$work/joyport-default.txt" '^joyportdefault1=none$'
+check "$work/joyport-default.txt" '^joyportdefault2=none$'
+check "$work/joyport-default.txt" '^joyportdefault3=none$'
+
+# Invalid keyboard-layout fallbacks must not escape the keyboard ID range.
+printf 'joyport0=joy0\njoyportdefault0=kbd11\n' > "$work/joyport-invalid-default.uae"
+"$bin" --dump-config -f "$work/joyport-invalid-default.uae" > "$work/joyport-invalid-default.txt" 2>/dev/null
+if grep -q '^joyportdefault0=' "$work/joyport-invalid-default.txt"; then
+	echo "invalid joyport keyboard fallback survived config parsing" >&2
+	exit 1
+fi
+
 # Defaults-only dump: header present, exits cleanly.
 "$bin" --dump-config > "$work/def.txt" 2> "$work/def_err.txt"
 check "$work/def.txt" '^; --dump-config: resolved configuration'

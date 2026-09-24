@@ -373,6 +373,7 @@ PANEL(about,              "About",              "amigainfo.png",  ICON_FA_CIRCLE
 PANEL(paths,              "Paths",              "paths.png",      ICON_FA_FOLDER_OPEN,  "General",    false, 4) \
 PANEL(quickstart,         "Quickstart",         "quickstart.png", ICON_FA_ROCKET,       "General",    true, -1) \
 PANEL(configurations,     "Configurations",     "file.png",       ICON_FA_FILE_LINES,   "General",    false, 1) \
+PANEL(whdload,            "WHDLoad",            "drive.png",      ICON_FA_DOWNLOAD,     "General",    true, -1) \
 PANEL(cpu,                "CPU and FPU",        "cpu.png",        ICON_FA_MICROCHIP,    "Hardware",   true, -1) \
 PANEL(chipset,            "Chipset",            "cpu.png",        ICON_FA_MICROCHIP,    "Hardware",   true, -1) \
 PANEL(adv_chipset,        "Adv. Chipset",       "cpu.png",        ICON_FA_GEARS,        "Hardware",   true, -1) \
@@ -389,14 +390,13 @@ PANEL(sound,              "Sound",              "sound.png",      ICON_FA_VOLUME
 PANEL(input,              "Input",              "joystick.png",   ICON_FA_GAMEPAD,      "Input / IO", false, 3) \
 PANEL(io,                 "IO Ports",           "port.png",       ICON_FA_PLUG,         "Input / IO", true, -1) \
 PANEL(custom,             "Custom controls",    "controller.png", ICON_FA_GEARS,        "Input / IO", true, -1) \
+PANEL(onscreen,             "On-Screen",          "keyboard.png",   ICON_FA_KEYBOARD,     "Input / IO", true, -1) \
 PANEL(diskswapper,        "Disk swapper",       "35floppy.png",   ICON_FA_SHUFFLE,      "Utility",    true, -1) \
 PANEL(misc,               "Miscellaneous",      "misc.png",       ICON_FA_WRENCH,       "Utility",    true, -1) \
 PANEL(global_settings,    "Global Settings",    "misc.png",       ICON_FA_SLIDERS,      "Utility",    true, -1) \
 PANEL(themes,             "Themes",             "misc.png",       ICON_FA_GEAR,         "Utility",    true, -1) \
 PANEL(prio,               "Priority",           "misc.png",       ICON_FA_GAUGE_HIGH,   "Utility",    true, -1) \
-PANEL(savestates,         "Savestates",         "savestate.png",  ICON_FA_BOOKMARK,     "Utility",    true, -1) \
-PANEL(virtual_keyboard,   "On-Screen",          "keyboard.png",   ICON_FA_KEYBOARD,     "Utility",    true, -1) \
-PANEL(whdload,            "WHDLoad",            "drive.png",      ICON_FA_DOWNLOAD,     "Storage",    true, -1)
+PANEL(savestates,         "Savestates",         "savestate.png",  ICON_FA_BOOKMARK,     "Utility",    true, -1)
 
 #endif
 

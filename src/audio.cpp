@@ -37,6 +37,9 @@
 #ifdef AVIOUTPUT
 #include "avioutput.h"
 #endif
+#ifdef VIDEOGRAB
+#include "videograb.h"
+#endif
 #ifdef AHI
 #include "ahi_v1.h"
 #endif
@@ -1552,10 +1555,12 @@ uae_u16 audio_dmal(void)
 	uae_u16 dmal = 0;
 	for (int nr = 0; nr < AUDIO_CHANNELS_PAULA; nr++) {
 		struct audio_channel_data *cdp = audio_channel + nr;
-		if (cdp->dr)
+		if (cdp->dr || cdp->dsr) {
 			dmal |= 1 << (nr * 2 + 1);
-		if (cdp->dsr)
+		}
+		if (cdp->dsr) {
 			dmal |= 1 << (nr * 2 + 0);
+		}
 		cdp->dr = cdp->dsr = false;
 	}
 	return dmal;
@@ -2242,6 +2247,10 @@ void set_audio (void)
 	} else {
 		sound_volume (0);
 	}
+
+#ifdef VIDEOGRAB
+	setsoundoutputvideograb(currprefs.produce_sound >= 2);
+#endif
 
 	sep = (currprefs.sound_stereo_separation = changed_prefs.sound_stereo_separation) * 3 / 2;
 	if (sep >= 15)

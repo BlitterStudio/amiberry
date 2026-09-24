@@ -9329,14 +9329,18 @@ void write_dcache030_retry(uaecptr addr, uae_u32 v, uae_u32 fc, int size, int fl
 	write_dcache030x(addr, v, size, fc);
 }
 
-static void dcache030_maybe_burst(uaecptr addr, struct cache030 *c, int lws)
+static void dcache030_maybe_burst(uaecptr addr, struct cache030 *c, int lws, uae_u32 fc)
 {
 	// Do burst fetch if enabled, cache not frozen, all line slots invalid, and 32-bit CPU local bus (no chip ram).
 	// (See notes about burst fetches in icache routines)
 	if (c->valid[0] + c->valid[1] + c->valid[2] + c->valid[3] == 1) {
 		uaecptr physaddr = addr;
 		if (currprefs.mmu_model) {
-			physaddr = mmu030_translate(addr, regs.s != 0, true, false);
+			// Translate with the function code of the access that missed, not the
+			// CPU's privilege level: MOVES with SFC=user runs in supervisor mode, and
+			// a supervisor translation can match a transparent translation register
+			// and fill the (user-tagged) line from the wrong physical address.
+			physaddr = mmu030_translate(addr, (fc & 4) != 0, (fc & 1) != 0, false);
 		}
 
 		if (ce_banktype[physaddr >> 16] == CE_MEMBANK_FAST32) {
@@ -9465,7 +9469,7 @@ static bool read_dcache030_2(uaecptr addr, uae_u32 size, uae_u32 *valp)
 		v1 = dcache_lget(addr);
 		update_dcache030(c1, v1, tag1, fc, lws1);
 		if ((cs & CACHE_ENABLE_DATA_BURST) && (regs.cacr & 0x1100) == 0x1100)
-			dcache030_maybe_burst(addr, c1, lws1);
+			dcache030_maybe_burst(addr, c1, lws1, fc);
 #if VALIDATE_68030_DATACACHE
 		validate_dcache030();
 #endif
@@ -9495,7 +9499,7 @@ static bool read_dcache030_2(uaecptr addr, uae_u32 size, uae_u32 *valp)
 		v2 = dcache_lget(addr);
 		update_dcache030(c2, v2, tag2, fc, lws2);
 		if ((cs & CACHE_ENABLE_DATA_BURST) && (regs.cacr & 0x1100) == 0x1100)
-			dcache030_maybe_burst(addr, c2, lws2);
+			dcache030_maybe_burst(addr, c2, lws2, fc);
 #if VALIDATE_68030_DATACACHE
 		validate_dcache030();
 #endif

@@ -1073,6 +1073,7 @@ struct uae_prefs {
 
 	struct jport jports[MAX_JPORTS];
 	struct jport_custom jports_custom[MAX_JPORTS_CUSTOM];
+	int jports_default[MAX_JPORTS];
 	int input_selected_setting;
 	int input_joymouse_multiplier;
 	int input_joymouse_deadzone;

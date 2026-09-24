@@ -85,6 +85,35 @@ endif()
 target_compile_definitions(${PROJECT_NAME} PRIVATE USE_SDL3)
 message(STATUS "Using SDL3")
 
+if(USE_VIDEOGRAB)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE VIDEOGRAB)
+    message(STATUS "Genlock video/camera input enabled")
+
+    if(USE_FFMPEG)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(FFMPEG QUIET IMPORTED_TARGET
+                libavformat>=59
+                libavcodec>=59
+                libavutil>=57
+                libswscale>=6
+                libswresample>=4
+            )
+        endif()
+
+        if(TARGET PkgConfig::FFMPEG)
+            target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WITH_FFMPEG)
+            target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::FFMPEG)
+            set(AMIBERRY_WITH_FFMPEG ON)
+            message(STATUS "FFmpeg genlock video decoding enabled")
+        else()
+            message(STATUS "FFmpeg development libraries not found; genlock video input is limited to raw 24-bit AVI")
+        endif()
+    else()
+        message(STATUS "FFmpeg genlock video decoding disabled; video input is limited to raw 24-bit AVI")
+    endif()
+endif()
+
 if(ANDROID)
     include(FetchContent)
 
