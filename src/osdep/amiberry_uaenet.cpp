@@ -424,6 +424,16 @@ static void uaenet_set_guest_mac(struct netdriverdata *ndd)
 // Enumerate network devices
 struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 {
+    // A single-device lookup must not re-enumerate if the device is already known:
+    // clearing nd[] would invalidate the pointers cached in the global ndd[] array
+    // from target_ethernet_enumerate() (same as uaenet_tap_enumerate()).
+    if (name != NULL && name[0] != '\0') {
+        for (int i = 0; i < MAX_TOTAL_NET_DEVICES; i++) {
+            if (nd[i].active && nd[i].name && !_tcsicmp(name, nd[i].name))
+                return &nd[i];
+        }
+    }
+
     pcap_if_t *alldevs;
     char errbuf[PCAP_ERRBUF_SIZE];
     memset(nd, 0, sizeof(nd));
