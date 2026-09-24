@@ -3991,8 +3991,13 @@ static void libretro_osk_publish_state(void)
 	if (!imgui_osk_should_render())
 		return;
 
-	// A direction or key held on either pad must keep navigating, so OR the
-	// OSK-relevant controls of both ports into one state.
+	// Publish only the controls the keyboard acquired after it opened. A
+	// direction, select or stick deflected for gameplay before the keyboard
+	// opened is gameplay-owned (see route_libretro_joy_button / axis); feeding
+	// its raw level here would be misread as a fresh OSK press and move focus
+	// or type a key while the same control is still active in the guest. A
+	// control held on either pad keeps navigating, so OR the OSK-relevant,
+	// OSK-owned controls of both ports into one state.
 	int dir = 0;
 	int btn = 0;
 	for (int i = 0; i < 2; i++) {
@@ -4001,7 +4006,11 @@ static void libretro_osk_publish_state(void)
 			continue;
 		for (const auto& mapping : joypad_map) {
 			const int bit = libretro_osk_button_bit(mapping.sdl_button);
-			if (!bit || !last_joypad[i][mapping.retro_id])
+			if (!bit)
+				continue;
+			if (joypad_owner[i][mapping.retro_id] != LibretroInputOwner::osk)
+				continue;
+			if (!last_joypad[i][mapping.retro_id])
 				continue;
 			if (bit == OSK_BUTTON)
 				btn = 1;
@@ -4009,16 +4018,23 @@ static void libretro_osk_publish_state(void)
 				dir |= bit;
 		}
 		// The left stick steers the keyboard, mirroring handle_osk_axis().
-		const int16_t lx = last_analog[i][0];
-		const int16_t ly = last_analog[i][1];
-		if (lx < -SDL_JOYSTICK_AXIS_MAX * 2 / 5)
-			dir |= OSK_LEFT;
-		else if (lx > SDL_JOYSTICK_AXIS_MAX * 2 / 5)
-			dir |= OSK_RIGHT;
-		if (ly < -SDL_JOYSTICK_AXIS_MAX * 2 / 5)
-			dir |= OSK_UP;
-		else if (ly > SDL_JOYSTICK_AXIS_MAX * 2 / 5)
-			dir |= OSK_DOWN;
+		// Only steer when the keyboard owns that axis; a stick deflected for
+		// gameplay before the keyboard opened is gameplay-owned and must not
+		// move focus.
+		if (analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX] == LibretroInputOwner::osk) {
+			const int16_t lx = last_analog[i][0];
+			if (lx < -SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+				dir |= OSK_LEFT;
+			else if (lx > SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+				dir |= OSK_RIGHT;
+		}
+		if (analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY] == LibretroInputOwner::osk) {
+			const int16_t ly = last_analog[i][1];
+			if (ly < -SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+				dir |= OSK_UP;
+			else if (ly > SDL_JOYSTICK_AXIS_MAX * 2 / 5)
+				dir |= OSK_DOWN;
+		}
 	}
 	const int dx = (dir & OSK_LEFT) ? -1 : (dir & OSK_RIGHT) ? 1 : 0;
 	const int dy = (dir & OSK_UP) ? -1 : (dir & OSK_DOWN) ? 1 : 0;
@@ -4075,15 +4091,24 @@ static void poll_input(void)
 				continue;
 			}
 			// East (B) hides the keyboard while it is open, mirroring the
-			// standalone controller path; consume it so it never reaches the
-			// guest. Skipped when B itself is the configured OSK toggle.
+			// standalone controller path. The keyboard only acquires B on a
+			// press made while it is open; a B already held for gameplay before
+			// the keyboard opened stays gameplay-owned, so its release must
+			// still reach the guest. Skipped when B is the OSK toggle.
 			if (currprefs.vkbd_enabled
 				&& mapping.sdl_button == SDL_CONTROLLER_BUTTON_B
 				&& libretro_vkbd_button != SDL_CONTROLLER_BUTTON_B
 				&& imgui_osk_is_active()) {
-				if (state && !was)
-					imgui_osk_hide();
-				continue;
+				LibretroInputOwner& bowner = joypad_owner[i][mapping.retro_id];
+				if (bowner == LibretroInputOwner::neutral && state)
+					bowner = LibretroInputOwner::osk;
+				if (bowner == LibretroInputOwner::osk) {
+					if (state && !was)
+						imgui_osk_hide();
+					if (!state)
+						bowner = LibretroInputOwner::neutral;
+					continue;
+				}
 			}
 			route_libretro_joy_button(
 				joy, mapping.sdl_button, state, joypad_owner[i][mapping.retro_id]);
