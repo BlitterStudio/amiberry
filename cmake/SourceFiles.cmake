@@ -364,6 +364,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/input.cpp
 		src/osdep/imgui/io.cpp
 		src/osdep/imgui/misc.cpp
+		src/osdep/imgui/onscreen.cpp
 		src/osdep/imgui/paths.cpp
 		src/osdep/imgui/play.cpp
 		src/osdep/imgui/play_content_detection.cpp
@@ -377,7 +378,6 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/shader_catalog.cpp
 		src/osdep/imgui/sound.cpp
 		src/osdep/imgui/themes.cpp
-		src/osdep/imgui/virtualkeyboard.cpp
 		src/osdep/imgui/whdload.cpp
 )
 

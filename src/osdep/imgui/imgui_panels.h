@@ -123,7 +123,7 @@ void HotkeyCapture_RenderPopup();
 bool HotkeyCapture_IsActive();
 void render_panel_prio();
 void render_panel_savestates();
-void render_panel_virtual_keyboard();
+void render_panel_onscreen();
 void render_panel_whdload();
 void render_panel_themes();
 void render_panel_filter();

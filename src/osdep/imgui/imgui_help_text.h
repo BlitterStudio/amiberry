@@ -873,7 +873,7 @@ static const char* help_text_savestates =
 	"Savestates are stored in a .uss file, with the name being that of the currently loaded\n"
 	"floppy disk image or whdload .lha file, or the name of the loaded HDD .uae config.\n";
 
-static const char* help_text_virtual_keyboard =
+static const char* help_text_onscreen =
 	"In this panel you can configure the on-screen joystick and on-screen keyboard overlays.\n"
 	"\n"
 	"\"On-screen Joystick\": shows a virtual D-pad and fire buttons for touchscreen control.\n"
