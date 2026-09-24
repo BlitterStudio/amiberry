@@ -131,7 +131,7 @@ static void build_comp(void);
  *
  * x86-64 JIT uses RIP-relative [RIP+disp32] addressing to access globals
  * (regs, regflags, etc.) via the _r_X() macro. This requires the JIT code
- * cache to be within ±2GB of .data.
+ * cache to be within +/-2GB of .data.
  *
  * Under non-PIE, .data is at a fixed low address and MAP_32BIT suffices.
  * Under PIE+ASLR, .data can be anywhere in the 47-bit VA space.
@@ -140,14 +140,14 @@ static void build_comp(void);
  * and we search outward from it for a free VA range. This mirrors the
  * Windows strategy (VirtualQuery walk from data_anchor).
  *
- * The probe covers ±1.75GB at 2MB intervals, well within the ±2GB
+ * The probe covers +/-1.75GB at 2MB intervals, well within the +/-2GB
  * RIP-relative limit.
  */
 
 /* jit_vm_acquire() uses this as the RIP-relative allocation anchor.
  * Set to the JIT cache base after alloc_cache() succeeds.
  * All x86-64 platforms need this since RIP-relative addressing
- * requires JIT allocations within ±2GB of both code and globals. */
+ * requires JIT allocations within +/-2GB of both code and globals. */
 static uae_u8* vm_acquire_anchor = NULL;
 #endif
 
@@ -157,7 +157,7 @@ static inline bool jit_vm_alloc_failed(const void *ptr)
 }
 
 #if defined(CPU_x86_64) && defined(__linux__)
-/* VMA-aware near-address allocator — Linux equivalent of the Windows
+/* VMA-aware near-address allocator - Linux equivalent of the Windows
  * VirtualQuery walk.  Parses /proc/self/maps to find the closest gap
  * to `base` that can hold `size` bytes within `range`.
  * Returns mmap'd pointer on success, NULL on failure. */
@@ -191,13 +191,13 @@ static void *find_nearest_gap(uintptr base, uae_u32 size, uintptr range)
 				/* Find the address in this gap closest to base */
 				uintptr alloc_at;
 				if (base >= gap_start && base + size <= gap_end) {
-					/* Gap contains base — ideal */
+					/* Gap contains base - ideal */
 					alloc_at = base & ~(granularity - 1);
 				} else if (gap_end <= base) {
-					/* Gap is below base — use highest aligned addr */
+					/* Gap is below base - use highest aligned addr */
 					alloc_at = (gap_end - size) & ~(granularity - 1);
 				} else {
-					/* Gap is above base — use lowest aligned addr */
+					/* Gap is above base - use lowest aligned addr */
 					alloc_at = (gap_start + granularity - 1) & ~(granularity - 1);
 				}
 
@@ -367,7 +367,7 @@ void *jit_vm_acquire(uae_u32 size, int options)
 		 * when available; fall back to a .data anchor for the first
 		 * allocation (the JIT cache itself).
 		 * Use VirtualQuery to find the closest free region within
-		 * +/-1.75GB — this avoids the blind 16MB-step probe that
+		 * +/-1.75GB - this avoids the blind 16MB-step probe that
 		 * exhausts in congested ASLR address spaces. */
 		uintptr base;
 		if (vm_acquire_anchor) {
@@ -397,13 +397,13 @@ void *jit_vm_acquire(uae_u32 size, int options)
 				/* Pick the address in this region closest to base */
 				uintptr alloc_at;
 				if (base >= region_base && base < region_end) {
-					/* Region contains base — ideal */
+					/* Region contains base - ideal */
 					alloc_at = base & ~(granularity - 1);
 				} else if (region_end <= base) {
-					/* Region is below base — use highest aligned addr */
+					/* Region is below base - use highest aligned addr */
 					alloc_at = (region_end - size) & ~(granularity - 1);
 				} else {
-					/* Region is above base — use lowest aligned addr */
+					/* Region is above base - use lowest aligned addr */
 					alloc_at = (region_base + granularity - 1) & ~(granularity - 1);
 				}
 				if (alloc_at >= region_base && alloc_at + size <= region_end &&
@@ -424,7 +424,7 @@ void *jit_vm_acquire(uae_u32 size, int options)
 			result = VirtualAlloc(best, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		}
 		if (!result) {
-			/* Last resort: OS choice — range-check the result to avoid
+			/* Last resort: OS choice - range-check the result to avoid
 			 * silent RIP-relative overflow in pool allocations that
 			 * bypass alloc_cache()'s post-hoc distance check. */
 			result = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -445,7 +445,7 @@ void *jit_vm_acquire(uae_u32 size, int options)
 		return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
 #else
 		/* Linux/POSIX x86-64: RIP-relative addressing (the _r_X macro)
-		 * requires all JIT allocations within ±2GB of both the JIT code
+		 * requires all JIT allocations within +/-2GB of both the JIT code
 		 * and global variables in the .data segment. Use compiled_code
 		 * as anchor when available, otherwise a .data section anchor.
 		 * Try mmap with hints near the anchor; fall back to unanchored. */
@@ -2007,7 +2007,7 @@ static inline void do_load_reg(int n, int r)
 		raw_load_flagx(n);
 #if X86_TARGET_64BIT
 	else if (r == PC_P) {
-		/* PC_P holds a 64-bit host pointer — must use 64-bit load */
+		/* PC_P holds a 64-bit host pointer - must use 64-bit load */
 		raw_mov_q_rm(n, (uintptr)live.state[r].mem);
 	}
 #endif
@@ -2214,7 +2214,7 @@ static void tomem(int r)
 		case 4:
 #if X86_TARGET_64BIT
 			if (r == PC_P) {
-				/* PC_P holds a 64-bit host pointer — must use 64-bit store */
+				/* PC_P holds a 64-bit host pointer - must use 64-bit store */
 				raw_mov_q_mr((uintptr)live.state[r].mem, rr);
 			} else
 #endif
@@ -2929,13 +2929,13 @@ static void bt_l_ri_noclobber(RR4 r, IMM i)
 static void f_tomem(int r)
 {
 	if (live.fate[r].status==DIRTY) {
-#ifdef USE_LONG_DOUBLE
+#ifdef SUPPORT_LONG_DOUBLE
 		if (use_long_double) {
 			raw_fmov_ext_mr((uintptr)live.fate[r].mem, live.fate[r].realreg);
 		} else {
 #endif
 			raw_fmov_mr((uintptr)live.fate[r].mem, live.fate[r].realreg);
-#ifdef USE_LONG_DOUBLE
+#ifdef SUPPORT_LONG_DOUBLE
 		}
 #endif
 		live.fate[r].status=CLEAN;
@@ -2945,13 +2945,13 @@ static void f_tomem(int r)
 static void f_tomem_drop(int r)
 {
 	if (live.fate[r].status==DIRTY) {
-#ifdef USE_LONG_DOUBLE
+#ifdef SUPPORT_LONG_DOUBLE
 		if (use_long_double) {
 			raw_fmov_ext_mr_drop((uintptr)live.fate[r].mem, live.fate[r].realreg);
 		} else {
 #endif
 			raw_fmov_mr_drop((uintptr)live.fate[r].mem,live.fate[r].realreg);
-#ifdef USE_LONG_DOUBLE
+#ifdef SUPPORT_LONG_DOUBLE
 		}
 #endif
 		live.fate[r].status=INMEM;
@@ -3057,13 +3057,13 @@ static int f_alloc_reg(int r, int willclobber)
 
 	if (!willclobber) {
 		if (live.fate[r].status!=UNDEF) {
-#ifdef USE_LONG_DOUBLE
+#ifdef SUPPORT_LONG_DOUBLE
 			if (use_long_double) {
 				raw_fmov_ext_rm(bestreg, (uintptr)live.fate[r].mem);
 			} else {
 #endif
 				raw_fmov_rm(bestreg,(uintptr)live.fate[r].mem);
-#ifdef USE_LONG_DOUBLE
+#ifdef SUPPORT_LONG_DOUBLE
 			}
 #endif
 		}
@@ -3796,7 +3796,7 @@ void flush_reg(int reg)
 			{
 #if X86_TARGET_64BIT
 				if (reg == PC_P) {
-					/* PC_P is a 64-bit pointer — must use 64-bit load/add/store.
+					/* PC_P is a 64-bit pointer - must use 64-bit load/add/store.
 					   compemu_raw_add_l_mi is only 32-bit and would leave
 					   upper 32 bits of regs.pc_p unmodified. */
 					int r_tmp = REG_PC_TMP;
@@ -4165,7 +4165,7 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 	int f=tmp;
 
 #if X86_TARGET_64BIT
-	/* x86-64: Same approach as writemem — keep 64-bit pointers out of
+	/* x86-64: Same approach as writemem - keep 64-bit pointers out of
 	   virtual registers.  Compute 32-bit bank index via allocator, then
 	   do 64-bit pointer chase with raw instructions after call setup. */
 
@@ -4863,7 +4863,7 @@ static inline void create_popalls(void)
 	raw_push_regs_to_preserve();
 	raw_dec_sp(stack_space);
 #if X86_TARGET_64BIT
-	/* Load R_MEMSTART (R15) with natmem_offset — used as base register
+	/* Load R_MEMSTART (R15) with natmem_offset - used as base register
 	   for all JIT memory accesses: [R_MEMSTART + m68k_addr].
 	   Loaded from the global variable (not immediate) so it stays correct
 	   if natmem_offset changes across resets. */
@@ -6307,7 +6307,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		bi->handler=
 			bi->handler_to_use=(cpuop_func *)get_target();
 #if X86_TARGET_64BIT
-		/* regs.pc_p is a 64-bit pointer — must compare all 8 bytes.
+		/* regs.pc_p is a 64-bit pointer - must compare all 8 bytes.
 		   x86-64 has no CMP [mem], imm64, so load into scratch and CMP. */
 		{
 			int r_tmp = REG_PC_TMP;

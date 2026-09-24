@@ -4663,7 +4663,8 @@ static void DISK_start(void)
 			if (drv->dskchange_time == -1) {
 				drv->dskchange_time = -2;
 				write_log(_T("Accessing state restored non-existing disk '%s'!\n"), drv->newname);
-				if (gui_ask_disk(dr, drv->newname)) {
+				if (gui_ask_disk(dr, drv->newname,
+					sizeof drv->newname / sizeof drv->newname[0])) {
 					if (drive_insert(drv, &currprefs, dr, drv->newname, false, false)) {
 						write_log(_T("Replacement disk '%s' inserted.\n"), drv->newname);
 						drv->dskready_up_time = 0;

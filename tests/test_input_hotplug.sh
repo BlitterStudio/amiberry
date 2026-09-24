@@ -108,6 +108,49 @@ fixjport = region_between(
 )
 if "if (vv == JPORT_NONE)" in fixjport:
 	fail("Explicitly selecting None must clear the previous device identity")
+previous_joy = region_between(
+	inputdevice,
+	"static void inputdevice_get_previous_joy(",
+	"void inputdevice_validate_jports",
+)
+if "jp->id >= 0 && p->jports_default[portnum] == 0" not in previous_joy:
+	fail("An explicit joyport default must take precedence over stored keyboard layouts")
+if "p->jports[portnum].id = default_keyboard_layout[portnum] - 1;" not in previous_joy:
+	fail("Controller removal must apply the configured keyboard-layout fallback")
+keyboard_default = region_between(
+	inputdevice,
+	"void inputdevice_joyport_keyboard_default(",
+	"void inputdevice_joyport_config_store(",
+)
+if '_tcsncmp(value, _T("kbd"), 3) == 0' not in keyboard_default:
+	fail("joyportdefault must accept explicit keyboard layouts")
+if '_tcscmp(value, _T("none")) == 0' not in keyboard_default:
+	fail("joyportdefault must support disabling the controller-removal fallback")
+if "layout > 0 && layout <= JSEM_LASTKBD && *endptr == 0" not in keyboard_default:
+	fail("joyportdefault keyboard layouts must reject invalid numeric suffixes")
+if "default_keyboard_layout[portnum] = p->jports_default[portnum];" not in keyboard_default:
+	fail("Parsed joyport defaults must update the runtime fallback state")
+copy_jport = region_between(
+	inputdevice,
+	"static void copyjport (",
+	"#define MAX_STORED_JPORTS",
+)
+if "dst->jports_default[num] = src->jports_default[num];" not in copy_jport:
+	fail("Copying active joyports must preserve their configured removal fallback")
+update_config = region_between(
+	inputdevice,
+	"void inputdevice_updateconfig_internal (",
+	"void inputdevice_updateconfig (",
+)
+if "default_keyboard_layout[i] = dstprefs->jports_default[i];" not in update_config:
+	fail("Activating preferences must replace every runtime keyboard fallback")
+port_config = region_between(
+	inputdevice,
+	"int inputdevice_joyport_config(",
+	"int inputdevice_getjoyportdevice (",
+)
+if "if (p->jports_default[portnum] == 0)" not in port_config:
+	fail("Automatic keyboard defaults must not overwrite an explicit joyportdefault")
 port_selection = region_between(
 	input_panel,
 	"static void set_port_input_device(",

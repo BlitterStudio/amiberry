@@ -68,7 +68,7 @@
 #endif
 #include "ethernet.h"
 #include "drawing.h"
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 #include "videograb.h"
 #endif
 #ifdef AHI
@@ -426,13 +426,13 @@ void virtualdevice_free(void)
 #endif
 	savestate_free();
 	memory_cleanup();
+	rtarea_free();
 	free_shm();
 	cfgfile_addcfgparam(0);
 #ifdef DRIVESOUND
 	driveclick_free();
 #endif
 	ethernet_enumerate_free();
-	rtarea_free();
 	drawing_free();
 #ifdef WITH_DRACO
 	draco_free();
@@ -559,7 +559,7 @@ void devices_pause(void)
 #ifdef RETROPLATFORM
 	rp_pause(1);
 #endif
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ethernet_pause(1);
@@ -577,7 +577,7 @@ void devices_unpause(void)
 #ifdef WITH_DSP
 	dsp_pause(0);
 #endif
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(0);
 #endif
 	ethernet_pause(0);

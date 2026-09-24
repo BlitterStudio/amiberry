@@ -25,6 +25,7 @@ void *uae_shmat(addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_m
 int uae_shmdt(const void *shmaddr);
 int uae_shmget(uae_key_t key, const addrbank *ab, int shmflg);
 int uae_shmctl(int shmid, int cmd, struct uae_shmid_ds *buf);
+bool uae_mman_alloc_nodirect(addrbank *ab, uae_u32 size);
 
 #define UAE_IPC_PRIVATE 0x01
 #define UAE_IPC_RMID    0x02

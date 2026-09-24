@@ -337,6 +337,7 @@ extern int inputdevice_getjoyportdevice (int port, int val);
 extern void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports);
 extern void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig);
 extern void inputdevice_jportcustom_fixup(struct uae_prefs *p, TCHAR*, int);
+extern void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum);
 
 extern void inputdevice_init (void);
 extern void inputdevice_close (void);
