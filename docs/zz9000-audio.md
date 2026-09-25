@@ -14,7 +14,7 @@ audio TX and RX rings are at board offsets `card_size - 0x10000` and
 
 | Offset | Meaning |
 |---|---|
-| `0x04` | Read pending interrupt flags (audio = bit 1); write bits 3 and 5 to acknowledge audio |
+| `0x04` | Read pending interrupt flags (Ethernet = bit 0, audio = bit 1); write bits 3 and 5 to acknowledge audio |
 | `0x70` | Write a TX period offset divided by 256 to convert the guest's BE samples; read the last collision flag |
 | `0x74` | Audio frames per 20 ms period; playback and capture run at `frames × 50` Hz |
 | `0xF4` | Read AX presence and TX status capability (`0x0003`); write playback and capture interrupt enables |
@@ -38,12 +38,13 @@ stub does not forward samples to the frontend.
 
 All card memory, register, status, and interrupt updates run from the
 emulation callback. A completed period asserts Paula's `INTB_EXTER` request
-(bit 13, level 6). The stock driver's `AddIntServer(INTB_EXTER, ...)` handler
-reads `0x04`, acknowledges it, and wakes its AHI worker. The card model clears
-its pending flag on that acknowledgement, stop, and reset; Exec clears the
-shared Paula request after running the interrupt-server chain. This supports
-the driver's default EXTER wiring; a system configured with `ENV:ZZ9K_INT2`
-uses the physical PORTS line and is not modeled yet.
+(bit 13, level 6) by default. The stock driver's interrupt server reads
+`0x04`, acknowledges audio without clearing Ethernet, and wakes its AHI
+worker. The card model clears audio pending on acknowledgement, stop, and
+reset. Ethernet and audio share the selected Paula line; a source that remains
+pending is asserted again after Exec services the other source. Set
+`zz9000_int2=true` when the guest has `ENV:ZZ9K_INT2` so both installed
+drivers use `INTB_PORTS` (bit 3, level 2).
 
 ## Validation
 

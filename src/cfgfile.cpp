@@ -2442,6 +2442,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	}
 
 	cfgfile_write_bool (f, _T("bsdsocket_emu"), p->socket_emu);
+#ifdef AMIBERRY
+	cfgfile_write_str(f, _T("zz9000_net"), p->zz9000net_name);
+	cfgfile_write_bool(f, _T("zz9000_int2"), p->zz9000_int2);
+#endif
 
 	{
 		// backwards compatibility
@@ -6212,6 +6216,13 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		}
 		return 1;
 	}
+#ifdef AMIBERRY
+	if (cfgfile_string(option, value, _T("zz9000_net"), p->zz9000net_name,
+	                   sizeof p->zz9000net_name / sizeof(TCHAR)))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("zz9000_int2"), &p->zz9000_int2))
+		return 1;
+#endif
 
 	if (cfgfile_string(option, value, _T("ne2000_pci"), p->ne2000pciname, sizeof p->ne2000pciname / sizeof(TCHAR)))
 		return 1;
@@ -9437,6 +9448,10 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->ne2000pciname[0] = 0;
 	p->ne2000pcmcianame[0] = 0;
 	p->a2065name[0] = 0;
+#ifdef AMIBERRY
+	_tcscpy(p->zz9000net_name, _T("slirp"));
+	p->zz9000_int2 = false;
+#endif
 
 	p->prtname[0] = 0;
 	p->sername[0] = 0;
