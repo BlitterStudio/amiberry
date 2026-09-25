@@ -1505,19 +1505,20 @@ static void zz_ax_audio_start(zz9000_state *data)
         data->ax_audio = new zz_ax_audio_engine();
     auto *eng = data->ax_audio;
     const uae_u32 rate = zz_ax_frames(data) * 50;
+    const bool play_enabled = data->audio_play && currprefs.produce_sound >= 2;
     if (eng->next_period != std::chrono::steady_clock::time_point{} && eng->rate == rate &&
-        eng->play_enabled == data->audio_play && eng->record_enabled == data->audio_record)
+        eng->play_enabled == play_enabled && eng->record_enabled == data->audio_record)
         return;
     zz_ax_audio_close(data);
     eng->rate = rate;
-    eng->play_enabled = data->audio_play;
+    eng->play_enabled = play_enabled;
     eng->record_enabled = data->audio_record;
     SDL_AudioSpec spec = {};
     spec.format = SDL_AUDIO_S16LE;
     spec.channels = 2;
     spec.freq = static_cast<int>(rate);
     enumerate_sound_devices();
-    if (data->audio_play) {
+    if (play_enabled) {
         const int soundcard = currprefs.soundcard;
         const bool use_default_device = currprefs.soundcard_default || soundcard < 0 ||
             soundcard >= MAX_SOUND_DEVICES || sound_devices[soundcard] == nullptr;
@@ -1572,6 +1573,8 @@ static void zz_ax_audio_tick(zz9000_state *data)
     auto *eng = data->ax_audio;
     if (!eng || (!data->audio_play && !data->audio_record))
         return;
+    if (eng->play_enabled != (data->audio_play && currprefs.produce_sound >= 2))
+        zz_ax_audio_start(data);
     const auto now = std::chrono::steady_clock::now();
     if (now < eng->next_period)
         return;
