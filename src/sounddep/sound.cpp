@@ -93,6 +93,7 @@ static int num_sound_devices, num_record_devices;
 
 static struct sound_data sdpaula;
 static struct sound_data *sdp = &sdpaula;
+static bool volume_mute;
 
 static uae_u8 *extrasndbuf;
 static int extrasndbufsize;
@@ -442,12 +443,18 @@ void set_volume_sound_device (struct sound_data *sd, int volume, int mute)
 
 void set_volume(int volume, int mute)
 {
+	volume_mute = mute != 0;
 	set_volume_sound_device(sdp, volume, mute);
 	setvolume_ahi(volume);
 #ifdef VIDEOGRAB
 	setmastervolumevideograb(volume, mute != 0);
 #endif
 	config_changed = 1;
+}
+
+bool sound_muted(void)
+{
+	return sdp->mute != 0 || volume_mute;
 }
 
 static void finish_sound_buffer_sdl_push(struct sound_data* sd, uae_u16* sndbuffer)
