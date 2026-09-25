@@ -21,6 +21,10 @@ leaves the card visible to the guest but causes transmit to return an error;
 Amiberry logs the failed host connection. SLIRP does not provide a bridge to
 other devices on the host's physical LAN.
 
+SLIRP supports one emulated network card at a time. If another card already
+uses it, the ZZ9000 host backend stays disconnected. Choose TAP or pcap for
+one card, or disable the other card, to use ZZ9000Net through SLIRP.
+
 The interface uses board offsets `0x2000` for the current RX frame and
 `0x8000` for TX staging. Writing a frame length to register `0x80` transmits
 the staged frame and reading it returns the send status. The RX window starts

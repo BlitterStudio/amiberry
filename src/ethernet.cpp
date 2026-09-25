@@ -88,7 +88,11 @@ void ethernet_trigger (struct netdriverdata *ndd, void *vsd)
 		case UAENET_SLIRP_INBOUND:
 		{
 			struct ethernet_data *ed = (struct ethernet_data*)vsd;
-			if (slirp_data) {
+			if (slirp_data
+#ifdef AMIBERRY
+				&& slirp_data == ed
+#endif
+			) {
 				uae_u8 pkt[4000];
 				int len = sizeof pkt;
 				int v;
@@ -145,6 +149,12 @@ int ethernet_open (struct netdriverdata *ndd, void *vsd, void *user, ethernet_go
 		case UAENET_SLIRP_INBOUND:
 		{
 			struct ethernet_data *ed = (struct ethernet_data*)vsd;
+#ifdef AMIBERRY
+			if (slirp_data) {
+				write_log(_T("UAENET: SLIRP is already in use by another network card\n"));
+				return 0;
+			}
+#endif
 			ed->gotfunc = gotfunc;
 			ed->getfunc = getfunc;
 			ed->userdata = user;
@@ -226,7 +236,11 @@ void ethernet_close (struct netdriverdata *ndd, void *vsd)
 #ifdef WITH_SLIRP
 		case UAENET_SLIRP:
 		case UAENET_SLIRP_INBOUND:
-		if (slirp_data) {
+		if (slirp_data
+#ifdef AMIBERRY
+			&& slirp_data == vsd
+#endif
+		) {
 			uae_slirp_end ();
 			uae_slirp_cleanup ();
 			slirp_data = NULL;
@@ -329,6 +343,30 @@ bool ethernet_enumerate (struct netdriverdata **nddp, int romtype)
 	nddp[j] = NULL;
 	return true;
 }
+
+#ifdef AMIBERRY
+// Look up one backend without refreshing the arrays used by active cards.
+struct netdriverdata *ethernet_find_driver(const TCHAR *name)
+{
+	if (!name || !name[0])
+		return NULL;
+	if (!_tcsicmp(name, slirpd.name))
+		return &slirpd;
+	if (!_tcsicmp(name, slirpd2.name))
+		return &slirpd2;
+#ifdef WITH_UAENET_TAP
+	struct netdriverdata *tap = uaenet_tap_enumerate(name);
+	if (tap && tap->active && tap->name && !_tcsicmp(name, tap->name))
+		return tap;
+#endif
+#ifdef WITH_UAENET_PCAP
+	struct netdriverdata *pcap = uaenet_enumerate(name);
+	if (pcap && pcap->active && pcap->name && !_tcsicmp(name, pcap->name))
+		return pcap;
+#endif
+	return NULL;
+}
+#endif
 
 void ethernet_close_driver (struct netdriverdata *ndd)
 {

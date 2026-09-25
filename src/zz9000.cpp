@@ -1466,27 +1466,22 @@ static void zz_net_open(zz9000_state *data, const TCHAR *name)
     auto *net = data->net;
     if (!net || !name || !name[0] || !_tcsicmp(name, _T("none")))
         return;
-    netdriverdata *choices[MAX_TOTAL_NET_DEVICES + 1] = {};
-    if (!ethernet_enumerate(choices, 0))
-        return;
-    for (int i = 0; choices[i]; ++i) {
-        if (_tcsicmp(choices[i]->name, name))
-            continue;
-        const int data_length = ethernet_getdatalength(choices[i]);
-        if (data_length <= 0)
-            break;
-        net->backend_data = xcalloc(uae_u8, data_length);
-        if (!net->backend_data)
-            break;
-        if (ethernet_open(choices[i], net->backend_data, net,
-                          zz_net_received, zz_net_transmit, 0, net->mac)) {
-            net->backend = choices[i];
-            write_log(_T("ZZ9000Net: host backend '%s' open\n"), name);
-            return;
+    netdriverdata *backend = ethernet_find_driver(name);
+    if (backend) {
+        const int data_length = ethernet_getdatalength(backend);
+        if (data_length > 0) {
+            net->backend_data = xcalloc(uae_u8, data_length);
+            if (net->backend_data) {
+                if (ethernet_open(backend, net->backend_data, net,
+                                  zz_net_received, zz_net_transmit, 0, net->mac)) {
+                    net->backend = backend;
+                    write_log(_T("ZZ9000Net: host backend '%s' open\n"), name);
+                    return;
+                }
+                xfree(net->backend_data);
+                net->backend_data = nullptr;
+            }
         }
-        xfree(net->backend_data);
-        net->backend_data = nullptr;
-        break;
     }
     write_log(_T("ZZ9000Net: host backend '%s' unavailable; card disconnected\n"), name);
 }
