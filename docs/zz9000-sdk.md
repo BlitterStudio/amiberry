@@ -22,7 +22,8 @@ reset the mailbox and release stream resources on board reset or removal.
 
 The focused tests are `tests/test_zz9000_sdk.sh` and
 `tests/test_zz9000_sdk_audio.sh`. They exercise mailbox completion, allocation,
-reset, and a generated MP3 stream. ZZPlay MHI playback has also been confirmed
-with the installed libraries on an A4000 system drive. AmigaAMP, pause/resume,
-seek, drain, simultaneous AHI, and Zorro II behavior still need guest checks
-before claiming full compatibility with a particular system drive.
+reset, and a generated MP3 stream. ZZPlay and AmigaAMP MHI playback have been
+confirmed with the installed libraries on an A4000 system drive; ZZ9000AX AHI
+still plays afterward. Pause/resume, seek, drain, simultaneous AHI, warm reset,
+and Zorro II behavior still need guest checks before claiming full compatibility
+with a particular system drive.
