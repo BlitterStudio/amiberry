@@ -49,6 +49,10 @@ extern struct gfxboard_func a2410_func;
 extern struct gfxboard_func harlequin_func;
 extern struct gfxboard_func rainbowii_func;
 extern struct gfxboard_func zz9000_func;
+#ifdef AMIBERRY
+extern bool zz9000_net_board_present(void);
+extern bool zz9000_net_host_active(void);
+#endif
 
 extern void vga_io_put(int board, int portnum, uae_u8 v);
 extern uae_u8 vga_io_get(int board, int portnum);

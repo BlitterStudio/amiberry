@@ -2,8 +2,10 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "gfxboard.h"
+#include "ethernet.h"
 #include "../amiberry_gfx.h"
 #include "../display_modes.h"
+#include "../target.h"
 #include <vector>
 #include <string>
 
@@ -108,6 +110,41 @@ void render_panel_rtg() {
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ShowHelpMarker("Select RTG graphics card to emulate (Picasso96, CyberGraphX compatible)");
+
+    if (rbc->rtgmem_type == GFXBOARD_ID_ZZ9000_Z2 ||
+        rbc->rtgmem_type == GFXBOARD_ID_ZZ9000_Z3) {
+        ImGui::Spacing();
+        ImGui::Text("ZZ9000 Ethernet");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.6f);
+        auto **netdrivers = target_ethernet_enumerate();
+        const char *selection = "Unavailable";
+        if (!_tcsicmp(changed_prefs.zz9000net_name, _T("none")))
+            selection = "Disconnected";
+        for (int i = 0; netdrivers && netdrivers[i]; ++i) {
+            if (!_tcsicmp(changed_prefs.zz9000net_name, netdrivers[i]->name)) {
+                selection = netdrivers[i]->desc;
+                break;
+            }
+        }
+        if (ImGui::BeginCombo("##ZZ9000Ethernet", selection)) {
+            if (ImGui::Selectable("Disconnected", !_tcsicmp(changed_prefs.zz9000net_name, _T("none"))))
+                _tcscpy(changed_prefs.zz9000net_name, _T("none"));
+            for (int i = 0; netdrivers && netdrivers[i]; ++i) {
+                if (ImGui::Selectable(netdrivers[i]->desc,
+                                      !_tcsicmp(changed_prefs.zz9000net_name, netdrivers[i]->name)))
+                    _tcscpy(changed_prefs.zz9000net_name, netdrivers[i]->name);
+            }
+            ImGui::EndCombo();
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Host network backend for the installed ZZ9000Net.device");
+        if (zz9000_net_board_present())
+            ImGui::TextDisabled("Running host backend: %s",
+                                zz9000_net_host_active() ? "Active" : "Disconnected");
+        AmigaCheckbox("ZZ9000 INT2", &changed_prefs.zz9000_int2);
+        ShowHelpMarker("Match this to the real drive's ZZ9K_INT2 setting; default is INT6");
+    }
 
     // WinUAE enable_for_expansiondlg() logic
     bool has_memory = rbc->rtgmem_size > 0;

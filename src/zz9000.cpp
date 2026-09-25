@@ -1,5 +1,5 @@
 /*
- * MNT ZZ9000 RTG and ZZ9000AX audio emulation
+ * MNT ZZ9000 RTG, Ethernet, and ZZ9000AX audio emulation
  *
  * Implements the register and framebuffer ABI used by the current
  * ZZ9000.card driver and ZZ9000OS 2.8 firmware.  The optional surface
@@ -16,19 +16,27 @@
 #include "picasso96.h"
 #include "gfxboard.h"
 #include "custom.h"
+#include "ethernet.h"
+#include "sana2.h"
+#include "zz9000_net_protocol.h"
 #ifdef AMIBERRY
 #include "amiberry_cursor.h"
 #endif
 #include "xwin.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <deque>
+#include <mutex>
+#include <new>
 #if defined(AHI) && !defined(LIBRETRO)
 #include <chrono>
 #include <SDL3/SDL.h>
 #include "sounddep/sound.h"
 struct zz_ax_audio_engine;
 #endif
+struct zz9000_net_engine;
 
 
 static constexpr uae_u32 ZZ9000_Z2_SIZE = 0x00400000;
@@ -92,6 +100,13 @@ enum zz9000_register {
 	ZZ_REG_ACC_OP = 0x5c,
 	ZZ_REG_SPLIT_POS = 0x5e,
 	ZZ_REG_SET_FEATURE = 0x60,
+	ZZ_REG_ETH_TX = 0x80,
+	ZZ_REG_ETH_RX = 0x82,
+	ZZ_REG_ETH_MAC_HI = 0x84,
+	ZZ_REG_ETH_MAC_MID = 0x86,
+	ZZ_REG_ETH_MAC_LO = 0x88,
+	ZZ_REG_ETH_RX_STATUS = 0x8c,
+	ZZ_REG_ETH_RX_STATS = 0x8e,
 	ZZ_REG_FW_VERSION = 0xc0,
 	ZZ_REG_FW_CAPABILITIES = 0xe6,
 	ZZ_REG_CONFIG_KEY = 0xe8,
@@ -269,6 +284,8 @@ struct zz9000_state {
 	uae_u32 audio_log_periods;
 	uae_u32 audio_log_flags;
 	uae_u32 audio_cfg_reads;
+	zz9000_net_engine *net;
+	bool int2;
 #if defined(AHI) && !defined(LIBRETRO)
 	zz_ax_audio_engine *ax_audio;
 #endif
@@ -1349,6 +1366,166 @@ static void zz_palette_write_z2(zz9000_state *data, int operation)
 		(data->palette_data >> 8) & 0xff, data->palette_data & 0xff, operation == 19);
 }
 
+static constexpr uae_u32 ZZ_NET_RX_WINDOW = 0x2000;
+static constexpr uae_u32 ZZ_NET_TX_WINDOW = 0x8000;
+static constexpr uae_u32 ZZ_NET_WINDOW_BYTES = 0x2000;
+static constexpr uae_u8 ZZ_NET_DEFAULT_MAC[6] = {0x68, 0x82, 0xf2, 0x00, 0x01, 0x00};
+
+struct zz9000_net_engine {
+    struct packet {
+        int length;
+        std::array<uae_u8, zz9000_net::RxQueue::max_frame> bytes;
+    };
+
+    // Backend callbacks can arrive off the emulation thread. The card RX
+    // window and interrupt state are updated only when hsync drains this queue.
+    std::mutex incoming_mutex;
+    std::deque<packet> incoming;
+    uae_u32 incoming_drops = 0;
+    zz9000_net::RxQueue rx;
+    std::array<uae_u8, ZZ_NET_WINDOW_BYTES> tx{};
+    uae_u8 mac[6] = {};
+    netdriverdata *backend = nullptr;
+    uae_u8 *backend_data = nullptr;
+    int tx_length = 0;
+    uae_u16 tx_status = 0;
+    bool irq_enabled = false;
+    bool irq_pending = false;
+};
+
+bool zz9000_net_board_present(void)
+{
+    for (const auto *board : zz9000_boards) {
+        if (board && board->configured)
+            return true;
+    }
+    return false;
+}
+
+bool zz9000_net_host_active(void)
+{
+    for (const auto *board : zz9000_boards) {
+        if (board && board->configured && board->net && board->net->backend)
+            return true;
+    }
+    return false;
+}
+
+static void zz_card_raise_interrupt(const zz9000_state *data)
+{
+    // PORTS is INT2 (bit 3); EXTER is INT6 (bit 13).
+    INTREQ_0(0x8000 | (data->int2 ? 0x0008 : 0x2000));
+}
+
+static void zz_net_received(void *user, const uae_u8 *bytes, int length)
+{
+    auto *net = static_cast<zz9000_net_engine *>(user);
+    if (!net || !bytes || length < 14 ||
+        length > static_cast<int>(zz9000_net::RxQueue::max_frame))
+        return;
+    std::lock_guard<std::mutex> lock(net->incoming_mutex);
+    if (net->incoming.size() >= zz9000_net::RxQueue::capacity) {
+        ++net->incoming_drops;
+        return;
+    }
+    zz9000_net_engine::packet packet{};
+    packet.length = length;
+    std::copy_n(bytes, length, packet.bytes.begin());
+    net->incoming.push_back(packet);
+}
+
+static int zz_net_transmit(void *user, uae_u8 *bytes, int *length)
+{
+    auto *net = static_cast<zz9000_net_engine *>(user);
+    if (!net || !bytes || !length || net->tx_length <= 0 ||
+        net->tx_length > *length)
+        return 0;
+    std::copy_n(net->tx.begin(), net->tx_length, bytes);
+    *length = net->tx_length;
+    net->tx_length = 0;
+    return 1;
+}
+
+static void zz_net_close(zz9000_net_engine *net)
+{
+    if (!net)
+        return;
+    if (net->backend && net->backend_data)
+        ethernet_close(net->backend, net->backend_data);
+    xfree(net->backend_data);
+    net->backend_data = nullptr;
+    net->backend = nullptr;
+    net->tx_length = 0;
+    std::lock_guard<std::mutex> lock(net->incoming_mutex);
+    net->incoming.clear();
+    net->incoming_drops = 0;
+}
+
+static void zz_net_open(zz9000_state *data, const TCHAR *name)
+{
+    auto *net = data->net;
+    if (!net || !name || !name[0] || !_tcsicmp(name, _T("none")))
+        return;
+    netdriverdata *backend = ethernet_find_driver(name);
+    if (backend) {
+        const int data_length = ethernet_getdatalength(backend);
+        if (data_length > 0) {
+            net->backend_data = xcalloc(uae_u8, data_length);
+            if (net->backend_data) {
+                if (ethernet_open(backend, net->backend_data, net,
+                                  zz_net_received, zz_net_transmit, 0, net->mac)) {
+                    net->backend = backend;
+                    write_log(_T("ZZ9000Net: host backend '%s' open\n"), name);
+                    return;
+                }
+                xfree(net->backend_data);
+                net->backend_data = nullptr;
+            }
+        }
+    }
+    write_log(_T("ZZ9000Net: host backend '%s' unavailable; card disconnected\n"), name);
+}
+
+static void zz_net_tick(zz9000_state *data)
+{
+    auto *net = data->net;
+    if (!net)
+        return;
+    if (net->backend)
+        ethernet_receive_poll(net->backend, net->backend_data);
+    {
+        std::lock_guard<std::mutex> lock(net->incoming_mutex);
+        while (!net->incoming.empty()) {
+            const auto &packet = net->incoming.front();
+            net->rx.enqueue(packet.bytes.data(), packet.length);
+            net->incoming.pop_front();
+        }
+        net->rx.record_drop(net->incoming_drops);
+        net->incoming_drops = 0;
+    }
+    if (net->irq_enabled && net->rx.ready() && !net->irq_pending)
+        net->irq_pending = true;
+    // Exec can clear the shared Paula request after one interrupt server
+    // accepts it. Reassert a second source still pending on the next hsync.
+    if (net->irq_pending || data->audio_intreq_pending)
+        zz_card_raise_interrupt(data);
+}
+
+static void zz_net_reset(zz9000_state *data)
+{
+    auto *net = data->net;
+    if (!net)
+        return;
+    zz_net_close(net);
+    net->rx.reset();
+    net->tx.fill(0);
+    std::copy_n(ZZ_NET_DEFAULT_MAC, 6, net->mac);
+    net->tx_status = 0;
+    net->irq_enabled = false;
+    net->irq_pending = false;
+    zz_net_open(data, currprefs.zz9000net_name);
+}
+
 // ZZ9000AX audio: 8-slot DMA ring in card memory (8 x 3840 bytes).
 // Each slot is 20 ms of 16-bit stereo at 96 kHz. The host is the single
 // producer (capture) / consumer (playback) of the ring; the Amiga-side
@@ -1430,9 +1607,8 @@ static void zz_ax_period_pending(zz9000_state *data)
     if (data->audio_intreq_pending)
         return;
     data->audio_intreq_pending = true;
-    // INTB_EXTER is bit 13. Exec's AddIntServer(INTB_EXTER, ...) installs
-    // the unchanged ZZ9000AX ISR on this line and enables that bit.
-    INTREQ_0(0x8000 | 0x2000);
+	// The installed AHI ISR uses the selected PORTS or EXTER line.
+	zz_card_raise_interrupt(data);
     if (!(data->audio_log_flags & (1u << 2))) {
         data->audio_log_flags |= 1u << 2;
         write_log(_T("ZZ9000AX: audio interrupt pending (tx_seq=%u rx_seq=%u)\n"),
@@ -1821,6 +1997,36 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 		case ZZ_REG_CONFIG_KEY:
 			data->config_key = value;
 			break;
+		case ZZ_REG_ETH_TX:
+			if (data->net) {
+				auto *net = data->net;
+				net->tx_status = 1;
+				if (value >= 14 && value <= zz9000_net::RxQueue::max_frame &&
+				    net->backend) {
+					net->tx_length = value;
+					ethernet_trigger(net->backend, net->backend_data);
+					net->tx_status = net->tx_length == 0 ? 0 : 2;
+					net->tx_length = 0;
+				}
+			}
+			break;
+		case ZZ_REG_ETH_RX:
+			if (data->net)
+				data->net->rx.accept(value);
+			break;
+		case ZZ_REG_ETH_MAC_HI:
+		case ZZ_REG_ETH_MAC_MID:
+		case ZZ_REG_ETH_MAC_LO:
+			if (data->net) {
+				const int index = (offset - ZZ_REG_ETH_MAC_HI) / 2 * 2;
+				data->net->mac[index] = static_cast<uae_u8>(value >> 8);
+				data->net->mac[index + 1] = static_cast<uae_u8>(value);
+				if (offset == ZZ_REG_ETH_MAC_LO && data->net->backend) {
+					zz_net_close(data->net);
+					zz_net_open(data, currprefs.zz9000net_name);
+				}
+			}
+			break;
 		case 0x1000:
 			data->palette_data = (data->palette_data & 0xffff) |
 				(static_cast<uae_u32>(value) << 16);
@@ -1887,16 +2093,23 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 #endif
 			break;
 		case ZZ_REG_CONFIG:
-			// The Amiga-side audio ISR acks the card INTREQ by writing
-			// 8|32 to the 0x04 intreq register; the RTG driver does
-			// not use it.
-			if (value & (8 | 32)) {
-				if (data->audio_intreq_pending &&
-					!(data->audio_log_flags & (1u << 3))) {
-					data->audio_log_flags |= 1u << 3;
-					write_log(_T("ZZ9000AX: interrupt acked via 0x04 write 0x%04x\n"), value);
+			// Bit 3 selects ack mode. Bits 4 and 5 independently
+			// acknowledge Ethernet and audio on the shared IRQ line.
+			if (value & 8) {
+				if ((value & 16) && data->net)
+					data->net->irq_pending = false;
+				if (value & 32) {
+					if (data->audio_intreq_pending &&
+					    !(data->audio_log_flags & (1u << 3))) {
+						data->audio_log_flags |= 1u << 3;
+						write_log(_T("ZZ9000AX: interrupt acked via 0x04 write 0x%04x\n"), value);
+					}
+					zz_ax_clear_interrupt(data);
 				}
-				zz_ax_clear_interrupt(data);
+			} else if (!(value & 128) && data->net) {
+				data->net->irq_enabled = (value & 1) != 0;
+				if (!data->net->irq_enabled)
+					data->net->irq_pending = false;
 			}
 			break;
 		default:
@@ -1916,15 +2129,34 @@ static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 			 * card driver stays on the legacy paths this
 			 * emulation backs. */
 			return 0;
+		case ZZ_REG_ETH_TX:
+			return data->net ? data->net->tx_status : 1;
+		case ZZ_REG_ETH_MAC_HI:
+		case ZZ_REG_ETH_MAC_MID:
+		case ZZ_REG_ETH_MAC_LO:
+			if (data->net) {
+				const int index = (offset - ZZ_REG_ETH_MAC_HI) / 2 * 2;
+				return (data->net->mac[index] << 8) | data->net->mac[index + 1];
+			}
+			return 0;
+		case ZZ_REG_ETH_RX_STATUS:
+			return data->net ? static_cast<uae_u16>(
+				(data->net->rx.ready() >= zz9000_net::RxQueue::capacity ? 0x8000 : 0) |
+				std::min<size_t>(data->net->rx.ready(), 255)) : 0;
+		case ZZ_REG_ETH_RX_STATS:
+			return data->net ? static_cast<uae_u16>(
+				std::min<uae_u32>(data->net->rx.dropped(), 255) << 8) : 0;
 		case ZZ_REG_VBLANK:
 			data->vblank_read = !data->vblank_read;
 			return data->vblank_read ? 1 : 0;
 		case ZZ_REG_CONFIG_KEY:
-			if (data->config_key == 9 || data->config_key == 10 || data->config_key == 11)
+			if ((data->config_key == 5 && data->int2) ||
+			    data->config_key == 9 || data->config_key == 10 || data->config_key == 11)
 				return 1;
 			return 0;
 		case ZZ_REG_CONFIG_PRESENT:
-			return data->config_key == 9 || data->config_key == 10 ||
+			return (data->config_key == 5 && data->int2) ||
+				data->config_key == 9 || data->config_key == 10 ||
 				data->config_key == 11 ? 1 : 0;
 		case ZZ_REG_AUDIO_CONFIG:
 			// Libretro's SDL audio stream stub does not deliver AX samples
@@ -1947,17 +2179,16 @@ static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 		case ZZ_REG_AUDIO_SWAB:
 			return data->audio_collision ? 1 : 0;
 		case ZZ_REG_CONFIG:
-			// The 0x04 intreq register is owned by the AX audio ISR; the
-			// RTG driver does not use it. Bit 1 = audio pending (refill).
-			// E2E diagnostic: probe whether the driver's vblank ISR reads
-			// 0x04 at all, and what value it sees (500 reads ~= 10 s).
+			// Ethernet uses bit 0; AX audio uses bit 1. RTG does not
+			// use this interrupt register.
 			data->audio_cfg_reads++;
 			if (data->audio_cfg_reads % 500 == 1)
-				write_log(_T("ZZ9000AX: 0x04 read=%u (n=%u pending=%d)\n"),
-					data->audio_intreq_pending ? 2 : 0,
-					data->audio_cfg_reads,
-					data->audio_intreq_pending ? 1 : 0);
-			return data->audio_intreq_pending ? 2 : 0;
+				write_log(_T("ZZ9000: 0x04 read=%u (n=%u)\n"),
+					(data->audio_intreq_pending ? 2 : 0) |
+					(data->net && data->net->irq_pending ? 1 : 0),
+					data->audio_cfg_reads);
+			return (data->audio_intreq_pending ? 2 : 0) |
+				(data->net && data->net->irq_pending ? 1 : 0);
 		default:
 			if (offset / 2 < sizeof data->registers / sizeof data->registers[0])
 				return data->registers[offset / 2];
@@ -1971,6 +2202,12 @@ static uae_u32 REGPARAM2 zz9000_wget(uaecptr addr)
 	if (!data)
 		return 0;
 	const uae_u32 offset = addr - data->configured;
+	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset + 1 < 0x6000)
+		return (data->net->rx.read(offset - ZZ_NET_RX_WINDOW) << 8) |
+			data->net->rx.read(offset + 1 - ZZ_NET_RX_WINDOW);
+	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset + 1 < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES)
+		return (data->net->tx[offset - ZZ_NET_TX_WINDOW] << 8) |
+			data->net->tx[offset + 1 - ZZ_NET_TX_WINDOW];
 	if (offset >= ZZ9000_MEMORY_BASE) {
 		if (offset + 1 >= data->card_size)
 			return 0;
@@ -1985,6 +2222,10 @@ static uae_u32 REGPARAM2 zz9000_bget(uaecptr addr)
 	if (!data)
 		return 0;
 	const uae_u32 offset = addr - data->configured;
+	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
+		return data->net->rx.read(offset - ZZ_NET_RX_WINDOW);
+	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES)
+		return data->net->tx[offset - ZZ_NET_TX_WINDOW];
 	if (offset >= ZZ9000_MEMORY_BASE)
 		return offset < data->card_size ? data->memory[offset] : 0;
 	const uae_u16 value = zz_read_register(data, offset & ~1U);
@@ -2002,6 +2243,13 @@ static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value)
 	if (!data)
 		return;
 	const uae_u32 offset = addr - data->configured;
+	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
+		return;
+	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset + 1 < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES) {
+		data->net->tx[offset - ZZ_NET_TX_WINDOW] = static_cast<uae_u8>(value >> 8);
+		data->net->tx[offset + 1 - ZZ_NET_TX_WINDOW] = static_cast<uae_u8>(value);
+		return;
+	}
 	if (offset >= ZZ9000_MEMORY_BASE) {
 		if (offset + 1 >= data->card_size)
 			return;
@@ -2019,6 +2267,12 @@ static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value)
 	if (!data)
 		return;
 	const uae_u32 offset = addr - data->configured;
+	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
+		return;
+	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES) {
+		data->net->tx[offset - ZZ_NET_TX_WINDOW] = static_cast<uae_u8>(value);
+		return;
+	}
 	if (offset >= ZZ9000_MEMORY_BASE) {
 		if (offset >= data->card_size)
 			return;
@@ -2260,6 +2514,7 @@ static void zz9000_refresh(void *userdata)
 
 static void zz9000_hsync(void *userdata)
 {
+	zz_net_tick(static_cast<zz9000_state *>(userdata));
 #if defined(AHI) && !defined(LIBRETRO)
 	zz_ax_audio_tick(static_cast<zz9000_state *>(userdata));
 #endif
@@ -2294,6 +2549,7 @@ static void zz9000_reset(void *userdata)
 	data->audio_log_periods = 0;
 	data->audio_log_flags = 0;
 	data->audio_cfg_reads = 0;
+	zz_net_reset(data);
 	data->modified = true;
 }
 
@@ -2313,6 +2569,9 @@ static void zz9000_free(void *userdata)
 	data->ax_audio = nullptr;
 #endif
 	zz_ax_clear_interrupt(data);
+	zz_net_close(data->net);
+	delete data->net;
+	data->net = nullptr;
 	xfree(data->memory);
 	data->memory = nullptr;
 	xfree(data);
@@ -2333,6 +2592,7 @@ static bool zz9000_init(autoconfig_info *aci)
 	data->devnum = aci->devnum;
 	data->monitor_id = aci->prefs->rtgboards[aci->devnum].monitor_id;
 	data->z3 = z3;
+	data->int2 = aci->prefs->zz9000_int2;
 	data->card_size = z3 ? ZZ9000_Z3_SIZE : ZZ9000_Z2_SIZE;
 	// AX audio rings live in the top 64 KB of card memory (index into
 	// data->memory): TX base = size - 0x10000, RX base = size - 0x8000.
@@ -2345,6 +2605,13 @@ static bool zz9000_init(autoconfig_info *aci)
 		xfree(data);
 		return false;
 	}
+	data->net = new (std::nothrow) zz9000_net_engine;
+	if (!data->net) {
+		xfree(data->memory);
+		xfree(data);
+		return false;
+	}
+	zz_net_reset(data);
 	data->sprite_colors[0] = 0x00ff00ff;
 	data->sprite_visible = false;
 	data->modified = true;

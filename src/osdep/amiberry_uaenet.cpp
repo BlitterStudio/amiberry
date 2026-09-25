@@ -398,6 +398,9 @@ static void uaenet_close_driver_internal(struct uaenet_data *ud)
 }
 
 static struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
+#ifdef WITH_UAENET_PCAP
+static bool pcap_enumerated;
+#endif
 
 // Number of this emulator instance among those running on the host.
 static int uaenet_instance()
@@ -424,6 +427,9 @@ static void uaenet_set_guest_mac(struct netdriverdata *ndd)
 // Enumerate network devices
 struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 {
+#ifdef AMIBERRY
+    const TCHAR *requested_name = name;
+#endif
     // A single-device lookup must not re-enumerate if the device is already known:
     // clearing nd[] would invalidate the pointers cached in the global ndd[] array
     // from target_ethernet_enumerate() (same as uaenet_tap_enumerate()).
@@ -432,10 +438,23 @@ struct netdriverdata *uaenet_enumerate(const TCHAR *name)
             if (nd[i].active && nd[i].name && !_tcsicmp(name, nd[i].name))
                 return &nd[i];
         }
+#ifdef AMIBERRY
+        if (pcap_enumerated)
+            return NULL;
+#endif
     }
 
     pcap_if_t *alldevs;
     char errbuf[PCAP_ERRBUF_SIZE];
+#ifdef AMIBERRY
+    // A named lookup builds the full cache once, so subsequent NIC opens do
+    // not clear descriptors that are already in use by another card.
+    if (name != NULL && name[0] != '\0') {
+        name = NULL;
+    } else {
+        uaenet_enumerate_free();
+    }
+#endif
     memset(nd, 0, sizeof(nd));
 
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
@@ -472,6 +491,16 @@ struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 
     pcap_freealldevs(alldevs);
     enumerated = 1;
+#ifdef AMIBERRY
+    pcap_enumerated = true;
+    if (requested_name && requested_name[0] != '\0') {
+        for (int i = 0; i < MAX_TOTAL_NET_DEVICES; i++) {
+            if (nd[i].active && nd[i].name && !_tcsicmp(requested_name, nd[i].name))
+                return &nd[i];
+        }
+        return NULL;
+    }
+#endif
     return nd;
 }
 #endif
@@ -816,6 +845,9 @@ void uaenet_enumerate_free()
         }
     }
     enumerated = 0;
+#ifdef AMIBERRY
+    pcap_enumerated = false;
+#endif
 #endif
 }
 
@@ -878,6 +910,7 @@ void uaenet_tap_enumerate_free(void)
 
 struct netdriverdata *uaenet_tap_enumerate(const TCHAR *name)
 {
+    const TCHAR *requested_name = name;
     // If already enumerated and doing a single-device lookup, search the existing
     // array. Re-enumerating would free the tap_nd[] name/desc strings, invalidating
     // pointers cached in the global ndd[] array from target_ethernet_enumerate().
@@ -888,6 +921,11 @@ struct netdriverdata *uaenet_tap_enumerate(const TCHAR *name)
         }
         return NULL;  // not found — don't return a wrong device
     }
+
+    // Populate all TAP descriptors on the first named lookup, so another
+    // card can select a different adapter without rebuilding this cache.
+    if (name != NULL && name[0] != '\0')
+        name = NULL;
 
     uaenet_tap_enumerate_free();
 
@@ -945,6 +983,13 @@ struct netdriverdata *uaenet_tap_enumerate(const TCHAR *name)
 
     closedir(dir);
     enumerated = 1;
+    if (requested_name && requested_name[0] != '\0') {
+        for (int i = 0; i < tap_nd_count; i++) {
+            if (tap_nd[i].active && tap_nd[i].name && !_tcsicmp(requested_name, tap_nd[i].name))
+                return &tap_nd[i];
+        }
+        return NULL;
+    }
     return tap_nd;
 }
 

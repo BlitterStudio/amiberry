@@ -886,6 +886,10 @@ struct uae_prefs {
 	TCHAR prtname[MAX_DPATH];
 	TCHAR sername[MAX_DPATH];
 	TCHAR a2065name[MAX_DPATH];
+#ifdef AMIBERRY
+	TCHAR zz9000net_name[MAX_DPATH];
+	bool zz9000_int2;
+#endif
 	TCHAR ne2000pciname[MAX_DPATH];
 	TCHAR ne2000pcmcianame[MAX_DPATH];
 	TCHAR picassoivromfile[MAX_DPATH];

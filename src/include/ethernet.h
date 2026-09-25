@@ -27,6 +27,9 @@ typedef void (ethernet_gotfunc)(void *dev, const uae_u8 *data, int len);
 typedef int (ethernet_getfunc)(void *dev, uae_u8 *d, int *len);
 
 extern bool ethernet_enumerate (struct netdriverdata **, int romtype);
+#ifdef AMIBERRY
+extern struct netdriverdata *ethernet_find_driver(const TCHAR *name);
+#endif
 extern void ethernet_enumerate_free (void);
 extern void ethernet_close_driver (struct netdriverdata *ndd);
 
