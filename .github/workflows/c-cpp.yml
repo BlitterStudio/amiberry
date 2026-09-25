@@ -671,7 +671,7 @@ jobs:
           SDL_AUDIODRIVER: dummy
           LD_LIBRARY_PATH: ${{ steps.sdl.outputs.prefix }}/lib
         run: |
-          sudo apt-get install -y ripgrep python3
+          sudo apt-get install -y ripgrep python3 ffmpeg
           tests/run_tests.sh build/amiberry
 
       - name: Verify QEMU-UAE plugin in DEB

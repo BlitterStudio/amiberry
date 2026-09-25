@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 #ifdef HAVE_MPG123
+#include <cfenv>
 #include <fstream>
 #include <iterator>
 #include "sysconfig.h"
@@ -62,6 +63,11 @@ int main(int argc, char **argv)
 	Mailbox z2(4 * 1024 * 1024);
 	auto *mb = z2.board.data() + zz9000_sdk::mailbox_offset;
 	assert(z2.sdk.read_register(0x100) == 0x5a39);
+	const uint32_t advertised_mailbox =
+		(static_cast<uint32_t>(z2.sdk.read_register(0x104)) << 16) |
+		z2.sdk.read_register(0x106);
+	assert(advertised_mailbox == 0x3fe40000u +
+	       (zz9000_sdk::mailbox_offset - 0xa000u));
 	assert(get32(mb) == 0x5a5a394b);
 	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 13) | (1u << 14);
 #ifdef HAVE_MPG123
@@ -132,7 +138,11 @@ int main(int argc, char **argv)
 	put32(payload + 12, 262144);
 	put32(payload + 24, 1);
 	put32(payload + 28, 32768);
+	const int previous_rounding = std::fegetround();
+	assert(std::fesetround(FE_DOWNWARD) == 0);
 	reply = z3.call(0x0503, payload, 40);
+	assert(std::fegetround() == FE_DOWNWARD);
+	assert(std::fesetround(previous_rounding) == 0);
 	const uint32_t session = get32(reply + 16);
 	assert(session);
 	put32(payload, session);
@@ -140,7 +150,10 @@ int main(int argc, char **argv)
 	put32(payload + 8, 0);
 	put32(payload + 12, static_cast<uint32_t>(mp3.size()));
 	put32(payload + 16, 0);
+	assert(std::fesetround(FE_DOWNWARD) == 0);
 	reply = z3.call(0x0504, payload, 20);
+	assert(std::fegetround() == FE_DOWNWARD);
+	assert(std::fesetround(previous_rounding) == 0);
 	assert(get32(reply + 24) == 48000);
 	assert(get32(reply + 52) == mp3.size());
 	assert(get32(reply + 60) & 2);

@@ -14,7 +14,7 @@ namespace zz9000_sdk {
 
 constexpr uint32_t mailbox_offset = 0xd000;
 constexpr uint32_t mailbox_size = 128 + 2 * 64 * 64;
-constexpr uint32_t mailbox_arm_address = 0x3fe4d000;
+constexpr uint32_t mailbox_arm_address = 0x3fe43000;
 
 class Engine {
 public:

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cfenv>
 #include <cstring>
 #include <limits>
 
@@ -46,6 +47,27 @@ constexpr uint32_t host_window_begin = 0x3e0000;
 constexpr uint32_t host_window_end = 0x3f0000;
 constexpr uint32_t z3_heap_begin = 0x06000000;
 constexpr uint32_t z3_heap_end = 0x07e00000;
+
+#ifdef ZZ9000_SDK_AUDIO
+// Guest FPCR can change host rounding; mpg123 expects nearest during setup
+// and decode. Restore the guest mode before returning to CPU emulation.
+class HostNearestRounding {
+public:
+	HostNearestRounding() : previous_(std::fegetround())
+	{
+		std::fesetround(FE_TONEAREST);
+	}
+
+	~HostNearestRounding()
+	{
+		if (previous_ >= 0)
+			std::fesetround(previous_);
+	}
+
+private:
+	int previous_;
+};
+#endif
 
 uint16_t be16(const uint8_t *p)
 {
@@ -201,6 +223,7 @@ void Engine::decode_audio(const uint8_t *input, uint32_t length)
 #ifdef ZZ9000_SDK_AUDIO
 	if (!audio_ || !audio_->decoder || audio_->faulted)
 		return;
+	HostNearestRounding host_rounding;
 	uint8_t decoded[16384];
 	const unsigned char *source = input;
 	size_t source_length = length;
@@ -485,6 +508,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		if (be32(request + 16) || be32(request + 20) || be32(request + 36) ||
 		    be32(request + 24) != 1)
 			return unsupported;
+		HostNearestRounding host_rounding;
 		static const bool mpg123_ready = mpg123_init() == MPG123_OK;
 		if (!mpg123_ready)
 			return io_error;
