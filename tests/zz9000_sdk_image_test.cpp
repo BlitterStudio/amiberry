@@ -293,6 +293,55 @@ void reject_changed_decode_surface(Mailbox &mailbox,
 		mailbox.call(0x0101, request, 4);
 	}
 }
+void check_surface_dirty_reports()
+{
+	for (bool doorbell : {false, true}) {
+		Mailbox mailbox(4 * 1024 * 1024);
+		mailbox.sdk.set_framebuffer(0x110000, 2, 2, 8, 7);
+		uint8_t request[48] = {};
+		const auto create_surface = [&]() {
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, 2); put32(request + 4, 2);
+			put32(request + 8, 7); put32(request + 12, 16);
+			put32(request + 16, 8);
+			return get32(mailbox.call(0x0200, request, 20, 0, doorbell));
+		};
+		const uint32_t source = create_surface();
+		const uint32_t destination = create_surface();
+		const auto fill = [&](uint32_t handle, uint32_t color) {
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, handle);
+			put32(request + 12, 2); put32(request + 16, 2);
+			put32(request + 20, color);
+			mailbox.call(0x0203, request, 28, 0, doorbell);
+		};
+		const auto scale = [&](uint32_t handle, uint16_t clip_x) {
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, source); put32(request + 4, handle);
+			put16(request + 12, 2); put16(request + 14, 2);
+			put16(request + 20, 2); put16(request + 22, 2);
+			put16(request + 24, clip_x);
+			put16(request + 28, 2); put16(request + 30, 2);
+			mailbox.call(0x0407, request, 40, 0, doorbell);
+		};
+		fill(source, 0x00ff0000);
+		assert(!mailbox.last_dirty); // ARM-local preprocessing.
+		fill(destination, 0x000000ff);
+		assert(!mailbox.last_dirty);
+		scale(destination, 0);
+		assert(!mailbox.last_dirty);
+		fill(0x80000000, 0x0000ff00);
+		assert(mailbox.last_dirty);
+		const auto *fb = mailbox.board.data() + 0x110000;
+		assert(fb[0] == 0 && fb[1] == 255 && fb[2] == 0);
+		scale(0x80000000, 2); // Empty clip intersection.
+		assert(!mailbox.last_dirty);
+		assert(fb[0] == 0 && fb[1] == 255 && fb[2] == 0);
+		scale(0x80000000, 0);
+		assert(mailbox.last_dirty);
+		assert(fb[0] == 0 && fb[1] == 0 && fb[2] == 255);
+	}
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -316,6 +365,7 @@ int main(int argc, char **argv)
 	run_framebuffer_decode(mailbox, read_file(argv[1]));
 	reject_16bit_decode_surface(mailbox);
 	reject_changed_decode_surface(mailbox, read_file(argv[1]));
+	check_surface_dirty_reports();
 	mailbox.sdk.reset();
 	assert(mailbox.sdk.buffer_data(1) == nullptr);
 }

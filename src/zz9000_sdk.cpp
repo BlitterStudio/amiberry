@@ -1614,9 +1614,22 @@ bool Engine::poll()
 			image_->output_mode == 1 &&
 			image_->dst_surface == framebuffer_handle && payload_length >= 44 &&
 			be32(payload + 4) == 4 && be32(payload + 40) != 0;
+		bool surface_framebuffer_write = false;
+		if (last_status_ == ok && opcode == 0x0203)
+			surface_framebuffer_write = be32(request + 16) == framebuffer_handle;
+		if (last_status_ == ok && opcode == 0x0407 &&
+		    be32(request + 20) == framebuffer_handle) {
+			const auto *args = request + 16;
+			const uint32_t dx = be16(args + 16), dy = be16(args + 18);
+			const uint32_t dw = be16(args + 20), dh = be16(args + 22);
+			const uint32_t cx = be16(args + 24), cy = be16(args + 26);
+			const uint32_t cw = be16(args + 28), ch = be16(args + 30);
+			surface_framebuffer_write =
+				std::max(dx, cx) < std::min(dx + dw, cx + cw) &&
+				std::max(dy, cy) < std::min(dy + dh, cy + ch);
+		}
 		if (last_status_ == ok &&
-		    (opcode == 0x0203 || image_framebuffer_write ||
-		     opcode == 0x0407 || opcode == 0x0b08))
+		    (surface_framebuffer_write || image_framebuffer_write || opcode == 0x0b08))
 			dirty = true;
 		std::memset(reply, 0, entry_size);
 		std::memcpy(reply, request, 4); // request id
