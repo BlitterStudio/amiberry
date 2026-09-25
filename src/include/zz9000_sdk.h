@@ -23,7 +23,7 @@ public:
 	void reset();
 	bool poll(); // True when a visible framebuffer or PIP frame changed.
 	uint16_t read_register(uint32_t offset) const;
-	void write_register(uint32_t offset, uint16_t value);
+	bool write_register(uint32_t offset, uint16_t value);
 	// Offsets are within board_memory, including the 64 KiB register aperture.
 	void set_framebuffer(uint32_t offset, uint32_t width, uint32_t height,
 	                     uint32_t pitch, uint32_t format);

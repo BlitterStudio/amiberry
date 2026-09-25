@@ -1871,7 +1871,8 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 	if (data->sdk && ((offset >= 0x100 && offset <= 0x10c) ||
 	                  (offset >= 0x1108 && offset <= 0x110c))) {
 		zz_sdk_update_framebuffer(data);
-		data->sdk->write_register(offset >= 0x1000 ? offset - 0x1000 : offset, value);
+		if (data->sdk->write_register(offset >= 0x1000 ? offset - 0x1000 : offset, value))
+			data->modified = true;
 		return;
 	}
 	if (offset / 2 < sizeof data->registers / sizeof data->registers[0])

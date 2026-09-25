@@ -179,6 +179,25 @@ void run_viewer_surface(Mailbox &mailbox, const std::vector<uint8_t> &image,
 	put32(request, staging);
 	mailbox.call(0x0101, request, 4);
 }
+
+void reject_16bit_decode_surface(Mailbox &mailbox)
+{
+	const uint32_t offset = static_cast<uint32_t>(mailbox.board.size() - 8);
+	for (uint32_t format : {1u, 6u}) {
+		mailbox.sdk.set_framebuffer(offset, 2, 2, 4, format);
+		std::fill(mailbox.board.end() - 16, mailbox.board.end(), 0xa5);
+		uint8_t request[48] = {};
+		put32(request, 2); // PNG
+		put32(request + 4, 1); // DECODE_TO_SURFACE
+		put32(request + 8, 0x80000000); // framebuffer
+		put32(request + 20, 2);
+		put32(request + 24, 2);
+		put32(request + 28, 7); // BGRA8888 output
+		mailbox.call(0x0404, request, 48, 3); // UNSUPPORTED
+		assert(std::all_of(mailbox.board.end() - 16, mailbox.board.end(),
+			[](uint8_t byte) { return byte == 0xa5; }));
+	}
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -199,6 +218,7 @@ int main(int argc, char **argv)
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 7);
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 1);
 	run_viewer_surface(mailbox, read_file(argv[2]), 1, 7);
+	reject_16bit_decode_surface(mailbox);
 	mailbox.sdk.reset();
 	assert(mailbox.sdk.buffer_data(1) == nullptr);
 }

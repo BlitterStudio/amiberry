@@ -288,11 +288,12 @@ uint16_t Engine::read_register(uint32_t offset) const
 	}
 }
 
-void Engine::write_register(uint32_t offset, uint16_t value)
+bool Engine::write_register(uint32_t offset, uint16_t value)
 {
 	if (offset == 0x108 && value)
-		poll();
+		return poll();
 	// Completion IRQ is deliberately unadvertised: SDK clients poll the ring.
+	return false;
 }
 
 void Engine::set_framebuffer(uint32_t offset, uint32_t width, uint32_t height,
@@ -1170,8 +1171,10 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			    rows > tile->length / stride)
 				return bad_request;
 		} else {
-			if (format != 7 || !surface_pixels(dst_surface))
+			if (!surface_pixels(dst_surface))
 				return bad_handle;
+			if (format != 7 || surface_format(dst_surface) != 7)
+				return unsupported;
 			if (!rect_valid(dst_x, dst_y, dst_width, dst_height,
 			                surface_width(dst_surface), surface_height(dst_surface)) ||
 			    tile_handle || stride || rows)
