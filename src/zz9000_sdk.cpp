@@ -1265,6 +1265,13 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				auto *dst = surface_pixels(image_->dst_surface);
 				if (!dst)
 					return bad_handle;
+				if (surface_format(image_->dst_surface) != 7)
+					return unsupported;
+				if (!rect_valid(image_->dst_x, image_->dst_y,
+				                image_->dst_width, image_->dst_height,
+				                surface_width(image_->dst_surface),
+				                surface_height(image_->dst_surface)))
+					return bad_request;
 				uint32_t out_width = width, out_height = image_->height;
 				if (image_->flags & 1) {
 					const uint64_t x_ratio = (static_cast<uint64_t>(image_->dst_width) << 16) / width;

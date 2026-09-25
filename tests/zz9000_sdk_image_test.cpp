@@ -198,6 +198,56 @@ void reject_16bit_decode_surface(Mailbox &mailbox)
 			[](uint8_t byte) { return byte == 0xa5; }));
 	}
 }
+
+void reject_changed_decode_surface(Mailbox &mailbox,
+	                               const std::vector<uint8_t> &image)
+{
+	assert(!image.empty() && image.size() < 4096);
+	for (bool change_format : {true, false}) {
+		mailbox.sdk.set_framebuffer(0x110000, 4, 4, 16, 7);
+		const uint32_t staging = mailbox.allocate(4096);
+		std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+		uint8_t request[48] = {};
+		put32(request, 2); // PNG
+		put32(request + 4, 1); // DECODE_TO_SURFACE
+		put32(request + 8, 0x80000000); // framebuffer
+		put32(request + 12, change_format ? 0 : 1);
+		put32(request + 16, change_format ? 0 : 1);
+		put32(request + 20, 2);
+		put32(request + 24, 3);
+		put32(request + 28, 7); // BGRA8888 output
+		const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+		assert(session);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		put32(request + 4, staging);
+		put32(request + 12, static_cast<uint32_t>(image.size() / 2));
+		const auto *reply = mailbox.call(0x0405, request, 48);
+		assert(get32(reply + 4) == 1); // NEED_INPUT
+
+		std::fill(mailbox.board.end() - 32, mailbox.board.end(), 0xa5);
+		if (change_format) {
+			// The saved rectangle still fits, but four-byte writes do not.
+			mailbox.sdk.set_framebuffer(static_cast<uint32_t>(mailbox.board.size() - 12),
+				2, 3, 4, 1); // RGB565
+		} else {
+			// The format still matches, but the saved rectangle no longer fits.
+			mailbox.sdk.set_framebuffer(static_cast<uint32_t>(mailbox.board.size() - 16),
+				2, 2, 8, 7);
+		}
+		put32(request + 8, static_cast<uint32_t>(image.size() / 2));
+		put32(request + 12, static_cast<uint32_t>(image.size() - image.size() / 2));
+		put32(request + 16, 1); // EOF
+		mailbox.call(0x0405, request, 48, change_format ? 3 : 4);
+		assert(std::all_of(mailbox.board.end() - 32, mailbox.board.end(),
+			[](uint8_t byte) { return byte == 0xa5; }));
+		put32(request, session);
+		put32(request + 4, 0);
+		mailbox.call(0x0406, request, 48);
+		put32(request, staging);
+		mailbox.call(0x0101, request, 4);
+	}
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -219,6 +269,7 @@ int main(int argc, char **argv)
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 1);
 	run_viewer_surface(mailbox, read_file(argv[2]), 1, 7);
 	reject_16bit_decode_surface(mailbox);
+	reject_changed_decode_surface(mailbox, read_file(argv[1]));
 	mailbox.sdk.reset();
 	assert(mailbox.sdk.buffer_data(1) == nullptr);
 }
