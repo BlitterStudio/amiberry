@@ -18,11 +18,13 @@ struct Mailbox {
 	zz9000_sdk::Engine sdk;
 	uint32_t request_id = 0;
 	uint32_t completion_head = 0;
+	bool last_dirty = false;
 
 	explicit Mailbox(uint32_t size) : board(size), sdk(board.data(), size) {}
 
 	const uint8_t *call(uint16_t opcode, const uint8_t *payload,
-	                    uint16_t length, uint16_t status = 0) {
+	                    uint16_t length, uint16_t status = 0,
+	                    bool doorbell = false) {
 		auto *mb = board.data() + zz9000_sdk::mailbox_offset;
 		const uint32_t tail = get32(mb + 24);
 		auto *request = mb + 128 + tail * 64;
@@ -33,7 +35,7 @@ struct Mailbox {
 		if (payload)
 			std::copy(payload, payload + length, request + 16);
 		put32(mb + 24, (tail + 1) % 64);
-		sdk.poll();
+		last_dirty = doorbell ? sdk.write_register(0x108, 1) : sdk.poll();
 		const auto *reply = mb + 128 + 64 * 64 + completion_head * 64;
 		assert(get32(reply) == request_id);
 		assert(get16(reply + 6) == status);
@@ -82,15 +84,17 @@ void run_image(Mailbox &mailbox, const std::vector<uint8_t> &image,
 	put32(request + 8, 0);
 	put32(request + 12, static_cast<uint32_t>(image.size() / 2));
 	put32(request + 16, 0);
-	reply = mailbox.call(0x0405, request, 48);
+	reply = mailbox.call(0x0405, request, 48, 0, true);
 	assert(get32(reply + 4) == 1 && get32(reply + 36) == image.size() / 2);
+	assert(!mailbox.last_dirty);
 	put32(request + 8, static_cast<uint32_t>(image.size() / 2));
 	put32(request + 12, static_cast<uint32_t>(image.size() - image.size() / 2));
 	put32(request + 16, 1); // EOF
-	reply = mailbox.call(0x0405, request, 48);
+	reply = mailbox.call(0x0405, request, 48, 0, true);
 	assert(get32(reply + 4) == 3 && get32(reply + 8) == 2 &&
 	       get32(reply + 12) == 3 && get32(reply + 24) == 0 &&
 	       get32(reply + 28) == 2 && get32(reply + 32) == 1);
+	assert(!mailbox.last_dirty);
 	if (codec == 2 && format == 8) {
 		const auto *data = mailbox.sdk.buffer_data(tile);
 		assert(data[0] == 255 && data[1] == 0 && data[2] == 0);
@@ -102,9 +106,11 @@ void run_image(Mailbox &mailbox, const std::vector<uint8_t> &image,
 		assert(get32(reply + 4) == 3 && get32(reply + 24) == row &&
 		       get32(reply + 32) == 1 && get32(reply + 40) == 2 *
 		       (format == 8 ? 3u : 4u));
+		assert(!mailbox.last_dirty);
 	}
 	reply = mailbox.call(0x0405, request, 48);
 	assert(get32(reply + 4) == 4); // COMPLETE
+	assert(!mailbox.last_dirty);
 	put32(request, session);
 	put32(request + 4, 0);
 	mailbox.call(0x0406, request, 48);
@@ -144,12 +150,17 @@ void run_viewer_surface(Mailbox &mailbox, const std::vector<uint8_t> &image,
 	mailbox.call(0x0201, request, 4, 2); // decode surface pinned
 	std::fill(std::begin(request), std::end(request), 0);
 	put32(request, session); put32(request + 4, staging);
-	put32(request + 12, static_cast<uint32_t>(image.size()));
+	put32(request + 12, static_cast<uint32_t>(image.size() / 2));
+	reply = mailbox.call(0x0405, request, 48, 0, true);
+	assert(get32(reply + 4) == 1 && !mailbox.last_dirty); // NEED_INPUT
+	put32(request + 8, static_cast<uint32_t>(image.size() / 2));
+	put32(request + 12, static_cast<uint32_t>(image.size() - image.size() / 2));
 	put32(request + 16, 1);
-	reply = mailbox.call(0x0405, request, 48);
+	reply = mailbox.call(0x0405, request, 48, 0, true);
 	assert(get32(reply + 4) == 4 && get32(reply + 8) == 2 &&
 	       get32(reply + 12) == 3 && get32(reply + 28) == 2 &&
 	       get32(reply + 32) == 3 && get32(reply + 40) == 24);
+	assert(!mailbox.last_dirty); // Offscreen surface is not yet visible.
 	put32(request, session); put32(request + 4, 0);
 	mailbox.call(0x0406, request, 48);
 	std::fill(std::begin(request), std::end(request), 0);
@@ -176,6 +187,40 @@ void run_viewer_surface(Mailbox &mailbox, const std::vector<uint8_t> &image,
 		assert(fb[12] == 0 && fb[13] == 255 && fb[14] == 0);
 	put32(request, surface);
 	mailbox.call(0x0201, request, 4);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
+
+void run_framebuffer_decode(Mailbox &mailbox, const std::vector<uint8_t> &image)
+{
+	assert(!image.empty() && image.size() < 4096);
+	mailbox.sdk.set_framebuffer(0x110000, 4, 4, 16, 7);
+	const uint32_t staging = mailbox.allocate(4096);
+	std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+	uint8_t request[48] = {};
+	put32(request, 2); // PNG
+	put32(request + 4, 1); // DECODE_TO_SURFACE
+	put32(request + 8, 0x80000000); // Live framebuffer
+	put32(request + 20, 2);
+	put32(request + 24, 3);
+	put32(request + 28, 7); // BGRA8888
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	assert(session);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session);
+	put32(request + 4, staging);
+	put32(request + 12, static_cast<uint32_t>(image.size() / 2));
+	const auto *reply = mailbox.call(0x0405, request, 48, 0, true);
+	assert(get32(reply + 4) == 1 && !mailbox.last_dirty); // NEED_INPUT
+	put32(request + 8, static_cast<uint32_t>(image.size() / 2));
+	put32(request + 12, static_cast<uint32_t>(image.size() - image.size() / 2));
+	put32(request + 16, 1); // EOF
+	reply = mailbox.call(0x0405, request, 48, 0, true);
+	assert(get32(reply + 4) == 4 && get32(reply + 40) == 24 &&
+	       mailbox.last_dirty); // Visible framebuffer write.
+	put32(request, session);
+	put32(request + 4, 0);
+	mailbox.call(0x0406, request, 48);
 	put32(request, staging);
 	mailbox.call(0x0101, request, 4);
 }
@@ -268,6 +313,7 @@ int main(int argc, char **argv)
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 7);
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 1);
 	run_viewer_surface(mailbox, read_file(argv[2]), 1, 7);
+	run_framebuffer_decode(mailbox, read_file(argv[1]));
 	reject_16bit_decode_surface(mailbox);
 	reject_changed_decode_surface(mailbox, read_file(argv[1]));
 	mailbox.sdk.reset();

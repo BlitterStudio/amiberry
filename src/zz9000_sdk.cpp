@@ -1610,8 +1610,12 @@ bool Engine::poll()
 		const uint16_t opcode = be16(request + 4);
 		last_status_ = dispatch(opcode, request + 16, be16(request + 10),
 			payload, &payload_length);
+		const bool image_framebuffer_write = opcode == 0x0405 && image_ &&
+			image_->output_mode == 1 &&
+			image_->dst_surface == framebuffer_handle && payload_length >= 44 &&
+			be32(payload + 4) == 4 && be32(payload + 40) != 0;
 		if (last_status_ == ok &&
-		    (opcode == 0x0203 || opcode == 0x0405 ||
+		    (opcode == 0x0203 || image_framebuffer_write ||
 		     opcode == 0x0407 || opcode == 0x0b08))
 			dirty = true;
 		std::memset(reply, 0, entry_size);
