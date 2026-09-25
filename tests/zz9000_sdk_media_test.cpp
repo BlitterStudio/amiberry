@@ -57,7 +57,7 @@ struct Mailbox {
 
 int main(int argc, char **argv)
 {
-	assert(argc == 2 || argc == 4 || argc == 5);
+	assert(argc == 2 || argc == 3 || argc == 4 || argc == 5);
 	const uint32_t width = argc >= 4 ? static_cast<uint32_t>(std::strtoul(argv[2], nullptr, 10)) : 160;
 	const uint32_t height = argc >= 4 ? static_cast<uint32_t>(std::strtoul(argv[3], nullptr, 10)) : 120;
 	const bool full = argc == 5;
@@ -192,6 +192,33 @@ int main(int argc, char **argv)
 	assert(get32(reply + 16) == 2 && get32(reply + 24) > 0);
 	put32(request, session);
 	mailbox.call(0x0b0d, request, 16);
+	if (argc == 3) {
+		std::ifstream audio_file(argv[2], std::ios::binary);
+		const std::vector<uint8_t> audio_only{
+			std::istreambuf_iterator<char>{audio_file}, {}};
+		assert(!audio_only.empty() && audio_only.size() <= 65536);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, 1); put32(request + 4, 1);
+		put32(request + 8, width); put32(request + 12, height);
+		put32(request + 16, 1); // MP2 output disabled; video is still required.
+		reply = mailbox.call(0x0b04, request, 44);
+		const uint32_t audio_only_session = get32(reply);
+		std::copy(audio_only.begin(), audio_only.end(),
+			mailbox.sdk.buffer_data(staging));
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, audio_only_session); put32(request + 4, staging);
+		put32(request + 12, static_cast<uint32_t>(audio_only.size()));
+		mailbox.call(0x0b05, request, 20);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, audio_only_session);
+		mailbox.call(0x0b06, request, 16, 9); // Ready PS headers contain no video.
+		put32(request + 4, staging); put32(request + 16, 1);
+		mailbox.call(0x0b05, request, 20); // EOF cannot supply video.
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, audio_only_session);
+		mailbox.call(0x0b06, request, 16, 9);
+		mailbox.call(0x0b0d, request, 16);
+	}
 	for (const std::vector<uint8_t> invalid_stream : {
 		std::vector<uint8_t>{'n', 'o', 't', ' ', 'm', 'p', 'e', 'g'},
 		std::vector<uint8_t>{0, 0, 1, 0xba}

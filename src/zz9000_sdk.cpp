@@ -798,6 +798,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			return busy;
 		HostNearestRounding host_rounding;
 		media_->header_ready = plm_has_headers(media_->decoder);
+		// The system header can be ready while a disabled audio decoder is not.
+		if (plm_demux_has_headers(media_->decoder->demux) &&
+		    !plm_get_num_video_streams(media_->decoder))
+			return io_error;
 		if (media_->header_ready) {
 			const int width = plm_get_width(media_->decoder);
 			const int height = plm_get_height(media_->decoder);
