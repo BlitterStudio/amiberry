@@ -43,6 +43,8 @@ constexpr uint16_t bad_handle = 5;
 constexpr uint16_t no_memory = 6;
 constexpr uint16_t io_error = 9;
 constexpr uint16_t not_found = 10;
+constexpr uint32_t pcm_s16le = 1;
+constexpr uint32_t pcm_s16be = 2;
 constexpr uint32_t host_window_begin = 0x3e0000;
 constexpr uint32_t host_window_end = 0x3f0000;
 constexpr uint32_t z3_heap_begin = 0x06000000;
@@ -110,6 +112,9 @@ struct Engine::Audio {
 	uint32_t bytes_produced = 0;
 	uint32_t frames_decoded = 0;
 	uint32_t sample_rate = 0;
+	uint32_t channels = 0;
+	uint32_t sample_format = pcm_s16le;
+	uint32_t samples_per_frame = 1152;
 	bool playing = false;
 	bool eof = false;
 	bool drain = false;
@@ -240,7 +245,39 @@ void Engine::decode_audio(const uint8_t *input, uint32_t length)
 			decoded, output_size, &done);
 		source = nullptr;
 		source_length = 0;
+		if (rc == MPG123_NEW_FORMAT) {
+			long rate = 0;
+			int channels = 0;
+			int encoding = 0;
+			if (mpg123_getformat(audio_->decoder, &rate, &channels, &encoding) != MPG123_OK ||
+			    rate <= 0 || (channels != 1 && channels != 2) ||
+			    encoding != MPG123_ENC_SIGNED_16 ||
+			    (audio_->sample_rate &&
+			     (audio_->sample_rate != static_cast<uint32_t>(rate) ||
+			      audio_->channels != static_cast<uint32_t>(channels)))) {
+				audio_->faulted = true;
+				break;
+			}
+			audio_->sample_rate = static_cast<uint32_t>(rate);
+			audio_->channels = static_cast<uint32_t>(channels);
+			if (audio_->sample_format == pcm_s16be) {
+				mpg123_frameinfo2 info{};
+				if (mpg123_info2(audio_->decoder, &info) != MPG123_OK) {
+					audio_->faulted = true;
+					break;
+				}
+				audio_->samples_per_frame = info.layer == 1 ? 384 :
+					(info.layer == 3 && info.version != MPG123_1_0 ? 576 : 1152);
+			}
+		}
 		if (done) {
+			if (!audio_->channels) {
+				audio_->faulted = true;
+				break;
+			}
+			if (audio_->sample_format == pcm_s16be)
+				for (size_t i = 0; i + 1 < done; i += 2)
+					std::swap(decoded[i], decoded[i + 1]);
 			auto *ring = buffer_data(audio_->pcm_handle);
 			if (!ring) {
 				audio_->faulted = true;
@@ -253,8 +290,8 @@ void Engine::decode_audio(const uint8_t *input, uint32_t length)
 				std::memcpy(ring, decoded + first, done - first);
 			audio_->pcm_written += static_cast<uint32_t>(done);
 			audio_->bytes_produced += static_cast<uint32_t>(done);
-			audio_->frames_decoded = audio_->bytes_produced / (4 * 1152);
-			audio_->sample_rate = 48000;
+			audio_->frames_decoded = audio_->bytes_produced /
+				(audio_->channels * 2 * audio_->samples_per_frame);
 		}
 		if (rc == MPG123_NEW_FORMAT)
 			continue;
@@ -356,8 +393,8 @@ void Engine::audio_result(uint8_t *reply, uint16_t *reply_length)
 	put32(reply + 0, audio_->session);
 	put32(reply + 4, state);
 	put32(reply + 8, audio_->sample_rate);
-	put32(reply + 12, audio_->sample_rate ? 2 : 0);
-	put32(reply + 16, 1); // S16LE
+	put32(reply + 12, audio_->channels);
+	put32(reply + 16, audio_->sample_format);
 	put32(reply + 20, audio_->bytes_consumed % audio_->mp3_capacity);
 	put32(reply + 24, audio_->pcm_written % audio_->pcm_capacity);
 	put32(reply + 28, audio_->pcm_read % audio_->pcm_capacity);
@@ -506,7 +543,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		    be32(request + 28) >= pcm_capacity || be32(request + 32) >= pcm_capacity)
 			return bad_request;
 		if (be32(request + 16) || be32(request + 20) || be32(request + 36) ||
-		    be32(request + 24) != 1)
+		    (be32(request + 24) != pcm_s16le &&
+		     be32(request + 24) != pcm_s16be))
 			return unsupported;
 		HostNearestRounding host_rounding;
 		static const bool mpg123_ready = mpg123_init() == MPG123_OK;
@@ -516,12 +554,21 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		auto *decoder = mpg123_new(nullptr, &decoder_error);
 		if (!decoder)
 			return no_memory;
-		const bool configured =
-			mpg123_param(decoder, MPG123_FORCE_RATE, 48000, 0.0) == MPG123_OK &&
-			mpg123_format_none(decoder) == MPG123_OK &&
-			mpg123_format(decoder, 48000, MPG123_STEREO,
-			              MPG123_ENC_SIGNED_16) == MPG123_OK &&
-			mpg123_open_feed(decoder) == MPG123_OK;
+		const uint32_t sample_format = be32(request + 24);
+		bool configured = mpg123_format_none(decoder) == MPG123_OK;
+		if (sample_format == pcm_s16le) {
+			configured = configured &&
+				mpg123_param(decoder, MPG123_FORCE_RATE, 48000, 0.0) == MPG123_OK &&
+				mpg123_format(decoder, 48000, MPG123_STEREO,
+				              MPG123_ENC_SIGNED_16) == MPG123_OK;
+		} else {
+			for (const long rate : {8000L, 11025L, 12000L, 16000L, 22050L,
+			                       24000L, 32000L, 44100L, 48000L})
+				configured = configured &&
+					mpg123_format(decoder, rate, MPG123_MONO | MPG123_STEREO,
+					              MPG123_ENC_SIGNED_16) == MPG123_OK;
+		}
+		configured = configured && mpg123_open_feed(decoder) == MPG123_OK;
 		if (!configured) {
 			mpg123_delete(decoder);
 			return io_error;
@@ -532,6 +579,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		audio_->pcm_handle = pcm->handle;
 		audio_->mp3_capacity = mp3_capacity;
 		audio_->pcm_capacity = pcm_capacity;
+		audio_->sample_format = sample_format;
 		audio_->decoder = decoder;
 		audio_result(reply, reply_length);
 		return ok;
@@ -586,6 +634,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 					return io_error;
 				if (!audio_->sample_rate)
 					return bad_request;
+				if (audio_->sample_format != pcm_s16le)
+					return unsupported;
 				if (!audio_->output) {
 					SDL_AudioSpec spec = { SDL_AUDIO_S16LE, 2, 48000 };
 					const int selected = currprefs.soundcard;
