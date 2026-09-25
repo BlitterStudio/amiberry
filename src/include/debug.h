@@ -247,7 +247,7 @@ struct dma_rec
     uae_u32 evt;
 	uae_u32 agnus_evt, agnus_evt_changed;
 	uae_u32 denise_evt[2], denise_evt_changed[2];
-	uae_u32 evtdata;
+	uae_u32 evtdata, evtdata2;
 	bool evtdataset;
     uae_s16 type;
 	uae_u16 extra;
@@ -312,6 +312,7 @@ extern struct dma_rec *last_dma_rec;
 #define DMA_EVENT_MODADD		0x00080000
 #define DMA_EVENT_LOF			0x00100000
 #define DMA_EVENT_LOL			0x00200000
+#define DMA_EVENT_DMAL			0x00400000
 
 #define DMA_EVENT_CIAA_IRQ		0x08000000
 #define DMA_EVENT_CIAB_IRQ		0x10000000
@@ -345,6 +346,7 @@ extern void record_dma_event_agnus(uae_u32 evt, bool onoff);
 extern void record_dma_event_denise(struct dma_rec *rd, int h, uae_u32 evt, bool onoff);
 extern void record_dma_event(uae_u32 evt);
 extern void record_dma_event_data(uae_u32 evt, uae_u32 data);
+extern void record_dma_event_data2(uae_u32 evt, uae_u32 data);
 extern void record_dma_clear(void);
 extern bool record_dma_check(void);
 extern void record_cia_access(int r, int mask, uae_u16 value, bool rw, int phase);

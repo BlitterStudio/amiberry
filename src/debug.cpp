@@ -2548,6 +2548,17 @@ void record_dma_event_data(uae_u32 evt, uae_u32 data)
 	dr->ipl = regs.ipl_pin;
 }
 
+void record_dma_event_data2(uae_u32 evt, uae_u32 data)
+{
+	struct dma_rec *dr;
+
+	if (!dma_record_data)
+		return;
+	dr = &dma_record_data[dma_record_cycle];
+	dr->evt |= evt;
+	dr->evtdata2 = data;
+}
+
 void record_dma_replace(int type, int extra)
 {
 	struct dma_rec *dr;
@@ -3147,7 +3158,16 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 		if (dr->evt & DMA_EVENT_MODADD) {
 			l3[cl2++] = 'M';
 		}
-
+		if (dr->evt & DMA_EVENT_DMAL) {
+			l3[cl2++] = 'P';
+			if (dr->evtdata2 < 2 * 3) {
+				l3[cl2++] = (dr->evtdata2 & 1) ? 'D' : 'd';
+				l3[cl2++] = '0' + (dr->evtdata2 - 0 * 2) / 2;
+			} else {
+				l3[cl2++] = (dr->evtdata2 & 1) ? 'A' : 'a';
+				l3[cl2++] = '0' + (dr->evtdata2 - 3 * 2) / 2;
+			}
+		}
 	}
 	if (l5) {
 		if (dr->ciaphase) {

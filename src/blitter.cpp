@@ -987,6 +987,7 @@ static void blitter_doit(void)
 	}
 	actually_do_blit();
 	blitter_done_all(true);
+	unset_special(SPCFLAG_BLTNASTY);
 }
 
 static int makebliteventtime(int delay)
@@ -1015,15 +1016,15 @@ void blitter_hsync(void)
 	}
 }
 
+// blitter_handler is not used in CE mode.
 static void blitter_handler(uae_u32 data)
 {
-	// blitter_handler is not use in CE mode.
 	if (!dmaen(DMA_BLITTER)) {
 		blt_info.blit_stuck = immediate_blits ? 1000 : -1;
 		return;
 	}
 	if (blit_slowdown > 0 && !immediate_blits) {
-		event2_newevent_xx(-1, makebliteventtime(blit_slowdown), 0, blitter_handler);
+		event2_newevent_xx(-1, makebliteventtime(blit_slowdown) * CYCLE_UNIT, 0, blitter_handler);
 		blit_slowdown = -1;
 		return;
 	}
@@ -2157,7 +2158,7 @@ void do_blitter(int copper, uaecptr pc)
 	}
 	
 	blit_cyclecounter = cycles * blit_cyclecount;
-	event2_newevent_xx(-1, makebliteventtime(blit_cyclecounter), 0, blitter_handler);
+	event2_newevent_xx(-1, makebliteventtime(blit_cyclecounter) * CYCLE_UNIT, 0, blitter_handler);
 }
 
 void blitter_check_start (void)
