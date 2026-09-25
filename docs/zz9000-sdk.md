@@ -25,6 +25,7 @@ The focused tests are `tests/test_zz9000_sdk.sh` and
 `tests/test_zz9000_sdk_audio.sh`. They exercise mailbox completion, allocation,
 reset, and a generated MP3 stream. ZZPlay and AmigaAMP MHI playback have been
 confirmed with the installed libraries on an A4000 system drive; ZZ9000AX AHI
-still plays afterward. Pause/resume, seek, drain, warm reset, and Zorro II
-behavior still need guest checks before claiming full compatibility with a
-particular system drive.
+still plays afterward. AmigaAMP pause/resume, seek, track completion, and
+starting another track also work. Drain and backpressure edge cases, warm
+reset, and Zorro II behavior still need guest checks before claiming full
+compatibility with a particular system drive.
