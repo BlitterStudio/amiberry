@@ -56,6 +56,7 @@ set(SOURCE_FILES
         src/softfloat/softfloat_fpsp.cpp
         src/framebufferboards.cpp
         src/zz9000.cpp
+        src/zz9000_sdk.cpp
         src/fsdb.cpp
         src/fsusage.cpp
         src/gayle.cpp
