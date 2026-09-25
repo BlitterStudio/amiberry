@@ -84,9 +84,11 @@ int main(int argc, char **argv)
 	assert(advertised_mailbox == 0x3fe40000u +
 	       (zz9000_sdk::mailbox_offset - 0xa000u));
 	assert(get32(mb) == 0x5a5a394b);
-	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 13) | (1u << 14);
+	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 3) |
+		(1u << 4) | (1u << 5) | (1u << 6) | (1u << 13) |
+		(1u << 14) | (1u << 15);
 #ifdef HAVE_MPG123
-	expected_caps |= (1u << 19) | (1u << 23);
+	expected_caps |= (1u << 7) | (1u << 19) | (1u << 23);
 #endif
 	assert(get32(mb + 44) == expected_caps);
 	uint8_t payload[48] = {};
