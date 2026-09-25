@@ -30,7 +30,9 @@ emulation. TX slots contain guest big-endian stereo S16 samples; the `0x70`
 kick swaps the submitted period and SDL plays it at the guest's selected rate.
 Capture converts host little-endian stereo S16 into the guest's big-endian RX
 ring. Missing host capture data becomes silence while period status continues
-to advance. Libretro does not expose AX audio yet because its SDL audio stream
+to advance. Selecting no sampler keeps the host microphone closed and supplies
+silence to the RX ring. Playback follows the Master and AHI volume controls
+and mute. Libretro does not expose AX audio yet because its SDL audio stream
 stub does not forward samples to the frontend.
 
 All card memory, register, status, and interrupt updates run from the
