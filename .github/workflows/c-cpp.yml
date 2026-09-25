@@ -37,7 +37,7 @@ env:
 jobs:
   build-macOS:
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.timeout_minutes }}
+    timeout-minutes: ${{ matrix.arch == 'intel' && 120 || 45 }}
     permissions:
       contents: read
       actions: write
@@ -48,12 +48,10 @@ jobs:
           - name: x86_64
             runner: macos-15-intel
             arch: intel
-            timeout_minutes: 120
             artifact_name: amiberry-macOS-x86_64-intermediate
           - name: Apple-Silicon
             runner: macos-15
             arch: apple-silicon
-            timeout_minutes: 45
             artifact_name: amiberry-macOS-arm64-intermediate
     steps:
       - name: Check out repository code
