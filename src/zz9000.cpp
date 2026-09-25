@@ -19,6 +19,7 @@
 #include "ethernet.h"
 #include "sana2.h"
 #include "zz9000_net_protocol.h"
+#include "zz9000_sdk.h"
 #ifdef AMIBERRY
 #include "amiberry_cursor.h"
 #endif
@@ -285,6 +286,7 @@ struct zz9000_state {
 	uae_u32 audio_log_flags;
 	uae_u32 audio_cfg_reads;
 	zz9000_net_engine *net;
+	zz9000_sdk::Engine *sdk;
 	bool int2;
 #if defined(AHI) && !defined(LIBRETRO)
 	zz_ax_audio_engine *ax_audio;
@@ -1841,6 +1843,11 @@ static void zz_ax_audio_tick(zz9000_state *data)
 
 static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 {
+	if (data->sdk && ((offset >= 0x100 && offset <= 0x10c) ||
+	                  (offset >= 0x1108 && offset <= 0x110c))) {
+		data->sdk->write_register(offset >= 0x1000 ? offset - 0x1000 : offset, value);
+		return;
+	}
 	if (offset / 2 < sizeof data->registers / sizeof data->registers[0])
 		data->registers[offset / 2] = value;
 
@@ -2119,6 +2126,8 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 
 static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 {
+	if (data->sdk && offset >= 0x100 && offset <= 0x10c)
+		return data->sdk->read_register(offset);
 	switch (offset) {
 		case ZZ_REG_FW_VERSION:
 			return 0x0208;
@@ -2202,6 +2211,9 @@ static uae_u32 REGPARAM2 zz9000_wget(uaecptr addr)
 	if (!data)
 		return 0;
 	const uae_u32 offset = addr - data->configured;
+	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
+	    offset + 1 < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size)
+		return (data->memory[offset] << 8) | data->memory[offset + 1];
 	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset + 1 < 0x6000)
 		return (data->net->rx.read(offset - ZZ_NET_RX_WINDOW) << 8) |
 			data->net->rx.read(offset + 1 - ZZ_NET_RX_WINDOW);
@@ -2222,6 +2234,9 @@ static uae_u32 REGPARAM2 zz9000_bget(uaecptr addr)
 	if (!data)
 		return 0;
 	const uae_u32 offset = addr - data->configured;
+	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
+	    offset < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size)
+		return data->memory[offset];
 	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return data->net->rx.read(offset - ZZ_NET_RX_WINDOW);
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES)
@@ -2243,6 +2258,12 @@ static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value)
 	if (!data)
 		return;
 	const uae_u32 offset = addr - data->configured;
+	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
+	    offset + 1 < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size) {
+		data->memory[offset] = static_cast<uae_u8>(value >> 8);
+		data->memory[offset + 1] = static_cast<uae_u8>(value);
+		return;
+	}
 	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return;
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset + 1 < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES) {
@@ -2267,6 +2288,11 @@ static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value)
 	if (!data)
 		return;
 	const uae_u32 offset = addr - data->configured;
+	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
+	    offset < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size) {
+		data->memory[offset] = static_cast<uae_u8>(value);
+		return;
+	}
 	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return;
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES) {
@@ -2514,9 +2540,12 @@ static void zz9000_refresh(void *userdata)
 
 static void zz9000_hsync(void *userdata)
 {
-	zz_net_tick(static_cast<zz9000_state *>(userdata));
+	auto *data = static_cast<zz9000_state *>(userdata);
+	if (data->sdk)
+		data->sdk->poll();
+	zz_net_tick(data);
 #if defined(AHI) && !defined(LIBRETRO)
-	zz_ax_audio_tick(static_cast<zz9000_state *>(userdata));
+	zz_ax_audio_tick(data);
 #endif
 }
 
@@ -2526,6 +2555,8 @@ static void zz9000_reset(void *userdata)
 #if defined(AHI) && !defined(LIBRETRO)
 	zz_ax_audio_stop(data);
 #endif
+	if (data->sdk)
+		data->sdk->reset();
 #ifdef AMIBERRY
 	picasso_clear_external_host_cursor(data->monitor_id);
 #endif
@@ -2570,6 +2601,8 @@ static void zz9000_free(void *userdata)
 #endif
 	zz_ax_clear_interrupt(data);
 	zz_net_close(data->net);
+	delete data->sdk;
+	data->sdk = nullptr;
 	delete data->net;
 	data->net = nullptr;
 	xfree(data->memory);
@@ -2607,6 +2640,13 @@ static bool zz9000_init(autoconfig_info *aci)
 	}
 	data->net = new (std::nothrow) zz9000_net_engine;
 	if (!data->net) {
+		xfree(data->memory);
+		xfree(data);
+		return false;
+	}
+	data->sdk = new (std::nothrow) zz9000_sdk::Engine(data->memory, data->card_size);
+	if (!data->sdk) {
+		delete data->net;
 		xfree(data->memory);
 		xfree(data);
 		return false;

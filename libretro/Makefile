@@ -325,6 +325,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/softfloat/softfloat_fpsp.cpp \
                $(AMIBERRY_DIR)/src/framebufferboards.cpp \
                $(AMIBERRY_DIR)/src/zz9000.cpp \
+               $(AMIBERRY_DIR)/src/zz9000_sdk.cpp \
                $(AMIBERRY_DIR)/src/fsdb.cpp \
                $(AMIBERRY_DIR)/src/fsusage.cpp \
                $(AMIBERRY_DIR)/src/gayle.cpp \
