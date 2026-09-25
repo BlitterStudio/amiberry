@@ -1377,8 +1377,8 @@ static inline bool zz_ax_collision(const zz9000_state *data, uae_u32 swab_value)
 
 static void zz_ax_clear_interrupt(zz9000_state *data)
 {
-	if (data->audio_intreq_pending)
-		INTREQ_0(0x2000);
+	// Exec clears the shared EXTER line after dispatching its server chain.
+	// Card acknowledgement must only clear this device's pending state.
 	data->audio_intreq_pending = false;
 }
 
@@ -1415,6 +1415,14 @@ static void zz_ax_swap16(uae_u8 *samples, uae_u32 bytes)
         std::swap(samples[i], samples[i + 1]);
 }
 
+static void zz_ax_swap_stereo(uae_u8 *samples, uae_u32 bytes)
+{
+    for (uae_u32 i = 0; i + 3 < bytes; i += 4) {
+        std::swap(samples[i], samples[i + 2]);
+        std::swap(samples[i + 1], samples[i + 3]);
+    }
+}
+
 static void zz_ax_period_pending(zz9000_state *data)
 {
     if (data->audio_intreq_pending)
@@ -1439,7 +1447,14 @@ static void zz_ax_audio_period(zz9000_state *data)
             static_cast<uae_u32>(data->audio_tx_read_period) * ZZ_AX_PERIOD_BYTES;
         if (eng->play_stream && !eng->play_paused &&
             SDL_GetAudioStreamQueued(eng->play_stream) < static_cast<int>(bytes * ZZ_AX_PERIODS)) {
-            SDL_PutAudioStreamData(eng->play_stream, slot, static_cast<int>(bytes));
+            if (currprefs.sound_stereo_swap_ahi) {
+                uae_u8 samples[ZZ_AX_PERIOD_BYTES];
+                memcpy(samples, slot, bytes);
+                zz_ax_swap_stereo(samples, bytes);
+                SDL_PutAudioStreamData(eng->play_stream, samples, static_cast<int>(bytes));
+            } else {
+                SDL_PutAudioStreamData(eng->play_stream, slot, static_cast<int>(bytes));
+            }
         }
         uae_u32 peak = 0;
         for (uae_u32 i = 0; i + 1 < bytes; i += 2) {
@@ -1473,6 +1488,8 @@ static void zz_ax_audio_period(zz9000_state *data)
             }
             SDL_GetAudioStreamData(eng->rec_stream, samples, period_bytes);
         }
+        if (currprefs.sound_stereo_swap_ahi)
+            zz_ax_swap_stereo(samples, bytes);
         const uae_u32 filled =
             (static_cast<uae_u32>(data->audio_rx_write_period) + 1) % ZZ_AX_PERIODS;
         uae_u8 *slot = data->memory + data->audio_rx_ring_off + filled * ZZ_AX_PERIOD_BYTES;
@@ -1851,10 +1868,8 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 			if (data->audio_play || data->audio_record) {
 				zz_ax_audio_start(data);
 			} else {
-				// Stop: clear a still-pending latch (a period may have
-				// gone pending while the driver stopped without acking
-				// the 0x04 register), so the 68k does not dispatch a
-				// stale interrupt.
+				// Stop: clear a still-pending card latch (a period may
+				// have gone pending without an 0x04 acknowledgement).
 				zz_ax_clear_interrupt(data);
 				zz_ax_audio_stop(data);
 			}

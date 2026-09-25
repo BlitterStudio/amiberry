@@ -31,15 +31,17 @@ kick swaps the submitted period and SDL plays it at the guest's selected rate.
 Capture converts host little-endian stereo S16 into the guest's big-endian RX
 ring. Missing host capture data becomes silence while period status continues
 to advance. Selecting no sampler keeps the host microphone closed and supplies
-silence to the RX ring. Playback follows the Master and AHI volume controls
-and mute. Libretro does not expose AX audio yet because its SDL audio stream
+silence to the RX ring. Playback follows the Master and AHI volume controls,
+mute, and AHI channel-swap preference; capture follows the same channel-swap
+preference. Libretro does not expose AX audio yet because its SDL audio stream
 stub does not forward samples to the frontend.
 
 All card memory, register, status, and interrupt updates run from the
 emulation callback. A completed period asserts Paula's `INTB_EXTER` request
 (bit 13, level 6). The stock driver's `AddIntServer(INTB_EXTER, ...)` handler
 reads `0x04`, acknowledges it, and wakes its AHI worker. The card model clears
-the request on that acknowledgement, stop, and reset. This currently supports
+its pending flag on that acknowledgement, stop, and reset; Exec clears the
+shared Paula request after running the interrupt-server chain. This supports
 the driver's default EXTER wiring; a system configured with `ENV:ZZ9K_INT2`
 uses the physical PORTS line and is not modeled yet.
 
