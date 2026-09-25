@@ -804,6 +804,8 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			if ((width && static_cast<uint32_t>(width) != media_->width) ||
 			    (height && static_cast<uint32_t>(height) != media_->height))
 				return io_error;
+		} else if (media_->eof) {
+			return io_error;
 		}
 		pump_media_audio();
 		if (media_->audio_enabled && media_->decoder->audio_buffer &&

@@ -192,6 +192,34 @@ int main(int argc, char **argv)
 	assert(get32(reply + 16) == 2 && get32(reply + 24) > 0);
 	put32(request, session);
 	mailbox.call(0x0b0d, request, 16);
+	for (const std::vector<uint8_t> invalid_stream : {
+		std::vector<uint8_t>{'n', 'o', 't', ' ', 'm', 'p', 'e', 'g'},
+		std::vector<uint8_t>{0, 0, 1, 0xba}
+	}) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, 1); put32(request + 4, 1);
+		put32(request + 8, width); put32(request + 12, height);
+		put32(request + 16, 1);
+		reply = mailbox.call(0x0b04, request, 44);
+		const uint32_t invalid_session = get32(reply);
+		std::copy(invalid_stream.begin(), invalid_stream.end(),
+			mailbox.sdk.buffer_data(staging));
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, invalid_session); put32(request + 4, staging);
+		put32(request + 12, static_cast<uint32_t>(invalid_stream.size()));
+		mailbox.call(0x0b05, request, 20);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, invalid_session);
+		reply = mailbox.call(0x0b06, request, 16);
+		assert(get32(reply + 4) == 1); // More input could still complete the headers.
+		put32(request + 4, staging); put32(request + 16, 1);
+		mailbox.call(0x0b05, request, 20); // EOF with no further bytes.
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, invalid_session);
+		mailbox.call(0x0b06, request, 16, 9); // EOF cannot complete these headers.
+		mailbox.call(0x0b06, request, 16, 9);
+		mailbox.call(0x0b0d, request, 16);
+	}
 	put32(request, pcm);
 	mailbox.call(0x0101, request, 4);
 	put32(request, staging);
