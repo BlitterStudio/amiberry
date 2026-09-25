@@ -1394,6 +1394,10 @@ struct zz_ax_audio_engine {
     uae_u32 last_peak = 0;
     bool play_enabled = false;
     bool record_enabled = false;
+    bool play_paused = false;
+    int soundcard = -1;
+    bool soundcard_default = true;
+    int samplersoundcard = -1;
 };
 
 static constexpr uae_u32 ZZ_AX_MAX_FRAMES = ZZ_AX_PERIOD_BYTES / 4;
@@ -1432,7 +1436,7 @@ static void zz_ax_audio_period(zz9000_state *data)
     if (data->audio_play) {
         uae_u8 *slot = data->memory + data->audio_tx_ring_off +
             static_cast<uae_u32>(data->audio_tx_read_period) * ZZ_AX_PERIOD_BYTES;
-        if (eng->play_stream &&
+        if (eng->play_stream && !eng->play_paused &&
             SDL_GetAudioStreamQueued(eng->play_stream) < static_cast<int>(bytes * ZZ_AX_PERIODS)) {
             SDL_PutAudioStreamData(eng->play_stream, slot, static_cast<int>(bytes));
         }
@@ -1497,6 +1501,7 @@ static void zz_ax_audio_close(zz9000_state *data)
         SDL_DestroyAudioStream(eng->rec_stream);
         eng->rec_stream = nullptr;
     }
+    eng->play_paused = false;
 }
 
 static void zz_ax_audio_start(zz9000_state *data)
@@ -1506,19 +1511,37 @@ static void zz_ax_audio_start(zz9000_state *data)
     auto *eng = data->ax_audio;
     const uae_u32 rate = zz_ax_frames(data) * 50;
     const bool play_enabled = data->audio_play && currprefs.produce_sound >= 2;
-    if (eng->next_period != std::chrono::steady_clock::time_point{} && eng->rate == rate &&
-        eng->play_enabled == play_enabled && eng->record_enabled == data->audio_record)
+    const bool starting = eng->next_period == std::chrono::steady_clock::time_point{};
+    const bool rate_changed = eng->rate != rate;
+    const bool play_changed = starting || rate_changed || eng->play_enabled != play_enabled ||
+        (play_enabled && (eng->soundcard != currprefs.soundcard ||
+            eng->soundcard_default != currprefs.soundcard_default));
+    const bool record_changed = starting || rate_changed || eng->record_enabled != data->audio_record ||
+        (data->audio_record && eng->samplersoundcard != currprefs.samplersoundcard);
+    if (!play_changed && !record_changed)
         return;
-    zz_ax_audio_close(data);
+    if (play_changed && eng->play_stream) {
+        SDL_DestroyAudioStream(eng->play_stream);
+        eng->play_stream = nullptr;
+        eng->play_paused = false;
+    }
+    if (record_changed && eng->rec_stream) {
+        SDL_DestroyAudioStream(eng->rec_stream);
+        eng->rec_stream = nullptr;
+    }
     eng->rate = rate;
     eng->play_enabled = play_enabled;
     eng->record_enabled = data->audio_record;
+    eng->soundcard = currprefs.soundcard;
+    eng->soundcard_default = currprefs.soundcard_default;
+    eng->samplersoundcard = currprefs.samplersoundcard;
     SDL_AudioSpec spec = {};
     spec.format = SDL_AUDIO_S16LE;
     spec.channels = 2;
     spec.freq = static_cast<int>(rate);
-    enumerate_sound_devices();
-    if (play_enabled) {
+    if ((play_changed && play_enabled) || (record_changed && data->audio_record))
+        enumerate_sound_devices();
+    if (play_changed && play_enabled) {
         const int soundcard = currprefs.soundcard;
         const bool use_default_device = currprefs.soundcard_default || soundcard < 0 ||
             soundcard >= MAX_SOUND_DEVICES || sound_devices[soundcard] == nullptr;
@@ -1532,12 +1555,14 @@ static void zz_ax_audio_start(zz9000_state *data)
             eng->play_stream = SDL_OpenAudioDeviceStream(
                 SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
         }
-        if (eng->play_stream)
-            SDL_ResumeAudioStreamDevice(eng->play_stream);
-        else
+        if (eng->play_stream) {
+            eng->play_paused = sound_paused();
+            if (!eng->play_paused)
+                SDL_ResumeAudioStreamDevice(eng->play_stream);
+        } else
             write_log(_T("ZZ9000AX: playback device open failed: %s\n"), SDL_GetError());
     }
-    if (data->audio_record) {
+    if (record_changed && data->audio_record) {
         const int soundcard = currprefs.samplersoundcard;
         const bool use_default_device = soundcard < 0 || soundcard >= MAX_SOUND_DEVICES ||
             record_devices[soundcard] == nullptr;
@@ -1556,7 +1581,8 @@ static void zz_ax_audio_start(zz9000_state *data)
         else
             write_log(_T("ZZ9000AX: recording device open failed: %s\n"), SDL_GetError());
     }
-    eng->next_period = std::chrono::steady_clock::now() + std::chrono::milliseconds(20);
+    if (starting)
+        eng->next_period = std::chrono::steady_clock::now() + std::chrono::milliseconds(20);
     write_log(_T("ZZ9000AX audio: %u Hz, play=%d record=%d\n"), rate,
         data->audio_play ? 1 : 0, data->audio_record ? 1 : 0);
 }
@@ -1573,14 +1599,27 @@ static void zz_ax_audio_tick(zz9000_state *data)
     auto *eng = data->ax_audio;
     if (!eng || (!data->audio_play && !data->audio_record))
         return;
-    if (eng->play_enabled != (data->audio_play && currprefs.produce_sound >= 2))
-        zz_ax_audio_start(data);
+    zz_ax_audio_start(data);
+    const bool paused = sound_paused();
+    if (eng->play_stream && eng->play_paused != paused) {
+        if (paused)
+            SDL_PauseAudioStreamDevice(eng->play_stream);
+        SDL_ClearAudioStream(eng->play_stream);
+        eng->play_paused = paused;
+        if (!paused)
+            SDL_ResumeAudioStreamDevice(eng->play_stream);
+    }
     const auto now = std::chrono::steady_clock::now();
     if (now < eng->next_period)
         return;
     eng->next_period += std::chrono::milliseconds(20);
-    if (eng->next_period < now)
+    if (eng->next_period < now) {
         eng->next_period = now + std::chrono::milliseconds(20);
+        // A full emulator pause stops hsync, so discard any host audio that
+        // was queued before the pause when emulation resumes.
+        if (eng->play_stream)
+            SDL_ClearAudioStream(eng->play_stream);
+    }
     zz_ax_audio_period(data);
 }
 #endif
