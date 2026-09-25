@@ -26,6 +26,7 @@
 #if defined(AHI) && !defined(LIBRETRO)
 #include <chrono>
 #include <SDL3/SDL.h>
+#include "sounddep/sound.h"
 struct zz_ax_audio_engine;
 #endif
 
@@ -1449,8 +1450,24 @@ static void zz_ax_audio_period(zz9000_state *data)
     }
     if (data->audio_record) {
         uae_u8 samples[ZZ_AX_PERIOD_BYTES] = {};
-        if (eng->rec_stream)
-            SDL_GetAudioStreamData(eng->rec_stream, samples, static_cast<int>(bytes));
+        if (eng->rec_stream) {
+            const int period_bytes = static_cast<int>(bytes);
+            const int available = SDL_GetAudioStreamAvailable(eng->rec_stream);
+            // A short scheduling delay is harmless. After a longer stall,
+            // discard old input so the guest receives the latest period.
+            if (available > period_bytes * 3) {
+                int stale_bytes = (available - period_bytes) & ~3;
+                while (stale_bytes > 0) {
+                    const int count = std::min(stale_bytes, static_cast<int>(sizeof samples));
+                    const int read = SDL_GetAudioStreamData(eng->rec_stream, samples, count);
+                    if (read <= 0)
+                        break;
+                    stale_bytes -= read;
+                }
+                memset(samples, 0, bytes);
+            }
+            SDL_GetAudioStreamData(eng->rec_stream, samples, period_bytes);
+        }
         const uae_u32 filled =
             (static_cast<uae_u32>(data->audio_rx_write_period) + 1) % ZZ_AX_PERIODS;
         uae_u8 *slot = data->memory + data->audio_rx_ring_off + filled * ZZ_AX_PERIOD_BYTES;
@@ -1499,17 +1516,40 @@ static void zz_ax_audio_start(zz9000_state *data)
     spec.format = SDL_AUDIO_S16LE;
     spec.channels = 2;
     spec.freq = static_cast<int>(rate);
+    enumerate_sound_devices();
     if (data->audio_play) {
+        const int soundcard = currprefs.soundcard;
+        const bool use_default_device = currprefs.soundcard_default || soundcard < 0 ||
+            soundcard >= MAX_SOUND_DEVICES || sound_devices[soundcard] == nullptr;
+        const SDL_AudioDeviceID device_id = use_default_device
+            ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
+            : static_cast<SDL_AudioDeviceID>(sound_devices[soundcard]->id);
         eng->play_stream = SDL_OpenAudioDeviceStream(
-            SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+            device_id, &spec, nullptr, nullptr);
+        if (!eng->play_stream && !use_default_device) {
+            write_log(_T("ZZ9000AX: selected playback device open failed, retrying default: %s\n"), SDL_GetError());
+            eng->play_stream = SDL_OpenAudioDeviceStream(
+                SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+        }
         if (eng->play_stream)
             SDL_ResumeAudioStreamDevice(eng->play_stream);
         else
             write_log(_T("ZZ9000AX: playback device open failed: %s\n"), SDL_GetError());
     }
     if (data->audio_record) {
+        const int soundcard = currprefs.samplersoundcard;
+        const bool use_default_device = soundcard < 0 || soundcard >= MAX_SOUND_DEVICES ||
+            record_devices[soundcard] == nullptr;
+        const SDL_AudioDeviceID device_id = use_default_device
+            ? SDL_AUDIO_DEVICE_DEFAULT_RECORDING
+            : static_cast<SDL_AudioDeviceID>(record_devices[soundcard]->id);
         eng->rec_stream = SDL_OpenAudioDeviceStream(
-            SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, nullptr, nullptr);
+            device_id, &spec, nullptr, nullptr);
+        if (!eng->rec_stream && !use_default_device) {
+            write_log(_T("ZZ9000AX: selected recording device open failed, retrying default: %s\n"), SDL_GetError());
+            eng->rec_stream = SDL_OpenAudioDeviceStream(
+                SDL_AUDIO_DEVICE_DEFAULT_RECORDING, &spec, nullptr, nullptr);
+        }
         if (eng->rec_stream)
             SDL_ResumeAudioStreamDevice(eng->rec_stream);
         else
