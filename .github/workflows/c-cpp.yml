@@ -37,7 +37,7 @@ env:
 jobs:
   build-macOS:
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.arch == 'intel' && 120 || 45 }}
     permissions:
       contents: read
       actions: write
@@ -58,15 +58,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
-
-      - name: Cache Homebrew
-        if: matrix.arch == 'intel'
-        uses: actions/cache@v5
-        with:
-          path: /usr/local/Homebrew
-          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
-          restore-keys: |
-            ${{ runner.os }}-brew-
 
       - name: Fix homebrew in Github Runner
         if: matrix.arch == 'intel'
@@ -91,14 +82,24 @@ jobs:
 
       - name: Install dependencies (Homebrew)
         run: |
-          brew update
           # `brew bundle` installs formulae concurrently, so sdl3 (which depends on
           # cmake) races the cmake entry for the cmake lock and intermittently fails
           # ("a `brew install --formula sdl3` process has already locked .../cmake").
           # Install the shared build dependency first, then retry the bundle once to
           # ride out any remaining transient lock contention.
-          brew install cmake || true
-          brew bundle || { sleep 10; brew bundle; }
+          if [ "${{ matrix.arch }}" = "intel" ]; then
+            # Homebrew no longer builds new Intel bottles. Keep the runner's
+            # installed formulae and show source-build output in the job log.
+            export HOMEBREW_NO_AUTO_UPDATE=1
+            if ! brew list --formula cmake >/dev/null 2>&1; then
+              brew install cmake
+            fi
+            brew bundle --no-upgrade --verbose || { sleep 10; brew bundle --no-upgrade --verbose; }
+          else
+            brew update
+            brew install cmake || true
+            brew bundle || { sleep 10; brew bundle; }
+          fi
 
       - name: Download QEMU-UAE plugin
         run: .github/scripts/download-qemu-uae-plugin.sh qemu-uae-macos-universal.zip
