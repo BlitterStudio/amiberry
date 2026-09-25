@@ -84,11 +84,40 @@ int main(int argc, char **argv)
 	assert(advertised_mailbox == 0x3fe40000u +
 	       (zz9000_sdk::mailbox_offset - 0xa000u));
 	assert(get32(mb) == 0x5a5a394b);
-	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 13) | (1u << 14);
+	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 3) |
+		(1u << 4) | (1u << 5) | (1u << 6) | (1u << 13) |
+		(1u << 14) | (1u << 15);
 #ifdef HAVE_MPG123
-	expected_caps |= (1u << 19) | (1u << 23);
+	expected_caps |= (1u << 7) | (1u << 19) | (1u << 23);
 #endif
 	assert(get32(mb + 44) == expected_caps);
+	{
+		Mailbox doorbell(4 * 1024 * 1024);
+		doorbell.sdk.set_framebuffer(0x110000, 2, 2, 8, 7);
+		auto *ring = doorbell.board.data() + zz9000_sdk::mailbox_offset;
+		auto *request = ring + 128;
+		put32(request, 1);
+		put16(request + 4, 0x0203); // Fill the visible framebuffer.
+		put16(request + 10, 28);
+		put32(request + 16, 0x80000000); // Framebuffer handle.
+		put32(request + 28, 2); // Width.
+		put32(request + 32, 2); // Height.
+		put32(request + 36, 0x00ff0000); // Red.
+		put32(ring + 24, 1);
+		assert(!doorbell.sdk.write_register(0x108, 0));
+		assert(get32(ring + 20) == 0);
+		assert(doorbell.sdk.write_register(0x108, 1));
+		assert(get32(ring + 20) == 1);
+		assert(get16(ring + 128 + 64 * 64 + 6) == 0);
+		assert(doorbell.board[0x110002] == 0xff);
+		assert(!doorbell.sdk.poll()); // The doorbell consumed the request.
+		request += 64;
+		put32(request, 2);
+		put16(request + 4, 0x0001); // Nonvisual query.
+		put32(ring + 24, 2);
+		assert(!doorbell.sdk.write_register(0x108, 1));
+		assert(get32(ring + 20) == 2);
+	}
 	uint8_t payload[48] = {};
 	const auto *reply = z2.call(0x0001, nullptr, 0);
 	assert(get32(reply + 16) == 0x5a5a394b);

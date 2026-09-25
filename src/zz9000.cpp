@@ -1841,11 +1841,38 @@ static void zz_ax_audio_tick(zz9000_state *data)
 }
 #endif
 
+static void zz_sdk_update_framebuffer(zz9000_state *data)
+{
+	if (!data->sdk)
+		return;
+	const uae_u32 format = data->color_mode == ZZ_COLOR_BGRA32 ? 7 :
+		data->color_mode == ZZ_COLOR_RGB565 ? 1 :
+		data->color_mode == ZZ_COLOR_RGB555 ? 6 : 0;
+	const uae_u32 bpp = zz_bytes_per_pixel(data->color_mode);
+	// RTG offsets are relative to VRAM, which starts after the register aperture.
+	const uae_u32 framebuffer_offset = data->pan_offset <=
+		data->card_size - ZZ9000_MEMORY_BASE ?
+		ZZ9000_MEMORY_BASE + data->pan_offset : data->card_size;
+	data->sdk->set_framebuffer(framebuffer_offset,
+		data->width > 0 ? data->width : 0,
+		data->height > 0 ? data->height : 0,
+		data->pan_width * bpp, format);
+	const auto &overlay = data->overlay;
+	const uae_u32 overlay_offset = overlay.source_offset <=
+		data->card_size - ZZ9000_MEMORY_BASE ?
+		ZZ9000_MEMORY_BASE + overlay.source_offset : data->card_size;
+	data->sdk->set_overlay(overlay_offset, overlay.source_width,
+		overlay.source_height, overlay.source_pitch, overlay.variant,
+		overlay.active);
+}
+
 static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 {
 	if (data->sdk && ((offset >= 0x100 && offset <= 0x10c) ||
 	                  (offset >= 0x1108 && offset <= 0x110c))) {
-		data->sdk->write_register(offset >= 0x1000 ? offset - 0x1000 : offset, value);
+		zz_sdk_update_framebuffer(data);
+		if (data->sdk->write_register(offset >= 0x1000 ? offset - 0x1000 : offset, value))
+			data->modified = true;
 		return;
 	}
 	if (offset / 2 < sizeof data->registers / sizeof data->registers[0])
@@ -2541,8 +2568,11 @@ static void zz9000_refresh(void *userdata)
 static void zz9000_hsync(void *userdata)
 {
 	auto *data = static_cast<zz9000_state *>(userdata);
-	if (data->sdk)
-		data->sdk->poll();
+	if (data->sdk) {
+		zz_sdk_update_framebuffer(data);
+		if (data->sdk->poll())
+			data->modified = true;
+	}
 	zz_net_tick(data);
 #if defined(AHI) && !defined(LIBRETRO)
 	zz_ax_audio_tick(data);
