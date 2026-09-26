@@ -3390,6 +3390,15 @@ void m68k_do_rte_mmu030c (uaecptr a7)
 		regs.prefetch020[1] = stagesbc >> 16;
 		regs.prefetch020[0] = oc >> 16;
 		mmu030_opcode_stageb = (uae_u16)oc;
+		// The pending write is replayed below and can fault again (an
+		// unaligned write whose second half lands in a page the handler
+		// did not map). The frame built for that fault stores regs.irc as
+		// the opcode of the instruction to resume, so it must hold the
+		// stage B opcode from this frame and not this RTE's own opcode:
+		// otherwise the handler's RTE resumes by executing an RTE at the
+		// faulted instruction's PC, on a stack without a frame.
+		regs.irc = (uae_u16)oc;
+		mmu030_opcode = -1;
 
 		mmu030_data_buffer_out = mmu030_data_buffer_out_v;
 		mmu030_state[0] = 0;

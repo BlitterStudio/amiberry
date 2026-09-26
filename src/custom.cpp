@@ -110,8 +110,15 @@ static uae_u32 displayresetcnt;
 static int displayreset_delayed;
 uae_u8 agnus_hpos;
 int agnus_hpos_prev, agnus_hpos_next, agnus_vpos_next;
+static bool agnus_even_prev;
 static int agnus_pos_change;
-static uae_u32 dmal_shifter;
+static uae_u32 agnus_dmal_shifter, paula_dmal_shifter, paula_dmal_shifter_fast;
+static int agnus_dmal_sprite_enable;
+static int agnus_dmal_sprite_enable2;
+static bool agnus_dmal_alloc;
+#ifdef DEBUGGER
+static int paula_dmal_shifter_cnt;
+#endif
 static struct rgabuf rga_pipe[RGA_SLOT_TOTAL + 1];
 struct denise_rga rga_denise[DENISE_RGA_SLOT_TOTAL];
 static struct linestate *current_line_state;
@@ -176,169 +183,6 @@ static void handle_pipelined_custom_write(bool now)
 
 static uae_u32 rga_slot_in_offset, rga_slot_first_offset, rga_slot_out_offset;
 static evt_t last_rga_cycle;
-
-static void write_drga_strobe(uae_u16 rga)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-	r->v = get_cck_cycles_diff(agnus_trigger_cck);
-};
-static void write_drga(uae_u16 rga, uaecptr pt, uae_u32 v)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->v = v;
-	r->pt = pt;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-};
-static void write_drga_dat_spr(uae_u16 rga, uaecptr pt, uae_u32 v)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->v = v;
-	r->pt = pt;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-};
-static void write_drga_dat_spr_wide(uae_u16 rga, uaecptr pt, uae_u64 v)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->v64 = v;
-	r->pt = pt;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-};
-
-static void write_drga_dat_bpl16(uae_u16 rga, uaecptr pt, uae_u16 v)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->v = v;
-	r->pt = pt;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-};
-static void write_drga_dat_bpl64(uae_u16 rga, uaecptr pt, uae_u64 v)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	r->rga = rga;
-	r->v64 = v;
-	r->pt = pt;
-	r->flags = 0;
-	r->line = rga_denise_cycle_line;
-};
-
-static void write_drga_flag(uae_u32 flags, uae_u32 mask)
-{
-	struct denise_rga *r = &rga_denise[rga_denise_cycle];
-	if (r->line != rga_denise_cycle_line) {
-		r->line = rga_denise_cycle_line;
-		r->rga = 0x1fe;
-		r->flags = 0;
-	}
-	r->flags &= ~mask;
-	r->flags |= flags;
-}
-
-static uae_u32 dummyrgaaddr;
-
-static void write_rga_update(struct rgabuf *r, uae_u32 *p)
-{
-	if (p && r->p) {
-		// DMA address pointer conflict causes both old and new address to becomes old OR new.
-		r->conflict2 = p; 
-		r->conflict = r->p;
-		*r->p |= *p;
-		*p = *r->p;
-		r->pv |= *p;
-	} else if (p) {
-		r->p = p;
-		r->pv = *p;
-	}
-}
-
-struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p)
-{
-	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
-
-	bool strobe = (v >= 0x38 && v < 0x40) || v == 0x1fe;
-
-	if (r->reg != 0x1fe && !strobe) {
-		write_log("RGA conflict: %04x -> %04x, %08x | %08x -> %08x, %04x, %d\n",
-			r->reg, v,
-			p ? *p : 0, r->pv, (p ? *p : 0) | r->pv, 
-			v,
-			slot);
-		//activate_debugger();
-	}
-	// RGA bus address conflict causes AND operation
-	r->reg &= v;
-	r->type |= type;
-	r->alloc = 1;
-	write_rga_update(r, p);
-	return r;
-}
-
-STATIC_INLINE rgabuf *read_rga_out(void)
-{
-	struct rgabuf *r = &rga_pipe[rga_slot_out_offset];
-	return r;
-}
-STATIC_INLINE rgabuf *read_rga_in(void)
-{
-	struct rgabuf *r = &rga_pipe[rga_slot_in_offset];
-	return r;
-}
-
-struct rgabuf *read_rga(int slot)
-{
-	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
-	return r;
-}
-bool check_rga_free_slot_in(void)
-{
-	struct rgabuf *r = &rga_pipe[rga_slot_in_offset];
-	return r->alloc <= 0;
-}
-STATIC_INLINE bool check_rga_out(void)
-{
-	struct rgabuf *r = &rga_pipe[rga_slot_out_offset];
-	return r->alloc;
-}
-
-bool check_rga(int slot)
-{
-	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
-	return r->alloc;
-}
-static void clear_rga(struct rgabuf *r)
-{
-	r->reg = 0x1fe;
-	r->p = NULL;
-	r->pv = 0;
-	r->type = 0;
-	r->alloc = 0;
-	r->write = false;
-	r->conflict = NULL;
-	r->conflict2 = NULL;
-}
-static void shift_rga(void)
-{
-	rga_slot_first_offset--;
-	rga_slot_in_offset--;
-	rga_slot_out_offset--;
-	rga_slot_first_offset &= 3;
-	rga_slot_in_offset &= 3;
-	rga_slot_out_offset &= 3;
-
-	struct rgabuf *r = &rga_pipe[rga_slot_first_offset];
-	clear_rga(r);
-}
-
 
 static void uae_abort (const TCHAR *format,...)
 {
@@ -791,8 +635,6 @@ static bool harddis_v, harddis_h;
 
 struct custom_store custom_storage[256];
 
-static uae_u16 dmal;
-
 static int REGPARAM3 custom_wput_1(uaecptr, uae_u32, int) REGPARAM;
 
 /*
@@ -802,6 +644,184 @@ static int REGPARAM3 custom_wput_1(uaecptr, uae_u32, int) REGPARAM;
 static bool safecpu(void)
 {
 	return currprefs.cpu_model == 68000 && currprefs.cpu_cycle_exact && currprefs.blitter_cycle_exact && currprefs.m68k_speed == 0 && !(currprefs.cs_hacks & 16);
+}
+
+static void write_drga_strobe(uae_u16 rga)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	r->rga = rga;
+	r->flags = 0;
+	r->line = rga_denise_cycle_line;
+	r->v = get_cck_cycles_diff(agnus_trigger_cck);
+};
+static void write_drga(uae_u16 rga, uaecptr pt, uae_u32 v)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	r->rga = rga;
+	r->v = v;
+	r->pt = pt;
+	r->flags = 0;
+	r->line = rga_denise_cycle_line;
+};
+static void write_drga_dat_spr(uae_u16 rga, uaecptr pt, uae_u32 v)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	r->rga = rga;
+	r->v = v;
+	r->pt = pt;
+	r->flags = 0;
+	r->line = rga_denise_cycle_line;
+};
+static void write_drga_dat_spr_wide(uae_u16 rga, uaecptr pt, uae_u64 v)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	r->rga = rga;
+	r->v64 = v;
+	r->pt = pt;
+	r->flags = 0;
+	r->line = rga_denise_cycle_line;
+};
+
+static void write_drga_dat_bpl16(uae_u16 rga, uaecptr pt, uae_u16 v)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	r->rga = rga;
+	r->v = v;
+	r->pt = pt;
+	r->flags = 0;
+	r->line = rga_denise_cycle_line;
+};
+static void write_drga_dat_bpl64(uae_u16 rga, uaecptr pt, uae_u64 v)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	r->rga = rga;
+	r->v64 = v;
+	r->pt = pt;
+	r->flags = 0;
+	r->line = rga_denise_cycle_line;
+};
+
+static void write_drga_flag(uae_u32 flags, uae_u32 mask)
+{
+	struct denise_rga *r = &rga_denise[rga_denise_cycle];
+	if (r->line != rga_denise_cycle_line) {
+		r->line = rga_denise_cycle_line;
+		r->rga = 0x1fe;
+		r->flags = 0;
+	}
+	r->flags &= ~mask;
+	r->flags |= flags;
+}
+
+static uae_u32 dummyrgaaddr;
+
+static void write_rga_update(struct rgabuf *r, uae_u32 *p)
+{
+	if (p && r->p) {
+		// DMA address pointer conflict causes both old and new address to becomes old OR new.
+		r->conflict2 = p;
+		r->conflict = r->p;
+		*r->p |= *p;
+		*p = *r->p;
+		r->pv |= *p;
+	} else if (p) {
+		r->p = p;
+		r->pv = *p;
+	}
+}
+
+struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p)
+{
+	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
+
+	bool strobe = (v >= 0x38 && v < 0x40) || v == 0x1fe;
+
+	if (r->reg != 0x1fe && !strobe) {
+		write_log("RGA conflict: %04x -> %04x, %08x | %08x -> %08x, %04x, %d\n",
+			r->reg, v,
+			p ? *p : 0, r->pv, (p ? *p : 0) | r->pv,
+			v,
+			slot);
+		//activate_debugger();
+	}
+	// RGA bus address conflict causes AND operation
+	r->reg &= v;
+	r->type |= type;
+	r->alloc = 1;
+	write_rga_update(r, p);
+	return r;
+}
+
+static struct rgabuf *write_rga_alloc(int slot, int type, uae_u16 v, uae_u32 *p, bool alloc)
+{
+	struct rgabuf *r = write_rga(slot, type, v, p);
+	// DMA request without allocation request is very rare special case
+	// Conflict possible!
+	if (!alloc) {
+		if (safecpu()) {
+			r->alloc = -1;
+#ifdef DEBUGGER
+			record_dma_event(DMA_EVENT_SPECIAL);
+#endif
+		}
+	}
+	return r;
+}
+
+STATIC_INLINE rgabuf *read_rga_out(void)
+{
+	struct rgabuf *r = &rga_pipe[rga_slot_out_offset];
+	return r;
+}
+STATIC_INLINE rgabuf *read_rga_in(void)
+{
+	struct rgabuf *r = &rga_pipe[rga_slot_in_offset];
+	return r;
+}
+
+struct rgabuf *read_rga(int slot)
+{
+	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
+	return r;
+}
+bool check_rga_free_slot_in(void)
+{
+	struct rgabuf *r = &rga_pipe[rga_slot_in_offset];
+	return r->alloc <= 0;
+}
+STATIC_INLINE bool check_rga_out(void)
+{
+	struct rgabuf *r = &rga_pipe[rga_slot_out_offset];
+	return r->alloc;
+}
+
+bool check_rga(int slot)
+{
+	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
+	return r->alloc;
+}
+static void clear_rga(struct rgabuf *r)
+{
+	r->reg = 0x1fe;
+	r->p = NULL;
+	r->pv = 0;
+	r->type = 0;
+	r->alloc = 0;
+	r->write = false;
+	r->conflict = NULL;
+	r->conflict2 = NULL;
+}
+static void shift_rga(void)
+{
+	rga_slot_first_offset--;
+	rga_slot_in_offset--;
+	rga_slot_out_offset--;
+	rga_slot_first_offset &= 3;
+	rga_slot_in_offset &= 3;
+	rga_slot_out_offset &= 3;
+
+	struct rgabuf *r = &rga_pipe[rga_slot_first_offset];
+	clear_rga(r);
 }
 
 static void check_nocustom(void)
@@ -2340,7 +2360,10 @@ static void setsyncstoppos(void)
 	agnus_hpos = 0;
 	hhpos = 0;
 	linear_hpos = 0;
-	dmal_shifter = 0; // fast CPU fix
+	// fast CPU fix
+	agnus_dmal_shifter = 0;
+	paula_dmal_shifter = 0;
+	paula_dmal_shifter_fast = 0;
 }
 
 static void setsyncstopped(void)
@@ -2599,7 +2622,7 @@ static void HHPOS(uae_u16 v)
 static void SPRHSTRT(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
+		programmed_register_accessed_v = true;
 		sprhstrt = v;
 		sprhstrt_v = v & (MAXVPOS_LINES_ECS - 1);
 	}
@@ -2607,7 +2630,7 @@ static void SPRHSTRT(uae_u16 v)
 static void SPRHSTOP(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
+		programmed_register_accessed_v = true;
 		sprhstop = v;
 		sprhstop_v = v & (MAXVPOS_LINES_ECS - 1);
 	}
@@ -2615,7 +2638,7 @@ static void SPRHSTOP(uae_u16 v)
 static void BPLHSTRT(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
+		programmed_register_accessed_v = true;
 		bplhstrt = v;
 		bplhstrt_v = v & (MAXVPOS_LINES_ECS - 1);
 	}
@@ -2623,7 +2646,7 @@ static void BPLHSTRT(uae_u16 v)
 static void BPLHSTOP(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
+		programmed_register_accessed_v = true;
 		bplhstop = v;
 		bplhstop_v = v & (MAXVPOS_LINES_ECS - 1);
 	}
@@ -2631,39 +2654,39 @@ static void BPLHSTOP(uae_u16 v)
 static void SPRHPTH(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
-		hhbpl &= 0x0000ffff;
-		hhbpl |= v;
+		programmed_register_accessed_v = true;
+		hhspr &= 0x0000ffff;
+		hhspr |= v << 16;
 	}
 }
 static void SPRHPTL(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
-		hhbpl &= 0xffff0000;
-		hhbpl |= v << 16;
+		programmed_register_accessed_v = true;
+		hhspr &= 0xffff0000;
+		hhspr |= v << 0;
 	}
 }
 static void BPLHPTH(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
-		hhspr &= 0x0000ffff;
-		hhspr |= v;
+		programmed_register_accessed_v = true;
+		hhbpl &= 0x0000ffff;
+		hhbpl |= v << 16;
 	}
 }
 static void BPLHPTL(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
-		hhspr &= 0xffff0000;
-		hhspr |= v << 16;
+		programmed_register_accessed_v = true;
+		hhbpl &= 0xffff0000;
+		hhbpl |= v << 0;
 	}
 }
 static void BPLHMOD(uae_u16 v)
 {
 	if (ecs_agnus) {
-		programmed_register_accessed_h = true;
+		programmed_register_accessed_v = true;
 		bplhmod = v;
 	}
 }
@@ -5397,14 +5420,26 @@ static void vsync_handler_post(void)
 	check_lineoptimizations();
 }
 
-static void dmal_emu_disk(struct rgabuf *rga, int slot, bool w)
+static void dmal_emu_disk(struct rgabuf *rga, int slot, bool w, bool fast)
 {
 	uae_u16 dat = 0;
+
+	if (currprefs.m68k_speed < 0) {
+		fast = true;
+	}
+
 	// disk_fifostatus() needed in >100% disk speed modes
 	if (w) {
-		// write to disk
-		if (disk_fifostatus() <= 0) {
-			uaecptr pt = rga->pv;
+		uaecptr pt = rga->pv;
+		if (fast) {
+			if (disk_fifostatus() <= 0) {
+				dat = chipmem_wget_indirect(pt);
+				regs.chipset_latch_rw = last_custom_value = dat;
+				if (disk_fifostatus() <= 0) {
+					DSKDAT(dat);
+				}
+			}
+		} else {
 #ifdef DEBUGGER
 			if (debug_dma) {
 				record_dma_read(rga->reg, pt, DMARECORD_DISK, slot);
@@ -5423,13 +5458,23 @@ static void dmal_emu_disk(struct rgabuf *rga, int slot, bool w)
 			}
 #endif
 			regs.chipset_latch_rw = last_custom_value = dat;
-			DSKDAT(dat);
+			if (disk_fifostatus() <= 0) {
+				DSKDAT(dat);
+			}
 		}
 	} else {
 		// read from disk
-		if (disk_fifostatus() >= 0) {
-			uaecptr pt = rga->pv;
-			dat = DSKDATR(slot);
+		uaecptr pt = rga->pv;
+		if (fast) {
+			if (disk_fifostatus() >= 0) {
+				dat = DSKDATR(slot);
+				chipmem_wput_indirect(pt, dat);
+				regs.chipset_latch_rw = last_custom_value = dat;
+			}
+		} else {
+			if (disk_fifostatus() >= 0) {
+				dat = DSKDATR(slot);
+			}
 #ifdef DEBUGGER
 			if (debug_dma) {
 				record_dma_write(rga->reg, dat, pt, DMARECORD_DISK, slot);
@@ -6362,16 +6407,13 @@ static void hsync_handler_post(bool onvsync)
 {
 	cia_hsync_do();
 
-
-#if 0
-	if (!custom_disabled) {
-		if (!currprefs.blitter_cycle_exact && blt_info.blit_main && dmaen (DMA_BITPLANE) && vdiwstate == diw_states::DIW_waiting_stop) {
-			blitter_slowdown(thisline_decision.plfleft, thisline_decision.plfright - (16 << fetchmode),
-				cycle_diagram_total_cycles[fetchmode][GET_RES_AGNUS (bplcon0)][GET_PLANES_LIMIT (bplcon0)],
-				cycle_diagram_free_cycles[fetchmode][GET_RES_AGNUS (bplcon0)][GET_PLANES_LIMIT (bplcon0)]);
+	if (!custom_disabled && !currprefs.blitter_cycle_exact) {
+		if (blt_info.blit_main && dmaen(DMA_BITPLANE) && vdiwstate == diw_states::DIW_waiting_stop) {
+			blitter_slowdown(ddfstrt, ddfstop - (16 << fetchmode),
+				cycle_diagram_total_cycles[fetchmode][GET_RES_AGNUS(bplcon0)][GET_PLANES_LIMIT(bplcon0)],
+				cycle_diagram_free_cycles[fetchmode][GET_RES_AGNUS(bplcon0)][GET_PLANES_LIMIT(bplcon0)]);
 		}
 	}
-#endif
 
 #if 0
 	// AF testing stuff
@@ -6388,6 +6430,7 @@ static void hsync_handler_post(bool onvsync)
 		port_get_custom (1, out);
 	}
 #endif
+
 	bool input_read_done = false;
 
 	if (currprefs.cpu_thread) {
@@ -6761,8 +6804,13 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	uhres_bpl = false;
 	uhres_spr = false;
 
-	dmal_shifter = 0;
-	dmal = 0;
+	agnus_dmal_shifter = 0;
+	paula_dmal_shifter = 0;
+	paula_dmal_shifter_fast = 0;
+	agnus_even_prev = false;
+	agnus_dmal_sprite_enable = -1;
+	agnus_dmal_sprite_enable2 = 0;
+	agnus_dmal_alloc = false;
 
 	nosignal_cnt = 0;
 	nosignal_status = 0;
@@ -6823,10 +6871,10 @@ void custom_reset(bool hardreset, bool keyboardreset)
 			vsstrt = 0xffff;
 			vsstop = 0xffff;
 			hcenter = 0xffff;
-			bplhstop = 0xffff;
-			bplhstrt = 0xffff;
-			sprhstop = 0xffff;
-			sprhstrt = 0xffff;
+			bplhstop = bplhstop_v = 0x7fff;
+			bplhstrt = bplhstrt_v = 0x7fff;
+			sprhstop = sprhstop_v = 0x7fff;
+			sprhstrt = sprhstrt_v = 0x7fff;
 
 			for (int i = 0; i < 32; i++) {
 				uae_u16 c = 0;
@@ -9228,12 +9276,7 @@ static void process_copper(struct rgabuf *r)
 
 static struct rgabuf *alloc_copper_cycle(void)
 {
-	struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_COPPER, 0x8c, &cop_state.ip);
-	if (!cop_state.cycle_alloc) {
-		// If cycle was not marked as copper allocated 1 CCK earlier,
-		// mark copper allocated cycle as not actually allocated. Conflict possible!
-		rga->alloc = -1;
-	}
+	struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_COPPER, 0x8c, &cop_state.ip, cop_state.cycle_alloc);
 	return rga;
 }
 // Address zero broken dma copper request
@@ -9469,15 +9512,11 @@ static void generate_uhres(void)
 			uhres_state = 1;
 		}
 		if (uhres_spr && (uhres_state == 4 || uhres_state == 6)) {
-			struct rgabuf *r = write_rga(RGA_SLOT_IN, CYCLE_UHRESSPR, 0x078, NULL);
-			r->p = &hhspr;
-			r->pv = *r->p;
+			struct rgabuf *r = write_rga(RGA_SLOT_IN, CYCLE_UHRESSPR, 0x078, &hhspr);
 		}
 		if (uhres_bpl && (uhres_state == 5)) {
-			struct rgabuf *r = write_rga(RGA_SLOT_IN, CYCLE_UHRESBPL, 0x07a, NULL);
+			struct rgabuf *r = write_rga(RGA_SLOT_IN, CYCLE_UHRESBPL, 0x07a, &hhbpl);
 			r->bplmod = bplhmod;
-			r->p = &hhbpl;
-			r->pv = *r->p;
 		}
 	}
 }
@@ -9769,73 +9808,71 @@ static void generate_sprites(int num, int slot)
 {
 	int hp = agnus_hpos;
 
-	if (slot == 0 || slot == 2) {
-		struct sprite *s = &spr[num];
-		if (slot == 0) {
-			if (!s->dmacycle && s->dmastate) {
-				s->dmacycle = 1;
+	struct sprite *s = &spr[num];
+	if (slot == 0) {
+		if (!s->dmacycle && s->dmastate) {
+			s->dmacycle = 1;
+		}
+		if (vpos == s->vstart) {
+			s->dmastate = 1;
+			s->dmacycle = 1;
+			if (num == 0 && slot == 0) {
+				cursorsprite(s);
 			}
-			if (vpos == s->vstart) {
-				s->dmastate = 1;
-				s->dmacycle = 1;
-				if (num == 0 && slot == 0) {
-					cursorsprite(s);
-				}
 #if 0
-				if (num == 0)
-					write_log("START %04x %04x %08x\n", s->vstart, s->vstop, s->pt);
+			if (num == 0)
+				write_log("START %04x %04x %08x\n", s->vstart, s->vstop, s->pt);
 #endif
-			}
-			if (vpos == s->vstop || agnus_vb_active_end_line) {
-				s->dmastate = 0;
-				s->dmacycle = 1;
+		}
+		if (vpos == s->vstop || agnus_vb_active_end_line) {
+			s->dmastate = 0;
+			s->dmacycle = 1;
 #if 0
-				if (num == 0)
-					write_log("STOP %04x %04x %08x\n", s->vstart, s->vstop, s->pt);
+			if (num == 0)
+				write_log("STOP %04x %04x %08x\n", s->vstart, s->vstop, s->pt);
 #endif
+		}
+	}
+	if (dmaen(DMA_SPRITE) && s->dmacycle) {
+		bool dodma = false;
+
+		// if bitplane DMA ends and last BPL1DAT slot is also sprite slot and sprite DMA is active: sprite DMA conflicts with bitplane DMA
+		bool bplconflict = false;
+		if (bprun && ddf_stopping == 2) {
+			bool last = islastbplseq();
+			if (last) {
+				bplconflict = true;
 			}
 		}
-		if (dmaen(DMA_SPRITE) && s->dmacycle) {
-			bool dodma = false;
 
-			// if bitplane DMA ends and last BPL1DAT slot is also sprite slot and sprite DMA is active: sprite DMA conflicts with bitplane DMA
-			bool bplconflict = false;
-			if (bprun && ddf_stopping == 2) {
-				bool last = islastbplseq();
-				if (last) {
-					bplconflict = true;
-				}
-			}
-
-			if (bprun != 1 || bplconflict) {
-				dodma = true;
+		if (bprun != 1 || bplconflict) {
+			dodma = true;
 #ifdef AGA
-				if (dodma && s->dblscan && (fmode & 0x8000) && (vpos & 1) != (s->vstart & 1) && s->dmastate) {
-					dodma = false;
-				}
+			if (dodma && s->dblscan && (fmode & 0x8000) && (vpos & 1) != (s->vstart & 1) && s->dmastate) {
+				dodma = false;
+			}
 #endif
-				if (dodma) {
-					uae_u32 dat = CYCLE_PIPE_SPRITE | (s->dmastate ? 0x10 : 0x00) | (s->dmacycle == 1 ? 0 : 8) | num;
-					int reg = 0x140 + slot + num * 8 + (s->dmastate ? 4 : 0);
-					struct rgabuf *rga = write_rga(RGA_SLOT_BPL, CYCLE_SPRITE, reg, NULL);
-					evt_t c = get_cycles();
-					if (c == sprite_dma_change_cycle_on) {
-						// If sprite DMA is switched on just when sprite DMA is decided, channel is still decided but it is not allocated!
-						// Blitter can use this cycle, causing a conflict.
-						rga->alloc = 0;
-						rga->conflict = &s->pt;
-					}
-					rga->sprdat = dat;
+			if (dodma) {
+				uae_u32 dat = CYCLE_PIPE_SPRITE | (s->dmastate ? 0x10 : 0x00) | (s->dmacycle == 1 ? 0 : 8) | num;
+				int reg = 0x140 + slot * 2 + num * 8 + (s->dmastate ? 4 : 0);
+				struct rgabuf *rga = write_rga(RGA_SLOT_BPL, CYCLE_SPRITE, reg, NULL);
+				evt_t c = get_cycles();
+				if (c == sprite_dma_change_cycle_on) {
+					// If sprite DMA is switched on just when sprite DMA is decided, channel is still decided but it is not allocated!
+					// Blitter can use this cycle, causing a conflict.
+					rga->alloc = 0;
+					rga->conflict = &s->pt;
 				}
+				rga->sprdat = dat;
 			}
 		}
-		if (s->dmacycle) {
-			s->dmacycle++;
-			if (s->dmacycle > 2) {
-				s->dmacycle = 0;
-				if (s->dmastate) {
-					s->dmacycle = 1;
-				}
+	}
+	if (s->dmacycle) {
+		s->dmacycle++;
+		if (s->dmacycle > 2) {
+			s->dmacycle = 0;
+			if (s->dmastate) {
+				s->dmacycle = 1;
 			}
 		}
 	}
@@ -9855,114 +9892,130 @@ static void generate_sprites(int num, int slot)
 #define DMAL_AUD2 (1 << 10)
 #define DMAL_AUD3 (1 << 11)
 // sprites have earlier DMA decisions
-#define DMAL_SPR0A (1 << 11)
-#define DMAL_SPR0B (1 << 12)
-#define DMAL_SPR1A (1 << 13)
-#define DMAL_SPR1B (1 << 14)
-#define DMAL_SPR2A (1 << 15)
-#define DMAL_SPR2B (1 << 16)
-#define DMAL_SPR3A (1 << 17)
-#define DMAL_SPR3B (1 << 18)
-#define DMAL_SPR4A (1 << 19)
-#define DMAL_SPR4B (1 << 20)
-#define DMAL_SPR5A (1 << 21)
-#define DMAL_SPR5B (1 << 22)
-#define DMAL_SPR6A (1 << 23)
-#define DMAL_SPR6B (1 << 24)
-#define DMAL_SPR7A (1 << 25)
-#define DMAL_SPR7B (1 << 26)
+#define DMAL_SPR (1 << 11)
+#define DMAL_END_MASK ((1 << 12) - 1)
+
+#define PAULA_DMAL_OFFSET 5
 
 static void process_dmal(uae_u32 v)
 {
-	uae_u16 dmalt = audio_dmal();
-	dmalt <<= (3 * 2);
+	uae_u32 dmalt;
+	dmalt = audio_dmal();
+	dmalt <<= 3 * 2;
 	dmalt |= disk_dmal();
-	dmal = dmalt;
+	paula_dmal_shifter_fast = dmalt;
+#ifdef DEBUGGER
+	paula_dmal_shifter_cnt = -PAULA_DMAL_OFFSET + 1;
+#endif
+	dmalt <<= PAULA_DMAL_OFFSET;
+	paula_dmal_shifter = dmalt;
 	inputdevice_hsync_strobe();
 }
 
 static void start_dmal(void)
 {
-	dmal_shifter |= 2;
-}
-
-static void shift_dmal(void)
-{
-	dmal_shifter <<= 1;
+	agnus_dmal_shifter |= 2;
+	agnus_dmal_alloc = true;
 }
 
 static void handle_dmal(void)
 {
-	if (!dmal_shifter) {
+#ifdef DEBUGGER
+	if (paula_dmal_shifter & 2) {
+		record_dma_event_data2(DMA_EVENT_DMAL, paula_dmal_shifter_cnt);
+	}
+#endif
+
+	if (!agnus_dmal_shifter && agnus_dmal_sprite_enable < 0) {
 		return;
 	}
 
-	if (agnus_hpos & 1) {
-		if (!custom_disabled && !agnus_vb_active && (dmal_shifter & (DMAL_SPR0A | DMAL_SPR1A | DMAL_SPR2A | DMAL_SPR3A | DMAL_SPR4A | DMAL_SPR5A | DMAL_SPR6A | DMAL_SPR7A |
-			DMAL_SPR0B | DMAL_SPR1B | DMAL_SPR2B | DMAL_SPR3B | DMAL_SPR4B | DMAL_SPR5B | DMAL_SPR6B | DMAL_SPR7B))) {
-			for (int nr = 0; nr < 8; nr++) {
-				if (dmal_shifter & (DMAL_SPR0A << (nr * 2))) {
-					generate_sprites(nr, 0);
-				}
-				if (dmal_shifter & (DMAL_SPR0A << (nr * 2 + 1))) {
-					generate_sprites(nr, 2);
-				}
+	// sprites
+	if ((agnus_hpos & 3) == 2) {
+		// only cycle when sprite block loads DMAL shifter token.
+		if (agnus_dmal_shifter & DMAL_SPR) {
+			// don't clear DMAL_SPR because it is also token for AUD3
+			agnus_dmal_shifter &= DMAL_END_MASK;
+			if (!custom_disabled && !agnus_vb_active) {
+				agnus_dmal_sprite_enable = 0;
+			}
+		} else if (agnus_dmal_sprite_enable >= 0) {		
+			agnus_dmal_sprite_enable++;
+			if (agnus_dmal_sprite_enable >= 8) {
+				agnus_dmal_sprite_enable = -1;
 			}
 		}
+		agnus_dmal_sprite_enable2 = 0;
 	}
-
 	if (agnus_hpos & 1) {
+		if (agnus_dmal_sprite_enable >= 0 && agnus_dmal_sprite_enable2 < 2) {
+			if (!custom_disabled && !agnus_vb_active) {
+				generate_sprites(agnus_dmal_sprite_enable, agnus_dmal_sprite_enable2);
+				agnus_dmal_sprite_enable2++;
+			}
+		}
+		// Generate cycle allocation signal (1 CCK before DMA request)
+		agnus_dmal_alloc = false;
+		if (((paula_dmal_shifter & 4) && (agnus_dmal_shifter & ((DMAL_DSK0 | DMAL_DSK1 | DMAL_DSK2 | DMAL_AUD0 | DMAL_AUD1 | DMAL_AUD2 | DMAL_AUD3) >> 1)))
+			||
+			(agnus_dmal_shifter & ((DMAL_REFRESH1 | DMAL_REFRESH2 | DMAL_REFRESH3) >> 1))
+			) {
+			agnus_dmal_alloc = true;
+		}
 		return;
 	}
 
-	if (dmaen(DMA_AUD0 | DMA_AUD1 | DMA_AUD2 | DMA_AUD3) && ((dmal >> (2 * 3)) & 255) && (dmal_shifter & (DMAL_AUD0 | DMAL_AUD1 | DMAL_AUD2 | DMAL_AUD3))) {
-		for (int nr = 0; nr < 4; nr++) {
-			if (dmal_shifter & (DMAL_AUD0 << nr)) {
-				uae_u32 dmalbits = (dmal >> ((3 + nr) * 2)) & 3;
-				if (dmalbits & 2) {
+	bool paula_dmal_bit = (paula_dmal_shifter & 2) != 0;
+	if (paula_dmal_bit) {
+		bool paula_dmal_2nd_bit = (paula_dmal_shifter & 1) != 0;
+
+		// audio
+		if (agnus_dmal_shifter & (DMAL_AUD0 | DMAL_AUD1 | DMAL_AUD2 | DMAL_AUD3)) {
+			for (int nr = 0; nr < 4; nr++) {
+				if (agnus_dmal_shifter & (DMAL_AUD0 << nr)) {
 					uaecptr *pt = audio_getpt(nr);
-					struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_AUDIO, 0xaa + nr * 16, pt);
-					rga->auddat = dmalbits | (((3 + nr) * 2) << 8);
+					struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_AUDIO, 0xaa + nr * 16, pt, agnus_dmal_alloc);
+					// second bit is pointer reload
+					rga->auddat = (paula_dmal_2nd_bit ? 0x100 : 0) | nr;
 				}
 			}
 		}
-	}
 
-	if (dmaen(DMA_DISK) && (((dmal >> 0) & 63) && (dmal_shifter & (DMAL_DSK0 | DMAL_DSK1 | DMAL_DSK2)))) {
-		for (int nr = 0; nr < 3; nr++) {
-			if (dmal_shifter & (DMAL_DSK0 << nr)) {
-				uae_u32 dmalbits = (dmal >> (0 + nr * 2)) & 3;
-				int w = (dmalbits & 3) == 3;
-				if (dmalbits) {
+		// disk
+		if (agnus_dmal_shifter & (DMAL_DSK0 | DMAL_DSK1 | DMAL_DSK2)) {
+			for (int nr = 0; nr < 3; nr++) {
+				if (agnus_dmal_shifter & (DMAL_DSK0 << nr)) {
 					uaecptr *pt = disk_getpt();
-					struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_DISK, w ? 0x26 : 0x08, pt);
-					rga->dskdat = nr;
+					// second bit is read/write
+					struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_DISK, paula_dmal_2nd_bit ? 0x26 : 0x08, pt, agnus_dmal_alloc);
+					rga->dskdat = (paula_dmal_2nd_bit ? 0x100 : 0) | nr;
 				}
 			}
 		}
 	}
 
-	if (dmal_shifter & (DMAL_REFRESH0 | DMAL_REFRESH1 | DMAL_REFRESH2 | DMAL_REFRESH3)) {
-		if (dmal_shifter & DMAL_REFRESH0) {
+	// refresh
+	if (agnus_dmal_shifter & (DMAL_REFRESH0 | DMAL_REFRESH1 | DMAL_REFRESH2 | DMAL_REFRESH3)) {
+		if (agnus_dmal_shifter & DMAL_REFRESH0) {
 			uae_u16 reg = get_strobe_reg(0);
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_STROBE, reg, &refptr);
+			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_STROBE, reg, &refptr, agnus_dmal_alloc);
 			rga->refdat = 0;
 		}
-		if (dmal_shifter & DMAL_REFRESH1) {
+		if (agnus_dmal_shifter & DMAL_REFRESH1) {
 			uae_u16 reg = get_strobe_reg(1);
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_REFRESH, reg, &refptr);
+			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, reg, &refptr, agnus_dmal_alloc);
 			rga->refdat = 1;
 		}
-		if (dmal_shifter & DMAL_REFRESH2) {
+		if (agnus_dmal_shifter & DMAL_REFRESH2) {
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr);
+			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr, agnus_dmal_alloc);
 			rga->refdat = 2;
 		}
-		if (dmal_shifter & DMAL_REFRESH3) {
+		if (agnus_dmal_shifter & DMAL_REFRESH3) {
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr);
+			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr, agnus_dmal_alloc);
 			rga->refdat = 3;
 		}
 	}
@@ -10247,16 +10300,16 @@ static void check_vsyncs(void)
 			agnus_pvb_end_line = false;
 			update_agnus_vb();
 		}
-		if (vpos == bplhstop) {
+		if (vpos == bplhstop_v) {
 			uhres_bpl = false;
 		}
-		if (vpos == bplhstrt) {
+		if (vpos == bplhstrt_v) {
 			uhres_bpl = true;
 		}
-		if (vpos == sprhstop) {
+		if (vpos == sprhstop_v) {
 			uhres_spr = false;
 		}
-		if (vpos == sprhstrt) {
+		if (vpos == sprhstrt_v) {
 			uhres_spr = true;
 		}
 	}
@@ -10754,37 +10807,6 @@ static void draw_line(int ldvpos, bool finalseg, bool borderline)
 	rga_denise_cycle_count_start = rga_denise_cycle_count_end;
 }
 
-static void dmal_fast(void)
-{
-	process_dmal(0);
-	for (int nr = 0; nr < 4; nr++) {
-		uae_u32 dmalbits = (dmal >> ((3 + nr) * 2)) & 3;
-		if (dmalbits) {
-			struct rgabuf r = { 0 };
-			r.p = audio_getpt(nr);
-			r.pv = *r.p;
-			dmal_emu_audio(&r, nr);
-			r.pv += 2;
-			if (dmalbits & 1) {
-				r.pv = audio_getloadpt(nr);
-			}
-			*r.p = r.pv;
-		}
-	}
-	for (int nr = 0; nr < 3; nr++) {
-		uae_u32 dmalbits = (dmal >> (0 + nr * 2)) & 3;
-		int w = (dmalbits & 3) == 3;
-		if (dmalbits) {
-			struct rgabuf r = { 0 };
-			r.p = disk_getpt();
-			r.pv = *r.p;
-			dmal_emu_disk(&r, nr, w);
-			r.pv += 2;
-			*r.p = r.pv;
-		}
-	}
-}
-
 static void do_draw_line(void)
 {
 	start_draw_denise();
@@ -10992,13 +11014,13 @@ static int can_fast_custom(void)
 static void do_imm_dmal(void)
 {
 	process_dmal(0);
-	uae_u32 dmal_d = dmal;
+	uae_u32 dmal_d = paula_dmal_shifter_fast;
 
 	// "immediate" audio DMA
 	if (dmaen(DMA_AUD0 | DMA_AUD1 | DMA_AUD2 | DMA_AUD3) && ((dmal_d >> (3 * 2)) & 255)) {
 		for (int nr = 0; nr < 4; nr++) {
-			uae_u32 dmalbits = (dmal_d >> ((3 + nr) * 2)) & 3;
-			if (dmalbits) {
+			int dmalbits = (dmal_d >> ((3 + nr) * 2)) & 3;
+			if (dmalbits & 2) {
 				struct rgabuf r = { 0 };
 				uaecptr *pt = audio_getpt(nr);
 				r.pv = *pt;
@@ -11014,20 +11036,21 @@ static void do_imm_dmal(void)
 	// "immediate" disk DMA
 	if (dmaen(DMA_DISK) && (((dmal_d >> 0) & 63))) {
 		for (int nr = 0; nr < 3; nr++) {
-			uae_u32 dmalbits = (dmal_d >> (0 + nr * 2)) & 3;
-			if (dmalbits) {
-				int w = (dmalbits & 3) == 3;
+			int dmalbits = (dmal_d >> ((0 + nr) * 2)) & 3;
+			if (dmalbits & 2) {
+				int w = (dmalbits & 1) != 0;
 				struct rgabuf r = { 0 };
 				uaecptr *pt = disk_getpt();
 				r.pv = *pt;
-				dmal_emu_disk(&r, nr, w);
+				dmal_emu_disk(&r, nr, w, true);
 				*pt += 2;
 			}
 		}
 	}
 
-	dmal = 0;
-	dmal_shifter = 0;
+	agnus_dmal_shifter = 0;
+	paula_dmal_shifter = 0;
+	paula_dmal_shifter_fast = 0;
 }
 
 static void sync_equalline_handler(void);
@@ -11845,9 +11868,9 @@ static void handle_rga_out(void)
 			disinc = true;
 #ifdef DEBUGGER
 			if (debug_dma) {
-				record_dma_read(r->reg, *r->p, DMARECORD_REFRESH, (hp - 3) / 2);
-				record_dma_read_value(0xffff);
 				int num = r->refdat;
+				record_dma_read(r->reg, *r->p, DMARECORD_REFRESH, num);
+				record_dma_read_value(0xffff);
 				if (num == 1 && lof_store) {
 					record_dma_event(DMA_EVENT_LOF);
 				}
@@ -12031,14 +12054,14 @@ static void handle_rga_out(void)
 		}
 
 		// AUDIO
-		if (r->reg == 0xaa || r->reg == 0xba || r->reg == 0xca || r->reg == 0xda) {
-			int num = (r->reg - 0xaa) / 0x10;
+		if (r->type & CYCLE_AUDIO) {
+			int num = r->auddat & 3;
 			uaecptr pt = r->pv;
 			dmal_emu_audio(r, num);
 			if (!disinc) {
 				pt += 2;
 			}
-			if (r->auddat & 1) {
+			if (r->auddat & 0x100) {
 				pt = audio_getloadpt(num);
 			}
 			*r->p = pt;
@@ -12047,9 +12070,9 @@ static void handle_rga_out(void)
 		}
 
 		// DISK
-		if (r->reg == 0x08 || r->reg == 0x26) {
+		if (r->type & CYCLE_DISK) {
 			uaecptr pt = r->pv;
-			dmal_emu_disk(r, r->dskdat, r->reg == 0x26);
+			dmal_emu_disk(r, r->dskdat & 3, (r->dskdat & 0x100) != 0, false);
 			if (!disinc) {
 				pt += 2;
 				*r->p = pt;
@@ -12059,26 +12082,98 @@ static void handle_rga_out(void)
 		}
 
 		// UHRES BPL
-		if (r->reg == 0x7a) {
+		if (r->type & CYCLE_UHRESBPL) {
 			uaecptr pt = r->pv;
-#ifdef DEBUGGER
-			if (debug_dma) {
-				record_dma_read(r->reg, pt, DMARECORD_UHRESBPL, 0);
+			bool write;
+			// if UHRES is in write mode, previous chipset bus value gets written!
+			if (aga_mode) {
+				write = (bplhstop & 0x8000) != 0;
+			} else {
+				write = (bplcon0 & 0x0020) != 0;
 			}
+			if (write) {
+				uae_u16 v = regs.chipset_latch_rw;
+#ifdef DEBUGGER
+				if (debug_dma) {
+					record_dma_write(r->reg, v, pt, DMARECORD_UHRESBPL, 0);
+					if (r->bplmod) {
+						record_dma_event(DMA_EVENT_MODADD);
+					}
+				}
+				if (memwatch_enabled) {
+					debug_putpeekdma_chipram(pt, v, MW_MASK_BPL_0 << 0, r->reg);
+				}
 #endif
+				chipmem_wput_indirect(pt, v);
+			} else {
+#ifdef DEBUGGER
+				if (debug_dma) {
+					record_dma_read(r->reg, pt, DMARECORD_UHRESBPL, 0);
+					if (r->bplmod) {
+						record_dma_event(DMA_EVENT_MODADD);
+					}
+				}
+				if (memwatch_enabled) {
+					debug_getpeekdma_chipram(pt, MW_MASK_BPL_0 << 0, r->reg);
+				}
+#endif
+				uae_u16 v = chipmem_wget_indirect(pt);
+				regs.chipset_latch_rw = v;
+#ifdef DEBUGGER
+				if (memwatch_enabled) {
+					debug_getpeekdma_value(v);
+				}
+				if (debug_dma) {
+					record_dma_read_value(v);
+				}
+#endif
+			}
 			pt += 2 + r->bplmod;
 			*r->p = pt;
 			hhbpl = pt;
 			done = true;
 		}
 		// UHRES SPR
-		if (r->reg == 0x78) {
+		if (r->type & CYCLE_UHRESSPR) {
 			uaecptr pt = r->pv;
-#ifdef DEBUGGER
-			if (debug_dma) {
-				record_dma_read(r->reg, pt, DMARECORD_UHRESSPR, 0);
+			bool write;
+			// if UHRES is in write mode, previous chipset bus value gets written!
+			if (aga_mode) {
+				write = (sprhstop & 0x8000) != 0;
+			} else {
+				write = (bplcon0 & 0x0010) != 0;
 			}
+			if (write) {
+				uae_u16 v = regs.chipset_latch_rw;
+				chipmem_wput_indirect(pt, v);
+#ifdef DEBUGGER
+				if (debug_dma) {
+					record_dma_write(r->reg, v, pt, DMARECORD_UHRESSPR, 0);
+				}
+				if (memwatch_enabled) {
+					debug_putpeekdma_chipram(pt, v, MW_MASK_SPR_0 << 0, r->reg);
+				}
 #endif
+			} else {
+#ifdef DEBUGGER
+				if (debug_dma) {
+					record_dma_read(r->reg, pt, DMARECORD_UHRESSPR, 0);
+				}
+				if (memwatch_enabled) {
+					debug_getpeekdma_chipram(pt, MW_MASK_SPR_0 << 0, r->reg);
+				}
+#endif
+				uae_u16 v = chipmem_wget_indirect(pt);
+				regs.chipset_latch_rw = v;
+#ifdef DEBUGGER
+				if (memwatch_enabled) {
+					debug_getpeekdma_value(v);
+				}
+				if (debug_dma) {
+					record_dma_read_value(v);
+				}
+#endif
+			}
 			pt += 2;
 			*r->p = pt;
 			hhspr = pt;
@@ -12113,14 +12208,24 @@ static void handle_rga_out(void)
 	}
 }
 
+static void shift_dmal(void)
+{
+	bool prev = (agnus_hpos & 1) == 0;
+	if (agnus_even_prev && !prev) {
+		agnus_dmal_shifter <<= 1;
+	}
+	agnus_even_prev = prev;
+
+	paula_dmal_shifter >>= 1;
+#ifdef DEBUGGER
+	paula_dmal_shifter_cnt++;
+#endif
+}
+
 static void generate_dmal(void)
 {
 	handle_dmal();
-
-	// even cycles only
-	if (!(agnus_hpos_prev & 1) && (agnus_hpos & 1)) {
-		shift_dmal();
-	}
+	shift_dmal();
 }
 
 static void generate_dma_requests(void)
@@ -12194,7 +12299,6 @@ static void do_cck(bool docycles)
 	if (custom_fastmode <= 0) {
 		generate_dmal();
 	}
-
 }
 
 static uae_u16 quick_strobe(void)
