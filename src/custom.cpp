@@ -12118,6 +12118,7 @@ static void handle_rga_out(void)
 				}
 #endif
 				uae_u16 v = chipmem_wget_indirect(pt);
+				regs.chipset_latch_rw = v;
 #ifdef DEBUGGER
 				if (memwatch_enabled) {
 					debug_getpeekdma_value(v);
@@ -12163,6 +12164,7 @@ static void handle_rga_out(void)
 				}
 #endif
 				uae_u16 v = chipmem_wget_indirect(pt);
+				regs.chipset_latch_rw = v;
 #ifdef DEBUGGER
 				if (memwatch_enabled) {
 					debug_getpeekdma_value(v);
