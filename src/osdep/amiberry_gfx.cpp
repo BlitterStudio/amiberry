@@ -135,6 +135,12 @@ constexpr int auto_crop_horizontal_jitter_tolerance = 2;
 // the first check after the pause; the periodic scan interval bounds any
 // delay regardless.
 constexpr int auto_crop_trigger_backoff = 8;
+
+// Frames a smaller scan result must persist (with an unchanged register base
+// and surface) before the presented crop shrinks to it. Absorbs rect
+// alternation from software that strobes full-surface effect frames between
+// smaller pictures; growth and base changes are never delayed.
+constexpr int auto_crop_shrink_hold_frames = 12;
 // Content-scan duty cycle for auto-crop. The DIW/DDF register window is the
 // crop base; the scan only expands beyond it for border effects, so it runs
 // when the base changes or every Nth frame. Odd so that successive periodic
@@ -2308,6 +2314,10 @@ void auto_crop_image()
 				|| last_autocrop != currprefs.gfx_auto_crop
 				|| (scan_frame % auto_crop_scan_interval) == 0;
 			if (!scan_due && last_scan_rect.w > 0 && last_scan_rect.h > 0) {
+				// The back-off only pauses the change check; the last scan's
+				// rect is still the presented crop on these frames.
+				crop_rect = last_scan_rect;
+				clamp_auto_crop_rect(surface, crop_rect);
 				if (trigger_backoff > 0) {
 					trigger_backoff--;
 				} else {
@@ -2318,10 +2328,7 @@ void auto_crop_image()
 							{ last_scan_rect.x, last_scan_rect.y,
 								last_scan_rect.w, last_scan_rect.h },
 							scan_state.outside_signature);
-					if (!outside_changed) {
-						crop_rect = last_scan_rect;
-						clamp_auto_crop_rect(surface, crop_rect);
-					} else {
+					if (outside_changed) {
 						scan_due = true;
 						trigger_scan = true;
 					}
@@ -2371,6 +2378,65 @@ void auto_crop_image()
 				last_scan_surface_w = surface_w;
 				last_scan_surface_h = surface_h;
 				scan_count++;
+			}
+
+			// Shrink hysteresis: software that alternates between a large
+			// effect frame and a smaller picture (Pinball Illusions' intro
+			// strobes full-surface raster shots between intro pictures) makes
+			// consecutive scans produce alternating rects, which presents as
+			// aspect flicker. When a scan result is smaller than the presented
+			// rect while the register base and surface are unchanged, keep
+			// presenting the larger rect until the smaller one has persisted
+			// for auto_crop_shrink_hold_frames consecutive frames. Growth and
+			// any register-base/surface change still apply immediately; only a
+			// fresh scan that reproduces or moves the presented rect clears
+			// the pending shrink — frames that merely reuse the last scan's
+			// small result keep counting toward it.
+			static SDL_Rect presented_rect = { 0, 0, 0, 0 };
+			static SDL_Rect presented_base = { 0, 0, 0, 0 };
+			static SDL_Surface* presented_surface = nullptr;
+			static int presented_surface_w = 0, presented_surface_h = 0;
+			static int presented_hres = -1, presented_vres = -1;
+			static SDL_Rect pending_shrink_rect = { 0, 0, 0, 0 };
+			static int pending_shrink_frames = 0;
+			static bool pending_shrink_valid = false;
+			const bool presented_context_matches = presented_surface == surface
+				&& presented_surface_w == surface_w
+				&& presented_surface_h == surface_h
+				&& presented_hres == hres && presented_vres == vres
+				&& presented_base.x == cx && presented_base.y == cy
+				&& presented_base.w == cw && presented_base.h == ch
+				&& presented_rect.w > 0 && presented_rect.h > 0;
+			if (presented_context_matches
+				&& auto_crop_rect_contains(presented_rect, crop_rect)
+				&& !auto_crop_rect_equals(presented_rect, crop_rect)) {
+				if (pending_shrink_valid
+					&& auto_crop_rect_equals(pending_shrink_rect, crop_rect)) {
+					pending_shrink_frames++;
+				} else {
+					pending_shrink_rect = crop_rect;
+					pending_shrink_frames = 0;
+					pending_shrink_valid = true;
+				}
+				if (pending_shrink_valid) {
+					if (pending_shrink_frames >= auto_crop_shrink_hold_frames) {
+						presented_rect = crop_rect;
+						pending_shrink_valid = false;
+					} else {
+						crop_rect = presented_rect;
+						clamp_auto_crop_rect(surface, crop_rect);
+					}
+				}
+			} else if (scan_due
+				|| !auto_crop_rect_equals(presented_rect, crop_rect)) {
+				presented_rect = crop_rect;
+				presented_base = { cx, cy, cw, ch };
+				presented_surface = surface;
+				presented_surface_w = surface_w;
+				presented_surface_h = surface_h;
+				presented_hres = hres;
+				presented_vres = vres;
+				pending_shrink_valid = false;
 			}
 		}
 		cx = crop_rect.x;
