@@ -1802,28 +1802,44 @@ static void configure_render_rects(const int monid, const int w, const int h, co
 		renderer->crop_aspect = 0.0f;
 		// WinUAE parity (od-win32/win32_scaler.cpp, AUTOSCALE_STATIC_NOMINAL):
 		// in full-window mode scale from the nominal visible area instead of
-		// the full overscan frame, presented at 4:3.
+		// the full overscan frame, presented at 4:3. WinUAE applies these
+		// insets to a fixed nominal drawbuffer; the Amiberry output buffer is
+		// the dynamic visible frame, whose size also changes with doubled
+		// modes (e.g. AmigaOS DBLPAL/DBLNTSC doublescan screens) and overscan.
+		// Scale the insets by the ratio between the actual frame and the
+		// nominal PAL/NTSC frame so the crop stays on the nominal visible
+		// area instead of swallowing the extra doubled/border lines.
 		if (isfullscreen() < 0 && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA) {
 			const int hs = currprefs.gfx_resolution;
 			const int vs = currprefs.gfx_vresolution;
-			int cx = 28 << hs;
-			int cy = 10 << vs;
-			int cw = w - (40 << hs);
-			int ch = h - (20 << vs);
-			if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-				cx -= 4 << hs;
-				cy -= 2 << vs;
-				cw += 8 << hs;
-				ch += 4 << vs;
-			} else if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
-				cx -= 7 << hs;
-				cy -= 10 << vs;
-				cw += 14 << hs;
-				ch += 20 << vs;
-			}
-			if (cx >= 0 && cy >= 0 && cw > 0 && ch > 0 && cx + cw <= w && cy + ch <= h) {
-				cr = { cx, cy, cw, ch };
-				renderer->crop_aspect = 4.0f / 3.0f;
+			const bool ntsc = vblank_hz > 55.0f;
+			const int nominal_w = AMIGA_WIDTH_MAX << hs;
+			const int nominal_h = (ntsc ? AMIGA_HEIGHT_MAX_NTSC : AMIGA_HEIGHT_MAX_PAL) << vs;
+			if (nominal_w > 0 && nominal_h > 0 && w > 0 && h > 0) {
+				const float sx = static_cast<float>(w) / static_cast<float>(nominal_w);
+				const float sy = static_cast<float>(h) / static_cast<float>(nominal_h);
+				auto inset = [](const int base, const float scale) {
+					return static_cast<int>(base * scale + 0.5f);
+				};
+				int cx = inset(28 << hs, sx);
+				int cy = inset(10 << vs, sy);
+				int cw = w - inset(40 << hs, sx);
+				int ch = h - inset(20 << vs, sy);
+				if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
+					cx -= inset(4 << hs, sx);
+					cy -= inset(2 << vs, sy);
+					cw += inset(8 << hs, sx);
+					ch += inset(4 << vs, sy);
+				} else if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
+					cx -= inset(7 << hs, sx);
+					cy -= inset(10 << vs, sy);
+					cw += inset(14 << hs, sx);
+					ch += inset(20 << vs, sy);
+				}
+				if (cx >= 0 && cy >= 0 && cw > 0 && ch > 0 && cx + cw <= w && cy + ch <= h) {
+					cr = { cx, cy, cw, ch };
+					renderer->crop_aspect = 4.0f / 3.0f;
+				}
 			}
 		}
 	}
