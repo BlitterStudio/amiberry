@@ -2312,6 +2312,12 @@ void auto_crop_image()
 				&& last_scan_hres == hres && last_scan_vres == vres
 				&& last_scan_base.x == cx && last_scan_base.y == cy
 				&& last_scan_base.w == cw && last_scan_base.h == ch;
+			if (!scan_context_matches && trigger_backoff > 0) {
+				// A context change forces a scan for the new context; an armed
+				// back-off describes animation in the previous one and must
+				// not suppress change checks here.
+				trigger_backoff = 0;
+			}
 			bool scan_due = !scan_context_matches
 				|| force_auto_crop
 				|| last_autocrop != currprefs.gfx_auto_crop
