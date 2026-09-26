@@ -3175,13 +3175,12 @@ static void mousehack_send_native_relative_delta (int mouse, int dx, int dy)
 		if (!v) {
 			continue;
 		}
+		// The delta is already exact in the absolute coordinate space that the
+		// guest's IECLASS_POINTERPOS events anchor to, so per-axis invert flags
+		// must not apply here; inverting only the delta would move the pointer
+		// opposite to the absolute position between guest driver updates.
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT; i++) {
-			const uae_u64 flags = id->flags[ID_AXIS_OFFSET + axis][i];
-			int state = v;
-			if (flags & ID_FLAG_INVERT) {
-				state = -state;
-			}
-			handle_input_event (id->eventid[ID_AXIS_OFFSET + axis][i], state, 0,
+			handle_input_event (id->eventid[ID_AXIS_OFFSET + axis][i], v, 0,
 				HANDLE_IE_FLAG_CANSTOPPLAYBACK);
 		}
 	}
