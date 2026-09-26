@@ -2537,6 +2537,9 @@ static bool mousehack_last_abs_valid;
 static int mousehack_native_origin_x, mousehack_native_origin_y;
 static bool mousehack_native_source_origin_valid;
 static bool mousehack_position_is_native;
+#ifdef AMIBERRY
+static int mousehack_last_mouse;
+#endif
 static int tablet_maxx, tablet_maxy, tablet_maxz;
 static int tablet_resx, tablet_resy;
 static int tablet_maxax, tablet_maxay, tablet_maxaz;
@@ -2669,6 +2672,9 @@ static void mousehack_reset (void)
 	mousehack_native_origin_x = mousehack_native_origin_y = 0;
 	mousehack_native_source_origin_valid = false;
 	mousehack_position_is_native = false;
+#ifdef AMIBERRY
+	mousehack_last_mouse = 0;
+#endif
 	dimensioninfo_dbl = 0;
 	mousehack_alive_cnt = 0;
 	vp_xoffset = vp_yoffset = 0;
@@ -3150,6 +3156,7 @@ void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay
 	inputdevice_update_tablet_params();
 }
 
+#ifdef AMIBERRY
 // Native-screen magic mouse: the guest only services the absolute
 // IECLASS_POINTERPOS events from the virtual mouse driver at a low rate
 // (Intuition processes them behind its input handling), so the pointer
@@ -3158,10 +3165,10 @@ void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay
 // between two consecutively delivered absolute positions into the relative
 // mouse pipeline so the pointer tracks every counter update; the absolute
 // events still anchor the exact position, so there is no double movement.
-static void mousehack_send_native_relative_delta (int dx, int dy)
+static void mousehack_send_native_relative_delta (int mouse, int dx, int dy)
 {
 	const int delta[2] = { dx, dy };
-	struct uae_input_device *id = &mice[0];
+	struct uae_input_device *id = &mice[mouse];
 
 	for (int axis = 0; axis < 2; axis++) {
 		const int v = delta[axis];
@@ -3179,6 +3186,7 @@ static void mousehack_send_native_relative_delta (int dx, int dy)
 		}
 	}
 }
+#endif // AMIBERRY
 
 static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_valid)
 {
@@ -3218,19 +3226,23 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 #endif
 
 	mousehack_enable ();
+#ifdef AMIBERRY
 	const int previous_abs_x = mousehack_last_abs_x;
 	const int previous_abs_y = mousehack_last_abs_y;
 	const bool previous_abs_valid = mousehack_last_abs_valid;
+#endif // AMIBERRY
 	// Keep the coordinate delivered after native screen-origin and host-hotspot
 	// compensation. The guest positions its native sprite from this coordinate,
 	// so their delta is the cursor hotspot.
 	mousehack_last_abs_x = x;
 	mousehack_last_abs_y = y;
 	mousehack_last_abs_valid = position_valid && mousehack_address;
+#ifdef AMIBERRY
 	if (position_valid && previous_abs_valid && currprefs.input_tablet == TABLET_MOUSEHACK
 		&& mousehack_alive () && mousehack_position_is_native) {
-		mousehack_send_native_relative_delta (x - previous_abs_x, y - previous_abs_y);
+		mousehack_send_native_relative_delta (mousehack_last_mouse, x - previous_abs_x, y - previous_abs_y);
 	}
+#endif // AMIBERRY
 	if (mousehack_address) {
 		uae_u8 tmp1[4], tmp2[4];
 		uae_u8 *p = mousehack_address;
@@ -10504,8 +10516,12 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 				lastmx = data;
 			else
 				lastmy = data;
-			if (axis)
+			if (axis) {
+#ifdef AMIBERRY
+				mousehack_last_mouse = mouse;
+#endif
 				mousehack_helper (mice2[mouse].buttonmask);
+			}
 		}
 #if OUTPUTDEBUG
 		OutputDebugString(_T("-> exit2\n"));
@@ -10537,8 +10553,12 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 		} else {
 			lastmy = data;
 		}
-		if (axis)
+		if (axis) {
+#ifdef AMIBERRY
+			mousehack_last_mouse = mouse;
+#endif
 			mousehack_helper (mice2[mouse].buttonmask);
+		}
 		if (currprefs.input_tablet == TABLET_MOUSEHACK && mousehack_alive() && axis < 2) {
 #if OUTPUTDEBUG
 			OutputDebugString(_T("-> exit4\n"));
