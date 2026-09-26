@@ -60,6 +60,9 @@ struct AmiberryAutoCropScanState {
 	// The last perimeter-detected border, kept so an interlaced scan can still
 	// recognize the generation the other field was drawn with.
 	AmiberryAutoCropBorderColors previous_border{};
+	// Sampled colors of the outside regions at the last observation; the
+	// between-scan trigger fires only when a sampled pixel changed.
+	std::vector<uint32_t> outside_signature;
 };
 
 static inline bool amiberry_auto_crop_border_state_changed(
@@ -308,6 +311,129 @@ static inline void amiberry_auto_crop_get_outside_regions(
 	regions[1] = { 0, crop.y, crop.x, crop.h };
 	regions[2] = { right, crop.y, buffer.width - right, crop.h };
 	regions[3] = { 0, bottom, buffer.width, buffer.height - bottom };
+}
+
+// Detects whether the outside regions changed since the last observation by
+// comparing a color-agnostic signature sampled on a two-pass grid: every row
+// reads every 32nd column and every column reads every 32nd row. Components
+// of roughly a thousand pixels are hit within one frame; real content is
+// caught far below that because text and dithered graphics scatter changed
+// pixels across many lattice points, and anything smaller still falls back to
+// the periodic scan interval. The grid is deliberately coarser than the
+// scan's component threshold: the signature runs every frame, so its
+// per-frame cost must stay far below the scan it guards, and tiny transients
+// outside the register window are not worth a full flood-fill scan. The
+// comparison carries no color semantics: any sampled pixel that differs from
+// the last observation is exactly the condition under which the expansion's
+// outcome could differ, while stable sub-threshold specks the last scan
+// already rejected keep matching the signature and stay silent. The
+// signature is refreshed on every call, so the triggering frame
+// re-baselines itself.
+static inline bool amiberry_auto_crop_outside_regions_changed(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
+	std::vector<uint32_t>& signature)
+{
+	if (!amiberry_auto_crop_buffer_valid(buffer)) {
+		return true;
+	}
+	// Compare and update in place: the stable path performs no allocation
+	// and no writes, and a differing sample only rewrites its own slot.
+	constexpr int stride = 32;
+	size_t index = 0;
+	bool changed = false;
+	const bool first_observation = signature.empty();
+	auto visit = [&](const uint32_t rgb) {
+		if (index < signature.size()) {
+			if (signature[index] != rgb) {
+				changed = true;
+				signature[index] = rgb;
+			}
+		} else {
+			signature.push_back(rgb);
+		}
+		index++;
+	};
+	AmiberryAutoCropRect regions[4];
+	amiberry_auto_crop_get_outside_regions(buffer, rect, regions);
+	for (const auto& region : regions) {
+		const int right = amiberry_auto_crop_rect_right(region);
+		const int bottom = amiberry_auto_crop_rect_bottom(region);
+		for (int y = region.y; y < bottom; y++) {
+			for (int x = region.x; x < right; x += stride) {
+				visit(amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
+			}
+		}
+		for (int x = region.x; x < right; x++) {
+			for (int y = region.y; y < bottom; y += stride) {
+				visit(amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
+			}
+		}
+	}
+	if (signature.size() != index) {
+		// The sampled area itself changed (surface or rect geometry).
+		signature.resize(index);
+		changed = true;
+	}
+	return changed && !first_observation;
+}
+
+// Reports, per side, whether that side's perimeter band just inside the
+// rect is entirely border-colored — the cheap per-frame signal that the
+// crop rect may be too large (content moved inward, e.g. after full-surface
+// effect shots). Sides are judged independently because stale area often
+// remains on one side only, and per-side reporting lets the caller track
+// confirmations independently: a side that legitimately shows border inside
+// the register window (a status panel, a letterboxed picture) must not
+// mask a transition on another side. The outside-region signature cannot
+// see any of this: the change happens inside the rect. Sampled on a coarse
+// stride so the per-frame cost stays negligible. Band extents are bounded
+// by the rect dimensions so undersized rects cannot read outside the
+// pixel buffer.
+static inline void amiberry_auto_crop_inside_band_empty_sides(
+	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
+	const AmiberryAutoCropBorderColors& border, bool (&sides_empty)[4])
+{
+	sides_empty[0] = sides_empty[1] = sides_empty[2] = sides_empty[3] = false;
+	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count == 0
+		|| rect.w <= 0 || rect.h <= 0) {
+		return;
+	}
+	constexpr int band = 4;
+	constexpr int stride = 16;
+	const int left = rect.x;
+	const int top = rect.y;
+	const int right = amiberry_auto_crop_rect_right(rect) - 1;
+	const int bottom = amiberry_auto_crop_rect_bottom(rect) - 1;
+	const int xband = std::min(band, rect.w);
+	const int yband = std::min(band, rect.h);
+	const auto is_border = [&](const int x, const int y) {
+		return amiberry_auto_crop_border_matches(border,
+			amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
+	};
+	const auto column_side_empty = [&](const int x0, const int dx) {
+		for (int y = top; y <= bottom; y += stride) {
+			for (int b = 0; b < xband; b++) {
+				if (!is_border(x0 + dx * b, y)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	};
+	const auto row_side_empty = [&](const int y0, const int dy) {
+		for (int x = left; x <= right; x += stride) {
+			for (int b = 0; b < yband; b++) {
+				if (!is_border(x, y0 + dy * b)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	};
+	sides_empty[0] = column_side_empty(left, 1);
+	sides_empty[1] = column_side_empty(right, -1);
+	sides_empty[2] = row_side_empty(top, 1);
+	sides_empty[3] = row_side_empty(bottom, -1);
 }
 
 // Woven is a template parameter so the far more common single-color border
@@ -827,7 +953,6 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 			}
 		}
 	}
-
 	if (changed) {
 		crop = expanded;
 	}
