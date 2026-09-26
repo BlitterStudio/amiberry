@@ -139,8 +139,10 @@ constexpr int auto_crop_trigger_backoff = 8;
 // Frames a smaller scan result must persist (with an unchanged register base
 // and surface) before the presented crop shrinks to it. Absorbs rect
 // alternation from software that strobes full-surface effect frames between
-// smaller pictures; growth and base changes are never delayed.
-constexpr int auto_crop_shrink_hold_frames = 12;
+// smaller pictures; growth and base changes are never delayed. Kept short:
+// a delayed settle is visible for the whole hold, while a wrong shrink
+// during effect strobing is masked by the strobing itself.
+constexpr int auto_crop_shrink_hold_frames = 6;
 // Content-scan duty cycle for auto-crop. The DIW/DDF register window is the
 // crop base; the scan only expands beyond it for border effects, so it runs
 // when the base changes or every Nth frame. Odd so that successive periodic
@@ -2302,6 +2304,7 @@ void auto_crop_image()
 			static int last_scan_surface_w = 0, last_scan_surface_h = 0;
 			static unsigned scan_frame = 0;
 			static int trigger_backoff = 0;
+			static bool inside_band_confirmed_empty = false;
 			bool trigger_scan = false;
 			scan_frame++;
 			const bool scan_context_matches = last_scan_surface == surface
@@ -2322,8 +2325,9 @@ void auto_crop_image()
 					trigger_backoff--;
 				} else {
 					AmiberryAutoCropPixelBuffer outside_buffer;
-					const bool outside_changed = get_auto_crop_pixel_buffer(
-							surface, outside_buffer)
+					const bool buffer_valid = get_auto_crop_pixel_buffer(
+						surface, outside_buffer);
+					const bool outside_changed = buffer_valid
 						&& amiberry_auto_crop_outside_regions_changed(outside_buffer,
 							{ last_scan_rect.x, last_scan_rect.y,
 								last_scan_rect.w, last_scan_rect.h },
@@ -2331,6 +2335,34 @@ void auto_crop_image()
 					if (outside_changed) {
 						scan_due = true;
 						trigger_scan = true;
+					} else {
+						// Stale-rect detector: when the held crop is too
+						// large, the perimeter band just inside it turns
+						// border-colored while the real content moved
+						// inward — a change the outside signature cannot
+						// see because it happens inside the rect (e.g. a
+						// settled intro picture after full-surface strobe
+						// shots). Confirm-then-stay-quiet: an empty band
+						// triggers one scan; the scan either shrinks the
+						// rect or confirms the band is legitimately empty,
+						// and the flag only re-arms when the band gains
+						// content again or a scan refreshes the border
+						// colors.
+						const bool inside_band_empty = buffer_valid
+							&& amiberry_auto_crop_inside_band_is_border(
+								outside_buffer,
+								{ last_scan_rect.x, last_scan_rect.y,
+									last_scan_rect.w, last_scan_rect.h },
+								scan_state.border);
+						if (inside_band_empty) {
+							if (!inside_band_confirmed_empty) {
+								scan_due = true;
+								trigger_scan = true;
+							}
+							inside_band_confirmed_empty = true;
+						} else {
+							inside_band_confirmed_empty = false;
+						}
 					}
 				}
 			}
