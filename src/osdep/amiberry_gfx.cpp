@@ -2304,7 +2304,7 @@ void auto_crop_image()
 			static int last_scan_surface_w = 0, last_scan_surface_h = 0;
 			static unsigned scan_frame = 0;
 			static int trigger_backoff = 0;
-			static bool inside_band_confirmed_empty = false;
+			static unsigned inside_band_confirmed_mask = 0;
 			bool trigger_scan = false;
 			scan_frame++;
 			const bool scan_context_matches = last_scan_surface == surface
@@ -2348,27 +2348,36 @@ void auto_crop_image()
 						// inward — a change the outside signature cannot
 						// see because it happens inside the rect (e.g. a
 						// settled intro picture after full-surface strobe
-						// shots). Confirm-then-stay-quiet: an empty band
-						// triggers one scan; the scan either shrinks the
-						// rect or confirms the band is legitimately empty,
-						// and the flag only re-arms when the band gains
-						// content again or a scan refreshes the border
-						// colors.
-						const bool inside_band_empty = buffer_valid
-							&& amiberry_auto_crop_inside_band_is_border(
+						// shots).
+						// Per-side confirm-then-stay-quiet: a side turning
+						// empty triggers one scan; the scan either shrinks
+						// the rect or confirms that side legitimately shows
+						// border inside the register window, and each side's
+						// confirmation only re-arms when that side gains
+						// content again — an always-border side cannot mask
+						// a transition on another side.
+						bool band_sides_empty[4];
+						if (buffer_valid) {
+							amiberry_auto_crop_inside_band_empty_sides(
 								outside_buffer,
 								{ last_scan_rect.x, last_scan_rect.y,
 									last_scan_rect.w, last_scan_rect.h },
-								scan_state.border);
-						if (inside_band_empty) {
-							if (!inside_band_confirmed_empty) {
-								scan_due = true;
-								trigger_scan = true;
-							}
-							inside_band_confirmed_empty = true;
+								scan_state.border, band_sides_empty);
 						} else {
-							inside_band_confirmed_empty = false;
+							band_sides_empty[0] = band_sides_empty[1]
+								= band_sides_empty[2] = band_sides_empty[3] = false;
 						}
+						unsigned empty_mask = 0;
+						for (int i = 0; i < 4; i++) {
+							empty_mask |= static_cast<unsigned>(band_sides_empty[i]) << i;
+						}
+						const unsigned fire_mask = empty_mask & ~inside_band_confirmed_mask;
+						if (fire_mask != 0) {
+							scan_due = true;
+							trigger_scan = true;
+						}
+						inside_band_confirmed_mask = (inside_band_confirmed_mask | fire_mask)
+							& empty_mask;
 					}
 				}
 			}

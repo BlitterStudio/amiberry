@@ -377,24 +377,26 @@ static inline bool amiberry_auto_crop_outside_regions_changed(
 	return changed && !first_observation;
 }
 
-// True when any one side's perimeter band just inside the rect is entirely
-// border-colored — the cheap per-frame signal that the crop rect may be too
-// large (content moved inward, e.g. after full-surface effect shots). Sides
-// are judged independently because stale area often remains on one side only
-// (Pinball Illusions' intro keeps its picture at the top of the stale rect).
-// The outside-region signature cannot see any of this: the change happens
-// inside the rect. Sampled on a coarse stride so the per-frame cost stays
-// negligible, and used with confirm-then-stay-quiet semantics: a side that
-// legitimately shows border inside the register window (a status panel, a
-// letterboxed picture) costs one confirming scan per empty transition, not
-// one per frame.
-static inline bool amiberry_auto_crop_inside_band_is_border(
+// Reports, per side, whether that side's perimeter band just inside the
+// rect is entirely border-colored — the cheap per-frame signal that the
+// crop rect may be too large (content moved inward, e.g. after full-surface
+// effect shots). Sides are judged independently because stale area often
+// remains on one side only, and per-side reporting lets the caller track
+// confirmations independently: a side that legitimately shows border inside
+// the register window (a status panel, a letterboxed picture) must not
+// mask a transition on another side. The outside-region signature cannot
+// see any of this: the change happens inside the rect. Sampled on a coarse
+// stride so the per-frame cost stays negligible. Band extents are bounded
+// by the rect dimensions so undersized rects cannot read outside the
+// pixel buffer.
+static inline void amiberry_auto_crop_inside_band_empty_sides(
 	const AmiberryAutoCropPixelBuffer& buffer, const AmiberryAutoCropRect& rect,
-	const AmiberryAutoCropBorderColors& border)
+	const AmiberryAutoCropBorderColors& border, bool (&sides_empty)[4])
 {
+	sides_empty[0] = sides_empty[1] = sides_empty[2] = sides_empty[3] = false;
 	if (!amiberry_auto_crop_buffer_valid(buffer) || border.count == 0
 		|| rect.w <= 0 || rect.h <= 0) {
-		return false;
+		return;
 	}
 	constexpr int band = 4;
 	constexpr int stride = 16;
@@ -402,13 +404,15 @@ static inline bool amiberry_auto_crop_inside_band_is_border(
 	const int top = rect.y;
 	const int right = amiberry_auto_crop_rect_right(rect) - 1;
 	const int bottom = amiberry_auto_crop_rect_bottom(rect) - 1;
+	const int xband = std::min(band, rect.w);
+	const int yband = std::min(band, rect.h);
 	const auto is_border = [&](const int x, const int y) {
 		return amiberry_auto_crop_border_matches(border,
 			amiberry_auto_crop_read_pixel(buffer, x, y) & buffer.rgb_mask);
 	};
 	const auto column_side_empty = [&](const int x0, const int dx) {
 		for (int y = top; y <= bottom; y += stride) {
-			for (int b = 0; b < band; b++) {
+			for (int b = 0; b < xband; b++) {
 				if (!is_border(x0 + dx * b, y)) {
 					return false;
 				}
@@ -418,7 +422,7 @@ static inline bool amiberry_auto_crop_inside_band_is_border(
 	};
 	const auto row_side_empty = [&](const int y0, const int dy) {
 		for (int x = left; x <= right; x += stride) {
-			for (int b = 0; b < band; b++) {
+			for (int b = 0; b < yband; b++) {
 				if (!is_border(x, y0 + dy * b)) {
 					return false;
 				}
@@ -426,8 +430,10 @@ static inline bool amiberry_auto_crop_inside_band_is_border(
 		}
 		return true;
 	};
-	return column_side_empty(left, 1) || column_side_empty(right, -1)
-		|| row_side_empty(top, 1) || row_side_empty(bottom, -1);
+	sides_empty[0] = column_side_empty(left, 1);
+	sides_empty[1] = column_side_empty(right, -1);
+	sides_empty[2] = row_side_empty(top, 1);
+	sides_empty[3] = row_side_empty(bottom, -1);
 }
 
 // Woven is a template parameter so the far more common single-color border
