@@ -3239,7 +3239,9 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 	mousehack_last_abs_valid = position_valid && mousehack_address;
 #ifdef AMIBERRY
 	if (position_valid && previous_abs_valid && currprefs.input_tablet == TABLET_MOUSEHACK
-		&& mousehack_alive () && mousehack_position_is_native) {
+		&& mousehack_alive () && mousehack_position_is_native
+		&& mousehack_last_mouse >= 0 && mousehack_last_mouse < MAX_INPUT_DEVICES
+		&& mice[mousehack_last_mouse].enabled) {
 		mousehack_send_native_relative_delta (mousehack_last_mouse, x - previous_abs_x, y - previous_abs_y);
 	}
 #endif // AMIBERRY
