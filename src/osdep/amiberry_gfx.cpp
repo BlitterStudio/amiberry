@@ -2378,6 +2378,21 @@ void auto_crop_image()
 				last_scan_surface_w = surface_w;
 				last_scan_surface_h = surface_h;
 				scan_count++;
+
+				// Re-baseline the outside signature against the scan's own
+				// frame and rect. Without this, the first check after a scan
+				// would adopt whatever that frame shows as the baseline
+				// (empty signature on first activation, stale geometry
+				// otherwise), so new outside content appearing between the
+				// scan and the first check would go unnoticed until the
+				// periodic scan.
+				AmiberryAutoCropPixelBuffer scan_buffer;
+				if (get_auto_crop_pixel_buffer(surface, scan_buffer)) {
+					amiberry_auto_crop_outside_regions_changed(scan_buffer,
+						{ last_scan_rect.x, last_scan_rect.y,
+							last_scan_rect.w, last_scan_rect.h },
+						scan_state.outside_signature);
+				}
 			}
 
 			// Shrink hysteresis: software that alternates between a large
