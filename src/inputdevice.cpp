@@ -3150,6 +3150,36 @@ void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay
 	inputdevice_update_tablet_params();
 }
 
+// Native-screen magic mouse: the guest only services the absolute
+// IECLASS_POINTERPOS events from the virtual mouse driver at a low rate
+// (Intuition processes them behind its input handling), so the pointer
+// moves in visible steps (#2279). The hardware mouse counters, in contrast,
+// are serviced every vsync exactly like normal mouse input. Feed the delta
+// between two consecutively delivered absolute positions into the relative
+// mouse pipeline so the pointer tracks every counter update; the absolute
+// events still anchor the exact position, so there is no double movement.
+static void mousehack_send_native_relative_delta (int dx, int dy)
+{
+	const int delta[2] = { dx, dy };
+	struct uae_input_device *id = &mice[0];
+
+	for (int axis = 0; axis < 2; axis++) {
+		const int v = delta[axis];
+		if (!v) {
+			continue;
+		}
+		for (int i = 0; i < MAX_INPUT_SUB_EVENT; i++) {
+			const uae_u64 flags = id->flags[ID_AXIS_OFFSET + axis][i];
+			int state = v;
+			if (flags & ID_FLAG_INVERT) {
+				state = -state;
+			}
+			handle_input_event (id->eventid[ID_AXIS_OFFSET + axis][i], state, 0,
+				HANDLE_IE_FLAG_CANSTOPPLAYBACK);
+		}
+	}
+}
+
 static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_valid)
 {
 #ifdef AMIBERRY
@@ -3188,12 +3218,19 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 #endif
 
 	mousehack_enable ();
+	const int previous_abs_x = mousehack_last_abs_x;
+	const int previous_abs_y = mousehack_last_abs_y;
+	const bool previous_abs_valid = mousehack_last_abs_valid;
 	// Keep the coordinate delivered after native screen-origin and host-hotspot
 	// compensation. The guest positions its native sprite from this coordinate,
 	// so their delta is the cursor hotspot.
 	mousehack_last_abs_x = x;
 	mousehack_last_abs_y = y;
 	mousehack_last_abs_valid = position_valid && mousehack_address;
+	if (position_valid && previous_abs_valid && currprefs.input_tablet == TABLET_MOUSEHACK
+		&& mousehack_alive () && mousehack_position_is_native) {
+		mousehack_send_native_relative_delta (x - previous_abs_x, y - previous_abs_y);
+	}
 	if (mousehack_address) {
 		uae_u8 tmp1[4], tmp2[4];
 		uae_u8 *p = mousehack_address;
