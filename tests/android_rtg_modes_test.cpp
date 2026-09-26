@@ -222,6 +222,52 @@ int main()
 		android_rtg_remaining_mode_budget(300, 299), out);
 	expect_eq(n, 0, "zero remaining budget must produce no candidates");
 
+	// --- Screen-shaped modes ---
+
+	// A 3200x2136 tablet: every height as wide as the screen, rounded to 16.
+	android_rtg_candidate shaped[android_rtg_screen_mode_count];
+	n = android_rtg_build_screen_modes(host_template, 3200, 2136, plenty_vram,
+		static_cast<int>(android_rtg_screen_mode_count), shaped);
+	expect_eq(n, 4, "a tablet screen must yield all four shaped heights");
+	expect_true(contains_resolution(shaped, n, 720, 480), "tablet 480 must be 720 wide");
+	expect_true(contains_resolution(shaped, n, 896, 600), "tablet 600 must be 896 wide");
+	expect_true(contains_resolution(shaped, n, 1200, 800), "tablet 800 must be 1200 wide");
+	expect_true(contains_resolution(shaped, n, 1536, 1024), "tablet 1024 must be 1536 wide");
+	for (int i = 0; i < n; i++) {
+		expect_eq(shaped[i].width % 16, 0, "shaped widths must be multiples of 16");
+		expect_eq(shaped[i].depth, 4, "shaped entry must carry the template depth");
+		expect_named(shaped[i], "shaped entry must carry the ANDROID suffix");
+	}
+
+	// Portrait reports give the same landscape shapes.
+	android_rtg_candidate shaped_portrait[android_rtg_screen_mode_count];
+	int n_portrait = android_rtg_build_screen_modes(host_template, 2136, 3200, plenty_vram,
+		static_cast<int>(android_rtg_screen_mode_count), shaped_portrait);
+	expect_eq(n_portrait, n, "portrait must yield as many shapes as landscape");
+	for (int i = 0; i < n && i < n_portrait; i++) {
+		expect_eq(shaped_portrait[i].width, shaped[i].width, "portrait width must match landscape");
+		expect_eq(shaped_portrait[i].height, shaped[i].height, "portrait height must match landscape");
+	}
+
+	// A squarer screen (4:3) cannot reach 640 across at 480: exactly 640x480.
+	n = android_rtg_build_screen_modes(host_template, 2048, 1536, plenty_vram,
+		static_cast<int>(android_rtg_screen_mode_count), shaped);
+	expect_true(contains_resolution(shaped, n, 640, 480), "4:3 screen at 480 must be 640 wide");
+
+	// Narrower than 640 is dropped: a 5:4 screen gives 600 at 480.
+	n = android_rtg_build_screen_modes(host_template, 1280, 1024, plenty_vram,
+		static_cast<int>(android_rtg_screen_mode_count), shaped);
+	expect_true(!contains_resolution(shaped, n, 608, 480), "a width under 640 must be dropped");
+	expect_eq(n, 3, "5:4 screen keeps the three heights that reach 640 across");
+
+	// Unknown screen size, VRAM and budget limits.
+	expect_eq(android_rtg_build_screen_modes(host_template, 0, 0, plenty_vram, 4, shaped), 0,
+		"an unknown screen must yield nothing");
+	expect_eq(android_rtg_build_screen_modes(host_template, 3200, 2136, 720LL * 480, 4, shaped), 1,
+		"a budget of 720x480 pixels admits only the smallest shape");
+	expect_eq(android_rtg_build_screen_modes(host_template, 3200, 2136, plenty_vram, 2, shaped), 2,
+		"the slot budget caps the shaped list");
+
 	if (failures == 0)
 		std::cout << "android_rtg_modes: all checks passed\n";
 	return failures == 0 ? 0 : 1;

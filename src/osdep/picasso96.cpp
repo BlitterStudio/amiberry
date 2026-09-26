@@ -3620,33 +3620,43 @@ static int addresolutions(void)
 			template_mode.depth = newmodes[0].depth;
 			template_mode.refresh = newmodes[0].refresh[0];
 		}
+		const long long usable_vram = static_cast<long long>(gfxmem_bank.allocated_size) - 256;
+		auto emit = [&](const android_rtg_candidate* candidates, const int added) {
+			for (int k = 0; k < added; k++) {
+				if (android_rtg_mode_fits_existing(candidates[k].width, candidates[k].height,
+					newmodes, cnt))
+					continue;
+				struct PicassoResolution* pr = &newmodes[cnt];
+				if (cnt > 0)
+					memcpy(pr, &newmodes[0], sizeof(struct PicassoResolution));
+				else
+					memset(pr, 0, sizeof(struct PicassoResolution));
+				pr->inuse = true;
+				pr->rawmode = false;
+				pr->lace = false;
+				pr->res.width = candidates[k].width;
+				pr->res.height = candidates[k].height;
+				pr->depth = candidates[k].depth;
+				pr->refresh[0] = candidates[k].refresh;
+				pr->refreshtype[0] = 0;
+				pr->refresh[1] = 0;
+				_sntprintf(pr->name, sizeof pr->name, _T("%s"), candidates[k].name);
+				size += PSSO_LibResolution_sizeof;
+				size += PSSO_ModeInfo_sizeof * depths;
+				cnt++;
+			}
+		};
+
 		struct android_rtg_candidate candidates[android_virtual_rtg_mode_count];
-		const int budget = android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt);
-		const int added = android_rtg_build_modes(template_mode,
-			static_cast<long long>(gfxmem_bank.allocated_size) - 256,
-			budget, candidates);
-		for (int k = 0; k < added; k++) {
-			if (android_rtg_mode_fits_existing(candidates[k].width, candidates[k].height,
-				newmodes, cnt))
-				continue;
-			struct PicassoResolution* pr = &newmodes[cnt];
-			if (cnt > 0)
-				memcpy(pr, &newmodes[0], sizeof(struct PicassoResolution));
-			else
-				memset(pr, 0, sizeof(struct PicassoResolution));
-			pr->inuse = true;
-			pr->rawmode = false;
-			pr->lace = false;
-			pr->res.width = candidates[k].width;
-			pr->res.height = candidates[k].height;
-			pr->depth = candidates[k].depth;
-			pr->refresh[0] = candidates[k].refresh;
-			pr->refreshtype[0] = 0;
-			pr->refresh[1] = 0;
-			_sntprintf(pr->name, sizeof pr->name, _T("%s"), candidates[k].name);
-			size += PSSO_LibResolution_sizeof;
-			size += PSSO_ModeInfo_sizeof * depths;
-			cnt++;
+		emit(candidates, android_rtg_build_modes(template_mode, usable_vram,
+			android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt), candidates));
+
+		// Modes in the device's own shape, which fill its screen exactly.
+		const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+		if (desktop) {
+			struct android_rtg_candidate shaped[android_rtg_screen_mode_count];
+			emit(shaped, android_rtg_build_screen_modes(template_mode, desktop->w, desktop->h,
+				usable_vram, android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt), shaped));
 		}
 	}
 #endif
