@@ -5795,6 +5795,8 @@ void target_default_options(uae_prefs* p, const int type)
 		//	_sntprintf(p->input_config_name[i], sizeof p->input_config_name[i] / sizeof(TCHAR), buf, i + 1);
 		//p->aviout_xoffset = -1;
 		//p->aviout_yoffset = -1;
+
+		p->ipc_disable_logging=false;
 	}
 	if (type == 1 || type == 0 || type == 3) {
 		p->uaescsimode = UAESCSI_CDEMU;
@@ -6057,6 +6059,8 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_str_escape(f, _T("parallel_port"), p->prtname[0] ? p->prtname : _T("none"));
 	cfgfile_target_dwrite_str_escape(f, _T("midiout_device_name"), p->midioutdev[0] ? p->midioutdev : _T("none"));
 	cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), p->midiindev[0] ? p->midiindev : _T("none"));
+
+	cfgfile_target_dwrite_bool(f, _T("ipc_disable_logging"), p->ipc_disable_logging);
 #else
 	cfgfile_target_dwrite (f, _T("midiout_device"), _T("%d"), p->midioutdev);
 	cfgfile_target_dwrite (f, _T("midiin_device"), _T("%d"), p->midiindev);
@@ -6488,6 +6492,9 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		}
 		return 1;
 	}
+
+	if (cfgfile_yesno(option, value, _T("ipc_disable_logging"), &p->ipc_disable_logging))
+		return 1;
 
 	return 0;
 }

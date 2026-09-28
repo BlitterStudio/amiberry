@@ -1134,6 +1134,7 @@ struct uae_prefs {
 	bool use_retroarch_statebuttons;
 	bool use_retroarch_vkbd;
 
+	bool ipc_disable_logging;
 #endif
 };
 
