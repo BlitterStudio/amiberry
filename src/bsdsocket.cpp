@@ -453,6 +453,18 @@ STATIC_INLINE struct socketbase *get_socketbase (TrapContext *ctx)
 	return (struct socketbase*)get_pointer (trap_get_areg(ctx, 6) + offsetof (struct UAEBSDBase, sb));
 }
 
+/* True while sb is a live socketbase that was opened as library base 'base'. */
+static bool socketbase_is_open (const struct socketbase *sb, uaecptr base)
+{
+	bool live = false;
+
+	locksigqueue ();
+	for (const struct socketbase *it = socketbases; it && !live; it = it->next)
+		live = it == sb;
+	unlocksigqueue ();
+	return live && sb->libbase == base;
+}
+
 static void free_socketbase (TrapContext *ctx)
 {
 	struct socketbase *sb, *nsb;
@@ -554,6 +566,7 @@ static uae_u32 REGPARAM2 bsdsocklib_Open (TrapContext *ctx)
 		result = trap_call_lib(ctx, sb->sysbase, -0x54); /* MakeLibrary */
 
 		put_pointer(result + offsetof(struct UAEBSDBase, sb), sb);
+		sb->libbase = result;
 
 		BSDTRACE ((_T("%0x [%d]\n"), result, opencount));
 	} else
@@ -567,6 +580,14 @@ static uae_u32 REGPARAM2 bsdsocklib_Close (TrapContext *ctx)
 	int opencount;
 
 	uae_u32 base = trap_get_areg(ctx, 6);
+
+	/* A program that closes its base twice (GLQuake does) would free the
+	 * socketbase and the library memory again; the stale base still holds
+	 * the freed socketbase pointer. */
+	if (!socketbase_is_open (get_socketbase (ctx), base)) {
+		write_log (_T("bsdsocket: CloseLibrary() of base 0x%08x that is not open, ignored\n"), base);
+		return 0;
+	}
 	uae_u32 negsize = get_word (base + 16);
 
 	free_socketbase(ctx);
