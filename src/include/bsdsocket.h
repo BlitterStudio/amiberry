@@ -61,6 +61,7 @@ struct socketbase {
 	uaecptr sysbase;
 	int dosignal;		/* signal flag */
 	uae_u32 ownertask;		/* task that opened the library */
+	uaecptr libbase;		/* library base OpenLibrary() returned for it */
 	int signal;			/* signal allocated for that task */
 	int sb_errno, sb_herrno;	/* errno and herrno variables */
 	uae_u32 errnoptr, herrnoptr;	/* pointers */

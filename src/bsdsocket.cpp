@@ -453,6 +453,28 @@ STATIC_INLINE struct socketbase *get_socketbase (TrapContext *ctx)
 	return (struct socketbase*)get_pointer (trap_get_areg(ctx, 6) + offsetof (struct UAEBSDBase, sb));
 }
 
+/* Remove sb from the open list if it is live and was opened as library base
+ * 'base'. Only one caller can win, so a base is cleaned up at most once even
+ * when Close re-enters the guest (or runs on another trap thread) mid-way. */
+static bool claim_socketbase (struct socketbase *sb, uaecptr base)
+{
+	bool claimed = false;
+
+	locksigqueue ();
+	for (struct socketbase **link = &socketbases; *link; link = &(*link)->next) {
+		if (*link == sb) {
+			if (sb->libbase == base) {
+				*link = sb->next;
+				claimed = true;
+			}
+			break;
+		}
+	}
+	unlocksigqueue ();
+	return claimed;
+}
+
+/* Close claims the socketbase (unlinks it from socketbases) before this. */
 static void free_socketbase (TrapContext *ctx)
 {
 	struct socketbase *sb, *nsb;
@@ -485,17 +507,6 @@ static void free_socketbase (TrapContext *ctx)
 		free (sb->ftable);
 
 		locksigqueue ();
-
-		if (sb == socketbases)
-			socketbases = sb->next;
-		else {
-			for (nsb = socketbases; nsb; nsb = nsb->next) {
-				if (sb == nsb->next) {
-					nsb->next = sb->next;
-					break;
-				}
-			}
-		}
 
 #if 1
 		if (sb == sbsigqueue)
@@ -554,6 +565,7 @@ static uae_u32 REGPARAM2 bsdsocklib_Open (TrapContext *ctx)
 		result = trap_call_lib(ctx, sb->sysbase, -0x54); /* MakeLibrary */
 
 		put_pointer(result + offsetof(struct UAEBSDBase, sb), sb);
+		sb->libbase = result;
 
 		BSDTRACE ((_T("%0x [%d]\n"), result, opencount));
 	} else
@@ -567,6 +579,16 @@ static uae_u32 REGPARAM2 bsdsocklib_Close (TrapContext *ctx)
 	int opencount;
 
 	uae_u32 base = trap_get_areg(ctx, 6);
+
+	struct socketbase *sb = get_socketbase (ctx);
+
+	/* A program that closes its base twice (GLQuake does) would free the
+	 * socketbase and the library memory again; the stale base still holds
+	 * the freed socketbase pointer. */
+	if (!claim_socketbase (sb, base)) {
+		write_log (_T("bsdsocket: CloseLibrary() of base 0x%08x that is not open, ignored\n"), base);
+		return 0;
+	}
 	uae_u32 negsize = get_word (base + 16);
 
 	free_socketbase(ctx);
