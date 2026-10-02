@@ -14,7 +14,7 @@ constexpr uae_u32 SERVICE_TRANSPORT_TRAP = 120;
 constexpr uae_u32 SERVICE_TRANSPORT_ERROR_UNAVAILABLE = 0xffffffffu;
 constexpr uae_u32 SERVICE_TRANSPORT_ERROR_INVALID     = 0xfffffffeu;
 constexpr uae_u32 SERVICE_TRANSPORT_ERROR_CAPACITY    = 0xfffffffdu;
-constexpr uae_u32 SERVICE_TRANSPORT_ERROR_LOST        = 0xfffffffcu;
+constexpr uae_u32 SERVICE_TRANSPORT_ERROR_LOST        = 0xfffffffcu; // context lost, or a reset overtook the call
 constexpr uae_u32 SERVICE_TRANSPORT_MAX_TRANSFER_BYTES = 64u * 1024u * 1024u;
 // Operations: 0=query, 1=create, 2=submit, 3=readback, 4=destroy, 5=request,
 // 6=request with an in-place reply (fails with UNAVAILABLE unless the reply is
