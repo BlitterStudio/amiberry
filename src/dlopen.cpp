@@ -79,9 +79,13 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 	const char* sysdir = libretro_get_system_dir();
 	if (sysdir && sysdir[0]) {
 		TCHAR path[MAX_DPATH];
-		// Try PUAE-compatible name first: {system_dir}/capsimg.so
-		snprintf(path, MAX_DPATH, "%s/%s%s", sysdir, "capsimg", LT_MODULE_EXT);
-		UAE_DLHANDLE handle = uae_dlopen(path);
+		UAE_DLHANDLE handle = NULL;
+		// PUAE installs the CAPS plugin as {system_dir}/capsimg.so; other
+		// plugins must not resolve to it.
+		if (!_tcscmp(name, _T("libcapsimage")) || !_tcscmp(name, _T("libCAPSImg"))) {
+			snprintf(path, MAX_DPATH, "%s/%s%s", sysdir, "capsimg", LT_MODULE_EXT);
+			handle = uae_dlopen(path);
+		}
 		if (!handle) {
 			// Try original amiberry name: {system_dir}/{name}.so
 			snprintf(path, MAX_DPATH, "%s/%s%s", sysdir, name, LT_MODULE_EXT);
