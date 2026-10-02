@@ -91,32 +91,62 @@ void service_transport_reset()
 }
 
 // Guest RAM banks are stored in Amiga byte order, so a range inside one
-// directly addressable bank can be handed to the plugin in place. Other banks
-// (custom/IO) fall back to byte accessors through a staging buffer.
-static const uae_u8* guest_input(uaecptr address, uae_u32 bytes)
+// directly addressable bank can be handed to the plugin in place. Everything
+// else is staged through the trap accessors: custom/IO and ROM banks, and all
+// guest memory in indirect UAE-board mode, where the trap runs on a worker
+// thread and must reach guest memory through the emulator.
+static bool direct_readable(uaecptr address, uae_u32 bytes)
 {
-	if (!bytes)
-		return g_plugin.input.data();
-	if (valid_address(address, bytes))
+	return bytes && !trap_is_indirect() && real_address_allowed()
+		&& valid_address(address, bytes);
+}
+
+// In-place writes must not bypass a bank's put handlers where those matter.
+// A directly mapped bank allows them when it also maps writes directly, or
+// for RTG VRAM, which commit_output() marks dirty. A bank without a direct
+// mapping vouches for the range through check()/xlate() (ZZ9000 VRAM marks
+// itself modified on xlate), unless it is ROM.
+static bool direct_writable(uaecptr address, uae_u32 bytes)
+{
+	if (!direct_readable(address, bytes))
+		return false;
+	const addrbank& bank = get_mem_bank(address);
+	if (bank.flags & (ABFLAG_ROM | ABFLAG_ROMIN))
+		return false;
+	if (!bank.baseaddr_direct_r)
+		return true;
+	return bank.baseaddr_direct_w || (bank.flags & ABFLAG_RTG);
+}
+
+static const uae_u8* guest_input(TrapContext* ctx, uaecptr address, uae_u32 bytes)
+{
+	if (direct_readable(address, bytes))
 		return get_real_address(address);
 	g_plugin.input.resize(bytes);
-	for (uae_u32 i = 0; i < bytes; ++i)
-		g_plugin.input[i] = get_byte(address + i);
+	trap_get_bytes(ctx, g_plugin.input.data(), address, static_cast<int>(bytes));
 	return g_plugin.input.data();
 }
 
 static uae_u8* guest_output(uaecptr address, uae_u32 bytes)
 {
-	if (bytes && valid_address(address, bytes))
+	if (direct_writable(address, bytes))
 		return get_real_address(address);
 	g_plugin.output.resize(bytes);
 	return g_plugin.output.data();
 }
 
-static void commit_output(uaecptr address, const uae_u8* data, uae_u32 bytes)
+static void commit_output(TrapContext* ctx, uaecptr address, const uae_u8* data, uae_u32 bytes)
 {
-	if (data != g_plugin.output.data())
-		return; // written in place
+	if (data != g_plugin.output.data()) {
+		picasso_mark_host_write(data, bytes); // written in place
+		return;
+	}
+	// Not trap_put_bytes() in direct mode: it would memcpy into any
+	// directly readable bank, ROM included.
+	if (trap_is_indirect()) {
+		trap_put_bytes(ctx, data, address, static_cast<int>(bytes));
+		return;
+	}
 	for (uae_u32 i = 0; i < bytes; ++i)
 		put_byte(address + i, data[i]);
 }
@@ -124,7 +154,6 @@ static void commit_output(uaecptr address, const uae_u8* data, uae_u32 bytes)
 uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 arg2,
 	uae_u32 arg3, uae_u32 arg4, uae_u32 arg5)
 {
-	(void)ctx;
 	if (operation == 0)
 		return ensure_plugin_loaded() ? g_plugin.query() : 0;
 	if (!ensure_plugin_loaded())
@@ -138,7 +167,7 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 				return SERVICE_TRANSPORT_ERROR_CAPACITY;
 			if (arg4 > 0xffffffffu - arg3)
 				return SERVICE_TRANSPORT_ERROR_INVALID;
-			return g_plugin.submit(arg2, guest_input(arg3, arg4), arg4);
+			return g_plugin.submit(arg2, guest_input(ctx, arg3, arg4), arg4);
 		}
 		case 3: {
 			if (arg4 > SERVICE_TRANSPORT_MAX_TRANSFER_BYTES)
@@ -149,7 +178,7 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 			const auto result = g_plugin.readback(arg2, pixels, arg4);
 			if (result != 0)
 				return result;
-			commit_output(arg3, pixels, arg4);
+			commit_output(ctx, arg3, pixels, arg4);
 			return 0;
 		}
 		case 4:
@@ -159,19 +188,19 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 		case 6: {
 			if (arg5 > 0xfffffff8u)
 				return SERVICE_TRANSPORT_ERROR_INVALID;
-			const uaecptr reply = get_long(arg5);
-			const uae_u32 reply_bytes = get_long(arg5 + 4);
+			const uaecptr reply = trap_get_long(ctx, arg5);
+			const uae_u32 reply_bytes = trap_get_long(ctx, arg5 + 4);
 			if (arg4 > SERVICE_TRANSPORT_MAX_TRANSFER_BYTES
 				|| reply_bytes > SERVICE_TRANSPORT_MAX_TRANSFER_BYTES)
 				return SERVICE_TRANSPORT_ERROR_CAPACITY;
 			if (arg4 > 0xffffffffu - arg3 || reply_bytes > 0xffffffffu - reply)
 				return SERVICE_TRANSPORT_ERROR_INVALID;
-			const uae_u8* input = guest_input(arg3, arg4);
+			const uae_u8* input = guest_input(ctx, arg3, arg4);
 			uae_u8* output;
 			if (operation == 6) {
 				// In-place reply (e.g. a locked RTG bitmap): never stage, since
 				// a staged copy-back would overwrite bytes the plugin skipped.
-				if (!reply_bytes || !valid_address(reply, reply_bytes))
+				if (!direct_writable(reply, reply_bytes))
 					return SERVICE_TRANSPORT_ERROR_UNAVAILABLE;
 				output = get_real_address(reply);
 			} else {
@@ -180,10 +209,7 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 			const auto result = g_plugin.request(arg2, input, arg4, output, reply_bytes);
 			if (result != 0)
 				return result;
-			if (operation == 6)
-				picasso_mark_host_write(output, reply_bytes);
-			else
-				commit_output(reply, output, reply_bytes);
+			commit_output(ctx, reply, output, reply_bytes);
 			return 0;
 		}
 		default:
