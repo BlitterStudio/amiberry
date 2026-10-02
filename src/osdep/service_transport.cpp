@@ -8,6 +8,7 @@
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
+#include <mutex>
 #include <vector>
 #include <new>
 
@@ -32,11 +33,18 @@ struct PluginBinding {
 	FuncReset reset = nullptr;
 	bool loaded = false;
 	bool tried = false;
-	std::vector<uint8_t> input, output;
 };
 
+// Indirect UAE-board mode runs traps on several worker threads. Loading, reset
+// and every plugin call are serialized by g_plugin_mutex, which is never held
+// across a trap accessor: those wait for the emulator thread, which may itself
+// be waiting for the mutex in service_transport_reset(). Staging buffers are
+// per thread, so a concurrent call cannot resize one that is in use.
 static PluginBinding g_plugin;
+static std::mutex g_plugin_mutex;
+static thread_local std::vector<uint8_t> t_input, t_output;
 
+// Caller holds g_plugin_mutex.
 bool ensure_plugin_loaded()
 {
 	if (g_plugin.loaded)
@@ -76,6 +84,15 @@ bool ensure_plugin_loaded()
 	return true;
 }
 
+// Runs a plugin call under g_plugin_mutex once the plugin is loaded. The
+// function pointers never change after loading, so they are read unlocked.
+template <typename Call>
+uae_u32 plugin_call(Call call)
+{
+	const std::lock_guard<std::mutex> lock(g_plugin_mutex);
+	return call();
+}
+
 } // anonymous namespace
 
 uae_u32 service_transport_native_code_denied_result(uae_u32 operation)
@@ -85,9 +102,9 @@ uae_u32 service_transport_native_code_denied_result(uae_u32 operation)
 
 void service_transport_reset()
 {
-	if (g_plugin.loaded && g_plugin.reset) {
+	const std::lock_guard<std::mutex> lock(g_plugin_mutex);
+	if (g_plugin.loaded)
 		g_plugin.reset();
-	}
 }
 
 // Guest RAM banks are stored in Amiga byte order, so a range inside one
@@ -122,22 +139,22 @@ static const uae_u8* guest_input(TrapContext* ctx, uaecptr address, uae_u32 byte
 {
 	if (direct_readable(address, bytes))
 		return get_real_address(address);
-	g_plugin.input.resize(bytes);
-	trap_get_bytes(ctx, g_plugin.input.data(), address, static_cast<int>(bytes));
-	return g_plugin.input.data();
+	t_input.resize(bytes);
+	trap_get_bytes(ctx, t_input.data(), address, static_cast<int>(bytes));
+	return t_input.data();
 }
 
 static uae_u8* guest_output(uaecptr address, uae_u32 bytes)
 {
 	if (direct_writable(address, bytes))
 		return get_real_address(address);
-	g_plugin.output.resize(bytes);
-	return g_plugin.output.data();
+	t_output.resize(bytes);
+	return t_output.data();
 }
 
 static void commit_output(TrapContext* ctx, uaecptr address, const uae_u8* data, uae_u32 bytes)
 {
-	if (data != g_plugin.output.data()) {
+	if (data != t_output.data()) {
 		picasso_mark_host_write(data, bytes); // written in place
 		return;
 	}
@@ -154,20 +171,24 @@ static void commit_output(TrapContext* ctx, uaecptr address, const uae_u8* data,
 uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 arg2,
 	uae_u32 arg3, uae_u32 arg4, uae_u32 arg5)
 {
-	if (operation == 0)
-		return ensure_plugin_loaded() ? g_plugin.query() : 0;
-	if (!ensure_plugin_loaded())
-		return SERVICE_TRANSPORT_ERROR_UNAVAILABLE;
+	{
+		const std::lock_guard<std::mutex> lock(g_plugin_mutex);
+		if (!ensure_plugin_loaded())
+			return operation == 0 ? 0 : SERVICE_TRANSPORT_ERROR_UNAVAILABLE;
+		if (operation == 0)
+			return g_plugin.query();
+	}
 	try {
 		switch (operation) {
 		case 1:
-			return g_plugin.create(arg2, arg3);
+			return plugin_call([&] { return g_plugin.create(arg2, arg3); });
 		case 2: {
 			if (arg4 > SERVICE_TRANSPORT_MAX_TRANSFER_BYTES)
 				return SERVICE_TRANSPORT_ERROR_CAPACITY;
 			if (arg4 > 0xffffffffu - arg3)
 				return SERVICE_TRANSPORT_ERROR_INVALID;
-			return g_plugin.submit(arg2, guest_input(ctx, arg3, arg4), arg4);
+			const uae_u8* input = guest_input(ctx, arg3, arg4);
+			return plugin_call([&] { return g_plugin.submit(arg2, input, arg4); });
 		}
 		case 3: {
 			if (arg4 > SERVICE_TRANSPORT_MAX_TRANSFER_BYTES)
@@ -175,14 +196,14 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 			if (arg4 > 0xffffffffu - arg3)
 				return SERVICE_TRANSPORT_ERROR_INVALID;
 			uae_u8* pixels = guest_output(arg3, arg4);
-			const auto result = g_plugin.readback(arg2, pixels, arg4);
+			const auto result = plugin_call([&] { return g_plugin.readback(arg2, pixels, arg4); });
 			if (result != 0)
 				return result;
 			commit_output(ctx, arg3, pixels, arg4);
 			return 0;
 		}
 		case 4:
-			g_plugin.destroy(arg2);
+			plugin_call([&] { g_plugin.destroy(arg2); return 0u; });
 			return 0;
 		case 5:
 		case 6: {
@@ -206,7 +227,9 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 			} else {
 				output = guest_output(reply, reply_bytes);
 			}
-			const auto result = g_plugin.request(arg2, input, arg4, output, reply_bytes);
+			const auto result = plugin_call([&] {
+				return g_plugin.request(arg2, input, arg4, output, reply_bytes);
+			});
 			if (result != 0)
 				return result;
 			commit_output(ctx, reply, output, reply_bytes);
