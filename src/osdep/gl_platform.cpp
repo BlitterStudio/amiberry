@@ -9,6 +9,7 @@
 
 #include "gl_platform.h"
 #include "sysdeps.h"
+#include <cstring>
 
 #if !defined(__ANDROID__) && !defined(USE_GLES3)
 // Desktop: Define the function pointers
@@ -165,9 +166,11 @@ const GlCapabilities& get_gl_capabilities()
 		static const GlCapabilities empty = {};
 		return empty;
 	}
-	cached = classify_gl_capabilities(
-		gl_ver_str,
-		(const char*)glGetString(GL_EXTENSIONS));
+	// Desktop core profiles reject GL_EXTENSIONS through glGetString; the
+	// desktop classifier needs only the version. GLES still needs extensions.
+	const char* extensions = std::strstr(gl_ver_str, "OpenGL ES")
+		? reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)) : nullptr;
+	cached = classify_gl_capabilities(gl_ver_str, extensions);
 	cached_context = current_context;
 
 	write_log("GL capabilities: %s %d.%d (clamp_to_border=%d framebuffer_srgb=%d rgba16f_renderable=%d)\n",
