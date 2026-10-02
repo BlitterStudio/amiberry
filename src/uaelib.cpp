@@ -925,7 +925,6 @@ void uaelib_host_cleanup()
 {
 	while (!shell_sessions.empty())
 		uaelib_host_close(nullptr, shell_sessions.begin()->first);
-	service_transport_reset();
 }
 
 // Host platform ids reported by trap 96; 0 (unknown trap on older

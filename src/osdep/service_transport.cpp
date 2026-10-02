@@ -85,10 +85,12 @@ bool ensure_plugin_loaded()
 	return true;
 }
 
-// Bumped by every reset, under g_plugin_mutex. A dispatch records it before
-// staging guest memory; a reset that overtakes the dispatch while it waits in
-// a trap accessor makes the plugin call and the staged copy-back give up, so
-// pre-reset handles and replies never reach the reset plugin or guest.
+// Bumped by every reset, under g_plugin_mutex. An emulator reset resets the
+// transport only after reset_traps() has drained the trap workers and their
+// queues, so no dispatch spans it. Turning Native Code off resets the plugin
+// without draining: a dispatch records the generation before staging guest
+// memory, and its plugin call and staged copy-back give up if a reset
+// happened since, so pre-reset handles never reach the reset plugin.
 uae_u32 g_reset_generation;
 
 bool reset_since(uae_u32 generation)
@@ -123,45 +125,53 @@ void service_transport_reset()
 		g_plugin.reset();
 }
 
-// Guest RAM banks are stored in Amiga byte order, so a range inside one
-// directly addressable bank can be handed to the plugin in place. Everything
-// else is staged through the trap accessors: custom/IO and ROM banks, and all
-// guest memory in indirect UAE-board mode, where the trap runs on a worker
-// thread and must reach guest memory through the emulator.
-static bool direct_readable(uaecptr address, uae_u32 bytes)
+// Guest RAM banks are stored in Amiga byte order, so the plugin may use guest
+// memory in place where the transport knows a bounded raw mapping backs the
+// whole range: a directly mapped bank (valid_address() then bounds the range
+// by its allocation) or ZZ9000 VRAM. A bank's own check()/xlate() promise
+// neither a bound nor raw access, so everything else goes through the bank
+// handlers: get_byte()/put_byte() on the emulator thread, or the trap
+// accessors in indirect UAE-board mode, where the trap runs on a worker
+// thread and nothing is passed in place.
+static bool host_mapped(uaecptr address, uae_u32 bytes)
 {
-	return bytes && !trap_is_indirect() && real_address_allowed()
-		&& valid_address(address, bytes);
+	if (!bytes || trap_is_indirect() || !real_address_allowed())
+		return false;
+	if (get_mem_bank(address).baseaddr_direct_r)
+		return valid_address(address, bytes);
+	return zz9000_host_vram(address, bytes);
 }
 
-// In-place output goes only to memory known to accept raw host writes: RTG
-// VRAM (commit_output() marks it dirty), banks that map writes directly, and
-// ZZ9000 VRAM. Everything else, ROM and banks whose put handlers filter
-// writes included, is staged and written through those handlers.
-static bool direct_writable(uaecptr address, uae_u32 bytes)
+// In-place output also needs raw writes to be safe: a direct write mapping,
+// RTG VRAM (commit_output() marks it dirty), or ZZ9000 VRAM. ROM is mapped
+// for reads only.
+static bool host_writable(uaecptr address, uae_u32 bytes)
 {
-	if (!direct_readable(address, bytes))
+	if (!host_mapped(address, bytes))
 		return false;
 	const addrbank& bank = get_mem_bank(address);
-	if (bank.flags & ABFLAG_RTG)
-		return true;
-	if (bank.baseaddr_direct_r)
-		return bank.baseaddr_direct_w != nullptr;
-	return zz9000_host_writable(address, bytes);
+	return !bank.baseaddr_direct_r || bank.baseaddr_direct_w || (bank.flags & ABFLAG_RTG);
 }
 
 static const uae_u8* guest_input(TrapContext* ctx, uaecptr address, uae_u32 bytes)
 {
-	if (direct_readable(address, bytes))
+	if (host_mapped(address, bytes))
 		return get_real_address(address);
 	t_input.resize(bytes);
-	trap_get_bytes(ctx, t_input.data(), address, static_cast<int>(bytes));
+	// Not trap_get_bytes() in direct mode: it would memcpy from any bank that
+	// passes valid_address().
+	if (trap_is_indirect()) {
+		trap_get_bytes(ctx, t_input.data(), address, static_cast<int>(bytes));
+	} else {
+		for (uae_u32 i = 0; i < bytes; ++i)
+			t_input[i] = static_cast<uae_u8>(get_byte(address + i));
+	}
 	return t_input.data();
 }
 
 static uae_u8* guest_output(uaecptr address, uae_u32 bytes)
 {
-	if (direct_writable(address, bytes))
+	if (host_writable(address, bytes))
 		return get_real_address(address);
 	t_output.resize(bytes);
 	return t_output.data();
@@ -174,13 +184,13 @@ static uae_u32 commit_output(TrapContext* ctx, uae_u32 generation, uaecptr addre
 		picasso_mark_host_write(data, bytes); // written in place
 		return 0;
 	}
-	// A reset after this check cannot let the copy land either: devices_reset()
-	// runs reset_traps() before the guest restarts, which aborts pending
-	// trap-backs and waits for each worker to finish its trap.
+	// Passing this check, the caller still owns its buffer: emulator resets
+	// drain the trap workers before resetting the transport, and turning
+	// Native Code off does not reset the guest.
 	if (reset_since(generation))
 		return SERVICE_TRANSPORT_ERROR_LOST;
-	// Not trap_put_bytes() in direct mode: it would memcpy into any
-	// directly readable bank, ROM included.
+	// Not trap_put_bytes() in direct mode: it would memcpy into any bank that
+	// passes valid_address(), ROM included.
 	if (trap_is_indirect()) {
 		trap_put_bytes(ctx, data, address, static_cast<int>(bytes));
 		return 0;
@@ -245,7 +255,7 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 			if (operation == 6) {
 				// In-place reply (e.g. a locked RTG bitmap): never stage, since
 				// a staged copy-back would overwrite bytes the plugin skipped.
-				if (!direct_writable(reply, reply_bytes))
+				if (!host_writable(reply, reply_bytes))
 					return SERVICE_TRANSPORT_ERROR_UNAVAILABLE;
 				output = get_real_address(reply);
 			} else {
