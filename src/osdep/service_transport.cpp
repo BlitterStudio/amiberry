@@ -174,6 +174,9 @@ static uae_u32 commit_output(TrapContext* ctx, uae_u32 generation, uaecptr addre
 		picasso_mark_host_write(data, bytes); // written in place
 		return 0;
 	}
+	// A reset after this check cannot let the copy land either: devices_reset()
+	// runs reset_traps() before the guest restarts, which aborts pending
+	// trap-backs and waits for each worker to finish its trap.
 	if (reset_since(generation))
 		return SERVICE_TRANSPORT_ERROR_LOST;
 	// Not trap_put_bytes() in direct mode: it would memcpy into any
