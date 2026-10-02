@@ -501,6 +501,14 @@ static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr)
 	return data->memory + offset;
 }
 
+/* ZZ9000 VRAM accepts raw host writes: its put handlers only store the bytes
+ * and flag the board modified, which zz9000_xlate() does too. The register,
+ * network and mailbox windows below ZZ9000_MEMORY_BASE are excluded. */
+bool zz9000_host_writable(uaecptr addr, uae_u32 size)
+{
+	return zz9000_check(addr, size) != 0;
+}
+
 static uae_u32 zz_apply_minterm(uae_u32 source, uae_u32 destination, int minterm)
 {
 	switch (minterm & 15) {

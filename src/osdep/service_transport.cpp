@@ -8,6 +8,7 @@
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
+#include "gfxboard.h"
 #include <mutex>
 #include <vector>
 #include <new>
@@ -118,21 +119,20 @@ static bool direct_readable(uaecptr address, uae_u32 bytes)
 		&& valid_address(address, bytes);
 }
 
-// In-place writes must not bypass a bank's put handlers where those matter.
-// A directly mapped bank allows them when it also maps writes directly, or
-// for RTG VRAM, which commit_output() marks dirty. A bank without a direct
-// mapping vouches for the range through check()/xlate() (ZZ9000 VRAM marks
-// itself modified on xlate), unless it is ROM.
+// In-place output goes only to memory known to accept raw host writes: RTG
+// VRAM (commit_output() marks it dirty), banks that map writes directly, and
+// ZZ9000 VRAM. Everything else, ROM and banks whose put handlers filter
+// writes included, is staged and written through those handlers.
 static bool direct_writable(uaecptr address, uae_u32 bytes)
 {
 	if (!direct_readable(address, bytes))
 		return false;
 	const addrbank& bank = get_mem_bank(address);
-	if (bank.flags & (ABFLAG_ROM | ABFLAG_ROMIN))
-		return false;
-	if (!bank.baseaddr_direct_r)
+	if (bank.flags & ABFLAG_RTG)
 		return true;
-	return bank.baseaddr_direct_w || (bank.flags & ABFLAG_RTG);
+	if (bank.baseaddr_direct_r)
+		return bank.baseaddr_direct_w != nullptr;
+	return zz9000_host_writable(address, bytes);
 }
 
 static const uae_u8* guest_input(TrapContext* ctx, uaecptr address, uae_u32 bytes)
