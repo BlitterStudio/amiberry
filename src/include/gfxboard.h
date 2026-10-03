@@ -52,7 +52,6 @@ extern struct gfxboard_func zz9000_func;
 #ifdef AMIBERRY
 extern bool zz9000_net_board_present(void);
 extern bool zz9000_net_host_active(void);
-extern bool zz9000_host_vram(uaecptr addr, uae_u32 size);
 #endif
 
 extern void vga_io_put(int board, int portnum, uae_u8 v);

@@ -31,6 +31,7 @@
 #include <deque>
 #include <mutex>
 #include <new>
+#include <vector>
 #if defined(AHI) && !defined(LIBRETRO)
 #include <chrono>
 #include <SDL3/SDL.h>
@@ -211,6 +212,8 @@ struct zz9000_state {
 	uae_u32 configured;
 	uae_u32 card_size;
 	uae_u8 *memory;
+	addrbank vram_bank;
+	std::vector<uae_u8> line_buffer;
 	uae_u16 registers[0x808];
 
 	bool enabled;
@@ -301,19 +304,25 @@ static uae_u32 REGPARAM2 zz9000_bget(uaecptr addr);
 static void REGPARAM2 zz9000_lput(uaecptr addr, uae_u32 value);
 static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value);
 static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value);
-static int REGPARAM2 zz9000_check(uaecptr addr, uae_u32 size);
-static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr);
+static int REGPARAM2 zz9000_vram_check(uaecptr addr, uae_u32 size);
+static uae_u8 *REGPARAM2 zz9000_vram_xlate(uaecptr addr);
 
-static addrbank zz9000_bank = {
+static addrbank zz9000_io_bank = {
 	zz9000_lget, zz9000_wget, zz9000_bget,
 	zz9000_lput, zz9000_wput, zz9000_bput,
-	zz9000_xlate, zz9000_check, nullptr, nullptr, _T("ZZ9000"),
+	default_xlate, default_check, nullptr, nullptr, _T("ZZ9000 registers"),
 	zz9000_lget, zz9000_wget,
-	/* ZZ9000 VRAM lives in the board's private allocation, not at its
-	 * natmem address. Force JIT accesses through the bank translation and
-	 * helpers instead of replaying faulting direct accesses. */
-	ABFLAG_IO, S_READ | S_N_ADDR, S_WRITE | S_N_ADDR
+	ABFLAG_IO, S_READ, S_WRITE
 };
+
+static const addrbank zz9000_vram_bank_template = {
+	zz9000_lget, zz9000_wget, zz9000_bget,
+	zz9000_lput, zz9000_wput, zz9000_bput,
+	zz9000_vram_xlate, zz9000_vram_check, nullptr, _T("*"), _T("ZZ9000 VRAM"),
+	zz9000_lget, zz9000_wget,
+	ABFLAG_RAM | ABFLAG_DIRECTACCESS, 0, 0
+};
+
 
 static inline uae_u16 zz_bswap16(uae_u16 value)
 {
@@ -477,7 +486,7 @@ static zz9000_state *zz_find_board(uaecptr addr)
 	return nullptr;
 }
 
-static int REGPARAM2 zz9000_check(uaecptr addr, uae_u32 size)
+static int REGPARAM2 zz9000_vram_check(uaecptr addr, uae_u32 size)
 {
 	zz9000_state *data = zz_find_board(addr);
 	if (!data)
@@ -487,7 +496,7 @@ static int REGPARAM2 zz9000_check(uaecptr addr, uae_u32 size)
 		size <= data->card_size - offset;
 }
 
-static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr)
+static uae_u8 *REGPARAM2 zz9000_vram_xlate(uaecptr addr)
 {
 	zz9000_state *data = zz_find_board(addr);
 	if (!data)
@@ -495,20 +504,9 @@ static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr)
 	const uae_u32 offset = addr - data->configured;
 	if (offset < ZZ9000_MEMORY_BASE || offset >= data->card_size)
 		return default_xlate(addr);
-	/* Callers using a translated pointer bypass the byte/word/long bank
-	 * handlers, so conservatively flag VRAM as changed for display refresh. */
-	data->modified = true;
 	return data->memory + offset;
 }
 
-/* ZZ9000 VRAM is a bounded raw allocation the host may access in place: its
- * get/put handlers only load or store the bytes (puts also flag the board
- * modified, which zz9000_xlate() does too). The register, network and
- * mailbox windows below ZZ9000_MEMORY_BASE are excluded. */
-bool zz9000_host_vram(uaecptr addr, uae_u32 size)
-{
-	return zz9000_check(addr, size) != 0;
-}
 
 static uae_u32 zz_apply_minterm(uae_u32 source, uae_u32 destination, int minterm)
 {
@@ -2493,46 +2491,44 @@ static bool zz9000_vsync(void *userdata, gfxboard_mode *mode)
 	uae_u8 *surface = gfx_lock_picasso(data->monitor_id, false);
 	if (!surface)
 		return false;
-	if (data->modified || data->mode_changed || mode->redraw_required) {
-		const size_t line_size = static_cast<size_t>(data->width) * bpp;
-		uae_u8 *line = xmalloc(uae_u8, line_size);
-		if (line) {
-			const uae_u32 source_pitch = data->pan_width * bpp;
-			bool secondary_palette_active = false;
-			for (int y = 0; y < data->height; ++y) {
-				const bool split = data->split_position > 0 && y >= data->split_position;
-				const uae_u32 source_base = split ? data->split_offset : data->pan_offset;
-				const int source_y = split ? y - data->split_position : y;
-				if (split && data->secondary_palette_feature && !secondary_palette_active &&
-					data->color_mode == ZZ_COLOR_CLUT) {
-					zz_activate_palette(data, data->secondary_palette);
-					secondary_palette_active = true;
-				}
-				const uae_u8 *source = zz_memory_ptr(data, source_base + source_y * source_pitch,
-					static_cast<uae_u32>(line_size));
-				if (data->display_blank || !source)
-					memset(line, 0, line_size);
-				else
-					memcpy(line, source, line_size);
-				if (!data->display_blank) {
-					zz_composite_overlay_row(data, line, y);
-#ifdef AMIBERRY
-					if (!host_only_cursor) {
-						zz_composite_sprite_row(data, line, y);
-					}
-#else
-					zz_composite_sprite_row(data, line, y);
-#endif
-				}
-				fb_copyrow(data->monitor_id, line, surface, 0, 0, data->width, bpp, y);
-			}
-			if (secondary_palette_active)
-				zz_activate_palette(data, data->primary_palette);
-			xfree(line);
-			data->modified = false;
-			data->mode_changed = false;
+	const size_t line_size = static_cast<size_t>(data->width) * bpp;
+	if (data->line_buffer.size() != line_size)
+		data->line_buffer.resize(line_size);
+	uae_u8 *line = data->line_buffer.data();
+	const uae_u32 source_pitch = data->pan_width * bpp;
+	bool secondary_palette_active = false;
+	for (int y = 0; y < data->height; ++y) {
+		const bool split = data->split_position > 0 && y >= data->split_position;
+		const uae_u32 source_base = split ? data->split_offset : data->pan_offset;
+		const int source_y = split ? y - data->split_position : y;
+		if (split && data->secondary_palette_feature && !secondary_palette_active &&
+			data->color_mode == ZZ_COLOR_CLUT) {
+			zz_activate_palette(data, data->secondary_palette);
+			secondary_palette_active = true;
 		}
+		const uae_u8 *source = zz_memory_ptr(data, source_base + source_y * source_pitch,
+			static_cast<uae_u32>(line_size));
+		if (data->display_blank || !source)
+			memset(line, 0, line_size);
+		else
+			memcpy(line, source, line_size);
+		if (!data->display_blank) {
+			zz_composite_overlay_row(data, line, y);
+#ifdef AMIBERRY
+			if (!host_only_cursor) {
+				zz_composite_sprite_row(data, line, y);
+			}
+#else
+			zz_composite_sprite_row(data, line, y);
+#endif
+		}
+		fb_copyrow(data->monitor_id, line, surface, 0, 0, data->width, bpp, y);
 	}
+	if (secondary_palette_active)
+		zz_activate_palette(data, data->primary_palette);
+	data->modified = false;
+	data->mode_changed = false;
+
 	gfx_unlock_picasso(data->monitor_id, true);
 	return true;
 }
@@ -2564,6 +2560,20 @@ static void zz9000_configured(void *userdata, uae_u32 address)
 {
 	auto *data = static_cast<zz9000_state *>(userdata);
 	data->configured = address;
+	data->vram_bank.start = address;
+	data->vram_bank.reserved_size = data->card_size;
+	data->vram_bank.mask = data->card_size - 1;
+	if (!mapped_malloc(&data->vram_bank)) {
+		write_log(_T("ZZ9000: failed to allocate %u MB of VRAM at %08x\n"),
+			data->card_size >> 20, address);
+		return;
+	}
+	data->memory = data->vram_bank.baseaddr;
+	map_banks(&data->vram_bank, (address + ZZ9000_MEMORY_BASE) >> 16,
+		(data->card_size - ZZ9000_MEMORY_BASE) >> 16, 0);
+	data->sdk = new (std::nothrow) zz9000_sdk::Engine(data->memory, data->card_size);
+	if (!data->sdk)
+		write_log(_T("ZZ9000: failed to create SDK engine\n"));
 	write_log(_T("ZZ9000 %s configured at %08x (%u MB)\n"),
 		data->z3 ? _T("Z3") : _T("Z2"), address, data->card_size >> 20);
 }
@@ -2644,9 +2654,9 @@ static void zz9000_free(void *userdata)
 	data->sdk = nullptr;
 	delete data->net;
 	data->net = nullptr;
-	xfree(data->memory);
+	mapped_free(&data->vram_bank);
 	data->memory = nullptr;
-	xfree(data);
+	delete data;
 }
 
 static bool zz9000_init(autoconfig_info *aci)
@@ -2658,7 +2668,7 @@ static bool zz9000_init(autoconfig_info *aci)
 	if (!aci->doinit)
 		return true;
 
-	auto *data = xcalloc(zz9000_state, 1);
+	auto *data = new (std::nothrow) zz9000_state{};
 	if (!data)
 		return false;
 	data->devnum = aci->devnum;
@@ -2672,22 +2682,10 @@ static bool zz9000_init(autoconfig_info *aci)
 	// places them here for both Z2 and Z3.
 	data->audio_tx_ring_off = data->card_size - 0x10000;
 	data->audio_rx_ring_off = data->card_size - 0x8000;
-	data->memory = xcalloc(uae_u8, data->card_size);
-	if (!data->memory) {
-		xfree(data);
-		return false;
-	}
+	data->vram_bank = zz9000_vram_bank_template;
 	data->net = new (std::nothrow) zz9000_net_engine;
 	if (!data->net) {
-		xfree(data->memory);
-		xfree(data);
-		return false;
-	}
-	data->sdk = new (std::nothrow) zz9000_sdk::Engine(data->memory, data->card_size);
-	if (!data->sdk) {
-		delete data->net;
-		xfree(data->memory);
-		xfree(data);
+		delete data;
 		return false;
 	}
 	zz_net_reset(data);
@@ -2695,7 +2693,7 @@ static bool zz9000_init(autoconfig_info *aci)
 	data->sprite_visible = false;
 	data->modified = true;
 	zz9000_boards[data->devnum] = data;
-	aci->addrbank = &zz9000_bank;
+	aci->addrbank = &zz9000_io_bank;
 	aci->userdata = data;
 	return true;
 }
