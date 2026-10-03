@@ -234,6 +234,9 @@ static bool path_exists_cached(const char* id, const std::string& path, bool is_
 
 void render_plugin_paths_settings(const char* id)
 {
+	if (!user_plugins_supported())
+		return;
+
 	static std::string selected_plugin;
 	static std::string install_status;
 	static bool install_failed = false;

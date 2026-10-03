@@ -8693,20 +8693,28 @@ static std::string get_legacy_system_plugins_directory()
 #endif
 }
 
+bool user_plugins_supported()
+{
+#if defined(MACOS_APP_STORE) || defined(AMIBERRY_IOS) || defined(__ANDROID__)
+	return false;
+#else
+	return true;
+#endif
+}
+
 std::string get_user_plugins_path()
 {
+	if (!user_plugins_supported())
+		return {};
+
 	if (g_portable_mode)
 		return join_path(get_portable_root_directory(), "plugins");
 #ifdef LIBRETRO
 	return get_system_plugins_directory();
-#elif defined(AMIBERRY_IOS)
-	return {};
 #elif defined(AMIBERRY_MACOS)
 	const auto user_home_dir = getenv("HOME");
 	return user_home_dir != nullptr && user_home_dir[0] != '\0'
 		? normalize_path_string(std::string(user_home_dir) + "/Library/Application Support/Amiberry/Plugins") : std::string{};
-#elif defined(__ANDROID__)
-	return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
 	const auto local_app_data = getenv("LOCALAPPDATA");
 	return local_app_data != nullptr && local_app_data[0] != '\0'

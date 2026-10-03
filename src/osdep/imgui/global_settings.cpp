@@ -728,9 +728,11 @@ void render_panel_global_settings()
 			"Folder containing bezel overlay assets.");
 	});
 
-	if (BeginGroupBox("Plugin locations", true, false))
+	if (user_plugins_supported() && BeginGroupBox("Plugin locations", true, false))
+	{
 		render_plugin_paths_settings("GlobalPlugins");
-	EndGroupBox("Plugin locations");
+		EndGroupBox("Plugin locations");
+	}
 
 	render_group("Updates", "GlobalUpdates", [&]() {
 		render_combo_row("Startup update check", &amiberry_options.update_check,
