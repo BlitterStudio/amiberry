@@ -1,6 +1,6 @@
 app-id: com.blitterstudio.amiberry
 runtime: org.freedesktop.Platform
-runtime-version: '25.08'
+runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
 command: amiberry
 rename-desktop-file: Amiberry.desktop
@@ -40,8 +40,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/libsdl-org/SDL.git
-        tag: release-3.4.16
-        commit: fa2c02bb6e21974a89ea9824bc53c9932abe5f9c
+        tag: release-3.4.18
+        commit: 829a65d769d935c4852f8159e964312c0957260a
         x-checker-data:
           type: git
           tag-pattern: ^release-([\d.]+)$
@@ -54,8 +54,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/libsdl-org/SDL_image.git
-        tag: release-3.4.6
-        commit: f661fa1ad24ab1b81e43662532f9a6a9fcf67ea6
+        tag: release-3.4.8
+        commit: 0891fc30428b518e7d018677bd6fa95c1a50f4c6
         x-checker-data:
           type: git
           tag-pattern: ^release-([\d.]+)$
