@@ -558,6 +558,24 @@ static void NOINLINE mark_dirty(int index, uae_u8* addr, int size)
 }
 #endif
 
+// Marks RTG memory that host code wrote through a direct pointer (bypassing the
+// CPU write handlers) so the display refresh picks it up. Ignores memory that
+// does not belong to an RTG bank.
+void picasso_mark_host_write(const uae_u8 *addr, uae_u32 size)
+{
+#if !defined(_WIN32) || defined(AMIBERRY)
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		const addrbank *bank = gfxmem_banks[i];
+		if (!bank || !bank->baseaddr || !dirty_page_map[i])
+			continue;
+		if (addr >= bank->baseaddr && addr < bank->baseaddr + bank->allocated_size) {
+			mark_dirty(i, const_cast<uae_u8 *>(addr), static_cast<int>(size));
+			return;
+		}
+	}
+#endif
+}
+
 static uae_u8 GetBytesPerPixel(uae_u32 RGBfmt)
 {
 	switch (RGBfmt)

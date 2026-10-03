@@ -501,6 +501,15 @@ static uae_u8 *REGPARAM2 zz9000_xlate(uaecptr addr)
 	return data->memory + offset;
 }
 
+/* ZZ9000 VRAM is a bounded raw allocation the host may access in place: its
+ * get/put handlers only load or store the bytes (puts also flag the board
+ * modified, which zz9000_xlate() does too). The register, network and
+ * mailbox windows below ZZ9000_MEMORY_BASE are excluded. */
+bool zz9000_host_vram(uaecptr addr, uae_u32 size)
+{
+	return zz9000_check(addr, size) != 0;
+}
+
 static uae_u32 zz_apply_minterm(uae_u32 source, uae_u32 destination, int minterm)
 {
 	switch (minterm & 15) {

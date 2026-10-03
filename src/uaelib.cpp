@@ -30,6 +30,7 @@
 #ifndef LIBRETRO
 #include "mhi_host.h"
 #endif
+#include "service_transport.h"
 #include "target.h"
 #include "parser.h" // for midi ports
 #endif
@@ -1088,11 +1089,15 @@ static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr 
 
 static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3, uae_u32 ARG4, uae_u32 ARG5)
 {
-	write_log("%ld\n",ARG0);
-
 #ifdef AMIBERRY
+	if (ARG0 != SERVICE_TRANSPORT_TRAP)
+		write_log("%ld\n", ARG0);
+	if (!currprefs.native_code && ARG0 == SERVICE_TRANSPORT_TRAP)
+		return service_transport_native_code_denied_result(ARG1);
 	if (!currprefs.native_code && uaelib_host_trap_requires_native_code(ARG0))
 		return uaelib_host_trap_denied_result(ARG0);
+#else
+	write_log("%ld\n", ARG0);
 #endif
 	
 	switch (ARG0) {
@@ -1167,6 +1172,8 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 			return uaelib_host_open_pipe(ctx, ARG1);
 		case 96: return uaelib_host_get_platform();
 
+		case SERVICE_TRANSPORT_TRAP:
+			return service_transport_uaelib(ctx, ARG1, ARG2, ARG3, ARG4, ARG5);
 		case 100:
 		{
 			return uaelib_midi(ctx, ARG1, ARG2, ARG3);
