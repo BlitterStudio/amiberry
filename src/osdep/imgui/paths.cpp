@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include "sysdeps.h"
+#include "target.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "uae.h"
@@ -229,6 +230,106 @@ static bool path_exists_cached(const char* id, const std::string& path, bool is_
 		e.exists = is_file ? my_existsfile(path.c_str()) : my_existsdir(path.c_str());
 	}
 	return e.exists;
+}
+
+void render_plugin_paths_settings(const char* id)
+{
+	static std::string selected_plugin;
+	static std::string install_status;
+	static bool install_failed = false;
+	const auto user_plugins_path = get_user_plugins_path();
+	const std::string dialog_key = std::string("INSTALL_PLUGIN_") + id;
+	const std::string popup_id = std::string("Overwrite Plugin##") + id;
+
+#if defined(_WIN32)
+	constexpr const char* plugin_filter = "Amiberry plugins (*.dll){.dll}";
+#elif defined(AMIBERRY_MACOS)
+	constexpr const char* plugin_filter = "Amiberry plugins (*.dylib){.dylib}";
+#else
+	constexpr const char* plugin_filter = "Amiberry plugins (*.so){.so}";
+#endif
+
+	auto install = [&]() {
+		std::error_code ec;
+		std::filesystem::create_directories(user_plugins_path, ec);
+		if (ec)
+		{
+			install_status = "Could not create the user plugins folder: " + ec.message();
+			install_failed = true;
+			return;
+		}
+
+		const auto destination = std::filesystem::path(user_plugins_path) / std::filesystem::path(selected_plugin).filename();
+		std::filesystem::copy_file(selected_plugin, destination, std::filesystem::copy_options::overwrite_existing, ec);
+		if (ec)
+		{
+			install_status = "Could not install plugin: " + ec.message();
+			install_failed = true;
+		}
+		else
+		{
+			install_status = "Installed " + destination.filename().string() + ".";
+			install_failed = false;
+		}
+	};
+
+	ImGui::PushID(id);
+	ImGui::TextWrapped("Bundled plugins stay with Amiberry. Install extra plugins in your user plugins folder.");
+	ImGui::Text("User plugins: %s", user_plugins_path.c_str());
+	if (AmigaButton("Open", ImVec2(SMALL_BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+	{
+		std::error_code ec;
+		std::filesystem::create_directories(user_plugins_path, ec);
+		if (ec)
+		{
+			install_status = "Could not create the user plugins folder: " + ec.message();
+			install_failed = true;
+		}
+		else
+		{
+			const auto directory = std::filesystem::path(user_plugins_path).generic_string();
+#ifdef _WIN32
+			const auto url = std::string("file:///") + directory;
+#else
+			const auto url = std::string("file://") + directory;
+#endif
+			if (!SDL_OpenURL(url.c_str()))
+			{
+				install_status = "Could not open the user plugins folder.";
+				install_failed = true;
+			}
+		}
+	}
+	ImGui::SameLine();
+	if (AmigaButton("Install plugin...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT)))
+		OpenFileDialogKey(dialog_key.c_str(), "Install plugin", plugin_filter, user_plugins_path);
+
+	std::string picked_plugin;
+	if (ConsumeFileDialogResultKey(dialog_key.c_str(), picked_plugin) && !picked_plugin.empty())
+	{
+		selected_plugin = picked_plugin;
+		const auto destination = std::filesystem::path(user_plugins_path) / std::filesystem::path(selected_plugin).filename();
+		if (std::filesystem::exists(destination))
+			ImGui::OpenPopup(popup_id.c_str());
+		else
+			install();
+	}
+	if (ImGui::BeginPopupModal(popup_id.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextWrapped("A plugin with this name is already installed. Replace it?");
+		if (AmigaButton("Replace", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		{
+			install();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
+	if (!install_status.empty())
+		ImGui::TextColored(install_failed ? ImVec4(1.0f, 0.3f, 0.3f, 1.0f) : ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "%s", install_status.c_str());
+	ImGui::PopID();
 }
 
 void render_panel_paths()
@@ -575,7 +676,8 @@ void render_panel_paths()
 		get_nvram_path(tmp, sizeof tmp);
 		RenderPathRow("NVRAM:", "NVRAMPath", tmp, [](const std::string& p) { set_nvram_path(p); });
 
-		RenderPathRow("Plugins:", "PluginsPath", get_plugins_path(), [](const std::string& p) { set_plugins_path(p); });
+		RenderPathRow("Plugins override:", "PluginsPath", get_plugins_override_path(), [](const std::string& p) { set_plugins_path(p); });
+		render_plugin_paths_settings("PathsPlugins");
 		RenderPathRow("Controllers DB:", "ControllersPath", get_controllers_path(), [](const std::string& p) { set_controllers_path(p); });
 		RenderPathRow("RetroArch config:", "RetroArchConfigPath", get_retroarch_file(), [](const std::string& p) { set_retroarch_file(p); }, true, "Choose Retroarch .cfg file", ".cfg");
 		RenderPathRow("WHDBoot:", "WHDBootPath", get_whdbootpath(), [](const std::string& p) { set_whdbootpath(p); });

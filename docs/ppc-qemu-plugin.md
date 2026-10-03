@@ -61,6 +61,10 @@ cmake -B build-ppc-no-qemu -DUSE_PPC=ON -DUSE_QEMU_PPC=OFF
 
 With a compatible plugin installed, selecting a CyberStorm PPC or Blizzard PPC board and enabling PPC CPU emulation should load the QEMU implementation. If the plugin is missing, too old, or missing required symbols, Amiberry logs the plugin error and falls back to another available PPC implementation or the dummy implementation.
 
+### Plugin locations
+
+For installation folders, lookup order, and macOS signing requirements, see [Plugin locations](/plugin-locations).
+
 Non-PPC builds hide PPC accelerator options, clear stale PPC config state, and do not save PPC-only config keys.
 
 ## Runtime Smoke Test
