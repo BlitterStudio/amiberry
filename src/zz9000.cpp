@@ -2569,8 +2569,25 @@ static void zz9000_configured(void *userdata, uae_u32 address)
 		return;
 	}
 	data->memory = data->vram_bank.baseaddr;
-	map_banks(&data->vram_bank, (address + ZZ9000_MEMORY_BASE) >> 16,
-		(data->card_size - ZZ9000_MEMORY_BASE) >> 16, 0);
+	const uae_u32 vram_start = address + ZZ9000_MEMORY_BASE;
+	const uae_u32 vram_size = data->card_size - ZZ9000_MEMORY_BASE;
+	// mapped_malloc owns a contiguous card allocation so host users retain
+	// their board-relative data->memory pointer. Map the VRAM subrange first
+	// while its base still identifies that allocation to add_shmmaps(), then
+	// shift the bank base to the subrange and remap quickly. This makes both
+	// direct pointers and JIT baseaddr[] resolve vram_start to memory[0x10000].
+	map_banks(&data->vram_bank, vram_start >> 16, vram_size >> 16, 0);
+	data->vram_bank.baseaddr += ZZ9000_MEMORY_BASE;
+	if (data->vram_bank.baseaddr_direct_r)
+		data->vram_bank.baseaddr_direct_r += ZZ9000_MEMORY_BASE;
+	if (data->vram_bank.baseaddr_direct_w)
+		data->vram_bank.baseaddr_direct_w += ZZ9000_MEMORY_BASE;
+	data->vram_bank.start = vram_start;
+	data->vram_bank.startmask = vram_start;
+	data->vram_bank.startaccessmask = vram_start & data->vram_bank.mask;
+	data->vram_bank.reserved_size = vram_size;
+	data->vram_bank.allocated_size = vram_size;
+	map_banks_quick(&data->vram_bank, vram_start >> 16, vram_size >> 16, 0);
 	data->sdk = new (std::nothrow) zz9000_sdk::Engine(data->memory, data->card_size);
 	if (!data->sdk)
 		write_log(_T("ZZ9000: failed to create SDK engine\n"));
@@ -2654,6 +2671,9 @@ static void zz9000_free(void *userdata)
 	data->sdk = nullptr;
 	delete data->net;
 	data->net = nullptr;
+	// The mapped allocation starts at the card address; the active VRAM bank
+	// base is advanced past the IO window for address translation.
+	data->vram_bank.baseaddr = data->memory;
 	mapped_free(&data->vram_bank);
 	data->memory = nullptr;
 	delete data;
