@@ -222,7 +222,12 @@ struct Engine::Media {
 };
 
 Engine::Engine(uint8_t *board_memory, uint32_t board_size)
-	: memory_(board_memory), board_size_(board_size)
+	: Engine(board_memory, board_memory + memory_base, board_size)
+{
+}
+
+Engine::Engine(uint8_t *io_memory, uint8_t *vram_memory, uint32_t board_size)
+	: io_memory_(io_memory), vram_memory_(vram_memory), board_size_(board_size)
 {
 	reset();
 }
@@ -232,6 +237,12 @@ Engine::~Engine()
 	close_audio();
 	close_media();
 	image_.reset();
+}
+
+uint8_t *Engine::memory_at(uint32_t offset) const
+{
+	return offset < memory_base ? io_memory_ + offset :
+		vram_memory_ + offset - memory_base;
 }
 
 uint32_t Engine::supported_capabilities() const
@@ -263,7 +274,7 @@ void Engine::reset()
 	next_media_session_ = 1;
 	overlay_ = {};
 	last_status_ = ok;
-	auto *mb = memory_ + mailbox_offset;
+	auto *mb = memory_at(mailbox_offset);
 	std::memset(mb, 0, mailbox_size);
 	put32(mb + 0, abi_magic);
 	put16(mb + 4, 2);
@@ -332,7 +343,7 @@ Engine::Surface *Engine::find_surface(uint32_t handle)
 uint8_t *Engine::surface_pixels(uint32_t handle)
 {
 	if (handle == framebuffer_handle)
-		return framebuffer_.width ? memory_ + framebuffer_.offset : nullptr;
+		return framebuffer_.width ? memory_at(framebuffer_.offset) : nullptr;
 	auto *surface = find_surface(handle);
 	return surface ? surface->pixels.data() : nullptr;
 }
@@ -399,7 +410,7 @@ uint8_t *Engine::buffer_data(uint32_t handle)
 	if (!buffer)
 		return nullptr;
 	return buffer->card_only.empty()
-		? memory_ + buffer->board_offset : buffer->card_only.data();
+		? memory_at(buffer->board_offset) : buffer->card_only.data();
 }
 
 uint32_t Engine::buffer_length(uint32_t handle) const
@@ -867,8 +878,8 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				return busy;
 			const auto *frame = media_->held_frame;
 			for (uint32_t y = 0; y < media_->height; ++y) {
-				auto *dst = memory_ + overlay_.offset +
-					static_cast<size_t>(y) * overlay_.pitch;
+				auto *dst = memory_at(overlay_.offset +
+					static_cast<size_t>(y) * overlay_.pitch);
 				for (uint32_t x = 0; x < media_->width; x += 2) {
 					const uint32_t luma = y * frame->y.width + x;
 					const uint32_t chroma = (y / 2) * frame->cb.width + x / 2;
@@ -1593,7 +1604,7 @@ bool Engine::poll()
 {
 	bool dirty = false;
 	pump_audio();
-	auto *mb = memory_ + mailbox_offset;
+	auto *mb = memory_at(mailbox_offset);
 	uint32_t head = be32(mb + 20);
 	const uint32_t tail = be32(mb + 24);
 	uint32_t completion_tail = be32(mb + 40);

@@ -19,6 +19,7 @@ constexpr uint32_t mailbox_arm_address = 0x3fe43000;
 class Engine {
 public:
 	Engine(uint8_t *board_memory, uint32_t board_size);
+	Engine(uint8_t *io_memory, uint8_t *vram_memory, uint32_t board_size);
 	~Engine();
 	void reset();
 	bool poll(); // True when a visible framebuffer or PIP frame changed.
@@ -52,7 +53,9 @@ private:
 		uint32_t offset = 0, width = 0, height = 0, pitch = 0, format = 0;
 	};
 
-	uint8_t *memory_;
+	static constexpr uint32_t memory_base = 0x10000;
+	uint8_t *io_memory_;
+	uint8_t *vram_memory_;
 	uint32_t board_size_;
 	std::array<Buffer, 16> buffers_{};
 	uint32_t next_handle_ = 1;
@@ -70,6 +73,7 @@ private:
 	std::array<Surface, 4> surfaces_{};
 	Framebuffer framebuffer_{};
 	uint32_t next_surface_handle_ = 1;
+	uint8_t *memory_at(uint32_t offset) const;
 	Buffer *find_buffer(uint32_t handle);
 	const Buffer *find_buffer(uint32_t handle) const;
 	Surface *find_surface(uint32_t handle);

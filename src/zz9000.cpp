@@ -212,6 +212,7 @@ struct zz9000_state {
 	uae_u32 configured;
 	uae_u32 card_size;
 	uae_u8 *memory;
+	uae_u8 *io_memory;
 	addrbank vram_bank;
 	std::vector<uae_u8> line_buffer;
 	uae_u16 registers[0x808];
@@ -370,7 +371,7 @@ static uae_u8 *zz_memory_ptr(zz9000_state *data, uae_u32 offset, uae_u32 size = 
 	const uae_u64 card_offset = static_cast<uae_u64>(ZZ9000_MEMORY_BASE) + offset;
 	if (card_offset + size > data->card_size)
 		return nullptr;
-	return data->memory + card_offset;
+	return data->memory + offset;
 }
 
 static const uae_u8 *zz_memory_ptr(const zz9000_state *data, uae_u32 offset, uae_u32 size = 1)
@@ -504,7 +505,7 @@ static uae_u8 *REGPARAM2 zz9000_vram_xlate(uaecptr addr)
 	const uae_u32 offset = addr - data->configured;
 	if (offset < ZZ9000_MEMORY_BASE || offset >= data->card_size)
 		return default_xlate(addr);
-	return data->memory + offset;
+	return data->memory + offset - ZZ9000_MEMORY_BASE;
 }
 
 
@@ -1630,7 +1631,7 @@ static void zz_ax_audio_period(zz9000_state *data)
     zz_ax_audio_engine *eng = data->ax_audio;
     const uae_u32 bytes = zz_ax_frames(data) * 4;
     if (data->audio_play) {
-        uae_u8 *slot = data->memory + data->audio_tx_ring_off +
+        uae_u8 *slot = data->memory + data->audio_tx_ring_off - ZZ9000_MEMORY_BASE +
             static_cast<uae_u32>(data->audio_tx_read_period) * ZZ_AX_PERIOD_BYTES;
         if (eng->play_stream && !eng->play_paused &&
             SDL_GetAudioStreamQueued(eng->play_stream) < static_cast<int>(bytes * ZZ_AX_PERIODS)) {
@@ -1679,7 +1680,7 @@ static void zz_ax_audio_period(zz9000_state *data)
             zz_ax_swap_stereo(samples, bytes);
         const uae_u32 filled =
             (static_cast<uae_u32>(data->audio_rx_write_period) + 1) % ZZ_AX_PERIODS;
-        uae_u8 *slot = data->memory + data->audio_rx_ring_off + filled * ZZ_AX_PERIOD_BYTES;
+        uae_u8 *slot = data->memory + data->audio_rx_ring_off - ZZ9000_MEMORY_BASE + filled * ZZ_AX_PERIOD_BYTES;
         memcpy(slot, samples, bytes);
         zz_ax_swap16(slot, bytes);
         data->audio_rx_write_period = static_cast<uae_u8>(filled);
@@ -2096,7 +2097,7 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 			if (!(value & 0x8000)) {
 				const uae_u32 slot_offset = ((value & 0x7fffu) * 256u) % ZZ_AX_RING_BYTES;
 				if (slot_offset + zz_ax_frames(data) * 4 <= ZZ_AX_RING_BYTES)
-					zz_ax_swap16(data->memory + data->audio_tx_ring_off + slot_offset,
+					zz_ax_swap16(data->memory + data->audio_tx_ring_off - ZZ9000_MEMORY_BASE + slot_offset,
 						zz_ax_frames(data) * 4);
 			}
 #endif
@@ -2247,7 +2248,7 @@ static uae_u32 REGPARAM2 zz9000_wget(uaecptr addr)
 	const uae_u32 offset = addr - data->configured;
 	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
 	    offset + 1 < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size)
-		return (data->memory[offset] << 8) | data->memory[offset + 1];
+		return (data->io_memory[offset] << 8) | data->io_memory[offset + 1];
 	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset + 1 < 0x6000)
 		return (data->net->rx.read(offset - ZZ_NET_RX_WINDOW) << 8) |
 			data->net->rx.read(offset + 1 - ZZ_NET_RX_WINDOW);
@@ -2257,7 +2258,8 @@ static uae_u32 REGPARAM2 zz9000_wget(uaecptr addr)
 	if (offset >= ZZ9000_MEMORY_BASE) {
 		if (offset + 1 >= data->card_size)
 			return 0;
-		return (data->memory[offset] << 8) | data->memory[offset + 1];
+		return (data->memory[offset - ZZ9000_MEMORY_BASE] << 8) |
+			data->memory[offset + 1 - ZZ9000_MEMORY_BASE];
 	}
 	return zz_read_register(data, offset & ~1U);
 }
@@ -2270,13 +2272,13 @@ static uae_u32 REGPARAM2 zz9000_bget(uaecptr addr)
 	const uae_u32 offset = addr - data->configured;
 	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
 	    offset < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size)
-		return data->memory[offset];
+		return data->io_memory[offset];
 	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return data->net->rx.read(offset - ZZ_NET_RX_WINDOW);
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES)
 		return data->net->tx[offset - ZZ_NET_TX_WINDOW];
 	if (offset >= ZZ9000_MEMORY_BASE)
-		return offset < data->card_size ? data->memory[offset] : 0;
+		return offset < data->card_size ? data->memory[offset - ZZ9000_MEMORY_BASE] : 0;
 	const uae_u16 value = zz_read_register(data, offset & ~1U);
 	return (offset & 1) ? value & 0xff : value >> 8;
 }
@@ -2294,8 +2296,8 @@ static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value)
 	const uae_u32 offset = addr - data->configured;
 	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
 	    offset + 1 < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size) {
-		data->memory[offset] = static_cast<uae_u8>(value >> 8);
-		data->memory[offset + 1] = static_cast<uae_u8>(value);
+		data->io_memory[offset] = static_cast<uae_u8>(value >> 8);
+		data->io_memory[offset + 1] = static_cast<uae_u8>(value);
 		return;
 	}
 	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
@@ -2308,8 +2310,8 @@ static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value)
 	if (offset >= ZZ9000_MEMORY_BASE) {
 		if (offset + 1 >= data->card_size)
 			return;
-		data->memory[offset] = static_cast<uae_u8>(value >> 8);
-		data->memory[offset + 1] = static_cast<uae_u8>(value);
+		data->memory[offset - ZZ9000_MEMORY_BASE] = static_cast<uae_u8>(value >> 8);
+		data->memory[offset + 1 - ZZ9000_MEMORY_BASE] = static_cast<uae_u8>(value);
 		data->modified = true;
 		return;
 	}
@@ -2324,7 +2326,7 @@ static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value)
 	const uae_u32 offset = addr - data->configured;
 	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
 	    offset < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size) {
-		data->memory[offset] = static_cast<uae_u8>(value);
+		data->io_memory[offset] = static_cast<uae_u8>(value);
 		return;
 	}
 	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
@@ -2336,7 +2338,7 @@ static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value)
 	if (offset >= ZZ9000_MEMORY_BASE) {
 		if (offset >= data->card_size)
 			return;
-		data->memory[offset] = static_cast<uae_u8>(value);
+		data->memory[offset - ZZ9000_MEMORY_BASE] = static_cast<uae_u8>(value);
 		data->modified = true;
 		return;
 	}
@@ -2560,35 +2562,20 @@ static void zz9000_configured(void *userdata, uae_u32 address)
 {
 	auto *data = static_cast<zz9000_state *>(userdata);
 	data->configured = address;
-	data->vram_bank.start = address;
-	data->vram_bank.reserved_size = data->card_size;
+	const uae_u32 vram_start = address + ZZ9000_MEMORY_BASE;
+	const uae_u32 vram_size = data->card_size - ZZ9000_MEMORY_BASE;
+	data->vram_bank.start = vram_start;
+	data->vram_bank.reserved_size = vram_size;
 	data->vram_bank.mask = data->card_size - 1;
 	if (!mapped_malloc(&data->vram_bank)) {
 		write_log(_T("ZZ9000: failed to allocate %u MB of VRAM at %08x\n"),
-			data->card_size >> 20, address);
+			vram_size >> 20, vram_start);
 		return;
 	}
 	data->memory = data->vram_bank.baseaddr;
-	const uae_u32 vram_start = address + ZZ9000_MEMORY_BASE;
-	const uae_u32 vram_size = data->card_size - ZZ9000_MEMORY_BASE;
-	// mapped_malloc owns a contiguous card allocation so host users retain
-	// their board-relative data->memory pointer. Map the VRAM subrange first
-	// while its base still identifies that allocation to add_shmmaps(), then
-	// shift the bank base to the subrange and remap quickly. This makes both
-	// direct pointers and JIT baseaddr[] resolve vram_start to memory[0x10000].
 	map_banks(&data->vram_bank, vram_start >> 16, vram_size >> 16, 0);
-	data->vram_bank.baseaddr += ZZ9000_MEMORY_BASE;
-	if (data->vram_bank.baseaddr_direct_r)
-		data->vram_bank.baseaddr_direct_r += ZZ9000_MEMORY_BASE;
-	if (data->vram_bank.baseaddr_direct_w)
-		data->vram_bank.baseaddr_direct_w += ZZ9000_MEMORY_BASE;
-	data->vram_bank.start = vram_start;
-	data->vram_bank.startmask = vram_start;
-	data->vram_bank.startaccessmask = vram_start & data->vram_bank.mask;
-	data->vram_bank.reserved_size = vram_size;
-	data->vram_bank.allocated_size = vram_size;
-	map_banks_quick(&data->vram_bank, vram_start >> 16, vram_size >> 16, 0);
-	data->sdk = new (std::nothrow) zz9000_sdk::Engine(data->memory, data->card_size);
+	data->sdk = new (std::nothrow) zz9000_sdk::Engine(
+		data->io_memory, data->memory, data->card_size);
 	if (!data->sdk)
 		write_log(_T("ZZ9000: failed to create SDK engine\n"));
 	write_log(_T("ZZ9000 %s configured at %08x (%u MB)\n"),
@@ -2671,11 +2658,10 @@ static void zz9000_free(void *userdata)
 	data->sdk = nullptr;
 	delete data->net;
 	data->net = nullptr;
-	// The mapped allocation starts at the card address; the active VRAM bank
-	// base is advanced past the IO window for address translation.
-	data->vram_bank.baseaddr = data->memory;
 	mapped_free(&data->vram_bank);
 	data->memory = nullptr;
+	xfree(data->io_memory);
+	data->io_memory = nullptr;
 	delete data;
 }
 
@@ -2696,15 +2682,21 @@ static bool zz9000_init(autoconfig_info *aci)
 	data->z3 = z3;
 	data->int2 = aci->prefs->zz9000_int2;
 	data->card_size = z3 ? ZZ9000_Z3_SIZE : ZZ9000_Z2_SIZE;
-	// AX audio rings live in the top 64 KB of card memory (index into
-	// data->memory): TX base = size - 0x10000, RX base = size - 0x8000.
+	// AX audio rings live in the top 64 KB of card memory. data->memory
+	// starts at card offset ZZ9000_MEMORY_BASE, so their host pointers subtract it.
 	// The 8-slot ring is 8 x 3840 B; the legacy aperture (FW_CAPS = 0)
 	// places them here for both Z2 and Z3.
 	data->audio_tx_ring_off = data->card_size - 0x10000;
 	data->audio_rx_ring_off = data->card_size - 0x8000;
 	data->vram_bank = zz9000_vram_bank_template;
+	data->io_memory = xcalloc(uae_u8, ZZ9000_MEMORY_BASE);
+	if (!data->io_memory) {
+		delete data;
+		return false;
+	}
 	data->net = new (std::nothrow) zz9000_net_engine;
 	if (!data->net) {
+		xfree(data->io_memory);
 		delete data;
 		return false;
 	}
