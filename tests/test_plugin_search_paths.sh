@@ -44,6 +44,21 @@ if [ "$portable_mode" = "1" ]; then
 	echo "plugin search paths behavioral test passed"
 	exit 0
 fi
+# On Linux and FreeBSD, a non-portable run without either home variable keeps
+# the legacy executable-relative plugins folder as its final fallback.
+case "$(uname -s)" in
+	Linux|FreeBSD)
+		env -u HOME -u AMIBERRY_HOME_DIR "$AMIBERRY_BIN" --dump-paths > "$work/no-home-paths.txt"
+		fallback_root="$(line_value portable_root "$work/no-home-paths.txt")"
+		fallback_path="$(grep '^plugin_search_path_' "$work/no-home-paths.txt" | tail -n 1 | cut -d= -f2-)"
+		[ -n "$fallback_root" ] || { echo "executable directory was not resolved" >&2; exit 1; }
+		case "$fallback_path" in
+			"$fallback_root/plugins"*) ;;
+			*) echo "missing executable-relative plugin fallback without a home directory" >&2; exit 1 ;;
+		esac
+		;;
+esac
+
 # An environment path equal to the user path must be represented only once,
 # while still taking the first search position.
 user_plugin_search_path="$(line_value plugin_search_path_0 "$work/default-paths.txt")"

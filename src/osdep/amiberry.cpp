@@ -8756,6 +8756,11 @@ std::vector<std::string> get_plugin_search_paths()
 		append_unique_path_candidate(candidates, plugins_dir);
 		append_unique_path_candidate(candidates, get_user_plugins_path());
 		append_unique_path_candidate(candidates, get_system_plugins_directory());
+		// Preserve the legacy executable-relative fallback. It remains last so
+		// user and system locations retain precedence when they are available.
+#if defined(__linux__) || defined(__FreeBSD__)
+		append_unique_path_candidate(candidates, join_path(get_portable_root_directory(), "plugins"));
+#endif
 	}
 	for (auto& candidate : candidates)
 		candidate = fix_trailing(candidate);
