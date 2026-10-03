@@ -8709,9 +8709,8 @@ static bool is_macos_bundled_plugins_path(const std::string& path)
 #ifdef AMIBERRY_MACOS
 	const auto normalized = lowercase_path_for_compare(path);
 	const auto marker = std::string(".app/contents/resources/plugins");
-	const auto position = normalized.find(marker);
-	return position != std::string::npos && (position + marker.size() == normalized.size()
-		|| normalized[position + marker.size()] == '/');
+	return normalized.size() >= marker.size()
+		&& normalized.compare(normalized.size() - marker.size(), marker.size(), marker) == 0;
 #else
 	return false;
 #endif
@@ -8721,18 +8720,23 @@ static bool is_valid_plugins_override(const std::string& path)
 {
 	if (path.empty() || g_portable_mode
 		|| path_strings_match(path, get_user_plugins_path())
-		|| path_strings_match(path, get_system_plugins_directory())
 		|| is_macos_bundled_plugins_path(path))
 		return false;
 
 #ifdef _WIN32
-	// Before plugin search paths were split, the bundled plugins folder was
-	// written to settings. A previous Windows installation still has its
-	// Amiberry executable alongside that folder, which distinguishes it from
-	// a user-selected folder after the executable has moved.
-	std::error_code ec;
-	const auto bundled_executable = std::filesystem::path(path).parent_path() / "Amiberry.exe";
-	if (std::filesystem::exists(bundled_executable, ec))
+	// Windows paths are case-insensitive; match only the old computed default,
+	// the executable's sibling plugins folder.
+	if (path_strings_match_case_insensitive(path, get_system_plugins_directory()))
+		return false;
+#else
+	if (path_strings_match(path, get_system_plugins_directory()))
+		return false;
+#endif
+
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	// Preserve the legacy Linux/Unix default even when the system directory
+	// no longer exists, so a stale setting cannot become a user override.
+	if (path_strings_match(path, AMIBERRY_LIBDIR))
 		return false;
 #endif
 	return true;

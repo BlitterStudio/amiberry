@@ -56,10 +56,12 @@ count="$(grep -F "=$user_plugin_search_path" "$work/deduplicated-paths.txt" | gr
 [ "$count" -eq 1 ] || { echo "duplicate plugin search path was retained" >&2; exit 1; }
 unset AMIBERRY_PLUGINS_DIR
 
-# A saved custom override remains second, between the environment and user
-# folders. The dump normalizes Windows separators, so compare emitted paths.
+# A saved sibling-folder override remains second, between the environment and
+# user folders. On Windows its parent contains Amiberry.exe, exercising the
+# legacy-default migration boundary. The dump normalizes separators, so compare
+# emitted paths.
 config_file="$(line_value amiberry_conf_file "$work/default-paths.txt")"
-custom_plugins="$work/custom-plugins"
+custom_plugins="$(line_value portable_root "$work/default-paths.txt")/third-party-plugins"
 environment_plugins="$work/environment-plugins"
 mkdir -p "$(dirname "$config_file")"
 printf 'plugins_dir=%s\n' "$custom_plugins" > "$config_file"
@@ -68,6 +70,7 @@ export AMIBERRY_PLUGINS_DIR="$environment_plugins"
 environment_path="$(line_value plugin_search_path_0 "$work/precedence-paths.txt")"
 override_plugins="$(line_value plugins_dir "$work/precedence-paths.txt")"
 override_path="$(line_value plugin_search_path_1 "$work/precedence-paths.txt")"
+[ -n "$override_plugins" ] || { echo "sibling plugin override was discarded" >&2; exit 1; }
 [ "$environment_path" != "$override_path" ] \
 	|| { echo "environment path was not first" >&2; exit 1; }
 [ "$environment_path" != "$user_plugin_search_path" ] \
@@ -81,11 +84,14 @@ esac
 unset AMIBERRY_PLUGINS_DIR
 
 # A saved bundled/system path is a previous computed default, not an override.
-# Windows always has this path; platforms without a system plugin path simply do
-# not exercise this platform-specific migration case.
+# On Windows, case variation must still match the executable's plugins folder.
 system_plugins="$(line_value plugin_search_path_1 "$work/default-paths.txt" || true)"
 if [ -n "$system_plugins" ] && [ -n "$config_file" ]; then
-	printf 'plugins_dir=%s\n' "$system_plugins" > "$config_file"
+	legacy_system_plugins="$system_plugins"
+	case "$legacy_system_plugins" in
+		[A-Za-z]:*) legacy_system_plugins="$(printf '%s' "$legacy_system_plugins" | tr '[:lower:]' '[:upper:]')" ;;
+	esac
+	printf 'plugins_dir=%s\n' "$legacy_system_plugins" > "$config_file"
 	"$AMIBERRY_BIN" --dump-paths > "$work/migrated-paths.txt"
 	[ -z "$(line_value plugins_dir "$work/migrated-paths.txt")" ] \
 		|| { echo "saved bundled plugin path was retained as an override" >&2; exit 1; }
