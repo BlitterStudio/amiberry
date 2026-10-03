@@ -1174,14 +1174,19 @@ jobs:
           Assert-PortablePath "config_path" $expectedConfig
           Assert-PortablePath "settings_dir" $expectedSettings
           Assert-PortablePath "data_dir" $expectedData
-          Assert-PortablePath "plugins_dir" $expectedPlugins
+          if (-not [string]::IsNullOrWhiteSpace($lines["plugins_dir"])) {
+            throw "plugins_dir must be empty in portable mode, got '$($lines["plugins_dir"])'."
+          }
+          Assert-PortablePath "user_plugins_dir" $expectedPlugins
+          Assert-PortablePath "plugin_search_path_0" $expectedPlugins
           Assert-NotUnderBlockedRoots "portable_root"
           Assert-NotUnderBlockedRoots "portable_marker_file"
           Assert-NotUnderBlockedRoots "home_dir"
           Assert-NotUnderBlockedRoots "config_path"
           Assert-NotUnderBlockedRoots "settings_dir"
           Assert-NotUnderBlockedRoots "data_dir"
-          Assert-NotUnderBlockedRoots "plugins_dir"
+          Assert-NotUnderBlockedRoots "user_plugins_dir"
+          Assert-NotUnderBlockedRoots "plugin_search_path_0"
           if (Test-Path (Join-Path $portableDir.FullName "Settings")) {
             throw "--dump-paths should not create Settings in the portable tree."
           }
