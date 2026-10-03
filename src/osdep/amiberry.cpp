@@ -8761,6 +8761,10 @@ static bool is_valid_plugins_override(const std::string& path)
 
 static void append_unique_path_candidate(std::vector<std::string>& candidates, const std::string& candidate);
 
+#ifdef _WIN32
+// "Install plugin…" moves a loaded DLL aside as <name>.dll.old (a DLL in use
+// cannot be replaced, but it can be renamed). Remove those at the next start,
+// when no process of ours holds them any more.
 static void remove_stale_user_plugin_backups()
 {
 	const auto user_plugins_path = get_user_plugins_path();
@@ -8770,23 +8774,18 @@ static void remove_stale_user_plugin_backups()
 	std::error_code ec;
 	for (std::filesystem::directory_iterator it(user_plugins_path, ec), end; !ec && it != end; it.increment(ec))
 	{
-		if (!it->is_regular_file(ec))
-		{
-			ec.clear();
-			continue;
-		}
 		const auto filename = it->path().filename().string();
-		if (filename.size() > 4 && filename.compare(filename.size() - 4, 4, ".old") == 0)
+		if (filename.size() > 8 && filename.compare(filename.size() - 8, 8, ".dll.old") == 0)
 		{
-			std::filesystem::remove(it->path(), ec);
-			ec.clear();
+			std::error_code remove_ec;
+			std::filesystem::remove(it->path(), remove_ec);
 		}
 	}
 }
+#endif
 
 std::vector<std::string> get_plugin_search_paths()
 {
-	remove_stale_user_plugin_backups();
 	std::vector<std::string> candidates;
 	if (g_portable_mode) {
 		append_unique_path_candidate(candidates, get_user_plugins_path());
@@ -12450,6 +12449,9 @@ int amiberry_main(int argc, char* argv[])
 		// cpu_compatible case and only risks breaking timing-sensitive titles.)
 		amiberry_options.default_gfx_autoresolution = 1;
 	}
+#ifdef _WIN32
+	remove_stale_user_plugin_backups();
+#endif
 
 #ifdef __ANDROID__
 	// First run with no amiberry.conf: nothing legacy to migrate. Marking now
