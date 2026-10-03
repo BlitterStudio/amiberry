@@ -118,6 +118,25 @@ int main(int argc, char **argv)
 		assert(!doorbell.sdk.write_register(0x108, 1));
 		assert(get32(ring + 20) == 2);
 	}
+	{
+		std::vector<uint8_t> io(0x10000);
+		std::vector<uint8_t> vram(4 * 1024 * 1024 - 0x10000);
+		zz9000_sdk::Engine split_memory(io.data(), vram.data(), 4 * 1024 * 1024);
+		auto *ring = io.data() + zz9000_sdk::mailbox_offset;
+		assert(get32(ring) == 0x5a5a394b);
+		split_memory.set_framebuffer(0x110000, 2, 2, 8, 7);
+		auto *request = ring + 128;
+		put32(request, 1);
+		put16(request + 4, 0x0203); // Fill the visible framebuffer.
+		put16(request + 10, 28);
+		put32(request + 16, 0x80000000); // Framebuffer handle.
+		put32(request + 28, 2); // Width.
+		put32(request + 32, 2); // Height.
+		put32(request + 36, 0x00ff0000); // Red.
+		put32(ring + 24, 1);
+		assert(split_memory.write_register(0x108, 1));
+		assert(vram[0x110002 - 0x10000] == 0xff);
+	}
 	uint8_t payload[48] = {};
 	const auto *reply = z2.call(0x0001, nullptr, 0);
 	assert(get32(reply + 16) == 0x5a5a394b);

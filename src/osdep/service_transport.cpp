@@ -126,25 +126,19 @@ void service_transport_reset()
 }
 
 // Guest RAM banks are stored in Amiga byte order, so the plugin may use guest
-// memory in place where the transport knows a bounded raw mapping backs the
-// whole range: a directly mapped bank (valid_address() then bounds the range
-// by its allocation) or ZZ9000 VRAM. A bank's own check()/xlate() promise
-// neither a bound nor raw access, so everything else goes through the bank
-// handlers: get_byte()/put_byte() on the emulator thread, or the trap
-// accessors in indirect UAE-board mode, where the trap runs on a worker
-// thread and nothing is passed in place.
+// memory in place only where the transport knows a bounded raw mapping backs
+// the whole range. A bank's own check()/xlate() promise neither a bound nor raw
+// access, so everything else goes through the bank handlers: get_byte()/
+// put_byte() on the emulator thread, or the trap accessors in indirect
+// UAE-board mode, where the trap runs on a worker thread and nothing is passed
+// in place.
 static bool host_mapped(uaecptr address, uae_u32 bytes)
 {
-	if (!bytes || trap_is_indirect() || !real_address_allowed())
-		return false;
-	if (get_mem_bank(address).baseaddr_direct_r)
-		return valid_address(address, bytes);
-	return zz9000_host_vram(address, bytes);
+	return bytes && !trap_is_indirect() && real_address_allowed() &&
+		get_mem_bank(address).baseaddr_direct_r && valid_address(address, bytes);
 }
 
-// In-place output also needs raw writes to be safe: a direct write mapping,
-// RTG VRAM (commit_output() marks it dirty), or ZZ9000 VRAM. ROM is mapped
-// for reads only.
+// In-place output also needs a raw write mapping. ROM is mapped for reads only.
 static bool host_writable(uaecptr address, uae_u32 bytes)
 {
 	if (!host_mapped(address, bytes))
