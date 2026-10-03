@@ -232,6 +232,84 @@ static bool path_exists_cached(const char* id, const std::string& path, bool is_
 	return e.exists;
 }
 
+static bool install_user_plugin(const std::filesystem::path& source, const std::filesystem::path& directory,
+	std::string& status)
+{
+	std::error_code ec;
+	std::filesystem::create_directories(directory, ec);
+	if (ec)
+	{
+		status = "Could not create the user plugins folder: " + ec.message();
+		return false;
+	}
+
+	const auto destination = directory / source.filename();
+	auto temporary = destination;
+	temporary += ".new";
+	std::filesystem::remove(temporary, ec);
+	if (ec)
+	{
+		status = "Could not prepare plugin installation: " + ec.message();
+		return false;
+	}
+
+	std::filesystem::copy_file(source, temporary, std::filesystem::copy_options::none, ec);
+	if (ec)
+	{
+		std::error_code cleanup_ec;
+		std::filesystem::remove(temporary, cleanup_ec);
+		status = "Could not copy plugin: " + ec.message();
+		return false;
+	}
+
+	const auto remove_temporary = [&]() {
+		std::error_code cleanup_ec;
+		std::filesystem::remove(temporary, cleanup_ec);
+	};
+	const auto fail = [&](const char* action) {
+		remove_temporary();
+		status = std::string("Could not ") + action + ": " + ec.message();
+		return false;
+	};
+
+#ifdef _WIN32
+	const auto destination_exists = std::filesystem::exists(destination, ec);
+	if (ec)
+		return fail("check the existing plugin");
+	if (destination_exists)
+	{
+		auto backup = destination;
+		backup += ".old";
+		std::filesystem::remove(backup, ec);
+		if (ec)
+			return fail("remove the previous plugin backup");
+		std::filesystem::rename(destination, backup, ec);
+		if (ec)
+			return fail("move the existing plugin aside");
+		std::filesystem::rename(temporary, destination, ec);
+		if (ec)
+		{
+			std::error_code restore_ec;
+			std::filesystem::rename(backup, destination, restore_ec);
+			return fail("replace the plugin");
+		}
+	}
+	else
+	{
+		std::filesystem::rename(temporary, destination, ec);
+		if (ec)
+			return fail("install the plugin");
+	}
+#else
+	std::filesystem::rename(temporary, destination, ec);
+	if (ec)
+		return fail("replace the plugin");
+#endif
+
+	status = "Installed " + destination.filename().string() + ". Restart Amiberry to use the new version.";
+	return true;
+}
+
 void render_plugin_paths_settings(const char* id)
 {
 	if (!user_plugins_supported())
@@ -253,27 +331,7 @@ void render_plugin_paths_settings(const char* id)
 #endif
 
 	auto install = [&]() {
-		std::error_code ec;
-		std::filesystem::create_directories(user_plugins_path, ec);
-		if (ec)
-		{
-			install_status = "Could not create the user plugins folder: " + ec.message();
-			install_failed = true;
-			return;
-		}
-
-		const auto destination = std::filesystem::path(user_plugins_path) / std::filesystem::path(selected_plugin).filename();
-		std::filesystem::copy_file(selected_plugin, destination, std::filesystem::copy_options::overwrite_existing, ec);
-		if (ec)
-		{
-			install_status = "Could not install plugin: " + ec.message();
-			install_failed = true;
-		}
-		else
-		{
-			install_status = "Installed " + destination.filename().string() + ".";
-			install_failed = false;
-		}
+		install_failed = !install_user_plugin(selected_plugin, user_plugins_path, install_status);
 	};
 
 	ImGui::PushID(id);

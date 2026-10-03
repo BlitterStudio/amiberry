@@ -8761,8 +8761,32 @@ static bool is_valid_plugins_override(const std::string& path)
 
 static void append_unique_path_candidate(std::vector<std::string>& candidates, const std::string& candidate);
 
+static void remove_stale_user_plugin_backups()
+{
+	const auto user_plugins_path = get_user_plugins_path();
+	if (user_plugins_path.empty())
+		return;
+
+	std::error_code ec;
+	for (std::filesystem::directory_iterator it(user_plugins_path, ec), end; !ec && it != end; it.increment(ec))
+	{
+		if (!it->is_regular_file(ec))
+		{
+			ec.clear();
+			continue;
+		}
+		const auto filename = it->path().filename().string();
+		if (filename.size() > 4 && filename.compare(filename.size() - 4, 4, ".old") == 0)
+		{
+			std::filesystem::remove(it->path(), ec);
+			ec.clear();
+		}
+	}
+}
+
 std::vector<std::string> get_plugin_search_paths()
 {
+	remove_stale_user_plugin_backups();
 	std::vector<std::string> candidates;
 	if (g_portable_mode) {
 		append_unique_path_candidate(candidates, get_user_plugins_path());
