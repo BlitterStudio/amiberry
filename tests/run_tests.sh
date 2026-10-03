@@ -22,6 +22,7 @@ SKIPPED_TESTS=()
 # Tests that run a built emulator binary (via AMIBERRY_BIN).
 BEHAVIORAL_TESTS=(
 	"test_dump_config.sh"
+	"test_plugin_search_paths.sh"
 )
 
 binary="${1:-${AMIBERRY_BIN:-}}"

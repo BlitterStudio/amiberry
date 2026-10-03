@@ -1103,6 +1103,7 @@ int max_uae_height;
 
 int main(int argc, char* argv[]);
 static void init_amiberry_dirs(bool portable_mode, bool materialize_host_roots = true);
+static bool is_valid_plugins_override(const std::string& path);
 void save_amiberry_settings();
 
 static const char* get_settings_resolution_source_name(const settings_resolution_source source)
@@ -6599,8 +6600,12 @@ void set_nvram_path(const std::string& newpath)
 
 void set_plugins_path(const std::string& newpath)
 {
-	plugins_dir = newpath;
-	macos_bookmark_store(newpath);
+	if (is_valid_plugins_override(newpath)) {
+		plugins_dir = normalize_path_string(newpath);
+		macos_bookmark_store(plugins_dir);
+	} else {
+		plugins_dir.clear();
+	}
 }
 
 void set_video_path(const std::string& newpath)
@@ -6917,16 +6922,9 @@ std::string get_nvram_path()
 	return fix_trailing(nvram_dir);
 }
 
-std::string get_plugins_path()
+std::string get_plugins_override_path()
 {
-	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
-	if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
-	{
-		std::string path = env_plugins_dir;
-		return fix_trailing(path);
-	}
-
-	return fix_trailing(plugins_dir);
+	return plugins_dir;
 }
 
 std::string get_screenshot_path()
@@ -7447,7 +7445,8 @@ bool save_amiberry_settings_with_result()
 	write_string_option("base_content_path", base_content_path);
 	write_string_option("retroarch_config", retroarch_file);
 	write_string_option("floppy_sounds_dir", floppy_sounds_dir);
-	write_string_option("plugins_dir", plugins_dir);
+	if (!plugins_dir.empty())
+		write_string_option("plugins_dir", plugins_dir);
 	write_managed_path_option(base_content_managed_path_options[0], config_path);
 	write_managed_path_option(base_content_managed_path_options[1], controllers_path);
 	write_managed_path_option(base_content_managed_path_options[2], whdboot_path);
@@ -7726,7 +7725,14 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir);
 		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir);
-		ret |= cfgfile_string(option, value, "plugins_dir", plugins_dir);
+	{
+		std::string loaded_plugins_dir;
+		if (cfgfile_string(option, value, "plugins_dir", loaded_plugins_dir)) {
+			plugins_dir = is_valid_plugins_override(loaded_plugins_dir)
+				? normalize_path_string(loaded_plugins_dir) : std::string{};
+			ret = 1;
+		}
+	}
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		ret |= cfgfile_string(option, value, "themes_path", themes_path);
 		ret |= cfgfile_string(option, value, "shaders_path", shaders_path);
@@ -8644,94 +8650,112 @@ std::string get_config_directory(bool portable_mode)
 #endif
 }
 
-// Plugins that Amiberry can use, usually in the form of shared libraries
-std::string get_plugins_directory(bool portable_mode)
+// Plugin locations are searched in get_plugin_search_paths(). The bundled or
+// system directory remains separate from the writable per-user directory.
+static std::string get_system_plugins_directory()
 {
 #ifdef LIBRETRO
-	// libretro: standard standalone fallbacks (executable dir / app bundle Resources)
-	// don't apply because the libretro core is loaded as a shared object inside the
-	// frontend's process — the executable is the frontend, not amiberry. Resolve only
-	// from explicit env vars; otherwise return empty (no plugins). Never fall back
-	// to a host home dir. See get_home_directory() for rationale.
-	{
-		const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
-		if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
-			return { env_plugins_dir };
-		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-		if (env_home_dir != nullptr && env_home_dir[0] != '\0')
-			return { std::string(env_home_dir) + "/plugins" };
-		return {};
-	}
-#endif
-#ifdef AMIBERRY_IOS
-	// iOS: no plugins directory (no dynamic loading on iOS)
+	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
+	if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
+		return { env_plugins_dir };
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	return env_home_dir != nullptr && env_home_dir[0] != '\0'
+		? join_path(env_home_dir, "plugins") : std::string{};
+#elif defined(AMIBERRY_IOS)
 	return {};
 #elif defined(AMIBERRY_MACOS)
 	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
-	std::string directory;
-	if (_NSGetExecutablePath(exepath, &size) == 0)
-	{
-		size_t last_slash_idx = string(exepath).rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-			directory = string(exepath).substr(0, last_slash_idx);
-		}
-		last_slash_idx = directory.rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-
-			directory = directory.substr(0, last_slash_idx);
-		}
-	}
-	return directory + "/Resources/plugins/";
+	if (_NSGetExecutablePath(exepath, &size) != 0)
+		return {};
+	return join_path(std::filesystem::path(exepath).parent_path().parent_path().string(), "Resources/plugins");
 #elif defined(__ANDROID__)
 	return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
-	{
-		return get_windows_executable_directory() + "\\plugins";
-	}
+	return get_windows_executable_directory() + "\\plugins";
 #else
-	if (portable_mode)
-	{
-		write_log("Portable mode: Setting plugins directory to executable path\n");
-		return join_path(get_portable_root_directory(), "plugins");
-	}
+	return my_existsdir(AMIBERRY_LIBDIR) ? AMIBERRY_LIBDIR : std::string{};
+#endif
+}
 
-	// 1: Check if the $AMIBERRY_PLUGINS_DIR ENV variable is set
-	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
-	if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
-	{
-		// If the ENV variable is set, use it
-		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
-		return { env_plugins_dir };
-	}
-	// 2: Check system-wide location (e.g. installed from a .deb package)
-	if (my_existsdir(AMIBERRY_LIBDIR))
-	{
-		write_log("Using plugins directory from " AMIBERRY_LIBDIR "\n");
-		return AMIBERRY_LIBDIR;
-	}
-	// 3: Check for $AMIBERRY_HOME_DIR/plugins
+std::string get_user_plugins_path()
+{
+	if (g_portable_mode)
+		return join_path(get_portable_root_directory(), "plugins");
+#ifdef LIBRETRO
+	return get_system_plugins_directory();
+#elif defined(AMIBERRY_IOS)
+	return {};
+#elif defined(AMIBERRY_MACOS)
+	const auto user_home_dir = getenv("HOME");
+	return user_home_dir != nullptr && user_home_dir[0] != '\0'
+		? normalize_path_string(std::string(user_home_dir) + "/Library/Application Support/Amiberry/Plugins") : std::string{};
+#elif defined(__ANDROID__)
+	return prefix_with_application_directory_path("plugins/");
+#elif defined(_WIN32)
+	const auto local_app_data = getenv("LOCALAPPDATA");
+	return local_app_data != nullptr && local_app_data[0] != '\0'
+		? normalize_path_string(std::string(local_app_data) + "\\Amiberry\\plugins") : std::string{};
+#else
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 	if (env_home_dir != nullptr && env_home_dir[0] != '\0')
-	{
-		write_log("Using plugins directory from AMIBERRY_HOME_DIR/plugins\n");
-		return { std::string(env_home_dir) + "/plugins" };
-	}
-	// 4: Check for ~/Amiberry/plugins.
-	// Keep path discovery side-effect free so migrated/customized setups do not recreate default folders.
-	const auto default_home_dir = get_default_posix_content_root();
-	if (!default_home_dir.empty())
-	{
-		write_log("Using plugins directory from $HOME/Amiberry/plugins\n");
-		return join_path(default_home_dir, "plugins");
-	}
-
-	// 5: Fallback to the executable directory when no other plugin path is available.
-	write_log("Using plugins directory from executable path\n");
-	return join_path(get_portable_root_directory(), "plugins");
+		return join_path(env_home_dir, "plugins");
+	return join_path(get_default_posix_content_root(), "plugins");
 #endif
+}
+
+static bool is_macos_bundled_plugins_path(const std::string& path)
+{
+#ifdef AMIBERRY_MACOS
+	const auto normalized = lowercase_path_for_compare(path);
+	const auto marker = std::string(".app/contents/resources/plugins");
+	const auto position = normalized.find(marker);
+	return position != std::string::npos && (position + marker.size() == normalized.size()
+		|| normalized[position + marker.size()] == '/');
+#else
+	return false;
+#endif
+}
+
+static bool is_valid_plugins_override(const std::string& path)
+{
+	if (path.empty() || g_portable_mode
+		|| path_strings_match(path, get_user_plugins_path())
+		|| path_strings_match(path, get_system_plugins_directory())
+		|| is_macos_bundled_plugins_path(path))
+		return false;
+
+#ifdef _WIN32
+	// Before plugin search paths were split, the bundled plugins folder was
+	// written to settings. A previous Windows installation still has its
+	// Amiberry executable alongside that folder, which distinguishes it from
+	// a user-selected folder after the executable has moved.
+	std::error_code ec;
+	const auto bundled_executable = std::filesystem::path(path).parent_path() / "Amiberry.exe";
+	if (std::filesystem::exists(bundled_executable, ec))
+		return false;
+#endif
+	return true;
+}
+
+static void append_unique_path_candidate(std::vector<std::string>& candidates, const std::string& candidate);
+
+std::vector<std::string> get_plugin_search_paths()
+{
+	std::vector<std::string> candidates;
+	if (g_portable_mode) {
+		append_unique_path_candidate(candidates, get_user_plugins_path());
+	} else {
+		const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
+		if (env_plugins_dir != nullptr && env_plugins_dir[0] != '\0')
+			append_unique_path_candidate(candidates, env_plugins_dir);
+		append_unique_path_candidate(candidates, plugins_dir);
+		append_unique_path_candidate(candidates, get_user_plugins_path());
+		append_unique_path_candidate(candidates, get_system_plugins_directory());
+	}
+	for (auto& candidate : candidates)
+		candidate = fix_trailing(candidate);
+	return candidates;
 }
 
 static void append_unique_path_candidate(std::vector<std::string>& candidates, const std::string& candidate)
@@ -11578,7 +11602,10 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 	config_path = get_config_directory(portable_mode);
 	current_dir = home_dir = get_home_directory(portable_mode);
 	data_dir = get_data_directory(portable_mode);
-	plugins_dir = get_plugins_directory(portable_mode);
+	// plugins_dir is only an explicit user override; defaults are resolved by
+	// get_plugin_search_paths() so moving an app bundle cannot stale this setting.
+	if (portable_mode)
+		plugins_dir.clear();
 	const auto visual_content_root = home_dir;
 
 #ifdef LIBRETRO
@@ -11698,6 +11725,10 @@ static void dump_resolved_paths(const bool write_dump_file)
 	append_line("config_path", config_path);
 	append_line("data_dir", data_dir);
 	append_line("plugins_dir", plugins_dir);
+	append_line("user_plugins_dir", get_user_plugins_path());
+	const auto plugin_search_paths = get_plugin_search_paths();
+	for (size_t index = 0; index < plugin_search_paths.size(); ++index)
+		append_line(("plugin_search_path_" + std::to_string(index)).c_str(), plugin_search_paths[index]);
 	append_line("controllers_path", controllers_path);
 	append_line("whdboot_path", whdboot_path);
 	append_line("whdload_arch_path", whdload_arch_path);
@@ -11739,6 +11770,7 @@ void reset_default_paths()
 {
 	const auto previous_logfile_path = logfile_path;
 	base_content_path.clear();
+	plugins_dir.clear();
 	init_amiberry_dirs(g_portable_mode);
 	create_missing_amiberry_folders();
 	if (!path_strings_match(previous_logfile_path, logfile_path))
@@ -12043,24 +12075,16 @@ void* uaenative_get_uaevar()
 
 const TCHAR** uaenative_get_library_dirs()
 {
-	static const TCHAR** nats;
-	static TCHAR* path;
-	static TCHAR* libpath;
-	
-	if (nats == nullptr)
-		nats = xcalloc(const TCHAR*, 4);
-	if (path == nullptr) {
-		path = xcalloc(TCHAR, MAX_DPATH);
-		_tcscpy(path, plugins_dir.c_str());
-	}
-	if (libpath == nullptr)
-	{
-		libpath = strdup(_T(AMIBERRY_LIBDIR));
-	}
-	nats[0] = home_dir.c_str();
-	nats[1] = path;
-	nats[2] = libpath; 
-	return nats;
+	static std::vector<std::string> library_dirs;
+	static std::vector<const TCHAR*> directories;
+	library_dirs = get_plugin_search_paths();
+	directories.clear();
+	directories.reserve(library_dirs.size() + 2);
+	directories.emplace_back(home_dir.c_str());
+	for (const auto& directory : library_dirs)
+		directories.emplace_back(directory.c_str());
+	directories.emplace_back(nullptr);
+	return directories.data();
 }
 
 static int parseversion(TCHAR** vs)
@@ -12629,29 +12653,30 @@ void toggle_mousegrab()
 bool get_plugin_path(TCHAR* out, const int len, const TCHAR* path)
 {
 	if (strcmp(path, "floppysounds") == 0) {
-		if (floppy_sounds_dir[0]) {
+		if (floppy_sounds_dir[0])
 			strncpy(out, floppy_sounds_dir.c_str(), len);
-		}
-		else {
+		else
 			strncpy(out, "floppy_sounds", len);
-		}
-		// make sure out is null-terminated in any case
 		out[len - 1] = '\0';
+		return TRUE;
 	}
-	else if (strcmp(path, "abr") == 0)
-	{
+	if (strcmp(path, "abr") == 0) {
 		strncpy(out, data_dir.c_str(), len - 1);
 		strncat(out, "abr/", len - 1);
 		out[len - 1] = '\0';
+		return TRUE;
 	}
-	else {
-		strncpy(out, plugins_dir.c_str(), len - 1);
-		strncat(out, "/", len - 1);
-		strncat(out, path, len - 1);
-		strncat(out, "/", len - 1);
-		return my_existsfile2(out);
+	for (const auto& plugin_directory : get_plugin_search_paths()) {
+		auto candidate = join_path(plugin_directory, path);
+		candidate = fix_trailing(candidate);
+		if (!my_existsfile2(candidate.c_str()))
+			continue;
+		strncpy(out, candidate.c_str(), len - 1);
+		out[len - 1] = '\0';
+		return true;
 	}
-	return TRUE;
+	out[0] = '\0';
+	return false;
 }
 
 // The serialization logic here is taken from FloppyBridge.cpp -> void BridgeConfig::toString(char** serialisedOptions)

@@ -89,6 +89,7 @@ bool play_is_adjusting_selected_content_model();
 bool play_prepare_selected_content_for_start();
 void render_panel_about();
 void render_panel_paths();
+void render_plugin_paths_settings(const char* id);
 void render_panel_quickstart();
 void Quickstart_ApplyDefaults(); // Helper to apply quickstart model defaults
 void render_panel_configurations();

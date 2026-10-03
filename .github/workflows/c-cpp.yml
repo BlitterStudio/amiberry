@@ -1621,8 +1621,8 @@ jobs:
           }
           Write-Host "ARM64 Amiberry.exe ran --dump-paths successfully."
 
-          # Shared --dump-config behavioral test (same script as the x64 and
-          # Linux legs); ARM64 has no JIT, but every dump assertion applies.
+          # Shared dump-mode behavioral tests also run on the x64 and Linux
+          # legs; ARM64 has no JIT, but every path assertion applies.
           $env:SDL_VIDEODRIVER = "dummy"
           $env:SDL_AUDIODRIVER = "dummy"
           $env:AMIBERRY_BIN = $exePath
@@ -1630,7 +1630,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "--dump-config behavioral test failed with exit code $LASTEXITCODE."
           }
-          Write-Host "ARM64 Amiberry.exe ran the --dump-config behavioral test successfully."
+          bash tests/test_plugin_search_paths.sh
+          if ($LASTEXITCODE -ne 0) {
+            throw "plugin search path behavioral test failed with exit code $LASTEXITCODE."
+          }
+          Write-Host "ARM64 Amiberry.exe ran the dump-mode behavioral tests successfully."
 
 
           $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
