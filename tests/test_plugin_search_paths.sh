@@ -22,6 +22,28 @@ line_value()
 }
 
 "$AMIBERRY_BIN" --dump-paths > "$work/default-paths.txt"
+portable_mode="$(line_value portable_mode "$work/default-paths.txt")"
+if [ "$portable_mode" = "1" ]; then
+	# Portable mode deliberately ignores environment and saved overrides: its
+	# portable plugins folder is the sole search location.
+	portable_plugins="$(line_value plugin_search_path_0 "$work/default-paths.txt")"
+	user_plugins="$(line_value user_plugins_dir "$work/default-paths.txt")"
+	[ -n "$portable_plugins" ] || { echo "portable plugin path was not resolved" >&2; exit 1; }
+	case "$portable_plugins" in
+		"$user_plugins"*) ;;
+		*) echo "portable plugin path did not use the portable plugins folder" >&2; exit 1 ;;
+	esac
+	export AMIBERRY_PLUGINS_DIR="$work/environment-plugins"
+	"$AMIBERRY_BIN" --dump-paths > "$work/portable-paths.txt"
+	[ "$(line_value plugin_search_path_0 "$work/portable-paths.txt")" = "$portable_plugins" ] \
+		|| { echo "portable mode honored an environment plugin override" >&2; exit 1; }
+	count="$(grep -c '^plugin_search_path_' "$work/portable-paths.txt" || true)"
+	[ "$count" -eq 1 ] || { echo "portable mode searched more than its plugins folder" >&2; exit 1; }
+	[ -z "$(line_value plugins_dir "$work/portable-paths.txt")" ] \
+		|| { echo "portable mode retained a plugins override" >&2; exit 1; }
+	echo "plugin search paths behavioral test passed"
+	exit 0
+fi
 # An environment path equal to the user path must be represented only once,
 # while still taking the first search position.
 user_plugin_search_path="$(line_value plugin_search_path_0 "$work/default-paths.txt")"
