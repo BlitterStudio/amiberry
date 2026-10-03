@@ -26,9 +26,11 @@ portable_mode="$(line_value portable_mode "$work/default-paths.txt")"
 if [ "$portable_mode" = "1" ]; then
 	# Portable mode deliberately ignores environment and saved overrides: its
 	# portable plugins folder is the sole search location.
-	portable_plugins="$(line_value plugin_search_path_0 "$work/default-paths.txt")"
 	user_plugins="$(line_value user_plugins_dir "$work/default-paths.txt")"
-	[ -n "$portable_plugins" ] || { echo "portable plugin path was not resolved" >&2; exit 1; }
+	portable_plugins="$(line_value plugin_search_path_0 "$work/default-paths.txt")"
+	[ -n "$user_plugins" ] || { echo "portable plugin path was not resolved" >&2; exit 1; }
+	[ -z "$(line_value system_plugins_dir "$work/default-paths.txt")" ] \
+		|| { echo "portable mode retained a system plugin path" >&2; exit 1; }
 	case "$portable_plugins" in
 		"$user_plugins"*) ;;
 		*) echo "portable plugin path did not use the portable plugins folder" >&2; exit 1 ;;
@@ -61,12 +63,14 @@ esac
 
 # An environment path equal to the user path must be represented only once,
 # while still taking the first search position.
-user_plugin_search_path="$(line_value plugin_search_path_0 "$work/default-paths.txt")"
+user_plugin_search_path="$(line_value user_plugins_dir "$work/default-paths.txt")"
 [ -n "$user_plugin_search_path" ] || { echo "user plugin search path was not resolved" >&2; exit 1; }
 export AMIBERRY_PLUGINS_DIR="$user_plugin_search_path"
 "$AMIBERRY_BIN" --dump-paths > "$work/deduplicated-paths.txt"
-[ "$(line_value plugin_search_path_0 "$work/deduplicated-paths.txt")" = "$user_plugin_search_path" ] \
-	|| { echo "environment plugin path did not take precedence" >&2; exit 1; }
+case "$(line_value plugin_search_path_0 "$work/deduplicated-paths.txt")" in
+	"$user_plugin_search_path"*) ;;
+	*) echo "environment plugin path did not take precedence" >&2; exit 1 ;;
+esac
 count="$(grep -F "=$user_plugin_search_path" "$work/deduplicated-paths.txt" | grep -c '^plugin_search_path_' || true)"
 [ "$count" -eq 1 ] || { echo "duplicate plugin search path was retained" >&2; exit 1; }
 unset AMIBERRY_PLUGINS_DIR
@@ -94,13 +98,15 @@ case "$override_path" in
 	"$override_plugins"*) ;;
 	*) echo "saved plugin override was not second" >&2; exit 1 ;;
 esac
-[ "$(line_value plugin_search_path_2 "$work/precedence-paths.txt")" = "$user_plugin_search_path" ] \
-	|| { echo "user plugin folder was not searched after the override" >&2; exit 1; }
+case "$(line_value plugin_search_path_2 "$work/precedence-paths.txt")" in
+	"$user_plugin_search_path"*) ;;
+	*) echo "user plugin folder was not searched after the override" >&2; exit 1 ;;
+esac
 unset AMIBERRY_PLUGINS_DIR
 
 # A saved bundled/system path is a previous computed default, not an override.
 # On Windows, case variation must still match the executable's plugins folder.
-system_plugins="$(line_value plugin_search_path_1 "$work/default-paths.txt" || true)"
+system_plugins="$(line_value system_plugins_dir "$work/default-paths.txt" || true)"
 if [ -n "$system_plugins" ] && [ -n "$config_file" ]; then
 	legacy_system_plugins="$system_plugins"
 	case "$legacy_system_plugins" in

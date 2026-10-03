@@ -8678,6 +8678,21 @@ static std::string get_system_plugins_directory()
 #endif
 }
 
+// This is the bundled/system path retained by legacy plugins_dir settings.
+// Unlike get_system_plugins_directory(), it remains available for migration
+// when the system installation directory has not been created yet.
+static std::string get_legacy_system_plugins_directory()
+{
+	if (g_portable_mode)
+		return {};
+
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_LIBDIR;
+#else
+	return get_system_plugins_directory();
+#endif
+}
+
 std::string get_user_plugins_path()
 {
 	if (g_portable_mode)
@@ -8723,20 +8738,14 @@ static bool is_valid_plugins_override(const std::string& path)
 		|| is_macos_bundled_plugins_path(path))
 		return false;
 
+	const auto legacy_system_plugins = get_legacy_system_plugins_directory();
 #ifdef _WIN32
 	// Windows paths are case-insensitive; match only the old computed default,
 	// the executable's sibling plugins folder.
-	if (path_strings_match_case_insensitive(path, get_system_plugins_directory()))
+	if (path_strings_match_case_insensitive(path, legacy_system_plugins))
 		return false;
 #else
-	if (path_strings_match(path, get_system_plugins_directory()))
-		return false;
-#endif
-
-#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
-	// Preserve the legacy Linux/Unix default even when the system directory
-	// no longer exists, so a stale setting cannot become a user override.
-	if (path_strings_match(path, AMIBERRY_LIBDIR))
+	if (path_strings_match(path, legacy_system_plugins))
 		return false;
 #endif
 	return true;
@@ -11734,6 +11743,7 @@ static void dump_resolved_paths(const bool write_dump_file)
 	append_line("config_path", config_path);
 	append_line("data_dir", data_dir);
 	append_line("plugins_dir", plugins_dir);
+	append_line("system_plugins_dir", get_legacy_system_plugins_directory());
 	append_line("user_plugins_dir", get_user_plugins_path());
 	const auto plugin_search_paths = get_plugin_search_paths();
 	for (size_t index = 0; index < plugin_search_paths.size(); ++index)
