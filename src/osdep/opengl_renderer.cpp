@@ -1284,23 +1284,17 @@ BezelHoleInfo OpenGLRenderer::get_bezel_hole_info() const
 void OpenGLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_x, float src_y,
 	float* dx, float* dy, float* mx, float* my)
 {
-	const amigadisplay* ad = &adisplays[monid];
-	SDL_Surface* surface = get_amiga_surface(monid);
-
 	*dx = 0; *dy = 0; *mx = 1.0f; *my = 1.0f;
+	if (!get_amiga_surface(monid))
+		return;
 
-	if (surface && render_quad.w > 0 && render_quad.h > 0) {
-		if (src_w > 0) *mx = static_cast<float>(render_quad.w) / src_w;
-		if (src_h > 0) *my = static_cast<float>(render_quad.h) / src_h;
-
-		if (ad->picasso_on) {
-			*dx = -static_cast<float>(render_quad.x) + src_x * (*mx);
-			*dy = -static_cast<float>(render_quad.y) + src_y * (*my);
-		} else {
-			*dx = static_cast<float>(render_quad.x) / (*mx) - src_x;
-			*dy = static_cast<float>(render_quad.y) / (*my) - src_y;
-		}
-	}
+	const AmiberryGfxInputOffset offset = amiberry_gfx_input_offset(
+		{ render_quad.x, render_quad.y, render_quad.w, render_quad.h },
+		src_x, src_y, src_w, src_h, adisplays[monid].picasso_on);
+	*dx = offset.dx;
+	*dy = offset.dy;
+	*mx = offset.mx;
+	*my = offset.my;
 }
 
 void OpenGLRenderer::get_drawable_size(SDL_Window* w, int* width, int* height)

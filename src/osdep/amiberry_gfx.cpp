@@ -920,23 +920,22 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	float src_w = 0, src_h = 0;
 	float src_x = 0, src_y = 0;
 
-#ifdef AMIBERRY
 	IRenderer* renderer = get_renderer(monid);
-	if (currprefs.gfx_auto_crop && !ad->picasso_on && renderer) {
-		src_w = static_cast<float>(renderer->crop_rect.w);
-		src_h = static_cast<float>(renderer->crop_rect.h);
-		src_x = static_cast<float>(renderer->crop_rect.x);
-		src_y = static_cast<float>(renderer->crop_rect.y);
-	}
-#endif
-	if (src_w <= 0) {
-		SDL_Surface* surface = get_amiga_surface(monid);
-		if (surface) {
-			src_w = static_cast<float>(surface->w);
-			src_h = static_cast<float>(surface->h);
-			src_x = 0;
-			src_y = 0;
+	SDL_Surface* surface = get_amiga_surface(monid);
+	if (surface) {
+		AmiberryGfxRect source{0, 0, surface->w, surface->h};
+		if (!ad->picasso_on && renderer) {
+			// Map against the region actually presented. Manual crop and the
+			// full-window nominal crop sample a sub-rect just like auto-crop;
+			// using the whole surface there skews pointer scale and origin.
+			const SDL_Rect& cr = renderer->crop_rect;
+			source = amiberry_gfx_presented_source_rect({cr.x, cr.y, cr.w, cr.h},
+				surface->w, surface->h);
 		}
+		src_x = static_cast<float>(source.x);
+		src_y = static_cast<float>(source.y);
+		src_w = static_cast<float>(source.w);
+		src_h = static_cast<float>(source.h);
 	}
 
 	if (renderer)

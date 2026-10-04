@@ -61,6 +61,61 @@ static inline bool amiberry_gfx_rect_covers_area(
 		&& rect.y + rect.h >= area.y + area.h;
 }
 
+// Region of a native surface that the renderers actually sample: the crop
+// rect when it selects a valid area (clamped to the surface exactly as the
+// OpenGL/Vulkan presenters clamp it), else the whole surface. Pointer mapping
+// must use this, not the raw surface, or manual/nominal crops scale and shift
+// the guest pointer away from the host cursor.
+static inline AmiberryGfxRect amiberry_gfx_presented_source_rect(
+	const AmiberryGfxRect& crop, const int surface_width, const int surface_height)
+{
+	const AmiberryGfxRect full{0, 0, surface_width, surface_height};
+	if (crop.w <= 0 || crop.h <= 0) {
+		return full;
+	}
+	const int x = crop.x > 0 ? crop.x : 0;
+	const int y = crop.y > 0 ? crop.y : 0;
+	const int w = crop.w < surface_width - x ? crop.w : surface_width - x;
+	const int h = crop.h < surface_height - y ? crop.h : surface_height - y;
+	if (w <= 0 || h <= 0) {
+		return full;
+	}
+	return {x, y, w, h};
+}
+
+struct AmiberryGfxInputOffset
+{
+	float dx;
+	float dy;
+	float mx;
+	float my;
+};
+
+// getgfxoffset() terms for a source region presented into `quad`, where quad
+// and the incoming pointer coordinates share one space (drawable pixels for
+// OpenGL/Vulkan, logical presentation units for the SDL renderer). mx/my are
+// presentation units per source pixel. Native callers recover the source pixel
+// as x / mx - dx; RTG callers as (x + dx) / mx.
+static inline AmiberryGfxInputOffset amiberry_gfx_input_offset(
+	const AmiberryGfxRect& quad, const float src_x, const float src_y,
+	const float src_w, const float src_h, const bool rtg)
+{
+	AmiberryGfxInputOffset offset{0.0f, 0.0f, 1.0f, 1.0f};
+	if (quad.w <= 0 || quad.h <= 0) {
+		return offset;
+	}
+	if (src_w > 0) offset.mx = static_cast<float>(quad.w) / src_w;
+	if (src_h > 0) offset.my = static_cast<float>(quad.h) / src_h;
+	if (rtg) {
+		offset.dx = -static_cast<float>(quad.x) + src_x * offset.mx;
+		offset.dy = -static_cast<float>(quad.y) + src_y * offset.my;
+	} else {
+		offset.dx = static_cast<float>(quad.x) / offset.mx - src_x;
+		offset.dy = static_cast<float>(quad.y) / offset.my - src_y;
+	}
+	return offset;
+}
+
 static inline void amiberry_gfx_auto_crop_presentation_dimensions(
 	int source_width, int source_height, bool is_ntsc, bool correct_aspect,
 	int& display_width, int& display_height)
