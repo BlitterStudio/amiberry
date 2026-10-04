@@ -567,7 +567,7 @@ static int hstrt_offset, hstop_offset;
 static int bpl1dat_trigger_offset;
 static int internal_pixel_cnt, internal_pixel_start_cnt;
 static int frame_internal_pixel_cnt;
-static int frame_internal_pixel_start_cnt;
+static int frame_internal_pixel_start_cnt, denise_line_xshift;
 static bool no_denise_lol, denise_strlong_seen;
 #define STRLONG_SEEN_DELAY 2
 static int denise_strlong_seen_delay;
@@ -6075,6 +6075,7 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 
 	denise_pixtotal_totalmax = (denise_pixtotalv - denise_pixtotalskip_end) * 2;
 	denise_pixtotal = -denise_pixtotalskip_start;
+	denise_line_xshift = 0;
 
 	if (!vb->locked) {
 		denise_pixtotal_totalmax = -0x7fffffff;
@@ -6134,8 +6135,8 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 				break;
 		}
 		setxlinebuffer(0, gfx_ypos);
-		int xshift = linetoscr_x_adjust >> lts_hres_shift;
-		denise_pixtotal -= xshift;
+		denise_line_xshift = linetoscr_x_adjust >> lts_hres_shift;
+		denise_pixtotal -= denise_line_xshift;
 	}
 
 	denise_pixtotal *= 2;
@@ -6548,7 +6549,11 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 
 	if (internal_pixel_cnt > 0) {
 		frame_internal_pixel_cnt = internal_pixel_cnt;
-		frame_internal_pixel_start_cnt = internal_pixel_start_cnt;
+		// unshifted origin: undo this line's centering shift (one shift unit is one CCK of internal pixels).
+		// Lines shifted right past the skipped start never latch an origin and are ignored.
+		if (internal_pixel_start_cnt > 0) {
+			frame_internal_pixel_start_cnt = internal_pixel_start_cnt - denise_line_xshift * (1 << (RES_MAX + 1));
+		}
 		// detect horizontal blanking
 		if (!denise_vblank_active) {
 			int ipc = internal_pixel_cnt + (denise_strlong_seen ? lol * 8 : 0);
