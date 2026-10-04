@@ -728,9 +728,9 @@ void render_panel_global_settings()
 			"Folder containing bezel overlay assets.");
 	});
 
-	if (user_plugins_supported() && BeginGroupBox("Plugin locations", true, false))
-	{
-		render_plugin_paths_settings("GlobalPlugins");
+	if (user_plugins_supported()) {
+		if (BeginGroupBox("Plugin locations", true, false))
+			render_plugin_paths_settings("GlobalPlugins");
 		EndGroupBox("Plugin locations");
 	}
 
