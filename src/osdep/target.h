@@ -74,6 +74,10 @@ extern void handle_joy_device_event(unsigned int which, bool removed);
 extern std::string screenshot_filename;
 
 extern void logging_init();
+// Startup log capture: messages logged between write_log_begin_startup_capture()
+// and logging_init() are replayed into the log file once it opens.
+extern void write_log_begin_startup_capture();
+extern void write_log_end_startup_capture();
 
 extern bool my_kbd_handler(int, int, int, bool);
 extern bool my_kbd_host_hotkey_handler(int, int, bool, bool, bool, bool);

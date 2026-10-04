@@ -4499,9 +4499,12 @@ void logging_init()
 	if (amiberry_options.write_logfile)
 	{
 		static int first = 0;
-		if (first > 1)
+		// A later amiberry_main() run (libretro reload) arrives here after
+		// logging_cleanup() closed the file, so only skip reopening while it is open.
+		if (first > 1 && debugfile)
 		{
 			write_log("***** RESTART *****\n");
+			write_log_end_startup_capture();
 			return;
 		}
 		if (first == 1)
@@ -4518,7 +4521,12 @@ void logging_init()
 		first++;
 		write_log("%s Logfile\n\n", VersionStr);
 		write_log("%s\n", get_sdl_version_string().c_str());
+		write_log_end_startup_capture();
 		regstatus();
+	}
+	else
+	{
+		write_log_end_startup_capture();
 	}
 }
 
@@ -11126,7 +11134,13 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 			message += "Conflicting legacy files were preserved under:\n\n  " + backup_root
 				+ "\n\n(or left in their original location if they could not be archived).\n\n";
 		}
-		message += "Files that could not be moved were left in place.\nPlease check the log file for details.";
+		message += "Files that could not be moved were left in place.\n";
+		if (!amiberry_options.write_logfile)
+			message += "Enable logging under Paths and restart Amiberry to record the details.";
+		else if (debugfile == nullptr)
+			message += "The details could not be recorded because the log file could not be opened:\n\n  " + logfile_path;
+		else
+			message += "Details are in the log file:\n\n  " + logfile_path;
 		return true;
 	}
 
@@ -12254,6 +12268,7 @@ static void resolve_and_load_bootstrap_settings_for_dump(const bool portable_mod
 
 int amiberry_main(int argc, char* argv[])
 {
+	write_log_begin_startup_capture();
 #ifdef __ANDROID__
 	if (!SDL_Init(0)) {
 		write_log("SDL_Init(0) failed: %s\n", SDL_GetError());
