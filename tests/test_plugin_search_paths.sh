@@ -51,7 +51,10 @@ fi
 case "$(uname -s)" in
 	Linux|FreeBSD)
 		env -u HOME -u AMIBERRY_HOME_DIR "$AMIBERRY_BIN" --dump-paths > "$work/no-home-paths.txt"
+		# SDL_GetBasePath() reports the executable directory with a trailing
+		# separator; drop it before building the expected fallback path.
 		fallback_root="$(line_value portable_root "$work/no-home-paths.txt")"
+		fallback_root="${fallback_root%/}"
 		fallback_path="$(grep '^plugin_search_path_' "$work/no-home-paths.txt" | tail -n 1 | cut -d= -f2- | tr -d '\r')"
 		[ -n "$fallback_root" ] || { echo "executable directory was not resolved" >&2; exit 1; }
 		case "$fallback_path" in
