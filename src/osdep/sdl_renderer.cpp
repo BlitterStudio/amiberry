@@ -470,11 +470,21 @@ void SDLRenderer::get_gfx_offset(int monid, float src_w, float src_h, float src_
 
 	*dx = 0; *dy = 0; *mx = 1.0f; *my = 1.0f;
 
+	if (!adisplays[monid].picasso_on) {
+		// Native frames draw the presented source rect into render_quad, and
+		// pointer events arrive in the same logical presentation space
+		// (SDL_RenderCoordinatesFromWindow already strips letterboxing).
+		const AmiberryGfxInputOffset offset = amiberry_gfx_input_offset(
+			{ render_quad.x, render_quad.y, render_quad.w, render_quad.h },
+			src_x, src_y, src_w, src_h, false);
+		*dx = offset.dx;
+		*dy = offset.dy;
+		*mx = offset.mx;
+		*my = offset.my;
+		return;
+	}
+
 	if (isfullscreen() < 0) {
-		if (currprefs.gfx_auto_crop) {
-			*dx -= src_x;
-			*dy -= src_y;
-		}
 		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
 			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width ||
 			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {

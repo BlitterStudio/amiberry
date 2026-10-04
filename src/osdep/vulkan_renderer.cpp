@@ -1878,19 +1878,14 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 void VulkanRenderer::get_gfx_offset(int monid, float src_w, float src_h,
 	float src_x, float src_y, float* dx, float* dy, float* mx, float* my)
 {
-	// Use same logic as SDL renderer: direct mapping based on render_quad
-	*dx = static_cast<float>(render_quad.x) - src_x;
-	*dy = static_cast<float>(render_quad.y) - src_y;
-
-	if (src_w > 0 && render_quad.w > 0)
-		*mx = static_cast<float>(render_quad.w) / src_w;
-	else
-		*mx = 1.0f;
-
-	if (src_h > 0 && render_quad.h > 0)
-		*my = static_cast<float>(render_quad.h) / src_h;
-	else
-		*my = 1.0f;
+	// render_quad is in drawable pixels, the same space as OpenGL's.
+	const AmiberryGfxInputOffset offset = amiberry_gfx_input_offset(
+		{ render_quad.x, render_quad.y, render_quad.w, render_quad.h },
+		src_x, src_y, src_w, src_h, adisplays[monid].picasso_on);
+	*dx = offset.dx;
+	*dy = offset.dy;
+	*mx = offset.mx;
+	*my = offset.my;
 }
 
 // ============================================================================

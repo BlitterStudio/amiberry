@@ -383,6 +383,80 @@ static void test_oversized_offset_presentation_leaves_drawable_uncovered()
 		"an oversized presentation shifted by its bezel hole must clear uncovered drawable edges");
 }
 
+static float native_source_x(const AmiberryGfxInputOffset& offset, const float x)
+{
+	// getgfxoffset() hands out 1/mx; get_mouse_position() computes x * fmx - fdx.
+	return x * (1.0f / offset.mx) - offset.dx;
+}
+
+static float native_source_y(const AmiberryGfxInputOffset& offset, const float y)
+{
+	return y * (1.0f / offset.my) - offset.dy;
+}
+
+// Issue #2367: with Manual Crop and offsets the renderer presents only the
+// crop rect, so the pointer must map against it rather than the full surface.
+static void test_manual_crop_pointer_maps_to_presented_source()
+{
+	const AmiberryGfxRect source = amiberry_gfx_presented_source_rect(
+		{100, 40, 400, 300}, 720, 568);
+	expect_int_eq(source.x, 100, "manual crop source must keep its horizontal offset");
+	expect_int_eq(source.y, 40, "manual crop source must keep its vertical offset");
+	expect_int_eq(source.w, 400, "manual crop source must keep its width");
+	expect_int_eq(source.h, 300, "manual crop source must keep its height");
+
+	// 4x presentation, letterboxed 160 px from the left edge.
+	const AmiberryGfxRect quad{160, 0, 1600, 1200};
+	const AmiberryGfxInputOffset offset = amiberry_gfx_input_offset(quad,
+		static_cast<float>(source.x), static_cast<float>(source.y),
+		static_cast<float>(source.w), static_cast<float>(source.h), false);
+
+	expect_float_near(native_source_x(offset, 160.0f), 100.0f, 0.001f,
+		"the left edge of the presented crop must map to the crop's first source column");
+	expect_float_near(native_source_y(offset, 0.0f), 40.0f, 0.001f,
+		"the top edge of the presented crop must map to the crop's first source row");
+	expect_float_near(native_source_x(offset, 160.0f + 4.0f * 50.0f), 150.0f, 0.001f,
+		"host motion inside the crop must advance one source pixel per presented pixel");
+	expect_float_near(native_source_x(offset, 1760.0f), 500.0f, 0.001f,
+		"the right edge of the presented crop must map to the crop's right source edge");
+	expect_float_near(native_source_y(offset, 1200.0f), 340.0f, 0.001f,
+		"the bottom edge of the presented crop must map to the crop's bottom source edge");
+}
+
+static void test_presented_source_rect_matches_renderer_clamping()
+{
+	const AmiberryGfxRect overflow = amiberry_gfx_presented_source_rect(
+		{600, 500, 400, 300}, 720, 568);
+	expect_int_eq(overflow.x, 600, "an overflowing crop keeps its in-surface origin");
+	expect_int_eq(overflow.w, 120, "an overflowing crop is clipped to the surface width");
+	expect_int_eq(overflow.h, 68, "an overflowing crop is clipped to the surface height");
+
+	const AmiberryGfxRect negative = amiberry_gfx_presented_source_rect(
+		{-20, -10, 400, 300}, 720, 568);
+	expect_int_eq(negative.x, 0, "a negative crop origin is clamped to the surface");
+	expect_int_eq(negative.y, 0, "a negative vertical crop origin is clamped to the surface");
+	expect_int_eq(negative.w, 400, "a clamped crop origin keeps the presented width");
+
+	const AmiberryGfxRect empty = amiberry_gfx_presented_source_rect({0, 0, 0, 0}, 720, 568);
+	expect_int_eq(empty.w, 720, "an unset crop presents the whole surface width");
+	expect_int_eq(empty.h, 568, "an unset crop presents the whole surface height");
+
+	const AmiberryGfxRect outside = amiberry_gfx_presented_source_rect(
+		{800, 0, 100, 100}, 720, 568);
+	expect_int_eq(outside.x, 0, "a crop entirely outside the surface falls back to the whole surface");
+	expect_int_eq(outside.w, 720, "a crop entirely outside the surface presents the whole width");
+}
+
+static void test_rtg_pointer_mapping_removes_letterbox()
+{
+	const AmiberryGfxInputOffset offset = amiberry_gfx_input_offset(
+		{240, 0, 1440, 1080}, 0.0f, 0.0f, 640.0f, 480.0f, true);
+	// get_mouse_position(): (x * fmx) + (dx * fmx).
+	const float x = 240.0f + 2.25f * 320.0f;
+	expect_float_near(x / offset.mx + offset.dx / offset.mx, 320.0f, 0.001f,
+		"RTG pointer mapping must subtract the letterbox offset before scaling");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
@@ -404,5 +478,8 @@ int main()
 	test_invalid_bounded_fallback_inputs_keep_presentation_size();
 	test_oversized_centered_presentation_covers_drawable();
 	test_oversized_offset_presentation_leaves_drawable_uncovered();
+	test_manual_crop_pointer_maps_to_presented_source();
+	test_presented_source_rect_matches_renderer_clamping();
+	test_rtg_pointer_mapping_removes_letterbox();
 	return failures == 0 ? 0 : 1;
 }
