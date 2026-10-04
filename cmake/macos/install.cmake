@@ -22,12 +22,16 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:CAPSImage>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:CAPSImage>)
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:floppybridge>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>)
 
+# Search paths used by dylibbundler.
+# /opt/local/lib is the MacPorts location.
 set(_amiberry_dylibbundler_search_args
+        -s /opt/local/lib
         -s /usr/local/lib
         -s /usr/local/opt/glib/lib
         -s /usr/local/opt/gettext/lib
@@ -41,7 +45,6 @@ if(QEMU_UAE_PLUGIN)
     get_filename_component(_amiberry_qemu_uae_plugin_name "${QEMU_UAE_PLUGIN}" NAME)
     set(_amiberry_qemu_uae_plugin_output
             "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/${_amiberry_qemu_uae_plugin_name}")
-
     set(_amiberry_qemu_uae_plugin_arches ${CMAKE_OSX_ARCHITECTURES})
     if(NOT _amiberry_qemu_uae_plugin_arches)
         set(_amiberry_qemu_uae_plugin_arches "${CMAKE_SYSTEM_PROCESSOR}")
@@ -66,19 +69,42 @@ if(QEMU_UAE_PLUGIN)
             VERBATIM)
 endif()
 
-# Gather all dependencies with dylibbundler
+# Gather all dependencies with dylibbundler.
+#
+# Use @rpath instead of @executable_path/../Frameworks.
+#
+# This is important because many system/package-manager dylibs do not
+# have enough Mach-O header padding to accommodate the much longer
+# @executable_path/../Frameworks/... install names.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/ ${_amiberry_dylibbundler_search_args})
+        COMMAND dylibbundler
+            -od
+            -b
+            -x $<TARGET_FILE:${PROJECT_NAME}>
+            -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/
+            -p @rpath/
+            ${_amiberry_dylibbundler_search_args})
 
 if(QEMU_UAE_PLUGIN)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND dylibbundler -of -cd -b -x "${_amiberry_qemu_uae_plugin_output}" -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/ ${_amiberry_dylibbundler_search_args}
+            COMMAND dylibbundler
+                -of
+                -cd
+                -b
+                -x "${_amiberry_qemu_uae_plugin_output}"
+                -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/
+                -p @rpath/
+                ${_amiberry_dylibbundler_search_args}
             COMMENT "Bundling QEMU-UAE PPC plugin dependencies"
             VERBATIM)
 endif()
 
+# Ensure the application has exactly one Frameworks rpath.
+# The rpath points to Contents/Frameworks.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -DAPP_BINARY=$<TARGET_FILE:${PROJECT_NAME}> -P ${CMAKE_SOURCE_DIR}/cmake/macos/dedupe_frameworks_rpath.cmake)
+        COMMAND ${CMAKE_COMMAND}
+            -DAPP_BINARY=$<TARGET_FILE:${PROJECT_NAME}>
+            -P ${CMAKE_SOURCE_DIR}/cmake/macos/dedupe_frameworks_rpath.cmake)
 
 # Codesign local/intermediate bundles after dylibbundler and install_name_tool
 # have finished mutating load commands. CI re-signs the final universal bundle
@@ -86,16 +112,22 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 option(MACOS_CODESIGN_BUNDLE
     "Codesign local/intermediate macOS app bundles after copying dependencies"
     ON)
+
 string(CONCAT _amiberry_codesign_identity_help
     "Code signing identity for local/intermediate macOS bundles "
     "(empty for non-App Store ad-hoc, '-' for explicit ad-hoc, "
     "or 'Developer ID Application: Name (TEAMID)')")
+
 set(MACOS_CODESIGN_IDENTITY "" CACHE STRING "${_amiberry_codesign_identity_help}")
+
 string(CONCAT _amiberry_codesign_options_help
     "Additional codesign --options value for local/intermediate macOS bundles (for example: runtime,hard)")
+
 set(MACOS_CODESIGN_OPTIONS "" CACHE STRING "${_amiberry_codesign_options_help}")
+
 if(MACOS_CODESIGN_BUNDLE)
     find_program(CODESIGN_EXECUTABLE codesign)
+
     if(NOT CODESIGN_EXECUTABLE)
         message(FATAL_ERROR
             "codesign executable not found; "
@@ -111,6 +143,7 @@ if(MACOS_CODESIGN_BUNDLE)
     endif()
 
     set(_amiberry_codesign_identity "${MACOS_CODESIGN_IDENTITY}")
+
     if(_amiberry_codesign_identity STREQUAL "")
         set(_amiberry_codesign_identity "-")
     endif()
@@ -130,8 +163,10 @@ endif()
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(FILES $<TARGET_FILE:CAPSImage>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+
     if(QEMU_UAE_PLUGIN)
         install(FILES "${_amiberry_qemu_uae_plugin_output}"
                 DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
@@ -141,14 +176,17 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
             ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
+
     # This one contains the data files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
             ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
+
     # This one contains the AROS kickstart files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
             ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
+
     # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
