@@ -4499,7 +4499,9 @@ void logging_init()
 	if (amiberry_options.write_logfile)
 	{
 		static int first = 0;
-		if (first > 1)
+		// A later amiberry_main() run (libretro reload) arrives here after
+		// logging_cleanup() closed the file, so only skip reopening while it is open.
+		if (first > 1 && debugfile)
 		{
 			write_log("***** RESTART *****\n");
 			write_log_end_startup_capture();
@@ -11132,10 +11134,13 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 			message += "Conflicting legacy files were preserved under:\n\n  " + backup_root
 				+ "\n\n(or left in their original location if they could not be archived).\n\n";
 		}
-		if (amiberry_options.write_logfile)
-			message += "Files that could not be moved were left in place.\nDetails are in the log file:\n\n  " + logfile_path;
+		message += "Files that could not be moved were left in place.\n";
+		if (!amiberry_options.write_logfile)
+			message += "Enable logging under Paths and restart Amiberry to record the details.";
+		else if (debugfile == nullptr)
+			message += "The details could not be recorded because the log file could not be opened:\n\n  " + logfile_path;
 		else
-			message += "Files that could not be moved were left in place.\nEnable logging under Paths and restart Amiberry to record the details.";
+			message += "Details are in the log file:\n\n  " + logfile_path;
 		return true;
 	}
 
