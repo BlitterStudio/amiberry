@@ -15,6 +15,7 @@
 #include <poll.h>
 #endif
 #include <clocale>
+#include <string>
 #include <SDL3/SDL.h>
 
 #include "libretro_shared.h"
@@ -51,6 +52,12 @@ static SDL_Window* previousactivewindow;
 
 static uae_sem_t log_sem;
 static int log_sem_init;
+
+// Startup work such as legacy layout migration runs before logging_init() opens
+// the log file. Hold those messages and replay them into the log once it opens.
+static std::string startup_log_buffer;
+static bool startup_log_capture = true;
+static constexpr size_t STARTUP_LOG_BUFFER_LIMIT = 1024 * 1024;
 
 /* console functions for debugger */
 
@@ -461,7 +468,8 @@ void write_log(const char* format, ...)
 	va_list parms;
 	const bool has_libretro_log = log_cb != NULL;
 
-	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile)
+	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile
+		&& !startup_log_capture)
 		return;
 
 	if (log_sem_init) uae_sem_wait(&log_sem);
@@ -497,6 +505,9 @@ void write_log(const char* format, ...)
 			fprintf(debugfile, "%s", ts);
 		fprintf(debugfile, "%s", bufp);
 	}
+	if (startup_log_capture && !debugfile
+		&& startup_log_buffer.size() + _tcslen(bufp) <= STARTUP_LOG_BUFFER_LIMIT)
+		startup_log_buffer += bufp;
 	lfdetected = 0;
 	if (bufp[0] != '\0' && bufp[_tcslen(bufp) - 1] == '\n')
 		lfdetected = 1;
@@ -506,6 +517,23 @@ void write_log(const char* format, ...)
 	if (always_flush_log)
 		flush_log();
 
+	if (log_sem_init) uae_sem_post(&log_sem);
+}
+
+void write_log_end_startup_capture()
+{
+	if (log_sem_init) uae_sem_wait(&log_sem);
+	if (startup_log_capture)
+	{
+		if (debugfile && !startup_log_buffer.empty())
+		{
+			fputs(startup_log_buffer.c_str(), debugfile);
+			if (always_flush_log)
+				fflush(debugfile);
+		}
+		startup_log_capture = false;
+		std::string().swap(startup_log_buffer);
+	}
 	if (log_sem_init) uae_sem_post(&log_sem);
 }
 

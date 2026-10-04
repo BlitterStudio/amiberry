@@ -4518,7 +4518,12 @@ void logging_init()
 		first++;
 		write_log("%s Logfile\n\n", VersionStr);
 		write_log("%s\n", get_sdl_version_string().c_str());
+		write_log_end_startup_capture();
 		regstatus();
+	}
+	else
+	{
+		write_log_end_startup_capture();
 	}
 }
 
@@ -11126,7 +11131,10 @@ bool consume_startup_migration_notice(std::string& title, std::string& message)
 			message += "Conflicting legacy files were preserved under:\n\n  " + backup_root
 				+ "\n\n(or left in their original location if they could not be archived).\n\n";
 		}
-		message += "Files that could not be moved were left in place.\nPlease check the log file for details.";
+		if (amiberry_options.write_logfile)
+			message += "Files that could not be moved were left in place.\nDetails are in the log file:\n\n  " + logfile_path;
+		else
+			message += "Files that could not be moved were left in place.\nEnable logging under Paths and restart Amiberry to record the details.";
 		return true;
 	}
 
