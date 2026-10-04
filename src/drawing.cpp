@@ -567,6 +567,7 @@ static int hstrt_offset, hstop_offset;
 static int bpl1dat_trigger_offset;
 static int internal_pixel_cnt, internal_pixel_start_cnt;
 static int frame_internal_pixel_cnt;
+static int frame_internal_pixel_start_cnt;
 static bool no_denise_lol, denise_strlong_seen;
 #define STRLONG_SEEN_DELAY 2
 static int denise_strlong_seen_delay;
@@ -1535,19 +1536,21 @@ static void center_image(void)
 		visible_left_border = maxdiw - w;
 		visible_left_border &= ~((xshift(1, 0)) - 1);
 
-		int hresdb = hresolution_inv + (doublescan == 1 ? 1 : 0);
+		// display window width and left edge in output buffer pixels, same origin the line renderer uses
 		int ww = (diwlastword_total - diwfirstword_total) >> hresolution_inv;
-		int wx = ((diwfirstword_total) >> hresdb) - (((hdisplay_left_border - 1) * 4) >> hresdb);
+		int wx = (diwfirstword_total - frame_internal_pixel_start_cnt + (1 << RES_MAX)) >> hresolution_inv;
 
 		if (ww < w && currprefs.gfx_xcenter == 2) {
-			/* Try to center. */
-			xoffset = (w - ww) / 2 - wx / 2;
+			/* Try to center. Positive offset moves the image left, one unit is two output pixels. */
+			xoffset = (wx - (w - ww) / 2) / 2;
 		}
 
 		if (!center_reset && !vertical_changed) {
 			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
 			if (currprefs.gfx_xcenter == 2) {
-				if (abs(xoffset - prev_x_adjust) <= 32) {
+				// keep the old offset only if the whole display window stays visible with it
+				int prevx = wx - prev_x_adjust * 2;
+				if (abs(xoffset - prev_x_adjust) <= 32 && prevx >= 0 && prevx + ww <= w) {
 					xoffset = prev_x_adjust;
 				}
 			}
@@ -6545,6 +6548,7 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 
 	if (internal_pixel_cnt > 0) {
 		frame_internal_pixel_cnt = internal_pixel_cnt;
+		frame_internal_pixel_start_cnt = internal_pixel_start_cnt;
 		// detect horizontal blanking
 		if (!denise_vblank_active) {
 			int ipc = internal_pixel_cnt + (denise_strlong_seen ? lol * 8 : 0);
