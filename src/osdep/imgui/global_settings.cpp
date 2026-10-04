@@ -710,9 +710,10 @@ void render_panel_global_settings()
 		render_path_row("NVRAM", "NVRAM", get_nvram_path(),
 			[](const std::string& path) { set_nvram_path(path); },
 			"Default folder for NVRAM files.");
-		render_path_row("Plugins", "Plugins", get_plugins_path(),
+		render_path_row("Plugins override", "Plugins", get_plugins_override_path(),
 			[](const std::string& path) { set_plugins_path(path); },
-			"Default folder for runtime plugins.");
+			"Optional folder searched after AMIBERRY_PLUGINS_DIR and before the user plugins folder.");
+
 		render_path_row("Videos", "Videos", get_video_path(),
 			[](const std::string& path) { set_video_path(path); },
 			"Default folder for video output files.");
@@ -726,6 +727,12 @@ void render_panel_global_settings()
 			[](const std::string& path) { set_bezels_path(path); },
 			"Folder containing bezel overlay assets.");
 	});
+
+	if (user_plugins_supported() && BeginGroupBox("Plugin locations", true, false))
+	{
+		render_plugin_paths_settings("GlobalPlugins");
+		EndGroupBox("Plugin locations");
+	}
 
 	render_group("Updates", "GlobalUpdates", [&]() {
 		render_combo_row("Startup update check", &amiberry_options.update_check,

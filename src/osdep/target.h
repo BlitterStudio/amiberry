@@ -159,7 +159,10 @@ extern void create_missing_directories_for_base_content_path(const std::string& 
 extern void set_configuration_path(const std::string& newpath);
 extern std::string get_nvram_path();
 extern void set_nvram_path(const std::string& newpath);
-extern std::string get_plugins_path();
+extern std::string get_plugins_override_path();
+extern bool user_plugins_supported();
+extern std::string get_user_plugins_path();
+extern std::vector<std::string> get_plugin_search_paths();
 extern void set_plugins_path(const std::string& newpath);
 extern std::string get_floppy_sounds_path();
 extern void set_floppy_sounds_path(const std::string& newpath);
