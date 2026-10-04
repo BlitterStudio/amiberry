@@ -40,6 +40,7 @@
 #include "on_screen_joystick.h"
 #include "fsdb_host.h"
 #include "uae/types.h"
+#include "gl_context_ladder.h"
 
 #ifdef USE_OPENGL
 #include "gl_platform.h"
@@ -1415,67 +1416,55 @@ bool doInit(AmigaMonitor* mon)
 	const char* drv = SDL_GetCurrentVideoDriver();
 	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
 
-	// Detect GLES-only systems: Android and iOS are GLES-only by platform;
-	// KMSDRM (Raspberry Pi and other SBCs on console Linux) has no desktop
-	// GL; USE_GLES3 builds link GLES exclusively and must request ES under
-	// any window system, not just KMSDRM.
+	// Detect the ladder profile: Android, iOS and USE_GLES3 builds are
+	// GLES-only by platform (desktop requests can never succeed there).
+	// KMSDRM (Raspberry Pi and other SBCs on console Linux) prefers GLES
+	// but keeps the desktop tiers as fall-through. SDL3 reports the driver
+	// name in lowercase ("kmsdrm"), so the comparison must be
+	// case-insensitive like every other KMSDRM check — the old
+	// case-sensitive strcmp never matched on SDL3 and silently turned
+	// KMSDRM into the plain desktop ladder.
 #if defined(__ANDROID__) || defined(AMIBERRY_IOS) || defined(USE_GLES3)
-	const bool likely_gles_only = true;
+	const GlLadderProfile ladder_profile = GlLadderProfile::GlesOnly;
 #else
-	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
+	const GlLadderProfile ladder_profile = (drv && (strcmpi(drv, "KMSDRM") == 0))
+		? GlLadderProfile::GlesPreferred
+		: GlLadderProfile::Desktop;
 #endif
 
-	/* Context request ladder, selected by `mode`:
-	 *   0 = preferred          : GL 3.3 Core (desktop) / GLES 3.0 (ES-only)
-	 *   1 = alternative        : GL 2.1 Compat (desktop) / GLES 3.0 minimal (ES-only)
-	 *   2 = preferred minimal  : mode 0 API, only DOUBLEBUFFER set
-	 *   3 = alternative minimal: mode 1 API, only DOUBLEBUFFER set
-	 *   4 = ES fallback        : GLES 3.0 full hints
-	 *   5 = ES fallback minimal: GLES 3.0, only DOUBLEBUFFER
-	 * Modes 2/3 exist for drivers with a narrow pixel-format set (e.g. Mesa3D
-	 * d3d12 on Windows ARM64 VMs). Modes 4/5 (AMIBERRY_GLES_FALLBACK builds
-	 * only) are the last resort for X11/Wayland hosts whose only hardware
-	 * driver is GLES — SDL loads libGLESv2 via EGL at runtime, so no extra
-	 * link-time dependency is needed. Unsupported modes return false and the
-	 * caller advances to the next attempt. */
-	enum class GlApiRequest { Core, Legacy, Es3 };
-	GlApiRequest api;
-	if (likely_gles_only) {
-		if (mode <= 1) {
-			api = GlApiRequest::Es3;
-		} else {
-			return false;
-		}
-	} else {
+	/* Context request ladder, selected by `mode` (see gl_context_ladder.cpp):
+	 *   desktop: 0 = GL 3.3 Core, 1 = GL 2.1 Compat, 2/3 = minimal-attribute
+	 *            retries of modes 0/1, 4/5 = GLES 3.0 fallback tier
+	 *            (AMIBERRY_GLES_FALLBACK builds only — X11/Wayland hosts
+	 *            whose only hardware driver is GLES; SDL loads libGLESv2
+	 *            via EGL at runtime, so no link-time dependency).
+	 *   KMSDRM:  0/1 = GLES 3.0 full/minimal (preferred), 2..5 = desktop
+	 *            Core/Legacy tiers so drivers without ES 3.0 (RPi3 vc4)
+	 *            keep hardware GL 2.1 instead of demoting to software.
+	 * Modes 2/3 exist for drivers with a narrow pixel-format set (e.g.
+	 * Mesa3D d3d12 on Windows ARM64 VMs). Unsupported modes return false
+	 * and the caller advances to the next attempt. */
 #ifdef AMIBERRY_GLES_FALLBACK
-		constexpr bool es_fallback_tier = true;
+	constexpr bool es_fallback_tier = true;
 #else
-		constexpr bool es_fallback_tier = false;
+	constexpr bool es_fallback_tier = false;
 #endif
-		if (es_fallback_tier && (mode == 4 || mode == 5)) {
-			api = GlApiRequest::Es3;
-		} else if (mode == 0 || mode == 2) {
-			api = GlApiRequest::Core;
-		} else if (mode == 1 || mode == 3) {
-			api = GlApiRequest::Legacy;
-		} else {
-			return false;
-		}
+	const GlLadderStep ladder_step =
+		select_gl_ladder_step(ladder_profile, es_fallback_tier, mode);
+	if (!ladder_step.valid) {
+		return false;
 	}
+	const GlLadderApi api = ladder_step.api;
+	const bool minimal_attrs = ladder_step.minimal_attrs;
 
-	// Matches the ladder above: ES-only mode 1 is the minimal retry; desktop
-	// modes 2/3/5 are the minimal-attribute retries.
-	const bool minimal_attrs = likely_gles_only ? (mode == 1)
-		: (mode == 2 || mode == 3 || mode == 5);
-
-	if (api == GlApiRequest::Es3) {
+	if (api == GlLadderApi::Es3) {
 		// GLES-only systems (e.g. Raspberry Pi with KMSDRM): GLES 3.0
 		write_log(_T("Requesting OpenGL ES 3.0 context (mode=%d, minimal=%d)...\n"),
 			mode, minimal_attrs ? 1 : 0);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-	} else if (api == GlApiRequest::Legacy) {
+	} else if (api == GlLadderApi::Legacy) {
 		write_log(_T("Requesting OpenGL 2.1 Compatibility context (mode=%d, minimal=%d)...\n"),
 			mode, minimal_attrs ? 1 : 0);
 		success &= SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);

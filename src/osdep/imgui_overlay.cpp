@@ -82,25 +82,10 @@ void imgui_overlay_init(SDL_Window* window, SDL_Renderer* sdl_renderer, void* gl
 		s_use_opengl = true;
 		ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
 
-		// Detect the correct GLSL version at runtime.
-		const char* glsl_version = "#version 130";
-		const char* gl_ver_str = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		if (gl_ver_str) {
-			bool is_gles = (strstr(gl_ver_str, "OpenGL ES") != nullptr);
-			int gl_major = 0, gl_minor = 0;
-			const char* v = gl_ver_str;
-			while (*v && (*v < '0' || *v > '9')) v++;
-			if (*v) {
-				gl_major = atoi(v);
-				while (*v && *v != '.') v++;
-				if (*v == '.') gl_minor = atoi(v + 1);
-			}
-			if (is_gles && gl_major >= 3)
-				glsl_version = "#version 300 es";
-			else if (!is_gles && (gl_major > 3 || (gl_major == 3 && gl_minor >= 2)))
-				glsl_version = "#version 150";
-		}
-		ImGui_ImplOpenGL3_Init(glsl_version);
+		// GLSL version follows the context the ladder obtained (GL 2.x ->
+		// "#version 120", GLES2 -> "#version 100", GLES3+ -> "#version 300
+		// es"); nullptr keeps the backend default for desktop GL >= 3.0.
+		ImGui_ImplOpenGL3_Init(get_imgui_glsl_version());
 	}
 	else
 #endif

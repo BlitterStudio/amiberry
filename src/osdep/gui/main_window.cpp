@@ -50,6 +50,7 @@
 #ifdef USE_OPENGL
 #include "imgui_impl_opengl3.h"
 #include <SDL3/SDL_opengl.h>
+#include "gl_platform.h"
 #endif
 #ifdef USE_VULKAN
 #include "imgui_impl_vulkan.h"
@@ -1732,13 +1733,11 @@ void amiberry_gui_init()
 		SDL_GLContext ctx = gl_renderer ? gl_renderer->get_gl_context() : nullptr;
 		SDL_GL_MakeCurrent(mon->gui_window, ctx);
 		ImGui_ImplSDL3_InitForOpenGL(mon->gui_window, ctx);
-		// Pass nullptr so the backend auto-picks "#version 300 es" when
-		// IMGUI_IMPL_OPENGL_ES3 is defined (Pi/GLES build) and "#version 130"
-		// on desktop GL. A desktop build whose GL context fell back to the
-		// runtime GLES tier (ladder modes 4/5) also needs the ES version
-		// string — the desktop default does not compile on a GLES context.
-		ImGui_ImplOpenGL3_Init(
-			get_gl_capabilities().is_gles ? "#version 300 es" : nullptr);
+		// Pick the GLSL version from the context the ladder actually
+		// obtained: desktop GL 2.x (e.g. Raspberry Pi vc4 via KMSDRM) needs
+		// "#version 120" — the backend's "#version 130" default does not
+		// compile there and aborts the GUI. GLES tiers get their ES string.
+		ImGui_ImplOpenGL3_Init(get_imgui_glsl_version());
 	} else
 #endif
 	{
