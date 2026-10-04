@@ -250,6 +250,7 @@ set(SOURCE_FILES
         src/osdep/external_shader.cpp
         src/osdep/shader_preset.cpp
         src/osdep/gl_capability_classify.cpp
+        src/osdep/gl_context_ladder.cpp
         src/osdep/crt_gpu_allowlist.cpp
         src/osdep/amiberry_gui.cpp
         src/osdep/amiberry_mem.cpp
