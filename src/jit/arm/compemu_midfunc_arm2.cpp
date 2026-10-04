@@ -3822,6 +3822,9 @@ MENDFUNC(1,jff_EXT_l,(RW4 d))
 MIDFUNC(2,jnf_LSL_b_imm,(RW1 d, IM8 i))
 {
   if(i) {
+		if(i > 31)
+			i = 31;
+
 		if (isconst(d)) {
 			live.state[d].val = (live.state[d].val & 0xffffff00) | ((live.state[d].val << i) & 0x000000ff);
 			return;
@@ -3829,8 +3832,6 @@ MIDFUNC(2,jnf_LSL_b_imm,(RW1 d, IM8 i))
 		
 		INIT_REG_b(d);
 	  
-    if(i > 31)
-      i = 31;
   	LSL_rri(REG_WORK1, d, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -3848,6 +3849,9 @@ MENDFUNC(2,jnf_LSL_b_imm,(RW1 d, IM8 i))
 MIDFUNC(2,jnf_LSL_w_imm,(RW2 d, IM8 i))
 {
   if(i) {
+		if(i > 31)
+			i = 31;
+
 		if (isconst(d)) {
 			live.state[d].val = (live.state[d].val & 0xffff0000) | ((live.state[d].val << i) & 0x0000ffff);
 			return;
@@ -3855,8 +3859,6 @@ MIDFUNC(2,jnf_LSL_w_imm,(RW2 d, IM8 i))
 
 		INIT_REG_w(d);
 	  
-    if(i > 31)
-      i = 31;
   	LSL_rri(REG_WORK1, d, i);
 	  PKHTB_rrr(d, d, REG_WORK1);
 	
@@ -3925,7 +3927,7 @@ MENDFUNC(2,jnf_LSL_w_reg,(RW2 d, RR4 i))
 MIDFUNC(2,jnf_LSL_l_reg,(RW4 d, RR4 i))
 {
 	if (isconst(i)) {
-		if(i > 31)
+		if((live.state[i].val & 0x3f) > 31)
 			set_const(d, 0);
 		else
 			COMPCALL(jnf_LSL_l_imm)(d, live.state[i].val & 0x3f);
@@ -4184,6 +4186,9 @@ MENDFUNC(1,jff_LSLW,(RW2 d))
 MIDFUNC(2,jnf_LSR_b_imm,(RW1 d, IM8 i))
 {
 	if(i) {
+		if(i > 31)
+			i = 31;
+
 		if (isconst(d)) {
 			live.state[d].val = (live.state[d].val & 0xffffff00) | ((live.state[d].val & 0xff) >> i);
 			return;
@@ -4192,8 +4197,6 @@ MIDFUNC(2,jnf_LSR_b_imm,(RW1 d, IM8 i))
 		INIT_REG_b(d);
 
 		UNSIGNED8_REG_2_REG(REG_WORK1, d);
-    if(i > 31)
-      i = 31;
   	LSR_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -4211,6 +4214,9 @@ MENDFUNC(2,jnf_LSR_b_imm,(RW1 d, IM8 i))
 MIDFUNC(2,jnf_LSR_w_imm,(RW2 d, IM8 i))
 {
 	if(i) {
+		if(i > 31)
+			i = 31;
+
 		if (isconst(d)) {
 			live.state[d].val = (live.state[d].val & 0xffff0000) | ((live.state[d].val & 0x0000ffff) >> i);
 			return;
@@ -4219,8 +4225,6 @@ MIDFUNC(2,jnf_LSR_w_imm,(RW2 d, IM8 i))
 		INIT_REG_w(d);
 
 		UNSIGNED16_REG_2_REG(REG_WORK1, d);
-    if(i > 31)
-      i = 31;
 	  PKHTB_rrrASRi(d, d, REG_WORK1, i);
 
 		unlock2(d);
@@ -4379,7 +4383,7 @@ MENDFUNC(2,jnf_LSR_w_reg,(RW2 d, RR4 i))
 MIDFUNC(2,jnf_LSR_l_reg,(RW4 d, RR4 i))
 {
 	if (isconst(i)) {
-		if(i > 31)
+		if((live.state[i].val & 0x3f) > 31)
 			set_const(d, 0);
 		else
 			COMPCALL(jnf_LSR_l_imm)(d, live.state[i].val & 0x3f);
