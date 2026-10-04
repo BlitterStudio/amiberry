@@ -183,6 +183,11 @@ const GlCapabilities& get_gl_capabilities()
 	return cached;
 }
 
+const char* get_imgui_glsl_version()
+{
+	return imgui_glsl_version_for_caps(get_gl_capabilities());
+}
+
 const GlShaderPreambles& get_gl_shader_preambles()
 {
 	// Same per-context key as get_gl_capabilities(): a context change can

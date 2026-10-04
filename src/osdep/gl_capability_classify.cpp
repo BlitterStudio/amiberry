@@ -57,3 +57,16 @@ GlCapabilities classify_gl_capabilities(const char* gl_version, const char* gl_e
 
 	return caps;
 }
+
+const char* imgui_glsl_version_for_caps(const GlCapabilities& caps)
+{
+	if (caps.major == 0)
+		return nullptr; // unprobed context: fall back to the backend default
+	if (caps.is_gles)
+		return caps.major >= 3 ? "#version 300 es" : "#version 100";
+	// The context ladder's desktop floor is GL 2.1, whose GLSL tops out at
+	// 1.20; GL 3.0+ accepts the backend's "#version 130" default.
+	if (caps.major < 3)
+		return "#version 120";
+	return nullptr;
+}

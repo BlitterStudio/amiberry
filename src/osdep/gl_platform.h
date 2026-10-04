@@ -169,6 +169,13 @@ const GlShaderPreambles& get_gl_shader_preambles();
 
 const GlCapabilities& get_gl_capabilities();
 
+// GLSL #version string for ImGui_ImplOpenGL3_Init() on the current GL
+// context (per-context cached like the capabilities themselves), or nullptr
+// where the backend's own default is correct. Covers the tiers the backend's
+// default gets wrong: desktop GL 2.x needs "#version 120", GLES < 3 needs
+// "#version 100". Must be called with the context current.
+const char* get_imgui_glsl_version();
+
 #endif // USE_OPENGL
 
 #endif // GL_PLATFORM_H

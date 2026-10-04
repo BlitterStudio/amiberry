@@ -85,6 +85,25 @@ int main()
 		"GL_EXT_texture_border_clamp GL_EXT_color_buffer_half_float", "desktop 3.3 + ext noise");
 	expect(desk33ext.clamp_to_border && desk33ext.rgba16f_renderable, "desktop 3.3: unchanged by exts");
 
+	// ImGui GLSL version selection: the string handed to
+	// ImGui_ImplOpenGL3_Init() must compile on the context the ladder
+	// obtained. Desktop GL 2.x (Raspberry Pi vc4 via KMSDRM) tops out at
+	// GLSL 1.20, so the backend's "#version 130" default fails to compile
+	// there and aborts the GUI with an IM_ASSERT.
+	expect(std::string(imgui_glsl_version_for_caps(desk21)) == "#version 120",
+		"imgui glsl: desktop GL 2.1 needs #version 120 (RPi3 KMSDRM GUI crash)");
+	expect(imgui_glsl_version_for_caps(desk33) == nullptr,
+		"imgui glsl: desktop GL 3.3 keeps the backend default (Apple picks 150)");
+	expect(imgui_glsl_version_for_caps(desk46) == nullptr,
+		"imgui glsl: desktop GL 4.6 keeps the backend default (410)");
+	expect(std::string(imgui_glsl_version_for_caps(es30)) == "#version 300 es",
+		"imgui glsl: GLES 3.x uses #version 300 es");
+	const GlCapabilities es20 = check("OpenGL ES 2.0 Mesa 25.0.3 vc4-drm", nullptr, "ES 2.0");
+	expect(std::string(imgui_glsl_version_for_caps(es20)) == "#version 100",
+		"imgui glsl: GLES 2.0 uses #version 100");
+	expect(imgui_glsl_version_for_caps(none) == nullptr,
+		"imgui glsl: unprobed context keeps the backend default");
+
 	if (failures > 0) {
 		std::cerr << failures << " gl_capability_classify failure(s)\n";
 		return 1;
