@@ -55,6 +55,8 @@ static int log_sem_init;
 
 // Startup work such as legacy layout migration runs before logging_init() opens
 // the log file. Hold those messages and replay them into the log once it opens.
+// retro_load_game() can run amiberry_main() again without reloading the core, so
+// each run re-arms the capture with write_log_begin_startup_capture().
 static std::string startup_log_buffer;
 static bool startup_log_capture = true;
 static constexpr size_t STARTUP_LOG_BUFFER_LIMIT = 1024 * 1024;
@@ -517,6 +519,13 @@ void write_log(const char* format, ...)
 	if (always_flush_log)
 		flush_log();
 
+	if (log_sem_init) uae_sem_post(&log_sem);
+}
+
+void write_log_begin_startup_capture()
+{
+	if (log_sem_init) uae_sem_wait(&log_sem);
+	startup_log_capture = true;
 	if (log_sem_init) uae_sem_post(&log_sem);
 }
 

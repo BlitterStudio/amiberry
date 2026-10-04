@@ -70,6 +70,8 @@ static int log_sem_init;
 // Startup work such as legacy layout migration runs before logging_init() opens
 // the log file. Hold those messages and replay them into the log once it opens,
 // so notices that point users at the log have something to point at.
+// amiberry_main() can run more than once per process (libretro reloads), so each
+// run re-arms the capture with write_log_begin_startup_capture().
 static std::string startup_log_buffer;
 static bool startup_log_capture = true;
 static constexpr size_t STARTUP_LOG_BUFFER_LIMIT = 1024 * 1024;
@@ -1013,6 +1015,13 @@ void flush_log()
 	if (debugfile)
 		fflush(debugfile);
 	flushconsole();
+}
+
+void write_log_begin_startup_capture()
+{
+	if (log_sem_init) uae_sem_wait(&log_sem);
+	startup_log_capture = true;
+	if (log_sem_init) uae_sem_post(&log_sem);
 }
 
 void write_log_end_startup_capture()

@@ -4502,6 +4502,7 @@ void logging_init()
 		if (first > 1)
 		{
 			write_log("***** RESTART *****\n");
+			write_log_end_startup_capture();
 			return;
 		}
 		if (first == 1)
@@ -12262,6 +12263,7 @@ static void resolve_and_load_bootstrap_settings_for_dump(const bool portable_mod
 
 int amiberry_main(int argc, char* argv[])
 {
+	write_log_begin_startup_capture();
 #ifdef __ANDROID__
 	if (!SDL_Init(0)) {
 		write_log("SDL_Init(0) failed: %s\n", SDL_GetError());
