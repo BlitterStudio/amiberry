@@ -72,6 +72,8 @@ void minigl_display_release_importer()
 		if (g_importer_refs > 0)
 			--g_importer_refs;
 		last = g_importer_refs == 0;
+		if (last)
+			g_installed = false;  // a later importer may install the sink again
 	}
 	if (!last)
 		return;  // another live context still imports
