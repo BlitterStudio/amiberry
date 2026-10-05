@@ -1030,7 +1030,18 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	// Zero-copy MiniGL frames replace the surface upload entirely; the
 	// shader stacks below still run for non-RTG screens and for RTG screens
 	// without a live export.
-	const bool minigl_frame = mon->screen_is_picasso && !is_cropped
+	// One composite owner: on hosts with several Picasso96 monitors only
+	// the claiming renderer shows the plugin's image; the others keep their
+	// own span content instead of getting the plugin's frame.
+	static bool s_composite_owner = false;
+	static bool s_composite_decided = false;
+	if (!s_composite_decided) {
+		s_composite_decided = true;
+		s_composite_owner = minigl_display_claim_composite();
+		if (!s_composite_owner)
+			write_log("MiniGL dmabuf composite claimed by another monitor\n");
+	}
+	const bool minigl_frame = mon->screen_is_picasso && !is_cropped && s_composite_owner
 		&& render_minigl_dmabuf(shader_viewport_x, shader_viewport_y,
 			shader_viewport_w, shader_viewport_h, shader_framebuffer);
 

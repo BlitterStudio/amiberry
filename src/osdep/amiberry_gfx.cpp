@@ -21,6 +21,7 @@
 #include <random>
 
 #include "sysdeps.h"
+#include "osdep/minigl_display.h"
 #include "options.h"
 #include "uae.h"
 #include "custom.h"
@@ -2815,6 +2816,9 @@ bool amiberry_capture_actionable_screenshot(const int monid,
 	}
 
 	for (int attempt = 0; attempt < 3; ++attempt) {
+		// Zero-copy image mode does not update the Picasso96 span; refresh
+		// it from the live export so the capture shows current pixels.
+		minigl_display_materialize();
 		const auto before = amiberry_gui_geometry_snapshot();
 		SDL_Surface* surface = get_amiga_surface(monid);
 		if (!before.valid || before.monitor_id != monid || !surface
@@ -2869,6 +2873,10 @@ bool create_screenshot()
         current_screenshot = nullptr;
     }
 
+    // Zero-copy image mode does not update the Picasso96 span; refresh it
+    // from the live export so every screenshot path captures current
+    // pixels rather than the last span-backed frame.
+    minigl_display_materialize();
     SDL_Surface* surface = get_amiga_surface(0);
     return gfx_platform_create_screenshot(surface, &current_screenshot);
 }

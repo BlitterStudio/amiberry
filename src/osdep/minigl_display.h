@@ -31,8 +31,17 @@ bool minigl_display_importer_ready();
 MiniglDisplayImage minigl_display_current();
 
 // Registers the sink through the plugin symbol (may be null on old plugin
-// builds; the call is then a no-op). Called once after plugin load.
-void minigl_display_install(void* set_image_sink_sym, void* plugin_lib);
+// builds; the call is then a no-op). The materialize symbol (also optional)
+// refreshes the span from the live export for host-side readers.
+void minigl_display_install(void* set_image_sink_sym, void* materialize_sym);
+
+// Publishes every live export into its span; call before reading Picasso96
+// memory (screenshot paths) so they capture current pixels.
+void minigl_display_materialize();
+
+// First capable RTG renderer wins: only that monitor composites the
+// plugin's image; others keep their own span content.
+bool minigl_display_claim_composite();
 
 // Releases one renderer instance's importer reference. When the last one
 // goes, the image is dropped and the sink is unregistered with the plugin

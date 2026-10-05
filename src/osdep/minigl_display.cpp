@@ -18,6 +18,8 @@ bool g_installed = false;
 int g_importer_refs = 0;  // live renderer instances that verified a capable context
 using SetImageSink = void (*)(void (*)(void*, int, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t), void*);
 SetImageSink g_set_image_sink = nullptr;
+void (*g_materialize_all)() = nullptr;
+bool g_composite_claimed = false;
 
 void sink_callback(void* /*user*/, int fd, uint32_t offset, uint32_t width, uint32_t height,
 	uint32_t stride, uint32_t fourcc, uint64_t modifier)
@@ -96,6 +98,8 @@ void minigl_display_release_importer()
 		const std::lock_guard<std::mutex> lock(g_mutex);
 		setter = g_set_image_sink;
 		g_set_image_sink = nullptr;
+		g_materialize_all = nullptr;
+		g_composite_claimed = false;
 	}
 	if (setter)
 		setter(nullptr, nullptr);
@@ -126,7 +130,25 @@ MiniglDisplayImage minigl_display_current()
 #endif
 }
 
-void minigl_display_install(void* set_image_sink_sym, void* /*plugin_lib*/)
+void minigl_display_materialize()
+{
+	// Safe to call from any path: the plugin serializes under its own mutex
+	// and no-ops without live exports. Optional symbol: old plugins never
+	// registered one.
+	if (g_materialize_all)
+		g_materialize_all();
+}
+
+bool minigl_display_claim_composite()
+{
+	const std::lock_guard<std::mutex> lock(g_mutex);
+	if (g_composite_claimed)
+		return false;
+	g_composite_claimed = true;
+	return true;
+}
+
+void minigl_display_install(void* set_image_sink_sym, void* materialize_sym)
 {
 	if (!set_image_sink_sym)
 		return;
@@ -145,6 +167,7 @@ void minigl_display_install(void* set_image_sink_sym, void* /*plugin_lib*/)
 			return;
 		g_installed = true;
 		g_set_image_sink = setter;
+		g_materialize_all = reinterpret_cast<void (*)()>(materialize_sym);
 	}
 	setter(&sink_callback, nullptr);
 }

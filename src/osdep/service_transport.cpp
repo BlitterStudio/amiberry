@@ -6,6 +6,7 @@
 #include "uae/dlopen.h"
 #include "service_transport.h"
 #include "minigl_display.h"
+#include "options.h"
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
@@ -104,8 +105,12 @@ static void maybe_install_zero_copy()
 		g_plugin.sink_installed = false;
 	if (g_plugin.sink_installed || sink_missing)
 		return;
-	if (getenv("AMIBERRY_MINIGL_ZEROCOPY") == nullptr
-		|| getenv("AMIBERRY_MINIGL_ZEROCOPY")[0] != '1')
+	// Config option on by default; the env forces either way ("1" on, "0"
+	// off) for one-off runs and troubleshooting.
+	const char* zero_copy_env = getenv("AMIBERRY_MINIGL_ZEROCOPY");
+	if (zero_copy_env && zero_copy_env[0] == '0')
+		return;
+	if (!(zero_copy_env && zero_copy_env[0] == '1') && !currprefs.minigl_zerocopy)
 		return;
 	if (!minigl_display_importer_ready()) {
 		if (!logged_wait) {
@@ -120,7 +125,7 @@ static void maybe_install_zero_copy()
 		write_log(_T("SERVICE_TRANSPORT: plugin lacks minigl_plugin_set_image_sink; zero-copy off\n"));
 		return;
 	}
-	minigl_display_install(set_image_sink, g_plugin.handle);
+	minigl_display_install(set_image_sink, uae_dlsym(g_plugin.handle, "minigl_plugin_materialize_all"));
 	g_plugin.sink_installed = true;
 	write_log(_T("SERVICE_TRANSPORT: MiniGL zero-copy display enabled\n"));
 }
