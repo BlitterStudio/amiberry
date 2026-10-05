@@ -12,6 +12,7 @@
 
 struct MiniglDisplayImage {
 	int fd = -1;
+	uint32_t offset = 0;
 	uint32_t width = 0, height = 0, stride = 0, fourcc = 0;
 	uint64_t modifier = 0;
 	uint64_t seq = 0;  // 0 = no image; bumped on every change

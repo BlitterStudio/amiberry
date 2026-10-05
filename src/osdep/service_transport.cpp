@@ -6,6 +6,8 @@
 #include "uae/dlopen.h"
 #include "service_transport.h"
 #include "minigl_display.h"
+#include "amiberry_gfx.h"
+#include "opengl_renderer.h"
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
@@ -83,8 +85,14 @@ bool ensure_plugin_loaded()
 	write_log(_T("SERVICE_TRANSPORT: Successfully loaded minigl_plugin!\n"));
 
 	// Optional zero-copy display handoff: the plugin exports presented
-	// frames as dma-bufs when the renderer is set up to import them.
-	if (getenv("AMIBERRY_MINIGL_ZEROCOPY") != nullptr
+	// frames as dma-bufs when the renderer is set up to import them. Only
+	// the OpenGL renderer imports; with any other backend registered, the
+	// plugin would skip span updates that nothing would ever display.
+	const bool gl_importer_live = get_opengl_renderer() != nullptr;
+	if (!gl_importer_live)
+		write_log(_T("SERVICE_TRANSPORT: zero-copy requested but the OpenGL renderer is not active\n"));
+	if (gl_importer_live
+		&& getenv("AMIBERRY_MINIGL_ZEROCOPY") != nullptr
 		&& getenv("AMIBERRY_MINIGL_ZEROCOPY")[0] == '1') {
 		void* set_image_sink = uae_dlsym(g_plugin.handle, "minigl_plugin_set_image_sink");
 		if (set_image_sink) {

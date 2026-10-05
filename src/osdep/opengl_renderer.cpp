@@ -539,7 +539,7 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 			EGL_HEIGHT, EGLint(image.height),
 			EGL_LINUX_DRM_FOURCC_EXT, EGLint(image.fourcc),
 			EGL_DMA_BUF_PLANE0_FD_EXT, image.fd,
-			EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
+			EGL_DMA_BUF_PLANE0_OFFSET_EXT, EGLint(image.offset),
 			EGL_DMA_BUF_PLANE0_PITCH_EXT, EGLint(image.stride),
 			EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, EGLint(image.modifier & 0xffffffffu),
 			EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, EGLint(image.modifier >> 32),
@@ -556,6 +556,7 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 		write_log("MiniGL dmabuf imported %ux%u fourcc 0x%x stride %u modifier 0x%llx\n",
 			image.width, image.height, image.fourcc, image.stride,
 			static_cast<unsigned long long>(image.modifier));
+		m_minigl_egl_image = handle;
 		m_minigl_egl_display = egl.current_display();
 		glGenTextures(1, &m_minigl_texture);
 		glBindTexture(GL_TEXTURE_2D, m_minigl_texture);
