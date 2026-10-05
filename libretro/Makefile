@@ -398,6 +398,7 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/sdl_renderer.cpp \
                 $(AMIBERRY_DIR)/src/osdep/service_transport.cpp \
                 $(AMIBERRY_DIR)/src/osdep/minigl_display.cpp \
+                $(AMIBERRY_DIR)/src/osdep/gl_context_ladder.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_input.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_mem.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_serial.cpp \
