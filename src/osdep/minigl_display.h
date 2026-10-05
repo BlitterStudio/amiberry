@@ -34,4 +34,9 @@ MiniglDisplayImage minigl_display_current();
 // builds; the call is then a no-op). Called once after plugin load.
 void minigl_display_install(void* set_image_sink_sym, void* plugin_lib);
 
+// Releases one renderer instance's importer reference. When the last one
+// goes, the image is dropped and the sink is unregistered with the plugin
+// so span updates resume.
+void minigl_display_release_importer();
+
 #endif

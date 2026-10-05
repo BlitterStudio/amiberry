@@ -210,6 +210,8 @@ private:
 
 	// Imported dma-buf state for the MiniGL zero-copy path.
 	void destroy_minigl_import();
+	bool m_minigl_probed = false;  // per context: rebuilds must re-publish capability
+	bool m_minigl_importer_ref = false;  // this instance holds a registry reference
 	GLuint m_minigl_texture = 0;
 	void* m_minigl_egl_display = nullptr;
 	void* m_minigl_egl_image = nullptr;  // EGLImageKHR

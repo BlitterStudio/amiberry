@@ -170,6 +170,11 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 void OpenGLRenderer::destroy_context()
 {
 	destroy_minigl_import();
+	if (m_minigl_importer_ref) {
+		minigl_display_release_importer();
+		m_minigl_importer_ref = false;
+	}
+	m_minigl_probed = false;  // a recreated context must re-publish capability
 
 	amiberry_hw_vsync_pacing_set_blocking(false);
 	if (m_gl_context != nullptr)
@@ -525,11 +530,17 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 	const int viewport_width, const int viewport_height, const GLuint target_framebuffer)
 {
 	const MiniglDisplayImage image = minigl_display_current();
-	if (image.fd < 0 || image.width == 0 || image.height == 0)
+	// The snapshot owns its descriptor; every exit must give it back.
+	const int owned_fd = image.fd;
+	const auto bail = [owned_fd] {
+		if (owned_fd >= 0) close(owned_fd);
 		return false;
+	};
+	if (image.fd < 0 || image.width == 0 || image.height == 0)
+		return bail();
 	auto& egl = egl_dmabuf_api();
 	if (!egl.available())
-		return false;
+		return bail();
 
 	if (image.seq != m_minigl_seq) {
 		// Drop the previous import before re-importing the new frame.
@@ -558,7 +569,7 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 			write_log("MiniGL dmabuf import failed (fourcc 0x%x, %ux%u stride %u)\n",
 				image.fourcc, image.width, image.height, image.stride);
 			m_minigl_seq = 0;
-			return false;
+			return bail();
 		}
 		write_log("MiniGL dmabuf imported %ux%u fourcc 0x%x stride %u modifier 0x%llx\n",
 			image.width, image.height, image.fourcc, image.stride,
@@ -576,8 +587,7 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 		m_minigl_seq = image.seq;
 	}
 #if defined(__linux__)
-	if (image.fd >= 0)
-		close(image.fd);  // the snapshot's duplicate: EGL holds its own reference
+	close(owned_fd);  // the snapshot's duplicate: EGL holds its own reference
 #endif
 
 	// The attachment is a GL-side (bottom-up) image, so like the shader
@@ -733,19 +743,39 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	// actually be imported here: an EGL display plus the import extension
 	// and the entry points. GLX or SDL-only window systems must keep the
 	// plugin on the span path instead of exporting frames nobody shows.
-	static bool s_importer_probed = false;
-	if (!s_importer_probed) {
-		s_importer_probed = true;
+	if (!m_minigl_probed) {
+		m_minigl_probed = true;
 		bool capable = false;
 		auto& egl = egl_dmabuf_api();
 		if (egl.available()) {
 			const EGLDisplay display = egl.current_display();
 			if (display != EGL_NO_DISPLAY) {
+				// The import attributes carry a format modifier, and the
+				// imported image is bound through glEGLImageTargetTexture2DOES,
+				// which needs the GL-side extension as well.
 				const char* extensions = egl.query_string(display, EGL_EXTENSIONS);
-				capable = extensions && strstr(extensions, "EGL_EXT_image_dma_buf_import");
+				capable = extensions && strstr(extensions, "EGL_EXT_image_dma_buf_import")
+					&& strstr(extensions, "EGL_EXT_image_dma_buf_import_modifiers");
+				if (capable) {
+					// glGetStringi is GL 3.0+; resolve it the way the rest of
+					// the GL entry points reach this context.
+					using GetStringi = const GLubyte* (*)(GLenum, GLuint);
+					static const auto get_stringi = reinterpret_cast<GetStringi>(
+						SDL_GL_GetProcAddress("glGetStringi"));
+					GLint count = 0;
+					glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+					bool gl_image = false;
+					for (GLint i = 0; i < count && !gl_image && get_stringi; ++i) {
+						const char* extension = reinterpret_cast<const char*>(
+							get_stringi(GL_EXTENSIONS, GLuint(i)));
+						gl_image = extension && strcmp(extension, "GL_OES_EGL_image") == 0;
+					}
+					capable = gl_image;
+				}
 			}
 		}
 		minigl_display_note_importer(capable);
+		m_minigl_importer_ref = capable;
 		write_log("MiniGL dmabuf importer %s\n", capable ? "ready" : "unavailable");
 	}
 #endif
