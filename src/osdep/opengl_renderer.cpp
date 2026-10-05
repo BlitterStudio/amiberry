@@ -542,6 +542,8 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 	if (!egl.available())
 		return bail();
 
+	if (image.seq != 0 && image.seq == m_minigl_failed_seq)
+		return bail();  // this export was already rejected; the span path stays
 	if (image.seq != m_minigl_seq) {
 		// Drop the previous import before re-importing the new frame.
 		if (m_minigl_texture != 0) {
@@ -566,8 +568,9 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 		const EGLImageKHR handle = egl.create_image(egl.current_display(), EGL_NO_CONTEXT,
 			EGL_LINUX_DMA_BUF_EXT, nullptr, attribs);
 		if (handle == EGL_NO_IMAGE_KHR) {
-			write_log("MiniGL dmabuf import failed (fourcc 0x%x, %ux%u stride %u)\n",
+			write_log("MiniGL dmabuf import failed (fourcc 0x%x, %ux%u stride %u); staying on the span path for this export\n",
 				image.fourcc, image.width, image.height, image.stride);
+			m_minigl_failed_seq = image.seq;  // do not retry or re-log this export
 			m_minigl_seq = 0;
 			return bail();
 		}

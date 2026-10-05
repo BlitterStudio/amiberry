@@ -16,7 +16,8 @@ std::mutex g_mutex;
 MiniglDisplayImage g_image;
 bool g_installed = false;
 int g_importer_refs = 0;  // live renderer instances that verified a capable context
-void (*g_set_image_sink)(void (*)(void*, int, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t), void*) = nullptr;
+using SetImageSink = void (*)(void (*)(void*, int, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t), void*);
+SetImageSink g_set_image_sink = nullptr;
 
 void sink_callback(void* /*user*/, int fd, uint32_t offset, uint32_t width, uint32_t height,
 	uint32_t stride, uint32_t fourcc, uint64_t modifier)
@@ -87,10 +88,17 @@ void minigl_display_release_importer()
 #endif
 	}
 	// No importer remains: removing the sink makes the plugin resume span
-	// updates instead of exporting frames nobody displays.
-	if (g_set_image_sink)
-		g_set_image_sink(nullptr, nullptr);
-	g_set_image_sink = nullptr;
+	// updates instead of exporting frames nobody displays. The pointer is
+	// copied under the mutex (install may race in) but the plugin setter
+	// itself runs outside it, mirroring install's lock order.
+	SetImageSink setter = nullptr;
+	{
+		const std::lock_guard<std::mutex> lock(g_mutex);
+		setter = g_set_image_sink;
+		g_set_image_sink = nullptr;
+	}
+	if (setter)
+		setter(nullptr, nullptr);
 }
 
 bool minigl_display_active()
@@ -120,10 +128,23 @@ MiniglDisplayImage minigl_display_current()
 
 void minigl_display_install(void* set_image_sink_sym, void* /*plugin_lib*/)
 {
-	if (!set_image_sink_sym || g_installed)
+	if (!set_image_sink_sym)
 		return;
 	using SetImageSink = void (*)(void (*)(void*, int, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t), void*);
-	reinterpret_cast<SetImageSink>(set_image_sink_sym)(&sink_callback, nullptr);
-	g_set_image_sink = reinterpret_cast<SetImageSink>(set_image_sink_sym);
-	g_installed = true;
+	const auto setter = reinterpret_cast<SetImageSink>(set_image_sink_sym);
+	// Decide under the registry mutex; call the plugin setter outside it
+	// (the plugin holds its own mutex around the sink callback - taking
+	// both in opposite orders would deadlock).
+	{
+		const std::lock_guard<std::mutex> lock(g_mutex);
+		if (g_installed)
+			return;
+		// A release may have dropped the last importer since the transport
+		// checked: installing now would suppress span updates nobody shows.
+		if (g_importer_refs == 0)
+			return;
+		g_installed = true;
+		g_set_image_sink = setter;
+	}
+	setter(&sink_callback, nullptr);
 }

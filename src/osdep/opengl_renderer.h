@@ -216,6 +216,7 @@ private:
 	void* m_minigl_egl_display = nullptr;
 	void* m_minigl_egl_image = nullptr;  // EGLImageKHR
 	uint64_t m_minigl_seq = 0;
+	uint64_t m_minigl_failed_seq = 0;  // import rejected: never retried, never logged twice
 };
 
 // Helper to get the OpenGL renderer from the global g_renderer.
