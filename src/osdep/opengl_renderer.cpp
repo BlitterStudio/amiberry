@@ -497,7 +497,9 @@ struct EglDmabufApi {
 };
 EglDmabufApi& egl_dmabuf_api() { static EglDmabufApi api; return api; }
 }
+#endif
 
+// Defined on every platform: destroy_context() calls it unconditionally.
 void OpenGLRenderer::destroy_minigl_import()
 {
 #if defined(__linux__)
@@ -518,6 +520,7 @@ void OpenGLRenderer::destroy_minigl_import()
 
 
 
+#if defined(__linux__)
 bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewport_y,
 	const int viewport_width, const int viewport_height, const GLuint target_framebuffer)
 {
