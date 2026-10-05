@@ -35,8 +35,10 @@
 #include "minigl_display.h"
 #if defined(__linux__)
 #include <dlfcn.h>
+#include <unistd.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <cstring>
 #endif
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
@@ -469,6 +471,7 @@ namespace {
 struct EglDmabufApi {
 	void* library = nullptr;
 	EGLDisplay (*current_display)() = nullptr;
+	const char* (*query_string)(EGLDisplay, EGLint) = nullptr;
 	EGLImageKHR (*create_image)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLint*) = nullptr;
 	EGLBoolean (*destroy_image)(EGLDisplay, EGLImageKHR) = nullptr;
 	void (*image_target_texture)(GLenum, EGLImageKHR) = nullptr;
@@ -480,6 +483,7 @@ struct EglDmabufApi {
 		if (!library) library = dlopen("libEGL.so.1", RTLD_LAZY);
 		if (!library) return false;
 		current_display = reinterpret_cast<EGLDisplay (*)()>(dlsym(library, "eglGetCurrentDisplay"));
+		query_string = reinterpret_cast<const char* (*)(EGLDisplay, EGLint)>(dlsym(library, "eglQueryString"));
 		if (!current_display) return false;
 		using GetProc = void* (*)(const char*);
 		const auto get_proc = reinterpret_cast<GetProc>(dlsym(library, "eglGetProcAddress"));
@@ -487,7 +491,7 @@ struct EglDmabufApi {
 		create_image = reinterpret_cast<EGLImageKHR (*)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLint*)>(get_proc("eglCreateImageKHR"));
 		destroy_image = reinterpret_cast<EGLBoolean (*)(EGLDisplay, EGLImageKHR)>(get_proc("eglDestroyImageKHR"));
 		image_target_texture = reinterpret_cast<void (*)(GLenum, EGLImageKHR)>(get_proc("glEGLImageTargetTexture2DOES"));
-		ok = create_image && destroy_image && image_target_texture;
+		ok = create_image && destroy_image && image_target_texture && query_string;
 		return ok;
 	}
 };
@@ -568,6 +572,10 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewpo
 		glBindTexture(GL_TEXTURE_2D, 0);
 		m_minigl_seq = image.seq;
 	}
+#if defined(__linux__)
+	if (image.fd >= 0)
+		close(image.fd);  // the snapshot's duplicate: EGL holds its own reference
+#endif
 
 	// The attachment is a GL-side (bottom-up) image, so like the shader
 	// resolve pass this quad samples without the Y-flip used for surfaces.
@@ -717,6 +725,27 @@ void OpenGLRenderer::render_shader_resolve(
 void OpenGLRenderer::present_frame(int monid, int mode)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
+#if defined(__linux__)
+	// Publish once, under this thread's context, whether dma-buf frames can
+	// actually be imported here: an EGL display plus the import extension
+	// and the entry points. GLX or SDL-only window systems must keep the
+	// plugin on the span path instead of exporting frames nobody shows.
+	static bool s_importer_probed = false;
+	if (!s_importer_probed) {
+		s_importer_probed = true;
+		bool capable = false;
+		auto& egl = egl_dmabuf_api();
+		if (egl.available()) {
+			const EGLDisplay display = egl.current_display();
+			if (display != EGL_NO_DISPLAY) {
+				const char* extensions = egl.query_string(display, EGL_EXTENSIONS);
+				capable = extensions && strstr(extensions, "EGL_EXT_image_dma_buf_import");
+			}
+		}
+		minigl_display_note_importer(capable);
+		write_log("MiniGL dmabuf importer %s\n", capable ? "ready" : "unavailable");
+	}
+#endif
 	SDL_Surface* surface = get_amiga_surface(monid);
 
 	const auto time = SDL_GetTicks();

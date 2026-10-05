@@ -21,6 +21,13 @@ struct MiniglDisplayImage {
 // True when the sink is registered and at least one image or withdrawal
 // arrived: the renderer can then consult minigl_display_current().
 bool minigl_display_active();
+
+// The OpenGL renderer calls this once it has verified, under its own
+// context, that frames can actually be imported (an EGL display with
+// dma-buf image support). Sink registration is gated on it so builds or
+// window systems without a working importer never stop the span updates.
+void minigl_display_note_importer(bool capable);
+bool minigl_display_importer_ready();
 MiniglDisplayImage minigl_display_current();
 
 // Registers the sink through the plugin symbol (may be null on old plugin
