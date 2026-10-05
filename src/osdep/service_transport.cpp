@@ -98,6 +98,10 @@ static void maybe_install_zero_copy()
 {
 	static bool sink_missing = false;
 	static bool logged_wait = false;
+	// The registry unregisters the sink when its last importer goes; the
+	// transport flag has to follow so a recreated context can reinstall.
+	if (g_plugin.sink_installed && !minigl_display_importer_ready())
+		g_plugin.sink_installed = false;
 	if (g_plugin.sink_installed || sink_missing)
 		return;
 	if (getenv("AMIBERRY_MINIGL_ZEROCOPY") == nullptr
@@ -241,8 +245,8 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 		if (operation == 0)
 			return g_plugin.query();
 		generation = g_reset_generation;
+		maybe_install_zero_copy();  // under the mutex: the plugin setter serializes here too
 	}
-	maybe_install_zero_copy();
 	try {
 		switch (operation) {
 		case 1:

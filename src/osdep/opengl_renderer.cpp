@@ -738,12 +738,25 @@ void OpenGLRenderer::render_shader_resolve(
 void OpenGLRenderer::present_frame(int monid, int mode)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
+	SDL_Surface* surface = get_amiga_surface(monid);
+
+	const auto time = SDL_GetTicks();
+
+	// Ensure GL context is current for this window
+	if (m_gl_context && mon->amiga_window) {
+		if (!SDL_GL_MakeCurrent(mon->amiga_window, m_gl_context)) {
+			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
+		}
+	}
+
 #if defined(__linux__)
-	// Publish once, under this thread's context, whether dma-buf frames can
-	// actually be imported here: an EGL display plus the import extension
-	// and the entry points. GLX or SDL-only window systems must keep the
-	// plugin on the span path instead of exporting frames nobody shows.
-	if (!m_minigl_probed) {
+	// Probe only now that this renderer's context is current: earlier, the
+	// EGL and GL capability queries could describe another context - or none
+	// - and the one-shot verdict would stick until context destruction.
+	// Only a renderer presenting the Picasso96 screen holds an importer
+	// reference, so a capable native-screen monitor cannot keep the sink
+	// installed while the RTG display falls back to SDL.
+	if (!m_minigl_probed && mon->screen_is_picasso) {
 		m_minigl_probed = true;
 		bool capable = false;
 		auto& egl = egl_dmabuf_api();
@@ -779,16 +792,6 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		write_log("MiniGL dmabuf importer %s\n", capable ? "ready" : "unavailable");
 	}
 #endif
-	SDL_Surface* surface = get_amiga_surface(monid);
-
-	const auto time = SDL_GetTicks();
-
-	// Ensure GL context is current for this window
-	if (m_gl_context && mon->amiga_window) {
-		if (!SDL_GL_MakeCurrent(mon->amiga_window, m_gl_context)) {
-			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
-		}
-	}
 
 	// Handle VSync options after making the emulation context current.
 	update_vsync(monid);
