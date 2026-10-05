@@ -5,6 +5,8 @@
 #include "uae.h"
 #include "uae/dlopen.h"
 #include "service_transport.h"
+#include "minigl_display.h"
+#include "options.h"
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
@@ -34,6 +36,7 @@ struct PluginBinding {
 	FuncReset reset = nullptr;
 	bool loaded = false;
 	bool tried = false;
+	bool sink_installed = false;  // zero-copy handoff; retried, cleared on reset
 };
 
 // Indirect UAE-board mode runs traps on several worker threads. Loading, reset
@@ -46,6 +49,8 @@ static std::mutex g_plugin_mutex;
 static thread_local std::vector<uint8_t> t_input, t_output;
 
 // Caller holds g_plugin_mutex.
+static void maybe_install_zero_copy();  // defined after the loader
+
 bool ensure_plugin_loaded()
 {
 	if (g_plugin.loaded)
@@ -82,7 +87,47 @@ bool ensure_plugin_loaded()
 	write_log(_T("SERVICE_TRANSPORT: Successfully loaded minigl_plugin!\n"));
 
 	g_plugin.loaded = true;
+	maybe_install_zero_copy();
 	return true;
+}
+
+// Called after plugin load and from the dispatch path: context recreation
+// unregisters the sink when its importer goes away, and a later renderer
+// can publish capability again - the installation has to retry until an
+// importer is actually ready, or zero-copy stays off for the process.
+static void maybe_install_zero_copy()
+{
+	static bool sink_missing = false;
+	static bool logged_wait = false;
+	// The registry unregisters the sink when its last importer goes; the
+	// transport flag has to follow so a recreated context can reinstall.
+	if (g_plugin.sink_installed && !minigl_display_importer_ready())
+		g_plugin.sink_installed = false;
+	if (g_plugin.sink_installed || sink_missing)
+		return;
+	// Config option on by default; the env forces either way ("1" on, "0"
+	// off) for one-off runs and troubleshooting.
+	const char* zero_copy_env = getenv("AMIBERRY_MINIGL_ZEROCOPY");
+	if (zero_copy_env && zero_copy_env[0] == '0')
+		return;
+	if (!(zero_copy_env && zero_copy_env[0] == '1') && !currprefs.minigl_zerocopy)
+		return;
+	if (!minigl_display_importer_ready()) {
+		if (!logged_wait) {
+			logged_wait = true;
+			write_log(_T("SERVICE_TRANSPORT: zero-copy requested; waiting for a dma-buf importer\n"));
+		}
+		return;
+	}
+	void* set_image_sink = uae_dlsym(g_plugin.handle, "minigl_plugin_set_image_sink");
+	if (!set_image_sink) {
+		sink_missing = true;
+		write_log(_T("SERVICE_TRANSPORT: plugin lacks minigl_plugin_set_image_sink; zero-copy off\n"));
+		return;
+	}
+	minigl_display_install(set_image_sink, uae_dlsym(g_plugin.handle, "minigl_plugin_materialize_all"));
+	g_plugin.sink_installed = true;
+	write_log(_T("SERVICE_TRANSPORT: MiniGL zero-copy display enabled\n"));
 }
 
 // Bumped by every reset, under g_plugin_mutex. An emulator reset resets the
@@ -205,6 +250,7 @@ uae_u32 service_transport_uaelib(TrapContext* ctx, uae_u32 operation, uae_u32 ar
 		if (operation == 0)
 			return g_plugin.query();
 		generation = g_reset_generation;
+		maybe_install_zero_copy();  // under the mutex: the plugin setter serializes here too
 	}
 	try {
 		switch (operation) {

@@ -971,6 +971,7 @@ struct uae_prefs {
 	int uae_hide;
 	bool clipboard_sharing;
 	bool native_code;
+	bool minigl_zerocopy;
 	bool uae_hide_autoconfig;
 	int z3_mapping_mode;
 	bool autoconfig_custom_sort;

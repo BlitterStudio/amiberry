@@ -32,6 +32,14 @@
 #include "target.h"
 #include "statusline.h"
 #include "imgui_overlay.h"
+#include "minigl_display.h"
+#if defined(__linux__)
+#include <dlfcn.h>
+#include <unistd.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <cstring>
+#endif
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
 #include "on_screen_joystick_layout.h"
@@ -161,6 +169,13 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 
 void OpenGLRenderer::destroy_context()
 {
+	destroy_minigl_import();
+	if (m_minigl_importer_ref) {
+		minigl_display_release_importer();
+		m_minigl_importer_ref = false;
+	}
+	m_minigl_probed = false;  // a recreated context must re-publish capability
+
 	amiberry_hw_vsync_pacing_set_blocking(false);
 	if (m_gl_context != nullptr)
 	{
@@ -452,6 +467,176 @@ void OpenGLRenderer::update_vsync(int monid)
 
 // --- Frame rendering ---
 
+#if defined(__linux__)
+// --- MiniGL zero-copy display ---------------------------------------------
+// Imports the plugin's exported dma-buf on this renderer's EGLDisplay and
+// composites it. EGL entry points are resolved from libEGL at runtime so no
+// build-time EGL dependency appears on platforms that never take this path.
+namespace {
+struct EglDmabufApi {
+	void* library = nullptr;
+	EGLDisplay (*current_display)() = nullptr;
+	const char* (*query_string)(EGLDisplay, EGLint) = nullptr;
+	EGLImageKHR (*create_image)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLint*) = nullptr;
+	EGLBoolean (*destroy_image)(EGLDisplay, EGLImageKHR) = nullptr;
+	void (*image_target_texture)(GLenum, EGLImageKHR) = nullptr;
+	bool ok = false, tried = false;
+	bool available() {
+		if (tried) return ok;
+		tried = true;
+		library = dlopen("libEGL.so.1", RTLD_LAZY | RTLD_NOLOAD);
+		if (!library) library = dlopen("libEGL.so.1", RTLD_LAZY);
+		if (!library) return false;
+		current_display = reinterpret_cast<EGLDisplay (*)()>(dlsym(library, "eglGetCurrentDisplay"));
+		query_string = reinterpret_cast<const char* (*)(EGLDisplay, EGLint)>(dlsym(library, "eglQueryString"));
+		if (!current_display) return false;
+		using GetProc = void* (*)(const char*);
+		const auto get_proc = reinterpret_cast<GetProc>(dlsym(library, "eglGetProcAddress"));
+		if (!get_proc) return false;
+		create_image = reinterpret_cast<EGLImageKHR (*)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLint*)>(get_proc("eglCreateImageKHR"));
+		destroy_image = reinterpret_cast<EGLBoolean (*)(EGLDisplay, EGLImageKHR)>(get_proc("eglDestroyImageKHR"));
+		image_target_texture = reinterpret_cast<void (*)(GLenum, EGLImageKHR)>(get_proc("glEGLImageTargetTexture2DOES"));
+		ok = create_image && destroy_image && image_target_texture && query_string;
+		return ok;
+	}
+};
+EglDmabufApi& egl_dmabuf_api() { static EglDmabufApi api; return api; }
+}
+#endif
+
+// Defined on every platform: destroy_context() calls it unconditionally.
+void OpenGLRenderer::destroy_minigl_import()
+{
+#if defined(__linux__)
+	if (m_minigl_texture != 0) {
+		glDeleteTextures(1, &m_minigl_texture);
+		m_minigl_texture = 0;
+	}
+	if (m_minigl_egl_image != nullptr && m_minigl_egl_display != nullptr) {
+		if (auto& egl = egl_dmabuf_api(); egl.destroy_image)
+			egl.destroy_image(static_cast<EGLDisplay>(m_minigl_egl_display),
+				static_cast<EGLImageKHR>(m_minigl_egl_image));
+		m_minigl_egl_image = nullptr;
+	}
+	m_minigl_egl_display = nullptr;
+	m_minigl_seq = 0;
+#endif
+}
+
+
+
+#if defined(__linux__)
+bool OpenGLRenderer::render_minigl_dmabuf(const int viewport_x, const int viewport_y,
+	const int viewport_width, const int viewport_height, const GLuint target_framebuffer)
+{
+	const MiniglDisplayImage image = minigl_display_current();
+	// The snapshot owns its descriptor; every exit must give it back.
+	const int owned_fd = image.fd;
+	const auto bail = [owned_fd] {
+		if (owned_fd >= 0) close(owned_fd);
+		return false;
+	};
+	if (image.fd < 0 || image.width == 0 || image.height == 0)
+		return bail();
+	auto& egl = egl_dmabuf_api();
+	if (!egl.available())
+		return bail();
+
+	if (image.seq != 0 && image.seq == m_minigl_failed_seq)
+		return bail();  // this export was already rejected; the span path stays
+	if (image.seq != m_minigl_seq) {
+		// Drop the previous import before re-importing the new frame.
+		if (m_minigl_texture != 0) {
+			glDeleteTextures(1, &m_minigl_texture);
+			m_minigl_texture = 0;
+		}
+		if (m_minigl_egl_image != nullptr && egl.destroy_image) {
+			egl.destroy_image(egl.current_display(), static_cast<EGLImageKHR>(m_minigl_egl_image));
+			m_minigl_egl_image = nullptr;
+		}
+		const EGLint attribs[] = {
+			EGL_WIDTH, EGLint(image.width),
+			EGL_HEIGHT, EGLint(image.height),
+			EGL_LINUX_DRM_FOURCC_EXT, EGLint(image.fourcc),
+			EGL_DMA_BUF_PLANE0_FD_EXT, image.fd,
+			EGL_DMA_BUF_PLANE0_OFFSET_EXT, EGLint(image.offset),
+			EGL_DMA_BUF_PLANE0_PITCH_EXT, EGLint(image.stride),
+			EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, EGLint(image.modifier & 0xffffffffu),
+			EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, EGLint(image.modifier >> 32),
+			EGL_NONE
+		};
+		const EGLImageKHR handle = egl.create_image(egl.current_display(), EGL_NO_CONTEXT,
+			EGL_LINUX_DMA_BUF_EXT, nullptr, attribs);
+		if (handle == EGL_NO_IMAGE_KHR) {
+			write_log("MiniGL dmabuf import failed (fourcc 0x%x, %ux%u stride %u); staying on the span path for this export\n",
+				image.fourcc, image.width, image.height, image.stride);
+			m_minigl_failed_seq = image.seq;  // do not retry or re-log this export
+			m_minigl_seq = 0;
+			return bail();
+		}
+		write_log("MiniGL dmabuf imported %ux%u fourcc 0x%x stride %u modifier 0x%llx\n",
+			image.width, image.height, image.fourcc, image.stride,
+			static_cast<unsigned long long>(image.modifier));
+		m_minigl_egl_image = handle;
+		m_minigl_egl_display = egl.current_display();
+		glGenTextures(1, &m_minigl_texture);
+		glBindTexture(GL_TEXTURE_2D, m_minigl_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		egl.image_target_texture(GL_TEXTURE_2D, handle);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		m_minigl_seq = image.seq;
+	}
+#if defined(__linux__)
+	close(owned_fd);  // the snapshot's duplicate: EGL holds its own reference
+#endif
+
+	// The attachment is a GL-side (bottom-up) image, so like the shader
+	// resolve pass this quad samples without the Y-flip used for surfaces.
+	static const GLfloat vertices[] = {
+		-1.0f, -1.0f, 0.0f, 0.0f,
+		 1.0f, -1.0f, 1.0f, 0.0f,
+		 1.0f,  1.0f, 1.0f, 1.0f,
+		-1.0f,  1.0f, 0.0f, 1.0f,
+	};
+
+	glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
+	if (!init_osd_shader())
+		return false;
+	glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glUseProgram(m_overlay.osd_program);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_minigl_texture);
+	if (m_overlay.osd_tex_loc != -1) glUniform1i(m_overlay.osd_tex_loc, 0);
+
+	glBindVertexArray(m_overlay.osd_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, m_overlay.osd_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	glEnableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), nullptr);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glDisableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+	return true;
+}
+#else
+bool OpenGLRenderer::render_minigl_dmabuf(const int, const int, const int, const int, const GLuint)
+{
+	return false;
+}
+#endif
+
 bool OpenGLRenderer::render_frame(int monid, int mode, int immediate)
 {
 	SDL_Surface* surface = get_amiga_surface(monid);
@@ -566,6 +751,50 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
 	}
+
+#if defined(__linux__)
+	// Probe only now that this renderer's context is current: earlier, the
+	// EGL and GL capability queries could describe another context - or none
+	// - and the one-shot verdict would stick until context destruction.
+	// Only a renderer presenting the Picasso96 screen holds an importer
+	// reference, so a capable native-screen monitor cannot keep the sink
+	// installed while the RTG display falls back to SDL.
+	if (!m_minigl_probed && mon->screen_is_picasso) {
+		m_minigl_probed = true;
+		bool capable = false;
+		auto& egl = egl_dmabuf_api();
+		if (egl.available()) {
+			const EGLDisplay display = egl.current_display();
+			if (display != EGL_NO_DISPLAY) {
+				// The import attributes carry a format modifier, and the
+				// imported image is bound through glEGLImageTargetTexture2DOES,
+				// which needs the GL-side extension as well.
+				const char* extensions = egl.query_string(display, EGL_EXTENSIONS);
+				capable = extensions && strstr(extensions, "EGL_EXT_image_dma_buf_import")
+					&& strstr(extensions, "EGL_EXT_image_dma_buf_import_modifiers");
+				if (capable) {
+					// glGetStringi is GL 3.0+; resolve it the way the rest of
+					// the GL entry points reach this context.
+					using GetStringi = const GLubyte* (*)(GLenum, GLuint);
+					static const auto get_stringi = reinterpret_cast<GetStringi>(
+						SDL_GL_GetProcAddress("glGetStringi"));
+					GLint count = 0;
+					glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+					bool gl_image = false;
+					for (GLint i = 0; i < count && !gl_image && get_stringi; ++i) {
+						const char* extension = reinterpret_cast<const char*>(
+							get_stringi(GL_EXTENSIONS, GLuint(i)));
+						gl_image = extension && strcmp(extension, "GL_OES_EGL_image") == 0;
+					}
+					capable = gl_image;
+				}
+			}
+		}
+		minigl_display_note_importer(capable);
+		m_minigl_importer_ref = capable;
+		write_log("MiniGL dmabuf importer %s\n", capable ? "ready" : "unavailable");
+	}
+#endif
 
 	// Handle VSync options after making the emulation context current.
 	update_vsync(monid);
@@ -798,8 +1027,26 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
+	// Zero-copy MiniGL frames replace the surface upload entirely; the
+	// shader stacks below still run for non-RTG screens and for RTG screens
+	// without a live export.
+	// One composite owner: on hosts with several Picasso96 monitors only
+	// the claiming renderer shows the plugin's image; the others keep their
+	// own span content instead of getting the plugin's frame.
+	static bool s_composite_owner = false;
+	static bool s_composite_decided = false;
+	if (!s_composite_decided) {
+		s_composite_decided = true;
+		s_composite_owner = minigl_display_claim_composite();
+		if (!s_composite_owner)
+			write_log("MiniGL dmabuf composite claimed by another monitor\n");
+	}
+	const bool minigl_frame = mon->screen_is_picasso && !is_cropped && s_composite_owner
+		&& render_minigl_dmabuf(shader_viewport_x, shader_viewport_y,
+			shader_viewport_w, shader_viewport_h, shader_framebuffer);
+
 	// Handle shader preset rendering (multi-pass .glslp)
-	if (m_shader.preset && m_shader.preset->is_valid()) {
+	if (!minigl_frame && m_shader.preset && m_shader.preset->is_valid()) {
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
@@ -821,7 +1068,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	}
 	// Handle external shader rendering (simplified single-pass)
-	else if (m_shader.external && m_shader.external->is_valid()) {
+	else if (!minigl_frame && m_shader.external && m_shader.external->is_valid()) {
 		// Explicitly disable attributes to avoid leakage from previous passes
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
@@ -846,7 +1093,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 				shader_framebuffer);
 		}
 
-	} else if (m_shader.crtemu) {
+	} else if (!minigl_frame && m_shader.crtemu) {
 		// crtemu_present expects attribute 0 to be enabled.
 		glEnableVertexAttribArray(0);
 		// Disable other attributes that might have been enabled by OSD or other passes
