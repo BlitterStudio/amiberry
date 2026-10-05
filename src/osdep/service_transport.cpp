@@ -5,6 +5,7 @@
 #include "uae.h"
 #include "uae/dlopen.h"
 #include "service_transport.h"
+#include "minigl_display.h"
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
@@ -80,6 +81,19 @@ bool ensure_plugin_loaded()
 		return false;
 	}
 	write_log(_T("SERVICE_TRANSPORT: Successfully loaded minigl_plugin!\n"));
+
+	// Optional zero-copy display handoff: the plugin exports presented
+	// frames as dma-bufs when the renderer is set up to import them.
+	if (getenv("AMIBERRY_MINIGL_ZEROCOPY") != nullptr
+		&& getenv("AMIBERRY_MINIGL_ZEROCOPY")[0] == '1') {
+		void* set_image_sink = uae_dlsym(g_plugin.handle, "minigl_plugin_set_image_sink");
+		if (set_image_sink) {
+			minigl_display_install(set_image_sink, g_plugin.handle);
+			write_log(_T("SERVICE_TRANSPORT: MiniGL zero-copy display enabled\n"));
+		} else {
+			write_log(_T("SERVICE_TRANSPORT: plugin lacks minigl_plugin_set_image_sink; zero-copy off\n"));
+		}
+	}
 
 	g_plugin.loaded = true;
 	return true;

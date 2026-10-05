@@ -225,6 +225,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_adpf.cpp
         src/osdep/mhi_host.cpp
         src/osdep/service_transport.cpp
+        src/osdep/minigl_display.cpp
         src/osdep/mp3decoder.cpp
         src/osdep/picasso96.cpp
         src/osdep/writelog.cpp

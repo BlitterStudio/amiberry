@@ -204,6 +204,16 @@ private:
 		const uae_u8* pixels, int width, int height, int pitch,
 		int viewport_x, int viewport_y, int viewport_width, int viewport_height,
 		GLuint target_framebuffer);
+	// Zero-copy MiniGL display: composite the plugin's exported frame.
+	bool render_minigl_dmabuf(const int viewport_x, const int viewport_y,
+		const int viewport_width, const int viewport_height, const GLuint target_framebuffer);
+
+	// Imported dma-buf state for the MiniGL zero-copy path.
+	void destroy_minigl_import();
+	GLuint m_minigl_texture = 0;
+	void* m_minigl_egl_display = nullptr;
+	void* m_minigl_egl_image = nullptr;  // EGLImageKHR
+	uint64_t m_minigl_seq = 0;
 };
 
 // Helper to get the OpenGL renderer from the global g_renderer.
