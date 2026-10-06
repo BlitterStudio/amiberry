@@ -166,8 +166,9 @@ sudo apt install amiberry</code></pre>
   <div class="platform-card android">
     <h3>🤖 Android</h3>
     <p>AArch64 &amp; x86_64 with full ARM64 JIT support for maximum performance.</p>
+    <p>Currently in Closed Testing on Google Play for <a href="https://ko-fi.com/midwan">Ko-fi</a> members. Open Testing is planned after the next release, followed by a public paid release.</p>
     <p class="platform-alt">
-      See the <a href="https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source">build instructions</a> for details.
+      See the <a href="https://github.com/BlitterStudio/amiberry/wiki/Android">Android guide</a> for details, or the <a href="https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source#android">build instructions</a> to build it yourself.
     </p>
   </div>
 </div>

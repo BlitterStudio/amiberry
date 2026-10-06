@@ -2,27 +2,23 @@
 
 The Android version of Amiberry has some differences from the desktop (Linux/macOS/Windows) builds due to platform constraints.
 
+The Android version is currently in Closed Testing on Google Play, available only to Ko-fi members. For availability, setup, touch controls, and the launcher, see the [Android wiki page](https://github.com/BlitterStudio/amiberry/wiki/Android).
+
 ## Disabled Features
 
-### Serial Port Emulation
-Serial port support is excluded on Android. The host serial device APIs are not available.
+These build options are forced off for Android in `CMakeLists.txt`:
 
-### Network Stack (bsdsocket)
-TCP/IP emulation via bsdsocket is not available. The SLIRP network stack and direct socket emulation are disabled.
+- **CD32 Full Motion Video** — the MPEG decoder (`USE_LIBMPEG2`) is not built.
+- **MP3 decoding** — `USE_MPG123` is off, so MP3 audio tracks in CUE images and the ZZ9000 MP3/MHI decoders are unavailable.
+- **Genlock video and camera input** — `USE_VIDEOGRAB` and `USE_FFMPEG` are off.
+- **uaenet** — the pcap and TAP backends are not available. The built-in SLIRP stack and `bsdsocket.library` emulation are still included.
+- **PowerPC** — `USE_PPC` and the QEMU-UAE plugin loader (`USE_QEMU_PPC`) are off.
+- **D-Bus, IPC socket, and GPIO LEDs** — `USE_DBUS`, `USE_IPC_SOCKET`, and `USE_GPIOD` are off.
 
-### CRT Shader Effects
-Six CRT shader effects are disabled on Android due to GPU performance constraints:
-- CRT Lottes
-- CRT Hyllian
-- CRT Caligari
-- CRT Easymode Halation
-- CRT Guest Advanced
-- CRT NewPixie
+MIDI is built with PortMidi's null backend, so no host MIDI devices are available. Portable mode and the built-in updater are not offered on Android; updates come through Google Play.
 
-The remaining shader effects (scanlines, aperture grille, etc.) work normally.
-
-### Fast Memory Mapping (natmem)
-The native memory mapping optimization used on desktop platforms is disabled on Android. This means the JIT compiler uses a different, slightly slower memory access path. This is necessary to avoid out-of-memory issues with Android's virtual memory management.
+### Shaders
+The Android launcher's **Native Shader** list offers the built-in shaders (`none`, `tv`, `pc`, `lite`, `1084`) plus any `.glslp` presets and top-level `.glsl` files found in `Visuals/Shaders`. The built-in CRT effect switches to lighter shader and blur variants on mobile GPUs.
 
 ### FPU Signaling NaN Detection
 Hardware-based signaling NaN (SNAN) detection is disabled. This is a platform-independent limitation but particularly affects Android due to the ARM64 FPU behavior.
@@ -37,7 +33,7 @@ The Android build supports:
 
 ## Storage
 
-Amiberry requests the `MANAGE_EXTERNAL_STORAGE` permission to access ROM images, disk images, and game archives in user-chosen directories. If denied, the app operates within its scoped storage directory at:
+Amiberry can use the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission to access ROM images, disk images, and game archives in user-chosen directories. It is not requested at startup. On Android 11 and newer, the launcher shows a **Limited file access** banner with a **Grant Access** button that opens the system permission screen. Without the permission, the app works within its scoped storage directory, and imports through the system file picker still copy files there:
 
 ```
 /storage/emulated/0/Android/data/com.blitterstudio.amiberry/files/
