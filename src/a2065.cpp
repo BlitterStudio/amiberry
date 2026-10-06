@@ -327,7 +327,7 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 {
 	int i;
 	int size, insize, first;
-	uae_u32 addr, off;
+	uae_u32 addr, off, prevoff = 0;
 	uae_u8 *d;
 	uae_u16 rmd0, rmd1, rmd2, rmd3;
 	uae_u32 crc32;
@@ -465,12 +465,16 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 		if (!(rmd1 & RX_OWN)) {
 			write_log (_T("7990: RECEIVE BUFFER ERROR\n"));
 			if (!first) {
-				rmd1 |= RX_BUFF | RX_OFLO;
-				csr[0] &= ~CSR0_RXON;
+				// Data chaining ran into a buffer the host owns: the
+				// error goes into the last buffer of the frame, which
+				// ends there, and the receiver stays on. Only STOP, RESET
+				// and MERR clear RXON (Am7990 data sheet, CSR0). The
+				// host's descriptor is left alone.
+				put_ram_word(prevoff + 2, get_ram_word(prevoff + 2) | RX_ERR | RX_BUFF | RX_OFLO);
+				csr[0] |= CSR0_RINT;
 			} else {
 				csr[0] |= CSR0_MISS;
 			}
-			put_ram_word(off + 2, rmd1);
 			devices_rethink_all(rethink_a2065);
 			return;
 		}
@@ -495,6 +499,7 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 
 		put_ram_word(off + 2, rmd1);
 		put_ram_word(off + 6, rmd3);
+		prevoff = off;
 
 		if (insize >= len)
 			break;

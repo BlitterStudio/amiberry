@@ -641,16 +641,26 @@ extern void m68k_do_bsr_mmu030 (uaecptr oldpc, uae_s32 offset);
 
 // more compatible + optional cache
 
+// These are MOVES's accessors when the data cache is off. A misaligned
+// word or long must be split like everywhere else: mmu030_get/put_word
+// and _long translate only the address of the first byte, so the part
+// in the next page would go to (or come from) the physically adjacent
+// page, and that page would never fault in.
+
 static ALWAYS_INLINE uae_u32 mmu030_get_fc_byte(uaecptr addr, uae_u32 fc)
 {
 	return mmu030_get_byte(addr, fc);
 }
 static ALWAYS_INLINE uae_u32 mmu030_get_fc_word(uaecptr addr, uae_u32 fc)
 {
+	if (unlikely(is_unaligned_bus(addr, 2)))
+		return mmu030_get_word_unaligned(addr, fc, 0);
 	return mmu030_get_word(addr, fc);
 }
 static ALWAYS_INLINE uae_u32 mmu030_get_fc_long(uaecptr addr, uae_u32 fc)
 {
+	if (unlikely(is_unaligned_bus(addr, 4)))
+		return mmu030_get_long_unaligned(addr, fc, 0);
 	return mmu030_get_long(addr, fc);
 }
 static ALWAYS_INLINE void mmu030_put_fc_byte(uaecptr addr, uae_u32 val, uae_u32 fc)
@@ -659,11 +669,17 @@ static ALWAYS_INLINE void mmu030_put_fc_byte(uaecptr addr, uae_u32 val, uae_u32 
 }
 static ALWAYS_INLINE void mmu030_put_fc_word(uaecptr addr, uae_u32 val, uae_u32 fc)
 {
-	mmu030_put_word(addr, val, fc);
+	if (unlikely(is_unaligned_bus(addr, 2)))
+		mmu030_put_word_unaligned(addr, val, fc, 0);
+	else
+		mmu030_put_word(addr, val, fc);
 }
 static ALWAYS_INLINE void mmu030_put_fc_long(uaecptr addr, uae_u32 val, uae_u32 fc)
 {
-	mmu030_put_long(addr, val, fc);
+	if (unlikely(is_unaligned_bus(addr, 4)))
+		mmu030_put_long_unaligned(addr, val, fc, 0);
+	else
+		mmu030_put_long(addr, val, fc);
 }
 
 static ALWAYS_INLINE uae_u32 sfc030c_get_long(uaecptr addr)

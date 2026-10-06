@@ -330,10 +330,12 @@ static void* alloc_page_aligned(size_t size, void** rawmem)
 }
 #endif
 
-static void clear_shm ()
+static void clear_shm(const addrbank* keep)
 {
 	shm_start = nullptr;
 	for (int i = 0; i < MAX_SHMID; i++) {
+		if (keep && shm_heapowners[i] == keep && shmids[i].attached)
+			continue;
 		if (!release_nondirect_shmid(i))
 			clear_shmid(i);
 	}
@@ -519,7 +521,7 @@ bool preinit_shm ()
 			   natmem_reserved, natmem_reserved + natmem_reserved_size,
 			   natmem_reserved_size, natmem_reserved_size / (1024 * 1024));
 
-	clear_shm ();
+	clear_shm (nullptr);
 
 	canbang = true;
 #ifdef CPU_64_BIT
@@ -764,7 +766,10 @@ bool init_shm()
 		return false;
 
 	resetmem (false);
-	clear_shm ();
+	// The UAE Boot ROM (rtarea) is allocated once, by virtualdevice_init():
+	// keep its non-direct allocation, or expamem_reset() writes through a
+	// NULL rtarea_bank.baseaddr.
+	clear_shm (&rtarea_bank);
 
 	memory_hardreset(2);
 	return true;
@@ -773,7 +778,7 @@ bool init_shm()
 void free_shm ()
 {
 	resetmem (true);
-	clear_shm ();
+	clear_shm (nullptr);
 	for (int & i : ortgmem_type) {
 		i = -1;
 	}

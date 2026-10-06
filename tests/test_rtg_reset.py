@@ -63,7 +63,7 @@ struct uae_prefs {
     ramboard z3chipmem{}, mbresmem_high{};
 } currprefs, changed_prefs;
 addrbank romboardmem_bank[MAX_ROM_BOARDS], fastmem_bank[MAX_RAM_BOARDS];
-addrbank z3fastmem_bank[MAX_RAM_BOARDS], z3chipmem_bank, graphics_bank;
+addrbank z3fastmem_bank[MAX_RAM_BOARDS], z3chipmem_bank, graphics_bank, rtarea_bank;
 addrbank* gfxmem_banks[MAX_RTG_BOARDS] = { &graphics_bank };
 static int mem_hardreset;
 
@@ -71,7 +71,7 @@ static int mem_hardreset;
 // configuration tracking), reset request and allocation make reset decisions.
 int doinit_shm() { return 0; }
 void resetmem(bool) {}
-void clear_shm() {}
+void clear_shm(const addrbank*) {}
 uae_u8 guest_ram_marker;
 void memory_clear() {
     mem_hardreset = 0;

@@ -464,7 +464,7 @@ uae_u32 get_byte_debug (uaecptr addr)
 			if (currprefs.mmu_model == 68030) {
 				v = mmu030_get_generic (addr, debug_mmu_mode, sz_byte, MMU030_SSW_SIZE_B);
 			} else {
-				if (debug_mmu_mode & 1) {
+				if (debug_mmu_mode & 2) {
 					bool odd = (addr & 1) != 0;
 					addr &= ~1;
 					v = mmu_get_iword(addr, sz_byte);
@@ -494,7 +494,7 @@ uae_u32 get_word_debug (uaecptr addr)
 			if (currprefs.mmu_model == 68030) {
 				v = mmu030_get_generic (addr, debug_mmu_mode, sz_word, MMU030_SSW_SIZE_W);
 			} else {
-				if (debug_mmu_mode & 1) {
+				if (debug_mmu_mode & 2) {
 					v = mmu_get_iword(addr, sz_word);
 				} else {
 					v = mmu_get_user_word (addr, regs.s != 0, false, sz_word, false);
@@ -518,7 +518,7 @@ uae_u32 get_long_debug (uaecptr addr)
 			if (currprefs.mmu_model == 68030) {
 				v = mmu030_get_generic (addr, debug_mmu_mode, sz_long, MMU030_SSW_SIZE_L);
 			} else {
-				if (debug_mmu_mode & 1) {
+				if (debug_mmu_mode & 2) {
 					v = mmu_get_ilong(addr, sz_long);
 				} else {
 					v = mmu_get_user_long (addr, regs.s != 0, false, sz_long, false);
@@ -579,6 +579,7 @@ int debug_safe_addr (uaecptr addr, int size)
 			else
 				addr = mmu030_translate (addr, regs.s != 0, (debug_mmu_mode & 1), false);
 		} CATCH(p) {
+			regs.s = olds;
 			STOPTRY;
 			return 0;
 		} ENDTRY

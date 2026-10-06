@@ -208,6 +208,8 @@ static int cpu_sleepmode, cpu_sleepmode_cnt;
 
 extern int vsync_activeheight, vsync_totalheight;
 extern float vsync_vblank, vsync_hblank;
+static bool vsync_done;
+static void vsync_nosync(void);
 
 /* Events */
 
@@ -426,6 +428,8 @@ static bool agnus_hsync, agnus_vsync, agnus_ve, agnus_p_ve;
 static bool agnus_bsvb, agnus_bsvb_prev;
 static bool agnus_equdis;
 static int vsync_lines, vsync_linecnt;
+static int vsync_active_count, vsyncp_active_count;
+static int hsync_change_count;
 
 
 int maxhpos = MAXHPOS_PAL;
@@ -1237,13 +1241,13 @@ static void update_mirrors(void)
 	ecs_agnus = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) != 0;
 	ecs_denise = (currprefs.chipset_mask & CSMASK_ECS_DENISE) != 0;
 	ecs_denise_only = ecs_denise && !aga_mode;
-	agnusa1000 = (currprefs.chipset_mask & CSMASK_A1000) != 0 || currprefs.cs_agnusmodel == AGNUSMODEL_A1000 || currprefs.cs_agnusmodel == AGNUSMODEL_VELVET;
+	agnusa1000 = (currprefs.chipset_mask & (CSMASK_A1000 | CSMASK_A1000_NOEHB)) != 0 || currprefs.cs_agnusmodel == AGNUSMODEL_A1000 || currprefs.cs_agnusmodel == AGNUSMODEL_VELVET;
 	if (agnusa1000) {
 		ecs_agnus = false;
 		aga_mode = false;
 	}
 	denisea1000_noehb = (currprefs.chipset_mask & CSMASK_A1000_NOEHB) != 0 || currprefs.cs_denisemodel == DENISEMODEL_VELVET || currprefs.cs_denisemodel == DENISEMODEL_A1000NOEHB;
-	denisea1000 = (currprefs.chipset_mask & CSMASK_A1000) != 0 || currprefs.cs_denisemodel == DENISEMODEL_VELVET || currprefs.cs_denisemodel == DENISEMODEL_A1000NOEHB || currprefs.cs_denisemodel == DENISEMODEL_A1000;
+	denisea1000 = (currprefs.chipset_mask & (CSMASK_A1000_NOEHB | CSMASK_A1000)) != 0 || currprefs.cs_denisemodel == DENISEMODEL_VELVET || currprefs.cs_denisemodel == DENISEMODEL_A1000NOEHB || currprefs.cs_denisemodel == DENISEMODEL_A1000;
 	direct_rgb = aga_mode;
 	if (aga_mode) {
 		sprite_sprctlmask = 0x01 | 0x08 | 0x10;
@@ -3096,21 +3100,13 @@ static void DMACON(int hpos, uae_u16 v)
 	if (newcop && !oldcop) {
 		if (safecpu()) {
 			copper_dma_change_cycle_pending = true;
-			if (copper_access) {
-				copper_dma_change_cycle = get_cycles();
-			} else {
-				copper_dma_change_cycle = get_cycles() + CYCLE_UNIT;
-			}
+			copper_dma_change_cycle = get_cycles() + CYCLE_UNIT;
 		}
 		copper_enabled_thisline = 1;
 	} else if (!newcop && oldcop) {
 		if (safecpu()) {
 			copper_dma_change_cycle_pending = true;
-			if (copper_access) {
-				copper_dma_change_cycle = get_cycles();
-			} else {
-				copper_dma_change_cycle = get_cycles() + CYCLE_UNIT;
-			}
+			copper_dma_change_cycle = get_cycles() + CYCLE_UNIT;
 		}
 		copper_enabled_thisline = 1;
 	}
@@ -5313,6 +5309,16 @@ static void handle_nosignal(void)
 
 static void check_no_signal(void)
 {
+	vsync_active_count += agnus_vsync;
+	vsyncp_active_count += agnus_pvsync;
+	// too long vertical sync
+	if (!beamcon0_has_vsync && vsync_active_count > 80) {
+		nosignal_trigger = true;
+	}
+	if (beamcon0_has_vsync && vsyncp_active_count > 80) {
+		nosignal_trigger = true;
+	}
+
 	if (!nosignal_trigger) {
 
 		evt_t c = get_cycles();
@@ -6625,57 +6631,80 @@ static bool uae_quit_check(void)
 	return false;
 }
 
+static bool vsync_do(bool normal)
+{
+	devices_vsync_pre();
+	if (normal) {
+		if (savestate_check()) {
+			uae_reset(0, 0);
+			return true;
+		}
+	}
+	if (uae_quit_check()) {
+		return true;
+	}
+	return false;
+}
+
+static void trigger_vsync_line(void)
+{
+	inputdevice_read_msg(true);
+	vsync_display_render();
+	vsync_display_rendered = false;
+	if ((currprefs.cs_hvcsync == HVSYNC_COMBINED || currprefs.cs_hvcsync == HVSYNC_COMBINED_SYNC) && valid_programmed_mode()) {
+		if (beamcon0 & (BEAMCON0_VARVSYEN | BEAMCON0_VARCSYEN)) {
+			lof_display = lof_pdetect;
+		} else {
+			lof_display = lof_detect;
+		}
+	} else if (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC) {
+		if (beamcon0 & BEAMCON0_VARVSYEN) {
+			lof_display = lof_pdetect;
+		} else {
+			lof_display = lof_detect;
+		}
+	} else {
+		if (beamcon0 & BEAMCON0_VARCSYEN) {
+			lof_display = lof_pdetect;
+		} else {
+			lof_display = lof_detect;
+		}
+	}
+	reset_autoscale();
+	virtual_vsync_check();
+	last_vsync_evt = get_cycles() + (maxvpos * maxhpos * 3) * CYCLE_UNIT;
+	display_vsync_counter++;
+	maxvpos_display_vsync_next = true;
+	display_hsync_counter = 0;
+	vsync_start_check();
+	// if vpos=last line/0 was missed, do internal vsync here
+	if (!vsync_done) {
+		vsync_do(false);
+	}
+	vsync_done = false;
+}
+
 // executed at start of scanline
 static void hsync_handler(bool vs)
 {
 	hsync_handler_pre(vs);
 	if (vs) {
-		devices_vsync_pre();
-		if (savestate_check()) {
-			uae_reset(0, 0);
-			return;
-		}
-		if (uae_quit_check()) {
+		vsync_done = true;
+		if (vsync_do(true)) {
 			return;
 		}
 	}
 	if (vpos == vsync_startline + 1 && !maxvpos_display_vsync_next) {
-		inputdevice_read_msg(true);
-		vsync_display_render();
-		vsync_display_rendered = false;
-		if ((currprefs.cs_hvcsync == HVSYNC_COMBINED || currprefs.cs_hvcsync == HVSYNC_COMBINED_SYNC) && valid_programmed_mode()) {
-			if (beamcon0 & (BEAMCON0_VARVSYEN | BEAMCON0_VARCSYEN)) {
-				lof_display = lof_pdetect;
-			} else {
-				lof_display = lof_detect;
-			}
-		} else if (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC) {
-			if (beamcon0 & BEAMCON0_VARVSYEN) {
-				lof_display = lof_pdetect;
-			} else {
-				lof_display = lof_detect;
-			}
-		} else {
-			if (beamcon0 & BEAMCON0_VARCSYEN) {
-				lof_display = lof_pdetect;
-			} else {
-				lof_display = lof_detect;
-			}
-		}
-		reset_autoscale();
-		virtual_vsync_check();
-		last_vsync_evt = get_cycles() + (maxvpos * maxhpos * 3) * CYCLE_UNIT;
-		display_vsync_counter++;
-		maxvpos_display_vsync_next = true;
-		display_hsync_counter = 0;
-		vsync_start_check();
+		trigger_vsync_line();
 	} else if (vpos != vsync_startline + 1 && maxvpos_display_vsync_next) {
 		// protect against weird VPOSW writes causing continuous vblanks
 		maxvpos_display_vsync_next = false;
 		vsync_start_check();
 	} else {
+		// if no vsync for 5000 lines, generate fake vsync
+		// to keep emulator mostly running normally.
 		display_hsync_counter++;
-		if (display_hsync_counter > maxvpos) {
+		if (display_hsync_counter > 5000) {
 			display_hsync_counter = 0;
 			inputdevice_read_msg(true);
 			vsync_display_render();
@@ -6794,6 +6823,9 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	agnus_vsync_start = get_cck_cycles();
 	agnus_hsync_start = get_cck_cycles();
 	next_lineno = 0;
+	vsync_active_count = 0;
+	vsyncp_active_count = 0;
+	hsync_change_count = 0;
 
 	agnus_hpos = 0;
 	agnus_hpos_prev = 0;
@@ -6827,6 +6859,8 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	agnus_hsync = agnus_vsync = agnus_ve = agnus_p_ve = false;
 	agnus_equdis = false;
 	agnus_bsvb = true;
+
+	vsync_done = false;
 
 	if (hardreset || savestate_state) {
 		maxhpos = ntsc ? MAXHPOS_NTSC : MAXHPOS_PAL;
@@ -7701,7 +7735,7 @@ static int custom_wput_agnus(int addr, uae_u32 value, int noget)
 #endif
 	case 0x1FE: FNULL(value); break;
 
-		/* writing to read-only register causes read access */
+	/* writing to read-only register causes read access */
 	default:
 		if (!noget) {
 #if CUSTOM_DEBUG > 0
@@ -9280,16 +9314,17 @@ static struct rgabuf *alloc_copper_cycle(void)
 	return rga;
 }
 // Address zero broken dma copper request
-static struct rgabuf *alloc_copper_cycle_dummy(void)
+static void alloc_copper_cycle_dummy(void)
 {
-	cop_state.dummyip = 0;
-	struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_COPPER, 0x8c, &cop_state.dummyip);
-	if (!cop_state.cycle_alloc) {
-		rga->alloc = -2;
-	} else {
-		rga->alloc = 2;
+	if (check_rga_free_slot_in()) {
+		cop_state.dummyip = 0;
+		struct rgabuf *rga = write_rga(RGA_SLOT_IN, CYCLE_COPPER, 0x8c, &cop_state.dummyip);
+		if (!cop_state.cycle_alloc) {
+			rga->alloc = -2;
+		} else {
+			rga->alloc = 2;
+		}
 	}
-	return rga;
 }
 
 static void generate_copper(void)
@@ -9297,6 +9332,7 @@ static void generate_copper(void)
 	bool dma = is_copper_dma(true);
 	bool odd_cycle = (agnus_hpos & 1) == COPPER_CYCLE_POLARITY;
 	bool ena_odd = odd_cycle && dma && check_rga_free_slot_in();
+	bool dis_odd = odd_cycle && !dma;
 	bool act_even = !odd_cycle && dma;
 	bool idle = !cop_state.irload1 && !cop_state.irload2 && !cop_state.start;
 	struct rgabuf *rga = NULL;
@@ -9384,7 +9420,16 @@ static void generate_copper(void)
 			}
 #endif
 		}
+	}
 
+	// Another very rare Copper special case: if DMA was switched off
+	// after cycle allocation but before DMA request generation,
+	// cycle will be allocated but it is left unused.
+	if (cop_state.cycle_alloc && dis_odd) {
+		if (!rga) {
+			alloc_copper_cycle_dummy();
+		}
+		cop_state.cycle_alloc = false;
 	}
 
 	// Copper bug: even to even line horizontal position condition (PAL 226 to 0, VHPOSW tricks)
@@ -9393,12 +9438,13 @@ static void generate_copper(void)
 	// causing it to do DMA from address 0.
 	// I assume it happens because there is very short even->odd transition in
 	// horizontal counter bit 0 before new even value is loaded.
-	if (!odd_cycle && !(agnus_hpos_prev & 1) && dma && check_rga_free_slot_in()) {
-		if (!rga) {
-			if (cop_state.irload1 == 1 || cop_state.start == 1 ||
-				(cop_state.irload2 == 1 && cop_state.validmove && !cop_state.irload1)) {
+	if (!odd_cycle && !(agnus_hpos_prev & 1) && dma) {
+		if (cop_state.irload1 == 1 || cop_state.start == 1 || cop_state.cycle_alloc ||
+			(cop_state.irload2 == 1 && cop_state.validmove && !cop_state.irload1)) {
+			if (!rga) {
 				alloc_copper_cycle_dummy();
 			}
+			cop_state.cycle_alloc = false;
 		}
 	}
 
@@ -9930,6 +9976,8 @@ static void handle_dmal(void)
 		return;
 	}
 
+	struct rgabuf *rga = NULL;
+
 	// sprites
 	if ((agnus_hpos & 3) == 2) {
 		// only cycle when sprite block loads DMAL shifter token.
@@ -9974,7 +10022,7 @@ static void handle_dmal(void)
 			for (int nr = 0; nr < 4; nr++) {
 				if (agnus_dmal_shifter & (DMAL_AUD0 << nr)) {
 					uaecptr *pt = audio_getpt(nr);
-					struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_AUDIO, 0xaa + nr * 16, pt, agnus_dmal_alloc);
+					rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_AUDIO, 0xaa + nr * 16, pt, agnus_dmal_alloc);
 					// second bit is pointer reload
 					rga->auddat = (paula_dmal_2nd_bit ? 0x100 : 0) | nr;
 				}
@@ -9987,7 +10035,7 @@ static void handle_dmal(void)
 				if (agnus_dmal_shifter & (DMAL_DSK0 << nr)) {
 					uaecptr *pt = disk_getpt();
 					// second bit is read/write
-					struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_DISK, paula_dmal_2nd_bit ? 0x26 : 0x08, pt, agnus_dmal_alloc);
+					rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_DISK, paula_dmal_2nd_bit ? 0x26 : 0x08, pt, agnus_dmal_alloc);
 					rga->dskdat = (paula_dmal_2nd_bit ? 0x100 : 0) | nr;
 				}
 			}
@@ -9999,26 +10047,39 @@ static void handle_dmal(void)
 		if (agnus_dmal_shifter & DMAL_REFRESH0) {
 			uae_u16 reg = get_strobe_reg(0);
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_STROBE, reg, &refptr, agnus_dmal_alloc);
+			rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_STROBE, reg, &refptr, agnus_dmal_alloc);
 			rga->refdat = 0;
 		}
 		if (agnus_dmal_shifter & DMAL_REFRESH1) {
 			uae_u16 reg = get_strobe_reg(1);
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, reg, &refptr, agnus_dmal_alloc);
+			rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, reg, &refptr, agnus_dmal_alloc);
 			rga->refdat = 1;
 		}
 		if (agnus_dmal_shifter & DMAL_REFRESH2) {
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr, agnus_dmal_alloc);
+			rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr, agnus_dmal_alloc);
 			rga->refdat = 2;
 		}
 		if (agnus_dmal_shifter & DMAL_REFRESH3) {
 			refptr &= refmask;
-			struct rgabuf *rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr, agnus_dmal_alloc);
+			rga = write_rga_alloc(RGA_SLOT_IN, CYCLE_REFRESH, 0x1fe, &refptr, agnus_dmal_alloc);
 			rga->refdat = 3;
 		}
 	}
+
+#if 0
+	// Not yet confirmed if this is needed.
+	//
+	// allocation without DMA request?
+	// mark cycle as allocated
+	if (agnus_dmal_alloc && !rga) {
+		rga = read_rga(RGA_SLOT_IN);
+		if (rga->alloc == 0) {
+			rga->alloc = 1;
+		}
+	}
+#endif
 }
 
 static void check_vidsyncs(void)
@@ -10122,6 +10183,23 @@ static void vsync_mark(void)
 	}
 }
 
+static void agnus_vsync_on(void)
+{
+	if (!agnus_vsync) {
+		vsync_active_count = 0;
+		agnus_vsync = true;
+		hsync_change_count = 0;
+	}
+}
+static void agnus_pvsync_on(void)
+{
+	if (!agnus_pvsync) {
+		vsyncp_active_count = 0;
+		agnus_pvsync = true;
+		hsync_change_count = 0;
+	}
+}
+
 static void check_vsyncs_fast(void)
 {
 	bool pal = beamcon0_pal;
@@ -10155,7 +10233,7 @@ static void check_vsyncs_fast(void)
 			if (!agnus_vsync && !beamcon0_has_vsync) {
 				vsync_mark();
 			}
-			agnus_vsync = true;
+			agnus_vsync_on();
 			lof_detect = 0;
 			update_lof_detect();
 		}
@@ -10163,7 +10241,7 @@ static void check_vsyncs_fast(void)
 			if (!agnus_vsync && !beamcon0_has_vsync) {
 				vsync_mark();
 			}
-			agnus_vsync = true;
+			agnus_vsync_on();
 			lof_detect = 1;
 			update_lof_detect();
 		}
@@ -10176,7 +10254,7 @@ static void check_vsyncs_fast(void)
 			if (!agnus_vsync && !beamcon0_has_vsync) {
 				vsync_mark();
 			}
-			agnus_vsync = true;
+			agnus_vsync_on();
 			lof_detect = 1;
 			update_lof_detect();
 		}
@@ -10184,7 +10262,7 @@ static void check_vsyncs_fast(void)
 			if (!agnus_vsync && !beamcon0_has_vsync) {
 				vsync_mark();
 			}
-			agnus_vsync = true;
+			agnus_vsync_on();
 			lof_detect = 0;
 			update_lof_detect();
 		}
@@ -10199,7 +10277,7 @@ static void check_vsyncs_fast(void)
 			if (!agnus_pvsync && beamcon0_has_vsync) {
 				vsync_mark();
 			}
-			agnus_pvsync = true;
+			agnus_pvsync_on();
 			lof_pdetect = 0;
 		}
 		if (!lof_store && vpos == vsstop) {
@@ -10243,7 +10321,7 @@ static void check_vsyncs_fast(void)
 				if (!agnus_pvsync && beamcon0_has_vsync) {
 					vsync_mark();
 				}
-				agnus_pvsync = true;
+				agnus_pvsync_on();
 				lof_pdetect = 1;
 			}
 			if (lof_store && vpos == vsstop) {
@@ -10432,6 +10510,13 @@ static void decide_line_end(void)
 	linear_hpos_prev[1] = linear_hpos_prev[0];
 	linear_hpos_prev[0] = custom_fastmode ? maxhpos : hsync_ccks;
 	linear_hpos = 0;
+	if (abs(linear_hpos_prev[1] - linear_hpos_prev[0]) >= 2) {
+		// if too many hsync length changes, trigger nosignal state
+		hsync_change_count++;
+		if (hsync_change_count > 20) {
+			nosignal_trigger = true;
+		}
+	}
 	hautoscale_check();
 	display_hstart_cyclewait_cnt = display_hstart_cyclewait_start;
 	if (currprefs.display_calibration) {
@@ -11325,6 +11410,15 @@ static void set_fakehsync_handler(void)
 	event2_newevent_xx(-1, CYCLE_UNIT * maxhpos, 0, fakehsync_handler);
 }
 
+static void check_vpos_change(void)
+{
+	check_vsyncs();
+	if (vpos == vsync_startline + 1 && !maxvpos_display_vsync_next) {
+		trigger_vsync_line();
+	}
+}
+
+
 static bool cck_clock;
 
 static void get_cck_clock(void)
@@ -11396,7 +11490,7 @@ static void inc_cck(void)
 			if (agnus_vpos_next >= 0) {
 				vpos = agnus_vpos_next;
 				agnus_vpos_next = -1;
-				check_vsyncs();
+				check_vpos_change();
 			}
 			compute_spcflag_copper();
 		}
@@ -11503,7 +11597,7 @@ static void check_hsyncs_hardwired(void)
 				if (!agnus_vsync && !beamcon0_has_vsync) {
 					vsync_mark();
 				}
-				agnus_vsync = true;
+				agnus_vsync_on();
 				lof_detect = 0;
 				update_lof_detect();
 #ifdef DEBUGGER
@@ -11527,7 +11621,7 @@ static void check_hsyncs_hardwired(void)
 				if (!agnus_vsync && !beamcon0_has_vsync) {
 					vsync_mark();
 				}
-				agnus_vsync = true;
+				agnus_vsync_on();
 				lof_detect = 1;
 				update_lof_detect();
 #ifdef DEBUGGER
@@ -11555,7 +11649,7 @@ static void check_hsyncs_hardwired(void)
 				if (!agnus_vsync && !beamcon0_has_vsync) {
 					vsync_mark();
 				}
-				agnus_vsync = true;
+				agnus_vsync_on();
 				lof_detect = 1;
 				update_lof_detect();
 #ifdef DEBUGGER
@@ -11579,7 +11673,7 @@ static void check_hsyncs_hardwired(void)
 				if (!agnus_vsync && !beamcon0_has_vsync) {
 					vsync_mark();
 				}
-				agnus_vsync = true;
+				agnus_vsync_on();
 				lof_detect = 0;
 				update_lof_detect();
 #ifdef DEBUGGER
@@ -11677,7 +11771,7 @@ static void check_hsyncs_programmed(void)
 		agnus_phsync = true;
 		agnus_phsstrt_cck = get_cck_cycles();
 		if (!lof_store && vpos == vsstrt) {
-			agnus_pvsync = true;
+			agnus_pvsync_on();
 			if (beamcon0_has_vsync) {
 				vsync_mark();
 			}
@@ -11783,7 +11877,7 @@ static void check_hsyncs_programmed(void)
 			if (!agnus_pvsync && beamcon0_has_vsync) {
 				vsync_mark();
 			}
-			agnus_pvsync = true;
+			agnus_pvsync_on();
 			lof_pdetect = 1;
 #ifdef DEBUGGER
 			if (debug_dma) {

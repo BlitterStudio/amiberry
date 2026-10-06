@@ -12,6 +12,7 @@
 #include "options.h"
 
 #define MAX_REGISTERS 16
+static void cputest_trim(TCHAR *s);
 
 #define EAFLAG_SP 1
 
@@ -2781,11 +2782,11 @@ static void save_data(uae_u8 *dst, const TCHAR *dir, int size)
 		fwrite(data, 1, 4, f);
 		pl(data, feature_exception_vectors);
 		fwrite(data, 1, 4, f);
-		data[0] = data[1] = data[2] = 0;
 		pl(data, feature_loop_mode_cnt | (feature_loop_mode_jit << 8));
-		fwrite(&data[0], 1, 4, f);
-		fwrite(&data[1], 1, 4, f);
-		fwrite(&data[2], 1, 4, f);
+		fwrite(data, 1, 4, f);
+		pl(data, 0);
+		fwrite(data, 1, 4, f);
+		fwrite(data, 1, 4, f);
 		fwrite(inst_name, 1, sizeof(inst_name) - 1, f);
 		data[0] = CT_END_FINISH;
 		data[1] = 0;
@@ -4897,10 +4898,12 @@ static void test_mnemo(const TCHAR *path, const TCHAR *mnemo, const TCHAR *ovrfi
 	filecount = 0;
 
 	struct mnemolookup *lookup = NULL;
-	for (int i = 0; lookuptab[i].name; i++) {
-		lookup = &lookuptab[i];
-		if (!_tcsicmp(lookup->name, mnemo) || (lookup->friendlyname && !_tcsicmp(lookup->friendlyname, mnemo)))
+	for (int i = 0; lookuptab[i].name[0]; i++) {
+		struct mnemolookup *candidate = &lookuptab[i];
+		if (!_tcsicmp(candidate->name, mnemo) || (candidate->friendlyname && !_tcsicmp(candidate->friendlyname, mnemo))) {
+			lookup = candidate;
 			break;
+		}
 	}
 	if (!lookup) {
 		wprintf(_T("'%s' not found.\n"), mnemo);
@@ -5744,7 +5747,7 @@ static void test_mnemo(const TCHAR *path, const TCHAR *mnemo, const TCHAR *ovrfi
 
 					uae_u32 dflags = m68k_disasm_2(out, sizeof(out) / sizeof(TCHAR), opcode_memory_address, NULL, 0, &nextpc, 1, &srcaddr, &dstaddr, 0xffffffff, 0);
 					if (verbose) {
-						my_trim(out);
+						cputest_trim(out);
 						wprintf(_T("%08u %s"), subtest_count, out);
 						if (srcaddr != 0xffffffff) {
 							outbytes(_T("S"), srcaddr);
@@ -5760,7 +5763,7 @@ static void test_mnemo(const TCHAR *path, const TCHAR *mnemo, const TCHAR *ovrfi
 								if (get_word_test(nextpc) == ILLG_OPCODE)
 									break;
 								m68k_disasm_2(out, sizeof(out) / sizeof(TCHAR), nextpc, NULL, 0, &nextpc, 1, NULL, NULL, 0xffffffff, 0);
-								my_trim(out);
+								cputest_trim(out);
 								wprintf(_T("%08u %s\n"), subtest_count, out);
 							}
 						}
@@ -6714,7 +6717,7 @@ static void test_mnemo_text(const TCHAR *path, const TCHAR *mode)
 	extra_or = 0;
 
 	_tcscpy(modetxt, mode);
-	my_trim(modetxt);
+	cputest_trim(modetxt);
 	TCHAR *s = _tcschr(modetxt, '.');
 	if (s || feature_instruction_size) {
 		TCHAR c = 0;
@@ -6782,7 +6785,7 @@ static void test_mnemo_text(const TCHAR *path, const TCHAR *mode)
 		ovrname = _T("MOVEC");
 	}
 
-	for (int j = 0; lookuptab[j].name; j++) {
+	for (int j = 0; lookuptab[j].name[0]; j++) {
 		if (!_tcsicmp(modetxt, lookuptab[j].name)) {
 			mnemo = j;
 			break;
@@ -6850,7 +6853,7 @@ static void test_mnemo_text(const TCHAR *path, const TCHAR *mode)
 	}
 }
 
-static void my_trim(TCHAR *s)
+static void cputest_trim(TCHAR *s)
 {
 	while (_tcslen(s) > 0 && _tcscspn(s, _T("\t \r\n")) == 0)
 		memmove(s, s + 1, (_tcslen(s + 1) + 1) * sizeof(TCHAR));
@@ -7384,7 +7387,7 @@ static int test(struct ini_data *ini, const TCHAR *sections, const TCHAR *testna
 					}
 					TCHAR amtext[256];
 					_tcscpy(amtext, p);
-					my_trim(amtext);
+					cputest_trim(amtext);
 					for (int i = 0; addrmodes[i]; i++) {
 						if (!_tcsicmp(addrmodes[i], amtext)) {
 							feature_addressing_modes[j] |= 1 << i;
@@ -7422,7 +7425,7 @@ static int test(struct ini_data *ini, const TCHAR *sections, const TCHAR *testna
 				}
 				TCHAR cctext[256];
 				_tcscpy(cctext, p);
-				my_trim(cctext);
+				cputest_trim(cctext);
 				for (int i = 0; ccnames[i]; i++) {
 					if (!_tcsicmp(ccnames[i], cctext)) {
 						feature_condition_codes |= 1 << i;
@@ -7463,7 +7466,7 @@ static int test(struct ini_data *ini, const TCHAR *sections, const TCHAR *testna
 	ini_getvalx(ini, sections, _T("max_file_size"), &max_file_size);
 
 	ini_getstringx(ini, sections, _T("feature_instruction_size"), &feature_instruction_size_text);
-	for (int i = 0; i < _tcslen(feature_instruction_size_text); i++) {
+	for (int i = 0; feature_instruction_size_text && i < _tcslen(feature_instruction_size_text); i++) {
 		TCHAR c = _totupper(feature_instruction_size_text[i]);
 		int sizes = -1;
 		if (c == 'B')
@@ -7840,7 +7843,7 @@ static int test(struct ini_data *ini, const TCHAR *sections, const TCHAR *testna
 					_tcscpy(prev, name);
 				}
 			}
-			for (int j = 1; lookuptab[j].name; j++) {
+			for (int j = 1; lookuptab[j].name[0]; j++) {
 				if (lookuptab[j].name[0] == 'F' && _tcscmp(lookuptab[j].name, _T("FPP"))) {
 					test_mnemo_text(path, lookuptab[j].name);
 				}

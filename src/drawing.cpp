@@ -4033,7 +4033,7 @@ static void do_exthblankon_aga(void)
 // BPL1DAT allows sprites 1 lores pixel before bitplanes
 static void bpl1dat_enable_sprites(void)
 {
-	// A1000/OCS Denise: BPL1DAT won't enable sprites if BURST is active
+	// A1000/OCS Denise: BPL1DAT re-closes after 0.5 CCK if BURST is active.
 	if (ecs_denise || !denise_burst) {
 		sprites_hidden2 &= ~2;
 		if (denise_hdiw) {
@@ -4043,7 +4043,14 @@ static void bpl1dat_enable_sprites(void)
 }
 static void bpl1dat_enable_bpls(void)
 {
-	// A1000/OCS Denise: BPL1DAT won't open HDIW if BURST is active
+	// A1000/OCS Denise: BPL1DAT re-closes after 0.5 CCK if BURST is active.
+	// This is normally invisible because BURST is active only inside HBLANK.
+	// VHPOSW tricks can make it visible.
+	if (!ecs_denise && denise_burst) {
+		bpl1dat_unalign = -1;
+		bpl1dat_trigger = true;
+		sprites_hidden2 |= 2;
+	}
 	if (ecs_denise || !denise_burst) {
 		bpl1dat_trigger = true;
 #ifdef DEBUGGER
@@ -4202,7 +4209,7 @@ static void expand_drga_early(struct denise_rga *rd)
 			if (!denise_hdiw) {
 				bpl1dat_enable_bpls();
 			} else {
-				bpl1dat_unalign = true;
+				bpl1dat_unalign = 1;
 				aga_unalign0 += 2;
 				aga_unalign1 += 2;
 			}
@@ -4527,9 +4534,9 @@ static void do_aga_unaligned1(int cnt)
 	sbasecol[0] = sbasecol2[0];
 	sbasecol[1] = sbasecol2[1];
 
-	if (bpl1dat_unalign) {
+	if (bpl1dat_unalign > 0) {
 		bpl1dat_enable_bpls();
-		bpl1dat_unalign = false;
+		bpl1dat_unalign = 0;
 	}
 
 	if (spr_unalign_reg[1]) {
@@ -4563,9 +4570,12 @@ static void do_ecs_unaligned(void)
 }
 static void do_ecs_unaligned1(void)
 {
-	if (bpl1dat_unalign) {
+	if (bpl1dat_unalign > 0) {
 		bpl1dat_enable_bpls();
-		bpl1dat_unalign = false;
+		bpl1dat_unalign = 0;
+	} else if (bpl1dat_unalign < 0) {
+		bpl1dat_trigger = false;
+		bpl1dat_unalign = 0;
 	}
 }
 
@@ -5538,9 +5548,14 @@ static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
 	if (exthblankon_ecsonly) {
 		do_exthblankon_ecs();
 	}
-	if (bpl1dat_unalign && h) {
-		bpl1dat_enable_bpls();
-		bpl1dat_unalign = false;
+	if (bpl1dat_unalign) {
+		if (h && bpl1dat_unalign > 0) {
+			bpl1dat_unalign = 0;
+			bpl1dat_enable_bpls();
+		} else if (!h && bpl1dat_unalign < 0) {
+			bpl1dat_trigger = false;
+			bpl1dat_unalign = 0;
+		}
 	}
 	// Delay by 1 lores pixel
 	denise_csync_blanken2 = denise_csync_blanken;

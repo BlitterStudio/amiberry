@@ -9335,7 +9335,10 @@ void write_dcache030_retry(uaecptr addr, uae_u32 v, uae_u32 fc, int size, int fl
 {
 	regs.fc030 = fc;
 	mmu030_put_generic(addr, v, fc, size, flags);
-	write_dcache030x(addr, v, size, fc);
+	// Without data cache emulation nothing else keeps the cache lines in
+	// step with memory, so they must not be touched here either.
+	if (currprefs.cpu_data_cache)
+		write_dcache030x(addr, v, size, fc);
 }
 
 static void dcache030_maybe_burst(uaecptr addr, struct cache030 *c, int lws, uae_u32 fc)
@@ -9550,7 +9553,10 @@ uae_u32 read_dcache030_retry(uaecptr addr, uae_u32 fc, int size, int flags)
 	uae_u32 val;
 	regs.fc030 = fc;
 
-	if (!read_dcache030_2(addr, size, &val)) {
+	// Without data cache emulation the cache lines are not kept in step
+	// with memory (only this retry path would fill them), so read memory,
+	// as the other 68030 MMU paths do.
+	if (!currprefs.cpu_data_cache || !read_dcache030_2(addr, size, &val)) {
 		return mmu030_get_generic(addr, fc, size, flags);
 	}
 	return val;
