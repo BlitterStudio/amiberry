@@ -4241,9 +4241,13 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
         if (getsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (char*)&orig_timeout, &tvlen) == 0) {
             timeout_set = 1;
         }
-        // Set a 1 second timeout for raw sockets
+        // Set a 1 second timeout for raw sockets, or the guest's receive
+        // timeout when it is shorter, so recv() cannot outlast the deadline
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
+        if (timeout_set && direction == bsdsock_blocking::direction::receive && has_deadline
+            && orig_timeout.tv_sec == 0)
+            timeout = orig_timeout;
         setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
     }
 #ifdef _WIN32

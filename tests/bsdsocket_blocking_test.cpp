@@ -78,6 +78,13 @@ static long elapsed_ms(wait_clock::time_point since)
 	return (long)std::chrono::duration_cast<milliseconds>(wait_clock::now() - since).count();
 }
 
+/* The kernel may store socket timeouts in scheduler ticks and round them up
+ * (Linux uses jiffies), so accept a read-back up to one 10 ms tick longer. */
+static bool within_tick(wait_clock::duration actual, milliseconds expected)
+{
+	return actual >= expected && actual <= expected + milliseconds(10);
+}
+
 static void test_deadline_follows_the_direction_option()
 {
 	const tcp_pair pair = make_tcp_pair();
@@ -90,7 +97,7 @@ static void test_deadline_follows_the_direction_option()
 	set_timeout(pair.client, SO_RCVTIMEO, 1, 500000);
 	expect(socket_deadline(pair.client, direction::receive, start, deadline),
 		"SO_RCVTIMEO gives recv a deadline");
-	expect(deadline - start == milliseconds(1500), "the receive deadline is start plus SO_RCVTIMEO");
+	expect(within_tick(deadline - start, milliseconds(1500)), "the receive deadline is start plus SO_RCVTIMEO");
 	expect(!socket_deadline(pair.client, direction::send, start, deadline),
 		"SO_RCVTIMEO does not limit send");
 	expect(!socket_deadline(pair.client, direction::none, start, deadline),
@@ -99,7 +106,7 @@ static void test_deadline_follows_the_direction_option()
 	set_timeout(pair.client, SO_SNDTIMEO, 0, 250000);
 	expect(socket_deadline(pair.client, direction::send, start, deadline),
 		"SO_SNDTIMEO gives send a deadline");
-	expect(deadline - start == milliseconds(250), "the send deadline is start plus SO_SNDTIMEO");
+	expect(within_tick(deadline - start, milliseconds(250)), "the send deadline is start plus SO_SNDTIMEO");
 
 	set_timeout(pair.client, SO_RCVTIMEO, 0, 0);
 	expect(!socket_deadline(pair.client, direction::receive, start, deadline),
