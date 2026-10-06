@@ -2449,11 +2449,7 @@ static void check_bus_error(const char *name, int offset, int write, int size, c
 				out("opcode |= 0x80000;\n");
 			} else if (g_instr->mnemo == i_CLR) {
 				if (g_instr->smode < Ad16) {
-					out("#if defined(CPU_i386) || defined(CPU_x86_64)\n");
 					out("regflags.cznv = oldflags.cznv;\n");
-					out("#else // we assume CPU_arm or CPU_AARCH64 here\n");
-					out("regflags.nzcv = oldflags.nzcv;\n");
-					out("#endif\n");
 				}
 				// (an)+ and -(an) is done later
 				if (g_instr->smode == Aipi || g_instr->smode == Apdi) {
@@ -3108,11 +3104,7 @@ static void move_68010_address_error(int size, int *setapdi, int *fcmodeflags)
 			out("regs.irc = dsta >> 16;\n");
 		}
 		if (reset_ccr) {
-			out("#if defined(CPU_i386) || defined(CPU_x86_64)\n");
 			out("regflags.cznv = oldflags.cznv;\n");
-			out("#else // we assume CPU_arm or CPU_AARCH64 here\n");
-			out("regflags.nzcv = oldflags.nzcv;\n");
-			out("#endif\n");
 		}
 		if (set_ccr) {
 			out("ccr_68000_word_move_ae_normal((uae_s16)(src));\n");
@@ -6174,11 +6166,7 @@ static void gen_opcode (unsigned int opcode)
 			}
 		} else if (cpu_level == 1) {
 			out("struct flag_struct oldflags;\n");
-			out("#if defined(CPU_i386) || defined(CPU_x86_64)\n");
 			out("oldflags.cznv = regflags.cznv;\n");
-			out("#else // we assume CPU_arm or CPU_AARCH64 here\n");
-			out("oldflags.nzcv = regflags.nzcv;\n");
-			out("#endif\n");
 			genamode(curi, curi->smode, "srcreg", curi->size, "src", 3, 0, GF_CLR68010);
 			if (isreg(curi->smode) && curi->size == sz_long) {
 				addcycles000(2);
@@ -6688,11 +6676,7 @@ static void gen_opcode (unsigned int opcode)
 				if (curi->mnemo == i_MOVE) {
 					if (cpu_level == 1 && (isreg(curi->smode) || curi->smode == imm)) {
 						out("struct flag_struct oldflags;\n");
-						out("#if defined(CPU_i386) || defined(CPU_x86_64)\n");
 						out("oldflags.cznv = regflags.cznv;\n");
-						out("#else // we assume CPU_arm or CPU_AARCH64 here\n");
-						out("oldflags.nzcv = regflags.nzcv;\n");
-						out("#endif\n");
 					}
 					if (curi->size == sz_long && (using_prefetch || using_ce) && curi->dmode >= Aind) {
 						// to support bus error exception correct flags, flags needs to be set

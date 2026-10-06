@@ -48668,11 +48668,7 @@ uae_u32 REGPARAM2 op_1180_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(2));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s8)(src)) == 0);
 	SET_NFLG(((uae_s8)(src)) < 0);
@@ -48881,11 +48877,7 @@ uae_u32 REGPARAM2 op_11bc_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(4));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s8)(src)) == 0);
 	SET_NFLG(((uae_s8)(src)) < 0);
@@ -49226,11 +49218,7 @@ uae_u32 REGPARAM2 op_2180_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(2));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s32)(src)) == 0);
 	SET_NFLG(((uae_s32)(src)) < 0);
@@ -49251,11 +49239,7 @@ uae_u32 REGPARAM2 op_2188_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(2));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s32)(src)) == 0);
 	SET_NFLG(((uae_s32)(src)) < 0);
@@ -49465,11 +49449,7 @@ uae_u32 REGPARAM2 op_21bc_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(6));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s32)(src)) == 0);
 	SET_NFLG(((uae_s32)(src)) < 0);
@@ -49812,11 +49792,7 @@ uae_u32 REGPARAM2 op_3180_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(2));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s16)(src)) == 0);
 	SET_NFLG(((uae_s16)(src)) < 0);
@@ -49837,11 +49813,7 @@ uae_u32 REGPARAM2 op_3188_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(2));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s16)(src)) == 0);
 	SET_NFLG(((uae_s16)(src)) < 0);
@@ -50050,11 +50022,7 @@ uae_u32 REGPARAM2 op_31bc_4_ff(uae_u32 opcode)
 	uaecptr dsta;
 	dsta = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(4));
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	CLEAR_CZNV();
 	SET_ZFLG(((uae_s16)(src)) == 0);
 	SET_NFLG(((uae_s16)(src)) < 0);
@@ -50324,11 +50292,7 @@ uae_u32 REGPARAM2 op_4230_4_ff(uae_u32 opcode)
 	uae_u32 real_opcode = opcode;
 	uae_u32 srcreg = (real_opcode & 7);
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, srcreg), get_diword(2));
 	CLEAR_CZNV();
@@ -50347,11 +50311,7 @@ uae_u32 REGPARAM2 op_4270_4_ff(uae_u32 opcode)
 	uae_u32 real_opcode = opcode;
 	uae_u32 srcreg = (real_opcode & 7);
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, srcreg), get_diword(2));
 	CLEAR_CZNV();
@@ -50370,11 +50330,7 @@ uae_u32 REGPARAM2 op_42b0_4_ff(uae_u32 opcode)
 	uae_u32 real_opcode = opcode;
 	uae_u32 srcreg = (real_opcode & 7);
 	struct flag_struct oldflags;
-	#if defined(CPU_i386) || defined(CPU_x86_64)
 	oldflags.cznv = regflags.cznv;
-	#else // we assume CPU_arm or CPU_AARCH64 here
-	oldflags.nzcv = regflags.nzcv;
-	#endif
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, srcreg), get_diword(2));
 	CLEAR_CZNV();
