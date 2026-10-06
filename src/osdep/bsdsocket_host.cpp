@@ -2696,6 +2696,7 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 #include <cstddef>
 #include <cstring>
 #include <vector>
+#include "bsdsocket_blocking.h"
 #include <SDL3/SDL_mutex.h>
 #if defined(_WIN32)
 #include <mutex>
@@ -4225,6 +4226,14 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
     if ((flags = fcntl(sb->s, F_GETFL)) == -1)
         flags = 0;
 #endif
+    /* Read the guest's timeout before the raw-socket override below replaces
+     * SO_RCVTIMEO. Connect (1) and accept (6) wait without a limit, as on BSD. */
+    const auto direction = sb->action == 3 ? bsdsock_blocking::direction::receive
+        : sb->action == 2 ? bsdsock_blocking::direction::send
+        : bsdsock_blocking::direction::none;
+    bsdsock_blocking::wait_clock::time_point deadline;
+    const bool has_deadline = bsdsock_blocking::socket_deadline(sb->s, direction,
+        bsdsock_blocking::wait_clock::now(), deadline);
     // Check if this is a raw socket
     if (getsockopt(sb->s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &optlen) == 0 && socktype == SOCK_RAW) {
         is_raw = 1;
@@ -4263,9 +4272,6 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
         if (foo < 0 && !nonblock) {
             errno = saved_errno;
             if ((saved_errno == EAGAIN) || (saved_errno == EWOULDBLOCK) || (saved_errno == EINPROGRESS)) {
-                fd_set readset, writeset, exceptset;
-                int maxfd = (sb->s > sb->sockabort[0]) ? sb->s : sb->sockabort[0];
-                int num;
                 if (!socket_fd_usable_for_select(sb->s) || !socket_fd_usable_for_select(sb->sockabort[0])) {
                     int fd_errno = EINVAL;
                     write_log("Blocking select skipped: socket fd %d or abort fd %d exceeds select() limit %d\n",
@@ -4280,20 +4286,10 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                     return -1;
                 }
 
-                FD_ZERO(&readset);
-                FD_ZERO(&writeset);
-                FD_ZERO(&exceptset);
-
-                if (sb->action == 3 || sb->action == 6)
-                    FD_SET(sb->s, &readset);
-                if (sb->action == 2 || sb->action == 1 || sb->action == 4)
-                    FD_SET(sb->s, &writeset);
-                FD_SET(sb->sockabort[0], &readset);
-
-                do {
-                    num = select(maxfd + 1, &readset, &writeset, &exceptset, NULL);
-                } while (num == -1 && errno == EINTR); // retry on EINTR
-                if (num == -1) {
+                const bool want_read = sb->action == 3 || sb->action == 6;
+                const auto wait = bsdsock_blocking::wait_for_socket(sb->s, sb->sockabort[0], want_read,
+                    has_deadline ? &deadline : nullptr);
+                if (wait == bsdsock_blocking::wait_result::error) {
                     int _select_err = errno; /* save before write_log/fcntl/setsockopt clobber it */
                     BSDLOG("Blocking select(%d) returns -1,errno is %d\n", sb->sockabort[0], _select_err);
 #ifdef _WIN32
@@ -4306,7 +4302,7 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                     return -1;
                 }
 
-                if (FD_ISSET(sb->sockabort[0], &readset) || FD_ISSET(sb->sockabort[0], &writeset)) {
+                if (wait == bsdsock_blocking::wait_result::aborted) {
                     /* reset sock abort pipe */
                     /* read from the pipe to reset it */
                     BSDLOG("select aborted from signal\n");
@@ -4315,6 +4311,13 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                     BSDLOG("Done read\n");
                     errno = EINTR;
                     interrupted = 1;
+                    done = 1;
+                }
+                else if (wait == bsdsock_blocking::wait_result::timed_out) {
+                    /* SO_RCVTIMEO/SO_SNDTIMEO expired with nothing transferred:
+                     * BSD reports EWOULDBLOCK, which mapErrno turns into Amiga 35. */
+                    BSDLOG("Blocking call on fd %d timed out\n", sb->s);
+                    saved_errno = EAGAIN;
                     done = 1;
                 }
                 else {
