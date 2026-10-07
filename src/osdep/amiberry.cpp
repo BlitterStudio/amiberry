@@ -5774,7 +5774,13 @@ void target_default_options(uae_prefs* p, const int type)
 		p->rtgallowscaling = false;
 		p->rtgscaleaspectratio = -1;
 		p->rtgvblankrate = 0;
+#ifdef LIBRETRO
+		// libretro presents the raw surface without the RTG cursor overlay,
+		// so Picasso96 must keep drawing the pointer into video memory.
+		p->rtg_hardwaresprite = false;
+#else
 		p->rtg_hardwaresprite = true;
+#endif
 		p->rtg_overlay = true;
 		p->rtg_vgascreensplit = true;
 		p->rtg_paletteswitch = true;
