@@ -27,6 +27,9 @@ static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u
 				uae_u32 dv = *dst_8;
 				BLT_FUNC(&sv, &dv);
 				*dst_8 = (uae_u8)dv;
+#ifdef BLT_WRITES_SRC
+				*src_8 = (uae_u8)sv;
+#endif
 			}
 			uae_u32 *src_32 = (uae_u32*)src_8;
 			uae_u32 *dst_32 = (uae_u32*)dst_8;
@@ -52,6 +55,9 @@ static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u
 				uae_u32 dv = *dst_8;
 				BLT_FUNC(&sv, &dv);
 				*dst_8 = (uae_u8)dv;
+#ifdef BLT_WRITES_SRC
+				*src_8 = (uae_u8)sv;
+#endif
 				src_8++;
 				dst_8++;
 			}
@@ -461,5 +467,6 @@ static void NOINLINE BLT_NAME_MASK(unsigned int w, unsigned int h, uae_u8 *src, 
 #undef BLT_NAME_TRANS
 #undef BLT_FUNC
 #undef BLT_FUNC_MASK
+#undef BLT_WRITES_SRC
 
 

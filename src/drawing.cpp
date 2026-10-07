@@ -1246,9 +1246,9 @@ int get_custom_limits(int *pw, int *ph, int *pdx, int *pdy, int *prealh, int *hr
 	if (w <= 0 || h <= 0 || dx < 0 || dy < 0)
 		return ret;
 	if (doublescan <= 0 && programmedmode != 1) {
-		if (dx > vidinfo->inbuffer->inwidth / 2)
+		if (dx >= vidinfo->inbuffer->inwidth)
 			return ret;
-		if (dy > vidinfo->inbuffer->inheight / 2)
+		if (dy >= vidinfo->inbuffer->inheight)
 			return ret;
 	}
 
@@ -3041,7 +3041,7 @@ static void spr_arms(struct denise_spr *s, int state)
 		if (s->armeds) {
 			denise_spr_nr_armeds--;
 			s->armeds = 0;
-			if (denise_spr_nr_armeds == 0 && sprite_lts_selected) {
+			if (denise_spr_nr_armeds == 0 && sprite_lts_selected && !denise_spr_nr_armed) {
 				select_lts();
 			}
 		}

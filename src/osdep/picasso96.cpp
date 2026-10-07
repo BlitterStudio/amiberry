@@ -1830,7 +1830,7 @@ static void picasso_handle_hsync()
 #include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_32
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_32
-#define BLT_FUNC(s,d) { uae_u16 tmp = *d ; *d = *s; *s = tmp; }
+#define BLT_FUNC(s,d) { auto tmp = *d; *d = *s; *s = tmp; }
 #include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SRC_32
 #define BLT_NAME_TRANS BLIT_SRC_TRANS_32
@@ -1899,7 +1899,8 @@ static void picasso_handle_hsync()
 #include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_24
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_24
-#define BLT_FUNC(s,d) { uae_u32 tmp = *d; *d = *s; *s = tmp; }
+#define BLT_FUNC(s,d) { auto tmp = *d; *d = *s; *s = tmp; }
+#define BLT_WRITES_SRC
 #include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SRC_24
 #define BLT_NAME_TRANS BLIT_SRC_TRANS_24
@@ -1968,7 +1969,7 @@ static void picasso_handle_hsync()
 #include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_16
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_16
-#define BLT_FUNC(s,d) { uae_u16 tmp = *d; *d = *s; *s = tmp; }
+#define BLT_FUNC(s,d) { auto tmp = *d; *d = *s; *s = tmp; }
 #include "../p96_blit.cpp.in"
 #define BLT_NAME BLIT_SRC_16
 #define BLT_NAME_TRANS BLIT_SRC_TRANS_16
@@ -2072,8 +2073,8 @@ static void picasso_handle_hsync()
 #define BLT_NAME BLIT_SWAP_8
 #define BLT_NAME_MASK BLIT_SWAP_MASK_8
 #define BLT_NAME_TRANS BLIT_SWAP_TRANS_8
-#define BLT_FUNC(s,d) { uae_u8 tmp = *d; *d = *s; *s = tmp; }
-#define BLT_FUNC_MASK(s,d,mask) { uae_u8 tmp = *d; *d = ((*d) & ~mask) | ((*s) & mask); *s = ((*s) & ~mask) | ((tmp) & mask); }
+#define BLT_FUNC(s,d) { auto tmp = *d; *d = *s; *s = tmp; }
+#define BLT_FUNC_MASK(s,d,mask) { auto tmp = *d; *d = ((*d) & ~mask) | ((*s) & mask); *s = ((*s) & ~mask) | ((tmp) & mask); }
 #include "../p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
@@ -2209,7 +2210,7 @@ static void do_blitrect_frame_buffer (struct RenderInfo *ri, struct
 		case BLIT_FALSE: BLIT_FALSE_MASK_8(PARMSM); break;
 		case BLIT_NOR: BLIT_NOR_MASK_8(PARMSM); break;
 		case BLIT_ONLYDST: BLIT_ONLYDST_MASK_8(PARMSM); break;
-		case BLIT_NOTSRC: BLIT_NOTSRC_8(PARMSM); break;
+		case BLIT_NOTSRC: BLIT_NOTSRC_MASK_8(PARMSM); break;
 		case BLIT_ONLYSRC: BLIT_ONLYSRC_MASK_8(PARMSM); break;
 		case BLIT_NOTDST: BLIT_NOTDST_MASK_8(PARMSM); break;
 		case BLIT_EOR: BLIT_EOR_MASK_8(PARMSM); break;
@@ -4729,6 +4730,11 @@ static int BlitRectHelper(TrapContext *ctx)
 	{
 		const uae_u32 dirtysize = dstri->BytesPerRow ? height * dstri->BytesPerRow : width * GetBytesPerPixel(RGBFmt);
 		mark_dirty(rtg_index, dstri->Memory + dsty * dstri->BytesPerRow + dstx * GetBytesPerPixel(RGBFmt), dirtysize);
+		if (opcode == BLIT_SWAP) {
+			// A swap also writes its source rectangle.
+			const uae_u32 srcdirtysize = ri->BytesPerRow ? height * ri->BytesPerRow : width * GetBytesPerPixel(RGBFmt);
+			mark_dirty(rtg_index, ri->Memory + srcy * ri->BytesPerRow + srcx * GetBytesPerPixel(RGBFmt), srcdirtysize);
+		}
 	}
 #endif
 	if (transparent) {
