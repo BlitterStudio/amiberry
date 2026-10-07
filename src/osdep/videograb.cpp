@@ -1145,6 +1145,10 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
     }
 
     target_frame = normalized_ffmpeg_frame(target_frame);
+    // Reuse the displayed frame so repeated requests cannot advance past EOF.
+    if (loaded_frame == target_frame && !frame_buffer.empty()) {
+        return true;
+    }
     if (ffmpeg_pending_video_frame_index >= 0 && loaded_frame >= 0 &&
         target_frame >= loaded_frame &&
         target_frame < ffmpeg_pending_video_frame_index &&
