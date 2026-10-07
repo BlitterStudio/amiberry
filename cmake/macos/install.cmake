@@ -31,7 +31,6 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # Search paths used by dylibbundler.
 # /opt/local/lib is the MacPorts location.
 set(_amiberry_dylibbundler_search_args
-        -s /opt/local/lib
         -s /usr/local/lib
         -s /usr/local/opt/glib/lib
         -s /usr/local/opt/gettext/lib
@@ -39,7 +38,8 @@ set(_amiberry_dylibbundler_search_args
         -s /opt/homebrew/lib
         -s /opt/homebrew/opt/glib/lib
         -s /opt/homebrew/opt/gettext/lib
-        -s /opt/homebrew/opt/pcre2/lib)
+        -s /opt/homebrew/opt/pcre2/lib
+        -s /opt/local/lib)
 
 if(QEMU_UAE_PLUGIN)
     get_filename_component(_amiberry_qemu_uae_plugin_name "${QEMU_UAE_PLUGIN}" NAME)
