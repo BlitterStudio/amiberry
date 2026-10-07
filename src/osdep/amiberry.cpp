@@ -5774,7 +5774,7 @@ void target_default_options(uae_prefs* p, const int type)
 		p->rtgallowscaling = false;
 		p->rtgscaleaspectratio = -1;
 		p->rtgvblankrate = 0;
-		p->rtg_hardwaresprite = false;
+		p->rtg_hardwaresprite = true;
 		p->rtg_overlay = true;
 		p->rtg_vgascreensplit = true;
 		p->rtg_paletteswitch = true;
