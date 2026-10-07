@@ -249,7 +249,9 @@ endif
 
 ifneq (,$(findstring android,$(platform)))
 # bionic keeps pthread and forkpty in libc; only the log sink is separate.
-LDFLAGS += -ldl -lm -llog
+# NDK clang++ links libc++_shared by default, and RetroArch does not ship
+# that library alongside downloaded cores, so link libc++ statically.
+LDFLAGS += -ldl -lm -llog -static-libstdc++
 endif
 
 ifeq ($(platform), osx)
