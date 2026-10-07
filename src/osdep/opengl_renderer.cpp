@@ -401,7 +401,8 @@ void OpenGLRenderer::update_vsync(int monid)
 
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
-	const int vsync_mode = currprefs.gfx_apmode[idx].gfx_vsync;
+	// Warp mode must never be limited by the display refresh rate.
+	const int vsync_mode = currprefs.turbo_emulation ? 0 : currprefs.gfx_apmode[idx].gfx_vsync;
 	int interval = 0;
 
 	if (currprefs.gfx_variable_sync && vsync_mode > 0) {
