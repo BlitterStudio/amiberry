@@ -5551,7 +5551,39 @@ static void burst_disable(void)
 static void lts_unaligned_ecs(int, int, int);
 static void lts_unaligned_aga(int, int, int);
 
+#ifdef AMIBERRY
+static bool checkhorizontal1_ecs_events(int cnt, int cnt_next, int h);
+
+// OCS/ECS counterpart of the checkhorizontal1_aga() fast reject: positions
+// with no horizontal event, burst edge or pending unaligned work skip the
+// full chain. Only the per-call csync delay remains. Counters outside the
+// table take the full chain, so the reject is exact.
+#if defined(__GNUC__)
+static inline __attribute__((always_inline)) bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
+#else
+STATIC_INLINE bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
+#endif
+{
+#if !DEBUG_ALWAYS_UNALIGNED_DRAWING
+	if (denise_hevent_valid && !reswitch_unalign && !exthblankon_ecsonly && !bpl1dat_unalign
+		&& static_cast<unsigned int>(cnt) < DENISE_HEVENT_POSITIONS
+		&& static_cast<unsigned int>(cnt_next) < DENISE_HEVENT_POSITIONS
+		&& !denise_hevent_cnt[cnt] && !denise_hevent_next[cnt_next]
+		&& cnt != 0x40 && cnt != 0x52
+		&& !(h && spr_unalign_reg[0])) {
+		denise_cycle_half = h;
+		// Delay by 1 lores pixel
+		denise_csync_blanken2 = denise_csync_blanken;
+		return false;
+	}
+#endif
+	return checkhorizontal1_ecs_events(cnt, cnt_next, h);
+}
+
+static bool checkhorizontal1_ecs_events(int cnt, int cnt_next, int h)
+#else
 static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
+#endif
 {
 	denise_cycle_half = h;
 	if (reswitch_unalign) {
