@@ -217,6 +217,28 @@ private:
 	void* m_minigl_egl_image = nullptr;  // EGLImageKHR
 	uint64_t m_minigl_seq = 0;
 	uint64_t m_minigl_failed_seq = 0;  // import rejected: never retried, never logged twice
+
+	// Native frames from a dma-buf backed surface (dmabuf_surface.h): the GPU
+	// samples the CPU-written pixels directly instead of a per-frame upload.
+	// begin returns the texture holding the presented rectangle (0 = use
+	// uploads); end submits the GPU read, and the next frame writer reclaims
+	// the pixels before writing.
+	GLuint begin_dmabuf_frame(SDL_Surface* surface, int x, int y, int width, int height);
+	void end_dmabuf_frame(SDL_Surface* surface);
+	bool import_frame_image(const struct DmabufSurfaceInfo* info);
+	bool ensure_frame_copy_target(int width, int height);
+	void copy_frame_rect(const SDL_Rect& rect, int surface_width, int surface_height);
+	void destroy_frame_image();
+	void destroy_frame_import();
+	void* m_frame_egl_display = nullptr;
+	void* m_frame_egl_image = nullptr;  // EGLImageKHR over the surface's dma-buf
+	GLuint m_frame_import_texture = 0;
+	GLuint m_frame_texture = 0;  // GPU copy of a cropped presentation area
+	GLuint m_frame_fbo = 0;
+	int m_frame_texture_w = 0;
+	int m_frame_texture_h = 0;
+	uint64_t m_frame_generation = 0;  // DmabufSurfaceInfo::generation of the live import
+	uint64_t m_frame_failed_generation = 0;  // import rejected: never retried, never logged twice
 };
 
 // Helper to get the OpenGL renderer from the global g_renderer.

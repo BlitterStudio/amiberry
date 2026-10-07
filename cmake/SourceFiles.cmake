@@ -226,6 +226,7 @@ set(SOURCE_FILES
         src/osdep/mhi_host.cpp
         src/osdep/service_transport.cpp
         src/osdep/minigl_display.cpp
+        src/osdep/dmabuf_surface.cpp
         src/osdep/mp3decoder.cpp
         src/osdep/picasso96.cpp
         src/osdep/writelog.cpp

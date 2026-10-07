@@ -185,6 +185,10 @@ inline SDL_Surface* get_amiga_surface(int monid = 0)
 	return amiga_surface;
 }
 
+// Native-chipset frame surface in pixel_format. Dma-buf backed when the
+// OpenGL renderer can sample it directly (dmabuf_surface.h).
+SDL_Surface* create_native_surface(int width, int height);
+
 enum class AmiberryGuiViewportSpace
 {
 	SdlRendererLogical,

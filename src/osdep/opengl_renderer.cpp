@@ -33,6 +33,7 @@
 #include "statusline.h"
 #include "imgui_overlay.h"
 #include "minigl_display.h"
+#include "dmabuf_surface.h"
 #if defined(__linux__)
 #include <dlfcn.h>
 #include <unistd.h>
@@ -170,6 +171,8 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 void OpenGLRenderer::destroy_context()
 {
 	destroy_minigl_import();
+	destroy_frame_import();
+	m_frame_failed_generation = 0;  // a recreated context gets one import attempt
 	if (m_minigl_importer_ref) {
 		minigl_display_release_importer();
 		m_minigl_importer_ref = false;
@@ -637,6 +640,225 @@ bool OpenGLRenderer::render_minigl_dmabuf(const int, const int, const int, const
 }
 #endif
 
+// Defined on every platform: destroy_context() calls it unconditionally.
+void OpenGLRenderer::destroy_frame_import()
+{
+#if defined(__linux__)
+	if (m_frame_fbo != 0) {
+		glDeleteFramebuffers(1, &m_frame_fbo);
+		m_frame_fbo = 0;
+	}
+	if (m_frame_texture != 0) {
+		if (m_shader.crtemu)
+			crtemu_texture_deleted(m_shader.crtemu, m_frame_texture);
+		glDeleteTextures(1, &m_frame_texture);
+		m_frame_texture = 0;
+	}
+	m_frame_texture_w = m_frame_texture_h = 0;
+	destroy_frame_image();
+#endif
+}
+
+void OpenGLRenderer::destroy_frame_image()
+{
+#if defined(__linux__)
+	if (m_frame_import_texture != 0) {
+		if (m_shader.crtemu)
+			crtemu_texture_deleted(m_shader.crtemu, m_frame_import_texture);
+		glDeleteTextures(1, &m_frame_import_texture);
+		m_frame_import_texture = 0;
+	}
+	if (m_frame_egl_image != nullptr && m_frame_egl_display != nullptr) {
+		if (auto& egl = egl_dmabuf_api(); egl.destroy_image)
+			egl.destroy_image(static_cast<EGLDisplay>(m_frame_egl_display),
+				static_cast<EGLImageKHR>(m_frame_egl_image));
+	}
+	m_frame_egl_image = nullptr;
+	m_frame_egl_display = nullptr;
+	m_frame_generation = 0;
+#endif
+}
+
+#if defined(__linux__)
+bool OpenGLRenderer::import_frame_image(const DmabufSurfaceInfo* info)
+{
+	destroy_frame_image();
+	auto& egl = egl_dmabuf_api();
+	const EGLint attribs[] = {
+		EGL_WIDTH, info->width,
+		EGL_HEIGHT, info->height,
+		EGL_LINUX_DRM_FOURCC_EXT, EGLint(info->drm_fourcc),
+		EGL_DMA_BUF_PLANE0_FD_EXT, info->fd,
+		EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
+		EGL_DMA_BUF_PLANE0_PITCH_EXT, info->pitch,
+		EGL_NONE
+	};
+	const EGLDisplay display = egl.current_display();
+	const EGLImageKHR image = display != EGL_NO_DISPLAY
+		? egl.create_image(display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, attribs)
+		: EGL_NO_IMAGE_KHR;
+	if (image == EGL_NO_IMAGE_KHR)
+		return false;
+	for (int i = 0; i < 16 && glGetError() != GL_NO_ERROR; ++i) {}
+	glGenTextures(1, &m_frame_import_texture);
+	glBindTexture(GL_TEXTURE_2D, m_frame_import_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	egl.image_target_texture(GL_TEXTURE_2D, image);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	m_frame_egl_image = image;
+	m_frame_egl_display = display;
+	if (glGetError() != GL_NO_ERROR) {
+		destroy_frame_image();
+		return false;
+	}
+	m_frame_generation = info->generation;
+	return true;
+}
+
+bool OpenGLRenderer::ensure_frame_copy_target(const int width, const int height)
+{
+	if (!init_osd_shader())
+		return false;
+	if (m_frame_texture != 0 && m_frame_texture_w == width && m_frame_texture_h == height)
+		return true;
+	if (m_frame_texture == 0)
+		glGenTextures(1, &m_frame_texture);
+	else if (m_shader.crtemu)
+		crtemu_texture_deleted(m_shader.crtemu, m_frame_texture);  // filters reset below
+	glBindTexture(GL_TEXTURE_2D, m_frame_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if (m_frame_fbo == 0)
+		glGenFramebuffers(1, &m_frame_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_frame_fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_frame_texture, 0);
+	const bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	if (!complete) {
+		write_log("Native frame copy target %dx%d incomplete; using texture uploads\n", width, height);
+		return false;
+	}
+	m_frame_texture_w = width;
+	m_frame_texture_h = height;
+	return true;
+}
+
+void OpenGLRenderer::copy_frame_rect(const SDL_Rect& rect, const int surface_width, const int surface_height)
+{
+	GLint saved_framebuffer = 0;
+	GLint saved_viewport[4] = {};
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &saved_framebuffer);
+	glGetIntegerv(GL_VIEWPORT, saved_viewport);
+	// Copy the presented rectangle 1:1, keeping its top row at t=0 as a
+	// glTexSubImage2D upload would.
+	const float u0 = float(rect.x) / float(surface_width);
+	const float u1 = float(rect.x + rect.w) / float(surface_width);
+	const float v0 = float(rect.y) / float(surface_height);
+	const float v1 = float(rect.y + rect.h) / float(surface_height);
+	const GLfloat vertices[] = {
+		-1.0f, -1.0f, u0, v0,
+		 1.0f, -1.0f, u1, v0,
+		 1.0f,  1.0f, u1, v1,
+		-1.0f,  1.0f, u0, v1,
+	};
+	glBindFramebuffer(GL_FRAMEBUFFER, m_frame_fbo);
+	glViewport(0, 0, rect.w, rect.h);
+	glDisable(GL_BLEND);
+	glUseProgram(m_overlay.osd_program);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_frame_import_texture);
+	if (m_overlay.osd_tex_loc != -1) glUniform1i(m_overlay.osd_tex_loc, 0);
+	glBindVertexArray(m_overlay.osd_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, m_overlay.osd_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), nullptr);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	glDisableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+	glBindFramebuffer(GL_FRAMEBUFFER, GLuint(saved_framebuffer));
+	glViewport(saved_viewport[0], saved_viewport[1], saved_viewport[2], saved_viewport[3]);
+}
+
+GLuint OpenGLRenderer::begin_dmabuf_frame(SDL_Surface* surface, const int x, const int y,
+	const int width, const int height)
+{
+	const DmabufSurfaceInfo* info = dmabuf_surface_info(surface);
+	if (!info || width <= 0 || height <= 0 || info->generation == m_frame_failed_generation)
+		return 0;
+	if (!egl_dmabuf_api().available())
+		return 0;
+
+	if (info->generation != m_frame_generation) {
+		if (!import_frame_image(info)) {
+			write_log("Native frame dma-buf import failed (%dx%d pitch %d); using texture uploads\n",
+				info->width, info->height, info->pitch);
+			m_frame_failed_generation = info->generation;
+			return 0;
+		}
+		write_log("Native frames sampled from dma-buf %dx%d pitch %d (no per-frame upload)\n",
+			info->width, info->height, info->pitch);
+	}
+
+	// present runs at the emulated vsync, after the display frame was closed,
+	// so Denise may still be drawing queued lines. Drain them first: no CPU
+	// write may overlap the cache flush and GPU read below (the main thread
+	// queues nothing while it presents, so the buffer stays idle until the
+	// next frame writer reclaims it).
+	draw_denise_line_queue_flush();
+
+	// Uncropped frames are sampled straight from the import; a crop is copied
+	// 1:1 on the GPU so the shader stack sees exactly the presented area.
+	// Everything that can fail happens while the CPU still owns the pixels,
+	// so a failure falls back to uploads without a GPU read in flight.
+	const bool cropped = x != 0 || y != 0 || width != info->width || height != info->height;
+	if (cropped && !ensure_frame_copy_target(width, height)) {
+		m_frame_failed_generation = info->generation;
+		destroy_frame_import();
+		return 0;
+	}
+
+	// The GPU reads the frame from here on: publish the CPU's writes first.
+	if (!dmabuf_surface_end_cpu_access(info)) {
+		write_log("Native frame dma-buf sync failed; using texture uploads\n");
+		m_frame_failed_generation = info->generation;
+		destroy_frame_import();
+		return 0;
+	}
+	if (!cropped)
+		return m_frame_import_texture;
+	copy_frame_rect(SDL_Rect{ x, y, width, height }, info->width, info->height);
+	return m_frame_texture;
+}
+
+void OpenGLRenderer::end_dmabuf_frame(SDL_Surface* surface)
+{
+	// Submit the GPU's read; frame writers reclaim the pixels (waiting for
+	// that read) before drawing the next frame, so it overlaps emulation.
+	glFlush();
+	dmabuf_surface_release_to_gpu(dmabuf_surface_info(surface));
+}
+#else
+GLuint OpenGLRenderer::begin_dmabuf_frame(SDL_Surface*, const int, const int, const int, const int)
+{
+	return 0;
+}
+
+void OpenGLRenderer::end_dmabuf_frame(SDL_Surface*)
+{
+}
+#endif
+
 bool OpenGLRenderer::render_frame(int monid, int mode, int immediate)
 {
 	SDL_Surface* surface = get_amiga_surface(monid);
@@ -1094,6 +1316,11 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		}
 
 	} else if (!minigl_frame && m_shader.crtemu) {
+		// Native frames in a dma-buf backed surface reach the GPU without an upload.
+		const GLuint frame_texture = surface && !mon->screen_is_picasso
+			? begin_dmabuf_frame(surface, is_cropped ? crop_x : 0, is_cropped ? crop_y : 0, src_w, src_h)
+			: 0;
+
 		// crtemu_present expects attribute 0 to be enabled.
 		glEnableVertexAttribArray(0);
 		// Disable other attributes that might have been enabled by OSD or other passes
@@ -1105,7 +1332,10 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		m_shader.crtemu->skip_aspect_correction = true;
 		m_shader.crtemu->desired_aspect = desired_aspect;
 
-		if (is_cropped && surface) {
+		if (frame_texture) {
+			crtemu_present_texture(m_shader.crtemu, time * 1000, frame_texture, src_w, src_h, 0xffffffff, 0x000000);
+			end_dmabuf_frame(surface);
+		} else if (is_cropped && surface) {
 			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
 
 			crtemu_present(m_shader.crtemu, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
