@@ -292,9 +292,9 @@ void render_panel_cpu() {
                 changed_prefs.blitter_cycle_exact = false;
                 changed_prefs.cpu_memory_cycle_exact = false;
 
-                if (changed_prefs.fpu_model > 0) {
-                    changed_prefs.compfpu = true;
-                }
+                // JIT FPU on by default, unless there is no FPU or a
+                // softfloat mode is selected (as WinUAE's CPU page does).
+                changed_prefs.compfpu = changed_prefs.fpu_model > 0 && changed_prefs.fpu_mode == 0;
             } else {
                 changed_prefs.cachesize = 0;
                 changed_prefs.compfpu = false;

@@ -8563,8 +8563,16 @@ static int execcmdline(struct uae_prefs *prefs, int argv, TCHAR **argc, TCHAR *o
 {
 	int ret = 0;
 	bool changed = false;
+#if defined(AMIBERRY) && defined(USE_JIT_FPU)
+	const int old_cachesize = prefs->cachesize;
+	bool compfpu_given = false;
+#endif
 	for (int i = 0; i < argv; i++) {
 		if (i + 2 <= argv) {
+#if defined(AMIBERRY) && defined(USE_JIT_FPU)
+			if (!_tcsicmp(argc[i], _T("compfpu")))
+				compfpu_given = true;
+#endif
 			if (!confonly) {
 				if (!_tcsicmp(argc[i], _T("shellexec"))) {
 					TCHAR *cmd = argc[i + 1];
@@ -8606,6 +8614,12 @@ static int execcmdline(struct uae_prefs *prefs, int argv, TCHAR **argc, TCHAR *o
 		}
 	}
 	if (changed) {
+#if defined(AMIBERRY) && defined(USE_JIT_FPU)
+		// Switching JIT on (e.g. uae-configuration cachesize) enables the
+		// JIT FPU as the GUI does, unless the same command sets compfpu.
+		if (!old_cachesize && prefs->cachesize && !compfpu_given)
+			prefs->compfpu = prefs->fpu_model > 0 && prefs->fpu_mode == 0;
+#endif
 		inputdevice_fix_prefs(prefs, false);
 		set_config_changed();
 		set_special(SPCFLAG_MODE_CHANGE);
@@ -9390,6 +9404,11 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->tod_hack = false;
 	p->maprom = 0;
 	p->cachesize = 0;
+#if defined(AMIBERRY) && defined(USE_JIT_FPU)
+	// Presets that switch JIT on (quickstart, WHDLoad) get the JIT FPU by
+	// default; fixup_prefs() clears it again without JIT or an FPU.
+	p->compfpu = p->fpu_mode == 0;
+#endif
 	p->socket_emu = false;
 	p->clipboard_sharing = false;
 	p->ppc_mode = 0;
