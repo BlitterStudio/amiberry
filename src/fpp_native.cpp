@@ -184,7 +184,7 @@ static void native_set_fpucw(uae_u32 m68k_cw)
 /* Functions for setting host/library modes and getting status */
 static void fp_set_mode(uae_u32 mode_control)
 {
-	if (mode_control == fpu_mode_control && !currprefs.compfpu)
+	if (mode_control == fpu_mode_control && !(currprefs.cachesize && currprefs.compfpu))
 		return;
     switch(mode_control & FPCR_ROUNDING_PRECISION) {
         case FPCR_PRECISION_EXTENDED: // X

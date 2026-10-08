@@ -272,7 +272,7 @@ uae_u8* comp_pc_p;
 static uae_u32 cache_size = 0;            // Size of total cache allocated for compiled blocks
 static uae_u32 current_cache_size   = 0;  // Cache grows upwards: how much has been consumed already
 #ifdef USE_JIT_FPU
-#define avoid_fpu (!currprefs.compfpu)
+#define avoid_fpu (!currprefs.compfpu || !currprefs.fpu_model)
 #define lazy_flush (!currprefs.comp_hardflush)
 #else
 #define avoid_fpu (true)

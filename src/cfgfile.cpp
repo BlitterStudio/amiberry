@@ -8616,9 +8616,11 @@ static int execcmdline(struct uae_prefs *prefs, int argv, TCHAR **argc, TCHAR *o
 	if (changed) {
 #if defined(AMIBERRY) && defined(USE_JIT_FPU)
 		// Switching JIT on (e.g. uae-configuration cachesize) enables the
-		// JIT FPU as the GUI does, unless the same command sets compfpu.
+		// JIT FPU as the GUI does, unless softfloat is selected or the same
+		// command sets compfpu. Configurations saved by older builds with
+		// JIT off can carry compfpu=false that the user never chose.
 		if (!old_cachesize && prefs->cachesize && !compfpu_given)
-			prefs->compfpu = prefs->fpu_model > 0 && prefs->fpu_mode == 0;
+			prefs->compfpu = prefs->fpu_mode <= 0;
 #endif
 		inputdevice_fix_prefs(prefs, false);
 		set_config_changed();
@@ -9406,8 +9408,9 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->cachesize = 0;
 #if defined(AMIBERRY) && defined(USE_JIT_FPU)
 	// Presets that switch JIT on (quickstart, WHDLoad) get the JIT FPU by
-	// default; fixup_prefs() clears it again without JIT or an FPU.
-	p->compfpu = p->fpu_mode == 0;
+	// default unless softfloat is selected; it has no effect without JIT
+	// or an FPU.
+	p->compfpu = p->fpu_mode <= 0;
 #endif
 	p->socket_emu = false;
 	p->clipboard_sharing = false;

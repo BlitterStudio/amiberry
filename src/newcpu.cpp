@@ -2069,7 +2069,7 @@ static void build_cpufunctbl ()
 		currprefs.cpu_model,
 		currprefs.fpu_model, currprefs.fpu_model ? (currprefs.fpu_mode > 0 ? _T(" (softfloat)") : (currprefs.fpu_mode < 0 ? _T(" (host 80b)") : _T(" (host 64b)"))) : _T(""),
 		currprefs.mmu_model,
-		currprefs.cachesize ? (currprefs.compfpu ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
+		currprefs.cachesize ? (currprefs.compfpu && currprefs.fpu_model ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
 		currprefs.cachesize);
 
 	regs.address_space_mask = 0xffffffff;
