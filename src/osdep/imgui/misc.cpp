@@ -71,10 +71,6 @@ static MiscListItem misc_items[] = {
 	 "Add a 1 second delay when resetting the emulated Amiga",
 	 &changed_prefs.reset_delay, nullptr, 0, 0, MISC_NORMAL},
 
-	{"Faster RTG",
-	 "Speed up RTG (graphics card) operations by disabling custom chipset emulation",
-	 &changed_prefs.picasso96_nocustom, nullptr, 0, 0, MISC_NORMAL},
-
 	{"Clipboard sharing",
 	 "Share clipboard between Amiga and host system",
 	 &changed_prefs.clipboard_sharing, nullptr, 0, 0, MISC_NORMAL},
