@@ -20,6 +20,7 @@ extern SDL_PixelFormat pixel_format;
 extern uae_u8* p96_get_render_buffer_pointer(int monid);
 extern bool p96_is_zero_copy_enabled(int monid);
 extern bool p96_is_zero_copy_surface(int monid, const void* pixels);
+extern bool p96_is_vram_pointer(const void* ptr);
 #endif
 
 #define GUI_WIDTH  860

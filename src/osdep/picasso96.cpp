@@ -1224,6 +1224,28 @@ bool p96_is_zero_copy_surface(int monid, const void* pixels)
 	const uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
 	return rtg_vram && pixels == rtg_vram;
 }
+
+// True if ptr lies inside any RTG board's VRAM, using the same natmem mapping as
+// p96_get_render_buffer_pointer(). A zero-copy surface wraps VRAM at whatever
+// XYOffset was current when it was created, so a range test still catches it
+// after the guest has moved to another screen or display offset.
+bool p96_is_vram_pointer(const void* ptr)
+{
+	// Without a natmem reservation, start + natmem_offset is a guest address,
+	// not a host pointer, and there is no zero-copy VRAM mapping to detect.
+	if (!ptr || !natmem_offset)
+		return false;
+	const auto* p = static_cast<const uae_u8*>(ptr);
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		const addrbank* bank = gfxmem_banks[i];
+		if (!bank || !bank->allocated_size)
+			continue;
+		const uae_u8* base = bank->start + natmem_offset;
+		if (p >= base && p < base + bank->allocated_size)
+			return true;
+	}
+	return false;
+}
 #endif
 
 static void rtg_render()
