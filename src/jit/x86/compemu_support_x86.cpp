@@ -729,7 +729,7 @@ static uae_u32 current_cache_size = 0; // Cache grows upwards: how much has been
 // Flag: compile FPU instructions ?
 #ifdef UAE
 #ifdef USE_JIT_FPU
-#define avoid_fpu (!currprefs.compfpu)
+#define avoid_fpu (!currprefs.compfpu || !currprefs.fpu_model)
 #define lazy_flush (!currprefs.comp_hardflush)
 #else
 #define avoid_fpu (true)

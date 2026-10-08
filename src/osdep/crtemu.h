@@ -40,6 +40,16 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
                      CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format, unsigned int pixel_type, int bpp );
 
+// Present from an existing GL texture laid out like an uploaded frame (first
+// row at t=0) instead of uploading CPU pixels. The texture is sampled once
+// into the pipeline backbuffer, or drawn directly for CRTEMU_TYPE_NONE.
+void crtemu_present_texture( crtemu_t* crtemu, CRTEMU_U64 time_us, unsigned int texture, int width, int height,
+                             CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr );
+
+// Tell crtemu a texture passed to crtemu_present_texture() was deleted, so a
+// later texture reusing its GL name gets its filter parameters set again.
+void crtemu_texture_deleted( crtemu_t* crtemu, unsigned int texture );
+
 void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int height, int* x, int* y );
 
 /*
@@ -239,6 +249,9 @@ struct crtemu_t {
 	unsigned int last_present_type;
 	CRTEMU_GLint texture_filter; // GL_NEAREST or GL_LINEAR for NONE mode
 	bool is_mobile_gpu; // True on low-power GPUs (per the GL_RENDERER allowlist or force_mobile) - selects simplified shader variants
+	bool fbo_backbuffer_attached; // fbo_backbuffer has backbuffer bound as its colour attachment
+	CRTEMU_GLuint param_texture; // caller-owned texture whose filters were last set (CRTEMU_TYPE_NONE)
+	CRTEMU_GLint param_filter; // filter applied to param_texture
 
 	CRTEMU_GLint loc_blur_blur;
 	CRTEMU_GLint loc_blur_texture;
@@ -2260,8 +2273,12 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
 }
 
 
-void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
-                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format, unsigned int pixel_type, int bpp ) {
+// pixels_xbgr uploads a CPU frame; otherwise a non-zero texture is sampled as
+// the frame. With neither, the texture bound to unit 0 is used (legacy path).
+static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr,
+                                     CRTEMU_GLuint texture, int width, int height, int pitch,
+                                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format,
+                                     unsigned int pixel_type, int bpp ) {
 
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
@@ -2303,10 +2320,22 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->Uniform1i( crtemu->loc_copy_tex0, 0 );
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
-		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
+		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, texture ? texture : crtemu->backbuffer );
 
-		// Only set texture filter parameters when texture was recreated
-		if (size_or_format_changed) {
+		if (texture) {
+			// Caller-owned texture: set filters only when the texture or the
+			// requested filter changed since they were last applied.
+			if (texture != crtemu->param_texture || crtemu->texture_filter != crtemu->param_filter) {
+				crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
+				crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+				crtemu->param_texture = texture;
+				crtemu->param_filter = crtemu->texture_filter;
+			}
+			// backbuffer was not refreshed: the next pixel upload must respecify it.
+			crtemu->last_present_width = 0;
+			crtemu->last_present_height = 0;
+		} else if (size_or_format_changed) {
+			// Only set texture filter parameters when the backbuffer was recreated
 			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
 			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
 		}
@@ -2341,13 +2370,21 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	} else {
-		if( size_changed ) {
+		if (texture) {
+			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, texture );
+			// backbuffer now holds a sampled copy: the next pixel upload must respecify it.
+			crtemu->last_present_format = 0;
+		}
+		if( size_changed || !crtemu->fbo_backbuffer_attached ) {
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->fbo_backbuffer );
 			crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer, 0 );
+			crtemu->fbo_backbuffer_attached = true;
+			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		}
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->fbo_backbuffer );
 		crtemu->Viewport( 0, 0, width, height );
@@ -2632,6 +2669,27 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+}
+
+
+void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
+                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format, unsigned int pixel_type, int bpp ) {
+	crtemu_internal_present( crtemu, time_us, pixels_xbgr, 0, width, height, pitch, mod_xbgr, border_xbgr,
+		pixel_format, pixel_type, bpp );
+}
+
+
+void crtemu_present_texture( crtemu_t* crtemu, CRTEMU_U64 time_us, unsigned int texture, int width, int height,
+                             CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr ) {
+	crtemu_internal_present( crtemu, time_us, nullptr, (CRTEMU_GLuint) texture, width, height, 0, mod_xbgr, border_xbgr,
+		0, 0, 4 );
+}
+
+
+void crtemu_texture_deleted( crtemu_t* crtemu, unsigned int texture ) {
+	if( crtemu && texture && crtemu->param_texture == (CRTEMU_GLuint) texture ) {
+		crtemu->param_texture = 0;
+	}
 }
 
 

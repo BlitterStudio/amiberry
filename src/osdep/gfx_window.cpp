@@ -1316,7 +1316,9 @@ bool doInit(AmigaMonitor* mon)
 			SDL_DestroySurface(surface_ref);
 			surface_ref = nullptr;
 		}
-		surface_ref = SDL_CreateSurface(display_width, display_height, pixel_format);
+		surface_ref = mon->screen_is_picasso
+			? SDL_CreateSurface(display_width, display_height, pixel_format)
+			: create_native_surface(display_width, display_height);
 		if (!surface_ref) {
 			write_log("Failed to create amiga_surface for monitor %d: %s\n", mon->monitor_id, SDL_GetError());
 			return false;

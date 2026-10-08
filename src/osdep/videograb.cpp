@@ -1145,6 +1145,9 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
     }
 
     target_frame = normalized_ffmpeg_frame(target_frame);
+    // A repeated request may still read ahead to queue interleaved audio and
+    // stash the next video frame, but it must not restart playback at EOF.
+    const bool repeat_request = loaded_frame == target_frame && !frame_buffer.empty();
     if (ffmpeg_pending_video_frame_index >= 0 && loaded_frame >= 0 &&
         target_frame >= loaded_frame &&
         target_frame < ffmpeg_pending_video_frame_index &&
@@ -1182,6 +1185,9 @@ static bool read_ffmpeg_frame(uae_s64 target_frame)
             if (err == AVERROR_EOF) {
                 ffmpeg_decode_audio_packet(nullptr, nullptr);
                 if (ffmpeg_decode_video_packet(nullptr, target_frame, nullptr)) {
+                    return true;
+                }
+                if (repeat_request) {
                     return true;
                 }
                 if (looped) {

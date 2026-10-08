@@ -344,9 +344,15 @@ void fixup_cpu (struct uae_prefs *p)
 		p->cachesize = 0;
 		error_log (_T("JIT requires 68020 or better CPU."));
 	}
+#ifdef AMIBERRY
+	// compfpu is the user's preference and only takes effect with JIT and an
+	// FPU (avoid_fpu and the fpp.cpp JIT paths need both), so keep it while
+	// either is off instead of losing it.
+#else
 	if ((p->fpu_model == 0 || !p->cachesize) && p->compfpu) {
 		p->compfpu = false;
 	}
+#endif
 
 	if (!p->cpu_memory_cycle_exact && p->cpu_cycle_exact)
 		p->cpu_memory_cycle_exact = true;
@@ -367,7 +373,7 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log (_T("JIT is not compatible with unimplemented CPU/FPU instruction emulation."));
 		p->fpu_no_unimplemented = p->int_no_unimplemented = false;
 	}
-	if (p->cachesize && p->compfpu && p->fpu_mode > 0) {
+	if (p->cachesize && p->compfpu && p->fpu_model && p->fpu_mode > 0) {
 		error_log (_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
 		p->fpu_mode = 0;
 	}

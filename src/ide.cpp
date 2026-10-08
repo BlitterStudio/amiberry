@@ -355,18 +355,28 @@ bool ide_isdrive (struct ide_hdf *ide)
 	return ide && (ide->hdhfd.size != 0 || ide->atapi);
 }
 
-static void ide_interrupt (struct ide_hdf *ide)
+/* Read/write and ATAPI commands complete on the "ide" thread, which fills
+ * secbuf, the registers and intdrq and then arms irq_delay. The CPU thread
+ * polls irq_delay in ide_interrupt_hsync() and only then builds the status
+ * from that state. Arm with release and poll with acquire so the thread's
+ * writes are visible first: on weakly ordered hosts (ARM64) the CPU thread
+ * could otherwise see the armed delay but a stale intdrq, raise the
+ * interrupt without DRQ, and leave scsi.device polling for DRQ forever. */
+static void ide_arm_interrupt (struct ide_hdf *ide, int delay)
 {
 	ide->regs.ide_status |= IDE_STATUS_BSY;
 	ide->regs.ide_status &= ~IDE_STATUS_DRQ;
-	ide->irq_delay = 2;
+	__atomic_store_n (&ide->irq_delay, delay, __ATOMIC_RELEASE);
+}
+
+static void ide_interrupt (struct ide_hdf *ide)
+{
+	ide_arm_interrupt (ide, 2);
 }
 
 static void ide_fast_interrupt (struct ide_hdf *ide)
 {
-	ide->regs.ide_status |= IDE_STATUS_BSY;
-	ide->regs.ide_status &= ~IDE_STATUS_DRQ;
-	ide->irq_delay = 1;
+	ide_arm_interrupt (ide, 1);
 }
 
 static bool ide_interrupt_do (struct ide_hdf *ide)
@@ -423,9 +433,10 @@ bool ide_interrupt_hsync(struct ide_hdf *idep)
 	for (int i = 0; idep && i < 2; i++) {
 		struct ide_hdf *ide = i == 0 ? idep : idep->pair;
 		if (ide) {
-			if (ide->irq_delay > 0) {
-				ide->irq_delay--;
-				if (ide->irq_delay == 0) {
+			const int delay = __atomic_load_n (&ide->irq_delay, __ATOMIC_ACQUIRE);
+			if (delay > 0) {
+				ide->irq_delay = delay - 1;
+				if (delay == 1) {
 					ide_interrupt_do (ide);
 				}
 			}

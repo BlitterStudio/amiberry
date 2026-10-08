@@ -272,7 +272,7 @@ uae_u8* comp_pc_p;
 static uae_u32 cache_size = 0;            // Size of total cache allocated for compiled blocks
 static uae_u32 current_cache_size   = 0;  // Cache grows upwards: how much has been consumed already
 #ifdef USE_JIT_FPU
-#define avoid_fpu (!currprefs.compfpu)
+#define avoid_fpu (!currprefs.compfpu || !currprefs.fpu_model)
 #define lazy_flush (!currprefs.comp_hardflush)
 #else
 #define avoid_fpu (true)
@@ -674,6 +674,13 @@ static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
     // The faulting store will re-execute successfully, then hit BRK → SIGTRAP.
     jit_dbg_vec2_page_protected = 0;
     // Return — store executes, then BRK fires SIGTRAP → handler re-protects page
+}
+
+// The page guard's SIGSEGV handler chains to Amiberry's own; signal-handler
+// reclaim (install_fault_signal_handlers) must leave it installed.
+bool jit_dbg_is_sigsegv_handler(void (*handler)(int, siginfo_t*, void*))
+{
+    return handler == jit_dbg_vec2_sigsegv_handler;
 }
 
 // v34: Vec2 check function callable from ALL C dispatch functions.

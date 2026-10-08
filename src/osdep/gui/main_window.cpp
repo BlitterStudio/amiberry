@@ -2119,6 +2119,9 @@ void run_gui()
 				handle_joy_device_event(gui_event.jdevice.which,
 					gui_event.type == SDL_EVENT_JOYSTICK_REMOVED);
 			}
+			else if (gui_event.type == SDL_EVENT_KEYBOARD_ADDED) {
+				install_fault_signal_handlers();
+			}
 			else if (gui_event.type == SDL_EVENT_WINDOW_MOVED
 				&& gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
 				gui_window_rect.x = gui_event.window.data1;

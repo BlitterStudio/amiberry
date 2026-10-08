@@ -292,12 +292,13 @@ void render_panel_cpu() {
                 changed_prefs.blitter_cycle_exact = false;
                 changed_prefs.cpu_memory_cycle_exact = false;
 
-                if (changed_prefs.fpu_model > 0) {
-                    changed_prefs.compfpu = true;
-                }
+                // Switching JIT on turns the JIT FPU on unless a softfloat
+                // mode is selected, as WinUAE's CPU page does. Without an
+                // FPU the setting has no effect.
+                changed_prefs.compfpu = changed_prefs.fpu_mode <= 0;
             } else {
+                // Keep compfpu: it only takes effect with JIT on.
                 changed_prefs.cachesize = 0;
-                changed_prefs.compfpu = false;
             }
         }
         ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
@@ -589,12 +590,8 @@ void render_panel_cpu() {
                 changed_prefs.cachesize =
                         1024 << (jit_slider_val - 1); // 1->1024, 2->2048... 5->16384
 
-            bool jitex = changed_prefs.cachesize > 0;
-            if (!jitex) {
-                changed_prefs.compfpu = false;
-            } else {
-                if (jit_slider_val > 0) canbang = true;
-            }
+            if (changed_prefs.cachesize > 0 && jit_slider_val > 0)
+                canbang = true;
 
             if (changed_prefs.cachesize && changed_prefs.cpu_model >= 68040) {
                 changed_prefs.cpu_compatible = false;

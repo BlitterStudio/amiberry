@@ -337,7 +337,10 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 {
 	int reg;
 
-	if (!currprefs.compfpu) {
+	/* compstbl_arm.cpp does not flag FScc/FBcc COMP_OPCODE_USES_FPU, so
+	 * avoid_fpu in build_comp() does not filter them: check here that the
+	 * JIT FPU is on and the CPU has an FPU at all. */
+	if (!currprefs.compfpu || !currprefs.fpu_model) {
 		FAIL (1);
 		return;
 	}
@@ -383,7 +386,7 @@ void comp_fbcc_opp (uae_u32 opcode)
 	uintptr v1, v2;
 	int cc;
 
-	if (!currprefs.compfpu) {
+	if (!currprefs.compfpu || !currprefs.fpu_model) {
 		FAIL (1);
 		return;
 	}
@@ -475,7 +478,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
     return;
   } 
 
-	if (!currprefs.compfpu) {
+	if (!currprefs.compfpu || !currprefs.fpu_model) {
 		FAIL (1);
 		return;
 	}
@@ -585,8 +588,10 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 				}
 				ad = comp_fp_adr (opcode);
 				if (ad < 0) {
-					m68k_setpc (m68k_getpc () - 4);
-					op_illg (opcode);
+					/* EA not compiled here (e.g. (d8,An,Xn), (d16,PC)): let
+					 * the interpreter run it. Never raise a guest exception
+					 * at compile time; the instruction may be valid. */
+					FAIL (1);
 					return;
 				}
 				switch ((extra >> 11) & 3) {
@@ -638,8 +643,8 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 				}
 				ad = comp_fp_adr (opcode);
 				if (ad < 0) {
-					m68k_setpc (m68k_getpc () - 4);
-					op_illg (opcode);
+					/* See FMOVEM FPP->memory above. */
+					FAIL (1);
 					return;
 				}
 				switch ((extra >> 11) & 3) {

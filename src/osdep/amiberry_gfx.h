@@ -20,6 +20,7 @@ extern SDL_PixelFormat pixel_format;
 extern uae_u8* p96_get_render_buffer_pointer(int monid);
 extern bool p96_is_zero_copy_enabled(int monid);
 extern bool p96_is_zero_copy_surface(int monid, const void* pixels);
+extern bool p96_is_vram_pointer(const void* ptr);
 #endif
 
 #define GUI_WIDTH  860
@@ -184,6 +185,10 @@ inline SDL_Surface* get_amiga_surface(int monid = 0)
 		return AMonitors[monid].amiga_surface;
 	return amiga_surface;
 }
+
+// Native-chipset frame surface in pixel_format. Dma-buf backed when the
+// OpenGL renderer can sample it directly (dmabuf_surface.h).
+SDL_Surface* create_native_surface(int width, int height);
 
 enum class AmiberryGuiViewportSpace
 {

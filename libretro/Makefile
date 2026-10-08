@@ -249,7 +249,9 @@ endif
 
 ifneq (,$(findstring android,$(platform)))
 # bionic keeps pthread and forkpty in libc; only the log sink is separate.
-LDFLAGS += -ldl -lm -llog
+# NDK clang++ links libc++_shared by default, and RetroArch does not ship
+# that library alongside downloaded cores, so link libc++ statically.
+LDFLAGS += -ldl -lm -llog -static-libstdc++
 endif
 
 ifeq ($(platform), osx)
@@ -398,6 +400,7 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/sdl_renderer.cpp \
                 $(AMIBERRY_DIR)/src/osdep/service_transport.cpp \
                 $(AMIBERRY_DIR)/src/osdep/minigl_display.cpp \
+                $(AMIBERRY_DIR)/src/osdep/dmabuf_surface.cpp \
                 $(AMIBERRY_DIR)/src/osdep/gl_context_ladder.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_input.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_mem.cpp \

@@ -44,6 +44,9 @@
 #include "gfxboard.h"
 #ifdef AMIBERRY
 #include "perf_monitor.h"
+// osdep/dmabuf_surface.h: wait for the GPU to finish reading the frame
+// surface before writing the next frame into it.
+void dmabuf_surface_reclaim();
 #endif
 
 #if defined(CPU_AARCH64)
@@ -1243,9 +1246,9 @@ int get_custom_limits(int *pw, int *ph, int *pdx, int *pdy, int *prealh, int *hr
 	if (w <= 0 || h <= 0 || dx < 0 || dy < 0)
 		return ret;
 	if (doublescan <= 0 && programmedmode != 1) {
-		if (dx > vidinfo->inbuffer->inwidth / 2)
+		if (dx >= vidinfo->inbuffer->inwidth)
 			return ret;
-		if (dy > vidinfo->inbuffer->inheight / 2)
+		if (dy >= vidinfo->inbuffer->inheight)
 			return ret;
 	}
 
@@ -2203,6 +2206,9 @@ static void finish_drawing_frame(bool drawlines)
 		return;
 	}
 
+#ifdef AMIBERRY
+	dmabuf_surface_reclaim();
+#endif
 	vbout->last_drawn_line = 0;
 	vbout->hardwiredpositioning = false;
 
@@ -2539,6 +2545,9 @@ void denise_clearbuffers(void)
 	struct amigadisplay *ad = &adisplays[monid];
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 	if (vidinfo->outbuffer && vidinfo->outbuffer->locked) {
+#ifdef AMIBERRY
+		dmabuf_surface_reclaim();
+#endif
 		struct vidbuffer *dst = vidinfo->outbuffer;
 		uae_u8 *p = dst->bufmem;
 		for (int y = 0; y < dst->height_allocated; y++) {
@@ -2806,6 +2815,51 @@ void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvb
 	*phbstrt = linear_denise_frame_hbstrt & ~15;
 }
 
+#ifdef AMIBERRY
+// checkhorizontal1_aga() fast reject: cnt / cnt_next values that can match a
+// horizontal event position. A superset is safe; the full check still decides.
+// Amiberry-local until offered upstream.
+#define DENISE_HEVENT_POSITIONS 512
+static uae_u8 denise_hevent_cnt[DENISE_HEVENT_POSITIONS], denise_hevent_next[DENISE_HEVENT_POSITIONS];
+static int denise_hevent_marked_cnt[4], denise_hevent_marked_next[5];
+static bool denise_hevent_valid;
+
+static void denise_hevent_mark(uae_u8 *table, int *marked, int count, const int *positions)
+{
+	for (int i = 0; i < count; i++) {
+		if (marked[i] >= 0) {
+			table[marked[i]] = 0;
+		}
+	}
+	for (int i = 0; i < count; i++) {
+		const int p = positions[i];
+		marked[i] = p >= 0 && p < DENISE_HEVENT_POSITIONS ? p : -1;
+		if (marked[i] >= 0) {
+			table[p] = 1;
+		}
+	}
+}
+
+static void update_horizontal_events(void)
+{
+	if (!denise_hevent_valid) {
+		memset(denise_hevent_cnt, 0, sizeof denise_hevent_cnt);
+		memset(denise_hevent_next, 0, sizeof denise_hevent_next);
+		for (int &m : denise_hevent_marked_cnt) {
+			m = -1;
+		}
+		for (int &m : denise_hevent_marked_next) {
+			m = -1;
+		}
+		denise_hevent_valid = true;
+	}
+	const int cnt_positions[] = { denise_hstrt_lores, denise_hstop_lores, denise_brdstrt_lores, denise_brdstop_lores };
+	const int next_positions[] = { denise_hbstrt_lores, denise_hbstop_lores, denise_phbstrt_lores, denise_phbstop_lores, denise_strlong_lores };
+	denise_hevent_mark(denise_hevent_cnt, denise_hevent_marked_cnt, 4, cnt_positions);
+	denise_hevent_mark(denise_hevent_next, denise_hevent_marked_next, 5, next_positions);
+}
+#endif
+
 static void setup_brdblank(void)
 {
 	denise_brdstrt_unalign = false;
@@ -2825,6 +2879,9 @@ static void setup_brdblank(void)
 		denise_brdstrt = -1;
 		denise_brdstop = -1;
 	}
+#ifdef AMIBERRY
+	update_horizontal_events();
+#endif
 }
 
 static void calchdiw(void)
@@ -2984,7 +3041,7 @@ static void spr_arms(struct denise_spr *s, int state)
 		if (s->armeds) {
 			denise_spr_nr_armeds--;
 			s->armeds = 0;
-			if (denise_spr_nr_armeds == 0 && sprite_lts_selected) {
+			if (denise_spr_nr_armeds == 0 && sprite_lts_selected && !denise_spr_nr_armed) {
 				select_lts();
 			}
 		}
@@ -3338,6 +3395,9 @@ static void update_hblank(void)
 		denise_strlong_hd += 1;
 		denise_strlong_unalign = true;
 	}
+#ifdef AMIBERRY
+	update_horizontal_events();
+#endif
 }
 
 static void update_sprres_set(void)
@@ -5491,7 +5551,39 @@ static void burst_disable(void)
 static void lts_unaligned_ecs(int, int, int);
 static void lts_unaligned_aga(int, int, int);
 
+#ifdef AMIBERRY
+static bool checkhorizontal1_ecs_events(int cnt, int cnt_next, int h);
+
+// OCS/ECS counterpart of the checkhorizontal1_aga() fast reject: positions
+// with no horizontal event, burst edge or pending unaligned work skip the
+// full chain. Only the per-call csync delay remains. Counters outside the
+// table take the full chain, so the reject is exact.
+#if defined(__GNUC__)
+static inline __attribute__((always_inline)) bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
+#else
+STATIC_INLINE bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
+#endif
+{
+#if !DEBUG_ALWAYS_UNALIGNED_DRAWING
+	if (denise_hevent_valid && !reswitch_unalign && !exthblankon_ecsonly && !bpl1dat_unalign
+		&& static_cast<unsigned int>(cnt) < DENISE_HEVENT_POSITIONS
+		&& static_cast<unsigned int>(cnt_next) < DENISE_HEVENT_POSITIONS
+		&& !denise_hevent_cnt[cnt] && !denise_hevent_next[cnt_next]
+		&& cnt != 0x40 && cnt != 0x52
+		&& !(h && spr_unalign_reg[0])) {
+		denise_cycle_half = h;
+		// Delay by 1 lores pixel
+		denise_csync_blanken2 = denise_csync_blanken;
+		return false;
+	}
+#endif
+	return checkhorizontal1_ecs_events(cnt, cnt_next, h);
+}
+
+static bool checkhorizontal1_ecs_events(int cnt, int cnt_next, int h)
+#else
 static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
+#endif
 {
 	denise_cycle_half = h;
 	if (reswitch_unalign) {
@@ -5562,7 +5654,37 @@ static bool checkhorizontal1_ecs(int cnt, int cnt_next, int h)
 	return false;
 }
 
+#ifdef AMIBERRY
+static bool checkhorizontal1_aga_events(int cnt, int cnt_next, int h);
+
+// Called twice per CCK by every AGA line renderer. Almost every position
+// matches no horizontal event; reject those without the full compare chain.
+// Counters outside the table (such as the -1 line-start sentinel, which can
+// equal a disabled -1 position) always take the full chain, so the reject is
+// exact. Forced inline: GCC otherwise keeps it out of line across ~200 callers.
+#if defined(__GNUC__)
+static inline __attribute__((always_inline)) bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
+#else
+STATIC_INLINE bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
+#endif
+{
+#if !DEBUG_ALWAYS_UNALIGNED_DRAWING
+	if (denise_hevent_valid && aga_unalign0 <= 0 && aga_unalign1 <= 0
+		&& static_cast<unsigned int>(cnt) < DENISE_HEVENT_POSITIONS
+		&& static_cast<unsigned int>(cnt_next) < DENISE_HEVENT_POSITIONS
+		&& !denise_hevent_cnt[cnt] && !denise_hevent_next[cnt_next]
+		&& !(h && (spr_unalign_reg[0] || spr_unalign_reg[1]))) {
+		denise_cycle_half = h;
+		return false;
+	}
+#endif
+	return checkhorizontal1_aga_events(cnt, cnt_next, h);
+}
+
+static bool checkhorizontal1_aga_events(int cnt, int cnt_next, int h)
+#else
 static bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
+#endif
 {
 	denise_cycle_half = h;
 #if DEBUG_ALWAYS_UNALIGNED_DRAWING
@@ -6379,6 +6501,9 @@ static void blankline(void)
 static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
 	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls)
 {
+#ifdef AMIBERRY
+	dmabuf_surface_reclaim();
+#endif
 	bool fullline = false;
 
 	if (startcycle == 0) {
@@ -7880,6 +8005,9 @@ static void fill_border(int total, uae_u32 bgcol)
 // draw border from hb to hb
 void draw_denise_border_line_fast(int gfx_ypos, bool blank, enum nln_how how, struct linestate *ls)
 {
+#ifdef AMIBERRY
+	dmabuf_surface_reclaim();
+#endif
 	if (ls->strlong_seen) {
 		set_strlong();
 	}
@@ -7995,6 +8123,9 @@ static int ltsf_init(int draw_start, int draw_startoffset, int *draw_end, int hb
 
 void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct linestate *ls)
 {
+#ifdef AMIBERRY
+	dmabuf_surface_reclaim();
+#endif
 	if (ls->strlong_seen) {
 		set_strlong();
 	}

@@ -77,6 +77,7 @@
 #include "external_shader.h"
 #include "shader_preset.h"
 #include "opengl_renderer.h"
+#include "dmabuf_surface.h"
 #include <SDL3_image/SDL_image.h>
 
 #ifdef LIBRETRO
@@ -725,6 +726,17 @@ bool get_kmsdrm_drawable_size(SDL_Window* window, int* width, int* height)
 
 SDL_PixelFormat pixel_format = SDL_PIXELFORMAT_ABGR8888;
 
+SDL_Surface* create_native_surface(const int width, const int height)
+{
+#ifdef USE_OPENGL
+	if (get_opengl_renderer()) {
+		if (SDL_Surface* surface = dmabuf_surface_create(width, height, pixel_format))
+			return surface;
+	}
+#endif
+	return SDL_CreateSurface(width, height, pixel_format);
+}
+
 static frame_time_t last_synctime;
 
 std::unique_ptr<IRenderer> g_renderer;
@@ -1137,6 +1149,13 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 
 	// Ensure blanking limits are open and synchronized at the start of frame locking
 	set_custom_limits(-1, -1, -1, -1, false);
+
+	// A zero-copy RTG surface's pixels are the guest's VRAM. Handing that to the
+	// chipset renderer would draw native frames into the RTG screen's bitmap
+	// (issue #2392), so refuse the lock until the surface has been rebuilt for
+	// native output.
+	if (vb->vram_buffer && p96_is_vram_pointer(surface->pixels))
+		return ret;
 
 	if (vb->vram_buffer) {
 		// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
@@ -1964,9 +1983,11 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		if (is_zero_copy_eligible) {
 			// Zero-Copy: Create surface from existing memory (rtg_render_ptr guaranteed non-null)
 			surface_ref = SDL_CreateSurfaceFrom(w, h, pixel_format, rtg_render_ptr, state->BytesPerRow);
-		} else {
+		} else if (mon->screen_is_picasso) {
 			// Normal copy: Create fresh surface
 			surface_ref = SDL_CreateSurface(w, h, pixel_format);
+		} else {
+			surface_ref = create_native_surface(w, h);
 		}
 
 		if (surface_ref) {
