@@ -831,11 +831,7 @@ static void shift_rga(void)
 static void check_nocustom(void)
 {
 	struct amigadisplay* ad = &adisplays[0];
-#ifdef AMIBERRY
-	if (ad->picasso_on && currprefs.picasso96_nocustom) {
-#else
 	if (ad->picasso_on) {
-#endif
 		custom_disabled = true;
 		line_disabled |= 2;
 	} else {
