@@ -828,6 +828,10 @@ extern void signal_term(int signum, siginfo_t* info, void* ptr);
 #endif
 
 #if defined(CPU_arm) && !defined(_WIN32)
+#if defined(JIT) && defined(JIT_DEBUG_MEM_CORRUPTION)
+extern bool jit_dbg_is_sigsegv_handler(void (*handler)(int, siginfo_t*, void*));
+#endif
+
 static bool install_fault_signal_handler(const int signum, const char* name,
 	void (*handler)(int, siginfo_t*, void*))
 {
@@ -835,6 +839,12 @@ static bool install_fault_signal_handler(const int signum, const char* name,
 	if (sigaction(signum, nullptr, &current) == 0) {
 		if ((current.sa_flags & SA_SIGINFO) && current.sa_sigaction == handler)
 			return true;
+#if defined(JIT) && defined(JIT_DEBUG_MEM_CORRUPTION)
+		// The JIT page guard chains to signal_segv(); keep it in front.
+		if (signum == SIGSEGV && (current.sa_flags & SA_SIGINFO)
+			&& jit_dbg_is_sigsegv_handler(current.sa_sigaction))
+			return true;
+#endif
 		if (current.sa_handler != SIG_DFL && current.sa_handler != SIG_IGN)
 			write_log("Reclaiming %s handler installed by another component.\n", name);
 	}
@@ -4224,9 +4234,11 @@ static void process_event(const SDL_Event& event)
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
 
+#ifndef LIBRETRO
 		case SDL_EVENT_KEYBOARD_ADDED:
 			install_fault_signal_handlers();
 			break;
+#endif
 
 		case SDL_EVENT_JOYSTICK_REMOVED:
 			handle_joy_device_event(event.jdevice.which, true);

@@ -676,6 +676,13 @@ static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
     // Return — store executes, then BRK fires SIGTRAP → handler re-protects page
 }
 
+// The page guard's SIGSEGV handler chains to Amiberry's own; signal-handler
+// reclaim (install_fault_signal_handlers) must leave it installed.
+bool jit_dbg_is_sigsegv_handler(void (*handler)(int, siginfo_t*, void*))
+{
+    return handler == jit_dbg_vec2_sigsegv_handler;
+}
+
 // v34: Vec2 check function callable from ALL C dispatch functions.
 // This covers the "dark zone" where compiled blocks chain via hash table
 // dispatch without any vec2 monitoring. Called from:
