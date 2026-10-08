@@ -1150,6 +1150,13 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	// Ensure blanking limits are open and synchronized at the start of frame locking
 	set_custom_limits(-1, -1, -1, -1, false);
 
+	// A zero-copy RTG surface's pixels are the guest's VRAM. Handing that to the
+	// chipset renderer would draw native frames into the RTG screen's bitmap
+	// (issue #2392), so refuse the lock until the surface has been rebuilt for
+	// native output.
+	if (vb->vram_buffer && p96_is_vram_pointer(surface->pixels))
+		return ret;
+
 	if (vb->vram_buffer) {
 		// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
 		// Therefore, this is disabled in Amiberry.
