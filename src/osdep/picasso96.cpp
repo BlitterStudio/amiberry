@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <atomic>
+#include <vector>
 
 #include "uae.h"
 
@@ -6503,6 +6504,87 @@ void picasso_invalidate(int monid, int x, int y, int w, int h)
 	DX_Invalidate(&AMonitors[monid], x, y, w, h);
 }
 
+#if !defined(_WIN32) || defined(AMIBERRY)
+// The emulated write-watch only sees VRAM writes that go through the gfxmem
+// put handlers (bank S_WRITE flag, host blits, picasso_mark_host_write). The
+// JIT picks a direct natmem store or a handler call per instruction from one
+// traced execution of the block, so a store traced while writing RAM stays a
+// direct store when the same code later writes VRAM. rtg.library's generic
+// rect copy does this when the software pointer restores its background
+// (#2318): the restore never reaches mark_dirty, so old pointer images stay on
+// the host surface. While direct JIT stores are possible, each drain compares
+// the visible pages against a shadow of what was last handed to the copy loop
+// and queues any changed page the dirty map missed.
+struct vram_shadow {
+	std::vector<uae_u8> data;
+	const uae_u8 *start = nullptr;
+};
+static vram_shadow vram_shadows[MAX_RTG_BOARDS][2];
+
+static bool jit_direct_vram_stores_possible()
+{
+#ifdef JIT
+	return currprefs.cachesize > 0 && canbang
+		&& (!currprefs.comptrustbyte || !currprefs.comptrustword
+			|| !currprefs.comptrustlong || !currprefs.comptrustnaddr);
+#else
+	return false;
+#endif
+}
+
+static void release_vram_shadows(int index)
+{
+	for (auto &shadow : vram_shadows[index]) {
+		std::vector<uae_u8>().swap(shadow.data);
+		shadow.start = nullptr;
+	}
+}
+
+// Appends pages of [start, end) that changed since the last call but are not
+// among the first 'drained' (address-ordered) entries of gwwbuf[index].
+// Returns the new entry count. The shadow is refreshed before the copy loop
+// reads VRAM, so it never holds data newer than the host surface: a write
+// racing with the copy shows up as a difference on the next drain.
+static int queue_unmarked_vram_pages(int index, int region, uae_u8 *start, uae_u8 *end, int drained, int count)
+{
+	vram_shadow &shadow = vram_shadows[index][region];
+	const size_t size = static_cast<size_t>(end - start);
+	const int page_size = gwwpagesize[index];
+	const bool resync = shadow.start != start || shadow.data.size() != size;
+	if (resync) {
+		shadow.data.resize(size);
+		shadow.start = start;
+	}
+	bool complete = true;
+	int next = 0;
+	for (size_t offset = 0; offset < size; offset += page_size) {
+		uae_u8 *page = start + offset;
+		uae_u8 *copy = shadow.data.data() + offset;
+		if (!resync && memcmp(page, copy, page_size) == 0) {
+			continue;
+		}
+		while (next < drained && static_cast<uae_u8*>(gwwbuf[index][next]) < page) {
+			next++;
+		}
+		const bool marked = next < drained && gwwbuf[index][next] == page;
+		if (!marked) {
+			if (count >= gwwbufsize[index]) {
+				// No room: keep the stale copy so the page is retried.
+				complete = false;
+				continue;
+			}
+			gwwbuf[index][count++] = page;
+		}
+		memcpy(copy, page, page_size);
+	}
+	if (resync && !complete) {
+		// Pages skipped during a resync hold no valid copy to compare against.
+		shadow.start = nullptr;
+	}
+	return count;
+}
+#endif
+
 static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 {
 	int monid = currprefs.rtgboards[index].monitor_id;
@@ -6605,6 +6687,14 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 				// and leave it stale.
 				if (split == 0) {
 					partial_gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
+					if (partial_gwwcnt >= 0 && jit_direct_vram_stores_possible()) {
+						const int drained = partial_gwwcnt;
+						for (int region = 0; region < 2 && src_start[region]; region++) {
+							partial_gwwcnt = queue_unmarked_vram_pages(index, region, src_start[region], src_end[region], drained, partial_gwwcnt);
+						}
+					} else {
+						release_vram_shadows(index);
+					}
 				}
 				gwwcnt = partial_gwwcnt;
 
@@ -6875,14 +6965,15 @@ MEMORY_XLATE(name);
 #define GFXMEM_MEMORY_FUNCTIONS(name, index) MEMORY_FUNCTIONS(name)
 #endif
 
-// On Amiberry, force JIT to route writes through the bank's *_put handlers
-// (by flagging the bank as special for writes via S_WRITE) so mark_dirty()
-// runs on every CPU poke to VRAM. WinUAE relies on GetWriteWatch() for this
-// instead, so leave its jit_write_flag at 0. Without S_WRITE, JIT blocks that
-// write directly to natmem (e.g. IconLib's WritePixelArrayAlpha loop during
-// an alpha drag) never mark the touched pages dirty and flushpixels uploads
-// nothing — the icon stays invisible until a boardinfo op (BltBitMap etc.)
-// re-marks the region.
+// On Amiberry, flag the bank as special for writes (S_WRITE) so JIT stores
+// traced against VRAM go through the bank's *_put handlers and mark_dirty().
+// WinUAE relies on GetWriteWatch() for this instead, so leave its
+// jit_write_flag at 0. Without S_WRITE, JIT blocks that write directly to
+// natmem (e.g. IconLib's WritePixelArrayAlpha loop during an alpha drag) never
+// mark the touched pages dirty and flushpixels uploads nothing — the icon stays
+// invisible until a boardinfo op (BltBitMap etc.) re-marks the region. The flag
+// only covers stores whose trace hit VRAM; queue_unmarked_vram_pages() catches
+// the rest.
 #if !defined(_WIN32) || defined(AMIBERRY)
 #define GFXMEM_JIT_WRITE_FLAG S_WRITE
 #else
