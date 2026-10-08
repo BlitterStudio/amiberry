@@ -5575,15 +5575,15 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		{
 			currprefs.cpu_compatible = changed_prefs.cpu_compatible = false;
 			currprefs.cachesize = changed_prefs.cachesize = MAX_JIT_CACHE;
-			currprefs.compfpu = changed_prefs.compfpu = true;
+			currprefs.compfpu = changed_prefs.compfpu = changed_prefs.fpu_mode <= 0;
 			currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact = false;
 			currprefs.cpu_memory_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
 			currprefs.address_space_24 = changed_prefs.address_space_24 = false;
 		}
 		else
 		{
+			// Keep compfpu: it only takes effect with JIT on.
 			currprefs.cachesize = changed_prefs.cachesize = 0;
-			currprefs.compfpu = changed_prefs.compfpu = false;
 		}
 		fixup_prefs(&changed_prefs, true);
 #endif
