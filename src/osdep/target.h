@@ -71,6 +71,7 @@ extern int minimized;
 extern int monitor_off;
 extern bool joystick_refresh_needed;
 extern void handle_joy_device_event(unsigned int which, bool removed);
+extern bool install_fault_signal_handlers();
 extern std::string screenshot_filename;
 
 extern void logging_init();

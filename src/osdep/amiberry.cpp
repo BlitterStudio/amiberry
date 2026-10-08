@@ -827,6 +827,47 @@ extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
 #endif
 
+#if defined(CPU_arm) && !defined(_WIN32)
+static bool install_fault_signal_handler(const int signum, const char* name,
+	void (*handler)(int, siginfo_t*, void*))
+{
+	struct sigaction current{};
+	if (sigaction(signum, nullptr, &current) == 0) {
+		if ((current.sa_flags & SA_SIGINFO) && current.sa_sigaction == handler)
+			return true;
+		if (current.sa_handler != SIG_DFL && current.sa_handler != SIG_IGN)
+			write_log("Reclaiming %s handler installed by another component.\n", name);
+	}
+
+	struct sigaction action{};
+	action.sa_sigaction = handler;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(signum, &action, nullptr) < 0) {
+		write_log("Failed to set signal handler (%s).\n", name);
+		return false;
+	}
+	return true;
+}
+#endif
+
+// JIT direct memory access depends on our fault handlers seeing the original
+// faulting context (e.g. Kickstart probing past the RAMSEY banks). SDL's evdev
+// console keyboard code (KMSDRM) installs its own SIGSEGV/SIGILL/SIGBUS handlers
+// whenever it mutes a keyboard: they restore the console, reinstate the previous
+// handler and re-raise with raise(), so ours only sees the raise() context and
+// JIT recovery fails. Reinstall ours on top after SDL init and keyboard hotplug.
+// Unhandled faults still restore the console: signal_segv() calls SDL_Quit().
+bool install_fault_signal_handlers()
+{
+#if defined(CPU_arm) && !defined(_WIN32)
+	return install_fault_signal_handler(SIGSEGV, "SIGSEGV", signal_segv)
+		&& install_fault_signal_handler(SIGILL, "SIGILL", signal_segv)
+		&& install_fault_signal_handler(SIGBUS, "SIGBUS", signal_buserror);
+#else
+	return true;
+#endif
+}
+
 extern void set_last_active_config(const char* filename);
 
 std::string home_dir;
@@ -4181,6 +4222,10 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_EVENT_JOYSTICK_ADDED:
 			handle_joy_device_event(event.jdevice.which, false);
+			break;
+
+		case SDL_EVENT_KEYBOARD_ADDED:
+			install_fault_signal_handlers();
 			break;
 
 		case SDL_EVENT_JOYSTICK_REMOVED:
@@ -12550,30 +12595,8 @@ int amiberry_main(int argc, char* argv[])
 	logging_init();
 	rp9_init();
 #if defined (CPU_arm) && !defined (_WIN32)
-	memset(&action, 0, sizeof action);
-	action.sa_sigaction = signal_segv;
-	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGSEGV, &action, nullptr) < 0)
+	if (!install_fault_signal_handlers())
 	{
-		write_log("Failed to set signal handler (SIGSEGV).\n");
-#ifndef __ANDROID__
-		abort();
-#endif
-	}
-	if (sigaction(SIGILL, &action, nullptr) < 0)
-	{
-		write_log("Failed to set signal handler (SIGILL).\n");
-#ifndef __ANDROID__
-		abort();
-#endif
-	}
-
-	memset(&action, 0, sizeof action);
-	action.sa_sigaction = signal_buserror;
-	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGBUS, &action, nullptr) < 0)
-	{
-		write_log("Failed to set signal handler (SIGBUS).\n");
 #ifndef __ANDROID__
 		abort();
 #endif
@@ -12599,6 +12622,7 @@ int amiberry_main(int argc, char* argv[])
 	
 	if (!osdep_platform_init_sdl())
 		abort();
+	install_fault_signal_handlers();
 
 	initialize_ini();
 	initialize_legacy_cleanup_prompt_state();
