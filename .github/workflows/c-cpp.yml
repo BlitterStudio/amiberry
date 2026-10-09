@@ -375,7 +375,7 @@ jobs:
                 fi
               done < <(
                 otool -arch "$arch" -L "$binary" 2>/dev/null |
-                grep '@executable_path/../Frameworks/' || true
+                grep -E '@rpath/|@executable_path/../Frameworks/' || true
               )
 
               if otool -arch "$arch" -L "$binary" 2>/dev/null |

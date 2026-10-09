@@ -10,12 +10,10 @@ set(_frameworks_rpath "@executable_path/../Frameworks/")
 
 # Derive the application bundle from the main executable so that the same
 # cleanup can be applied to bundled Frameworks and plugins.
-get_filename_component(_app_contents_dir "${APP_BINARY}" DIRECTORY)
-get_filename_component(_app_macos_dir "${_app_contents_dir}" DIRECTORY)
-get_filename_component(_app_bundle_dir "${_app_macos_dir}" DIRECTORY)
+get_filename_component(_app_macos_contents_dir "${APP_BINARY}" DIRECTORY)
 
-set(_frameworks_dir "${_app_contents_dir}/../Frameworks")
-set(_plugins_dir "${_app_contents_dir}/../Resources/plugins")
+set(_frameworks_dir "${_app_macos_contents_dir}/../Frameworks")
+set(_plugins_dir "${_app_macos_contents_dir}/../Resources/plugins")
 
 # Remove every occurrence of a particular RPATH. Do not assume that there
 # are only two or three entries. A dylib can contain an arbitrary number of

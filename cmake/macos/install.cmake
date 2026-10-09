@@ -29,17 +29,39 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>)
 
 # Search paths used by dylibbundler.
+# Split out depending on if arm or x86 and homebrew or MacPorts to not co-mingle 
 # /opt/local/lib is the MacPorts location.
-set(_amiberry_dylibbundler_search_args
-        -s /usr/local/lib
-        -s /usr/local/opt/glib/lib
-        -s /usr/local/opt/gettext/lib
-        -s /usr/local/opt/pcre2/lib
-        -s /opt/homebrew/lib
-        -s /opt/homebrew/opt/glib/lib
-        -s /opt/homebrew/opt/gettext/lib
-        -s /opt/homebrew/opt/pcre2/lib
-        -s /opt/local/lib)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    if(EXISTS "/opt/homebrew")
+        # Apple Silicon: prefer Homebrew.
+        set(_amiberry_dylibbundler_search_args
+            -s /opt/homebrew/lib
+            -s /opt/homebrew/opt/glib/lib
+            -s /opt/homebrew/opt/gettext/lib
+            -s /opt/homebrew/opt/pcre2/lib)
+    elseif(EXISTS "/opt/local")
+        # Apple Silicon: fall back to MacPorts.
+        set(_amiberry_dylibbundler_search_args
+            -s /opt/local/lib)
+    else()
+        set(_amiberry_dylibbundler_search_args)
+    endif()
+else()
+    # Intel Macs.
+    if(EXISTS "/usr/local")
+        set(_amiberry_dylibbundler_search_args
+            -s /usr/local/lib
+            -s /usr/local/opt/glib/lib
+            -s /usr/local/opt/gettext/lib
+            -s /usr/local/opt/pcre2/lib)
+    elseif(EXISTS "/opt/local")
+        set(_amiberry_dylibbundler_search_args
+            -s /opt/local/lib)
+    else()
+        set(_amiberry_dylibbundler_search_args)
+    endif()
+endif()
 
 if(QEMU_UAE_PLUGIN)
     get_filename_component(_amiberry_qemu_uae_plugin_name "${QEMU_UAE_PLUGIN}" NAME)
