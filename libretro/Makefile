@@ -743,18 +743,12 @@ $(NLOHMANN_JSON_HEADER):
 $(TARGET): $(OBJECTS)
 	$(CXX) $(INCFLAGS) $(FLAGS) -o $@ $^ $(LDFLAGS)
 
-$(LIBRETRO_INFO): $(LIBRETRO_DIR)/libretro.cpp $(AMIBERRY_DIR)/CMakeLists.txt
-	@printf 'display_name = "Amiberry"\n' > $@
-	@printf 'authors = "Amiberry Team"\n' >> $@
-	@printf 'supported_extensions = "%s"\n' "$(LIBRETRO_SUPPORTED_EXTENSIONS)" >> $@
-	@printf 'corename = "Amiberry"\n' >> $@
-	@printf 'categories = "Emulator"\n' >> $@
-	@printf 'license = "GPLv3"\n' >> $@
-	@printf 'permissions = "Content loading"\n' >> $@
-	@printf 'display_version = "v%s"\n' "$(AMIBERRY_VERSION)" >> $@
-	@printf 'supports_no_game = "true"\n' >> $@
-	@printf 'database = "Commodore - Amiga"\n' >> $@
-	@printf 'notes = "Requires Kickstart ROM files in the frontend system directory."\n' >> $@
+# Canonical core info entry: whenever it changes, submit the generated file to
+# libretro/libretro-super as dist/info/amiberry_libretro.info.
+# libretro/libretro-core-info only mirrors that copy.
+$(LIBRETRO_INFO): $(LIBRETRO_DIR)/amiberry_libretro.info.in $(LIBRETRO_DIR)/libretro.cpp $(AMIBERRY_DIR)/CMakeLists.txt
+	sed -e 's/@SUPPORTED_EXTENSIONS@/$(LIBRETRO_SUPPORTED_EXTENSIONS)/' \
+		-e 's/@VERSION@/$(AMIBERRY_VERSION)/' $< > $@
 
 %.o: %.cpp | $(NLOHMANN_JSON_HEADER)
 	$(CXX) $(INCFLAGS) $(FLAGS) -std=gnu++17 -c -o $@ $<
