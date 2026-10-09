@@ -743,8 +743,9 @@ $(NLOHMANN_JSON_HEADER):
 $(TARGET): $(OBJECTS)
 	$(CXX) $(INCFLAGS) $(FLAGS) -o $@ $^ $(LDFLAGS)
 
-# Canonical libretro-core-info entry: submit the generated file to
-# libretro/libretro-core-info whenever it changes.
+# Canonical core info entry: whenever it changes, submit the generated file to
+# libretro/libretro-super as dist/info/amiberry_libretro.info.
+# libretro/libretro-core-info only mirrors that copy.
 $(LIBRETRO_INFO): $(LIBRETRO_DIR)/amiberry_libretro.info.in $(LIBRETRO_DIR)/libretro.cpp $(AMIBERRY_DIR)/CMakeLists.txt
 	sed -e 's/@SUPPORTED_EXTENSIONS@/$(LIBRETRO_SUPPORTED_EXTENSIONS)/' \
 		-e 's/@VERSION@/$(AMIBERRY_VERSION)/' $< > $@
