@@ -1606,12 +1606,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				add_file_to_mru_list(lstMRUCDList, std::string(txt));
 				cd_auto_prefs(&currprefs, txt);
 			}
-			else if (_tcscmp(txt2.c_str(), ".adf") == 0
-				|| _tcscmp(txt2.c_str(), ".adz") == 0
-				|| _tcscmp(txt2.c_str(), ".dms") == 0
-				|| _tcscmp(txt2.c_str(), ".ipf") == 0
-				|| _tcscmp(txt2.c_str(), ".zip") == 0
-				|| _tcscmp(txt2.c_str(), ".7z") == 0
+			else if (_tcsicmp(txt2.c_str(), ".adf") == 0
+				|| _tcsicmp(txt2.c_str(), ".adz") == 0
+				|| _tcsicmp(txt2.c_str(), ".dms") == 0
+				|| _tcsicmp(txt2.c_str(), ".ipf") == 0
+				|| _tcsicmp(txt2.c_str(), ".zip") == 0
+				|| _tcsicmp(txt2.c_str(), ".7z") == 0
 				)
 			{
 				write_log("Floppy... %s\n", txt);
@@ -1679,9 +1679,17 @@ static void parse_cmdline (int argc, TCHAR **argv)
 						savestate_state = STATE_DORESTORE;
 						_tcscpy(savestate_fname, txt);
 					}
+					else if (type == ZFILE_DISKIMAGE) {
+						// A floppy image the extension list above does not
+						// name (.scp, .fdi, an extensionless ADF, ...).
+						write_log("Floppy... %s\n", txt);
+						cmdline_config_source[0] = 0;
+						disk_insert(0, txt);
+						set_last_active_config_from_media(txt);
+						currprefs.start_gui = false;
+					}
 					else {
-						// Openable media of another type (a disk image with
-						// an unexpected extension, etc.) is not a
+						// Openable media of another type is not a
 						// configuration source either.
 						cmdline_config_source[0] = 0;
 					}
