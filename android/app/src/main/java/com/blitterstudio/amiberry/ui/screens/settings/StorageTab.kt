@@ -56,6 +56,8 @@ import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.ui.ImportInFlightGuard
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.rememberImportInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -262,9 +264,12 @@ fun StorageTab(
 					Spacer(modifier = Modifier.height(8.dp))
 				}
 
-				TextButton(onClick = {
-					viewModel.updateSettings { s -> s.copy(hardDrives = s.hardDrives + HardDrive(path = "")) }
-				}) {
+				TextButton(
+					onClick = {
+						viewModel.updateSettings { s -> s.copy(hardDrives = s.hardDrives + HardDrive(path = "")) }
+					},
+					modifier = Modifier.dpadFocusIndicator()
+				) {
 					Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
 					Spacer(modifier = Modifier.width(4.dp))
 					Text(stringResource(R.string.settings_storage_add_hard_drive))
@@ -307,6 +312,7 @@ private fun FileDropdown(
 				label = { Text(label) },
 				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 				modifier = Modifier
+					.dpadVerticalMovesFocus()
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 					.fillMaxWidth()
 			)
@@ -333,7 +339,10 @@ private fun FileDropdown(
 			}
 		}
 		if (selectedPath.isNotEmpty()) {
-			IconButton(onClick = onClear) {
+			IconButton(
+				onClick = onClear,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
 				Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject_named, selectedName))
 			}
 		}
@@ -383,6 +392,7 @@ private fun FloppyDriveRow(
 				label = { Text(stringResource(R.string.settings_storage_type_label)) },
 				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
 				modifier = Modifier
+					.dpadVerticalMovesFocus()
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 					.fillMaxWidth()
 			)
@@ -430,7 +440,11 @@ private fun FloppyDriveRow(
 					}
 				}
 			}
-			TextButton(onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES)) }, enabled = !importInProgress) {
+			TextButton(
+				onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES)) },
+				enabled = !importInProgress,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
 				if (importInProgress) {
 					CircularProgressIndicator(
 						modifier = Modifier.size(16.dp),
@@ -478,7 +492,10 @@ private fun HardDriveRow(
 				style = MaterialTheme.typography.labelMedium,
 				modifier = Modifier.weight(1f)
 			)
-			IconButton(onClick = onRemove) {
+			IconButton(
+				onClick = onRemove,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
 				Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.settings_storage_remove_hard_drive))
 			}
 		}
@@ -510,7 +527,8 @@ private fun HardDriveRow(
 		}
 		TextButton(
 			onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES)) },
-			enabled = !importInProgress
+			enabled = !importInProgress,
+			modifier = Modifier.dpadFocusIndicator()
 		) {
 			if (importInProgress) {
 				CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)

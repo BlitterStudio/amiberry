@@ -17,7 +17,7 @@ class QuickStartUiStateTest {
 			floppy0 = "/media/Workbench.adf",
 			floppy1 = "/media/Extras.adf",
 			onScreenJoystick = false,
-			onScreenKeyboard = true
+			onScreenKeyboardButton = true
 		)
 
 		val summary = QuickStartUiState.buildEffectiveSummary(

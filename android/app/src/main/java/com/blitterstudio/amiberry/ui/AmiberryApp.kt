@@ -84,12 +84,19 @@ fun AmiberryApp() {
 					}
 				},
 				dismissButton = {
-					TextButton(onClick = { activity.copyAssetExtractionFailureDetailsToClipboard() }) {
+					TextButton(
+						onClick = { activity.copyAssetExtractionFailureDetailsToClipboard() },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(stringResource(R.string.asset_extraction_copy_details))
 					}
 				},
 				confirmButton = {
-					TextButton(onClick = { activity.retryAssetExtraction() }, enabled = !assetExtractionInProgress) {
+					TextButton(
+						onClick = { activity.retryAssetExtraction() },
+						enabled = !assetExtractionInProgress,
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(
 							stringResource(
 								if (assetExtractionInProgress) R.string.action_retrying else R.string.action_retry
@@ -114,12 +121,18 @@ fun AmiberryApp() {
 					}
 				},
 				dismissButton = {
-					TextButton(onClick = { activity.copyCrashDiagnosticsToClipboard() }) {
+					TextButton(
+						onClick = { activity.copyCrashDiagnosticsToClipboard() },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(stringResource(R.string.crash_dialog_copy_diagnostics))
 					}
 				},
 				confirmButton = {
-					TextButton(onClick = { activity.clearCrashFlag() }) {
+					TextButton(
+						onClick = { activity.clearCrashFlag() },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(stringResource(R.string.crash_dialog_dismiss))
 					}
 				}
@@ -199,35 +212,44 @@ fun AmiberryApp() {
 			title = { Text(stringResource(R.string.dialog_unsaved_changes_title)) },
 			text = { Text(stringResource(R.string.dialog_unsaved_changes_message, configName)) },
 			confirmButton = {
-				TextButton(onClick = {
-					navScope.launch {
-						val result = settingsViewModel.saveTracked()
-						if (result is ConfigurationSaveActions.SaveResult.Saved) {
-							pendingNavigation = null
-							proceed()
-						} else {
-							pendingNavigation = null
-							Toast.makeText(
-								context,
-								context.getString(R.string.msg_failed_save_config),
-								Toast.LENGTH_SHORT
-							).show()
+				TextButton(
+					onClick = {
+						navScope.launch {
+							val result = settingsViewModel.saveTracked()
+							if (result is ConfigurationSaveActions.SaveResult.Saved) {
+								pendingNavigation = null
+								proceed()
+							} else {
+								pendingNavigation = null
+								Toast.makeText(
+									context,
+									context.getString(R.string.msg_failed_save_config),
+									Toast.LENGTH_SHORT
+								).show()
+							}
 						}
-					}
-				}) {
+					},
+					modifier = Modifier.dpadFocusIndicator()
+				) {
 					Text(stringResource(R.string.action_save))
 				}
 			},
 			dismissButton = {
 				Row {
-					TextButton(onClick = {
-						settingsViewModel.discardChanges()
-						pendingNavigation = null
-						proceed()
-					}) {
+					TextButton(
+						onClick = {
+							settingsViewModel.discardChanges()
+							pendingNavigation = null
+							proceed()
+						},
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(stringResource(R.string.action_discard))
 					}
-					TextButton(onClick = { pendingNavigation = null }) {
+					TextButton(
+						onClick = { pendingNavigation = null },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(stringResource(R.string.action_cancel))
 					}
 				}
@@ -244,7 +266,8 @@ fun AmiberryApp() {
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
 							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-						onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } }
+						onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
+						modifier = Modifier.dpadFocusIndicator()
 					)
 				}
 			}
@@ -262,7 +285,8 @@ fun AmiberryApp() {
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
 							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-							onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } }
+							onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
+							modifier = Modifier.dpadFocusIndicator()
 						)
 					}
 				}

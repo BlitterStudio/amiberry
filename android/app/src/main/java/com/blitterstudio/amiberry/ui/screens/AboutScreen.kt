@@ -53,6 +53,7 @@ import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AboutActions
 import com.blitterstudio.amiberry.data.AboutSupportInfo
 import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.hasFullStorageAccess
 import kotlinx.coroutines.launch
 
@@ -100,7 +101,10 @@ fun AboutScreen(onBack: () -> Unit) {
 			TopAppBar(
 				title = { Text(stringResource(R.string.about_title)) },
 				navigationIcon = {
-					IconButton(onClick = onBack) {
+					IconButton(
+						onClick = onBack,
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Icon(
 							Icons.AutoMirrored.Filled.ArrowBack,
 							contentDescription = stringResource(R.string.action_back)
@@ -189,7 +193,8 @@ fun AboutScreen(onBack: () -> Unit) {
 								ClipData.newPlainText(context.getString(R.string.about_support_title), supportInfo)
 							)
 							scope.launch { snackbarHostState.showSnackbar(supportInfoCopiedMessage) }
-						}
+						},
+						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.about_copy_support_info))
 					}
@@ -255,7 +260,7 @@ private fun openExternalLink(context: Context, url: String, onFailure: () -> Uni
 private fun LinkRow(icon: ImageVector, text: String, onClick: () -> Unit) {
 	TextButton(
 		onClick = onClick,
-		modifier = Modifier.fillMaxWidth()
+		modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 	) {
 		Row(
 			modifier = Modifier.fillMaxWidth(),

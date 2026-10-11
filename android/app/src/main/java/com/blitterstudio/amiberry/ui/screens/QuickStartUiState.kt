@@ -104,9 +104,9 @@ object QuickStartUiState {
 
 	private fun buildControlsSummary(settings: EmulatorSettings): String {
 		return when {
-			settings.onScreenJoystick && settings.onScreenKeyboard -> "On-screen joystick and keyboard"
+			settings.onScreenJoystick && settings.onScreenKeyboardAvailable -> "On-screen joystick and keyboard"
 			settings.onScreenJoystick -> "On-screen joystick"
-			settings.onScreenKeyboard -> "On-screen keyboard"
+			settings.onScreenKeyboardAvailable -> "On-screen keyboard"
 			else -> "Physical controls only"
 		}
 	}

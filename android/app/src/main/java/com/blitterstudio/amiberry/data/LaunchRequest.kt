@@ -102,7 +102,7 @@ sealed interface LaunchRequest {
 		val joyport0: String,
 		val joyport1: String,
 		val onScreenJoystick: Boolean,
-		val onScreenKeyboard: Boolean,
+		val onScreenKeyboardButton: Boolean,
 		val onScreenKeyboardNumpad: Boolean = false,
 		val onScreenKeyboardToggle: String? = null,
 		val joyport0MouseMap: Boolean = false,
@@ -114,12 +114,16 @@ sealed interface LaunchRequest {
 			if (joyport1 != "onscreen_joy") {
 				args.addAll(listOf("-s", "joyport1=$joyport1"))
 			}
+			val keyboardAvailable = EmulatorSettings.onScreenKeyboardAvailable(
+				onScreenKeyboardButton, onScreenKeyboardToggle
+			).toCfg()
 			args.addAll(
 				listOf(
 					"-s", "amiberry.onscreen_joystick=${onScreenJoystick.toCfg()}",
-					"-s", "amiberry.vkbd_enabled=${onScreenKeyboard.toCfg()}",
+					"-s", "amiberry.vkbd_enabled=$keyboardAvailable",
+					"-s", "amiberry.vkbd_touch_button=${onScreenKeyboardButton.toCfg()}",
 					"-s", "amiberry.vkbd_numpad=${onScreenKeyboardNumpad.toCfg()}",
-					"-s", "input.default_osk=${onScreenKeyboard.toCfg()}"
+					"-s", "input.default_osk=$keyboardAvailable"
 				)
 			)
 		// null = "emulator default": emit the explicit reset sentinel so a
@@ -146,7 +150,7 @@ sealed interface LaunchRequest {
 					joyport0 = settings.joyport0,
 					joyport1 = settings.joyport1,
 					onScreenJoystick = settings.onScreenJoystick,
-					onScreenKeyboard = settings.onScreenKeyboard,
+					onScreenKeyboardButton = settings.onScreenKeyboardButton,
 					onScreenKeyboardNumpad = settings.onScreenKeyboardNumpad,
 					onScreenKeyboardToggle = settings.onScreenKeyboardToggle,
 					joyport0MouseMap = settings.joyport0MouseMap,

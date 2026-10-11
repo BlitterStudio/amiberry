@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <array>
 #include <nlohmann/json.hpp>
+#include <cfloat>
 #include <SDL3_image/SDL_image.h>
 #include <dpi_handler.hpp>
 #include <unordered_map>
@@ -81,6 +82,10 @@ static bool touch_scrolling = false;
 static bool touch_scroll_on_widget = false;  // true when finger-down landed on an active ImGui widget (e.g. scrollbar)
 static float touch_scroll_accum = 0.0f;
 static SDL_FingerID touch_scroll_finger = 0;
+#if defined(__ANDROID__) && defined(USE_IMGUI)
+// SDL leaves its synthesized touch mouse at the last contact position after release.
+static bool clear_touch_hover_next_frame = false;
+#endif
 
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
@@ -2075,8 +2080,24 @@ void run_gui()
 				continue;
 			}
 
+#ifdef __ANDROID__
+			// SDL sends no motion for a second tap on the same spot, so restore
+			// the position that was cleared after the previous touch release.
+			if (gui_event.type == SDL_EVENT_MOUSE_BUTTON_DOWN
+				&& gui_event.button.which == SDL_TOUCH_MOUSEID)
+				ImGui::GetIO().AddMousePosEvent(gui_event.button.x, gui_event.button.y);
+#endif
+
 			// Make sure ImGui sees all unconsumed events
 			ImGui_ImplSDL3_ProcessEvent(&gui_event);
+
+#ifdef __ANDROID__
+			if ((gui_event.type == SDL_EVENT_MOUSE_BUTTON_UP
+				&& gui_event.button.which == SDL_TOUCH_MOUSEID)
+				|| gui_event.type == SDL_EVENT_FINGER_UP
+				|| gui_event.type == SDL_EVENT_FINGER_CANCELED)
+				clear_touch_hover_next_frame = true;
+#endif
 
 			if (gui_event.type == SDL_EVENT_QUIT)	{
 				uae_quit();
@@ -2254,6 +2275,15 @@ void run_gui()
 		apply_pending_font_rebuild();
 
 		ImGui::NewFrame();
+
+#ifdef __ANDROID__
+		// Queue the leave after this frame has consumed the touch release, so the
+		// click still activates its target before its hover state is cleared.
+		if (clear_touch_hover_next_frame) {
+			ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+			clear_touch_hover_next_frame = false;
+		}
+#endif
 
 		// Update GUI window title with config name and dirty indicator
 		update_gui_window_title(mon->gui_window);

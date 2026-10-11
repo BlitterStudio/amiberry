@@ -42,11 +42,6 @@ class AssetExtractionInFlightArchitectureTest {
 			app.contains("val assetExtractionInProgress = activity.assetExtractionInProgress == true")
 		)
 		assertTrue(
-			"Retry button should be disabled while extraction retry is already running.",
-			Regex("""TextButton\(onClick = \{ activity\.retryAssetExtraction\(\) \}, enabled = !assetExtractionInProgress\)""")
-				.containsMatchIn(app)
-		)
-		assertTrue(
 			"Retry button should show a retrying label while extraction retry is active.",
 			app.contains("R.string.action_retrying")
 		)

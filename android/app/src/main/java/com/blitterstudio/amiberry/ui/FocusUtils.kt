@@ -23,9 +23,16 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 
 /**
@@ -166,4 +173,20 @@ fun Modifier.dpadFocusIndicator(): Modifier = composed {
 			color = borderColor,
 			shape = RoundedCornerShape(12.dp)
 		)
+}
+
+/**
+ * Read-only dropdown anchors (ExposedDropdownMenuBox text fields) consume
+ * D-pad Up/Down, trapping TV focus. Move focus to the neighbouring control instead.
+ */
+fun Modifier.dpadVerticalMovesFocus(): Modifier = composed {
+	val focusManager = LocalFocusManager.current
+	this.onPreviewKeyEvent { event ->
+		if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+		when (event.key) {
+			Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+			Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+			else -> false
+		}
+	}
 }

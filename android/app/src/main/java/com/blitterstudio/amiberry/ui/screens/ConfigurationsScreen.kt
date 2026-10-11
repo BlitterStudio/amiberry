@@ -129,7 +129,10 @@ fun ConfigurationsScreen(
 			TopAppBar(
 				title = { Text(stringResource(R.string.configurations_title)) },
 				actions = {
-					IconButton(onClick = { viewModel.refresh() }) {
+					IconButton(
+						onClick = { viewModel.refresh() },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Icon(
 							Icons.Default.Refresh,
 							contentDescription = stringResource(R.string.configurations_refresh)
@@ -157,7 +160,10 @@ fun ConfigurationsScreen(
 							color = MaterialTheme.colorScheme.onSurfaceVariant
 						)
 						Spacer(modifier = Modifier.height(24.dp))
-						Button(onClick = { navController.switchToTab(Screen.Settings.route) }) {
+						Button(
+							onClick = { navController.switchToTab(Screen.Settings.route) },
+							modifier = Modifier.dpadFocusIndicator()
+						) {
 							Text(stringResource(R.string.configurations_empty_cta))
 						}
 				}
@@ -323,7 +329,10 @@ private fun ConfigurationSearchControls(
 			leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
 			trailingIcon = {
 				if (query.isNotBlank()) {
-					IconButton(onClick = onClearSearch) {
+					IconButton(
+						onClick = onClearSearch,
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear_search))
 					}
 				}
@@ -364,14 +373,14 @@ private fun ConfigurationFilterButton(
 	if (filter == selectedFilter) {
 		Button(
 			onClick = { onFilterSelected(filter) },
-			modifier = modifier
+			modifier = modifier.dpadFocusIndicator()
 		) {
 			Text(stringResource(filter.labelRes()))
 		}
 	} else {
 		OutlinedButton(
 			onClick = { onFilterSelected(filter) },
-			modifier = modifier
+			modifier = modifier.dpadFocusIndicator()
 		) {
 			Text(stringResource(filter.labelRes()))
 		}
@@ -438,7 +447,11 @@ private fun ConfigItem(
 				modifier = Modifier.wrapContentWidth(),
 				verticalAlignment = Alignment.CenterVertically
 			) {
-				IconButton(onClick = onLaunch, enabled = !launchInProgress) {
+				IconButton(
+					onClick = onLaunch,
+					enabled = !launchInProgress,
+					modifier = Modifier.dpadFocusIndicator()
+				) {
 						if (launchInProgress) {
 							CircularProgressIndicator(
 								modifier = Modifier.size(20.dp),
@@ -452,7 +465,10 @@ private fun ConfigItem(
 							)
 						}
 					}
-					IconButton(onClick = onLoad) {
+					IconButton(
+						onClick = onLoad,
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Icon(
 							Icons.Default.Edit,
 							contentDescription = stringResource(R.string.action_edit_named, config.name),
@@ -462,7 +478,10 @@ private fun ConfigItem(
 
 				// More options button (D-pad accessible alternative to long-press)
 				Box {
-						IconButton(onClick = { showMenu = true }) {
+						IconButton(
+							onClick = { showMenu = true },
+							modifier = Modifier.dpadFocusIndicator()
+						) {
 							Icon(
 								Icons.Default.MoreVert,
 								contentDescription = stringResource(R.string.action_more_for_named, config.name),
@@ -528,12 +547,15 @@ private fun ConfigItem(
 					TextButton(onClick = {
 						onDelete()
 						showDeleteDialog = false
-					}) {
+					}, modifier = Modifier.dpadFocusIndicator()) {
 						Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
 					}
 				},
 				dismissButton = {
-					TextButton(onClick = { showDeleteDialog = false }) {
+					TextButton(
+						onClick = { showDeleteDialog = false },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Text(stringResource(R.string.action_cancel))
 					}
 				}

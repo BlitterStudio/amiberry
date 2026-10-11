@@ -31,6 +31,10 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event);
 bool on_screen_joystick_is_enabled();
 void on_screen_joystick_set_enabled(bool enabled);
 
+// Advance the emulated frame clock before processing host input for that frame.
+// Deferred short-touch releases are delivered on this boundary.
+void on_screen_joystick_advance_frame();
+
 // Release all active touch-control state without changing the enabled setting.
 void on_screen_joystick_release_all();
 

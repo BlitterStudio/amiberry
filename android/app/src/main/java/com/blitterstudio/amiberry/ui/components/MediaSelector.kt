@@ -37,6 +37,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 
 /**
  * Reusable media selector component for floppy disks, CDs, WHDLoad games, etc.
@@ -91,7 +93,11 @@ fun MediaSelector(
 					Spacer(modifier = Modifier.width(8.dp))
 					Text(title, style = MaterialTheme.typography.titleMedium)
 				}
-				TextButton(onClick = onImport, enabled = !importInProgress) {
+				TextButton(
+					onClick = onImport,
+					enabled = !importInProgress,
+					modifier = Modifier.dpadFocusIndicator()
+				) {
 					if (importInProgress) {
 						CircularProgressIndicator(
 							modifier = Modifier.size(16.dp),
@@ -142,6 +148,7 @@ fun MediaSelector(
 							readOnly = true,
 							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 							modifier = Modifier
+								.dpadVerticalMovesFocus()
 								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 								.fillMaxWidth()
 						)
@@ -171,7 +178,10 @@ fun MediaSelector(
 					}
 
 					if (selectedPath.isNotBlank()) {
-						IconButton(onClick = onEject) {
+						IconButton(
+							onClick = onEject,
+							modifier = Modifier.dpadFocusIndicator()
+						) {
 							Icon(
 								Icons.Default.Eject,
 								contentDescription = stringResource(R.string.action_eject_named, title)
