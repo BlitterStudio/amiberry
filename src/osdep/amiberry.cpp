@@ -4463,8 +4463,16 @@ int handle_msgpump(bool vblank)
 	 * every frame, so skipping it on any other thread is safe. */
 	if (!is_mainthread())
 		return 0;
-	if (vblank)
-		on_screen_joystick_advance_frame();
+	if (vblank) {
+		// inputdevice_read_msg() calls this repeatedly in one vblank until the
+		// event queue is drained; advance the latch clock once per frame so a
+		// release deferred by the first call is not delivered by the next one.
+		static uae_u32 osj_latch_vsync = ~0u;
+		if (vsync_counter != osj_latch_vsync) {
+			osj_latch_vsync = vsync_counter;
+			on_screen_joystick_advance_frame();
+		}
+	}
 #if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	flush_macos_synthetic_mouse_releases();
 #endif
