@@ -193,7 +193,7 @@ class WhdLoadAutoConfigTest {
 				""".trimIndent(),
 				lhaFile = lha,
 				availableRoms = listOf(rom("kick40-a600.rom", 0x43b0df7bL)),
-				currentSettings = EmulatorSettings(onScreenKeyboard = false)
+				currentSettings = EmulatorSettings(onScreenKeyboardButton = false)
 			)
 		)
 
@@ -203,7 +203,7 @@ class WhdLoadAutoConfigTest {
 		assertEquals(8, detected.fastRam)
 		assertTrue(detected.autoCrop)
 		assertTrue(detected.cycleExact)
-		assertFalse(detected.onScreenKeyboard)
+		assertFalse(detected.onScreenKeyboardButton)
 	}
 
 	@Test

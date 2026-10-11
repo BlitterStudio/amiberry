@@ -17,7 +17,7 @@ class AndroidControlSettingsTest {
 				joyport0 = "joy0",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
-				onScreenKeyboard = false,
+				onScreenKeyboardButton = false,
 				onScreenKeyboardNumpad = true
 			)
 		)
@@ -25,7 +25,7 @@ class AndroidControlSettingsTest {
 		assertEquals("joy0", settings.joyport0)
 		assertEquals("joy1", settings.joyport1)
 		assertFalse(settings.onScreenJoystick)
-		assertFalse(settings.onScreenKeyboard)
+		assertFalse(settings.onScreenKeyboardButton)
 		assertTrue(settings.onScreenKeyboardNumpad)
 	}
 
@@ -36,7 +36,7 @@ class AndroidControlSettingsTest {
 				joyport0 = "mouse",
 				joyport1 = "onscreen_joy",
 				onScreenJoystick = true,
-				onScreenKeyboard = true,
+				onScreenKeyboardButton = true,
 				onScreenKeyboardNumpad = true
 			),
 			explicitKeys = setOf(
@@ -50,14 +50,14 @@ class AndroidControlSettingsTest {
 				joyport0 = "joy0",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
-				onScreenKeyboard = false
+				onScreenKeyboardButton = false
 			)
 		)
 
 		assertEquals("mouse", settings.joyport0)
 		assertEquals("onscreen_joy", settings.joyport1)
 		assertTrue(settings.onScreenJoystick)
-		assertTrue(settings.onScreenKeyboard)
+		assertTrue(settings.onScreenKeyboardButton)
 		assertTrue(settings.onScreenKeyboardNumpad)
 	}
 

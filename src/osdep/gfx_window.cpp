@@ -280,6 +280,31 @@ void update_gfxparams(struct AmigaMonitor* mon)
 
 }
 
+static void format_window_title(const AmigaMonitor* mon, TCHAR* title, const size_t size)
+{
+	if (mon->monitor_id > 0)
+		_sntprintf(title, size, _T("Amiberry [%d]"), mon->monitor_id + 1);
+	else if (last_active_config[0])
+		_sntprintf(title, size, _T("Amiberry - [%s]"), last_active_config);
+	else
+		_sntprintf(title, size, _T("Amiberry"));
+	title[size - 1] = 0;
+}
+
+// The window title is fixed at creation, but a window survives config switches
+// whose display settings don't require recreating it (#2406).
+void refreshtitle()
+{
+	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+		const AmigaMonitor* mon = &AMonitors[i];
+		if (!mon->amiga_window)
+			continue;
+		TCHAR wintitle[256];
+		format_window_title(mon, wintitle, sizeof wintitle / sizeof(TCHAR));
+		gfx_platform_set_window_title(mon->amiga_window, wintitle);
+	}
+}
+
 int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 {
 	// Skip window creation entirely if headless mode
@@ -678,6 +703,13 @@ static int create_windows(struct AmigaMonitor* mon)
 		}
 	}
 
+#ifdef __ANDROID__
+	// Android windows have no non-client area. Keeping desktop frame deltas
+	// across a rotation makes the resized surface look smaller than zero.
+	mon->window_extra_width = 0;
+	mon->window_extra_height = 0;
+#endif
+
 	if (mon->amiga_window) {
 		SDL_Rect r;
 		int nw, nh, nx, ny;
@@ -900,12 +932,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= renderer_to_use->get_window_flags();
 	}
 	TCHAR wintitle[256];
-	if (mon->monitor_id > 0)
-		_sntprintf(wintitle, sizeof wintitle / sizeof(TCHAR), _T("Amiberry [%d]"), mon->monitor_id + 1);
-	else if (last_active_config[0])
-		_sntprintf(wintitle, sizeof wintitle / sizeof(TCHAR), _T("Amiberry - [%s]"), last_active_config);
-	else
-		_tcscpy(wintitle, _T("Amiberry"));
+	format_window_title(mon, wintitle, sizeof wintitle / sizeof(TCHAR));
 	mon->amiga_window = SDL_CreateWindow(wintitle,
 		rc.w, rc.h,
 		flags);
@@ -926,12 +953,19 @@ static int create_windows(struct AmigaMonitor* mon)
 		SDL_SyncWindow(mon->amiga_window);
 	}
 
+#ifdef __ANDROID__
+	// The Android activity surface is the client area; do not derive frame
+	// insets from transient rotation dimensions.
+	mon->window_extra_width = 0;
+	mon->window_extra_height = 0;
+#else
 	SDL_Rect rc2;
 	GetWindowRect(mon->amiga_window, &rc2);
-	int expected_client_width = mon->currentmode.current_width;
-	int expected_client_height = mon->currentmode.current_height;
+	const int expected_client_width = mon->currentmode.current_width;
+	const int expected_client_height = mon->currentmode.current_height;
 	mon->window_extra_width = rc2.w - expected_client_width;
 	mon->window_extra_height = rc2.h - expected_client_height;
+#endif
 
 	w = mon->currentmode.native_width;
 	h = mon->currentmode.native_height;

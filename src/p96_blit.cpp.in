@@ -66,6 +66,7 @@ static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u
 		}
 	}
 }
+#ifdef BLT_NAME_TRANS
 static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src, uae_u8 *dst, int srcpitch, int dstpitch, uae_u32 transparentcolor, uae_u32 rgbmask)
 {
 	uae_u8 *src2 = src;
@@ -144,6 +145,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 		}
 	}
 }
+#endif
 #else
 static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u8 *dst, int srcpitch, int dstpitch, uae_u32 rgbmask)
 {
@@ -323,6 +325,7 @@ static void NOINLINE BLT_NAME(unsigned int w, unsigned int h, uae_u8 *src, uae_u
 		}
 	}
 }
+#ifdef BLT_NAME_TRANS
 static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src, uae_u8 *dst, int srcpitch, int dstpitch, uae_u32 transparentcolor, uae_u32 rgbmask)
 {
 	uae_u8 *src2 = src;
@@ -344,7 +347,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			for (x = 0; x < w; x++) {
 				dst_16--;
 				src_16--;
-				if ((*src_16 & rgbmask) != ((uae_u16)transparentcolor & rgbmask)) {
+				if ((*src_16 & rgbmask) != (uae_u16)transparentcolor) {
 					BLT_FUNC(src_16, dst_16);
 				}
 			}
@@ -364,7 +367,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			for (x = 0; x < w; x++) {
 				src_32--;
 				dst_32--;
-				if ((*src_32 & rgbmask) != (transparentcolor & rgbmask)) {
+				if ((*src_32 & rgbmask) != transparentcolor) {
 					BLT_FUNC(src_32, dst_32);
 				}
 			}
@@ -376,7 +379,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 			uae_u16 *src_16 = (uae_u16 *)src2;
 			uae_u16 *dst_16 = (uae_u16 *)dst2;
 			for (x = 0; x < w; x++) {
-				if ((*src_16 & rgbmask) != ((uae_u16)transparentcolor & rgbmask)) {
+				if ((*src_16 & rgbmask) != (uae_u16)transparentcolor) {
 					BLT_FUNC(src_16, dst_16);
 				}
 				dst_16++;
@@ -408,6 +411,7 @@ static void NOINLINE BLT_NAME_TRANS(unsigned int w, unsigned int h, uae_u8 *src,
 		}
 	}
 }
+#endif
 #endif
 
 #if BLT_SIZE == 1

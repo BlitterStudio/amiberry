@@ -66,12 +66,12 @@ class SettingsIntentPresetsTest {
 	@Test
 	fun `touch preset enables both on-screen controls`() {
 		val settings = SettingsIntentPresets.apply(
-			EmulatorSettings(onScreenJoystick = false, onScreenKeyboard = false, joyport1 = "joy1"),
+			EmulatorSettings(onScreenJoystick = false, onScreenKeyboardButton = false, joyport1 = "joy1"),
 			SettingsIntentPreset.TouchControls
 		)
 
 		assertTrue(settings.onScreenJoystick)
-		assertTrue(settings.onScreenKeyboard)
+		assertTrue(settings.onScreenKeyboardButton)
 		assertEquals("onscreen_joy", settings.joyport1)
 	}
 }

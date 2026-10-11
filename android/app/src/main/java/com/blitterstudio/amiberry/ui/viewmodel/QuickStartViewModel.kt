@@ -5,20 +5,32 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.ui.screens.QuickStartLaunchMode
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class QuickStartViewModel(application: Application) : AndroidViewModel(application) {
+class QuickStartViewModel(
+	application: Application,
+	private val savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
 
 	private val repository = FileRepository.getInstance(application)
 	private val prefs = AppPreferences.getInstance(application)
 
 	var selectedWhdload by mutableStateOf<AmigaFile?>(null)
+		private set
+
+	var selectedLaunchMode by mutableStateOf(
+		QuickStartLaunchMode.fromName(
+			savedStateHandle[SELECTED_LAUNCH_MODE_KEY] ?: QuickStartLaunchMode.WHDLOAD.name
+		)
+	)
 		private set
 
 	val availableFloppies: StateFlow<List<AmigaFile>> = repository.floppies
@@ -61,6 +73,11 @@ class QuickStartViewModel(application: Application) : AndroidViewModel(applicati
 		prefs.lastWhdloadPath = file?.path ?: ""
 	}
 
+	fun selectLaunchMode(mode: QuickStartLaunchMode) {
+		selectedLaunchMode = mode
+		savedStateHandle[SELECTED_LAUNCH_MODE_KEY] = mode.name
+	}
+
 	fun rescanWhdload() {
 		viewModelScope.launch {
 			repository.rescanCategory(FileCategory.WHDLOAD_GAMES)
@@ -71,5 +88,9 @@ class QuickStartViewModel(application: Application) : AndroidViewModel(applicati
 		viewModelScope.launch {
 			repository.rescanCategory(FileCategory.ROMS)
 		}
+	}
+
+	private companion object {
+		const val SELECTED_LAUNCH_MODE_KEY = "quick_start_launch_mode"
 	}
 }

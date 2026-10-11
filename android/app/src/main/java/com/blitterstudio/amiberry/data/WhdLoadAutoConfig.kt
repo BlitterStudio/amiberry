@@ -118,7 +118,7 @@ object WhdLoadAutoConfig {
 			joyport0 = currentSettings.joyport0,
 			joyport1 = currentSettings.joyport1,
 			onScreenJoystick = currentSettings.onScreenJoystick,
-			onScreenKeyboard = currentSettings.onScreenKeyboard,
+			onScreenKeyboardButton = currentSettings.onScreenKeyboardButton,
 			onScreenKeyboardNumpad = currentSettings.onScreenKeyboardNumpad,
 			onScreenKeyboardToggle = currentSettings.onScreenKeyboardToggle,
 			joyport0MouseMap = currentSettings.joyport0MouseMap,

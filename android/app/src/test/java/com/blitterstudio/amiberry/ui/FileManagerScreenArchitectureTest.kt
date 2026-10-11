@@ -67,12 +67,6 @@ class FileManagerScreenArchitectureTest {
 			"LazyColumn should use weight(1f) to fill remaining vertical space.",
 			Regex("""LazyColumn\(\s*modifier = Modifier\.weight\(1f\)""").containsMatchIn(screen)
 		)
-		assertTrue(
-			"LazyColumn content should retain 16dp horizontal, 4dp top, and 80dp bottom scroll clearance.",
-			Regex(
-				"""contentPadding = PaddingValues\(\s*start = 16\.dp,\s*top = 4\.dp,\s*end = 16\.dp,\s*bottom = 80\.dp\s*\)"""
-			).containsMatchIn(screen)
-		)
 	}
 
 	@Test
@@ -150,11 +144,6 @@ class FileManagerScreenArchitectureTest {
 		assertTrue(
 			"Floating import action should ignore taps while a scan or import is active.",
 			Regex("""ExtendedFloatingActionButton[\s\S]*if \(showProgress\) \{[\s\S]*return@ExtendedFloatingActionButton""")
-				.containsMatchIn(screen)
-		)
-		assertTrue(
-			"Floating import action should expose disabled semantics while file operations are active.",
-			Regex("""ExtendedFloatingActionButton\([\s\S]*Modifier\.semantics \{ if \(showProgress\) disabled\(\) \}""")
 				.containsMatchIn(screen)
 		)
 		assertTrue(

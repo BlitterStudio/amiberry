@@ -27,7 +27,7 @@ class ConfigGeneratorTest {
 	@Test
 	fun `generate writes vkbd toggle when set`() {
 		val output = ConfigGenerator.generate(
-			EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "rightstick")
+			EmulatorSettings(onScreenKeyboardButton = true, onScreenKeyboardToggle = "rightstick")
 		)
 		assertContains(output, "amiberry.vkbd_toggle=rightstick")
 	}
@@ -37,7 +37,7 @@ class ConfigGeneratorTest {
 		val file = tempDir.newFile("disabled-toggle.uae")
 		file.writeText(
 			ConfigGenerator.generate(
-				EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = "")
+				EmulatorSettings(onScreenKeyboardButton = true, onScreenKeyboardToggle = "")
 			)
 		)
 
@@ -47,7 +47,7 @@ class ConfigGeneratorTest {
 	@Test
 	fun `saved default toggle survives remembered fallback on reload`() {
 		val file = tempDir.newFile("default-toggle.uae")
-		val settings = EmulatorSettings(onScreenKeyboard = true, onScreenKeyboardToggle = null)
+		val settings = EmulatorSettings(onScreenKeyboardButton = true, onScreenKeyboardToggle = null)
 		for (generated in listOf(ConfigGenerator.generate(settings), ConfigGenerator.generateControlConfig(settings))) {
 			file.writeText(generated)
 			val parsed = ConfigParser.parse(file)
@@ -241,7 +241,7 @@ class ConfigGeneratorTest {
 			EmulatorSettings(
 				joyport1 = "onscreen_joy",
 				onScreenJoystick = true,
-				onScreenKeyboard = true,
+				onScreenKeyboardButton = true,
 				onScreenKeyboardNumpad = true
 			)
 		)
@@ -251,7 +251,27 @@ class ConfigGeneratorTest {
 		assertContainsLine(lines, "amiberry.android_joyport1=onscreen_joy")
 		assertContainsLine(lines, "amiberry.onscreen_joystick=true")
 		assertContainsLine(lines, "amiberry.vkbd_enabled=true")
+		assertContainsLine(lines, "amiberry.vkbd_touch_button=true")
 		assertContainsLine(lines, "amiberry.vkbd_numpad=true")
+		assertContainsLine(lines, "input.default_osk=true")
+	}
+
+	@Test
+	fun `generate keeps gamepad keyboard access with the touch button hidden`() {
+		// Android TV: no on-screen controls, but the gamepad toggle still opens the keyboard.
+		val output = ConfigGenerator.generate(
+			EmulatorSettings(
+				joyport1 = "joy1",
+				onScreenJoystick = false,
+				onScreenKeyboardButton = false
+			)
+		)
+		val lines = output.lines()
+
+		assertContainsLine(lines, "amiberry.onscreen_joystick=false")
+		assertContainsLine(lines, "amiberry.vkbd_enabled=true")
+		assertContainsLine(lines, "amiberry.vkbd_touch_button=false")
+		assertContainsLine(lines, "amiberry.vkbd_toggle=default")
 		assertContainsLine(lines, "input.default_osk=true")
 	}
 
@@ -261,7 +281,8 @@ class ConfigGeneratorTest {
 			EmulatorSettings(
 				joyport1 = "joy1",
 				onScreenJoystick = false,
-				onScreenKeyboard = false
+				onScreenKeyboardButton = false,
+				onScreenKeyboardToggle = ""
 			)
 		)
 		val lines = output.lines()
@@ -270,8 +291,23 @@ class ConfigGeneratorTest {
 		assertContainsLine(lines, "amiberry.android_joyport1=joy1")
 		assertContainsLine(lines, "amiberry.onscreen_joystick=false")
 		assertContainsLine(lines, "amiberry.vkbd_enabled=false")
+		assertContainsLine(lines, "amiberry.vkbd_touch_button=false")
 		assertContainsLine(lines, "amiberry.vkbd_numpad=false")
+		assertContainsLine(lines, "amiberry.vkbd_toggle=")
 		assertContainsLine(lines, "input.default_osk=false")
+	}
+
+	@Test
+	fun `parse round-trips gamepad-only and fully disabled keyboard`() {
+		val gamepadOnly = EmulatorSettings(onScreenKeyboardButton = false, onScreenKeyboardToggle = "back")
+		val disabled = EmulatorSettings(onScreenKeyboardButton = false, onScreenKeyboardToggle = "")
+		for (original in listOf(gamepadOnly, disabled)) {
+			val file = tempDir.newFile()
+			file.writeText(ConfigGenerator.generate(original))
+			val parsed = ConfigParser.parse(file).settings
+			assertEquals(original.onScreenKeyboardButton, parsed.onScreenKeyboardButton)
+			assertEquals(original.onScreenKeyboardToggle, parsed.onScreenKeyboardToggle)
+		}
 	}
 
 	@Test
@@ -282,7 +318,8 @@ class ConfigGeneratorTest {
 				joyport0 = "mouse",
 				joyport1 = "joy1",
 				onScreenJoystick = false,
-				onScreenKeyboard = false
+				onScreenKeyboardButton = false,
+				onScreenKeyboardToggle = ""
 			)
 		)
 		val lines = output.lines()
@@ -449,7 +486,7 @@ class ConfigGeneratorTest {
 			joyport0 = "mouse",
 			joyport1 = "joy0",
 			onScreenJoystick = false,
-			onScreenKeyboard = true,
+			onScreenKeyboardButton = true,
 			onScreenKeyboardNumpad = true,
 			joyport1MouseMap = true
 		)
@@ -537,8 +574,8 @@ class ConfigGeneratorTest {
 	fun `generate emits default scaling keys`() {
 		val output = ConfigGenerator.generate(EmulatorSettings())
 		val lines = output.lines()
-		assertContains(output, "scaling_method=-1")
-		assertFalse(lines.any { it == "amiberry.scaling_method=-1" })
+		assertTrue(lines.any { it == "amiberry.scaling_method=-1" })
+		assertFalse(lines.any { it.startsWith("scaling_method=") })
 		assertContains(output, "gfx_autoresolution=0")
 	}
 
@@ -547,7 +584,7 @@ class ConfigGeneratorTest {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(scalingMethod = 2, gfxAutoresolution = 1)
 		)
-		assertContains(output, "scaling_method=2")
+		assertContains(output, "amiberry.scaling_method=2")
 		assertContains(output, "gfx_autoresolution=1")
 	}
 

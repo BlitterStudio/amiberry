@@ -78,7 +78,7 @@
     <string name="settings_adjustment_jit_cpu">JIT requires a 68020 or newer CPU.</string>
     <string name="settings_adjustment_jit_32bit">JIT requires 32-bit addressing.</string>
     <string name="settings_adjustment_touch_required">On-screen controls were disabled because this device has no touchscreen.</string>
-    <string name="settings_adjustment_touch_port">On-screen joystick was assigned to port 1.</string>
+	<string name="settings_adjustment_touch_port">On-screen joystick was assigned to Port 2.</string>
     <string name="settings_adjustment_input_reset">Invalid input device selections were reset.</string>
     <string name="dialog_overwrite_config_title">Overwrite configuration?</string>
     <string name="dialog_overwrite_config_message">A configuration named \"%1$s\" already exists. Overwrite it?</string>
@@ -302,11 +302,12 @@
     <string name="settings_sound_channels_mixed" formatted="false">Mixed (75% stereo)</string>
 
     <string name="settings_input_port_assignments_title">Port Assignments</string>
-    <string name="settings_input_port0_label">Port 0 (Mouse Port)</string>
-    <string name="settings_input_port1_label">Port 1 (Joystick Port)</string>
+    <string name="settings_input_port0_label">Port 1 (Mouse Port)</string>
+    <string name="settings_input_port1_label">Port 2 (Joystick Port)</string>
     <string name="settings_input_on_screen_controls_title">On-Screen Controls</string>
     <string name="settings_input_on_screen_joystick">On-Screen Joystick</string>
     <string name="settings_input_on_screen_keyboard_button">On-Screen Keyboard Button</string>
+    <string name="settings_input_on_screen_keyboard_button_summary">KB button on the on-screen joystick. The toggle button below opens the keyboard either way.</string>
     <string name="settings_input_on_screen_keyboard_numpad">Include Numeric Keypad</string>
     <string name="settings_input_on_screen_keyboard_numpad_summary">Fits the full Amiga keyboard on screen using smaller keys.</string>
     <string name="settings_input_on_screen_keyboard_toggle">On-Screen Keyboard Toggle Button</string>

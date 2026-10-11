@@ -10,6 +10,9 @@ object AndroidControlSettings {
 		fallback: EmulatorSettings
 	): EmulatorSettings {
 		val keys = explicitKeys.map { it.lowercase() }.toSet()
+		val keyboardSwitchExplicit = "amiberry.vkbd_enabled" in keys || "input.default_osk" in keys
+		// An explicitly disabled keyboard also fixes the toggle (parsed as disabled).
+		val keyboardExplicitlyOff = keyboardSwitchExplicit && !settings.onScreenKeyboardAvailable
 		return settings.copy(
 			joyport0 = if ("joyport0" in keys) settings.joyport0 else fallback.joyport0,
 			joyport1 = if ("joyport1" in keys || "amiberry.android_joyport1" in keys) {
@@ -22,17 +25,17 @@ object AndroidControlSettings {
 			} else {
 				fallback.onScreenJoystick
 			},
-			onScreenKeyboard = if ("amiberry.vkbd_enabled" in keys || "input.default_osk" in keys) {
-				settings.onScreenKeyboard
+			onScreenKeyboardButton = if (keyboardSwitchExplicit || "amiberry.vkbd_touch_button" in keys) {
+				settings.onScreenKeyboardButton
 			} else {
-				fallback.onScreenKeyboard
+				fallback.onScreenKeyboardButton
 			},
 			onScreenKeyboardNumpad = if ("amiberry.vkbd_numpad" in keys) {
 				settings.onScreenKeyboardNumpad
 			} else {
 				fallback.onScreenKeyboardNumpad
 			},
-			onScreenKeyboardToggle = if ("amiberry.vkbd_toggle" in keys) {
+			onScreenKeyboardToggle = if ("amiberry.vkbd_toggle" in keys || keyboardExplicitlyOff) {
 				settings.onScreenKeyboardToggle
 			} else {
 				fallback.onScreenKeyboardToggle

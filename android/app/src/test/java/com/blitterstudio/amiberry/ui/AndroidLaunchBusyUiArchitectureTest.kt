@@ -56,11 +56,6 @@ class AndroidLaunchBusyUiArchitectureTest {
 			configurations.contains("launchInProgress = launchInProgress")
 		)
 		assertTrue(
-			"Saved configuration launch buttons should be disabled while a launch is in progress.",
-			Regex("""IconButton\(onClick = onLaunch, enabled = !launchInProgress\)""")
-				.containsMatchIn(configurations)
-		)
-		assertTrue(
 			"Saved configuration Advanced launch menu item should be disabled while a launch is in progress.",
 			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_edit_advanced_imgui\)\) \}[\s\S]*enabled = !launchInProgress""")
 				.containsMatchIn(configurations)

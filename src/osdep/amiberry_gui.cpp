@@ -967,6 +967,9 @@ void gui_display(int shortcut)
 	if (mon->amiga_window) {
 		SDL_RaiseWindow(mon->amiga_window);
 	}
+	// The GUI may have loaded another config; the emulation window can be
+	// reused without recreation, and shared-window setups still show the GUI title.
+	refreshtitle();
 
 	if (resumepaused_without_mouse_capture(7)) {
 		const bool restore_capture_allowed = restore_capture && (!restore_capture_was_automatic || currprefs.capture_always);

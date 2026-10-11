@@ -78,6 +78,9 @@ int check_prefs_changed_gfx()
 	if (!config_changed && !display_change_requested)
 		return 0;
 
+	// Runtime config loads (IPC, D-Bus) change the active config name.
+	refreshtitle();
+
 	c |= config_changed_flags;
 	config_changed_flags = 0;
 
@@ -680,12 +683,14 @@ int check_prefs_changed_gfx()
 #ifdef AMIBERRY
 	// On-screen keyboard
 	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
+		currprefs.vkbd_touch_button != changed_prefs.vkbd_touch_button ||
 		currprefs.vkbd_numpad != changed_prefs.vkbd_numpad ||
 		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
 		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
 		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
 	{
 		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
+		currprefs.vkbd_touch_button = changed_prefs.vkbd_touch_button;
 		currprefs.vkbd_numpad = changed_prefs.vkbd_numpad;
 		currprefs.vkbd_transparency = changed_prefs.vkbd_transparency;
 		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);

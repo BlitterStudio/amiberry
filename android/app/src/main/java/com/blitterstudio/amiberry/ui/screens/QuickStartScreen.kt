@@ -35,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -53,10 +52,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -80,6 +80,8 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.launchGuarded
@@ -126,8 +128,7 @@ fun QuickStartScreen(
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
 	val appPreferences = remember { AppPreferences.getInstance(context) }
-	var selectedLaunchModeName by rememberSaveable { mutableStateOf(QuickStartLaunchMode.WHDLOAD.name) }
-	val selectedLaunchMode = QuickStartLaunchMode.fromName(selectedLaunchModeName)
+	val selectedLaunchMode = viewModel.selectedLaunchMode
 	val model = settingsViewModel.settings.baseModel
 	val floppies by viewModel.availableFloppies.collectAsState()
 	val cds by viewModel.availableCds.collectAsState()
@@ -165,6 +166,14 @@ fun QuickStartScreen(
 		RecentLaunches.pruneMissingFiles(allRecent, recentFileExists)
 	}
 	val hasSeenWelcome by appPreferences.hasSeenWelcome
+	val quickStartModeFocusRequester = remember { FocusRequester() }
+	var requestQuickStartModeFocus by remember { mutableStateOf(false) }
+	LaunchedEffect(hasSeenWelcome, requestQuickStartModeFocus) {
+		if (hasSeenWelcome && requestQuickStartModeFocus) {
+			quickStartModeFocusRequester.requestFocus()
+			requestQuickStartModeFocus = false
+		}
+	}
 
 	val selectedFloppyPath = settingsViewModel.settings.floppy0
 	val selectedFloppy1Path = settingsViewModel.settings.floppy1
@@ -197,9 +206,9 @@ fun QuickStartScreen(
 		}
 	}
 
-	LaunchedEffect(selectedWhdloadGame?.path) {
+	LaunchedEffect(selectedLaunchMode, selectedWhdloadGame?.path) {
 		val game = selectedWhdloadGame
-		if (game == null) {
+		if (selectedLaunchMode != QuickStartLaunchMode.WHDLOAD || game == null) {
 			whdloadAutoConfigPath = null
 			return@LaunchedEffect
 		}
@@ -328,9 +337,10 @@ fun QuickStartScreen(
 			TopAppBar(
 				title = { Text(stringResource(R.string.quick_start_title)) },
 				actions = {
-					IconButton(onClick = {
-						navController?.navigate(Screen.About.route)
-					}) {
+					IconButton(
+						onClick = { navController?.navigate(Screen.About.route) },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Icon(
 							Icons.Default.Info,
 							contentDescription = stringResource(R.string.nav_about)
@@ -397,6 +407,7 @@ fun QuickStartScreen(
 							QuickStartLaunchMode.RECENT -> Unit
 						}
 					},
+					modifier = Modifier.dpadFocusIndicator(),
 					icon = {
 						if (launchInProgress) {
 							CircularProgressIndicator(
@@ -423,7 +434,7 @@ fun QuickStartScreen(
 				.fillMaxSize()
 				.padding(innerPadding)
 				.verticalScroll(rememberScrollState())
-				.padding(16.dp),
+				.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 			verticalArrangement = Arrangement.spacedBy(16.dp)
 		) {
 			if (isScanning) {
@@ -473,7 +484,13 @@ fun QuickStartScreen(
 							modifier = Modifier.fillMaxWidth(),
 							horizontalArrangement = Arrangement.End
 						) {
-							TextButton(onClick = { appPreferences.setHasSeenWelcome(true) }) {
+							TextButton(
+								onClick = {
+									requestQuickStartModeFocus = true
+									appPreferences.setHasSeenWelcome(true)
+								},
+								modifier = Modifier.dpadFocusIndicator()
+							) {
 								Text(stringResource(R.string.welcome_dismiss))
 							}
 						}
@@ -529,7 +546,8 @@ fun QuickStartScreen(
 							colors = ButtonDefaults.buttonColors(
 								containerColor = MaterialTheme.colorScheme.onErrorContainer,
 								contentColor = MaterialTheme.colorScheme.errorContainer
-							)
+							),
+							modifier = Modifier.dpadFocusIndicator()
 						) {
 							Text(
 								stringResource(
@@ -549,7 +567,8 @@ fun QuickStartScreen(
 
 			QuickStartModeSelector(
 				selectedMode = selectedLaunchMode,
-				onModeSelected = { selectedLaunchModeName = it.name }
+				onModeSelected = viewModel::selectLaunchMode,
+				modifier = Modifier.focusRequester(quickStartModeFocusRequester)
 			)
 
 			when (selectedLaunchMode) {
@@ -759,7 +778,7 @@ fun QuickStartScreen(
 											}
 										},
 										enabled = !launchInProgress,
-										modifier = Modifier.fillMaxWidth()
+										modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 									) {
 										Column(
 											modifier = Modifier.fillMaxWidth(),
@@ -795,7 +814,6 @@ fun QuickStartScreen(
 				)
 			)
 
-			Spacer(modifier = Modifier.height(80.dp))
 		}
 	}
 }
@@ -855,7 +873,8 @@ private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
 @Composable
 private fun QuickStartModeSelector(
 	selectedMode: QuickStartLaunchMode,
-	onModeSelected: (QuickStartLaunchMode) -> Unit
+	onModeSelected: (QuickStartLaunchMode) -> Unit,
+	modifier: Modifier = Modifier
 ) {
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(
@@ -870,7 +889,7 @@ private fun QuickStartModeSelector(
 				QuickStartModeButton(
 					mode = QuickStartLaunchMode.WHDLOAD,
 					selectedMode = selectedMode,
-					modifier = Modifier.weight(1f),
+					modifier = modifier.weight(1f),
 					onModeSelected = onModeSelected
 				)
 				QuickStartModeButton(
@@ -906,20 +925,16 @@ private fun QuickStartModeButton(
 	onModeSelected: (QuickStartLaunchMode) -> Unit
 ) {
 	val selected = mode == selectedMode
-	if (selected) {
-		Button(
-			onClick = { onModeSelected(mode) },
-			modifier = modifier
-		) {
-			QuickStartModeButtonContent(mode)
-		}
-	} else {
-		OutlinedButton(
-			onClick = { onModeSelected(mode) },
-			modifier = modifier
-		) {
-			QuickStartModeButtonContent(mode)
-		}
+	// One button node for both states: swapping Button/OutlinedButton would drop
+	// D-pad focus to the navigation rail when the mode changes.
+	Button(
+		onClick = { onModeSelected(mode) },
+		modifier = modifier.dpadFocusIndicator(),
+		colors = if (selected) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors(),
+		elevation = if (selected) ButtonDefaults.buttonElevation() else null,
+		border = if (selected) null else ButtonDefaults.outlinedButtonBorder(enabled = true)
+	) {
+		QuickStartModeButtonContent(mode)
 	}
 }
 
@@ -973,6 +988,7 @@ private fun ModelSelectorCard(
 					enabled = availableModels.isNotEmpty(),
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
 					modifier = Modifier
+						.dpadVerticalMovesFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth(),
 					supportingText = {

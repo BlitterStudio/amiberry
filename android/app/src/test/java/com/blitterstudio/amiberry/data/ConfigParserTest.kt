@@ -278,7 +278,7 @@ class ConfigParserTest {
 		// android_joyport1 takes priority over joyport1
 		assertEquals("onscreen_joy", s.joyport1)
 		assertTrue(s.onScreenJoystick)
-		assertFalse(s.onScreenKeyboard)
+		assertFalse(s.onScreenKeyboardButton)
 	}
 
 	@Test
@@ -304,7 +304,7 @@ class ConfigParserTest {
 		""".trimIndent())
 		val result = ConfigParser.parse(file)
 
-		assertTrue(result.settings.onScreenKeyboard)
+		assertTrue(result.settings.onScreenKeyboardButton)
 		assertTrue(result.unknownLines.isEmpty())
 	}
 
@@ -313,7 +313,7 @@ class ConfigParserTest {
 		val file = writeConfig("amiberry.vkbd_enabled=false")
 		val result = ConfigParser.parse(file)
 
-		assertFalse(result.settings.onScreenKeyboard)
+		assertFalse(result.settings.onScreenKeyboardButton)
 		assertTrue(result.unknownLines.isEmpty())
 	}
 

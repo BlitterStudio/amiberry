@@ -47,11 +47,18 @@ Amiberry can use the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission to 
 
 ## On-Screen Keyboard Controls
 
-The Input settings provide an on-screen keyboard toggle binding. **Default** uses the native default binding; **Disabled** leaves the button available to the game. Saved configurations preserve Default, Disabled, and explicit button selections independently of remembered settings. Older configurations without a toggle setting still inherit the remembered selection.
+The on-screen keyboard has two independent ways to open it:
+
+- **On-Screen Keyboard Button** shows the green **KB** touch button on the on-screen joystick (`amiberry.vkbd_touch_button`). It only appears while the on-screen joystick is shown.
+- **On-Screen Keyboard Toggle Button** picks the controller button that opens and closes the keyboard. **Default** uses the native default binding; **None (disabled)** leaves the button available to the game.
+
+Turning the KB button off keeps the gamepad toggle working, so a TV or other gamepad-only device can hide all touch controls and still type. The keyboard is off entirely only when the KB button is off and the toggle is **None (disabled)**. A gamepad connected at startup hides the on-screen joystick but leaves the keyboard available.
+
+Saved configurations preserve Default, None and explicit button selections independently of remembered settings. Older configurations without a toggle setting still inherit the remembered selection. Configurations and remembered settings from older versions that had the keyboard switched off load with the KB button off and the toggle set to None.
 
 While the keyboard is open, the D-pad or left stick moves focus, South presses the focused key, and East closes the keyboard. Focus stays fixed while South is held. Opening the emulator GUI closes the keyboard so controller releases consumed by the GUI cannot leave stale keyboard holds when emulation resumes.
 
-A WHDLoad sidecar configuration's explicit toggle setting takes precedence. If the sidecar omits it, the launcher's selected binding is retained.
+A WHDLoad sidecar configuration's explicit keyboard settings take precedence. If the sidecar omits them, the launcher's KB button and toggle selections are retained.
 
 ## Desktop-Style Use on ChromeOS
 

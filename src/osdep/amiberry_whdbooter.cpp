@@ -1628,6 +1628,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 #ifdef __ANDROID__
 	const bool android_onscreen_joystick = prefs->onscreen_joystick;
 	const bool android_vkbd_enabled = prefs->vkbd_enabled;
+	const bool android_vkbd_touch_button = prefs->vkbd_touch_button;
 	const bool android_vkbd_numpad = prefs->vkbd_numpad;
 	const bool android_input_default_osk = prefs->input_default_onscreen_keyboard;
 	TCHAR android_vkbd_toggle[256];
@@ -1823,15 +1824,19 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config.c_str());
 #ifdef __ANDROID__
 		// target_cfgfile_load() above reset the preferences before applying the
-		// sidecar, dropping the launcher's toggle selection. An explicit
-		// amiberry.vkbd_toggle line in the sidecar (button name, empty = disabled,
-		// or the "default" sentinel) wins; when the key is absent, restore the
-		// captured launcher value so the selected toggle still applies.
+		// sidecar, dropping the launcher's on-screen keyboard selection. Explicit
+		// sidecar lines win (for vkbd_toggle: button name, empty = disabled, or
+		// the "default" sentinel); absent keys restore the captured launcher
+		// values so the selected keyboard access still applies.
 		if (!loaded_config_has_option(prefs, _T("amiberry.vkbd_toggle")))
 		{
 			write_log("WHDBooter - Sidecar has no vkbd_toggle; restoring Android toggle '%s'\n", android_vkbd_toggle);
 			_tcscpy(prefs->vkbd_toggle, android_vkbd_toggle);
 		}
+		if (!loaded_config_has_option(prefs, _T("amiberry.vkbd_enabled")))
+			prefs->vkbd_enabled = android_vkbd_enabled;
+		if (!loaded_config_has_option(prefs, _T("amiberry.vkbd_touch_button")))
+			prefs->vkbd_touch_button = android_vkbd_touch_button;
 #endif
 		return;
 	}
@@ -1875,6 +1880,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	prefs->onscreen_joystick = android_onscreen_joystick;
 	_tcscpy(prefs->vkbd_toggle, android_vkbd_toggle);
 	prefs->vkbd_enabled = android_vkbd_enabled;
+	prefs->vkbd_touch_button = android_vkbd_touch_button;
 	prefs->vkbd_numpad = android_vkbd_numpad;
 	prefs->input_default_onscreen_keyboard = android_input_default_osk;
 #endif

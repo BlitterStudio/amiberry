@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
@@ -116,6 +117,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port0Expanded) },
 						modifier = Modifier
 							.testTag("input-port0-dropdown")
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -155,6 +157,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port1Expanded) },
 						modifier = Modifier
 							.testTag("input-port1-dropdown")
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -191,7 +194,8 @@ fun InputTab(viewModel: SettingsViewModel) {
 		}
 
 		// The keyboard can be driven by a game controller, so keep its settings
-		// available on non-touch devices as well.
+		// available on non-touch devices as well. The KB touch button and the
+		// gamepad toggle are independent ways to open it.
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
 				Text(stringResource(R.string.settings_input_on_screen_controls_title), style = MaterialTheme.typography.titleMedium)
@@ -205,20 +209,22 @@ fun InputTab(viewModel: SettingsViewModel) {
 							viewModel.updateSettings { s -> InputSettingsActions.setOnScreenJoystick(s, isEnabled) }
 						}
 					)
-				}
 
-				SwitchRow(
-					label = stringResource(R.string.settings_input_on_screen_keyboard_button),
-					checked = settings.onScreenKeyboard,
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(onScreenKeyboard = it) }
-					}
-				)
+					SwitchRow(
+						label = stringResource(R.string.settings_input_on_screen_keyboard_button),
+						checked = settings.onScreenKeyboardButton,
+						enabled = settings.onScreenJoystick,
+						supportingText = stringResource(R.string.settings_input_on_screen_keyboard_button_summary),
+						onCheckedChange = {
+							viewModel.updateSettings { s -> s.copy(onScreenKeyboardButton = it) }
+						}
+					)
+				}
 
 				SwitchRow(
 					label = stringResource(R.string.settings_input_on_screen_keyboard_numpad),
 					checked = settings.onScreenKeyboardNumpad,
-					enabled = settings.onScreenKeyboard,
+					enabled = settings.onScreenKeyboardAvailable,
 					supportingText = stringResource(R.string.settings_input_on_screen_keyboard_numpad_summary),
 					onCheckedChange = {
 						viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
@@ -244,11 +250,11 @@ fun InputTab(viewModel: SettingsViewModel) {
 						value = toggleLabel,
 						onValueChange = {},
 						readOnly = true,
-						enabled = settings.onScreenKeyboard,
 						label = { Text(stringResource(R.string.settings_input_on_screen_keyboard_toggle)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toggleExpanded) },
 						modifier = Modifier
 							.testTag("input-osk-toggle-dropdown")
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)

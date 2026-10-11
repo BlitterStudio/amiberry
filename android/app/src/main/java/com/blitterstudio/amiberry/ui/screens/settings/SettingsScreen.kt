@@ -77,6 +77,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.launchGuarded
@@ -167,11 +169,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 								}
 							}
 						},
-						enabled = viewModel.currentConfigName == null || viewModel.isDirty
+						enabled = viewModel.currentConfigName == null || viewModel.isDirty,
+						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.action_save))
 					}
-					IconButton(onClick = { showTopBarMenu = true }) {
+					IconButton(
+						onClick = { showTopBarMenu = true },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
 						Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
 					}
 					DropdownMenu(
@@ -266,6 +272,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						}
 					}
 				},
+				modifier = Modifier.dpadFocusIndicator(),
 				icon = {
 					if (launchInProgress) {
 						CircularProgressIndicator(
@@ -301,7 +308,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					Tab(
 						selected = validSelectedTab == index,
 						onClick = { selectedTab = index },
-						modifier = Modifier.testTag(tab.testTag),
+						modifier = Modifier.testTag(tab.testTag).dpadFocusIndicator(),
 						text = { Text(stringResource(tab.titleRes)) }
 					)
 				}
@@ -356,7 +363,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 							colors = ButtonDefaults.buttonColors(
 								containerColor = MaterialTheme.colorScheme.onErrorContainer,
 								contentColor = MaterialTheme.colorScheme.errorContainer
-							)
+							),
+							modifier = Modifier.dpadFocusIndicator()
 						) {
 							Text(
 								stringResource(
@@ -436,12 +444,15 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 								}
 								snackbarHostState.showSnackbar(saveMessage(result))
 							}
-						}) {
+						}, modifier = Modifier.dpadFocusIndicator()) {
 							Text(stringResource(R.string.action_overwrite))
 						}
 					},
 					dismissButton = {
-						TextButton(onClick = { overwriteRequest = null }) {
+						TextButton(
+							onClick = { overwriteRequest = null },
+							modifier = Modifier.dpadFocusIndicator()
+						) {
 							Text(stringResource(R.string.action_cancel))
 						}
 					}
@@ -476,6 +487,7 @@ private fun SettingsPresetSelector(
 					label = { Text(stringResource(R.string.settings_presets_title)) },
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 					modifier = Modifier
+						.dpadVerticalMovesFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth()
 				)
@@ -554,7 +566,10 @@ private fun SettingsAdjustmentBanner(
 					color = MaterialTheme.colorScheme.onSecondaryContainer
 				)
 			}
-			TextButton(onClick = onDismiss) {
+			TextButton(
+				onClick = onDismiss,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
 				Text(stringResource(R.string.action_dismiss))
 			}
 		}
@@ -625,7 +640,10 @@ private fun SettingsChangesDialog(
 			}
 		},
 		confirmButton = {
-			TextButton(onClick = onDismiss) {
+			TextButton(
+				onClick = onDismiss,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
 				Text(stringResource(R.string.action_done))
 			}
 		}
@@ -669,13 +687,17 @@ fun SaveConfigDialog(
 		confirmButton = {
 			TextButton(
 				onClick = { onSave(name.trim(), description.trim()) },
-				enabled = name.isNotBlank()
+				enabled = name.isNotBlank(),
+				modifier = Modifier.dpadFocusIndicator()
 			) {
 				Text(stringResource(R.string.action_save))
 			}
 		},
 		dismissButton = {
-			TextButton(onClick = onDismiss) {
+			TextButton(
+				onClick = onDismiss,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
 				Text(stringResource(R.string.action_cancel))
 			}
 		}

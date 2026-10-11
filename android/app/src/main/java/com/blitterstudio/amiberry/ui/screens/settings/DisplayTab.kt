@@ -34,6 +34,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,6 +94,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_display_resolution_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -182,6 +184,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 							ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
 						},
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -239,6 +242,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_display_theme_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
