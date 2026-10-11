@@ -91,7 +91,7 @@ fi
 * Sun Oct 11 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.0-1
 - Feature release v8.4.0
 - ZZ9000: AHI audio, SANA-II network, SDK mailbox/MHI audio, MPEGA streams, image/ZZPlay services, firmware 2.8 register ABI, direct VRAM mapping
-- MiniGL renderer plugin via uaelib trap 120 with dma-buf frame compositing; user plugin search locations
+- Support for an external MiniGL renderer plugin (available separately) via uaelib trap 120, with dma-buf frame compositing; user plugin search locations
 - Custom cartridge ROM support, .A1000 ROMs, relative media paths, --dump-config CLI option, ipc_disable_logging option
 - RTG: dirty-tracking race/split-screen and direct JIT store fixes, hardware sprite on by default, warm reset fixes
 - JIT: ARM64 trap-block demotion by opcode class, register shift count fixes, JIT FPU setting respected, KMSDRM fault handler ordering
