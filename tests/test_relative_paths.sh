@@ -11,7 +11,11 @@ if [ -z "${AMIBERRY_BIN:-}" ]; then
 	echo "AMIBERRY_BIN must point at a built amiberry binary" >&2
 	exit 1
 fi
-bin="$AMIBERRY_BIN"
+# Absolute, because the dumps run from a scratch working directory.
+case "$AMIBERRY_BIN" in
+	/*|[A-Za-z]:*) bin="$AMIBERRY_BIN" ;;
+	*) bin="$PWD/$AMIBERRY_BIN" ;;
+esac
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
