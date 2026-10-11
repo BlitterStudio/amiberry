@@ -2601,8 +2601,15 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 			if (canstretch(mon)) {
 				int w = mon->mainwin_rect.w;
 				int h = mon->mainwin_rect.h;
+#ifdef __ANDROID__
+				// Android's activity surface is already the client area. Desktop frame
+				// deltas are invalid while the surface changes orientation.
+				const int content_w = w;
+				const int content_h = h;
+#else
 				const int content_w = w - mon->window_extra_width;
 				const int content_h = h - mon->window_extra_height;
+#endif
 				if (content_w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width ||
 					content_h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height) {
 					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = content_w;
@@ -4456,6 +4463,8 @@ int handle_msgpump(bool vblank)
 	 * every frame, so skipping it on any other thread is safe. */
 	if (!is_mainthread())
 		return 0;
+	if (vblank)
+		on_screen_joystick_advance_frame();
 #if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	flush_macos_synthetic_mouse_releases();
 #endif
@@ -6250,16 +6259,18 @@ void target_default_options(uae_prefs* p, const int type)
 
 	// On-screen keyboard default options
 	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
+	p->vkbd_touch_button = true;
 	p->vkbd_numpad = false;
 
 #ifdef __ANDROID__
 	// Touch-only Android: enable on-screen controls by default. If a physical
-	// gamepad is already connected at startup, disable them so they don't
-	// obscure the emulation for users who have real hardware. User overrides
-	// from a loaded .uae config still take precedence (applied after defaults).
+	// gamepad is already connected at startup, hide the touch joystick so it
+	// doesn't obscure the emulation for users who have real hardware. The
+	// on-screen keyboard stays available: a gamepad-only device (e.g. Android
+	// TV) has no other way to type. User overrides from a loaded .uae config
+	// still take precedence (applied after defaults).
 	if (SDL_HasJoystick()) {
 		p->onscreen_joystick = false;
-		p->vkbd_enabled = false;
 	}
 #endif
 	if (amiberry_options.default_vkbd_language[0])
@@ -6436,6 +6447,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 
 	cfgfile_target_dwrite_bool(f, _T("onscreen_joystick"), p->onscreen_joystick);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
+	cfgfile_target_dwrite_bool(f, _T("vkbd_touch_button"), p->vkbd_touch_button);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_numpad"), p->vkbd_numpad);
 	cfgfile_target_dwrite(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
 	cfgfile_target_dwrite_str(f, _T("vkbd_language"), p->vkbd_language);
@@ -6596,6 +6608,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		return 1;
 
 	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
+		|| cfgfile_yesno(option, value, _T("vkbd_touch_button"), &p->vkbd_touch_button)
 		|| cfgfile_yesno(option, value, _T("vkbd_numpad"), &p->vkbd_numpad)
 		|| cfgfile_yesno(option, value, _T("vkbd_hires"), &p->vkbd_hires)
 		|| cfgfile_yesno(option, value, _T("vkbd_exit"), &p->vkbd_exit)

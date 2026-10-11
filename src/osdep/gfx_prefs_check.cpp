@@ -683,12 +683,14 @@ int check_prefs_changed_gfx()
 #ifdef AMIBERRY
 	// On-screen keyboard
 	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
+		currprefs.vkbd_touch_button != changed_prefs.vkbd_touch_button ||
 		currprefs.vkbd_numpad != changed_prefs.vkbd_numpad ||
 		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
 		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
 		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
 	{
 		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
+		currprefs.vkbd_touch_button = changed_prefs.vkbd_touch_button;
 		currprefs.vkbd_numpad = changed_prefs.vkbd_numpad;
 		currprefs.vkbd_transparency = changed_prefs.vkbd_transparency;
 		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);

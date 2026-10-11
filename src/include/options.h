@@ -1110,6 +1110,7 @@ struct uae_prefs {
 
 #ifdef AMIBERRY
 	bool vkbd_enabled;
+	bool vkbd_touch_button; // KB button on the on-screen joystick overlay
 	bool vkbd_numpad;
 	bool vkbd_hires;
 	bool vkbd_exit;

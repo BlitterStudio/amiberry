@@ -703,6 +703,13 @@ static int create_windows(struct AmigaMonitor* mon)
 		}
 	}
 
+#ifdef __ANDROID__
+	// Android windows have no non-client area. Keeping desktop frame deltas
+	// across a rotation makes the resized surface look smaller than zero.
+	mon->window_extra_width = 0;
+	mon->window_extra_height = 0;
+#endif
+
 	if (mon->amiga_window) {
 		SDL_Rect r;
 		int nw, nh, nx, ny;
@@ -946,12 +953,19 @@ static int create_windows(struct AmigaMonitor* mon)
 		SDL_SyncWindow(mon->amiga_window);
 	}
 
+#ifdef __ANDROID__
+	// The Android activity surface is the client area; do not derive frame
+	// insets from transient rotation dimensions.
+	mon->window_extra_width = 0;
+	mon->window_extra_height = 0;
+#else
 	SDL_Rect rc2;
 	GetWindowRect(mon->amiga_window, &rc2);
-	int expected_client_width = mon->currentmode.current_width;
-	int expected_client_height = mon->currentmode.current_height;
+	const int expected_client_width = mon->currentmode.current_width;
+	const int expected_client_height = mon->currentmode.current_height;
 	mon->window_extra_width = rc2.w - expected_client_width;
 	mon->window_extra_height = rc2.h - expected_client_height;
+#endif
 
 	w = mon->currentmode.native_width;
 	h = mon->currentmode.native_height;

@@ -182,6 +182,11 @@ void render_panel_onscreen()
 		ImGui::SetTooltip("Include the Amiga numeric keypad; keys will be smaller to fit the full keyboard");
 	}
 
+	AmigaCheckbox("Keyboard button on On-screen Joystick", &changed_prefs.vkbd_touch_button);
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Show the KB touch button next to the fire buttons; the toggle button below works either way");
+	}
+
 	// Transparency slider
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Transparency:");
