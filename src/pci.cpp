@@ -707,7 +707,7 @@ static uae_u32 REGPARAM2 pci_config_lget(uaecptr addr)
 }
 static uae_u32 REGPARAM2 pci_config_wget(uaecptr addr)
 {
-	uae_u32 v = 0xffff;
+	uae_u32 v = 0xffffffff;
 	int endianswap;
 	uae_u8 *config = get_pci_config(addr, -2, v, &endianswap);
 	if (config) {
@@ -729,9 +729,9 @@ static uae_u32 REGPARAM2 pci_config_wget(uaecptr addr)
 }
 static uae_u32 REGPARAM2 pci_config_bget(uaecptr addr)
 {
-	uae_u8 v = 0xff;
+	uae_u32 v = 0xffffffff;
 	int endianswap;
-	uae_u8 *config = get_pci_config(addr, -1, 0, &endianswap);
+	uae_u8 *config = get_pci_config(addr, -1, v, &endianswap);
 	if (config) {
 		uae_u32 offset = addr & 0xff;
 		if (!endianswap) {
