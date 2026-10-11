@@ -831,11 +831,24 @@ static bool cfgfile_multipath_contains_entry(const struct multipath *mp, const T
 	}
 	return false;
 }
+
+static void cfgfile_make_relative_path_for_save(TCHAR *path, int size)
+{
+	if (target_isrelativemode())
+		target_make_relative_path(path, size);
+}
 #endif
 
 
 static TCHAR *cfgfile_subst_path_load (const TCHAR *path, struct multipath *mp, const TCHAR *file, bool dir)
 {
+#ifdef AMIBERRY
+	TCHAR resolved[MAX_DPATH];
+	_tcsncpy(resolved, file, MAX_DPATH - 1);
+	resolved[MAX_DPATH - 1] = 0;
+	if (target_resolve_relative_path(resolved, MAX_DPATH))
+		return my_strdup(resolved);
+#endif
 	TCHAR *s = cfgfile_get_multipath2 (mp, path, file, dir);
 	if (s)
 		return s;
@@ -1154,7 +1167,15 @@ static void cfgfile_write_rom (struct zfile *f, struct multipath *mp, const TCHA
 
 	TCHAR *str = cfgfile_subst_path (mp->path[0], UNEXPANDED, romfile);
 	str = cfgfile_put_multipath (mp, str);
+#ifdef AMIBERRY
+	TCHAR saved[MAX_DPATH];
+	_tcsncpy(saved, str, MAX_DPATH - 1);
+	saved[MAX_DPATH - 1] = 0;
+	cfgfile_make_relative_path_for_save(saved, MAX_DPATH);
+	cfgfile_write_str (f, name, saved);
+#else
 	cfgfile_write_str (f, name, str);
+#endif
 	struct zfile *zf = zfile_fopen (str, _T("rb"), ZFD_ALL);
 	if (zf) {
 		struct romdata *rd = getromdatabyzfile (zf);
@@ -1204,12 +1225,18 @@ static void cfgfile_dwrite_path2(struct zfile *f, const TCHAR *option, const TCH
 static void cfgfile_write_path (struct zfile *f, struct multipath *mp, const TCHAR *option, const TCHAR *value)
 {
 	TCHAR *s = cfgfile_put_multipath (mp, value);
+#ifdef AMIBERRY
+	cfgfile_make_relative_path_for_save(s, uaetcslen(s) + 1);
+#endif
 	cfgfile_write_str (f, option, s);
 	xfree (s);
 }
 static void cfgfile_dwrite_path (struct zfile *f, struct multipath *mp, const TCHAR *option, const TCHAR *value)
 {
 	TCHAR *s = cfgfile_put_multipath (mp, value);
+#ifdef AMIBERRY
+	cfgfile_make_relative_path_for_save(s, uaetcslen(s) + 1);
+#endif
 	cfgfile_dwrite_str (f, option, s);
 	xfree (s);
 }
@@ -1218,8 +1245,16 @@ static void cfgfile_dwrite_path (struct zfile *f, struct multipath *mp, const TC
 static void cfgfile_write_multipath(struct zfile *f, const TCHAR *option, const struct multipath *mp)
 {
 	for (int i = 0; i < MAX_PATHS; i++) {
-		if (mp->path[i][0] && !cfgfile_multipath_contains_entry(mp, mp->path[i], i))
-			cfgfile_write_str(f, option, mp->path[i]);
+		if (mp->path[i][0] && !cfgfile_multipath_contains_entry(mp, mp->path[i], i)) {
+			TCHAR path[MAX_DPATH];
+			_tcsncpy(path, mp->path[i], MAX_DPATH - 1);
+			path[MAX_DPATH - 1] = 0;
+			cfgfile_make_relative_path_for_save(path, MAX_DPATH);
+			// "./" is the empty multipath placeholder, so the base folder itself stays absolute.
+			if (!_tcscmp(path, _T("./")))
+				_tcscpy(path, mp->path[i]);
+			cfgfile_write_str(f, option, path);
+		}
 	}
 }
 #endif
@@ -1251,6 +1286,12 @@ static void cfgfile_adjust_path(TCHAR *path, int maxsz, struct multipath *mp)
 	TCHAR *s = target_expand_environment(path, nullptr, 0);
 	_tcsncpy(path, s, maxsz - 1);
 	path[maxsz - 1] = 0;
+#ifdef AMIBERRY
+	if (target_resolve_relative_path(path, maxsz)) {
+		xfree(s);
+		return;
+	}
+#endif
 	if (mp) {
 		for (auto& i : mp->path) {
 			if (i[0] && _tcscmp(i, _T(".\\")) != 0 && _tcscmp(i, _T("./")) != 0 && (path[0] != '/' && path[0] != '\\' && !_tcschr(path, ':'))) {
@@ -1303,6 +1344,10 @@ static void cfgfile_resolve_path_out_all(const TCHAR *path, TCHAR *out, int size
 		_tcscpy(out, s);
 		xfree(s);
 	}
+#ifdef AMIBERRY
+	if (save)
+		cfgfile_make_relative_path_for_save(out, size);
+#endif
 	// if (!save) {
 	// 	my_resolvesoftlink(out, size, true);
 	// }
@@ -3516,6 +3561,8 @@ static int cfgfile_multipath (const TCHAR *option, const TCHAR *value, const TCH
 	const auto s = target_expand_environment (tmploc, nullptr, 0);
 	_tcsncpy (tmploc, s, MAX_DPATH - 1);
 	tmploc[MAX_DPATH - 1] = 0;
+	if (_tcscmp (tmploc, _T("./")) && _tcscmp (tmploc, _T(".\\")))
+		target_resolve_relative_path (tmploc, MAX_DPATH);
 	fix_trailing (tmploc);
 	xfree (s);
 	if (cfgfile_multipath_contains_entry(mp, tmploc, MAX_PATHS))
@@ -3744,6 +3791,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	for (i = 0; i < MAX_SPARE_DRIVES; i++) {
 		_sntprintf (tmpbuf, sizeof tmpbuf, _T("diskimage%d"), i);
 		if (cfgfile_string(option, value, tmpbuf, p->dfxlist[i], sizeof p->dfxlist[i] / sizeof(TCHAR))) {
+#ifdef AMIBERRY
+			target_resolve_relative_path(p->dfxlist[i], sizeof p->dfxlist[i] / sizeof(TCHAR));
+#endif
 			return 1;
 		}
 	}
@@ -3821,6 +3871,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					_tcsncpy (p->cdslots[i].name, path, sizeof(p->cdslots[i].name) / sizeof (TCHAR));
 				}
 				p->cdslots[i].name[sizeof(p->cdslots[i].name) / sizeof(TCHAR) - 1] = 0;
+#ifdef AMIBERRY
+				target_resolve_relative_path(p->cdslots[i].name, sizeof(p->cdslots[i].name) / sizeof(TCHAR));
+#endif
 				p->cdslots[i].inuse = true;
 				p->cdslots[i].type = type;
 				if (path[0] == 0 || !_tcsicmp(path, _T("empty")) || !_tcscmp(path, _T("."))) {
@@ -3848,6 +3901,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		for (i = 0; i < MAX_LUA_STATES; i++) {
 			if (!p->luafiles[i][0]) {
 				_tcscpy (p->luafiles[i], value);
+#ifdef AMIBERRY
+				target_resolve_relative_path(p->luafiles[i], sizeof p->luafiles[i] / sizeof(TCHAR));
+#endif
 				break;
 			}
 		}
@@ -6707,6 +6763,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		if (cfgfile_string(option, value, tmpbuf, p->floppyslots[i].df, sizeof p->floppyslots[i].df / sizeof(TCHAR))) {
 			if (!_tcscmp(p->floppyslots[i].df, _T(".")))
 				p->floppyslots[i].df[0] = 0;
+#ifdef AMIBERRY
+			target_resolve_relative_path(p->floppyslots[i].df, sizeof p->floppyslots[i].df / sizeof(TCHAR));
+#endif
 			return 1;
 		}
 		_sntprintf(tmpbuf, sizeof tmpbuf, _T("floppy%dsubtypeid"), i);
@@ -8821,6 +8880,9 @@ uae_u8 *restore_configuration (uae_u8 *src)
 					_sntprintf(tmp, sizeof tmp, _T("diskimage%d"), i);
 					if (!_tcscmp(option, tmp)) {
 						cfgfile_string(option, value, tmp, p->dfxlist[i], sizeof p->dfxlist[i] / sizeof(TCHAR));
+#ifdef AMIBERRY
+						target_resolve_relative_path(p->dfxlist[i], sizeof p->dfxlist[i] / sizeof(TCHAR));
+#endif
 						break;
 					}
 				}

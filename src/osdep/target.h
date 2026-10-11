@@ -225,6 +225,8 @@ extern bool get_portable_mode();
 extern bool can_toggle_portable_mode(std::string* reason_out);
 extern bool set_portable_mode(bool enable);
 #endif
+extern int relativepaths;
+extern std::string get_relative_path_base();
 extern bool should_show_legacy_cleanup_prompt();
 extern std::vector<std::string> get_legacy_cleanup_prompt_items();
 extern bool legacy_cleanup_uses_trash();
