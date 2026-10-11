@@ -6497,6 +6497,16 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		return 1;
 	}
 
+#ifdef AMIBERRY
+	if (cfgfile_string(option, value, _T("flash_file"), p->flashfile, sizeof p->flashfile / sizeof (TCHAR))) {
+		target_resolve_relative_path(p->flashfile, sizeof p->flashfile / sizeof (TCHAR));
+		return 1;
+	}
+	if (cfgfile_string(option, value, _T("rtc_file"), p->rtcfile, sizeof p->rtcfile / sizeof (TCHAR))) {
+		target_resolve_relative_path(p->rtcfile, sizeof p->rtcfile / sizeof (TCHAR));
+		return 1;
+	}
+#endif
 	if (cfgfile_path (option, value, _T("kickstart_rom_file"), p->romfile, sizeof p->romfile / sizeof (TCHAR), &p->path_rom)
 		|| cfgfile_path (option, value, _T("kickstart_ext_rom_file"), p->romextfile, sizeof p->romextfile / sizeof (TCHAR), &p->path_rom)
 		|| cfgfile_path (option, value, _T("kickstart_ext_rom_file2"), p->romextfile2, sizeof p->romextfile2 / sizeof (TCHAR), &p->path_rom)
@@ -7569,8 +7579,20 @@ static char *cfg_fgets (char *line, int max, struct zfile *fh)
 	return nullptr;
 }
 
+#ifdef AMIBERRY
+// Paths inside a configuration file are relative to the relative path base, also when the
+// file is loaded while command-line arguments are being parsed.
+struct cfgfile_config_path_scope {
+	bool previous = target_set_cmdline_path_mode(false);
+	~cfgfile_config_path_scope() { target_set_cmdline_path_mode(previous); }
+};
+#endif
+
 static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real, int *type)
 {
+#ifdef AMIBERRY
+	const cfgfile_config_path_scope path_scope;
+#endif
 	struct zfile *fh;
 	char linea[CONFIG_BLEN];
 	TCHAR line[CONFIG_BLEN], line1b[CONFIG_BLEN], line2b[CONFIG_BLEN];
@@ -8211,6 +8233,9 @@ static void cmdpath (TCHAR *dst, const TCHAR *src, int maxsz)
 	TCHAR *s = target_expand_environment (src, nullptr, 0);
 	_tcsncpy (dst, s, maxsz);
 	dst[maxsz] = 0;
+#ifdef AMIBERRY
+	target_resolve_relative_path (dst, maxsz + 1);
+#endif
 	xfree (s);
 }
 

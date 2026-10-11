@@ -1144,6 +1144,9 @@ static void parse_diskswapper (const TCHAR *s)
 					continue;
 				}
 
+#ifdef AMIBERRY
+				target_resolve_relative_path(path, MAX_DPATH);
+#endif
 				auto *expanded = target_expand_environment(path, nullptr, 0);
 				const TCHAR *use_path = expanded ? expanded : path;
 
@@ -1188,6 +1191,15 @@ static TCHAR *parsetextpath (const TCHAR *s)
 	auto* const s2 = parsetext (s);
 	auto* const s3 = target_expand_environment (s2, nullptr, 0);
 	xfree(s2);
+#ifdef AMIBERRY
+	TCHAR resolved[MAX_DPATH];
+	_tcsncpy(resolved, s3, MAX_DPATH - 1);
+	resolved[MAX_DPATH - 1] = 0;
+	if (target_resolve_relative_path(resolved, MAX_DPATH)) {
+		xfree(s3);
+		return my_strdup(resolved);
+	}
+#endif
 	return s3;
 }
 
@@ -1319,6 +1331,14 @@ static void parse_cmdline (int argc, TCHAR **argv)
 	if (cmdline_started)
 		return;
 	cmdline_started = true;
+#ifdef AMIBERRY
+	// "./" paths typed on the command line stay relative to the working directory;
+	// configuration files loaded from here switch back to the relative path base.
+	struct cmdline_path_scope {
+		bool previous = target_set_cmdline_path_mode(true);
+		~cmdline_path_scope() { target_set_cmdline_path_mode(previous); }
+	} const path_scope;
+#endif
 
 #ifdef AMIBERRY
 	// RP9 validates required ROMs as soon as --autoload is parsed, so publish

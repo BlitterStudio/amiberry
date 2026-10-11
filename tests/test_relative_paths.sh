@@ -37,10 +37,13 @@ fail()
 	exit 1
 }
 
-mkdir -p "$work/content/Floppies" "$work/elsewhere" "$work/cwd"
+mkdir -p "$work/content/Floppies" "$work/elsewhere" "$work/cwd/Floppies"
 printf 'x' > "$work/content/Floppies/disk.adf"
 printf 'x' > "$work/elsewhere/other.adf"
 printf 'x' > "$work/cwd/local.adf"
+# The same relative path also exists in the working directory: configuration
+# files must still pick the base copy, command-line arguments the cwd copy.
+printf 'x' > "$work/cwd/Floppies/disk.adf"
 
 "$bin" --dump-paths > "$work/paths.txt"
 if [ "$(line_value portable_mode "$work/paths.txt")" = "1" ]; then
@@ -65,7 +68,9 @@ printf 'floppy0=./Floppies/disk.adf\nfloppy1=%s\nfloppy2=./local.adf\n' \
 
 dump()
 {
-	(cd "$work/cwd" && "$bin" --dump-config -f "$(host_path "$work/media.uae")") > "$1" 2>/dev/null \
+	out="$1"
+	shift
+	(cd "$work/cwd" && "$bin" --dump-config "$@") > "$out" 2>/dev/null \
 		|| fail "dump-config failed"
 }
 
@@ -73,7 +78,7 @@ printf 'relative_paths=yes\n' > "$settings_file"
 "$bin" --dump-paths > "$work/relative-paths.txt"
 [ "$(line_value relative_paths "$work/relative-paths.txt")" = "1" ] \
 	|| fail "relative_paths=yes was not loaded" "$work/relative-paths.txt"
-dump "$work/relative.txt"
+dump "$work/relative.txt" -f "$(host_path "$work/media.uae")"
 [ "$(line_value floppy0 "$work/relative.txt")" = "./Floppies/disk.adf" ] \
 	|| fail "path inside the base was not saved relative" "$work/relative.txt"
 line_value floppy1 "$work/relative.txt" | grep -Eq '^[^.].*elsewhere[/\\]other\.adf$' \
@@ -81,8 +86,14 @@ line_value floppy1 "$work/relative.txt" | grep -Eq '^[^.].*elsewhere[/\\]other\.
 line_value floppy2 "$work/relative.txt" | grep -Eq '^[^.].*cwd[/\\]local\.adf$' \
 	|| fail "working-directory path was not kept" "$work/relative.txt"
 
+dump "$work/cmdline.txt" -0 ./Floppies/disk.adf --cdimage ./Floppies/disk.adf
+line_value floppy0 "$work/cmdline.txt" | grep -Eq '^[^.].*cwd[/\\]Floppies[/\\]disk\.adf$' \
+	|| fail "command-line floppy did not resolve against the working directory" "$work/cmdline.txt"
+line_value cdimage0 "$work/cmdline.txt" | grep -Eq '^[^.].*cwd[/\\]Floppies[/\\]disk\.adf(,|$)' \
+	|| fail "command-line CD image did not resolve against the working directory" "$work/cmdline.txt"
+
 printf 'relative_paths=no\n' > "$settings_file"
-dump "$work/absolute.txt"
+dump "$work/absolute.txt" -f "$(host_path "$work/media.uae")"
 line_value floppy0 "$work/absolute.txt" | grep -Eq '^[^.].*content[/\\]Floppies[/\\]disk\.adf$' \
 	|| fail "base-relative path did not resolve against the base" "$work/absolute.txt"
 

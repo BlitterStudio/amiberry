@@ -5403,6 +5403,29 @@ static bool host_path_exists(const std::string& path)
 	return std::filesystem::exists(path, ec);
 }
 
+// While command-line arguments are parsed, "./" paths mean what the user typed: relative
+// to the working directory. Configuration files switch this off while they load.
+static bool cmdline_path_mode = false;
+
+bool target_set_cmdline_path_mode(const bool enable)
+{
+	const bool previous = cmdline_path_mode;
+	cmdline_path_mode = enable;
+	return previous;
+}
+
+// Existing paths become absolute now, so later loads cannot re-resolve them against the
+// relative path base. Missing paths keep the pre-relative-paths handling of their option.
+static bool resolve_path_from_working_directory(TCHAR* path, const int size)
+{
+	TCHAR absolute[MAX_DPATH];
+	if (!host_path_exists(path) || !get_absolute_path(path, absolute)
+		|| _tcslen(absolute) >= static_cast<size_t>(size))
+		return false;
+	_tcscpy(path, absolute);
+	return true;
+}
+
 // Portable installs anchor relative paths to the executable directory, so they survive
 // drive letter and mount point changes. Other installs anchor them to the content home.
 std::string get_relative_path_base()
@@ -5445,6 +5468,8 @@ bool target_resolve_relative_path(TCHAR* path, const int size)
 {
 	if (!is_base_relative_path(path))
 		return false;
+	if (cmdline_path_mode)
+		return resolve_path_from_working_directory(path, size);
 	const auto base = get_absolute_relative_path_base();
 	if (base.empty())
 		return false;
