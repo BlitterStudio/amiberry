@@ -27,14 +27,14 @@ object SettingsChangeSummary {
 		addIfChanged("Scaling", scaling(before.scalingMethod), scaling(after.scalingMethod))
 		addIfChanged("Resolution autoswitch", autoresolution(before.gfxAutoresolution), autoresolution(after.gfxAutoresolution))
 		addIfChanged("Native shader", before.shader, after.shader)
-		addIfChanged("Joy port 0", before.joyport0, after.joyport0)
-		addIfChanged("Joy port 1", before.joyport1, after.joyport1)
+		addIfChanged("Port 1", before.joyport0, after.joyport0)
+		addIfChanged("Port 2", before.joyport1, after.joyport1)
 		addIfChanged("On-screen joystick", yesNo(before.onScreenJoystick), yesNo(after.onScreenJoystick))
-		addIfChanged("On-screen keyboard", yesNo(before.onScreenKeyboard), yesNo(after.onScreenKeyboard))
+		addIfChanged("On-screen keyboard button", yesNo(before.onScreenKeyboardButton), yesNo(after.onScreenKeyboardButton))
 		addIfChanged("On-screen keyboard numpad", yesNo(before.onScreenKeyboardNumpad), yesNo(after.onScreenKeyboardNumpad))
 		addIfChanged("On-screen keyboard toggle", before.onScreenKeyboardToggle ?: "Default", after.onScreenKeyboardToggle ?: "Default")
-		addIfChanged("Port 0 analog mouse map", yesNo(before.joyport0MouseMap), yesNo(after.joyport0MouseMap))
-		addIfChanged("Port 1 analog mouse map", yesNo(before.joyport1MouseMap), yesNo(after.joyport1MouseMap))
+		addIfChanged("Port 1 analog mouse map", yesNo(before.joyport0MouseMap), yesNo(after.joyport0MouseMap))
+		addIfChanged("Port 2 analog mouse map", yesNo(before.joyport1MouseMap), yesNo(after.joyport1MouseMap))
 	}
 
 	private fun MutableList<SettingsChange>.addIfChanged(label: String, before: String, after: String) {

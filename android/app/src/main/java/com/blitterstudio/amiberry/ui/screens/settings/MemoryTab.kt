@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
@@ -198,6 +199,7 @@ private fun MemoryDropdown(
 			label = { Text(label) },
 			trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 			modifier = Modifier
+				.dpadVerticalMovesFocus()
 				.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 				.fillMaxWidth()
 		)

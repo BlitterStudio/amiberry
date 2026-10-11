@@ -93,7 +93,8 @@ object ConfigGenerator {
 		sb.appendLine("gfx_height=${settings.gfxHeight}")
 		sb.appendLine("amiberry.gfx_correct_aspect=${settings.correctAspect.toCfg()}")
 		sb.appendLine("amiberry.gfx_auto_crop=${settings.autoCrop.toCfg()}")
-		sb.appendLine("scaling_method=${settings.scalingMethod}")
+		// Amiberry target option: the native parser only accepts the prefixed form.
+		sb.appendLine("amiberry.scaling_method=${settings.scalingMethod}")
 		sb.appendLine("gfx_autoresolution=${settings.gfxAutoresolution}")
 		sb.appendLine("amiberry.shader=${settings.shader}")
 
@@ -113,13 +114,14 @@ object ConfigGenerator {
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
-		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboardAvailable.toCfg()}")
+		sb.appendLine("amiberry.vkbd_touch_button=${settings.onScreenKeyboardButton.toCfg()}")
 		sb.appendLine("amiberry.vkbd_numpad=${settings.onScreenKeyboardNumpad.toCfg()}")
 		// Always explicit: null ("Default") serializes as the reset sentinel so a
 		// remembered toggle cannot replace the saved default choice on reload.
 		// "" (explicitly disabled) and button names round-trip unchanged.
 		sb.appendLine("amiberry.vkbd_toggle=${settings.onScreenKeyboardToggle ?: "default"}")
-		sb.appendLine("input.default_osk=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("input.default_osk=${settings.onScreenKeyboardAvailable.toCfg()}")
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")
@@ -143,13 +145,14 @@ object ConfigGenerator {
 		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
-		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboardAvailable.toCfg()}")
+		sb.appendLine("amiberry.vkbd_touch_button=${settings.onScreenKeyboardButton.toCfg()}")
 		sb.appendLine("amiberry.vkbd_numpad=${settings.onScreenKeyboardNumpad.toCfg()}")
 		// Always explicit: null ("Default") serializes as the reset sentinel so a
 		// remembered toggle cannot replace the saved default choice on reload.
 		// "" (explicitly disabled) and button names round-trip unchanged.
 		sb.appendLine("amiberry.vkbd_toggle=${settings.onScreenKeyboardToggle ?: "default"}")
-		sb.appendLine("input.default_osk=${settings.onScreenKeyboard.toCfg()}")
+		sb.appendLine("input.default_osk=${settings.onScreenKeyboardAvailable.toCfg()}")
 		sb.appendLine("use_gui=no")
 
 		return sb.toString()

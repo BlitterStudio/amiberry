@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.StoragePermissionActions
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.hasFullStorageAccess
-
 /**
  * Displays an informational banner when the app does not have full storage access.
  * Includes a button to open system settings so the user can grant the permission.
@@ -85,7 +85,8 @@ fun StoragePermissionBanner(
 								// Message delivery is owned by the parent screen; keep the banner resilient.
 							}
 						}
-					}
+					},
+					modifier = Modifier.dpadFocusIndicator()
 				) {
 					Text(stringResource(R.string.storage_permission_banner_action))
 				}

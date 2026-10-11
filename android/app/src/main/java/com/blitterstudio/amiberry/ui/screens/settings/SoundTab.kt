@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,6 +92,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_sound_output_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = outputExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -128,6 +130,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_sound_sample_rate_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = freqExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -165,6 +168,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_sound_stereo_mode_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = channelExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)

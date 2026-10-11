@@ -187,7 +187,8 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 							val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 							clipboard.setPrimaryClip(ClipData.newPlainText(clipboardLabelPath, viewModel.getStoragePath()))
 							scope.launch { snackbarHostState.showSnackbar(pathCopiedMessage) }
-						}
+						},
+						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Icon(
 							Icons.Default.ContentCopy,
@@ -196,7 +197,8 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					}
 					IconButton(
 						onClick = { viewModel.rescan() },
-						enabled = !showProgress
+						enabled = !showProgress,
+						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Icon(
 							Icons.Default.Refresh,
@@ -215,7 +217,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						}
 						openImportPicker()
 					},
-					modifier = Modifier.semantics { if (showProgress) disabled() },
+					modifier = Modifier.dpadFocusIndicator().semantics { if (showProgress) disabled() },
 					icon = {
 						if (isImporting) {
 							CircularProgressIndicator(
@@ -297,7 +299,10 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
 					trailingIcon = {
 						if (searchQuery.isNotEmpty()) {
-							IconButton(onClick = { searchQuery = "" }) {
+							IconButton(
+								onClick = { searchQuery = "" },
+								modifier = Modifier.dpadFocusIndicator()
+							) {
 								Icon(
 									Icons.Default.Clear,
 									contentDescription = stringResource(R.string.action_clear_search),
@@ -363,7 +368,8 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 									openImportPicker()
 								}
 							},
-							enabled = searchHasNoResults || !showProgress
+							enabled = searchHasNoResults || !showProgress,
+							modifier = Modifier.dpadFocusIndicator()
 						) {
 							Icon(
 								if (searchHasNoResults) Icons.Default.Clear else Icons.Default.Add,
@@ -388,7 +394,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						start = 16.dp,
 						top = 4.dp,
 						end = 16.dp,
-						bottom = 80.dp
+						bottom = 120.dp
 					),
 					verticalArrangement = Arrangement.spacedBy(4.dp)
 				) {
@@ -440,7 +446,8 @@ private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Un
 			}
 			IconButton(
 				onClick = { showDeleteDialog = true },
-				enabled = deleteEnabled
+				enabled = deleteEnabled,
+				modifier = Modifier.dpadFocusIndicator()
 			) {
 				Icon(
 					Icons.Default.Delete,
@@ -463,7 +470,8 @@ private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Un
 						onDelete()
 						showDeleteDialog = false
 					},
-					enabled = deleteEnabled
+					enabled = deleteEnabled,
+					modifier = Modifier.dpadFocusIndicator()
 				) {
 					Text(
 						stringResource(R.string.action_delete),
@@ -472,7 +480,10 @@ private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Un
 				}
 			},
 			dismissButton = {
-				TextButton(onClick = { showDeleteDialog = false }) {
+				TextButton(
+					onClick = { showDeleteDialog = false },
+					modifier = Modifier.dpadFocusIndicator()
+				) {
 					Text(stringResource(R.string.action_cancel))
 				}
 			}

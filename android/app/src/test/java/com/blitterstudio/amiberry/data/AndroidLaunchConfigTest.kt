@@ -15,7 +15,7 @@ class AndroidLaunchConfigTest {
 			joyport0 = "joy0",
 			joyport1 = "joy1",
 			onScreenJoystick = false,
-			onScreenKeyboard = false,
+			onScreenKeyboardButton = false,
 			onScreenKeyboardNumpad = true
 		)
 
@@ -36,7 +36,7 @@ class AndroidLaunchConfigTest {
 		assertEquals("joy0", snapshot.joyport0)
 		assertEquals("joy1", snapshot.joyport1)
 		assertEquals(false, snapshot.onScreenJoystick)
-		assertEquals(false, snapshot.onScreenKeyboard)
+		assertEquals(false, snapshot.onScreenKeyboardButton)
 		assertEquals(true, snapshot.onScreenKeyboardNumpad)
 	}
 

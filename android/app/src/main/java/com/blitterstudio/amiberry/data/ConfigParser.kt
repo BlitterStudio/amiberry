@@ -36,7 +36,7 @@ object ConfigParser {
 		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
 		"joyport0", "joyport1",
 		"joyport0mousemap", "joyport1mousemap",
-		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
+		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
 		"amiberry.android_joyport1",
 		"use_gui", "config_description", "config_hardware_path"
 	)
@@ -105,6 +105,9 @@ object ConfigParser {
 	}
 
 	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {
+		// vkbd_enabled is the native master switch; the KB touch button and the
+		// gamepad toggle are only reachable while it is on (see ConfigGenerator).
+		val keyboardAvailable = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
 		return EmulatorSettings(
 			baseModel = guessModel(kv),
 			cpuModel = kv["cpu_model"]?.toIntOrNull() ?: 68000,
@@ -165,13 +168,18 @@ object ConfigParser {
 				}
 			},
 			onScreenJoystick = kv["amiberry.onscreen_joystick"].toBool(true),
-			onScreenKeyboard = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true),
+			onScreenKeyboardButton = keyboardAvailable && kv["amiberry.vkbd_touch_button"].toBool(true),
 			onScreenKeyboardNumpad = kv["amiberry.vkbd_numpad"].toBool(false),
 			// "default" is the explicit reset sentinel (see ConfigGenerator): parse it
 			// back to the emulator default (null) while the key stays explicit, so the
 			// remembered-control fallback cannot override a saved Default choice.
-			// "" (explicitly disabled) and button names round-trip unchanged.
-			onScreenKeyboardToggle = kv["amiberry.vkbd_toggle"]?.takeIf { it != "default" },
+			// "" (explicitly disabled) and button names round-trip unchanged. With the
+			// keyboard switched off the toggle is inert, so it reads as disabled.
+			onScreenKeyboardToggle = if (keyboardAvailable) {
+				kv["amiberry.vkbd_toggle"]?.takeIf { it != "default" }
+			} else {
+				""
+			},
 			joyport0MouseMap = (kv["joyport0mousemap"]?.toIntOrNull() ?: 0) > 0,
 			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0
 		)

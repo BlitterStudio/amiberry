@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +70,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						readOnly = true,
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth(),
 						supportingText = {
@@ -111,6 +114,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_cpu_model_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cpuExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -184,6 +188,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 							label = { Text(stringResource(R.string.settings_cpu_fpu_label)) },
 							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fpuExpanded) },
 							modifier = Modifier
+								.dpadVerticalMovesFocus()
 								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 								.fillMaxWidth()
 						)
@@ -255,6 +260,7 @@ fun SwitchRow(
 				role = Role.Switch,
 				onValueChange = onCheckedChange
 			)
+			.dpadFocusIndicator()
 			.padding(vertical = 4.dp)
 	) {
 		Row(

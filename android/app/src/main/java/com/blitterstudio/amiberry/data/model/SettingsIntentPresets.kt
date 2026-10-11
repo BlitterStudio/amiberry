@@ -48,7 +48,7 @@ object SettingsIntentPresets {
 			SettingsIntentPreset.TouchControls -> settings.copy(
 				joyport1 = "onscreen_joy",
 				onScreenJoystick = true,
-				onScreenKeyboard = true
+				onScreenKeyboardButton = true
 			)
 		}
 	}

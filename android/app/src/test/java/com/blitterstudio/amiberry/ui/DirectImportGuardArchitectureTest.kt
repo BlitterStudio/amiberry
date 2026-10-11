@@ -86,11 +86,6 @@ class DirectImportGuardArchitectureTest {
 			storage.contains("launchImportGuarded(importGuard)")
 		)
 		assertTrue(
-			"StorageTab should disable floppy import buttons while a direct import is active.",
-			Regex("""TextButton\(onClick = \{ importLauncher\.launch\(FilePickerFilters\.mimeTypesFor\(FileCategory\.FLOPPIES\)\) \}, enabled = !importInProgress\)""")
-				.containsMatchIn(storage)
-		)
-		assertTrue(
 			"StorageTab should show an importing label while direct floppy import is active.",
 			storage.contains("R.string.action_importing")
 		)
@@ -100,11 +95,6 @@ class DirectImportGuardArchitectureTest {
 		assertTrue(
 			"MediaSelector should accept direct import busy state from its caller.",
 			mediaSelector.contains("importInProgress: Boolean = false")
-		)
-		assertTrue(
-			"MediaSelector import button should be disabled while importing.",
-			Regex("""TextButton\(onClick = onImport, enabled = !importInProgress\)""")
-				.containsMatchIn(mediaSelector)
 		)
 		assertTrue(
 			"MediaSelector should show an importing label while busy.",

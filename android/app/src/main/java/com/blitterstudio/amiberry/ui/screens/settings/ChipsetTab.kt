@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +74,7 @@ fun ChipsetTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_chipset_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = chipsetExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -128,6 +130,7 @@ fun ChipsetTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_chipset_collision_level_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = collisionExpanded) },
 						modifier = Modifier
+							.dpadVerticalMovesFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
