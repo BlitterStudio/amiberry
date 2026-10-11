@@ -178,8 +178,14 @@ if(IOS)
     list(APPEND AMIBERRY_COMPILE_OPTIONS "$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-mno-omit-leaf-frame-pointer>")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS "/opt/homebrew/include")
-        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS "/opt/homebrew/lib")
+        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS
+            "/opt/homebrew/include"
+            "/opt/local/include"
+        )
+        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS
+            "/opt/homebrew/lib"
+            "/opt/local/lib"
+        )
     else()
         list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS "/usr/local/include")
         list(APPEND AMIBERRY_PLATFORM_LINK_DIRS "/usr/local/lib")

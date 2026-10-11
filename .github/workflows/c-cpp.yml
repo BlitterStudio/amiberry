@@ -358,14 +358,28 @@ jobs:
               if ! lipo "$binary" -verify_arch "$arch" >/dev/null 2>&1; then
                 continue
               fi
+              own_id=$(otool -arch "$arch" -D "$binary" 2>/dev/null | sed -n '2p')
               while read -r line; do
-                dep_name=$(echo "$line" | sed -E 's|.*@executable_path/../Frameworks/([^ ]+).*|\1|')
+                dep=$(echo "$line" | awk '{print $1}')
+                [ "$dep" = "$own_id" ] && continue
+                dep_name=$(echo "$dep" | sed -E 's#^(@rpath/|@executable_path/\.\./Frameworks/)##')
+
+                if [ -z "$dep_name" ] || [ "$dep_name" = "$dep" ]; then
+                  continue
+                fi
+
                 if [ ! -f "$UNI_FW/$dep_name" ]; then
                   echo "  MISSING ($arch, $label): $dep_name"
+                  echo "    reference: $dep"
                   missing_deps=1
                 fi
-              done < <(otool -arch "$arch" -L "$binary" 2>/dev/null | grep '@executable_path/../Frameworks/' || true)
-              if otool -arch "$arch" -L "$binary" 2>/dev/null | grep -E '/opt/homebrew|/usr/local'; then
+              done < <(
+                otool -arch "$arch" -L "$binary" 2>/dev/null |
+                grep -E '@rpath/|@executable_path/../Frameworks/' || true
+              )
+
+              if otool -arch "$arch" -L "$binary" 2>/dev/null |
+                  grep -E '/opt/homebrew|/usr/local|/opt/local'; then
                 echo "  EXTERNAL HOMEBREW DEPENDENCY ($arch, $label)"
                 missing_deps=1
               fi
