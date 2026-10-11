@@ -4889,7 +4889,7 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 #ifdef AMIBERRY
 	// Host Only keeps chipset sprite 0 available for collision and cursor
 	// extraction, but removes it from the rendered Denise output.
-	vs &= magic_sprite_mask;
+	v &= magic_sprite_mask;
 #endif
 	int *shift_lookup = bpldualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
 	int maskshift, plfmask;
