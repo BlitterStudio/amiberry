@@ -5372,36 +5372,246 @@ static void clear_base_content_path_preserving_overrides()
 		previous_paths, previous_baseline_paths));
 }
 
-// convert path to absolute
-void fullpath(TCHAR* path, int size, bool userelative)
+static std::string get_portable_root_directory();
+
+static bool is_path_separator(const TCHAR c)
 {
-	// Resolve absolute path
-	TCHAR tmp1[MAX_DPATH];
-	tmp1[0] = 0;
-#ifdef _WIN32
-	if (_fullpath(tmp1, path, MAX_DPATH) != nullptr)
-#else
-	if (realpath(path, tmp1) != nullptr)
-#endif
-	{
-		if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
-			_tcscpy(path, tmp1);
-	}
-	else if (path[0] != 0)
-	{
-		const auto path_len = _tcslen(path);
-		const bool pseudo_path = path[0] == ':';
-		const bool optional_geometry_file = errno == ENOENT && path_len >= 4
-			&& _tcsicmp(path + path_len - 4, _T(".geo")) == 0;
-		if (!pseudo_path && !optional_geometry_file)
-			write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
-	}
+	return c == '/' || c == '\\';
 }
 
-// convert path to absolute
+// "./", ".\", "../" and "..\" prefixes mark paths relative to the relative path base.
+static bool is_base_relative_path(const TCHAR* path)
+{
+	if (path[0] != '.')
+		return false;
+	const int dots = path[1] == '.' ? 2 : 1;
+	return is_path_separator(path[dots]);
+}
+
+static bool get_absolute_path(const TCHAR* path, TCHAR* out)
+{
+#ifdef _WIN32
+	return _fullpath(out, path, MAX_DPATH) != nullptr;
+#else
+	return realpath(path, out) != nullptr;
+#endif
+}
+
+static bool host_path_exists(const std::string& path)
+{
+	std::error_code ec;
+	return std::filesystem::exists(path, ec);
+}
+
+// While command-line arguments are parsed, "./" paths mean what the user typed: relative
+// to the working directory. Configuration files switch this off while they load.
+static bool cmdline_path_mode = false;
+
+bool target_set_cmdline_path_mode(const bool enable)
+{
+	const bool previous = cmdline_path_mode;
+	cmdline_path_mode = enable;
+	return previous;
+}
+
+// Existing paths become absolute now, so later loads cannot re-resolve them against the
+// relative path base. Missing paths keep the pre-relative-paths handling of their option.
+static bool resolve_path_from_working_directory(TCHAR* path, const int size)
+{
+	TCHAR absolute[MAX_DPATH];
+	if (!host_path_exists(path) || !get_absolute_path(path, absolute)
+		|| _tcslen(absolute) >= static_cast<size_t>(size))
+		return false;
+	_tcscpy(path, absolute);
+	return true;
+}
+
+// Portable installs anchor relative paths to the executable directory, so they survive
+// drive letter and mount point changes. Other installs anchor them to the content home.
+std::string get_relative_path_base()
+{
+	if (g_portable_mode)
+	{
+		static const std::string portable_root = get_portable_root_directory();
+		if (!portable_root.empty())
+			return portable_root;
+	}
+	return home_dir;
+}
+
+#ifdef _WIN32
+static constexpr char native_path_separator = '\\';
+#else
+static constexpr char native_path_separator = '/';
+#endif
+
+static std::string strip_trailing_separators(std::string path)
+{
+	while (!path.empty() && is_path_separator(path.back()))
+		path.pop_back();
+	return path;
+}
+
+// The relative path base without trailing separators, as configured and in canonical form.
+// The spellings differ when the base is reached through a symlink.
+struct relative_path_base_spellings
+{
+	bool available = false;
+	std::string configured;
+	std::string canonical;
+};
+
+static relative_path_base_spellings get_relative_path_base_spellings()
+{
+	relative_path_base_spellings base;
+	const auto configured = get_relative_path_base();
+	if (configured.empty())
+		return base;
+	base.available = true;
+	base.configured = strip_trailing_separators(configured);
+	TCHAR absolute[MAX_DPATH];
+	base.canonical = strip_trailing_separators(
+		get_absolute_path(configured.c_str(), absolute) ? std::string(absolute) : configured);
+	return base;
+}
+
+// Roots keep their separator: "E:" alone names the drive's current directory, not its root.
+static std::string get_base_directory_path(const std::string& stripped_base)
+{
+	if (stripped_base.empty() || (stripped_base.size() == 2 && stripped_base[1] == ':'))
+		return stripped_base + native_path_separator;
+	return stripped_base;
+}
+
+static bool path_chars_match(const TCHAR a, const TCHAR b)
+{
+	if (is_path_separator(a) && is_path_separator(b))
+		return true;
+#if defined(_WIN32) || defined(__APPLE__)
+	return _totlower(a) == _totlower(b);
+#else
+	return a == b;
+#endif
+}
+
+bool target_resolve_relative_path(TCHAR* path, const int size)
+{
+	if (!is_base_relative_path(path))
+		return false;
+	if (cmdline_path_mode)
+		return resolve_path_from_working_directory(path, size);
+	const auto base = get_relative_path_base_spellings();
+	if (!base.available)
+		return false;
+
+	// "./" alone names the base itself.
+	const TCHAR* rest = path[1] == '.' ? path : path + 2;
+	if (!rest[0])
+	{
+		const auto directory = get_base_directory_path(base.canonical);
+		if (directory.size() >= static_cast<size_t>(size))
+			return false;
+		_tcscpy(path, directory.c_str());
+		return true;
+	}
+
+	std::string candidate = base.canonical + native_path_separator + rest;
+	// A path typed relative to the working directory (command line, launcher) still wins
+	// when it only exists there.
+	if (!host_path_exists(candidate) && host_path_exists(path))
+		return false;
+
+	TCHAR absolute[MAX_DPATH];
+	if (get_absolute_path(candidate.c_str(), absolute))
+	{
+		candidate = absolute;
+		// Directory entries keep their trailing separator, as callers append file names.
+		if (is_path_separator(path[_tcslen(path) - 1]) && !is_path_separator(candidate.back()))
+			candidate += native_path_separator;
+	}
+	if (candidate.size() >= static_cast<size_t>(size))
+		return false;
+	_tcscpy(path, candidate.c_str());
+	return true;
+}
+
+static bool make_path_relative_to(const TCHAR* path, const std::string& stripped_base, std::string& relative)
+{
+	const size_t path_len = _tcslen(path);
+	if (path_len < stripped_base.size())
+		return false;
+	for (size_t i = 0; i < stripped_base.size(); i++)
+	{
+		if (!path_chars_match(path[i], stripped_base[i]))
+			return false;
+	}
+	if (path_len > stripped_base.size() && !is_path_separator(path[stripped_base.size()]))
+		return false;
+
+	// Forward slashes keep the stored path usable on every host.
+	relative = "./";
+	const TCHAR* rest = path + stripped_base.size();
+	while (is_path_separator(*rest))
+		rest++;
+	for (; *rest; rest++)
+		relative += is_path_separator(*rest) ? '/' : *rest;
+	return true;
+}
+
+bool target_make_relative_path(TCHAR* path, const int size)
+{
+	if (!path[0] || is_base_relative_path(path))
+		return false;
+	const auto base = get_relative_path_base_spellings();
+	if (!base.available)
+		return false;
+
+	// Paths derived from the configured base keep its spelling; resolved paths are canonical.
+	std::string relative;
+	if (!make_path_relative_to(path, base.configured, relative)
+		&& !make_path_relative_to(path, base.canonical, relative))
+	{
+		TCHAR canonical[MAX_DPATH];
+		if (!get_absolute_path(path, canonical) || !make_path_relative_to(canonical, base.canonical, relative))
+			return false;
+	}
+	if (relative.size() >= static_cast<size_t>(size))
+		return false;
+	_tcscpy(path, relative.c_str());
+	return true;
+}
+
+// convert path to absolute, or to base-relative when userelative is set
+void fullpath(TCHAR* path, int size, bool userelative)
+{
+	if (!target_resolve_relative_path(path, size))
+	{
+		TCHAR tmp1[MAX_DPATH];
+		tmp1[0] = 0;
+		if (get_absolute_path(path, tmp1))
+		{
+			if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
+				_tcscpy(path, tmp1);
+		}
+		else if (path[0] != 0)
+		{
+			const auto path_len = _tcslen(path);
+			const bool pseudo_path = path[0] == ':';
+			const bool optional_geometry_file = errno == ENOENT && path_len >= 4
+				&& _tcsicmp(path + path_len - 4, _T(".geo")) == 0;
+			if (!pseudo_path && !optional_geometry_file)
+				write_log("fullpath: realpath() failed for '%s' (errno=%d), using path as-is.\n", path, errno);
+		}
+	}
+	if (userelative)
+		target_make_relative_path(path, size);
+}
+
+// Amiberry never changes into the relative path base, so paths used at runtime stay
+// absolute. The relative form is produced only when configurations are written.
 void fullpath(TCHAR* path, const int size)
 {
-	fullpath(path, size, relativepaths);
+	fullpath(path, size, false);
 }
 
 bool target_isrelativemode()
@@ -7271,6 +7481,18 @@ void read_directory(const std::string& path, std::vector<std::string>* dirs, std
 		sort(files->begin(), files->end());
 }
 
+// Portable installs store amiberry.conf paths relative to the executable directory when
+// relative paths are enabled, so the whole folder can move to another drive or mount point.
+static std::string get_settings_path_for_save(const std::string& value)
+{
+	if (!g_portable_mode || !relativepaths || value.empty() || value.size() >= MAX_DPATH)
+		return value;
+	TCHAR path[MAX_DPATH];
+	_tcscpy(path, value.c_str());
+	target_make_relative_path(path, MAX_DPATH);
+	return path;
+}
+
 bool save_amiberry_settings_with_result()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
@@ -7293,6 +7515,10 @@ bool save_amiberry_settings_with_result()
 	auto write_string_option = [&](const char* name, const std::string& value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%s\n", name, value.c_str());
 		fputs(buffer, f);
+		};
+
+	auto write_path_option = [&](const char* name, const std::string& value) {
+		write_string_option(name, get_settings_path_for_save(value));
 		};
 
 	auto write_float_option = [&](const char* name, const float value) {
@@ -7500,14 +7726,15 @@ bool save_amiberry_settings_with_result()
 		: get_base_content_path_set(base_content_path);
 	auto write_managed_path_option = [&](const managed_path_option_descriptor& descriptor, const std::string& value) {
 		if (base_content_path.empty() || !path_strings_match(value, derived_base_paths.*(descriptor.member)))
-			write_string_option(descriptor.name, value);
+			write_path_option(descriptor.name, value);
 	};
 
-	write_string_option("base_content_path", base_content_path);
-	write_string_option("retroarch_config", retroarch_file);
-	write_string_option("floppy_sounds_dir", floppy_sounds_dir);
+	write_bool_option("relative_paths", relativepaths != 0);
+	write_path_option("base_content_path", base_content_path);
+	write_path_option("retroarch_config", retroarch_file);
+	write_path_option("floppy_sounds_dir", floppy_sounds_dir);
 	if (!plugins_dir.empty())
-		write_string_option("plugins_dir", plugins_dir);
+		write_path_option("plugins_dir", plugins_dir);
 	write_managed_path_option(base_content_managed_path_options[0], config_path);
 	write_managed_path_option(base_content_managed_path_options[1], controllers_path);
 	write_managed_path_option(base_content_managed_path_options[2], whdboot_path);
@@ -7534,7 +7761,7 @@ bool save_amiberry_settings_with_result()
 	fputs(buffer, f);
 	for (auto& i : lstMRUDiskList)
 	{
-		write_string_option("Diskfile", i);
+		write_path_option("Diskfile", i);
 	}
 
 	// Recent CD entries (these are used in the dropdown controls)
@@ -7542,7 +7769,7 @@ bool save_amiberry_settings_with_result()
 	fputs(buffer, f);
 	for (auto& i : lstMRUCDList)
 	{
-		write_string_option("CDfile", i);
+		write_path_option("CDfile", i);
 	}
 
 	// Recent WHDLoad entries (these are used in the dropdown controls)
@@ -7551,7 +7778,7 @@ bool save_amiberry_settings_with_result()
 	fputs(buffer, f);
 	for (auto& i : lstMRUWhdloadList)
 	{
-		write_string_option("WHDLoadfile", i);
+		write_path_option("WHDLoadfile", i);
 	}
 	
 	const bool write_ok = ferror(f) == 0;
@@ -7649,6 +7876,7 @@ static bool parse_base_content_path_line(const char* path, char* linea, std::str
 	if (!cfgfile_string(option, value, "base_content_path", configured_base_path, sizeof configured_base_path))
 		return false;
 
+	target_resolve_relative_path(configured_base_path, sizeof configured_base_path);
 	value_out = normalize_path_string(configured_base_path);
 	return true;
 }
@@ -7674,8 +7902,23 @@ static bool parse_managed_path_option_line(const char* path, char* linea, manage
 		return false;
 
 	line_out.descriptor = descriptor;
+	target_resolve_relative_path(configured_path, sizeof configured_path);
 	line_out.value = normalize_path_string(configured_path);
 	return true;
+}
+
+static bool is_settings_path_option(const TCHAR* option)
+{
+	static const TCHAR* const path_options[] = {
+		_T("retroarch_config"), _T("floppy_sounds_dir"), _T("plugins_dir"), _T("cd_path"),
+		_T("Diskfile"), _T("CDfile"), _T("WHDLoadfile"),
+	};
+	for (const auto* path_option : path_options)
+	{
+		if (_tcscmp(option, path_option) == 0)
+			return true;
+	}
+	return find_base_content_managed_path_option(option) != nullptr;
 }
 
 static int parse_amiberry_settings_line(const char *path, char *linea)
@@ -7704,6 +7947,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 
 	if (!cfgfile_separate_linea(path, linea, option, value))
 		return 0;
+	if (is_settings_path_option(option))
+		target_resolve_relative_path(value, CONFIG_BLEN);
 
 	if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 	{
@@ -7802,6 +8047,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
 		ret |= cfgfile_string(option, value, "amiberry_config", amiberry_conf_file);
+		bool relative_paths_enabled = relativepaths != 0;
+		if (cfgfile_yesno(option, value, "relative_paths", &relative_paths_enabled))
+		{
+			relativepaths = relative_paths_enabled ? 1 : 0;
+			ret = 1;
+		}
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
@@ -11831,6 +12082,8 @@ static void dump_resolved_paths(const bool write_dump_file)
 	output.append("portable_mode=").append(g_portable_mode ? "1" : "0").append("\n");
 	append_line("portable_root", get_portable_root_directory());
 	append_line("portable_marker_file", get_portable_mode_marker_path());
+	append_line("relative_paths", relativepaths ? "1" : "0");
+	append_line("relative_path_base", get_relative_path_base());
 	append_line("settings_resolution_source", get_settings_resolution_source_name(resolved_settings_source));
 	append_line("settings_resolution_file", resolved_settings_file);
 	append_line("settings_dir", settings_dir);
@@ -12420,6 +12673,8 @@ int amiberry_main(int argc, char* argv[])
 	g_portable_mode = false;
 	#endif
 	const bool portable_mode = g_portable_mode;
+	// Portable installs default to relative paths; amiberry.conf can override this.
+	relativepaths = portable_mode ? 1 : 0;
 	resolve_bootstrap_settings_paths(portable_mode, !early_dump_mode);
 	if (dump_paths)
 	{

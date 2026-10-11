@@ -625,6 +625,20 @@ void render_panel_paths()
 #endif
 		ShowHelpMarker(portable_help.c_str());
 	}
+	{
+		bool use_relative_paths = relativepaths != 0;
+		if (AmigaCheckbox("Use relative paths", &use_relative_paths))
+			relativepaths = use_relative_paths ? 1 : 0;
+		const std::string relative_help =
+			"When enabled, file and folder paths inside the base folder are saved as relative paths\n"
+			"(for example ./Floppies/game.adf), so the folder can move to another drive or location.\n"
+			"Paths outside the base folder stay absolute.\n\n"
+			"Base folder: " + get_relative_path_base() + "\n\n"
+			"In portable mode, the base folder is the executable directory and amiberry.conf paths\n"
+			"are stored relative to it as well. Relative paths are always resolved when loading,\n"
+			"whether or not this option is enabled.";
+		ShowHelpMarker(relative_help.c_str());
+	}
 	ImGui::Spacing();
 	ImGui::Separator();
 	ImGui::Spacing();

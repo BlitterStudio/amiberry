@@ -23,6 +23,7 @@ SKIPPED_TESTS=()
 BEHAVIORAL_TESTS=(
 	"test_dump_config.sh"
 	"test_plugin_search_paths.sh"
+	"test_relative_paths.sh"
 )
 
 binary="${1:-${AMIBERRY_BIN:-}}"
