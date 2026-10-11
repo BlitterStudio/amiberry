@@ -12,6 +12,10 @@ class AppPreferences private constructor(context: Context) {
 	private val prefs: SharedPreferences =
 		context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+	init {
+		migrateLegacyKeyboardSwitch()
+	}
+
 	var useDynamicColor = mutableStateOf(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
 		private set
 
@@ -35,7 +39,7 @@ class AppPreferences private constructor(context: Context) {
 			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, DEFAULT_JOYPORT0) ?: DEFAULT_JOYPORT0,
 			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, DEFAULT_JOYPORT1) ?: DEFAULT_JOYPORT1,
 			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
-			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD),
+			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, DEFAULT_ON_SCREEN_KEYBOARD),
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
 			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, null),
 			joyport0MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, false),
@@ -54,11 +58,26 @@ class AppPreferences private constructor(context: Context) {
 			putString(KEY_LAST_JOYPORT0, settings.joyport0)
 			putString(KEY_LAST_JOYPORT1, settings.joyport1)
 			putBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, settings.onScreenJoystick)
-			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, settings.onScreenKeyboardButton)
+			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, settings.onScreenKeyboardButton)
 			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, settings.onScreenKeyboardNumpad)
 			putString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, settings.onScreenKeyboardToggle)
 			putBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, settings.joyport0MouseMap)
 			putBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, settings.joyport1MouseMap)
+		}
+	}
+
+	/**
+	 * [KEY_LAST_ON_SCREEN_KEYBOARD] used to hold the keyboard master switch. Off meant
+	 * no keyboard at all, so carry it over as button off plus a disabled gamepad toggle;
+	 * otherwise the default toggle would re-enable the keyboard after an upgrade.
+	 */
+	private fun migrateLegacyKeyboardSwitch() {
+		if (!prefs.contains(KEY_LAST_ON_SCREEN_KEYBOARD)) return
+		val keyboardEnabled = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD, DEFAULT_ON_SCREEN_KEYBOARD)
+		prefs.edit {
+			putBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, keyboardEnabled)
+			if (!keyboardEnabled) putString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, "")
+			remove(KEY_LAST_ON_SCREEN_KEYBOARD)
 		}
 	}
 
@@ -126,7 +145,9 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_LAST_JOYPORT0 = "last_joyport0"
 		private const val KEY_LAST_JOYPORT1 = "last_joyport1"
 		private const val KEY_LAST_ON_SCREEN_JOYSTICK = "last_on_screen_joystick"
+		/** Legacy keyboard master switch; migrated by [migrateLegacyKeyboardSwitch]. */
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD = "last_on_screen_keyboard"
+		private const val KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON = "last_on_screen_keyboard_button"
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD = "last_on_screen_keyboard_numpad"
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE = "last_on_screen_keyboard_toggle"
 		private const val KEY_LAST_JOYPORT0_MOUSEMAP = "last_joyport0_mousemap"
