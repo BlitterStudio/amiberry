@@ -2001,6 +2001,80 @@ static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
 	return !out_images.empty();
 }
 
+// With block_extract set, RetroArch passes a file the user browsed to inside an
+// archive as "<archive>#<entry>". zfile opens archive members as
+// "<archive>/<entry>", so rewrite the delimiter for the archive types zfile
+// handles. Other paths are returned unchanged.
+static std::string frontend_path_to_zfile_path(const std::string& path)
+{
+	const char* delim = path_get_archive_delim(path.c_str());
+	if (!delim)
+		return path;
+	const size_t pos = static_cast<size_t>(delim - path.c_str());
+	const std::string archive_ext = path_extension_lower(path.substr(0, pos));
+	if (archive_ext != "zip" && archive_ext != "7z")
+		return path;
+	return path.substr(0, pos) + "/" + path.substr(pos + 1);
+}
+
+// zfile names archive members after the archive path with '\' turned into '/'
+// and repeated '/' collapsed. Apply the same rules before comparing paths.
+static std::string zfile_path_key(std::string path)
+{
+	std::replace(path.begin(), path.end(), '\\', '/');
+	path.erase(std::unique(path.begin(), path.end(), [](const char a, const char b) {
+		return a == '/' && b == '/';
+	}), path.end());
+	return path;
+}
+
+static int collect_archive_floppy_image(struct zfile* f, void* user)
+{
+	auto* paths = static_cast<std::vector<std::string>*>(user);
+	const TCHAR* name = zfile_getname(f);
+	if (name && zfile_gettype(f) == ZFILE_DISKIMAGE)
+		paths->emplace_back(name);
+	return 0;
+}
+
+// Given a .zip or .7z, UAE inserts only the first disk it finds. Expose every
+// floppy image in the archive as its own disk control entry instead, sorted by
+// name like the desktop disk swapper. If the content path names a member
+// ("<archive>#<entry>"), `selected` receives its zfile path. A member that is
+// not a floppy image (an HDF or CD image) becomes the only entry. Returns false
+// when the content is not a zip/7z or holds no floppy images, so the caller
+// falls back to passing the content path through unchanged.
+static bool load_archive_disk_images(const std::string& content_path,
+	std::vector<DiskImage>& out_images, std::string& selected)
+{
+	selected.clear();
+	std::string archive = content_path;
+	if (const char* delim = path_get_archive_delim(content_path.c_str()))
+		archive = content_path.substr(0, static_cast<size_t>(delim - content_path.c_str()));
+	const std::string archive_ext = path_extension_lower(archive);
+	if (archive_ext != "zip" && archive_ext != "7z")
+		return false;
+	if (archive != content_path)
+		selected = zfile_path_key(frontend_path_to_zfile_path(content_path));
+
+	std::vector<std::string> paths;
+	zfile_zopen(archive, collect_archive_floppy_image, &paths);
+	if (!selected.empty() && std::none_of(paths.begin(), paths.end(), [&selected](const std::string& p) {
+			return zfile_path_key(p) == selected;
+		})) {
+		paths.assign(1, selected);
+	}
+	if (paths.empty())
+		return false;
+
+	std::sort(paths.begin(), paths.end());
+	for (auto& p : paths)
+		out_images.push_back({ std::move(p), {} });
+	if (log_cb)
+		log_cb(RETRO_LOG_INFO, "Archive %s: exposing %zu disk image(s)\n", archive.c_str(), out_images.size());
+	return true;
+}
+
 static bool libretro_get_image_label(unsigned index, char* s, size_t len);
 
 static void sync_rp9_disk_control_media()
@@ -2202,9 +2276,10 @@ static bool libretro_replace_image_index(unsigned index, const struct retro_game
 	if (index >= disk_images.size())
 		return false;
 	if (info && info->path) {
-		if (!file_readable(info->path) && log_cb)
+		const std::string image_path = frontend_path_to_zfile_path(info->path);
+		if (image_path == info->path && !file_readable(info->path) && log_cb)
 			log_cb(RETRO_LOG_WARN, "Disk image not readable: %s\n", info->path);
-		disk_images[index].path = info->path;
+		disk_images[index].path = image_path;
 		disk_images[index].label.clear();
 	} else {
 		disk_images[index].path.clear();
@@ -5190,6 +5265,7 @@ bool retro_load_game(const struct retro_game_info *info)
 		last_disk_index = 0;
 		last_disk_ejected = false;
 
+		std::string selected_disk;
 		const auto ext_pos = path.find_last_of('.');
 		const std::string path_ext = (ext_pos == std::string::npos) ? "" : path.substr(ext_pos);
 		if (path_ext == ".m3u" || path_ext == ".m3u8") {
@@ -5200,22 +5276,35 @@ bool retro_load_game(const struct retro_game_info *info)
 				image.path = path;
 				disk_images.push_back(image);
 			}
-		} else {
+		} else if (!load_archive_disk_images(path, disk_images, selected_disk)) {
 			DiskImage image;
 			image.path = path;
 			disk_images.push_back(image);
 		}
 
 		if (!disk_images.empty()) {
+			// A saved image path that matches nothing is stale: ignore the
+			// restore and fall back to the browsed archive member, if any.
+			bool restored = false;
 			if (!initial_disk_path.empty()) {
 				for (size_t i = 0; i < disk_images.size(); i++) {
 					if (disk_images[i].path == initial_disk_path) {
 						disk_index = static_cast<unsigned>(i);
+						restored = true;
 						break;
 					}
 				}
 			} else if (initial_disk_index >= 0 && static_cast<unsigned>(initial_disk_index) < disk_images.size()) {
 				disk_index = static_cast<unsigned>(initial_disk_index);
+				restored = true;
+			}
+			if (!restored && !selected_disk.empty()) {
+				for (size_t i = 0; i < disk_images.size(); i++) {
+					if (zfile_path_key(disk_images[i].path) == selected_disk) {
+						disk_index = static_cast<unsigned>(i);
+						break;
+					}
+				}
 			}
 			strncpy(game_path, disk_images[disk_index].path.c_str(), sizeof(game_path) - 1);
 			game_path[sizeof(game_path) - 1] = '\0';
