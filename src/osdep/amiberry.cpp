@@ -5439,18 +5439,48 @@ std::string get_relative_path_base()
 	return home_dir;
 }
 
-// Absolute form of the relative path base, without trailing separators.
-static std::string get_absolute_relative_path_base()
+#ifdef _WIN32
+static constexpr char native_path_separator = '\\';
+#else
+static constexpr char native_path_separator = '/';
+#endif
+
+static std::string strip_trailing_separators(std::string path)
 {
-	std::string base = get_relative_path_base();
-	if (base.empty())
-		return {};
+	while (!path.empty() && is_path_separator(path.back()))
+		path.pop_back();
+	return path;
+}
+
+// The relative path base without trailing separators, as configured and in canonical form.
+// The spellings differ when the base is reached through a symlink.
+struct relative_path_base_spellings
+{
+	bool available = false;
+	std::string configured;
+	std::string canonical;
+};
+
+static relative_path_base_spellings get_relative_path_base_spellings()
+{
+	relative_path_base_spellings base;
+	const auto configured = get_relative_path_base();
+	if (configured.empty())
+		return base;
+	base.available = true;
+	base.configured = strip_trailing_separators(configured);
 	TCHAR absolute[MAX_DPATH];
-	if (get_absolute_path(base.c_str(), absolute))
-		base = absolute;
-	while (base.size() > 1 && is_path_separator(base.back()))
-		base.pop_back();
+	base.canonical = strip_trailing_separators(
+		get_absolute_path(configured.c_str(), absolute) ? std::string(absolute) : configured);
 	return base;
+}
+
+// Roots keep their separator: "E:" alone names the drive's current directory, not its root.
+static std::string get_base_directory_path(const std::string& stripped_base)
+{
+	if (stripped_base.empty() || (stripped_base.size() == 2 && stripped_base[1] == ':'))
+		return stripped_base + native_path_separator;
+	return stripped_base;
 }
 
 static bool path_chars_match(const TCHAR a, const TCHAR b)
@@ -5470,26 +5500,22 @@ bool target_resolve_relative_path(TCHAR* path, const int size)
 		return false;
 	if (cmdline_path_mode)
 		return resolve_path_from_working_directory(path, size);
-	const auto base = get_absolute_relative_path_base();
-	if (base.empty())
+	const auto base = get_relative_path_base_spellings();
+	if (!base.available)
 		return false;
 
 	// "./" alone names the base itself.
 	const TCHAR* rest = path[1] == '.' ? path : path + 2;
 	if (!rest[0])
 	{
-		if (base.size() >= static_cast<size_t>(size))
+		const auto directory = get_base_directory_path(base.canonical);
+		if (directory.size() >= static_cast<size_t>(size))
 			return false;
-		_tcscpy(path, base.c_str());
+		_tcscpy(path, directory.c_str());
 		return true;
 	}
 
-#ifdef _WIN32
-	constexpr char native_separator = '\\';
-#else
-	constexpr char native_separator = '/';
-#endif
-	std::string candidate = base + native_separator + rest;
+	std::string candidate = base.canonical + native_path_separator + rest;
 	// A path typed relative to the working directory (command line, launcher) still wins
 	// when it only exists there.
 	if (!host_path_exists(candidate) && host_path_exists(path))
@@ -5501,7 +5527,7 @@ bool target_resolve_relative_path(TCHAR* path, const int size)
 		candidate = absolute;
 		// Directory entries keep their trailing separator, as callers append file names.
 		if (is_path_separator(path[_tcslen(path) - 1]) && !is_path_separator(candidate.back()))
-			candidate += native_separator;
+			candidate += native_path_separator;
 	}
 	if (candidate.size() >= static_cast<size_t>(size))
 		return false;
@@ -5509,32 +5535,46 @@ bool target_resolve_relative_path(TCHAR* path, const int size)
 	return true;
 }
 
-bool target_make_relative_path(TCHAR* path, const int size)
+static bool make_path_relative_to(const TCHAR* path, const std::string& stripped_base, std::string& relative)
 {
-	if (!path[0] || is_base_relative_path(path))
-		return false;
-	const auto base = get_absolute_relative_path_base();
-	if (base.empty())
-		return false;
-
 	const size_t path_len = _tcslen(path);
-	if (path_len < base.size())
+	if (path_len < stripped_base.size())
 		return false;
-	for (size_t i = 0; i < base.size(); i++)
+	for (size_t i = 0; i < stripped_base.size(); i++)
 	{
-		if (!path_chars_match(path[i], base[i]))
+		if (!path_chars_match(path[i], stripped_base[i]))
 			return false;
 	}
-	if (path_len > base.size() && !is_path_separator(path[base.size()]))
+	if (path_len > stripped_base.size() && !is_path_separator(path[stripped_base.size()]))
 		return false;
 
 	// Forward slashes keep the stored path usable on every host.
-	std::string relative = "./";
-	const TCHAR* rest = path + base.size();
+	relative = "./";
+	const TCHAR* rest = path + stripped_base.size();
 	while (is_path_separator(*rest))
 		rest++;
 	for (; *rest; rest++)
 		relative += is_path_separator(*rest) ? '/' : *rest;
+	return true;
+}
+
+bool target_make_relative_path(TCHAR* path, const int size)
+{
+	if (!path[0] || is_base_relative_path(path))
+		return false;
+	const auto base = get_relative_path_base_spellings();
+	if (!base.available)
+		return false;
+
+	// Paths derived from the configured base keep its spelling; resolved paths are canonical.
+	std::string relative;
+	if (!make_path_relative_to(path, base.configured, relative)
+		&& !make_path_relative_to(path, base.canonical, relative))
+	{
+		TCHAR canonical[MAX_DPATH];
+		if (!get_absolute_path(path, canonical) || !make_path_relative_to(canonical, base.canonical, relative))
+			return false;
+	}
 	if (relative.size() >= static_cast<size_t>(size))
 		return false;
 	_tcscpy(path, relative.c_str());

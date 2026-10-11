@@ -92,6 +92,19 @@ line_value floppy0 "$work/cmdline.txt" | grep -Eq '^[^.].*cwd[/\\]Floppies[/\\]d
 line_value cdimage0 "$work/cmdline.txt" | grep -Eq '^[^.].*cwd[/\\]Floppies[/\\]disk\.adf(,|$)' \
 	|| fail "command-line CD image did not resolve against the working directory" "$work/cmdline.txt"
 
+# A base reached through a symlink: paths derived from it keep the link
+# spelling, resolved paths are canonical, and both must count as inside it.
+if ! command -v cygpath > /dev/null 2>&1 && ln -s "$work/content" "$work/content-link" 2> /dev/null; then
+	(
+		export AMIBERRY_HOME_DIR="$work/content-link"
+		dump "$work/symlink.txt" -f "$work/media.uae"
+	) || exit 1
+	[ "$(line_value floppy0 "$work/symlink.txt")" = "./Floppies/disk.adf" ] \
+		|| fail "path under a symlinked base was not saved relative" "$work/symlink.txt"
+	[ "$(line_value amiberry.floppy_path "$work/symlink.txt")" = "./Floppies/" ] \
+		|| fail "search path under a symlinked base was not saved relative" "$work/symlink.txt"
+fi
+
 printf 'relative_paths=no\n' > "$settings_file"
 dump "$work/absolute.txt" -f "$(host_path "$work/media.uae")"
 line_value floppy0 "$work/absolute.txt" | grep -Eq '^[^.].*content[/\\]Floppies[/\\]disk\.adf$' \
