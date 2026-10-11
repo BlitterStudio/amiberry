@@ -187,8 +187,14 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
             "/opt/local/lib"
         )
     else()
-        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS "/usr/local/include")
-        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS "/usr/local/lib")
+        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS 
+            "/usr/local/include"
+            "/opt/local/include"
+        )
+        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS 
+            "/usr/local/lib"
+            "/opt/local/lib"
+        )
     endif()
 
     list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework AppKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "iconv")

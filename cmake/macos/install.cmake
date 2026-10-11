@@ -49,7 +49,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     endif()
 else()
     # Intel Macs.
-    if(EXISTS "/usr/local")
+    if(EXISTS "/usr/local/Cellar")
         set(_amiberry_dylibbundler_search_args
             -s /usr/local/lib
             -s /usr/local/opt/glib/lib
