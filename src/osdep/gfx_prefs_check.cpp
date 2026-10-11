@@ -78,6 +78,9 @@ int check_prefs_changed_gfx()
 	if (!config_changed && !display_change_requested)
 		return 0;
 
+	// Runtime config loads (IPC, D-Bus) change the active config name.
+	refreshtitle();
+
 	c |= config_changed_flags;
 	config_changed_flags = 0;
 

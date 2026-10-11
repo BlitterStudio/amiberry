@@ -219,6 +219,12 @@ static inline void gfx_platform_set_window_icon(SDL_Window* window)
 	(void)window;
 }
 
+static inline void gfx_platform_set_window_title(SDL_Window* window, const char* title)
+{
+	(void)window;
+	(void)title;
+}
+
 static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)
 {
 	if (!format)

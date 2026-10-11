@@ -68,6 +68,13 @@ static inline void gfx_platform_set_window_icon(SDL_Window* window)
 #endif
 }
 
+static inline void gfx_platform_set_window_title(SDL_Window* window, const char* title)
+{
+	const char* current = SDL_GetWindowTitle(window);
+	if (!current || strcmp(current, title) != 0)
+		SDL_SetWindowTitle(window, title);
+}
+
 static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)
 {
 	(void)format;

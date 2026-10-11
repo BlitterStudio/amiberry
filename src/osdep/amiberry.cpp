@@ -1577,16 +1577,6 @@ void unsetminimized(const int monid)
 	minimized = 0;
 }
 
-void refreshtitle()
-{
-	//for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
-	//	struct AmigaMonitor* mon = &AMonitors[i];
-	//	if (mon->sdl_window && isfullscreen() == 0) {
-	//		setmaintitle(mon->monitor_id);
-	//	}
-	//}
-}
-
 void setpriority(const int prio)
 {
 	if (prio >= 0 && prio <= 2)
