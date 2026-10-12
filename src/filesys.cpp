@@ -9809,8 +9809,9 @@ static TCHAR *makenativepath (UnitInfo *ui, TCHAR *apath)
 {
 	TCHAR *pn;
 	/* create native path. FIXME: handle 'illegal' characters */
-	pn = xcalloc (TCHAR, uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1);
-	_sntprintf (pn, sizeof pn, _T("%s/%s"), ui->rootdir, apath);
+	const size_t pn_len = uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1;
+	pn = xcalloc (TCHAR, pn_len);
+	_sntprintf (pn, pn_len, _T("%s/%s"), ui->rootdir, apath);
 	if (FSDB_DIR_SEPARATOR != '/') {
 		for (int i = 0; i < uaetcslen (pn); i++) {
 			if (pn[i] == '/')

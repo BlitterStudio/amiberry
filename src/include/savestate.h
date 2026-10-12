@@ -267,7 +267,7 @@ extern int save_state(const TCHAR *filename, const TCHAR *description);
 extern void restore_state(const TCHAR *filename);
 #ifdef LIBRETRO
 extern int save_state_internal(struct zfile *f, const TCHAR *description, int comp, bool savepath);
-extern void restore_state_file(struct zfile *f);
+extern void savestate_restore_memory(const uae_u8 *data, size_t size);
 #endif
 extern bool savestate_restore_finish(void);
 extern void savestate_restore_final(void);

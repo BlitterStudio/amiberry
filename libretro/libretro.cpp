@@ -89,6 +89,11 @@ unsigned libretro_audio_frames_this_run;
 static char game_path[1024];
 static bool core_started = false;
 static bool core_shutdown_complete = false;
+// Statefile accepted by retro_unserialize() but not yet applied by the core.
+// The emulator restores it at the next vsync through the regular
+// restore_state() + hard reset path; until then retro_serialize() reports it.
+static std::vector<uint8_t> pending_state;
+static bool pending_state_queued = false;
 static bool input_log_enabled = true;
 static uint8_t key_state[RETROK_LAST + 1];
 static constexpr size_t kJoypadMax = RETRO_DEVICE_ID_JOYPAD_R3 + 1;
@@ -4487,10 +4492,11 @@ static void core_entry(void)
 
 	const bool automatic_crop = get_libretro_crop_mode() == libretro_crop_mode::auto_crop;
 	if (libretro_should_queue_auto_crop_options(automatic_crop, is_rp9)) {
-		push_s_option("gfx_auto_crop=true");
-		push_s_option("gfx_manual_crop=false");
-		push_s_option("gfx_horizontal_offset=0");
-		push_s_option("gfx_vertical_offset=0");
+		// Amiberry target options: the config parser only accepts the prefixed form.
+		push_s_option("amiberry.gfx_auto_crop=true");
+		push_s_option("amiberry.gfx_manual_crop=false");
+		push_s_option("amiberry.gfx_horizontal_offset=0");
+		push_s_option("amiberry.gfx_vertical_offset=0");
 		push_s_option("gfx_center_horizontal=none");
 		push_s_option("gfx_center_vertical=none");
 	}
@@ -4599,16 +4605,10 @@ static void core_entry(void)
 			}
 		}
 	}
-	if (!save_dir.empty()) {
-		const std::string cfg_path = "config_path=" + save_dir;
-		const std::string saveimage_path = "saveimage_dir=" + save_dir;
-		const std::string savestate_path = "savestate_dir=" + save_dir;
-		const std::string statefile_path = "statefile_path=" + save_dir;
-		push_s_option(cfg_path);
-		push_s_option(saveimage_path);
-		push_s_option(savestate_path);
-		push_s_option(statefile_path);
-	}
+	// Host directories (config, savestate, screenshot, ...) come from
+	// AMIBERRY_HOME_DIR; only the statefile path is a per-config option.
+	if (!save_dir.empty())
+		push_s_option("statefile_path=" + save_dir);
 
 	if (game_path[0])
 	{
@@ -4729,6 +4729,33 @@ static void delete_core_fiber()
 	core_fiber = NULL;
 }
 
+static void clear_pending_state()
+{
+	pending_state.clear();
+	pending_state.shrink_to_fit();
+	pending_state_queued = false;
+	savestate_restore_memory(nullptr, 0);
+}
+
+// Hand the pending statefile to the emulator. Only valid once the core has
+// booted: startup resets savestate_state with the default prefs.
+static void queue_pending_state()
+{
+	if (pending_state.empty() || pending_state_queued || !core_is_running())
+		return;
+	savestate_restore_memory(pending_state.data(), pending_state.size());
+	pending_state_queued = true;
+}
+
+// Drop the pending copy once the emulator has finished restoring it.
+static void retire_pending_state()
+{
+	if (pending_state_queued
+		&& savestate_state != STATE_DORESTORE
+		&& savestate_state != STATE_RESTORE)
+		clear_pending_state();
+}
+
 static void reset_core_runtime_state()
 {
 	if (fastforward_forced) {
@@ -4749,6 +4776,7 @@ static void reset_core_runtime_state()
 	libretro_options_dirty = true;
 	memset(joypad_owner, 0, sizeof joypad_owner);
 	memset(analog_owner, 0, sizeof analog_owner);
+	clear_pending_state();
 }
 
 static void apply_minimum_audio_latency()
@@ -5156,6 +5184,7 @@ void retro_run(void)
 			set_fastforward_override(fastforwarding);
 		}
 	}
+	queue_pending_state();
 	poll_input();
 	libretro_audio_frames_this_run = 0;
 	co_switch(core_fiber);
@@ -5165,6 +5194,7 @@ void retro_run(void)
 	}
 	if (core_shutdown_complete)
 		return;
+	retire_pending_state();
 	apply_cheats();
 	update_memory_map();
 	update_led_interface();
@@ -5446,12 +5476,23 @@ size_t retro_serialize_size(void)
 	total += currprefs.mbresmem_low.size;
 	total += currprefs.mbresmem_high.size;
 	total += 8 * 1024 * 1024;
-	return total;
+	return std::max(total, pending_state.size());
 }
 
 bool retro_serialize(void *data, size_t size)
 {
-	if (!core_is_running() || !data || size == 0)
+	if (!data || size == 0)
+		return false;
+
+	// A loaded state the core has not applied yet is the current state.
+	if (!pending_state.empty()) {
+		if (pending_state.size() > size)
+			return false;
+		memcpy(data, pending_state.data(), pending_state.size());
+		return true;
+	}
+
+	if (!core_is_running())
 		return false;
 
 	struct zfile *f = zfile_fopen_empty(NULL, _T("libretro"));
@@ -5481,13 +5522,20 @@ bool retro_serialize(void *data, size_t size)
 
 bool retro_unserialize(const void *data, size_t size)
 {
-	if (!core_is_running() || !data || size == 0)
+	if (core_shutdown_complete || !data || size < 4)
+		return false;
+	if (memcmp(data, "ASF ", 4) != 0)
 		return false;
 
-	struct zfile *f = zfile_fopen_data(_T("libretro"), (uae_u64)size, (const uae_u8*)data);
-	if (!f) return false;
-
-	restore_state_file(f);
+	// Restoring needs the CPU loop to unwind to m68k_go(), which runs
+	// restore_state() followed by the hard reset that rebuilds memory maps,
+	// devices and the filesystem from the restored chunks. Queue the state;
+	// the core applies it at its next vsync. States loaded before the core
+	// has booted are queued once it is running.
+	const auto* bytes = static_cast<const uint8_t*>(data);
+	pending_state.assign(bytes, bytes + size);
+	pending_state_queued = false;
+	queue_pending_state();
 	return true;
 }
 
