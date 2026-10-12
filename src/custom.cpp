@@ -539,7 +539,10 @@ static int sprite_width;
 static int sprite_sprctlmask;
 int sprite_buffer_res;
 
+#ifdef AMIBERRY
+// Bits cleared from magic_sprite_mask to hide sprite `num` in Host Only mode.
 #define SPRITE_RENDER_MASK(num) ((3u << ((num) * 2)) | (1u << ((num) + 16)))
+#endif
 
 static uae_s16 bpl1mod, bpl2mod;
 static uaecptr bplpt[MAX_PLANES];
@@ -4458,9 +4461,17 @@ static void cursorsprite(struct sprite *s)
 	if (sprres == 0) {
 		sprite_0_doubled = 1;
 	}
+#ifdef AMIBERRY
+	// SPRxPOS bit 7 (SH8, horizontal start bit 8) only selects scan-doubling
+	// when FMODE.SSCAN2 is set. Without that gate the host cursor loses half
+	// its rows whenever the pointer crosses into the right half of the screen.
+	sprite_0_height = amiberry_input_native_cursor_height(sprite_0_height,
+		spr[0].dblscan, (fmode & 0x8000) != 0);
+#else
 	if (spr[0].dblscan) {
 		sprite_0_height /= 2;
 	}
+#endif
 	if (aga_mode) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
 		sprite_0_colors[1] = agnus_colors.color_regs_aga[sbasecol + 1] & 0xffffff;
