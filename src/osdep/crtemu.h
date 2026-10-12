@@ -190,24 +190,13 @@ typedef GLbitfield CRTEMU_GLbitfield;
 #define CRTEMU_GL_TEXTURE_WRAP_S GL_TEXTURE_WRAP_S
 #define CRTEMU_GL_TEXTURE_WRAP_T GL_TEXTURE_WRAP_T
 #define CRTEMU_GL_CLAMP_TO_EDGE GL_CLAMP_TO_EDGE
-#ifndef CRTEMU_WEBGL
-    #if defined(GL_CLAMP_TO_BORDER) && !defined(__ANDROID__)
-        #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER
-        #define CRTEMU_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
-    #else
-        // Fallback for Android/GLES where CLAMP_TO_BORDER might be missing
-        #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_EDGE
-        #ifndef GL_TEXTURE_BORDER_COLOR
-             #define CRTEMU_GL_TEXTURE_BORDER_COLOR 0x1004 // Define if missing, though likely unused if CLAMP_TO_BORDER is replaced
-        #else
-             #define CRTEMU_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
-        #endif
-    #endif
-#else
-// WebGL does not support GL_CLAMP_TO_BORDER, we have to emulate
-          // this behavior with code in the fragment shader
-          #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_EDGE
-#endif
+// Border clamping is core on desktop GL; on GLES it needs ES 3.2 or
+// EXT/OES_texture_border_clamp, whose suffixed enums share these values.
+// GLES headers lack the unsuffixed names, so use the raw values and decide
+// at runtime (crtemu_t::clamp_to_border) whether the context accepts them.
+// WebGL never enables it and emulates the border in the fragment shader.
+#define CRTEMU_GL_CLAMP_TO_BORDER 0x812D
+#define CRTEMU_GL_TEXTURE_BORDER_COLOR 0x1004
 #endif
 
 
@@ -249,6 +238,7 @@ struct crtemu_t {
 	unsigned int last_present_type;
 	CRTEMU_GLint texture_filter; // GL_NEAREST or GL_LINEAR for NONE mode
 	bool is_mobile_gpu; // True on low-power GPUs (per the GL_RENDERER allowlist or force_mobile) - selects simplified shader variants
+	bool clamp_to_border; // Context accepts GL_CLAMP_TO_BORDER and GL_TEXTURE_BORDER_COLOR; otherwise clamp to edge
 	bool fbo_backbuffer_attached; // fbo_backbuffer has backbuffer bound as its colour attachment
 	CRTEMU_GLuint param_texture; // caller-owned texture whose filters were last set (CRTEMU_TYPE_NONE)
 	CRTEMU_GLint param_filter; // filter applied to param_texture
@@ -1863,6 +1853,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 		crtemu->is_mobile_gpu = false;
 	}
 
+#ifndef CRTEMU_WEBGL
+	crtemu->clamp_to_border = get_gl_capabilities().clamp_to_border;
+#endif
+
 #ifndef CRTEMU_SDL
 
 	crtemu->gl_dll = LoadLibraryA( "opengl32.dll" );
@@ -2272,6 +2266,21 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 }
 
+// Applies the CRT pass wrap mode to the texture bound on the active unit:
+// transparent black outside the image where the context supports border
+// clamping, edge clamping otherwise.
+static void crtemu_internal_set_border_wrap( crtemu_t* crtemu ) {
+	if( crtemu->clamp_to_border ) {
+		static const CRTEMU_GLfloat color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
+		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
+		crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
+	} else {
+		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
+		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
+	}
+}
+
 
 // pixels_xbgr uploads a CPU frame; otherwise a non-zero texture is sampled as
 // the frame. With neither, the texture bound to unit 0 is used (legacy path).
@@ -2615,28 +2624,18 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 	float mod_b = ( ( mod_xbgr >> 16 ) & 0xff ) / 255.0f;
 	crtemu->Uniform3f( crtemu->loc_crt_modulate, mod_r, mod_g, mod_b );
 
-	float color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
-	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-#if !defined(CRTEMU_WEBGL) && !defined(__ANDROID__)
-	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-#endif
+	crtemu_internal_set_border_wrap( crtemu );
 
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
-	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-#if !defined(CRTEMU_WEBGL) && !defined(__ANDROID__)
-	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-#endif
+	crtemu_internal_set_border_wrap( crtemu );
 
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
@@ -2650,11 +2649,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
 	}
 
-	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
-	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-#if !defined(CRTEMU_WEBGL) && !defined(__ANDROID__)
-	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-#endif
+	crtemu_internal_set_border_wrap( crtemu );
 
 
 	crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
