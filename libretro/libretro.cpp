@@ -72,6 +72,7 @@ struct AmigaMonitor;
 extern struct AmigaMonitor AMonitors[];
 extern int gfx_GetWidth(const struct AmigaMonitor* mon);
 extern int gfx_GetHeight(const struct AmigaMonitor* mon);
+extern int joystick_mousemap_mouse_device(int device_index);
 
 cothread_t main_fiber;
 cothread_t core_fiber;
@@ -1136,7 +1137,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_joy_as_mouse",
 		"Joystick As Mouse",
 		"Joystick As Mouse",
-		"Map joystick to mouse input.",
+		"Left analog stick of the selected Amiga port's controller moves the Amiga mouse in port 1; L/R shoulder buttons act as the left/right mouse buttons. Requires Analog Input and a mouse in port 1.",
 		NULL,
 		"input",
 		{
@@ -4042,6 +4043,34 @@ static void route_libretro_joy_axis(const int joy, const int axis,
 		owner = LibretroInputOwner::neutral;
 }
 
+// Joystick As Mouse: full left-stick deflection moves the Amiga mouse this many
+// counts per frame (before the mouse speed pref), matching PUAE's default
+// analog mouse speed. Polled every frame, so a held stick keeps moving.
+static constexpr float libretro_stick_mouse_counts_per_frame = 10.0f;
+static float stick_mouse_remainder[2][2];
+
+static void route_libretro_stick_mouse(const int port, const int mouse_device,
+	const int16_t x, const int16_t y)
+{
+	float* remainder = stick_mouse_remainder[port];
+	const float magnitude = sqrtf(static_cast<float>(x) * x + static_cast<float>(y) * y);
+	const float deadzone = currprefs.input_joymouse_deadzone * 32768.0f / 100.0f;
+	// The stick steers the on-screen keyboard while it is on screen.
+	if (magnitude <= deadzone || deadzone >= 32768.0f || imgui_osk_should_render()) {
+		remainder[0] = remainder[1] = 0.0f;
+		return;
+	}
+	const float travel = std::min((magnitude - deadzone) / (32768.0f - deadzone), 1.0f);
+	const float scale = travel * libretro_stick_mouse_counts_per_frame / magnitude;
+	const float motion[2] = { x * scale + remainder[0], y * scale + remainder[1] };
+	for (int axis = 0; axis < 2; axis++) {
+		const int counts = static_cast<int>(motion[axis]);
+		remainder[axis] = motion[axis] - counts;
+		if (counts)
+			setmousestate(mouse_device, axis, counts, 0);
+	}
+}
+
 // The on-screen keyboard's direct driver. While the keyboard is on screen the
 // RetroPads are the keyboard's navigation surface: the D-pad / A move and
 // select, and the left stick steers. This mirrors the standalone controller
@@ -4219,10 +4248,21 @@ static void poll_input(void)
 			log_input_axis(i, "lt", lt, &last_trigger[i][0]);
 			log_input_axis(i, "rt", rt, &last_trigger[i][1]);
 
-			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
-				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
-			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
-				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			const int stick_mouse = joystick_mousemap_mouse_device(joy);
+			if (stick_mouse >= 0) {
+				// The left stick drives the Amiga mouse instead of this
+				// port's joystick directions (mirrors read_controller_axis).
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, 0,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, 0,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+				route_libretro_stick_mouse(i, stick_mouse, lx, ly);
+			} else {
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			}
 			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTX, rx,
 				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTX]);
 			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTY, ry,

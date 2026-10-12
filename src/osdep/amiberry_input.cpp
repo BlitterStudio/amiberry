@@ -2047,6 +2047,14 @@ static int mousemap_mouse_device()
 	return mouse >= 0 ? mouse : 0;
 }
 
+int joystick_mousemap_mouse_device(const int device_index)
+{
+	const int port = assigned_joyport(device_index);
+	if (port < 0 || currprefs.jports[port].mousemap <= 0)
+		return -1;
+	return mousemap_mouse_device();
+}
+
 static bool invert_axis(int axis, const didata* did)
 {
 	switch (axis)
