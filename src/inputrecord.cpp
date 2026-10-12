@@ -954,27 +954,16 @@ bool inprec_realtime (void)
 	return inprec_realtime (false);
 }
 
-void inprec_getstatus (TCHAR *title)
+void inprec_getstatus (TCHAR *title, int titlesize)
 {
-	TCHAR *p;
 	if (!input_record && !input_play)
 		return;
-	_tcscat (title, _T("["));
-	if (input_record) {
-		if (input_record != INPREC_RECORD_PLAYING)
-			_tcscat (title, _T("-REC-"));
-		else
-			_tcscat (title, _T("REPLAY"));
-	} else if (input_play) {
-		_tcscat (title, _T("PLAY-"));
-	}
-	_tcscat (title, _T(" "));
-	p = title + _tcslen (title);
-	int mvp = current_maxvpos ();
-	_sntprintf (p, sizeof p, _T("%03d %02d:%02d:%02d/%02d:%02d:%02d"), replaypos,
+	int len = _tcslen(title);
+	if (len >= titlesize)
+		return;
+	const TCHAR *status = input_record ? (input_record != INPREC_RECORD_PLAYING ? _T("-REC-") : _T("REPLAY")) : _T("PLAY-");
+	int mvp = current_maxvpos();
+	_sntprintf(title + len, titlesize - len, _T("[%s %03d %02d:%02d:%02d/%02d:%02d:%02d] "), status, replaypos,
 		(int)(lasthsync / (vblank_hz * mvp * 60)), ((int)(lasthsync / (vblank_hz * mvp)) % 60), (lasthsync / mvp) % (int)vblank_hz,
 		(int)(endhsync / (vblank_hz * mvp * 60)), ((int)(endhsync / (vblank_hz * mvp)) % 60), (endhsync / mvp) % (int)vblank_hz);
-	p += _tcslen (p);
-	_tcscat (p, _T("] "));
-
 }

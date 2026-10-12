@@ -2576,7 +2576,7 @@ uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int b
 Disasm the m68kcode at the given address into instrname
 and instrcode
 *************************************************************/
-void sm68k_disasm (TCHAR *instrname, TCHAR *instrcode, uaecptr addr, uaecptr *nextpc, uaecptr lastpc)
+void sm68k_disasm (TCHAR *instrname, TCHAR *instrcode, int instrcode_size, uaecptr addr, uaecptr *nextpc, uaecptr lastpc)
 {
 	TCHAR *ccpt;
 	uae_u32 opcode;
@@ -2614,13 +2614,16 @@ void sm68k_disasm (TCHAR *instrname, TCHAR *instrcode, uaecptr addr, uaecptr *ne
 	if (dp->duse) {
 		pc = ShowEA (0, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, NULL, NULL, 0);
 	}
-	if (instrcode)
+	if (instrcode && instrcode_size > 0)
 	{
-		int i;
-		for (i = 0; i < (pc - oldpc) / 2; i++)
+		TCHAR *p = instrcode;
+		for (int i = 0; i < (pc - oldpc) / 2; i++)
 		{
-			_sntprintf (instrcode, sizeof instrcode, _T("%04x "), get_iword_debug (oldpc + i * 2));
-			instrcode += _tcslen (instrcode);
+			int remaining = instrcode_size - (p - instrcode);
+			if (remaining <= 0)
+				break;
+			_sntprintf (p, remaining, _T("%04x "), get_iword_debug (oldpc + i * 2));
+			p += _tcslen (p);
 		}
 	}
 	if (nextpc)

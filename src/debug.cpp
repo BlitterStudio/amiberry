@@ -5580,9 +5580,18 @@ end:
 
 static uae_u8 *dump_xlate (uae_u32 addr)
 {
-	if (!mem_banks[addr >> 16]->check (addr, 1))
+	addrbank *bank = mem_banks[addr >> 16];
+	if (!bank || !bank->check || !bank->xlateaddr || !bank->check (addr, 1))
 		return NULL;
-	return mem_banks[addr >> 16]->xlateaddr (addr);
+	return bank->xlateaddr (addr);
+}
+
+static uae_u8 *dump_xlate_range (uae_u32 addr, uae_u32 size)
+{
+	addrbank *bank = mem_banks[addr >> 16];
+	if (!bank || !bank->check || !bank->xlateaddr || !bank->check(addr, size))
+		return NULL;
+	return bank->xlateaddr(addr);
 }
 
 #if 0
@@ -5700,13 +5709,15 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 					if ((a1->flags & ABFLAG_ROM) && mirrored) {
 						TCHAR *p = txt + _tcslen (txt);
 						uae_u32 crc = 0xffffffff;
-						if (a1->check(((j << 16) | bankoffset), (size * 1024) / mirrored))
-						crc = get_crc32 (a1->xlateaddr((j << 16) | bankoffset), (size * 1024) / mirrored);
+						uae_u32 crc_size = (size * 1024) / mirrored;
+						uae_u8 *crc_mem = dump_xlate_range((j << 16) | bankoffset, crc_size);
+						if (crc_mem)
+							crc = get_crc32(crc_mem, crc_size);
 						struct romdata *rd = getromdatabycrc (crc);
-						_sntprintf (p, sizeof p, _T(" (%08X)"), crc);
+						_sntprintf (p, sizeof txt / sizeof *txt - (p - txt), _T(" (%08X)"), crc);
 					if (rd) {
 						tmp[0] = '=';
-						getromname (rd, tmp + 1);
+						getromname (rd, tmp + 1, sizeof tmp / sizeof *tmp - 1);
 						_tcscat (tmp, _T("\n"));
 					}
 				}

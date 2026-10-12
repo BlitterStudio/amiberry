@@ -1457,13 +1457,13 @@ static void write_filesys_config (struct uae_prefs *p, struct zfile *f)
 			if (ci->highcyl || ci->physical_geometry || ci->geometry[0]) {
 				TCHAR *s = tmp + _tcslen (tmp);
 				TCHAR *s2 = s;
-				_sntprintf (s2, sizeof s2, _T(",%d"), ci->highcyl);
+				_sntprintf (s2, sizeof tmp / sizeof *tmp - (s2 - tmp), _T(",%d"), ci->highcyl);
 				if ((ci->physical_geometry && ci->pheads && ci->psecs) || ci->geometry[0]) {
 					s = tmp + _tcslen (tmp);
-					_sntprintf (s, sizeof s, _T(",%d/%d/%d"), ci->pcyls, ci->pheads, ci->psecs);
+					_sntprintf (s, sizeof tmp / sizeof *tmp - (s - tmp), _T(",%d/%d/%d"), ci->pcyls, ci->pheads, ci->psecs);
 					if (ci->geometry[0]) {
 						s = tmp + _tcslen (tmp);
-						_sntprintf (s, sizeof s, _T(",%s"), sgeometry);
+						_sntprintf (s, sizeof tmp / sizeof *tmp - (s - tmp), _T(",%s"), sgeometry);
 					}
 				}
 				_tcscat (tmp3, s2);
@@ -2521,7 +2521,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			TCHAR *ptmp = tmp + _tcslen (tmp);
 			if (ptmp > tmp)
 				*ptmp++ = ',';
-			_sntprintf (ptmp, sizeof ptmp, _T("%d"), sr->dstport);
+			_sntprintf (ptmp, sizeof tmp / sizeof *tmp - (ptmp - tmp), _T("%d"), sr->dstport);
 		}
 	}
 	if (tmp[0])
@@ -5118,7 +5118,7 @@ static void decode_rom_ident (TCHAR *romfile, int maxlen, const TCHAR *ident, in
 						for (i = 0; rl[i]; i++) {
 							if (round) {
 								TCHAR romname[MAX_DPATH];
-								getromname(rl[i]->rd, romname);
+								getromname(rl[i]->rd, romname, sizeof romname / sizeof *romname);
 								_tcscat (romtxt, romname);
 								_tcscat (romtxt, _T("\n"));
 							} else {
