@@ -4048,18 +4048,41 @@ static void route_libretro_joy_axis(const int joy, const int axis,
 // analog mouse speed. Polled every frame, so a held stick keeps moving.
 static constexpr float libretro_stick_mouse_counts_per_frame = 10.0f;
 static float stick_mouse_remainder[2][2];
+// The stick was moving the mouse when the on-screen keyboard opened. Like a
+// gameplay-held stick it stays with the mouse until released, so it cannot
+// steer the keyboard by accident (mirrors controller_axis_has_gameplay_input).
+static bool stick_mouse_held[2];
 
-static void route_libretro_stick_mouse(const int port, const int mouse_device,
+// The left stick drives the Amiga mouse instead of this port's joystick
+// directions (mirrors read_controller_axis). While the on-screen keyboard is
+// on screen the stick steers it instead, through the usual axis ownership.
+static void route_libretro_stick_mouse(const int joy, const int mouse_device,
 	const int16_t x, const int16_t y)
 {
-	float* remainder = stick_mouse_remainder[port];
 	const float magnitude = sqrtf(static_cast<float>(x) * x + static_cast<float>(y) * y);
 	const float deadzone = currprefs.input_joymouse_deadzone * 32768.0f / 100.0f;
-	// The stick steers the on-screen keyboard while it is on screen.
-	if (magnitude <= deadzone || deadzone >= 32768.0f || imgui_osk_should_render()) {
+	const bool deflected = magnitude > deadzone && deadzone < 32768.0f;
+	const bool osk_rendering = imgui_osk_should_render();
+	if (!deflected)
+		stick_mouse_held[joy] = false;
+
+	const int16_t values[2] = { x, y };
+	const int axes[2] = { SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY };
+	for (int n = 0; n < 2; n++) {
+		LibretroInputOwner& owner = analog_owner[joy][axes[n]];
+		// Zero neutralizes the guest joystick axis and releases any keyboard
+		// or gameplay ownership left from before the map applied.
+		const bool to_osk = osk_rendering && !stick_mouse_held[joy]
+			&& owner != LibretroInputOwner::gameplay;
+		route_libretro_joy_axis(joy, axes[n], to_osk ? values[n] : 0, owner);
+	}
+
+	float* remainder = stick_mouse_remainder[joy];
+	if (!deflected || osk_rendering) {
 		remainder[0] = remainder[1] = 0.0f;
 		return;
 	}
+	stick_mouse_held[joy] = true;
 	const float travel = std::min((magnitude - deadzone) / (32768.0f - deadzone), 1.0f);
 	const float scale = travel * libretro_stick_mouse_counts_per_frame / magnitude;
 	const float motion[2] = { x * scale + remainder[0], y * scale + remainder[1] };
@@ -4250,13 +4273,7 @@ static void poll_input(void)
 
 			const int stick_mouse = joystick_mousemap_mouse_device(joy);
 			if (stick_mouse >= 0) {
-				// The left stick drives the Amiga mouse instead of this
-				// port's joystick directions (mirrors read_controller_axis).
-				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, 0,
-					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
-				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, 0,
-					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
-				route_libretro_stick_mouse(i, stick_mouse, lx, ly);
+				route_libretro_stick_mouse(joy, stick_mouse, lx, ly);
 			} else {
 				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
 					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
