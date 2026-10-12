@@ -72,6 +72,7 @@ struct AmigaMonitor;
 extern struct AmigaMonitor AMonitors[];
 extern int gfx_GetWidth(const struct AmigaMonitor* mon);
 extern int gfx_GetHeight(const struct AmigaMonitor* mon);
+extern int joystick_mousemap_mouse_device(int device_index);
 
 cothread_t main_fiber;
 cothread_t core_fiber;
@@ -1136,7 +1137,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_joy_as_mouse",
 		"Joystick As Mouse",
 		"Joystick As Mouse",
-		"Map joystick to mouse input.",
+		"Left analog stick of the selected Amiga port's controller moves the Amiga mouse in port 1; L/R shoulder buttons act as the left/right mouse buttons. Requires Analog Input and a mouse in port 1.",
 		NULL,
 		"input",
 		{
@@ -4042,6 +4043,57 @@ static void route_libretro_joy_axis(const int joy, const int axis,
 		owner = LibretroInputOwner::neutral;
 }
 
+// Joystick As Mouse: full left-stick deflection moves the Amiga mouse this many
+// counts per frame (before the mouse speed pref), matching PUAE's default
+// analog mouse speed. Polled every frame, so a held stick keeps moving.
+static constexpr float libretro_stick_mouse_counts_per_frame = 10.0f;
+static float stick_mouse_remainder[2][2];
+// The stick was moving the mouse when the on-screen keyboard opened. Like a
+// gameplay-held stick it stays with the mouse until released, so it cannot
+// steer the keyboard by accident (mirrors controller_axis_has_gameplay_input).
+static bool stick_mouse_held[2];
+
+// The left stick drives the Amiga mouse instead of this port's joystick
+// directions (mirrors read_controller_axis). While the on-screen keyboard is
+// on screen the stick steers it instead, through the usual axis ownership.
+static void route_libretro_stick_mouse(const int joy, const int mouse_device,
+	const int16_t x, const int16_t y)
+{
+	const float magnitude = sqrtf(static_cast<float>(x) * x + static_cast<float>(y) * y);
+	const float deadzone = currprefs.input_joymouse_deadzone * 32768.0f / 100.0f;
+	const bool deflected = magnitude > deadzone && deadzone < 32768.0f;
+	const bool osk_rendering = imgui_osk_should_render();
+	if (!deflected)
+		stick_mouse_held[joy] = false;
+
+	const int16_t values[2] = { x, y };
+	const int axes[2] = { SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY };
+	for (int n = 0; n < 2; n++) {
+		LibretroInputOwner& owner = analog_owner[joy][axes[n]];
+		// Zero neutralizes the guest joystick axis and releases any keyboard
+		// or gameplay ownership left from before the map applied.
+		const bool to_osk = osk_rendering && !stick_mouse_held[joy]
+			&& owner != LibretroInputOwner::gameplay;
+		route_libretro_joy_axis(joy, axes[n], to_osk ? values[n] : 0, owner);
+	}
+
+	float* remainder = stick_mouse_remainder[joy];
+	if (!deflected || osk_rendering) {
+		remainder[0] = remainder[1] = 0.0f;
+		return;
+	}
+	stick_mouse_held[joy] = true;
+	const float travel = std::min((magnitude - deadzone) / (32768.0f - deadzone), 1.0f);
+	const float scale = travel * libretro_stick_mouse_counts_per_frame / magnitude;
+	const float motion[2] = { x * scale + remainder[0], y * scale + remainder[1] };
+	for (int axis = 0; axis < 2; axis++) {
+		const int counts = static_cast<int>(motion[axis]);
+		remainder[axis] = motion[axis] - counts;
+		if (counts)
+			setmousestate(mouse_device, axis, counts, 0);
+	}
+}
+
 // The on-screen keyboard's direct driver. While the keyboard is on screen the
 // RetroPads are the keyboard's navigation surface: the D-pad / A move and
 // select, and the left stick steers. This mirrors the standalone controller
@@ -4219,10 +4271,15 @@ static void poll_input(void)
 			log_input_axis(i, "lt", lt, &last_trigger[i][0]);
 			log_input_axis(i, "rt", rt, &last_trigger[i][1]);
 
-			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
-				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
-			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
-				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			const int stick_mouse = joystick_mousemap_mouse_device(joy);
+			if (stick_mouse >= 0) {
+				route_libretro_stick_mouse(joy, stick_mouse, lx, ly);
+			} else {
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			}
 			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTX, rx,
 				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTX]);
 			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTY, ry,
