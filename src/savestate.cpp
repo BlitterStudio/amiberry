@@ -65,6 +65,8 @@
 #include "devices.h"
 #include "fsdb.h"
 #include "gfxboard.h"
+#include "xwin.h"
+#include "drawing.h"
 
 int savestate_state = 0;
 static int savestate_first_capture;
@@ -633,8 +635,19 @@ void savestate_restore_memory(const uae_u8 *data, size_t size)
 	if (!data || !size)
 		return;
 	savestate_memory_file = zfile_fopen_data(_T("libretro.uss"), size, data);
-	if (savestate_memory_file)
-		savestate_state = STATE_DORESTORE;
+	if (!savestate_memory_file)
+		return;
+	savestate_state = STATE_DORESTORE;
+	/* Unwind to m68k_go() at the next instruction boundary instead of the
+	 * next vsync, so no frame of the discarded timeline is emulated (and
+	 * none of its audio queued) before the restore. Same transition as
+	 * uae_quit_check() performs at vsync. */
+	uae_reset(0, 0);
+	if (quit_program < 0) {
+		quit_program = -quit_program;
+		set_inhibit_frame(0, IHF_QUIT_PROGRAM);
+		set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
+	}
 }
 #endif
 

@@ -90,7 +90,7 @@ static char game_path[1024];
 static bool core_started = false;
 static bool core_shutdown_complete = false;
 // Statefile accepted by retro_unserialize() but not yet applied by the core.
-// The emulator restores it at the next vsync through the regular
+// The emulator restores it when the core next resumes, through the regular
 // restore_state() + hard reset path; until then retro_serialize() reports it.
 static std::vector<uint8_t> pending_state;
 static bool pending_state_queued = false;
@@ -4744,6 +4744,8 @@ static void queue_pending_state()
 	if (pending_state.empty() || pending_state_queued || !core_is_running())
 		return;
 	savestate_restore_memory(pending_state.data(), pending_state.size());
+	// Samples still buffered belong to the timeline being discarded.
+	libretro_audio_reset();
 	pending_state_queued = true;
 }
 
@@ -5530,7 +5532,7 @@ bool retro_unserialize(const void *data, size_t size)
 	// Restoring needs the CPU loop to unwind to m68k_go(), which runs
 	// restore_state() followed by the hard reset that rebuilds memory maps,
 	// devices and the filesystem from the restored chunks. Queue the state;
-	// the core applies it at its next vsync. States loaded before the core
+	// the core applies it as soon as it resumes. States loaded before the core
 	// has booted are queued once it is running.
 	const auto* bytes = static_cast<const uint8_t*>(data);
 	pending_state.assign(bytes, bytes + size);
