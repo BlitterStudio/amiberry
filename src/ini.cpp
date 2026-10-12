@@ -138,7 +138,8 @@ void ini_addnewval64(struct ini_data *ini, const TCHAR *section, const TCHAR *ke
 
 void ini_addnewdata(struct ini_data *ini, const TCHAR *section, const TCHAR *key, const uae_u8 *data, int len)
 {
-	TCHAR *s = xcalloc(TCHAR, len * 3);
+	const int size = len * 3 + 3;
+	TCHAR *s = xcalloc(TCHAR, size);
 	if (!s)
 		return;
 	_tcscpy(s, _T("\\\n"));
@@ -148,7 +149,7 @@ void ini_addnewdata(struct ini_data *ini, const TCHAR *section, const TCHAR *key
 			_tcscat(s, _T(" \\\n"));
 		TCHAR *p = s + _tcslen(s);
 		for (int j = 0; j < w && j + i < len; j++) {
-			_sntprintf (p, sizeof p, _T("%02X"), data[i + j]);
+			_sntprintf (p, size - (p - s), _T("%02X"), data[i + j]);
 			p += 2;
 		}
 		*p = 0;

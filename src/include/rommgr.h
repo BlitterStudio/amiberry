@@ -280,7 +280,7 @@ extern struct romdata *getfrombydefaultname(const TCHAR *name, int size);
 extern struct romlist **getarcadiaroms(int);
 extern struct romdata *getarcadiarombyname (const TCHAR *name);
 extern struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all);
-extern void getromname (const struct romdata*, TCHAR*);
+extern void getromname (const struct romdata*, TCHAR*, int);
 extern struct romdata *getromdatabyname (const TCHAR*);
 extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
 extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);

@@ -536,7 +536,7 @@ static int libretro_add_rom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 		TCHAR* p = tmp1 + _tcslen(tmp1);
 		_sntprintf(p, sizeof tmp1 - _tcslen(tmp1), _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
 	}
-	getromname(rd, tmp2);
+	getromname(rd, tmp2, sizeof tmp2 / sizeof *tmp2);
 	pathname[0] = 0;
 
 	if (name)

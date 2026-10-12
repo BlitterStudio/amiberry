@@ -1253,7 +1253,7 @@ struct zvolume *archive_directory_plain (struct zfile *z)
 	if (!memcmp (id, exeheader, sizeof id)) {
 		char *an = ua (zai.name);
 		char *data = xmalloc (char, 1 + strlen (an) + 1 + 1 + 1);
-		_sntprintf (data, sizeof data, "\"%s\"\n", an);
+		_sntprintf (data, 1 + strlen (an) + 1 + 1 + 1, "\"%s\"\n", an);
 		zn = addfile (zv, z, _T("s/startup-sequence"), (uae_u8*)data, uaestrlen (data));
 		xfree (data);
 		xfree (an);
