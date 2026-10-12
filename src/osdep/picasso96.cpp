@@ -2370,7 +2370,11 @@ static int tmp_sprite_monid = -1;
 #endif
 
 extern uaecptr sprite_0;
+#ifdef AMIBERRY
 extern int sprite_0_width, sprite_0_height, sprite_0_doubled, sprite_0_x, sprite_0_y;
+#else
+extern int sprite_0_width, sprite_0_height, sprite_0_doubled;
+#endif
 extern uae_u32 sprite_0_colors[4];
 
 static int createwindowscursor(int monid, int set, int chipset)
@@ -2943,11 +2947,13 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	bpp = 4;
 	w = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseWidth);
 	h = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseHeight);
+#ifdef AMIBERRY
 	// P96 stores these fields as UBYTE but interprets them as signed BYTE
 	// displacements. Keep the raw byte here; hotspot conversion sign-extends it.
 	// Some versions leave them zero, in which case the live tracker can refine it.
 	cursorxoffset = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseXOffset);
 	cursoryoffset = trap_get_byte(ctx, bi + PSSO_BoardInfo_MouseYOffset);
+#endif
 	flags = trap_get_long(ctx, bi + PSSO_BoardInfo_Flags);
 	hiressprite = 1;
 	doubledsprite = 0;
