@@ -16,7 +16,9 @@
 #include "uae.h"
 #include "xwin.h"
 #include "sounddep/sound.h"
+#include <atomic>
 #include <memory>
+#include <mutex>
 
 #ifdef DEBUGGER
 namespace {
@@ -42,6 +44,14 @@ std::unique_ptr<winuae_gdb::Session> session;
 std::string pending;
 bool polling, sockets_started;
 int configured_port;
+// With the threaded CPU, debug() and therefore gdb_server_stop() can run on
+// the CPU thread while the main thread keeps calling gdb_server_poll() from
+// handle_events(). The mutex serializes all socket and session access, and
+// while a stop is in progress only the stopped thread polls, so commands
+// that touch CPU state run on the thread that stopped.
+std::mutex server_mutex;
+std::atomic<bool> connected{false};
+bool stop_in_progress;
 
 void disconnect_client()
 {
@@ -49,6 +59,7 @@ void disconnect_client()
 	client = invalid_socket;
 	if (session) debug_gdb_target().detach();
 	session.reset();
+	connected = false;
 	pending.clear();
 }
 
@@ -79,11 +90,8 @@ void listen_local(int port)
 	}
 	write_log(_T("WinUAE GDB: listening on 127.0.0.1:%d\n"), port);
 }
-}
 
-bool gdb_server_connected() { return session != nullptr; }
-
-void gdb_server_close()
+void close_server()
 {
 	disconnect_client();
 	if (listener != invalid_socket) close_socket(listener);
@@ -95,13 +103,13 @@ void gdb_server_close()
 	configured_port = 0;
 }
 
-void gdb_server_poll()
+void poll_server()
 {
 	if (polling) return;
 	int port = (currprefs.debugging_features & DEBUG_FEATURE_GDBSERVER) ? currprefs.gdb_port : 0;
 	if (quit_program) port = 0;
 	if (port != configured_port) {
-		gdb_server_close();
+		close_server();
 		configured_port = port;
 		if (port > 0 && port <= 65535) listen_local(port);
 	}
@@ -117,6 +125,7 @@ void gdb_server_poll()
 				setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
 				session.reset(new winuae_gdb::Session(debug_gdb_target()));
+				connected = true;
 				debug_gdb_target().interrupt();
 			}
 		}
@@ -149,16 +158,44 @@ void gdb_server_poll()
 	if (session && session->finished() && pending.empty()) disconnect_client();
 	polling = false;
 }
+}
+
+bool gdb_server_connected() { return connected; }
+
+void gdb_server_close()
+{
+	std::lock_guard<std::mutex> lock(server_mutex);
+	close_server();
+}
+
+void gdb_server_poll()
+{
+	std::unique_lock<std::mutex> lock(server_mutex, std::try_to_lock);
+	if (!lock.owns_lock() || stop_in_progress) return;
+	poll_server();
+}
 
 bool gdb_server_stop(const char* reason)
 {
-	if (!session) return false;
-	session->stop(reason);
+	{
+		std::lock_guard<std::mutex> lock(server_mutex);
+		if (!session) return false;
+		session->stop(reason);
+		stop_in_progress = true;
+	}
 	pause_sound();
-	while (session && session->stopped() && !quit_program) {
-		gdb_server_poll();
+	for (;;) {
+		{
+			std::lock_guard<std::mutex> lock(server_mutex);
+			if (!session || !session->stopped() || quit_program) break;
+			poll_server();
+		}
 		handle_msgpump(false);
 		sleep_millis(1);
+	}
+	{
+		std::lock_guard<std::mutex> lock(server_mutex);
+		stop_in_progress = false;
 	}
 	resume_sound();
 	return true;
