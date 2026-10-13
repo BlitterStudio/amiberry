@@ -197,7 +197,8 @@ std::string GdbTarget::memory_map()
 		addrbank* bank = &get_mem_bank(address);
 		if (bank->sub_banks)
 			bank = get_sub_bank(&address);
-		const char* type = bank->flags & ABFLAG_ROM ? "rom" : bank->flags & ABFLAG_RAM ? "ram" : NULL;
+		// ROMIN banks (UAE boot ROM) are readable code, like ROM.
+		const char* type = bank->flags & (ABFLAG_ROM | ABFLAG_ROMIN) ? "rom" : bank->flags & ABFLAG_RAM ? "ram" : NULL;
 		if (type && r.size)
 			xml += "<memory type=\"" + std::string(type) + "\" start=\"" +
 				std::to_string(r.start) + "\" length=\"" + std::to_string(r.size) + "\"/>";

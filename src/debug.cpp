@@ -8703,7 +8703,13 @@ void debug (void)
 		inside_debugger = 1;
 		trace_mode = 0;
 		gdb_target_stopped(remote_reason, sizeof(remote_reason));
+#ifdef WITH_PPC
+		uae_ppc_pause(1);
+#endif
 		gdb_server_stop(remote_reason);
+#ifdef WITH_PPC
+		uae_ppc_pause(0);
+#endif
 		return;
 	}
 
