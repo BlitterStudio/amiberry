@@ -60,6 +60,22 @@ jobs:
           sync: rsync
           prepare: |
             set -eu
+            # The VM images use the latest package branch. Release packages
+            # record exact shared-library versions, so build them against
+            # quarterly, the branch a stock FreeBSD install uses.
+            pkg_branch=${{ github.ref_type == 'tag' && 'quarterly' || 'latest' }}
+            if [ "$pkg_branch" = quarterly ]; then
+              for conf in /etc/pkg/*.conf /usr/local/etc/pkg/repos/*.conf; do
+                if [ -f "$conf" ]; then
+                  sed -i '' 's|/latest"|/quarterly"|' "$conf"
+                fi
+              done
+              if pkg -vv | grep -q '/latest"'; then
+                echo "error: a package repository still points at latest" >&2
+                exit 1
+              fi
+              pkg update -f
+            fi
             pkg install -y \
               cmake ninja pkgconf git \
               sdl3 sdl3_image flac mpg123 ffmpeg png curl nlohmann-json \
