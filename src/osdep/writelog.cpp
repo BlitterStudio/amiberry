@@ -916,8 +916,9 @@ TCHAR* write_log_get_ts(void)
 	p += strlen(p);
 	_sntprintf(p, 10, "%03d", milliseconds);
 	p += strlen(p);
-	if (vsync_counter != 0xffffffff)
-		_sntprintf(p, 50, " [%u %03d%s%03d/%03d]", vsync_counter, current_hpos_safe(), lof_store ? "-" : "=", vpos, linear_display_vpos);
+	if (vsync_counter != 0xffffffff) {
+		_stprintf (p, _T(" [%d %03d%s%03d/%03d]"), vsync_counter, current_hpos_safe(), lof_store ? _T("-") : _T("="), vpos, linear_vpos_start);
+	}
 	strcat(p, ": ");
 	return out;
 }

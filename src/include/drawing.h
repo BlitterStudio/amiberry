@@ -185,11 +185,12 @@ struct linestate
 	int fetchmode_size, fetchstart_mask;
 	uae_u16 strobe;
 	int strobe_pos;
+	bool drawmode;
 };
 
 extern struct color_entry denise_colors;
 void draw_denise_line_queue(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int endpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
-	int calib_start, int calib_len, bool lof, bool lol, int hdelay, bool blanked, bool borderline, bool finalseg, struct linestate *ls);
+	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, uae_s8 borderline, bool finalseg, struct linestate *ls);
 void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct linestate *ls);
 void draw_denise_bitplane_line_fast_queue(int gfx_ypos, enum nln_how how, struct linestate *ls);
 void draw_denise_border_line_fast(int gfx_ypos, bool blank, enum nln_how how, struct linestate *ls);
