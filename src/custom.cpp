@@ -11670,9 +11670,6 @@ static void check_hsyncs_hardwired(void)
 #endif
 	}
 	if (is_hsstop) { // HSSTOP
-		if (agnus_hsync && !beamcon0_has_hsync) {
-			ciab_tod_maybe_inc(0);
-		}
 		agnus_hsync = false;
 		agnus_hsstop_cck = get_cck_cycles();
 		if (!beamcon0_has_hsync) {
@@ -11935,9 +11932,6 @@ static void check_hsyncs_programmed(void)
 #endif
 	}
 	if (hhp == hsstop) {
-		if (agnus_phsync && beamcon0_has_hsync) {
-			ciab_tod_maybe_inc(0);
-		}
 		agnus_phsync = false;
 		agnus_phsstop_cck = get_cck_cycles();
 		if (beamcon0_has_hsync) {
