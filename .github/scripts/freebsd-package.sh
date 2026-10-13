@@ -82,7 +82,8 @@ mkdir "$work/meta"
 	echo 'licenselogic: single'
 	echo 'licenses: [GPLv3+]'
 	echo 'desc: <<EOD'
-	cat "$src_dir/packaging/Description.txt"
+	# Description.txt has no trailing newline; EOD must start its own line.
+	printf '%s\n' "$(cat "$src_dir/packaging/Description.txt")"
 	echo 'EOD'
 	echo 'deps: {'
 	for dep in $(LC_ALL=C sort -u "$work/deps"); do
