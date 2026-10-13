@@ -6363,6 +6363,7 @@ static void cia_hsync_do(void)
 	// vertical: interlaced = toggles every other field, non-interlaced = both fields (normal)
 	// horizontal: PAL = every line, NTSC = every other line
 	genlockhtoggle = !genlockhtoggle;
+	set_cia_syncs();
 
 	CIA_hsync_posthandler(false, false);
 
@@ -11262,7 +11263,7 @@ static void vsync_nosync(void)
 static void custom_trigger_start_nosync(void)
 {
 	linear_vpos_start_prev = linear_vpos_start;
-	linear_vpos_start = linear_vpos_start_prev;
+	linear_vpos_start = linear_vpos;
 	linear_vpos++;
 	hsync_ccks = maxhpos;
 	if (linear_vpos >= maxvpos + lof_store) {
@@ -11342,6 +11343,7 @@ static void custom_trigger_start(void)
 		}
 		if ((bplcon0 & 2) && currprefs.genlock) {
 			genlockvtoggle = lof_store ? 1 : 0;
+			set_cia_syncs();
 		}
 
 		vposzero = true;
