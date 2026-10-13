@@ -187,11 +187,11 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
             "/opt/local/lib"
         )
     else()
-        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS 
+        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS
             "/usr/local/include"
             "/opt/local/include"
         )
-        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS 
+        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS
             "/usr/local/lib"
             "/opt/local/lib"
         )

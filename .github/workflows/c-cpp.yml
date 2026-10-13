@@ -372,8 +372,7 @@ jobs:
                   echo "  MISSING ($arch, $label): $dep_name"
                   echo "    reference: $dep"
                   missing_deps=1
-                fi
-                if ! lipo "$UNI_FW/$dep_name" -verify_arch "$arch" >/dev/null 2>&1; then
+                elif ! lipo "$UNI_FW/$dep_name" -verify_arch "$arch" >/dev/null 2>&1; then
                   echo "  WRONG ARCHITECTURE ($arch, $label): $dep_name"
                   missing_deps=1
                 fi
@@ -384,16 +383,21 @@ jobs:
 
               if otool -arch "$arch" -L "$binary" 2>/dev/null |
                   grep -E '/opt/homebrew|/usr/local|/opt/local'; then
-                echo "  EXTERNAL HOMEBREW DEPENDENCY ($arch, $label)"
-                missing_deps=1
-              fi
-
-              if ! otool -arch "$arch" -l "$MAIN_BIN" | grep -A2 LC_RPATH | grep -q '@executable_path/../Frameworks/'; then
-                echo "  MISSING LC_RPATH @executable_path/../Frameworks/ ($arch, Amiberry)"
+                echo "  EXTERNAL PACKAGE MANAGER DEPENDENCY ($arch, $label)"
                 missing_deps=1
               fi
             done
           }
+
+          # Bundled dylibs and plugins carry no LC_RPATH of their own; every
+          # @rpath/ reference resolves through the executable's runpath.
+          for arch in x86_64 arm64; do
+            if ! otool -arch "$arch" -l "$MAIN_BIN" | grep -A2 LC_RPATH |
+                grep -qF '@executable_path/../Frameworks/'; then
+              echo "  MISSING LC_RPATH @executable_path/../Frameworks/ ($arch, Amiberry)"
+              missing_deps=1
+            fi
+          done
 
           check_framework_refs "$MAIN_BIN" "Amiberry"
           for dylib in "$UNI_PLUGINS"/*.dylib "$UNI_FW"/*.dylib; do
@@ -402,7 +406,7 @@ jobs:
             check_framework_refs "$dylib" "$(basename "$dylib")"
           done
           if [ "$missing_deps" = "1" ]; then
-            echo "::error::Some dylib references are unresolved or still point at Homebrew paths"
+            echo "::error::Some dylib references are unresolved or still point at Homebrew/MacPorts paths"
             exit 1
           fi
 
