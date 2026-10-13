@@ -28,8 +28,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         $<TARGET_FILE:floppybridge>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>)
 
-# Search paths used by dylibbundler.
-# Split out depending on if arm or x86 and homebrew or MacPorts to not co-mingle 
+# Search paths used by dylibbundler, chosen per architecture so Homebrew and
+# MacPorts libraries are not mixed. Homebrew wins when both are installed;
 # /opt/local/lib is the MacPorts location.
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
