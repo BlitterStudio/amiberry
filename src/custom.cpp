@@ -10377,6 +10377,12 @@ static void check_vsyncs_fast(void)
 	}
 
 	check_vidsyncs();
+
+	if (!beamcon0_has_hsync) {
+		ciab_tod_maybe_inc(35);
+	} else {
+		ciab_tod_maybe_inc(hsstop);
+	}
 }
 
 static void check_vsyncs(void)
@@ -10498,13 +10504,6 @@ static void check_vsyncs(void)
 			update_agnus_vb();
 		}
 	}
-
-	if (!beamcon0_has_hsync) {
-		ciab_tod_maybe_inc(35);
-	} else {
-		ciab_tod_maybe_inc(hsstop);
-	}
-
 }
 
 static uae_u64 olddat[DENISE_RGA_SLOT_TOTAL / DENISE_RGA_SLOT_CHUNKS];
@@ -11670,6 +11669,9 @@ static void check_hsyncs_hardwired(void)
 #endif
 	}
 	if (is_hsstop) { // HSSTOP
+		if (agnus_hsync && !beamcon0_has_hsync) {
+			ciab_tod_maybe_inc(0);
+		}
 		agnus_hsync = false;
 		agnus_hsstop_cck = get_cck_cycles();
 		if (!beamcon0_has_hsync) {
@@ -11932,6 +11934,9 @@ static void check_hsyncs_programmed(void)
 #endif
 	}
 	if (hhp == hsstop) {
+		if (agnus_phsync && beamcon0_has_hsync) {
+			ciab_tod_maybe_inc(0);
+		}
 		agnus_phsync = false;
 		agnus_phsstop_cck = get_cck_cycles();
 		if (beamcon0_has_hsync) {
@@ -12585,7 +12590,6 @@ static void sync_equalline_handler(void)
 	custom_trigger_start();
 
 	if (eventtab[ev_sync].active) {
-		check_vsyncs_fast();
 		check_bpl_vdiw();
 		do_imm_dmal();
 	} else {
