@@ -151,9 +151,11 @@ bool GdbTarget::breakpoint(bool insert, unsigned type, uint32_t address, uint32_
 		breakpoints[free_slot] = true;
 		return true;
 	}
-	// The existing watchpoint mapper uses signed bank boundaries. Keep
-	// remote ranges within its supported address space and preserve MMU mode.
-	if (type > 4 || mmu_enabled || length > 0x10000 || uint64_t(address) + length > 0x7fff0000)
+	// The existing watchpoint mapper uses signed bank boundaries and, with
+	// 24-bit addressing, only restores the first 256 banks. Keep remote
+	// ranges within its supported address space and preserve MMU mode.
+	uint64_t limit = currprefs.address_space_24 ? 0x01000000 : 0x7fff0000;
+	if (type > 4 || mmu_enabled || length > 0x10000 || uint64_t(address) + length > limit)
 		return false;
 	int rwi = type == 2 ? 2 : type == 3 ? 1 : 3;
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
