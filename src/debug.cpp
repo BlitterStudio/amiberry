@@ -8553,6 +8553,10 @@ void debug (void)
 			int bpnum = -1;
 			int bp = 0;
 
+			// The checks below read guest memory for the debugger; keep those
+			// reads from tripping memwatch points (inside_debugger suppresses them).
+			int was_inside_debugger = inside_debugger;
+			inside_debugger = 1;
 			pc = munge24 (m68k_getpc ());
 			opcode = currprefs.cpu_model < 68020 && (currprefs.cpu_compatible || currprefs.cpu_cycle_exact) ? regs.ir : get_word_debug (pc);
 
@@ -8678,6 +8682,7 @@ void debug (void)
 			}
 			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason)))
 				bp = -1;
+			inside_debugger = was_inside_debugger;
 			if (!bp && bpnum < 0) {
 				debug_continue();
 				return;

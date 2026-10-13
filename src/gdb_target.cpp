@@ -123,7 +123,9 @@ int GdbTarget::free_watch_slot()
 bool GdbTarget::breakpoint(bool insert, unsigned type, uint32_t address, uint32_t length)
 {
 	if (type <= 1) {
-		if (length != 2 || (address & 1))
+		// With 24-bit addressing debug() compares breakpoints against the
+		// masked PC, so a breakpoint above 16 MB could never trigger.
+		if (length != 2 || (address & 1) || (insert && currprefs.address_space_24 && address >= 0x01000000))
 			return false;
 		int free_slot = -1;
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
