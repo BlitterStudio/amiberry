@@ -108,6 +108,8 @@ Each Amiberry release also ships packages for FreeBSD 14 and 15 (amd64 and aarch
 pkg install ./amiberry-v8.4.0-freebsd15-amd64.pkg
 ```
 
+These packages are built against the `quarterly` package branch, which is the default on FreeBSD. If your system uses `latest`, a dependency may have moved to a newer library version; use the ports package in that case.
+
 Or if you prefer to install from Source then
 
 ```bash
