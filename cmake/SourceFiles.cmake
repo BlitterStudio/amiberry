@@ -269,8 +269,6 @@ set(SOURCE_FILES
         src/osdep/registry.cpp
         src/osdep/retroarch.cpp
         src/osdep/vpar.cpp
-        src/ppc/ppc.cpp
-        src/ppc/ppcd.cpp
         src/qemuvga/cirrus_vga.cpp
         src/qemuvga/es1370.cpp
         src/qemuvga/esp.cpp
@@ -348,6 +346,13 @@ list(APPEND SOURCE_FILES ${SLIRP_SOURCES})
 
 if(USE_VIDEOGRAB)
 	list(APPEND SOURCE_FILES src/osdep/videograb.cpp)
+endif()
+
+if(USE_PPC)
+	list(APPEND SOURCE_FILES
+		src/ppc/ppc.cpp
+		src/ppc/ppcd.cpp
+	)
 endif()
 
 set(IMGUI_GUI_FILES
