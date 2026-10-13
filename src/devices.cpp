@@ -1,5 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "gdb_server.h"
 
 #include "devices.h"
 
@@ -240,6 +241,7 @@ void devices_reset_ext(int hardreset)
 
 void devices_reset(int hardreset)
 {
+	gdb_server_close();
 	memset(device_reset_done, 0, sizeof(device_reset_done));
 #ifdef AMIBERRY
 	uaelib_host_cleanup();
@@ -397,6 +399,7 @@ void devices_update_sync(float svpos, float syncadjust)
 
 void virtualdevice_free(void)
 {
+	gdb_server_close();
 #ifdef AMIBERRY
 	uaelib_host_cleanup();
 #endif

@@ -45,6 +45,7 @@
 #include "newcpu.h"
 #include "traps.h"
 #include "xwin.h"
+#include "gdb_server.h"
 #include "keyboard.h"
 #include "inputdevice.h"
 #include "drawing.h"
@@ -4502,6 +4503,7 @@ int handle_msgpump(bool vblank)
 
 bool handle_events()
 {
+	gdb_server_poll();
 	const AmigaMonitor* mon = &AMonitors[0];
 	static auto was_paused = 0;
 

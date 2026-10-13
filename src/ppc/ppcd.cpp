@@ -364,22 +364,22 @@ static const char * b_ctr[16] = {
 // Place target address in operands. Helper for bcx/bx calls.
 static char *place_target(char *ptr, int comma)
 {
-    char *old;
     u32 *t = (u32 *)&o->target;
-    // Calculate remaining space in operands buffer
     size_t remaining = sizeof(o->operands) - (ptr - o->operands);
-
-    if(comma) ptr += snprintf(ptr, remaining, "%s", COMMA);
+    if(comma) {
+        int written = snprintf(ptr, remaining, "%s", COMMA);
+        ptr += written >= (int)remaining ? remaining - 1 : written;
+    }
     remaining = sizeof(o->operands) - (ptr - o->operands);
-    old = ptr;
 #ifdef  POWERPC_32
-    ptr += snprintf(ptr, remaining, HEX1 "%08X" HEX2, (u32)o->target);
+    int written = snprintf(ptr, remaining, HEX1 "%08X" HEX2, (u32)o->target);
 #endif
 #ifdef  POWERPC_64
-    ptr = old;
-    if(bigendian) ptr += snprintf(ptr, remaining, HEX1 "%08X_%08X" HEX2, t[0], t[1]);
-    else ptr += snprintf(ptr, remaining, HEX1 "%08X_%08X" HEX2, t[1], t[0]);
+    int written;
+    if(bigendian) written = snprintf(ptr, remaining, HEX1 "%08X_%08X" HEX2, t[0], t[1]);
+    else written = snprintf(ptr, remaining, HEX1 "%08X_%08X" HEX2, t[1], t[0]);
 #endif
+    ptr += written >= (int)remaining ? remaining - 1 : written;
     return ptr;
 }
 

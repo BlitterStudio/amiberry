@@ -122,6 +122,18 @@ if(_deb_shlib_private_dirs)
     list(REMOVE_DUPLICATES _deb_shlib_private_dirs)
     list(JOIN _deb_shlib_private_dirs ";" CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS)
 endif()
+# FFmpeg libraries with a Debian/Ubuntu -extra flavour, as "<library>:<soversion>".
+# cmake/package_deb_shlibs_local.cmake turns these into "libfooNN | libfoo-extraNN"
+# dependencies so .deb installers keep an installed -extra flavour (issue #2423).
+set(CPACK_AMIBERRY_DEB_EXTRA_FLAVOUR_LIBS "")
+if(AMIBERRY_WITH_FFMPEG)
+    foreach(_ffmpeg_lib IN ITEMS avcodec avformat)
+        string(REGEX MATCH "^[0-9]+" _ffmpeg_soversion "${FFMPEG_lib${_ffmpeg_lib}_VERSION}")
+        if(_ffmpeg_soversion)
+            list(APPEND CPACK_AMIBERRY_DEB_EXTRA_FLAVOUR_LIBS "lib${_ffmpeg_lib}:${_ffmpeg_soversion}")
+        endif()
+    endforeach()
+endif()
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${_deb_arch}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
@@ -172,7 +184,8 @@ set(CPACK_STRIP_FILES TRUE)
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
     set(CPACK_PRE_BUILD_SCRIPTS
-            "${CMAKE_SOURCE_DIR}/cmake/package_strip_macos_metadata.cmake")
+            "${CMAKE_SOURCE_DIR}/cmake/package_strip_macos_metadata.cmake"
+            "${CMAKE_SOURCE_DIR}/cmake/package_deb_shlibs_local.cmake")
 endif()
 
 # Generator selection per platform

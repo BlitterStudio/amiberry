@@ -452,10 +452,10 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 		}
 
 		if (y >= td_numbers_pady && y - td_numbers_pady < td_numbers_height) {
-			int xd = (TD_MAX_CHARS - strlen(text)) * td_numbers_width * mult / 2 + TD_DEFAULT_PADX;
-			for (int i = 0; i < strlen(text); i++) {
+			int xd = (TD_MAX_CHARS - uaestrlen(text)) * td_numbers_width * mult / 2 + TD_DEFAULT_PADX;
+			for (int i = 0; i < uaestrlen(text); i++) {
 				char ch = text[i];
-				for (int j = 0; j < strlen(numbers_mapping); j++) {
+				for (int j = 0; j < uaestrlen(numbers_mapping); j++) {
 					if (ch == numbers_mapping[j]) {
 						write_tdnumber(buf, x + xd, y - td_numbers_pady, j, pen_rgb, c2, mult);
 						break;

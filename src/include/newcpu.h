@@ -729,7 +729,7 @@ extern void REGPARAM3 put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, 
 extern void m68k_disasm_ea (uaecptr addr, uaecptr *nextpc, int cnt, uae_u32 *seaddr, uae_u32 *deaddr, uaecptr lastpc);
 extern void m68k_disasm (uaecptr addr, uaecptr *nextpc, uaecptr lastpc, int cnt);
 extern uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int bufpccount, uaecptr *nextpc, int cnt, uae_u32 *seaddr, uae_u32 *deaddr, uaecptr lastpc, int safemode);
-extern void sm68k_disasm (TCHAR*, TCHAR*, uaecptr addr, uaecptr *nextpc, uaecptr lastpc);
+extern void sm68k_disasm (TCHAR*, TCHAR*, int, uaecptr addr, uaecptr *nextpc, uaecptr lastpc);
 extern int m68k_asm(TCHAR *buf, uae_u16 *out, uaecptr pc);
 extern uaecptr ShowEA(void *f, uaecptr pc, uae_u16 opcode, int reg, amodes mode, wordsizes size, TCHAR *buf, uae_u32 *eaddr, int *actualea, int safemode);
 extern int get_cpu_model (void);
@@ -763,6 +763,13 @@ extern int m68k_mull (uae_u32, uae_u32, uae_u16);
 extern void init_m68k (void);
 extern void m68k_run(void);
 extern void m68k_go (int);
+#ifdef LIBRETRO
+/* True while m68k_go() executes the CPU (m68k_run() or its halt loop): the
+ * only code that unwinds on SPCFLAG_BRK to the reset/restore handling at the
+ * top of the m68k_go() loop. False during that handling, which can present
+ * frames (and so yield to the libretro frontend) mid-reset. */
+extern bool m68k_cpu_loop_active;
+#endif
 extern void m68k_dumpstate(uaecptr *, uaecptr);
 extern void m68k_dumpcache(bool);
 extern int getMulu68kCycles(uae_u16 src);

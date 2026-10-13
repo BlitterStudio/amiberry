@@ -172,7 +172,7 @@ static int addrom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 		TCHAR* p = tmp1 + _tcslen(tmp1);
 		_sntprintf(p, sizeof tmp1 / sizeof(TCHAR) - (p - tmp1), _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
 	}
-	getromname(rd, tmp2);
+	getromname(rd, tmp2, sizeof tmp2 / sizeof *tmp2);
 	pathname[0] = 0;
 
 	if (name) {
@@ -284,7 +284,7 @@ static int scan_rom_2(struct zfile* f, void* vrsd)
 	if (rd)
 	{
 		TCHAR name[MAX_DPATH];
-		getromname(rd, name);
+		getromname(rd, name, sizeof name / sizeof *name);
 		addrom(rsd->fkey, rd, path);
 		if (rd->type & ROMTYPE_KEY)
 			addkeyfile(path);

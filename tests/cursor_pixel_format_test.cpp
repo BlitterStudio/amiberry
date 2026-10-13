@@ -231,7 +231,7 @@ static void test_native_cursor_height_requires_sscan2()
 	expect_int_eq(amiberry_input_native_cursor_height(27, false, false), 27,
 		"normal native cursor height must remain unchanged");
 	expect_int_eq(amiberry_input_native_cursor_height(27, true, false), 27,
-		"vertical position bit 7 must not squash the cursor when SSCAN2 is disabled");
+		"SPRxPOS bit 7 (SH8) must not squash the cursor when SSCAN2 is disabled");
 	expect_int_eq(amiberry_input_native_cursor_height(27, true, true), 13,
 		"active SSCAN2 must halve the extracted cursor data height");
 }

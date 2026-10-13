@@ -6397,6 +6397,17 @@ static void	action_rename_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a2->db_offset = a1->db_offset;
 	a2->dirty = 0;
 	a2->vfso = a1->vfso;
+	/* Files still open under the old name (for reading: renaming a file
+	 * open for writing fails above) keep valid host handles when the
+	 * host rename succeeds, as it does on Unix. Their keys must follow
+	 * the object, since a1 is freed below. */
+	for (k1 = unit->keys; k1; k1 = knext) {
+		knext = k1->next;
+		if (k1->aino == a1) {
+			k1->aino = a2;
+			wehavekeys++;
+		}
+	}
 	move_exkeys (unit, a1, a2);
 	move_aino_children (unit, a1, a2);
 	delete_aino (unit, a1);
@@ -9809,8 +9820,9 @@ static TCHAR *makenativepath (UnitInfo *ui, TCHAR *apath)
 {
 	TCHAR *pn;
 	/* create native path. FIXME: handle 'illegal' characters */
-	pn = xcalloc (TCHAR, uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1);
-	_sntprintf (pn, sizeof pn, _T("%s/%s"), ui->rootdir, apath);
+	const size_t pn_len = uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1;
+	pn = xcalloc (TCHAR, pn_len);
+	_sntprintf (pn, pn_len, _T("%s/%s"), ui->rootdir, apath);
 	if (FSDB_DIR_SEPARATOR != '/') {
 		for (int i = 0; i < uaetcslen (pn); i++) {
 			if (pn[i] == '/')

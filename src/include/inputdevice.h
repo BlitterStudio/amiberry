@@ -242,11 +242,13 @@ extern int is_touch_lightpen (void);
 extern int inputdevice_is_tablet (void);
 extern int input_mousehack_status(TrapContext *ctx, int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset);
 extern void input_mousehack_mouseoffset (uaecptr pointerprefs);
+#ifdef AMIBERRY
 extern void input_mousehack_cursor_hotspot(int cursor_width, int cursor_height, int* hotspot_x, int* hotspot_y,
 	int* residual_x, int* residual_y);
 extern bool input_mousehack_get_last_abs_position(int* x, int* y);
 extern void input_mousehack_invalidate_last_abs_position();
 extern void input_mousehack_set_host_cursor_uses_hotspot(bool enabled, int residual_x, int residual_y);
+#endif
 extern int mousehack_alive (void);
 extern void mousehack_wakeup(void);
 extern bool mousehack_pending(void);

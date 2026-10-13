@@ -49,6 +49,7 @@ extern "C" {
 #include "keyboard.h"
 #include "uae.h"
 #include "memory.h"
+#include "newcpu.h"
 #include "savestate.h"
 #include "disk.h"
 #include "blkdev.h"
@@ -72,6 +73,7 @@ struct AmigaMonitor;
 extern struct AmigaMonitor AMonitors[];
 extern int gfx_GetWidth(const struct AmigaMonitor* mon);
 extern int gfx_GetHeight(const struct AmigaMonitor* mon);
+extern int joystick_mousemap_mouse_device(int device_index);
 
 cothread_t main_fiber;
 cothread_t core_fiber;
@@ -88,6 +90,11 @@ unsigned libretro_audio_frames_this_run;
 static char game_path[1024];
 static bool core_started = false;
 static bool core_shutdown_complete = false;
+// Statefile accepted by retro_unserialize() but not yet applied by the core.
+// The emulator restores it when the core next resumes, through the regular
+// restore_state() + hard reset path; until then retro_serialize() reports it.
+static std::vector<uint8_t> pending_state;
+static bool pending_state_queued = false;
 static bool input_log_enabled = true;
 static uint8_t key_state[RETROK_LAST + 1];
 static constexpr size_t kJoypadMax = RETRO_DEVICE_ID_JOYPAD_R3 + 1;
@@ -1136,7 +1143,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_joy_as_mouse",
 		"Joystick As Mouse",
 		"Joystick As Mouse",
-		"Map joystick to mouse input.",
+		"Left analog stick of the selected Amiga port's controller moves the Amiga mouse in port 1; L/R shoulder buttons act as the left/right mouse buttons. Requires Analog Input and a mouse in port 1.",
 		NULL,
 		"input",
 		{
@@ -4042,6 +4049,57 @@ static void route_libretro_joy_axis(const int joy, const int axis,
 		owner = LibretroInputOwner::neutral;
 }
 
+// Joystick As Mouse: full left-stick deflection moves the Amiga mouse this many
+// counts per frame (before the mouse speed pref), matching PUAE's default
+// analog mouse speed. Polled every frame, so a held stick keeps moving.
+static constexpr float libretro_stick_mouse_counts_per_frame = 10.0f;
+static float stick_mouse_remainder[2][2];
+// The stick was moving the mouse when the on-screen keyboard opened. Like a
+// gameplay-held stick it stays with the mouse until released, so it cannot
+// steer the keyboard by accident (mirrors controller_axis_has_gameplay_input).
+static bool stick_mouse_held[2];
+
+// The left stick drives the Amiga mouse instead of this port's joystick
+// directions (mirrors read_controller_axis). While the on-screen keyboard is
+// on screen the stick steers it instead, through the usual axis ownership.
+static void route_libretro_stick_mouse(const int joy, const int mouse_device,
+	const int16_t x, const int16_t y)
+{
+	const float magnitude = sqrtf(static_cast<float>(x) * x + static_cast<float>(y) * y);
+	const float deadzone = currprefs.input_joymouse_deadzone * 32768.0f / 100.0f;
+	const bool deflected = magnitude > deadzone && deadzone < 32768.0f;
+	const bool osk_rendering = imgui_osk_should_render();
+	if (!deflected)
+		stick_mouse_held[joy] = false;
+
+	const int16_t values[2] = { x, y };
+	const int axes[2] = { SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY };
+	for (int n = 0; n < 2; n++) {
+		LibretroInputOwner& owner = analog_owner[joy][axes[n]];
+		// Zero neutralizes the guest joystick axis and releases any keyboard
+		// or gameplay ownership left from before the map applied.
+		const bool to_osk = osk_rendering && !stick_mouse_held[joy]
+			&& owner != LibretroInputOwner::gameplay;
+		route_libretro_joy_axis(joy, axes[n], to_osk ? values[n] : 0, owner);
+	}
+
+	float* remainder = stick_mouse_remainder[joy];
+	if (!deflected || osk_rendering) {
+		remainder[0] = remainder[1] = 0.0f;
+		return;
+	}
+	stick_mouse_held[joy] = true;
+	const float travel = std::min((magnitude - deadzone) / (32768.0f - deadzone), 1.0f);
+	const float scale = travel * libretro_stick_mouse_counts_per_frame / magnitude;
+	const float motion[2] = { x * scale + remainder[0], y * scale + remainder[1] };
+	for (int axis = 0; axis < 2; axis++) {
+		const int counts = static_cast<int>(motion[axis]);
+		remainder[axis] = motion[axis] - counts;
+		if (counts)
+			setmousestate(mouse_device, axis, counts, 0);
+	}
+}
+
 // The on-screen keyboard's direct driver. While the keyboard is on screen the
 // RetroPads are the keyboard's navigation surface: the D-pad / A move and
 // select, and the left stick steers. This mirrors the standalone controller
@@ -4219,10 +4277,15 @@ static void poll_input(void)
 			log_input_axis(i, "lt", lt, &last_trigger[i][0]);
 			log_input_axis(i, "rt", rt, &last_trigger[i][1]);
 
-			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
-				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
-			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
-				analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			const int stick_mouse = joystick_mousemap_mouse_device(joy);
+			if (stick_mouse >= 0) {
+				route_libretro_stick_mouse(joy, stick_mouse, lx, ly);
+			} else {
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTX, lx,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTX]);
+				route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_LEFTY, ly,
+					analog_owner[i][SDL_CONTROLLER_AXIS_LEFTY]);
+			}
 			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTX, rx,
 				analog_owner[i][SDL_CONTROLLER_AXIS_RIGHTX]);
 			route_libretro_joy_axis(joy, SDL_CONTROLLER_AXIS_RIGHTY, ry,
@@ -4430,10 +4493,11 @@ static void core_entry(void)
 
 	const bool automatic_crop = get_libretro_crop_mode() == libretro_crop_mode::auto_crop;
 	if (libretro_should_queue_auto_crop_options(automatic_crop, is_rp9)) {
-		push_s_option("gfx_auto_crop=true");
-		push_s_option("gfx_manual_crop=false");
-		push_s_option("gfx_horizontal_offset=0");
-		push_s_option("gfx_vertical_offset=0");
+		// Amiberry target options: the config parser only accepts the prefixed form.
+		push_s_option("amiberry.gfx_auto_crop=true");
+		push_s_option("amiberry.gfx_manual_crop=false");
+		push_s_option("amiberry.gfx_horizontal_offset=0");
+		push_s_option("amiberry.gfx_vertical_offset=0");
 		push_s_option("gfx_center_horizontal=none");
 		push_s_option("gfx_center_vertical=none");
 	}
@@ -4542,16 +4606,10 @@ static void core_entry(void)
 			}
 		}
 	}
-	if (!save_dir.empty()) {
-		const std::string cfg_path = "config_path=" + save_dir;
-		const std::string saveimage_path = "saveimage_dir=" + save_dir;
-		const std::string savestate_path = "savestate_dir=" + save_dir;
-		const std::string statefile_path = "statefile_path=" + save_dir;
-		push_s_option(cfg_path);
-		push_s_option(saveimage_path);
-		push_s_option(savestate_path);
-		push_s_option(statefile_path);
-	}
+	// Host directories (config, savestate, screenshot, ...) come from
+	// AMIBERRY_HOME_DIR; only the statefile path is a per-config option.
+	if (!save_dir.empty())
+		push_s_option("statefile_path=" + save_dir);
 
 	if (game_path[0])
 	{
@@ -4672,6 +4730,40 @@ static void delete_core_fiber()
 	core_fiber = NULL;
 }
 
+static void clear_pending_state()
+{
+	pending_state.clear();
+	pending_state.shrink_to_fit();
+	pending_state_queued = false;
+	savestate_restore_memory(nullptr, 0);
+}
+
+// Hand the pending statefile to the emulator. Only valid while the core is
+// parked inside the CPU loop. Startup resets savestate_state with the default
+// prefs, and m68k_go()'s reset handling presents frames, so the core can
+// yield mid-reset: a request queued there loses its SPCFLAG_BRK to
+// m68k_reset2() and is never acted on (#2429). The state stays pending and is
+// retried on every retro_run() until the core is back in the CPU loop.
+static void queue_pending_state()
+{
+	if (pending_state.empty() || pending_state_queued || !core_is_running()
+		|| !m68k_cpu_loop_active)
+		return;
+	savestate_restore_memory(pending_state.data(), pending_state.size());
+	// Samples still buffered belong to the timeline being discarded.
+	libretro_audio_reset();
+	pending_state_queued = true;
+}
+
+// Drop the pending copy once the emulator has finished restoring it.
+static void retire_pending_state()
+{
+	if (pending_state_queued
+		&& savestate_state != STATE_DORESTORE
+		&& savestate_state != STATE_RESTORE)
+		clear_pending_state();
+}
+
 static void reset_core_runtime_state()
 {
 	if (fastforward_forced) {
@@ -4692,6 +4784,7 @@ static void reset_core_runtime_state()
 	libretro_options_dirty = true;
 	memset(joypad_owner, 0, sizeof joypad_owner);
 	memset(analog_owner, 0, sizeof analog_owner);
+	clear_pending_state();
 }
 
 static void apply_minimum_audio_latency()
@@ -5099,6 +5192,7 @@ void retro_run(void)
 			set_fastforward_override(fastforwarding);
 		}
 	}
+	queue_pending_state();
 	poll_input();
 	libretro_audio_frames_this_run = 0;
 	co_switch(core_fiber);
@@ -5108,6 +5202,7 @@ void retro_run(void)
 	}
 	if (core_shutdown_complete)
 		return;
+	retire_pending_state();
 	apply_cheats();
 	update_memory_map();
 	update_led_interface();
@@ -5389,12 +5484,23 @@ size_t retro_serialize_size(void)
 	total += currprefs.mbresmem_low.size;
 	total += currprefs.mbresmem_high.size;
 	total += 8 * 1024 * 1024;
-	return total;
+	return std::max(total, pending_state.size());
 }
 
 bool retro_serialize(void *data, size_t size)
 {
-	if (!core_is_running() || !data || size == 0)
+	if (!data || size == 0)
+		return false;
+
+	// A loaded state the core has not applied yet is the current state.
+	if (!pending_state.empty()) {
+		if (pending_state.size() > size)
+			return false;
+		memcpy(data, pending_state.data(), pending_state.size());
+		return true;
+	}
+
+	if (!core_is_running())
 		return false;
 
 	struct zfile *f = zfile_fopen_empty(NULL, _T("libretro"));
@@ -5424,13 +5530,21 @@ bool retro_serialize(void *data, size_t size)
 
 bool retro_unserialize(const void *data, size_t size)
 {
-	if (!core_is_running() || !data || size == 0)
+	if (core_shutdown_complete || !data || size < 4)
+		return false;
+	if (memcmp(data, "ASF ", 4) != 0)
 		return false;
 
-	struct zfile *f = zfile_fopen_data(_T("libretro"), (uae_u64)size, (const uae_u8*)data);
-	if (!f) return false;
-
-	restore_state_file(f);
+	// Restoring needs the CPU loop to unwind to m68k_go(), which runs
+	// restore_state() followed by the hard reset that rebuilds memory maps,
+	// devices and the filesystem from the restored chunks. Queue the state;
+	// the core applies it as soon as it resumes inside the CPU loop. States
+	// loaded before the core has booted (RetroArch auto-load) or while it is
+	// mid-reset wait until it is.
+	const auto* bytes = static_cast<const uint8_t*>(data);
+	pending_state.assign(bytes, bytes + size);
+	pending_state_queued = false;
+	queue_pending_state();
 	return true;
 }
 

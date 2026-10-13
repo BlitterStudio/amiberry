@@ -2029,6 +2029,7 @@ static uaecptr mmu030_put_atc_generic(uaecptr addr, int l, uae_u32 fc, int flags
         return 0;
     }
 
+	mmu030_cache_state = mmu030.atc[l].physical.cache_inhibit;
 	mmu030_add_data_write_cache(addr, physical_addr, fc);
 
 	return physical_addr + page_index;
@@ -2049,6 +2050,7 @@ static uae_u32 mmu030_get_atc_generic(uaecptr addr, int l, uae_u32 fc, int flags
         return 0;
     }
 
+	mmu030_cache_state = mmu030.atc[l].physical.cache_inhibit;
 	mmu030_add_data_read_cache(addr, physical_addr, fc);
 
 	return physical_addr + page_index;

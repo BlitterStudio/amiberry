@@ -27,7 +27,9 @@
 #include "options.h"
 #include "keyboard.h"
 #include "inputdevice.h"
+#ifdef AMIBERRY
 #include "amiberry_input_helpers.h"
+#endif
 
 #include <algorithm>
 #include "inputrecord.h"
@@ -2530,6 +2532,7 @@ static int lastmxy_abs[2][2];
 static uaecptr magicmouse_ibase, magicmouse_gfxbase;
 static int dimensioninfo_width, dimensioninfo_height, dimensioninfo_dbl;
 static int vp_xoffset, vp_yoffset, mouseoffset_x, mouseoffset_y;
+#ifdef AMIBERRY
 static bool mousehack_host_cursor_uses_hotspot;
 static int mousehack_host_cursor_residual_x, mousehack_host_cursor_residual_y;
 static int mousehack_last_abs_x, mousehack_last_abs_y;
@@ -2537,7 +2540,6 @@ static bool mousehack_last_abs_valid;
 static int mousehack_native_origin_x, mousehack_native_origin_y;
 static bool mousehack_native_source_origin_valid;
 static bool mousehack_position_is_native;
-#ifdef AMIBERRY
 static int mousehack_last_mouse;
 #endif
 static int tablet_maxx, tablet_maxy, tablet_maxz;
@@ -2665,6 +2667,7 @@ static void mousehack_reset (void)
 {
 	dimensioninfo_width = dimensioninfo_height = 0;
 	mouseoffset_x = mouseoffset_y = 0;
+#ifdef AMIBERRY
 	mousehack_host_cursor_uses_hotspot = false;
 	mousehack_host_cursor_residual_x = mousehack_host_cursor_residual_y = 0;
 	mousehack_last_abs_x = mousehack_last_abs_y = 0;
@@ -2672,7 +2675,6 @@ static void mousehack_reset (void)
 	mousehack_native_origin_x = mousehack_native_origin_y = 0;
 	mousehack_native_source_origin_valid = false;
 	mousehack_position_is_native = false;
-#ifdef AMIBERRY
 	mousehack_last_mouse = 0;
 #endif
 	dimensioninfo_dbl = 0;
@@ -2749,6 +2751,7 @@ void input_mousehack_mouseoffset(uaecptr pointerprefs)
 	mouseoffset_y = (uae_s16)get_word (pointerprefs + 30);
 }
 
+#ifdef AMIBERRY
 void input_mousehack_cursor_hotspot(int cursor_width, int cursor_height, int* hotspot_x, int* hotspot_y,
 	int* residual_x, int* residual_y)
 {
@@ -2789,11 +2792,16 @@ void input_mousehack_invalidate_last_abs_position()
 {
 	mousehack_last_abs_valid = false;
 }
+#endif
 
 static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 {
+#ifdef AMIBERRY
 	extern int mouse_monid;
 	int monid = mouse_monid;
+#else
+	int monid = 0;
+#endif
 	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
 	struct amigadisplay *ad = &adisplays[monid];
 	struct picasso96_state_struct *state = &picasso96_state[monid];
@@ -2808,8 +2816,10 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 
 #ifdef PICASSO96
 	if (ad->picasso_on) {
+#ifdef AMIBERRY
 		mousehack_native_source_origin_valid = false;
 		mousehack_position_is_native = false;
+#endif
 		x -= state->XOffset;
 		y -= state->YOffset;
 		x = (int)(x * fmx);
@@ -2820,8 +2830,10 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 #endif
 	{
 		if (vidinfo->outbuffer == NULL) {
+#ifdef AMIBERRY
 			mousehack_native_source_origin_valid = false;
 			mousehack_position_is_native = false;
+#endif
 			*xp = 0;
 			*yp = 0;
 			return false;
@@ -2829,11 +2841,8 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		x = (int)(x * fmx);
 		y = (int)(y * fmy);
 		x -= (int)(fdx * 1.0) - 0;
-		#ifdef AMIBERRY
-			y -= (int)(fdy * 1.0);
-		#else
-			y -= (int)(fdy * 1.0) - 2;
-		#endif
+#ifdef AMIBERRY
+		y -= (int)(fdy * 1.0);
 		int origin_x = 0;
 		int origin_y = 0;
 		const bool source_origin_valid = getgfxsourceorigin(monid, &origin_x, &origin_y);
@@ -2861,6 +2870,34 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		mousehack_native_origin_y = origin_y;
 		mousehack_native_source_origin_valid = source_origin_valid;
 		mousehack_position_is_native = true;
+#else
+		y -= (int)(fdy * 1.0) - 2;
+		if (x < 0) {
+			ob = true;
+			x = 0;
+		}
+		if (x * fmx >= vidinfo->outbuffer->outwidth) {
+			ob = true;
+			x = vidinfo->outbuffer->outwidth - 1;
+		}
+		if (y < 0) {
+			ob = true;
+			y = 0;
+		}
+		if (y * fmy >= vidinfo->outbuffer->outheight) {
+			ob = true;
+			y = vidinfo->outbuffer->outheight - 1;
+		}
+		if (currprefs.gfx_resolution == RES_LORES) {
+			x *= 2;
+		} else if (currprefs.gfx_resolution == RES_SUPERHIRES) {
+			x /= 2;
+		}
+		x = coord_native_to_amiga_x(x);
+		if (y >= 0) {
+			y = coord_native_to_amiga_y(y) * 2;
+		}
+#endif
 	}
 	*xp = x;
 	*yp = y;
@@ -3187,7 +3224,11 @@ static void mousehack_send_native_relative_delta (int mouse, int dx, int dy)
 }
 #endif // AMIBERRY
 
+#ifdef AMIBERRY
 static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_valid)
+#else
+static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits)
+#endif
 {
 #ifdef AMIBERRY
 	if (mousehack_host_cursor_uses_hotspot) {
@@ -3229,14 +3270,12 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits, bool position_
 	const int previous_abs_x = mousehack_last_abs_x;
 	const int previous_abs_y = mousehack_last_abs_y;
 	const bool previous_abs_valid = mousehack_last_abs_valid;
-#endif // AMIBERRY
 	// Keep the coordinate delivered after native screen-origin and host-hotspot
 	// compensation. The guest positions its native sprite from this coordinate,
 	// so their delta is the cursor hotspot.
 	mousehack_last_abs_x = x;
 	mousehack_last_abs_y = y;
 	mousehack_last_abs_valid = position_valid && mousehack_address;
-#ifdef AMIBERRY
 	if (position_valid && previous_abs_valid && currprefs.input_tablet == TABLET_MOUSEHACK
 		&& mousehack_alive () && mousehack_position_is_native
 		&& mousehack_last_mouse >= 0 && mousehack_last_mouse < MAX_INPUT_DEVICES
@@ -3511,6 +3550,7 @@ static void mousehack_helper (uae_u32 buttonmask)
 		return;
 	}
 
+#ifdef AMIBERRY
 	// The virtual mouse driver must actually be in use. The guest driver task
 	// is installed unconditionally since "support virtual mouse driver on the
 	// fly change" (it no longer gates on this trap returning 0), so feeding it
@@ -3519,6 +3559,7 @@ static void mousehack_helper (uae_u32 buttonmask)
 	if (currprefs.input_tablet == TABLET_OFF) {
 		return;
 	}
+#endif
 	if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
 		return;
 	}
@@ -3526,8 +3567,13 @@ static void mousehack_helper (uae_u32 buttonmask)
 		return;
 	}
 
+#ifdef AMIBERRY
 	const bool position_valid = get_mouse_position(&x, &y, lastmx, lastmy);
 	inputdevice_mh_abs(x, y, buttonmask, position_valid);
+#else
+	get_mouse_position(&x, &y, lastmx, lastmy);
+	inputdevice_mh_abs(x, y, buttonmask);
+#endif
 }
 
 static int mouseedge_x, mouseedge_y, mouseedge_time;

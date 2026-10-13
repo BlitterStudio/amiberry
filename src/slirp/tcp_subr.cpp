@@ -1009,8 +1009,10 @@ do_prompt:
 			n4 =  (laddr & 0xff);
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += snprintf(bptr, M_FREEROOM(m), "ORT %d,%d,%d,%d,%d,%d\r\n%s",
+			size_t remaining = M_FREEROOM(m);
+			int written = snprintf(bptr, remaining, "ORT %d,%d,%d,%d,%d,%d\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
+			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 			return 1;
 		} else if ((bptr = (char *)strstr(m->m_data, "27 Entering")) != NULL) {
 			/*
@@ -1040,8 +1042,10 @@ do_prompt:
 			n4 =  (laddr & 0xff);
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += snprintf(bptr, M_FREEROOM(m), "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
+			size_t remaining = M_FREEROOM(m);
+			int written = snprintf(bptr, remaining, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
+			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 
 			return 1;
 		}
@@ -1090,25 +1094,31 @@ do_prompt:
 				return 1;
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC CHAT chat %lu %u%c\n",
+			size_t remaining = M_FREEROOM(m);
+			int written = snprintf(bptr, remaining, "DCC CHAT chat %lu %u%c\n",
 			     (unsigned long)ntohl(so->so_faddr.s_addr),
 			     ntohs(so->so_fport), 1);
+			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 		} else if (sscanf(bptr, "DCC SEND %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
 
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC SEND %s %lu %u %u%c\n",
+			size_t remaining = M_FREEROOM(m);
+			int written = snprintf(bptr, remaining, "DCC SEND %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
+			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 		} else if (sscanf(bptr, "DCC MOVE %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
 
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC MOVE %s %lu %u %u%c\n",
+			size_t remaining = M_FREEROOM(m);
+			int written = snprintf(bptr, remaining, "DCC MOVE %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
+			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 		}
 		return 1;
 	}

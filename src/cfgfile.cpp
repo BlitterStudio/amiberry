@@ -269,7 +269,7 @@ static const TCHAR *lacer[] = { _T("off"), _T("i"), _T("p"), nullptr };
 static const TCHAR *cycleexact[] = { _T("false"), _T("memory"), _T("true"), nullptr  };
 static const TCHAR *unmapped[] = { _T("floating"), _T("zero"), _T("one"), nullptr };
 static const TCHAR *ciatype[] = { _T("default"), _T("391078-01"), nullptr };
-static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), nullptr };
+static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), _T("gdbserver"), nullptr };
 static const TCHAR *hvcsync[] = { _T("hvcsync"), _T("csync"), _T("hvsync"), _T("hvcsync_s"), _T("csync_s"), _T("hvsync_s"), nullptr };
 static const TCHAR *eclocksync[] = { _T("default"), _T("68000"), _T("Gayle"), _T("68000_opt"), nullptr };
 static const TCHAR *agnusmodel[] = { _T("default"), _T("velvet"), _T("a1000"), _T("ocs"), _T("ecs"), _T("aga"), nullptr };
@@ -1457,13 +1457,13 @@ static void write_filesys_config (struct uae_prefs *p, struct zfile *f)
 			if (ci->highcyl || ci->physical_geometry || ci->geometry[0]) {
 				TCHAR *s = tmp + _tcslen (tmp);
 				TCHAR *s2 = s;
-				_sntprintf (s2, sizeof s2, _T(",%d"), ci->highcyl);
+				_sntprintf (s2, sizeof tmp / sizeof *tmp - (s2 - tmp), _T(",%d"), ci->highcyl);
 				if ((ci->physical_geometry && ci->pheads && ci->psecs) || ci->geometry[0]) {
 					s = tmp + _tcslen (tmp);
-					_sntprintf (s, sizeof s, _T(",%d/%d/%d"), ci->pcyls, ci->pheads, ci->psecs);
+					_sntprintf (s, sizeof tmp / sizeof *tmp - (s - tmp), _T(",%d/%d/%d"), ci->pcyls, ci->pheads, ci->psecs);
 					if (ci->geometry[0]) {
 						s = tmp + _tcslen (tmp);
-						_sntprintf (s, sizeof s, _T(",%s"), sgeometry);
+						_sntprintf (s, sizeof tmp / sizeof *tmp - (s - tmp), _T(",%s"), sgeometry);
 					}
 				}
 				_tcscat (tmp3, s2);
@@ -2197,6 +2197,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_bool (f, _T("use_debugger"), p->start_debugger);
 	cfgfile_write_multichoice(f, _T("debugging_features"), debugfeatures, p->debugging_features);
 	cfgfile_dwrite_str(f, _T("debugging_options"), p->debugging_options);
+	cfgfile_dwrite(f, _T("gdb_port"), _T("%d"), p->gdb_port);
 
 	cfgfile_write_rom (f, &p->path_rom, p->romfile, _T("kickstart_rom_file"));
 	cfgfile_write_rom (f, &p->path_rom, p->romextfile, _T("kickstart_ext_rom_file"));
@@ -2521,7 +2522,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			TCHAR *ptmp = tmp + _tcslen (tmp);
 			if (ptmp > tmp)
 				*ptmp++ = ',';
-			_sntprintf (ptmp, sizeof ptmp, _T("%d"), sr->dstport);
+			_sntprintf (ptmp, sizeof tmp / sizeof *tmp - (ptmp - tmp), _T("%d"), sr->dstport);
 		}
 	}
 	if (tmp[0])
@@ -4134,6 +4135,11 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 #ifdef DEBUGGER
 	if (cfgfile_multichoice(option, value, _T("debugging_features"), &p->debugging_features, debugfeatures))
 		return 1;
+	if (cfgfile_intval(option, value, _T("gdb_port"), &p->gdb_port, 1)) {
+		if (p->gdb_port < 1 || p->gdb_port > 65535)
+			p->gdb_port = 2345;
+		return 1;
+	}
 #endif
 
 	if (cfgfile_yesno(option, value, _T("gfx_api_hdr"), &vb)) {
@@ -5118,7 +5124,7 @@ static void decode_rom_ident (TCHAR *romfile, int maxlen, const TCHAR *ident, in
 						for (i = 0; rl[i]; i++) {
 							if (round) {
 								TCHAR romname[MAX_DPATH];
-								getromname(rl[i]->rd, romname);
+								getromname(rl[i]->rd, romname, sizeof romname / sizeof *romname);
 								_tcscat (romtxt, romname);
 								_tcscat (romtxt, _T("\n"));
 							} else {
@@ -9571,6 +9577,7 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->mountitems = 0;
 
 	p->debug_mem = false;
+	p->gdb_port = 2345;
 
 	target_default_options (p, 1);
 	cfgfile_compatibility_romtype(p);

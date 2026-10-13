@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.3.0
+Version:        8.4.0
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -88,6 +88,20 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Sun Oct 11 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.0-1
+- Feature release v8.4.0
+- ZZ9000: AHI audio, SANA-II network, SDK mailbox/MHI audio, MPEGA streams, image/ZZPlay services, firmware 2.8 register ABI, direct VRAM mapping
+- Support for an external MiniGL renderer plugin (available separately) via uaelib trap 120, with dma-buf frame compositing; user plugin search locations
+- Custom cartridge ROM support, .A1000 ROMs, relative media paths, --dump-config CLI option, ipc_disable_logging option
+- RTG: dirty-tracking race/split-screen and direct JIT store fixes, hardware sprite on by default, warm reset fixes
+- JIT: ARM64 trap-block demotion by opcode class, register shift count fixes, JIT FPU setting respected, KMSDRM fault handler ordering
+- Performance: RPi4 zero-copy native frames and faster AGA line drawing, duty-cycled auto-crop scan
+- Graphics: runtime GL capability detection, KMSDRM GLES-first context ladder, autocrop and centering fixes
+- Networking: bsdsocket blocking/timeout fixes, SANA-II receive/multicast fixes, uaenet MTU/MAC and macOS BPF fixes
+- Libretro: on-screen keyboard, zip/7z disk control, HDF without RDB, Windows CHD fix, core info generation
+- Android: launcher/touch/TV fixes, controller OSK toggle, analog stick mouse, ChromeOS desktop improvements
+- Merged latest WinUAE and ImGui updates; FreeBSD amd64/aarch64 CI; updated AROS ROMs
+
 * Wed Aug 05 2026 Dimitris Panokostas <midwan@gmail.com> - 8.3.0-1
 - Feature release v8.3.0
 - Added ZZ9000 RTG emulation, RP9 package support, Global Settings panel, and configuration category grouping

@@ -197,6 +197,9 @@ struct memwatch_node {
 extern struct memwatch_node mwnodes[MEMWATCH_TOTAL];
 
 extern void memwatch_dump2 (TCHAR *buf, int bufsize, int num);
+extern void initialize_memwatch (int mode);
+extern int deinitialize_memwatch (void);
+extern void memwatch_setup (void);
 
 void debug_getpeekdma_chipram(uaecptr addr, uae_u32 mask, int reg);
 void debug_getpeekdma_value(uae_u32);
@@ -366,6 +369,9 @@ extern int get_dma_debug_color(struct dma_rec *dr, int line, uae_u32 *cp);
 #define TRACE_RAM_PC 6
 #define TRACE_IMMEDIATE 7
 #define TRACE_CHECKONLY 10
+
+extern void debug_remote_interrupt(void);
+extern void debug_remote_resume(bool step, bool check);
 
 #else
 

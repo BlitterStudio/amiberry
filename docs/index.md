@@ -214,6 +214,10 @@ Guides, tutorials, and references to help you get the most out of Amiberry.
     <span class="resource-icon">IPC</span>
     IPC Controller Interface
   </a>
+  <a href="/gdb-debugging" class="resource-link">
+    <span class="resource-icon">GDB</span>
+    GDB Remote Debugging
+  </a>
   <a href="https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting" class="resource-link">
     <span class="resource-icon">🔍</span>
     Troubleshooting

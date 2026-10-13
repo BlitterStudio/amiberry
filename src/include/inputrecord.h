@@ -60,6 +60,6 @@ extern void inprec_playdebug_cia (uae_u32, uae_u32, uae_u32);
 extern int inprec_getposition (void);
 extern void inprec_setposition (int offset, int replaycounter);
 extern bool inprec_realtime (void);
-extern void inprec_getstatus (TCHAR*);
+extern void inprec_getstatus (TCHAR*, int);
 
 #endif /* UAE_INPUTRECORD_H */

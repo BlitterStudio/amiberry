@@ -24927,6 +24927,11 @@ uae_u32 REGPARAM2 op_4808_0_comp_ff(uae_u32 opcode) /* LINK */
 	m68k_pc_offset+=2;
 	{
 		uae_u8 scratchie=S1;
+		if (srcreg == 7) {
+			m68k_pc_offset = m68k_pc_offset_thisinst;
+			FAIL(1);
+			return 0;
+		}
 		{
 			int src = dodgy ? scratchie++ : srcreg + 8;
 			if (dodgy) {
@@ -27696,6 +27701,11 @@ uae_u32 REGPARAM2 op_4e50_0_comp_ff(uae_u32 opcode) /* LINK */
 	m68k_pc_offset+=2;
 	{
 		uae_u8 scratchie=S1;
+		if (srcreg == 7) {
+			m68k_pc_offset = m68k_pc_offset_thisinst;
+			FAIL(1);
+			return 0;
+		}
 		{
 			int src = dodgy ? scratchie++ : srcreg + 8;
 			if (dodgy) {
@@ -76042,6 +76052,11 @@ uae_u32 REGPARAM2 op_4808_0_comp_nf(uae_u32 opcode) /* LINK */
 	m68k_pc_offset+=2;
 	{
 		uae_u8 scratchie=S1;
+		if (srcreg == 7) {
+			m68k_pc_offset = m68k_pc_offset_thisinst;
+			FAIL(1);
+			return 0;
+		}
 		{
 			int src = dodgy ? scratchie++ : srcreg + 8;
 			if (dodgy) {
@@ -78949,6 +78964,11 @@ uae_u32 REGPARAM2 op_4e50_0_comp_nf(uae_u32 opcode) /* LINK */
 	m68k_pc_offset+=2;
 	{
 		uae_u8 scratchie=S1;
+		if (srcreg == 7) {
+			m68k_pc_offset = m68k_pc_offset_thisinst;
+			FAIL(1);
+			return 0;
+		}
 		{
 			int src = dodgy ? scratchie++ : srcreg + 8;
 			if (dodgy) {

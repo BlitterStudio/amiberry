@@ -57,6 +57,7 @@
 #include "ini.h"
 #include "readcpu.h"
 #include "keybuf.h"
+#include "gdb_server.h"
 #if defined(AMIBERRY) && defined(USE_IPC_SOCKET)
 #include "amiberry_ipc.h"
 #endif
@@ -4152,7 +4153,6 @@ static void smc_free (void)
 	smc_table = NULL;
 }
 
-static void initialize_memwatch(int mode);
 static void smc_detect_init(TCHAR **c)
 {
 	int v;
@@ -4994,7 +4994,7 @@ static void memwatch_remap (uaecptr addr)
 	}
 }
 
-static void memwatch_setup(void)
+void memwatch_setup(void)
 {
 	memwatch_reset();
 	mwnodes_start = MEMWATCH_TOTAL - 1;
@@ -5016,7 +5016,7 @@ static void memwatch_setup(void)
 	}
 }
 
-static int deinitialize_memwatch (void)
+int deinitialize_memwatch (void)
 {
 	int oldmode;
 
@@ -5037,7 +5037,7 @@ static int deinitialize_memwatch (void)
 	return oldmode;
 }
 
-static void initialize_memwatch (int mode)
+void initialize_memwatch (int mode)
 {
 	membank_total = currprefs.address_space_24 ? 256 : 65536;
 	deinitialize_memwatch ();
@@ -5580,9 +5580,18 @@ end:
 
 static uae_u8 *dump_xlate (uae_u32 addr)
 {
-	if (!mem_banks[addr >> 16]->check (addr, 1))
+	addrbank *bank = mem_banks[addr >> 16];
+	if (!bank || !bank->check || !bank->xlateaddr || !bank->check (addr, 1))
 		return NULL;
-	return mem_banks[addr >> 16]->xlateaddr (addr);
+	return bank->xlateaddr (addr);
+}
+
+static uae_u8 *dump_xlate_range (uae_u32 addr, uae_u32 size)
+{
+	addrbank *bank = mem_banks[addr >> 16];
+	if (!bank || !bank->check || !bank->xlateaddr || !bank->check(addr, size))
+		return NULL;
+	return bank->xlateaddr(addr);
 }
 
 #if 0
@@ -5700,13 +5709,15 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 					if ((a1->flags & ABFLAG_ROM) && mirrored) {
 						TCHAR *p = txt + _tcslen (txt);
 						uae_u32 crc = 0xffffffff;
-						if (a1->check(((j << 16) | bankoffset), (size * 1024) / mirrored))
-						crc = get_crc32 (a1->xlateaddr((j << 16) | bankoffset), (size * 1024) / mirrored);
+						uae_u32 crc_size = (size * 1024) / mirrored;
+						uae_u8 *crc_mem = dump_xlate_range((j << 16) | bankoffset, crc_size);
+						if (crc_mem)
+							crc = get_crc32(crc_mem, crc_size);
 						struct romdata *rd = getromdatabycrc (crc);
-						_sntprintf (p, sizeof p, _T(" (%08X)"), crc);
+						_sntprintf (p, sizeof txt / sizeof *txt - (p - txt), _T(" (%08X)"), crc);
 					if (rd) {
 						tmp[0] = '=';
-						getromname (rd, tmp + 1);
+						getromname (rd, tmp + 1, sizeof tmp / sizeof *tmp - 1);
 						_tcscat (tmp, _T("\n"));
 					}
 				}
@@ -8370,6 +8381,33 @@ void debug_exception(int nr)
 	}
 }
 
+/* Execution control for the remote debugger (gdb_target.cpp) */
+
+void debug_remote_interrupt(void)
+{
+	trace_mode = TRACE_IMMEDIATE;
+	debugging = 1;
+	set_special(SPCFLAG_BRK);
+}
+
+void debug_remote_resume(bool step, bool check)
+{
+	inside_debugger = debugger_active = 0;
+	trace_mode = check || processptr || processname ? TRACE_CHECKONLY : 0;
+	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+		if (bpnodes[i].enabled > 0)
+			trace_mode = TRACE_CHECKONLY;
+	}
+	if (step) {
+		trace_mode = TRACE_SKIP_INS;
+		trace_param[0] = 1;
+	}
+	exception_debugging = step ? 1 : 0;
+	debugging = trace_mode ? -1 : 0;
+	if (trace_mode)
+		set_special(SPCFLAG_BRK);
+}
+
 static bool check_breakpoint(struct breakpoint_node *bpn, uaecptr pc)
 {
 	int bpnum = -1;
@@ -8481,6 +8519,7 @@ static bool check_breakpoint_count(struct breakpoint_node *bpn, uaecptr pc)
 void debug (void)
 {
 	int wasactive;
+	char remote_reason[128] = "S05";
 
 	if (savestate_state || quit_program)
 		return;
@@ -8514,6 +8553,10 @@ void debug (void)
 			int bpnum = -1;
 			int bp = 0;
 
+			// The checks below read guest memory for the debugger; keep those
+			// reads from tripping memwatch points (inside_debugger suppresses them).
+			int was_inside_debugger = inside_debugger;
+			inside_debugger = 1;
 			pc = munge24 (m68k_getpc ());
 			opcode = currprefs.cpu_model < 68020 && (currprefs.cpu_compatible || currprefs.cpu_cycle_exact) ? regs.ir : get_word_debug (pc);
 
@@ -8637,6 +8680,9 @@ void debug (void)
 					bp = -2;
 				}
 			}
+			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason)))
+				bp = -1;
+			inside_debugger = was_inside_debugger;
 			if (!bp && bpnum < 0) {
 				debug_continue();
 				return;
@@ -8649,8 +8695,27 @@ void debug (void)
 			}
 		}
 	} else {
+		if (gdb_server_connected()) {
+			const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
+				(mwhit.rwi & 2) ? "watch" : "rwatch";
+			snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;", kind, mwhit.addr);
+		}
 		memwatch_hit_msg(memwatch_triggered - 1);
 		memwatch_triggered = 0;
+	}
+
+	if (gdb_server_connected()) {
+		inside_debugger = 1;
+		trace_mode = 0;
+		gdb_target_stopped(remote_reason, sizeof(remote_reason));
+#ifdef WITH_PPC
+		uae_ppc_pause(1);
+#endif
+		gdb_server_stop(remote_reason);
+#ifdef WITH_PPC
+		uae_ppc_pause(0);
+#endif
+		return;
 	}
 
 	wasactive = ismouseactive ();

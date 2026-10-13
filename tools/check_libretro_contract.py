@@ -232,13 +232,13 @@ def main():
 		failures,
 	)
 	require(
-		"if (!core_is_running() || !data || size == 0)\n\t\treturn false;" in retro_serialize,
+		"if (!core_is_running())\n\t\treturn false;" in retro_serialize,
 		"retro_serialize() must reject calls before live core state exists",
 		failures,
 	)
 	require(
-		"if (!core_is_running() || !data || size == 0)\n\t\treturn false;" in retro_unserialize,
-		"retro_unserialize() must reject calls before live core state exists",
+		"if (core_shutdown_complete || !data || size < 4)\n\t\treturn false;" in retro_unserialize,
+		"retro_unserialize() must reject calls after core shutdown and non-statefile data",
 		failures,
 	)
 	require(
@@ -268,7 +268,7 @@ def main():
 	)
 	require(
 		'info->valid_extensions = "adf|adz|dms|fdi|raw|ipf|hdf|hdz|lha|lzh|zip|7z|uae|rp9|m3u|m3u8|iso|cue|ccd|nrg|mds|chd";' in retro_get_system_info
-		and '_tcscmp(txt2.c_str(), ".7z") == 0' in parse_cmdline,
+		and '_tcsicmp(txt2.c_str(), ".7z") == 0' in parse_cmdline,
 		"libretro must not block frontend extraction for advertised .7z content unless .7z loads directly",
 		failures,
 	)
@@ -347,15 +347,15 @@ def main():
 		failures,
 	)
 	require(
-		"whd_path = canonicalize_existing_host_path(whd_path);" in retro_load_game,
-		"WHDLoad archive paths must be canonicalized before being passed to WHDBooter",
+		"package_path = canonicalize_existing_host_path(package_path);" in retro_load_game,
+		"WHDLoad/RP9 package paths must be canonicalized before being passed to WHDBooter",
 		failures,
 	)
 	require(
-		"bool used_archive_auto_detect = false;" in whdload_auto_prefs
-		and "used_archive_auto_detect = auto_detect_slave_from_archive(filepath, game_detail);" in whdload_auto_prefs
-		and "const auto use_a1200_for_unknown = chipset_unknown && used_archive_auto_detect;" in whdload_auto_prefs,
-		"WHDBooter must only use the A1200 unknown-chipset fallback for archive auto-detect, not matched database entries",
+		"bool used_slave_auto_detect = false;" in whdload_auto_prefs
+		and "used_slave_auto_detect = auto_detect_slave_from_archive(filepath, game_detail);" in whdload_auto_prefs
+		and "const auto use_a1200_for_unknown = chipset_unknown && used_slave_auto_detect;" in whdload_auto_prefs,
+		"WHDBooter must only use the A1200 unknown-chipset fallback for slave auto-detect, not matched database entries",
 		failures,
 	)
 	require(
