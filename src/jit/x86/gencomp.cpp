@@ -2082,6 +2082,11 @@ gen_opcode(unsigned int opcode)
 #ifdef DISABLE_I_LINK
 		failure;
 #endif
+		comprintf("\tif (srcreg == 7) {\n"
+			"\t\tm68k_pc_offset = m68k_pc_offset_thisinst;\n"
+			"\t\tFAIL(1);\n"
+			"\t\t" RETURN "\n"
+			"\t}\n");
 		genamode(curi->smode, "srcreg", sz_long, "src", GENA_GETV_FETCH, GENA_MOVEM_DO_INC);
 		genamode(curi->dmode, "dstreg", curi->size, "offs", GENA_GETV_FETCH, GENA_MOVEM_DO_INC);
 		comprintf("\tsub_l_ri(SP_REG,4);\n"
