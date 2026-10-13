@@ -763,6 +763,13 @@ extern int m68k_mull (uae_u32, uae_u32, uae_u16);
 extern void init_m68k (void);
 extern void m68k_run(void);
 extern void m68k_go (int);
+#ifdef LIBRETRO
+/* True while m68k_go() executes the CPU (m68k_run() or its halt loop): the
+ * only code that unwinds on SPCFLAG_BRK to the reset/restore handling at the
+ * top of the m68k_go() loop. False during that handling, which can present
+ * frames (and so yield to the libretro frontend) mid-reset. */
+extern bool m68k_cpu_loop_active;
+#endif
 extern void m68k_dumpstate(uaecptr *, uaecptr);
 extern void m68k_dumpcache(bool);
 extern int getMulu68kCycles(uae_u16 src);

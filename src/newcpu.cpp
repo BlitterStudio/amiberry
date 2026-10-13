@@ -6973,6 +6973,10 @@ void m68k_run(void)
 #endif
 }
 
+#ifdef LIBRETRO
+bool m68k_cpu_loop_active;
+#endif
+
 void m68k_go (int may_quit)
 {
 	int hardboot = 1;
@@ -7174,12 +7178,24 @@ void m68k_go (int may_quit)
 		if (regs.halted) {
 			cpu_halt (regs.halted);
 			if (regs.halted < 0) {
+#ifdef LIBRETRO
+				m68k_cpu_loop_active = true;
+#endif
 				haltloop();
+#ifdef LIBRETRO
+				m68k_cpu_loop_active = false;
+#endif
 				continue;
 			}
 		}
 
+#ifdef LIBRETRO
+		m68k_cpu_loop_active = true;
+#endif
 		m68k_run();
+#ifdef LIBRETRO
+		m68k_cpu_loop_active = false;
+#endif
 
 		custom_end_drawing();
 
