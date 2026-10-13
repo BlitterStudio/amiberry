@@ -49,6 +49,7 @@ extern "C" {
 #include "keyboard.h"
 #include "uae.h"
 #include "memory.h"
+#include "newcpu.h"
 #include "savestate.h"
 #include "disk.h"
 #include "blkdev.h"
@@ -4737,11 +4738,16 @@ static void clear_pending_state()
 	savestate_restore_memory(nullptr, 0);
 }
 
-// Hand the pending statefile to the emulator. Only valid once the core has
-// booted: startup resets savestate_state with the default prefs.
+// Hand the pending statefile to the emulator. Only valid while the core is
+// parked inside the CPU loop. Startup resets savestate_state with the default
+// prefs, and m68k_go()'s reset handling presents frames, so the core can
+// yield mid-reset: a request queued there loses its SPCFLAG_BRK to
+// m68k_reset2() and is never acted on (#2429). The state stays pending and is
+// retried on every retro_run() until the core is back in the CPU loop.
 static void queue_pending_state()
 {
-	if (pending_state.empty() || pending_state_queued || !core_is_running())
+	if (pending_state.empty() || pending_state_queued || !core_is_running()
+		|| !m68k_cpu_loop_active)
 		return;
 	savestate_restore_memory(pending_state.data(), pending_state.size());
 	// Samples still buffered belong to the timeline being discarded.
@@ -5532,8 +5538,9 @@ bool retro_unserialize(const void *data, size_t size)
 	// Restoring needs the CPU loop to unwind to m68k_go(), which runs
 	// restore_state() followed by the hard reset that rebuilds memory maps,
 	// devices and the filesystem from the restored chunks. Queue the state;
-	// the core applies it as soon as it resumes. States loaded before the core
-	// has booted are queued once it is running.
+	// the core applies it as soon as it resumes inside the CPU loop. States
+	// loaded before the core has booted (RetroArch auto-load) or while it is
+	// mid-reset wait until it is.
 	const auto* bytes = static_cast<const uint8_t*>(data);
 	pending_state.assign(bytes, bytes + size);
 	pending_state_queued = false;
