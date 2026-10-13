@@ -73,7 +73,8 @@ int main()
 	require(s.take_output() == frame("S05"), "missing delayed stop reply");
 	require(send(s, "QStartNoAckMode") == "+" + frame("OK"), "no-ack transition");
 	require(send(s, "p0") == frame("00000000"), "no-ack mode still acknowledges");
-	require(send(s, "p1a") == frame("xxxxxxxx"), "FPU register read must be unavailable, not an error");
+	require(send(s, "p12") == frame(std::string(24, 'x')), "fp0 read must be 12 unavailable bytes");
+	require(send(s, "p1a") == frame("xxxxxxxx"), "fpcontrol read must be 4 unavailable bytes");
 	const char* invalid[] = {"M1000,1000:00", "M1000,1:zz", "M1000,ffffffff:00",
 		"Mffffffff,2:0000", "M1000,1:0", "M1000:00,1", "M,1:00", "M1000,0:ab",
 		"P0=", "P0=xyzabcde", "P12=00000000", "P=00000000", "G", "gextra"};
