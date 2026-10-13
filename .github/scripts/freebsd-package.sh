@@ -56,17 +56,21 @@ done
 pkg query -a '%b %n' > "$work/shlib-owners"
 : > "$work/deps"
 for soname in $(LC_ALL=C sort -u "$work/needed"); do
+	# Check base first: compiler packages also provide libgcc_s, and pkgbase
+	# systems register libc and friends as FreeBSD-* packages that
+	# freebsd-update installs don't have.
+	if [ -e "/lib/$soname" ] || [ -e "/usr/lib/$soname" ]; then
+		continue
+	fi
+	if awk -F/ -v s="$soname" '$NF == s { found = 1 } END { exit !found }' "$work/plist"; then
+		continue # shipped in this package
+	fi
 	owner=$(awk -v s="$soname" '$1 == s { print $2; exit }' "$work/shlib-owners")
-	if [ -n "$owner" ]; then
-		echo "$owner" >> "$work/deps"
-	elif [ -e "/lib/$soname" ] || [ -e "/usr/lib/$soname" ]; then
-		: # base system
-	elif awk -F/ -v s="$soname" '$NF == s { found = 1 } END { exit !found }' "$work/plist"; then
-		: # shipped in this package
-	else
+	if [ -z "$owner" ]; then
 		echo "error: no installed package provides $soname" >&2
 		exit 1
 	fi
+	echo "$owner" >> "$work/deps"
 done
 
 mkdir "$work/meta"
