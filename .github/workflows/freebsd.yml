@@ -63,7 +63,7 @@ jobs:
             # The VM images use the latest package branch. Release packages
             # record exact shared-library versions, so build them against
             # quarterly, the branch a stock FreeBSD install uses.
-            pkg_branch=${{ github.ref_type == 'tag' && 'quarterly' || 'latest' }}
+            pkg_branch=quarterly
             if [ "$pkg_branch" = quarterly ]; then
               for conf in /etc/pkg/*.conf /usr/local/etc/pkg/repos/*.conf; do
                 if [ -f "$conf" ]; then
