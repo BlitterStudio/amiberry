@@ -23,6 +23,11 @@ amiberry -s debugging_features=gdbserver -s gdb_port=2345
 `gdb_port` defaults to 2345. Amiberry logs
 `WinUAE GDB: listening on 127.0.0.1:<port>` when the server starts.
 
+The server is not available with the threaded CPU option
+(`cpu_threaded=true`). In that mode Amiberry logs
+`WinUAE GDB: not available with the threaded CPU (cpu_threaded=true)` and does
+not listen.
+
 The server listens on `127.0.0.1` only and accepts one client at a time. It is
 unauthenticated: any local process that connects gets full control of the
 guest. When it is enabled but no client is attached, the only cost is a
