@@ -1049,28 +1049,28 @@ addrbank romboardmem_bank[MAX_ROM_BOARDS] =
 	{
 		romboardmem0_lget, romboardmem0_wget, romboardmem0_bget,
 		empty_put, empty_put, empty_put,
-		romboardmem0_xlate, romboardmem0_check, NULL, _T("*"), _T("ROM board"),
+		romboardmem0_xlate, romboardmem0_check, NULL, _T("*"), _T("Custom ROM board #1"),
 		romboardmem0_lget, romboardmem0_wget,
 		ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, 0
 	},
 	{
 		romboardmem1_lget, romboardmem1_wget, romboardmem1_bget,
 		empty_put, empty_put, empty_put,
-		romboardmem1_xlate, romboardmem1_check, NULL, _T("*"), _T("ROM board"),
+		romboardmem1_xlate, romboardmem1_check, NULL, _T("*"), _T("Custom ROM board #2"),
 		romboardmem1_lget, romboardmem1_wget,
 		ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, 0
 	},
 	{
 		romboardmem2_lget, romboardmem2_wget, romboardmem2_bget,
 		empty_put, empty_put, empty_put,
-		romboardmem2_xlate, romboardmem2_check, NULL, _T("*"), _T("ROM board"),
+		romboardmem2_xlate, romboardmem2_check, NULL, _T("*"), _T("Custom ROM board #3"),
 		romboardmem2_lget, romboardmem2_wget,
 		ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, 0
 	},
 	{
 		romboardmem3_lget, romboardmem3_wget, romboardmem3_bget,
 		empty_put, empty_put, empty_put,
-		romboardmem3_xlate, romboardmem3_check, NULL, _T("*"), _T("ROM board"),
+		romboardmem3_xlate, romboardmem3_check, NULL, _T("*"), _T("Custom ROM board #4"),
 		romboardmem3_lget, romboardmem3_wget,
 		ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, 0
 	}

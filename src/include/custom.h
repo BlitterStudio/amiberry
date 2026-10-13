@@ -77,7 +77,7 @@ extern uae_u32 hsync_counter, vsync_counter;
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
 
-extern int vpos, linear_display_vpos;
+extern int vpos, linear_vpos_start;
 extern int linear_vpos_vb_start, linear_vpos_vb_end;
 extern uae_u8 agnus_hpos;
 extern bool lof_store, lof_display;
