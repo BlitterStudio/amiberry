@@ -96,10 +96,16 @@ Download the [installer or portable ZIP](https://github.com/BlitterStudio/amiber
 Currently in Closed Testing on [Google Play](https://play.google.com/store/apps/details?id=com.blitterstudio.amiberry) for [Ko-fi](https://ko-fi.com/midwan) members, who receive a 100% discount code that also covers the final release. Open Testing is planned after the next release, followed by a public paid release on Google Play. AArch64 & x86_64, with full ARM64 JIT support. See the [Android wiki page](https://github.com/BlitterStudio/amiberry/wiki/Android) for details.
 
 ### FreeBSD
-In order to install amiberry on FreeBSD simply use pkg
+Install from the FreeBSD package repository:
 
 ```bash
 pkg install amiberry
+```
+
+Each Amiberry release also ships packages for FreeBSD 14 and 15 (amd64 and aarch64) on the [releases page](https://github.com/BlitterStudio/amiberry/releases/latest), which can be newer than the ports tree. Download the one matching your FreeBSD version and CPU, then install it with `pkg install`, which fetches the dependencies from your configured repository:
+
+```bash
+pkg install ./amiberry-v8.4.0-freebsd15-amd64.pkg
 ```
 
 Or if you prefer to install from Source then
