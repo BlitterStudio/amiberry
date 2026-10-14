@@ -27,8 +27,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +48,14 @@ fun SoundTab(viewModel: SettingsViewModel) {
 		44100 to stringResource(R.string.settings_sound_frequency_hz, 44100),
 		48000 to stringResource(R.string.settings_sound_frequency_hz, 48000)
 	)
+
+	// One emulator chunk is sound_max_buff / 4 frames
+	val bufferFreq = if (settings.soundFreq > 0) settings.soundFreq else EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY
+	val bufferMs = { size: Int -> (size / 4.0 * 1000.0 / bufferFreq).roundToInt() }
+	val bufferOptions = EmulatorSettingsConstraints.SOUND_BUFFER_SIZES.map { size ->
+		size to if (size == 0) stringResource(R.string.settings_sound_buffer_min)
+		else stringResource(R.string.settings_sound_buffer_option, size, bufferMs(size))
+	}
 
 	val channelOptions = listOf(
 		"mono" to R.string.settings_sound_channels_mono,
@@ -144,6 +154,44 @@ fun SoundTab(viewModel: SettingsViewModel) {
 								onClick = {
 									viewModel.updateSettings { s -> s.copy(soundFreq = value) }
 									freqExpanded = false
+								}
+							)
+						}
+					}
+				}
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				// Sound buffer
+				var bufferExpanded by remember { mutableStateOf(false) }
+				val bufferLabel = bufferOptions.firstOrNull { it.first == settings.soundBuffer }?.second
+					?: stringResource(R.string.settings_sound_buffer_option, settings.soundBuffer, bufferMs(settings.soundBuffer))
+
+				ExposedDropdownMenuBox(
+					expanded = bufferExpanded,
+					onExpandedChange = { bufferExpanded = it }
+				) {
+					OutlinedTextField(
+						value = bufferLabel,
+						onValueChange = {},
+						readOnly = true,
+						label = { Text(stringResource(R.string.settings_sound_buffer_label)) },
+						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bufferExpanded) },
+						modifier = Modifier
+							.dpadVerticalMovesFocus()
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+							.fillMaxWidth()
+					)
+					ExposedDropdownMenu(
+						expanded = bufferExpanded,
+						onDismissRequest = { bufferExpanded = false }
+					) {
+						bufferOptions.forEach { (value, label) ->
+							DropdownMenuItem(
+								text = { Text(label) },
+								onClick = {
+									viewModel.updateSettings { s -> s.copy(soundBuffer = value) }
+									bufferExpanded = false
 								}
 							)
 						}

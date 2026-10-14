@@ -35,6 +35,7 @@ object SettingsChangeSummary {
 		addIfChanged("On-screen keyboard toggle", before.onScreenKeyboardToggle ?: "Default", after.onScreenKeyboardToggle ?: "Default")
 		addIfChanged("Port 1 analog mouse map", yesNo(before.joyport0MouseMap), yesNo(after.joyport0MouseMap))
 		addIfChanged("Port 2 analog mouse map", yesNo(before.joyport1MouseMap), yesNo(after.joyport1MouseMap))
+		addIfChanged("Analog mouse speed", before.analogMouseSpeed.toString(), after.analogMouseSpeed.toString())
 	}
 
 	private fun MutableList<SettingsChange>.addIfChanged(label: String, before: String, after: String) {

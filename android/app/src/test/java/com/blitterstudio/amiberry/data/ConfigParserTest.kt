@@ -190,6 +190,7 @@ class ConfigParserTest {
 		val file = writeConfig("""
 			sound_output=normal
 			sound_frequency=48000
+			sound_max_buff=16384
 			sound_channels=mono
 		""".trimIndent())
 		val result = ConfigParser.parse(file)
@@ -197,6 +198,7 @@ class ConfigParserTest {
 
 		assertEquals("normal", s.soundOutput)
 		assertEquals(48000, s.soundFreq)
+		assertEquals(16384, s.soundBuffer)
 		assertEquals("mono", s.soundChannels)
 	}
 
@@ -294,6 +296,18 @@ class ConfigParserTest {
 		assertTrue(result.settings.joyport1MouseMap)
 		assertTrue("joyport1mousemap" in result.explicitKeys)
 		assertTrue(result.unknownLines.none { it.trimStart().startsWith("joyport1mousemap=") })
+	}
+
+	@Test
+	fun `parse input ignores unparsable analog mouse speed key and keeps default`() {
+		val file = writeConfig("""
+			input.joymouse_speed_analog=invalid
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertEquals(25, result.settings.analogMouseSpeed)
+		assertTrue("input.joymouse_speed_analog" in result.explicitKeys)
+		assertTrue(result.unknownLines.none { it.trimStart().startsWith("input.joymouse_speed_analog=") })
 	}
 
 	@Test

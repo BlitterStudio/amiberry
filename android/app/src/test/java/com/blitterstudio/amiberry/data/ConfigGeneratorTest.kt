@@ -478,6 +478,7 @@ class ConfigGeneratorTest {
 			floppy0Type = 0,
 			soundOutput = "exact",
 			soundFreq = 44100,
+			soundBuffer = 16384,
 			soundChannels = "stereo",
 			gfxWidth = 720,
 			gfxHeight = 568,
@@ -488,7 +489,8 @@ class ConfigGeneratorTest {
 			onScreenJoystick = false,
 			onScreenKeyboardButton = true,
 			onScreenKeyboardNumpad = true,
-			joyport1MouseMap = true
+			joyport1MouseMap = true,
+			analogMouseSpeed = 50
 		)
 
 		val configText = ConfigGenerator.generate(original)
@@ -515,6 +517,7 @@ class ConfigGeneratorTest {
 		assertEquals(original.floppy0Type, result.floppy0Type)
 		assertEquals(original.soundOutput, result.soundOutput)
 		assertEquals(original.soundFreq, result.soundFreq)
+		assertEquals(original.soundBuffer, result.soundBuffer)
 		assertEquals(original.soundChannels, result.soundChannels)
 		assertEquals(original.gfxWidth, result.gfxWidth)
 		assertEquals(original.gfxHeight, result.gfxHeight)
@@ -526,6 +529,7 @@ class ConfigGeneratorTest {
 		assertEquals(original.onScreenKeyboardNumpad, result.onScreenKeyboardNumpad)
 		assertFalse(result.joyport0MouseMap)
 		assertTrue(result.joyport1MouseMap)
+		assertEquals(50, result.analogMouseSpeed)
 	}
 
 	@Test

@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 
 sealed interface LaunchRequest {
 	val trackSession: Boolean
@@ -106,7 +107,8 @@ sealed interface LaunchRequest {
 		val onScreenKeyboardNumpad: Boolean = false,
 		val onScreenKeyboardToggle: String? = null,
 		val joyport0MouseMap: Boolean = false,
-		val joyport1MouseMap: Boolean = false
+		val joyport1MouseMap: Boolean = false,
+		val analogMouseSpeed: Int = EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED
 	) {
 		fun toArgs(): List<String> {
 			val args = mutableListOf("-s", "joyport0=$joyport0")
@@ -140,6 +142,9 @@ sealed interface LaunchRequest {
 			args.add("joyport0mousemap=${if (joyport0MouseMap) "1" else "0"}")
 			args.add("-s")
 			args.add("joyport1mousemap=${if (joyport1MouseMap) "1" else "0"}")
+			// Explicit too, so a backing config's speed cannot beat the slider
+			args.add("-s")
+			args.add("input.joymouse_speed_analog=$analogMouseSpeed")
 
 			return args
 		}
@@ -154,7 +159,8 @@ sealed interface LaunchRequest {
 					onScreenKeyboardNumpad = settings.onScreenKeyboardNumpad,
 					onScreenKeyboardToggle = settings.onScreenKeyboardToggle,
 					joyport0MouseMap = settings.joyport0MouseMap,
-					joyport1MouseMap = settings.joyport1MouseMap
+					joyport1MouseMap = settings.joyport1MouseMap,
+					analogMouseSpeed = settings.analogMouseSpeed
 				)
 		}
 	}

@@ -83,10 +83,9 @@ struct didata {
 
 	bool hotkey_held{}; // per-device hotkey state, updated in event order
 	Uint32 remapped_press_mask{}; // logical buttons whose press used the hotkey remap offset
+	std::array<Uint8, 8> hat_values{}; // last value per hat; the D-pad follows their union
 };
 
-//Analog joystick dead zone
-static int joystick_dead_zone = 8000;
 #define REMAP_BUTTONS 32
 static int axisold[MAX_INPUT_DEVICES][256], buttonold[MAX_INPUT_DEVICES][256];
 
@@ -140,9 +139,6 @@ extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
 // Uses logical axes, matching read_controller_axis and normalized RetroArch axes.
 extern bool controller_axis_has_gameplay_input(int id, int axis, int value);
-// Mouse device the left stick of joystick device_index drives while its
-// joyport's analog mouse map is on, or -1 when the map is off for that port.
-extern int joystick_mousemap_mouse_device(int device_index);
 
 // Preserve RetroArch's own raw shortcuts; other devices use the global hotkeys
 // in the index space consumed by their SDL event path.

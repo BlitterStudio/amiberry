@@ -291,6 +291,9 @@
     <string name="settings_sound_output_normal">Normal</string>
     <string name="settings_sound_output_exact">Exact</string>
     <string name="settings_sound_frequency_hz">%1$d Hz</string>
+    <string name="settings_sound_buffer_label">Sound Buffer</string>
+    <string name="settings_sound_buffer_option">%1$d (%2$d ms)</string>
+    <string name="settings_sound_buffer_min">Min</string>
     <string name="settings_sound_channels_mono">Mono</string>
     <string name="settings_sound_channels_stereo">Stereo</string>
     <string name="settings_sound_channels_cloned_stereo">Cloned stereo</string>
@@ -314,6 +317,8 @@
     <string name="settings_input_on_screen_keyboard_toggle_hint">Gamepad button that shows or hides the on-screen keyboard. Back always hides it.</string>
     <string name="settings_input_analog_mouse_map">Left Analog Stick as Mouse</string>
     <string name="settings_input_analog_mouse_map_summary">Left stick moves the mouse pointer; L/R shoulder buttons act as the left/right mouse buttons. Other controls stay as the port joystick.</string>
+    <string name="settings_input_analog_mouse_speed">Analog mouse speed</string>
+    <string name="settings_input_analog_mouse_speed_summary">Pointer speed when the left stick moves the mouse. Lower is slower.</string>
     <string name="settings_input_device_mouse">Mouse</string>
     <string name="settings_input_device_joystick_0">Joystick 0</string>
     <string name="settings_input_device_joystick_1">Joystick 1</string>

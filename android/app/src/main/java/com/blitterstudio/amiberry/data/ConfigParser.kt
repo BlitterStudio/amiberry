@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.HardDrive
 import java.io.File
 import java.io.IOException
@@ -30,12 +31,13 @@ object ConfigParser {
 		"floppy0", "floppy0type", "floppy1", "floppy1type",
 		"floppy2", "floppy2type", "floppy3", "floppy3type",
 		"cdimage0",
-		"sound_output", "sound_frequency", "sound_channels",
+		"sound_output", "sound_frequency", "sound_max_buff", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
 		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
 		"joyport0", "joyport1",
 		"joyport0mousemap", "joyport1mousemap",
+		"input.joymouse_speed_analog",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
 		"amiberry.android_joyport1",
 		"use_gui", "config_description", "config_hardware_path"
@@ -145,7 +147,10 @@ object ConfigParser {
 			hardDrives = hardDrives,
 
 			soundOutput = kv["sound_output"] ?: "exact",
-			soundFreq = kv["sound_frequency"]?.toIntOrNull() ?: 44100,
+			soundFreq = kv["sound_frequency"]?.toIntOrNull()
+				?: EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
+			soundBuffer = kv["sound_max_buff"]?.toIntOrNull()
+				?: EmulatorSettingsConstraints.DEFAULT_SOUND_BUFFER,
 			soundChannels = kv["sound_channels"] ?: "stereo",
 
 			gfxWidth = kv["gfx_width"]?.toIntOrNull() ?: 720,
@@ -181,7 +186,9 @@ object ConfigParser {
 				""
 			},
 			joyport0MouseMap = (kv["joyport0mousemap"]?.toIntOrNull() ?: 0) > 0,
-			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0
+			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0,
+			analogMouseSpeed = kv["input.joymouse_speed_analog"]?.toIntOrNull()
+				?: EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED
 		)
 	}
 

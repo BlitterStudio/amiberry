@@ -41,7 +41,12 @@ object AndroidControlSettings {
 				fallback.onScreenKeyboardToggle
 			},
 			joyport0MouseMap = if ("joyport0mousemap" in keys) settings.joyport0MouseMap else fallback.joyport0MouseMap,
-			joyport1MouseMap = if ("joyport1mousemap" in keys) settings.joyport1MouseMap else fallback.joyport1MouseMap
+			joyport1MouseMap = if ("joyport1mousemap" in keys) settings.joyport1MouseMap else fallback.joyport1MouseMap,
+			analogMouseSpeed = if ("input.joymouse_speed_analog" in keys) {
+				settings.analogMouseSpeed
+			} else {
+				fallback.analogMouseSpeed
+			}
 		)
 	}
 }

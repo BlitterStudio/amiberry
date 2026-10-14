@@ -5061,9 +5061,22 @@ void inputdevice_do_kb_reset(void)
 #ifdef AMIBERRY
 static const int mousespeed_values[] = {2, 5, 10, 20, 40};
 
-int mousespeed;
-int i;
-int num_elements;
+// Next analog joy-mouse speed step above or below the current speed, wrapping
+// at either end. The current speed need not be a step (config default, GUI
+// slider, hand-edited config).
+static int step_joymouse_speed(const int current, const bool up)
+{
+	if (up) {
+		for (const int value : mousespeed_values)
+			if (value > current)
+				return value;
+		return mousespeed_values[0];
+	}
+	for (int n = static_cast<int>(std::size(mousespeed_values)) - 1; n >= 0; --n)
+		if (mousespeed_values[n] < current)
+			return mousespeed_values[n];
+	return mousespeed_values[std::size(mousespeed_values) - 1];
+}
 #endif
 
 // these need cpu trace data
@@ -5591,24 +5604,12 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 
 	case AKS_MOUSE_SPEED_DOWN:
-		num_elements = std::size(mousespeed_values);
-		mousespeed = currprefs.input_joymouse_multiplier;
-
-		i = find_in_array(mousespeed_values, num_elements, mousespeed);
-		i = i - 1;
-		if (i < 0) { i = num_elements - 1; }
-		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
+		changed_prefs.input_joymouse_multiplier = step_joymouse_speed(currprefs.input_joymouse_multiplier, false);
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 
 	case AKS_MOUSE_SPEED_UP:
-		num_elements = std::size(mousespeed_values);
-		mousespeed = currprefs.input_joymouse_multiplier;
-
-		i = find_in_array(mousespeed_values, num_elements, mousespeed);
-		i = i + 1;
-		if (i >= num_elements) { i = 0; }
-		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
+		changed_prefs.input_joymouse_multiplier = step_joymouse_speed(currprefs.input_joymouse_multiplier, true);
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 	case AKS_SHUTDOWN:
@@ -5849,8 +5850,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 						state -= deadzone;
 						lightpen_deltanoreset[lpnum][unit] = 1;
 					}
+					// A dead zone covering the whole range leaves no travel: stay neutral
 					max -= deadzone;
-					delta = state * currprefs.input_joymouse_multiplier / (10 * max);
+					delta = max ? state * currprefs.input_joymouse_multiplier / (10 * max) : 0;
 				}
 				if (ie->data & IE_INVERT)
 					delta = -delta;
@@ -5940,8 +5942,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 					mouse_deltanoreset[joy][unit] = 1;
 				}
 				if (max > 0) {
+					// A dead zone covering the whole range leaves no travel: stay neutral
 					max -= deadzone;
-					delta = state * currprefs.input_joymouse_multiplier / max;
+					delta = max > 0 ? state * currprefs.input_joymouse_multiplier / max : 0;
 				} else {
 					delta = state;
 				}
@@ -6024,7 +6027,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 				} else {
 					state -= deadzone;
 				}
-				state = state * max / (max - deadzone);
+				// A dead zone covering the whole range leaves no travel: stay neutral
+				state = max != deadzone ? state * max / (max - deadzone) : 0;
 			} else {
 				max = 100;
 				relativecount[joy][unit] += state;
@@ -8676,7 +8680,7 @@ void inputdevice_updateconfig (struct uae_prefs *srcprefs, struct uae_prefs *dst
 bool inputdevice_devicechange (struct uae_prefs *prefs)
 {
 	int acc = input_acquired;
-	int idx;
+	int i, idx;
 	TCHAR *jports_name[MAX_JPORTS];
 	TCHAR *jports_configname[MAX_JPORTS];
 	int jportskb[MAX_JPORTS], jportscustom[MAX_JPORTS];
@@ -9015,7 +9019,13 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	inputdevice_init ();
 
 	p->input_selected_setting = GAMEPORT_INPUT_SETTINGS;
+#ifdef AMIBERRY
+	// Full stick deflection moves the mouse this many counts per frame. The
+	// WinUAE default of 100 is too fast for the analog stick mouse map.
+	p->input_joymouse_multiplier = 25;
+#else
 	p->input_joymouse_multiplier = 100;
+#endif
 	p->input_joymouse_deadzone = 33;
 	p->input_joystick_deadzone = 33;
 	p->input_joymouse_speed = 10;

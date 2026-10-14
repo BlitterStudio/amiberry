@@ -86,6 +86,7 @@ object ConfigGenerator {
 		// Sound
 		sb.appendLine("sound_output=${settings.soundOutput}")
 		sb.appendLine("sound_frequency=${settings.soundFreq}")
+		sb.appendLine("sound_max_buff=${settings.soundBuffer}")
 		sb.appendLine("sound_channels=${settings.soundChannels}")
 
 		// Display
@@ -111,6 +112,7 @@ object ConfigGenerator {
 		// round-trips and is not overridden by remembered-control fallback
 		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
+		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
@@ -144,6 +146,7 @@ object ConfigGenerator {
 		// round-trips and is not overridden by remembered-control fallback
 		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
+		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboardAvailable.toCfg()}")
 		sb.appendLine("amiberry.vkbd_touch_button=${settings.onScreenKeyboardButton.toCfg()}")

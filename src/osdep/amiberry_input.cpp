@@ -1888,6 +1888,7 @@ static void unacquire_joystick(const int num)
 	struct didata* did = &di_joystick[num];
 	did->acquired = 0;
 	did->hotkey_held = false;
+	did->hat_values.fill(0);
 }
 
 static const TCHAR* get_joystick_friendlyname(const int joy)
@@ -2026,10 +2027,10 @@ void ensure_onscreen_joystick_registered()
 	write_log("On-Screen Joystick registered as JOY%d\n", osj_device_index);
 }
 
-// Joyport (0..3) the given joystick device is currently assigned to, or -1.
-// The analog mouse map is configured per joyport, but axis events arrive
-// carrying the di_joystick[] device index — these must not be conflated
-// (e.g. default Android: port 0 = mouse, port 1 = joy0/device 0).
+#ifdef LIBRETRO
+// The libretro frontend polls the left stick every frame and drives the
+// port 0 mouse itself (route_libretro_stick_mouse), so its left stick keeps
+// the joystick-direction mapping that also steers the on-screen keyboard.
 static int assigned_joyport(const int device_index)
 {
 	for (int port = 0; port < MAX_JPORTS; port++) {
@@ -2039,21 +2040,17 @@ static int assigned_joyport(const int device_index)
 	return -1;
 }
 
-// Mouse device index that receives the emulated Amiga mouse (port 0) input
-// while an analog stick is mapped to mouse movement.
-static int mousemap_mouse_device()
-{
-	const int mouse = jsem_ismouse(0, &currprefs);
-	return mouse >= 0 ? mouse : 0;
-}
-
+// Mouse device the left stick of joystick device_index drives while its
+// joyport's analog mouse map is on, or -1 when the map is off for that port.
 int joystick_mousemap_mouse_device(const int device_index)
 {
 	const int port = assigned_joyport(device_index);
 	if (port < 0 || currprefs.jports[port].mousemap <= 0)
 		return -1;
-	return mousemap_mouse_device();
+	const int mouse = jsem_ismouse(0, &currprefs);
+	return mouse >= 0 ? mouse : 0;
 }
+#endif
 
 static bool invert_axis(int axis, const didata* did)
 {
@@ -2074,12 +2071,6 @@ static bool invert_axis(int axis, const didata* did)
 
 bool controller_axis_has_gameplay_input(const int id, const int axis, const int value)
 {
-	const auto& did = di_joystick[id];
-	const int port = assigned_joyport(id);
-	if (axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0) {
-		const int divisor = did.is_controller && !did.mapping.is_retroarch ? 10000 : 1000;
-		return abs(value) > joystick_dead_zone && value / divisor != 0;
-	}
 	return inputdevice_is_joystick_axis_active(id, axis, value, analog_upper_bound);
 }
 
@@ -2130,21 +2121,7 @@ void read_controller_axis(const int id, const int axis, const int value)
 	const inputdevice_osk_passthrough passthrough;
 
 	if (isfocus() || currprefs.inactive_input & 4)
-	{
-		// If analog mouse mapping is used, the Left stick acts as a mouse.
-		// The mousemap flag lives on the joyport this controller is assigned
-		// to, which is not necessarily the same number as the device index.
-		const int port = assigned_joyport(id);
-		if (axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0)
-		{
-			if (value > joystick_dead_zone || value < -joystick_dead_zone)
-				setmousestate(mousemap_mouse_device(), axis, value / 10000, 0);
-		}
-		else
-		{
-			set_axis_state(id, axis, value, invert_axis(axis, did));
-		}
-	}
+		set_axis_state(id, axis, value, invert_axis(axis, did));
 }
 
 void read_joystick_button_single(const int id, const int button, const int state)
@@ -2203,28 +2180,25 @@ void read_joystick_axis(const int id, const int axis, int value)
 		{
 			if (did->mapping.axis[did_axis] == axis)
 			{
-				// If analog mouse mapping is used, the Left stick acts as a mouse.
-				// The mousemap flag lives on the joyport this controller is
-				// assigned to, not the device index.
-				const int port = assigned_joyport(id);
-				if (did_axis <= SDL_GAMEPAD_AXIS_LEFTY && port >= 0 && currprefs.jports[port].mousemap > 0)
-				{
-					if (value > joystick_dead_zone || value < -joystick_dead_zone)
-						setmousestate(mousemap_mouse_device(), did_axis, value / 1000, 0);
-				}
-				else
-				{
-					set_axis_state(id, did_axis, value, invert_axis(did_axis, did));
-				}
+				set_axis_state(id, did_axis, value, invert_axis(did_axis, did));
 				break;
 			}
 		}
 	}
 }
 
-void read_joystick_hat(const int id, int hat, const int value)
+void read_joystick_hat(const int id, const int hat, const int value)
 {
-	const inputdevice_osk_passthrough passthrough(di_joystick[id].is_controller);
+	auto& did = di_joystick[id];
+	// Every hat drives the D-pad. Combine them so centering one hat does not
+	// release directions another hat still holds.
+	int combined = value;
+	if (hat >= 0 && hat < static_cast<int>(did.hat_values.size()))
+		did.hat_values[hat] = static_cast<Uint8>(value);
+	for (const Uint8 hat_value : did.hat_values)
+		combined |= hat_value;
+
+	const inputdevice_osk_passthrough passthrough(did.is_controller);
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
 		for (int button = SDL_GAMEPAD_BUTTON_DPAD_UP; button <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT; button++)
@@ -2232,16 +2206,16 @@ void read_joystick_hat(const int id, int hat, const int value)
 			int state = 0;
 			switch (button) {
 			case SDL_GAMEPAD_BUTTON_DPAD_UP:
-				state = value & SDL_HAT_UP;
+				state = combined & SDL_HAT_UP;
 				break;
 			case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
-				state = value & SDL_HAT_DOWN;
+				state = combined & SDL_HAT_DOWN;
 				break;
 			case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
-				state = value & SDL_HAT_LEFT;
+				state = combined & SDL_HAT_LEFT;
 				break;
 			case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
-				state = value & SDL_HAT_RIGHT;
+				state = combined & SDL_HAT_RIGHT;
 				break;
 			default: break;
 			}
@@ -2299,8 +2273,18 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			v = port ? INPUTEVENT_JOY2_VERT : INPUTEVENT_JOY1_VERT;
 		}
 	}
+	const bool mousemap = currprefs.jports[port].mousemap > 0;
+#ifdef LIBRETRO
 	setid(uid, i, ID_AXIS_OFFSET + SDL_GAMEPAD_AXIS_LEFTX, 0, port, h, gp);
 	setid(uid, i, ID_AXIS_OFFSET + SDL_GAMEPAD_AXIS_LEFTY, 0, port, v, gp);
+#else
+	// Mouse map: SDL reports stick changes, not a held position, so the left
+	// stick drives the port 0 Amiga mouse through the core analog joy-mouse
+	// path. "Analog joy-mouse speed" and the joy-mouse dead zone apply, and a
+	// held stick keeps the pointer moving.
+	setid(uid, i, ID_AXIS_OFFSET + SDL_GAMEPAD_AXIS_LEFTX, 0, port, mousemap ? INPUTEVENT_MOUSE1_HORIZ : h, gp);
+	setid(uid, i, ID_AXIS_OFFSET + SDL_GAMEPAD_AXIS_LEFTY, 0, port, mousemap ? INPUTEVENT_MOUSE1_VERT : v, gp);
+#endif
 
 	if (port >= 2) {
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_GAMEPAD_BUTTON_SOUTH, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON, af, gp);
@@ -2370,7 +2354,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 
 	// If mouse map is enabled (we're emulating a mouse on Port 0 from this controller's Analog stick)
 	// we need to enable 2 mouse buttons for Port 0 as well. These are currently LShoulder / RShoulder respectively
-	if (currprefs.jports[port].mousemap > 0)
+	if (mousemap)
 	{
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, 0, port, INPUTEVENT_JOY1_FIRE_BUTTON, gp);
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 0, port, INPUTEVENT_JOY1_2ND_BUTTON, gp);

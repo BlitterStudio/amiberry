@@ -61,7 +61,8 @@ object AndroidLaunchConfig {
 			onScreenKeyboardNumpad = currentSettings.onScreenKeyboardNumpad,
 			onScreenKeyboardToggle = currentSettings.onScreenKeyboardToggle,
 			joyport0MouseMap = currentSettings.joyport0MouseMap,
-			joyport1MouseMap = currentSettings.joyport1MouseMap
+			joyport1MouseMap = currentSettings.joyport1MouseMap,
+			analogMouseSpeed = currentSettings.analogMouseSpeed
 		)
 	}
 

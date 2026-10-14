@@ -52,7 +52,8 @@ data class EmulatorSettings(
 
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
-	val soundFreq: Int = 44100,
+	val soundFreq: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
+	val soundBuffer: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_BUFFER,
 	val soundChannels: String = "stereo",
 
 	// Display
@@ -76,7 +77,9 @@ data class EmulatorSettings(
 	 * null = key absent, emulator default applies; "" = explicitly disabled; else a button name. */
 	val onScreenKeyboardToggle: String? = null,
 	val joyport0MouseMap: Boolean = false,  // left analog stick + shoulders act as the Amiga mouse
-	val joyport1MouseMap: Boolean = false
+	val joyport1MouseMap: Boolean = false,
+	/** Pointer speed when the left stick drives the mouse (input.joymouse_speed_analog). */
+	val analogMouseSpeed: Int = EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED
 ) {
 	/** The on-screen keyboard is reachable by touch or by a gamepad toggle (vkbd_enabled). */
 	val onScreenKeyboardAvailable: Boolean
