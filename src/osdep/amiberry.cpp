@@ -12054,8 +12054,6 @@ static void refresh_whdboot_database_if_outdated()
 		write_log("WHDBooter - User database is outdated (%s < %s), updating from bundled database\n",
 			user_generated.empty() ? "missing/unparseable" : user_generated.c_str(),
 			bundled_generated.c_str());
-
-		backup_file(user_db_path);
 	}
 	else
 	{
@@ -12063,24 +12061,50 @@ static void refresh_whdboot_database_if_outdated()
 			bundled_generated.c_str());
 	}
 
-	ensure_directory_exists(join_path(whdboot_path, "game-data"));
+	const auto game_data_dir = join_path(whdboot_path, "game-data");
+	ensure_directory_exists(game_data_dir);
 
+	// Copy to a staging file first: the user's database is only touched once a
+	// complete copy exists and the backup has been made.
+	const auto staged_path = user_db_path + ".new";
 	std::error_code ec;
-	std::filesystem::copy_file(bundled_db_path, user_db_path,
+	std::filesystem::copy_file(bundled_db_path, staged_path,
 		std::filesystem::copy_options::overwrite_existing, ec);
-	if (ec)
+	bool staged = !ec;
+	if (staged)
+	{
+		const auto source_size = std::filesystem::file_size(bundled_db_path, ec);
+		staged = !ec && std::filesystem::file_size(staged_path, ec) == source_size && !ec;
+	}
+	if (!staged)
 	{
 		write_log("WHDBooter - Failed to copy bundled database %s to %s: %s\n",
-			bundled_db_path.c_str(), user_db_path.c_str(), ec.message().c_str());
-		// Put the previous database back so WHDBooter keeps working.
-		const auto backup_path = join_path(whdboot_path, "game-data/whdload_db.bak");
-		if (!file_exists(user_db_path) && file_exists(backup_path))
-			std::rename(backup_path.c_str(), user_db_path.c_str());
+			bundled_db_path.c_str(), staged_path.c_str(), ec ? ec.message().c_str() : "size mismatch");
+		std::filesystem::remove(staged_path, ec);
+		return;
 	}
-	else
+
+	if (user_db_exists && !backup_file(user_db_path))
 	{
-		write_log("WHDBooter - Bundled database copied successfully to %s\n", user_db_path.c_str());
+		write_log("WHDBooter - Could not back up %s, keeping the existing database\n", user_db_path.c_str());
+		std::filesystem::remove(staged_path, ec);
+		return;
 	}
+
+	std::filesystem::rename(staged_path, user_db_path, ec);
+	if (ec)
+	{
+		write_log("WHDBooter - Failed to replace %s: %s\n", user_db_path.c_str(), ec.message().c_str());
+		std::filesystem::remove(staged_path, ec);
+		if (user_db_exists)
+		{
+			const auto backup_path = join_path(game_data_dir, "whdload_db.bak");
+			std::filesystem::rename(backup_path, user_db_path, ec);
+		}
+		return;
+	}
+
+	write_log("WHDBooter - Bundled database copied successfully to %s\n", user_db_path.c_str());
 }
 
 
