@@ -2183,7 +2183,7 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 		panel_width_draw = px == 2 ? 352 : 336;
 		pxcnt = 3;
 		hires = false;
-		srcxoffset = (112 << RES_MAX) - 360; // 112*4-360=88 (312) 112*4-272=176 (172)
+		srcxoffset = 312 - src->xoffset;
 		if (px > 2)
 			return false;
 		total_width = 336 + 336 + 352;
@@ -2192,7 +2192,7 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 		panel_width_draw = 512;
 		pxcnt = 2;
 		hires = true;
-		srcxoffset = (128 << RES_MAX) - 360; // 128*4-360=152 (312) 128*4-272=240 (172)
+		srcxoffset = 376 - src->xoffset;
 		if (px > 1)
 			return false;
 		total_width = 512 + 512;
@@ -2677,12 +2677,7 @@ skip:
 	int gen_xoffset = 0;
 	int gen_yoffset = 0;
 
-	gen_xoffset = 0;
-	if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
-		gen_xoffset += 16 * 2;
-	} else if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-		gen_xoffset += 36 * 2;
-	}
+	gen_xoffset = (224 - src->xoffset) / 2;
 	gen_yoffset = (ystart - minfirstline) * 2 / 2;
 
 	gen_xoffset += currprefs.genlock_offset_x;

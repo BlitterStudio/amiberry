@@ -1672,7 +1672,7 @@ static void center_image(void)
 		}
 	}
 
-	vidinfo->inbuffer->xoffset = visible_left_border << (RES_MAX - currprefs.gfx_resolution);
+	vidinfo->inbuffer->xoffset = frame_internal_pixel_start_cnt;
 	vidinfo->inbuffer->yoffset = minfirstline_linear << VRES_MAX;
 
 	int linedbl = currprefs.gfx_vresolution;
@@ -6312,9 +6312,13 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 			xlinebuffer += sizeof(uae_u32);
 			xlinebuffer2 += sizeof(uae_u32);
 		}
-		if (denise_strlong_seen && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME && !ecs_denise) {
-			int size = currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN ? 2 : 1;
-			denise_pixtotal -= 4 * size;
+		if (denise_strlong_seen && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME) {
+			if (!ecs_denise) {
+				int size = currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN ? 2 : 1;
+				denise_pixtotal -= 4 * size;
+			} else if (aga_mode && currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
+				denise_pixtotal -= 2;
+			}
 		}
 	}
 
@@ -6419,6 +6423,19 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 				}
 				if (hbstrt_ptr2 && p2 < ptre2) {
 					*p2++ = BLANK_COLOR_EDGE;
+				}
+			}
+		} else if (aga_mode && currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
+			if (lol_shift_prev) {
+				uae_u32 *p1 = (uae_u32*)xlinebuffer;
+				uae_u32 *p2 = (uae_u32*)xlinebuffer2;
+				for (int i = 0; i < add; i++) {
+					if (xlinebuffer && p1 < (uae_u32*)xlinebuffer_end) {
+						*p1++ = BLANK_COLOR_EDGE;
+					}
+					if (xlinebuffer2 && p2 < (uae_u32*)xlinebuffer2_end) {
+						*p2++ = BLANK_COLOR_EDGE;
+					}
 				}
 			}
 		}
