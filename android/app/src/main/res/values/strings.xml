@@ -291,6 +291,8 @@
     <string name="settings_sound_output_normal">Normal</string>
     <string name="settings_sound_output_exact">Exact</string>
     <string name="settings_sound_frequency_hz">%1$d Hz</string>
+    <string name="settings_sound_buffer_label">Sound Buffer</string>
+    <string name="settings_sound_buffer_option">%1$d (%2$d ms)</string>
     <string name="settings_sound_channels_mono">Mono</string>
     <string name="settings_sound_channels_stereo">Stereo</string>
     <string name="settings_sound_channels_cloned_stereo">Cloned stereo</string>

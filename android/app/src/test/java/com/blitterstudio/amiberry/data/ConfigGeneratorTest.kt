@@ -478,6 +478,7 @@ class ConfigGeneratorTest {
 			floppy0Type = 0,
 			soundOutput = "exact",
 			soundFreq = 44100,
+			soundBuffer = 16384,
 			soundChannels = "stereo",
 			gfxWidth = 720,
 			gfxHeight = 568,
@@ -516,6 +517,7 @@ class ConfigGeneratorTest {
 		assertEquals(original.floppy0Type, result.floppy0Type)
 		assertEquals(original.soundOutput, result.soundOutput)
 		assertEquals(original.soundFreq, result.soundFreq)
+		assertEquals(original.soundBuffer, result.soundBuffer)
 		assertEquals(original.soundChannels, result.soundChannels)
 		assertEquals(original.gfxWidth, result.gfxWidth)
 		assertEquals(original.gfxHeight, result.gfxHeight)

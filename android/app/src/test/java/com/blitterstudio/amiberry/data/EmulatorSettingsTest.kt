@@ -422,8 +422,29 @@ class EmulatorSettingsTest {
 		)
 
 		assertEquals("exact", constrained.soundOutput)
-		assertEquals(44100, constrained.soundFreq)
+		assertEquals(48000, constrained.soundFreq)
 		assertEquals("stereo", constrained.soundChannels)
+	}
+
+	@Test
+	fun `constraints snap sound buffer to nearest allowed size`() {
+		val snappedMid = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(soundBuffer = 5000),
+			hasTouchScreen = true
+		)
+		assertEquals(4096, snappedMid.soundBuffer)
+
+		val snappedLower = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(soundBuffer = 0),
+			hasTouchScreen = true
+		)
+		assertEquals(1024, snappedLower.soundBuffer)
+
+		val snappedUpper = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(soundBuffer = 999999),
+			hasTouchScreen = true
+		)
+		assertEquals(65536, snappedUpper.soundBuffer)
 	}
 
 	// --- Hard drives ---

@@ -36,6 +36,7 @@ object EmulatorSettingsConstraints {
 		result = result.copy(
 			soundOutput = normalizeSoundOutput(result.soundOutput),
 			soundFreq = if (result.soundFreq > 0) result.soundFreq else DEFAULT_SOUND_FREQUENCY,
+			soundBuffer = normalizeSoundBuffer(result.soundBuffer),
 			soundChannels = normalizeSoundChannels(result.soundChannels)
 		)
 
@@ -163,10 +164,17 @@ object EmulatorSettingsConstraints {
 	fun normalizeAnalogMouseSpeed(speed: Int): Int =
 		ANALOG_MOUSE_SPEEDS.minBy { kotlin.math.abs(it - speed) }
 
+	/** Nearest allowed sound buffer size, so hand-edited configs still map onto the dropdown. */
+	fun normalizeSoundBuffer(buffer: Int): Int =
+		SOUND_BUFFER_SIZES.minBy { kotlin.math.abs(it - buffer) }
+
 	private const val DEFAULT_GFX_WIDTH = 720
 	private const val DEFAULT_GFX_HEIGHT = 568
 	private const val DEFAULT_SOUND_OUTPUT = "exact"
-	private const val DEFAULT_SOUND_FREQUENCY = 44100
+	// Android mixes at 48 kHz, so 44.1 kHz forces resampling and loses AAudio's low-latency path.
+	const val DEFAULT_SOUND_FREQUENCY = 48000
+	val SOUND_BUFFER_SIZES = listOf(1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536)
+	const val DEFAULT_SOUND_BUFFER = 8192
 	private const val DEFAULT_SOUND_CHANNELS = "stereo"
 	private const val SCALING_METHOD_INTEGER = 2
 	private const val AUTORESOLUTION_ALWAYS = 1

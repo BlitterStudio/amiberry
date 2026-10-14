@@ -52,7 +52,8 @@ data class EmulatorSettings(
 
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
-	val soundFreq: Int = 44100,
+	val soundFreq: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
+	val soundBuffer: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_BUFFER,
 	val soundChannels: String = "stereo",
 
 	// Display

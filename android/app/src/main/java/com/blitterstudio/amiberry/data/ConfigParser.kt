@@ -31,7 +31,7 @@ object ConfigParser {
 		"floppy0", "floppy0type", "floppy1", "floppy1type",
 		"floppy2", "floppy2type", "floppy3", "floppy3type",
 		"cdimage0",
-		"sound_output", "sound_frequency", "sound_channels",
+		"sound_output", "sound_frequency", "sound_max_buff", "sound_channels",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
 		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
@@ -147,7 +147,10 @@ object ConfigParser {
 			hardDrives = hardDrives,
 
 			soundOutput = kv["sound_output"] ?: "exact",
-			soundFreq = kv["sound_frequency"]?.toIntOrNull() ?: 44100,
+			soundFreq = kv["sound_frequency"]?.toIntOrNull()
+				?: EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
+			soundBuffer = kv["sound_max_buff"]?.toIntOrNull()
+				?: EmulatorSettingsConstraints.DEFAULT_SOUND_BUFFER,
 			soundChannels = kv["sound_channels"] ?: "stereo",
 
 			gfxWidth = kv["gfx_width"]?.toIntOrNull() ?: 720,

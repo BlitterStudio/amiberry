@@ -86,6 +86,7 @@ object ConfigGenerator {
 		// Sound
 		sb.appendLine("sound_output=${settings.soundOutput}")
 		sb.appendLine("sound_frequency=${settings.soundFreq}")
+		sb.appendLine("sound_max_buff=${settings.soundBuffer}")
 		sb.appendLine("sound_channels=${settings.soundChannels}")
 
 		// Display

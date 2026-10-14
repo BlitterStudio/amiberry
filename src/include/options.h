@@ -1435,8 +1435,15 @@ struct amiberry_options
 	int default_height = 568;
 	int default_fullscreen_mode = 0;
 	int default_stereo_separation = 7;
+#ifdef __ANDROID__
+	// Android mixes at 48 kHz (44.1 kHz loses AAudio's low-latency path to
+	// resampling) and needs more queued audio to ride out scheduling stalls.
+	int default_sound_buffer = 8192;
+	int default_sound_frequency = 48000;
+#else
 	int default_sound_buffer = 3072;
 	int default_sound_frequency = 44100;
+#endif
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;
 	bool default_retroarch_menu = true;

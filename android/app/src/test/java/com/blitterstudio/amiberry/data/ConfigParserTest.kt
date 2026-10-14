@@ -190,6 +190,7 @@ class ConfigParserTest {
 		val file = writeConfig("""
 			sound_output=normal
 			sound_frequency=48000
+			sound_max_buff=16384
 			sound_channels=mono
 		""".trimIndent())
 		val result = ConfigParser.parse(file)
@@ -197,6 +198,7 @@ class ConfigParserTest {
 
 		assertEquals("normal", s.soundOutput)
 		assertEquals(48000, s.soundFreq)
+		assertEquals(16384, s.soundBuffer)
 		assertEquals("mono", s.soundChannels)
 	}
 
