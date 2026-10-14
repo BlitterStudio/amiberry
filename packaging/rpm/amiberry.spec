@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.4.0
+Version:        8.4.1
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -88,6 +88,16 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Wed Oct 14 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.1-1
+- Bugfix release v8.4.1
+- Libretro: save states load through the regular restore path, auto-loaded states apply after boot, left stick moves the mouse in Joystick As Mouse
+- Fixed buffer sizes truncating restored directory paths and saved strings such as hardfile geometry
+- Fixed Host Only cursor height on the right half of native screens and ROM folder handling with relative paths
+- Merged WinUAE fixes: MMU cache-inhibited pages, filesystem rename with open files, CIA TOD timing, A2024/Graffiti/genlock overscan
+- Added optional GDB remote debugging server
+- Packaging: MacPorts support on macOS, FreeBSD pkg release assets, libavcodec-extra alternatives in DEB dependencies
+- Build fixes for GLES-only and USE_PPC=OFF configurations; updated AROS ROMs
+
 * Sun Oct 11 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.0-1
 - Feature release v8.4.0
 - ZZ9000: AHI audio, SANA-II network, SDK mailbox/MHI audio, MPEGA streams, image/ZZPlay services, firmware 2.8 register ABI, direct VRAM mapping

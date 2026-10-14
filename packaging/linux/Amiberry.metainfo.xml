@@ -67,6 +67,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.4.1" date="2026-10-14">
+            <description>
+                <p>Bugfix release: RetroArch save states load reliably, including auto-loaded states, and restore mounted directory paths; libretro Joystick As Mouse moves the pointer with the left stick. Fixed the Host Only cursor losing its lower half on the right side of native screens, ROM folder handling with relative paths, configuration strings such as hardfile geometry truncated on save, cache-inhibited MMU pages, file renames while files are open, and A2024, Graffiti and genlock overscan handling. Adds an optional GDB remote debugging server, MacPorts support on macOS, FreeBSD packages with each release, GLES-only and USE_PPC=OFF build fixes, libavcodec-extra support in DEB packages, updated AROS ROMs, and the latest WinUAE updates.</p>
+            </description>
+        </release>
         <release version="8.4.0" date="2026-10-11">
             <description>
                 <p>Feature release: expanded ZZ9000 emulation (AHI audio, SANA-II networking, SDK mailbox and MHI audio, MPEGA streams, image and ZZPlay services, firmware 2.8 register ABI), support for an external MiniGL renderer plugin (available separately) with dma-buf frame compositing, user plugin locations, custom cartridge ROM and .A1000 ROM support, relative media paths, and a --dump-config command-line option. RTG dirty-tracking and warm-reset fixes, ARM64 JIT trap and FPU fixes, RPi4 zero-copy native frames and faster AGA drawing, runtime GL capability detection, bsdsocket/SANA-II/uaenet networking fixes, a libretro on-screen keyboard and disk control improvements, Android launcher/touch/TV fixes, and the latest WinUAE and ImGui updates.</p>
