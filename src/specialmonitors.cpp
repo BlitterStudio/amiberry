@@ -2683,7 +2683,7 @@ skip:
 	int gen_xoffset = 0;
 	int gen_yoffset = 0;
 
-	gen_xoffset = (224 - src->xoffset) / 2;
+	gen_xoffset = (224 - src->xoffset) / avidinfo->xchange;
 	gen_yoffset = (ystart - minfirstline) * 2 / 2;
 
 	gen_xoffset += currprefs.genlock_offset_x;
