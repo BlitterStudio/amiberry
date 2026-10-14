@@ -1574,8 +1574,10 @@ void render_panel_hd()
     ImGui::SameLine();
     ImGui::Dummy(ImVec2(20, 0));
     ImGui::SameLine();
+    ImGui::BeginDisabled(emulating);
     AmigaCheckbox("Disable UAEFSDB", &changed_prefs.filesys_no_uaefsdb);
-    ShowHelpMarker("When enabled, _UAEFSDB.___ binary metadata files are not created in host directories. This also disables filename translation for characters not supported by the host filesystem.");
+    ImGui::EndDisabled();
+    ShowHelpMarker("When enabled, _UAEFSDB.___ binary metadata files are not created in host directories. This also disables filename translation for characters not supported by the host filesystem. Can only be changed while emulation is stopped.");
     ImGui::Spacing();
 
     // Logic to open Modals - Add Directory
