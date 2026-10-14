@@ -33,6 +33,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <nlohmann/json.hpp>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -8422,6 +8423,28 @@ bool set_portable_mode(bool enable)
 }
 #endif
 
+static bool backup_file(const std::string& destination)
+{
+	if (!file_exists(destination))
+		return false;
+
+	write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
+	const auto dot_pos = destination.find_last_of('.');
+	const std::string new_filename = (dot_pos != std::string::npos)
+		? destination.substr(0, dot_pos).append(".bak")
+		: destination + ".bak";
+
+	if (file_exists(new_filename))
+		std::remove(new_filename.c_str());
+
+	if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
+	{
+		write_log("%s\n", strerror(errno));
+		return false;
+	}
+	return true;
+}
+
 #ifndef LIBRETRO
 #ifdef AMIBERRY_HAS_CURL
 static size_t curl_write_file_cb(void* ptr, size_t size, size_t nmemb, void* userdata)
@@ -8497,13 +8520,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	{
 		if (file_exists(destination) && keep_backup)
 		{
-			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
-			const std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
-			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
-			{
-				write_log(strerror(errno));
-				write_log("\n");
-			}
+			backup_file(destination);
 		}
 
 		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
@@ -8607,13 +8624,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	{
 		if (file_exists(destination) && keep_backup)
 		{
-			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
-			const std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
-			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
-			{
-				write_log(strerror(errno));
-				write_log("\n");
-			}
+			backup_file(destination);
 		}
 
 		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
@@ -11574,6 +11585,9 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 	if (!app_resources_dir.empty())
 		append_unique_path_candidate(candidates, join_path(app_resources_dir, subdirectory));
 #else
+	const auto executable_directory = get_desktop_executable_directory();
+	if (!executable_directory.empty())
+		append_unique_path_candidate(candidates, join_path(executable_directory, subdirectory));
 	append_unique_path_candidate(candidates, join_path(AMIBERRY_DATADIR, subdirectory));
 #if !defined(_WIN32)
 	append_unique_path_candidate(candidates, join_path("/usr/share/amiberry", subdirectory));
@@ -11927,6 +11941,149 @@ static void seed_default_whdboot_files_if_needed()
 	}
 }
 
+static std::string get_whdload_db_generated_timestamp(const std::string& json_path)
+{
+	std::ifstream f(json_path, std::ios::binary);
+	if (!f.is_open())
+		return "";
+
+	std::string buffer;
+	buffer.resize(4096);
+	f.read(&buffer[0], buffer.size());
+	const std::streamsize bytes_read = f.gcount();
+	buffer.resize(static_cast<size_t>(bytes_read));
+
+	const auto key_pos = buffer.find("\"generated\"");
+	if (key_pos != std::string::npos)
+	{
+		const auto colon_pos = buffer.find(':', key_pos + 11);
+		if (colon_pos != std::string::npos)
+		{
+			const auto first_quote = buffer.find('\"', colon_pos + 1);
+			if (first_quote != std::string::npos)
+			{
+				const auto second_quote = buffer.find('\"', first_quote + 1);
+				if (second_quote != std::string::npos)
+				{
+					bool whitespace_only = true;
+					for (size_t i = key_pos + 11; i < colon_pos; ++i)
+					{
+						if (!std::isspace(static_cast<unsigned char>(buffer[i])))
+						{
+							whitespace_only = false;
+							break;
+						}
+					}
+					for (size_t i = colon_pos + 1; whitespace_only && i < first_quote; ++i)
+					{
+						if (!std::isspace(static_cast<unsigned char>(buffer[i])))
+						{
+							whitespace_only = false;
+							break;
+						}
+					}
+					if (whitespace_only)
+					{
+						return buffer.substr(first_quote + 1, second_quote - (first_quote + 1));
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback to full parse for non-standard layout or large header
+	f.clear();
+	f.seekg(0, std::ios::beg);
+	try
+	{
+		nlohmann::json doc = nlohmann::json::parse(f, nullptr, false);
+		if (!doc.is_discarded() && doc.contains("generated") && doc["generated"].is_string())
+		{
+			return doc["generated"].get<std::string>();
+		}
+	}
+	catch (...)
+	{
+	}
+
+	return "";
+}
+
+static void refresh_whdboot_database_if_outdated()
+{
+	if (whdboot_path.empty())
+		return;
+
+	const auto source_candidates = get_seed_source_candidates("whdboot", true);
+	std::string bundled_db_path;
+	for (const auto& candidate : source_candidates)
+	{
+		if (path_strings_match(candidate, whdboot_path))
+			continue;
+		const auto candidate_db = join_path(candidate, "game-data/whdload_db.json");
+		if (file_exists(candidate_db))
+		{
+			bundled_db_path = candidate_db;
+			break;
+		}
+	}
+
+	if (bundled_db_path.empty())
+		return;
+
+	const auto bundled_generated = get_whdload_db_generated_timestamp(bundled_db_path);
+	if (bundled_generated.empty())
+	{
+		// If the bundled file lacks generated, do nothing
+		return;
+	}
+
+	const auto user_db_path = join_path(whdboot_path, "game-data/whdload_db.json");
+	const bool user_db_exists = file_exists(user_db_path);
+
+	if (user_db_exists)
+	{
+		const auto user_generated = get_whdload_db_generated_timestamp(user_db_path);
+		if (!user_generated.empty() && !(user_generated < bundled_generated))
+		{
+			write_log("WHDBooter - User database is current (%s >= %s), keeping existing database\n",
+				user_generated.c_str(), bundled_generated.c_str());
+			return;
+		}
+
+		write_log("WHDBooter - User database is outdated (%s < %s), updating from bundled database\n",
+			user_generated.empty() ? "missing/unparseable" : user_generated.c_str(),
+			bundled_generated.c_str());
+
+		backup_file(user_db_path);
+	}
+	else
+	{
+		write_log("WHDBooter - User database is missing, copying bundled database (%s)\n",
+			bundled_generated.c_str());
+	}
+
+	ensure_directory_exists(join_path(whdboot_path, "game-data"));
+
+	std::error_code ec;
+	std::filesystem::copy_file(bundled_db_path, user_db_path,
+		std::filesystem::copy_options::overwrite_existing, ec);
+	if (ec)
+	{
+		write_log("WHDBooter - Failed to copy bundled database %s to %s: %s\n",
+			bundled_db_path.c_str(), user_db_path.c_str(), ec.message().c_str());
+		// Put the previous database back so WHDBooter keeps working.
+		const auto backup_path = join_path(whdboot_path, "game-data/whdload_db.bak");
+		if (!file_exists(user_db_path) && file_exists(backup_path))
+			std::rename(backup_path.c_str(), user_db_path.c_str());
+	}
+	else
+	{
+		write_log("WHDBooter - Bundled database copied successfully to %s\n", user_db_path.c_str());
+	}
+}
+
+
 static bool rom_seed_files_missing()
 {
 	if (!file_exists(join_path(rom_path, "aros-ext.bin")))
@@ -11962,6 +12119,7 @@ void create_missing_amiberry_folders()
 	seed_default_controller_files_if_needed();
 	ensure_whdboot_runtime_directories();
 	seed_default_whdboot_files_if_needed();
+	refresh_whdboot_database_if_outdated();
 	seed_default_rom_files_if_needed();
 	refresh_builtin_theme_presets();
 }
