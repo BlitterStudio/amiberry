@@ -1701,6 +1701,9 @@ static void update_display_vars(void)
 	int maxv = current_linear_vpos - (hiddentopv + hiddenbottomv) + 1;
 	linear_vpos_vb_end = current_linear_vpos_vb_end - display_vblankstart_skip - 1;
 	minfirstline = vblines - (display_vblankstart_skip > 0 ? display_vblankstart_skip : 0) - 1;
+	if (minfirstline < 2 * LINES_AFTER_VSYNC) {
+		minfirstline = 2 * LINES_AFTER_VSYNC;
+	}
 	minfirstline_linear = minfirstline - LINES_AFTER_VSYNC;
 	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		maxv = current_linear_vpos;
@@ -11295,9 +11298,8 @@ static void custom_trigger_start(void)
 	linear_vpos_vblank_lines_cnt++;
 	draw_line_next_line = 0;
 
-
 	if (linear_vpos_start == linear_vpos_vb_end) {
-		linear_vb_offset = linear_vpos_start;
+		linear_vb_offset = linear_vpos_start + 1;
 	}
 
 #ifdef DEBUGGER
