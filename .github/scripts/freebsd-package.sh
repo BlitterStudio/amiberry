@@ -73,6 +73,16 @@ for soname in $(LC_ALL=C sort -u "$work/needed"); do
 	echo "$owner" >> "$work/deps"
 done
 
+# Like ports' USES=desktop-file-utils shared-mime-info: these packages carry
+# the pkg triggers that refresh the desktop and MIME caches whenever files in
+# share/applications or share/mime change, on install and on removal.
+if grep -qs '^MimeType=' "$root"/share/applications/*.desktop; then
+	echo desktop-file-utils >> "$work/deps"
+fi
+if [ -d "$root/share/mime/packages" ]; then
+	echo shared-mime-info >> "$work/deps"
+fi
+
 mkdir "$work/meta"
 {
 	echo 'name: amiberry'
