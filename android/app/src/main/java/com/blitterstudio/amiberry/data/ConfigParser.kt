@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data
 import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.HardDrive
 import java.io.File
 import java.io.IOException
@@ -36,6 +37,7 @@ object ConfigParser {
 		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
 		"joyport0", "joyport1",
 		"joyport0mousemap", "joyport1mousemap",
+		"input.joymouse_speed_analog",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
 		"amiberry.android_joyport1",
 		"use_gui", "config_description", "config_hardware_path"
@@ -181,7 +183,9 @@ object ConfigParser {
 				""
 			},
 			joyport0MouseMap = (kv["joyport0mousemap"]?.toIntOrNull() ?: 0) > 0,
-			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0
+			joyport1MouseMap = (kv["joyport1mousemap"]?.toIntOrNull() ?: 0) > 0,
+			analogMouseSpeed = kv["input.joymouse_speed_analog"]?.toIntOrNull()
+				?: EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED
 		)
 	}
 

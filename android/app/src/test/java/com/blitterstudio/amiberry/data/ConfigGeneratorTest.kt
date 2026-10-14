@@ -488,7 +488,8 @@ class ConfigGeneratorTest {
 			onScreenJoystick = false,
 			onScreenKeyboardButton = true,
 			onScreenKeyboardNumpad = true,
-			joyport1MouseMap = true
+			joyport1MouseMap = true,
+			analogMouseSpeed = 50
 		)
 
 		val configText = ConfigGenerator.generate(original)
@@ -526,6 +527,7 @@ class ConfigGeneratorTest {
 		assertEquals(original.onScreenKeyboardNumpad, result.onScreenKeyboardNumpad)
 		assertFalse(result.joyport0MouseMap)
 		assertTrue(result.joyport1MouseMap)
+		assertEquals(50, result.analogMouseSpeed)
 	}
 
 	@Test

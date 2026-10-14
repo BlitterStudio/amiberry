@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,20 +17,24 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import kotlin.math.roundToInt
 
 internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List<String> = buildList {
 	add("none")
@@ -188,6 +193,47 @@ fun InputTab(viewModel: SettingsViewModel) {
 								InputSettingsActions.setPortMouseMap(s, 1, isEnabled)
 							}
 						}
+					)
+					Spacer(modifier = Modifier.height(8.dp))
+					val speedValues = EmulatorSettingsConstraints.ANALOG_MOUSE_SPEEDS
+					val currentSpeedIndex = speedValues.indexOf(
+						EmulatorSettingsConstraints.normalizeAnalogMouseSpeed(settings.analogMouseSpeed)
+					).coerceAtLeast(0)
+					val isMouseMapEnabled = settings.joyport1MouseMap
+					Row(
+						verticalAlignment = Alignment.CenterVertically,
+						horizontalArrangement = Arrangement.SpaceBetween,
+						modifier = Modifier.fillMaxWidth()
+					) {
+						Text(
+							text = stringResource(R.string.settings_input_analog_mouse_speed),
+							style = MaterialTheme.typography.bodyMedium,
+							color = if (isMouseMapEnabled) MaterialTheme.colorScheme.onSurface
+							else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+						)
+						Text(
+							text = "${settings.analogMouseSpeed}",
+							style = MaterialTheme.typography.bodyMedium,
+							color = if (isMouseMapEnabled) MaterialTheme.colorScheme.onSurfaceVariant
+							else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+						)
+					}
+					Slider(
+						value = currentSpeedIndex.toFloat(),
+						onValueChange = { idx ->
+							val speed = speedValues[idx.roundToInt().coerceIn(0, speedValues.lastIndex)]
+							viewModel.updateSettings { s -> s.copy(analogMouseSpeed = speed) }
+						},
+						valueRange = 0f..(speedValues.lastIndex).toFloat(),
+						steps = speedValues.size - 2,
+						enabled = isMouseMapEnabled,
+						modifier = Modifier.testTag("input-analog-mouse-speed-slider")
+					)
+					Text(
+						text = stringResource(R.string.settings_input_analog_mouse_speed_summary),
+						style = MaterialTheme.typography.bodySmall,
+						color = if (isMouseMapEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+						else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
 					)
 				}
 			}

@@ -115,6 +115,11 @@ object EmulatorSettingsConstraints {
 			result = result.copy(joyport1MouseMap = false)
 		}
 
+		val normalizedSpeed = normalizeAnalogMouseSpeed(result.analogMouseSpeed)
+		if (normalizedSpeed != result.analogMouseSpeed) {
+			result = result.copy(analogMouseSpeed = normalizedSpeed)
+		}
+
 		return result
 	}
 
@@ -154,6 +159,10 @@ object EmulatorSettingsConstraints {
 	private fun normalizeJoyport1(joyport1: String): String =
 		if (joyport1 in ANDROID_PORT_INPUT_DEVICES || joyport1 == "onscreen_joy") joyport1 else DEFAULT_JOYPORT1
 
+	/** Nearest allowed speed, so hand-edited configs still map onto the slider. */
+	fun normalizeAnalogMouseSpeed(speed: Int): Int =
+		ANALOG_MOUSE_SPEEDS.minBy { kotlin.math.abs(it - speed) }
+
 	private const val DEFAULT_GFX_WIDTH = 720
 	private const val DEFAULT_GFX_HEIGHT = 568
 	private const val DEFAULT_SOUND_OUTPUT = "exact"
@@ -178,6 +187,8 @@ object EmulatorSettingsConstraints {
 		"kbd9"
 	)
 	private val NATIVE_SOUND_CHANNELS = EmulatorSettings.soundChannelOptions.map { it.first }.toSet()
+	val ANALOG_MOUSE_SPEEDS = listOf(5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150)
+	const val DEFAULT_ANALOG_MOUSE_SPEED = 25
 
 	private data class NormalizedFloppyDrive(
 		val path: String,

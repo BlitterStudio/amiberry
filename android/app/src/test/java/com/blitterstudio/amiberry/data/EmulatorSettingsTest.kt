@@ -185,6 +185,33 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
+	fun `constraints snap analog mouse speed to nearest allowed value`() {
+		val snappedMid = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(analogMouseSpeed = 27),
+			hasTouchScreen = true
+		)
+		assertEquals(25, snappedMid.analogMouseSpeed)
+
+		val snappedUpper = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(analogMouseSpeed = 999),
+			hasTouchScreen = true
+		)
+		assertEquals(150, snappedUpper.analogMouseSpeed)
+
+		val snappedLower = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(analogMouseSpeed = 0),
+			hasTouchScreen = true
+		)
+		assertEquals(5, snappedLower.analogMouseSpeed)
+
+		val snappedUp = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(analogMouseSpeed = 8),
+			hasTouchScreen = true
+		)
+		assertEquals(10, snappedUp.analogMouseSpeed)
+	}
+
+	@Test
 	fun `constraints disable on-screen joystick without touchscreen`() {
 		val constrained = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(

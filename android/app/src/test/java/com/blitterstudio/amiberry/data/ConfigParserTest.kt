@@ -297,6 +297,18 @@ class ConfigParserTest {
 	}
 
 	@Test
+	fun `parse input ignores unparsable analog mouse speed key and keeps default`() {
+		val file = writeConfig("""
+			input.joymouse_speed_analog=invalid
+		""".trimIndent())
+		val result = ConfigParser.parse(file)
+
+		assertEquals(25, result.settings.analogMouseSpeed)
+		assertTrue("input.joymouse_speed_analog" in result.explicitKeys)
+		assertTrue(result.unknownLines.none { it.trimStart().startsWith("input.joymouse_speed_analog=") })
+	}
+
+	@Test
 	fun `parse input uses native vkbd key before default osk`() {
 		val file = writeConfig("""
 			amiberry.vkbd_enabled=true
