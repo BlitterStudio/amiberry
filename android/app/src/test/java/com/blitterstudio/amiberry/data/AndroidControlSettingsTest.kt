@@ -66,21 +66,23 @@ class AndroidControlSettingsTest {
 		val settings = AndroidControlSettings.withFallback(
 			settings = EmulatorSettings(),
 			explicitKeys = setOf("joyport0", "joyport1"),
-			fallback = EmulatorSettings(joyport1MouseMap = true)
+			fallback = EmulatorSettings(joyport1MouseMap = true, analogMouseSpeed = 75)
 		)
 
 		assertTrue(settings.joyport1MouseMap)
+		assertEquals(75, settings.analogMouseSpeed)
 	}
 
 	@Test
 	fun `explicit mouse map keys from a config override the fallback`() {
 		val settings = AndroidControlSettings.withFallback(
-			settings = EmulatorSettings(joyport1MouseMap = false),
-			explicitKeys = setOf("joyport1mousemap"),
-			fallback = EmulatorSettings(joyport1MouseMap = true)
+			settings = EmulatorSettings(joyport1MouseMap = false, analogMouseSpeed = 40),
+			explicitKeys = setOf("joyport1mousemap", "input.joymouse_speed_analog"),
+			fallback = EmulatorSettings(joyport1MouseMap = true, analogMouseSpeed = 75)
 		)
 
 		assertFalse(settings.joyport1MouseMap)
+		assertEquals(40, settings.analogMouseSpeed)
 	}
 
 	@Test

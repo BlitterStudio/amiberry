@@ -130,6 +130,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
+				"-s", "input.joymouse_speed_analog=25",
 				"-G"
 			),
 			args
@@ -237,6 +238,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
+				"-s", "input.joymouse_speed_analog=25",
 				"-G"
 			),
 			args
@@ -273,6 +275,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=0",
+				"-s", "input.joymouse_speed_analog=25",
 				"-G"
 			),
 			args
@@ -290,7 +293,8 @@ class LaunchRequestTest {
 				joyport1 = "joy0",
 				onScreenJoystick = false,
 				onScreenKeyboardButton = true,
-				joyport1MouseMap = true
+				joyport1MouseMap = true,
+				analogMouseSpeed = 50
 			),
 			skipGui = true
 		).toArgs()
@@ -309,6 +313,7 @@ class LaunchRequestTest {
 				"-s", "amiberry.vkbd_toggle=default",
 				"-s", "joyport0mousemap=0",
 				"-s", "joyport1mousemap=1",
+				"-s", "input.joymouse_speed_analog=50",
 				"-G"
 			),
 			args

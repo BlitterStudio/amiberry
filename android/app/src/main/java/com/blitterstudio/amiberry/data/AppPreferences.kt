@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
@@ -43,7 +44,8 @@ class AppPreferences private constructor(context: Context) {
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
 			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, null),
 			joyport0MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, false),
-			joyport1MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, false)
+			joyport1MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, false),
+			analogMouseSpeed = prefs.getInt(KEY_LAST_ANALOG_MOUSE_SPEED, EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED)
 		)
 
 	fun applyRememberedAndroidControls(settings: EmulatorSettings, explicitKeys: Set<String>): EmulatorSettings =
@@ -63,6 +65,7 @@ class AppPreferences private constructor(context: Context) {
 			putString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, settings.onScreenKeyboardToggle)
 			putBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, settings.joyport0MouseMap)
 			putBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, settings.joyport1MouseMap)
+			putInt(KEY_LAST_ANALOG_MOUSE_SPEED, settings.analogMouseSpeed)
 		}
 	}
 
@@ -152,6 +155,7 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE = "last_on_screen_keyboard_toggle"
 		private const val KEY_LAST_JOYPORT0_MOUSEMAP = "last_joyport0_mousemap"
 		private const val KEY_LAST_JOYPORT1_MOUSEMAP = "last_joyport1_mousemap"
+		private const val KEY_LAST_ANALOG_MOUSE_SPEED = "last_analog_mouse_speed"
 		private const val KEY_RECENT_LAUNCHES = "recent_launches"
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
