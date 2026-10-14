@@ -60,36 +60,94 @@ jobs:
           sync: rsync
           prepare: |
             set -eu
+            # The VM images use the latest package branch. Release packages
+            # record exact shared-library versions, so build them against
+            # quarterly, the branch a stock FreeBSD install uses.
+            pkg_branch=${{ github.ref_type == 'tag' && 'quarterly' || 'latest' }}
+            if [ "$pkg_branch" = quarterly ]; then
+              for conf in /etc/pkg/*.conf /usr/local/etc/pkg/repos/*.conf; do
+                if [ -f "$conf" ]; then
+                  sed -i '' 's|/latest"|/quarterly"|' "$conf"
+                fi
+              done
+              if pkg -vv | grep -q '/latest"'; then
+                echo "error: a package repository still points at latest" >&2
+                exit 1
+              fi
+              pkg update -f
+            fi
             pkg install -y \
               cmake ninja pkgconf git \
               sdl3 sdl3_image flac mpg123 ffmpeg png curl nlohmann-json \
               libsysinfo libiconv libglvnd dbus \
-              libserialport enet portmidi libmpeg2 libpcap zstd
+              libserialport enet portmidi libmpeg2 libpcap zstd \
+              desktop-file-utils shared-mime-info
           run: |
             set -eu
             freebsd-version
             uname -m
             cc --version
+            pkg -vv | sed -n '/^Repositories:/,$p'
 
-            # Exercise DBus linking on both releases and native optimization
-            # on 15.1. Build and stage outside the synced workspace so the
-            # action's copyback returns only the tarball, not the build tree.
+            # Exercise DBus linking on both releases. Native optimization
+            # (-mcpu=native) runs on 15.1 except for release tags, whose
+            # packages must run on any CPU. Build and stage outside the synced
+            # workspace so the action's copyback returns only the package,
+            # not the build tree.
             cmake -S . -B /tmp/build-freebsd -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/usr/local \
               -DUSE_DBUS=ON \
-              -DWITH_OPTIMIZE=${{ matrix.release == '15.1' && 'ON' || 'OFF' }}
+              -DWITH_OPTIMIZE=${{ matrix.release == '15.1' && github.ref_type != 'tag' && 'ON' || 'OFF' }}
             cmake --build /tmp/build-freebsd --parallel 4
 
             # Stage through the normal install rules, including CAPSImage and
-            # floppybridge. This is a CI artifact, not a standalone package.
+            # floppybridge, and package the staged tree.
             DESTDIR=/tmp/stage-freebsd cmake --install /tmp/build-freebsd
-            tar -czf amiberry-freebsd.tar.gz -C /tmp/stage-freebsd .
+            pkg_file="amiberry-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-freebsd$(freebsd-version -u | cut -d. -f1)-${{ matrix.arch }}.pkg"
+            sh .github/scripts/freebsd-package.sh /tmp/build-freebsd /tmp/stage-freebsd "$pkg_file"
+
+            # Install the package the way users will, then run it.
+            pkg install -y "./$pkg_file"
+            pkg check -d amiberry
+            amiberry --version
+            pkg delete -y amiberry
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
           name: amiberry-freebsd-${{ matrix.release }}-${{ matrix.arch }}
-          path: amiberry-freebsd.tar.gz
+          path: amiberry-*-freebsd*.pkg
           if-no-files-found: error
           retention-days: 7
+
+  attach-release:
+    name: Attach to release
+    needs: build-freebsd
+    if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
+    runs-on: ubuntu-24.04
+    # The script waits up to 120 minutes for c-cpp.yml to publish the release.
+    timeout-minutes: 150
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: amiberry-freebsd-*
+          path: packages
+          merge-multiple: true
+
+      - name: Attach packages and checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: bash .github/scripts/attach-freebsd-release-assets.sh "${{ github.ref_name }}" packages/*.pkg
