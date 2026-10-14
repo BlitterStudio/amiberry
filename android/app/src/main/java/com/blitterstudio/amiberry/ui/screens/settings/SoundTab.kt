@@ -53,7 +53,8 @@ fun SoundTab(viewModel: SettingsViewModel) {
 	val bufferFreq = if (settings.soundFreq > 0) settings.soundFreq else EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY
 	val bufferMs = { size: Int -> (size / 4.0 * 1000.0 / bufferFreq).roundToInt() }
 	val bufferOptions = EmulatorSettingsConstraints.SOUND_BUFFER_SIZES.map { size ->
-		size to stringResource(R.string.settings_sound_buffer_option, size, bufferMs(size))
+		size to if (size == 0) stringResource(R.string.settings_sound_buffer_min)
+		else stringResource(R.string.settings_sound_buffer_option, size, bufferMs(size))
 	}
 
 	val channelOptions = listOf(

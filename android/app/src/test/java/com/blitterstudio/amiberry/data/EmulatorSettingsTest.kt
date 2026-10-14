@@ -185,30 +185,26 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `constraints snap analog mouse speed to nearest allowed value`() {
-		val snappedMid = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(analogMouseSpeed = 27),
+	fun `constraints keep off-slider analog mouse speeds and reset invalid ones`() {
+		val hotkeySpeed = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(analogMouseSpeed = 2),
 			hasTouchScreen = true
 		)
-		assertEquals(25, snappedMid.analogMouseSpeed)
+		assertEquals(2, hotkeySpeed.analogMouseSpeed)
 
-		val snappedUpper = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(analogMouseSpeed = 999),
-			hasTouchScreen = true
-		)
-		assertEquals(150, snappedUpper.analogMouseSpeed)
-
-		val snappedLower = EmulatorSettingsConstraints.apply(
+		val invalid = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(analogMouseSpeed = 0),
 			hasTouchScreen = true
 		)
-		assertEquals(5, snappedLower.analogMouseSpeed)
+		assertEquals(25, invalid.analogMouseSpeed)
+	}
 
-		val snappedUp = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(analogMouseSpeed = 8),
-			hasTouchScreen = true
-		)
-		assertEquals(10, snappedUp.analogMouseSpeed)
+	@Test
+	fun `slider position for an off-step speed is the nearest step`() {
+		val speeds = EmulatorSettingsConstraints.ANALOG_MOUSE_SPEEDS
+		assertEquals(speeds.indexOf(5), EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(2))
+		assertEquals(speeds.indexOf(10), EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(8))
+		assertEquals(speeds.lastIndex, EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(999))
 	}
 
 	@Test
@@ -427,24 +423,24 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `constraints snap sound buffer to nearest allowed size`() {
-		val snappedMid = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(soundBuffer = 5000),
-			hasTouchScreen = true
-		)
-		assertEquals(4096, snappedMid.soundBuffer)
-
-		val snappedLower = EmulatorSettingsConstraints.apply(
+	fun `constraints keep the min and off-list sound buffers and reset invalid ones`() {
+		val min = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(soundBuffer = 0),
 			hasTouchScreen = true
 		)
-		assertEquals(1024, snappedLower.soundBuffer)
+		assertEquals(0, min.soundBuffer)
 
-		val snappedUpper = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(soundBuffer = 999999),
+		val offList = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(soundBuffer = 5000),
 			hasTouchScreen = true
 		)
-		assertEquals(65536, snappedUpper.soundBuffer)
+		assertEquals(5000, offList.soundBuffer)
+
+		val invalid = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(soundBuffer = -1),
+			hasTouchScreen = true
+		)
+		assertEquals(8192, invalid.soundBuffer)
 	}
 
 	// --- Hard drives ---

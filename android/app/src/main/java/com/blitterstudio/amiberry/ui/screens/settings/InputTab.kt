@@ -196,9 +196,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 					)
 					Spacer(modifier = Modifier.height(8.dp))
 					val speedValues = EmulatorSettingsConstraints.ANALOG_MOUSE_SPEEDS
-					val currentSpeedIndex = speedValues.indexOf(
-						EmulatorSettingsConstraints.normalizeAnalogMouseSpeed(settings.analogMouseSpeed)
-					).coerceAtLeast(0)
+					val currentSpeedIndex = EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(settings.analogMouseSpeed)
 					val isMouseMapEnabled = settings.joyport1MouseMap
 					Row(
 						verticalAlignment = Alignment.CenterVertically,

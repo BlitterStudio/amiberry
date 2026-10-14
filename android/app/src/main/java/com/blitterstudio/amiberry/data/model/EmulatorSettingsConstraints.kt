@@ -36,7 +36,8 @@ object EmulatorSettingsConstraints {
 		result = result.copy(
 			soundOutput = normalizeSoundOutput(result.soundOutput),
 			soundFreq = if (result.soundFreq > 0) result.soundFreq else DEFAULT_SOUND_FREQUENCY,
-			soundBuffer = normalizeSoundBuffer(result.soundBuffer),
+			// 0 is the emulator's "Min"; off-list sizes are valid native values too
+			soundBuffer = if (result.soundBuffer >= 0) result.soundBuffer else DEFAULT_SOUND_BUFFER,
 			soundChannels = normalizeSoundChannels(result.soundChannels)
 		)
 
@@ -116,9 +117,9 @@ object EmulatorSettingsConstraints {
 			result = result.copy(joyport1MouseMap = false)
 		}
 
-		val normalizedSpeed = normalizeAnalogMouseSpeed(result.analogMouseSpeed)
-		if (normalizedSpeed != result.analogMouseSpeed) {
-			result = result.copy(analogMouseSpeed = normalizedSpeed)
+		// Off-slider speeds (hotkeys, hand-edited configs) stay; only invalid ones reset
+		if (result.analogMouseSpeed <= 0) {
+			result = result.copy(analogMouseSpeed = DEFAULT_ANALOG_MOUSE_SPEED)
 		}
 
 		return result
@@ -160,20 +161,17 @@ object EmulatorSettingsConstraints {
 	private fun normalizeJoyport1(joyport1: String): String =
 		if (joyport1 in ANDROID_PORT_INPUT_DEVICES || joyport1 == "onscreen_joy") joyport1 else DEFAULT_JOYPORT1
 
-	/** Nearest allowed speed, so hand-edited configs still map onto the slider. */
-	fun normalizeAnalogMouseSpeed(speed: Int): Int =
-		ANALOG_MOUSE_SPEEDS.minBy { kotlin.math.abs(it - speed) }
-
-	/** Nearest allowed sound buffer size, so hand-edited configs still map onto the dropdown. */
-	fun normalizeSoundBuffer(buffer: Int): Int =
-		SOUND_BUFFER_SIZES.minBy { kotlin.math.abs(it - buffer) }
+	/** Slider position for a speed that may sit between the slider's steps. */
+	fun nearestAnalogMouseSpeedIndex(speed: Int): Int =
+		ANALOG_MOUSE_SPEEDS.indices.minBy { kotlin.math.abs(ANALOG_MOUSE_SPEEDS[it] - speed) }
 
 	private const val DEFAULT_GFX_WIDTH = 720
 	private const val DEFAULT_GFX_HEIGHT = 568
 	private const val DEFAULT_SOUND_OUTPUT = "exact"
 	// Android mixes at 48 kHz, so 44.1 kHz forces resampling and loses AAudio's low-latency path.
 	const val DEFAULT_SOUND_FREQUENCY = 48000
-	val SOUND_BUFFER_SIZES = listOf(1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536)
+	/** Same choices as the in-emulator slider; 0 is its "Min". */
+	val SOUND_BUFFER_SIZES = listOf(0, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536)
 	const val DEFAULT_SOUND_BUFFER = 8192
 	private const val DEFAULT_SOUND_CHANNELS = "stereo"
 	private const val SCALING_METHOD_INTEGER = 2
