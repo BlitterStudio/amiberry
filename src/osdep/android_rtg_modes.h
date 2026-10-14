@@ -128,6 +128,12 @@ inline constexpr std::size_t android_rtg_screen_mode_count = std::size(android_r
 // instead and the screen then scrolls, so narrower shapes are no use.
 inline constexpr int android_rtg_screen_min_width = 640;
 
+// A shape more than twice as tall as the screen is left out: shown full screen
+// it would be shrunk by more than half, and text on it is no longer readable.
+// Only screens under 512 lines lose anything, the 1024 high shape - an 854x480
+// phone gets 848x480, 1072x600 and 1424x800.
+inline constexpr int android_rtg_screen_max_downscale = 2;
+
 // Build the screen-shaped candidates for a screen_w x screen_h display (either
 // orientation; the landscape shape is used). Widths are rounded to a multiple
 // of 16, which Picasso96 wants - a fraction of a percent off the true ratio.
@@ -150,7 +156,7 @@ inline int android_rtg_build_screen_modes(const android_rtg_candidate& template_
 		if (count >= max_modes)
 			break;
 		const long long w = ((static_cast<long long>(h) * screen_w / screen_h) + 8) & ~15LL;
-		if (w < android_rtg_screen_min_width || h > screen_h * 2)
+		if (w < android_rtg_screen_min_width || h > screen_h * android_rtg_screen_max_downscale)
 			continue;
 		if (w * h > usable_vram_bytes)
 			continue;

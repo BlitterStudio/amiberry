@@ -3652,10 +3652,21 @@ static int addresolutions(void)
 			android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt), candidates));
 
 		// Modes in the device's own shape, which fill its screen exactly.
-		const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
-		if (desktop) {
+		// This runs on the extended-trap thread, so take the screen size that
+		// enumeratedisplays() cached on the main thread rather than asking SDL.
+		// The bounds are in points, not pixels, but only the shape matters.
+		const MultiDisplay* primary = nullptr;
+		for (int di = 0; di < MAX_DISPLAYS && Displays[di].monitorname; di++) {
+			if (Displays[di].primary) {
+				primary = &Displays[di];
+				break;
+			}
+		}
+		if (!primary && Displays[0].monitorname)
+			primary = &Displays[0];
+		if (primary) {
 			struct android_rtg_candidate shaped[android_rtg_screen_mode_count];
-			emit(shaped, android_rtg_build_screen_modes(template_mode, desktop->w, desktop->h,
+			emit(shaped, android_rtg_build_screen_modes(template_mode, primary->rect.w, primary->rect.h,
 				usable_vram, android_rtg_remaining_mode_budget(MAX_PICASSO_MODES, cnt), shaped));
 		}
 	}

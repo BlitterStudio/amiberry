@@ -260,6 +260,16 @@ int main()
 	expect_true(!contains_resolution(shaped, n, 608, 480), "a width under 640 must be dropped");
 	expect_eq(n, 3, "5:4 screen keeps the three heights that reach 640 across");
 
+	// A shape more than twice the screen height is dropped: an 854x480 phone
+	// keeps 480, 600 and 800 but not 1024, which would be shrunk past half.
+	n = android_rtg_build_screen_modes(host_template, 854, 480, plenty_vram,
+		static_cast<int>(android_rtg_screen_mode_count), shaped);
+	expect_eq(n, 3, "an 854x480 screen must drop the 1024 high shape");
+	expect_true(contains_resolution(shaped, n, 848, 480), "854x480 at 480 must be 848 wide");
+	expect_true(contains_resolution(shaped, n, 1072, 600), "854x480 at 600 must be 1072 wide");
+	expect_true(contains_resolution(shaped, n, 1424, 800), "854x480 at 800 must be 1424 wide");
+	expect_true(!contains_resolution(shaped, n, 1824, 1024), "854x480 must not get a 1024 high shape");
+
 	// Unknown screen size, VRAM and budget limits.
 	expect_eq(android_rtg_build_screen_modes(host_template, 0, 0, plenty_vram, 4, shaped), 0,
 		"an unknown screen must yield nothing");
