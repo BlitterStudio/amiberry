@@ -5603,6 +5603,9 @@ bool target_make_relative_path(TCHAR* path, const int size)
 // convert path to absolute, or to base-relative when userelative is set
 void fullpath(TCHAR* path, int size, bool userelative)
 {
+	// Empty means unset; _fullpath() would turn it into the working directory.
+	if (!path[0])
+		return;
 	if (!target_resolve_relative_path(path, size))
 	{
 		TCHAR tmp1[MAX_DPATH];
@@ -5612,7 +5615,7 @@ void fullpath(TCHAR* path, int size, bool userelative)
 			if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
 				_tcscpy(path, tmp1);
 		}
-		else if (path[0] != 0)
+		else
 		{
 			const auto path_len = _tcslen(path);
 			const bool pseudo_path = path[0] == ':';

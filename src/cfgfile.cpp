@@ -837,6 +837,18 @@ static void cfgfile_make_relative_path_for_save(TCHAR *path, int size)
 	if (target_isrelativemode())
 		target_make_relative_path(path, size);
 }
+
+// The base-relative form wins: a path already stripped to a search-path-relative name
+// would otherwise be made base-relative against the working directory.
+static TCHAR *cfgfile_put_path_for_save(struct multipath *mp, const TCHAR *s)
+{
+	TCHAR path[MAX_DPATH];
+	_tcsncpy(path, s, MAX_DPATH - 1);
+	path[MAX_DPATH - 1] = 0;
+	if (target_isrelativemode() && target_make_relative_path(path, MAX_DPATH))
+		return my_strdup(path);
+	return cfgfile_put_multipath(mp, s);
+}
 #endif
 
 
@@ -1166,14 +1178,13 @@ static void cfgfile_write_rom (struct zfile *f, struct multipath *mp, const TCHA
 #endif
 
 	TCHAR *str = cfgfile_subst_path (mp->path[0], UNEXPANDED, romfile);
-	str = cfgfile_put_multipath (mp, str);
 #ifdef AMIBERRY
-	TCHAR saved[MAX_DPATH];
-	_tcsncpy(saved, str, MAX_DPATH - 1);
-	saved[MAX_DPATH - 1] = 0;
-	cfgfile_make_relative_path_for_save(saved, MAX_DPATH);
+	TCHAR *saved = cfgfile_put_path_for_save (mp, str);
 	cfgfile_write_str (f, name, saved);
-#else
+	xfree (saved);
+#endif
+	str = cfgfile_put_multipath (mp, str);
+#ifndef AMIBERRY
 	cfgfile_write_str (f, name, str);
 #endif
 	struct zfile *zf = zfile_fopen (str, _T("rb"), ZFD_ALL);
@@ -1224,18 +1235,20 @@ static void cfgfile_dwrite_path2(struct zfile *f, const TCHAR *option, const TCH
 
 static void cfgfile_write_path (struct zfile *f, struct multipath *mp, const TCHAR *option, const TCHAR *value)
 {
-	TCHAR *s = cfgfile_put_multipath (mp, value);
 #ifdef AMIBERRY
-	cfgfile_make_relative_path_for_save(s, uaetcslen(s) + 1);
+	TCHAR *s = cfgfile_put_path_for_save (mp, value);
+#else
+	TCHAR *s = cfgfile_put_multipath (mp, value);
 #endif
 	cfgfile_write_str (f, option, s);
 	xfree (s);
 }
 static void cfgfile_dwrite_path (struct zfile *f, struct multipath *mp, const TCHAR *option, const TCHAR *value)
 {
-	TCHAR *s = cfgfile_put_multipath (mp, value);
 #ifdef AMIBERRY
-	cfgfile_make_relative_path_for_save(s, uaetcslen(s) + 1);
+	TCHAR *s = cfgfile_put_path_for_save (mp, value);
+#else
+	TCHAR *s = cfgfile_put_multipath (mp, value);
 #endif
 	cfgfile_dwrite_str (f, option, s);
 	xfree (s);

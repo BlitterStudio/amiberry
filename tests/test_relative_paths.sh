@@ -23,6 +23,11 @@ host_path()
 {
 	if command -v cygpath > /dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
 }
+# Search-path prefixes only match the host spelling of resolved paths.
+native_dir()
+{
+	if command -v cygpath > /dev/null 2>&1; then printf '%s\\' "$(cygpath -w "$1")"; else printf '%s/' "$1"; fi
+}
 export HOME="$work/home"
 export LOCALAPPDATA="$(host_path "$work/local-app-data")"
 export APPDATA="$(host_path "$work/app-data")"
@@ -41,7 +46,9 @@ fail()
 	exit 1
 }
 
-mkdir -p "$work/content/Floppies" "$work/elsewhere" "$work/cwd/Floppies"
+mkdir -p "$work/content/Floppies" "$work/content/ROMs" "$work/elsewhere" "$work/cwd/Floppies"
+printf 'x' > "$work/content/ROMs/kick.rom"
+printf 'x' > "$work/content/ROMs/cart.rom"
 printf 'x' > "$work/content/Floppies/disk.adf"
 printf 'x' > "$work/elsewhere/other.adf"
 printf 'x' > "$work/cwd/local.adf"
@@ -66,8 +73,9 @@ esac
 mkdir -p "$(dirname "$settings_file")"
 
 # floppy0 is base-relative, floppy1 lies outside the base, and floppy2 is a
-# "./" path that exists only in the working directory.
-printf 'floppy0=./Floppies/disk.adf\nfloppy1=%s\nfloppy2=./local.adf\n' \
+# "./" path that exists only in the working directory. The ROMs also lie in
+# the ROM search path, which must not shorten them to bare file names.
+printf 'floppy0=./Floppies/disk.adf\nfloppy1=%s\nfloppy2=./local.adf\nkickstart_rom_file=./ROMs/kick.rom\ncart_file=./ROMs/cart.rom\n' \
 	"$(host_path "$work/elsewhere/other.adf")" > "$work/media.uae"
 
 dump()
@@ -78,7 +86,7 @@ dump()
 		|| fail "dump-config failed"
 }
 
-printf 'relative_paths=yes\n' > "$settings_file"
+printf 'relative_paths=yes\nrom_path=%s\n' "$(native_dir "$work/content/ROMs")" > "$settings_file"
 "$bin" --dump-paths > "$work/relative-paths.txt"
 [ "$(line_value relative_paths "$work/relative-paths.txt")" = "1" ] \
 	|| fail "relative_paths=yes was not loaded" "$work/relative-paths.txt"
@@ -89,6 +97,15 @@ line_value floppy1 "$work/relative.txt" | grep -Eq '^[^.].*elsewhere[/\\]other\.
 	|| fail "path outside the base must stay absolute" "$work/relative.txt"
 line_value floppy2 "$work/relative.txt" | grep -Eq '^[^.].*cwd[/\\]local\.adf$' \
 	|| fail "working-directory path was not kept" "$work/relative.txt"
+[ "$(line_value kickstart_rom_file "$work/relative.txt")" = "./ROMs/kick.rom" ] \
+	|| fail "ROM inside the ROM path was not saved relative to the base" "$work/relative.txt"
+[ "$(line_value cart_file "$work/relative.txt")" = "./ROMs/cart.rom" ] \
+	|| fail "cartridge inside the ROM path was not saved relative to the base" "$work/relative.txt"
+# Unset files must not turn into the working directory.
+[ -z "$(line_value flash_file "$work/relative.txt")" ] \
+	|| fail "unset flash_file was saved as a path" "$work/relative.txt"
+[ -z "$(line_value rtc_file "$work/relative.txt")" ] \
+	|| fail "unset rtc_file was saved as a path" "$work/relative.txt"
 
 dump "$work/cmdline.txt" -0 ./Floppies/disk.adf --cdimage ./Floppies/disk.adf
 line_value floppy0 "$work/cmdline.txt" | grep -Eq '^[^.].*cwd[/\\]Floppies[/\\]disk\.adf$' \
