@@ -491,19 +491,19 @@ void render_panel_input() {
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Analog joy-mouse speed:");
     ImGui::SameLine();
-    int ana_speed_idx = 1; // Default 10
-    for (int i = 0; i < IM_ARRAYSIZE(analog_joymousespeed_values); ++i) {
-        if (changed_prefs.input_joymouse_multiplier == analog_joymousespeed_values[i]) {
+    // Nearest listed value, so a hand-edited config still shows a sensible position
+    int ana_speed_idx = 0;
+    for (int i = 1; i < IM_ARRAYSIZE(analog_joymousespeed_values); ++i) {
+        if (abs(analog_joymousespeed_values[i] - changed_prefs.input_joymouse_multiplier)
+            < abs(analog_joymousespeed_values[ana_speed_idx] - changed_prefs.input_joymouse_multiplier))
             ana_speed_idx = i;
-            break;
-        }
     }
     ImGui::SetNextItemWidth(BUTTON_WIDTH);
     if (ImGui::SliderInt("##AnaSpeed", &ana_speed_idx, 0, IM_ARRAYSIZE(analog_joymousespeed_values) - 1, "")) {
         changed_prefs.input_joymouse_multiplier = analog_joymousespeed_values[ana_speed_idx];
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-    ShowHelpMarker("Sensitivity multiplier for mouse cursor controlled by analog joystick");
+    ShowHelpMarker("Mouse pointer speed when an analog stick drives the mouse (Mouse Map, or a controller in Mouse mode). Lower is slower");
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
     ImGui::Text("%d", changed_prefs.input_joymouse_multiplier);
@@ -527,7 +527,7 @@ void render_panel_input() {
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputInt("##MouseSpd", &changed_prefs.input_mouse_speed, 1, 10);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-        ShowHelpMarker("Mouse sensitivity multiplier (100 = normal speed, higher = faster)");
+        ShowHelpMarker("Speed of real mouse and touch pointer movement (100 = normal speed, higher = faster). Analog stick mouse movement uses Analog joy-mouse speed instead");
 
         // Right: Mouse Untrap (Inline Label)
         ImGui::TableNextColumn();

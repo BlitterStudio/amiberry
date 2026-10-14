@@ -25,7 +25,7 @@ def main():
     header = (ROOT / "src/osdep/amiberry_input.h").read_text(encoding="utf-8")
     input_header = (ROOT / "src/include/inputdevice.h").read_text(encoding="utf-8")
     button = between(core, "\t\tif (ie->type & 4) {", "\t\t} else if (ie->type & 8)") + "\n}"
-    direction = between(core, "\t\t\tint left = oleft[joy]", "\n\t\t}\n\t\tbreak;")
+    direction = between(core, "\t\t\tconst bool capture_osk = !osk_passthrough", "\n\t\t}\n\t\tbreak;")
     mouse = between(core, "\t\t\t/* real mouse / analog stick mouse emulation */", "\n\t\t\tmax = 32;")
     production = between(core, "// Generic joystick mappings", "static int isdevice")
     production += "\nvoid core_button(int joy, int data, int state) { Event e{4, data}; auto ie = &e;\n" + button + "\n}\n"

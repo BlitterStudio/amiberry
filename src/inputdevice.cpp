@@ -9015,7 +9015,13 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	inputdevice_init ();
 
 	p->input_selected_setting = GAMEPORT_INPUT_SETTINGS;
+#ifdef AMIBERRY
+	// Full stick deflection moves the mouse this many counts per frame. The
+	// WinUAE default of 100 is too fast for the analog stick mouse map.
+	p->input_joymouse_multiplier = 25;
+#else
 	p->input_joymouse_multiplier = 100;
+#endif
 	p->input_joymouse_deadzone = 33;
 	p->input_joystick_deadzone = 33;
 	p->input_joymouse_speed = 10;

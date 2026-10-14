@@ -10,7 +10,7 @@
 #include "sdl_compat.h"
 #include "imgui_osk.h"
 
-constexpr int MAX_INPUT_DEVICES = 4, REMAP_BUTTONS = 32, analog_upper_bound = 32767;
+constexpr int MAX_INPUT_DEVICES = 4, MAX_JPORTS = 4, REMAP_BUTTONS = 32, analog_upper_bound = 32767;
 constexpr int DIR_LEFT = 1, DIR_RIGHT = 2, DIR_UP = 4, DIR_DOWN = 8;
 constexpr int IE_CDTV = 256, IE_INVERT = 512, JOYMOUSE_CDTV = 10, CYCLE_UNIT = 1;
 #include "osk_mapping_under_test.inc"
@@ -25,6 +25,7 @@ struct didata {
     SDL_Joystick* joystick = nullptr;
     bool hotkey_held = false;
     Uint32 remapped_press_mask = 0;
+    std::array<Uint8, 8> hat_values{};
     controller_mapping mapping{};
 };
 struct Prefs {
@@ -32,7 +33,6 @@ struct Prefs {
     char vkbd_toggle[128] = "leftstick";
     int inactive_input = 0, input_contact_bounce = 0;
     int input_joystick_deadzone = 33, input_joymouse_deadzone = 33, input_joymouse_multiplier = 100;
-    struct { int mousemap = 0; } jports[4];
 } currprefs, changed_prefs;
 struct Hotkey { int button = 0; } quit_key, action_replay_key, fullscreen_key, minimize_key, screenshot_key, debugger_key;
 struct Event { int type, data, unit = 1; };
@@ -58,7 +58,7 @@ didata di_joystick[MAX_INPUT_DEVICES];
 SDL_Gamepad pads[MAX_INPUT_DEVICES];
 SDL_Joystick sticks[MAX_INPUT_DEVICES];
 int vkbd_button = SDL_GAMEPAD_BUTTON_LEFT_STICK, enter_gui_button = SDL_GAMEPAD_BUTTON_START;
-int joystick_dead_zone = 8000, axisold[MAX_INPUT_DEVICES][256]{};
+int axisold[MAX_INPUT_DEVICES][256]{};
 int joybutton[4]{}, joydir[4]{}, oleft[4]{}, oright[4]{}, otop[4]{}, obot[4]{};
 int horizclear[4]{}, vertclear[4]{}, relativecount[4][2]{}, mouse_deltanoreset[4][2]{}, mouse_delta[4][2]{};
 int input_record = 0, input_play = 0, bouncy = 0, bouncy_cycles = 0;
@@ -89,10 +89,6 @@ bool inputdevice_handle_inputcode_immediate(int, int) { return false; }
 char* my_strdup(const char* text) { return strdup(text); }
 void uae_quit() {} void minimizewindow(int) {} void joymousecounter(int) {}
 int get_cycles() { return 0; }
-int assigned_joyport(int id) { return id; }
-int mousemap_mouse_device() { return 0; }
-int mapped_mouse_delta = 0;
-void setmousestate(int, int, int value, int) { mapped_mouse_delta += value; }
 void write_log(const char*, ...) {}
 bool inputdevice_devicechange(Prefs*) { return true; }
 int SDL_GetNumJoystickHats(SDL_Joystick*) { return 2; }
@@ -132,7 +128,6 @@ static void reset_fixture() {
     vkbd_button = SDL_GAMEPAD_BUTTON_LEFT_STICK;
     enter_gui_button = SDL_GAMEPAD_BUTTON_START;
     active = animating = false;
-    mapped_mouse_delta = 0;
     remap_button_state = plain_button_state = -1;
     observed_osk = 0;
     memset(joybutton, 0, sizeof joybutton); memset(joydir, 0, sizeof joydir);
@@ -177,29 +172,12 @@ static void axis(int id, int axis, int value, bool raw = false) {
     if (raw) { sticks[id].axes[axis] = value; event.jaxis.which = id + 1; event.jaxis.axis = axis; event.jaxis.value = value; handle_joy_axis_motion_event(event); }
     else { pads[id].axes[axis] = value; event.gaxis.which = id + 1; event.gaxis.axis = axis; event.gaxis.value = value; handle_controller_axis_motion_event(event); }
 }
-static void hat(int id, int value) {
-    sticks[id].hats[0] = value;
-    SDL_Event event{}; event.jhat.which = id + 1; event.jhat.hat = 0; event.jhat.value = value;
+static void hat(int id, int value, int index = 0) {
+    sticks[id].hats[index] = value;
+    SDL_Event event{}; event.jhat.which = id + 1; event.jhat.hat = index; event.jhat.value = value;
     handle_joy_hat_motion_event(event);
 }
 static int pending(int code) { int count = 0; for (const auto& e : inputcode_pending) count += e.code == code; return count; }
-
-static void test_mousemap_ownership(bool raw) {
-    reset_fixture();
-    currprefs.jports[0].mousemap = 1;
-    currprefs.input_joystick_deadzone = currprefs.input_joymouse_deadzone = 50;
-    di_joystick[0].mapping.is_retroarch = raw;
-    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 9000, raw);
-    assert(mapped_mouse_delta == (raw ? 9 : 0));
-    osk_clear_controller_holds();
-    active = true;
-    axis(0, SDL_GAMEPAD_AXIS_LEFTX, 24000, raw);
-    if (raw) {
-        assert(observed_osk == 0 && mapped_mouse_delta == 33);
-    } else {
-        assert((observed_osk & OSK_RIGHT) && mapped_mouse_delta == 0);
-    }
-}
 
 static void test_center_drift(bool raw, bool reacquire) {
     reset_fixture();
@@ -315,6 +293,16 @@ int main() {
     assert(joydir[0] == 0);
     hat(0, SDL_HAT_UP);
     assert(joydir[0] == DIR_UP);
+
+    // Every hat drives the D-pad; centering one must not release another's.
+    reset_fixture(); di_joystick[0].is_controller = false;
+    hat(0, SDL_HAT_RIGHT);
+    hat(0, SDL_HAT_CENTERED, 1);
+    assert(joydir[0] == DIR_RIGHT);
+    hat(0, SDL_HAT_UP, 1);
+    assert(joydir[0] == (DIR_RIGHT | DIR_UP));
+    hat(0, SDL_HAT_CENTERED);
+    assert(joydir[0] == DIR_UP);
     reset_fixture();
     debugger_key.button = SDL_GAMEPAD_BUTTON_RIGHT_STICK;
     active = true;
@@ -340,9 +328,6 @@ int main() {
     for (bool raw : {false, true})
         for (bool reacquire : {false, true})
             test_center_drift(raw, reacquire);
-
-    test_mousemap_ownership(false);
-    test_mousemap_ownership(true);
 
     // An unused digital-joystick deadzone must not reserve a mouse-mapped axis.
     reset_fixture(); map_mouse(0);

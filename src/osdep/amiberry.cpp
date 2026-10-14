@@ -2953,7 +2953,7 @@ void handle_joy_device_event(const SDL_JoystickID which, const bool removed)
 	if (removed) {
 		osk_controllers.erase(which);
 		for (auto it = osk_hats.begin(); it != osk_hats.end();) {
-			if ((it->first >> 8) == which)
+			if ((it->first >> 8) == static_cast<Uint64>(which))
 				it = osk_hats.erase(it);
 			else
 				++it;

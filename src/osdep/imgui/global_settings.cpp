@@ -489,8 +489,8 @@ void render_panel_global_settings()
 	render_group("Input defaults and hotkeys", "GlobalInputDefaults", [&]() {
 		render_bool_row("RCtrl as RAmiga", &amiberry_options.rctrl_as_ramiga,
 			"Map Right Control to the Right Amiga key by default.");
-		render_int_row("Mouse speed", &amiberry_options.input_default_mouse_speed,
-			"Default mouse input speed applied to new configurations.", 1, 1, 1000);
+		render_int_row("Default mouse speed", &amiberry_options.input_default_mouse_speed,
+			"Mouse speed applied to new configurations (100 = normal). Analog stick mouse movement uses the Analog joy-mouse speed setting instead.", 1, 1, 1000);
 		render_bool_row("Keyboard joystick stops keypresses",
 			&amiberry_options.input_keyboard_as_joystick_stop_keypresses,
 			"Stop keyboard-as-joystick mappings from also generating normal Amiga key presses.");
