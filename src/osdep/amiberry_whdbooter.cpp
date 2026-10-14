@@ -1025,6 +1025,8 @@ game_hardware_options parse_settings_from_json(uae_prefs* prefs, const char* fil
 	auto sha1 = my_get_sha1_of_file(filepath);
 	std::transform(sha1.begin(), sha1.end(), sha1.begin(),
 		[](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
+	if (!sha1.empty())
+		write_log("WHDBooter - Archive SHA1: %s\n", sha1.c_str());
 
 	const nlohmann::json* selected_game = nullptr;
 	bool matched_by_sha1 = false;
@@ -1141,6 +1143,8 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 	auto sha1 = my_get_sha1_of_file(filepath);
 	std::transform(sha1.begin(), sha1.end(), sha1.begin(),
 		[](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
+	if (!sha1.empty())
+		write_log("WHDBooter - Archive SHA1: %s\n", sha1.c_str());
 
 	auto* root_element = doc.FirstChildElement("whdbooter");
 	if (!root_element)
