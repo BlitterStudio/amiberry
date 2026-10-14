@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <iterator>
+#include <utility>
 
 // Depth in bytes per pixel stamped on virtual modes when the host exposed no
 // mode to clone one from (32-bit, the usual RTG desktop depth).
@@ -100,6 +101,63 @@ inline int android_rtg_build_modes(const android_rtg_candidate& template_mode,
 			break;
 		const long long w = mode[0];
 		const long long h = mode[1];
+		if (w * h > usable_vram_bytes)
+			continue;
+		out[count] = template_mode;
+		out[count].width = static_cast<unsigned int>(w);
+		out[count].height = static_cast<unsigned int>(h);
+		out[count].depth = depth;
+		out[count].refresh = refresh;
+		std::snprintf(out[count].name, sizeof out[count].name, "%ux%u%s",
+			out[count].width, out[count].height, android_rtg_name_suffix);
+		count++;
+	}
+	return count;
+}
+
+// Screen-shaped virtual modes. Not one entry of the table above has the shape
+// of a phone or a tablet, so an RTG screen shown full screen is always either
+// stretched or left with bars down the sides. These heights, each as wide as
+// the device's own screen, fill it exactly with no aspect correction at all:
+// a 3200x2136 tablet gets 720x480, 896x600, 1200x800 and 1536x1024.
+inline constexpr int android_rtg_screen_heights[] = { 480, 600, 800, 1024 };
+
+inline constexpr std::size_t android_rtg_screen_mode_count = std::size(android_rtg_screen_heights);
+
+// Picasso96 will not open a screen narrower than this: it widens the bitmap
+// instead and the screen then scrolls, so narrower shapes are no use.
+inline constexpr int android_rtg_screen_min_width = 640;
+
+// A shape more than twice as tall as the screen is left out: shown full screen
+// it would be shrunk by more than half, and text on it is no longer readable.
+// Only screens under 512 lines lose anything, the 1024 high shape - an 854x480
+// phone gets 848x480, 1072x600 and 1424x800.
+inline constexpr int android_rtg_screen_max_downscale = 2;
+
+// Build the screen-shaped candidates for a screen_w x screen_h display (either
+// orientation; the landscape shape is used). Widths are rounded to a multiple
+// of 16, which Picasso96 wants - a fraction of a percent off the true ratio.
+// Same template, VRAM and budget semantics as android_rtg_build_modes().
+// out: array with room for android_rtg_screen_mode_count entries.
+//
+// Returns the number of candidates written; none for an unknown screen size.
+inline int android_rtg_build_screen_modes(const android_rtg_candidate& template_mode,
+	int screen_w, int screen_h, const long long usable_vram_bytes, const int max_modes,
+	android_rtg_candidate* out)
+{
+	if (screen_w < screen_h)
+		std::swap(screen_w, screen_h);
+	if (screen_w <= 0 || screen_h <= 0)
+		return 0;
+	const int depth = template_mode.depth > 0 ? template_mode.depth : android_rtg_default_depth;
+	const int refresh = template_mode.refresh > 0 ? template_mode.refresh : android_rtg_default_refresh;
+	int count = 0;
+	for (const int h : android_rtg_screen_heights) {
+		if (count >= max_modes)
+			break;
+		const long long w = ((static_cast<long long>(h) * screen_w / screen_h) + 8) & ~15LL;
+		if (w < android_rtg_screen_min_width || h > screen_h * android_rtg_screen_max_downscale)
+			continue;
 		if (w * h > usable_vram_bytes)
 			continue;
 		out[count] = template_mode;
