@@ -329,6 +329,15 @@ int main() {
         for (bool reacquire : {false, true})
             test_center_drift(raw, reacquire);
 
+    // A 100% joy-mouse dead zone leaves no travel: full deflection stays neutral
+    // instead of dividing by zero.
+    for (int value : {32767, -32768}) {
+        reset_fixture(); map_mouse(0);
+        currprefs.input_joymouse_deadzone = 100;
+        axis(0, SDL_GAMEPAD_AXIS_LEFTX, value);
+        assert(mouse_delta[0][0] == 0);
+    }
+
     // An unused digital-joystick deadzone must not reserve a mouse-mapped axis.
     reset_fixture(); map_mouse(0);
     currprefs.input_joystick_deadzone = 1;

@@ -5849,8 +5849,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 						state -= deadzone;
 						lightpen_deltanoreset[lpnum][unit] = 1;
 					}
+					// A dead zone covering the whole range leaves no travel: stay neutral
 					max -= deadzone;
-					delta = state * currprefs.input_joymouse_multiplier / (10 * max);
+					delta = max ? state * currprefs.input_joymouse_multiplier / (10 * max) : 0;
 				}
 				if (ie->data & IE_INVERT)
 					delta = -delta;
@@ -5940,8 +5941,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 					mouse_deltanoreset[joy][unit] = 1;
 				}
 				if (max > 0) {
+					// A dead zone covering the whole range leaves no travel: stay neutral
 					max -= deadzone;
-					delta = state * currprefs.input_joymouse_multiplier / max;
+					delta = max > 0 ? state * currprefs.input_joymouse_multiplier / max : 0;
 				} else {
 					delta = state;
 				}
@@ -6024,7 +6026,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 				} else {
 					state -= deadzone;
 				}
-				state = state * max / (max - deadzone);
+				// A dead zone covering the whole range leaves no travel: stay neutral
+				state = max != deadzone ? state * max / (max - deadzone) : 0;
 			} else {
 				max = 100;
 				relativecount[joy][unit] += state;
