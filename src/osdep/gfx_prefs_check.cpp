@@ -531,6 +531,9 @@ int check_prefs_changed_gfx()
 	//currprefs.win32_norecyclebin = changed_prefs.win32_norecyclebin;
 	currprefs.filesys_limit = changed_prefs.filesys_limit;
 	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
+	// Every .uaem read/write checks this flag per call, so it is safe to apply live.
+	// filesys_no_uaefsdb is not copied: it changes name translation for mounted volumes.
+	currprefs.filesys_custom_uaefsdb = changed_prefs.filesys_custom_uaefsdb;
 
 	//if (currprefs.win32_logfile != changed_prefs.win32_logfile) {
 	//	currprefs.win32_logfile = changed_prefs.win32_logfile;
