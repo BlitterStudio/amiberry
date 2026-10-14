@@ -1950,6 +1950,8 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 		xstart++;
 		xend++;
 	}
+	if ((xstart << RES_MAX) < src->xoffset)
+		return false;
 
 	srcbuf = src->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes + (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * src->pixbytes;
 
