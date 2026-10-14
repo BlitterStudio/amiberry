@@ -5061,9 +5061,22 @@ void inputdevice_do_kb_reset(void)
 #ifdef AMIBERRY
 static const int mousespeed_values[] = {2, 5, 10, 20, 40};
 
-int mousespeed;
-int i;
-int num_elements;
+// Next analog joy-mouse speed step above or below the current speed, wrapping
+// at either end. The current speed need not be a step (config default, GUI
+// slider, hand-edited config).
+static int step_joymouse_speed(const int current, const bool up)
+{
+	if (up) {
+		for (const int value : mousespeed_values)
+			if (value > current)
+				return value;
+		return mousespeed_values[0];
+	}
+	for (int n = static_cast<int>(std::size(mousespeed_values)) - 1; n >= 0; --n)
+		if (mousespeed_values[n] < current)
+			return mousespeed_values[n];
+	return mousespeed_values[std::size(mousespeed_values) - 1];
+}
 #endif
 
 // these need cpu trace data
@@ -5591,24 +5604,12 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 
 	case AKS_MOUSE_SPEED_DOWN:
-		num_elements = std::size(mousespeed_values);
-		mousespeed = currprefs.input_joymouse_multiplier;
-
-		i = find_in_array(mousespeed_values, num_elements, mousespeed);
-		i = i - 1;
-		if (i < 0) { i = num_elements - 1; }
-		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
+		changed_prefs.input_joymouse_multiplier = step_joymouse_speed(currprefs.input_joymouse_multiplier, false);
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 
 	case AKS_MOUSE_SPEED_UP:
-		num_elements = std::size(mousespeed_values);
-		mousespeed = currprefs.input_joymouse_multiplier;
-
-		i = find_in_array(mousespeed_values, num_elements, mousespeed);
-		i = i + 1;
-		if (i >= num_elements) { i = 0; }
-		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
+		changed_prefs.input_joymouse_multiplier = step_joymouse_speed(currprefs.input_joymouse_multiplier, true);
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 	case AKS_SHUTDOWN:
@@ -8679,7 +8680,7 @@ void inputdevice_updateconfig (struct uae_prefs *srcprefs, struct uae_prefs *dst
 bool inputdevice_devicechange (struct uae_prefs *prefs)
 {
 	int acc = input_acquired;
-	int idx;
+	int i, idx;
 	TCHAR *jports_name[MAX_JPORTS];
 	TCHAR *jports_configname[MAX_JPORTS];
 	int jportskb[MAX_JPORTS], jportscustom[MAX_JPORTS];
