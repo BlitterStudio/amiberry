@@ -1328,6 +1328,13 @@ static void cfgfile_adjust_path(TCHAR *path, int maxsz, struct multipath *mp)
 
 static void cfgfile_resolve_path_out_all(const TCHAR *path, TCHAR *out, int size, int type, bool save)
 {
+#ifdef AMIBERRY
+	// Empty means unset; a search-path lookup would turn it into the search folder itself.
+	if (!path[0]) {
+		out[0] = 0;
+		return;
+	}
+#endif
 	struct uae_prefs *p = &currprefs;
 	TCHAR *s = nullptr;
 	switch (type)
