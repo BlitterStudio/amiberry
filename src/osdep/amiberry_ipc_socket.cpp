@@ -3335,6 +3335,11 @@ static constexpr std::chrono::milliseconds IPC_MAX_SERVICE_TIME{5};
 // client that writes continuously cannot hold the emulation thread.
 static constexpr int IPC_MAX_READS_PER_PASS = 16;
 
+// Longest request line accepted. A client that sends more than this without a
+// newline is disconnected (after a best-effort error reply), so a malformed
+// controller cannot grow the receive buffer without limit.
+static constexpr size_t IPC_MAX_REQUEST_BYTES = 64 * 1024;
+
 static void CloseClient(IPCClient& client)
 {
 	if (client.fd >= 0) {
@@ -3418,6 +3423,11 @@ static int ServiceClient(IPCClient& client)
 		}
 	}
 	client.pending.erase(0, start);
+
+	if (keep_open && client.pending.size() > IPC_MAX_REQUEST_BYTES) {
+		SendResponse(client.fd, make_response(false, {"Request too long"}));
+		keep_open = false;
+	}
 
 	if (!keep_open) {
 		CloseClient(client);

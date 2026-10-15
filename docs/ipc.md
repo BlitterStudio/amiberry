@@ -32,7 +32,8 @@ running build.
 A connection stays open until the client closes it. A controller can send many
 requests over one connection or open a new connection per request, and up to
 16 controllers can be connected at once. Requests on one connection are
-answered in order.
+answered in order. Amiberry closes a connection whose request grows past
+64 KiB without a newline.
 
 Commands run on the emulation thread between frames. Amiberry answers every
 request that is waiting, then keeps listening for a few milliseconds so a
