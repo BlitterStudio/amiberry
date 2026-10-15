@@ -34,7 +34,9 @@
 #include <cstring>
 #include <map>
 #include <algorithm>
+#include <chrono>
 #include <mutex>
+#include <vector>
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -3276,96 +3278,191 @@ static void ConfigureClientSocket(int client_socket)
 	}
 }
 
-static bool SendResponse(int client_socket, const std::string& response)
-{
-	const char* data = response.c_str();
-	size_t remaining = response.length();
+// A connected controller. Connections stay open across IPCHandle() calls
+// until the client closes them, so a controller can keep one connection for
+// many requests or open one connection per request.
+struct IPCClient {
+	int fd;
+	std::string pending; // received bytes not handled yet
+	std::string output;  // reply bytes the socket has not accepted yet
+	bool eof;            // the client has stopped sending
+};
 
-	while (remaining > 0) {
-		const ssize_t written = send(client_socket, data, remaining, MSG_NOSIGNAL);
+static std::vector<IPCClient> ipc_clients;
+static constexpr size_t IPC_MAX_CLIENTS = 16;
+
+// Commands run on the emulation thread, which calls IPCHandle() once per
+// frame. After handling a request, keep listening briefly for the next one so
+// a controller that sends requests back to back is not limited to one request
+// per frame. No new command starts after IPC_MAX_SERVICE_TIME, except that
+// each client with a request waiting gets at least one per pass.
+static constexpr std::chrono::milliseconds IPC_FOLLOWUP_WAIT{2};
+static constexpr std::chrono::milliseconds IPC_MAX_SERVICE_TIME{5};
+
+// Upper bound on reads (4 KiB each) from one client per service pass, so a
+// client that writes continuously cannot hold the emulation thread.
+static constexpr int IPC_MAX_READS_PER_PASS = 16;
+
+// Longest request line accepted. A client that sends more than this without a
+// newline is disconnected (after a best-effort error reply), so a malformed
+// controller cannot grow the receive buffer without limit.
+static constexpr size_t IPC_MAX_REQUEST_BYTES = 64 * 1024;
+
+static void CloseClient(IPCClient& client)
+{
+	if (client.fd >= 0) {
+		close(client.fd);
+		client.fd = -1;
+	}
+}
+
+// Write as much queued output as the socket accepts without blocking.
+// Returns false if the connection failed.
+static bool FlushOutput(IPCClient& client)
+{
+	size_t sent = 0;
+	while (sent < client.output.size()) {
+		const ssize_t written = send(client.fd, client.output.data() + sent,
+			client.output.size() - sent, MSG_NOSIGNAL);
 		if (written > 0) {
-			data += written;
-			remaining -= written;
+			sent += static_cast<size_t>(written);
 			continue;
 		}
 		if (written < 0 && errno == EINTR) {
 			continue;
 		}
 		if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-			struct pollfd pfd{};
-			pfd.fd = client_socket;
-			pfd.events = POLLOUT;
-
-			int ret;
-			do {
-				ret = poll(&pfd, 1, 100);
-			} while (ret < 0 && errno == EINTR);
-
-			if (ret > 0 && (pfd.revents & POLLOUT)) {
-				continue;
-			}
+			break;
 		}
 		return false;
 	}
-
+	client.output.erase(0, sent);
 	return true;
 }
 
-// Handle a single client connection
-static void HandleClient(int client_socket)
+// Accept every queued connection, up to the client limit.
+// Returns true if at least one connection was accepted.
+static bool AcceptClients()
 {
+	bool accepted = false;
+	while (ipc_clients.size() < IPC_MAX_CLIENTS) {
+		const int client_socket = accept(server_socket, nullptr, nullptr);
+		if (client_socket < 0) {
+			if (errno == EINTR) {
+				continue;
+			}
+			break;
+		}
+		ConfigureClientSocket(client_socket);
+		ipc_clients.push_back({client_socket, {}, {}, false});
+		accepted = true;
+	}
+	return accepted;
+}
+
+// A complete request is waiting and nothing blocks answering it.
+static bool HasBacklog(const IPCClient& client)
+{
+	return client.output.empty() && client.pending.find('\n') != std::string::npos;
+}
+
+// QUIT ends the process, so this is the one place where waiting for a client
+// is acceptable: give the reply a bounded chance to go out before closing.
+static void FlushBeforeQuit(IPCClient& client)
+{
+	const auto give_up = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+	while (FlushOutput(client) && !client.output.empty()
+		&& std::chrono::steady_clock::now() < give_up) {
+		pollfd pfd{client.fd, POLLOUT, 0};
+		poll(&pfd, 1, 50);
+	}
+}
+
+// Send queued replies, then read what the client has sent and answer complete
+// lines. Nothing ever waits for the socket: while a reply is still queued, the
+// client's further requests stay unread, so a controller that stops reading
+// replies is held back by its own socket instead of stalling emulation.
+// Requests are answered until the deadline passes, but at least one per call,
+// so every client makes progress; the rest wait for the next call, and nothing
+// more is read from the client until they are answered.
+// Closes the client once it has stopped sending and every reply is out, and
+// on error, oversized request, or QUIT.
+// Returns true if a queued reply finished sending or a command ran, so the
+// caller keeps listening for the client's next request.
+static bool ServiceClient(IPCClient& client, std::chrono::steady_clock::time_point deadline)
+{
+	const bool drained = !client.output.empty();
+	if (!FlushOutput(client)) {
+		CloseClient(client);
+		return false;
+	}
+	if (!client.output.empty()) {
+		return false;
+	}
+
 	char buffer[4096];
-	std::string accumulated;
-	bool quit_after_reply = false;
+	const bool backlog = client.pending.find('\n') != std::string::npos;
+	for (int reads = 0; !backlog && !client.eof && reads < IPC_MAX_READS_PER_PASS; ++reads) {
+		const ssize_t n = read(client.fd, buffer, sizeof(buffer));
+		if (n > 0) {
+			client.pending.append(buffer, static_cast<size_t>(n));
+			continue;
+		}
+		if (n < 0 && errno == EINTR) {
+			continue;
+		}
+		if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			break;
+		}
+		// End of stream or error. Lines already received are still answered;
+		// a client that half-closes after sending can read the replies.
+		client.eof = true;
+	}
 
-	ConfigureClientSocket(client_socket);
+	int processed = 0;
+	size_t start = 0;
+	size_t pos;
+	while (client.output.empty()
+		&& (processed == 0 || std::chrono::steady_clock::now() < deadline)
+		&& (pos = client.pending.find('\n', start)) != std::string::npos) {
+		std::string line = client.pending.substr(start, pos - start);
+		start = pos + 1;
 
-	// Read with timeout
-	struct pollfd pfd{};
-	pfd.fd = client_socket;
-	pfd.events = POLLIN;
+		// Remove trailing \r if present
+		if (!line.empty() && line.back() == '\r') {
+			line.pop_back();
+		}
+		if (line.empty()) {
+			continue;
+		}
 
-	while (!quit_after_reply) {
-		int ret = poll(&pfd, 1, 100); // 100ms timeout
-		if (ret <= 0) break;
-
-		ssize_t n = read(client_socket, buffer, sizeof(buffer) - 1);
-		if (n <= 0) break;
-
-		buffer[n] = '\0';
-		accumulated += buffer;
-
-		// Process complete lines
-		size_t pos;
-		while ((pos = accumulated.find('\n')) != std::string::npos) {
-			std::string line = accumulated.substr(0, pos);
-			accumulated.erase(0, pos + 1);
-
-			// Remove trailing \r if present
-			if (!line.empty() && line.back() == '\r') {
-				line.pop_back();
-			}
-
-			if (!line.empty()) {
-				std::string response = ProcessCommand(line);
-				quit_after_reply = ipc_quit_requested;
-				SendResponse(client_socket, response);
-				if (quit_after_reply) {
-					break;
-				}
-			}
+		client.output += ProcessCommand(line);
+		++processed;
+		if (ipc_quit_requested) {
+			FlushBeforeQuit(client);
+			shutdown(client.fd, SHUT_WR);
+			CloseClient(client);
+			return true;
+		}
+		if (!FlushOutput(client)) {
+			CloseClient(client);
+			return true;
 		}
 	}
+	client.pending.erase(0, start);
 
-	if (quit_after_reply) {
-		shutdown(client_socket, SHUT_WR);
+	const size_t last_newline = client.pending.rfind('\n');
+	const size_t unterminated = last_newline == std::string::npos
+		? client.pending.size()
+		: client.pending.size() - last_newline - 1;
+	if (unterminated > IPC_MAX_REQUEST_BYTES) {
+		client.output += make_response(false, {"Request too long"});
+		FlushOutput(client);
+		CloseClient(client);
+	} else if (client.eof && client.output.empty() && last_newline == std::string::npos) {
+		CloseClient(client);
 	}
-	close(client_socket);
-
-	if (quit_after_reply) {
-		ipc_quit_requested = false;
-		uae_quit();
-	}
+	return drained || processed > 0;
 }
 
 // Helper: Check if a socket is stale (no process listening)
@@ -3505,7 +3602,7 @@ void Amiberry::IPC::IPCSetup()
 	}
 
 	// Listen
-	if (listen(server_socket, 5) < 0) {
+	if (listen(server_socket, SOMAXCONN) < 0) {
 		std::cerr << "IPC: Failed to listen on socket: " << strerror(errno) << std::endl;
 		close(server_socket);
 		server_socket = -1;
@@ -3527,6 +3624,11 @@ void Amiberry::IPC::IPCSetup()
 
 void Amiberry::IPC::IPCCleanUp()
 {
+	for (auto& client : ipc_clients) {
+		CloseClient(client);
+	}
+	ipc_clients.clear();
+
 	if (server_socket >= 0) {
 		close(server_socket);
 		server_socket = -1;
@@ -3547,20 +3649,77 @@ void Amiberry::IPC::IPCHandle()
 
 	if (server_socket < 0) return;
 
-	// Check for incoming connections (non-blocking)
-	struct pollfd pfd{};
-	pfd.fd = server_socket;
-	pfd.events = POLLIN;
+	using clock = std::chrono::steady_clock;
+	const auto started = clock::now();
+	auto last_activity = started;
+	bool active = false;
+	std::vector<pollfd> fds;
+	fds.reserve(IPC_MAX_CLIENTS + 1);
 
-	int ret = poll(&pfd, 1, 0); // Non-blocking
-	if (ret > 0 && (pfd.revents & POLLIN)) {
-		struct sockaddr_un client_addr{};
-		socklen_t client_len = sizeof(client_addr);
-
-		int client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &client_len);
-		if (client_socket >= 0) {
-			HandleClient(client_socket);
+	while (!ipc_quit_requested) {
+		// Without activity, only take what is already waiting. After a request
+		// or a new connection, wait a little for the next request.
+		const auto hard_deadline = started + IPC_MAX_SERVICE_TIME;
+		auto deadline = hard_deadline;
+		if (active) {
+			deadline = std::min(deadline, last_activity + IPC_FOLLOWUP_WAIT);
 		}
+		const auto now = clock::now();
+		if (now >= deadline) {
+			break;
+		}
+
+		fds.clear();
+		const bool can_accept = ipc_clients.size() < IPC_MAX_CLIENTS;
+		if (can_accept) {
+			fds.push_back({server_socket, POLLIN, 0});
+		}
+		const size_t first_client = fds.size();
+		bool backlog = false;
+		for (const auto& client : ipc_clients) {
+			const short events = client.output.empty() ? POLLIN : POLLOUT;
+			fds.push_back({client.fd, events, 0});
+			backlog = backlog || HasBacklog(client);
+		}
+
+		// Requests left over from an earlier pass are answered without waiting.
+		const int timeout_ms = active && !backlog
+			? static_cast<int>(std::chrono::ceil<std::chrono::milliseconds>(deadline - now).count())
+			: 0;
+		const int ret = poll(fds.data(), static_cast<nfds_t>(fds.size()), timeout_ms);
+		if (ret < 0 && errno == EINTR) {
+			continue;
+		}
+		if (ret < 0 || (ret == 0 && !backlog)) {
+			break;
+		}
+
+		bool progressed = false;
+		for (size_t i = first_client; i < fds.size() && !ipc_quit_requested; ++i) {
+			IPCClient& client = ipc_clients[i - first_client];
+			if ((fds[i].revents != 0 || HasBacklog(client))
+				&& ServiceClient(client, hard_deadline)) {
+				progressed = true;
+			}
+		}
+		ipc_clients.erase(
+			std::remove_if(ipc_clients.begin(), ipc_clients.end(),
+				[](const IPCClient& client) { return client.fd < 0; }),
+			ipc_clients.end());
+
+		if (can_accept && (fds[0].revents & POLLIN) && !ipc_quit_requested && AcceptClients()) {
+			progressed = true;
+		}
+
+		if (progressed) {
+			active = true;
+			last_activity = clock::now();
+		}
+	}
+
+	if (ipc_quit_requested) {
+		ipc_quit_requested = false;
+		uae_quit();
 	}
 }
 

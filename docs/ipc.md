@@ -29,6 +29,21 @@ A response starts with `OK` or `ERROR`; any following tab-separated fields are
 command-specific. The `HELP` command lists all commands supported by the
 running build.
 
+A connection stays open until the client closes it. A controller can send many
+requests over one connection or open a new connection per request, and up to
+16 controllers can be connected at once. Requests on one connection are
+answered in order. Amiberry closes a connection whose request grows past
+64 KiB without a newline.
+
+Commands run on the emulation thread between frames. Amiberry answers waiting
+requests for a few milliseconds per frame, at least one per connection, and
+keeps listening briefly so a controller that sends its next request as soon as
+it reads the reply is not limited to one request per frame. Requests beyond
+that budget wait for the next frame. Several requests can therefore take effect
+in the same emulated frame. A controller that needs the Amiga to observe a
+state, such as a key or mouse button being held down, must wait between the
+press and the release instead of relying on one request per frame.
+
 ## Screenshot-driven GUI automation
 
 The safe controller sequence is:
