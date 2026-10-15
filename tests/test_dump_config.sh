@@ -144,7 +144,9 @@ check "$work/operand_err.txt" 'incomplete command line'
 # A 68030 from the WHDLoad database must reach the emulated CPU, with 32-bit
 # addressing. cpu_type has no 68030 value, so WHDBooter used to drop it and
 # run AGA games on a 68020. Runs last: it creates the WHDBoot tree that the
-# side-effect checks above must not see.
+# side-effect checks above must not see. Portable mode ignores the environment
+# and keeps WHDBoot in the install tree, so the database cannot be isolated
+# there; the check is skipped rather than write into the install.
 host_path()
 {
 	if command -v cygpath > /dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
@@ -152,19 +154,24 @@ host_path()
 export AMIBERRY_HOME_DIR="$(host_path "$work/whd-home")" XDG_DATA_HOME="$work/whd-xdg"
 export LOCALAPPDATA="$(host_path "$work/whd-local-app-data")" APPDATA="$(host_path "$work/whd-app-data")"
 unset AMIBERRY_CONFIG_DIR XDG_CONFIG_HOME
-whdboot="$(host_path "$("$bin" --dump-paths | sed -n 's/^whdboot_path=//p' | tr -d '\r')")"
-case "$whdboot" in
-	"$(host_path "$work")"/*) ;;
-	*) echo "WHDBoot path escaped the scratch directory: $whdboot" >&2; exit 1 ;;
-esac
-mkdir -p "$whdboot/game-data"
-printf '%s\n' '{"schema_version":2,"games":[{"filename":"Cpu030_v1.0_AGA","name":"Cpu030","subpath":"Cpu030",' \
-	'"slave_count":1,"slave_default":"Cpu030.slave","slave_libraries":false,' \
-	'"slaves":[{"filename":"Cpu030.slave","datapath":""}],"hardware":{"chipset":"aga","cpu":"68030"}}]}' \
-	> "$whdboot/game-data/whdload_db.json"
-printf 'not-really-an-archive' > "$work/Cpu030_v1.0_AGA.lha"
-"$bin" --dump-config --autoload "$work/Cpu030_v1.0_AGA.lha" > "$work/cpu030.txt" 2>/dev/null
-check "$work/cpu030.txt" '^cpu_model=68030$'
-check "$work/cpu030.txt" '^cpu_24bit_addressing=false$'
+"$bin" --dump-paths | tr -d '\r' > "$work/whd-paths.txt"
+if grep -q '^portable_mode=1$' "$work/whd-paths.txt"; then
+	echo "68030 WHDLoad database check skipped: binary runs in portable mode"
+else
+	whdboot="$(host_path "$(sed -n 's/^whdboot_path=//p' "$work/whd-paths.txt")")"
+	case "$whdboot" in
+		"$(host_path "$work")"/*) ;;
+		*) echo "WHDBoot path escaped the scratch directory: $whdboot" >&2; exit 1 ;;
+	esac
+	mkdir -p "$whdboot/game-data"
+	printf '%s\n' '{"schema_version":2,"games":[{"filename":"Cpu030_v1.0_AGA","name":"Cpu030","subpath":"Cpu030",' \
+		'"slave_count":1,"slave_default":"Cpu030.slave","slave_libraries":false,' \
+		'"slaves":[{"filename":"Cpu030.slave","datapath":""}],"hardware":{"chipset":"aga","cpu":"68030"}}]}' \
+		> "$whdboot/game-data/whdload_db.json"
+	printf 'not-really-an-archive' > "$work/Cpu030_v1.0_AGA.lha"
+	"$bin" --dump-config --autoload "$work/Cpu030_v1.0_AGA.lha" > "$work/cpu030.txt" 2>/dev/null
+	check "$work/cpu030.txt" '^cpu_model=68030$'
+	check "$work/cpu030.txt" '^cpu_24bit_addressing=false$'
+fi
 
 echo "dump-config behavioral test passed"
