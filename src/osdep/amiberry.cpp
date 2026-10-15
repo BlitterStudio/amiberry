@@ -6190,9 +6190,6 @@ void target_default_options(uae_prefs* p, const int type)
 	if (amiberry_options.default_vertical_centering)
 		p->gfx_ycenter = 2;
 
-	if (amiberry_options.default_frameskip)
-		p->gfx_framerate = 2;
-
 	p->soundcard_default = true;
 
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
@@ -7611,8 +7608,6 @@ bool save_amiberry_settings_with_result()
 	// Enable Auto Resolution Switching by default?
 	write_int_option("default_gfx_autoresolution", amiberry_options.default_gfx_autoresolution);
 
-	// Enable frameskip by default?
-	write_bool_option("default_frameskip", amiberry_options.default_frameskip);
 	write_bool_option("perf_log", amiberry_options.perf_log);
 	write_bool_option("slow_host_warning", amiberry_options.slow_host_warning);
 	write_bool_option("use_adpf", amiberry_options.use_adpf);
@@ -8107,7 +8102,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
 		ret |= cfgfile_intval(option, value, "default_gfx_autoresolution", &amiberry_options.default_gfx_autoresolution, 1);
-		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
 		ret |= cfgfile_yesno(option, value, "perf_log", &amiberry_options.perf_log);
 		ret |= cfgfile_yesno(option, value, "slow_host_warning", &amiberry_options.slow_host_warning);
 		ret |= cfgfile_yesno(option, value, "use_adpf", &amiberry_options.use_adpf);

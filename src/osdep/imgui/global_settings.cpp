@@ -552,8 +552,6 @@ void render_panel_global_settings()
 		render_combo_row("Auto resolution", &amiberry_options.default_gfx_autoresolution,
 			enabled_options, IM_ARRAYSIZE(enabled_options),
 			"Enable native display auto-resolution switching by default.");
-		render_bool_row("Frameskip", &amiberry_options.default_frameskip,
-			"Enable default frameskip for slower hosts.");
 		render_bool_row("Correct aspect ratio", &amiberry_options.default_correct_aspect_ratio,
 			"Preserve the Amiga display aspect ratio by default.");
 		render_bool_row("Auto crop", &amiberry_options.default_auto_crop,
