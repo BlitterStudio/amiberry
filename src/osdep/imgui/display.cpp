@@ -50,9 +50,6 @@ void render_panel_display() {
                   changed_prefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE;
 #endif
 
-    // Logic Check: Refresh Rate Slider / FPS Adj
-    bool refresh_enabled = !changed_prefs.cpu_memory_cycle_exact;
-
     // Logic Check: Resolution & Line Mode Groups
     bool autoresol_enabled = changed_prefs.gfx_autoresolution > 0;
     bool linemode_enabled = !autoresol_enabled;
@@ -451,25 +448,21 @@ void render_panel_display() {
 
     ImGui::Spacing();
 
-    // Refresh Slider + PAL/NTSC
-    // WinUAE: Label "Refresh:" -> Slider -> Dropdown "PAL"
-    if (ImGui::BeginTable("RefreshRowTable", 3, ImGuiTableFlags_SizingFixedFit)) {
+    // Video standard + FPS adj
+    // WinUAE's "Refresh" (frameskip) slider is not shown: since the WinUAE 6 core, gfx_framerate
+    // no longer skips any drawing or presentation, so the control had no visible effect.
+    if (ImGui::BeginTable("RefreshRowTable", 4, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 0.7f);
         ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-        ImGui::TableSetupColumn("combo", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        // Own column for the lock checkbox: placed after the value field, it fell outside the
+        // fixed-width column and was clipped away.
+        ImGui::TableSetupColumn("lock", ImGuiTableColumnFlags_WidthFixed);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("Refresh:");
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(BUTTON_WIDTH);
-        if (!refresh_enabled) ImGui::BeginDisabled();
-        ImGui::SliderInt("##RefreshSld", &changed_prefs.gfx_framerate, 1, 10, ""); // 1=Every, 2=Every 2nd
-        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-        ShowHelpMarker("Frame skip rate: 1=every frame (no skip), 2=every other frame, etc. Disabled in cycle-exact mode");
-        if (!refresh_enabled) ImGui::EndDisabled();
-
+        ImGui::Text("Standard:");
         ImGui::TableNextColumn();
         const char *video_standards[] = {"PAL", "NTSC"};
         int current_vid_Standard = changed_prefs.ntscmode ? 1 : 0;
@@ -498,6 +491,12 @@ void render_panel_display() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         ShowHelpMarker("Video standard: PAL (50Hz, European) or NTSC (60Hz, American/Japanese)");
 
+        // WinUAE selects the entry in its refresh rate list; Amiberry only has the PAL/NTSC selector above,
+        // so edit the entry of the selected video standard. cr_selected defaults to -1, never index with it.
+        const int cr_index = changed_prefs.ntscmode ? CHIPSET_REFRESH_NTSC : CHIPSET_REFRESH_PAL;
+        changed_prefs.cr_selected = cr_index;
+        struct chipset_refresh *cr = &changed_prefs.cr[cr_index];
+
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -505,24 +504,45 @@ void render_panel_display() {
         ImGui::TableNextColumn();
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         // WinUAE: FPS adj slider/text enabled by cr->locked, not by cpu_memory_cycle_exact
-        bool fps_adj_enabled = changed_prefs.cr[changed_prefs.cr_selected].locked;
+        const bool fps_adj_enabled = cr->locked;
+        bool rate_edited = false;
         if (!fps_adj_enabled) ImGui::BeginDisabled();
-        ImGui::SliderFloat("##FPSAdjSld", &changed_prefs.cr[changed_prefs.cr_selected].rate, 1.0f, 100.0f, "");
+        int rate_pos = static_cast<int>(cr->rate + 0.5f);
+        if (ImGui::SliderInt("##FPSAdjSld", &rate_pos, 1, 99, "")) {
+            cr->rate = static_cast<float>(rate_pos);
+            rate_edited = true;
+        }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-        ShowHelpMarker("Adjust frame rate adjustment percentage. Only active when locked checkbox is enabled");
+        ShowHelpMarker("Emulated refresh rate in Hz. Only used when the checkbox is enabled");
         if (!fps_adj_enabled) ImGui::EndDisabled();
         ImGui::TableNextColumn();
 
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%.6f", changed_prefs.cr[changed_prefs.cr_selected].rate);
         if (!fps_adj_enabled) ImGui::BeginDisabled();
-        ImGui::InputText("##FPSVal", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat("##FPSVal", &cr->rate, 0.0f, 0.0f, "%.6f");
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            rate_edited = true;
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         if (!fps_adj_enabled) ImGui::EndDisabled();
-        ImGui::SameLine();
-        AmigaCheckbox("##FPSLocked", (bool *) &changed_prefs.cr[changed_prefs.cr_selected].locked);
-        ShowHelpMarker("Lock the FPS adjustment to a fixed value. When unlocked, automatic adjustment is used");
+        ImGui::TableNextColumn();
+        bool locked = cr->locked;
+        if (AmigaCheckbox("##FPSLocked", &locked)) {
+            cr->locked = locked;
+            if (locked) {
+                cr->inuse = true;
+            } else if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
+                cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0) {
+                // WinUAE: deactivate if plain uncustomized PAL or NTSC
+                cr->inuse = false;
+            }
+        }
+        ShowHelpMarker("Use the FPS adj. rate instead of the standard PAL (50 Hz) or NTSC (60 Hz) rate");
+        // WinUAE: unlocked PAL/NTSC entries keep their standard rate; out of range values are reset.
+        if (!cr->locked) {
+            cr->rate = cr_index == CHIPSET_REFRESH_NTSC ? 60.0f : 50.0f;
+        } else if (rate_edited && ((cr->rate > 0.0f && cr->rate < 1.0f) || cr->rate > 300.0f)) {
+            cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
+        }
         ImGui::EndTable();
     }
 

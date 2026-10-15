@@ -1423,7 +1423,6 @@ struct amiberry_options
 	bool default_vertical_centering = false;
 	int default_scaling_method = -1;
 	int default_gfx_autoresolution = 0;
-	bool default_frameskip = false;
 	bool perf_log = false;
 	bool slow_host_warning = true;
 	bool use_adpf = true;
