@@ -3387,15 +3387,17 @@ static void FlushBeforeQuit(IPCClient& client)
 // more is read from the client until they are answered.
 // Closes the client once it has stopped sending and every reply is out, and
 // on error, oversized request, or QUIT.
-// Returns the number of commands processed.
-static int ServiceClient(IPCClient& client, std::chrono::steady_clock::time_point deadline)
+// Returns true if a queued reply finished sending or a command ran, so the
+// caller keeps listening for the client's next request.
+static bool ServiceClient(IPCClient& client, std::chrono::steady_clock::time_point deadline)
 {
+	const bool drained = !client.output.empty();
 	if (!FlushOutput(client)) {
 		CloseClient(client);
-		return 0;
+		return false;
 	}
 	if (!client.output.empty()) {
-		return 0;
+		return false;
 	}
 
 	char buffer[4096];
@@ -3440,11 +3442,11 @@ static int ServiceClient(IPCClient& client, std::chrono::steady_clock::time_poin
 			FlushBeforeQuit(client);
 			shutdown(client.fd, SHUT_WR);
 			CloseClient(client);
-			return processed;
+			return true;
 		}
 		if (!FlushOutput(client)) {
 			CloseClient(client);
-			return processed;
+			return true;
 		}
 	}
 	client.pending.erase(0, start);
@@ -3460,7 +3462,7 @@ static int ServiceClient(IPCClient& client, std::chrono::steady_clock::time_poin
 	} else if (client.eof && client.output.empty() && last_newline == std::string::npos) {
 		CloseClient(client);
 	}
-	return processed;
+	return drained || processed > 0;
 }
 
 // Helper: Check if a socket is stale (no process listening)
@@ -3696,7 +3698,7 @@ void Amiberry::IPC::IPCHandle()
 		for (size_t i = first_client; i < fds.size() && !ipc_quit_requested; ++i) {
 			IPCClient& client = ipc_clients[i - first_client];
 			if ((fds[i].revents != 0 || HasBacklog(client))
-				&& ServiceClient(client, hard_deadline) > 0) {
+				&& ServiceClient(client, hard_deadline)) {
 				progressed = true;
 			}
 		}
