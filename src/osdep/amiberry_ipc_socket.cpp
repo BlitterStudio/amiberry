@@ -3278,47 +3278,14 @@ static void ConfigureClientSocket(int client_socket)
 	}
 }
 
-static bool SendResponse(int client_socket, const std::string& response)
-{
-	const char* data = response.c_str();
-	size_t remaining = response.length();
-
-	while (remaining > 0) {
-		const ssize_t written = send(client_socket, data, remaining, MSG_NOSIGNAL);
-		if (written > 0) {
-			data += written;
-			remaining -= written;
-			continue;
-		}
-		if (written < 0 && errno == EINTR) {
-			continue;
-		}
-		if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-			struct pollfd pfd{};
-			pfd.fd = client_socket;
-			pfd.events = POLLOUT;
-
-			int ret;
-			do {
-				ret = poll(&pfd, 1, 100);
-			} while (ret < 0 && errno == EINTR);
-
-			if (ret > 0 && (pfd.revents & POLLOUT)) {
-				continue;
-			}
-		}
-		return false;
-	}
-
-	return true;
-}
-
 // A connected controller. Connections stay open across IPCHandle() calls
 // until the client closes them, so a controller can keep one connection for
 // many requests or open one connection per request.
 struct IPCClient {
 	int fd;
-	std::string pending;
+	std::string pending; // received bytes not handled yet
+	std::string output;  // reply bytes the socket has not accepted yet
+	bool eof;            // the client has stopped sending
 };
 
 static std::vector<IPCClient> ipc_clients;
@@ -3348,6 +3315,30 @@ static void CloseClient(IPCClient& client)
 	}
 }
 
+// Write as much queued output as the socket accepts without blocking.
+// Returns false if the connection failed.
+static bool FlushOutput(IPCClient& client)
+{
+	size_t sent = 0;
+	while (sent < client.output.size()) {
+		const ssize_t written = send(client.fd, client.output.data() + sent,
+			client.output.size() - sent, MSG_NOSIGNAL);
+		if (written > 0) {
+			sent += static_cast<size_t>(written);
+			continue;
+		}
+		if (written < 0 && errno == EINTR) {
+			continue;
+		}
+		if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			break;
+		}
+		return false;
+	}
+	client.output.erase(0, sent);
+	return true;
+}
+
 // Accept every queued connection, up to the client limit.
 // Returns true if at least one connection was accepted.
 static bool AcceptClients()
@@ -3362,21 +3353,31 @@ static bool AcceptClients()
 			break;
 		}
 		ConfigureClientSocket(client_socket);
-		ipc_clients.push_back({client_socket, {}});
+		ipc_clients.push_back({client_socket, {}, {}, false});
 		accepted = true;
 	}
 	return accepted;
 }
 
-// Read what the client has sent and answer every complete line.
-// Closes the client on end of stream, error, or QUIT.
+// Send queued replies, then read what the client has sent and answer complete
+// lines. Nothing ever waits for the socket: while a reply is still queued, the
+// client's further requests stay unread, so a controller that stops reading
+// replies is held back by its own socket instead of stalling emulation.
+// Closes the client once it has stopped sending and every reply is out, and
+// on error, oversized request, or QUIT.
 // Returns the number of commands processed.
 static int ServiceClient(IPCClient& client)
 {
-	char buffer[4096];
-	bool keep_open = true;
+	if (!FlushOutput(client)) {
+		CloseClient(client);
+		return 0;
+	}
+	if (!client.output.empty()) {
+		return 0;
+	}
 
-	for (int reads = 0; reads < IPC_MAX_READS_PER_PASS; ++reads) {
+	char buffer[4096];
+	for (int reads = 0; !client.eof && reads < IPC_MAX_READS_PER_PASS; ++reads) {
 		const ssize_t n = read(client.fd, buffer, sizeof(buffer));
 		if (n > 0) {
 			client.pending.append(buffer, static_cast<size_t>(n));
@@ -3390,14 +3391,13 @@ static int ServiceClient(IPCClient& client)
 		}
 		// End of stream or error. Lines already received are still answered;
 		// a client that half-closes after sending can read the replies.
-		keep_open = false;
-		break;
+		client.eof = true;
 	}
 
 	int processed = 0;
 	size_t start = 0;
 	size_t pos;
-	while ((pos = client.pending.find('\n', start)) != std::string::npos) {
+	while (client.output.empty() && (pos = client.pending.find('\n', start)) != std::string::npos) {
 		std::string line = client.pending.substr(start, pos - start);
 		start = pos + 1;
 
@@ -3409,27 +3409,30 @@ static int ServiceClient(IPCClient& client)
 			continue;
 		}
 
-		const std::string response = ProcessCommand(line);
+		client.output += ProcessCommand(line);
 		++processed;
-		const bool sent = SendResponse(client.fd, response);
+		const bool sent = FlushOutput(client);
 		if (ipc_quit_requested) {
 			shutdown(client.fd, SHUT_WR);
-			keep_open = false;
-			break;
+			CloseClient(client);
+			return processed;
 		}
 		if (!sent) {
-			keep_open = false;
-			break;
+			CloseClient(client);
+			return processed;
 		}
 	}
 	client.pending.erase(0, start);
 
-	if (keep_open && client.pending.size() > IPC_MAX_REQUEST_BYTES) {
-		SendResponse(client.fd, make_response(false, {"Request too long"}));
-		keep_open = false;
-	}
-
-	if (!keep_open) {
+	const size_t last_newline = client.pending.rfind('\n');
+	const size_t unterminated = last_newline == std::string::npos
+		? client.pending.size()
+		: client.pending.size() - last_newline - 1;
+	if (unterminated > IPC_MAX_REQUEST_BYTES) {
+		client.output += make_response(false, {"Request too long"});
+		FlushOutput(client);
+		CloseClient(client);
+	} else if (client.eof && client.output.empty()) {
 		CloseClient(client);
 	}
 	return processed;
@@ -3648,7 +3651,8 @@ void Amiberry::IPC::IPCHandle()
 		}
 		const size_t first_client = fds.size();
 		for (const auto& client : ipc_clients) {
-			fds.push_back({client.fd, POLLIN, 0});
+			const short events = client.output.empty() ? POLLIN : POLLOUT;
+			fds.push_back({client.fd, events, 0});
 		}
 
 		const int ret = poll(fds.data(), static_cast<nfds_t>(fds.size()), timeout_ms);
