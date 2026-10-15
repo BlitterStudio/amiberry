@@ -3294,7 +3294,8 @@ static constexpr size_t IPC_MAX_CLIENTS = 16;
 // Commands run on the emulation thread, which calls IPCHandle() once per
 // frame. After handling a request, keep listening briefly for the next one so
 // a controller that sends requests back to back is not limited to one request
-// per frame. The total time spent per call stays bounded.
+// per frame. No new command starts after IPC_MAX_SERVICE_TIME, except that
+// each client with a request waiting gets at least one per pass.
 static constexpr std::chrono::milliseconds IPC_FOLLOWUP_WAIT{2};
 static constexpr std::chrono::milliseconds IPC_MAX_SERVICE_TIME{5};
 
@@ -3359,14 +3360,35 @@ static bool AcceptClients()
 	return accepted;
 }
 
+// A complete request is waiting and nothing blocks answering it.
+static bool HasBacklog(const IPCClient& client)
+{
+	return client.output.empty() && client.pending.find('\n') != std::string::npos;
+}
+
+// QUIT ends the process, so this is the one place where waiting for a client
+// is acceptable: give the reply a bounded chance to go out before closing.
+static void FlushBeforeQuit(IPCClient& client)
+{
+	const auto give_up = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+	while (FlushOutput(client) && !client.output.empty()
+		&& std::chrono::steady_clock::now() < give_up) {
+		pollfd pfd{client.fd, POLLOUT, 0};
+		poll(&pfd, 1, 50);
+	}
+}
+
 // Send queued replies, then read what the client has sent and answer complete
 // lines. Nothing ever waits for the socket: while a reply is still queued, the
 // client's further requests stay unread, so a controller that stops reading
 // replies is held back by its own socket instead of stalling emulation.
+// Requests are answered until the deadline passes, but at least one per call,
+// so every client makes progress; the rest wait for the next call, and nothing
+// more is read from the client until they are answered.
 // Closes the client once it has stopped sending and every reply is out, and
 // on error, oversized request, or QUIT.
 // Returns the number of commands processed.
-static int ServiceClient(IPCClient& client)
+static int ServiceClient(IPCClient& client, std::chrono::steady_clock::time_point deadline)
 {
 	if (!FlushOutput(client)) {
 		CloseClient(client);
@@ -3377,7 +3399,8 @@ static int ServiceClient(IPCClient& client)
 	}
 
 	char buffer[4096];
-	for (int reads = 0; !client.eof && reads < IPC_MAX_READS_PER_PASS; ++reads) {
+	const bool backlog = client.pending.find('\n') != std::string::npos;
+	for (int reads = 0; !backlog && !client.eof && reads < IPC_MAX_READS_PER_PASS; ++reads) {
 		const ssize_t n = read(client.fd, buffer, sizeof(buffer));
 		if (n > 0) {
 			client.pending.append(buffer, static_cast<size_t>(n));
@@ -3397,7 +3420,9 @@ static int ServiceClient(IPCClient& client)
 	int processed = 0;
 	size_t start = 0;
 	size_t pos;
-	while (client.output.empty() && (pos = client.pending.find('\n', start)) != std::string::npos) {
+	while (client.output.empty()
+		&& (processed == 0 || std::chrono::steady_clock::now() < deadline)
+		&& (pos = client.pending.find('\n', start)) != std::string::npos) {
 		std::string line = client.pending.substr(start, pos - start);
 		start = pos + 1;
 
@@ -3411,13 +3436,13 @@ static int ServiceClient(IPCClient& client)
 
 		client.output += ProcessCommand(line);
 		++processed;
-		const bool sent = FlushOutput(client);
 		if (ipc_quit_requested) {
+			FlushBeforeQuit(client);
 			shutdown(client.fd, SHUT_WR);
 			CloseClient(client);
 			return processed;
 		}
-		if (!sent) {
+		if (!FlushOutput(client)) {
 			CloseClient(client);
 			return processed;
 		}
@@ -3432,7 +3457,7 @@ static int ServiceClient(IPCClient& client)
 		client.output += make_response(false, {"Request too long"});
 		FlushOutput(client);
 		CloseClient(client);
-	} else if (client.eof && client.output.empty()) {
+	} else if (client.eof && client.output.empty() && last_newline == std::string::npos) {
 		CloseClient(client);
 	}
 	return processed;
@@ -3632,7 +3657,8 @@ void Amiberry::IPC::IPCHandle()
 	while (!ipc_quit_requested) {
 		// Without activity, only take what is already waiting. After a request
 		// or a new connection, wait a little for the next request.
-		auto deadline = started + IPC_MAX_SERVICE_TIME;
+		const auto hard_deadline = started + IPC_MAX_SERVICE_TIME;
+		auto deadline = hard_deadline;
 		if (active) {
 			deadline = std::min(deadline, last_activity + IPC_FOLLOWUP_WAIT);
 		}
@@ -3640,9 +3666,6 @@ void Amiberry::IPC::IPCHandle()
 		if (now >= deadline) {
 			break;
 		}
-		const int timeout_ms = active
-			? static_cast<int>(std::chrono::ceil<std::chrono::milliseconds>(deadline - now).count())
-			: 0;
 
 		fds.clear();
 		const bool can_accept = ipc_clients.size() < IPC_MAX_CLIENTS;
@@ -3650,22 +3673,30 @@ void Amiberry::IPC::IPCHandle()
 			fds.push_back({server_socket, POLLIN, 0});
 		}
 		const size_t first_client = fds.size();
+		bool backlog = false;
 		for (const auto& client : ipc_clients) {
 			const short events = client.output.empty() ? POLLIN : POLLOUT;
 			fds.push_back({client.fd, events, 0});
+			backlog = backlog || HasBacklog(client);
 		}
 
+		// Requests left over from an earlier pass are answered without waiting.
+		const int timeout_ms = active && !backlog
+			? static_cast<int>(std::chrono::ceil<std::chrono::milliseconds>(deadline - now).count())
+			: 0;
 		const int ret = poll(fds.data(), static_cast<nfds_t>(fds.size()), timeout_ms);
 		if (ret < 0 && errno == EINTR) {
 			continue;
 		}
-		if (ret <= 0) {
+		if (ret < 0 || (ret == 0 && !backlog)) {
 			break;
 		}
 
 		bool progressed = false;
 		for (size_t i = first_client; i < fds.size() && !ipc_quit_requested; ++i) {
-			if (fds[i].revents != 0 && ServiceClient(ipc_clients[i - first_client]) > 0) {
+			IPCClient& client = ipc_clients[i - first_client];
+			if ((fds[i].revents != 0 || HasBacklog(client))
+				&& ServiceClient(client, hard_deadline) > 0) {
 				progressed = true;
 			}
 		}
