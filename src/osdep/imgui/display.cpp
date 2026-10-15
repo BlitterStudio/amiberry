@@ -538,10 +538,13 @@ void render_panel_display() {
         }
         ShowHelpMarker("Use the FPS adj. rate instead of the standard PAL (50 Hz) or NTSC (60 Hz) rate");
         // WinUAE: unlocked PAL/NTSC entries keep their standard rate; out of range values are reset.
+        // The standard rate comes from the entry being edited, not from the running configuration,
+        // which may still use the other video standard until the pending settings are applied.
+        const float standard_rate = cr_index == CHIPSET_REFRESH_NTSC ? 60.0f : 50.0f;
         if (!cr->locked) {
-            cr->rate = cr_index == CHIPSET_REFRESH_NTSC ? 60.0f : 50.0f;
-        } else if (rate_edited && ((cr->rate > 0.0f && cr->rate < 1.0f) || cr->rate > 300.0f)) {
-            cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
+            cr->rate = standard_rate;
+        } else if (rate_edited && (cr->rate < 1.0f || cr->rate > 300.0f)) {
+            cr->rate = standard_rate;
         }
         ImGui::EndTable();
     }
