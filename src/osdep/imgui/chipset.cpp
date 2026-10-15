@@ -377,8 +377,8 @@ void render_panel_chipset() {
         AmigaRadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
         ShowHelpMarker("Detect sprite-to-sprite and sprite-to-playfield collisions.");
         ImGui::Spacing();
-        AmigaRadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
-        ShowHelpMarker("Full collision detection including playfield-to-playfield. Slowest.");
+        AmigaRadioButton("Full", &changed_prefs.collision_level, 3);
+        ShowHelpMarker("Full collision detection including playfield-to-playfield. Default.");
         ImGui::Spacing();
         ImGui::EndGroup();
     }

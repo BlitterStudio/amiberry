@@ -240,8 +240,8 @@ static const char* help_text_chipset =
 	"If you see graphic issues in a game, try the \"Immediate\" or \"Wait for blitter\" "
 	"Blitter options.\n"
 	"\n"
-	"For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine "
-	"for nearly all games.\n";
+	"\"Collision Level\" defaults to \"Full\", which emulates all collision hardware. "
+	"Lower levels skip some collision checks and can break games that rely on them.\n";
 
 static const char* help_text_adv_chipset = nullptr;
 
