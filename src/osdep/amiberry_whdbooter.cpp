@@ -781,6 +781,9 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	// The A600/A1200 presets whdload_auto_prefs() starts from are already fully
 	// cycle-exact. Cycle-exact needs the compatible CPU (fixup_prefs turns it
 	// back on), so turning compatible mode off has to turn cycle-exact off too.
+	// Without cycle-exact, wait for the blitter as built_in_prefs() does for
+	// presets that are not cycle-exact; fixup_prefs drops it again if the
+	// immediate blitter is selected below.
 	if (strcmpi(game_detail.cpu_exact.c_str(), "true") == 0)
 	{
 		line_string = "cpu_cycle_exact=true";
@@ -789,6 +792,9 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	else if (strcmpi(game_detail.cpu_exact.c_str(), "false") == 0 || strcmpi(game_detail.cpu_comp.c_str(), "false") == 0)
 	{
 		line_string = "cycle_exact=false";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "waiting_blits=automatic";
 		parse_cfg_line(prefs, line_string);
 	}
 

@@ -238,7 +238,7 @@ class WhdLoadAutoConfigTest {
 	}
 
 	@Test
-	fun `AGA WHDLoad database match keeps a requested 68040`() {
+	fun `AGA WHDLoad database match keeps a requested 68040 with its FPU`() {
 		val lha = tempDir.newFile("Fast_v1.0_AGA.lha")
 		lha.writeText("fixture")
 		val detected = requireNotNull(
@@ -261,6 +261,7 @@ class WhdLoadAutoConfigTest {
 
 		assertEquals(AmigaModel.A1200, detected.baseModel)
 		assertEquals(68040, detected.cpuModel)
+		assertEquals(68040, detected.fpuModel)
 	}
 
 	@Test
