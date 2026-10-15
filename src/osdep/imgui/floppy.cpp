@@ -181,11 +181,9 @@ static void RenderDriveSlot(const int i)
              else if (!drive_enabled)
                  changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
         }
-        if (i == 0) {
-            ShowHelpMarker("Enable/disable floppy drive. DF0: is the boot drive");
-        } else {
-            ShowHelpMarker("Enable/disable floppy drive");
-        }
+        ShowHelpMarker(i == 0
+            ? "Enable/disable floppy drive. DF0: is the boot drive. Changes made while emulation is running require resetting the emulated Amiga before AmigaOS can detect them."
+            : "Enable/disable floppy drive. Changes made while emulation is running require resetting the emulated Amiga before AmigaOS can detect them.");
 
         ImGui::BeginDisabled(!drive_enabled);
 
@@ -483,6 +481,8 @@ void render_panel_floppy()
     // FLOPPY DRIVES GROUP
     // ---------------------------------------------------------
     BeginGroupBox("Floppy Drives");
+    RenderFloppyDriveResetNotice();
+
     for (int i = 0; i < 4; ++i)
     {
         RenderDriveSlot(i);
