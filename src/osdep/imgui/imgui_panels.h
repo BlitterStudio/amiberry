@@ -81,6 +81,8 @@ bool AmigaRadioButton(const char* label, int* v, int v_button);
 
 // Delayed tooltip on the previous widget (shown after hover delay)
 void ShowHelpMarker(const char* desc);
+void RenderFloppyDriveResetNotice();
+
 
 void render_panel_play();
 bool play_has_content_selection();

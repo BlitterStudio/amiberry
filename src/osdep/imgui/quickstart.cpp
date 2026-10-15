@@ -370,6 +370,8 @@ void render_panel_quickstart() {
     ImGui::Spacing();
 
     BeginGroupBox("Emulated Drives");
+    RenderFloppyDriveResetNotice();
+
     auto render_floppy_drive = [&](int i, bool is_editable) {
         ImGui::PushID(i);
         char label[64];
@@ -390,6 +392,10 @@ void render_panel_quickstart() {
             }
         }
         if (!is_editable) ImGui::EndDisabled();
+        ShowHelpMarker(i == 0
+            ? "Enable/disable floppy drive. DF0: is the boot drive. Changes made while emulation is running require resetting the emulated Amiga before AmigaOS can detect them."
+            : "Enable/disable floppy drive. Changes made while emulation is running require resetting the emulated Amiga before AmigaOS can detect them.");
+
 
         ImGui::SameLine();
 

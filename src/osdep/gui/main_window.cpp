@@ -1038,6 +1038,17 @@ void AmigaCircularBevel(const ImVec2 center, const float radius, const bool rece
 	draw_list->PathStroke(col_bottom_right, 0, 1.0f);
 }
 
+void RenderFloppyDriveResetNotice()
+{
+	if (!emulating)
+		return;
+
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
+	ImGui::TextWrapped(ICON_FA_CIRCLE_INFO " Changes to connected floppy drives require resetting the emulated Amiga before AmigaOS can detect them.");
+	ImGui::PopStyleColor();
+	ImGui::Spacing();
+}
+
 static bool g_groupbox_collapsed = false;
 static bool g_groupbox_collapsible = false;
 
