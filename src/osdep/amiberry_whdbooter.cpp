@@ -700,11 +700,13 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& game_detail, const bool a600_available, const bool use_aga)
 {
 	std::string line_string;
-	// CPU 68020/040 or no A600 ROM available
-	if (strcmpi(game_detail.cpu.c_str(), "68020") == 0 || strcmpi(game_detail.cpu.c_str(), "68040") == 0 || use_aga)
+	// CPU 68020/040, or AGA/CD32 (A1200 preset): those need at least a 68020,
+	// so a requested 68020 or 68040 is kept and anything else becomes 68020
+	const bool cpu_020_or_040 = strcmpi(game_detail.cpu.c_str(), "68020") == 0 || strcmpi(game_detail.cpu.c_str(), "68040") == 0;
+	if (cpu_020_or_040 || use_aga)
 	{
 		line_string = "cpu_type=";
-		line_string.append(use_aga ? "68020" : game_detail.cpu);
+		line_string.append(cpu_020_or_040 ? game_detail.cpu : "68020");
 		parse_cfg_line(prefs, line_string);
 	}
 
@@ -776,9 +778,23 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	}
 
 	// CYCLE-EXACT CPU
+	// The A600/A1200 presets whdload_auto_prefs() starts from are already fully
+	// cycle-exact. Cycle-exact needs the compatible CPU (fixup_prefs turns it
+	// back on), so turning compatible mode off has to turn cycle-exact off too.
+	// Without cycle-exact, wait for the blitter as built_in_prefs() does for
+	// presets that are not cycle-exact; fixup_prefs drops it again if the
+	// immediate blitter is selected below.
 	if (strcmpi(game_detail.cpu_exact.c_str(), "true") == 0)
 	{
 		line_string = "cpu_cycle_exact=true";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.cpu_exact.c_str(), "false") == 0 || strcmpi(game_detail.cpu_comp.c_str(), "false") == 0)
+	{
+		line_string = "cycle_exact=false";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "waiting_blits=automatic";
 		parse_cfg_line(prefs, line_string);
 	}
 
