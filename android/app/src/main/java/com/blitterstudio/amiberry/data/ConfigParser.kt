@@ -122,7 +122,7 @@ object ConfigParser {
 
 			chipset = kv["chipset"] ?: "ocs",
 			immediateBlits = kv["immediate_blits"].toBool(false),
-			collisionLevel = kv["collision_level"] ?: "playfields",
+			collisionLevel = kv["collision_level"] ?: "full",
 			cycleExact = kv["cycle_exact"].toBool(false),
 			ntsc = kv["ntsc"].toBool(false),
 

@@ -29,6 +29,8 @@ class ConfigParserTest {
 		assertEquals(68000, result.settings.cpuModel)
 		assertEquals("ocs", result.settings.chipset)
 		assertEquals(1, result.settings.chipRam)
+		// Must match the core default (cfgfile.cpp), or saving rewrites a missing key to a lower level.
+		assertEquals("full", result.settings.collisionLevel)
 		assertTrue(result.unknownLines.isEmpty())
 		assertEquals("", result.description)
 	}
