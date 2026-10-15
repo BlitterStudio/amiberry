@@ -38,6 +38,9 @@ static void expect_true(bool condition, const char *message)
 	}
 }
 
+// Frame number for the next tracker sample; each call stands for a new frame.
+static unsigned int next_frame = 1;
+
 // Samples a pointer and sprite that stay put long enough for the tracker to
 // treat the position as settled.
 static bool sample_rest(amiberry_input_cursor_hotspot_tracker* tracker,
@@ -46,7 +49,7 @@ static bool sample_rest(amiberry_input_cursor_hotspot_tracker* tracker,
 {
 	bool learned = false;
 	for (int i = 0; i < 3; i++) {
-		learned = amiberry_input_cursor_hotspot_tracker_sample(tracker, true,
+		learned = amiberry_input_cursor_hotspot_tracker_sample(tracker, true, next_frame++,
 			pointer_x, pointer_y, sprite_x, sprite_y, width, height, 3, hotspot_x, hotspot_y);
 	}
 	return learned;
@@ -281,13 +284,13 @@ static void test_native_cursor_hotspot_learning_waits_for_rest()
 	int hotspot_x = -1;
 	int hotspot_y = -1;
 
-	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y),
 		"first hotspot sample must not be trusted immediately");
-	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y),
 		"second resting sample must still wait for the sprite to settle");
-	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y),
 		"a settled pointer and sprite must provide a provisional hotspot");
 	expect_int_eq(hotspot_x, 25, "learned cross cursor hotspot x must use the settled sprite displacement");
@@ -298,6 +301,27 @@ static void test_native_cursor_hotspot_learning_waits_for_rest()
 	sample_rest(&tracker, 320, 240, 295, 210, 51, 61, &hotspot_x, &hotspot_y);
 	expect_true(tracker.confirmed_x && tracker.confirmed_y,
 		"a matching displacement at a second resting position must confirm both axes");
+}
+
+static void test_native_cursor_hotspot_counts_frames_not_samples()
+{
+	amiberry_input_cursor_hotspot_tracker tracker;
+	int hotspot_x = -1;
+	int hotspot_y = -1;
+
+	// A P96 shape change rebuilds the cursor twice in one frame, and window
+	// events can rebuild it again; none of that gives the sprite time to move.
+	const unsigned int frame = next_frame++;
+	for (int i = 0; i < 3; i++) {
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, frame,
+			301, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
+	}
+	expect_true(!amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
+		301, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"repeated samples within one frame must not count as a settled position");
+	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
+		301, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y),
+		"three distinct unchanged frames must settle the position");
 }
 
 static void test_native_cursor_hotspot_ignores_lagging_sprite_during_slow_movement()
@@ -311,7 +335,7 @@ static void test_native_cursor_hotspot_ignores_lagging_sprite_during_slow_moveme
 	// The guest moves its sprite a frame after each pointer update. Steady
 	// slow movement keeps the lagged displacement constant (#2452).
 	for (int i = 1; i <= 20; i++) {
-		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 			300 + i, 220 + i, 275 + i - 1, 190 + i - 1, 51, 61, 3, &hotspot_x, &hotspot_y);
 	}
 	expect_int_eq(hotspot_x, 25, "lagging sprite during slow movement must not shift the x hotspot");
@@ -321,7 +345,7 @@ static void test_native_cursor_hotspot_ignores_lagging_sprite_during_slow_moveme
 
 	sample_rest(&tracker, 320, 240, 295, 210, 51, 61, &hotspot_x, &hotspot_y);
 	for (int i = 1; i <= 20; i++) {
-		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 			320 + i, 240, 295 + i - 1, 210, 51, 61, 3, &hotspot_x, &hotspot_y);
 	}
 	expect_int_eq(hotspot_x, 25, "slow movement after confirmation must keep the x hotspot");
@@ -352,12 +376,12 @@ static void test_native_cursor_hotspot_cache_keeps_interleaved_sizes()
 	for (int i = 0; i < 3; i++) {
 		auto* tall = amiberry_input_cursor_hotspot_tracker_cache_acquire(
 			&cache, 32, 54, tall_signature);
-		amiberry_input_cursor_hotspot_tracker_sample(tall, true,
+		amiberry_input_cursor_hotspot_tracker_sample(tall, true, next_frame++,
 			400, 300, 384, 286, 32, 54, 3, &hotspot_x, &hotspot_y);
 
 		auto* short_cursor = amiberry_input_cursor_hotspot_tracker_cache_acquire(
 			&cache, 32, 26, short_signature);
-		amiberry_input_cursor_hotspot_tracker_sample(short_cursor, true,
+		amiberry_input_cursor_hotspot_tracker_sample(short_cursor, true, next_frame++,
 			500, 200, 484, 188, 32, 26, 3, &hotspot_x, &hotspot_y);
 	}
 
@@ -384,7 +408,7 @@ static void test_native_cursor_hotspot_cache_separates_same_size_bitmaps()
 	for (int i = 0; i < 3; i++) {
 		auto* arrow = amiberry_input_cursor_hotspot_tracker_cache_acquire(
 			&cache, 32, 32, arrow_signature);
-		amiberry_input_cursor_hotspot_tracker_sample(arrow, true,
+		amiberry_input_cursor_hotspot_tracker_sample(arrow, true, next_frame++,
 			200, 160, 199, 158, 32, 32, 3, &hotspot_x, &hotspot_y);
 	}
 
@@ -427,13 +451,13 @@ static void test_native_cursor_hotspot_learning_keeps_last_valid_result()
 	int hotspot_y = -1;
 
 	for (int i = 0; i < 3; i++) {
-		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+		amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 			200, 160, 199, 158, 16, 16, 3, &hotspot_x, &hotspot_y);
 	}
 	expect_int_eq(hotspot_x, 1, "tracker must learn a valid arrow hotspot x");
 	expect_int_eq(hotspot_y, 2, "tracker must learn a valid arrow hotspot y");
 
-	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	expect_true(amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		200, 160, 80, 40, 16, 16, 3, &hotspot_x, &hotspot_y),
 		"an unrelated sprite position must retain the last learned hotspot");
 	expect_int_eq(hotspot_x, 1, "invalid candidate must not replace learned hotspot x");
@@ -501,17 +525,17 @@ static void test_p96_cursor_swap_waits_for_stable_hotspot()
 	int hotspot_x = -1;
 	int hotspot_y = -1;
 
-	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
 	expect_true(amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
 		"changed P96 cursor must keep the previous cursor while its hotspot is pending");
 
-	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
 	expect_true(amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
 		"second P96 hotspot sample must still defer the cursor swap");
 
-	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 275, 190, 51, 61, 3, &hotspot_x, &hotspot_y);
 	expect_true(!amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
 		"learned P96 hotspot must allow the new cursor to replace the previous cursor");
@@ -519,7 +543,7 @@ static void test_p96_cursor_swap_waits_for_stable_hotspot()
 		"initial P96 cursor must not wait for a previous cursor that does not exist");
 
 	amiberry_input_cursor_hotspot_tracker_reset(&tracker);
-	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true,
+	amiberry_input_cursor_hotspot_tracker_sample(&tracker, true, next_frame++,
 		300, 220, 100, 40, 51, 61, 3, &hotspot_x, &hotspot_y);
 	expect_true(!amiberry_input_cursor_hotspot_should_defer_swap(true, true, &tracker),
 		"invalid P96 displacement must not leave the previous cursor stuck indefinitely");
@@ -562,6 +586,7 @@ int main()
 	test_native_mousehack_normalizes_interlace_field_origin();
 	test_native_cursor_hotspot_learning_waits_for_rest();
 	test_native_cursor_hotspot_ignores_lagging_sprite_during_slow_movement();
+	test_native_cursor_hotspot_counts_frames_not_samples();
 	test_native_cursor_hotspot_uses_hires_y_units();
 	test_native_cursor_hotspot_cache_keeps_interleaved_sizes();
 	test_native_cursor_hotspot_cache_separates_same_size_bitmaps();

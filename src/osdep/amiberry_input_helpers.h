@@ -132,7 +132,7 @@ static inline int amiberry_input_native_interlace_origin(
 // position, so while the pointer moves the displacement includes the distance
 // travelled during that lag. A steady slow movement keeps that biased value
 // constant (#2452). Only settled samples, where neither pointer nor sprite has
-// changed for the required number of samples, are trusted.
+// changed for the required number of distinct frames, are trusted.
 struct amiberry_input_cursor_hotspot_tracker
 {
 	bool have_sample = false;
@@ -144,6 +144,7 @@ struct amiberry_input_cursor_hotspot_tracker
 	int last_pointer_y = 0;
 	int last_sprite_x = 0;
 	int last_sprite_y = 0;
+	unsigned int last_frame = 0;
 	int unchanged_samples = 0;
 	int settled_pointer_x = 0;
 	int settled_pointer_y = 0;
@@ -258,9 +259,9 @@ amiberry_input_cursor_hotspot_tracker_cache_acquire(
 }
 
 static inline bool amiberry_input_cursor_hotspot_tracker_sample(
-	amiberry_input_cursor_hotspot_tracker* tracker, bool position_valid,
+	amiberry_input_cursor_hotspot_tracker* tracker, bool position_valid, unsigned int frame,
 	int pointer_x, int pointer_y, int sprite_x, int sprite_y,
-	int cursor_width, int cursor_height, int required_settled_samples,
+	int cursor_width, int cursor_height, int required_settled_frames,
 	int* hotspot_x, int* hotspot_y)
 {
 	if (!tracker) {
@@ -289,15 +290,20 @@ static inline bool amiberry_input_cursor_hotspot_tracker_sample(
 			&& pointer_x == tracker->last_pointer_x && pointer_y == tracker->last_pointer_y
 			&& sprite_x == tracker->last_sprite_x && sprite_y == tracker->last_sprite_y;
 
-		tracker->unchanged_samples = unchanged ? tracker->unchanged_samples + 1 : 1;
+		// The cursor can be rebuilt several times within one frame. Those
+		// repeats give the guest no extra time to move its sprite.
+		if (!unchanged || frame != tracker->last_frame) {
+			tracker->unchanged_samples = unchanged ? tracker->unchanged_samples + 1 : 1;
+		}
 		tracker->have_sample = true;
+		tracker->last_frame = frame;
 		tracker->last_pointer_x = pointer_x;
 		tracker->last_pointer_y = pointer_y;
 		tracker->last_sprite_x = sprite_x;
 		tracker->last_sprite_y = sprite_y;
 
 		// Evaluate each resting position once.
-		if (tracker->unchanged_samples == required_settled_samples) {
+		if (tracker->unchanged_samples == required_settled_frames) {
 			if (!tracker->learned) {
 				tracker->learned = true;
 				tracker->hotspot_x = candidate_x;

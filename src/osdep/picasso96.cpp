@@ -2506,7 +2506,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 		// Native pointer and sprite positions both use hires coordinate units.
 		// Decoded low-res cursor pixels use those same units on both axes.
 		if (amiberry_input_cursor_hotspot_tracker_sample(hotspot_tracker,
-			pointer_valid, pointer_x, pointer_y, sprite_0_x, sprite_0_y,
+			pointer_valid, vsync_counter, pointer_x, pointer_y, sprite_0_x, sprite_0_y,
 			w, h, 3, &hotspot_x, &hotspot_y)) {
 			// The pointer-to-sprite delta contains small native positioning biases.
 			// If it lands at a decoded row/column crossing, prefer the bitmap's
@@ -2530,7 +2530,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 				&p96_cursor_hotspot_tracker_cache, w, h, hotspot_signature);
 
 			if (amiberry_input_cursor_hotspot_tracker_sample(hotspot_tracker,
-				pointer_valid, pointer_x, pointer_y,
+				pointer_valid, vsync_counter, pointer_x, pointer_y,
 				newcursor_x, newcursor_y, w, h, 3, &hotspot_x, &hotspot_y)) {
 				residual_x = 0;
 				residual_y = 0;
