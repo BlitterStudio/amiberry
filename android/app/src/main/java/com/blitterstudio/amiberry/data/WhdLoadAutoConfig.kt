@@ -154,12 +154,12 @@ object WhdLoadAutoConfig {
 		var settings = initial
 		val cpu = hardware.stringOrNull("cpu")?.lowercase()
 		// Same rules as set_compatibility_settings(): AGA/CD32 keep a requested
-		// 68020 or 68040 and use a 68020 otherwise. Like cpu_type there, a 68040
-		// comes with its internal FPU and a 68020 with none.
-		val cpu020or040 = cpu == "68020" || cpu == "68040"
+		// 68020, 68030 or 68040 and use a 68020 otherwise. Like cpu_type there,
+		// a 68040 comes with its internal FPU and a 68020 or 68030 with none.
+		val cpu020to040 = cpu == "68020" || cpu == "68030" || cpu == "68040"
 		settings = when {
-			cpu020or040 || useAgaCpuProfile -> {
-				val model = if (cpu020or040) cpu.toInt() else 68020
+			cpu020to040 || useAgaCpuProfile -> {
+				val model = if (cpu020to040) cpu.toInt() else 68020
 				settings.copy(cpuModel = model, fpuModel = if (model == 68040) 68040 else 0)
 			}
 			(cpu == "68000" || cpu == "68010") && a600Available ->

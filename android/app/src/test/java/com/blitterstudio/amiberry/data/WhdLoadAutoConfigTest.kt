@@ -265,6 +265,34 @@ class WhdLoadAutoConfigTest {
 	}
 
 	@Test
+	fun `WHDLoad database match keeps a requested 68030 on A600 hardware`() {
+		val lha = tempDir.newFile("Faster_v1.0.lha")
+		lha.writeText("fixture")
+		val detected = requireNotNull(
+			WhdLoadAutoConfig.settingsFromDatabaseJson(
+				json = """
+					{
+					  "games": [
+					    {
+					      "filename": "Faster_v1.0",
+					      "hardware": { "cpu": "68030" }
+					    }
+					  ]
+					}
+				""".trimIndent(),
+				lhaFile = lha,
+				availableRoms = listOf(rom("kick40-a600.rom", 0x43b0df7bL)),
+				currentSettings = EmulatorSettings()
+			)
+		)
+
+		assertEquals(AmigaModel.A600, detected.baseModel)
+		assertEquals(68030, detected.cpuModel)
+		assertEquals(0, detected.fpuModel)
+		assertFalse(detected.address24Bit)
+	}
+
+	@Test
 	fun `WHDLoad database cpu_compatible false also turns cycle-exact off`() {
 		val lha = tempDir.newFile("Bloodwych_v2.51_0439.lha")
 		lha.writeText("fixture")
