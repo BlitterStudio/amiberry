@@ -20,7 +20,7 @@ data class EmulatorSettings(
 	// Chipset
 	val chipset: String = "ocs",  // ocs, ecs_agnus, ecs_denise, ecs, aga
 	val immediateBlits: Boolean = false,
-	val collisionLevel: String = "playfields",  // none, sprites, playfields, full
+	val collisionLevel: String = "full",  // none, sprites, playfields, full
 	val cycleExact: Boolean = false,
 	val ntsc: Boolean = false,
 
