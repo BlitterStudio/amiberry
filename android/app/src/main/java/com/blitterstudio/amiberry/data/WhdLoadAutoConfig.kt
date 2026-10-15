@@ -153,9 +153,12 @@ object WhdLoadAutoConfig {
 	): EmulatorSettings {
 		var settings = initial
 		val cpu = hardware.stringOrNull("cpu")?.lowercase()
+		// Same rules as set_compatibility_settings(): AGA/CD32 keep a requested
+		// 68020 or 68040 and use a 68020 otherwise.
+		val cpu020or040 = cpu == "68020" || cpu == "68040"
 		settings = when {
-			cpu == "68020" || cpu == "68040" || useAgaCpuProfile ->
-				settings.copy(cpuModel = if (useAgaCpuProfile) 68020 else cpu!!.toInt())
+			cpu020or040 || useAgaCpuProfile ->
+				settings.copy(cpuModel = if (cpu020or040) cpu.toInt() else 68020)
 			(cpu == "68000" || cpu == "68010") && a600Available ->
 				settings.copy(cpuModel = cpu.toInt(), chipRam = 4)
 			a600Available ->
@@ -168,8 +171,15 @@ object WhdLoadAutoConfig {
 			"max" -> settings = settings.copy(cpuSpeed = "max")
 		}
 
-		hardware.boolOrNull("cpu_compatible")?.let { settings = settings.copy(cpuCompatible = it) }
-		hardware.boolOrNull("cpu_exact")?.let { settings = settings.copy(cycleExact = it) }
+		// Cycle-exact needs the compatible CPU, so turning compatible mode off
+		// also turns cycle-exact off unless cpu_exact says otherwise.
+		val cpuCompatible = hardware.boolOrNull("cpu_compatible")
+		val cpuExact = hardware.boolOrNull("cpu_exact")
+		cpuCompatible?.let { settings = settings.copy(cpuCompatible = it) }
+		when {
+			cpuExact != null -> settings = settings.copy(cycleExact = cpuExact)
+			cpuCompatible == false -> settings = settings.copy(cycleExact = false)
+		}
 
 		val z3Ram = hardware.intOrNull("z3_ram")
 		if (hardware.boolOrNull("cpu_24bitaddressing") == false || z3Ram != null) {

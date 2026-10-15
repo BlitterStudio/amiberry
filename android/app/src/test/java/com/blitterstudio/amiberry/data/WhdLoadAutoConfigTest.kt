@@ -237,6 +237,59 @@ class WhdLoadAutoConfigTest {
 		assertEquals("aga", detected.chipset)
 	}
 
+	@Test
+	fun `AGA WHDLoad database match keeps a requested 68040`() {
+		val lha = tempDir.newFile("Fast_v1.0_AGA.lha")
+		lha.writeText("fixture")
+		val detected = requireNotNull(
+			WhdLoadAutoConfig.settingsFromDatabaseJson(
+				json = """
+					{
+					  "games": [
+					    {
+					      "filename": "Fast_v1.0_AGA",
+					      "hardware": { "chipset": "aga", "cpu": "68040" }
+					    }
+					  ]
+					}
+				""".trimIndent(),
+				lhaFile = lha,
+				availableRoms = listOf(rom("kick31-a1200.rom", 0x6c9b07d2L)),
+				currentSettings = EmulatorSettings()
+			)
+		)
+
+		assertEquals(AmigaModel.A1200, detected.baseModel)
+		assertEquals(68040, detected.cpuModel)
+	}
+
+	@Test
+	fun `WHDLoad database cpu_compatible false also turns cycle-exact off`() {
+		val lha = tempDir.newFile("Bloodwych_v2.51_0439.lha")
+		lha.writeText("fixture")
+		val detected = requireNotNull(
+			WhdLoadAutoConfig.settingsFromDatabaseJson(
+				json = """
+					{
+					  "games": [
+					    {
+					      "filename": "Bloodwych_v2.51_0439",
+					      "hardware": { "cpu_compatible": false }
+					    }
+					  ]
+					}
+				""".trimIndent(),
+				lhaFile = lha,
+				availableRoms = listOf(rom("kick40-a600.rom", 0x43b0df7bL)),
+				currentSettings = EmulatorSettings()
+			)
+		)
+
+		assertEquals(AmigaModel.A600, detected.baseModel)
+		assertFalse(detected.cpuCompatible)
+		assertFalse(detected.cycleExact)
+	}
+
 	private fun rom(name: String, crc32: Long, path: String = "/roms/$name") = AmigaFile(
 		path = path,
 		name = name,
