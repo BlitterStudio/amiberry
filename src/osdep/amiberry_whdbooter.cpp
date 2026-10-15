@@ -700,10 +700,21 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& game_detail, const bool a600_available, const bool use_aga)
 {
 	std::string line_string;
-	// CPU 68020/040, or AGA/CD32 (A1200 preset): those need at least a 68020,
-	// so a requested 68020 or 68040 is kept and anything else becomes 68020
+	// CPU 68020/030/040, or AGA/CD32 (A1200 preset): those need at least a 68020,
+	// so a requested 68020, 68030 or 68040 is kept and anything else becomes 68020
+	const bool cpu_030 = strcmpi(game_detail.cpu.c_str(), "68030") == 0;
 	const bool cpu_020_or_040 = strcmpi(game_detail.cpu.c_str(), "68020") == 0 || strcmpi(game_detail.cpu.c_str(), "68040") == 0;
-	if (cpu_020_or_040 || use_aga)
+	if (cpu_030)
+	{
+		// cpu_type has no 68030 value. cpu_model has, but unlike cpu_type it
+		// keeps the preset's 24-bit addressing, which a 68030 does not have.
+		line_string = "cpu_model=68030";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "cpu_24bit_addressing=false";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (cpu_020_or_040 || use_aga)
 	{
 		line_string = "cpu_type=";
 		line_string.append(cpu_020_or_040 ? game_detail.cpu : "68020");
