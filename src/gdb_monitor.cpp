@@ -421,8 +421,10 @@ MonitorResult GdbMonitor::watch_command(const std::string& command, std::string&
 		if (range) {
 			// Any access overlapping the range matches, as with console
 			// watchpoints. Instruction fetches (4) need the CPU fetch source.
+			// memwatch takes the value width from the watch size.
 			if (!a[1] || a[1] > 0x10000 || a[2] < 1 || a[2] > 7 ||
-				!(a[2] & 4) != !(a[3] & MW_MASK_CPU_I) || ((a[2] & 3) && !(a[3] & ~MW_MASK_CPU_I)))
+				!(a[2] & 4) != !(a[3] & MW_MASK_CPU_I) || ((a[2] & 3) && !(a[3] & ~MW_MASK_CPU_I)) ||
+				(a[4] && a[1] != 1 && a[1] != 2 && a[1] != 4))
 				return MonitorResult::error;
 		} else if ((a[1] != 1 && a[1] != 2 && a[1] != 4) || (a[0] & (a[1] - 1)) ||
 			a[2] < 1 || a[2] > 3 || (a[3] & MW_MASK_CPU_I)) {
