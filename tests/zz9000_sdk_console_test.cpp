@@ -151,6 +151,12 @@ int main()
 	put16(request + 26, 0);
 	reply = z3.call(0x8200, request, 34);
 	assert(get32(reply + 16) == 5 && get16(reply + 22) == 0);
+	// An ordinary incremental pass must see framebuffer changes made since
+	// the previous pass, without a reset.
+	pixels[0] = 255;
+	pixels[2] = 0;
+	reply = z3.call(0x8200, request, 34);
+	assert(get32(reply + 16) > 5 && get16(reply + 22) == 0);
 	console_request(request, output, 2, 2, 4, 2, 4, 1, 0);
 	z3.call(0x8200, request, 34);
 	put16(request + 22, 1);
@@ -163,7 +169,7 @@ int main()
 	std::memcpy(pixels, rgb565, sizeof(rgb565));
 	console_request(request, output, 2, 1, 4, 2, 4, 1);
 	reply = z3.call(0x8200, request, 34);
-	const uint8_t expected_rgb565[] = {1, 0, 0, 4, 3, 0, 0, 0, 0xf8, 0, 0, 0x1f, 0};
+	const uint8_t expected_rgb565[] = {1, 0, 0, 5, 3, 0, 0, 0, 0xf8, 0, 0, 0x1f, 0};
 	assert(get32(reply + 16) == sizeof(expected_rgb565));
 	assert(std::memcmp(z3.sdk.buffer_data(output), expected_rgb565, sizeof(expected_rgb565)) == 0);
 

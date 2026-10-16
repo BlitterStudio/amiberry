@@ -97,8 +97,14 @@ uint16_t ConsoleEncoder::encode(const uint8_t *request, uint8_t *pixels,
 		tile_width_ = tile_width;
 		tile_height_ = tile_height;
 		format_ = format;
-		if (!geometry_same || owner_changed)
+		// A new geometry voids the snapshot; a same-geometry reset (the
+		// viewer's refresh, which may arrive on any band) keeps it.
+		if (!geometry_same)
 			snapshot_.clear();
+	}
+	// Band 0 copies the live framebuffer once per pass; every band of the
+	// pass encodes from that copy, as the firmware does.
+	if (ty0 == 0) {
 		try {
 			snapshot_.resize(static_cast<size_t>(pitch) * height);
 		} catch (...) {
