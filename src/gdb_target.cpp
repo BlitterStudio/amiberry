@@ -281,4 +281,10 @@ void gdb_target_stopped(char* reason, size_t size)
 {
 	gdb_target().stopped(reason, size);
 }
+
+void gdb_target_exception(int nr)
+{
+	// No guest inspection or trace changes when the remote feature is idle.
+	gdb_target().exception(nr);
+}
 #endif

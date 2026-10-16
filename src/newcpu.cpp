@@ -83,6 +83,11 @@ static uaecptr last_fault_for_exception_3;
 static bool last_writeaccess_for_exception_3;
 /* size */
 static bool last_size_for_exception_3;
+#if defined(DEBUGGER) && defined(GDBSERVER)
+// Keep the original frame-building size flag unchanged.
+static int debug_fault_size = -1;
+static int debug_fault_fc = -1;
+#endif
 /* FC */
 static int last_fc_for_exception_3;
 /* Data (1) or instruction fetch (0) */
@@ -8098,6 +8103,41 @@ uae_u8 *restore_mmu(uae_u8 *src)
 
 #endif /* SAVESTATE */
 
+#if defined(DEBUGGER) && defined(GDBSERVER)
+cpu_debug_fault cpu_get_debug_fault(int vector)
+{
+	cpu_debug_fault fault;
+	if (vector != 2 && vector != 3) return fault;
+	fault.memory = true;
+#ifndef CPUEMU_68000_ONLY
+	if (vector == 2 && currprefs.mmu_model) {
+		fault.address = regs.mmu_fault_addr;
+		if (currprefs.mmu_model == 68060) {
+			fault.status = regs.mmu_fslw;
+			fault.access = ((fault.status & MMU_FSLW_R) ? 1 : 0) |
+				((fault.status & MMU_FSLW_W) ? 2 : 0);
+			const int sizes[] = {4, 1, 2, 8};
+			fault.size = sizes[(fault.status >> 21) & 3];
+			fault.function_code = (fault.status >> 16) & 7;
+		} else {
+			fault.status = regs.mmu_ssw;
+			bool m030 = currprefs.mmu_model == 68030;
+			fault.access = (fault.status & (m030 ? MMU030_SSW_RW : MMU_SSW_RW)) ? 1 : 2;
+			const int sizes[] = {4, 1, 2, 0};
+			fault.size = sizes[(fault.status >> (m030 ? 4 : 5)) & 3];
+			fault.function_code = fault.status & 7;
+		}
+		return fault;
+	}
+#endif
+	fault.address = last_fault_for_exception_3;
+	fault.access = last_writeaccess_for_exception_3 ? 2 : 1;
+	fault.size = debug_fault_size >= 0 && debug_fault_size <= 2 ? 1 << debug_fault_size : 0;
+	fault.function_code = debug_fault_fc;
+	return fault;
+}
+#endif
+
 static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool instructionaccess, bool notinstruction, uaecptr pc, int size, int fc, uae_u16 secondarysr)
 {
 	if (currprefs.cpu_model >= 68040)
@@ -8118,6 +8158,10 @@ static void exception3f(uae_u32 opcode, uaecptr addr, bool writeaccess, bool ins
 	last_fc_for_exception_3 = fc >= 0 ? fc : (instructionaccess ? 2 : 1);
 	last_notinstruction_for_exception_3 = notinstruction;
 	last_size_for_exception_3 = size;
+#if defined(DEBUGGER) && defined(GDBSERVER)
+	debug_fault_size = size;
+	debug_fault_fc = fc >= 0 ? (fc | (currprefs.cpu_model <= 68010 && regs.s ? 4 : 0)) : ((regs.s ? 4 : 0) | (instructionaccess ? 2 : 1));
+#endif
 	last_sr_for_exception3 = secondarysr;
 	Exception (3);
 #if EXCEPTION3_DEBUGGER
@@ -8234,6 +8278,10 @@ void exception2_setup(uae_u32 opcode, uaecptr addr, bool read, int size, uae_u32
 	last_fc_for_exception_3 = fc;
 	last_notinstruction_for_exception_3 = exception_in_exception != 0;
 	last_size_for_exception_3 = size & 15;
+#if defined(DEBUGGER) && defined(GDBSERVER)
+	debug_fault_size = size & 15;
+	debug_fault_fc = fc | (currprefs.cpu_model <= 68010 && regs.s ? 4 : 0);
+#endif
 	last_di_for_exception_3 = 1;
 	hardware_bus_error = 0;
 
@@ -8314,6 +8362,10 @@ static void exception2_fetch_common(uae_u32 opcode, int offset)
 	last_fc_for_exception_3 = 2;
 	last_notinstruction_for_exception_3 = exception_in_exception != 0;
 	last_size_for_exception_3 = sz_word;
+#if defined(DEBUGGER) && defined(GDBSERVER)
+	debug_fault_size = sz_word;
+	debug_fault_fc = (regs.s ? 4 : 0) | 2;
+#endif
 	last_di_for_exception_3 = 0;
 	hardware_bus_error = 0;
 

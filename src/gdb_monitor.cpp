@@ -59,6 +59,8 @@ public:
 	bool monitor_running(const std::string& command) override;
 	MonitorResult monitor(const std::string& command, std::string& result) override;
 	bool check_stop(uaecptr pc, char* reason, size_t size) override;
+	void stopped(char* reason, size_t size) override;
+	void exception(int nr) override;
 	void detach() override;
 private:
 	std::string process_name;
@@ -66,12 +68,19 @@ private:
 	bool process_armed = false;
 	bool remote_history = false;
 	bool conditional[BREAKPOINT_TOTAL] {};
+	uae_u64 exception_mask = 0;
+	int exception_vector = -1;
+	bool exception_pending = false;
+	uaecptr exception_instruction = 0;
+	winuae_gdb::Registers exception_registers {};
+	std::string exception_details;
 
 	bool trace_checks() override { return process_armed || remote_history; }
 	bool read(uint32_t address, uint8_t* bytes, size_t length) override;
 	bool disassemble_line(uaecptr pc, TCHAR* line, int size, uaecptr& next);
 	MonitorResult status_command(const std::string& command, std::string& result);
 	MonitorResult process_command(const std::string& command, std::string& result);
+	MonitorResult exception_command(const std::string& command, std::string& result);
 	MonitorResult task_command(const std::string& command, std::string& result);
 };
 
@@ -148,6 +157,7 @@ MonitorResult GdbMonitor::monitor(const std::string& command, std::string& resul
 	static const Handler handlers[] = {
 		&GdbMonitor::status_command,
 		&GdbMonitor::process_command,
+		&GdbMonitor::exception_command,
 		&GdbMonitor::task_command,
 	};
 	for (auto handler : handlers) {
@@ -163,11 +173,12 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 	if (command == "capabilities") {
 		std::string commands = "\"capabilities\",\"execution-status\",\"memory-map\",\"memory-check\",\"disasm\",\"screenshot\"";
 		commands += ",\"process-break\",\"segments\"";
+		commands += ",\"exception\",\"exception-mask\"";
 		commands += ",\"tasks\",\"history\",\"condition\",\"step-over\"";
 		result = "{\"protocol\":1,\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
 			",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
 			",\"memory_addressing\":\"physical\",\"commands\":[" + commands +
-			"],\"execution\":[\"continue\",\"step\",\"range-step\",\"step-over\"]}";
+			"],\"execution\":[\"continue\",\"step\",\"range-step\",\"step-over\"],\"exception_details\":true}";
 		return MonitorResult::ok;
 	}
 	if (command == "execution-status") {
@@ -282,6 +293,40 @@ MonitorResult GdbMonitor::process_command(const std::string& command, std::strin
 		process_address = address;
 		process_name.clear();
 		process_armed = true;
+		return MonitorResult::ok;
+	}
+	return MonitorResult::unsupported;
+}
+
+MonitorResult GdbMonitor::exception_command(const std::string& command, std::string& result)
+{
+	if (command == "exception") {
+		char mask[17];
+		snprintf(mask, sizeof(mask), "%016llx", static_cast<unsigned long long>(exception_mask));
+		result = "{\"mask\":\"" + std::string(mask) + "\",\"last\":";
+		if (exception_vector < 0) {
+			result += "null";
+		} else {
+			result += "{\"vector\":" + std::to_string(exception_vector) +
+				",\"instruction_pc\":" + std::to_string(exception_instruction) + ",\"registers\":[";
+			for (size_t i = 0; i < exception_registers.size(); i++) {
+				if (i)
+					result += ",";
+				result += std::to_string(exception_registers[i]);
+			}
+			result += "]" + exception_details + "}";
+		}
+		result += "}";
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 15, "exception-mask ") == 0) {
+		auto text = command.substr(15);
+		if (text.empty() || text.size() > 16 || text.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos)
+			return MonitorResult::error;
+		uae_u64 mask = strtoull(text.c_str(), NULL, 16);
+		if (mask & 3)
+			return MonitorResult::error;
+		exception_mask = mask;
 		return MonitorResult::ok;
 	}
 	return MonitorResult::unsupported;
@@ -408,9 +453,56 @@ bool GdbMonitor::check_stop(uaecptr pc, char* reason, size_t size)
 	return GdbTarget::check_stop(pc, reason, size);
 }
 
+void GdbMonitor::exception(int nr)
+{
+	if (nr < 2 || nr > 63 || !(exception_mask & (static_cast<uae_u64>(1) << nr)) || exception_pending)
+		return;
+	// Capture before the CPU builds its exception frame, but enter the
+	// remote event loop only at the next normal debugger boundary.
+	exception_vector = nr;
+	exception_instruction = regs.instruction_pc;
+	exception_registers = registers();
+	auto fault = cpu_get_debug_fault(nr);
+	exception_details = ",\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
+		",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
+		",\"vbr\":" + std::to_string(regs.vbr) +
+		",\"usp\":" + std::to_string(regs.s ? regs.usp : m68k_areg(regs, 7)) +
+		",\"isp\":" + std::to_string(regs.s && (!regs.m || currprefs.cpu_model < 68020) ? m68k_areg(regs, 7) : regs.isp) +
+		",\"msp\":" + std::to_string(regs.s && regs.m && currprefs.cpu_model >= 68020 ? m68k_areg(regs, 7) : regs.msp) +
+		",\"memory_fault\":";
+	if (!fault.memory) {
+		exception_details += "null";
+	} else {
+		static const char* access[] = { "unknown", "read", "write", "read-modify-write" };
+		exception_details += "{\"address\":" + std::to_string(fault.address) +
+			",\"access\":\"" + access[fault.access] + "\",\"size\":" +
+			(fault.size ? std::to_string(fault.size) : "null") +
+			",\"function_code\":" + std::to_string(fault.function_code) +
+			",\"mmu_status\":" + (nr == 2 && currprefs.mmu_model ? std::to_string(fault.status) : "null") + "}";
+	}
+	exception_pending = true;
+	interrupt();
+}
+
+void GdbMonitor::stopped(char* reason, size_t size)
+{
+	GdbTarget::stopped(reason, size);
+	if (!exception_pending)
+		return;
+	exception_pending = false;
+	unsigned signal = exception_vector == 2 || exception_vector == 3 ? 10 :
+		exception_vector == 4 || exception_vector == 10 || exception_vector == 11 ? 4 :
+		exception_vector >= 5 && exception_vector <= 7 ? 8 : 5;
+	snprintf(reason, size, "T%02xwinuae-exception:%02x;winuae-faultpc:%08x;11:%08x;",
+		signal, exception_vector, exception_instruction, m68k_getpc());
+}
+
 void GdbMonitor::detach()
 {
 	remote_history = false;
+	exception_mask = 0;
+	exception_vector = -1;
+	exception_pending = false;
 	process_armed = false;
 	process_name.clear();
 	process_address = 0;

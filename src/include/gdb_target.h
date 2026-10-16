@@ -19,7 +19,8 @@ public:
 	void detach() override;
 	// CPU debugger hooks.
 	virtual bool check_stop(uaecptr pc, char* reason, size_t size);
-	void stopped(char* reason, size_t size);
+	virtual void stopped(char* reason, size_t size);
+	virtual void exception(int) {}
 protected:
 	enum WatchOwner : uae_u8 { watch_none, watch_gdb };
 	bool breakpoints[BREAKPOINT_TOTAL] {};

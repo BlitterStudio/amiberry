@@ -934,4 +934,16 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size);
 const struct cputbl *uaegetjitcputbl(void);
 const struct cputbl *getjitcputbl(int cpulvl, int direct);
 
+
+#if defined(DEBUGGER) && defined(GDBSERVER)
+// Read-only fault metadata, captured before exception-frame construction.
+struct cpu_debug_fault {
+	bool memory = false;
+	uae_u32 address = 0, status = 0;
+	int access = 0; // 1 read, 2 write, 3 read-modify-write, 0 unknown
+	int size = 0, function_code = -1;
+};
+extern cpu_debug_fault cpu_get_debug_fault(int vector);
+#endif
+
 #endif /* UAE_NEWCPU_H */

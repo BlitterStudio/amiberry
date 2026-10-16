@@ -8364,6 +8364,7 @@ static void addhistory(void)
 
 void debug_exception(int nr)
 {
+	gdb_target_exception(nr);
 	if (debug_illegal) {
 		if (nr <= 63 && (debug_illegal_mask & ((uae_u64)1 << nr))) {
 			console_out_f(_T("Exception %d breakpoint\n"), nr);
