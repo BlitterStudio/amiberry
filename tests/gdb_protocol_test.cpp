@@ -272,6 +272,12 @@ int main()
 	output.enable(true);
 	output.capture("hello\n");
 	require(output.snapshot().find("hello\\u000a") != std::string::npos, "guest output escaping");
+	GuestOutput boundary_output;
+	boundary_output.enable(true);
+	std::string boundary(1024, 'x');
+	boundary_output.capture(boundary.c_str());
+	require(boundary_output.snapshot().find("\"truncated\":false") != std::string::npos,
+		"exact guest output boundary marked truncated");
 	std::string flood(2048, char(255));
 	for (int i = 0; i < 100; ++i) output.capture(flood.c_str());
 	auto snapshot = output.snapshot();

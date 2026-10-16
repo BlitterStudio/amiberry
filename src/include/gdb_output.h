@@ -18,17 +18,18 @@ class GuestOutput {
 	size_t bytes = 0;
 	uint64_t next = 1, dropped = 0;
 public:
-	void capture(const char* text)
+	void capture(const char* text, bool truncated = false)
 	{
 		if (!enabled.load(std::memory_order_relaxed)) return;
 		std::lock_guard<std::mutex> lock(mutex);
 		if (!enabled.load(std::memory_order_relaxed)) return;
 		size_t length = 0;
 		while (length < 1024 && text[length]) ++length;
+		truncated = truncated || text[length];
 		while (!records.empty() && (records.size() >= 64 || bytes + length > 4096)) {
 			bytes -= records.front().text.size(); records.erase(records.begin()); ++dropped;
 		}
-		records.push_back({next++, std::string(text, length), length == 1024});
+		records.push_back({next++, std::string(text, length), truncated});
 		bytes += length;
 	}
 	void enable(bool value)

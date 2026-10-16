@@ -860,8 +860,8 @@ void gdb_server_input_frame()
 		gdb_monitor.input_frame();
 }
 
-void gdb_server_guest_output(const char* text)
+void gdb_server_guest_output(const char* text, bool truncated)
 {
-	gdb_monitor.guest_output.capture(text);
+	gdb_monitor.guest_output.capture(text, truncated);
 }
 #endif
