@@ -1555,7 +1555,9 @@ jobs:
         shell: bash
         run: |
           cmake --build out/build/windows-arm64-release -j$NUMBER_OF_PROCESSORS
-          for library in avcodec avformat avutil swresample swscale webp webpdemux; do
+          # vcpkg's FFmpeg port does not configure for arm64-mingw, so this
+          # build has WebP but not the FFmpeg codecs (see vcpkg.json).
+          for library in webp webpdemux; do
             find out/build/windows-arm64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
           done
 
@@ -1565,7 +1567,7 @@ jobs:
           rm -rf out/install/windows-arm64-release
           rm -rf out/package/windows-arm64-release
           cmake --install out/build/windows-arm64-release --prefix out/install/windows-arm64-release
-          for library in avcodec avformat avutil swresample swscale webp webpdemux; do
+          for library in webp webpdemux; do
             find out/install/windows-arm64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
           done
 

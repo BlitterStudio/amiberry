@@ -19,7 +19,9 @@ clients fall back exactly as they would on older firmware.
 
 FFmpeg 5.1 or newer is required. It is no longer tied to `USE_VIDEOGRAB`;
 genlock video input still uses it when both are enabled. Android, iOS and
-the libretro core build without FFmpeg and libwebp.
+the libretro core build without FFmpeg and libwebp. Windows ARM64 builds
+include libwebp but not FFmpeg, because vcpkg's FFmpeg port does not build
+for `arm64-mingw-dynamic`.
 
 ## Discovery and memory
 

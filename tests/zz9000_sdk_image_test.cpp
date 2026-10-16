@@ -523,7 +523,7 @@ void run_webp_animation(Mailbox &mailbox, const std::vector<uint8_t> &image)
 
 	std::fill(std::begin(request), std::end(request), 0);
 	
-	put32(request, 2); put32(request + 4, 3); put32(request + 8, 9);
+	put32(request, 2); put32(request + 4, 2); put32(request + 8, 9);
 	put32(request + 12, 16); put32(request + 16, 4);
 	const uint32_t surface = get32(mailbox.call(0x0200, request, 20));
 	std::fill(std::begin(request), std::end(request), 0);
@@ -531,15 +531,15 @@ void run_webp_animation(Mailbox &mailbox, const std::vector<uint8_t> &image)
 	mailbox.call(0x0203, request, 28, 3); // Packed YUV has no per-pixel fill.
 	std::fill(std::begin(request), std::end(request), 0);
 	put32(request, 4); put32(request + 4, 1); put32(request + 8, surface);
-	put32(request + 20, 2); put32(request + 24, 3); put32(request + 28, 9);
+	put32(request + 20, 2); put32(request + 24, 2); put32(request + 28, 9);
 	put32(request + 44, 8);
 	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
 	std::fill(std::begin(request), std::end(request), 0);
 	put32(request, session); put32(request + 4, staging);
 	put32(request + 12, static_cast<uint32_t>(image.size())); put32(request + 16, 1);
 	const auto *reply = mailbox.call(0x0405, request, 48);
-	assert(get32(reply + 4) == 6 && get32(reply + 8) == 2 && get32(reply + 12) == 3);
-		mailbox.sdk.set_overlay(0x120000, 2, 3, 4, 0, true);
+	assert(get32(reply + 4) == 6 && get32(reply + 8) == 2 && get32(reply + 12) == 2);
+		mailbox.sdk.set_overlay(0x120000, 2, 2, 4, 0, true);
 		std::fill(std::begin(request), std::end(request), 0);
 		put32(request, session);
 		reply = mailbox.call(0x0408, request, 48);

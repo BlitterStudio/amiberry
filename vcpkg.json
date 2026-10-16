@@ -14,6 +14,7 @@
     {
       "name": "ffmpeg",
       "default-features": false,
+      "platform": "!(windows & arm64)",
       "features": [
         "avcodec",
         "avformat",

@@ -45,6 +45,6 @@ ffmpeg -nostdin -loglevel error -i "$flac_long" -f s16le -acodec pcm_s16le "$fla
 ffmpeg -nostdin -loglevel error -f lavfi -i 'testsrc2=size=1024x1024:rate=1' -frames:v 1 "$picture_png"
 ffmpeg -nostdin -loglevel error -i "$flac16" -i "$picture_png" -map 0:a -map 1:v \
   -c:a copy -c:v png -disposition:v attached_pic "$flac_picture"
-. tests/zz9000_sdk_build.sh
+. tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_test.cpp libmpg123 -DHAVE_MPG123
 SDL_AUDIODRIVER=dummy "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref"

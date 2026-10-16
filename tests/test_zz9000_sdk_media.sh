@@ -32,7 +32,7 @@ ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1282x720:rate=10:d
 dd if="$vp8" of="$truncated" bs=1 count=512 status=none
 # Timestamps starting at 5 s: the audio clock must keep that origin.
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis -output_ts_offset 5 "$offset"
-. tests/zz9000_sdk_build.sh
+. tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" "$video" "$audio_only"
 "$out" --av "$vp8" 3 2 5 0 1 160 120

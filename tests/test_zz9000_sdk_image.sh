@@ -40,10 +40,11 @@ ffmpeg -nostdin -loglevel error -y -i "$png" -frames:v 1 "$jpeg"
 ffmpeg -nostdin -loglevel error -y -i "$png" -frames:v 1 -c:v libwebp "$webp_lossy"
 ffmpeg -nostdin -loglevel error -y -i "$png" -frames:v 1 -c:v libwebp -lossless 1 "$webp_lossless"
 ffmpeg -nostdin -loglevel error -y -i "$alpha_png" -frames:v 1 -c:v libwebp -lossless 1 -pix_fmt bgra "$webp_alpha"
+# Even dimensions: FFmpeg 6.1's libwebp_anim writes a 2x3 input as a 2x2 canvas.
 ffmpeg -nostdin -loglevel error -y \
-	-f lavfi -i color=c=red:s=2x3:r=10:d=0.1 \
-	-f lavfi -i color=c=blue:s=2x3:r=10:d=0.1 \
+	-f lavfi -i color=c=red:s=2x2:r=10:d=0.1 \
+	-f lavfi -i color=c=blue:s=2x2:r=10:d=0.1 \
 	-filter_complex '[0:v][1:v]concat=n=2:v=1:a=0' -c:v libwebp_anim -lossless 1 -loop 1 "$webp_animation"
-. tests/zz9000_sdk_build.sh
+. tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_image_test.cpp
 "$out" "$png" "$jpeg" "$webp_lossy" "$webp_lossless" "$webp_animation" "$webp_alpha"
