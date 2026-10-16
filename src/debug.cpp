@@ -8813,6 +8813,12 @@ void debug (void)
 			}
 			if (bpnum >= 0) {
 				console_out_f(_T("Breakpoint %d triggered.\n"), bpnum);
+#ifdef AMIBERRY
+				// Only for the native stop that IPC reads; a GDB client keeps
+				// the plain S05 reply it got before.
+				if (!gdb_server_connected())
+					snprintf(remote_reason, sizeof(remote_reason), "T05breakpoint:%d;", bpnum);
+#endif
 			}
 			if (bp >= -1) {
 				debug_cycles(1);
