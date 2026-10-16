@@ -683,17 +683,17 @@ int main(int argc, char **argv)
 	}
 	// A whole stream fed in one EOF-marked feed must drain completely through
 	// a PCM ring much smaller than its decoded size.
-	auto drain_small_ring = [&](uint32_t codec, const char *path) {
+	auto drain_small_ring = [&](uint32_t codec, const char *path, uint32_t ring_size = 16384) {
 		std::ifstream long_file(path, std::ios::binary);
 		std::vector<uint8_t> long_bytes(std::istreambuf_iterator<char>{long_file}, {});
 		assert(!long_bytes.empty() && long_bytes.size() <= 512 * 1024);
-		put32(payload, 16384);
+		put32(payload, ring_size);
 		put32(payload + 4, 16);
 		put32(payload + 8, 0);
 		reply = z3.call(0x0100, payload, 12);
 		const uint32_t small_pcm = get32(reply + 16);
 		std::copy(long_bytes.begin(), long_bytes.end(), z3.sdk.buffer_data(audio_staging));
-		reply = begin_audio_ex(z3, codec, ex_compressed, 512 * 1024, small_pcm, 16384, 1);
+		reply = begin_audio_ex(z3, codec, ex_compressed, 512 * 1024, small_pcm, ring_size, 1);
 		const uint32_t long_session = get32(reply + 16);
 		assert(long_session);
 		put32(payload, long_session);
@@ -709,15 +709,15 @@ int main(int argc, char **argv)
 			const uint32_t flags = get32(reply + 60);
 			uint32_t available = 0;
 			if (pcm_write == pcm_read)
-				available = (flags & 2) ? 16384 : 0;
+				available = (flags & 2) ? ring_size : 0;
 			else if (pcm_write > pcm_read)
 				available = pcm_write - pcm_read;
 			else
-				available = 16384 - pcm_read + pcm_write;
+				available = ring_size - pcm_read + pcm_write;
 			if (available > 0) {
 				const auto *ring = z3.sdk.buffer_data(small_pcm);
 				for (uint32_t i = 0; i < available; ++i)
-					drained_pcm.push_back(ring[(pcm_read + i) % 16384]);
+					drained_pcm.push_back(ring[(pcm_read + i) % ring_size]);
 				put32(payload, long_session);
 				put32(payload + 4, available);
 				put32(payload + 8, 0);
@@ -740,6 +740,23 @@ int main(int argc, char **argv)
 	};
 	{
 		const auto drained_pcm = drain_small_ring(3, argv[11]);
+		// The EOS granule trims the stream to an exact length; a ring that
+		// is not a whole number of stereo frames must not change it.
+		std::ifstream vorbis_long_file(argv[11], std::ios::binary);
+		const std::vector<uint8_t> vorbis_long_bytes(std::istreambuf_iterator<char>{vorbis_long_file}, {});
+		size_t last_page = 0;
+		for (size_t offset = 0; offset + 27 <= vorbis_long_bytes.size();) {
+			size_t page = 27u + vorbis_long_bytes[offset + 26];
+			for (uint32_t i = 0; i < vorbis_long_bytes[offset + 26]; ++i)
+				page += vorbis_long_bytes[offset + 27 + i];
+			last_page = offset;
+			offset += page;
+		}
+		uint64_t granule = 0;
+		for (int i = 7; i >= 0; --i)
+			granule = (granule << 8) | vorbis_long_bytes[last_page + 6 + i];
+		assert(drained_pcm.size() == granule * 4);
+		assert(drain_small_ring(3, argv[11], 16386) == drained_pcm);
 		std::ifstream vorbis_long_ref_file(argv[12], std::ios::binary);
 		std::vector<uint8_t> vorbis_long_ref(std::istreambuf_iterator<char>{vorbis_long_ref_file}, {});
 		assert(drained_pcm.size() >= vorbis_long_ref.size());

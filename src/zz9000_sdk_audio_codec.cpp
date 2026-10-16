@@ -47,7 +47,7 @@ struct AudioCodecDecoder::Impl {
 	bool vorbis_eos = false;
 	std::vector<std::vector<uint8_t>> vorbis_header_packets;
 	uint64_t decoded_frames = 0;
-	uint64_t frames_consumed = 0;
+	uint64_t bytes_consumed = 0; // PCM bytes handed to the guest ring
 	uint64_t flac_total_samples = 0;
 	uint64_t vorbis_granule = 0;
 #ifdef AMIBERRY_WITH_FFMPEG
@@ -523,9 +523,11 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 		const size_t channels = state.channels ? state.channels : 2;
 		const size_t final_frame_bytes = channels * (state.output_format == pcm_s32be ? 4 : 2);
 		if (state.vorbis_granule && state.decoded_frames > state.vorbis_granule) {
-			const uint64_t keep_frames = state.vorbis_granule > state.frames_consumed ?
-				(state.vorbis_granule - state.frames_consumed) : 0;
-			const size_t keep_bytes = static_cast<size_t>(keep_frames * final_frame_bytes);
+			// Count published PCM in bytes: ring capacities and reads need
+			// not be frame multiples, so a frame count would drift.
+			const uint64_t granule_bytes = state.vorbis_granule * final_frame_bytes;
+			const size_t keep_bytes = static_cast<size_t>(granule_bytes > state.bytes_consumed ?
+				granule_bytes - state.bytes_consumed : 0);
 			if (keep_bytes < state.output.size())
 				state.output.resize(keep_bytes);
 		}
@@ -582,9 +584,7 @@ void AudioCodecDecoder::consume_pcm(size_t length)
 {
 	length = std::min(length, impl_->output.size());
 	impl_->output.erase(impl_->output.begin(), impl_->output.begin() + length);
-	const size_t frame_bytes = impl_->channels * (impl_->output_format == pcm_s32be ? 4 : 2);
-	if (frame_bytes)
-		impl_->frames_consumed += length / frame_bytes;
+	impl_->bytes_consumed += length;
 }
 
 } // namespace zz9000_sdk
