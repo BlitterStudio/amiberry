@@ -15,6 +15,7 @@
 #include "inputrecord.h"
 #include "savestate.h"
 #include "xwin.h"
+#include "drawing.h"
 #include "zfile.h"
 #include "fsdb.h"
 #include "gdb_server.h"
@@ -159,6 +160,7 @@ bool GdbMonitor::disassemble(uint32_t address, unsigned count, std::string& outp
 
 bool GdbMonitor::screenshot(const std::string& path)
 {
+	draw_denise_line_queue_flush();
 	TCHAR* filename = utf8u(path.c_str());
 	if (!filename)
 		return false;
