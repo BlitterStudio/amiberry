@@ -198,10 +198,15 @@ static struct zfile *zfile_create (struct zfile *prev, const TCHAR *originalname
 	return z;
 }
 
-static void zfile_free (struct zfile *f)
+static int zfile_free (struct zfile *f)
 {
-	if (f->f)
-		fclose (f->f);
+	int error = 0;
+	if (f->f) {
+		error = ferror(f->f) != 0;
+		if (fclose(f->f))
+			error = 1;
+		f->f = NULL;
+	}
 	if (f->deleteafterclose) {
 		_wunlink (f->name);
 		write_log (_T("deleted temporary file '%s'\n"), f->name);
@@ -212,6 +217,7 @@ static void zfile_free (struct zfile *f)
 	xfree (f->mode);
 	xfree (f->userdata);
 	xfree (f);
+	return error;
 }
 
 void zfile_exit (void)
@@ -223,18 +229,18 @@ void zfile_exit (void)
 	}
 }
 
-void zfile_fclose (struct zfile *f)
+int zfile_fclose (struct zfile *f)
 {
 	//write_log (_T("%p\n"), f);
 	if (!f)
-		return;
+		return 0;
 	if (f->opencnt < 0) {
 		write_log (_T("zfile: tried to free already closed filehandle!\n"));
-		return;
+		return 1;
 	}
 	f->opencnt--;
 	if (f->opencnt > 0)
-		return;
+		return 0;
 	f->opencnt = -100;
 	if (f->parent) {
 		f->parent->opencnt--;
@@ -251,20 +257,21 @@ void zfile_fclose (struct zfile *f)
 	while (l != f) {
 		if (l == 0) {
 			write_log (_T("zfile: tried to free already freed or nonexisting filehandle!\n"));
-			return;
+			return 1;
 		}
 		pl = l;
 		l = l->next;
 	}
 	if (l)
 		nxt = l->next;
-	zfile_free (f);
+	int error = zfile_free (f);
 	if (l == 0)
-		return;
+		return error;
 	if(!pl)
 		zlist = nxt;
 	else
 		pl->next = nxt;
+	return error;
 }
 
 static void removeext (TCHAR *s, const TCHAR *ext)
@@ -2557,7 +2564,7 @@ int zfile_getc (struct zfile *z)
 
 int zfile_ferror (struct zfile *z)
 {
-	return 0;
+	return z && z->f ? ferror(z->f) : 0;
 }
 
 uae_u8 *zfile_getdata (struct zfile *z, uae_s64 offset, int len, int *outlen)

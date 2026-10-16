@@ -23,6 +23,7 @@
 #include "traps.h"
 #include "disk.h"
 #include "debug.h"
+#include "gdb_server.h"
 #include "gensound.h"
 #include "picasso96.h"
 #include "filesys.h"
@@ -1139,8 +1140,9 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		case 85: return native_dos_op(ctx, ARG1, ARG2, ARG3, ARG4);
 		case 86:
 		if (valid_address(ARG1, 1)) {
-			uae_char tmp[MAX_DPATH];
-			trap_get_string(ctx, tmp, ARG1, sizeof tmp);
+			uae_char tmp[1025];
+			const bool truncated = trap_get_string(ctx, tmp, ARG1, sizeof tmp) >= static_cast<int>(sizeof tmp);
+			gdb_server_guest_output(tmp, truncated);
 			TCHAR *s = au(tmp);
 			write_log(_T("DBG: %s\n"), s);
 			xfree(s);

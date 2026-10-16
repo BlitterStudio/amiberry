@@ -241,7 +241,7 @@ void devices_reset_ext(int hardreset)
 
 void devices_reset(int hardreset)
 {
-	gdb_server_close();
+	gdb_server_reset();
 	memset(device_reset_done, 0, sizeof(device_reset_done));
 #ifdef AMIBERRY
 	uaelib_host_cleanup();

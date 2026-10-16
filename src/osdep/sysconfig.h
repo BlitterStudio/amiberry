@@ -65,6 +65,7 @@
 #endif
 
 #define DEBUGGER
+#define GDBSERVER 1
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */

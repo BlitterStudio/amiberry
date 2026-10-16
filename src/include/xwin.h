@@ -93,6 +93,8 @@ float target_getcurrentvblankrate(int monid);
 
 extern int debuggable(void);
 extern void screenshot(int monid, int, int);
+// Save PNG to an explicit host path without changing screenshot preferences.
+extern bool screenshot_save(int monid, const TCHAR *path);
 void refreshtitle(void);
 
 extern int bits_in_mask(unsigned long mask);

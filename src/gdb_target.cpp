@@ -2,7 +2,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#ifdef DEBUGGER
+#if defined(DEBUGGER) && defined(GDBSERVER)
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
@@ -111,6 +111,13 @@ bool GdbTarget::start_memwatch()
 	return memwatch_enabled != 0;
 }
 
+// The existing watchpoint mapper uses signed bank boundaries and, with
+// 24-bit addressing, only restores the first 256 banks.
+uint64_t GdbTarget::watch_limit()
+{
+	return currprefs.address_space_24 ? 0x01000000 : 0x7fff0000;
+}
+
 int GdbTarget::free_watch_slot()
 {
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
@@ -153,11 +160,8 @@ bool GdbTarget::breakpoint(bool insert, unsigned type, uint32_t address, uint32_
 		breakpoints[free_slot] = true;
 		return true;
 	}
-	// The existing watchpoint mapper uses signed bank boundaries and, with
-	// 24-bit addressing, only restores the first 256 banks. Keep remote
-	// ranges within its supported address space and preserve MMU mode.
-	uint64_t limit = currprefs.address_space_24 ? 0x01000000 : 0x7fff0000;
-	if (type > 4 || mmu_enabled || length > 0x10000 || uint64_t(address) + length > limit)
+	// Keep remote ranges within the supported address space and preserve MMU mode.
+	if (type > 4 || mmu_enabled || length > 0x10000 || uint64_t(address) + length > watch_limit())
 		return false;
 	int rwi = type == 2 ? 2 : type == 3 ? 1 : 3;
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
@@ -183,6 +187,7 @@ bool GdbTarget::breakpoint(bool insert, unsigned type, uint32_t address, uint32_
 	wp.rwi = rwi;
 	wp.access_mask = MW_MASK_CPU_D_R | MW_MASK_CPU_D_W;
 	wp.reg = wp.pc = wp.val_mask = 0xffffffff;
+	wp.remote = MW_REMOTE_LOG;
 	watch_owner[slot] = watch_gdb;
 	memwatch_setup();
 	return true;
@@ -219,7 +224,7 @@ void GdbTarget::interrupt()
 void GdbTarget::resume(bool step)
 {
 	range_active = false;
-	debug_remote_resume(step, false);
+	debug_remote_resume(step, trace_checks());
 }
 
 bool GdbTarget::resume_range(uint32_t start, uint32_t end)
@@ -272,12 +277,6 @@ winuae_gdb::Target& debug_gdb_target()
 	return gdb_target();
 }
 
-GdbTarget& gdb_target()
-{
-	static GdbTarget target;
-	return target;
-}
-
 bool gdb_target_check_stop(uaecptr pc, char* reason, size_t size)
 {
 	return gdb_target().check_stop(pc, reason, size);
@@ -286,5 +285,17 @@ bool gdb_target_check_stop(uaecptr pc, char* reason, size_t size)
 void gdb_target_stopped(char* reason, size_t size)
 {
 	gdb_target().stopped(reason, size);
+}
+
+void gdb_target_exception(int nr)
+{
+	// No guest inspection or trace changes when the remote feature is idle.
+	gdb_target().exception(nr);
+}
+
+void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 source, uae_u32 reg,
+	uae_u32 value, uae_u32 old_value, bool old_valid)
+{
+	gdb_target().watch_hit(slot, addr, size, rwi, source, reg, value, old_value, old_valid);
 }
 #endif

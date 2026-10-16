@@ -335,6 +335,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/fsdb.cpp \
                $(AMIBERRY_DIR)/src/fsusage.cpp \
                $(AMIBERRY_DIR)/src/gayle.cpp \
+               $(AMIBERRY_DIR)/src/gdb_monitor.cpp \
                $(AMIBERRY_DIR)/src/gdb_protocol.cpp \
                $(AMIBERRY_DIR)/src/gdb_server.cpp \
                $(AMIBERRY_DIR)/src/gdb_target.cpp \

@@ -269,7 +269,12 @@ static const TCHAR *lacer[] = { _T("off"), _T("i"), _T("p"), nullptr };
 static const TCHAR *cycleexact[] = { _T("false"), _T("memory"), _T("true"), nullptr  };
 static const TCHAR *unmapped[] = { _T("floating"), _T("zero"), _T("one"), nullptr };
 static const TCHAR *ciatype[] = { _T("default"), _T("391078-01"), nullptr };
-static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), _T("gdbserver"), nullptr };
+static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"),
+#ifdef GDBSERVER
+	_T("gdbserver"),
+#endif
+	nullptr
+};
 static const TCHAR *hvcsync[] = { _T("hvcsync"), _T("csync"), _T("hvsync"), _T("hvcsync_s"), _T("csync_s"), _T("hvsync_s"), nullptr };
 static const TCHAR *eclocksync[] = { _T("default"), _T("68000"), _T("Gayle"), _T("68000_opt"), nullptr };
 static const TCHAR *agnusmodel[] = { _T("default"), _T("velvet"), _T("a1000"), _T("ocs"), _T("ecs"), _T("aga"), nullptr };
@@ -2217,7 +2222,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_bool (f, _T("use_debugger"), p->start_debugger);
 	cfgfile_write_multichoice(f, _T("debugging_features"), debugfeatures, p->debugging_features);
 	cfgfile_dwrite_str(f, _T("debugging_options"), p->debugging_options);
+#ifdef GDBSERVER
 	cfgfile_dwrite(f, _T("gdb_port"), _T("%d"), p->gdb_port);
+#endif
 
 	cfgfile_write_rom (f, &p->path_rom, p->romfile, _T("kickstart_rom_file"));
 	cfgfile_write_rom (f, &p->path_rom, p->romextfile, _T("kickstart_ext_rom_file"));
@@ -4158,11 +4165,14 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 #ifdef DEBUGGER
 	if (cfgfile_multichoice(option, value, _T("debugging_features"), &p->debugging_features, debugfeatures))
 		return 1;
+#ifdef GDBSERVER
 	if (cfgfile_intval(option, value, _T("gdb_port"), &p->gdb_port, 1)) {
-		if (p->gdb_port < 1 || p->gdb_port > 65535)
+		if (p->gdb_port < 1 || p->gdb_port > 65535) {
 			p->gdb_port = 2345;
+		}
 		return 1;
 	}
+#endif
 #endif
 
 	if (cfgfile_yesno(option, value, _T("gfx_api_hdr"), &vb)) {
@@ -9602,7 +9612,9 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->mountitems = 0;
 
 	p->debug_mem = false;
+#ifdef GDBSERVER
 	p->gdb_port = 2345;
+#endif
 
 	target_default_options (p, 1);
 	cfgfile_compatibility_romtype(p);

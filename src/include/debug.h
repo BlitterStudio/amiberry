@@ -193,12 +193,17 @@ struct memwatch_node {
 	bool nobreak;
 	bool reportonly;
 	int bus_error;
+	int remote;
 };
 extern struct memwatch_node mwnodes[MEMWATCH_TOTAL];
 
+/* memwatch_node.remote: entries owned by the remote debugger */
+#define MW_REMOTE_LOG 1		// record access evidence for the remote client
+#define MW_REMOTE_EXACT 2	// match complete accesses only, compare old RAM values
+
 extern void memwatch_dump2 (TCHAR *buf, int bufsize, int num);
-extern void initialize_memwatch (int mode);
-extern int deinitialize_memwatch (void);
+extern void initialize_memwatch(int mode);
+extern int deinitialize_memwatch(void);
 extern void memwatch_setup (void);
 
 void debug_getpeekdma_chipram(uaecptr addr, uae_u32 mask, int reg);
@@ -370,8 +375,15 @@ extern int get_dma_debug_color(struct dma_rec *dr, int line, uae_u32 *cp);
 #define TRACE_IMMEDIATE 7
 #define TRACE_CHECKONLY 10
 
+#ifdef GDBSERVER
 extern void debug_remote_interrupt(void);
 extern void debug_remote_resume(bool step, bool check);
+extern void debug_remote_run_to(uaecptr pc);
+extern void debug_remote_hold(void);
+extern bool debug_remote_frame_save(bool enable);
+extern int debug_history_size(void);
+extern const struct regstruct *debug_history_get(int index, int *frame, int *vpos, int *hpos);
+#endif
 
 #else
 
