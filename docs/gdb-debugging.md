@@ -23,9 +23,8 @@ amiberry -s debugging_features=gdbserver -s gdb_port=2345
 `gdb_port` defaults to 2345. Amiberry logs
 `WinUAE GDB: listening on 127.0.0.1:<port>` when the server starts.
 
-The standalone application builds the server when both `DEBUGGER` and
-`GDBSERVER` are defined. The libretro core does not expose the host event loop
-needed to poll the server, so it intentionally compiles the server out.
+The standalone application and libretro core build the server when both
+`DEBUGGER` and `GDBSERVER` are defined. Both poll it from `handle_events()`.
 
 The server is not available with the threaded CPU option
 (`cpu_threaded=true`). In that mode Amiberry logs
