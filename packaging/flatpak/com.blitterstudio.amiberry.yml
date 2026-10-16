@@ -60,6 +60,34 @@ modules:
           type: git
           tag-pattern: ^release-([\d.]+)$
 
+
+  - name: libwebp
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DWEBP_BUILD_ANIM_UTILS=OFF
+      - -DWEBP_BUILD_CWEBP=OFF
+      - -DWEBP_BUILD_DWEBP=OFF
+      - -DWEBP_BUILD_EXTRAS=OFF
+      - -DWEBP_BUILD_WEBPINFO=OFF
+      - -DWEBP_BUILD_WEBPMUX=OFF
+    sources:
+      - type: git
+        url: https://github.com/webmproject/libwebp.git
+        tag: v1.5.0
+        commit: f7710292e894c8413edaca4610d11dde843c04fd
+
+  - name: ffmpeg
+    buildsystem: simple
+    build-commands:
+      - ./configure --prefix=/app --enable-shared --disable-static --disable-programs --disable-doc
+      - make -j ${FLATPAK_BUILDER_N_JOBS}
+      - make install
+    sources:
+      - type: git
+        url: https://github.com/FFmpeg/FFmpeg.git
+        tag: n7.1.1
+        commit: a1328e68877e12ab5a6e5d92a84aefa566783ea5
   - name: libpcap
     buildsystem: autotools
     sources:

@@ -1877,7 +1877,8 @@ static void zz_sdk_update_framebuffer(zz9000_state *data)
 static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 {
 	if (data->sdk && ((offset >= 0x100 && offset <= 0x10c) ||
-	                  (offset >= 0x1108 && offset <= 0x110c))) {
+	                  (offset >= 0x1108 && offset <= 0x110c) ||
+	                  (offset >= 0x111c && offset <= 0x111e))) {
 		zz_sdk_update_framebuffer(data);
 		if (data->sdk->write_register(offset >= 0x1000 ? offset - 0x1000 : offset, value))
 			data->modified = true;
@@ -2161,8 +2162,9 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 
 static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 {
-	if (data->sdk && offset >= 0x100 && offset <= 0x10c)
-		return data->sdk->read_register(offset);
+	if (data->sdk && ((offset >= 0x100 && offset <= 0x10c) ||
+	                  (offset >= 0x111c && offset <= 0x111e)))
+		return data->sdk->read_register(offset >= 0x1000 ? offset - 0x1000 : offset);
 	switch (offset) {
 		case ZZ_REG_FW_VERSION:
 			return 0x0208;

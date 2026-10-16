@@ -1,6 +1,7 @@
 #include "zz9000_sdk.h"
 
 #include <cassert>
+#include <cstdio>
 #include <algorithm>
 #include <cstdint>
 #include <vector>
@@ -71,6 +72,19 @@ const uint8_t *begin_audio(Mailbox &mailbox, uint32_t compressed,
 	put32(request + 28, low_water);
 	return mailbox.call(0x0503, request, 40);
 }
+const uint8_t *begin_audio_ex(Mailbox &mailbox, uint32_t codec, uint32_t input,
+	                          uint32_t input_capacity, uint32_t pcm,
+	                          uint32_t pcm_capacity, uint32_t format)
+{
+	uint8_t request[48] = {};
+	put32(request, codec);
+	put32(request + 4, input);
+	put32(request + 8, input_capacity);
+	put32(request + 12, pcm);
+	put32(request + 16, pcm_capacity);
+	put32(request + 28, format);
+	return mailbox.call(0x0516, request, 48);
+}
 }
 
 int main(int argc, char **argv)
@@ -85,10 +99,13 @@ int main(int argc, char **argv)
 	       (zz9000_sdk::mailbox_offset - 0xa000u));
 	assert(get32(mb) == 0x5a5a394b);
 	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 3) |
-		(1u << 4) | (1u << 5) | (1u << 6) | (1u << 13) |
-		(1u << 14) | (1u << 15);
+		(1u << 4) | (1u << 5) | (1u << 6) | (1u << 10) |
+		(1u << 13) | (1u << 14) | (1u << 15);
 #ifdef HAVE_MPG123
 	expected_caps |= (1u << 7) | (1u << 19) | (1u << 23);
+#endif
+#ifdef AMIBERRY_WITH_FFMPEG
+	expected_caps |= (1u << 7) | (1u << 28) | (1u << 29);
 #endif
 	assert(get32(mb + 44) == expected_caps);
 	{
@@ -157,7 +174,7 @@ int main(int argc, char **argv)
 	z2.call(0x0101, payload, 4, 5);
 	put32(payload, 0x500);
 	z2.call(0x0004, payload, 4,
-#ifdef HAVE_MPG123
+#if defined(HAVE_MPG123) || defined(AMIBERRY_WITH_FFMPEG)
 		0
 #else
 		10
@@ -179,7 +196,11 @@ int main(int argc, char **argv)
 	assert(get32(reply + 20) == 0x061f0000);
 	assert(z3.sdk.buffer_data(get32(reply + 16)) == z3.board.data() + 0x06000000);
 #ifdef HAVE_MPG123
+#ifdef AMIBERRY_WITH_FFMPEG
+	assert(argc == 13);
+#else
 	assert(argc == 4);
+#endif
 	std::ifstream file(argv[1], std::ios::binary);
 	std::vector<uint8_t> mp3(std::istreambuf_iterator<char>{file}, {});
 	assert(!mp3.empty() && mp3.size() < 65536);
@@ -190,7 +211,7 @@ int main(int argc, char **argv)
 	std::vector<uint8_t> low_mp3(std::istreambuf_iterator<char>{low_file}, {});
 	assert(!low_mp3.empty() && low_mp3.size() < 65536);
 	assert(SDL_Init(SDL_INIT_AUDIO));
-	put32(payload, 65536);
+	put32(payload, 512 * 1024);
 	put32(payload + 4, 16);
 	put32(payload + 8, 0);
 	reply = z3.call(0x0100, payload, 12);
@@ -231,6 +252,19 @@ int main(int argc, char **argv)
 	reply = z3.call(0x0507, payload, 8);
 	assert(get32(reply + 16) == session);
 	z3.call(0x0508, payload, 8);
+	z3.call(0x0506, payload, 8);
+	reply = begin_audio_ex(z3, 1, compressed, 131072, pcm, 262144, 1);
+	const uint32_t begin_ex_mp3_session = get32(reply + 16);
+	put32(payload, begin_ex_mp3_session);
+	put32(payload + 4, audio_staging);
+	put32(payload + 8, 0);
+	put32(payload + 12, static_cast<uint32_t>(mp3.size()));
+	put32(payload + 16, 0);
+	reply = z3.call(0x0504, payload, 20);
+	assert(get32(reply + 24) == 48000 && get32(reply + 56) >= little_pcm.size());
+	assert(std::equal(little_pcm.begin(), little_pcm.end(), z3.sdk.buffer_data(pcm)));
+	put32(payload, begin_ex_mp3_session);
+	put32(payload + 4, 0);
 	z3.call(0x0506, payload, 8);
 	assert(std::fesetround(FE_DOWNWARD) == 0);
 	reply = begin_audio(z3, compressed, 131072, pcm, 262144, 2);
@@ -329,7 +363,285 @@ int main(int argc, char **argv)
 	put32(payload + 16, 0);
 	reply = z2.call(0x0504, payload, 20);
 	assert(get32(reply + 24) == 44100 && get32(reply + 28) == 1);
+#ifdef AMIBERRY_WITH_FFMPEG
+	const uint32_t ex_compressed = audio_staging;
+
 	assert(get32(reply + 56) > 0);
+
+	auto decode_ex = [&](const char *path, const char *reference_path, uint32_t codec,
+	                     uint32_t format, uint32_t rate, uint32_t channels,
+	                     bool chunked = false) {
+		std::ifstream input_file(path, std::ios::binary);
+		std::vector<uint8_t> input_bytes(std::istreambuf_iterator<char>{input_file}, {});
+		std::ifstream reference_file(reference_path, std::ios::binary);
+		std::vector<uint8_t> reference(std::istreambuf_iterator<char>{reference_file}, {});
+		assert(!input_bytes.empty() && input_bytes.size() <= 512 * 1024);
+		std::copy(input_bytes.begin(), input_bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, codec, ex_compressed, 65536, pcm, 262144, format);
+		const uint32_t ex_session = get32(reply + 16);
+		assert(ex_session);
+		if (chunked) {
+			for (uint32_t offset = 0; offset < input_bytes.size();) {
+				const uint32_t length = std::min<uint32_t>(997, input_bytes.size() - offset);
+				put32(payload, ex_session);
+				put32(payload + 4, audio_staging);
+				put32(payload + 8, offset);
+				put32(payload + 12, length);
+				put32(payload + 16, offset + length == input_bytes.size() ? 1 : 0);
+				reply = z3.call(0x0504, payload, 20);
+				offset += length;
+			}
+		} else {
+			put32(payload, ex_session);
+			put32(payload + 4, audio_staging);
+			put32(payload + 8, 0);
+			put32(payload + 12, static_cast<uint32_t>(input_bytes.size()));
+			put32(payload + 16, 1);
+			reply = z3.call(0x0504, payload, 20);
+		}
+		assert(get32(reply + 24) == rate && get32(reply + 28) == channels);
+		const uint32_t produced = get32(reply + 56);
+		assert(produced && produced % (channels * (format == 4 ? 4 : 2)) == 0);
+		const auto *decoded = z3.sdk.buffer_data(pcm);
+		assert(std::any_of(decoded, decoded + std::min<uint32_t>(produced, 128),
+		                   [](uint8_t value) { return value != 0; }));
+		std::vector<uint8_t> pcm_bytes(decoded, decoded + produced);
+		if (codec == 2)
+			assert(pcm_bytes.size() == reference.size());
+		else
+			assert(pcm_bytes.size() >= reference.size());
+		if (codec == 2) {
+			assert(pcm_bytes == reference);
+		} else {
+			size_t alignment = pcm_bytes.size();
+			for (size_t candidate = 0; candidate + 128 <= pcm_bytes.size() &&
+			     candidate < 4096; candidate += 2) {
+				bool matches = true;
+				for (size_t offset = 0; offset < 128; offset += 2) {
+					const int sample = static_cast<int16_t>(pcm_bytes[candidate + offset] |
+						(static_cast<uint16_t>(pcm_bytes[candidate + offset + 1]) << 8));
+					const int expected = static_cast<int16_t>(reference[offset] |
+						(static_cast<uint16_t>(reference[offset + 1]) << 8));
+					if (std::abs(sample - expected) > 4) {
+						matches = false;
+						break;
+					}
+				}
+				if (matches) {
+					alignment = candidate;
+					break;
+				}
+			}
+			assert(alignment != pcm_bytes.size());
+			assert(alignment + reference.size() <= pcm_bytes.size());
+			for (size_t offset = 0; offset < reference.size(); offset += 2) {
+				const int sample = static_cast<int16_t>(pcm_bytes[alignment + offset] |
+					(static_cast<uint16_t>(pcm_bytes[alignment + offset + 1]) << 8));
+				const int expected = static_cast<int16_t>(reference[offset] |
+					(static_cast<uint16_t>(reference[offset + 1]) << 8));
+				assert(std::abs(sample - expected) <= 4);
+			}
+		}
+		put32(payload, ex_session);
+		put32(payload + 4, 64);
+		put32(payload + 8, 0);
+		reply = z3.call(0x0515, payload, 48);
+		assert(get32(reply + 16) == ex_session);
+		put32(payload + 4, produced);
+		put32(payload + 8, 0);
+		reply = z3.call(0x0505, payload, 12);
+		assert(get32(reply + 60) & 4);
+		put32(payload, ex_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		return pcm_bytes;
+	};
+	const auto flac_once = decode_ex(argv[4], argv[7], 2, 2, 44100, 1);
+	const auto flac_chunked = decode_ex(argv[4], argv[7], 2, 2, 44100, 1, true);
+	assert(flac_once == flac_chunked);
+	decode_ex(argv[5], argv[8], 2, 4, 48000, 2);
+	decode_ex(argv[6], argv[9], 3, 1, 32000, 2);
+	const auto flac_picture = decode_ex(argv[10], argv[7], 2, 2, 44100, 1, true);
+	assert(flac_picture == flac_once);
+	auto reject_flac = [&](auto mutate) {
+		std::ifstream flac_file(argv[4], std::ios::binary);
+		std::vector<uint8_t> bytes(std::istreambuf_iterator<char>{flac_file}, {});
+		assert(bytes.size() > 21 && !std::memcmp(bytes.data(), "fLaC", 4));
+		mutate(bytes);
+		std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 2, ex_compressed, 65536, pcm, 262144, 2);
+		const uint32_t rejected_session = get32(reply + 16);
+		put32(payload, rejected_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(bytes.size()));
+		put32(payload + 16, 0);
+		z3.call(0x0504, payload, 20, 3);
+		put32(payload, rejected_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+	};
+	reject_flac([](std::vector<uint8_t> &bytes) {
+		const uint32_t rate = 7000;
+		bytes[18] = static_cast<uint8_t>(rate >> 12);
+		bytes[19] = static_cast<uint8_t>(rate >> 4);
+		bytes[20] = static_cast<uint8_t>((bytes[20] & 15) | (rate << 4));
+	});
+	reject_flac([](std::vector<uint8_t> &bytes) {
+		bytes[20] = static_cast<uint8_t>((bytes[20] & 0xf1) | (2 << 1));
+	});
+	reject_flac([](std::vector<uint8_t> &bytes) {
+		bytes[20] |= 1;
+		bytes[21] = static_cast<uint8_t>((bytes[21] & 15) | 0xf0);
+	});
+	{
+		std::ifstream vorbis_file(argv[6], std::ios::binary);
+		std::vector<uint8_t> bytes(std::istreambuf_iterator<char>{vorbis_file}, {});
+		auto header = std::search(bytes.begin(), bytes.end(), "\x01vorbis",
+			"\x01vorbis" + 7);
+		assert(header != bytes.end() && bytes.end() - header >= 16);
+		const uint32_t rate = 192000;
+		header[12] = static_cast<uint8_t>(rate);
+		header[13] = static_cast<uint8_t>(rate >> 8);
+		header[14] = static_cast<uint8_t>(rate >> 16);
+		header[15] = static_cast<uint8_t>(rate >> 24);
+		std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 3, ex_compressed, 65536, pcm, 262144, 1);
+		const uint32_t rejected_session = get32(reply + 16);
+		put32(payload, rejected_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(bytes.size()));
+		put32(payload + 16, 0);
+		z3.call(0x0504, payload, 20, 3);
+		put32(payload, rejected_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+	}
+	{
+		reply = begin_audio_ex(z3, 3, ex_compressed, 65536, pcm, 262144, 1);
+		const uint32_t garbage_session = get32(reply + 16);
+		assert(garbage_session);
+		std::vector<uint8_t> garbage(256, 0xaa);
+		std::copy(garbage.begin(), garbage.end(), z3.sdk.buffer_data(audio_staging));
+		put32(payload, garbage_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(garbage.size()));
+		put32(payload + 16, 0);
+		z3.call(0x0504, payload, 20, 9);
+		for (int i = 0; i < 5; ++i)
+			z3.call(0x0504, payload, 20, 9);
+		put32(payload, garbage_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+	}
+	{
+		std::ifstream flac16_file(argv[4], std::ios::binary);
+		std::vector<uint8_t> flac16_bytes(std::istreambuf_iterator<char>{flac16_file}, {});
+		std::copy(flac16_bytes.begin(), flac16_bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 2, ex_compressed, 65536, pcm, 262144, 1);
+		const uint32_t play_session = get32(reply + 16);
+		put32(payload, play_session);
+		put32(payload + 4, 0);
+		z3.call(0x0507, payload, 8, 4);
+		put32(payload, play_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(flac16_bytes.size()));
+		put32(payload + 16, 0);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 24) == 44100 && get32(reply + 28) == 1);
+		put32(payload, play_session);
+		put32(payload + 4, 0);
+		z3.call(0x0507, payload, 8, 0);
+		z3.call(0x0508, payload, 8, 0);
+		z3.call(0x0506, payload, 8, 0);
+	}
+	{
+		std::ifstream vorbis_long_file(argv[11], std::ios::binary);
+		std::vector<uint8_t> vorbis_long_bytes(std::istreambuf_iterator<char>{vorbis_long_file}, {});
+		std::ifstream vorbis_long_ref_file(argv[12], std::ios::binary);
+		std::vector<uint8_t> vorbis_long_ref(std::istreambuf_iterator<char>{vorbis_long_ref_file}, {});
+		put32(payload, 16384);
+		reply = z3.call(0x0100, payload, 12);
+		const uint32_t small_pcm = get32(reply + 16);
+		std::copy(vorbis_long_bytes.begin(), vorbis_long_bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 3, ex_compressed, 65536, small_pcm, 16384, 1);
+		const uint32_t long_session = get32(reply + 16);
+		assert(long_session);
+		put32(payload, long_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(vorbis_long_bytes.size()));
+		put32(payload + 16, 1);
+		reply = z3.call(0x0504, payload, 20);
+		std::vector<uint8_t> drained_pcm;
+		for (;;) {
+			const uint32_t pcm_write = get32(reply + 40);
+			const uint32_t pcm_read = get32(reply + 44);
+			const uint32_t flags = get32(reply + 60);
+			uint32_t available = 0;
+			if (pcm_write == pcm_read)
+				available = (flags & 2) ? 16384 : 0;
+			else if (pcm_write > pcm_read)
+				available = pcm_write - pcm_read;
+			else
+				available = 16384 - pcm_read + pcm_write;
+			if (available > 0) {
+				const auto *ring = z3.sdk.buffer_data(small_pcm);
+				for (uint32_t i = 0; i < available; ++i)
+					drained_pcm.push_back(ring[(pcm_read + i) % 16384]);
+				put32(payload, long_session);
+				put32(payload + 4, available);
+				put32(payload + 8, 0);
+				reply = z3.call(0x0505, payload, 12);
+			} else if (flags & 4) {
+				break;
+			} else {
+				put32(payload, long_session);
+				put32(payload + 4, 0);
+				put32(payload + 8, 0);
+				reply = z3.call(0x0505, payload, 12);
+			}
+		}
+		assert(drained_pcm.size() >= vorbis_long_ref.size());
+		size_t alignment = drained_pcm.size();
+		for (size_t candidate = 0; candidate + 128 <= drained_pcm.size() && candidate < 4096; candidate += 2) {
+			bool matches = true;
+			for (size_t offset = 0; offset < 128; offset += 2) {
+				const int sample = static_cast<int16_t>(drained_pcm[candidate + offset] |
+					(static_cast<uint16_t>(drained_pcm[candidate + offset + 1]) << 8));
+				const int expected = static_cast<int16_t>(vorbis_long_ref[offset] |
+					(static_cast<uint16_t>(vorbis_long_ref[offset + 1]) << 8));
+				if (std::abs(sample - expected) > 4) { matches = false; break; }
+			}
+			if (matches) { alignment = candidate; break; }
+		}
+		assert(alignment != drained_pcm.size());
+		assert(alignment + vorbis_long_ref.size() <= drained_pcm.size());
+		for (size_t offset = 0; offset < vorbis_long_ref.size(); offset += 2) {
+			const int sample = static_cast<int16_t>(drained_pcm[alignment + offset] |
+				(static_cast<uint16_t>(drained_pcm[alignment + offset + 1]) << 8));
+			const int expected = static_cast<int16_t>(vorbis_long_ref[offset] |
+				(static_cast<uint16_t>(vorbis_long_ref[offset + 1]) << 8));
+			assert(std::abs(sample - expected) <= 4);
+		}
+		put32(payload, long_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		put32(payload, small_pcm);
+		z3.call(0x0101, payload, 4);
+	}
+	uint8_t invalid_begin[48] = {};
+	put32(invalid_begin, 2);
+	put32(invalid_begin + 4, ex_compressed);
+	put32(invalid_begin + 8, 65536);
+	put32(invalid_begin + 12, pcm);
+	put32(invalid_begin + 16, 262144);
+	put32(invalid_begin + 28, 3);
+	z3.call(0x0516, invalid_begin, 48, 3);
+#endif
 	put32(payload, z2_session);
 	put32(payload + 4, 0);
 	z2.call(0x0506, payload, 8);

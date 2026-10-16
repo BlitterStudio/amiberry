@@ -1,64 +1,122 @@
 # ZZ9000 SDK mailbox, images, audio, and video
 
 The emulated ZZ9000 exposes the SDK v2 mailbox discovery registers and a
-polling completion ring at board offset `0xD000`. It implements core
-discovery, bounded shared-buffer allocation, and the audio-stream operations
-used by the current `zz9k.library` and installed `mhizz9000.library`:
-begin, feed, read, play, stop, and close. The older direct-register MP3 decoder
-is no longer used by that MHI driver. The separate SDK-backed `mpega.library`
-client uses the same stream service for decoded PCM reads. Its S16BE sessions
-retain the MP3's sample rate and channel count; playback remains available
-only for S16LE sessions, matching the card's stream contract.
+polling completion ring at board offset `0xD000`. The protocol follows the
+ZZ9000 firmware's SDK (`zz9000-firmware` master, which now advertises WebP,
+FLAC, Vorbis, WebM and MPEG-2). Amiberry advertises a capability bit or
+service flag only when the host code behind it is compiled in, so the guest
+clients fall back exactly as they would on older firmware.
 
-The image service accepts bounded JPEG and PNG streams. It can return RGB or
-32-bit tiles to the installed picture DataTypes, or decode into an ARM-local
-BGRA surface for SDK viewers. Surface mapping, fill, and clipped bilinear
-scaling target the live 32-bit or 16-bit RTG framebuffer. CPU-visible SDK
-surface allocations and other image formats return `UNSUPPORTED`.
+## Build options
 
-On Zorro III, the video service advertises MPEG-1 Program Stream sessions with
-MP2 decoding to a shared S16BE PCM ring and explicit presentation to the
-Picasso96 YUY2 overlay. It accepts bounded streaming input and supports
-session close and reopen. The emulator does not advertise card-local AX media
-binding, so ZZPlay's automatic audio selection uses guest AHI. Zorro II video
-sessions remain unadvertised because its PIP aperture is not mapped for this
-path.
+| Feature | Needs |
+|---|---|
+| MP3 audio streams (MHI, MPEGA, ZZPlay MP3) | mpg123 and AHI support |
+| FLAC and Ogg Vorbis audio streams | FFmpeg (`USE_FFMPEG`, default on) |
+| MPEG-2, WebM and Matroska media sessions | FFmpeg, Zorro III |
+| WebP stills and animations | libwebp with libwebpdemux (`USE_WEBP`, default on) |
+| JPEG/PNG, MPEG-1 media, surfaces, console encoder | always built |
 
-Audio-stream capability bits are present only in builds with mpg123, AHI, and
-SDL audio support. MHI's S16LE stream decodes to 48 kHz stereo 16-bit PCM and
-plays through the selected Amiberry playback device. MHI has a separate host
-output stream from the board's AHI path. The SDK audio fabric is not emulated or
-advertised; the installed guest drivers therefore exclude simultaneous active
-AHI and MHI.
+FFmpeg 5.1 or newer is required. It is no longer tied to `USE_VIDEOGRAB`;
+genlock video input still uses it when both are enabled. Android, iOS and
+the libretro core build without FFmpeg and libwebp.
+
+## Discovery and memory
+
+Discovery, service queries, and bounded shared-buffer allocation work on both
+board models. Zorro II additionally answers the aperture-info handshake
+(`0x111C`/`0x111E`) and the aperture layout query that current
+`zz9k.library` builds use. The codec, crypto and diagnostics services are not
+advertised; current clients treat them as optional.
+
+The Zorro III model reserves a shared-buffer heap near the top of its 128 MB
+board memory and also accepts card-only media allocations of up to 64 MiB
+(`ZZ9K_ALLOC_MEDIA`), which ZZPlay's `--preload` option copies the file into
+with `MEM_COPY` before playback. The Zorro II model provides a 64 KiB
+host-visible staging window plus card-only buffers for the compressed and PCM
+rings. Both models reset the mailbox and release every session, worker thread
+and buffer on board reset or removal.
+
+## Audio streams
+
+The audio-stream service implements begin, codec-aware begin (`BeginEx`),
+feed, read, play, stop, close and per-stream gain. MP3 sessions use mpg123;
+the legacy begin opcode and `BeginEx` with the MP3 codec produce identical
+PCM. FLAC (8 to 192 kHz, up to 24 bits, mono or stereo) and Ogg Vorbis (8 to
+96 kHz, mono or stereo) are decoded incrementally with FFmpeg as the guest
+feeds them, so large files are never held in host memory. FLAC sessions can
+return S16LE, S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
+
+MHI's S16LE stream plays through the selected Amiberry playback device on a
+host output stream separate from the board's AHI path; the per-stream gain
+applies to that output. The SDK audio fabric is not emulated, so the
+installed guest drivers do not run AHI and MHI at the same time.
+`mpega.library` keeps the MP3's sample rate and channel count for its S16BE
+reads.
+
+## Images
+
+The image service decodes JPEG, PNG and WebP streams into RGB or 32-bit tiles
+for the installed picture DataTypes, or into an ARM-local surface for SDK
+viewers. Surface mapping, fill, and clipped bilinear scaling target the live
+32-bit or 16-bit RTG framebuffer. WebP inputs follow the firmware limits:
+8 MiB of input, 8192 pixels per side, 6 megapixels per canvas, and for
+animations 256 frames. Animated WebP sessions step frames with next, present,
+retire and restart, report frame durations and loop counts, and present
+YUV422CGX frames to the Picasso96 video window. CPU-visible SDK surface
+allocations still return `UNSUPPORTED`.
+
+## Media sessions
+
+On Zorro III the video service plays:
+
+- MPEG-1 Program Stream with MP2 audio, decoded by pl_mpeg (always built);
+- MPEG-2 Program Stream and VOB files with AC-3, DVD LPCM or MP2 audio,
+  including audio-only and video-only sessions;
+- WebM with VP8 or VP9 video and Opus or Vorbis audio;
+- Matroska with MPEG-1, MPEG-2, VP8 or VP9 video and the same audio codecs.
+
+Everything except MPEG-1 is decoded by FFmpeg on one worker thread per
+session. ZZPlay streams the file through a bounded input queue; the media
+write reply reports the cumulative number of accepted bytes, and decoding
+begins as soon as the stream headers arrive rather than at end of file.
+Decoded frames are packed to YUY2 for the Picasso96 video window. Interlaced
+frames are blended, and frames too large for the window are packed at half
+size. Audio goes to the session's S16BE PCM ring. Card-local AX media binding
+is not advertised, so ZZPlay plays the sound through guest AHI. Zorro II video
+sessions remain unadvertised because its video window aperture is not mapped
+for this path.
+
+## Console encoder
+
+The console service (`0x8200`) encodes the live RTG framebuffer into RFB tile
+updates for remote-console clients. It converts BGRA8888 or RGB565
+framebuffers to big-endian RGB565 tiles, refuses RGB555, and compresses tiles
+with zlib when that makes them smaller.
+
+## Not emulated
+
 The SDK's archive, crypto, module, and physical-card operations remain
 unadvertised and return `UNSUPPORTED`.
 
-The Zorro III model reserves a bounded shared-buffer heap near the top of its
-128 MB board memory. The Zorro II model provides a 64 KiB host-visible staging
-window plus card-only buffers for the compressed and PCM rings. Both models
-reset the mailbox and release stream resources on board reset or removal.
+## Tests
 
-The focused tests are `tests/test_zz9000_sdk.sh`,
-`tests/test_zz9000_sdk_audio.sh`, `tests/test_zz9000_sdk_image.sh`, and
-`tests/test_zz9000_sdk_media.sh`.
-They exercise mailbox completion, allocation,
-reset, MHI playback, and MPEGA-style big-endian PCM reads with short input,
-native-rate mono output at 44.1 and 22.05 kHz, EOF, and compact Zorro II
-buffers. ZZPlay and AmigaAMP MHI playback have been confirmed with the
-installed libraries on an A4000 system drive; ZZ9000AX AHI still plays
-afterward. AmigaAMP pause/resume, seek, track completion, and starting another
-track also work. On that same drive, `mpega.library` 2.125 passed the SDK smoke
-tool's null API check, decoded a full 246.8-second 44.1 kHz stereo MP3 through
-EOF, and decoded 100 frames after seeking to 30 seconds. MHI drain and
-backpressure edge cases, warm reset, and Zorro II behavior still need guest
-checks before claiming full compatibility with a particular system drive.
-The installed picture DataTypes opened both JPEG and PNG on the user's normal
-A4000 configuration. The SDK viewer displays and redraws a large PNG correctly
-in its window after mapping the live framebuffer past the board's 64 KiB
-register aperture. Host media tests decoded and presented frames from a
-complete 182-second MPEG-1/MP2 sample. On the same guest drive, ZZPlay showed
-video and played MP2 audio through AHI from the 10-second excerpt. Pause,
-resume, window resize, a loop restart, and playback from a longer clip also
-worked. The media reply reports cumulative accepted input bytes, matching the
-firmware contract used by ZZPlay's streaming transport. Zorro II and warm
-reset still need guest qualification.
+`tests/test_zz9000_sdk.sh`, `tests/test_zz9000_sdk_audio.sh`,
+`tests/test_zz9000_sdk_image.sh`, `tests/test_zz9000_sdk_media.sh` and
+`tests/test_zz9000_sdk_console.sh` build the SDK against whichever optional
+libraries `pkg-config` finds and generate their fixtures with the `ffmpeg`
+command-line tool. They cover mailbox completion, allocation, reset and
+preload buffers; MP3, FLAC and Vorbis PCM against FFmpeg-decoded references
+and chunked feeding; JPEG, PNG and WebP pixels, limits and animation
+stepping; streaming playback of every supported container and codec pair,
+truncated input, and close/reopen; and console tile output.
+
+## Guest qualification
+
+On the user's A4000 system drive, ZZPlay and AmigaAMP MHI playback, MPEGA
+decoding, the JPEG and PNG picture DataTypes, the SDK viewer, and ZZPlay
+MPEG-1/MP2 playback (pause, resume, resize, loop, longer clips) work with the
+installed libraries. The features added for the newer firmware (WebP, FLAC,
+Vorbis, WebM, MPEG-2, Matroska, preload, console encoder) have only been
+exercised by the host tests so far. Zorro II and warm reset still need guest
+checks.

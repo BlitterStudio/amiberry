@@ -57,6 +57,10 @@ set(SOURCE_FILES
         src/framebufferboards.cpp
         src/zz9000.cpp
         src/zz9000_sdk.cpp
+        src/zz9000_sdk_audio_codec.cpp
+        src/zz9000_sdk_webp.cpp
+        src/zz9000_sdk_media_av.cpp
+        src/zz9000_sdk_console.cpp
         src/fsdb.cpp
         src/fsusage.cpp
         src/gayle.cpp

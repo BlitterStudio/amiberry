@@ -5,6 +5,11 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "zz9000_sdk.h"
+#include "zz9000_sdk_internal.h"
+#include "zz9000_sdk_audio_codec.h"
+#include "zz9000_sdk_media_av.h"
+#include "zz9000_sdk_console.h"
+#include "zz9000_sdk_webp.h"
 
 #include <algorithm>
 #include <chrono>
@@ -20,6 +25,7 @@
 #define STBI_ONLY_PNG
 #define STBI_MAX_DIMENSIONS 8192
 #include "../external/ImGuiFileDialog/stb/stb_image.h"
+
 
 #define PLM_NO_STDIO 1
 #define PL_MPEG_IMPLEMENTATION
@@ -43,118 +49,81 @@ constexpr uint32_t completion_offset = request_offset + 64 * 64;
 constexpr uint32_t ring_entries = 64;
 constexpr uint32_t entry_size = 64;
 constexpr uint32_t base_capabilities = (1u << 0) | (1u << 2) | (1u << 3) |
-	(1u << 4) | (1u << 5) | (1u << 6) | (1u << 13) |
+	(1u << 4) | (1u << 5) | (1u << 6) | (1u << 10) | (1u << 13) |
 	(1u << 14) | (1u << 15);
 constexpr uint32_t image_service_flags = 1u | (1u << 16) | (1u << 17) |
 	(1u << 18) | (1u << 19) | (1u << 20) | (1u << 21) |
 	(1u << 23) | (1u << 24) | (1u << 25) |
-	(1u << 26) | (1u << 27);
+	(1u << 26) | (1u << 27)
+#ifdef AMIBERRY_WITH_WEBP
+	| (1u << 28) | (1u << 29)
+#endif
+	;
+#if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
+constexpr uint32_t audio_capabilities =
+	(1u << 7)
 #ifdef ZZ9000_SDK_AUDIO
-constexpr uint32_t audio_capabilities = (1u << 7) | (1u << 19) | (1u << 23);
+	| (1u << 19) | (1u << 23)
+#endif
+#ifdef AMIBERRY_WITH_FFMPEG
+	| (1u << 28) | (1u << 29)
+#endif
+	;
 #else
 constexpr uint32_t audio_capabilities = 0;
+#endif
+#if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
+constexpr uint32_t audio_service_flags =
+	1u
+#ifdef ZZ9000_SDK_AUDIO
+	| (1u << 16) | (1u << 18) | (1u << 19) | (1u << 20) | (1u << 24)
+#endif
+#ifdef AMIBERRY_WITH_FFMPEG
+	| (1u << 25) | (1u << 26)
+#endif
+	;
+#else
+constexpr uint32_t audio_service_flags = 0;
 #endif
 constexpr uint32_t video_capabilities = (1u << 7) | (1u << 21) | (1u << 22);
 constexpr uint32_t video_service_flags = 1u | (1u << 16) | (1u << 17) |
 	(1u << 18) | (1u << 19) | (1u << 21) | (1u << 22) |
-	(1u << 23) | (1u << 24) | (1u << 25);
-constexpr uint16_t ok = 0;
-constexpr uint16_t busy = 2;
-constexpr uint16_t unsupported = 3;
-constexpr uint16_t bad_request = 4;
-constexpr uint16_t bad_handle = 5;
-constexpr uint16_t no_memory = 6;
-constexpr uint16_t io_error = 9;
-constexpr uint16_t not_found = 10;
-constexpr uint32_t pcm_s16le = 1;
-constexpr uint32_t pcm_s16be = 2;
-constexpr uint32_t host_window_begin = 0x3e0000;
-constexpr uint32_t host_window_end = 0x3f0000;
-constexpr uint32_t z3_heap_begin = 0x06000000;
-constexpr uint32_t z3_heap_end = 0x07e00000;
-constexpr uint32_t max_image_input = 16 * 1024 * 1024;
-constexpr uint32_t max_image_pixels = 24 * 1024 * 1024;
-constexpr uint32_t framebuffer_handle = 0x80000000;
-constexpr uint32_t surface_handle_base = 0x40000000;
-constexpr uint32_t max_surface_bytes = 32 * 1024 * 1024;
+	(1u << 23) | (1u << 24) | (1u << 25)
+#ifdef AMIBERRY_WITH_FFMPEG
+	| (1u << 27) | (1u << 28) | (1u << 29) | (1u << 30) | (1u << 31)
+#endif
+	;
 
-uint32_t pixel_bytes(uint32_t format)
+uint8_t clamp_byte(int32_t value)
 {
-	return format == 7 ? 4 : (format == 1 || format == 6 ? 2 : 0);
+	return static_cast<uint8_t>(std::clamp(value, 0, 255));
 }
 
-bool rect_valid(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-	            uint32_t bound_width, uint32_t bound_height)
+void rgba_to_yuv422cgx(const uint8_t *rgba, uint32_t width, uint32_t height,
+	                  uint8_t *dst, uint32_t pitch)
 {
-	return width && height && x <= bound_width && y <= bound_height &&
-		width <= bound_width - x && height <= bound_height - y;
-}
-
-void write_pixel(uint8_t *dst, uint32_t format, uint8_t r, uint8_t g,
-	             uint8_t b, uint8_t a = 255)
-{
-	if (format == 7) {
-		dst[0] = b; dst[1] = g; dst[2] = r; dst[3] = a;
-	} else {
-		const uint16_t value = format == 1 ?
-			static_cast<uint16_t>(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)) :
-			static_cast<uint16_t>(((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3));
-		dst[0] = static_cast<uint8_t>(value >> 8);
-		dst[1] = static_cast<uint8_t>(value);
+	for (uint32_t y = 0; y < height; ++y) {
+		const auto *src = rgba + static_cast<size_t>(y) * width * 4;
+		auto *row = dst + static_cast<size_t>(y) * pitch;
+		for (uint32_t x = 0; x < width; x += 2) {
+			const auto *a = src + x * 4;
+			const auto *b = src + std::min(x + 1, width - 1) * 4;
+			const int32_t r = (a[0] + b[0]) / 2, g = (a[1] + b[1]) / 2;
+			const int32_t blue = (a[2] + b[2]) / 2;
+			row[0] = clamp_byte(((66 * a[0] + 129 * a[1] + 25 * a[2] + 128) >> 8) + 16);
+			row[1] = clamp_byte(((-38 * r - 74 * g + 112 * blue + 128) >> 8) + 128);
+			row[2] = clamp_byte(((66 * b[0] + 129 * b[1] + 25 * b[2] + 128) >> 8) + 16);
+			row[3] = clamp_byte(((112 * r - 94 * g - 18 * blue + 128) >> 8) + 128);
+			row += 4;
+		}
 	}
-}
-
-// Guest FPCR can change host rounding; mpg123 expects nearest during setup
-// and decode; pl_mpeg also uses host floating-point arithmetic. Restore the
-// guest mode before returning to CPU emulation.
-class HostNearestRounding {
-public:
-	HostNearestRounding() : previous_(std::fegetround())
-	{
-		std::fesetround(FE_TONEAREST);
-	}
-
-	~HostNearestRounding()
-	{
-		if (previous_ >= 0)
-			std::fesetround(previous_);
-	}
-
-private:
-	int previous_;
-};
-
-uint16_t be16(const uint8_t *p)
-{
-	return (static_cast<uint16_t>(p[0]) << 8) | p[1];
-}
-
-uint32_t be32(const uint8_t *p)
-{
-	return (static_cast<uint32_t>(be16(p)) << 16) | be16(p + 2);
-}
-
-void put16(uint8_t *p, uint16_t value)
-{
-	p[0] = static_cast<uint8_t>(value >> 8);
-	p[1] = static_cast<uint8_t>(value);
-}
-
-void put32(uint8_t *p, uint32_t value)
-{
-	put16(p, static_cast<uint16_t>(value >> 16));
-	put16(p + 2, static_cast<uint16_t>(value));
-}
-
-uint32_t align_up(uint32_t value, uint32_t alignment)
-{
-	return (value + alignment - 1) & ~(alignment - 1);
 }
 
 } // namespace
 
 struct Engine::Audio {
 	uint32_t session = 0;
+	uint32_t codec = 1;
 	uint32_t mp3_handle = 0;
 	uint32_t pcm_handle = 0;
 	uint32_t mp3_capacity = 0;
@@ -168,15 +137,18 @@ struct Engine::Audio {
 	uint32_t channels = 0;
 	uint32_t sample_format = pcm_s16le;
 	uint32_t samples_per_frame = 1152;
+	uint32_t stream_gain = 128;
 	bool playing = false;
 	bool eof = false;
 	bool drain = false;
 	bool decoder_pending = false;
 	bool backpressure = false;
 	bool faulted = false;
+	uint16_t fault_status = io_error;
 	bool paused = false;
 	std::chrono::steady_clock::time_point next_pump{};
 	float gain = -1.0f;
+	std::unique_ptr<AudioCodecDecoder> codec_decoder;
 #ifdef ZZ9000_SDK_AUDIO
 	mpg123_handle *decoder = nullptr;
 	SDL_AudioStream *output = nullptr;
@@ -196,8 +168,19 @@ struct Engine::Image {
 	uint32_t width = 0;
 	uint32_t height = 0;
 	uint32_t next_row = 0;
+	uint32_t animation_loop_count = 0;
+	uint32_t animation_loop_index = 0;
+	uint32_t animation_frame_index = 0;
+	uint32_t animation_token = 0;
+	uint32_t animation_token_sequence = 0;
+	uint32_t animation_previous_timestamp = 0;
+	bool animation = false;
+	bool animation_presented = false;
+	bool animation_ended = false;
+	bool input_eof = false;
 	std::vector<uint8_t> compressed;
 	std::vector<uint8_t> rgba;
+	std::unique_ptr<WebpDecoder> webp;
 };
 
 struct Engine::Media {
@@ -210,15 +193,22 @@ struct Engine::Media {
 	uint32_t pcm_low_water = 0, pcm_high_water = 0;
 	uint64_t pcm_produced = 0, pcm_acknowledged = 0;
 	uint64_t video_pts = UINT64_MAX, audio_pts = UINT64_MAX;
-	uint32_t sample_rate = 0;
+	uint32_t sample_rate = 0, channels = 0;
 	uint32_t state = 1; // NEED_INPUT
+	uint32_t video_codec = 0, container = 0;
 	bool audio_enabled = false;
 	bool eof = false;
 	bool header_ready = false;
 	bool held = false;
+	bool held_interlaced = false;
+	bool av = false;
 	plm_buffer_t *input = nullptr;
 	plm_t *decoder = nullptr;
 	plm_frame_t *held_frame = nullptr;
+	std::unique_ptr<MediaAv> av_decoder;
+	MediaAvAudio av_audio;
+	size_t av_audio_offset = 0;
+	std::vector<uint8_t> held_yuy2;
 };
 
 Engine::Engine(uint8_t *board_memory, uint32_t board_size)
@@ -248,13 +238,8 @@ uint8_t *Engine::memory_at(uint32_t offset) const
 uint32_t Engine::supported_capabilities() const
 {
 	return base_capabilities | audio_capabilities |
-		(board_size_ == 0x08000000 ? video_capabilities : 0);
-}
-
-void put64(uint8_t *p, uint64_t value)
-{
-	put32(p, static_cast<uint32_t>(value >> 32));
-	put32(p + 4, static_cast<uint32_t>(value));
+		(board_size_ == 0x08000000 ? video_capabilities | (1u << 30) :
+		 (aperture_acked_ ? (1u << 20) | (1u << 24) : 0));
 }
 
 void Engine::reset()
@@ -262,6 +247,8 @@ void Engine::reset()
 	close_audio();
 	close_media();
 	image_.reset();
+	if (console_)
+		console_->reset();
 	for (auto &buffer : buffers_)
 		buffer = {};
 	for (auto &surface : surfaces_)
@@ -273,6 +260,7 @@ void Engine::reset()
 	next_image_session_ = 1;
 	next_media_session_ = 1;
 	overlay_ = {};
+	aperture_acked_ = false;
 	last_status_ = ok;
 	auto *mb = memory_at(mailbox_offset);
 	std::memset(mb, 0, mailbox_size);
@@ -295,6 +283,8 @@ uint16_t Engine::read_register(uint32_t offset) const
 		case 0x104: return mailbox_arm_address >> 16;
 		case 0x106: return mailbox_arm_address & 0xffff;
 		case 0x10a: return last_status_;
+		case 0x11c: return board_size_ == 0x00400000 ? 0x5a02 : 0;
+		case 0x11e: return board_size_ == 0x00400000 ? 0x0704 : 0;
 		default: return 0;
 	}
 }
@@ -303,6 +293,11 @@ bool Engine::write_register(uint32_t offset, uint16_t value)
 {
 	if (offset == 0x108 && value)
 		return poll();
+	if (offset == 0x11e && board_size_ == 0x00400000 && value == 0xa502) {
+		aperture_acked_ = true;
+		put32(memory_at(mailbox_offset) + 44, supported_capabilities());
+		return false;
+	}
 	// Completion IRQ is deliberately unadvertised: SDK clients poll the ring.
 	return false;
 }
@@ -439,6 +434,47 @@ void Engine::close_media()
 
 void Engine::decode_audio(const uint8_t *input, uint32_t length)
 {
+	if (!audio_ || audio_->faulted)
+		return;
+	if (audio_->codec_decoder) {
+		if (input && length)
+			audio_->codec_decoder->append(input, length);
+		const uint16_t status = audio_->codec_decoder->decode(audio_->eof);
+		if (status != ok) {
+			audio_->faulted = true;
+			audio_->fault_status = status;
+			return;
+		}
+		if (audio_->codec_decoder->sample_rate()) {
+			audio_->sample_rate = audio_->codec_decoder->sample_rate();
+			audio_->channels = audio_->codec_decoder->channels();
+		}
+		const uint32_t used = audio_->pcm_written - audio_->pcm_read;
+		const uint32_t free = audio_->pcm_capacity - used;
+		const uint32_t bytes = static_cast<uint32_t>(
+			std::min<size_t>(audio_->codec_decoder->pcm_size(), free));
+		auto *ring = buffer_data(audio_->pcm_handle);
+		if (bytes && !ring) {
+			audio_->faulted = true;
+			return;
+		}
+		if (bytes) {
+			const uint32_t pos = audio_->pcm_written % audio_->pcm_capacity;
+			const uint32_t first = std::min<uint32_t>(bytes, audio_->pcm_capacity - pos);
+			const auto *decoded = audio_->codec_decoder->pcm_data();
+			std::memcpy(ring + pos, decoded, first);
+			if (bytes > first)
+				std::memcpy(ring, decoded + first, bytes - first);
+			audio_->codec_decoder->consume_pcm(bytes);
+			audio_->pcm_written += bytes;
+			audio_->bytes_produced += bytes;
+			const uint32_t frame_bytes = audio_->channels *
+				(audio_->sample_format == pcm_s32be ? 4 : 2);
+			audio_->frames_decoded = frame_bytes ? audio_->bytes_produced / frame_bytes : 0;
+		}
+		audio_->decoder_pending = audio_->codec_decoder->has_pending();
+		return;
+	}
 #ifdef ZZ9000_SDK_AUDIO
 	if (!audio_ || !audio_->decoder || audio_->faulted)
 		return;
@@ -549,7 +585,8 @@ void Engine::pump_audio()
 		}
 		const float master = (100 - std::clamp(currprefs.sound_volume_master, 0, 100)) / 100.0f;
 		const float board = (100 - std::clamp(currprefs.sound_volume_board, 0, 100)) / 100.0f;
-		const float gain = sound_muted() ? 0.0f : master * board;
+		const float gain = sound_muted() ? 0.0f :
+			master * board * static_cast<float>(audio_->stream_gain) / 128.0f;
 		if (gain != audio_->gain && SDL_SetAudioStreamGain(audio_->output, gain))
 			audio_->gain = gain;
 	}
@@ -563,11 +600,14 @@ void Engine::pump_audio()
 		audio_->faulted = true;
 		return;
 	}
-	if (queued >= 48000 / 2 * 4)
+	const int rate = audio_->sample_rate ? static_cast<int>(audio_->sample_rate) : 48000;
+	const int channels = audio_->channels ? static_cast<int>(audio_->channels) : 2;
+	const int max_queued = rate * channels;
+	if (queued >= max_queued)
 		return;
 	uint32_t available = audio_->pcm_written - audio_->pcm_read;
 	available = std::min<uint32_t>(available, 16384);
-	available = std::min<uint32_t>(available, 48000 / 2 * 4 - queued);
+	available = std::min<uint32_t>(available, static_cast<uint32_t>(max_queued - queued));
 	if (!available)
 		return;
 	const uint32_t pos = audio_->pcm_read % audio_->pcm_capacity;
@@ -651,7 +691,7 @@ void Engine::media_audio_result(uint8_t *reply, uint16_t *reply_length)
 	put32(reply, media_->session);
 	put32(reply + 4, media_->state);
 	put32(reply + 8, media_->sample_rate);
-	put32(reply + 12, media_->sample_rate ? 2 : 0);
+	put32(reply + 12, media_->channels);
 	put32(reply + 16, 2); // S16BE
 	put64(reply + 20, media_->pcm_produced);
 	put64(reply + 28, media_->pcm_acknowledged);
@@ -662,27 +702,53 @@ void Engine::media_audio_result(uint8_t *reply, uint16_t *reply_length)
 
 void Engine::pump_media_audio()
 {
-	if (!media_ || !media_->audio_enabled || !media_->decoder ||
-	    !media_->pcm_capacity)
+	if (!media_ || !media_->audio_enabled || !media_->pcm_capacity)
 		return;
 	auto *ring = buffer_data(media_->pcm_handle);
 	if (!ring)
 		return;
+	if (media_->av) {
+		while (media_->pcm_produced - media_->pcm_acknowledged < media_->pcm_high_water) {
+			if (media_->av_audio_offset == media_->av_audio.s16be.size()) {
+				media_->av_audio = {};
+				media_->av_audio_offset = 0;
+				if (!media_->av_decoder->pop_audio(media_->av_audio))
+					break;
+				media_->sample_rate = media_->av_audio.sample_rate;
+				media_->channels = media_->av_audio.channels;
+				if (media_->audio_pts == UINT64_MAX)
+					media_->audio_pts = media_->av_audio.pts;
+			}
+			const uint64_t used = media_->pcm_produced - media_->pcm_acknowledged;
+			const uint32_t space = static_cast<uint32_t>(media_->pcm_capacity - used);
+			const uint32_t bytes = std::min<uint32_t>(space,
+				static_cast<uint32_t>(media_->av_audio.s16be.size() - media_->av_audio_offset));
+			if (!bytes)
+				break;
+			for (uint32_t i = 0; i < bytes; ++i)
+				ring[(media_->pcm_produced + i) % media_->pcm_capacity] =
+					media_->av_audio.s16be[media_->av_audio_offset + i];
+			media_->pcm_produced += bytes;
+			media_->av_audio_offset += bytes;
+		}
+		return;
+	}
+	if (!media_->decoder)
+		return;
 	HostNearestRounding host_rounding;
 	for (unsigned block = 0; block < 4; ++block) {
 		if (media_->decoder->video_buffer &&
-		    plm_buffer_get_remaining(media_->decoder->video_buffer) >
-		    256 * 1024)
+		    plm_buffer_get_remaining(media_->decoder->video_buffer) > 256 * 1024)
 			break;
 		if (media_->pcm_produced - media_->pcm_acknowledged + 4608 >
-		    media_->pcm_capacity ||
-		    media_->pcm_produced - media_->pcm_acknowledged >=
+		    media_->pcm_capacity || media_->pcm_produced - media_->pcm_acknowledged >=
 		    media_->pcm_high_water)
 			break;
 		plm_samples_t *samples = plm_decode_audio(media_->decoder);
 		if (!samples)
 			break;
 		media_->sample_rate = static_cast<uint32_t>(plm_get_samplerate(media_->decoder));
+		media_->channels = 2;
 		if (!media_->sample_rate)
 			break;
 		if (media_->audio_pts == UINT64_MAX)
@@ -711,14 +777,28 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			return bad_request;
 		if (media_)
 			return busy;
+		const uint32_t video_codec = be32(request);
+		const uint32_t container = be32(request + 4);
 		const uint32_t width = be32(request + 8), height = be32(request + 12);
 		const uint32_t audio_codec = be32(request + 20);
-		if (be32(request) != 1 || be32(request + 4) != 1 ||
-		    be32(request + 16) != 1 || audio_codec > 1 ||
-		    be32(request + 40))
+		if (be32(request + 16) != 1 || be32(request + 40))
 			return unsupported;
-		if (!width || !height || width > 1920 || height > 1080 ||
-		    (width & 1))
+		const bool legacy_mpeg1 = video_codec == 1 && container == 1 &&
+			(audio_codec == 0 || audio_codec == 1);
+		const bool av_media =
+#ifdef AMIBERRY_WITH_FFMPEG
+			(video_codec == 2 && container == 1 && audio_codec <= 3) ||
+			((video_codec == 3 || video_codec == 4) && container == 2 &&
+			 (audio_codec == 0 || audio_codec == 4 || audio_codec == 5)) ||
+			((video_codec == 1 || video_codec == 2) && container == 2 &&
+			 audio_codec <= 3);
+#else
+			false;
+#endif
+		if (!legacy_mpeg1 && !av_media)
+			return unsupported;
+		if (!width || !height || width > 1920 || height > 1920 ||
+		    static_cast<uint64_t>(width) * height > 1920u * 1088u || (width & 1))
 			return bad_request;
 		const uint32_t pcm_handle = be32(request + 24);
 		const uint32_t pcm_capacity = be32(request + 28);
@@ -727,32 +807,39 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			const auto *ring = find_buffer(pcm_handle);
 			if (!ring)
 				return bad_handle;
-			if (pcm_capacity < 8192 || pcm_capacity > ring->length ||
-			    (pcm_capacity & 3) || low >= high || high > pcm_capacity)
+			if (pcm_capacity < 4608 || pcm_capacity > 256 * 1024 ||
+			    pcm_capacity > ring->length || (pcm_capacity & 3) || low >= high ||
+			    high < 4608 || high > pcm_capacity || (low & 3) || (high & 3))
 				return bad_request;
 		} else if (pcm_handle || pcm_capacity || low || high) {
 			return bad_request;
 		}
-		HostNearestRounding host_rounding;
-		auto *input = plm_buffer_create_with_capacity(256 * 1024);
-		if (!input)
-			return no_memory;
-		auto *decoder = plm_create_with_buffer(input, TRUE);
-		if (!decoder) {
-			plm_buffer_destroy(input);
-			return no_memory;
-		}
-		plm_set_audio_enabled(decoder, audio_codec == 1);
 		media_ = std::make_unique<Media>();
 		media_->session = next_media_session_++;
 		media_->width = width; media_->height = height;
-		media_->audio_enabled = audio_codec == 1;
+		media_->video_codec = video_codec; media_->container = container;
+		media_->audio_enabled = audio_codec != 0;
 		media_->pcm_handle = pcm_handle;
 		media_->pcm_capacity = pcm_capacity;
 		media_->pcm_low_water = low;
 		media_->pcm_high_water = high;
-		media_->input = input;
-		media_->decoder = decoder;
+		if (av_media) {
+			media_->av = true;
+			media_->av_decoder = std::make_unique<MediaAv>(video_codec, container, audio_codec);
+		} else {
+			HostNearestRounding host_rounding;
+			auto *input = plm_buffer_create_with_capacity(256 * 1024);
+			if (!input) { media_.reset(); return no_memory; }
+			auto *decoder = plm_create_with_buffer(input, TRUE);
+			if (!decoder) {
+				plm_buffer_destroy(input);
+				media_.reset();
+				return no_memory;
+			}
+			plm_set_audio_enabled(decoder, audio_codec == 1);
+			media_->input = input;
+			media_->decoder = decoder;
+		}
 		media_result(reply, reply_length);
 		return ok;
 	}
@@ -771,6 +858,25 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		if (offset > source->length || length > source->length - offset ||
 		    media_->eof)
 			return bad_request;
+		if (media_->av) {
+			const uint32_t accepted = length ? media_->av_decoder->append(
+				buffer_data(handle) + offset, length) : 0;
+			if (!accepted && length) {
+				if (media_->av_decoder->failed())
+					return io_error;
+				media_result(reply, reply_length, 0, 1u << 8);
+				return busy;
+			}
+			media_->bytes_accepted = accepted > UINT32_MAX - media_->bytes_accepted ?
+				UINT32_MAX : media_->bytes_accepted + accepted;
+			if ((flags & 1) && accepted == length) {
+				media_->av_decoder->finish_input();
+				media_->eof = true;
+			}
+			media_result(reply, reply_length, accepted,
+				accepted < length ? 1u << 8 : 0);
+			return ok;
+		}
 		const size_t remaining = plm_buffer_get_remaining(media_->input);
 		const bool es_backpressure =
 			(media_->decoder->video_buffer &&
@@ -803,10 +909,38 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		return ok;
 	}
 	if (opcode == 0x0b06) {
-		if (be32(request + 4) || be32(request + 8) || be32(request + 12))
+		if ((be32(request + 4) & ~3u) || be32(request + 8) || be32(request + 12))
 			return bad_request;
 		if (media_->held)
 			return busy;
+		if (media_->av) {
+			MediaAvFrame frame;
+			const int result = media_->av_decoder->decode(frame, be32(request + 4));
+			if (result < 0) {
+				media_->state = 5;
+				return io_error;
+			}
+			media_->header_ready = media_->av_decoder->header_ready();
+			if (result == 1) {
+				if (frame.width != media_->width || frame.height != media_->height) {
+					media_->state = 5;
+					return io_error;
+				}
+				media_->held_yuy2 = std::move(frame.yuy2);
+				media_->held_interlaced = frame.interlaced;
+				media_->held = true;
+				media_->state = 3;
+				media_->frame_number++;
+				media_->frame_rate_num = frame.frame_rate_num;
+				media_->frame_rate_den = frame.frame_rate_den;
+				media_->video_pts = frame.pts;
+			} else {
+				media_->state = result == 2 ? 4 : 1;
+			}
+			pump_media_audio();
+			media_result(reply, reply_length);
+			return ok;
+		}
 		HostNearestRounding host_rounding;
 		media_->header_ready = plm_has_headers(media_->decoder);
 		// The system header can be ready while a disabled audio decoder is not.
@@ -853,45 +987,79 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		return ok;
 	}
 	if (opcode == 0x0b07) {
-		if (!media_->audio_enabled || be32(request + 12))
+		if (!media_->audio_enabled)
 			return unsupported;
+		if (be32(request + 12))
+			return bad_request;
 		const uint64_t acknowledged =
 			(static_cast<uint64_t>(be32(request + 4)) << 32) | be32(request + 8);
+		const uint32_t frame_bytes = media_->channels ? media_->channels * 2 : 4;
 		if (acknowledged < media_->pcm_acknowledged ||
-		    acknowledged > media_->pcm_produced || (acknowledged & 3))
+		    acknowledged > media_->pcm_produced || (acknowledged % frame_bytes))
 			return bad_request;
 		media_->pcm_acknowledged = acknowledged;
 		pump_media_audio();
 		if (media_->sample_rate)
-			media_->audio_pts = (acknowledged / 4) * 90000 / media_->sample_rate;
+			media_->audio_pts = (acknowledged / frame_bytes) * 90000 / media_->sample_rate;
 		media_audio_result(reply, reply_length);
 		return ok;
 	}
 	if (opcode == 0x0b08 || opcode == 0x0b09) {
 		if (be32(request + 4) || be32(request + 8) || be32(request + 12))
 			return bad_request;
-		if (!media_->held || !media_->held_frame)
+		if (!media_->held || (!media_->av && !media_->held_frame))
 			return bad_request;
 		if (opcode == 0x0b08) {
-			if (!overlay_.active || overlay_.width < media_->width ||
-			    overlay_.height < media_->height)
+			if (!overlay_.active)
 				return busy;
-			const auto *frame = media_->held_frame;
-			for (uint32_t y = 0; y < media_->height; ++y) {
-				auto *dst = memory_at(overlay_.offset +
-					static_cast<size_t>(y) * overlay_.pitch);
-				for (uint32_t x = 0; x < media_->width; x += 2) {
-					const uint32_t luma = y * frame->y.width + x;
-					const uint32_t chroma = (y / 2) * frame->cb.width + x / 2;
-					dst[0] = frame->y.data[luma];
-					dst[1] = frame->cb.data[chroma];
-					dst[2] = frame->y.data[luma + 1];
-					dst[3] = frame->cr.data[chroma];
-					dst += 4;
+			const bool half = overlay_.width < media_->width ||
+				overlay_.height < media_->height;
+			const uint32_t packed_width = half ? media_->width / 2 : media_->width;
+			const uint32_t packed_height = half ? media_->height / 2 : media_->height;
+			if (!packed_width || !packed_height || overlay_.width < packed_width ||
+			    overlay_.height < packed_height || (!media_->av && half))
+				return busy;
+			if (media_->av) {
+				for (uint32_t y = 0; y < packed_height; ++y) {
+					auto *dst = memory_at(overlay_.offset +
+						static_cast<size_t>(y) * overlay_.pitch);
+					const uint8_t *src = media_->held_yuy2.data() +
+						static_cast<size_t>(half ? y * 2 : y) * media_->width * 2;
+					if (half) {
+						for (uint32_t x = 0; x < packed_width; x += 2) {
+							const size_t input = static_cast<size_t>(x / 2) * 8;
+							dst[x * 2] = src[input];
+							dst[x * 2 + 1] = src[input + 1];
+							dst[x * 2 + 2] = src[input + 4];
+							dst[x * 2 + 3] = src[input + 3];
+						}
+					} else if (media_->held_interlaced && y + 1 < media_->height) {
+						const uint8_t *next = src + static_cast<size_t>(media_->width) * 2;
+						for (uint32_t x = 0; x < media_->width * 2; ++x)
+							dst[x] = static_cast<uint8_t>((src[x] + next[x] + 1) >> 1);
+					} else {
+						std::memcpy(dst, src, static_cast<size_t>(media_->width) * 2);
+					}
+				}
+			} else {
+				const auto *frame = media_->held_frame;
+				for (uint32_t y = 0; y < media_->height; ++y) {
+					auto *dst = memory_at(overlay_.offset +
+						static_cast<size_t>(y) * overlay_.pitch);
+					for (uint32_t x = 0; x < media_->width; x += 2) {
+						const uint32_t luma = y * frame->y.width + x;
+						const uint32_t chroma = (y / 2) * frame->cb.width + x / 2;
+						dst[0] = frame->y.data[luma];
+						dst[1] = frame->cb.data[chroma];
+						dst[2] = frame->y.data[luma + 1];
+						dst[3] = frame->cr.data[chroma];
+						dst += 4;
+					}
 				}
 			}
 		}
 		media_->held = false;
+		media_->held_interlaced = false;
 		media_->held_frame = nullptr;
 		media_->state = 2;
 		media_result(reply, reply_length, 0,
@@ -902,17 +1070,50 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		if (request_length < 12 || be32(request + 8))
 			return bad_request;
 		const uint32_t page = be32(request + 4);
-		if (page != 1)
+		if (page > 3)
 			return bad_request;
 		put32(reply, media_->session);
 		put32(reply + 4, media_->state);
 		put32(reply + 8, page);
-		put32(reply + 12, 0);
-		put64(reply + 16, UINT64_MAX);
-		put64(reply + 24, media_->video_pts);
-		put64(reply + 32, media_->audio_pts);
-		put64(reply + 40, media_->sample_rate ? 0 : UINT64_MAX);
+		if (page == 0) {
+			put32(reply + 12, 0);
+			put64(reply + 16, UINT64_MAX);
+			put64(reply + 24, media_->video_pts);
+			put64(reply + 32, media_->audio_pts);
+			put64(reply + 40, media_->sample_rate ? 0 : UINT64_MAX);
+		} else if (page == 1) {
+			put32(reply + 12, media_->sample_rate ? 1u << 7 : 0);
+			put64(reply + 16, media_->pcm_produced);
+			put64(reply + 24, media_->pcm_acknowledged);
+			put64(reply + 32, media_->audio_pts);
+			put64(reply + 40, media_->audio_pts);
+		} else if (page == 2) {
+			put32(reply + 12, 0);
+			put64(reply + 16, media_->bytes_accepted);
+			put64(reply + 24, media_->frame_number);
+			put64(reply + 32, media_->frame_number);
+			put64(reply + 40, 0);
+		} else if (page == 3) {
+			const uint32_t frame_bytes = media_->channels ? media_->channels * 2 : 4;
+			const uint64_t retired = frame_bytes ? media_->pcm_acknowledged / frame_bytes : 0;
+			const uint64_t staged = frame_bytes ? media_->pcm_produced / frame_bytes : 0;
+			const uint64_t queued = staged >= retired ? staged - retired : 0;
+			put32(reply + 12, media_->sample_rate ? 1u << 7 : 0);
+			put64(reply + 16, retired);
+			put64(reply + 24, queued);
+			put64(reply + 32, staged);
+			put64(reply + 40, 0);
+		}
 		*reply_length = 48;
+		return ok;
+	}
+	if (opcode == 0x0b0b) {
+		return unsupported;
+	}
+	if (opcode == 0x0b0c) {
+		if (be32(request + 4) || be32(request + 8) || be32(request + 12))
+			return bad_request;
+		media_audio_result(reply, reply_length);
 		return ok;
 	}
 	if (opcode == 0x0b0d) {
@@ -927,6 +1128,23 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 	return unsupported;
 }
 
+uint16_t Engine::dispatch_console(const uint8_t *request, uint16_t request_length,
+	                              uint8_t *reply, uint16_t *reply_length)
+{
+	if (request_length < 34)
+		return bad_request;
+	auto *pixels = surface_pixels(be32(request));
+	auto *output = buffer_data(be32(request + 4));
+	const auto *buffer = find_buffer(be32(request + 4));
+	if (!pixels || !output || !buffer)
+		return bad_handle;
+	if (!console_)
+		console_ = std::make_unique<ConsoleEncoder>();
+	return console_->encode(request, pixels, surface_width(be32(request)),
+		surface_height(be32(request)), surface_pitch(be32(request)),
+		surface_format(be32(request)), output, buffer->length, reply, reply_length);
+}
+
 uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 	                       uint16_t request_length, uint8_t *reply,
 	                       uint16_t *reply_length)
@@ -934,6 +1152,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 	*reply_length = 0;
 	if (request_length > 48)
 		return bad_request;
+	if (opcode == 0x8200)
+		return dispatch_console(request, request_length, reply, reply_length);
 	if (opcode >= 0x0b04 && opcode <= 0x0b0d)
 		return dispatch_media(opcode, request, request_length, reply, reply_length);
 	if (opcode == 0x0000)
@@ -955,7 +1175,25 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		put32(reply + 28, ring_entries);
 		put32(reply + 32, ring_entries);
 		put32(reply + 36, board_size_ == 0x00400000 ?
-			 host_window_end - host_window_begin : 0);
+			(aperture_acked_ ? 0x4000 : host_window_end - host_window_begin) : 0);
+		*reply_length = 48;
+		return ok;
+	}
+	if (opcode == 0x0005) {
+		if (board_size_ != 0x00400000 || !aperture_acked_)
+			return unsupported;
+		put32(reply + 0, 0x0002000f);
+		put32(reply + 4, 0x00400000);
+		put32(reply + 8, 0x00010000);
+		put32(reply + 12, 0x00388000);
+		put32(reply + 16, 0x00398000);
+		put32(reply + 20, 0x00038000);
+		put32(reply + 24, 0x003d0000);
+		put32(reply + 28, 0x00010000);
+		put32(reply + 32, 0x003e0000);
+		put32(reply + 36, 0x00004000);
+		put32(reply + 40, 0x003f0000);
+		put32(reply + 44, 0x00010000);
 		*reply_length = 48;
 		return ok;
 	}
@@ -964,9 +1202,9 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return bad_request;
 		const uint32_t service = be32(request);
 		if (service != 0 && service != 0x100 && service != 0x200 &&
-		    service != 0x400 &&
+		    service != 0x400 && service != 0x8200 &&
 		    (service != 0x0b00 || board_size_ != 0x08000000)
-#ifdef ZZ9000_SDK_AUDIO
+#if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
 		    && service != 0x500
 #endif
 		)
@@ -975,26 +1213,33 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		put32(reply + 4, 0x00020000);
 		put32(reply + 8, service == 0 ? supported_capabilities() & ~((1u << 2) |
 			(1u << 3) | (1u << 4) | (1u << 5) | (1u << 6) |
-			(1u << 7) | (1u << 15) | (1u << 19) |
-			(1u << 21) | (1u << 22)) :
-			service == 0x100 ? (1u << 2) :
+			(1u << 7) | (1u << 15) | (1u << 19) | (1u << 21) |
+			(1u << 22) | (1u << 30)) :
+			service == 0x100 ? ((1u << 2) | (1u << 10) |
+				(board_size_ == 0x08000000 ? (1u << 30) :
+				 (aperture_acked_ ? (1u << 20) : 0))) :
 			service == 0x200 ? ((1u << 3) | (1u << 4) | (1u << 15)) :
 			service == 0x400 ? ((1u << 5) | (1u << 6)) :
 			service == 0x0b00 ? video_capabilities :
-			audio_capabilities);
-		put32(reply + 12, service == 0x400 ? image_service_flags :
+			service == 0x8200 ? 0 : audio_capabilities);
+		put32(reply + 12, service == 0x100 ?
+			(1u | (board_size_ == 0x08000000 ? (1u << 16) : 0)) :
+			service == 0x400 ? image_service_flags :
 			service == 0x0b00 ? video_service_flags :
-			service == 0x500 ?
-			(1u | (1u << 16) | (1u << 18) | (1u << 19) | (1u << 20)) : 1u);
+			service == 0x500 ? audio_service_flags : 1u);
 		put32(reply + 16, service);
-		put32(reply + 20, service == 0 ? 4 : service == 0x100 ? 2 :
-			service == 0x200 ? 5 :
-			service == 0x400 ? 8 : service == 0x0b00 ? 14 : 6);
+		put32(reply + 20, service == 0 ? 6 : service == 0x100 ? 4 :
+			service == 0x200 ? 5 : service == 0x400 ?
+#ifdef AMIBERRY_WITH_WEBP
+			12 :
+#else
+			8 :
+#endif
+			service == 0x0b00 ? 14 : service == 0x8200 ? 1 : 23);
 		put32(reply + 24, 48);
 		const char *name = service == 0 ? "core" : service == 0x100 ?
-			"memory" : service == 0x200 ? "surface" :
-			service == 0x400 ? "image" :
-			service == 0x0b00 ? "video" : "audio";
+			"memory" : service == 0x200 ? "surface" : service == 0x400 ? "image" :
+			service == 0x0b00 ? "video" : service == 0x8200 ? "console" : "audio";
 		std::memcpy(reply + 28, name, std::strlen(name));
 		*reply_length = 48;
 		return ok;
@@ -1005,19 +1250,31 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		const uint32_t length = be32(request);
 		uint32_t alignment = be32(request + 4);
 		const uint32_t flags = be32(request + 8);
+		const bool media = (flags & 4) != 0;
+		const bool z2 = board_size_ == 0x00400000;
 		if (alignment == 0)
 			alignment = 16;
-		if (!length || length > 4 * 1024 * 1024 || alignment > 4096 ||
-			(alignment & (alignment - 1)) || (flags & ~3u))
+		if (!length || (alignment & (alignment - 1)) || (flags & ~7u))
 			return bad_request;
+		if (media) {
+			if (board_size_ != 0x08000000)
+				return unsupported;
+			if (!(flags & 2) || (flags & 1) || length > 64 * 1024 * 1024 ||
+				alignment > 64 * 1024)
+				return bad_request;
+		} else if (alignment > 4096 || length > 0x003f0000 ||
+			(z2 && (flags & 1) &&
+			 length > (aperture_acked_ ? 0x4000 : host_window_end - host_window_begin))) {
+			return bad_request;
+		}
 		auto free_slot = std::find_if(buffers_.begin(), buffers_.end(),
 			[](const Buffer &buffer) { return buffer.handle == 0; });
 		if (free_slot == buffers_.end())
 			return no_memory;
-		const bool z2 = board_size_ == 0x00400000;
-		const bool card_only = z2 && (flags & 2);
+		const bool card_only = media || (z2 && (flags & 2));
 		const uint32_t start = z2 && !card_only ? host_window_begin : z3_heap_begin;
-		const uint32_t end = z2 && !card_only ? host_window_end : z3_heap_end;
+		const uint32_t end = z2 && !card_only ?
+			(aperture_acked_ ? host_window_begin + 0x4000 : host_window_end) : z3_heap_end;
 		uint32_t board_offset = 0;
 		if (!card_only) {
 			uint32_t candidate = align_up(start, alignment);
@@ -1040,8 +1297,13 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			if (!board_offset)
 				return no_memory;
 		}
-		if (card_only)
-			free_slot->card_only.resize(length);
+		try {
+			if (card_only)
+				free_slot->card_only.resize(length);
+		} catch (...) {
+			*free_slot = {};
+			return no_memory;
+		}
 		free_slot->handle = next_handle_++;
 		free_slot->board_offset = board_offset;
 		free_slot->length = length;
@@ -1070,20 +1332,55 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		*buffer = {};
 		return ok;
 	}
+	if (opcode == 0x0102) {
+		if (request_length < 13)
+			return bad_request;
+		auto *buffer = find_buffer(be32(request));
+		const uint32_t offset = be32(request + 4);
+		const uint32_t length = be32(request + 8);
+		if (!buffer)
+			return bad_handle;
+		if (offset > buffer->length || length > buffer->length - offset)
+			return bad_request;
+		if (length)
+			std::memset(buffer_data(buffer->handle) + offset, request[12], length);
+		return ok;
+	}
+	if (opcode == 0x0103) {
+		if (request_length < 20)
+			return bad_request;
+		auto *dst = find_buffer(be32(request));
+		const uint32_t dst_offset = be32(request + 4);
+		auto *src = find_buffer(be32(request + 8));
+		const uint32_t src_offset = be32(request + 12);
+		const uint32_t length = be32(request + 16);
+		if (!dst || !src)
+			return bad_handle;
+		if (dst_offset > dst->length || length > dst->length - dst_offset ||
+			src_offset > src->length || length > src->length - src_offset)
+			return bad_request;
+		if (length)
+			std::memmove(buffer_data(dst->handle) + dst_offset,
+				buffer_data(src->handle) + src_offset, length);
+		return ok;
+	}
 	if (opcode == 0x0200) {
 		if (request_length < 20)
 			return bad_request;
 		const uint32_t width = be32(request), height = be32(request + 4);
 		const uint32_t format = be32(request + 8), flags = be32(request + 12);
 		uint32_t pitch = be32(request + 16);
-		if (!width || !height || width > 8192 || height > 8192 || format != 7 ||
-		    (flags & ~17u) || !(flags & 16u))
+		if (!width || !height || width > 8192 || height > 8192 ||
+		    (format != 7
+#ifdef AMIBERRY_WITH_WEBP
+		     && format != 9
+#endif
+		    ) || (flags & ~17u) || !(flags & 16u))
 			return unsupported;
-		if (width > UINT32_MAX / 4)
-			return bad_request;
+		const uint32_t minimum_pitch = format == 9 ? ((width + 1) / 2) * 4 : width * 4;
 		if (!pitch)
-			pitch = width * 4;
-		if (pitch < width * 4 ||
+			pitch = minimum_pitch;
+		if (pitch < minimum_pitch ||
 		    static_cast<uint64_t>(pitch) * height > max_surface_bytes)
 			return bad_request;
 		auto slot = std::find_if(surfaces_.begin(), surfaces_.end(),
@@ -1152,6 +1449,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return bad_request;
 		const uint32_t pitch = surface_pitch(handle), format = surface_format(handle);
 		const uint32_t bpp = pixel_bytes(format);
+		if (!bpp)
+			return unsupported;
 		for (uint32_t row = y; row < y + height; ++row)
 			for (uint32_t col = x; col < x + width; ++col)
 				write_pixel(pixels + static_cast<size_t>(row) * pitch + col * bpp,
@@ -1174,13 +1473,31 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		const uint32_t stride = be32(request + 36);
 		const uint32_t rows = be32(request + 40);
 		const uint32_t flags = be32(request + 44);
-		if (codec != 1 && codec != 2)
+		if (codec != 1 && codec != 2 && codec != 4)
 			return codec == 3 ? unsupported : bad_request;
-		if ((output_mode != 1 && output_mode != 3) || (flags & ~3u))
+#ifndef AMIBERRY_WITH_WEBP
+		if (codec == 4)
 			return unsupported;
-		if (format != 2 && format != 3 && format != 7 && format != 8)
+#endif
+		const bool animation = (flags & 8u) != 0;
+		if ((animation && (codec != 4 || flags != 8u)) ||
+		    (!animation && (flags & ~3u)))
+			return animation ? bad_request : unsupported;
+		if (codec == 4 && (flags & 1u))
 			return unsupported;
-		if (output_mode == 3) {
+		if ((output_mode != 1 && output_mode != 2 && output_mode != 3) ||
+		    (animation && output_mode != 1))
+			return animation ? bad_request : unsupported;
+		if (animation) {
+			if (format != 9 || !surface_pixels(dst_surface))
+				return format == 9 ? bad_handle : unsupported;
+			if (surface_format(dst_surface) != 9 ||
+			    dst_x || dst_y || dst_width != surface_width(dst_surface) ||
+			    dst_height != surface_height(dst_surface) || tile_handle || stride || rows)
+				return unsupported;
+		} else if (format != 2 && format != 3 && format != 7 && format != 8) {
+			return unsupported;
+		} else if (output_mode == 3) {
 			const auto *tile = find_buffer(tile_handle);
 			if (!tile)
 				return bad_handle;
@@ -1190,7 +1507,9 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		} else {
 			if (!surface_pixels(dst_surface))
 				return bad_handle;
-			if (format != 7 || surface_format(dst_surface) != 7)
+			if ((output_mode == 2 && dst_surface != framebuffer_handle) ||
+			    (codec != 4 && (format != 7 || surface_format(dst_surface) != 7)) ||
+			    (codec == 4 && surface_format(dst_surface) != format))
 				return unsupported;
 			if (!rect_valid(dst_x, dst_y, dst_width, dst_height,
 			                surface_width(dst_surface), surface_height(dst_surface)) ||
@@ -1203,12 +1522,15 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		image_->output_format = format;
 		image_->tile_handle = tile_handle;
 		image_->output_mode = output_mode;
-		image_->dst_surface = output_mode == 1 ? dst_surface : 0;
+		image_->dst_surface = output_mode != 3 ? dst_surface : 0;
 		image_->dst_x = dst_x; image_->dst_y = dst_y;
 		image_->dst_width = dst_width; image_->dst_height = dst_height;
 		image_->flags = flags;
 		image_->tile_stride = stride;
 		image_->tile_rows = rows;
+		image_->animation = animation;
+		if (codec == 4)
+			image_->webp = std::make_unique<WebpDecoder>();
 		put32(reply, image_->session);
 		put32(reply + 4, 1); // NEED_INPUT
 		put32(reply + 16, format);
@@ -1232,53 +1554,99 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		if (source_offset > source->length ||
 		    source_length > source->length - source_offset)
 			return bad_request;
-		if (!image_->rgba.empty() && source_length)
-			return bad_request;
-		if (image_->rgba.empty() && source_length) {
-			if (source_length > max_image_input - image_->compressed.size())
-				return no_memory;
-			const auto *data = buffer_data(source_handle) + source_offset;
-			image_->compressed.insert(image_->compressed.end(), data,
-				data + source_length);
-		}
 		uint32_t state = 1; // NEED_INPUT
 		uint32_t tile_y = 0, tile_height = 0, bytes_written = 0;
 		uint32_t result_flags = 0;
-		if ((flags & 1) && image_->rgba.empty()) {
-			const auto &data = image_->compressed;
-			const bool signature = image_->codec == 1 ?
-				(data.size() >= 2 && data[0] == 0xff && data[1] == 0xd8) :
-				(data.size() >= 8 && std::memcmp(data.data(),
-					"\x89PNG\r\n\x1a\n", 8) == 0);
-			if (!signature || data.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
-				return io_error;
-			int width = 0, height = 0, channels = 0;
-			if (!stbi_info_from_memory(data.data(), static_cast<int>(data.size()),
-				&width, &height, &channels) || width <= 0 || height <= 0 ||
-				static_cast<uint64_t>(width) * height > max_image_pixels)
-				return io_error;
-			const uint32_t bpp = image_->output_format == 8 ? 3 : 4;
-			if (image_->output_mode == 3 &&
-			    static_cast<uint64_t>(width) * bpp > image_->tile_stride)
-				return bad_request;
-			int decoded_width = 0, decoded_height = 0;
-			auto *decoded = stbi_load_from_memory(data.data(),
-				static_cast<int>(data.size()), &decoded_width, &decoded_height,
-				&channels, 4);
-			if (!decoded || decoded_width != width || decoded_height != height) {
-				stbi_image_free(decoded);
-				return io_error;
+		if ((!image_->rgba.empty() || image_->input_eof) && source_length)
+			return bad_request;
+		if (image_->codec == 4) {
+			const auto map_webp_result = [](WebpInputResult result) {
+				return result == WebpInputResult::limit ? bad_request :
+					result == WebpInputResult::no_memory ? no_memory : io_error;
+			};
+			if (source_length) {
+				const auto result = image_->webp->append(
+					buffer_data(source_handle) + source_offset, source_length);
+				if (result != WebpInputResult::ok)
+					return map_webp_result(result);
 			}
-			image_->width = static_cast<uint32_t>(width);
-			image_->height = static_cast<uint32_t>(height);
-			image_->rgba.assign(decoded, decoded + static_cast<size_t>(width) * height * 4);
-			stbi_image_free(decoded);
-			image_->compressed.clear();
+			if (flags & 1u) {
+				image_->input_eof = true;
+				if (image_->animation) {
+					uint32_t width = 0, height = 0, loops = 0;
+					const auto result = image_->webp->begin_animation(width, height, loops);
+					if (result != WebpInputResult::ok)
+						return map_webp_result(result);
+					if (width > surface_width(image_->dst_surface) ||
+					    height > surface_height(image_->dst_surface) ||
+					    surface_pitch(image_->dst_surface) < ((width + 1) / 2) * 4)
+						return bad_request;
+					image_->width = width;
+					image_->height = height;
+					image_->animation_loop_count = loops;
+					put32(reply, image_->session);
+					put32(reply + 4, 6); // ANIMATION_READY
+					put32(reply + 8, width);
+					put32(reply + 12, height);
+					put32(reply + 16, image_->output_format);
+					put32(reply + 36, source_length);
+					*reply_length = 48;
+					return ok;
+				}
+				bool animated = false;
+				const auto result = image_->webp->decode_still(image_->width, image_->height,
+					animated, image_->rgba);
+				if (result != WebpInputResult::ok)
+					return map_webp_result(result);
+				const uint32_t bpp = image_->output_format == 8 ? 3 : 4;
+				if (image_->output_mode == 3 &&
+				    static_cast<uint64_t>(image_->width) * bpp > image_->tile_stride)
+					return bad_request;
+			}
+		} else {
+			if (image_->rgba.empty() && source_length) {
+				if (source_length > max_image_input - image_->compressed.size())
+					return no_memory;
+				const auto *data = buffer_data(source_handle) + source_offset;
+				image_->compressed.insert(image_->compressed.end(), data,
+					data + source_length);
+			}
+			if ((flags & 1) && image_->rgba.empty()) {
+				const auto &data = image_->compressed;
+				const bool signature = image_->codec == 1 ?
+					(data.size() >= 2 && data[0] == 0xff && data[1] == 0xd8) :
+					(data.size() >= 8 && std::memcmp(data.data(),
+						"\x89PNG\r\n\x1a\n", 8) == 0);
+				if (!signature || data.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+					return io_error;
+				int width = 0, height = 0, channels = 0;
+				if (!stbi_info_from_memory(data.data(), static_cast<int>(data.size()),
+					&width, &height, &channels) || width <= 0 || height <= 0 ||
+					static_cast<uint64_t>(width) * height > max_image_pixels)
+					return io_error;
+				const uint32_t bpp = image_->output_format == 8 ? 3 : 4;
+				if (image_->output_mode == 3 &&
+				    static_cast<uint64_t>(width) * bpp > image_->tile_stride)
+					return bad_request;
+				int decoded_width = 0, decoded_height = 0;
+				auto *decoded = stbi_load_from_memory(data.data(),
+					static_cast<int>(data.size()), &decoded_width, &decoded_height,
+					&channels, 4);
+				if (!decoded || decoded_width != width || decoded_height != height) {
+					stbi_image_free(decoded);
+					return io_error;
+				}
+				image_->width = static_cast<uint32_t>(width);
+				image_->height = static_cast<uint32_t>(height);
+				image_->rgba.assign(decoded, decoded + static_cast<size_t>(width) * height * 4);
+				stbi_image_free(decoded);
+				image_->compressed.clear();
+			}
 		}
 		if (!image_->rgba.empty()) {
 			const uint32_t bpp = image_->output_format == 8 ? 3 : 4;
 			const uint32_t width = image_->width;
-			if (image_->output_mode == 1 && image_->next_row == 0) {
+			if (image_->output_mode != 3 && image_->next_row == 0) {
 				auto *dst = surface_pixels(image_->dst_surface);
 				if (!dst)
 					return bad_handle;
@@ -1333,16 +1701,18 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 					static_cast<size_t>(tile_y + row) * width * 4;
 				auto *dst = tile + static_cast<size_t>(row) * image_->tile_stride;
 				for (uint32_t x = 0; x < width; ++x) {
-					const uint8_t r = src[x * 4], g = src[x * 4 + 1];
-					const uint8_t b = src[x * 4 + 2], a = src[x * 4 + 3];
+					const uint8_t red = src[x * 4];
+					const uint8_t green = src[x * 4 + 1];
+					const uint8_t blue = src[x * 4 + 2];
+					const uint8_t alpha = src[x * 4 + 3];
 					if (image_->output_format == 8) {
-						dst[x * 3] = r; dst[x * 3 + 1] = g; dst[x * 3 + 2] = b;
+						dst[x * 3] = red; dst[x * 3 + 1] = green; dst[x * 3 + 2] = blue;
 					} else if (image_->output_format == 7) {
-						dst[x * 4] = b; dst[x * 4 + 1] = g;
-						dst[x * 4 + 2] = r; dst[x * 4 + 3] = a;
+						dst[x * 4] = blue; dst[x * 4 + 1] = green;
+						dst[x * 4 + 2] = red; dst[x * 4 + 3] = alpha;
 					} else if (image_->output_format == 2) {
-						dst[x * 4] = a; dst[x * 4 + 1] = r;
-						dst[x * 4 + 2] = g; dst[x * 4 + 3] = b;
+						dst[x * 4] = alpha; dst[x * 4 + 1] = red;
+						dst[x * 4 + 2] = green; dst[x * 4 + 3] = blue;
 					} else {
 						std::memcpy(dst + x * 4, src + x * 4, 4);
 					}
@@ -1378,6 +1748,115 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return bad_request;
 		image_.reset();
 		return ok;
+	}
+	if (opcode >= 0x0408 && opcode <= 0x040b) {
+#ifndef AMIBERRY_WITH_WEBP
+		return unsupported;
+#else
+		if (request_length < 48)
+			return bad_request;
+		const uint32_t session = be32(request), token = be32(request + 4);
+		const uint32_t flags = be32(request + 8);
+		if ((opcode == 0x0408 || opcode == 0x040b) ? token != 0 : token == 0)
+			return bad_request;
+		if (!image_ || image_->session != session)
+			return bad_handle;
+		if (!image_->animation)
+			return bad_request;
+		const auto result = [&](uint32_t state, uint32_t result_flags,
+			uint32_t duration, uint32_t result_token) {
+			put32(reply, image_->session); put32(reply + 4, state);
+			put32(reply + 8, image_->width); put32(reply + 12, image_->height);
+			put32(reply + 16, image_->animation_frame_index ?
+				image_->animation_frame_index - 1 : 0);
+			put32(reply + 20, duration); put32(reply + 24, image_->animation_loop_index);
+			put32(reply + 28, image_->animation_loop_count); put32(reply + 32, result_token);
+			put32(reply + 36, 9); put32(reply + 40, result_flags);
+			*reply_length = 48;
+		};
+		if (opcode == 0x0408) {
+			if (flags || image_->animation_token || (!image_->animation_ended && !image_->input_eof))
+				return bad_request;
+			if (image_->animation_ended) {
+				result(7, 8, 0, 0);
+				return ok;
+			}
+			if (!image_->webp->animation_has_more()) {
+				if (image_->animation_loop_count &&
+				    image_->animation_loop_index + 1 >= image_->animation_loop_count) {
+					image_->animation_ended = true;
+					result(7, 8, 0, 0);
+					return ok;
+				}
+				if (image_->webp->reset_animation() != WebpInputResult::ok)
+					return io_error;
+				++image_->animation_loop_index;
+				image_->animation_frame_index = 0;
+				image_->animation_previous_timestamp = 0;
+			}
+			const uint8_t *rgba = nullptr;
+			uint32_t timestamp = 0;
+			if (image_->webp->next_animation(rgba, timestamp) != WebpInputResult::ok)
+				return io_error;
+			auto *dst = surface_pixels(image_->dst_surface);
+			if (!dst || surface_format(image_->dst_surface) != 9 ||
+			    surface_pitch(image_->dst_surface) < ((image_->width + 1) / 2) * 4)
+				return bad_request;
+			rgba_to_yuv422cgx(rgba, image_->width, image_->height, dst,
+				surface_pitch(image_->dst_surface));
+			const uint32_t duration = timestamp >= image_->animation_previous_timestamp ?
+				timestamp - image_->animation_previous_timestamp : 0;
+			image_->animation_previous_timestamp = timestamp;
+			if (++image_->animation_token_sequence == 0)
+				++image_->animation_token_sequence;
+			image_->animation_token = image_->animation_token_sequence;
+			const bool last = !image_->webp->animation_has_more() &&
+				image_->animation_loop_count &&
+				image_->animation_loop_index + 1 >= image_->animation_loop_count;
+			++image_->animation_frame_index;
+			result(6, 1 | (last ? 2u : 0u), duration, image_->animation_token);
+			return ok;
+		}
+		if (opcode == 0x0409) {
+			if (flags || token != image_->animation_token || image_->animation_presented)
+				return bad_request;
+			image_->animation_presented = true;
+			if (overlay_.active && overlay_.variant == 0) {
+				const uint32_t width = std::min(image_->width, overlay_.width);
+				const uint32_t rows = std::min(image_->height, overlay_.height);
+				const uint32_t bytes = std::min({((width + 1) / 2) * 4,
+					surface_pitch(image_->dst_surface), overlay_.pitch});
+				const auto *src = surface_pixels(image_->dst_surface);
+				for (uint32_t y = 0; y < rows; ++y)
+					std::memcpy(memory_at(overlay_.offset + static_cast<size_t>(y) *
+						overlay_.pitch), src + static_cast<size_t>(y) *
+						surface_pitch(image_->dst_surface), bytes);
+			}
+			result(6, 4, 0, token);
+			return ok;
+		}
+		if (opcode == 0x040a) {
+			if (flags || token != image_->animation_token || !image_->animation_presented)
+				return bad_request;
+			image_->animation_token = 0;
+			image_->animation_presented = false;
+			if (!image_->webp->animation_has_more() && image_->animation_loop_count &&
+			    image_->animation_loop_index + 1 >= image_->animation_loop_count)
+				image_->animation_ended = true;
+			result(image_->animation_ended ? 7 : 6, image_->animation_ended ? 8 : 0, 0, 0);
+			return ok;
+		}
+		if (flags || image_->animation_token || (!image_->animation_ended && !image_->input_eof))
+			return bad_request;
+		if (image_->webp->reset_animation() != WebpInputResult::ok)
+			return io_error;
+		image_->animation_loop_index = 0;
+		image_->animation_frame_index = 0;
+		image_->animation_previous_timestamp = 0;
+		image_->animation_ended = false;
+		result(6, 0, 0, 0);
+		return ok;
+#endif
 	}
 	if (opcode == 0x0407) {
 		if (request_length < 40)
@@ -1452,6 +1931,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		}
 		return ok;
 	}
+#if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
 #ifdef ZZ9000_SDK_AUDIO
 	if (opcode == 0x0503) {
 		if (request_length < 40)
@@ -1510,6 +1990,57 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		audio_result(reply, reply_length);
 		return ok;
 	}
+#endif
+	if (opcode == 0x0516) {
+		if (request_length < 48)
+			return bad_request;
+		const uint32_t codec = be32(request);
+		if (!codec || codec > 3)
+			return bad_request;
+		if (codec == 1) {
+			uint8_t legacy[48] = {};
+			std::memcpy(legacy, request + 4, 36);
+			return dispatch(0x0503, legacy, 40, reply, reply_length);
+		}
+#ifndef AMIBERRY_WITH_FFMPEG
+		return unsupported;
+#else
+		if (audio_)
+			return busy;
+		const auto *input = find_buffer(be32(request + 4));
+		const auto *pcm = find_buffer(be32(request + 12));
+		if (!input || !pcm || input == pcm)
+			return bad_handle;
+		const uint32_t input_capacity = be32(request + 8);
+		const uint32_t pcm_capacity = be32(request + 16);
+		const uint32_t format = be32(request + 28);
+		if (be32(request + 20) || be32(request + 24) || be32(request + 40))
+			return unsupported;
+		if ((codec == 2 && format != pcm_s16le && format != pcm_s16be &&
+		     format != pcm_s32be) ||
+		    (codec == 3 && format != pcm_s16le && format != pcm_s16be)) {
+			if (format == 3 || format == 4)
+				return unsupported;
+			return bad_request;
+		}
+		if (!input_capacity || input_capacity > input->length || pcm_capacity < 8192 ||
+		    pcm_capacity > pcm->length || (pcm_capacity & 1) ||
+		    be32(request + 32) >= pcm_capacity || be32(request + 36) >= pcm_capacity)
+			return bad_request;
+		audio_ = std::make_unique<Audio>();
+		audio_->session = next_audio_session_++;
+		audio_->codec = codec;
+		audio_->mp3_handle = input->handle;
+		audio_->pcm_handle = pcm->handle;
+		audio_->mp3_capacity = input_capacity;
+		audio_->pcm_capacity = pcm_capacity;
+		audio_->sample_format = format;
+		audio_->codec_decoder = std::make_unique<AudioCodecDecoder>(codec, format,
+			audio_->pcm_capacity);
+		audio_result(reply, reply_length);
+		return ok;
+#endif
+	}
 	if (opcode >= 0x0504 && opcode <= 0x0508) {
 		const uint16_t needed = opcode == 0x0504 ? 20 :
 			                         opcode == 0x0505 ? 12 : 8;
@@ -1539,10 +2070,17 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				audio_->backpressure = false;
 				audio_->drain = false;
 				audio_->bytes_consumed += length;
+				if ((flags & 1) && audio_->codec_decoder)
+					audio_->eof = true;
 				decode_audio(buffer_data(source->handle) + offset, length);
 			}
-			if (flags & 1)
+			if (flags & 1) {
 				audio_->eof = true;
+				if (audio_->codec_decoder)
+					decode_audio(nullptr, 0);
+			}
+			if (audio_->codec_decoder && audio_->faulted)
+				return audio_->fault_status;
 			if (flags & 2)
 				audio_->drain = true;
 		} else if (opcode == 0x0505) {
@@ -1556,14 +2094,29 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			if (be32(request + 4))
 				return bad_request;
 			if (opcode == 0x0507) {
+#ifndef ZZ9000_SDK_AUDIO
+				return unsupported;
+#else
 				if (audio_->faulted)
 					return io_error;
 				if (!audio_->sample_rate)
 					return bad_request;
 				if (audio_->sample_format != pcm_s16le)
 					return unsupported;
+				if (audio_->codec == 2 || audio_->codec == 3) {
+					if (audio_->channels != 1 && audio_->channels != 2)
+						return unsupported;
+					const uint32_t r = audio_->sample_rate;
+					if (r != 8000 && r != 11025 && r != 12000 && r != 16000 && r != 22050 &&
+					    r != 24000 && r != 32000 && r != 44100 && r != 48000 && r != 88200 && r != 96000)
+						return unsupported;
+				}
 				if (!audio_->output) {
-					SDL_AudioSpec spec = { SDL_AUDIO_S16LE, 2, 48000 };
+					SDL_AudioSpec spec = {
+						SDL_AUDIO_S16LE,
+						static_cast<int>(audio_->channels ? audio_->channels : 2),
+						static_cast<int>(audio_->sample_rate ? audio_->sample_rate : 48000)
+					};
 					const int selected = currprefs.soundcard;
 					const bool use_default = currprefs.soundcard_default || selected < 0 ||
 					    selected >= MAX_SOUND_DEVICES || !sound_devices[selected];
@@ -1580,12 +2133,15 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 						SDL_ResumeAudioStreamDevice(audio_->output);
 				}
 				audio_->playing = true;
+#endif
 			} else if (opcode == 0x0508) {
 				audio_->playing = false;
+#ifdef ZZ9000_SDK_AUDIO
 				if (audio_->output) {
 					SDL_DestroyAudioStream(audio_->output);
 					audio_->output = nullptr;
 				}
+#endif
 			} else {
 				audio_result(reply, reply_length);
 				close_audio();
@@ -1593,6 +2149,18 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			}
 		}
 		pump_audio();
+		audio_result(reply, reply_length);
+		return ok;
+	}
+	if (opcode == 0x0515) {
+		if (request_length < 48)
+			return bad_request;
+		const uint32_t gain = be32(request + 4);
+		if (be32(request + 8) || gain > 128)
+			return bad_request;
+		if (!audio_ || be32(request) != audio_->session)
+			return bad_request;
+		audio_->stream_gain = gain;
 		audio_result(reply, reply_length);
 		return ok;
 	}
@@ -1628,7 +2196,7 @@ bool Engine::poll()
 		last_status_ = dispatch(opcode, request + 16, be16(request + 10),
 			payload, &payload_length);
 		const bool image_framebuffer_write = opcode == 0x0405 && image_ &&
-			image_->output_mode == 1 &&
+			image_->output_mode != 3 &&
 			image_->dst_surface == framebuffer_handle && payload_length >= 44 &&
 			be32(payload + 4) == 4 && be32(payload + 40) != 0;
 		bool surface_framebuffer_write = false;
@@ -1645,8 +2213,9 @@ bool Engine::poll()
 				std::max(dx, cx) < std::min(dx + dw, cx + cw) &&
 				std::max(dy, cy) < std::min(dy + dh, cy + ch);
 		}
-		if (last_status_ == ok &&
-		    (surface_framebuffer_write || image_framebuffer_write || opcode == 0x0b08))
+		const bool image_overlay_write = opcode == 0x0409 && overlay_.active;
+		if (last_status_ == ok && (surface_framebuffer_write ||
+		    image_framebuffer_write || image_overlay_write || opcode == 0x0b08))
 			dirty = true;
 		std::memset(reply, 0, entry_size);
 		std::memcpy(reply, request, 4); // request id

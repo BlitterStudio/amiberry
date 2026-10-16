@@ -645,7 +645,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build file zip libflac-dev libmpeg2-4-dev libpng-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev libdbus-1-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+          sudo apt-get install -y build-essential cmake ninja-build file zip libflac-dev libmpeg2-4-dev libpng-dev libwebp-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev libdbus-1-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
 
       - name: Install SDL3 and SDL3_image
         if: matrix.sdl_source == 'setup-sdl'
@@ -767,6 +767,7 @@ jobs:
           bash -euo pipefail -c '
             QEMU_PLUGIN="$1"
             test -f "$QEMU_PLUGIN"
+            dnf install -y ffmpeg-free-devel libwebp-devel
             for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
               readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
             done
@@ -835,6 +836,8 @@ jobs:
             bash -euo pipefail -c '
               QEMU_PLUGIN="$1"
               test -f "$QEMU_PLUGIN"
+              apt-get update
+              apt-get install -y libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libwebp-dev
               for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
                 readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
               done
@@ -903,6 +906,8 @@ jobs:
           bash -euo pipefail -c '
             QEMU_PLUGIN="$1"
             test -f "$QEMU_PLUGIN"
+            apt-get update
+            apt-get install -y libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libwebp-dev
             for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
               readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
             done
@@ -1033,6 +1038,9 @@ jobs:
         shell: bash
         run: |
           cmake --build out/build/windows-release -j$NUMBER_OF_PROCESSORS
+          for library in avcodec avformat avutil swresample swscale webp webpdemux; do
+            find out/build/windows-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+          done
 
       - name: Install (portable layout)
         shell: bash
@@ -1040,6 +1048,9 @@ jobs:
           rm -rf out/install/windows-release
           rm -rf out/package/windows-release
           cmake --install out/build/windows-release --prefix out/install/windows-release
+          for library in avcodec avformat avutil swresample swscale webp webpdemux; do
+            find out/install/windows-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+          done
 
       - name: Package (Portable ZIP)
         shell: bash
@@ -1544,6 +1555,9 @@ jobs:
         shell: bash
         run: |
           cmake --build out/build/windows-arm64-release -j$NUMBER_OF_PROCESSORS
+          for library in avcodec avformat avutil swresample swscale webp webpdemux; do
+            find out/build/windows-arm64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+          done
 
       - name: Install (portable layout)
         shell: bash
@@ -1551,6 +1565,9 @@ jobs:
           rm -rf out/install/windows-arm64-release
           rm -rf out/package/windows-arm64-release
           cmake --install out/build/windows-arm64-release --prefix out/install/windows-arm64-release
+          for library in avcodec avformat avutil swresample swscale webp webpdemux; do
+            find out/install/windows-arm64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+          done
 
       - name: Package (Portable ZIP)
         shell: bash

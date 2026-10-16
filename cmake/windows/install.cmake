@@ -75,14 +75,27 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 
-# Bundle vcpkg runtime DLLs into the install directory using applocal.ps1
-# (same mechanism vcpkg uses at build time to copy DLLs next to the executable).
-# The x_vcpkg_install_local_dependencies function gates on "windows|uwp|xbox" platform
-# and excludes "mingw-dynamic", so we invoke applocal.ps1 directly.
+# Bundle vcpkg runtime DLLs beside the build and installed executables using
+# applocal.ps1. vcpkg's standard helper excludes mingw-dynamic, so invoke it
+# directly for both layouts.
 cmake_policy(SET CMP0087 NEW)
 
 z_vcpkg_set_powershell_path()
 
+set(_AMIBERRY_VCPKG_APPLOCAL "${Z_VCPKG_TOOLCHAIN_DIR}/msbuild/applocal.ps1")
+set(_AMIBERRY_VCPKG_INSTALLED_BIN "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(_AMIBERRY_VCPKG_INSTALLED_BIN "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin")
+endif()
+
+if(EXISTS "${_AMIBERRY_VCPKG_APPLOCAL}")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${Z_VCPKG_POWERSHELL_PATH}" -noprofile -executionpolicy Bypass
+            -file "${_AMIBERRY_VCPKG_APPLOCAL}"
+            -targetBinary "$<TARGET_FILE:${PROJECT_NAME}>"
+            -installedDir "${_AMIBERRY_VCPKG_INSTALLED_BIN}"
+        COMMENT "Copying vcpkg runtime DLLs beside ${PROJECT_NAME}")
+endif()
 install(CODE "
     set(_applocal \"${Z_VCPKG_TOOLCHAIN_DIR}/msbuild/applocal.ps1\")
     set(_target \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>\")
