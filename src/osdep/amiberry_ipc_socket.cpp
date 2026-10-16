@@ -2574,10 +2574,13 @@ static std::string HandleDebugStatus(const std::vector<std::string>& args)
 
 	std::vector<std::string> responses;
 	responses.push_back("active=" + std::to_string(debugger_active ? 1 : 0));
-	responses.push_back("stopped=" + std::to_string(debugger_is_stopped() ? 1 : 0));
+	const bool stopped = debugger_is_stopped();
+	responses.push_back("stopped=" + std::to_string(stopped ? 1 : 0));
 	responses.push_back("debugging=" + std::to_string(debugging ? 1 : 0));
 	responses.push_back("exception_debugging=" + std::to_string(exception_debugging ? 1 : 0));
-	responses.push_back(std::string("reason=") + debugger_last_stop_reason());
+	// The saved text belongs to the last stop; any exit from the debugger
+	// (continue, step, DEBUG_DEACTIVATE, the console) makes it historical.
+	responses.push_back(std::string("reason=") + (stopped ? debugger_last_stop_reason() : ""));
 
 	return make_response(true, responses);
 }
