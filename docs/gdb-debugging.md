@@ -32,6 +32,9 @@ The server is not available with the threaded CPU option
 `WinUAE GDB: not available with the threaded CPU (cpu_threaded=true)` and does
 not listen.
 
+
+`gdb_server_poll()` runs from Amiberry's `handle_events()` loop. It never
+accesses emulated state from a socket thread.
 The server listens on `127.0.0.1` only and accepts one client at a time. It is
 unauthenticated: any local process that connects gets full control of the
 guest. When it is enabled but no client is attached, the only cost is a
@@ -82,6 +85,52 @@ access to unlisted regions first:
 (gdb) set mem inaccessible-by-default off
 (gdb) x/2xh 0xdff004
 ```
+
+## Monitor commands
+
+Amiberry-specific operations use GDB `monitor` (`qRcmd`) commands. Replies are
+hex-encoded text, usually JSON. Numeric arguments are hexadecimal unless a
+command says otherwise. Commands require a stopped CPU except `capabilities`
+and `execution-status`.
+
+- `monitor capabilities` lists commands available in the current build and
+  configuration. `monitor execution-status` reports CPU, host-pause, frame,
+  beam and cycle state without stopping the guest.
+- `monitor disasm ADDRESS DECIMAL-COUNT` disassembles 1–100 instructions.
+  `monitor screenshot NATIVE-HOST-PATH` writes a PNG without changing
+  screenshot preferences or showing a status-line message.
+- `monitor memory-map` returns the debugger memory map as JSON. `monitor
+  memory-check ADDRESS LENGTH` checks that a physical RAM range is writable
+  and reports whether it is chip or fast RAM.
+- `monitor process-break name NAME` or `process-break address TASK` arms a
+  one-shot stop at an AmigaDOS program entry. `process-break status` and
+  `process-break clear` inspect or cancel it. `monitor segments [PROCESS]`
+  reports loaded AmigaDOS segments.
+- `monitor tasks` lists current, ready and waiting Exec tasks. `monitor
+  history on|off` and `history read COUNT` use the existing debugger history.
+  `monitor condition add`, `condition list`, `condition remove`, and
+  `step-over` use the existing breakpoint and trace controls.
+- `monitor exception-mask MASK` chooses CPU exception vectors; `monitor
+  exception` reports the selected exception with its pre-frame register
+  snapshot.
+- `monitor dma-watch add ADDRESS LENGTH MODE MASK`, `dma-watch list`, and
+  `dma-watch remove ID` manage DMA watches. `monitor watch add` and `watch
+  range` create CPU/DMA watch predicates; `watch list`, `watch remove`,
+  `watch events`, `watch last`, and `watch clear-events` inspect them.
+- `monitor guest-output on|off|read|clear` captures uaelib function 86 debug
+  messages. It retains bounded payload and record counts.
+- `monitor checkpoint save NATIVE-HOST-PATH` saves at the next frame start,
+  then stops. `monitor checkpoint restore NATIVE-HOST-PATH` follows the
+  normal reset/restore lifecycle and keeps the client connection. Restore
+  clears remote breakpoints, watches, exception selection, entry/range state,
+  and captured output.
+- `monitor input event KIND PORT CODE VALUE` injects keyboard, relative mouse,
+  or joystick input through the shared input handlers. `monitor input
+  sequence` accepts frame-delayed events; `input status` and `input release`
+  inspect or cancel the sequence.
+
+`monitor capabilities` is the authoritative command list. It omits commands
+that are unavailable in the active build or configuration.
 
 ## Detaching
 
