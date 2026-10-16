@@ -38,7 +38,7 @@ bool nonblocking(Socket s)
 }
 #endif
 Socket listener = invalid_socket, client = invalid_socket;
-std::unique_ptr<winuae_gdb::Session> session;
+std::unique_ptr<winuae_gdb::Session> session, retired_session;
 std::string pending;
 bool polling, sockets_started, restoring;
 int configured_port;
@@ -49,7 +49,12 @@ void disconnect_client()
 	if (client != invalid_socket) close_socket(client);
 	client = invalid_socket;
 	if (session) debug_gdb_target().detach();
-	session.reset();
+	if (polling && session) {
+		session->abandon();
+		retired_session = std::move(session);
+	} else {
+		session.reset();
+	}
 	pending.clear();
 }
 
@@ -189,6 +194,7 @@ void gdb_server_poll()
 	}
 	if (session && session->finished() && pending.empty()) disconnect_client();
 	polling = false;
+	retired_session.reset();
 }
 
 bool gdb_server_stop(const char* reason)

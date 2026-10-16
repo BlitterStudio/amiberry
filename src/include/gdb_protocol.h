@@ -44,6 +44,7 @@ public:
 	void receive(const char*, size_t);
 	void stop(const std::string& reason = "S05");
 	void complete_monitor(bool success);
+	void abandon() { closing = true; }
 	std::string take_output();
 	bool stopped() const { return halted; }
 	bool finished() const { return closing; }
