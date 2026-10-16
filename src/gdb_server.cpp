@@ -83,6 +83,7 @@ void listen_local(int port)
 }
 
 bool gdb_server_connected() { return session != nullptr; }
+bool gdb_server_halted() { return session && session->stopped(); }
 
 void gdb_server_close()
 {

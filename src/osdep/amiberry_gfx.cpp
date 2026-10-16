@@ -2914,6 +2914,14 @@ int save_thumb(const std::string& path)
 	return ret;
 }
 
+bool screenshot_save(int monid, const TCHAR* path)
+{
+	(void)monid;
+	if (!path || !*path || !create_screenshot())
+		return false;
+	return save_thumb(path) != 0;
+}
+
 void screenshot(int monid, int mode, int doprepare)
 {
 	std::string filename;

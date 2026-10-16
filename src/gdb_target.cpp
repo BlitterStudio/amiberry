@@ -272,12 +272,6 @@ winuae_gdb::Target& debug_gdb_target()
 	return gdb_target();
 }
 
-GdbTarget& gdb_target()
-{
-	static GdbTarget target;
-	return target;
-}
-
 bool gdb_target_check_stop(uaecptr pc, char* reason, size_t size)
 {
 	return gdb_target().check_stop(pc, reason, size);

@@ -1,4 +1,5 @@
 #include "include/gdb_protocol.h"
+#include <cstdio>
 
 namespace winuae_gdb {
 namespace {
@@ -31,6 +32,18 @@ bool range(uint32_t address, uint32_t length)
 {
 	return uint64_t(address) + length <= (uint64_t(1) << 32);
 }
+}
+
+std::string json_string(const std::string& value)
+{
+	std::string result = "\"";
+	for (unsigned char c : value) {
+		if (c == '"' || c == '\\') { result += '\\'; result += char(c); }
+		else if (c < 32 || c >= 127) {
+			char escaped[7]; std::snprintf(escaped, sizeof(escaped), "\\u%04x", c); result += escaped;
+		} else result += char(c);
+	}
+	return result + "\"";
 }
 
 void Session::reply(const std::string& data)
@@ -130,6 +143,44 @@ void Session::command(const std::string& s)
 	}
 	if (s == "D") {
 		reply("OK"); closing = true; return;
+	}
+	if (s.compare(0, 6, "qRcmd,") == 0) {
+		if ((s.size() & 1) || s.size() > 2054) { reply("E01"); return; }
+		std::string command;
+		for (size_t i = 6; i < s.size(); i += 2) {
+			uint32_t value;
+			if (!number(s, i, i + 2, value) || !value) { reply("E01"); return; }
+			command += static_cast<char>(value);
+		}
+		if (!halted && !target.monitor_running(command)) { reply("E16"); return; }
+		if (command.compare(0, 7, "disasm ") == 0) {
+			auto space = command.find(' ', 7);
+			uint32_t address, count = 0;
+			if (space == std::string::npos || !number(command, 7, space, address) ||
+				space + 1 == command.size()) { reply("E01"); return; }
+			for (size_t i = space + 1; i < command.size(); ++i) {
+				if (command[i] < '0' || command[i] > '9' || count > 100) { reply("E01"); return; }
+				count = count * 10 + command[i] - '0';
+			}
+			std::string result;
+			if (!count || count > 100 || !target.disassemble(address, count, result) ||
+				result.size() > packet_size / 2) { reply("E01"); return; }
+			std::string encoded;
+			for (unsigned char c : result) { encoded += hex[c >> 4]; encoded += hex[c & 15]; }
+			reply(encoded); return;
+		}
+		if (command.compare(0, 11, "screenshot ") == 0) {
+			std::string path = command.substr(11);
+			reply(!path.empty() && target.screenshot(path) ? "OK" : "E01"); return;
+		}
+		std::string result;
+		auto status = target.monitor(command, result);
+		if (status == MonitorResult::unsupported) { reply(""); return; }
+		if (status == MonitorResult::error || result.size() > packet_size / 2) { reply("E01"); return; }
+		if (result.empty()) { reply("OK"); return; }
+		std::string encoded;
+		for (unsigned char c : result) { encoded += hex[c >> 4]; encoded += hex[c & 15]; }
+		reply(encoded); return;
 	}
 	if (s.compare(0, 7, "vCont;r") == 0) {
 		if (!halted) { reply("E16"); return; }

@@ -18,7 +18,20 @@ struct FakeTarget : Target {
 	Registers values{};
 	unsigned writes = 0, interrupts = 0, runs = 0, breaks = 0;
 	bool stepped = false;
+	MonitorResult monitor(const std::string& command, std::string& out) override {
+		if (command == "test-query") { out = "{}"; return MonitorResult::ok; }
+		if (command == "test-arm") return MonitorResult::ok;
+		if (command == "test-invalid") return MonitorResult::error;
+		return MonitorResult::unsupported;
+	}
+	bool monitor_running(const std::string& command) override { return command == "test-query"; }
 	std::string memory_map() override { return "<memory-map/>"; }
+	std::string screenshot_path;
+	bool screenshot(const std::string& path) override { screenshot_path = path; return true; }
+	bool disassemble(uint32_t address, unsigned count, std::string& out) override {
+		if (address != 0x1000 || count != 10) return false;
+		out = "NOP\n"; return true;
+	}
 	Registers registers() override { return values; }
 	bool write_registers(const Registers& v, uint32_t mask) override {
 		++writes;
@@ -35,6 +48,14 @@ struct FakeTarget : Target {
 	}
 	void detach() override {}
 };
+static std::string monitor(const std::string& command)
+{
+	std::string encoded = "qRcmd,";
+	for (unsigned char c : command) {
+		char pair[3]; std::snprintf(pair, sizeof(pair), "%02x", c); encoded += pair;
+	}
+	return encoded;
+}
 static std::string send(Session& session, const std::string& command)
 {
 	std::string packet = frame(command);
@@ -105,10 +126,22 @@ int main()
 	require(send(s, "vCont;s").empty() && target.stepped, "step must wait for stop");
 	s.stop(); require(s.take_output() == frame("S05"), "step stop reply");
 	require(send(s, "vCont;c").empty() && !target.stepped, "continue");
+	require(send(s, monitor("test-query")) == frame("7b7d") && !s.stopped(), "live query stopped CPU");
+	require(send(s, monitor("test-arm")) == frame("E16"), "unsafe live monitor accepted");
 	s.receive("\003", 1); require(target.interrupts == 2, "interrupt byte");
 	s.stop("T05watch:00001000;");
 	require(s.take_output() == frame("T05watch:00001000;"), "watchpoint stop reason");
-	require(send(s, "qRcmd,70726f66696c65") == frame(""), "unsupported packet");
+	require(send(s, "qRcmd,70726f66696c65") == frame(""), "unsupported monitor command");
+	require(send(s, monitor("screenshot /tmp/screen shot.png")) == frame("OK") &&
+		target.screenshot_path == "/tmp/screen shot.png", "screenshot path with spaces");
+	require(send(s, "qRcmd,00") == frame("E01"), "monitor NUL accepted");
+	require(send(s, monitor("disasm 1000 10")) == frame("4e4f500a"), "decimal disassembly count");
+	for (const char* command : {"disasm 1000 0", "disasm 1000 101", "disasm z 1", "disasm 1000 1x", "disasm 1000 "})
+		require(send(s, monitor(command)) == frame("E01"), command);
+	require(send(s, monitor("test-query")) == frame("7b7d"), "monitor response encoding");
+	require(send(s, monitor("test-arm")) == frame("OK"), "monitor acknowledgement");
+	require(send(s, monitor("test-invalid")) == frame("E01"), "monitor rejection");
+	require(json_string("a\n\"") == "\"a\\u000a\\\"\"", "JSON escaping");
 	require(send(s, "D") == frame("OK") && s.finished(), "detach");
 	Session oversized(target);
 	std::string huge = "$" + std::string(Session::packet_size + 5, 'x');

@@ -64,6 +64,7 @@ set(SOURCE_FILES
         src/fsdb.cpp
         src/fsusage.cpp
         src/gayle.cpp
+        src/gdb_monitor.cpp
         src/gdb_protocol.cpp
         src/gdb_server.cpp
         src/gdb_target.cpp

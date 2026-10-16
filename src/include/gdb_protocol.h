@@ -11,6 +11,11 @@ namespace winuae_gdb {
 
 using Registers = std::array<uint32_t, 18>;
 
+enum class MonitorResult { unsupported, ok, error };
+
+// Quote and escape a string for monitor command JSON replies.
+std::string json_string(const std::string&);
+
 class Target {
 public:
 	virtual ~Target() = default;
@@ -21,6 +26,11 @@ public:
 	virtual bool write_memory(uint32_t, const std::vector<uint8_t>&) = 0;
 	virtual bool breakpoint(bool insert, unsigned type, uint32_t, uint32_t) = 0;
 	virtual std::string memory_map() { return {}; }
+	virtual bool screenshot(const std::string&) { return false; }
+	virtual bool disassemble(uint32_t, unsigned, std::string&) { return false; }
+	virtual MonitorResult monitor(const std::string&, std::string&) { return MonitorResult::unsupported; }
+	// Monitor commands that may run without stopping the CPU.
+	virtual bool monitor_running(const std::string&) { return false; }
 	virtual void interrupt() = 0;
 	virtual void resume(bool step) = 0;
 	virtual bool resume_range(uint32_t, uint32_t) { return false; }
