@@ -193,6 +193,7 @@ struct Engine::Media {
 	uint32_t pcm_low_water = 0, pcm_high_water = 0;
 	uint64_t pcm_produced = 0, pcm_acknowledged = 0;
 	uint64_t video_pts = UINT64_MAX, audio_pts = UINT64_MAX;
+	uint64_t first_audio_pts = UINT64_MAX; // origin of the acknowledged-PCM clock
 	uint32_t sample_rate = 0, channels = 0;
 	uint32_t state = 1; // NEED_INPUT
 	uint32_t video_codec = 0, container = 0;
@@ -716,8 +717,8 @@ void Engine::pump_media_audio()
 					break;
 				media_->sample_rate = media_->av_audio.sample_rate;
 				media_->channels = media_->av_audio.channels;
-				if (media_->audio_pts == UINT64_MAX)
-					media_->audio_pts = media_->av_audio.pts;
+				if (media_->first_audio_pts == UINT64_MAX)
+					media_->first_audio_pts = media_->audio_pts = media_->av_audio.pts;
 			}
 			const uint64_t used = media_->pcm_produced - media_->pcm_acknowledged;
 			const uint32_t space = static_cast<uint32_t>(media_->pcm_capacity - used);
@@ -751,8 +752,8 @@ void Engine::pump_media_audio()
 		media_->channels = 2;
 		if (!media_->sample_rate)
 			break;
-		if (media_->audio_pts == UINT64_MAX)
-			media_->audio_pts = 0;
+		if (media_->first_audio_pts == UINT64_MAX)
+			media_->first_audio_pts = media_->audio_pts = 0;
 		for (uint32_t i = 0; i < samples->count * 2; ++i) {
 			const auto scaled = std::lround(std::clamp(samples->interleaved[i],
 				-1.0f, 1.0f) * 32767.0f);
@@ -999,8 +1000,14 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			return bad_request;
 		media_->pcm_acknowledged = acknowledged;
 		pump_media_audio();
-		if (media_->sample_rate)
-			media_->audio_pts = (acknowledged / frame_bytes) * 90000 / media_->sample_rate;
+		// As on the card, the audio clock is the first decoded timestamp plus
+		// the acknowledged PCM duration.
+		if (media_->sample_rate && media_->first_audio_pts != UINT64_MAX) {
+			const uint64_t frames = acknowledged / frame_bytes;
+			media_->audio_pts = media_->first_audio_pts +
+				(frames / media_->sample_rate) * 90000 +
+				((frames % media_->sample_rate) * 90000) / media_->sample_rate;
+		}
 		media_audio_result(reply, reply_length);
 		return ok;
 	}
@@ -1087,7 +1094,7 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			put64(reply + 16, media_->pcm_produced);
 			put64(reply + 24, media_->pcm_acknowledged);
 			put64(reply + 32, media_->audio_pts);
-			put64(reply + 40, media_->audio_pts);
+			put64(reply + 40, media_->first_audio_pts);
 		} else if (page == 2) {
 			put32(reply + 12, 0);
 			put64(reply + 16, media_->bytes_accepted);

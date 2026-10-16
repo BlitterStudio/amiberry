@@ -179,6 +179,14 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 					assert(get32(reply + 20) > 0);
 				else if (page == 3 && audio_codec)
 					assert(get32(reply + 36) > 0);
+				else if (page == 1 && audio_codec) {
+					// The audio clock runs from the first decoded timestamp.
+					const uint64_t audio_pts = (static_cast<uint64_t>(get32(reply + 32)) << 32) |
+						get32(reply + 36);
+					const uint64_t first = (static_cast<uint64_t>(get32(reply + 40)) << 32) |
+						get32(reply + 44);
+					assert(first != UINT64_MAX && audio_pts > first);
+				}
 			}
 		}
 		std::fill(std::begin(request), std::end(request), 0);
