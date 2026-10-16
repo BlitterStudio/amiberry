@@ -67,6 +67,8 @@ uint16_t ConsoleEncoder::encode(const uint8_t *request, uint8_t *pixels,
 	*reply_length = 0;
 	if (!pixels || !output || !requested_capacity || requested_capacity > output_length)
 		return bad_handle;
+	// A converted RGB565 row is never wider than the 32-bit source row, which
+	// bounds the shadow and snapshot by the framebuffer's own size.
 	if (width != surface_width || height != surface_height || !width || !height ||
 		!pixel_bytes || depth != pixel_bytes * 8 || !tile_width || tile_width > 64 ||
 		!tile_height || tile_height > 64 || ty0 > ty1 || ty1 > tiles_y ||
@@ -74,7 +76,7 @@ uint16_t ConsoleEncoder::encode(const uint8_t *request, uint8_t *pixels,
 		pitch < width * pixel_bytes ||
 		(!bgra_convert && (pitch != surface_pitch ||
 			(surface_format != (format == rfb_format_clut8 ? 0u : 1u))) ||
-		(bgra_convert && surface_pitch < width * 4)))
+		(bgra_convert && (surface_pitch < width * 4 || pitch > surface_pitch))))
 		return bad_request;
 
 	const bool owner_changed = ready_ && owner != owner_;

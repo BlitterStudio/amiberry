@@ -163,6 +163,10 @@ int main()
 	put16(request + 24, 2);
 	put16(request + 26, 1);
 	z3.call(0x8200, request, 34);
+	// A converted row wider than the 32-bit source row would size the host
+	// shadow and snapshot from the request instead of the framebuffer.
+	console_request(request, output, 2, 2, 0xfffc, 2, 64, 2);
+	z3.call(0x8200, request, 34, 4);
 
 	z3.sdk.set_framebuffer(0x10000, 2, 1, 4, 1);
 	const uint8_t rgb565[] = {0xf8, 0, 0, 0x1f};
