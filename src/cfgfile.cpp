@@ -2763,6 +2763,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			cfgfile_dwrite_ext(f, _T("gfx_filter_overlay"), ext, _T("%s%s"),
 				gf->gfx_filteroverlay, _tcschr (gf->gfx_filteroverlay, ',') ? _T(",") : _T(""));
 		}
+		if (j != 1) {
+			cfgfile_dwrite_ext(f, _T("gfx_filter_blanking"), ext, _T("%d"), gf->gfx_filter_blanking);
+		}
 		cfgfile_dwrite_ext(f, _T("gfx_filter_rotation"), ext, _T("%d"), gf->gfx_filter_rotation);
 	}
 
@@ -4219,7 +4222,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			|| cfgfile_intval(option, value, _T("gfx_filter_keep_autoscale_aspect"), ext, &gf->gfx_filter_keep_autoscale_aspect, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_enable"), ext, &gf->enable, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_rotation"), ext, &gf->gfx_filter_rotation, 1)
-			|| cfgfile_string(option, value, _T("gfx_filter_mask"), ext, gf->gfx_filtermask[2 * MAX_FILTERSHADERS], sizeof gf->gfx_filtermask[2 * MAX_FILTERSHADERS] / sizeof (TCHAR)))
+			|| cfgfile_string(option, value, _T("gfx_filter_mask"), ext, gf->gfx_filtermask[2 * MAX_FILTERSHADERS], sizeof gf->gfx_filtermask[2 * MAX_FILTERSHADERS] / sizeof (TCHAR))
+			|| cfgfile_intval(option, value, _T("gfx_filter_blanking"), ext, &gf->gfx_filter_blanking, 1))
 			{
 				return 1;
 			}
@@ -9284,6 +9288,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 		f->gfx_filteroverlay_overscan = 0;
 		f->gfx_filter_left_border = -1;
 		f->gfx_filter_top_border = -1;
+		f->gfx_filter_blanking = 0;
 		f->enable = true;
 	}
 	p->gf[2].enable = false;

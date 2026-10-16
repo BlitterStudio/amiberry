@@ -1148,7 +1148,7 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 		return ret;
 
 	// Ensure blanking limits are open and synchronized at the start of frame locking
-	set_custom_limits(-1, -1, -1, -1, false);
+	set_custom_limits(-1, -1, -1, -1);
 
 	// A zero-copy RTG surface's pixels are the guest's VRAM. Handing that to the
 	// chipset renderer would draw native frames into the RTG screen's bitmap
@@ -2059,7 +2059,7 @@ static void updatedisplayarea2(const int monid)
 
 void updatedisplayarea(const int monid)
 {
-	set_custom_limits(-1, -1, -1, -1, false);
+	set_custom_limits(-1, -1, -1, -1);
 	if (monid >= 0) {
 		updatedisplayarea2(monid);
 	} else {

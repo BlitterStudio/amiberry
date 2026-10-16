@@ -959,7 +959,7 @@ void check_custom_limits(void)
 		denise_vblank_extra_bottom[1] = visible_bottom_stop >> vshift;
 	}
 
-	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
+	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN || fd->gfx_filter_blanking) {
 		denise_vblank_extra_top[1] = denise_vblank_extra_top[0];
 		denise_vblank_extra_bottom[1] = denise_vblank_extra_bottom[0];
 		denise_hblank_extra_left[1] = denise_hblank_extra_left[0];
@@ -969,7 +969,7 @@ void check_custom_limits(void)
 	//write_log("%d %d %d %d\n", denise_vblank_extra_top, denise_vblank_extra_bottom, visible_top_start, visible_bottom_stop);
 }
 
-void set_custom_limits (int w, int h, int dx, int dy, bool blank)
+void set_custom_limits (int w, int h, int dx, int dy)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	struct gfx_filterdata *fd = &currprefs.gf[ad->gf_index];
@@ -989,7 +989,7 @@ void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 		dy = 0;
 	}
 #ifdef WITH_SPECIALMONITORS
-	if (specialmonitor_uses_control_lines() || !blank) {
+	if (specialmonitor_uses_control_lines() || !fd->gfx_filter_blanking) {
 		w = -1;
 		h = -1;
 	}
@@ -1035,7 +1035,7 @@ void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 		visible_top_start = 0;
 		visible_bottom_stop = MAX_STOP;
 	} else {
-		int startypos = linear_vpos_vb_end << vshift;
+		int startypos = (linear_vpos_vb_end + 1) << vshift;
 		visible_top_start = startypos + dy;
 		visible_bottom_stop = startypos + dy + h;
 		visible_top_start += hhadd;
@@ -6572,7 +6572,6 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 	}
 
 	bool line_is_blanked = false;
-	bool hidden = this_line->linear_vpos >= denise_vblank_extra_bottom[0] || this_line->linear_vpos < denise_vblank_extra_top[0];
 	bool hiddenblank = this_line->linear_vpos >= denise_vblank_extra_bottom[1] || this_line->linear_vpos < denise_vblank_extra_top[1];
 	diw_disable = borderline > 0;
 
@@ -8166,7 +8165,6 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 		return;
 	}
 
-	bool hidden = this_line->linear_vpos >= denise_vblank_extra_bottom[0] || this_line->linear_vpos < denise_vblank_extra_top[0];
 	bool hiddenblank = this_line->linear_vpos >= denise_vblank_extra_bottom[1] || this_line->linear_vpos < denise_vblank_extra_top[1];
 	if (ls->blankedline || hiddenblank) {
 		blankline();
