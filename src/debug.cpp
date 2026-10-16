@@ -242,7 +242,7 @@ void debugger_breakpoints_changed(void)
 			debugging = -1;
 			set_special(SPCFLAG_BRK);
 		}
-	} else if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY) {
+	} else if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY && !processptr && !processname) {
 		trace_mode = 0;
 		debugging = 0;
 	}

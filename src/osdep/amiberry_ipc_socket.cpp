@@ -2727,6 +2727,8 @@ static std::string HandleMonitor(const std::vector<std::string>& args)
 	std::string result, error;
 	if (!gdb_monitor_command(text.c_str(), result, error))
 		return make_response(false, {error.empty() ? std::string("monitor command failed") : error});
+	if (monitor_prefix(text, "condition add") || monitor_prefix(text, "condition remove"))
+		debugger_breakpoints_changed();
 	if (monitor_arms_trace(text))
 		debugger_sync_monitor_trace();
 	return make_response(true, monitor_result_fields(result));
