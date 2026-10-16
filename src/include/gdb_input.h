@@ -62,8 +62,9 @@ public:
 	}
 	void frame() {
 		if (!active()) return;
-		while (next < steps.size() && elapsed >= due) {
+		while (active() && next < steps.size() && elapsed >= due) {
 			apply(steps[next++].event);
+			if (!active()) return;
 			if (next < steps.size()) due += steps[next].delay;
 		}
 		if (next == steps.size()) { release(); state = "completed"; }
