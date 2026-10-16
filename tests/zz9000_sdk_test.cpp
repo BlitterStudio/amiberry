@@ -460,7 +460,10 @@ int main(int argc, char **argv)
 	const auto flac_chunked = decode_ex(argv[4], argv[7], 2, 2, 44100, 1, true);
 	assert(flac_once == flac_chunked);
 	decode_ex(argv[5], argv[8], 2, 4, 48000, 2);
-	decode_ex(argv[6], argv[9], 3, 1, 32000, 2);
+	// 997-byte feeds end inside Ogg pages; each must still be accepted.
+	const auto vorbis_once = decode_ex(argv[6], argv[9], 3, 1, 32000, 2);
+	const auto vorbis_chunked = decode_ex(argv[6], argv[9], 3, 1, 32000, 2, true);
+	assert(vorbis_once == vorbis_chunked);
 	const auto flac_picture = decode_ex(argv[10], argv[7], 2, 2, 44100, 1, true);
 	assert(flac_picture == flac_once);
 	auto reject_flac = [&](auto mutate) {

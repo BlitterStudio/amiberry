@@ -29,6 +29,7 @@ struct AudioCodecDecoder::Impl {
 	uint16_t status = ok;
 	bool eof = false;
 	bool flushed = false;
+	bool blocked = false;
 	std::vector<uint8_t> input;
 	std::vector<uint8_t> output;
 	std::vector<uint8_t> packet;
@@ -485,6 +486,16 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 	}
 	return ok;
 }
+
+// The decoder stops once its output reaches this size: the guest ring for
+// FLAC, plus Vorbis's held-back tail for final granule trimming.
+size_t output_cap(const AudioCodecDecoder::Impl &state)
+{
+	if (state.codec != 3)
+		return state.output_limit;
+	const size_t frame_bytes = state.channels * (state.output_format == pcm_s32be ? 4 : 2);
+	return state.output_limit + 4096 * (frame_bytes ? frame_bytes : 4);
+}
 } // namespace
 #endif
 
@@ -495,6 +506,9 @@ uint16_t AudioCodecDecoder::decode(bool eof)
 	HostNearestRounding host_rounding;
 	if (impl_->status == ok)
 		impl_->status = impl_->codec == 2 ? process_flac(*impl_) : process_vorbis(*impl_);
+	// Only output backpressure leaves work that can progress without more
+	// input; a partial frame or Ogg page needs the next feed.
+	impl_->blocked = impl_->output.size() >= output_cap(*impl_);
 	return impl_->status;
 #else
 	return unsupported;
@@ -515,7 +529,7 @@ size_t AudioCodecDecoder::pcm_size() const
 }
 bool AudioCodecDecoder::has_pending() const
 {
-	return pcm_size() != 0 || (!impl_->input.empty() && !impl_->flushed);
+	return pcm_size() != 0 || (impl_->blocked && !impl_->flushed);
 }
 void AudioCodecDecoder::consume_pcm(size_t length)
 {
