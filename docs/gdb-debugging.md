@@ -72,9 +72,12 @@ update.
   range. At least one instruction runs; an empty range single-steps.
 - The memory map (`info mem`), listing RAM and ROM regions.
 
-Memory addresses are physical; guest MMU translation is not applied.
-Watchpoints must lie below `$7FFF0000`, can be at most 64 KiB long, and are
-unavailable while the debugger's MMU mode is enabled.
+Memory addresses are physical; guest MMU translation is not applied. A
+watchpoint range must end at or below the watch limit: `$01000000` with
+24-bit addressing, `$7FFF0000` otherwise. GDB data watchpoints, `watch
+range`, and `dma-watch` spans are at most 64 KiB long; `watch add` accepts
+sizes of 1, 2, or 4 bytes only. Watchpoints are unavailable while the
+debugger's MMU mode is enabled.
 
 Because the target provides a memory map, GDB refuses to access addresses
 outside the listed RAM and ROM regions. To read custom chip registers, allow
@@ -124,8 +127,9 @@ input sequences may be submitted while the guest runs.
 - `monitor checkpoint save NATIVE-HOST-PATH` saves at the next frame start,
   then stops. `monitor checkpoint restore NATIVE-HOST-PATH` follows the
   normal reset/restore lifecycle and keeps the client connection. Restore
-  clears remote breakpoints, watches, exception selection, entry/range state,
-  and captured output.
+  clears remote breakpoints, watches, conditions, exception selection,
+  entry/range state, history recording, the watch event log, captured
+  output, and held input.
 - `monitor input event KIND PORT CODE VALUE` injects keyboard, relative mouse,
   or joystick input through the shared input handlers. `monitor input
   sequence` accepts frame-delayed events; `input status` and `input release`
@@ -146,6 +150,8 @@ client is connected.
 ## Detaching
 
 `detach`, or closing the client, resumes the emulation and removes the
-breakpoints and watchpoints that the client set. Breakpoints and watchpoints
-set from Amiberry's own debugger stay in place. A hard reset of the emulated
+breakpoints and watchpoints that the client set, along with monitor
+conditions, exception selection, entry state, history recording, the watch
+event log, captured output, and held input. Breakpoints and watchpoints set
+from Amiberry's own debugger stay in place. A hard reset of the emulated
 machine closes the connection.
