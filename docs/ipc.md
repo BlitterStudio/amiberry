@@ -237,6 +237,12 @@ Exception stops use `Tnnwinuae-exception:...`, process-break stops use
 empty unless `stopped=1`, however the debugger was left. `execution-status`
 reports the GDB halt flag, not this native stop.
 
+`SET_BREAKPOINT`, `CLEAR_BREAKPOINT`, and `LIST_BREAKPOINTS` manage standard PC
+breakpoints and leave monitor condition slots (`MONITOR condition add`) alone:
+auto-allocation skips slots that hold conditions, requesting an explicit slot
+that holds a condition is refused, and `CLEAR_BREAKPOINT ALL` clears only
+standard breakpoints. Conditions must be removed through `MONITOR condition remove`.
+
 IPC and a connected GDB client share one monitor object. IPC keeps answering
 while GDB has the CPU stopped, but state-changing `MONITOR` commands,
 `input event` and `input release` are refused while a GDB client is

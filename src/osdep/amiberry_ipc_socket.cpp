@@ -2909,12 +2909,15 @@ static std::string HandleSetBreakpoint(const std::vector<std::string>& args)
 		} catch (...) {
 			slot = -1;
 		}
+		if (slot >= 0 && gdb_monitor_has_condition(slot)) {
+			return make_response(false, {"Slot " + std::to_string(slot) + " is reserved for a monitor condition"});
+		}
 	}
 
 	// Find a free slot if not specified
 	if (slot < 0) {
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-			if (!bpnodes[i].enabled) {
+			if (!bpnodes[i].enabled && !gdb_monitor_has_condition(i)) {
 				slot = i;
 				break;
 			}
@@ -2952,7 +2955,9 @@ static std::string HandleClearBreakpoint(const std::vector<std::string>& args)
 	if (selector == "ALL") {
 		// Clear all breakpoints
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-			bpnodes[i].enabled = 0;
+			if (!gdb_monitor_has_condition(i)) {
+				bpnodes[i].enabled = 0;
+			}
 		}
 		debugger_breakpoints_changed();
 		return make_response(true, {"All breakpoints cleared"});
@@ -2967,7 +2972,7 @@ static std::string HandleClearBreakpoint(const std::vector<std::string>& args)
 
 	int cleared = 0;
 	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled && bpnodes[i].type == BREAKPOINT_REG_PC && bpnodes[i].value1 == addr) {
+		if (bpnodes[i].enabled && bpnodes[i].type == BREAKPOINT_REG_PC && bpnodes[i].value1 == addr && !gdb_monitor_has_condition(i)) {
 			bpnodes[i].enabled = 0;
 			cleared++;
 		}
@@ -2992,7 +2997,7 @@ static std::string HandleListBreakpoints(const std::vector<std::string>& args)
 	int count = 0;
 
 	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled) {
+		if (bpnodes[i].enabled && !gdb_monitor_has_condition(i)) {
 			char buf[128];
 			snprintf(buf, sizeof(buf), "slot=%d address=%08X type=%d enabled=1",
 				i, bpnodes[i].value1, bpnodes[i].type);

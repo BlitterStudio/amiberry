@@ -79,6 +79,7 @@ public:
 #ifdef AMIBERRY
 	bool ipc_control_state();
 	bool ipc_needs_trace() const { return process_armed || remote_history; }
+	bool has_condition(int slot) const { return slot >= 0 && slot < BREAKPOINT_TOTAL && conditional[slot]; }
 #endif
 private:
 	winuae_gdb::GuestInput guest_input { *this };
@@ -937,6 +938,11 @@ bool gdb_monitor_needs_trace()
 {
 	return gdb_monitor.ipc_needs_trace();
 }
+bool gdb_monitor_has_condition(int slot)
+{
+	return slot >= 0 && slot < BREAKPOINT_TOTAL && gdb_monitor.has_condition(slot);
+}
+
 
 static bool hex_span(const std::string& text, size_t begin, size_t end, uint32_t& value)
 {

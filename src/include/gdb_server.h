@@ -29,6 +29,7 @@ void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 sou
 bool gdb_monitor_command(const std::string& command, std::string& result, std::string& error);
 bool gdb_monitor_ipc_active();
 bool gdb_monitor_needs_trace();
+bool gdb_monitor_has_condition(int slot);
 #endif
 #else
 static inline void gdb_server_poll() {}
@@ -46,5 +47,6 @@ static inline bool gdb_target_check_stop(uaecptr, char*, size_t) { return false;
 static inline void gdb_target_stopped(char*, size_t) {}
 static inline void gdb_target_exception(int) {}
 static inline void gdb_target_watch_hit(int, uaecptr, int, int, uae_u32, uae_u32, uae_u32, uae_u32, bool) {}
+static inline bool gdb_monitor_has_condition(int) { return false; }
 #endif
 #endif
