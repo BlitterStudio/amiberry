@@ -2719,12 +2719,16 @@ static std::string HandleMonitor(const std::vector<std::string>& args)
 			text += ' ';
 		text += args[i];
 	}
+	for (unsigned char c : text) {
+		if (c < 0x20)
+			return make_response(false, {"Invalid control character in monitor command"});
+	}
 	std::string refusal = monitor_refusal(text);
 	if (!refusal.empty())
 		return make_response(false, {refusal});
 
 	std::string result, error;
-	if (!gdb_monitor_command(text.c_str(), result, error))
+	if (!gdb_monitor_command(text, result, error))
 		return make_response(false, {error.empty() ? std::string("monitor command failed") : error});
 	// Conditions, history and program-entry breaks all depend on
 	// per-instruction trace checks; recompute them from every source.

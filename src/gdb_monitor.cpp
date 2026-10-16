@@ -964,15 +964,20 @@ static bool hex_span(const std::string& text, size_t begin, size_t end, uint32_t
 // Host entry for the same monitor text GDB sends as qRcmd. step-over and
 // checkpoint return running/pending and complete inside the GDB stop loop, so
 // they are refused here instead of being started without a client.
-bool gdb_monitor_command(const char* text, std::string& result, std::string& error)
+bool gdb_monitor_command(const std::string& command, std::string& result, std::string& error)
 {
 	result.clear();
 	error.clear();
-	if (!text || !*text) {
+	if (command.empty()) {
 		error = "missing monitor command";
 		return false;
 	}
-	std::string command(text);
+	for (unsigned char c : command) {
+		if (c < 0x20) {
+			error = "invalid control character in monitor command";
+			return false;
+		}
+	}
 	if (command == "step-over") {
 		error = "step-over depends on a GDB client; use DEBUG_STEP_OVER";
 		return false;

@@ -26,7 +26,7 @@ void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 sou
 	uae_u32 value, uae_u32 old_value, bool old_valid);
 #ifdef AMIBERRY
 #include <string>
-bool gdb_monitor_command(const char* text, std::string& result, std::string& error);
+bool gdb_monitor_command(const std::string& command, std::string& result, std::string& error);
 bool gdb_monitor_ipc_active();
 bool gdb_monitor_needs_trace();
 #endif
