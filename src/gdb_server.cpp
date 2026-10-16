@@ -162,8 +162,21 @@ void gdb_server_poll()
 				int one = 1;
 				setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
+#ifdef AMIBERRY
+				// IPC and a GDB client share this monitor object. Accepting a
+				// client would make detach() clear IPC watches and masks.
+				if (gdb_monitor_ipc_active()) {
+					write_log(_T("WinUAE GDB: connection refused; IPC monitor state is active\n"));
+					close_socket(client);
+					client = invalid_socket;
+				} else {
+					session.reset(new winuae_gdb::Session(debug_gdb_target()));
+					debug_gdb_target().interrupt();
+				}
+#else
 				session.reset(new winuae_gdb::Session(debug_gdb_target()));
 				debug_gdb_target().interrupt();
+#endif
 			}
 		}
 	}

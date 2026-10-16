@@ -247,6 +247,48 @@ void debugger_breakpoints_changed(void)
 		debugging = 0;
 	}
 }
+
+static char debugger_stop_reason_text[160];
+
+static void debugger_note_stop_reason(const char* reason)
+{
+	debugger_stop_reason_text[0] = 0;
+	if (!reason || !reason[0] || strcmp(reason, "S05") == 0)
+		return;
+	snprintf(debugger_stop_reason_text, sizeof(debugger_stop_reason_text), "%s", reason);
+}
+
+const char* debugger_last_stop_reason(void)
+{
+	return debugger_stop_reason_text;
+}
+
+void debugger_sync_monitor_trace(void)
+{
+#if defined(GDBSERVER)
+	if (gdb_monitor_needs_trace()) {
+		if (!debugger_is_stopped() && trace_mode == 0) {
+			trace_mode = TRACE_CHECKONLY;
+			debugging = -1;
+			set_special(SPCFLAG_BRK);
+		}
+		return;
+	}
+	if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY) {
+		bool enabled = false;
+		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+			if (bpnodes[i].enabled) {
+				enabled = true;
+				break;
+			}
+		}
+		if (!enabled) {
+			trace_mode = 0;
+			debugging = 0;
+		}
+	}
+#endif
+}
 #endif
 
 bool debug_enforcer(void)
@@ -8591,6 +8633,9 @@ void debug (void)
 {
 	int wasactive;
 	char remote_reason[128] = "S05";
+#ifdef AMIBERRY
+	debugger_stop_reason_text[0] = 0;
+#endif
 
 	if (savestate_state || quit_program)
 		return;
@@ -8751,7 +8796,7 @@ void debug (void)
 					bp = -2;
 				}
 			}
-			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
+			if (gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
 				bp = -1;
 			}
 			inside_debugger = was_inside_debugger;
@@ -8767,12 +8812,10 @@ void debug (void)
 			}
 		}
 	} else {
-		if (gdb_server_connected()) {
-			const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
-				(mwhit.rwi & 2) ? "watch" : "rwatch";
-			snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
-				kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
-		}
+		const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
+			(mwhit.rwi & 2) ? "watch" : "rwatch";
+		snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
+			kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
 		memwatch_hit_msg(memwatch_triggered - 1);
 		memwatch_triggered = 0;
 	}
@@ -8790,6 +8833,12 @@ void debug (void)
 #endif
 		return;
 	}
+#ifdef AMIBERRY
+	// No GDB client: clear exception_pending and keep the stop reason, then
+	// enter the native debugger that IPC already resumes.
+	gdb_target_stopped(remote_reason, sizeof(remote_reason));
+	debugger_note_stop_reason(remote_reason);
+#endif
 
 	wasactive = ismouseactive ();
 #ifdef WITH_PPC
@@ -8845,6 +8894,10 @@ void debug (void)
 				trace_mode = TRACE_CHECKONLY;
 		}
 	}
+#if defined(AMIBERRY) && defined(GDBSERVER)
+	if (!trace_mode && gdb_monitor_needs_trace())
+		trace_mode = TRACE_CHECKONLY;
+#endif
 	if (trace_mode) {
 		set_special (SPCFLAG_BRK);
 		debugging = -1;
