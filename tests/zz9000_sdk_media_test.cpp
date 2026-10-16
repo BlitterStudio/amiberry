@@ -122,11 +122,14 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 		}
 		std::fill(std::begin(request), std::end(request), 0);
 		put32(request, session);
-		reply = mailbox.call(0x0b06, request, 16, truncated ? 0xffff : 0);
+		reply = mailbox.call(0x0b06, request, 16, 0xffff);
 		if (truncated) {
 			if (mailbox.last_status == 9) break;
 			continue;
 		}
+		// BUSY: decoded PCM is waiting for ring space; read audio and retry.
+		if (mailbox.last_status == 2)
+			continue;
 		assert(mailbox.last_status == 0);
 		if (get32(reply + 4) == 3) {
 			const uint64_t pts = (static_cast<uint64_t>(get32(reply + 28)) << 32) | get32(reply + 32);
@@ -137,6 +140,25 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 			frames++;
 		} else if (get32(reply + 4) == 4) {
 			done = true;
+			if (audio_codec) {
+				// DONE means every decoded sample is already in the ring:
+				// draining it afterwards must not produce anything new.
+				std::fill(std::begin(request), std::end(request), 0);
+				put32(request, session); put32(request + 4, 1);
+				reply = mailbox.call(0x0b0a, request, 16);
+				const uint64_t produced_at_done =
+					(static_cast<uint64_t>(get32(reply + 16)) << 32) | get32(reply + 20);
+				uint64_t produced = 0;
+				for (unsigned pass = 0; pass < 8; ++pass) {
+					std::fill(std::begin(request), std::end(request), 0);
+					put32(request, session); put32(request + 4, static_cast<uint32_t>(acknowledged >> 32));
+					put32(request + 8, static_cast<uint32_t>(acknowledged));
+					reply = mailbox.call(0x0b07, request, 16);
+					produced = (static_cast<uint64_t>(get32(reply + 20)) << 32) | get32(reply + 24);
+					acknowledged = produced;
+				}
+				assert(produced == produced_at_done);
+			}
 		}
 	}
 	if (truncated)

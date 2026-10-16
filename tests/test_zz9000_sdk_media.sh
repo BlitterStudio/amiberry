@@ -22,7 +22,8 @@ ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:du
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx-vp9 -row-mt 1 -cpu-used 8 -c:a libopus "$vp9"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 "$mkv"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$ps"
-ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:a ac3 -f vob "$audio_ac3"
+# Three seconds of stereo PCM is several times the test's PCM ring.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:a ac3 -f vob "$audio_ac3"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a pcm_dvd -f vob "$lpcm"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -c:v mpeg2video -flags +ilme+ildct -pix_fmt yuv420p -an -f vob "$interlaced"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1280x720:rate=10:duration=1' -c:v mpeg2video -pix_fmt yuv420p -an -f vob "$large"

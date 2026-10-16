@@ -239,6 +239,12 @@ bool MediaAv::pop_audio(MediaAvAudio &audio)
 	return true;
 }
 
+bool MediaAv::has_audio() const
+{
+	std::lock_guard<std::mutex> lock(mutex_);
+	return !audio_.empty();
+}
+
 int MediaAv::decode(MediaAvFrame &frame, uint32_t flags)
 {
 	std::unique_lock<std::mutex> lock(mutex_);

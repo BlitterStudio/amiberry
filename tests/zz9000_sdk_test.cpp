@@ -537,6 +537,36 @@ int main(int argc, char **argv)
 		z3.call(0x0506, payload, 8);
 	}
 	{
+		// A Vorbis file cut at a page boundary before its EOS page is a
+		// truncated track: the EOF-marked feed fails like on the card.
+		std::ifstream vorbis_file(argv[11], std::ios::binary);
+		std::vector<uint8_t> bytes(std::istreambuf_iterator<char>{vorbis_file}, {});
+		size_t last_page = 0;
+		for (size_t offset = 0; offset + 27 <= bytes.size();) {
+			assert(!std::memcmp(bytes.data() + offset, "OggS", 4));
+			size_t page = 27u + bytes[offset + 26];
+			for (uint32_t i = 0; i < bytes[offset + 26]; ++i)
+				page += bytes[offset + 27 + i];
+			last_page = offset;
+			offset += page;
+		}
+		assert(last_page && (bytes[last_page + 5] & 4));
+		bytes.resize(last_page);
+		std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 3, ex_compressed, 65536, pcm, 262144, 1);
+		const uint32_t cut_session = get32(reply + 16);
+		assert(cut_session);
+		put32(payload, cut_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(bytes.size()));
+		put32(payload + 16, 1);
+		z3.call(0x0504, payload, 20, 9);
+		put32(payload, cut_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+	}
+	{
 		std::ifstream flac16_file(argv[4], std::ios::binary);
 		std::vector<uint8_t> flac16_bytes(std::istreambuf_iterator<char>{flac16_file}, {});
 		std::copy(flac16_bytes.begin(), flac16_bytes.end(), z3.sdk.buffer_data(audio_staging));

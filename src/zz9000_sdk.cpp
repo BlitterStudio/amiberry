@@ -939,6 +939,14 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				media_->state = result == 2 ? 4 : 1;
 			}
 			pump_media_audio();
+			// DONE is final for the guest: hold it back while decoded PCM is
+			// still waiting for room in the guest ring.
+			if (result == 2 && (media_->av_audio_offset < media_->av_audio.s16be.size() ||
+			    media_->av_decoder->has_audio())) {
+				media_->state = 2;
+				media_result(reply, reply_length, 0, 1u << 8);
+				return busy;
+			}
 			media_result(reply, reply_length);
 			return ok;
 		}

@@ -45,6 +45,8 @@ public:
 	/* -1 malformed/unsupported, 0 need input, 1 frame, 2 end of stream. */
 	int decode(MediaAvFrame &frame, uint32_t flags = 0);
 	bool pop_audio(MediaAvAudio &audio);
+	/* True while decoded PCM is still queued for the guest ring. */
+	bool has_audio() const;
 	bool header_ready() const;
 	bool failed() const;
 	bool worker_waiting() const;

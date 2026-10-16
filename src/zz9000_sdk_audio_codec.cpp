@@ -40,6 +40,7 @@ struct AudioCodecDecoder::Impl {
 	uint32_t vorbis_serial = 0;
 	bool vorbis_serial_set = false;
 	uint32_t vorbis_headers = 0;
+	bool vorbis_eos = false;
 	std::vector<std::vector<uint8_t>> vorbis_header_packets;
 	uint64_t decoded_frames = 0;
 	uint64_t frames_consumed = 0;
@@ -374,6 +375,27 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 	const size_t trim_tail = 4096 * (frame_bytes ? frame_bytes : 4);
 	const size_t max_output = state.output_limit + trim_tail;
 	while (state.status == ok && state.output.size() < max_output) {
+		if (state.vorbis_eos) {
+			// After EOS the firmware refuses another complete page and
+			// discards anything else as trailing data.
+			const size_t prefix = std::min<size_t>(state.input.size(), 4);
+			if (!prefix)
+				break;
+			if (!std::memcmp(state.input.data(), "OggS", prefix)) {
+				size_t page = 0;
+				if (state.input.size() >= 27 && state.input.size() >= 27u + state.input[26]) {
+					page = 27u + state.input[26];
+					for (uint32_t i = 0; i < state.input[26]; ++i)
+						page += state.input[27 + i];
+				}
+				if (page && state.input.size() >= page)
+					return io_error;
+				if (!state.eof)
+					break;
+			}
+			state.input.clear();
+			break;
+		}
 		if (state.input.size() < 4) {
 			if (!state.input.empty() &&
 			    std::memcmp(state.input.data(), "OggS", state.input.size()) != 0)
@@ -431,9 +453,17 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 			}
 		}
 		state.input.erase(state.input.begin(), state.input.begin() + 27 + segments + body);
+		if (header_type & 4) {
+			// A packet cut by EOS, or EOS before the audio, is truncation.
+			if (!state.packet.empty() || state.vorbis_headers != 3)
+				return io_error;
+			state.vorbis_eos = true;
+		}
 	}
 	if (state.eof && !state.flushed) {
-		if (!state.input.empty() || !state.packet.empty() || state.vorbis_headers != 3)
+		// Like the card, the stream must end on its EOS page; EOF anywhere
+		// else means the track was cut short.
+		if (!state.vorbis_eos || !state.packet.empty() || state.vorbis_headers != 3)
 			return io_error;
 		const uint16_t status = send_packet(state, nullptr, 0);
 		if (status != ok)
