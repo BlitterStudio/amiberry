@@ -200,7 +200,7 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 		commands += ",\"process-break\",\"segments\"";
 		commands += ",\"exception\",\"exception-mask\"";
 		if (!mmu_enabled)
-			commands += ",\"dma-watch\",\"watch\"";
+			commands += ",\"dma-watch\",\"watch\",\"watch-range\"";
 		commands += ",\"guest-output\"";
 #ifdef SAVESTATE
 		commands += ",\"checkpoint\"";
@@ -391,7 +391,8 @@ MonitorResult GdbMonitor::watch_command(const std::string& command, std::string&
 					",\"sources\":" + std::to_string(wp.access_mask) + ",\"value\":" +
 					(wp.val_enabled ? std::to_string(wp.val) : "null") + ",\"mask\":" + std::to_string(wp.val_mask) +
 					",\"change_only\":" + (wp.mustchange ? "true" : "false") +
-					",\"log_only\":" + (wp.nobreak ? "true" : "false") + "}";
+					",\"log_only\":" + (wp.nobreak ? "true" : "false") +
+					",\"range\":" + ((wp.remote & MW_REMOTE_EXACT) ? "false" : "true") + "}";
 			}
 		}
 		result += "]";
@@ -408,16 +409,25 @@ MonitorResult GdbMonitor::watch_command(const std::string& command, std::string&
 		memwatch_setup();
 		return MonitorResult::ok;
 	}
-	if (command.compare(0, 10, "watch add ") == 0) {
-		// address, access width, access kind, source mask, value enabled,
-		// value, value mask, change-only, log-only.
+	bool range = command.compare(0, 12, "watch range ") == 0;
+	if (range || command.compare(0, 10, "watch add ") == 0) {
+		// address, access width or range length, access kind, source mask,
+		// value enabled, value, value mask, change-only, log-only.
 		uint32_t a[9];
-		if (mmu_enabled || !hex_words(command.substr(10), 9, a) ||
-			(a[1] != 1 && a[1] != 2 && a[1] != 4) || (a[0] & (a[1] - 1)) ||
-			uint64_t(a[0]) + a[1] > watch_limit() || a[2] < 1 || a[2] > 3 ||
-			!a[3] || (a[3] & ~static_cast<uint32_t>(MW_MASK_ALL & ~MW_MASK_CPU_I)) ||
+		if (mmu_enabled || !hex_words(command.substr(range ? 12 : 10), 9, a) ||
+			uint64_t(a[0]) + a[1] > watch_limit() || !a[3] || (a[3] & ~static_cast<uint32_t>(MW_MASK_ALL)) ||
 			a[4] > 1 || a[7] > 1 || a[8] > 1 || (a[7] && a[2] != 2))
 			return MonitorResult::error;
+		if (range) {
+			// Any access overlapping the range matches, as with console
+			// watchpoints. Instruction fetches (4) need the CPU fetch source.
+			if (!a[1] || a[1] > 0x10000 || a[2] < 1 || a[2] > 7 ||
+				!(a[2] & 4) != !(a[3] & MW_MASK_CPU_I) || ((a[2] & 3) && !(a[3] & ~MW_MASK_CPU_I)))
+				return MonitorResult::error;
+		} else if ((a[1] != 1 && a[1] != 2 && a[1] != 4) || (a[0] & (a[1] - 1)) ||
+			a[2] < 1 || a[2] > 3 || (a[3] & MW_MASK_CPU_I)) {
+			return MonitorResult::error;
+		}
 		// Old values must be readable RAM, never device register reads.
 		if (a[7]) {
 			addrbank& bank = get_mem_bank(a[0]);
@@ -439,7 +449,7 @@ MonitorResult GdbMonitor::watch_command(const std::string& command, std::string&
 		wp.mustchange = a[7];
 		wp.nobreak = a[8];
 		wp.reg = wp.pc = 0xffffffff;
-		wp.remote = MW_REMOTE_LOG | MW_REMOTE_EXACT;
+		wp.remote = range ? MW_REMOTE_LOG : MW_REMOTE_LOG | MW_REMOTE_EXACT;
 		watch_owner[slot] = watch_predicate;
 		memwatch_setup();
 		result = "{\"id\":" + std::to_string(slot) + "}";
