@@ -132,7 +132,11 @@ struct Engine::Audio {
 	uint32_t pcm_capacity = 0;
 	uint32_t pcm_written = 0;
 	uint32_t pcm_read = 0;
+	// Compressed bytes the decoder has taken out of the input ring. MP3 counts
+	// a feed as consumed when it is accepted; FLAC/Vorbis keep undecoded input
+	// in the ring, as the card does, and count it as it is decoded.
 	uint32_t bytes_consumed = 0;
+	uint32_t bytes_fed = 0;
 	uint32_t bytes_produced = 0;
 	uint32_t frames_decoded = 0;
 	uint32_t sample_rate = 0;
@@ -443,26 +447,32 @@ void Engine::decode_audio(const uint8_t *input, uint32_t length)
 	if (audio_->codec_decoder) {
 		if (input && length)
 			audio_->codec_decoder->append(input, length);
-		const uint16_t status = audio_->codec_decoder->decode(audio_->eof);
-		if (status != ok) {
-			audio_->faulted = true;
-			audio_->fault_status = status;
-			return;
-		}
-		if (audio_->codec_decoder->sample_rate()) {
-			audio_->sample_rate = audio_->codec_decoder->sample_rate();
-			audio_->channels = audio_->codec_decoder->channels();
-		}
-		const uint32_t used = audio_->pcm_written - audio_->pcm_read;
-		const uint32_t free = audio_->pcm_capacity - used;
-		const uint32_t bytes = static_cast<uint32_t>(
-			std::min<size_t>(audio_->codec_decoder->pcm_size(), free));
-		auto *ring = buffer_data(audio_->pcm_handle);
-		if (bytes && !ring) {
-			audio_->faulted = true;
-			return;
-		}
-		if (bytes) {
+		// The decoder keeps up to one ring of PCM of its own. When the ring
+		// had room, that PCM moves first and a second pass lets the decoder
+		// take more input, so freed ring space reaches the input ring at once,
+		// as it does on the card.
+		for (int pass = 0; pass < 2; ++pass) {
+			const uint16_t status = audio_->codec_decoder->decode(audio_->eof);
+			if (status != ok) {
+				audio_->faulted = true;
+				audio_->fault_status = status;
+				return;
+			}
+			if (audio_->codec_decoder->sample_rate()) {
+				audio_->sample_rate = audio_->codec_decoder->sample_rate();
+				audio_->channels = audio_->codec_decoder->channels();
+			}
+			const uint32_t used = audio_->pcm_written - audio_->pcm_read;
+			const uint32_t free = audio_->pcm_capacity - used;
+			const uint32_t bytes = static_cast<uint32_t>(
+				std::min<size_t>(audio_->codec_decoder->pcm_size(), free));
+			if (!bytes)
+				break;
+			auto *ring = buffer_data(audio_->pcm_handle);
+			if (!ring) {
+				audio_->faulted = true;
+				return;
+			}
 			const uint32_t pos = audio_->pcm_written % audio_->pcm_capacity;
 			const uint32_t first = std::min<uint32_t>(bytes, audio_->pcm_capacity - pos);
 			const auto *decoded = audio_->codec_decoder->pcm_data();
@@ -477,6 +487,8 @@ void Engine::decode_audio(const uint8_t *input, uint32_t length)
 			audio_->frames_decoded = frame_bytes ? audio_->bytes_produced / frame_bytes : 0;
 		}
 		audio_->decoder_pending = audio_->codec_decoder->has_pending();
+		audio_->bytes_consumed = audio_->bytes_fed -
+			static_cast<uint32_t>(audio_->codec_decoder->input_size());
 		return;
 	}
 #ifdef ZZ9000_SDK_AUDIO
@@ -921,13 +933,17 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		return ok;
 	}
 	if (opcode == 0x0b06) {
-		if ((be32(request + 4) & ~3u) || be32(request + 8) || be32(request + 12))
+		// Command payload: session, 64-bit value cursor (zero for DECODE),
+		// then flags. ZZPlay sets the late-frame skip flags when it falls
+		// behind, for example while switching to fullscreen.
+		const uint32_t flags = be32(request + 12);
+		if (be32(request + 4) || be32(request + 8) || (flags & ~3u))
 			return bad_request;
 		if (media_->held)
 			return busy;
 		if (media_->av) {
 			MediaAvFrame frame;
-			const int result = media_->av_decoder->decode(frame, be32(request + 4));
+			const int result = media_->av_decoder->decode(frame, flags);
 			if (result < 0) {
 				media_->state = 5;
 				return io_error;
@@ -946,6 +962,15 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				media_->frame_rate_num = frame.frame_rate_num;
 				media_->frame_rate_den = frame.frame_rate_den;
 				media_->video_pts = frame.pts;
+			} else if (result == 0 && media_->eof) {
+				// All input has arrived and the worker is still decoding it
+				// (a short file can be fed whole before FFmpeg finishes
+				// probing). NEED_INPUT after EOF means a truncated stream to
+				// ZZPlay, so ask the guest to retry instead.
+				pump_media_audio();
+				media_->state = 2;
+				media_result(reply, reply_length, 0, 1u << 8);
+				return busy;
 			} else {
 				media_->state = result == 2 ? 4 : 1;
 			}
@@ -2103,16 +2128,26 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				const uint32_t offset = be32(request + 8);
 				if (!source || offset > source->length || length > source->length - offset)
 					return bad_handle;
-				if (length > audio_->mp3_capacity || audio_->decoder_pending ||
-				    audio_->pcm_written - audio_->pcm_read >
-				        audio_->pcm_capacity - 8192) {
+				// The card refuses a feed only when its input ring has no
+				// room; FLAC/Vorbis input waits there until PCM space lets
+				// the decoder take it. MP3 sessions keep their one-feed model.
+				const uint32_t retained = audio_->codec_decoder ?
+					static_cast<uint32_t>(audio_->codec_decoder->input_size()) : 0;
+				const bool full = audio_->codec_decoder ?
+					length > audio_->mp3_capacity - std::min(retained, audio_->mp3_capacity) :
+					length > audio_->mp3_capacity || audio_->decoder_pending ||
+					    audio_->pcm_written - audio_->pcm_read > audio_->pcm_capacity - 8192;
+				if (full) {
 					audio_->backpressure = true;
 					audio_result(reply, reply_length);
 					return ok;
 				}
 				audio_->backpressure = false;
 				audio_->drain = false;
-				audio_->bytes_consumed += length;
+				if (audio_->codec_decoder)
+					audio_->bytes_fed += length;
+				else
+					audio_->bytes_consumed += length;
 				if ((flags & 1) && audio_->codec_decoder)
 					audio_->eof = true;
 				decode_audio(buffer_data(source->handle) + offset, length);

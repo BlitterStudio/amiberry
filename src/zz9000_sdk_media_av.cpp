@@ -517,17 +517,64 @@ void MediaAv::worker_loop()
 		}
 		return drained(result);
 	};
+	// Like the card's 1 MiB video FIFO, keep demuxing past a full frame
+	// queue: a Program Stream can carry the audio for the picture on show
+	// up to ~0.7 s further on, and blocking on video there starves audio.
+	constexpr size_t video_packet_budget = 1024 * 1024;
+	std::deque<AVPacket *> pending_video;
+	size_t pending_video_bytes = 0;
+	auto free_pending = [&] {
+		for (AVPacket *packet : pending_video)
+			av_packet_free(&packet);
+		pending_video.clear();
+	};
+	auto frame_room = [this] {
+		std::lock_guard<std::mutex> lock(mutex_);
+		return frames_.size() < frame_capacity;
+	};
+	// Sends queued video while the frame queue has room, or until the queue
+	// is back under its budget when force is set (that may block on output).
+	auto send_pending_video = [&](bool force) -> bool {
+		while (!pending_video.empty() &&
+			(force ? pending_video_bytes >= video_packet_budget : frame_room())) {
+			AVPacket *packet = pending_video.front();
+			pending_video.pop_front();
+			pending_video_bytes -= static_cast<size_t>(packet->size);
+			const int send = avcodec_send_packet(state_->video, packet);
+			av_packet_free(&packet);
+			if (send < 0 || !drain_video()) return false;
+		}
+		return true;
+	};
 	for (;;) {
+		if (!send_pending_video(false)) { free_pending(); fail(); return; }
 		const int read = av_read_frame(state_->format, state_->packet);
 		if (read == AVERROR_EOF) break;
-		if (read < 0) { fail(); return; }
+		if (read < 0) { free_pending(); fail(); return; }
 		int send = 0;
-		if (state_->packet->stream_index == state_->video_stream)
-			send = avcodec_send_packet(state_->video, state_->packet);
-		else if (state_->packet->stream_index == state_->audio_stream)
+		if (state_->packet->stream_index == state_->video_stream) {
+			AVPacket *queued = av_packet_clone(state_->packet);
+			if (!queued) send = AVERROR(ENOMEM);
+			else {
+				pending_video_bytes += static_cast<size_t>(queued->size);
+				pending_video.push_back(queued);
+			}
+		} else if (state_->packet->stream_index == state_->audio_stream) {
 			send = avcodec_send_packet(state_->audio, state_->packet);
+		}
 		av_packet_unref(state_->packet);
-		if (send < 0 || !drain_video() || !drain_audio()) { fail(); return; }
+		if (send < 0 || !send_pending_video(true) || !drain_audio()) {
+			free_pending();
+			fail();
+			return;
+		}
+	}
+	while (!pending_video.empty()) {
+		AVPacket *packet = pending_video.front();
+		pending_video.pop_front();
+		const int send = avcodec_send_packet(state_->video, packet);
+		av_packet_free(&packet);
+		if (send < 0 || !drain_video()) { free_pending(); fail(); return; }
 	}
 	if (state_->video) avcodec_send_packet(state_->video, nullptr);
 	if (state_->audio) avcodec_send_packet(state_->audio, nullptr);

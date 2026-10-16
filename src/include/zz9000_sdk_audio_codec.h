@@ -19,6 +19,8 @@ public:
 	AudioCodecDecoder(const AudioCodecDecoder &) = delete;
 	AudioCodecDecoder &operator=(const AudioCodecDecoder &) = delete;
 
+	// Compressed bytes appended but not yet taken by the decoder.
+	size_t input_size() const;
 	void append(const uint8_t *data, size_t length);
 	uint16_t decode(bool eof);
 	uint32_t sample_rate() const;

@@ -81,8 +81,8 @@ AudioCodecDecoder::~AudioCodecDecoder()
 
 void AudioCodecDecoder::append(const uint8_t *data, size_t length)
 {
-	// FEED only hands over new input once the previous feed is decoded, so
-	// at most one feed plus a partial frame or Ogg page is ever retained.
+	// FEED refuses input that does not fit the session's input ring, so the
+	// retained input never exceeds the ring.
 	if (impl_->input.size() + length > impl_->input_limit + 65536u) {
 		impl_->status = io_error;
 		return;
@@ -580,6 +580,7 @@ bool AudioCodecDecoder::has_pending() const
 {
 	return pcm_size() != 0 || (impl_->blocked && !impl_->flushed);
 }
+size_t AudioCodecDecoder::input_size() const { return impl_->input.size(); }
 void AudioCodecDecoder::consume_pcm(size_t length)
 {
 	length = std::min(length, impl_->output.size());
