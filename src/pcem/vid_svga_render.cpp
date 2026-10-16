@@ -604,7 +604,7 @@ void svga_render_15bpp_lowres(svga_t *svga)
                
                 if (!svga->remap_required)
                 {
-                        for (x = 0; x <= svga->hdisp << svga->horizontal_linedbl; x += 4)
+                        for (x = 0; x <= svga->hdisp << svga->horizontal_linedbl; x += 2)
                         {
                                 uint32_t dat = *(uint32_t *)(&svga->vram[(svga->ma + (x << 1)) & svga->vram_display_mask]);
 
