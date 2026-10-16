@@ -462,7 +462,9 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 			state.vorbis_eos = true;
 		}
 	}
-	if (state.eof && !state.flushed) {
+	// While PCM backpressure stops the loop, unparsed pages may still hold
+	// the rest of the stream; judge EOF only once parsing could continue.
+	if (state.eof && !state.flushed && state.output.size() < max_output) {
 		// Like the card, the stream must end on its EOS page; EOF anywhere
 		// else means the track was cut short.
 		if (!state.vorbis_eos || !state.packet.empty() || state.vorbis_headers != 3)

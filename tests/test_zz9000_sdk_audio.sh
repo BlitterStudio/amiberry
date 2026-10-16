@@ -33,8 +33,10 @@ ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=660:duration=0.15' \
 ffmpeg -nostdin -loglevel error -i "$flac16" -f s16be -acodec pcm_s16be "$flac16_ref"
 ffmpeg -nostdin -loglevel error -i "$flac24" -f s32be -acodec pcm_s32be "$flac24_ref"
 ffmpeg -nostdin -loglevel error -i "$vorbis" -f s16le -acodec pcm_s16le "$vorbis_ref"
-ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=500:duration=1.0' \
-  -ar 32000 -ac 2 -c:a libvorbis "$vorbis_long"
+# Noise keeps the Vorbis pages large, so PCM backpressure stops parsing
+# before the EOS page of a single EOF-marked feed.
+ffmpeg -nostdin -loglevel error -f lavfi -i 'anoisesrc=duration=2:color=pink:sample_rate=44100:amplitude=0.5' \
+  -ac 2 -c:a libvorbis "$vorbis_long"
 ffmpeg -nostdin -loglevel error -i "$vorbis_long" -f s16le -acodec pcm_s16le "$vorbis_long_ref"
 # White noise barely compresses, so one feed carries well over 128 KiB.
 ffmpeg -nostdin -loglevel error -f lavfi -i 'anoisesrc=duration=3:color=white:sample_rate=44100:amplitude=0.5' \
