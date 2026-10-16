@@ -1588,36 +1588,42 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			}
 			if (flags & 1u) {
 				image_->input_eof = true;
+				// Later EOF-marked feeds (one per tile band) reuse what the
+				// first one decoded, as the JPEG/PNG path does.
 				if (image_->animation) {
-					uint32_t width = 0, height = 0, loops = 0;
-					const auto result = image_->webp->begin_animation(width, height, loops);
-					if (result != WebpInputResult::ok)
-						return map_webp_result(result);
-					if (width > surface_width(image_->dst_surface) ||
-					    height > surface_height(image_->dst_surface) ||
-					    surface_pitch(image_->dst_surface) < ((width + 1) / 2) * 4)
-						return bad_request;
-					image_->width = width;
-					image_->height = height;
-					image_->animation_loop_count = loops;
+					if (!image_->width) {
+						uint32_t width = 0, height = 0, loops = 0;
+						const auto result = image_->webp->begin_animation(width, height, loops);
+						if (result != WebpInputResult::ok)
+							return map_webp_result(result);
+						if (width > surface_width(image_->dst_surface) ||
+						    height > surface_height(image_->dst_surface) ||
+						    surface_pitch(image_->dst_surface) < ((width + 1) / 2) * 4)
+							return bad_request;
+						image_->width = width;
+						image_->height = height;
+						image_->animation_loop_count = loops;
+					}
 					put32(reply, image_->session);
 					put32(reply + 4, 6); // ANIMATION_READY
-					put32(reply + 8, width);
-					put32(reply + 12, height);
+					put32(reply + 8, image_->width);
+					put32(reply + 12, image_->height);
 					put32(reply + 16, image_->output_format);
 					put32(reply + 36, source_length);
 					*reply_length = 48;
 					return ok;
 				}
-				bool animated = false;
-				const auto result = image_->webp->decode_still(image_->width, image_->height,
-					animated, image_->rgba);
-				if (result != WebpInputResult::ok)
-					return map_webp_result(result);
-				const uint32_t bpp = image_->output_format == 8 ? 3 : 4;
-				if (image_->output_mode == 3 &&
-				    static_cast<uint64_t>(image_->width) * bpp > image_->tile_stride)
-					return bad_request;
+				if (image_->rgba.empty()) {
+					bool animated = false;
+					const auto result = image_->webp->decode_still(image_->width, image_->height,
+						animated, image_->rgba);
+					if (result != WebpInputResult::ok)
+						return map_webp_result(result);
+					const uint32_t bpp = image_->output_format == 8 ? 3 : 4;
+					if (image_->output_mode == 3 &&
+					    static_cast<uint64_t>(image_->width) * bpp > image_->tile_stride)
+						return bad_request;
+				}
 			}
 		} else {
 			if (image_->rgba.empty() && source_length) {
