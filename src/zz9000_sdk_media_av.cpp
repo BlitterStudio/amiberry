@@ -48,11 +48,22 @@ AVCodecID video_id(uint32_t codec)
 	}
 }
 
-bool audio_id_matches(uint32_t codec, AVCodecID id)
+// Which demuxed audio tracks a session's audio codec selects, per container,
+// as the card's demuxers do: any MPEG audio layer for MP2 (the card decodes
+// with minimp3), DVD LPCM in Program Streams, and A_PCM/INT/LIT (16-bit,
+// 48 kHz, mono or stereo) for LPCM in Matroska.
+bool audio_track_matches(uint32_t codec, uint32_t container,
+	const AVCodecParameters *parameters)
 {
+	const AVCodecID id = parameters->codec_id;
 	switch (codec) {
-	case audio_mp2: return id == AV_CODEC_ID_MP2;
-	case audio_lpcm: return id == AV_CODEC_ID_PCM_DVD;
+	case audio_mp2:
+		return id == AV_CODEC_ID_MP1 || id == AV_CODEC_ID_MP2 || id == AV_CODEC_ID_MP3;
+	case audio_lpcm:
+		if (container == container_mpeg_ps)
+			return id == AV_CODEC_ID_PCM_DVD;
+		return id == AV_CODEC_ID_PCM_S16LE && parameters->sample_rate == 48000 &&
+			(parameters->ch_layout.nb_channels == 1 || parameters->ch_layout.nb_channels == 2);
 	case audio_ac3: return id == AV_CODEC_ID_AC3;
 	case audio_opus: return id == AV_CODEC_ID_OPUS;
 	case audio_vorbis: return id == AV_CODEC_ID_VORBIS;
@@ -339,7 +350,7 @@ void MediaAv::worker_loop()
 			parameters->codec_id == wanted_video && state_->video_stream < 0)
 			state_->video_stream = static_cast<int>(i);
 		if (audio_codec_ != audio_none && parameters->codec_type == AVMEDIA_TYPE_AUDIO &&
-			audio_id_matches(audio_codec_, parameters->codec_id) && state_->audio_stream < 0)
+			audio_track_matches(audio_codec_, container_, parameters) && state_->audio_stream < 0)
 			state_->audio_stream = static_cast<int>(i);
 	}
 	if ((state_->video_stream < 0 && state_->audio_stream < 0) ||

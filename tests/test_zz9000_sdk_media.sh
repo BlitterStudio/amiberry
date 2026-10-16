@@ -15,12 +15,17 @@ large="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.large.vob"
 large_odd_half="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.large_odd_half.vob"
 truncated="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.truncated.webm"
 offset="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.offset.webm"
-trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset"' EXIT
+mkv_pcm="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.pcm.mkv"
+mkv_mp3="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mp3.mkv"
+trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3"' EXIT
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:a mp2 -b:a 128k -f mpeg "$audio_only"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis "$vp8"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx-vp9 -row-mt 1 -cpu-used 8 -c:a libopus "$vp9"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 "$mkv"
+# Matroska carries LPCM as A_PCM/INT/LIT and MPEG audio of any layer.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -ac 2 -c:v mpeg2video -pix_fmt yuv420p -c:a pcm_s16le "$mkv_pcm"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a libmp3lame "$mkv_mp3"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$ps"
 # Three seconds of stereo PCM is several times the test's PCM ring.
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:a ac3 -f vob "$audio_ac3"
@@ -38,6 +43,8 @@ zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" --av "$vp8" 3 2 5 0 1 160 120
 "$out" --av "$vp9" 4 2 4 0 1 160 120
 "$out" --av "$mkv" 2 2 1 0 1 160 120
+"$out" --av "$mkv_pcm" 2 2 2 0 1 160 120
+"$out" --av "$mkv_mp3" 2 2 1 0 1 160 120
 "$out" --av "$ps" 2 1 3 0 1 160 120
 "$out" --av "$lpcm" 2 1 2 0 1 160 120
 "$out" --av "$audio_ac3" 2 1 3 0 0 160 120
