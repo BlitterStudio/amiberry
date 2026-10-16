@@ -228,23 +228,26 @@ Use `SAVESTATE` and `LOADSTATE`.
 `input sequence` is refused. Its steps advance from the frame hook only while
 a GDB client is connected. Use `input event`.
 
-
-A watch hit, exception-mask hit, or process-break entry with no GDB client
-stops in the native debugger. `DEBUG_STATUS` reports `stopped=1` and `reason=`
-set to the stop text when one was produced. A read/write watch is
+A watch hit, exception-mask hit, condition, or process-break entry with no GDB
+client stops in the native debugger. `DEBUG_STATUS` reports `stopped=1` and
+`reason=` set to the stop text when one was produced. A read/write watch is
 `T05awatch:`, a write watch is `T05watch:`, and a read watch is `T05rwatch:`.
-Exception stops use `Tnnwinuae-exception:...`. Process-break stops use
-`T05winuae-entry:...`. `reason=` is empty unless `stopped=1`. `DEBUG_CONTINUE`,
-`DEBUG_STEP`, and `DEBUG_STEP_OVER` clear it. `execution-status` reports the
-GDB halt flag, not this native stop.
+Exception stops use `Tnnwinuae-exception:...`, process-break stops use
+`T05winuae-entry:...`, and conditions use `T05breakpoint:N;`. `reason=` is
+empty unless `stopped=1`, however the debugger was left. `execution-status`
+reports the GDB halt flag, not this native stop.
 
 IPC and a connected GDB client share one monitor object. State-changing
-`MONITOR` commands are refused while a GDB client is connected. A new GDB
-connection is refused while IPC has installed monitor state (watches,
-conditions, an exception mask, a process-break, history recording, guest-output
-capture, or captured watch events). GDB detach clears that object, so the
-connection is refused instead of letting detach delete IPC state. Clear the
-IPC state before attaching GDB. D-Bus does not expose `MONITOR`.
+`MONITOR` commands are refused while a GDB client is connected. A GDB detach
+clears everything in that object, so a new GDB connection is refused while
+IPC holds any of it: watches, DMA watches, conditions, an exception mask, a
+process-break, history recording, guest-output capture or captured records,
+captured watch events, or input held by `input event`. Clear it before
+attaching GDB with `watch remove`, `dma-watch remove`, `condition remove`,
+`exception-mask 0`, `process-break clear`, `history off`, `guest-output off`
+followed by `guest-output clear`, `watch clear-events`, and `input release`.
+The last captured exception (`exception`) does not block GDB; it is dropped
+when that GDB client detaches. D-Bus does not expose `MONITOR`.
 
 ## Validation status
 

@@ -77,7 +77,7 @@ public:
 	void detach() override;
 	void input_frame();
 #ifdef AMIBERRY
-	bool ipc_control_state() const;
+	bool ipc_control_state();
 	bool ipc_needs_trace() const { return process_armed || remote_history; }
 #endif
 private:
@@ -909,9 +909,13 @@ void gdb_server_guest_output(const char* text, bool truncated)
 }
 
 #ifdef AMIBERRY
-bool GdbMonitor::ipc_control_state() const
+// Anything detach() would clear counts as IPC-owned state while no GDB
+// client is connected: armed stops, tables, logs, captured output and held
+// or scheduled input.
+bool GdbMonitor::ipc_control_state()
 {
-	if (process_armed || remote_history || exception_mask || !watch_log.empty() || guest_output.is_enabled())
+	if (process_armed || remote_history || exception_mask || !watch_log.empty() || guest_output.retained() ||
+		guest_input.holding() || guest_input.active())
 		return true;
 	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
 		if (conditional[i])
