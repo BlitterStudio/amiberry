@@ -89,8 +89,9 @@ access to unlisted regions first:
 
 Amiberry-specific operations use GDB `monitor` (`qRcmd`) commands. Replies are
 hex-encoded text, usually JSON. Numeric arguments are hexadecimal unless a
-command says otherwise. Commands require a stopped CPU except `capabilities`
-and `execution-status`.
+command says otherwise. Commands require a stopped CPU except `capabilities`,
+`execution-status`, and `input` commands. Input events and frame-scheduled
+input sequences may be submitted while the guest runs.
 
 - `monitor capabilities` lists commands available in the current build and
   configuration. `monitor execution-status` reports CPU, host-pause, frame,
