@@ -8122,15 +8122,16 @@ cpu_debug_fault cpu_get_debug_fault(int vector)
 		fault.address = regs.mmu_fault_addr;
 		if (currprefs.mmu_model == 68060) {
 			fault.status = regs.mmu_fslw;
-			fault.access = ((fault.status & MMU_FSLW_R) ? 1 : 0) |
-				((fault.status & MMU_FSLW_W) ? 2 : 0);
+			fault.access = (fault.status & MMU_FSLW_LK) ? 3 :
+				((fault.status & MMU_FSLW_R) ? 1 : 0) | ((fault.status & MMU_FSLW_W) ? 2 : 0);
 			const int sizes[] = {4, 1, 2, 8};
 			fault.size = sizes[(fault.status >> 21) & 3];
 			fault.function_code = (fault.status >> 16) & 7;
 		} else {
 			fault.status = regs.mmu_ssw;
 			bool m030 = currprefs.mmu_model == 68030;
-			fault.access = (fault.status & (m030 ? MMU030_SSW_RW : MMU_SSW_RW)) ? 1 : 2;
+			fault.access = (fault.status & (m030 ? MMU030_SSW_RM : MMU_SSW_LK)) ? 3 :
+				((fault.status & (m030 ? MMU030_SSW_RW : MMU_SSW_RW)) ? 1 : 2);
 			const int sizes[] = {4, 1, 2, 0};
 			fault.size = sizes[(fault.status >> (m030 ? 4 : 5)) & 3];
 			fault.function_code = fault.status & 7;
