@@ -16,6 +16,9 @@
 #include "uae.h"
 #include "xwin.h"
 #include "sounddep/sound.h"
+#ifdef AMIBERRY
+#include "debug.h"
+#endif
 #include <memory>
 
 #if defined(DEBUGGER) && defined(GDBSERVER)
@@ -162,8 +165,21 @@ void gdb_server_poll()
 				int one = 1;
 				setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
+#ifdef AMIBERRY
+				// IPC and a GDB client share this monitor object. Accepting a
+				// client would make detach() clear IPC watches and masks.
+				if (gdb_monitor_ipc_active()) {
+					write_log(_T("WinUAE GDB: connection refused; IPC monitor state is active\n"));
+					close_socket(client);
+					client = invalid_socket;
+				} else {
+					session.reset(new winuae_gdb::Session(debug_gdb_target()));
+					debug_gdb_target().interrupt();
+				}
+#else
 				session.reset(new winuae_gdb::Session(debug_gdb_target()));
 				debug_gdb_target().interrupt();
+#endif
 			}
 		}
 	}
@@ -204,6 +220,10 @@ bool gdb_server_stop(const char* reason)
 	pause_sound();
 	while (session && session->stopped() && !quit_program) {
 		gdb_server_poll();
+#ifdef AMIBERRY
+		// Keep answering IPC while GDB holds the CPU.
+		debugger_service_ipc();
+#endif
 		handle_msgpump(false);
 		sleep_millis(1);
 	}

@@ -226,27 +226,60 @@ static void debug_continue(void)
 }
 
 #ifdef AMIBERRY
+// Recompute TRACE_CHECKONLY from every source that needs per-instruction
+// checks: breakpoint slots (IPC breakpoints and monitor conditions), the
+// console process breakpoint, and monitor history or program-entry breaks.
+// Callers change one source; this keeps the others from being dropped.
 void debugger_breakpoints_changed(void)
 {
-	bool enabled = false;
-	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled) {
-			enabled = true;
-			break;
-		}
+	bool needed = processptr || processname;
+	for (int i = 0; i < BREAKPOINT_TOTAL && !needed; i++) {
+		if (bpnodes[i].enabled)
+			needed = true;
 	}
-
-	if (enabled) {
-		if (!debugger_is_stopped() && trace_mode == 0) {
+#if defined(GDBSERVER)
+	if (gdb_monitor_needs_trace())
+		needed = true;
+#endif
+	if (debugger_is_stopped())
+		return;
+	if (needed) {
+		if (trace_mode == 0) {
 			trace_mode = TRACE_CHECKONLY;
 			debugging = -1;
 			set_special(SPCFLAG_BRK);
 		}
-	} else if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY) {
+	} else if (trace_mode == TRACE_CHECKONLY) {
 		trace_mode = 0;
 		debugging = 0;
 	}
 }
+
+static char debugger_stop_reason_text[160];
+
+static void debugger_note_stop_reason(const char* reason)
+{
+	debugger_stop_reason_text[0] = 0;
+	if (!reason || !reason[0] || strcmp(reason, "S05") == 0)
+		return;
+	snprintf(debugger_stop_reason_text, sizeof(debugger_stop_reason_text), "%s", reason);
+}
+
+const char* debugger_last_stop_reason(void)
+{
+	return debugger_stop_reason_text;
+}
+
+// The GDB stop loop does not return to handle_events(), so it calls this to
+// keep answering IPC (read-only MONITOR queries, status) while GDB holds the
+// CPU. MONITOR refuses state changes while a GDB client is connected.
+void debugger_service_ipc(void)
+{
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCHandle();
+#endif
+}
+
 #endif
 
 bool debug_enforcer(void)
@@ -6386,6 +6419,7 @@ bool debugger_request_step(const int count)
 	if (!debugger_is_stopped() || count < 1 || count > 10000)
 		return false;
 
+	debugger_stop_reason_text[0] = 0;
 	no_trace_exceptions = 0;
 	debug_cycles(2);
 	trace_param[0] = count;
@@ -6402,6 +6436,7 @@ bool debugger_request_step_over(void)
 	if (!debugger_is_stopped())
 		return false;
 
+	debugger_stop_reason_text[0] = 0;
 	TCHAR disassembly[256];
 	uaecptr next_address = M68K_GETPC;
 	m68k_disasm_2(disassembly, sizeof(disassembly) / sizeof(TCHAR), next_address, nullptr, 0, &next_address, 1,
@@ -6420,6 +6455,7 @@ bool debugger_request_continue(void)
 	if (!debugger_is_stopped())
 		return false;
 
+	debugger_stop_reason_text[0] = 0;
 	deactivate_debugger();
 	debugger_external_control_pending.store(true, std::memory_order_release);
 	return true;
@@ -8591,6 +8627,9 @@ void debug (void)
 {
 	int wasactive;
 	char remote_reason[128] = "S05";
+#ifdef AMIBERRY
+	debugger_stop_reason_text[0] = 0;
+#endif
 
 	if (savestate_state || quit_program)
 		return;
@@ -8751,7 +8790,11 @@ void debug (void)
 					bp = -2;
 				}
 			}
+#ifdef AMIBERRY
+			if (gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
+#else
 			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
+#endif
 				bp = -1;
 			}
 			inside_debugger = was_inside_debugger;
@@ -8761,18 +8804,31 @@ void debug (void)
 			}
 			if (bpnum >= 0) {
 				console_out_f(_T("Breakpoint %d triggered.\n"), bpnum);
+#ifdef AMIBERRY
+				// Only for the native stop that IPC reads; a GDB client keeps
+				// the plain S05 reply it got before.
+				if (!gdb_server_connected())
+					snprintf(remote_reason, sizeof(remote_reason), "T05breakpoint:%d;", bpnum);
+#endif
 			}
 			if (bp >= -1) {
 				debug_cycles(1);
 			}
 		}
 	} else {
+#ifdef AMIBERRY
+		const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
+			(mwhit.rwi & 2) ? "watch" : "rwatch";
+		snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
+			kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
+#else
 		if (gdb_server_connected()) {
 			const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
 				(mwhit.rwi & 2) ? "watch" : "rwatch";
 			snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
 				kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
 		}
+#endif
 		memwatch_hit_msg(memwatch_triggered - 1);
 		memwatch_triggered = 0;
 	}
@@ -8790,6 +8846,12 @@ void debug (void)
 #endif
 		return;
 	}
+#ifdef AMIBERRY
+	// No GDB client: clear exception_pending and keep the stop reason, then
+	// enter the native debugger that IPC already resumes.
+	gdb_target_stopped(remote_reason, sizeof(remote_reason));
+	debugger_note_stop_reason(remote_reason);
+#endif
 
 	wasactive = ismouseactive ();
 #ifdef WITH_PPC
@@ -8845,6 +8907,10 @@ void debug (void)
 				trace_mode = TRACE_CHECKONLY;
 		}
 	}
+#if defined(AMIBERRY) && defined(GDBSERVER)
+	if (!trace_mode && gdb_monitor_needs_trace())
+		trace_mode = TRACE_CHECKONLY;
+#endif
 	if (trace_mode) {
 		set_special (SPCFLAG_BRK);
 		debugging = -1;

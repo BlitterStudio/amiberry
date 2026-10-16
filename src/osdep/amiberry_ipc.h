@@ -126,6 +126,7 @@ constexpr char const* CMD_DEBUG_STATUS = "DEBUG_STATUS";
 constexpr char const* CMD_DEBUG_STEP = "DEBUG_STEP";
 constexpr char const* CMD_DEBUG_STEP_OVER = "DEBUG_STEP_OVER";
 constexpr char const* CMD_DEBUG_CONTINUE = "DEBUG_CONTINUE";
+constexpr char const* CMD_MONITOR = "MONITOR";
 constexpr char const* CMD_GET_CPU_REGS = "GET_CPU_REGS";
 constexpr char const* CMD_GET_CUSTOM_REGS = "GET_CUSTOM_REGS";
 constexpr char const* CMD_DISASSEMBLE = "DISASSEMBLE";

@@ -76,6 +76,11 @@ public:
 		uae_u32 value, uae_u32 old_value, bool old_valid) override;
 	void detach() override;
 	void input_frame();
+#ifdef AMIBERRY
+	bool ipc_control_state();
+	bool ipc_needs_trace() const { return process_armed || remote_history; }
+	bool has_condition(int slot) const { return slot >= 0 && slot < BREAKPOINT_TOTAL && conditional[slot]; }
+#endif
 private:
 	winuae_gdb::GuestInput guest_input { *this };
 	winuae_gdb::WatchLog watch_log;
@@ -903,4 +908,137 @@ void gdb_server_guest_output(const char* text, bool truncated)
 {
 	gdb_monitor.guest_output.capture(text, truncated);
 }
+
+#ifdef AMIBERRY
+// Anything detach() would clear counts as IPC-owned state while no GDB
+// client is connected: armed stops, tables, logs, captured output and held
+// or scheduled input.
+bool GdbMonitor::ipc_control_state()
+{
+	if (process_armed || remote_history || exception_mask || !watch_log.empty() || guest_output.retained() ||
+		guest_input.holding() || guest_input.active())
+		return true;
+	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+		if (conditional[i])
+			return true;
+	}
+	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
+		if (watch_owner[i] == watch_predicate || watch_owner[i] == watch_dma)
+			return true;
+	}
+	return false;
+}
+
+bool gdb_monitor_ipc_active()
+{
+	return gdb_monitor.ipc_control_state();
+}
+
+bool gdb_monitor_needs_trace()
+{
+	return gdb_monitor.ipc_needs_trace();
+}
+bool gdb_monitor_has_condition(int slot)
+{
+	return slot >= 0 && slot < BREAKPOINT_TOTAL && gdb_monitor.has_condition(slot);
+}
+
+
+static bool hex_span(const std::string& text, size_t begin, size_t end, uint32_t& value)
+{
+	if (begin >= end || end - begin > 8)
+		return false;
+	value = 0;
+	for (size_t i = begin; i < end; i++) {
+		unsigned char c = static_cast<unsigned char>(text[i]);
+		unsigned digit;
+		if (c >= '0' && c <= '9')
+			digit = c - '0';
+		else if (c >= 'a' && c <= 'f')
+			digit = c - 'a' + 10;
+		else if (c >= 'A' && c <= 'F')
+			digit = c - 'A' + 10;
+		else
+			return false;
+		value = (value << 4) | digit;
+	}
+	return true;
+}
+
+
+
+// Host entry for the same monitor text GDB sends as qRcmd. step-over and
+// checkpoint return running/pending and complete inside the GDB stop loop, so
+// they are refused here instead of being started without a client.
+bool gdb_monitor_command(const std::string& command, std::string& result, std::string& error)
+{
+	result.clear();
+	error.clear();
+	if (command.empty()) {
+		error = "missing monitor command";
+		return false;
+	}
+	for (unsigned char c : command) {
+		if (c < 0x20) {
+			error = "invalid control character in monitor command";
+			return false;
+		}
+	}
+	if (command == "step-over") {
+		error = "step-over depends on a GDB client; use DEBUG_STEP_OVER";
+		return false;
+	}
+	if (command == "checkpoint save" || command.compare(0, 16, "checkpoint save ") == 0) {
+		error = "checkpoint save depends on a GDB client; use SAVESTATE";
+		return false;
+	}
+	if (command == "checkpoint restore" || command.compare(0, 19, "checkpoint restore ") == 0) {
+		error = "checkpoint restore depends on a GDB client; use LOADSTATE";
+		return false;
+	}
+	if (command.compare(0, 7, "disasm ") == 0) {
+		auto space = command.find(' ', 7);
+		uint32_t address = 0;
+		unsigned count = 0;
+		if (space == std::string::npos || !hex_span(command, 7, space, address) || space + 1 == command.size()) {
+			error = "invalid disasm command";
+			return false;
+		}
+		for (size_t i = space + 1; i < command.size(); i++) {
+			if (command[i] < '0' || command[i] > '9' || count > 100) {
+				error = "invalid disasm command";
+				return false;
+			}
+			count = count * 10 + static_cast<unsigned>(command[i] - '0');
+		}
+		if (!count || count > 100 || !gdb_monitor.disassemble(address, count, result)) {
+			result.clear();
+			error = "disasm failed";
+			return false;
+		}
+		return true;
+	}
+	if (command.compare(0, 11, "screenshot ") == 0) {
+		auto path = command.substr(11);
+		if (path.empty() || !gdb_monitor.screenshot(path)) {
+			error = "screenshot failed";
+			return false;
+		}
+		return true;
+	}
+	auto status = gdb_monitor.monitor(command, result);
+	if (status == MonitorResult::ok)
+		return true;
+	result.clear();
+	if (status == MonitorResult::unsupported)
+		error = "unknown monitor command";
+	else if (status == MonitorResult::pending)
+		error = "monitor command is still pending";
+	else if (status == MonitorResult::running)
+		error = "monitor command is still running";
+	else
+		error = "monitor command failed";
+	return false;
+}
+#endif
 #endif

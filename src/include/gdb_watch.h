@@ -29,6 +29,7 @@ public:
 		entries[(begin + count++) % entries.size()] = hit;
 	}
 	void clear() { begin = count = 0; dropped = 0; }
+	bool empty() const { return count == 0; }
 	std::string snapshot(bool last = false) const {
 		if (last) return count ? entries[(begin + count - 1) % entries.size()].json() : "null";
 		std::string out = "{\"dropped\":" + std::to_string(dropped) + ",\"events\":[";

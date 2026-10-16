@@ -26,6 +26,7 @@
 #include "blitter.h"
 #ifdef DEBUGGER
 #include "debug.h"
+#include "gdb_server.h"
 #endif
 #include <dirent.h>
 
@@ -274,6 +275,9 @@ static std::string HandleScreenshot(const std::vector<std::string>& args)
 	if (args.empty()) {
 		return make_response(false, {"Missing filename"});
 	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
 	if (args.size() > 1) {
 		if (args.size() != 2 || args[1] != "ACTIONABLE") {
 			return make_response(false, {"Usage: SCREENSHOT <path> [ACTIONABLE]"});
@@ -314,8 +318,16 @@ static std::string HandleSavestate(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received SAVESTATE" << std::endl;
 	}
+#ifdef DEBUGGER
+	if (debugger_is_stopped() || gdb_server_halted()) {
+		return make_response(false, {"Cannot save state while the debugger has the CPU stopped; resume or PAUSE first"});
+	}
+#endif
 	if (args.size() < 2) {
 		return make_response(false, {"Usage: SAVESTATE <statefile> <configfile>"});
+	}
+	if (args[0].size() >= MAX_DPATH || args[1].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	savestate_initsave(args[0].c_str(), 1, true, true);
@@ -334,6 +346,9 @@ static std::string HandleLoadState(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Missing state file path"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	savestate_state = STATE_DORESTORE;
@@ -411,6 +426,9 @@ static std::string HandleInsertFloppy(const std::vector<std::string>& args)
 	if (args.size() < 2) {
 		return make_response(false, {"Usage: INSERTFLOPPY <path> <drivenum>"});
 	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
 
 	int drivenum;
 	try {
@@ -438,6 +456,9 @@ static std::string HandleInsertCD(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Missing CD image path"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	_tcsncpy(changed_prefs.cdslots[0].name, args[0].c_str(), MAX_DPATH);
@@ -741,6 +762,9 @@ static std::string HandleLoadConfig(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Missing config file path"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	int result = target_cfgfile_load(&changed_prefs, args[0].c_str(), CONFIG_TYPE_DEFAULT, 0);
@@ -1318,6 +1342,11 @@ static std::string HandleQuickSave(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received QUICKSAVE" << std::endl;
 	}
+#ifdef DEBUGGER
+	if (debugger_is_stopped() || gdb_server_halted()) {
+		return make_response(false, {"Cannot save state while the debugger has the CPU stopped; resume or PAUSE first"});
+	}
+#endif
 	int slot = 0;
 	if (!args.empty()) {
 		try {
@@ -2454,6 +2483,9 @@ static std::string HandleInsertWHDLoad(const std::vector<std::string>& args)
 	if (args.empty()) {
 		return make_response(false, {"Usage: INSERT_WHDLOAD <path_to_lha_or_directory>"});
 	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
 
 	std::string path = args[0];
 
@@ -2571,9 +2603,13 @@ static std::string HandleDebugStatus(const std::vector<std::string>& args)
 
 	std::vector<std::string> responses;
 	responses.push_back("active=" + std::to_string(debugger_active ? 1 : 0));
-	responses.push_back("stopped=" + std::to_string(debugger_is_stopped() ? 1 : 0));
+	const bool stopped = debugger_is_stopped();
+	responses.push_back("stopped=" + std::to_string(stopped ? 1 : 0));
 	responses.push_back("debugging=" + std::to_string(debugging ? 1 : 0));
 	responses.push_back("exception_debugging=" + std::to_string(exception_debugging ? 1 : 0));
+	// The saved text belongs to the last stop; any exit from the debugger
+	// (continue, step, DEBUG_DEACTIVATE, the console) makes it historical.
+	responses.push_back(std::string("reason=") + (stopped ? debugger_last_stop_reason() : ""));
 
 	return make_response(true, responses);
 }
@@ -2627,6 +2663,109 @@ static std::string HandleDebugContinue(const std::vector<std::string>& args)
 
 	return make_response(true, {"Execution continued"});
 }
+
+#ifdef GDBSERVER
+static bool monitor_prefix(const std::string& text, const char* prefix)
+{
+	const size_t n = strlen(prefix);
+	return text.compare(0, n, prefix) == 0 && (text.size() == n || text[n] == ' ');
+}
+
+static bool monitor_changes_state(const std::string& text)
+{
+	return monitor_prefix(text, "watch add") || monitor_prefix(text, "watch range") ||
+		monitor_prefix(text, "watch remove") || text == "watch clear-events" ||
+		monitor_prefix(text, "dma-watch add") || monitor_prefix(text, "dma-watch remove") ||
+		monitor_prefix(text, "condition add") || monitor_prefix(text, "condition remove") ||
+		monitor_prefix(text, "exception-mask") ||
+		text == "history on" || text == "history off" ||
+		text == "guest-output on" || text == "guest-output off" || text == "guest-output clear" ||
+		monitor_prefix(text, "process-break name") || monitor_prefix(text, "process-break address") ||
+		text == "process-break clear";
+}
+
+static bool monitor_reads_guest(const std::string& text)
+{
+	return monitor_prefix(text, "disasm") || text == "tasks" ||
+		text == "segments" || monitor_prefix(text, "segments");
+}
+
+static std::string monitor_refusal(const std::string& text)
+{
+	// gdb_server.cpp refuses the threaded CPU because debug() and bank remaps
+	// can run while the other thread is still executing. The same constraint
+	// applies to MONITOR mutations and guest-memory reads.
+	if (monitor_prefix(text, "input sequence"))
+		return "input sequence is advanced only while a GDB client is connected; use input event";
+	if (currprefs.cpu_thread && (monitor_changes_state(text) || monitor_reads_guest(text)))
+		return "not available with the threaded CPU (cpu_threaded=true)";
+	// A connected GDB client owns the shared monitor object, and its detach
+	// clears all of it, held input included.
+	if (gdb_server_connected() && (monitor_changes_state(text) ||
+		monitor_prefix(text, "input event") || text == "input release"))
+		return "a GDB client is connected; monitor state changes are refused";
+	if (monitor_changes_state(text) && !pause_emulation && !debugger_is_stopped())
+		return "monitor state changes require PAUSE or a stopped debugger";
+	return {};
+}
+
+static std::vector<std::string> monitor_result_fields(const std::string& result)
+{
+	std::vector<std::string> fields;
+	size_t start = 0;
+	while (start < result.size()) {
+		auto end = result.find('\n', start);
+		if (end == std::string::npos)
+			end = result.size();
+		std::string line = result.substr(start, end - start);
+		if (!line.empty() && line.back() == '\r')
+			line.pop_back();
+		if (!line.empty()) {
+			for (char& c : line) {
+				if (c == '\t')
+					c = ' ';
+			}
+			fields.push_back(std::move(line));
+		}
+		if (end == result.size())
+			break;
+		start = end + 1;
+	}
+	return fields;
+}
+
+static std::string HandleMonitor(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received MONITOR" << std::endl;
+	}
+	if (args.empty())
+		return make_response(false, {"Usage: MONITOR <command> [args]"});
+
+	std::string text;
+	for (size_t i = 0; i < args.size(); i++) {
+		if (i)
+			text += ' ';
+		text += args[i];
+	}
+	for (unsigned char c : text) {
+		if (c < 0x20)
+			return make_response(false, {"Invalid control character in monitor command"});
+	}
+	std::string refusal = monitor_refusal(text);
+	if (!refusal.empty())
+		return make_response(false, {refusal});
+
+	std::string result, error;
+	if (!gdb_monitor_command(text, result, error))
+		return make_response(false, {error.empty() ? std::string("monitor command failed") : error});
+	// Conditions, history and program-entry breaks all depend on
+	// per-instruction trace checks; recompute them from every source.
+	if (monitor_changes_state(text))
+		debugger_breakpoints_changed();
+	return make_response(true, monitor_result_fields(result));
+}
+#endif
 #endif
 
 static std::string HandleGetCPURegs(const std::vector<std::string>& args)
@@ -2799,12 +2938,15 @@ static std::string HandleSetBreakpoint(const std::vector<std::string>& args)
 		} catch (...) {
 			slot = -1;
 		}
+		if (slot >= 0 && gdb_monitor_has_condition(slot)) {
+			return make_response(false, {"Slot " + std::to_string(slot) + " is reserved for a monitor condition"});
+		}
 	}
 
 	// Find a free slot if not specified
 	if (slot < 0) {
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-			if (!bpnodes[i].enabled) {
+			if (!bpnodes[i].enabled && !gdb_monitor_has_condition(i)) {
 				slot = i;
 				break;
 			}
@@ -2842,7 +2984,9 @@ static std::string HandleClearBreakpoint(const std::vector<std::string>& args)
 	if (selector == "ALL") {
 		// Clear all breakpoints
 		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-			bpnodes[i].enabled = 0;
+			if (!gdb_monitor_has_condition(i)) {
+				bpnodes[i].enabled = 0;
+			}
 		}
 		debugger_breakpoints_changed();
 		return make_response(true, {"All breakpoints cleared"});
@@ -2857,7 +3001,7 @@ static std::string HandleClearBreakpoint(const std::vector<std::string>& args)
 
 	int cleared = 0;
 	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled && bpnodes[i].type == BREAKPOINT_REG_PC && bpnodes[i].value1 == addr) {
+		if (bpnodes[i].enabled && bpnodes[i].type == BREAKPOINT_REG_PC && bpnodes[i].value1 == addr && !gdb_monitor_has_condition(i)) {
 			bpnodes[i].enabled = 0;
 			cleared++;
 		}
@@ -2882,7 +3026,7 @@ static std::string HandleListBreakpoints(const std::vector<std::string>& args)
 	int count = 0;
 
 	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled) {
+		if (bpnodes[i].enabled && !gdb_monitor_has_condition(i)) {
 			char buf[128];
 			snprintf(buf, sizeof(buf), "slot=%d address=%08X type=%d enabled=1",
 				i, bpnodes[i].value1, bpnodes[i].type);
@@ -3111,6 +3255,9 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("--- Debugging Commands ---");
 	commands.emplace_back("DEBUG_ACTIVATE, DEBUG_DEACTIVATE, DEBUG_STATUS");
 	commands.emplace_back("DEBUG_STEP [count], DEBUG_STEP_OVER, DEBUG_CONTINUE");
+#ifdef GDBSERVER
+	commands.emplace_back("MONITOR <text> - GDB monitor command; lines returned as fields");
+#endif
 	commands.emplace_back("GET_CPU_REGS, GET_CUSTOM_REGS");
 	commands.emplace_back("DISASSEMBLE <addr> [count] - disassemble instructions");
 	commands.emplace_back("SET_BREAKPOINT <addr>, CLEAR_BREAKPOINT <addr|ALL>, LIST_BREAKPOINTS");
@@ -3229,6 +3376,9 @@ static void InitHandlers()
 	command_handlers[CMD_DEBUG_STEP] = HandleDebugStep;
 	command_handlers[CMD_DEBUG_STEP_OVER] = HandleDebugStepOver;
 	command_handlers[CMD_DEBUG_CONTINUE] = HandleDebugContinue;
+#ifdef GDBSERVER
+	command_handlers[CMD_MONITOR] = HandleMonitor;
+#endif
 	command_handlers[CMD_GET_CPU_REGS] = HandleGetCPURegs;
 	command_handlers[CMD_GET_CUSTOM_REGS] = HandleGetCustomRegs;
 	command_handlers[CMD_DISASSEMBLE] = HandleDisassemble;

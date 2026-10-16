@@ -47,6 +47,7 @@ class GuestInput {
 	}
 public:
 	bool active() const { return state == "running"; }
+	bool holding() const { return held(); }
 	bool start(const std::vector<InputStep>& sequence) {
 		if (active() || held() || sequence.empty() || sequence.size() > 256) return false;
 		uint64_t total = 0;
