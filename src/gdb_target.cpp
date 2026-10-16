@@ -2,7 +2,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#ifdef DEBUGGER
+#if defined(DEBUGGER) && defined(GDBSERVER)
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"

@@ -18,7 +18,7 @@
 #include "sounddep/sound.h"
 #include <memory>
 
-#ifdef DEBUGGER
+#if defined(DEBUGGER) && defined(GDBSERVER)
 namespace {
 #ifdef _WIN32
 using Socket = SOCKET;

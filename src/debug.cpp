@@ -8381,6 +8381,7 @@ void debug_exception(int nr)
 	}
 }
 
+#ifdef GDBSERVER
 /* Execution control for the remote debugger (gdb_target.cpp) */
 
 void debug_remote_interrupt(void)
@@ -8407,6 +8408,7 @@ void debug_remote_resume(bool step, bool check)
 	if (trace_mode)
 		set_special(SPCFLAG_BRK);
 }
+#endif
 
 static bool check_breakpoint(struct breakpoint_node *bpn, uaecptr pc)
 {

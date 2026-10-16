@@ -4,7 +4,7 @@
 
 #define DEBUG_FEATURE_GDBSERVER (1 << 2)
 
-#ifdef DEBUGGER
+#if defined(DEBUGGER) && defined(GDBSERVER)
 namespace winuae_gdb { class Target; }
 winuae_gdb::Target& debug_gdb_target();
 void gdb_server_poll();
