@@ -8796,7 +8796,11 @@ void debug (void)
 					bp = -2;
 				}
 			}
+#ifdef AMIBERRY
 			if (gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
+#else
+			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
+#endif
 				bp = -1;
 			}
 			inside_debugger = was_inside_debugger;
@@ -8812,10 +8816,19 @@ void debug (void)
 			}
 		}
 	} else {
+#ifdef AMIBERRY
 		const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
 			(mwhit.rwi & 2) ? "watch" : "rwatch";
 		snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
 			kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
+#else
+		if (gdb_server_connected()) {
+			const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
+				(mwhit.rwi & 2) ? "watch" : "rwatch";
+			snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
+				kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
+		}
+#endif
 		memwatch_hit_msg(memwatch_triggered - 1);
 		memwatch_triggered = 0;
 	}
