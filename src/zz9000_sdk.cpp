@@ -194,6 +194,7 @@ struct Engine::Media {
 	uint64_t pcm_produced = 0, pcm_acknowledged = 0;
 	uint64_t video_pts = UINT64_MAX, audio_pts = UINT64_MAX;
 	uint64_t first_audio_pts = UINT64_MAX; // origin of the acknowledged-PCM clock
+	uint64_t format_base = 0; // pcm_produced when the current PCM format began
 	uint32_t sample_rate = 0, channels = 0;
 	uint32_t state = 1; // NEED_INPUT
 	uint32_t video_codec = 0, container = 0;
@@ -715,10 +716,18 @@ void Engine::pump_media_audio()
 				media_->av_audio_offset = 0;
 				if (!media_->av_decoder->pop_audio(media_->av_audio))
 					break;
+			}
+			// A rate or channel change takes effect only once the guest has
+			// acknowledged all PCM in the old format; the clock then restarts
+			// from the new chunk's timestamp.
+			if (media_->av_audio.sample_rate != media_->sample_rate ||
+			    media_->av_audio.channels != media_->channels) {
+				if (media_->pcm_produced != media_->pcm_acknowledged)
+					break;
 				media_->sample_rate = media_->av_audio.sample_rate;
 				media_->channels = media_->av_audio.channels;
-				if (media_->first_audio_pts == UINT64_MAX)
-					media_->first_audio_pts = media_->audio_pts = media_->av_audio.pts;
+				media_->format_base = media_->pcm_produced;
+				media_->first_audio_pts = media_->audio_pts = media_->av_audio.pts;
 			}
 			const uint64_t used = media_->pcm_produced - media_->pcm_acknowledged;
 			const uint32_t space = static_cast<uint32_t>(media_->pcm_capacity - used);
@@ -1004,14 +1013,16 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			(static_cast<uint64_t>(be32(request + 4)) << 32) | be32(request + 8);
 		const uint32_t frame_bytes = media_->channels ? media_->channels * 2 : 4;
 		if (acknowledged < media_->pcm_acknowledged ||
-		    acknowledged > media_->pcm_produced || (acknowledged % frame_bytes))
+		    acknowledged > media_->pcm_produced ||
+		    ((acknowledged - media_->format_base) % frame_bytes))
 			return bad_request;
 		media_->pcm_acknowledged = acknowledged;
 		pump_media_audio();
 		// As on the card, the audio clock is the first decoded timestamp plus
-		// the acknowledged PCM duration.
+		// the acknowledged PCM duration in the current format.
 		if (media_->sample_rate && media_->first_audio_pts != UINT64_MAX) {
-			const uint64_t frames = acknowledged / frame_bytes;
+			const uint64_t frames = (acknowledged - media_->format_base) /
+				(media_->channels * 2);
 			media_->audio_pts = media_->first_audio_pts +
 				(frames / media_->sample_rate) * 90000 +
 				((frames % media_->sample_rate) * 90000) / media_->sample_rate;

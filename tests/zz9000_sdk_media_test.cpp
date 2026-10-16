@@ -109,6 +109,7 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 	}
 	uint64_t acknowledged = 0;
 	uint64_t last_pts = 0;
+	uint64_t last_audio_pts = 0;
 	uint32_t frames = 0;
 	bool done = false;
 	for (unsigned i = 0; i < 1000 && !done; ++i) {
@@ -119,6 +120,14 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 			reply = mailbox.call(0x0b07, request, 16);
 			assert(mailbox.last_status == 0);
 			acknowledged = (static_cast<uint64_t>(get32(reply + 20)) << 32) | get32(reply + 24);
+			// The audio clock never runs backward, even across a change of
+			// sample rate or channel count.
+			const uint64_t audio_pts = (static_cast<uint64_t>(get32(reply + 36)) << 32) |
+				get32(reply + 40);
+			if (audio_pts != UINT64_MAX) {
+				assert(audio_pts >= last_audio_pts);
+				last_audio_pts = audio_pts;
+			}
 		}
 		std::fill(std::begin(request), std::end(request), 0);
 		put32(request, session);
