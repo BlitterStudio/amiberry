@@ -21,7 +21,8 @@ mkv_pcm_big="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.pcm_big.mkv"
 switch_a="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_a.mp2"
 switch_b="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_b.mp2"
 switch="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch.vob"
-trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch"' EXIT
+ac3_51="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.ac3_51.vob"
+trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51"' EXIT
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:a mp2 -b:a 128k -f mpeg "$audio_only"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis "$vp8"
@@ -39,6 +40,8 @@ cat "$switch_a" "$switch_b" > "$switch.mp2"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=2' -i "$switch.mp2" -c:v mpeg2video -pix_fmt yuv420p -c:a copy -f vob "$switch"
 rm -f "$switch.mp2"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$ps"
+# 5.1 AC-3, which the card downmixes to stereo.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -filter_complex '[1:a]pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0[a]' -map 0:v -map '[a]' -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$ac3_51"
 # Three seconds of stereo PCM is several times the test's PCM ring.
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:a ac3 -f vob "$audio_ac3"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a pcm_dvd -f vob "$lpcm"
@@ -60,6 +63,7 @@ zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" --av "$mkv_pcm_big" 2 2 2 0 1 160 120
 "$out" --av "$switch" 2 1 1 0 1 160 120
 "$out" --av "$ps" 2 1 3 0 1 160 120
+"$out" --av "$ac3_51" 2 1 3 0 1 160 120
 "$out" --av "$lpcm" 2 1 2 0 1 160 120
 "$out" --av "$audio_ac3" 2 1 3 0 0 160 120
 "$out" --av "$interlaced" 2 1 0 0 1 160 120

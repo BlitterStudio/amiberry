@@ -462,8 +462,11 @@ void MediaAv::worker_loop()
 		if (!state_->audio) return true;
 		int result;
 		while ((result = avcodec_receive_frame(state_->audio, state_->frame)) == 0) {
+			// As on the card, AC-3 is always downmixed to stereo (liba52 with
+			// A52_STEREO); the other codecs accept only mono or stereo.
+			const bool ac3 = audio_codec_ == audio_ac3;
 			const int channels = state_->frame->ch_layout.nb_channels;
-			if (channels < 1 || channels > 2 || state_->frame->sample_rate <= 0) {
+			if (channels < 1 || (!ac3 && channels > 2) || state_->frame->sample_rate <= 0) {
 				av_frame_unref(state_->frame);
 				return false;
 			}
@@ -475,7 +478,7 @@ void MediaAv::worker_loop()
 				swr_free(&state_->swr);
 				av_channel_layout_uninit(&state_->in_layout);
 			}
-			const int out_channels = std::min(2, std::max(1, channels));
+			const int out_channels = ac3 ? 2 : channels;
 			const int out_rate = in_rate;
 			AVChannelLayout output_layout;
 			av_channel_layout_default(&output_layout, out_channels);
