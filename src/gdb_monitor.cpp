@@ -14,6 +14,7 @@
 #include "xwin.h"
 #include "gdb_server.h"
 #include "gdb_target.h"
+#include "gdb_amiga.h"
 #include <algorithm>
 
 using winuae_gdb::MonitorResult;
@@ -39,18 +40,53 @@ bool hex_words(const std::string& text, unsigned count, uint32_t* words)
 	}
 	return false;
 }
+
+// Exec structures are longword aligned and never at address zero.
+bool structure_address(const std::string& text, uaecptr& address)
+{
+	uint32_t value;
+	if (!hex_words(text, 1, &value) || !value || (value & 3))
+		return false;
+	address = value;
+	return true;
+}
 }
 
-class GdbMonitor : public GdbTarget {
+class GdbMonitor : public GdbTarget, private winuae_gdb::GuestReader {
 public:
 	bool disassemble(uint32_t address, unsigned count, std::string& output) override;
 	bool screenshot(const std::string& path) override;
 	bool monitor_running(const std::string& command) override;
 	MonitorResult monitor(const std::string& command, std::string& result) override;
+	bool check_stop(uaecptr pc, char* reason, size_t size) override;
+	void detach() override;
 private:
+	std::string process_name;
+	uaecptr process_address = 0;
+	bool process_armed = false;
+
+	bool trace_checks() override { return process_armed; }
+	bool read(uint32_t address, uint8_t* bytes, size_t length) override;
 	bool disassemble_line(uaecptr pc, TCHAR* line, int size, uaecptr& next);
 	MonitorResult status_command(const std::string& command, std::string& result);
+	MonitorResult process_command(const std::string& command, std::string& result);
 };
+
+bool GdbMonitor::read(uint32_t address, uint8_t* bytes, size_t length)
+{
+	if (uint64_t(address) + length > (uint64_t(1) << 32))
+		return false;
+	for (size_t i = 0; i < length; i++) {
+		uaecptr addr = address + static_cast<uaecptr>(i);
+		addrbank& bank = get_mem_bank(addr);
+		// Exec task names may point at constant strings in Kickstart ROM.
+		// Permit ordinary ROM reads, but never follow metadata into I/O.
+		if (!(bank.flags & (ABFLAG_RAM | ABFLAG_ROM | ABFLAG_ROMIN)) || !bank.check(addr, 1))
+			return false;
+		bytes[i] = static_cast<uint8_t>(bank.bget(addr));
+	}
+	return true;
+}
 
 bool GdbMonitor::disassemble_line(uaecptr pc, TCHAR* line, int size, uaecptr& next)
 {
@@ -108,6 +144,7 @@ MonitorResult GdbMonitor::monitor(const std::string& command, std::string& resul
 	using Handler = MonitorResult (GdbMonitor::*)(const std::string&, std::string&);
 	static const Handler handlers[] = {
 		&GdbMonitor::status_command,
+		&GdbMonitor::process_command,
 	};
 	for (auto handler : handlers) {
 		auto status = (this->*handler)(command, result);
@@ -121,6 +158,7 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 {
 	if (command == "capabilities") {
 		std::string commands = "\"capabilities\",\"execution-status\",\"memory-map\",\"memory-check\",\"disasm\",\"screenshot\"";
+		commands += ",\"process-break\",\"segments\"";
 		result = "{\"protocol\":1,\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
 			",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
 			",\"memory_addressing\":\"physical\",\"commands\":[" + commands +
@@ -184,6 +222,89 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 		return MonitorResult::ok;
 	}
 	return MonitorResult::unsupported;
+}
+
+MonitorResult GdbMonitor::process_command(const std::string& command, std::string& result)
+{
+	if (command == "segments" || command.compare(0, 9, "segments ") == 0) {
+		uaecptr address = 0;
+		if (command.size() > 8 && !structure_address(command.substr(9), address))
+			return MonitorResult::error;
+		winuae_gdb::AmigaProcess process;
+		std::vector<winuae_gdb::AmigaSegment> segments;
+		if (!winuae_gdb::read_process(*this, address, process) ||
+			!winuae_gdb::read_segments(*this, process.segments, segments))
+			return MonitorResult::error;
+		result = "{\"process\":" + std::to_string(process.address) + ",\"name\":" + json_string(process.name) +
+			",\"command\":" + json_string(process.command) + ",\"segments\":[";
+		for (size_t i = 0; i < segments.size(); i++) {
+			if (i)
+				result += ",";
+			result += "{\"index\":" + std::to_string(i) + ",\"address\":" + std::to_string(segments[i].address) +
+				",\"size\":" + std::to_string(segments[i].size) + "}";
+		}
+		result += "]}";
+		return MonitorResult::ok;
+	}
+	if (command == "process-break clear") {
+		process_armed = false;
+		process_name.clear();
+		process_address = 0;
+		return MonitorResult::ok;
+	}
+	if (command == "process-break status") {
+		result = "{\"armed\":" + std::string(process_armed ? "true" : "false") +
+			",\"name\":" + json_string(process_name) + ",\"address\":" + std::to_string(process_address) + "}";
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 19, "process-break name ") == 0) {
+		auto name = command.substr(19);
+		if (name.empty() || name.size() > 255)
+			return MonitorResult::error;
+		for (unsigned char c : name) {
+			if (c < 32 || c >= 127)
+				return MonitorResult::error;
+		}
+		process_name = name;
+		process_address = 0;
+		process_armed = true;
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 22, "process-break address ") == 0) {
+		uaecptr address;
+		if (!structure_address(command.substr(22), address))
+			return MonitorResult::error;
+		process_address = address;
+		process_name.clear();
+		process_armed = true;
+		return MonitorResult::ok;
+	}
+	return MonitorResult::unsupported;
+}
+
+bool GdbMonitor::check_stop(uaecptr pc, char* reason, size_t size)
+{
+	if (process_armed && !(get_mem_bank(pc).flags & ABFLAG_ROM)) {
+		winuae_gdb::AmigaProcess process;
+		if (winuae_gdb::read_process(*this, 0, process) && pc == process.segments + 4 &&
+			(process_address ? process.address == process_address :
+			winuae_gdb::process_name_matches(process.name, process_name) ||
+			winuae_gdb::process_name_matches(process.command, process_name))) {
+			// This is a one-shot entry breakpoint, not an Amiga task switch stop.
+			process_armed = false;
+			snprintf(reason, size, "T05winuae-entry:%08x;11:%08x;", process.address, pc);
+			return true;
+		}
+	}
+	return GdbTarget::check_stop(pc, reason, size);
+}
+
+void GdbMonitor::detach()
+{
+	process_armed = false;
+	process_name.clear();
+	process_address = 0;
+	GdbTarget::detach();
 }
 
 static GdbMonitor gdb_monitor;

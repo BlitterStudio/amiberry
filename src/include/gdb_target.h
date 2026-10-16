@@ -18,7 +18,7 @@ public:
 	bool resume_range(uint32_t start, uint32_t end) override;
 	void detach() override;
 	// CPU debugger hooks.
-	bool check_stop(uaecptr pc, char* reason, size_t size);
+	virtual bool check_stop(uaecptr pc, char* reason, size_t size);
 	void stopped(char* reason, size_t size);
 protected:
 	enum WatchOwner : uae_u8 { watch_none, watch_gdb };
@@ -27,6 +27,8 @@ protected:
 	bool initialized_watchpoints = false;
 	bool range_active = false;
 	uaecptr range_start = 0, range_end = 0;
+	// Extensions that inspect every instruction keep debugger checks active.
+	virtual bool trace_checks() { return false; }
 	bool start_memwatch();
 	int free_watch_slot();
 };

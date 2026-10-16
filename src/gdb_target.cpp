@@ -219,7 +219,7 @@ void GdbTarget::interrupt()
 void GdbTarget::resume(bool step)
 {
 	range_active = false;
-	debug_remote_resume(step, false);
+	debug_remote_resume(step, trace_checks());
 }
 
 bool GdbTarget::resume_range(uint32_t start, uint32_t end)
