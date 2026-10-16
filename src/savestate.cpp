@@ -69,6 +69,7 @@
 #include "drawing.h"
 
 int savestate_state = 0;
+int savestate_last_save_result = -1;
 static int savestate_first_capture;
 
 static bool new_blitter = false;
@@ -1352,6 +1353,7 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 		}
 		if (!save_filesys_cando ()) {
 			gui_message (_T("Filesystem active. Try again later."));
+			savestate_state = 0;
 			return -1;
 		}
 	}
@@ -1359,8 +1361,10 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	savestate_flags &= ~SAVESTATE_NODIALOGS;
 	custom_prepare_savestate();
 	f = zfile_fopen (filename, _T("w+b"), 0);
-	if (!f)
+	if (!f) {
+		savestate_state = 0;
 		return 0;
+	}
 	if (savestate_flags & SAVESTATE_SPECIALDUMP) {
 		size_t pos;
 		if (savestate_flags & SAVESTATE_SPECIALDUMP2) {
@@ -1381,14 +1385,18 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 			zfile_fwrite (tmp, len2, 1, f);
 			xfree (tmp);
 		}
-		zfile_fclose (f);
-		return 1;
+		return zfile_fclose(f) ? 0 : 1;
 	}
 	int v = save_state_internal (f, description, comp, true);
-	if (v)
-		write_log (_T("Save of '%s' complete\n"), filename);
-	zfile_fclose (f);
-	DISK_history_add(filename, -1, HISTORY_STATEFILE, 0);
+	bool failed = zfile_ferror(f) != 0;
+	if (zfile_fclose(f))
+		failed = true;
+	if (failed)
+		v = 0;
+	if (v) {
+		write_log(_T("Save of '%s' complete\n"), filename);
+		DISK_history_add(filename, -1, HISTORY_STATEFILE, 0);
+	}
 	savestate_state = 0;
 	return v;
 }
@@ -1454,7 +1462,8 @@ bool savestate_check(void)
 		return true;
 	} else if (savestate_state == STATE_SAVE) {
 		savestate_initsave(savestate_fname, 1, true, true);
-		save_state(savestate_fname, STATE_SAVE_DESCRIPTION);
+		savestate_last_save_result = save_state(savestate_fname, STATE_SAVE_DESCRIPTION);
+		savestate_state = 0;
 		return false;
 	}
 	return false;

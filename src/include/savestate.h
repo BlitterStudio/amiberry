@@ -289,6 +289,7 @@ extern bool savestate_check(void);
 #define STATE_SAVE_DESCRIPTION _T("Description!")
 
 extern int savestate_state;
+extern int savestate_last_save_result;
 extern TCHAR savestate_fname[MAX_DPATH];
 extern TCHAR path_statefile[MAX_DPATH];
 extern struct zfile *savestate_file;
