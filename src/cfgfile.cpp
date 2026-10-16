@@ -4167,8 +4167,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 #ifdef GDBSERVER
 	if (cfgfile_intval(option, value, _T("gdb_port"), &p->gdb_port, 1)) {
-		if (p->gdb_port < 1 || p->gdb_port > 65535)
+		if (p->gdb_port < 1 || p->gdb_port > 65535) {
 			p->gdb_port = 2345;
+		}
 		return 1;
 	}
 #endif

@@ -202,8 +202,8 @@ extern struct memwatch_node mwnodes[MEMWATCH_TOTAL];
 #define MW_REMOTE_EXACT 2	// match complete accesses only, compare old RAM values
 
 extern void memwatch_dump2 (TCHAR *buf, int bufsize, int num);
-extern void initialize_memwatch (int mode);
-extern int deinitialize_memwatch (void);
+extern void initialize_memwatch(int mode);
+extern int deinitialize_memwatch(void);
 extern void memwatch_setup (void);
 
 void debug_getpeekdma_chipram(uaecptr addr, uae_u32 mask, int reg);

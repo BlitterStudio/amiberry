@@ -4277,8 +4277,9 @@ uae_u8 *save_debug_memwatch (size_t *len, uae_u8 *dstptr)
 
 	total = 0;
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
-		if (mwnodes[i].size > 0 && !mwnodes[i].remote)
+		if (mwnodes[i].size > 0 && !mwnodes[i].remote) {
 			total++;
+		}
 	}
 	if (!total)
 		return NULL;
@@ -4292,8 +4293,9 @@ uae_u8 *save_debug_memwatch (size_t *len, uae_u8 *dstptr)
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
 		struct memwatch_node *m = &mwnodes[i];
 		// Remote debugger watchpoints belong to the connection, not the state.
-		if (m->size <= 0 || m->remote)
+		if (m->size <= 0 || m->remote) {
 			continue;
+		}
 		save_store_pos ();
 		save_u8 (i);
 		save_u8 (m->modval_written);
@@ -4538,8 +4540,9 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 
 		// Remote predicates describe one complete bus access. Do not match
 		// adjacent bytes or combine two 68000 word writes into a longword.
-		if ((m->remote & MW_REMOTE_EXACT) && (addr != m->addr || size != m->size))
+		if ((m->remote & MW_REMOTE_EXACT) && (addr != m->addr || size != m->size)) {
 			continue;
+		}
 		if (m->bus_error) {
 			if (((m->bus_error & 1) && (rwi & 1)) || ((m->bus_error & 4) && (rwi & 4)) || ((m->bus_error & 2) && (rwi & 2))) {
 				hardware_exception2(addr, val, (rwi & 2) != 0, (rwi & 4) != 0, size == 4 ? sz_long : (size == 2 ? sz_word : sz_byte));
@@ -4595,8 +4598,9 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 				continue;
 		}
 
-		if ((m->remote & MW_REMOTE_EXACT) && m->mustchange && !isoldval)
+		if ((m->remote & MW_REMOTE_EXACT) && m->mustchange && !isoldval) {
 			continue;
+		}
 		if (m->mustchange && rwi == 2 && isoldval) {
 			if (oldval == newval)
 				continue;
@@ -4646,8 +4650,9 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 			gdb_target_watch_hit(i, addr, size, rwi, accessmask, reg, val, oldval, isoldval != 0);
 			// A remote log-only entry must not hide later console watchpoints
 			// or leave a stale memwatch_triggered reason for another stop.
-			if (m->nobreak)
+			if (m->nobreak) {
 				continue;
+			}
 		}
 		mwhit.addr = addr;
 		mwhit.rwi = rwi;
@@ -5030,7 +5035,7 @@ void memwatch_setup(void)
 	}
 }
 
-int deinitialize_memwatch (void)
+int deinitialize_memwatch(void)
 {
 	int oldmode;
 
@@ -5051,7 +5056,7 @@ int deinitialize_memwatch (void)
 	return oldmode;
 }
 
-void initialize_memwatch (int mode)
+void initialize_memwatch(int mode)
 {
 	membank_total = currprefs.address_space_24 ? 256 : 65536;
 	deinitialize_memwatch ();
@@ -8421,8 +8426,9 @@ void debug_remote_resume(bool step, bool check)
 	inside_debugger = debugger_active = 0;
 	trace_mode = check || processptr || processname ? TRACE_CHECKONLY : 0;
 	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled > 0)
+		if (bpnodes[i].enabled > 0) {
 			trace_mode = TRACE_CHECKONLY;
+		}
 	}
 	if (step) {
 		trace_mode = TRACE_SKIP_INS;
@@ -8430,8 +8436,9 @@ void debug_remote_resume(bool step, bool check)
 	}
 	exception_debugging = step ? 1 : 0;
 	debugging = trace_mode ? -1 : 0;
-	if (trace_mode)
+	if (trace_mode) {
 		set_special(SPCFLAG_BRK);
+	}
 }
 
 void debug_remote_run_to(uaecptr pc)
@@ -8748,8 +8755,9 @@ void debug (void)
 					bp = -2;
 				}
 			}
-			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason)))
+			if (gdb_server_connected() && gdb_target_check_stop(pc, remote_reason, sizeof(remote_reason))) {
 				bp = -1;
+			}
 			inside_debugger = was_inside_debugger;
 			if (!bp && bpnum < 0) {
 				debug_continue();
