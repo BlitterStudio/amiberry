@@ -8,6 +8,7 @@
 namespace winuae_gdb { class Target; }
 winuae_gdb::Target& debug_gdb_target();
 void gdb_server_poll();
+void gdb_server_input_frame();
 void gdb_server_guest_output(const char*);
 void gdb_server_close();
 void gdb_server_reset();
@@ -25,6 +26,7 @@ void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 sou
 	uae_u32 value, uae_u32 old_value, bool old_valid);
 #else
 static inline void gdb_server_poll() {}
+static inline void gdb_server_input_frame() {}
 static inline void gdb_server_guest_output(const char*) {}
 static inline void gdb_server_close() {}
 static inline void gdb_server_reset() {}

@@ -153,13 +153,15 @@ void Session::command(const std::string& s)
 		reply("OK"); closing = true; return;
 	}
 	if (s.compare(0, 6, "qRcmd,") == 0) {
-		if ((s.size() & 1) || s.size() > 2054) { reply("E01"); return; }
+		if ((s.size() & 1) || s.size() > 32774) { reply("E01"); return; }
 		std::string command;
 		for (size_t i = 6; i < s.size(); i += 2) {
 			uint32_t value;
 			if (!number(s, i, i + 2, value) || !value) { reply("E01"); return; }
 			command += static_cast<char>(value);
 		}
+		// Only bounded input sequences may exceed the ordinary command size.
+		if (command.size() > 1024 && command.compare(0, 15, "input sequence ")) { reply("E01"); return; }
 		if (!halted && (monitor_pending || !target.monitor_running(command))) { reply("E16"); return; }
 		if (command.compare(0, 7, "disasm ") == 0) {
 			auto space = command.find(' ', 7);
