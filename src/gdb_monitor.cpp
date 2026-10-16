@@ -235,7 +235,7 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 			addrbank* bank = &get_mem_bank(address);
 			if (bank->sub_banks)
 				bank = get_sub_bank(&address);
-			const char* type = bank->flags & ABFLAG_ROM ? "rom" : bank->flags & ABFLAG_RAM ? "ram" : "io";
+			const char* type = bank->flags & (ABFLAG_ROM | ABFLAG_ROMIN) ? "rom" : bank->flags & ABFLAG_RAM ? "ram" : "io";
 			char* name = uutf8(r.name);
 			if (i)
 				result += ",";
