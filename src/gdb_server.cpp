@@ -16,6 +16,9 @@
 #include "uae.h"
 #include "xwin.h"
 #include "sounddep/sound.h"
+#ifdef AMIBERRY
+#include "debug.h"
+#endif
 #include <memory>
 
 #if defined(DEBUGGER) && defined(GDBSERVER)
@@ -217,6 +220,10 @@ bool gdb_server_stop(const char* reason)
 	pause_sound();
 	while (session && session->stopped() && !quit_program) {
 		gdb_server_poll();
+#ifdef AMIBERRY
+		// Keep answering IPC while GDB holds the CPU.
+		debugger_service_ipc();
+#endif
 		handle_msgpump(false);
 		sleep_millis(1);
 	}

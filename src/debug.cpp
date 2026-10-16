@@ -270,6 +270,16 @@ const char* debugger_last_stop_reason(void)
 	return debugger_stop_reason_text;
 }
 
+// The GDB stop loop does not return to handle_events(), so it calls this to
+// keep answering IPC (read-only MONITOR queries, status) while GDB holds the
+// CPU. MONITOR refuses state changes while a GDB client is connected.
+void debugger_service_ipc(void)
+{
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCHandle();
+#endif
+}
+
 #endif
 
 bool debug_enforcer(void)

@@ -54,6 +54,7 @@ extern bool debugger_request_step_over(void);
 extern bool debugger_request_continue(void);
 extern void debugger_breakpoints_changed(void);
 extern const char* debugger_last_stop_reason(void);
+extern void debugger_service_ipc(void);
 #endif
 extern const TCHAR *debuginfo (int);
 extern void record_copper (uaecptr addr, uaecptr nextaddr, uae_u16 word1, uae_u16 word2, int hpos, int vpos);
