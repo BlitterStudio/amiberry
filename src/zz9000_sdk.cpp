@@ -85,6 +85,8 @@ constexpr uint32_t audio_service_flags =
 #else
 constexpr uint32_t audio_service_flags = 0;
 #endif
+// CARD_POOL_LIMIT_MEDIA_INPUT in the firmware's card_pool.h.
+constexpr uint32_t media_input_limit = 64 * 1024 * 1024;
 constexpr uint32_t video_capabilities = (1u << 7) | (1u << 21) | (1u << 22);
 constexpr uint32_t video_service_flags = 1u | (1u << 16) | (1u << 17) |
 	(1u << 18) | (1u << 19) | (1u << 21) | (1u << 22) |
@@ -1286,9 +1288,17 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		if (media) {
 			if (board_size_ != 0x08000000)
 				return unsupported;
-			if (!(flags & 2) || (flags & 1) || length > 64 * 1024 * 1024 ||
+			if (!(flags & 2) || (flags & 1) || length > media_input_limit ||
 				alignment > 64 * 1024)
 				return bad_request;
+			// Like the card's MEDIA_INPUT pool class, all media-input
+			// buffers together share one 64 MiB budget.
+			uint32_t media_used = 0;
+			for (const auto &buffer : buffers_)
+				if (buffer.handle && (buffer.flags & 4))
+					media_used += buffer.length;
+			if (length > media_input_limit - media_used)
+				return no_memory;
 		} else if (alignment > 4096 || length > 0x003f0000 ||
 			(z2 && (flags & 1) &&
 			 length > (aperture_acked_ ? 0x4000 : host_window_end - host_window_begin))) {

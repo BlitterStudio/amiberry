@@ -125,6 +125,16 @@ int main()
 	put32(request + 8, 6); z2.call(0x0100, request, 12, 3);
 	put32(request, 64 * 1024 * 1024 + 1); put32(request + 8, 6);
 	z3.call(0x0100, request, 12, 4);
+	// All media-input buffers share one 64 MiB budget, as the card's pool
+	// class does: a second 40 MiB buffer fits only after the first is freed.
+	const uint32_t big = z3.alloc(40 * 1024 * 1024, 6);
+	assert(big);
+	put32(request, 40 * 1024 * 1024); put32(request + 4, 16); put32(request + 8, 6);
+	z3.call(0x0100, request, 12, 6);
+	put32(request, big); z3.call(0x0101, request, 4);
+	const uint32_t big_again = z3.alloc(40 * 1024 * 1024, 6);
+	assert(big_again);
+	put32(request, big_again); z3.call(0x0101, request, 4);
 	const uint32_t reset_media = z3.alloc(64, 6);
 	z3.sdk.reset();
 	assert(z3.sdk.buffer_data(reset_media) == nullptr);
