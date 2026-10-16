@@ -391,9 +391,15 @@ void MediaAv::worker_loop()
 		output_ready_.notify_all();
 		return true;
 	};
+	// Only EAGAIN and EOF end a drain cleanly; any other negative return from
+	// FFmpeg is a decoding or demuxing error and fails the session.
+	auto drained = [](int result) {
+		return result == AVERROR(EAGAIN) || result == AVERROR_EOF;
+	};
 	auto drain_video = [&]() -> bool {
 		if (!state_->video) return true;
-		while (avcodec_receive_frame(state_->video, state_->frame) == 0) {
+		int result;
+		while ((result = avcodec_receive_frame(state_->video, state_->frame)) == 0) {
 			if (!frame_is_420(state_->frame) || state_->frame->width <= 0 ||
 				state_->frame->height <= 0 || state_->frame->width > 1920 ||
 				state_->frame->height > 1920 || (state_->frame->width & 1) ||
@@ -435,11 +441,12 @@ void MediaAv::worker_loop()
 			av_frame_unref(state_->frame);
 			if (!push_frame(std::move(frame))) return false;
 		}
-		return true;
+		return drained(result);
 	};
 	auto drain_audio = [&]() -> bool {
 		if (!state_->audio) return true;
-		while (avcodec_receive_frame(state_->audio, state_->frame) == 0) {
+		int result;
+		while ((result = avcodec_receive_frame(state_->audio, state_->frame)) == 0) {
 			const int channels = state_->frame->ch_layout.nb_channels;
 			if (channels < 1 || channels > 2 || state_->frame->sample_rate <= 0) {
 				av_frame_unref(state_->frame);
@@ -490,11 +497,12 @@ void MediaAv::worker_loop()
 				std::swap(audio.s16be[i], audio.s16be[i + 1]);
 			if (!push_audio(std::move(audio))) return false;
 		}
-		return true;
+		return drained(result);
 	};
 	for (;;) {
 		const int read = av_read_frame(state_->format, state_->packet);
-		if (read < 0) break;
+		if (read == AVERROR_EOF) break;
+		if (read < 0) { fail(); return; }
 		int send = 0;
 		if (state_->packet->stream_index == state_->video_stream)
 			send = avcodec_send_packet(state_->video, state_->packet);

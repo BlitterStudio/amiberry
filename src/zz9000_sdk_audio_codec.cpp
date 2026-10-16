@@ -23,6 +23,7 @@ struct AudioCodecDecoder::Impl {
 	uint32_t codec;
 	uint32_t output_format;
 	uint32_t output_limit;
+	uint32_t input_limit;
 	uint32_t sample_rate = 0;
 	uint32_t channels = 0;
 	uint16_t status = ok;
@@ -54,11 +55,12 @@ struct AudioCodecDecoder::Impl {
 };
 
 AudioCodecDecoder::AudioCodecDecoder(uint32_t codec, uint32_t output_format,
-	uint32_t output_limit) : impl_(std::make_unique<Impl>())
+	uint32_t output_limit, uint32_t input_limit) : impl_(std::make_unique<Impl>())
 {
 	impl_->codec = codec;
 	impl_->output_format = output_format;
 	impl_->output_limit = output_limit;
+	impl_->input_limit = input_limit;
 }
 
 AudioCodecDecoder::~AudioCodecDecoder()
@@ -75,7 +77,9 @@ AudioCodecDecoder::~AudioCodecDecoder()
 
 void AudioCodecDecoder::append(const uint8_t *data, size_t length)
 {
-	if (impl_->input.size() + length > 512 * 1024) {
+	// FEED only hands over new input once the previous feed is decoded, so
+	// at most one feed plus a partial frame or Ogg page is ever retained.
+	if (impl_->input.size() + length > impl_->input_limit + 65536u) {
 		impl_->status = io_error;
 		return;
 	}
@@ -266,11 +270,9 @@ uint16_t process_flac(AudioCodecDecoder::Impl &state)
 		}
 		if (state.input.empty())
 			break;
-		if (state.input.size() > 128 * 1024)
-			return io_error;
-		// The parser may return a packet that points into its input, and it
-		// also overreads: parse from a padded copy that stays valid until the
-		// packet has been sent.
+		// Parse 4 KiB at a time however much is queued. The parser may return
+		// a packet that points into its input, and it also overreads: parse
+		// from a padded copy that stays valid until the packet has been sent.
 		const size_t chunk = std::min<size_t>(state.input.size(), 4096);
 		state.parse_buffer.assign(state.input.begin(),
 			state.input.begin() + static_cast<std::ptrdiff_t>(chunk));

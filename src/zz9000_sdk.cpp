@@ -2052,7 +2052,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		audio_->pcm_capacity = pcm_capacity;
 		audio_->sample_format = format;
 		audio_->codec_decoder = std::make_unique<AudioCodecDecoder>(codec, format,
-			audio_->pcm_capacity);
+			audio_->pcm_capacity, input_capacity);
 		audio_result(reply, reply_length);
 		return ok;
 #endif

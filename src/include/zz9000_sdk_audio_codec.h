@@ -13,7 +13,8 @@ namespace zz9000_sdk {
 
 class AudioCodecDecoder {
 public:
-	AudioCodecDecoder(uint32_t codec, uint32_t output_format, uint32_t output_limit);
+	AudioCodecDecoder(uint32_t codec, uint32_t output_format, uint32_t output_limit,
+		uint32_t input_limit);
 	~AudioCodecDecoder();
 	AudioCodecDecoder(const AudioCodecDecoder &) = delete;
 	AudioCodecDecoder &operator=(const AudioCodecDecoder &) = delete;

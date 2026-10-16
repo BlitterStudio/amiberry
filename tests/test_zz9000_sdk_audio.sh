@@ -36,8 +36,9 @@ ffmpeg -nostdin -loglevel error -i "$vorbis" -f s16le -acodec pcm_s16le "$vorbis
 ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=500:duration=1.0' \
   -ar 32000 -ac 2 -c:a libvorbis "$vorbis_long"
 ffmpeg -nostdin -loglevel error -i "$vorbis_long" -f s16le -acodec pcm_s16le "$vorbis_long_ref"
-ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=500:duration=1.0' \
-  -ar 44100 -ac 2 -c:a flac -sample_fmt s16 "$flac_long"
+# White noise barely compresses, so one feed carries well over 128 KiB.
+ffmpeg -nostdin -loglevel error -f lavfi -i 'anoisesrc=duration=3:color=white:sample_rate=44100:amplitude=0.5' \
+  -ac 1 -c:a flac -sample_fmt s16 "$flac_long"
 ffmpeg -nostdin -loglevel error -i "$flac_long" -f s16le -acodec pcm_s16le "$flac_long_ref"
 ffmpeg -nostdin -loglevel error -f lavfi -i 'testsrc2=size=1024x1024:rate=1' -frames:v 1 "$picture_png"
 ffmpeg -nostdin -loglevel error -i "$flac16" -i "$picture_png" -map 0:a -map 1:v \

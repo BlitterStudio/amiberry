@@ -593,14 +593,14 @@ int main(int argc, char **argv)
 	auto drain_small_ring = [&](uint32_t codec, const char *path) {
 		std::ifstream long_file(path, std::ios::binary);
 		std::vector<uint8_t> long_bytes(std::istreambuf_iterator<char>{long_file}, {});
-		assert(!long_bytes.empty() && long_bytes.size() <= 65536);
+		assert(!long_bytes.empty() && long_bytes.size() <= 512 * 1024);
 		put32(payload, 16384);
 		put32(payload + 4, 16);
 		put32(payload + 8, 0);
 		reply = z3.call(0x0100, payload, 12);
 		const uint32_t small_pcm = get32(reply + 16);
 		std::copy(long_bytes.begin(), long_bytes.end(), z3.sdk.buffer_data(audio_staging));
-		reply = begin_audio_ex(z3, codec, ex_compressed, 65536, small_pcm, 16384, 1);
+		reply = begin_audio_ex(z3, codec, ex_compressed, 512 * 1024, small_pcm, 16384, 1);
 		const uint32_t long_session = get32(reply + 16);
 		assert(long_session);
 		put32(payload, long_session);
@@ -673,6 +673,10 @@ int main(int argc, char **argv)
 		}
 	}
 	{
+		// Over 128 KiB of FLAC in one feed: parsed incrementally, not refused.
+		std::ifstream flac_long_file(argv[13], std::ios::binary);
+		std::vector<uint8_t> flac_long_bytes(std::istreambuf_iterator<char>{flac_long_file}, {});
+		assert(flac_long_bytes.size() > 128 * 1024);
 		const auto drained_pcm = drain_small_ring(2, argv[13]);
 		std::ifstream flac_long_ref_file(argv[14], std::ios::binary);
 		std::vector<uint8_t> flac_long_ref(std::istreambuf_iterator<char>{flac_long_ref_file}, {});
