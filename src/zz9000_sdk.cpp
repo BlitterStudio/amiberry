@@ -2129,6 +2129,9 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 							SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
 					if (!audio_->output)
 						return io_error;
+					// A new stream starts at unity gain; force pump_audio()
+					// to apply the session's gain to it.
+					audio_->gain = -1.0f;
 					audio_->paused = sound_paused();
 					if (!audio_->paused)
 						SDL_ResumeAudioStreamDevice(audio_->output);

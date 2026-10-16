@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 	assert(z3.sdk.buffer_data(get32(reply + 16)) == z3.board.data() + 0x06000000);
 #ifdef HAVE_MPG123
 #ifdef AMIBERRY_WITH_FFMPEG
-	assert(argc == 13);
+	assert(argc == 15);
 #else
 	assert(argc == 4);
 #endif
@@ -558,22 +558,25 @@ int main(int argc, char **argv)
 		z3.call(0x0508, payload, 8, 0);
 		z3.call(0x0506, payload, 8, 0);
 	}
-	{
-		std::ifstream vorbis_long_file(argv[11], std::ios::binary);
-		std::vector<uint8_t> vorbis_long_bytes(std::istreambuf_iterator<char>{vorbis_long_file}, {});
-		std::ifstream vorbis_long_ref_file(argv[12], std::ios::binary);
-		std::vector<uint8_t> vorbis_long_ref(std::istreambuf_iterator<char>{vorbis_long_ref_file}, {});
+	// A whole stream fed in one EOF-marked feed must drain completely through
+	// a PCM ring much smaller than its decoded size.
+	auto drain_small_ring = [&](uint32_t codec, const char *path) {
+		std::ifstream long_file(path, std::ios::binary);
+		std::vector<uint8_t> long_bytes(std::istreambuf_iterator<char>{long_file}, {});
+		assert(!long_bytes.empty() && long_bytes.size() <= 65536);
 		put32(payload, 16384);
+		put32(payload + 4, 16);
+		put32(payload + 8, 0);
 		reply = z3.call(0x0100, payload, 12);
 		const uint32_t small_pcm = get32(reply + 16);
-		std::copy(vorbis_long_bytes.begin(), vorbis_long_bytes.end(), z3.sdk.buffer_data(audio_staging));
-		reply = begin_audio_ex(z3, 3, ex_compressed, 65536, small_pcm, 16384, 1);
+		std::copy(long_bytes.begin(), long_bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, codec, ex_compressed, 65536, small_pcm, 16384, 1);
 		const uint32_t long_session = get32(reply + 16);
 		assert(long_session);
 		put32(payload, long_session);
 		put32(payload + 4, audio_staging);
 		put32(payload + 8, 0);
-		put32(payload + 12, static_cast<uint32_t>(vorbis_long_bytes.size()));
+		put32(payload + 12, static_cast<uint32_t>(long_bytes.size()));
 		put32(payload + 16, 1);
 		reply = z3.call(0x0504, payload, 20);
 		std::vector<uint8_t> drained_pcm;
@@ -605,6 +608,17 @@ int main(int argc, char **argv)
 				reply = z3.call(0x0505, payload, 12);
 			}
 		}
+		put32(payload, long_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		put32(payload, small_pcm);
+		z3.call(0x0101, payload, 4);
+		return drained_pcm;
+	};
+	{
+		const auto drained_pcm = drain_small_ring(3, argv[11]);
+		std::ifstream vorbis_long_ref_file(argv[12], std::ios::binary);
+		std::vector<uint8_t> vorbis_long_ref(std::istreambuf_iterator<char>{vorbis_long_ref_file}, {});
 		assert(drained_pcm.size() >= vorbis_long_ref.size());
 		size_t alignment = drained_pcm.size();
 		for (size_t candidate = 0; candidate + 128 <= drained_pcm.size() && candidate < 4096; candidate += 2) {
@@ -627,11 +641,12 @@ int main(int argc, char **argv)
 				(static_cast<uint16_t>(vorbis_long_ref[offset + 1]) << 8));
 			assert(std::abs(sample - expected) <= 4);
 		}
-		put32(payload, long_session);
-		put32(payload + 4, 0);
-		z3.call(0x0506, payload, 8);
-		put32(payload, small_pcm);
-		z3.call(0x0101, payload, 4);
+	}
+	{
+		const auto drained_pcm = drain_small_ring(2, argv[13]);
+		std::ifstream flac_long_ref_file(argv[14], std::ios::binary);
+		std::vector<uint8_t> flac_long_ref(std::istreambuf_iterator<char>{flac_long_ref_file}, {});
+		assert(flac_long_ref.size() > 4 * 16384 && drained_pcm == flac_long_ref);
 	}
 	uint8_t invalid_begin[48] = {};
 	put32(invalid_begin, 2);
