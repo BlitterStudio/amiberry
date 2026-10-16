@@ -68,6 +68,7 @@
 #include "amiberry_input.h"
 #include "amiberry_adpf.h"
 #include "amiberry_rp9.h"
+#include "amiberry_reset_chipset_prefs.h"
 #include "amiberry_update.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
@@ -12591,6 +12592,10 @@ void target_addtorecent(const TCHAR* name, int t)
 void target_reset()
 {
 	clipboard_reset();
+	// Runs before devices_reset() -> memory_reset(), so the memory map and
+	// chipset setup see the new values.
+	if (is_hardreset())
+		set_reset_only_chipset_prefs(currprefs, get_reset_only_chipset_prefs(changed_prefs));
 }
 
 bool target_can_autoswitchdevice()
