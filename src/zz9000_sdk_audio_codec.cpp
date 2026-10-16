@@ -6,6 +6,7 @@
 #include "zz9000_sdk_internal.h"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <limits>
 #include <vector>
@@ -41,6 +42,7 @@ struct AudioCodecDecoder::Impl {
 	bool flac_metadata_complete = false;
 	uint32_t vorbis_serial = 0;
 	bool vorbis_serial_set = false;
+	uint32_t vorbis_sequence = 0;
 	uint32_t vorbis_headers = 0;
 	bool vorbis_eos = false;
 	std::vector<std::vector<uint8_t>> vorbis_header_packets;
@@ -95,6 +97,28 @@ uint32_t le32(const uint8_t *data)
 {
 	return static_cast<uint32_t>(data[0]) | (static_cast<uint32_t>(data[1]) << 8) |
 		(static_cast<uint32_t>(data[2]) << 16) | (static_cast<uint32_t>(data[3]) << 24);
+}
+
+// Ogg page CRC: CRC-32 polynomial 0x04c11db7, MSB first, initial value 0,
+// computed with the page's own CRC field (bytes 22..25) taken as zero.
+uint32_t ogg_page_crc(const uint8_t *page, size_t length)
+{
+	static const auto table = [] {
+		std::array<uint32_t, 256> values{};
+		for (uint32_t i = 0; i < 256; ++i) {
+			uint32_t crc = i << 24;
+			for (int bit = 0; bit < 8; ++bit)
+				crc = (crc & 0x80000000u) ? (crc << 1) ^ 0x04c11db7u : crc << 1;
+			values[i] = crc;
+		}
+		return values;
+	}();
+	uint32_t crc = 0;
+	for (size_t i = 0; i < length; ++i) {
+		const uint8_t byte = i >= 22 && i < 26 ? 0 : page[i];
+		crc = (crc << 8) ^ table[((crc >> 24) ^ byte) & 0xff];
+	}
+	return crc;
 }
 
 uint16_t open_codec(AudioCodecDecoder::Impl &state, const uint8_t *extradata,
@@ -400,7 +424,8 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 					for (uint32_t i = 0; i < state.input[26]; ++i)
 						page += state.input[27 + i];
 				}
-				if (page && state.input.size() >= page)
+				if (page && state.input.size() >= page &&
+				    ogg_page_crc(state.input.data(), page) == le32(state.input.data() + 22))
 					return io_error;
 				if (!state.eof)
 					break;
@@ -432,22 +457,35 @@ uint16_t process_vorbis(AudioCodecDecoder::Impl &state)
 				return io_error;
 			break;
 		}
+		// The checks the card's libogg page layer and next_page() apply: a
+		// CRC mismatch is lost sync, and a lost, repeated or reordered page,
+		// a second BOS, or a continuation flag that disagrees with the
+		// packet in progress is a damaged stream.
+		const size_t page_size = 27u + segments + body;
+		if (ogg_page_crc(state.input.data(), page_size) != le32(state.input.data() + 22))
+			return io_error;
 		if (state.input[4] != 0)
 			return io_error;
 		const uint32_t serial = le32(state.input.data() + 14);
+		const uint32_t sequence = le32(state.input.data() + 18);
 		const uint8_t header_type = state.input[5];
+		const bool bos = (header_type & 2) != 0;
 		if (header_type & 4)
 			state.vorbis_granule = static_cast<uint64_t>(le32(state.input.data() + 6)) |
 				(static_cast<uint64_t>(le32(state.input.data() + 10)) << 32);
 		if (!state.vorbis_serial_set) {
-			if (!(header_type & 2))
+			if (!bos)
 				return io_error;
 			state.vorbis_serial = serial;
 			state.vorbis_serial_set = true;
 		} else if (serial != state.vorbis_serial) {
-			return unsupported;
+			// A chained or multiplexed stream is unsupported, as on the card.
+			return bos ? unsupported : io_error;
+		} else if (bos || sequence != state.vorbis_sequence + 1) {
+			return io_error;
 		}
-		if ((header_type & 1) && state.packet.empty())
+		state.vorbis_sequence = sequence;
+		if (((header_type & 1) != 0) != !state.packet.empty())
 			return io_error;
 		uint32_t body_offset = 27 + segments;
 		for (uint32_t i = 0; i < segments; ++i) {

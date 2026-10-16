@@ -25,6 +25,24 @@ uint16_t get16(const uint8_t *p) { return (p[0] << 8) | p[1]; }
 uint32_t get32(const uint8_t *p) { return (get16(p) << 16) | get16(p + 2); }
 void put16(uint8_t *p, uint16_t n) { p[0] = n >> 8; p[1] = n; }
 void put32(uint8_t *p, uint32_t n) { put16(p, n >> 16); put16(p + 2, n); }
+// Recomputes the CRC of the Ogg page at offset after a test edits it, so the
+// edit reaches the codec instead of failing the page checksum.
+void reseal_ogg_page(std::vector<uint8_t> &bytes, size_t offset)
+{
+	size_t length = 27u + bytes[offset + 26];
+	for (uint32_t i = 0; i < bytes[offset + 26]; ++i)
+		length += bytes[offset + 27 + i];
+	for (size_t i = 22; i < 26; ++i)
+		bytes[offset + i] = 0;
+	uint32_t crc = 0;
+	for (size_t i = 0; i < length; ++i) {
+		crc ^= static_cast<uint32_t>(bytes[offset + i]) << 24;
+		for (int bit = 0; bit < 8; ++bit)
+			crc = (crc & 0x80000000u) ? (crc << 1) ^ 0x04c11db7u : crc << 1;
+	}
+	for (size_t i = 0; i < 4; ++i)
+		bytes[offset + 22 + i] = static_cast<uint8_t>(crc >> (8 * i));
+}
 
 struct Mailbox {
 	std::vector<uint8_t> board;
@@ -508,6 +526,7 @@ int main(int argc, char **argv)
 		header[13] = static_cast<uint8_t>(rate >> 8);
 		header[14] = static_cast<uint8_t>(rate >> 16);
 		header[15] = static_cast<uint8_t>(rate >> 24);
+		reseal_ogg_page(bytes, 0);
 		std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
 		reply = begin_audio_ex(z3, 3, ex_compressed, 65536, pcm, 262144, 1);
 		const uint32_t rejected_session = get32(reply + 16);
@@ -568,6 +587,46 @@ int main(int argc, char **argv)
 		put32(payload, cut_session);
 		put32(payload + 4, 0);
 		z3.call(0x0506, payload, 8);
+	}
+	{
+		// A lost audio page (the EOS page still present) and a corrupted
+		// page both make the EOF-marked feed fail, as the card's page layer
+		// does; the intact file decodes.
+		std::ifstream vorbis_file(argv[11], std::ios::binary);
+		const std::vector<uint8_t> original(std::istreambuf_iterator<char>{vorbis_file}, {});
+		std::vector<std::pair<size_t, size_t>> pages;
+		for (size_t offset = 0; offset + 27 <= original.size();) {
+			size_t page = 27u + original[offset + 26];
+			for (uint32_t i = 0; i < original[offset + 26]; ++i)
+				page += original[offset + 27 + i];
+			pages.emplace_back(offset, page);
+			offset += page;
+		}
+		// Pages 0 and 1 carry the headers; the one before the EOS page is audio.
+		assert(pages.size() >= 4);
+		const auto audio_page = pages[pages.size() - 2];
+		auto feed_whole = [&](const std::vector<uint8_t> &bytes, uint16_t status) {
+			std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
+			reply = begin_audio_ex(z3, 3, ex_compressed, 512 * 1024, pcm, 262144, 1);
+			const uint32_t session = get32(reply + 16);
+			assert(session);
+			put32(payload, session);
+			put32(payload + 4, audio_staging);
+			put32(payload + 8, 0);
+			put32(payload + 12, static_cast<uint32_t>(bytes.size()));
+			put32(payload + 16, 1);
+			z3.call(0x0504, payload, 20, status);
+			put32(payload, session);
+			put32(payload + 4, 0);
+			z3.call(0x0506, payload, 8);
+		};
+		std::vector<uint8_t> lost(original);
+		lost.erase(lost.begin() + static_cast<std::ptrdiff_t>(audio_page.first),
+			lost.begin() + static_cast<std::ptrdiff_t>(audio_page.first + audio_page.second));
+		feed_whole(lost, 9);
+		std::vector<uint8_t> corrupt(original);
+		corrupt[audio_page.first + audio_page.second - 1] ^= 0x55;
+		feed_whole(corrupt, 9);
 	}
 	{
 		// A FLAC stream that ends on a frame boundary but short of the
