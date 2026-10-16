@@ -4514,7 +4514,6 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 	for (int i = mwnodes_start; i <= mwnodes_end; i++) {
 		struct memwatch_node *m = &mwnodes[i];
 		uaecptr addr2 = m->addr;
-		uaecptr addr3 = addr2 + m->size;
 		int rwi2 = m->rwi;
 		uae_u32 oldval = 0;
 		int isoldval = 0;
@@ -4528,11 +4527,8 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 		if (!(m->access_mask & accessmask))
 			continue;
 
-		if (addr >= addr2 && addr < addr3)
-			brk = 1;
-		if (!brk && size == 2 && (addr + 1 >= addr2 && addr + 1 < addr3))
-			brk = 1;
-		if (!brk && size == 4 && ((addr + 2 >= addr2 && addr + 2 < addr3) || (addr + 3 >= addr2 && addr + 3 < addr3)))
+		// Match when any byte of the access lies inside the watched range.
+		if (uae_u64(addr) < uae_u64(addr2) + m->size && uae_u64(addr) + size > addr2)
 			brk = 1;
 
 		if (!brk)
