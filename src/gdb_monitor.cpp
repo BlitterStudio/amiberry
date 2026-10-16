@@ -76,6 +76,10 @@ public:
 		uae_u32 value, uae_u32 old_value, bool old_valid) override;
 	void detach() override;
 	void input_frame();
+#ifdef AMIBERRY
+	bool ipc_control_state() const;
+	bool ipc_needs_trace() const { return process_armed || remote_history; }
+#endif
 private:
 	winuae_gdb::GuestInput guest_input { *this };
 	winuae_gdb::WatchLog watch_log;
@@ -903,4 +907,144 @@ void gdb_server_guest_output(const char* text, bool truncated)
 {
 	gdb_monitor.guest_output.capture(text, truncated);
 }
+
+#ifdef AMIBERRY
+bool GdbMonitor::ipc_control_state() const
+{
+	if (process_armed || remote_history || exception_mask || !watch_log.empty() || guest_output.is_enabled())
+		return true;
+	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+		if (conditional[i])
+			return true;
+	}
+	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
+		if (watch_owner[i] == watch_predicate || watch_owner[i] == watch_dma)
+			return true;
+	}
+	return false;
+}
+
+static bool ipc_monitor_state;
+
+bool gdb_monitor_ipc_active()
+{
+	return ipc_monitor_state;
+}
+
+bool gdb_monitor_needs_trace()
+{
+	return gdb_monitor.ipc_needs_trace();
+}
+
+static bool hex_span(const std::string& text, size_t begin, size_t end, uint32_t& value)
+{
+	if (begin >= end || end - begin > 8)
+		return false;
+	value = 0;
+	for (size_t i = begin; i < end; i++) {
+		unsigned char c = static_cast<unsigned char>(text[i]);
+		unsigned digit;
+		if (c >= '0' && c <= '9')
+			digit = c - '0';
+		else if (c >= 'a' && c <= 'f')
+			digit = c - 'a' + 10;
+		else if (c >= 'A' && c <= 'F')
+			digit = c - 'A' + 10;
+		else
+			return false;
+		value = (value << 4) | digit;
+	}
+	return true;
+}
+
+static bool command_word(const std::string& text, const char* prefix)
+{
+	const std::string word(prefix);
+	return text.compare(0, word.size(), word) == 0 && (text.size() == word.size() || text[word.size()] == ' ');
+}
+
+static bool ipc_state_command(const std::string& command)
+{
+	return command_word(command, "watch add") || command_word(command, "watch range") ||
+		command_word(command, "watch remove") || command == "watch clear-events" ||
+		command_word(command, "dma-watch add") || command_word(command, "dma-watch remove") ||
+		command_word(command, "condition add") || command_word(command, "condition remove") ||
+		command_word(command, "exception-mask") ||
+		command == "history on" || command == "history off" ||
+		command == "guest-output on" || command == "guest-output off" || command == "guest-output clear" ||
+		command_word(command, "process-break name") || command_word(command, "process-break address") ||
+		command == "process-break clear";
+}
+
+// Host entry for the same monitor text GDB sends as qRcmd. step-over and
+// checkpoint return running/pending and complete inside the GDB stop loop, so
+// they are refused here instead of being started without a client.
+bool gdb_monitor_command(const char* text, std::string& result, std::string& error)
+{
+	result.clear();
+	error.clear();
+	if (!text || !*text) {
+		error = "missing monitor command";
+		return false;
+	}
+	std::string command(text);
+	if (command == "step-over") {
+		error = "step-over depends on a GDB client; use DEBUG_STEP_OVER";
+		return false;
+	}
+	if (command == "checkpoint save" || command.compare(0, 16, "checkpoint save ") == 0) {
+		error = "checkpoint save depends on a GDB client; use SAVESTATE";
+		return false;
+	}
+	if (command == "checkpoint restore" || command.compare(0, 19, "checkpoint restore ") == 0) {
+		error = "checkpoint restore depends on a GDB client; use LOADSTATE";
+		return false;
+	}
+	if (command.compare(0, 7, "disasm ") == 0) {
+		auto space = command.find(' ', 7);
+		uint32_t address = 0;
+		unsigned count = 0;
+		if (space == std::string::npos || !hex_span(command, 7, space, address) || space + 1 == command.size()) {
+			error = "invalid disasm command";
+			return false;
+		}
+		for (size_t i = space + 1; i < command.size(); i++) {
+			if (command[i] < '0' || command[i] > '9' || count > 100) {
+				error = "invalid disasm command";
+				return false;
+			}
+			count = count * 10 + static_cast<unsigned>(command[i] - '0');
+		}
+		if (!count || count > 100 || !gdb_monitor.disassemble(address, count, result)) {
+			result.clear();
+			error = "disasm failed";
+			return false;
+		}
+		return true;
+	}
+	if (command.compare(0, 11, "screenshot ") == 0) {
+		auto path = command.substr(11);
+		if (path.empty() || !gdb_monitor.screenshot(path)) {
+			error = "screenshot failed";
+			return false;
+		}
+		return true;
+	}
+	auto status = gdb_monitor.monitor(command, result);
+	if (ipc_state_command(command))
+		ipc_monitor_state = gdb_monitor.ipc_control_state();
+	if (status == MonitorResult::ok)
+		return true;
+	result.clear();
+	if (status == MonitorResult::unsupported)
+		error = "unknown monitor command";
+	else if (status == MonitorResult::pending)
+		error = "monitor command is still pending";
+	else if (status == MonitorResult::running)
+		error = "monitor command is still running";
+	else
+		error = "monitor command failed";
+	return false;
+}
+#endif
 #endif

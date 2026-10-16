@@ -32,6 +32,7 @@ public:
 		records.push_back({next++, std::string(text, length), truncated});
 		bytes += length;
 	}
+	bool is_enabled() const { return enabled.load(std::memory_order_relaxed); }
 	void enable(bool value)
 	{
 		std::lock_guard<std::mutex> lock(mutex);

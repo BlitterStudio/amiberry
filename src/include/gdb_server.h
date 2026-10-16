@@ -24,6 +24,12 @@ void gdb_target_stopped(char* reason, size_t size);
 void gdb_target_exception(int nr);
 void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 source, uae_u32 reg,
 	uae_u32 value, uae_u32 old_value, bool old_valid);
+#ifdef AMIBERRY
+#include <string>
+bool gdb_monitor_command(const char* text, std::string& result, std::string& error);
+bool gdb_monitor_ipc_active();
+bool gdb_monitor_needs_trace();
+#endif
 #else
 static inline void gdb_server_poll() {}
 static inline void gdb_server_input_frame() {}
