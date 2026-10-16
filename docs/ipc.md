@@ -224,7 +224,9 @@ frames, so it is also accepted when the CPU is not threaded.
 `step-over` is refused. It completes inside the GDB stop loop. Use
 `DEBUG_STEP_OVER`, which requires the native debugger to be stopped.
 `checkpoint save` and `checkpoint restore` are refused for the same reason.
-Use `SAVESTATE` and `LOADSTATE`.
+Use `SAVESTATE` and `LOADSTATE`. Note that `SAVESTATE` and `QUICKSAVE` are
+refused while the CPU is stopped by the debugger (native or GDB); resume
+execution or `PAUSE` first so the snapshot is taken at a clean frame boundary.
 `input sequence` is refused. Its steps advance from the frame hook only while
 a GDB client is connected. Use `input event`.
 

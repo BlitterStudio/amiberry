@@ -143,7 +143,9 @@ that are unavailable in the active build or configuration.
 The same monitor text is available on the IPC socket as `MONITOR`, without a
 GDB client. The command, the stop behaviour, and the ownership rule are
 described in `docs/ipc.md`. IPC refuses `step-over` and `checkpoint` and names
-`DEBUG_STEP_OVER`, `SAVESTATE`, and `LOADSTATE`. A GDB connection is refused
+`DEBUG_STEP_OVER`, `SAVESTATE`, and `LOADSTATE` (saving state requires resuming
+or pausing first if the debugger has the CPU stopped). A GDB connection is
+refused
 while IPC holds monitor state, and IPC will not change that state while a GDB
 client is connected.
 

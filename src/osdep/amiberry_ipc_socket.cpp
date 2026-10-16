@@ -26,9 +26,7 @@
 #include "blitter.h"
 #ifdef DEBUGGER
 #include "debug.h"
-#ifdef GDBSERVER
 #include "gdb_server.h"
-#endif
 #endif
 #include <dirent.h>
 
@@ -317,6 +315,11 @@ static std::string HandleSavestate(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received SAVESTATE" << std::endl;
 	}
+#ifdef DEBUGGER
+	if (debugger_is_stopped() || gdb_server_halted()) {
+		return make_response(false, {"Cannot save state while the debugger has the CPU stopped; resume or PAUSE first"});
+	}
+#endif
 	if (args.size() < 2) {
 		return make_response(false, {"Usage: SAVESTATE <statefile> <configfile>"});
 	}
@@ -1321,6 +1324,11 @@ static std::string HandleQuickSave(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received QUICKSAVE" << std::endl;
 	}
+#ifdef DEBUGGER
+	if (debugger_is_stopped() || gdb_server_halted()) {
+		return make_response(false, {"Cannot save state while the debugger has the CPU stopped; resume or PAUSE first"});
+	}
+#endif
 	int slot = 0;
 	if (!args.empty()) {
 		try {
