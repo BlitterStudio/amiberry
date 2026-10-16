@@ -187,6 +187,63 @@ Amiberry MCP controller currently uses 50 ms between press/move/release
 phases), but that timing and the raw button-mask sequence are private
 implementation details rather than public API parameters.
 
+## Debugger monitor
+
+`MONITOR <text>` runs the same command text as GDB `monitor <text>`. The
+command list and argument syntax are in `docs/gdb-debugging.md`. IPC joins the
+tab-separated arguments with spaces. A path or name that contains spaces must
+be sent as one argument. The reply is `OK` and one field per result line.
+JSON replies are a single field. `disasm` returns one field per instruction
+line. A tab inside a result line is replaced with a space so the field count
+matches the line count. Failure is `ERROR` and a message.
+
+The handler runs on the emulation thread, either between frames or while the
+native debugger is stopped. Read-only commands do not require a stopped CPU.
+Between frames the 68k core is not executing, so a guest memory read is stable
+for the duration of the call. `cpu_threaded=true` is the exception: the CPU
+thread can still be executing, so guest-memory reads and state changes are
+refused. `capabilities`, `execution-status`, `input`, `screenshot`, and the
+list/status commands that do not read guest RAM are still accepted.
+
+These commands change debugger tables or remap memory banks, and require
+`PAUSE` or a stopped native debugger:
+
+- `watch add`, `watch range`, `watch remove`, `watch clear-events`
+- `dma-watch add`, `dma-watch remove`
+- `condition add`, `condition remove`
+- `exception-mask`
+- `history on`, `history off`
+- `guest-output on`, `guest-output off`, `guest-output clear`
+- `process-break name`, `process-break address`, `process-break clear`
+
+`memwatch_setup()` remaps the watched banks. `map_banks` flushes the JIT
+cache as part of that remap. The console debugger installs watches only while
+the CPU is stopped; IPC uses the same rule. Host pause is a stop between
+frames, so it is also accepted when the CPU is not threaded.
+
+`step-over` is refused. It completes inside the GDB stop loop. Use
+`DEBUG_STEP_OVER`, which requires the native debugger to be stopped.
+`checkpoint save` and `checkpoint restore` are refused for the same reason.
+Use `SAVESTATE` and `LOADSTATE`.
+`input sequence` is refused. Its steps advance from the frame hook only while
+a GDB client is connected. Use `input event`.
+
+
+A watch hit, exception-mask hit, or process-break entry with no GDB client
+stops in the native debugger. `DEBUG_STATUS` reports `stopped=1` and, when a
+stop packet was produced, `reason=` set to that text (`T05watch:...`,
+`Tnnwinuae-exception:...`, or `T05winuae-entry:...`). `DEBUG_CONTINUE` and
+`DEBUG_STEP` resume that stop. `execution-status` reports the GDB halt flag,
+not this native stop.
+
+IPC and a connected GDB client share one monitor object. State-changing
+`MONITOR` commands are refused while a GDB client is connected. A new GDB
+connection is refused while IPC has installed monitor state (watches,
+conditions, an exception mask, a process-break, history recording, guest-output
+capture, or captured watch events). GDB detach clears that object, so the
+connection is refused instead of letting detach delete IPC state. Clear the
+IPC state before attaching GDB. D-Bus does not expose `MONITOR`.
+
 ## Validation status
 
 The geometry mapping and controller primitives have automated coverage in

@@ -189,6 +189,7 @@ def print_help():
   DEBUG_STEP                - Step one instruction
   DEBUG_STEP_OVER           - Step over (skip subroutine calls)
   DEBUG_CONTINUE            - Continue execution until next breakpoint
+  MONITOR <text>            - Run a GDB monitor command (see docs/gdb-debugging.md)
   GET_CPU_REGS              - Get all CPU register values
   GET_CUSTOM_REGS           - Get Amiga custom chip register values
   DISASSEMBLE <addr> [n]    - Disassemble n instructions at address

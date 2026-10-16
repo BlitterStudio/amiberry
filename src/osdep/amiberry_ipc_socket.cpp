@@ -26,6 +26,9 @@
 #include "blitter.h"
 #ifdef DEBUGGER
 #include "debug.h"
+#ifdef GDBSERVER
+#include "gdb_server.h"
+#endif
 #endif
 #include <dirent.h>
 
@@ -2574,6 +2577,7 @@ static std::string HandleDebugStatus(const std::vector<std::string>& args)
 	responses.push_back("stopped=" + std::to_string(debugger_is_stopped() ? 1 : 0));
 	responses.push_back("debugging=" + std::to_string(debugging ? 1 : 0));
 	responses.push_back("exception_debugging=" + std::to_string(exception_debugging ? 1 : 0));
+	responses.push_back(std::string("reason=") + debugger_last_stop_reason());
 
 	return make_response(true, responses);
 }
@@ -2627,6 +2631,107 @@ static std::string HandleDebugContinue(const std::vector<std::string>& args)
 
 	return make_response(true, {"Execution continued"});
 }
+
+#ifdef GDBSERVER
+static bool monitor_prefix(const std::string& text, const char* prefix)
+{
+	const size_t n = strlen(prefix);
+	return text.compare(0, n, prefix) == 0 && (text.size() == n || text[n] == ' ');
+}
+
+static bool monitor_changes_state(const std::string& text)
+{
+	return monitor_prefix(text, "watch add") || monitor_prefix(text, "watch range") ||
+		monitor_prefix(text, "watch remove") || text == "watch clear-events" ||
+		monitor_prefix(text, "dma-watch add") || monitor_prefix(text, "dma-watch remove") ||
+		monitor_prefix(text, "condition add") || monitor_prefix(text, "condition remove") ||
+		monitor_prefix(text, "exception-mask") ||
+		text == "history on" || text == "history off" ||
+		text == "guest-output on" || text == "guest-output off" || text == "guest-output clear" ||
+		monitor_prefix(text, "process-break name") || monitor_prefix(text, "process-break address") ||
+		text == "process-break clear";
+}
+
+static bool monitor_reads_guest(const std::string& text)
+{
+	return monitor_prefix(text, "disasm") || text == "tasks" ||
+		text == "segments" || monitor_prefix(text, "segments");
+}
+
+static bool monitor_arms_trace(const std::string& text)
+{
+	return text == "history on" || text == "history off" ||
+		monitor_prefix(text, "process-break name") || monitor_prefix(text, "process-break address") ||
+		text == "process-break clear";
+}
+
+static std::string monitor_refusal(const std::string& text)
+{
+	// gdb_server.cpp refuses the threaded CPU because debug() and bank remaps
+	// can run while the other thread is still executing. The same constraint
+	// applies to MONITOR mutations and guest-memory reads.
+	if (monitor_prefix(text, "input sequence"))
+		return "input sequence is advanced only while a GDB client is connected; use input event";
+	if (currprefs.cpu_thread && (monitor_changes_state(text) || monitor_reads_guest(text)))
+		return "not available with the threaded CPU (cpu_threaded=true)";
+	if (gdb_server_connected() && monitor_changes_state(text))
+		return "a GDB client is connected; monitor state changes are refused";
+	if (monitor_changes_state(text) && !pause_emulation && !debugger_is_stopped())
+		return "monitor state changes require PAUSE or a stopped debugger";
+	return {};
+}
+
+static std::vector<std::string> monitor_result_fields(const std::string& result)
+{
+	std::vector<std::string> fields;
+	size_t start = 0;
+	while (start < result.size()) {
+		auto end = result.find('\n', start);
+		if (end == std::string::npos)
+			end = result.size();
+		std::string line = result.substr(start, end - start);
+		if (!line.empty() && line.back() == '\r')
+			line.pop_back();
+		if (!line.empty()) {
+			for (char& c : line) {
+				if (c == '\t')
+					c = ' ';
+			}
+			fields.push_back(std::move(line));
+		}
+		if (end == result.size())
+			break;
+		start = end + 1;
+	}
+	return fields;
+}
+
+static std::string HandleMonitor(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received MONITOR" << std::endl;
+	}
+	if (args.empty())
+		return make_response(false, {"Usage: MONITOR <command> [args]"});
+
+	std::string text;
+	for (size_t i = 0; i < args.size(); i++) {
+		if (i)
+			text += ' ';
+		text += args[i];
+	}
+	std::string refusal = monitor_refusal(text);
+	if (!refusal.empty())
+		return make_response(false, {refusal});
+
+	std::string result, error;
+	if (!gdb_monitor_command(text.c_str(), result, error))
+		return make_response(false, {error.empty() ? std::string("monitor command failed") : error});
+	if (monitor_arms_trace(text))
+		debugger_sync_monitor_trace();
+	return make_response(true, monitor_result_fields(result));
+}
+#endif
 #endif
 
 static std::string HandleGetCPURegs(const std::vector<std::string>& args)
@@ -3111,6 +3216,9 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("--- Debugging Commands ---");
 	commands.emplace_back("DEBUG_ACTIVATE, DEBUG_DEACTIVATE, DEBUG_STATUS");
 	commands.emplace_back("DEBUG_STEP [count], DEBUG_STEP_OVER, DEBUG_CONTINUE");
+#ifdef GDBSERVER
+	commands.emplace_back("MONITOR <text> - GDB monitor command; lines returned as fields");
+#endif
 	commands.emplace_back("GET_CPU_REGS, GET_CUSTOM_REGS");
 	commands.emplace_back("DISASSEMBLE <addr> [count] - disassemble instructions");
 	commands.emplace_back("SET_BREAKPOINT <addr>, CLEAR_BREAKPOINT <addr|ALL>, LIST_BREAKPOINTS");
@@ -3229,6 +3337,9 @@ static void InitHandlers()
 	command_handlers[CMD_DEBUG_STEP] = HandleDebugStep;
 	command_handlers[CMD_DEBUG_STEP_OVER] = HandleDebugStepOver;
 	command_handlers[CMD_DEBUG_CONTINUE] = HandleDebugContinue;
+#ifdef GDBSERVER
+	command_handlers[CMD_MONITOR] = HandleMonitor;
+#endif
 	command_handlers[CMD_GET_CPU_REGS] = HandleGetCPURegs;
 	command_handlers[CMD_GET_CUSTOM_REGS] = HandleGetCustomRegs;
 	command_handlers[CMD_DISASSEMBLE] = HandleDisassemble;
