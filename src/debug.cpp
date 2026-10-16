@@ -282,7 +282,7 @@ void debugger_sync_monitor_trace(void)
 				break;
 			}
 		}
-		if (!enabled) {
+		if (!enabled && !processptr && !processname) {
 			trace_mode = 0;
 			debugging = 0;
 		}
