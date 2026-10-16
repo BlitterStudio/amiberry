@@ -275,6 +275,9 @@ static std::string HandleScreenshot(const std::vector<std::string>& args)
 	if (args.empty()) {
 		return make_response(false, {"Missing filename"});
 	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
 	if (args.size() > 1) {
 		if (args.size() != 2 || args[1] != "ACTIONABLE") {
 			return make_response(false, {"Usage: SCREENSHOT <path> [ACTIONABLE]"});
@@ -323,6 +326,9 @@ static std::string HandleSavestate(const std::vector<std::string>& args)
 	if (args.size() < 2) {
 		return make_response(false, {"Usage: SAVESTATE <statefile> <configfile>"});
 	}
+	if (args[0].size() >= MAX_DPATH || args[1].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
 
 	savestate_initsave(args[0].c_str(), 1, true, true);
 	save_state(args[0].c_str(), "...");
@@ -340,6 +346,9 @@ static std::string HandleLoadState(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Missing state file path"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	savestate_state = STATE_DORESTORE;
@@ -417,6 +426,9 @@ static std::string HandleInsertFloppy(const std::vector<std::string>& args)
 	if (args.size() < 2) {
 		return make_response(false, {"Usage: INSERTFLOPPY <path> <drivenum>"});
 	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
 
 	int drivenum;
 	try {
@@ -444,6 +456,9 @@ static std::string HandleInsertCD(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Missing CD image path"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	_tcsncpy(changed_prefs.cdslots[0].name, args[0].c_str(), MAX_DPATH);
@@ -747,6 +762,9 @@ static std::string HandleLoadConfig(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Missing config file path"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	int result = target_cfgfile_load(&changed_prefs, args[0].c_str(), CONFIG_TYPE_DEFAULT, 0);
@@ -2464,6 +2482,9 @@ static std::string HandleInsertWHDLoad(const std::vector<std::string>& args)
 	}
 	if (args.empty()) {
 		return make_response(false, {"Usage: INSERT_WHDLOAD <path_to_lha_or_directory>"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
 	}
 
 	std::string path = args[0];
