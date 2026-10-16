@@ -7149,7 +7149,11 @@ void m68k_go (int may_quit)
 		cpu_hardreset = false;
 		cpu_keyboardreset = false;
 		event_wait = true;
-		unset_special(SPCFLAG_MODE_CHANGE);
+		// A reset requested from the debugger stop above can already have
+		// raised MODE_CHANGE; keep it so that m68k_run() returns for it.
+		if (quit_program <= 0) {
+			unset_special(SPCFLAG_MODE_CHANGE);
+		}
 
 		if (!restored && hardboot) {
 			uaerandomizeseed();
