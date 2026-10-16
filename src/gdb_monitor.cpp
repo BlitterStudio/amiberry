@@ -924,11 +924,9 @@ bool GdbMonitor::ipc_control_state() const
 	return false;
 }
 
-static bool ipc_monitor_state;
-
 bool gdb_monitor_ipc_active()
 {
-	return ipc_monitor_state;
+	return gdb_monitor.ipc_control_state();
 }
 
 bool gdb_monitor_needs_trace()
@@ -957,24 +955,7 @@ static bool hex_span(const std::string& text, size_t begin, size_t end, uint32_t
 	return true;
 }
 
-static bool command_word(const std::string& text, const char* prefix)
-{
-	const std::string word(prefix);
-	return text.compare(0, word.size(), word) == 0 && (text.size() == word.size() || text[word.size()] == ' ');
-}
 
-static bool ipc_state_command(const std::string& command)
-{
-	return command_word(command, "watch add") || command_word(command, "watch range") ||
-		command_word(command, "watch remove") || command == "watch clear-events" ||
-		command_word(command, "dma-watch add") || command_word(command, "dma-watch remove") ||
-		command_word(command, "condition add") || command_word(command, "condition remove") ||
-		command_word(command, "exception-mask") ||
-		command == "history on" || command == "history off" ||
-		command == "guest-output on" || command == "guest-output off" || command == "guest-output clear" ||
-		command_word(command, "process-break name") || command_word(command, "process-break address") ||
-		command == "process-break clear";
-}
 
 // Host entry for the same monitor text GDB sends as qRcmd. step-over and
 // checkpoint return running/pending and complete inside the GDB stop loop, so
@@ -1031,8 +1012,6 @@ bool gdb_monitor_command(const char* text, std::string& result, std::string& err
 		return true;
 	}
 	auto status = gdb_monitor.monitor(command, result);
-	if (ipc_state_command(command))
-		ipc_monitor_state = gdb_monitor.ipc_control_state();
 	if (status == MonitorResult::ok)
 		return true;
 	result.clear();
