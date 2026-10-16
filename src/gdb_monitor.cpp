@@ -563,6 +563,7 @@ MonitorResult GdbMonitor::checkpoint_command(const std::string& command, std::st
 	// stop right after the save; an earlier stop cancels it.
 	savestate_initsave(filename, 1, true, false);
 	xfree(filename);
+	savestate_last_save_result = -1;
 	checkpoint_saving = true;
 	debug_remote_frame_save(true);
 	resume(false);
@@ -608,22 +609,38 @@ MonitorResult GdbMonitor::task_command(const std::string& command, std::string& 
 		if (!hex_words(command.substr(13), 1, &count) || !count || count > 128)
 			return MonitorResult::error;
 		int size = debug_history_size();
+		const std::string suffix = "],\"truncated\":false}";
 		result = "{\"recording\":" + std::string(remote_history ? "true" : "false") + ",\"entries\":[";
-		for (int i = (std::max)(0, size - static_cast<int>(count)); i < size; i++) {
+		// Collect from the newest entry back so a truncated reply keeps the
+		// most recent instructions, then emit them oldest first.
+		std::vector<std::string> entries;
+		size_t length = result.size() + suffix.size();
+		bool truncated = false;
+		for (int i = size - 1; i >= (std::max)(0, size - static_cast<int>(count)); i--) {
 			int frame, entry_vpos, entry_hpos;
 			const struct regstruct* r = debug_history_get(i, &frame, &entry_vpos, &entry_hpos);
-			if (result.back() != '[')
-				result += ",";
-			result += "{\"pc\":" + std::to_string(r->pc) + ",\"frame\":" + std::to_string(frame) +
+			std::string entry = "{\"pc\":" + std::to_string(r->pc) + ",\"frame\":" + std::to_string(frame) +
 				",\"vpos\":" + std::to_string(entry_vpos) + ",\"hpos\":" + std::to_string(entry_hpos) + ",\"registers\":[";
 			for (int j = 0; j < 16; j++) {
 				if (j)
-					result += ",";
-				result += std::to_string(r->regs[j]);
+					entry += ",";
+				entry += std::to_string(r->regs[j]);
 			}
-			result += "]}";
+			entry += "]}";
+			const size_t separator = entries.empty() ? 0 : 1;
+			if (length + separator + entry.size() > winuae_gdb::Session::packet_size / 2) {
+				truncated = true;
+				break;
+			}
+			length += separator + entry.size();
+			entries.push_back(std::move(entry));
 		}
-		result += "]}";
+		for (auto it = entries.rbegin(); it != entries.rend(); ++it) {
+			if (it != entries.rbegin())
+				result += ",";
+			result += *it;
+		}
+		result += "],\"truncated\":" + std::string(truncated ? "true" : "false") + "}";
 		return MonitorResult::ok;
 	}
 	if (command == "condition list") {
@@ -828,9 +845,10 @@ void GdbMonitor::finish_checkpoint()
 	if (!checkpoint_saving)
 		return;
 	checkpoint_saving = false;
-	bool saved = !debug_remote_frame_save(false) && savestate_state != STATE_SAVE;
+	bool saved = !debug_remote_frame_save(false) && savestate_last_save_result > 0;
 	if (savestate_state == STATE_SAVE)
 		savestate_state = 0;
+	savestate_last_save_result = -1;
 	gdb_server_monitor_complete(saved);
 }
 

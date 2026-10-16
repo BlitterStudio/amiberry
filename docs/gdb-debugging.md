@@ -104,14 +104,14 @@ input sequences may be submitted while the guest runs.
   and reports whether it is chip or fast RAM.
 - `monitor process-break name NAME` or `process-break address TASK` arms a
   one-shot stop at an AmigaDOS program entry. `process-break status` and
-  `process-break clear` inspect or cancel it. `monitor segments [PROCESS]`
-  reports loaded AmigaDOS segments.
-- `monitor tasks` returns a JSON object with the current, ready and waiting
-  Exec tasks in `tasks`. Its `truncated` flag is true if the reply reached the
-  remote packet limit. `monitor history on|off` and `history read COUNT` use
-  the existing debugger history.
-  `monitor condition add`, `condition list`, `condition remove`, and
-  `step-over` use the existing breakpoint and trace controls.
+  `process-break clear` inspect or cancel it.
+- `monitor tasks` returns the current, ready and waiting Exec tasks in `tasks`;
+  its `truncated` flag is true if the reply reached the remote packet limit.
+  `monitor segments [PROCESS]` reports loaded AmigaDOS segments. `monitor
+  history on|off` and `history read COUNT` use the existing debugger history;
+  history replies may set `truncated`. `monitor condition add`, `condition
+  list`, `condition remove`, and `step-over` use the existing breakpoint and
+  trace controls.
 - `monitor exception-mask MASK` chooses CPU exception vectors; `monitor
   exception` reports the selected exception with its pre-frame register
   snapshot.
