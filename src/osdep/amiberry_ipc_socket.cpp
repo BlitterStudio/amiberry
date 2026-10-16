@@ -2661,13 +2661,6 @@ static bool monitor_reads_guest(const std::string& text)
 		text == "segments" || monitor_prefix(text, "segments");
 }
 
-static bool monitor_arms_trace(const std::string& text)
-{
-	return text == "history on" || text == "history off" ||
-		monitor_prefix(text, "process-break name") || monitor_prefix(text, "process-break address") ||
-		text == "process-break clear";
-}
-
 static std::string monitor_refusal(const std::string& text)
 {
 	// gdb_server.cpp refuses the threaded CPU because debug() and bank remaps
@@ -2677,7 +2670,10 @@ static std::string monitor_refusal(const std::string& text)
 		return "input sequence is advanced only while a GDB client is connected; use input event";
 	if (currprefs.cpu_thread && (monitor_changes_state(text) || monitor_reads_guest(text)))
 		return "not available with the threaded CPU (cpu_threaded=true)";
-	if (gdb_server_connected() && monitor_changes_state(text))
+	// A connected GDB client owns the shared monitor object, and its detach
+	// clears all of it, held input included.
+	if (gdb_server_connected() && (monitor_changes_state(text) ||
+		monitor_prefix(text, "input event") || text == "input release"))
 		return "a GDB client is connected; monitor state changes are refused";
 	if (monitor_changes_state(text) && !pause_emulation && !debugger_is_stopped())
 		return "monitor state changes require PAUSE or a stopped debugger";
@@ -2730,10 +2726,10 @@ static std::string HandleMonitor(const std::vector<std::string>& args)
 	std::string result, error;
 	if (!gdb_monitor_command(text.c_str(), result, error))
 		return make_response(false, {error.empty() ? std::string("monitor command failed") : error});
-	if (monitor_prefix(text, "condition add") || monitor_prefix(text, "condition remove"))
+	// Conditions, history and program-entry breaks all depend on
+	// per-instruction trace checks; recompute them from every source.
+	if (monitor_changes_state(text))
 		debugger_breakpoints_changed();
-	if (monitor_arms_trace(text))
-		debugger_sync_monitor_trace();
 	return make_response(true, monitor_result_fields(result));
 }
 #endif

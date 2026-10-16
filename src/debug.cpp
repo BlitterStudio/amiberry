@@ -226,23 +226,30 @@ static void debug_continue(void)
 }
 
 #ifdef AMIBERRY
+// Recompute TRACE_CHECKONLY from every source that needs per-instruction
+// checks: breakpoint slots (IPC breakpoints and monitor conditions), the
+// console process breakpoint, and monitor history or program-entry breaks.
+// Callers change one source; this keeps the others from being dropped.
 void debugger_breakpoints_changed(void)
 {
-	bool enabled = false;
-	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-		if (bpnodes[i].enabled) {
-			enabled = true;
-			break;
-		}
+	bool needed = processptr || processname;
+	for (int i = 0; i < BREAKPOINT_TOTAL && !needed; i++) {
+		if (bpnodes[i].enabled)
+			needed = true;
 	}
-
-	if (enabled) {
-		if (!debugger_is_stopped() && trace_mode == 0) {
+#if defined(GDBSERVER)
+	if (gdb_monitor_needs_trace())
+		needed = true;
+#endif
+	if (debugger_is_stopped())
+		return;
+	if (needed) {
+		if (trace_mode == 0) {
 			trace_mode = TRACE_CHECKONLY;
 			debugging = -1;
 			set_special(SPCFLAG_BRK);
 		}
-	} else if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY && !processptr && !processname) {
+	} else if (trace_mode == TRACE_CHECKONLY) {
 		trace_mode = 0;
 		debugging = 0;
 	}
@@ -263,32 +270,6 @@ const char* debugger_last_stop_reason(void)
 	return debugger_stop_reason_text;
 }
 
-void debugger_sync_monitor_trace(void)
-{
-#if defined(GDBSERVER)
-	if (gdb_monitor_needs_trace()) {
-		if (!debugger_is_stopped() && trace_mode == 0) {
-			trace_mode = TRACE_CHECKONLY;
-			debugging = -1;
-			set_special(SPCFLAG_BRK);
-		}
-		return;
-	}
-	if (!debugger_is_stopped() && trace_mode == TRACE_CHECKONLY) {
-		bool enabled = false;
-		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
-			if (bpnodes[i].enabled) {
-				enabled = true;
-				break;
-			}
-		}
-		if (!enabled && !processptr && !processname) {
-			trace_mode = 0;
-			debugging = 0;
-		}
-	}
-#endif
-}
 #endif
 
 bool debug_enforcer(void)

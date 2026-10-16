@@ -238,9 +238,10 @@ empty unless `stopped=1`, however the debugger was left. `execution-status`
 reports the GDB halt flag, not this native stop.
 
 IPC and a connected GDB client share one monitor object. State-changing
-`MONITOR` commands are refused while a GDB client is connected. A GDB detach
-clears everything in that object, so a new GDB connection is refused while
-IPC holds any of it: watches, DMA watches, conditions, an exception mask, a
+`MONITOR` commands, `input event` and `input release` are refused while a GDB
+client is connected. A GDB detach clears everything in that object, so a new
+GDB connection is refused while IPC holds any of it: watches, DMA watches,
+conditions, an exception mask, a
 process-break, history recording, guest-output capture or captured records,
 captured watch events, or input held by `input event`. Clear it before
 attaching GDB with `watch remove`, `dma-watch remove`, `condition remove`,
