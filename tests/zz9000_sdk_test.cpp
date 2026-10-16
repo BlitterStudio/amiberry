@@ -792,6 +792,53 @@ int main(int argc, char **argv)
 		std::vector<uint8_t> flac_long_ref(std::istreambuf_iterator<char>{flac_long_ref_file}, {});
 		assert(flac_long_ref.size() > 4 * 16384 && drained_pcm == flac_long_ref);
 	}
+	{
+		// While the PCM ring is full the card keeps FLAC input in its input
+		// ring, refuses only a feed that does not fit, and reports as consumed
+		// only the input it has decoded. ZZPlay's on-card playback waits on
+		// that count before it feeds again.
+		std::ifstream flac_long_file(argv[13], std::ios::binary);
+		std::vector<uint8_t> flac_long_bytes(std::istreambuf_iterator<char>{flac_long_file}, {});
+		std::copy(flac_long_bytes.begin(), flac_long_bytes.end(), z3.sdk.buffer_data(audio_staging));
+		put32(payload, 16384);
+		put32(payload + 4, 16);
+		put32(payload + 8, 0);
+		reply = z3.call(0x0100, payload, 12);
+		const uint32_t small_pcm = get32(reply + 16);
+		reply = begin_audio_ex(z3, 2, ex_compressed, 65536, small_pcm, 16384, 1);
+		const uint32_t ring_session = get32(reply + 16);
+		uint32_t fed = 0;
+		bool refused = false;
+		for (uint32_t offset = 0; offset + 4096 <= flac_long_bytes.size() && !refused;
+		     offset += 4096) {
+			put32(payload, ring_session);
+			put32(payload + 4, audio_staging);
+			put32(payload + 8, offset);
+			put32(payload + 12, 4096);
+			put32(payload + 16, 0);
+			reply = z3.call(0x0504, payload, 20);
+			if (get32(reply + 60) & 8)
+				refused = true;
+			else
+				fed += 4096;
+		}
+		assert(refused && fed > 65536 - 4096);
+		const uint32_t consumed = get32(reply + 52);
+		assert(consumed < fed && fed - consumed <= 65536);
+		const uint32_t pcm_write = get32(reply + 40);
+		const uint32_t pcm_read = get32(reply + 44);
+		const uint32_t used = pcm_write == pcm_read ? 16384 : (pcm_write + 16384 - pcm_read) % 16384;
+		put32(payload, ring_session);
+		put32(payload + 4, used);
+		put32(payload + 8, 0);
+		reply = z3.call(0x0505, payload, 12);
+		assert(get32(reply + 52) > consumed);
+		put32(payload, ring_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		put32(payload, small_pcm);
+		z3.call(0x0101, payload, 4);
+	}
 	uint8_t invalid_begin[48] = {};
 	put32(invalid_begin, 2);
 	put32(invalid_begin + 4, ex_compressed);

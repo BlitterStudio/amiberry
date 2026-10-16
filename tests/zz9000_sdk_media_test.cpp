@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -140,6 +142,9 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 		if (mailbox.last_status == 2)
 			continue;
 		assert(mailbox.last_status == 0);
+		// All input and EOF have been sent: NEED_INPUT now reads as a
+		// truncated stream to ZZPlay, even while FFmpeg is still decoding.
+		assert(get32(reply + 4) != 1);
 		if (get32(reply + 4) == 3) {
 			const uint64_t pts = (static_cast<uint64_t>(get32(reply + 28)) << 32) | get32(reply + 32);
 			assert(frames == 0 || pts >= last_pts);
@@ -230,12 +235,66 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 	put32(request, session);
 	mailbox.call(0x0b0d, request, 16);
 }
+
+// A Program Stream can carry the audio for the picture on show well after
+// the next pictures. While the guest holds video (it does not DECODE until
+// the audio clock reaches the frame), the session must still decode that
+// audio, or ZZPlay underruns.
+void run_held_video_audio(const char *path)
+{
+	std::ifstream file(path, std::ios::binary);
+	const std::vector<uint8_t> input{std::istreambuf_iterator<char>{file}, {}};
+	assert(!input.empty() && input.size() < 4 * 1024 * 1024);
+	Mailbox mailbox;
+	const uint32_t staging = mailbox.allocate(65536);
+	const uint32_t pcm = mailbox.allocate(131072);
+	mailbox.sdk.set_overlay(0x03310000, 160, 120, 320, 0, true);
+	uint8_t request[48] = {};
+	put32(request, 2); put32(request + 4, 1);
+	put32(request + 8, 160); put32(request + 12, 120); put32(request + 16, 1);
+	put32(request + 20, 3);
+	put32(request + 24, pcm); put32(request + 28, 131072);
+	put32(request + 32, 24576); put32(request + 36, 98304);
+	const uint32_t session = get32(mailbox.call(0x0b04, request, 44));
+	const uint64_t wanted = 48000ull * 4 * 2; // two seconds of 48 kHz stereo
+	size_t offset = 0;
+	uint64_t acknowledged = 0;
+	for (unsigned round = 0; round < 400 && acknowledged < wanted; ++round) {
+		while (offset < input.size()) {
+			const uint32_t bytes = static_cast<uint32_t>(std::min<size_t>(4096, input.size() - offset));
+			std::copy(input.begin() + offset, input.begin() + offset + bytes,
+				mailbox.sdk.buffer_data(staging));
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, session); put32(request + 4, staging); put32(request + 12, bytes);
+			put32(request + 16, offset + bytes == input.size());
+			const auto *reply = mailbox.call(0x0b05, request, 20, 0xffff);
+			const uint32_t accepted = mailbox.last_status == 0 ? get32(reply + 40) : 0;
+			offset += accepted;
+			if (accepted < bytes)
+				break;
+		}
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session); put32(request + 4, static_cast<uint32_t>(acknowledged >> 32));
+		put32(request + 8, static_cast<uint32_t>(acknowledged));
+		const auto *reply = mailbox.call(0x0b07, request, 16);
+		acknowledged = (static_cast<uint64_t>(get32(reply + 20)) << 32) | get32(reply + 24);
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+	assert(acknowledged >= wanted);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session);
+	mailbox.call(0x0b0d, request, 16, 0xffff);
+}
 #endif
 }
 
 int main(int argc, char **argv)
 {
 #ifdef AMIBERRY_WITH_FFMPEG
+	if (argc == 3 && std::strcmp(argv[1], "--held-video") == 0) {
+		run_held_video_audio(argv[2]);
+		return 0;
+	}
 	if (argc == 10 && std::strcmp(argv[1], "--av") == 0) {
 		run_ffmpeg_media(argv[2], static_cast<uint32_t>(std::strtoul(argv[3], nullptr, 10)),
 			static_cast<uint32_t>(std::strtoul(argv[4], nullptr, 10)),
@@ -358,13 +417,24 @@ int main(int argc, char **argv)
 		assert(get32(reply + 36) == offset + length);
 		offset += length;
 	}
+	// DECODE flags follow the 64-bit value cursor. Unknown flags and a nonzero
+	// cursor are refused, as on the card.
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session); put32(request + 12, 4);
+	mailbox.call(0x0b06, request, 16, 4);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session); put32(request + 4, 1);
+	mailbox.call(0x0b06, request, 16, 4);
 	bool shown = false;
 	for (int i = 0; i < 100 && !shown; ++i) {
 		std::fill(std::begin(request), std::end(request), 0);
 		put32(request, session);
+		// A late client asks to skip to the next keyframe and I picture.
+		put32(request + 12, 3);
 		reply = mailbox.call(0x0b06, request, 16);
 		if (get32(reply + 4) == 3) {
 			assert(get32(reply + 8) == width && get32(reply + 12) == height);
+			put32(request + 12, 0);
 			reply = mailbox.call(0x0b08, request, 16);
 			assert(get32(reply + 44) & (1u << 9));
 			assert(mailbox.last_dirty);

@@ -22,7 +22,8 @@ switch_a="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_a.mp2"
 switch_b="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_b.mp2"
 switch="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch.vob"
 ac3_51="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.ac3_51.vob"
-trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51"' EXIT
+held="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.held.vob"
+trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51" "$held"' EXIT
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:a mp2 -b:a 128k -f mpeg "$audio_only"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis "$vp8"
@@ -52,6 +53,8 @@ ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1282x720:rate=10:d
 dd if="$vp8" of="$truncated" bs=1 count=512 status=none
 # Timestamps starting at 5 s: the audio clock must keep that origin.
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis -output_ts_offset 5 "$offset"
+# Four seconds of VOB: the muxer interleaves audio well behind its video.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=4' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=4' -ac 2 -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$held"
 . tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" "$video" "$audio_only"
@@ -71,3 +74,4 @@ zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" --av "$large_odd_half" 2 1 0 0 1 1282 720
 "$out" --av "$truncated" 3 2 5 1 1 160 120
 "$out" --av "$offset" 3 2 5 0 1 160 120
+"$out" --held-video "$held"

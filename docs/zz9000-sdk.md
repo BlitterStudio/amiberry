@@ -46,8 +46,11 @@ feed, read, play, stop, close and per-stream gain. MP3 sessions use mpg123;
 the legacy begin opcode and `BeginEx` with the MP3 codec produce identical
 PCM. FLAC (8 to 192 kHz, up to 24 bits, mono or stereo) and Ogg Vorbis (8 to
 96 kHz, mono or stereo) are decoded incrementally with FFmpeg as the guest
-feeds them, so large files are never held in host memory. FLAC sessions can
-return S16LE, S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
+feeds them, so large files are never held in host memory. As on the card,
+their input waits in the session's input ring until PCM space lets the
+decoder take it: a feed is refused only when it does not fit that ring, and
+`bytes_consumed` counts decoded input. FLAC sessions can return S16LE,
+S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
 
 MHI's S16LE stream plays through the selected Amiberry playback device on a
 host output stream separate from the board's AHI path; the per-stream gain
@@ -82,6 +85,11 @@ Everything except MPEG-1 is decoded by FFmpeg on one worker thread per
 session. ZZPlay streams the file through a bounded input queue; the media
 write reply reports the cumulative number of accepted bytes, and decoding
 begins as soon as the stream headers arrive rather than at end of file.
+Like the card's video FIFO, the worker demuxes up to 1 MiB of video ahead
+of the decoded-frame queue, so audio that a Program Stream carries behind
+its pictures keeps decoding while the guest holds a frame. Once all input
+and EOF have arrived, DECODE answers BUSY rather than NEED_INPUT until the
+worker has caught up.
 Decoded frames are packed to YUY2 for the Picasso96 video window. Interlaced
 frames are blended, and frames too large for the window are packed at half
 size. Audio goes to the session's S16BE PCM ring. Card-local AX media binding
@@ -118,7 +126,10 @@ truncated input, and close/reopen; and console tile output.
 On the user's A4000 system drive, ZZPlay and AmigaAMP MHI playback, MPEGA
 decoding, the JPEG and PNG picture DataTypes, the SDK viewer, and ZZPlay
 MPEG-1/MP2 playback (pause, resume, resize, loop, longer clips) work with the
-installed libraries. The features added for the newer firmware (WebP, FLAC,
-Vorbis, WebM, MPEG-2, Matroska, preload, console encoder) have only been
-exercised by the host tests so far. Zorro II and warm reset still need guest
-checks.
+installed libraries. ZZPlay also played MPEG-2 Program Stream and VOB files
+with MP2, AC-3 and LPCM audio (up to 1280x720), WebM VP8/Vorbis and
+VP9/Opus, Matroska with MPEG-1, MPEG-2 and VP8 video, a 1920x1080 VP9 clip,
+FLAC and Ogg Vorbis through AHI and through on-card output, animated WebP,
+and preloaded playback; `zz9k-view` showed lossy, lossless and animated WebP.
+The WebP picture DataType and the sound DataType, the console encoder,
+Zorro II and warm reset still need guest checks.
