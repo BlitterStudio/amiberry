@@ -124,19 +124,32 @@ bool GdbMonitor::read(uint32_t address, uint8_t* bytes, size_t length)
 
 bool GdbMonitor::disassemble_line(uaecptr pc, TCHAR* line, int size, uaecptr& next)
 {
-	// Check instruction and extension words before calling the existing
-	// debugger disassembler. Never disassemble hardware registers.
-	if ((pc & 1) || pc > 0xffffffe0)
+	// The longest 68k instruction is 22 bytes (MOVE between two memory
+	// indirect operands with 32-bit displacements). None of those bytes may
+	// be a hardware register, so the disassembler never reads I/O; the
+	// decoded instruction itself must lie in readable RAM or ROM.
+	static const int max_instruction = 22;
+	if ((pc & 1) || pc > 0xffffffff - max_instruction)
 		return false;
-	addrbank& bank = get_mem_bank(pc);
-	if (!(bank.flags & (ABFLAG_RAM | ABFLAG_ROM | ABFLAG_ROMIN)) || !bank.check(pc, 32))
+	int readable = 0;
+	for (int i = 0; i < max_instruction; i++) {
+		uaecptr addr = pc + i;
+		addrbank& bank = get_mem_bank(addr);
+		if ((bank.flags & (ABFLAG_RAM | ABFLAG_ROM | ABFLAG_ROMIN)) && bank.check(addr, 1)) {
+			if (readable == i)
+				readable++;
+		} else if (bank.flags & ABFLAG_IO) {
+			return false;
+		}
+	}
+	if (readable < 2)
 		return false;
 	int flags = disasm_flags;
 	disasm_flags &= ~(DISASM_FLAG_VAL | DISASM_FLAG_VAL_FORCE);
 	next = pc;
 	m68k_disasm_2(line, size, pc, NULL, 0, &next, 1, NULL, NULL, 0xffffffff, 1);
 	disasm_flags = flags;
-	return next > pc;
+	return next > pc && next - pc <= static_cast<uaecptr>(readable);
 }
 
 bool GdbMonitor::disassemble(uint32_t address, unsigned count, std::string& output)
