@@ -5979,6 +5979,13 @@ static void set_pixtotal_max(void)
 		if (xshift > 0) {
 			denise_pixtotal_max -= xshift * 2;
 		}
+
+		if (denise_strlong_seen) {
+			if (aga_mode && currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
+				denise_pixtotal_max -= 1;
+			}
+		}
+
 	} else {
 		denise_pixtotal_max = -0x7fffffff;
 	}
@@ -6316,8 +6323,6 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 			if (!ecs_denise) {
 				int size = currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN ? 2 : 1;
 				denise_pixtotal -= 4 * size;
-			} else if (aga_mode && currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
-				denise_pixtotal -= 2;
 			}
 		}
 	}
