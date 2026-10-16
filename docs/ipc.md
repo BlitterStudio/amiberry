@@ -230,11 +230,13 @@ a GDB client is connected. Use `input event`.
 
 
 A watch hit, exception-mask hit, or process-break entry with no GDB client
-stops in the native debugger. `DEBUG_STATUS` reports `stopped=1` and, when a
-stop packet was produced, `reason=` set to that text (`T05watch:...`,
-`Tnnwinuae-exception:...`, or `T05winuae-entry:...`). `DEBUG_CONTINUE` and
-`DEBUG_STEP` resume that stop. `execution-status` reports the GDB halt flag,
-not this native stop.
+stops in the native debugger. `DEBUG_STATUS` reports `stopped=1` and `reason=`
+set to the stop text when one was produced. A read/write watch is
+`T05awatch:`, a write watch is `T05watch:`, and a read watch is `T05rwatch:`.
+Exception stops use `Tnnwinuae-exception:...`. Process-break stops use
+`T05winuae-entry:...`. `reason=` is empty unless `stopped=1`. `DEBUG_CONTINUE`,
+`DEBUG_STEP`, and `DEBUG_STEP_OVER` clear it. `execution-status` reports the
+GDB halt flag, not this native stop.
 
 IPC and a connected GDB client share one monitor object. State-changing
 `MONITOR` commands are refused while a GDB client is connected. A new GDB

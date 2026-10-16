@@ -6428,6 +6428,7 @@ bool debugger_request_step(const int count)
 	if (!debugger_is_stopped() || count < 1 || count > 10000)
 		return false;
 
+	debugger_stop_reason_text[0] = 0;
 	no_trace_exceptions = 0;
 	debug_cycles(2);
 	trace_param[0] = count;
@@ -6444,6 +6445,7 @@ bool debugger_request_step_over(void)
 	if (!debugger_is_stopped())
 		return false;
 
+	debugger_stop_reason_text[0] = 0;
 	TCHAR disassembly[256];
 	uaecptr next_address = M68K_GETPC;
 	m68k_disasm_2(disassembly, sizeof(disassembly) / sizeof(TCHAR), next_address, nullptr, 0, &next_address, 1,
@@ -6462,6 +6464,7 @@ bool debugger_request_continue(void)
 	if (!debugger_is_stopped())
 		return false;
 
+	debugger_stop_reason_text[0] = 0;
 	deactivate_debugger();
 	debugger_external_control_pending.store(true, std::memory_order_release);
 	return true;
