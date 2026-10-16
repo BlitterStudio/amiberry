@@ -106,8 +106,10 @@ input sequences may be submitted while the guest runs.
   one-shot stop at an AmigaDOS program entry. `process-break status` and
   `process-break clear` inspect or cancel it. `monitor segments [PROCESS]`
   reports loaded AmigaDOS segments.
-- `monitor tasks` lists current, ready and waiting Exec tasks. `monitor
-  history on|off` and `history read COUNT` use the existing debugger history.
+- `monitor tasks` returns a JSON object with the current, ready and waiting
+  Exec tasks in `tasks`. Its `truncated` flag is true if the reply reached the
+  remote packet limit. `monitor history on|off` and `history read COUNT` use
+  the existing debugger history.
   `monitor condition add`, `condition list`, `condition remove`, and
   `step-over` use the existing breakpoint and trace controls.
 - `monitor exception-mask MASK` chooses CPU exception vectors; `monitor

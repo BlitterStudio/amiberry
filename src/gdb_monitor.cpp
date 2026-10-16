@@ -578,17 +578,25 @@ MonitorResult GdbMonitor::task_command(const std::string& command, std::string& 
 		std::vector<winuae_gdb::AmigaTask> tasks;
 		if (!winuae_gdb::read_tasks(*this, tasks))
 			return MonitorResult::error;
-		result = "[";
+		const std::string suffix = "],\"truncated\":false}";
+		result = "{\"tasks\":[";
+		bool truncated = false;
 		for (const auto& task : tasks) {
-			if (result.size() > 1)
-				result += ",";
-			result += "{\"address\":" + std::to_string(task.address) + ",\"name\":" + json_string(task.name) +
+			std::string entry = "{\"address\":" + std::to_string(task.address) + ",\"name\":" + json_string(task.name) +
 				",\"list\":" + json_string(task.list) + ",\"type\":" + std::to_string(task.type) +
 				",\"state\":" + std::to_string(task.state) + ",\"saved_sp\":" + std::to_string(task.saved_sp) +
 				",\"stack_lower\":" + std::to_string(task.stack_lower) + ",\"stack_upper\":" + std::to_string(task.stack_upper) +
 				",\"signals_wait\":" + std::to_string(task.signals_wait) + "}";
+			const size_t separator = result.back() == '[' ? 0 : 1;
+			if (result.size() + separator + entry.size() + suffix.size() > winuae_gdb::Session::packet_size / 2) {
+				truncated = true;
+				break;
+			}
+			if (separator)
+				result += ",";
+			result += entry;
 		}
-		result += "]";
+		result += "],\"truncated\":" + std::string(truncated ? "true" : "false") + "}";
 		return MonitorResult::ok;
 	}
 	if (command == "history on" || command == "history off") {
