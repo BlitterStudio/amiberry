@@ -33,6 +33,7 @@
 #include "memory.h"
 #include "amiberry_gfx.h"
 #include "expansion_display_name.h"
+#include "amiberry_reset_chipset_prefs.h"
 #include "irenderer.h"
 #ifdef ARCADIA
 #include "arcadia.h"
@@ -776,7 +777,11 @@ static void prefs_to_gui()
 	else
 		load_default_theme();
 	
+	// Hard-reset-only chipset settings would otherwise snap back to the
+	// running machine's values here, hiding a pending change (#2459).
+	const auto pending_chipset = get_reset_only_chipset_prefs(changed_prefs);
 	copy_prefs(&currprefs, &changed_prefs);
+	set_reset_only_chipset_prefs(changed_prefs, pending_chipset);
 
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
