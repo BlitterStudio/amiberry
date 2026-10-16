@@ -15,6 +15,7 @@
 #include "gdb_server.h"
 #include "gdb_target.h"
 #include "gdb_amiga.h"
+#include "gdb_output.h"
 #include "gdb_watch.h"
 #include <algorithm>
 
@@ -55,6 +56,7 @@ bool structure_address(const std::string& text, uaecptr& address)
 
 class GdbMonitor : public GdbTarget, private winuae_gdb::GuestReader {
 public:
+	winuae_gdb::GuestOutput guest_output;
 	bool disassemble(uint32_t address, unsigned count, std::string& output) override;
 	bool screenshot(const std::string& path) override;
 	bool monitor_running(const std::string& command) override;
@@ -86,6 +88,7 @@ private:
 	MonitorResult process_command(const std::string& command, std::string& result);
 	MonitorResult exception_command(const std::string& command, std::string& result);
 	MonitorResult watch_command(const std::string& command, std::string& result);
+	MonitorResult output_command(const std::string& command, std::string& result);
 	MonitorResult task_command(const std::string& command, std::string& result);
 };
 
@@ -164,6 +167,7 @@ MonitorResult GdbMonitor::monitor(const std::string& command, std::string& resul
 		&GdbMonitor::process_command,
 		&GdbMonitor::exception_command,
 		&GdbMonitor::watch_command,
+		&GdbMonitor::output_command,
 		&GdbMonitor::task_command,
 	};
 	for (auto handler : handlers) {
@@ -182,6 +186,7 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 		commands += ",\"exception\",\"exception-mask\"";
 		if (!mmu_enabled)
 			commands += ",\"dma-watch\",\"watch\"";
+		commands += ",\"guest-output\"";
 		commands += ",\"tasks\",\"history\",\"condition\",\"step-over\"";
 		result = "{\"protocol\":1,\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
 			",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
@@ -454,6 +459,23 @@ MonitorResult GdbMonitor::watch_command(const std::string& command, std::string&
 	return MonitorResult::unsupported;
 }
 
+MonitorResult GdbMonitor::output_command(const std::string& command, std::string& result)
+{
+	if (command.compare(0, 13, "guest-output ") != 0)
+		return MonitorResult::unsupported;
+	auto action = command.substr(13);
+	if (action == "on")
+		guest_output.enable(true);
+	else if (action == "off")
+		guest_output.enable(false);
+	else if (action == "clear")
+		guest_output.clear();
+	else if (action != "read")
+		return MonitorResult::error;
+	result = guest_output.snapshot();
+	return MonitorResult::ok;
+}
+
 MonitorResult GdbMonitor::task_command(const std::string& command, std::string& result)
 {
 	if (command == "tasks") {
@@ -629,6 +651,7 @@ void GdbMonitor::watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 so
 void GdbMonitor::detach()
 {
 	watch_log.clear();
+	guest_output.clear(true);
 	remote_history = false;
 	exception_mask = 0;
 	exception_vector = -1;
@@ -649,5 +672,10 @@ static GdbMonitor gdb_monitor;
 GdbTarget& gdb_target()
 {
 	return gdb_monitor;
+}
+
+void gdb_server_guest_output(const char* text)
+{
+	gdb_monitor.guest_output.capture(text);
 }
 #endif

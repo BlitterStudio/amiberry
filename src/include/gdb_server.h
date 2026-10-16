@@ -1,4 +1,4 @@
-/* Optional WinUAE remote debugger. All calls run on the emulation thread. */
+/* Optional WinUAE remote debugger. Guest output capture also accepts trap threads. */
 #ifndef WINUAE_GDB_SERVER_H
 #define WINUAE_GDB_SERVER_H
 
@@ -8,6 +8,7 @@
 namespace winuae_gdb { class Target; }
 winuae_gdb::Target& debug_gdb_target();
 void gdb_server_poll();
+void gdb_server_guest_output(const char*);
 void gdb_server_close();
 bool gdb_server_connected();
 bool gdb_server_halted();
@@ -20,6 +21,7 @@ void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 sou
 	uae_u32 value, uae_u32 old_value, bool old_valid);
 #else
 static inline void gdb_server_poll() {}
+static inline void gdb_server_guest_output(const char*) {}
 static inline void gdb_server_close() {}
 static inline bool gdb_server_connected() { return false; }
 static inline bool gdb_server_halted() { return false; }

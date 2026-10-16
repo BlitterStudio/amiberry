@@ -1,5 +1,6 @@
 #include "include/gdb_protocol.h"
 #include "include/gdb_amiga.h"
+#include "include/gdb_output.h"
 #include "include/gdb_watch.h"
 #include <cstring>
 #include <cstdio>
@@ -221,6 +222,19 @@ int main()
 	require(send(s, monitor("test-invalid")) == frame("E01"), "monitor rejection");
 	process_reader_tests();
 	task_reader_tests();
+	GuestOutput output;
+	output.capture("disabled");
+	require(output.snapshot().find("disabled") == std::string::npos, "guest capture enabled by default");
+	output.enable(true);
+	output.capture("hello\n");
+	require(output.snapshot().find("hello\\u000a") != std::string::npos, "guest output escaping");
+	std::string flood(2048, char(255));
+	for (int i = 0; i < 100; ++i) output.capture(flood.c_str());
+	auto snapshot = output.snapshot();
+	require(snapshot.size() < Session::packet_size / 2 && snapshot.find("\"truncated\":true") != std::string::npos &&
+		snapshot.find("\"dropped\":97") != std::string::npos, "guest output flood not bounded");
+	output.clear(true); output.capture("detached");
+	require(output.snapshot() == "{\"enabled\":false,\"dropped\":0,\"records\":[]}", "guest output teardown");
 	require(json_string("a\n\"") == "\"a\\u000a\\\"\"", "JSON escaping");
 	require(send(s, "D") == frame("OK") && s.finished(), "detach");
 	Session oversized(target);
