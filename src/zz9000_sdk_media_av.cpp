@@ -395,7 +395,11 @@ void MediaAv::worker_loop()
 	auto push_audio = [this](MediaAvAudio &&audio) -> bool {
 		const uint32_t bytes = static_cast<uint32_t>(audio.s16be.size());
 		std::unique_lock<std::mutex> lock(mutex_);
-		output_ready_.wait(lock, [this, bytes] { return abort_ || audio_bytes_ + bytes <= audio_capacity; });
+		// A single decoded frame larger than the queue (a big Matroska PCM
+		// block) is admitted once the queue is empty, or it could never be.
+		output_ready_.wait(lock, [this, bytes] {
+			return abort_ || audio_.empty() || audio_bytes_ + bytes <= audio_capacity;
+		});
 		if (abort_) return false;
 		audio_bytes_ += bytes;
 		audio_.push_back(std::move(audio));
