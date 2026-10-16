@@ -8382,7 +8382,7 @@ void debug_exception(int nr)
 }
 
 #ifdef GDBSERVER
-/* Execution control for the remote debugger (gdb_target.cpp) */
+/* Execution control for the remote debugger (gdb_target.cpp, gdb_monitor.cpp) */
 
 void debug_remote_interrupt(void)
 {
@@ -8407,6 +8407,30 @@ void debug_remote_resume(bool step, bool check)
 	debugging = trace_mode ? -1 : 0;
 	if (trace_mode)
 		set_special(SPCFLAG_BRK);
+}
+
+void debug_remote_run_to(uaecptr pc)
+{
+	debug_remote_resume(false, false);
+	trace_mode = TRACE_MATCH_PC;
+	trace_param[0] = pc;
+	exception_debugging = 1;
+	debugging = -1;
+	set_special(SPCFLAG_BRK);
+}
+
+int debug_history_size(void)
+{
+	return (lasthist - firsthist + MAX_HIST) % MAX_HIST;
+}
+
+const struct regstruct *debug_history_get(int index, int *frame, int *vpos, int *hpos)
+{
+	struct cpuhistory *h = &history[(firsthist + index) % MAX_HIST];
+	*frame = h->fp;
+	*vpos = h->vpos;
+	*hpos = h->hpos;
+	return &h->regs;
 }
 #endif
 

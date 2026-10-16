@@ -175,6 +175,7 @@ void Session::command(const std::string& s)
 		}
 		std::string result;
 		auto status = target.monitor(command, result);
+		if (status == MonitorResult::running) { halted = false; await_stop = true; reply("OK"); return; }
 		if (status == MonitorResult::unsupported) { reply(""); return; }
 		if (status == MonitorResult::error || result.size() > packet_size / 2) { reply("E01"); return; }
 		if (result.empty()) { reply("OK"); return; }

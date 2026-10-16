@@ -64,12 +64,15 @@ private:
 	std::string process_name;
 	uaecptr process_address = 0;
 	bool process_armed = false;
+	bool remote_history = false;
+	bool conditional[BREAKPOINT_TOTAL] {};
 
-	bool trace_checks() override { return process_armed; }
+	bool trace_checks() override { return process_armed || remote_history; }
 	bool read(uint32_t address, uint8_t* bytes, size_t length) override;
 	bool disassemble_line(uaecptr pc, TCHAR* line, int size, uaecptr& next);
 	MonitorResult status_command(const std::string& command, std::string& result);
 	MonitorResult process_command(const std::string& command, std::string& result);
+	MonitorResult task_command(const std::string& command, std::string& result);
 };
 
 bool GdbMonitor::read(uint32_t address, uint8_t* bytes, size_t length)
@@ -145,6 +148,7 @@ MonitorResult GdbMonitor::monitor(const std::string& command, std::string& resul
 	static const Handler handlers[] = {
 		&GdbMonitor::status_command,
 		&GdbMonitor::process_command,
+		&GdbMonitor::task_command,
 	};
 	for (auto handler : handlers) {
 		auto status = (this->*handler)(command, result);
@@ -159,10 +163,11 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 	if (command == "capabilities") {
 		std::string commands = "\"capabilities\",\"execution-status\",\"memory-map\",\"memory-check\",\"disasm\",\"screenshot\"";
 		commands += ",\"process-break\",\"segments\"";
+		commands += ",\"tasks\",\"history\",\"condition\",\"step-over\"";
 		result = "{\"protocol\":1,\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
 			",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
 			",\"memory_addressing\":\"physical\",\"commands\":[" + commands +
-			"],\"execution\":[\"continue\",\"step\",\"range-step\"]}";
+			"],\"execution\":[\"continue\",\"step\",\"range-step\",\"step-over\"]}";
 		return MonitorResult::ok;
 	}
 	if (command == "execution-status") {
@@ -282,6 +287,110 @@ MonitorResult GdbMonitor::process_command(const std::string& command, std::strin
 	return MonitorResult::unsupported;
 }
 
+MonitorResult GdbMonitor::task_command(const std::string& command, std::string& result)
+{
+	if (command == "tasks") {
+		std::vector<winuae_gdb::AmigaTask> tasks;
+		if (!winuae_gdb::read_tasks(*this, tasks))
+			return MonitorResult::error;
+		result = "[";
+		for (const auto& task : tasks) {
+			if (result.size() > 1)
+				result += ",";
+			result += "{\"address\":" + std::to_string(task.address) + ",\"name\":" + json_string(task.name) +
+				",\"list\":" + json_string(task.list) + ",\"type\":" + std::to_string(task.type) +
+				",\"state\":" + std::to_string(task.state) + ",\"saved_sp\":" + std::to_string(task.saved_sp) +
+				",\"stack_lower\":" + std::to_string(task.stack_lower) + ",\"stack_upper\":" + std::to_string(task.stack_upper) +
+				",\"signals_wait\":" + std::to_string(task.signals_wait) + "}";
+		}
+		result += "]";
+		return MonitorResult::ok;
+	}
+	if (command == "history on" || command == "history off") {
+		remote_history = command == "history on";
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 13, "history read ") == 0) {
+		uint32_t count;
+		if (!hex_words(command.substr(13), 1, &count) || !count || count > 128)
+			return MonitorResult::error;
+		int size = debug_history_size();
+		result = "{\"recording\":" + std::string(remote_history ? "true" : "false") + ",\"entries\":[";
+		for (int i = (std::max)(0, size - static_cast<int>(count)); i < size; i++) {
+			int frame, entry_vpos, entry_hpos;
+			const struct regstruct* r = debug_history_get(i, &frame, &entry_vpos, &entry_hpos);
+			if (result.back() != '[')
+				result += ",";
+			result += "{\"pc\":" + std::to_string(r->pc) + ",\"frame\":" + std::to_string(frame) +
+				",\"vpos\":" + std::to_string(entry_vpos) + ",\"hpos\":" + std::to_string(entry_hpos) + ",\"registers\":[";
+			for (int j = 0; j < 16; j++) {
+				if (j)
+					result += ",";
+				result += std::to_string(r->regs[j]);
+			}
+			result += "]}";
+		}
+		result += "]}";
+		return MonitorResult::ok;
+	}
+	if (command == "condition list") {
+		result = "[";
+		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+			if (!conditional[i])
+				continue;
+			const auto& bp = bpnodes[i];
+			if (result.size() > 1)
+				result += ",";
+			result += "{\"id\":" + std::to_string(i) + ",\"register\":" + std::to_string(bp.type) +
+				",\"operator\":" + std::to_string(bp.oper) + ",\"value\":" + std::to_string(bp.value1) +
+				",\"mask\":" + std::to_string(bp.mask) + ",\"signed\":" + (bp.opersigned ? "true" : "false") + "}";
+		}
+		result += "]";
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 17, "condition remove ") == 0) {
+		uint32_t id;
+		if (!hex_words(command.substr(17), 1, &id) || id >= BREAKPOINT_TOTAL || !conditional[id])
+			return MonitorResult::error;
+		bpnodes[id] = {};
+		conditional[id] = false;
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 14, "condition add ") == 0) {
+		uint32_t args[5];
+		if (!hex_words(command.substr(14), 5, args) || args[0] > BREAKPOINT_REG_SR || args[0] == BREAKPOINT_REG_PC ||
+			args[1] > BREAKPOINT_CMP_LARGER || args[4] > 1)
+			return MonitorResult::error;
+		for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+			if (bpnodes[i].enabled)
+				continue;
+			auto& bp = bpnodes[i];
+			bp = {};
+			bp.type = args[0];
+			bp.oper = args[1];
+			bp.value1 = args[2];
+			bp.mask = args[3];
+			bp.opersigned = args[4] != 0;
+			bp.enabled = 1;
+			bp.chain = -1;
+			conditional[i] = true;
+			result = "{\"id\":" + std::to_string(i) + "}";
+			return MonitorResult::ok;
+		}
+		return MonitorResult::error;
+	}
+	if (command == "step-over") {
+		TCHAR line[1024];
+		uaecptr next;
+		if (!disassemble_line(m68k_getpc(), line, 1024, next))
+			return MonitorResult::error;
+		range_active = false;
+		debug_remote_run_to(next);
+		return MonitorResult::running;
+	}
+	return MonitorResult::unsupported;
+}
+
 bool GdbMonitor::check_stop(uaecptr pc, char* reason, size_t size)
 {
 	if (process_armed && !(get_mem_bank(pc).flags & ABFLAG_ROM)) {
@@ -301,9 +410,15 @@ bool GdbMonitor::check_stop(uaecptr pc, char* reason, size_t size)
 
 void GdbMonitor::detach()
 {
+	remote_history = false;
 	process_armed = false;
 	process_name.clear();
 	process_address = 0;
+	for (int i = 0; i < BREAKPOINT_TOTAL; i++) {
+		if (conditional[i])
+			bpnodes[i] = {};
+		conditional[i] = false;
+	}
 	GdbTarget::detach();
 }
 

@@ -11,7 +11,7 @@ namespace winuae_gdb {
 
 using Registers = std::array<uint32_t, 18>;
 
-enum class MonitorResult { unsupported, ok, error };
+enum class MonitorResult { unsupported, ok, error, running };
 
 // Quote and escape a string for monitor command JSON replies.
 std::string json_string(const std::string&);

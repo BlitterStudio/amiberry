@@ -84,6 +84,24 @@ struct GuestFixture : GuestReader {
 		put32(2048 + 60, 4096 / 4);
 	}
 };
+static void task_reader_tests()
+{
+	GuestFixture memory;
+	std::vector<AmigaTask> tasks;
+	require(read_tasks(memory, tasks) && tasks.size() == 1 && tasks[0].name == "Task", "current task inspection");
+	memory.put32(256 + 420, 1024);
+	memory.put32(1024, 256 + 424);
+	memory.ram[1024 + 15] = 4; // TS_WAIT, with ThisTask retained by idle Exec.
+	require(read_tasks(memory, tasks) && tasks.size() == 1 && tasks[0].state == 4,
+		"waiting current task rejected or duplicated");
+	memory.put32(256 + 406, 1024);
+	require(!read_tasks(memory, tasks), "task in both queues accepted");
+	memory.put32(256 + 420, 0);
+	memory.put32(256 + 406, 1024);
+	memory.put32(1024, 1024);
+	require(!read_tasks(memory, tasks), "task list cycle accepted");
+}
+
 static void process_reader_tests()
 {
 	GuestFixture memory;
@@ -196,6 +214,7 @@ int main()
 	require(send(s, monitor("test-arm")) == frame("OK"), "monitor acknowledgement");
 	require(send(s, monitor("test-invalid")) == frame("E01"), "monitor rejection");
 	process_reader_tests();
+	task_reader_tests();
 	require(json_string("a\n\"") == "\"a\\u000a\\\"\"", "JSON escaping");
 	require(send(s, "D") == frame("OK") && s.finished(), "detach");
 	Session oversized(target);

@@ -67,6 +67,49 @@ inline bool read_process(GuestReader& memory, uint32_t address, AmigaProcess& ou
 	return out.segments >= 4 && out.segments <= 0xfffffff8;
 }
 
+struct AmigaTask {
+	uint32_t address = 0, saved_sp = 0, stack_lower = 0, stack_upper = 0, signals_wait = 0;
+	uint8_t type = 0, state = 0;
+	std::string name, list;
+};
+inline bool read_tasks(GuestReader& memory, std::vector<AmigaTask>& out)
+{
+	uint32_t exec, current, head;
+	if (!memory.u32(4, exec) || !exec || exec > 0xfffffe00 ||
+		!memory.u32(exec + 276, current)) return false;
+	std::vector<AmigaTask> tasks;
+	auto add = [&](uint32_t address, const char* list) {
+		if (!address || (address & 1) || address > 0xffffff00 || tasks.size() == 128) return false;
+		for (const auto& t : tasks) if (t.address == address) return false;
+		AmigaTask task;
+		uint32_t name;
+		task.address = address; task.list = list;
+		if (!memory.read(address + 8, &task.type, 1) || (task.type != 1 && task.type != 13) ||
+			!memory.read(address + 15, &task.state, 1) || !memory.u32(address + 10, name) ||
+			(name && !memory.string(name, task.name, false)) ||
+			!memory.u32(address + 22, task.signals_wait) || !memory.u32(address + 54, task.saved_sp) ||
+			!memory.u32(address + 58, task.stack_lower) || !memory.u32(address + 62, task.stack_upper)) return false;
+		tasks.push_back(task); return true;
+	};
+	if (current && !add(current, "current")) return false;
+	bool current_queued = false;
+	for (unsigned list = 0; list < 2; ++list) {
+		if (!memory.u32(exec + (list ? 420 : 406), head)) return false;
+		while (head) {
+			uint32_t next;
+			if (!memory.u32(head, next)) return false;
+			if (!next) break; // Exec list tail sentinel, not a task.
+			// Exec retains ThisTask while idle even when that task is waiting.
+			// Include it once, but still reject a second queue occurrence so
+			// cycles and duplicate membership remain bounded errors.
+			if (head == current && !current_queued) current_queued = true;
+			else if (!add(head, list ? "waiting" : "ready")) return false;
+			head = next;
+		}
+	}
+	out.swap(tasks); return true;
+}
+
 struct AmigaSegment {
 	uint32_t link, address, size;
 };
