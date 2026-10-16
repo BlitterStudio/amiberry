@@ -33,6 +33,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "debug.h"
+#include "gdb_server.h"
 #include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"
@@ -7085,6 +7086,7 @@ void m68k_go (int may_quit)
 				eventtab[ev_audio].active = false;
 			m68k_setpc_normal (regs.pc);
 			check_prefs_changed_audio ();
+			gdb_server_restore_complete(restored != 0);
 
 			if (!restored || hsync_counter == 0)
 				savestate_check ();

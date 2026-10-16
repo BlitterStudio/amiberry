@@ -40,7 +40,7 @@ bool nonblocking(Socket s)
 Socket listener = invalid_socket, client = invalid_socket;
 std::unique_ptr<winuae_gdb::Session> session;
 std::string pending;
-bool polling, sockets_started;
+bool polling, sockets_started, restoring;
 int configured_port;
 bool threaded_cpu_warned;
 
@@ -87,6 +87,7 @@ bool gdb_server_halted() { return session && session->stopped(); }
 
 void gdb_server_close()
 {
+	restoring = false;
 	disconnect_client();
 	if (listener != invalid_socket) close_socket(listener);
 	listener = invalid_socket;
@@ -97,9 +98,36 @@ void gdb_server_close()
 	configured_port = 0;
 }
 
+void gdb_server_reset()
+{
+	// A requested checkpoint restore retains the connection until the CPU
+	// reaches its restored boundary. Ordinary resets still detach clients.
+	if (!restoring) gdb_server_close();
+}
+
+void gdb_server_begin_restore() { restoring = true; }
+
+void gdb_server_restore_complete(bool success)
+{
+	if (!restoring) return;
+	restoring = false;
+	if (!session) return;
+	// A state file can contain configuration from a different debug session.
+	currprefs.debugging_features |= DEBUG_FEATURE_GDBSERVER;
+	changed_prefs.debugging_features |= DEBUG_FEATURE_GDBSERVER;
+	currprefs.gdb_port = changed_prefs.gdb_port = configured_port;
+	session->complete_monitor(success);
+	debug_gdb_target().interrupt();
+}
+
+void gdb_server_monitor_complete(bool success)
+{
+	if (session) session->complete_monitor(success);
+}
+
 void gdb_server_poll()
 {
-	if (polling) return;
+	if (polling || restoring) return;
 	int port = (currprefs.debugging_features & DEBUG_FEATURE_GDBSERVER) ? currprefs.gdb_port : 0;
 	// With the threaded CPU, debug() runs on either thread while the other
 	// keeps executing, so remote breakpoint, watchpoint and detach handling

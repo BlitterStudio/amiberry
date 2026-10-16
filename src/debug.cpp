@@ -4277,7 +4277,7 @@ uae_u8 *save_debug_memwatch (size_t *len, uae_u8 *dstptr)
 
 	total = 0;
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
-		if (mwnodes[i].size > 0)
+		if (mwnodes[i].size > 0 && !mwnodes[i].remote)
 			total++;
 	}
 	if (!total)
@@ -4291,7 +4291,8 @@ uae_u8 *save_debug_memwatch (size_t *len, uae_u8 *dstptr)
 	save_u8 (total);
 	for (int i = 0; i < MEMWATCH_TOTAL; i++) {
 		struct memwatch_node *m = &mwnodes[i];
-		if (m->size <= 0)
+		// Remote debugger watchpoints belong to the connection, not the state.
+		if (m->size <= 0 || m->remote)
 			continue;
 		save_store_pos ();
 		save_u8 (i);
@@ -6296,6 +6297,9 @@ static void show_exec_lists (TCHAR *t)
 
 static int debug_vpos = -1;
 static int debug_hpos = -1;
+#ifdef GDBSERVER
+static bool debug_frame_save;
+#endif
 
 static void internal_debug(void)
 {
@@ -6322,6 +6326,13 @@ void debug_hsync(void)
 		return;
 	}
 	if (debug_hpos <= 0) {
+#ifdef GDBSERVER
+		if (debug_frame_save) {
+			// vsync_do() writes the state file later in this hsync.
+			debug_frame_save = false;
+			savestate_state = STATE_SAVE;
+		}
+#endif
 		breakfunc(0);
 	} else {
 		if (current_hpos() < debug_hpos) {
@@ -8431,6 +8442,23 @@ void debug_remote_run_to(uaecptr pc)
 	exception_debugging = 1;
 	debugging = -1;
 	set_special(SPCFLAG_BRK);
+}
+
+// Stay inside the debugger across a reset that restores a checkpoint.
+void debug_remote_hold(void)
+{
+	inside_debugger = 1;
+}
+
+// Save state at the start of the next frame, where state files are valid,
+// and stop right after it. Returns whether the frame start was still ahead.
+bool debug_remote_frame_save(bool enable)
+{
+	bool waiting = debug_frame_save;
+	debug_frame_save = enable;
+	debug_vpos = enable ? 0 : -1;
+	debug_hpos = enable ? 0 : -1;
+	return waiting;
 }
 
 int debug_history_size(void)

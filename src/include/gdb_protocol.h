@@ -11,7 +11,7 @@ namespace winuae_gdb {
 
 using Registers = std::array<uint32_t, 18>;
 
-enum class MonitorResult { unsupported, ok, error, running };
+enum class MonitorResult { unsupported, ok, error, pending, running };
 
 // Quote and escape a string for monitor command JSON replies.
 std::string json_string(const std::string&);
@@ -43,6 +43,7 @@ public:
 	explicit Session(Target& target) : target(target) {}
 	void receive(const char*, size_t);
 	void stop(const std::string& reason = "S05");
+	void complete_monitor(bool success);
 	std::string take_output();
 	bool stopped() const { return halted; }
 	bool finished() const { return closing; }
@@ -50,7 +51,7 @@ private:
 	Target& target;
 	std::string input, output, last_reply, stop_reason = "S05";
 	size_t checksum_offset = std::string::npos;
-	bool no_ack = false, halted = false, await_stop = false, closing = false;
+	bool no_ack = false, halted = false, await_stop = false, closing = false, monitor_pending = false;
 	void reply(const std::string&);
 	void command(const std::string&);
 };

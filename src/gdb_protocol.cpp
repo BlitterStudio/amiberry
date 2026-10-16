@@ -61,6 +61,14 @@ std::string Session::take_output()
 	return result;
 }
 
+void Session::complete_monitor(bool success)
+{
+	if (!monitor_pending) return;
+	monitor_pending = false;
+	halted = true;
+	reply(success ? "OK" : "E01");
+}
+
 void Session::stop(const std::string& reason)
 {
 	halted = true;
@@ -152,7 +160,7 @@ void Session::command(const std::string& s)
 			if (!number(s, i, i + 2, value) || !value) { reply("E01"); return; }
 			command += static_cast<char>(value);
 		}
-		if (!halted && !target.monitor_running(command)) { reply("E16"); return; }
+		if (!halted && (monitor_pending || !target.monitor_running(command))) { reply("E16"); return; }
 		if (command.compare(0, 7, "disasm ") == 0) {
 			auto space = command.find(' ', 7);
 			uint32_t address, count = 0;
@@ -176,6 +184,7 @@ void Session::command(const std::string& s)
 		std::string result;
 		auto status = target.monitor(command, result);
 		if (status == MonitorResult::running) { halted = false; await_stop = true; reply("OK"); return; }
+		if (status == MonitorResult::pending) { halted = false; monitor_pending = true; return; }
 		if (status == MonitorResult::unsupported) { reply(""); return; }
 		if (status == MonitorResult::error || result.size() > packet_size / 2) { reply("E01"); return; }
 		if (result.empty()) { reply("OK"); return; }

@@ -4,6 +4,7 @@
 
 #if defined(DEBUGGER) && defined(GDBSERVER)
 #include "options.h"
+#include "uae.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
@@ -11,7 +12,11 @@
 #include "debug.h"
 #include "disasm.h"
 #include "inputdevice.h"
+#include "inputrecord.h"
+#include "savestate.h"
 #include "xwin.h"
+#include "zfile.h"
+#include "fsdb.h"
 #include "gdb_server.h"
 #include "gdb_target.h"
 #include "gdb_amiga.h"
@@ -63,6 +68,7 @@ public:
 	MonitorResult monitor(const std::string& command, std::string& result) override;
 	bool check_stop(uaecptr pc, char* reason, size_t size) override;
 	void stopped(char* reason, size_t size) override;
+	void finish_checkpoint();
 	void exception(int nr) override;
 	void watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 source, uae_u32 reg,
 		uae_u32 value, uae_u32 old_value, bool old_valid) override;
@@ -77,6 +83,7 @@ private:
 	uae_u64 exception_mask = 0;
 	int exception_vector = -1;
 	bool exception_pending = false;
+	bool checkpoint_saving = false;
 	uaecptr exception_instruction = 0;
 	winuae_gdb::Registers exception_registers {};
 	std::string exception_details;
@@ -89,6 +96,7 @@ private:
 	MonitorResult exception_command(const std::string& command, std::string& result);
 	MonitorResult watch_command(const std::string& command, std::string& result);
 	MonitorResult output_command(const std::string& command, std::string& result);
+	MonitorResult checkpoint_command(const std::string& command, std::string& result);
 	MonitorResult task_command(const std::string& command, std::string& result);
 };
 
@@ -168,6 +176,7 @@ MonitorResult GdbMonitor::monitor(const std::string& command, std::string& resul
 		&GdbMonitor::exception_command,
 		&GdbMonitor::watch_command,
 		&GdbMonitor::output_command,
+		&GdbMonitor::checkpoint_command,
 		&GdbMonitor::task_command,
 	};
 	for (auto handler : handlers) {
@@ -187,6 +196,9 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 		if (!mmu_enabled)
 			commands += ",\"dma-watch\",\"watch\"";
 		commands += ",\"guest-output\"";
+#ifdef SAVESTATE
+		commands += ",\"checkpoint\"";
+#endif
 		commands += ",\"tasks\",\"history\",\"condition\",\"step-over\"";
 		result = "{\"protocol\":1,\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
 			",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
@@ -476,6 +488,69 @@ MonitorResult GdbMonitor::output_command(const std::string& command, std::string
 	return MonitorResult::ok;
 }
 
+MonitorResult GdbMonitor::checkpoint_command(const std::string& command, std::string&)
+{
+	bool restore = command.compare(0, 19, "checkpoint restore ") == 0;
+	if (!restore && command.compare(0, 16, "checkpoint save ") != 0)
+		return MonitorResult::unsupported;
+#ifdef SAVESTATE
+	auto path = command.substr(restore ? 19 : 16);
+	if (path.empty() || savestate_state || quit_program || input_record || input_play ||
+		is_savestate_incompatible() || !save_filesys_cando())
+		return MonitorResult::error;
+	TCHAR* filename = utf8u(path.c_str());
+	if (!filename)
+		return MonitorResult::error;
+	if (_tcslen(filename) >= MAX_DPATH) {
+		xfree(filename);
+		return MonitorResult::error;
+	}
+	if (restore) {
+		// Reject missing files and obvious non-state input before reset.
+		struct zfile* file = zfile_fopen(filename, _T("rb"), 0);
+		char header[4];
+		bool valid = file && zfile_fread(header, 1, 4, file) == 4 && !memcmp(header, "ASF ", 4);
+		if (file)
+			zfile_fclose(file);
+		if (!valid) {
+			xfree(filename);
+			return MonitorResult::error;
+		}
+		savestate_initsave(filename, 1, true, false);
+		xfree(filename);
+		// Remote ownership cannot survive memory remapping. Clear it
+		// before loading saved console watches, while keeping transport.
+		detach();
+		debug_remote_hold();
+		gdb_server_begin_restore();
+		savestate_state = STATE_DORESTORE;
+		uae_reset(1, 0);
+		return MonitorResult::pending;
+	}
+	// A save that cannot open its file would be retried every frame.
+	bool existed = zfile_exists(filename) != 0;
+	struct zfile* file = zfile_fopen(filename, _T("ab"), 0);
+	if (file)
+		zfile_fclose(file);
+	if (file && !existed)
+		my_unlink(filename);
+	if (!file) {
+		xfree(filename);
+		return MonitorResult::error;
+	}
+	// State files are only valid at the start of a frame. Run there and
+	// stop right after the save; an earlier stop cancels it.
+	savestate_initsave(filename, 1, true, false);
+	xfree(filename);
+	checkpoint_saving = true;
+	debug_remote_frame_save(true);
+	resume(false);
+	return MonitorResult::pending;
+#else
+	return MonitorResult::unsupported;
+#endif
+}
+
 MonitorResult GdbMonitor::task_command(const std::string& command, std::string& result)
 {
 	if (command == "tasks") {
@@ -631,6 +706,7 @@ void GdbMonitor::exception(int nr)
 void GdbMonitor::stopped(char* reason, size_t size)
 {
 	GdbTarget::stopped(reason, size);
+	finish_checkpoint();
 	if (!exception_pending)
 		return;
 	exception_pending = false;
@@ -648,8 +724,20 @@ void GdbMonitor::watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 so
 		static_cast<uint32_t>(rwi), source, reg, regs.instruction_pc, value, old_value, old_valid });
 }
 
+void GdbMonitor::finish_checkpoint()
+{
+	if (!checkpoint_saving)
+		return;
+	checkpoint_saving = false;
+	bool saved = !debug_remote_frame_save(false) && savestate_state != STATE_SAVE;
+	if (savestate_state == STATE_SAVE)
+		savestate_state = 0;
+	gdb_server_monitor_complete(saved);
+}
+
 void GdbMonitor::detach()
 {
+	finish_checkpoint();
 	watch_log.clear();
 	guest_output.clear(true);
 	remote_history = false;

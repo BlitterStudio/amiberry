@@ -379,6 +379,8 @@ extern int get_dma_debug_color(struct dma_rec *dr, int line, uae_u32 *cp);
 extern void debug_remote_interrupt(void);
 extern void debug_remote_resume(bool step, bool check);
 extern void debug_remote_run_to(uaecptr pc);
+extern void debug_remote_hold(void);
+extern bool debug_remote_frame_save(bool enable);
 extern int debug_history_size(void);
 extern const struct regstruct *debug_history_get(int index, int *frame, int *vpos, int *hpos);
 #endif

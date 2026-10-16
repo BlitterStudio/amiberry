@@ -24,6 +24,7 @@ struct FakeTarget : Target {
 	bool stepped = false;
 	MonitorResult monitor(const std::string& command, std::string& out) override {
 		if (command == "test-query") { out = "{}"; return MonitorResult::ok; }
+		if (command == "test-pending") return MonitorResult::pending;
 		if (command == "test-arm") return MonitorResult::ok;
 		if (command == "test-invalid") return MonitorResult::error;
 		return MonitorResult::unsupported;
@@ -220,6 +221,13 @@ int main()
 	require(send(s, monitor("test-query")) == frame("7b7d"), "monitor response encoding");
 	require(send(s, monitor("test-arm")) == frame("OK"), "monitor acknowledgement");
 	require(send(s, monitor("test-invalid")) == frame("E01"), "monitor rejection");
+	require(send(s, monitor("test-pending")).empty() && !s.stopped(), "deferred monitor acknowledged early");
+	require(send(s, "P0=00000000") == frame("E16"), "state changed during deferred monitor");
+	s.complete_monitor(true); s.stop();
+	require(s.take_output() == frame("OK") && s.stopped(), "deferred monitor completion");
+	s.complete_monitor(false); require(s.take_output().empty(), "duplicate monitor completion");
+	require(send(s, monitor("test-pending")).empty(), "second deferred monitor");
+	s.complete_monitor(false); require(s.take_output() == frame("E01"), "deferred failure hidden");
 	process_reader_tests();
 	task_reader_tests();
 	GuestOutput output;
