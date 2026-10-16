@@ -21,8 +21,9 @@ public:
 	virtual bool check_stop(uaecptr pc, char* reason, size_t size);
 	virtual void stopped(char* reason, size_t size);
 	virtual void exception(int) {}
+	virtual void watch_hit(int, uaecptr, int, int, uae_u32, uae_u32, uae_u32, uae_u32, bool) {}
 protected:
-	enum WatchOwner : uae_u8 { watch_none, watch_gdb };
+	enum WatchOwner : uae_u8 { watch_none, watch_gdb, watch_dma, watch_predicate };
 	bool breakpoints[BREAKPOINT_TOTAL] {};
 	WatchOwner watch_owner[MEMWATCH_TOTAL] {};
 	bool initialized_watchpoints = false;
@@ -32,6 +33,7 @@ protected:
 	virtual bool trace_checks() { return false; }
 	bool start_memwatch();
 	int free_watch_slot();
+	static uint64_t watch_limit();
 };
 
 GdbTarget& gdb_target();

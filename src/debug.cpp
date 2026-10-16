@@ -4535,6 +4535,10 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 		if (!brk)
 			continue;
 
+		// Remote predicates describe one complete bus access. Do not match
+		// adjacent bytes or combine two 68000 word writes into a longword.
+		if ((m->remote & MW_REMOTE_EXACT) && (addr != m->addr || size != m->size))
+			continue;
 		if (m->bus_error) {
 			if (((m->bus_error & 1) && (rwi & 1)) || ((m->bus_error & 4) && (rwi & 4)) || ((m->bus_error & 2) && (rwi & 2))) {
 				hardware_exception2(addr, val, (rwi & 2) != 0, (rwi & 4) != 0, size == 4 ? sz_long : (size == 2 ? sz_word : sz_byte));
@@ -4590,6 +4594,8 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 				continue;
 		}
 
+		if ((m->remote & MW_REMOTE_EXACT) && m->mustchange && !isoldval)
+			continue;
 		if (m->mustchange && rwi == 2 && isoldval) {
 			if (oldval == newval)
 				continue;
@@ -4634,6 +4640,13 @@ static int memwatch_func (uaecptr addr, int rwi, int size, uae_u32 *valp, uae_u3
 				return 1;
 			}
 			return 0;
+		}
+		if (m->remote) {
+			gdb_target_watch_hit(i, addr, size, rwi, accessmask, reg, val, oldval, isoldval != 0);
+			// A remote log-only entry must not hide later console watchpoints
+			// or leave a stale memwatch_triggered reason for another stop.
+			if (m->nobreak)
+				continue;
 		}
 		mwhit.addr = addr;
 		mwhit.rwi = rwi;
@@ -8725,7 +8738,8 @@ void debug (void)
 		if (gdb_server_connected()) {
 			const char* kind = mwnodes[memwatch_triggered - 1].rwi == 3 ? "awatch" :
 				(mwhit.rwi & 2) ? "watch" : "rwatch";
-			snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;", kind, mwhit.addr);
+			snprintf(remote_reason, sizeof(remote_reason), "T05%s:%08x;winuae-source:%08x;winuae-reg:%04x;",
+				kind, mwhit.addr, mwhit.access_mask, mwhit.reg);
 		}
 		memwatch_hit_msg(memwatch_triggered - 1);
 		memwatch_triggered = 0;

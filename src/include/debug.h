@@ -193,8 +193,13 @@ struct memwatch_node {
 	bool nobreak;
 	bool reportonly;
 	int bus_error;
+	int remote;
 };
 extern struct memwatch_node mwnodes[MEMWATCH_TOTAL];
+
+/* memwatch_node.remote: entries owned by the remote debugger */
+#define MW_REMOTE_LOG 1		// record access evidence for the remote client
+#define MW_REMOTE_EXACT 2	// match complete accesses only, compare old RAM values
 
 extern void memwatch_dump2 (TCHAR *buf, int bufsize, int num);
 extern void initialize_memwatch (int mode);

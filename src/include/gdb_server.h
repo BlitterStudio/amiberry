@@ -16,6 +16,8 @@ bool gdb_server_stop(const char* reason);
 bool gdb_target_check_stop(uaecptr pc, char* reason, size_t size);
 void gdb_target_stopped(char* reason, size_t size);
 void gdb_target_exception(int nr);
+void gdb_target_watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 source, uae_u32 reg,
+	uae_u32 value, uae_u32 old_value, bool old_valid);
 #else
 static inline void gdb_server_poll() {}
 static inline void gdb_server_close() {}
@@ -25,5 +27,6 @@ static inline bool gdb_server_stop(const char*) { return false; }
 static inline bool gdb_target_check_stop(uaecptr, char*, size_t) { return false; }
 static inline void gdb_target_stopped(char*, size_t) {}
 static inline void gdb_target_exception(int) {}
+static inline void gdb_target_watch_hit(int, uaecptr, int, int, uae_u32, uae_u32, uae_u32, uae_u32, bool) {}
 #endif
 #endif

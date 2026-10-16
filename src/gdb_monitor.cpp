@@ -15,6 +15,7 @@
 #include "gdb_server.h"
 #include "gdb_target.h"
 #include "gdb_amiga.h"
+#include "gdb_watch.h"
 #include <algorithm>
 
 using winuae_gdb::MonitorResult;
@@ -61,8 +62,11 @@ public:
 	bool check_stop(uaecptr pc, char* reason, size_t size) override;
 	void stopped(char* reason, size_t size) override;
 	void exception(int nr) override;
+	void watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 source, uae_u32 reg,
+		uae_u32 value, uae_u32 old_value, bool old_valid) override;
 	void detach() override;
 private:
+	winuae_gdb::WatchLog watch_log;
 	std::string process_name;
 	uaecptr process_address = 0;
 	bool process_armed = false;
@@ -81,6 +85,7 @@ private:
 	MonitorResult status_command(const std::string& command, std::string& result);
 	MonitorResult process_command(const std::string& command, std::string& result);
 	MonitorResult exception_command(const std::string& command, std::string& result);
+	MonitorResult watch_command(const std::string& command, std::string& result);
 	MonitorResult task_command(const std::string& command, std::string& result);
 };
 
@@ -158,6 +163,7 @@ MonitorResult GdbMonitor::monitor(const std::string& command, std::string& resul
 		&GdbMonitor::status_command,
 		&GdbMonitor::process_command,
 		&GdbMonitor::exception_command,
+		&GdbMonitor::watch_command,
 		&GdbMonitor::task_command,
 	};
 	for (auto handler : handlers) {
@@ -174,6 +180,8 @@ MonitorResult GdbMonitor::status_command(const std::string& command, std::string
 		std::string commands = "\"capabilities\",\"execution-status\",\"memory-map\",\"memory-check\",\"disasm\",\"screenshot\"";
 		commands += ",\"process-break\",\"segments\"";
 		commands += ",\"exception\",\"exception-mask\"";
+		if (!mmu_enabled)
+			commands += ",\"dma-watch\",\"watch\"";
 		commands += ",\"tasks\",\"history\",\"condition\",\"step-over\"";
 		result = "{\"protocol\":1,\"cpu_model\":" + std::to_string(currprefs.cpu_model) +
 			",\"mmu_model\":" + std::to_string(currprefs.mmu_model) +
@@ -327,6 +335,120 @@ MonitorResult GdbMonitor::exception_command(const std::string& command, std::str
 		if (mask & 3)
 			return MonitorResult::error;
 		exception_mask = mask;
+		return MonitorResult::ok;
+	}
+	return MonitorResult::unsupported;
+}
+
+MonitorResult GdbMonitor::watch_command(const std::string& command, std::string& result)
+{
+	if (command == "watch events" || command == "watch last" || command == "watch clear-events") {
+		if (command == "watch clear-events")
+			watch_log.clear();
+		result = watch_log.snapshot(command == "watch last");
+		return MonitorResult::ok;
+	}
+	if (command == "watch list" || command == "dma-watch list") {
+		bool dma = command[0] == 'd';
+		result = "[";
+		for (int i = 0; i < MEMWATCH_TOTAL; i++) {
+			if (watch_owner[i] != (dma ? watch_dma : watch_predicate))
+				continue;
+			const auto& wp = mwnodes[i];
+			if (result.size() > 1)
+				result += ",";
+			if (dma) {
+				result += "{\"id\":" + std::to_string(i) + ",\"address\":" + std::to_string(wp.addr) +
+					",\"length\":" + std::to_string(wp.size) + ",\"mode\":" + std::to_string(wp.rwi) +
+					",\"mask\":" + std::to_string(wp.access_mask) + "}";
+			} else {
+				result += "{\"id\":" + std::to_string(i) + ",\"address\":" + std::to_string(wp.addr) +
+					",\"size\":" + std::to_string(wp.size) + ",\"access\":" + std::to_string(wp.rwi) +
+					",\"sources\":" + std::to_string(wp.access_mask) + ",\"value\":" +
+					(wp.val_enabled ? std::to_string(wp.val) : "null") + ",\"mask\":" + std::to_string(wp.val_mask) +
+					",\"change_only\":" + (wp.mustchange ? "true" : "false") +
+					",\"log_only\":" + (wp.nobreak ? "true" : "false") + "}";
+			}
+		}
+		result += "]";
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 13, "watch remove ") == 0 || command.compare(0, 17, "dma-watch remove ") == 0) {
+		bool dma = command[0] == 'd';
+		uint32_t id;
+		if (!hex_words(command.substr(dma ? 17 : 13), 1, &id) || id >= MEMWATCH_TOTAL ||
+			watch_owner[id] != (dma ? watch_dma : watch_predicate))
+			return MonitorResult::error;
+		mwnodes[id] = {};
+		watch_owner[id] = watch_none;
+		memwatch_setup();
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 10, "watch add ") == 0) {
+		// address, access width, access kind, source mask, value enabled,
+		// value, value mask, change-only, log-only.
+		uint32_t a[9];
+		if (mmu_enabled || !hex_words(command.substr(10), 9, a) ||
+			(a[1] != 1 && a[1] != 2 && a[1] != 4) || (a[0] & (a[1] - 1)) ||
+			uint64_t(a[0]) + a[1] > watch_limit() || a[2] < 1 || a[2] > 3 ||
+			!a[3] || (a[3] & ~static_cast<uint32_t>(MW_MASK_ALL & ~MW_MASK_CPU_I)) ||
+			a[4] > 1 || a[7] > 1 || a[8] > 1 || (a[7] && a[2] != 2))
+			return MonitorResult::error;
+		// Old values must be readable RAM, never device register reads.
+		if (a[7]) {
+			addrbank& bank = get_mem_bank(a[0]);
+			if (!(bank.flags & ABFLAG_RAM) || !bank.check(a[0], a[1]))
+				return MonitorResult::error;
+		}
+		int slot = free_watch_slot();
+		if (slot < 0 || !start_memwatch())
+			return MonitorResult::error;
+		auto& wp = mwnodes[slot];
+		wp = {};
+		wp.addr = a[0];
+		wp.size = a[1];
+		wp.rwi = a[2];
+		wp.access_mask = a[3];
+		wp.val_enabled = a[4];
+		wp.val = a[5];
+		wp.val_mask = a[6];
+		wp.mustchange = a[7];
+		wp.nobreak = a[8];
+		wp.reg = wp.pc = 0xffffffff;
+		wp.remote = MW_REMOTE_LOG | MW_REMOTE_EXACT;
+		watch_owner[slot] = watch_predicate;
+		memwatch_setup();
+		result = "{\"id\":" + std::to_string(slot) + "}";
+		return MonitorResult::ok;
+	}
+	if (command.compare(0, 14, "dma-watch add ") == 0) {
+		uint32_t args[4];
+		if (!hex_words(command.substr(14), 4, args) || !args[1] || args[1] > 0x10000 ||
+			uint64_t(args[0]) + args[1] > watch_limit() || args[2] < 1 || args[2] > 3 ||
+			!args[3] || (args[3] & ~static_cast<uint32_t>(MW_MASK_ALL & ~7)) || mmu_enabled)
+			return MonitorResult::error;
+		for (int i = 0; i < MEMWATCH_TOTAL; i++) {
+			const auto& wp = mwnodes[i];
+			if (watch_owner[i] == watch_dma && wp.addr == args[0] && wp.size == args[1] &&
+				wp.rwi == args[2] && wp.access_mask == args[3]) {
+				result = std::to_string(i);
+				return MonitorResult::ok;
+			}
+		}
+		int slot = free_watch_slot();
+		if (slot < 0 || !start_memwatch())
+			return MonitorResult::error;
+		auto& wp = mwnodes[slot];
+		wp = {};
+		wp.addr = args[0];
+		wp.size = args[1];
+		wp.rwi = args[2];
+		wp.access_mask = args[3];
+		wp.reg = wp.pc = wp.val_mask = 0xffffffff;
+		wp.remote = MW_REMOTE_LOG;
+		watch_owner[slot] = watch_dma;
+		memwatch_setup();
+		result = std::to_string(slot);
 		return MonitorResult::ok;
 	}
 	return MonitorResult::unsupported;
@@ -497,8 +619,16 @@ void GdbMonitor::stopped(char* reason, size_t size)
 		signal, exception_vector, exception_instruction, m68k_getpc());
 }
 
+void GdbMonitor::watch_hit(int slot, uaecptr addr, int size, int rwi, uae_u32 source, uae_u32 reg,
+	uae_u32 value, uae_u32 old_value, bool old_valid)
+{
+	watch_log.capture({ 0, static_cast<uint32_t>(slot), addr, static_cast<uint32_t>(size),
+		static_cast<uint32_t>(rwi), source, reg, regs.instruction_pc, value, old_value, old_valid });
+}
+
 void GdbMonitor::detach()
 {
+	watch_log.clear();
 	remote_history = false;
 	exception_mask = 0;
 	exception_vector = -1;

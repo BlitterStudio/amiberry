@@ -1,5 +1,6 @@
 #include "include/gdb_protocol.h"
 #include "include/gdb_amiga.h"
+#include "include/gdb_watch.h"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -137,6 +138,11 @@ static void process_reader_tests()
 
 int main()
 {
+	WatchLog log;
+	for (unsigned i = 0; i < 70; ++i) log.capture({0,1,i,2,2,1,0,0x10000,i,0,true});
+	require(log.snapshot().find("\"dropped\":6") != std::string::npos &&
+		log.snapshot(true).find("\"address\":69") != std::string::npos, "watch log bounds/order");
+	log.clear(); require(log.snapshot(true) == "null", "stale watch evidence after clear");
 	FakeTarget target;
 	Session s(target);
 	require(send(s, "qXfer:memory-map:read::0,8") == "+" + frame("m<memory-"), "memory map first chunk");
