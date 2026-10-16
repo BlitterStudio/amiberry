@@ -138,7 +138,7 @@ cmake --build build -j$(nproc)
 
 See the [build guide](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source) for platform-specific instructions, dependencies, and build options.
 
-Desktop builds enable SDL3-backed genlock video and camera input by default (`USE_VIDEOGRAB`). Raw 24-bit AVI files work without extra dependencies. When FFmpeg/libav 5.0 or newer development files are available, `USE_FFMPEG` also enables common video formats and source audio playback.
+Desktop builds enable SDL3-backed genlock video and camera input by default (`USE_VIDEOGRAB`). `USE_FFMPEG` independently enables ZZ9000 and genlock media decoding when FFmpeg 5.1 or newer development files are available; it requires libavformat 59.27+, libavcodec 59.37+, libavutil 57.28+, libswresample 4.7+, and libswscale 6.7+. `USE_WEBP` enables still and animated WebP decoding when libwebp and libwebpdemux development files are available.
 
 ## Contributing
 

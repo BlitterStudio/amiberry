@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iterator>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -342,11 +344,282 @@ void check_surface_dirty_reports()
 		assert(fb[0] == 0 && fb[1] == 0 && fb[2] == 255);
 	}
 }
+
+#ifdef AMIBERRY_WITH_WEBP
+std::vector<uint8_t> decode_webp_tile(Mailbox &mailbox,
+                                      const std::vector<uint8_t> &image,
+                                      uint32_t feed_size)
+{
+	assert(!image.empty() && image.size() < 4096 && feed_size);
+	const uint32_t staging = mailbox.allocate(4096);
+	const uint32_t tile = mailbox.allocate(64);
+	std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+	uint8_t request[48] = {};
+	put32(request, 4); put32(request + 4, 3); put32(request + 28, 7);
+	put32(request + 32, tile); put32(request + 36, 16); put32(request + 40, 3);
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	for (uint32_t offset = 0; offset < image.size();) {
+		const uint32_t length = std::min<uint32_t>(feed_size,
+			static_cast<uint32_t>(image.size()) - offset);
+		const bool eof = offset + length == image.size();
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session); put32(request + 4, staging);
+		put32(request + 8, offset); put32(request + 12, length);
+		put32(request + 16, eof);
+		const auto *reply = mailbox.call(0x0405, request, 48);
+		assert(get32(reply + 4) == (eof ? 3u : 1u) &&
+		       get32(reply + 36) == length);
+		offset += length;
+	}
+	const auto *pixels = mailbox.sdk.buffer_data(tile);
+	std::vector<uint8_t> result(pixels, pixels + 48);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session);
+	mailbox.call(0x0406, request, 48);
+	put32(request, tile);
+	mailbox.call(0x0101, request, 4);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+	return result;
+}
+
+void run_webp_alpha(Mailbox &mailbox, const std::vector<uint8_t> &image)
+{
+	assert(image.size() > 61);
+	const auto single_feed = decode_webp_tile(mailbox, image,
+		static_cast<uint32_t>(image.size()));
+	const auto chunked_feed = decode_webp_tile(mailbox, image, 61);
+	assert(single_feed == chunked_feed);
+	assert(single_feed[0] == 0 && single_feed[1] == 0 &&
+	       single_feed[2] == 0 && single_feed[3] == 0);
+	assert(single_feed[4] == 0x66 && single_feed[5] == 0x55 &&
+	       single_feed[6] == 0x44 && single_feed[7] == 255);
+
+	mailbox.sdk.set_framebuffer(0x110000, 4, 3, 16, 7);
+	uint8_t request[48] = {};
+	const uint32_t staging = mailbox.allocate(4096);
+	std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 4); put32(request + 4, 1); put32(request + 8, 0x80000000);
+	put32(request + 20, 4); put32(request + 24, 3); put32(request + 28, 7);
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session); put32(request + 4, staging);
+	put32(request + 12, static_cast<uint32_t>(image.size())); put32(request + 16, 1);
+	const auto *reply = mailbox.call(0x0405, request, 48);
+	assert(get32(reply + 4) == 4 && get32(reply + 40) == 48);
+	const auto *pixels = mailbox.board.data() + 0x110000;
+	assert(pixels[0] == 0 && pixels[1] == 0 &&
+	       pixels[2] == 0 && pixels[3] == 0);
+	assert(pixels[4] == 0x66 && pixels[5] == 0x55 &&
+	       pixels[6] == 0x44 && pixels[7] == 255);
+	put32(request + 4, 0);
+	put32(request, session);
+	mailbox.call(0x0406, request, 48);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
+
+void append_le32(std::vector<uint8_t> &data, uint32_t value)
+{
+	data.push_back(static_cast<uint8_t>(value));
+	data.push_back(static_cast<uint8_t>(value >> 8));
+	data.push_back(static_cast<uint8_t>(value >> 16));
+	data.push_back(static_cast<uint8_t>(value >> 24));
+}
+
+void append_le24(std::vector<uint8_t> &data, uint32_t value)
+{
+	data.push_back(static_cast<uint8_t>(value));
+	data.push_back(static_cast<uint8_t>(value >> 8));
+	data.push_back(static_cast<uint8_t>(value >> 16));
+}
+
+std::vector<uint8_t> webp_with_canvas(const std::vector<uint8_t> &image,
+                                      uint32_t width, uint32_t height)
+{
+	assert(image.size() >= 20 && width && height);
+	size_t offset = 12;
+	while (offset + 8 <= image.size()) {
+		const uint32_t length = image[offset + 4] |
+			(static_cast<uint32_t>(image[offset + 5]) << 8) |
+			(static_cast<uint32_t>(image[offset + 6]) << 16) |
+			(static_cast<uint32_t>(image[offset + 7]) << 24);
+		const size_t padded = length + (length & 1u);
+		assert(padded >= length && padded <= image.size() - offset - 8);
+		if (std::memcmp(image.data() + offset, "VP8L", 4) == 0) {
+			std::vector<uint8_t> result{'R', 'I', 'F', 'F', 0, 0, 0, 0,
+				'W', 'E', 'B', 'P', 'V', 'P', '8', 'X'};
+			append_le32(result, 10);
+			result.insert(result.end(), {0x10, 0, 0, 0});
+			append_le24(result, width - 1);
+			append_le24(result, height - 1);
+			result.insert(result.end(), image.begin() + offset,
+				image.begin() + offset + 8 + padded);
+			const uint32_t riff_length = static_cast<uint32_t>(result.size() - 8);
+			result[4] = static_cast<uint8_t>(riff_length);
+			result[5] = static_cast<uint8_t>(riff_length >> 8);
+			result[6] = static_cast<uint8_t>(riff_length >> 16);
+			result[7] = static_cast<uint8_t>(riff_length >> 24);
+			return result;
+		}
+		offset += 8 + padded;
+	}
+	assert(false);
+	return {};
+}
+
+void reject_webp_canvas_limits(Mailbox &mailbox, const std::vector<uint8_t> &image)
+{
+	for (const auto dimensions : {std::pair<uint32_t, uint32_t>{8193, 3},
+	                              {3000, 2100}}) {
+		const auto oversized = webp_with_canvas(image, dimensions.first, dimensions.second);
+		const uint32_t staging = mailbox.allocate(4096);
+		const uint32_t tile = mailbox.allocate(64);
+		std::copy(oversized.begin(), oversized.end(), mailbox.sdk.buffer_data(staging));
+		uint8_t request[48] = {};
+		put32(request, 4); put32(request + 4, 3); put32(request + 28, 7);
+		put32(request + 32, tile); put32(request + 36, 16); put32(request + 40, 1);
+		const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session); put32(request + 4, staging);
+		put32(request + 12, static_cast<uint32_t>(oversized.size()));
+		put32(request + 16, 1);
+		mailbox.call(0x0405, request, 48, 4); // Firmware rejects canvas at IMAGE_FEED.
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		mailbox.call(0x0406, request, 48);
+		put32(request, tile);
+		mailbox.call(0x0101, request, 4);
+		put32(request, staging);
+		mailbox.call(0x0101, request, 4);
+	}
+}
+
+void run_webp_animation(Mailbox &mailbox, const std::vector<uint8_t> &image)
+{
+	assert(!image.empty() && image.size() < 4096);
+	const uint32_t staging = mailbox.allocate(4096);
+	std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+	// Decode-time canvas dimensions, not only begin geometry, bound animation output.
+	uint8_t request[48] = {};
+	put32(request, 2); put32(request + 4, 1); put32(request + 8, 9);
+	put32(request + 12, 16); put32(request + 16, 4);
+	const uint32_t too_short = get32(mailbox.call(0x0200, request, 20));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 4); put32(request + 4, 1); put32(request + 8, too_short);
+	put32(request + 20, 2); put32(request + 24, 1); put32(request + 28, 9);
+	put32(request + 44, 8);
+	const uint32_t rejected_session = get32(mailbox.call(0x0404, request, 48));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, rejected_session); put32(request + 4, staging);
+	put32(request + 12, static_cast<uint32_t>(image.size())); put32(request + 16, 1);
+	mailbox.call(0x0405, request, 48, 4);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, rejected_session);
+	mailbox.call(0x0406, request, 48);
+	put32(request, too_short);
+	mailbox.call(0x0201, request, 4);
+
+	std::fill(std::begin(request), std::end(request), 0);
+	
+	put32(request, 2); put32(request + 4, 2); put32(request + 8, 9);
+	put32(request + 12, 16); put32(request + 16, 4);
+	const uint32_t surface = get32(mailbox.call(0x0200, request, 20));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, surface); put32(request + 12, 1); put32(request + 16, 1);
+	mailbox.call(0x0203, request, 28, 3); // Packed YUV has no per-pixel fill.
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 4); put32(request + 4, 1); put32(request + 8, surface);
+	put32(request + 20, 2); put32(request + 24, 2); put32(request + 28, 9);
+	put32(request + 44, 8);
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session); put32(request + 4, staging);
+	put32(request + 12, static_cast<uint32_t>(image.size())); put32(request + 16, 1);
+	const auto *reply = mailbox.call(0x0405, request, 48);
+	assert(get32(reply + 4) == 6 && get32(reply + 8) == 2 && get32(reply + 12) == 2);
+		mailbox.sdk.set_overlay(0x120000, 2, 2, 4, 0, true);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		reply = mailbox.call(0x0408, request, 48);
+		const uint32_t token = get32(reply + 32);
+		assert(get32(reply + 4) == 6 && token && get32(reply + 20) == 100 &&
+		       get32(reply + 28) == 1 && get32(reply + 36) == 9 &&
+		       (get32(reply + 40) & 1));
+		put32(request + 4, token);
+		reply = mailbox.call(0x0409, request, 48);
+		assert(get32(reply + 40) == 4);
+		const auto *pip = mailbox.board.data() + 0x120000;
+		assert(pip[0] == 81 && pip[1] == 90 && pip[2] == 81 && pip[3] == 239);
+		reply = mailbox.call(0x040a, request, 48);
+		assert(!get32(reply + 32));
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		reply = mailbox.call(0x0408, request, 48);
+		const uint32_t second_token = get32(reply + 32);
+		assert(second_token && get32(reply + 16) == 1 && get32(reply + 20) == 100);
+		put32(request + 4, second_token);
+		mailbox.call(0x0409, request, 48);
+		assert(pip[0] == 41 && pip[1] == 240 && pip[2] == 41 && pip[3] == 110);
+		mailbox.call(0x040a, request, 48);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		reply = mailbox.call(0x040b, request, 48);
+		assert(get32(reply + 4) == 6 && !get32(reply + 32));
+	mailbox.sdk.reset(); // An open animation session must release its YUV surface.
+	mailbox.request_id = 0;
+	mailbox.completion_head = 0;
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 2); put32(request + 4, 3); put32(request + 8, 9);
+	put32(request + 12, 16); put32(request + 16, 4);
+	const uint32_t replacement = get32(mailbox.call(0x0200, request, 20));
+	put32(request, replacement);
+	mailbox.call(0x0201, request, 4);
+}
+
+void reject_webp_input_limit(Mailbox &mailbox)
+{
+	const uint32_t staging = mailbox.allocate(64);
+	auto *data = mailbox.sdk.buffer_data(staging);
+	std::memcpy(data, "RIFF", 4);
+	data[4] = 0; data[5] = 0; data[6] = 0x80; data[7] = 0;
+	std::memcpy(data + 8, "WEBP", 4);
+	const uint32_t tile = mailbox.allocate(64);
+	uint8_t request[48] = {};
+	put32(request, 4); put32(request + 4, 3); put32(request + 28, 7);
+	put32(request + 32, tile); put32(request + 36, 16); put32(request + 40, 1);
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session); put32(request + 4, staging); put32(request + 12, 12);
+	mailbox.call(0x0405, request, 48, 4); // Declared input exceeds 8 MiB.
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		mailbox.call(0x0406, request, 48);
+	// A complete but chunkless RIFF is malformed at the EOF decode boundary.
+	data[4] = 4; data[5] = data[6] = data[7] = 0;
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 4); put32(request + 4, 3); put32(request + 28, 7);
+	put32(request + 32, tile); put32(request + 36, 16); put32(request + 40, 1);
+	const uint32_t truncated = get32(mailbox.call(0x0404, request, 48));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, truncated); put32(request + 4, staging); put32(request + 12, 12);
+	put32(request + 16, 1);
+	mailbox.call(0x0405, request, 48, 9);
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, truncated);
+		mailbox.call(0x0406, request, 48);
+	put32(request, tile);
+	mailbox.call(0x0101, request, 4);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
+#endif
 } // namespace
 
 int main(int argc, char **argv)
 {
-	assert(argc == 3);
+	assert(argc == 7);
 	Mailbox mailbox(4 * 1024 * 1024);
 	assert((get32(mailbox.board.data() + zz9000_sdk::mailbox_offset + 44) &
 	        (1u << 5)) != 0);
@@ -356,9 +629,22 @@ int main(int argc, char **argv)
 	assert(get32(reply + 8) == ((1u << 5) | (1u << 6)));
 	assert((get32(reply + 12) & ((1u << 20) | (1u << 21) | (1u << 26))) ==
 	       ((1u << 20) | (1u << 21) | (1u << 26)));
+#ifdef AMIBERRY_WITH_WEBP
+	assert((get32(reply + 12) & ((1u << 28) | (1u << 29))) ==
+	       ((1u << 28) | (1u << 29)));
+	assert(get32(reply + 20) == 12);
+#endif
 	run_image(mailbox, read_file(argv[1]), 2, 8); // PNG RGB888
 	run_image(mailbox, read_file(argv[1]), 2, 7); // PNG BGRA8888
 	run_image(mailbox, read_file(argv[2]), 1, 8); // JPEG RGB888
+#ifdef AMIBERRY_WITH_WEBP
+	run_image(mailbox, read_file(argv[3]), 4, 8); // Lossy WebP RGB888
+	run_image(mailbox, read_file(argv[4]), 4, 7); // Lossless WebP BGRA8888
+	run_webp_animation(mailbox, read_file(argv[5]));
+	run_webp_alpha(mailbox, read_file(argv[6]));
+	reject_webp_canvas_limits(mailbox, read_file(argv[6]));
+	reject_webp_input_limit(mailbox);
+#endif
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 7);
 	run_viewer_surface(mailbox, read_file(argv[1]), 2, 1);
 	run_viewer_surface(mailbox, read_file(argv[2]), 1, 7);

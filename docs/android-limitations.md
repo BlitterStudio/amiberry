@@ -10,7 +10,7 @@ These build options are forced off for Android in `CMakeLists.txt`:
 
 - **CD32 Full Motion Video** — the MPEG decoder (`USE_LIBMPEG2`) is not built.
 - **MP3 decoding** — `USE_MPG123` is off, so MP3 audio tracks in CUE images and the ZZ9000 MP3/MHI decoders are unavailable.
-- **Genlock video and camera input** — `USE_VIDEOGRAB` and `USE_FFMPEG` are off.
+- **Genlock video, camera input, and ZZ9000 FFmpeg/WebP codecs** — `USE_VIDEOGRAB`, `USE_FFMPEG`, and `USE_WEBP` are off.
 - **uaenet** — the pcap and TAP backends are not available. The built-in SLIRP stack and `bsdsocket.library` emulation are still included.
 - **PowerPC** — `USE_PPC` and the QEMU-UAE plugin loader (`USE_QEMU_PPC`) are off.
 - **D-Bus, IPC socket, and GPIO LEDs** — `USE_DBUS`, `USE_IPC_SOCKET`, and `USE_GPIOD` are off.

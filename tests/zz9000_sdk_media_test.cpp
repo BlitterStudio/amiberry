@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <vector>
@@ -53,10 +54,199 @@ struct Mailbox {
 		return get32(call(0x0100, request, 12));
 	}
 };
+#ifdef AMIBERRY_WITH_FFMPEG
+void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container,
+	uint32_t audio_codec, bool truncated, bool expect_video, uint32_t width, uint32_t height)
+{
+	std::ifstream file(path, std::ios::binary);
+	const std::vector<uint8_t> input{std::istreambuf_iterator<char>{file}, {}};
+	assert(!input.empty() && input.size() < 8 * 1024 * 1024);
+	Mailbox mailbox;
+	const uint32_t staging = mailbox.allocate(65536);
+	const uint32_t pcm = audio_codec ? mailbox.allocate(131072) : 0;
+	const uint32_t pip_width = width > 720 ? ((width / 2) + 1) & ~1u : width;
+	const uint32_t pip_height = height > 720 ? height / 2 : height;
+	mailbox.sdk.set_overlay(0x03310000, pip_width, pip_height, pip_width * 2, 0, true);
+	// Presentation must stay inside the video window.
+	auto *guard = mailbox.board.data() + 0x03310000 + static_cast<size_t>(pip_width) * pip_height * 2;
+	std::fill(guard, guard + 16, 0xa5);
+	uint8_t request[48] = {};
+	put32(request, video_codec); put32(request + 4, container);
+	put32(request + 8, width); put32(request + 12, height); put32(request + 16, 1);
+	put32(request + 20, audio_codec);
+	if (audio_codec) {
+		put32(request + 24, pcm); put32(request + 28, 131072);
+		put32(request + 32, 24576); put32(request + 36, 98304);
+	}
+	const auto *reply = mailbox.call(0x0b04, request, 44);
+	assert(mailbox.last_status == 0);
+	const uint32_t session = get32(reply);
+	assert(session && get32(reply + 4) == 1);
+	bool before_eof = false;
+	for (size_t offset = 0; offset < input.size();) {
+		const uint32_t bytes = static_cast<uint32_t>(std::min<size_t>(4096, input.size() - offset));
+		std::copy(input.begin() + offset, input.begin() + offset + bytes,
+			mailbox.sdk.buffer_data(staging));
+		if (expect_video && !truncated && offset + bytes == input.size()) {
+			for (unsigned attempt = 0; attempt < 20 && !before_eof; ++attempt) {
+				std::fill(std::begin(request), std::end(request), 0);
+				put32(request, session);
+				reply = mailbox.call(0x0b06, request, 16);
+				assert(mailbox.last_status == 0);
+				if (get32(reply + 4) == 3) {
+					mailbox.call(0x0b08, request, 16);
+					before_eof = true;
+				}
+			}
+		}
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session); put32(request + 4, staging); put32(request + 12, bytes);
+		put32(request + 16, offset + bytes == input.size());
+		reply = mailbox.call(0x0b05, request, 20);
+		assert(mailbox.last_status == 0);
+		assert(get32(reply + 40) == bytes && get32(reply + 36) == offset + bytes);
+		offset += bytes;
+	}
+	uint64_t acknowledged = 0;
+	uint64_t last_pts = 0;
+	uint64_t last_audio_pts = 0;
+	uint32_t frames = 0;
+	bool done = false;
+	for (unsigned i = 0; i < 1000 && !done; ++i) {
+		if (audio_codec) {
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, session); put32(request + 4, static_cast<uint32_t>(acknowledged >> 32));
+			put32(request + 8, static_cast<uint32_t>(acknowledged));
+			reply = mailbox.call(0x0b07, request, 16);
+			assert(mailbox.last_status == 0);
+			acknowledged = (static_cast<uint64_t>(get32(reply + 20)) << 32) | get32(reply + 24);
+			// The audio clock never runs backward, even across a change of
+			// sample rate or channel count.
+			const uint64_t audio_pts = (static_cast<uint64_t>(get32(reply + 36)) << 32) |
+				get32(reply + 40);
+			if (audio_pts != UINT64_MAX) {
+				assert(audio_pts >= last_audio_pts);
+				last_audio_pts = audio_pts;
+			}
+		}
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		reply = mailbox.call(0x0b06, request, 16, 0xffff);
+		if (truncated) {
+			if (mailbox.last_status == 9) break;
+			continue;
+		}
+		// BUSY: decoded PCM is waiting for ring space; read audio and retry.
+		if (mailbox.last_status == 2)
+			continue;
+		assert(mailbox.last_status == 0);
+		if (get32(reply + 4) == 3) {
+			const uint64_t pts = (static_cast<uint64_t>(get32(reply + 28)) << 32) | get32(reply + 32);
+			assert(frames == 0 || pts >= last_pts);
+			last_pts = pts;
+			assert(get32(reply + 8) == width && get32(reply + 12) == height);
+			mailbox.call(0x0b08, request, 16);
+			frames++;
+		} else if (get32(reply + 4) == 4) {
+			done = true;
+			if (audio_codec) {
+				// DONE means every decoded sample is already in the ring:
+				// draining it afterwards must not produce anything new.
+				std::fill(std::begin(request), std::end(request), 0);
+				put32(request, session); put32(request + 4, 1);
+				reply = mailbox.call(0x0b0a, request, 16);
+				const uint64_t produced_at_done =
+					(static_cast<uint64_t>(get32(reply + 16)) << 32) | get32(reply + 20);
+				uint64_t produced = 0;
+				for (unsigned pass = 0; pass < 8; ++pass) {
+					std::fill(std::begin(request), std::end(request), 0);
+					put32(request, session); put32(request + 4, static_cast<uint32_t>(acknowledged >> 32));
+					put32(request + 8, static_cast<uint32_t>(acknowledged));
+					reply = mailbox.call(0x0b07, request, 16);
+					produced = (static_cast<uint64_t>(get32(reply + 20)) << 32) | get32(reply + 24);
+					acknowledged = produced;
+				}
+				assert(produced == produced_at_done);
+			}
+		}
+	}
+	if (truncated)
+		assert(mailbox.last_status == 9);
+	else {
+		assert(done);
+		if (audio_codec) {
+			put32(request, session); put32(request + 4, static_cast<uint32_t>(acknowledged >> 32));
+			put32(request + 8, static_cast<uint32_t>(acknowledged));
+			reply = mailbox.call(0x0b07, request, 16);
+			assert(mailbox.last_status == 0);
+			acknowledged = (static_cast<uint64_t>(get32(reply + 20)) << 32) | get32(reply + 24);
+		}
+		if (expect_video) {
+			assert(before_eof && frames > 1);
+			assert(std::any_of(mailbox.board.data() + 0x03310000,
+				mailbox.board.data() + 0x03310000 + static_cast<size_t>(pip_width) * pip_height * 2,
+				[](uint8_t value) { return value != 0; }));
+		}
+		if (expect_video && width > 720 && ((width / 2) & 1)) {
+			// An odd half width ends on the last whole YUY2 pair; the spare
+			// column of every row stays untouched.
+			for (uint32_t y = 0; y < height / 2; ++y) {
+				const auto *row = mailbox.board.data() + 0x03310000 + static_cast<size_t>(y) * pip_width * 2;
+				assert(std::all_of(row + (width / 2 - 1) * 2, row + pip_width * 2,
+					[](uint8_t value) { return value == 0; }));
+			}
+		}
+		assert(std::all_of(guard, guard + 16, [](uint8_t value) { return value == 0xa5; }));
+		if (audio_codec)
+			assert(acknowledged > 0);
+		for (uint32_t page = 0; page <= 4; ++page) {
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, session); put32(request + 4, page);
+			reply = mailbox.call(0x0b0a, request, 16, page <= 3 ? 0 : 4);
+			if (page <= 3) {
+				assert(get32(reply) == session);
+				assert(get32(reply + 8) == page);
+				if (page == 2)
+					assert(get32(reply + 20) > 0);
+				else if (page == 3 && audio_codec)
+					assert(get32(reply + 36) > 0);
+				else if (page == 1 && audio_codec) {
+					// The audio clock runs from the first decoded timestamp.
+					const uint64_t audio_pts = (static_cast<uint64_t>(get32(reply + 32)) << 32) |
+						get32(reply + 36);
+					const uint64_t first = (static_cast<uint64_t>(get32(reply + 40)) << 32) |
+						get32(reply + 44);
+					assert(first != UINT64_MAX && audio_pts > first);
+				}
+			}
+		}
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		mailbox.call(0x0b0b, request, 16, 3);
+		reply = mailbox.call(0x0b0c, request, 16, 0);
+		assert(get32(reply) == session);
+	}
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session);
+	mailbox.call(0x0b0d, request, 16);
+}
+#endif
 }
 
 int main(int argc, char **argv)
 {
+#ifdef AMIBERRY_WITH_FFMPEG
+	if (argc == 10 && std::strcmp(argv[1], "--av") == 0) {
+		run_ffmpeg_media(argv[2], static_cast<uint32_t>(std::strtoul(argv[3], nullptr, 10)),
+			static_cast<uint32_t>(std::strtoul(argv[4], nullptr, 10)),
+			static_cast<uint32_t>(std::strtoul(argv[5], nullptr, 10)),
+			std::strtoul(argv[6], nullptr, 10) != 0,
+			std::strtoul(argv[7], nullptr, 10) != 0,
+			static_cast<uint32_t>(std::strtoul(argv[8], nullptr, 10)),
+			static_cast<uint32_t>(std::strtoul(argv[9], nullptr, 10)));
+		return 0;
+	}
+#endif
 	assert(argc == 2 || argc == 3 || argc == 4 || argc == 5);
 	const uint32_t width = argc >= 4 ? static_cast<uint32_t>(std::strtoul(argv[2], nullptr, 10)) : 160;
 	const uint32_t height = argc >= 4 ? static_cast<uint32_t>(std::strtoul(argv[3], nullptr, 10)) : 120;

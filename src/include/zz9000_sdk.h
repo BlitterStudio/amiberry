@@ -16,6 +16,8 @@ constexpr uint32_t mailbox_offset = 0xd000;
 constexpr uint32_t mailbox_size = 128 + 2 * 64 * 64;
 constexpr uint32_t mailbox_arm_address = 0x3fe43000;
 
+class ConsoleEncoder;
+
 class Engine {
 public:
 	Engine(uint8_t *board_memory, uint32_t board_size);
@@ -57,6 +59,7 @@ private:
 	uint8_t *io_memory_;
 	uint8_t *vram_memory_;
 	uint32_t board_size_;
+	bool aperture_acked_ = false;
 	std::array<Buffer, 16> buffers_{};
 	uint32_t next_handle_ = 1;
 	uint16_t last_status_ = 0;
@@ -66,6 +69,7 @@ private:
 	uint32_t next_image_session_ = 1;
 	std::unique_ptr<Media> media_;
 	uint32_t next_media_session_ = 1;
+	std::unique_ptr<ConsoleEncoder> console_;
 	struct Overlay {
 		uint32_t offset = 0, width = 0, height = 0, pitch = 0, variant = 0;
 		bool active = false;
@@ -94,6 +98,8 @@ private:
 	uint16_t dispatch_media(uint16_t opcode, const uint8_t *request,
 	                        uint16_t request_length, uint8_t *reply,
 	                        uint16_t *reply_length);
+	uint16_t dispatch_console(const uint8_t *request, uint16_t request_length,
+	                         uint8_t *reply, uint16_t *reply_length);
 	uint32_t supported_capabilities() const;
 	uint16_t dispatch(uint16_t opcode, const uint8_t *request,
 	                  uint16_t request_length, uint8_t *reply,

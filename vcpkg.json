@@ -11,6 +11,18 @@
         "png"
       ]
     },
+    {
+      "name": "ffmpeg",
+      "default-features": false,
+      "platform": "!(windows & arm64)",
+      "features": [
+        "avcodec",
+        "avformat",
+        "swresample",
+        "swscale"
+      ]
+    },
+    "libwebp",
     "libflac",
     {
       "name": "mpg123",

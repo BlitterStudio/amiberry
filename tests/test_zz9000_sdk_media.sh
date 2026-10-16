@@ -4,16 +4,70 @@ cd "$(dirname "$0")/.."
 out="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$"
 video="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mpg"
 audio_only="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.audio.mpg"
-trap 'rm -f "$out" "$video" "$audio_only"' EXIT
-ffmpeg -nostdin -loglevel error -y \
-  -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' \
-  -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' \
-  -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
-ffmpeg -nostdin -loglevel error -y \
-  -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' \
-  -c:a mp2 -b:a 128k -f mpeg "$audio_only"
-${CXX:-c++} -std=c++17 -Isrc/include -Isrc/osdep \
-  $(pkg-config --cflags sdl3) \
-  -o "$out" tests/zz9000_sdk_media_test.cpp src/zz9000_sdk.cpp \
-  $(pkg-config --libs sdl3)
+vp8="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.vp8.webm"
+vp9="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.vp9.webm"
+mkv="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mkv"
+ps="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.vob"
+lpcm="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.lpcm.vob"
+audio_ac3="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.audio.ac3.mpg"
+interlaced="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.interlaced.vob"
+large="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.large.vob"
+large_odd_half="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.large_odd_half.vob"
+truncated="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.truncated.webm"
+offset="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.offset.webm"
+mkv_pcm="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.pcm.mkv"
+mkv_mp3="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mp3.mkv"
+mkv_pcm_big="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.pcm_big.mkv"
+switch_a="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_a.mp2"
+switch_b="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_b.mp2"
+switch="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch.vob"
+ac3_51="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.ac3_51.vob"
+trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51"' EXIT
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:a mp2 -b:a 128k -f mpeg "$audio_only"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis "$vp8"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx-vp9 -row-mt 1 -cpu-used 8 -c:a libopus "$vp9"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 "$mkv"
+# Matroska carries LPCM as A_PCM/INT/LIT and MPEG audio of any layer.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -ac 2 -c:v mpeg2video -pix_fmt yuv420p -c:a pcm_s16le "$mkv_pcm"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a libmp3lame "$mkv_mp3"
+# One 600 KB PCM block, larger than the decoder's whole audio queue.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=4' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=4' -ac 2 -af asetnsamples=n=150000 -c:v mpeg2video -pix_fmt yuv420p -c:a pcm_s16le "$mkv_pcm_big"
+# MP2 that changes from 48 kHz mono to 44.1 kHz stereo halfway through.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -ac 1 -c:a mp2 "$switch_a"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=660:sample_rate=44100:duration=1' -ac 2 -c:a mp2 "$switch_b"
+cat "$switch_a" "$switch_b" > "$switch.mp2"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=2' -i "$switch.mp2" -c:v mpeg2video -pix_fmt yuv420p -c:a copy -f vob "$switch"
+rm -f "$switch.mp2"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$ps"
+# 5.1 AC-3, which the card downmixes to stereo.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -filter_complex '[1:a]pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0[a]' -map 0:v -map '[a]' -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$ac3_51"
+# Three seconds of stereo PCM is several times the test's PCM ring.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:a ac3 -f vob "$audio_ac3"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a pcm_dvd -f vob "$lpcm"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -c:v mpeg2video -flags +ilme+ildct -pix_fmt yuv420p -an -f vob "$interlaced"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1280x720:rate=10:duration=1' -c:v mpeg2video -pix_fmt yuv420p -an -f vob "$large"
+# 1282 / 2 = 641: the half-size row must still end on a whole YUY2 pair.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1282x720:rate=10:duration=1' -c:v mpeg2video -pix_fmt yuv420p -an -f vob "$large_odd_half"
+dd if="$vp8" of="$truncated" bs=1 count=512 status=none
+# Timestamps starting at 5 s: the audio clock must keep that origin.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis -output_ts_offset 5 "$offset"
+. tests/lib/zz9000_sdk_build.sh
+zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" "$video" "$audio_only"
+"$out" --av "$vp8" 3 2 5 0 1 160 120
+"$out" --av "$vp9" 4 2 4 0 1 160 120
+"$out" --av "$mkv" 2 2 1 0 1 160 120
+"$out" --av "$mkv_pcm" 2 2 2 0 1 160 120
+"$out" --av "$mkv_mp3" 2 2 1 0 1 160 120
+"$out" --av "$mkv_pcm_big" 2 2 2 0 1 160 120
+"$out" --av "$switch" 2 1 1 0 1 160 120
+"$out" --av "$ps" 2 1 3 0 1 160 120
+"$out" --av "$ac3_51" 2 1 3 0 1 160 120
+"$out" --av "$lpcm" 2 1 2 0 1 160 120
+"$out" --av "$audio_ac3" 2 1 3 0 0 160 120
+"$out" --av "$interlaced" 2 1 0 0 1 160 120
+"$out" --av "$large" 2 1 0 0 1 1280 720
+"$out" --av "$large_odd_half" 2 1 0 0 1 1282 720
+"$out" --av "$truncated" 3 2 5 1 1 160 120
+"$out" --av "$offset" 3 2 5 0 1 160 120

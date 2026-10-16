@@ -15,8 +15,9 @@ BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
 BuildRequires:  flac-devel
 BuildRequires:  libmpeg2-devel
+BuildRequires:  ffmpeg-free-devel
+BuildRequires:  libwebp-devel
 BuildRequires:  libpng-devel
-BuildRequires:  SDL3-devel
 BuildRequires:  SDL3_image-devel
 BuildRequires:  alsa-lib-devel
 BuildRequires:  mpg123-devel
@@ -33,8 +34,13 @@ Requires:       libstdc++
 Requires:       SDL3
 Requires:       SDL3_image
 Requires:       flac
+Requires:       libavcodec-free
+Requires:       libavformat-free
+Requires:       libavutil-free
+Requires:       libswresample-free
+Requires:       libswscale-free
+Requires:       libwebp
 Requires:       mpg123
-Requires:       libpng
 Requires:       zlib
 Requires:       libcurl
 Requires:       zstd

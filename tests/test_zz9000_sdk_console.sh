@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+out="${TMPDIR:-/tmp}/zz9000_sdk_console_test.$$"
+trap 'rm -f "$out"' EXIT
+. tests/lib/zz9000_sdk_build.sh
+zz9000_sdk_compile "$out" tests/zz9000_sdk_console_test.cpp
+"$out"

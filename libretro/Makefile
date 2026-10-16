@@ -328,6 +328,10 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/framebufferboards.cpp \
                $(AMIBERRY_DIR)/src/zz9000.cpp \
                $(AMIBERRY_DIR)/src/zz9000_sdk.cpp \
+               $(AMIBERRY_DIR)/src/zz9000_sdk_audio_codec.cpp \
+               $(AMIBERRY_DIR)/src/zz9000_sdk_webp.cpp \
+               $(AMIBERRY_DIR)/src/zz9000_sdk_media_av.cpp \
+               $(AMIBERRY_DIR)/src/zz9000_sdk_console.cpp \
                $(AMIBERRY_DIR)/src/fsdb.cpp \
                $(AMIBERRY_DIR)/src/fsusage.cpp \
                $(AMIBERRY_DIR)/src/gayle.cpp \

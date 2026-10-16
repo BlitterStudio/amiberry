@@ -88,30 +88,70 @@ message(STATUS "Using SDL3")
 if(USE_VIDEOGRAB)
     target_compile_definitions(${PROJECT_NAME} PRIVATE VIDEOGRAB)
     message(STATUS "Genlock video/camera input enabled")
+endif()
 
-    if(USE_FFMPEG)
+if(USE_FFMPEG)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(FFMPEG QUIET IMPORTED_TARGET
+            libavformat>=59.27
+            libavcodec>=59.37
+            libavutil>=57.28
+            libswscale>=6.7
+            libswresample>=4.7
+        )
+    endif()
+
+    if(TARGET PkgConfig::FFMPEG)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WITH_FFMPEG)
+        target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::FFMPEG)
+        set(AMIBERRY_WITH_FFMPEG ON)
+        message(STATUS "FFmpeg 5.1+ media decoding enabled")
+    else()
+        find_package(FFMPEG QUIET)
+        if(FFMPEG_FOUND
+            AND FFMPEG_libavformat_VERSION VERSION_GREATER_EQUAL "59.27"
+            AND FFMPEG_libavcodec_VERSION VERSION_GREATER_EQUAL "59.37"
+            AND FFMPEG_libavutil_VERSION VERSION_GREATER_EQUAL "57.28"
+            AND FFMPEG_libswscale_VERSION VERSION_GREATER_EQUAL "6.7"
+            AND FFMPEG_libswresample_VERSION VERSION_GREATER_EQUAL "4.7")
+            target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WITH_FFMPEG)
+            target_include_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS})
+            target_link_libraries(${PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARIES})
+            set(AMIBERRY_WITH_FFMPEG ON)
+            message(STATUS "FFmpeg 5.1+ media decoding enabled")
+        else()
+            message(STATUS "FFmpeg 5.1+ development libraries not found; FFmpeg media decoding disabled")
+        endif()
+    endif()
+else()
+    message(STATUS "FFmpeg media decoding disabled")
+endif()
+
+if(USE_WEBP)
+    find_package(WebP CONFIG QUIET)
+    if(TARGET WebP::webp AND TARGET WebP::webpdemux)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WITH_WEBP)
+        target_link_libraries(${PROJECT_NAME} PRIVATE WebP::webp WebP::webpdemux)
+        set(AMIBERRY_WITH_WEBP ON)
+        message(STATUS "libwebp still and animated WebP decoding enabled")
+    else()
         find_package(PkgConfig QUIET)
         if(PkgConfig_FOUND)
-            pkg_check_modules(FFMPEG QUIET IMPORTED_TARGET
-                libavformat>=59
-                libavcodec>=59
-                libavutil>=57
-                libswscale>=6
-                libswresample>=4
-            )
+            pkg_check_modules(WEBP QUIET IMPORTED_TARGET libwebp libwebpdemux)
         endif()
 
-        if(TARGET PkgConfig::FFMPEG)
-            target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WITH_FFMPEG)
-            target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::FFMPEG)
-            set(AMIBERRY_WITH_FFMPEG ON)
-            message(STATUS "FFmpeg genlock video decoding enabled")
+        if(TARGET PkgConfig::WEBP)
+            target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WITH_WEBP)
+            target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::WEBP)
+            set(AMIBERRY_WITH_WEBP ON)
+            message(STATUS "libwebp still and animated WebP decoding enabled")
         else()
-            message(STATUS "FFmpeg development libraries not found; genlock video input is limited to raw 24-bit AVI")
+            message(STATUS "libwebp and libwebpdemux development libraries not found; WebP decoding disabled")
         endif()
-    else()
-        message(STATUS "FFmpeg genlock video decoding disabled; video input is limited to raw 24-bit AVI")
     endif()
+else()
+    message(STATUS "WebP decoding disabled")
 endif()
 
 if(ANDROID)
