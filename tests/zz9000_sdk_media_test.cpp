@@ -64,9 +64,12 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 	Mailbox mailbox;
 	const uint32_t staging = mailbox.allocate(65536);
 	const uint32_t pcm = audio_codec ? mailbox.allocate(131072) : 0;
-	const uint32_t pip_width = width > 720 ? width / 2 : width;
+	const uint32_t pip_width = width > 720 ? ((width / 2) + 1) & ~1u : width;
 	const uint32_t pip_height = height > 720 ? height / 2 : height;
 	mailbox.sdk.set_overlay(0x03310000, pip_width, pip_height, pip_width * 2, 0, true);
+	// Presentation must stay inside the video window.
+	auto *guard = mailbox.board.data() + 0x03310000 + static_cast<size_t>(pip_width) * pip_height * 2;
+	std::fill(guard, guard + 16, 0xa5);
 	uint8_t request[48] = {};
 	put32(request, video_codec); put32(request + 4, container);
 	put32(request + 8, width); put32(request + 12, height); put32(request + 16, 1);
@@ -153,6 +156,16 @@ void run_ffmpeg_media(const char *path, uint32_t video_codec, uint32_t container
 				mailbox.board.data() + 0x03310000 + static_cast<size_t>(pip_width) * pip_height * 2,
 				[](uint8_t value) { return value != 0; }));
 		}
+		if (expect_video && width > 720 && ((width / 2) & 1)) {
+			// An odd half width ends on the last whole YUY2 pair; the spare
+			// column of every row stays untouched.
+			for (uint32_t y = 0; y < height / 2; ++y) {
+				const auto *row = mailbox.board.data() + 0x03310000 + static_cast<size_t>(y) * pip_width * 2;
+				assert(std::all_of(row + (width / 2 - 1) * 2, row + pip_width * 2,
+					[](uint8_t value) { return value == 0; }));
+			}
+		}
+		assert(std::all_of(guard, guard + 16, [](uint8_t value) { return value == 0xa5; }));
 		if (audio_codec)
 			assert(acknowledged > 0);
 		for (uint32_t page = 0; page <= 4; ++page) {

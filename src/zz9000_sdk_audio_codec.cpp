@@ -31,6 +31,7 @@ struct AudioCodecDecoder::Impl {
 	std::vector<uint8_t> input;
 	std::vector<uint8_t> output;
 	std::vector<uint8_t> packet;
+	std::vector<uint8_t> parse_buffer;
 	uint32_t metadata_remaining = 0;
 	uint8_t metadata_type = 0;
 	bool metadata_last = false;
@@ -175,12 +176,22 @@ uint16_t receive_frames(AudioCodecDecoder::Impl &state)
 	}
 }
 
+// FFmpeg readers may overread a packet by AV_INPUT_BUFFER_PADDING_SIZE, so
+// every packet is copied into padded, refcounted storage.
 uint16_t send_packet(AudioCodecDecoder::Impl &state, const uint8_t *data, int size)
 {
-	AVPacket packet{};
-	packet.data = const_cast<uint8_t *>(data);
-	packet.size = size;
-	if (avcodec_send_packet(state.context, data ? &packet : nullptr) < 0)
+	if (!data)
+		return avcodec_send_packet(state.context, nullptr) < 0 ? io_error :
+			receive_frames(state);
+	AVPacket *packet = av_packet_alloc();
+	if (!packet || av_new_packet(packet, size) < 0) {
+		av_packet_free(&packet);
+		return no_memory;
+	}
+	std::memcpy(packet->data, data, static_cast<size_t>(size));
+	const int result = avcodec_send_packet(state.context, packet);
+	av_packet_free(&packet);
+	if (result < 0)
 		return io_error;
 	return receive_frames(state);
 }
@@ -256,10 +267,17 @@ uint16_t process_flac(AudioCodecDecoder::Impl &state)
 			break;
 		if (state.input.size() > 128 * 1024)
 			return io_error;
+		// The parser may return a packet that points into its input, and it
+		// also overreads: parse from a padded copy that stays valid until the
+		// packet has been sent.
+		const size_t chunk = std::min<size_t>(state.input.size(), 4096);
+		state.parse_buffer.assign(state.input.begin(),
+			state.input.begin() + static_cast<std::ptrdiff_t>(chunk));
+		state.parse_buffer.resize(chunk + AV_INPUT_BUFFER_PADDING_SIZE, 0);
 		uint8_t *packet = nullptr;
 		int packet_size = 0;
 		const int consumed = av_parser_parse2(state.parser, state.context, &packet, &packet_size,
-			state.input.data(), static_cast<int>(std::min<size_t>(state.input.size(), 4096)), AV_NOPTS_VALUE,
+			state.parse_buffer.data(), static_cast<int>(chunk), AV_NOPTS_VALUE,
 			AV_NOPTS_VALUE, 0);
 		if (consumed < 0)
 			return io_error;

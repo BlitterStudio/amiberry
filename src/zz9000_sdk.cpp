@@ -1014,7 +1014,8 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				return busy;
 			const bool half = overlay_.width < media_->width ||
 				overlay_.height < media_->height;
-			const uint32_t packed_width = half ? media_->width / 2 : media_->width;
+			// YUY2 pairs pixels, so a half-size row keeps an even width.
+			const uint32_t packed_width = half ? (media_->width / 2) & ~1u : media_->width;
 			const uint32_t packed_height = half ? media_->height / 2 : media_->height;
 			if (!packed_width || !packed_height || overlay_.width < packed_width ||
 			    overlay_.height < packed_height || (!media_->av && half))
