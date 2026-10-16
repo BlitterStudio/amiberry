@@ -570,6 +570,37 @@ int main(int argc, char **argv)
 		z3.call(0x0506, payload, 8);
 	}
 	{
+		// A FLAC stream that ends on a frame boundary but short of the
+		// STREAMINFO sample count is truncated: declare 4096 more samples.
+		std::ifstream flac_file(argv[4], std::ios::binary);
+		std::vector<uint8_t> bytes(std::istreambuf_iterator<char>{flac_file}, {});
+		assert(bytes.size() > 26 && !std::memcmp(bytes.data(), "fLaC", 4) && !(bytes[4] & 0x7f));
+		uint8_t *total_field = bytes.data() + 8 + 13;
+		uint64_t total = (static_cast<uint64_t>(total_field[0] & 0x0f) << 32) |
+			(static_cast<uint64_t>(total_field[1]) << 24) | (total_field[2] << 16) |
+			(total_field[3] << 8) | total_field[4];
+		assert(total);
+		total += 4096;
+		total_field[0] = static_cast<uint8_t>((total_field[0] & 0xf0) | ((total >> 32) & 0x0f));
+		total_field[1] = static_cast<uint8_t>(total >> 24);
+		total_field[2] = static_cast<uint8_t>(total >> 16);
+		total_field[3] = static_cast<uint8_t>(total >> 8);
+		total_field[4] = static_cast<uint8_t>(total);
+		std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 2, ex_compressed, 65536, pcm, 262144, 1);
+		const uint32_t short_session = get32(reply + 16);
+		assert(short_session);
+		put32(payload, short_session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(bytes.size()));
+		put32(payload + 16, 1);
+		z3.call(0x0504, payload, 20, 9);
+		put32(payload, short_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+	}
+	{
 		std::ifstream flac16_file(argv[4], std::ios::binary);
 		std::vector<uint8_t> flac16_bytes(std::istreambuf_iterator<char>{flac16_file}, {});
 		std::copy(flac16_bytes.begin(), flac16_bytes.end(), z3.sdk.buffer_data(audio_staging));

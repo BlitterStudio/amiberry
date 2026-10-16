@@ -46,6 +46,7 @@ struct AudioCodecDecoder::Impl {
 	std::vector<std::vector<uint8_t>> vorbis_header_packets;
 	uint64_t decoded_frames = 0;
 	uint64_t frames_consumed = 0;
+	uint64_t flac_total_samples = 0;
 	uint64_t vorbis_granule = 0;
 #ifdef AMIBERRY_WITH_FFMPEG
 	AVCodecParserContext *parser = nullptr;
@@ -215,6 +216,10 @@ uint16_t flac_header(AudioCodecDecoder::Impl &state, const uint8_t *data)
 		return unsupported;
 	state.sample_rate = rate;
 	state.channels = channels;
+	// 36-bit total sample count; 0 means unknown.
+	state.flac_total_samples = (static_cast<uint64_t>(data[13] & 0x0f) << 32) |
+		(static_cast<uint64_t>(data[14]) << 24) | (static_cast<uint32_t>(data[15]) << 16) |
+		(static_cast<uint32_t>(data[16]) << 8) | data[17];
 	return open_codec(state, data, 34);
 }
 
@@ -313,6 +318,10 @@ uint16_t process_flac(AudioCodecDecoder::Impl &state)
 		const uint16_t status = send_packet(state, nullptr, 0);
 		if (status != ok)
 			return status;
+		// Like the card, a stream ending short of the STREAMINFO sample
+		// count is truncated, even when it stops on a frame boundary.
+		if (state.flac_total_samples && state.decoded_frames != state.flac_total_samples)
+			return io_error;
 		state.flushed = true;
 	}
 	return ok;
