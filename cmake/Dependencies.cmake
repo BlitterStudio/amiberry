@@ -24,7 +24,7 @@ endif ()
 
 if (USE_IPC_SOCKET)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IPC_SOCKET)
-    message(STATUS "Unix socket IPC enabled")
+    message(STATUS "IPC control socket enabled")
 endif ()
 
 if (USE_OPENGL)

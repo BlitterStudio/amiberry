@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test client for Amiberry Unix socket IPC.
+Simple test client for the Amiberry IPC socket.
 
 Usage:
     python ipc_client.py                    # Interactive mode
@@ -9,16 +9,33 @@ Usage:
     python ipc_client.py SET_CONFIG floppy_speed 100
 
 Socket path: /tmp/amiberry.sock (or $XDG_RUNTIME_DIR/amiberry.sock)
+Windows: named pipe \\\\.\\pipe\\amiberry
 """
 
 import os
 import socket
 import sys
-import readline  # For command history in interactive mode
+import time
+
+try:
+    import readline  # noqa: F401  (command history in interactive mode)
+except ImportError:
+    pass  # not available on Windows
+
+IS_WINDOWS = sys.platform == 'win32'
+ERROR_PIPE_BUSY = 231
+SECURITY_SQOS_PRESENT = 0x00100000
+SECURITY_IDENTIFICATION = 0x00010000
+
+if IS_WINDOWS:
+    import _winapi
+    import msvcrt
 
 
 def get_socket_path() -> str:
-    """Determine the socket path based on environment."""
+    """Determine the socket path (pipe name on Windows) based on environment."""
+    if IS_WINDOWS:
+        return r'\\.\pipe\amiberry'
     xdg_runtime = os.environ.get('XDG_RUNTIME_DIR')
     if xdg_runtime:
         path = os.path.join(xdg_runtime, 'amiberry.sock')
@@ -27,12 +44,72 @@ def get_socket_path() -> str:
     return '/tmp/amiberry.sock'
 
 
+class PipeConnection:
+    """Windows named pipe client with the socket methods this script uses."""
+
+    def __init__(self, path: str, timeout: float):
+        self._timeout = timeout
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                # Identification level only, so whoever serves the pipe
+                # cannot act as this user.
+                handle = _winapi.CreateFile(
+                    path, _winapi.GENERIC_READ | _winapi.GENERIC_WRITE, 0, 0,
+                    _winapi.OPEN_EXISTING, SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION, 0)
+                break
+            except OSError as e:
+                # Every instance is connected: Amiberry creates the next one
+                # within a frame.
+                if e.winerror != ERROR_PIPE_BUSY or time.monotonic() > deadline:
+                    raise
+                time.sleep(0.01)
+        self._handle = handle
+        self._pipe = open(msvcrt.open_osfhandle(handle, 0), 'r+b', buffering=0)
+
+    def sendall(self, data: bytes):
+        self._pipe.write(data)
+
+    def recv(self, size: int) -> bytes:
+        # A blocking pipe read cannot time out, so wait until bytes are
+        # available, as socket.settimeout() does on the Unix transport.
+        deadline = time.monotonic() + self._timeout
+        try:
+            while not _winapi.PeekNamedPipe(self._handle, 0)[0]:
+                if time.monotonic() > deadline:
+                    raise socket.timeout('timed out')
+                time.sleep(0.005)
+            return self._pipe.read(size)
+        except BrokenPipeError:
+            return b''
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self._pipe.close()
+
+
+def connect(path: str):
+    """Open a connection to Amiberry."""
+    if IS_WINDOWS:
+        return PipeConnection(path, 5.0)
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.connect(path)
+        sock.settimeout(5.0)
+    except BaseException:
+        sock.close()
+        raise
+    return sock
+
+
 def expand_path(path: str) -> str:
     """Expand ~ and environment variables in a path."""
     return os.path.expanduser(os.path.expandvars(path))
 
 
-def send_command(sock: socket.socket, command: str, *args: str) -> str:
+def send_command(sock, command: str, *args: str) -> str:
     """Send a command and receive the response."""
     # Expand paths in arguments (for commands that take file paths)
     expanded_args = [expand_path(arg) for arg in args]
@@ -250,9 +327,7 @@ def interactive_mode(socket_path: str):
         args = parts[1:]
 
         try:
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-                sock.connect(socket_path)
-                sock.settimeout(5.0)
+            with connect(socket_path) as sock:
                 response = send_command(sock, command, *args)
 
             success, data = parse_response(response)
@@ -271,9 +346,7 @@ def interactive_mode(socket_path: str):
 def single_command_mode(socket_path: str, command: str, args: list[str]):
     """Send a single command and exit."""
     try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-            sock.connect(socket_path)
-            sock.settimeout(5.0)
+        with connect(socket_path) as sock:
             response = send_command(sock, command, *args)
 
         success, data = parse_response(response)
@@ -314,7 +387,8 @@ def main():
         single_command_mode(socket_path, command, args)
     else:
         # Interactive mode
-        if not os.path.exists(socket_path):
+        # Windows: stat() on a pipe name opens a connection, so skip the check.
+        if not IS_WINDOWS and not os.path.exists(socket_path):
             print(f"Warning: Socket not found at {socket_path}")
             print("Is Amiberry running with USE_IPC_SOCKET enabled?\n")
         interactive_mode(socket_path)

@@ -1269,6 +1269,13 @@ jobs:
           }
           Write-Host "x64 (llvm-mingw) Amiberry.exe ran --jit-selftest successfully."
 
+          # The IPC test starts real emulator instances, which write settings
+          # into the portable tree, so it runs after the tree assertions.
+          bash tests/test_ipc_transport.sh
+          if ($LASTEXITCODE -ne 0) {
+            throw "IPC transport behavioral test failed with exit code $LASTEXITCODE."
+          }
+
       - name: Package (InnoSetup)
         shell: pwsh
         run: |
