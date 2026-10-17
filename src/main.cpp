@@ -317,11 +317,6 @@ void fixup_cpu (struct uae_prefs *p)
 	p->ppc_cpu_idle = 0;
 #endif
 
-	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020)) {
-		p->cpu_thread = false;
-		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
-	}
-
 #ifdef WITH_PPC
 	// 1 = "automatic" PPC config
 	if (p->ppc_mode == 1) {
@@ -376,6 +371,13 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cachesize && p->compfpu && p->fpu_model && p->fpu_mode > 0) {
 		error_log (_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
 		p->fpu_mode = 0;
+	}
+
+	// Checked after the CPU options above are final: only the JIT and the plain
+	// 68020+ interpreter have a CPU thread (m68k_run()).
+	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->mmu_model || p->cpu_model < 68020)) {
+		p->cpu_thread = false;
+		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible, Cycle Exact or MMU modes. CPU type must be 68020 or higher."));
 	}
 
 #ifdef JIT

@@ -3166,7 +3166,8 @@ static void DMACON(int hpos, uae_u16 v)
 	}
 #endif
 
-	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued)) {
+	// See do_blitter(): the threaded CPU never waits for a nasty blit.
+	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued) && !currprefs.cpu_thread) {
 		set_special(SPCFLAG_BLTNASTY);
 	}
 
@@ -7204,13 +7205,9 @@ static uae_u32 REGPARAM3 custom_wget(uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_bget(uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_lgeti(uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wgeti(uaecptr) REGPARAM;
-#ifdef WITH_THREADED_CPU
-// we have these in custom.h as non-static
-#else
 static void REGPARAM3 custom_lput(uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_wput(uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_bput(uaecptr, uae_u32) REGPARAM;
-#endif
 
 addrbank custom_bank = {
 	custom_lget, custom_wget, custom_bget,
@@ -7779,17 +7776,8 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 	}
 	return ret;
 }
-#ifndef WITH_THREADED_CPU
-static
-#endif
-void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
+static void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
-		if (cpu_thread_queue_register_op(addr, value, 2, 1))
-			return;
-	}
-#endif
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		dummy_put(addr, 2, value);
 		return;
@@ -7809,17 +7797,8 @@ void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 	custom_wput_1(addr, value, 0);
 }
 
-#ifndef WITH_THREADED_CPU
-static
-#endif
-void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
+static void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
-		if (cpu_thread_queue_register_op(addr, value, 1, 1))
-			return;
-	}
-#endif
 	uae_u16 rval;
 
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
@@ -7849,17 +7828,8 @@ void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
 	}
 }
 
-#ifndef WITH_THREADED_CPU
-static
-#endif
-void REGPARAM2 custom_lput(uaecptr addr, uae_u32 value)
+static void REGPARAM2 custom_lput(uaecptr addr, uae_u32 value)
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
-		if (cpu_thread_queue_register_op(addr, value, 4, 1))
-			return;
-	}
-#endif
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		dummy_put(addr, 4, value);
 		return;
@@ -12634,9 +12604,6 @@ int do_cycles_cck(int cycles)
 #ifdef WITH_THREADED_CPU
 	if (currprefs.cpu_thread && !is_mainthread()) {
 		/* CPU thread is skipping cycle accounting */
-		/* Phase 2: Flush any batched register operations before returning */
-		cpu_thread_flush_register_batch();
-
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
