@@ -4701,6 +4701,11 @@ static void doint_delayed(uae_u32 v)
 	update_ipl(v);
 }
 
+#ifdef WITH_THREADED_CPU
+// Interrupt level the threaded CPU acts on when it sees SPCFLAG_INT/SPCFLAG_DOINT.
+static volatile int cpu_thread_ilvl;
+#endif
+
 void doint()
 {
 #ifdef WITH_PPC
@@ -4710,6 +4715,12 @@ void doint()
 	}
 #endif
 	int ipl = intlev();
+#ifdef WITH_THREADED_CPU
+	// Store the level before the flags below are raised. run_cpu_thread() polls
+	// intlev() only every other CCK, so after an INTREQ acknowledge the CPU thread
+	// would otherwise retake the old level as a spurious interrupt.
+	cpu_thread_ilvl = ipl;
+#endif
 
 	if (regs.ipl_pin != ipl) {
 
@@ -4743,10 +4754,17 @@ void doint()
 	}
 }
 
+// Clear flags and report whether any of them was set. With the threaded CPU the
+// main and CPU threads both poll SPCFLAG_BRK, and only one of them may act on it.
+static bool take_special(uae_u32 x)
+{
+	return (__atomic_fetch_and(&regs.spcflags, ~x, __ATOMIC_SEQ_CST) & x) != 0;
+}
+
 static void check_debugger()
 {
-	if (regs.spcflags & SPCFLAG_BRK) {
-		unset_special(SPCFLAG_BRK);
+	// Plain load first: this runs on every JIT dispatch of the CPU thread.
+	if ((regs.spcflags & SPCFLAG_BRK) && take_special(SPCFLAG_BRK)) {
 #ifdef DEBUGGER
 		if (debugging) {
 			debug();
@@ -4767,13 +4785,15 @@ static void debug_cpu_stop()
 
 static int do_specialties_check()
 {
+	// Clear before reading the state it reports: with the threaded CPU, cpu_halt()
+	// can run on the main thread, and its request must not be cleared unseen.
+	unset_special(SPCFLAG_CHECK);
 	if (regs.halted) {
 		if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
 			if (currprefs.cpu_thread)
 				set_special(SPCFLAG_MODE_CHANGE);
 			return 1;
 		}
-		unset_special(SPCFLAG_CHECK);
 		if (currprefs.cpu_thread) {
 			while (regs.halted) {
 				check_debugger();
@@ -4803,7 +4823,6 @@ static int do_specialties_check()
 		}
 	}
 	m68k_reset_delay = false;
-	unset_special(SPCFLAG_CHECK);
 	return 0;
 }
 
@@ -5298,9 +5317,8 @@ static uae_u16 get_word_020_prefetchf (uae_u32 pc)
 
 #ifdef WITH_THREADED_CPU
 static volatile int cpu_thread_active;
-uae_sem_t cpu_in_sema, cpu_out_sema, cpu_wakeup_sema;
+static uae_sem_t cpu_in_sema, cpu_wakeup_sema;
 
-static volatile int cpu_thread_ilvl;
 static volatile uae_atomic cpu_thread_indirect_mode;
 static volatile uae_u32 cpu_thread_indirect_addr;
 static volatile uae_u32 cpu_thread_indirect_val;
@@ -5309,8 +5327,6 @@ static volatile uae_atomic cpu_thread_reset;
 static SDL_Thread* cpu_thread;
 static SDL_ThreadID cpu_thread_tid;
 
-static bool m68k_cs_initialized;
-
 static int do_specialties_thread()
 {
 	uae_atomic spcflags = regs.spcflags;
@@ -5318,14 +5334,26 @@ static int do_specialties_thread()
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
 
+	// Held in reset by the keyboard. The main thread ends the hold with a mode change.
+	if (spcflags & SPCFLAG_CPUINRESET) {
+		while (regs.spcflags & SPCFLAG_CPUINRESET) {
+			check_debugger();
+			if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+				return 1;
+			sleep_millis(1);
+		}
+		spcflags = regs.spcflags;
+	}
+
 	if (spcflags & SPCFLAG_CHECK) {
 		if (do_specialties_check())
 			return 1;
 		spcflags = regs.spcflags;
 	}
 
+	// run_cpu_thread() polls uae_interrupt and raises INTREQ itself; this thread
+	// must not write chipset state.
 	if (spcflags & SPCFLAG_UAEINT) {
-		check_uae_int_request();
 		unset_special(SPCFLAG_UAEINT);
 	}
 
@@ -5353,39 +5381,20 @@ static int do_specialties_thread()
 			do_trace();
 
 		if (spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+			// Clear before reading the level. doint() and run_cpu_thread() store the
+			// level before raising a flag, so a level not visible yet leaves it set.
+			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
 			int intr = cpu_thread_ilvl;
 			if (intr > regs.intmask || (intr == 7 && intr > regs.lastipl)) {
 				do_interrupt(intr);
 			}
 			regs.lastipl = intr;
-			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
 		}
 	}
-	if (spcflags & SPCFLAG_BRK) {
-		unset_special(SPCFLAG_BRK);
-#ifdef DEBUGGER
-		if (debugging) {
-			debug();
-		}
-#endif
-	}
-	if (spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
-		return 1;
-	}
-
-	return 0;
-}
-
-static void init_cpu_thread()
-{
-	if (!currprefs.cpu_thread)
-		return;
-	if (m68k_cs_initialized)
-		return;
-	uae_sem_init(&cpu_in_sema, 0, 0);
-	uae_sem_init(&cpu_out_sema, 0, 0);
-	uae_sem_init(&cpu_wakeup_sema, 0, 0);
-	m68k_cs_initialized = true;
+	check_debugger();
+	// SPCFLAG_BRK alone must not end this thread: run_cpu_thread() keeps running
+	// until SPCFLAG_MODE_CHANGE, so the emulation would stop with no CPU.
+	return (regs.spcflags & SPCFLAG_MODE_CHANGE) ? 1 : 0;
 }
 
 extern addrbank *thread_mem_banks[MEMORY_BANKS];
@@ -5536,12 +5545,19 @@ static void run_cpu_thread(int (*f)(void *))
 	cpu_thread_indirect_mode = 0xff;
 	atomic_set(&cpu_thread_reset, 0);
 
+	// uae_sem_init() only signals an existing semaphore. Counts left by the previous
+	// run would let custom_reset_cpu() return before custom_reset() has run.
+	uae_sem_destroy(&cpu_in_sema);
+	uae_sem_destroy(&cpu_wakeup_sema);
 	uae_sem_init(&cpu_in_sema, 0, 0);
-	uae_sem_init(&cpu_out_sema, 0, 0);
 	uae_sem_init(&cpu_wakeup_sema, 0, 0);
 
-	if (!uae_start_thread(_T("cpu"), f, nullptr, &cpu_thread))
+	if (!uae_start_thread(_T("cpu"), f, nullptr, &cpu_thread)) {
+		// m68k_go() would retry forever; run on this thread instead.
+		write_log(_T("Could not start the CPU thread, running the CPU on the main thread.\n"));
+		currprefs.cpu_thread = false;
 		return;
+	}
 	cpu_thread_tid = uae_thread_get_id(cpu_thread);
 	while (!cpu_thread_active) {
 		sleep_millis(1);
@@ -5555,9 +5571,6 @@ static void run_cpu_thread(int (*f)(void *))
 
 		// Service any pending indirect memory request (lockless fast path)
 		service_cpu_indirect_request();
-
-		// Flush any batched register operations from the CPU thread
-		cpu_thread_flush_register_batch();
 
 		// Check for CPU reset request
 		uae_u32 reset_val = __atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE);
@@ -5581,9 +5594,8 @@ static void run_cpu_thread(int (*f)(void *))
 
 		for (int i = 0; i < cycles_to_do; i++) {
 			// Check for incoming IO request EVERY cycle for minimal latency
-			if (i > 0 && service_cpu_indirect_request()) {
-				// Serviced a request - flush register batch too while we're at it
-				cpu_thread_flush_register_batch();
+			if (i > 0) {
+				service_cpu_indirect_request();
 			}
 
 			do_cycles(CYCLE_UNIT);
@@ -5598,7 +5610,9 @@ static void run_cpu_thread(int (*f)(void *))
 				if (intr != intlev_prev) {
 					cpu_thread_ilvl = intr;
 					if (intr > 0) {
-						cycles_do_special();
+						// Level changes made without doint() (forced or delayed IRQs)
+						// are only noticed here; raise the flag after storing the level.
+						set_special(SPCFLAG_INT);
 						uae_sem_post(&cpu_wakeup_sema);
 					}
 					intlev_prev = intr;
@@ -5606,14 +5620,7 @@ static void run_cpu_thread(int (*f)(void *))
 			}
 		}
 
-		if (regs.spcflags & SPCFLAG_BRK) {
-			unset_special(SPCFLAG_BRK);
-#ifdef DEBUGGER
-			if (debugging) {
-				debug();
-			}
-#endif
-		}
+		check_debugger();
 
 		if (regs.spcflags & SPCFLAG_UAEINT) {
 			check_uae_int_request();
@@ -5628,9 +5635,7 @@ static void run_cpu_thread(int (*f)(void *))
 				frame_time_t c = read_processor_time();
 				while (next > c && next - c < vsyncmaxtime * 2) {
 					// Even during frame limiter sleep, service IO requests
-					if (service_cpu_indirect_request()) {
-						cpu_thread_flush_register_batch();
-					}
+					service_cpu_indirect_request();
 					if (regs.spcflags & SPCFLAG_CALLBACK) {
 						unset_special(SPCFLAG_CALLBACK);
 						device_call_main_thread_callbacks();
@@ -6989,6 +6994,15 @@ void m68k_run(void)
 {
 	void (*run_func)(void);
 
+#if defined(WITH_THREADED_CPU) && defined(ACTION_REPLAY)
+	// Freezer cartridges are entered and left in do_specialties(), which only the
+	// CPU loops on the main thread run.
+	if (currprefs.cpu_thread && action_replay_freezer_active()) {
+		write_log(_T("Freezer cartridge active, running the CPU on the main thread.\n"));
+		currprefs.cpu_thread = false;
+	}
+#endif
+
 	run_func = currprefs.cpu_cycle_exact && currprefs.cpu_model <= 68010 ? m68k_run_1_ce :
 		currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
 #ifdef JIT
@@ -7022,9 +7036,6 @@ void m68k_go (int may_quit)
 {
 	int hardboot = 1;
 
-#ifdef WITH_THREADED_CPU
-	init_cpu_thread();
-#endif
 	if (in_m68k_go || !may_quit) {
 		write_log (_T("Bug! m68k_go is not reentrant.\n"));
 		abort ();

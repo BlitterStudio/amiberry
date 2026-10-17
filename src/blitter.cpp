@@ -2102,7 +2102,9 @@ void do_blitter(int copper, uaecptr pc)
 	blit_slowdown = 0;
 
 	unset_special (SPCFLAG_BLTNASTY);
-	if (dmaen(DMA_BLITPRI)) {
+	// Only do_specialties() waits for a nasty blit. The threaded CPU never does, and
+	// the flag would end every JIT block for the length of the blit.
+	if (dmaen(DMA_BLITPRI) && !currprefs.cpu_thread) {
 		set_special(SPCFLAG_BLTNASTY);
 	}
 

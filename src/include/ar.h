@@ -45,6 +45,7 @@ extern int action_replay_load (void);
 extern int action_replay_unload (int in_memory_reset);
 
 extern void action_replay_memory_reset (void);
+extern bool action_replay_freezer_active (void);
 extern void action_replay_init (int);
 extern void action_replay_cleanup (void);
 extern void REGPARAM3 chipmem_lput_actionreplay23 (uaecptr addr, uae_u32 l) REGPARAM;

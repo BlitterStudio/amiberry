@@ -2081,6 +2081,17 @@ void action_replay_memory_reset (void)
 	hrtmon_configure ();
 	if (armodel == 1)
 		action_replay_flag = ACTION_REPLAY_ACTIVE;
+#ifdef WITH_THREADED_CPU
+	// m68k_run() keeps a freezer on the main-thread CPU loops. A cartridge that
+	// appears while the CPU thread runs needs a restart of the CPU loop.
+	if (currprefs.cpu_thread && action_replay_freezer_active())
+		set_special(SPCFLAG_MODE_CHANGE);
+#endif
+}
+
+bool action_replay_freezer_active(void)
+{
+	return action_replay_flag != ACTION_REPLAY_INACTIVE || hrtmon_flag != ACTION_REPLAY_INACTIVE;
 }
 
 uae_u8 *save_hrtmon(size_t *len, uae_u8 *dstptr)
