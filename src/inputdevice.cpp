@@ -5050,13 +5050,14 @@ void inputdevice_do_kb_reset(void)
 	keyboard_reset_seq = 0;
 }
 
-// Chipset reset deferred by cpu_keyboard_reset() while the reset keys are held.
+// Chipset reset while the reset keys are held: the reset deferred by
+// cpu_keyboard_reset(), or a RESET instruction that ran during the hold.
 // custom_reset() clears the keyboard reset sequence, which is still in progress.
-void inputdevice_kb_custom_reset(bool hardreset)
+void inputdevice_kb_custom_reset(bool hardreset, bool keyboardreset)
 {
 	int mode = keyboard_reset_seq_mode;
 	int seq = keyboard_reset_seq;
-	custom_reset(hardreset, true);
+	custom_reset(hardreset, keyboardreset);
 	keyboard_reset_seq_mode = mode;
 	keyboard_reset_seq = seq;
 }
