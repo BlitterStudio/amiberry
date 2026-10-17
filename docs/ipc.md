@@ -278,6 +278,12 @@ when that GDB client detaches. D-Bus does not expose `MONITOR`.
 The geometry mapping and controller primitives have automated coverage in
 `tests/test_gfx_geometry.sh` and `tests/test_ipc_gui_automation.sh`, including
 HiDPI conversion, revision invalidation, stale-guard rejection, button masks,
-and unconditional release. Live end-to-end validation with packaged Amiberry
-builds on Linux and macOS is a separate release check and is not implied by
-those automated tests.
+and unconditional release. Both scripts also compile and pass on Windows with
+the llvm-mingw toolchain. The Windows named-pipe transport and the
+screenshot-driven automation commands have had a live end-to-end pass against
+an installed release build: actionable capture, the guarded configuration
+compare-and-set, guarded clicks and drags with held buttons read back from
+the emulated CIA registers, focus gating, and stale-guard rejection after a
+window resize and after a restart. Live end-to-end validation with packaged
+Amiberry builds on Linux and macOS remains a separate release check and is
+not implied by those automated tests.
