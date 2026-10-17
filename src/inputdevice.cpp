@@ -4975,10 +4975,10 @@ void inputdevice_do_keyboard(int code, int state)
 				if (keyboard_reset_seq >= 5 * 50 || keyboard_reset_seq_mode > 0) {
 					send_internalevent(INTERNALEVENT_KBRESET);
 					if (keyboard_reset_seq >= 5 * 50 || keyboard_reset_seq_mode == 2) {
-						custom_reset(true, true);
+						cpu_keyboard_reset(true, false);
 						uae_reset(1, 1);
 					} else {
-						custom_reset(false, true);
+						cpu_keyboard_reset(false, false);
 						uae_reset(0, 1);
 					}
 				}
@@ -4993,12 +4993,10 @@ void inputdevice_do_keyboard(int code, int state)
 				if (keyboardresetkeys() || key == AK_RESETWARNING) {
 					int r = keybuf[AK_LALT] | keybuf[AK_RALT];
 					if (r) {
-						custom_reset(true, true);
-						cpu_inreset();
+						cpu_keyboard_reset(true, true);
 						keyboard_reset_seq_mode = 2;
 					} else {
-						custom_reset(false, true);
-						cpu_inreset();
+						cpu_keyboard_reset(false, true);
 						keyboard_reset_seq_mode = 1;
 					}
 					keyboard_reset_seq = 0;
@@ -5015,15 +5013,13 @@ void inputdevice_do_keyboard(int code, int state)
 			keyboard_reset_seq_mode = 0;
 			int r = keybuf[AK_LALT] | keybuf[AK_RALT];
 			if (r) {
-				custom_reset(true, true);
-				cpu_inreset();
+				cpu_keyboard_reset(true, true);
 				keyboard_reset_seq_mode = 2;
 			} else {
 				if (currprefs.cs_resetwarning && resetwarning_do(0)) {
 					keyboard_reset_seq_mode = 3;
 				} else {
-					custom_reset(false, true);
-					cpu_inreset();
+					cpu_keyboard_reset(false, true);
 					keyboard_reset_seq_mode = 1;
 				}
 			}
@@ -5043,20 +5039,26 @@ void inputdevice_do_keyboard(int code, int state)
 
 void inputdevice_do_kb_reset(void)
 {
-	int mode = keyboard_reset_seq_mode;
-	custom_reset(false, true);
-	if (mode == 3) {
-		if (!keyboardresetkeys()) {
-			keyboard_reset_seq_mode = 0;
-			keyboard_reset_seq = 0;
-			uae_reset(0, 1);
-		} else {
-			cpu_inreset();
-			keyboard_reset_seq_mode = 4;
-		}
+	if (keyboard_reset_seq_mode == 3 && keyboardresetkeys()) {
+		cpu_keyboard_reset(false, true);
+		keyboard_reset_seq_mode = 4;
 	} else {
+		cpu_keyboard_reset(false, false);
+		keyboard_reset_seq_mode = 0;
 		uae_reset(0, 1);
 	}
+	keyboard_reset_seq = 0;
+}
+
+// Chipset reset deferred by cpu_keyboard_reset() while the reset keys are held.
+// custom_reset() clears the keyboard reset sequence, which is still in progress.
+void inputdevice_kb_custom_reset(bool hardreset)
+{
+	int mode = keyboard_reset_seq_mode;
+	int seq = keyboard_reset_seq;
+	custom_reset(hardreset, true);
+	keyboard_reset_seq_mode = mode;
+	keyboard_reset_seq = seq;
 }
 
 #ifdef AMIBERRY
