@@ -1,8 +1,8 @@
 # IPC controller interface
 
-Amiberry exposes a line-oriented Unix-domain socket when it is built with
-`USE_IPC_SOCKET=ON`. The interface is available on Linux and macOS. It is used
-by controller software such as the
+Amiberry exposes a line-oriented local control socket when it is built with
+`USE_IPC_SOCKET=ON`. On Linux and macOS it is a Unix-domain socket; on Windows
+it is a named pipe. It is used by controller software such as the
 [Amiberry MCP server](https://github.com/BlitterStudio/amiberry-mcp-server),
 which presents stable, action-level MCP tools and HTTP endpoints.
 
@@ -14,9 +14,23 @@ public automation API.
 
 ## Transport
 
-The first instance listens on `$XDG_RUNTIME_DIR/amiberry.sock`, or
-`/tmp/amiberry.sock` when `XDG_RUNTIME_DIR` is not set. Further instances use
-`amiberry_1.sock` through `amiberry_9.sock` in the same directory.
+On Linux and macOS the first instance listens on
+`$XDG_RUNTIME_DIR/amiberry.sock`, or `/tmp/amiberry.sock` when
+`XDG_RUNTIME_DIR` is not set. Further instances use `amiberry_1.sock` through
+`amiberry_9.sock` in the same directory.
+
+On Windows the first instance listens on the named pipe `\\.\pipe\amiberry`,
+and further instances use `\\.\pipe\amiberry_1` through `\\.\pipe\amiberry_9`.
+The pipe is byte-mode and only the account Amiberry runs as can open it, from
+the local machine. Open it like a file, for example with
+`System.IO.Pipes.NamedPipeClientStream` in .NET or `CreateFile` in C. Amiberry
+keeps one pipe instance waiting for the next client and creates a new one
+within a frame of each connection, so a client that gets `ERROR_PIPE_BUSY`
+(231) should retry for a short time. Python's `open()` reports that error as
+`EINVAL`; `tools/ipc_client.py` calls `_winapi.CreateFile` to see it. A pipe
+cannot be half-closed: read the replies before closing
+the handle. `tools/ipc_client.py` works on both transports. The Amiberry MCP
+server does not support the Windows pipe yet.
 
 Each request and response is one newline-terminated record. Request fields are
 separated by tabs:

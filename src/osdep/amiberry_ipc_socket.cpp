@@ -1,6 +1,6 @@
 //
-// Unix domain socket IPC implementation for Amiberry
-// Cross-platform: Linux, macOS, FreeBSD
+// IPC control transport for Amiberry
+// Unix domain socket (Linux, macOS, FreeBSD) or named pipe (Windows)
 //
 
 #ifdef USE_IPC_SOCKET
@@ -30,7 +30,9 @@
 #endif
 #include <dirent.h>
 
+#include <array>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <cstring>
 #include <map>
@@ -39,22 +41,30 @@
 #include <mutex>
 #include <vector>
 
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <cerrno>
+
+#ifdef _WIN32
+#include <sddl.h>
+#else
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <fcntl.h>
 #include <poll.h>
 
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0
 #endif
+#endif
 
 using namespace Amiberry::IPC;
 
-// Socket state
+// Listener state. socket_path is the Unix socket path, or the pipe name on
+// Windows.
+#ifndef _WIN32
 static int server_socket = -1;
+#endif
 static std::string socket_path;
 static int socket_instance = 0;
 static bool ipc_active = false;
@@ -3416,30 +3426,85 @@ static std::string ProcessCommand(const std::string& line)
 	return make_response(false, {"Unknown command: " + cmd});
 }
 
-static void ConfigureClientSocket(int client_socket)
-{
-#ifdef SO_NOSIGPIPE
-	const int set = 1;
-	setsockopt(client_socket, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(set));
-#endif
-	const int flags = fcntl(client_socket, F_GETFL, 0);
-	if (flags >= 0) {
-		fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
+// Transport. POSIX builds listen on a Unix-domain socket. Windows builds listen
+// on a named pipe: CPython, Node and Windows PowerShell can all open a named
+// pipe, but none of them can connect to an AF_UNIX socket on Windows. Both are
+// driven from the emulation thread without blocking, through the Conn*,
+// AcceptClients and WaitForActivity functions; request handling is shared.
+
+enum class IoStatus {
+	Ok,         // data moved
+	WouldBlock, // nothing more can move until the peer acts
+	Closed,     // end of stream or connection error
+};
+
+#ifdef _WIN32
+
+static constexpr DWORD IPC_PIPE_BUFFER_SIZE = 64 * 1024;
+
+// One pipe instance, first waiting for a client and then connected to it.
+// Overlapped operations keep pointers into this object until they complete,
+// so it is heap allocated and never moves. The pending connect uses read_ov.
+struct PipeConnection {
+	HANDLE pipe = INVALID_HANDLE_VALUE;
+	OVERLAPPED read_ov{};
+	OVERLAPPED write_ov{};
+	bool read_pending = false;
+	bool write_pending = false;
+	char read_buffer[4096]{};
+	std::string write_buffer;
+
+	PipeConnection()
+	{
+		read_ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+		write_ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
 	}
-}
+	PipeConnection(const PipeConnection&) = delete;
+	PipeConnection& operator=(const PipeConnection&) = delete;
+	~PipeConnection()
+	{
+		if (pipe != INVALID_HANDLE_VALUE) {
+			// Bytes the pipe has accepted stay readable by the client after the
+			// handle is closed; only operations still in flight are dropped.
+			if (read_pending || write_pending) {
+				CancelIoEx(pipe, nullptr);
+				DWORD ignored;
+				if (read_pending) {
+					GetOverlappedResult(pipe, &read_ov, &ignored, TRUE);
+				}
+				if (write_pending) {
+					GetOverlappedResult(pipe, &write_ov, &ignored, TRUE);
+				}
+			}
+			CloseHandle(pipe);
+		}
+		if (read_ov.hEvent) {
+			CloseHandle(read_ov.hEvent);
+		}
+		if (write_ov.hEvent) {
+			CloseHandle(write_ov.hEvent);
+		}
+	}
+};
+
+using IPCConnection = std::unique_ptr<PipeConnection>;
+#else
+using IPCConnection = int;
+#endif
 
 // A connected controller. Connections stay open across IPCHandle() calls
 // until the client closes them, so a controller can keep one connection for
 // many requests or open one connection per request.
 struct IPCClient {
-	int fd;
+	IPCConnection conn;
 	std::string pending; // received bytes not handled yet
-	std::string output;  // reply bytes the socket has not accepted yet
+	std::string output;  // reply bytes the connection has not accepted yet
 	bool eof;            // the client has stopped sending
 };
 
 static std::vector<IPCClient> ipc_clients;
 static constexpr size_t IPC_MAX_CLIENTS = 16;
+using IPCReadyFlags = std::array<bool, IPC_MAX_CLIENTS>;
 
 // Commands run on the emulation thread, which calls IPCHandle() once per
 // frame. After handling a request, keep listening briefly for the next one so
@@ -3458,36 +3523,349 @@ static constexpr int IPC_MAX_READS_PER_PASS = 16;
 // controller cannot grow the receive buffer without limit.
 static constexpr size_t IPC_MAX_REQUEST_BYTES = 64 * 1024;
 
+static bool OutputBusy(const IPCClient& client);
+
+#ifdef _WIN32
+
+// The instance waiting for the next client.
+static IPCConnection pipe_listener;
+
+// Grants pipe access to the account Amiberry runs as and nobody else, like the
+// per-user XDG_RUNTIME_DIR that holds the Unix socket. The default pipe DACL
+// would let every local account open read-only connections and use up the
+// client slots.
+static PSECURITY_DESCRIPTOR pipe_security = nullptr;
+
+static bool CreatePipeSecurity()
+{
+	HANDLE token;
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+		return false;
+	}
+	DWORD size = 0;
+	GetTokenInformation(token, TokenUser, nullptr, 0, &size);
+	std::vector<BYTE> user(size);
+	const bool have_user = size != 0
+		&& GetTokenInformation(token, TokenUser, user.data(), size, &size);
+	CloseHandle(token);
+	LPSTR sid = nullptr;
+	if (!have_user
+		|| !ConvertSidToStringSidA(reinterpret_cast<TOKEN_USER*>(user.data())->User.Sid, &sid)) {
+		return false;
+	}
+	const std::string sddl = std::string("D:P(A;;GA;;;") + sid + ")";
+	LocalFree(sid);
+	return ConvertStringSecurityDescriptorToSecurityDescriptorA(
+		sddl.c_str(), SDDL_REVISION_1, &pipe_security, nullptr);
+}
+
+static bool ConnIsOpen(const IPCClient& client)
+{
+	return client.conn != nullptr;
+}
+
 static void CloseClient(IPCClient& client)
 {
-	if (client.fd >= 0) {
-		close(client.fd);
-		client.fd = -1;
+	client.conn.reset();
+}
+
+// Creates a pipe instance and starts waiting for a client on it. With
+// first_instance set, creation fails with ERROR_ACCESS_DENIED when another
+// process already owns the name.
+static IPCConnection CreatePipeListener(const std::string& name, bool first_instance, DWORD& error)
+{
+	auto conn = std::make_unique<PipeConnection>();
+	if (!conn->read_ov.hEvent || !conn->write_ov.hEvent) {
+		error = GetLastError();
+		return nullptr;
+	}
+	DWORD open_mode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
+	if (first_instance) {
+		open_mode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
+	}
+	SECURITY_ATTRIBUTES security{sizeof(security), pipe_security, FALSE};
+	conn->pipe = CreateNamedPipeA(name.c_str(), open_mode,
+		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+		PIPE_UNLIMITED_INSTANCES, IPC_PIPE_BUFFER_SIZE, IPC_PIPE_BUFFER_SIZE, 0, &security);
+	if (conn->pipe == INVALID_HANDLE_VALUE) {
+		error = GetLastError();
+		return nullptr;
+	}
+	if (!ConnectNamedPipe(conn->pipe, &conn->read_ov)) {
+		error = GetLastError();
+		if (error == ERROR_IO_PENDING) {
+			conn->read_pending = true;
+		} else if (error != ERROR_PIPE_CONNECTED && error != ERROR_NO_DATA) {
+			return nullptr;
+		}
+	}
+	// Connected already (a client that has also gone again is accepted and
+	// then closed on its first read): let the accept path see it.
+	if (!conn->read_pending) {
+		SetEvent(conn->read_ov.hEvent);
+	}
+	error = ERROR_SUCCESS;
+	return conn;
+}
+
+// Replaces the listener after a connection. IPCHandle retries every frame
+// while this fails, so each distinct error is reported once.
+static void RestartPipeListener()
+{
+	static DWORD reported_error = ERROR_SUCCESS;
+	DWORD error = ERROR_SUCCESS;
+	pipe_listener = CreatePipeListener(socket_path, false, error);
+	if (!pipe_listener && error != reported_error && !currprefs.ipc_disable_logging) {
+		std::cerr << "IPC: Failed to create pipe instance: error " << error << std::endl;
+	}
+	reported_error = error;
+}
+
+// Starts a read so the read event signals when data or end of stream arrives.
+static bool StartRead(PipeConnection& c)
+{
+	if (c.read_pending) {
+		return true;
+	}
+	if (!ReadFile(c.pipe, c.read_buffer, sizeof(c.read_buffer), nullptr, &c.read_ov)
+		&& GetLastError() != ERROR_IO_PENDING) {
+		return false;
+	}
+	c.read_pending = true;
+	return true;
+}
+
+// Appends whatever one read delivers to out.
+static IoStatus ConnRead(IPCClient& client, std::string& out)
+{
+	PipeConnection& c = *client.conn;
+	if (!StartRead(c)) {
+		return IoStatus::Closed;
+	}
+	DWORD received = 0;
+	if (!GetOverlappedResult(c.pipe, &c.read_ov, &received, FALSE)) {
+		if (GetLastError() == ERROR_IO_INCOMPLETE) {
+			return IoStatus::WouldBlock;
+		}
+		c.read_pending = false;
+		return IoStatus::Closed;
+	}
+	c.read_pending = false;
+	out.append(c.read_buffer, received);
+	return IoStatus::Ok;
+}
+
+// A write handed to the pipe has not been accepted into its buffer yet.
+static bool ConnWriteBusy(const IPCClient& client)
+{
+	return client.conn && client.conn->write_pending
+		&& WaitForSingleObject(client.conn->write_ov.hEvent, 0) != WAIT_OBJECT_0;
+}
+
+// Hands data to the pipe. The pipe owns the bytes from then on, but the next
+// write waits until it has accepted them (ConnWriteBusy).
+static IoStatus ConnWrite(IPCClient& client, const char* data, size_t size, size_t& written)
+{
+	PipeConnection& c = *client.conn;
+	written = 0;
+	if (c.write_pending) {
+		DWORD done = 0;
+		if (!GetOverlappedResult(c.pipe, &c.write_ov, &done, FALSE)) {
+			if (GetLastError() == ERROR_IO_INCOMPLETE) {
+				return IoStatus::WouldBlock;
+			}
+			c.write_pending = false;
+			return IoStatus::Closed;
+		}
+		c.write_pending = false;
+	}
+	c.write_buffer.assign(data, size);
+	if (!WriteFile(c.pipe, c.write_buffer.data(), static_cast<DWORD>(c.write_buffer.size()), nullptr, &c.write_ov)
+		&& GetLastError() != ERROR_IO_PENDING) {
+		return IoStatus::Closed;
+	}
+	c.write_pending = true;
+	written = size;
+	return IoStatus::Ok;
+}
+
+static void ConnWaitWritable(IPCClient& client, int timeout_ms)
+{
+	WaitForSingleObject(client.conn->write_ov.hEvent, static_cast<DWORD>(timeout_ms));
+}
+
+// Closing the handle ends the client's stream after the bytes already sent.
+static void ConnFinishWrite(IPCClient&)
+{
+}
+
+// Accept every connected pipe instance, up to the client limit.
+// Returns true if at least one connection was accepted.
+static bool AcceptClients()
+{
+	bool accepted = false;
+	while (ipc_clients.size() < IPC_MAX_CLIENTS && pipe_listener) {
+		if (pipe_listener->read_pending) {
+			DWORD ignored;
+			if (!GetOverlappedResult(pipe_listener->pipe, &pipe_listener->read_ov, &ignored, FALSE)) {
+				if (GetLastError() == ERROR_IO_INCOMPLETE) {
+					break;
+				}
+				// The connect failed; wait on a fresh instance instead.
+				pipe_listener->read_pending = false;
+				RestartPipeListener();
+				continue;
+			}
+			pipe_listener->read_pending = false;
+		}
+		ipc_clients.push_back({std::move(pipe_listener), {}, {}, false});
+		accepted = true;
+		RestartPipeListener();
+	}
+	return accepted;
+}
+
+// Waits up to timeout_ms until the listener or a client can make progress.
+// Sets accept_ready and ready[i] for each such client in ipc_clients.
+// Returns the number of ready objects, 0 on timeout, or -1 on failure.
+static int WaitForActivity(bool can_accept, int timeout_ms, bool& accept_ready, IPCReadyFlags& ready)
+{
+	constexpr size_t listener_owner = IPC_MAX_CLIENTS;
+	std::array<HANDLE, IPC_MAX_CLIENTS + 1> handles{};
+	std::array<size_t, IPC_MAX_CLIENTS + 1> owners{};
+	DWORD count = 0;
+	int immediate = 0;
+	accept_ready = false;
+	ready.fill(false);
+
+	if (can_accept && pipe_listener) {
+		owners[count] = listener_owner;
+		handles[count++] = pipe_listener->read_ov.hEvent;
+	}
+	for (size_t i = 0; i < ipc_clients.size(); ++i) {
+		IPCClient& client = ipc_clients[i];
+		HANDLE event;
+		if (OutputBusy(client)) {
+			event = client.conn->write_ov.hEvent;
+		} else if (!client.eof && StartRead(*client.conn)) {
+			event = client.conn->read_ov.hEvent;
+		} else {
+			// The client has stopped sending, or its read failed at once:
+			// servicing it answers what is left and closes it.
+			ready[i] = true;
+			++immediate;
+			continue;
+		}
+		owners[count] = i;
+		handles[count++] = event;
+	}
+
+	if (count == 0) {
+		return immediate;
+	}
+	const DWORD result = WaitForMultipleObjects(count, handles.data(), FALSE,
+		immediate > 0 ? 0 : static_cast<DWORD>(timeout_ms));
+	if (result == WAIT_FAILED) {
+		return -1;
+	}
+	if (result == WAIT_TIMEOUT) {
+		return immediate;
+	}
+	int signalled = immediate;
+	for (DWORD h = 0; h < count; ++h) {
+		if (WaitForSingleObject(handles[h], 0) != WAIT_OBJECT_0) {
+			continue;
+		}
+		++signalled;
+		if (owners[h] == listener_owner) {
+			accept_ready = true;
+		} else {
+			ready[owners[h]] = true;
+		}
+	}
+	return signalled;
+}
+
+#else
+
+static bool ConnIsOpen(const IPCClient& client)
+{
+	return client.conn >= 0;
+}
+
+static void CloseClient(IPCClient& client)
+{
+	if (client.conn >= 0) {
+		close(client.conn);
+		client.conn = -1;
 	}
 }
 
-// Write as much queued output as the socket accepts without blocking.
-// Returns false if the connection failed.
-static bool FlushOutput(IPCClient& client)
+static void ConfigureClientSocket(int client_socket)
 {
-	size_t sent = 0;
-	while (sent < client.output.size()) {
-		const ssize_t written = send(client.fd, client.output.data() + sent,
-			client.output.size() - sent, MSG_NOSIGNAL);
-		if (written > 0) {
-			sent += static_cast<size_t>(written);
-			continue;
-		}
-		if (written < 0 && errno == EINTR) {
-			continue;
-		}
-		if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-			break;
-		}
-		return false;
+#ifdef SO_NOSIGPIPE
+	const int set = 1;
+	setsockopt(client_socket, SOL_SOCKET, SO_NOSIGPIPE, &set, sizeof(set));
+#endif
+	const int flags = fcntl(client_socket, F_GETFL, 0);
+	if (flags >= 0) {
+		fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
 	}
-	client.output.erase(0, sent);
-	return true;
+}
+
+// Appends whatever one read delivers to out.
+static IoStatus ConnRead(IPCClient& client, std::string& out)
+{
+	char buffer[4096];
+	for (;;) {
+		const ssize_t n = read(client.conn, buffer, sizeof(buffer));
+		if (n > 0) {
+			out.append(buffer, static_cast<size_t>(n));
+			return IoStatus::Ok;
+		}
+		if (n < 0 && errno == EINTR) {
+			continue;
+		}
+		if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			return IoStatus::WouldBlock;
+		}
+		return IoStatus::Closed;
+	}
+}
+
+static bool ConnWriteBusy(const IPCClient&)
+{
+	return false;
+}
+
+static IoStatus ConnWrite(IPCClient& client, const char* data, size_t size, size_t& written)
+{
+	written = 0;
+	for (;;) {
+		const ssize_t n = send(client.conn, data, size, MSG_NOSIGNAL);
+		if (n > 0) {
+			written = static_cast<size_t>(n);
+			return IoStatus::Ok;
+		}
+		if (n < 0 && errno == EINTR) {
+			continue;
+		}
+		if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			return IoStatus::WouldBlock;
+		}
+		return IoStatus::Closed;
+	}
+}
+
+static void ConnWaitWritable(IPCClient& client, int timeout_ms)
+{
+	pollfd pfd{client.conn, POLLOUT, 0};
+	poll(&pfd, 1, timeout_ms);
+}
+
+static void ConnFinishWrite(IPCClient& client)
+{
+	shutdown(client.conn, SHUT_WR);
 }
 
 // Accept every queued connection, up to the client limit.
@@ -3510,10 +3888,67 @@ static bool AcceptClients()
 	return accepted;
 }
 
+// Waits up to timeout_ms until the listener or a client can make progress.
+// Sets accept_ready and ready[i] for each such client in ipc_clients.
+// Returns the number of ready objects, 0 on timeout, or -1 on failure.
+static int WaitForActivity(bool can_accept, int timeout_ms, bool& accept_ready, IPCReadyFlags& ready)
+{
+	std::array<pollfd, IPC_MAX_CLIENTS + 1> fds{};
+	nfds_t count = 0;
+	if (can_accept) {
+		fds[count++] = {server_socket, POLLIN, 0};
+	}
+	const nfds_t first_client = count;
+	for (const auto& client : ipc_clients) {
+		fds[count++] = {client.conn, static_cast<short>(OutputBusy(client) ? POLLOUT : POLLIN), 0};
+	}
+
+	int ret;
+	do {
+		ret = poll(fds.data(), count, timeout_ms);
+	} while (ret < 0 && errno == EINTR);
+
+	accept_ready = ret > 0 && can_accept && (fds[0].revents & POLLIN);
+	ready.fill(false);
+	for (size_t i = 0; ret > 0 && i < ipc_clients.size(); ++i) {
+		ready[i] = fds[first_client + i].revents != 0;
+	}
+	return ret;
+}
+
+#endif
+
+// A reply is waiting to go out, so the client's next request must wait.
+static bool OutputBusy(const IPCClient& client)
+{
+	return !client.output.empty() || ConnWriteBusy(client);
+}
+
+// Write as much queued output as the connection accepts without blocking.
+// Returns false if the connection failed.
+static bool FlushOutput(IPCClient& client)
+{
+	size_t sent = 0;
+	while (sent < client.output.size()) {
+		size_t written = 0;
+		const IoStatus status = ConnWrite(client, client.output.data() + sent,
+			client.output.size() - sent, written);
+		if (status == IoStatus::Closed) {
+			return false;
+		}
+		if (status == IoStatus::WouldBlock) {
+			break;
+		}
+		sent += written;
+	}
+	client.output.erase(0, sent);
+	return true;
+}
+
 // A complete request is waiting and nothing blocks answering it.
 static bool HasBacklog(const IPCClient& client)
 {
-	return client.output.empty() && client.pending.find('\n') != std::string::npos;
+	return !OutputBusy(client) && client.pending.find('\n') != std::string::npos;
 }
 
 // QUIT ends the process, so this is the one place where waiting for a client
@@ -3521,17 +3956,17 @@ static bool HasBacklog(const IPCClient& client)
 static void FlushBeforeQuit(IPCClient& client)
 {
 	const auto give_up = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
-	while (FlushOutput(client) && !client.output.empty()
+	while (FlushOutput(client) && OutputBusy(client)
 		&& std::chrono::steady_clock::now() < give_up) {
-		pollfd pfd{client.fd, POLLOUT, 0};
-		poll(&pfd, 1, 50);
+		ConnWaitWritable(client, 50);
 	}
 }
 
 // Send queued replies, then read what the client has sent and answer complete
-// lines. Nothing ever waits for the socket: while a reply is still queued, the
-// client's further requests stay unread, so a controller that stops reading
-// replies is held back by its own socket instead of stalling emulation.
+// lines. Nothing ever waits for the connection: while a reply is still queued,
+// the client's further requests stay unread, so a controller that stops
+// reading replies is held back by its own connection instead of stalling
+// emulation.
 // Requests are answered until the deadline passes, but at least one per call,
 // so every client makes progress; the rest wait for the next call, and nothing
 // more is read from the client until they are answered.
@@ -3541,38 +3976,32 @@ static void FlushBeforeQuit(IPCClient& client)
 // caller keeps listening for the client's next request.
 static bool ServiceClient(IPCClient& client, std::chrono::steady_clock::time_point deadline)
 {
-	const bool drained = !client.output.empty();
+	const bool drained = OutputBusy(client);
 	if (!FlushOutput(client)) {
 		CloseClient(client);
 		return false;
 	}
-	if (!client.output.empty()) {
+	if (OutputBusy(client)) {
 		return false;
 	}
 
-	char buffer[4096];
 	const bool backlog = client.pending.find('\n') != std::string::npos;
 	for (int reads = 0; !backlog && !client.eof && reads < IPC_MAX_READS_PER_PASS; ++reads) {
-		const ssize_t n = read(client.fd, buffer, sizeof(buffer));
-		if (n > 0) {
-			client.pending.append(buffer, static_cast<size_t>(n));
-			continue;
-		}
-		if (n < 0 && errno == EINTR) {
-			continue;
-		}
-		if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+		const IoStatus status = ConnRead(client, client.pending);
+		if (status == IoStatus::WouldBlock) {
 			break;
 		}
-		// End of stream or error. Lines already received are still answered;
-		// a client that half-closes after sending can read the replies.
-		client.eof = true;
+		if (status == IoStatus::Closed) {
+			// Lines already received are still answered; a client that
+			// half-closes after sending can read the replies.
+			client.eof = true;
+		}
 	}
 
 	int processed = 0;
 	size_t start = 0;
 	size_t pos;
-	while (client.output.empty()
+	while (!OutputBusy(client)
 		&& (processed == 0 || std::chrono::steady_clock::now() < deadline)
 		&& (pos = client.pending.find('\n', start)) != std::string::npos) {
 		std::string line = client.pending.substr(start, pos - start);
@@ -3590,7 +4019,7 @@ static bool ServiceClient(IPCClient& client, std::chrono::steady_clock::time_poi
 		++processed;
 		if (ipc_quit_requested) {
 			FlushBeforeQuit(client);
-			shutdown(client.fd, SHUT_WR);
+			ConnFinishWrite(client);
 			CloseClient(client);
 			return true;
 		}
@@ -3609,12 +4038,13 @@ static bool ServiceClient(IPCClient& client, std::chrono::steady_clock::time_poi
 		client.output += make_response(false, {"Request too long"});
 		FlushOutput(client);
 		CloseClient(client);
-	} else if (client.eof && client.output.empty() && last_newline == std::string::npos) {
+	} else if (client.eof && !OutputBusy(client) && last_newline == std::string::npos) {
 		CloseClient(client);
 	}
 	return drained || processed > 0;
 }
 
+#ifndef _WIN32
 // Helper: Check if a socket is stale (no process listening)
 static bool is_socket_stale(const std::string& path)
 {
@@ -3660,10 +4090,15 @@ static bool is_socket_stale(const std::string& path)
 	// Other errors - assume stale to allow cleanup
 	return true;
 }
+#endif
 
-// Helper: Generate socket path with optional instance suffix
+// Helper: Generate socket path (pipe name on Windows) with optional instance suffix
 static std::string get_socket_path(int instance = 0)
 {
+#ifdef _WIN32
+	const std::string base_path = "\\\\.\\pipe\\amiberry";
+	const char* suffix = "";
+#else
 	std::string base_path;
 	const char* xdg_runtime = getenv("XDG_RUNTIME_DIR");
 	if (xdg_runtime) {
@@ -3671,15 +4106,47 @@ static std::string get_socket_path(int instance = 0)
 	} else {
 		base_path = "/tmp/amiberry";
 	}
+	const char* suffix = ".sock";
+#endif
 
 	if (instance == 0) {
-		return base_path + ".sock";
+		return base_path + suffix;
 	} else {
-		return base_path + "_" + std::to_string(instance) + ".sock";
+		return base_path + "_" + std::to_string(instance) + suffix;
 	}
 }
 
-void Amiberry::IPC::IPCSetup()
+#ifdef _WIN32
+// Claims the first free pipe name. A pipe disappears with the process that
+// created it, so there are no stale names to clean up.
+static bool OpenListener()
+{
+	if (!CreatePipeSecurity()) {
+		std::cerr << "IPC: Failed to build pipe security descriptor: error " << GetLastError() << std::endl;
+		return false;
+	}
+	for (int instance = 0; instance < 10; ++instance) {
+		socket_path = get_socket_path(instance);
+		DWORD error = ERROR_SUCCESS;
+		pipe_listener = CreatePipeListener(socket_path, true, error);
+		if (pipe_listener) {
+			socket_instance = instance;
+			if (instance > 0 && !currprefs.ipc_disable_logging) {
+				std::cout << "IPC: Default pipe in use, using instance " << instance << std::endl;
+			}
+			return true;
+		}
+		// ERROR_ACCESS_DENIED: another process owns this name.
+		if (error != ERROR_ACCESS_DENIED && error != ERROR_PIPE_BUSY) {
+			std::cerr << "IPC: Failed to create pipe " << socket_path << ": error " << error << std::endl;
+			return false;
+		}
+	}
+	std::cerr << "IPC: Could not find available pipe name after 10 attempts" << std::endl;
+	return false;
+}
+#else
+static bool OpenListener()
 {
 	// Try to find an available socket path
 	// First, try the default path
@@ -3697,7 +4164,7 @@ void Amiberry::IPC::IPCSetup()
 	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (server_socket < 0) {
 		std::cerr << "IPC: Failed to create socket: " << strerror(errno) << std::endl;
-		return;
+		return false;
 	}
 
 	// Set non-blocking
@@ -3740,7 +4207,7 @@ void Amiberry::IPC::IPCSetup()
 			std::cerr << "IPC: Failed to bind socket: " << strerror(errno) << std::endl;
 			close(server_socket);
 			server_socket = -1;
-			return;
+			return false;
 		}
 	}
 
@@ -3748,7 +4215,7 @@ void Amiberry::IPC::IPCSetup()
 		std::cerr << "IPC: Could not find available socket path after 10 attempts" << std::endl;
 		close(server_socket);
 		server_socket = -1;
-		return;
+		return false;
 	}
 
 	// Listen
@@ -3757,6 +4224,15 @@ void Amiberry::IPC::IPCSetup()
 		close(server_socket);
 		server_socket = -1;
 		unlink(socket_path.c_str());
+		return false;
+	}
+	return true;
+}
+#endif
+
+void Amiberry::IPC::IPCSetup()
+{
+	if (!OpenListener()) {
 		return;
 	}
 
@@ -3779,6 +4255,12 @@ void Amiberry::IPC::IPCCleanUp()
 	}
 	ipc_clients.clear();
 
+#ifdef _WIN32
+	pipe_listener.reset();
+	LocalFree(pipe_security);
+	pipe_security = nullptr;
+	socket_path.clear();
+#else
 	if (server_socket >= 0) {
 		close(server_socket);
 		server_socket = -1;
@@ -3788,6 +4270,7 @@ void Amiberry::IPC::IPCCleanUp()
 		unlink(socket_path.c_str());
 		socket_path.clear();
 	}
+#endif
 
 	ipc_active = false;
 }
@@ -3797,14 +4280,21 @@ void Amiberry::IPC::IPCHandle()
 	std::unique_lock<std::mutex> lock(ipc_handle_mutex, std::try_to_lock);
 	if (!lock.owns_lock()) return;
 
+#ifdef _WIN32
+	if (!ipc_active) return;
+	if (!pipe_listener) {
+		// Creating the next instance failed earlier; try again.
+		RestartPipeListener();
+	}
+#else
 	if (server_socket < 0) return;
+#endif
 
 	using clock = std::chrono::steady_clock;
 	const auto started = clock::now();
 	auto last_activity = started;
 	bool active = false;
-	std::vector<pollfd> fds;
-	fds.reserve(IPC_MAX_CLIENTS + 1);
+	IPCReadyFlags ready{};
 
 	while (!ipc_quit_requested) {
 		// Without activity, only take what is already waiting. After a request
@@ -3819,16 +4309,9 @@ void Amiberry::IPC::IPCHandle()
 			break;
 		}
 
-		fds.clear();
 		const bool can_accept = ipc_clients.size() < IPC_MAX_CLIENTS;
-		if (can_accept) {
-			fds.push_back({server_socket, POLLIN, 0});
-		}
-		const size_t first_client = fds.size();
 		bool backlog = false;
 		for (const auto& client : ipc_clients) {
-			const short events = client.output.empty() ? POLLIN : POLLOUT;
-			fds.push_back({client.fd, events, 0});
 			backlog = backlog || HasBacklog(client);
 		}
 
@@ -3836,28 +4319,27 @@ void Amiberry::IPC::IPCHandle()
 		const int timeout_ms = active && !backlog
 			? static_cast<int>(std::chrono::ceil<std::chrono::milliseconds>(deadline - now).count())
 			: 0;
-		const int ret = poll(fds.data(), static_cast<nfds_t>(fds.size()), timeout_ms);
-		if (ret < 0 && errno == EINTR) {
-			continue;
-		}
+		bool accept_ready = false;
+		const int ret = WaitForActivity(can_accept, timeout_ms, accept_ready, ready);
 		if (ret < 0 || (ret == 0 && !backlog)) {
 			break;
 		}
 
 		bool progressed = false;
-		for (size_t i = first_client; i < fds.size() && !ipc_quit_requested; ++i) {
-			IPCClient& client = ipc_clients[i - first_client];
-			if ((fds[i].revents != 0 || HasBacklog(client))
+		const size_t waited_on = ipc_clients.size();
+		for (size_t i = 0; i < waited_on && !ipc_quit_requested; ++i) {
+			IPCClient& client = ipc_clients[i];
+			if ((ready[i] || HasBacklog(client))
 				&& ServiceClient(client, hard_deadline)) {
 				progressed = true;
 			}
 		}
 		ipc_clients.erase(
 			std::remove_if(ipc_clients.begin(), ipc_clients.end(),
-				[](const IPCClient& client) { return client.fd < 0; }),
+				[](const IPCClient& client) { return !ConnIsOpen(client); }),
 			ipc_clients.end());
 
-		if (can_accept && (fds[0].revents & POLLIN) && !ipc_quit_requested && AcceptClients()) {
+		if (can_accept && accept_ready && !ipc_quit_requested && AcceptClients()) {
 			progressed = true;
 		}
 

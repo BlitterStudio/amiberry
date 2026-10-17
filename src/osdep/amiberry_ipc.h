@@ -1,6 +1,6 @@
 //
 // Unified IPC interface for Amiberry
-// Supports Unix domain sockets (cross-platform: Linux, macOS, FreeBSD)
+// Listens on a Unix domain socket (Linux, macOS, FreeBSD) or a named pipe (Windows)
 //
 
 #pragma once
@@ -12,14 +12,6 @@
 #include <functional>
 
 namespace Amiberry::IPC {
-
-// Socket path - use XDG_RUNTIME_DIR on Linux if available, else /tmp
-#ifdef __linux__
-    #define DEFAULT_SOCKET_PATH "/tmp/amiberry.sock"
-#else
-    // macOS and other Unix systems
-    constexpr char const* DEFAULT_SOCKET_PATH = "/tmp/amiberry.sock";
-#endif
 
 // Command names (same as DBus for consistency)
 constexpr char const* CMD_QUIT = "QUIT";
