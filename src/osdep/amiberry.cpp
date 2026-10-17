@@ -13286,7 +13286,8 @@ void drawbridge_update_profiles(uae_prefs* p)
 
 bool is_mainthread()
 {
-	return uae_thread_get_id(nullptr) == mainthreadid;
+	static thread_local const SDL_ThreadID tid = uae_thread_get_id(nullptr);
+	return tid == mainthreadid;
 }
 
 void clear_whdload_prefs()

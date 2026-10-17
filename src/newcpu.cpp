@@ -4340,7 +4340,8 @@ static void check_uae_int_request(void)
 {
 	bool irq2 = false;
 	bool irq6 = false;
-	if (atomic_and(&uae_interrupt, 0)) {
+	// Idle polls must not take exclusive ownership of the shared interrupt flag.
+	if (atomic_read(&uae_interrupt) && atomic_and(&uae_interrupt, 0)) {
 		for (int i = 0; i < IRQ_SOURCE_MAX; i++) {
 			if (!irq2 && uae_interrupts2[i]) {
 				uae_atomic v = atomic_and(&uae_interrupts2[i], 0);
@@ -4764,6 +4765,46 @@ static void debug_cpu_stop()
 #endif
 }
 
+static int do_specialties_check()
+{
+	if (regs.halted) {
+		if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
+			return 1;
+		}
+		unset_special(SPCFLAG_CHECK);
+		if (currprefs.cpu_thread) {
+			while (regs.halted) {
+				check_debugger();
+				if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+					return 1;
+				sleep_millis(1);
+			}
+		} else if (haltloop()) {
+			return 1;
+		}
+	}
+	if (m68k_reset_delay) {
+		int vsynccnt = 60;
+		int vsyncstate = -1;
+		while (vsynccnt > 0 && !quit_program) {
+			if (currprefs.cpu_thread) {
+				if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+					return 1;
+				sleep_millis(1);
+			} else {
+				x_do_cycles(8 * CYCLE_UNIT);
+			}
+			if (vsync_counter != vsyncstate) {
+				vsyncstate = vsync_counter;
+				vsynccnt--;
+			}
+		}
+	}
+	m68k_reset_delay = false;
+	unset_special(SPCFLAG_CHECK);
+	return 0;
+}
+
 static int do_specialties (int cycles)
 {
 	uaecptr pc = m68k_getpc();
@@ -4787,28 +4828,9 @@ static int do_specialties (int cycles)
 	}
 
 	if (spcflags & SPCFLAG_CHECK) {
-		if (regs.halted) {
-			if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
-				return 1;
-			}
-			unset_special(SPCFLAG_CHECK);
-			if (haltloop())
-				return 1;
-		}
-		if (m68k_reset_delay) {
-			int vsynccnt = 60;
-			int vsyncstate = -1;
-			while (vsynccnt > 0 && !quit_program) {
-				x_do_cycles(8 * CYCLE_UNIT);
-				spcflags = regs.spcflags;
-				if (vsync_counter != vsyncstate) {
-					vsyncstate = vsync_counter;
-					vsynccnt--;
-				}
-			}
-		}
-		m68k_reset_delay = false;
-		unset_special(SPCFLAG_CHECK);
+		if (do_specialties_check())
+			return 1;
+		spcflags = regs.spcflags;
 	}
 
 #ifdef ACTION_REPLAY
@@ -5294,13 +5316,19 @@ static int do_specialties_thread()
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
 
+	if (spcflags & SPCFLAG_CHECK) {
+		if (do_specialties_check())
+			return 1;
+		spcflags = regs.spcflags;
+	}
+
 	if (spcflags & SPCFLAG_UAEINT) {
 		check_uae_int_request();
 		unset_special(SPCFLAG_UAEINT);
 	}
 
 #ifdef JIT
-	if (currprefs.cachesize) {
+	if (currprefs.cachesize && (spcflags & SPCFLAG_END_COMPILE)) {
 		unset_special(SPCFLAG_END_COMPILE);
 	}
 #endif
@@ -5362,7 +5390,8 @@ extern addrbank *thread_mem_banks[MEMORY_BANKS];
 
 static bool is_cpu_thread()
 {
-	return cpu_thread_tid == uae_thread_get_id(nullptr);
+	static thread_local const SDL_ThreadID tid = uae_thread_get_id(nullptr);
+	return cpu_thread_tid == tid;
 }
 
 uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
@@ -5668,6 +5697,9 @@ void do_nothing (void)
 		/* What did you expect this to do? */
 		do_cycles (0);
 		/* I bet you didn't expect *that* ;-) */
+	} else {
+		// The chipset thread cannot replenish the CPU's JIT dispatch budget.
+		countdown = pissoff_value;
 	}
 }
 
@@ -5814,6 +5846,7 @@ static int cpu_thread_run_jit(void *v)
 #endif
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
+	countdown = pissoff_value;
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
@@ -5849,8 +5882,8 @@ static int cpu_thread_run_jit(void *v)
 #endif
 			}
 #endif
-			/* Whenever we return from that, we should check spcflags */
-			if (regs.spcflags || cpu_thread_ilvl > 0) {
+			/* A nonzero IPL alone needs no work: interrupt handling is flag-driven. */
+			if (regs.spcflags) {
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 				jit_in_compiled_code = false;
 #endif
@@ -6787,7 +6820,7 @@ static int cpu_thread_run_2(void *v)
 #endif
 				(*cpufunctbl[r->opcode])(r->opcode);
 
-				if (regs.spcflags || cpu_thread_ilvl > 0) {
+				if (regs.spcflags) {
 					if (do_specialties_thread())
 						exit = true;
 				}
