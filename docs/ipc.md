@@ -29,8 +29,8 @@ within a frame of each connection, so a client that gets `ERROR_PIPE_BUSY`
 (231) should retry for a short time. Python's `open()` reports that error as
 `EINVAL`; `tools/ipc_client.py` calls `_winapi.CreateFile` to see it. A pipe
 cannot be half-closed: read the replies before closing
-the handle. `tools/ipc_client.py` works on both transports. The Amiberry MCP
-server does not support the Windows pipe yet.
+the handle. `tools/ipc_client.py` and the Amiberry MCP server work on both
+transports.
 
 Each request and response is one newline-terminated record. Request fields are
 separated by tabs:
