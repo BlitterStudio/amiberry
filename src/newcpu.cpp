@@ -7021,6 +7021,20 @@ void m68k_run(void)
 
 		currprefs.cpu_model < 68020 ? m68k_run_2_000 : m68k_run_2_020;
 
+#ifdef WITH_THREADED_CPU
+	// Only these two loops start a CPU thread. Code that tests cpu_thread, such as
+	// the waits in do_specialties_check(), assumes another thread runs the chipset;
+	// a CPU fallback can switch to a loop without one.
+	if (currprefs.cpu_thread && run_func != m68k_run_2_020
+#ifdef JIT
+		&& run_func != m68k_run_jit
+#endif
+		) {
+		write_log(_T("Selected CPU emulation has no CPU thread, running the CPU on the main thread.\n"));
+		currprefs.cpu_thread = false;
+	}
+#endif
+
 	run_func();
 
 #ifdef WITH_THREADED_CPU

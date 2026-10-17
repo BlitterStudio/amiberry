@@ -488,6 +488,8 @@ void render_panel_cpu() {
                                 changed_prefs.ppc_mode ||
 #endif
                                 changed_prefs.cpu_memory_cycle_exact ||
+                                changed_prefs.cpu_cycle_exact ||
+                                (changed_prefs.mmu_model && !changed_prefs.cachesize) ||
                                 changed_prefs.cpu_model < 68020);
         ImGui::BeginDisabled(no_thread || emulating);
         AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
