@@ -4702,8 +4702,8 @@ static void doint_delayed(uae_u32 v)
 }
 
 #ifdef WITH_THREADED_CPU
-// Interrupt level the threaded CPU acts on when it sees SPCFLAG_INT/SPCFLAG_DOINT.
-static volatile int cpu_thread_ilvl;
+// Main-thread-published interrupt level consumed by the threaded CPU.
+static volatile uae_atomic cpu_thread_ilvl;
 #endif
 
 void doint()
@@ -4716,10 +4716,10 @@ void doint()
 #endif
 	int ipl = intlev();
 #ifdef WITH_THREADED_CPU
-	// Store the level before the flags below are raised. run_cpu_thread() polls
-	// intlev() only every other CCK, so after an INTREQ acknowledge the CPU thread
-	// would otherwise retake the old level as a spurious interrupt.
-	cpu_thread_ilvl = ipl;
+	// Publish chipset changes before raising flags, not at the next CCK poll.
+	// CPU-side calls may hold a stale sample and must not overwrite this latch.
+	if (currprefs.cpu_thread && is_mainthread())
+		atomic_set(&cpu_thread_ilvl, ipl);
 #endif
 
 	if (regs.ipl_pin != ipl) {
@@ -5384,7 +5384,7 @@ static int do_specialties_thread()
 			// Clear before reading the level. doint() and run_cpu_thread() store the
 			// level before raising a flag, so a level not visible yet leaves it set.
 			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
-			int intr = cpu_thread_ilvl;
+			int intr = atomic_read(&cpu_thread_ilvl);
 			if (intr > regs.intmask || (intr == 7 && intr > regs.lastipl)) {
 				do_interrupt(intr);
 			}
@@ -5608,7 +5608,7 @@ static void run_cpu_thread(int (*f)(void *))
 				check_uae_int_request();
 				int intr = intlev();
 				if (intr != intlev_prev) {
-					cpu_thread_ilvl = intr;
+					atomic_set(&cpu_thread_ilvl, intr);
 					if (intr > 0) {
 						// Level changes made without doint() (forced or delayed IRQs)
 						// are only noticed here; raise the flag after storing the level.
