@@ -834,6 +834,7 @@ extern void m68k_reset(void);
 extern bool cpureset(void);
 extern void cpu_halt(int id);
 extern void cpu_inreset(void);
+extern void cpu_keyboard_reset(bool hardreset, bool hold);
 extern int cpu_sleep_millis(int ms);
 extern void cpu_change(int newmodel);
 extern void cpu_fallback(int mode);

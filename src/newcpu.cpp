@@ -118,6 +118,11 @@ static volatile uae_atomic uae_interrupt;
 static volatile uae_atomic uae_interrupts2[IRQ_SOURCE_MAX];
 static volatile uae_atomic uae_interrupts6[IRQ_SOURCE_MAX];
 
+#ifdef WITH_THREADED_CPU
+// Keyboard reset left for the CPU thread: bit 0 = pending, bit 1 = hard reset.
+static volatile uae_atomic cpu_thread_kbreset;
+#endif
+
 static int cacheisets04060, cacheisets04060mask, cacheitag04060mask;
 static int cachedsets04060, cachedsets04060mask, cachedtag04060mask;
 
@@ -3651,6 +3656,9 @@ static void m68k_reset2(bool hardreset)
 	cpu_halt_clear();
 
 	regs.spcflags = 0;
+#ifdef WITH_THREADED_CPU
+	atomic_set(&cpu_thread_kbreset, 0);
+#endif
 	m68k_reset_delay = false;
 	regs.ipl[0] = regs.ipl[1] = regs.ipl_pin = 0;
 	for (int i = 0; i < IRQ_SOURCE_MAX; i++) {
@@ -5327,6 +5335,8 @@ static volatile uae_atomic cpu_thread_reset;
 static SDL_Thread* cpu_thread;
 static SDL_ThreadID cpu_thread_tid;
 
+static void custom_reset_cpu(bool hardreset, bool keyboardreset);
+
 static int do_specialties_thread()
 {
 	uae_atomic spcflags = regs.spcflags;
@@ -5340,6 +5350,14 @@ static int do_specialties_thread()
 			check_debugger();
 			if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 				return 1;
+			// The chipset reset of a keyboard reset runs on the main thread while this
+			// thread waits. custom_reset() clears SPCFLAG_CPUINRESET, so set it again.
+			uae_u32 kbreset = __atomic_exchange_n(&cpu_thread_kbreset, 0, __ATOMIC_ACQ_REL);
+			if (kbreset) {
+				custom_reset_cpu((kbreset & 2) != 0, true);
+				cpu_inreset();
+				continue;
+			}
 			sleep_millis(1);
 		}
 		spcflags = regs.spcflags;
@@ -5577,7 +5595,10 @@ static void run_cpu_thread(int (*f)(void *))
 		if (reset_val & 1) {
 			bool hardreset = reset_val & 2;
 			bool keyboardreset = reset_val & 4;
-			custom_reset(hardreset, keyboardreset);
+			if (keyboardreset)
+				inputdevice_kb_custom_reset(hardreset);
+			else
+				custom_reset(hardreset, false);
 			__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 			uae_sem_post(&cpu_in_sema);
 		}
@@ -5670,6 +5691,28 @@ static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 #else
 	custom_reset(hardreset, keyboardreset);
 #endif
+}
+
+// Chipset reset for a keyboard reset. hold keeps the CPU in reset afterwards;
+// without hold a uae_reset() follows.
+void cpu_keyboard_reset(bool hardreset, bool hold)
+{
+#ifdef WITH_THREADED_CPU
+	// The CPU thread may be running, so it does the reset itself from the hold in
+	// do_specialties_thread(). Without hold, m68k_go() resets everything after the
+	// CPU thread has stopped.
+	if (cpu_thread_active && !is_cpu_thread()) {
+		if (hold) {
+			atomic_set(&cpu_thread_kbreset, 1 | (hardreset ? 2 : 0));
+			set_special(SPCFLAG_CPUINRESET);
+			uae_sem_post(&cpu_wakeup_sema);
+		}
+		return;
+	}
+#endif
+	custom_reset_cpu(hardreset, true);
+	if (hold)
+		cpu_inreset();
 }
 
 #ifdef JIT  /* Completely different run_2 replacement */
