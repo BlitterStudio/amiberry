@@ -4769,6 +4769,8 @@ static int do_specialties_check()
 {
 	if (regs.halted) {
 		if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
+			if (currprefs.cpu_thread)
+				set_special(SPCFLAG_MODE_CHANGE);
 			return 1;
 		}
 		unset_special(SPCFLAG_CHECK);
