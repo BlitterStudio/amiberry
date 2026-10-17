@@ -5381,8 +5381,8 @@ static int do_specialties_thread()
 			do_trace();
 
 		if (spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
-			// Clear before reading the level. doint() and run_cpu_thread() store the
-			// level before raising a flag, so a level not visible yet leaves it set.
+			// Clear before reading the level. The main thread stores a new level
+			// before raising a flag, so a level not visible yet leaves it set.
 			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
 			int intr = atomic_read(&cpu_thread_ilvl);
 			if (intr > regs.intmask || (intr == 7 && intr > regs.lastipl)) {
