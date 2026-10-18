@@ -77,7 +77,7 @@ jobs:
         run: |
           PAGES_URL="https://packages.amiberry.com"
           mkdir -p /tmp/apt-repo
-          for codename in jammy noble questing resolute bookworm trixie; do
+          for codename in jammy noble questing resolute stonking bookworm trixie; do
             for arch in amd64 arm64; do
               pkgs_url="${PAGES_URL}/apt/dists/${codename}/main/binary-${arch}/Packages.gz"
               if curl -sf --max-time 10 "$pkgs_url" -o /tmp/packages-${codename}-${arch}.gz 2>/dev/null; then
@@ -99,7 +99,7 @@ jobs:
             [ -f "$deb" ] || { echo "No .deb files to process"; break; }
             debname=$(basename "$deb")
             echo "Processing: $debname"
-            codename=$(echo "$debname" | sed -nE 's/.*\+(jammy|noble|questing|resolute|bookworm|trixie)([.+~-][^_]*)?_[^_]+\.deb$/\1/p')
+            codename=$(echo "$debname" | sed -nE 's/.*\+(jammy|noble|questing|resolute|stonking|bookworm|trixie)([.+~-][^_]*)?_[^_]+\.deb$/\1/p')
             if [ -z "$codename" ]; then
               echo "  WARNING: Cannot extract codename from $debname - skipping"
               continue

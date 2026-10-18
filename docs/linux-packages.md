@@ -95,6 +95,7 @@ sudo dnf update amiberry
 | Ubuntu | 24.04 LTS (Noble) | noble | amd64 |
 | Ubuntu | 25.10 (Questing) | questing | amd64, arm64 |
 | Ubuntu | 26.04 LTS (Resolute) | resolute | amd64, arm64 |
+| Ubuntu | 26.10 (Stonking) | stonking | amd64, arm64 |
 | Debian | 12 (Bookworm) | bookworm | amd64, arm64 |
 | Debian | 13 (Trixie) | trixie | amd64, arm64 |
 | Raspberry Pi OS | Bookworm, Trixie | bookworm, trixie | arm64 |
@@ -171,6 +172,20 @@ Possible causes:
 - Your distribution version is not in the supported list above
 - Your architecture is not supported for your distro version (e.g., `arm64` on Ubuntu 22.04)
 - The repository was not configured correctly — re-run the install steps
+
+### "The Amiberry repository has no packages for ..."
+
+The install script found your release, but the repository does not publish a suite
+for it yet (new Ubuntu releases are added after their first Amiberry build). The
+script stops without changing your apt configuration. To try the packages of the
+closest older release, name its suite explicitly:
+
+```bash
+curl -fsSL https://packages.amiberry.com/install.sh | sudo AMIBERRY_APT_SUITE=resolute sh
+```
+
+Older-release packages can fail to install if your release has moved to newer
+library versions; Flatpak is the fallback in that case.
 
 ### Conflicting versions (Flatpak + APT/DNF both installed)
 
