@@ -5595,10 +5595,17 @@ static void run_cpu_thread(int (*f)(void *))
 		if (reset_val & 1) {
 			bool hardreset = reset_val & 2;
 			bool keyboardreset = reset_val & 4;
-			if (keyboardreset)
-				inputdevice_kb_custom_reset(hardreset);
-			else
+			if (keyboardreset) {
+				inputdevice_kb_custom_reset(hardreset, true);
+			} else if (atomic_read(&cpu_thread_kbreset)) {
+				// The reset keys were pressed while the CPU thread waited here (RESET
+				// instruction). custom_reset() would end that hold: it clears
+				// SPCFLAG_CPUINRESET and the keyboard reset sequence.
+				inputdevice_kb_custom_reset(hardreset, false);
+				set_special(SPCFLAG_CPUINRESET);
+			} else {
 				custom_reset(hardreset, false);
+			}
 			__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 			uae_sem_post(&cpu_in_sema);
 		}
