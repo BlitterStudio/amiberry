@@ -8421,6 +8421,11 @@ static std::string get_portable_mode_marker_path()
 
 static bool is_portable_mode_enabled()
 {
+#if defined(__linux__)
+	const auto* appimage = getenv("APPIMAGE");
+	if (appimage != nullptr && appimage[0] != '\0')
+		return false;
+#endif
 	const auto portable_marker = get_portable_mode_marker_path();
 	if (portable_marker.empty())
 		return false;
@@ -8436,6 +8441,15 @@ bool get_portable_mode()
 #if !defined(__MACH__) && !defined(__ANDROID__)
 bool can_toggle_portable_mode(std::string* reason_out)
 {
+#if defined(__linux__)
+	const auto* appimage = getenv("APPIMAGE");
+	if (appimage != nullptr && appimage[0] != '\0')
+	{
+		if (reason_out != nullptr)
+			*reason_out = "AppImage mounts are read-only. Create a sibling '<AppImage>.home' directory before launch to keep Amiberry data beside the image.";
+		return false;
+	}
+#endif
 	const auto portable_root = get_portable_root_directory();
 	if (portable_root.empty())
 	{
@@ -12396,6 +12410,14 @@ static void dump_resolved_paths(const bool write_dump_file)
 	output.append("portable_mode=").append(g_portable_mode ? "1" : "0").append("\n");
 	append_line("portable_root", get_portable_root_directory());
 	append_line("portable_marker_file", get_portable_mode_marker_path());
+#if !defined(__MACH__) && !defined(__ANDROID__)
+	std::string portable_toggle_reason;
+	const bool portable_toggle_available = can_toggle_portable_mode(&portable_toggle_reason);
+	std::replace(portable_toggle_reason.begin(), portable_toggle_reason.end(), '\n', ' ');
+	std::replace(portable_toggle_reason.begin(), portable_toggle_reason.end(), '\r', ' ');
+	output.append("portable_toggle_available=").append(portable_toggle_available ? "1" : "0").append("\n");
+	append_line("portable_toggle_unavailable_reason", portable_toggle_reason);
+#endif
 	append_line("relative_paths", relativepaths ? "1" : "0");
 	append_line("relative_path_base", get_relative_path_base());
 	append_line("settings_resolution_source", get_settings_resolution_source_name(resolved_settings_source));

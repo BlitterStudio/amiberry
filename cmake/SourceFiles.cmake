@@ -266,6 +266,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_mem.cpp
         src/osdep/amiberry_serial.cpp
         src/osdep/amiberry_update.cpp
+        src/osdep/amiberry_update_asset_policy.cpp
         src/osdep/amiberry_uaenet.cpp
         src/osdep/amiberry_whdbooter.cpp
         src/osdep/amiberry_rp9.cpp
