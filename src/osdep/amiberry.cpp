@@ -8327,6 +8327,80 @@ static std::string get_desktop_executable_directory()
 #endif
 }
 
+struct installed_resource_roots
+{
+	std::string prefix;
+	std::string data;
+	std::string plugins;
+};
+
+static const char* get_configured_install_bindir()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_INSTALL_BINDIR;
+#else
+	return "";
+#endif
+}
+
+static const char* get_configured_install_datadir()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_INSTALL_DATADIR;
+#else
+	return "";
+#endif
+}
+
+static const char* get_configured_install_libdir()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_INSTALL_LIBDIR;
+#else
+	return "";
+#endif
+}
+
+static const installed_resource_roots& get_relocated_installed_resource_roots()
+{
+	static const installed_resource_roots roots = []
+	{
+		installed_resource_roots result;
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+		auto executable_directory = std::filesystem::path(get_desktop_executable_directory()).lexically_normal();
+		if (executable_directory.filename().empty())
+			executable_directory = executable_directory.parent_path();
+		const auto configured_bindir = std::filesystem::path(AMIBERRY_INSTALL_BINDIR).lexically_normal();
+		if (executable_directory.empty() || configured_bindir.empty() || configured_bindir.is_absolute())
+			return result;
+
+		for (auto component = configured_bindir.end(); component != configured_bindir.begin();)
+		{
+			--component;
+			if (*component == "." || component->empty())
+				continue;
+			if (*component == ".." || executable_directory.empty()
+				|| executable_directory.filename() != *component)
+				return result;
+			executable_directory = executable_directory.parent_path();
+		}
+		if (executable_directory.empty())
+			return result;
+
+		result.prefix = normalize_path_string(executable_directory.string());
+		const auto data_root = (executable_directory / AMIBERRY_INSTALL_DATADIR / "amiberry").lexically_normal();
+		if (my_existsdir(data_root.string().c_str()))
+			result.data = normalize_path_string(data_root.string());
+		const auto plugins_root = (executable_directory / AMIBERRY_INSTALL_LIBDIR / "amiberry").lexically_normal();
+		if (my_existsdir(plugins_root.string().c_str()))
+			result.plugins = normalize_path_string(plugins_root.string());
+#endif
+		return result;
+	}();
+	return roots;
+}
+
+
 static std::string get_portable_root_directory()
 {
 	const auto executable_directory = get_desktop_executable_directory();
@@ -8740,25 +8814,31 @@ std::string get_data_directory(bool portable_mode)
 	}
 
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
-	const auto xdg_data_home = get_xdg_data_home();
 
-	// 1: Check if the $AMIBERRY_DATA_DIR ENV variable is set
+	// 1: An explicit environment override always wins.
 	if (env_data_dir != nullptr && my_existsdir(env_data_dir))
 	{
-		// If the ENV variable is set, and it actually contains our data dir, use it
 		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
 		return {env_data_dir};
 	}
-	// 2: Check for system-wide installation (e.g. from a .deb package)
+
+	// 2: Prefer resources installed beside this executable. This keeps staged
+	// and relocated prefixes isolated from another Amiberry under /usr.
+	const auto& installed_roots = get_relocated_installed_resource_roots();
+	if (!installed_roots.data.empty() && directory_exists(installed_roots.data, "/data"))
+	{
+		write_log("Using relocated data directory from %s\n", installed_roots.data.c_str());
+		return join_path(installed_roots.data, "data");
+	}
+
+	// 3: Retain the configured system location for native package layouts.
 	if (directory_exists(AMIBERRY_DATADIR, "/data"))
 	{
-		// If the data directory exists in AMIBERRY_DATADIR, use it
-		// This would be the default location after an installation with the .deb package
 		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
 		return std::string(AMIBERRY_DATADIR) + "/data/";
 	}
 
-	// 3: Check for a local executable-relative data dir (e.g. local build or unpacked tree)
+	// 4: Fall back to build-tree resources beside the executable.
 	const auto executable_directory = get_desktop_executable_directory();
 	if (directory_exists(executable_directory, "/data"))
 	{
@@ -8996,6 +9076,15 @@ std::string get_config_directory(bool portable_mode)
 
 // Plugin locations are searched in get_plugin_search_paths(). The bundled or
 // system directory remains separate from the writable per-user directory.
+static std::string get_compiled_system_plugins_directory()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return my_existsdir(AMIBERRY_LIBDIR) ? AMIBERRY_LIBDIR : std::string{};
+#else
+	return {};
+#endif
+}
+
 static std::string get_system_plugins_directory()
 {
 #ifdef LIBRETRO
@@ -9018,13 +9107,14 @@ static std::string get_system_plugins_directory()
 #elif defined(_WIN32)
 	return get_windows_executable_directory() + "\\plugins";
 #else
-	return my_existsdir(AMIBERRY_LIBDIR) ? AMIBERRY_LIBDIR : std::string{};
+	const auto& installed_roots = get_relocated_installed_resource_roots();
+	return !installed_roots.plugins.empty()
+		? installed_roots.plugins : get_compiled_system_plugins_directory();
 #endif
 }
 
-// This is the bundled/system path retained by legacy plugins_dir settings.
-// Unlike get_system_plugins_directory(), it remains available for migration
-// when the system installation directory has not been created yet.
+// This path was retained by legacy plugins_dir settings. Keep the compiled
+// location available for migration even when a relocated root takes precedence.
 static std::string get_legacy_system_plugins_directory()
 {
 	if (g_portable_mode)
@@ -9087,6 +9177,7 @@ static bool is_valid_plugins_override(const std::string& path)
 {
 	if (path.empty() || g_portable_mode
 		|| path_strings_match(path, get_user_plugins_path())
+		|| path_strings_match(path, get_relocated_installed_resource_roots().plugins)
 		|| is_macos_bundled_plugins_path(path))
 		return false;
 
@@ -9139,9 +9230,14 @@ std::vector<std::string> get_plugin_search_paths()
 			append_unique_path_candidate(candidates, env_plugins_dir);
 		append_unique_path_candidate(candidates, plugins_dir);
 		append_unique_path_candidate(candidates, get_user_plugins_path());
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+		append_unique_path_candidate(candidates, get_relocated_installed_resource_roots().plugins);
+		append_unique_path_candidate(candidates, get_compiled_system_plugins_directory());
+#else
 		append_unique_path_candidate(candidates, get_system_plugins_directory());
+#endif
 		// Preserve the legacy executable-relative fallback. It remains last so
-		// user and system locations retain precedence when they are available.
+		// user and installed locations retain precedence when they are available.
 #if (defined(__linux__) || defined(__FreeBSD__)) && !defined(LIBRETRO)
 		append_unique_path_candidate(candidates, join_path(get_portable_root_directory(), "plugins"));
 #endif
@@ -11580,6 +11676,20 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 	if (!app_resources_dir.empty())
 		append_unique_path_candidate(candidates, join_path(app_resources_dir, subdirectory));
 #else
+#if !defined(LIBRETRO) && !defined(__ANDROID__) && !defined(_WIN32)
+	const auto append_existing_seed_directory = [&](const std::string& root)
+	{
+		const auto candidate = join_path(root, subdirectory);
+		if (!candidate.empty() && my_existsdir(candidate.c_str()))
+			append_unique_path_candidate(candidates, candidate);
+	};
+	append_existing_seed_directory(get_relocated_installed_resource_roots().data);
+	append_existing_seed_directory(AMIBERRY_DATADIR);
+	append_existing_seed_directory(get_desktop_executable_directory());
+	append_existing_seed_directory("/usr/share/amiberry");
+	if (include_usr_local_share)
+		append_existing_seed_directory("/usr/local/share/amiberry");
+#else
 	const auto executable_directory = get_desktop_executable_directory();
 	if (!executable_directory.empty())
 		append_unique_path_candidate(candidates, join_path(executable_directory, subdirectory));
@@ -11588,6 +11698,7 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 	append_unique_path_candidate(candidates, join_path("/usr/share/amiberry", subdirectory));
 	if (include_usr_local_share)
 		append_unique_path_candidate(candidates, join_path("/usr/local/share/amiberry", subdirectory));
+#endif
 #endif
 #endif
 	return candidates;
@@ -12296,12 +12407,27 @@ static void dump_resolved_paths(const bool write_dump_file)
 	append_line("home_dir", home_dir);
 	append_line("config_path", config_path);
 	append_line("data_dir", data_dir);
+	append_line("install_bindir_relative", get_configured_install_bindir());
+	append_line("install_datadir_relative", get_configured_install_datadir());
+	append_line("install_libdir_relative", get_configured_install_libdir());
+	const auto& installed_roots = get_relocated_installed_resource_roots();
+	append_line("install_prefix", installed_roots.prefix);
+	append_line("relocated_data_root", installed_roots.data);
+	append_line("relocated_plugins_root", installed_roots.plugins);
 	append_line("plugins_dir", plugins_dir);
 	append_line("system_plugins_dir", get_legacy_system_plugins_directory());
 	append_line("user_plugins_dir", get_user_plugins_path());
 	const auto plugin_search_paths = get_plugin_search_paths();
 	for (size_t index = 0; index < plugin_search_paths.size(); ++index)
 		append_line(("plugin_search_path_" + std::to_string(index)).c_str(), plugin_search_paths[index]);
+	const auto append_seed_sources = [&](const char* name, const std::vector<std::string>& candidates)
+	{
+		for (size_t index = 0; index < candidates.size(); ++index)
+			append_line((std::string(name) + "_seed_source_" + std::to_string(index)).c_str(), candidates[index]);
+	};
+	append_seed_sources("controllers", get_seed_source_candidates("controllers", true));
+	append_seed_sources("roms", get_seed_source_candidates("roms", true));
+	append_seed_sources("whdboot", get_seed_source_candidates("whdboot", true));
 	append_line("controllers_path", controllers_path);
 	append_line("whdboot_path", whdboot_path);
 	append_line("whdload_arch_path", whdload_arch_path);
