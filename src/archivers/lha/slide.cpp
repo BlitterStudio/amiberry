@@ -89,6 +89,8 @@ int decode(struct interfacing *lhinterface)
 	if (dtext == NULL)
 	    return 0;
 	for (i=0; i<dicsiz; i++) dtext[i] = 0x20;
+	/* decode_start_lz5() presets the dictionary through the global 'text' */
+	text = dtext;
 	decode_set.decode_start();
 	dicsiz1 = dicsiz - 1;
 	offset = (lhinterface->method == LARC_METHOD_NUM) ? 0x100 - 2 : 0x100 - 3;
@@ -124,6 +126,7 @@ int decode(struct interfacing *lhinterface)
 	}
 
 	free(dtext);
+	text = NULL;
     return 1;
 }
 
