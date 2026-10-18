@@ -15,6 +15,7 @@
 #include "sysdeps.h"
 #include "amiberry_update.h"
 #include "amiberry_update_asset_policy.h"
+#include "amiberry_curl.h"
 #include "options.h"
 #include "threaddep/thread.h"
 
@@ -442,6 +443,13 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 		return false;
 	}
 
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error)) {
+		write_log("Updater: failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
+		return false;
+	}
+
 	HttpContext ctx;
 
 	const std::string ua = std::string("User-Agent: amiberry/") + AMIBERRY_VERSION;
@@ -805,6 +813,15 @@ std::string download_update(const UpdateInfo& info, DownloadProgressCallback pro
 	CURL* curl = curl_easy_init();
 	if (!curl) {
 		write_log("Updater: curl_easy_init failed in download_update\n");
+		out.close();
+		std::filesystem::remove(temp_path, ec);
+		return {};
+	}
+
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error)) {
+		write_log("Updater: failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
 		out.close();
 		std::filesystem::remove(temp_path, ec);
 		return {};

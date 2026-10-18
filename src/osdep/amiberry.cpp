@@ -70,6 +70,7 @@
 #include "amiberry_rp9.h"
 #include "amiberry_reset_chipset_prefs.h"
 #include "amiberry_update.h"
+#include "amiberry_curl.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
 #include "gui_layout_scale.h"
@@ -8576,6 +8577,16 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		return false;
 	}
 
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error))
+	{
+		write_log("Failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
+		fclose(fp);
+		std::remove(tmp.c_str());
+		return false;
+	}
+
 	curl_easy_setopt(curl, CURLOPT_URL, source.c_str());
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -8670,6 +8681,16 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	{
 		write_log("Failed to initialize libcurl\n");
 		fclose(fp);
+		return false;
+	}
+
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error))
+	{
+		write_log("Failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
+		fclose(fp);
+		std::remove(tmp.c_str());
 		return false;
 	}
 
@@ -12432,6 +12453,7 @@ static void dump_resolved_paths(const bool write_dump_file)
 	append_line("install_bindir_relative", get_configured_install_bindir());
 	append_line("install_datadir_relative", get_configured_install_datadir());
 	append_line("install_libdir_relative", get_configured_install_libdir());
+	append_line("effective_ca_bundle", get_effective_ca_bundle());
 	const auto& installed_roots = get_relocated_installed_resource_roots();
 	append_line("install_prefix", installed_roots.prefix);
 	append_line("relocated_data_root", installed_roots.data);
