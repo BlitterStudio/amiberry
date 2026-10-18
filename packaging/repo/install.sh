@@ -23,9 +23,19 @@ GPG_KEY_URL="${REPO_BASE}/gpg.key"
 GPG_ASC_URL="${REPO_BASE}/gpg.asc"
 GPG_KEYRING="/usr/share/keyrings/amiberry-archive-keyring.gpg"
 
+# Suites published under ${REPO_BASE}/apt (packaging/repo/conf/distributions).
+PUBLISHED_APT_SUITES="jammy noble questing resolute stonking bookworm trixie"
+
 APT_FAMILY=""
 APT_SUITE=""
 APT_VERSION_ID="${VERSION_ID:-}"
+
+is_published_suite() {
+    case " ${PUBLISHED_APT_SUITES} " in
+        *" $1 "*) return 0 ;;
+    esac
+    return 1
+}
 
 set_ubuntu_suite() {
     APT_FAMILY="ubuntu"
@@ -35,6 +45,7 @@ set_ubuntu_suite() {
         noble)    APT_VERSION_ID="24.04" ;;
         questing) APT_VERSION_ID="25.10" ;;
         resolute) APT_VERSION_ID="26.04" ;;
+        stonking) APT_VERSION_ID="26.10" ;;
     esac
 }
 
@@ -118,7 +129,7 @@ fi
 
 if [ -z "$APT_SUITE" ]; then
     case "${VERSION_CODENAME:-}" in
-        jammy|noble|questing|resolute)
+        jammy|noble|questing|resolute|stonking)
             case " ${ID_LIKE:-} " in
                 *" ubuntu "*|*" debian "*) set_ubuntu_suite "$VERSION_CODENAME" ;;
             esac
@@ -131,19 +142,34 @@ if [ -z "$APT_SUITE" ]; then
     esac
 fi
 
+# AMIBERRY_APT_SUITE overrides detection, e.g. to use the closest older suite
+# on a release that has no packages yet:
+#   curl -fsSL https://packages.amiberry.com/install.sh | sudo AMIBERRY_APT_SUITE=resolute sh
+if [ -n "${AMIBERRY_APT_SUITE:-}" ]; then
+    case "$AMIBERRY_APT_SUITE" in
+        jammy|noble|questing|resolute|stonking) set_ubuntu_suite "$AMIBERRY_APT_SUITE" ;;
+        bookworm|trixie) set_debian_suite "$AMIBERRY_APT_SUITE" ;;
+        *)
+            echo "Error: AMIBERRY_APT_SUITE=${AMIBERRY_APT_SUITE} is not a published suite."
+            echo "Published suites: ${PUBLISHED_APT_SUITES}"
+            exit 1
+            ;;
+    esac
+fi
+
 if [ -n "$APT_SUITE" ]; then
     echo "Detected ${PRETTY_NAME}"
     echo "Using ${APT_SUITE} repository suite"
 
-    # Check if codename is supported
-    case "$APT_SUITE" in
-        jammy|noble|questing|resolute|bookworm|trixie)
-            ;;
-        *)
-            echo "Warning: ${APT_SUITE} is not officially supported."
-            echo "You can still try to use the closest supported release."
-            ;;
-    esac
+    # Stop before touching apt configuration: a source for a suite the
+    # repository does not publish makes every later 'apt update' fail.
+    if ! is_published_suite "$APT_SUITE"; then
+        echo "Error: the Amiberry repository has no packages for ${APT_SUITE}."
+        echo "Published suites: ${PUBLISHED_APT_SUITES}"
+        echo "To try the closest older release instead, choose its suite explicitly:"
+        echo "  curl -fsSL ${REPO_BASE}/install.sh | sudo AMIBERRY_APT_SUITE=<suite> sh"
+        exit 1
+    fi
         
     # Install curl if not available
     if ! command -v curl >/dev/null 2>&1; then
@@ -224,6 +250,8 @@ else
         echo "Supported: Ubuntu (22.04+), Debian (12+), Devuan (5+), Fedora"
         echo "Also supported through compatible suites: Linux Mint, LMDE,"
         echo "Elementary OS, Pop!_OS, Zorin OS, Parrot OS, and SparkyLinux"
+        echo "Other Debian/Ubuntu-based systems can name a suite with"
+        echo "AMIBERRY_APT_SUITE=<suite> (one of: ${PUBLISHED_APT_SUITES})"
         echo ""
         echo "For manual installation, visit: https://packages.amiberry.com"
         exit 1

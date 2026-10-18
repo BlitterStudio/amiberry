@@ -37,6 +37,15 @@ SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
 Origin: Amiberry
 Label: Amiberry
 Suite: stable
+Codename: stonking
+Architectures: amd64 arm64
+Components: main
+Description: Amiberry APT repository (Ubuntu 26.10 Stonking)
+SignWith: D74D52525340C442A4F8B657A12B57C04E1FE282
+
+Origin: Amiberry
+Label: Amiberry
+Suite: stable
 Codename: bookworm
 Architectures: amd64 arm64
 Components: main

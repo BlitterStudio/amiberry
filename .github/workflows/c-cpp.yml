@@ -611,6 +611,22 @@ jobs:
             codename: resolute
             extra_cmake_args:
             qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
+          - name: 26.10-amd64
+            runner: ubuntu-24.04
+            container: ubuntu:26.10
+            artifact_name: amiberry-ubuntu-26.10-amd64
+            sdl_source: apt
+            codename: stonking
+            extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-x86_64.tar.xz
+          - name: 26.10-arm64
+            runner: ubuntu-24.04-arm
+            container: ubuntu:26.10
+            artifact_name: amiberry-ubuntu-26.10-arm64
+            sdl_source: apt
+            codename: stonking
+            extra_cmake_args:
+            qemu_uae_asset: qemu-uae-linux-aarch64.tar.xz
     steps:
       - name: Install prerequisites
         run: |
