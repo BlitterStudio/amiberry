@@ -823,7 +823,8 @@ void uaenet_trigger(void *vsd)
 #endif
 #ifdef WITH_UAENET_PCAP
             if (ud->backend_type == UAENET_PCAP) {
-                pcap_sendpacket(ud->handle, (const u_char *)pkt, len);
+                if (pcap_sendpacket(ud->handle, (const u_char *)pkt, len) != 0)
+                    write_log(_T("UAENET: pcap_sendpacket error: %s\n"), pcap_geterr(ud->handle));
             }
 #endif
         }
