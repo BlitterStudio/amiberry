@@ -166,6 +166,7 @@ static const TCHAR *getdevname (void)
 	return _T("uaenet.device");
 }
 
+namespace {
 struct asyncreq {
 	struct asyncreq *next;
 	uaecptr arequest;
@@ -173,6 +174,7 @@ struct asyncreq {
 	struct s2packet *s2p;
 	int ready;
 };
+}
 
 struct mcast {
 	struct mcast *next;

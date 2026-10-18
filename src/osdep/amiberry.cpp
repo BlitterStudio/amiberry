@@ -12631,6 +12631,7 @@ void target_shutdown()
 #endif
 }
 
+namespace {
 struct winuae	//this struct is put in a6 if you call
 	//execute native function
 {
@@ -12638,6 +12639,7 @@ struct winuae	//this struct is put in a6 if you call
 	unsigned int changenum;   //number to detect screen close/open
 	unsigned int z3offset;    //the offset to add to access Z3 mem from Dll side
 };
+}
 
 void* uaenative_get_uaevar()
 {

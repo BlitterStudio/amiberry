@@ -108,6 +108,7 @@ int log_uaeserial = 0;
 */
 
 
+namespace {
 struct asyncreq {
 	struct asyncreq *next;
 	uaecptr arequest;
@@ -129,6 +130,7 @@ struct devstruct {
 
 	void *sysdata;
 };
+}
 
 static int uniq;
 static uae_u32 nscmd_cmd;
