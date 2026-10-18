@@ -116,10 +116,12 @@ typedef struct atkbc_dev_t {
 static atkbc_dev_t draco_kbd;
 static atkbc_dev_t *SavedKbd = &draco_kbd;
 
+namespace {
 typedef struct scancode {
     const uint8_t mk[4];
     const uint8_t brk[4];
 } scancode;
+}
 
 static scancode *scan_table; /* scancode table for keyboard */
 

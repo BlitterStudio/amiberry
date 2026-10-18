@@ -37,15 +37,15 @@ enum bitmap_format
 };
 
 
-// ======================> rectangle
+// ======================> chd_rectangle
 
 // rectangles describe a bitmap portion
-class rectangle
+class chd_rectangle
 {
 public:
 	// construction/destruction
-	constexpr rectangle() { }
-	constexpr rectangle(int32_t minx, int32_t maxx, int32_t miny, int32_t maxy)
+	constexpr chd_rectangle() { }
+	constexpr chd_rectangle(int32_t minx, int32_t maxx, int32_t miny, int32_t maxy)
 		: min_x(minx), max_x(maxx), min_y(miny), max_y(maxy)
 	{ }
 
@@ -56,7 +56,7 @@ public:
 	constexpr int32_t bottom() const { return max_y; }
 
 	// compute intersection with another rect
-	rectangle& operator&=(const rectangle& src)
+	chd_rectangle& operator&=(const chd_rectangle& src)
 	{
 		if (src.min_x > min_x) min_x = src.min_x;
 		if (src.max_x < max_x) max_x = src.max_x;
@@ -66,7 +66,7 @@ public:
 	}
 
 	// compute union with another rect
-	rectangle& operator|=(const rectangle& src)
+	chd_rectangle& operator|=(const chd_rectangle& src)
 	{
 		if (src.min_x < min_x) min_x = src.min_x;
 		if (src.max_x > max_x) max_x = src.max_x;
@@ -75,32 +75,32 @@ public:
 		return *this;
 	}
 
-	rectangle operator&(const rectangle& b)
+	chd_rectangle operator&(const chd_rectangle& b)
 	{
-		rectangle a(*this);
+		chd_rectangle a(*this);
 		a &= b;
 		return a;
 	}
 
-	rectangle operator|(const rectangle& b)
+	chd_rectangle operator|(const chd_rectangle& b)
 	{
-		rectangle a(*this);
+		chd_rectangle a(*this);
 		a |= b;
 		return a;
 	}
 
 	// comparisons
-	constexpr bool operator==(const rectangle& rhs) const { return min_x == rhs.min_x && max_x == rhs.max_x && min_y == rhs.min_y && max_y == rhs.max_y; }
-	constexpr bool operator!=(const rectangle& rhs) const { return min_x != rhs.min_x || max_x != rhs.max_x || min_y != rhs.min_y || max_y != rhs.max_y; }
-	constexpr bool operator>(const rectangle& rhs) const { return min_x < rhs.min_x&& min_y < rhs.min_y&& max_x > rhs.max_x&& max_y > rhs.max_y; }
-	constexpr bool operator>=(const rectangle& rhs) const { return min_x <= rhs.min_x && min_y <= rhs.min_y && max_x >= rhs.max_x && max_y >= rhs.max_y; }
-	constexpr bool operator<(const rectangle& rhs) const { return min_x >= rhs.min_x || min_y >= rhs.min_y || max_x <= rhs.max_x || max_y <= rhs.max_y; }
-	constexpr bool operator<=(const rectangle& rhs) const { return min_x > rhs.min_x || min_y > rhs.min_y || max_x < rhs.max_x || max_y < rhs.max_y; }
+	constexpr bool operator==(const chd_rectangle& rhs) const { return min_x == rhs.min_x && max_x == rhs.max_x && min_y == rhs.min_y && max_y == rhs.max_y; }
+	constexpr bool operator!=(const chd_rectangle& rhs) const { return min_x != rhs.min_x || max_x != rhs.max_x || min_y != rhs.min_y || max_y != rhs.max_y; }
+	constexpr bool operator>(const chd_rectangle& rhs) const { return min_x < rhs.min_x&& min_y < rhs.min_y&& max_x > rhs.max_x&& max_y > rhs.max_y; }
+	constexpr bool operator>=(const chd_rectangle& rhs) const { return min_x <= rhs.min_x && min_y <= rhs.min_y && max_x >= rhs.max_x && max_y >= rhs.max_y; }
+	constexpr bool operator<(const chd_rectangle& rhs) const { return min_x >= rhs.min_x || min_y >= rhs.min_y || max_x <= rhs.max_x || max_y <= rhs.max_y; }
+	constexpr bool operator<=(const chd_rectangle& rhs) const { return min_x > rhs.min_x || min_y > rhs.min_y || max_x < rhs.max_x || max_y < rhs.max_y; }
 
 	// other helpers
 	constexpr bool empty() const { return (min_x > max_x) || (min_y > max_y); }
 	constexpr bool contains(int32_t x, int32_t y) const { return (x >= min_x) && (x <= max_x) && (y >= min_y) && (y <= max_y); }
-	constexpr bool contains(const rectangle& rect) const { return (min_x <= rect.min_x) && (max_x >= rect.max_x) && (min_y <= rect.min_y) && (max_y >= rect.max_y); }
+	constexpr bool contains(const chd_rectangle& rect) const { return (min_x <= rect.min_x) && (max_x >= rect.max_x) && (min_y <= rect.min_y) && (max_y >= rect.max_y); }
 	constexpr int32_t width() const { return max_x + 1 - min_x; }
 	constexpr int32_t height() const { return max_y + 1 - min_y; }
 	constexpr int32_t xcenter() const { return (min_x + max_x + 1) / 2; }
@@ -128,23 +128,23 @@ public:
 };
 
 
-// ======================> bitmap_t
+// ======================> chd_bitmap_t
 
 // bitmaps describe a rectangular array of pixels
-class bitmap_t
+class chd_bitmap_t
 {
 protected:
 	// construction/destruction -- subclasses only to ensure type correctness
-	bitmap_t(const bitmap_t&) = delete;
-	bitmap_t(bitmap_t&& that);
-	bitmap_t(bitmap_format format, uint8_t bpp, int width = 0, int height = 0, int xslop = 0, int yslop = 0);
-	bitmap_t(bitmap_format format, uint8_t bpp, void* base, int width, int height, int rowpixels);
-	bitmap_t(bitmap_format format, uint8_t bpp, bitmap_t& source, const rectangle& subrect);
-	virtual ~bitmap_t();
+	chd_bitmap_t(const chd_bitmap_t&) = delete;
+	chd_bitmap_t(chd_bitmap_t&& that);
+	chd_bitmap_t(bitmap_format format, uint8_t bpp, int width = 0, int height = 0, int xslop = 0, int yslop = 0);
+	chd_bitmap_t(bitmap_format format, uint8_t bpp, void* base, int width, int height, int rowpixels);
+	chd_bitmap_t(bitmap_format format, uint8_t bpp, chd_bitmap_t& source, const chd_rectangle& subrect);
+	virtual ~chd_bitmap_t();
 
 	// prevent implicit copying
-	bitmap_t& operator=(const bitmap_t&) = delete;
-	bitmap_t& operator=(bitmap_t&& that);
+	chd_bitmap_t& operator=(const chd_bitmap_t&) = delete;
+	chd_bitmap_t& operator=(chd_bitmap_t&& that);
 
 public:
 	// allocation/deallocation
@@ -159,7 +159,7 @@ public:
 	bitmap_format format() const { return m_format; }
 	bool valid() const { return (m_base != nullptr); }
 	palette_t* palette() const { return m_palette; }
-	const rectangle& cliprect() const { return m_cliprect; }
+	const chd_rectangle& cliprect() const { return m_cliprect; }
 
 	// allocation/sizing
 	void allocate(int width, int height, int xslop = 0, int yslop = 0);
@@ -168,10 +168,10 @@ public:
 	// operations
 	void set_palette(palette_t* palette);
 	void fill(uint64_t color) { fill(color, m_cliprect); }
-	void fill(uint64_t color, const rectangle& bounds);
+	void fill(uint64_t color, const chd_rectangle& bounds);
 	void plot_box(int32_t x, int32_t y, int32_t width, int32_t height, uint64_t color)
 	{
-		fill(color, rectangle(x, x + width - 1, y, y + height - 1));
+		fill(color, chd_rectangle(x, x + width - 1, y, y + height - 1));
 	}
 
 	// pixel access
@@ -183,7 +183,7 @@ protected:
 	template <typename PixelType> PixelType& pixt(int32_t y, int32_t x = 0) { return *(reinterpret_cast<PixelType*>(m_base) + y * m_rowpixels + x); }
 	template <typename PixelType> PixelType const& pixt(int32_t y, int32_t x = 0) const { return *(reinterpret_cast<PixelType*>(m_base) + y * m_rowpixels + x); }
 	void wrap(void* base, int width, int height, int rowpixels);
-	void wrap(bitmap_t& source, const rectangle& subrect);
+	void wrap(chd_bitmap_t& source, const chd_rectangle& subrect);
 
 private:
 	// internal helpers
@@ -201,23 +201,23 @@ private:
 	bitmap_format               m_format;       // format of the bitmap
 	uint8_t                     m_bpp;          // bits per pixel
 	palette_t* m_palette;      // optional palette
-	rectangle                   m_cliprect;     // a clipping rectangle covering the full bitmap
+	chd_rectangle                   m_cliprect;     // a clipping chd_rectangle covering the full bitmap
 };
 
 
 // ======================> bitmap_specific, bitmap8_t, bitmap16_t, bitmap32_t, bitmap64_t
 
 template <typename PixelType>
-class bitmap_specific : public bitmap_t
+class bitmap_specific : public chd_bitmap_t
 {
 	static constexpr int PIXEL_BITS = 8 * sizeof(PixelType);
 
 protected:
 	// construction/destruction -- subclasses only
 	bitmap_specific(bitmap_specific<PixelType>&&) = default;
-	bitmap_specific(bitmap_format format, int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap_t(format, PIXEL_BITS, width, height, xslop, yslop) { }
-	bitmap_specific(bitmap_format format, PixelType* base, int width, int height, int rowpixels) : bitmap_t(format, PIXEL_BITS, base, width, height, rowpixels) { }
-	bitmap_specific(bitmap_format format, bitmap_specific<PixelType>& source, const rectangle& subrect) : bitmap_t(format, PIXEL_BITS, source, subrect) { }
+	bitmap_specific(bitmap_format format, int width = 0, int height = 0, int xslop = 0, int yslop = 0) : chd_bitmap_t(format, PIXEL_BITS, width, height, xslop, yslop) { }
+	bitmap_specific(bitmap_format format, PixelType* base, int width, int height, int rowpixels) : chd_bitmap_t(format, PIXEL_BITS, base, width, height, rowpixels) { }
+	bitmap_specific(bitmap_format format, bitmap_specific<PixelType>& source, const chd_rectangle& subrect) : chd_bitmap_t(format, PIXEL_BITS, source, subrect) { }
 
 	bitmap_specific<PixelType>& operator=(bitmap_specific<PixelType>&&) = default;
 
@@ -233,10 +233,10 @@ public:
 
 	// operations
 	void fill(PixelType color) { fill(color, cliprect()); }
-	void fill(PixelType color, const rectangle& bounds)
+	void fill(PixelType color, const chd_rectangle& bounds)
 	{
 		// if we have a cliprect, intersect with that
-		rectangle fill(bounds);
+		chd_rectangle fill(bounds);
 		fill &= cliprect();
 		if (!fill.empty())
 		{
@@ -246,7 +246,7 @@ public:
 	}
 	void plot_box(int32_t x, int32_t y, int32_t width, int32_t height, PixelType color)
 	{
-		fill(color, rectangle(x, x + width - 1, y, y + height - 1));
+		fill(color, chd_rectangle(x, x + width - 1, y, y + height - 1));
 	}
 };
 
@@ -279,9 +279,9 @@ public:
 	bitmap_ind8(bitmap_ind8&&) = default;
 	bitmap_ind8(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap8_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_ind8(uint8_t* base, int width, int height, int rowpixels) : bitmap8_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind8(bitmap_ind8& source, const rectangle& subrect) : bitmap8_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint8_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_ind8& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_ind8(bitmap_ind8& source, const chd_rectangle& subrect) : bitmap8_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint8_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind8& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }
@@ -299,9 +299,9 @@ public:
 	bitmap_ind16(bitmap_ind16&&) = default;
 	bitmap_ind16(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap16_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_ind16(uint16_t* base, int width, int height, int rowpixels) : bitmap16_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind16(bitmap_ind16& source, const rectangle& subrect) : bitmap16_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint16_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_ind8& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_ind16(bitmap_ind16& source, const chd_rectangle& subrect) : bitmap16_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint16_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind8& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }
@@ -319,9 +319,9 @@ public:
 	bitmap_ind32(bitmap_ind32&&) = default;
 	bitmap_ind32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_ind32(uint32_t* base, int width, int height, int rowpixels) : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind32(bitmap_ind32& source, const rectangle& subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint32_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_ind8& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_ind32(bitmap_ind32& source, const chd_rectangle& subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint32_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind8& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }
@@ -339,9 +339,9 @@ public:
 	bitmap_ind64(bitmap_ind64&&) = default;
 	bitmap_ind64(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap64_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_ind64(uint64_t* base, int width, int height, int rowpixels) : bitmap64_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_ind64(bitmap_ind64& source, const rectangle& subrect) : bitmap64_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint64_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_ind8& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_ind64(bitmap_ind64& source, const chd_rectangle& subrect) : bitmap64_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint64_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_ind8& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }
@@ -362,9 +362,9 @@ public:
 	bitmap_yuy16(bitmap_yuy16&&) = default;
 	bitmap_yuy16(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap16_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_yuy16(uint16_t* base, int width, int height, int rowpixels) : bitmap16_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_yuy16(bitmap_yuy16& source, const rectangle& subrect) : bitmap16_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint16_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_yuy16& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_yuy16(bitmap_yuy16& source, const chd_rectangle& subrect) : bitmap16_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint16_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_yuy16& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }
@@ -382,9 +382,9 @@ public:
 	bitmap_rgb32(bitmap_rgb32&&) = default;
 	bitmap_rgb32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_rgb32(uint32_t* base, int width, int height, int rowpixels) : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_rgb32(bitmap_rgb32& source, const rectangle& subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint32_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_rgb32& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_rgb32(bitmap_rgb32& source, const chd_rectangle& subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint32_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_rgb32& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }
@@ -402,9 +402,9 @@ public:
 	bitmap_argb32(bitmap_argb32&&) = default;
 	bitmap_argb32(int width = 0, int height = 0, int xslop = 0, int yslop = 0) : bitmap32_t(k_bitmap_format, width, height, xslop, yslop) { }
 	bitmap_argb32(uint32_t* base, int width, int height, int rowpixels) : bitmap32_t(k_bitmap_format, base, width, height, rowpixels) { }
-	bitmap_argb32(bitmap_argb32& source, const rectangle& subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
-	void wrap(uint32_t* base, int width, int height, int rowpixels) { bitmap_t::wrap(base, width, height, rowpixels); }
-	void wrap(bitmap_argb32& source, const rectangle& subrect) { bitmap_t::wrap(static_cast<bitmap_t&>(source), subrect); }
+	bitmap_argb32(bitmap_argb32& source, const chd_rectangle& subrect) : bitmap32_t(k_bitmap_format, source, subrect) { }
+	void wrap(uint32_t* base, int width, int height, int rowpixels) { chd_bitmap_t::wrap(base, width, height, rowpixels); }
+	void wrap(bitmap_argb32& source, const chd_rectangle& subrect) { chd_bitmap_t::wrap(static_cast<chd_bitmap_t&>(source), subrect); }
 
 	// getters
 	bitmap_format format() const { return k_bitmap_format; }

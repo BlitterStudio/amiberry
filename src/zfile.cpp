@@ -960,6 +960,11 @@ static struct zfile *ipf (struct zfile *z, int index, int *retcode)
 			caps_loadtrack (mfm, NULL, 0, i, &len, &mrev, &gapo, NULL, true);
 			//write_log (_T("%d: %d %d %d\n"), i, mrev, gapo, len);
 			len /= 8;
+			if (len <= 0) {
+				zd->zdisktracks[i].data = NULL;
+				zd->zdisktracks[i].len = 0;
+				continue;
+			}
 			buf = p = xmalloc (uae_u8, len);
 			for (j = 0; j < len / 2; j++) {
 				uae_u16 v = mfm[j];

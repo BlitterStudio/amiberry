@@ -41,6 +41,7 @@
 #define ASYNC_REQUEST_CHANGEINT 10
 #define ASYNC_REQUEST_FRAMEINT 11
 
+namespace {
 struct devstruct {
 	int unitnum, aunit;
 	int opencnt;
@@ -67,6 +68,7 @@ struct devstruct {
 	TCHAR *tape_directory;
 	bool readonly;
 };
+}
 
 struct priv_devstruct {
 	int inuse;

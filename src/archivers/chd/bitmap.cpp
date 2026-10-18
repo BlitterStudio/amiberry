@@ -23,7 +23,7 @@
 //  compute_rowpixels - compute a rowpixels value
 //-------------------------------------------------
 
-inline int32_t bitmap_t::compute_rowpixels(int width, int xslop)
+inline int32_t chd_bitmap_t::compute_rowpixels(int width, int xslop)
 {
 	return width + 2 * xslop;
 }
@@ -34,7 +34,7 @@ inline int32_t bitmap_t::compute_rowpixels(int width, int xslop)
 //  with the given slop values
 //-------------------------------------------------
 
-inline void bitmap_t::compute_base(int xslop, int yslop)
+inline void chd_bitmap_t::compute_base(int xslop, int yslop)
 {
 	m_base = m_alloc.get() + (m_rowpixels * yslop + xslop) * (m_bpp / 8);
 }
@@ -45,7 +45,7 @@ inline void bitmap_t::compute_base(int xslop, int yslop)
 //  is valid and agrees with the BPP
 //-------------------------------------------------
 
-inline bool bitmap_t::valid_format() const
+inline bool chd_bitmap_t::valid_format() const
 {
 	switch (m_format)
 	{
@@ -81,7 +81,7 @@ inline bool bitmap_t::valid_format() const
 //  BITMAP ALLOCATION/CONFIGURATION
 //**************************************************************************
 
-bitmap_t::bitmap_t(bitmap_t&& that)
+chd_bitmap_t::chd_bitmap_t(chd_bitmap_t&& that)
 	: m_alloc(std::move(that.m_alloc))
 	, m_allocbytes(that.m_allocbytes)
 	, m_base(that.m_base)
@@ -98,10 +98,10 @@ bitmap_t::bitmap_t(bitmap_t&& that)
 }
 
 /**
- * @fn  bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, int width, int height, int xslop, int yslop)
+ * @fn  chd_bitmap_t::chd_bitmap_t(bitmap_format format, uint8_t bpp, int width, int height, int xslop, int yslop)
  *
  * @brief   -------------------------------------------------
- *            bitmap_t - basic constructor
+ *            chd_bitmap_t - basic constructor
  *          -------------------------------------------------.
  *
  * @param   format  Describes the format to use.
@@ -112,7 +112,7 @@ bitmap_t::bitmap_t(bitmap_t&& that)
  * @param   yslop   The yslop.
  */
 
-bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, int width, int height, int xslop, int yslop)
+chd_bitmap_t::chd_bitmap_t(bitmap_format format, uint8_t bpp, int width, int height, int xslop, int yslop)
 	: m_alloc()
 	, m_allocbytes(0)
 	, m_format(format)
@@ -126,7 +126,7 @@ bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, int width, int height, int
 }
 
 /**
- * @fn  bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, void *base, int width, int height, int rowpixels)
+ * @fn  chd_bitmap_t::chd_bitmap_t(bitmap_format format, uint8_t bpp, void *base, int width, int height, int rowpixels)
  *
  * @brief   Constructor.
  *
@@ -138,7 +138,7 @@ bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, int width, int height, int
  * @param   rowpixels       The rowpixels.
  */
 
-bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, void* base, int width, int height, int rowpixels)
+chd_bitmap_t::chd_bitmap_t(bitmap_format format, uint8_t bpp, void* base, int width, int height, int rowpixels)
 	: m_alloc()
 	, m_allocbytes(0)
 	, m_base(base)
@@ -154,7 +154,7 @@ bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, void* base, int width, int
 }
 
 /**
- * @fn  bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, bitmap_t &source, const rectangle &subrect)
+ * @fn  chd_bitmap_t::chd_bitmap_t(bitmap_format format, uint8_t bpp, chd_bitmap_t &source, const chd_rectangle &subrect)
  *
  * @brief   Constructor.
  *
@@ -164,7 +164,7 @@ bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, void* base, int width, int
  * @param   subrect         The subrect.
  */
 
-bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, bitmap_t& source, const rectangle& subrect)
+chd_bitmap_t::chd_bitmap_t(bitmap_format format, uint8_t bpp, chd_bitmap_t& source, const chd_rectangle& subrect)
 	: m_alloc()
 	, m_allocbytes(0)
 	, m_base(source.raw_pixptr(subrect.top(), subrect.left()))
@@ -182,20 +182,20 @@ bitmap_t::bitmap_t(bitmap_format format, uint8_t bpp, bitmap_t& source, const re
 }
 
 /**
- * @fn  bitmap_t::~bitmap_t()
+ * @fn  chd_bitmap_t::~chd_bitmap_t()
  *
  * @brief   -------------------------------------------------
- *            ~bitmap_t - basic destructor
+ *            ~chd_bitmap_t - basic destructor
  *          -------------------------------------------------.
  */
 
-bitmap_t::~bitmap_t()
+chd_bitmap_t::~chd_bitmap_t()
 {
 	// delete any existing stuff
 	reset();
 }
 
-bitmap_t& bitmap_t::operator=(bitmap_t&& that)
+chd_bitmap_t& chd_bitmap_t::operator=(chd_bitmap_t&& that)
 {
 	m_alloc = std::move(that.m_alloc);
 	m_allocbytes = that.m_allocbytes;
@@ -212,7 +212,7 @@ bitmap_t& bitmap_t::operator=(bitmap_t&& that)
 }
 
 /**
- * @fn  void bitmap_t::allocate(int width, int height, int xslop, int yslop)
+ * @fn  void chd_bitmap_t::allocate(int width, int height, int xslop, int yslop)
  *
  * @brief   -------------------------------------------------
  *            allocate -- (re)allocate memory for the bitmap at the given size, destroying
@@ -225,7 +225,7 @@ bitmap_t& bitmap_t::operator=(bitmap_t&& that)
  * @param   yslop   The yslop.
  */
 
-void bitmap_t::allocate(int width, int height, int xslop, int yslop)
+void chd_bitmap_t::allocate(int width, int height, int xslop, int yslop)
 {
 	assert(m_format != BITMAP_FORMAT_INVALID);
 	assert(m_bpp == 8 || m_bpp == 16 || m_bpp == 32 || m_bpp == 64);
@@ -255,7 +255,7 @@ void bitmap_t::allocate(int width, int height, int xslop, int yslop)
 }
 
 /**
- * @fn  void bitmap_t::resize(int width, int height, int xslop, int yslop)
+ * @fn  void chd_bitmap_t::resize(int width, int height, int xslop, int yslop)
  *
  * @brief   -------------------------------------------------
  *            resize -- resize a bitmap, reusing existing memory if the new size is smaller than
@@ -268,7 +268,7 @@ void bitmap_t::allocate(int width, int height, int xslop, int yslop)
  * @param   yslop   The yslop.
  */
 
-void bitmap_t::resize(int width, int height, int xslop, int yslop)
+void chd_bitmap_t::resize(int width, int height, int xslop, int yslop)
 {
 	assert(m_format != BITMAP_FORMAT_INVALID);
 	assert(m_bpp == 8 || m_bpp == 16 || m_bpp == 32 || m_bpp == 64);
@@ -303,14 +303,14 @@ void bitmap_t::resize(int width, int height, int xslop, int yslop)
 }
 
 /**
- * @fn  void bitmap_t::reset()
+ * @fn  void chd_bitmap_t::reset()
  *
  * @brief   -------------------------------------------------
  *            reset -- reset to an invalid bitmap, deleting all allocated stuff
  *          -------------------------------------------------.
  */
 
-void bitmap_t::reset()
+void chd_bitmap_t::reset()
 {
 	// delete any existing stuff
 	set_palette(nullptr);
@@ -325,7 +325,7 @@ void bitmap_t::reset()
 }
 
 /**
- * @fn  void bitmap_t::wrap(void *base, int width, int height, int rowpixels)
+ * @fn  void chd_bitmap_t::wrap(void *base, int width, int height, int rowpixels)
  *
  * @brief   -------------------------------------------------
  *            wrap -- wrap an array of memory; the target bitmap does not own the memory
@@ -337,7 +337,7 @@ void bitmap_t::reset()
  * @param   rowpixels       The rowpixels.
  */
 
-void bitmap_t::wrap(void* base, int width, int height, int rowpixels)
+void chd_bitmap_t::wrap(void* base, int width, int height, int rowpixels)
 {
 	// delete any existing stuff
 	reset();
@@ -351,7 +351,7 @@ void bitmap_t::wrap(void* base, int width, int height, int rowpixels)
 }
 
 /**
- * @fn  void bitmap_t::wrap(const bitmap_t &source, const rectangle &subrect)
+ * @fn  void chd_bitmap_t::wrap(const chd_bitmap_t &source, const chd_rectangle &subrect)
  *
  * @brief   -------------------------------------------------
  *            wrap -- wrap a subrectangle of an existing bitmap by copying its fields; the target
@@ -362,7 +362,7 @@ void bitmap_t::wrap(void* base, int width, int height, int rowpixels)
  * @param   subrect The subrect.
  */
 
-void bitmap_t::wrap(bitmap_t& source, const rectangle& subrect)
+void chd_bitmap_t::wrap(chd_bitmap_t& source, const chd_rectangle& subrect)
 {
 	assert(m_format == source.m_format);
 	assert(m_bpp == source.m_bpp);
@@ -381,7 +381,7 @@ void bitmap_t::wrap(bitmap_t& source, const rectangle& subrect)
 }
 
 /**
- * @fn  void bitmap_t::set_palette(palette_t *palette)
+ * @fn  void chd_bitmap_t::set_palette(palette_t *palette)
  *
  * @brief   -------------------------------------------------
  *            set_palette -- associate a palette with a bitmap
@@ -390,7 +390,7 @@ void bitmap_t::wrap(bitmap_t& source, const rectangle& subrect)
  * @param [in,out]  palette If non-null, the palette.
  */
 
-void bitmap_t::set_palette(palette_t* palette)
+void chd_bitmap_t::set_palette(palette_t* palette)
 {
 	// first dereference any existing palette
 	if (m_palette != nullptr)
@@ -408,7 +408,7 @@ void bitmap_t::set_palette(palette_t* palette)
 }
 
 /**
- * @fn  void bitmap_t::fill(uint64_t color, const rectangle &bounds)
+ * @fn  void chd_bitmap_t::fill(uint64_t color, const chd_rectangle &bounds)
  *
  * @brief   -------------------------------------------------
  *            fill -- fill a bitmap with a solid color
@@ -418,10 +418,10 @@ void bitmap_t::set_palette(palette_t* palette)
  * @param   bounds      The bounds.
  */
 
-void bitmap_t::fill(uint64_t color, const rectangle& bounds)
+void chd_bitmap_t::fill(uint64_t color, const chd_rectangle& bounds)
 {
 	// if we have a cliprect, intersect with that
-	rectangle fill(bounds);
+	chd_rectangle fill(bounds);
 	fill &= m_cliprect;
 	if (!fill.empty())
 	{

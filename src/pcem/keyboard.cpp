@@ -4,11 +4,13 @@
 
 int keybsendcallback = 0;
 
+namespace {
 typedef struct
 {
         uint8_t scancodes_make[8];
         uint8_t scancodes_break[8];        
 } scancode;
+}
 
 /*272 = 256 + 16 fake interim scancodes for disambiguation purposes.*/
 static scancode scancode_set1[272] =

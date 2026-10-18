@@ -28,17 +28,17 @@ class palette_t;
 typedef uint16_t rgb15_t;
 
 
-// ======================> rgb_t
+// ======================> chd_rgb_t
 
-// an rgb_t is a single combined R,G,B (and optionally alpha) value
-class rgb_t
+// an chd_rgb_t is a single combined R,G,B (and optionally alpha) value
+class chd_rgb_t
 {
 public:
 	// construction/destruction
-	constexpr rgb_t() : m_data(0) { }
-	constexpr rgb_t(uint32_t data) : m_data(data) { }
-	constexpr rgb_t(uint8_t r, uint8_t g, uint8_t b) : m_data((255 << 24) | (r << 16) | (g << 8) | b) { }
-	constexpr rgb_t(uint8_t a, uint8_t r, uint8_t g, uint8_t b) : m_data((a << 24) | (r << 16) | (g << 8) | b) { }
+	constexpr chd_rgb_t() : m_data(0) { }
+	constexpr chd_rgb_t(uint32_t data) : m_data(data) { }
+	constexpr chd_rgb_t(uint8_t r, uint8_t g, uint8_t b) : m_data((255 << 24) | (r << 16) | (g << 8) | b) { }
+	constexpr chd_rgb_t(uint8_t a, uint8_t r, uint8_t g, uint8_t b) : m_data((a << 24) | (r << 16) | (g << 8) | b) { }
 
 	// getters
 	constexpr uint8_t a() const { return m_data >> 24; }
@@ -52,25 +52,25 @@ public:
 	void expand_rgb(int& r, int& g, int& b) const { r = (m_data >> 16) & 0xff; g = (m_data >> 8) & 0xff; b = (m_data >> 0) & 0xff; }
 
 	// setters
-	rgb_t& set_a(uint8_t a) { m_data &= ~0xff000000; m_data |= a << 24; return *this; }
-	rgb_t& set_r(uint8_t r) { m_data &= ~0x00ff0000; m_data |= r << 16; return *this; }
-	rgb_t& set_g(uint8_t g) { m_data &= ~0x0000ff00; m_data |= g << 8; return *this; }
-	rgb_t& set_b(uint8_t b) { m_data &= ~0x000000ff; m_data |= b << 0; return *this; }
+	chd_rgb_t& set_a(uint8_t a) { m_data &= ~0xff000000; m_data |= a << 24; return *this; }
+	chd_rgb_t& set_r(uint8_t r) { m_data &= ~0x00ff0000; m_data |= r << 16; return *this; }
+	chd_rgb_t& set_g(uint8_t g) { m_data &= ~0x0000ff00; m_data |= g << 8; return *this; }
+	chd_rgb_t& set_b(uint8_t b) { m_data &= ~0x000000ff; m_data |= b << 0; return *this; }
 
 	// implicit conversion operators
 	constexpr operator uint32_t() const { return m_data; }
 
 	// operations
-	rgb_t& scale8(uint8_t scale) { m_data = rgb_t(clamphi((a() * scale) >> 8), clamphi((r() * scale) >> 8), clamphi((g() * scale) >> 8), clamphi((b() * scale) >> 8)); return *this; }
+	chd_rgb_t& scale8(uint8_t scale) { m_data = chd_rgb_t(clamphi((a() * scale) >> 8), clamphi((r() * scale) >> 8), clamphi((g() * scale) >> 8), clamphi((b() * scale) >> 8)); return *this; }
 
 	// assignment operators
-	rgb_t& operator=(uint32_t rhs) { m_data = rhs; return *this; }
-	rgb_t& operator+=(const rgb_t& rhs) { m_data = uint32_t(*this + rhs); return *this; }
-	rgb_t& operator-=(const rgb_t& rhs) { m_data = uint32_t(*this - rhs); return *this; }
+	chd_rgb_t& operator=(uint32_t rhs) { m_data = rhs; return *this; }
+	chd_rgb_t& operator+=(const chd_rgb_t& rhs) { m_data = uint32_t(*this + rhs); return *this; }
+	chd_rgb_t& operator-=(const chd_rgb_t& rhs) { m_data = uint32_t(*this - rhs); return *this; }
 
 	// arithmetic operators
-	constexpr rgb_t operator+(const rgb_t& rhs) const { return rgb_t(clamphi(a() + rhs.a()), clamphi(r() + rhs.r()), clamphi(g() + rhs.g()), clamphi(b() + rhs.b())); }
-	constexpr rgb_t operator-(const rgb_t& rhs) const { return rgb_t(clamplo(a() - rhs.a()), clamplo(r() - rhs.r()), clamplo(g() - rhs.g()), clamplo(b() - rhs.b())); }
+	constexpr chd_rgb_t operator+(const chd_rgb_t& rhs) const { return chd_rgb_t(clamphi(a() + rhs.a()), clamphi(r() + rhs.r()), clamphi(g() + rhs.g()), clamphi(b() + rhs.b())); }
+	constexpr chd_rgb_t operator-(const chd_rgb_t& rhs) const { return chd_rgb_t(clamplo(a() - rhs.a()), clamplo(r() - rhs.r()), clamplo(g() - rhs.g()), clamplo(b() - rhs.b())); }
 
 	// static helpers
 	static constexpr uint8_t clamp(int32_t value) { return (value < 0) ? 0 : (value > 255) ? 255 : value; }
@@ -78,11 +78,11 @@ public:
 	static constexpr uint8_t clamplo(int32_t value) { return (value < 0) ? 0 : value; }
 
 	// constant factories
-	static constexpr rgb_t black() { return rgb_t(0, 0, 0); }
-	static constexpr rgb_t white() { return rgb_t(255, 255, 255); }
-	static constexpr rgb_t green() { return rgb_t(0, 255, 0); }
-	static constexpr rgb_t amber() { return rgb_t(247, 170, 0); }
-	static constexpr rgb_t transparent() { return rgb_t(0, 0, 0, 0); }
+	static constexpr chd_rgb_t black() { return chd_rgb_t(0, 0, 0); }
+	static constexpr chd_rgb_t white() { return chd_rgb_t(255, 255, 255); }
+	static constexpr chd_rgb_t green() { return chd_rgb_t(0, 255, 0); }
+	static constexpr chd_rgb_t amber() { return chd_rgb_t(247, 170, 0); }
+	static constexpr chd_rgb_t transparent() { return chd_rgb_t(0, 0, 0, 0); }
 
 private:
 	uint32_t  m_data;
@@ -165,21 +165,21 @@ public:
 	void set_gamma(float gamma);
 
 	// entry getters
-	rgb_t entry_color(uint32_t index) const { return (index < m_numcolors) ? m_entry_color[index] : rgb_t::black(); }
-	rgb_t entry_adjusted_color(uint32_t index) const { return (index < m_numcolors* m_numgroups) ? m_adjusted_color[index] : rgb_t::black(); }
+	chd_rgb_t entry_color(uint32_t index) const { return (index < m_numcolors) ? m_entry_color[index] : chd_rgb_t::black(); }
+	chd_rgb_t entry_adjusted_color(uint32_t index) const { return (index < m_numcolors* m_numgroups) ? m_adjusted_color[index] : chd_rgb_t::black(); }
 	float entry_contrast(uint32_t index) const { return (index < m_numcolors) ? m_entry_contrast[index] : 1.0f; }
 
 	// entry setters
-	void entry_set_color(uint32_t index, rgb_t rgb);
+	void entry_set_color(uint32_t index, chd_rgb_t rgb);
 	void entry_set_red_level(uint32_t index, uint8_t level);
 	void entry_set_green_level(uint32_t index, uint8_t level);
 	void entry_set_blue_level(uint32_t index, uint8_t level);
 	void entry_set_contrast(uint32_t index, float contrast);
 
 	// entry list getters
-	const rgb_t* entry_list_raw() const { return &m_entry_color[0]; }
-	const rgb_t* entry_list_adjusted() const { return &m_adjusted_color[0]; }
-	const rgb_t* entry_list_adjusted_rgb15() const { return &m_adjusted_rgb15[0]; }
+	const chd_rgb_t* entry_list_raw() const { return &m_entry_color[0]; }
+	const chd_rgb_t* entry_list_adjusted() const { return &m_adjusted_color[0]; }
+	const chd_rgb_t* entry_list_adjusted_rgb15() const { return &m_adjusted_rgb15[0]; }
 
 	// group adjustments
 	void group_set_brightness(uint32_t group, float brightness);
@@ -194,7 +194,7 @@ private:
 	~palette_t();
 
 	// internal helpers
-	rgb_t adjust_palette_entry(rgb_t entry, float brightness, float contrast, const uint8_t* gamma_map);
+	chd_rgb_t adjust_palette_entry(chd_rgb_t entry, float brightness, float contrast, const uint8_t* gamma_map);
 	void update_adjusted_color(uint32_t group, uint32_t index);
 
 	// internal state
@@ -207,10 +207,10 @@ private:
 	float           m_gamma;                      // overall gamma value
 	uint8_t           m_gamma_map[256];             // gamma map
 
-	std::vector<rgb_t> m_entry_color;           // array of raw colors
+	std::vector<chd_rgb_t> m_entry_color;           // array of raw colors
 	std::vector<float> m_entry_contrast;        // contrast value for each entry
-	std::vector<rgb_t> m_adjusted_color;        // array of adjusted colors
-	std::vector<rgb_t> m_adjusted_rgb15;        // array of adjusted colors as RGB15
+	std::vector<chd_rgb_t> m_adjusted_color;        // array of adjusted colors
+	std::vector<chd_rgb_t> m_adjusted_rgb15;        // array of adjusted colors as RGB15
 
 	std::vector<float> m_group_bright;          // brightness value for each group
 	std::vector<float> m_group_contrast;        // contrast value for each group
@@ -261,15 +261,15 @@ constexpr uint8_t pal7bit(uint8_t bits) { return palexpand<7>(bits); }
 //-------------------------------------------------
 
 template<int _RBits, int _GBits, int _BBits>
-constexpr rgb_t rgbexpand(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift)
+constexpr chd_rgb_t rgbexpand(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift)
 {
-	return rgb_t(palexpand<_RBits>(data >> rshift), palexpand<_GBits>(data >> gshift), palexpand<_BBits>(data >> bshift));
+	return chd_rgb_t(palexpand<_RBits>(data >> rshift), palexpand<_GBits>(data >> gshift), palexpand<_BBits>(data >> bshift));
 }
 
 template<int _ABits, int _RBits, int _GBits, int _BBits>
-constexpr rgb_t argbexpand(uint32_t data, uint8_t ashift, uint8_t rshift, uint8_t gshift, uint8_t bshift)
+constexpr chd_rgb_t argbexpand(uint32_t data, uint8_t ashift, uint8_t rshift, uint8_t gshift, uint8_t bshift)
 {
-	return rgb_t(palexpand<_ABits>(data >> ashift), palexpand<_RBits>(data >> rshift), palexpand<_GBits>(data >> gshift), palexpand<_BBits>(data >> bshift));
+	return chd_rgb_t(palexpand<_ABits>(data >> ashift), palexpand<_RBits>(data >> rshift), palexpand<_GBits>(data >> gshift), palexpand<_BBits>(data >> bshift));
 }
 
 
@@ -278,10 +278,10 @@ constexpr rgb_t argbexpand(uint32_t data, uint8_t ashift, uint8_t rshift, uint8_
 //  bits from a uint32_t
 //-------------------------------------------------
 
-constexpr rgb_t pal332(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<3, 3, 2>(data, rshift, gshift, bshift); }
-constexpr rgb_t pal444(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<4, 4, 4>(data, rshift, gshift, bshift); }
-constexpr rgb_t pal555(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<5, 5, 5>(data, rshift, gshift, bshift); }
-constexpr rgb_t pal565(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<5, 6, 5>(data, rshift, gshift, bshift); }
-constexpr rgb_t pal888(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<8, 8, 8>(data, rshift, gshift, bshift); }
+constexpr chd_rgb_t pal332(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<3, 3, 2>(data, rshift, gshift, bshift); }
+constexpr chd_rgb_t pal444(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<4, 4, 4>(data, rshift, gshift, bshift); }
+constexpr chd_rgb_t pal555(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<5, 5, 5>(data, rshift, gshift, bshift); }
+constexpr chd_rgb_t pal565(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<5, 6, 5>(data, rshift, gshift, bshift); }
+constexpr chd_rgb_t pal888(uint32_t data, uint8_t rshift, uint8_t gshift, uint8_t bshift) { return rgbexpand<8, 8, 8>(data, rshift, gshift, bshift); }
 
 #endif // MAME_UTIL_PALETTE_H
