@@ -121,6 +121,7 @@ static volatile uae_atomic uae_interrupts6[IRQ_SOURCE_MAX];
 #ifdef WITH_THREADED_CPU
 // Keyboard reset left for the CPU thread: bit 0 = pending, bit 1 = hard reset.
 static volatile uae_atomic cpu_thread_kbreset;
+static bool is_cpu_thread();
 #endif
 
 static int cacheisets04060, cacheisets04060mask, cacheitag04060mask;
@@ -3655,9 +3656,20 @@ static void m68k_reset2(bool hardreset)
 
 	cpu_halt_clear();
 
-	regs.spcflags = 0;
 #ifdef WITH_THREADED_CPU
-	atomic_set(&cpu_thread_kbreset, 0);
+	if (is_cpu_thread()) {
+		// RESET instruction on a board that forces a hard reset (cpureset()). A
+		// keyboard reset the CPU thread has not taken yet must still hold the CPU.
+		// Clear first: the main thread sets cpu_thread_kbreset before the flag.
+		atomic_set(&regs.spcflags, 0);
+		if (atomic_read(&cpu_thread_kbreset))
+			set_special(SPCFLAG_CPUINRESET);
+	} else {
+		regs.spcflags = 0;
+		atomic_set(&cpu_thread_kbreset, 0);
+	}
+#else
+	regs.spcflags = 0;
 #endif
 	m68k_reset_delay = false;
 	regs.ipl[0] = regs.ipl[1] = regs.ipl_pin = 0;
