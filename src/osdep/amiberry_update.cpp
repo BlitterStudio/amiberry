@@ -1,7 +1,6 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
-#include <sstream>
 #include <fstream>
 #include <filesystem>
 #include <cstring>
@@ -15,6 +14,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "amiberry_update.h"
+#include "amiberry_update_asset_policy.h"
+#include "amiberry_curl.h"
 #include "options.h"
 #include "threaddep/thread.h"
 
@@ -336,6 +337,19 @@ static std::string get_executable_path()
 #endif
 }
 
+#if defined(__linux__)
+static linux_release_arch get_linux_release_arch()
+{
+#if defined(__aarch64__) || defined(CPU_AARCH64)
+	return linux_release_arch::aarch64;
+#elif defined(__arm__) || defined(CPU_arm)
+	return linux_release_arch::armhf;
+#else
+	return linux_release_arch::x86_64;
+#endif
+}
+
+#else
 static std::string get_platform_asset_suffix()
 {
 #if defined(_WIN32)
@@ -349,26 +363,12 @@ static std::string get_platform_asset_suffix()
 
 static bool matches_platform_asset(const std::string& name)
 {
-#if defined(__linux__)
-	// Linux release assets use various naming conventions per distro/arch
-	// (e.g. "debian-bookworm-amd64", "fedora-x86_64", "ubuntu-24.04-arm64").
-	// Exclude assets for other platforms that share architecture substrings.
-	const std::string name_lower = to_lower(name);
-	if (name_lower.find("macos") != std::string::npos || name_lower.find("windows") != std::string::npos)
-		return false;
-	#if defined(__aarch64__) || defined(CPU_AARCH64)
-	return name_lower.find("arm64") != std::string::npos || name_lower.find("aarch64") != std::string::npos;
-	#elif defined(__arm__) || defined(CPU_arm)
-	return name_lower.find("armhf") != std::string::npos;
-	#else
-	return name_lower.find("amd64") != std::string::npos || name_lower.find("x86_64") != std::string::npos;
-	#endif
-#else
 	const std::string suffix = get_platform_asset_suffix();
-	if (suffix.empty()) return true;
+	if (suffix.empty())
+		return true;
 	return name.find(suffix) != std::string::npos;
-#endif
 }
+#endif
 
 static bool is_allowed_download_url(const std::string& url)
 {
@@ -433,6 +433,13 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 	CURL* curl = curl_easy_init();
 	if (!curl) {
 		write_log("Updater: curl_easy_init failed\n");
+		return false;
+	}
+
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error)) {
+		write_log("Updater: failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
 		return false;
 	}
 
@@ -505,13 +512,13 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 	}
 
 	std::string sha256_url;
+#if defined(__linux__)
+	std::vector<std::string> linux_asset_names;
+#endif
 
 	if (rel.contains("assets") && rel["assets"].is_array()) {
 		for (const auto& asset : rel["assets"]) {
-			if (!asset.is_object()) {
-				continue;
-			}
-			if (!asset.contains("name") || !asset["name"].is_string()) {
+			if (!asset.is_object() || !asset.contains("name") || !asset["name"].is_string()) {
 				continue;
 			}
 			const std::string name = asset["name"].get<std::string>();
@@ -522,16 +529,16 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 				continue;
 			}
 
-			if (!matches_platform_asset(name)) {
-				continue;
-			}
-
-			if (!asset.contains("browser_download_url") || !asset["browser_download_url"].is_string()) {
+#if defined(__linux__)
+			linux_asset_names.push_back(name);
+#else
+			if (!matches_platform_asset(name)
+				|| !asset.contains("browser_download_url")
+				|| !asset["browser_download_url"].is_string()) {
 				continue;
 			}
 
 #ifdef _WIN32
-			// On Windows prefer .exe installer over .zip archive
 			const bool is_installer = name.size() >= 4
 				&& to_lower(name.substr(name.size() - 4)) == ".exe";
 			if (!out.download_url.empty() && !is_installer) {
@@ -548,7 +555,29 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 			if (asset.contains("size") && asset["size"].is_number_integer()) {
 				out.asset_size = asset["size"].get<int64_t>();
 			}
+#endif
 		}
+
+#if defined(__linux__)
+		const auto selected_name = select_linux_release_asset(
+			linux_asset_names, get_linux_release_arch(), get_linux_installation_kind());
+		if (!selected_name.empty()) {
+			for (const auto& asset : rel["assets"]) {
+				if (!asset.is_object() || !asset.contains("name") || !asset["name"].is_string()
+					|| asset["name"].get<std::string>() != selected_name
+					|| !asset.contains("browser_download_url")
+					|| !asset["browser_download_url"].is_string()) {
+					continue;
+				}
+				out.download_url = asset["browser_download_url"].get<std::string>();
+				out.asset_name = selected_name;
+				if (asset.contains("size") && asset["size"].is_number_integer()) {
+					out.asset_size = asset["size"].get<int64_t>();
+				}
+				break;
+			}
+		}
+#endif
 	}
 
 	if (!sha256_url.empty() && is_allowed_download_url(sha256_url)) {
@@ -559,19 +588,7 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 #else
 		if (false) {
 #endif
-			std::istringstream iss(sums_body);
-			std::string line;
-			static const std::regex sha_re(R"(^\s*([A-Fa-f0-9]{64})\s+\*?(.+?)\s*$)");
-			while (std::getline(iss, line)) {
-				if (out.asset_name.empty() || line.find(out.asset_name) == std::string::npos) {
-					continue;
-				}
-				std::smatch m;
-				if (std::regex_match(line, m, sha_re)) {
-					out.sha256_expected = to_lower(m[1].str());
-					break;
-				}
-			}
+			out.sha256_expected = find_release_asset_sha256(sums_body, out.asset_name);
 		}
 	}
 
@@ -788,6 +805,15 @@ std::string download_update(const UpdateInfo& info, DownloadProgressCallback pro
 	CURL* curl = curl_easy_init();
 	if (!curl) {
 		write_log("Updater: curl_easy_init failed in download_update\n");
+		out.close();
+		std::filesystem::remove(temp_path, ec);
+		return {};
+	}
+
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error)) {
+		write_log("Updater: failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
 		out.close();
 		std::filesystem::remove(temp_path, ec);
 		return {};

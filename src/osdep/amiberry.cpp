@@ -70,6 +70,8 @@
 #include "amiberry_rp9.h"
 #include "amiberry_reset_chipset_prefs.h"
 #include "amiberry_update.h"
+#include "amiberry_curl.h"
+#include "amiberry_update_asset_policy.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
 #include "gui_layout_scale.h"
@@ -1066,6 +1068,7 @@ std::string harddrive_path;
 std::string cdrom_path;
 std::string logfile_path;
 std::string floppy_sounds_dir;
+static bool floppy_sounds_dir_is_default = true;
 std::string data_dir;
 std::string saveimage_dir;
 std::string savestate_dir;
@@ -5085,6 +5088,51 @@ static bool path_strings_match(const std::string& lhs, const std::string& rhs)
 	return normalize_path_for_compare(lhs) == normalize_path_for_compare(rhs);
 }
 
+static const char* get_configured_install_datadir();
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+static std::string get_relocated_installed_data_root();
+#endif
+
+// Earlier versions persisted the derived floppy-sound location. A saved value
+// is a stale default only where Amiberry itself computed it: a known
+// installation root or an AppImage runtime directory. Any other directory is a
+// user choice, even when it is temporarily unavailable.
+static bool is_computed_floppy_sounds_dir(const std::string& path)
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	if (path.empty())
+		return false;
+
+	const auto normalized = normalize_path_for_compare(path);
+	const auto is_floppy_sounds_of = [&](const std::string& root)
+	{
+		return !root.empty()
+			&& path_strings_match(normalized, join_path(join_path(root, "data"), "floppy_sounds"));
+	};
+	if (is_floppy_sounds_of(AMIBERRY_DATADIR)
+		|| is_floppy_sounds_of(get_relocated_installed_data_root())
+		|| is_floppy_sounds_of("/usr/share/amiberry")
+		|| is_floppy_sounds_of("/usr/local/share/amiberry"))
+		return true;
+
+	// The AppImage runtime mounts or extracts the image to a fresh
+	// <tmp>/.mount_*/usr/<datadir>/amiberry directory on every launch.
+	const std::filesystem::path normalized_path(normalized);
+	const auto appdir_suffix = (std::filesystem::path("usr") / get_configured_install_datadir()
+		/ "amiberry" / "data" / "floppy_sounds").lexically_normal();
+	const std::vector<std::filesystem::path> path_components(normalized_path.begin(), normalized_path.end());
+	const std::vector<std::filesystem::path> suffix_components(appdir_suffix.begin(), appdir_suffix.end());
+	if (suffix_components.size() >= path_components.size()
+		|| !std::equal(suffix_components.rbegin(), suffix_components.rend(), path_components.rbegin()))
+		return false;
+	const auto appdir_name = path_components[path_components.size() - suffix_components.size() - 1].string();
+	return appdir_name.rfind(".mount_", 0) == 0 || appdir_name.rfind("appimage_extracted_", 0) == 0;
+#else
+	(void)path;
+	return false;
+#endif
+}
+
 static std::string lowercase_path_for_compare(const std::string& path)
 {
 	auto normalized = normalize_path_for_compare(path);
@@ -5381,6 +5429,7 @@ static void clear_base_content_path_preserving_overrides()
 
 	const auto previous_retroarch_file = retroarch_file;
 	const auto previous_floppy_sounds_dir = floppy_sounds_dir;
+	const auto previous_floppy_sounds_dir_is_default = floppy_sounds_dir_is_default;
 	const auto previous_plugins_dir = plugins_dir;
 
 	base_content_path.clear();
@@ -5388,6 +5437,7 @@ static void clear_base_content_path_preserving_overrides()
 
 	retroarch_file = previous_retroarch_file;
 	floppy_sounds_dir = previous_floppy_sounds_dir;
+	floppy_sounds_dir_is_default = previous_floppy_sounds_dir_is_default;
 	plugins_dir = previous_plugins_dir;
 	apply_base_content_path_set(merge_base_content_path_overrides(get_current_base_content_path_set(),
 		previous_paths, previous_baseline_paths));
@@ -7271,6 +7321,7 @@ std::string get_floppy_sounds_path()
 void set_floppy_sounds_path(const std::string& newpath)
 {
 	floppy_sounds_dir = newpath;
+	floppy_sounds_dir_is_default = false;
 	macos_bookmark_store(newpath);
 }
 
@@ -7755,7 +7806,8 @@ bool save_amiberry_settings_with_result()
 	write_bool_option("relative_paths", relativepaths != 0);
 	write_path_option("base_content_path", base_content_path);
 	write_path_option("retroarch_config", retroarch_file);
-	write_path_option("floppy_sounds_dir", floppy_sounds_dir);
+	if (!floppy_sounds_dir_is_default)
+		write_path_option("floppy_sounds_dir", floppy_sounds_dir);
 	if (!plugins_dir.empty())
 		write_path_option("plugins_dir", plugins_dir);
 	write_managed_path_option(base_content_managed_path_options[0], config_path);
@@ -8047,7 +8099,20 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path);
-		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir);
+		std::string configured_floppy_sounds_dir;
+		if (cfgfile_string(option, value, "floppy_sounds_dir", configured_floppy_sounds_dir))
+		{
+			if (is_computed_floppy_sounds_dir(configured_floppy_sounds_dir))
+			{
+				legacy_migration_state.settings_rewrite_needed = true;
+			}
+			else
+			{
+				floppy_sounds_dir = configured_floppy_sounds_dir;
+				floppy_sounds_dir_is_default = false;
+			}
+			ret = 1;
+		}
 		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir);
 		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir);
 		ret |= cfgfile_string(option, value, "ripper_path", ripper_path);
@@ -8327,6 +8392,86 @@ static std::string get_desktop_executable_directory()
 #endif
 }
 
+struct installed_resource_roots
+{
+	std::string prefix;
+	std::string data;
+	std::string plugins;
+};
+
+static const char* get_configured_install_bindir()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_INSTALL_BINDIR;
+#else
+	return "";
+#endif
+}
+
+static const char* get_configured_install_datadir()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_INSTALL_DATADIR;
+#else
+	return "";
+#endif
+}
+
+static const char* get_configured_install_libdir()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return AMIBERRY_INSTALL_LIBDIR;
+#else
+	return "";
+#endif
+}
+
+static const installed_resource_roots& get_relocated_installed_resource_roots()
+{
+	static const installed_resource_roots roots = []
+	{
+		installed_resource_roots result;
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+		auto executable_directory = std::filesystem::path(get_desktop_executable_directory()).lexically_normal();
+		if (executable_directory.filename().empty())
+			executable_directory = executable_directory.parent_path();
+		const auto configured_bindir = std::filesystem::path(AMIBERRY_INSTALL_BINDIR).lexically_normal();
+		if (executable_directory.empty() || configured_bindir.empty() || configured_bindir.is_absolute())
+			return result;
+
+		for (auto component = configured_bindir.end(); component != configured_bindir.begin();)
+		{
+			--component;
+			if (*component == "." || component->empty())
+				continue;
+			if (*component == ".." || executable_directory.empty()
+				|| executable_directory.filename() != *component)
+				return result;
+			executable_directory = executable_directory.parent_path();
+		}
+		if (executable_directory.empty())
+			return result;
+
+		result.prefix = normalize_path_string(executable_directory.string());
+		const auto data_root = (executable_directory / AMIBERRY_INSTALL_DATADIR / "amiberry").lexically_normal();
+		if (my_existsdir(data_root.string().c_str()))
+			result.data = normalize_path_string(data_root.string());
+		const auto plugins_root = (executable_directory / AMIBERRY_INSTALL_LIBDIR / "amiberry").lexically_normal();
+		if (my_existsdir(plugins_root.string().c_str()))
+			result.plugins = normalize_path_string(plugins_root.string());
+#endif
+		return result;
+	}();
+	return roots;
+}
+
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+static std::string get_relocated_installed_data_root()
+{
+	return get_relocated_installed_resource_roots().data;
+}
+#endif
+
 static std::string get_portable_root_directory()
 {
 	const auto executable_directory = get_desktop_executable_directory();
@@ -8347,6 +8492,10 @@ static std::string get_portable_mode_marker_path()
 
 static bool is_portable_mode_enabled()
 {
+#if defined(__linux__) && !defined(LIBRETRO)
+	if (get_linux_installation_kind() == linux_installation_kind::appimage)
+		return false;
+#endif
 	const auto portable_marker = get_portable_mode_marker_path();
 	if (portable_marker.empty())
 		return false;
@@ -8362,6 +8511,14 @@ bool get_portable_mode()
 #if !defined(__MACH__) && !defined(__ANDROID__)
 bool can_toggle_portable_mode(std::string* reason_out)
 {
+#if defined(__linux__) && !defined(LIBRETRO)
+	if (get_linux_installation_kind() == linux_installation_kind::appimage)
+	{
+		if (reason_out != nullptr)
+			*reason_out = "AppImage mounts are read-only. Create a sibling '<AppImage>.home' directory before launch to keep Amiberry data beside the image.";
+		return false;
+	}
+#endif
 	const auto portable_root = get_portable_root_directory();
 	if (portable_root.empty())
 	{
@@ -8488,6 +8645,16 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		return false;
 	}
 
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error))
+	{
+		write_log("Failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
+		fclose(fp);
+		std::remove(tmp.c_str());
+		return false;
+	}
+
 	curl_easy_setopt(curl, CURLOPT_URL, source.c_str());
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -8582,6 +8749,16 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	{
 		write_log("Failed to initialize libcurl\n");
 		fclose(fp);
+		return false;
+	}
+
+	std::string ca_error;
+	if (!apply_effective_ca_bundle_to_curl(curl, &ca_error))
+	{
+		write_log("Failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
+		curl_easy_cleanup(curl);
+		fclose(fp);
+		std::remove(tmp.c_str());
 		return false;
 	}
 
@@ -8740,25 +8917,26 @@ std::string get_data_directory(bool portable_mode)
 	}
 
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
-	const auto xdg_data_home = get_xdg_data_home();
 
-	// 1: Check if the $AMIBERRY_DATA_DIR ENV variable is set
 	if (env_data_dir != nullptr && my_existsdir(env_data_dir))
 	{
-		// If the ENV variable is set, and it actually contains our data dir, use it
 		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
 		return {env_data_dir};
 	}
-	// 2: Check for system-wide installation (e.g. from a .deb package)
+
+	const auto& installed_roots = get_relocated_installed_resource_roots();
+	if (!installed_roots.data.empty() && directory_exists(installed_roots.data, "/data"))
+	{
+		write_log("Using relocated data directory from %s\n", installed_roots.data.c_str());
+		return join_path(installed_roots.data, "data");
+	}
+
 	if (directory_exists(AMIBERRY_DATADIR, "/data"))
 	{
-		// If the data directory exists in AMIBERRY_DATADIR, use it
-		// This would be the default location after an installation with the .deb package
 		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
 		return std::string(AMIBERRY_DATADIR) + "/data/";
 	}
 
-	// 3: Check for a local executable-relative data dir (e.g. local build or unpacked tree)
 	const auto executable_directory = get_desktop_executable_directory();
 	if (directory_exists(executable_directory, "/data"))
 	{
@@ -8996,6 +9174,16 @@ std::string get_config_directory(bool portable_mode)
 
 // Plugin locations are searched in get_plugin_search_paths(). The bundled or
 // system directory remains separate from the writable per-user directory.
+static std::string get_compiled_system_plugins_directory()
+{
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+	return my_existsdir(AMIBERRY_LIBDIR) ? AMIBERRY_LIBDIR : std::string{};
+#else
+	return {};
+#endif
+}
+
+#if defined(LIBRETRO) || defined(AMIBERRY_IOS) || defined(AMIBERRY_MACOS) || defined(__ANDROID__) || defined(_WIN32)
 static std::string get_system_plugins_directory()
 {
 #ifdef LIBRETRO
@@ -9017,14 +9205,10 @@ static std::string get_system_plugins_directory()
 	return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
 	return get_windows_executable_directory() + "\\plugins";
-#else
-	return my_existsdir(AMIBERRY_LIBDIR) ? AMIBERRY_LIBDIR : std::string{};
 #endif
 }
+#endif
 
-// This is the bundled/system path retained by legacy plugins_dir settings.
-// Unlike get_system_plugins_directory(), it remains available for migration
-// when the system installation directory has not been created yet.
 static std::string get_legacy_system_plugins_directory()
 {
 	if (g_portable_mode)
@@ -9087,6 +9271,7 @@ static bool is_valid_plugins_override(const std::string& path)
 {
 	if (path.empty() || g_portable_mode
 		|| path_strings_match(path, get_user_plugins_path())
+		|| path_strings_match(path, get_relocated_installed_resource_roots().plugins)
 		|| is_macos_bundled_plugins_path(path))
 		return false;
 
@@ -9139,9 +9324,12 @@ std::vector<std::string> get_plugin_search_paths()
 			append_unique_path_candidate(candidates, env_plugins_dir);
 		append_unique_path_candidate(candidates, plugins_dir);
 		append_unique_path_candidate(candidates, get_user_plugins_path());
+#if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
+		append_unique_path_candidate(candidates, get_relocated_installed_resource_roots().plugins);
+		append_unique_path_candidate(candidates, get_compiled_system_plugins_directory());
+#else
 		append_unique_path_candidate(candidates, get_system_plugins_directory());
-		// Preserve the legacy executable-relative fallback. It remains last so
-		// user and system locations retain precedence when they are available.
+#endif
 #if (defined(__linux__) || defined(__FreeBSD__)) && !defined(LIBRETRO)
 		append_unique_path_candidate(candidates, join_path(get_portable_root_directory(), "plugins"));
 #endif
@@ -11580,6 +11768,25 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 	if (!app_resources_dir.empty())
 		append_unique_path_candidate(candidates, join_path(app_resources_dir, subdirectory));
 #else
+#if !defined(LIBRETRO) && !defined(__ANDROID__) && !defined(_WIN32)
+	const auto append_existing_seed_directory = [&](const std::string& root)
+	{
+		const auto candidate = join_path(root, subdirectory);
+		if (!candidate.empty() && my_existsdir(candidate.c_str()))
+			append_unique_path_candidate(candidates, candidate);
+	};
+	// Executable-relative resources belong to the binary being run: a portable
+	// copy or a development build. A relocated installation root outranks them
+	// only outside portable mode, and the compiled data directory follows both.
+	if (g_portable_mode)
+		append_existing_seed_directory(get_desktop_executable_directory());
+	append_existing_seed_directory(get_relocated_installed_resource_roots().data);
+	append_existing_seed_directory(get_desktop_executable_directory());
+	append_existing_seed_directory(AMIBERRY_DATADIR);
+	append_existing_seed_directory("/usr/share/amiberry");
+	if (include_usr_local_share)
+		append_existing_seed_directory("/usr/local/share/amiberry");
+#else
 	const auto executable_directory = get_desktop_executable_directory();
 	if (!executable_directory.empty())
 		append_unique_path_candidate(candidates, join_path(executable_directory, subdirectory));
@@ -11588,6 +11795,7 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 	append_unique_path_candidate(candidates, join_path("/usr/share/amiberry", subdirectory));
 	if (include_usr_local_share)
 		append_unique_path_candidate(candidates, join_path("/usr/local/share/amiberry", subdirectory));
+#endif
 #endif
 #endif
 	return candidates;
@@ -12270,6 +12478,7 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 			floppy_sounds_dir += '/';
 #endif
 	}
+	floppy_sounds_dir_is_default = true;
 
 	default_base_content_paths = get_current_base_content_path_set();
 }
@@ -12285,6 +12494,14 @@ static void dump_resolved_paths(const bool write_dump_file)
 	output.append("portable_mode=").append(g_portable_mode ? "1" : "0").append("\n");
 	append_line("portable_root", get_portable_root_directory());
 	append_line("portable_marker_file", get_portable_mode_marker_path());
+#if !defined(__MACH__) && !defined(__ANDROID__)
+	std::string portable_toggle_reason;
+	const bool portable_toggle_available = can_toggle_portable_mode(&portable_toggle_reason);
+	std::replace(portable_toggle_reason.begin(), portable_toggle_reason.end(), '\n', ' ');
+	std::replace(portable_toggle_reason.begin(), portable_toggle_reason.end(), '\r', ' ');
+	output.append("portable_toggle_available=").append(portable_toggle_available ? "1" : "0").append("\n");
+	append_line("portable_toggle_unavailable_reason", portable_toggle_reason);
+#endif
 	append_line("relative_paths", relativepaths ? "1" : "0");
 	append_line("relative_path_base", get_relative_path_base());
 	append_line("settings_resolution_source", get_settings_resolution_source_name(resolved_settings_source));
@@ -12296,12 +12513,31 @@ static void dump_resolved_paths(const bool write_dump_file)
 	append_line("home_dir", home_dir);
 	append_line("config_path", config_path);
 	append_line("data_dir", data_dir);
+	append_line("floppy_sounds_dir", floppy_sounds_dir);
+	append_line("abr_path", get_data_path() + "abr/");
+	append_line("install_bindir_relative", get_configured_install_bindir());
+	append_line("install_datadir_relative", get_configured_install_datadir());
+	append_line("install_libdir_relative", get_configured_install_libdir());
+	append_line("compiled_data_dir", join_path(AMIBERRY_DATADIR, "data"));
+	append_line("effective_ca_bundle", get_effective_ca_bundle());
+	const auto& installed_roots = get_relocated_installed_resource_roots();
+	append_line("install_prefix", installed_roots.prefix);
+	append_line("relocated_data_root", installed_roots.data);
+	append_line("relocated_plugins_root", installed_roots.plugins);
 	append_line("plugins_dir", plugins_dir);
 	append_line("system_plugins_dir", get_legacy_system_plugins_directory());
 	append_line("user_plugins_dir", get_user_plugins_path());
 	const auto plugin_search_paths = get_plugin_search_paths();
 	for (size_t index = 0; index < plugin_search_paths.size(); ++index)
 		append_line(("plugin_search_path_" + std::to_string(index)).c_str(), plugin_search_paths[index]);
+	const auto append_seed_sources = [&](const char* name, const std::vector<std::string>& candidates)
+	{
+		for (size_t index = 0; index < candidates.size(); ++index)
+			append_line((std::string(name) + "_seed_source_" + std::to_string(index)).c_str(), candidates[index]);
+	};
+	append_seed_sources("controllers", get_seed_source_candidates("controllers", true));
+	append_seed_sources("roms", get_seed_source_candidates("roms", true));
+	append_seed_sources("whdboot", get_seed_source_candidates("whdboot", true));
 	append_line("controllers_path", controllers_path);
 	append_line("whdboot_path", whdboot_path);
 	append_line("whdload_arch_path", whdload_arch_path);
@@ -13225,8 +13461,8 @@ bool get_plugin_path(TCHAR* out, const int len, const TCHAR* path)
 		return TRUE;
 	}
 	if (strcmp(path, "abr") == 0) {
-		strncpy(out, data_dir.c_str(), len - 1);
-		strncat(out, "abr/", len - 1);
+		const auto abr_path = get_data_path() + "abr/";
+		strncpy(out, abr_path.c_str(), len - 1);
 		out[len - 1] = '\0';
 		return TRUE;
 	}

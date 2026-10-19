@@ -624,6 +624,13 @@ void render_panel_paths()
 		}
 #endif
 		ShowHelpMarker(portable_help.c_str());
+#if !defined(__MACH__)
+		if (!portable_toggle_available
+			&& portable_toggle_unavailable_reason.rfind("AppImage", 0) == 0)
+		{
+			ImGui::TextWrapped("%s", portable_toggle_unavailable_reason.c_str());
+		}
+#endif
 	}
 	{
 		bool use_relative_paths = relativepaths != 0;

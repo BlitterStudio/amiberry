@@ -741,6 +741,25 @@ elseif(CURL_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_HAS_CURL)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(NOT CURL_CONFIG_EXECUTABLE)
+        find_program(CURL_CONFIG_EXECUTABLE NAMES curl-config)
+    endif()
+    if(CURL_CONFIG_EXECUTABLE)
+        execute_process(
+            COMMAND "${CURL_CONFIG_EXECUTABLE}" --ca
+            RESULT_VARIABLE AMIBERRY_CURL_CONFIG_RESULT
+            OUTPUT_VARIABLE AMIBERRY_CURL_CA_BUNDLE
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(AMIBERRY_CURL_CONFIG_RESULT EQUAL 0
+                AND IS_ABSOLUTE "${AMIBERRY_CURL_CA_BUNDLE}")
+            target_compile_definitions(${PROJECT_NAME} PRIVATE
+                    AMIBERRY_CURL_CA_BUNDLE="${AMIBERRY_CURL_CA_BUNDLE}")
+        endif()
+    endif()
+endif()
+
 if (NOT ANDROID AND NOT WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
 endif()

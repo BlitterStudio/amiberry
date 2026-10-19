@@ -6,6 +6,7 @@
 #include "gui/gui_handling.h"
 #include "fsdb_host.h"
 #include "amiberry_update.h"
+#include "amiberry_update_asset_policy.h"
 #include "target.h"
 #include "irenderer.h"
 #ifdef USE_OPENGL
@@ -220,8 +221,16 @@ static void render_update_section()
 				else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
 				{
 					ImGui::SameLine();
-					if (AmigaButton("Open Download Page", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
-						SDL_OpenURL(s_cached_update_info.release_url.c_str());
+					if (AmigaButton("Open Download", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+					{
+#if defined(__linux__)
+						const auto& url = select_linux_notification_url(s_cached_update_info.release_url,
+							s_cached_update_info.download_url, get_linux_installation_kind());
+#else
+						const auto& url = s_cached_update_info.release_url;
+#endif
+						SDL_OpenURL(url.c_str());
+					}
 				}
 			}
 		}
