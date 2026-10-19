@@ -5159,9 +5159,9 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                // non-paletted with tRNS = constant alpha. if header-scanning, we can stop now.
                if (scan == STBI__SCAN_header) { ++s->img_n; return 1; }
                if (z->depth == 16) {
-                  for (k = 0; k < s->img_n; ++k) tc16[k] = (stbi__uint16)stbi__get16be(s); // copy the values as-is
+                  for (k = 0; k < s->img_n && k < 3; ++k) tc16[k] = (stbi__uint16)stbi__get16be(s); // copy the values as-is
                } else {
-                  for (k = 0; k < s->img_n; ++k) tc[k] = (stbi_uc)(stbi__get16be(s) & 255) * stbi__depth_scale_table[z->depth]; // non 8-bit images will be larger
+                  for (k = 0; k < s->img_n && k < 3; ++k) tc[k] = (stbi_uc)(stbi__get16be(s) & 255) * stbi__depth_scale_table[z->depth]; // non 8-bit images will be larger
                }
             }
             break;
